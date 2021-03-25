@@ -2880,7 +2880,7 @@ const char * param_get_info(
 	const char * name,
 	const char * subsys,
 	const char * local,
-	MyString &name_used,
+	std::string & name_used,
 	const char ** pdef_val,
 	const MACRO_META **ppmet)
 {
@@ -2889,8 +2889,10 @@ const char * param_get_info(
 	if (ppmet)    { *ppmet = NULL; }
 	name_used.clear();
 
+	MyString ms;
 	HASHITER it(ConfigMacroSet, 0);
-	if (param_find_item(name, subsys, local, name_used, it)) {
+	if (param_find_item(name, subsys, local, ms, it)) {
+		name_used = ms;
 		val = hash_iter_value(it);
 		if (pdef_val) { *pdef_val = hash_iter_def_value(it); }
 		if (ppmet) { *ppmet = hash_iter_meta(it); }

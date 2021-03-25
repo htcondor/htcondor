@@ -255,19 +255,19 @@ void print_useful_info_10(bool rv, const char*, MyString name, Sock*, ClassAd *a
 
 
 void print_info(bool rv, const char* dname, const char * addr, Sock* s, MyString name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
-	MyString cmd_map_ent;
-        const std::string &tag = SecMan::getTag();
+	std::string cmd_map_ent;
+	const std::string &tag = SecMan::getTag();
 	if (tag.size()) {
-		cmd_map_ent.formatstr ("{%s,%s,<%i>}", tag.c_str(), addr, cmd);
+		formatstr(cmd_map_ent, "{%s,%s,<%i>}", tag.c_str(), addr, cmd);
 	} else {
-		cmd_map_ent.formatstr ("{%s,<%i>}", addr, cmd);
+		formatstr(cmd_map_ent, "{%s,<%i>}", addr, cmd);
 	}
 
-	MyString session_id;
+	std::string session_id;
 	KeyCacheEntry *k = NULL;
 	ClassAd *policy = NULL;
 	int ret = 0;
-	
+
 	if(rv) {
 		// IMPORTANT: this hashtable returns 0 on success!
 		ret = (SecMan::command_map).lookup(cmd_map_ent, session_id);
@@ -277,7 +277,7 @@ void print_info(bool rv, const char* dname, const char * addr, Sock* s, MyString
 		}
 
 		// IMPORTANT: this hashtable returns 1 on success!
-		ret = (SecMan::session_cache)->lookup(session_id.Value(), k);
+		ret = (SecMan::session_cache)->lookup(session_id.c_str(), k);
 		if (!ret) {
 			printf("no session!\n");
 			return;

@@ -99,7 +99,7 @@ std::map<DCpermission, std::string> SecMan::m_tag_methods;
 std::string SecMan::m_tag_token_owner;
 KeyCache *SecMan::session_cache = &SecMan::m_default_session_cache;
 std::string SecMan::m_pool_password;
-HashTable<MyString,MyString> SecMan::command_map(hashFunction);
+HashTable<std::string,std::string> SecMan::command_map(hashFunction);
 HashTable<MyString,classy_counted_ptr<SecManStartCommand> > SecMan::tcp_auth_in_progress(hashFunction);
 int SecMan::sec_man_ref_count = 0;
 std::set<std::string> SecMan::m_not_my_family;
@@ -1113,7 +1113,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	                  // don't have to worry about longevity of it.  It's
 	                  // all static data anyway, so this is no big deal.
 
-	MyString m_session_key; // "addr,<cmd>"
+	std::string m_session_key; // "addr,<cmd>"
 	bool m_already_tried_TCP_auth;
 	SimpleList<classy_counted_ptr<SecManStartCommand> > m_waiting_for_tcp_auth;
 	classy_counted_ptr<SecManStartCommand> m_tcp_auth_command;
@@ -1451,42 +1451,42 @@ SecManStartCommand::sendAuthInfo_inner()
 
 	// find out if we have a session id to use for this command
 
-	MyString sid;
+	std::string sid;
 
 	sid = m_sec_session_id_hint;
-	if( sid.Value()[0] && !m_raw_protocol && !m_use_tmp_sec_session ) {
-		m_have_session = m_sec_man.LookupNonExpiredSession(sid.Value(), m_enc_key);
+	if( sid.c_str()[0] && !m_raw_protocol && !m_use_tmp_sec_session ) {
+		m_have_session = m_sec_man.LookupNonExpiredSession(sid.c_str(), m_enc_key);
 		if( m_have_session ) {
-			dprintf(D_SECURITY,"Using requested session %s.\n",sid.Value());
+			dprintf(D_SECURITY,"Using requested session %s.\n",sid.c_str());
 		}
 		else {
-			dprintf(D_SECURITY,"Ignoring requested session, because it does not exist: %s\n",sid.Value());
+			dprintf(D_SECURITY,"Ignoring requested session, because it does not exist: %s\n",sid.c_str());
 		}
 	}
 
 	const std::string &tag = SecMan::getTag();
 	if (tag.size()) {
-		m_session_key.formatstr ("{%s,%s,<%i>}", tag.c_str(), m_sock->get_connect_addr(), m_cmd);
+		formatstr(m_session_key, "{%s,%s,<%i>}", tag.c_str(), m_sock->get_connect_addr(), m_cmd);
 	} else {
-		m_session_key.formatstr ("{%s,<%i>}", m_sock->get_connect_addr(), m_cmd);
+		formatstr(m_session_key, "{%s,<%i>}", m_sock->get_connect_addr(), m_cmd);
 	}
 	bool found_map_ent = false;
 	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session ) {
 		found_map_ent = (m_sec_man.command_map.lookup(m_session_key, sid) == 0);
 	}
 	if (found_map_ent) {
-		dprintf (D_SECURITY, "SECMAN: using session %s for %s.\n", sid.Value(), m_session_key.Value());
+		dprintf (D_SECURITY, "SECMAN: using session %s for %s.\n", sid.c_str(), m_session_key.c_str());
 		// we have the session id, now get the session from the cache
-		m_have_session = m_sec_man.LookupNonExpiredSession(sid.Value(), m_enc_key);
+		m_have_session = m_sec_man.LookupNonExpiredSession(sid.c_str(), m_enc_key);
 
 		if(!m_have_session) {
 			// the session is no longer in the cache... might as well
 			// delete this mapping to it.  (we could delete them all, but
 			// it requires iterating through the hash table)
-			if (m_sec_man.command_map.remove(m_session_key.Value()) == 0) {
-				dprintf (D_SECURITY, "SECMAN: session id %s not found, removed %s from map.\n", sid.Value(), m_session_key.Value());
+			if (m_sec_man.command_map.remove(m_session_key.c_str()) == 0) {
+				dprintf (D_SECURITY, "SECMAN: session id %s not found, removed %s from map.\n", sid.c_str(), m_session_key.c_str());
 			} else {
-				dprintf (D_SECURITY, "SECMAN: session id %s not found and failed to removed %s from map!\n", sid.Value(), m_session_key.Value());
+				dprintf (D_SECURITY, "SECMAN: session id %s not found and failed to removed %s from map!\n", sid.c_str(), m_session_key.c_str());
 			}
 		}
 	}
@@ -1511,7 +1511,7 @@ SecManStartCommand::sendAuthInfo_inner()
 
 		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf (D_SECURITY, "SECMAN: found cached session id %s for %s.\n",
-					m_enc_key->id(), m_session_key.Value());
+					m_enc_key->id(), m_session_key.c_str());
 			m_sec_man.key_printf(D_SECURITY, m_enc_key->key());
 			dPrintAd( D_SECURITY, m_auth_info );
 		}
@@ -1564,10 +1564,10 @@ SecManStartCommand::sendAuthInfo_inner()
 
 		if (IsDebugVerbose(D_SECURITY)) {
 			if( m_use_tmp_sec_session ) {
-				dprintf (D_SECURITY, "SECMAN: using temporary security session for %s.\n", m_session_key.Value() );
+				dprintf (D_SECURITY, "SECMAN: using temporary security session for %s.\n", m_session_key.c_str() );
 			}
 			else {
-				dprintf (D_SECURITY, "SECMAN: no cached key for %s.\n", m_session_key.Value());
+				dprintf (D_SECURITY, "SECMAN: no cached key for %s.\n", m_session_key.c_str());
 			}
 		}
 
@@ -2546,7 +2546,7 @@ SecManStartCommand::DoTCPAuth_inner()
 			if(IsDebugVerbose(D_SECURITY)) {
 				dprintf(D_SECURITY,
 						"SECMAN: waiting for pending session %s to be ready\n",
-						m_session_key.Value());
+						m_session_key.c_str());
 			}
 
 			return StartCommandInProgress;

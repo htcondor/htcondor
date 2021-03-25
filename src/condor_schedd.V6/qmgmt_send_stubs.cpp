@@ -284,6 +284,15 @@ int SetJobFactory(int cluster_id, int num, const char * filename, const char * t
 	return rval;
 }
 
+int
+SendMaterializeData(int cluster_id, int flags, int (*next)(void* pv, std::string&item), void* pv, std::string & filename, int* pnum_items) {
+    MyString ms;
+    int rv = SendMaterializeData(cluster_id, flags, next, pv, ms, pnum_items);
+    // Unconditional, because the argument is unconditionally clear()ed.
+    filename = ms;
+    return rv;
+}
+
 int SendMaterializeData(int cluster_id, int flags, int (*next)(void* pv, std::string&item), void* pv, MyString & filename, int* pnum_items)
 {
 	int	rval = -1;

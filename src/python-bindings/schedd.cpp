@@ -1539,10 +1539,10 @@ struct Schedd {
     bool
     owner_from_sock(std::string &result) const
     {
-        MyString cmd_map_ent;
-        cmd_map_ent.formatstr ("{%s,<%i>}", m_addr.c_str(), QMGMT_WRITE_CMD);
+        std::string cmd_map_ent;
+        formatstr(cmd_map_ent, "{%s,<%i>}", m_addr.c_str(), QMGMT_WRITE_CMD);
 
-        MyString session_id;
+        std::string session_id;
         KeyCacheEntry *k = NULL;
         int ret = 0;
 
@@ -1554,7 +1554,7 @@ struct Schedd {
         }
 
         // IMPORTANT: this hashtable returns 1 on success!
-        ret = (SecMan::session_cache)->lookup(session_id.Value(), k);
+        ret = (SecMan::session_cache)->lookup(session_id.c_str(), k);
         if (!ret)
         {
             return false;
@@ -3311,7 +3311,7 @@ public:
 			// send over the itemdata
 			int row_count = 1;
 			if (ssi.has_items()) {
-				MyString items_filename;
+				std::string items_filename;
 				if (SendMaterializeData(cluster, 0, ssi.send_row, &ssi, items_filename, &row_count) < 0 || row_count <= 0) {
 					THROW_EX(HTCondorIOError, "Failed to to send materialize itemdata");
 				}

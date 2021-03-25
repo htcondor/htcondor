@@ -2887,7 +2887,8 @@ handle_config_val(int idCmd, Stream* stream )
 	if (idCmd == DC_CONFIG_VAL) {
 		int retval = TRUE; // assume success
 
-		MyString name_used, value;
+		std::string name_used;
+		MyString value;
 		const char * def_val = NULL;
 		const MACRO_META * pmet = NULL;
 		const char * subsys = get_mySubSystem()->getName();
@@ -2904,7 +2905,7 @@ handle_config_val(int idCmd, Stream* stream )
 			}
 		} else {
 
-			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
+			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.c_str(), def_val ? def_val : "NULL");
 
 			if (val) { tmp = expand_param(val, local_name, subsys, 0); } else { tmp = NULL; }
 			if( ! stream->code_nullstr(tmp) ) {
@@ -2913,7 +2914,7 @@ handle_config_val(int idCmd, Stream* stream )
 			}
 			if (tmp) {free(tmp);} tmp = NULL;
 
-			name_used.upper_case();
+			upper_case(name_used);
 			name_used += " = ";
 			if (val) name_used += val;
 			if ( ! stream->code(name_used)) {

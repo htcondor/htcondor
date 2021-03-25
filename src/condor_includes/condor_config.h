@@ -247,7 +247,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	const char * param_get_info(const char * name,
 								const char * subsys,
 								const char * local,
-								MyString &name_used,
+								std::string & name_used,
 								const char ** pdef_value,
 								const MACRO_META **ppmet);
 

@@ -80,7 +80,7 @@ public:
 	// Alternate tag methods
 	static std::map<DCpermission, std::string> m_tag_methods;
 	static std::string m_tag_token_owner;
-	static HashTable<MyString, MyString> command_map;
+	static HashTable<std::string, std::string> command_map;
 	static int sec_man_ref_count;
 	static std::set<std::string> m_not_my_family;
 
