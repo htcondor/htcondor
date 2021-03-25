@@ -22,6 +22,7 @@
 
 #include "condor_constants.h"
 #include <stdio.h>	// for FILE
+#include <string>
 
 typedef enum { READ_LOCK, WRITE_LOCK, UN_LOCK } LOCK_TYPE;
 
