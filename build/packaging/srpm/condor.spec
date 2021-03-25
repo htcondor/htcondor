@@ -45,8 +45,6 @@
 
 %define python 1
 
-%define glexec 1
-
 # Temporarily turn parallel_setup off
 %define parallel_setup 0
 
@@ -787,11 +785,6 @@ export CMAKE_PREFIX_PATH=/usr
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
        -DWITH_CREAM:BOOL=FALSE \
-%if %glexec
-       -DWANT_GLEXEC:BOOL=TRUE \
-%else
-       -DWANT_GLEXEC:BOOL=FALSE \
-%endif
        -DWITH_GLOBUS:BOOL=TRUE \
        -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
        -DWITH_LIBCGROUP:BOOL=TRUE \
@@ -1157,14 +1150,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_job_router
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
-%if %glexec
-%_libexecdir/condor/condor_glexec_setup
-%_libexecdir/condor/condor_glexec_run
-%_libexecdir/condor/condor_glexec_job_wrapper
-%_libexecdir/condor/condor_glexec_update_proxy
-%_libexecdir/condor/condor_glexec_cleanup
-%_libexecdir/condor/condor_glexec_kill
-%endif
 %if %blahp
 %dir %_libexecdir/condor/glite/bin
 %_libexecdir/condor/glite/bin/kubernetes_cancel.sh
@@ -1205,8 +1190,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/legacy_curl_plugin
 %_libexecdir/condor/condor_shared_port
-%_libexecdir/condor/condor_glexec_wrapper
-%_libexecdir/condor/glexec_starter_setup.sh
 %_libexecdir/condor/condor_defrag
 %_libexecdir/condor/interactive.sub
 %_libexecdir/condor/condor_gangliad
