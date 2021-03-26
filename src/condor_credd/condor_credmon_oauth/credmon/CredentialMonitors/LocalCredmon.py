@@ -75,7 +75,7 @@ class LocalCredmon(OAuthCredmon):
             atomic_rename(tmp_access_token_path, access_token_path)
         except OSError as e:
             self.log.exception("Failure when writing out new access token to {}: {}.".format(
-                access_token_path, str(oe)))
+                access_token_path, str(e)))
             return False
         else:
             return True
