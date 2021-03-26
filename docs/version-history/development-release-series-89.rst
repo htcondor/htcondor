@@ -9,16 +9,7 @@ Version 8.9.12
 
 Release Notes:
 
-.. HTCondor version 8.9.12 released on Month Date, 2021.
-
-- HTCondor version 8.9.12 not yet released.
-
-- We fixed a bug in how the IDTOKENS authentication method reads its
-  signing keys.  As a result, some previously-issued tokens will no
-  longer be valid with this release.  In some cases, truncating the
-  signing key just before the first zero byte will allow the old tokens
-  to be validated until you can resissue new tokens.
-  :jira:`295`
+- HTCondor version 8.9.12 released on March 25, 2021.
 
 - We have changed the default configuration file.  It no longer sets
   ``use security : host_based``.  This may cause your existing, insecure
@@ -33,6 +24,20 @@ Release Notes:
   this file if you're upgrading.  This file has an extensive explanatory
   comment, which includes the work-around for the previous item's problem.
   :jira:`339`
+
+- We fixed a bug in how the IDTOKENS authentication method reads its
+  signing keys.  As a result, some previously-issued tokens will no
+  longer be valid with this release.  In some cases, truncating the
+  signing key just before the first zero byte will allow the old tokens
+  to be validated until you can reissue new tokens.
+  :jira:`295`
+
+- HTCondor will now access tokens in directory ``/etc/condor/tokens.d`` as
+  user root, meaning this directory and its contents should be only accessible
+  by user root for maximum security.  If upgrading from an earlier v8.9.x release,
+  it may currently be accessible by user ``condor``, so recommend that
+  admins issue command ``chown -R root:root /etc/condor/tokens.d``.
+  :jira:`266`
 
 - As an improved security measure, HTCondor will now prohibit Linux jobs
   from running setuid executables by default.  We believe the only common setuid
@@ -66,9 +71,10 @@ Release Notes:
 - SCITOKENS is now in the default list of authentication methods.
   :jira:`47`
 
-- Added configuration parameter `LEGACY_ALLOW_SEMANTICS`, which re-enables
-  the behavior of HTCondor 8.8 and prior when `ALLOW_DAEMON` or
-  `DENY_DAEMON` is not defined.
+- Added configuration parameter ``LEGACY_ALLOW_SEMANTICS``, which re-enables
+  the behavior of HTCondor 8.8 and prior when ``ALLOW_DAEMON`` or
+  ``DENY_DAEMON`` is not defined.
+
   This parameter is intended to ease the transition of existing HTCondor
   configurations from 8.8 to 9.0, and should not be used long-term or in
   new installations.
@@ -78,10 +84,10 @@ Release Notes:
   ``condor_reconfig`` and ``condor_off`` commands to other daemons.
   :jira:`273`
 
-- The ``condor_credmon_oauth`` now writes logs to the path in
-  `CREDMON_OAUTH_LOG` if defined, which matches the typical log config
+- The `condor_credmon_oauth` now writes logs to the path in
+  ``CREDMON_OAUTH_LOG`` if defined, which matches the typical log config
   parameter naming pattern, instead of using the path defined in
-  `SEC_CREDENTIAL_MONITOR_OAUTH_LOG`.
+  ``SEC_CREDENTIAL_MONITOR_OAUTH_LOG``.
   :jira:`122`
 
 New Features:
@@ -91,13 +97,17 @@ New Features:
   https://zenodo.org/record/3937438 for details.
   :jira:`92`
 
-- Improvments made to error messages when jobs go on hold due to
+- Improvements made to error messages when jobs go on hold due to
   timeouts transferring files via HTTP.
   :jira:`355`
 
 - HTCondor now creates a number of directories on start-up, rather than
   fail later on when it needs them to exist.  See the ticket for details.
   :jira:`73`
+
+- The default value for the knob DISABLE_SETUID is now false, so that
+  condor_ssh_to_job works on machines with SELinux enabled.
+  :jira:`358`
 
 - HTCondor daemons that read the configuration files as root when they start
   up will now also read the configuration files as root when they are reconfigured.
@@ -170,7 +180,7 @@ New Features:
 - The *condor_drain* command now has a ``-reason`` argument and will supply a default
   reason value if it is not used.  The *condor_defrag* daemon will always pass ``defrag``
   as the reason so that draining initiated by the administrator can be distinguished
-  by drainging initiated by *condor_defrag*.
+  by draining initiated by *condor_defrag*.
   :jira:`77`
 
 - The  *condor_defrag* daemon will now supply a ``-reason`` argument of ``defrag``
@@ -199,7 +209,7 @@ New Features:
 - Added configuration parameter ``GRIDMANAGER_LOG_APPEND_SELECTION_EXPR``,
   which allows each *condor_gridmanager* process to write to a separate
   daemon log file.
-  When this paramaeter is set to ``True``, the evaluated value of
+  When this parameter is set to ``True``, the evaluated value of
   ``GRIDMANAGER_SELECTION_EXPR`` (if set) will be appended to the
   filename specified by ``GRIDMANAGER_LOG``.
   :jira:`102`
@@ -233,6 +243,10 @@ Bugs Fixed:
 - Fixed a bug where an IDTOKEN could be sent to a user who had authenticated
   with the ANONYMOUS method after the auto-approval period had expired.
   :jira:`231`
+
+- HTCondor daemons used to access tokens in ``/etc/condor/tokens.d`` as user ``condor``, now
+  instead tokens are accessed as user ``root``.  
+  :jira:`266`
 
 - Fixed a bug where jobs that asked for ``transfer_output_files = .`` would
   be put on hold if they were evicted and restarted.
@@ -279,6 +293,11 @@ Bugs Fixed:
 - Fixed a bug with *condor_dagman* direct job submission where certain submit
   errors were not getting reported in the debug output.
   :jira:`85`
+
+- The minihtcondor DEB package no longer aborts if installed on 
+  systems that do not have systemd installed, as is common with Debian and Ubuntu
+  docker containers.
+  :jira:`362`
 
 Version 8.9.11
 --------------

@@ -1278,7 +1278,7 @@ type=string
 tags=daemon_core
 
 [DISABLE_SETUID]
-default=true
+default=false
 type=bool
 tags=master
 

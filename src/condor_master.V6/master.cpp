@@ -1875,7 +1875,7 @@ main_pre_command_sock_init()
 	}
 
 #ifdef LINUX
-	if (param_boolean("DISABLE_SETUID", true)) {
+	if (param_boolean("DISABLE_SETUID", false)) {
 		prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
 	}
 #endif
