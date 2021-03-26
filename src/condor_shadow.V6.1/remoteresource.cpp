@@ -1083,7 +1083,7 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 					// fill in session_info so that starter will have
 					// enough info to create a security session
 					// compatible with the one we just created.
-				MyString session_info;
+				std::string session_info;
 				rc = daemonCore->getSecMan()->ExportSecSessionInfo(
 					filetrans_session_id.c_str(),
 					session_info );
@@ -1092,7 +1092,7 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 					dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to get session info for claim id %s\n",m_filetrans_session.publicClaimId());
 				}
 				else {
-					m_filetrans_session.setSecSessionInfo( session_info.Value() );
+					m_filetrans_session.setSecSessionInfo( session_info.c_str() );
 				}
 			}
 		}

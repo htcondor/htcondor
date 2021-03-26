@@ -30,7 +30,6 @@
 #include "condor_attributes.h"
 #include "match_prefix.h"
 #include "get_daemon_name.h"
-#include "MyString.h"
 #include "ad_printmask.h"
 #include "internet.h"
 #include "sig_install.h"

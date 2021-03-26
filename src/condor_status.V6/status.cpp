@@ -747,7 +747,7 @@ main (int argc, char *argv[])
 		query->setResultLimit(result_limit);
 	}
 	if (dash_snapshot) {
-		MyString snap; snap.formatstr("%d", dash_snapshot);
+		std::string snap; formatstr(snap, "%d", dash_snapshot);
 		query->addExtraAttribute("snapshot", snap.c_str());
 	}
 
@@ -2219,7 +2219,7 @@ secondPass (int argc, char *argv[])
 
 				projList.insert(attributes.begin(), attributes.end());
 
-				MyString lbl = "";
+				std::string lbl = "";
 				int wid = 0;
 				int opts = FormatOptionNoTruncate;
 				if (fheadings || mainPP.pm_head.Length() > 0) { 
@@ -2228,13 +2228,13 @@ secondPass (int argc, char *argv[])
 					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
 					mainPP.pm_head.Append(hd);
 				}
-				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
+				else if (flabel) { formatstr(lbl, "%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 				if (diagnose) {
 					printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for [%s]\n",
-							i, lbl.Value(), wid, opts,  argv[i]);
+							i, lbl.c_str(), wid, opts,  argv[i]);
 				}
-				mainPP.pm.registerFormat(lbl.Value(), wid, opts, argv[i]);
+				mainPP.pm.registerFormat(lbl.c_str(), wid, opts, argv[i]);
 			}
 			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
 			MSC_SUPPRESS_WARNING(6011) // code analysis can't figure out that argc test protects us from de-refing a NULL in argv
