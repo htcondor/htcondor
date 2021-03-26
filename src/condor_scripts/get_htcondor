@@ -692,7 +692,7 @@ while [ $# -gt 0 ]; do
 			exit 1
 			;;
 	esac
-	shift $(( $# > 0 ? 1 : 0 ))
+	shift
 done
 
 # We have to update this once every stable release; we don't want
