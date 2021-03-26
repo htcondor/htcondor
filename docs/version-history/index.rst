@@ -6,9 +6,8 @@ Version History and Release Notes
    :glob:
    
    introduction-version-history
-   upgrading-from-86-to-88-series
+   upgrading-from-88-to-90-series
+   stable-release-series-90
    development-release-series-89
    stable-release-series-88
-   development-release-series-87
-   stable-release-series-86
       
