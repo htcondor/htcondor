@@ -393,22 +393,18 @@ do_install() {
 			fi
 
 			repo_dist=${lsb_dist}
-			if [ "${repo_dist}" = "centos" ]; then
-				repo_dist="rhel"
-			fi
-			if [ "${repo_dist}" = "rhel" ]; then
-				repo_dist="el"
-			fi
+			case $repo_dist in
+				centos ) repo_dist=rhel ;;
+				rhel   ) repo_dist=el   ;;
+			esac
 			repo_suffix="${repo_dist}${dist_version}"
 			yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL}/htcondor-release-current.${repo_suffix}.noarch.rpm"
 
 			echo -e "\n# Installing EPEL"
 			epel_version="${dist_version}"
-			if [ "${lsb_dist}" = "amzn" ]; then
-				if [ "${dist_version}" -eq 2 ]; then
-					epel_version="7"
-				fi
-			fi
+			case ${lsb_dist}.${dist_version} in
+				amzn.2 ) epel_version="7" ;;
+			esac
 			$sh_c "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || yum reinstall -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
 
 			if [ "${lsb_dist}" != "amzn" ]; then
