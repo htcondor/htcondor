@@ -407,29 +407,23 @@ do_install() {
 			esac
 			$sh_c "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || yum reinstall -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
 
-			if [ "${lsb_dist}" != "amzn" ]; then
-				#
-				# Just to make our lives harder, the packages we need from
-				# EPEL depend on repositories which are disabled by default,
-				# and those repositories and how to enable them between
-				# RHEL and CentOS and between version 7 and 8.
-				#
-				if [ "${lsb_dist}" = "centos" ]; then
-					if [ "${dist_version}" -eq 8 ]; then
-						$sh_c "dnf -y install dnf-plugins-core"
-						$sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
-					fi
-				elif [ "${lsb_dist}" = "rhel" ]; then
-					# subscription-manager only works if you've already
-					# "register"ed and "attach"ed the system.
-					if [ "${dist_version}" -eq 7 ]; then
-						$sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
-					elif [ "${dist_version}" -eq 8 ]; then
-						ARCH=$(/bin/arch)
-						$sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-8-${ARCH}-rpms\""
-					fi
-				fi
-			fi
+			# Just to make our lives harder, the packages we need from
+			# EPEL depend on repositories which are disabled by default,
+			# and those repositories and how to enable them between
+			# RHEL and CentOS and between version 7 and 8.
+			#
+			case ${lsb_dist}.${dist_version} in
+				centos.8 ) $sh_c "dnf -y install dnf-plugins-core"
+				           $sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
+				           ;;
+				# subscription-manager only works if you've already
+				# "register"ed and "attach"ed the system.
+				rhel.7 ) $sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
+				         ;;
+				rhel.8 ) ARCH=$(/bin/arch)
+				         $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-8-${ARCH}-rpms\""
+				         ;;
+			esac
 
 			echo -e "\n# Installing the HTCondor repo"
 			$sh_c "yum install -y ${yum_repo_rpm} || yum reinstall -y ${yum_repo_rpm}"
