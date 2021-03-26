@@ -466,13 +466,13 @@ int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::Cla
 
 int GetQueueConstraint(CondorQ & q, ConstraintHolder & constr) {
 	int err = 0;
-	MyString query;
+	std::string query;
 	q.useDefaultingOperator(true);
 	q.rawQuery(query);
 	if (query.empty()) {
 		constr.clear();
 	} else {
-		constr.set(query.StrDup());
+		constr.set(strdup(query.c_str()));
 	}
 	constr.Expr(&err);
 	return err;
@@ -1300,7 +1300,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			while (i+1 < argc && *(argv[i+1]) != '-') {
 				++i;
 				GetAllReferencesFromClassAdExpr(argv[i], attrs);
-				MyString lbl = "";
+				std::string lbl = "";
 				int wid = 0;
 				int opts = FormatOptionNoTruncate;
 				if (fheadings || prmask.has_headings()) {
@@ -1309,9 +1309,9 @@ processCommandLineArguments (int argc, const char *argv[])
 					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
 					prmask.set_heading(hd);
 				}
-				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
+				else if (flabel) { formatstr(lbl, "%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
-				prmask.registerFormat(lbl.Value(), wid, opts, argv[i]);
+				prmask.registerFormat(lbl.c_str(), wid, opts, argv[i]);
 			}
 			prmask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
 			//summarize = 0;
@@ -1991,11 +1991,11 @@ render_job_description(std::string & out, ClassAd *ad, Formatter &)
 	if ( ! description.empty()) {
 		formatstr(out, "(%s)", description.c_str());
 	} else {
-		MyString put_result = condor_basename(out.c_str());
-		MyString args_string;
-		ArgList::GetArgsStringForDisplay(ad,&args_string);
-		if ( ! args_string.IsEmpty()) {
-			put_result.formatstr_cat(" %s", args_string.Value());
+		std::string put_result = condor_basename(out.c_str());
+		std::string args_string;
+		ArgList::GetArgsStringForDisplay(ad,args_string);
+		if ( ! args_string.empty()) {
+			formatstr_cat(put_result, " %s", args_string.c_str());
 		}
 		out = put_result;
 	}
@@ -2493,9 +2493,7 @@ render_gridResource(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
 	if (ix4 > ix2) ix4 = ix2;
 	host = str.substr(ix3, ix4-ix3);
 
-	MyString mystr = mgr.c_str();
-	mystr.replaceString(" ", "/");
-	mgr = mystr.Value();
+	replace_str(mgr, " ", "/");
 
     static char result_str[1024];
     if( MATCH == grid_type.compare( "ec2" ) ) {
@@ -2929,7 +2927,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 
 	// if there is a user-override output mask, then use that instead of the code below
 	if ( ! disable_user_print_files) {
-		MyString param_name("Q_DEFAULT_");
+		std::string param_name("Q_DEFAULT_");
 		if (tag[0]) {
 			param_name += tag;
 			param_name += "_";
@@ -3947,7 +3945,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		jr.getString(ixOwnerCol, name_width);
 		wids.owner_width = MAX(wids.owner_width, name_width);
 
-		MyString tmp;
+		std::string tmp;
 		union _jobid jid; jid.id = jr.id;
 		if (jr.flags & JROD_SCHEDUNIV) {
 			if (fold_dagman_sibs && jr.batch_uid && jr.next_sib && jr.getString(ixBatchNameCol, name_width)) {
@@ -3957,7 +3955,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 				jr.getString(ixBatchNameCol, name_width);
 				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
 			#else
-				tmp.formatstr("DAG %d", jid.cluster);
+				formatstr(tmp, "DAG %d", jid.cluster);
 				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
 				jr.rov.set_col_valid(ixBatchNameCol, true);
 				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
@@ -3967,7 +3965,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 			if (jr.getString(ixBatchNameCol, name_width)) {
 				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
 			} else {
-				tmp.formatstr("ID: %d", jid.cluster);
+				formatstr(tmp, "ID: %d", jid.cluster);
 				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
 				jr.rov.set_col_valid(ixBatchNameCol, true);
 				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
@@ -3977,12 +3975,12 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		union _jobid jmin, jmax; jmin.id = prog.min_jobid; jmax.id = prog.max_jobid;
 		if (jmin.id != jmax.id) {
 			if (jmin.cluster == jmax.cluster) {
-				tmp.formatstr("%d.%d-%d", jmin.cluster, jmin.proc, jmax.proc);
+				formatstr(tmp, "%d.%d-%d", jmin.cluster, jmin.proc, jmax.proc);
 			} else {
-				tmp.formatstr("%d.%d ... %d.%d", jmin.cluster, jmin.proc, jmax.cluster, jmax.proc);
+				formatstr(tmp, "%d.%d ... %d.%d", jmin.cluster, jmin.proc, jmax.cluster, jmax.proc);
 			}
 		} else {
-			tmp.formatstr("%d.%d", jmin.cluster, jmin.proc);
+			formatstr(tmp, "%d.%d", jmin.cluster, jmin.proc);
 		}
 		jr.rov.Column(ixJobIdsCol)->SetStringValue(tmp.c_str());
 		jr.rov.set_col_valid(ixJobIdsCol, true);
@@ -4077,9 +4075,9 @@ bool print_jobs_analysis (
 
 	// if there is a schedd ad, and we are not summarizing, check and report the schedd's global limits
 	if (pschedd_daemon && (analysis_mode > anaModeBetter) && ! reverse_analyze) {
-		MyString buf;
+		std::string buf;
 		if (warnScheddGlobalLimits(pschedd_daemon, buf)) {
-			fputs(buf.Value(), stdout);
+			fputs(buf.c_str(), stdout);
 		}
 	}
 
@@ -5058,11 +5056,11 @@ static void init_standard_summary_mask(ClassAd * summary_ad)
 	std::string messages;
 	PrintMaskMakeSettings dummySettings;
 	std::vector<GroupByKeyInfo> dummyGrpBy;
-	MyString sumyformat(standard_summary2);
+	std::string sumyformat(standard_summary2);
 	std::string myname;
 	if (summary_ad->LookupString("MyName", myname)) { 
 		sumyformat = standard_summary3;
-		sumyformat.replaceString("$(ME)", myname.c_str());
+		replace_str(sumyformat, "$(ME)", myname);
 	}
 	if (use_legacy_standard_summary) {
 		sumyformat = standard_summary_legacy;

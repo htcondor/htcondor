@@ -287,8 +287,8 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         // create the socket, due to processing of things like private network interfaces.
         addr = sock->get_connect_addr();
 
-	// Get the policy stored in the socket.
-	ClassAd sock_policy;
+        // Get the policy stored in the socket.
+        ClassAd sock_policy;
         sock->getPolicyAd(sock_policy);
 
         // Don't leak sock!
@@ -296,15 +296,15 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         sock = NULL;
         ml.release();
 
-        MyString cmd_map_ent;
+        std::string cmd_map_ent;
         const std::string &tag = m_tag_set ? m_tag : SecMan::getTag();
         if (tag.size()) {
-                cmd_map_ent.formatstr ("{%s,%s,<%i>}", tag.c_str(), addr.c_str(), num);
+                formatstr(cmd_map_ent, "{%s,%s,<%i>}", tag.c_str(), addr.c_str(), num);
         } else {
-                cmd_map_ent.formatstr ("{%s,<%i>}", addr.c_str(), num);
+                formatstr(cmd_map_ent, "{%s,<%i>}", addr.c_str(), num);
         }
 
-        MyString session_id;
+        std::string session_id;
         KeyCacheEntry *k = NULL;
         ClassAd *policy = NULL;
 
@@ -317,7 +317,7 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         std::string origTag = SecMan::getTag();
         if (m_tag_set) {SecMan::setTag(tag);}
         // IMPORTANT: this hashtable returns 1 on success!
-        if (!(SecMan::session_cache)->lookup(session_id.Value(), k))
+        if (!(SecMan::session_cache)->lookup(session_id.c_str(), k))
         {
             if (m_tag_set) {SecMan::setTag(origTag);}
             THROW_EX(HTCondorValueError, "No valid entry in session map hash table!");

@@ -648,10 +648,9 @@ bool StringTokenIterator::next(MyString & tok)
 }
 
 int
-replace_str( std::string & str, const std::string & from, const std::string & to ) {
+replace_str( std::string & str, const std::string & from, const std::string & to, size_t start ) {
     if( from.empty() ) { return -1; }
 
-    size_t start = 0;
     int replacements = 0;
     while( (start = str.find(from, start)) != std::string::npos ) {
         str.replace( start, from.length(), to );

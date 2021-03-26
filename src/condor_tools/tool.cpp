@@ -81,7 +81,7 @@ bool IgnoreMissingDaemon = false;
 
 bool all_good = true;
 
-HashTable<MyString, bool> addresses_sent( hashFunction );
+HashTable<std::string, bool> addresses_sent( hashFunction );
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
@@ -1284,7 +1284,6 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 
 	CondorError errstack;
 	QueryResult q_result;
-	MyString buffer;
 
 	if (adtype == GENERIC_AD) {
 		query.setGenericQueryType(subsys);
@@ -1501,7 +1500,7 @@ doCommand( Daemon* d )
 		// since we'll send the claim-id after the command and it
 		// won't be duplication of effort.
 		if( ! is_per_claim_startd_cmd ) {
-			MyString hash_key = d->addr();
+			std::string hash_key = d->addr();
 			bool sent_it = false;
 			if( addresses_sent.lookup(hash_key, sent_it) >= 0 && sent_it ) {
 				return;

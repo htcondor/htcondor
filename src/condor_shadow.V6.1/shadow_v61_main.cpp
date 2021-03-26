@@ -182,20 +182,20 @@ readJobAd( void )
 			 is_stdin ? "STDIN" : job_ad_file );
 
 	ad = new ClassAd;
-	MyString line;
-	while( line.readLine(fp) ) {
+	std::string line;
+	while( readLine(line, fp) ) {
         read_something = true;
-		line.chomp();
+		chomp(line);
 		if( line[0] == '#' ) {
-			dprintf( D_JOB, "IGNORING COMMENT: %s\n", line.Value() );
+			dprintf( D_JOB, "IGNORING COMMENT: %s\n", line.c_str() );
 			continue;
 		}
 		if( line == "***" ) {
 			dprintf( D_JOB, "Saw ClassAd delimitor, stopping\n" );
 			break;
 		}
-        if( ! ad->Insert(line.Value()) ) {
-			EXCEPT( "Failed to insert \"%s\" into ClassAd!", line.Value() );
+        if( ! ad->Insert(line) ) {
+			EXCEPT( "Failed to insert \"%s\" into ClassAd!", line.c_str() );
         }
     }
 	if( ! read_something ) {

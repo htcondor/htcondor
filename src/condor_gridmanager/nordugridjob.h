@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "MyString.h"
 
 #include "basejob.h"
 #include "nordugridresource.h"

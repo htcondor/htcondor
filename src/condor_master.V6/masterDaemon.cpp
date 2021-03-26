@@ -1026,9 +1026,9 @@ int daemon::RealStart( )
 
 	const char	*proc_type = command_port ? "DaemonCore " : "";
 	if ( IsFulldebug(D_FULLDEBUG) ) {
-		MyString	 args_string, tmp;
-		args.GetArgsStringForDisplay( &tmp, 1 );
-		if( tmp.Length() ) {
+		std::string	 args_string, tmp;
+		args.GetArgsStringForDisplay( tmp, 1 );
+		if( tmp.length() ) {
 			args_string  = " ";
 			args_string += tmp;
 		}
@@ -1037,7 +1037,7 @@ int daemon::RealStart( )
 		}
 		dprintf( D_ALWAYS,
 				 "Started %sprocess \"%s%s\", pid and pgroup = %d\n",
-				 proc_type, process_name, args_string.Value(), pid );
+				 proc_type, process_name, args_string.c_str(), pid );
 	}
 	else {
 		dprintf( D_ALWAYS,
@@ -1404,17 +1404,17 @@ daemon::Obituary( int status )
 
     char buf[1000];
 
-	MyString email_subject;
-	email_subject.formatstr("Problem %s: %s ", get_local_fqdn().Value(), 
+	std::string email_subject;
+	formatstr(email_subject, "Problem %s: %s ", get_local_fqdn().Value(), 
 						  condor_basename(process_name));
 	if ( was_not_responding ) {
 		email_subject += "killed (unresponsive)";
 	} else {
-		MyString fmt;
+		std::string fmt;
 		if( WIFSIGNALED(status) ) {
-			fmt.formatstr("died (%d)", WTERMSIG(status));
+			formatstr(fmt, "died (%d)", WTERMSIG(status));
 		} else {
-			fmt.formatstr("exited (%d)", WEXITSTATUS(status));
+			formatstr(fmt, "exited (%d)", WEXITSTATUS(status));
 		}
 		email_subject += fmt;
 	}
@@ -1422,10 +1422,10 @@ daemon::Obituary( int status )
     sprintf( buf, "%s_ADMIN_EMAIL", name_in_config_file );
     char *address = param(buf);
     if(address) {
-        mailer = email_nonjob_open(address, email_subject.Value());
+        mailer = email_nonjob_open(address, email_subject.c_str());
         free(address);
     } else {
-        mailer = email_admin_open(email_subject.Value());
+        mailer = email_admin_open(email_subject.c_str());
     }
 
     if( mailer == NULL ) {
@@ -1673,11 +1673,11 @@ daemon::SetupHighAvailability( void )
 {
 	char		*tmp;
 	char		*url;
-	MyString	name;
+	std::string	name;
 
 	// Get the URL
-	name.formatstr("HA_%s_LOCK_URL", name_in_config_file );
-	tmp = param( name.Value() );
+	formatstr(name, "HA_%s_LOCK_URL", name_in_config_file );
+	tmp = param( name.c_str() );
 	if ( ! tmp ) {
 		tmp = param( "HA_LOCK_URL" );
 	}
@@ -1691,8 +1691,8 @@ daemon::SetupHighAvailability( void )
 
 	// Get the length of the lock
 	time_t		lock_hold_time = 60 * 60;	// One hour
-	name.formatstr( "HA_%s_LOCK_HOLD_TIME", name_in_config_file );
-	tmp = param( name.Value( ) );
+	formatstr( name, "HA_%s_LOCK_HOLD_TIME", name_in_config_file );
+	tmp = param( name.c_str( ) );
 	if ( ! tmp ) {
 		tmp = param( "HA_LOCK_HOLD_TIME" );
 	}
@@ -1709,8 +1709,8 @@ daemon::SetupHighAvailability( void )
 
 	// Get the lock poll time
 	time_t		poll_period = 5 * 60;		// Five minutes
-	name.formatstr( "HA_%s_POLL_PERIOD", name_in_config_file );
-	tmp = param( name.Value() );
+	formatstr( name, "HA_%s_POLL_PERIOD", name_in_config_file );
+	tmp = param( name.c_str() );
 	if ( ! tmp ) {
 		tmp = param( "HA_POLL_PERIOD" );
 	}
@@ -2860,9 +2860,9 @@ Daemons::ExecMaster()
 			if( runfor <= 0 ) {
 				runfor = 1; // minimum 1
 			}
-			MyString runfor_str;
-			runfor_str.formatstr("%d",runfor);
-			argv[i++] = strdup(runfor_str.Value());
+			std::string runfor_str;
+			formatstr(runfor_str, "%d",runfor);
+			argv[i++] = strdup(runfor_str.c_str());
 		}
 	}
 	argv[i++] = NULL;
@@ -2901,13 +2901,13 @@ Daemons::FinalRestartMaster()
 
 			::GetSystemDirectory(systemshell,MAX_PATH);
 			strcat(systemshell,"\\cmd.exe");
-			MyString command;
-			command.formatstr("net stop %s & net start %s", 
+			std::string command;
+			formatstr(command, "net stop %s & net start %s", 
 				_condor_myServiceName, _condor_myServiceName);
 			dprintf( D_ALWAYS, "Doing exec( \"%s /Q /C %s\" )\n", 
-				 systemshell,command.Value());
+				 systemshell,command.c_str());
 			(void)execl(systemshell, "/Q", "/C",
-				command.Value(), 0);
+				command.c_str(), 0);
 #endif
 		} else if ( !sd.PrepareForExec() ) {
 			dprintf( D_ALWAYS, "Systemd services in use, exiting to be restarted by systemd\n" );

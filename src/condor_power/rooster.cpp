@@ -91,9 +91,9 @@ void Rooster::config()
 
 	m_wakeup_args.Clear();
 	MyString error_msg;
-	if( !m_wakeup_args.AppendArgsV2Quoted(m_wakeup_cmd.Value(),&error_msg) ) {
+	if( !m_wakeup_args.AppendArgsV2Quoted(m_wakeup_cmd.c_str(),&error_msg) ) {
 		EXCEPT("Invalid wakeup command %s: %s",
-			   m_wakeup_cmd.Value(), error_msg.Value());
+			   m_wakeup_cmd.c_str(), error_msg.Value());
 	}
 
 	MyString rank;
@@ -140,13 +140,13 @@ void Rooster::poll()
 	CondorQuery unhibernateQuery(STARTD_AD);
 	ExprTree *requirements = NULL;
 
-	if( ParseClassAdRvalExpr( m_unhibernate_constraint.Value(), requirements )!=0 || requirements==NULL )
+	if( ParseClassAdRvalExpr( m_unhibernate_constraint.c_str(), requirements )!=0 || requirements==NULL )
 	{
 		EXCEPT("Invalid expression for ROOSTER_UNHIBERNATE: %s",
-			   m_unhibernate_constraint.Value());
+			   m_unhibernate_constraint.c_str());
 	}
 
-	unhibernateQuery.addANDConstraint(m_unhibernate_constraint.Value());
+	unhibernateQuery.addANDConstraint(m_unhibernate_constraint.c_str());
 
 	CollectorList* collects = daemonCore->getCollectorList();
 	ASSERT( collects );
@@ -157,12 +157,12 @@ void Rooster::poll()
 		dprintf(D_ALWAYS,
 				"Couldn't fetch startd ads using constraint "
 				"ROOSTER_UNHIBERNATE=%s: %s\n",
-				m_unhibernate_constraint.Value(), getStrQueryResult(result));
+				m_unhibernate_constraint.c_str(), getStrQueryResult(result));
 		return;
 	}
 
 	dprintf(D_FULLDEBUG,"Got %d startd ads matching ROOSTER_UNHIBERNATE=%s\n",
-			startdAds.MyLength(), m_unhibernate_constraint.Value());
+			startdAds.MyLength(), m_unhibernate_constraint.c_str());
 
 	startdAds.Sort(StartdSortFunc,&m_rank_ad);
 
@@ -264,7 +264,7 @@ Rooster::wakeUp(ClassAd *startd_ad)
 
 	if( pid == -1 ) {
 		dprintf(D_ALWAYS,"Failed to run %s: %s\n",
-				m_wakeup_cmd.Value(), strerror(errno));
+				m_wakeup_cmd.c_str(), strerror(errno));
 		daemonCore->Close_Pipe(stdin_pipe_fds[1]);
 		daemonCore->Close_Pipe(stdout_pipe_fds[0]);
 		return false;
@@ -281,7 +281,7 @@ Rooster::wakeUp(ClassAd *startd_ad)
 	int n = daemonCore->Write_Pipe(stdin_pipe_fds[1],stdin_str.Value(),stdin_str.Length());
 	if( n != stdin_str.Length() ) {
 		dprintf(D_ALWAYS,"Rooster::wakeUp: failed to write to %s: %s\n",
-				m_wakeup_cmd.Value(), strerror(errno));
+				m_wakeup_cmd.c_str(), strerror(errno));
 		daemonCore->Close_Pipe(stdin_pipe_fds[1]);
 		daemonCore->Close_Pipe(stdout_pipe_fds[0]);
 		return false;

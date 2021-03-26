@@ -1003,7 +1003,8 @@ main( int argc, const char* argv[] )
 						for (int ii = 0; ii < (int)names.size(); ++ii) {
 
 							const char * name = names[ii].c_str();
-							MyString name_used, location;
+							std::string name_used;
+							MyString location;
 							//int line_number, use_count, ref_count;
 							const MACRO_META * pmet = NULL;
 							const char * def_val = NULL;
@@ -1174,7 +1175,8 @@ main( int argc, const char* argv[] )
 	while( (tmp = params.next()) ) {
 		// empty parens so that we don't have to change the brace level of ALL of the code below.
 		{
-			MyString name_used, raw_value, file_and_line, def_value, usage_report;
+			std::string name_used;
+			MyString raw_value, file_and_line, def_value, usage_report;
 			const char * tags = NULL;
 			const char * descrip = NULL;
 			const char * used_for = NULL;
@@ -1229,9 +1231,9 @@ main( int argc, const char* argv[] )
 
 							name_used = names[ii];
 							if (expand_dumped_variables || ! raw_supported) {
-								printf("%s = %s\n", name_used.Value(), value ? value : "");
+								printf("%s = %s\n", name_used.c_str(), value ? value : "");
 							} else {
-								printf("%s = %s\n", name_used.Value(), RemoteRawValuePart(raw_value));
+								printf("%s = %s\n", name_used.c_str(), RemoteRawValuePart(raw_value));
 							}
 							if ( ! raw_supported && (verbose || ! expand_dumped_variables)) {
 								printf(" # remote HTCondor version does not support -verbose\n");
@@ -1283,7 +1285,7 @@ main( int argc, const char* argv[] )
 					continue;
 				} else if (dash_raw || verbose) {
 					name_used = tmp;
-					name_used.upper_case();
+					upper_case(name_used);
 					value = GetRemoteParamRaw(target, tmp, raw_supported, raw_value, file_and_line, def_value, usage_report);
 					if ( ! verbose && ! raw_value.IsEmpty()) {
 						free(value);
@@ -1295,7 +1297,7 @@ main( int argc, const char* argv[] )
 					}
 				} else {
 					name_used = tmp;
-					name_used.upper_case();
+					upper_case(name_used);
 					value = GetRemoteParam(target, tmp);
 				}
                 if (value && evaluate_daemon_vars) {
@@ -1352,7 +1354,7 @@ main( int argc, const char* argv[] )
 					}
 				} else {
 					name_used = tmp;
-					name_used.upper_case();
+					upper_case(name_used);
 					value = NULL;
 				}
 			}
@@ -2281,7 +2283,8 @@ void DumpRemoteParams(Daemon* target, const char * tmp)
 
 void PrintParam(const char * tmp)
 {
-	MyString name_used, raw_value, file_and_line, def_value, usage_report;
+	std::string name_used;
+	MyString raw_value, file_and_line, def_value, usage_report;
 	bool raw_supported = false;
 	//fprintf(stderr, "param = %s\n", tmp);
 	if( target ) {
@@ -2301,7 +2304,7 @@ void PrintParam(const char * tmp)
 			?? DumpRemoteParams();
 		} else if (dash_raw || verbose) {
 			name_used = tmp;
-			name_used.upper_case();
+			upper_case(name_used);
 			value = GetRemoteParamRaw(target, tmp, raw_supported, raw_value, file_and_line, def_value, usage_report);
 			if ( ! verbose && ! raw_value.IsEmpty()) {
 				free(value);
@@ -2309,7 +2312,7 @@ void PrintParam(const char * tmp)
 			}
 		} else {
 			name_used = tmp;
-			name_used.upper_case();
+			upper_case(name_used);
 			value = GetRemoteParam(target, tmp);
 		}
         if (value && evaluate_daemon_vars) {
@@ -2347,7 +2350,7 @@ void PrintParam(const char * tmp)
 			}
 		} else {
 			name_used = tmp;
-			name_used.upper_case();
+			upper_case(name_used);
 			value = NULL;
 		}
 	}

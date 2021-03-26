@@ -131,10 +131,10 @@ UserLogHeader::ExtractEvent( const ULogEvent *event )
 
 // sprintf() method
 void
-UserLogHeader::sprint_cat( MyString &buf ) const
+UserLogHeader::sprint_cat( std::string &buf ) const
 {
 	if ( m_valid ) {
-		buf.formatstr_cat( "id=%s"
+		formatstr_cat( buf, "id=%s"
 						 " seq=%d"
 						 " ctime=%lu"
 						 " size=" FILESIZE_T_FORMAT
@@ -143,7 +143,7 @@ UserLogHeader::sprint_cat( MyString &buf ) const
 						 " event_offset=%" PRIi64
 						 " max_rotation=%d"
 						 " creator_name=<%s>",
-						 m_id.Value(),
+						 m_id.c_str(),
 						 m_sequence,
 						 (unsigned long) m_ctime,
 						 m_size,
@@ -151,7 +151,7 @@ UserLogHeader::sprint_cat( MyString &buf ) const
 						 m_file_offset,
 						 m_event_offset,
 						 m_max_rotation,
-						 m_creator_name.Value()
+						 m_creator_name.c_str()
 						 );
 	}
 	else {
@@ -161,14 +161,14 @@ UserLogHeader::sprint_cat( MyString &buf ) const
 
 // dprint() method
 void
-UserLogHeader::dprint( int level, MyString &buf ) const
+UserLogHeader::dprint( int level, std::string &buf ) const
 {
 	if ( ! IsDebugCatAndVerbosity(level) ) {
 		return;
 	}
 
 	sprint_cat( buf );
-	::dprintf( level, "%s\n", buf.Value() );
+	::dprintf( level, "%s\n", buf.c_str() );
 }
 
 // dprint() method
@@ -183,8 +183,8 @@ UserLogHeader::dprint( int level, const char *label ) const
 		label = "";
 	}
 
-	MyString	buf;
-	buf.formatstr( "%s header:", label );
+	std::string buf;
+	formatstr( buf, "%s header:", label );
 	this->dprint( level, buf );
 }
 
@@ -261,14 +261,14 @@ WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 			  " max_rotation=%d"
 			  " creator_name=<%s>",
 			  (int) getCtime(),
-			  getId().Value(),
+			  getId().c_str(),
 			  getSequence(),
 			  getSize(),
 			  getNumEvents(),
 			  getFileOffset(),
 			  getEventOffset(),
 			  getMaxRotation(),
-			  getCreatorName().Value()
+			  getCreatorName().c_str()
 			  );
 	if (len < 0 || len == sizeof(event.info)) {
 		// not enough room in the buffer

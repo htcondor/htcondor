@@ -128,32 +128,32 @@ int IsProtectedAttribute(const char *attr)
 	return NORMAL_ATTR;
 }
 
-static void appendProcsForCluster(MyString & out, int cluster, std::set<int> & procs)
+static void appendProcsForCluster(std::string & out, int cluster, std::set<int> & procs)
 {
 	if (cluster <= 0)
 		return;
 
 	if (procs.empty()) {
-		out.formatstr_cat(ATTR_CLUSTER_ID " == %d ", cluster);
+		formatstr_cat(out, ATTR_CLUSTER_ID " == %d ", cluster);
 	} else {
-		out.formatstr_cat("( " ATTR_CLUSTER_ID " == %d && ", cluster);
+		formatstr_cat(out, "( " ATTR_CLUSTER_ID " == %d && ", cluster);
 		if (procs.size() > 1) {
 			out += "(";
 			const char * op = "";
 			for (std::set<int>::iterator it = procs.begin(); it != procs.end(); ++it) {
 				out += op;
-				out.formatstr_cat(ATTR_PROC_ID " == %d ", *it);
+				formatstr_cat(out, ATTR_PROC_ID " == %d ", *it);
 				op = " || ";
 			}
 			out += ")";
 		} else {
-			out.formatstr_cat(ATTR_PROC_ID " == %d ", *procs.begin());
+			formatstr_cat(out, ATTR_PROC_ID " == %d ", *procs.begin());
 		}
 		out += ")";
 	}
 }
 
-const char * makeJobidConstraint(MyString & out, std::set<JOB_ID_KEY> & jobids)
+const char * makeJobidConstraint(std::string & out, std::set<JOB_ID_KEY> & jobids)
 {
 	if (jobids.empty()) return out.c_str();
 	int cluster = -1;
@@ -288,7 +288,7 @@ main(int argc, const char *argv[])
 				exit(1);
 			}
 			ownername = argv[ixarg]; // remember this in case we need it later
-			MyString expr; expr.formatstr(ATTR_OWNER "==\"%s\"", ownername);
+			std::string expr; formatstr(expr, ATTR_OWNER "==\"%s\"", ownername);
 			gquery.addCustomAND(expr.c_str());
 			bare_arg_must_identify_jobs = false;
 			only_my_jobs = false;
@@ -365,7 +365,7 @@ main(int argc, const char *argv[])
 			} else {
 				// assume that this argument is an ownername
 				ownername = argv[ixarg];
-				MyString expr; expr.formatstr(ATTR_OWNER "==\"%s\"", ownername);
+				std::string expr; formatstr(expr, ATTR_OWNER "==\"%s\"", ownername);
 				gquery.addCustomAND(expr.c_str());
 			}
 		}
@@ -417,7 +417,7 @@ main(int argc, const char *argv[])
 	// 
 
 	ConstraintHolder constraint;
-	MyString query_string;
+	std::string query_string;
 	gquery.makeQuery(query_string);
 
 	// cook jobid strings into either a set of job ids, or more constraints
@@ -447,7 +447,7 @@ main(int argc, const char *argv[])
 		}
 	}
 	if ( ! query_string.empty()) {
-		constraint.set(query_string.StrDup());
+		constraint.set(strdup(query_string.c_str()));
 	}
 
 	// got the args, now check for consistency
@@ -647,9 +647,9 @@ main(int argc, const char *argv[])
 			match_count += rval;
 		}
 		if (transaction_aborted) break;
-		MyString count("all");
-		if (match_count > 0) count.formatstr("%d", match_count);
-		printf("%sSet attribute \"%s\" for %s matching jobs.\n", dry_tag, attr, count.Value());
+		std::string count("all");
+		if (match_count > 0) formatstr(count, "%d", match_count);
+		printf("%sSet attribute \"%s\" for %s matching jobs.\n", dry_tag, attr, count.c_str());
 	}
 
 	if ( ! transaction_aborted && jobids.empty() && (setflags & SetAttribute_QueryOnly)) {

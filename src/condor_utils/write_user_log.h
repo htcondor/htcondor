@@ -233,7 +233,7 @@ public:
 	*/
 	virtual void globalRotationComplete( int /*num_rotations*/,
 										 int /*sequence*/,
-										 const MyString & /*id*/ )
+										 const std::string & /*id*/ )
 		{ return; };
 
 
@@ -302,7 +302,7 @@ public:
 
 	// options are flags from the ULogEvent::formatOpt enum
 	bool doWriteEvent( int fd, ULogEvent *event, int format_options );
-	void GenerateGlobalId( MyString &id );
+	void GenerateGlobalId( std::string &id );
 
 	bool checkGlobalLogRotation(void);
 	bool globalLogRotated( ReadUserLogHeader &reader );
@@ -310,7 +310,7 @@ public:
 	bool openGlobalLog( bool reopen, const UserLogHeader &header );
 	bool closeGlobalLog( void);
 	int doRotation( const char *path, int &fd,
-					MyString &rotated, int max_rotations );
+					std::string &rotated, int max_rotations );
 
 
 	bool updateGlobalStat( void );

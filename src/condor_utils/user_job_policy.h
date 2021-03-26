@@ -225,12 +225,13 @@ class UserPolicy
 		/* This explains what the firing expression evaluated to which
 		   caused the above action.  If no firing expression occured,
 		   return -1. */
-        int FiringExpressionValue( void ) const { return m_fire_expr_val; };
-	
+		int FiringExpressionValue( void ) const { return m_fire_expr_val; };
+
 		/* This constructs the string explaining what expression fired, useful
 		   for a Reason string in the job ad. If no firing expression
 		   occurred, then false is returned. */
 		bool FiringReason(MyString &reason,int &reason_code,int &reason_subcode);
+		bool FiringReason(std::string & reason, int & reason_code, int & reason_subcode);
 
 	private: /* functions */
 		/* This function inserts the five of the six (all but TimerRemove) user

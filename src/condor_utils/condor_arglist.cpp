@@ -59,6 +59,14 @@ void append_arg(char const *arg,MyString &result) {
 	}
 }
 
+void
+join_args( SimpleList<MyString> const & args_list, std::string & result, int start_arg)
+{
+    MyString ms(result.c_str());
+    join_args( args_list, & ms, start_arg );
+    result = ms;
+}
+
 void join_args(SimpleList<MyString> const &args_list,MyString *result,int start_arg)
 {
 	SimpleListIterator<MyString> it(args_list);
@@ -261,6 +269,14 @@ ArgList::InsertArg(char const *arg,int pos) {
 char **
 ArgList::GetStringArray() const {
 	return ArgListToArgsArray(args_list);
+}
+
+bool
+ArgList::AppendArgsV1RawOrV2Quoted(char const *args,std::string & error_msg) {
+    MyString ms;
+    bool rv = AppendArgsV1RawOrV2Quoted( args, & ms );
+    if(! ms.empty()) { error_msg = ms; }
+    return rv;
 }
 
 bool
@@ -538,6 +554,14 @@ ArgList::GetArgsStringForDisplay(ClassAd const *ad,MyString *result)
 	}
 }
 
+void
+ArgList::GetArgsStringForDisplay(ClassAd const *ad, std::string &result)
+{
+	if( ! ad->LookupString(ATTR_JOB_ARGUMENTS2, result) ) {
+		ad->LookupString(ATTR_JOB_ARGUMENTS1, result);
+	}
+}
+
 bool
 ArgList::AppendArgsFromClassAd(ClassAd const * ad, std::string & error_msg)
 {
@@ -677,6 +701,16 @@ ArgList::IsSafeArgV1Value(char const *str) const
 }
 
 bool
+ArgList::GetArgsStringV1Raw(std::string & result, std::string & error_msg) const {
+    MyString ms1(result.c_str());
+    MyString ms2;
+    bool rv = GetArgsStringV1Raw(&ms1, &ms2);
+    result = ms1;
+    if(! ms2.empty()) { error_msg = ms2; }
+    return rv;
+}
+
+bool
 ArgList::GetArgsStringV1Raw(MyString *result,MyString *error_msg) const
 {
 	SimpleListIterator<MyString> it(args_list);
@@ -734,6 +768,13 @@ ArgList::V1RawToV1Wacked(MyString const &v1_raw,MyString *result)
 }
 
 bool
+ArgList::GetArgsStringV2Raw(std::string & result, int start_arg) const
+{
+	join_args(args_list, result, start_arg);
+	return true;
+}
+
+bool
 ArgList::GetArgsStringV2Raw(MyString *result,MyString * /*error_msg*/,int start_arg) const
 {
 	join_args(args_list,result,start_arg);
@@ -749,9 +790,7 @@ ArgList::GetArgsStringForDisplay(MyString *result,int start_arg) const
 void
 ArgList::GetArgsStringForDisplay(std::string & result, int start_arg) const
 {
-	MyString ms;
-	GetArgsStringV2Raw( &ms, NULL, start_arg );
-	result = ms;
+	GetArgsStringV2Raw(result, start_arg);
 }
 
 // Separate arguments with a space.  Replace whitespace in each argument

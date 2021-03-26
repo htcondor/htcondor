@@ -589,7 +589,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 			dprintf( D_FULLDEBUG,
 					 "%s: Set UniqId to '%s', sequence to %d\n",
 					 m_state->CurPath(),
-					 header_reader.getId().Value(),
+					 header_reader.getId().c_str(),
 					 header_reader.getSequence() );
 		}
 
@@ -1602,7 +1602,7 @@ ReadUserLogMatch::MatchInternal(
 		result_str = "no match";
 	}
 	dprintf( D_FULLDEBUG, "Read ID from '%s' as '%s': %d (%s)\n",
-			 path_str.Value(), header_reader.getId().Value(),
+			 path_str.Value(), header_reader.getId().c_str(),
 			 id_result, result_str );
 
 	// And, last but not least, re-evaluate the score

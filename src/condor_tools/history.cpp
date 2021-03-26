@@ -312,7 +312,7 @@ main(int argc, const char* argv[])
 		dprintf_config("Tool");
 
 		if (IsFulldebug(D_ALWAYS)) {
-			MyString myargs;
+			std::string myargs;
 			for (int ii = 0; ii < argc; ++ii) { formatstr_cat(myargs, "[%d]%s ", ii, argv[ii]); }
 			dprintf(D_FULLDEBUG, "args: %s\n", myargs.c_str());
 		}
@@ -432,11 +432,11 @@ main(int argc, const char* argv[])
 			PROC_ID jid;
 			const char * pend;
 			if (StrIsProcId(argv[i], jid.cluster, jid.proc, &pend) && !*pend) {
-				MyString buf;
+				std::string buf;
 				if (jid.proc >= 0) {
-					buf.formatstr("ClusterId == %d && ProcId == %d", jid.cluster, jid.proc);
+					formatstr(buf, "ClusterId == %d && ProcId == %d", jid.cluster, jid.proc);
 				} else {
-					buf.formatstr("ClusterId == %d", jid.cluster);
+					formatstr(buf, "ClusterId == %d", jid.cluster);
 					//buf.formatstr("CompletionDate <= %d", jid.cluster);
 				}
 				ParseClassAdRvalExpr(buf.c_str(), sinceExpr);
@@ -456,7 +456,7 @@ main(int argc, const char* argv[])
 		}
 		
 		delete sinceExpr; sinceExpr = NULL;
-		MyString buf; buf.formatstr("CompletionDate <= %s", argv[i]);
+		std::string buf; formatstr(buf, "CompletionDate <= %s", argv[i]);
 		if (0 != ParseClassAdRvalExpr(buf.c_str(), sinceExpr)) {
 			fprintf( stderr, "Error: '%s' not valid parameter for -completedsince ", argv[i]);
 			exit(1);
@@ -534,7 +534,7 @@ main(int argc, const char* argv[])
 	// Since we only deal with one ad at a time, this doubles the speed of parsing
   classad::ClassAdSetExpressionCaching(false);
  
-  MyString my_constraint;
+  std::string my_constraint;
   constraint.makeQuery(my_constraint);
   if (diagnostic) {
 	  fprintf(stderr, "Using effective constraint: %s\n", my_constraint.c_str());

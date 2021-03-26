@@ -83,21 +83,21 @@ public:
 private:
 	PROC_ID m_jobid;
 	int m_subproc;
-	MyString m_schedd_name;
-	MyString m_pool_name;
-	MyString m_ssh_options;
+	std::string m_schedd_name;
+	std::string m_pool_name;
+	std::string m_ssh_options;
 	int m_proxy_fd;
-	MyString m_program_name;
+	std::string m_program_name;
 	int m_ssh_exit_status;
 	ArgList m_ssh_args_from_command_line;
-	MyString m_session_dir;
+	std::string m_session_dir;
 	bool m_debug;
-	MyString m_shells; // comma-separated list of shells to try
+	std::string m_shells; // comma-separated list of shells to try
 	bool m_retry_sensible;
 	bool m_auto_retry;
 	bool m_remove_on_interrupt;
 	int m_retry_delay;
-	MyString m_ssh_keygen_args;
+	std::string m_ssh_keygen_args;
 	bool m_x_forwarding;
 
 	bool m_could_be_ec2_job;
@@ -125,9 +125,9 @@ SSHToJob::SSHToJob():
 
 SSHToJob::~SSHToJob()
 {
-	if( !m_session_dir.IsEmpty() ) {
-		Directory dir(m_session_dir.Value());
-		if (!dir.Remove_Full_Path(m_session_dir.Value())) {
+	if( !m_session_dir.empty() ) {
+		Directory dir(m_session_dir.c_str());
+		if (!dir.Remove_Full_Path(m_session_dir.c_str())) {
 			// This isn't fatal, the starter will remove it on exit, but
 			// log the fact just in case
 			dprintf(D_ALWAYS, "SSHToJob: Can't remove session dir, letting the starter take care of it\n");
@@ -142,11 +142,11 @@ int SSHToJob::getSSHExitStatus() const
 
 char* SSHToJob::getJobId() const
 {
-	MyString temp;
+	std::string temp;
 	char *ret_val = NULL;
 
-	temp.formatstr("%d.%d",m_jobid.cluster,m_jobid.proc);
-	ret_val = strdup(temp.Value());
+	formatstr(temp,"%d.%d",m_jobid.cluster,m_jobid.proc);
+	ret_val = strdup(temp.c_str());
 	return ret_val;
 }
 
@@ -161,7 +161,7 @@ void SSHToJob::logError(char const *fmt,...)
 void SSHToJob::printUsage()
 {
 	fprintf(stderr, "Usage: %s [OPTIONS] { cluster | cluster.proc } [command]\n",
-			m_program_name.Value());
+			m_program_name.c_str());
 	fprintf(stderr,"\n");
 	fprintf(stderr,"OPTIONS:\n");
 	fprintf(stderr," -debug\n");
@@ -183,7 +183,8 @@ bool SSHToJob::parseArgs(int argc,char **argv)
 	}
 
 		// default shell to request
-	m_shells = getenv("SHELL");
+	const char *val = getenv("SHELL");
+	m_shells = val ? val : "";
 
 	int nextarg;
 	for( nextarg=1; nextarg<argc; nextarg++ ) {
@@ -410,20 +411,20 @@ bool SSHToJob::execute_ssh_retry()
 
 bool SSHToJob::execute_ssh()
 {
-	DCSchedd schedd(m_schedd_name.IsEmpty() ? NULL : m_schedd_name.Value(),
-					m_pool_name.IsEmpty() ? NULL   : m_pool_name.Value());
+	DCSchedd schedd(m_schedd_name.empty() ? NULL : m_schedd_name.c_str(),
+					m_pool_name.empty() ? NULL   : m_pool_name.c_str());
 	if( schedd.locate() == false ) {
-		if( m_schedd_name.IsEmpty() ) {
+		if( m_schedd_name.empty() ) {
 			logError("ERROR: Can't find address of local schedd\n");
 			return false;
 		}
 
-		if( m_pool_name.IsEmpty() ) {
+		if( m_pool_name.empty() ) {
 			logError("No such schedd named %s in local pool\n",
-					 m_schedd_name.Value() );
+					 m_schedd_name.c_str() );
 		} else {
 			logError("No such schedd named %s in pool %s\n",
-					 m_schedd_name.Value(), m_pool_name.Value() );
+					 m_schedd_name.c_str(), m_pool_name.c_str() );
 		}
 		return false;
 	}
@@ -602,7 +603,7 @@ bool SSHToJob::execute_ssh()
 		return false;
 	}
 
-	MyString remote_host;
+	std::string remote_host;
 	char const *at_pos = strrchr(slot_name.c_str(),'@');
 	if( at_pos ) {
 		remote_host = at_pos + 1;
@@ -624,9 +625,9 @@ bool SSHToJob::execute_ssh()
 	unsigned int num = 1;
 	for(num=1;num<2000;num++) {
 		unsigned int r = get_random_uint_insecure();
-		m_session_dir.formatstr("%s%c%s.condor_ssh_to_job_%x",
-							  temp_dir,DIR_DELIM_CHAR,local_username,r);
-		if( mkdir(m_session_dir.Value(),0700)==0 ) {
+		formatstr(m_session_dir,"%s%c%s.condor_ssh_to_job_%x",
+					temp_dir,DIR_DELIM_CHAR,local_username,r);
+		if( mkdir(m_session_dir.c_str(),0700)==0 ) {
 			break;
 		}
 		m_session_dir = "";
@@ -634,33 +635,33 @@ bool SSHToJob::execute_ssh()
 			continue;
 		}
 		logError("Failed to create ssh session dir %s: %s\n",
-				m_session_dir.Value(),strerror(errno));
+				m_session_dir.c_str(),strerror(errno));
 		free(local_username);
 		return false;
 	}
 
 	free(local_username);
 
-	if( m_session_dir.IsEmpty() ) {
+	if( m_session_dir.empty() ) {
 		logError("Failed to create ssh session dir in %u tries.\n",num);
 		return false;
 	}
 
 
-	MyString known_hosts_file;
-	known_hosts_file.formatstr("%s%cknown_hosts",m_session_dir.Value(),DIR_DELIM_CHAR);
-	MyString private_client_key_file;
-	private_client_key_file.formatstr("%s%cssh_key",m_session_dir.Value(),DIR_DELIM_CHAR);
+	std::string known_hosts_file;
+	formatstr(known_hosts_file,"%s%cknown_hosts",m_session_dir.c_str(),DIR_DELIM_CHAR);
+	std::string private_client_key_file;
+	formatstr(private_client_key_file,"%s%cssh_key",m_session_dir.c_str(),DIR_DELIM_CHAR);
 
 	ReliSock sock;
 	std::string remote_user; // this will be filled in with the remote user name
 	std::string error_msg;
 	bool start_sshd = starter.startSSHD(
-		known_hosts_file.Value(),
-		private_client_key_file.Value(),
-		m_shells.Value(),
+		known_hosts_file.c_str(),
+		private_client_key_file.c_str(),
+		m_shells.c_str(),
 		slot_name.c_str(),
-		m_ssh_keygen_args.Value(),
+		m_ssh_keygen_args.c_str(),
 		sock,
 		timeout,
 		ssh_session_id,
@@ -678,8 +679,8 @@ bool SSHToJob::execute_ssh()
 	}
 
 
-	MyString fdpass_sock_name;
-	fdpass_sock_name.formatstr("%s%cfdpass",m_session_dir.Value(),DIR_DELIM_CHAR);
+	std::string fdpass_sock_name;
+	formatstr(fdpass_sock_name,"%s%cfdpass",m_session_dir.c_str(),DIR_DELIM_CHAR);
 
 	// because newer versions of openssh (e.g. 5.8) close
 	// all file descriptors > 2, we have to pass the ssh connection
@@ -689,17 +690,17 @@ bool SSHToJob::execute_ssh()
 	struct sockaddr_un named_sock_addr;
 	memset(&named_sock_addr, 0, sizeof(named_sock_addr));
 	named_sock_addr.sun_family = AF_UNIX;
-	strncpy(named_sock_addr.sun_path,fdpass_sock_name.Value(),sizeof(named_sock_addr.sun_path)-1);
-	if( strcmp(named_sock_addr.sun_path,fdpass_sock_name.Value()) ) {
+	strncpy(named_sock_addr.sun_path,fdpass_sock_name.c_str(),sizeof(named_sock_addr.sun_path)-1);
+	if( strcmp(named_sock_addr.sun_path,fdpass_sock_name.c_str()) ) {
 		logError("full socket name is too long: %s\n",
-			fdpass_sock_name.Value());
+			fdpass_sock_name.c_str());
 		return false;
 	}
 
 	int fdpass_sock_fd = socket(AF_UNIX,SOCK_STREAM,0);
 	if( fdpass_sock_fd == -1 ) {
 		logError("failed to created named socket %s: %s\n",
-			fdpass_sock_name.Value(),
+			fdpass_sock_name.c_str(),
 			strerror(errno));
 		return false;
 	}
@@ -714,7 +715,7 @@ bool SSHToJob::execute_ssh()
 	int fd_flags = fcntl(fdpass_sock_fd,F_GETFD);
 	if( fd_flags == -1 ) {
 		logError("failed to get socket %s flags: %s\n",
-			 fdpass_sock_name.Value(),
+			 fdpass_sock_name.c_str(),
 			 strerror(errno));
 		return false;
 	}
@@ -741,7 +742,7 @@ bool SSHToJob::execute_ssh()
 	if( bind_rc != 0 )
 	{
 		logError("failed to bind to %s: %s\n",
-			fdpass_sock_name.Value(),
+			fdpass_sock_name.c_str(),
 			strerror(errno));
 		umask(old_umask);
 		return false;
@@ -751,35 +752,35 @@ bool SSHToJob::execute_ssh()
 
 	if( listen(fdpass_sock_fd,5) ) {
 		logError("failed to listen on %s: %s\n",
-			 fdpass_sock_name.Value(), strerror(errno));
+			 fdpass_sock_name.c_str(), strerror(errno));
 		return false;
 	}
 
 
 	MyString proxy_command;
 	ArgList proxy_arglist;
-	proxy_arglist.AppendArg(m_program_name.Value());
+	proxy_arglist.AppendArg(m_program_name.c_str());
 	if( m_debug ) {
 		proxy_arglist.AppendArg("-debug");
 	}
 	proxy_arglist.AppendArg("-proxy");
-	proxy_arglist.AppendArg(fdpass_sock_name.Value());
+	proxy_arglist.AppendArg(fdpass_sock_name.c_str());
 	if( !proxy_arglist.GetArgsStringSystem(&proxy_command,0) ) {
 		logError("Failed to produce proxy command.\n");
 		return false;
 	}
 
 	ArgList ssh_options_arglist;
-	if(!ssh_options_arglist.AppendArgsV2Raw(m_ssh_options.Value(), error_msg)
+	if(!ssh_options_arglist.AppendArgsV2Raw(m_ssh_options.c_str(), error_msg)
 	   || ssh_options_arglist.Count() < 1 )
 	{
-		logError("Failed to parse ssh options (%s): %s\n",m_ssh_options.Value(),error_msg.c_str());
+		logError("Failed to parse ssh options (%s): %s\n",m_ssh_options.c_str(),error_msg.c_str());
 		return false;
 	}
 
 		// We now look up the auto-generated ssh options and merge
 		// those together.
-	MyString m_ssh_basename;
+	std::string m_ssh_basename;
 	m_ssh_basename = condor_basename(ssh_options_arglist.GetArg(0));
 	bool is_scp = (m_ssh_basename == "scp");
 
@@ -794,19 +795,19 @@ bool SSHToJob::execute_ssh()
 		// file, no matter what options we set, so it is recommended
 		// not to give ssh a real hostname.  That's why we prefix
 		// the hostname with "condor-job" in the default options.
-	MyString ssh_cmd;
+	std::string ssh_cmd;
 	ArgList ssh_arglist;
-	MyString param_name;
-	param_name.formatstr("SSH_TO_JOB_%s_CMD",m_ssh_basename.Value());
-	MyString default_ssh_cmd;
-	default_ssh_cmd.formatstr("\"%s -oUser=%%u -oIdentityFile=%%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%%k -oGlobalKnownHostsFile=%%k -oProxyCommand=%%x%s\"",
+	std::string param_name;
+	formatstr(param_name,"SSH_TO_JOB_%s_CMD",m_ssh_basename.c_str());
+	std::string default_ssh_cmd;
+	formatstr(default_ssh_cmd, "\"%s -oUser=%%u -oIdentityFile=%%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%%k -oGlobalKnownHostsFile=%%k -oProxyCommand=%%x%s\"",
 							ssh_options_arglist.GetArg(0),
 							is_scp ? "" : " condor-job.%h");
-	param(ssh_cmd,param_name.Value(),default_ssh_cmd.Value());
+	param(ssh_cmd,param_name.c_str(),default_ssh_cmd.c_str());
 
-	if( !ssh_arglist.AppendArgsV2Quoted(ssh_cmd.Value(), error_msg) ) {
+	if( !ssh_arglist.AppendArgsV2Quoted(ssh_cmd.c_str(), error_msg) ) {
 		logError("Error parsing configuration %s: %s\n",
-				param_name.Value(), error_msg.c_str());
+				param_name.c_str(), error_msg.c_str());
 		return false;
 	}
 
@@ -824,7 +825,7 @@ bool SSHToJob::execute_ssh()
 	ssh_arglist.Clear();
 	for(int i=0; argarray[i]; i++) {
 		char const *ptr;
-		MyString new_arg;
+		std::string new_arg;
 		for(ptr=argarray[i]; *ptr; ptr++) {
 			if( *ptr == '%' ) {
 				ptr += 1;
@@ -849,7 +850,7 @@ bool SSHToJob::execute_ssh()
 				else {
 					deleteStringArray(argarray);
 					logError("Unexpected %%%c in ssh command: %s\n",
-							 *ptr ? *ptr : ' ', ssh_cmd.Value());
+							 *ptr ? *ptr : ' ', ssh_cmd.c_str());
 					return false;
 				}
 			}
@@ -857,18 +858,18 @@ bool SSHToJob::execute_ssh()
 				new_arg += *ptr;
 			}
 		}
-		ssh_arglist.AppendArg(new_arg.Value());
+		ssh_arglist.AppendArg(new_arg.c_str());
 	}
 	deleteStringArray(argarray);
 	argarray = NULL;
 
 	ssh_arglist.AppendArgsFromArgList(m_ssh_args_from_command_line);
 
-	MyString ssh_command;
-	ssh_arglist.GetArgsStringForDisplay(&ssh_command);
+	std::string ssh_command;
+	ssh_arglist.GetArgsStringForDisplay(ssh_command);
 
 	dprintf(D_FULLDEBUG,"Executing ssh command: %s\n",
-			ssh_command.Value());
+			ssh_command.c_str());
 
 	int pid = fork();
 	if( pid == 0 ) {
@@ -919,7 +920,7 @@ bool SSHToJob::execute_ssh()
 
 			if( accepted_fd == -1 ) {
 				logError("Error accepting connection on %s: %s\n",
-					 fdpass_sock_name.Value(),
+					 fdpass_sock_name.c_str(),
 					 strerror(errno));
 			}
 			else {

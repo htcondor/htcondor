@@ -103,7 +103,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 	scheddAddr = sendUpdatesToSchedd ? strdup( schedd_addr ) : strdup("noschedd");
 
-	m_xfer_queue_contact_info = xfer_queue_contact_info;
+	m_xfer_queue_contact_info = xfer_queue_contact_info ? xfer_queue_contact_info : "";
 
 	if ( !jobAd->LookupString(ATTR_OWNER, owner)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_OWNER);
@@ -137,9 +137,9 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 
 		// construct the core file name we'd get if we had one.
-	MyString tmp_name = iwd;
+	std::string tmp_name = iwd;
 	formatstr_cat( tmp_name, "%ccore.%d.%d", DIR_DELIM_CHAR, cluster, proc );
-	core_file_name = strdup( tmp_name.Value() );
+	core_file_name = strdup( tmp_name.c_str() );
 
         // put the shadow's sinful string into the jobAd.  Helpful for
         // the mpi shadow, at least...and a good idea in general.
@@ -315,11 +315,11 @@ int BaseShadow::cdToIwd() {
 		dprintf(D_ALWAYS, "\n\nPath does not exist.\n"
 				"He who travels without bounds\n"
 				"Can't locate data.\n\n" );
-		MyString hold_reason;
-		hold_reason.formatstr("Cannot access initial working directory %s: %s",
+		std::string hold_reason;
+		formatstr(hold_reason, "Cannot access initial working directory %s: %s",
 		                    iwd.c_str(), strerror(chdir_errno));
-		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-		holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
+		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
+		holdJobAndExit(hold_reason.c_str(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
 		iRet = -1;
 	}
 	
@@ -726,8 +726,8 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 void
 BaseShadow::evictJob( int reason )
 {
-	MyString from_where;
-	MyString machine;
+	std::string from_where;
+	std::string machine;
 
 	// If we previously delayed exiting to let the starter wrap up, then
 	// immediately try exiting now. None of the cleanup below here is
@@ -738,10 +738,10 @@ BaseShadow::evictJob( int reason )
 	}
 
 	if( getMachineName(machine) ) {
-		from_where.formatstr(" from %s",machine.Value());
+		formatstr(from_where, " from %s" ,machine.c_str());
 	}
 	dprintf( D_ALWAYS, "Job %d.%d is being evicted%s\n",
-			 getCluster(), getProc(), from_where.Value() );
+			 getCluster(), getProc(), from_where.c_str() );
 
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In evictJob() w/ NULL JobAd!\n" );
@@ -1522,7 +1522,7 @@ display_dprintf_header(char **buf,int *bufpos,int *buflen)
 }
 
 bool
-BaseShadow::getMachineName( MyString & /*machineName*/ )
+BaseShadow::getMachineName( std::string & /*machineName*/ )
 {
 	return false;
 }
