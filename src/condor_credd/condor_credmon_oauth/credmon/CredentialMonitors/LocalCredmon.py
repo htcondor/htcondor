@@ -6,7 +6,7 @@ import scitokens
 import htcondor
 
 from credmon.CredentialMonitors.OAuthCredmon import OAuthCredmon
-from credmon.utils import atomic_output_json
+from credmon.utils import atomic_rename
 
 class LocalCredmon(OAuthCredmon):
     """
@@ -63,18 +63,22 @@ class LocalCredmon(OAuthCredmon):
             self.log.exception("Failure when attempting to serialize a SciToken, likely due to algorithm mismatch")
             return False
 
-        oauth_response = {"access_token": serialized_token.decode(),
-                          "expires_in":   int(self.token_lifetime)}
+        # copied from the Vault credmon
+        (tmp_fd, tmp_access_token_path) = tempfile.mkstemp(dir = self.cred_dir)
+        with os.fdopen(tmp_fd, 'w') as f:
+            f.write(serialized_token.decode()+'\n')
 
         access_token_path = os.path.join(self.cred_dir, username, token_name + '.use')
 
+        # atomically move new file into place
         try:
-            atomic_output_json(oauth_response, access_token_path)
-        except OSError as oe:
+            atomic_rename(tmp_access_token_path, access_token_path)
+        except OSError as e:
             self.log.exception("Failure when writing out new access token to {}: {}.".format(
                 access_token_path, str(oe)))
             return False
-        return True
+        else:
+            return True
 
     def process_cred_file(self, cred_fname):
         """
