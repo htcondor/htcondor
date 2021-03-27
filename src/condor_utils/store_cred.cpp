@@ -2557,7 +2557,7 @@ const std::string & IssuerKeyNameCache::NameList(CondorError * err)
 // helper function for getTokenSigningKeyPath and hasTokenSigningKey
 // takes a key_id and returns the path to the file that should contain the signing key
 // will set the CondorError if the configuration is missing knobs necessary to determine the path
-// will optionally set is_legacy_pool_pass if the signing key should be loaded using backward compat hacks for pool passwords
+// will optionally set is_pool_pass if the signing key should be loaded using backward compat hacks for pool passwords
 bool getTokenSigningKeyPath(const std::string &key_id, std::string &fullpath, CondorError *err, bool * is_pool_pass)
 {
 	bool is_pool = false;
@@ -2626,13 +2626,11 @@ bool getTokenSigningKey(const std::string &key_id, std::string &contents, Condor
 	// so that tokens issued against a non-trucated POOL signing key pre 8.9.12 still work
 	// we will always double the pool key
 	double_the_key = is_pool;
-	if (is_pool) {
-			// secret knob to tell us to process the token signing key the way we would pre 9.0
-			// Set this to true if the key has imbedded nulls and had been used to sign tokens with
-			// an earlier version of Condor, and for some reason you don't want to just truncate the
-			// file itself
-		truncate_at_first_null = param_boolean("SEC_TOKEN_POOL_SIGNING_KEY_IS_PASSWORD", false);
-	}
+		// secret knob to tell us to process the token signing key the way we would pre 9.0
+		// Set this to true if the key has embedded nulls and had been used to sign tokens with
+		// an earlier version of Condor, and for some reason you don't want to just truncate the
+		// file itself
+	truncate_at_first_null = param_boolean("SEC_TOKEN_POOL_SIGNING_KEY_IS_PASSWORD", false);
 
 	dprintf(D_SECURITY, "getTokenSigningKey(): for id=%s, pool=%d v84mode=%d reading %s\n",
 		key_id.c_str(), is_pool, truncate_at_first_null, fullpath.c_str());
@@ -2681,8 +2679,12 @@ bool getTokenSigningKey(const std::string &key_id, std::string &contents, Condor
 		}
 		len *= 2;
 	} else {
-		pw.resize(len);
+		pw.resize(len + 1);
 		simple_scramble(reinterpret_cast<char*>(pw.data()), buf, (int)len);
+		if (truncate_at_first_null) {
+			// Note the resize operation will explicitly NULL-terminate the array.
+			len = strlen(pw.data());
+		}
 	}
 	free(buf);
 
