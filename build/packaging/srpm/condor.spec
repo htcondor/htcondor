@@ -1679,7 +1679,7 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Thu Mar 23 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.12-1
+* Tue Mar 30 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.13-1
 - Host based security is no longer the default security model
 - Hardware accelerated integrity and AES encryption used by default
 - Normally, AES encryption is used for all communication and file transfers
@@ -1688,6 +1688,9 @@ fi
 - HTCondor now detects instances of multi-instance GPUs
 - Fixed memory leaks (collector updates in 8.9 could leak a few MB per day)
 - Many other enhancements and bug fixes, see version history for details
+
+* Thu Mar 25 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.12-1
+- Withdrawn due to compatibility issues with prior releases
 
 * Tue Mar 23 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.13-1
 - condor_ssh_to_job now maps CR and NL to work with editors like nano
