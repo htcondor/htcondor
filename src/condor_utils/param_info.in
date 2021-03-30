@@ -2514,7 +2514,7 @@ type=string
 tags=condor_auth_passwd
 
 [SEC_TOKEN_POOL_SIGNING_KEY_FILE]
-default=$(SEC_PASSWORD_DIRECTORY)/POOL
+default=$(SEC_PASSWORD_FILE)
 win32_default=$(RELEASE_DIR)\tokens.sk\POOL
 type=path
 description=Path to the POOL token signing key

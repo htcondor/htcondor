@@ -1,4 +1,4 @@
-condor (8.9.12-1) stable; urgency=medium
+condor (8.9.13-1) stable; urgency=medium
 
   * Host based security is no longer the default security model
   * Hardware accelerated integrity and AES encryption used by default
@@ -8,6 +8,12 @@ condor (8.9.12-1) stable; urgency=medium
   * HTCondor now detects instances of multi-instance GPUs
   * Fixed memory leaks (collector updates in 8.9 could leak a few MB per day)
   * Many other enhancements and bug fixes, see version history for details
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 29 Mar 2021 22:50:51 -0500
+
+condor (8.9.12-1) stable; urgency=medium
+
+  * Withdrawn due to compatibility issues with prior releases
 
  -- Tim Theisen <tim@cs.wisc.edu>  Thu, 25 Mar 2021 14:15:17 -0500
 
