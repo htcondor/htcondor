@@ -910,8 +910,8 @@ DockerAPI::testImageRuns(CondorError &err) {
 	param(test_image_name, "DOCKER_TEST_IMAGE_NAME");
 	if (test_image_name.empty()) return true;
 
-	// First, load the image from file system into the load docker cache
-	// will quietly success if image is already installed
+	// First, load the image from file system into the local Docker cache
+	// This will quietly succeed if image is already installed
 	int r = 0;
 
 	ArgList loadArgs;
@@ -939,7 +939,7 @@ DockerAPI::testImageRuns(CondorError &err) {
 			runArgs,
 			false,
 			nullptr, // env
-			false); //drop privs
+			false);  // false == don't drop privs -- docker needs priv to run
 
 	int exit_status = -1;
 	pgm.wait_for_exit(20, &exit_status);
