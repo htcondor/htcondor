@@ -155,6 +155,10 @@ class DockerAPI {
 		 */
 		static int detect( CondorError & err );
 
+		/*
+		 *  Load a pre-defined docker test image and exec it to make sure that docker fully works
+		 */
+		static int testImageRuns( CondorError &err);
 		/**
 		 * Obtains the configured DOCKER's version string.
 		 *

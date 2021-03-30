@@ -885,6 +885,15 @@ bool DockerProc::Detect() {
 	CondorError err;
 	bool hasDocker = DockerAPI::detect( err ) == 0;
 
+	if (hasDocker) {
+		int r  = DockerAPI::testImageRuns(err);
+		if (r == 0) {
+			hasDocker = true;
+		} else {
+			hasDocker = false;
+		}
+	}
+	
 	return hasDocker;
 }
 

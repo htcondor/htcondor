@@ -5171,6 +5171,18 @@ tags=starter
 default=true
 type=bool
 
+[DOCKER_PERFORM_TEST]
+default=true
+type=bool
+
+[DOCKER_TEST_IMAGE_PATH]
+default=$(LIBEXEC)/htcondor_docker_test
+type=string
+
+[DOCKER_TEST_IMAGE_NAME]
+default=htcondor_docker_test
+type=string
+
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
 type=string
