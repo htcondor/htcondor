@@ -2989,7 +2989,8 @@ Condor_Auth_Passwd::should_try_auth()
 	const std::string & keys = getCachedIssuerKeyNames(&err);
 	if ( ! err.empty()) {
 		dprintf(D_SECURITY, "Failed to determine available TOKEN keys: %s\n", err.getFullText().c_str());
-		return false;
+		// return TRUE because we are probably a tool that does not have read access to the signing keys
+		return true;
 	}
 	has_named_creds = ! keys.empty();
 	if (has_named_creds) {

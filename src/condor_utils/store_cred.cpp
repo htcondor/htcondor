@@ -2558,21 +2558,17 @@ const std::string & IssuerKeyNameCache::NameList(CondorError * err)
 // takes a key_id and returns the path to the file that should contain the signing key
 // will set the CondorError if the configuration is missing knobs necessary to determine the path
 // will optionally set is_legacy_pool_pass if the signing key should be loaded using backward compat hacks for pool passwords
-bool getTokenSigningKeyPath(const std::string &key_id, std::string &fullpath, CondorError *err, bool * is_legacy_pool_pass)
+bool getTokenSigningKeyPath(const std::string &key_id, std::string &fullpath, CondorError *err, bool * is_pool_pass)
 {
-	bool is_legacy = false;
+	bool is_pool = false;
 	if (key_id.empty() || (key_id == "POOL") || starts_with(key_id, POOL_PASSWORD_USERNAME "@")) {
 		param(fullpath, "SEC_TOKEN_POOL_SIGNING_KEY_FILE");
 		if (fullpath.empty()) {
 			if (err) err->push("TOKEN", 1, "No master pool token key setup in SEC_TOKEN_POOL_SIGNING_KEY_FILE");
 			return false;
 		}
-		// secret knob to tell us to process the token signing key the way we would pre 9.0
-		// Set this to true if the key has imbedded nulls and had been used to sign tokens with
-		// an earlier version of Condor, and for some reason you don't want to just truncate the
-		// file itself
 		// 
-		is_legacy = param_boolean("SEC_TOKEN_POOL_SIGNING_KEY_IS_PASSWORD", false);
+		is_pool = true;
 
 	} else {
 
@@ -2585,7 +2581,7 @@ bool getTokenSigningKeyPath(const std::string &key_id, std::string &fullpath, Co
 		dircat(dirpath, key_id.c_str(), fullpath);
 	}
 
-	if (is_legacy_pool_pass) *is_legacy_pool_pass = is_legacy;
+	if (is_pool_pass) *is_pool_pass = is_pool;
 	return true;
 }
 
@@ -2623,14 +2619,23 @@ bool getTokenSigningKey(const std::string &key_id, std::string &contents, Condor
 
 	// We get the "pool" signing key for this pool from a specific knob
 	std::string fullpath;
-	bool is_legacy = false;
-	if ( ! getTokenSigningKeyPath(key_id, fullpath, err, &is_legacy)) {
+	bool is_pool = false;
+	if ( ! getTokenSigningKeyPath(key_id, fullpath, err, &is_pool)) {
 		return false;
 	}
-	truncate_at_first_null = double_the_key = is_legacy;
+	// so that tokens issued against a non-trucated POOL signing key pre 8.9.12 still work
+	// we will always double the pool key
+	double_the_key = is_pool;
+	if (is_pool) {
+			// secret knob to tell us to process the token signing key the way we would pre 9.0
+			// Set this to true if the key has imbedded nulls and had been used to sign tokens with
+			// an earlier version of Condor, and for some reason you don't want to just truncate the
+			// file itself
+		truncate_at_first_null = param_boolean("SEC_TOKEN_POOL_SIGNING_KEY_IS_PASSWORD", false);
+	}
 
-	dprintf(D_SECURITY, "getTokenSigningKey(): for id=%s, v84mode=%d reading %s\n",
-		key_id.c_str(), is_legacy, fullpath.c_str());
+	dprintf(D_SECURITY, "getTokenSigningKey(): for id=%s, pool=%d v84mode=%d reading %s\n",
+		key_id.c_str(), is_pool, truncate_at_first_null, fullpath.c_str());
 
 	char* buf = nullptr;
 	size_t len = 0;
@@ -2640,6 +2645,7 @@ bool getTokenSigningKey(const std::string &key_id, std::string &contents, Condor
 		dprintf(D_ALWAYS, "getTokenSigningKey(): read_secure_file(%s) failed!\n", fullpath.c_str());
 		return false;
 	}
+	size_t file_len = len;
 	if (truncate_at_first_null) {
 		// buffer now contains the binary contents from the file.
 		// due to the way 8.4.X and earlier version wrote the file,
@@ -2669,6 +2675,11 @@ bool getTokenSigningKey(const std::string &key_id, std::string &contents, Condor
 			len = strlen(pw.data());
 		}
 		memcpy(&pw[len], &pw[0], len);
+		if (len < file_len) {
+			dprintf(D_ALWAYS, "WARNING: pool signing key truncated from %d to %d bytes because of internal NUL characters\n",
+				(int)file_len, (int)len);
+		}
+		len *= 2;
 	} else {
 		pw.resize(len);
 		simple_scramble(reinterpret_cast<char*>(pw.data()), buf, (int)len);

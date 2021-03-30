@@ -4,12 +4,24 @@ Development Release Series 8.9
 This is the development release series of HTCondor. The details of each
 version are described below.
 
-Version 8.9.12
+Version 8.9.13
 --------------
 
 Release Notes:
 
-- HTCondor version 8.9.12 released on March 25, 2021.
+- HTCondor version 8.9.13 released on March 30, 2021.
+
+- We fixed a bug in how the IDTOKENS authentication method reads its
+  signing keys.  You can use the new `condor_check_password` tool to
+  determine if your signing keys were truncated by this bug.  If they
+  were, we recommend that you reissue all tokens signed by the affected
+  key(s).  The `condor_check_password` tool may also be used to truncate
+  the affected key(s) before the first byte causing the problem, which
+  will allow existing tokens to continue to work, but is, perhaps
+  substantially, less cryptographically secure.  For more information,
+  see https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UpgradingToEightNineThirteen.
+  :jira:`295`
+  :jira:`369`
 
 - We have changed the default configuration file.  It no longer sets
   ``use security : host_based``.  This may cause your existing, insecure
@@ -25,13 +37,6 @@ Release Notes:
   comment, which includes the work-around for the previous item's problem.
   :jira:`339`
 
-- We fixed a bug in how the IDTOKENS authentication method reads its
-  signing keys.  As a result, some previously-issued tokens will no
-  longer be valid with this release.  In some cases, truncating the
-  signing key just before the first zero byte will allow the old tokens
-  to be validated until you can reissue new tokens.
-  :jira:`295`
-
 - HTCondor will now access tokens in directory ``/etc/condor/tokens.d`` as
   user root, meaning this directory and its contents should be only accessible
   by user root for maximum security.  If upgrading from an earlier v8.9.x release,
@@ -39,34 +44,12 @@ Release Notes:
   admins issue command ``chown -R root:root /etc/condor/tokens.d``.
   :jira:`266`
 
-- As an improved security measure, HTCondor will now prohibit Linux jobs
+- As an improved security measure, HTCondor can now prohibit Linux jobs
   from running setuid executables by default.  We believe the only common setuid
-  program this impacts is ``ping``.  To allow jobs to run setuid binaries,
-  set ``DISABLE_SETUID`` to ``false`` in the configuration of the worker
+  program this impacts is ``ping``.  To prohibit jobs from running setuid binaries,
+  set ``DISABLE_SETUID`` to ``true`` in the configuration of the worker
   node.
   :jira:`256`
-
-- The ``condor_procd`` now attempts to detect invalidly short reads of
-  the ``/proc`` filesystem on Linux.  If it reads ``/proc`` and does not
-  find its own PID, the PID of its parent, or PID 1, it considers the read
-  invalid and will immediately retry it.  However, these precautions do
-  not detect the majority of short reads.  In addition, therefore, the
-  ``condor_procd`` compares the number of PIDs it just read to the number
-  of PIDs it read the last time it checked; if the number is too much
-  smaller, that is also considered an invalid read.  If the re-read fails,
-  the result of the previous read is returned.  The ``condor_procd`` checks
-  for this condition because not finding every PID on the system causes
-  a wide variety of user-visible failures, which (usually) result in HTCondor
-  completely restarting.
-
-  The default threshold for "too much smaller" is that the current read is less
-  than 90% of the previous read; in our testing, this detected every actual
-  short read with an overhead of roughly one additional read per 4000.  You
-  can tune the threshold by setting ``_CONDOR_PROCAPI_RETRY_FRACTION``
-  in the ``condor_master``'s environment to the threshold's floating-point
-  value (so that the default is ``0.90``).  This value is only passed to the
-  ``condor_procd`` on start-up.
-  :jira:`33`
 
 - SCITOKENS is now in the default list of authentication methods.
   :jira:`47`
@@ -90,7 +73,28 @@ Release Notes:
   ``SEC_CREDENTIAL_MONITOR_OAUTH_LOG``.
   :jira:`122`
 
+Known Issues:
+
+- The MUNGE security method is not working at this time.
+
 New Features:
+
+- By default, all HTCondor communications and HTCondor file transfers
+  are protected by hardware-accelerated integrity and AES encryption.
+  HTCondor automatically falls back to Triple-DES or Blowfish when
+  inter-operating with a previous version.
+  :jira:`222`
+
+- HTCondor now detects instances of multi-instance GPUs.  These devices will
+  be reported as individual GPUs, each named as required to access them via
+  ``CUDA_VISIBLE_DEVICES``.  Some of the ``-extra`` and ``-dynamic``
+  properties are unavailable for these devices.  Due to driver limitations,
+  if MIG is enabled on any GPU, HTCondor will detect all devices on the system
+  using NVML; some ``-extra`` properties will not be reported for these
+  systems as a result.
+
+  This feature does not include reporting the utilization of MIG instances.
+  :jira:`137`
 
 - If ``SCITOKENS_FILE`` is not specified, HTCondor will now follow WLCG's
   bearer token discovery protocol to find it.  See
@@ -112,17 +116,6 @@ New Features:
 - HTCondor daemons that read the configuration files as root when they start
   up will now also read the configuration files as root when they are reconfigured.
   :jira:`314`
-
-- HTCondor now detects instances of multi-instance GPUs.  These devices will
-  be reported as individual GPUs, each named as required to access them via
-  ``CUDA_VISIBLE_DEVICES``.  Some of the ``-extra`` and ``-dynamic``
-  properties are unavailable for these devices.  Due to driver limitations,
-  if MIG is enabled on any GPU, HTCondor will detect all devices on the system
-  using NVML; some ``-extra`` properties will not be reported for these
-  systems as a result.
-
-  This feature does not include reporting the utilization of MIG instances.
-  :jira:`137`
 
 - To make the debugging logs more consistent, the slot name is always
   appended to the StarterLog.  Previously, a single slot startd's
@@ -232,30 +225,36 @@ New Features:
 
 Bugs Fixed:
 
-- Sufficiently old versions of the CUDA libraries no longer cause
-  `condor_gpu_discovery` to segfault.
-  :jira:`343`
+- Fixed a bug where daemons would leak memory whenever sending updates
+  to the collector, at the rate of a few megabytes per day.  This leak
+  was introduced earlier in the HTCondor v8.9.x series.
+  :jira:`323`
 
 - Malformed or missing SciToken can result in a schedd abort when using ``SCHEDD_AUDIT_LOG``.
   :jira:`315`
 
+- Fixed a problem where ``condor_watch_q`` would crash when updating totals for DAGman jobs.
+  :jira:`201`
+
+- Sufficiently old versions of the CUDA libraries no longer cause
+  `condor_gpu_discovery` to segfault.
+  :jira:`343`
+
+- Fixed a bug introduced in version 8.9.12, where non-root clients could not
+  use IDTOKENS.
+  :jira:`370`
 
 - Fixed a bug where an IDTOKEN could be sent to a user who had authenticated
   with the ANONYMOUS method after the auto-approval period had expired.
   :jira:`231`
 
 - HTCondor daemons used to access tokens in ``/etc/condor/tokens.d`` as user ``condor``, now
-  instead tokens are accessed as user ``root``.  
+  instead tokens are accessed as user ``root``.
   :jira:`266`
 
 - Fixed a bug where jobs that asked for ``transfer_output_files = .`` would
   be put on hold if they were evicted and restarted.
   :jira:`267`
-
-- Fixed a bug where daemons would leak memory whenever sending updates
-  to the collector, at the rate of a few megabytes per day.  This leak
-  was introduced earlier in the HTCondor v8.9.x series.
-  :jira:`323`
 
 - The ``preserve_relative_paths`` submit command now properly allows jobs
   to run on HTCondor versions 8.9.10 and later.
@@ -269,9 +268,6 @@ Bugs Fixed:
   being set to the scratch directory when `SINGULARITY_TARGET_DIR` wasn't
   also set.
   :jira:`91`
-
-- Fixed a problem where ``condor_watch_q`` would crash when updating totals for DAGman jobs.
-  :jira:`201`
 
 - The tool ``condor_store_cred`` will now accept and use a handle for an OAuth
   cred, and the *condor_credd* will now honor the handle in the stored filename.
@@ -294,10 +290,31 @@ Bugs Fixed:
   errors were not getting reported in the debug output.
   :jira:`85`
 
-- The minihtcondor DEB package no longer aborts if installed on 
+- The minihtcondor DEB package no longer aborts if installed on
   systems that do not have systemd installed, as is common with Debian and Ubuntu
   docker containers.
   :jira:`362`
+
+- The ``condor_procd`` now detects and compensates for incomplete reads of
+  the ``/proc`` file system.
+  :jira:`33`
+
+Version 8.9.12
+--------------
+
+Release Notes:
+
+- HTCondor version 8.9.12 was released on March 25, 2021, and pulled the
+  next day for significant incompatibilities with previous releases.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 
 Version 8.9.11
 --------------
