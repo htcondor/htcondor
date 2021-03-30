@@ -1150,6 +1150,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_job_router
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
+%_libexecdir/condor/htcondor_docker_test
 %if %blahp
 %dir %_libexecdir/condor/glite/bin
 %_libexecdir/condor/glite/bin/kubernetes_cancel.sh
