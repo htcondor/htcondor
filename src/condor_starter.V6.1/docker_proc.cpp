@@ -893,7 +893,7 @@ bool DockerProc::Detect() {
 			hasDocker = false;
 		}
 	}
-	
+
 	return hasDocker;
 }
 

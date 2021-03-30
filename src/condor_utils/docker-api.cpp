@@ -894,7 +894,7 @@ DockerAPI::testImageRuns(CondorError &err) {
 
 #ifndef LINUX
 	return 0;
-#else 
+#else
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 
 	bool run_test = param_boolean("DOCKER_PERFORM_TEST", true);
@@ -914,12 +914,12 @@ DockerAPI::testImageRuns(CondorError &err) {
 	// will quietly success if image is already installed
 	int r = 0;
 
-    ArgList loadArgs;
-    loadArgs.AppendArg( "load" );
-    loadArgs.AppendArg( "-i" ); // input from following file
+	ArgList loadArgs;
+	loadArgs.AppendArg( "load" );
+	loadArgs.AppendArg( "-i" ); // input from following file
 	r  = run_docker_command(loadArgs, test_image_path, 20, err, true);
 
-	dprintf(D_FULLDEBUG, "Loaded docker test image result is %d\n", r);
+	dprintf(D_FULLDEBUG, "Tried to load docker test image, result was %d\n", r);
 	if (r != 0) {
 		return r; // false
 	}
@@ -959,7 +959,7 @@ DockerAPI::testImageRuns(CondorError &err) {
 	ArgList rmiArgs;
 	rmiArgs.AppendArg("rmi");
 	r  = run_docker_command(rmiArgs, test_image_name, 20, err, true);
-	dprintf(D_FULLDEBUG, "Results of docker rmi test image is %d\n", r);
+	dprintf(D_FULLDEBUG, "Tried to remove docker test image, result was %d\n", r);
 
 	if (dockerWorks) {
 		return 0;
@@ -968,6 +968,7 @@ DockerAPI::testImageRuns(CondorError &err) {
 	}
 #endif
 }
+
 //
 // FIXME: We have a lot of boilerplate code in this function and file.
 //
