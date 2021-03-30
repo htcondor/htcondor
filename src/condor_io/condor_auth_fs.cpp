@@ -169,11 +169,11 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				filename = "/tmp";
 			}
 			formatstr_cat( filename, "/FS_REMOTE_%s_%d_XXXXXXXXX",
-			               get_local_hostname().Value(), mypid );
+			               get_local_hostname().c_str(), mypid );
 			dprintf( D_SECURITY, "FS_REMOTE: client template is %s\n", filename.c_str() );
 
 			int sync_fd;
-			char *new_dir = strdup(filename.Value());
+			char *new_dir = strdup(filename.c_str());
 			sync_fd = condor_mkstemp(new_dir);
 			m_new_dir = new_dir;
 			free(new_dir);
@@ -300,7 +300,7 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 			// in so we create a dup of it just in case MyString does
 			// anything funny or uses string spaces, etc.
 			formatstr_cat( filename_template, "/FS_REMOTE_%s_%d_XXXXXX",
-			               get_local_hostname().Value(), mypid );
+			               get_local_hostname().c_str(), mypid );
 			char* filename_inout = strdup(filename_template.Value());
 
 			dprintf( D_SECURITY, "FS_REMOTE: sync filename is %s\n", filename_inout );

@@ -834,7 +834,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 		}
 
 		for (unsigned int i = 0; i < hostnames.size(); ++i) {
-			thehost = hostnames[i].Value();
+			thehost = hostnames[i].c_str();
 			peer_description.append_to_list(thehost);
 
 			if ( !(mask&deny_resolved) && lookup_user_host_deny(perm,who,thehost) ) {

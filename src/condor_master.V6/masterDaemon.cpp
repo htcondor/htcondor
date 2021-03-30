@@ -641,7 +641,7 @@ int daemon::RealStart( )
 		dprintf ( 
 			D_FULLDEBUG, 
 			"Looking for matching Collector on '%s' ...\n", 
-			get_local_fqdn().Value());
+			get_local_fqdn().c_str());
 		CollectorList* collectors = NULL;
 		if ((collectors = daemonCore->getCollectorList())) {
 			MyString my_fqdn_str = get_local_fqdn();
@@ -1405,7 +1405,7 @@ daemon::Obituary( int status )
     char buf[1000];
 
 	std::string email_subject;
-	formatstr(email_subject, "Problem %s: %s ", get_local_fqdn().Value(), 
+	formatstr(email_subject, "Problem %s: %s ", get_local_fqdn().c_str(), 
 						  condor_basename(process_name));
 	if ( was_not_responding ) {
 		email_subject += "killed (unresponsive)";
@@ -1433,7 +1433,7 @@ daemon::Obituary( int status )
     }
 
 	fprintf( mailer, "\"%s\" on \"%s\" ",process_name, 
-			 get_local_fqdn().Value() );
+			 get_local_fqdn().c_str() );
 
 	if ( was_not_responding ) {
 		fprintf( mailer, "was killed because\nit was no longer responding.\n");

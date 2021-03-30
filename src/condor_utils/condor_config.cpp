@@ -1017,9 +1017,9 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	if( host ) {
 		insert_macro("HOSTNAME", host, ConfigMacroSet, DetectedMacro, ctx);
 	} else {
-		insert_macro("HOSTNAME", get_local_hostname().Value(), ConfigMacroSet, DetectedMacro, ctx);
+		insert_macro("HOSTNAME", get_local_hostname().c_str(), ConfigMacroSet, DetectedMacro, ctx);
 	}
-	insert_macro("FULL_HOSTNAME", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro, ctx);
+	insert_macro("FULL_HOSTNAME", get_local_fqdn().c_str(), ConfigMacroSet, DetectedMacro, ctx);
 
 		// Also insert tilde since we don't want that over-written.
 	if( tilde ) {
@@ -1925,14 +1925,14 @@ check_domain_attributes()
 
 	filesys_domain = param("FILESYSTEM_DOMAIN");
 	if( !filesys_domain ) {
-		insert_macro("FILESYSTEM_DOMAIN", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro, ctx);
+		insert_macro("FILESYSTEM_DOMAIN", get_local_fqdn().c_str(), ConfigMacroSet, DetectedMacro, ctx);
 	} else {
 		free( filesys_domain );
 	}
 
 	uid_domain = param("UID_DOMAIN");
 	if( !uid_domain ) {
-		insert_macro("UID_DOMAIN", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro, ctx);
+		insert_macro("UID_DOMAIN", get_local_fqdn().c_str(), ConfigMacroSet, DetectedMacro, ctx);
 	} else {
 		free( uid_domain );
 	}
@@ -2918,9 +2918,9 @@ reinsert_specials( const char* host )
 	if( host ) {
 		insert_macro("HOSTNAME", host, ConfigMacroSet, DetectedMacro, ctx);
 	} else {
-		insert_macro("HOSTNAME", get_local_hostname().Value(), ConfigMacroSet, DetectedMacro, ctx);
+		insert_macro("HOSTNAME", get_local_hostname().c_str(), ConfigMacroSet, DetectedMacro, ctx);
 	}
-	insert_macro("FULL_HOSTNAME", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro, ctx);
+	insert_macro("FULL_HOSTNAME", get_local_fqdn().c_str(), ConfigMacroSet, DetectedMacro, ctx);
 	insert_macro("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro, ctx);
 	// insert $(LOCALNAME) macro as the value of LocalName OR the value of SubSystem if there is no local name.
 	const char * localname = get_mySubSystem()->getLocalName();

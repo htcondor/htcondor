@@ -209,7 +209,7 @@ HADStateMachine::softReconfigure(void)
         // 'my_username' allocates dynamic string
         buffer = my_username();
         tmp = buffer ? buffer : "UNKNOWN";
-        formatstr( m_name, "%s@%s", tmp, get_local_fqdn().Value() );
+        formatstr( m_name, "%s@%s", tmp, get_local_fqdn().c_str() );
 	if ( buffer ) {
 		free( buffer );
 	}

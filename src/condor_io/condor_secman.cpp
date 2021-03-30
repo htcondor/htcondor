@@ -3307,7 +3307,7 @@ char* SecMan::my_unique_id() {
 #endif
 
         MyString tid;
-        tid.formatstr( "%s:%i:%i", get_local_hostname().Value(), mypid, 
+        tid.formatstr( "%s:%i:%i", get_local_hostname().c_str(), mypid, 
 					 (int)time(0));
 
         _my_unique_id = strdup(tid.Value());

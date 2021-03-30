@@ -10965,7 +10965,7 @@ DaemonCore::publish(ClassAd *ad) {
 	ad->Assign(ATTR_MY_CURRENT_TIME, (int)time(NULL));
 
 		// Every daemon wants ATTR_MACHINE to be the full hostname:
-	ad->Assign(ATTR_MACHINE, get_local_fqdn().Value());
+	ad->Assign(ATTR_MACHINE, get_local_fqdn().c_str());
 
 		// Publish our network identification attributes:
 	tmp = privateNetworkName();

@@ -2137,10 +2137,10 @@ void CollectorDaemon::init_classad(int interval)
             if( strchr( CollectorName, '@' ) ) {
                formatstr( id, "%s", CollectorName );
             } else {
-               formatstr( id, "%s@%s", CollectorName, get_local_fqdn().Value() );
+               formatstr( id, "%s@%s", CollectorName, get_local_fqdn().c_str() );
             }
     } else {
-            formatstr( id, "%s", get_local_fqdn().Value() );
+            formatstr( id, "%s", get_local_fqdn().c_str() );
     }
     ad->Assign( ATTR_NAME, id );
 

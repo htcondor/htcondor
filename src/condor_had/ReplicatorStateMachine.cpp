@@ -225,7 +225,7 @@ ReplicatorStateMachine::initializeClassAd()
     SetMyTypeName(*m_classAd, "Replication");
     SetTargetTypeName(*m_classAd, "");
 
-    formatstr( m_name, "replication@%s -p %d", get_local_fqdn().Value(),
+    formatstr( m_name, "replication@%s -p %d", get_local_fqdn().c_str(),
 				  daemonCore->InfoCommandPort( ) );
     m_classAd->Assign( ATTR_NAME, m_name );
     m_classAd->Assign( ATTR_MY_ADDRESS,

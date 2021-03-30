@@ -662,7 +662,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		dummyAd.Assign(ATTR_IMAGE_SIZE, 0);
 		dummyAd.Assign(ATTR_JOB_CMD, "boinc");
 		std::string gjid;
-		formatstr(gjid,"%s#%d#%d#%d", get_local_hostname().Value(), now, 1, now);
+		formatstr(gjid,"%s#%d#%d#%d", get_local_hostname().c_str(), now, 1, now);
 		dummyAd.Assign(ATTR_GLOBAL_JOB_ID, gjid);
 		jobAd = &dummyAd;
 	}

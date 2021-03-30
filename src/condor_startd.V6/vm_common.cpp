@@ -157,7 +157,7 @@ vmapi_is_my_machine(char *h1)
 	if( !h1 )
 		return FALSE;
 
-	if( !strcmp(h1, get_local_fqdn().Value()) )
+	if( !strcmp(h1, get_local_fqdn().c_str()) )
 		return TRUE;
 
 	// TODO: Picking IPv4 arbitrarily.

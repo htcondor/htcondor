@@ -1271,7 +1271,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
             // name
 		_is_local = true;
 		New_name( localName() );
-		New_full_hostname( strdup(get_local_fqdn().Value()) );
+		New_full_hostname( strdup(get_local_fqdn().c_str()) );
 		dprintf( D_HOSTNAME, "Neither name nor addr specified, using local "
 				 "values - name: \"%s\", full host: \"%s\"\n", 
 				 _name, _full_hostname );
@@ -1467,8 +1467,8 @@ Daemon::getCmInfo( const char* subsys )
 				// everything else (port, hostname, etc), will be
 				// initialized and set correctly by our caller based
 				// on the fullname and the address.
-			New_name( strdup(get_local_fqdn().Value()) );
-			New_full_hostname( strdup(get_local_fqdn().Value()) );
+			New_name( strdup(get_local_fqdn().c_str()) );
+			New_full_hostname( strdup(get_local_fqdn().c_str()) );
 			free( host );
 			return true;
 		}
@@ -1524,8 +1524,8 @@ Daemon::findCmDaemon( const char* cm_name )
 	if( _port == 0 && readAddressFile(_subsys) ) {
 		dprintf( D_HOSTNAME, "Port 0 specified in name, "
 				 "IP/port found in address file\n" );
-		New_name( strdup(get_local_fqdn().Value()) );
-		New_full_hostname( strdup(get_local_fqdn().Value()) );
+		New_name( strdup(get_local_fqdn().c_str()) );
+		New_full_hostname( strdup(get_local_fqdn().c_str()) );
 		return true;
 	}
 
@@ -1786,7 +1786,7 @@ Daemon::localName( void )
 		my_name = build_valid_daemon_name( tmp );
 		free( tmp );
 	} else {
-		my_name = strdup( get_local_fqdn().Value() );
+		my_name = strdup( get_local_fqdn().c_str() );
 	}
 	return my_name;
 }
