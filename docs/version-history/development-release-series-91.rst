@@ -15,7 +15,8 @@ Release Notes:
 
 New Features:
 
-- None.
+- gdb and strace should now work in Docker Universe jobs.
+  :jira:`349`
 
 Bugs Fixed:
 
