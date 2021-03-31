@@ -116,11 +116,10 @@ usage( const char *str, int iExitCode )
 	fprintf( stderr, 
 			 "    -pool hostname\tuse the given central manager to find daemons\n" );
 	if( cmd == DAEMONS_OFF || cmd == DAEMON_OFF || cmd == RESTART ) {
-		fprintf( stderr, "    -graceful\t\tgracefully shutdown daemons %s\n", 
-				 "(the default)" );
-		fprintf( stderr, "    -fast\t\tquickly shutdown daemons\n" );
-		fprintf( stderr, "    -peaceful\t\twait indefinitely for jobs to finish\n" );
-		fprintf( stderr, "    -force-graceful\t\tupgrade a peaceful shutdown to a graceful shutdown\n" );
+		fprintf( stderr, "    -graceful\t\tThe default. If jobs are running, wait for up to the configured \n\t\t\tgrace period for them to finish, then exit\n");
+		fprintf( stderr, "    -fast\t\tquickly shutdown daemons, immediately evicting any running jobs\n" );
+		fprintf( stderr, "    -peaceful\t\twait indefinitely for jobs to finish before shutdown\n" );
+		fprintf( stderr, "    -force-graceful\tupgrade a peaceful shutdown to a graceful shutdown\n" );
 	}
 	if( cmd == VACATE_CLAIM ) {
 		fprintf( stderr, 
