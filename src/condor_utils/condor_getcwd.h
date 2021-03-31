@@ -27,5 +27,6 @@ class MyString;
    returns: true on success, false on failure (errno contains reason)
  */
 bool condor_getcwd(MyString &path);
+bool condor_getcwd(std::string &path);
 
 #endif

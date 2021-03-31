@@ -118,34 +118,34 @@ UserProc::initKillSigs( void )
 bool
 UserProc::JobReaper(int pid, int status)
 {
-	MyString line;
-	MyString error_txt;
-	MyString filename;
+	std::string line;
+	std::string error_txt;
+	std::string filename;
 	const char* dir = Starter->GetWorkingDir(0);
 	FILE* fp;
 
 	dprintf( D_FULLDEBUG, "Inside UserProc::JobReaper()\n" );
 
-	filename.formatstr("%s%c%s", dir, DIR_DELIM_CHAR, JOB_WRAPPER_FAILURE_FILE);
-	if (0 == access(filename.Value(), F_OK)) {
+	formatstr(filename, "%s%c%s", dir, DIR_DELIM_CHAR, JOB_WRAPPER_FAILURE_FILE);
+	if (0 == access(filename.c_str(), F_OK)) {
 		// The job wrapper failed, so read the contents of the file
 		// and EXCEPT, just as is done when an executable is unable
 		// to be run.  Ideally, both failure cases would propagate
 		// into the job ad
-		fp = safe_fopen_wrapper_follow(filename.Value(), "r");
+		fp = safe_fopen_wrapper_follow(filename.c_str(), "r");
 		if (!fp) {
 			dprintf(D_ALWAYS, "Unable to open \"%s\" for reading: "
-					"%s (errno %d)\n", filename.Value(),
+					"%s (errno %d)\n", filename.c_str(),
 					strerror(errno), errno);
 		} else {
-			while (line.readLine(fp))
+			while (readLine(line, fp))
 			{
 				error_txt += line;
 			}
 			fclose(fp);
 		}
-		error_txt.trim();
-		EXCEPT("The job wrapper failed to execute the job: %s", error_txt.Value());
+		trim(error_txt);
+		EXCEPT("The job wrapper failed to execute the job: %s", error_txt.c_str());
 	}
 
 	if (JobPid == pid) {
@@ -359,9 +359,9 @@ UserProc::getStdFile( std_file_type type,
 	if( wants_stream && ! is_null_file ) {
 		StreamHandler *handler = new StreamHandler;
 		if( !handler->Init(filename, stream_name, is_output, streamingOpenFlags( is_output ) ) ) {
-			MyString err_msg;
-			err_msg.formatstr( "unable to establish %s stream", phrase );
-			Starter->jic->notifyStarterError( err_msg.Value(), true,
+			std::string err_msg;
+			formatstr( err_msg, "unable to establish %s stream", phrase );
+			Starter->jic->notifyStarterError( err_msg.c_str(), true,
 			    is_output ? CONDOR_HOLD_CODE_UnableToOpenOutputStream :
 			                CONDOR_HOLD_CODE_UnableToOpenInputStream, 0 );
 			return false;
@@ -455,7 +455,7 @@ UserProc::openStdFile( std_file_type type,
 	if( fd < 0 ) {
 		int open_errno = errno;
 		char const *errno_str = strerror( errno );
-		MyString err_msg;
+		std::string err_msg;
 		const char* phrase;
 		if (type == SFT_IN) {
 			phrase = "standard input";
@@ -466,13 +466,13 @@ UserProc::openStdFile( std_file_type type,
 		else {
 			phrase = "standard error";
 		}
-		err_msg.formatstr( "Failed to open '%s' as %s: %s (errno %d)",
+		formatstr( err_msg, "Failed to open '%s' as %s: %s (errno %d)",
 		                 filename.Value(),
 		                 phrase,
 		                 errno_str,
 		                 errno );
-		dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
-		Starter->jic->notifyStarterError( err_msg.Value(), true,
+		dprintf( D_ALWAYS, "%s\n", err_msg.c_str() );
+		Starter->jic->notifyStarterError( err_msg.c_str(), true,
 		  is_output ? CONDOR_HOLD_CODE_UnableToOpenOutput :
 		              CONDOR_HOLD_CODE_UnableToOpenInput, open_errno );
 		return -1;

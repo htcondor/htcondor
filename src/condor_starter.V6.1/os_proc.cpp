@@ -216,10 +216,10 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 		// Either way, we now have to add the user-specified args as
 		// the rest of the Args string.
-	MyString args_error;
-	if(!args.AppendArgsFromClassAd(JobAd,&args_error)) {
+	std::string args_error;
+	if(!args.AppendArgsFromClassAd(JobAd,args_error)) {
 		dprintf(D_ALWAYS, "Failed to read job arguments from JobAd.  "
-				"Aborting OsProc::StartJob: %s\n",args_error.Value());
+				"Aborting OsProc::StartJob: %s\n",args_error.c_str());
 		job_not_started = true;
 		return 0;
 	}
@@ -581,16 +581,16 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// in the below dprintfs, we want to skip past argv[0], which
 		// is sometimes condor_exec, in the Args string. 
 
-	MyString args_string;
-	args.GetArgsStringForDisplay(&args_string, 1);
+	std::string args_string;
+	args.GetArgsStringForDisplay(args_string, 1);
 	if( has_wrapper ) { 
 			// print out exactly what we're doing so folks can debug
 			// it, if they need to.
 		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.c_str(), 
-				 args_string.Value() );
+				 args_string.c_str() );
 	} else {
 		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.c_str(),
-				 args_string.Value() );
+				 args_string.c_str() );
 	}
 
 	
@@ -651,8 +651,8 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
     // errno is 0 in the privsep case.  This executes for the daemon core create-process logic
     if ((FALSE == JobPid) && (0 != create_process_errno)) {
         if (create_process_err_msg != "") create_process_err_msg += " ";
-        MyString errbuf;
-        errbuf.formatstr("(errno=%d: '%s')", create_process_errno, strerror(create_process_errno));
+        std::string errbuf;
+        formatstr(errbuf, "(errno=%d: '%s')", create_process_errno, strerror(create_process_errno));
         create_process_err_msg += errbuf;
     }
 
@@ -687,17 +687,17 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				EXCEPT("Create_Process failed to register the job with the ProcD");
 			}
 
-			MyString err_msg = "Failed to execute '";
+			std::string err_msg = "Failed to execute '";
 			err_msg += JobName;
 			err_msg += "'";
-			if(!args_string.IsEmpty()) {
+			if(!args_string.empty()) {
 				err_msg += " with arguments ";
-				err_msg += args_string.Value();
+				err_msg += args_string.c_str();
 			}
 			err_msg += ": ";
 			err_msg += create_process_err_msg;
 			if( !ThisProcRunsAlongsideMainProc() ) {
-				Starter->jic->notifyStarterError( err_msg.Value(),
+				Starter->jic->notifyStarterError( err_msg.c_str(),
 			    	                              true,
 			        	                          CONDOR_HOLD_CODE_FailedToCreateProcess,
 			            	                      create_process_errno );
@@ -705,7 +705,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		}
 
 		dprintf(D_ALWAYS,"Create_Process(%s,%s, ...) failed: %s\n",
-			JobName.c_str(), args_string.Value(), create_process_err_msg.Value());
+			JobName.c_str(), args_string.c_str(), create_process_err_msg.Value());
 		job_not_started = true;
 		return 0;
 	}
@@ -859,8 +859,8 @@ OsProc::checkCoreFile( void )
 
 	// Since Linux now writes out "core.pid" by default, we should
 	// search for that.  Try the JobPid of our first child:
-	MyString name_with_pid;
-	name_with_pid.formatstr( "core.%d", JobPid );
+	std::string name_with_pid;
+	formatstr( name_with_pid, "core.%d", JobPid );
 
 	if (Starter->privSepHelper() != NULL) {
 
@@ -868,8 +868,8 @@ OsProc::checkCoreFile( void )
 		EXCEPT("PrivSep not yet available on Windows");
 #else
 		struct stat stat_buf;
-		if (stat(name_with_pid.Value(), &stat_buf) != -1) {
-			Starter->jic->addToOutputFiles(name_with_pid.Value());
+		if (stat(name_with_pid.c_str(), &stat_buf) != -1) {
+			Starter->jic->addToOutputFiles(name_with_pid.c_str());
 		}
 		else if (stat("core", &stat_buf) != -1) {
 			Starter->jic->addToOutputFiles("core");
@@ -877,19 +877,19 @@ OsProc::checkCoreFile( void )
 #endif
 	}
 	else {
-		MyString new_name;
-		new_name.formatstr( "core.%d.%d",
+		std::string new_name;
+		formatstr( new_name, "core.%d.%d",
 		                  Starter->jic->jobCluster(), 
 		                  Starter->jic->jobProc() );
 
-		if( renameCoreFile(name_with_pid.Value(), new_name.Value()) ) {
+		if( renameCoreFile(name_with_pid.c_str(), new_name.c_str()) ) {
 			// great, we found it, renameCoreFile() took care of
 			// everything we need to do... we're done.
 			return;
 		}
 
 		// Now, just see if there's a file called "core"
-		if( renameCoreFile("core", new_name.Value()) ) {
+		if( renameCoreFile("core", new_name.c_str()) ) {
 			return;
 		}
 	}
@@ -915,18 +915,18 @@ OsProc::renameCoreFile( const char* old_name, const char* new_name )
 	bool rval = false;
 	int t_errno = 0;
 
-	MyString old_full;
-	MyString new_full;
+	std::string old_full;
+	std::string new_full;
 	const char* job_iwd = Starter->jic->jobIWD();
-	old_full.formatstr( "%s%c%s", job_iwd, DIR_DELIM_CHAR, old_name );
-	new_full.formatstr( "%s%c%s", job_iwd, DIR_DELIM_CHAR, new_name );
+	formatstr( old_full, "%s%c%s", job_iwd, DIR_DELIM_CHAR, old_name );
+	formatstr( new_full, "%s%c%s", job_iwd, DIR_DELIM_CHAR, new_name );
 
 	priv_state old_priv;
 
 		// we need to do this rename as the user...
 	errno = 0;
 	old_priv = set_user_priv();
-	int ret = rename(old_full.Value(), new_full.Value());
+	int ret = rename(old_full.c_str(), new_full.c_str());
 	if( ret != 0 ) {
 			// rename failed
 		t_errno = errno; // grab errno right away
@@ -949,7 +949,7 @@ OsProc::renameCoreFile( const char* old_name, const char* new_name )
 		Starter->jic->addToOutputFiles( new_name );
 	} else if( t_errno != ENOENT ) {
 		dprintf( D_ALWAYS, "Failed to rename(%s,%s): errno %d (%s)\n",
-				 old_full.Value(), new_full.Value(), t_errno,
+				 old_full.c_str(), new_full.c_str(), t_errno,
 				 strerror(t_errno) );
 	}
 	return rval;
@@ -1058,9 +1058,9 @@ OsProc::PublishToEnv( Env * proc_env ) {
 	UserProc::PublishToEnv( proc_env );
 
 	if( howCode != -1 ) {
-		MyString name;
+		std::string name;
 		formatstr( name, "_%s_HOW_CODE", myDistro->Get() );
-		name.upper_case();
+		upper_case(name);
 		proc_env->SetEnv( name, std::to_string( howCode ) );
 	}
 }
@@ -1081,9 +1081,9 @@ OsProc::makeCpuAffinityMask(int slotId) {
 
 	char *affinityParamResult = param("STARTD_ASSIGNED_AFFINITY");
 	if (!affinityParamResult) {
-		MyString affinityParam;
-		affinityParam.formatstr("SLOT%d_CPU_AFFINITY", slotId);
-		affinityParamResult = param(affinityParam.Value());
+		std::string affinityParam;
+		formatstr(affinityParam, "SLOT%d_CPU_AFFINITY", slotId);
+		affinityParamResult = param(affinityParam.c_str());
 	}
 
 	if (affinityParamResult == NULL) {

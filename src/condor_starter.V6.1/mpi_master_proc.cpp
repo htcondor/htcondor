@@ -145,15 +145,15 @@ MPIMasterProc::alterEnv()
         return 0;
     }
 
-	MyString path;
-	MyString new_path;
+	std::string path;
+	std::string new_path;
 
 	new_path = condor_rsh;
 	new_path += ":";
 
 	if(envobject.GetEnv("PATH",path)) {
         // The user gave us a path in env.  Find & alter:
-        dprintf ( D_FULLDEBUG, "$PATH in ad:%s\n", path.Value() );
+        dprintf ( D_FULLDEBUG, "$PATH in ad:%s\n", path.c_str() );
 
 		new_path += path;
 	}
@@ -172,7 +172,7 @@ MPIMasterProc::alterEnv()
 			new_path = condor_rsh;
         }
     }
-	envobject.SetEnv("PATH",new_path.Value());
+	envobject.SetEnv("PATH",new_path.c_str());
     
         /* We want to add one little thing to the environment:
            We want to put the var MPI_MY_ADDRESS in here, 
@@ -192,10 +192,10 @@ MPIMasterProc::alterEnv()
 		// In case the user job is linked with a newer version of
 		// MPICH that honors the P4_RSHCOMMAND env var, let's set
 		// that, too.
-	MyString condor_rsh_command;
+	std::string condor_rsh_command;
 	condor_rsh_command = condor_rsh;
 	condor_rsh_command += "/rsh";
-	envobject.SetEnv( "P4_RSHCOMMAND", condor_rsh_command.Value());
+	envobject.SetEnv( "P4_RSHCOMMAND", condor_rsh_command.c_str());
 
 	free( condor_rsh );
 

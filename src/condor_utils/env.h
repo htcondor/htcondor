@@ -246,6 +246,7 @@ class Env {
 	void Walk(bool (*walk_func)(void* pv, const MyString &var, const MyString &val), void* pv) const;
 
 	bool GetEnv(MyString const &var,MyString &val) const;
+	bool GetEnv(const std::string &var, std::string &val) const;
 
 		// Returns true if string is safe to insert in old-style
 		// ; or | delimited string.

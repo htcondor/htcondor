@@ -280,11 +280,11 @@ Singularity::setup(ClassAd &machineAd,
 
 	sing_args.AppendArg("-C");
 
-	MyString args_error;
+	std::string args_error;
 	char *tmp = param("SINGULARITY_EXTRA_ARGUMENTS");
-	if(!sing_args.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
+	if(!sing_args.AppendArgsV1RawOrV2Quoted(tmp,args_error)) {
 		dprintf(D_ALWAYS,"singularity: failed to parse extra arguments: %s\n",
-		args_error.Value());
+		args_error.c_str());
 		free(tmp);
 		return Singularity::FAILURE;
 	}
@@ -303,11 +303,11 @@ Singularity::setup(ClassAd &machineAd,
 	sing_args.AppendArg(exec.c_str());
 	sing_args.AppendArgsFromArgList(job_args);
 
-	MyString args_string;
+	std::string args_string;
 	job_args = sing_args;
-	job_args.GetArgsStringForDisplay(&args_string, 1);
+	job_args.GetArgsStringForDisplay(args_string, 1);
 	exec = sing_exec_str;
-	dprintf(D_FULLDEBUG, "Arguments updated for executing with singularity: %s %s\n", exec.c_str(), args_string.Value());
+	dprintf(D_FULLDEBUG, "Arguments updated for executing with singularity: %s %s\n", exec.c_str(), args_string.c_str());
 
 	Singularity::convertEnv(&job_env);
 	return Singularity::SUCCESS;
@@ -381,8 +381,8 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 		testArgs.AppendArg(arg);
 	}
 
-	MyString stredArgs;
-	testArgs.GetArgsStringForDisplay(&stredArgs);
+	std::string stredArgs;
+	testArgs.GetArgsStringForDisplay(stredArgs);
 
 	dprintf(D_FULLDEBUG, "Runnning singularity test for job %s cmd is %s\n", JobName.c_str(), stredArgs.c_str());
 	FILE *sing_test_output = my_popen(testArgs, "r", MY_POPEN_OPT_WANT_STDERR, &env, true);

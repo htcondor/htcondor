@@ -5910,8 +5910,8 @@ void FileTransfer::DoPluginConfiguration() {
 	}
 }
 
-MyString FileTransfer::GetSupportedMethods(CondorError &e) {
-	MyString method_list;
+std::string FileTransfer::GetSupportedMethods(CondorError &e) {
+	std::string method_list;
 
 	DoPluginConfiguration();
 
@@ -5930,7 +5930,7 @@ MyString FileTransfer::GetSupportedMethods(CondorError &e) {
 		plugin_table->startIterations();
 		while(plugin_table->iterate(method, junk)) {
 			// add comma if needed
-			if (!(method_list.IsEmpty())) {
+			if (!(method_list.empty())) {
 				method_list += ",";
 			}
 			method_list += method;
@@ -6500,9 +6500,9 @@ FileTransfer::LegalPathInSandbox(char const *path,char const *sandbox) {
 	ASSERT( path );
 	ASSERT( sandbox );
 
-	MyString buf = path;
+	std::string buf = path;
 	canonicalize_dir_delimiters( buf );
-	path = buf.Value();
+	path = buf.c_str();
 
 	if( fullpath(path) ) {
 		return false;

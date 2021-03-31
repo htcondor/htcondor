@@ -44,7 +44,7 @@ int JavaProc::StartJob()
 	std::string java_cmd;
 	char* jarfiles = NULL;
 	ArgList args;
-	MyString arg_buf;
+	std::string arg_buf;
 
 	// Since we are adding to the argument list, we may need to deal
 	// with platform-specific arg syntax in the user's args in order
@@ -77,13 +77,13 @@ int JavaProc::StartJob()
 			while( (jarfile_name = jarfiles_orig_list.next()) ) {
 					// Construct the local name
 				base_name = condor_basename( jarfile_name );
-				MyString local_name = execute_dir;
+				std::string local_name = execute_dir;
 				local_name += DIR_DELIM_CHAR;
 				local_name += base_name; 
 
-				if( stat(local_name.Value(), &stat_buff) == 0 ) {
+				if( stat(local_name.c_str(), &stat_buff) == 0 ) {
 						// Jar file exists locally, use local name
-					jarfiles_local_list.append( local_name.Value() );
+					jarfiles_local_list.append( local_name.c_str() );
 				} else {
 					dprintf(D_ALWAYS, "JavaProc::StartJob could not stat jar file %s: errno %d\n",
 						local_name.c_str(), errno);
@@ -111,26 +111,26 @@ int JavaProc::StartJob()
 
 	JobAd->Assign(ATTR_JOB_CMD, java_cmd);
 
-	arg_buf.formatstr("-Dchirp.config=%s%cchirp.config",execute_dir,DIR_DELIM_CHAR);
-	args.AppendArg(arg_buf.Value());
+	formatstr(arg_buf,"-Dchirp.config=%s%cchirp.config",execute_dir,DIR_DELIM_CHAR);
+	args.AppendArg(arg_buf.c_str());
 
 	char *jvm_args1 = NULL;
 	char *jvm_args2 = NULL;
-	MyString jvm_args_error;
+	std::string jvm_args_error;
 	bool jvm_args_success = true;
 	JobAd->LookupString(ATTR_JOB_JAVA_VM_ARGS1, &jvm_args1);
 	JobAd->LookupString(ATTR_JOB_JAVA_VM_ARGS2, &jvm_args2);
 	if(jvm_args2) {
-		jvm_args_success = args.AppendArgsV2Raw(jvm_args2, &jvm_args_error);
+		jvm_args_success = args.AppendArgsV2Raw(jvm_args2, jvm_args_error);
 	}
 	else if(jvm_args1) {
-		jvm_args_success = args.AppendArgsV1Raw(jvm_args1, &jvm_args_error);
+		jvm_args_success = args.AppendArgsV1Raw(jvm_args1, jvm_args_error);
 	}
 	free(jvm_args1);
 	free(jvm_args2);
 	if (!jvm_args_success) {
 		dprintf(D_ALWAYS, "JavaProc: failed to parse JVM args: %s\n",
-				jvm_args_error.Value());
+				jvm_args_error.c_str());
 		return 0;
 	}
 
@@ -138,26 +138,26 @@ int JavaProc::StartJob()
 	args.AppendArg(startfile.c_str());
 	args.AppendArg(endfile.c_str());
 
-	MyString args_error;
-	if(!args.AppendArgsFromClassAd(JobAd,&args_error)) {
+	std::string args_error;
+	if(!args.AppendArgsFromClassAd(JobAd,args_error)) {
 		dprintf(D_ALWAYS,"JavaProc: failed to read job arguments: %s\n",
-				args_error.Value());
+				args_error.c_str());
 		return 0;
 	}
 
 	// We are just talking to ourselves, so it is fine to use argument
 	// syntax compatible with this current version of Condor.
 	CondorVersionInfo ver_info;
-	if(!args.InsertArgsIntoClassAd(JobAd,&ver_info,&args_error)) {
+	if(!args.InsertArgsIntoClassAd(JobAd,&ver_info,args_error)) {
 		dprintf(D_ALWAYS,"JavaProc: failed to insert java job arguments: %s\n",
-				args_error.Value());
+				args_error.c_str());
 		return 0;
 	}
 
 	dprintf(D_ALWAYS,"JavaProc: Cmd=%s\n",java_cmd.c_str());
-	MyString args_string;
-	args.GetArgsStringForDisplay(&args_string);
-	dprintf(D_ALWAYS,"JavaProc: Args=%s\n",args_string.Value());
+	std::string args_string;
+	args.GetArgsStringForDisplay(args_string);
+	dprintf(D_ALWAYS,"JavaProc: Args=%s\n",args_string.c_str());
 
 	return VanillaProc::StartJob();
 }

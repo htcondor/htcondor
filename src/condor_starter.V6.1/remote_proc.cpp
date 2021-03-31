@@ -31,7 +31,7 @@ RemoteProc::RemoteProc( ClassAd * job_ad )
 	dprintf ( D_FULLDEBUG, "In RemoteProc::RemoteProc()\n" );
 	JobAd = job_ad;
 
-	formatstr( m_remoteJobId, "%s-%ld", Starter->getMySlotName().Value(), (long)daemonCore->getpid() );
+	formatstr( m_remoteJobId, "%s-%ld", Starter->getMySlotName().c_str(), (long)daemonCore->getpid() );
 }
 
 RemoteProc::~RemoteProc() {

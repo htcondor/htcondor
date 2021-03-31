@@ -153,8 +153,8 @@ int DockerProc::StartJob() {
 
 	ArgList args;
 	args.SetArgV1SyntaxToCurrentPlatform();
-	MyString argsError;
-	if( ! args.AppendArgsFromClassAd( JobAd, & argsError ) ) {
+	std::string argsError;
+	if( ! args.AppendArgsFromClassAd( JobAd, argsError ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to read job arguments from job ad: '%s'.\n", argsError.c_str() );
 		return FALSE;
 	}
@@ -930,7 +930,7 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 		char *scratchName = 0;
 			// Foreach scratch name...
 		while ( (scratchName=sl.next()) ) {
-			MyString hostdirbuf;
+			std::string hostdirbuf;
 			const char * hostDir = dirscat(workingDir.c_str(), scratchName, hostdirbuf);
 			std::string volumePath;
 			volumePath.append(hostDir).append(":").append(scratchName);
