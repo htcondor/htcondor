@@ -550,7 +550,7 @@ do_download() {
 		ubuntu)
 			OS_NAME=Ubuntu
 			dist_version_number="$(. /etc/os-release && echo "$VERSION_ID")"
-			dist_version_number=`echo $dist_version_number | sed -e s'/\.[0-9]*//'`
+			dist_version_number="$(echo $dist_version_number | sed -e s'/\.[0-9]*//')"
 			OS_VERSION=$dist_version_number
 			;;
 		debian)
