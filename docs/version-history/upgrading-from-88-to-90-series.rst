@@ -154,3 +154,6 @@ Step 4: Other Changes
   default.  Add ``-by-index`` to ``GPU_DISCOVERY_EXTRA`` to go back to the
   8.8-compatible index-based GPU IDs.
   :jira:`145`
+
+- The packages have changed.  The ``condor-extras`` package is now empty, and
+  the blahp is packaged in ``blahp``.
