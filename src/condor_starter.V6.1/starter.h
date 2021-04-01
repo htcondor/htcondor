@@ -209,7 +209,7 @@ public:
 		if (inner && ! InnerWorkingDir.empty()) {
 			return InnerWorkingDir.c_str();
 		}
-		return WorkingDir.Value();
+		return WorkingDir.c_str();
 	}
 		/* Set the working dir from the perspective of the job. This may differ from
 		*  the Starter's WorkingDir value when the job is in a container.  For a containerized job
@@ -271,7 +271,7 @@ public:
 			running on a slot at all.
 		*/
 	int getMySlotNumber( void );
-	MyString getMySlotName( void );
+	std::string getMySlotName( void );
 
 		/** Returns the number of jobs currently running under
 		 * this multi-starter.
@@ -396,10 +396,10 @@ private:
 	char *Execute;
 		// The temporary directory created under Execute for this job.
 		// If file transfer is used, this will also be the IWD of the job.
-	MyString WorkingDir;
-	MyString InnerWorkingDir; // if non-empty, this is the jobs view if the working dir
+	std::string WorkingDir;
+	std::string InnerWorkingDir; // if non-empty, this is the jobs view if the working dir
 	char *orig_cwd;
-	MyString m_recoveryFile;
+	std::string m_recoveryFile;
 	bool is_gridshell;
 #ifdef WIN32
 	bool has_encrypted_working_dir;

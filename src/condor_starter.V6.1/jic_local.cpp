@@ -494,7 +494,7 @@ char*
 JICLocal::getJobStdFile( const char* attr_name )
 {
 	char* tmp = NULL;
-	MyString filename;
+	std::string filename;
 
 		// the only magic here is to make sure we have full paths for
 		// these, by prepending the job's iwd if the filename doesn't
@@ -505,13 +505,13 @@ JICLocal::getJobStdFile( const char* attr_name )
 	}
 	if ( !nullFile(tmp) ) {
 		if( ! fullpath(tmp) ) { 
-			filename.formatstr( "%s%c", job_iwd, DIR_DELIM_CHAR );
+			formatstr( filename, "%s%c", job_iwd, DIR_DELIM_CHAR );
 		}
 		filename += tmp;
 	}
 	free( tmp );
 	if( filename[0] ) { 
-		return strdup( filename.Value() );
+		return strdup( filename.c_str() );
 	}
 	return NULL;
 }
@@ -606,7 +606,7 @@ JICLocal::initUserCredentials()
 	// we do this as root, and later switch into USER priv to store the creds in the sandbox
 	std::string user;
 	job_ad->LookupString("Owner", user);
-	MyString cred_dir_name;
+	std::string cred_dir_name;
 	dircat(cred_dir, user.c_str(), cred_dir_name);
 
 	// we will load the creds into this map of service -> binary-cred-data
@@ -618,14 +618,14 @@ JICLocal::initUserCredentials()
 	services_list.rewind();
 	char *curr;
 	while ((curr = services_list.next())) {
-		MyString fname, fullname;
-		fname.formatstr("%s.use", curr);
+		std::string fname, fullname;
+		formatstr(fname, "%s.use", curr);
 
 		// change the '*' to an '_'.  These are stored that way
 		// so that the original service name can be cleanly
 		// separate if needed.  we don't care, so just change
 		// them all up front.
-		fname.replaceString("*", "_");
+		replace_str(fname, "*", "_");
 
 		if (creddata.count(fname.c_str()) > 0) {
 			// we loaded this file already, services_list must have a repeat in it.
@@ -635,14 +635,14 @@ JICLocal::initUserCredentials()
 
 		dircat(cred_dir_name.c_str(), fname.c_str(), fullname);
 
-		dprintf(D_SECURITY, "creds: loading %s (from service name %s).\n", fullname.Value(), curr);
+		dprintf(D_SECURITY, "creds: loading %s (from service name %s).\n", fullname.c_str(), curr);
 		// read the file (fourth argument "true" means as_root)
 		struct _bindata data = { 0, 0 };
 		const bool as_root = true;
 		const int verify_mode = trust_cred_dir ? 0 : SECURE_FILE_VERIFY_ALL;
-		bool rc = read_secure_file(fullname.Value(), (void**)(&data.buf), &data.len, as_root, verify_mode);
+		bool rc = read_secure_file(fullname.c_str(), (void**)(&data.buf), &data.len, as_root, verify_mode);
 		if (!rc) {
-			dprintf(D_ALWAYS, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.Value());
+			dprintf(D_ALWAYS, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.c_str());
 			had_error = true;
 		}
 
@@ -650,7 +650,7 @@ JICLocal::initUserCredentials()
 	}
 
 	// setup .condor_creds directory in sandbox (may already exist).
-	MyString sandbox_dir_name;
+	std::string sandbox_dir_name;
 	dircat(Starter->GetWorkingDir(0), ".condor_creds", sandbox_dir_name);
 
 	// from here on out, do everything as the user.
@@ -658,18 +658,18 @@ JICLocal::initUserCredentials()
 
 	// create dir to hold creds
 	int rc = 0;
-	dprintf(D_SECURITY, "CREDS: creating %s\n", sandbox_dir_name.Value());
-	rc = mkdir(sandbox_dir_name.Value(), 0700);
+	dprintf(D_SECURITY, "CREDS: creating %s\n", sandbox_dir_name.c_str());
+	rc = mkdir(sandbox_dir_name.c_str(), 0700);
 
 	if(rc != 0) {
 		if(errno != 17) {
-			dprintf(D_ALWAYS, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.Value(), errno);
+			dprintf(D_ALWAYS, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.c_str(), errno);
 			return false;
 		} else {
-			dprintf(D_SECURITY|D_FULLDEBUG, "CREDS: info: %s already exists.\n", sandbox_dir_name.Value());
+			dprintf(D_SECURITY|D_FULLDEBUG, "CREDS: info: %s already exists.\n", sandbox_dir_name.c_str());
 		}
 	} else {
-		dprintf(D_SECURITY, "CREDS: successfully created %s\n", sandbox_dir_name.Value());
+		dprintf(D_SECURITY, "CREDS: successfully created %s\n", sandbox_dir_name.c_str());
 	}
 
 	// store the creds in files in the sandbox cred dir and free the buffers
@@ -679,7 +679,7 @@ JICLocal::initUserCredentials()
 			// ignore empty entries
 			continue;
 		}
-		MyString fullname;
+		std::string fullname;
 		dircat(sandbox_dir_name.c_str(), fname, fullname);
 		if ( ! replace_secure_file(fullname.c_str(), ".tmp", it->second.buf, it->second.len, false)) {
 			dprintf(D_ALWAYS, "failed to write OAuth cred file securely: %s\n", fullname.c_str());
@@ -696,8 +696,8 @@ JICLocal::initUserCredentials()
 
 	// only need to do this once
 	if( ! getCredPath()) {
-		dprintf(D_SECURITY, "CREDS: setting env _CONDOR_CREDS to %s\n", sandbox_dir_name.Value());
-		setCredPath(sandbox_dir_name.Value());
+		dprintf(D_SECURITY, "CREDS: setting env _CONDOR_CREDS to %s\n", sandbox_dir_name.c_str());
+		setCredPath(sandbox_dir_name.c_str());
 	}
 
 	return 1;

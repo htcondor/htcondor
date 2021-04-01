@@ -2750,6 +2750,13 @@ const char * param_get_location(const MACRO_META * pmet, MyString & value)
 	return param_append_location(pmet, value);
 }
 
+const char * param_get_location(const MACRO_META * pmet, std::string & value)
+{
+	MyString mystr;
+	value = param_append_location(pmet, mystr);
+	return value.c_str();
+}
+
 
 // find an item and return a hash iterator that points to it.
 bool param_find_item (

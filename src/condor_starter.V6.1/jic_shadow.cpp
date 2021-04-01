@@ -681,11 +681,11 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 	}
 
 	if( strcmp(new_owner, my_owner) ) {
-		MyString err_msg = "User '";
+		std::string err_msg = "User '";
 		err_msg += new_owner;
 		err_msg += "' does not match the owner of this job";
 		sendErrorReply( s, getCommandString(CA_RECONNECT_JOB), 
-						CA_NOT_AUTHORIZED, err_msg.Value() ); 
+						CA_NOT_AUTHORIZED, err_msg.c_str() ); 
 		dprintf( D_COMMAND, "Denied request for %s by invalid user '%s'\n", 
 				 getCommandString(CA_RECONNECT_JOB), new_owner );
 		return FALSE;
@@ -992,7 +992,7 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 
 	ad->Assign( ATTR_FILE_SYSTEM_DOMAIN, fs_domain );
 
-	MyString slotName = Starter->getMySlotName();
+	std::string slotName = Starter->getMySlotName();
 	slotName += '@';
 	slotName += get_local_fqdn();
 	ad->Assign( ATTR_NAME, slotName );
@@ -1252,13 +1252,13 @@ JICShadow::initUserPriv( void )
         char *nobody_user = NULL;
 			// 20 is the longest param: len(VM_UNIV_NOBODY_USER) + 1
         char nobody_param[20];
-		MyString slotName = Starter->getMySlotName();
-		if (slotName.Length() > 4) {
+		std::string slotName = Starter->getMySlotName();
+		if (slotName.length() > 4) {
 			// We have a real slot of the form slotX or slotX_Y
 		} else {
 			slotName = "slot1";
 		}
-		slotName.upper_case();
+		upper_case(slotName);
 
 		if( job_universe == CONDOR_UNIVERSE_VM ) {
 			// If "VM_UNIV_NOBODY_USER" is defined in Condor configuration file, 
@@ -1268,12 +1268,12 @@ JICShadow::initUserPriv( void )
 			if( nobody_user == NULL ) {
 				// "VM_UNIV_NOBODY_USER" is NOT defined.
 				// Next, we will try to use SLOTx_VMUSER
-				snprintf( nobody_param, 20, "%s_VMUSER", slotName.Value() );
+				snprintf( nobody_param, 20, "%s_VMUSER", slotName.c_str() );
 				nobody_user = param(nobody_param);
 			}
 		}
 		if( nobody_user == NULL ) {
-			snprintf( nobody_param, 20, "%s_USER", slotName.Value() );
+			snprintf( nobody_param, 20, "%s_USER", slotName.c_str() );
 			nobody_user = param(nobody_param);
 		}
 
@@ -1577,7 +1577,7 @@ JICShadow::getJobStdFile( const char* attr_name )
 {
 	char* tmp = NULL;
 	const char* base = NULL;
-	MyString filename;
+	std::string filename;
 
 	if(streamStdFile(attr_name)) {
 		if(!tmp && attr_name) job_ad->LookupString(attr_name,&tmp);
@@ -1597,13 +1597,13 @@ JICShadow::getJobStdFile( const char* attr_name )
 			base = tmp;
 		}
 		if( ! fullpath(base) ) {	// prepend full path
-			filename.formatstr( "%s%c", job_iwd, DIR_DELIM_CHAR );
+			formatstr( filename, "%s%c", job_iwd, DIR_DELIM_CHAR );
 		}
 		filename += base;
 	}
 	free( tmp );
 	if( filename[0] ) { 
-		return strdup( filename.Value() );
+		return strdup( filename.c_str() );
 	}
 	return NULL;
 }
@@ -1751,7 +1751,7 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 	        "Remote side requests to update X509 proxy at %s\n",
 	        path);
 
-	MyString tmp_path;
+	std::string tmp_path;
 #if defined(LINUX)
 	GLExecPrivSepHelper* gpsh = Starter->glexecPrivSepHelper();
 #else
@@ -1786,9 +1786,9 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 	filesize_t size = 0;
 	int rc;
 	if ( cmd == UPDATE_GSI_CRED ) {
-		rc = rsock->get_file(&size,tmp_path.Value());
+		rc = rsock->get_file(&size,tmp_path.c_str());
 	} else if ( cmd == DELEGATE_GSI_CRED_STARTER ) {
-		rc = rsock->get_x509_delegation(tmp_path.Value(), false, NULL);
+		rc = rsock->get_x509_delegation(tmp_path.c_str(), false, NULL);
 	} else {
 		dprintf( D_ALWAYS,
 		         "unknown CEDAR command %d in updateX509Proxy\n",
@@ -1804,7 +1804,7 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 			// use our glexec helper object, which will
 			// call out to GLExec
 			//
-			if (gpsh->update_proxy(tmp_path.Value())) {
+			if (gpsh->update_proxy(tmp_path.c_str())) {
 				reply = 1;
 			}
 			else {
@@ -1817,7 +1817,7 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 		else {
 				// transfer worked, now rename the file to
 				// final_proxy_path
-			if ( rotate_file(tmp_path.Value(), path) < 0 ) 
+			if ( rotate_file(tmp_path.c_str(), path) < 0 ) 
 			{
 					// the rename failed!!?!?!
 				dprintf( D_ALWAYS,
@@ -2638,7 +2638,7 @@ bool
 JICShadow::initIOProxy( void )
 {
 	bool want_io_proxy = false;
-	MyString io_proxy_config_file;
+	std::string io_proxy_config_file;
 
 		// the admin should have the final say over whether
 		// chirp is enabled
@@ -2718,11 +2718,11 @@ JICShadow::initIOProxy( void )
 			bindTo = &dockerInterface;
 		}
 
-		io_proxy_config_file.formatstr( "%s%c%s" ,
+		formatstr( io_proxy_config_file, "%s%c%s" ,
 				 Starter->GetWorkingDir(0), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
 		m_chirp_config_filename = io_proxy_config_file;
-		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.Value());
-		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates, want_delayed, bindTo) ) {
+		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.c_str());
+		if( !io_proxy.init(this, io_proxy_config_file.c_str(), want_io_proxy, want_updates, want_delayed, bindTo) ) {
 			dprintf( D_FAILURE|D_ALWAYS, 
 					 "Couldn't initialize IO Proxy.\n" );
 			return false;
@@ -2787,7 +2787,7 @@ JICShadow::initUserCredentials() {
 	// TODO: add domain to filename
 
 	// check to see if .cc already exists
-	MyString ccfilename;
+	std::string ccfilename;
 	dircat(cred_dir_krb, user, ".cc", ccfilename);
 
 	struct stat cred_stat_buf;
@@ -2962,8 +2962,8 @@ JICShadow::refreshSandboxCredentialsKRB()
 	char  *ccbuf = 0;
 	size_t cclen = 0;
 
-	MyString ccfile;
-	MyString sandboxccfile;
+	std::string ccfile;
+	std::string sandboxccfile;
 	const char * ccfilename = NULL;
 	const char * sandboxccfilename = NULL;
 
@@ -3096,7 +3096,7 @@ JICShadow::refreshSandboxCredentialsOAuth()
 	}
 
 	// setup .condor_creds directory in sandbox (may already exist).
-	MyString sandbox_dir_name;
+	std::string sandbox_dir_name;
 	dircat(Starter->GetWorkingDir(0), ".condor_creds", sandbox_dir_name);
 
 	// from here on out, do everything as the user.
@@ -3104,30 +3104,30 @@ JICShadow::refreshSandboxCredentialsOAuth()
 
 	// create dir to hold creds
 	int rc = 0;
-	dprintf(D_SECURITY, "CREDS: creating %s\n", sandbox_dir_name.Value());
-	rc = mkdir(sandbox_dir_name.Value(), 0700);
+	dprintf(D_SECURITY, "CREDS: creating %s\n", sandbox_dir_name.c_str());
+	rc = mkdir(sandbox_dir_name.c_str(), 0700);
 
 	if(rc != 0) {
 		if(errno != 17) {
-			dprintf(D_ALWAYS, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.Value(), errno);
+			dprintf(D_ALWAYS, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.c_str(), errno);
 			return false;
 		} else {
-			dprintf(D_SECURITY|D_FULLDEBUG, "CREDS: info: %s already exists.\n", sandbox_dir_name.Value());
+			dprintf(D_SECURITY|D_FULLDEBUG, "CREDS: info: %s already exists.\n", sandbox_dir_name.c_str());
 		}
 	} else {
-		dprintf(D_SECURITY, "CREDS: successfully created %s\n", sandbox_dir_name.Value());
+		dprintf(D_SECURITY, "CREDS: successfully created %s\n", sandbox_dir_name.c_str());
 	}
 
 	// do syscall to receive credential wallet directly into sandbox
-	if (REMOTE_CONDOR_getcreds(sandbox_dir_name.Value()) <= 0) {
+	if (REMOTE_CONDOR_getcreds(sandbox_dir_name.c_str()) <= 0) {
 		dprintf(D_ALWAYS, "ERROR: Failed to receive user credentials.\n");
 		return false;
 	}
 
 	// only need to do this once
 	if( ! getCredPath()) {
-		dprintf(D_SECURITY, "CREDS: setting env _CONDOR_CREDS to %s\n", sandbox_dir_name.Value());
-		setCredPath(sandbox_dir_name.Value());
+		dprintf(D_SECURITY, "CREDS: setting env _CONDOR_CREDS to %s\n", sandbox_dir_name.c_str());
+		setCredPath(sandbox_dir_name.c_str());
 	}
 
 	return true;
@@ -3145,13 +3145,13 @@ JICShadow::initMatchSecuritySession()
 		return;
 	}
 
-	MyString reconnect_session_id;
-	MyString reconnect_session_info;
-	MyString reconnect_session_key;
+	std::string reconnect_session_id;
+	std::string reconnect_session_info;
+	std::string reconnect_session_key;
 
-	MyString filetrans_session_id;
-	MyString filetrans_session_info;
-	MyString filetrans_session_key;
+	std::string filetrans_session_id;
+	std::string filetrans_session_info;
+	std::string filetrans_session_key;
 
 		// For possible future use.  We could set security session
 		// options here if we wanted to get an effect similar to
@@ -3183,12 +3183,12 @@ JICShadow::initMatchSecuritySession()
 			// and create a new one, because the syscall socket is
 			// already using the session key from it.
 	}
-	else if( reconnect_session_id.Length() ) {
+	else if( reconnect_session_id.length() ) {
 		rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 			WRITE,
-			reconnect_session_id.Value(),
-			reconnect_session_key.Value(),
-			reconnect_session_info.Value(),
+			reconnect_session_id.c_str(),
+			reconnect_session_key.c_str(),
+			reconnect_session_info.c_str(),
 			AUTH_METHOD_MATCH,
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			NULL,
@@ -3201,7 +3201,7 @@ JICShadow::initMatchSecuritySession()
 					"Will fall back on auto-negotiated session instead.\n");
 		}
 		else {
-			m_reconnect_sec_session = strdup(reconnect_session_id.Value());
+			m_reconnect_sec_session = strdup(reconnect_session_id.c_str());
 		}
 	}
 
@@ -3219,12 +3219,12 @@ JICShadow::initMatchSecuritySession()
 		m_filetrans_sec_session = NULL;
 	}
 
-	if( filetrans_session_id.Length() ) {
+	if( filetrans_session_id.length() ) {
 		rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 			WRITE,
-			filetrans_session_id.Value(),
-			filetrans_session_key.Value(),
-			filetrans_session_info.Value(),
+			filetrans_session_id.c_str(),
+			filetrans_session_key.c_str(),
+			filetrans_session_info.c_str(),
 			AUTH_METHOD_MATCH,
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			shadow->addr(),
@@ -3237,7 +3237,7 @@ JICShadow::initMatchSecuritySession()
 					"Will fall back on auto-negotiated session instead.\n");
 		}
 		else {
-			m_filetrans_sec_session = strdup(filetrans_session_id.Value());
+			m_filetrans_sec_session = strdup(filetrans_session_id.c_str());
 		}
 	}
 }

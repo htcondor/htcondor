@@ -245,9 +245,9 @@ int filename_remap_find( const char *input, const char *filename, MyString &outp
 // changes all directory separators to match the DIR_DELIM_CHAR
 // makes changes in place
 void
-canonicalize_dir_delimiters( MyString &path ) {
+canonicalize_dir_delimiters( std::string &path ) {
 
-	char *tmp = strdup(path.Value());
+	char *tmp = strdup(path.c_str());
 	canonicalize_dir_delimiters( tmp );
 	path = tmp;
 	free( tmp );

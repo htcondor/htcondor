@@ -105,8 +105,8 @@ MPIComradeProc::addEnvVars()
         return 0;
     }
 
-	MyString path;
-	MyString new_path;
+	std::string path;
+	std::string new_path;
 	char *tmp;
 
 	new_path = bin;
@@ -114,7 +114,7 @@ MPIComradeProc::addEnvVars()
 
 	if(env.GetEnv("PATH",path)) {
         // The user gave us a path in env.  Find & alter:
-        dprintf ( D_FULLDEBUG, "$PATH in ad:%s\n", path.Value() );
+        dprintf ( D_FULLDEBUG, "$PATH in ad:%s\n", path.c_str() );
 
 		new_path += path;
 	}
@@ -133,7 +133,7 @@ MPIComradeProc::addEnvVars()
 			new_path = bin;
         }
     }
-	env.SetEnv("PATH",new_path.Value());
+	env.SetEnv("PATH",new_path.c_str());
 
 	char *condor_config = getenv( "CONDOR_CONFIG");
 	if (condor_config) {

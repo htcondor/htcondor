@@ -57,9 +57,9 @@ ClassAd * java_detect()
 
 	FILE *stream = my_popen(args,"r",0);
 	if(!stream) {
-		MyString arg_str;
-		args.GetArgsStringForDisplay(&arg_str);
-		dprintf(D_ALWAYS,"JavaDetect: failed to execute %s\n",arg_str.Value());
+		std::string arg_str;
+		args.GetArgsStringForDisplay(arg_str);
+		dprintf(D_ALWAYS,"JavaDetect: failed to execute %s\n",arg_str.c_str());
 		return 0;
 	}
 
@@ -69,9 +69,9 @@ ClassAd * java_detect()
 
 	int rc = my_pclose(stream);
 	if( rc!=0 ) {
-		MyString arg_str;
-		args.GetArgsStringForDisplay(&arg_str);
-		dprintf(D_ALWAYS,"JavaDetect: failure status %d when executing %s\n",rc,arg_str.Value());
+		std::string arg_str;
+		args.GetArgsStringForDisplay(arg_str);
+		dprintf(D_ALWAYS,"JavaDetect: failure status %d when executing %s\n",rc,arg_str.c_str());
 		error = 1;
 	}
 

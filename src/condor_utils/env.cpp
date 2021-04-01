@@ -821,6 +821,18 @@ Env::GetEnv(MyString const &var,MyString &val) const
 	return _envTable->lookup(var,val) == 0;
 }
 
+bool
+Env::GetEnv(const std::string &var, std::string &val) const
+{
+	// lookup returns 0 on success
+	MyString mystr;
+	if (_envTable->lookup(var,mystr) == 0) {
+		val = mystr.c_str();
+		return true;
+	}
+	return false;
+}
+
 void
 Env::Import( void )
 {

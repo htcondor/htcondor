@@ -173,7 +173,7 @@ JobRouter::GetInstanceLock() {
 	// We may be an ordinary user, so cannot lock in $(LOCK)
 	param(lock_fullname,"JOB_ROUTER_LOCK");
 	ASSERT( !lock_fullname.empty() );
-	canonicalize_dir_delimiters(const_cast<char *>(lock_fullname.c_str()));
+	canonicalize_dir_delimiters(lock_fullname);
 
 	m_router_lock_fd = safe_open_wrapper_follow(lock_fullname.c_str(),O_CREAT|O_APPEND|O_WRONLY,0600);
 	if(m_router_lock_fd == -1) {

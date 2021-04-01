@@ -126,6 +126,7 @@ class ArgList {
 		// Parse args string in plain old V1 syntax.
 		// Double-quotes should not be backwacked.
 	bool AppendArgsV1Raw(char const *args,MyString *error_msg);
+	bool AppendArgsV1Raw(char const *args, std::string & error_msg);
 
 		// Parse args string in V1Raw or V2Quoted syntax.  This is used
 		// anywhere except for arguments strings in submit files (that

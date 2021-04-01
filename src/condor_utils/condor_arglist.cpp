@@ -452,6 +452,15 @@ ArgList::AppendArgsV1Raw_unix(char const *args,MyString *  /*error_msg*/)
 }
 
 bool
+ArgList::AppendArgsV1Raw(char const *args, std::string &error_msg)
+{
+	MyString mystr;
+	bool rv = AppendArgsV1Raw(args, &mystr);
+	error_msg = mystr;
+	return rv;
+}
+
+bool
 ArgList::AppendArgsV1Raw(char const *args,MyString *error_msg)
 {
 	if(!args) return true;

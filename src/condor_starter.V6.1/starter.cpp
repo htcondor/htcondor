@@ -154,7 +154,7 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 			// EXECUTE is, or our CWD if that's not defined...
 		WorkingDir = Execute;
 	} else {
-		WorkingDir.formatstr( "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
+		formatstr( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 				 (long)daemonCore->getpid() );
 	}
 
@@ -667,12 +667,9 @@ Starter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 	}
 	if( rc ) {
 			// get the final session parameters that were chosen
-		session_info = "";
-		MyString tmp;
 		rc = daemonCore->getSecMan()->ExportSecSessionInfo(
 			session_id,
-			tmp );
-		session_info = tmp.Value();
+			session_info );
 	}
 
 	ClassAd response;
@@ -866,7 +863,6 @@ int
 Starter::peek(int /*cmd*/, Stream *sock)
 {
 	// This command should only be allowed by the job owner.
-	MyString error_msg;
 	ReliSock *s = (ReliSock*)sock;
 	char const *fqu = s->getFullyQualifiedUser();
 	std::string job_owner;
@@ -1301,46 +1297,46 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		return SSHDRetry(s,"Retrying request, because job execution account not yet established.");
 	}
 
-	MyString libexec;
+	std::string libexec;
 	if( !param(libexec,"LIBEXEC") ) {
 		return SSHDFailed(s,"LIBEXEC not defined, so cannot find condor_ssh_to_job_sshd_setup");
 	}
-	MyString ssh_to_job_sshd_setup;
-	MyString ssh_to_job_shell_setup;
-	ssh_to_job_sshd_setup.formatstr(
-		"%s%ccondor_ssh_to_job_sshd_setup",libexec.Value(),DIR_DELIM_CHAR);
-	ssh_to_job_shell_setup.formatstr(
-		"%s%ccondor_ssh_to_job_shell_setup",libexec.Value(),DIR_DELIM_CHAR);
+	std::string ssh_to_job_sshd_setup;
+	std::string ssh_to_job_shell_setup;
+	formatstr(ssh_to_job_sshd_setup,
+		"%s%ccondor_ssh_to_job_sshd_setup",libexec.c_str(),DIR_DELIM_CHAR);
+	formatstr(ssh_to_job_shell_setup,
+		"%s%ccondor_ssh_to_job_shell_setup",libexec.c_str(),DIR_DELIM_CHAR);
 
-	if( access(ssh_to_job_sshd_setup.Value(),X_OK)!=0 ) {
+	if( access(ssh_to_job_sshd_setup.c_str(),X_OK)!=0 ) {
 		return SSHDFailed(s,"Cannot execute %s: %s",
-						  ssh_to_job_sshd_setup.Value(),strerror(errno));
+						  ssh_to_job_sshd_setup.c_str(),strerror(errno));
 	}
-	if( access(ssh_to_job_shell_setup.Value(),X_OK)!=0 ) {
+	if( access(ssh_to_job_shell_setup.c_str(),X_OK)!=0 ) {
 		return SSHDFailed(s,"Cannot execute %s: %s",
-						  ssh_to_job_shell_setup.Value(),strerror(errno));
+						  ssh_to_job_shell_setup.c_str(),strerror(errno));
 	}
 
-	MyString sshd_config_template;
+	std::string sshd_config_template;
 	if( !param(sshd_config_template,"SSH_TO_JOB_SSHD_CONFIG_TEMPLATE") ) {
 		if( param(sshd_config_template,"LIB") ) {
-			sshd_config_template.formatstr_cat("%ccondor_ssh_to_job_sshd_config_template",DIR_DELIM_CHAR);
+			formatstr_cat(sshd_config_template,"%ccondor_ssh_to_job_sshd_config_template",DIR_DELIM_CHAR);
 		}
 		else {
 			return SSHDFailed(s,"SSH_TO_JOB_SSHD_CONFIG_TEMPLATE and LIB are not defined.  At least one of them is required.");
 		}
 	}
-	if( access(sshd_config_template.Value(),F_OK)!=0 ) {
-		return SSHDFailed(s,"%s does not exist!",sshd_config_template.Value());
+	if( access(sshd_config_template.c_str(),F_OK)!=0 ) {
+		return SSHDFailed(s,"%s does not exist!",sshd_config_template.c_str());
 	}
 
-	MyString ssh_keygen;
-	MyString ssh_keygen_args;
+	std::string ssh_keygen;
+	std::string ssh_keygen_args;
 	ArgList ssh_keygen_arglist;
 	param(ssh_keygen,"SSH_TO_JOB_SSH_KEYGEN","/usr/bin/ssh-keygen");
 	param(ssh_keygen_args,"SSH_TO_JOB_SSH_KEYGEN_ARGS","\"-N '' -C '' -q -f %f -t rsa\"");
-	ssh_keygen_arglist.AppendArg(ssh_keygen.Value());
-	if( !ssh_keygen_arglist.AppendArgsV2Quoted(ssh_keygen_args.Value(),&error_msg) ) {
+	ssh_keygen_arglist.AppendArg(ssh_keygen);
+	if( !ssh_keygen_arglist.AppendArgsV2Quoted(ssh_keygen_args.c_str(),&error_msg) ) {
 		return SSHDFailed(s,
 						  "SSH_TO_JOB_SSH_KEYGEN_ARGS is misconfigured: %s",
 						  error_msg.Value());
@@ -1405,10 +1401,10 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	}
 
 	ArgList setup_args;
-	setup_args.AppendArg(ssh_to_job_sshd_setup.Value());
+	setup_args.AppendArg(ssh_to_job_sshd_setup.c_str());
 	setup_args.AppendArg(GetWorkingDir(0));
-	setup_args.AppendArg(ssh_to_job_shell_setup.Value());
-	setup_args.AppendArg(sshd_config_template.Value());
+	setup_args.AppendArg(ssh_to_job_shell_setup.c_str());
+	setup_args.AppendArg(sshd_config_template.c_str());
 	setup_args.AppendArg(ssh_keygen_cmd.Value());
 
 		// Would like to use my_popen here, but we need to support glexec.
@@ -1418,7 +1414,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	int setup_reaper = 1;
 	if( privSepHelper() ) {
 		privSepHelper()->create_process(
-			ssh_to_job_sshd_setup.Value(),
+			ssh_to_job_sshd_setup.c_str(),
 			setup_args,
 			setup_env,
 			GetWorkingDir(0),
@@ -1432,7 +1428,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	}
 	else {
 		daemonCore->Create_Process(
-			ssh_to_job_sshd_setup.Value(),
+			ssh_to_job_sshd_setup.c_str(),
 			setup_args,
 			PRIV_USER_FINAL,
 			setup_reaper,
@@ -1537,7 +1533,6 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	free( setup_output );
 
 	if( !rc ) {
-		MyString msg;
 		return SSHDFailed(s,
 			"Failed to parse output of condor_ssh_to_job_sshd_setup: %s",
 			error_msg.Value());
@@ -1545,8 +1540,8 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 
 	dprintf(D_FULLDEBUG,"StartSSHD: session_dir='%s'\n",session_dir.c_str());
 
-	MyString sshd_config_file;
-	sshd_config_file.formatstr("%s%csshd_config",session_dir.c_str(),DIR_DELIM_CHAR);
+	std::string sshd_config_file;
+	formatstr(sshd_config_file,"%s%csshd_config",session_dir.c_str(),DIR_DELIM_CHAR);
 
 
 
@@ -1557,19 +1552,19 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	}
 
 	ArgList sshd_arglist;
-	MyString sshd_arg_string;
+	std::string sshd_arg_string;
 	param(sshd_arg_string,"SSH_TO_JOB_SSHD_ARGS","\"-i -e -f %f\"");
-	if( !sshd_arglist.AppendArgsV2Quoted(sshd_arg_string.Value(),&error_msg) )
+	if( !sshd_arglist.AppendArgsV2Quoted(sshd_arg_string.c_str(),&error_msg) )
 	{
 		return SSHDFailed(s,"Invalid SSH_TO_JOB_SSHD_ARGS (%s): %s",
-						  sshd_arg_string.Value(),error_msg.Value());
+						  sshd_arg_string.c_str(),error_msg.Value());
 	}
 
 	char **argarray = sshd_arglist.GetStringArray();
 	sshd_arglist.Clear();
 	for(int i=0; argarray[i]; i++) {
 		char const *ptr;
-		MyString new_arg;
+		std::string new_arg;
 		for(ptr=argarray[i]; *ptr; ptr++) {
 			if( *ptr == '%' ) {
 				ptr += 1;
@@ -1577,20 +1572,20 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 					new_arg += '%';
 				}
 				else if( *ptr == 'f' ) {
-					new_arg += sshd_config_file.Value();
+					new_arg += sshd_config_file;
 				}
 				else {
 					deleteStringArray(argarray);
 					return SSHDFailed(s,
 							"Unexpected %%%c in SSH_TO_JOB_SSHD_ARGS: %s\n",
-							*ptr ? *ptr : ' ', sshd_arg_string.Value());
+							*ptr ? *ptr : ' ', sshd_arg_string.c_str());
 				}
 			}
 			else {
 				new_arg += *ptr;
 			}
 		}
-		sshd_arglist.AppendArg(new_arg.Value());
+		sshd_arglist.AppendArg(new_arg.c_str());
 	}
 	deleteStringArray(argarray);
 	argarray = NULL;
@@ -1649,9 +1644,8 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 
 
 
-	MyString sshd_log_fname;
-	sshd_log_fname.formatstr(
-		"%s%c%s",session_dir.c_str(),DIR_DELIM_CHAR,"sshd.log");
+	std::string sshd_log_fname;
+	formatstr(sshd_log_fname,"%s%c%s",session_dir.c_str(),DIR_DELIM_CHAR,"sshd.log");
 
 
 	int std[3];
@@ -1661,7 +1655,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	std[1] = sock->get_file_desc();
 	std_fname[1] = "stdout";
 	std[2] = -1;
-	std_fname[2] = sshd_log_fname.Value();
+	std_fname[2] = sshd_log_fname.c_str();
 
 
 	SSHDProc *proc = new SSHDProc(sshd_ad, session_dir, true);
@@ -1695,7 +1689,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 int 
 Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
 {
-	MyString hold_reason;
+	std::string hold_reason;
 	int hold_code;
 	int hold_subcode;
 	int soft;
@@ -1713,7 +1707,7 @@ Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
 
 		// Put the job on hold on the remote side.
 	if( jic ) {
-		jic->holdJob(hold_reason.Value(),hold_code,hold_subcode);
+		jic->holdJob(hold_reason.c_str(),hold_code,hold_subcode);
 	}
 
 	int reply = 1;
@@ -1831,7 +1825,7 @@ Starter::createTempExecuteDir( void )
 		// scratch dir, we're just using whatever we got from the
 		// scheduler we're running under.
 	if( is_gridshell ) { 
-		dprintf( D_ALWAYS, "gridshell running in: \"%s\"\n", WorkingDir.Value() ); 
+		dprintf( D_ALWAYS, "gridshell running in: \"%s\"\n", WorkingDir.c_str() ); 
 		return true;
 	}
 
@@ -1891,10 +1885,10 @@ Starter::createTempExecuteDir( void )
 			dir_perms = 0755;
 		}
 #endif
-		if( mkdir(WorkingDir.Value(), dir_perms) < 0 ) {
+		if( mkdir(WorkingDir.c_str(), dir_perms) < 0 ) {
 			dprintf( D_FAILURE|D_ALWAYS,
 			         "couldn't create dir %s: %s\n",
-			         WorkingDir.Value(),
+			         WorkingDir.c_str(),
 			         strerror(errno) );
 			set_priv( priv );
 			return false;
@@ -1903,12 +1897,12 @@ Starter::createTempExecuteDir( void )
 		WriteAdFiles();
 		if (use_chown) {
 			priv_state p = set_root_priv();
-			if (chown(WorkingDir.Value(),
+			if (chown(WorkingDir.c_str(),
 			          get_user_uid(),
 			          get_user_gid()) == -1)
 			{
 				EXCEPT("chown error on %s: %s",
-				       WorkingDir.Value(),
+				       WorkingDir.c_str(),
 				       strerror(errno));
 			}
 			set_priv(p);
@@ -1928,7 +1922,7 @@ Starter::createTempExecuteDir( void )
 		const char * nobody_login = get_user_loginname();
 		ASSERT(nobody_login);
 		dirperm.init(nobody_login);
-		bool ret_val = dirperm.set_acls( WorkingDir.Value() );
+		bool ret_val = dirperm.set_acls( WorkingDir.c_str() );
 		if ( !ret_val ) {
 			dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON EXECUTE DIRECTORY\n");
 			set_priv( priv );
@@ -1970,17 +1964,17 @@ Starter::createTempExecuteDir( void )
 			}
 
 			if ( efs_support ) {
-				size_t cch = WorkingDir.Length()+1;
+				size_t cch = WorkingDir.length()+1;
 				wchar_t *WorkingDir_w = new wchar_t[cch];
-				swprintf_s(WorkingDir_w, cch, L"%S", WorkingDir.Value());
+				swprintf_s(WorkingDir_w, cch, L"%S", WorkingDir.c_str());
 
 				EncryptionDisable(WorkingDir_w, FALSE);
 				
-				if ( EncryptFile(WorkingDir.Value()) == 0 ) {
+				if ( EncryptFile(WorkingDir.c_str()) == 0 ) {
 					dprintf(D_ALWAYS, "Could not encrypt execute directory (err=%li)\n", GetLastError());
 				} else {
 					has_encrypted_working_dir = true;
-					dprintf(D_ALWAYS, "Encrypting execute directory \"%s\" to user %s\n", WorkingDir.Value(), nobody_login);
+					dprintf(D_ALWAYS, "Encrypting execute directory \"%s\" to user %s\n", WorkingDir.c_str(), nobody_login);
 				}
 
 				delete[] WorkingDir_w;
@@ -2006,16 +2000,16 @@ Starter::createTempExecuteDir( void )
 
 	// switch to user priv -- it's the owner of the directory we just made
 	priv_state ch_p = set_user_priv();
-	int chdir_result = chdir(WorkingDir.Value());
+	int chdir_result = chdir(WorkingDir.c_str());
 	set_priv( ch_p );
 
 	if( chdir_result < 0 ) {
-		dprintf( D_FAILURE|D_ALWAYS, "couldn't move to %s: %s\n", WorkingDir.Value(),
+		dprintf( D_FAILURE|D_ALWAYS, "couldn't move to %s: %s\n", WorkingDir.c_str(),
 				 strerror(errno) ); 
 		set_priv( priv );
 		return false;
 	}
-	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir.Value() );
+	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir.c_str() );
 	set_priv( priv );
 	return true;
 }
@@ -2045,7 +2039,7 @@ Starter::jobEnvironmentReady( void )
 			           "but job has no proxy");
 		}
 		const char* proxy_name = condor_basename(proxy_path.c_str());
-		gpsh->initialize(proxy_name, WorkingDir.Value());
+		gpsh->initialize(proxy_name, WorkingDir.c_str());
 	}
 #endif
 
@@ -2124,7 +2118,7 @@ Starter::jobWaitUntilExecuteTime( void )
 		// If this is set to true, then we'll want to abort the job
 		//
 	bool abort = false;
-	MyString error;
+	std::string error;
 	
 		//
 		// First check to see if the job is set to be
@@ -2142,12 +2136,12 @@ Starter::jobWaitUntilExecuteTime( void )
 		 	// got a positive integer. Otherwise we'll have to kick out
 		 	//
 		if ( ! jobAd->LookupInteger( ATTR_DEFERRAL_TIME, deferralTime ) ) {
-			error.formatstr( "Invalid deferred execution time for Job %d.%d.",
+			formatstr( error, "Invalid deferred execution time for Job %d.%d.",
 							this->jic->jobCluster(),
 							this->jic->jobProc() );
 			abort = true;
 		} else if ( deferralTime <= 0 ) {
-			error.formatstr( "Invalid execution time '%d' for Job %d.%d.",
+			formatstr( error, "Invalid execution time '%d' for Job %d.%d.",
 							deferralTime,
 							this->jic->jobCluster(),
 							this->jic->jobProc() );
@@ -2200,7 +2194,7 @@ Starter::jobWaitUntilExecuteTime( void )
 				//
 			if ( deltaT < 0 ) {
 				if ( abs( deltaT ) > deferralWindow ) {
-					error.formatstr( "Job %d.%d missed its execution time.",
+					formatstr( error, "Job %d.%d missed its execution time.",
 								this->jic->jobCluster(),
 								this->jic->jobProc() );
 					abort = true;
@@ -2284,7 +2278,7 @@ Starter::jobWaitUntilExecuteTime( void )
 			// of error handling in place for jobs that never started
 			// Andy Pavlo - 01.24.2006 - pavlo@cs.wisc.edu
 			//
-		dprintf( D_ALWAYS, "%s Aborting.\n", error.Value() );
+		dprintf( D_ALWAYS, "%s Aborting.\n", error.c_str() );
 		OsProc proc( jobAd );
 		proc.JobReaper( -1, JOB_MISSED_DEFERRAL_TIME );
 		this->jic->notifyJobExit( -1, JOB_MISSED_DEFERRAL_TIME, &proc );
@@ -2457,7 +2451,7 @@ Starter::SpawnJob( void )
 			}
 			} break;
 		case CONDOR_UNIVERSE_JAVA:
-			job = new JavaProc( jobAd, WorkingDir.Value() );
+			job = new JavaProc( jobAd, WorkingDir.c_str() );
 			break;
 	    case CONDOR_UNIVERSE_PARALLEL:
 			job = new ParallelProc( jobAd );
@@ -2553,23 +2547,23 @@ Starter::SpawnJob( void )
 void
 Starter::WriteRecoveryFile( ClassAd *recovery_ad )
 {
-	MyString tmp_file;
+	std::string tmp_file;
 	FILE *tmp_fp;
 
 	if ( recovery_ad == NULL ) {
 		return;
 	}
 
-	if ( m_recoveryFile.Length() == 0 ) {
-		m_recoveryFile.formatstr( "%s%cdir_%ld.recover", Execute,
+	if ( m_recoveryFile.length() == 0 ) {
+		formatstr( m_recoveryFile, "%s%cdir_%ld.recover", Execute,
 								DIR_DELIM_CHAR, (long)daemonCore->getpid() );
 	}
 
-	tmp_file.formatstr( "%s.tmp", m_recoveryFile.Value() );
+	formatstr( tmp_file, "%s.tmp", m_recoveryFile.c_str() );
 
-	tmp_fp = safe_fcreate_replace_if_exists( tmp_file.Value(), "w" );
+	tmp_fp = safe_fcreate_replace_if_exists( tmp_file.c_str(), "w" );
 	if ( tmp_fp == NULL ) {
-		dprintf( D_ALWAYS, "Failed to open recovery file %s\n", tmp_file.Value() );
+		dprintf( D_ALWAYS, "Failed to open recovery file %s\n", tmp_file.c_str() );
 		return;
 	}
 
@@ -2582,23 +2576,23 @@ Starter::WriteRecoveryFile( ClassAd *recovery_ad )
 	if ( fclose( tmp_fp ) != 0 ) {
 		dprintf( D_ALWAYS, "Failed close recovery file\n" );
 		MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
-		unlink( tmp_file.Value() );
+		unlink( tmp_file.c_str() );
 		return;
 	}
 
-	if ( rotate_file( tmp_file.Value(), m_recoveryFile.Value() ) != 0 ) {
+	if ( rotate_file( tmp_file.c_str(), m_recoveryFile.c_str() ) != 0 ) {
 		dprintf( D_ALWAYS, "Failed to rename recovery file\n" );
 		MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
-		unlink( tmp_file.Value() );
+		unlink( tmp_file.c_str() );
 	}
 }
 
 void
 Starter::RemoveRecoveryFile()
 {
-	if ( m_recoveryFile.Length() > 0 ) {
+	if ( m_recoveryFile.length() > 0 ) {
 		MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
-		unlink( m_recoveryFile.Value() );
+		unlink( m_recoveryFile.c_str() );
 		m_recoveryFile = "";
 	}
 }
@@ -3193,16 +3187,16 @@ Starter::PublishToEnv( Env* proc_env )
 		// used by sshd_shell_setup script to cd to the job working dir
 	proc_env->SetEnv("_CONDOR_JOB_IWD",jic->jobRemoteIWD());
 
-	MyString job_pids;
+	std::string job_pids;
 	UserProc* uproc;
 	m_job_list.Rewind();
 	while ((uproc = m_job_list.Next()) != NULL) {
 		uproc->PublishToEnv( proc_env );
 
-		if( ! job_pids.IsEmpty() ) {
+		if( ! job_pids.empty() ) {
 			job_pids += " ";
 		}
-		job_pids.formatstr_cat("%d",uproc->GetJobPid());		
+		formatstr_cat(job_pids, "%d", uproc->GetJobPid());		
 	}
 		// put the pid of the job in the environment, used by sshd and hooks
 	proc_env->SetEnv("_CONDOR_JOB_PIDS",job_pids);
@@ -3234,12 +3228,12 @@ Starter::PublishToEnv( Env* proc_env )
 
 		// now, stuff the starter knows about, instead of individual
 		// procs under its control
-	MyString base;
+	std::string base;
 	base = "_";
 	base += myDistro->GetUc();
 	base += '_';
  
-	MyString env_name;
+	std::string env_name;
 
 		// if there are non-fungible assigned resources (i.e. GPUs) pass those assignments down in the environment
 		// we look through all machine resource names looking for an attribute Assigned*, if we find one
@@ -3260,8 +3254,8 @@ Starter::PublishToEnv( Env* proc_env )
 				// a bit wierd here. we publish if there are any assigned, we also always
 				// publish if there is a config knob ENVIRONMENT_FOR_Assigned<tag> even if
 				// there are none assigned, so long as there are any defined.
-				MyString env_name;
-				MyString param_name("ENVIRONMENT_FOR_"); param_name += attr;
+				std::string env_name;
+				std::string param_name("ENVIRONMENT_FOR_"); param_name += attr;
 				param(env_name, param_name.c_str());
 
 				std::string assigned;
@@ -3279,7 +3273,7 @@ Starter::PublishToEnv( Env* proc_env )
 
 					env_name = base;
 					env_name += attr;
-					proc_env->SetEnv(env_name.Value(), assigned.c_str());
+					proc_env->SetEnv(env_name.c_str(), assigned.c_str());
 				}
 			}
 		}
@@ -3302,21 +3296,21 @@ Starter::PublishToEnv( Env* proc_env )
 		// path to the output ad, if any
 	const char* output_ad = jic->getOutputAdFile();
 	if( output_ad && !(output_ad[0] == '-' && output_ad[1] == '\0') ) {
-		env_name = base.Value();
+		env_name = base;
 		env_name += "OUTPUT_CLASSAD";
-		proc_env->SetEnv( env_name.Value(), output_ad );
+		proc_env->SetEnv( env_name.c_str(), output_ad );
 	}
 	
 		// job scratch space
-	env_name = base.Value();
+	env_name = base;
 	env_name += "SCRATCH_DIR";
-	proc_env->SetEnv( env_name.Value(), GetWorkingDir(true) );
+	proc_env->SetEnv( env_name.c_str(), GetWorkingDir(true) );
 
 		// slot identifier
-	env_name = base.Value();
+	env_name = base;
 	env_name += "SLOT";
 	
-	proc_env->SetEnv(env_name.Value(), getMySlotName());
+	proc_env->SetEnv(env_name.c_str(), getMySlotName());
 
 		// pass through the pidfamily ancestor env vars this process
 		// currently has to the job.
@@ -3327,14 +3321,14 @@ Starter::PublishToEnv( Env* proc_env )
 		std::string tmp_port_number;
 
 		tmp_port_number = std::to_string( high );
-		env_name = base.Value();
+		env_name = base;
 		env_name += "HIGHPORT";
-		proc_env->SetEnv( env_name.Value(), tmp_port_number.c_str() );
+		proc_env->SetEnv( env_name.c_str(), tmp_port_number.c_str() );
 
 		tmp_port_number = std::to_string( low );
-		env_name = base.Value();
+		env_name = base;
 		env_name += "LOWPORT";
-		proc_env->SetEnv( env_name.Value(), tmp_port_number.c_str() );
+		proc_env->SetEnv( env_name.c_str(), tmp_port_number.c_str() );
     }
 
 		// set environment variables for temporary directories
@@ -3362,14 +3356,14 @@ Starter::PublishToEnv( Env* proc_env )
 	}
 	char* cpu_vars_param = param("STARTER_NUM_THREADS_ENV_VARS");
 	if (cpus > 0 && cpu_vars_param) {
-		MyString jobNumThreads;
+		std::string jobNumThreads;
 		StringList cpu_vars_list(cpu_vars_param);
 		cpu_vars_list.remove("");
 		cpu_vars_list.rewind();
 		char *var = NULL;
 		while ((var = cpu_vars_list.next())) {
 			proc_env->GetEnv(var, jobNumThreads);
-			if (jobNumThreads.Length() == 0) {
+			if (jobNumThreads.length() == 0) {
 				proc_env->SetEnv(var, std::to_string(cpus));
 			}
 		}
@@ -3383,8 +3377,8 @@ Starter::PublishToEnv( Env* proc_env )
 	if (wrapper) {
 			// setenv only if wrapper actually exists
 		if ( access(wrapper,X_OK) >= 0 ) {
-			MyString wrapper_err;
-			wrapper_err.formatstr("%s%c%s", GetWorkingDir(0),
+			std::string wrapper_err;
+			formatstr(wrapper_err, "%s%c%s", GetWorkingDir(0),
 						DIR_DELIM_CHAR,
 						JOB_WRAPPER_FAILURE_FILE);
 			proc_env->SetEnv("_CONDOR_WRAPPER_ERROR_FILE", wrapper_err);
@@ -3396,8 +3390,8 @@ Starter::PublishToEnv( Env* proc_env )
 		// in OsProc::StartJob(), but we want to set them here
 		// so they will also appear in ssh_to_job environments.
 
-	MyString path;
-	path.formatstr("%s%c%s", GetWorkingDir(true),
+	std::string path;
+	formatstr(path, "%s%c%s", GetWorkingDir(true),
 			 	DIR_DELIM_CHAR,
 				MACHINE_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_MACHINE_AD", path) ) {
@@ -3410,7 +3404,7 @@ Starter::PublishToEnv( Env* proc_env )
 		dprintf( D_ALWAYS, "Failed to set _CONDOR_CHIRP_CONFIG environment variable.\n");
 	}
 
-	path.formatstr("%s%c%s", GetWorkingDir(true),
+	formatstr(path, "%s%c%s", GetWorkingDir(true),
 			 	DIR_DELIM_CHAR,
 				JOB_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_JOB_AD", path) ) {
@@ -3550,7 +3544,7 @@ Starter::getMySlotNumber( void )
 	int slot_number = 0; // default to 0, let our caller decide how to interpret that.
 
 #if 1
-	MyString slot_name;
+	std::string slot_name;
 	if (param(slot_name, "STARTER_SLOT_NAME")) {
 		// find the first number in the slot name, that's our slot number.
 		const char * tmp = slot_name.c_str();
@@ -3560,15 +3554,15 @@ Starter::getMySlotNumber( void )
 		// legacy (before 8.1.5), assume that the log filename ends with our slot name.
 		slot_name = this->getMySlotName();
 		if ( ! slot_name.empty()) {
-			MyString prefix;
+			std::string prefix;
 			if ( ! param(prefix, "STARTD_RESOURCE_PREFIX")) {
 				prefix = "slot";
 			}
 
-			const char * tmp = strstr(slot_name.c_str(), prefix.Value());
+			const char * tmp = strstr(slot_name.c_str(), prefix.c_str());
 			if (tmp) {
 				prefix += "%d";
-				if (sscanf(tmp, prefix.Value(), &slot_number) < 1) {
+				if (sscanf(tmp, prefix.c_str(), &slot_number) < 1) {
 					// if we couldn't parse it, leave it at 0.
 					slot_number = 0;
 				}
@@ -3585,21 +3579,21 @@ Starter::getMySlotNumber( void )
 			// We currently use the extension of the starter log file
 			// name to determine which slot we are.  Strange.
 		char const *log_basename = condor_basename(logappend);
-		MyString prefix;
+		std::string prefix;
 
 		char* resource_prefix = param("STARTD_RESOURCE_PREFIX");
 		if( resource_prefix ) {
-			prefix.formatstr(".%s",resource_prefix);
+			formatstr(prefix, ".%s", resource_prefix);
 			free( resource_prefix );
 		}
 		else {
 			prefix = ".slot";
 		}
 
-		tmp = strstr(log_basename, prefix.Value());
+		tmp = strstr(log_basename, prefix.c_str());
 		if ( tmp ) {				
 			prefix += "%d";
-			if ( sscanf(tmp, prefix.Value(), &slot_number) < 1 ) {
+			if ( sscanf(tmp, prefix.c_str(), &slot_number) < 1 ) {
 				// if we couldn't parse it, leave it at 0.
 				slot_number = 0;
 			}
@@ -3612,10 +3606,10 @@ Starter::getMySlotNumber( void )
 	return slot_number;
 }
 
-MyString
+std::string
 Starter::getMySlotName(void)
 {
-	MyString slotName = "";
+	std::string slotName = "";
 	if (param(slotName, "STARTER_SLOT_NAME")) {
 		return slotName;
 	}
@@ -3626,18 +3620,18 @@ Starter::getMySlotName(void)
 			// We currently use the extension of the starter log file
 			// name to determine which slot we are.  Strange.
 		char const *log_basename = condor_basename(logappend);
-		MyString prefix;
+		std::string prefix;
 
 		char* resource_prefix = param("STARTD_RESOURCE_PREFIX");
 		if( resource_prefix ) {
-			prefix.formatstr(".%s",resource_prefix);
+			formatstr(prefix, ".%s", resource_prefix);
 			free( resource_prefix );
 		}
 		else {
 			prefix = ".slot";
 		}
 
-		const char *tmp = strstr(log_basename, prefix.Value());
+		const char *tmp = strstr(log_basename, prefix.c_str());
 		if ( tmp ) {				
 			slotName = (tmp + 1); // skip the .
 		} 
@@ -3702,10 +3696,10 @@ Starter::classadCommand( int, Stream* s ) const
 
 	default:
 		const char* tmp = getCommandString(cmd);
-		MyString err_msg = "Starter does not support command (";
-		err_msg += tmp;
+		std::string err_msg = "Starter does not support command (";
+		err_msg += tmp ? tmp : NULL;
 		err_msg += ')';
-		sendErrorReply( s, tmp, CA_INVALID_REQUEST, err_msg.Value() );
+		sendErrorReply( s, tmp, CA_INVALID_REQUEST, err_msg.c_str() );
 		return FALSE;
 	}
 	return TRUE;
@@ -3730,7 +3724,7 @@ Starter::removeTempExecuteDir( void )
 		return true;
 	}
 
-	MyString dir_name = "dir_";
+	std::string dir_name = "dir_";
 	dir_name += std::to_string( daemonCore->getpid() );
 
 #if defined(LINUX)
@@ -3756,7 +3750,7 @@ Starter::removeTempExecuteDir( void )
 
 	// Remove the directory from all possible chroots.
 	// On Windows, we expect the root_dir_list to have only a single entry - "/"
-	MyString full_exec_dir(Execute);
+	std::string full_exec_dir(Execute);
 	pair_strings_vector root_dirs = root_dir_list();
 	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
 		if (it->second == "/") {
@@ -3771,10 +3765,10 @@ Starter::removeTempExecuteDir( void )
 				continue;
 			}
 		}
-		Directory execute_dir( full_exec_dir.Value(), PRIV_ROOT );
-		if ( execute_dir.Find_Named_Entry( dir_name.Value() ) ) {
+		Directory execute_dir( full_exec_dir.c_str(), PRIV_ROOT );
+		if ( execute_dir.Find_Named_Entry( dir_name.c_str() ) ) {
 
-			dprintf( D_FULLDEBUG, "Removing %s%c%s\n", full_exec_dir.Value(), DIR_DELIM_CHAR, dir_name.Value() );
+			dprintf( D_FULLDEBUG, "Removing %s%c%s\n", full_exec_dir.c_str(), DIR_DELIM_CHAR, dir_name.c_str() );
 			if (!execute_dir.Remove_Current_File()) {
 				has_failed = true;
 			}
@@ -3818,7 +3812,7 @@ Starter::WriteAdFiles() const
 
 	ClassAd* ad;
 	const char* dir = this->GetWorkingDir(0);
-	MyString ad_str, filename;
+	std::string filename;
 	FILE* fp;
 	bool ret_val = true;
 
@@ -3826,12 +3820,12 @@ Starter::WriteAdFiles() const
 	ad = this->jic->jobClassAd();
 	if (ad != NULL)
 	{
-		filename.formatstr("%s%c%s", dir, DIR_DELIM_CHAR, JOB_AD_FILENAME);
-		fp = safe_fopen_wrapper_follow(filename.Value(), "w");
+		formatstr(filename, "%s%c%s", dir, DIR_DELIM_CHAR, JOB_AD_FILENAME);
+		fp = safe_fopen_wrapper_follow(filename.c_str(), "w");
 		if (!fp)
 		{
 			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write job ad: "
-						"%s (errno %d)\n", filename.Value(),
+						"%s (errno %d)\n", filename.c_str(),
 						strerror(errno), errno);
 			ret_val = false;
 		}
@@ -3839,7 +3833,7 @@ Starter::WriteAdFiles() const
 		{
 		#ifdef WIN32
 			if (has_encrypted_working_dir) {
-				DecryptFile(filename.Value(), 0);
+				DecryptFile(filename.c_str(), 0);
 			}
 		#endif
 			fPrintAd(fp, *ad);
@@ -3856,12 +3850,12 @@ Starter::WriteAdFiles() const
 	ad = this->jic->machClassAd();
 	if (ad != NULL)
 	{
-		filename.formatstr("%s%c%s", dir, DIR_DELIM_CHAR, MACHINE_AD_FILENAME);
-		fp = safe_fopen_wrapper_follow(filename.Value(), "w");
+		formatstr(filename, "%s%c%s", dir, DIR_DELIM_CHAR, MACHINE_AD_FILENAME);
+		fp = safe_fopen_wrapper_follow(filename.c_str(), "w");
 		if (!fp)
 		{
 			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write machine "
-						"ad: %s (errno %d)\n", filename.Value(),
+						"ad: %s (errno %d)\n", filename.c_str(),
 					strerror(errno), errno);
 			ret_val = false;
 		}
@@ -3869,7 +3863,7 @@ Starter::WriteAdFiles() const
 		{
 		#ifdef WIN32
 			if (has_encrypted_working_dir) {
-				DecryptFile(filename.Value(), 0);
+				DecryptFile(filename.c_str(), 0);
 			}
 		#endif
 			fPrintAd(fp, *ad);
