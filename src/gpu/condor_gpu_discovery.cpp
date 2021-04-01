@@ -298,8 +298,9 @@ main( int argc, const char** argv)
 	int opt_hetero = 0;  // don't assume properties are homogeneous
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
-	int opt_uuid = 0;   // publish DetectedGPUs as a list of GPU-<uuid> rather than than CUDA<N>
-	int opt_short_uuid = 0; // use shortened uuids
+	int opt_cuda_index = 0; // publish by index (I.e CUDA<N>)
+	int opt_uuid = -1;   // publish DetectedGPUs as a list of GPU-<uuid> rather than than CUDA<N>
+	int opt_short_uuid = -1; // use shortened uuids
 	std::list<int> dwl; // Device White List
 	bool opt_nvcuda = false; // force use of nvcuda rather than cudart
 	bool opt_cudart = false; // force use of use cudart rather than nvcuda
@@ -409,12 +410,18 @@ main( int argc, const char** argv)
 				opt_tag = argv[++i];
 			}
 		}
+		else if (is_dash_arg_prefix(argv[i], "by-index", 4)) {
+			opt_cuda_index = 1;
+			opt_short_uuid = opt_uuid = 0;
+		}
 		else if (is_dash_arg_prefix(argv[i], "uuid", 2)) {
 			opt_uuid = 1;
+			opt_cuda_index = opt_short_uuid = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "short-uuid", -1)) {
 			opt_uuid = 1;
 			opt_short_uuid = 1;
+			opt_cuda_index = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "prefix", 3)) {
 			if (argv[i+1]) {
@@ -872,7 +879,8 @@ void usage(FILE* out, const char * argv0)
 		"    -cuda             Detection via CUDA only, ignore OpenCL devices\n"
 		"    -opencl           Prefer detection via OpenCL rather than CUDA\n"
 		"    -uuid             Use GPU uuid instead of index as GPU id\n"
-		"    -short-uuid       Use first 8 characters of GPU uuid as GPU id\n"
+		"    -short-uuid       Use first 8 characters of GPU uuid as GPU id (default)\n"
+		"    -by-index         Use GPU index as the GPU id\n"
 		"    -simulate[:D[,N]] Simulate detection of N devices of type D\n"
 		"           where D is 0 - GeForce GT 330, default N=1\n"
 		"                      1 - GeForce GTX 480, default N=2\n"
