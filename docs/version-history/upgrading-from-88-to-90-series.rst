@@ -64,7 +64,7 @@ which configures user-based security and requires encryption, authentication,
 and integrity.  If you have already configured another daemon authentication
 method (e.g. pool PASSWORD, SSL, GSI, KERBEROS, etc) at some point in the past,
 you can comment out the above line in the file ``00-htcondor-9.0.config``
-and skip to step 2, below.
+and skip to `Step 2`_ below.
 
 If you have not already configured some other daemon authentication method
 and thus are relying solely on host-based authentication (i.e. a list of
@@ -77,6 +77,8 @@ allowed hostnames or IP addresses), you have three options:
   site-specific configuration from your old installation to the new
   installation by placing configuration files into ``/etc/condor/config.d``.
 
+  Continue with `Step 4: Other Changes`_ below.
+
 - **Option B**.  Run two commands (as root) on every machine in your pool to
   enable the recommended security configuration appropriate for v9.0.  When
   prompted, type the same password for every machine. (*Note:* If typing a
@@ -88,6 +90,8 @@ allowed hostnames or IP addresses), you have three options:
 
         # condor_store_cred -c add
         # umask 0077; condor_token_create -identity condor@mypool > /etc/condor/tokens.d/condor@mypool
+
+  Continue with `Step 4: Other Changes`_ below.
 
 - **Option C**.  Revert to the previous host-based security configuration that
   was the default before v9.0.  This is the most expedient way to get your
