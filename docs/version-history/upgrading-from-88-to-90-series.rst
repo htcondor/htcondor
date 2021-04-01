@@ -142,6 +142,11 @@ Step 4: Other Changes
   permissions on these subdirectories will need to be changed from the
   default of ``0755`` to ``1777``.
 
-- Users of ``bosco_cluster`` will have to re-run ``bosco_cluster --add`` for
+- Users of *bosco_cluster* will have to re-run ``bosco_cluster --add`` for
   all remote clusters they are using.
   :jira:`274`
+
+- *condor_gpu_discovery* will now report short-UUID-based stable GPU IDs by
+  default.  Add ``-by-index`` to ``GPU_DISCOVERY_EXTRA`` to go back to the
+  8.8-compatible index-based GPU IDs.
+  :jira:`145`
