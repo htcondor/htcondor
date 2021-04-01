@@ -45,8 +45,6 @@
 
 %define python 1
 
-%define glexec 1
-
 # Temporarily turn parallel_setup off
 %define parallel_setup 0
 
@@ -787,11 +785,6 @@ export CMAKE_PREFIX_PATH=/usr
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
        -DWITH_CREAM:BOOL=FALSE \
-%if %glexec
-       -DWANT_GLEXEC:BOOL=TRUE \
-%else
-       -DWANT_GLEXEC:BOOL=FALSE \
-%endif
        -DWITH_GLOBUS:BOOL=TRUE \
        -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
        -DWITH_LIBCGROUP:BOOL=TRUE \
@@ -903,6 +896,7 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_install.1
 rm -f %{buildroot}/%{_bindir}/condor_top
 rm -f %{buildroot}/%{_bindir}/classad_eval
 rm -f %{buildroot}/%{_bindir}/condor_watch_q
+rm -f %{buildroot}/%{_bindir}/condor_check_password
 %endif
 
 # For EL7, move oauth credmon WSGI script out of libexec to /var/www
@@ -1157,14 +1151,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_job_router
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
-%if %glexec
-%_libexecdir/condor/condor_glexec_setup
-%_libexecdir/condor/condor_glexec_run
-%_libexecdir/condor/condor_glexec_job_wrapper
-%_libexecdir/condor/condor_glexec_update_proxy
-%_libexecdir/condor/condor_glexec_cleanup
-%_libexecdir/condor/condor_glexec_kill
-%endif
+%_libexecdir/condor/htcondor_docker_test
 %if %blahp
 %dir %_libexecdir/condor/glite/bin
 %_libexecdir/condor/glite/bin/kubernetes_cancel.sh
@@ -1205,8 +1192,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/legacy_curl_plugin
 %_libexecdir/condor/condor_shared_port
-%_libexecdir/condor/condor_glexec_wrapper
-%_libexecdir/condor/glexec_starter_setup.sh
 %_libexecdir/condor/condor_defrag
 %_libexecdir/condor/interactive.sub
 %_libexecdir/condor/condor_gangliad
@@ -1303,6 +1288,7 @@ rm -rf %{buildroot}
 %_bindir/condor_config_val
 %_bindir/condor_reschedule
 %_bindir/condor_userprio
+%_bindir/condor_check_password
 %_bindir/condor_dagman
 %_bindir/condor_rm
 %_bindir/condor_vacate
@@ -1677,6 +1663,19 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Mar 30 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.13-1
+- Host based security is no longer the default security model
+- Hardware accelerated integrity and AES encryption used by default
+- Normally, AES encryption is used for all communication and file transfers
+- Fallback to Triple-DES or Blowfish when interoperating with older versions
+- Simplified and automated new HTCondor installations
+- HTCondor now detects instances of multi-instance GPUs
+- Fixed memory leaks (collector updates in 8.9 could leak a few MB per day)
+- Many other enhancements and bug fixes, see version history for details
+
+* Thu Mar 25 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.12-1
+- Withdrawn due to compatibility issues with prior releases
+
 * Tue Mar 23 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.13-1
 - condor_ssh_to_job now maps CR and NL to work with editors like nano
 - Improved the performance of data transfer in condor_ssh_to_job
