@@ -98,7 +98,7 @@ A "graceful" shutdown of a schedd is functionally the same as a "fast"
 shutdown of a schedd.
 
 A "graceful" shutdown of a startd that has jobs running under it causes
-the startd to wait for the jobs to exits of their own accord, up to the 
+the startd to wait for the jobs to exit of their own accord, up to the 
 MaxJobRetirementTime.  After the MaxJobRetirementTime, the startd will evict
 any remaining running jobs and exit.
 
