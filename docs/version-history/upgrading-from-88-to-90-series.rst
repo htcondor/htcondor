@@ -23,3 +23,5 @@ is a list of items that administrators should be aware of.
 -  If EXECUTE and/or LOCAL_UNIV_EXECUTE are on NFS with root squash,
 permissions on these subdirectories will need to be changed from the
 default of 0755 to 1777.
+-  *condor_gpu_discovery* will now report short UUID based stable GPU IDs by default.
+use ``-by-index`` to go back to the 8.8 compatible index based GPU IDs.
