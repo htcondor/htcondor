@@ -1,0 +1,92 @@
+#!/usr/bin/python3
+
+"""
+Scan through the various HTCondor config knobs looking for potential
+issues caused by 9.0 having different default behavior than 8.8.
+A big focus of this script is the secure-by-default changes for 9.0
+"""
+
+import argparse
+import os
+import pathlib
+import re
+import sys
+import tempfile
+
+import htcondor
+
+
+g_color_output = os.isatty(sys.stdout.fileno())
+
+def format_red_terminal_text(text):
+    if g_color_output:
+        return "\033[1m\033[91m%s\033[0m" % text
+    return text
+
+def check_allow_daemon():
+    """
+    Look for missing ALLOW_DAEMON and ALLOW_ADVERTISE_* 
+    At least one of which is needed for the collector
+    """
+
+    allow_write = 'ALLOW_WRITE' in htcondor.param
+    if not allow_write : allow_write = 'ALLOW_WRITE_COLLECTOR' in htcondor.param
+    #print(allow_write)
+
+    allow_daemon = 'ALLOW_DAEMON' in htcondor.param
+    #print(allow_daemon)
+
+    allow_advertise = 'ALLOW_ADVERTISE_STARTD' in htcondor.param
+    if not allow_advertise : allow_advertise = 'ALLOW_ADVERTISE_SCHEDD' in htcondor.param
+    if not allow_advertise : allow_advertise = 'ALLOW_ADVERTISE_MASTER' in htcondor.param
+    #print(allow_advertise)
+
+    allow_daemon_or_advertise = allow_daemon or allow_advertise
+
+    if allow_write and not allow_daemon_or_advertise :
+        return """ALLOW_WRITE is configured, but ALLOW_DAEMON is not :
+   You must configure ALLOW_DAEMON or ALLOW_ADVERTISE_STARTD, ALLOW_ADVERTISE_MASTER,
+   and ALLOW_ADVERTISE_COLLECTOR Or none of the HTCondor daemons will be able to send
+   ads to the collector.  In 8.8 ALLOW_DAEMON and ALLOW_ADVERTISE_* would inherit from
+   ALLOW_WRITE, but in 9.0 ALLOW_WRITE is used only by the Schedd to control who can
+   submit jobs.
+"""
+
+def check_dead_allow_write():
+    """
+    Look for extraneous ALLOW_WRITE_<daemon>
+    """
+    if 'ALLOW_WRITE_COLLECTOR' in htcondor.param : allow_write = 'ALLOW_WRITE_COLLECTOR '
+    if 'ALLOW_WRITE_STARTD' in htcondor.param : allow_write += 'ALLOW_WRITE_STARTD '
+
+    if len(allow_write) :
+       return """obsolete %s :
+    In 8.8 ALLOW_DAEMON_<name> would inherit from ALLOW_WRITE_<name>, but in 9.0 this no
+    longer happens.  You should use
+       condor_config_val -verbose -dump ALLOW_WRITE_
+    To find obsolete uses of ALLOW_WRITE and either delete them, or change them to ALLOW_DAEMON
+""" % allow_write
+
+def main():
+
+#    parser = argparse.ArgumentParser(description="Examine HTCondor configuration, looking for parameters that may not work for 9.0")
+#    parser.add_argument("key", nargs="*", help="Specific key files to examine; if not given, then the defaults are used from the HTCondor configuration")
+#    parser.add_argument("--truncate", default=False, help="When a potentially insecure key is encountered, truncate it to match the behavior prior to 8.9.12", action="store_true")
+#    args = parser.parse_args()
+
+    Issues = 0
+
+    message = check_allow_daemon()
+    if message:
+        print(message)
+        Issues = 1
+
+    message = check_dead_allow_write()
+    if message:
+        print(message)
+        Issues = 1
+
+    sys.exit(Issues)
+
+if __name__ == '__main__':
+    main()
