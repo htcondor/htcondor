@@ -10,6 +10,7 @@ namespace classad {
 	class ClassAd;
 }
 class ArgList;
+class MyString;
 class Env;
 
 namespace htcondor {
