@@ -651,12 +651,11 @@ GetFileID( const MyString &filename, MyString &fileID,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Note: logfile is not passed as a reference because we need a local
-// copy to modify anyhow.
 bool
-ReadMultipleUserLogs::monitorLogFile( MyString logfile,
+ReadMultipleUserLogs::monitorLogFile( const MyString & l,
 			bool truncateIfFirst, CondorError &errstack )
 {
+	MyString logfile = l;
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::monitorLogFile(%s, %d)\n",
 				logfile.Value(), truncateIfFirst );
 
@@ -739,18 +738,17 @@ ReadMultipleUserLogs::monitorLogFile( MyString logfile,
 	}
 
 	monitor->refCount++;
-	
+
 	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Note: logfile is not passed as a reference because we need a local
-// copy to modify anyhow.
 bool
-ReadMultipleUserLogs::unmonitorLogFile( MyString logfile,
+ReadMultipleUserLogs::unmonitorLogFile( const MyString & l,
 			CondorError &errstack )
 {
+	MyString logfile = l;
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::unmonitorLogFile(%s)\n",
 				logfile.Value() );
 

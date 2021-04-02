@@ -46,6 +46,15 @@ CheckEvents::~CheckEvents()
 //-----------------------------------------------------------------------------
 
 CheckEvents::check_event_result_t
+CheckEvents::CheckAnEvent(const ULogEvent *event, std::string &errorMsg)
+{
+	MyString ms;
+	auto rv = CheckAnEvent(event, ms);
+	errorMsg = ms;  // unconditional assignment in CheckAnEvent().
+	return rv;
+}
+
+CheckEvents::check_event_result_t
 CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg)
 {
 	check_event_result_t	result = EVENT_OKAY;
@@ -278,6 +287,15 @@ CheckEvents::CheckJobFinal(const MyString &idStr,
 }
 
 //-----------------------------------------------------------------------------
+
+CheckEvents::check_event_result_t
+CheckEvents::CheckAllJobs(std::string &errorMsg)
+{
+	MyString ms;
+	auto rv = CheckAllJobs(ms);
+	errorMsg = ms; // unconditional assignment in CheckAllJobs().
+	return rv;
+}
 
 CheckEvents::check_event_result_t
 CheckEvents::CheckAllJobs(MyString &errorMsg)
