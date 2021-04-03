@@ -92,10 +92,10 @@ ResMgr::ResMgr() :
 				 primary->interfaceName() );
 	}
 	m_hibernation_manager->initialize( );
-	MyString	states;
+	std::string	states;
 	m_hibernation_manager->getSupportedStates(states);
 	dprintf( D_FULLDEBUG,
-			 "Detected hibernation states: %s\n", states.Value() );
+			 "Detected hibernation states: %s\n", states.c_str() );
 
 	m_hibernating = FALSE;
 #endif
