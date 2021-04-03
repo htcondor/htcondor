@@ -216,11 +216,13 @@ class ArgList {
 		// necessary markings to make it correctly recognized as V2
 		// by AppendArgsV1or2Raw().
 	bool GetArgsStringV1or2Raw(MyString *result,MyString *error_msg) const;
+	bool GetArgsStringV1or2Raw(std::string & result) const;
 
 		// From args in ClassAd, create V1 args string if
 		// possible. o.w. V2, with necessary markings to make it
 		// correctly recognized as V2 by AppendArgsV1or2Raw().
 	bool GetArgsStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *error_msg);
+	bool GetArgsStringV1or2Raw(ClassAd const *ad, std::string & result, std::string & error_msg);
 
 		// Create an args string for windows CreateProcess().
 	bool GetArgsStringWin32(MyString *result,int skip_args) const;

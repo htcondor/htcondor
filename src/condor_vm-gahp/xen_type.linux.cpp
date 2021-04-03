@@ -26,7 +26,6 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_mkstemp.h"
-#include "MyString.h"
 #include "util_lib_proto.h"
 #include "vmgahp_common.h"
 #include "vm_type.h"
@@ -339,8 +338,8 @@ bool VirshType::CreateVirshConfigFile(const char*  /*filename*/)
   tmp = param("LIBVIRT_XML_SCRIPT_ARGS");
   if(tmp != NULL)
     {
-      MyString errormsg;
-      if (!args.AppendArgsV1RawOrV2Quoted(tmp,&errormsg)) {
+      std::string errormsg;
+      if (!args.AppendArgsV1RawOrV2Quoted(tmp, errormsg)) {
 		vmprintf(D_ALWAYS, "Cannot parse LIBVIRT_XML_SCRIPT_ARGS: %s\n", tmp);
 	  }
       free(tmp);

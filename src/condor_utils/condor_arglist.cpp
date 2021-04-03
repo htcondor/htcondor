@@ -839,6 +839,14 @@ void ArgList::GetArgsStringForLogging( MyString * result ) const {
 	}
 }
 
+bool
+ArgList::GetArgsStringV1or2Raw(std::string & result) const
+{
+    MyString ms;
+    bool rv = GetArgsStringV1or2Raw(& ms, NULL);
+    result = ms;
+    return rv;
+}
 
 bool
 ArgList::GetArgsStringV1or2Raw(MyString *result,MyString *error_msg) const
@@ -860,6 +868,16 @@ ArgList::GetArgsStringV1or2Raw(MyString *result,MyString *error_msg) const
 	(*result) += RAW_V2_ARGS_MARKER;
 	return GetArgsStringV2Raw(result,error_msg);
 }
+
+bool
+ArgList::GetArgsStringV1or2Raw(ClassAd const * ad, std::string & result, std::string & error_msg)
+{
+	if(! AppendArgsFromClassAd(ad, error_msg)) {
+		return false;
+	}
+	return GetArgsStringV1or2Raw(result);
+}
+
 
 bool
 ArgList::GetArgsStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *error_msg)
