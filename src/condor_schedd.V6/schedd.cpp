@@ -10971,12 +10971,12 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			condor_sockaddr addr;
 			if( mrec->peer && mrec->peer[0] && addr.from_sinful(mrec->peer) ) {
 					// make local copy of static hostname buffer
-				MyString hostname = get_hostname(addr);
-				if (hostname.Length() > 0) {
+				std::string hostname = get_hostname(addr);
+				if (hostname.length() > 0) {
 					SetAttributeString( cluster, proc, ATTR_REMOTE_HOST,
-										hostname.Value() );
+										hostname.c_str() );
 					dprintf( D_FULLDEBUG, "Used inverse DNS lookup (%s)\n",
-							 hostname.Value() );
+							 hostname.c_str() );
 				} else {
 						// Error looking up host info...
 						// Just use the sinful string

@@ -1798,20 +1798,20 @@ int store_pool_cred_handler(int, Stream *s)
 	char *credd_host = param("CREDD_HOST");
 	if (credd_host) {
 
-		MyString my_fqdn_str = get_local_fqdn();
-		MyString my_hostname_str = get_local_hostname();
+		std::string my_fqdn_str = get_local_fqdn();
+		std::string my_hostname_str = get_local_hostname();
 		// TODO: Arbitrarily picking IPv4
-		MyString my_ip_str = get_local_ipaddr(CP_IPV4).to_ip_string();
+		std::string my_ip_str = get_local_ipaddr(CP_IPV4).to_ip_string();
 
 		// figure out if we're on the CREDD_HOST
-		bool on_credd_host = (strcasecmp(my_fqdn_str.Value(), credd_host) == MATCH);
-		on_credd_host = on_credd_host || (strcasecmp(my_hostname_str.Value(), credd_host) == MATCH);
-		on_credd_host = on_credd_host || (strcmp(my_ip_str.Value(), credd_host) == MATCH);
+		bool on_credd_host = (strcasecmp(my_fqdn_str.c_str(), credd_host) == MATCH);
+		on_credd_host = on_credd_host || (strcasecmp(my_hostname_str.c_str(), credd_host) == MATCH);
+		on_credd_host = on_credd_host || (strcmp(my_ip_str.c_str(), credd_host) == MATCH);
 
 		if (on_credd_host) {
 				// we're the CREDD_HOST; make sure the source address matches ours
 			const char *addr = ((ReliSock*)s)->peer_ip_str();
-			if (!addr || strcmp(my_ip_str.Value(), addr)) {
+			if (!addr || strcmp(my_ip_str.c_str(), addr)) {
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password remotely\n");
 				free(credd_host);
 				return CLOSE_STREAM;

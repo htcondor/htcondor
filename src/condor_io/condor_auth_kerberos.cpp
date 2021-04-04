@@ -1425,15 +1425,15 @@ int Condor_Auth_Kerberos :: init_server_info()
     // if we are client side, figure out remote server_ credentials
     if (mySock_->isClient()) {
 
-        MyString remoteName = get_hostname(mySock_->peer_addr());
+		std::string remoteName = get_hostname(mySock_->peer_addr());
 
         char *service = param(STR_KERBEROS_SERVER_SERVICE);
         if (!service)
             service = strdup(STR_DEFAULT_CONDOR_SERVICE);
 
-        err = (*krb5_sname_to_principal_ptr)(krb_context_, remoteName.Value(), service, KRB5_NT_SRV_HST, &server_);
+        err = (*krb5_sname_to_principal_ptr)(krb_context_, remoteName.c_str(), service, KRB5_NT_SRV_HST, &server_);
         dprintf(D_SECURITY, "KERBEROS: get remote server principal for \"%s/%s\"%s\n",
-                service, remoteName.Value(), err ? " FAILED" : "");
+                service, remoteName.c_str(), err ? " FAILED" : "");
 
         if (!err)
             err = !map_kerberos_name(&server_);

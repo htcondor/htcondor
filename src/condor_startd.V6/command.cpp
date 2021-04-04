@@ -1730,16 +1730,16 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 
 		// Figure out the hostname of our client.
 	ASSERT(sock->peer_addr().is_valid());
-	MyString hostname = get_full_hostname(sock->peer_addr());
-	if(hostname.IsEmpty()) {
+	std::string hostname = get_full_hostname(sock->peer_addr());
+	if(hostname.empty()) {
 		MyString ip = sock->peer_addr().to_ip_string();
 		rip->dprintf( D_FULLDEBUG,
 					  "Can't find hostname of client machine %s\n", ip.Value() );
 		if (ripb) { ripb->r_cur->client()->sethost(ip.Value()); }
 		rip->r_cur->client()->sethost(ip.Value());
 	} else {
-		if (ripb) { ripb->r_cur->client()->sethost(hostname.Value()); }
-		rip->r_cur->client()->sethost( hostname.Value() );
+		if (ripb) { ripb->r_cur->client()->sethost(hostname.c_str()); }
+		rip->r_cur->client()->sethost( hostname.c_str() );
 	}
 
 		// Get the owner of this claim out of the request classad.
@@ -2797,12 +2797,12 @@ command_coalesce_slots(int, Stream * stream ) {
 
 	// Sadly, launching a starter requires us to do this.
 	ASSERT( sock->peer_addr().is_valid() );
-	MyString hostname = get_full_hostname( sock->peer_addr() );
-	if(! hostname.IsEmpty() ) {
-		coalescedSlot->r_cur->client()->sethost( hostname.Value() );
+	std::string hostname = get_full_hostname( sock->peer_addr() );
+	if(! hostname.empty() ) {
+		coalescedSlot->r_cur->client()->sethost( hostname.c_str() );
 	} else {
-		MyString ip = sock->peer_addr().to_ip_string();
-		coalescedSlot->r_cur->client()->sethost( ip.Value() );
+		std::string ip = sock->peer_addr().to_ip_string();
+		coalescedSlot->r_cur->client()->sethost( ip.c_str() );
 	}
 
 	// We'e ignoring consumption policy here.  (See request_claim().)  This
