@@ -238,7 +238,7 @@ daemon::runs_on_this_host()
 				param_boolean_crufty(flag_in_config_file, false) ? TRUE : FALSE;
 		} else {
 			if (!this_host_addr_cached) {
-				MyString local_hostname = get_local_hostname();
+				std::string local_hostname = get_local_hostname();
 				this_host_addr = resolve_hostname(local_hostname);
 				if (!this_host_addr.empty()) {
 					this_host_addr_cached = true;
@@ -400,12 +400,12 @@ daemon::DoConfig( bool init )
 	char *env_string = param( buf );
 
 	Env env_parser;
-	MyString env_error_msg;
+	std::string env_error_msg;
 
-	if(!env_parser.MergeFromV1RawOrV2Quoted(env_string,&env_error_msg)) {
+	if(!env_parser.MergeFromV1RawOrV2Quoted(env_string, env_error_msg)) {
 		EXCEPT("ERROR: Failed to parse %s_ENVIRONMENT in config file: %s",
 		       name_in_config_file,
-			   env_error_msg.Value());
+			   env_error_msg.c_str());
 	}
 	free(env_string);
 
@@ -562,7 +562,7 @@ int daemon::RealStart( )
 	const char	*shortname;
 	int 	command_port = isDC ? TRUE : FALSE;
 	char const *daemon_sock = NULL;
-	MyString daemon_sock_buf;
+	std::string daemon_sock_buf;
 	std::string default_id;
 	char	buf[512];
 	ArgList args;
@@ -644,8 +644,8 @@ int daemon::RealStart( )
 			get_local_fqdn().c_str());
 		CollectorList* collectors = NULL;
 		if ((collectors = daemonCore->getCollectorList())) {
-			MyString my_fqdn_str = get_local_fqdn();
-			const char * my_hostname = my_fqdn_str.Value();
+			std::string my_fqdn_str = get_local_fqdn();
+			const char * my_hostname = my_fqdn_str.c_str();
 			Daemon * my_daemon;
 			collectors->rewind();
 			while (collectors->next (my_daemon)) {
@@ -656,22 +656,22 @@ int daemon::RealStart( )
 					my_daemon->fullHostname (),
 					my_daemon->port () );
 				
-				MyString cm_sinful = my_daemon->addr();
+				std::string cm_sinful = my_daemon->addr();
 				condor_sockaddr cm_sockaddr;
 				cm_sockaddr.from_sinful(cm_sinful);
-				MyString cm_hostname;
+				std::string cm_hostname;
 				if(my_daemon->fullHostname()) {
 					cm_hostname = my_daemon->fullHostname();
 				}
 
 				if( cm_sockaddr.is_loopback() ||
 					same_host (my_hostname, 
-							   cm_hostname.Value())) {
+							   cm_hostname.c_str())) {
 					Sinful sinful( my_daemon->addr() );
 					if( sinful.getSharedPortID() ) {
 							// collector is using a shared port
 						daemon_sock_buf = sinful.getSharedPortID();
-						daemon_sock = daemon_sock_buf.Value();
+						daemon_sock = daemon_sock_buf.c_str();
 						command_port = 1;
 					}
 					else {
@@ -817,15 +817,15 @@ int daemon::RealStart( )
 			// win, but we might as well do it right.
 			bool foundLocalName = false;
 			ArgList configArgs;
-			MyString configError;
-			if( configArgs.AppendArgsV1RawOrV2Quoted( daemon_args, & configError ) ) {
+			std::string configError;
+			if( configArgs.AppendArgsV1RawOrV2Quoted( daemon_args, configError ) ) {
 				for( int i = 0; i < configArgs.Count(); ++i ) {
 					char const * configArg = configArgs.GetArg( i );
 					if( strcmp( configArg, "-local-name" ) == 0 ) {
 						foundLocalName = true;
 						if( i + 1 < configArgs.Count() ) {
 							daemon_sock_buf = configArgs.GetArg(i + 1);
-							daemon_sock_buf.lower_case();
+							lower_case(daemon_sock_buf);
 							daemon_sock = daemon_sock_buf.c_str();
 							localName = daemon_sock_buf;
 							setLocalName = true;
@@ -872,11 +872,11 @@ int daemon::RealStart( )
 		}
 	}
 
-	MyString args_error;
-	if(!args.AppendArgsV1RawOrV2Quoted(daemon_args,&args_error)) {
+	std::string args_error;
+	if(!args.AppendArgsV1RawOrV2Quoted(daemon_args, args_error)) {
 		dprintf(D_ALWAYS,"ERROR: failed to parse %s daemon arguments: %s\n",
 				buf,
-				args_error.Value());
+				args_error.c_str());
 		Restart();
 		free(daemon_args);
 		return 0;
@@ -961,7 +961,7 @@ int daemon::RealStart( )
 		// We checked for local names already, use the config name here.
 		if( isDC ) {
 			daemon_sock_buf = name_in_config_file;
-			daemon_sock_buf.lower_case();
+			lower_case(daemon_sock_buf);
 			// Because the master only starts daemons named in the config
 			// file, and those names are by definition unique, we don't
 			// need to further uniquify them with a sequence number, and

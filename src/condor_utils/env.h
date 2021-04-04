@@ -131,6 +131,7 @@ class Env {
 		// string.  If the string begins with a double-quote, it will
 		// be treated as V2Quoted; otherwise it will be read as V1Raw.
 	bool MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString *error_msg );
+	bool MergeFromV1RawOrV2Quoted( const char *delimitedString, std::string & error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
 		// If the string is not in V2Quoted format, this function
