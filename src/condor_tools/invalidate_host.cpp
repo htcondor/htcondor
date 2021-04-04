@@ -54,7 +54,6 @@ usage( void )
 int
 main( int argc, char** argv ) 
 {
-	char* host;
 	ClassAd invalidate_ad;
 	char line[256];
 	Daemon Collector( DT_COLLECTOR);
@@ -72,13 +71,14 @@ main( int argc, char** argv )
 	if( ! argv[1] ) {
 		usage();
 	}
+	std::string host;
 	host = get_full_hostname( argv[1] );
-	if( ! host ) {
+	if( host.empty() ) {
 		fprintf( stderr, "%s: Unknown host %s\n", MyName, argv[1] );
 		exit( 1 );
 	}
 
-	printf( "Trying %s\n", host );
+	printf( "Trying %s\n", host.c_str() );
 
 	if( ! Collector.locate() ) {
 		fprintf( stderr, "%s: ERROR, can't locate Central Manager!\n", 
@@ -91,7 +91,7 @@ main( int argc, char** argv )
     SetTargetTypeName( invalidate_ad, STARTD_ADTYPE );
 
         // We only want to invalidate this slot.
-    sprintf( line, "%s == \"%s\"", ATTR_MACHINE, host );
+    sprintf( line, "%s == \"%s\"", ATTR_MACHINE, host.c_str() );
     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line );
 
 
@@ -123,7 +123,7 @@ main( int argc, char** argv )
 	}
 
 	delete coll_sock;
-	printf( "%s: Sent invalidate ad for %s to %s\n", MyName, host,
+	printf( "%s: Sent invalidate ad for %s to %s\n", MyName, host.c_str(),
 			Collector.fullHostname() );
 	exit( 0 );
 }

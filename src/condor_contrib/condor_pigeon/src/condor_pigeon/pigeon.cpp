@@ -89,7 +89,7 @@ void Pigeon::initialize() {
   	dprintf(D_ALWAYS, "You need to specify the QPID executable as QPID_EXEC in your condor config \n");
   	EXCEPT("No qpid executable (QPID_EXEC) specified!");
   }
-  MyString hostname = get_local_fqdn();
+  std::string hostname = get_local_fqdn();
   
   ArgList arglist; 
   arglist.AppendArg("qpidd");
@@ -132,7 +132,7 @@ void Pigeon::initialize() {
   SetMyTypeName(m_qpidAd, "pigeon");
   SetTargetTypeName(m_qpidAd, "");
   std::string hostAddr = "pigeon@";
-  hostAddr += hostname.Value();
+  hostAddr += hostname.c_str();
   m_qpidAd.Assign(ATTR_NAME, "pigeon"); //hostAddr.c_str());
   m_qpidAd.Assign("Key", "qpidKey");
   m_qpidAd.Assign("IP","128" );

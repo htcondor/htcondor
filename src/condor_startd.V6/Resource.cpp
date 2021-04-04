@@ -265,12 +265,12 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 
     r_cur = new Claim(this);
 
-	MyString fqdn;
+	std::string fqdn;
 	if( Name ) {
 		tmpName = Name;
 	} else {
 		fqdn = get_local_fqdn();
-		tmpName = fqdn.Value();
+		tmpName = fqdn.c_str();
 	}
 	if( multiple_slots || get_feature() == PARTITIONABLE_SLOT ) {
 		tmp.formatstr( "%s@%s", r_id_str, tmpName );
