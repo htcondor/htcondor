@@ -827,7 +827,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 		}
 
 
-		std::vector<MyString> hostnames;
+		std::vector<std::string> hostnames;
 		// now scan through hostname strings
 		if( !(mask&allow_resolved) || !(mask&deny_resolved) ) {
 			hostnames = get_hostname_with_alias(addr);
