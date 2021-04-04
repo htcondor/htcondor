@@ -29,6 +29,10 @@
 #include "../condor_starter.V6.1/cgroup.linux.h"
 #endif
 
+#ifdef LINUX
+#include "../condor_utils/perf_counter.linux.h"
+#endif
+
 class ProcFamilyMonitor;
 
 class ProcFamily {
@@ -192,6 +196,9 @@ private:
 	// this flag will be true.  This avoids a Linux kernel panic.
 	bool m_last_signal_was_sigstop;
 
+#ifdef LINUX
+	PerfCounter m_perf_counter;
+#endif
 	int count_tasks_cgroup();
 	int aggregate_usage_cgroup_blockio(ProcFamilyUsage*);
 	int aggregate_usage_cgroup_blockio_io_serviced(ProcFamilyUsage*);

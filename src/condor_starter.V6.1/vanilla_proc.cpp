@@ -747,6 +747,12 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 		ad->Assign(ATTR_IO_WAIT, usage->io_wait);
 	}
 
+#ifdef LINUX
+	if (usage->m_instructions > 0) {
+		ad->Assign(ATTR_JOB_CPU_INSTRUCTIONS, usage->m_instructions);
+	}
+#endif
+
 
 		// Update our knowledge of how many processes the job has
 	num_pids = usage->num_procs;

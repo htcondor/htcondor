@@ -152,6 +152,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_BLOCK_READS );
 	common_job_queue_attrs->insert( ATTR_NETWORK_IN );
 	common_job_queue_attrs->insert( ATTR_NETWORK_OUT );
+	common_job_queue_attrs->insert( ATTR_JOB_CPU_INSTRUCTIONS );
     common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_KBYTES );
     common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITE_KBYTES );
     common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_BYTES );
