@@ -385,6 +385,16 @@ Env::V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *errmsg)
 }
 
 bool
+Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, std::string & error_msg )
+{
+    MyString ms(error_msg);
+    bool rv = MergeFromV1RawOrV2Quoted( delimitedString, & ms );
+    if( ms != error_msg ) { error_msg = ms; }
+    return rv;
+}
+
+
+bool
 Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString *error_msg )
 {
 	if(!delimitedString) return true;

@@ -400,12 +400,12 @@ daemon::DoConfig( bool init )
 	char *env_string = param( buf );
 
 	Env env_parser;
-	MyString env_error_msg;
+	std::string env_error_msg;
 
-	if(!env_parser.MergeFromV1RawOrV2Quoted(env_string,&env_error_msg)) {
+	if(!env_parser.MergeFromV1RawOrV2Quoted(env_string, env_error_msg)) {
 		EXCEPT("ERROR: Failed to parse %s_ENVIRONMENT in config file: %s",
 		       name_in_config_file,
-			   env_error_msg.Value());
+			   env_error_msg.c_str());
 	}
 	free(env_string);
 
@@ -562,7 +562,7 @@ int daemon::RealStart( )
 	const char	*shortname;
 	int 	command_port = isDC ? TRUE : FALSE;
 	char const *daemon_sock = NULL;
-	MyString daemon_sock_buf;
+	std::string daemon_sock_buf;
 	std::string default_id;
 	char	buf[512];
 	ArgList args;
@@ -817,15 +817,15 @@ int daemon::RealStart( )
 			// win, but we might as well do it right.
 			bool foundLocalName = false;
 			ArgList configArgs;
-			MyString configError;
-			if( configArgs.AppendArgsV1RawOrV2Quoted( daemon_args, & configError ) ) {
+			std::string configError;
+			if( configArgs.AppendArgsV1RawOrV2Quoted( daemon_args, configError ) ) {
 				for( int i = 0; i < configArgs.Count(); ++i ) {
 					char const * configArg = configArgs.GetArg( i );
 					if( strcmp( configArg, "-local-name" ) == 0 ) {
 						foundLocalName = true;
 						if( i + 1 < configArgs.Count() ) {
 							daemon_sock_buf = configArgs.GetArg(i + 1);
-							daemon_sock_buf.lower_case();
+							lower_case(daemon_sock_buf);
 							daemon_sock = daemon_sock_buf.c_str();
 							localName = daemon_sock_buf;
 							setLocalName = true;
@@ -872,11 +872,11 @@ int daemon::RealStart( )
 		}
 	}
 
-	MyString args_error;
-	if(!args.AppendArgsV1RawOrV2Quoted(daemon_args,&args_error)) {
+	std::string args_error;
+	if(!args.AppendArgsV1RawOrV2Quoted(daemon_args, args_error)) {
 		dprintf(D_ALWAYS,"ERROR: failed to parse %s daemon arguments: %s\n",
 				buf,
-				args_error.Value());
+				args_error.c_str());
 		Restart();
 		free(daemon_args);
 		return 0;
@@ -961,7 +961,7 @@ int daemon::RealStart( )
 		// We checked for local names already, use the config name here.
 		if( isDC ) {
 			daemon_sock_buf = name_in_config_file;
-			daemon_sock_buf.lower_case();
+			lower_case(daemon_sock_buf);
 			// Because the master only starts daemons named in the config
 			// file, and those names are by definition unique, we don't
 			// need to further uniquify them with a sequence number, and
