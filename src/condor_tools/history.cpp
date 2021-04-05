@@ -1080,8 +1080,8 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
            &prevOffset, &clusterId, &procId, owner, &completionDate);
 
     if (scan_result < 1 || (prevOffset == -1 && clusterId == -1 && procId == -1)) {
-        fprintf(stderr, 
-                "Error: (%s) is an incompatible history file, please run condor_convert_history.\n",
+        fprintf(stderr,
+                "Error: (%s) is an incompatible history file.\n",
                 filename);
         free(owner);
         exit(1);
@@ -1123,8 +1123,8 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
                    &prevOffset, &clusterId, &procId, owner, &completionDate);
 
 			if (scan_result < 1 || (prevOffset == -1 && clusterId == -1 && procId == -1)) {
-				fprintf(stderr, 
-						"Error: (%s) is an incompatible history file, please run condor_convert_history.\n",
+				fprintf(stderr,
+						"Error: (%s) is an incompatible history file.\n",
 						filename);
 				free(owner);
 				exit(1);

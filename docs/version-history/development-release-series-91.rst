@@ -13,6 +13,9 @@ Release Notes:
 
 - HTCondor version 9.1.0 not yet released.
 
+- The *condor_convert_history* command was removed.
+  :jira:`392`
+
 New Features:
 
 - gdb and strace should now work in Docker Universe jobs.
