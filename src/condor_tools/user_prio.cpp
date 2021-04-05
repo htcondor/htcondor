@@ -28,7 +28,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_io.h"
-#include "MyString.h"
 #include "format_time.h"
 #include "daemon.h"
 #include "condor_distribution.h"

@@ -1094,6 +1094,16 @@ ArgList::SetArgV1SyntaxToCurrentPlatform()
 }
 
 bool
+ArgList::GetArgsStringSystem(std::string & result,int skip_args) const
+{
+    MyString ms(result.c_str());
+    bool rv = GetArgsStringSystem(& ms, skip_args);
+    result = ms;
+    return rv;
+}
+
+
+bool
 ArgList::GetArgsStringSystem(MyString *result,int skip_args) const
 {
 #ifdef WIN32

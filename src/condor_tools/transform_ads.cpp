@@ -1055,14 +1055,13 @@ int DoUnitTests(int options, std::vector<input_file> & inputs)
 				const char * p2;
 				int c1, c2;
 				if (reader->get_data(p1, c1, p2, c2)) {
-				#if 1
-					MyString tmp;
+					std::string tmp;
 					bool got_line = reader->output().readLine(tmp);
 					if (got_line) ++lineno;
 					if (options & 1) {
-						fprintf(stdout, "reader %p: get_data(%p, %d, %p, %d) %d [%3d]:%s\n", reader, p1, c1, p2, c2, got_line, lineno, tmp.Value());
+						fprintf(stdout, "reader %p: get_data(%p, %d, %p, %d) %d [%3d]:%s\n", reader, p1, c1, p2, c2, got_line, lineno, tmp.c_str());
 					} else {
-						fprintf(stdout, "%s", tmp.Value());
+						fprintf(stdout, "%s", tmp.c_str());
 					}
 					if ( ! got_line) {
 						++cpending;
@@ -1070,12 +1069,6 @@ int DoUnitTests(int options, std::vector<input_file> & inputs)
 							is_done = true;
 						}
 					}
-				#else
-					MyString tmp;
-					if (p1) { tmp.set(p1, MIN(c1,30)); }
-					fprintf(stdout, "reader %p: get_data(%p, %d, %p, %d) %s\n", reader, p1, c1, p2, c2, tmp.Value());
-					reader->consume_data(120);
-				#endif
 				} else if (reader->is_closed() || reader->error_code()) {
 					is_done = true;
 					int tot_reads=-1, tot_pending=-1;

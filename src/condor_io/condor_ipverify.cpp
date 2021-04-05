@@ -673,6 +673,17 @@ IpVerify::refreshDNS() {
 }
 
 int
+IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr,
+  const char * user, std::string & allow_reason, std::string & deny_reason ) {
+	MyString ms_deny(deny_reason.c_str());
+	MyString ms_allow(allow_reason.c_str());
+	int rv = Verify( perm, addr, user, &ms_allow, &ms_deny );
+	allow_reason = ms_allow;
+	deny_reason = ms_deny;
+	return rv;
+}
+
+int
 IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * user, MyString *allow_reason, MyString *deny_reason )
 {
 	perm_mask_t mask;

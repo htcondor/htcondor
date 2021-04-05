@@ -2731,6 +2731,14 @@ param_boolean_int( const char *name, int default_value ) {
     return param_boolean(name, default_bool) ? 1 : 0;
 }
 
+const char *
+param_append_location(const MACRO_META * pmet, std::string & value) {
+	MyString ms(value.c_str());
+	const char * rv = param_append_location(pmet, ms);
+	value = ms;
+	return rv;
+}
+
 const char * param_append_location(const MACRO_META * pmet, MyString & value)
 {
 	value += config_source_by_id(pmet->source_id);

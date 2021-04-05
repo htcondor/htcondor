@@ -242,6 +242,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	bool param_false( const char * name );
 
 	const char * param_append_location(const MACRO_META * pmet, MyString & value);
+	const char * param_append_location(const MACRO_META * pmet, std::string & value);
 	const char * param_get_location(const MACRO_META * pmet, MyString & value);
 	const char * param_get_location(const MACRO_META * pmet, std::string & value);
 

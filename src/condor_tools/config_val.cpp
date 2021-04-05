@@ -248,17 +248,17 @@ void print_as_type(const char * name, int as_type)
 	}
 }
 
-const char * report_config_source(MACRO_META * pmeta, MyString & source)
+const char * report_config_source(MACRO_META * pmeta, std::string & source)
 {
 	source = config_source_by_id(pmeta->source_id);
 	if (pmeta->source_line < 0) {
 		if (pmeta->source_id == 1) {
-			source.formatstr_cat(", item %d", pmeta->param_id);
+			formatstr_cat(source,", item %d", pmeta->param_id);
 		}
 	} else {
-		source.formatstr_cat(", line %d", pmeta->source_line);
+		formatstr_cat(source,", line %d", pmeta->source_line);
 	}
-	return source.Value();
+	return source.c_str();
 }
 
 // increment the ref count of params referenced by default params
@@ -441,7 +441,7 @@ void print_param_table_info(FILE* out, int param_id, int type_and_flags, const c
 #ifdef HAS_LAMBDA
 #else
 bool report_obsolete_var(void* pv, HASHITER & it) {
-	MyString * pstr = (MyString*)pv;
+	std::string * pstr = (std::string*)pv;
 	const char * name = hash_iter_key(it);
 	if (is_known_subsys_prefix(name)) {
 		*pstr += "  ";
@@ -887,11 +887,11 @@ main( int argc, const char* argv[] )
 		Regex re; int err = 0; const char * pszMsg = 0;
 		// check for knobs of the form SUBSYS.LOCALNAME.*
 		ASSERT(re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &pszMsg, &err, PCRE_CASELESS));
-		MyString obsolete_vars;
+		std::string obsolete_vars;
 		foreach_param_matching(re, HASHITER_NO_DEFAULTS,
 #ifdef HAS_LAMBDA
 			[](void* pv, HASHITER & it) -> bool {
-				MyString * pstr = (MyString*)pv;
+				std::string * pstr = (std::string *)pv;
 				const char * name = hash_iter_key(it);
 				if (is_known_subsys_prefix(name)) {
 					*pstr += "  ";
@@ -2054,8 +2054,8 @@ bool write_config_callback(void* user, HASHITER & it) {
 		}
 
 		if (pargs->opt.hide_if_match && pargs->obsoleteif) {
-			MyString item(hash_iter_key(it));
-			item.upper_case();
+			std::string item(hash_iter_key(it));
+			upper_case(item);
 			item += "=";
 			const char * val = hash_iter_value(it);
 			if (val) item += hash_iter_value(it);
@@ -2076,7 +2076,7 @@ bool write_config_callback(void* user, HASHITER & it) {
 		return true;
 	}
 
-	MyString source;
+	std::string source;
 	if (pargs->opt.comment_source) {
 		report_config_source(pmeta, source);
 	}
@@ -2149,10 +2149,10 @@ void PrintMetaKnob(const char * metaval, bool expand, bool verbose)
 			printf("%s\n", line);
 		}
 		if (is_use && expand) {
-			MyString cat(toks.next()), remain;
+			std::string cat(toks.next()), remain;
 			int len, ix = toks.next_token(len);
 			if (ix > 0) { remain = line + ix; }
-			PrintExpandedMetaParams(cat.Value(), remain.Value(), verbose);
+			PrintExpandedMetaParams(cat.c_str(), remain.c_str(), verbose);
 		}
 	}
 }

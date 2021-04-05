@@ -109,6 +109,7 @@ public:
                 USER_ID_REQUIRED -- if user id is required but the caller did not pass in
 	*/
 	int Verify( DCpermission perm, const condor_sockaddr& addr, const char * user, MyString *allow_reason, MyString *deny_reason );
+	int Verify( DCpermission perm, const condor_sockaddr& addr, const char * user, std::string & allow_reason, std::string & deny_reason );
 
 	/** Dynamically opens a hole in the authorization settings for the
 	    given (user, IP) at the given perm level.

@@ -18,7 +18,6 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "MyString.h"
 #include "directory.h"
 
 #define HISTORY_DELIM	"***"
@@ -87,39 +86,39 @@ convertHistoryFile(const char *oldHistoryFileName)
     printf("Converting history file: %s...\n", oldHistoryFileName);
 
 	int totalsum = 0, entrysum = 0,  entry_count = 0, tmploc = 0, found = 0;
-	MyString Readbuf, Delimbuf, ClusterId, ProcId, Owner, CompletionDate;
+	std::string Readbuf, Delimbuf, ClusterId, ProcId, Owner, CompletionDate;
 
-	while( Readbuf.readLine(OldLogFile) == true ) {
+	while( readLine(Readbuf, OldLogFile) == true ) {
 
-		if( Readbuf.Length() == 0 ) continue;
+		if( Readbuf.length() == 0 ) continue;
 
-		if( strncmp(Readbuf.Value(), HISTORY_DELIM, strlen(HISTORY_DELIM)) == 0 ) {
+		if( strncmp(Readbuf.c_str(), HISTORY_DELIM, strlen(HISTORY_DELIM)) == 0 ) {
 			// This line contains delimiter
 			found = 1;
 
-			Delimbuf.formatstr("%s Offset = %d ClusterId = %s ProcId = %s Owner = %s CompletionDate = %s\n", HISTORY_DELIM, entrysum, ClusterId.Value(), ProcId.Value(), Owner.Value(), CompletionDate.Value());
-			fprintf(NewLogFile, "%s", Delimbuf.Value());
+			formatstr(Delimbuf,"%s Offset = %d ClusterId = %s ProcId = %s Owner = %s CompletionDate = %s\n", HISTORY_DELIM, entrysum, ClusterId.c_str(), ProcId.c_str(), Owner.c_str(), CompletionDate.c_str());
+			fprintf(NewLogFile, "%s", Delimbuf.c_str());
 
 			entrysum = totalsum;
-			totalsum += Delimbuf.Length();
+			totalsum += Delimbuf.length();
 			entry_count++;
 		}else {
-			totalsum += Readbuf.Length();
-			fprintf(NewLogFile, "%s", Readbuf.Value());
+			totalsum += Readbuf.length();
+			fprintf(NewLogFile, "%s", Readbuf.c_str());
 
-			Readbuf.chomp();
-			if( strncmp(Readbuf.Value(), CLUSTERID, strlen(CLUSTERID)) == 0 ) {
-				tmploc = Readbuf.FindChar('=');
-				ClusterId = Readbuf.substr(tmploc+2, Readbuf.Length());
-			}else if( strncmp(Readbuf.Value(), PROCID, strlen(PROCID)) == 0 ) {
-				tmploc = Readbuf.FindChar('=');
-				ProcId = Readbuf.substr(tmploc+2, Readbuf.Length());
-			}else if( strncmp(Readbuf.Value(), OWNER, strlen(OWNER)) == 0 ) {
-				tmploc = Readbuf.FindChar('=');
-				Owner = Readbuf.substr(tmploc+2, Readbuf.Length());
-			}else if( strncmp(Readbuf.Value(), COMPLETIONDATE, strlen(COMPLETIONDATE)) == 0 ) {
-				tmploc = Readbuf.FindChar('=');
-				CompletionDate = Readbuf.substr(tmploc+2, Readbuf.Length());
+			chomp(Readbuf);
+			if( strncmp(Readbuf.c_str(), CLUSTERID, strlen(CLUSTERID)) == 0 ) {
+				tmploc = Readbuf.find('=');
+				ClusterId = Readbuf.substr(tmploc+2, Readbuf.length());
+			}else if( strncmp(Readbuf.c_str(), PROCID, strlen(PROCID)) == 0 ) {
+				tmploc = Readbuf.find('=');
+				ProcId = Readbuf.substr(tmploc+2, Readbuf.length());
+			}else if( strncmp(Readbuf.c_str(), OWNER, strlen(OWNER)) == 0 ) {
+				tmploc = Readbuf.find('=');
+				Owner = Readbuf.substr(tmploc+2, Readbuf.length());
+			}else if( strncmp(Readbuf.c_str(), COMPLETIONDATE, strlen(COMPLETIONDATE)) == 0 ) {
+				tmploc = Readbuf.find('=');
+				CompletionDate = Readbuf.substr(tmploc+2, Readbuf.length());
 			}
 		}
 	}

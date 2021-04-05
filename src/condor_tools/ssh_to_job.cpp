@@ -23,7 +23,6 @@
 #include "condor_distribution.h"
 #include "dc_schedd.h"
 #include "dc_starter.h"
-#include "MyString.h"
 #include "sig_install.h"
 #include "sig_name.h"
 #include "my_popen.h"
@@ -757,7 +756,7 @@ bool SSHToJob::execute_ssh()
 	}
 
 
-	MyString proxy_command;
+	std::string proxy_command;
 	ArgList proxy_arglist;
 	proxy_arglist.AppendArg(m_program_name.c_str());
 	if( m_debug ) {
@@ -765,7 +764,7 @@ bool SSHToJob::execute_ssh()
 	}
 	proxy_arglist.AppendArg("-proxy");
 	proxy_arglist.AppendArg(fdpass_sock_name.c_str());
-	if( !proxy_arglist.GetArgsStringSystem(&proxy_command,0) ) {
+	if( !proxy_arglist.GetArgsStringSystem(proxy_command,0) ) {
 		logError("Failed to produce proxy command.\n");
 		return false;
 	}

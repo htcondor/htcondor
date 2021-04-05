@@ -232,6 +232,7 @@ class ArgList {
 		// and so that it is treated as a single argument even if it contains
 		// spaces.
 	bool GetArgsStringSystem(MyString *result,int skip_args) const;
+	bool GetArgsStringSystem(std::string & result,int skip_args) const;
 
 	bool InputWasV1() const {return input_was_unknown_platform_v1;}
 
