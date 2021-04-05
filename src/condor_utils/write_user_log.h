@@ -38,7 +38,6 @@
 #endif
 
 /* Predeclare some classes */
-class MyString;
 class UserLogHeader;
 class FileLockBase;
 class FileLock;
