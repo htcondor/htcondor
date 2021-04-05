@@ -853,6 +853,10 @@ populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{versio
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-minicondor
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/50ec2.config
 
+# Install a second config.d directory under /usr/share, used for the
+# convenience of software built on top of Condor such as GlideinWMS.
+mkdir -p -m0755 %{buildroot}/usr/share/condor/config.d
+
 mkdir -p -m0755 %{buildroot}/%{_var}/log/condor
 # Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
@@ -1131,6 +1135,7 @@ rm -rf %{buildroot}
 %dir %_sysconfdir/condor/tokens.d/
 %dir %_sysconfdir/condor/config.d/
 %config(noreplace) %{_sysconfdir}/condor/config.d/00-htcondor-9.0.config
+%dir /usr/share/condor/config.d/
 %_libdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/bash_completion.d/condor
