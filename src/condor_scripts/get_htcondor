@@ -519,7 +519,7 @@ do_install() {
 			CONFIG_FILE="/etc/condor/config.d/01-submit.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
 			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_submit' >> ${CONFIG_FILE}"
-			$sh_c "echo 'use role : get_htcondor_submit' >> ${CONFIG_FILE}"
+			$sh_c "echo 'use role:get_htcondor_submit' >> ${CONFIG_FILE}"
 
 			if [ -n "${SHARED_FS_DOMAIN}" ]; then
 				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
@@ -532,7 +532,7 @@ do_install() {
 			CONFIG_FILE="/etc/condor/config.d/01-execute.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
 			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_execute' >> ${CONFIG_FILE}"
-			$sh_c "echo 'use role : get_htcondor_execute' >> ${CONFIG_FILE}"
+			$sh_c "echo 'use role:get_htcondor_execute' >> ${CONFIG_FILE}"
 
 			if [ -n "${SHARED_FS_DOMAIN}" ]; then
 				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
