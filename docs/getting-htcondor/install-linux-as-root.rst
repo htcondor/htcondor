@@ -14,7 +14,7 @@ download, install and start HTCondor.
 
       .. code-block:: shell
 
-         sudo apt-get install curl
+         apt-get update && apt-get install curl
 
 The command below shows how to download the script and run it immediately;
 if you would like to inspect it first, see
