@@ -26,6 +26,9 @@ the :doc:`admin-quick-start`.
 
     sudo curl -fsSL https://get.htcondor.com | /bin/bash -s -- --no-dry-run
 
+If you see an error like ``bash: sudo: command not found``, try re-running
+the command above without the leading ``sudo``.
+
 .. _inspecting_the_script:
 
 .. admonition:: Inspecting the Script
