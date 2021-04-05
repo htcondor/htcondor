@@ -89,6 +89,8 @@ LOCAL_DIR		= $(TILDE)
 
 ##  Where are optional machine-specific local config files located?
 ##  Config files are included in lexicographic order.
+##  Multiple directories may be specified, separated by commas; directories
+##  are read in left-to-right order.
 ##  No default.
 LOCAL_CONFIG_DIR        = $(ETC)/config.d
 
