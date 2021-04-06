@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "directory.h"
+#include "stl_string_utils.h"
 
 #define HISTORY_DELIM	"***"
 #define CLUSTERID	"ClusterId"
