@@ -19,7 +19,11 @@ Release Notes:
 
 New Features:
 
-- None.
+- A new tool *condor_check_config* can be used after an upgrade when you had a working
+  condor configuration before the upgrade. It will report configuration values that should be changed.
+  In this version the tool for a few things related to the change to a more secure configuration by default.
+  :jira:`384`
+
 
 Bugs Fixed:
 
