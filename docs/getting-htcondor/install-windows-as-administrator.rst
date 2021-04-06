@@ -117,3 +117,61 @@ restart Windows for HTCondor to work.
 Open a command prompt to follow the next set of instructions.
 
 .. include:: minicondor-test-and-quickstart.include
+
+Setting Up a Whole Pool
+------------------------------------
+
+Follow the instructions above through Step 1. Then, customize the 
+installation as follows: 
+
+STEP 2: HTCondor Pool Configuration.
+
+    Create a new pool
+    only on the machine you've chosen as their central manager.  See
+    the :doc:`admin-quick-start`.  Otherwise, choose the option to
+    join an existing pool and enter the name or IP address of the
+    central manager.
+
+STEP 3: This Machine's Roles.
+
+    Check the "submit jobs"
+    box to select the submit role, or choose "always run jobs" to select
+    the execute role.
+
+STEP 4: The Account Domain.
+    Enter the
+    same name on all submit-role machines.  This helps ensure that a
+    user can't get more resources by logging in to more than one machine.
+
+STEP 5: E-mail Settings.
+    Specify the desired email address(es), if any.
+
+STEP 6: Java Settings.
+    If this entry is already set, accept it.  Otherwise, skip it.
+
+    Experienced users who know they want to use the **java** universe
+    should instead enter the path to the Java executable on the machine,
+    if it isn't already set, or they want to use a different one.
+
+    To disable use of the **java** universe, leave the field blank.
+
+STEP 7: Host Permission Settings.
+    Leave all three
+    entries blank and configure security as appropriate for the
+    machine's role by editing HTCondor configuration files; see the
+    ``get_htcondor`` :doc:`man page <../man-pages/get_htcondor>` for
+    details.
+
+STEP 8: VM Universe Setting.
+    Disable the **vm** universe.
+
+    Experienced users with VMWare and Perl already installed may enable
+    the **vm** universe.
+
+STEP 9: Choose Destination Folder
+    :index:`location of files<single: location of files; installation>`
+
+    Experienced users may change the default installation path
+    (``c:\Condor``), but we don't recommend doing so.  The default path
+    is assumed in a number of script and configuration paths, so you should
+    expect problems if you do so.
