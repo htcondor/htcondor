@@ -373,7 +373,7 @@ parseIpPort (const MyString &ip_port_pair, MyString &ip_addr)
 {
 	ip_addr = "";
 
-	if (ip_port_pair.IsEmpty()) {
+	if (ip_port_pair.empty()) {
         return false;
 	}
     const char *ip_port = ip_port_pair.Value();

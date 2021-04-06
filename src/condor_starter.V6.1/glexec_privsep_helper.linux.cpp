@@ -530,7 +530,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 				}
 			}
 
-			if( !glexec_stderr.IsEmpty() ) {
+			if( !glexec_stderr.empty() ) {
 				glexec_stderr.trim();
 				StringList lines(glexec_stderr.Value(),"\n");
 				lines.rewind();
@@ -547,7 +547,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 					}
 					line_count++;
 
-					if( !glexec_stderr.IsEmpty() ) {
+					if( !glexec_stderr.empty() ) {
 						glexec_stderr += "; ";
 					}
 					dprintf(D_ALWAYS,

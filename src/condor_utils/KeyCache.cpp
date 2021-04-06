@@ -327,7 +327,7 @@ bool KeyCache::insert(KeyCacheEntry &e) {
 void
 KeyCache::makeServerUniqueId(MyString const &parent_id,int server_pid,MyString *result) {
 	ASSERT( result );
-	if( parent_id.IsEmpty() || server_pid == 0 ) {
+	if( parent_id.empty() || server_pid == 0 ) {
 			// If our peer is not a daemon, parent_id will be empty
 			// and there is no point in indexing it, because we
 			// never query by PID alone.
@@ -404,7 +404,7 @@ KeyCache::removeFromIndex(KeyCacheEntry *key)
 void
 KeyCache::addToIndex(KeyCacheIndex *hash,MyString const &index,KeyCacheEntry *key)
 {
-	if( index.IsEmpty() ) {
+	if( index.empty() ) {
 		return;
 	}
 	ASSERT( key );

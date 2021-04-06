@@ -35,7 +35,7 @@ SharedPortServer::~SharedPortServer() {
 		daemonCore->Cancel_Command( SHARED_PORT_CONNECT );
 	}
 
-	if( !m_shared_port_server_ad_file.IsEmpty() ) {
+	if( !m_shared_port_server_ad_file.empty() ) {
 		IGNORE_RETURN unlink( m_shared_port_server_ad_file.Value() );
 	}
 

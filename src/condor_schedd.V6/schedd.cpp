@@ -9648,7 +9648,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	if( p ) {
 		MyString usermap;
 		p->getUseridMap(usermap);
-		if( !usermap.IsEmpty() ) {
+		if( !usermap.empty() ) {
 			MyString envname;
 			envname.formatstr("_%s_USERID_MAP",myDistro->Get());
 			extra_env.SetEnv(envname.Value(),usermap.Value());
@@ -12069,7 +12069,7 @@ Scheduler::child_exit(int pid, int status)
 	if ( !ExitWhenDone && paired_match_wait ) {
 		return;
 	} else if( ! ExitWhenDone && StartJobsFlag ) {
-		if( !claim_id.IsEmpty() ) {
+		if( !claim_id.empty() ) {
 				// Try finding a new job for this claim.
 			match_rec *mrec = scheduler.FindMrecByClaimID( claim_id.Value() );
 			if( mrec ) {
@@ -12079,7 +12079,7 @@ Scheduler::child_exit(int pid, int status)
 			this->ExpediteStartJobs();
 		}
 	} else if( !keep_claim ) {
-		if( !claim_id.IsEmpty() ) {
+		if( !claim_id.empty() ) {
 			DelMrec( claim_id.Value() );
 		}
 	}

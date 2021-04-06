@@ -65,7 +65,7 @@ Credential::SetName(const char * _name) {
 classad::ClassAd * 
 Credential::GetMetadata() {
 	classad::ClassAd * class_ad = new classad::ClassAd();
-	ASSERT (!name.IsEmpty());
+	ASSERT (!name.empty());
 	class_ad->InsertAttr (CREDATTR_NAME, name.Value());
 	class_ad->InsertAttr (CREDATTR_TYPE, type);
 	class_ad->InsertAttr (CREDATTR_OWNER, owner.Value());

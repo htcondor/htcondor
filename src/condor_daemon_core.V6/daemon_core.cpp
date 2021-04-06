@@ -6246,7 +6246,7 @@ void CreateProcessForkit::exec() {
 			// for this process.
 		m_envobject.SetEnv( EnvGetName( ENV_INHERIT ), m_inheritbuf.Value() );
 
-		if( !m_privateinheritbuf.IsEmpty() ) {
+		if( !m_privateinheritbuf.empty() ) {
 			m_envobject.SetEnv( EnvGetName( ENV_PRIVATE ), m_privateinheritbuf.Value() );
 		}
 			// Make sure PURIFY can open windows for the daemons when
@@ -11127,7 +11127,7 @@ DaemonCore::PidEntry::~PidEntry() {
 		}
 	}
 
-	if( !shared_port_fname.IsEmpty() ) {
+	if( !shared_port_fname.empty() ) {
 			// Clean up the named socket for this process if the child
 			// didn't already do so.
 #ifndef WIN32

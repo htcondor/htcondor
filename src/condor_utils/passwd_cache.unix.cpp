@@ -96,7 +96,7 @@ passwd_cache::getUseridMap(MyString &usermap)
 
 	uid_table->startIterations();
 	while ( uid_table->iterate(index, uent) ) {
-		if( !usermap.IsEmpty() ) {
+		if( !usermap.empty() ) {
 			usermap += " ";
 		}
 		usermap.formatstr_cat("%s=%ld,%ld",index.Value(),(long)uent->uid,(long)uent->gid);

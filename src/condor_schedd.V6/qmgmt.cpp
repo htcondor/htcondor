@@ -474,7 +474,7 @@ ClusterCleanup(int cluster_id)
 	// garbage collect the shared ickpt file if necessary
 	// As of 9.0 new jobs will be unable to submit shared executables
 	// but there may still be some jobs in the queue that have that.
-	if (!hash.IsEmpty()) {
+	if (!hash.empty()) {
 		ickpt_share_try_removal(owner.Value(), hash.Value());
 	}
 }

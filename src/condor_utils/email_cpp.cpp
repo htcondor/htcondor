@@ -313,7 +313,7 @@ Email::writeJobId( ClassAd* ad )
 		fprintf( fp, "\t%s", cmd );
 		free( cmd );
 		cmd = NULL;
-		if( !args.IsEmpty() ) {
+		if( !args.empty() ) {
 			fprintf( fp, " %s\n", args.Value() );
 		} else {
 			fprintf( fp, "\n" );

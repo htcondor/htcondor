@@ -98,7 +98,7 @@ CronJobParams::Initialize( void )
 	Lookup( "JOB_LOAD", param_job_load, 0.01, 0, 100.0 );
 
 	// Some quick sanity checks
-	if ( param_executable.IsEmpty() ) {
+	if ( param_executable.empty() ) {
 		dprintf( D_ALWAYS, 
 				 "CronJobParams: No path found for job '%s'; skipping\n",
 				 GetName() );
@@ -107,7 +107,7 @@ CronJobParams::Initialize( void )
 
 	// Parse the job mode
 	m_mode = DefaultJobMode( );
-	if ( ! param_mode.IsEmpty() ) {
+	if ( ! param_mode.empty() ) {
 		const CronJobModeTable		&mt  = GetCronJobModeTable( );
 		const CronJobModeTableEntry	*mte = mt.Find( param_mode.Value() );
 		if ( NULL == mte ) {
@@ -200,7 +200,7 @@ CronJobParams::InitPeriod( const MyString &param_period )
 	// Find the job period
 	m_period = 0;
 	if ( ( m_mode == CRON_ONE_SHOT) || ( m_mode == CRON_ON_DEMAND) ) {
-		if ( ! param_period.IsEmpty() ) {
+		if ( ! param_period.empty() ) {
 			dprintf( D_ALWAYS,
 					 "CronJobParams: Warning:"
 					 "Ignoring job period specified for '%s'\n",
@@ -208,7 +208,7 @@ CronJobParams::InitPeriod( const MyString &param_period )
 			return true;
 		}
 	}
-	else if ( param_period.IsEmpty() ) {
+	else if ( param_period.empty() ) {
 		dprintf( D_ALWAYS,
 				 "CronJobParams: No job period found for job '%s': skipping\n",
 				 GetName() );

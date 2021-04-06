@@ -745,7 +745,7 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 		AddDownloadFilenameRemap(condor_basename(full_name.c_str()), full_name.c_str());
 	}
 
-	if(!download_filename_remaps.IsEmpty()) {
+	if(!download_filename_remaps.empty()) {
 		dprintf(D_FULLDEBUG, "FileTransfer: output file remaps: %s\n",download_filename_remaps.Value());
 	}
 	return 1;
@@ -869,7 +869,7 @@ FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
 		free(remap_fname);
 		remap_fname = NULL;
 	}
-	if(!download_filename_remaps.IsEmpty()) {
+	if(!download_filename_remaps.empty()) {
 		dprintf(D_FULLDEBUG, "FileTransfer: input file remaps: %s\n",download_filename_remaps.Value());
 	}
 	return 1;
@@ -1867,7 +1867,7 @@ FileTransfer::ReadTransferPipeMsg()
  read_failed:
 	Info.success = false;
 	Info.try_again = true;
-	if( Info.error_desc.IsEmpty() ) {
+	if( Info.error_desc.empty() ) {
 		Info.error_desc.formatstr("Failed to read status report from file transfer pipe (errno %d): %s",errno,strerror(errno));
 		dprintf(D_ALWAYS,"%s\n",Info.error_desc.Value());
 	}
@@ -2006,7 +2006,7 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 
 void
 FileTransfer::AddDownloadFilenameRemap(char const *source_name,char const *target_name) {
-	if(!download_filename_remaps.IsEmpty()) {
+	if(!download_filename_remaps.empty()) {
 		download_filename_remaps += ";";
 	}
 	download_filename_remaps += source_name;
@@ -2016,7 +2016,7 @@ FileTransfer::AddDownloadFilenameRemap(char const *source_name,char const *targe
 
 void
 FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
-	if(!download_filename_remaps.IsEmpty()) {
+	if(!download_filename_remaps.empty()) {
 		download_filename_remaps += ";";
 	}
 	download_filename_remaps += remaps;
@@ -5121,7 +5121,7 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock
 			error_buf.formatstr_cat(": %s",upload_error_desc);
 		}
 
-		if(!download_error_buf.IsEmpty()) {
+		if(!download_error_buf.empty()) {
 			error_buf.formatstr_cat("; %s",download_error_buf.Value());
 		}
 

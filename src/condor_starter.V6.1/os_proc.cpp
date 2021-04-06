@@ -673,7 +673,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	if ( JobPid == FALSE ) {
 		JobPid = -1;
 
-		if(!create_process_err_msg.IsEmpty()) {
+		if(!create_process_err_msg.empty()) {
 
 			// if the reason Create_Process failed was that registering
 			// a family with the ProcD failed, it is indicative of a

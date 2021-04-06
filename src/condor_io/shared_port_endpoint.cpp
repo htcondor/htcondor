@@ -258,7 +258,7 @@ SharedPortEndpoint::StopListener()
 		daemonCore->Cancel_Socket( &m_listener_sock );
 	}
 	m_listener_sock.close();
-	if( !m_full_name.IsEmpty() ) {
+	if( !m_full_name.empty() ) {
 		RemoveSocket(m_full_name.Value());
 	}
 
@@ -769,7 +769,7 @@ SharedPortEndpoint::TouchSocketInterval()
 void
 SharedPortEndpoint::SocketCheck()
 {
-	if( !m_listening || m_full_name.IsEmpty() || !m_is_file_socket) {
+	if( !m_listening || m_full_name.empty() || !m_is_file_socket) {
 		return;
 	}
 
@@ -970,7 +970,7 @@ SharedPortEndpoint::ReloadSharedPortServerAddr()
 void
 SharedPortEndpoint::EnsureInitRemoteAddress()
 {
-	if( m_remote_addr.IsEmpty() && m_retry_remote_addr_timer==-1 ) {
+	if( m_remote_addr.empty() && m_retry_remote_addr_timer==-1 ) {
 		RetryInitRemoteAddress();
 	}
 }
@@ -984,7 +984,7 @@ SharedPortEndpoint::GetMyRemoteAddress()
 
 	EnsureInitRemoteAddress();
 
-	if( m_remote_addr.IsEmpty() ) {
+	if( m_remote_addr.empty() ) {
 		return NULL;
 	}
 	return m_remote_addr.Value();
@@ -1003,7 +1003,7 @@ SharedPortEndpoint::GetMyLocalAddress()
 	if( !m_listening ) {
 		return NULL;
 	}
-	if( m_local_addr.IsEmpty() ) {
+	if( m_local_addr.empty() ) {
 		Sinful sinful;
 			// port 0 is used as an indicator that no SharedPortServer
 			// address is included in this address.  This address should

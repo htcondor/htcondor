@@ -472,7 +472,7 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 
 		input_line.readLine(src); // Result ignored, we already monitor EOF
 
-		if (input_line.IsEmpty()) {
+		if (input_line.empty()) {
 			continue;
 		}
 
@@ -486,7 +486,7 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 			}
 			MyString path;
 			offset = ParseField(input_line, offset, path);
-			if (path.IsEmpty()) {
+			if (path.empty()) {
 				dprintf(D_ALWAYS, "ERROR: Empty filename for @include directive in the map %s (line %d)\n", srcname, line);
 				continue;
 			}
@@ -526,9 +526,9 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 #endif
 		offset = ParseField(input_line, offset, canonicalization);
 
-		if (method.IsEmpty() ||
-			principal.IsEmpty() ||
-			canonicalization.IsEmpty()) {
+		if (method.empty() ||
+			principal.empty() ||
+			canonicalization.empty()) {
 				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.  (Method=%s) (Principal=%s) (Canon=%s) Skipping to next line.\n",
 						line, srcname, method.Value(), principal.Value(), canonicalization.Value());
 
@@ -618,7 +618,7 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 
 		input_line.readLine(src); // Result ignored, we already monitor EOF
 
-		if (input_line.IsEmpty()) {
+		if (input_line.empty()) {
 			continue;
 		}
 
@@ -637,8 +637,8 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 				canonicalization.Value(),
 				user.Value());
 
-		if (canonicalization.IsEmpty() ||
-			user.IsEmpty()) {
+		if (canonicalization.empty() ||
+			user.empty()) {
 				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.\n",
 						line, srcname);
 				return line;

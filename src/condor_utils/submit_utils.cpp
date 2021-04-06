@@ -1236,13 +1236,13 @@ int SubmitHash::SetJavaVMArgs()
 	bool MyCondorVersionRequiresV1 = args.InputWasV1() || args.CondorVersionRequiresV1(getScheddVersion());
 	if( MyCondorVersionRequiresV1 ) {
 		args_success = args.GetArgsStringV1Raw(&value,&error_msg);
-		if(!value.IsEmpty()) {
+		if(!value.empty()) {
 			AssignJobString(ATTR_JOB_JAVA_VM_ARGS1, value.c_str());
 		}
 	}
 	else {
 		args_success = args.GetArgsStringV2Raw(&value,&error_msg);
-		if(!value.IsEmpty()) {
+		if(!value.empty()) {
 			AssignJobString(ATTR_JOB_JAVA_VM_ARGS2, value.c_str());
 		}
 	}
@@ -1820,13 +1820,13 @@ int SubmitHash::SetTDP()
 	bool MyCondorVersionRequiresV1 = args.InputWasV1() || args.CondorVersionRequiresV1(getScheddVersion());
 	if(MyCondorVersionRequiresV1) {
 		args_success = args.GetArgsStringV1Raw(&args_value,&error_msg);
-		if(!args_value.IsEmpty()) {
+		if(!args_value.empty()) {
 			AssignJobString(ATTR_TOOL_DAEMON_ARGS1, args_value.c_str());
 		}
 	}
 	else if(args.Count()) {
 		args_success = args.GetArgsStringV2Raw(&args_value,&error_msg);
-		if(!args_value.IsEmpty()) {
+		if(!args_value.empty()) {
 			AssignJobString(ATTR_TOOL_DAEMON_ARGS2, args_value.c_str());
 		}
 	}
@@ -4012,7 +4012,7 @@ int SubmitHash::SetArguments()
 	}
 
 	if(!args_success) {
-		if(error_msg.IsEmpty()) {
+		if(error_msg.empty()) {
 			error_msg = "ERROR in arguments.";
 		}
 		push_error(stderr, "%s\nThe full arguments you specified were: %s\n",
@@ -6508,8 +6508,8 @@ int SubmitHash::SetConcurrencyLimits()
 	MyString tmp = submit_param_mystring(SUBMIT_KEY_ConcurrencyLimits, NULL);
 	MyString tmp2 = submit_param_mystring(SUBMIT_KEY_ConcurrencyLimitsExpr, NULL);
 
-	if (!tmp.IsEmpty()) {
-		if (!tmp2.IsEmpty()) {
+	if (!tmp.empty()) {
+		if (!tmp2.empty()) {
 			push_error( stderr, SUBMIT_KEY_ConcurrencyLimits " and " SUBMIT_KEY_ConcurrencyLimitsExpr " can't be used together\n" );
 			ABORT_AND_RETURN( 1 );
 		}
@@ -6540,7 +6540,7 @@ int SubmitHash::SetConcurrencyLimits()
 			AssignJobString(ATTR_CONCURRENCY_LIMITS, str);
 			free(str);
 		}
-	} else if (!tmp2.IsEmpty()) {
+	} else if (!tmp2.empty()) {
 		AssignJobExpr(ATTR_CONCURRENCY_LIMITS, tmp2.Value() );
 	}
 
@@ -7514,7 +7514,7 @@ int SubmitHash::SetTransferFiles()
 				//notice that.
 			AssignJobString(ATTR_JOB_OUTPUT, working_name);
 
-			if(!output_remaps.IsEmpty()) output_remaps += ";";
+			if(!output_remaps.empty()) output_remaps += ";";
 			output_remaps.formatstr_cat("%s=%s",working_name,EscapeChars(output,";=\\",'\\').c_str());
 		}
 
@@ -7535,7 +7535,7 @@ int SubmitHash::SetTransferFiles()
 				//notice that.
 			AssignJobString(ATTR_JOB_ERROR, working_name);
 
-			if(!output_remaps.IsEmpty()) output_remaps += ";";
+			if(!output_remaps.empty()) output_remaps += ";";
 			output_remaps.formatstr_cat("%s=%s",working_name,EscapeChars(error,";=\\",'\\').c_str());
 		}
 	}
@@ -7619,13 +7619,13 @@ int SubmitHash::SetTransferFiles()
 
 		macro_value[strlen(macro_value)-1] = '\0';  //get rid of terminal quote
 
-		if(!output_remaps.IsEmpty()) output_remaps += ";";
+		if(!output_remaps.empty()) output_remaps += ";";
 		output_remaps += macro_value+1; // add user remaps to auto-generated ones
 
 		free(macro_value);
 	}
 
-	if(!output_remaps.IsEmpty()) {
+	if(!output_remaps.empty()) {
 		AssignJobString(ATTR_TRANSFER_OUTPUT_REMAPS, output_remaps.Value());
 	}
 

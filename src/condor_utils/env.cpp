@@ -861,7 +861,7 @@ Env::Import( void )
 				// contain an assignment
 			continue;
 		}
-		if ( varname.IsEmpty() ) {
+		if ( varname.empty() ) {
 				// ignore entries in the environment that contain
 				// an empty variable name
 			continue;

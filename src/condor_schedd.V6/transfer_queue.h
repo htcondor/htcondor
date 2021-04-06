@@ -58,12 +58,12 @@ class TransferQueueRequest {
 	bool ReadReport(class TransferQueueManager *manager) const;
 
 	ReliSock *m_sock;
-	MyString m_queue_user;   // Name of file transfer queue user. (TRANSFER_QUEUE_USER_EXPR)
+	std::string m_queue_user;   // Name of file transfer queue user. (TRANSFER_QUEUE_USER_EXPR)
 	std::string m_up_down_queue_user; // queue user prefixed by "U" or "D" for upload/download
-	MyString m_jobid;   // For information purposes, the job associated with
+	std::string  m_jobid;   // For information purposes, the job associated with
 	                    // this file transfer.
 	double m_sandbox_size_MB;
-	MyString m_fname;   // File this client originally requested to transfer.
+	std::string  m_fname;   // File this client originally requested to transfer.
 	                    // In current implementation, it may silently move on
 	                    // to a different file without notifying us.
 	bool m_downloading; // true if client wants to download a file; o.w. upload
@@ -75,7 +75,7 @@ class TransferQueueRequest {
 	time_t m_time_born;
 	time_t m_time_go_ahead;
 
-	MyString m_description; // buffer for Description()
+	std::string m_description; // buffer for Description()
 };
 
 class TransferQueueManager: public Service {

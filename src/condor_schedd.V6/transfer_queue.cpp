@@ -62,14 +62,14 @@ TransferQueueRequest::~TransferQueueRequest() {
 
 char const *
 TransferQueueRequest::Description() {
-	m_description.formatstr("%s %s job %s for %s (sandbox size %g MB, initial file %s)",
+	formatstr(m_description, "%s %s job %s for %s (sandbox size %g MB, initial file %s)",
 					m_sock ? m_sock->peer_description() : "",
 					m_downloading ? "downloading" : "uploading",
-					m_jobid.Value(),
-					m_queue_user.Value(),
+					m_jobid.c_str(),
+					m_queue_user.c_str(),
 					m_sandbox_size_MB,
-					m_fname.Value());
-	return m_description.Value();
+					m_fname.c_str());
+	return m_description.c_str();
 }
 
 char const *
@@ -353,10 +353,10 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 		!msg.LookupString(ATTR_USER,queue_user) ||
 		!msg.LookupInteger(ATTR_SANDBOX_SIZE,sandbox_size))
 	{
-		MyString msg_str;
+		std::string msg_str;
 		sPrintAd(msg_str, msg);
 		dprintf(D_ALWAYS,"TransferQueueManager: invalid request from %s: %s\n",
-				sock->peer_description(), msg_str.Value());
+				sock->peer_description(), msg_str.c_str());
 		return FALSE;
 	}
 
@@ -444,23 +444,23 @@ TransferQueueManager::HandleReport( Stream *sock )
 
 		// should never get here
 	m_xfer_queue.Rewind();
-	MyString clients;
+	std::string clients;
 	while( m_xfer_queue.Next( client ) ) {
-		clients.formatstr_cat(" (%p) %s\n",
+		formatstr_cat(clients, " (%p) %s\n",
 					 client->m_sock,client->m_sock->peer_description());
 	}
 	EXCEPT("TransferQueueManager: ERROR: disconnect from client (%p) %s;"
 		   " not found in list: %s\n",
 		   sock,
 		   sock->peer_description(),
-		   clients.Value());
+		   clients.c_str());
 	return FALSE; // close socket
 }
 
 bool
 TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
 {
-	MyString report;
+	std::string report;
 	m_sock->decode();
 	if( !m_sock->get(report) ||
 		!m_sock->end_of_message() )
@@ -468,7 +468,7 @@ TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
 		return false;
 	}
 
-	if( report.IsEmpty() ) {
+	if( report.empty() ) {
 		return false;
 	}
 
@@ -482,7 +482,7 @@ TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
 	unsigned recent_usec_net_write;
 	IOStats iostats;
 
-	int rc = sscanf(report.Value(),"%u %u %u %u %u %u %u %u",
+	int rc = sscanf(report.c_str(),"%u %u %u %u %u %u %u %u",
 					&report_time,
 					&report_interval_usec,
 					&recent_bytes_sent,
@@ -493,7 +493,7 @@ TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
 					&recent_usec_net_write);
 	if( rc != 8 ) {
 		dprintf(D_ALWAYS,"Failed to parse I/O report from file transfer worker %s: %s.\n",
-				m_sock->peer_description(),report.Value());
+				m_sock->peer_description(),report.c_str());
 		return false;
 	}
 

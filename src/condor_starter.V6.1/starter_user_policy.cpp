@@ -100,7 +100,7 @@ StarterUserPolicy::doAction( int action, bool is_periodic )
 	int reason_code;
 	int reason_subcode;
 	this->user_policy.FiringReason(reason,reason_code,reason_subcode);
-	if ( reason.IsEmpty() ) {
+	if ( reason.empty() ) {
 		EXCEPT( "StarterUserPolicy: Empty FiringReason." );
 	}
 

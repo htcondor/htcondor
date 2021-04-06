@@ -938,7 +938,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			// entry that the user expected us to match (e.g. because
 			// of typo or DNS problem), record all the hostnames we
 			// searched for.
-			if( allow_reason && !peer_description.IsEmpty() ) {
+			if( allow_reason && !peer_description.empty() ) {
 				allow_reason->formatstr_cat(
 					"; identifiers used for this remote host: %s",
 					peer_description.Value());

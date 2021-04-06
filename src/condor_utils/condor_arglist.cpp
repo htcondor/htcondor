@@ -1115,7 +1115,7 @@ ArgList::GetArgsStringSystem(MyString *result,int skip_args) const
 	for(int i=0;it.Next(arg);i++) {
 		if(i<skip_args) continue;
 		result->formatstr_cat("%s\"%s\"",
-							result->IsEmpty() ? "" : " ",
+							result->empty() ? "" : " ",
 							arg->EscapeChars("\"\\$`",'\\').Value());
 	}
 	return true;

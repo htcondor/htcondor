@@ -1673,7 +1673,7 @@ find_file(const char *env_name, const char *file_name, int config_options, MyStr
 		for (ctr = 0 ; ctr < locations_length; ctr++) {
 				// Only use this file if the path isn't empty and
 				// if we can read it properly.
-			if (!locations[ctr].IsEmpty()) {
+			if (!locations[ctr].empty()) {
 				config_file = locations[ctr];
 				config_source = config_file.c_str();
 				if ((fd = safe_open_wrapper_follow(config_source, O_RDONLY)) < 0) {
