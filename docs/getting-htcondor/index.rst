@@ -17,8 +17,8 @@ Getting HTCondor
 
     admin-quick-start
 
-These instructions show how to install HTCondor and run all of its
-components on a single computer, so that you can test HTCondor and
+These instructions show how to create a complete HTCondor installation with 
+all of its components on a single computer, so that you can test HTCondor and
 explore its features.  We recommend that new users start with the
 :ref:`first set of instructions <install_with_administrative_privileges>`
 here and then continue with the :doc:`../users-manual/quick-start-guide`;
@@ -31,7 +31,7 @@ with cloud computing, you may also get HTCondor :ref:`in the cloud<cloud>`.
 .. rubric:: Installing HTCondor on a Cluster
 
 Experienced users who want to make an HTCondor pool out of multiple
-machines should follow the :doc:`admin-quick-start`.  If you're new to
+machines should follow the :doc:`admin-quick-start`. If you're new to
 HTCondor administration, you may want to read the :doc:`../admin-manual/index`.
 
 .. _install_with_administrative_privileges:
@@ -44,6 +44,7 @@ instructions corresponding to your operating system:
 * :doc:`Windows <install-windows-as-administrator>`.
 * :doc:`Linux <install-linux-as-root>`.  HTCondor supports Enterprise Linux 7
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
+
   Ubuntu 18.04 and 20.04.
 
 .. _hand_install_with_user_privileges:

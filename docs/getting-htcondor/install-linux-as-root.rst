@@ -6,6 +6,9 @@ Linux (as root)
 For ease of installation on Linux, we provide a script that will automatically
 download, install and start HTCondor.
 
+Quickstart Installation Instructions
+------------------------------------
+
 .. warning::
 
     * RedHat systems must be attached to a subscription.
@@ -18,9 +21,12 @@ download, install and start HTCondor.
 
 The command below shows how to download the script and run it immediately;
 if you would like to inspect it first, see
-:ref:`Inspecting the Script <inspecting_the_script>`.  Experienced users who
-are making a pool should add a flag to select the desired role; see
-the :doc:`admin-quick-start`.
+:ref:`Inspecting the Script <inspecting_the_script>`.  The default behavior 
+will create a complete HTCondor pool with its multiple roles on one computer, 
+referred to in this manual as a "minicondor." 
+Experienced users who are making an HTCondor pool out of multiple machines 
+should add a flag to select the desired role; see
+the :doc:`admin-quick-start` for more details. 
 
 .. code-block:: shell
 
@@ -45,3 +51,9 @@ the command above without the leading ``sudo``.
       to perform the installation.
 
 .. include:: minicondor-test-and-quickstart.include
+
+Setting Up a Whole Pool
+------------------------------------
+
+The details of using this installation procedure to create a multi-machine 
+HTCondor pool are described in the admin quick-start guide: :doc:`admin-quick-start`
