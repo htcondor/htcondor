@@ -122,9 +122,6 @@ using, add their entries to the corresponding ``ALLOW`` or ``DENY`` list.
 Step 4: Other Changes
 ---------------------
 
-- The 9.0 release RPMs of HTCondor now requires packages from EPEL.
-  :ticket:`7681`
-
 - GPU monitoring is now on by default.
   :ticket:`7201`
 
@@ -155,5 +152,8 @@ Step 4: Other Changes
   8.8-compatible index-based GPU IDs.
   :jira:`145`
 
-- The packages have changed.  The ``condor-extras`` package is now empty, and
-  the blahp is packaged in ``blahp``.
+- The packages have changed.  The ``condor-externals`` package is now empty,
+  and the blahp is packaged in the ``blahp`` package.  The 9.0 release RPMs
+  of HTCondor require additional packages from EPEL.
+  :ticket:`7681`
+
