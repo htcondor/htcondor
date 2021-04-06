@@ -594,7 +594,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 		return FALSE;
 	}
 	const char* env_buf = env_str.Value();
-	int env_len = env_str.Length() + 1;
+	int env_len = env_str.length() + 1;
 	errno = 0;
 	if (full_write(sock_fds[0], &env_len, sizeof(env_len)) != sizeof(env_len)) {
 		dprintf(D_ALWAYS,

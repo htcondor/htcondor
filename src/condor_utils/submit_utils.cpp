@@ -5877,7 +5877,7 @@ int SubmitHash::SetRequirements()
 
 		if (append_req) {
 			// We found something to append.
-			if( answer.Length() ) {
+			if( answer.length() ) {
 					// We've already got something in requirements, so we
 					// need to append an AND clause.
 				answer += " && (";
@@ -7821,7 +7821,7 @@ int SubmitHash::build_oauth_service_ads (
 		} else {
 			// no split into two
 			service_name = token_MyS.substr(0,starpos);
-			handle = token_MyS.substr(starpos+1,token_MyS.Length());
+			handle = token_MyS.substr(starpos+1,token_MyS.length());
 		}
 		request_ad->Assign("Service", service_name);
 		if ( ! handle.empty()) { request_ad->Assign("Handle", handle); }
@@ -7829,12 +7829,12 @@ int SubmitHash::build_oauth_service_ads (
 
 		// get permissions (scopes) from submit file or config file if needed
 		param_name.formatstr("%s_OAUTH_PERMISSIONS", service_name.c_str());
-		if (handle.Length()) {
+		if (handle.length()) {
 			param_name += "_";
 			param_name += handle;
 		}
 		param_val = submit_param_mystring(param_name.c_str(), NULL);
-		if(param_val.Length() == 0) {
+		if(param_val.length() == 0) {
 			// not specified: is this required?
 			config_param_name.formatstr("%s_USER_DEFINE_SCOPES", service_name.c_str());
 			param_val  = param(config_param_name.c_str());
@@ -7849,12 +7849,12 @@ int SubmitHash::build_oauth_service_ads (
 
 		// get resource (audience) from submit file or config file if needed
 		param_name.formatstr("%s_OAUTH_RESOURCE", service_name.c_str());
-		if (handle.Length()) {
+		if (handle.length()) {
 			param_name += "_";
 			param_name += handle;
 		}
 		param_val = submit_param_mystring(param_name.c_str(), NULL);
-		if (param_val.Length() == 0) {
+		if (param_val.length() == 0) {
 			// not specified: is this required?
 			config_param_name.formatstr("%s_USER_DEFINE_AUDIENCE", service_name.c_str());
 			param_val  = param(config_param_name.c_str());

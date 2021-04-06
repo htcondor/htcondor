@@ -387,7 +387,7 @@ ReadUserLogState::GeneratePath( int rotation,
 	}
 
 	// No base path set???  Nothing we can do here.
-	if ( !m_base_path.Length() ) {
+	if ( !m_base_path.length() ) {
 		path = "";
 		return false;
 	}
@@ -595,7 +595,7 @@ ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 		(void) sb.Stat( fd );
 	}
 
-	if ( m_cur_path.Length() && !sb.IsBufValid() ) {
+	if ( m_cur_path.length() && !sb.IsBufValid() ) {
 		(void) sb.Stat( m_cur_path.Value() );
 	}
 

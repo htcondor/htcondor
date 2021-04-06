@@ -155,7 +155,7 @@ const char* dirscat(const char *dirpath, const char *subdir, MyString &result )
 
 	// remove any trailing directory delims and replace with a single directory delim
 	// that is correct for this platform.
-	int len = result.Length();
+	int len = result.length();
 	if (len > 0 && IS_ANY_DIR_DELIM_CHAR(result[len-1])) {
 		// make sure there is only one trailing directory delim and it is the correct one (if on windows)
 		do {

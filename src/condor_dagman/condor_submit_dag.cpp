@@ -219,7 +219,7 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 				int start = submitFile.find( DAG_SUBMIT_FILE_SUFFIX );
 				if ( start >= 0 &&
 							start + (int)strlen( DAG_SUBMIT_FILE_SUFFIX) ==
-							submitFile.Length() ) {
+							submitFile.length() ) {
 
 						// Change submit file name to DAG file name.
 					submitFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );

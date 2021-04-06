@@ -595,14 +595,14 @@ TranslateClient::hookExited(int exit_status)
 
 	HookClient::hookExited(exit_status);
 
-	if (m_std_err.Length())
+	if (m_std_err.length())
 	{
 		dprintf(D_ALWAYS, "TranslateClient::hookExited (%s): "
 				"Warning, hook %s (pid %d) printed to stderr: "
 				"%s\n", m_routed_job->JobDesc().c_str(), 
 				m_hook_path, (int)m_pid, m_std_err.Value());
 	}
-	if (m_std_out.Length() && 0 == WEXITSTATUS(exit_status))
+	if (m_std_out.length() && 0 == WEXITSTATUS(exit_status))
 	{
 		ClassAd job_ad;
 		const char* hook_line = NULL;
@@ -679,14 +679,14 @@ StatusClient::hookExited(int exit_status)
 
 	HookClient::hookExited(exit_status);
 
-	if (m_std_err.Length())
+	if (m_std_err.length())
 	{
 		dprintf(D_ALWAYS, "StatusClient::hookExited (%s): Warning, "
 				"hook %s (pid %d) printed to stderr: %s\n",
 				m_routed_job->JobDesc().c_str(), m_hook_path,
 				(int)m_pid, m_std_err.Value());
 	}
-	if (m_std_out.Length() && 0 == WEXITSTATUS(exit_status))
+	if (m_std_out.length() && 0 == WEXITSTATUS(exit_status))
 	{
 		ClassAd job_ad;
 		const char* hook_line = NULL;
@@ -767,14 +767,14 @@ ExitClient::hookExited(int exit_status) {
 
 	HookClient::hookExited(exit_status);
 
-	if (m_std_err.Length())
+	if (m_std_err.length())
 	{
 		dprintf(D_ALWAYS, "ExitClient::hookExited (%s): Warning, hook "
 				"%s (pid %d) printed to stderr: %s\n",
 				m_routed_job->JobDesc().c_str(), m_hook_path,
 				(int)m_pid, m_std_err.Value());
 	}
-	if (m_std_out.Length())
+	if (m_std_out.length())
 	{
 		if (0 == WEXITSTATUS(exit_status))
 		{
@@ -875,7 +875,7 @@ CleanupClient::hookExited(int exit_status)
 	}
 
 	HookClient::hookExited(exit_status);
-	if (m_std_err.Length())
+	if (m_std_err.length())
 	{
 		dprintf(D_ALWAYS,
 				"CleanupClient::hookExited (%s): Warning, hook "

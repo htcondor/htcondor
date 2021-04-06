@@ -2096,7 +2096,7 @@ Claim::writeJobAd( int pipe_end )
 	sPrintAd(ad_str, *c_jobad);
 
 	const char* ptr = ad_str.Value();
-	int len = ad_str.Length();
+	int len = ad_str.length();
 	while (len) {
 		int bytes_written = daemonCore->Write_Pipe(pipe_end, ptr, len);
 		if (bytes_written == -1) {

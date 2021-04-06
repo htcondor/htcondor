@@ -1456,7 +1456,7 @@ Job::GetJobstateJobTag()
 		} else {
 				// Remove double-quotes
 			int begin = jobTagName[0] == '\"' ? 1 : 0;
-			int last = jobTagName.Length() - 1;
+			int last = jobTagName.length() - 1;
 			int end = jobTagName[last] == '\"' ? last - 1 : last;
 			jobTagName = jobTagName.substr( begin, 1 + end - begin );
 		}
@@ -1468,7 +1468,7 @@ Job::GetJobstateJobTag()
 		} else {
 				// Remove double-quotes
 			int begin = tmpJobTag[0] == '\"' ? 1 : 0;
-			int last = tmpJobTag.Length() - 1;
+			int last = tmpJobTag.length() - 1;
 			int end = tmpJobTag[last] == '\"' ? last - 1 : last;
 			tmpJobTag = tmpJobTag.substr( begin, 1 + end - begin );
 		}

@@ -81,7 +81,7 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, pr
 	}
 
     int std_fds[3] = {DC_STD_FD_NOPIPE, DC_STD_FD_NOPIPE, DC_STD_FD_NOPIPE};
-    if (hook_stdin && hook_stdin->Length()) {
+    if (hook_stdin && hook_stdin->length()) {
 		std_fds[0] = DC_STD_FD_PIPE;
 	}
 	if (wants_output) {
@@ -109,9 +109,9 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, pr
 	}
 
 		// If we've got initial input to write to stdin, do so now.
-    if (hook_stdin && hook_stdin->Length()) {
+    if (hook_stdin && hook_stdin->length()) {
 		daemonCore->Write_Stdin_Pipe(pid, hook_stdin->Value(),
-									 hook_stdin->Length());
+									 hook_stdin->length());
 	}
 
 	if (wants_output) {

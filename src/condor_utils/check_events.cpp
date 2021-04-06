@@ -314,7 +314,7 @@ CheckEvents::CheckAllJobs(MyString &errorMsg)
 			// Put a limit on the maximum message length so we don't
 			// have a chance of ending up with a ridiculously large
 			// MyString...
-		if ( !msgFull && (errorMsg.Length() > MAX_MSG_LEN) ) {
+		if ( !msgFull && (errorMsg.length() > MAX_MSG_LEN) ) {
 			errorMsg += " ...";
 			msgFull = true;
 		}

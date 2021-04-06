@@ -7001,7 +7001,7 @@ int DaemonCore::Create_Process(
 	if ( m_inherit_parent_sinful.empty() ) {
 		MyString mysin = InfoCommandSinfulStringMyself(true);
 		// ASSERT(mysin.Length() > 0); // Empty entry means unparsable string.
-		if ( mysin.Length() < 1 ) {
+		if ( mysin.length() < 1 ) {
 			dprintf( D_ALWAYS, "Warning: mysin has length 0 (ignore if produced by DAGMan; see gittrac #4987, #5031)\n" );
 		}
 		inheritbuf += mysin;
@@ -11169,7 +11169,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
 	// Read until we consume all the data (or loop too many times...)
 	max_buffer = daemonCore->Get_Max_Pipe_Buffer();
 
-	max_read_bytes = max_buffer - cur_buf->Length();
+	max_read_bytes = max_buffer - cur_buf->length();
 	if (max_read_bytes > DC_PIPE_BUF_SIZE) {
 		max_read_bytes = DC_PIPE_BUF_SIZE;
 	}
@@ -11183,7 +11183,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
 		buf[bytes] = '\0';
 		*cur_buf += buf;
 
-		if (cur_buf->Length() >= max_buffer) {
+		if (cur_buf->length() >= max_buffer) {
 			dprintf(D_DAEMONCORE, "DC %s pipe closed for "
 					"pid %d because max bytes (%d)"
 					"read\n", pipe_desc, (int)pid,
@@ -11213,7 +11213,7 @@ DaemonCore::PidEntry::pipeFullWrite(int fd)
 	if (pipe_buf[0] != NULL)
 	{
 		const void* data_left = (const void*)(((const char*) pipe_buf[0]->Value()) + stdin_offset);
-		total_len = pipe_buf[0]->Length();
+		total_len = pipe_buf[0]->length();
 		bytes_written = daemonCore->Write_Pipe(fd, data_left, total_len - stdin_offset);
 		dprintf(D_DAEMONCORE, "DaemonCore::PidEntry::pipeFullWrite: Total bytes to write = %d, bytes written this pass = %d\n", total_len, bytes_written);
 	}

@@ -9801,7 +9801,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		MyString ad_str;
 		sPrintAdWithSecrets(ad_str, *job_ad);
 		const char* ptr = ad_str.Value();
-		int len = ad_str.Length();
+		int len = ad_str.length();
 		while (len) {
 			int bytes_written = daemonCore->Write_Pipe(pipe_fds[1], ptr, len);
 			if (bytes_written == -1) {
@@ -10404,7 +10404,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 
 	//change back to whence we came
-	if ( tmpCwd.Length() ) {
+	if ( tmpCwd.length() ) {
 		if (chdir(tmpCwd.Value())) {
 			dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n",
 					tmpCwd.Value(), strerror(errno));

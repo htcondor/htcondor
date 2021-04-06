@@ -440,7 +440,7 @@ ProcFamilyProxy::start_procd()
 
 	// the (optional) procd log file
 	//
-	if (m_procd_log.Length() > 0 && log_size != 0) {
+	if (m_procd_log.length() > 0 && log_size != 0) {
 		args.AppendArg("-L");
 		args.AppendArg(m_procd_log);
 	

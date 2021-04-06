@@ -3345,7 +3345,7 @@ char* SecMan::my_parent_unique_id() {
 		MyString value;
 		GetEnv( envName, value );
 
-		if (value.Length()) {
+		if (value.length()) {
 			set_parent_unique_id(value.Value());
 		}
 	}
@@ -3677,14 +3677,14 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 	MyString buf = session_info+1;
 
 		// verify that the string is contained in []'s
-	if( session_info[0]!='[' || buf[buf.Length()-1]!=']' ) {
+	if( session_info[0]!='[' || buf[buf.length()-1]!=']' ) {
 		dprintf( D_ALWAYS, "ImportSecSessionInfo: invalid session info: %s\n",
 				session_info );
 		return false;
 	}
 
 		// get rid of final ']'
-	buf.truncate(buf.Length()-1);
+	buf.truncate(buf.length()-1);
 
 	StringList lines(buf.Value(),";");
 	lines.rewind();

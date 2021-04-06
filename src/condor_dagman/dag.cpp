@@ -4697,7 +4697,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 
 	MyString parentName = parentSplice->_spliceScope;
 		// Trim trailing '+' from parentName.
-	int last = parentName.Length() - 1;
+	int last = parentName.length() - 1;
 	ASSERT( last >= 0 );
 	if ( parentName[last] == '+' ) {
 		parentName.truncate( last );
@@ -4705,7 +4705,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 
 	MyString childName = childSplice->_spliceScope;
 		// Trim trailing '+' from childName.
-	last = childName.Length() - 1;
+	last = childName.length() - 1;
 	ASSERT( last >= 0 );
 	if ( childName[last] == '+' ) {
 		childName.truncate( last );

@@ -3429,7 +3429,7 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 				   sizeof(int) );
 		if(n != sizeof(int)) write_failed = true;
 	}
-	int error_len = Info.error_desc.Length();
+	int error_len = Info.error_desc.length();
 	if(error_len) {
 		error_len++; //write the null too
 	}
@@ -3446,7 +3446,7 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		if(n != error_len) write_failed = true;
 	}
 
-	int spooled_files_len = Info.spooled_files.Length();
+	int spooled_files_len = Info.spooled_files.length();
 	if(spooled_files_len) {
 		spooled_files_len++; //write the null too
 	}
@@ -4496,7 +4496,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					//
 					MyString junkbuf;
 					sPrintAd(junkbuf, file_info);
-					bytes = junkbuf.Length();
+					bytes = junkbuf.length();
 				}
 			} else {
 				dprintf( D_ALWAYS, "DoUpload: invalid subcommand %i, skipping %s.",
@@ -4533,7 +4533,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			// 
 			// instead we add the length of the URL itself, since that's what
 			// we sent.
-			bytes = fullname.Length();
+			bytes = fullname.length();
 
 		} else if( file_command == TransferCommand::Mkdir ) { // mkdir
 			// the only data sent is the file_mode.
@@ -4930,7 +4930,7 @@ FileTransfer::ReceiveTransferGoAhead(
 
 	if( !result ) {
 		SaveTransferInfo(false,try_again,hold_code,hold_subcode,error_desc.Value());
-		if( error_desc.Length() ) {
+		if( error_desc.length() ) {
 			dprintf(D_ALWAYS,"%s\n",error_desc.Value());
 		}
 	}

@@ -894,7 +894,7 @@ int operator==(const MyString& S1, const MyString& S2)
 
 int operator==(const MyString& S1, const char *S2) 
 {
-    if ((!S1.Data || !S1.Length()) && (!S2 || !strlen(S2))) {
+    if ((!S1.Data || !S1.length()) && (!S2 || !strlen(S2))) {
 		return 1;
 	}
     if (!S1.Data || !S2) {
@@ -908,7 +908,7 @@ int operator==(const MyString& S1, const char *S2)
 
 int operator==(const char *S1, const MyString& S2) 
 {
-    if ((!S2.Data || !S2.Length()) && (!S1 || !strlen(S1))) {
+    if ((!S2.Data || !S2.length()) && (!S1 || !strlen(S1))) {
 		return 1;
 	}
     if (!S2.Data || !S1) {

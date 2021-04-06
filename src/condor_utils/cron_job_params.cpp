@@ -54,7 +54,7 @@ CronJobParams::GetParamName( const char *item ) const
 	// Build the name of the parameter to read
 	size_t len = ( strlen( &m_base ) +
 					 1 +		// '_'
-					 m_name.Length( ) +
+					 m_name.length( ) +
 					 1 +		// '_'
 					 strlen( item ) +
 					 1 );	// '\0'

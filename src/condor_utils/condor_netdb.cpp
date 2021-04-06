@@ -75,7 +75,7 @@ condor_gethostname(char *name, size_t namelen) {
 			}
 
 			MyString hostname = convert_ipaddr_to_fake_hostname(addr);
-			if (hostname.Length() >= (int) namelen) {
+			if (hostname.length() >= (int) namelen) {
 				return -1;
 			}
 			strcpy(name, hostname.Value());
@@ -150,7 +150,7 @@ condor_gethostname(char *name, size_t namelen) {
 
 			close(s);
 			MyString hostname = convert_ipaddr_to_fake_hostname(addr);
-			if (hostname.Length() >= (int) namelen) {
+			if (hostname.length() >= (int) namelen) {
 				return -1;
 			}
 			strcpy(name, hostname.Value());
@@ -174,7 +174,7 @@ condor_gethostname(char *name, size_t namelen) {
 			}
 
 			MyString hostname = convert_ipaddr_to_fake_hostname(addrs.front());
-			if (hostname.Length() >= (int) namelen) {
+			if (hostname.length() >= (int) namelen) {
 				return -1;
 			}
 			strcpy(name, hostname.Value());

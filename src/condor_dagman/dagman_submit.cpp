@@ -421,10 +421,10 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// how big is the command line so far?
 	MyString display;
 	args.GetArgsStringForDisplay( &display );
-	int cmdLineSize = display.Length();
+	int cmdLineSize = display.length();
 
 	parentNameArgs.GetArgsStringForDisplay( &display );
-	int DAGParentNodeNamesLen = display.Length();
+	int DAGParentNodeNamesLen = display.length();
 		// how many additional chars must we still add to command line
 	        // NOTE: according to the POSIX spec, the args +
    	        // environ given to exec() cannot exceed

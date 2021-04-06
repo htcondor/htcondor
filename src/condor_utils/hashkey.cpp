@@ -39,7 +39,7 @@ AdNameHashKey::sprint( std::string &s ) const {
 
 void AdNameHashKey::sprint (MyString &s) const
 {
-	if (ip_addr.Length() )
+	if (ip_addr.length() )
 		s.formatstr( "< %s , %s >", name.Value(), ip_addr.Value() );
 	else
 		s.formatstr( "< %s >", name.Value() );
@@ -157,7 +157,7 @@ getIpAddr( const char *ad_type,
 
 	// If no valid string, do our own thing..
 	char* host;
-	if ( ( tmp.Length() == 0 ) || (host = getHostFromAddr(tmp.Value())) == NULL  ) {
+	if ( ( tmp.length() == 0 ) || (host = getHostFromAddr(tmp.Value())) == NULL  ) {
 		dprintf (D_ALWAYS, "%sAd: Invalid IP address in classAd\n", ad_type );
 		return false;
 	}
@@ -402,7 +402,7 @@ HashString::HashString( const AdNameHashKey &hk )
 void
 HashString::Build( const AdNameHashKey &hk )
 {
-	if ( hk.ip_addr.Length() ) {
+	if ( hk.ip_addr.length() ) {
 		formatstr( "< %s , %s >", hk.name.Value(), hk.ip_addr.Value() );
 	} else {
 		formatstr( "< %s >", hk.name.Value() );

@@ -336,7 +336,7 @@ glexec_starter_handle_env(pid_t pid)
 		return false;
 	}
 	const char* env_buf = env_str.Value();
-	int env_len = env_str.Length() + 1;
+	int env_len = env_str.length() + 1;
 	errno = 0;
 	if (write(sock_fd, &env_len, sizeof(env_len)) != sizeof(env_len)) {
 		dprintf(D_ALWAYS,

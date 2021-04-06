@@ -505,7 +505,7 @@ void process_cred_mark_dir(const char * cred_dir_name, const char *markfile) {
 
 	// delete the user's dir
 	MyString username = markfile;
-	username = username.substr(0, username.Length()-5);
+	username = username.substr(0, username.length()-5);
 	dprintf (D_FULLDEBUG, "CREDMON: CRED_DIR: %s, USERNAME: %s\n", cred_dir_name, username.Value());
 	if ( cred_dir.Find_Named_Entry( username.Value() ) ) {
 		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", cred_dir_name, DIR_DELIM_CHAR, username.Value() );

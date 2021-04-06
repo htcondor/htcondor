@@ -3227,7 +3227,7 @@ set_persistent_config(char *admin, char *config)
 
 	// make sure top level config source is set
 	init_dynamic_config();
-	if( ! toplevel_persistent_config.Length() ) {
+	if( ! toplevel_persistent_config.length() ) {
 		EXCEPT( "Impossible: programmer error: toplevel_persistent_config "
 				"is 0-length, but we already initialized, enable_persistent "
 				"is TRUE, and set_persistent_config() has been called" );

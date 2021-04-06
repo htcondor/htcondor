@@ -333,7 +333,7 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 
 	}
 
-	if (overall_max_width && retval.Length() > overall_max_width)
+	if (overall_max_width && retval.length() > overall_max_width)
 		retval.truncate(overall_max_width);
 
 	if (row_suffix)
@@ -396,7 +396,7 @@ PrintCol(MyString * prow, Formatter & fmt, const char * value)
 	if (col_prefix && ! (fmt.options & FormatOptionNoPrefix))
 		(*prow) += col_prefix;
 
-	int col_start = prow->Length();
+	int col_start = prow->length();
 
 	const char * printfFmt = fmt.printfFmt;
 	if ( ! printfFmt && fmt.width) {
@@ -418,7 +418,7 @@ PrintCol(MyString * prow, Formatter & fmt, const char * value)
 	}
 
 	if (fmt.options & FormatOptionAutoWidth) {
-		int col_width = prow->Length() - col_start;
+		int col_width = prow->length() - col_start;
 		fmt.width = MAX(fmt.width, col_width);
 	}
 

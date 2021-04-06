@@ -340,10 +340,10 @@ void MapFile::clear() // clear all items and free the allocation pool
 int
 MapFile::ParseField(MyString & line, int offset, MyString & field, int * popts /*=NULL*/)
 {
-	ASSERT(offset >= 0 && offset <= line.Length());
+	ASSERT(offset >= 0 && offset <= line.length());
 
 		// We consume the leading white space
-	while (offset < line.Length() &&
+	while (offset < line.length() &&
 		   (' ' == line[offset] ||
 			'\t' == line[offset] ||
 			'\n' == line[offset])) {
@@ -368,7 +368,7 @@ MapFile::ParseField(MyString & line, int offset, MyString & field, int * popts /
 		offset++;
 	}
 
-	while (offset < line.Length()) {
+	while (offset < line.length()) {
 		if (multiword) {
 				// If we hit a " (quote) we are done, quotes in the
 				// field are prefixed with a \ [don't end comments
@@ -398,7 +398,7 @@ MapFile::ParseField(MyString & line, int offset, MyString & field, int * popts /
 					// If we see a \ we either write it out or if it
 					// is followed by a " we strip it and output the "
 					// alone
-			} else if ('\\' == line[offset] && ++offset < line.Length()) {
+			} else if ('\\' == line[offset] && ++offset < line.length()) {
 				if (chEnd == (line[offset])) {
 					field += line[offset];
 				} else {
@@ -517,7 +517,7 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 		}
 
 #ifdef USE_MAPFILE_V2
-		if (method.Length() == 0 || method[0] == '#') continue; // ignore blank and comment lines
+		if (method.length() == 0 || method[0] == '#') continue; // ignore blank and comment lines
 		int regex_opts = assume_hash ? 0 : PCRE_NOTEMPTY;
 		offset = ParseField(input_line, offset, principal, assume_hash ? &regex_opts : NULL);
 #else
@@ -626,7 +626,7 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 #ifdef USE_MAPFILE_V2
 		int regex_opts = assume_hash ? 0 : PCRE_NOTEMPTY;
 		offset = ParseField(input_line, offset, canonicalization, assume_hash ? &regex_opts : NULL);
-		if (canonicalization.Length() == 0 || canonicalization[0] == '#') continue; // ignore blank and comment lines
+		if (canonicalization.length() == 0 || canonicalization[0] == '#') continue; // ignore blank and comment lines
 #else
 		offset = ParseField(input_line, offset, canonicalization);
 #endif
@@ -903,7 +903,7 @@ MapFile::FindMapping(CanonicalMapList* list,       // in: the mapping data set
 					const char ** pcanon)         // out: canonicalization pattern
 {
 	for (CanonicalMapEntry * entry = list->first; entry; entry = entry->next) {
-		if (entry->matches(input.c_str(), input.Length(), groups, pcanon)) {
+		if (entry->matches(input.c_str(), input.length(), groups, pcanon)) {
 			return true;
 		}
 	}

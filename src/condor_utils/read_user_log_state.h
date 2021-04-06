@@ -200,7 +200,7 @@ public:
 	// Get / set the uniq identifier
 	void UniqId( const MyString &id ) { Update(); m_uniq_id = id; };
 	const char *UniqId( void ) const { return m_uniq_id.Value(); };
-	bool ValidUniqId( void ) const { return ( m_uniq_id.Length() != 0 ); };
+	bool ValidUniqId( void ) const { return ( m_uniq_id.length() != 0 ); };
 
 	// Get / set the sequence number
 	void Sequence( int seq ) { m_sequence = seq; };

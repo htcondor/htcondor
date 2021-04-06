@@ -829,7 +829,7 @@ Directory::Next()
 		}
 		{
 			path = curr_dir;
-			if(path.Length() == 0 || path[path.Length()-1] != DIR_DELIM_CHAR) {
+			if(path.length() == 0 || path[path.length()-1] != DIR_DELIM_CHAR) {
 				path += DIR_DELIM_CHAR;
 			}
 			path += dirent->d_name;

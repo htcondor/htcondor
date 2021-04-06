@@ -520,7 +520,7 @@ bool ULogEvent::read_line_value(const char * prefix, MyString & val, FILE* file,
 	}
 	if (chomp) { str.chomp(); }
 	if (starts_with(str.c_str(), prefix)) {
-		val = str.substr((int)strlen(prefix), str.Length());
+		val = str.substr((int)strlen(prefix), str.length());
 		return true;
 	}
 	return false;
@@ -1942,7 +1942,7 @@ GenericEvent::readEvent(FILE *file, bool & got_sync_line)
 {
 #ifdef DONT_EVER_SEEK
 	MyString str;
-	if ( ! read_optional_line(str, file, got_sync_line) || str.Length() >= (int)sizeof(info)) {
+	if ( ! read_optional_line(str, file, got_sync_line) || str.length() >= (int)sizeof(info)) {
 		return 0;
 	}
 	strncpy(info, str.c_str(), sizeof(info)-1);
@@ -2162,7 +2162,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 			continue;
 		}
 
-		if(lines.Length()) lines += "\n";
+		if(lines.length()) lines += "\n";
 		lines += l;
 	}
 
@@ -7560,7 +7560,7 @@ FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 	// Did we record the queueing delay?
 	MyString prefix = "\tSeconds spent in queue: ";
 	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
-		MyString value = optionalLine.substr( prefix.Length(), optionalLine.Length() );
+		MyString value = optionalLine.substr( prefix.length(), optionalLine.length() );
 
 		char * endptr = NULL;
 		queueingDelay = strtol( value.c_str(), & endptr, 10 );
@@ -7579,7 +7579,7 @@ FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 	// Did we record the starter host?
 	prefix = "\tTransferring to host: ";
 	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
-		host = optionalLine.substr( prefix.Length(), optionalLine.Length() );
+		host = optionalLine.substr( prefix.length(), optionalLine.length() );
 
 /*
 		// If we read an optional line, check for the next one.
@@ -7723,7 +7723,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	optionalLine.chomp();
 	std::string prefix = "Bytes reserved:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.length());
 		long long bytes_long;
 		try {
 			bytes_long = stoll(bytes_str);
@@ -7746,7 +7746,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	optionalLine.chomp();
 	prefix = "\tReservation Expiration:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string expiry_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		std::string expiry_str = optionalLine.substr(prefix.size(), optionalLine.length());
 		long long expiry_long;
 		try {
 			expiry_long = stoll(expiry_str);
@@ -7768,7 +7768,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tReservation UUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_uuid = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_uuid = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation UUID line missing.\n");
 		return false;
@@ -7780,7 +7780,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_tag = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation tag line missing.\n");
 		return false;
@@ -7854,7 +7854,7 @@ ReleaseSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	std::string prefix = "Reservation UUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_uuid= optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_uuid= optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation UUID line missing.\n");
 		return false;
@@ -7950,7 +7950,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	optionalLine.chomp();
 	std::string prefix = "Bytes:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.length());
 		long long bytes_long;
 		try {
 			bytes_long = stoll(bytes_str);
@@ -7972,7 +7972,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_checksum = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
 		return false;
@@ -7984,7 +7984,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
 		return false;
@@ -7996,7 +7996,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tUUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_uuid = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_uuid = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "File UUID line missing.\n");
 		return false;
@@ -8078,7 +8078,7 @@ FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	optionalLine.chomp();
 	std::string prefix = "Checksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_checksum = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
 		return false;
@@ -8090,7 +8090,7 @@ FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
 		return false;
@@ -8102,7 +8102,7 @@ FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_tag = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation tag line missing.\n");
 		return false;
@@ -8199,7 +8199,7 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	optionalLine.chomp();
 	std::string prefix = "Bytes:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.length());
 		long long bytes_long;
 		try {
 			bytes_long = stoll(bytes_str);
@@ -8222,7 +8222,7 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	optionalLine.chomp();
 	prefix = "\tChecksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_checksum = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
 		return false;
@@ -8234,7 +8234,7 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
 		return false;
@@ -8246,7 +8246,7 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_tag = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "File tag line missing.\n");
 		return false;

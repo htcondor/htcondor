@@ -534,10 +534,10 @@ MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 			// continuation characters (backslash).
 		MyString	logicalLine(physicalLine);
 
-		while ( logicalLine[logicalLine.Length()-1] == continuation ) {
+		while ( logicalLine[logicalLine.length()-1] == continuation ) {
 
 				// Remove the continuation character.
-			logicalLine.truncate(logicalLine.Length()-1);
+			logicalLine.truncate(logicalLine.length()-1);
 
 				// Append the next physical line.
 			physicalLine = listIn.next();

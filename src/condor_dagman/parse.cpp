@@ -2887,7 +2887,7 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 		varName += *str++;
 	}
 
-	if ( varName.Length() == '\0' ) { // no alphanumeric symbols at all were written into name,
+	if ( varName.length() == '\0' ) { // no alphanumeric symbols at all were written into name,
 	                      // just something weird, which we'll print
 		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Unexpected symbol: \"%c\"\n", filename,
 			lineNumber, *str);
@@ -2939,11 +2939,11 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 		if ( !escaped ) {
 			if ( *str == '"' ) {
 				// we don't want that last " in the string
-				varValue.truncate( varValue.Length() - 1 );
+				varValue.truncate( varValue.length() - 1 );
 				stillInQuotes = false;
 			} else if ( *str == '\\' ) {
 				// on the next pass it will be filled in appropriately
-				varValue.truncate( varValue.Length() - 1 );
+				varValue.truncate( varValue.length() - 1 );
 				escaped = true;
 				continue;
 			}

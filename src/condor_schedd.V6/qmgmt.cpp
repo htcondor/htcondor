@@ -4201,9 +4201,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		bool owner_is_quoted = false;
 		if( *owner == '"' ) {
 			owner_buf = owner+1;
-			if( owner_buf.Length() && owner_buf[owner_buf.Length()-1] == '"' )
+			if( owner_buf.length() && owner_buf[owner_buf.length()-1] == '"' )
 			{
-				owner_buf.truncate(owner_buf.Length()-1);
+				owner_buf.truncate(owner_buf.length()-1);
 				owner_is_quoted = true;
 			}
 			owner = owner_buf.Value();
@@ -6497,18 +6497,18 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 					MyString expr_to_add;
 					expr_to_add.formatstr("string(%s", name + 1);
-					expr_to_add.setAt(expr_to_add.Length()-1, ')');
+					expr_to_add.setAt(expr_to_add.length()-1, ')');
 
 						// Any backwacked double quotes or backwacks
 						// within the []'s should be unbackwacked.
 					int read_pos;
 					int write_pos;
 					for( read_pos = 0, write_pos = 0;
-						 read_pos < expr_to_add.Length();
+						 read_pos < expr_to_add.length();
 						 read_pos++, write_pos++ )
 					{
 						if( expr_to_add[read_pos] == '\\'  &&
-							read_pos+1 < expr_to_add.Length() &&
+							read_pos+1 < expr_to_add.length() &&
 							( expr_to_add[read_pos+1] == '\"' ||
 							  expr_to_add[read_pos+1] == '\\' ) )
 						{
@@ -6540,7 +6540,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					MyString replacement_value;
 					replacement_value += left;
 					replacement_value += result;
-					search_pos = replacement_value.Length();
+					search_pos = replacement_value.length();
 					replacement_value += right;
 					expanded_ad->AssignExpr(curr_attr_to_expand, replacement_value.Value());
 					dprintf(D_FULLDEBUG,"$$([]) substitution: %s=%s\n",curr_attr_to_expand,replacement_value.Value());

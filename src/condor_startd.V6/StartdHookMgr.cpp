@@ -381,12 +381,12 @@ FetchClient::reply()
 void
 FetchClient::hookExited(int exit_status) {
 	HookClient::hookExited(exit_status);
-	if (m_std_err.Length()) {
+	if (m_std_err.length()) {
 		dprintf(D_ALWAYS,
 				"Warning, hook %s (pid %d) printed to stderr: %s\n",
 				m_hook_path, (int)m_pid, m_std_err.Value());
 	}
-	if (m_std_out.Length()) {
+	if (m_std_out.length()) {
 		ASSERT(m_job_ad == NULL);
 		m_job_ad = new ClassAd();
 		MyStringTokener tok;

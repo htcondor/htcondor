@@ -55,7 +55,7 @@ int cleanStringForUseAsAttr(MyString &str, char chReplace/*=0*/, bool compact/*=
 
    // trim the input and replace invalid chars with chReplace
    str.trim();
-   for (int ii = 0; ii < str.Length(); ++ii) {
+   for (int ii = 0; ii < str.length(); ++ii) {
       char ch = str[ii];
       if (ch == '_' || (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z'))
          continue;
@@ -73,7 +73,7 @@ int cleanStringForUseAsAttr(MyString &str, char chReplace/*=0*/, bool compact/*=
       }
    }
    str.trim();
-   return str.Length();
+   return str.length();
 }
 
 /*

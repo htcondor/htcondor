@@ -133,7 +133,7 @@ AppendHistory(ClassAd* ad)
   MyString ad_string;
   int ad_size;
   sPrintAd(ad_string, *ad);
-  ad_size = ad_string.Length();
+  ad_size = ad_string.length();
 
   MaybeRotateHistory(ad_size);
 

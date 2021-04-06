@@ -25,7 +25,7 @@
 #include "condor_attributes.h"
 
 void append_arg(char const *arg,MyString &result) {
-	if(result.Length()) {
+	if(result.length()) {
 		result += " ";
 	}
 	ASSERT(arg);
@@ -39,10 +39,10 @@ void append_arg(char const *arg,MyString &result) {
 		case '\n':
 		case '\r':
 		case '\'':
-			if(result.Length() && result[result.Length()-1] == '\'') {
+			if(result.length() && result[result.length()-1] == '\'') {
 				//combine preceeding quoted section with this one,
 				//so we do not introduce a repeated quote.
-				result.truncate(result.Length()-1);
+				result.truncate(result.length()-1);
 			}
 			else {
 				result += '\'';
@@ -732,7 +732,7 @@ ArgList::GetArgsStringV1Raw(MyString *result,MyString *error_msg) const
 			}
 			return false;
 		}
-		if(result->Length()) {
+		if(result->length()) {
 			(*result) += " ";
 		}
 		(*result) += arg->Value();
@@ -812,7 +812,7 @@ void ArgList::GetArgsStringForLogging( MyString * result ) const {
 	while( it.Next( msArg ) ) {
 		const char * arg = msArg->c_str();
 
-		if( result->Length() != 0 ) { * result += " "; }
+		if( result->length() != 0 ) { * result += " "; }
 		while( * arg ) {
 			switch( * arg ) {
 				case ' ':
@@ -852,7 +852,7 @@ bool
 ArgList::GetArgsStringV1or2Raw(MyString *result,MyString *error_msg) const
 {
 	ASSERT(result);
-	int old_len = result->Length();
+	int old_len = result->length();
 
 	if(GetArgsStringV1Raw(result,NULL)) {
 		return true;
@@ -860,7 +860,7 @@ ArgList::GetArgsStringV1or2Raw(MyString *result,MyString *error_msg) const
 
 	// V1 attempt failed.  Use V2 syntax.
 
-	if(result->Length() > old_len) {
+	if(result->length() > old_len) {
 		// Clear any partial output we may have generated above.
 		result->truncate(old_len);
 	}
@@ -893,7 +893,7 @@ ArgList::AddErrorMessage(char const *msg,MyString *error_buf)
 {
 	if(!error_buf) return;
 
-	if(error_buf->Length()) {
+	if(error_buf->length()) {
 		// each message is separated by a newline
 		(*error_buf) += "\n";
 	}
@@ -919,7 +919,7 @@ ArgList::GetArgsStringWin32(MyString *result,int skip_args) const
 	int i;
 	for(i=0;it.Next(arg);i++) {
 		if(i<skip_args) continue;
-		if(result->Length()) (*result) += ' ';
+		if(result->length()) (*result) += ' ';
 		if(input_was_unknown_platform_v1) {
 			// In V1 arg syntax, we just pass on whatever the user entered
 			// directly to the Windows OS, assuming the user wants the

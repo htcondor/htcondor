@@ -407,13 +407,13 @@ IpVerify::PrintAuthTable(int dprintf_level) {
 			UserHashToString(pentry->deny_users,deny_users);
 		}
 
-		if( allow_users.Length() ) {
+		if( allow_users.length() ) {
 			dprintf(dprintf_level,"allow %s: %s\n",
 					PermString(perm),
 					allow_users.Value());
 		}
 
-		if( deny_users.Length() ) {
+		if( deny_users.length() ) {
 			dprintf(dprintf_level,"deny %s: %s\n",
 					PermString(perm),
 					deny_users.Value());

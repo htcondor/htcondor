@@ -569,7 +569,7 @@ Env::SetEnv( const char* var, const char* val )
 bool
 Env::SetEnv( const MyString & var, const MyString & val )
 {
-	if( var.Length() == 0 ) {
+	if( var.length() == 0 ) {
 		return false;
 	}
 	bool ret = (_envTable->insert( var, val, true ) == 0);
@@ -617,7 +617,7 @@ bool
 Env::getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char v1_delim) const
 {
 	ASSERT(result);
-	int old_len = result->Length();
+	int old_len = result->length();
 
 	if(getDelimitedStringV1Raw(result,NULL,v1_delim)) {
 		return true;
@@ -625,7 +625,7 @@ Env::getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char v1_del
 
 	// V1 attempt failed.  Use V2 syntax.
 
-	if(result->Length() > old_len) {
+	if(result->length() > old_len) {
 		// Clear any partial output we may have generated above.
 		result->truncate(old_len);
 	}
@@ -787,8 +787,8 @@ Env::getStringArray() const {
     _envTable->startIterations();
 	for( i = 0; _envTable->iterate( var, val ); i++ ) {
 		ASSERT( i < numVars );
-		ASSERT( var.Length() > 0 );
-		array[i] = (char *)malloc(var.Length() + val.Length() + 2);
+		ASSERT( var.length() > 0 );
+		array[i] = (char *)malloc(var.length() + val.length() + 2);
 		ASSERT( array[i] );
 		strcpy( array[i], var.Value() );
 		if(val != NO_ENVIRONMENT_VALUE) {

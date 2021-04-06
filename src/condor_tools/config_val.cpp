@@ -1064,7 +1064,7 @@ main( int argc, const char* argv[] )
 		// print the set of all config sources.
 		if ( ! verbose) {
 			fprintf(stdout, "# Contributing configuration file(s):\n");
-			if (global_config_source.Length() > 0) {
+			if (global_config_source.length() > 0) {
 				fprintf(stdout, "#\t%s\n", global_config_source.Value());
 			}
 			local_config_sources.rewind();
@@ -1923,7 +1923,7 @@ static void PrintConfigSources(void)
 		// stdout, so that the output can be cleanly piped into
 		// something like xargs...
 
-	if (global_config_source.Length() > 0) {
+	if (global_config_source.length() > 0) {
 		fprintf( stderr, "Configuration source:\n" );
 		fflush( stderr );
 		fprintf( stdout, "\t%s\n", global_config_source.Value() );

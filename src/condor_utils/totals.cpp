@@ -137,7 +137,7 @@ displayTotals (FILE *file, int keyLength)
 		// insert the key in the right position in the list
 		keys[pos] = strdup(key.Value());
 		if (auto_key_length) {
-			keyLength = MAX(keyLength, key.Length());
+			keyLength = MAX(keyLength, key.length());
 		}
 	}
 
