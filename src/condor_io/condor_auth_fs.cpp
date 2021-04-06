@@ -188,7 +188,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				int en = errno;  // strerror could replace errno!
 				errstack->pushf("FS_REMOTE", 1002,
 						"condor_mkstemp(%s) failed: %s (%i)",
-						filename.Value(), strerror(en), en);
+						filename.c_str(), strerror(en), en);
 				m_new_dir = "";			//the other process will expect an
 										//empty string on failure
 			} else {
@@ -209,7 +209,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 			dprintf( D_SECURITY, "FS: client template is %s\n", filename.c_str() );
 
 			int sync_fd;
-			char * new_dir = strdup(filename.Value());
+			char * new_dir = strdup(filename.c_str());
 			sync_fd = condor_mkstemp(new_dir);
 			m_new_dir = new_dir;
 			free(new_dir);
@@ -224,7 +224,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				int en = errno;  // strerror could replace errno!
 				errstack->pushf("FS", 1002,
 						"condor_mkstemp(%s) failed: %s (%i)",
-						filename.Value(), strerror(en), en);
+						filename.c_str(), strerror(en), en);
 				m_new_dir = "";			//the other process will expect an
 										//empty string on failure
 			} else {
@@ -301,7 +301,7 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 			// anything funny or uses string spaces, etc.
 			formatstr_cat( filename_template, "/FS_REMOTE_%s_%d_XXXXXX",
 			               get_local_hostname().c_str(), mypid );
-			char* filename_inout = strdup(filename_template.Value());
+			char* filename_inout = strdup(filename_template.c_str());
 
 			dprintf( D_SECURITY, "FS_REMOTE: sync filename is %s\n", filename_inout );
 

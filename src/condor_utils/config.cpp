@@ -1965,7 +1965,7 @@ FILE* Open_macro_source (
 			ArgList argList;
 			MyString args_errors;
 			if(!argList.AppendArgsV1RawOrV2Quoted(cmd, &args_errors)) {
-				formatstr(config_errmsg, "Can't append args, %s", args_errors.Value());
+				formatstr(config_errmsg, "Can't append args, %s", args_errors.c_str());
 				return NULL;
 			}
 			fp = my_popen(argList, "r", 0 | MY_POPEN_OPT_FAIL_QUIETLY);
@@ -2025,7 +2025,7 @@ FILE* Copy_macro_source_into (
 		ArgList argList;
 		MyString args_errors;
 		if(!argList.AppendArgsV1RawOrV2Quoted(cmd, &args_errors)) {
-			formatstr(errmsg, "Can't append args, %s", args_errors.Value());
+			formatstr(errmsg, "Can't append args, %s", args_errors.c_str());
 			return NULL;
 		}
 		fp = my_popen(argList, "rb", MY_POPEN_OPT_FAIL_QUIETLY);

@@ -75,7 +75,7 @@ ParallelProc::addEnvVars()
 	MyString env_errors;
 	if ( !env.MergeFrom(JobAd,&env_errors) ) {
 		dprintf( D_ALWAYS, "Failed to read environment from JobAd: %s\n", 
-				 env_errors.Value() );
+				 env_errors.c_str() );
 		return 0;
 	}
 
@@ -155,13 +155,13 @@ ParallelProc::addEnvVars()
 	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString env_str;
 		env.getDelimitedStringForDisplay(&env_str);
-		dprintf ( D_FULLDEBUG, "New env: %s\n", env_str.Value() );
+		dprintf ( D_FULLDEBUG, "New env: %s\n", env_str.c_str() );
 	}
 
         // now put the env back into the JobAd:
 	if(!env.InsertEnvIntoClassAd(JobAd,&env_errors)) {
 		dprintf( D_ALWAYS, "Unable to update env! Aborting: %s\n",
-				 env_errors.Value());
+				 env_errors.c_str());
 		return 0;
 	}
 

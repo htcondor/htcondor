@@ -94,9 +94,9 @@ LoadQueue::display( Resource* rip )
 		msg += numbuf;
 	}
 	if( rip ) {
-		rip->dprintf( D_FULLDEBUG, "%s\n", msg.Value() );
+		rip->dprintf( D_FULLDEBUG, "%s\n", msg.c_str() );
 	} else { 
-		dprintf( D_FULLDEBUG, "%s\n", msg.Value() );
+		dprintf( D_FULLDEBUG, "%s\n", msg.c_str() );
 	}
 }
 

@@ -92,7 +92,7 @@ glexec_starter_prepare(const char* starter_path,
 	glexec_private_dir += random_part;
 	dprintf(D_ALWAYS,
 	        "GLEXEC: starter private dir is '%s'\n",
-	        glexec_private_dir.Value());
+	        glexec_private_dir.c_str());
 
 	// get the glexec command line prefix from config
 	char* glexec_argstr = param( "GLEXEC" );
@@ -120,7 +120,7 @@ glexec_starter_prepare(const char* starter_path,
 	                                                   &setup_err ) ) {
 		dprintf( D_ALWAYS,
 		         "GLEXEC: failed to parse GLEXEC from config: %s\n",
-		         setup_err.Value() );
+		         setup_err.c_str() );
 		free( glexec_argstr );
 		return 0;
 	}
@@ -137,15 +137,15 @@ glexec_starter_prepare(const char* starter_path,
 	free(tmp);
 	MyString setup_script = libexec;
 	setup_script += "/glexec_starter_setup.sh";
-	glexec_setup_args.AppendArg(setup_script.Value());
-	glexec_setup_args.AppendArg(glexec_private_dir.Value());
+	glexec_setup_args.AppendArg(setup_script.c_str());
+	glexec_setup_args.AppendArg(glexec_private_dir.c_str());
 
 	// debug info.  this display format totally screws up the quoting, but
 	// my_system gets it right.
 	MyString disp_args;
 	glexec_setup_args.GetArgsStringForDisplay(&disp_args, 0);
 	dprintf (D_ALWAYS, "GLEXEC: about to glexec: ** %s **\n",
-			disp_args.Value());
+			disp_args.c_str());
 
 	// the only thing actually needed by glexec at this point is the cert, so
 	// that it knows who to map to.  the pipe outputs the username that glexec
@@ -173,14 +173,14 @@ glexec_starter_prepare(const char* starter_path,
 	                                             &err ) ) {
 		dprintf( D_ALWAYS,
 		         "failed to parse GLEXEC from config: %s\n",
-		         err.Value() );
+		         err.c_str() );
 		free( glexec_argstr );
 		return 0;
 	}
 	free( glexec_argstr );
 	MyString wrapper_path = libexec;
 	wrapper_path += "/condor_glexec_wrapper";
-	glexec_args.AppendArg(wrapper_path.Value());
+	glexec_args.AppendArg(wrapper_path.c_str());
 
 	// complete the command line by adding in the original
 	// arguments. we also make sure that the full path to the
@@ -233,18 +233,18 @@ glexec_starter_prepare(const char* starter_path,
 	// environment.
 	MyString execute_dir = glexec_private_dir;
 	execute_dir += "/execute";
-	glexec_env.SetEnv ( "_CONDOR_EXECUTE", execute_dir.Value());
-	glexec_env.SetEnv ( "_condor_EXECUTE", execute_dir.Value());
+	glexec_env.SetEnv ( "_CONDOR_EXECUTE", execute_dir.c_str());
+	glexec_env.SetEnv ( "_condor_EXECUTE", execute_dir.c_str());
 
 	// the LOG dir should be owned by the mapped user.  we created this
 	// earlier, and now we override it in the condor_config via the
 	// environment.
 	MyString log_dir = glexec_private_dir;
 	log_dir += "/log";
-	glexec_env.SetEnv ( "_CONDOR_LOG", log_dir.Value());
-	glexec_env.SetEnv ( "_condor_LOG", log_dir.Value());
-	glexec_env.SetEnv ( "_CONDOR_LOCK", log_dir.Value());
-	glexec_env.SetEnv ( "_condor_LOCK", log_dir.Value());
+	glexec_env.SetEnv ( "_CONDOR_LOG", log_dir.c_str());
+	glexec_env.SetEnv ( "_condor_LOG", log_dir.c_str());
+	glexec_env.SetEnv ( "_CONDOR_LOCK", log_dir.c_str());
+	glexec_env.SetEnv ( "_condor_LOCK", log_dir.c_str());
 
 	// PROCD_ADDRESS: the Starter that we are about to create will
 	// not have access to our ProcD. we'll explicitly set PROCD_ADDRESS
@@ -254,8 +254,8 @@ glexec_starter_prepare(const char* starter_path,
 	//
 	MyString procd_address = log_dir;
 	procd_address += "/procd_pipe";
-	glexec_env.SetEnv( "_CONDOR_PROCD_ADDRESS", procd_address.Value() );
-	glexec_env.SetEnv( "_condor_PROCD_ADDRESS", procd_address.Value() );
+	glexec_env.SetEnv( "_CONDOR_PROCD_ADDRESS", procd_address.c_str() );
+	glexec_env.SetEnv( "_condor_PROCD_ADDRESS", procd_address.c_str() );
 
 	// CONDOR_GLEXEC_STARTER_CLEANUP_FLAG: this serves as a flag in the
 	// Starter's environment that it will check for in order to determine
@@ -331,11 +331,11 @@ glexec_starter_handle_env(pid_t pid)
 	if (!env_to_send.getDelimitedStringV2Raw(&env_str, &merge_err)) {
 		dprintf(D_ALWAYS,
 		        "GLEXEC: Env::getDelimitedStringV2Raw error: %s\n",
-		        merge_err.Value());
+		        merge_err.c_str());
 		close(sock_fd);
 		return false;
 	}
-	const char* env_buf = env_str.Value();
+	const char* env_buf = env_str.c_str();
 	int env_len = env_str.length() + 1;
 	errno = 0;
 	if (write(sock_fd, &env_len, sizeof(env_len)) != sizeof(env_len)) {

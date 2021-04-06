@@ -536,7 +536,7 @@ JICShadow::transferOutput( bool &transient_failure )
 
 		if( m_ft_rval ) {
 			job_ad->Assign(ATTR_SPOOLED_OUTPUT_FILES, 
-							m_ft_info.spooled_files.Value());
+							m_ft_info.spooled_files.c_str());
 		} else {
 			dprintf( D_FULLDEBUG, "Sandbox transfer failed.\n");
 			// Failed to transfer.
@@ -605,7 +605,7 @@ JICShadow::transferOutputMopUp(void)
 			ASSERT(m_ft_info.hold_code != 0);
 			// The shadow will immediately cut the connection to the
 			// starter when this is called. 
-			notifyStarterError(m_ft_info.error_desc.Value(), true,
+			notifyStarterError(m_ft_info.error_desc.c_str(), true,
 			                   m_ft_info.hold_code,m_ft_info.hold_subcode);
 			return false;
 		}
@@ -2532,7 +2532,7 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 			if(!ft_info.try_again) {
 					// Put the job on hold.
 				ASSERT(ft_info.hold_code != 0);
-				notifyStarterError(ft_info.error_desc.Value(), true,
+				notifyStarterError(ft_info.error_desc.c_str(), true,
 				                   ft_info.hold_code,ft_info.hold_subcode);
 			}
 

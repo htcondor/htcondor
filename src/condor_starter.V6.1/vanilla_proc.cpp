@@ -395,13 +395,13 @@ VanillaProc::StartJob()
                        chroot_spec.Tokenize();
                        const char * chroot_name = chroot_spec.GetNextToken("=", false);
                        if (chroot_name == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.c_str());
                        }
                        const char * next_dir = chroot_spec.GetNextToken("=", false);
                        if (chroot_name == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.c_str());
                        }
-                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir, chroot_spec.Value());
+                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir, chroot_spec.c_str());
                        if (IsDirectory(next_dir) && chroot_name && (strcmp(requested_chroot_name.c_str(), chroot_name) == 0)) {
                                acceptable_chroot = true;
                                requested_chroot = next_dir;

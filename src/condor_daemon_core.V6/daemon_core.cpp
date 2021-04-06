@@ -1169,7 +1169,7 @@ char const * DaemonCore::InfoCommandSinfulString(int pid)
 			// this pid is apparently not a daemon core process
 			return NULL;
 		}
-		return pidinfo->sinful_string.Value();
+		return pidinfo->sinful_string.c_str();
 	}
 }
 
@@ -1302,7 +1302,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			}
 			else {
 				private_sinful_string = generate_sinful(private_ip.c_str(), port);
-				sinful_private = strdup(private_sinful_string.Value());
+				sinful_private = strdup(private_sinful_string.c_str());
 			}
 			free(tmp);
 		}
@@ -1795,7 +1795,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 				"Aborting registration of socket %s %s: %s\n",
 				iosock_descrip ? iosock_descrip : "",
 				handler_descrip ? handler_descrip : ((Sock *)iosock)->get_sinful_peer(),
-				overload_msg.Value() );
+				overload_msg.c_str() );
 			return -3;
 		}
 	}
@@ -3177,7 +3177,7 @@ DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 
 	if( m_command_port_arg != 0 && SharedPortEndpoint::UseSharedPort(&why_not,already_open) ) {
 		if( !m_shared_port_endpoint ) {
-			char const *sock_name = m_daemon_sock_name.Value();
+			char const *sock_name = m_daemon_sock_name.c_str();
 			if( !*sock_name ) sock_name = NULL;
 			m_shared_port_endpoint = new SharedPortEndpoint(sock_name);
 		}
@@ -3188,7 +3188,7 @@ DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 	}
 	else if( m_shared_port_endpoint ) {
 		dprintf(D_ALWAYS,
-				"Turning off shared port endpoint because %s\n",why_not.Value());
+				"Turning off shared port endpoint because %s\n",why_not.c_str());
 		delete m_shared_port_endpoint;
 		m_shared_port_endpoint = NULL;
 
@@ -3199,7 +3199,7 @@ DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 		}
 	}
 	else if( IsFulldebug(D_FULLDEBUG) ) {
-		dprintf(D_FULLDEBUG,"Not using shared port because %s\n",why_not.Value());
+		dprintf(D_FULLDEBUG,"Not using shared port because %s\n",why_not.c_str());
 	}
 }
 
@@ -3250,7 +3250,7 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_s
 				 ipstr,
 				 command_descrip ? command_descrip : "unspecified operation",
 				 PermString(perm),
-				 reason->Value() );
+				 reason->c_str() );
 	}
 
 	return result;
@@ -5091,7 +5091,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 		}
 
 		is_local = pidinfo->is_local;
-		destination = pidinfo->sinful_string.Value();
+		destination = pidinfo->sinful_string.c_str();
 	}
 
 	classy_counted_ptr<Daemon> d = new Daemon( DT_ANY, destination );
@@ -6244,10 +6244,10 @@ void CreateProcessForkit::exec() {
 
 			// add/override the inherit variable with the correct value
 			// for this process.
-		m_envobject.SetEnv( EnvGetName( ENV_INHERIT ), m_inheritbuf.Value() );
+		m_envobject.SetEnv( EnvGetName( ENV_INHERIT ), m_inheritbuf.c_str() );
 
 		if( !m_privateinheritbuf.empty() ) {
-			m_envobject.SetEnv( EnvGetName( ENV_PRIVATE ), m_privateinheritbuf.Value() );
+			m_envobject.SetEnv( EnvGetName( ENV_PRIVATE ), m_privateinheritbuf.c_str() );
 		}
 			// Make sure PURIFY can open windows for the daemons when
 			// they start. This functionality appears to only exist when we've
@@ -6379,7 +6379,7 @@ void CreateProcessForkit::exec() {
 		if(IsDebugLevel(D_DAEMONCORE)) {
 			MyString arg_string;
 			m_args.GetArgsStringForDisplay(&arg_string);
-			dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", arg_string.Value());
+			dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", arg_string.c_str());
 		}
 		m_unix_args = m_args.GetStringArray();
 	}
@@ -7189,7 +7189,7 @@ int DaemonCore::Create_Process(
 			dprintf(D_ALWAYS, "ERROR: Create_Process failed to export security session for child daemon.\n");
 			goto wrapup;
 		}
-		ClaimIdParser claimId(session_id_c_str, session_info.Value(), session_key_c_str);
+		ClaimIdParser claimId(session_id_c_str, session_info.c_str(), session_key_c_str);
 		privateinheritbuf += claimId.claimId();
 	}
 	if((want_command_port != FALSE || HAS_DCJOBOPT_INHERIT_FAMILY_SESSION(job_opt_mask)) 
@@ -7202,7 +7202,7 @@ int DaemonCore::Create_Process(
 			dprintf(D_ALWAYS, "ERROR: Create_Process failed to export family security session for child daemon.\n");
 			goto wrapup;
 		}
-		ClaimIdParser claimId(m_family_session_id.c_str(), family_session_info.Value(), m_family_session_key.c_str());
+		ClaimIdParser claimId(m_family_session_id.c_str(), family_session_info.c_str(), m_family_session_key.c_str());
 		privateinheritbuf += " FamilySessionKey:";
 		privateinheritbuf += claimId.claimId();
 	}
@@ -7881,8 +7881,8 @@ int DaemonCore::Create_Process(
 				goto wrapup;
 			}
 
-			executable_fullpath_buf.formatstr("%s/%s", currwd.Value(), executable);
-			executable_fullpath = executable_fullpath_buf.Value();
+			executable_fullpath_buf.formatstr("%s/%s", currwd.c_str(), executable);
+			executable_fullpath = executable_fullpath_buf.c_str();
 
 				// Finally, log it
 			dprintf ( D_DAEMONCORE, "Full path exec name: %s\n", executable_fullpath );
@@ -8363,7 +8363,7 @@ int DaemonCore::Create_Process(
 	dprintf(D_DAEMONCORE,
 		"Child Process: pid %lu at %s (%.2f sec)\n",
 		(unsigned long)newpid, 
-        pidtmp->sinful_string.Value(), 
+        pidtmp->sinful_string.c_str(), 
         delta_runtime);
 #ifdef WIN32
 	WatchPid(pidtmp);
@@ -9296,7 +9296,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// TODO: That I need to twice override "fixing" wildcard addresses is terrible
 		// Something is wrong here and needs to be fixed.
 		dprintf(D_ALWAYS, "Daemoncore: Listening at %s on %s.\n",
-			it->rsock()->my_addr_wildcard_okay().to_sinful_wildcard_okay().Value(), proto.Value());
+			it->rsock()->my_addr_wildcard_okay().to_sinful_wildcard_okay().c_str(), proto.c_str());
 	}
 
 	// TODO: This block should really be in the dc_socks loop above.
@@ -10108,13 +10108,13 @@ static bool assign_sock(condor_protocol proto, Sock * sock, bool fatal)
 	MyString msg;
 	msg.formatstr( "Failed to create a %s/%s socket.  Does this computer have %s support?",
 		type,
-		protoname.Value(),
-		protoname.Value());
+		protoname.c_str(),
+		protoname.c_str());
 	if(fatal) {
-		EXCEPT("%s", msg.Value());
+		EXCEPT("%s", msg.c_str());
 	}
 
-	dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
+	dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.c_str());
 	return false;
 }
 
@@ -10177,11 +10177,11 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 		// numbers match.
 		if(! BindAnyCommandPort( rsock, dynamicUDPSocket, proto ) ) {
 			MyString msg;
-			msg.formatstr( "BindAnyCommandPort() failed. Does this computer have %s support?", condor_protocol_to_str( proto ).Value() );
+			msg.formatstr( "BindAnyCommandPort() failed. Does this computer have %s support?", condor_protocol_to_str( proto ).c_str() );
 			if( fatal ) {
-				EXCEPT( "%s", msg.Value() );
+				EXCEPT( "%s", msg.c_str() );
 			} else {
-				dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
+				dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.c_str());
 				return false;
 			}
 		}
@@ -10231,12 +10231,12 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 			MyString msg;
 			msg.formatstr( "Failed to listen(%d) on TCP/%s command socket. Does this computer have %s support?",
 				tcp_port,
-				condor_protocol_to_str( proto ).Value(),
-				condor_protocol_to_str( proto ).Value() );
+				condor_protocol_to_str( proto ).c_str(),
+				condor_protocol_to_str( proto ).c_str() );
 			if( fatal ) {
-				EXCEPT( "%s", msg.Value() );
+				EXCEPT( "%s", msg.c_str() );
 			} else {
-				dprintf( D_ALWAYS | D_FAILURE, "%s\n", msg.Value() );
+				dprintf( D_ALWAYS | D_FAILURE, "%s\n", msg.c_str() );
 				return false;
 			}
 		}
@@ -10275,7 +10275,7 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 
 
 	dprintf (D_NETWORK, "InitCommandSocket(%s, %d, %s, %s) created %s.\n",
-		condor_protocol_to_str( proto ).Value(),
+		condor_protocol_to_str( proto ).c_str(),
 		tcp_port,
 		want_udp ? "want UDP" : "no UDP",
 		fatal ? "fatal errors" : "non-fatal errors",
@@ -10590,7 +10590,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 
 		std::string perm_name = PermString(static_cast<DCpermission>(i));
 
-		if( sock->isAuthorizationInBoundingSet(perm_name) && Verify(command_desc.Value(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
+		if( sock->isAuthorizationInBoundingSet(perm_name) && Verify(command_desc.c_str(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
 				// now we can see if the specific attribute they're
 				// trying to set is in our list.
 			if( (SettableAttrsLists[i])->
@@ -10688,7 +10688,7 @@ DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 		param_name = "SETTABLE_ATTRS_";
 /*	}*/
 	param_name += PermString((DCpermission)i);
-	tmp = param( param_name.Value() );
+	tmp = param( param_name.c_str() );
 	if( tmp ) {
 		SettableAttrsLists[i] = new StringList;
 		(SettableAttrsLists[i])->initializeFromString( tmp );
@@ -10723,7 +10723,7 @@ void DaemonCore :: clearSession(pid_t pid)
 
     if ( pidTable->lookup(pid,pidentry) != -1 ) {
         if (sec_man && pidentry) {
-            sec_man->invalidateHost(pidentry->sinful_string.Value());
+            sec_man->invalidateHost(pidentry->sinful_string.c_str());
         }
     }
 }
@@ -10923,10 +10923,10 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd,char const *fname)
     if( fname ) {
 		MyString newLocalAdFile;
 		newLocalAdFile.formatstr("%s.new",fname);
-        if( (AD_FILE = safe_fopen_wrapper_follow(newLocalAdFile.Value(), "w")) ) {
+        if( (AD_FILE = safe_fopen_wrapper_follow(newLocalAdFile.c_str(), "w")) ) {
             fPrintAd(AD_FILE, *daemonAd);
             fclose( AD_FILE );
-			if( rotate_file(newLocalAdFile.Value(),fname)!=0 ) {
+			if( rotate_file(newLocalAdFile.c_str(),fname)!=0 ) {
 					// Under windows, rotate_file() sometimes failes with
 					// system error 5 (access denied).  This is believed
 					// to be expected in the case where some other process
@@ -10940,14 +10940,14 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd,char const *fname)
 #else
 				dprintf( D_ALWAYS,
 						 "DaemonCore: ERROR: failed to rotate %s to %s\n",
-						 newLocalAdFile.Value(),
+						 newLocalAdFile.c_str(),
 						 fname);
 #endif
 			}
         } else {
             dprintf( D_ALWAYS,
                      "DaemonCore: ERROR: Can't open daemon address file %s\n",
-                     newLocalAdFile.Value() );
+                     newLocalAdFile.c_str() );
         }
     }
 }
@@ -11131,7 +11131,7 @@ DaemonCore::PidEntry::~PidEntry() {
 			// Clean up the named socket for this process if the child
 			// didn't already do so.
 #ifndef WIN32
-		SharedPortEndpoint::RemoveSocket( shared_port_fname.Value() );
+		SharedPortEndpoint::RemoveSocket( shared_port_fname.c_str() );
 #endif
 	}
 	if(child_session_id)
@@ -11212,7 +11212,7 @@ DaemonCore::PidEntry::pipeFullWrite(int fd)
 
 	if (pipe_buf[0] != NULL)
 	{
-		const void* data_left = (const void*)(((const char*) pipe_buf[0]->Value()) + stdin_offset);
+		const void* data_left = (const void*)(((const char*) pipe_buf[0]->c_str()) + stdin_offset);
 		total_len = pipe_buf[0]->length();
 		bytes_written = daemonCore->Write_Pipe(fd, data_left, total_len - stdin_offset);
 		dprintf(D_DAEMONCORE, "DaemonCore::PidEntry::pipeFullWrite: Total bytes to write = %d, bytes written this pass = %d\n", total_len, bytes_written);

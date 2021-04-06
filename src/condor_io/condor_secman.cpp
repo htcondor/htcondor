@@ -330,12 +330,12 @@ SecMan::sec_req_param( const char* fmt, DCpermission auth_level, sec_req def ) {
 			char *value = getSecSetting( fmt, auth_level, &param_name );
 			if( res == SEC_REQ_INVALID ) {
 				EXCEPT( "SECMAN: %s=%s is invalid!",
-				        param_name.Value(), value ? value : "(null)" );
+				        param_name.c_str(), value ? value : "(null)" );
 			}
 			if( IsDebugVerbose(D_SECURITY) ) {
 				dprintf (D_SECURITY,
 				         "SECMAN: %s is undefined; using %s.\n",
-				         param_name.Value(), SecMan::sec_req_rev[def]);
+				         param_name.c_str(), SecMan::sec_req_rev[def]);
 			}
 			free(value);
 
@@ -407,10 +407,10 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 			buf.formatstr( fmt, PermString(*perms) );
 			buf.formatstr_cat("_%s",check_subsystem);
 			if( int_result ) {
-				found = param_integer( buf.Value(), *int_result, false, 0, false, 0, 0 );
+				found = param_integer( buf.c_str(), *int_result, false, 0, false, 0, 0 );
 			}
 			else {
-				*str_result = param( buf.Value() );
+				*str_result = param( buf.c_str() );
 				found = *str_result;
 			}
 			if( found ) {
@@ -424,10 +424,10 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 
 		buf.formatstr( fmt, PermString(*perms) );
 		if( int_result ) {
-			found = param_integer( buf.Value(), *int_result, false, 0, false, 0, 0 );
+			found = param_integer( buf.c_str(), *int_result, false, 0, false, 0, 0 );
 		}
 		else {
-			*str_result = param( buf.Value() );
+			*str_result = param( buf.c_str() );
 			found = *str_result;
 		}
 		if( found ) {
@@ -1254,7 +1254,7 @@ SecManStartCommand::doCallback( StartCommandResult result )
 			         "DENIED authorization of server '%s/%s' (I am acting as "
 			         "the client): reason: %s.",
 					 server_fqu ? server_fqu : "*",
-					 m_sock->peer_ip_str(), deny_reason.Value() );
+					 m_sock->peer_ip_str(), deny_reason.c_str() );
 			result = StartCommandFailed;
 		}
 	}
@@ -1353,7 +1353,7 @@ SecManStartCommand::startCommand_inner()
 	dprintf ( D_SECURITY, "SECMAN: %scommand %i %s to %s from %s port %i (%s%s).\n",
 			  m_already_logged_startcommand ? "resuming " : "",
 			  m_cmd,
-			  m_cmd_description.Value(),
+			  m_cmd_description.c_str(),
 			  m_sock->peer_description(),
 			  m_is_tcp ? "TCP" : "UDP",
 			  m_sock->get_port(),
@@ -1369,9 +1369,9 @@ SecManStartCommand::startCommand_inner()
 					m_is_tcp && !m_sock->is_connected() ?
 					"connection to" : "security handshake with",
 					m_sock->peer_description());
-		dprintf(D_SECURITY,"SECMAN: %s\n", msg.Value());
+		dprintf(D_SECURITY,"SECMAN: %s\n", msg.c_str());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-						  "%s", msg.Value());
+						  "%s", msg.c_str());
 
 		return StartCommandFailed;
 	}
@@ -1384,9 +1384,9 @@ SecManStartCommand::startCommand_inner()
 		MyString msg;
 		msg.formatstr("TCP connection to %s failed.",
 					m_sock->peer_description());
-		dprintf(D_SECURITY,"SECMAN: %s\n", msg.Value());
+		dprintf(D_SECURITY,"SECMAN: %s\n", msg.c_str());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-						  "%s", msg.Value());
+						  "%s", msg.c_str());
 
 		return StartCommandFailed;
 	}
@@ -1819,7 +1819,7 @@ SecManStartCommand::sendAuthInfo_inner()
 				}
 
 				m_sock->encode();
-				m_sock->set_MD_mode(MD_ALWAYS_ON, ki, key_id.Value());
+				m_sock->set_MD_mode(MD_ALWAYS_ON, ki, key_id.c_str());
 
 				dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
 			} // if (will_enable_mac)
@@ -1850,7 +1850,7 @@ SecManStartCommand::sendAuthInfo_inner()
 
 
 				m_sock->encode();
-				m_sock->set_crypto_key(turn_encryption_on, ki, key_id.Value());
+				m_sock->set_crypto_key(turn_encryption_on, ki, key_id.c_str());
 
 				dprintf ( D_SECURITY,
 						  "SECMAN: successfully enabled encryption%s.\n",
@@ -2141,7 +2141,7 @@ SecManStartCommand::authenticate_inner()
 					dprintf( D_ALWAYS,
 							"SECMAN: required authentication with %s failed, so aborting command %s.\n",
 							m_sock->peer_description(),
-							m_cmd_description.Value());
+							m_cmd_description.c_str());
 					return StartCommandFailed;
 				}
 				dprintf( D_SECURITY|D_FULLDEBUG,
@@ -2181,7 +2181,7 @@ SecManStartCommand::authenticate_inner_continue()
 			dprintf( D_ALWAYS,
 				"SECMAN: required authentication with %s failed, so aborting command %s.\n",
                                                          m_sock->peer_description(),
-                                                         m_cmd_description.Value());
+                                                         m_cmd_description.c_str());
 			return StartCommandFailed;
 		}
 		dprintf( D_SECURITY|D_FULLDEBUG,
@@ -2282,8 +2282,8 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			if (!getClassAd(m_sock, post_auth_info) || !m_sock->end_of_message()) {
 				MyString errmsg;
 				errmsg.formatstr("Failed to received post-auth ClassAd");
-				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.Value());
-				m_errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR, errmsg.Value());
+				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.c_str());
+				m_errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR, errmsg.c_str());
 				return StartCommandFailed;
 			} else {
 				if (IsDebugVerbose(D_SECURITY)) {
@@ -2320,16 +2320,16 @@ SecManStartCommand::receivePostAuthInfo_inner()
 					response_method = "(no authentication)";
 					errmsg.formatstr( "Received \"%s\" from server for user %s using no authentication method, which may imply host-based security.  Our address was '%s', and server's address was '%s'.  Check your ALLOW settings and IP protocols.",
 						response_rc.c_str(), response_user.c_str(),
-						m_sock->my_addr().to_ip_string().Value(),
-						m_sock->peer_addr().to_ip_string().Value()
+						m_sock->my_addr().to_ip_string().c_str(),
+						m_sock->peer_addr().to_ip_string().c_str()
 						);
 				} else {
 					m_sock->setShouldTryTokenRequest(true);
 					errmsg.formatstr("Received \"%s\" from server for user %s using method %s.",
-						response_rc.c_str(), response_user.c_str(), response_method.Value());
+						response_rc.c_str(), response_user.c_str(), response_method.c_str());
 				}
-				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.Value());
-				m_errstack->push ("SECMAN", SECMAN_ERR_AUTHORIZATION_FAILED, errmsg.Value());
+				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.c_str());
+				m_errstack->push ("SECMAN", SECMAN_ERR_AUTHORIZATION_FAILED, errmsg.c_str());
 				return StartCommandFailed;
 			} else {
 				// Hey, it worked!  Make sure we don't request a new token.
@@ -2477,10 +2477,10 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				if (m_sec_man.command_map.insert(keybuf, sesid, true) == 0) {
 					// success
 					if (IsDebugVerbose(D_SECURITY)) {
-						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.Value(), sesid);
+						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
 					}
 				} else {
-					dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.Value());
+					dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.c_str());
 				}
 			}
 			
@@ -2568,10 +2568,10 @@ SecManStartCommand::DoTCPAuth_inner()
 
 		// we already know the address - condor uses the same TCP port as it does UDP port.
 	MyString tcp_addr = m_sock->get_connect_addr();
-	if (!tcp_auth_sock->connect(tcp_addr.Value(),0,m_nonblocking)) {
-		dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.Value());
+	if (!tcp_auth_sock->connect(tcp_addr.c_str(),0,m_nonblocking)) {
+		dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.c_str());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-						  "TCP auth connection to %s failed.", tcp_addr.Value());
+						  "TCP auth connection to %s failed.", tcp_addr.c_str());
 		delete tcp_auth_sock;
 		return StartCommandFailed;
 	}
@@ -2590,8 +2590,8 @@ SecManStartCommand::DoTCPAuth_inner()
 		m_nonblocking ? SecManStartCommand::TCPAuthCallback : NULL,
 		m_nonblocking ? this : NULL,
 		m_nonblocking,
-		m_cmd_description.Value(),
-		m_sec_session_id_hint.Value(),
+		m_cmd_description.c_str(),
+		m_sec_session_id_hint.c_str(),
 		m_owner,
 		m_methods,
 		&m_sec_man);
@@ -2728,12 +2728,12 @@ SecManStartCommand::WaitForSocketCallback()
 
 	MyString req_description;
 	req_description.formatstr("SecManStartCommand::WaitForSocketCallback %s",
-							m_cmd_description.Value());
+							m_cmd_description.c_str());
 	int reg_rc = daemonCore->Register_Socket(
 		m_sock,
 		m_sock->peer_description(),
 		(SocketHandlercpp)&SecManStartCommand::SocketCallback,
-		req_description.Value(),
+		req_description.c_str(),
 		this,
 		ALLOW);
 
@@ -2743,9 +2743,9 @@ SecManStartCommand::WaitForSocketCallback()
 					"Register_Socket returned %d.",
 					m_sock->get_sinful_peer(),
 					reg_rc);
-		dprintf(D_SECURITY, "SECMAN: %s\n", msg.Value());
+		dprintf(D_SECURITY, "SECMAN: %s\n", msg.c_str());
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-						  "%s", msg.Value());
+						  "%s", msg.c_str());
 
 		return StartCommandFailed;
 	}
@@ -2867,7 +2867,7 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
             char * cmd = NULL;
             while ( (cmd = cmd_list.next()) ) {
                 memset(keybuf, 0, 128);
-                sprintf (keybuf, "{%s,<%s>}", addr.Value(), cmd);
+                sprintf (keybuf, "{%s,<%s>}", addr.c_str(), cmd);
                 command_map.remove(keybuf);
             }
         }
@@ -3310,7 +3310,7 @@ char* SecMan::my_unique_id() {
         tid.formatstr( "%s:%i:%i", get_local_hostname().c_str(), mypid, 
 					 (int)time(0));
 
-        _my_unique_id = strdup(tid.Value());
+        _my_unique_id = strdup(tid.c_str());
     }
 
     return _my_unique_id;
@@ -3346,7 +3346,7 @@ char* SecMan::my_parent_unique_id() {
 		GetEnv( envName, value );
 
 		if (value.length()) {
-			set_parent_unique_id(value.Value());
+			set_parent_unique_id(value.c_str());
 		}
 	}
 
@@ -3644,10 +3644,10 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		if (command_map.insert(keybuf, sesid, true) == 0) {
 			// success
 			if (IsDebugVerbose(D_SECURITY)) {
-				dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.Value(), sesid);
+				dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
 			}
 		} else {
-			dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.Value());
+			dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.c_str());
 		}
 	}
 
@@ -3686,7 +3686,7 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 		// get rid of final ']'
 	buf.truncate(buf.length()-1);
 
-	StringList lines(buf.Value(),";");
+	StringList lines(buf.c_str(),";");
 	lines.rewind();
 
 	char const *line;
@@ -3859,7 +3859,7 @@ SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	session_info += "]";
 
 	dprintf(D_SECURITY,"SECMAN: exporting session info for %s: %s\n",
-			session_id, session_info.Value());
+			session_id, session_info.c_str());
 	return true;
 }
 

@@ -651,7 +651,7 @@ public:
 	int getProcId() const    { return jid.proc; }
 	time_t getSubmitTime() const { return submit_time; } // aka QDATE, if this is 0, baseJob has never been initialized
 	bool getSubmitOnHold(int & code) const { code = SubmitOnHoldCode; return SubmitOnHold; }
-	const char * getScheddVersion() { return ScheddVersion.Value(); }
+	const char * getScheddVersion() { return ScheddVersion.c_str(); }
 	const char * getIWD();
 	const char * full_path(const char *name, bool use_iwd=true);
 	int check_and_universalize_path(MyString &path);

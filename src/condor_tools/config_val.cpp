@@ -1065,7 +1065,7 @@ main( int argc, const char* argv[] )
 		if ( ! verbose) {
 			fprintf(stdout, "# Contributing configuration file(s):\n");
 			if (global_config_source.length() > 0) {
-				fprintf(stdout, "#\t%s\n", global_config_source.Value());
+				fprintf(stdout, "#\t%s\n", global_config_source.c_str());
 			}
 			local_config_sources.rewind();
 			while ((source = local_config_sources.next()) != NULL) {
@@ -1926,7 +1926,7 @@ static void PrintConfigSources(void)
 	if (global_config_source.length() > 0) {
 		fprintf( stderr, "Configuration source:\n" );
 		fflush( stderr );
-		fprintf( stdout, "\t%s\n", global_config_source.Value() );
+		fprintf( stdout, "\t%s\n", global_config_source.c_str() );
 		fflush( stdout );
 	} else {
 		fprintf( stderr, "Can't find the configuration source.\n" );

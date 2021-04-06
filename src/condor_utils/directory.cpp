@@ -833,7 +833,7 @@ Directory::Next()
 				path += DIR_DELIM_CHAR;
 			}
 			path += dirent->d_name;
-			curr = new StatInfo( path.Value() );
+			curr = new StatInfo( path.c_str() );
 			switch( curr->Error() ) {
 			case SINoFile:
 					// This file was deleted, continue with the next file. 
@@ -844,7 +844,7 @@ Directory::Next()
 					// do_stat failed with an error!
 				dprintf( D_FULLDEBUG,
 					 "Directory::stat() failed for \"%s\", errno: %d (%s)\n",
-					 path.Value(), curr->Errno(), strerror(curr->Errno()) );
+					 path.c_str(), curr->Errno(), strerror(curr->Errno()) );
 				delete curr;
 				curr = NULL;
 				break;

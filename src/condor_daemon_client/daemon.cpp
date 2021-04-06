@@ -1201,7 +1201,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 
 				return false;
 			}
-			buf = generate_sinful(hostaddr.to_ip_string().Value(), _port);
+			buf = generate_sinful(hostaddr.to_ip_string().c_str(), _port);
 			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.c_str() );
 			if (fqdn.length() > 0)
 				New_full_hostname(strdup(fqdn.c_str()));
@@ -1579,7 +1579,7 @@ Daemon::findCmDaemon( const char* cm_name )
 
 			return false;
 		}
-		sinful.setHost(saddr.to_ip_string().Value());
+		sinful.setHost(saddr.to_ip_string().c_str());
 		sinful.setAlias(fqdn.c_str());
 		dprintf( D_HOSTNAME, "Found CM IP address and port %s\n",
 				 sinful.getSinful() ? sinful.getSinful() : "NULL" );
@@ -1648,7 +1648,7 @@ Daemon::initHostname( void )
 		New_hostname( NULL );
 		New_full_hostname( NULL );
 		dprintf(D_HOSTNAME, "get_full_hostname() failed for address %s\n",
-				saddr.to_ip_string().Value());
+				saddr.to_ip_string().c_str());
 		std::string err_msg = "can't find host info for ";
 		err_msg += _addr;
 		newError( CA_LOCATE_FAILED, err_msg.c_str() );

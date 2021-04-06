@@ -69,7 +69,7 @@ int cleanStringForUseAsAttr(MyString &str, char chReplace/*=0*/, bool compact/*=
          str.replaceString(" ","");
       else {
          MyString tmp; tmp += chReplace; tmp += chReplace;
-         str.replaceString(tmp.Value(), tmp.Value()+1);
+         str.replaceString(tmp.c_str(), tmp.c_str()+1);
       }
    }
    str.trim();

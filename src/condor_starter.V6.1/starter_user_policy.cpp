@@ -110,7 +110,7 @@ StarterUserPolicy::doAction( int action, bool is_periodic )
 		// ---------------------------------
 		case UNDEFINED_EVAL:
 		case HOLD_IN_QUEUE:
-			this->jic->holdJob( reason.Value(), reason_code, reason_subcode );
+			this->jic->holdJob( reason.c_str(), reason_code, reason_subcode );
 			break;
 		// ---------------------------------
 		// REMOVE_FROM_QUEUE
@@ -122,13 +122,13 @@ StarterUserPolicy::doAction( int action, bool is_periodic )
 				// execution, or it was being removed by PERIODIC_REMOVE
 				//
 			if( is_periodic ) {
-				this->jic->removeJob( reason.Value() );
+				this->jic->removeJob( reason.c_str() );
 			} else {
 					//
 					// I am passing the reason, but apparently 
 					// it isn't necessary?
 					//
-				this->jic->terminateJob( reason.Value() );
+				this->jic->terminateJob( reason.c_str() );
 			}
 			break;
 		// ---------------------------------
@@ -139,7 +139,7 @@ StarterUserPolicy::doAction( int action, bool is_periodic )
 				EXCEPT( "STAYS_IN_QUEUE should never be handled by "
 						"periodic doAction()" );
 			}
-			this->jic->requeueJob( reason.Value() );
+			this->jic->requeueJob( reason.c_str() );
 			break;
 
 		// ---------------------------------		

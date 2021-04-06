@@ -677,7 +677,7 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 				} else if (fea.items_filename.empty()) {
 					// this is ok?
 				} else if (fea.items_filename == "<" || fea.items_filename == "-") {
-					formatstr(errmsg, "invalid filename '%s' for foreach from", fea.items_filename.Value());
+					formatstr(errmsg, "invalid filename '%s' for foreach from", fea.items_filename.c_str());
 				} else if (reader.eof_was_read()) {
 					// the reader was primed with itemdata sent over the wire...
 				} else if (fea.items.number() > 0) {
@@ -697,8 +697,8 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 						MyString spooled_filename;
 						GetSpooledMaterializeDataPath(spooled_filename, cluster_id, Spool);
 						if (spooled_filename != fea.items_filename) {
-							dprintf(D_MATERIALIZE, "invalid filename '%s' for foreach from, Cluster %d factory will be disabled\n", fea.items_filename.Value(), cluster_id);
-							formatstr(errmsg, "invalid filename '%s' for foreach from. File must be in Spool.", fea.items_filename.Value());
+							dprintf(D_MATERIALIZE, "invalid filename '%s' for foreach from, Cluster %d factory will be disabled\n", fea.items_filename.c_str(), cluster_id);
+							formatstr(errmsg, "invalid filename '%s' for foreach from. File must be in Spool.", fea.items_filename.c_str());
 							rval = -1;
 						}
 					}
@@ -713,12 +713,12 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 						// setup an async reader for the itemdata
 						rval = reader.open(fea.items_filename.c_str());
 						if (rval) {
-							formatstr(errmsg, "could not open item data file '%s', error = %d", fea.items_filename.Value(), rval);
+							formatstr(errmsg, "could not open item data file '%s', error = %d", fea.items_filename.c_str(), rval);
 						}
 						else {
 							rval = reader.queue_next_read();
 							if (rval) {
-								formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d", fea.items_filename.Value(), rval);
+								formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d", fea.items_filename.c_str(), rval);
 							}
 							else {
 								fea.foreach_mode = foreach_from_async;
@@ -759,7 +759,7 @@ bool JobFactory::RowDataIsLoading(int row)
 		if (reader.done_reading()) {
 			if ( ! reader.eof_was_read()) {
 				std::string filename;
-				dprintf(D_ALWAYS, "failed to read all of the item data from '%s', error %d\n", fea.items_filename.Value(), reader.error_code());
+				dprintf(D_ALWAYS, "failed to read all of the item data from '%s', error %d\n", fea.items_filename.c_str(), reader.error_code());
 			}
 			// we have read all we are going to, so close the reader now.
 			reader.close();

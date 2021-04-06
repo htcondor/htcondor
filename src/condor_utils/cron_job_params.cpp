@@ -63,7 +63,7 @@ CronJobParams::GetParamName( const char *item ) const
 	}
 	strcpy( m_name_buf, &m_base );
 	strcat( m_name_buf, "_" );
-	strcat( m_name_buf, m_name.Value() );
+	strcat( m_name_buf, m_name.c_str() );
 	strcat( m_name_buf, "_" );
 	strcat( m_name_buf, item );
 
@@ -109,7 +109,7 @@ CronJobParams::Initialize( void )
 	m_mode = DefaultJobMode( );
 	if ( ! param_mode.empty() ) {
 		const CronJobModeTable		&mt  = GetCronJobModeTable( );
-		const CronJobModeTableEntry	*mte = mt.Find( param_mode.Value() );
+		const CronJobModeTableEntry	*mte = mt.Find( param_mode.c_str() );
 		if ( NULL == mte ) {
 			dprintf( D_ALWAYS,
 					 "CronJobParams: Unknown job mode for '%s'\n",
@@ -165,12 +165,12 @@ CronJobParams::InitArgs( const MyString &param_args )
 
 	// Force the first arg to be the "Job Name"..
 	m_args.Clear();
-	if( !args.AppendArgsV1RawOrV2Quoted( param_args.Value(),
+	if( !args.AppendArgsV1RawOrV2Quoted( param_args.c_str(),
 										 &args_errors ) ) {
 		dprintf( D_ALWAYS,
 				 "CronJobParams: Job '%s': "
 				 "Failed to parse arguments: '%s'\n",
-				 GetName(), args_errors.Value());
+				 GetName(), args_errors.c_str());
 		return false;
 	}
 	return AddArgs( args );
@@ -182,12 +182,12 @@ CronJobParams::InitEnv( const MyString &param_env )
 	Env			env_object;
 	MyString	env_error_msg;
 	m_env.Clear();
-	if( !env_object.MergeFromV1RawOrV2Quoted( param_env.Value(),
+	if( !env_object.MergeFromV1RawOrV2Quoted( param_env.c_str(),
 										  &env_error_msg ) ) {
 		dprintf( D_ALWAYS,
 				 "CronJobParams: Job '%s': "
 				 "Failed to parse environment: '%s'\n",
-				 GetName(), env_error_msg.Value());
+				 GetName(), env_error_msg.c_str());
 		return false;
 	}
 	return AddEnv( env_object );
@@ -215,13 +215,13 @@ CronJobParams::InitPeriod( const MyString &param_period )
 		return false;
 	} else {
 		char	modifier = 'S';
-		int		num = sscanf( param_period.Value(), "%d%c",
+		int		num = sscanf( param_period.c_str(), "%d%c",
 							  &m_period, &modifier );
 		if ( num < 1 ) {
 			dprintf( D_ALWAYS,
 					 "CronJobParams: Invalid job period found "
 					 "for job '%s' (%s): skipping\n",
-					 GetName(), param_period.Value() );
+					 GetName(), param_period.c_str() );
 			return false;
 		} else {
 			// Check the modifier
@@ -236,7 +236,7 @@ CronJobParams::InitPeriod( const MyString &param_period )
 				dprintf( D_ALWAYS,
 						 "CronJobParams: Invalid period modifier "
 						 "'%c' for job %s (%s)\n",
-						 modifier, GetName(), param_period.Value() );
+						 modifier, GetName(), param_period.c_str() );
 				return false;
 			}
 		}

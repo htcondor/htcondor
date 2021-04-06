@@ -957,7 +957,7 @@ Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, st
 		retval = daemonCore->getSecMan()->ExportSecSessionInfo(id.c_str(), exported_session_info);
 	}
 	if ( retval ) {
-		ClaimIdParser cid(id.c_str(), exported_session_info.Value(), keybuf.get());
+		ClaimIdParser cid(id.c_str(), exported_session_info.c_str(), keybuf.get());
 		capability = cid.claimId();
 	}
 	return retval;
@@ -1004,7 +1004,7 @@ Scheduler::SetupCollectorSession(unsigned duration, std::string &capability)
 		retval = daemonCore->getSecMan()->ExportSecSessionInfo(id.c_str(), exported_session_info);
 	}
 	if ( retval ) {
-		ClaimIdParser cid(id.c_str(), exported_session_info.Value(), keybuf.get());
+		ClaimIdParser cid(id.c_str(), exported_session_info.c_str(), keybuf.get());
 		capability = cid.claimId();
 	}
 	return retval;
@@ -1848,9 +1848,9 @@ Scheduler::count_jobs()
 	while( GridJobOwners.iterate(userident, gridcounts) ) {
 		if(gridcounts.GridJobs > 0) {
 			GridUniverseLogic::JobCountUpdate(
-					userident.username().Value(),
-					userident.domain().Value(),
-					userident.auxid().Value(),m_unparsed_gridman_selection_expr, 0, 0, 
+					userident.username().c_str(),
+					userident.domain().c_str(),
+					userident.auxid().c_str(),m_unparsed_gridman_selection_expr, 0, 0, 
 					gridcounts.GridJobs,
 					gridcounts.UnmanagedGridJobs);
 		}
@@ -3555,9 +3555,9 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 			job_ad->LookupString(ATTR_OWNER,owner);
 			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
 			UserIdentity userident(owner.c_str(),domain.c_str(),job_ad);
-			GridUniverseLogic::JobRemoved(userident.username().Value(),
-					userident.domain().Value(),
-					userident.auxid().Value(),
+			GridUniverseLogic::JobRemoved(userident.username().c_str(),
+					userident.domain().c_str(),
+					userident.auxid().c_str(),
 					scheduler.getGridUnparsedSelectionExpr(),
 					0,0);
 			return;
@@ -3698,7 +3698,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 #else
 				msg.formatstr("Unable to switch to user: %s", owner.c_str());
 #endif
-				holdJob(job_id.cluster, job_id.proc, msg.Value(), 
+				holdJob(job_id.cluster, job_id.proc, msg.c_str(), 
 						CONDOR_HOLD_CODE_FailedToAccessUserAccount, 0,
 					false, true, false, false);
 				return;
@@ -3910,19 +3910,19 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void *)
 	switch(action) {
 		case REMOVE_FROM_QUEUE:
 			if(status!=REMOVED) {
-				abortJob( cluster, proc, reason.Value(), true );
+				abortJob( cluster, proc, reason.c_str(), true );
 			}
 			break;
 		case HOLD_IN_QUEUE:
 			if(status!=HELD) {
-				holdJob(cluster, proc, reason.Value(),
+				holdJob(cluster, proc, reason.c_str(),
 						reason_code, reason_subcode,
 						true, false, false, false);
 			}
 			break;
 		case RELEASE_FROM_HOLD:
 			if(status==HELD) {
-				releaseJob(cluster, proc, reason.Value(), true);
+				releaseJob(cluster, proc, reason.c_str(), true);
 			}
 			break;
 	}
@@ -4231,7 +4231,7 @@ jobIsFinished( int cluster, int proc, void* )
 
 			filename_template.formatstr( "%s/.condor_nfs_sync_XXXXXX",
 									   iwd.c_str() );
-			sync_filename = strdup( filename_template.Value() );
+			sync_filename = strdup( filename_template.c_str() );
 			sync_fd = condor_mkstemp( sync_filename );
 			if ( sync_fd >= 0 ) {
 				close( sync_fd );
@@ -4932,9 +4932,9 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			ClassAd proxy_attrs;
 			GetAttributeString(cluster, proc, ATTR_OWNER, owner);
 			GetAttributeString(cluster, proc, ATTR_JOB_IWD, iwd);
-			formatstr(full_file, "%s%c%s", iwd.Value(), DIR_DELIM_CHAR, proxy_file.Value());
+			formatstr(full_file, "%s%c%s", iwd.c_str(), DIR_DELIM_CHAR, proxy_file.c_str());
 
-			if ( ReadProxyFileIntoAd(full_file.Value(), owner.Value(), proxy_attrs) ) {
+			if ( ReadProxyFileIntoAd(full_file.c_str(), owner.c_str(), proxy_attrs) ) {
 				UpdateJobProxyAttrs((*jobs)[jobIndex], proxy_attrs);
 			}
 		}
@@ -5662,10 +5662,10 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	void *state = NULL;
 	ReliSock::x509_delegation_result result;
 	if ( cmd == UPDATE_GSI_CRED ) {
-		int rc = rsock->get_file(&size,temp_proxy_path.Value());
+		int rc = rsock->get_file(&size,temp_proxy_path.c_str());
 		result = (rc == 0) ? ReliSock::delegation_ok : ReliSock::delegation_error;
 	} else if ( cmd == DELEGATE_GSI_CRED_SCHEDD ) {
-		result = rsock->get_x509_delegation(temp_proxy_path.Value(), false, &state);
+		result = rsock->get_x509_delegation(temp_proxy_path.c_str(), false, &state);
 	} else {
 		dprintf( D_ALWAYS, "updateGSICred(%d): unknown CEDAR command %d\n",
 				 cmd, cmd );
@@ -5674,8 +5674,8 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 
 	UpdateGSICredContinuation* continuation =
 		new UpdateGSICredContinuation(cmd,
-			temp_proxy_path.Value(),
-			final_proxy_path.Value(),
+			temp_proxy_path.c_str(),
+			final_proxy_path.c_str(),
 			job_owner,
 			jobid,
 			state);
@@ -6552,14 +6552,14 @@ removeOtherJobs( int cluster, int proc )
 					"Constraint <%s = %s> fired because job (%d.%d) "
 					"was removed\n",
 					ATTR_OTHER_JOB_REMOVE_REQUIREMENTS,
-					removeConstraint.Value(), cluster, proc );
+					removeConstraint.c_str(), cluster, proc );
 		MyString reason;
 		reason.formatstr(
 					"removed because <%s = %s> fired when job (%d.%d)"
 					" was removed", ATTR_OTHER_JOB_REMOVE_REQUIREMENTS,
-					removeConstraint.Value(), cluster, proc );
-		result = abortJobsByConstraint(removeConstraint.Value(),
-					reason.Value(), true);
+					removeConstraint.c_str(), cluster, proc );
+		result = abortJobsByConstraint(removeConstraint.c_str(),
+					reason.c_str(), true);
 	}
 
 	return result;
@@ -7362,7 +7362,7 @@ Scheduler::negotiate(int command, Stream* s)
 				if( submitter_tag == flock_col->name() ){
 					which_negotiator = n;
 					remote_pool_buf = flock_col->name();
-					remote_pool = remote_pool_buf.Value();
+					remote_pool = remote_pool_buf.c_str();
 					match = true;
 					break;
 				}
@@ -7419,7 +7419,7 @@ Scheduler::negotiate(int command, Stream* s)
 						match = true;
 						which_negotiator = n;
 						remote_pool_buf = neg_host->pool();
-						remote_pool = remote_pool_buf.Value();
+						remote_pool = remote_pool_buf.c_str();
 						break;
 					}
 				}
@@ -7652,7 +7652,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		}
 		dprintf( D_ALWAYS,
 				 "Failed to %s job when requesting claim %s\n",
-				 reason, description.Value() );
+				 reason, description.c_str() );
 
 		if( args->isDedicated() ) {
 			mrec = dedicated_scheduler.FindMrecByClaimID(args->claimId());
@@ -7731,7 +7731,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 
 	startd->asyncRequestOpportunisticClaim(
 		jobAd,
-		description.Value(),
+		description.c_str(),
 		daemonCore->publicNetworkIpAddr(),
 		scheduler.aliveInterval(),
 		STARTD_CONTACT_TIMEOUT, // timeout on individual network ops
@@ -7788,7 +7788,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::PunchHole error for %s: "
 			            "job %d.%d may fail to execute\n",
-			        match->auth_hole_id->Value(),
+			        match->auth_hole_id->c_str(),
 			        match->cluster,
 			        match->proc);
 			delete match->auth_hole_id;
@@ -7905,7 +7905,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 					dprintf(D_ALWAYS,
 						"WARNING: IpVerify::PunchHole error for paired %s: "
 			            "job %d.%d may fail to execute\n",
-						paired_mrec->auth_hole_id->Value(),
+						paired_mrec->auth_hole_id->c_str(),
 						paired_mrec->cluster,
 						paired_mrec->proc);
 					delete paired_mrec->auth_hole_id;
@@ -8154,7 +8154,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::PunchHole error for %s: "
 			            "job %d.%d may fail to execute\n",
-			        mrec->auth_hole_id->Value(),
+			        mrec->auth_hole_id->c_str(),
 			        mrec->cluster,
 			        mrec->proc);
 			delete mrec->auth_hole_id;
@@ -9454,7 +9454,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	if ( sh_reads_file ) {
 		if( sh_is_dc ) { 
 			argbuf.formatstr("%d.%d",job_id->cluster,job_id->proc);
-			args.AppendArg(argbuf.Value());
+			args.AppendArg(argbuf.c_str());
 
 			if(wants_reconnect) {
 				args.AppendArg("--reconnect");
@@ -9464,11 +9464,11 @@ Scheduler::spawnShadow( shadow_rec* srec )
 			// We need this even if we are not currently in reconnect mode,
 			// because the shadow may go into reconnect mode at any time.
 			argbuf.formatstr("--schedd=%s", daemonCore->publicNetworkIpAddr());
-			args.AppendArg(argbuf.Value());
+			args.AppendArg(argbuf.c_str());
 
 			if( m_have_xfer_queue_contact ) {
 				argbuf.formatstr("--xfer-queue=%s", m_xfer_queue_contact.c_str());
-				args.AppendArg(argbuf.Value());
+				args.AppendArg(argbuf.c_str());
 			}
 
 				// pass the private socket ip/port for use just by shadows
@@ -9651,7 +9651,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		if( !usermap.empty() ) {
 			MyString envname;
 			envname.formatstr("_%s_USERID_MAP",myDistro->Get());
-			extra_env.SetEnv(envname.Value(),usermap.Value());
+			extra_env.SetEnv(envname.c_str(),usermap.c_str());
 		}
 	}
 #endif
@@ -9766,7 +9766,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		MyString arg_string;
 		args.GetArgsStringForDisplay(&arg_string);
 		dprintf( D_FAILURE|D_ALWAYS, "spawnJobHandlerRaw: "
-				 "CreateProcess(%s, %s) failed\n", path, arg_string.Value() );
+				 "CreateProcess(%s, %s) failed\n", path, arg_string.c_str() );
 		if( wants_pipe ) {
 			for( int i = 0; i < 2; i++ ) {
 				if( pipe_fds[i] >= 0 ) {
@@ -9800,7 +9800,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		ASSERT( job_ad );
 		MyString ad_str;
 		sPrintAdWithSecrets(ad_str, *job_ad);
-		const char* ptr = ad_str.Value();
+		const char* ptr = ad_str.c_str();
 		int len = ad_str.length();
 		while (len) {
 			int bytes_written = daemonCore->Write_Pipe(pipe_fds[1], ptr, len);
@@ -10007,7 +10007,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	starter_args.AppendArg("-header");
 	MyString header;
 	header.formatstr("(%d.%d) ",job_id->cluster,job_id->proc);
-	starter_args.AppendArg(header.Value());
+	starter_args.AppendArg(header.c_str());
 
 	starter_args.AppendArg("-job-input-ad");
 	starter_args.AppendArg("-");
@@ -10018,7 +10018,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 		MyString argstring;
 		starter_args.GetArgsStringForDisplay(&argstring);
 		dprintf( D_FULLDEBUG, "About to spawn %s %s\n", 
-				 starter_path, argstring.Value() );
+				 starter_path, argstring.c_str() );
 	}
 
 	mark_serial_job_running( job_id );
@@ -10039,7 +10039,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	Env starter_env;
 	MyString execute_env;
 	execute_env.formatstr( "_%s_EXECUTE", myDistro->Get());
-	starter_env.SetEnv(execute_env.Value(),LocalUnivExecuteDir);
+	starter_env.SetEnv(execute_env.c_str(),LocalUnivExecuteDir);
 	
 	rval = spawnJobHandlerRaw( srec, starter_path, starter_args,
 							   &starter_env, "starter", true, true, true );
@@ -10093,19 +10093,19 @@ Scheduler::initLocalStarterDir( void )
 	if( LocalUnivExecuteDir ) {
 		free( LocalUnivExecuteDir );
 	}
-	LocalUnivExecuteDir = strdup( dir_name.Value() );
+	LocalUnivExecuteDir = strdup( dir_name.c_str() );
 
-	StatInfo exec_statinfo( dir_name.Value() );
+	StatInfo exec_statinfo( dir_name.c_str() );
 	if( ! exec_statinfo.IsDirectory() ) {
 			// our umask is going to mess this up for us, so we might
 			// as well just do the chmod() seperately, anyway, to
 			// ensure we've got it right.  the extra cost is minimal,
 			// since we only do this once...
 		dprintf( D_FULLDEBUG, "initLocalStarterDir(): %s does not exist, "
-				 "calling mkdir()\n", dir_name.Value() );
-		if( mkdir(dir_name.Value(), 0777) < 0 ) {
+				 "calling mkdir()\n", dir_name.c_str() );
+		if( mkdir(dir_name.c_str(), 0777) < 0 ) {
 			dprintf( D_ALWAYS, "initLocalStarterDir(): mkdir(%s) failed: "
-					 "%s (errno %d)\n", dir_name.Value(), strerror(errno),
+					 "%s (errno %d)\n", dir_name.c_str(), strerror(errno),
 					 errno );
 				// TODO: retry as priv root or something?  deal w/ NFS
 				// and root squashing, etc...
@@ -10121,7 +10121,7 @@ Scheduler::initLocalStarterDir( void )
 				// left by starters that died prematurely, etc.
 			dprintf( D_FULLDEBUG, "initLocalStarterDir: "
 					 "%s already exists, deleting old contents\n",
-					 dir_name.Value() );
+					 dir_name.c_str() );
 			Directory exec_dir( &exec_statinfo, PRIV_CONDOR );
 			exec_dir.Remove_Entire_Directory();
 			first_time = false;
@@ -10132,11 +10132,11 @@ Scheduler::initLocalStarterDir( void )
 		// right for our needs...
 	if( (mode & desired_mode) != desired_mode ) {
 		dprintf( D_FULLDEBUG, "initLocalStarterDir(): "
-				 "Changing permission on %s\n", dir_name.Value() );
-		if( chmod(dir_name.Value(), (mode|desired_mode)) < 0 ) {
+				 "Changing permission on %s\n", dir_name.c_str() );
+		if( chmod(dir_name.c_str(), (mode|desired_mode)) < 0 ) {
 			dprintf( D_ALWAYS, 
 					 "initLocalStarterDir(): chmod(%s) failed: "
-					 "%s (errno %d)\n", dir_name.Value(), 
+					 "%s (errno %d)\n", dir_name.c_str(), 
 					 strerror(errno), errno );
 		}
 	}
@@ -10212,7 +10212,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	GetAttributeString(job_id->cluster, job_id->proc, ATTR_NT_DOMAIN, domain);
 
 	// sanity check to make sure this job isn't going to start as root.
-	if (strcasecmp(owner.Value(), "root") == 0 ) {
+	if (strcasecmp(owner.c_str(), "root") == 0 ) {
 		dprintf(D_ALWAYS, "Aborting job %d.%d.  Tried to start as root.\n",
 			job_id->cluster, job_id->proc);
 		goto wrapup;
@@ -10221,14 +10221,14 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// switch to the user in question to make some checks about what I'm 
 	// about to execute and then to execute.
 
-	if (! init_user_ids(owner.Value(), domain.Value()) ) {
+	if (! init_user_ids(owner.c_str(), domain.c_str()) ) {
 		MyString tmpstr;
 #ifdef WIN32
 		tmpstr.formatstr("Bad or missing credential for user: %s", owner.Value());
 #else
-		tmpstr.formatstr("Unable to switch to user: %s", owner.Value());
+		tmpstr.formatstr("Unable to switch to user: %s", owner.c_str());
 #endif
-		holdJob(job_id->cluster, job_id->proc, tmpstr.Value(),
+		holdJob(job_id->cluster, job_id->proc, tmpstr.c_str(),
 				CONDOR_HOLD_CODE_FailedToAccessUserAccount, 0,
 				false, true, false, false);
 		goto wrapup;
@@ -10292,7 +10292,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		// the IWD.
 		if ( !fullpath( a_out_name.c_str() ) ) {
 			std::string tmp = a_out_name;
-			formatstr( a_out_name, "%s%c%s", iwd.Value(), DIR_DELIM_CHAR, tmp.c_str() );
+			formatstr( a_out_name, "%s%c%s", iwd.c_str(), DIR_DELIM_CHAR, tmp.c_str() );
 		}
 		
 		// Now check, as the user, if we may execute it.
@@ -10306,7 +10306,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			MyString tmpstr;
 			tmpstr.formatstr( "File '%s' is missing or not executable", a_out_name.c_str() );
 			set_priv( priv );  // back to regular privs...
-			holdJob(job_id->cluster, job_id->proc, tmpstr.Value(),
+			holdJob(job_id->cluster, job_id->proc, tmpstr.c_str(),
 					CONDOR_HOLD_CODE_FailedToCreateProcess, EACCES,
 					false, true, false, false);
 			goto wrapup;
@@ -10332,8 +10332,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	//change to IWD before opening files, easier than prepending 
 	//IWD if not absolute pathnames
 	condor_getcwd(tmpCwd);
-	if (chdir(iwd.Value())) {
-		dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", iwd.Value(), strerror(errno));
+	if (chdir(iwd.c_str())) {
+		dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", iwd.c_str(), strerror(errno));
 	}
 	
 	// now open future in|out|err files
@@ -10357,16 +10357,16 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	
 #endif
 	
-	if ((inouterr[0] = safe_open_wrapper_follow(input.Value(), O_RDONLY, S_IREAD)) < 0) {
-		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", input.Value(), errno );
+	if ((inouterr[0] = safe_open_wrapper_follow(input.c_str(), O_RDONLY, S_IREAD)) < 0) {
+		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", input.c_str(), errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[1] = safe_open_wrapper_follow(output.Value(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
-		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", output.Value(), errno );
+	if ((inouterr[1] = safe_open_wrapper_follow(output.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
+		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", output.c_str(), errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[2] = safe_open_wrapper_follow(error.Value(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
-		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", error.Value(), errno );
+	if ((inouterr[2] = safe_open_wrapper_follow(error.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
+		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", error.c_str(), errno );
 		cannot_open_files = true;
 	}
 
@@ -10405,9 +10405,9 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
 	//change back to whence we came
 	if ( tmpCwd.length() ) {
-		if (chdir(tmpCwd.Value())) {
+		if (chdir(tmpCwd.c_str())) {
 			dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n",
-					tmpCwd.Value(), strerror(errno));
+					tmpCwd.c_str(), strerror(errno));
 		}
 	}
 	
@@ -10418,21 +10418,21 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			if (close(inouterr[0]) == -1) {
 				dprintf(D_ALWAYS, 
 					"Failed to close input file fd for '%s' because [%d %s]\n",
-					input.Value(), errno, strerror(errno));
+					input.c_str(), errno, strerror(errno));
 			}
 		}
 		if (inouterr[1] >= 0) {
 			if (close(inouterr[1]) == -1) {
 				dprintf(D_ALWAYS,  
 					"Failed to close output file fd for '%s' because [%d %s]\n",
-					output.Value(), errno, strerror(errno));
+					output.c_str(), errno, strerror(errno));
 			}
 		}
 		if (inouterr[2] >= 0) {
 			if (close(inouterr[2]) == -1) {
 				dprintf(D_ALWAYS,  
 					"Failed to close error file fd for '%s' because [%d %s]\n",
-					output.Value(), errno, strerror(errno));
+					output.c_str(), errno, strerror(errno));
 			}
 		}
 		set_priv( priv );  // back to regular privs...
@@ -10443,7 +10443,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	
 	if(!envobject.MergeFrom(userJob,&env_error_msg)) {
 		dprintf(D_ALWAYS,"Failed to read job environment: %s\n",
-				env_error_msg.Value());
+				env_error_msg.c_str());
 		goto wrapup;
 	}
 	
@@ -10477,11 +10477,11 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// Don't use a_out_name for argv[0], use
 	// "condor_scheduniv_exec.cluster.proc" instead. 
 	argbuf.formatstr("condor_scheduniv_exec.%d.%d",job_id->cluster,job_id->proc);
-	args.AppendArg(argbuf.Value());
+	args.AppendArg(argbuf.c_str());
 
 	if(!args.AppendArgsFromClassAd(userJob,&error_msg)) {
 		dprintf(D_ALWAYS,"Failed to read job arguments: %s\n",
-				error_msg.Value());
+				error_msg.c_str());
 		goto wrapup;
 	}
 
@@ -10525,7 +10525,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	daemonCore->SetInheritParentSinful( NULL );
 	pid = daemonCore->Create_Process( a_out_name.c_str(), args, PRIV_USER_FINAL, 
 	                                  shadowReaperId, FALSE, FALSE,
-	                                  &envobject, iwd.Value(), &fi, NULL, inouterr,
+	                                  &envobject, iwd.c_str(), &fi, NULL, inouterr,
 	                                  NULL, niceness, NULL,
 	                                  DCJOBOPT_NO_ENV_INHERIT,
 	                                  core_size_ptr );
@@ -10768,7 +10768,7 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 			SetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, ++num_restarts);
 
 			GetAttributeString(cluster, proc, ATTR_JOB_VM_TYPE, vmtype);
-			if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
+			if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
 				// In vmware vm universe, vmware disk may be 
 				// a sparse disk or snapshot disk. So we can't estimate the disk space 
 				// in advanace because the sparse disk or snapshot disk will 
@@ -10797,9 +10797,9 @@ RotateAttributeList( int cluster, int proc, char const *attrname, int start_inde
 		attr.formatstr("%s%d",attrname,index-1);
 
 		char *value=NULL;
-		if( GetAttributeExprNew(cluster,proc,attr.Value(),&value) == 0 ) {
+		if( GetAttributeExprNew(cluster,proc,attr.c_str(),&value) == 0 ) {
 			attr.formatstr("%s%d",attrname,index);
-			SetAttribute(cluster,proc,attr.Value(),value);
+			SetAttribute(cluster,proc,attr.c_str(),value);
 			free( value );
 		}
 	}
@@ -10876,7 +10876,7 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
 		return;
 	}
 
-	StringList machine_attrs(user_machine_attrs.Value());
+	StringList machine_attrs(user_machine_attrs.c_str());
 
 	machine_attrs.create_union( m_job_machine_attrs, true );
 
@@ -10886,7 +10886,7 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
 		MyString result_attr;
 		result_attr.formatstr("%s%s",ATTR_MACHINE_ATTR_PREFIX,attr);
 
-		RotateAttributeList(cluster,proc,result_attr.Value(),0,history_len);
+		RotateAttributeList(cluster,proc,result_attr.c_str(),0,history_len);
 
 		classad::Value result;
 		if( !machine->EvaluateAttr(attr,result) ) {
@@ -10896,7 +10896,7 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
 
 		unparser.Unparse(unparsed_result,result);
 		result_attr += "0";
-		SetAttribute(cluster,proc,result_attr.Value(),unparsed_result.c_str());
+		SetAttribute(cluster,proc,result_attr.c_str(),unparsed_result.c_str());
 	}
 
 	FreeJobAd( job );
@@ -10994,7 +10994,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			SetAttributeString(cluster,
 			                   proc,
 			                   ATTR_STARTD_PRINCIPAL,
-			                   mrec->auth_hole_id->Value());
+			                   mrec->auth_hole_id->c_str());
 		}
 	}
 	GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &new_rec->universe );
@@ -12071,7 +12071,7 @@ Scheduler::child_exit(int pid, int status)
 	} else if( ! ExitWhenDone && StartJobsFlag ) {
 		if( !claim_id.empty() ) {
 				// Try finding a new job for this claim.
-			match_rec *mrec = scheduler.FindMrecByClaimID( claim_id.Value() );
+			match_rec *mrec = scheduler.FindMrecByClaimID( claim_id.c_str() );
 			if( mrec ) {
 				this->StartJob( mrec );
 			}
@@ -12080,7 +12080,7 @@ Scheduler::child_exit(int pid, int status)
 		}
 	} else if( !keep_claim ) {
 		if( !claim_id.empty() ) {
-			DelMrec( claim_id.Value() );
+			DelMrec( claim_id.c_str() );
 		}
 	}
 }
@@ -12259,11 +12259,11 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			break;
 
 		case JOB_SHADOW_USAGE:
-			EXCEPT( "%s exited with incorrect usage!", daemon_name.Value() );
+			EXCEPT( "%s exited with incorrect usage!", daemon_name.c_str() );
 			break;
 
 		case JOB_BAD_STATUS:
-			EXCEPT( "%s exited because job status != RUNNING", daemon_name.Value() );
+			EXCEPT( "%s exited because job status != RUNNING", daemon_name.c_str() );
 			break;
 
 		case JOB_SHOULD_REMOVE:
@@ -12335,9 +12335,9 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				//
 			MyString _error("\"Job missed deferred execution time\"");
 			if ( SetAttribute( job_id.cluster, job_id.proc,
-					  		  ATTR_HOLD_REASON, _error.Value() ) < 0 ) {
+					  		  ATTR_HOLD_REASON, _error.c_str() ) < 0 ) {
 				dprintf( D_ALWAYS, "WARNING: Failed to set %s to %s for "
-						 "job %d.%d\n", ATTR_HOLD_REASON, _error.Value(), 
+						 "job %d.%d\n", ATTR_HOLD_REASON, _error.c_str(), 
 						 job_id.cluster, job_id.proc );
 			}
 			if ( SetAttributeInt(job_id.cluster, job_id.proc,
@@ -12393,7 +12393,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		case DPRINTF_ERROR:
 			dprintf( D_ALWAYS,
 					 "ERROR: %s had fatal error writing its log file\n",
-					 daemon_name.Value() );
+					 daemon_name.c_str() );
 			stats.JobsDebugLogError += 1;
 			OTHER.JobsDebugLogError += 1;
 			// We don't want to break, we want to fall through 
@@ -12403,7 +12403,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			if ( exit_code == JOB_EXCEPTION ){
 				dprintf( D_ALWAYS,
 						 "ERROR: %s exited with exception code!\n",
-						 daemon_name.Value() );
+						 daemon_name.c_str() );
 			}
 			// We don't want to break, we want to fall through 
 			// and treat this like a shadow exception for now.
@@ -12417,7 +12417,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				 ( exit_code != JOB_EXCEPTION ) ) {
 				dprintf( D_ALWAYS,
 						 "ERROR: %s exited with unknown value %d!\n",
-						 daemon_name.Value(), exit_code );
+						 daemon_name.c_str(), exit_code );
 			}
 				// The logic to report a shadow exception has been
 				// moved down below. We just set this flag to 
@@ -12633,13 +12633,13 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 
 		case STAYS_IN_QUEUE:
 			set_job_status( job_id.cluster,	job_id.proc, IDLE ); 
-			WriteRequeueToUserLog(job_id, status, reason.Value());
+			WriteRequeueToUserLog(job_id, status, reason.c_str());
 			break;
 
 		case HOLD_IN_QUEUE:
 				// passing "false" to write_user_log, as
 				// delete_shadow_rec will do that later
-			holdJob(job_id.cluster, job_id.proc, reason.Value(),
+			holdJob(job_id.cluster, job_id.proc, reason.c_str(),
 					reason_code, reason_subcode,
 					true,false,false,false,false);
 			break;
@@ -12656,8 +12656,8 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			dprintf( D_ALWAYS,
 				"(%d.%d) Problem parsing user policy for job: %s.  "
 				"Putting job on hold.\n",
-				 job_id.cluster, job_id.proc, reason.Value());
-			holdJob(job_id.cluster, job_id.proc, reason.Value(),
+				 job_id.cluster, job_id.proc, reason.c_str());
+			holdJob(job_id.cluster, job_id.proc, reason.c_str(),
 					reason_code, reason_subcode,
 				true,false,false,true);
 			break;
@@ -12666,7 +12666,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			dprintf( D_ALWAYS,
 				"(%d.%d) User policy requested unknown action of %d. "
 				"Putting job on hold. (Reason: %s)\n",
-				 job_id.cluster, job_id.proc, action, reason.Value());
+				 job_id.cluster, job_id.proc, action, reason.c_str());
 			std::string reason2 = "Unknown action (";
 			reason2 += std::to_string( action );
 			reason2 += ") ";
@@ -12807,7 +12807,7 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		if ( GetAttributeString(cluster,proc,ATTR_OWNER,owner_buf) < 0 ) {
 			dprintf(D_ALWAYS,"ERROR: cleanup_ckpt_files(): cannot determine owner for job %d.%d\n",cluster,proc);
 		} else {
-			owner = owner_buf.Value();
+			owner = owner_buf.c_str();
 		}
 	}
 
@@ -13243,7 +13243,7 @@ Scheduler::Init()
 					MyString other = groups[2]; // this will be lowercase
 					if (isdigit(other[0])) {
 						// can't start atributes with a digit, start with _ instead
-						other.formatstr("_%s", groups[2].Value());
+						other.formatstr("_%s", groups[2].c_str());
 					} else {
 						other.setAt(0, toupper(other[0])); // capitalize it.
 					}
@@ -13251,16 +13251,16 @@ Scheduler::Init()
 					// for 'by' type stats, we also allow an expiration.
 					time_t lifetime = 0;
 					const int one_week = 60*60*24*7; // 60sec*60min*24hr*7day
-					bool by = (MATCH == strcasecmp(byorfor.Value(), "by"));
+					bool by = (MATCH == strcasecmp(byorfor.c_str(), "by"));
 					if (by) {
 						MyString expires_name;
-						expires_name.formatstr("schedd_expire_stats_by_%s", other.Value());
-						lifetime = (time_t)param_integer(expires_name.Value(), one_week);
+						expires_name.formatstr("schedd_expire_stats_by_%s", other.c_str());
+						lifetime = (time_t)param_integer(expires_name.c_str(), one_week);
 					}
 
 					dprintf(D_FULLDEBUG, "Collecting stats %s '%s' life=%" PRId64 " trigger is %s\n", 
-					        byorfor.Value(), other.Value(), (int64_t)lifetime, filter);
-					OtherPoolStats.Enable(other.Value(), filter, by, lifetime);
+					        byorfor.c_str(), other.c_str(), (int64_t)lifetime, filter);
+					OtherPoolStats.Enable(other.c_str(), filter, by, lifetime);
 				}
 				free(filter);
 			}
@@ -13491,7 +13491,7 @@ Scheduler::Init()
 		temp.formatstr("string(%s)",expr);
 		free(expr);
 		expr = temp.StrDup();
-		ParseClassAdRvalExpr(temp.Value(),m_parsed_gridman_selection_expr);	
+		ParseClassAdRvalExpr(temp.c_str(),m_parsed_gridman_selection_expr);	
 			// if the expression in the config file is not valid, 
 			// the m_parsed_gridman_selection_expr will still be NULL.  in this case,
 			// pretend like it isn't set at all in the config file.
@@ -13526,7 +13526,7 @@ Scheduler::Init()
 	MyString job_machine_attrs_str;
 	param(job_machine_attrs_str,"SYSTEM_JOB_MACHINE_ATTRS");
 	m_job_machine_attrs.clearAll();
-	m_job_machine_attrs.initializeFromString( job_machine_attrs_str.Value() );
+	m_job_machine_attrs.initializeFromString( job_machine_attrs_str.c_str() );
 
 	m_job_machine_attrs_history_length = param_integer("SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH",1,0);
 
@@ -14507,7 +14507,7 @@ Scheduler::unlinkMrec(match_rec* match)
 		if (!ipv->FillHole(READ, *match->auth_hole_id)) {
 			dprintf(D_ALWAYS,
 			        "WARNING: IpVerify::FillHole error for %s\n",
-			        match->auth_hole_id->Value());
+			        match->auth_hole_id->c_str());
 		}
 		delete match->auth_hole_id;
 		match->auth_hole_id = NULL;
@@ -15365,7 +15365,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		std::string global_job_id;
 		MyString startd_addr = mrec->peer;
 
-		DCStartd startd(startd_name.c_str(),NULL,startd_addr.Value(),mrec->secSessionId() );
+		DCStartd startd(startd_name.c_str(),NULL,startd_addr.c_str(),mrec->secSessionId() );
 
 		jobad->LookupString(ATTR_GLOBAL_JOB_ID,global_job_id);
 
@@ -15583,7 +15583,7 @@ moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 	}
 	
 	rval = SetAttributeString( job_id.cluster, job_id.proc, new_attr,
-							   value.Value() ); 
+							   value.c_str() ); 
 
 	if( rval < 0 ) { 
 		if( verbose ) {
@@ -15837,7 +15837,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 			fixed_reason += '"';
 		}
 		if( SetAttribute(cluster, proc, ATTR_HOLD_REASON, 
-						 fixed_reason.Value()) < 0 ) {
+						 fixed_reason.c_str()) < 0 ) {
 			dprintf( D_ALWAYS, "WARNING: Failed to set %s to \"%s\" for "
 					 "job %d.%d\n", ATTR_HOLD_REASON, reason, cluster,
 					 proc );
@@ -15990,7 +15990,7 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 			fixed_reason += '"';
 		}
 		if( SetAttribute(cluster, proc, ATTR_RELEASE_REASON, 
-						 fixed_reason.Value()) < 0 ) {
+						 fixed_reason.c_str()) < 0 ) {
 			dprintf( D_ALWAYS, "WARNING: Failed to set %s to \"%s\" for "
 					 "job %d.%d\n", ATTR_RELEASE_REASON, reason, cluster,
 					 proc );
@@ -16752,7 +16752,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			//	email_admin		- false
 			//	system_hold		- false
 			//
-		holdJob( id.cluster, id.proc, reason.Value(),
+		holdJob( id.cluster, id.proc, reason.c_str(),
 				 CONDOR_HOLD_CODE_InvalidCronSettings, 0,
 				 true, true, false, false );
 	}
@@ -17079,8 +17079,8 @@ Scheduler::FindGManagerPid(PROC_ID job_id)
 	job_ad->LookupString(ATTR_OWNER,owner);
 	job_ad->LookupString(ATTR_NT_DOMAIN,domain);
 	UserIdentity userident(owner.c_str(),domain.c_str(),job_ad);
-	return GridUniverseLogic::FindGManagerPid(userident.username().Value(),
-                                        userident.auxid().Value(), 0, 0);
+	return GridUniverseLogic::FindGManagerPid(userident.username().c_str(),
+                                        userident.auxid().c_str(), 0, 0);
 }
 
 int

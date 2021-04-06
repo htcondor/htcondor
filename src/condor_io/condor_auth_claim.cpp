@@ -178,7 +178,7 @@ int Condor_Auth_Claim :: authenticate(const char * /* remoteHost */, CondorError
 				free(tmpDomain);
 			}
 			setRemoteUser(tmpUser);
-			setAuthenticatedName(myUser.Value());
+			setAuthenticatedName(myUser.c_str());
 			free(tmpUser);
 			retval = 1;
 

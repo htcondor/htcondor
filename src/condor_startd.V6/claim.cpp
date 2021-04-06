@@ -1288,7 +1288,7 @@ Claim::setRequestStream(Stream* stream)
 
 		int register_rc = daemonCore->Register_Socket(
 			c_request_stream,
-			desc.Value(),
+			desc.c_str(),
 			(SocketHandlercpp)&Claim::requestClaimSockClosed,
 			"requestClaimSockClosed",
 			this );
@@ -1794,7 +1794,7 @@ Claim::makeCODStarterArgs( ArgList &args )
 	}
 	cod_id_arg += codId();
 	cod_id_arg += ")";
-	args.AppendArg(cod_id_arg.Value());
+	args.AppendArg(cod_id_arg.c_str());
 
 		// if we've got a cluster and proc for the job, append those
 	if( c_cluster >= 0 ) {
@@ -2095,7 +2095,7 @@ Claim::writeJobAd( int pipe_end )
 	// The starter doesn't need to know any secrets.
 	sPrintAd(ad_str, *c_jobad);
 
-	const char* ptr = ad_str.Value();
+	const char* ptr = ad_str.c_str();
 	int len = ad_str.length();
 	while (len) {
 		int bytes_written = daemonCore->Write_Pipe(pipe_end, ptr, len);
@@ -2348,7 +2348,7 @@ newIdString( char** id_str_ptr )
 	id += keybuf;
 	free( keybuf );
 
-	*id_str_ptr = strdup( id.Value() );
+	*id_str_ptr = strdup( id.c_str() );
 	return sequence_num;
 }
 
@@ -2380,8 +2380,8 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 
 		bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 			DAEMON,
-			session_id.Value(),
-			session_key.Value(),
+			session_id.c_str(),
+			session_key.c_str(),
 			NULL,
 			AUTH_METHOD_MATCH,
 			SUBMIT_SIDE_MATCHSESSION_FQU,
@@ -2391,22 +2391,22 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 
 		if( !rc ) {
 			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create "
-					"security session for claim id %s\n", session_id.Value());
+					"security session for claim id %s\n", session_id.c_str());
 		}
 		else {
 				// fill in session_info so that schedd will have
 				// enough info to create a pre-built security session
 				// compatible with the one we just created.
 			rc = daemonCore->getSecMan()->ExportSecSessionInfo(
-				session_id.Value(),
+				session_id.c_str(),
 				session_info );
 
 			if( !rc ) {
 				dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to get "
-						"session info for claim id %s\n",session_id.Value());
+						"session info for claim id %s\n",session_id.c_str());
 			}
 			else {
-				claimid_parser.setSecSessionInfo( session_info.Value() );
+				claimid_parser.setSecSessionInfo( session_info.c_str() );
 				free( c_id );
 				c_id = strdup(claimid_parser.claimId());
 
@@ -2469,20 +2469,20 @@ ClaimId::dropFile( int slot_id )
 
 	filename_tmp += ".new";
 
-	FILE* NEW_FILE = safe_fopen_wrapper_follow( filename_tmp.Value(), "w", 0600 );
+	FILE* NEW_FILE = safe_fopen_wrapper_follow( filename_tmp.c_str(), "w", 0600 );
 	if( ! NEW_FILE ) {
 		dprintf( D_ALWAYS,
 				 "ERROR: can't open claim id file: %s: %s (errno: %d)\n",
-				 filename_tmp.Value(), strerror(errno), errno );
+				 filename_tmp.c_str(), strerror(errno), errno );
  		return;
 	}
 	fprintf( NEW_FILE, "%s\n", c_id );
 	fclose( NEW_FILE );
-	if( rotate_file(filename_tmp.Value(), filename_final.Value()) < 0 ) {
+	if( rotate_file(filename_tmp.c_str(), filename_final.c_str()) < 0 ) {
 		dprintf( D_ALWAYS, "ERROR: failed to move %s into place, removing\n",
-				 filename_tmp.Value() );
-		if (unlink(filename_tmp.Value()) < 0) {
-			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_tmp.Value() );
+				 filename_tmp.c_str() );
+		if (unlink(filename_tmp.c_str()) < 0) {
+			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_tmp.c_str() );
 		}
 	}
 }

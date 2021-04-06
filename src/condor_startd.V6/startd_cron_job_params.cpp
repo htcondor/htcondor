@@ -47,7 +47,7 @@ StartdCronJobParams::Initialize( void )
 	Lookup( "SLOTS", slots_str );
 
 	m_slots.clear();
-	StringList	slot_list( slots_str.Value() );
+	StringList	slot_list( slots_str.c_str() );
 	slot_list.rewind();
 	const char *slot;
 	while( ( slot = slot_list.next()) != NULL ) {
@@ -75,7 +75,7 @@ StartdCronJobParams::Initialize( void )
 				s.formatstr_cat( "%u ", *iter );
 			}
 		}
-		dprintf( D_ALWAYS, "%s\n", s.Value() );
+		dprintf( D_ALWAYS, "%s\n", s.c_str() );
 	}
 
 	return true;

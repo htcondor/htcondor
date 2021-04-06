@@ -47,11 +47,11 @@ MyString
 which(const MyString &strFilename, const MyString &strAdditionalSearchDirs)
 {
 	MyString strPath = getenv( EnvGetName( ENV_PATH ) );
-	dprintf( D_FULLDEBUG, "Path: %s\n", strPath.Value());
+	dprintf( D_FULLDEBUG, "Path: %s\n", strPath.c_str());
 
 	char path_delim[3];
 	sprintf( path_delim, "%c", PATH_DELIM_CHAR );
-	StringList listDirectoriesInPath( strPath.Value(), path_delim );
+	StringList listDirectoriesInPath( strPath.c_str(), path_delim );
 
 #ifdef WIN32
 	int iLength = strFilename.Length();
@@ -119,7 +119,7 @@ which(const MyString &strFilename, const MyString &strAdditionalSearchDirs)
 	// add additional dirs if specified
 	if( strAdditionalSearchDirs != "" ) {
 		// path_delim was set above
-		StringList listAdditionalSearchDirs( strAdditionalSearchDirs.Value(), path_delim );
+		StringList listAdditionalSearchDirs( strAdditionalSearchDirs.c_str(), path_delim );
 		listDirectoriesInPath.create_union(listAdditionalSearchDirs, false);
 	}
 	
@@ -131,9 +131,9 @@ which(const MyString &strFilename, const MyString &strAdditionalSearchDirs)
 		dprintf( D_FULLDEBUG, "Checking dir: %s\n", psDir );
 
 		MyString strFullDir;
-		dircat(psDir, strFilename.Value(), strFullDir);
+		dircat(psDir, strFilename.c_str(), strFullDir);
 
-		StatInfo info(strFullDir.Value());
+		StatInfo info(strFullDir.c_str());
 		if( info.Error() == SIGood ) {
 			return strFullDir;
 		}

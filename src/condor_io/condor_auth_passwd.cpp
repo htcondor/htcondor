@@ -654,7 +654,7 @@ Condor_Auth_Passwd::fetchLogin()
 		login.formatstr("%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
 	}
 
-	return strdup( login.Value() );
+	return strdup( login.c_str() );
 }
 
 bool

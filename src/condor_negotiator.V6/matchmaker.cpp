@@ -1078,7 +1078,7 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 
 		MyString map_output;
 		if (user_map_do_mapping("PRIORITY_FACTOR_AUTHORIZATION", peer_identity, map_output)) {
-			StringList items(map_output.Value(), ",");
+			StringList items(map_output.c_str(), ",");
 			items.rewind();
 			char * item;
 			while ( (item = items.next()) ) {

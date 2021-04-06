@@ -76,10 +76,10 @@ StartdBenchJobParams::GetDefault( const char *item ) const
 {
 	if ( !strcasecmp( item, "EXECUTABLE" ) ) {
 		const char	*exe = NULL;
-		if ( !strcasecmp( m_name.Value(), "MIPS" ) ) {
+		if ( !strcasecmp( m_name.c_str(), "MIPS" ) ) {
 			exe = "condor_mips";
 		}
-		else if ( !strcasecmp( m_name.Value(), "KFLOPS" ) ) {
+		else if ( !strcasecmp( m_name.c_str(), "KFLOPS" ) ) {
 			exe = "condor_kflops";
 		}
 		else {

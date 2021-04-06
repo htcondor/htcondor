@@ -317,7 +317,7 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 
 	if( result == FALSE ) {
 		dprintf( D_ALWAYS, "QmgrJobUpdater::updateAttr: failed to "
-				 "update (%s = %s): %s\n", name, expr, err_msg.Value() );
+				 "update (%s = %s): %s\n", name, expr, err_msg.c_str() );
 	}
 	return result;
 }
@@ -328,7 +328,7 @@ QmgrJobUpdater::updateAttr( const char *name, int value, bool updateMaster, bool
 {
 	MyString buf;
     buf.formatstr("%d", value);
-	return updateAttr(name, buf.Value(), updateMaster, log);
+	return updateAttr(name, buf.c_str(), updateMaster, log);
 }
 
 

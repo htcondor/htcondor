@@ -1071,7 +1071,7 @@ command_delegate_gsi_cred(int, Stream* stream )
 		proxy_file = "/tmp";
 	}
 	proxy_file += "/startd-tmp-proxy-XXXXXX";
-	char* proxy_file_tmp = strdup(proxy_file.Value());
+	char* proxy_file_tmp = strdup(proxy_file.c_str());
 	ASSERT(proxy_file_tmp != NULL);
 	int fd = condor_mkstemp( proxy_file_tmp );
 	proxy_file = proxy_file_tmp;
@@ -1088,7 +1088,7 @@ command_delegate_gsi_cred(int, Stream* stream )
 
 	dprintf( D_FULLDEBUG,
 	         "writing temporary proxy to: %s\n",
-	         proxy_file.Value() );
+	         proxy_file.c_str() );
 
 	// sender decides whether to use delegation or simply copy
 	int use_delegation = 0;
@@ -1100,7 +1100,7 @@ command_delegate_gsi_cred(int, Stream* stream )
 	int rv;
 	filesize_t dont_care;
 	if( use_delegation ) {
-		rv = sock->get_x509_delegation( proxy_file.Value(), false, NULL );
+		rv = sock->get_x509_delegation( proxy_file.c_str(), false, NULL );
 	}
 	else {
 		dprintf( D_FULLDEBUG,
@@ -1112,7 +1112,7 @@ command_delegate_gsi_cred(int, Stream* stream )
 			reply( sock, CONDOR_ERROR );
 			return FALSE;
 		}
-		rv = sock->get_file( &dont_care, proxy_file.Value() );
+		rv = sock->get_file( &dont_care, proxy_file.c_str() );
 	}
 	if( rv == -1 ) {
 		dprintf( D_ALWAYS, "Error: couldn't get proxy\n");
@@ -1145,7 +1145,7 @@ command_delegate_gsi_cred(int, Stream* stream )
 	// we have the proxy - now stash its location in the Claim's
 	// Client object so we can get at it when we launch the
 	// starter
-	claim->client()->setProxyFile( proxy_file.Value() );
+	claim->client()->setProxyFile( proxy_file.c_str() );
 
 	return TRUE;
 }
@@ -1734,9 +1734,9 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 	if(hostname.empty()) {
 		MyString ip = sock->peer_addr().to_ip_string();
 		rip->dprintf( D_FULLDEBUG,
-					  "Can't find hostname of client machine %s\n", ip.Value() );
-		if (ripb) { ripb->r_cur->client()->sethost(ip.Value()); }
-		rip->r_cur->client()->sethost(ip.Value());
+					  "Can't find hostname of client machine %s\n", ip.c_str() );
+		if (ripb) { ripb->r_cur->client()->sethost(ip.c_str()); }
+		rip->r_cur->client()->sethost(ip.c_str());
 	} else {
 		if (ripb) { ripb->r_cur->client()->sethost(hostname.c_str()); }
 		rip->r_cur->client()->sethost( hostname.c_str() );
@@ -1798,7 +1798,7 @@ activate_claim( Resource* rip, Stream* stream )
 	ClassAd	*req_classad = NULL, *mach_classad = rip->r_classad;
 	int starter = MAX_STARTERS;
 	Sock* sock = (Sock*)stream;
-	char* shadow_addr = strdup(sock->peer_addr().to_ip_string().Value());
+	char* shadow_addr = strdup(sock->peer_addr().to_ip_string().c_str());
 
 	if( rip->state() != claimed_state ) {
 		rip->dprintf( D_ALWAYS, "Not in claimed state, aborting.\n" );
@@ -2108,7 +2108,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		err_msg += owner;
 		err_msg += "' is not authorized for using COD at this machine"; 
 		return sendErrorReply( s, cmd_str, CA_NOT_AUTHORIZED,
-							   err_msg.Value() );
+							   err_msg.c_str() );
 	}
 	dprintf( D_COMMAND, 
 			 "Serving request for a new COD claim by user '%s'\n", 
@@ -2135,7 +2135,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		err_msg += " (";
 		err_msg += requirements_str;
 		err_msg += ')';
-		return sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
+		return sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.c_str() );
 	}
 
 	if( !req_ad->LookupInteger(ATTR_JOB_LEASE_DURATION, lease_duration) ) {
@@ -2190,7 +2190,7 @@ caRequestClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		err_msg += ATTR_CLAIM_TYPE;
 		err_msg += " in ClassAd";
 		return sendErrorReply( s, cmd_str, CA_INVALID_REQUEST, 
-							   err_msg.Value() );
+							   err_msg.c_str() );
 	}
 	claim_type = getClaimTypeNum( ct_str );
 	free( ct_str ); 
@@ -2204,7 +2204,7 @@ caRequestClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		err_msg += getClaimTypeString( claim_type );
 		err_msg += ") not supported by this startd";
 		return sendErrorReply( s, cmd_str, CA_INVALID_REQUEST,
-							   err_msg.Value() );
+							   err_msg.c_str() );
 		break;
 	default:
 		err_msg = "Unrecognized ";
@@ -2213,7 +2213,7 @@ caRequestClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		err_msg += getClaimTypeString( claim_type );
 		err_msg += ") in request ClassAd";
 		return sendErrorReply( s, cmd_str, CA_INVALID_REQUEST,
-							   err_msg.Value() );
+							   err_msg.c_str() );
 		break;
 	}
 	return FALSE;
@@ -2245,7 +2245,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 		err_msg += " ( ";
 		err_msg += global_job_id;
 		err_msg += " ) not found";
-		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
+		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.c_str() );
 		rval = FALSE;
 		goto cleanup;
 	}
@@ -2260,7 +2260,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 		MyString err_msg;
 		err_msg.formatstr("Required %s, not found in request",
 						ATTR_SCHEDD_IP_ADDR);
-		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
+		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.c_str() );
 		rval = FALSE;
 		goto cleanup;
 	}
@@ -2272,7 +2272,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 		err_msg += " (";
 		err_msg += global_job_id;
 		err_msg += ")";
-		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
+		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.c_str() );
 		rval = FALSE;
 		goto cleanup;
 	}
@@ -2400,7 +2400,7 @@ command_classad_handler(int dc_cmd, Stream* s )
 		MyString err_msg = "ClaimID (";
 		err_msg += claim_id;
 		err_msg += ") not found";
-		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
+		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.c_str() );
 		free( claim_id );
 		free( cmd_str );
 		return FALSE;
@@ -2413,7 +2413,7 @@ command_classad_handler(int dc_cmd, Stream* s )
 		MyString err_msg = "User '";
 		err_msg += owner;
 		err_msg += "' does not match the owner of this claim";
-		sendErrorReply( s, cmd_str, CA_NOT_AUTHORIZED, err_msg.Value() ); 
+		sendErrorReply( s, cmd_str, CA_NOT_AUTHORIZED, err_msg.c_str() ); 
 		free( claim_id );
 		free( cmd_str );
 		return FALSE;
@@ -2432,7 +2432,7 @@ command_classad_handler(int dc_cmd, Stream* s )
 			err_msg += "' yet request sent by user '";
 			err_msg += owner;
 			err_msg += "', possible security attack, request refused!";
-			sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
+			sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.c_str() );
 			free( claim_id );
 			free( cmd_str );
 			free( tmp );

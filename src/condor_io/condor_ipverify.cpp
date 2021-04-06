@@ -164,10 +164,10 @@ IpVerify::Init()
 			pDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
 		}
 		if( pAllow ) {
-			dprintf ( D_SECURITY, "IPVERIFY: allow %s: %s (from config value %s)\n", PermString(perm),pAllow,allow_param.Value());
+			dprintf ( D_SECURITY, "IPVERIFY: allow %s: %s (from config value %s)\n", PermString(perm),pAllow,allow_param.c_str());
 		}
 		if( pDeny ) {
-			dprintf ( D_SECURITY, "IPVERIFY: deny %s: %s (from config value %s)\n", PermString(perm),pDeny,deny_param.Value());
+			dprintf ( D_SECURITY, "IPVERIFY: deny %s: %s (from config value %s)\n", PermString(perm),pDeny,deny_param.c_str());
 		}
 
 		// Treat "*" or "*/*" specially, because that's an optimized default.
@@ -286,7 +286,7 @@ IpVerify::add_hash_entry(const struct in6_addr & sin6_addr, const char * user, p
 		AuthEntryToString(sin6_addr,user,new_mask, auth_str);
 		dprintf(D_FULLDEBUG|D_SECURITY,
 				"Adding to resolved authorization table: %s\n",
-				auth_str.Value());
+				auth_str.c_str());
 	}
 
     return TRUE;
@@ -331,7 +331,7 @@ IpVerify::UserHashToString(UserHash_t *user_hash, MyString &result)
 			while( (user=users->next()) ) {
 				result.formatstr_cat(" %s/%s",
 								   user,
-								   host.Value());
+								   host.c_str());
 			}
 		}
 	}
@@ -366,7 +366,7 @@ IpVerify::AuthEntryToString(const in6_addr & host, const char * user, perm_mask_
 	result.formatstr("%s/%s: %s", /* NOTE: this does not need a '\n', all the call sites add one. */
 			user ? user : "(null)",
 			buf,
-			mask_str.Value() );
+			mask_str.c_str() );
 }
 
 void
@@ -382,11 +382,11 @@ IpVerify::PrintAuthTable(int dprintf_level) {
 		ptable->startIterations();
 		while( ptable->iterate(userid,mask) ) {
 				// Call has_user() to get the full mask
-			has_user(ptable, userid.Value(), mask);
+			has_user(ptable, userid.c_str(), mask);
 
 			MyString auth_entry_str;
-			AuthEntryToString(host,userid.Value(),mask, auth_entry_str);
-			dprintf(dprintf_level,"%s\n", auth_entry_str.Value());
+			AuthEntryToString(host,userid.c_str(),mask, auth_entry_str);
+			dprintf(dprintf_level,"%s\n", auth_entry_str.c_str());
 		}
 	}
 
@@ -410,13 +410,13 @@ IpVerify::PrintAuthTable(int dprintf_level) {
 		if( allow_users.length() ) {
 			dprintf(dprintf_level,"allow %s: %s\n",
 					PermString(perm),
-					allow_users.Value());
+					allow_users.c_str());
 		}
 
 		if( deny_users.length() ) {
 			dprintf(dprintf_level,"deny %s: %s\n",
 					PermString(perm),
-					deny_users.Value());
+					deny_users.c_str());
 		}
 	}
 }
@@ -483,7 +483,7 @@ ExpandHostAddresses( char const * entry, StringList * list )
 		 iter != addrs.end();
 		 ++iter) {
 		const condor_sockaddr& addr = *iter;
-		list->append(addr.to_ip_string().Value());
+		list->append(addr.to_ip_string().c_str());
 	}
 }
 
@@ -536,7 +536,7 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 				// add user to user hash, host to host list
 			if (whichUserHash->lookup(hostString, userList) == -1) {
 				whichUserHash->insert(hostString, new StringList(user)); 
-				whichHostList->append(hostString.Value());
+				whichHostList->append(hostString.c_str());
 			}
 			else {
 				userList->append(user);
@@ -736,7 +736,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 	if ( PunchedHoleArray[perm] != NULL ) {
 		HolePunchTable_t* hpt = PunchedHoleArray[perm];
 		MyString ip_str_buf = addr.to_ip_string();
-		const char* ip_str = ip_str_buf.Value();
+		const char* ip_str = ip_str_buf.c_str();
 		MyString id_with_ip;
 		MyString id;
 		int count;
@@ -747,7 +747,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 				if( allow_reason ) {
 					allow_reason->formatstr(
 						"%s authorization has been made automatic for %s",
-						PermString(perm), id.Value() );
+						PermString(perm), id.c_str() );
 				}
 				return USER_AUTH_SUCCESS;
 			}
@@ -755,7 +755,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 				if( allow_reason ) {
 					allow_reason->formatstr(
 						"%s authorization has been made automatic for %s",
-						PermString(perm), id_with_ip.Value() );
+						PermString(perm), id_with_ip.c_str() );
 				}
 				return USER_AUTH_SUCCESS;
 			}
@@ -765,7 +765,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			if( allow_reason ) {
 				allow_reason->formatstr(
 					"%s authorization has been made automatic for %s",
-					PermString(perm), id.Value() );
+					PermString(perm), id.c_str() );
 			}
 			return USER_AUTH_SUCCESS;
 		}
@@ -824,7 +824,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			if( deny_reason ) {
 				deny_reason->formatstr(
 					"%s authorization policy denies IP address %s",
-					PermString(perm), addr.to_ip_string().Value() );
+					PermString(perm), addr.to_ip_string().c_str() );
 			}
 		}
 
@@ -833,7 +833,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			if( allow_reason ) {
 				allow_reason->formatstr(
 					"%s authorization policy allows IP address %s",
-					PermString(perm), addr.to_ip_string().Value() );
+					PermString(perm), addr.to_ip_string().c_str() );
 			}
 		}
 
@@ -878,7 +878,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 		bool determined_by_parent = false;
 		if ( mask == 0 ) {
 			if ( PermTypeArray[perm]->behavior == USERVERIFY_ONLY_DENIES ) {
-				dprintf(D_SECURITY,"IPVERIFY: %s at %s not matched to deny list, so allowing.\n",who, addr.to_sinful().Value());
+				dprintf(D_SECURITY,"IPVERIFY: %s at %s not matched to deny list, so allowing.\n",who, addr.to_sinful().c_str());
 				if( allow_reason ) {
 					allow_reason->formatstr(
 						"%s authorization policy does not deny, so allowing",
@@ -895,14 +895,14 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 					if( Verify( *parent_perms, addr, user, allow_reason, NULL ) == USER_AUTH_SUCCESS ) {
 						determined_by_parent = true;
 						parent_allowed = true;
-						dprintf(D_SECURITY,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who, addr.to_sinful().Value(),PermString(perm),PermString(*parent_perms));
+						dprintf(D_SECURITY,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who, addr.to_sinful().c_str(),PermString(perm),PermString(*parent_perms));
 						if( allow_reason ) {
 							MyString tmp = *allow_reason;
 							allow_reason->formatstr(
 								"%s is implied by %s; %s",
 								PermString(perm),
 								PermString(*parent_perms),
-								tmp.Value());
+								tmp.c_str());
 						}
 						break;
 					}
@@ -925,7 +925,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 							"; identifiers used for this host: %s, hostname size = %lu, "
 							"original ip address = %s",
 							PermString(perm),
-							peer_description.Value(),
+							peer_description.c_str(),
 							(unsigned long)hostnames.size(),
 							ipstr);
 					}
@@ -941,7 +941,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			if( allow_reason && !peer_description.empty() ) {
 				allow_reason->formatstr_cat(
 					"; identifiers used for this remote host: %s",
-					peer_description.Value());
+					peer_description.c_str());
 			}
 		}
 
@@ -1076,14 +1076,14 @@ IpVerify::PunchHole(DCpermission perm, const MyString& id)
 		dprintf(D_SECURITY,
 		        "IpVerify::PunchHole: opened %s level to %s\n",
 		        PermString(perm),
-		        id.Value());
+		        id.c_str());
 	}
 	else {
 		dprintf(D_SECURITY,
 		        "IpVerify::PunchHole: "
 			    "open count at level %s for %s now %d\n",
 		        PermString(perm),
-		        id.Value(),
+		        id.c_str(),
 		        count);
 	}
 
@@ -1130,14 +1130,14 @@ IpVerify::FillHole(DCpermission perm, const MyString& id)
 		        "IpVerify::FillHole: "
 		            "removed %s-level opening for %s\n",
 		        PermString(perm),
-		        id.Value());
+		        id.c_str());
 	}
 	else {
 		dprintf(D_SECURITY,
 		        "IpVerify::FillHole: "
 		            "open count at level %s for %s now %d\n",
 		        PermString(perm),
-		        id.Value(),
+		        id.c_str(),
 		        count);
 	}
 

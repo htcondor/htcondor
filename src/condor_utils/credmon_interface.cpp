@@ -506,15 +506,15 @@ void process_cred_mark_dir(const char * cred_dir_name, const char *markfile) {
 	// delete the user's dir
 	MyString username = markfile;
 	username = username.substr(0, username.length()-5);
-	dprintf (D_FULLDEBUG, "CREDMON: CRED_DIR: %s, USERNAME: %s\n", cred_dir_name, username.Value());
-	if ( cred_dir.Find_Named_Entry( username.Value() ) ) {
-		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", cred_dir_name, DIR_DELIM_CHAR, username.Value() );
+	dprintf (D_FULLDEBUG, "CREDMON: CRED_DIR: %s, USERNAME: %s\n", cred_dir_name, username.c_str());
+	if ( cred_dir.Find_Named_Entry( username.c_str() ) ) {
+		dprintf( D_FULLDEBUG, "Removing %s%c%s\n", cred_dir_name, DIR_DELIM_CHAR, username.c_str() );
 		if (!cred_dir.Remove_Current_File()) {
-			dprintf( D_ALWAYS, "CREDMON: ERROR REMOVING %s%c%s\n", cred_dir_name, DIR_DELIM_CHAR, username.Value() );
+			dprintf( D_ALWAYS, "CREDMON: ERROR REMOVING %s%c%s\n", cred_dir_name, DIR_DELIM_CHAR, username.c_str() );
 			return;
 		}
 	} else {
-		dprintf( D_ALWAYS, "CREDMON: Couldn't find dir \"%s\" in %s\n", username.Value(), cred_dir_name);
+		dprintf( D_ALWAYS, "CREDMON: Couldn't find dir \"%s\" in %s\n", username.c_str(), cred_dir_name);
 		return;
 	}
 }

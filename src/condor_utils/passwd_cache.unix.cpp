@@ -99,7 +99,7 @@ passwd_cache::getUseridMap(MyString &usermap)
 		if( !usermap.empty() ) {
 			usermap += " ";
 		}
-		usermap.formatstr_cat("%s=%ld,%ld",index.Value(),(long)uent->uid,(long)uent->gid);
+		usermap.formatstr_cat("%s=%ld,%ld",index.c_str(),(long)uent->uid,(long)uent->gid);
 		if( group_table->lookup(index,gent) == 0 ) {
 			unsigned i;
 			for(i=0;i<gent->gidlist_sz;i++) {
@@ -348,7 +348,7 @@ passwd_cache::cache_uid(const struct passwd *pwent) {
 
 		index = pwent->pw_name;
 
-		if ( uid_table->lookup(index.Value(), cache_entry) < 0 ) {
+		if ( uid_table->lookup(index.c_str(), cache_entry) < 0 ) {
 				/* if we don't already have this entry, create a new one */
 			init_uid_entry(cache_entry);
 			uid_table->insert(index, cache_entry);
@@ -491,7 +491,7 @@ passwd_cache::get_user_name(const uid_t uid, char *&user) {
 	uid_table->startIterations();
 	while ( uid_table->iterate(index, ent) ) {
 		if ( ent->uid == uid ) {
-			user = strdup(index.Value());
+			user = strdup(index.c_str());
 			return true;
 		}
 	}

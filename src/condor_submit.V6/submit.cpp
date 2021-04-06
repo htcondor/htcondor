@@ -907,7 +907,7 @@ main( int argc, const char *argv[] )
 	// ensure I have a known transfer method
 	if (STMethod == STM_UNKNOWN) {
 		fprintf( stderr, 
-			"%s: Unknown sandbox transfer method: %s\n", MyName, method.Value());
+			"%s: Unknown sandbox transfer method: %s\n", MyName, method.c_str());
 		usage();
 		exit(1);
 	}
@@ -917,7 +917,7 @@ main( int argc, const char *argv[] )
 	if ( DumpClassAdToFile && STMethod != STM_USE_SCHEDD_ONLY ) {
 		fprintf( stderr, 
 			"%s: Dumping ClassAds to a file is not compatible with sandbox "
-			"transfer method: %s\n", MyName, method.Value());
+			"transfer method: %s\n", MyName, method.c_str());
 		usage();
 		exit(1);
 	}
@@ -2801,10 +2801,10 @@ int process_job_credentials()
 				if (IsUrl(URL.c_str())) {
 					// report to user a URL
 					char *my_un = my_username();
-					fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_un, URL.Value());
+					fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_un, URL.c_str());
 					free(my_un);
 				} else {
-					fprintf(stderr, "\nOAuth error: %s\n\n", URL.Value());
+					fprintf(stderr, "\nOAuth error: %s\n\n", URL.c_str());
 				}
 				exit(1);
 			}
@@ -2874,7 +2874,7 @@ int process_job_credentials()
 	// If SEC_CREDENTIAL_PRODUCER is anything else, then consider it to be the
 	// name of a script we should spawn to create the credential.
 
-	if ( strcasecmp(producer.Value(),"CREDENTIAL_ALREADY_STORED") != MATCH ) {
+	if ( strcasecmp(producer.c_str(),"CREDENTIAL_ALREADY_STORED") != MATCH ) {
 		// If we made it here, we need to spawn a credential producer process.
 		dprintf(D_ALWAYS, "CREDMON: invoking %s\n", producer.c_str());
 		ArgList args;
@@ -2988,7 +2988,7 @@ int process_job_credentials()
 
 int SendLastExecutable()
 {
-	const char * ename = LastExecutable.empty() ? NULL : LastExecutable.Value();
+	const char * ename = LastExecutable.empty() ? NULL : LastExecutable.c_str();
 	bool copy_to_spool = SpoolLastExecutable;
 	MyString SpoolEname(ename);
 
@@ -2998,12 +2998,12 @@ int SendLastExecutable()
 		char * chkptname = GetSpooledExecutablePath(submit_hash.getClusterId(), "");
 		SpoolEname = chkptname;
 		if (chkptname) free(chkptname);
-		int ret = MyQ->send_SpoolFile(SpoolEname.Value());
+		int ret = MyQ->send_SpoolFile(SpoolEname.c_str());
 
 		if (ret < 0) {
 			fprintf( stderr,
 						"\nERROR: Request to transfer executable %s failed\n",
-						SpoolEname.Value() );
+						SpoolEname.c_str() );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}

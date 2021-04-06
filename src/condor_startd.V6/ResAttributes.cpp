@@ -781,7 +781,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 	ArgList args;
 	MyString errors;
 	if(!args.AppendArgsV1RawOrV2Quoted(script_cmd, &errors)) {
-		printf("Can't append cmd %s(%s)\n", script_cmd, errors.Value());
+		printf("Can't append cmd %s(%s)\n", script_cmd, errors.c_str());
 		return -1;
 	}
 

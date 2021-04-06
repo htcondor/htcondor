@@ -1339,7 +1339,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	if( !ssh_keygen_arglist.AppendArgsV2Quoted(ssh_keygen_args.c_str(),&error_msg) ) {
 		return SSHDFailed(s,
 						  "SSH_TO_JOB_SSH_KEYGEN_ARGS is misconfigured: %s",
-						  error_msg.Value());
+						  error_msg.c_str());
 	}
 
 	std::string client_keygen_args;
@@ -1347,7 +1347,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	if( !ssh_keygen_arglist.AppendArgsV2Raw(client_keygen_args.c_str(),&error_msg) ) {
 		return SSHDFailed(s,
 						  "Failed to produce ssh-keygen arg list: %s",
-						  error_msg.Value());
+						  error_msg.c_str());
 	}
 
 	MyString ssh_keygen_cmd;
@@ -1373,7 +1373,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	Env setup_env;
 	if( !GetJobEnv( jobad, &setup_env, &error_msg ) ) {
 		return SSHDFailed(
-			s,"Failed to get job environment: %s",error_msg.Value());
+			s,"Failed to get job environment: %s",error_msg.c_str());
 	}
 
 	if( !slot_name.empty() ) {
@@ -1405,7 +1405,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	setup_args.AppendArg(GetWorkingDir(0));
 	setup_args.AppendArg(ssh_to_job_shell_setup.c_str());
 	setup_args.AppendArg(sshd_config_template.c_str());
-	setup_args.AppendArg(ssh_keygen_cmd.Value());
+	setup_args.AppendArg(ssh_keygen_cmd.c_str());
 
 		// Would like to use my_popen here, but we need to support glexec.
 		// Use the default reaper, even though it doesn't know anything
@@ -1478,7 +1478,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		error_msg.formatstr("condor_ssh_to_job_sshd_setup failed: %s",
 						  setup_output);
 		free( setup_output );
-		return SSHDFailed(s,"%s",error_msg.Value());
+		return SSHDFailed(s,"%s",error_msg.c_str());
 	}
 
 		// Since in privsep situations, we cannot directly access the
@@ -1535,7 +1535,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	if( !rc ) {
 		return SSHDFailed(s,
 			"Failed to parse output of condor_ssh_to_job_sshd_setup: %s",
-			error_msg.Value());
+			error_msg.c_str());
 	}
 
 	dprintf(D_FULLDEBUG,"StartSSHD: session_dir='%s'\n",session_dir.c_str());
@@ -1557,7 +1557,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	if( !sshd_arglist.AppendArgsV2Quoted(sshd_arg_string.c_str(),&error_msg) )
 	{
 		return SSHDFailed(s,"Invalid SSH_TO_JOB_SSHD_ARGS (%s): %s",
-						  sshd_arg_string.c_str(),error_msg.Value());
+						  sshd_arg_string.c_str(),error_msg.c_str());
 	}
 
 	char **argarray = sshd_arglist.GetStringArray();
@@ -1597,7 +1597,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	if( !sshd_arglist.InsertArgsIntoClassAd(sshd_ad,&ver_info,&error_msg) ) {
 		return SSHDFailed(s,
 			"Failed to insert args into sshd job description: %s",
-			error_msg.Value());
+			error_msg.c_str());
 	}
 		// Since sshd clenses the user's environment, it doesn't really
 		// matter what we pass here.  Instead, we depend on sshd_shell_init
@@ -1621,7 +1621,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	if( !setup_env.InsertEnvIntoClassAd(sshd_ad,&error_msg,NULL,&ver_info) ) {
 		return SSHDFailed(s,
 			"Failed to insert environment into sshd job description: %s",
-			error_msg.Value());
+			error_msg.c_str());
 	}
 #endif
 

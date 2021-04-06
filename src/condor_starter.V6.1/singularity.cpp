@@ -342,9 +342,9 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 	job_env.SetEnv("_CONDOR_JOB_AD", job_ad.c_str());
 	MyString proxy_file;
 	if ( job_env.GetEnv( "X509_USER_PROXY", proxy_file ) &&
-	     strncmp( execute_dir.c_str(), proxy_file.Value(),
+	     strncmp( execute_dir.c_str(), proxy_file.c_str(),
 	      execute_dir.length() ) == 0 ) {
-		std::string new_proxy = target_dir + "/" + condor_basename( proxy_file.Value() );
+		std::string new_proxy = target_dir + "/" + condor_basename( proxy_file.c_str() );
 		job_env.SetEnv( "X509_USER_PROXY", new_proxy.c_str() );
 	}
 	return true;

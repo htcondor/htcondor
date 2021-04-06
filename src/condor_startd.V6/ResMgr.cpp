@@ -252,7 +252,7 @@ ResMgr::init_config_classad( void )
 	if( !configInsert( config_classad, ATTR_UNHIBERNATE, false ) ) {
 		MyString default_expr;
 		default_expr.formatstr("MY.%s =!= UNDEFINED",ATTR_MACHINE_LAST_MATCH_TIME);
-		config_classad->AssignExpr( ATTR_UNHIBERNATE, default_expr.Value() );
+		config_classad->AssignExpr( ATTR_UNHIBERNATE, default_expr.c_str() );
 	}
 #endif /* HAVE_HIBERNATION */
 
@@ -785,7 +785,7 @@ ResMgr::adlist_replace( const char *name, ClassAd *newAd, bool report_diff, cons
 		StringList ignore_list;
 		MyString ignore = prefix;
 		ignore += "LastUpdate";
-		ignore_list.append( ignore.Value() );
+		ignore_list.append( ignore.c_str() );
 		return extra_ads.Replace( name, newAd, true, &ignore_list );
 	}
 	else {
@@ -1234,7 +1234,7 @@ ResMgr::report_updates( void ) const
 		}
 		dprintf( D_FULLDEBUG,
 				 "Sent %d update(s) to the collector (%s)\n",
-				 num_updates, list.Value());
+				 num_updates, list.c_str());
 	}
 }
 

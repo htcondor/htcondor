@@ -255,7 +255,7 @@ VMProc::StartJob()
 	if( ! job_env.MergeFromV1RawOrV2Quoted(env_str,&env_errors) ) {
 		dprintf( D_ALWAYS, "Aborting VMProc::StartJob: "
 				"%s\nThe full value for STARTER_JOB_ENVIRONMENT: "
-				"%s\n",env_errors.Value(),env_str);
+				"%s\n",env_errors.c_str(),env_str);
 		if( env_str ) {
 			free(env_str);
 		}

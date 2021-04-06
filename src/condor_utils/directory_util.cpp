@@ -97,7 +97,7 @@ const char* dircat(const char *dirpath, const char *filename, const char * filee
 	}
 
 	// return the result
-	return result.Value();
+	return result.c_str();
 }
 
 const char* dircat(const char *dirpath, const char *filename, const char * fileext, std::string &result )
@@ -168,7 +168,7 @@ const char* dirscat(const char *dirpath, const char *subdir, MyString &result )
 	} else {
 		result += DIR_DELIM_STRING;
 	}
-	return result.Value();
+	return result.c_str();
 }
 
 const char* dirscat(const char *dirpath, const char *subdir, std::string &result )

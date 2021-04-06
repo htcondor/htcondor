@@ -320,7 +320,7 @@ gmetric_send(const char *group, const char *name, const char *value, const char 
 	if( !fp ) {
 		MyString display_args;
 		args.GetArgsStringForDisplay(&display_args);
-		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.Value(),strerror(errno));
+		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.c_str(),strerror(errno));
 		return false;
 	}
 	while( fgets(line,sizeof(line),fp) ) {
@@ -330,7 +330,7 @@ gmetric_send(const char *group, const char *name, const char *value, const char 
 	if( rc != 0 ) {
 		MyString display_args;
 		args.GetArgsStringForDisplay(&display_args);
-		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.Value(),output.c_str());
+		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.c_str(),output.c_str());
 		return false;
 	}
 	return true;
@@ -397,7 +397,7 @@ gmetric_send_heartbeat(const char *spoof_host)
 	if( !fp ) {
 		MyString display_args;
 		args.GetArgsStringForDisplay(&display_args);
-		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.Value(),strerror(errno));
+		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.c_str(),strerror(errno));
 		return false;
 	}
 	while( fgets(line,sizeof(line),fp) ) {
@@ -407,7 +407,7 @@ gmetric_send_heartbeat(const char *spoof_host)
 	if( rc != 0 ) {
 		MyString display_args;
 		args.GetArgsStringForDisplay(&display_args);
-		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.Value(),output.c_str());
+		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.c_str(),output.c_str());
 		return false;
 	}
 	return true;

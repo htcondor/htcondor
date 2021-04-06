@@ -391,8 +391,8 @@ TransferQueueManager::AddRequest( TransferQueueRequest *client ) {
 	{
 		dprintf(D_FULLDEBUG,"TransferQueueManager: rejecting %s to avoid overload: %s\n",
 				client->Description(),
-				error_desc.Value());
-		client->SendGoAhead(XFER_QUEUE_NO_GO,error_desc.Value());
+				error_desc.c_str());
+		client->SendGoAhead(XFER_QUEUE_NO_GO,error_desc.c_str());
 		return false;
 	}
 

@@ -78,7 +78,7 @@ condor_gethostname(char *name, size_t namelen) {
 			if (hostname.length() >= (int) namelen) {
 				return -1;
 			}
-			strcpy(name, hostname.Value());
+			strcpy(name, hostname.c_str());
 			return 0;
 		}
 
@@ -153,7 +153,7 @@ condor_gethostname(char *name, size_t namelen) {
 			if (hostname.length() >= (int) namelen) {
 				return -1;
 			}
-			strcpy(name, hostname.Value());
+			strcpy(name, hostname.c_str());
 			return 0;
 		}
 
@@ -177,7 +177,7 @@ condor_gethostname(char *name, size_t namelen) {
 			if (hostname.length() >= (int) namelen) {
 				return -1;
 			}
-			strcpy(name, hostname.Value());
+			strcpy(name, hostname.c_str());
 			return 0;
 		}
 

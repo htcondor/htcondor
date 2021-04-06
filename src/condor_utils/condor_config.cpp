@@ -503,24 +503,24 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 
 	// <SUBSYS>_ATTRS is the proper form, set the string list from entries in the config value
 	param_name = subsys; param_name += "_ATTRS";
-	param_and_insert_unique_items(param_name.Value(), reqdAttrs);
+	param_and_insert_unique_items(param_name.c_str(), reqdAttrs);
 
 	// <SUBSYS>_EXPRS is deprecated, but still supported for now, we merge merge it into the existing list.
 	param_name = subsys; param_name += "_EXPRS";
-	param_and_insert_unique_items(param_name.Value(), reqdAttrs);
+	param_and_insert_unique_items(param_name.c_str(), reqdAttrs);
 
 	// SYSTEM_<SUBSYS>_ATTRS is the set of attrs that are required by HTCondor, this is a non-public config knob.
 	param_name.formatstr("SYSTEM_%s_ATTRS", subsys);
-	param_and_insert_unique_items(param_name.Value(), reqdAttrs);
+	param_and_insert_unique_items(param_name.c_str(), reqdAttrs);
 
 	if (prefix) {
 		// <PREFIX>_<SUBSYS>_ATTRS is additional attributes needed
 		param_name.formatstr("%s_%s_ATTRS", prefix, subsys);
-		param_and_insert_unique_items(param_name.Value(), reqdAttrs);
+		param_and_insert_unique_items(param_name.c_str(), reqdAttrs);
 
 		// <PREFIX>_<SUBSYS>_EXPRS is deprecated, but still supported for now.
 		param_name.formatstr("%s_%s_EXPRS", prefix, subsys);
-		param_and_insert_unique_items(param_name.Value(), reqdAttrs);
+		param_and_insert_unique_items(param_name.c_str(), reqdAttrs);
 	}
 
 	if ( ! reqdAttrs.isEmpty()) {
@@ -529,7 +529,7 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 			auto_free_ptr expr(NULL);
 			if (prefix) {
 				param_name.formatstr("%s_%s", prefix, attr);
-				expr.set(param(param_name.Value()));
+				expr.set(param(param_name.c_str()));
 			}
 			if ( ! expr) {
 				expr.set(param(attr));
@@ -674,9 +674,9 @@ bool validate_config(bool abort_if_invalid, int opt)
 	hash_iter_delete(&it);
 	if(invalid_entries > 0) {
 		if (abort_if_invalid) {
-			EXCEPT("%s", invalid_out.Value());
+			EXCEPT("%s", invalid_out.c_str());
 		} else {
-			dprintf(D_ALWAYS, "%s", invalid_out.Value());
+			dprintf(D_ALWAYS, "%s", invalid_out.c_str());
 			return false;
 		}
 	}
@@ -684,7 +684,7 @@ bool validate_config(bool abort_if_invalid, int opt)
 		dprintf(D_ALWAYS,
 			"WARNING: Some configuration variables appear to be an unsupported form of SUBSYS.LOCALNAME.* override\n"
 			"       The supported form is just LOCALNAME.* Variables are:\n%s",
-			deprecated_out.Value());
+			deprecated_out.c_str());
 	}
 	return true;
 }
@@ -1100,7 +1100,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		if( !strcmp( macro_name, "START_owner" ) ) {
 			MyString ownerstr;
 			ownerstr.formatstr( "Owner == \"%s\"", varvalue );
-			insert_macro("START", ownerstr.Value(), ConfigMacroSet, EnvMacro, ctx);
+			insert_macro("START", ownerstr.c_str(), ConfigMacroSet, EnvMacro, ctx);
 		}
 		// ignore "_CONDOR_" without any macro name attached
 		else if( macro_name[0] != '\0' ) {
@@ -1543,7 +1543,7 @@ find_global(int config_options, MyString & config_file)
 {
 	MyString	file;
 	file.formatstr( "%s_config", myDistro->Get() );
-	return find_file( EnvGetName(ENV_CONFIG), file.Value(), config_options, config_file);
+	return find_file( EnvGetName(ENV_CONFIG), file.c_str(), config_options, config_file);
 }
 
 // Find user-specific location of a file
@@ -1813,7 +1813,7 @@ fill_attributes()
 		int ver = sysapi_opsys_version();
 		if (ver > 0) {
 			val.formatstr("%d", ver);
-			insert_macro("OPSYSVER", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
+			insert_macro("OPSYSVER", val.c_str(), ConfigMacroSet, DetectedMacro, ctx);
 		}
 	}
 
@@ -1828,7 +1828,7 @@ fill_attributes()
 	int major_ver = sysapi_opsys_major_version();
 	if (major_ver > 0) {
 		val.formatstr("%d", major_ver);
-		insert_macro("OPSYSMAJORVER", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
+		insert_macro("OPSYSMAJORVER", val.c_str(), ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	if( (tmp = sysapi_opsys_name()) != NULL ) {
@@ -1879,7 +1879,7 @@ fill_attributes()
 	insert_macro("LOCALNAME", localname, ConfigMacroSet, DetectedMacro, ctx);
 
 	val.formatstr("%d",sysapi_phys_memory_raw_no_param());
-	insert_macro("DETECTED_MEMORY", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
+	insert_macro("DETECTED_MEMORY", val.c_str(), ConfigMacroSet, DetectedMacro, ctx);
 
 		// Currently, num_hyperthread_cores is defined as everything
 		// in num_cores plus other junk, which on some systems may
@@ -1894,19 +1894,19 @@ fill_attributes()
 
 	// DETECTED_PHYSICAL_CPUS will always be the number of real CPUs not counting hyperthreads.
 	val.formatstr("%d",num_cpus);
-	insert_macro("DETECTED_PHYSICAL_CPUS", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
+	insert_macro("DETECTED_PHYSICAL_CPUS", val.c_str(), ConfigMacroSet, DetectedMacro, ctx);
 
 	int def_valid = 0;
 	bool count_hyper = param_default_boolean("COUNT_HYPERTHREAD_CPUS", get_mySubSystem()->getName(), &def_valid);
 	if ( ! def_valid) count_hyper = true;
 	// DETECTED_CPUS will be the value that NUM_CPUS will be set to by default.
 	val.formatstr("%d", count_hyper ? num_hyperthread_cpus : num_cpus);
-	insert_macro("DETECTED_CPUS", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
+	insert_macro("DETECTED_CPUS", val.c_str(), ConfigMacroSet, DetectedMacro, ctx);
 
 	// DETECTED_CORES is not a good name, but we're stuck with it now...
 	// it will ALWAYS be the number of hyperthreaded cores.
 	val.formatstr("%d",num_hyperthread_cpus);
-	insert_macro("DETECTED_CORES", val.Value(), ConfigMacroSet, DetectedMacro, ctx);
+	insert_macro("DETECTED_CORES", val.c_str(), ConfigMacroSet, DetectedMacro, ctx);
 }
 
 
@@ -3018,7 +3018,7 @@ reinsert_specials( const char* host )
 	// init_local_hostname_impl(), which calls network_interface_to_ip().
 	//
 	condor_sockaddr ip = get_local_ipaddr( CP_IPV4 );
-	insert_macro("IP_ADDRESS", ip.to_ip_string().Value(), ConfigMacroSet, DetectedMacro, ctx);
+	insert_macro("IP_ADDRESS", ip.to_ip_string().c_str(), ConfigMacroSet, DetectedMacro, ctx);
 	if( ip.is_ipv6() ) {
 		insert_macro("IP_ADDRESS_IS_IPV6", "true", ConfigMacroSet, DetectedMacro, ctx);
 	} else {
@@ -3027,12 +3027,12 @@ reinsert_specials( const char* host )
 
 	condor_sockaddr v4 = get_local_ipaddr( CP_IPV4 );
 	if( v4.is_ipv4() ) {
-		insert_macro("IPV4_ADDRESS", v4.to_ip_string().Value(), ConfigMacroSet, DetectedMacro, ctx);
+		insert_macro("IPV4_ADDRESS", v4.to_ip_string().c_str(), ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 	condor_sockaddr v6 = get_local_ipaddr( CP_IPV6 );
 	if( v6.is_ipv6() ) {
-		insert_macro("IPV6_ADDRESS", v6.to_ip_string().Value(), ConfigMacroSet, DetectedMacro, ctx);
+		insert_macro("IPV6_ADDRESS", v6.to_ip_string().c_str(), ConfigMacroSet, DetectedMacro, ctx);
 	}
 
 
@@ -3156,7 +3156,7 @@ init_dynamic_config()
 		// knob for the root location
 	MyString filename_parameter;
 	filename_parameter.formatstr( "%s_CONFIG", get_mySubSystem()->getName() );
-	tmp = param( filename_parameter.Value() );
+	tmp = param( filename_parameter.c_str() );
 	if( tmp ) {
 		toplevel_persistent_config = tmp;
 		free( tmp );
@@ -3180,7 +3180,7 @@ init_dynamic_config()
 			fprintf( stderr, "%s error: ENABLE_PERSISTENT_CONFIG is TRUE, "
 					 "but neither %s nor PERSISTENT_CONFIG_DIR is "
 					 "specified in the configuration file\n",
-					 myDistro->GetCap(), filename_parameter.Value() );
+					 myDistro->GetCap(), filename_parameter.c_str() );
 			exit( 1 );
 		}
 	}
@@ -3236,16 +3236,16 @@ set_persistent_config(char *admin, char *config)
 	priv = set_root_priv();
 	if (config && config[0]) {	// (re-)set config
 			// write new config to temporary file
-		filename.formatstr( "%s.%s", toplevel_persistent_config.Value(), admin );
-		tmp_filename.formatstr( "%s.tmp", filename.Value() );
+		filename.formatstr( "%s.%s", toplevel_persistent_config.c_str(), admin );
+		tmp_filename.formatstr( "%s.tmp", filename.c_str() );
 		do {
 			MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
-			unlink( tmp_filename.Value() );
-			fd = safe_open_wrapper_follow( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
+			unlink( tmp_filename.c_str() );
+			fd = safe_open_wrapper_follow( tmp_filename.c_str(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
 		} while (fd == -1 && errno == EEXIST);
 		if( fd < 0 ) {
 			dprintf( D_ALWAYS, "safe_open_wrapper(%s) returned %d '%s' (errno %d) in "
-					 "set_persistent_config()\n", tmp_filename.Value(),
+					 "set_persistent_config()\n", tmp_filename.c_str(),
 					 fd, strerror(errno), errno );
 			ABORT;
 		}
@@ -3262,10 +3262,10 @@ set_persistent_config(char *admin, char *config)
 		}
 		
 			// commit config changes
-		if (rotate_file(tmp_filename.Value(), filename.Value()) < 0) {
+		if (rotate_file(tmp_filename.c_str(), filename.c_str()) < 0) {
 			dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with '%s' "
 					 "(errno %d) in set_persistent_config()\n",
-					 tmp_filename.Value(), filename.Value(),
+					 tmp_filename.c_str(), filename.c_str(),
 					 strerror(errno), errno );
 			ABORT;
 		}
@@ -3291,15 +3291,15 @@ set_persistent_config(char *admin, char *config)
 	}		
 
 	// update admin list on disk
-	tmp_filename.formatstr( "%s.tmp", toplevel_persistent_config.Value() );
+	tmp_filename.formatstr( "%s.tmp", toplevel_persistent_config.c_str() );
 	do {
 		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
-		unlink( tmp_filename.Value() );
-		fd = safe_open_wrapper_follow( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
+		unlink( tmp_filename.c_str() );
+		fd = safe_open_wrapper_follow( tmp_filename.c_str(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
 	} while (fd == -1 && errno == EEXIST);
 	if( fd < 0 ) {
 		dprintf( D_ALWAYS, "safe_open_wrapper(%s) returned %d '%s' (errno %d) in "
-				 "set_persistent_config()\n", tmp_filename.Value(),
+				 "set_persistent_config()\n", tmp_filename.c_str(),
 				 fd, strerror(errno), errno );
 		ABORT;
 	}
@@ -3342,23 +3342,23 @@ set_persistent_config(char *admin, char *config)
 		ABORT;
 	}
 	
-	rval = rotate_file( tmp_filename.Value(),
-						toplevel_persistent_config.Value() );
+	rval = rotate_file( tmp_filename.c_str(),
+						toplevel_persistent_config.c_str() );
 	if (rval < 0) {
 		dprintf( D_ALWAYS, "rotate_file(%s,%s) failed with '%s' (errno %d) "
-				 "in set_persistent_config()\n", tmp_filename.Value(),
-				 filename.Value(), strerror(errno), errno );
+				 "in set_persistent_config()\n", tmp_filename.c_str(),
+				 filename.c_str(), strerror(errno), errno );
 		ABORT;
 	}
 
 	// if we removed a config, then we should clean up by removing the file(s)
 	if (!config || !config[0]) {
-		filename.formatstr( "%s.%s", toplevel_persistent_config.Value(), admin );
+		filename.formatstr( "%s.%s", toplevel_persistent_config.c_str(), admin );
 		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
-		unlink( filename.Value() );
+		unlink( filename.c_str() );
 		if (PersistAdminList.number() == 0) {
 			MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
-			unlink( toplevel_persistent_config.Value() );
+			unlink( toplevel_persistent_config.c_str() );
 		}
 	}
 
@@ -3489,12 +3489,12 @@ process_persistent_configs()
 	char *tmp = NULL;
 	bool processed = false;
 
-	if( access( toplevel_persistent_config.Value(), R_OK ) == 0 &&
+	if( access( toplevel_persistent_config.c_str(), R_OK ) == 0 &&
 		PersistAdminList.number() == 0 )
 	{
 		processed = true;
 
-		process_persistent_config_or_die(toplevel_persistent_config.Value(), true);
+		process_persistent_config_or_die(toplevel_persistent_config.c_str(), true);
 
 		tmp = param ("RUNTIME_CONFIG_ADMIN");
 		if (tmp) {
@@ -3507,9 +3507,9 @@ process_persistent_configs()
 	while ((tmp = PersistAdminList.next())) {
 		processed = true;
 		MyString config_source;
-		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
+		config_source.formatstr( "%s.%s", toplevel_persistent_config.c_str(),
 							   tmp );
-		process_persistent_config_or_die(config_source.Value(), false);
+		process_persistent_config_or_die(config_source.c_str(), false);
 	}
 	return (int)processed;
 }
@@ -3770,7 +3770,7 @@ param_with_full_path(const char *name)
 			);
 		free(command);
 		command = NULL;
-		if ((real_path = realpath(p.Value(),NULL))) {
+		if ((real_path = realpath(p.c_str(),NULL))) {
 			p = real_path;
 			free(real_path);
 			if (
@@ -3786,7 +3786,7 @@ param_with_full_path(const char *name)
 			{
 				// we have a full path, and it looks safe.
 				// restash command as the full path into config table.
-				command = strdup( p.Value() );
+				command = strdup( p.c_str() );
 				config_insert(name,command);
 			}
 		}

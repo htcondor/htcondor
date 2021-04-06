@@ -475,7 +475,7 @@ ClusterCleanup(int cluster_id)
 	// As of 9.0 new jobs will be unable to submit shared executables
 	// but there may still be some jobs in the queue that have that.
 	if (!hash.empty()) {
-		ickpt_share_try_removal(owner.Value(), hash.Value());
+		ickpt_share_try_removal(owner.c_str(), hash.c_str());
 	}
 }
 
@@ -1012,7 +1012,7 @@ QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 	}
 
 	addr = raddr;
-	myendpoint = strdup(addr.to_ip_string().Value());
+	myendpoint = strdup(addr.to_ip_string().c_str());
 
 	return true;
 }
@@ -1582,7 +1582,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 
 	int spool_min_version = 0;
 	int spool_cur_version = 0;
-	CheckSpoolVersion(spool.Value(),SPOOL_MIN_VERSION_SCHEDD_SUPPORTS,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS,spool_min_version,spool_cur_version);
+	CheckSpoolVersion(spool.c_str(),SPOOL_MIN_VERSION_SCHEDD_SUPPORTS,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS,spool_min_version,spool_cur_version);
 
 	JobQueue = new JobQueueType(new ConstructClassAdLogTableEntry<JobQueuePayload>(),job_queue_name,max_historical_logs);
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(hashFuncInt);
@@ -2021,7 +2021,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	std::list< PROC_ID > spool_rename_list;
 
 	if( spool_cur_version < 1 ) {
-		SpoolHierarchyChangePass1(spool.Value(),spool_rename_list);
+		SpoolHierarchyChangePass1(spool.c_str(),spool_rename_list);
 	}
 
 
@@ -2038,11 +2038,11 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	}
 
 	if( spool_cur_version < 1 ) {
-		SpoolHierarchyChangePass2(spool.Value(),spool_rename_list);
+		SpoolHierarchyChangePass2(spool.c_str(),spool_rename_list);
 	}
 
 	if( spool_cur_version != SPOOL_CUR_VERSION_SCHEDD_SUPPORTS ) {
-		WriteSpoolVersion(spool.Value(),SPOOL_MIN_VERSION_SCHEDD_WRITES,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS);
+		WriteSpoolVersion(spool.c_str(),SPOOL_MIN_VERSION_SCHEDD_WRITES,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS);
 	}
 }
 
@@ -2446,10 +2446,10 @@ SuperUserAllowedToSetOwnerTo(const MyString &user) {
 		// root/condor.
 
 	if( queue_super_user_may_impersonate_regex ) {
-		if( queue_super_user_may_impersonate_regex->match(user.Value()) ) {
+		if( queue_super_user_may_impersonate_regex->match(user.c_str()) ) {
 			return true;
 		}
-		dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this does not match the QUEUE_SUPER_USER_MAY_IMPERSONATE regular expression.\n",user.Value());
+		dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this does not match the QUEUE_SUPER_USER_MAY_IMPERSONATE regular expression.\n",user.c_str());
 		return false;
 	}
 
@@ -2457,7 +2457,7 @@ SuperUserAllowedToSetOwnerTo(const MyString &user) {
 	if( owner_history.lookup(user,junk) != -1 ) {
 		return true;
 	}
-	dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this instance of the schedd has never seen that user submit any jobs.\n",user.Value());
+	dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this instance of the schedd has never seen that user submit any jobs.\n",user.c_str());
 	return false;
 }
 
@@ -3561,7 +3561,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 						fixed_reason += '"';
 					}
 					if( SetAttribute(cluster_id, proc_id, ATTR_REMOVE_REASON, 
-									 fixed_reason.Value()) < 0 ) {
+									 fixed_reason.c_str()) < 0 ) {
 						dprintf( D_ALWAYS, "WARNING: Failed to set %s to \"%s\" for "
 								 "job %d.%d\n", ATTR_REMOVE_REASON, reason, cluster_id,
 								 proc_id );
@@ -4206,7 +4206,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				owner_buf.truncate(owner_buf.length()-1);
 				owner_is_quoted = true;
 			}
-			owner = owner_buf.Value();
+			owner = owner_buf.c_str();
 		}
 
 		bool set_to_nobody = false;
@@ -4267,9 +4267,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// See gittrack #1018.
 			dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s when previously set to \"%s\"\n",
-					attr_value, orig_owner.Value());
+					attr_value, orig_owner.c_str());
 			if (err) err->pushf("QMGMT", EACCES, "Setting owner to %s when previously "
-				"set to %s is not permitted.", attr_value, orig_owner.Value());
+				"set to %s is not permitted.", attr_value, orig_owner.c_str());
 			errno = EACCES;
 			return -1;
 		}
@@ -4589,7 +4589,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	round_param_name = "SCHEDD_ROUND_ATTR_";
 	round_param_name += attr_name;
 
-	char *round_param = param(round_param_name.Value());
+	char *round_param = param(round_param_name.c_str());
 
 	if( round_param && *round_param && strcmp(round_param,"0") ) {
 		classad::Value::ValueType attr_type = classad::Value::NULL_VALUE;
@@ -4641,7 +4641,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					percent > 1000 || percent < 0 )
 				{
 					EXCEPT("Invalid rounding parameter %s=%s",
-						   round_param_name.Value(),round_param);
+						   round_param_name.c_str(),round_param);
 				}
 				if( fabs(fvalue) < 0.000001 || percent < 0.000001 ) {
 					new_value = attr_value; // unmodified
@@ -4663,7 +4663,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			else {
 					// round to specified power of 10
 				unsigned int base;
-				int exp = param_integer(round_param_name.Value(),0,0,9);
+				int exp = param_integer(round_param_name.c_str(),0,0,9);
 
 					// now compute the rounded value
 					// set base to be 10^exp
@@ -4688,7 +4688,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		} else {
 			dprintf(D_FULLDEBUG,
 				"%s=%s, but value '%s' is not a scalar - ignored\n",
-				round_param_name.Value(),round_param,attr_value);
+				round_param_name.c_str(),round_param,attr_value);
 		}
 	}
 	free( round_param );
@@ -5042,16 +5042,16 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	priv_state old_priv = set_root_priv();
 	// Delete the file
 	struct stat stat_buff;
-	if (stat (filename.Value(), &stat_buff) == 0) {
+	if (stat (filename.c_str(), &stat_buff) == 0) {
 		// If the file exists, delete it
-		if (unlink (filename.Value()) && errno != ENOENT) {
+		if (unlink (filename.c_str()) && errno != ENOENT) {
 			set_priv(old_priv);
 			return -1;
 		}
 	}
 
 	// Create the file
-	int fd = safe_open_wrapper_follow(filename.Value(), O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
+	int fd = safe_open_wrapper_follow(filename.c_str(), O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
@@ -5103,17 +5103,17 @@ DestroyMyProxyPassword( int cluster_id, int proc_id )
 
 	// Delete the file
 	struct stat stat_buff;
-	if( stat(filename.Value(), &stat_buff) == 0 ) {
+	if( stat(filename.c_str(), &stat_buff) == 0 ) {
 			// If the file exists, delete it
-		if( unlink( filename.Value()) < 0 && errno != ENOENT ) {
+		if( unlink( filename.c_str()) < 0 && errno != ENOENT ) {
 			dprintf( D_ALWAYS, "unlink(%s) failed: errno %d (%s)\n",
-					 filename.Value(), errno, strerror(errno) );
+					 filename.c_str(), errno, strerror(errno) );
 		 	set_priv(old_priv);
 			return -1;
 
 		}
 		dprintf( D_FULLDEBUG, "Destroyed MPP %d.%d: %s\n", cluster_id, 
-				 proc_id, filename.Value() );
+				 proc_id, filename.c_str() );
 	}
 
 	// Switch back to non-root
@@ -5137,7 +5137,7 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	
 	MyString filename;
 	filename.formatstr( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
-	int fd = safe_open_wrapper_follow(filename.Value(), O_RDONLY);
+	int fd = safe_open_wrapper_follow(filename.c_str(), O_RDONLY);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
@@ -6525,7 +6525,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					ClassAd tmpJobAd(*ad);
 					const char * INTERNAL_DD_EXPR = "InternalDDExpr";
 
-					bool isok = tmpJobAd.AssignExpr(INTERNAL_DD_EXPR, expr_to_add.Value());
+					bool isok = tmpJobAd.AssignExpr(INTERNAL_DD_EXPR, expr_to_add.c_str());
 					if( ! isok ) {
 						attribute_not_found = true;
 						break;
@@ -6542,11 +6542,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					replacement_value += result;
 					search_pos = replacement_value.length();
 					replacement_value += right;
-					expanded_ad->AssignExpr(curr_attr_to_expand, replacement_value.Value());
-					dprintf(D_FULLDEBUG,"$$([]) substitution: %s=%s\n",curr_attr_to_expand,replacement_value.Value());
+					expanded_ad->AssignExpr(curr_attr_to_expand, replacement_value.c_str());
+					dprintf(D_FULLDEBUG,"$$([]) substitution: %s=%s\n",curr_attr_to_expand,replacement_value.c_str());
 
 					free(attribute_value);
-					attribute_value = strdup(replacement_value.Value());
+					attribute_value = strdup(replacement_value.c_str());
 
 
 				} else  {
@@ -6590,7 +6590,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						MyString expr;
 						expr = "MATCH_";
 						expr += name;
-						value = sPrintExpr(*ad, expr.Value());
+						value = sPrintExpr(*ad, expr.c_str());
 						value_came_from_jobad = true;
 					}
 
@@ -6643,10 +6643,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						// the GRID universe, but we now need it for flocked
 						// jobs using disconnected starter-shadow (job-leases).
 						// So just always do it.
-						if ( SetAttribute(cluster_id,proc_id,expr.Value(),tvalue) < 0 )
+						if ( SetAttribute(cluster_id,proc_id,expr.c_str(),tvalue) < 0 )
 						{
 							EXCEPT("Failed to store %s into job ad %d.%d",
-								expr.Value(),cluster_id,proc_id);
+								expr.c_str(),cluster_id,proc_id);
 						}
 					}
 					// skip any quotation marks around strings
@@ -6715,10 +6715,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 					MyString match_exp_name = MATCH_EXP;
 					match_exp_name += itr->first;
-					if ( SetAttribute(cluster_id,proc_id,match_exp_name.Value(),new_value) < 0 )
+					if ( SetAttribute(cluster_id,proc_id,match_exp_name.c_str(),new_value) < 0 )
 					{
 						EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
-						       match_exp_name.Value(), new_value, cluster_id, proc_id);
+						       match_exp_name.c_str(), new_value, cluster_id, proc_id);
 					}
 				}
 			}
@@ -6799,7 +6799,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			// a client.  Then restore Q_SOCK back to the original value.
 			QmgmtPeer* saved_sock = Q_SOCK;
 			Q_SOCK = NULL;
-			holdJob(cluster_id, proc_id, hold_reason.Value());
+			holdJob(cluster_id, proc_id, hold_reason.c_str());
 			Q_SOCK = saved_sock;
 
 			char buf[256];
@@ -6848,14 +6848,14 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				hold_reason.formatstr(
 					"Failed to convert environment to target syntax"
 					" for starter (opsys=%s): %s",
-					opsys ? opsys : "NULL",env_error_msg.Value());
+					opsys ? opsys : "NULL",env_error_msg.c_str());
 
 
 				dprintf( D_ALWAYS, 
 					"Putting job %d.%d on hold - cannot convert environment"
 					" to target syntax for starter (opsys=%s): %s\n",
 					cluster_id, proc_id, opsys ? opsys : "NULL",
-						 env_error_msg.Value() );
+						 env_error_msg.c_str() );
 
 				// SetAttribute does security checks if Q_SOCK is
 				// not NULL.  So, set Q_SOCK to be NULL before
@@ -6865,7 +6865,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 				QmgmtPeer* saved_sock = Q_SOCK;
 				Q_SOCK = NULL;
-				holdJob(cluster_id, proc_id, hold_reason.Value());
+				holdJob(cluster_id, proc_id, hold_reason.c_str());
 				Q_SOCK = saved_sock;
 			}
 
@@ -6881,14 +6881,14 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				hold_reason.formatstr(
 					"Failed to convert arguments to target syntax"
 					" for starter: %s",
-					arg_error_msg.Value());
+					arg_error_msg.c_str());
 
 
 				dprintf( D_ALWAYS, 
 					"Putting job %d.%d on hold - cannot convert arguments"
 					" to target syntax for starter: %s\n",
 					cluster_id, proc_id,
-					arg_error_msg.Value() );
+					arg_error_msg.c_str() );
 
 				// SetAttribute does security checks if Q_SOCK is
 				// not NULL.  So, set Q_SOCK to be NULL before
@@ -6898,7 +6898,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 				QmgmtPeer* saved_sock = Q_SOCK;
 				Q_SOCK = NULL;
-				holdJob(cluster_id, proc_id, hold_reason.Value());
+				holdJob(cluster_id, proc_id, hold_reason.c_str());
 				Q_SOCK = saved_sock;
 			}
 

@@ -150,7 +150,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		assert( syscall_sock->get(owner) );
 		assert( syscall_sock->end_of_message() );
 
-		rval = QmgmtSetEffectiveOwner( owner.Value() );
+		rval = QmgmtSetEffectiveOwner( owner.c_str() );
 		terrno = errno;
 
 		syscall_sock->encode();
@@ -163,7 +163,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		char const *fqu = syscall_sock->getFullyQualifiedUser();
 		dprintf(D_SYSCALLS, "\tSetEffectiveOwner\n");
 		dprintf(D_SYSCALLS, "\tauthenticated user = '%s'\n", fqu ? fqu : "");
-		dprintf(D_SYSCALLS, "\trequested owner = '%s'\n", owner.Value());
+		dprintf(D_SYSCALLS, "\trequested owner = '%s'\n", owner.c_str());
 		dprintf(D_SYSCALLS, "\trval %d, errno %d\n", rval, terrno);
 
 		return 0;

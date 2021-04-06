@@ -1129,7 +1129,7 @@ int Starter::execDCStarter(
 		MyString args_string;
 		final_args->GetArgsStringForDisplay(&args_string);
 		dprintf( D_FULLDEBUG, "About to Create_Process \"%s\"\n",
-				 args_string.Value() );
+				 args_string.c_str() );
 	}
 
 	FamilyInfo fi;

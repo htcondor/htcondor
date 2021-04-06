@@ -1187,7 +1187,7 @@ cred_get_password_handler(int /*i*/, Stream *s)
 	if ( s->type() != Stream::reli_sock ) {
 		dprintf(D_ALWAYS,
 			"WARNING - password fetch attempt via UDP from %s\n",
-				((Sock*)s)->peer_addr().to_sinful().Value());
+				((Sock*)s)->peer_addr().to_sinful().c_str());
 		return TRUE;
 	}
 
@@ -1198,7 +1198,7 @@ cred_get_password_handler(int /*i*/, Stream *s)
 	if ( !sock->isAuthenticated() ) {
 		dprintf(D_ALWAYS,
 				"WARNING - authentication failed for password fetch attempt from %s\n",
-				sock->peer_addr().to_sinful().Value());
+				sock->peer_addr().to_sinful().c_str());
 		goto bail_out;
 	}
 
@@ -1209,7 +1209,7 @@ cred_get_password_handler(int /*i*/, Stream *s)
 	if ( !sock->get_encryption() ) {
 		dprintf(D_ALWAYS,
 			"WARNING - password fetch attempt without encryption from %s\n",
-				sock->peer_addr().to_sinful().Value());
+				sock->peer_addr().to_sinful().c_str());
 		goto bail_out;
 	}
 
@@ -1239,7 +1239,7 @@ cred_get_password_handler(int /*i*/, Stream *s)
 
 	client_user = strdup(sock->getOwner());
 	client_domain = strdup(sock->getDomain());
-	client_ipaddr = strdup(sock->peer_addr().to_sinful().Value());
+	client_ipaddr = strdup(sock->peer_addr().to_sinful().c_str());
 
 	// we do not want to send out the pool password through a command handler
 	if(strcmp(user, POOL_PASSWORD_USERNAME) == 0) {
@@ -1315,7 +1315,7 @@ cred_get_cred_handler(int /*i*/, Stream *s)
 	if ( s->type() != Stream::reli_sock ) {
 		dprintf(D_ALWAYS,
 			"WARNING - credential fetch attempt via UDP from %s\n",
-			((Sock*)s)->peer_addr().to_sinful().Value());
+			((Sock*)s)->peer_addr().to_sinful().c_str());
 		return TRUE;
 	}
 
@@ -1326,7 +1326,7 @@ cred_get_cred_handler(int /*i*/, Stream *s)
 	if ( !sock->isAuthenticated() ) {
 		dprintf(D_ALWAYS,
 			"WARNING - authentication failed for credential fetch attempt from %s\n",
-			sock->peer_addr().to_sinful().Value());
+			sock->peer_addr().to_sinful().c_str());
 		goto bail_out;
 	}
 
@@ -1337,7 +1337,7 @@ cred_get_cred_handler(int /*i*/, Stream *s)
 	if ( !sock->get_encryption() ) {
 		dprintf(D_ALWAYS,
 			"WARNING - credential fetch attempt without encryption from %s\n",
-			sock->peer_addr().to_sinful().Value());
+			sock->peer_addr().to_sinful().c_str());
 		goto bail_out;
 	}
 
@@ -1373,7 +1373,7 @@ cred_get_cred_handler(int /*i*/, Stream *s)
 
 	client_user = strdup(sock->getOwner());
 	client_domain = strdup(sock->getDomain());
-	client_ipaddr = strdup(sock->peer_addr().to_sinful().Value());
+	client_ipaddr = strdup(sock->peer_addr().to_sinful().c_str());
 
 	// Now fetch the password from the secure store --
 	// If not LocalSystem, this step will fail.
@@ -1473,7 +1473,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 	if ( s->type() != Stream::reli_sock ) {
 		dprintf(D_ALWAYS,
 			"WARNING - credential store attempt via UDP from %s\n",
-				((Sock*)s)->peer_addr().to_sinful().Value());
+				((Sock*)s)->peer_addr().to_sinful().c_str());
 		return FALSE;
 	}
 
@@ -1484,7 +1484,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 	if ( !sock->isAuthenticated() ) {
 		dprintf(D_ALWAYS,
 			"WARNING - authentication failed for credential store attempt from %s\n",
-			sock->peer_addr().to_sinful().Value());
+			sock->peer_addr().to_sinful().c_str());
 		return FALSE;
 	}
 
@@ -1837,11 +1837,11 @@ int store_pool_cred_handler(int, Stream *s)
 
 	// do the real work
 	if (pw && *pw) {
-		result = store_cred_password(username.Value(), pw, GENERIC_ADD);
+		result = store_cred_password(username.c_str(), pw, GENERIC_ADD);
 		SecureZeroMemory(pw, strlen(pw));
 	}
 	else {
-		result = store_cred_password(username.Value(), NULL, GENERIC_DELETE);
+		result = store_cred_password(username.c_str(), NULL, GENERIC_DELETE);
 	}
 
 	s->encode();

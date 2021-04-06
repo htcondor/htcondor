@@ -381,8 +381,8 @@ public:
 	long long get_disk() const { return c_disk; }
 	double get_disk_fraction() const { return c_disk_fraction; }
 	long long get_total_disk() const { return c_total_disk; }
-	char const *executeDir() { return c_execute_dir.Value(); }
-	char const *executePartitionID() { return c_execute_partition_id.Value(); }
+	char const *executeDir() { return c_execute_dir.c_str(); }
+	char const *executePartitionID() { return c_execute_partition_id.c_str(); }
     const slotres_map_t& get_slotres_map() { return c_slotres_map; }
     const slotres_devIds_map_t & get_slotres_ids_map() { return c_slotres_ids_map; }
     const MachAttributes* get_mach_attr() { return map; }

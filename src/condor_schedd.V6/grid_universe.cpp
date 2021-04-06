@@ -233,7 +233,7 @@ GridUniverseLogic::scratchFilePath(gman_node_t *gman_node, MyString & path)
 					gman_node,daemonCore->getpid());
 	auto_free_ptr prefix(temp_dir_path());
 	ASSERT(prefix);
-	return dircat(prefix,filename.Value(),path);
+	return dircat(prefix,filename.c_str(),path);
 }
 
 
@@ -272,7 +272,7 @@ GridUniverseLogic::GManagerReaper(int pid, int exit_status)
 							 daemonCore->GetExceptionString( exit_status ) );
 	}
 	dprintf(D_ALWAYS, "condor_gridmanager (PID %d, owner %s) exited %s.\n",
-			pid, owner_safe.Value(), exit_reason.Value() );
+			pid, owner_safe.c_str(), exit_reason.c_str() );
 	if(WIFEXITED(exit_status) && WEXITSTATUS(exit_status) == DPRINTF_ERROR) {
 		const char *condorUserName = get_condor_username();
 
@@ -463,7 +463,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 
 	if(!args.AppendArgsV1RawOrV2Quoted(gman_args,&error_msg)) {
 		dprintf( D_ALWAYS, "ERROR: failed to parse gridmanager args: %s\n",
-				 error_msg.Value());
+				 error_msg.c_str());
 		free(gman_binary);
 		free(gman_args);
 		return NULL;
@@ -491,14 +491,14 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		args.AppendArg(attr_value);
 	}
 	args.AppendArg("-C");
-	args.AppendArg(constraint.Value());
+	args.AppendArg(constraint.c_str());
 
 	MyString full_owner_name(owner);
 	if ( domain && *domain ) {
 		full_owner_name.formatstr_cat( "@%s", domain );
 	}
 	args.AppendArg("-o");
-	args.AppendArg(full_owner_name.Value());
+	args.AppendArg(full_owner_name.c_str());
 
 	if (!init_user_ids(owner, domain)) {
 		dprintf(D_ALWAYS,"ERROR - init_user_ids() failed in GRIDMANAGER\n");
@@ -582,7 +582,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString args_string;
 		args.GetArgsStringForDisplay(&args_string);
-		dprintf(D_FULLDEBUG,"Really Execing %s\n",args_string.Value());
+		dprintf(D_FULLDEBUG,"Really Execing %s\n",args_string.c_str());
 	}
 
 	MyString daemon_sock = SharedPortEndpoint::GenerateEndpointName( "gridmanager" );

@@ -69,7 +69,7 @@ MyString::~MyString()
 
 MyString::operator std::string() const
 {
-    std::string r = this->Value();
+    std::string r = this->c_str();
     return r;
 }
 
@@ -131,7 +131,7 @@ MyString::truncate(int pos)
 MyString& MyString::
 operator=(const MyString& S) 
 {
-	assign_str(S.Value(), S.Len);
+	assign_str(S.c_str(), S.Len);
     return *this;
 }
 
@@ -258,7 +258,7 @@ MyString&
 MyString::operator+=(const MyString& S) 
 {
 	
-    append_str( S.Value(), S.Len );
+    append_str( S.c_str(), S.Len );
     return *this;
 }
 
@@ -324,7 +324,7 @@ MyString::append_to_list(char const *str,char const *delim /* = "," */) {
 
 void
 MyString::append_to_list(MyString const &str,char const *delim /* ="," */) {
-	append_to_list(str.Value(),delim);
+	append_to_list(str.c_str(),delim);
 }
 
 MyString& 
@@ -664,7 +664,7 @@ MyString::vformatstr_cat(const char *format,va_list args)
 	int s_len;
 
     if( !format || *format == '\0' ) {
-		return Value();
+		return c_str();
 	}
 #ifdef HAVE_VASPRINTF
 	s_len = vasprintf(&buffer, format, args);
@@ -690,7 +690,7 @@ MyString::vformatstr_cat(const char *format,va_list args)
 	::vsprintf(Data + Len, format, args);
 #endif
 	Len += s_len;
-    return Value();
+    return c_str();
 }
 
 const char *
@@ -1136,7 +1136,7 @@ const char *MyStringTokener::GetNextToken(const char *delim, bool skipBlankToken
 MyStringWithTokener::MyStringWithTokener(const MyString &S)
 {
 	init();
-	assign_str(S.Value(), S.Len);
+	assign_str(S.c_str(), S.Len);
 }
 
 MyStringWithTokener::MyStringWithTokener(const char *s)

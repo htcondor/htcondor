@@ -912,7 +912,7 @@ kill_daemon_ad_file()
 {
 	MyString param_name;
 	param_name.formatstr( "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
-	char *ad_file = param(param_name.Value());
+	char *ad_file = param(param_name.c_str());
 	if( !ad_file ) {
 		return;
 	}
@@ -938,7 +938,7 @@ drop_addr_file()
 	prefix += get_mySubSystem()->getName();
 
 	// Fill in addrFile[0] and addr[0] with info about regular command port
-	sprintf( addr_file, "%s_ADDRESS_FILE", prefix.Value() );
+	sprintf( addr_file, "%s_ADDRESS_FILE", prefix.c_str() );
 	if( addrFile[0] ) {
 		free( addrFile[0] );
 	}
@@ -951,7 +951,7 @@ drop_addr_file()
 	}
 
 	// Fill in addrFile[1] and addr[1] with info about superuser command port
-	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", prefix.Value() );
+	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", prefix.c_str() );
 	if( addrFile[1] ) {
 		free( addrFile[1] );
 	}
@@ -962,21 +962,21 @@ drop_addr_file()
 		if( addrFile[i] ) {
 			MyString newAddrFile;
 			newAddrFile.formatstr("%s.new",addrFile[i]);
-			if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
+			if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.c_str(), "w")) ) {
 				fprintf( ADDR_FILE, "%s\n", addr[i] );
 				fprintf( ADDR_FILE, "%s\n", CondorVersion() );
 				fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
 				fclose( ADDR_FILE );
-				if( rotate_file(newAddrFile.Value(),addrFile[i])!=0 ) {
+				if( rotate_file(newAddrFile.c_str(),addrFile[i])!=0 ) {
 					dprintf( D_ALWAYS,
 							 "DaemonCore: ERROR: failed to rotate %s to %s\n",
-							 newAddrFile.Value(),
+							 newAddrFile.c_str(),
 							 addrFile[i]);
 				}
 			} else {
 				dprintf( D_ALWAYS,
 						 "DaemonCore: ERROR: Can't open address file %s\n",
-						 newAddrFile.Value() );
+						 newAddrFile.c_str() );
 			}
 		}
 	}	// end of for loop
@@ -1192,11 +1192,11 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 	
 		// Next, try to create the given directory, if it doesn't
 		// already exist.
-	make_dir( newdir.Value() );
+	make_dir( newdir.c_str() );
 
 		// Now, set our own config hashtable entry so we start using
 		// this new directory.
-	config_insert( param_name, newdir.Value() );
+	config_insert( param_name, newdir.c_str() );
 
 	// Finally, insert the _condor_<param_name> environment
 	// variable, so our children get the right configuration.
@@ -1206,7 +1206,7 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 	env_str += param_name;
 	env_str += "=";
 	env_str += newdir;
-	char *env_cstr = strdup( env_str.Value() );
+	char *env_cstr = strdup( env_str.c_str() );
 	if( SetEnv(env_cstr) != TRUE ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
 				 env_cstr );
@@ -1238,7 +1238,7 @@ handle_dynamic_dirs()
 	int mypid = daemonCore->getpid();
 	char buf[256];
 	// TODO: Picking IPv4 arbitrarily.
-	sprintf( buf, "%s-%d", get_local_ipaddr(CP_IPV4).to_ip_string().Value(), mypid );
+	sprintf( buf, "%s-%d", get_local_ipaddr(CP_IPV4).to_ip_string().c_str(), mypid );
 
 	dprintf(D_DAEMONCORE | D_VERBOSE, "Using dynamic directories with suffix: %s\n", buf);
 	set_dynamic_dir( "LOG", buf );
@@ -1696,15 +1696,15 @@ handle_fetch_log(int cmd, Stream *s )
 		full_filename += ext;
 
 		if( strchr(ext,DIR_DELIM_CHAR) ) {
-			dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: invalid file extension specified by user: ext=%s, filename=%s\n",ext,full_filename.Value() );
+			dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: invalid file extension specified by user: ext=%s, filename=%s\n",ext,full_filename.c_str() );
 			free(pname);
 			return FALSE;
 		}
 	}
 
-	int fd = safe_open_wrapper_follow(full_filename.Value(),O_RDONLY);
+	int fd = safe_open_wrapper_follow(full_filename.c_str(),O_RDONLY);
 	if(fd<0) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",full_filename.Value());
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",full_filename.c_str());
 		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
 		if (!stream->code(result)) {
 				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
@@ -1808,7 +1808,7 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 		MyString fullPath(dirName);
 		fullPath += "/";
 		fullPath += filename;
-		int fd = safe_open_wrapper_follow(fullPath.Value(),O_RDONLY);
+		int fd = safe_open_wrapper_follow(fullPath.c_str(),O_RDONLY);
 		if (fd >= 0) {
 			filesize_t size;
 			stream->put_file(&size, fd);
@@ -3864,11 +3864,11 @@ int dc_main( int argc, char** argv )
 	// See if the config tells us to wait on startup for a debugger to attach.
 	MyString debug_wait_param;
 	debug_wait_param.formatstr("%s_DEBUG_WAIT", get_mySubSystem()->getName() );
-	if (param_boolean(debug_wait_param.Value(), false, false)) {
+	if (param_boolean(debug_wait_param.c_str(), false, false)) {
 		volatile int debug_wait = 1;
 		dprintf(D_ALWAYS,
 				"%s is TRUE, waiting for debugger to attach to pid %d.\n", 
-				debug_wait_param.Value(), (int)::getpid());
+				debug_wait_param.c_str(), (int)::getpid());
 		#ifndef WIN32
 			// since we are about to delay for an arbitrary amount of time, write to the background pipe
 			// so that our forked parent can exit.
@@ -3965,7 +3965,7 @@ int dc_main( int argc, char** argv )
 
 	if (global_config_source != "") {
 		dprintf(D_ALWAYS, "Using config source: %s\n", 
-				global_config_source.Value());
+				global_config_source.c_str());
 	} else {
 		const char* env_name = EnvGetName( ENV_CONFIG );
 		char* env = getenv( env_name );
@@ -4360,7 +4360,7 @@ int dc_main( int argc, char** argv )
 	// send it to the SecMan object so it can include it in any
 	// classads it sends.  if this is NULL, it will not include
 	// the attribute.
-	daemonCore->sec_man->set_parent_unique_id(parent_id.Value());
+	daemonCore->sec_man->set_parent_unique_id(parent_id.c_str());
 
 	// now re-set the identity so that any children we spawn will have it
 	// in their environment

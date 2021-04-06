@@ -989,7 +989,7 @@ int Sock::special_connect(char const *host,int /*port*/,bool nonblocking)
 		//   We should do a better job of detecting whether sinful
 		//   points to a local interface.
 		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
-		if( sinful.getHost() && strcmp(my_ip.Value(),sinful.getHost())==0 ) {
+		if( sinful.getHost() && strcmp(my_ip.c_str(),sinful.getHost())==0 ) {
 			same_host = true;
 		}
 
@@ -1182,13 +1182,13 @@ Sock::get_sinful_public() const
 			if (addrs.empty()) {
 				dprintf(D_ALWAYS,
 					"failed to resolve address of TCP_FORWARDING_HOST=%s\n",
-					tcp_forwarding_host.Value());
+					tcp_forwarding_host.c_str());
 				return NULL;
 			}
 			addr = addrs.front();
 		}
 		addr.set_port(get_port());
-		_sinful_public_buf = addr.to_sinful().Value();
+		_sinful_public_buf = addr.to_sinful().c_str();
 
 		std::string alias;
 		if( param(alias,"HOST_ALIAS") ) {

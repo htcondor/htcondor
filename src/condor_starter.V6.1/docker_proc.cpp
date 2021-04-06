@@ -170,7 +170,7 @@ int DockerProc::StartJob() {
 	Env job_env;
 	MyString env_errors;
 	if( !Starter->GetJobEnv(JobAd,&job_env,&env_errors) ) {
-		dprintf( D_ALWAYS, "Aborting DockerProc::StartJob: %s\n", env_errors.Value());
+		dprintf( D_ALWAYS, "Aborting DockerProc::StartJob: %s\n", env_errors.c_str());
 		return 0;
 	}
 
@@ -614,7 +614,7 @@ DockerProc::AcceptSSHClient(Stream *stream) {
 	Env env;
 	MyString env_errors;
 	if( !Starter->GetJobEnv(JobAd,&env,&env_errors) ) {
-		dprintf( D_ALWAYS, "Aborting DockerProc::exec: %s\n", env_errors.Value());
+		dprintf( D_ALWAYS, "Aborting DockerProc::exec: %s\n", env_errors.c_str());
 		return 0;
 	}
 

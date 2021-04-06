@@ -74,7 +74,7 @@ void join_args(SimpleList<MyString> const &args_list,MyString *result,int start_
 	MyString *arg=NULL;
 	for(int i=0;it.Next(arg);i++) {
 		if(i<start_arg) continue;
-		append_arg(arg->Value(),*result);
+		append_arg(arg->c_str(),*result);
 	}
 }
 
@@ -160,7 +160,7 @@ ArgListToArgsArray(SimpleList<MyString> const &args_list)
 	char **args_array = (char **)malloc((args_list.Number()+1)*sizeof(char*));
 	ASSERT(args_array);
 	for(i=0;it.Next(arg);i++) {
-		args_array[i] = strdup(arg->Value());
+		args_array[i] = strdup(arg->c_str());
 		ASSERT(args_array[i]);
 	}
 	args_array[i] = NULL;
@@ -205,15 +205,15 @@ ArgList::GetArg(int n) const {
 	MyString *arg;
 	int i;
 	for(i=0;it.Next(arg);i++) {
-		if(i == n) return arg->Value();
+		if(i == n) return arg->c_str();
 	}
 	return NULL;
 }
 
 void
 ArgList::AppendArg(MyString arg) {
-	ASSERT(arg.Value());
-	ASSERT(args_list.Append(arg.Value()));
+	ASSERT(arg.c_str());
+	ASSERT(args_list.Append(arg.c_str()));
 }
 
 void
@@ -288,7 +288,7 @@ ArgList::AppendArgsV1RawOrV2Quoted(char const *args,MyString *error_msg)
 		if(!V2QuotedToV2Raw(args,&v2,error_msg)) {
 			return false;
 		}
-		return AppendArgsV2Raw(v2.Value(),error_msg);
+		return AppendArgsV2Raw(v2.c_str(),error_msg);
 	}
 
 		// It is a raw V1 input string, not enclosed in double-quotes.
@@ -305,7 +305,7 @@ ArgList::AppendArgsV1WackedOrV2Quoted(char const *args,MyString *error_msg)
 		if(!V2QuotedToV2Raw(args,&v2,error_msg)) {
 			return false;
 		}
-		return AppendArgsV2Raw(v2.Value(),error_msg);
+		return AppendArgsV2Raw(v2.c_str(),error_msg);
 	}
 
 		// It is a V1Wacked string.  Literal double-quotes are
@@ -315,7 +315,7 @@ ArgList::AppendArgsV1WackedOrV2Quoted(char const *args,MyString *error_msg)
 		return false;
 	}
 
-	return AppendArgsV1Raw(v1.Value(),error_msg);
+	return AppendArgsV1Raw(v1.c_str(),error_msg);
 }
 
 bool
@@ -338,7 +338,7 @@ ArgList::AppendArgsV2Quoted(char const *args,MyString *error_msg)
 	if(!V2QuotedToV2Raw(args,&v2,error_msg)) {
 		return false;
 	}
-	return AppendArgsV2Raw(v2.Value(),error_msg);
+	return AppendArgsV2Raw(v2.c_str(),error_msg);
 }
 
 bool
@@ -402,7 +402,7 @@ ArgList::AppendArgsV1Raw_win32(char const *args,MyString *error_msg)
 				if(*args != '"') {
 					MyString msg;
 					msg.formatstr("Unterminated quote in windows argument string starting here: %s",begin_quote);
-					AddErrorMessage(msg.Value(),error_msg);
+					AddErrorMessage(msg.c_str(),error_msg);
 					return false;
 				}
 				args++;
@@ -539,7 +539,7 @@ ArgList::AppendArgsFromArgList(ArgList const &args)
 	SimpleListIterator<MyString> it(args.args_list);
 	MyString *arg=NULL;
 	while(it.Next(arg)) {
-		AppendArg(arg->Value());
+		AppendArg(arg->c_str());
 	}
 }
 
@@ -643,7 +643,7 @@ ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyS
 	{
 		MyString args2;
 		if(!GetArgsStringV2Raw(&args2,error_msg)) return false;
-		ad->Assign(ATTR_JOB_ARGUMENTS2,args2.Value());
+		ad->Assign(ATTR_JOB_ARGUMENTS2,args2.c_str());
 	}
 	else if(has_args2) {
 		ad->Delete(ATTR_JOB_ARGUMENTS2);
@@ -653,7 +653,7 @@ ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyS
 		MyString args1;
 
 		if(GetArgsStringV1Raw(&args1,error_msg)) {
-			ad->Assign(ATTR_JOB_ARGUMENTS1,args1.Value());
+			ad->Assign(ATTR_JOB_ARGUMENTS1,args1.c_str());
 		}
 		else {
 			if(condor_version_requires_v1 && !input_was_unknown_platform_v1) {
@@ -675,7 +675,7 @@ ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyS
 				ad->Delete(ATTR_JOB_ARGUMENTS1);
 				ad->Delete(ATTR_JOB_ARGUMENTS2);
 				if(error_msg) {
-					dprintf(D_FULLDEBUG,"Failed to convert arguments to V1 syntax: %s\n",error_msg->Value());
+					dprintf(D_FULLDEBUG,"Failed to convert arguments to V1 syntax: %s\n",error_msg->c_str());
 				}
 			}
 			else {
@@ -726,16 +726,16 @@ ArgList::GetArgsStringV1Raw(MyString *result,MyString *error_msg) const
 	MyString *arg=NULL;
 	ASSERT(result);
 	while(it.Next(arg)) {
-		if(!IsSafeArgV1Value(arg->Value())) {
+		if(!IsSafeArgV1Value(arg->c_str())) {
 			if(error_msg) {
-				error_msg->formatstr("Cannot represent '%s' in V1 arguments syntax.",arg->Value());
+				error_msg->formatstr("Cannot represent '%s' in V1 arguments syntax.",arg->c_str());
 			}
 			return false;
 		}
 		if(result->length()) {
 			(*result) += " ";
 		}
-		(*result) += arg->Value();
+		(*result) += arg->c_str();
 	}
 	return true;
 }
@@ -767,7 +767,7 @@ ArgList::GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg) c
 void
 ArgList::V2RawToV2Quoted(MyString const &v2_raw,MyString *result)
 {
-	result->formatstr_cat("\"%s\"",v2_raw.EscapeChars("\"",'\"').Value());
+	result->formatstr_cat("\"%s\"",v2_raw.EscapeChars("\"",'\"').c_str());
 }
 
 void
@@ -931,7 +931,7 @@ ArgList::GetArgsStringWin32(MyString *result,int skip_args) const
 			// In V2 arg syntax, we encode arguments in a way that should
 			// be parsed correctly by Windows function CommandLineToArgv().
 
-			char const *argstr = arg->Value();
+			char const *argstr = arg->c_str();
 			if(argstr[strcspn(argstr," \t\"")] == '\0') {
 				// No special characters in the argument.
 				(*result) += (*arg);
@@ -1042,7 +1042,7 @@ ArgList::V2QuotedToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
 				"Unexpected characters following double-quote.  "
 				"Did you forget to escape the double-quote by repeating it?  "
 				"Here is the quote and trailing characters: %s\n",quote_terminated);
-			AddErrorMessage(msg.Value(),errmsg);
+			AddErrorMessage(msg.c_str(),errmsg);
 		}
 		return false;
 	}
@@ -1061,7 +1061,7 @@ ArgList::V1WackedToV1Raw(char const *v1_input,MyString *v1_raw,MyString *errmsg)
 			if(errmsg) {
 				MyString msg;
 				msg.formatstr("Found illegal unescaped double-quote: %s",v1_input);
-				AddErrorMessage(msg.Value(),errmsg);
+				AddErrorMessage(msg.c_str(),errmsg);
 			}
 			return false;
 		}
@@ -1116,7 +1116,7 @@ ArgList::GetArgsStringSystem(MyString *result,int skip_args) const
 		if(i<skip_args) continue;
 		result->formatstr_cat("%s\"%s\"",
 							result->empty() ? "" : " ",
-							arg->EscapeChars("\"\\$`",'\\').Value());
+							arg->EscapeChars("\"\\$`",'\\').c_str());
 	}
 	return true;
 #endif

@@ -322,7 +322,7 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 		MyString tmp_fmt;
 		if (fmt->width) {
 			tmp_fmt.formatstr("%%-%ds", fmt->width);
-			retval.formatstr_cat(tmp_fmt.Value(), pszHead);
+			retval.formatstr_cat(tmp_fmt.c_str(), pszHead);
 		} else {
 			retval += pszHead;
 		}
@@ -340,7 +340,7 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 		retval += row_suffix;
 
 	// Convert return MyString to new char *.
-	return strdup(retval.Value() );
+	return strdup(retval.c_str() );
 }
 
 char * AttrListPrintMask::
@@ -1244,9 +1244,9 @@ int parse_autoformat_args (
 		lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 		if (diagnostic) {
 			printf ("Arg %d --- register format [%s] width=%d, opt=0x%x [%s]\n",
-				ixArg, lbl.Value(), wid, opts, pattr);
+				ixArg, lbl.c_str(), wid, opts, pattr);
 		}
-		print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
+		print_mask.registerFormat(lbl.c_str(), wid, opts, pattr);
 		++ixArg;
 	}
 	return ixArg;

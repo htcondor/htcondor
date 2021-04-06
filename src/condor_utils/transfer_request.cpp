@@ -174,7 +174,7 @@ TransferRequest::dprintf(unsigned int lvl)
 	::dprintf(lvl, "\tProtocol Version: %d\n", get_protocol_version());
 	::dprintf(lvl, "\tServer Mode: %u\n", get_transfer_service());
 	::dprintf(lvl, "\tNum Transfers: %d\n", get_num_transfers());
-	::dprintf(lvl, "\tPeer Version: %s\n", pv.Value());
+	::dprintf(lvl, "\tPeer Version: %s\n", pv.c_str());
 }
 
 void
@@ -477,7 +477,7 @@ encap_method(const std::string &line)
 TreqMode
 transfer_mode(MyString mode)
 {
-	return transfer_mode(mode.Value());
+	return transfer_mode(mode.c_str());
 }
 
 TreqMode

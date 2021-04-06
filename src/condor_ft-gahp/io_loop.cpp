@@ -1054,7 +1054,7 @@ int do_command_download_sandbox(void *arg, Stream*) {
 	// the "true" param to DownloadFiles here means blocking (i.e. "in the foreground")
 	if (!ft.DownloadFiles(true)) {
 		// FAIL
-		write_to_pipe( ChildErrorPipe, ft.GetInfo().error_desc.Value() );
+		write_to_pipe( ChildErrorPipe, ft.GetInfo().error_desc.c_str() );
 		return 1;
 	}
 
@@ -1119,7 +1119,7 @@ int do_command_upload_sandbox(void *arg, Stream*) {
 	// the "true" param to UploadFiles here means blocking (i.e. "in the foreground")
 	if (!ft.UploadFiles(true)) {
 		// FAIL
-		write_to_pipe( ChildErrorPipe, ft.GetInfo().error_desc.Value() );
+		write_to_pipe( ChildErrorPipe, ft.GetInfo().error_desc.c_str() );
 		return 1;
 	}
 

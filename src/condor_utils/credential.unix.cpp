@@ -51,7 +51,7 @@ Credential::~Credential() {
 
 const char * 
 Credential::GetName() {
-	return name.Value();
+	return name.c_str();
 }
 
 void 
@@ -66,9 +66,9 @@ classad::ClassAd *
 Credential::GetMetadata() {
 	classad::ClassAd * class_ad = new classad::ClassAd();
 	ASSERT (!name.empty());
-	class_ad->InsertAttr (CREDATTR_NAME, name.Value());
+	class_ad->InsertAttr (CREDATTR_NAME, name.c_str());
 	class_ad->InsertAttr (CREDATTR_TYPE, type);
-	class_ad->InsertAttr (CREDATTR_OWNER, owner.Value());
+	class_ad->InsertAttr (CREDATTR_OWNER, owner.c_str());
 	class_ad->InsertAttr (CREDATTR_DATA_SIZE, m_data_size);
 
 	return class_ad;
@@ -115,7 +115,7 @@ Credential::SetOrigOwner (const char * _owner) {
 
 const char *
 Credential::GetOrigOwner() {
-	return orig_owner.Value();
+	return orig_owner.c_str();
 }
 
 void
@@ -125,7 +125,7 @@ Credential::SetOwner (const char * _owner) {
 
 const char *
 Credential::GetOwner() {
-	return owner.Value();
+	return owner.c_str();
 }
 
 int

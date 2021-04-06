@@ -110,7 +110,7 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, pr
 
 		// If we've got initial input to write to stdin, do so now.
     if (hook_stdin && hook_stdin->length()) {
-		daemonCore->Write_Stdin_Pipe(pid, hook_stdin->Value(),
+		daemonCore->Write_Stdin_Pipe(pid, hook_stdin->c_str(),
 									 hook_stdin->length());
 	}
 

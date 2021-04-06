@@ -75,7 +75,7 @@ ThrottleByCategory::SetThrottle( const MyString *category, int maxJobs )
 		if ( info->isSet() && info->_maxJobs != maxJobs ) {
 			debug_printf( DEBUG_NORMAL, "Warning: new maxjobs value %d "
 						"for category %s overrides old value %d\n",
-						maxJobs, category->Value(), info->_maxJobs );
+						maxJobs, category->c_str(), info->_maxJobs );
 			check_warning_strictness( DAG_STRICT_3 );
 		}
 		info->_maxJobs = maxJobs;
@@ -145,7 +145,7 @@ ThrottleByCategory::PrintThrottles( FILE *fp ) /* const */
 	ThrottleInfo	*info;
 	while ( _throttles.iterate( info ) ) {
 		if ( info->isSet() ) {
-			fprintf( fp, "MAXJOBS %s %d\n", info->_category->Value(),
+			fprintf( fp, "MAXJOBS %s %d\n", info->_category->c_str(),
 						info->_maxJobs );
 		}
 	}

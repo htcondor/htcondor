@@ -324,7 +324,7 @@ int DockerAPI::createContainer(
 	char *tmp = param("DOCKER_EXTRA_ARGUMENTS");
 	if(!runArgs.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
 		dprintf(D_ALWAYS,"docker: failed to parse extra arguments: %s\n",
-		args_error.Value());
+		args_error.c_str());
 		free(tmp);
 		return -1;
 	}

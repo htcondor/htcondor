@@ -45,13 +45,13 @@ void GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *partitio
 	MyString execute_param;
 	char *execute_value = NULL;
 	execute_param.formatstr("SLOT%d_EXECUTE",slot_id);
-	execute_value = param( execute_param.Value() );
+	execute_value = param( execute_param.c_str() );
 	if( !execute_value ) {
 		execute_value = param( "EXECUTE" );
 	}
 	if( !execute_value ) {
 		EXCEPT("EXECUTE (or %s) is not defined in the configuration.",
-			   execute_param.Value());
+			   execute_param.c_str());
 	}
 
 #if defined(WIN32)
@@ -65,21 +65,21 @@ void GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *partitio
 #endif
 
 	*execute_dir = execute_value;
-	dprintf(D_FULLDEBUG, "Got execute_dir = %s\n",execute_dir->Value());
+	dprintf(D_FULLDEBUG, "Got execute_dir = %s\n",execute_dir->c_str());
 	free( execute_value );
 
 		// Get a unique identifier for the partition containing the execute dir
 	char *partition_value = NULL;
-	bool partition_rc = sysapi_partition_id( execute_dir->Value(), &partition_value );
+	bool partition_rc = sysapi_partition_id( execute_dir->c_str(), &partition_value );
 	if( !partition_rc ) {
 		struct stat statbuf;
-		if( stat(execute_dir->Value(), &statbuf)!=0 ) {
+		if( stat(execute_dir->c_str(), &statbuf)!=0 ) {
 			int stat_errno = errno;
 			EXCEPT("Error accessing execute directory %s specified in the configuration setting %s: (errno=%d) %s",
-				   execute_dir->Value(), execute_param.Value(), stat_errno, strerror(stat_errno) );
+				   execute_dir->c_str(), execute_param.c_str(), stat_errno, strerror(stat_errno) );
 		}
 		EXCEPT("Failed to get partition id for %s=%s",
-			   execute_param.Value(), execute_dir->Value());
+			   execute_param.c_str(), execute_dir->c_str());
 	}
 	ASSERT( partition_value );
 	*partition_id = partition_value;
@@ -215,7 +215,7 @@ void initTypes( int max_types, StringList **type_strings, int except )
 			continue;
 		}
 		buf.formatstr("SLOT_TYPE_%d", i);
-		tmp = param(buf.Value());
+		tmp = param(buf.c_str());
 		if (!tmp) {
 				continue;
 		}
@@ -244,7 +244,7 @@ int countTypes( int max_types, int num_cpus, int** array_ptr, bool except )
 
 	for( i=1; i<max_types; i++ ) {
 		param_name.formatstr("NUM_SLOTS_TYPE_%d", i);
-		my_type_nums[i] = param_integer(param_name.Value(), 0);
+		my_type_nums[i] = param_integer(param_name.c_str(), 0);
 		if (my_type_nums[i]) {
 			num_set = 1;
 			num += my_type_nums[i];

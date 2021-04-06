@@ -181,7 +181,7 @@ ScriptProc::StartJob()
 		if( ! job_env.MergeFromV2Raw(env2,&env_errors) ) {
 			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
 					 "Aborting ScriptProc::StartJob.\n",
-					 env2_attr.c_str(),env_errors.Value() );
+					 env2_attr.c_str(),env_errors.c_str() );
 			free( env1 );
 			free( env2 );
 			return 0;
@@ -191,7 +191,7 @@ ScriptProc::StartJob()
 		if( ! job_env.MergeFromV1Raw(env1,&env_errors) ) {
 			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
 					 "Aborting ScriptProc::StartJob.\n",
-					 env1_attr.c_str(),env_errors.Value() );
+					 env1_attr.c_str(),env_errors.c_str() );
 			free( env1 );
 			free( env2 );
 			return 0;
@@ -211,7 +211,7 @@ ScriptProc::StartJob()
 	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString env_str;
 		job_env.getDelimitedStringForDisplay(&env_str);
-		dprintf(D_FULLDEBUG, "%sEnv = %s\n", name, env_str.Value() );
+		dprintf(D_FULLDEBUG, "%sEnv = %s\n", name, env_str.c_str() );
 	}
 
 

@@ -531,14 +531,14 @@ my_popenv_impl( const char *const args[],
 		if (env_ptr) {
 			char **m_unix_env = NULL;
 			m_unix_env = env_ptr->getStringArray();
-			execve(cmd.Value(), const_cast<char *const*>(args), m_unix_env );
+			execve(cmd.c_str(), const_cast<char *const*>(args), m_unix_env );
 
 				// delete the memory even though we're on our way out
 				// if exec failed.
 			deleteStringArray(m_unix_env);
 
 		} else {
-			execvp(cmd.Value(), const_cast<char *const*>(args) );
+			execvp(cmd.c_str(), const_cast<char *const*>(args) );
 		}
 
 			/* If we get here, inform the parent of our errno */

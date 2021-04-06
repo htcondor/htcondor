@@ -435,11 +435,11 @@ MapFile::ParseField(MyString & line, int offset, MyString & field, int * popts /
 int
 MapFile::ParseCanonicalizationFile(const MyString filename, bool assume_hash /*=false*/, bool allow_include /*=true*/)
 {
-	FILE *file = safe_fopen_wrapper_follow(filename.Value(), "r");
+	FILE *file = safe_fopen_wrapper_follow(filename.c_str(), "r");
 	if (NULL == file) {
 		dprintf(D_ALWAYS,
 				"ERROR: Could not open canonicalization file '%s' (%s)\n",
-				filename.Value(),
+				filename.c_str(),
 				strerror(errno));
 		return -1;
 	} else {
@@ -448,7 +448,7 @@ MapFile::ParseCanonicalizationFile(const MyString filename, bool assume_hash /*=
 
 	MyStringFpSource myfs(file, true);
 
-	return ParseCanonicalization(myfs, filename.Value(), assume_hash, allow_include);
+	return ParseCanonicalization(myfs, filename.c_str(), assume_hash, allow_include);
 }
 
 int
@@ -530,16 +530,16 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 			principal.empty() ||
 			canonicalization.empty()) {
 				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.  (Method=%s) (Principal=%s) (Canon=%s) Skipping to next line.\n",
-						line, srcname, method.Value(), principal.Value(), canonicalization.Value());
+						line, srcname, method.c_str(), principal.c_str(), canonicalization.c_str());
 
 				continue;
 		}
 
 		dprintf(D_FULLDEBUG,
 				"MapFile: Canonicalization File: method='%s' principal='%s' canonicalization='%s'\n",
-				method.Value(),
-				principal.Value(),
-				canonicalization.Value());
+				method.c_str(),
+				principal.c_str(),
+				canonicalization.c_str());
 
 /*
 		Regex *re = new Regex;
@@ -584,18 +584,18 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 int
 MapFile::ParseUsermapFile(const MyString filename, bool assume_hash /*=false*/)
 {
-	FILE *file = safe_fopen_wrapper_follow(filename.Value(), "r");
+	FILE *file = safe_fopen_wrapper_follow(filename.c_str(), "r");
 	if (NULL == file) {
 		dprintf(D_ALWAYS,
 				"ERROR: Could not open usermap file '%s' (%s)\n",
-				filename.Value(),
+				filename.c_str(),
 				strerror(errno));
 		return -1;
 	}
 
 	MyStringFpSource myfs(file, true);
 
-	return ParseUsermap(myfs, filename.Value(), assume_hash);
+	return ParseUsermap(myfs, filename.c_str(), assume_hash);
 }
 
 int
@@ -634,8 +634,8 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 
 		dprintf(D_FULLDEBUG,
 				"MapFile: Usermap File: canonicalization='%s' user='%s'\n",
-				canonicalization.Value(),
-				user.Value());
+				canonicalization.c_str(),
+				user.c_str());
 
 		if (canonicalization.empty() ||
 			user.empty()) {

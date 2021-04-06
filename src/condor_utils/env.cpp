@@ -146,7 +146,7 @@ Env::InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys, 
 		if(!getDelimitedStringV2Raw(&env2,error_msg)) {
 			return false;
 		}
-		ad->Assign(ATTR_JOB_ENVIRONMENT2,env2.Value());
+		ad->Assign(ATTR_JOB_ENVIRONMENT2,env2.c_str());
 	}
 	if(has_env1 || requires_env1) {
 		// Record the OPSYS that is being used to delimit the environment.
@@ -187,7 +187,7 @@ Env::InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys, 
 		}
 
 		if(env1_success) {
-			ad->Assign(ATTR_JOB_ENVIRONMENT1,env1.Value());
+			ad->Assign(ATTR_JOB_ENVIRONMENT1,env1.c_str());
 		}
 		else {
 			if(has_env2) {
@@ -206,7 +206,7 @@ Env::InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys, 
 				// at least prevent incorrect behavior.
 
 				ad->Assign(ATTR_JOB_ENVIRONMENT1,"ENVIRONMENT_CONVERSION_ERROR");
-				dprintf(D_FULLDEBUG,"Failed to convert environment to V1 syntax: %s\n",error_msg ? error_msg->Value() : "");
+				dprintf(D_FULLDEBUG,"Failed to convert environment to V1 syntax: %s\n",error_msg ? error_msg->c_str() : "");
 			}
 			else {
 				// Failed to convert to V1 syntax, and the ad does not
@@ -403,7 +403,7 @@ Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString *error_msg 
 		if(!V2QuotedToV2Raw(delimitedString,&v2,error_msg)) {
 			return false;
 		}
-		return MergeFromV2Raw(v2.Value(),error_msg);
+		return MergeFromV2Raw(v2.c_str(),error_msg);
 	}
 	else {
 		return MergeFromV1Raw(delimitedString,error_msg);
@@ -419,7 +419,7 @@ Env::MergeFromV2Quoted( const char *delimitedString, MyString *error_msg )
 		if(!V2QuotedToV2Raw(delimitedString,&v2,error_msg)) {
 			return false;
 		}
-		return MergeFromV2Raw(v2.Value(),error_msg);
+		return MergeFromV2Raw(v2.c_str(),error_msg);
 	}
 	else {
 		AddErrorMessage("Expecting a double-quoted environment string (V2 format).",error_msg);
@@ -441,7 +441,7 @@ Env::MergeFromV2Raw( const char *delimitedString, MyString *error_msg )
 	SimpleListIterator<MyString> it(env_list);
 	MyString *env_entry;
 	while(it.Next(env_entry)) {
-		if(!SetEnvWithErrorMessage(env_entry->Value(),error_msg)) {
+		if(!SetEnvWithErrorMessage(env_entry->c_str(),error_msg)) {
 			return false;
 		}
 	}
@@ -543,7 +543,7 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 			else {
 				msg.formatstr("ERROR: missing variable in '%s'.",expr);
 			}
-			AddErrorMessage(msg.Value(),error_msg);
+			AddErrorMessage(msg.c_str(),error_msg);
 		}
 		free(expr);
 		return false;
@@ -671,7 +671,7 @@ Env::getDelimitedStringV2Raw(MyString *result,MyString * /*error_msg*/,bool mark
 		}
 		else {
 			MyString var_val;
-			var_val.formatstr("%s=%s",var.Value(),val.Value());
+			var_val.formatstr("%s=%s",var.c_str(),val.c_str());
 			env_list.Append(var_val);
 		}
 	}
@@ -716,13 +716,13 @@ Env::getDelimitedStringV1Raw(MyString *result,MyString *error_msg,char delim) co
 
 	_envTable->startIterations();
 	while( _envTable->iterate( var, val ) ) {
-		if(!IsSafeEnvV1Value(var.Value(),delim) ||
-		   !IsSafeEnvV1Value(val.Value(),delim)) {
+		if(!IsSafeEnvV1Value(var.c_str(),delim) ||
+		   !IsSafeEnvV1Value(val.c_str(),delim)) {
 
 			if(error_msg) {
 				MyString msg;
-				msg.formatstr("Environment entry is not compatible with V1 syntax: %s=%s",var.Value(),val.Value());
-				AddErrorMessage(msg.Value(),error_msg);
+				msg.formatstr("Environment entry is not compatible with V1 syntax: %s=%s",var.c_str(),val.c_str());
+				AddErrorMessage(msg.c_str(),error_msg);
 			}
 			return false;
 		}
@@ -730,10 +730,10 @@ Env::getDelimitedStringV1Raw(MyString *result,MyString *error_msg,char delim) co
         if( !emptyString ) {
 			(*result) += delim;
         }
-		WriteToDelimitedString(var.Value(),*result);
+		WriteToDelimitedString(var.c_str(),*result);
 		if(val != NO_ENVIRONMENT_VALUE) {
 			WriteToDelimitedString("=",*result);
-			WriteToDelimitedString(val.Value(),*result);
+			WriteToDelimitedString(val.c_str(),*result);
 		}
 		emptyString = false;
 	}
@@ -790,10 +790,10 @@ Env::getStringArray() const {
 		ASSERT( var.length() > 0 );
 		array[i] = (char *)malloc(var.length() + val.length() + 2);
 		ASSERT( array[i] );
-		strcpy( array[i], var.Value() );
+		strcpy( array[i], var.c_str() );
 		if(val != NO_ENVIRONMENT_VALUE) {
 			strcat( array[i], "=" );
-			strcat( array[i], val.Value() );
+			strcat( array[i], val.c_str() );
 		}
 	}
 	array[i] = NULL;

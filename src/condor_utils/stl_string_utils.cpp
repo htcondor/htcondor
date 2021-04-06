@@ -25,18 +25,18 @@
 
 #include "stl_string_utils.h"
 
-bool operator==(const MyString& L, const std::string& R) { return R == L.Value(); }
-bool operator==(const std::string& L, const MyString& R) { return L == R.Value(); }
-bool operator!=(const MyString& L, const std::string& R) { return R != L.Value(); }
-bool operator!=(const std::string& L, const MyString& R) { return L != R.Value(); }
-bool operator<(const MyString& L, const std::string& R) { return R > L.Value(); }
-bool operator<(const std::string& L, const MyString& R) { return L < R.Value(); }
-bool operator>(const MyString& L, const std::string& R) { return R < L.Value(); }
-bool operator>(const std::string& L, const MyString& R) { return L > R.Value(); }
-bool operator<=(const MyString& L, const std::string& R) { return R >= L.Value(); }
-bool operator<=(const std::string& L, const MyString& R) { return L <= R.Value(); }
-bool operator>=(const MyString& L, const std::string& R) { return R <= L.Value(); }
-bool operator>=(const std::string& L, const MyString& R) { return L >= R.Value(); }
+bool operator==(const MyString& L, const std::string& R) { return R == L.c_str(); }
+bool operator==(const std::string& L, const MyString& R) { return L == R.c_str(); }
+bool operator!=(const MyString& L, const std::string& R) { return R != L.c_str(); }
+bool operator!=(const std::string& L, const MyString& R) { return L != R.c_str(); }
+bool operator<(const MyString& L, const std::string& R) { return R > L.c_str(); }
+bool operator<(const std::string& L, const MyString& R) { return L < R.c_str(); }
+bool operator>(const MyString& L, const std::string& R) { return R < L.c_str(); }
+bool operator>(const std::string& L, const MyString& R) { return L > R.c_str(); }
+bool operator<=(const MyString& L, const std::string& R) { return R >= L.c_str(); }
+bool operator<=(const std::string& L, const MyString& R) { return L <= R.c_str(); }
+bool operator>=(const MyString& L, const std::string& R) { return R <= L.c_str(); }
+bool operator>=(const std::string& L, const MyString& R) { return L >= R.c_str(); }
 
 
 static
@@ -419,7 +419,7 @@ const char * is_attr_in_attr_list(const char * attr, const char * list)
 #if 1
 static MyStringTokener tokenbuf;
 void Tokenize(const char *str) { tokenbuf.Tokenize(str); }
-void Tokenize(const MyString &str) { Tokenize(str.Value()); }
+void Tokenize(const MyString &str) { Tokenize(str.c_str()); }
 void Tokenize(const std::string &str) { Tokenize(str.c_str()); }
 const char *GetNextToken(const char *delim, bool skipBlankTokens) { return tokenbuf.GetNextToken(delim, skipBlankTokens); }
 #else

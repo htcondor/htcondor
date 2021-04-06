@@ -515,7 +515,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		int pos = m_reject_reason.FindChar('|');
 		if ( pos >= 0 ) {
 			MyStringTokener tok;
-			tok.Tokenize(m_reject_reason.Value());
+			tok.Tokenize(m_reject_reason.c_str());
 			/*const char *reason =*/ tok.GetNextToken("|",false);
 			const char *ac = tok.GetNextToken("|",false);
 			const char *jobid = tok.GetNextToken("|",false);

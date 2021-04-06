@@ -738,7 +738,7 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port)
 		} else {
 			addr = get_local_ipaddr(proto);
 			if(!addr.is_valid()) {
-				dprintf(D_ALWAYS, "Asked to bind to a single %s interface, but cannot find a suitable interface\n", condor_protocol_to_str(proto).Value());
+				dprintf(D_ALWAYS, "Asked to bind to a single %s interface, but cannot find a suitable interface\n", condor_protocol_to_str(proto).c_str());
 				return FALSE;
 			}
 		}
@@ -874,7 +874,7 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback, co
 		} else {
 			addr = get_local_ipaddr(proto);
 			if(!addr.is_valid()) {
-				dprintf(D_ALWAYS, "Asked to bind to a single %s interface, but cannot find a suitable interface\n", condor_protocol_to_str(proto).Value());
+				dprintf(D_ALWAYS, "Asked to bind to a single %s interface, but cannot find a suitable interface\n", condor_protocol_to_str(proto).c_str());
 				return FALSE;
 			}
 		}
@@ -1159,7 +1159,7 @@ bool Sock::guess_address_string(char const* host, int port, condor_sockaddr& add
 	if (host[0] == '<') {
 		addr.from_sinful(host);
 		dprintf(D_HOSTNAME, "it was sinful string. ip = %s, port = %d\n",
-				addr.to_ip_string().Value(), addr.get_port());
+				addr.to_ip_string().c_str(), addr.get_port());
 	}
 	/* try to get a decimal notation 	 			*/
 	else if ( addr.from_ip_string(host) ) {
@@ -1321,7 +1321,7 @@ int Sock::do_connect(
 			set_connect_addr(host);
 		}
 		else { // otherwise, just use ip string.
-			set_connect_addr(_who.to_ip_string().Value());
+			set_connect_addr(_who.to_ip_string().c_str());
 		}
     	addr_changed();
     }
@@ -2494,7 +2494,7 @@ Sock::peer_ip_str() const
 {
 	if (!_peer_ip_buf[0]) {
 		MyString peer_ip = _who.to_ip_string();
-		strcpy(_peer_ip_buf, peer_ip.Value());
+		strcpy(_peer_ip_buf, peer_ip.c_str());
 	}
 	return _peer_ip_buf;
 		/*
@@ -2643,7 +2643,7 @@ Sock::my_ip_str() const
 {
 	if (!_my_ip_buf[0]) {
 		MyString ip_str = my_addr().to_ip_string();
-		strcpy(_my_ip_buf, ip_str.Value());
+		strcpy(_my_ip_buf, ip_str.c_str());
 	}
 	return _my_ip_buf;
 }
@@ -2674,7 +2674,7 @@ Sock::get_sinful_peer() const
 {       
 	if ( !_sinful_peer_buf[0] ) {
 		MyString sinful_peer = _who.to_sinful();
-		strcpy(_sinful_peer_buf, sinful_peer.Value());
+		strcpy(_sinful_peer_buf, sinful_peer.c_str());
 	}
 	return _sinful_peer_buf;
 }

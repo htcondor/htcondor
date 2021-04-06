@@ -600,7 +600,7 @@ TranslateClient::hookExited(int exit_status)
 		dprintf(D_ALWAYS, "TranslateClient::hookExited (%s): "
 				"Warning, hook %s (pid %d) printed to stderr: "
 				"%s\n", m_routed_job->JobDesc().c_str(), 
-				m_hook_path, (int)m_pid, m_std_err.Value());
+				m_hook_path, (int)m_pid, m_std_err.c_str());
 	}
 	if (m_std_out.length() && 0 == WEXITSTATUS(exit_status))
 	{
@@ -608,7 +608,7 @@ TranslateClient::hookExited(int exit_status)
 		const char* hook_line = NULL;
 
 		MyStringTokener tok;
-		tok.Tokenize(m_std_out.Value());
+		tok.Tokenize(m_std_out.c_str());
 		while ((hook_line = tok.GetNextToken("\n", true)))
 		{
 			if (!job_ad.Insert(hook_line))
@@ -684,7 +684,7 @@ StatusClient::hookExited(int exit_status)
 		dprintf(D_ALWAYS, "StatusClient::hookExited (%s): Warning, "
 				"hook %s (pid %d) printed to stderr: %s\n",
 				m_routed_job->JobDesc().c_str(), m_hook_path,
-				(int)m_pid, m_std_err.Value());
+				(int)m_pid, m_std_err.c_str());
 	}
 	if (m_std_out.length() && 0 == WEXITSTATUS(exit_status))
 	{
@@ -696,7 +696,7 @@ StatusClient::hookExited(int exit_status)
 			NULL };
 
 		MyStringTokener tok;
-		tok.Tokenize(m_std_out.Value());
+		tok.Tokenize(m_std_out.c_str());
 		while ((hook_line = tok.GetNextToken("\n", true)))
 		{
 			if (!job_ad.Insert(hook_line))
@@ -772,7 +772,7 @@ ExitClient::hookExited(int exit_status) {
 		dprintf(D_ALWAYS, "ExitClient::hookExited (%s): Warning, hook "
 				"%s (pid %d) printed to stderr: %s\n",
 				m_routed_job->JobDesc().c_str(), m_hook_path,
-				(int)m_pid, m_std_err.Value());
+				(int)m_pid, m_std_err.c_str());
 	}
 	if (m_std_out.length())
 	{
@@ -784,7 +784,7 @@ ExitClient::hookExited(int exit_status) {
 			classad::ClassAd *orig_ad = ad_collection->GetClassAd(m_routed_job->src_key);
 
 			MyStringTokener tok;
-			tok.Tokenize(m_std_out.Value());
+			tok.Tokenize(m_std_out.c_str());
 			while ((hook_line = tok.GetNextToken("\n", true)))
 			{
 				if (!job_ad.Insert(hook_line))
@@ -881,7 +881,7 @@ CleanupClient::hookExited(int exit_status)
 				"CleanupClient::hookExited (%s): Warning, hook "
 				"%s (pid %d) printed to stderr: %s\n",
 				m_routed_job->JobDesc().c_str(), m_hook_path,
-				(int)m_pid, m_std_err.Value());
+				(int)m_pid, m_std_err.c_str());
 	}
 
 	// Only tell the job router to finish the cleanup of the job if the

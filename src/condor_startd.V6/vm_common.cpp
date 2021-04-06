@@ -70,12 +70,12 @@ vmapi_is_allowed_vm_addr(const char *addr)
 		char *vm_name;
 		vmmanager->allowed_vm_list->rewind();
 		while( (vm_name = vmmanager->allowed_vm_list->next()) ) {
-			if( !strcmp(ip.Value(), vm_name) ) {
+			if( !strcmp(ip.c_str(), vm_name) ) {
 				return TRUE;
 			}
 		}
 
-		dprintf( D_FULLDEBUG, "IP(%s) is not an allowed virtual machine\n", ip.Value());
+		dprintf( D_FULLDEBUG, "IP(%s) is not an allowed virtual machine\n", ip.c_str());
 	}
 
 	return FALSE;
@@ -162,7 +162,7 @@ vmapi_is_my_machine(char *h1)
 
 	// TODO: Picking IPv4 arbitrarily.
 	MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
-	if( !strcmp(h1, my_ip.Value()) )
+	if( !strcmp(h1, my_ip.c_str()) )
 		return TRUE;
 
 	return FALSE;

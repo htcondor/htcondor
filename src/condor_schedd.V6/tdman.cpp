@@ -739,8 +739,8 @@ TDMan::invoke_a_td(TransferDaemon *td)
 
 	args.GetArgsStringForDisplay(&args_display);
 	dprintf(D_ALWAYS, "Invoking for user '%s' a transferd: %s\n", 
-		td->get_fquser().Value(),
-		args_display.Value());
+		td->get_fquser().c_str(),
+		args_display.c_str());
 
 	// XXX needs to be the user, not root!
 	pid = daemonCore->Create_Process( td_path, args, PRIV_ROOT, rid );
@@ -1042,7 +1042,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 	sock_id += td_id;
 	sock_id += ">";
 
-	daemonCore->Register_Socket(sock, sock_id.Value(),
+	daemonCore->Register_Socket(sock, sock_id.c_str(),
 		(SocketHandlercpp)&TDMan::transferd_update,
 		"TDMan::transferd_update", this, ALLOW);
 	
@@ -1052,7 +1052,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 	// handlers if they determined the daemon went away. Instead I'll push an 
 	// identifier so I can see if it still exists in the pool before messing
 	// with it.
-	tdup = new TDUpdateContinuation(td_sinful, fquser, td_id, sock_id.Value());
+	tdup = new TDUpdateContinuation(td_sinful, fquser, td_id, sock_id.c_str());
 	ASSERT(tdup);
 
 	// set up the continuation for TDMan::transferd_update()
@@ -1126,7 +1126,7 @@ TDMan::transferd_update(Stream *sock)
 	ASSERT(tdup != NULL);
 
 	dprintf(D_ALWAYS, "Transferd update from: addr(%s) fquser(%s) id(%s)\n", 
-		tdup->sinful.Value(), tdup->fquser.Value(), tdup->id.Value());
+		tdup->sinful.c_str(), tdup->fquser.c_str(), tdup->id.c_str());
 
 	/////////////////////////////////////////////////////////////////////////
 	// Get the resultant status classad from the transferd
@@ -1138,7 +1138,7 @@ TDMan::transferd_update(Stream *sock)
 		dprintf(D_ALWAYS, "Update socket was closed. "
 			"Transferd for user: %s with id: %s at location: %s will soon be "
 			"reaped.\n", 
-			tdup->fquser.Value(), tdup->id.Value(), tdup->sinful.Value());
+			tdup->fquser.c_str(), tdup->id.c_str(), tdup->sinful.c_str());
 
 		delete tdup;
 		daemonCore->SetDataPtr(NULL);

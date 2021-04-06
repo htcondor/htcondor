@@ -333,7 +333,7 @@ KeyCache::makeServerUniqueId(MyString const &parent_id,int server_pid,MyString *
 			// never query by PID alone.
 		return;
 	}
-	result->formatstr("%s.%d",parent_id.Value(),server_pid);
+	result->formatstr("%s.%d",parent_id.c_str(),server_pid);
 }
 
 bool KeyCache::lookup(const char *key_id, KeyCacheEntry *&e_ptr) {
@@ -485,7 +485,7 @@ StringList * KeyCache::getExpiredKeys() {
 	while (key_table->iterate(id, key_entry)) {
 		// check the freshness date on that key
 		if (key_entry->expiration() && key_entry->expiration() <= cutoff_time) {
-            list->append(id.Value());
+            list->append(id.c_str());
 			//expire(key_entry);
 		}
 	}

@@ -214,7 +214,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	tmp.formatstr_cat( "%d", r_id );
 	if  (_parent) { tmp.formatstr_cat( "_%d", r_sub_id ); }
 	// save the constucted slot name & id string.
-	r_id_str = strdup( tmp.Value() );
+	r_id_str = strdup( tmp.c_str() );
 	r_pair_name = NULL;
 
 		// we need this before we can call type()...
@@ -274,7 +274,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	}
 	if( multiple_slots || get_feature() == PARTITIONABLE_SLOT ) {
 		tmp.formatstr( "%s@%s", r_id_str, tmpName );
-		r_name = strdup( tmp.Value() );
+		r_name = strdup( tmp.c_str() );
 	} else {
 		r_name = strdup( tmpName );
 	}
@@ -1615,7 +1615,7 @@ Resource::final_update( void )
      */
 	 QuoteAdStringValue( r_name, escaped_name );
      line.formatstr( "( TARGET.%s == %s )", ATTR_NAME, escaped_name.c_str() );
-     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
+     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
      invalidate_ad.Assign( ATTR_NAME, r_name );
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 
@@ -2172,7 +2172,7 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
 		MyString tmp_expr_name = expr_name;
 		tmp_expr_name += "_VANILLA";
-		tmp = eval_expr( tmp_expr_name.Value(), false, false );
+		tmp = eval_expr( tmp_expr_name.c_str(), false, false );
 		if( tmp >= 0 ) {
 				// found it, just return the value;
 			return tmp;
@@ -2182,7 +2182,7 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VM ) {
 		MyString tmp_expr_name = expr_name;
 		tmp_expr_name += "_VM";
-		tmp = eval_expr( tmp_expr_name.Value(), false, false );
+		tmp = eval_expr( tmp_expr_name.c_str(), false, false );
 		if( tmp >= 0 ) {
 				// found it, just return the value;
 			return tmp;
@@ -2983,7 +2983,7 @@ Resource::publishSlotAttrs( ClassAd* cap, bool as_literal, bool only_valid_value
 		prefix += '_';
 		startd_slot_attrs->rewind();
 		while ((ptr = startd_slot_attrs->next())) {
-			caInsert(cap, r_classad, ptr, prefix.Value());
+			caInsert(cap, r_classad, ptr, prefix.c_str());
 		}
 	}
 }
@@ -3557,7 +3557,7 @@ Resource::getHookKeyword()
 	if (!m_hook_keyword_initialized) {
 		MyString param_name;
 		param_name.formatstr("%s_JOB_HOOK_KEYWORD", r_id_str);
-		m_hook_keyword = param(param_name.Value());
+		m_hook_keyword = param(param_name.c_str());
 		if (!m_hook_keyword) {
 			m_hook_keyword = param("STARTD_JOB_HOOK_KEYWORD");
 		}
@@ -3670,7 +3670,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 		for (int i=0; resources[i]; i++) {
 			MyString knob("MODIFY_REQUEST_EXPR_");
 			knob += resources[i];
-			char *tmp = param(knob.Value());
+			char *tmp = param(knob.c_str());
 			if( tmp ) {
 				ExprTree *tree = NULL;
 				classad::Value result;
@@ -3775,7 +3775,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                 // Look to see how many CPUs are being requested.
             schedd_requested_attr = "_condor_";
             schedd_requested_attr += ATTR_REQUEST_CPUS;
-            if( !EvalInteger( schedd_requested_attr.Value(), req_classad, mach_classad, cpus ) ) {
+            if( !EvalInteger( schedd_requested_attr.c_str(), req_classad, mach_classad, cpus ) ) {
                 if( !EvalInteger( ATTR_REQUEST_CPUS, req_classad, mach_classad, cpus ) ) {
                     cpus = 1; // reasonable default, for sure
                 }
@@ -3785,7 +3785,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                 // Look to see how much MEMORY is being requested.
             schedd_requested_attr = "_condor_";
             schedd_requested_attr += ATTR_REQUEST_MEMORY;
-            if( !EvalInteger( schedd_requested_attr.Value(), req_classad, mach_classad, memory ) ) {
+            if( !EvalInteger( schedd_requested_attr.c_str(), req_classad, mach_classad, memory ) ) {
                 if( !EvalInteger( ATTR_REQUEST_MEMORY, req_classad, mach_classad, memory ) ) {
                         // some memory size must be available else we cannot
                         // match, plus a job ad without ATTR_MEMORY is sketchy
@@ -3799,7 +3799,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                 // Look to see how much DISK is being requested.
             schedd_requested_attr = "_condor_";
             schedd_requested_attr += ATTR_REQUEST_DISK;
-            if( !EvalInteger( schedd_requested_attr.Value(), req_classad, mach_classad, disk ) ) {
+            if( !EvalInteger( schedd_requested_attr.c_str(), req_classad, mach_classad, disk ) ) {
                 if( !EvalInteger( ATTR_REQUEST_DISK, req_classad, mach_classad, disk ) ) {
                         // some disk size must be available else we cannot
                         // match, plus a job ad without ATTR_DISK is sketchy
@@ -3818,7 +3818,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			double total_virt_mem = rip->r_attr->get_mach_attr()->virt_mem();
 			bool set_swap = true;
 
-            if( !EvalInteger( schedd_requested_attr.Value(), req_classad, mach_classad, swap ) ) {
+            if( !EvalInteger( schedd_requested_attr.c_str(), req_classad, mach_classad, swap ) ) {
                 if( !EvalInteger( ATTR_REQUEST_VIRTUAL_MEMORY, req_classad, mach_classad, swap ) ) {
 						// Schedd didn't set it, user didn't request it
 					if (param_boolean("PROPORTIONAL_SWAP_ASSIGNMENT", false)) {
@@ -3850,9 +3850,9 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
         }
 
 		rip->dprintf( D_FULLDEBUG,
-					  "Match requesting resources: %s\n", type.Value() );
+					  "Match requesting resources: %s\n", type.c_str() );
 
-		type_list.initializeFromString( type.Value() );
+		type_list.initializeFromString( type.c_str() );
 		cpu_attrs = ::buildSlot( resmgr->m_attr, rip->r_id, &type_list, -rip->type(), false );
 		if( ! cpu_attrs ) {
 			rip->dprintf( D_ALWAYS,

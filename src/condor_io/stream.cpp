@@ -837,7 +837,7 @@ Stream::put_nullstr( char const *s)
 int 
 Stream::put( const MyString &s)
 {
-	return put( s.Value() );
+	return put( s.c_str() );
 }
 
 int

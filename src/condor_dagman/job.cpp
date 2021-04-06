@@ -209,7 +209,7 @@ Job::PrefixDirectory(MyString &prefix)
 
     stringSpace.free_dedup(_directory);
 
-	_directory = stringSpace.strdup_dedup(newdir.Value());
+	_directory = stringSpace.strdup_dedup(newdir.c_str());
     ASSERT(_directory);
 }
 
@@ -234,7 +234,7 @@ void Job::Dump ( const Dag *dag ) const {
     dprintf( D_ALWAYS, "    Node Status: %s\n", GetStatusName() );
     dprintf( D_ALWAYS, "Node return val: %d\n", retval );
 	if( _Status == STATUS_ERROR ) {
-		dprintf( D_ALWAYS, "          Error: %s\n", error_text.Value() );
+		dprintf( D_ALWAYS, "          Error: %s\n", error_text.c_str() );
 	}
     dprintf( D_ALWAYS, "Job Submit File: %s\n", _cmdFile );
 	if( _scriptPre ) {
@@ -1383,7 +1383,7 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 				(tmpName != *(_throttleInfo->_category)) ) {
 		debug_printf( DEBUG_NORMAL, "Warning: new category %s for node %s "
 					"overrides old value %s\n", categoryName, GetJobName(),
-					_throttleInfo->_category->Value() );
+					_throttleInfo->_category->c_str() );
 		check_warning_strictness( DAG_STRICT_3 );
 	}
 
@@ -1414,7 +1414,7 @@ Job::PrefixName(const MyString &prefix)
 
 	free(_jobName);
 
-	_jobName = strdup(tmp.Value());
+	_jobName = strdup(tmp.c_str());
 }
 
 
@@ -1462,7 +1462,7 @@ Job::GetJobstateJobTag()
 		}
 
 		MyString tmpJobTag = MultiLogFiles::loadValueFromSubFile(
-					_cmdFile, _directory, jobTagName.Value() );
+					_cmdFile, _directory, jobTagName.c_str() );
 		if ( tmpJobTag == "" ) {
 			tmpJobTag = "-";
 		} else {
@@ -1472,7 +1472,7 @@ Job::GetJobstateJobTag()
 			int end = tmpJobTag[last] == '\"' ? last - 1 : last;
 			tmpJobTag = tmpJobTag.substr( begin, 1 + end - begin );
 		}
-		_jobTag = strdup( tmpJobTag.Value() );
+		_jobTag = strdup( tmpJobTag.c_str() );
 	}
 
 	return _jobTag;

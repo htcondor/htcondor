@@ -1003,7 +1003,7 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 			}
 		} else {
 			MACRO_SOURCE ItemsSource;
-			FILE *fpItems = Open_macro_source(ItemsSource, oa.items_filename.Value(), false, set.macros(), errmsg);
+			FILE *fpItems = Open_macro_source(ItemsSource, oa.items_filename.c_str(), false, set.macros(), errmsg);
 			if ( ! fpItems) {
 				return -1;
 			}

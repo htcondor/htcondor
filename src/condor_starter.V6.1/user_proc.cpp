@@ -239,13 +239,13 @@ UserProc::PublishToEnv( Env* proc_env )
 		MyString env_name;
 
 		if( WIFSIGNALED(exit_status) ) {
-			env_name = base.Value();
+			env_name = base.c_str();
 			env_name += "EXIT_SIGNAL";
-			proc_env->SetEnv( env_name.Value(), std::to_string( WTERMSIG(exit_status) ) );
+			proc_env->SetEnv( env_name.c_str(), std::to_string( WTERMSIG(exit_status) ) );
 		} else {
-			env_name = base.Value();
+			env_name = base.c_str();
 			env_name += "EXIT_CODE";
-			proc_env->SetEnv( env_name.Value(), std::to_string( WEXITSTATUS(exit_status) ) );
+			proc_env->SetEnv( env_name.c_str(), std::to_string( WEXITSTATUS(exit_status) ) );
 		}
 	}
 }
@@ -443,14 +443,14 @@ UserProc::openStdFile( std_file_type type,
 			}
 		}
 #endif
-		fd = safe_open_wrapper_follow( filename.Value(), flags, 0666 );
+		fd = safe_open_wrapper_follow( filename.c_str(), flags, 0666 );
 		if( fd < 0 ) {
 				// if failed, try again without O_TRUNC
 			flags &= ~O_TRUNC;
-			fd = safe_open_wrapper_follow( filename.Value(), flags, 0666 );
+			fd = safe_open_wrapper_follow( filename.c_str(), flags, 0666 );
 		}
 	} else {
-		fd = safe_open_wrapper_follow( filename.Value(), O_RDONLY | O_LARGEFILE );
+		fd = safe_open_wrapper_follow( filename.c_str(), O_RDONLY | O_LARGEFILE );
 	}
 	if( fd < 0 ) {
 		int open_errno = errno;
@@ -467,7 +467,7 @@ UserProc::openStdFile( std_file_type type,
 			phrase = "standard error";
 		}
 		formatstr( err_msg, "Failed to open '%s' as %s: %s (errno %d)",
-		                 filename.Value(),
+		                 filename.c_str(),
 		                 phrase,
 		                 errno_str,
 		                 errno );
@@ -479,7 +479,7 @@ UserProc::openStdFile( std_file_type type,
 	}
 	dprintf( (filename == NULL_FILE) ? D_FULLDEBUG : D_ALWAYS,
 	         "%s: %s\n", log_header,
-	         filename.Value() );
+	         filename.c_str() );
 	return fd;
 }
 
@@ -491,7 +491,7 @@ UserProc::SetStdFiles(const int std_fds[], char const *std_fnames[])
 	for(i=0;i<3;i++) {
 		m_pre_defined_std_fds[i] = std_fds[i];
 		m_pre_defined_std_fname_buf[i] = std_fnames[i];
-		m_pre_defined_std_fnames[i] = std_fnames[i] ? m_pre_defined_std_fname_buf[i].Value() : NULL;
+		m_pre_defined_std_fnames[i] = std_fnames[i] ? m_pre_defined_std_fname_buf[i].c_str() : NULL;
 	}
 }
 

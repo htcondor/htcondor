@@ -119,7 +119,7 @@ SharedPortClient::sendSharedPortID(char const *shared_port_id,Sock *sock)
 	}
 
 		// for debugging
-	if (!sock->put(myName().Value())) {
+	if (!sock->put(myName().c_str())) {
 		dprintf(D_ALWAYS, "SharedPortClient: failed to send my name to %s\n", 
 				sock->peer_description());
 		return false;

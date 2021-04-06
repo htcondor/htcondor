@@ -119,7 +119,7 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 				// then go on our merry way trying again if they
 				// call us again.
 				dprintf( D_ALWAYS, "ReadMultipleUserLogs: read error "
-							"on log %s\n", monitor->logFile.Value() );
+							"on log %s\n", monitor->logFile.c_str() );
 				return outcome;
 			}
 		}
@@ -247,7 +247,7 @@ ULogEventOutcome
 ReadMultipleUserLogs::readEventFromLog( LogFileMonitor *monitor )
 {
 	dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::readEventFromLog(%s)\n",
-				monitor->logFile.Value() );
+				monitor->logFile.c_str() );
 
 	ULogEventOutcome	result =
 				monitor->readUserLog->readEvent( monitor->lastLogEvent );
@@ -271,12 +271,12 @@ MultiLogFiles::FileReader::Open( const MyString &filename )
 {
 	MyString result( "" );
 
-	_fp = safe_fopen_wrapper_follow( filename.Value(), "r" );
+	_fp = safe_fopen_wrapper_follow( filename.c_str(), "r" );
 	if ( !_fp ) {
 		result.formatstr( "MultiLogFiles::FileReader::Open(): "
 				"safe_fopen_wrapper_follow(%s) failed with errno %d (%s)\n",
-				filename.Value(), errno, strerror(errno) );
-		dprintf( D_ALWAYS, "%s", result.Value() );
+				filename.c_str(), errno, strerror(errno) );
+		dprintf( D_ALWAYS, "%s", result.c_str() );
 	}
 
 	return result;
@@ -315,13 +315,13 @@ MultiLogFiles::fileNameToLogicalLines(const MyString &filename,
 	MyString fileContents = readFileToString(filename);
 	if (fileContents == "") {
 		result = "Unable to read file: " + filename;
-		dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.Value());
+		dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.c_str());
 		return result;
 	}
 
 		// Split the file string into physical lines.
 		// Note: StringList constructor removes leading whitespace from lines.
-	StringList physicalLines(fileContents.Value(), "\r\n");
+	StringList physicalLines(fileContents.c_str(), "\r\n");
 	physicalLines.rewind();
 
 		// Combine lines with continuation characters.
@@ -342,19 +342,19 @@ MyString
 MultiLogFiles::readFileToString(const MyString &strFilename)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::readFileToString(%s)\n",
-				strFilename.Value() );
+				strFilename.c_str() );
 
-	FILE *pFile = safe_fopen_wrapper_follow(strFilename.Value(), "r");
+	FILE *pFile = safe_fopen_wrapper_follow(strFilename.c_str(), "r");
 	if (!pFile) {
 		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
-				"safe_fopen_wrapper_follow(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				"safe_fopen_wrapper_follow(%s) failed with errno %d (%s)\n", strFilename.c_str(),
 				errno, strerror(errno) );
 		return "";
 	}
 
 	if ( fseek(pFile, 0, SEEK_END) != 0 ) {
 		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
-				"fseek(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				"fseek(%s) failed with errno %d (%s)\n", strFilename.c_str(),
 				errno, strerror(errno) );
 		fclose(pFile);
 		return "";
@@ -362,7 +362,7 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 	int iLength = ftell(pFile);
 	if ( iLength == -1 ) {
 		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
-				"ftell(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				"ftell(%s) failed with errno %d (%s)\n", strFilename.c_str(),
 				errno, strerror(errno) );
 		fclose(pFile);
 		return "";
@@ -372,7 +372,7 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 
 	if (fseek(pFile, 0, SEEK_SET) < 0) {
 		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
-				"fseek(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				"fseek(%s) failed with errno %d (%s)\n", strFilename.c_str(),
 				errno, strerror(errno) );
 		fclose(pFile);
 		return "";
@@ -413,13 +413,13 @@ MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
 		const MyString &directory, const char *keyword)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::loadValueFromSubFile(%s, %s, %s)\n",
-				strSubFilename.Value(), directory.Value(), keyword );
+				strSubFilename.c_str(), directory.c_str(), keyword );
 
 	TmpDir		td;
 	if ( directory != "" ) {
 		MyString	errMsg;
-		if ( !td.Cd2TmpDir(directory.Value(), errMsg) ) {
-			dprintf(D_ALWAYS, "Error from Cd2TmpDir: %s\n", errMsg.Value());
+		if ( !td.Cd2TmpDir(directory.c_str(), errMsg) ) {
+			dprintf(D_ALWAYS, "Error from Cd2TmpDir: %s\n", errMsg.c_str());
 			return "";
 		}
 	}
@@ -447,7 +447,7 @@ MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
 		// handle those.
 		//
 	if ( value != "" ) {
-		if ( strchr(value.Value(), '$') ) {
+		if ( strchr(value.c_str(), '$') ) {
 			dprintf(D_ALWAYS, "MultiLogFiles: macros not allowed "
 						"in %s in DAG node submit files\n", keyword);
 			value = "";
@@ -457,7 +457,7 @@ MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
 	if ( directory != "" ) {
 		MyString	errMsg;
 		if ( !td.Cd2MainDir(errMsg) ) {
-			dprintf(D_ALWAYS, "Error from Cd2MainDir: %s\n", errMsg.Value());
+			dprintf(D_ALWAYS, "Error from Cd2MainDir: %s\n", errMsg.c_str());
 			return "";
 		}
 	}
@@ -470,7 +470,7 @@ MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
 bool
 MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
 {
-	if ( !fullpath(filename.Value()) ) {
+	if ( !fullpath(filename.c_str()) ) {
 			// I'd like to use realpath() here, but I'm not sure
 			// if that's portable across all platforms.  wenger 2009-01-09.
 		MyString	currentDir;
@@ -498,12 +498,12 @@ MultiLogFiles::getParamFromSubmitLine(MyString &submitLineIn,
 	const char *DELIM = "=";
 
 	MyStringTokener submittok;
-	submittok.Tokenize(submitLineIn.Value());
+	submittok.Tokenize(submitLineIn.c_str());
 	const char *	rawToken = submittok.GetNextToken(DELIM, true);
 	if ( rawToken ) {
 		MyString	token(rawToken);
 		token.trim();
-		if ( !strcasecmp(token.Value(), paramName) ) {
+		if ( !strcasecmp(token.c_str(), paramName) ) {
 			rawToken = submittok.GetNextToken(DELIM, true);
 			if ( rawToken ) {
 				paramValue = rawToken;
@@ -522,7 +522,7 @@ MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 		const MyString &filename, StringList &listOut)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::CombineLines(%s, %c)\n",
-				filename.Value(), continuation );
+				filename.c_str(), continuation );
 
 	listIn.rewind();
 
@@ -547,12 +547,12 @@ MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 				MyString result = MyString("Improper file syntax: ") +
 							"continuation character with no trailing line! (" +
 							logicalLine + ") in file " + filename;
-				dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.Value());
+				dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.c_str());
 				return result;
 			}
 		}
 
-		listOut.append(logicalLine.Value());
+		listOut.append(logicalLine.c_str());
 	}
 
 	return ""; // blank means okay
@@ -614,11 +614,11 @@ GetFileID( const MyString &filename, MyString &fileID,
 		// We *don't* want to truncate the file here, though, because
 		// we don't know for sure whether it's the first time we're seeing
 		// it.
-	if ( access( filename.Value(), F_OK ) != 0 ) {
-		if ( !MultiLogFiles::InitializeFile( filename.Value(),
+	if ( access( filename.c_str(), F_OK ) != 0 ) {
+		if ( !MultiLogFiles::InitializeFile( filename.c_str(),
 					false, errstack ) ) {
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-						"Error initializing log file %s", filename.Value() );
+						"Error initializing log file %s", filename.c_str() );
 			return false;
 		}
 	}
@@ -636,10 +636,10 @@ GetFileID( const MyString &filename, MyString &fileID,
 	free( tmpRealPath );
 #else
 	StatWrapper swrap;
-	if ( swrap.Stat( filename.Value() ) != 0 ) {
+	if ( swrap.Stat( filename.c_str() ) != 0 ) {
 		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Error getting inode for log file %s",
-					filename.Value() );
+					filename.c_str() );
 		return false;
 	}
 	fileID.formatstr( "%llu:%llu", (unsigned long long)swrap.GetBuf()->st_dev,
@@ -657,7 +657,7 @@ ReadMultipleUserLogs::monitorLogFile( const MyString & l,
 {
 	MyString logfile = l;
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::monitorLogFile(%s, %d)\n",
-				logfile.Value(), truncateIfFirst );
+				logfile.c_str(), truncateIfFirst );
 
 	MyString fileID;
 	if ( !GetFileID( logfile, fileID, errstack ) ) {
@@ -670,33 +670,33 @@ ReadMultipleUserLogs::monitorLogFile( const MyString & l,
 	if ( allLogFiles.lookup( fileID, monitor ) == 0 ) {
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
 					"LogFileMonitor object for %s (%s)\n",
-					logfile.Value(), fileID.Value() );
+					logfile.c_str(), fileID.c_str() );
 
 	} else {
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: didn't "
 					"find LogFileMonitor object for %s (%s)\n",
-					logfile.Value(), fileID.Value() );
+					logfile.c_str(), fileID.c_str() );
 
 			// Make sure the log file is in the correct state -- it must
 			// exist, and be truncated if necessary.
-		if ( !MultiLogFiles::InitializeFile( logfile.Value(),
+		if ( !MultiLogFiles::InitializeFile( logfile.c_str(),
 					truncateIfFirst, errstack ) ) {
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-						"Error initializing log file %s", logfile.Value() );
+						"Error initializing log file %s", logfile.c_str() );
 			return false;
 		}
 
 		monitor = new LogFileMonitor( logfile );
 		ASSERT( monitor );
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: created LogFileMonitor "
-					"object for log file %s\n", logfile.Value() );
+					"object for log file %s\n", logfile.c_str() );
 			// Note: we're only putting a pointer to the LogFileMonitor
 			// object into the hash table; the actual LogFileMonitor should
 			// only be deleted in this object's destructor.
 		if ( allLogFiles.insert( fileID, monitor ) != 0 ) {
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error inserting %s into allLogFiles",
-						logfile.Value() );
+						logfile.c_str() );
 			delete monitor;
 			return false;
 		}
@@ -713,7 +713,7 @@ ReadMultipleUserLogs::monitorLogFile( const MyString & l,
 				errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 							"Monitoring log file %s fails because of "
 							"previous error saving file state",
-							logfile.Value() );
+							logfile.c_str() );
 				return false;
 			}
 
@@ -722,18 +722,18 @@ ReadMultipleUserLogs::monitorLogFile( const MyString & l,
 				// Monitoring this log file for the first time, so create
 				// the log reader from scratch.
 			monitor->readUserLog =
-						new ReadUserLog( monitor->logFile.Value() );
+						new ReadUserLog( monitor->logFile.c_str() );
 		}
 
 		if ( activeLogFiles.insert( fileID, monitor ) != 0 ) {
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error inserting %s (%s) into activeLogFiles",
-						logfile.Value(), fileID.Value() );
+						logfile.c_str(), fileID.c_str() );
 			return false;
 		} else {
 			dprintf( D_LOG_FILES, "ReadMultipleUserLogs: added log "
-						"file %s (%s) to active list\n", logfile.Value(),
-						fileID.Value() );
+						"file %s (%s) to active list\n", logfile.c_str(),
+						fileID.c_str() );
 		}
 	}
 
@@ -750,7 +750,7 @@ ReadMultipleUserLogs::unmonitorLogFile( const MyString & l,
 {
 	MyString logfile = l;
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::unmonitorLogFile(%s)\n",
-				logfile.Value() );
+				logfile.c_str() );
 
 	MyString fileID;
 	if ( !GetFileID( logfile, fileID, errstack ) ) {
@@ -763,8 +763,8 @@ ReadMultipleUserLogs::unmonitorLogFile( const MyString & l,
 	if ( activeLogFiles.lookup( fileID, monitor ) != 0 ) {
 		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Didn't find LogFileMonitor object for log "
-					"file %s (%s)!", logfile.Value(),
-					fileID.Value() );
+					"file %s (%s)!", logfile.c_str(),
+					fileID.c_str() );
 		dprintf( D_ALWAYS, "ReadMultipleUserLogs error: %s\n",
 					errstack.message() );
 		printAllLogMonitors( NULL );
@@ -773,7 +773,7 @@ ReadMultipleUserLogs::unmonitorLogFile( const MyString & l,
 
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
 				"LogFileMonitor object for %s (%s)\n",
-				logfile.Value(), fileID.Value() );
+				logfile.c_str(), fileID.c_str() );
 
 	monitor->refCount--;
 
@@ -783,14 +783,14 @@ ReadMultipleUserLogs::unmonitorLogFile( const MyString & l,
 			// into a ReadUserLog::FileState object (so we can go back
 			// to the right place if we later monitor it again) and
 			// then deleting the ReadUserLog object.
-		dprintf( D_LOG_FILES, "Closing file <%s>\n", logfile.Value() );
+		dprintf( D_LOG_FILES, "Closing file <%s>\n", logfile.c_str() );
 
 		if ( !monitor->state ) {
 			monitor->state = new ReadUserLog::FileState();
 			if ( !ReadUserLog::InitFileState( *(monitor->state) ) ) {
 				errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 							"Unable to initialize ReadUserLog::FileState "
-							"object for log file %s", logfile.Value() );
+							"object for log file %s", logfile.c_str() );
 				monitor->stateError = true;
 				delete monitor->state;
 				monitor->state = NULL;
@@ -801,7 +801,7 @@ ReadMultipleUserLogs::unmonitorLogFile( const MyString & l,
 		if ( !monitor->readUserLog->GetFileState( *(monitor->state) ) ) {
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error getting state for log file %s",
-						logfile.Value() );
+						logfile.c_str() );
 			monitor->stateError = true;
 			delete monitor->state;
 			monitor->state = NULL;
@@ -816,7 +816,7 @@ ReadMultipleUserLogs::unmonitorLogFile( const MyString & l,
 		if ( activeLogFiles.remove( fileID ) != 0 ) {
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error removing %s (%s) from activeLogFiles",
-						logfile.Value(), fileID.Value() );
+						logfile.c_str(), fileID.c_str() );
 			dprintf( D_ALWAYS, "ReadMultipleUserLogs error: %s\n",
 						errstack.message() );
 			printAllLogMonitors( NULL );
@@ -825,7 +825,7 @@ ReadMultipleUserLogs::unmonitorLogFile( const MyString & l,
 
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: removed "
 					"log file %s (%s) from active list\n",
-					logfile.Value(), fileID.Value() );
+					logfile.c_str(), fileID.c_str() );
 	}
 
 	return true;
@@ -868,15 +868,15 @@ ReadMultipleUserLogs::printLogMonitors( FILE *stream,
 	LogFileMonitor *	monitor;
 	while ( logTable.iterate( fileID,  monitor ) ) {
 		if ( stream != NULL ) {
-			fprintf( stream, "  File ID: %s\n", fileID.Value() );
+			fprintf( stream, "  File ID: %s\n", fileID.c_str() );
 			fprintf( stream, "    Monitor: %p\n", monitor );
-			fprintf( stream, "    Log file: <%s>\n", monitor->logFile.Value() );
+			fprintf( stream, "    Log file: <%s>\n", monitor->logFile.c_str() );
 			fprintf( stream, "    refCount: %d\n", monitor->refCount );
 			fprintf( stream, "    lastLogEvent: %p\n", monitor->lastLogEvent );
 		} else {
-			dprintf( D_ALWAYS, "  File ID: %s\n", fileID.Value() );
+			dprintf( D_ALWAYS, "  File ID: %s\n", fileID.c_str() );
 			dprintf( D_ALWAYS, "    Monitor: %p\n", monitor );
-			dprintf( D_ALWAYS, "    Log file: <%s>\n", monitor->logFile.Value() );
+			dprintf( D_ALWAYS, "    Log file: <%s>\n", monitor->logFile.c_str() );
 			dprintf( D_ALWAYS, "    refCount: %d\n", monitor->refCount );
 			dprintf( D_ALWAYS, "    lastLogEvent: %p\n", monitor->lastLogEvent );
 		}

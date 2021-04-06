@@ -240,7 +240,7 @@ debug_cache_flush(void)
 
 	if (cache != "") {
 		dprintf(D_ALWAYS, "LOG LINE CACHE: Begin Flush\n");
-		dprintf(D_ALWAYS | D_NOHEADER, "%s", cache.Value());
+		dprintf(D_ALWAYS | D_NOHEADER, "%s", cache.c_str());
 		dprintf(D_ALWAYS, "LOG LINE CACHE: End Flush\n");
 		cache = "";
 	}

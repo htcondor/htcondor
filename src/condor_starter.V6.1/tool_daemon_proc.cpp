@@ -187,7 +187,7 @@ ToolDaemonProc::StartJob()
 	MyString env_errors;
 	if( !job_env.MergeFrom(JobAd,&env_errors) ) {
 		dprintf( D_ALWAYS, "Failed to read environment from JobAd.  Aborting "
-				 "ToolDaemonProc::StartJob: %s\n",env_errors.Value());
+				 "ToolDaemonProc::StartJob: %s\n",env_errors.c_str());
 		return 0;
 	}
 

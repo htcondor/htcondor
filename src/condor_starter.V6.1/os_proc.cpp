@@ -235,7 +235,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	MyString env_errors;
 	if( !Starter->GetJobEnv(JobAd,&job_env,&env_errors) ) {
 		dprintf( D_ALWAYS, "Aborting OSProc::StartJob: %s\n",
-				 env_errors.Value());
+				 env_errors.c_str());
 		job_not_started = true;
 		return 0;
 	}
@@ -374,7 +374,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString env_string;
 		job_env.getDelimitedStringForDisplay(&env_string);
-		dprintf(D_FULLDEBUG, "Env = %s\n", env_string.Value());
+		dprintf(D_FULLDEBUG, "Env = %s\n", env_string.c_str());
 	}
 
 	// Stash the environment in the manifest directory, if desired.
@@ -401,7 +401,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			MyString env_string;
 			job_env.getDelimitedStringForDisplay(&env_string);
 
-			fprintf( file, "%s\n", env_string.Value());
+			fprintf( file, "%s\n", env_string.c_str());
 			fclose(file);
 		} else {
 			dprintf( D_ALWAYS, "Failed to open environment log %s: %d (%s)\n", f.c_str(), errno, strerror(errno) );
@@ -603,9 +603,9 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	if (privsep_helper != NULL) {
 		const char* std_file_names[3] = {
-			privsep_stdin_name.Value(),
-			privsep_stdout_name.Value(),
-			privsep_stderr_name.Value()
+			privsep_stdin_name.c_str(),
+			privsep_stdout_name.c_str(),
+			privsep_stderr_name.c_str()
 		};
 		JobPid = privsep_helper->create_process(JobName.c_str(),
 		                                        args,
@@ -705,7 +705,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		}
 
 		dprintf(D_ALWAYS,"Create_Process(%s,%s, ...) failed: %s\n",
-			JobName.c_str(), args_string.c_str(), create_process_err_msg.Value());
+			JobName.c_str(), args_string.c_str(), create_process_err_msg.c_str());
 		job_not_started = true;
 		return 0;
 	}

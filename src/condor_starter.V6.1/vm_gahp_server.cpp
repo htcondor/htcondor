@@ -329,7 +329,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	if(IsFulldebug(D_FULLDEBUG)) {
 		MyString env_str;
 		job_env->getDelimitedStringForDisplay(&env_str);
-		dprintf(D_FULLDEBUG, "Env = %s\n", env_str.Value());
+		dprintf(D_FULLDEBUG, "Env = %s\n", env_str.c_str());
 	}
 
 	priv_state vmgahp_priv = PRIV_ROOT;

@@ -91,7 +91,7 @@ class MyString
 	int Capacity()        const { return capacity;           }
 
 	/** Returns a strdup()ed C string. */
-	char *StrDup() const { return strdup( Value() );         }
+	char *StrDup() const { return strdup( c_str() );         }
 
 	/** alternate names that match std::string method names */
 	int length() const { return Len; }
@@ -100,7 +100,7 @@ class MyString
 	void set(const char* p, int len) { assign_str(p, len); }
 	void append(const char *p, int len) { append_str(p, len); }
 	bool empty() const { return (0 == Len); }
-	const char * c_str() const { return Value(); }
+	const char * c_str() const { return (Data ? Data : ""); }
 
 	/** Returns string. 
 		Note that it never returns NULL, but will return an 
@@ -436,7 +436,7 @@ public:
   MyStringTokener &operator=(MyStringTokener &&rhs) noexcept ;
   ~MyStringTokener();
   void Tokenize(const char * str);
-  void Tokenize(const MyString & str) { Tokenize(str.Value()); }
+  void Tokenize(const MyString & str) { Tokenize(str.c_str()); }
   const char *GetNextToken(const char *delim, bool skipBlankTokens);
 protected:
   char *tokenBuf;
@@ -458,7 +458,7 @@ public:
 	//@{ 
 
 	/** Initialize the tokenizing of this string.  */
-	void Tokenize() { tok.Tokenize(Value()); }
+	void Tokenize() { tok.Tokenize(c_str()); }
 
 	/** Get the next token, with tokens separated by the characters
 	    in delim.  Note that the value of delim may change from call to

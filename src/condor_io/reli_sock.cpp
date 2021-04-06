@@ -1427,7 +1427,7 @@ ReliSock::serialize() const
 	char * msg = serializeMsgInfo();
 	char * md = serializeMdInfo();
 
-	formatstr( state, "%s%d*%s*%s*%s*%s*", parent_state, _special_state, _who.to_sinful().Value(), crypto, msg, md );
+	formatstr( state, "%s%d*%s*%s*%s*%s*", parent_state, _special_state, _who.to_sinful().c_str(), crypto, msg, md );
 
 	delete[] parent_state;
 	delete[] crypto;
