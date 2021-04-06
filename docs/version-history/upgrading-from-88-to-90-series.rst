@@ -119,6 +119,9 @@ The deprecated configuration settings beginning with ``HOSTALLOW`` and
 ``HOSTDENY`` have been removed.  If your 8.8 configuration was still
 using, add their entries to the corresponding ``ALLOW`` or ``DENY`` list.
 
+If you run the *condor_check_config* tool it will detect a couple of the 
+most common configuration values that should be changed after an upgrade.
+
 Step 4: Other Changes
 ---------------------
 
