@@ -84,7 +84,9 @@ Open a command prompt to follow the next set of instructions.
 
 .. include:: minicondor-test-and-quickstart.include
 
-Setting Up a Whole Pool
+.. _admin_install_windows_pool:
+
+Setting Up a Whole Pool with Windows
 ------------------------------------
 
 Follow the instructions above through Step 1. Then, customize the 

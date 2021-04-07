@@ -17,7 +17,9 @@ most systems with Docker installed:
 
 From here, you can proceed to the :ref:`quick_start_guide`.
 
-Setting Up a Whole Pool
+.. _docker_image_pool:
+
+Setting Up a Whole Pool with Docker
 ------------------------------------
 
 If you're looking to set up a whole pool, the following images correspond
