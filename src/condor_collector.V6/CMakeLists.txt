@@ -47,5 +47,9 @@ if (LINUX)
     # only pass the libraries in on Windows and Mac.
     condor_plugin( ce-audit "ce-audit-plugin.cpp" "${C_LIBEXEC}" "" off )
 else()
-    condor_plugin( ce-audit "ce-audit-plugin.cpp" "${C_LIBEXEC}" "${CONDOR_LIBS}" off )
+    # Collector plug-ins can't be be built on Windows or Mac because the
+    # CollectorPlugin constructor and destructor are implemented in the
+    # collector binary, not in a library we can link against.  If anybody
+    # ever actually cares, we can probably change that.
+    # condor_plugin( ce-audit "ce-audit-plugin.cpp" "${C_LIBEXEC}" "${CONDOR_LIBS}" off )
 endif()
