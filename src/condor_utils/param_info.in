@@ -6211,7 +6211,7 @@ default : @end
 	ALLOW_WRITE_STARTD=$(ALLOW_WRITE) $(FLOCK_FROM)
 	ALLOW_READ_COLLECTOR=$(ALLOW_READ) $(FLOCK_FROM)
 	ALLOW_READ_STARTD=$(ALLOW_READ) $(FLOCK_FROM)
-	use SECURITY : WITH_AUTHENTICATION
+	use SECURITY:WITH_AUTHENTICATION
 @end
 
 [$FEATURE.AssignAccountingGroup]
@@ -6429,7 +6429,7 @@ default: @end
 [$SECURITY.get_htcondor_idtokens]
 default: @end
 # Authenticate, encrypt, and monitor the integrity of all connections.
-use security : strong
+use security:strong
 
 # This configuration specifies authentication methods first, and then
 # specifies various authorizations.  Think of a passport and a visa: the
@@ -6495,14 +6495,14 @@ ALLOW_NEGOTIATOR = condor@$(TRUST_DOMAIN)
 
 [$ROLE.get_htcondor_central_manager]
 default: @end
-use security : get_htcondor_idtokens
+use security:get_htcondor_idtokens
 
-use role : CentralManager
+use role:CentralManager
 @end
 
 [$ROLE.get_htcondor_submit]
 default: @end
-use security : get_htcondor_idtokens
+use security:get_htcondor_idtokens
 
 # Allow local users to submit jobs.  Since the only way to authenticate
 # is with IDTOKENS (all of whose holders we trust) and FS (the local users),
@@ -6510,14 +6510,14 @@ use security : get_htcondor_idtokens
 # UID_DOMAIN is set (and introduces more opportunities for DNS to fail).
 ALLOW_WRITE = $(ALLOW_WRITE) *
 
-use role : submit
+use role:submit
 @end
 
 [$ROLE.get_htcondor_execute]
 default: @end
-use security : get_htcondor_idtokens
+use security:get_htcondor_idtokens
 
-use role : execute
+use role:execute
 @end
 
 ##
@@ -6530,7 +6530,7 @@ SECURITY_MODEL = 9.0
 
 # Assume that FS and IDTOKENS are in SEC_DEFAULT_AUTHENTICATION_METHODS,
 # which they are by default.
-use security : strong
+use security:strong
 
 # This allows anyone who can access port 9618 to READ, which lets
 # condor_status and condor_q work over the network out of the box.

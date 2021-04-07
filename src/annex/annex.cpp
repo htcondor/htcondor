@@ -213,7 +213,7 @@ createConfigTarball(	const char * configDir,
 
 	std::string contents;
 	formatstr( contents,
-		"use security : host_based\n"
+		"use security:host_based\n"
 		"LOCAL_HOSTS = $(FULL_HOSTNAME) $(IP_ADDRESS) 127.0.0.1 $(TCP_FORWARDING_HOST)\n"
 		"CONDOR_HOST = condor_pool@*/* $(LOCAL_HOSTS)\n"
 		"COLLECTOR_HOST = %s\n"
