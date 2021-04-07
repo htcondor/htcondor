@@ -21,7 +21,7 @@
 // Note this is included in the procd, so we can't use full condor libraries
 
 #ifndef __PERF_COUNTER_H
-#define  _PERF_COUNTER_H
+#define __PERF_COUNTER_H
 
 #include <sys/types.h>
 
