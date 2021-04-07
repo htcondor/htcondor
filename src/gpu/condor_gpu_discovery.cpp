@@ -214,7 +214,7 @@ constructGPUID( const char * opt_pre, int dev, int opt_uuid, int opt_opencl, int
 	std::string gpuID = Format( "%s%i", opt_pre, dev );
 
 	// The -uuid and -short-uuid flags don't imply -properties.
-	if( opt_uuid && !opt_opencl ) {
+	if( opt_uuid && !opt_opencl && !enumeratedDevices[dev].uuid.empty()) {
 		gpuID = gpuIDFromUUID( enumeratedDevices[dev].uuid, opt_short_uuid );
 	}
 
@@ -608,6 +608,11 @@ main( int argc, const char** argv)
 		// Skip devices not on the whitelist.
 		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
 			continue;
+		}
+
+		// if we are defaulting to UUID, but the device has no UUID, switch the default to -by-index
+		if ((opt_uuid < 0) && enumeratedDevices[dev].uuid.empty()) {
+			opt_short_uuid = opt_uuid = 0;
 		}
 
 		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
