@@ -34,10 +34,12 @@ If one or more GPUS were detected, the value is a string, presented as a
 comma and space separated list of the GPUs discovered, where each is
 given a name further used as the *prefix string* in other attribute
 names. Where there is more than one GPU of a particular type, the
-*prefix string* includes an integer value numbering the device; these
-integer values monotonically increase from 0 unless the ``-uuid`` or ``-short-uuid``
-option is used or unless otherwise specified
-in the environment; see above. For example, a discovery of two GPUs may
+*prefix string* includes an GPU id value identifying the device; these
+can be integer values that monotonically increase from 0 when the ``-by-index``
+option is used or globally unique identfiers when the ``-short-uuid`` or
+``-uuid`` argument is used.  
+
+For example, a discovery of two GPUs with ``-by-index`` may
 output
 
 .. code-block:: condor-classad
@@ -50,8 +52,9 @@ of the integer values 0 or 1 as the *prefix string* in attribute names.
 For machines with more than one or two NVIDIA devices, it is recommended that you
 also use the ``-short-uuid`` or ``-uuid`` option.  The uuid value assigned by
 NVIDA to each GPU is unique, so  using this option provides stable device
-identifiers for your devices. The ``--short-uuid`` option uses only part of the
+identifiers for your devices. The ``-short-uuid`` option uses only part of the
 uuid, but it is highly likely to still be unique for devices on a single machine.
+As of HTCondor 9.0 ``-short-uuid`` is the default.
 When ``-short-uuid`` is used, discovery of two GPUs may look like this
 
 .. code-block:: condor-classad
@@ -117,6 +120,8 @@ Options
     When naming attributes, use *str* as the *prefix string*. When this
     option is not specified, the *prefix string* is either ``CUDA`` or
     ``OCL`` unless ``-uuid`` or ``-short-uuid`` is also used.
+ **-by-index**
+    Use the prefix and device index as the device identifier.
  **-short-uuid**
     Use the first 8 characters of the NVIDIA uuid as the device identifier.
     When this option is used, devices will be shown as ``GPU-<xxxxxxxx>`` where

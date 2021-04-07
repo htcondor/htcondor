@@ -50,12 +50,12 @@ LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config
 ## You should seriously consider improving your security configuration.
 ##
 ## To continue to use your old security configuration, knowing that it is
-## insecure, add the line 'use SECURITY : HOST_BASED' to your local
+## insecure, add the line 'use SECURITY:HOST_BASED' to your local
 ## configuration directory.  Don't just uncomment the final line in this
 ## comment block; changes in this file may be lost during your next upgrade.
 ## The following shell command will make the change on most Linux systems.
 ##
-## echo 'use SECURITY : HOST_BASED' >> $(condor_config_val LOCAL_CONFIG_DIR)/00-insecure.config
+## echo 'use SECURITY:HOST_BASED' >> $(condor_config_val LOCAL_CONFIG_DIR)/00-insecure.config
 ##
 
 ##  To expand your condor pool beyond a single host, set ALLOW_WRITE to match all of the hosts

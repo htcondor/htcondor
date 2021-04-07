@@ -384,11 +384,19 @@ do_install() {
 				echo -e "\n# Installing ps"
 				$sh_c "apt-get install -y procps"
 
-				# In the Ubuntu 20.04 Docker container, this blows up
-				# when run out of the pipe with curl because the
-				# keyboard-configuration and console-configuration
-				# require interactive responses (and stdin is eaten by
-				# this file).  How much do we care?
+				# In the Ubuntu 20.04 Docker container, the following packages
+				# need to be installed non-interactively, because the pipe
+				# out of curl eats the tty they'd like to use:
+				#	keyboard-configuration
+				#	console-setup
+				#	tzdata
+				# apt-get will succeed if these packages are already installed,
+				# but for now let's not risk screwing things up by adding them
+				# on the platforms that don't need them.
+				if [[ $lsb_dist = "ubuntu" && $dist_version = "focal" ]]; then
+					echo -e "\n# Preconfiguring packages for Ubuntu 20.04."
+					$sh_c "DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration console-setup tzdata"
+				fi
 
 				echo -e "\n# Installing HTCondor binaries and dependencies"
 				if [ -z "${ROLE}" ]; then
@@ -526,7 +534,7 @@ do_install() {
 			CONFIG_FILE="/etc/condor/config.d/01-submit.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
 			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_submit' >> ${CONFIG_FILE}"
-			$sh_c "echo 'use role : get_htcondor_submit' >> ${CONFIG_FILE}"
+			$sh_c "echo 'use role:get_htcondor_submit' >> ${CONFIG_FILE}"
 
 			if [ -n "${SHARED_FS_DOMAIN}" ]; then
 				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
@@ -539,7 +547,7 @@ do_install() {
 			CONFIG_FILE="/etc/condor/config.d/01-execute.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
 			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_execute' >> ${CONFIG_FILE}"
-			$sh_c "echo 'use role : get_htcondor_execute' >> ${CONFIG_FILE}"
+			$sh_c "echo 'use role:get_htcondor_execute' >> ${CONFIG_FILE}"
 
 			if [ -n "${SHARED_FS_DOMAIN}" ]; then
 				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"

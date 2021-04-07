@@ -22,7 +22,6 @@ Command Reference Manual (man pages)
    condor_configure
    condor_config_val
    condor_continue
-   condor_convert_history
    condor_dagman
    condor_drain
    condor_evicted_files

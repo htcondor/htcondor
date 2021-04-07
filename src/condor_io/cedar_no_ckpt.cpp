@@ -340,6 +340,10 @@ ReliSock::put_empty_file( filesize_t *size )
 {
 	bool buffered = get_encryption() && get_crypto_state()->m_keyInfo.getProtocol() == CONDOR_AESGCM;
 	*size = 0;
+	// the put(1) here is required because the other size is expecting us
+	// to send the size of messages we are going to use.  however, we're
+	// send zero bytes total so we just need to send any int at all, which
+	// then gets ignored on the other side.
 	if(!put(*size) || !(buffered ? put(1) : 1) || !end_of_message()) {
 		dprintf(D_ALWAYS,"ReliSock: put_file: failed to send dummy file size\n");
 		return -1;

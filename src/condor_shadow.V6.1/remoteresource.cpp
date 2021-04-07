@@ -1478,7 +1478,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     CopyAttribute("Recent" ATTR_BLOCK_READS, *jobAd, *update_ad);
     CopyAttribute("Recent" ATTR_BLOCK_WRITES, *jobAd, *update_ad);
 
+
     CopyAttribute(ATTR_IO_WAIT, *jobAd, *update_ad);
+    CopyAttribute(ATTR_JOB_CPU_INSTRUCTIONS, *jobAd, *update_ad);
 
 	// FIXME: If we're convinced that we want a whitelist here (chirp
 	// would seem to make a mockery of that), we should at least rewrite

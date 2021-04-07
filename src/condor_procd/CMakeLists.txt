@@ -35,6 +35,7 @@ if (LINUX)
 list(APPEND ProcdElements
 	gid_pool.linux.cpp
 	group_tracker.linux.cpp
+	../condor_utils/perf_counter.linux.cpp
 	)
 endif(LINUX)
 

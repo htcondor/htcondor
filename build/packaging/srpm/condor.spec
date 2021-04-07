@@ -897,6 +897,7 @@ rm -f %{buildroot}/%{_bindir}/condor_top
 rm -f %{buildroot}/%{_bindir}/classad_eval
 rm -f %{buildroot}/%{_bindir}/condor_watch_q
 rm -f %{buildroot}/%{_bindir}/condor_check_password
+rm -f %{buildroot}/%{_bindir}/condor_check_config
 %endif
 
 # For EL7, move oauth credmon WSGI script out of libexec to /var/www
@@ -1208,7 +1209,6 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_config_val.1.gz
-%_mandir/man1/condor_convert_history.1.gz
 %_mandir/man1/condor_dagman.1.gz
 %_mandir/man1/condor_fetchlog.1.gz
 %_mandir/man1/condor_findhost.1.gz
@@ -1289,6 +1289,7 @@ rm -rf %{buildroot}
 %_bindir/condor_reschedule
 %_bindir/condor_userprio
 %_bindir/condor_check_password
+%_bindir/condor_check_config
 %_bindir/condor_dagman
 %_bindir/condor_rm
 %_bindir/condor_vacate
@@ -1339,7 +1340,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
-%_sbindir/condor_convert_history
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
 %_sbindir/condor_had

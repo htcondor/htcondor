@@ -65,7 +65,6 @@ condor_exe(condor_transfer_data "transfer_data.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS
 condor_exe(condor_version "version.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_wait "wait.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_history "history.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-condor_exe(condor_convert_history "convert_history.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_store_cred "store_cred_main.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_vacate "tool.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_on "tool.cpp" "${C_SBIN}" "${CONDOR_TOOL_LIBS}" OFF)

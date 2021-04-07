@@ -14,7 +14,7 @@ download, install and start HTCondor.
 
       .. code-block:: shell
 
-         sudo apt-get install curl
+         apt-get update && apt-get install -y curl
 
 The command below shows how to download the script and run it immediately;
 if you would like to inspect it first, see
@@ -25,6 +25,9 @@ the :doc:`admin-quick-start`.
 .. code-block:: shell
 
     sudo curl -fsSL https://get.htcondor.com | /bin/bash -s -- --no-dry-run
+
+If you see an error like ``bash: sudo: command not found``, try re-running
+the command above without the leading ``sudo``.
 
 .. _inspecting_the_script:
 
