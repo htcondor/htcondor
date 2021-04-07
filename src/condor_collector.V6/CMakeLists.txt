@@ -32,13 +32,12 @@ set(CollectorLibSrcs
 	collector_engine.cpp
 	view_server.cpp
 	collector.cpp
-        ad_transforms.cpp
+	ad_transforms.cpp
 )
-
-#
-#condor_static_lib ( collectorlib "${CollectorLibSrcs}")
 
 condor_daemon ( EXE condor_collector
   SOURCES "${collectorElements};${CollectorLibSrcs}"
   LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}"
   INSTALL ${C_SBIN} )
+
+condor_plugin( ce-audit "ce-audit-plugin.cpp" "${C_LIBEXEC}" "" off )
