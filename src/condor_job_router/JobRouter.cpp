@@ -775,6 +775,12 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 	while(m_jobs.iterate(job))
 	{
 		orig_ad = ad_collection->GetClassAd(job->src_key);
+		
+		if (!orig_ad) {
+			dprintf(D_ALWAYS, "Skipping periodic expression evaluation for job %s"
+					" because it seems to have been removed\n", job->src_key.c_str());
+			continue;
+		}
 		// Forward any update of TimerRemove from the source schedd's
 		// job ad to our other copy of the ad.
 		// This brute-force update assumes that if  TimerRemove initially
@@ -783,7 +789,6 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 		// Do the same for x509UserProxyExpiration, which is used in some
 		// users' job policy expressions.
 		int timer_remove = -1;
-		MSC_SUPPRESS_WARNING(6011) // code analysis thinks orig_ad may be null, code analysis is wrong
 		if (orig_ad->EvaluateAttrInt(ATTR_TIMER_REMOVE_CHECK, timer_remove)) {
 			job->src_ad.InsertAttr(ATTR_TIMER_REMOVE_CHECK, timer_remove);
 			job->src_ad.MarkAttributeClean(ATTR_TIMER_REMOVE_CHECK);
@@ -797,13 +802,6 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 			dprintf(D_ALWAYS, "JobRouter failure (%s): Unable to "
 					"evaluate job's periodic policy "
 					"expressions.\n", job->JobDesc().c_str());
-			if( !orig_ad ) {
-				dprintf(D_ALWAYS, "JobRouter failure (%s): "
-					"failed to reset src job "
-					"attributes, because ad not found "
-					"in collection.\n",job->JobDesc().c_str());
-				continue;
-			}
 
 			job->SetSrcJobAd(job->src_key.c_str(), orig_ad, ad_collection);
 			if (false == push_dirty_attributes(job->src_ad,m_schedd1_name,m_schedd1_pool))
