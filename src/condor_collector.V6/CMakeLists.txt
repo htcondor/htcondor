@@ -40,4 +40,12 @@ condor_daemon ( EXE condor_collector
   LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}"
   INSTALL ${C_SBIN} )
 
-condor_plugin( ce-audit "ce-audit-plugin.cpp" "${C_LIBEXEC}" "" off )
+if (LINUX)
+    # Linux doesn't require a library's libraries to be on the link line,
+    # and none of the other invocations of condor_plugin() use the library
+    # argument -- although they're all explicitly Linux-specific.  For now,
+    # only pass the libraries in on Windows and Mac.
+    condor_plugin( ce-audit "ce-audit-plugin.cpp" "${C_LIBEXEC}" "" off )
+else()
+    condor_plugin( ce-audit "ce-audit-plugin.cpp" "${C_LIBEXEC}" "${CONDOR_LIBS}" off )
+endif()
