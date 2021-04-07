@@ -10,6 +10,7 @@
 # % define osg      0
 # % define uw_build 1
 # % define vaultcred 1
+# % define devtoolset 0
 
 %define python 0
 
@@ -212,7 +213,7 @@ BuildRequires: libtool-ltdl-devel
 BuildRequires: libcgroup-devel
 Requires: libcgroup
 
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
+%if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
 BuildRequires: which
 BuildRequires: devtoolset-9-toolchain
 %endif
@@ -704,7 +705,7 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 
 %build
 
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
+%if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
 . /opt/rh/devtoolset-9/enable
 export CC=$(which cc)
 export CXX=$(which c++)
