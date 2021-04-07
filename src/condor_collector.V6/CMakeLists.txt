@@ -51,5 +51,9 @@ else()
     # CollectorPlugin constructor and destructor are implemented in the
     # collector binary, not in a library we can link against.  If anybody
     # ever actually cares, we can probably change that.
+    #
+    # Moving the CollectorPlugin constructor to a library would probably
+    # also require moving the plugin manager to a library, since they
+    # need to be able to find each other.
     # condor_plugin( ce-audit "ce-audit-plugin.cpp" "${C_LIBEXEC}" "${CONDOR_LIBS}" off )
 endif()
