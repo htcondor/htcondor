@@ -52,24 +52,62 @@ STEP 1: License Agreement.
 STEP 2: HTCondor Pool Configuration.
     Choose the option to create a new pool and enter a name.
 
-    Experienced users who are making a pool should create a new pool
-    only on the machine they've chosen as their central manager.  See
+STEP 3: This Machine's Roles.
+    Check the "submit jobs" box.  From the list of execution options,
+    choose "always run jobs".
+
+STEP 4: The Account Domain.
+    Skip this entry.
+
+STEP 5: E-mail Settings.
+    Specify the desired email address(es), if any.
+
+STEP 6: Java Settings.
+    If this entry is already set, accept it.  Otherwise, skip it.
+
+STEP 7: Host Permission Settings.
+    Enter ``127.0.0.1`` for all settings.
+
+STEP 8: VM Universe Setting.
+    Disable the **vm** universe.
+
+STEP 9: Choose Destination Folder
+    :index:`location of files<single: location of files; installation>`
+
+    Accept the default settings.
+
+This should complete the installation process. The installer will have
+automatically started HTCondor in the background and you do **not** need to
+restart Windows for HTCondor to work.
+
+Open a command prompt to follow the next set of instructions.
+
+.. include:: minicondor-test-and-quickstart.include
+
+.. _admin_install_windows_pool:
+
+Setting Up a Whole Pool with Windows
+------------------------------------
+
+Follow the instructions above through Step 1. Then, customize the
+installation as follows:
+
+STEP 2: HTCondor Pool Configuration.
+
+    Create a new pool
+    only on the machine you've chosen as their central manager.  See
     the :doc:`admin-quick-start`.  Otherwise, choose the option to
     join an existing pool and enter the name or IP address of the
     central manager.
 
 STEP 3: This Machine's Roles.
-    Check the "submit jobs" box.  From the list of execution options,
-    choose "always run jobs".
 
-    Experienced users who are making a pool should check the "submit jobs"
+    Check the "submit jobs"
     box to select the submit role, or choose "always run jobs" to select
     the execute role.
 
 STEP 4: The Account Domain.
-    Skip this entry.
-
-    Experienced users who are making a pool should instead enter the
+    Enter the
     same name on all submit-role machines.  This helps ensure that a
     user can't get more resources by logging in to more than one machine.
 
@@ -86,9 +124,7 @@ STEP 6: Java Settings.
     To disable use of the **java** universe, leave the field blank.
 
 STEP 7: Host Permission Settings.
-    Enter ``127.0.0.1`` for all settings.
-
-    Experienced users who are making a pool should leave all three
+    Leave all three
     entries blank and configure security as appropriate for the
     machine's role by editing HTCondor configuration files; see the
     ``get_htcondor`` :doc:`man page <../man-pages/get_htcondor>` for
@@ -103,17 +139,7 @@ STEP 8: VM Universe Setting.
 STEP 9: Choose Destination Folder
     :index:`location of files<single: location of files; installation>`
 
-    Accept the default settings.
-
     Experienced users may change the default installation path
     (``c:\Condor``), but we don't recommend doing so.  The default path
     is assumed in a number of script and configuration paths, so you should
     expect problems if you do so.
-
-This should complete the installation process. The installer will have
-automatically started HTCondor in the background and you do **not** need to
-restart Windows for HTCondor to work.
-
-Open a command prompt to follow the next set of instructions.
-
-.. include:: minicondor-test-and-quickstart.include
