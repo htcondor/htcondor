@@ -17,8 +17,8 @@ Getting HTCondor
 
     admin-quick-start
 
-These instructions show how to install HTCondor and run all of its
-components on a single computer, so that you can test HTCondor and
+These instructions show how to create a complete HTCondor installation with
+all of its components on a single computer, so that you can test HTCondor and
 explore its features.  We recommend that new users start with the
 :ref:`first set of instructions <install_with_administrative_privileges>`
 here and then continue with the :doc:`../users-manual/quick-start-guide`;
