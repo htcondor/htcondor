@@ -23,7 +23,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a memory leak in the job router, usually triggered when job
+  policy expressions cause removal of the job.
+  :jira:`408`
 
 Version 8.8.13
 --------------
