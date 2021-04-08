@@ -111,3 +111,5 @@ if [ -d usr/lib/condor/libexec/glite ]; then
     ln -s ../../../../lib usr/lib/condor/libexec/glite
     ln -s bin usr/lib/condor/libexec/glite/libexec
 fi
+# Comment out default blahp location
+sed -i -e s/blah_libexec_directory/#blah_libexec_directory/ etc/blah.config

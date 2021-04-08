@@ -10,6 +10,7 @@
 # % define osg      0
 # % define uw_build 1
 # % define vaultcred 1
+# % define devtoolset 0
 
 %define python 0
 
@@ -23,6 +24,7 @@
 %endif
 
 %if %uw_build
+%define devtoolset 1
 %define debug 1
 %endif
 
@@ -212,7 +214,7 @@ BuildRequires: libtool-ltdl-devel
 BuildRequires: libcgroup-devel
 Requires: libcgroup
 
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
+%if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
 BuildRequires: which
 BuildRequires: devtoolset-9-toolchain
 %endif
@@ -704,7 +706,7 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 
 %build
 
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
+%if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
 . /opt/rh/devtoolset-9/enable
 export CC=$(which cc)
 export CXX=$(which c++)
@@ -1198,6 +1200,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
+%_libexecdir/condor/ce-audit.so
 %_libexecdir/condor/adstash/__init__.py
 %_libexecdir/condor/adstash/config.py
 %_libexecdir/condor/adstash/convert.py

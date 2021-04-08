@@ -5,8 +5,8 @@ Docker Images
 
 HTCondor provides images on Docker Hub.
 
-.. rubric:: Getting Started with HTCondor
-
+Quickstart Instructions
+-----------------------
 If you're just getting started with HTCondor, use ``htcondor/minicondor``,
 a stand-alone HTCondor configuration.  The following command will work on
 most systems with Docker installed:
@@ -17,7 +17,10 @@ most systems with Docker installed:
 
 From here, you can proceed to the :ref:`quick_start_guide`.
 
-.. rubric:: Setting up a Whole Pool
+.. _docker_image_pool:
+
+Setting Up a Whole Pool with Docker
+-----------------------------------
 
 If you're looking to set up a whole pool, the following images correspond
 to the three required roles.  See the :doc:`admin-quick-start` for more

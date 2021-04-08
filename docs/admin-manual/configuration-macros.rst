@@ -9361,6 +9361,10 @@ macros are described in the :doc:`/admin-manual/security` section.
     The number of seconds to wait before cleaning up unused credentials.
     Defaults to 3,600 seconds (1 hour).
 
+:macro-def:`SEC_CREDENTIAL_DIRECTORY_KRB`
+    The directory that users' Kerberos credentials should be stored in.
+    This variable has no default value.
+
 :macro-def:`SEC_CREDENTIAL_DIRECTORY_OAUTH`
     The directory that users' OAuth2 credentials should be stored in.
     This directory must be owned by root:condor with the setgid flag enabled.
