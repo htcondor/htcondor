@@ -2663,15 +2663,14 @@ JobRouter::CleanupRetiredJob(RoutedJob *job) {
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 	classad::ClassAd *src_ad = ad_collection->GetClassAd(job->src_key);
 
-	// If src_ad cannot be found in the mirror, then the ad has probably
-	// been deleted, and we could just count that as being in sync.
-	// However, there is no penalty to keeping the job waiting around in
-	// retirement in this case, because without src_ad, we can't possibly
-	// try to route this job again or anything like that.  Therefore,
-	// play it safe and only count the mirror as synchronized if we
-	// can find src_ad and directly observe that it is not managed by us.
+	// If src_ad cannot be found in the mirror, then the ad has already
+	// been retired from the job ad. This is particularly likely to
+	// happen if we removed the job (e.g. due to job policy expressions).
+	// Consider it synchronized.
 
-	if(src_ad) {
+	if(!src_ad) {
+		src_job_synchronized = true;
+	} else {
 		std::string managed;
 		std::string manager;
 		src_ad->EvaluateAttrString(ATTR_JOB_MANAGED,managed);
