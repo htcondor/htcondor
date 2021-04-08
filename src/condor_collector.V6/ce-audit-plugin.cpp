@@ -5,7 +5,9 @@
 
 #include "ce-audit-plugin.h"
 #include "Regex.h"
+
 #include <algorithm>
+#include <iterator>
 
 static CEAuditPlugin instance;
 
