@@ -3,47 +3,15 @@ Upgrading from the 8.8 series to the 9.0 series of HTCondor
 
 :index:`items to be aware of<single: items to be aware of; upgrading>`
 
-Upgrading from the 8.8 series of HTCondor to the 9.0 series will bring
-new features introduced in the 8.9 series of HTCondor.  A list of the
-most significant changes of interests to pool administrators follows;
-a full list of changes can be found in the
-`version history <../version-history/development-release-series-89.html>`_.
-
-- HTCondor now creates a number of directories on start-up, rather than
-  fail later on when it needs them to exist.  See the ticket for details.
-  :jira:`73`
-
-- Many API changes in the Python bindings: many new features, new packages,
-  and many interfaces have been deprecated.  In particular, see
-  :ticket:`7808`, :ticket:`7607`, :ticket:`7337`, :ticket:`7261`,
-  :ticket:`7109`, and :ticket:`6983` for potentially-breaking changes.
-  (Too many other tickets to list.)
-
-- Kerberos and OAuth credentials may now be enabled on the same machine.
-  :ticket:`7462`
-
-- Added a new tool, *classad_eval*, that can evaluate a ClassAd expression in
-  the context of ClassAd attributes, and print the result in ClassAd format.
-  :ticket:`7339`
-
-- Added a new authentication method, `IDTOKENS`, which we recommend over
-  `PASSWORD` unconditionally.
-  :ticket:`6947`
-
-.. Apparently SciTokens still aren't -- perhaps deliberately -- documented.
-.. - `SciTokens <https://scitokens.org>`_ may now be used for authentication.
-..  :ticket:`7011`
-
-Upgrading from the 8.8 series of HTCondor to the 9.0 series will also
-introduce changes that administrators should be aware of when planning
-an upgrade.
-
-(If you're upgrading from the 8.9 series to 9.0, read the
-`specific documentation <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UpgradingToEightNineThirteen>`_ for that, instead.)
-
-HTCondor 9.0 introduces many security improvements.  As a result, we expect
+HTCondor 9.0 introduces many security improvements.  As a result, **we expect
 that many 8.8 pools will require explicit administrator intervention after
-the upgrade.
+the upgrade.**
+
+(If you’re upgrading to 9.0 from the 8.9 series, read the
+`instructions for upgrading to 8.9.13 <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UpgradingToEightNineThirteen>`_, instead.)
+
+The following steps will help you determine if you need to make changes,
+and if so, which ones.
 
 Step 1
 ------
@@ -62,9 +30,9 @@ file adds the line
 
 which configures user-based security and requires encryption, authentication,
 and integrity.  If you have already configured another daemon authentication
-method (e.g. pool PASSWORD, SSL, GSI, KERBEROS, etc) at some point in the past,
-you can comment out the above line in the file ``00-htcondor-9.0.config``
-and skip to `Step 2`_ below.
+method (e.g. pool ``PASSWORD``, ``SSL``, ``GSI``, ``KERBEROS``, etc) at some
+point in the past, you can comment out the above line in the file
+``00-htcondor-9.0.config`` and skip to `Step 2`_ below.
 
 If you have not already configured some other daemon authentication method
 and thus are relying solely on host-based authentication (i.e. a list of
@@ -77,7 +45,7 @@ allowed hostnames or IP addresses), you have three options:
   site-specific configuration from your old installation to the new
   installation by placing configuration files into ``/etc/condor/config.d``.
 
-  Continue with `Step 4: Other Changes`_ below.
+  Continue with `Step 4`_ below.
 
 - **Option B**.  Run two commands (as root) on every machine in your pool to
   enable the recommended security configuration appropriate for v9.0.  When
@@ -91,7 +59,7 @@ allowed hostnames or IP addresses), you have three options:
         # condor_store_cred -c add
         # umask 0077; condor_token_create -identity condor@mypool > /etc/condor/tokens.d/condor@mypool
 
-  Continue with `Step 4: Other Changes`_ below.
+  Continue with `Step 4`_ below.
 
 - **Option C**.  Revert to the previous host-based security configuration that
   was the default before v9.0.  This is the most expedient way to get your
@@ -119,24 +87,22 @@ The deprecated configuration settings beginning with ``HOSTALLOW`` and
 ``HOSTDENY`` have been removed.  If your 8.8 configuration was still
 using, add their entries to the corresponding ``ALLOW`` or ``DENY`` list.
 
-If you run the *condor_check_config* tool it will detect a couple of the 
+If you run the *condor_check_config* tool it will detect a couple of the
 most common configuration values that should be changed after an upgrade.
 
-Step 4: Other Changes
----------------------
+Step 4
+------
 
-- GPU monitoring is now on by default.
-  :ticket:`7201`
-
-- Any negotiator trusted by the collector is now trusted by schedds which
-  trust the collector.  This may inform your (new) security configuration.
-  :ticket:`6956`
+The following changes my affect but your pool, but are not security
+improvements.  You may have to take action to continue using certain
+features of HTCondor.  If you don't use the feature, you may ignore
+its entry.
 
 - Singularity jobs no longer mount the user's home directory by default.
   To re-enable this, set the knob ``SINGULARITY_MOUNT_HOME = true``.
   :ticket:`6676`
 
-- The ``SHARED_PORT_PORT`` setting is now honored. If you are using
+- The ``SHARED_PORT_PORT`` setting is now honored.  If you are using
   a non-standard port on machines other than the Central Manager, this
   bug fix will a require configuration change in order to specify
   the non-standard port.
@@ -155,8 +121,45 @@ Step 4: Other Changes
   8.8-compatible index-based GPU IDs.
   :jira:`145`
 
+- Many API changes in the Python bindings: many new features, new packages,
+  and many interfaces have been deprecated.  In particular, see
+  :ticket:`7808`, :ticket:`7607`, :ticket:`7337`, :ticket:`7261`,
+  :ticket:`7109`, and :ticket:`6983` for potentially-breaking changes.
+  (Too many other tickets to list.)
+
+Other Changes
+-------------
+
+The following items are strictly informative.
+
+- Any negotiator trusted by the collector is now trusted by schedds which
+  trust the collector.  This may inform or simplify your (new) security
+  configuration.
+  :ticket:`6956`
+
 - The packages have changed.  The ``condor-externals`` package is now empty,
   and the blahp is packaged in the ``blahp`` package.  The 9.0 release RPMs
   of HTCondor require additional packages from EPEL.
   :ticket:`7681`
 
+- GPU monitoring is now on by default.
+  :ticket:`7201`
+
+- HTCondor now creates a number of directories on start-up, rather than
+  fail later on when it needs them to exist.  See the ticket for details.
+  :jira:`73`
+
+- Kerberos and OAuth credentials may now be enabled on the same machine.
+  :ticket:`7462`
+
+- Added a new tool, *classad_eval*, that can evaluate a ClassAd expression in
+  the context of ClassAd attributes, and print the result in ClassAd format.
+  :ticket:`7339`
+
+- Added a new authentication method, ``IDTOKENS``, which we recommend over
+  ``PASSWORD`` unconditionally.
+  :ticket:`6947`
+
+.. Apparently SciTokens still aren't -- perhaps deliberately -- documented.
+.. - `SciTokens <https://scitokens.org>`_ may now be used for authentication.
+..  :ticket:`7011`
