@@ -573,7 +573,7 @@ bool hasTwoColonsInHost( char const * sinful ) {
 	return false;
 }
 
-Sinful::Sinful( char const * sinful ) {
+Sinful::Sinful( char const * sinful ) : m_valid(false) {
 	if( sinful == NULL ) {
 		// default constructor
 		m_valid = true;
