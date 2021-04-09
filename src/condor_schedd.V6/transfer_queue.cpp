@@ -160,10 +160,10 @@ TransferQueueManager::~TransferQueueManager() {
 	}
 	m_xfer_queue.Clear();
 
-	if( m_check_queue_timer != -1 ) {
+	if( daemonCore && m_check_queue_timer != -1 ) {
 		daemonCore->Cancel_Timer( m_check_queue_timer );
 	}
-	if( m_update_iostats_timer != -1 ) {
+	if( daemonCore && m_update_iostats_timer != -1 ) {
 		daemonCore->Cancel_Timer( m_update_iostats_timer );
 	}
 }

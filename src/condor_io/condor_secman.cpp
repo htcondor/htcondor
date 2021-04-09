@@ -2981,7 +2981,7 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 
 
 SecMan::SecMan() :
-	m_cached_auth_level((DCpermission)-1),
+	m_cached_auth_level(UNSET_PERM),
 	m_cached_raw_protocol(false),
 	m_cached_use_tmp_sec_session(false),
 	m_cached_force_authentication(false),

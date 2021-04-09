@@ -229,7 +229,7 @@ SelfDrainingQueue::cancelTimer( void )
 	if( tid != -1 ) {
 		dprintf( D_FULLDEBUG, "Canceling timer for SelfDrainingQueue %s "
 				 "(timer id: %d)\n", name, tid );
-		daemonCore->Cancel_Timer( tid );
+		if (daemonCore) daemonCore->Cancel_Timer( tid );
 		tid = -1;
 	}
 }

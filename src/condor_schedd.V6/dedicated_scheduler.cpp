@@ -484,10 +484,10 @@ DedicatedScheduler::~DedicatedScheduler()
 		delete shadow_obj;
 		shadow_obj = NULL;
 	}
-	if( hdjt_tid != -1 ) {
+	if( daemonCore && hdjt_tid != -1 ) {
 		daemonCore->Cancel_Timer( hdjt_tid );
 	}
-	if( sanity_tid != -1 ) {
+	if( daemonCore && sanity_tid != -1 ) {
 		daemonCore->Cancel_Timer( sanity_tid );
 	}
 
