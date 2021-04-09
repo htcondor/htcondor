@@ -1344,7 +1344,7 @@ char * ReliSock::serializeMsgInfo() const
 	if(m_final_mds.size()) {
 		strcat(buf, "*");
 		char * ptr = buf + strlen(buf);
-		const unsigned char * vecdata = m_final_mds.data();
+		unsigned char * vecdata = const_cast<unsigned char*>(&(m_final_mds[0]));
 		for (unsigned int i=0; i < m_final_mds.size(); i++, vecdata++, ptr+=2) {
 			sprintf(ptr, "%02X", *vecdata);
 		}
@@ -1398,7 +1398,7 @@ const char * ReliSock::serializeMsgInfo(const char * buf)
 	if (vecsize) {
 		buf++;
 		unsigned int hex;
-		unsigned char* ptr = m_final_mds.data();
+		char* ptr = (char*)(&m_final_mds[0]);
 		for (unsigned int i = 0; i < vecsize; i++) {
 			citems = sscanf(buf, "%2X", &hex);
 			if (citems != 1) break;
