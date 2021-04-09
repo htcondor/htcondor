@@ -58,7 +58,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	ReliSock* rsock = (ReliSock*)s;
 	TransferDaemon *td = NULL;
 	std::string rand_id;
-	MyString fquser;
+	std::string fquser;
 	ClassAd reqad, respad;
 	std::string jids, jids_allow, jids_deny;
 	std::vector<PROC_ID> *jobs = NULL;
@@ -70,7 +70,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	std::string peer_version;
 	bool has_constraint;
 	int direction;
-	MyString desc;
+	std::string desc;
 
 	(void)mode; // quiet the compiler
 
@@ -217,7 +217,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		// authorized to.
 		//////////////////////
 		for (size_t i = 0; i < jobs->size(); i++) {
-			MyString job_owner = "";
+			std::string job_owner = "";
 			GetAttributeString((*jobs)[i].cluster, (*jobs)[i].proc, attr_JobUser.c_str(), job_owner);
 			if (UserCheck2(NULL, EffectiveUser(rsock), job_owner.c_str())) {
 				// only allow the user to manipulate jobs it is entitled to.
@@ -874,13 +874,13 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 			char *old_path_buf;
 			bool changed = false;
 			const char *base = NULL;
-			MyString new_path_buf;
+			std::string new_path_buf;
 			while ( (old_path_buf=old_paths.next()) ) {
 				base = condor_basename(old_path_buf);
 				if ((strcmp(AttrsToModify[index], ATTR_TRANSFER_INPUT_FILES)==0) && IsUrl(old_path_buf)) {
 					base = old_path_buf;
 				} else if ( strcmp(base,old_path_buf)!=0 ) {
-					new_path_buf.formatstr(
+					formatstr(new_path_buf,
 						"%s%c%s",SpoolSpace.c_str(),DIR_DELIM_CHAR,base);
 					base = new_path_buf.c_str();
 					changed = true;
@@ -1441,13 +1441,13 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			char *old_path_buf;
 			bool changed = false;
 			const char *base = NULL;
-			MyString new_path_buf;
+			std::string new_path_buf;
 			while ( (old_path_buf=old_paths.next()) ) {
 				base = condor_basename(old_path_buf);
 				if ( strcmp(base,old_path_buf)!=0 ) {
-					new_path_buf.sprintf(
+					sprintf(new_path_buf,
 						"%s%c%s",SpoolSpace.c_str(),DIR_DELIM_CHAR,base);
-					base = new_path_buf.Value();
+					base = new_path_buf.c_str();
 					changed = true;
 				}
 				new_paths.append(base);

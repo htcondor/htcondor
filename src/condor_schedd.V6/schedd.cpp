@@ -9048,7 +9048,7 @@ Scheduler::startTransferd( int cluster, int proc )
 	std::string rand_id;
 	TransferDaemon *td = NULL;
 	ClassAd *jobad = NULL;
-	MyString desc;
+	std::string desc;
 
 	// just do a quick check in case a higher layer had already started one
 	// for this job.
