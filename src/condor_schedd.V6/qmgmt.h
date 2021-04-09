@@ -136,7 +136,6 @@ public:
 
 	// return a pointer to the class that this qelm is part of.
 	template <typename T> T* as() {
-		if ( ! this) return NULL;
 		char * p = (char*)this - offsetof(T,qe);
 		return reinterpret_cast<T*>(p);
 	}
