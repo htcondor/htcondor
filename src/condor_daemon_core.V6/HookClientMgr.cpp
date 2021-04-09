@@ -39,10 +39,10 @@ HookClientMgr::~HookClientMgr() {
 		m_client_list.DeleteCurrent();
 		delete client;
 	}
-	if (m_reaper_output_id != -1) {
+	if (daemonCore && m_reaper_output_id != -1) {
 		daemonCore->Cancel_Reaper(m_reaper_output_id);
 	}
-	if (m_reaper_ignore_id != -1) {
+	if (daemonCore && m_reaper_ignore_id != -1) {
 		daemonCore->Cancel_Reaper(m_reaper_ignore_id);
 	}
 }

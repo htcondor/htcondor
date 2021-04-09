@@ -496,9 +496,9 @@ classad::ClassAdCollection *Scheduler::GetClassAds() const
 	return NULL;
 }
 
-void Scheduler::init() {  m_mirror->init(); }
-void Scheduler::config() { m_mirror->config(); }
-void Scheduler::stop()  { m_mirror->stop(); }
+void Scheduler::init() {  if (m_mirror) m_mirror->init(); }
+void Scheduler::config() { if (m_mirror) m_mirror->config(); }
+void Scheduler::stop()  { if (m_mirror) m_mirror->stop(); }
 void Scheduler::poll()  { }
 int  Scheduler::id() const { return m_id; }
 
