@@ -160,7 +160,7 @@ extern const std::string & attr_JobUser; // the attribute name we use for the "o
 // Hash table with an entry for every job owner that
 // has existed in the queue since this schedd has been
 // running.  Used by SuperUserAllowedToSetOwnerTo().
-static HashTable<MyString,int> owner_history(hashFunction);
+static HashTable<std::string,int> owner_history(hashFunction);
 
 int		do_Q_request(QmgmtPeer &,bool &may_fork);
 #if 0 // not used?
@@ -189,7 +189,7 @@ static int cluster_maximum_val = 0;     // maximum cluster id (default is 0, or 
 static int job_queued_count = 0;
 static Regex *queue_super_user_may_impersonate_regex = NULL;
 
-static void AddOwnerHistory(const MyString &user);
+static void AddOwnerHistory(const std::string &user);
 
 typedef _condor_auto_accum_runtime< stats_entry_probe<double> > condor_auto_runtime;
 
@@ -453,7 +453,7 @@ ClusterCleanup(int cluster_id)
 	}
 
 	// pull out the owner and hash used for ickpt sharing
-	MyString hash, owner, digest;
+	std::string hash, owner, digest;
 	GetAttributeString(cluster_id, -1, ATTR_JOB_CMD_HASH, hash);
 	if ( ! hash.empty()) {
 		GetAttributeString(cluster_id, -1, ATTR_OWNER, owner);
@@ -1575,7 +1575,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	ASSERT(qmgmt_was_initialized);	// make certain our parameters are setup
 	ASSERT(!JobQueue);
 
-	MyString spool;
+	std::string spool;
 	if( !param(spool,"SPOOL") ) {
 		EXCEPT("SPOOL must be defined.");
 	}
@@ -1602,7 +1602,6 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	std::string	owner;
 	std::string	user;
 	std::string correct_user;
-	MyString	buf;
 	std::string	attr_scheduler;
 	std::string correct_scheduler;
 	std::string buffer;
@@ -2432,12 +2431,12 @@ isQueueSuperUser( const char* user )
 }
 
 static void
-AddOwnerHistory(const MyString &user) {
+AddOwnerHistory(const std::string &user) {
 	owner_history.insert(user,1);
 }
 
 static bool
-SuperUserAllowedToSetOwnerTo(const MyString &user) {
+SuperUserAllowedToSetOwnerTo(const std::string &user) {
 		// To avoid giving the queue super user (e.g. condor)
 		// the ability to run as innocent people who have never
 		// even run a job, only allow them to set the owner
@@ -3552,7 +3551,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 				// Take care of ATTR_REMOVE_REASON
 				if( reason ) {
-					MyString fixed_reason;
+					std::string fixed_reason;
 					if( reason[0] == '"' ) {
 						fixed_reason += reason;
 					} else {
@@ -3649,7 +3648,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 	// both an input constraint and OnlyMyJobs is set.
 	YourString owner;
 	YourString user;
-	MyString owner_expr;
+	std::string owner_expr;
 	if (flags & SetAttribute_OnlyMyJobs) {
 			// TODO: Owner should be 'nobody' for non-local UID domain.
 		user = EffectiveUser(Q_SOCK); // user is "" if no Q_SOCK
@@ -3665,7 +3664,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 			// for queue superusers, disable the OnlyMyJobs flag - they get to act on all jobs.
 			flags &= ~SetAttribute_OnlyMyJobs;
 		} else {
-			owner_expr.formatstr("(%s == \"%s\")", attr_JobUser.c_str(), user.c_str());
+			formatstr(owner_expr, "(%s == \"%s\")", attr_JobUser.c_str(), user.c_str());
 			if (constraint_str) {
 				owner_expr += " && ";
 				owner_expr += constraint_str;
@@ -4376,13 +4375,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			}
 			// TODO: handle the case where nice-user was true, but now is being set to false?
 		} else {
-			MyString owner;
-			MyString user;
+			std::string owner;
+			std::string user;
 			if( GetAttributeString(cluster_id, proc_id, ATTR_OWNER, owner)
 				>= 0 ) {
-				user.formatstr( "\"%s%s@%s\"", (nice_user) ? "nice-user." :
-						 "", owner.Value(), scheduler.uidDomain() );
-				SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags, nullptr );
+				formatstr( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." :
+						 "", owner.c_str(), scheduler.uidDomain() );
+				SetAttribute( cluster_id, proc_id, ATTR_USER, user.c_str(), flags, nullptr );
 			}
 		}
 	}
@@ -4585,7 +4584,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	// This block handles rounding of attributes.
-	MyString round_param_name;
+	std::string round_param_name;
 	round_param_name = "SCHEDD_ROUND_ATTR_";
 	round_param_name += attr_name;
 
@@ -5035,8 +5034,8 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	}
 
 	// Create filename
-	MyString filename;
-	filename.formatstr( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
+	std::string filename;
+	formatstr( filename, "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
 
 	// Swith to root temporarily
 	priv_state old_priv = set_root_priv();
@@ -5094,8 +5093,8 @@ DestroyMyProxyPassword( int cluster_id, int proc_id )
 		return 0;
 	}
 
-	MyString filename;
-	filename.formatstr( "%s%cmpp.%d.%d", Spool, DIR_DELIM_CHAR,
+	std::string filename;
+	formatstr( filename, "%s%cmpp.%d.%d", Spool, DIR_DELIM_CHAR,
 					  cluster_id, proc_id );
 
   	// Swith to root temporarily
@@ -5135,8 +5134,8 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	// Swith to root temporarily
 	priv_state old_priv = set_root_priv();
 	
-	MyString filename;
-	filename.formatstr( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
+	std::string filename;
+	formatstr( filename, "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
 	int fd = safe_open_wrapper_follow(filename.c_str(), O_RDONLY);
 	if (fd < 0) {
 		set_priv(old_priv);
@@ -6587,7 +6586,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						value_came_from_jobad = false;
 					} else {
 							// No startd ad -- use value from last match.
-						MyString expr;
+						std::string expr;
 						expr = "MATCH_";
 						expr += name;
 						value = sPrintExpr(*ad, expr.c_str());
@@ -6628,7 +6627,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					// re-insert it if we got the value from the job ad
 					// in the first place.
 					if ( !value_came_from_jobad && persist_expansions) {
-						MyString expr;
+						std::string expr;
 						expr = "MATCH_";
 						expr += name;
 
@@ -6713,7 +6712,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					ASSERT(new_value);
 					expanded_ad->AssignExpr(itr->first,new_value);
 
-					MyString match_exp_name = MATCH_EXP;
+					std::string match_exp_name = MATCH_EXP;
 					match_exp_name += itr->first;
 					if ( SetAttribute(cluster_id,proc_id,match_exp_name.c_str(),new_value) < 0 )
 					{
@@ -6782,11 +6781,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 
 		if ( attribute_not_found ) {
-			MyString hold_reason;
+			std::string hold_reason;
 			// Don't put the $$(expr) literally in the hold message, otherwise
 			// if we fix the original problem, we won't be able to expand the one
 			// in the hold message
-			hold_reason.formatstr("Cannot expand $$ expression (%s).",name);
+			formatstr(hold_reason,"Cannot expand $$ expression (%s).",name);
 
 			// no ClassAd in the match record; probably
 			// an older negotiator.  put the job on hold and send email.
@@ -6844,8 +6843,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			   !env_obj.InsertEnvIntoClassAd(expanded_ad,&env_error_msg,opsys,&ver_info))
 			{
 				attribute_not_found = true;
-				MyString hold_reason;
-				hold_reason.formatstr(
+				std::string hold_reason;
+				formatstr(hold_reason,
 					"Failed to convert environment to target syntax"
 					" for starter (opsys=%s): %s",
 					opsys ? opsys : "NULL",env_error_msg.c_str());
@@ -6877,8 +6876,8 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			   !arglist.InsertArgsIntoClassAd(expanded_ad,&ver_info,&arg_error_msg))
 			{
 				attribute_not_found = true;
-				MyString hold_reason;
-				hold_reason.formatstr(
+				std::string hold_reason;
+				formatstr(hold_reason,
 					"Failed to convert arguments to target syntax"
 					" for starter: %s",
 					arg_error_msg.c_str());
@@ -7495,7 +7494,7 @@ SendSpoolFileIfNeeded(ClassAd& /*ad*/)
 					hash = "";
 			}
 
-			MyString cluster_owner;
+			std::string cluster_owner;
 			if( GetAttributeString(active_cluster_num,-1,ATTR_OWNER,cluster_owner) == -1 ) {
 					// The owner is not set in the cluster ad.  We
 					// need it to be set so we can attempt to clean up
