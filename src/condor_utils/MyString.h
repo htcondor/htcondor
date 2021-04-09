@@ -596,6 +596,8 @@ public:
 	MyStringFpSource(FILE*_fp=NULL, bool delete_fp=false) : fp(_fp), owns_fp(delete_fp) {}
 	virtual ~MyStringFpSource() { if (fp && owns_fp) fclose(fp); fp = NULL; };
 	virtual bool readLine(MyString & str, bool append = false);
+	// append can't have a default arg until the other overload goes away
+	virtual bool readLine(std::string & str, bool append);
 	virtual bool isEof();
 protected:
 	FILE* fp;

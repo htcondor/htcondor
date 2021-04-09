@@ -1007,6 +1007,12 @@ MyStringFpSource::readLine(MyString & str, bool append /* = false*/)
 }
 
 bool
+MyStringFpSource::readLine(std::string & str, bool append /* = false*/)
+{
+    return ::readLine(str, fp, append);
+}
+
+bool
 MyStringFpSource::isEof()
 {
 	return feof(fp) != 0;
