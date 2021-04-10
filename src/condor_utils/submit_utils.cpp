@@ -7122,14 +7122,14 @@ int SubmitHash::SetTransferFiles()
 		// On NT, if we're an MPI job, we need to find the
 		// mpich.dll file and automatically include that in the
 		// transfer input files
-		MyString dll_name("mpich.dll");
+		std::string dll_name("mpich.dll");
 
 		// first, check to make sure the user didn't already
 		// specify mpich.dll in transfer_input_files
-		if (! input_file_list.contains(dll_name.Value())) {
+		if (! input_file_list.contains(dll_name.c_str())) {
 			// nothing there yet, try to find it ourselves
-			MyString dll_path = which(dll_name);
-			if (dll_path.Length() == 0) {
+			std::string dll_path = which(dll_name);
+			if (dll_path.length() == 0) {
 				// File not found, fatal error.
 				push_error(stderr, "Condor cannot find the "
 					"\"mpich.dll\" file it needs to run your MPI job.\n"
@@ -7141,7 +7141,7 @@ int SubmitHash::SetTransferFiles()
 			// If we made it here, which() gave us a real path.
 			// so, now we just have to append that to our list of
 			// files. 
-			input_file_list.append(dll_path.Value());
+			input_file_list.append(dll_path.c_str());
 		}
 	}
 #endif /* WIN32 */

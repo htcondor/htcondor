@@ -860,7 +860,8 @@ int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource, std::strin
 
 		if (FileSource.line != lineno+1) {
 			// if we read more than a single line, comment the new linenumber
-			MyString buf; buf.formatstr("#opt:lineno:%d", FileSource.line);
+			std::string buf = "#opt:lineno:";
+			buf += std::to_string(FileSource.line);
 			lines.append(buf.c_str());
 		}
 		lines.append(line);
