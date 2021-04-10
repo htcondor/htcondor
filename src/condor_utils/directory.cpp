@@ -416,6 +416,12 @@ bool
 Directory::do_remove_file( const char* path )
 {
     bool ret_val = true;    // we'll set this to false if we fail
+
+	if (path == nullptr) {
+		errno = EFAULT;
+		return false;
+	}
+
 	Set_Access_Priv();
 
 #if DEBUG_DIRECTORY_CLASS

@@ -1739,11 +1739,11 @@ ResMgr::addResource( Resource *rip )
 		EXCEPT("Failed to allocate memory for new resource");
 	}
 
-		// Copy over the old Resource pointers.  If nresources is 0
-		// (b/c we used to be configured to have no slots), this won't
-		// copy anything (and won't seg fault).
-	memcpy( (void*)new_resources, (void*)resources,
-			(sizeof(Resource*)*nresources) );
+		// Copy over any old Resource pointers. 
+	if (nresources > 0) {
+		memcpy((void*)new_resources, (void*)resources,
+			sizeof(Resource*) * nresources);
+	}
 
 	new_resources[nresources] = rip;
 

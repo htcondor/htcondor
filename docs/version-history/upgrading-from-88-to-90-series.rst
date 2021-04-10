@@ -7,8 +7,8 @@ HTCondor 9.0 introduces many security improvements.  As a result, **we expect
 that many 8.8 pools will require explicit administrator intervention after
 the upgrade.**
 
-(If you’re upgrading to 9.0 from the 8.9 series, read the
-`instructions for upgrading to 8.9.13 <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UpgradingToEightNineThirteen>`_, instead.)
+**If you’re upgrading from an 8.9 release**, read the
+`specific instructions for that <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UpgradingFromEightNineToNineZero>`_, instead.
 
 The following steps will help you determine if you need to make changes,
 and if so, which ones.
@@ -85,7 +85,7 @@ If you chose option **A** or option **B** in step 1, skip this step.
 
 The deprecated configuration settings beginning with ``HOSTALLOW`` and
 ``HOSTDENY`` have been removed.  If your 8.8 configuration was still
-using, add their entries to the corresponding ``ALLOW`` or ``DENY`` list.
+using either, add their entries to the corresponding ``ALLOW`` or ``DENY`` list.
 
 If you run the *condor_check_config* tool it will detect a couple of the
 most common configuration values that should be changed after an upgrade.

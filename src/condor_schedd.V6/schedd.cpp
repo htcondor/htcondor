@@ -8588,7 +8588,7 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ)
 		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
 	}
 	auto job_ad = GetJobAd(new_job_id);
-	if (!JobCanFlock(*job_ad, mrec->getPool())) {
+	if (!job_ad || !JobCanFlock(*job_ad, mrec->getPool())) {
 		return false;
 	}
 
