@@ -161,7 +161,7 @@ vmapi_is_my_machine(char *h1)
 		return TRUE;
 
 	// TODO: Picking IPv4 arbitrarily.
-	MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+	std::string my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
 	if( !strcmp(h1, my_ip.c_str()) )
 		return TRUE;
 
