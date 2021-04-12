@@ -274,7 +274,6 @@ rec_touch_file(char *path, mode_t file_mode, mode_t directory_mode , int pos)
 					char *dir = new char[pos+1];
 					strncpy(dir, path, pos);
 					dir[pos] = '\0';
-					dprintf(D_FULLDEBUG, "directory_util::rec_touch_file: Creating directory %s \n", dir);
 					int err = mkdir(dir, directory_mode);
 					if (err != 0) {
 						if (errno != EEXIST) {
@@ -282,6 +281,8 @@ rec_touch_file(char *path, mode_t file_mode, mode_t directory_mode , int pos)
 							delete []dir;
 							return -1;
 						}
+					} else {
+						dprintf(D_FULLDEBUG, "directory_util::rec_touch_file: Created directory %s \n", dir);
 					}
 					delete []dir;
 					++pos;
