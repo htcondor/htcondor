@@ -258,7 +258,7 @@ public:
 
 	void reconfig();
 	static IpVerify *getIpVerify();
-	static int Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu, MyString *allow_reason=NULL, MyString *deny_reason=NULL );
+	static int Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu, std::string &allow_reason, std::string &deny_reason );
 
 	static classad::References* getResumeProj() { return &m_resume_proj; };
 

@@ -1240,14 +1240,15 @@ SecManStartCommand::doCallback( StartCommandResult result )
 					m_sock->peer_ip_str() );
 		}
 
-		MyString deny_reason;
+		std::string allow_reason;
+		std::string deny_reason;
 
 		int authorized = m_sec_man.Verify(
 			CLIENT_PERM,
 			m_sock->peer_addr(),
 			server_fqu,
-			NULL,
-			&deny_reason );
+			allow_reason,
+			deny_reason );
 
 		if( authorized != USER_AUTH_SUCCESS ) {
 			m_errstack->pushf("SECMAN", SECMAN_ERR_CLIENT_AUTH_FAILED,
@@ -3051,7 +3052,7 @@ SecMan::getIpVerify()
 }
 
 int
-SecMan::Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu, MyString *allow_reason, MyString *deny_reason )
+SecMan::Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu, std::string &allow_reason, std::string &deny_reason )
 {
 	IpVerify *ipverify = getIpVerify();
 	ASSERT( ipverify );
