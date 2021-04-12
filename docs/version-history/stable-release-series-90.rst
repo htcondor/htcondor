@@ -24,6 +24,11 @@ New Features:
   In this version the tool for a few things related to the change to a more secure configuration by default.
   :jira:`384`
 
+- The *condor_gpu_discovery* tool now defaults to using ``-short-uuid`` form for GPU ids on machines
+  where the CUDA driver library has support for them. A new option ``-by-index`` has been added
+  to select index-based GPU ids.
+  :jira:`145`
+
 
 Bugs Fixed:
 
