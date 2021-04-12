@@ -27,5 +27,7 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug introduced in 8.9.12 where the condor_job_router inside a CE would crash when
+  evaluating periodic expresions
+  :jira:`402`
 
