@@ -226,6 +226,7 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 		Parse_json,   // file is in -json form, usually begins with a line of "[" and has a with a line of "," between ads
 		Parse_new,    // file is in new classads form, may begin with a line of "{" and have a line of "," between ads, or may just begin with a line of [
 		Parse_auto,   // parse helper should figure out what the form is
+		Parse_Unspecified  // value at initialization
 	};
 
 	CondorClassAdFileParseHelper(std::string delim, ParseType typ=Parse_long) 

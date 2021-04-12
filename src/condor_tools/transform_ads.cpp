@@ -48,8 +48,6 @@
 #define USE_CLASSAD_ITERATOR 1
 #define USE_CLASSAD_LIST_WRITER 1
 
-#define UNSPECIFIED_PARSE_TYPE (ClassAdFileParseType::ParseType)-1
-
 bool dash_verbose = false;
 bool dash_terse = false;
 int  UnitTestOpts = 0;
@@ -58,7 +56,7 @@ bool DumpLocalHash = false;
 bool DumpClassAdToFile = false;
 bool DumpFileIsStdout = false;
 bool DashOutAttrsInHashOrder = false;
-ClassAdFileParseType::ParseType DashOutFormat = UNSPECIFIED_PARSE_TYPE;
+ClassAdFileParseType::ParseType DashOutFormat = ClassAdFileParseType::Parse_Unspecified;
 const char * DashOutName = NULL;
 const char * MyName = NULL; // set from argc
 const char * MySubsys = "XFORM";
@@ -136,7 +134,7 @@ int
 main( int argc, const char *argv[] )
 {
 	const char *pcolon = NULL;
-	ClassAdFileParseType::ParseType def_ads_format = UNSPECIFIED_PARSE_TYPE;
+	ClassAdFileParseType::ParseType def_ads_format = ClassAdFileParseType::Parse_Unspecified;
 	std::vector<input_file> inputs;
 	std::vector<const char *> rules;
 	const char *job_match_constraint = NULL;
@@ -230,7 +228,7 @@ main( int argc, const char *argv[] )
 				}
 				// fixup parse format for inputs that have an unspecified parse type
 				for (size_t ii = 0; ii < inputs.size(); ++ii) {
-					if (inputs[ii].parse_format == UNSPECIFIED_PARSE_TYPE) {
+					if (inputs[ii].parse_format == ClassAdFileParseType::Parse_Unspecified) {
 						inputs[ii].parse_format = def_ads_format;
 					}
 				}
@@ -353,9 +351,9 @@ main( int argc, const char *argv[] )
 	}
 
 	// if no default parse format has been specified for the input files, choose auto
-	if (def_ads_format == UNSPECIFIED_PARSE_TYPE) { def_ads_format = ClassAdFileParseType::Parse_auto; }
+	if (def_ads_format == ClassAdFileParseType::Parse_Unspecified) { def_ads_format = ClassAdFileParseType::Parse_auto; }
 	// if no output parse format has been specified, choose long
-	if (DashOutFormat == UNSPECIFIED_PARSE_TYPE) { DashOutFormat = ClassAdFileParseType::Parse_long; }
+	if (DashOutFormat == ClassAdFileParseType::Parse_Unspecified) { DashOutFormat = ClassAdFileParseType::Parse_long; }
 
 #ifdef USE_CLASSAD_LIST_WRITER
 	CondorClassAdListWriter writer(DashOutFormat);
@@ -363,7 +361,7 @@ main( int argc, const char *argv[] )
 
 	for (size_t ixInput = 0; ixInput < inputs.size(); ++ixInput) {
 		// use default parse format if input file still has an unspecifed one.
-		if (inputs[ixInput].parse_format == UNSPECIFIED_PARSE_TYPE) { inputs[ixInput].parse_format = def_ads_format; }
+		if (inputs[ixInput].parse_format == ClassAdFileParseType::Parse_Unspecified) { inputs[ixInput].parse_format = def_ads_format; }
 #ifdef USE_CLASSAD_LIST_WRITER
 		rval = DoTransforms(inputs[ixInput], job_match_constraint, ms, xform_hash, outfile, writer);
 #else
