@@ -1942,8 +1942,9 @@ list indicates the highest preference. Possible values are
 
 .. code-block:: text
 
-    3DES
+    AES
     BLOWFISH
+    3DES
 
 Integrity
 ---------
