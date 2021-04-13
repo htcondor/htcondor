@@ -980,7 +980,7 @@ bool ArcJobInfoWorkerFunction(GahpRequest *gahp_request)
 
 	// Now, extract the ComputingActivity attributes (possibly a subset)
 	classad::Value value;
-	classad::ClassAd *info_ad;
+	classad::ClassAd *info_ad = NULL;
 	if ( ! resp_ad.EvaluateExpr("job.info_document.ComputingActivity", value) || ! value.IsClassAdValue(info_ad) ) {
 		gahp_request->m_result = create_result_string( request_id,
 								"499", "Invalid response" );

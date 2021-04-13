@@ -852,15 +852,15 @@
     + Result Line:
 
         <request-ID> <SP> <status-code> <SP> <status-msg> <SP>
-            <job-status> <CRLF>
+            <job-state> <CRLF>
 
-        * job-status = ARC status of the job
+        * job-state = ARC state of the job
 
     -----------------------------------------------
 
     ARC_JOB_STATUS_ALL
 
-    Query the ids of all jobs, optionally restricted to those in the 
+    Query the state of all jobs, optionally restricted to those in the
     given set of states.
 
     + Request Line:
@@ -875,11 +875,12 @@
     + Result Line:
 
         <request-ID> <SP> <status-code> <SP> <status-msg> <SP>
-            <count> [<SP> <job-id>]* <CRLF>
+            <count> [<SP> <job-id> <SP> <job-state>]* <CRLF>
 
-        * count = the number of job-ids that will follow
+        * count = the number of job-id/state pairs that will follow
 
         * job-id = ARC job id
+        * job-state = ARC state of the job
 
     -----------------------------------------------
 

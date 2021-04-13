@@ -375,8 +375,6 @@ void ArcJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-#if 0
-				// This relies on ArcResource doing a bulk query
 				if ( m_lastRemoteStatusUpdate > enteredCurrentGmState ) {
 					if ( remoteJobState == REMOTE_STATE_ACCEPTING ||
 						 remoteJobState == REMOTE_STATE_ACCEPTED ||
@@ -388,39 +386,6 @@ void ArcJob::doEvaluateState()
 				} else if ( m_currentStatusUnknown ) {
 					gmState = GM_CANCEL;
 				}
-#else
-				std::string new_status;
-				rc = gahp->arc_job_status( resourceManagerString,
-										 remoteJobId, new_status );
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					 rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				} else if ( rc == HTTP_404_NOT_FOUND ) {
-					// The job isn't there. Assume it timed out before we
-					// could stage in the data files.
-					SetRemoteJobId( NULL );
-					gmState = GM_CLEAR_REQUEST;
-					break;
-				} else if ( rc != HTTP_200_OK ) {
-					// What to do about failure?
-					errorString = gahp->getErrorString();
-					dprintf( D_ALWAYS, "(%d.%d) job recovery query failed: %s\n",
-							 procID.cluster, procID.proc,
-							 errorString.c_str() );
-					gmState = GM_HOLD;
-				} else {
-					remoteJobState = new_status;
-					SetRemoteJobStatus( new_status.c_str() );
-					if ( remoteJobState == REMOTE_STATE_ACCEPTING ||
-						 remoteJobState == REMOTE_STATE_ACCEPTED ||
-						 remoteJobState == REMOTE_STATE_PREPARING ) {
-						gmState = GM_STAGE_IN;
-					} else {
-						gmState = GM_SUBMITTED;
-					}
-				}
-				lastProbeTime = now;
-#endif
 			}
 			} break;
 		case GM_UNSUBMITTED: {
@@ -554,8 +519,7 @@ void ArcJob::doEvaluateState()
 					lastProbeTime = 0;
 					probeNow = false;
 				}
-				// TODO We eventually want to do a collective poll
-				//   of all job statuses in the resource object.
+#if 0
 				int probe_interval = myResource->GetJobPollInterval();
 				if ( now >= lastProbeTime + probe_interval ) {
 					gmState = GM_PROBE_JOB;
@@ -566,6 +530,7 @@ void ArcJob::doEvaluateState()
 					delay = (lastProbeTime + probe_interval) - now;
 				}
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
+#endif
 			}
 			} break;
 		case GM_PROBE_JOB: {

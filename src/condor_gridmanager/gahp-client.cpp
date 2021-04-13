@@ -5339,7 +5339,8 @@ GahpClient::arc_job_status(const std::string &service_url,
 int
 GahpClient::arc_job_status_all(const std::string &service_url,
                                const std::string &states,
-                               StringList &job_ids)
+                               StringList &job_ids,
+                               StringList &job_states)
 {
 	static const char* command = "ARC_JOB_STATUS_ALL";
 
@@ -5387,11 +5388,12 @@ GahpClient::arc_job_status_all(const std::string &service_url,
 		}
 		if (result->argc >= 3) {
 			int cnt = atoi(result->argv[3]);
-			if ( cnt + 4 != result->argc ) {
+			if ( 2*cnt + 4 != result->argc ) {
 				EXCEPT("Bad %s Result",command);
 			}
-			for ( int i = 4; i < result->argc; i++ ) {
+			for ( int i = 4;  (i + 1) < result->argc; i += 2 ) {
 				job_ids.append(result->argv[i]);
+				job_states.append(result->argv[i + 1]);
 			}
 		}
 		delete result;

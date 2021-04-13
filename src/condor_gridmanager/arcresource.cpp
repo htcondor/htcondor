@@ -82,11 +82,9 @@ ArcResource::ArcResource( const char *resource_name,
 	gahp->setTimeout( ArcJob::gahpCallTimeout );
 
 	m_jobStatusTid = TIMER_UNSET;
-	/*
 	m_jobStatusTid = daemonCore->Register_Timer( 0,
 							(TimerHandlercpp)&ArcResource::DoJobStatus,
 							"ArcResource::DoJobStatus", (Service*)this );
-	*/
 
 	m_statusGahp = new GahpClient( buff.c_str() );
 	m_statusGahp->setNotificationTimerId( m_jobStatusTid );
@@ -190,89 +188,63 @@ void ArcResource::DoJobStatus()
 
 	daemonCore->Reset_Timer( m_jobStatusTid, TIMER_NEVER );
 
-	StringList results;
+	StringList job_ids;
+	StringList job_states;
 
 	if ( m_jobStatusActive == false ) {
 
-			// start ldap status command
-		dprintf( D_FULLDEBUG, "Starting ldap poll: %s\n", resourceName );
+			// start group status command
+		dprintf( D_FULLDEBUG, "Starting ARC group status query: %s\n", resourceName );
 
-		std::string ldap_server = resourceName;
-		size_t pos = ldap_server.find_first_of( ':' );
-		if ( pos != std::string::npos ) {
-			ldap_server.erase( pos );
-		}
-
-		std::string filter;
-		formatstr( filter, "(&(objectclass=nordugrid-job)(nordugrid-job-globalowner=%s))", proxySubject );
-		int rc = m_statusGahp->nordugrid_ldap_query( ldap_server.c_str(), "mds-vo-name=local,o=grid", filter.c_str(), "nordugrid-job-globalid,nordugrid-job-status",
-													 results );
+		int rc = m_statusGahp->arc_job_status_all( resourceName, "",
+		                                           job_ids, job_states );
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 			dprintf( D_ALWAYS,
-					 "gahp->nordugrid_ldap_query returned %d for resource %s\n",
+					 "gahp->arc_job_status_all returned %d for resource %s\n",
 					 rc, resourceName );
-			EXCEPT( "nordugrid_ldap_query failed!" );
+			EXCEPT( "arc_job_status_all failed!" );
 		}
 		m_jobStatusActive = true;
 
 	} else {
 
-			// finish ldap status command
-		int rc = m_statusGahp->nordugrid_ldap_query( NULL, NULL, NULL, NULL, results );
+			// finish status command
+		int rc = m_statusGahp->arc_job_status_all( resourceName, "", job_ids, job_states );
 
 		if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 			return;
-		} else if ( rc != 0 ) {
+		} else if ( rc != HTTP_201_CREATED ) {
 			dprintf( D_ALWAYS,
-					 "gahp->nordugrid_ldap_query returned %d for resource %s: %s\n",
+					 "gahp->arc_job_status_all returned %d for resource %s: %s\n",
 					 rc, resourceName, m_statusGahp->getErrorString() );
 			dprintf( D_ALWAYS, "Requesting ping of resource\n" );
 			RequestPing( NULL );
 		}
 
-		if ( rc == 0 ) {
+		if ( rc == HTTP_201_CREATED ) {
 			const char *next_job_id = NULL;
-			const char *next_status = NULL;
-			const char *next_attr;
+			const char *next_job_state = NULL;
 			std::string key;
 
-			results.rewind();
-			do {
-				next_attr = results.next();
+			job_ids.rewind();
+			job_states.rewind();
+			while ( (next_job_id = job_ids.next()) && (next_job_state = job_states.next()) ) {
 
-				if ( next_attr != NULL && *next_attr != '\0' ) {
-						// Save the attributes we're interested in
-					if ( !strncmp( next_attr, "nordugrid-job-globalid: ", 24 ) ) {
-						next_job_id = next_attr;
-					} else if ( !strncmp( next_attr, "nordugrid-job-status: ", 22 ) ) {
-						next_status = next_attr;
-					}
-					continue;
+				int rc2;
+				BaseJob *base_job = NULL;
+				ArcJob *job = NULL;
+				formatstr( key, "arc %s %s", resourceName, next_job_id );
+				rc2 = BaseJob::JobsByRemoteId.lookup( key, base_job );
+				if ( rc2 == 0 && (job = dynamic_cast<ArcJob*>(base_job)) ) {
+					job->NotifyNewRemoteStatus( next_job_state );
 				}
-					// We just reached the end of a record. Process it.
-					// If we don't have the attributes we expect, skip it.
-				if ( next_job_id && next_status ) {
-					int rc2;
-					const char *id;
-					BaseJob *base_job = NULL;
-					ArcJob *job = NULL;
-					id = strrchr( next_job_id, '/' );
-					id = (id != NULL) ? (id + 1) : "";
-					formatstr( key, "nordugrid %s %s", resourceName, id );
-					rc2 = BaseJob::JobsByRemoteId.lookup( key, base_job );
-					if ( rc2 == 0 && (job = dynamic_cast<ArcJob*>(base_job)) ) {
-						job->NotifyNewRemoteStatus( strchr( next_status, ' ' ) + 1 );
-					}
-				}
-				next_job_id = NULL;
-				next_status = NULL;
-			} while ( next_attr );
+			}
 
 		}
 
 		m_jobStatusActive = false;
 
-		dprintf( D_FULLDEBUG, "ldap poll complete: %s\n", resourceName );
+		dprintf( D_FULLDEBUG, "group status query complete: %s\n", resourceName );
 
 		daemonCore->Reset_Timer( m_jobStatusTid, m_paramJobPollInterval );
 	}
