@@ -585,7 +585,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		dprintf(D_FULLDEBUG,"Really Execing %s\n",args_string.c_str());
 	}
 
-	MyString daemon_sock = SharedPortEndpoint::GenerateEndpointName( "gridmanager" );
+	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName( "gridmanager" );
 	pid = daemonCore->Create_Process( 
 		gman_binary,			// Program to exec
 		args,					// Command-line args

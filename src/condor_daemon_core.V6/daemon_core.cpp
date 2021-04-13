@@ -3172,7 +3172,7 @@ DaemonCore::reconfig(void) {
 void
 DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 {
-	MyString why_not = "no command port requested";
+	std::string why_not = "no command port requested";
 	bool already_open = m_shared_port_endpoint != NULL;
 
 	if( m_command_port_arg != 0 && SharedPortEndpoint::UseSharedPort(&why_not,already_open) ) {

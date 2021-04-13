@@ -609,7 +609,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 #endif
 
 	if (global_map_file) {
-		MyString canonical_user;
+		std::string canonical_user;
 
 		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 1: attempting to map '%s'\n", auth_name_to_map.c_str());
 		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
@@ -676,8 +676,8 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 
 				dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: found user %s, splitting.\n", canonical_user.c_str());
 
-				MyString user;
-				MyString domain;
+				std::string user;
+				std::string domain;
 
 				// this sets user and domain
 				split_canonical_name( canonical_user, user, domain);
@@ -711,13 +711,13 @@ void Authentication::split_canonical_name(char const *can_name,char **user,char 
 		// This version of the function exists to avoid use of MyString
 		// in ReliSock, because that gets linked into std univ jobs.
 		// This function is stubbed out in cedar_no_ckpt.C.
-	MyString my_user,my_domain;
+	std::string my_user,my_domain;
 	split_canonical_name(can_name,my_user,my_domain);
 	*user = strdup(my_user.c_str());
 	*domain = strdup(my_domain.c_str());
 }
 
-void Authentication::split_canonical_name(MyString can_name, MyString& user, MyString& domain ) {
+void Authentication::split_canonical_name(const std::string& can_name, std::string& user, std::string& domain ) {
 
     char local_user[256];
  
