@@ -1957,11 +1957,6 @@ modification, or deletion can be detected. Through configuration macros,
 both the client and the daemon can specify whether an integrity check is
 required of further communication.
 
-Note at this time, integrity checks are not performed upon job data
-files that are transferred by HTCondor via the File Transfer Mechanism
-described in :ref:`users-manual/file-transfer:submitting jobs without a
-shared file system: htcondor's file transfer mechanism`.
-
 The client uses one of two macros to enable or disable an integrity
 check: :index:`SEC_DEFAULT_INTEGRITY`
 :index:`SEC_CLIENT_INTEGRITY`
@@ -2015,11 +2010,12 @@ then this default defines the daemon's needs for integrity checks over
 all access levels. Where a specific macro is present, its value takes
 precedence over any default given.
 
-A signed MD5 check sum is currently the only available method for
+If ``AES`` encryption is used for a connection, then a secure checksum is
+included within the AES data regardless of any INTEGRITY settings.
+
+If another type of encryption was used (i.e. ``BLOWFISH`` or ``3DES``),
+then a signed MD5 check sum is the only available method for
 integrity checking. Its use is implied whenever integrity checks occur.
-If more methods are implemented, then there will be further macros to
-allow both the client and the daemon to specify which methods are
-acceptable.
 
 Authorization
 -------------
