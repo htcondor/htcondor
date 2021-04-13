@@ -3,6 +3,250 @@ Security
 
 :index:`in HTCondor<single: in HTCondor; security>`
 
+Security Overview
+-----------------
+
+Beginning in HTCondor version 9, a main goal is to make all condor
+installations easier to secure.  In previous versions, a default installation
+typically required additional steps after setup to enable end-to-end security
+for all users and daemons in the system.  Configuring various different types
+of authentication and security policy could also involve setting quite a number
+of different configuration parameters and a fairly deep foray into the manual
+to understand how they all work together.
+
+This overview will explain the high-level concepts involved in securing an
+HTCondor pool.  If possible, we recommend performing a clean installation "from
+scratch" and then migrating over pieces of your old configuration as needed.
+Here are some quick links for getting started if you want to jump right in:
+
+Quick Links:
+   If you are upgrading an existing pool from 8.9.X to 9.0.0, please visit
+   https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UpgradingFromEightNineToNineZero
+
+   If you are upgrading an existing pool from 8.8.X to 9.0.0, please visit
+   :doc:`/version-history/upgrading-from-88-to-90-series`.
+
+   If you are installing a new HTCondor pool from scratch, please read
+   about :doc:`/getting-htcondor/index`
+
+
+General Security Flow
+'''''''''''''''''''''
+
+Establishing a secure connection in HTCondor goes through four major steps,
+which are very briefly enumerated here for reference.
+
+1. Negotiation: In order for a client and server to communicate, they need to
+   agree on which security mechanisms will be used for the connection.  This
+   includes whether or not the connection will be authenticated, which types of
+   authentication methods can be used, whether the connection will be encrypted,
+   and which different types of encryption algorithms can be used.  The client
+   sends its capabilities, preferences, and requirements; the server compares
+   those against its own, decides what to do, and tells the client; if a
+   connection is possible, they both then work to enact it.  We call the decisions
+   the server makes during negotiation the "security policy" for that connection;
+   see :ref:`admin-manual/security:security negotiation` for details on policy
+   configuration.
+2. Authentication/Mapping:  If the server decides to authenticate (and we
+   strongly recommend that it almost always either do so or reject the
+   connection), the methods allowed are tried in the order decided by the server
+   until one of them succeeds.  After a successful authentication, the server
+   decides the canonical name of the user based on the credentials used by the
+   client.  For SSL, this involves mapping the DN to a user@domain.name format.
+   For most other methods the result is already in user@domain.name format.  For
+   details on different types of supported authentication methods, please see
+   :ref:`admin-manual/security:authentication`.
+3. Encryption and Integrity: If the server decided that encryption would be
+   used, both sides now enable encryption and integrity checks using the method
+   preferred by the server.  AES is now the preferred method and enabled by
+   default.  The overhead of doing the encryption and integrity checks is minimal
+   so we have decided to simplify configuration by requiring changes to disable it
+   rather than enable it.  For details on different types of supported
+   authentication methods, see :ref:`admin-manual/security:encryption`.
+4. Authorization: The canonical user is now checked to see if they are allowed
+   to send the command to the server that they wish to send.  Commands are
+   "registered" at different authorization levels, and there is an ALLOW/DENY list
+   for each level.  If the canonical user is authorized, HTCondor performs the
+   requested action.  If authorization fails, the permission is DENIED and the
+   network connection is closed.  For list of authorization levels and more
+   information on configuring ALLOW and DENY lists, please see
+   :ref:`admin-manual/security:authorization`.
+
+
+Highlights of New Features In Version 9.0.0
+'''''''''''''''''''''''''''''''''''''''''''
+
+Introducing: IDTOKENS
+"""""""""""""""""""""
+
+In 9.0.0, we have introduced a new authentication mechanism called
+``IDTOKENS``.  These tokens are easy for the administrator to issue, and in
+many cases users can also acquire their own tokens on a machine used to submit
+jobs (running the *condor_schedd*).  An ``IDTOKEN`` is a relatively lightweight
+credential that can be used to prove an identity.  The contents of the token
+are actually a JWT (https://jwt.io/) that is signed by a "Token Signing Key"
+that establishes the trustworthiness of the token.  Typically, this signing key
+is something accessible only to HTCondor (and owned by the "root" user of the
+system) and not users, and by default lives in /etc/condor/passwords.d/POOL.
+To make configuration easier, this signing key is generated automatically by
+HTCondor if it does not exist on the machine that runs the Central Manager, or
+the *condor_collector* daemon in particular.  So after installing the central
+manager and starting it up for the first time, you should as the administrator
+be all set to start issuing tokens.  That said, you will need to copy the
+signing key to all other machines in your pool that you want to be able to
+receive and validate the ``IDTOKEN`` credentials that you issue.
+
+Documentation for the command line tools used for creating and managing
+``IDTOKENS`` is available in the :ref:`admin-manual/security:token
+authentication` section.
+
+
+Introducing: AES
+""""""""""""""""
+
+In version 9.0.0 we have also added support for AES, a widely-used encryption
+method that has hardware support in most modern CPUS.  Because the overhead of
+encryption is so much lower, we have turned it on by default.  We use AES in
+such a way (called AESGCM mode) that it provides integrity checks (checksums)
+on transmitted data, and this method is now on by default and is the preferred
+method to be used if both sides support it.
+
+
+Types of Network Connections
+''''''''''''''''''''''''''''
+
+We generally consider user-to-daemon and daemon-to-daemon connections
+distinctly. User-to-daemon connections almost always issue ``READ`` or
+``WRITE`` level commands, and the vast majority of those connections are to the
+schedd or the collector; many of those connections will be between processes on
+the same machine.  Conversely, daemon-to-daemon connections are typically
+between two different machines, and use commands registered at all levels.
+
+
+User-to-Daemon Connections (User Authentication)
+""""""""""""""""""""""""""""""""""""""""""""""""
+
+In order for users to submit jobs to the HTCondor system, they will need to
+authenticate to the *condor_schedd* daemon.  They also need to authenticate to
+the SchedD to modify, remove, hold, or release jobs.  When users are
+interacting with the *condor_schedd*, they issue commands that need to be
+authorized at either the "READ" or "WRITE" level.  (Unless the user is an
+administrator, in which case they might also issue "ADMINISTRATOR"-level
+commands).
+
+
+Authenticating using FS
+^^^^^^^^^^^^^^^^^^^^^^^
+
+On a Linux system this is typically done by logging into the machine that is
+running the *condor_schedd* daemon and authentication using a method called
+``FS`` (on Linux see Windows note below this paragraph).  ``FS`` stands for
+"File System" and the method works by having the user create a file in /tmp
+that the *condor_schedd* can then examine to determine who the owner is.
+Because this operates in /tmp, this only works for connections to daemons on
+the same machine.  ``FS`` is enabled by default so the administrator does not
+need to do anything to allow users to interact with the job queue this way.
+(There are other methods, mentioned below, that can work over a network
+connection.)
+
+[Windows note:  HTCondor on Windows does not use ``FS``, but rather a method
+specific to Windows called NTSSPI.  See the section on
+:ref:`admin-manual/security:authentication` for more more info. ]
+
+If it is necessary to do a "remote submit" -- that is, run *condor_submit* on a
+different machine than is running the *condor_schedd* -- then the administrator
+will need to configure another method.  ``FS_REMOTE`` works similarly to ``FS``
+but uses a shared directory other than /tmp.  Mechanisms such as ``KERBEROS``,
+``SSL``, and ``MUNGE`` can also be configured.  However, with the addition of
+``IDTOKENS`` in 9.0.0, it is easy to configure and deploy this mechanism and we
+would suggest you do so unless you have a specific need to use one of the
+alternatives.
+
+
+Authenticating using IDTOKENS
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If a user is able to log in to the machine running the *condor_schedd*, and the
+SchedD has been set up with the Token Signing Key (see above for how that is
+created and deployed) then the user can simply run *condor_token_fetch* and
+retreive their own token.  This token can then be (securely) moved to another
+machine and used to interact with the job queue, including submission, edits,
+hold, release, and removing the job.
+
+If the user cannot log in to the machine running the *condor_schedd*, they
+should ask their administrator to create tokens for them using the
+*condor_token_create* command line tool.  Once again, more info can be found in
+the :ref:`admin-manual/security:token authentication` section.
+
+Daemon-to-Daemon Connections (Daemon Authentication)
+""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+HTCondor daemons need to trust each other to pass information security from one
+to the other.  This information may contain important attributes about a job to
+run, such as which executable to run, the arguments, and which user to run the
+job as.  Obviously, being able to tamper those could allow an impersonator to
+perform all sorts of nefarious tasks.
+
+For daemons that run on the same machine, for example a *condor_master*,
+*condor_schedd*, and the *condor_shadow* daemons launched by the
+*condor_schedd*, this authentication is performed using a secret that is shared
+with each condor daemon when it is launched.  These are called "family
+sessions", since the processes sharing the secret are all part of the same unix
+process family.  This allows the HTCondor daemons to contact one another
+locally without having to use another type of authentication.  So essentially,
+when we are discussing daemon-to-daemon communication, we are talking about
+HTCondor daemons on two different physical machines.  In those cases, they need
+to establish trust using some mechanism that works over a network.  The ``FS``
+mechanism used for user job submission typically doesn't work here because it
+relies on sharing a directory between the two daemons, typically /tmp.
+However, ``IDTOKENS`` are able to work here as long as the server has a copy of
+the Signing Key that was used to issue the token that the client is using.  The
+daemon will authenticate as ``condor@$(TRUST_DOMAIN)`` where the trust domain
+is the string set by the token issuer, and is usually equal to the
+``$(UID_DOMAIN)`` setting on the central manager.  (Note that setting
+:macro:`UID_DOMAIN` has other consequences.)
+
+Once HTCondor has determined the authenticate principal, it checks the
+authorization lists as mentioned above in
+:ref:`admin-manual/security:general security flow`.  For daemon-to-daemon
+authorization, there are a few lists that may be consulted.
+
+If the condor daemon receiving the connection is the *condor_collector*, it first
+checks to see if there are specific authorization lists for daemons advertising
+to the collector (i.e. joining the pool).  If the incoming command is
+advertising a submit node (i.e. a *condor_schedd* daemon), it will check
+``ALLOW_ADVERTISE_SCHEDD``.  If the incoming command is for an execute node (a
+*condor_startd* daemon), it will check ``ALLOW_ADVERTISE_STARTD``.  And if the
+incoming command is for a *condor_master* (which runs on all HTCondor nodes) it
+will check ``ALLOW_ADVERTISE_MASTER``.  If the list it checks is undefined, it will
+then check ``ALLOW_DAEMON`` instead.
+
+If the condor daemon receiving the connection is not a *condor_collector*, the
+``ALLOW_DAEMON`` is the only list that is looked at.
+
+It is notable that many daemon-to-daemon connections have been optimized to not
+need to authenticate using one of the standard methods.  Similar to the
+"family" sessions that work internally on one machine, there are sessions
+called "match" sessions that can be used internally within one POOL of
+machines.  Here, trust is established by the negotiator when matching a job to
+a resource -- the Negotiator takes a secret generated by the *condor_startd* and
+securely passes it to the *condor_schedd* when a match is made.  The submit and
+execute machines can now use this secret to establish a secure channel.
+Because of this, you do not necessarily need to have authentication from one to
+the other configured; it is enough to have secure channels from the SchedD to
+the Collector and from the StartD to the collector.  Likewise, a Negotiator can
+establish trust with a SchedD in the same way: the SchedD trusts the Collector
+to tell only trustworthy Negotiators its secret.  However, some features such
+as *condor_ssh_to_job* and *condor_tail* will not work unless the submit machine
+can authenticate directly to the execute machine, which is why we mentioned
+needing to distribute the signing key earlier -- if the server does not have
+the signing key, it cannot directly validate the incoming ``IDTOKEN`` used for
+authentication.
+
+
+Security Terms
+--------------
+
 Security in HTCondor is a broad issue, with many aspects to consider.
 Because HTCondor's main purpose is to allow users to run arbitrary code
 on large numbers of computers, it is important to try to limit who can
