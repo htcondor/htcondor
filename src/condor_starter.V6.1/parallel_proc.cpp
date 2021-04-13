@@ -82,7 +82,7 @@ ParallelProc::addEnvVars()
 		// Add the remote spool dir, the "server" directory for
 		// condor_chirp to stage files to/from
 	std::string spool;
-	if ( JobAd->LookupString( ATTR_REMOTE_SPOOL_DIR, spool ) < 1 ) {
+	if ( ! JobAd->LookupString( ATTR_REMOTE_SPOOL_DIR, spool ) ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
 				 ATTR_REMOTE_SPOOL_DIR);
 		return 0;
@@ -98,7 +98,7 @@ ParallelProc::addEnvVars()
 
 		// And put the total number of nodes into CONDOR_NPROC
 	int machine_count;
-	if ( JobAd->LookupInteger( ATTR_CURRENT_HOSTS, machine_count ) !=  1 ) {
+	if ( ! JobAd->LookupInteger( ATTR_CURRENT_HOSTS, machine_count ) ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
 				 ATTR_CURRENT_HOSTS);
 		return 0;
