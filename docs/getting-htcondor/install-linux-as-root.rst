@@ -30,7 +30,7 @@ the :doc:`admin-quick-start` for more details.
 
 .. code-block:: shell
 
-    sudo curl -fsSL https://get.htcondor.com | /bin/bash -s -- --no-dry-run
+    sudo curl -fsSL https://get.htcondor.org | /bin/bash -s -- --no-dry-run
 
 If you see an error like ``bash: sudo: command not found``, try re-running
 the command above without the leading ``sudo``.
@@ -43,7 +43,7 @@ the command above without the leading ``sudo``.
     If you would like to inspect the script before you running it on
     your system as root, you can:
 
-    * `read the script <https://get.htcondor.com>`_;
+    * `read the script <https://get.htcondor.org>`_;
     * compare the script to the versions `in our GitHub repository <https://github.com/htcondor/htcondor/blob/master/src/condor_scripts/get_htcondor>`_;
     * or run the script as user ``nobody``, dropping the ``--no-dry-run``
       flag.  This will cause the script to print out what it would do if

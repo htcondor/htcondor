@@ -10,7 +10,7 @@ set -e
 #
 # This script is meant for quick & easy install via:
 #
-#   $ sudo curl -fsSL https://get.htcondor.com | /bin/bash -s -- --no-dry-run
+#   $ sudo curl -fsSL https://get.htcondor.org | /bin/bash -s -- --no-dry-run
 #
 
 usage() {
