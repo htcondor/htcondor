@@ -16,7 +16,7 @@
  # 
  ############################################################### 
 if(WINDOWS)
-	set(SAFE_OPEN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/safe_open.c)
+	set(SAFE_OPEN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/safe_open.c ${CMAKE_CURRENT_SOURCE_DIR}/safe_fopen.c)
 else()
 	set(SAFE_OPEN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/safe_open.c ${CMAKE_CURRENT_SOURCE_DIR}/safe_fopen.c ${CMAKE_CURRENT_SOURCE_DIR}/safe_is_path_trusted.c ${CMAKE_CURRENT_SOURCE_DIR}/safe_id_range_list.c)
 endif()
