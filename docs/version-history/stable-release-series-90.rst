@@ -8,16 +8,18 @@ series.
 
 The details of each version are described below.
 
-Version 9.0.X
+Version 9.0.0
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.0.X released on Month Date, 2021.
-
-- HTCondor version 9.0.X not yet released.
+- HTCondor version 9.0.0 released on April 14, 2021.
 
 - Removed support for CREAM and Unicore grid jobs, glexec privilege separation, DRMAA, and *condor_cod*.
+
+Known Issue:
+
+- MUNGE security is temporarily broken.
 
 New Features:
 
