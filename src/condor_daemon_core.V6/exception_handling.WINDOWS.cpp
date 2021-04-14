@@ -271,7 +271,7 @@ LPCTSTR ExceptionHandler::GetExceptionInfo(PEXCEPTION_RECORD per, LPTSTR szBuf, 
 			TCHAR * p = szBuf + lstrlen(szBuf);
 			*p++ = ' '; *p++ = 'a'; *p++ = 't'; *p++ = ' ';
 		#ifdef _WIN64
-			p += sprintf(p, "%p", per->ExceptionInformation[1]);
+			p += sprintf(p, "%p", (void*)per->ExceptionInformation[1]);
 		#else
 			p += sprintf(p, "%08X", per->ExceptionInformation[1]);
 		#endif

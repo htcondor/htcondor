@@ -65,7 +65,7 @@ UserProc::initialize( void )
 	}
 	if( JobAd ) {
 		initKillSigs();
-		if( JobAd->LookupInteger( ATTR_JOB_UNIVERSE, job_universe ) < 1 ) {
+		if( ! JobAd->LookupInteger( ATTR_JOB_UNIVERSE, job_universe ) ) {
 			job_universe = 0;
 		}
 	}

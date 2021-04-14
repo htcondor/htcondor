@@ -338,7 +338,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 					// we want this to be set to true!).
 					// In the future, we can always reproduce the entire chain of
 					// logic to determine if TOKEN auth is tried.
-					m_should_try_token_request |= mySock->isClient();
+					m_should_try_token_request |= (mySock->isClient() != 0);
 
 				return 0;
 
