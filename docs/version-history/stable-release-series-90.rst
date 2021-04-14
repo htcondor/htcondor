@@ -17,6 +17,8 @@ Release Notes:
 
 - HTCondor version 9.0.X not yet released.
 
+- Removed support for CREAM and Unicore grid jobs, glexec privilege separation, DRMAA, and *condor_cod*.
+
 New Features:
 
 - A new tool *condor_check_config* can be used after an upgrade when you had a working
@@ -33,6 +35,6 @@ New Features:
 Bugs Fixed:
 
 - Fixed a bug introduced in 8.9.12 where the condor_job_router inside a CE would crash when
-  evaluating periodic expresions
+  evaluating periodic expressions
   :jira:`402`
 
