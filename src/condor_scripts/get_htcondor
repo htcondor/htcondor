@@ -371,7 +371,7 @@ do_install() {
 				# Install our repository key.
 				$sh_c "apt-get update"
 				$sh_c "apt-get install -y gnupg"
-				$sh_c "curl -fsSL ${DOWNLOAD_URL}/debian/HTCondor-Release.gpg.key | apt-key add -"
+				$sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/keys/HTCondor-${CHANNEL_DIR}-Key | apt-key add -"
 
 				# Add our repository.
 				HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
