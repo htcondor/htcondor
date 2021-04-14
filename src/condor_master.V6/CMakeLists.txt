@@ -17,7 +17,6 @@
  ############################################################### 
 
 
-file( GLOB MasterRmvElements Example* )
 set(masterElements
 master.cpp
 masterDaemon.cpp
