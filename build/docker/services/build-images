@@ -61,7 +61,7 @@ DISTRO_IMAGE = {
 
 
 IMAGES = ["execute", "submit", "cm", "mini"]
-LATEST_SERIES = "8.9"
+LATEST_SERIES = "9.0"
 # ^^ TODO Gotta be a better way of doing this
 
 
