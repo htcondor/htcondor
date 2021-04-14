@@ -18,7 +18,10 @@
 
 if(WINDOWS)
 
-	set(RmdirFiles condor_rmdir.cpp main.cpp harylist.cpp)
+	set(RmdirFiles 
+		condor_rmdir.cpp 
+		main.cpp 
+		tokenize.cpp)
 	
 	condor_exe( condor_rmdir "${RmdirFiles}" ${C_BIN} "" OFF )
 
