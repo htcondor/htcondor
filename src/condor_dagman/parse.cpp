@@ -261,7 +261,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		char *token = strtok(line, DELIMITERS);
 		if ( !token ) continue; // so Coverity is happy
 
-		bool parsed_line_successfully;
+		bool parsed_line_successfully = false;
 
 		// Handle a Job spec
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
