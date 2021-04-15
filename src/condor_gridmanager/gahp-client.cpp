@@ -5386,7 +5386,7 @@ GahpClient::arc_job_status_all(const std::string &service_url,
 		} else {
 			error_string = "";
 		}
-		if (result->argc >= 3) {
+		if (result->argc > 3) {
 			int cnt = atoi(result->argv[3]);
 			if ( 2*cnt + 4 != result->argc ) {
 				EXCEPT("Bad %s Result",command);
