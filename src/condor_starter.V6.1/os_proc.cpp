@@ -622,6 +622,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 												&create_process_err_msg);
 	}
 	else {
+		/*
 		JobPid = daemonCore->Create_Process( JobName.c_str(),
 		                                     args,
 		                                     PRIV_USER_FINAL,
@@ -636,13 +637,53 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		                                     NULL,
 		                                     nice_inc,
 		                                     NULL,
-		                                     job_opt_mask, 
+		                                     job_opt_mask,
 		                                     core_size_ptr,
-                                             affinity_mask,
-											 NULL,
-                                             &create_process_err_msg,
-                                             fs_remap,
-											 rlimit_as_hard_limit);
+		                                     affinity_mask,
+		                                     NULL,
+		                                     &create_process_err_msg,
+		                                     fs_remap,
+		                                     rlimit_as_hard_limit);
+		*/
+		/*
+		std::string cpem;
+		JobPid = daemonCore->CreateProcessNew( JobName.c_str(),
+		                                     args,
+		                                     {
+		                                     PRIV_USER_FINAL,
+		                                     1,
+		                                     FALSE,
+		                                     FALSE,
+		                                     &job_env,
+		                                     job_iwd,
+		                                     family_info,
+		                                     NULL,
+		                                     fds,
+		                                     NULL,
+		                                     nice_inc,
+		                                     NULL,
+		                                     job_opt_mask,
+		                                     core_size_ptr,
+		                                     affinity_mask,
+		                                     NULL,
+		                                     cpem,
+		                                     fs_remap,
+		                                     rlimit_as_hard_limit
+		                                     }
+		                                     );
+		if(! cpem.empty()) { create_process_err_msg = cpem; }
+		*/
+		std::string error_return_msg(create_process_err_msg);
+		JobPid = daemonCore->CreateProcessNew( JobName.c_str(), args,
+			OptionalCreateProcessArgs().priv(PRIV_USER_FINAL)
+			.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+			.env(&job_env).cwd(job_iwd).familyInfo(family_info)
+			.std(fds).niceInc(nice_inc).jobOptMask(job_opt_mask)
+			.coreHardLimit(core_size_ptr).affinityMask(affinity_mask)
+			.errorReturnMsg(error_return_msg).remap(fs_remap)
+			.asHardLimit(rlimit_as_hard_limit)
+		);
+		create_process_err_msg = error_return_msg;
 	}
 
 	// Create_Process() saves the errno for us if it is an "interesting" error.
