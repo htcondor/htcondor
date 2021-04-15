@@ -122,19 +122,19 @@ the submit machine(s), and then add the execute machine(s).
 
 .. code-block:: shell
 
-    sudo curl -fsSL https://get.htcondor.com | GET_HTCONDOR_PASSWORD=$htcondor_password /bin/bash -s -- --no-dry-run --central-manager $central_manager_name
+    sudo curl -fsSL https://get.htcondor.org | GET_HTCONDOR_PASSWORD=$htcondor_password /bin/bash -s -- --no-dry-run --central-manager $central_manager_name
 
 .. rubric:: Submit
 
 .. code-block:: shell
 
-    sudo curl -fsSL https://get.htcondor.com | GET_HTCONDOR_PASSWORD=$htcondor_password /bin/bash -s -- --no-dry-run --submit $central_manager_name
+    sudo curl -fsSL https://get.htcondor.org | GET_HTCONDOR_PASSWORD=$htcondor_password /bin/bash -s -- --no-dry-run --submit $central_manager_name
 
 .. rubric:: Execute
 
 .. code-block:: shell
 
-    sudo curl -fsSL https://get.htcondor.com | GET_HTCONDOR_PASSWORD=$htcondor_password /bin/bash -s -- --no-dry-run --execute $central_manager_name
+    sudo curl -fsSL https://get.htcondor.org | GET_HTCONDOR_PASSWORD=$htcondor_password /bin/bash -s -- --no-dry-run --execute $central_manager_name
 
 At this point, users logged in on the submit machine should be able to see
 execute machines in the pool (using ``condor_status``), submit jobs
