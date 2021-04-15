@@ -494,6 +494,9 @@ void do_linux_kernel_tuning() {
 			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to dup /dev/null: %d.\n", errno );
 			exit( 1 );
 		}
+		if( fd > 0 ) {
+			close( fd );
+		}
 		fd = open( kernelTuningLogFile.c_str(), O_WRONLY | O_APPEND, 0644 );
 		if ((fd < 0) && (errno == ENOENT)) {
 			fd = open( kernelTuningLogFile.c_str(), O_WRONLY | O_APPEND | O_CREAT, 0644 );
@@ -509,6 +512,9 @@ void do_linux_kernel_tuning() {
 		if( dup2( fd, 2 ) == -1 ) {
 			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to dup log file '%s' to stderr: %d.\n", kernelTuningLogFile.c_str(), errno );
 			exit( 1 );
+		}
+		if( fd > 2 ) {
+			close( fd );
 		}
 
 		execl( kernelTuningScript.c_str(), kernelTuningScript.c_str(), (char *) NULL );
