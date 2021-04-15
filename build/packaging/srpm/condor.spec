@@ -273,7 +273,7 @@ Requires: condor-boinc
 %endif
 
 %if %blahp
-Requires: blahp >= 1.16.1
+Requires: blahp >= 2.0.1
 %endif
 
 # Useful tools are using the Python bindings
@@ -1666,6 +1666,21 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Apr 14 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.0-1
+- Absent any configuration, HTCondor denies authorization to all users
+- AES encryption is used for all communication and file transfers by default
+- New IDTOKEN authentication method enables fine-grained authorization
+- IDTOKEN authentication method is designed to replace GSI
+- Improved support for GPUs, including machines with multiple GPUs
+- New condor_watch_q tool that efficiently provides live job status updates
+- Many improvements to the Python bindings
+- New Python bindings for DAGMan and chirp
+- Improved file transfer plugins supporting uploads and authentication
+- File transfer times are now recorded in the job log
+- Added support for jobs that need to acquire and use OAUTH tokens
+- Many memory footprint and performance improvements in DAGMan
+- Submitter ceilings can limit the number of jobs per user in a pool
+
 * Tue Mar 30 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.13-1
 - Host based security is no longer the default security model
 - Hardware accelerated integrity and AES encryption used by default
