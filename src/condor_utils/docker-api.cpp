@@ -356,9 +356,25 @@ int DockerAPI::createContainer(
 	build_env_for_docker_cli(cliEnvironment);
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
 
+	/*
 	int childPID = daemonCore->Create_Process( runArgs.GetArg(0), runArgs,
 		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
 		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT );
+	*/
+
+	/*
+	std::string err_return_msg;
+	int childPID = daemonCore->CreateProcessNew( runArgs.GetArg(0), runArgs,
+		{ PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
+		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT,
+		NULL, NULL, NULL, err_return_msg, NULL, 0l } );
+	*/
+
+	int childPID = daemonCore->CreateProcessNew( runArgs.GetArg(0), runArgs,
+		OptionalCreateProcessArgs().priv(PRIV_CONDOR_FINAL)
+			.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+			.env(&cliEnvironment).cwd("/").familyInfo(& fi)
+			.std(childFDs).jobOptMask(DCJOBOPT_NO_ENV_INHERIT) );
 
 	if( childPID == FALSE ) {
 		dprintf( D_ALWAYS, "Create_Process() failed.\n" );
