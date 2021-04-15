@@ -850,26 +850,30 @@ bool ArcJobStatusAllWorkerFunction(GahpRequest *gahp_request)
 		return true;
 	}
 
-	classad::ClassAd resp_ad;
-	classad::ClassAdJsonParser parser;
-	if ( ! parser.ParseClassAd(status_request.responseBody, resp_ad, true) ) {
-		gahp_request->m_result = create_result_string( request_id,
-								"499", "Invalid response" );
-		return true;
-	}
-
-	classad::ExprTree *expr = resp_ad.Lookup("job");
-	if ( expr == NULL ) {
-		gahp_request->m_result = create_result_string( request_id,
-								"499", "Invalid response" );
-		return true;
-	}
-
 	std::vector<classad::ExprTree*> expr_list;
-	if ( expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE ) {
-		((classad::ExprList*)expr)->GetComponents(expr_list);
-	} else if ( expr->GetKind() == classad::ExprTree::CLASSAD_NODE ) {
-		expr_list.push_back(expr);
+
+	// If there are no jobs, then the response body will be empty.
+	if( ! status_request.responseBody.empty() ) {
+		classad::ClassAd resp_ad;
+		classad::ClassAdJsonParser parser;
+		if ( ! parser.ParseClassAd(status_request.responseBody, resp_ad, true) ) {
+			gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+			return true;
+		}
+
+		classad::ExprTree *expr = resp_ad.Lookup("job");
+		if ( expr == NULL ) {
+			gahp_request->m_result = create_result_string( request_id,
+								"499", "Invalid response" );
+			return true;
+		}
+
+		if ( expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE ) {
+			((classad::ExprList*)expr)->GetComponents(expr_list);
+		} else if ( expr->GetKind() == classad::ExprTree::CLASSAD_NODE ) {
+			expr_list.push_back(expr);
+		}
 	}
 
 	std::vector<std::string> result_args;
