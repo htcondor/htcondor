@@ -11316,3 +11316,33 @@ bool DaemonCore::getStartTime( int & startTime ) {
 	startTime = dcc->getStartTime();
 	return true;
 }
+
+
+
+int DaemonCore::CreateProcessNew(
+  const std::string & name,
+  const std::vector< std::string > args,
+  const OptionalCreateProcessArgs & ocpa ) {
+	ArgList argsList;
+	for( const auto & arg : args ) {
+		argsList.AppendArg(arg);
+	}
+	return CreateProcessNew( name, argsList, ocpa );
+}
+
+int DaemonCore::CreateProcessNew(
+  const std::string & name,
+  const ArgList & argsList,
+  const OptionalCreateProcessArgs & ocpa ) {
+	MyString ms(ocpa.err_return_msg);
+	int rv = Create_Process( name.c_str(), argsList,
+		ocpa._priv, ocpa.reaper_id, ocpa.want_command_port,
+		ocpa.want_udp_command_port, ocpa._env, ocpa._cwd, ocpa.family_info,
+		ocpa.socket_inherit_list, ocpa._std, ocpa.fd_inherit_list, ocpa.nice_inc,
+		ocpa.sig_mask, ocpa.job_opt_mask, ocpa.core_hard_limit,
+		ocpa.affinity_mask, ocpa.daemon_sock,
+		& ms,
+		ocpa._remap, ocpa.as_hard_limit );
+	if(! ms.empty()) { ocpa.err_return_msg = ms; }
+	return rv;
+}
