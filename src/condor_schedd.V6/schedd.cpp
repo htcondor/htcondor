@@ -2459,7 +2459,7 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 		// at this point owner should be set if my_jobs_expr is non-null
 		// and that means we can construct the correct my_jobs_expr contraint expression
 		if (my_jobs_expr) {
-			MyString sub_expr;
+			std::string sub_expr;
 			bool fully_qualified = owner.find('@') != std::string::npos;
 			formatstr(sub_expr, "(%s == \"%s\")", fully_qualified ? ATTR_USER : ATTR_OWNER, owner.c_str());
 			classad::ClassAdParser parser;
@@ -7773,10 +7773,10 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	// authorize this startd for READ operations
 	//
 	if ( match->auth_hole_id == NULL ) {
-		match->auth_hole_id = new MyString;
+		match->auth_hole_id = new std::string;
 		ASSERT(match->auth_hole_id != NULL);
 		if (msg->startd_fqu() && *msg->startd_fqu()) {
-			match->auth_hole_id->formatstr("%s/%s",
+			formatstr(*match->auth_hole_id, "%s/%s",
 			                            msg->startd_fqu(),
 			                            msg->startd_ip_addr());
 		}
@@ -7899,7 +7899,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			paired_mrec->setStatus( M_CLAIMED );
 
 			if ( match->auth_hole_id != NULL ) {
-				paired_mrec->auth_hole_id = new MyString( *match->auth_hole_id );
+				paired_mrec->auth_hole_id = new std::string( *match->auth_hole_id );
 				IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
 				if (!ipv->PunchHole(READ, *paired_mrec->auth_hole_id)) {
 					dprintf(D_ALWAYS,
@@ -8143,7 +8143,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 
 		// authorize this startd for READ access
 	if (startd_principal != NULL) {
-		mrec->auth_hole_id = new MyString(startd_principal);
+		mrec->auth_hole_id = new std::string(startd_principal);
 		ASSERT(mrec->auth_hole_id != NULL);
 		free(startd_principal);
 		IpVerify* ipv = daemonCore->getIpVerify();

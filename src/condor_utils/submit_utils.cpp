@@ -8587,7 +8587,7 @@ int SubmitForeachArgs::parse_queue_args (
 				items.append(plist);
 			} else {
 				items_filename = plist;
-				items_filename.trim();
+				trim(items_filename);
 			}
 		} else {
 			while (isspace(*plist)) ++plist;
