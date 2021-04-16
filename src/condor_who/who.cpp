@@ -1774,7 +1774,7 @@ static void read_address_file(const char * filename, std::string & addr)
 
 	// read the address file into a local buffer
 	char buf[4096];
-	int cbRead = read(fd, buf, sizeof(buf));
+	int cbRead = read(fd, buf, sizeof(buf) - 1);
 
 	if (cbRead < 0) {
 		close(fd);
