@@ -6196,7 +6196,7 @@ default : @end
 @end
 
 [$FEATURE.AssignAccountingGroup]
-description=Set the job accounting attributes by mapping the job's Owner attribute args:(map_file)
+description=Set the job accounting attributes by mapping the job's Owner attribute args:(map_file [,check_request])
 default : @fin
 	if ! $(1?)
 	  error : use FEATURE : AssignAccountingGroup requires a map_file argument
@@ -6206,6 +6206,12 @@ default : @fin
 	JOB_TRANSFORM_AssignAccountingGroup = [ copy_Owner="AcctGroupUser"; copy_AcctGroup="RequestedAcctGroup"; eval_set_AcctGroup=usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup); eval_set_AccountingGroup=join(".",usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup),AcctGroupUser); ]
 	# make sure that the user can't qedit these attributes once they have been set.
 	IMMUTABLE_JOB_ATTRS = $(IMMUTABLE_JOB_ATTRS) AcctGroup AcctGroupUser AccountingGroup
+	# optionally check that the user requested a valid group
+	if $(2:True)
+	  SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) CheckRequestedGroup
+	  SUBMIT_REQUIREMENT_CheckRequestedGroup = RequestedAcctGroup is undefined || RequestedAcctGroup == AcctGroup
+	  SUBMIT_REQUIREMENT_CheckRequestedGroup_REASON = strcat("Permission denied setting accounting_group to ", RequestedAcctGroup)
+	endif
 	# require that the user mapped into an accounting group
 	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) AssignAccountingGroup
 	SUBMIT_REQUIREMENT_AssignAccountingGroup = AcctGroup isnt undefined && AccountingGroup isnt undefined
