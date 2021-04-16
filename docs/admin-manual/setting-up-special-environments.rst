@@ -495,7 +495,7 @@ in their job submit files.
     of the Vault machine.  *condor_submit* users will then be able to select
     the oauth services that are defined on the Vault server.  See the
     htvault-config
-    (`https://gitub.com/fermitools/htvault-config <https://gitub.com/fermitools/htvault-config>`_)
+    (`https://github.com/fermitools/htvault-config <https://github.com/fermitools/htvault-config>`_)
     documentation to see how to set up and configure the Vault server.
 
 Configuring HTCondor for Multiple Platforms
