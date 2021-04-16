@@ -2,6 +2,7 @@
 import os
 import glob
 import json
+import tempfile
 
 import scitokens
 import htcondor
