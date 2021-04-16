@@ -5541,6 +5541,10 @@ default=$(SBIN)/condor_credmon_oauth
 win32_default=
 type=path
 
+[LOCAL_CREDMON_TOKEN_USE_JSON]
+default=true
+type=bool
+
 # standard API endpoints for common OAuth token providers
 [BOX_AUTHORIZATION_URL]
 default=https://account.box.com/api/oauth2/authorize
