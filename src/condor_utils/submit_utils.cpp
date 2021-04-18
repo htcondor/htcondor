@@ -5840,17 +5840,15 @@ int SubmitHash::SetRequirements()
 		return abort_code;
 	}
 
-	const char * factory_req = lookup_macro_exact_no_default("FACTORY.AppendReq", SubmitMacroSet);
-	if (factory_req) {
-		if (factory_req[0]) {
-			// We found something to append.
-			if ( ! answer.empty()) { answer += " && "; }
-			if (factory_req[0] == '(') { answer += factory_req; }
-			else {
-				answer += "(";
-				answer += factory_req;
-				answer += ")";
-			}
+	std::string factory_req = lookup_macro_exact_no_default("FACTORY.AppendReq", SubmitMacroSet);
+	if(! factory_req.empty()) {
+		// We found something to append.
+		if ( ! answer.empty()) { answer += " && "; }
+		if (factory_req[0] == '(') { answer += factory_req; }
+		else {
+			answer += "(";
+			answer += factory_req;
+			answer += ")";
 		}
 	}
 	else
@@ -6933,7 +6931,7 @@ int SubmitHash::SetVMParams()
 		// because we don't want to enum a directory at materialization time. so we set
 		// FACTORY.vm_input_files in the submit digest and use that instead of doing the directory walk
 		//
-		if (lookup_macro_exact_no_default("FACTORY.vm_input_files", SubmitMacroSet)) {
+		if (exists_macro_exact_no_default("FACTORY.vm_input_files", SubmitMacroSet)) {
 			// PRAGMA_REMIND("TODO: check for a VMWARE_DIR that varies by ProcId")
 		} else {
 			auto_free_ptr vmware_dir(submit_param(SUBMIT_KEY_VM_VMWARE_DIR, VMPARAM_VMWARE_DIR));

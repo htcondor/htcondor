@@ -2099,20 +2099,6 @@ char*
 param_ctx(const char* name, MACRO_EVAL_CONTEXT & ctx)
 {
 
-#if 0
-	// hack to make SUBSYS.LOCALNAME work for direct param lookups.
-	if (ctx.localname && ctx.subsys) {
-		MyString lcl(ctx.subsys); lcl += "."; lcl += ctx.localname;
-		const char * lval = lookup_macro_exact_no_default(name, lcl.c_str(), ConfigMacroSet, ctx.use_mask);
-		if (lval) {
-			char * expanded_val = expand_macro(lval, ConfigMacroSet, ctx);
-			if ( ! expanded_val) { return NULL; }
-			else if (  ! expanded_val[0]) { free(expanded_val); return NULL; }
-			return expanded_val;
-		}
-	}
-#endif
-
 	const char * pval = lookup_macro(name, ConfigMacroSet, ctx);
 	if ( ! pval || ! pval[0]) {
 		// If we don't find any value at all, return NULL

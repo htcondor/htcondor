@@ -3021,6 +3021,7 @@ char * expand_meta_args(const char *value, std::string & argstr)
 }
 #endif
 
+
 /*
 ** Expand parameter references of the form "left$(middle)right".  This
 ** is deceptively simple, but does handle multiple and or nested references.
@@ -3029,8 +3030,7 @@ char * expand_meta_args(const char *value, std::string & argstr)
 ** Also expand references of the form "left$RANDOM_CHOICE(middle)right".
 */
 
-
-const char * lookup_macro_exact_no_default(const char *name, MACRO_SET & set, int use)
+const char * lookup_macro_exact_no_default_impl(const char *name, MACRO_SET & set, int use)
 {
 	MACRO_ITEM* pitem = find_macro_item(name, NULL, set);
 	if (pitem) {
@@ -3044,8 +3044,22 @@ const char * lookup_macro_exact_no_default(const char *name, MACRO_SET & set, in
 	return NULL;
 }
 
+std::string
+lookup_macro_exact_no_default( const std::string & name, MACRO_SET & set, int use ) {
+	const char * rv = lookup_macro_exact_no_default_impl(name.c_str(), set, use);
+	if( rv == NULL ) {
+		return std::string();
+	} else {
+		return std::string(rv);
+	}
+}
 
-const char * lookup_macro_exact_no_default(const char *name, const char *prefix, MACRO_SET & set, int use)
+bool
+exists_macro_exact_no_default( const std::string & name, MACRO_SET & set, int use ) {
+	return NULL != lookup_macro_exact_no_default_impl(name.c_str(), set, use);
+}
+
+const char * lookup_macro_exact_no_default_impl(const char *name, const char *prefix, MACRO_SET & set, int use)
 {
 	MACRO_ITEM* pitem = find_macro_item(name, prefix, set);
 	if (pitem) {
@@ -3058,6 +3072,7 @@ const char * lookup_macro_exact_no_default(const char *name, const char *prefix,
 	}
 	return NULL;
 }
+
 
 // lookup macro in all of the usual places.  The lookup order is
 //    localname.name in config file
@@ -3076,7 +3091,7 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 {
 	const char * lval = NULL;
 	if (ctx.localname) {
-		lval = lookup_macro_exact_no_default(name, ctx.localname, macro_set, ctx.use_mask);
+		lval = lookup_macro_exact_no_default_impl(name, ctx.localname, macro_set, ctx.use_mask);
 		if (lval) return lval;
 
 		if (macro_set.defaults && ! ctx.without_default) {
@@ -3085,7 +3100,7 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 		}
 	}
 	if (ctx.subsys) {
-		lval = lookup_macro_exact_no_default(name, ctx.subsys, macro_set, ctx.use_mask);
+		lval = lookup_macro_exact_no_default_impl(name, ctx.subsys, macro_set, ctx.use_mask);
 		if (lval) return lval;
 
 		if (macro_set.defaults && ! ctx.without_default) {
@@ -3098,7 +3113,7 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 	// Note that if 'name' has been explicitly set to nothing,
 	// lval will _not_ be NULL so we will not call
 	// find_macro_def_item().  See gittrack #1302
-	lval = lookup_macro_exact_no_default(name, macro_set, ctx.use_mask);
+	lval = lookup_macro_exact_no_default_impl(name, macro_set, ctx.use_mask);
 	if (lval) return lval;
 
 	// if not found in the config file, lookup in the param table
