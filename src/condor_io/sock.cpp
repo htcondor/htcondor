@@ -2493,7 +2493,7 @@ const char *
 Sock::peer_ip_str() const
 {
 	if (!_peer_ip_buf[0]) {
-		MyString peer_ip = _who.to_ip_string();
+		std::string peer_ip = _who.to_ip_string();
 		strcpy(_peer_ip_buf, peer_ip.c_str());
 	}
 	return _peer_ip_buf;
@@ -2642,7 +2642,7 @@ const char *
 Sock::my_ip_str() const
 {
 	if (!_my_ip_buf[0]) {
-		MyString ip_str = my_addr().to_ip_string();
+		std::string ip_str = my_addr().to_ip_string();
 		strcpy(_my_ip_buf, ip_str.c_str());
 	}
 	return _my_ip_buf;

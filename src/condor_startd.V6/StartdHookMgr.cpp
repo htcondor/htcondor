@@ -51,7 +51,7 @@ void
 StartdHookMgr::clearHookPaths()
 {
 	int i;
-	MyString key;
+	std::string key;
 	char** hook_paths;
 	m_keyword_hook_paths.startIterations();
 	while (m_keyword_hook_paths.iterate(key, hook_paths)) {
@@ -95,7 +95,7 @@ StartdHookMgr::getHookPath(HookType hook_type, Resource* rip)
 	}
 
 	int i;
-	MyString key(keyword);
+	std::string key(keyword);
 	char** hook_paths;
 	if (m_keyword_hook_paths.lookup(key, hook_paths) < 0) {
 			// No entry, initialize it.
@@ -108,8 +108,8 @@ StartdHookMgr::getHookPath(HookType hook_type, Resource* rip)
 
 	char* path = hook_paths[(int)hook_type];
 	if (!path) {
-		MyString _param;
-		_param.formatstr("%s_HOOK_%s", keyword, getHookTypeString(hook_type));
+		std::string _param;
+		formatstr(_param, "%s_HOOK_%s", keyword, getHookTypeString(hook_type));
 		bool hperr = !validateHookPath(_param.c_str(), path);
         // Here the distinction between undefined hook and a hook path error 
         // is being collapsed

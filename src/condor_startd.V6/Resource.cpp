@@ -195,7 +195,7 @@ const char * Resource::param(std::string& out, const char * name, const char * d
 
 Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent ) : m_acceptedWhileDraining( false )
 {
-	MyString tmp;
+	std::string tmp;
 	const char* tmpName;
 
 		// we need this before we instantiate any Claim objects...
@@ -211,8 +211,8 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	}
 	// append slot id
 	// for dynamic slots, also append sub_id
-	tmp.formatstr_cat( "%d", r_id );
-	if  (_parent) { tmp.formatstr_cat( "_%d", r_sub_id ); }
+	formatstr_cat( tmp, "%d", r_id );
+	if  (_parent) { formatstr_cat( tmp, "_%d", r_sub_id ); }
 	// save the constucted slot name & id string.
 	r_id_str = strdup( tmp.c_str() );
 	r_pair_name = NULL;
@@ -273,7 +273,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 		tmpName = fqdn.c_str();
 	}
 	if( multiple_slots || get_feature() == PARTITIONABLE_SLOT ) {
-		tmp.formatstr( "%s@%s", r_id_str, tmpName );
+		formatstr( tmp, "%s@%s", r_id_str, tmpName );
 		r_name = strdup( tmp.c_str() );
 	} else {
 		r_name = strdup( tmpName );
@@ -1601,7 +1601,7 @@ void
 Resource::final_update( void )
 {
 	ClassAd invalidate_ad;
-	MyString line;
+	std::string line;
 	string escaped_name;
 
 		// Set the correct types
@@ -1614,7 +1614,7 @@ Resource::final_update( void )
 	 * the IP was added to allow the collector to create a hash key to delete in O(1).
      */
 	 QuoteAdStringValue( r_name, escaped_name );
-     line.formatstr( "( TARGET.%s == %s )", ATTR_NAME, escaped_name.c_str() );
+     formatstr( line, "( TARGET.%s == %s )", ATTR_NAME, escaped_name.c_str() );
      invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
      invalidate_ad.Assign( ATTR_NAME, r_name );
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
@@ -2170,7 +2170,7 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 {
 	int tmp;
 	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
-		MyString tmp_expr_name = expr_name;
+		std::string tmp_expr_name = expr_name;
 		tmp_expr_name += "_VANILLA";
 		tmp = eval_expr( tmp_expr_name.c_str(), false, false );
 		if( tmp >= 0 ) {
@@ -2180,7 +2180,7 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 			// otherwise, fall through and try the non-vanilla version
 	}
 	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VM ) {
-		MyString tmp_expr_name = expr_name;
+		std::string tmp_expr_name = expr_name;
 		tmp_expr_name += "_VM";
 		tmp = eval_expr( tmp_expr_name.c_str(), false, false );
 		if( tmp >= 0 ) {
@@ -2451,9 +2451,9 @@ void Resource::publish_static(ClassAd* cap)
 
 		// use the slot name prefix up to the first _ as a config prefix, we do this so dynamic slots
 		// get the same values as their parent slots.
-		MyString slot_name(r_id_str);
-		int iUnderPos = slot_name.find("_");
-		if (iUnderPos >=0) { slot_name.truncate (iUnderPos); }
+		std::string slot_name(r_id_str);
+		size_t iUnderPos = slot_name.find('_');
+		if (iUnderPos != std::string::npos) { slot_name.erase (iUnderPos); }
 
 		// load the relevant param that controls the attribute list.  
 		// We preserve the behavior of config_fill_ad here so the effective list is STARTD_ATTRS + SLOTn_STARTD_ATTRS
@@ -2465,14 +2465,14 @@ void Resource::publish_static(ClassAd* cap)
 		StringList slot_attrs;
 		auto_free_ptr tmp(param("STARTD_ATTRS"));
 		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
-		MyString param_name(slot_name); param_name += "_STARTD_ATTRS";
+		std::string param_name(slot_name); param_name += "_STARTD_ATTRS";
 		tmp.set(param(param_name.c_str()));
 		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
 
 		// check for obsolete STARTD_EXPRS and generate a warning if both STARTD_ATTRS and STARTD_EXPRS is set.
 		if ( ! slot_attrs.isEmpty() && ! warned_startd_attrs_once)
 		{
-			MyString tname(slot_name); tname += "_STARTD_EXPRS";
+			std::string tname(slot_name); tname += "_STARTD_EXPRS";
 			auto_free_ptr tmp2(param(tname.c_str()));
 			if ( ! tmp2.empty()) {
 				dprintf(D_ALWAYS, "WARNING: config contains obsolete %s or SLOT_TYPE_n_%s which will be (partially) ignored! use *_STARTD_ATTRS instead.\n", tname.c_str(), tname.c_str());
@@ -2490,7 +2490,7 @@ void Resource::publish_static(ClassAd* cap)
 
 		slot_attrs.rewind();
 		for (char* attr = slot_attrs.first(); attr != NULL; attr = slot_attrs.next()) {
-			param_name.formatstr("%s_%s", slot_name.c_str(), attr);
+			formatstr(param_name, "%s_%s", slot_name.c_str(), attr);
 			tmp.set(param(param_name.c_str()));
 			if ( ! tmp) { tmp.set(param(attr)); } // if no SLOTn_attr config definition, lookup just attr
 			if ( ! tmp) continue;  // no definition of either type, skip this attribute.
@@ -2751,7 +2751,7 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 
 		// Write to a temporary file first and then rename it
 		// to ensure atomic updates.
-		MyString updateAdTmpPath;
+		std::string updateAdTmpPath;
 		dircat(updateAdDir.c_str(), ".update.ad.tmp", updateAdTmpPath);
 
 		FILE * updateAdFile = NULL;
@@ -2788,7 +2788,7 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 
 
 			// Rename the temporary.
-			MyString updateAdPath;
+			std::string updateAdPath;
 			dircat(updateAdDir.c_str(), ".update.ad", updateAdPath);
 
 #if defined(WINDOWS)
@@ -2979,7 +2979,7 @@ Resource::publishSlotAttrs( ClassAd* cap, bool as_literal, bool only_valid_value
 		}
 	} else {
 		char* ptr;
-		MyString prefix = r_id_str;
+		std::string prefix = r_id_str;
 		prefix += '_';
 		startd_slot_attrs->rewind();
 		while ((ptr = startd_slot_attrs->next())) {
@@ -3555,8 +3555,8 @@ char*
 Resource::getHookKeyword()
 {
 	if (!m_hook_keyword_initialized) {
-		MyString param_name;
-		param_name.formatstr("%s_JOB_HOOK_KEYWORD", r_id_str);
+		std::string param_name;
+		formatstr(param_name, "%s_JOB_HOOK_KEYWORD", r_id_str);
 		m_hook_keyword = param(param_name.c_str());
 		if (!m_hook_keyword) {
 			m_hook_keyword = param("STARTD_JOB_HOOK_KEYWORD");
@@ -3626,7 +3626,7 @@ Resource::swap_claims(Resource* ripa, Resource* ripb)
 	ripb->r_cur->setResource(ripb);
 
 	// swap execute directory
-	MyString str = ripa->m_execute_dir;
+	std::string str = ripa->m_execute_dir;
 	ripa->m_execute_dir = ripb->m_execute_dir;
 	ripb->m_execute_dir = str;
 
@@ -3648,7 +3648,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 	if( Resource::PARTITIONABLE_SLOT == rip->get_feature() ) {
 		ClassAd	*mach_classad = rip->r_classad;
 		CpuAttributes *cpu_attrs;
-		MyString type;
+		std::string type;
 		StringList type_list;
 		int cpus;
 		long long disk, memory, swap;
@@ -3668,7 +3668,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			// Now make the modifications.
 		static const char* resources[] = {ATTR_REQUEST_CPUS, ATTR_REQUEST_DISK, ATTR_REQUEST_MEMORY, NULL};
 		for (int i=0; resources[i]; i++) {
-			MyString knob("MODIFY_REQUEST_EXPR_");
+			std::string knob("MODIFY_REQUEST_EXPR_");
 			knob += resources[i];
 			char *tmp = param(knob.c_str());
 			if( tmp ) {
@@ -3754,7 +3754,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			// original request. If the schedd does not specify, go with whatever the user
 			// placed in the ad, aka the ATTR_REQUEST_* attributes itself.  If that does
 			// not exist, we either cons up a default or refuse the claim.
-		MyString schedd_requested_attr;
+		std::string schedd_requested_attr;
 
         if (cp_supports_policy(*mach_classad)) {
             // apply consumption policy
@@ -3766,9 +3766,9 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                 if (j != consumption.begin()) type += " ";
                 if (MATCH == strcasecmp(j->first.c_str(),"disk")) {
                     // if it weren't for special cases, we'd have no cases at all
-                    type.formatstr_cat("disk=%.1f%%", max(0, (0.1 + 100 * j->second / (double)rip->r_attr->get_total_disk())));
+                    formatstr_cat(type, "disk=%.1f%%", max(0, (0.1 + 100 * j->second / (double)rip->r_attr->get_total_disk())));
                 } else {
-                    type.formatstr_cat("%s=%d", j->first.c_str(), int(j->second));
+                    formatstr_cat(type, "%s=%d", j->first.c_str(), int(j->second));
                 }
             }
         } else {
@@ -3780,7 +3780,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                     cpus = 1; // reasonable default, for sure
                 }
             }
-            type.formatstr_cat( "cpus=%d ", cpus );
+            formatstr_cat( type, "cpus=%d ", cpus );
 
                 // Look to see how much MEMORY is being requested.
             schedd_requested_attr = "_condor_";
@@ -3794,7 +3794,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                     return NULL;
                 }
             }
-            type.formatstr_cat( "memory=%lld ", memory );
+            formatstr_cat( type, "memory=%lld ", memory );
 
                 // Look to see how much DISK is being requested.
             schedd_requested_attr = "_condor_";
@@ -3808,7 +3808,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                     return NULL;
                 }
             }
-            type.formatstr_cat( "disk=%.1f%%",
+            formatstr_cat( type, "disk=%.1f%%",
                                 max((0.1 + disk / (double) rip->r_attr->get_total_disk() * 100), 0.001) );
 
 
@@ -3824,7 +3824,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 					if (param_boolean("PROPORTIONAL_SWAP_ASSIGNMENT", false)) {
 						// set swap to same percentage of swap as we have of physical memory
 						double mpcent = 100.0 * double(memory) / double(rip->r_attr->get_mach_attr()->phys_mem());
-						type.formatstr_cat(" swap=%d%%", int(mpcent));
+						formatstr_cat(type, " swap=%d%%", int(mpcent));
 						set_swap = false;
 					} else {
 						// Fall back to you get everything and don't pay anything
@@ -3834,7 +3834,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
             }
 
 			if (set_swap) {
-				type.formatstr_cat( " swap=%d%%", 
+				formatstr_cat( type, " swap=%d%%", 
 					max((int) ceil((swap / total_virt_mem) * 100), 1));
 			}
 

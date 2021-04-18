@@ -562,6 +562,7 @@ public:
 	// returns true if the separator was found, false if not.
 	// if return value is true, the val will be set to the string, if false val is unchanged.
 	bool deserialize_string(MyString & val, const char * sep);
+	bool deserialize_string(std::string & val, const char * sep);
 	// return the current deserialize offset from the start of the string
 	size_t offset() { return (m_str && m_p) ? (m_p - m_str) : 0; }
 	// return the current deserialization pointer into the string.

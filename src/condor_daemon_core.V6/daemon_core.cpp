@@ -3172,7 +3172,7 @@ DaemonCore::reconfig(void) {
 void
 DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 {
-	MyString why_not = "no command port requested";
+	std::string why_not = "no command port requested";
 	bool already_open = m_shared_port_endpoint != NULL;
 
 	if( m_command_port_arg != 0 && SharedPortEndpoint::UseSharedPort(&why_not,already_open) ) {
@@ -3222,18 +3222,21 @@ DaemonCore::ReloadSharedPortServerAddr()
 int
 DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_sockaddr& addr, const char * fqu, int log_level )
 {
-	MyString deny_reason; // always get 'deny' reason, if there is one
-	MyString *allow_reason = NULL;
-	MyString allow_reason_buf;
-	if( IsDebugLevel( D_SECURITY ) ) {
-			// only get 'allow' reason if doing verbose debugging
-		allow_reason = &allow_reason_buf;
+	std::string allow_reason;
+	std::string deny_reason;
+
+	int result = getSecMan()->Verify(perm, addr, fqu, allow_reason, deny_reason);
+
+	std::string *reason = NULL;
+	const char *result_desc = NULL;
+	if (result == USER_AUTH_FAILURE) {
+		reason = &deny_reason;
+		result_desc = "DENIED";
+	} else if (IsDebugLevel(D_SECURITY)) {
+		// only log 'allow' reason if doing verbose debugging
+		reason = &allow_reason;
+		result_desc = "GRANTED";
 	}
-
-	int result = getSecMan()->Verify(perm, addr, fqu, allow_reason, &deny_reason);
-
-	MyString *reason = result ? allow_reason : &deny_reason;
-	char const *result_desc = result ? "GRANTED" : "DENIED";
 
 	if( reason ) {
 		char ipstr[IP_STRING_BUF_SIZE];
