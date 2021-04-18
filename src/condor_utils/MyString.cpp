@@ -1027,6 +1027,14 @@ MyStringFpSource::isEof()
 }
 
 
+bool
+MyStringCharSource::readLine(std::string & str, bool append /* = false*/) {
+    MyString ms(str);
+    bool rv = readLine(ms, append);
+    str = ms;
+    return rv;
+}
+
 // the MyStringCharSource scans a string buffer returning
 // whenver it sees a \n
 bool

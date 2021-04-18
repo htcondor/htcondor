@@ -26,7 +26,6 @@
 #include "env.h"
 #include "starter.h"
 #include "condor_daemon_core.h"
-#include "MyString.h"
 #include "gahp_common.h"
 #include "strupr.h"
 #include "my_popen.h"
@@ -327,8 +326,8 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 
 	// Grab the full environment back out of the Env object
 	if(IsFulldebug(D_FULLDEBUG)) {
-		MyString env_str;
-		job_env->getDelimitedStringForDisplay(&env_str);
+		std::string env_str;
+		job_env->getDelimitedStringForDisplay( env_str);
 		dprintf(D_FULLDEBUG, "Env = %s\n", env_str.c_str());
 	}
 

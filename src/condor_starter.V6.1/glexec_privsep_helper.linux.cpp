@@ -283,15 +283,13 @@ GLExecPrivSepHelper::create_process(const char* path,
                                     int         dc_job_opts,
                                     FamilyInfo* family_info,
                                     int *,
-									MyString *error_msg)
+                                    std::string & error_msg)
 {
 	ASSERT(m_initialized);
 
 	if (!proxy_valid_right_now()) {
 		dprintf(D_ALWAYS, "GLExecPrivSepHelper::create_process: not invoking glexec since the proxy is not valid!\n");
-		if( error_msg ) {
-			error_msg->formatstr_cat("The job proxy is invalid.");
-		}
+		formatstr_cat(error_msg, "The job proxy is invalid.");
 		return -1;
 	}
 
@@ -417,9 +415,7 @@ GLExecPrivSepHelper::create_process(const char* path,
 
 		if( !retry ) {
 				// return the most recent glexec error output
-			if( error_msg ) {
-				error_msg->formatstr_cat("%s",glexec_error_msg.c_str());
-			}
+			formatstr_cat(error_msg,"%s",glexec_error_msg.c_str());
 			return 0;
 		}
 			// truncated exponential backoff

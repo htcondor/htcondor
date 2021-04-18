@@ -6812,6 +6812,40 @@ void CreateProcessForkit::exec() {
 }
 #endif
 
+
+int DaemonCore::Create_Process(
+			const char      *executable,
+			ArgList const   &args,
+			priv_state      priv,
+			int             reaper_id,
+			int             want_command_port,
+			int             want_udp_command_port,
+			Env const       *env,
+			const char      *cwd,
+			FamilyInfo      *family_info,
+			Stream          *sock_inherit_list[],
+			int             std[],
+			int             fd_inherit_list[],
+			int             nice_inc,
+			sigset_t        *sigmask,
+			int             job_opt_mask,
+			size_t          *core_hard_limit,
+			int             *affinity_mask,
+			char const      *daemon_sock,
+			std::string     & err_return_msg,
+			FilesystemRemap *remap,
+			long            as_hard_limit
+			) {
+	MyString ms;
+	int rv = Create_Process( executable, args, priv, reaper_id,
+		want_command_port, want_udp_command_port, env, cwd, family_info,
+		sock_inherit_list, std, fd_inherit_list, nice_inc, sigmask,
+		job_opt_mask, core_hard_limit, affinity_mask, daemon_sock,
+		& ms, remap, as_hard_limit );
+	if(! ms.empty()) { err_return_msg = ms; }
+	return rv;
+}
+
 MSC_DISABLE_WARNING(6262) // function uses 62916 bytes of stack
 int DaemonCore::Create_Process(
 			const char    *executable,

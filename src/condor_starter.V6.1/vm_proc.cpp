@@ -251,8 +251,8 @@ VMProc::StartJob()
 
 	char *env_str = param( "STARTER_JOB_ENVIRONMENT" );
 
-	MyString env_errors;
-	if( ! job_env.MergeFromV1RawOrV2Quoted(env_str,&env_errors) ) {
+	std::string env_errors;
+	if( ! job_env.MergeFromV1RawOrV2Quoted(env_str, env_errors) ) {
 		dprintf( D_ALWAYS, "Aborting VMProc::StartJob: "
 				"%s\nThe full value for STARTER_JOB_ENVIRONMENT: "
 				"%s\n",env_errors.c_str(),env_str);

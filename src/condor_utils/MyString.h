@@ -616,6 +616,7 @@ public:
 	int          pos() const { return ix; }
 	void rewind() { ix = 0; }
 	virtual bool readLine(MyString & str, bool append = false);
+	virtual bool readLine(std::string & str, bool append = false);
 	virtual bool isEof();
 protected:
 	char * ptr;

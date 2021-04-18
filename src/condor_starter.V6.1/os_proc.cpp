@@ -232,8 +232,8 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// environment as needed.
 	Env job_env;
 
-	MyString env_errors;
-	if( !Starter->GetJobEnv(JobAd,&job_env,&env_errors) ) {
+	std::string env_errors;
+	if( !Starter->GetJobEnv(JobAd,&job_env, env_errors) ) {
 		dprintf( D_ALWAYS, "Aborting OSProc::StartJob: %s\n",
 				 env_errors.c_str());
 		job_not_started = true;
@@ -263,28 +263,28 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	bool stdin_ok;
 	bool stdout_ok;
 	bool stderr_ok;
-	MyString privsep_stdin_name;
-	MyString privsep_stdout_name;
-	MyString privsep_stderr_name;
+	std::string privsep_stdin_name;
+	std::string privsep_stdout_name;
+	std::string privsep_stderr_name;
 	if (privsep_helper != NULL) {
 		stdin_ok = getStdFile(SFT_IN,
 		                      NULL,
 		                      true,
 		                      "Input file",
 		                      &fds[0],
-		                      &privsep_stdin_name);
+		                      privsep_stdin_name);
 		stdout_ok = getStdFile(SFT_OUT,
 		                       NULL,
 		                       true,
 		                       "Output file",
 		                       &fds[1],
-		                       &privsep_stdout_name);
+		                       privsep_stdout_name);
 		stderr_ok = getStdFile(SFT_ERR,
 		                       NULL,
 		                       true,
 		                       "Error file",
 		                       &fds[2],
-		                       &privsep_stderr_name);
+		                       privsep_stderr_name);
 	}
 	else {
 		fds[0] = openStdFile( SFT_IN,
@@ -372,8 +372,8 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 		// Grab the full environment back out of the Env object 
 	if(IsFulldebug(D_FULLDEBUG)) {
-		MyString env_string;
-		job_env.getDelimitedStringForDisplay(&env_string);
+		std::string env_string;
+		job_env.getDelimitedStringForDisplay( env_string);
 		dprintf(D_FULLDEBUG, "Env = %s\n", env_string.c_str());
 	}
 
@@ -398,8 +398,8 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// Assume we're in the root of the sandbox.
 		FILE * file = fopen( f.c_str(), "w" );
 		if( file != NULL ) {
-			MyString env_string;
-			job_env.getDelimitedStringForDisplay(&env_string);
+			std::string env_string;
+			job_env.getDelimitedStringForDisplay( env_string);
 
 			fprintf( file, "%s\n", env_string.c_str());
 			fclose(file);
@@ -583,23 +583,23 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	std::string args_string;
 	args.GetArgsStringForDisplay(args_string, 1);
-	if( has_wrapper ) { 
+	if( has_wrapper ) {
 			// print out exactly what we're doing so folks can debug
 			// it, if they need to.
-		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.c_str(), 
+		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.c_str(),
 				 args_string.c_str() );
 	} else {
 		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.c_str(),
 				 args_string.c_str() );
 	}
 
-	
+
 
 	set_priv ( priv );
 
     // use this to return more detailed and reliable error message info
     // from create-process operation.
-    MyString create_process_err_msg;
+    std::string create_process_err_msg;
 
 	if (privsep_helper != NULL) {
 		const char* std_file_names[3] = {
@@ -619,7 +619,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		                                        job_opt_mask,
 		                                        family_info,
 												affinity_mask,
-												&create_process_err_msg);
+												create_process_err_msg );
 	}
 	else {
 		JobPid = daemonCore->Create_Process( JobName.c_str(),
@@ -636,11 +636,11 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		                                     NULL,
 		                                     nice_inc,
 		                                     NULL,
-		                                     job_opt_mask, 
+		                                     job_opt_mask,
 		                                     core_size_ptr,
                                              affinity_mask,
 											 NULL,
-                                             &create_process_err_msg,
+                                             create_process_err_msg,
                                              fs_remap,
 											 rlimit_as_hard_limit);
 	}
@@ -1238,8 +1238,8 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	}
 
 	Env env;
-	MyString env_errors;
-	if (!Starter->GetJobEnv(JobAd,&env,&env_errors)) {
+	std::string env_errors;
+	if (!Starter->GetJobEnv(JobAd,&env, env_errors)) {
 		dprintf(D_ALWAYS, "Warning -- cannot put environment into singularity job: %s\n", env_errors.c_str());
 	}
 
