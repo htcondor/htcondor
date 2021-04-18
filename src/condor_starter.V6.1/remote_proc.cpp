@@ -128,6 +128,7 @@ bool RemoteProc::JobReaper( int pid, int status )
 					int r = read(fd, buf, 511);
 					if (r < 0) {
 						dprintf(D_ALWAYS, "Cannot read worker output file on job submission. Errno %d\n", errno);
+						sprintf(buf, "Cannot read worker output file on job submission. Errno %d\n", errno);
 					} else {
 						buf[r] = '\0';
 						int buflen = strlen(buf);

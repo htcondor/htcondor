@@ -1714,26 +1714,6 @@ int submit_jobs (
 		if (rval < 0)
 			break;
 
-
-		// OAUTH (SCITOKENS) CODE INSERT
-		//
-		// This should not stay here.  We would like a separate API
-		// that can be called by python bindings and condor_store_cred
-		// (as well is submit) to do this work.
-		//
-		// But for now, here it is, and this should be refactored in
-		// the 8.9 series.
-		//
-		int cred_result = process_job_credentials();
-
-		// zero means success, we should continue.  otherwise bail.
-		if (cred_result) {
-			// what is the best way to bail out / abort the submit process?
-			printf("BAILING OUT: %i\n", cred_result);
-			exit(1);
-		}
-
-
 		// we'll use the GotQueueCommand flag as a convenient flag for 'this is the first iteration of the loop'
 		if ( ! GotQueueCommand) {
 			// If this turns out to be late materialization, the schedd will need to know what the
@@ -1799,6 +1779,24 @@ int submit_jobs (
 		rval = submit_hash.parse_q_args(queue_args, o, errmsg);
 		if (rval)
 			break;
+
+
+		// OAUTH (SCITOKENS) CODE INSERT
+		//
+		// This should not stay here.  We would like a separate API
+		// that can be called by python bindings and condor_store_cred
+		// (as well is submit) to do this work.
+		//
+		// But for now, here it is, and this should be refactored in
+		// the 8.9 series.
+		//
+		int cred_result = process_job_credentials();
+		if (cred_result) { // zero means success, otherwise bail.
+			// what is the best way to bail out / abort the submit process?
+			printf("BAILING OUT: %i\n", cred_result);
+			exit(1);
+		}
+
 
 		// load the foreach data
 		rval = submit_hash.load_inline_q_foreach_items(ms, o, errmsg);

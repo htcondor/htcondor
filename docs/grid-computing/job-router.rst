@@ -263,7 +263,7 @@ will be considered in the order given by this configuration variable.
     @rt
 
     # define a pre-route transform that does the transforms all routes should do
-    JOB_ROUTER_PRE_ROUTE_TRANSFORMS = Defaults
+    JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES = Defaults
 
     JOB_ROUTER_TRANSFORM_Defaults @=jrd
        # remove routed job if it goes on hold or stays idle for over 6 hours

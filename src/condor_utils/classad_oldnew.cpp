@@ -569,7 +569,7 @@ int putClassAd (Stream *sock, const classad::ClassAd& ad, int options, const cla
 	}
 
 	bool non_blocking = (options & PUT_CLASSAD_NON_BLOCKING) != 0;
-	ReliSock* rsock = static_cast<ReliSock*>(sock);
+	ReliSock* rsock = dynamic_cast<ReliSock*>(sock);
 	if (non_blocking && rsock)
 	{
 		BlockingModeGuard guard(rsock, true);

@@ -125,6 +125,7 @@ sysapi_get_windows_info(void)
 
 	OSVERSIONINFOEX info;
 	info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+	MSC_SUPPRESS_WARNING_FOREVER(4996) // 'GetVersionExA': was declared deprecated
 	if (GetVersionEx((LPOSVERSIONINFO)&info) > 0 ) {
 		switch(info.dwPlatformId) {
 		case VER_PLATFORM_WIN32s:

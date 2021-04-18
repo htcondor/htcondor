@@ -89,6 +89,7 @@ CSysinfo::CSysinfo()
 		// Figure out if we are running on Win2k or above
 		OSVERSIONINFO info;
 		info.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+		MSC_SUPPRESS_WARNING_FOREVER(4996) // 'GetVersionExA': was declared deprecated
 		if (GetVersionEx(&info) > 0) {
 			if ( info.dwPlatformId ==  VER_PLATFORM_WIN32_NT  &&
 				 info.dwMajorVersion >= 5 ) 

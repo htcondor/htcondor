@@ -1828,7 +1828,10 @@ FileTransfer::ReadTransferPipeMsg()
 			n = daemonCore->Read_Pipe( TransferPipe[0],
 									   error_buf,
 									   error_len );
-			if(n != error_len) goto read_failed;
+			if(n != error_len) {
+				delete [] error_buf;
+				goto read_failed;
+			}
 			Info.error_desc = error_buf;
 
 			delete [] error_buf;
@@ -1847,7 +1850,13 @@ FileTransfer::ReadTransferPipeMsg()
 			n = daemonCore->Read_Pipe( TransferPipe[0],
 									   spooled_files_buf,
 									   spooled_files_len );
-			if(n != spooled_files_len) goto read_failed;
+			if(n != spooled_files_len) {
+				delete [] spooled_files_buf;
+				goto read_failed;
+			}
+			// The sender should be sending a null terminator,
+			// but let's not rely on that.
+			spooled_files_buf[spooled_files_len-1] = '\0';
 			Info.spooled_files = spooled_files_buf;
 
 			delete [] spooled_files_buf;

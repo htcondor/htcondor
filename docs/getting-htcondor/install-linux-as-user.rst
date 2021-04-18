@@ -21,7 +21,7 @@ otherwise, we recommend using our download script, as follows.
 .. code-block:: shell
 
     cd
-    curl -fsSL https://get.htcondor.com | /bin/bash -s -- --download
+    curl -fsSL https://get.htcondor.org | /bin/bash -s -- --download
 
 Install
 -------

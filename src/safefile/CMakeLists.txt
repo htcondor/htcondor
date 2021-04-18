@@ -16,10 +16,11 @@
  # 
  ############################################################### 
 if(WINDOWS)
-	file(GLOB SAFE_OPEN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/safe_open.* ${CMAKE_CURRENT_SOURCE_DIR}/safe_fopen.*)
+	set(SAFE_OPEN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/safe_open.c ${CMAKE_CURRENT_SOURCE_DIR}/safe_fopen.c)
 else()
-	file(GLOB SAFE_OPEN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/safe_open.* ${CMAKE_CURRENT_SOURCE_DIR}/safe_fopen.* ${CMAKE_CURRENT_SOURCE_DIR}/safe_is_path_trusted.* ${CMAKE_CURRENT_SOURCE_DIR}/safe_id_range_list.c ${CMAKE_CURRENT_BINARY_DIR}/safe_id_range_list.h)
+	set(SAFE_OPEN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/safe_open.c ${CMAKE_CURRENT_SOURCE_DIR}/safe_fopen.c ${CMAKE_CURRENT_SOURCE_DIR}/safe_is_path_trusted.c ${CMAKE_CURRENT_SOURCE_DIR}/safe_id_range_list.c)
 endif()
+
 set(SAFE_OPEN_SRC ${SAFE_OPEN_SRC} PARENT_SCOPE)
 
 message ( STATUS "safe_open done")
