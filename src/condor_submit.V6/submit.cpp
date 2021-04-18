@@ -1361,7 +1361,7 @@ bool is_crlf_shebang(const char *path)
 }
 
 // callback passed to make_job_ad on the submit_hash that gets passed each input or output file
-// so we can choose to do file checks. 
+// so we can choose to do file checks.
 int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const char * pathname, int flags)
 {
 	if ((pathname == NULL) && (role != SFR_PSEUDO_EXECUTABLE)) {
@@ -1408,13 +1408,12 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 		return 0;
 
 	} else if (role == SFR_EXECUTABLE || role == SFR_PSEUDO_EXECUTABLE) {
-
 		const char * ename = pathname;
 		bool transfer_it = (flags & 1) != 0;
 
 		if (!ename) transfer_it = false;
 
-		LastExecutable = ename;
+        empty_if_null(LastExecutable, ename);
 		SpoolLastExecutable = false;
 
 		// ensure the executables exist and spool them only if no
@@ -2871,7 +2870,7 @@ int SendLastExecutable()
 {
 	const char * ename = LastExecutable.empty() ? NULL : LastExecutable.c_str();
 	bool copy_to_spool = SpoolLastExecutable;
-	std::string SpoolEname(ename);
+	std::string SpoolEname(ename ? ename : "");
 
 	// spool executable if necessary
 	if ( ename && copy_to_spool ) {
