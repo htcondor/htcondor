@@ -2167,7 +2167,7 @@ static int OpenSpoolFactoryFile(int cluster_id, const char * filename, int &fd, 
 // the materialize itemdata is *also* stored in the submit pending JobFactory so we don't have to read it from the
 // spool file on initial submit.
 // 
-int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & spooled_filename, int &row_count, int &terrno)
+int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, std::string & spooled_filename, int &row_count, int &terrno)
 {
 	int rval = -1;
 	SetAttributeFlags_t flags = 0;
@@ -2313,7 +2313,7 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 
 			// If the submit digest parsed correctly, we need to write it to spool so we can re-load if the schedd is restarted
 			//
-			MyString spooled_filename;
+			std::string spooled_filename;
 			GetSpooledSubmitDigestPath(spooled_filename, cluster_id, Spool);
 			const char * filename = spooled_filename.c_str();
 
@@ -4195,14 +4195,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 			// We can't just use attr_value, since it contains '"'
 			// marks.  Carefully remove them here.
-		MyString owner_buf;
+		std::string owner_buf;
 		char const *owner = attr_value;
 		bool owner_is_quoted = false;
 		if( *owner == '"' ) {
 			owner_buf = owner+1;
 			if( owner_buf.length() && owner_buf[owner_buf.length()-1] == '"' )
 			{
-				owner_buf.truncate(owner_buf.length()-1);
+				owner_buf.erase(owner_buf.length()-1);
 				owner_is_quoted = true;
 			}
 			owner = owner_buf.c_str();
@@ -4256,7 +4256,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 
-		MyString orig_owner;
+		std::string orig_owner;
 		if( GetAttributeString(cluster_id,proc_id,ATTR_OWNER,orig_owner) >= 0
 			&& orig_owner != owner
 			&& !qmgmt_all_users_trusted )
@@ -4330,13 +4330,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				// the job queue.
 		#ifdef NO_DEPRECATED_NICE_USER
 			int nice_user = 0;
-			MyString user;
+			std::string user;
 
 			GetAttributeInt( cluster_id, proc_id, ATTR_NICE_USER,
 							 &nice_user );
-			user.formatstr( "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
+			formatstr( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
 					 owner, scheduler.uidDomain() );
-			SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags, nullptr );
+			SetAttribute( cluster_id, proc_id, ATTR_USER, user.c_str(), flags, nullptr );
 		#else
 			auto new_user = std::string("\"") + owner + "@" + scheduler.uidDomain() + "\"";
 			SetAttribute(cluster_id, proc_id, ATTR_USER, new_user.c_str());
@@ -5813,7 +5813,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 
 								// we need to let MakeJobFactory know whether the digest has been spooled or not
 								// because it needs to know whether to impersonate the user or not.
-								MyString spooled_filename;
+								std::string spooled_filename;
 								GetSpooledSubmitDigestPath(spooled_filename, clusterad->jid.cluster, Spool);
 								bool spooled_digest = YourStringNoCase(spooled_filename) == submit_digest;
 
@@ -6536,7 +6536,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						attribute_not_found = true;
 						break;
 					}
-					MyString replacement_value;
+					std::string replacement_value;
 					replacement_value += left;
 					replacement_value += result;
 					search_pos = replacement_value.length();
@@ -6871,9 +6871,9 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 			// Now convert the arguments to a form understood by the starter.
 			ArgList arglist;
-			MyString arg_error_msg;
-			if(!arglist.AppendArgsFromClassAd(expanded_ad,&arg_error_msg) ||
-			   !arglist.InsertArgsIntoClassAd(expanded_ad,&ver_info,&arg_error_msg))
+			std::string arg_error_msg;
+			if(!arglist.AppendArgsFromClassAd(expanded_ad,arg_error_msg) ||
+			   !arglist.InsertArgsIntoClassAd(expanded_ad,&ver_info,arg_error_msg))
 			{
 				attribute_not_found = true;
 				std::string hold_reason;
@@ -8022,7 +8022,7 @@ void load_job_factories()
 
 			// we need to let MakeJobFactory know whether the digest has been spooled or not
 			// because it needs to know whether to impersonate the user or not.
-			MyString spooled_filename;
+			std::string spooled_filename;
 			GetSpooledSubmitDigestPath(spooled_filename, clusterad->jid.cluster, Spool);
 			bool spooled_digest = YourStringNoCase(spooled_filename) == submit_digest;
 
@@ -8226,17 +8226,17 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	jobid.proc = -1;	
 
 	int i;
-	MyString owner;
+	std::string owner;
 	if (user_is_the_new_owner) {
 	} else {
-		owner = user;
+		owner = user ? user : "";
 
 		// We have been passed user, which is owner@uid.  We want just
 		// owner, place a NULL at the '@'.
 
-		int at_sign_pos = owner.FindChar('@');
-		if (at_sign_pos >= 0) {
-			owner.truncate(at_sign_pos);
+		size_t at_sign_pos = owner.find('@');
+		if (at_sign_pos != std::string::npos) {
+			owner.erase(at_sign_pos);
 			user = owner.c_str();
 		}
 	}
