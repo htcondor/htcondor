@@ -22,7 +22,7 @@ Quickstart Installation Instructions
 To download the latest HTCondor Windows Installer:
 
 #.  Go to the
-    `current channel <https://research.cs.wisc.edu/htcondor/tarball/current/>`_
+    `stable channel <https://research.cs.wisc.edu/htcondor/tarball/9.0/>`_
     download site.
 #.  Click on the second-latest version.  (The latest version should always be
     the under-development version and will only have ``daily`` builds.)

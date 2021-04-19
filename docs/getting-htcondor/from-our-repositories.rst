@@ -24,11 +24,11 @@ for x86-64.
 
 Repository packages are available for each platform:
 
-* `RedHat 7 <https://research.cs.wisc.edu/htcondor/repo/8.9/htcondor-release-current.el7.noarch.rpm>`_
-* `RedHat 8 <https://research.cs.wisc.edu/htcondor/repo/8.9/htcondor-release-current.el8.noarch.rpm>`_
-* `CentOS 7 <https://research.cs.wisc.edu/htcondor/repo/8.9/htcondor-release-current.el7.noarch.rpm>`_
-* `CentOS 8 <https://research.cs.wisc.edu/htcondor/repo/8.9/htcondor-release-current.el8.noarch.rpm>`_
-* `Amazon Linux 2 <https://research.cs.wisc.edu/htcondor/repo/8.9/htcondor-release-current.amzn2.noarch.rpm>`_
+* `RedHat 7 <https://research.cs.wisc.edu/htcondor/repo/9.0/htcondor-release-current.el7.noarch.rpm>`_
+* `RedHat 8 <https://research.cs.wisc.edu/htcondor/repo/9.0/htcondor-release-current.el8.noarch.rpm>`_
+* `CentOS 7 <https://research.cs.wisc.edu/htcondor/repo/9.0/htcondor-release-current.el7.noarch.rpm>`_
+* `CentOS 8 <https://research.cs.wisc.edu/htcondor/repo/9.0/htcondor-release-current.el8.noarch.rpm>`_
+* `Amazon Linux 2 <https://research.cs.wisc.edu/htcondor/repo/9.0/htcondor-release-current.amzn2.noarch.rpm>`_
 
 The HTCondor packages on these platforms depends on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
@@ -38,7 +38,7 @@ Additionally, the following repositories are required for specific platforms:
 * On RedHat 7, ``rhel-*-optional-rpms``, ``rhel-*-extras-rpms``, and
   ``rhel-ha-for-rhel-*-server-rpms``.
 * On RedHat 8, ``codeready-builder-for-rhel-8-${ARCH}-rpms``.
-* On CentOS 8, ``PowerTools`` (or ``powertools``).
+* On CentOS 8, ``powertools`` (or ``PowerTools``).
 
 deb-based Distributions
 -----------------------
@@ -50,17 +50,17 @@ also include the source packages.
 Debian 9 and 10
 ###############
 
-Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/debian/HTCondor-Release.gpg.key>`_
+Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-9.0-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Debian 9: ``deb http://research.cs.wisc.edu/htcondor/repo/debian/8.9 stretch main``
-* Debian 10: ``deb http://research.cs.wisc.edu/htcondor/repo/debian/8.9 buster main``
+* Debian 9: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/9.0 stretch main``
+* Debian 10: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/9.0 buster main``
 
 Ubuntu 16.04, 18.04, and 20.04
 ##############################
 
-Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/ubuntu/HTCondor-Release.gpg.key>`_
+Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-9.0-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Ubuntu 18.04: ``deb http://research.cs.wisc.edu/htcondor/repo/ubuntu/8.9 bionic main``
-* Ubuntu 20.04: ``deb http://research.cs.wisc.edu/htcondor/repo/ubuntu/8.9 focal main``
+* Ubuntu 18.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/9.0 bionic main``
+* Ubuntu 20.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/9.0 focal main``

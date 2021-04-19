@@ -15,7 +15,7 @@ Download
 The first step is to download HTCondor for your platform.  If you know
 which platform you're using, that HTCondor supports it, and which
 version you want, you can download the corresponding file from
-`our website <https://research.cs.wisc.edu/htcondor/tarball/current/>`_;
+`our website <https://research.cs.wisc.edu/htcondor/tarball/9.0/>`_;
 otherwise, we recommend using our download script, as follows.
 
 .. code-block:: shell
