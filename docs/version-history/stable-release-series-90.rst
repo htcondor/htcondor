@@ -59,3 +59,7 @@ Bugs Fixed:
   policy expressions cause removal of the job.
   :jira:`408`
 
+- Fixed a bug in the way ``AutoClusterAttrs`` was calculated that could
+  in matchmaking ignoring attributes changed by ``job_machine_attrs``.
+  :jira:`414`
+
