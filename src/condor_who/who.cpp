@@ -1782,8 +1782,6 @@ static void read_address_file(const char * filename, std::string & addr)
 		return;
 	}
 
-	buf[cbRead] = '\0'; // just in case
-
 	// parse out the address string. it should be the first line of data
 	char * peol = buf;
 	while (peol < buf+cbRead) {
@@ -1797,7 +1795,7 @@ static void read_address_file(const char * filename, std::string & addr)
 	close(fd);
 
 	// return the address
-	addr = buf;
+	if (cbRead > 0) addr.assign(buf, cbRead);
 }
 
 
