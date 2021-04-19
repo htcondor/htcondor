@@ -259,12 +259,12 @@ MPIMasterProc::preparePortFile( void )
 	if(!envobject.MergeFrom(JobAd, env_errors)) {
 			// Maybe this is a little harsh, but it should never 
 			// happen.   
-		EXCEPT( "MPI Master node failed to initialize job environment: %s",env_errors.Value() );
+		EXCEPT( "MPI Master node failed to initialize job environment: %s",env_errors.c_str() );
 	}
 	envobject.SetEnv("MPICH_EXTRA",port_file);
 
 	if(!envobject.InsertEnvIntoClassAd(JobAd, env_errors)) {
-		EXCEPT( "MPI Master failed to update job environment: %s",env_errors.Value() );
+		EXCEPT( "MPI Master failed to update job environment: %s",env_errors.c_str() );
 	}
 	return true;
 }

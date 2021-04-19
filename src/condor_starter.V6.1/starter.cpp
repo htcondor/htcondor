@@ -1796,12 +1796,12 @@ bool Starter::loadUserRegistry(const ClassAd * JobAd)
 
 	// load the slot user registry if it is wanted or needed. This can take about 30 seconds to load
 	if (load_profile) {
-		dprintf(D_FULLDEBUG, "Loading registry hives for %s\n", username.Value());
+		dprintf(D_FULLDEBUG, "Loading registry hives for %s\n", username.c_str());
 		if ( ! m_owner_profile.load()) {
-			dprintf(D_ALWAYS, "Failed to load registry hives for %s\n", username.Value());
+			dprintf(D_ALWAYS, "Failed to load registry hives for %s\n", username.c_str());
 			return false;
 		} else {
-			dprintf(D_ALWAYS, "Loaded Registry hives for %s\n", username.Value());
+			dprintf(D_ALWAYS, "Loaded Registry hives for %s\n", username.c_str());
 		}
 	}
 
