@@ -83,6 +83,7 @@ int verify_min_number_args (const int, const int);
 
 bool check_access_and_secret_key_file(const char* accesskeyfile, const char* secretkeyfile, std::string &err_msg);
 
+void append_escaped_arg(std::string &buffer, const std::string &arg);
 //std::string create_result_string(int req_id, const std::string &result_code, const std::string &result_msg);
 std::string create_result_string(int req_id, const std::string &result_code, const std::string &result_msg, const std::vector<std::string> &args = std::vector<std::string>());
 
