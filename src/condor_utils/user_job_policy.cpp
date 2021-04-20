@@ -877,9 +877,6 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(ClassAd & /*ad*/, const char * attr
 	}
 
 	return false;
-
-	//MyString macroname = "system_";
-	//macroname += attrname;
 }
 
 #endif
