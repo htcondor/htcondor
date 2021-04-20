@@ -285,7 +285,7 @@ bool
 QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaster, bool log )
 {
 	bool result;
-	MyString err_msg;
+	std::string err_msg;
 	SetAttributeFlags_t flags=0;
 
 	dprintf( D_FULLDEBUG, "QmgrJobUpdater::updateAttr: %s = %s\n",
@@ -327,8 +327,8 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 bool
 QmgrJobUpdater::updateAttr( const char *name, int value, bool updateMaster, bool log )
 {
-	MyString buf;
-    buf.formatstr("%d", value);
+	std::string buf;
+	formatstr(buf, "%d", value);
 	return updateAttr(name, buf.c_str(), updateMaster, log);
 }
 
@@ -451,7 +451,6 @@ QmgrJobUpdater::retrieveJobUpdates( void )
 	CondorError errstack;
 	StringList job_ids;
 	char id_str[PROC_ID_STR_BUFLEN];
-	MyString error;
 
 	ProcIdToStr(cluster, proc, id_str);
 	job_ids.insert(id_str);

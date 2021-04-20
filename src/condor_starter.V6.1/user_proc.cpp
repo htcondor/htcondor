@@ -224,7 +224,7 @@ UserProc::PublishToEnv( Env* proc_env )
 	if (m_proc_exited) {
 			// TODO: what should these really be called?  use
 			// myDistro?  get_mySubSystem()?  hard to say...
-		MyString base;
+		std::string base;
 		base = "_";
 		base += myDistro->Get();
 		base += '_';
@@ -234,9 +234,9 @@ UserProc::PublishToEnv( Env* proc_env )
 			base += "MAINJOB";
 		}
 		base += '_';
-		base.upper_case();
+		upper_case(base);
  
-		MyString env_name;
+		std::string env_name;
 
 		if( WIFSIGNALED(exit_status) ) {
 			env_name = base.c_str();
@@ -256,7 +256,7 @@ UserProc::getStdFile( std_file_type type,
                       bool allow_dash,
                       const char* log_header,
                       int* out_fd,
-                      MyString* out_name)
+                      std::string & out_name)
 {
 		// we're going to return true on success, false on error.
 		// if we succeed, then if we have an open FD that should
@@ -265,7 +265,6 @@ UserProc::getStdFile( std_file_type type,
 		// argument and return the name of the file that should
 		// be opened for the child in the name argument
 	ASSERT(out_fd != NULL);
-	ASSERT(out_name != NULL);
 	*out_fd = -1;
 
 	const char* filename = NULL;
@@ -399,27 +398,27 @@ UserProc::getStdFile( std_file_type type,
 	}
 
 		///////////////////////////////////////////////////////
-		// The regular case of a local file 
+		// The regular case of a local file
 		///////////////////////////////////////////////////////
-	*out_name = filename;
+	out_name = filename;
 	return true;
 }
 
 int
 UserProc::openStdFile( std_file_type type,
-                       const char* attr, 
+                       const char* attr,
                        bool allow_dash,
                        const char* log_header)
 {
 		// most of the work gets done by our helper, getStdFile
 	int fd;
-	MyString filename;
+	std::string filename;
 	if (!getStdFile(type,
 	                attr,
 	                allow_dash,
 	                log_header,
 	                &fd,
-	                &filename))
+	                filename))
 	{
 		return -1;
 	}

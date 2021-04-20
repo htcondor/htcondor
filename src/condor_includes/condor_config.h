@@ -274,10 +274,16 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// find an item in the macro_set, but do not look in the defaults table.
 	// if prefix is not NULL, then "prefix.name" is looked up and "name" is NOT
 	// this function does not look in the defaults (param) table.
-	const char * lookup_macro_exact_no_default (const char *name, const char *prefix, MACRO_SET& set, int use=3);
-	const char * lookup_macro_exact_no_default (const char *name, MACRO_SET& set, int use=3);
 
-	// Expand parameter references of the form "left$(middle)right".  
+	// If you don't care about the difference between unset and empty.
+	std::string lookup_macro_exact_no_default( const std::string & name,
+		MACRO_SET & set, int use = 3 );
+
+	// Returns false if the macro is unset.
+	bool exists_macro_exact_no_default( const std::string & name,
+		MACRO_SET & set, int use = 3 );
+
+	// Expand parameter references of the form "left$(middle)right".
 	// handle multiple and or nested references.
 	// Also expand references of the form "left$ENV(middle)right",
 	// replacing $ENV(middle) with getenv(middle).

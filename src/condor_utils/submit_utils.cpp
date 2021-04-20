@@ -5840,17 +5840,15 @@ int SubmitHash::SetRequirements()
 		return abort_code;
 	}
 
-	const char * factory_req = lookup_macro_exact_no_default("FACTORY.AppendReq", SubmitMacroSet);
-	if (factory_req) {
-		if (factory_req[0]) {
-			// We found something to append.
-			if ( ! answer.empty()) { answer += " && "; }
-			if (factory_req[0] == '(') { answer += factory_req; }
-			else {
-				answer += "(";
-				answer += factory_req;
-				answer += ")";
-			}
+	std::string factory_req = lookup_macro_exact_no_default("FACTORY.AppendReq", SubmitMacroSet);
+	if(! factory_req.empty()) {
+		// We found something to append.
+		if ( ! answer.empty()) { answer += " && "; }
+		if (factory_req[0] == '(') { answer += factory_req; }
+		else {
+			answer += "(";
+			answer += factory_req;
+			answer += ")";
 		}
 	}
 	else
@@ -6933,7 +6931,7 @@ int SubmitHash::SetVMParams()
 		// because we don't want to enum a directory at materialization time. so we set
 		// FACTORY.vm_input_files in the submit digest and use that instead of doing the directory walk
 		//
-		if (lookup_macro_exact_no_default("FACTORY.vm_input_files", SubmitMacroSet)) {
+		if (exists_macro_exact_no_default("FACTORY.vm_input_files", SubmitMacroSet)) {
 			// PRAGMA_REMIND("TODO: check for a VMWARE_DIR that varies by ProcId")
 		} else {
 			auto_free_ptr vmware_dir(submit_param(SUBMIT_KEY_VM_VMWARE_DIR, VMPARAM_VMWARE_DIR));
@@ -7122,14 +7120,14 @@ int SubmitHash::SetTransferFiles()
 		// On NT, if we're an MPI job, we need to find the
 		// mpich.dll file and automatically include that in the
 		// transfer input files
-		MyString dll_name("mpich.dll");
+		std::string dll_name("mpich.dll");
 
 		// first, check to make sure the user didn't already
 		// specify mpich.dll in transfer_input_files
-		if (! input_file_list.contains(dll_name.Value())) {
+		if (! input_file_list.contains(dll_name.c_str())) {
 			// nothing there yet, try to find it ourselves
-			MyString dll_path = which(dll_name);
-			if (dll_path.Length() == 0) {
+			std::string dll_path = which(dll_name);
+			if (dll_path.length() == 0) {
 				// File not found, fatal error.
 				push_error(stderr, "Condor cannot find the "
 					"\"mpich.dll\" file it needs to run your MPI job.\n"
@@ -7141,7 +7139,7 @@ int SubmitHash::SetTransferFiles()
 			// If we made it here, which() gave us a real path.
 			// so, now we just have to append that to our list of
 			// files. 
-			input_file_list.append(dll_path.Value());
+			input_file_list.append(dll_path.c_str());
 		}
 	}
 #endif /* WIN32 */
@@ -8589,7 +8587,7 @@ int SubmitForeachArgs::parse_queue_args (
 				items.append(plist);
 			} else {
 				items_filename = plist;
-				items_filename.trim();
+				trim(items_filename);
 			}
 		} else {
 			while (isspace(*plist)) ++plist;

@@ -64,15 +64,15 @@ StartdCronJobParams::Initialize( void )
 
 	// Print out the slots for D_FULLDEBUG
 	if ( IsFulldebug(D_FULLDEBUG) ) {
-		MyString	s;
-		s.formatstr( "CronJob '%s' slots: ", GetName() );
+		std::string	s;
+		formatstr( s, "CronJob '%s' slots: ", GetName() );
 		if ( m_slots.empty() ) {
 			s += "ALL";
 		}
 		else {
 			list<unsigned>::iterator iter;
 			for( iter = m_slots.begin(); iter != m_slots.end(); iter++ ) {
-				s.formatstr_cat( "%u ", *iter );
+				formatstr_cat( s, "%u ", *iter );
 			}
 		}
 		dprintf( D_ALWAYS, "%s\n", s.c_str() );

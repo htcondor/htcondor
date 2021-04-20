@@ -166,7 +166,7 @@ protected:
 	                 bool allow_dash,
 	                 const char* log_header,
 	                 int* out_fd,
-	                 MyString* out_name);
+	                 std::string & out_name);
 
 	int openStdFile( std_file_type type,
 	                 const char* attr,
@@ -190,7 +190,7 @@ private:
 		// UserProc.
 	int m_pre_defined_std_fds[3];            // -1 if not set
 	char const *m_pre_defined_std_fnames[3]; // NULL if not defined
-	MyString m_pre_defined_std_fname_buf[3];
+	std::string m_pre_defined_std_fname_buf[3];
 };
 
 #endif /* _CONDOR_USER_PROC_H */

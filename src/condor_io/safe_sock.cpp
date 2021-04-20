@@ -739,11 +739,11 @@ char * SafeSock::serialize() const
 {
 	char * parent_state = Sock::serialize();
 
-	MyString state;
+	std::string state;
 	formatstr( state, "%s%d*%s*", parent_state, _special_state, _who.to_sinful().c_str() );
 	delete[] parent_state;
 
-	return state.detach_buffer();
+	return strdup(state.c_str());
 }
 
 const char * SafeSock::serialize(const char *buf)

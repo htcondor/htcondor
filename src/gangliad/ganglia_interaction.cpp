@@ -318,8 +318,8 @@ gmetric_send(const char *group, const char *name, const char *value, const char 
 	char line[1024];
 	std::string output;
 	if( !fp ) {
-		MyString display_args;
-		args.GetArgsStringForDisplay(&display_args);
+		std::string display_args;
+		args.GetArgsStringForDisplay( display_args);
 		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.c_str(),strerror(errno));
 		return false;
 	}
@@ -328,8 +328,8 @@ gmetric_send(const char *group, const char *name, const char *value, const char 
 	}
 	int rc = my_pclose(fp);
 	if( rc != 0 ) {
-		MyString display_args;
-		args.GetArgsStringForDisplay(&display_args);
+		std::string display_args;
+		args.GetArgsStringForDisplay( display_args);
 		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.c_str(),output.c_str());
 		return false;
 	}
@@ -395,8 +395,8 @@ gmetric_send_heartbeat(const char *spoof_host)
 	char line[1024];
 	std::string output;
 	if( !fp ) {
-		MyString display_args;
-		args.GetArgsStringForDisplay(&display_args);
+		std::string display_args;
+		args.GetArgsStringForDisplay( display_args);
 		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.c_str(),strerror(errno));
 		return false;
 	}
@@ -405,8 +405,8 @@ gmetric_send_heartbeat(const char *spoof_host)
 	}
 	int rc = my_pclose(fp);
 	if( rc != 0 ) {
-		MyString display_args;
-		args.GetArgsStringForDisplay(&display_args);
+		std::string display_args;
+		args.GetArgsStringForDisplay( display_args);
 		dprintf(D_ALWAYS,"Failed to execute %s: %s\n",display_args.c_str(),output.c_str());
 		return false;
 	}

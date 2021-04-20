@@ -1061,7 +1061,7 @@ command_delegate_gsi_cred(int, Stream* stream )
 
 	// create a temporary file to hold the proxy and set it
 	// to mode 600
-	MyString proxy_file;
+	std::string proxy_file;
 	char* glexec_user_dir = param("GLEXEC_USER_DIR");
 	if (glexec_user_dir != NULL) {
 		proxy_file = glexec_user_dir;
@@ -1732,7 +1732,7 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 	ASSERT(sock->peer_addr().is_valid());
 	std::string hostname = get_full_hostname(sock->peer_addr());
 	if(hostname.empty()) {
-		MyString ip = sock->peer_addr().to_ip_string();
+		std::string ip = sock->peer_addr().to_ip_string();
 		rip->dprintf( D_FULLDEBUG,
 					  "Can't find hostname of client machine %s\n", ip.c_str() );
 		if (ripb) { ripb->r_cur->client()->sethost(ip.c_str()); }
@@ -2097,7 +2097,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 	const char* requirements_str = NULL;
 	Resource* rip;
 	Claim* claim;
-	MyString err_msg;
+	std::string err_msg;
 	ExprTree *tree;
 	ReliSock* rsock = (ReliSock*)s;
 	int lease_duration = 0;
@@ -2181,7 +2181,7 @@ caRequestClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 {
 	ClaimType claim_type;
 	char* ct_str = NULL;
-	MyString err_msg; 
+	std::string err_msg; 
 
 		// Now, depending on what kind of claim they're asking for, do
 		// the right thing
@@ -2223,21 +2223,21 @@ caRequestClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 int
 caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 {
-	char* global_job_id = NULL;
-	char* claimid = NULL;
-	char* schedd_addr = NULL;
+	std::string global_job_id;
+	std::string claimid;
+	std::string schedd_addr;
 	Claim* claim = NULL;
 	int rval = TRUE;
 	ClassAd reply;
 	std::string startd_sends_alives;
 
-	req_ad->LookupString(ATTR_CLAIM_ID, &claimid);
-	req_ad->LookupString(ATTR_GLOBAL_JOB_ID, &global_job_id);
-	req_ad->LookupString(ATTR_SCHEDD_IP_ADDR, &schedd_addr);
-	claim = resmgr->getClaimByGlobalJobIdAndId(global_job_id, claimid);
+	req_ad->LookupString(ATTR_CLAIM_ID, claimid);
+	req_ad->LookupString(ATTR_GLOBAL_JOB_ID, global_job_id);
+	req_ad->LookupString(ATTR_SCHEDD_IP_ADDR, schedd_addr);
+	claim = resmgr->getClaimByGlobalJobIdAndId(global_job_id.c_str(), claimid.c_str());
 
 	if( ! claim ) {
-		MyString err_msg = ATTR_CLAIM_ID;
+		std::string err_msg = ATTR_CLAIM_ID;
 		err_msg += " (";
 		err_msg += claimid;
 		err_msg += ") and ";
@@ -2254,11 +2254,11 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 		// then we _must_ be passed the address of the schedd
 		// since it likely changed.
 	param( startd_sends_alives, "STARTD_SENDS_ALIVES", "peer" );
-	if ( (!schedd_addr) && 
+	if ( (schedd_addr.empty()) && 
 		 strcasecmp( startd_sends_alives.c_str(), "false" ) )
 	{
-		MyString err_msg;
-		err_msg.formatstr("Required %s, not found in request",
+		std::string err_msg;
+		formatstr(err_msg, "Required %s, not found in request",
 						ATTR_SCHEDD_IP_ADDR);
 		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.c_str() );
 		rval = FALSE;
@@ -2267,7 +2267,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 
 	claim->publish(&reply);
 	if( ! claim->publishStarterAd(&reply) ) {
-		MyString err_msg = "No starter found for ";
+		std::string err_msg = "No starter found for ";
 		err_msg += ATTR_GLOBAL_JOB_ID;
 		err_msg += " (";
 		err_msg += global_job_id;
@@ -2278,10 +2278,10 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 	}
 	
 		// if we are passed an updated schedd addr, stash it
-	if ( schedd_addr ) {
+	if ( ! schedd_addr.empty() ) {
 		Client *client = claim->client();
 		if ( client ) {
-			client->setaddr(schedd_addr);
+			client->setaddr(schedd_addr.c_str());
 		}
 	}
 
@@ -2295,9 +2295,6 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 	}
 
 cleanup:
-	if ( global_job_id ) free( global_job_id );
-	if ( claimid ) free( claimid );
-	if ( schedd_addr ) free( schedd_addr );
 
 	return rval;
 }
@@ -2397,7 +2394,7 @@ command_classad_handler(int dc_cmd, Stream* s )
 	}
 	claim = resmgr->getClaimById( claim_id );
 	if( ! claim ) {
-		MyString err_msg = "ClaimID (";
+		std::string err_msg = "ClaimID (";
 		err_msg += claim_id;
 		err_msg += ") not found";
 		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.c_str() );
@@ -2410,7 +2407,7 @@ command_classad_handler(int dc_cmd, Stream* s )
 		// might be) is the same as the owner of the claim
 	const char* owner = rsock->getOwner();
 	if( ! claim->ownerMatches(owner) ) {
-		MyString err_msg = "User '";
+		std::string err_msg = "User '";
 		err_msg += owner;
 		err_msg += "' does not match the owner of this claim";
 		sendErrorReply( s, cmd_str, CA_NOT_AUTHORIZED, err_msg.c_str() ); 
@@ -2426,7 +2423,7 @@ command_classad_handler(int dc_cmd, Stream* s )
 	if( tmp ) {
 		if( strcmp(tmp, owner) ) {
 				// they're different!
-			MyString err_msg = ATTR_OWNER;
+			std::string err_msg = ATTR_OWNER;
 			err_msg += " specified in ClassAd as '";
 			err_msg += tmp;
 			err_msg += "' yet request sent by user '";

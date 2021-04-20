@@ -3172,7 +3172,7 @@ DaemonCore::reconfig(void) {
 void
 DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 {
-	MyString why_not = "no command port requested";
+	std::string why_not = "no command port requested";
 	bool already_open = m_shared_port_endpoint != NULL;
 
 	if( m_command_port_arg != 0 && SharedPortEndpoint::UseSharedPort(&why_not,already_open) ) {
@@ -3222,18 +3222,21 @@ DaemonCore::ReloadSharedPortServerAddr()
 int
 DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_sockaddr& addr, const char * fqu, int log_level )
 {
-	MyString deny_reason; // always get 'deny' reason, if there is one
-	MyString *allow_reason = NULL;
-	MyString allow_reason_buf;
-	if( IsDebugLevel( D_SECURITY ) ) {
-			// only get 'allow' reason if doing verbose debugging
-		allow_reason = &allow_reason_buf;
+	std::string allow_reason;
+	std::string deny_reason;
+
+	int result = getSecMan()->Verify(perm, addr, fqu, allow_reason, deny_reason);
+
+	std::string *reason = NULL;
+	const char *result_desc = NULL;
+	if (result == USER_AUTH_FAILURE) {
+		reason = &deny_reason;
+		result_desc = "DENIED";
+	} else if (IsDebugLevel(D_SECURITY)) {
+		// only log 'allow' reason if doing verbose debugging
+		reason = &allow_reason;
+		result_desc = "GRANTED";
 	}
-
-	int result = getSecMan()->Verify(perm, addr, fqu, allow_reason, &deny_reason);
-
-	MyString *reason = result ? allow_reason : &deny_reason;
-	char const *result_desc = result ? "GRANTED" : "DENIED";
 
 	if( reason ) {
 		char ipstr[IP_STRING_BUF_SIZE];
@@ -6808,6 +6811,40 @@ void CreateProcessForkit::exec() {
 	}
 }
 #endif
+
+
+int DaemonCore::Create_Process(
+			const char      *executable,
+			ArgList const   &args,
+			priv_state      priv,
+			int             reaper_id,
+			int             want_command_port,
+			int             want_udp_command_port,
+			Env const       *env,
+			const char      *cwd,
+			FamilyInfo      *family_info,
+			Stream          *sock_inherit_list[],
+			int             std[],
+			int             fd_inherit_list[],
+			int             nice_inc,
+			sigset_t        *sigmask,
+			int             job_opt_mask,
+			size_t          *core_hard_limit,
+			int             *affinity_mask,
+			char const      *daemon_sock,
+			std::string     & err_return_msg,
+			FilesystemRemap *remap,
+			long            as_hard_limit
+			) {
+	MyString ms;
+	int rv = Create_Process( executable, args, priv, reaper_id,
+		want_command_port, want_udp_command_port, env, cwd, family_info,
+		sock_inherit_list, std, fd_inherit_list, nice_inc, sigmask,
+		job_opt_mask, core_hard_limit, affinity_mask, daemon_sock,
+		& ms, remap, as_hard_limit );
+	if(! ms.empty()) { err_return_msg = ms; }
+	return rv;
+}
 
 MSC_DISABLE_WARNING(6262) // function uses 62916 bytes of stack
 int DaemonCore::Create_Process(

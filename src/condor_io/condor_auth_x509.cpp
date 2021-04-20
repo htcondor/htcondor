@@ -46,7 +46,7 @@ StringList * getDaemonList(char const *param_name,char const *fqh);
 
 
 #ifdef WIN32
-HashTable<MyString, MyString> * Condor_Auth_X509::GridMap = 0;
+HashTable<std::string, std::string> * Condor_Auth_X509::GridMap = 0;
 #endif
 
 bool Condor_Auth_X509::m_globusActivated = false;
@@ -448,7 +448,7 @@ int Condor_Auth_X509::condor_gss_assist_gridmap(const char * from, char ** to) {
 	}
 
 	if (GridMap) {
-		MyString f(from), t;
+		std::string f(from), t;
 		if (GridMap->lookup(f, t) != -1) {
 			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf (D_SECURITY, "GSI: subject %s is mapped to user %s.\n", 
@@ -577,12 +577,12 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 		return 0;
 	}
 
-	MyString user;
-	MyString domain;
+	std::string user;
+	std::string domain;
 	Authentication::split_canonical_name( local_user, user, domain );
     
-	setRemoteUser  (user.Value());
-	setRemoteDomain(domain.Value());
+	setRemoteUser  (user.c_str());
+	setRemoteDomain(domain.c_str());
 	setAuthenticatedName(GSSClientname);
 	return 1;
 }

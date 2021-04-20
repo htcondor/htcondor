@@ -131,8 +131,8 @@ MPIMasterProc::alterEnv()
 
     char *tmp;
 	Env envobject;
-	MyString env_errors;
-	if(!envobject.MergeFrom(JobAd,&env_errors)) {
+	std::string env_errors;
+	if(!envobject.MergeFrom(JobAd, env_errors)) {
 		dprintf( D_ALWAYS, "Failed to read environment from job: %s\n",
 				 env_errors.c_str());
 		return 0;
@@ -200,13 +200,13 @@ MPIMasterProc::alterEnv()
 	free( condor_rsh );
 
 	if(IsFulldebug(D_FULLDEBUG)) {
-		MyString env_str;
-		envobject.getDelimitedStringForDisplay(&env_str);
+		std::string env_str;
+		envobject.getDelimitedStringForDisplay( env_str);
 		dprintf ( D_FULLDEBUG, "New env: %s\n", env_str.c_str() );
 	}
 
         // now put the env back into the JobAd:
-	if(!envobject.InsertEnvIntoClassAd(JobAd,&env_errors)) {
+	if(!envobject.InsertEnvIntoClassAd(JobAd, env_errors)) {
 		dprintf( D_ALWAYS, "Unable to update env! Aborting: %s\n",
 				 env_errors.c_str());
 		return 0;
@@ -254,17 +254,17 @@ MPIMasterProc::preparePortFile( void )
 		// MPICH puts the port in here.
 
 	Env envobject;
-	MyString env_errors;
+	std::string env_errors;
 
-	if(!envobject.MergeFrom(JobAd,&env_errors)) {
+	if(!envobject.MergeFrom(JobAd, env_errors)) {
 			// Maybe this is a little harsh, but it should never 
 			// happen.   
-		EXCEPT( "MPI Master node failed to initialize job environment: %s",env_errors.Value() );
+		EXCEPT( "MPI Master node failed to initialize job environment: %s",env_errors.c_str() );
 	}
 	envobject.SetEnv("MPICH_EXTRA",port_file);
 
-	if(!envobject.InsertEnvIntoClassAd(JobAd,&env_errors)) {
-		EXCEPT( "MPI Master failed to update job environment: %s",env_errors.Value() );
+	if(!envobject.InsertEnvIntoClassAd(JobAd, env_errors)) {
+		EXCEPT( "MPI Master failed to update job environment: %s",env_errors.c_str() );
 	}
 	return true;
 }

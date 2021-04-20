@@ -124,15 +124,15 @@ param_boinc( const char* attr_name, const char* alt_name )
 	if( ! attr_name ) {
 		EXCEPT( "param_boinc() called with NULL attr_name" );
 	}
-	MyString param_name;
-	param_name.formatstr( "BOINC_%s", attr_name );
+	std::string param_name;
+	formatstr( param_name, "BOINC_%s", attr_name );
 	char* tmp = param( param_name.c_str() );
 	if( tmp ) {
 		free( tmp );
 		return true;
 	}
 	if( alt_name ) {
-		param_name.formatstr( "BOINC_%s", alt_name );
+		formatstr( param_name, "BOINC_%s", alt_name );
 		tmp = param( param_name.c_str() );
 		if( tmp ) {
 			free( tmp );

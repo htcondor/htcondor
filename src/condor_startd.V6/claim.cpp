@@ -1283,8 +1283,8 @@ Claim::setRequestStream(Stream* stream)
 	c_request_stream = stream;
 
 	if( c_request_stream ) {
-		MyString desc;
-		desc.formatstr("request claim %s", publicClaimId() );
+		std::string desc;
+		formatstr(desc, "request claim %s", publicClaimId() );
 
 		int register_rc = daemonCore->Register_Socket(
 			c_request_stream,
@@ -1418,7 +1418,7 @@ int Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 		cacheJobInfo(job);
 	}
 
-	MyString prefix;
+	std::string prefix;
 	formatstr(prefix, "%s[%d.%d]", c_rip->r_id_str, c_cluster, c_proc);
 	starter->set_dprintf_prefix(prefix.c_str());
 
@@ -1786,7 +1786,7 @@ Claim::makeCODStarterArgs( ArgList &args )
 	args.AppendArg("cod");
 	args.AppendArg("-header");
 
-	MyString cod_id_arg;
+	std::string cod_id_arg;
 	cod_id_arg += "(";
 	if( resmgr->is_smp() ) {
 		cod_id_arg += c_rip->r_id_str;
@@ -1794,7 +1794,7 @@ Claim::makeCODStarterArgs( ArgList &args )
 	}
 	cod_id_arg += codId();
 	cod_id_arg += ")";
-	args.AppendArg(cod_id_arg.c_str());
+	args.AppendArg(cod_id_arg);
 
 		// if we've got a cluster and proc for the job, append those
 	if( c_cluster >= 0 ) {
@@ -2091,7 +2091,7 @@ Claim::writeJobAd( int pipe_end )
 	// pipe_end is a DaemonCore pipe, so we must use
 	// DC::Write_Pipe for writing to it
 	
-	MyString ad_str;
+	std::string ad_str;
 	// The starter doesn't need to know any secrets.
 	sPrintAd(ad_str, *c_jobad);
 
@@ -2329,7 +2329,7 @@ newIdString( char** id_str_ptr )
 	static int sequence_num = 0;
 	sequence_num++;
 
-	MyString id;
+	std::string id;
 	// Keeping with tradition, we insert the startd's address in
 	// the claim id.  As of condor 7.2, nothing relies on this.
 	// Starting in 8.9, we use the full sinful string, which can
@@ -2462,8 +2462,8 @@ ClaimId::dropFile( int slot_id )
 		return;
 	}
 
-	MyString filename_final = filename;
-	MyString filename_tmp = filename;
+	std::string filename_final = filename;
+	std::string filename_tmp = filename;
 	free( filename );
 	filename = NULL;
 

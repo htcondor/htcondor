@@ -156,7 +156,7 @@ class Authentication {
     //------------------------------------------
     
 #if !defined(SKIP_AUTHENTICATION)
-	static void split_canonical_name(MyString can_name, MyString& user, MyString& domain );
+	static void split_canonical_name(const std::string& can_name, std::string& user, std::string& domain );
 		// This version of the function exists to avoid use of MyString
 		// in ReliSock, because that gets linked into std univ jobs.
 		// This function is stubbed out in cedar_no_ckpt.C.

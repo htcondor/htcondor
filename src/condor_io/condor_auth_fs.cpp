@@ -158,7 +158,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 	        mypid = ::getpid();
 #endif
 
-			MyString filename;
+			std::string filename;
 			char * rendezvous_dir = param("FS_REMOTE_DIR");
 			if (rendezvous_dir) {
 				filename = rendezvous_dir;
@@ -197,7 +197,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				dprintf( D_SECURITY, "FS_REMOTE: client filename is %s\n", m_new_dir.c_str() );
 			}
 		} else {
-			MyString filename;
+			std::string filename;
 			char * rendezvous_dir = param("FS_LOCAL_DIR");
 			if (rendezvous_dir) {
 				filename = rendezvous_dir;
@@ -281,7 +281,7 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 			// NFS client to sync to the NFS server.  fsync() does not do this.
 			// in practice, creating a file or directory should force the NFS
 			// client to sync in order to avoid race conditions.
-			MyString filename_template = "/tmp";
+			std::string filename_template = "/tmp";
 
 			char * rendezvous_dir = param("FS_REMOTE_DIR");
 			if (rendezvous_dir) {

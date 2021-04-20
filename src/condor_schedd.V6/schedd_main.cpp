@@ -74,7 +74,7 @@ void
 main_init(int argc, char* argv[])
 {
 	char**		ptr; 
-	MyString		job_queue_name;
+	std::string job_queue_name;
  
 	int argc_count = 1;
 	for(ptr = argv + 1, argc_count = 1; argc_count<argc && *ptr; ptr++,argc_count++)
@@ -140,18 +140,18 @@ main_init(int argc, char* argv[])
 
 	if (job_queue_param_name == NULL) {
 		// the default place for the job_queue.log is in spool
-		job_queue_name.formatstr( "%s/job_queue.log", Spool);
+		formatstr( job_queue_name, "%s/job_queue.log", Spool);
 	} else {
-		job_queue_name = job_queue_param_name; // convert char * to MyString
+		job_queue_name = job_queue_param_name; // convert char * to std::string
 		free(job_queue_param_name);
 	}
 
 		// Make a backup of the job queue?
 	if ( param_boolean_crufty("SCHEDD_BACKUP_SPOOL", false) ) {
-			MyString hostname;
+			std::string hostname;
 			hostname = get_local_hostname();
-			MyString		job_queue_backup;
-			job_queue_backup.formatstr( "%s/job_queue.bak.%s.%ld",
+			std::string		job_queue_backup;
+			formatstr( job_queue_backup, "%s/job_queue.bak.%s.%ld",
 			                            Spool, hostname.c_str(), (long)time(NULL) );
 			if ( copy_file( job_queue_name.c_str(), job_queue_backup.c_str() ) ) {
 				dprintf( D_ALWAYS, "Failed to backup spool to '%s'\n",
