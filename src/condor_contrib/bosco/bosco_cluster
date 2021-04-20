@@ -283,7 +283,7 @@ ssh_detect_linux_distro () {
     [[ $? -eq 0 ]] || return 1
 
     dist=`echo "$os_release" | awk -F '=' '/^ID=/ {print $2}' | tr -d '"'`
-    ver=`echo "$os_release | "awk -F '=' '/^VERSION_ID=/ {print $2}' | tr -d '"'`
+    ver=`echo "$os_release" | awk -F '=' '/^VERSION_ID=/ {print $2}' | tr -d '"'`
     major_ver="${ver%%.*}"
 
     case "$dist" in
