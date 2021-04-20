@@ -6526,6 +6526,8 @@ use security:strong
 # This allows anyone who can access port 9618 to READ, which lets
 # condor_status and condor_q work over the network out of the box.
 SEC_READ_AUTHENTICATION = OPTIONAL
+SEC_READ_ENCRYPTION = OPTIONAL
+SEC_READ_INTEGRITY = OPTIONAL
 
 ALLOW_ADMINISTRATOR = root@*, condor@*, condor_pool@*
 ALLOW_DAEMON = condor@*, condor_pool@*
