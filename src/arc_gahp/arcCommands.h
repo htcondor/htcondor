@@ -21,6 +21,7 @@
 #define ARC_COMMANDS_H
 
 #include "condor_common.h"
+#include <curl/curl.h>
 
 // ARC Commands
 #define ARC_COMMAND_PING			"ARC_PING"
@@ -44,6 +45,9 @@ class HttpRequest {
 	virtual ~HttpRequest();
 
 	virtual bool SendRequest();
+
+	static curl_version_info_data *curlVerInfo;
+	static bool curlUsesNss;
 
 	std::string serviceURL;
 

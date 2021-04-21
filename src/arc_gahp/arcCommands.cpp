@@ -35,6 +35,9 @@ using std::vector;
 
 #define NULLSTRING "NULL"
 
+curl_version_info_data *HttpRequest::curlVerInfo = NULL;
+bool HttpRequest::curlUsesNss = false;
+
 const char * nullStringIfEmpty( const string & str ) {
 	if( str.empty() ) { return NULLSTRING; }
 	else { return str.c_str(); }
@@ -151,6 +154,13 @@ size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str )
 
 HttpRequest::HttpRequest()
 {
+	if ( curlVerInfo == NULL ) {
+		curlVerInfo = curl_version_info(CURLVERSION_NOW);
+		if ( curlVerInfo && curlVerInfo->ssl_version && strstr(curlVerInfo->ssl_version, "NSS") ) {
+			curlUsesNss = true;
+		}
+	}
+
 	includeResponseHeader = false;
 	contentType = "application/json";
 }
@@ -414,43 +424,18 @@ bool HttpRequest::SendRequest()
 
 	ca_dir = getenv( "X509_CERT_DIR" );
 	if ( ca_dir == NULL ) {
-		ca_dir = getenv( "GAHP_SSL_CADIR" );
-	}
-
-	ca_file = getenv( "X509_CERT_FILE" );
-	if ( ca_file == NULL ) {
-		ca_file = getenv( "GAHP_SSL_CAFILE" );
-	}
-
-	if ( ca_dir == NULL && ca_file == NULL ) {
 		ca_dir = "/etc/grid-security/certificates";
 	}
 
-	// FIXME: Update documentation to reflect no hardcoded default.
-	if( ca_dir ) {
-		dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", ca_dir );
+	dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", ca_dir );
 
-		rv = curl_easy_setopt( curl, CURLOPT_CAPATH, ca_dir );
-		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
-			this->errorMessage = "curl_easy_setopt( CURLOPT_CAPATH ) failed.";
-			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_CAPATH ) failed (%d): '%s', failing.\n",
-					 rv, curl_easy_strerror( rv ) );
-			goto error_return;
-		}
-	}
-
-	if( ca_file ) {
-		dprintf( D_FULLDEBUG, "Setting CA file to '%s'\n", ca_file );
-
-		rv = curl_easy_setopt( curl, CURLOPT_CAINFO, ca_file );
-		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
-			this->errorMessage = "curl_easy_setopt( CURLOPT_CAINFO ) failed.";
-			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_CAINFO ) failed (%d): '%s', failing.\n",
-					 rv, curl_easy_strerror( rv ) );
-			goto error_return;
-		}
+	rv = curl_easy_setopt( curl, CURLOPT_CAPATH, ca_dir );
+	if( rv != CURLE_OK ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_easy_setopt( CURLOPT_CAPATH ) failed.";
+		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_CAPATH ) failed (%d): '%s', failing.\n",
+				 rv, curl_easy_strerror( rv ) );
+		goto error_return;
 	}
 
 	if( setenv( "OPENSSL_ALLOW_PROXY", "1", 0 ) != 0 ) {
@@ -477,6 +462,27 @@ bool HttpRequest::SendRequest()
 			        rv, curl_easy_strerror(rv));
 			goto error_return;
 		}
+
+		// When authenticating with an X.509 proxy certificate, NSS
+		// only sends the final proxy certificate from the proxy file
+		// to the server. It doesn't send the user's certificate or
+		// any intermediary proxy certificates from the proxy file.
+		// But if we tell curl that the proxy file contains CA
+		// certificates, then NSS will send all of the necessary
+		// certificates.
+		if( curlUsesNss ) {
+			dprintf( D_FULLDEBUG, "Setting CA file to '%s'\n", proxyFile.c_str() );
+
+			rv = curl_easy_setopt( curl, CURLOPT_CAINFO, proxyFile.c_str() );
+			if( rv != CURLE_OK ) {
+				this->errorCode = "E_CURL_LIB";
+				this->errorMessage = "curl_easy_setopt( CURLOPT_CAINFO ) failed.";
+				dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_CAINFO ) failed (%d): '%s', failing.\n",
+				         rv, curl_easy_strerror( rv ) );
+				goto error_return;
+			}
+		}
+
 	}
 
 	arc_gahp_release_big_mutex();
