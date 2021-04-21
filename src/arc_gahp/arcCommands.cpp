@@ -859,8 +859,8 @@ bool ArcJobStatusAllWorkerFunction(GahpRequest *gahp_request)
 	std::vector<classad::ExprTree*> expr_list;
 
 	// If there are no jobs, then the response body will be empty.
+	classad::ClassAd resp_ad;
 	if( ! status_request.responseBody.empty() ) {
-		classad::ClassAd resp_ad;
 		classad::ClassAdJsonParser parser;
 		if ( ! parser.ParseClassAd(status_request.responseBody, resp_ad, true) ) {
 			gahp_request->m_result = create_result_string( request_id,
