@@ -138,7 +138,6 @@ if (BUILD_TESTING)
 		add_dependencies(job_core_rmkillsig_sched x_trapsig.exe)
 	endif()
 
-	# TODO: Not a CTEST because it overlaps with a target of the same name in src/condor_negotiator.V6
 	condor_pl_test( protocol_matching "test: Protocol matching" "quick;ctest" CTEST DEPENDS ${CMAKE_BINARY_DIR}/src/condor_tests/test_protocol_matching)
 	add_dependencies(protocol_matching test_protocol_matching)
 
