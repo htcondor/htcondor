@@ -22,7 +22,6 @@
 #include <pthread.h>
 #include <signal.h>
 #include <time.h>
-#include <curl/curl.h>
 
 #include "condor_config.h"
 #include "condor_debug.h"
@@ -30,7 +29,6 @@
 #include "HashTable.h"
 #include "PipeBuffer.h"
 #include "my_getopt.h"
-#include "directory.h"
 #include "io_loop_pthread.h"
 #include "arcgahp_common.h"
 #include "arcCommands.h"
@@ -48,6 +46,10 @@ const char * version = "$GahpVersion " ARC_GAHP_VERSION " Mar 16 2021 Condor\\ A
 static IOProcess ioprocess;
 
 // forwarding declaration
+static void gahp_output_return_error();
+static void gahp_output_return_success();
+static void gahp_output_return (const char ** results, const int count);
+static int verify_gahp_command(char ** argv, int argc);
 static void *worker_function( void *ptr );
 
 /* We use a big mutex to make certain only one thread is running at a time,
@@ -71,134 +73,6 @@ usage()
 	dprintf( D_ALWAYS, "Usage: arc_gahp -d debuglevel -w min_worker_nums -m max_worker_nums\n");
 	fprintf( stderr, "Usage: arc_gahp -d debuglevel -w min_worker_nums -m max_worker_nums\n");
 	exit(1);
-}
-
-// For client authentication with an X.509 proxy certificate, NSS only
-// sends the final proxy certificate from the proxy file to the server.
-// It doesn't send the user's certificate or any intermediary proxy
-// certificates from the proxy file.
-// So, if libcurl is using NSS, we need to create an NSS database, load
-// those certifcates into it as CA certs, and tell libcurl to use the
-// database by setting SSL_DIR in the environment.
-// That will cause NSS to send all of the certificates.
-bool NeedNssDatabase = false;
-std::string TmpDir;
-std::string NssDatabasePath;
-
-void CheckForNss()
-{
-	curl_version_info_data *cvid = curl_version_info(CURLVERSION_NOW);
-	if ( cvid && cvid->ssl_version && strstr(cvid->ssl_version, "NSS") ) {
-		NeedNssDatabase = true;
-	} else {
-		NeedNssDatabase = false;
-	}
-}
-
-bool CreateNssDatabase(std::string &err_msg)
-{
-	if ( ! NeedNssDatabase ) {
-		return true;
-	}
-	if ( ! NssDatabasePath.empty() ) {
-		return true;
-	}
-	const char *tmp_dir = getenv("TMPDIR");
-	if ( ! tmp_dir ) {
-		tmp_dir = "/tmp";
-	}
-	std::string db_path;
-	formatstr(db_path, "%s/arc_gahp.%d.nssdb", tmp_dir, (int)getpid());
-	if ( mkdir(db_path.c_str(), 0700) < 0 && errno != EEXIST) {
-		dprintf(D_ALWAYS, "Failed to create directory %s, errno=%d (%s)\n", db_path.c_str(), errno, strerror(errno));
-		formatstr(err_msg, "Failed to create directory %s", db_path.c_str());
-		return false;
-	}
-	TmpDir = tmp_dir;
-	NssDatabasePath = db_path;
-	setenv("SSL_DIR", NssDatabasePath.c_str(), 1);
-	return true;
-}
-
-void DeleteNssDatabase()
-{
-	if ( NssDatabasePath.empty() ) {
-		return;
-	}
-	Directory db_dir(NssDatabasePath.c_str());
-	if ( ! db_dir.Remove_Entire_Directory() || rmdir(NssDatabasePath.c_str()) < 0 ) {
-		dprintf(D_ALWAYS, "Failed to remove NSS database directory %s\n", NssDatabasePath.c_str());
-	}
-	NssDatabasePath.clear();
-}
-
-// Import the certificates in a proxy file into our NSS database.
-// Skip the end-point proxy certificate (which is first in the file),
-// as NSS will read that one via CURLOPT_SSLCERT.
-bool AddCertsToNssDatabase(const std::string& cert_file, std::string &err_msg)
-{
-	if ( ! NeedNssDatabase ) {
-		return true;
-	}
-	if ( !CreateNssDatabase(err_msg) ) {
-		return false;
-	}
-	int rc;
-	std::string next_cert;
-	std::vector<std::string> certs;
-	FILE *cert_fp = safe_fopen_wrapper_follow(cert_file.c_str(),"r");
-	if ( cert_fp == NULL ) {
-		dprintf(D_ALWAYS,"Failed to open file %s, errno=%d (%s)\n", cert_file.c_str(), errno, strerror(errno));
-		formatstr(err_msg, "Failed to open %s", cert_file.c_str());
-		return false;
-	}
-	bool in_cert = false;
-	std::string next_line;
-	while ( readLine(next_line, cert_fp, false) ) {
-		if ( next_line == "-----BEGIN CERTIFICATE-----\n" ) {
-			in_cert = true;
-		}
-		if ( in_cert ) {
-			next_cert += next_line;
-		}
-		if ( next_line == "-----END CERTIFICATE-----\n" ) {
-			in_cert = false;
-			certs.push_back(next_cert);
-			next_cert.clear();
-		}
-	}
-	fclose(cert_fp);
-
-	std::string cmd;
-	std::string tmp_cert_file;
-	formatstr(tmp_cert_file, "%s/arc_gahp.%d.tmp-cert", TmpDir.c_str(), (int)getpid());
-	for ( size_t i = 1; i < certs.size(); i++ ) {
-		dprintf(D_FULLDEBUG,"Adding cert:\n%s",certs[i].c_str());
-		int fd = safe_open_wrapper(tmp_cert_file.c_str(), O_WRONLY|O_CREAT|O_TRUNC, 0600);
-		if ( fd < 0 ) {
-			formatstr(err_msg, "Failed to open temporary file %s\n", tmp_cert_file.c_str());
-			dprintf(D_ALWAYS, "Failed to open temporary file %s, errno=%d (%s)\n", tmp_cert_file.c_str(), errno, strerror(errno));
-			return false;
-		}
-		rc = write(fd, certs[i].c_str(), strlen(certs[i].c_str()));
-		close(fd);
-		if ( rc != strlen(certs[i].c_str()) ) {
-			formatstr(err_msg, "Failed to write temporary file %s\n", tmp_cert_file.c_str());
-			dprintf(D_ALWAYS, "Failed to write temporary file %s, errno=%d (%s)\n", tmp_cert_file.c_str(), errno, strerror(errno));
-			unlink(tmp_cert_file.c_str());
-			return false;
-		}
-		formatstr(cmd, "/usr/bin/certutil -d %s -A -i %s -n %s#%d -t C,C,C", NssDatabasePath.c_str(), tmp_cert_file.c_str(), cert_file.c_str(), (int)i);
-		dprintf(D_FULLDEBUG, "Calling: %s\n",cmd.c_str());
-		rc = system(cmd.c_str());
-		if ( rc != 0 ) {
-			dprintf(D_ALWAYS,"certutil failed, rc=%d\n", rc);
-			formatstr(err_msg, "Failed to add certificate to NSS database");
-			return false;
-		}
-		unlink(tmp_cert_file.c_str());
-	}
-	return true;
 }
 
 static bool
@@ -328,11 +202,6 @@ main( int argc, char ** const argv )
 		dprintf(D_ALWAYS, "Using http proxy = %s\n", buff);
 	}
 
-	CheckForNss();
-	if( NeedNssDatabase ) {
-		dprintf(D_ALWAYS, "libcurl uses NSS, will create NSS database for X.509 proxies\n");
-	}
-
 	// Register all ARC commands
 	if( registerAllArcCommands() == false ) {
 		dprintf(D_ALWAYS, "Can't register ARC commands\n");
@@ -431,14 +300,6 @@ static void
 gahp_output_return_error() {
 	const char* result[] = {GAHP_RESULT_ERROR};
 	gahp_output_return (result, 1);
-}
-
-static void
-gahp_output_return_failure(const std::string &msg) {
-	std::string esc_msg;
-	append_escaped_arg(esc_msg, msg);
-	const char* result[] = {GAHP_RESULT_FAILURE, esc_msg.c_str()};
-	gahp_output_return (result, 2);
 }
 
 Worker::Worker(int worker_id)
@@ -562,7 +423,6 @@ IOProcess::stdinPipeHandler()
 				fflush (stdout);
 
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_QUIT) == 0) {
-				DeleteNssDatabase();
 				gahp_output_return_success();
 				io_process_exit(0);
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_ASYNC_MODE_ON) == 0) {
@@ -603,31 +463,16 @@ IOProcess::stdinPipeHandler()
 
 				gahp_output_return (commands, i);
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_INITIALIZE_FROM_FILE) == 0) {
-				std::string err_msg;
-				if (!AddCertsToNssDatabase(args.argv[1], err_msg)) {
-					gahp_output_return_failure(err_msg);
-				} else {
-					m_cached_proxies[DEFAULT_PROXY_NAME] = args.argv[1];
-					m_active_proxy = DEFAULT_PROXY_NAME;
-					gahp_output_return_success();
-				}
+				m_cached_proxies[DEFAULT_PROXY_NAME] = args.argv[1];
+				m_active_proxy = DEFAULT_PROXY_NAME;
+				gahp_output_return_success();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_REFRESH_PROXY_FROM_FILE) == 0) {
-				std::string err_msg;
-				if (!AddCertsToNssDatabase(args.argv[1], err_msg)) {
-					gahp_output_return_failure(err_msg);
-				} else {
-					m_cached_proxies[DEFAULT_PROXY_NAME] = args.argv[1];
-					gahp_output_return_success();
-				}
+				m_cached_proxies[DEFAULT_PROXY_NAME] = args.argv[1];
+				gahp_output_return_success();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_CACHE_PROXY_FROM_FILE) == 0) {
-				std::string err_msg;
-				if (!AddCertsToNssDatabase(args.argv[1], err_msg)) {
-					gahp_output_return_failure(err_msg);
-				} else {
-					m_cached_proxies[args.argv[1]] = args.argv[2];
-					m_active_proxy = args.argv[1];
-					gahp_output_return_success();
-				}
+				m_cached_proxies[args.argv[1]] = args.argv[2];
+				m_active_proxy = args.argv[1];
+				gahp_output_return_success();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_USE_CACHED_PROXY) == 0) {
 				// TODO verify proxy is already cached
 				m_active_proxy = args.argv[1];

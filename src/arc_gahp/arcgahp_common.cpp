@@ -371,7 +371,7 @@ get_ulong (const char * blah, unsigned long * s) {
 	return TRUE;
 }
 
-void
+static void
 append_escaped_arg(std::string &buffer, const std::string &arg)
 {
 	if ( arg.empty() ) {

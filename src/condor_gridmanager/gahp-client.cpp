@@ -778,7 +778,6 @@ GahpServer::Startup()
 	gahp_args.InsertArg( gahp_path, 0);
 
 	newenv.SetEnv( "GAHP_TEMP", GridmanagerScratchDir );
-	newenv.SetEnv( "TMPDIR", GridmanagerScratchDir );
 
 	// forward the port ranges through the environment:
 	//
