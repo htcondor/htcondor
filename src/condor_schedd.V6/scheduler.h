@@ -639,7 +639,7 @@ class Scheduler : public Service
 	bool			WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
 	int				receive_startd_alive(int cmd, Stream *s) const;
-	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
+	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine, bool do_rotation );
 		// Public startd socket management functions
 	void            checkContactQueue();
 

@@ -6995,7 +6995,13 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 			// So, set the matched attribute in our classad to be true,
 			// and store a copy of match_ad in a hashtable.
 
-		scheduler.InsertMachineAttrs(job_id.cluster,job_id.proc,&match_ad);
+			// Normally with a job that has a shadow, we would insert the
+			// MachineAttrs when the shadow_rec is created, and then rotate the
+			// shadow_rec is destroyed.  But since this resource does not support
+			// claiming, there won't be a shadow rec, so do both insert and 
+			// rotate steps here. In this case we want to rotate, then insert.
+		scheduler.InsertMachineAttrs(job_id.cluster,job_id.proc,&match_ad, true);
+		scheduler.InsertMachineAttrs(job_id.cluster, job_id.proc, &match_ad, false);
 
 		ClassAd *tmp_ad = NULL;
 		scheduler.resourcesByProcID->lookup(job_id,tmp_ad);
@@ -10788,6 +10794,24 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 static void
 RotateAttributeList( int cluster, int proc, char const *attrname, int start_index, int history_len )
 {
+	MyString attr_start_index;
+	attr_start_index.formatstr("%s%d", attrname, start_index);
+
+	if (history_len < 2) {
+		// nothing to rotate if list has just 0 or 1 entries....
+		return;
+	} else {
+		// Only rotate if there is something new in MachineAttrX0 (the start_index element)
+		char *value = NULL;
+		if (GetAttributeExprNew(cluster, proc, attr_start_index.Value(), &value) == 0) {
+			free(value);
+		} else {
+			// MachineAttrX0 is empty, should not rotate
+			return;
+		}
+	}
+
+		// Rotate
 	int index;
 	for(index=start_index+history_len-1;
 		index>start_index;
@@ -10803,12 +10827,26 @@ RotateAttributeList( int cluster, int proc, char const *attrname, int start_inde
 			free( value );
 		}
 	}
+
+		// Delete the start_index element (it now lives in index start_index+1)
+	DeleteAttribute(cluster, proc, attr_start_index.Value());
 }
 
 void
-Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
+Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad, bool do_rotation )
 {
-	ASSERT( machine_ad );
+	// Some explanation about the "do_rotation" parameter:
+	// If do_rotation is False, then only insert the MachineAttr0 attribute and do not rotate.
+	// If do_rotation is True, then only do the rotation.
+	// The idea here is the schedd should invoke this function with do_rotation=False when
+	// launching a shadow, and invoke with do_rotation=True whenever a job goes back to Idle.
+	// This is because we do not want to rotate until after the shadow activates the claim, as 
+	// we want minimal modifications to the job ad between matching, claiming, and activation.
+	// Todd Tannenbaum, 4/2021
+
+	if (!do_rotation) {
+		ASSERT(machine_ad);
+	}
 
 	classad::ClassAdUnParser unparser;
 	classad::ClassAd *machine;
@@ -10840,25 +10878,30 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
 	int list_len = 0;
 	job->LookupInteger(ATTR_LAST_MATCH_LIST_LENGTH,list_len);
 	if ( list_len > 0 ) {
-		RotateAttributeList(cluster,proc,ATTR_LAST_MATCH_LIST_PREFIX,0,list_len);
-		std::string attr_buf;
-		std::string slot_name;
-		machine_ad->LookupString(ATTR_NAME,slot_name);
+		if (do_rotation) {
+			RotateAttributeList(cluster, proc, ATTR_LAST_MATCH_LIST_PREFIX, 0, list_len);
+		} else {
+			std::string attr_buf;
+			std::string slot_name;
+			machine_ad->LookupString(ATTR_NAME, slot_name);
 
-		formatstr(attr_buf,"%s0",ATTR_LAST_MATCH_LIST_PREFIX);
-		SetAttributeString(cluster,proc,attr_buf.c_str(),slot_name.c_str());
+			formatstr(attr_buf, "%s0", ATTR_LAST_MATCH_LIST_PREFIX);
+			SetAttributeString(cluster, proc, attr_buf.c_str(), slot_name.c_str());
+		}
 	}
 
 		// End of old-style match_list stuff
 
 		// Increment ATTR_NUM_MATCHES
-	int num_matches = 0;
-	job->LookupInteger(ATTR_NUM_MATCHES,num_matches);
-	num_matches++;
+	if (!do_rotation) {
+		int num_matches = 0;
+		job->LookupInteger(ATTR_NUM_MATCHES, num_matches);
+		num_matches++;
 
-	SetAttributeInt(cluster,proc,ATTR_NUM_MATCHES,num_matches);
+		SetAttributeInt(cluster, proc, ATTR_NUM_MATCHES, num_matches);
 
-	SetAttributeInt(cluster,proc,ATTR_LAST_MATCH_TIME,(int)time(0));
+		SetAttributeInt(cluster, proc, ATTR_LAST_MATCH_TIME, (int)time(0));
+	}
 
 		// Now handle JOB_MACHINE_ATTRS
 
@@ -10886,17 +10929,19 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
 		MyString result_attr;
 		result_attr.formatstr("%s%s",ATTR_MACHINE_ATTR_PREFIX,attr);
 
-		RotateAttributeList(cluster,proc,result_attr.Value(),0,history_len);
+		if (do_rotation) {
+			RotateAttributeList(cluster, proc, result_attr.Value(), 0, history_len);
+		} else {
+			classad::Value result;
+			if (!machine->EvaluateAttr(attr, result)) {
+				result.SetErrorValue();
+			}
+			std::string unparsed_result;
 
-		classad::Value result;
-		if( !machine->EvaluateAttr(attr,result) ) {
-			result.SetErrorValue();
+			unparser.Unparse(unparsed_result, result);
+			result_attr += "0";
+			SetAttribute(cluster, proc, result_attr.Value(), unparsed_result.c_str());
 		}
-		std::string unparsed_result;
-
-		unparser.Unparse(unparsed_result,result);
-		result_attr += "0";
-		SetAttribute(cluster,proc,result_attr.Value(),unparsed_result.c_str());
 	}
 
 	FreeJobAd( job );
@@ -10960,7 +11005,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			mrec->my_match_ad->LookupInteger( ATTR_SLOT_ID, slot );
 			SetAttributeInt(cluster,proc,ATTR_REMOTE_SLOT_ID,slot);
 
-			InsertMachineAttrs(cluster,proc,mrec->my_match_ad);
+			InsertMachineAttrs(cluster,proc,mrec->my_match_ad,false);
 		}
 		if( ! have_remote_host ) {
 				// CRUFT
@@ -11268,6 +11313,12 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		dprintf( D_FULLDEBUG, "Job %d.%d has keepClaimAttributes set to true. "
 					    "Not removing %s and %s attributes.\n",
 					    cluster, proc, ATTR_CLAIM_ID, ATTR_REMOTE_HOST );
+	}
+
+	// If job not in a terminal state, rotate the MachineAttr attributes
+	// so we are ready for the next match...
+	if (job_status != COMPLETED && job_status != REMOVED) {
+		InsertMachineAttrs(cluster, proc, nullptr, true);
 	}
 
 	DeleteAttribute( cluster, proc, ATTR_SHADOW_BIRTHDATE );
