@@ -24,7 +24,7 @@
 %endif
 
 %if %uw_build
-%define devtoolset 1
+%define devtoolset 0
 %define debug 1
 %endif
 
