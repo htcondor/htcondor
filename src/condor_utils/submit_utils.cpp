@@ -4245,7 +4245,7 @@ int SubmitHash::SetJobRetries()
 					valid_retry_until = false;
 				} else {
 					retry_until.clear();
-					formatstr(retry_until, ATTR_ON_EXIT_CODE " == %d", (int)futility_code);
+					formatstr(retry_until, ATTR_ON_EXIT_CODE " =?= %d", (int)futility_code);
 				}
 			} else {
 				ExprTree * expr = WrapExprTreeInParensForOp(tree, classad::Operation::LOGICAL_OR_OP);
@@ -4289,7 +4289,7 @@ int SubmitHash::SetJobRetries()
 	}
 
 	// Build the appropriate OnExitRemove expression, we will fill in success exit status value and other clauses later.
-	const char * basic_exit_remove_expr = ATTR_NUM_JOB_COMPLETIONS " > " ATTR_JOB_MAX_RETRIES " || " ATTR_ON_EXIT_CODE " == ";
+	const char * basic_exit_remove_expr = ATTR_NUM_JOB_COMPLETIONS " > " ATTR_JOB_MAX_RETRIES " || " ATTR_ON_EXIT_CODE " =?= ";
 
 	// build the sub expression that checks for exit codes that should end retries
 	std::string code_check;
