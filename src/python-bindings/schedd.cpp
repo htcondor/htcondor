@@ -4104,7 +4104,7 @@ void export_schedd()
             Submit one or more jobs to the *condor_schedd* daemon.
 
             This method requires the invoker to provide a :class:`~htcondor.Submit` object that
-            describes the jobs to submit.  The return value will be a :class::`~htcondor.SubmitResult`
+            describes the jobs to submit.  The return value will be a :class:`~htcondor.SubmitResult`
             that contains the cluster ID and ClassAd of the submitted jobs.
 
             For backward compatibility, this method will also accept a :class:`~classad.ClassAd`
