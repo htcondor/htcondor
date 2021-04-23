@@ -8,6 +8,34 @@ series.
 
 The details of each version are described below.
 
+Version 9.0.1
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.1 released on Month Date, 2021.
+
+- HTCondor version 9.0.1 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug in the implementation of the submit commands ``max_retries``
+  and ``success_exit_code`` which would cause jobs which exited on a
+  signal to go on hold (instead of exiting or being retried).
+  :jira:`430`
+
+- Fixed a memory leak in the job router, usually triggered when job
+  policy expressions cause removal of the job.
+  :jira:`408`
+
+- Fixed a bug in the way ``AutoClusterAttrs`` was calculated that could
+  in matchmaking ignoring attributes changed by ``job_machine_attrs``.
+  :jira:`414`
+
 Version 9.0.0
 -------------
 
@@ -38,33 +66,8 @@ New Features:
   to select index-based GPU ids.
   :jira:`145`
 
-
 Bugs Fixed:
 
 - Fixed a bug introduced in 8.9.12 where the condor_job_router inside a CE would crash when
   evaluating periodic expressions
   :jira:`402`
-
-Version 9.0.1
--------------
-
-Release Notes:
-
-.. HTCondor version 9.0.1 released on Month Date, 2021.
-
-- HTCondor version 9.0.1 not yet released.
-
-New Features:
-
-- None.
-
-Bugs Fixed:
-
-- Fixed a memory leak in the job router, usually triggered when job
-  policy expressions cause removal of the job.
-  :jira:`408`
-
-- Fixed a bug in the way ``AutoClusterAttrs`` was calculated that could
-  in matchmaking ignoring attributes changed by ``job_machine_attrs``.
-  :jira:`414`
-
