@@ -225,10 +225,16 @@ for it to finish.  The next example implements a time-out.
             print(f"Unexpected job event: {event.type}!");
             break
 
-
-
-In the following example, we check once a second to see if the deadline
-has expired.
+The following example includes a deadline for the job to finish.  To
+make it quick to run the example, the deadline is only ten seconds;
+real jobs will almost always take considerably longer.  You can change
+``arguments = 20`` to ``arguments = 5`` to verify that this example
+correctly detects the job finishing.  For the same reason, we check
+once a second to see if the deadline has expired.  In practice, you
+should check much less frequently, depending on how quickly your
+script needs to react and how long you expect the job to last.  In
+most cases, even once a minute is more frequent than necessary or
+appropriate on shared resources; every five minutes is better.
 
 .. code-block:: python
 
@@ -256,6 +262,7 @@ has expired.
     def waitForJob(deadline):
         jel = htcondor.JobEventLog(logFileName)
         while time.time() < deadline:
+            # In real code, this should be more like stop_after=300; see above.
             for event in jel.events(stop_after=1):
                 # HTCondor appends to job event logs by default, so if you run
                 # this example more than once, there will be more than one job
