@@ -108,8 +108,10 @@ if [ -d usr/lib/condor/libexec/glite ]; then
     (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../bin/bl* .)
     (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../sbin/bl* .)
     (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../libexec/blahp/* .)
-    ln -s ../../../../lib usr/lib/condor/libexec/glite
+    ln -s ../../.. usr/lib/condor/libexec/glite
     ln -s bin usr/lib/condor/libexec/glite/libexec
 fi
 # Comment out default blahp location
 sed -i -e s/blah_libexec_directory/#blah_libexec_directory/ etc/blah.config
+# Make absolute links relative
+(cd usr/libexec/blahp; ln -sf ../../../etc/blahp/*_local_submit_attributes.sh .)
