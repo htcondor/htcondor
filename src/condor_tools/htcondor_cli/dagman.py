@@ -28,9 +28,7 @@ class DAGMan:
         )
 
         if env:
-            #for item in env[0]["Env"].split(";"):
-            #    print(f"{item}, len={len(item)}")
-            env = dict(item.split("=") for item in env[0]["Env"].split(";"))
+            env = dict(item.split("=", 1) for item in env[0]["Env"].split(";"))
             out = env["_CONDOR_DAGMAN_LOG"]
             log = out.replace(".dagman.out", ".nodes.log")
             dag = out.replace(".dagman.out", "")
