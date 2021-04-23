@@ -886,17 +886,7 @@ const char* UserPolicy::FiringExpression(void)
 	return m_fire_expr;
 }
 
-bool
-UserPolicy::FiringReason(std::string & reason, int & reason_code, int & reason_subcode) {
-    MyString ms;
-    bool rv = FiringReason(ms, reason_code, reason_subcode);
-    // This update is unconditional because the unconditional assignment
-    // in FiringReason(MyString &...) makes it empty.
-    reason = ms;
-    return rv;
-}
-
-bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subcode)
+bool UserPolicy::FiringReason(std::string &reason,int &reason_code,int &reason_subcode)
 {
 	reason_code = 0;
 	reason_subcode = 0;
@@ -911,7 +901,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 #ifdef USE_NON_MUTATING_USERPOLICY
 	std::string exprString;
 #else
-	MyString exprString;
+	std::string exprString;
 	std::string reason_expr_param;
 	std::string reason_expr_attr;
 	std::string subcode_expr_param;
@@ -926,7 +916,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 		{
 			expr_src = "job attribute";
 #ifdef USE_NON_MUTATING_USERPOLICY
-			exprString = m_fire_unparsed_expr.c_str();
+			exprString = m_fire_unparsed_expr;
 			if (m_fire_expr_val == -1) {
 				reason_code = CONDOR_HOLD_CODE_JobPolicyUndefined;
 			} else {
@@ -958,7 +948,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 		{
 			expr_src = "system macro";
 #ifdef USE_NON_MUTATING_USERPOLICY
-			exprString = m_fire_unparsed_expr.c_str();
+			exprString = m_fire_unparsed_expr;
 			if( m_fire_expr_val == -1 ) {
 				reason_code = CONDOR_HOLD_CODE_SystemPolicyUndefined;
 			}
@@ -992,7 +982,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 #ifdef USE_NON_MUTATING_USERPOLICY
 	// don't need this. it's handled above.
 #else
-	MyString subcode_expr;
+	std::string subcode_expr;
 	if( !subcode_expr_param.empty() &&
 		param(subcode_expr,subcode_expr_param.c_str(),NULL) &&
 		!subcode_expr.IsEmpty())
@@ -1006,7 +996,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 		m_ad->LookupInteger(subcode_expr_attr, reason_subcode);
 	}
 
-	MyString reason_expr;
+	std::string reason_expr;
 	if( !reason_expr_param.empty() &&
 		param(reason_expr,reason_expr_param.c_str(),NULL) &&
 		!reason_expr.IsEmpty())
@@ -1026,7 +1016,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 	}
 
 	// Format up the reason string
-	reason.formatstr( "The %s %s expression '%s' evaluated to ",
+	formatstr( reason, "The %s %s expression '%s' evaluated to ",
 					expr_src,
 					m_fire_expr,
 					exprString.c_str());

@@ -230,7 +230,6 @@ class UserPolicy
 		/* This constructs the string explaining what expression fired, useful
 		   for a Reason string in the job ad. If no firing expression
 		   occurred, then false is returned. */
-		bool FiringReason(MyString &reason,int &reason_code,int &reason_subcode);
 		bool FiringReason(std::string & reason, int & reason_code, int & reason_subcode);
 
 	private: /* functions */

@@ -3899,7 +3899,7 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void *)
 #endif
 
 	// Build a "reason" string for logging
-	MyString reason;
+	std::string reason;
 	int reason_code;
 	int reason_subcode;
 	policy.FiringReason(reason,reason_code,reason_subcode);
@@ -12598,7 +12598,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 	}
 
 	int action;
-	MyString reason;
+	std::string reason;
 	int reason_code;
 	int reason_subcode;
 	ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
