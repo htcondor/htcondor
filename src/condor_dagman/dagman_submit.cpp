@@ -221,7 +221,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   std::string &batchId )
 {
 	TmpDir		tmpDir;
-	MyString	errMsg;
+	std::string	errMsg;
 	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
 				"Could not change to node directory %s: %s\n",
@@ -590,7 +590,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	SubmitHash* submitHash = node->GetSubmitDesc();
 
 	TmpDir		tmpDir;
-	MyString	errMsg;
+	std::string	errMsg;
 	const char* directory = node->GetDirectory();
 	if (!tmpDir.Cd2TmpDir(directory, errMsg)) {
 		debug_printf(DEBUG_QUIET,
@@ -790,7 +790,7 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 			   const char* directory, const char *logFile )
 {
 	TmpDir		tmpDir;
-	MyString	errMsg;
+	std::string	errMsg;
 	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
 				"Could not change to node directory %s: %s\n",
@@ -855,7 +855,7 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 			   const char* directory, const char *logFile )
 {
 	TmpDir tmpDir;
-	MyString	errMsg;
+	std::string	errMsg;
 	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
 				"Could not change to node directory %s: %s\n",

@@ -99,7 +99,7 @@ DataReuseDirectory::CreatePaths()
 		m_valid = false;
 		return;
 	}
-	MyString subdir, subdir2;
+	std::string subdir, subdir2;
 	auto name = dircat(m_dirpath.c_str(), "tmp", subdir);
 	if (!mkdir_and_parents_if_needed(name, 0700, 0700, PRIV_CONDOR)) {
 		m_valid = false;
@@ -163,7 +163,7 @@ DataReuseDirectory::FileEntry::fname(const std::string &dirpath,
 	const std::string &checksum,
 	const std::string &tag)
 {
-	MyString hash_dir;
+	std::string hash_dir;
 	dircat(dirpath.c_str(), checksum_type.c_str(), hash_dir);
 
 	char hash_substring[3];
@@ -171,10 +171,10 @@ DataReuseDirectory::FileEntry::fname(const std::string &dirpath,
 	hash_substring[0] = checksum[0];
 	hash_substring[1] = checksum[1];
 
-	MyString file_dir;
+	std::string file_dir;
 	dircat(hash_dir.c_str(), hash_substring, file_dir);
 
-	MyString fname;
+	std::string fname;
 	std::string hash_name(checksum.c_str() + 2, checksum.size()-2);
 	hash_name += "." + tag;
 	dircat(file_dir.c_str(), hash_name.c_str(), fname);

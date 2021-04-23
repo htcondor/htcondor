@@ -9643,7 +9643,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 #ifndef WIN32
 	passwd_cache *p = pcache();
 	if( p ) {
-		MyString usermap;
+		std::string usermap;
 		p->getUseridMap(usermap);
 		if( !usermap.empty() ) {
 			std::string envname;

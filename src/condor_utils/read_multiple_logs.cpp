@@ -417,7 +417,7 @@ MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
 
 	TmpDir		td;
 	if ( directory != "" ) {
-		MyString	errMsg;
+		std::string	errMsg;
 		if ( !td.Cd2TmpDir(directory.c_str(), errMsg) ) {
 			dprintf(D_ALWAYS, "Error from Cd2TmpDir: %s\n", errMsg.c_str());
 			return "";
@@ -455,7 +455,7 @@ MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
 	}
 
 	if ( directory != "" ) {
-		MyString	errMsg;
+		std::string	errMsg;
 		if ( !td.Cd2MainDir(errMsg) ) {
 			dprintf(D_ALWAYS, "Error from Cd2MainDir: %s\n", errMsg.c_str());
 			return "";

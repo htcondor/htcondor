@@ -176,7 +176,7 @@ private:
 	uint64_t m_allocated_space{0};
 
 	std::string m_dirpath;
-	MyString m_logname;
+	std::string m_logname;
 
 	std::string m_state_name; // Pathname of the state file.
 	WriteUserLog m_log;
