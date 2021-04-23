@@ -81,7 +81,7 @@ glexec_starter_prepare(const char* starter_path,
 	//   - $(GLEXEC_USER_DIR)/starter-tmp-dir-XXXXXX
 	//       - starter's private dir
 	//
-	MyString glexec_private_dir;
+	std::string glexec_private_dir;
 	char* dir_part = condor_dirname(proxy_file);
 	ASSERT(dir_part != NULL);
 	glexec_private_dir = dir_part;
@@ -113,11 +113,11 @@ glexec_starter_prepare(const char* starter_path,
 	// parse the glexec args for invoking glexec_starter_setup.sh.
 	// do not free them yet, except on an error, as we use them
 	// again below.
-	MyString setup_err;
+	std::string setup_err;
 	ArgList  glexec_setup_args;
 	glexec_setup_args.SetArgV1SyntaxToCurrentPlatform();
 	if( ! glexec_setup_args.AppendArgsV1RawOrV2Quoted( glexec_argstr,
-	                                                   &setup_err ) ) {
+	                                                   setup_err ) ) {
 		dprintf( D_ALWAYS,
 		         "GLEXEC: failed to parse GLEXEC from config: %s\n",
 		         setup_err.c_str() );
@@ -133,17 +133,17 @@ glexec_starter_prepare(const char* starter_path,
 		free( glexec_argstr );
 		return 0;
 	}
-	MyString libexec = tmp;
+	std::string libexec = tmp;
 	free(tmp);
-	MyString setup_script = libexec;
+	std::string setup_script = libexec;
 	setup_script += "/glexec_starter_setup.sh";
 	glexec_setup_args.AppendArg(setup_script.c_str());
 	glexec_setup_args.AppendArg(glexec_private_dir.c_str());
 
 	// debug info.  this display format totally screws up the quoting, but
 	// my_system gets it right.
-	MyString disp_args;
-	glexec_setup_args.GetArgsStringForDisplay(&disp_args, 0);
+	std::string disp_args;
+	glexec_setup_args.GetArgsStringForDisplay(disp_args, 0);
 	dprintf (D_ALWAYS, "GLEXEC: about to glexec: ** %s **\n",
 			disp_args.c_str());
 
@@ -168,9 +168,9 @@ glexec_starter_prepare(const char* starter_path,
 
 	// now prepare the starter command line, starting with glexec and its
 	// options (if any), then condor_glexec_wrapper.
-	MyString err;
+	std::string err;
 	if( ! glexec_args.AppendArgsV1RawOrV2Quoted( glexec_argstr,
-	                                             &err ) ) {
+	                                             err ) ) {
 		dprintf( D_ALWAYS,
 		         "failed to parse GLEXEC from config: %s\n",
 		         err.c_str() );
@@ -178,7 +178,7 @@ glexec_starter_prepare(const char* starter_path,
 		return 0;
 	}
 	free( glexec_argstr );
-	MyString wrapper_path = libexec;
+	std::string wrapper_path = libexec;
 	wrapper_path += "/condor_glexec_wrapper";
 	glexec_args.AppendArg(wrapper_path.c_str());
 
@@ -214,24 +214,24 @@ glexec_starter_prepare(const char* starter_path,
 	// this needs to be in a directory owned by that user, and not world
 	// writable.  glexec enforces this.  hence, all the whoami/mkdir mojo
 	// above.
-	MyString child_proxy_file = glexec_private_dir;
+	std::string child_proxy_file = glexec_private_dir;
 	child_proxy_file += "/glexec_starter_proxy";
 	dprintf (D_ALWAYS, "GLEXEC: setting GLEXEC_TARGET_PROXY to %s\n",
-		child_proxy_file.Value());
-	glexec_env.SetEnv( "GLEXEC_TARGET_PROXY", child_proxy_file.Value() );
+		child_proxy_file.c_str());
+	glexec_env.SetEnv( "GLEXEC_TARGET_PROXY", child_proxy_file.c_str() );
 
 	// _CONDOR_GSI_DAEMON_PROXY - starter's proxy
-	MyString var_name;
-	var_name.formatstr("_CONDOR_%s", STR_GSI_DAEMON_PROXY);
-	glexec_env.SetEnv( var_name.Value(), child_proxy_file.Value() );
-	var_name.formatstr("_condor_%s", STR_GSI_DAEMON_PROXY);
-	glexec_env.SetEnv( var_name.Value(), child_proxy_file.Value() );
+	std::string var_name;
+	formatstr(var_name, "_CONDOR_%s", STR_GSI_DAEMON_PROXY);
+	glexec_env.SetEnv( var_name.c_str(), child_proxy_file.c_str() );
+	formatstr(var_name, "_condor_%s", STR_GSI_DAEMON_PROXY);
+	glexec_env.SetEnv( var_name.c_str(), child_proxy_file.c_str() );
 #endif
 
 	// the EXECUTE dir should be owned by the mapped user.  we created this
 	// earlier, and now we override it in the condor_config via the
 	// environment.
-	MyString execute_dir = glexec_private_dir;
+	std::string execute_dir = glexec_private_dir;
 	execute_dir += "/execute";
 	glexec_env.SetEnv ( "_CONDOR_EXECUTE", execute_dir.c_str());
 	glexec_env.SetEnv ( "_condor_EXECUTE", execute_dir.c_str());
@@ -239,7 +239,7 @@ glexec_starter_prepare(const char* starter_path,
 	// the LOG dir should be owned by the mapped user.  we created this
 	// earlier, and now we override it in the condor_config via the
 	// environment.
-	MyString log_dir = glexec_private_dir;
+	std::string log_dir = glexec_private_dir;
 	log_dir += "/log";
 	glexec_env.SetEnv ( "_CONDOR_LOG", log_dir.c_str());
 	glexec_env.SetEnv ( "_condor_LOG", log_dir.c_str());
@@ -252,7 +252,7 @@ glexec_starter_prepare(const char* starter_path,
 	// PROCD_ADDRESS knob is different from what it inherits in
 	// CONDOR_PROCD_ADDRESS, and know it needs to create its own ProcD
 	//
-	MyString procd_address = log_dir;
+	std::string procd_address = log_dir;
 	procd_address += "/procd_pipe";
 	glexec_env.SetEnv( "_CONDOR_PROCD_ADDRESS", procd_address.c_str() );
 	glexec_env.SetEnv( "_condor_PROCD_ADDRESS", procd_address.c_str() );

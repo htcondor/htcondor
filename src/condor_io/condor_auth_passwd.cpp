@@ -643,15 +643,15 @@ Condor_Auth_Passwd::fetchLogin()
 		return strdup(username.c_str());
 	}
 
-	MyString login;
+	std::string login;
 	
 		// decide the login name we will try to authenticate with.  
 	if ( is_root() ) {
-		login.formatstr("%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
+		formatstr(login,"%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
 	} else {
 		// for now, always use the POOL_PASSWORD_USERNAME.  at some
 		// point this code should call my_username() my_domainname().
-		login.formatstr("%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
+		formatstr(login,"%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
 	}
 
 	return strdup( login.c_str() );

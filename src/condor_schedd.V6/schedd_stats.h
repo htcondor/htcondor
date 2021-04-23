@@ -163,8 +163,8 @@ public:
 
    ScheddOtherStats * next;	// used to temporarily build a linked list of stats matching a ClassAd
    ScheddJobStatistics stats;
-   MyString     prefix;
-   MyString     trigger;
+   std::string  prefix;
+   std::string  trigger;
    ExprTree *   trigger_expr;
    bool         enabled;
    bool         by; // when true, there is a set of stats for each unique value of trigger_expr
@@ -206,7 +206,7 @@ public:
 
 private:
    ScheddStatistics & config;  // ref to ScheddStatistics that we pull config from
-   HashTable<MyString, ScheddOtherStats*> pools; // pools of stats and triggers (for Enable)
+   HashTable<std::string, ScheddOtherStats*> pools; // pools of stats and triggers (for Enable)
    std::map<int,int> deferred_jobs_submitted; // key=cluster, value=max_proc.
 };
 

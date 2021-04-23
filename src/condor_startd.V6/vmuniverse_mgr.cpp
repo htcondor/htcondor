@@ -453,8 +453,8 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 	}
 	my_pclose( fp );
 	if( !read_something ) {
-		MyString args_string;
-		systemcmd.GetArgsStringForDisplay(&args_string,0);
+		std::string args_string;
+		systemcmd.GetArgsStringForDisplay(args_string,0);
 		dprintf( D_ALWAYS, 
 				 "Warning: '%s' did not produce any valid output.\n", 
 				 args_string.c_str());

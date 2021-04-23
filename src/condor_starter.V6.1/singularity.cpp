@@ -18,7 +18,7 @@ using namespace htcondor;
 bool Singularity::m_enabled = false;
 bool Singularity::m_probed = false;
 int  Singularity::m_default_timeout = 120;
-MyString Singularity::m_singularity_version;
+std::string Singularity::m_singularity_version;
 
 
 static bool find_singularity(std::string &exec)
@@ -80,8 +80,8 @@ Singularity::detect(CondorError &err)
 	infoArgs.AppendArg(exec);
 	infoArgs.AppendArg("--version");
 
-	MyString displayString;
-	infoArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	infoArgs.GetArgsStringForLogging( displayString );
 	dprintf(D_FULLDEBUG, "Attempting to run: '%s %s'.\n", exec.c_str(), displayString.c_str());
 
 	MyPopenTimer pgm;
@@ -99,21 +99,22 @@ Singularity::detect(CondorError &err)
 	int exitCode;
 	if ( ! pgm.wait_for_exit(m_default_timeout, &exitCode) || exitCode != 0) {
 		pgm.close_program(1);
-		MyString line;
-		line.readLine(pgm.output(), false); line.chomp();
+		std::string line;
+		pgm.output().readLine(line, false);
+		chomp(line);
 		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str());
 		err.pushf("Singularity::detect", 2, "'%s' exited with status %d", displayString.c_str(), exitCode);
 		return false;
 	}
 
-	m_singularity_version.readLine(pgm.output(), false);
-	m_singularity_version.chomp();
+	pgm.output().readLine(m_singularity_version, false);
+	chomp(m_singularity_version);
 	dprintf( D_FULLDEBUG, "[singularity version] %s\n", m_singularity_version.c_str() );
 	if (IsFulldebug(D_ALWAYS)) {
-		MyString line;
-		while (line.readLine(pgm.output(), false)) {
-			line.readLine(pgm.output(), false);
-			line.chomp();
+		std::string line;
+		while (pgm.output().readLine(line, false)) {
+			pgm.output().readLine(line, false);
+			chomp(line);
 			dprintf( D_FULLDEBUG, "[singularity info] %s\n", line.c_str() );
 		}
 	}
@@ -314,9 +315,9 @@ Singularity::setup(ClassAd &machineAd,
 }
 
 static bool
-envToList(void *list, const MyString &Name, const MyString & /*value*/) {
+envToList(void *list, const std::string & name, const std::string & /*value*/) {
 	std::list<std::string> *slist = (std::list<std::string> *)list;
-	slist->push_back(std::string(Name));
+	slist->push_back(name);
 	return true;
 }
 
@@ -326,7 +327,7 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 	// if SINGULARITY_TARGET_DIR is set, we need to reset
 	// all the job's environment variables that refer to the scratch dir
 
-	MyString oldScratchDir;
+	std::string oldScratchDir;
 	job_env.GetEnv("_CONDOR_SCRATCH_DIR", oldScratchDir);
 	job_env.SetEnv("_CONDOR_SCRATCH_DIR_OUTSIDE_CONTAINER", oldScratchDir);
 
@@ -340,7 +341,7 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 	job_env.SetEnv("_CONDOR_CHIRP_CONFIG", chirp.c_str());
 	job_env.SetEnv("_CONDOR_MACHINE_AD", machine_ad.c_str());
 	job_env.SetEnv("_CONDOR_JOB_AD", job_ad.c_str());
-	MyString proxy_file;
+	std::string proxy_file;
 	if ( job_env.GetEnv( "X509_USER_PROXY", proxy_file ) &&
 	     strncmp( execute_dir.c_str(), proxy_file.c_str(),
 	      execute_dir.length() ) == 0 ) {
@@ -356,7 +357,7 @@ Singularity::convertEnv(Env *job_env) {
 	std::list<std::string>::iterator it;
 	for (it = envNames.begin(); it != envNames.end(); it++) {
 		std::string name = *it;
-		MyString value;
+		std::string  value;
 		job_env->GetEnv(name.c_str(), value);
 		std::string new_name = "SINGULARITYENV_" + name;
 		job_env->SetEnv(new_name.c_str(), value);

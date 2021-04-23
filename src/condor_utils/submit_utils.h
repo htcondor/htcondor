@@ -452,7 +452,7 @@ public:
 	StringList vars;           // loop variable names
 	StringList items;          // list of items to iterate over
 	qslice     slice;          // may be initialized to slice if "[]" is parsed.
-	MyString   items_filename; // file to read list of items from, if it is "<" list should be read from submit file until )
+	std::string   items_filename; // file to read list of items from, if it is "<" list should be read from submit file until )
 };
 
 

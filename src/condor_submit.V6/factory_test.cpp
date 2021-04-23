@@ -311,9 +311,9 @@ bool JobFactory::RowDataIsLoading(int row)
 	if (fea.foreach_mode == foreach_from_async) {
 
 		// put all of the items we have read so far into the item list
-		MyString str;
+		std::string str;
 		while (reader.output().readLine(str, false)) {
-			str.trim();
+			trim(str);
 			fea.items.append(str.c_str());
 		}
 

@@ -89,7 +89,7 @@ bool
 StartdHibernator::initialize( void )
 {
 	ArgList	argList;
-	argList.AppendArg( m_plugin_path.c_str() );
+	argList.AppendArg( m_plugin_path );
 
 	if ( m_plugin_args ) {
 		m_plugin_args->rewind();
@@ -108,8 +108,8 @@ StartdHibernator::initialize( void )
 	FILE *fp = my_popenv( args, "r", MY_POPEN_OPT_WANT_STDERR );
 	deleteStringArray( args );
 
-	MyString	cmd;
-	argList.GetArgsStringForDisplay( &cmd );
+	std::string	cmd;
+	argList.GetArgsStringForDisplay( cmd );
 	dprintf( D_FULLDEBUG,
 			 "Initially invoking hibernation plugin '%s'\n", cmd.c_str() );
 
@@ -163,7 +163,7 @@ HibernatorBase::SLEEP_STATE
 StartdHibernator::enterState( SLEEP_STATE state, bool /*force*/ ) const
 {
 	ArgList		args;
-	args.AppendArg( m_plugin_path.c_str() );
+	args.AppendArg( m_plugin_path );
 
 	if( param_boolean("HIBERNATION_DEBUG", false) ) {
 		args.AppendArg( "-d" );
@@ -179,8 +179,8 @@ StartdHibernator::enterState( SLEEP_STATE state, bool /*force*/ ) const
 	args.AppendArg( "set" );
 	args.AppendArg( sleepStateToString(state) );
 
-	MyString	cmd;
-	args.GetArgsStringForDisplay( &cmd );
+	std::string	cmd;
+	args.GetArgsStringForDisplay( cmd );
 
 	priv_state	priv = set_root_priv();
 	int status = my_system( args );

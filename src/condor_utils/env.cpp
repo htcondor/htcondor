@@ -387,10 +387,10 @@ Env::V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *errmsg)
 bool
 Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, std::string & error_msg )
 {
-    MyString ms(error_msg);
-    bool rv = MergeFromV1RawOrV2Quoted( delimitedString, & ms );
-    if( ms != error_msg ) { error_msg = ms; }
-    return rv;
+	MyString ms(error_msg);
+	bool rv = MergeFromV1RawOrV2Quoted( delimitedString, & ms );
+	if( ms != error_msg ) { error_msg = ms; }
+	return rv;
 }
 
 
@@ -428,6 +428,14 @@ Env::MergeFromV2Quoted( const char *delimitedString, MyString *error_msg )
 }
 
 bool
+Env::MergeFromV2Raw( const char *delimitedString, std::string & error_msg ) {
+	MyString ms(error_msg);
+	bool rv = MergeFromV2Raw(delimitedString, & ms);
+	error_msg = ms;
+	return rv;
+}
+
+bool
 Env::MergeFromV2Raw( const char *delimitedString, MyString *error_msg )
 {
 	SimpleList<MyString> env_list;
@@ -446,6 +454,15 @@ Env::MergeFromV2Raw( const char *delimitedString, MyString *error_msg )
 		}
 	}
 	return true;
+}
+
+bool
+Env::MergeFromV1Raw( const char *delimitedString, std::string & error_msg )
+{
+	MyString ms(error_msg);
+	bool rv = MergeFromV1Raw( delimitedString, &ms );
+	error_msg = ms;
+	return rv;
 }
 
 bool
@@ -657,6 +674,14 @@ Env::getDelimitedStringV1RawOrV2Quoted(MyString *result,MyString *error_msg) con
 }
 
 bool
+Env::getDelimitedStringV2Raw( std::string & result, bool mark_v2) const {
+    MyString ms;
+    bool rv = getDelimitedStringV2Raw( & ms, NULL, mark_v2 );
+    if(! ms.empty()) { result = ms; }
+    return rv;
+}
+
+bool
 Env::getDelimitedStringV2Raw(MyString *result,MyString * /*error_msg*/,bool mark_v2) const
 {
 	MyString var, val;
@@ -681,6 +706,12 @@ Env::getDelimitedStringV2Raw(MyString *result,MyString * /*error_msg*/,bool mark
 	}
 	join_args(env_list,result);
 	return true;
+}
+
+void
+Env::getDelimitedStringForDisplay(std::string & result) const
+{
+	getDelimitedStringV2Raw(result, NULL);
 }
 
 void
@@ -822,6 +853,28 @@ void Env::Walk(bool (*walk_func)(void* pv, const MyString &var, const MyString &
 		if ( ! walk_func(pv, *var, *val))
 			break;
 	}
+}
+
+//
+// This makes me sad.  Consider replacing this (in
+// condor_starter.V6/singulariy.cpp, at any rate), with a function which,
+// once this class's internals are std::string, directly returns the desired
+// std::list<std::string>... or maybe std::vector<std::string>?
+//
+void
+Env::Walk(bool (*walk_func)(void* pv, const std::string &var, const std::string &val), void* pv) const
+{
+	const MyString *var;
+	MyString *val;
+
+	_envTable->startIterations();
+	while (_envTable->iterate_nocopy(&var, &val)) {
+	    std::string s(var->c_str());
+	    std::string t(val->c_str());
+		if ( ! walk_func(pv, s, t))
+			break;
+	}
+
 }
 
 bool

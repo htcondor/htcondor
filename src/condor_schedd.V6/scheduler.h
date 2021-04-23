@@ -331,7 +331,7 @@ class match_rec: public ClaimIdParser
 		// if we created a dynamic hole in the DAEMON auth level
 		// to support flocking, this will be set to the id of the
 		// punched hole
-	MyString*		auth_hole_id;
+	std::string*	auth_hole_id;
 
 	match_rec *m_paired_mrec;
 	bool m_can_start_jobs;
@@ -383,17 +383,17 @@ class UserIdentity {
 				m_domain == rhs.m_domain && 
 				m_auxid == rhs.m_auxid;
 		}
-		MyString username() const { return m_username; }
-		MyString domain() const { return m_domain; }
-		MyString auxid() const { return m_auxid; }
+		std::string username() const { return m_username; }
+		std::string domain() const { return m_domain; }
+		std::string auxid() const { return m_auxid; }
 
 			// For use in HashTables
 		static size_t HashFcn(const UserIdentity & index);
 	
 	private:
-		MyString m_username;
-		MyString m_domain;
-		MyString m_auxid;
+		std::string m_username;
+		std::string m_domain;
+		std::string m_auxid;
 };
 
 
@@ -639,7 +639,7 @@ class Scheduler : public Service
 	bool			WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
 	int				receive_startd_alive(int cmd, Stream *s) const;
-	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
+	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine, bool do_rotation );
 		// Public startd socket management functions
 	void            checkContactQueue();
 

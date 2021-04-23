@@ -4179,6 +4179,11 @@ details.
     trusted users to run with full linux capabilities within the
     container.
 
+:macro-def:`DOCKER_PERFORM_TEST`
+    When the *condor_startd* starts up, it runs a simple docker
+    container to verify that docker completely works.  If 
+    DOCKER_PERFORM_TEST is false, this test is skipped.
+
 :macro-def:`DOCKER_EXTRA_ARGUMENTS`
     Any additional command line options the administrator wants to be
     added to the docker container create command line can be set with

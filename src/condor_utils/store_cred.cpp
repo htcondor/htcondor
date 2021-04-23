@@ -233,18 +233,18 @@ cred_matches(const std::string & credfile, const ClassAd * requestAd)
 }
 
 long long
-PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int rawlen, int mode, MyString & ccfile)
+PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int rawlen, int mode, std::string & ccfile)
 {
 	dprintf(D_ALWAYS, "PWD store cred user %s len %i mode %i\n", username, rawlen, mode);
 
 	ccfile.clear();
 
 	int rc;
-	MyString pw;
+	std::string pw;
 	if ((mode & MODE_MASK) == GENERIC_ADD) {
-		pw.set((const char *)rawbuf, rawlen);
+		pw.assign((const char *)rawbuf, rawlen);
 		// check for null characters in password, we don't support those
-		if (pw.length() != (int)strlen(pw.c_str())) {
+		if (pw.length() != strlen(pw.c_str())) {
 			dprintf(D_ALWAYS, "Failed to add password for user %s, password contained NULL characters\n", username);
 			return FAILURE_BAD_PASSWORD;
 		}
@@ -294,7 +294,7 @@ bool okay_for_oauth_filename(std::string s) {
 }
 
 long long
-OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, const ClassAd * ad, ClassAd & return_ad, MyString & ccfile)
+OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, const ClassAd * ad, ClassAd & return_ad, std::string & ccfile)
 {
 	// store an OAuth token, this is presumed to be a refresh token (*.top file) unless the classad argument
 	// indicates that it is not a refresh token, in which case it is stored as a *.use file
@@ -343,7 +343,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 	credmon_clear_mark(cred_dir, username);
 
 	// the user's creds go into a directory
-	MyString user_cred_path;
+	std::string user_cred_path;
 	dircat(cred_dir, username, user_cred_path);
 
 	// lookup and validate service name
@@ -530,7 +530,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 
 // this is a helper function massages the info enough that we can call the oauth store cred
 long long
-LOCAL_STORE_CRED(const char *username, const char *servicename, MyString &ccfile) {
+LOCAL_STORE_CRED(const char *username, const char *servicename, std::string &ccfile) {
 
 	// put the service name in an ad so the oauth code can extract it
 	ClassAd ad, ret;
@@ -558,7 +558,7 @@ LOCAL_STORE_CRED(const char *username, const char *servicename, MyString &ccfile
 //   but the caller should wait for a .cc file before proceeding,
 //   the ccfile argument will be returned
 long long
-KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, ClassAd & return_ad, MyString & ccfile, bool &detected_local_cred)
+KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, ClassAd & return_ad, std::string & ccfile, bool &detected_local_cred)
 {
 	dprintf(D_ALWAYS, "Krb store cred user %s len %i mode %i\n", username, credlen, mode);
 
@@ -650,7 +650,7 @@ KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credle
 		return cred_stat_buf.st_mtime;
 	}
 
-	MyString credfile;
+	std::string credfile;
 	dircat(cred_dir, username, ".cred", credfile);
 	const char *filename = credfile.c_str();
 
@@ -705,8 +705,8 @@ UNIX_GET_CRED(const char *user, const char *domain, size_t & len)
 	}
 
 	// create filenames
-	MyString filename;
-	filename.formatstr("%s%c%s.cred", cred_dir.ptr(), DIR_DELIM_CHAR, user);
+	std::string filename;
+	formatstr(filename,"%s%c%s.cred", cred_dir.ptr(), DIR_DELIM_CHAR, user);
 	dprintf(D_ALWAYS, "CREDS: reading data from %s\n", filename.c_str());
 
 	// read the file (fourth argument "true" means as_root)
@@ -719,7 +719,7 @@ UNIX_GET_CRED(const char *user, const char *domain, size_t & len)
 }
 
 
-long long store_cred_blob(const char *user, int mode, const unsigned char *blob, int bloblen, const ClassAd * ad, MyString &ccfile)
+long long store_cred_blob(const char *user, int mode, const unsigned char *blob, int bloblen, const ClassAd * ad, std::string &ccfile)
 {
 	int domain_pos = -1;
 	if (username_is_pool_password(user, &domain_pos)) {
@@ -783,7 +783,7 @@ unsigned char* getStoredCredential(int mode, const char *username, const char *d
 	}
 
 	// create filenames
-	MyString credfile;
+	std::string credfile;
 	const char * filename = dircat(cred_dir, username, ".cred", credfile);
 
 	dprintf(D_ALWAYS, "CREDS: reading data from %s\n", filename);
@@ -1452,7 +1452,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 	std::string fulluser; // full username including domain
 	std::string username; // just the username part before the @ of the above
 	std::string pass;	  // password, if the password is a string and mode is LEGACY
-	MyString ccfile;   // credmon completion file to watch for before returning
+	std::string ccfile;   // credmon completion file to watch for before returning
 	ClassAd     ad;
 	ClassAd     return_ad;
 	auto_free_ptr cred;
@@ -1785,7 +1785,7 @@ int store_pool_cred_handler(int, Stream *s)
 	int result;
 	char *pw = NULL;
 	char *domain = NULL;
-	MyString username = POOL_PASSWORD_USERNAME "@";
+	std::string username = POOL_PASSWORD_USERNAME "@";
 
 	if (s->type() != Stream::reli_sock) {
 		dprintf(D_ALWAYS, "ERROR: pool password set attempt via UDP\n");
@@ -2031,7 +2031,7 @@ do_store_cred (
 	long return_val;
 #endif
 	Sock* sock = NULL;
-	MyString daemonid; // for error messages
+	std::string daemonid; // for error messages
 
 	// to help future debugging, print out the mode we are in
 	dprintf ( D_ALWAYS,  "STORE_CRED: In mode %d '%s', user is \"%s\"\n", mode, mode_name[mode & MODE_MASK], user);
@@ -2058,7 +2058,7 @@ do_store_cred (
 	// If not, then send the request over the wire to a remote credd or schedd.
 
 	if ( is_root() && d == NULL ) {
-		MyString ccfile;	// we don't care about a completion file, but we have to pass this in anyway
+		std::string ccfile;	// we don't care about a completion file, but we have to pass this in anyway
 		if (mode >= STORE_CRED_LEGACY_PWD && mode <= STORE_CRED_LAST_MODE) {
 			return_val = store_cred_password(user, (const char *)cred, mode);
 		} else {
@@ -2075,8 +2075,8 @@ do_store_cred (
 			if ((cred_type != STORE_CRED_LEGACY_PWD) && (cred_type != STORE_CRED_USER_PWD)) {
 				return FAILURE_BAD_ARGS;
 			}
-			MyString pw;
-			if (cred) pw.set((const char *)cred, credlen);
+			std::string pw;
+			if (cred) pw.assign((const char *)cred, credlen);
 			return do_store_cred(user, pw.c_str(), mode, d);
 		}
 		if ((domain_pos <= 0) && user[0]) {
@@ -2111,9 +2111,9 @@ do_store_cred (
 			return FAILURE_NOT_SECURE;
 		}
 
-		MyString pw;
+		std::string pw;
 		if (mode & STORE_CRED_LEGACY) {
-			if (cred) pw.set((const char *)cred, credlen);
+			if (cred) pw.assign((const char *)cred, credlen);
 		} else {
 			// TODO: password field could be used for other data, perhaps cred subtype?
 		}
@@ -2234,7 +2234,7 @@ int do_check_oauth_creds (
 {
 	ReliSock * sock;
 	CondorError err;
-	MyString daemonid;
+	std::string daemonid;
 
 	outputURL.clear();
 	if (num_ads < 0) {

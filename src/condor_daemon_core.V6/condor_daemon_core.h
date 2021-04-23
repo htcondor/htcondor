@@ -1392,7 +1392,6 @@ class DaemonCore : public Service
         long            as_hard_limit        = 0l
         );
 
-
     int CreateProcessNew(
         const std::string & name,
         const ArgList & argsList,

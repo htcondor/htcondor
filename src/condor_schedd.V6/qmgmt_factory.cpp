@@ -35,6 +35,7 @@
 #include "submit_utils.h"
 #include "set_user_priv_from_ad.h"
 #include "my_async_fread.h"
+#include "spooled_job_files.h"
 
 
 class JobFactory : public SubmitHash {
@@ -692,9 +693,8 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 						priv = set_user_priv_from_ad(*user_ident);
 					} else {
 						// if we are not impersonating a user, then the items filename MUST be in spool
-						extern void GetSpooledMaterializeDataPath(MyString &path, int cluster, const char *dir /*= NULL*/);
 						extern char* Spool; // in schedd_main.cpp. 
-						MyString spooled_filename;
+						std::string spooled_filename;
 						GetSpooledMaterializeDataPath(spooled_filename, cluster_id, Spool);
 						if (spooled_filename != fea.items_filename) {
 							dprintf(D_MATERIALIZE, "invalid filename '%s' for foreach from, Cluster %d factory will be disabled\n", fea.items_filename.c_str(), cluster_id);

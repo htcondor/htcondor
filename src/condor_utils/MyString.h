@@ -562,6 +562,7 @@ public:
 	// returns true if the separator was found, false if not.
 	// if return value is true, the val will be set to the string, if false val is unchanged.
 	bool deserialize_string(MyString & val, const char * sep);
+	bool deserialize_string(std::string & val, const char * sep);
 	// return the current deserialize offset from the start of the string
 	size_t offset() { return (m_str && m_p) ? (m_p - m_str) : 0; }
 	// return the current deserialization pointer into the string.
@@ -596,6 +597,8 @@ public:
 	MyStringFpSource(FILE*_fp=NULL, bool delete_fp=false) : fp(_fp), owns_fp(delete_fp) {}
 	virtual ~MyStringFpSource() { if (fp && owns_fp) fclose(fp); fp = NULL; };
 	virtual bool readLine(MyString & str, bool append = false);
+	// append can't have a default arg until the other overload goes away
+	virtual bool readLine(std::string & str, bool append);
 	virtual bool isEof();
 protected:
 	FILE* fp;
@@ -613,6 +616,7 @@ public:
 	int          pos() const { return ix; }
 	void rewind() { ix = 0; }
 	virtual bool readLine(MyString & str, bool append = false);
+	virtual bool readLine(std::string & str, bool append = false);
 	virtual bool isEof();
 protected:
 	char * ptr;
