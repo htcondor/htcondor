@@ -7,11 +7,10 @@ import re
 import sys
 import stat
 
-from datetime import datetime, timedelta
-
 from .conf import *
 from .dagman import DAGMan
 from .job import Job
+
 
 def print_help(stream=sys.stderr):
     help_msg = """htcondor is a tool for managing HTCondor jobs and resources.
@@ -127,9 +126,9 @@ def main():
         elif command["action"] == "resources":
             Job.resources(command["target"], options)
         else:
-            print(f"Error: The '{command['action']}' action is not supported for job objects")
+            print(f"Error: The '{command['action']}' action is not supported for jobs")
     else:
-        print(f"Error: '{command['object']}' is not a valid command object") 
+        print(f"Error: '{command['object']}' is not a valid object") 
 
     # All done
     sys.exit(0)

@@ -28,8 +28,8 @@ class DAGMan:
         )
 
         if env:
-            for item in env[0]["Env"].split(";"):
-                print(f"{item}, len={len(item)}")
+            #for item in env[0]["Env"].split(";"):
+            #    print(f"{item}, len={len(item)}")
             env = dict(item.split("=") for item in env[0]["Env"].split(";"))
             out = env["_CONDOR_DAGMAN_LOG"]
             log = out.replace(".dagman.out", ".nodes.log")
@@ -48,11 +48,11 @@ class DAGMan:
         sendmail_sh_file = open(TMP_DIR / "sendmail.sh", "w")
         sendmail_sh_file.write(sendmail_sh)
         sendmail_sh_file.close()
-        st = os.stat("sendmail.sh")
-        os.chmod("sendmail.sh", st.st_mode | stat.S_IEXEC)
+        st = os.stat(TMP_DIR / "sendmail.sh")
+        os.chmod(TMP_DIR / "sendmail.sh", st.st_mode | stat.S_IEXEC)
 
         slurm_config = "DAGMAN_USE_CONDOR_SUBMIT = False"
-        slurm_config_file = open("slurm_submit.config", "w")
+        slurm_config_file = open(TMP_DIR / "slurm_submit.config", "w")
         slurm_config_file.write(slurm_config)
         slurm_config_file.close()
 
@@ -113,14 +113,14 @@ VARS C +WantFlocking="True"
 #sendmail {email}
 """
 
-        sendmail_sh_file = open("sendmail.sh", "w")
+        sendmail_sh_file = open(TMP_DIR / "sendmail.sh", "w")
         sendmail_sh_file.write(sendmail_sh)
         sendmail_sh_file.close()
-        st = os.stat("sendmail.sh")
-        os.chmod("sendmail.sh", st.st_mode | stat.S_IEXEC)
+        st = os.stat(TMP_DIR / "sendmail.sh")
+        os.chmod(TMP_DIR / "sendmail.sh", st.st_mode | stat.S_IEXEC)
 
         ec2_config = "DAGMAN_USE_CONDOR_SUBMIT = False"
-        ec2_config_file = open("ec2_submit.config", "w")
+        ec2_config_file = open(TMP_DIR / "ec2_submit.config", "w")
         ec2_config_file.write(ec2_config)
         ec2_config_file.close()
 
@@ -151,6 +151,6 @@ PARENT B C CHILD D
 CONFIG ec2_submit.config
 """
 
-        dag_file = open("ec2_submit.dag", "w")
+        dag_file = open(TMP_DIR / "ec2_submit.dag", "w")
         dag_file.write(ec2_dag)
         dag_file.close()

@@ -1,5 +1,6 @@
 import htcondor
 import os
+import shutil
 import sys
 
 from datetime import datetime, timedelta
@@ -64,12 +65,16 @@ class Job:
                 print("Error: Slurm resources must specify a --node_count argument")
                 sys.exit(1)
 
-            # Delete any leftover files
-            # TODO: Find a safer way to do this, avoid deleting active .nodes.log files
-            os.system("rm -rf slurm_submit.dag*")
+            # Clear contents of TMP_DIR to ensure we can write/submit the dag
+            # TODO: Find a safer way to manage tmp files
+            shutil.rmtree(TMP_DIR)
+            os.mkdir(TMP_DIR)
 
             DAGMan.write_slurm_dag(file, options["runtime"], options["node_count"])
-            submit_description = htcondor.Submit.from_dag("slurm_submit.dag")
+            print(str(TMP_DIR / "slurm_submit.dag"))
+            # DAG must be submitted from TMP_DIR
+            os.chdir(TMP_DIR)
+            submit_description = htcondor.Submit.from_dag(str(TMP_DIR / "slurm_submit.dag"))
             submit_description["+ResourceType"] = "\"Slurm\""
             
             # The Job class can only submit a single job at a time
@@ -95,11 +100,14 @@ class Job:
                 print("Error: EC2 resources must specify a --node_count argument")
                 sys.exit(1)
 
-            # Delete any leftover files
-            # TODO: Find a safer way to do this, avoid deleting active .nodes.log files
-            os.system("rm -rf ec2_submit.dag*")
+            # Clear contents of TMP_DIR to ensure we can write/submit the dag
+            # TODO: Find a safer way to manage tmp files
+            shutil.rmtree(TMP_DIR)
+            os.mkdir(TMP_DIR)
 
             DAGMan.write_ec2_dag(file, options["runtime"], options["node_count"])
+            # DAG must be submitted from TMP_DIR
+            os.chdir(TMP_DIR)
             submit_description = htcondor.Submit.from_dag("ec2_submit.dag")
             submit_description["+ResourceType"] = "\"EC2\""
 
