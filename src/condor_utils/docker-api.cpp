@@ -356,6 +356,14 @@ int DockerAPI::createContainer(
 	build_env_for_docker_cli(cliEnvironment);
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
 
+	//
+	// The following two commented-out Create_Process() calls were
+	// left in as examples of (respectively) that bad old way,
+	// the bad new way (in case you actually need to set all of
+	// the default arguments), and the good new way (in case you
+	// don't, in which case it's both shorter and clearer).
+	//
+
 	/*
 	int childPID = daemonCore->Create_Process( runArgs.GetArg(0), runArgs,
 		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",

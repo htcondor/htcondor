@@ -58,7 +58,7 @@ int main ( int argc, char *argv[] ) {
 #endif
 
 	char *tmp;
-	MyString buf;
+	std::string buf;
 	myDistro->Init( argc, argv );
     buf = argv[1];
     for ( int i=2 ; i<argc ; i++ ) {
@@ -84,7 +84,7 @@ int main ( int argc, char *argv[] ) {
 
 		if ( shadow ) {
 			fprintf ( fp, "%s = %s\n", envName, shadow );
-			fprintf ( fp, "args: %s\n", buf.Value() );
+			fprintf ( fp, "args: %s\n", buf.c_str() );
 		}
 		else {
 			fprintf ( fp, "No PARALLEL_SHADOW_SINFUL!  Aborting!\n" );
@@ -110,7 +110,7 @@ int main ( int argc, char *argv[] ) {
     }
 
 		// Stupid code() requires a non-const char *
-	tmp = strdup( buf.Value() );
+	tmp = strdup( buf.c_str() );
     if ( !s->code ( tmp ) ||
          !s->end_of_message() ) {
         delete s;

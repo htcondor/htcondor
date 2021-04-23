@@ -2426,17 +2426,6 @@ JICShadow::beginFileTransfer( void )
 
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
-#if 0
-		// Only rename the executable if it is transferred.
-		bool xferExec = true;
-		job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
-
-		if( xferExec ) {
-			dprintf( D_FULLDEBUG, "Changing the executable name\n" );
-			job_ad->Assign(ATTR_JOB_CMD,CONDOR_EXEC );
-		}
-#endif
-
 		filetrans = new FileTransfer();
 		auto reuse_dir = Starter->getDataReuseDirectory();
 		if (reuse_dir) {
@@ -2828,7 +2817,6 @@ JICShadow::initUserCredentials() {
 	dprintf(D_FULLDEBUG, "CREDMON: obtaining credentials for %s from shadow %s\n",
 		fullusername.c_str(), shadow->addr() );
 
-#if 1
 	unsigned char * cred = NULL;
 	int credlen = 0;
 
@@ -2854,7 +2842,7 @@ JICShadow::initUserCredentials() {
 	}
 	dprintf(D_FULLDEBUG, "CREDMON: got a cred of size %d bytes\n", credlen);
 
-	MyString ccfile;
+	std::string ccfile;
 	long long res = store_cred_blob(fullusername.c_str(), ADD_KRB_MODE, cred, credlen, NULL, ccfile);
 	SecureZeroMemory(cred, credlen);
 	free(cred);
@@ -2870,67 +2858,6 @@ JICShadow::initUserCredentials() {
 		dprintf(D_ALWAYS, "CREDMON: credmon failed to produce file : %s\n", ccfile.c_str());
 		return false;
 	}
-
-#else
-	// get credential from shadow
-	MyString credential;
-	shadow->getUserCredential(user.c_str(), domain.c_str(), credential);
-	dprintf(D_FULLDEBUG, "CREDMON: got cred %s\n", credential.c_str());
-
-	//
-	// We should refactor the below code and that of ZKM_UNIX_STORE_CRED
-	// as they are essentially identical other than copying the creds to
-	// the sandbox
-	//
-
-	// create filenames
-	char tmpfilename[PATH_MAX];
-	char filename[PATH_MAX];
-	sprintf(tmpfilename, "%s%c%s.cred.tmp", cred_dir, DIR_DELIM_CHAR, user.c_str());
-	sprintf(filename, "%s%c%s.cred", cred_dir, DIR_DELIM_CHAR, user.c_str());
-	dprintf(D_FULLDEBUG, "CREDMON: writing data to %s\n", tmpfilename);
-
-	int rawlen = -1;
-	unsigned char* rawbuf = NULL;
-	zkm_base64_decode(credential.c_str(), &rawbuf, &rawlen);
-
-	if (rawlen <= 0) {
-		dprintf(D_ALWAYS, "CREDMON: failed to decode credential into file (%s)!\n", filename);
-		free(rawbuf);
-		return false;
-	}
-
-	// write temp file
-	rc = write_secure_file(tmpfilename, rawbuf, rawlen, true);
-
-	// caller of condor_base64_decode is responsible for freeing buffer
-	free(rawbuf);
-
-	if (rc != SUCCESS) {
-		dprintf(D_ALWAYS, "CREDMON: failed to write secure temp file %s\n", tmpfilename);
-		return false;
-	}
-
-	// now move into place
-	dprintf(D_SECURITY | D_VERBOSE, "CREDMON: renaming %s to %s\n", tmpfilename, filename);
-	priv_state priv = set_root_priv();
-	rc = rename(tmpfilename, filename);
-	set_priv(priv);
-
-	if (rc == -1) {
-		dprintf(D_ALWAYS, "CREDMON: failed to rename %s to %s\n", tmpfilename, filename);
-
-		// should we rm tmpfilename ?
-		return false;
-	}
-
-	// now signal the credmon
-	rc = credmon_poll(user.c_str(), false, true);
-	if(!rc) {
-		dprintf(D_ALWAYS, "CREDMON: credmon failed to produce .cc file!\n");
-		return false;
-	}
-#endif
 
 	// this will set up the credentials in the sandbox and set a timer to
 	// do it periodically.  propagate any errors.

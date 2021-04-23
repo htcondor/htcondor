@@ -255,8 +255,8 @@ public:
 		/** Set up the complete environment for the job.  This includes
 			STARTER_JOB_ENVIRONMENT, the job ClassAd, and PublishToEnv()
 		*/
-	bool GetJobEnv( ClassAd *jobad, Env *job_env, MyString *env_errors );
-	
+	bool GetJobEnv( ClassAd *jobad, Env *job_env, std::string & env_errors );
+
 		/** Pointer to our JobInfoCommuniator object, which abstracts
 			away any details about our communications with whatever
 			entity is controlling our job.  This way, the starter can

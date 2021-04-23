@@ -357,7 +357,7 @@ class OptionalCreateProcessArgs {
         char const *      daemon_sock,
         std::string &     err_return_msg,
         FilesystemRemap * remap,
-        long		 	  as_hard_limit
+        long              as_hard_limit
     ) :
         _priv(priv), reaper_id(reaper_id), want_command_port(want_command_port),
         want_udp_command_port(want_udp_command_port), _env(env), _cwd(cwd),
@@ -414,7 +414,7 @@ class OptionalCreateProcessArgs {
     char const *      daemon_sock;
     std::string &     err_return_msg;
     FilesystemRemap * _remap;
-    long		 	  as_hard_limit;
+    long              as_hard_limit;
 
     // We'd like to use std::optional for the std::string reference, but
     // we can't do that until C++17 is a thing for us.  Instead, initialize
@@ -1391,7 +1391,6 @@ class DaemonCore : public Service
         FilesystemRemap *remap               = NULL,
         long            as_hard_limit        = 0l
         );
-
 
     int CreateProcessNew(
         const std::string & name,

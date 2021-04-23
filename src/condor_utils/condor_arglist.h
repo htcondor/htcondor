@@ -188,6 +188,7 @@ class ArgList {
 
 		// ...
 	void GetArgsStringForLogging( MyString * result ) const;
+	void GetArgsStringForLogging( std::string & result ) const;
 
 		// Return a NULL-terminated string array of args.
 		// Caller should delete array (e.g. with deleteStringArray())

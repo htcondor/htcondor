@@ -108,7 +108,6 @@ public:
 		@return USER_AUTH_SUCCESS -- if success, USER_AUTH_FAILURE -- if failer
                 USER_ID_REQUIRED -- if user id is required but the caller did not pass in
 	*/
-	int Verify( DCpermission perm, const condor_sockaddr& addr, const char * user, MyString *allow_reason, MyString *deny_reason );
 	int Verify( DCpermission perm, const condor_sockaddr& addr, const char * user, std::string & allow_reason, std::string & deny_reason );
 
 	/** Dynamically opens a hole in the authorization settings for the
@@ -118,22 +117,22 @@ public:
 	                     "user/IP" or just "IP" for any user.
 	        @return      true on success, false on failure.
 	*/
-	bool PunchHole(DCpermission perm, const MyString& id);
+	bool PunchHole(DCpermission perm, const std::string& id);
 
 	/** Remove an authorization hole previously opened using PunchHole().
 	        @param  perm The permission level that was opened.
 	        @param  id   The user / IP that the hole was opened for.
 	        @return      true on success, false on failure.
 	*/
-	bool FillHole(DCpermission perm, const MyString& id);
+	bool FillHole(DCpermission perm, const std::string& id);
 
 private:
 
-    typedef HashTable <MyString, perm_mask_t> UserPerm_t;     // <userid, mask> pair
+    typedef HashTable <std::string, perm_mask_t> UserPerm_t;     // <userid, mask> pair
     /* This is for listing users per host */
-    typedef HashTable <MyString, StringList *>    UserHash_t;
+    typedef HashTable <std::string, StringList *>    UserHash_t;
 
-    typedef HashTable <MyString, int> HolePunchTable_t;
+    typedef HashTable <std::string, int> HolePunchTable_t;
 
     typedef std::vector<std::string> netgroup_list_t;
 
@@ -144,7 +143,7 @@ private:
 		NetStringList* deny_hosts;
 		UserHash_t* allow_users;
 		UserHash_t* deny_users;
-		HolePunchTable_t* hole_punch_table;
+//		HolePunchTable_t* hole_punch_table;
 
         // used if netgroups are supported
         netgroup_list_t allow_netgroups;
@@ -156,7 +155,7 @@ private:
 			allow_users = NULL;
 			deny_users  = NULL;
 			behavior = USERVERIFY_USE_TABLE;
-			hole_punch_table = NULL;
+//			hole_punch_table = NULL;
 		}
 		~PermTypeEntry(); 
 	};
@@ -169,9 +168,9 @@ private:
 	perm_mask_t allow_mask(DCpermission perm);
 	perm_mask_t deny_mask(DCpermission perm);
 
-	void PermMaskToString(perm_mask_t mask, MyString &mask_str);
-	void UserHashToString(UserHash_t *user_hash, MyString &result);
-	void AuthEntryToString(const struct in6_addr & host, const char * user, perm_mask_t mask, MyString &result);
+	void PermMaskToString(perm_mask_t mask, std::string &mask_str);
+	void UserHashToString(UserHash_t *user_hash, std::string &result);
+	void AuthEntryToString(const struct in6_addr & host, const char * user, perm_mask_t mask, std::string &result);
 	void PrintAuthTable(int dprintf_level);
 
 		// See if there is an authorization policy entry for a specific user at

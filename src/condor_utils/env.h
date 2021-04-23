@@ -141,10 +141,12 @@ class Env {
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V2 format.
 	bool MergeFromV2Raw( const char *delimitedString, MyString *error_msg );
+	bool MergeFromV2Raw( const char *delimitedString, std::string & error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V1 format.
 	bool MergeFromV1Raw( const char *delimitedString, MyString *error_msg );
+	bool MergeFromV1Raw( const char *delimitedString, std::string & error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V1or2 format,
@@ -209,6 +211,7 @@ class Env {
 		// If mark_v2=true, then result will be identifiable as V2 by
 		// MergeV1or2()
 	bool getDelimitedStringV2Raw(MyString *result,MyString *error_msg,bool mark_v2=false) const;
+	bool getDelimitedStringV2Raw(std::string & result, bool mark_v2=false) const;
 
 	 // old-style ; or | delimited
 	bool getDelimitedStringV1Raw(MyString *result,MyString *error_msg,char delim='\0') const;
@@ -232,6 +235,7 @@ class Env {
 
 		// Get a string describing the environment in this Env object.
 	void getDelimitedStringForDisplay(MyString *result) const;
+	void getDelimitedStringForDisplay(std::string & result) const;
 
 #if defined(WIN32)
 		// Caller should delete the string.
@@ -245,6 +249,8 @@ class Env {
 		// Walk the environment, calling walk_func for each entry until walk_func returns false
 	void Walk(bool (*walk_func)(void* pv, const MyString &var, MyString &val), void* pv);
 	void Walk(bool (*walk_func)(void* pv, const MyString &var, const MyString &val), void* pv) const;
+
+    void Walk(bool (*walk_func)(void* pv, const std::string & var, const std::string & val), void* pv) const;
 
 	bool GetEnv(MyString const &var,MyString &val) const;
 	bool GetEnv(const std::string &var, std::string &val) const;

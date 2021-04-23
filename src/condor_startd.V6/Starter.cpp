@@ -815,7 +815,7 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 	bool slot_arg = false;
 	enum { APPEND_NOTHING, APPEND_SLOT, APPEND_CLUSTER, APPEND_JOBID } append = APPEND_SLOT;
 
-	MyString ext;
+	std::string ext;
 	if (param(ext, "STARTER_LOG_NAME_APPEND")) {
 		slot_arg = true;
 		if (MATCH == strcasecmp(ext.c_str(), "Slot")) {
@@ -1126,8 +1126,8 @@ int Starter::execDCStarter(
 	}
 
 	if(IsFulldebug(D_FULLDEBUG)) {
-		MyString args_string;
-		final_args->GetArgsStringForDisplay(&args_string);
+		std::string args_string;
+		final_args->GetArgsStringForDisplay(args_string);
 		dprintf( D_FULLDEBUG, "About to Create_Process \"%s\"\n",
 				 args_string.c_str() );
 	}
@@ -1137,7 +1137,7 @@ int Starter::execDCStarter(
 
 	std::string sockBaseName( "starter" );
 	if( claim ) { sockBaseName = claim->rip()->r_id_str; }
-	MyString daemon_sock = SharedPortEndpoint::GenerateEndpointName( sockBaseName.c_str() );
+	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName( sockBaseName.c_str() );
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
 		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds,

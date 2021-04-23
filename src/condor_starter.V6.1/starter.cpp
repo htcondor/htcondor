@@ -802,23 +802,19 @@ static bool extract_delimited_data_as_base64(
 	char const *begin_marker,
 	char const *end_marker,
 	std::string &output_buffer,
-	MyString *error_msg)
+	std::string &error_msg)
 {
 	int start = find_str_in_buffer(input_buffer,input_len,begin_marker);
 	int end = find_str_in_buffer(input_buffer,input_len,end_marker);
 	if( start < 0 ) {
-		if( error_msg ) {
-			error_msg->formatstr("Failed to find '%s' in input: %.*s",
-							   begin_marker,input_len,input_buffer);
-		}
+		formatstr(error_msg,"Failed to find '%s' in input: %.*s",
+							begin_marker,input_len,input_buffer);
 		return false;
 	}
 	start += strlen(begin_marker);
 	if( end < 0 || end < start ) {
-		if( error_msg ) {
-			error_msg->formatstr("Failed to find '%s' in input: %.*s",
-							   end_marker,input_len,input_buffer);
-		}
+		formatstr(error_msg,"Failed to find '%s' in input: %.*s",
+							end_marker,input_len,input_buffer);
 		return false;
 	}
 	char *encoded = condor_base64_encode((unsigned char const *)input_buffer+start,end-start);
@@ -834,23 +830,19 @@ static bool extract_delimited_data(
 	char const *begin_marker,
 	char const *end_marker,
 	std::string &output_buffer,
-	MyString *error_msg)
+	std::string &error_msg)
 {
 	int start = find_str_in_buffer(input_buffer,input_len,begin_marker);
 	int end = find_str_in_buffer(input_buffer,input_len,end_marker);
 	if( start < 0 ) {
-		if( error_msg ) {
-			error_msg->formatstr("Failed to find '%s' in input: %.*s",
-							   begin_marker,input_len,input_buffer);
-		}
+		formatstr(error_msg,"Failed to find '%s' in input: %.*s",
+							begin_marker,input_len,input_buffer);
 		return false;
 	}
 	start += strlen(begin_marker);
 	if( end < 0 || end < start ) {
-		if( error_msg ) {
-			error_msg->formatstr("Failed to find '%s' in input: %.*s",
-							   end_marker,input_len,input_buffer);
-		}
+		formatstr(error_msg,"Failed to find '%s' in input: %.*s",
+							end_marker,input_len,input_buffer);
 		return false;
 	}
 	formatstr(output_buffer,"%.*s",end-start,input_buffer+start);
@@ -1235,7 +1227,7 @@ int
 Starter::startSSHD( int /*cmd*/, Stream* s )
 {
 		// This command should only be allowed by the job owner.
-	MyString error_msg;
+	std::string error_msg;
 	Sock *sock = (Sock*)s;
 	char const *fqu = sock->getFullyQualifiedUser();
 	std::string job_owner;
@@ -1336,7 +1328,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	param(ssh_keygen,"SSH_TO_JOB_SSH_KEYGEN","/usr/bin/ssh-keygen");
 	param(ssh_keygen_args,"SSH_TO_JOB_SSH_KEYGEN_ARGS","\"-N '' -C '' -q -f %f -t rsa\"");
 	ssh_keygen_arglist.AppendArg(ssh_keygen);
-	if( !ssh_keygen_arglist.AppendArgsV2Quoted(ssh_keygen_args.c_str(),&error_msg) ) {
+	if( !ssh_keygen_arglist.AppendArgsV2Quoted(ssh_keygen_args.c_str(), error_msg) ) {
 		return SSHDFailed(s,
 						  "SSH_TO_JOB_SSH_KEYGEN_ARGS is misconfigured: %s",
 						  error_msg.c_str());
@@ -1344,14 +1336,14 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 
 	std::string client_keygen_args;
 	input.LookupString(ATTR_SSH_KEYGEN_ARGS,client_keygen_args);
-	if( !ssh_keygen_arglist.AppendArgsV2Raw(client_keygen_args.c_str(),&error_msg) ) {
+	if( !ssh_keygen_arglist.AppendArgsV2Raw(client_keygen_args.c_str(), error_msg) ) {
 		return SSHDFailed(s,
 						  "Failed to produce ssh-keygen arg list: %s",
 						  error_msg.c_str());
 	}
 
-	MyString ssh_keygen_cmd;
-	if(!ssh_keygen_arglist.GetArgsStringSystem(&ssh_keygen_cmd,0)) {
+	std::string ssh_keygen_cmd;
+	if(!ssh_keygen_arglist.GetArgsStringSystem( ssh_keygen_cmd,0)) {
 		return SSHDFailed(s, "Failed to produce ssh-keygen command string" );
 	}
 
@@ -1371,7 +1363,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		// save the environment so that it can be restored when the
 		// ssh session starts and our shell setup script is called.
 	Env setup_env;
-	if( !GetJobEnv( jobad, &setup_env, &error_msg ) ) {
+	if( !GetJobEnv( jobad, &setup_env,  error_msg ) ) {
 		return SSHDFailed(
 			s,"Failed to get job environment: %s",error_msg.c_str());
 	}
@@ -1413,6 +1405,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		// by checking for a magic success string at the end of the output.
 	int setup_reaper = 1;
 	if( privSepHelper() ) {
+	    std::string error_msg;
 		privSepHelper()->create_process(
 			ssh_to_job_sshd_setup.c_str(),
 			setup_args,
@@ -1424,7 +1417,9 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 			NULL,
 			setup_reaper,
 			setup_opt_mask,
-			NULL);
+			NULL,
+			NULL,
+			error_msg);
 	}
 	else {
 		daemonCore->Create_Process(
@@ -1475,7 +1470,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 
 		// look for magic success string
 	if( find_str_in_buffer(setup_output,setup_output_len,"condor_ssh_to_job_sshd_setup SUCCESS") < 0 ) {
-		error_msg.formatstr("condor_ssh_to_job_sshd_setup failed: %s",
+		formatstr(error_msg, "condor_ssh_to_job_sshd_setup failed: %s",
 						  setup_output);
 		free( setup_output );
 		return SSHDFailed(s,"%s",error_msg.c_str());
@@ -1494,7 +1489,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 			"condor_ssh_to_job_sshd_setup SSHD DIR BEGIN\n",
 			"\ncondor_ssh_to_job_sshd_setup SSHD DIR END\n",
 			session_dir,
-			&error_msg);
+			error_msg);
 	}
 
 	std::string sshd_user;
@@ -1505,7 +1500,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 			"condor_ssh_to_job_sshd_setup SSHD USER BEGIN\n",
 			"\ncondor_ssh_to_job_sshd_setup SSHD USER END\n",
 			sshd_user,
-			&error_msg);
+			error_msg);
 	}
 
 	std::string public_host_key;
@@ -1516,7 +1511,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 			"condor_ssh_to_job_sshd_setup PUBLIC SERVER KEY BEGIN\n",
 			"condor_ssh_to_job_sshd_setup PUBLIC SERVER KEY END\n",
 			public_host_key,
-			&error_msg);
+			error_msg);
 	}
 
 	std::string private_client_key;
@@ -1527,7 +1522,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 			"condor_ssh_to_job_sshd_setup AUTHORIZED CLIENT KEY BEGIN\n",
 			"condor_ssh_to_job_sshd_setup AUTHORIZED CLIENT KEY END\n",
 			private_client_key,
-			&error_msg);
+			error_msg);
 	}
 
 	free( setup_output );
@@ -1554,7 +1549,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	ArgList sshd_arglist;
 	std::string sshd_arg_string;
 	param(sshd_arg_string,"SSH_TO_JOB_SSHD_ARGS","\"-i -e -f %f\"");
-	if( !sshd_arglist.AppendArgsV2Quoted(sshd_arg_string.c_str(),&error_msg) )
+	if( !sshd_arglist.AppendArgsV2Quoted(sshd_arg_string.c_str(), error_msg) )
 	{
 		return SSHDFailed(s,"Invalid SSH_TO_JOB_SSHD_ARGS (%s): %s",
 						  sshd_arg_string.c_str(),error_msg.c_str());
@@ -1594,7 +1589,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	ClassAd *sshd_ad = new ClassAd(*jobad);
 	sshd_ad->Assign(ATTR_JOB_CMD,sshd);
 	CondorVersionInfo ver_info;
-	if( !sshd_arglist.InsertArgsIntoClassAd(sshd_ad,&ver_info,&error_msg) ) {
+	if( !sshd_arglist.InsertArgsIntoClassAd(sshd_ad,&ver_info, error_msg) ) {
 		return SSHDFailed(s,
 			"Failed to insert args into sshd job description: %s",
 			error_msg.c_str());
@@ -1618,7 +1613,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 			dprintf(D_ALWAYS, "Not setting LD_PRELOAD=%s for sshd, as file does not exist\n", getpwnampath.c_str());
 		}
 	}
-	if( !setup_env.InsertEnvIntoClassAd(sshd_ad,&error_msg,NULL,&ver_info) ) {
+	if( !setup_env.InsertEnvIntoClassAd(sshd_ad, error_msg,NULL,&ver_info) ) {
 		return SSHDFailed(s,
 			"Failed to insert environment into sshd job description: %s",
 			error_msg.c_str());
@@ -1780,7 +1775,7 @@ Starter::Hold( void )
 bool Starter::loadUserRegistry(const ClassAd * JobAd)
 {
 	m_owner_profile.update ();
-	MyString username(m_owner_profile.username());
+	std::string username(m_owner_profile.username());
 
 	/*************************************************************
 	NOTE: We currently *ONLY* support loading slot-user profiles.
@@ -1801,12 +1796,12 @@ bool Starter::loadUserRegistry(const ClassAd * JobAd)
 
 	// load the slot user registry if it is wanted or needed. This can take about 30 seconds to load
 	if (load_profile) {
-		dprintf(D_FULLDEBUG, "Loading registry hives for %s\n", username.Value());
+		dprintf(D_FULLDEBUG, "Loading registry hives for %s\n", username.c_str());
 		if ( ! m_owner_profile.load()) {
-			dprintf(D_ALWAYS, "Failed to load registry hives for %s\n", username.Value());
+			dprintf(D_ALWAYS, "Failed to load registry hives for %s\n", username.c_str());
 			return false;
 		} else {
-			dprintf(D_ALWAYS, "Loaded Registry hives for %s\n", username.Value());
+			dprintf(D_ALWAYS, "Loaded Registry hives for %s\n", username.c_str());
 		}
 	}
 
@@ -3135,28 +3130,24 @@ Starter::publishPostScriptUpdateAd( ClassAd* ad )
 }
 
 bool
-Starter::GetJobEnv( ClassAd *jobad, Env *job_env, MyString *env_errors )
+Starter::GetJobEnv( ClassAd *jobad, Env *job_env, std::string & env_errors )
 {
 	char *env_str = param( "STARTER_JOB_ENVIRONMENT" );
 
 	ASSERT( jobad );
 	ASSERT( job_env );
 	if( !job_env->MergeFromV1RawOrV2Quoted(env_str,env_errors) ) {
-		if( env_errors ) {
-			env_errors->formatstr_cat(
-				" The full value for STARTER_JOB_ENVIRONMENT: %s\n",env_str);
-		}
+		formatstr_cat(env_errors,
+			" The full value for STARTER_JOB_ENVIRONMENT: %s\n",env_str);
 		free(env_str);
 		return false;
 	}
 	free(env_str);
 
 	if(!job_env->MergeFrom(jobad,env_errors)) {
-		if( env_errors ) {
-			env_errors->formatstr_cat(
+		formatstr_cat(env_errors,
 				" (This error was from the environment string in the job "
 				"ClassAd.)");
-		}
 		return false;
 	}
 

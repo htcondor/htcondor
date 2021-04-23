@@ -53,6 +53,7 @@ bool printExitString( ClassAd* ad, int exit_reason, std::string &str );
 // return value is the length of the resulting string.
 // NOTE: This function does not ensure that the first character isn't
 //   a digit. For current callers, this is not a problem.
+int cleanStringForUseAsAttr(std::string &str, char chReplace=0, bool compact=true);
 int cleanStringForUseAsAttr(MyString &str, char chReplace=0, bool compact=true);
 
 // Create an empty job ad, with sensible defaults for all of the attributes

@@ -265,7 +265,7 @@ CODMgr::release( Stream* s, ClassAd* req, Claim* claim )
 int
 CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 {
-	MyString err_msg;
+	std::string err_msg;
 	ClassAd *mach_classad = rip->r_classad;
 
 	switch( claim->state() ) {
@@ -361,7 +361,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 int
 CODMgr::deactivate( Stream* s, ClassAd* req, Claim* claim )
 {
-	MyString err_msg;
+	std::string err_msg;
 	VacateType vac_type = getVacateType( req );
 
 	claim->setPendingCmd( CA_DEACTIVATE_CLAIM );
@@ -428,7 +428,7 @@ CODMgr::suspend( Stream* s, ClassAd* /*req*/ /*UNUSED*/, Claim* claim )
 {
 	int rval;
 	ClassAd reply;
-	MyString line;
+	std::string line;
 
 	switch( claim->state() ) {
 
@@ -500,7 +500,7 @@ CODMgr::resume( Stream* s, ClassAd* /*req*/ /*UNUSED*/, Claim* claim )
 {
 	int rval;
 	ClassAd reply;
-	MyString line;
+	std::string line;
 
 	switch( claim->state() ) {
 

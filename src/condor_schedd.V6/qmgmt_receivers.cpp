@@ -525,7 +525,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "	flags = 0x%x\n", flags );
 
 		int terrno = 0;
-		MyString filename; // set to the filename that the data was spooled to.
+		std::string filename; // set to the filename that the data was spooled to.
 		if (cluster_id != active_cluster_num) {
 			return -1;
 		}

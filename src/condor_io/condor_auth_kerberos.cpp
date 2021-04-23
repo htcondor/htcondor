@@ -50,7 +50,7 @@ const char STR_DEFAULT_CONDOR_SERVICE[] = "host";
 #define KERBEROS_MUTUAL  3
 #define KERBEROS_PROCEED 4
 
-HashTable<MyString, MyString> * Condor_Auth_Kerberos::RealmMap = 0;
+HashTable<std::string, std::string> * Condor_Auth_Kerberos::RealmMap = 0;
 //----------------------------------------------------------------------
 // Kerberos Implementation
 //----------------------------------------------------------------------
@@ -1280,7 +1280,7 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
     // two cases, if domain is the same as the current uid domain,
     // then we are okay, other wise, see if we have a map
     if (RealmMap) {
-        MyString from(domain), to;
+        std::string from(domain), to;
         if (RealmMap->lookup(from, to) != -1) {
 			if (IsFulldebug(D_SECURITY)) {
 				dprintf (D_SECURITY, "KERBEROS: mapping realm %s to domain %s.\n", 
@@ -1354,7 +1354,7 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 		char *f, * t;
 		while ( (f = from.next()) ) {
 			t = to.next();
-			RealmMap->insert(MyString(f), MyString(t));
+			RealmMap->insert(std::string(f), std::string(t));
 			from.deleteCurrent();
 			to.deleteCurrent();
 		}

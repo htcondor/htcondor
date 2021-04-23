@@ -802,6 +802,14 @@ ArgList::GetArgsStringForDisplay(std::string & result, int start_arg) const
 	GetArgsStringV2Raw(result, start_arg);
 }
 
+void
+ArgList::GetArgsStringForLogging( std::string & result ) const {
+    MyString ms(result);
+    GetArgsStringForLogging(& ms);
+    result = ms;
+}
+
+
 // Separate arguments with a space.  Replace whitespace in each argument
 // with their C-style escapes.
 void ArgList::GetArgsStringForLogging( MyString * result ) const {

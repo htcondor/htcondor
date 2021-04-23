@@ -481,18 +481,21 @@ in their job submit files.
 
 .. only:: Vault
 
+    .. _installing_credmon_vault:
+
     Using Vault as the OAuth client
     '''''''''''''''''''''''''''''''
 
     To instead configure HTCondor to use Vault as the OAuth client,
-    install the ``condor-credmon-vault`` rpm.  Also install the
-    `htgettoken <https://github.com/fermitools/htgettoken>`_
+    install the ``condor-credmon-vault`` rpm.  Also install the htgettoken
+    (`https://github.com/fermitools/htgettoken <https://github.com/fermitools/htgettoken>`_)
     rpm on the submit machine.  Additionally, on the submit machine
     set the ``SEC_CREDENTIAL_GETTOKEN_OPTS`` configuration option to
     ``-a <vault.name>`` where <vault.name> is the fully qualified domain name
     of the Vault machine.  *condor_submit* users will then be able to select
     the oauth services that are defined on the Vault server.  See the
-    `htvault-config <https://gitub.com/fermitools/htvault-config>`_
+    htvault-config
+    (`https://github.com/fermitools/htvault-config <https://github.com/fermitools/htvault-config>`_)
     documentation to see how to set up and configure the Vault server.
 
 Configuring HTCondor for Multiple Platforms

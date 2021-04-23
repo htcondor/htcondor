@@ -85,7 +85,7 @@ void
 LoadQueue::display( Resource* rip )
 {
 	int i, j;
-	MyString msg;
+	std::string msg;
 	msg += "LoadQueue: ";
 	char numbuf[64];
 	for( i=0; i<q_size; i++ ) {

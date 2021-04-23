@@ -454,6 +454,14 @@ bool YourStringDeserializer::deserialize_string(MyString & val, const char * sep
 	return true;
 }
 
+bool YourStringDeserializer::deserialize_string(std::string & val, const char * sep)
+{
+	const char * p; size_t len;
+	if ( ! deserialize_string(p, len, sep)) return false;
+	val.assign(p, len);
+	return true;
+}
+
 // force instantiation of the serialize and deserialize functions that users of condor_utils will need
 template bool MyString::serialize_int<int>(int val);
 template bool MyString::serialize_int<long>(long val);
@@ -1007,11 +1015,25 @@ MyStringFpSource::readLine(MyString & str, bool append /* = false*/)
 }
 
 bool
+MyStringFpSource::readLine(std::string & str, bool append /* = false*/)
+{
+    return ::readLine(str, fp, append);
+}
+
+bool
 MyStringFpSource::isEof()
 {
 	return feof(fp) != 0;
 }
 
+
+bool
+MyStringCharSource::readLine(std::string & str, bool append /* = false*/) {
+    MyString ms(str);
+    bool rv = readLine(ms, append);
+    str = ms;
+    return rv;
+}
 
 // the MyStringCharSource scans a string buffer returning
 // whenver it sees a \n

@@ -74,10 +74,10 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	}
 
 	const char *executable = NULL;
-	MyString valgrindPath; // outside if so executable is valid!
+	std::string valgrindPath; // outside if so executable is valid!
 	if ( shallowOpts.runValgrind ) {
 		valgrindPath = which( valgrind_exe );
-		if ( valgrindPath == "" ) {
+		if ( valgrindPath.empty()) {
 			fprintf( stderr, "ERROR: can't find %s in PATH, aborting.\n",
 						 valgrind_exe );
 			fclose(pSubFile);
@@ -249,7 +249,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg(deepOpts.strNotification);
 	}
 
-	if(deepOpts.strDagmanPath != "") {
+	if(!deepOpts.strDagmanPath.empty()) {
 		args.AppendArg("-Dagman");
 		args.AppendArg(deepOpts.strDagmanPath);
 	}
@@ -421,7 +421,7 @@ DagmanUtils::runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		}
 	}
 
-	if ( deepOpts.strDagmanPath != "" ) {
+	if ( !deepOpts.strDagmanPath.empty() ) {
 		args.AppendArg( "-dagman" );
 		args.AppendArg( deepOpts.strDagmanPath.c_str() );
 	}
@@ -546,11 +546,11 @@ DagmanUtils::setUpOptions( SubmitDagDeepOptions &deepOpts,
 
 	shallowOpts.strLockFile = shallowOpts.primaryDagFile + ".lock";
 
-	if (deepOpts.strDagmanPath == "" ) {
+	if (deepOpts.strDagmanPath.empty()) {
 		deepOpts.strDagmanPath = which( dagman_exe );
 	}
 
-	if (deepOpts.strDagmanPath == "")
+	if (deepOpts.strDagmanPath.empty())
 	{
 		fprintf( stderr, "ERROR: can't find %s in PATH, aborting.\n",
 				 dagman_exe );

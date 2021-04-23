@@ -21,6 +21,12 @@ New Features:
 - gdb and strace should now work in Docker Universe jobs.
   :jira:`349`
 
+- The *condor_startd* on platforms that support Docker now
+  runs a simple Docker container at startup to verify that
+  docker universe completely works.  This can be disabled with the
+  knob DOCKER_PERFORM_TEST
+  :jira:`325`
+
 Bugs Fixed:
 
 - None.
