@@ -15,11 +15,16 @@ Release Notes:
 
 - HTCondor version 9.0.0 released on April 14, 2021.
 
+- The installer was for Windows platforms was not ready for 9.0.0.
+  Windows support will appear in 9.0.1.
+
 - Removed support for CREAM and Unicore grid jobs, glexec privilege separation, DRMAA, and *condor_cod*.
 
-Known Issue:
+Known Issues:
 
 - MUNGE security is temporarily broken.
+
+- The *bosco_cluster* command is temporarily broken.
 
 New Features:
 
