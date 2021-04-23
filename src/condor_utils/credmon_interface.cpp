@@ -30,20 +30,19 @@
 
 // constuct filename <cred_dir>/<user><ext>
 // if user ends in @domain, only part before the @ will be used
-static const char * credmon_user_filename(MyString & file, const char * cred_dir, const char *user, const char * ext=NULL)
+static const char * credmon_user_filename(std::string & file, const char * cred_dir, const char *user, const char * ext=NULL)
 {
 	size_t len = strlen(cred_dir) + strlen(user) + 10;
 	if (ext) {
 		len += strlen(ext);
 	}
-	file.reserve_at_least((int)len);
 	dircat(cred_dir, user, file);
 
 	// if username has a @ we need to remove that from the filename
 	const char *at = strchr(user, '@');
 	if (at) {
-		int ix = file.FindChar('@', (int)strlen(cred_dir));
-		file.truncate(ix);
+		size_t ix = file.find('@', strlen(cred_dir));
+		file.erase(ix);
 	}
 	// append file extension (if any)
 	if (ext) {
@@ -102,7 +101,7 @@ void credmon_clear_completion(int /*cred_type*/, const char * cred_dir)
 	if (! cred_dir)
 		return;
 
-	MyString ccfile;
+	std::string ccfile;
 	dircat(cred_dir, "CREDMON_COMPLETE", ccfile);
 
 	//TODO: the code in the master that was doing this before did not setpriv, should it?
@@ -123,7 +122,7 @@ bool credmon_poll_for_completion(int cred_type, const char * cred_dir, int timeo
 
 	bool success = false;
 
-	MyString ccfile;
+	std::string ccfile;
 	dircat(cred_dir, "CREDMON_COMPLETE", ccfile);
 	for (;;) {
 		// look for existence of file that says everything is up-to-date.
@@ -192,7 +191,7 @@ bool credmon_kick(int cred_type)
 
 	// cred_dir is set, we need to refresh the credmon handle
 	if (cred_dir) {
-		MyString idfile;
+		std::string idfile;
 		dircat(cred_dir, file, idfile);
 
 		int fd = safe_open_no_create(idfile.c_str(), O_RDONLY | _O_BINARY);
@@ -429,7 +428,7 @@ bool credmon_mark_creds_for_sweeping(const char * cred_dir, const char* user) {
 	}
 
 	// construct <cred_dir>/<user>.mark
-	MyString markfile;
+	std::string markfile;
 	const char * markfilename = credmon_user_filename(markfile, cred_dir, user, ".mark");
 
 	priv_state priv = set_root_priv();
@@ -565,7 +564,7 @@ void credmon_sweep_creds(const char * cred_dir, int cred_type)
 #ifdef WIN32
 	// TODO: implement this.
 #else
-	MyString fullpathname;
+	std::string fullpathname;
 	dprintf(D_FULLDEBUG, "CREDMON: scandir(%s)\n", cred_dir);
 	struct dirent **namelist;
 	int n = scandir(cred_dir, &namelist, &markfilter, alphasort);
@@ -635,7 +634,7 @@ bool credmon_clear_mark(const char * cred_dir , const char* user) {
 	}
 
 	// construct /<cred_dir>/<user>.mark
-	MyString markfile;
+	std::string markfile;
 	const char * markfilename = credmon_user_filename(markfile, cred_dir, user, ".mark");
 
 	priv_state priv = set_root_priv();

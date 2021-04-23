@@ -113,7 +113,7 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 			// Make path fully qualified if it is relative to the cwd
 			if (!fullpath(path)) {
 				if (condor_getcwd(full_pathname)) {
-					MyString result;
+					std::string result;
 					full_pathname = dircat(full_pathname.c_str(), path, result);
 					path = full_pathname.c_str();
 				}
