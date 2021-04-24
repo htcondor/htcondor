@@ -116,11 +116,18 @@ done
 
 rm -r external-packages
 
+# Check tarball for externals (in case of download errors)
+for package in $externals; do
+    if ! grep $package tarball/Manifest.txt; then
+        echo "ERROR: external $package is missing!"
+        exit 1
+    fi
+done
+
 # Make necessary?? directories
 mkdir -p tarball/etc/condor/passwords.d
 mkdir -p tarball/etc/condor/tokens.d
 mkdir -p tarball/var/lib/condor/execute
-mkdir -p tarball/var/lib/condor/oauth_credentials
 mkdir -p tarball/var/lib/condor/oauth_credentials
 
 $cmd_dir/make-tarball-links tarball
