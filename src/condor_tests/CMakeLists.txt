@@ -196,10 +196,10 @@ if (BUILD_TESTING)
 		condor_pl_test (lib_auth_protocol-token "TOKEN authentication test" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
 
 		# htcondor.dags test suite
-		condor_pl_test (test_htcondor_dags "htcondor-dags test suite" "quick;ctest")
+		condor_pl_test (test_htcondor_dags "htcondor-dags test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_dags")
 
 		# htcondor.personal test suite
-		condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "quick;ctest")
+		condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_personal")
 
 		# ClassAds test suite
 		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "quick;ctest")
@@ -612,7 +612,7 @@ if (BUILD_TESTING)
 	condor_pl_test(job_filexfer_whento-withinput_van "Vanilla: Multiple input files arrive ok" "filexfer;quick;ctest" CTEST DEPENDS "src/condor_tests/x_job_filexfer_testjob.pl")
 	condor_pl_test(job_filexfer_output_van "Vanilla: Are 6 output files returned" "filexfer;quick;ctest" CTEST DEPENDS "src/condor_tests/x_job_filexfer_testjob.pl")
 	condor_pl_test(job_filexfer_md5-remote_van "Vanilla: Can we move 200 megs and not impact md5 checksum?" "filexfer;quick;ctest" CTEST DEPENDS "src/condor_tests/job_filexfer_md5-remote.pl")
-	condor_pl_test(job_startd_rank_preempt "Does startd rank trump user priority?" "quick;ctest")
+	condor_pl_test(job_startd_rank_preempt "Does startd rank trump user priority?" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(cmd_wait_shows-all "" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog_events.exe")
         add_dependencies_suffix_hack(cmd_wait_shows-all x_write_joblog_events.exe)
 	condor_pl_test(cmd_wait_shows-base "" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog_events.exe")
