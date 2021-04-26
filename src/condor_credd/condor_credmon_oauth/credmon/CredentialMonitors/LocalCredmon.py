@@ -69,7 +69,7 @@ class LocalCredmon(OAuthCredmon):
 
         # Convert the space separated list of audiences to a proper list
         # No aud is valid for scitokens:1.0 tokens.  Also, no resonable default.
-        aud_list = self.token_aud.strip().split(" ")
+        aud_list = self.token_aud.strip().split()
         if aud_list:
             token.update_claims({'aud': aud_list})
 
