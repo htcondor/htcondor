@@ -3,11 +3,11 @@
   <Fragment>
     <UI>
       <Dialog Id="CondorPermCfgDlg" Width="370" Height="270" Title="[ProductName] [Setup]" NoMinimize="yes">
-        <Control Id="HostRead" Type="Text" X="85" Y="60" Width="90" Height="15" TabSkip="no" Text="Host with &amp;Read access:" />
+        <Control Id="HostRead" Type="Text" X="85" Y="60" Width="90" Height="15" TabSkip="no" Text="Account with &amp;Read access:" />
         <Control Id="HostReadEdit" Type="Edit" X="180" Y="58" Width="120" Height="18" Property="HOSTALLOWREAD" Text="{80}" />
-        <Control Id="HostWrite" Type="Text" X="85" Y="80" Width="90" Height="15" TabSkip="no" Text="Host with &amp;Write access:" />
+        <Control Id="HostWrite" Type="Text" X="85" Y="80" Width="90" Height="15" TabSkip="no" Text="Account with &amp;Write access:" />
         <Control Id="HostWriteEdit" Type="Edit" X="180" Y="78" Width="120" Height="18" Property="HOSTALLOWWRITE" Text="{80}" />
-        <Control Id="HostAdmin" Type="Text" X="56" Y="100" Width="138" Height="15" TabSkip="no" Text="Host with &amp;Administrator access:" />
+        <Control Id="HostAdmin" Type="Text" X="56" Y="100" Width="138" Height="15" TabSkip="no" Text="Account with &amp;Administrator access:" />
         <Control Id="HostAdminEdit" Type="Edit" X="180" Y="98" Width="120" Height="18" Property="HOSTALLOWADMINISTRATOR" Text="{80}" />
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
           <Publish Event="NewDialog" Value="CondorJavaCfgDlg">1</Publish>
@@ -20,11 +20,11 @@
         </Control>
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
         <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text>What hosts have access to this machine?</Text>
+          <Text>What accounts have access to this machine?</Text>
         </Control>
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text>{\WixUI_Font_Title}Host Permission Settings</Text>
+          <Text>{\WixUI_Font_Title}Access Permission Settings</Text>
         </Control>
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
       </Dialog>
