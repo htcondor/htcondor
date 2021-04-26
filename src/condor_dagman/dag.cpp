@@ -44,8 +44,6 @@
 #include "condor_string.h"  /* for strnewp() */
 #include "string_list.h"
 #include "condor_daemon_core.h"
-#include "extArray.h"
-#include "HashTable.h"
 #include <set>
 #include "dagman_metrics.h"
 #include "enum_utils.h"
@@ -98,14 +96,14 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
     _maxPostScripts       (maxPostScripts),
 	_maxHoldScripts       (maxHoldScripts),
 	MAX_SIGNAL			  (64),
-	_splices              (hashFunction),
+	_splices              ({}),
 	_dagFiles             (dagFiles),
 	_useDagDir            (useDagDir),
 	_final_job (0),
-	_nodeNameHash		  (hashFunction),
-	_nodeIDHash			  (hashFuncInt),
-	_condorIDHash		  (hashFuncInt),
-	_noopIDHash			  (hashFuncInt),
+	_nodeNameHash		  ({}),
+	_nodeIDHash			  ({}),
+	_condorIDHash		  ({}),
+	_noopIDHash			  ({}),
     _numNodesDone         (0),
     _numNodesFailed       (0),
     _numJobsSubmitted     (0),
@@ -411,10 +409,13 @@ Dag::AddDependency( Job* parent, Job* child )
 //-------------------------------------------------------------------------
 Job * Dag::FindNodeByNodeID (const JobID_t jobID) const {
 	Job *	job = NULL;
-	if ( _nodeIDHash.lookup(jobID, job) != 0 ) {
+	auto findResult = _nodeIDHash.find( jobID );
+	if ( findResult == _nodeIDHash.end() ) {
     	debug_printf( DEBUG_NORMAL, "ERROR: job %d not found!\n", jobID);
 		dprintf(D_ALWAYS | D_BACKTRACE, "caller info");
-		job = NULL;
+	}
+	else {
+		job = (*findResult).second;
 	}
 
 	if ( job ) {
@@ -1359,9 +1360,12 @@ Job * Dag::FindNodeByName (const char * jobName) const {
 	}
 
 	Job *	job = NULL;
-	if ( _nodeNameHash.lookup(jobName, job) != 0 ) {
+	auto findResult = _nodeNameHash.find( jobName );
+	if ( findResult == _nodeNameHash.end() ) {
 		debug_printf( DEBUG_VERBOSE, "ERROR: job %s not found!\n", jobName);
-		job = NULL;
+	}
+	else {
+		job = ( *findResult ).second;
 	}
 
 	if ( job ) {
@@ -1434,10 +1438,14 @@ Dag::NodeExists( const char* nodeName ) const
 
 	// Note:  we don't just call FindNodeByName() here because that would print
 	// an error message if the node doesn't exist.
-  Job *	job = NULL;
-  if ( _nodeNameHash.lookup(nodeName, job) != 0 ) {
-    return false;
-  }
+	Job *job = NULL;
+	auto findResult = _nodeNameHash.find( nodeName );
+	if ( findResult == _nodeNameHash.end() ) {
+		return false;
+	}
+	else {
+		job = ( *findResult ).second;
+	}
 
 	if ( job ) {
 		if ( strcmp( nodeName, job->GetJobName() ) != 0 ) {
@@ -1458,7 +1466,8 @@ Job * Dag::FindNodeByEventID ( const CondorID condorID ) const {
 	Job *	node = NULL;
 	bool isNoop = JobIsNoop( condorID );
 	int id = GetIndexID( condorID );
-	if ( GetEventIDHash( isNoop )->lookup(id, node) != 0 ) {
+	auto findResult = GetEventIDHash( isNoop )->find( id );
+	if ( findResult == GetEventIDHash( isNoop )->end() ) {
 			// Note: eventually get rid of the "(might be because of
 			// node retries)" message here, and have code that explicitly
 			// figures out whether the node was not found because of a
@@ -1467,7 +1476,9 @@ Job * Dag::FindNodeByEventID ( const CondorID condorID ) const {
 					"ERROR: node for condor ID %d.%d.%d not found! "
 					"(might be because of node retries)\n",
 					condorID._cluster, condorID._proc, condorID._subproc);
-		node = NULL;
+	}
+	else {
+		node = (*findResult).second;
 	}
 
 	if ( node ) {
@@ -2726,8 +2737,8 @@ Dag::RestartNode( Job *node, bool recovery )
 			// should *always* be true here, but checking just to be safe.
 		if ( !(node->GetID() == _defaultCondorId) ) {
 			int id = GetIndexID( node->GetID() );
-			if ( GetEventIDHash( node->GetNoop() )->remove( id )
-						!= 0 ) {
+			if ( GetEventIDHash( node->GetNoop() )->erase( id )
+						!= 1 ) {
 				EXCEPT( "Event ID hash table error!" );
 			}
 		}
@@ -3588,7 +3599,6 @@ void
 Dag::CheckThrottleCats()
 {
 	ThrottleByCategory::ThrottleInfo *info;
-	_catThrottles.StartIterations();
 	while ( _catThrottles.Iterate( info ) ) {
 		debug_printf( DEBUG_DEBUG_1, "Category %s has %d jobs, "
 					"throttle setting of %d\n", info->_category->Value(),
@@ -3800,10 +3810,10 @@ Dag::ChooseDotFileName(MyString &dot_file_name)
 //---------------------------------------------------------------------------
 bool Dag::Add( Job& job )
 {
-	int insertResult = _nodeNameHash.insert( job.GetJobName(), &job );
-	ASSERT( insertResult == 0 );
-	insertResult = _nodeIDHash.insert( job.GetJobID(), &job );
-	ASSERT( insertResult == 0 );
+	auto insertJobResult = _nodeNameHash.insert( std::make_pair( job.GetJobName(), &job ) );
+	ASSERT( insertJobResult.second == true );
+	auto insertIdResult = _nodeIDHash.insert( std::make_pair( job.GetJobID(), &job ) );
+	ASSERT( insertIdResult.second == true );
 
 		// Final node status is set to STATUS_NOT_READY here, so it
 		// won't get run even though it has no parents; its status
@@ -4043,19 +4053,19 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 						// table if we don't already have it (e.g., recovery
 						// mode).  (In "normal" mode we should have already
 						// inserted it when we did the condor_submit.)
-					Job *tmpNode = NULL;
 					bool isNoop = JobIsNoop( condorID );
 					ASSERT( isNoop == node->GetNoop() );
 					int id = GetIndexID( condorID );
-					HashTable<int, Job *> *ht =
+					std::map<int, Job *> *ht =
 								GetEventIDHash( isNoop );
-					if ( ht->lookup(id, tmpNode) != 0 ) {
+					auto findResult = ht->find( id );
+					if ( findResult == ht->end() ) {
 							// Node not found.
-						int insertResult = ht->insert( id, node );
-						ASSERT( insertResult == 0 );
+						auto insertResult = ht->insert( std::make_pair( id, node ) );
+						ASSERT( insertResult.second == true );
 					} else {
 							// Node was found.
-						ASSERT( tmpNode == node );
+						ASSERT( (*findResult).second == node );
 					}
 				}
 			} else {
@@ -4088,18 +4098,18 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 				node->SetCondorID( condorID );
 					// Insert this node into the CondorID->node hash
 					// table.
-				Job *tmpNode = NULL;
 				bool isNoop = JobIsNoop( condorID );
 				int id = GetIndexID( condorID );
-				HashTable<int, Job *> *ht =
+				std::map<int, Job *> *ht =
 							GetEventIDHash( isNoop );
-				if ( ht->lookup(id, tmpNode) != 0 ) {
+				auto findResult = ht->find( id );
+				if ( findResult == ht->end() ) {
 						// Node not found.
-					int insertResult = ht->insert( id, node );
-					ASSERT( insertResult == 0 );
+					auto insertResult = ht->insert( std::make_pair( id, node ) );
+					ASSERT( insertResult.second == true );
 				} else {
 						// Node was found.
-					ASSERT( tmpNode == node );
+					ASSERT( (*findResult).second == node );
 				}
 			}
 		} else {
@@ -4126,19 +4136,21 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 						// table if we don't already have it (e.g., recovery
 						// mode).  (In "normal" mode we should have already
 						// inserted it when we did the condor_submit.)
-					Job *tmpNode = NULL;
 					bool isNoop = JobIsNoop( condorID );
 					ASSERT( isNoop == node->GetNoop() );
 					int id = GetIndexID( condorID );
-					HashTable<int, Job *> *ht =
+					std::map<int, Job *> *ht =
 								GetEventIDHash( isNoop );
-					if ( ht->lookup(id, tmpNode) != 0 ) {
+					auto findResult = ht->find( id );
+						// std::map::find() returns an iterator pointing to the desired element, or end() if not found
+					if ( findResult == ht->end() ) {
 							// Node not found.
-						int insertResult = ht->insert( id, node );
-						ASSERT( insertResult == 0 );
+						auto insertResult = ht->insert( std::make_pair( id, node ) );
+							// std::map::insert() returns a pair, second element is the success bool
+						ASSERT( insertResult.second == true );
 					} else {
 							// Node was found.
-						ASSERT( tmpNode == node );
+						ASSERT( (*findResult).second == node );
 					}
 				}
 			} else {
@@ -4270,7 +4282,7 @@ Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node ) const
 }
 
 //---------------------------------------------------------------------------
-HashTable<int, Job *> *
+std::map<int, Job *> *
 Dag::GetEventIDHash(bool isNoop)
 {
 	if ( isNoop ) {
@@ -4281,7 +4293,7 @@ Dag::GetEventIDHash(bool isNoop)
 }
 
 //---------------------------------------------------------------------------
-const HashTable<int, Job *> *
+const std::map<int, Job *> *
 Dag::GetEventIDHash(bool isNoop) const
 {
 	if ( isNoop ) {
@@ -4309,8 +4321,9 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			// Remove the "previous" HTCondor ID for this node from
 			// the ID->node hash table.
 		int id = GetIndexID( node->GetID() );
-		int removeResult = GetEventIDHash( node->GetNoop() )->remove( id );
-		ASSERT( removeResult == 0 );
+		int removeResult = GetEventIDHash( node->GetNoop() )->erase( id );
+			// std::map::erase() returns the number of elements erased
+		ASSERT( removeResult == 1 );
 	}
 	node->SetCondorID( _defaultCondorId );
 
@@ -4459,8 +4472,9 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 	node->SetCondorID( condorID );
 	ASSERT( JobIsNoop( node->GetID() ) == node->GetNoop() );
 	int id = GetIndexID( node->GetID() );
-	int insertResult = GetEventIDHash( node->GetNoop() )->insert( id, node );
-	ASSERT( insertResult == 0 );
+	auto result = GetEventIDHash( node->GetNoop() )->insert( std::make_pair( id, node ) );
+		// std::map::insert() returns a pair, second element is the success bool
+	ASSERT( result.second == true );
 
 	debug_printf( DEBUG_VERBOSE, "\tassigned %s ID (%d.%d.%d)\n",
 				  node->JobTypeString(), condorID._cluster, condorID._proc,
@@ -4818,7 +4832,6 @@ Dag::DeletePinList( PinList &pinList )
 void
 Dag::PrefixAllNodeNames(const MyString &prefix)
 {
-	Job *job = NULL;
 	MyString key;
 
 	debug_printf(DEBUG_DEBUG_1, "Entering: Dag::PrefixAllNodeNames()"
@@ -4832,15 +4845,16 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 	// also fix my node name hash view of the jobs
 
 	// First, wipe out the index.
-	_nodeNameHash.startIterations();
-	while(_nodeNameHash.iterate(key,job)) {
-		_nodeNameHash.remove(key);
+	auto it = _nodeNameHash.begin();
+	while (it != _nodeNameHash.end()) {
+		it = _nodeNameHash.erase(it);
 	}
 
 	// Then, reindex all the jobs keyed by their new name
 	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
 		key = (*it)->GetJobName();
-		if (_nodeNameHash.insert(key, *it) != 0) {
+		auto insertResult = _nodeNameHash.insert(std::make_pair(key, *it));
+		if (insertResult.second != true) {
 			// I'm reinserting everything newly, so this should never happen
 			// unless two jobs have an identical name, which means another
 			// part o the code failed to keep the constraint that all jobs have
@@ -4853,17 +4867,22 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 }
 
 //---------------------------------------------------------------------------
-int 
+bool 
 Dag::InsertSplice(MyString spliceName, Dag *splice_dag)
 {
-	return _splices.insert(spliceName, splice_dag);
+	auto insertResult = _splices.insert(std::make_pair(spliceName, splice_dag));
+	return insertResult.second;
 }
 
 //---------------------------------------------------------------------------
-int
-Dag::LookupSplice(MyString name, Dag *&splice_dag)
+Dag*
+Dag::LookupSplice(MyString name)
 {
-	return _splices.lookup(name, splice_dag);
+	auto findResult = _splices.find(name);
+	if (findResult == _splices.end()) {
+		return nullptr;
+	}
+	return (*findResult).second;
 }
 
 //---------------------------------------------------------------------------
@@ -4935,32 +4954,29 @@ OwnedMaterials*
 Dag::LiftSplices(SpliceLayer layer)
 {
 	//PrintJobList();
-	Dag *splice = NULL;
 	MyString key;
 	OwnedMaterials *om = NULL;
 
 	// if this splice contains no other splices, then relinquish the nodes I own
-	if (layer == DESCENDENTS && _splices.getNumElements() == 0) {
+	if (layer == DESCENDENTS && _splices.size() == 0) {
 		return RelinquishNodeOwnership();
 	}
 
 	// recurse down the splice tree moving everything up into myself.
-	_splices.startIterations();
-	while(_splices.iterate(key, splice)) {
-		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", key.Value());
-		om = splice->LiftSplices(DESCENDENTS);
+	for (auto& splice: _splices) {
+		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", splice.first.Value());
+		om = splice.second->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
-		AssumeOwnershipofNodes(key, om);
+		AssumeOwnershipofNodes(splice.first, om);
 		delete om;
 	}
 
 	// Now delete all of them.
-	_splices.startIterations();
-	while(_splices.iterate(key, splice)) {
-		_splices.remove(key);
-		delete splice;
+	auto it = _splices.begin();
+	while(it != _splices.end()) {
+		it = _splices.erase(it);
 	}
-	ASSERT( _splices.getNumElements() == 0 );
+	ASSERT( _splices.size() == 0 );
 
 	// and prefix them if there was a DIR for the dag.
 	PropagateDirectoryToAllNodes();
@@ -5069,7 +5085,8 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 		debug_printf(DEBUG_DEBUG_1, "Creating view hash fixup for: job %s\n", 
 			key.Value());
 
-		if (_nodeNameHash.insert(key, (*nodes)[i]) != 0) {
+		auto insertResult = _nodeNameHash.insert(std::make_pair(key, (*nodes)[i]));
+		if (insertResult.second == false) {
 			debug_printf(DEBUG_QUIET, 
 				"Found name collision while taking ownership of node: %s\n",
 				key.Value());
@@ -5078,7 +5095,8 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 			(*nodes)[i]->Dump( this );
 			debug_printf(DEBUG_QUIET, "but it collided with key %s, node:\n", 
 				key.Value());
-			if (_nodeNameHash.lookup(key, job) == 0) {
+			auto findResult = _nodeNameHash.find(key);
+			if (findResult != _nodeNameHash.end()) {
 				job->Dump( this );
 			} else {
 				debug_error(1, DEBUG_QUIET, "What? This is impossible!\n");
@@ -5091,7 +5109,8 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 	// 3. Update our node id hash to include the new nodes.
 	for (i = 0; i < nodes->length(); i++) {
 		key_id = (*nodes)[i]->GetJobID();
-		if (_nodeIDHash.insert(key_id, (*nodes)[i]) != 0) {
+		auto insertResult = _nodeIDHash.insert(std::make_pair(key_id, (*nodes)[i])) ;
+		if (insertResult.second != true) {
 			debug_error(1, DEBUG_QUIET, 
 				"Found job id collision while taking ownership of node: %s\n",
 				(*nodes)[i]->GetJobName());

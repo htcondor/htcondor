@@ -49,8 +49,9 @@ ThrottleByCategory::AddCategory( const MyString *category, int maxJobs )
 	ASSERT( category != NULL );
 
 	ThrottleInfo *	info = new ThrottleInfo( category, maxJobs );
-	if ( _throttles.insert( *(info->_category), info ) != 0 ) {
-		EXCEPT( "HashTable error" );
+	auto insertResult = _throttles.insert( std::make_pair( *(info->_category), info ) );
+	if ( insertResult.second == false ) {
+		EXCEPT( "Error adding new throttle category" );
 	}
 
 	return info;
@@ -62,8 +63,8 @@ ThrottleByCategory::SetThrottle( const MyString *category, int maxJobs )
 {
 	ASSERT( category != NULL );
 
-	ThrottleInfo	*info;
-	if ( _throttles.lookup( *category, info ) != 0 ) {
+	ThrottleInfo	*info = _throttles.find( *category );
+	if ( !info ) {
 			// category not in table
 
 			// Coverity complains about not storing the return value here, but
@@ -88,8 +89,8 @@ ThrottleByCategory::GetThrottleInfo( const MyString *category )
 {
 	ASSERT( category != NULL );
 
-	ThrottleInfo	*info;
-	if ( _throttles.lookup( *category, info ) != 0 ) {
+	ThrottleInfo	*info = _throttles.lookup( *category );
+	if ( !info ) {
 		return NULL;
 	} else {
 		return info;

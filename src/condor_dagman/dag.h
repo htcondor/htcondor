@@ -25,8 +25,6 @@
 #include "job.h"
 #include "scriptQ.h"
 #include "condor_constants.h"      /* from condor_includes/ directory */
-#include "HashTable.h"
-#include "extArray.h"
 #include "condor_daemon_core.h"
 #include "read_multiple_logs.h"
 #include "check_events.h"
@@ -725,11 +723,11 @@ class Dag {
 		return JobIsNoop( id ) ? id._subproc : id._cluster; 
 	}
 
-	// return same thing as HashTable.insert()
-	int InsertSplice(MyString spliceName, Dag *splice_dag);
+	// return same thing as std::map::insert()
+	bool InsertSplice(MyString spliceName, Dag *splice_dag);
 
-	// return same thing as HashTable.lookup()
-	int LookupSplice(MyString name, Dag *&splice_dag);
+	// return same thing as std::map::find()
+	Dag* LookupSplice(MyString name);
 
 	// return an array of job pointers to all of the nodes with no
 	// parents in this dag.
@@ -879,7 +877,7 @@ class Dag {
 
   	// A hash table with key of a splice name and value of the dag parse 
 	// associated with the splice.
-	HashTable<MyString, Dag*> _splices;
+	std::map<MyString, Dag*> _splices;
 
 	// A reference to something the dagman passes into the constructor
 	std::list<std::string>& _dagFiles;
@@ -1015,13 +1013,13 @@ class Dag {
 			@param whether the node is a NOOP node
 			@return a pointer to the appropriate hash table
 		*/
-	HashTable<int, Job *> *		GetEventIDHash(bool isNoop);
+	std::map<int, Job *> *		GetEventIDHash(bool isNoop);
 
 		/** Get the appropriate hash table for event ID->node mapping.
 			@param whether the node is a NOOP node
 			@return a pointer to the appropriate hash table
 		*/
-	const HashTable<int, Job *> *		GetEventIDHash(bool isNoop) const;
+	const std::map<int, Job *> *		GetEventIDHash(bool isNoop) const;
 
 	// run DAGs in directories from DAG file paths if true
 	bool _useDagDir;
@@ -1093,16 +1091,16 @@ private:
 
 	bool _provisioner_ready = false;
 
-	HashTable<MyString, Job *>		_nodeNameHash;
+	std::map<MyString, Job *>		_nodeNameHash;
 
-	HashTable<JobID_t, Job *>		_nodeIDHash;
+	std::map<JobID_t, Job *>		_nodeIDHash;
 
 	// Hash by HTCondorID (really just by the cluster ID because all
 	// procs in the same cluster map to the same node).
-	HashTable<int, Job *>			_condorIDHash;
+	std::map<int, Job *>			_condorIDHash;
 
 	// NOOP nodes are indexed by subprocID.
-	HashTable<int, Job *>			_noopIDHash;
+	std::map<int, Job *>			_noopIDHash;
 
     // Number of nodes that are done (completed execution)
     int _numNodesDone;
