@@ -4963,16 +4963,9 @@ Dag::LiftSplices(SpliceLayer layer)
 	}
 
 	// recurse down the splice tree moving everything up into myself.
-<<<<<<< HEAD
 	for (auto& splice: _splices) {
 		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", splice.first.Value());
 		om = splice.second->LiftSplices(DESCENDENTS);
-=======
-	_splices.startIterations();
-	while(_splices.iterate(key, splice)) {
-		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", key.c_str());
-		om = splice->LiftSplices(DESCENDENTS);
->>>>>>> master
 		// this function moves what it needs out of the returned object
 		AssumeOwnershipofNodes(splice.first, om);
 		delete om;
@@ -5101,14 +5094,9 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 				key.c_str());
 			(*nodes)[i]->Dump( this );
 			debug_printf(DEBUG_QUIET, "but it collided with key %s, node:\n", 
-<<<<<<< HEAD
 				key.Value());
 			auto findResult = _nodeNameHash.find(key);
 			if (findResult != _nodeNameHash.end()) {
-=======
-				key.c_str());
-			if (_nodeNameHash.lookup(key, job) == 0) {
->>>>>>> master
 				job->Dump( this );
 			} else {
 				debug_error(1, DEBUG_QUIET, "What? This is impossible!\n");
