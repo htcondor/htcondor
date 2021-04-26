@@ -5526,6 +5526,15 @@ type=path
 default=true
 type=bool
 
+[LOCAL_CREDMON_TOKEN_AUDIENCE]
+default=
+type=string
+
+[LOCAL_CREDMON_TOKEN_VERSION]
+default=scitokens:2.0
+type=string
+
+
 # standard API endpoints for common OAuth token providers
 [BOX_AUTHORIZATION_URL]
 default=https://account.box.com/api/oauth2/authorize
