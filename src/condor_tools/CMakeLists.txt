@@ -75,10 +75,6 @@ if (WANT_FULL_DEPLOYMENT)
 endif(WANT_FULL_DEPLOYMENT)
 clone_install(condor_vacate "${C_BIN}" "condor_reschedule" "${C_BIN}")
 
-if (WINDOWS)
-	clone_install(condor_vacate "${C_BIN}" "condor_squawk" "${C_BIN}")
-endif(WINDOWS)
-
 condor_exe(condor_stats "stats.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 if( WINDOWS )

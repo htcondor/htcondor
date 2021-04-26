@@ -669,7 +669,6 @@ Scheduler::Scheduler() :
 
 		//gotiator = NULL;
 	CondorAdministrator = NULL;
-	Mail = NULL;
 	alive_interval = 0;
 	leaseAliveInterval = 500000;	// init to a nice big number
 	aliveid = -1;
@@ -790,8 +789,6 @@ Scheduler::~Scheduler()
 
 	if (CondorAdministrator)
 		free(CondorAdministrator);
-	if (Mail)
-		free(Mail);
 	if (matches) {
 		matches->startIterations();
 		match_rec *rec;
@@ -12918,11 +12915,6 @@ Scheduler::Init()
 			"WARNING: CONDOR_ADMIN not specified in config file" );
 	}
 
-	if( Mail ) free( Mail );
-	if( ! (Mail=param("MAIL")) ) {
-		EXCEPT( "MAIL not specified in config file" );
-	}	
-
 		// UidDomain will always be defined, since config() will put
 		// in get_local_fqdn() if it's not defined in the file.
 		// See if the value of this changes, since if so, we've got
@@ -13826,10 +13818,6 @@ Scheduler::Register()
 								  &handle_q,
 								  "handle_q", WRITE, D_FULLDEBUG,
 								  true /* force authentication */ );
-
-	daemonCore->Register_Command( DUMP_STATE, "DUMP_STATE",
-								  (CommandHandlercpp)&Scheduler::dumpState,
-								  "dumpState", this, READ  );
 
 	daemonCore->Register_CommandWithPayload( GET_MYPROXY_PASSWORD, "GET_MYPROXY_PASSWORD",
 								  &get_myproxy_password_handler,
@@ -15088,7 +15076,6 @@ Scheduler::publish( ClassAd *cad ) {
 	char *temp;
 	
 		// -------------------------------------------------------
-		// Copied from dumpState()
 		// Many of these might not be necessary for the 
 		// general case of publish() and should probably be
 		// moved back into dumpState()
@@ -15469,41 +15456,6 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 				"Failed to send error response to GET_JOB_CONNECT_INFO\n");
 	}
 	return FALSE;
-}
-
-int
-Scheduler::dumpState(int, Stream* s) {
-
-	dprintf ( D_FULLDEBUG, "Dumping state for Squawk\n" );
-
-		//
-		// The new publish() method will stuff all the attributes
-		// that we used to set in this method
-		//
-	ClassAd job_ad;
-	this->publish( &job_ad );
-	
-		//
-		// These items we want to keep in here because they're
-		// not needed for the general info produced by publish()
-		//
-	job_ad.Assign( "leaseAliveInterval", leaseAliveInterval );
-	job_ad.Assign( "alive_interval", alive_interval );
-	job_ad.Assign( "startjobsid", startjobsid );
-	job_ad.Assign( "timeoutid", timeoutid );
-	job_ad.Assign( "Mail", Mail );
-	
-	int cmd = 0;
-	if (!s->code( cmd )) {
-		dprintf(D_ALWAYS, "Squawk client disconnected from server\n");
-	}
-	s->end_of_message();
-
-	s->encode();
-	
-	putClassAd( s, job_ad );
-
-	return TRUE;
 }
 
 int

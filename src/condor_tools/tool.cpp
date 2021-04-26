@@ -54,7 +54,6 @@ void handleAll();
 void doSquawk( const char *addr );
 int handleSquawk( char *line, char *addr );
 int doSquawkReconnect( char *addr );
-void squawkHelp( const char *token );
 int  printAdToFile(ClassAd *ad, char* filename);
 int strncmp_auto(const char *s1, const char *s2);
 void PREFAST_NORETURN usage( const char *str, int iExitCode=1 );
@@ -213,11 +212,6 @@ usage( const char *str, int iExitCode )
 				 "they are done checkpointing.\n",
 				 str);
 		break;
-	case SQUAWK:
-		fprintf( stderr, "  %s\n"
-				 "is a developer-only command used to talk to daemons.", 
-				 str );
-		break;
 	default:
 		fprintf( stderr, "  Valid commands are:\n%s%s",
 				 "\toff, on, restart, reconfig, reschedule, ",
@@ -295,8 +289,6 @@ cmdToStr( int c )
 		return "Reschedule";
 	case DC_RECONFIG_FULL:
 		return "Reconfig";
-	case SQUAWK:
-		return "Squawk";
 	case SET_SHUTDOWN_PROGRAM:
 		return "Set-Shutdown-Program";
 	}
@@ -407,9 +399,6 @@ main( int argc, char *argv[] )
 		cmd = VACATE_CLAIM;
 	} else if( !strncmp_auto( cmd_str, "_checkpoint" ) ) {
 		cmd = PCKPT_JOB;
-	} else if ( !strncmp_auto( cmd_str, "_squawk" ) ) {
-		cmd = SQUAWK;
-		takes_subsys = 1;
 	} else if ( !strncmp_auto( cmd_str, "_set_shutdown" ) ) {
 		cmd = SET_SHUTDOWN_PROGRAM;
 	} else {
@@ -1198,9 +1187,6 @@ computeRealAction( void )
 	case SET_SHUTDOWN_PROGRAM:
 		real_dt = DT_MASTER;
 		break;
-
-	case SQUAWK:
-		break;
 	}
 
 	if( real_cmd < 0 ) {
@@ -1505,13 +1491,6 @@ doCommand( Daemon* d )
 				return;
 			}
 			addresses_sent.insert( hash_key, true );
-		}
-
-			/* Squawking does its own connect... */
-		if( real_cmd == SQUAWK ) {
-			doSquawk( d->addr() );
-			printf ( "Bye!\n" );
-			return;
 		}
 
 		/* Connect to the daemon */
@@ -1893,7 +1872,6 @@ handleSquawk( char *line, char *addr ) {
 
 	case 'h': /* help */
 		if ( ( token = strtok( NULL, " " )) != NULL ) {
-			squawkHelp( token );
 			return TRUE;
 		}
 			/* Generic help falls thru to here: */
