@@ -24,7 +24,7 @@ New Features:
   permitted to use, the submit will be rejected with an error message.
   This configuration template has a new optional second argument that can be used
   to quietly ignore the requested accounting group instead.
-  :jira:
+  :jira:`426`
 
 Bugs Fixed:
 
