@@ -182,20 +182,20 @@ readJobAd( void )
 			 is_stdin ? "STDIN" : job_ad_file );
 
 	ad = new ClassAd;
-	MyString line;
-	while( line.readLine(fp) ) {
+	std::string line;
+	while( readLine(line, fp) ) {
         read_something = true;
-		line.chomp();
+		chomp(line);
 		if( line[0] == '#' ) {
-			dprintf( D_JOB, "IGNORING COMMENT: %s\n", line.Value() );
+			dprintf( D_JOB, "IGNORING COMMENT: %s\n", line.c_str() );
 			continue;
 		}
 		if( line == "***" ) {
 			dprintf( D_JOB, "Saw ClassAd delimitor, stopping\n" );
 			break;
 		}
-        if( ! ad->Insert(line.Value()) ) {
-			EXCEPT( "Failed to insert \"%s\" into ClassAd!", line.Value() );
+        if( ! ad->Insert(line) ) {
+			EXCEPT( "Failed to insert \"%s\" into ClassAd!", line.c_str() );
         }
     }
 	if( ! read_something ) {
@@ -511,10 +511,10 @@ recycleShadow(int previous_job_exit_reason)
 		ASSERT( schedd_addr );
 
 		DCSchedd schedd(schedd_addr);
-		MyString error_msg;
+		std::string error_msg;
 		if( !schedd.recycleShadow( previous_job_exit_reason, &new_job_ad, error_msg ) )
 		{
-			dprintf(D_ALWAYS,"recycleShadow() failed: %s\n",error_msg.Value());
+			dprintf(D_ALWAYS,"recycleShadow() failed: %s\n",error_msg.c_str());
 			delete new_job_ad;
 			return false;
 		}

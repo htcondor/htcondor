@@ -260,6 +260,7 @@ cleanup_memory( void )
 		free( FS_Preen );
 		FS_Preen = NULL;
 	}
+	daemons.UnRegisterAllDaemons();
 }
 
 #ifdef WIN32
@@ -493,6 +494,9 @@ void do_linux_kernel_tuning() {
 			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to dup /dev/null: %d.\n", errno );
 			exit( 1 );
 		}
+		if( fd > 0 ) {
+			close( fd );
+		}
 		fd = open( kernelTuningLogFile.c_str(), O_WRONLY | O_APPEND, 0644 );
 		if ((fd < 0) && (errno == ENOENT)) {
 			fd = open( kernelTuningLogFile.c_str(), O_WRONLY | O_APPEND | O_CREAT, 0644 );
@@ -508,6 +512,9 @@ void do_linux_kernel_tuning() {
 		if( dup2( fd, 2 ) == -1 ) {
 			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to dup log file '%s' to stderr: %d.\n", kernelTuningLogFile.c_str(), errno );
 			exit( 1 );
+		}
+		if( fd > 2 ) {
+			close( fd );
 		}
 
 		execl( kernelTuningScript.c_str(), kernelTuningScript.c_str(), (char *) NULL );
@@ -634,10 +641,10 @@ main_init( int argc, char* argv[] )
         // We'll give it an absolute time, though runfor is a 
         // relative time. This means that we don't have to update
         // the time each time we restart the daemon.
-		MyString runfor_env;
-		runfor_env.formatstr("%s=%ld", EnvGetName(ENV_DAEMON_DEATHTIME),
+		std::string runfor_env;
+		formatstr(runfor_env,"%s=%ld", EnvGetName(ENV_DAEMON_DEATHTIME),
 						   time(NULL) + (runfor * 60));
-		SetEnv(runfor_env.Value());
+		SetEnv(runfor_env.c_str());
     }
 
 	daemons.SetDefaultReaper();
@@ -909,7 +916,7 @@ agent_starter( ReliSock * s, Stream * )
 int
 handle_agent_fetch_log (ReliSock* stream) {
 
-	MyString daemon;
+	std::string daemon;
 	int  res = FALSE;
 
 	if( ! stream->code(daemon) ||
@@ -1016,21 +1023,21 @@ handle_shutdown_program( int cmd, Stream* stream )
 		EXCEPT( "Unknown command (%d) in handle_shutdown_program", cmd );
 	}
 
-	MyString name;
+	std::string name;
 	stream->decode();
 	if( ! stream->code(name) ) {
 		dprintf( D_ALWAYS, "Can't read program name in handle_shutdown_program\n" );
 	}
 
-	if ( name.IsEmpty() ) {
+	if ( name.empty() ) {
 		return FALSE;
 	}
 
 	// Can we find it in the configuration?
-	MyString	pname;
+	std::string	pname;
 	pname =  "master_shutdown_";
 	pname += name;
-	char	*path = param( pname.Value() );
+	char	*path = param( pname.c_str() );
 	if ( NULL == path ) {
 		dprintf( D_ALWAYS, "No shutdown program defined for '%s'\n", name.c_str() );
 		return FALSE;
@@ -1214,11 +1221,11 @@ init_daemon_list()
 	}
 	else {
 		if ( *dc_daemon_list == '+' ) {
-			MyString	dclist;
+			std::string	dclist;
 			dclist = default_dc_daemon_list;
 			dclist += ", ";
 			dclist += &dc_daemon_list[1];
-			dc_daemon_names.initializeFromString( dclist.Value() );
+			dc_daemon_names.initializeFromString( dclist.c_str() );
 		}
 		else {
 			dc_daemon_names.initializeFromString(dc_daemon_list);
@@ -1601,7 +1608,7 @@ invalidate_ads() {
 	SetMyTypeName( cmd_ad, QUERY_ADTYPE );
 	SetTargetTypeName( cmd_ad, MASTER_ADTYPE );
 	
-	MyString line;
+	std::string line;
 	std::string escaped_name;
 	char* default_name = MasterName ? ::strdup(MasterName) : NULL;
 	if(!default_name) {
@@ -1609,8 +1616,8 @@ invalidate_ads() {
 	}
 	
 	QuoteAdStringValue( default_name, escaped_name );
-	line.formatstr( "( TARGET.%s == %s )", ATTR_NAME, escaped_name.c_str() );
-	cmd_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
+	formatstr( line, "( TARGET.%s == %s )", ATTR_NAME, escaped_name.c_str() );
+	cmd_ad.AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
 	cmd_ad.Assign( ATTR_NAME, default_name );
 	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 	daemonCore->sendUpdates( INVALIDATE_MASTER_ADS, &cmd_ad, NULL, false );
@@ -1716,7 +1723,7 @@ run_preen_now()
 	char *args=NULL;
 	const char	*preen_base;
 	ArgList arglist;
-	MyString error_msg;
+	std::string error_msg;
 
 	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
 	if ( preen_pid > 0 ) {
@@ -1732,8 +1739,8 @@ run_preen_now()
 	arglist.AppendArg(preen_base);
 
 	args = param("PREEN_ARGS");
-	if(!arglist.AppendArgsV1RawOrV2Quoted(args,&error_msg)) {
-		EXCEPT("ERROR: failed to parse preen args: %s",error_msg.Value());
+	if(!arglist.AppendArgsV1RawOrV2Quoted(args, error_msg)) {
+		EXCEPT("ERROR: failed to parse preen args: %s",error_msg.c_str());
 	}
 	free(args);
 
@@ -1833,7 +1840,7 @@ main_pre_command_sock_init()
 	/* Make sure we are the only copy of condor_master running */
 	char*  p;
 #ifndef WIN32
-	MyString lock_file;
+	std::string lock_file;
 
 	// see if a file is given explicitly
 	p = param ("MASTER_INSTANCE_LOCK");
@@ -1861,9 +1868,9 @@ main_pre_command_sock_init()
 			}
 		}
 	}
-	dprintf (D_FULLDEBUG, "Attempting to lock %s.\n", lock_file.Value() );
-	lock_or_except( lock_file.Value() );
-	dprintf (D_FULLDEBUG, "Obtained lock on %s.\n", lock_file.Value() );
+	dprintf (D_FULLDEBUG, "Attempting to lock %s.\n", lock_file.c_str() );
+	lock_or_except( lock_file.c_str() );
+	dprintf (D_FULLDEBUG, "Obtained lock on %s.\n", lock_file.c_str() );
 #endif
 
 	// Do any kernel tuning we've been configured to do.
@@ -1874,7 +1881,7 @@ main_pre_command_sock_init()
 	}
 
 #ifdef LINUX
-	if (param_boolean("DISABLE_SETUID", true)) {
+	if (param_boolean("DISABLE_SETUID", false)) {
 		prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
 	}
 #endif

@@ -681,7 +681,7 @@ if (DOCKER_ALLOW_RUN_AS_ROOT)
 	set_source_files_properties(docker-api.cpp PROPERTIES COMPILE_DEFINITIONS DOCKER_ALLOW_RUN_AS_ROOT=1)
 endif()
 
-target_link_libraries(condorapi ${CLASSADS_FOUND};${CMAKE_DL_LIBS};${RT_FOUND})
+target_link_libraries(condorapi classads;${CMAKE_DL_LIBS};${RT_FOUND})
 if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condorapi ${LIBUUID_FOUND})
 endif()

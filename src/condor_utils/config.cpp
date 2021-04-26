@@ -1965,7 +1965,7 @@ FILE* Open_macro_source (
 			ArgList argList;
 			MyString args_errors;
 			if(!argList.AppendArgsV1RawOrV2Quoted(cmd, &args_errors)) {
-				formatstr(config_errmsg, "Can't append args, %s", args_errors.Value());
+				formatstr(config_errmsg, "Can't append args, %s", args_errors.c_str());
 				return NULL;
 			}
 			fp = my_popen(argList, "r", 0 | MY_POPEN_OPT_FAIL_QUIETLY);
@@ -2025,7 +2025,7 @@ FILE* Copy_macro_source_into (
 		ArgList argList;
 		MyString args_errors;
 		if(!argList.AppendArgsV1RawOrV2Quoted(cmd, &args_errors)) {
-			formatstr(errmsg, "Can't append args, %s", args_errors.Value());
+			formatstr(errmsg, "Can't append args, %s", args_errors.c_str());
 			return NULL;
 		}
 		fp = my_popen(argList, "rb", MY_POPEN_OPT_FAIL_QUIETLY);
@@ -2763,12 +2763,12 @@ const char * condor_basename_plus_dirs(const char *path, int num_dirs)
 	return path;
 }
 
-// strdup a string with room to grow and an optional leading quote
-// and room for a trailing quote.
+// copy a string stripping leading an trailing double quotes or quotes of the given type
+// and optionally adding leading and trailing quotes of the given type
 char * strcpy_quoted(char* out, const char* str, int cch, char quoted) {
 	ASSERT(cch >= 0);
 
-	// ignore leading and/or trailing quotes when we dup
+	// ignore leading and/or trailing quotes when we copy
 	char quote_char = 0;
 	if (*str=='"' || (*str && *str == quoted)) { quote_char = *str; ++str; --cch; }
 	if (cch > 0 && str[cch-1] && str[cch-1] == quote_char) --cch;
@@ -2799,12 +2799,13 @@ char * strdup_quoted(const char* str, int cch, char quoted) {
 // strdup a string with room to grow and an optional leading quote
 // and room for a trailing quote, also canocalize windows path characters
 //
-char * strdup_path_quoted(const char* str, int cch, char quoted, char to_path_char) {
+char * strdup_path_quoted(const char* str, int cch, int cch_extra, char quoted, char to_path_char) {
 	if (cch < 0) cch = (int)strlen(str);
 
 	// malloc with room for quotes and a terminating 0
-	char * out = (char*)malloc(cch+3);
+	char * out = (char*)malloc(cch+3+cch_extra);
 	ASSERT(out);
+	memset(out + cch, 0, 3 + cch_extra);
 	strcpy_quoted(out, str, cch, quoted);
 	if (to_path_char) {
 		char path_char = (to_path_char == '/') ? '\\' : '/';
@@ -2824,7 +2825,7 @@ char * strdup_full_path_quoted(const char *name, int cch, MACRO_EVAL_CONTEXT & c
 		|| !ctx.cwd || !ctx.cwd[0]
 	   )
 	{
-		return strdup_path_quoted(name, cch, quoted, to_path_char);
+		return strdup_path_quoted(name, cch, 0, quoted, to_path_char);
 	}
 	else
 	{
@@ -2837,7 +2838,7 @@ char * strdup_full_path_quoted(const char *name, int cch, MACRO_EVAL_CONTEXT & c
 	#endif
 		if (has_dir_delim) { cch_cwd -= 1; }
 		if (cch < 0) { name = strlen_unquote(name, cch); }
-		char * str = strdup_path_quoted(ctx.cwd, cch_cwd + cch + 1, quoted, to_path_char);
+		char * str = strdup_path_quoted(ctx.cwd, cch_cwd, cch + 1, quoted, to_path_char);
 		if (str) {
 			char * p = str + cch_cwd;
 			if (quoted) ++p;
@@ -3020,6 +3021,7 @@ char * expand_meta_args(const char *value, std::string & argstr)
 }
 #endif
 
+
 /*
 ** Expand parameter references of the form "left$(middle)right".  This
 ** is deceptively simple, but does handle multiple and or nested references.
@@ -3028,8 +3030,7 @@ char * expand_meta_args(const char *value, std::string & argstr)
 ** Also expand references of the form "left$RANDOM_CHOICE(middle)right".
 */
 
-
-const char * lookup_macro_exact_no_default(const char *name, MACRO_SET & set, int use)
+const char * lookup_macro_exact_no_default_impl(const char *name, MACRO_SET & set, int use)
 {
 	MACRO_ITEM* pitem = find_macro_item(name, NULL, set);
 	if (pitem) {
@@ -3043,8 +3044,22 @@ const char * lookup_macro_exact_no_default(const char *name, MACRO_SET & set, in
 	return NULL;
 }
 
+std::string
+lookup_macro_exact_no_default( const std::string & name, MACRO_SET & set, int use ) {
+	const char * rv = lookup_macro_exact_no_default_impl(name.c_str(), set, use);
+	if( rv == NULL ) {
+		return std::string();
+	} else {
+		return std::string(rv);
+	}
+}
 
-const char * lookup_macro_exact_no_default(const char *name, const char *prefix, MACRO_SET & set, int use)
+bool
+exists_macro_exact_no_default( const std::string & name, MACRO_SET & set, int use ) {
+	return NULL != lookup_macro_exact_no_default_impl(name.c_str(), set, use);
+}
+
+const char * lookup_macro_exact_no_default_impl(const char *name, const char *prefix, MACRO_SET & set, int use)
 {
 	MACRO_ITEM* pitem = find_macro_item(name, prefix, set);
 	if (pitem) {
@@ -3057,6 +3072,7 @@ const char * lookup_macro_exact_no_default(const char *name, const char *prefix,
 	}
 	return NULL;
 }
+
 
 // lookup macro in all of the usual places.  The lookup order is
 //    localname.name in config file
@@ -3075,7 +3091,7 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 {
 	const char * lval = NULL;
 	if (ctx.localname) {
-		lval = lookup_macro_exact_no_default(name, ctx.localname, macro_set, ctx.use_mask);
+		lval = lookup_macro_exact_no_default_impl(name, ctx.localname, macro_set, ctx.use_mask);
 		if (lval) return lval;
 
 		if (macro_set.defaults && ! ctx.without_default) {
@@ -3084,7 +3100,7 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 		}
 	}
 	if (ctx.subsys) {
-		lval = lookup_macro_exact_no_default(name, ctx.subsys, macro_set, ctx.use_mask);
+		lval = lookup_macro_exact_no_default_impl(name, ctx.subsys, macro_set, ctx.use_mask);
 		if (lval) return lval;
 
 		if (macro_set.defaults && ! ctx.without_default) {
@@ -3097,7 +3113,7 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 	// Note that if 'name' has been explicitly set to nothing,
 	// lval will _not_ be NULL so we will not call
 	// find_macro_def_item().  See gittrack #1302
-	lval = lookup_macro_exact_no_default(name, macro_set, ctx.use_mask);
+	lval = lookup_macro_exact_no_default_impl(name, macro_set, ctx.use_mask);
 	if (lval) return lval;
 
 	// if not found in the config file, lookup in the param table
@@ -3659,7 +3675,7 @@ static const char * evaluate_macro_func (
 				if (full_path) {
 					buf = strdup_full_path_quoted(umval, cchum, ctx, quote_char, to_path_char);
 				} else if (parts || to_path_char || bare) {
-					buf = strdup_path_quoted(umval, cchum, quote_char, to_path_char);  // copy the macro value with quotes add/removed as requested.
+					buf = strdup_path_quoted(umval, cchum, 0, quote_char, to_path_char);  // copy the macro value with quotes add/removed as requested.
 				} else {
 					buf = strdup_quoted(umval, cchum, quote_char);  // copy the macro value with quotes add/removed as requested.
 				}
@@ -4339,7 +4355,7 @@ static ptrdiff_t evaluate_macro_func (
 				if (full_path) {
 					buf = strdup_full_path_quoted(umval, cchum, ctx, quote_char, to_path_char);
 				} else if (parts || to_path_char || bare) {
-					buf = strdup_path_quoted(umval, cchum, quote_char, to_path_char);  // copy the macro value with quotes add/removed as requested.
+					buf = strdup_path_quoted(umval, cchum, 0, quote_char, to_path_char);  // copy the macro value with quotes add/removed as requested.
 				} else {
 					buf = strdup_quoted(umval, cchum, quote_char);  // copy the macro value with quotes add/removed as requested.
 				}

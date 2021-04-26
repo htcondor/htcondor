@@ -159,7 +159,7 @@ void iso8601_to_time(
 	}
 
 	// Only do something if we got valid parameters
-	if (iso_time != NULL && time != NULL) {
+	if (iso_time != NULL && time != NULL && (strlen(iso_time) > 2)) {
 		if (iso_time[0] == 'T' || iso_time[2] == ':')
 			begins_with_time = true;
 		else

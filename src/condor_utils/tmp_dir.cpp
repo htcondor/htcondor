@@ -51,7 +51,7 @@ TmpDir::~TmpDir()
 		if ( !Cd2MainDir(errMsg) ) {
 			dprintf( D_ALWAYS,
 					"ERROR: Cd2Main fails in TmpDir::~TmpDir(): %s\n",
-					errMsg.Value() );
+					errMsg.c_str() );
 		}
 	}
 }
@@ -74,7 +74,7 @@ TmpDir::Cd2TmpDir(const char *directory, MyString &errMsg)
 			if ( !condor_getcwd( mainDir ) ) {
 				formatstr( errMsg, "Unable to get cwd: %s (errno %d)",
 				           strerror( errno ), errno );
-				dprintf( D_ALWAYS, "ERROR: %s\n", errMsg.Value() );
+				dprintf( D_ALWAYS, "ERROR: %s\n", errMsg.c_str() );
 				EXCEPT( "Unable to get current directory!" );
 				return false; // never get here
 			}
@@ -85,7 +85,7 @@ TmpDir::Cd2TmpDir(const char *directory, MyString &errMsg)
 		if ( chdir( directory ) != 0 ) {
 			formatstr( errMsg, "Unable to chdir to %s: %s",
 			           directory, strerror( errno ) );
-			dprintf( D_FULLDEBUG, "ERROR: %s\n", errMsg.Value() );
+			dprintf( D_FULLDEBUG, "ERROR: %s\n", errMsg.c_str() );
 			return false;
 		}
 
@@ -128,10 +128,10 @@ TmpDir::Cd2MainDir(MyString &errMsg)
 			return false; // never get here
 		}
 
-		if ( chdir( mainDir.Value() ) != 0 ) {
-			formatstr( errMsg, "Unable to chdir to %s: %s", mainDir.Value(),
+		if ( chdir( mainDir.c_str() ) != 0 ) {
+			formatstr( errMsg, "Unable to chdir to %s: %s", mainDir.c_str(),
 			           strerror( errno ) );
-			dprintf( D_FULLDEBUG, "ERROR: %s\n", errMsg.Value() );
+			dprintf( D_FULLDEBUG, "ERROR: %s\n", errMsg.c_str() );
 			EXCEPT( "Unable to chdir() to original directory!" );
 			return false; // never get here
 		}

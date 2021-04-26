@@ -683,12 +683,12 @@ root_dir_list()
 			chroot_spec.Tokenize();
 			const char * chroot_name = chroot_spec.GetNextToken("=", false);
 			if (chroot_name == NULL) {
-				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
+				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.c_str());
 				continue;
 			}
 			const char * next_dir = chroot_spec.GetNextToken("=", false);
 			if (next_dir == NULL) {
-				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
+				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.c_str());
 				continue;
 			}
 			if (IsDirectory(next_dir)) {

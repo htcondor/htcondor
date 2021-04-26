@@ -660,7 +660,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 {
 	char * proxy_filename = proxy->proxy_filename;
 	MyProxyEntry * myProxyEntry = NULL;
-	MyString args_string;
+	std::string args_string;
 	int pid;
 
 	// Starting from the most recent myproxy entry
@@ -819,8 +819,8 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	}
 
 
-	args.GetArgsStringForDisplay(&args_string);
-	dprintf (D_ALWAYS, "Calling %s %s\n", myproxy_get_delegation_pgm, args_string.Value());
+	args.GetArgsStringForDisplay(args_string);
+	dprintf (D_ALWAYS, "Calling %s %s\n", myproxy_get_delegation_pgm, args_string.c_str());
 
 	pid = daemonCore->Create_Process (
 					myproxy_get_delegation_pgm,

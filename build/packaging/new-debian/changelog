@@ -1,3 +1,52 @@
+condor (9.0.0-1) stable; urgency=medium
+
+  * Absent any configuration, HTCondor denies authorization to all users
+  * AES encryption is used for all communication and file transfers by default
+  * New IDTOKEN authentication method enables fine-grained authorization
+  * IDTOKEN authentication method is designed to replace GSI
+  * Improved support for GPUs, including machines with multiple GPUs
+  * New condor_watch_q tool that efficiently provides live job status updates
+  * Many improvements to the Python bindings
+  * New Python bindings for DAGMan and chirp
+  * Improved file transfer plugins supporting uploads and authentication
+  * File transfer times are now recorded in the job log
+  * Added support for jobs that need to acquire and use OAUTH tokens
+  * Many memory footprint and performance improvements in DAGMan
+  * Submitter ceilings can limit the number of jobs per user in a pool
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 14 Apr 2021 13:25:15 -0500
+
+condor (8.9.13-1) stable; urgency=medium
+
+  * Host based security is no longer the default security model
+  * Hardware accelerated integrity and AES encryption used by default
+  * Normally, AES encryption is used for all communication and file transfers
+  * Fallback to Triple-DES or Blowfish when interoperating with older versions
+  * Simplified and automated new HTCondor installations
+  * HTCondor now detects instances of multi-instance GPUs
+  * Fixed memory leaks (collector updates in 8.9 could leak a few MB per day)
+  * Many other enhancements and bug fixes, see version history for details
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 29 Mar 2021 22:50:51 -0500
+
+condor (8.9.12-1) stable; urgency=medium
+
+  * Withdrawn due to compatibility issues with prior releases
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 25 Mar 2021 14:15:17 -0500
+
+condor (8.8.13-1) stable; urgency=medium
+
+  * condor_ssh_to_job now maps CR and NL to work with editors like nano
+  * Improved the performance of data transfer in condor_ssh_to_job
+  * HA replication now accepts SHA-2 checksums to prepare for MD5 removal
+  * Submission to NorduGrid ARC CE works with newer ARC CE versions
+  * Fixed condor_annex crashes on platforms with newer compilers
+  * Fixed "use feature: GPUsMonitor" to locate the monitor binary on Windows
+  * Fixed a bug that prevented using the '@' character in an event log path
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 23 Mar 2021 08:07:35 -0500
+
 condor (8.9.11-1) stable; urgency=high
 
   * This release of HTCondor fixes security-related bugs described at

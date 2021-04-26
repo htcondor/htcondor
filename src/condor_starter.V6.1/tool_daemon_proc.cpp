@@ -61,7 +61,7 @@ ToolDaemonProc::StartJob()
 		return 0;
     }
 
-	MyString DaemonNameStr;
+	std::string DaemonNameStr;
 	char* tmp = NULL;
 	if( JobAd->LookupString( ATTR_TOOL_DAEMON_CMD, &tmp ) != 1 ) {
 	    dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting "
@@ -75,14 +75,14 @@ ToolDaemonProc::StartJob()
 	const char* base = NULL;
 	base = condor_basename( tmp );
 	if( Starter->jic->iwdIsChanged() ) {
-		DaemonNameStr.formatstr( "%s%c%s", Starter->GetWorkingDir(0),
+		formatstr( DaemonNameStr, "%s%c%s", Starter->GetWorkingDir(0),
 							   DIR_DELIM_CHAR, base );
 	} else if( ! fullpath(tmp) ) {
-		DaemonNameStr.formatstr( "%s%c%s", job_iwd, DIR_DELIM_CHAR, tmp );
+		formatstr( DaemonNameStr, "%s%c%s", job_iwd, DIR_DELIM_CHAR, tmp );
 	} else {
 		DaemonNameStr = tmp;
 	}
-	const char* DaemonName = DaemonNameStr.Value();
+	const char* DaemonName = DaemonNameStr.c_str();
 	free( tmp );
 	tmp = NULL;
 			
@@ -156,9 +156,9 @@ ToolDaemonProc::StartJob()
 
 	JobAd->LookupString( ATTR_TOOL_DAEMON_ARGS2, &tmp );
 	bool args_success = true;
-	MyString args_error;
+	std::string args_error;
 	if( tmp ) {
-		args_success = DaemonArgs.AppendArgsV2Raw(tmp,&args_error);
+		args_success = DaemonArgs.AppendArgsV2Raw(tmp,args_error);
 		dprintf( D_FULLDEBUG, "Daemon Args: %s\n", tmp ) ;
 		free( tmp );
 		tmp = NULL;
@@ -166,7 +166,7 @@ ToolDaemonProc::StartJob()
 	else {
 		JobAd->LookupString( ATTR_TOOL_DAEMON_ARGS1, &tmp );
 		if( tmp ) {
-			args_success = DaemonArgs.AppendArgsV1Raw(tmp,&args_error);
+			args_success = DaemonArgs.AppendArgsV1Raw(tmp,args_error);
 			dprintf( D_FULLDEBUG, "Daemon Args: %s\n", tmp ) ;
 			free( tmp );
 			tmp = NULL;
@@ -175,7 +175,7 @@ ToolDaemonProc::StartJob()
 
 	if(!args_success) {
 		dprintf(D_ALWAYS, "Aborting.  Failed to read daemon args: %s\n",
-				args_error.Value());
+				args_error.c_str());
 		return 0;
 	}
 
@@ -184,10 +184,10 @@ ToolDaemonProc::StartJob()
 		// // // // // // 
 
 	Env job_env;
-	MyString env_errors;
-	if( !job_env.MergeFrom(JobAd,&env_errors) ) {
+	std::string env_errors;
+	if( !job_env.MergeFrom(JobAd, env_errors) ) {
 		dprintf( D_ALWAYS, "Failed to read environment from JobAd.  Aborting "
-				 "ToolDaemonProc::StartJob: %s\n",env_errors.Value());
+				 "ToolDaemonProc::StartJob: %s\n",env_errors.c_str());
 		return 0;
 	}
 
@@ -268,9 +268,9 @@ ToolDaemonProc::StartJob()
 		        fi.login);
 	}
 
-	MyString args_string;
-	DaemonArgs.GetArgsStringForDisplay(&args_string);
-	dprintf( D_ALWAYS, "About to exec %s\n", args_string.Value() ); 
+	std::string args_string;
+	DaemonArgs.GetArgsStringForDisplay(args_string);
+	dprintf( D_ALWAYS, "About to exec %s\n", args_string.c_str() ); 
 
 	set_priv( priv );
 
@@ -308,12 +308,12 @@ ToolDaemonProc::StartJob()
 	if( JobPid == FALSE ) {
 		JobPid = -1;
 		if( create_process_error ) {
-			MyString err_msg;
-			err_msg.formatstr( "Failed to execute '%s': %s",
-							 args_string.Value(), create_process_error );
-			Starter->jic->notifyStarterError( err_msg.Value(), true, CONDOR_HOLD_CODE_FailedToCreateProcess, create_process_errno );
+			std::string err_msg;
+			formatstr( err_msg, "Failed to execute '%s': %s",
+							 args_string.c_str(), create_process_error );
+			Starter->jic->notifyStarterError( err_msg.c_str(), true, CONDOR_HOLD_CODE_FailedToCreateProcess, create_process_errno );
 		}
-		EXCEPT( "Create_Process(%s, ...) failed", args_string.Value() );
+		EXCEPT( "Create_Process(%s, ...) failed", args_string.c_str() );
 		return FALSE;
 
 	} else {

@@ -59,7 +59,7 @@ class GenericQuery
 	
 	// make the query expression
 	int makeQuery (ExprTree *&tree);
-	int makeQuery (MyString &expr);
+	int makeQuery (std::string &expr);
 
 	// overloaded operators
     // friend ostream &operator<< (ostream &, GenericQuery &);  // display

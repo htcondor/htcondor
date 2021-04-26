@@ -548,7 +548,7 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 }
 
 bool
-UniShadow::getMachineName( MyString &machineName )
+UniShadow::getMachineName( std::string &machineName )
 {
 	if( remRes ) {
 		char *name = NULL;

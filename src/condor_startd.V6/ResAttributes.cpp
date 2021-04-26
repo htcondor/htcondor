@@ -779,9 +779,9 @@ static double parse_user_resource_config(const char * tag, const char * res_valu
 double MachAttributes::init_machine_resource_from_script(const char * tag, const char * script_cmd) {
 
 	ArgList args;
-	MyString errors;
-	if(!args.AppendArgsV1RawOrV2Quoted(script_cmd, &errors)) {
-		printf("Can't append cmd %s(%s)\n", script_cmd, errors.Value());
+	std::string errors;
+	if(!args.AppendArgsV1RawOrV2Quoted(script_cmd, errors)) {
+		printf("Can't append cmd %s(%s)\n", script_cmd, errors.c_str());
 		return -1;
 	}
 
@@ -872,8 +872,8 @@ bool MachAttributes::init_machine_resource(MachAttributes * pme, HASHITER & it) 
 		}
 	} else {
 		StringList offline_ids;
-		MyString off_name("OFFLINE_"); off_name += name;
-		MyString my_value;
+		std::string off_name("OFFLINE_"); off_name += name;
+		std::string my_value;
 		if (param(my_value, off_name.c_str()) && !my_value.empty()) {
 			offline = parse_user_resource_config(tag, my_value.c_str(), offline_ids);
 		}
@@ -1343,8 +1343,8 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 							  double virt_mem_fraction,
 							  double disk_fraction,
 							  const slotres_map_t& slotres_map,
-							  MyString &execute_dir,
-							  MyString &execute_partition_id )
+							  const std::string &execute_dir,
+							  const std::string &execute_partition_id )
 {
 	map = map_arg;
 	c_type = slot_type;
@@ -1573,13 +1573,13 @@ CpuAttributes::display(int dpf_flags) const
 
 
 void
-CpuAttributes::cat_totals(MyString & buf) const
+CpuAttributes::cat_totals(std::string & buf) const
 {
 	buf += "Cpus: ";
 	if (IS_AUTO_SHARE(c_num_cpus)) {
 		buf += "auto";
 	} else {
-		buf.formatstr_cat("%f", c_num_cpus);
+		formatstr_cat(buf, "%f", c_num_cpus);
 	}
 
 	buf += ", Memory: ";
@@ -1587,7 +1587,7 @@ CpuAttributes::cat_totals(MyString & buf) const
 		buf += "auto";
 	}
 	else {
-		buf.formatstr_cat("%d", c_phys_mem);
+		formatstr_cat(buf, "%d", c_phys_mem);
 	}
 
 	buf += ", Swap: ";
@@ -1595,7 +1595,7 @@ CpuAttributes::cat_totals(MyString & buf) const
 		buf += "auto";
 	}
 	else {
-		buf.formatstr_cat("%.2f%%", 100*c_virt_mem_fraction );
+		formatstr_cat(buf, "%.2f%%", 100*c_virt_mem_fraction );
 	}
 
 	buf += ", Disk: ";
@@ -1603,14 +1603,14 @@ CpuAttributes::cat_totals(MyString & buf) const
 		buf += "auto";
 	}
 	else {
-		buf.formatstr_cat("%.2f%%", 100*c_disk_fraction );
+		formatstr_cat(buf, "%.2f%%", 100*c_disk_fraction );
 	}
 
 	for (auto j(c_slotres_map.begin()); j != c_slotres_map.end(); ++j) {
 		if (IS_AUTO_SHARE(j->second)) {
-			buf.formatstr_cat(", %s: auto", j->first.c_str());
+			formatstr_cat(buf, ", %s: auto", j->first.c_str());
 		} else {
-			buf.formatstr_cat(", %s: %d", j->first.c_str(), int(j->second));
+			formatstr_cat(buf, ", %s: %d", j->first.c_str(), int(j->second));
 		}
 	}
 }
@@ -1633,7 +1633,7 @@ CpuAttributes::swap_attributes(CpuAttributes & attra, CpuAttributes & attrb, int
 {
 	if (flags & 1) {
 		// swap execute directories.
-		MyString str = attra.c_execute_dir;
+		std::string str = attra.c_execute_dir;
 		attra.c_execute_dir = attrb.c_execute_dir;
 		attrb.c_execute_dir = str;
 
@@ -1714,7 +1714,7 @@ AvailAttributes::AvailAttributes( MachAttributes* map ):
 }
 
 AvailDiskPartition &
-AvailAttributes::GetAvailDiskPartition(MyString const &execute_partition_id)
+AvailAttributes::GetAvailDiskPartition(std::string const &execute_partition_id)
 {
 	AvailDiskPartition *a = NULL;
 	if( m_execute_partitions.lookup(execute_partition_id,a) < 0 ) {
@@ -1864,7 +1864,7 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 	}
 
 	if( IS_AUTO_SHARE(cap->c_disk_fraction) ) {
-		AvailDiskPartition &partition = GetAvailDiskPartition( cap->c_execute_partition_id );
+		AvailDiskPartition &partition = GetAvailDiskPartition ( cap->c_execute_partition_id );
 		ASSERT( partition.m_auto_count > 0 );
 		double new_value = partition.m_disk_fraction / partition.m_auto_count;
 		if( new_value <= 0 ) {
@@ -1903,13 +1903,13 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 
 
 void
-AvailAttributes::cat_totals(MyString & buf, const char * execute_partition_id)
+AvailAttributes::cat_totals(std::string & buf, const char * execute_partition_id)
 {
 	AvailDiskPartition &partition = GetAvailDiskPartition( execute_partition_id );
-	buf.formatstr_cat("Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%",
+	formatstr_cat(buf, "Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%",
 		a_num_cpus, a_phys_mem, 100*a_virt_mem_fraction,
 		100*partition.m_disk_fraction );
 	for (slotres_map_t::iterator j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
-		buf.formatstr_cat(", %s: %d", j->first.c_str(), int(j->second));
+		formatstr_cat(buf, ", %s: %d", j->first.c_str(), int(j->second));
 	}
 }

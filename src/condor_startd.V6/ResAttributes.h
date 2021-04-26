@@ -346,7 +346,7 @@ public:
 				   int num_phys_mem, double virt_mem_fraction,
 				   double disk_fraction,
 				   const slotres_map_t& slotres_map,
-				   MyString &execute_dir, MyString &execute_partition_id );
+				   const std::string &execute_dir, const std::string &execute_partition_id );
 
 	void attach( Resource* );	// Attach to the given Resource
 	void bind_DevIds(int slot_id, int slot_sub_id);   // bind non-fungable resource ids to a slot
@@ -374,15 +374,15 @@ public:
 
 	void display(int dpf_flags) const;
 	void dprintf( int, const char*, ... ) const;
-	void cat_totals(MyString & buf) const;
+	void cat_totals(std::string & buf) const;
 
 	double num_cpus() const { return c_num_cpus; }
 	bool allow_fractional_cpus(bool allow) { bool old = c_allow_fractional_cpus; c_allow_fractional_cpus = allow; return old; }
 	long long get_disk() const { return c_disk; }
 	double get_disk_fraction() const { return c_disk_fraction; }
 	long long get_total_disk() const { return c_total_disk; }
-	char const *executeDir() { return c_execute_dir.Value(); }
-	char const *executePartitionID() { return c_execute_partition_id.Value(); }
+	char const *executeDir() { return c_execute_dir.c_str(); }
+	char const *executePartitionID() { return c_execute_partition_id.c_str(); }
     const slotres_map_t& get_slotres_map() { return c_slotres_map; }
     const slotres_devIds_map_t & get_slotres_ids_map() { return c_slotres_ids_map; }
     const MachAttributes* get_mach_attr() { return map; }
@@ -451,8 +451,8 @@ private:
 
 	double			c_disk_fraction; // share of execute dir partition
 	double			c_slot_disk; // share of execute dir partition
-	MyString        c_execute_dir;
-	MyString        c_execute_partition_id;  // unique id for partition
+	std::string     c_execute_dir;
+	std::string     c_execute_partition_id;  // unique id for partition
 
 	int				c_type;		// The type of this resource
 };	
@@ -479,7 +479,7 @@ public:
 	bool decrement( CpuAttributes* cap );
 	bool computeRemainder(slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
 	bool computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
-	void cat_totals(MyString & buf, const char * execute_partition_id);
+	void cat_totals(std::string & buf, const char * execute_partition_id);
 
 private:
 	int				a_num_cpus;
@@ -493,9 +493,9 @@ private:
     slotres_map_t a_autocnt_map;
 
 		// number of slots using "auto" for disk share in each partition
-	HashTable<MyString,AvailDiskPartition> m_execute_partitions;
+	HashTable<std::string,AvailDiskPartition> m_execute_partitions;
 
-	AvailDiskPartition &GetAvailDiskPartition(MyString const &execute_partition_id);
+	AvailDiskPartition &GetAvailDiskPartition(std::string const &execute_partition_id);
 };
 
 #endif /* _RES_ATTRIBUTES_H */

@@ -70,7 +70,7 @@ BaseUserPolicy::init( ClassAd* job_ad_ptr )
 void
 BaseUserPolicy::cancelTimer( void )
 {
-	if ( this->tid != -1 ) {
+	if ( daemonCore && this->tid != -1 ) {
 		daemonCore->Cancel_Timer( this->tid );
 		this->tid = -1;
 	}

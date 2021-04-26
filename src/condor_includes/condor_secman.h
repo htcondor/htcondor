@@ -80,7 +80,7 @@ public:
 	// Alternate tag methods
 	static std::map<DCpermission, std::string> m_tag_methods;
 	static std::string m_tag_token_owner;
-	static HashTable<MyString, MyString> command_map;
+	static HashTable<std::string, std::string> command_map;
 	static int sec_man_ref_count;
 	static std::set<std::string> m_not_my_family;
 
@@ -91,7 +91,7 @@ public:
 	static std::string m_token;
 
 		// The following is indexed by session index name ( "addr,<cmd>" )
-	static HashTable<MyString, classy_counted_ptr<SecManStartCommand> > tcp_auth_in_progress;
+	static HashTable<std::string, classy_counted_ptr<SecManStartCommand> > tcp_auth_in_progress;
 
 	SecMan();
 	SecMan(const SecMan &);
@@ -215,7 +215,7 @@ public:
 	static	int 			getAuthBitmask ( const char * methods );
 	static  std::string		getAuthenticationMethods( DCpermission perm );
 
-	static	MyString 		getDefaultCryptoMethods();
+	static	std::string		getDefaultCryptoMethods();
 		// Given a list of crypto methods, return a list of those that are supported
 		// by this version of HTCondor.  Prevents clients and servers from suggesting
 		// a crypto method that isn't supported by the code.
@@ -258,7 +258,7 @@ public:
 
 	void reconfig();
 	static IpVerify *getIpVerify();
-	static int Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu, MyString *allow_reason=NULL, MyString *deny_reason=NULL );
+	static int Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu, std::string &allow_reason, std::string &deny_reason );
 
 	static classad::References* getResumeProj() { return &m_resume_proj; };
 
@@ -280,6 +280,7 @@ public:
 		// can create pre-built security session compatible with ours.
 		// This basically serializes selected attributes of the session.
 	bool ExportSecSessionInfo(char const *session_id,MyString &session_info);
+	bool ExportSecSessionInfo(char const *session_id,std::string &session_info);
 
 		// This can be used, for example, to expire a non-negotiated session
 		// that was originally created with no expiration time.

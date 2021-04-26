@@ -118,7 +118,7 @@ bool
 printAllTokens() {
 	std::string dirpath;
 	if (!param(dirpath, "SEC_TOKEN_DIRECTORY")) {
-		MyString file_location;
+		std::string file_location;
 		if (!find_user_file(file_location, "tokens.d", false, false)) {
 			param(dirpath, "SEC_TOKEN_SYSTEM_DIRECTORY");
 		} else {

@@ -152,6 +152,7 @@ int DockerAPI::createContainer(
 	if (param_boolean("DOCKER_DROP_ALL_CAPABILITIES", true /*default*/,
 		true /*do_log*/, &machineAd, &jobAd)) {
 		runArgs.AppendArg("--cap-drop=all");
+		runArgs.AppendArg("--cap-add=SYS_PTRACE");
 
 		// --no-new-privileges flag appears in docker 1.11
 		runArgs.AppendArg("--security-opt");
@@ -323,7 +324,7 @@ int DockerAPI::createContainer(
 	char *tmp = param("DOCKER_EXTRA_ARGUMENTS");
 	if(!runArgs.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
 		dprintf(D_ALWAYS,"docker: failed to parse extra arguments: %s\n",
-		args_error.Value());
+		args_error.c_str());
 		free(tmp);
 		return -1;
 	}
@@ -355,9 +356,33 @@ int DockerAPI::createContainer(
 	build_env_for_docker_cli(cliEnvironment);
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
 
+	//
+	// The following two commented-out Create_Process() calls were
+	// left in as examples of (respectively) that bad old way,
+	// the bad new way (in case you actually need to set all of
+	// the default arguments), and the good new way (in case you
+	// don't, in which case it's both shorter and clearer).
+	//
+
+	/*
 	int childPID = daemonCore->Create_Process( runArgs.GetArg(0), runArgs,
 		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
 		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT );
+	*/
+
+	/*
+	std::string err_return_msg;
+	int childPID = daemonCore->CreateProcessNew( runArgs.GetArg(0), runArgs,
+		{ PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
+		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT,
+		NULL, NULL, NULL, err_return_msg, NULL, 0l } );
+	*/
+
+	int childPID = daemonCore->CreateProcessNew( runArgs.GetArg(0), runArgs,
+		OptionalCreateProcessArgs().priv(PRIV_CONDOR_FINAL)
+			.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+			.env(&cliEnvironment).cwd("/").familyInfo(& fi)
+			.std(childFDs).jobOptMask(DCJOBOPT_NO_ENV_INHERIT) );
 
 	if( childPID == FALSE ) {
 		dprintf( D_ALWAYS, "Create_Process() failed.\n" );
@@ -886,6 +911,86 @@ int DockerAPI::detect( CondorError & err ) {
 	}
 
 	return 0;
+}
+
+int
+DockerAPI::testImageRuns(CondorError &err) {
+
+#ifndef LINUX
+	return 0;
+#else
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+
+	bool run_test = param_boolean("DOCKER_PERFORM_TEST", true);
+	if (!run_test) return 0;
+
+	// First, get the path to the test image on the local fs
+	std::string test_image_path;
+	param(test_image_path, "DOCKER_TEST_IMAGE_PATH");
+	if (test_image_path.empty()) return true;
+
+	// and the name thereof
+	std::string test_image_name;
+	param(test_image_name, "DOCKER_TEST_IMAGE_NAME");
+	if (test_image_name.empty()) return true;
+
+	// First, load the image from file system into the local Docker cache
+	// This will quietly succeed if image is already installed
+	int r = 0;
+
+	ArgList loadArgs;
+	loadArgs.AppendArg( "load" );
+	loadArgs.AppendArg( "-i" ); // input from following file
+	r  = run_docker_command(loadArgs, test_image_path, 20, err, true);
+
+	dprintf(D_FULLDEBUG, "Tried to load docker test image, result was %d\n", r);
+	if (r != 0) {
+		return r; // false
+	}
+
+	// Now let's run a container from that image
+	// Note that we can't use DockerAPI::createContainer, as that uses daemoncore
+	// which isn't initialized when the starter runs this
+	ArgList runArgs;
+	runArgs.AppendArg("docker");
+	runArgs.AppendArg("run");
+	runArgs.AppendArg("--rm=true");
+	runArgs.AppendArg(test_image_name);
+	runArgs.AppendArg("/exit_37");
+
+	MyPopenTimer pgm;
+	pgm.start_program(
+			runArgs,
+			false,
+			nullptr, // env
+			false);  // false == don't drop privs -- docker needs priv to run
+
+	int exit_status = -1;
+	pgm.wait_for_exit(20, &exit_status);
+
+	exit_status = WEXITSTATUS(exit_status);
+
+	bool dockerWorks = false;
+	if (exit_status == 37) {
+		dprintf(D_ALWAYS, "Docker test container ran correctly!  Docker works!\n");
+		dockerWorks = true;
+	} else {
+		dprintf(D_ALWAYS, "Docker test container ran incorrectly, returned %d unexpectedly\n", exit_status);
+	}
+
+	// we changed the local docker image cache by loading an image.  Let's
+	// return to state by removing what we created
+	ArgList rmiArgs;
+	rmiArgs.AppendArg("rmi");
+	r  = run_docker_command(rmiArgs, test_image_name, 20, err, true);
+	dprintf(D_FULLDEBUG, "Tried to remove docker test image, result was %d\n", r);
+
+	if (dockerWorks) {
+		return 0;
+	} else {
+		return 1;
+	}
+#endif
 }
 
 //

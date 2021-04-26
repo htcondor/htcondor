@@ -10,7 +10,7 @@ set -e
 #
 # This script is meant for quick & easy install via:
 #
-#   $ sudo curl -fsSL https://get.htcondor.com | /bin/bash -s -- --no-dry-run
+#   $ sudo curl -fsSL https://get.htcondor.org | /bin/bash -s -- --no-dry-run
 #
 
 usage() {
@@ -24,11 +24,13 @@ usage() {
 
 	Installation options:
 	--channel NAME	: Specify version channel to install; NAME can be
-	     current: Most recent release with new features [default]
-	     stable : Most recent release with only bug-fixes
+	    current: Most recent release with new features [default]
+	    stable : Most recent release with only bug-fixes
 	--password	: Set the password used to secure the pool.  Use only if
 	          	  nobody else can log into the machine.  Otherwise specify
 	          	  in the environment (GET_HTCONDOR_PASSWORD) or interactively.
+	--shared-filesystem-domain NAME : Specifies that machines installed with
+	    the same NAME share a filesystem.
 
 	Installation options, specify only one:
 	--minicondor            : Install a complete stand-alone HTCondor.  [default]
@@ -229,13 +231,12 @@ do_configure_firewall() {
 
 do_start_service() {
 	# Start HTCondor via systemd if detected, else via just condor_master
-	if [ "$(ps --pid 1 -o comm -h)" != 'systemd' ] && command_exists systemctl; then
+	if [ "$(ps --pid 1 -o comm -h)" != 'systemd' ] || ! command_exists systemctl; then
 		echo -e "\n# Start the HTCondor service in the background (without systemd)"
 		(
 			if ! is_dry_run; then
 				set -x
 			fi
-			$sh_c "mkdir --mode=0755 /var/lock/condor /var/run/condor; chown condor:condor /var/lock/condor /var/run/condor"
 			$sh_c "condor_master"
 		)
 	else
@@ -251,18 +252,10 @@ do_start_service() {
 }
 
 do_token_security() {
-	# This won't work in a pipeline (as we recommend using this script).
-	if [ -z "${PASSWORD}" ]; then
-		echo -n "Enter a pool password: "
-		read PASSWORD
-	fi
-
-	if [ -z "${PASSWORD}" ]; then
-		echo
-		echo "You must set a password!  Did you replace \$htcondor_password with a password?"
-		echo
-		exit 1
-	fi
+	# Remove the default 9.0 security configuration.  Arguably, the
+	# get_htcondor metaknobs should instead check for SECURITY_MODEL == 9.0
+	# and adjust accordingly, which might make microversion upgrades easier.
+	$sh_c "rm -f /etc/condor/config.d/00-htcondor-9.0.config"
 
 	# So 'echo' is a shell built-in, which means no command-line to show
 	# up in 'ps' and leak the password.  You MUST do the 'echo' before the
@@ -336,6 +329,29 @@ do_install() {
 		exit 1
 	fi
 
+
+	#
+	# Check for the pool password / default signing key before installing.
+	#
+	if [ -n "${ROLE}" ]; then
+		if [ -z "${PASSWORD}" ]; then
+			if ! is_dry_run; then
+				echo -n "Enter a pool password: "
+				read PASSWORD
+			else
+				PASSWORD="NONE"
+				echo "SKIPPING PASSWORD PROMPT DURING DRY RUN"
+			fi
+		fi
+
+		if [ -z "${PASSWORD}" ]; then
+			echo
+			echo "You must set a password!  Did you replace \$htcondor_password with a password?"
+			echo
+			exit 1
+		fi
+	fi
+
 	if [ -z "${ROLE}" ]; then
 		echo -e "\n# Installing mini HTCondor for ${lsb_dist^} $dist_version"
 	else
@@ -354,8 +370,8 @@ do_install() {
 
 				# Install our repository key.
 				$sh_c "apt-get update"
-				$sh_c "apt-get install gnupg"
-				$sh_c "curl -fsSL ${DOWNLOAD_URL}/debian/HTCondor-Release.gpg.key | apt-key add -"
+				$sh_c "apt-get install -y gnupg"
+				$sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/keys/HTCondor-${CHANNEL_DIR}-Key | apt-key add -"
 
 				# Add our repository.
 				HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
@@ -365,11 +381,22 @@ do_install() {
 				echo -e "\n# Updating package lists"
 				$sh_c "apt-get update"
 
-				# In the Ubuntu 20.04 Docker container, this blows up
-				# when run out of the pipe with curl because the
-				# keyboard-configuration and console-configuration
-				# require interactive responses (and stdin is eaten by
-				# this file).  How much do we care?
+				echo -e "\n# Installing ps"
+				$sh_c "apt-get install -y procps"
+
+				# In the Ubuntu 20.04 Docker container, the following packages
+				# need to be installed non-interactively, because the pipe
+				# out of curl eats the tty they'd like to use:
+				#	keyboard-configuration
+				#	console-setup
+				#	tzdata
+				# apt-get will succeed if these packages are already installed,
+				# but for now let's not risk screwing things up by adding them
+				# on the platforms that don't need them.
+				if [[ $lsb_dist = "ubuntu" && $dist_version = "focal" ]]; then
+					echo -e "\n# Preconfiguring packages for Ubuntu 20.04."
+					$sh_c "DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration console-setup tzdata"
+				fi
 
 				echo -e "\n# Installing HTCondor binaries and dependencies"
 				if [ -z "${ROLE}" ]; then
@@ -413,7 +440,8 @@ do_install() {
 				#
 				if [ "${lsb_dist}" = "centos" ]; then
 					if [ "${dist_version}" -eq 8 ]; then
-						$sh_c "dnf config-manager --set-enabled PowerTools"
+						$sh_c "dnf -y install dnf-plugins-core"
+						$sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
 					fi
 				elif [ "${lsb_dist}" = "rhel" ]; then
 					# subscription-manager only works if you've already
@@ -454,13 +482,50 @@ do_install() {
 			;;
 	esac
 
+	if [ -n "${SHARED_FS_DOMAIN}" ]; then
+		DOMAIN_CONFIG=$(cat <<-EOF
+
+			# HTCondor assumes that any two machines with the same value
+			# for this variable have the same shared filesystems.  Shared
+			# filesystems tend not to scale as well as you would like, but
+			# they do make it simpler to explain how a job accesses its file.
+			FILESYSTEM_DOMAIN = ${SHARED_FS_DOMAIN}
+
+			# If your jobs are accessing a shared filesystem, they probably
+			# need to be run as the user who submitted them (as opposed to
+			# user nobody or a local user which only runs batch jobs).  This
+			# variable must be set to the same thing on the submit machine
+			# and on the execute machine to do this.
+			UID_DOMAIN = ${SHARED_FS_DOMAIN}
+
+			# The UID_DOMAIN must normally be a suffix of the fully-qualified
+			# DNS name of the submit machine (as determined by a reverse
+			# lookup of the IP address used to contact the execute machine).
+			# Setting this variable relaxes that requirement, which is safe
+			# to do for this configuration because only submit machines you
+			# trust can contact your execute machines.
+			TRUST_UID_DOMAIN = TRUE
+
+			# Normally, before running a job as a particular user (that is,
+			# not as user nobody), HTCondor checks to make sure that user
+			# is in the password file.  Not all methods for sharing UIDs
+			# across machines store every user in every password file (for
+			# example, LDAP does not).  Setting this this variable relaxes
+			# this requirement.
+			SOFT_UID_DOMAIN = TRUE
+
+		EOF
+		)
+	fi
+
 	# Configure the role, if any.
 	echo -e "\n# Configuring role, if any ..."
 	case "${ROLE}" in
 		"central manager")
 			CONFIG_FILE="/etc/condor/config.d/01-central-manager.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
-			$sh_c "echo 'use role : get_htcondor_central_manager' >> ${CONFIG_FILE}"
+			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_central_manager' >> ${CONFIG_FILE}"
+			$sh_c "echo 'use role:get_htcondor_central_manager' >> ${CONFIG_FILE}"
 
 			do_token_security
 			;;
@@ -468,7 +533,12 @@ do_install() {
 		"submit")
 			CONFIG_FILE="/etc/condor/config.d/01-submit.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
-			$sh_c "echo 'use role : get_htcondor_submit' >> ${CONFIG_FILE}"
+			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_submit' >> ${CONFIG_FILE}"
+			$sh_c "echo 'use role:get_htcondor_submit' >> ${CONFIG_FILE}"
+
+			if [ -n "${SHARED_FS_DOMAIN}" ]; then
+				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
+			fi
 
 			do_token_security
 			;;
@@ -476,7 +546,12 @@ do_install() {
 		"execute")
 			CONFIG_FILE="/etc/condor/config.d/01-execute.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
-			$sh_c "echo 'use role : get_htcondor_execute' >> ${CONFIG_FILE}"
+			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_execute' >> ${CONFIG_FILE}"
+			$sh_c "echo 'use role:get_htcondor_execute' >> ${CONFIG_FILE}"
+
+			if [ -n "${SHARED_FS_DOMAIN}" ]; then
+				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
+			fi
 
 			do_token_security
 			;;
@@ -561,6 +636,14 @@ while [ $# -gt 0 ]; do
 			PASSWORD=$2
 			if [ -z "${PASSWORD}" ]; then
 				echo "--password requires an argument"
+				exit 1
+			fi
+			shift
+			;;
+		--shared-filesystem-domain)
+			SHARED_FS_DOMAIN=$2
+			if [ -z "${SHARED_FS_DOMAIN}" ]; then
+				echo "--shared-filesystem-domain requires an argument"
 				exit 1
 			fi
 			shift

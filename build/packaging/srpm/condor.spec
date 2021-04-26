@@ -10,6 +10,7 @@
 # % define osg      0
 # % define uw_build 1
 # % define vaultcred 1
+# % define devtoolset 0
 
 %define python 0
 
@@ -23,6 +24,7 @@
 %endif
 
 %if %uw_build
+%define devtoolset 0
 %define debug 1
 %endif
 
@@ -44,8 +46,6 @@
 %endif
 
 %define python 1
-
-%define glexec 1
 
 # Temporarily turn parallel_setup off
 %define parallel_setup 0
@@ -115,9 +115,6 @@ Source1: generate-tarball.sh
 
 Source3: osg-env.conf
 Source5: condor_config.local.dedicated.resource
-
-Source6: 00-batch_gahp_blahp.config
-Source7: 00-restart_peaceful.config
 
 Source8: htcondor.pp
 
@@ -217,7 +214,7 @@ BuildRequires: libtool-ltdl-devel
 BuildRequires: libcgroup-devel
 Requires: libcgroup
 
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
+%if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
 BuildRequires: which
 BuildRequires: devtoolset-9-toolchain
 %endif
@@ -277,7 +274,7 @@ Requires: condor-boinc
 %endif
 
 %if %blahp
-Requires: blahp >= 1.16.1
+Requires: blahp >= 2.0.1
 %endif
 
 # Useful tools are using the Python bindings
@@ -709,7 +706,7 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 
 %build
 
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
+%if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
 . /opt/rh/devtoolset-9/enable
 export CC=$(which cc)
 export CXX=$(which c++)
@@ -790,11 +787,6 @@ export CMAKE_PREFIX_PATH=/usr
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
        -DWITH_CREAM:BOOL=FALSE \
-%if %glexec
-       -DWANT_GLEXEC:BOOL=TRUE \
-%else
-       -DWANT_GLEXEC:BOOL=FALSE \
-%endif
        -DWITH_GLOBUS:BOOL=TRUE \
        -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
        -DWITH_LIBCGROUP:BOOL=TRUE \
@@ -818,6 +810,7 @@ function populate {
 rm -rf %{buildroot}
 echo ---------------------------- makefile ---------------------------------
 make install DESTDIR=%{buildroot}
+
 %if %uw_build
 make tests-tar-pkg
 # tarball of tests
@@ -858,6 +851,7 @@ mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/tokens.d
 cp %{SOURCE5} %{buildroot}/%{_sysconfdir}/condor/config.d/20dedicated_scheduler_condor.config
 %endif
 
+populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-htcondor-9.0.config
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-minicondor
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/50ec2.config
 
@@ -882,8 +876,9 @@ mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
 
 # not packaging configure/install scripts
 %if ! %uw_build
-rm -rf %{buildroot}%{_sbindir}/condor_configure
-rm -rf %{buildroot}%{_sbindir}/condor_install
+rm -f %{buildroot}%{_bindir}/make-personal-from-tarball
+rm -f %{buildroot}%{_sbindir}/condor_configure
+rm -f %{buildroot}%{_sbindir}/condor_install
 rm -f %{buildroot}/%{_mandir}/man1/condor_configure.1
 rm -f %{buildroot}/%{_mandir}/man1/condor_install.1
 %endif
@@ -903,6 +898,8 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_install.1
 rm -f %{buildroot}/%{_bindir}/condor_top
 rm -f %{buildroot}/%{_bindir}/classad_eval
 rm -f %{buildroot}/%{_bindir}/condor_watch_q
+rm -f %{buildroot}/%{_bindir}/condor_check_password
+rm -f %{buildroot}/%{_bindir}/condor_check_config
 %endif
 
 # For EL7, move oauth credmon WSGI script out of libexec to /var/www
@@ -1091,14 +1088,6 @@ mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{bu
 %endif
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
 
-%if %blahp
-install -p -m 0644 %{SOURCE6} %{buildroot}%{_sysconfdir}/condor/config.d/00-batch_gahp_blahp.config
-%endif
-
-%if 0%{?osg} || 0%{?hcc}
-install -p -m 0644 %{SOURCE7} %{buildroot}%{_sysconfdir}/condor/config.d/00-restart_peaceful.config
-%endif
-
 # htcondor/dags only works with Python3
 rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
 
@@ -1144,6 +1133,7 @@ rm -rf %{buildroot}
 %dir %_sysconfdir/condor/passwords.d/
 %dir %_sysconfdir/condor/tokens.d/
 %dir %_sysconfdir/condor/config.d/
+%config(noreplace) %{_sysconfdir}/condor/config.d/00-htcondor-9.0.config
 %_libdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/bash_completion.d/condor
@@ -1164,14 +1154,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_job_router
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
-%if %glexec
-%_libexecdir/condor/condor_glexec_setup
-%_libexecdir/condor/condor_glexec_run
-%_libexecdir/condor/condor_glexec_job_wrapper
-%_libexecdir/condor/condor_glexec_update_proxy
-%_libexecdir/condor/condor_glexec_cleanup
-%_libexecdir/condor/condor_glexec_kill
-%endif
+%_libexecdir/condor/htcondor_docker_test
 %if %blahp
 %dir %_libexecdir/condor/glite/bin
 %_libexecdir/condor/glite/bin/kubernetes_cancel.sh
@@ -1184,10 +1167,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/glite/bin/nqs_resume.sh
 %_libexecdir/condor/glite/bin/nqs_status.sh
 %_libexecdir/condor/glite/bin/nqs_submit.sh
-%config(noreplace) %{_sysconfdir}/condor/config.d/00-batch_gahp_blahp.config
-%endif
-%if 0%{?osg} || 0%{?hcc}
-%config(noreplace) %{_sysconfdir}/condor/config.d/00-restart_peaceful.config
 %endif
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster
@@ -1216,13 +1195,12 @@ rm -rf %{buildroot}
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/legacy_curl_plugin
 %_libexecdir/condor/condor_shared_port
-%_libexecdir/condor/condor_glexec_wrapper
-%_libexecdir/condor/glexec_starter_setup.sh
 %_libexecdir/condor/condor_defrag
 %_libexecdir/condor/interactive.sub
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
+%_libexecdir/condor/ce-audit.so
 %_libexecdir/condor/adstash/__init__.py
 %_libexecdir/condor/adstash/config.py
 %_libexecdir/condor/adstash/convert.py
@@ -1234,7 +1212,6 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_config_val.1.gz
-%_mandir/man1/condor_convert_history.1.gz
 %_mandir/man1/condor_dagman.1.gz
 %_mandir/man1/condor_fetchlog.1.gz
 %_mandir/man1/condor_findhost.1.gz
@@ -1314,6 +1291,8 @@ rm -rf %{buildroot}
 %_bindir/condor_config_val
 %_bindir/condor_reschedule
 %_bindir/condor_userprio
+%_bindir/condor_check_password
+%_bindir/condor_check_config
 %_bindir/condor_dagman
 %_bindir/condor_rm
 %_bindir/condor_vacate
@@ -1364,7 +1343,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
-%_sbindir/condor_convert_history
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
 %_sbindir/condor_had
@@ -1688,6 +1666,43 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Apr 14 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.0-1
+- Absent any configuration, HTCondor denies authorization to all users
+- AES encryption is used for all communication and file transfers by default
+- New IDTOKEN authentication method enables fine-grained authorization
+- IDTOKEN authentication method is designed to replace GSI
+- Improved support for GPUs, including machines with multiple GPUs
+- New condor_watch_q tool that efficiently provides live job status updates
+- Many improvements to the Python bindings
+- New Python bindings for DAGMan and chirp
+- Improved file transfer plugins supporting uploads and authentication
+- File transfer times are now recorded in the job log
+- Added support for jobs that need to acquire and use OAUTH tokens
+- Many memory footprint and performance improvements in DAGMan
+- Submitter ceilings can limit the number of jobs per user in a pool
+
+* Tue Mar 30 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.13-1
+- Host based security is no longer the default security model
+- Hardware accelerated integrity and AES encryption used by default
+- Normally, AES encryption is used for all communication and file transfers
+- Fallback to Triple-DES or Blowfish when interoperating with older versions
+- Simplified and automated new HTCondor installations
+- HTCondor now detects instances of multi-instance GPUs
+- Fixed memory leaks (collector updates in 8.9 could leak a few MB per day)
+- Many other enhancements and bug fixes, see version history for details
+
+* Thu Mar 25 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.12-1
+- Withdrawn due to compatibility issues with prior releases
+
+* Tue Mar 23 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.13-1
+- condor_ssh_to_job now maps CR and NL to work with editors like nano
+- Improved the performance of data transfer in condor_ssh_to_job
+- HA replication now accepts SHA-2 checksums to prepare for MD5 removal
+- Submission to NorduGrid ARC CE works with newer ARC CE versions
+- Fixed condor_annex crashes on platforms with newer compilers
+- Fixed "use feature: GPUsMonitor" to locate the monitor binary on Windows
+- Fixed a bug that prevented using the '@' character in an event log path
+
 * Wed Jan 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.11-1
 - This release of HTCondor fixes security-related bugs described at
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001.html

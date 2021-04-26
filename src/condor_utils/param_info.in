@@ -1053,7 +1053,7 @@ type=int
 tags=sysapi,reconfig
 
 [RELEASE_DIR]
-default=/tmp/condorinstall0
+default=/usr
 win32_default=c:\condor
 type=string
 usage=Where have you installed the bin, sbin and lib condor directories?
@@ -1278,7 +1278,7 @@ type=string
 tags=daemon_core
 
 [DISABLE_SETUID]
-default=true
+default=false
 type=bool
 tags=master
 
@@ -1286,6 +1286,11 @@ tags=master
 default=false
 type=bool
 tags=daemon_core
+
+[SEC_C_GAHP_WORKER_THREAD_DEFAULT_SESSION_DURATION]
+default=1800
+range=0,
+type=int
 
 [SEC_SESSION_DURATION_SLOP]
 default=20
@@ -1517,7 +1522,7 @@ type=string
 tags=gridmanager,gahp-client
 
 [BATCH_GAHP]
-default=$(GLITE_LOCATION)/bin/batch_gahp
+default=$(BIN)/blahpd
 type=string
 tags=gridmanager,infnbatchjob
 
@@ -2487,12 +2492,13 @@ tags=misc_utils
 
 [SEC_PASSWORD_FILE]
 default=$(SEC_PASSWORD_DIRECTORY)/POOL
-type=string
+win32_default=
+type=path
 tags=store_cred
 
 [SEC_PASSWORD_DIRECTORY]
 default=/etc/condor/passwords.d
-win32_default=
+win32_default=$(RELEASE_DIR)\tokens.sk
 type=path
 tags=store_cred
 
@@ -2505,13 +2511,20 @@ tags=condor_auth_passwd
 [SEC_TOKEN_DIRECTORY]
 default=
 description=Directory containing the tokens for token auth.
-type=string
+type=path
 tags=condor_auth_passwd
 
 [SEC_TOKEN_ISSUER_KEY]
 default=POOL
 description=Name of the key used to issue session tokens
 type=string
+tags=condor_auth_passwd
+
+[SEC_TOKEN_POOL_SIGNING_KEY_FILE]
+default=$(SEC_PASSWORD_FILE)
+win32_default=$(RELEASE_DIR)\tokens.sk\POOL
+type=path
+description=Path to the POOL token signing key
 tags=condor_auth_passwd
 
 [SEC_TOKEN_MAX_AGE]
@@ -2674,7 +2687,7 @@ type=string
 tags=starter
 
 [STARTER_NUM_THREADS_ENV_VARS]
-default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS
+default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT OPENBLAS_NUM_THREADS TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS
 type=string
 tags=starter
 
@@ -5158,6 +5171,18 @@ tags=starter
 default=true
 type=bool
 
+[DOCKER_PERFORM_TEST]
+default=true
+type=bool
+
+[DOCKER_TEST_IMAGE_PATH]
+default=$(LIBEXEC)/htcondor_docker_test
+type=string
+
+[DOCKER_TEST_IMAGE_NAME]
+default=htcondor_docker_test
+type=string
+
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
 type=string
@@ -5515,6 +5540,10 @@ type=path
 default=$(SBIN)/condor_credmon_oauth
 win32_default=
 type=path
+
+[LOCAL_CREDMON_TOKEN_USE_JSON]
+default=true
+type=bool
 
 # standard API endpoints for common OAuth token providers
 [BOX_AUTHORIZATION_URL]
@@ -6186,11 +6215,11 @@ default : @end
 	ALLOW_WRITE_STARTD=$(ALLOW_WRITE) $(FLOCK_FROM)
 	ALLOW_READ_COLLECTOR=$(ALLOW_READ) $(FLOCK_FROM)
 	ALLOW_READ_STARTD=$(ALLOW_READ) $(FLOCK_FROM)
-	use SECURITY : WITH_AUTHENTICATION
+	use SECURITY:WITH_AUTHENTICATION
 @end
 
 [$FEATURE.AssignAccountingGroup]
-description=Set the job accounting attributes by mapping the job's Owner attribute args:(map_file)
+description=Set the job accounting attributes by mapping the job's Owner attribute args:(map_file [,check_request])
 default : @fin
 	if ! $(1?)
 	  error : use FEATURE : AssignAccountingGroup requires a map_file argument
@@ -6200,6 +6229,12 @@ default : @fin
 	JOB_TRANSFORM_AssignAccountingGroup = [ copy_Owner="AcctGroupUser"; copy_AcctGroup="RequestedAcctGroup"; eval_set_AcctGroup=usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup); eval_set_AccountingGroup=join(".",usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup),AcctGroupUser); ]
 	# make sure that the user can't qedit these attributes once they have been set.
 	IMMUTABLE_JOB_ATTRS = $(IMMUTABLE_JOB_ATTRS) AcctGroup AcctGroupUser AccountingGroup
+	# optionally check that the user requested a valid group
+	if $(2:True)
+	  SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) CheckRequestedGroup
+	  SUBMIT_REQUIREMENT_CheckRequestedGroup = RequestedAcctGroup is undefined || RequestedAcctGroup == AcctGroup
+	  SUBMIT_REQUIREMENT_CheckRequestedGroup_REASON = strcat("Permission denied setting accounting_group to ", RequestedAcctGroup)
+	endif
 	# require that the user mapped into an accounting group
 	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) AssignAccountingGroup
 	SUBMIT_REQUIREMENT_AssignAccountingGroup = AcctGroup isnt undefined && AccountingGroup isnt undefined
@@ -6404,7 +6439,7 @@ default: @end
 [$SECURITY.get_htcondor_idtokens]
 default: @end
 # Authenticate, encrypt, and monitor the integrity of all connections.
-use security : strong
+use security:strong
 
 # This configuration specifies authentication methods first, and then
 # specifies various authorizations.  Think of a passport and a visa: the
@@ -6417,8 +6452,9 @@ use security : strong
 # but rather than force each user to acquire one, we add the FS ("filesystem")
 # method, which lets the HTCondor tools use the local filesystem to prove the
 # identity of the user who invoked them.  Finally, we allow ANONYMOUS
-# authentication, if nothing else works, to allow users read-only access
-# to remote daemons (e.g., for condor_status).
+# authentication, for the READ authorization level only, so that if nothing
+# else works, we can allow users read-only access to remote daemons
+# (e.g., for condor_status).
 #
 # Users who want to submit jobs remotely should run `condor_token_fetch` on
 # the machine they want to submit to and cut-and-paste the result to a file
@@ -6429,7 +6465,12 @@ use security : strong
 # IDTOKENS before FS because FS gives the daemon a different identity
 # than the IDTOKEN, and FS before ANONYMOUS because ANONYMOUS, of course,
 # gives no specific identity at all.
-SEC_DEFAULT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
+SEC_DEFAULT_AUTHENTICATION_METHODS = IDTOKENS, FS
+# Only allow ANONYMOUS authentication for READ-level authorizations.
+SEC_READ_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
+# Since ANONYMOUS is not in the default authentication methods, we must
+# list it in the client methods explicitly (all other methods are server).
+SEC_CLIENT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
 
 # IDTOKENs issued by HTCondor include the identity of the issuer.  This
 # identity is used to determine which IDTOKEN(s) to present to which
@@ -6450,9 +6491,13 @@ TRUST_DOMAIN = $(CONDOR_HOST)
 # the ANONYMOUS identity, but if we're including ANONYMOUS, why bother?
 ALLOW_READ = *
 
+# Give root on each machine ADMINISTRATOR access (in case something goes
+# wrong with IDTOKENS) and OWNER access (so they can force HTCondor to
+# stop all running jobs on that machine).  Do NOT issue IDTOKENS to root.
+ALLOW_ADMINISTRATOR = root@* condor@$(TRUST_DOMAIN)
+ALLOW_OWNER = root@* condor@$(TRUST_DOMAIN)
+
 # Accept non-read connections only from other daemons in the same pool.
-ALLOW_ADMINISTRATOR = condor@$(TRUST_DOMAIN)
-ALLOW_OWNER = condor@$(TRUST_DOMAIN)
 ALLOW_WRITE = condor@$(TRUST_DOMAIN)
 ALLOW_DAEMON = condor@$(TRUST_DOMAIN)
 ALLOW_NEGOTIATOR = condor@$(TRUST_DOMAIN)
@@ -6460,28 +6505,55 @@ ALLOW_NEGOTIATOR = condor@$(TRUST_DOMAIN)
 
 [$ROLE.get_htcondor_central_manager]
 default: @end
-use security : get_htcondor_idtokens
+use security:get_htcondor_idtokens
 
-use role : CentralManager
+use role:CentralManager
 @end
 
 [$ROLE.get_htcondor_submit]
 default: @end
-use security : get_htcondor_idtokens
+use security:get_htcondor_idtokens
 
-# Allow local users to submit jobs.
-ALLOW_WRITE = $(ALLOW_WRITE) *@$(HOSTNAME)
+# Allow local users to submit jobs.  Since the only way to authenticate
+# is with IDTOKENS (all of whose holders we trust) and FS (the local users),
+# we can avoid writing things like *@$(HOSTNAME), which will fail if
+# UID_DOMAIN is set (and introduces more opportunities for DNS to fail).
+ALLOW_WRITE = $(ALLOW_WRITE) *
 
-use role : submit
+use role:submit
 @end
 
 [$ROLE.get_htcondor_execute]
 default: @end
-use security : get_htcondor_idtokens
+use security:get_htcondor_idtokens
 
-use role : execute
+use role:execute
 @end
 
+##
+## Version-specific knobx.
+##
+[$SECURITY.recommended_v9_0]
+default: @end
+# Make it easy to detect if this metaknob was set.
+SECURITY_MODEL = 9.0
+
+# Assume that FS and IDTOKENS are in SEC_DEFAULT_AUTHENTICATION_METHODS,
+# which they are by default.
+use security:strong
+
+# This allows anyone who can access port 9618 to READ, which lets
+# condor_status and condor_q work over the network out of the box.
+SEC_READ_AUTHENTICATION = OPTIONAL
+SEC_READ_ENCRYPTION = OPTIONAL
+SEC_READ_INTEGRITY = OPTIONAL
+
+ALLOW_ADMINISTRATOR = root@*, condor@*, condor_pool@*
+ALLOW_DAEMON = condor@*, condor_pool@*
+ALLOW_NEGOTIATOR = condor@*, condor_pool@*
+ALLOW_WRITE = *
+ALLOW_READ = *
+@end
 
 ##
 ## Experimental meta knobs

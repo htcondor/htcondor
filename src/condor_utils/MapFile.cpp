@@ -340,10 +340,10 @@ void MapFile::clear() // clear all items and free the allocation pool
 int
 MapFile::ParseField(MyString & line, int offset, MyString & field, int * popts /*=NULL*/)
 {
-	ASSERT(offset >= 0 && offset <= line.Length());
+	ASSERT(offset >= 0 && offset <= line.length());
 
 		// We consume the leading white space
-	while (offset < line.Length() &&
+	while (offset < line.length() &&
 		   (' ' == line[offset] ||
 			'\t' == line[offset] ||
 			'\n' == line[offset])) {
@@ -368,7 +368,7 @@ MapFile::ParseField(MyString & line, int offset, MyString & field, int * popts /
 		offset++;
 	}
 
-	while (offset < line.Length()) {
+	while (offset < line.length()) {
 		if (multiword) {
 				// If we hit a " (quote) we are done, quotes in the
 				// field are prefixed with a \ [don't end comments
@@ -380,9 +380,13 @@ MapFile::ParseField(MyString & line, int offset, MyString & field, int * popts /
 					// if this is a regex match, then it can be followed by i or U to modify the match
 					while ((ch = line[offset]) != 0) {
 						if (ch == 'i') {
-							*popts |= PCRE_CASELESS;
+							if (popts) {
+								*popts |= PCRE_CASELESS;
+							}
 						} else if (ch == 'U') {
-							*popts |= PCRE_UNGREEDY;
+							if (popts) {
+								*popts |= PCRE_UNGREEDY;
+							}
 						} else {
 							break;
 						}
@@ -394,7 +398,7 @@ MapFile::ParseField(MyString & line, int offset, MyString & field, int * popts /
 					// If we see a \ we either write it out or if it
 					// is followed by a " we strip it and output the "
 					// alone
-			} else if ('\\' == line[offset] && ++offset < line.Length()) {
+			} else if ('\\' == line[offset] && ++offset < line.length()) {
 				if (chEnd == (line[offset])) {
 					field += line[offset];
 				} else {
@@ -431,11 +435,11 @@ MapFile::ParseField(MyString & line, int offset, MyString & field, int * popts /
 int
 MapFile::ParseCanonicalizationFile(const MyString filename, bool assume_hash /*=false*/, bool allow_include /*=true*/)
 {
-	FILE *file = safe_fopen_wrapper_follow(filename.Value(), "r");
+	FILE *file = safe_fopen_wrapper_follow(filename.c_str(), "r");
 	if (NULL == file) {
 		dprintf(D_ALWAYS,
 				"ERROR: Could not open canonicalization file '%s' (%s)\n",
-				filename.Value(),
+				filename.c_str(),
 				strerror(errno));
 		return -1;
 	} else {
@@ -444,7 +448,7 @@ MapFile::ParseCanonicalizationFile(const MyString filename, bool assume_hash /*=
 
 	MyStringFpSource myfs(file, true);
 
-	return ParseCanonicalization(myfs, filename.Value(), assume_hash, allow_include);
+	return ParseCanonicalization(myfs, filename.c_str(), assume_hash, allow_include);
 }
 
 int
@@ -468,7 +472,7 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 
 		input_line.readLine(src); // Result ignored, we already monitor EOF
 
-		if (input_line.IsEmpty()) {
+		if (input_line.empty()) {
 			continue;
 		}
 
@@ -482,7 +486,7 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 			}
 			MyString path;
 			offset = ParseField(input_line, offset, path);
-			if (path.IsEmpty()) {
+			if (path.empty()) {
 				dprintf(D_ALWAYS, "ERROR: Empty filename for @include directive in the map %s (line %d)\n", srcname, line);
 				continue;
 			}
@@ -513,7 +517,7 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 		}
 
 #ifdef USE_MAPFILE_V2
-		if (method.Length() == 0 || method[0] == '#') continue; // ignore blank and comment lines
+		if (method.length() == 0 || method[0] == '#') continue; // ignore blank and comment lines
 		int regex_opts = assume_hash ? 0 : PCRE_NOTEMPTY;
 		offset = ParseField(input_line, offset, principal, assume_hash ? &regex_opts : NULL);
 #else
@@ -522,20 +526,20 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 #endif
 		offset = ParseField(input_line, offset, canonicalization);
 
-		if (method.IsEmpty() ||
-			principal.IsEmpty() ||
-			canonicalization.IsEmpty()) {
+		if (method.empty() ||
+			principal.empty() ||
+			canonicalization.empty()) {
 				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.  (Method=%s) (Principal=%s) (Canon=%s) Skipping to next line.\n",
-						line, srcname, method.Value(), principal.Value(), canonicalization.Value());
+						line, srcname, method.c_str(), principal.c_str(), canonicalization.c_str());
 
 				continue;
 		}
 
 		dprintf(D_FULLDEBUG,
 				"MapFile: Canonicalization File: method='%s' principal='%s' canonicalization='%s'\n",
-				method.Value(),
-				principal.Value(),
-				canonicalization.Value());
+				method.c_str(),
+				principal.c_str(),
+				canonicalization.c_str());
 
 /*
 		Regex *re = new Regex;
@@ -580,18 +584,18 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 int
 MapFile::ParseUsermapFile(const MyString filename, bool assume_hash /*=false*/)
 {
-	FILE *file = safe_fopen_wrapper_follow(filename.Value(), "r");
+	FILE *file = safe_fopen_wrapper_follow(filename.c_str(), "r");
 	if (NULL == file) {
 		dprintf(D_ALWAYS,
 				"ERROR: Could not open usermap file '%s' (%s)\n",
-				filename.Value(),
+				filename.c_str(),
 				strerror(errno));
 		return -1;
 	}
 
 	MyStringFpSource myfs(file, true);
 
-	return ParseUsermap(myfs, filename.Value(), assume_hash);
+	return ParseUsermap(myfs, filename.c_str(), assume_hash);
 }
 
 int
@@ -614,7 +618,7 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 
 		input_line.readLine(src); // Result ignored, we already monitor EOF
 
-		if (input_line.IsEmpty()) {
+		if (input_line.empty()) {
 			continue;
 		}
 
@@ -622,7 +626,7 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 #ifdef USE_MAPFILE_V2
 		int regex_opts = assume_hash ? 0 : PCRE_NOTEMPTY;
 		offset = ParseField(input_line, offset, canonicalization, assume_hash ? &regex_opts : NULL);
-		if (canonicalization.Length() == 0 || canonicalization[0] == '#') continue; // ignore blank and comment lines
+		if (canonicalization.length() == 0 || canonicalization[0] == '#') continue; // ignore blank and comment lines
 #else
 		offset = ParseField(input_line, offset, canonicalization);
 #endif
@@ -630,11 +634,11 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 
 		dprintf(D_FULLDEBUG,
 				"MapFile: Usermap File: canonicalization='%s' user='%s'\n",
-				canonicalization.Value(),
-				user.Value());
+				canonicalization.c_str(),
+				user.c_str());
 
-		if (canonicalization.IsEmpty() ||
-			user.IsEmpty()) {
+		if (canonicalization.empty() ||
+			user.empty()) {
 				dprintf(D_ALWAYS, "ERROR: Error parsing line %d of %s.\n",
 						line, srcname);
 				return line;
@@ -899,7 +903,7 @@ MapFile::FindMapping(CanonicalMapList* list,       // in: the mapping data set
 					const char ** pcanon)         // out: canonicalization pattern
 {
 	for (CanonicalMapEntry * entry = list->first; entry; entry = entry->next) {
-		if (entry->matches(input.c_str(), input.Length(), groups, pcanon)) {
+		if (entry->matches(input.c_str(), input.length(), groups, pcanon)) {
 			return true;
 		}
 	}

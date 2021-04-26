@@ -93,6 +93,8 @@ common_externals="boost169-python3 \
     globus-xio \
     globus-xio-gsi-driver \
     globus-xio-popen-driver \
+    libcgroup \
+    libgomp \
     munge-libs \
     scitokens-cpp \
     voms"
@@ -127,6 +129,15 @@ for file in external-packages/*.rpm; do
 done
 
 rm -r external-packages
+
+# Check tarball for externals (in case of download errors)
+for package in $externals; do
+    if ! grep $package tarball/Manifest.txt; then
+        echo "ERROR: external $package is missing!"
+        exit 1
+    fi
+done
+
 $cmd_dir/make-tarball-links tarball
 $cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64'
 

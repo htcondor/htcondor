@@ -64,8 +64,8 @@ public:
 	                   int         reaper_id,
 	                   int         dc_job_opts,
 	                   FamilyInfo* family_info,
-					   int *       affinity_mask = 0,
-					   MyString *  error_msg = NULL);
+	                   int *       affinity_mask /* = 0 */,
+	                   std::string & error_msg);
 
 	// check if the proxy is currently valid
 	//

@@ -35,8 +35,8 @@ SharedPortServer::~SharedPortServer() {
 		daemonCore->Cancel_Command( SHARED_PORT_CONNECT );
 	}
 
-	if( !m_shared_port_server_ad_file.IsEmpty() ) {
-		IGNORE_RETURN unlink( m_shared_port_server_ad_file.Value() );
+	if( !m_shared_port_server_ad_file.empty() ) {
+		IGNORE_RETURN unlink( m_shared_port_server_ad_file.c_str() );
 	}
 
 	if( m_publish_addr_timer != -1 ) {
@@ -109,13 +109,13 @@ SharedPortServer::RemoveDeadAddressFile()
 		return;
 	}
 
-	int fd = open( shared_port_server_ad_file.Value(), O_RDONLY );
+	int fd = open( shared_port_server_ad_file.c_str(), O_RDONLY );
 	if( fd != -1 ) {
 		close( fd );
-		if( unlink(shared_port_server_ad_file.Value()) == 0 ) {
-			dprintf(D_ALWAYS,"Removed %s (assuming it is left over from previous run)\n",shared_port_server_ad_file.Value());
+		if( unlink(shared_port_server_ad_file.c_str()) == 0 ) {
+			dprintf(D_ALWAYS,"Removed %s (assuming it is left over from previous run)\n",shared_port_server_ad_file.c_str());
 		} else {
-			EXCEPT( "Failed to remove dead shared port address file '%s'!", shared_port_server_ad_file.Value() );
+			EXCEPT( "Failed to remove dead shared port address file '%s'!", shared_port_server_ad_file.c_str() );
 		}
 	}
 }
@@ -158,11 +158,11 @@ SharedPortServer::PublishAddress()
 	// metrics that may be useful for debugging, and b) this method is 
 	// only invoked every 5 minutes by default
 	dprintf(D_ALWAYS, "About to update statistics in shared_port daemon ad file at %s :\n",
-			m_shared_port_server_ad_file.Value());
+			m_shared_port_server_ad_file.c_str());
 	dPrintAd(D_ALWAYS|D_NOHEADER,ad);
 
 	// and now save the ad to disk
-	daemonCore->UpdateLocalAd(&ad,m_shared_port_server_ad_file.Value());
+	daemonCore->UpdateLocalAd(&ad,m_shared_port_server_ad_file.c_str());
 }
 
 int
@@ -218,7 +218,7 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 		MyString client_buf(client_name);
 			// client name is purely for debugging purposes
 		client_buf.formatstr_cat(" on %s",sock->peer_description());
-		sock->set_peer_description(client_buf.Value());
+		sock->set_peer_description(client_buf.c_str());
 	}
 
 	MyString deadline_desc;
@@ -232,7 +232,7 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 
 	dprintf( D_FULLDEBUG,
 			"SharedPortServer: request from %s to connect to %s%s. (CurPending=%u PeakPending=%u)\n",
-			sock->peer_description(), shared_port_id, deadline_desc.Value(),
+			sock->peer_description(), shared_port_id, deadline_desc.c_str(),
 			m_shared_port_client.get_currentPendingPassSocketCalls(),
 			m_shared_port_client.get_maxPendingPassSocketCalls() );
 

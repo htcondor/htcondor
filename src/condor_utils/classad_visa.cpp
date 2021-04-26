@@ -22,7 +22,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "directory.h"
-#include "MyString.h"
 #include "classad_visa.h"
 #include "ipv6_hostname.h"
 
@@ -31,11 +30,11 @@ classad_visa_write(ClassAd* ad,
                    const char* daemon_type,
                    const char* daemon_sinful,
                    const char* dir_path,
-                   MyString* filename_used)
+                   std::string* filename_used)
 {
 	int cluster, proc, i;
 	ClassAd visa_ad;
-	MyString filename, fullpath;
+	std::string filename, fullpath;
 
 	const char *file_path = NULL;
 	int fd = -1;
@@ -99,9 +98,9 @@ classad_visa_write(ClassAd* ad,
 		// unique, e.g. if jobad.0.0 exists then jobad.0.0.0 and if
 		// jobad.0.0.0 exists then jobad.0.0.1 and so on
 	i = 0;
-	filename.formatstr("jobad.%d.%d", cluster, proc);
+	formatstr(filename, "jobad.%d.%d", cluster, proc);
 	ASSERT(dir_path != NULL);
-	file_path = dircat(dir_path, filename.Value(), fullpath);
+	file_path = dircat(dir_path, filename.c_str(), fullpath);
 	while (-1 == (fd = safe_open_wrapper_follow(file_path,
 	                                     O_WRONLY|O_CREAT|O_EXCL))) {
 		if (EEXIST != errno) {
@@ -111,8 +110,8 @@ classad_visa_write(ClassAd* ad,
 			goto EXIT;
 		}
 
-		filename.formatstr("jobad.%d.%d.%d", cluster, proc, i++);
-		file_path = dircat(dir_path, filename.Value(), fullpath);
+		formatstr(filename, "jobad.%d.%d.%d", cluster, proc, i++);
+		file_path = dircat(dir_path, filename.c_str(), fullpath);
 	}
 
 	if (NULL == (file = fdopen(fd, "w"))) {

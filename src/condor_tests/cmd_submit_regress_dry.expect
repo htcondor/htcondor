@@ -315,12 +315,12 @@ JobMaxRetries=3
 OnExitHold=ExitCode > 42
 OnExitHoldReason="job fooled by succeeding to well"
 OnExitHoldSubCode=43
-OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode == 0
+OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode =?= 0
 
 ==success.sub
 JobMaxRetries=2
 JobSuccessExitCode=5
-OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode == JobSuccessExitCode
+OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode =?= JobSuccessExitCode
 
 ==parallel.sub
 JobUniverse=11
@@ -370,7 +370,7 @@ Err="prediction_script_data_70_0.err"
 Iwd=/".+Multilevel_Thesis_WheatData/70"/
 JobMaterializeMaxIdle=2000
 JobMaxRetries=5
-OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode == 0
+OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode =?= 0
 Out="prediction_script_data_70.out"
 PeriodicHold=(NumJobCompletions > 10)
 RequestDisk=716800

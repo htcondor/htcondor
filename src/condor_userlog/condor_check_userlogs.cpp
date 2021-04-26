@@ -50,9 +50,8 @@ int main(int argc, char **argv)
 	ReadMultipleUserLogs	ru;
 	char *filename;
 	while ( (filename = logFiles.next()) ) {
-		MyString filestring( filename );
 		CondorError errstack;
-		if ( !ru.monitorLogFile( filestring, false, errstack ) ) {
+		if ( !ru.monitorLogFile( filename, false, errstack ) ) {
 			fprintf( stderr, "Error monitoring log file %s: %s\n", filename,
 						errstack.getFullText().c_str() );
 			result = 1;
@@ -68,7 +67,7 @@ int main(int argc, char **argv)
 	while( !done ) {
 
     	ULogEvent* e = NULL;
-		MyString errorMsg;
+		std::string errorMsg;
 
         ULogEventOutcome outcome = ru.readEvent( e );
 
@@ -92,7 +91,7 @@ int main(int argc, char **argv)
 						e->cluster, e->proc, e->subproc );
 
 			if ( ce.CheckAnEvent(e, errorMsg) != CheckEvents::EVENT_OKAY ) {
-				fprintf(stderr, "%s\n", errorMsg.Value());
+				fprintf(stderr, "%s\n", errorMsg.c_str());
 				result = 1;
 			}
 
@@ -142,20 +141,19 @@ int main(int argc, char **argv)
 
 	logFiles.rewind();
 	while ( (filename = logFiles.next()) ) {
-		MyString filestring( filename );
 		CondorError errstack;
-		if ( !ru.unmonitorLogFile( filestring, errstack ) ) {
+		if ( !ru.unmonitorLogFile( filename, errstack ) ) {
 			fprintf( stderr, "Error unmonitoring log file %s: %s\n", filename,
 						errstack.getFullText().c_str() );
 			result = 1;
 		}
 	}
 
-	MyString errorMsg;
+	std::string errorMsg;
 	CheckEvents::check_event_result_t checkAllResult =
 				ce.CheckAllJobs(errorMsg);
 	if ( checkAllResult != CheckEvents::EVENT_OKAY ) {
-		fprintf(stderr, "%s\n", errorMsg.Value());
+		fprintf(stderr, "%s\n", errorMsg.c_str());
 		fprintf(stderr, "CheckAllJobs() result: %s\n",
 					CheckEvents::ResultToString(checkAllResult));
 		result = 1;

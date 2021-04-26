@@ -414,7 +414,7 @@ void ScheddOtherStatsMgr::Publish(ClassAd & ad)
 		if ( ! po->enabled)
 			continue;
 
-		po->stats.Pool.Publish(ad, po->prefix.Value(), po->stats.PublishFlags);
+		po->stats.Pool.Publish(ad, po->prefix.c_str(), po->stats.PublishFlags);
 		if ( ! po->sets.empty()) {
 			for (std::map<std::string, ScheddOtherStats*>::iterator it = po->sets.begin();
 				 it != po->sets.end();
@@ -422,7 +422,7 @@ void ScheddOtherStatsMgr::Publish(ClassAd & ad)
 
 				ScheddOtherStats* po2 = it->second;
 				if (po2->enabled) {
-					po2->stats.Pool.Publish(ad, po2->prefix.Value(), po->stats.PublishFlags);
+					po2->stats.Pool.Publish(ad, po2->prefix.c_str(), po->stats.PublishFlags);
 				}
 
 			}
@@ -440,7 +440,7 @@ void ScheddOtherStatsMgr::Publish(ClassAd & ad, int flags)
 		if ( ! po->enabled)
 			continue;
 
-		po->stats.Pool.Publish(ad, po->prefix.Value(), flags);
+		po->stats.Pool.Publish(ad, po->prefix.c_str(), flags);
 		if ( ! po->sets.empty()) {
 			for (std::map<std::string, ScheddOtherStats*>::iterator it = po->sets.begin();
 				 it != po->sets.end();
@@ -448,7 +448,7 @@ void ScheddOtherStatsMgr::Publish(ClassAd & ad, int flags)
 
 				ScheddOtherStats* po2 = it->second;
 				if (po2->enabled) {
-					po2->stats.Pool.Publish(ad, po2->prefix.Value(), flags);
+					po2->stats.Pool.Publish(ad, po2->prefix.c_str(), flags);
 				}
 
 			}
@@ -473,7 +473,7 @@ void ScheddOtherStatsMgr::UnpublishDisabled(ClassAd & ad)
 
 				ScheddOtherStats* po2 = it->second;
 				if ( ! po2->enabled || ! po->enabled) {
-					po2->stats.Pool.Unpublish(ad, po2->prefix.Value());
+					po2->stats.Pool.Unpublish(ad, po2->prefix.c_str());
 				}
 
 			}
@@ -621,7 +621,7 @@ bool ScheddOtherStatsMgr::RemoveDisabled()
 	pools.startIterations();
 	while (pools.iterate(po)) {
 		if ( ! po->enabled) {
-			MyString key;
+			std::string key;
 			pools.getCurrentKey(key);
 			pools.remove(key);
 			delete po;
@@ -673,7 +673,7 @@ ScheddOtherStats * ScheddOtherStatsMgr::Matches(ClassAd & ad, time_t updateTime)
 			classad::ClassAdParser  parser;
 			if ( ! parser.ParseExpression(po->trigger, tree)) {
 				dprintf(D_ALWAYS, "Schedd_stats: Failed to parse expression for %s stats: '%s'\n", 
-						po->prefix.Value(), po->trigger.Value());
+						po->prefix.c_str(), po->trigger.c_str());
 				continue;
 			}
 			po->trigger_expr = tree;
@@ -748,7 +748,7 @@ ScheddOtherStats * ScheddOtherStatsMgr::Matches(ClassAd & ad, time_t updateTime)
 			ASSERT(po2);
 			po->sets[str] = po2;
 
-			po2->prefix.formatstr("%s_%s_", po->prefix.Value(), str.c_str());
+			formatstr(po2->prefix, "%s_%s_", po->prefix.c_str(), str.c_str());
 			cleanStringForUseAsAttr(po2->prefix, '_', false);
 
 			po2->stats.InitOther(config.RecentWindowMax, config.RecentWindowQuantum);

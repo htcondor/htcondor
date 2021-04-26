@@ -214,7 +214,7 @@ constructGPUID( const char * opt_pre, int dev, int opt_uuid, int opt_opencl, int
 	std::string gpuID = Format( "%s%i", opt_pre, dev );
 
 	// The -uuid and -short-uuid flags don't imply -properties.
-	if( opt_uuid && !opt_opencl ) {
+	if( opt_uuid && !opt_opencl && !enumeratedDevices[dev].uuid.empty()) {
 		gpuID = gpuIDFromUUID( enumeratedDevices[dev].uuid, opt_short_uuid );
 	}
 
@@ -298,8 +298,9 @@ main( int argc, const char** argv)
 	int opt_hetero = 0;  // don't assume properties are homogeneous
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
-	int opt_uuid = 0;   // publish DetectedGPUs as a list of GPU-<uuid> rather than than CUDA<N>
-	int opt_short_uuid = 0; // use shortened uuids
+	int opt_cuda_index = 0; // publish by index (I.e CUDA<N>)
+	int opt_uuid = -1;   // publish DetectedGPUs as a list of GPU-<uuid> rather than than CUDA<N>
+	int opt_short_uuid = -1; // use shortened uuids
 	std::list<int> dwl; // Device White List
 	bool opt_nvcuda = false; // force use of nvcuda rather than cudart
 	bool opt_cudart = false; // force use of use cudart rather than nvcuda
@@ -409,12 +410,18 @@ main( int argc, const char** argv)
 				opt_tag = argv[++i];
 			}
 		}
+		else if (is_dash_arg_prefix(argv[i], "by-index", 4)) {
+			opt_cuda_index = 1;
+			opt_short_uuid = opt_uuid = 0;
+		}
 		else if (is_dash_arg_prefix(argv[i], "uuid", 2)) {
 			opt_uuid = 1;
+			opt_cuda_index = opt_short_uuid = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "short-uuid", -1)) {
 			opt_uuid = 1;
 			opt_short_uuid = 1;
+			opt_cuda_index = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "prefix", 3)) {
 			if (argv[i+1]) {
@@ -553,14 +560,20 @@ main( int argc, const char** argv)
 		// record all the UUIDs we found via CUDA and skip them when
 		// reporting the devices we found via NVML.
 		//
+		bool shouldEnumerateNVMLDevices = true;
 		for( const BasicProps & bp : enumeratedDevices ) {
-			// NVML and CUDA UUIDs differ in this prefix.
-			std::string UUID = "GPU-" + bp.uuid;
-			cudaDevices.insert( UUID );
-			// fprintf( stderr, "Adding %s to the CUDA device list\n", UUID.c_str() );
+			if(! bp.uuid.empty()) {
+				// NVML and CUDA UUIDs differ in this prefix.
+				std::string UUID = "GPU-" + bp.uuid;
+				cudaDevices.insert( UUID );
+				// fprintf( stderr, "Adding %s to the CUDA device list\n", UUID.c_str() );
+			} else {
+				fprintf( stderr, "Not enumerating NVML devices because a CUDA device has no UUID.  This usually means you should upgrade your CUDA libaries.\n" );
+				shouldEnumerateNVMLDevices = false;
+			}
 		}
 
-		if( nvml_handle ) {
+		if( shouldEnumerateNVMLDevices && nvml_handle ) {
 			nvmlReturn_t r = enumerateNVMLDevices(nvmlDevices);
 			if(r != NVML_SUCCESS) {
 				fprintf( stderr, "Failed to enumerate MIG devices (%d: %s), aborting.\n", r, nvmlErrorString(r) );
@@ -595,6 +608,11 @@ main( int argc, const char** argv)
 		// Skip devices not on the whitelist.
 		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
 			continue;
+		}
+
+		// if we are defaulting to UUID, but the device has no UUID, switch the default to -by-index
+		if ((opt_uuid < 0) && enumeratedDevices[dev].uuid.empty()) {
+			opt_short_uuid = opt_uuid = 0;
 		}
 
 		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
@@ -866,7 +884,8 @@ void usage(FILE* out, const char * argv0)
 		"    -cuda             Detection via CUDA only, ignore OpenCL devices\n"
 		"    -opencl           Prefer detection via OpenCL rather than CUDA\n"
 		"    -uuid             Use GPU uuid instead of index as GPU id\n"
-		"    -short-uuid       Use first 8 characters of GPU uuid as GPU id\n"
+		"    -short-uuid       Use first 8 characters of GPU uuid as GPU id (default)\n"
+		"    -by-index         Use GPU index as the GPU id\n"
 		"    -simulate[:D[,N]] Simulate detection of N devices of type D\n"
 		"           where D is 0 - GeForce GT 330, default N=1\n"
 		"                      1 - GeForce GTX 480, default N=2\n"

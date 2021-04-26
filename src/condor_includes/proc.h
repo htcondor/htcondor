@@ -154,6 +154,7 @@ typedef struct JOB_ID_KEY {
 	operator const PROC_ID&() const { return *((const PROC_ID*)this); }
 	operator std::string() const;
 	void sprint(MyString &s) const;
+	void sprint(std::string &s) const;
 	bool set(const char * job_id_str) { return StrIsProcId(job_id_str, this->cluster, this->proc, NULL); }
 	static size_t hash(const JOB_ID_KEY &) noexcept;
 } JOB_ID_KEY;

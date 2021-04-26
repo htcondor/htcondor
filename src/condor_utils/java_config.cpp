@@ -87,14 +87,14 @@ int java_config( std::string &cmd, ArgList *args, StringList *extra_classpath )
 			arg_buf += tmp;
 		}
 	}
-	args->AppendArg(arg_buf.Value());
+	args->AppendArg(arg_buf.c_str());
 
 	MyString args_error;
 
 	tmp = param("JAVA_EXTRA_ARGUMENTS");
 	if(!args->AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
 		dprintf(D_ALWAYS,"java_config: failed to parse extra arguments: %s\n",
-				args_error.Value());
+				args_error.c_str());
 		free(tmp);
 		return 0;
 	}

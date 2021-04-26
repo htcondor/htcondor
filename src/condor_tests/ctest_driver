@@ -22,9 +22,12 @@ NEGOTIATOR_CYCLE_DELAY=1
 NEGOTIATOR_INTERVAL=1
 SCHEDD_INTERVAL=1
 SCHEDD_MIN_INTERVAL=1
+DAGMAN_USER_LOG_SCAN_INTERVAL = 1
 SCHEDD_DEBUG=D_FULLDEBUG
 RUNBENCHMARKS=false
-FILETRANSFER_PLUGINS=
+MAIL=/bin/true
+SENDMAIL=/bin/true
+FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin
 LOCAL_CONFIG_FILE={pwd}/condor_config.local
 # ctest allows tests to run for up to 1500 seconds; after that, we are
 # potentially a runaway personal condor instance.
@@ -125,7 +128,7 @@ def main():
 
     # TODO: there is much environment munging and path construction below that won't work on Windows
 
-    os.environ["PERL5LIB"] = ".."
+    os.environ["PERL5LIB"] = "..:."
 
     new_library_path = os.path.join(args.prefix_path, "lib")
     if "LD_LIBRARY_PATH" in os.environ:

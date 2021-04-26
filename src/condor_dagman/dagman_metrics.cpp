@@ -146,21 +146,21 @@ DagmanMetrics::WriteMetricsFile( int exitCode, DagStatus status )
 	double endTime = GetTime();
 	double duration = endTime - _startTime;
 
-	FILE *fp = safe_fopen_wrapper_follow( _metricsFile.Value(), "w" );
+	FILE *fp = safe_fopen_wrapper_follow( _metricsFile.c_str(), "w" );
 	if ( !fp ) {
 		debug_printf( DEBUG_QUIET, "Could not open %s for writing.\n",
-					_metricsFile.Value() );
+					_metricsFile.c_str() );
 		return false;
 	}
 
 	fprintf( fp, "{\n" );
 	fprintf( fp, "    \"client\":\"%s\",\n", "condor_dagman" );
-	fprintf( fp, "    \"version\":\"%s\",\n", GetVersion().Value() );
-	fprintf( fp, "    \"planner\":\"%s\",\n", _plannerName.Value() );
-	fprintf( fp, "    \"planner_version\":\"%s\",\n", _plannerVersion.Value() );
+	fprintf( fp, "    \"version\":\"%s\",\n", GetVersion().c_str() );
+	fprintf( fp, "    \"planner\":\"%s\",\n", _plannerName.c_str() );
+	fprintf( fp, "    \"planner_version\":\"%s\",\n", _plannerVersion.c_str() );
 	fprintf( fp, "    \"type\":\"metrics\",\n" );
-	fprintf( fp, "    \"wf_uuid\":\"%s\",\n", _workflowId.Value() );
-	fprintf( fp, "    \"root_wf_uuid\":\"%s\",\n", _rootWorkflowId.Value() );
+	fprintf( fp, "    \"wf_uuid\":\"%s\",\n", _workflowId.c_str() );
+	fprintf( fp, "    \"root_wf_uuid\":\"%s\",\n", _rootWorkflowId.c_str() );
 	fprintf( fp, "    \"start_time\":%.3lf,\n", _startTime );
 	fprintf( fp, "    \"end_time\":%.3lf,\n", endTime );
 	fprintf( fp, "    \"duration\":%.3lf,\n", duration );
@@ -195,11 +195,11 @@ DagmanMetrics::WriteMetricsFile( int exitCode, DagStatus status )
 	if ( fclose( fp ) != 0 ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: closing metrics file %s; errno %d (%s)\n",
-					_metricsFile.Value(), errno, strerror( errno ) );
+					_metricsFile.c_str(), errno, strerror( errno ) );
 	}
 
 	debug_printf( DEBUG_NORMAL, "Wrote metrics file %s.\n",
-				_metricsFile.Value() );
+				_metricsFile.c_str() );
 
 	return true;
 }

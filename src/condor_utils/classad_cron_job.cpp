@@ -82,7 +82,7 @@ ClassAdCronJob::Initialize( void )
 {
 	// Build my interface version environment (but, I need a 'name' to do it)
 	const MyString	&mgr_name_uc = Params().GetMgrNameUc( );
-	if ( mgr_name_uc.Length() ) {
+	if ( mgr_name_uc.length() ) {
 		MyString env_name;
 
 		env_name = Params().GetMgrNameUc();
@@ -94,7 +94,7 @@ ClassAdCronJob::Initialize( void )
 		m_classad_env.SetEnv( env_name, Mgr().GetName() );
 	}
 
-	if (  Params().GetConfigValProg().Length() && mgr_name_uc.Length()  ) {
+	if (  Params().GetConfigValProg().length() && mgr_name_uc.length()  ) {
 		MyString	env_name;
 		env_name = mgr_name_uc;
 		env_name += "_CONFIG_VAL";

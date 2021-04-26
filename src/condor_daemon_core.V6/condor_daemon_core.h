@@ -324,6 +324,105 @@ private:
 };
 
 
+class OptionalCreateProcessArgs;
+class OptionalCreateProcessArgs {
+  friend class DaemonCore;
+
+  public:
+    OptionalCreateProcessArgs() :
+        _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(TRUE),
+        want_udp_command_port(TRUE), _env(NULL), _cwd(NULL), family_info(NULL),
+        socket_inherit_list(NULL), _std(NULL), fd_inherit_list(NULL),
+        nice_inc(0), sig_mask(NULL), job_opt_mask(0), core_hard_limit(NULL),
+        affinity_mask(NULL), daemon_sock(NULL),
+        err_return_msg(default_return_msg), _remap(NULL), as_hard_limit(0l)
+    {}
+
+    OptionalCreateProcessArgs(
+        priv_state        priv,
+        int               reaper_id,
+        int               want_command_port,
+        int               want_udp_command_port,
+        const Env *       env,
+        const char *      cwd,
+        FamilyInfo *      family_info,
+        Stream **         socket_inherit_list,
+        int *             std,
+        int *             fd_inherit_list,
+        int               nice_inc,
+        sigset_t *        sig_mask,
+        int               job_opt_mask,
+        size_t *          core_hard_limit,
+        int *             affinity_mask,
+        char const *      daemon_sock,
+        std::string &     err_return_msg,
+        FilesystemRemap * remap,
+        long              as_hard_limit
+    ) :
+        _priv(priv), reaper_id(reaper_id), want_command_port(want_command_port),
+        want_udp_command_port(want_udp_command_port), _env(env), _cwd(cwd),
+        family_info(family_info), socket_inherit_list(socket_inherit_list),
+        _std(std), fd_inherit_list(fd_inherit_list), nice_inc(nice_inc),
+        sig_mask(sig_mask), job_opt_mask(job_opt_mask),
+        core_hard_limit(core_hard_limit), affinity_mask(affinity_mask),
+        daemon_sock(daemon_sock), err_return_msg(err_return_msg),
+        _remap(remap), as_hard_limit(as_hard_limit)
+    {}
+
+    OptionalCreateProcessArgs & priv(priv_state p) { this->_priv = p; return *this; }
+    OptionalCreateProcessArgs & wantCommandPort(int wcp) { this->want_command_port = wcp; return *this; }
+    OptionalCreateProcessArgs & wantUDPCommandPort(int wucp) { this->want_udp_command_port = wucp; return *this; }
+    OptionalCreateProcessArgs & env(const Env * env) { this->_env = env; return *this; }
+    OptionalCreateProcessArgs & cwd(const char * cwd) { this->_cwd = cwd; return *this; }
+    OptionalCreateProcessArgs & familyInfo(FamilyInfo * family_info) { this->family_info = family_info; return *this; }
+    OptionalCreateProcessArgs & socketInheritList(Stream ** socket_inherit_list) { this->socket_inherit_list = socket_inherit_list; return *this; }
+    OptionalCreateProcessArgs & std(int * std) { this->_std = std; return *this; }
+    OptionalCreateProcessArgs & fdInheritList(int * fd_inherit_list) { this->fd_inherit_list = fd_inherit_list; return *this; }
+    OptionalCreateProcessArgs & niceInc(int nice_inc) { this->nice_inc = nice_inc; return *this; }
+    OptionalCreateProcessArgs & sigMask(sigset_t * sig_mask) { this->sig_mask = sig_mask; return *this; }
+    OptionalCreateProcessArgs & jobOptMask(int job_opt_mask) { this->job_opt_mask = job_opt_mask; return *this; }
+    OptionalCreateProcessArgs & coreHardLimit(size_t * core_hard_limit ) { this->core_hard_limit = core_hard_limit; return *this; }
+    OptionalCreateProcessArgs & affinityMask(int * affinity_mask) { this->affinity_mask = affinity_mask; return *this; }
+    OptionalCreateProcessArgs & daemonSock(const char * daemon_sock) { this->daemon_sock = daemon_sock; return *this; }
+    OptionalCreateProcessArgs & errorReturnMsg(std::string & erm) { this->err_return_msg = erm; return *this; }
+    OptionalCreateProcessArgs & remap(FilesystemRemap * fsr) { this->_remap = fsr; return *this; }
+    OptionalCreateProcessArgs & asHardLimit(long ahl) { this->as_hard_limit = ahl; return *this; }
+
+
+    // Special case for usability; may be a bad idea, but allows you to
+    // pass the default OptionalCreateProcessArgs and still get the error
+    // message back.
+    std::string & getErrorReturnMsg() const { return err_return_msg; }
+
+  private:
+
+    priv_state        _priv;
+    int               reaper_id;
+    int               want_command_port;
+    int               want_udp_command_port;
+    const Env *       _env;
+    const char *      _cwd;
+    FamilyInfo *      family_info;
+    Stream **         socket_inherit_list;
+    int *             _std;
+    int *             fd_inherit_list;
+    int               nice_inc;
+    sigset_t *        sig_mask;
+    int               job_opt_mask;
+    size_t *          core_hard_limit;
+    int *             affinity_mask;
+    char const *      daemon_sock;
+    std::string &     err_return_msg;
+    FilesystemRemap * _remap;
+    long              as_hard_limit;
+
+    // We'd like to use std::optional for the std::string reference, but
+    // we can't do that until C++17 is a thing for us.  Instead, initialize
+    // the default reference to this member variable.
+    std::string       default_return_msg;
+};
+
+
 //-----------------------------------------------------------------------------
 /** This class badly needs documentation, doesn't it? 
     This file contains the definition for class DaemonCore. This is the
@@ -860,6 +959,8 @@ class DaemonCore : public Service
 	   @return true of in danger of running out of file descriptors
 	 */
 	bool TooManyRegisteredSockets(int fd=-1,MyString *msg=NULL,int num_fds=1);
+    // Set default fd=-1 and msg=NULL when the MyString variant vanishes.
+	bool TooManyRegisteredSockets(int fd,std::string *msg,int num_fds=1);
 
 	/**
 	   @return Maximum number of persistent file descriptors that
@@ -1260,12 +1361,46 @@ class DaemonCore : public Service
         sigset_t        *sigmask             = NULL,
         int             job_opt_mask         = 0,
         size_t          *core_hard_limit     = NULL,
-        int              *affinity_mask	     = NULL,
+        int             *affinity_mask       = NULL,
         char const      *daemon_sock         = NULL,
         MyString        *err_return_msg      = NULL,
         FilesystemRemap *remap               = NULL,
-        long		 	as_hard_limit        = 0l
+        long            as_hard_limit        = 0l
         );
+
+    int Create_Process (
+        const char      *name,
+        ArgList const   &arglist,
+        priv_state      priv                 /* = PRIV_UNKNOWN */,
+        int             reaper_id            /* = 1 */,
+        int             want_commanand_port  /* = TRUE */,
+        int             want_udp_comm_port   /* = TRUE */,
+        Env const       *env                 /* = NULL */,
+        const char      *cwd                 /* = NULL */,
+        FamilyInfo      *family_info         /* = NULL */,
+        Stream          *sock_inherit_list[] /* = NULL */,
+        int             std[]                /* = NULL */,
+        int             fd_inherit_list[]    /* = NULL */,
+        int             nice_inc             /* = 0 */,
+        sigset_t        *sigmask             /* = NULL */,
+        int             job_opt_mask         /* = 0 */,
+        size_t          *core_hard_limit     /* = NULL */,
+        int             *affinity_mask       /* = NULL */,
+        char const      *daemon_sock         /* = NULL */,
+        std::string     &err_return_msg,
+        FilesystemRemap *remap               = NULL,
+        long            as_hard_limit        = 0l
+        );
+
+    int CreateProcessNew(
+        const std::string & name,
+        const ArgList & argsList,
+        const OptionalCreateProcessArgs & ocpa = {} );
+
+    int CreateProcessNew(
+        const std::string & name,
+        const std::vector< std::string > args,
+        const OptionalCreateProcessArgs & ocpa = {} );
 
     //@}
 

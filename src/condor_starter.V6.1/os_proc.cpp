@@ -216,10 +216,10 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 		// Either way, we now have to add the user-specified args as
 		// the rest of the Args string.
-	MyString args_error;
-	if(!args.AppendArgsFromClassAd(JobAd,&args_error)) {
+	std::string args_error;
+	if(!args.AppendArgsFromClassAd(JobAd,args_error)) {
 		dprintf(D_ALWAYS, "Failed to read job arguments from JobAd.  "
-				"Aborting OsProc::StartJob: %s\n",args_error.Value());
+				"Aborting OsProc::StartJob: %s\n",args_error.c_str());
 		job_not_started = true;
 		return 0;
 	}
@@ -232,10 +232,10 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// environment as needed.
 	Env job_env;
 
-	MyString env_errors;
-	if( !Starter->GetJobEnv(JobAd,&job_env,&env_errors) ) {
+	std::string env_errors;
+	if( !Starter->GetJobEnv(JobAd,&job_env, env_errors) ) {
 		dprintf( D_ALWAYS, "Aborting OSProc::StartJob: %s\n",
-				 env_errors.Value());
+				 env_errors.c_str());
 		job_not_started = true;
 		return 0;
 	}
@@ -263,28 +263,28 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	bool stdin_ok;
 	bool stdout_ok;
 	bool stderr_ok;
-	MyString privsep_stdin_name;
-	MyString privsep_stdout_name;
-	MyString privsep_stderr_name;
+	std::string privsep_stdin_name;
+	std::string privsep_stdout_name;
+	std::string privsep_stderr_name;
 	if (privsep_helper != NULL) {
 		stdin_ok = getStdFile(SFT_IN,
 		                      NULL,
 		                      true,
 		                      "Input file",
 		                      &fds[0],
-		                      &privsep_stdin_name);
+		                      privsep_stdin_name);
 		stdout_ok = getStdFile(SFT_OUT,
 		                       NULL,
 		                       true,
 		                       "Output file",
 		                       &fds[1],
-		                       &privsep_stdout_name);
+		                       privsep_stdout_name);
 		stderr_ok = getStdFile(SFT_ERR,
 		                       NULL,
 		                       true,
 		                       "Error file",
 		                       &fds[2],
-		                       &privsep_stderr_name);
+		                       privsep_stderr_name);
 	}
 	else {
 		fds[0] = openStdFile( SFT_IN,
@@ -372,9 +372,9 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 		// Grab the full environment back out of the Env object 
 	if(IsFulldebug(D_FULLDEBUG)) {
-		MyString env_string;
-		job_env.getDelimitedStringForDisplay(&env_string);
-		dprintf(D_FULLDEBUG, "Env = %s\n", env_string.Value());
+		std::string env_string;
+		job_env.getDelimitedStringForDisplay( env_string);
+		dprintf(D_FULLDEBUG, "Env = %s\n", env_string.c_str());
 	}
 
 	// Stash the environment in the manifest directory, if desired.
@@ -398,10 +398,10 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// Assume we're in the root of the sandbox.
 		FILE * file = fopen( f.c_str(), "w" );
 		if( file != NULL ) {
-			MyString env_string;
-			job_env.getDelimitedStringForDisplay(&env_string);
+			std::string env_string;
+			job_env.getDelimitedStringForDisplay( env_string);
 
-			fprintf( file, "%s\n", env_string.Value());
+			fprintf( file, "%s\n", env_string.c_str());
 			fclose(file);
 		} else {
 			dprintf( D_ALWAYS, "Failed to open environment log %s: %d (%s)\n", f.c_str(), errno, strerror(errno) );
@@ -467,6 +467,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			} else {
 				dprintf(D_ALWAYS, "Can't evaluate STARTER_RLIMIT_AS expression %s\n", rlimit_expr);
 			}
+			delete tree;
 		} else {
 			dprintf(D_ALWAYS, "Can't parse STARTER_RLIMIT_AS expression: %s\n", rlimit_expr);
 		}
@@ -580,31 +581,31 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// in the below dprintfs, we want to skip past argv[0], which
 		// is sometimes condor_exec, in the Args string. 
 
-	MyString args_string;
-	args.GetArgsStringForDisplay(&args_string, 1);
-	if( has_wrapper ) { 
+	std::string args_string;
+	args.GetArgsStringForDisplay(args_string, 1);
+	if( has_wrapper ) {
 			// print out exactly what we're doing so folks can debug
 			// it, if they need to.
-		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.c_str(), 
-				 args_string.Value() );
+		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName.c_str(),
+				 args_string.c_str() );
 	} else {
 		dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.c_str(),
-				 args_string.Value() );
+				 args_string.c_str() );
 	}
 
-	
+
 
 	set_priv ( priv );
 
     // use this to return more detailed and reliable error message info
     // from create-process operation.
-    MyString create_process_err_msg;
+    std::string create_process_err_msg;
 
 	if (privsep_helper != NULL) {
 		const char* std_file_names[3] = {
-			privsep_stdin_name.Value(),
-			privsep_stdout_name.Value(),
-			privsep_stderr_name.Value()
+			privsep_stdin_name.c_str(),
+			privsep_stdout_name.c_str(),
+			privsep_stderr_name.c_str()
 		};
 		JobPid = privsep_helper->create_process(JobName.c_str(),
 		                                        args,
@@ -618,9 +619,17 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		                                        job_opt_mask,
 		                                        family_info,
 												affinity_mask,
-												&create_process_err_msg);
+												create_process_err_msg );
 	}
 	else {
+		//
+		// The following two commented-out Create_Process() calls were
+		// left in as examples of (respectively) that bad old way,
+		// the bad new way (in case you actually need to set all of
+		// the default arguments), and the good new way (in case you
+		// don't, in which case it's both shorter and clearer).
+		//
+		/*
 		JobPid = daemonCore->Create_Process( JobName.c_str(),
 		                                     args,
 		                                     PRIV_USER_FINAL,
@@ -635,13 +644,50 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		                                     NULL,
 		                                     nice_inc,
 		                                     NULL,
-		                                     job_opt_mask, 
+		                                     job_opt_mask,
 		                                     core_size_ptr,
-                                             affinity_mask,
-											 NULL,
-                                             &create_process_err_msg,
-                                             fs_remap,
-											 rlimit_as_hard_limit);
+		                                     affinity_mask,
+		                                     NULL,
+		                                     create_process_err_msg,
+		                                     fs_remap,
+		                                     rlimit_as_hard_limit);
+		*/
+		/*
+		JobPid = daemonCore->CreateProcessNew( JobName.c_str(),
+		                                     args,
+		                                     {
+		                                     PRIV_USER_FINAL,
+		                                     1,
+		                                     FALSE,
+		                                     FALSE,
+		                                     &job_env,
+		                                     job_iwd,
+		                                     family_info,
+		                                     NULL,
+		                                     fds,
+		                                     NULL,
+		                                     nice_inc,
+		                                     NULL,
+		                                     job_opt_mask,
+		                                     core_size_ptr,
+		                                     affinity_mask,
+		                                     NULL,
+		                                     create_process_err_msg,
+		                                     fs_remap,
+		                                     rlimit_as_hard_limit
+		                                     }
+		                                     );
+		*/
+
+		JobPid = daemonCore->CreateProcessNew( JobName.c_str(), args,
+			OptionalCreateProcessArgs().priv(PRIV_USER_FINAL)
+			.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+			.env(&job_env).cwd(job_iwd).familyInfo(family_info)
+			.std(fds).niceInc(nice_inc).jobOptMask(job_opt_mask)
+			.coreHardLimit(core_size_ptr).affinityMask(affinity_mask)
+			.errorReturnMsg(create_process_err_msg).remap(fs_remap)
+			.asHardLimit(rlimit_as_hard_limit)
+		);
 	}
 
 	// Create_Process() saves the errno for us if it is an "interesting" error.
@@ -650,8 +696,8 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
     // errno is 0 in the privsep case.  This executes for the daemon core create-process logic
     if ((FALSE == JobPid) && (0 != create_process_errno)) {
         if (create_process_err_msg != "") create_process_err_msg += " ";
-        MyString errbuf;
-        errbuf.formatstr("(errno=%d: '%s')", create_process_errno, strerror(create_process_errno));
+        std::string errbuf;
+        formatstr(errbuf, "(errno=%d: '%s')", create_process_errno, strerror(create_process_errno));
         create_process_err_msg += errbuf;
     }
 
@@ -672,7 +718,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	if ( JobPid == FALSE ) {
 		JobPid = -1;
 
-		if(!create_process_err_msg.IsEmpty()) {
+		if(!create_process_err_msg.empty()) {
 
 			// if the reason Create_Process failed was that registering
 			// a family with the ProcD failed, it is indicative of a
@@ -686,17 +732,17 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				EXCEPT("Create_Process failed to register the job with the ProcD");
 			}
 
-			MyString err_msg = "Failed to execute '";
+			std::string err_msg = "Failed to execute '";
 			err_msg += JobName;
 			err_msg += "'";
-			if(!args_string.IsEmpty()) {
+			if(!args_string.empty()) {
 				err_msg += " with arguments ";
-				err_msg += args_string.Value();
+				err_msg += args_string.c_str();
 			}
 			err_msg += ": ";
 			err_msg += create_process_err_msg;
 			if( !ThisProcRunsAlongsideMainProc() ) {
-				Starter->jic->notifyStarterError( err_msg.Value(),
+				Starter->jic->notifyStarterError( err_msg.c_str(),
 			    	                              true,
 			        	                          CONDOR_HOLD_CODE_FailedToCreateProcess,
 			            	                      create_process_errno );
@@ -704,7 +750,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		}
 
 		dprintf(D_ALWAYS,"Create_Process(%s,%s, ...) failed: %s\n",
-			JobName.c_str(), args_string.Value(), create_process_err_msg.Value());
+			JobName.c_str(), args_string.c_str(), create_process_err_msg.c_str());
 		job_not_started = true;
 		return 0;
 	}
@@ -741,6 +787,14 @@ OsProc::JobReaper( int pid, int status )
 				struct timeval exitTime;
 				condor_gettimestamp( exitTime );
 				tag->InsertAttr( "When", (long long)exitTime.tv_sec );
+
+				if(WIFSIGNALED(status)) {
+					tag->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, true );
+					tag->InsertAttr( ATTR_ON_EXIT_SIGNAL, WTERMSIG(status));
+				} else {
+					tag->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, false );
+					tag->InsertAttr( ATTR_ON_EXIT_CODE, WEXITSTATUS(status));
+				}
 
 				classad::ClassAd toe;
 				toe.Insert( ATTR_JOB_TOE, tag );
@@ -858,8 +912,8 @@ OsProc::checkCoreFile( void )
 
 	// Since Linux now writes out "core.pid" by default, we should
 	// search for that.  Try the JobPid of our first child:
-	MyString name_with_pid;
-	name_with_pid.formatstr( "core.%d", JobPid );
+	std::string name_with_pid;
+	formatstr( name_with_pid, "core.%d", JobPid );
 
 	if (Starter->privSepHelper() != NULL) {
 
@@ -867,8 +921,8 @@ OsProc::checkCoreFile( void )
 		EXCEPT("PrivSep not yet available on Windows");
 #else
 		struct stat stat_buf;
-		if (stat(name_with_pid.Value(), &stat_buf) != -1) {
-			Starter->jic->addToOutputFiles(name_with_pid.Value());
+		if (stat(name_with_pid.c_str(), &stat_buf) != -1) {
+			Starter->jic->addToOutputFiles(name_with_pid.c_str());
 		}
 		else if (stat("core", &stat_buf) != -1) {
 			Starter->jic->addToOutputFiles("core");
@@ -876,19 +930,19 @@ OsProc::checkCoreFile( void )
 #endif
 	}
 	else {
-		MyString new_name;
-		new_name.formatstr( "core.%d.%d",
+		std::string new_name;
+		formatstr( new_name, "core.%d.%d",
 		                  Starter->jic->jobCluster(), 
 		                  Starter->jic->jobProc() );
 
-		if( renameCoreFile(name_with_pid.Value(), new_name.Value()) ) {
+		if( renameCoreFile(name_with_pid.c_str(), new_name.c_str()) ) {
 			// great, we found it, renameCoreFile() took care of
 			// everything we need to do... we're done.
 			return;
 		}
 
 		// Now, just see if there's a file called "core"
-		if( renameCoreFile("core", new_name.Value()) ) {
+		if( renameCoreFile("core", new_name.c_str()) ) {
 			return;
 		}
 	}
@@ -914,18 +968,18 @@ OsProc::renameCoreFile( const char* old_name, const char* new_name )
 	bool rval = false;
 	int t_errno = 0;
 
-	MyString old_full;
-	MyString new_full;
+	std::string old_full;
+	std::string new_full;
 	const char* job_iwd = Starter->jic->jobIWD();
-	old_full.formatstr( "%s%c%s", job_iwd, DIR_DELIM_CHAR, old_name );
-	new_full.formatstr( "%s%c%s", job_iwd, DIR_DELIM_CHAR, new_name );
+	formatstr( old_full, "%s%c%s", job_iwd, DIR_DELIM_CHAR, old_name );
+	formatstr( new_full, "%s%c%s", job_iwd, DIR_DELIM_CHAR, new_name );
 
 	priv_state old_priv;
 
 		// we need to do this rename as the user...
 	errno = 0;
 	old_priv = set_user_priv();
-	int ret = rename(old_full.Value(), new_full.Value());
+	int ret = rename(old_full.c_str(), new_full.c_str());
 	if( ret != 0 ) {
 			// rename failed
 		t_errno = errno; // grab errno right away
@@ -948,7 +1002,7 @@ OsProc::renameCoreFile( const char* old_name, const char* new_name )
 		Starter->jic->addToOutputFiles( new_name );
 	} else if( t_errno != ENOENT ) {
 		dprintf( D_ALWAYS, "Failed to rename(%s,%s): errno %d (%s)\n",
-				 old_full.Value(), new_full.Value(), t_errno,
+				 old_full.c_str(), new_full.c_str(), t_errno,
 				 strerror(t_errno) );
 	}
 	return rval;
@@ -1057,9 +1111,9 @@ OsProc::PublishToEnv( Env * proc_env ) {
 	UserProc::PublishToEnv( proc_env );
 
 	if( howCode != -1 ) {
-		MyString name;
+		std::string name;
 		formatstr( name, "_%s_HOW_CODE", myDistro->Get() );
-		name.upper_case();
+		upper_case(name);
 		proc_env->SetEnv( name, std::to_string( howCode ) );
 	}
 }
@@ -1080,9 +1134,9 @@ OsProc::makeCpuAffinityMask(int slotId) {
 
 	char *affinityParamResult = param("STARTD_ASSIGNED_AFFINITY");
 	if (!affinityParamResult) {
-		MyString affinityParam;
-		affinityParam.formatstr("SLOT%d_CPU_AFFINITY", slotId);
-		affinityParamResult = param(affinityParam.Value());
+		std::string affinityParam;
+		formatstr(affinityParam, "SLOT%d_CPU_AFFINITY", slotId);
+		affinityParamResult = param(affinityParam.c_str());
 	}
 
 	if (affinityParamResult == NULL) {
@@ -1237,8 +1291,8 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	}
 
 	Env env;
-	MyString env_errors;
-	if (!Starter->GetJobEnv(JobAd,&env,&env_errors)) {
+	std::string env_errors;
+	if (!Starter->GetJobEnv(JobAd,&env, env_errors)) {
 		dprintf(D_ALWAYS, "Warning -- cannot put environment into singularity job: %s\n", env_errors.c_str());
 	}
 

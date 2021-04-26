@@ -28,7 +28,6 @@
 #include "dc_collector.h"
 #include "extArray.h"
 #include "string_list.h"
-#include "MyString.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
 #include "condor_api.h"
 #include "condor_string.h"   // for strnewp()
@@ -85,7 +84,7 @@ static char * get_daemon_param(const char * addr, const char * param_name);
 static bool get_daemon_ready(const char * addr, const char * requirements, time_t sec_to_wait, ClassAd & ready_ad);
 
 // app globals
-static struct {
+static struct AppType {
 	const char * Name; // tool name as invoked from argv[0]
 	List<const char> target_names;    // list of target names to query
 	List<LOG_INFO>   all_log_info;    // pool of info from scanning log directories.
@@ -107,7 +106,7 @@ static struct {
 	bool   ping_all_addrs;	 //
 	int    query_ready_timeout;
 	int    poll_for_master_time; // time spent polling for the master
-	MyString query_ready_requirements;
+	std::string query_ready_requirements;
 	int    test_backward;   // test backward reading code.
 	vector<pid_t> query_pids;
 	vector<const char *> query_log_dirs;
@@ -152,6 +151,11 @@ static struct {
 		return found;
 	}
 
+	~AppType() {
+		target_names.Clear();
+		all_log_info.Clear();
+		print_head.Clear();
+	}	
 } App;
 
 // init fields in the App structure that have no default initializers
@@ -385,7 +389,7 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 	if (line) data = line;
 
 	if (data.find("====") == 0 || data.find("----") == 0) {
-		subhead = line;
+		subhead = line ? line : "";
 		data.clear();
 
 		// first line after headings is not data, but underline
@@ -726,9 +730,9 @@ static void get_process_table(TABULAR_MAP & table)
 	}
 
 	if (App.diagnostic > 1) {
-		MyString args;
-		cmdargs.GetArgsStringForDisplay(&args);
-		printf("Parsed command output> %s\n", args.Value());
+		std::string args;
+		cmdargs.GetArgsStringForDisplay(args);
+		printf("Parsed command output> %s\n", args.c_str());
 
 		printf("with filter> %s\n", "cmd_contains(\"condor\")");
 		dump_tabular_map(table, tm_cmd_contains("condor"));
@@ -770,9 +774,9 @@ static void get_address_table(TABULAR_MAP & table)
 	}
 
 	if (App.diagnostic > 1) {
-		MyString args;
-		cmdargs.GetArgsStringForDisplay(&args);
-		printf("Parsed command output> %s\n", args.Value());
+		std::string args;
+		cmdargs.GetArgsStringForDisplay(args);
+		printf("Parsed command output> %s\n", args.c_str());
 
 		printf("with filter> %s\n", "true");
 		dump_tabular_map(table, tabular_map_constraint());
@@ -800,8 +804,8 @@ void convert_to_sinful_addr(std::string & out, const std::string & str)
 
 	if (port_offset) {
 		// TODO Picking IPv4 arbitrarily.
-		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
-		formatstr(out, "<%s:%s>", my_ip.Value(), str.substr(port_offset).c_str());
+		std::string my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		formatstr(out, "<%s:%s>", my_ip.c_str(), str.substr(port_offset).c_str());
 	} else {
 		formatstr(out, "<%s>", str.c_str());
 	}
@@ -1172,7 +1176,7 @@ void parse_args(int /*argc*/, char *argv[])
 						}
 					}
 
-					MyString lbl = "";
+					std::string lbl = "";
 					int wid = 0;
 					int opts = FormatOptionNoTruncate;
 					if (fheadings || App.print_head.Length() > 0) {
@@ -1181,17 +1185,17 @@ void parse_args(int /*argc*/, char *argv[])
 						opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
 						App.print_head.Append(hd);
 					}
-					else if (flabel) { lbl.formatstr("%s = ", parg); wid = 0; opts = 0; }
+					else if (flabel) { formatstr(lbl,"%s = ", parg); wid = 0; opts = 0; }
 
 					lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 					if (App.diagnostic) {
 						printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %llx[%s]\n",
-							ixArg, lbl.Value(), wid, opts, (long long)(StringCustomFormat)cust_fmt, pattr);
+							ixArg, lbl.c_str(), wid, opts, (long long)(StringCustomFormat)cust_fmt, pattr);
 					}
 					if (cust_fmt) {
 						App.print_mask.registerFormat(NULL, wid, opts, cust_fmt, pattr);
 					} else {
-						App.print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
+						App.print_mask.registerFormat(lbl.c_str(), wid, opts, pattr);
 					}
 				}
 			} else if (IsArg(parg, "job", 3)) {
@@ -1510,6 +1514,10 @@ main( int argc, char *argv[] )
 				printf("\nLOG directory \"%s\"\n", App.query_log_dirs[ii]);
 				print_daemon_info(info, App.quick_scan);
 			}
+			for (const auto &keyvalue : info) {
+				delete keyvalue.second;
+			}
+			info.clear();
 		}
 	}
 
@@ -1786,7 +1794,7 @@ static void read_address_file(const char * filename, std::string & addr)
 	close(fd);
 
 	// return the address
-	addr = buf;
+	if (cbRead > 0) addr.assign(buf, cbRead);
 }
 
 

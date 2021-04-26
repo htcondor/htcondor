@@ -246,14 +246,14 @@ send_email()
 {
 	char	*str;
 	FILE	*mailer;
-	MyString subject,szTmp;
-	subject.formatstr("condor_preen results %s: %d old file%s found", 
-		get_local_fqdn().Value(), BadFiles->number(), 
+	std::string subject,szTmp;
+	formatstr(subject, "condor_preen results %s: %d old file%s found", 
+		get_local_fqdn().c_str(), BadFiles->number(), 
 		(BadFiles->number() > 1)?"s":"");
 
 	if( MailFlag ) {
-		if( (mailer=email_nonjob_open(PreenAdmin, subject.Value())) == NULL ) {
-			dprintf(D_ALWAYS|D_FAILURE, "Can't do email_open(\"%s\", \"%s\")\n",PreenAdmin,subject.Value());
+		if( (mailer=email_nonjob_open(PreenAdmin, subject.c_str())) == NULL ) {
+			dprintf(D_ALWAYS|D_FAILURE, "Can't do email_open(\"%s\", \"%s\")\n",PreenAdmin,subject.c_str());
 		#ifdef WIN32
 			if ( ! param_defined("SMTP_SERVER")) {
 				dprintf(D_ALWAYS, "SMTP_SERVER not configured\n");
@@ -265,17 +265,17 @@ send_email()
 		mailer = stdout;
 	}
 
-	szTmp.formatstr("The condor_preen process has found the following stale condor files on <%s>:\n\n",  get_local_hostname().Value());
-	dprintf(D_ALWAYS, "%s", szTmp.Value()); 
+	formatstr(szTmp, "The condor_preen process has found the following stale condor files on <%s>:\n\n",  get_local_hostname().c_str());
+	dprintf(D_ALWAYS, "%s", szTmp.c_str()); 
 		
 	if( MailFlag ) {
 		fprintf( mailer, "\n" );
-		fprintf( mailer, "%s", szTmp.Value());
+		fprintf( mailer, "%s", szTmp.c_str());
 	}
 
 	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
-		szTmp.formatstr("  %s\n", str);
-		fprintf( mailer, "%s", szTmp.Value() );
+		formatstr(szTmp, "  %s\n", str);
+		fprintf( mailer, "%s", szTmp.c_str() );
 	}
 
 	if( MailFlag ) {
@@ -630,9 +630,9 @@ is_valid_shared_exe( const char *name )
 	if ((strlen(name) < 4) || (strncmp(name, "exe-", 4) != 0)) {
 		return false;
 	}
-	MyString path;
-	path.formatstr("%s/%s", Spool, name);
-	int count = link_count(path.Value());
+	std::string path;
+	formatstr(path, "%s/%s", Spool, name);
+	int count = link_count(path.c_str());
 	if (count == 1) {
 		return false;
 	}
@@ -870,12 +870,12 @@ check_daemon_sock_dir()
 	time_t stale_age = SharedPortEndpoint::TouchSocketInterval()*100;
 
 	while( (f = dir.Next()) ) {
-		MyString full_path;
-		full_path.formatstr("%s%c%s",DaemonSockDir,DIR_DELIM_CHAR,f);
+		std::string full_path;
+		formatstr(full_path,"%s%c%s",DaemonSockDir,DIR_DELIM_CHAR,f);
 
 			// daemon sockets are touched periodically to mark them as
 			// still in use
-		if( touched_recently( full_path.Value(), stale_age ) ) {
+		if( touched_recently( full_path.c_str(), stale_age ) ) {
 			good_file( DaemonSockDir, f );
 		}
 		else {
@@ -996,9 +996,9 @@ void check_tmp_dir(){
 	bool newLock = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
 	if (newLock) {
 		// get temp path for file locking from the FileLock class
-		MyString tmpDir;
+		std::string tmpDir;
 		FileLock::getTempPath(tmpDir);
-		rec_lock_cleanup(tmpDir.Value(), 3);
+		rec_lock_cleanup(tmpDir.c_str(), 3);
 	}
   
 #endif	
@@ -1109,32 +1109,32 @@ good_file( const char *dir, const char *name )
 void
 bad_file( const char *dirpath, const char *name, Directory & dir )
 {
-	MyString	pathname;
-	MyString	buf;
+	std::string pathname;
+	std::string buf;
 
 	if( !fullpath( name ) ) {
-		pathname.formatstr( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
+		formatstr( pathname, "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
 	}
 	else {
 		pathname = name;
 	}
 
 	if( VerboseFlag ) {
-		printf( "%s - BAD\n", pathname.Value() );
-		dprintf( D_ALWAYS, "%s - BAD\n", pathname.Value() );
+		printf( "%s - BAD\n", pathname.c_str() );
+		dprintf( D_ALWAYS, "%s - BAD\n", pathname.c_str() );
 	}
 
 	if( RmFlag ) {
-		bool removed = dir.Remove_Full_Path( pathname.Value() );
+		bool removed = dir.Remove_Full_Path( pathname.c_str() );
 		if( removed ) {
-			buf.formatstr( "%s - Removed", pathname.Value() );
+			formatstr( buf, "%s - Removed", pathname.c_str() );
 		} else {
-			buf.formatstr( "%s - Can't Remove", pathname.Value() );
+			formatstr( buf, "%s - Can't Remove", pathname.c_str() );
 		}
 	} else {
-		buf.formatstr( "%s - Not Removed", pathname.Value() );
+		formatstr( buf, "%s - Not Removed", pathname.c_str() );
 	}
-	BadFiles->append( buf.Value() );
+	BadFiles->append( buf.c_str() );
 }
 
 

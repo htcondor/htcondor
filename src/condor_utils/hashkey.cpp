@@ -30,12 +30,19 @@
 #include <netinet/in.h>
 #endif
 
+void
+AdNameHashKey::sprint( std::string &s ) const {
+    MyString ms;
+    sprint( ms );
+    s = ms;
+}
+
 void AdNameHashKey::sprint (MyString &s) const
 {
-	if (ip_addr.Length() )
-		s.formatstr( "< %s , %s >", name.Value(), ip_addr.Value() );
+	if (ip_addr.length() )
+		s.formatstr( "< %s , %s >", name.c_str(), ip_addr.c_str() );
 	else
-		s.formatstr( "< %s >", name.Value() );
+		s.formatstr( "< %s >", name.c_str() );
 }
 
 bool operator== (const AdNameHashKey &lhs, const AdNameHashKey &rhs)
@@ -150,7 +157,7 @@ getIpAddr( const char *ad_type,
 
 	// If no valid string, do our own thing..
 	char* host;
-	if ( ( tmp.Length() == 0 ) || (host = getHostFromAddr(tmp.Value())) == NULL  ) {
+	if ( ( tmp.length() == 0 ) || (host = getHostFromAddr(tmp.c_str())) == NULL  ) {
 		dprintf (D_ALWAYS, "%sAd: Invalid IP address in classAd\n", ad_type );
 		return false;
 	}
@@ -192,7 +199,7 @@ makeStartdAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 					 hk.ip_addr ) ) {
 		dprintf (D_FULLDEBUG,
 				 "StartAd: No IP address in classAd from %s\n",
-				 hk.name.Value() );
+				 hk.name.c_str() );
 	}
 
 	return true;
@@ -366,10 +373,10 @@ parseIpPort (const MyString &ip_port_pair, MyString &ip_addr)
 {
 	ip_addr = "";
 
-	if (ip_port_pair.IsEmpty()) {
+	if (ip_port_pair.empty()) {
         return false;
 	}
-    const char *ip_port = ip_port_pair.Value();
+    const char *ip_port = ip_port_pair.c_str();
 	ip_port++;			// Skip the leading "<"
     while ( *ip_port && *ip_port != ':')
     {
@@ -395,9 +402,9 @@ HashString::HashString( const AdNameHashKey &hk )
 void
 HashString::Build( const AdNameHashKey &hk )
 {
-	if ( hk.ip_addr.Length() ) {
-		formatstr( "< %s , %s >", hk.name.Value(), hk.ip_addr.Value() );
+	if ( hk.ip_addr.length() ) {
+		formatstr( "< %s , %s >", hk.name.c_str(), hk.ip_addr.c_str() );
 	} else {
-		formatstr( "< %s >", hk.name.Value() );
+		formatstr( "< %s >", hk.name.c_str() );
 	}
 }

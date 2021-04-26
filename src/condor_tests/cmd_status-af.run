@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -28,13 +27,6 @@ use warnings;
 
 my $testname = "cmd_status-af";
 
-# needs to specify every time before a check
-my $pid;
-my $executable = "x_sleep.pl";
-my $arguments;
-my $submit_content;
-my $submitfile;
-
 # other variables, updated through each check
 my %Attr_old;
 my %Attr_new;
@@ -44,7 +36,8 @@ my @content;
 # elements of the format file
 my $rules_file;
 my $rules_content;
-my $orig_ads;
+my $orig_ads_first_test;
+my $orig_ads_second_test;
 my $new_ads;
 
 my $sel0;
@@ -53,16 +46,9 @@ my $sel2;
 my $sel3;
 
 print "############################################################################\n";
-$pid = $$;
-$arguments = 600;
-$orig_ads = "$testname"."_orig.ads";
+$orig_ads_first_test  = "$testname"."_orig_first_test.ads";
+$orig_ads_second_test = "$testname"."_orig_second_test.ads";
 $new_ads = "$testname"."_new.ads";
-$submit_content =
-"executable = $executable
-arguments = $arguments
-queue";
-$submitfile = "$testname$pid.sub";
-emit_dag_files($testname,$submit_content,$pid);
 
 $option = "af";
 $rules_content = 
@@ -103,27 +89,8 @@ open(FH,">$rules_file") || print "FAILED opening file $rules_file\n";
 print FH $rules_content;
 close(FH);
 
-`condor_submit $submitfile`;
-my $counter = 20;
-while ($counter ne 0){
-	if ($counter == 0){
-		print "Took too long!\n";
-		exit(1);
-	} else {
-		`condor_status -long > $orig_ads`;
-		%Attr_old = read_attr($orig_ads);
-		if (scalar keys %Attr_old == 0){
-			sleep(1);
-		} else {
-			last;
-		}
-		$counter --;
-	}
-}
-`condor_status -long > $orig_ads`;
-%Attr_old = read_attr($orig_ads);
-`condor_transform_ads -rules $rules_file -out $new_ads $orig_ads`;
-`condor_rm -all`;
+%Attr_old = read_attr($orig_ads_first_test);
+`condor_transform_ads -rules $rules_file -out $new_ads $orig_ads_first_test`;
 
 %Attr_new = read_attr($new_ads);
 
@@ -140,11 +107,10 @@ delete $Attr_new{0}{TotalTimeClaimedIdle};
 for my $key (sort keys %{$Attr_new{0}}) {
 	if ($Attr_new{0}{$key} =~ /,/) { delete $Attr_new{0}{$key}; }
 }
-$sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel3 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-#print "$sel0\n$sel1\n$sel2\n$sel3\n";
+$sel0 = "TotalSlotMemory";
+$sel1 = "Arch";
+$sel2 = "LastHeardFrom";
+$sel3 = "MaxJobRetirementTime";
 @content = `condor_status -ads $new_ads -af $sel0 $sel1 $sel2 $sel3 -sort Name`;
 print @content;
 
@@ -154,11 +120,10 @@ if (check_af(\%Attr_new,\@content,"",$sel0,$sel1,$sel2,$sel3)){
 	RegisterResult(0,check_name=>"$option",test_name=>$testname);
 } 
 
-$sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel3 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-print "$sel0\n$sel1\n$sel2\n$sel3\n";
+$sel0 = "UpdatesSequenced";
+$sel1 = "HasJobDeferral";
+$sel2 = "Activity";
+$sel3 = "DaemonLastReconfigTime";
 @content = `condor_status -ads $new_ads -af:, $sel0 $sel1 $sel2 $sel3 -sort Name`;
 print @content;
 
@@ -168,10 +133,10 @@ if (check_af(\%Attr_new,\@content,":,",$sel0,$sel1,$sel2,$sel3)){
 	RegisterResult(0,check_name=>"$option:,",test_name=>$testname);
 }
 
-$sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel3 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel0 = "TotalSlotCpus";
+$sel1 = "has_ssse3";
+$sel2 = "MonitorSelfRegisteredSocketCount";
+$sel3 = "TimeToLive";
 @content = `condor_status -ads $new_ads -af:h $sel0 $sel1 $sel2 $sel3 -sort Name`;
 print @content;
 
@@ -181,11 +146,10 @@ if (check_af(\%Attr_new,\@content,":h",$sel0,$sel1,$sel2,$sel3)){
 	RegisterResult(0,check_name=>"$option:h",test_name=>$testname);
 }
 
-$sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel3 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-print "$sel0\n$sel1\n$sel2\n$sel3\n";
+$sel0 = "HasSingularity";
+$sel1 = "WakeOnLanEnabledFlags";
+$sel2 = "DetectedMemory";
+$sel3 = "UidDomain";
 @content = `condor_status -ads $new_ads -af:ln $sel0 $sel1 $sel2 $sel3 -sort Name`;
 print @content;
 
@@ -195,11 +159,10 @@ if (check_af(\%Attr_new,\@content,":ln",$sel0,$sel1,$sel2,$sel3)){
 	RegisterResult(0,check_name=>"$option:ln",test_name=>$testname);
 }
 
-$sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel3 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-print "$sel0\n$sel1\n$sel2\n$sel3\n";
+$sel0 = "ClockMin";
+$sel1 = "Memory";
+$sel2 = "UtsnameSysname";
+$sel3 = "HibernationLevel";
 @content = `condor_status -ads $new_ads -af:lrng $sel0 $sel1 $sel2 $sel3 -sort Name`;
 print @content;
 
@@ -209,12 +172,10 @@ if (check_af(\%Attr_new,\@content,":lrng",$sel0,$sel1,$sel2,$sel3)){
 	RegisterResult(0,check_name=>"$option:lrng",test_name=>$testname);
 }
 
-$sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel0 = "HibernationState";
 $sel1 = "ExecutableSize";
-$sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-$sel3 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
-print "$sel0\n$sel1\n$sel2\n$sel3\n";
+$sel2 = "IsWakeAble";
+$sel3 = "State";
 @content = `condor_status -ads $new_ads -af:t $sel0 $sel1 $sel2 $sel3 -sort Name`;
 print @content;
 
@@ -265,11 +226,8 @@ open(FH,">$rules_file") || print "FAILED opening file $rules_file\n";
 print FH $rules_content;
 close(FH);
 
-`condor_submit $submitfile`;
-`condor_status -long > $orig_ads`;
-%Attr_old = read_attr($orig_ads);
-`condor_transform_ads -rules $rules_file -out $new_ads $orig_ads`;
-`condor_rm -all`;
+%Attr_old = read_attr($orig_ads_second_test);
+`condor_transform_ads -rules $rules_file -out $new_ads $orig_ads_second_test`;
 
 %Attr_new = read_attr($new_ads);
 delete $Attr_new{0}{CpuBusy};
@@ -296,19 +254,19 @@ my $result1;
 my $result2;
 my $result3;
 
-$sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel0 = "EnteredCurrentState";
 @content = `condor_status -ads $new_ads -format$flag $sel0 -sort Name`;
 $result0 = check_type(\%Attr_new,$flag,\@content,$sel0);
 
-$sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel1 = "SlotType";
 @content = `condor_status -ads $new_ads -format$flag $sel1 -sort Name`;
 $result1 = check_type(\%Attr_new,$flag,\@content,$sel1);
 
-$sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel2 = "RecentJobUserPrioPreemptions";
 @content = `condor_status -ads $new_ads -format$flag $sel2 -sort Name`;
 $result2 = check_type(\%Attr_new,$flag,\@content,$sel2);
 
-$sel3 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel3 = "RecentJobUserPrioPreemptions";
 @content = `condor_status -ads $new_ads -format$flag $sel3 -sort Name`;
 $result3 = check_type(\%Attr_new,$flag,\@content,$sel3);
 
@@ -316,19 +274,19 @@ RegisterResult(($result0 && $result1 && $result2 && $result2 && $result3),check_
 
 
 $flag = " %V";
-$sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel0 = "HibernationLevel";
 @content = `condor_status -ads $new_ads -format$flag $sel0 -sort Name`;
 $result0 = check_type(\%Attr_new,$flag,\@content,$sel0);
 
-$sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel1 = "CpuModelNumber";
 @content = `condor_status -ads $new_ads -format$flag $sel1 -sort Name`;
 $result1 = check_type(\%Attr_new,$flag,\@content,$sel1);
 
-$sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel2 = "UtsnameMachine";
 @content = `condor_status -ads $new_ads -format$flag $sel2 -sort Name`;
 $result2 = check_type(\%Attr_new,$flag,\@content,$sel2);
 
-$sel3 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel3 = "StarterAbilityList";
 @content = `condor_status -ads $new_ads -format$flag $sel3 -sort Name`;
 $result3 = check_type(\%Attr_new,$flag,\@content,$sel3);
 
@@ -336,19 +294,19 @@ RegisterResult(($result0 && $result1 && $result2 && $result2 && $result3),check_
 
 
 $flag = " %s";
-$sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel0 = "UidDomain";
 @content = `condor_status -ads $new_ads -format$flag $sel0 -sort Name`;
 $result0 = check_type(\%Attr_new,$flag,\@content,$sel0);
 
-$sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel1 = "VirtualMemory";
 @content = `condor_status -ads $new_ads -format$flag $sel1 -sort Name`;
 $result1 = check_type(\%Attr_new,$flag,\@content,$sel1);
 
-$sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel2 = "DaemonLastReconfigTime";
 @content = `condor_status -ads $new_ads -format$flag $sel2 -sort Name`;
 $result2 = check_type(\%Attr_new,$flag,\@content,$sel2);
 
-$sel3 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel3 = "TimeToLive";
 @content = `condor_status -ads $new_ads -format$flag $sel3 -sort Name`;
 $result3 = check_type(\%Attr_new,$flag,\@content,$sel3);
 
@@ -356,19 +314,19 @@ RegisterResult(($result0 && $result1 && $result2 && $result2 && $result3),check_
 
 
 $flag = " %d";
-$sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel0 = "Activity";
 @content = `condor_status -ads $new_ads -format$flag $sel0 -sort Name`;
 $result0 = check_type(\%Attr_new,$flag,\@content,$sel0);
 
-$sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel1 = "DetectedCpus";
 @content = `condor_status -ads $new_ads -format$flag $sel1 -sort Name`;
 $result1 = check_type(\%Attr_new,$flag,\@content,$sel1);
 
-$sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel2 = "SingularityVersion";
 @content = `condor_status -ads $new_ads -format$flag $sel2 -sort Name`;
 $result2 = check_type(\%Attr_new,$flag,\@content,$sel2);
 
-$sel3 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel3 = "HasJICLocalStdin";
 @content = `condor_status -ads $new_ads -format$flag $sel3 -sort Name`;
 $result3 = check_type(\%Attr_new,$flag,\@content,$sel3);
 
@@ -376,19 +334,19 @@ RegisterResult(($result0 && $result1 && $result2 && $result2 && $result3),check_
 
 
 $flag = " %f";
-$sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel0 = "HasReconnect";
 @content = `condor_status -ads $new_ads -format$flag $sel0 -sort Name`;
 $result0 = check_type(\%Attr_new,$flag,\@content,$sel0);
 
-$sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel1 = "SubnetMask";
 @content = `condor_status -ads $new_ads -format$flag $sel1 -sort Name`;
 $result1 = check_type(\%Attr_new,$flag,\@content,$sel1);
 
-$sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel2 = "HasJICLocalStdin";
 @content = `condor_status -ads $new_ads -format$flag $sel2 -sort Name`;
 $result2 = check_type(\%Attr_new,$flag,\@content,$sel2);
 
-$sel3 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel3 = "TotalSlotCpus";
 @content = `condor_status -ads $new_ads -format$flag $sel3 -sort Name`;
 $result3 = check_type(\%Attr_new,$flag,\@content,$sel3);
 
@@ -396,25 +354,21 @@ RegisterResult(($result0 && $result1 && $result2 && $result2 && $result3),check_
 
 
 $flag = " %.2f";
-$sel0 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel0 = "SubnetMask";
 @content = `condor_status -ads $new_ads -format$flag $sel0 -sort Name`;
 $result0 = check_type(\%Attr_new,$flag,\@content,$sel0);
-print "$sel0\n$result0\n";
 
-$sel1 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel1 = "Memory";
 @content = `condor_status -ads $new_ads -format$flag $sel1 -sort Name`;
 $result1 = check_type(\%Attr_new,$flag,\@content,$sel1);
-print "$sel1\n$result1\n";
 
-$sel2 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel2 = "HasReconnect";
 @content = `condor_status -ads $new_ads -format$flag $sel2 -sort Name`;
 $result2 = check_type(\%Attr_new,$flag,\@content,$sel2);
-print "$sel2\n$result2\n";
 
-$sel3 = (keys %{$Attr_new{0}})[rand keys %{$Attr_new{0}}];
+$sel3 = "HasJICLocalStdin";
 @content = `condor_status -ads $new_ads -format$flag $sel3 -sort Name`;
 $result3 = check_type(\%Attr_new,$flag,\@content,$sel3);
-print "$sel3\n$result3\n";
 
 RegisterResult(($result0 && $result1 && $result2 && $result2 && $result3),check_name=>"$option$flag", testname=>$testname);
 

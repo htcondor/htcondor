@@ -573,7 +573,7 @@ bool hasTwoColonsInHost( char const * sinful ) {
 	return false;
 }
 
-Sinful::Sinful( char const * sinful ) {
+Sinful::Sinful( char const * sinful ) : m_valid(false) {
 	if( sinful == NULL ) {
 		// default constructor
 		m_valid = true;
@@ -751,10 +751,10 @@ bool Sinful::getSourceRoutes( std::vector< SourceRoute > & v, std::string * host
 		if( remainder == NULL ) { return false; }
 
 		// Yes, yes, yes, I know.
-		char nameBuffer[64];
-		char addressBuffer[64];
+		char nameBuffer[65];
+		char addressBuffer[65];
 		int port = -1;
-		char protocolBuffer[16];
+		char protocolBuffer[17];
 		int matches = sscanf( open, "[ p=%16s a=%64s port=%d; n=%64s ",
 			protocolBuffer, addressBuffer, & port, nameBuffer );
 		if( matches != 4 ) { return false; }

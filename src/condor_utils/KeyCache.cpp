@@ -278,7 +278,7 @@ void KeyCache::delete_storage()
 			}
 		}
 		key_table->clear();
-		dprintf( D_SECURITY|D_FULLDEBUG, "KEYCACHE: deleted: %p\n", key_table );
+		//dprintf( D_SECURITY|D_FULLDEBUG, "KEYCACHE: deleted: %p\n", key_table );
 	}
 	if( m_index ) {
 		MyString index;
@@ -327,13 +327,13 @@ bool KeyCache::insert(KeyCacheEntry &e) {
 void
 KeyCache::makeServerUniqueId(MyString const &parent_id,int server_pid,MyString *result) {
 	ASSERT( result );
-	if( parent_id.IsEmpty() || server_pid == 0 ) {
+	if( parent_id.empty() || server_pid == 0 ) {
 			// If our peer is not a daemon, parent_id will be empty
 			// and there is no point in indexing it, because we
 			// never query by PID alone.
 		return;
 	}
-	result->formatstr("%s.%d",parent_id.Value(),server_pid);
+	result->formatstr("%s.%d",parent_id.c_str(),server_pid);
 }
 
 bool KeyCache::lookup(const char *key_id, KeyCacheEntry *&e_ptr) {
@@ -404,7 +404,7 @@ KeyCache::removeFromIndex(KeyCacheEntry *key)
 void
 KeyCache::addToIndex(KeyCacheIndex *hash,MyString const &index,KeyCacheEntry *key)
 {
-	if( index.IsEmpty() ) {
+	if( index.empty() ) {
 		return;
 	}
 	ASSERT( key );
@@ -485,7 +485,7 @@ StringList * KeyCache::getExpiredKeys() {
 	while (key_table->iterate(id, key_entry)) {
 		// check the freshness date on that key
 		if (key_entry->expiration() && key_entry->expiration() <= cutoff_time) {
-            list->append(id.Value());
+            list->append(id.c_str());
 			//expire(key_entry);
 		}
 	}

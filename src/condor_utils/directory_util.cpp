@@ -97,7 +97,7 @@ const char* dircat(const char *dirpath, const char *filename, const char * filee
 	}
 
 	// return the result
-	return result.Value();
+	return result.c_str();
 }
 
 const char* dircat(const char *dirpath, const char *filename, const char * fileext, std::string &result )
@@ -155,7 +155,7 @@ const char* dirscat(const char *dirpath, const char *subdir, MyString &result )
 
 	// remove any trailing directory delims and replace with a single directory delim
 	// that is correct for this platform.
-	int len = result.Length();
+	int len = result.length();
 	if (len > 0 && IS_ANY_DIR_DELIM_CHAR(result[len-1])) {
 		// make sure there is only one trailing directory delim and it is the correct one (if on windows)
 		do {
@@ -168,7 +168,7 @@ const char* dirscat(const char *dirpath, const char *subdir, MyString &result )
 	} else {
 		result += DIR_DELIM_STRING;
 	}
-	return result.Value();
+	return result.c_str();
 }
 
 const char* dirscat(const char *dirpath, const char *subdir, std::string &result )
@@ -274,7 +274,6 @@ rec_touch_file(char *path, mode_t file_mode, mode_t directory_mode , int pos)
 					char *dir = new char[pos+1];
 					strncpy(dir, path, pos);
 					dir[pos] = '\0';
-					dprintf(D_FULLDEBUG, "directory_util::rec_touch_file: Creating directory %s \n", dir);
 					int err = mkdir(dir, directory_mode);
 					if (err != 0) {
 						if (errno != EEXIST) {
@@ -282,6 +281,8 @@ rec_touch_file(char *path, mode_t file_mode, mode_t directory_mode , int pos)
 							delete []dir;
 							return -1;
 						}
+					} else {
+						dprintf(D_FULLDEBUG, "directory_util::rec_touch_file: Created directory %s \n", dir);
 					}
 					delete []dir;
 					++pos;

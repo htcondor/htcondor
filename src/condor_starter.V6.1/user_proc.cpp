@@ -65,7 +65,7 @@ UserProc::initialize( void )
 	}
 	if( JobAd ) {
 		initKillSigs();
-		if( JobAd->LookupInteger( ATTR_JOB_UNIVERSE, job_universe ) < 1 ) {
+		if( ! JobAd->LookupInteger( ATTR_JOB_UNIVERSE, job_universe ) ) {
 			job_universe = 0;
 		}
 	}
@@ -118,34 +118,34 @@ UserProc::initKillSigs( void )
 bool
 UserProc::JobReaper(int pid, int status)
 {
-	MyString line;
-	MyString error_txt;
-	MyString filename;
+	std::string line;
+	std::string error_txt;
+	std::string filename;
 	const char* dir = Starter->GetWorkingDir(0);
 	FILE* fp;
 
 	dprintf( D_FULLDEBUG, "Inside UserProc::JobReaper()\n" );
 
-	filename.formatstr("%s%c%s", dir, DIR_DELIM_CHAR, JOB_WRAPPER_FAILURE_FILE);
-	if (0 == access(filename.Value(), F_OK)) {
+	formatstr(filename, "%s%c%s", dir, DIR_DELIM_CHAR, JOB_WRAPPER_FAILURE_FILE);
+	if (0 == access(filename.c_str(), F_OK)) {
 		// The job wrapper failed, so read the contents of the file
 		// and EXCEPT, just as is done when an executable is unable
 		// to be run.  Ideally, both failure cases would propagate
 		// into the job ad
-		fp = safe_fopen_wrapper_follow(filename.Value(), "r");
+		fp = safe_fopen_wrapper_follow(filename.c_str(), "r");
 		if (!fp) {
 			dprintf(D_ALWAYS, "Unable to open \"%s\" for reading: "
-					"%s (errno %d)\n", filename.Value(),
+					"%s (errno %d)\n", filename.c_str(),
 					strerror(errno), errno);
 		} else {
-			while (line.readLine(fp))
+			while (readLine(line, fp))
 			{
 				error_txt += line;
 			}
 			fclose(fp);
 		}
-		error_txt.trim();
-		EXCEPT("The job wrapper failed to execute the job: %s", error_txt.Value());
+		trim(error_txt);
+		EXCEPT("The job wrapper failed to execute the job: %s", error_txt.c_str());
 	}
 
 	if (JobPid == pid) {
@@ -224,7 +224,7 @@ UserProc::PublishToEnv( Env* proc_env )
 	if (m_proc_exited) {
 			// TODO: what should these really be called?  use
 			// myDistro?  get_mySubSystem()?  hard to say...
-		MyString base;
+		std::string base;
 		base = "_";
 		base += myDistro->Get();
 		base += '_';
@@ -234,18 +234,18 @@ UserProc::PublishToEnv( Env* proc_env )
 			base += "MAINJOB";
 		}
 		base += '_';
-		base.upper_case();
+		upper_case(base);
  
-		MyString env_name;
+		std::string env_name;
 
 		if( WIFSIGNALED(exit_status) ) {
-			env_name = base.Value();
+			env_name = base.c_str();
 			env_name += "EXIT_SIGNAL";
-			proc_env->SetEnv( env_name.Value(), std::to_string( WTERMSIG(exit_status) ) );
+			proc_env->SetEnv( env_name.c_str(), std::to_string( WTERMSIG(exit_status) ) );
 		} else {
-			env_name = base.Value();
+			env_name = base.c_str();
 			env_name += "EXIT_CODE";
-			proc_env->SetEnv( env_name.Value(), std::to_string( WEXITSTATUS(exit_status) ) );
+			proc_env->SetEnv( env_name.c_str(), std::to_string( WEXITSTATUS(exit_status) ) );
 		}
 	}
 }
@@ -256,7 +256,7 @@ UserProc::getStdFile( std_file_type type,
                       bool allow_dash,
                       const char* log_header,
                       int* out_fd,
-                      MyString* out_name)
+                      std::string & out_name)
 {
 		// we're going to return true on success, false on error.
 		// if we succeed, then if we have an open FD that should
@@ -265,7 +265,6 @@ UserProc::getStdFile( std_file_type type,
 		// argument and return the name of the file that should
 		// be opened for the child in the name argument
 	ASSERT(out_fd != NULL);
-	ASSERT(out_name != NULL);
 	*out_fd = -1;
 
 	const char* filename = NULL;
@@ -359,9 +358,9 @@ UserProc::getStdFile( std_file_type type,
 	if( wants_stream && ! is_null_file ) {
 		StreamHandler *handler = new StreamHandler;
 		if( !handler->Init(filename, stream_name, is_output, streamingOpenFlags( is_output ) ) ) {
-			MyString err_msg;
-			err_msg.formatstr( "unable to establish %s stream", phrase );
-			Starter->jic->notifyStarterError( err_msg.Value(), true,
+			std::string err_msg;
+			formatstr( err_msg, "unable to establish %s stream", phrase );
+			Starter->jic->notifyStarterError( err_msg.c_str(), true,
 			    is_output ? CONDOR_HOLD_CODE_UnableToOpenOutputStream :
 			                CONDOR_HOLD_CODE_UnableToOpenInputStream, 0 );
 			return false;
@@ -399,27 +398,27 @@ UserProc::getStdFile( std_file_type type,
 	}
 
 		///////////////////////////////////////////////////////
-		// The regular case of a local file 
+		// The regular case of a local file
 		///////////////////////////////////////////////////////
-	*out_name = filename;
+	out_name = filename;
 	return true;
 }
 
 int
 UserProc::openStdFile( std_file_type type,
-                       const char* attr, 
+                       const char* attr,
                        bool allow_dash,
                        const char* log_header)
 {
 		// most of the work gets done by our helper, getStdFile
 	int fd;
-	MyString filename;
+	std::string filename;
 	if (!getStdFile(type,
 	                attr,
 	                allow_dash,
 	                log_header,
 	                &fd,
-	                &filename))
+	                filename))
 	{
 		return -1;
 	}
@@ -443,19 +442,19 @@ UserProc::openStdFile( std_file_type type,
 			}
 		}
 #endif
-		fd = safe_open_wrapper_follow( filename.Value(), flags, 0666 );
+		fd = safe_open_wrapper_follow( filename.c_str(), flags, 0666 );
 		if( fd < 0 ) {
 				// if failed, try again without O_TRUNC
 			flags &= ~O_TRUNC;
-			fd = safe_open_wrapper_follow( filename.Value(), flags, 0666 );
+			fd = safe_open_wrapper_follow( filename.c_str(), flags, 0666 );
 		}
 	} else {
-		fd = safe_open_wrapper_follow( filename.Value(), O_RDONLY | O_LARGEFILE );
+		fd = safe_open_wrapper_follow( filename.c_str(), O_RDONLY | O_LARGEFILE );
 	}
 	if( fd < 0 ) {
 		int open_errno = errno;
 		char const *errno_str = strerror( errno );
-		MyString err_msg;
+		std::string err_msg;
 		const char* phrase;
 		if (type == SFT_IN) {
 			phrase = "standard input";
@@ -466,20 +465,20 @@ UserProc::openStdFile( std_file_type type,
 		else {
 			phrase = "standard error";
 		}
-		err_msg.formatstr( "Failed to open '%s' as %s: %s (errno %d)",
-		                 filename.Value(),
+		formatstr( err_msg, "Failed to open '%s' as %s: %s (errno %d)",
+		                 filename.c_str(),
 		                 phrase,
 		                 errno_str,
 		                 errno );
-		dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
-		Starter->jic->notifyStarterError( err_msg.Value(), true,
+		dprintf( D_ALWAYS, "%s\n", err_msg.c_str() );
+		Starter->jic->notifyStarterError( err_msg.c_str(), true,
 		  is_output ? CONDOR_HOLD_CODE_UnableToOpenOutput :
 		              CONDOR_HOLD_CODE_UnableToOpenInput, open_errno );
 		return -1;
 	}
 	dprintf( (filename == NULL_FILE) ? D_FULLDEBUG : D_ALWAYS,
 	         "%s: %s\n", log_header,
-	         filename.Value() );
+	         filename.c_str() );
 	return fd;
 }
 
@@ -491,7 +490,7 @@ UserProc::SetStdFiles(const int std_fds[], char const *std_fnames[])
 	for(i=0;i<3;i++) {
 		m_pre_defined_std_fds[i] = std_fds[i];
 		m_pre_defined_std_fname_buf[i] = std_fnames[i];
-		m_pre_defined_std_fnames[i] = std_fnames[i] ? m_pre_defined_std_fname_buf[i].Value() : NULL;
+		m_pre_defined_std_fnames[i] = std_fnames[i] ? m_pre_defined_std_fname_buf[i].c_str() : NULL;
 	}
 }
 

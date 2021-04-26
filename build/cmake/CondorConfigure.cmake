@@ -727,10 +727,12 @@ option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(WANT_CONTRIB "Enable building of contrib modules" OFF)
 option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
-option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
+option(WANT_GLEXEC "Build and install condor glexec functionality" OFF)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
+option(WITH_ADDRESS_SANITIZER "Build with address sanitizer" OFF)
+option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
 option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run as root inside their container" OFF)
 
 #####################################
@@ -756,6 +758,25 @@ if ( NOT CMAKE_SKIP_RPATH )
 	set( CMAKE_INSTALL_RPATH ${CONDOR_RPATH} )
 	set( CMAKE_BUILD_WITH_INSTALL_RPATH TRUE )
 endif()
+
+if (WITH_ADDRESS_SANITIZER)
+	# Condor daemons dup stderr to /dev/null, so to see output need to run with
+	# ASAN_OPTIONS="log_path=/tmp/asan" condor_master 
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+endif()
+
+if (WITH_UB_SANITIZER)
+	# Condor daemons dup stderr to /dev/null, so to see output need to run with
+	# UBSAN_OPTIONS="log_path=/tmp/asan print_stacktrace=true" condor_master 
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+endif()
+
 
 #####################################
 # KBDD option

@@ -25,6 +25,8 @@ use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
 
+#testreq: personal
+
 my $mypid = $$;
 my $testname = "job_core_basic_par";
 my $wantedout = $testname . $mypid . ".out" . "\$(NODE)";
@@ -38,7 +40,8 @@ machine_count = 4
 my $debuglevel = 1;
 
 # where am I running
-my $currenthost = CondorTest::getFqdnHost();
+my $currenthost = `condor_config_val FULL_HOSTNAME`;
+chomp($currenthost);
 
 print scalar localtime() . "\n";
 

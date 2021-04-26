@@ -271,7 +271,7 @@ cleanup_execute_dirs( StringList &list )
 
 		execute_dir.Remove_Entire_Directory();
 #else
-		MyString dirbuf;
+		std::string dirbuf;
 		pair_strings_vector root_dirs = root_dir_list();
 		for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
 			const char * exec_path_full = dirscat(it->second.c_str(), exec_path, dirbuf);
@@ -381,7 +381,7 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 	check_recovery_file( pid_dir_path.c_str());
 
 	// Instantiate a directory object pointing at the execute directory
-	MyString dirbuf;
+	std::string dirbuf;
 	pair_strings_vector root_dirs = root_dir_list();
 	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
 		const char * exec_path_full = dirscat(it->second.c_str(), exec_path, dirbuf);

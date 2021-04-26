@@ -124,9 +124,10 @@ DCpermissionHierarchy(DCpermission perm) {
 		switch(m_config_perms[i-1]) {
 		case DAEMON:
 			if (param_boolean("LEGACY_ALLOW_SEMANTICS", false)) {
-				m_config_perms[i] = WRITE;
+				m_config_perms[i++] = WRITE;
+			} else {
+				done = true;
 			}
-			i++;
 			break;
 		case ADVERTISE_STARTD_PERM:
 		case ADVERTISE_SCHEDD_PERM:

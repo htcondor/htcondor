@@ -60,7 +60,7 @@ class OwnedMaterials
 	public:
 		// this structure owns the containers passed to it, but not the memory 
 		// contained in the containers...
-		OwnedMaterials(ExtArray<Job*> *a, ThrottleByCategory *tr,
+		OwnedMaterials(std::vector<Job*> *a, ThrottleByCategory *tr,
 				bool reject, MyString firstRejectLoc ) :
 				nodes (a), throttles (tr), _reject(reject),
 				_firstRejectLoc(firstRejectLoc) {};
@@ -69,7 +69,7 @@ class OwnedMaterials
 			delete nodes;
 		};
 
-	ExtArray<Job*> *nodes;
+	std::vector<Job*> *nodes;
 	ThrottleByCategory *throttles;
 	bool _reject;
 	MyString _firstRejectLoc;
@@ -733,13 +733,13 @@ class Dag {
 	// parents in this dag.
 	// These pointers are aliased and should not be freed.
 	// However the array itself is allocated and must be freed.
-	ExtArray<Job*>* InitialRecordedNodes(void);
+	std::vector<Job*>* InitialRecordedNodes(void);
 
 	// return an array of job pointers to all of the nodes with no
 	// children in this dag.
 	// These pointers are aliased and should not be freed.
 	// However the array itself is allocated and must be freed.
-	ExtArray<Job*>* FinalRecordedNodes(void);
+	std::vector<Job*>* FinalRecordedNodes(void);
 
 	// called just after a parse of a dag, this will keep track of the
 	// original intial and terminal nodes of a dag (after all parent and
@@ -872,8 +872,8 @@ class Dag {
 	// and final nodes were for the dag. This is so when we are using this
 	// dag as a parent or a child, we can always reference the correct nodes
 	// even in the face of AddDependency().
-	ExtArray<Job*> _splice_initial_nodes;
-	ExtArray<Job*> _splice_terminal_nodes;
+	std::vector<Job*> _splice_initial_nodes;
+	std::vector<Job*> _splice_terminal_nodes;
 
   	// A hash table with key of a splice name and value of the dag parse 
 	// associated with the splice.
@@ -1078,7 +1078,7 @@ class Dag {
 
 protected:
     // List of Job objects
-    mutable std::deque<Job*>     _jobs;
+    mutable std::vector<Job*>     _jobs;
 
 private:
 		// Note: the final node is in the _jobs list; this pointer is just
@@ -1384,7 +1384,7 @@ private:
 	static void DeletePinList( PinList &pinList );
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Iterator for ALL_NODES implementation.
-	mutable std::deque<Job*>::iterator _allNodesIt;
+	mutable std::vector<Job*>::iterator _allNodesIt;
 
 		// The schedd we need to talk to to update the classad.
 	DCSchedd *_schedd;

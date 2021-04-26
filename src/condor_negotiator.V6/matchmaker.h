@@ -409,7 +409,7 @@ class Matchmaker : public Service
 			double			PostJobRankValue;
 			double			PreemptRankValue;
 			PreemptState	PreemptStateValue;
-			MyString			DslotClaims;
+			std::string			DslotClaims;
 			ClassAd *ad;
 		};
 
@@ -496,7 +496,7 @@ class Matchmaker : public Service
 		private:
 			
 			// AdListEntry* peek_candidate();
-			static int sort_compare(const void*, const void*);
+			static bool sort_compare(const AdListEntry &Elem1, const AdListEntry &Elem2);
 			AdListEntry* AdListArray;			
 			int adListMaxLen;	// max length of AdListArray
 			int adListLen;		// current length of AdListArray

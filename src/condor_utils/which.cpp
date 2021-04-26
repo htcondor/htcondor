@@ -28,34 +28,19 @@
 #include <direct.h>
 #endif
 
-
-// A version that doesn't require having MyStrings passed to it, in
-// case we find this easier to use...
-MyString
-which( const char* strFilename, const char* strAdditionalSearchDir )
+std::string
+which(const std::string &strFilename, const std::string &strAdditionalSearchDirs)
 {
-	MyString file( strFilename );
-	if( strAdditionalSearchDir ) {
-		MyString additionalSearch( strAdditionalSearchDir );
-		return which( file, additionalSearch );
-	} 
-	return which( file );
-}
-
-
-MyString
-which(const MyString &strFilename, const MyString &strAdditionalSearchDirs)
-{
-	MyString strPath = getenv( EnvGetName( ENV_PATH ) );
-	dprintf( D_FULLDEBUG, "Path: %s\n", strPath.Value());
+	std::string strPath = getenv( EnvGetName( ENV_PATH ) );
+	dprintf( D_FULLDEBUG, "Path: %s\n", strPath.c_str());
 
 	char path_delim[3];
 	sprintf( path_delim, "%c", PATH_DELIM_CHAR );
-	StringList listDirectoriesInPath( strPath.Value(), path_delim );
+	StringList listDirectoriesInPath( strPath.c_str(), path_delim );
 
 #ifdef WIN32
-	int iLength = strFilename.Length();
-	if (!strcasecmp(strFilename.substr(iLength - 4, 4).Value(), ".dll"))
+	int iLength = strFilename.length();
+	if (!strcasecmp(strFilename.substr(iLength - 4, 4).c_str(), ".dll"))
 	{	// if the filename ends in ".dll"
 		
 		// in order to mimic the behavior of LoadLibrary
@@ -117,9 +102,9 @@ which(const MyString &strFilename, const MyString &strAdditionalSearchDirs)
 	listDirectoriesInPath.next();
 
 	// add additional dirs if specified
-	if( strAdditionalSearchDirs != "" ) {
+	if( !strAdditionalSearchDirs.empty() ) {
 		// path_delim was set above
-		StringList listAdditionalSearchDirs( strAdditionalSearchDirs.Value(), path_delim );
+		StringList listAdditionalSearchDirs( strAdditionalSearchDirs.c_str(), path_delim );
 		listDirectoriesInPath.create_union(listAdditionalSearchDirs, false);
 	}
 	
@@ -130,10 +115,10 @@ which(const MyString &strFilename, const MyString &strAdditionalSearchDirs)
 	{
 		dprintf( D_FULLDEBUG, "Checking dir: %s\n", psDir );
 
-		MyString strFullDir;
-		dircat(psDir, strFilename.Value(), strFullDir);
+		std::string strFullDir;
+		dircat(psDir, strFilename.c_str(), strFullDir);
 
-		StatInfo info(strFullDir.Value());
+		StatInfo info(strFullDir.c_str());
 		if( info.Error() == SIGood ) {
 			return strFullDir;
 		}

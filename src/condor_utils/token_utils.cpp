@@ -53,7 +53,7 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
 
 	std::string dirpath;
 	if (!owner.empty() || !param(dirpath, "SEC_TOKEN_DIRECTORY")) {
-		MyString file_location;
+		std::string file_location;
 		if (!find_user_file(file_location, "tokens.d", false, !owner.empty())) {
 			if (!owner.empty()) {
 				dprintf(D_FULLDEBUG, "write_out_token(%s): Unable to find token file for owner.\n",
@@ -109,21 +109,14 @@ htcondor::generate_client_id()
 
 std::string
 htcondor::get_token_signing_key(CondorError &err) {
-	std::string key_name = "POOL";
-	param(key_name, "SEC_TOKEN_ISSUER_KEY");
-	std::string final_key_name;
-	std::vector<std::string> creds;
-	if (!listNamedCredentials(creds, &err)) {
-		return "";
-	}
-	for (const auto &cred : creds) {
-		if (cred == key_name) {
-			final_key_name = key_name;
-			break;
+	auto_free_ptr key_name(param("SEC_TOKEN_ISSUER_KEY"));
+	if (key_name) {
+		if (hasTokenSigningKey(key_name.ptr(), &err)) {
+			return key_name.ptr();
 		}
+	} else if (hasTokenSigningKey("POOL", &err)) {
+		return "POOL";
 	}
-	if (final_key_name.empty()) {
-		err.push("TOKEN_UTILS", 4, "Server does not have a signing key configured.");
-	}
-	return final_key_name;
+	err.push("TOKEN_UTILS", 4, "Server does not have a signing key configured.");
+	return "";
 }

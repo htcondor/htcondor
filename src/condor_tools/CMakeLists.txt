@@ -16,7 +16,6 @@
  # 
  ############################################################### 
 
-# condor_exe(condor_userlog_tail "userlog_tail.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_evicted_files "evicted_files.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_now "now.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_update_machine_ad "update_machine_ad.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
@@ -40,13 +39,11 @@ condor_exe(condor_token_request_approve "token_request_approve.cpp" "${C_BIN}" "
 condor_exe(condor_token_request_list "token_request_list.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_token_request_auto_approve "token_request_auto_approve.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_scitoken_exchange "scitoken_exchange.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
+
 if (LINUX)
-condor_exe(condor_docker_enter "docker_enter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-condor_exe(condor_nsenter "nsenter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+    condor_exe(condor_docker_enter "docker_enter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+    condor_exe(condor_nsenter "nsenter.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 endif()
-
-
-#condor_exe(condor_curlplugin "condor_curlplugin.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 if (CURL_FOUND)
 	if (WINDOWS)
@@ -64,16 +61,11 @@ endif(HAVE_SSH_TO_JOB)
 include_directories(${BOOST_INCLUDE})
 condor_exe(condor_tail "peek.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
-
-
 condor_exe(condor_transfer_data "transfer_data.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_version "version.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_wait "wait.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_history "history.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
-condor_exe(condor_convert_history "convert_history.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
-
 condor_exe(condor_store_cred "store_cred_main.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
-
 condor_exe(condor_vacate "tool.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_on "tool.cpp" "${C_SBIN}" "${CONDOR_TOOL_LIBS}" OFF)
 

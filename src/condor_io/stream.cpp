@@ -837,7 +837,7 @@ Stream::put_nullstr( char const *s)
 int 
 Stream::put( const MyString &s)
 {
-	return put( s.Value() );
+	return put( s.c_str() );
 }
 
 int
@@ -1483,6 +1483,10 @@ Stream::set_crypto_mode(bool enabled)
 			// we FAILED to enable crypto when requested, return false
 			return false;
 		}
+	}
+
+	if (mustEncrypt()) {
+		return false;
 	}
 
 	// turn off crypto

@@ -153,6 +153,10 @@ printClassAd( void )
 		std::string dockerVersion;
 		if( DockerProc::Version( dockerVersion ) ) {
 			printf( "%s = \"%s\"\n", ATTR_DOCKER_VERSION, dockerVersion.c_str() );
+			if (dockerVersion.find("20.10.4,") != std::string::npos) {
+				dprintf(D_ALWAYS, "Docker Version 20.10.4 detected.  This version cannot work with HTCondor.  Please upgrade docker to get Docker universe support\n");
+				printf( "%s = False\n", ATTR_HAS_DOCKER );
+			}
 		}
 	}
 
@@ -175,9 +179,9 @@ printClassAd( void )
 	// Advertise which file transfer plugins are supported
 	FileTransfer ft;
 	CondorError e;
-	MyString method_list = ft.GetSupportedMethods(e);
-	if (!method_list.IsEmpty()) {
-		printf("%s = \"%s\"\n", ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS, method_list.Value());
+	std::string method_list = ft.GetSupportedMethods(e);
+	if (!method_list.empty()) {
+		printf("%s = \"%s\"\n", ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS, method_list.c_str());
 	}
 	if (e.code()) {
 		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
@@ -256,12 +260,12 @@ main_pre_dc_init( int argc, char* argv[] )
 	}
 
 		// if we're still here, stash the cwd for future reference
-	MyString cwd;
+	std::string cwd;
 	if( ! condor_getcwd(cwd)) {
 		dprintf( D_ALWAYS, "ERROR calling getcwd(): %s (errno %d)\n", 
 				 strerror(errno), errno );
 	} else {
-		orig_cwd = strdup(cwd.Value());
+		orig_cwd = strdup(cwd.c_str());
 	}
 
 		// if we're the gridshell, assume a "-f" option.  all that

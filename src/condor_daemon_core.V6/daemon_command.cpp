@@ -921,7 +921,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					// generate a unique ID.
 					std::string tmpStr;
 					formatstr( tmpStr, "%s:%i:%i:%i",
-									get_local_hostname().Value(), daemonCore->mypid,
+									get_local_hostname().c_str(), daemonCore->mypid,
 							 (int)time(0), ZZZ_always_increase() );
 					assert (m_sid == NULL);
 					m_sid = strdup(tmpStr.c_str());

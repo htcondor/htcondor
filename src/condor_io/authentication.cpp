@@ -338,7 +338,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 					// we want this to be set to true!).
 					// In the future, we can always reproduce the entire chain of
 					// logic to determine if TOKEN auth is tried.
-					m_should_try_token_request |= mySock->isClient();
+					m_should_try_token_request |= (mySock->isClient() != 0);
 
 				return 0;
 
@@ -609,17 +609,17 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 #endif
 
 	if (global_map_file) {
-		MyString canonical_user;
+		std::string canonical_user;
 
 		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 1: attempting to map '%s'\n", auth_name_to_map.c_str());
 		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
-		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
+		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.c_str());
 
 		// if it did not find a user, and we included voms attrs, try again without voms
 		if (mapret && included_voms) {
 			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: now attempting to map '%s'\n", authentication_name);
 			mapret = global_map_file->GetCanonicalization(method_string, authentication_name, canonical_user);
-			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: now 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: now 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.c_str());
 		}
 
 		// if the method is SCITOKENS and mapping failed, try again
@@ -648,7 +648,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 
 		if (!mapret) {
 			// returns true on failure?
-			dprintf (D_FULLDEBUG|D_VERBOSE, "AUTHENTICATION: successful mapping to %s\n", canonical_user.Value());
+			dprintf (D_FULLDEBUG|D_VERBOSE, "AUTHENTICATION: successful mapping to %s\n", canonical_user.c_str());
 
 			// there is a switch for GSI to use the default globus function for this, in
 			// case there is some custom globus mapping add-on, or the admin just wants
@@ -674,16 +674,16 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 				return;
 			} else {
 
-				dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: found user %s, splitting.\n", canonical_user.Value());
+				dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: found user %s, splitting.\n", canonical_user.c_str());
 
-				MyString user;
-				MyString domain;
+				std::string user;
+				std::string domain;
 
 				// this sets user and domain
 				split_canonical_name( canonical_user, user, domain);
 
-				authenticator_->setRemoteUser( user.Value() );
-				authenticator_->setRemoteDomain( domain.Value() );
+				authenticator_->setRemoteUser( user.c_str() );
+				authenticator_->setRemoteDomain( domain.c_str() );
 
 				// we're done.
 				return;
@@ -711,18 +711,18 @@ void Authentication::split_canonical_name(char const *can_name,char **user,char 
 		// This version of the function exists to avoid use of MyString
 		// in ReliSock, because that gets linked into std univ jobs.
 		// This function is stubbed out in cedar_no_ckpt.C.
-	MyString my_user,my_domain;
+	std::string my_user,my_domain;
 	split_canonical_name(can_name,my_user,my_domain);
-	*user = strdup(my_user.Value());
-	*domain = strdup(my_domain.Value());
+	*user = strdup(my_user.c_str());
+	*domain = strdup(my_domain.c_str());
 }
 
-void Authentication::split_canonical_name(MyString can_name, MyString& user, MyString& domain ) {
+void Authentication::split_canonical_name(const std::string& can_name, std::string& user, std::string& domain ) {
 
     char local_user[256];
  
 	// local storage so we can modify it.
-	strncpy (local_user, can_name.Value(), 255);
+	strncpy (local_user, can_name.c_str(), 255);
 	local_user[255] = 0;
 
     // split it into user@domain

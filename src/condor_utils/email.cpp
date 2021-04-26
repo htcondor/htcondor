@@ -234,7 +234,7 @@ email_nonjob_open( const char *email_addr, const char *subject )
 		}
 
 		fprintf(mailerstream,"This is an automated email from the Condor "
-			"system\non machine \"%s\".  Do not reply.\n\n",get_local_fqdn().Value());
+			"system\non machine \"%s\".  Do not reply.\n\n",get_local_fqdn().c_str());
 	}
 
 	/* free up everything we strdup-ed and param-ed, and return result */

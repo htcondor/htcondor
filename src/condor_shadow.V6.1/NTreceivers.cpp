@@ -171,7 +171,7 @@ do_REMOTE_syscall()
 
 	rval = syscall_sock->code(condor_sysnum);
 	if (!rval) {
-		MyString err_msg;
+		std::string err_msg;
 		err_msg = "Can no longer talk to condor_starter ";
 		err_msg += syscall_sock->get_sinful_peer();
 
@@ -195,14 +195,14 @@ do_REMOTE_syscall()
 		if( Shadow->supportsReconnect() ) {
 				// instead of having to EXCEPT, we can now try to
 				// reconnect.  happy day! :)
-			dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
+			dprintf( D_ALWAYS, "%s\n", err_msg.c_str() );
 
 			Shadow->resourceDisconnected(thisRemoteResource);
 
 			if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
 					dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
 					Shadow->gracefulShutDown();
-					EXCEPT( "%s", err_msg.Value() );
+					EXCEPT( "%s", err_msg.c_str() );
 			}
 				// tell the shadow to start trying to reconnect
 			Shadow->reconnect();
@@ -213,7 +213,7 @@ do_REMOTE_syscall()
 		} else {
 				// The remote starter doesn't support it, so give up
 				// like we always used to.
-			EXCEPT( "%s", err_msg.Value() );
+			EXCEPT( "%s", err_msg.c_str() );
 		}
 	}
 
@@ -836,7 +836,7 @@ do_REMOTE_syscall()
 
 	case CONDOR_phase:
 	{
-		char *phase = 0;
+		std::string phase;
 		result = ( syscall_sock->code(phase) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
@@ -858,7 +858,7 @@ do_REMOTE_syscall()
 		ASSERT( syscall_sock->end_of_message() );;
 
 		errno = (condor_errno_t)0;
-		MyString expr;
+		std::string expr;
 		if ( thisRemoteResource->allowRemoteReadAttributeAccess(attrname) ) {
 			rval = pseudo_get_job_attr( attrname , expr);
 			terrno = (condor_errno_t)errno;
@@ -874,7 +874,7 @@ do_REMOTE_syscall()
 			ASSERT( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			ASSERT( syscall_sock->put(expr.Value()) );
+			ASSERT( syscall_sock->put(expr) );
 		}
 		free( (char *)attrname );
 		ASSERT( syscall_sock->end_of_message() );;
@@ -939,14 +939,14 @@ do_REMOTE_syscall()
 	}
 	case CONDOR_get_sec_session_info:
 	{
-		MyString starter_reconnect_session_info;
-		MyString starter_filetrans_session_info;
-		MyString reconnect_session_id;
-		MyString reconnect_session_info;
-		MyString reconnect_session_key;
-		MyString filetrans_session_id;
-		MyString filetrans_session_info;
-		MyString filetrans_session_key;
+		std::string starter_reconnect_session_info;
+		std::string starter_filetrans_session_info;
+		std::string reconnect_session_id;
+		std::string reconnect_session_info;
+		std::string reconnect_session_key;
+		std::string filetrans_session_id;
+		std::string filetrans_session_info;
+		std::string filetrans_session_key;
 		bool socket_default_crypto = syscall_sock->get_encryption();
 		if( !socket_default_crypto ) {
 				// always encrypt; we are exchanging super secret session keys
@@ -958,11 +958,11 @@ do_REMOTE_syscall()
 
 		errno = (condor_errno_t)0;
 		rval = pseudo_get_sec_session_info(
-			starter_reconnect_session_info.Value(),
+			starter_reconnect_session_info.c_str(),
 			reconnect_session_id,
 			reconnect_session_info,
 			reconnect_session_key,
-			starter_filetrans_session_info.Value(),
+			starter_filetrans_session_info.c_str(),
 			filetrans_session_id,
 			filetrans_session_info,
 			filetrans_session_key );
@@ -2179,7 +2179,7 @@ case CONDOR_getdir:
 			dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY_OAUTH defined.\n");
 			return -1;
 		}
-		MyString cred_dir_name;
+		std::string cred_dir_name;
 		dircat(cred_dir, user.c_str(), cred_dir_name);
 
 		// what we want to do is send only the ".use" creds, and only
@@ -2194,26 +2194,26 @@ case CONDOR_getdir:
 		services_list.rewind();
 		char *curr;
 		while((curr = services_list.next())) {
-			MyString fname,fullname;
-			fname.formatstr("%s.use", curr);
+			std::string fname,fullname;
+			formatstr(fname, "%s.use", curr);
 
 			// change the '*' to an '_'.  These are stored that way
 			// so that the original service name can be cleanly
 			// separate if needed.  we don't care, so just change
 			// them all up front.
-			fname.replaceString("*", "_");
+			replace_str(fname, "*", "_");
 
-			fullname.formatstr("%s%c%s", cred_dir_name.c_str(), DIR_DELIM_CHAR, fname.Value());
+			formatstr(fullname, "%s%c%s", cred_dir_name.c_str(), DIR_DELIM_CHAR, fname.c_str());
 
-			dprintf(D_SECURITY, "CONDOR_getcreds: sending %s (from service name %s).\n", fullname.Value(), curr);
+			dprintf(D_SECURITY, "CONDOR_getcreds: sending %s (from service name %s).\n", fullname.c_str(), curr);
 			// read the file (fourth argument "true" means as_root)
 			unsigned char *buf = 0;
 			size_t len = 0;
 			const bool as_root = true;
 			const int verify_mode = trust_cred_dir ? 0 : SECURE_FILE_VERIFY_ALL;
-			bool rc = read_secure_file(fullname.Value(), (void**)(&buf), &len, as_root, verify_mode);
+			bool rc = read_secure_file(fullname.c_str(), (void**)(&buf), &len, as_root, verify_mode);
 			if(!rc) {
-				dprintf( D_ALWAYS, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.Value() );
+				dprintf( D_ALWAYS, "CONDOR_getcreds: ERROR reading contents of %s\n", fullname.c_str() );
 				had_error = true;
 				break;
 			}
@@ -2221,7 +2221,7 @@ case CONDOR_getdir:
 			free(buf);
 
 			ClassAd ad;
-			ad.Assign("Service", fname.Value());
+			ad.Assign("Service", fname);
 			ad.Assign("Data", b64);
 
 			int more_ads = 1;

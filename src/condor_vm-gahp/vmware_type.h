@@ -22,7 +22,6 @@
 #define VMWARE_TYPE_H
 
 #include "condor_classad.h"
-#include "MyString.h"
 #include "simplelist.h"
 #include "gahp_common.h"
 #include "vmgahp.h"
@@ -74,7 +73,7 @@ private:
 	bool ResumeFromSoftSuspend();
 	bool getPIDofVM(int &vm_pid);
 
-	bool findCkptConfig(MyString &vmconfig);
+	bool findCkptConfig(std::string &vmconfig);
 	bool readVMXfile(const char *filename, const char *dirpath);
 
 	StringList m_configVars;

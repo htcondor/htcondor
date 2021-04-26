@@ -81,7 +81,7 @@ bool IgnoreMissingDaemon = false;
 
 bool all_good = true;
 
-HashTable<MyString, bool> addresses_sent( hashFunction );
+HashTable<std::string, bool> addresses_sent( hashFunction );
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
@@ -116,11 +116,10 @@ usage( const char *str, int iExitCode )
 	fprintf( stderr, 
 			 "    -pool hostname\tuse the given central manager to find daemons\n" );
 	if( cmd == DAEMONS_OFF || cmd == DAEMON_OFF || cmd == RESTART ) {
-		fprintf( stderr, "    -graceful\t\tgracefully shutdown daemons %s\n", 
-				 "(the default)" );
-		fprintf( stderr, "    -fast\t\tquickly shutdown daemons\n" );
-		fprintf( stderr, "    -peaceful\t\twait indefinitely for jobs to finish\n" );
-		fprintf( stderr, "    -force-graceful\t\tupgrade a peaceful shutdown to a graceful shutdown\n" );
+		fprintf( stderr, "    -graceful\t\tThe default. If jobs are running, wait for up to the configured \n\t\t\tgrace period for them to finish, then exit\n");
+		fprintf( stderr, "    -fast\t\tquickly shutdown daemons, immediately evicting any running jobs\n" );
+		fprintf( stderr, "    -peaceful\t\twait indefinitely for jobs to finish before shutdown\n" );
+		fprintf( stderr, "    -force-graceful\tupgrade a peaceful shutdown to a graceful shutdown\n" );
 	}
 	if( cmd == VACATE_CLAIM ) {
 		fprintf( stderr, 
@@ -1284,7 +1283,6 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 
 	CondorError errstack;
 	QueryResult q_result;
-	MyString buffer;
 
 	if (adtype == GENERIC_AD) {
 		query.setGenericQueryType(subsys);
@@ -1501,7 +1499,7 @@ doCommand( Daemon* d )
 		// since we'll send the claim-id after the command and it
 		// won't be duplication of effort.
 		if( ! is_per_claim_startd_cmd ) {
-			MyString hash_key = d->addr();
+			std::string hash_key = d->addr();
 			bool sent_it = false;
 			if( addresses_sent.lookup(hash_key, sent_it) >= 0 && sent_it ) {
 				return;

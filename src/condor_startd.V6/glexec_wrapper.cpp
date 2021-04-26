@@ -45,14 +45,14 @@ static int read_fd(int);
 int
 main(int, char* argv[])
 {
-	MyString err;
+	std::string err;
 
 	// dup FD 0 since well will later replace FD 0 with the job's stdin
 	//
 	int sock_fd = dup(0);
 	if (sock_fd == -1) {
-		err.formatstr("dup error on FD 0: %s", strerror(errno));
-		full_write(0, err.Value(), err.Length() + 1);
+		formatstr(err, "dup error on FD 0: %s", strerror(errno));
+		full_write(0, err.c_str(), err.length() + 1);
 		exit(1);
 	}
 
@@ -102,46 +102,46 @@ main(int, char* argv[])
 static char*
 read_env(int sock_fd)
 {
-	MyString err;
+	std::string err;
 	int bytes;
 	int env_len;
 	bytes = full_read(0, &env_len, sizeof(env_len));
 	if (bytes != sizeof(env_len)) {
 		if (bytes == -1) {
-			err.formatstr("read error getting env size: %s",
+			formatstr(err, "read error getting env size: %s",
 			            strerror(errno));
 		}
 		else {
-			err.formatstr("short read of env size: %d of %lu bytes",
+			formatstr(err, "short read of env size: %d of %lu bytes",
 			            bytes,
 			            sizeof(env_len));
 		}
-		full_write(sock_fd, err.Value(), err.Length() + 1);
+		full_write(sock_fd, err.c_str(), err.length()() + 1);
 		exit(1);
 	}
 	if (env_len <= 0) {
-		err.formatstr("invalid env size %d read from stdin", env_len);
-		full_write(sock_fd, err.Value(), err.Length() + 1);
+		formatstr(err, "invalid env size %d read from stdin", env_len);
+		full_write(sock_fd, err.c_str(), err.length() + 1);
 		exit(1);
 	}
 	char* env_buf = new char[env_len];
 	if (env_buf == NULL) {
-		err.formatstr("failure to allocate %d bytes", env_len);
-		full_write(sock_fd, err.Value(), err.Length() + 1);
+		formatstr(err, "failure to allocate %d bytes", env_len);
+		full_write(sock_fd, err.c_str(), err.length() + 1);
 		exit(1);
 	}
 	bytes = full_read(0, env_buf, env_len);
 	if (bytes != env_len) {
 		if (bytes == -1) {
-			err.formatstr("read error getting env: %s",
+			formatstr(err, "read error getting env: %s",
 			            strerror(errno));
 		}
 		else {
-			err.formatstr("short read of env: %d of %d bytes",
+			formatstr(err, "short read of env: %d of %d bytes",
 			            bytes,
 			            env_len);
 		}
-		full_write(sock_fd, err.Value(), err.Length() + 1);
+		full_write(sock_fd, err.c_str(), err.length() + 1);
 		exit(1);
 	}
 	return env_buf;
@@ -150,38 +150,38 @@ read_env(int sock_fd)
 static int
 read_fd(int sock_fd)
 {
-	MyString err;
+	std::string err;
 	int bytes;
 	int flag;
 	bytes = full_read(0, &flag, sizeof(flag));
 	if (bytes != sizeof(flag)) {
 		if (bytes == -1) {
-			err.formatstr("read error getting flag: %s",
+			formatstr(err, "read error getting flag: %s",
 			            strerror(errno));
 		}
 		else {
-			err.formatstr("short read of flag: %d of %lu bytes",
+			formatstr(err, "short read of flag: %d of %lu bytes",
 			            bytes,
 			            sizeof(flag));
 		}
-		full_write(sock_fd, err.Value(), err.Length() + 1);
+		full_write(sock_fd, err.c_str(), err.length() + 1);
 		exit(1);
 	}
 	int fd;
 	if (flag) {
 		fd = fdpass_recv(sock_fd);
 		if (fd == -1) {
-			err.formatstr("fdpass_recv failed\n");
-			full_write(sock_fd, err.Value(), err.Length() + 1);
+			formatstr(err, "fdpass_recv failed\n");
+			full_write(sock_fd, err.c_str(), err.length() + 1);
 			exit(1);
 		}
 	}
 	else {
 		fd = open("/dev/null", O_RDONLY);
 		if (fd == -1) {
-			err.formatstr("error opening /dev/null: %s",
+			formatstr(err, "error opening /dev/null: %s",
 			            strerror(errno));
-			full_write(sock_fd, err.Value(), err.Length() + 1);
+			full_write(sock_fd, err.c_str(), err.length() + 1);
 			exit(1);
 		}
 	}

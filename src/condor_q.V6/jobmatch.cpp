@@ -31,7 +31,6 @@
 #include "match_prefix.h"
 #include "queue_internal.h"
 #if 0
-#include "MyString.h"
 #include "ad_printmask.h"
 #include "internet.h"
 #include "sig_install.h"
@@ -194,11 +193,11 @@ int setupAnalysis(
 
 	// if there is a slot constraint, that's allowed to be a simple machine/slot name
 	// in which case we build up the actual constraint expression automatically.
-	MyString mconst; // holds the final machine/slot constraint expression 
+	std::string mconst; // holds the final machine/slot constraint expression 
 	if (user_slot_constraint) {
 		mconst = user_slot_constraint;
 		if (is_slot_name(user_slot_constraint)) {
-			mconst.formatstr("(" ATTR_NAME "==\"%s\") || (" ATTR_MACHINE "==\"%s\")", user_slot_constraint, user_slot_constraint);
+			formatstr(mconst, "(" ATTR_NAME "==\"%s\") || (" ATTR_MACHINE "==\"%s\")", user_slot_constraint, user_slot_constraint);
 			single_machine = true;
 			single_machine_label = user_slot_constraint;
 		}
@@ -206,7 +205,7 @@ int setupAnalysis(
 
 	// fetch startd ads
 	if (machineads_file != NULL) {
-		ConstraintHolder constr(mconst.empty() ? NULL : mconst.StrDup());
+		ConstraintHolder constr(mconst.empty() ? NULL : strdup(mconst.c_str()));
 		CondorClassAdFileParseHelper parse_helper("\n", machineads_file_format);
 		if ( ! iter_ads_from_file(machineads_file, AddSlotToClassAdCollection, &startdAds, parse_helper, constr.Expr())) {
 			exit (1);
@@ -790,7 +789,7 @@ bool doJobRunAnalysis (
 	request->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 	if (universe == CONDOR_UNIVERSE_LOCAL || universe == CONDOR_UNIVERSE_SCHEDULER) {
 
-		MyString match_result;
+		std::string match_result;
 		ClassAd *scheddAd = schedd ? schedd->daemonAd() : NULL;
 		if ( ! scheddAd) {
 			match_result = "WARNING: A schedd ClassAd is needed to do analysis for scheduler or Local universe jobs.\n";
@@ -805,10 +804,10 @@ bool doJobRunAnalysis (
 				: ATTR_START_SCHEDULER_UNIVERSE;
 			bool can_start = false;
 			if ( ! EvalBool(requirements_attr, scheddAd, request, can_start)) {
-				match_result.formatstr_cat("This schedd's %s policy failed to evalute for this job.\n",requirements_attr);
+				formatstr_cat(match_result, "This schedd's %s policy failed to evalute for this job.\n",requirements_attr);
 			} else {
 				if (can_start) { ac.both_match++; } else { ac.fOffConstraint++; }
-				match_result.formatstr_cat("This schedd's %s evalutes to %s for this job.\n",requirements_attr, can_start ? "true" : "false" );
+				formatstr_cat(match_result, "This schedd's %s evalutes to %s for this job.\n",requirements_attr, can_start ? "true" : "false" );
 			}
 		}
 
@@ -1091,7 +1090,7 @@ const char * appendJobRunAnalysisToBuffer(std::string & out, ClassAd *job, anaCo
 
 	if (prio) {
 		formatstr_cat(out,
-			 "Submittor %s has a priority of %.3f\n", prioTable[prio->ixSubmittor].name.Value(), prioTable[prio->ixSubmittor].prio);
+			 "Submittor %s has a priority of %.3f\n", prioTable[prio->ixSubmittor].name.c_str(), prioTable[prio->ixSubmittor].prio);
 	}
 
 	const char * with_prio_tag = prio ? "considering user priority" : "ignoring user priority";
@@ -1555,7 +1554,7 @@ void buildJobClusterMap(IdToClassaAdMap & jobs, const char * attr, JobClusterMap
 
 int findSubmittor( const char *name ) 
 {
-	MyString 	sub(name);
+	std::string sub(name);
 	int			last = prioTable.getlast();
 	
 	for(int i = 0 ; i <= last ; i++ ) {
@@ -1592,21 +1591,19 @@ fixSubmittorName( const char *name, int niceUser )
 					niceUser ? NiceUserName : "",
 					niceUser ? "." : "",
 					name );
-		return buffer;
 	} else {
 		sprintf( buffer, "%s%s%s@%s", 
 					niceUser ? NiceUserName : "",
 					niceUser ? "." : "",
 					name, uid_domain );
-		return buffer;
 	}
 
-	return NULL;
+	return buffer;
 }
 
 
 
-bool warnScheddGlobalLimits(DaemonAllowLocateFull *schedd,MyString &result_buf) {
+bool warnScheddGlobalLimits(DaemonAllowLocateFull *schedd,std::string &result_buf) {
 	if( !schedd ) {
 		return false;
 	}
@@ -1616,11 +1613,11 @@ bool warnScheddGlobalLimits(DaemonAllowLocateFull *schedd,MyString &result_buf) 
 		bool exhausted = false;
 		ad->LookupBool("SwapSpaceExhausted", exhausted);
 		if (exhausted) {
-			result_buf.formatstr_cat("WARNING -- this schedd is not running jobs because it believes that doing so\n");
-			result_buf.formatstr_cat("           would exhaust swap space and cause thrashing.\n");
-			result_buf.formatstr_cat("           Set RESERVED_SWAP to 0 to tell the scheduler to skip this check\n");
-			result_buf.formatstr_cat("           Or add more swap space.\n");
-			result_buf.formatstr_cat("           The analysis code does not take this into consideration\n");
+			formatstr_cat(result_buf, "WARNING -- this schedd is not running jobs because it believes that doing so\n");
+			formatstr_cat(result_buf, "           would exhaust swap space and cause thrashing.\n");
+			formatstr_cat(result_buf, "           Set RESERVED_SWAP to 0 to tell the scheduler to skip this check\n");
+			formatstr_cat(result_buf, "           Or add more swap space.\n");
+			formatstr_cat(result_buf, "           The analysis code does not take this into consideration\n");
 			has_warn = true;
 		}
 
@@ -1632,9 +1629,9 @@ bool warnScheddGlobalLimits(DaemonAllowLocateFull *schedd,MyString &result_buf) 
 
 		if ((maxJobsRunning > -1) && (totalRunningJobs > -1) && 
 			(maxJobsRunning == totalRunningJobs)) { 
-			result_buf.formatstr_cat("WARNING -- this schedd has hit the MAX_JOBS_RUNNING limit of %d\n", maxJobsRunning);
-			result_buf.formatstr_cat("       to run more concurrent jobs, raise this limit in the config file\n");
-			result_buf.formatstr_cat("       NOTE: the matchmaking analysis does not take the limit into consideration\n");
+			formatstr_cat(result_buf, "WARNING -- this schedd has hit the MAX_JOBS_RUNNING limit of %d\n", maxJobsRunning);
+			formatstr_cat(result_buf, "       to run more concurrent jobs, raise this limit in the config file\n");
+			formatstr_cat(result_buf, "       NOTE: the matchmaking analysis does not take the limit into consideration\n");
 			has_warn = true;
 		}
 	}
@@ -1823,9 +1820,9 @@ bool print_jobs_analysis(
 #endif
 				} else {
 					if (pschedd_daemon && ! already_warned_schedd_limits) {
-						MyString buf;
+						std::string buf;
 						if (warnScheddGlobalLimits(pschedd_daemon, buf)) {
-							printf("%s", buf.Value());
+							printf("%s", buf.c_str());
 						}
 						already_warned_schedd_limits = true;
 					}

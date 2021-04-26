@@ -90,21 +90,21 @@ void Rooster::config()
 	ASSERT( param(m_wakeup_cmd,"ROOSTER_WAKEUP_CMD") );
 
 	m_wakeup_args.Clear();
-	MyString error_msg;
-	if( !m_wakeup_args.AppendArgsV2Quoted(m_wakeup_cmd.Value(),&error_msg) ) {
+	std::string error_msg;
+	if( !m_wakeup_args.AppendArgsV2Quoted(m_wakeup_cmd.c_str(), error_msg) ) {
 		EXCEPT("Invalid wakeup command %s: %s",
-			   m_wakeup_cmd.Value(), error_msg.Value());
+			   m_wakeup_cmd.c_str(), error_msg.c_str());
 	}
 
-	MyString rank;
+	std::string rank;
 	param(rank,"ROOSTER_UNHIBERNATE_RANK");
-	if( rank.IsEmpty() ) {
+	if( rank.empty() ) {
 		m_rank_ad.Delete(ATTR_RANK);
 	}
 	else {
-		if( !m_rank_ad.AssignExpr(ATTR_RANK,rank.Value()) ) {
+		if( !m_rank_ad.AssignExpr(ATTR_RANK,rank.c_str()) ) {
 			EXCEPT("Invalid expression for ROOSTER_UNHIBERNATE_RANK: %s",
-				   rank.Value());
+				   rank.c_str());
 		}
 	}
 
@@ -140,13 +140,13 @@ void Rooster::poll()
 	CondorQuery unhibernateQuery(STARTD_AD);
 	ExprTree *requirements = NULL;
 
-	if( ParseClassAdRvalExpr( m_unhibernate_constraint.Value(), requirements )!=0 || requirements==NULL )
+	if( ParseClassAdRvalExpr( m_unhibernate_constraint.c_str(), requirements )!=0 || requirements==NULL )
 	{
 		EXCEPT("Invalid expression for ROOSTER_UNHIBERNATE: %s",
-			   m_unhibernate_constraint.Value());
+			   m_unhibernate_constraint.c_str());
 	}
 
-	unhibernateQuery.addANDConstraint(m_unhibernate_constraint.Value());
+	unhibernateQuery.addANDConstraint(m_unhibernate_constraint.c_str());
 
 	CollectorList* collects = daemonCore->getCollectorList();
 	ASSERT( collects );
@@ -157,19 +157,19 @@ void Rooster::poll()
 		dprintf(D_ALWAYS,
 				"Couldn't fetch startd ads using constraint "
 				"ROOSTER_UNHIBERNATE=%s: %s\n",
-				m_unhibernate_constraint.Value(), getStrQueryResult(result));
+				m_unhibernate_constraint.c_str(), getStrQueryResult(result));
 		return;
 	}
 
 	dprintf(D_FULLDEBUG,"Got %d startd ads matching ROOSTER_UNHIBERNATE=%s\n",
-			startdAds.MyLength(), m_unhibernate_constraint.Value());
+			startdAds.MyLength(), m_unhibernate_constraint.c_str());
 
 	startdAds.Sort(StartdSortFunc,&m_rank_ad);
 
 	startdAds.Open();
 	int num_woken = 0;
 	ClassAd *startd_ad;
-	HashTable<MyString,bool> machines_done(hashFunction);
+	HashTable<std::string,bool> machines_done(hashFunction);
 	while( (startd_ad=startdAds.Next()) ) {
 		std::string machine;
 		std::string name;
@@ -264,13 +264,13 @@ Rooster::wakeUp(ClassAd *startd_ad)
 
 	if( pid == -1 ) {
 		dprintf(D_ALWAYS,"Failed to run %s: %s\n",
-				m_wakeup_cmd.Value(), strerror(errno));
+				m_wakeup_cmd.c_str(), strerror(errno));
 		daemonCore->Close_Pipe(stdin_pipe_fds[1]);
 		daemonCore->Close_Pipe(stdout_pipe_fds[0]);
 		return false;
 	}
 
-	MyString stdin_str;
+	std::string stdin_str;
 	sPrintAd(stdin_str, *startd_ad);
 
 		// Beware: the following code assumes that we will not
@@ -278,10 +278,10 @@ Rooster::wakeUp(ClassAd *startd_ad)
 		// filling up the stdout pipe.  The tool must consume all
 		// input before generating more than a pipe buffer full of output.
 
-	int n = daemonCore->Write_Pipe(stdin_pipe_fds[1],stdin_str.Value(),stdin_str.Length());
-	if( n != stdin_str.Length() ) {
+	int n = daemonCore->Write_Pipe(stdin_pipe_fds[1],stdin_str.c_str(),stdin_str.length());
+	if( n < 0 || (unsigned)n != stdin_str.length() ) {
 		dprintf(D_ALWAYS,"Rooster::wakeUp: failed to write to %s: %s\n",
-				m_wakeup_cmd.Value(), strerror(errno));
+				m_wakeup_cmd.c_str(), strerror(errno));
 		daemonCore->Close_Pipe(stdin_pipe_fds[1]);
 		daemonCore->Close_Pipe(stdout_pipe_fds[0]);
 		return false;
@@ -290,7 +290,7 @@ Rooster::wakeUp(ClassAd *startd_ad)
 		// done writing to tool
 	daemonCore->Close_Pipe(stdin_pipe_fds[1]);
 
-	MyString stdout_str;
+	std::string stdout_str;
 	while( true ) {
 		char pipe_buf[1024];
 		n = daemonCore->Read_Pipe(stdout_pipe_fds[0],pipe_buf,1023);
@@ -305,9 +305,9 @@ Rooster::wakeUp(ClassAd *startd_ad)
 		// done reading from tool
 	daemonCore->Close_Pipe(stdout_pipe_fds[0]);
 
-	if( stdout_str.Length() ) {
+	if( stdout_str.length() ) {
 			// log debugging output from the tool
-		dprintf(D_ALWAYS|D_NOHEADER,"%s",stdout_str.Value());
+		dprintf(D_ALWAYS|D_NOHEADER,"%s",stdout_str.c_str());
 	}
 
 		// Would be nice to get final exit status of tool, but

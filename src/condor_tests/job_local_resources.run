@@ -30,9 +30,6 @@ use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
-use Net::Domain qw(hostfqdn);
-my $host = hostfqdn();
-print "$host\n";
 
 
 # Static slot set up for local resources
@@ -58,6 +55,9 @@ CondorTest::StartCondorWithParams(
 	fresh_local => "TRUE",
 	condorlocalsrc => "$configfile",
 );
+
+my $host = `condor_status -af Machine -limit 1`;
+chomp($host);
 
 my $on_abort = sub {
 	CondorTest::debug("Abort from removing sleep 0 jobs.\n",1);

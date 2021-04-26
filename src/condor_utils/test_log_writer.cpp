@@ -239,7 +239,7 @@ public:
 
 	bool globalRotationStarting( unsigned long size );
 	void globalRotationEvents( int events );
-	void globalRotationComplete( int, int, const MyString &  );
+	void globalRotationComplete( int, int, const std::string &  );
 
 	bool WriteEvents( int &num, int &sequence );
 	long getUserLogSize( void );
@@ -1108,7 +1108,7 @@ TestLogWriter::globalRotationEvents( int events )
 void
 TestLogWriter::globalRotationComplete( int num_rotations,
 									 int sequence,
-									 const MyString & /*id*/ )
+									   const std::string & /*id*/ )
 {
 	if ( m_options.Verbose(VERB_INFO) ) {
 		printf( "rotation complete: %d %d\n",
@@ -1602,7 +1602,7 @@ EventInfo::GenEventGeneric( void )
 	SetName( "Generic" );
 
 	GenericEvent	*e = new GenericEvent;
-	strncpy(e->info, m_options.m_genericEventStr, sizeof(e->info) );
+	strncpy(e->info, m_options.m_genericEventStr, sizeof(e->info) - 1 );
 	e->info[sizeof(e->info)-1] = '\0';
 
 	return SetEvent( e );

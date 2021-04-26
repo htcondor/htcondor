@@ -428,7 +428,7 @@ Dagman::Config()
 		_defaultNodeLog = "@(DAG_DIR)/@(DAG_FILE).nodes.log";
 	}
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n",
-				_defaultNodeLog.Value() );
+				_defaultNodeLog.c_str() );
 
 	_generateSubdagSubmits = 
 		param_boolean( "DAGMAN_GENERATE_SUBDAG_SUBMITS",
@@ -564,7 +564,7 @@ void main_shutdown_rescue( int exitVal, DagStatus dagStatus,
 			// unrecoverable state...
 		if( exitVal != 0 ) {
 			if ( dagman.maxRescueDagNum > 0 ) {
-				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
+				dagman.dag->Rescue( dagman.primaryDagFile.c_str(),
 							dagman.multiDags, dagman.maxRescueDagNum,
 							wroteRescue, false,
 							dagman._writePartialRescueDag );
@@ -673,9 +673,9 @@ void main_init (int argc, char ** const argv) {
 								 "main_shutdown_remove");
 
 	// Reclaim the working directory
-	if ( chdir( dagman.workingDir.Value() ) != 0 ) {
+	if ( chdir( dagman.workingDir.c_str() ) != 0 ) {
 		debug_printf( DEBUG_NORMAL, "WARNING: Failed to change working "
-			"directory to %s\n", dagman.workingDir.Value() );
+			"directory to %s\n", dagman.workingDir.c_str() );
 	}
 
 /****** FOR TESTING *******
@@ -691,7 +691,7 @@ void main_init (int argc, char ** const argv) {
 		// Version of this condor_submit_dag binary.
 		//.Defaults to same version as condor_dagman, updated by input args
 	bool allowVerMismatch = false;
-	const char *csdVersion = dagmanVersion.get_version_string();
+	char *csdVersion = dagmanVersion.get_version_string();
 
 	int i;
 	for (i = 0 ; i < argc ; i++) {
@@ -868,6 +868,7 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_SILENT, "No CsdVersion value specified\n" );
 				Usage();
 			}
+			if (csdVersion) free(csdVersion);
 			csdVersion = argv[i];
 
 		} else if( !strcasecmp( "-AllowVersionMismatch", argv[i] ) ) {
@@ -992,12 +993,12 @@ void main_init (int argc, char ** const argv) {
 	if( !submitFileVersion.is_valid() ) {
 		if ( !allowVerMismatch ) {
 			debug_printf( DEBUG_QUIET, "Error: %s is invalid!\n",
-						versionMsg.Value() );
+						versionMsg.c_str() );
 			DC_Exit( EXIT_ERROR );
 		} else {
 			debug_printf( DEBUG_NORMAL, "Warning: %s is invalid; "
 						"continuing because of -AllowVersionMismatch flag\n",
-						versionMsg.Value() );
+						versionMsg.c_str() );
 		}
 
 		// Make sure .condor.sub file is recent enough.
@@ -1011,26 +1012,26 @@ void main_init (int argc, char ** const argv) {
 			if ( !allowVerMismatch ) {
 				debug_printf( DEBUG_QUIET, "Error: %s is older than "
 							"oldest permissible version (%s)\n",
-							versionMsg.Value(), minSubmitVersionStr.Value() );
+							versionMsg.c_str(), minSubmitVersionStr.c_str() );
 				DC_Exit( EXIT_ERROR );
 			} else {
 				debug_printf( DEBUG_NORMAL, "Warning: %s is older than "
 							"oldest permissible version (%s); continuing "
 							"because of -AllowVersionMismatch flag\n",
-							versionMsg.Value(), minSubmitVersionStr.Value() );
+							versionMsg.c_str(), minSubmitVersionStr.c_str() );
 			}
 
 			// Warn if .condor.sub file is a newer version than this binary.
 		} else if (dagmanVersion.compare_versions( csdVersion ) > 0 ) {
 			debug_printf( DEBUG_NORMAL, "Warning: %s is newer than "
-						"condor_dagman version (%s)\n", versionMsg.Value(),
+						"condor_dagman version (%s)\n", versionMsg.c_str(),
 						CondorVersion() );
 			check_warning_strictness( DAG_STRICT_3 );
 		} else {
 			debug_printf( DEBUG_NORMAL, "Note: %s differs from "
 						"condor_dagman version (%s), but the "
 						"difference is permissible\n", 
-						versionMsg.Value(), CondorVersion() );
+						versionMsg.c_str(), CondorVersion() );
 		}
 	}
 
@@ -1040,7 +1041,7 @@ void main_init (int argc, char ** const argv) {
 
 		// If lockFileName not provided in arguments, set a default
 	if (lockFileName.empty()) {
-		lockFileName = std::string(dagman.primaryDagFile.Value()) + ".lock";
+		lockFileName = std::string(dagman.primaryDagFile.c_str()) + ".lock";
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1141,7 +1142,7 @@ void main_init (int argc, char ** const argv) {
 				   lockFileName.c_str() );
 	if ( dagman.dagFiles.size() == 1 ) {
 		debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n",
-				  	dagman.primaryDagFile.Value() );
+				  	dagman.primaryDagFile.c_str() );
 	} else {
 		MyString msg = "DAG Input files are ";
 
@@ -1150,7 +1151,7 @@ void main_init (int argc, char ** const argv) {
 			msg += " ";
 		}
 		msg += "\n";
-		debug_printf( DEBUG_VERBOSE, "%s", msg.Value() );
+		debug_printf( DEBUG_VERBOSE, "%s", msg.c_str() );
 	}
 
 		// if requested, wait for someone to attach with a debugger...
@@ -1161,7 +1162,7 @@ void main_init (int argc, char ** const argv) {
 		if( !condor_getcwd(cwd) ) {
 			cwd = "<null>";
 		}
-		debug_printf( DEBUG_DEBUG_1, "Current path is %s\n",cwd.Value());
+		debug_printf( DEBUG_DEBUG_1, "Current path is %s\n",cwd.c_str());
 
 		char *temp = my_username();
 		debug_printf( DEBUG_DEBUG_1, "Current user is %s\n",
@@ -1181,12 +1182,12 @@ void main_init (int argc, char ** const argv) {
 	if ( dagman.doRescueFrom != 0 ) {
 		rescueDagNum = dagman.doRescueFrom;
 		rescueDagMsg.formatstr( "Rescue DAG number %d specified", rescueDagNum );
-		dagmanUtils.RenameRescueDagsAfter( dagman.primaryDagFile.Value(),
+		dagmanUtils.RenameRescueDagsAfter( dagman.primaryDagFile.c_str(),
 					dagman.multiDags, rescueDagNum, dagman.maxRescueDagNum );
 
 	} else if ( dagman.autoRescue ) {
 		rescueDagNum = dagmanUtils.FindLastRescueDagNum(
-					dagman.primaryDagFile.Value(),
+					dagman.primaryDagFile.c_str(),
 					dagman.multiDags, dagman.maxRescueDagNum );
 		rescueDagMsg.formatstr( "Found rescue DAG number %d", rescueDagNum );
 	}
@@ -1216,7 +1217,7 @@ void main_init (int argc, char ** const argv) {
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  &dagman.DAGManJobId,
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
-						  dagman._defaultNodeLog.Value(),
+						  dagman._defaultNodeLog.c_str(),
 						  dagman._generateSubdagSubmits,
 						  &dagman._submitDagDeepOpts,
 						  false, dagman._schedd ); /* toplevel dag! */
@@ -1258,7 +1259,7 @@ void main_init (int argc, char ** const argv) {
 					// in the failed parse attempt.
 				debug_printf( DEBUG_QUIET, "Dumping rescue DAG "
 							"because of -DumpRescue flag\n" );
-				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
+				dagman.dag->Rescue( dagman.primaryDagFile.c_str(),
 							dagman.multiDags, dagman.maxRescueDagNum,
 							false, true, false );
 			}
@@ -1300,30 +1301,30 @@ void main_init (int argc, char ** const argv) {
 		//
 	if ( rescueDagNum > 0 ) {
 		dagman.rescueFileToRun = dagmanUtils.RescueDagName(
-					dagman.primaryDagFile.Value(),
+					dagman.primaryDagFile.c_str(),
 					dagman.multiDags, rescueDagNum );
 		debug_printf ( DEBUG_QUIET, "%s; running %s in combination with "
-					"normal DAG file%s\n", rescueDagMsg.Value(),
-					dagman.rescueFileToRun.Value(),
+					"normal DAG file%s\n", rescueDagMsg.c_str(),
+					dagman.rescueFileToRun.c_str(),
 					dagman.multiDags ? "s" : "");
 		debug_printf ( DEBUG_QUIET,
 					"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 
 		debug_printf ( DEBUG_QUIET, "USING RESCUE DAG %s\n",
-					dagman.rescueFileToRun.Value() );
+					dagman.rescueFileToRun.c_str() );
 
 			// Turn off node name munging for the rescue DAG, because
 			// it will already have munged node names.
 		parseSetDoNameMunge( false );
 
-		if( !parse( dagman.dag, dagman.rescueFileToRun.Value(),
+		if( !parse( dagman.dag, dagman.rescueFileToRun.c_str(),
 					dagman.useDagDir, dagman._schedd ) ) {
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.
 				debug_printf( DEBUG_QUIET, "Dumping rescue DAG "
 							"because of -DumpRescue flag\n" );
-				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
+				dagman.dag->Rescue( dagman.primaryDagFile.c_str(),
 							dagman.multiDags, dagman.maxRescueDagNum,
 							true, false );
 			}
@@ -1343,7 +1344,7 @@ void main_init (int argc, char ** const argv) {
 	}
 
 		// This must come after splices are lifted.
-	dagman.dag->CreateMetrics( dagman.primaryDagFile.Value(), rescueDagNum );
+	dagman.dag->CreateMetrics( dagman.primaryDagFile.c_str(), rescueDagNum );
 
 	dagman.dag->CheckThrottleCats();
 
@@ -1372,7 +1373,7 @@ void main_init (int argc, char ** const argv) {
 					"specification in %s.  This most likely means "
 					"that the DAG file was produced with the -DumpRescue "
 					"flag when parsing the original DAG failed.\n",
-					firstLocation.Value() );
+					firstLocation.c_str() );
 		DC_Exit( EXIT_ERROR );
 		return;
 	}
@@ -1391,7 +1392,7 @@ void main_init (int argc, char ** const argv) {
 	if ( dagman.dumpRescueDag ) {
 		debug_printf( DEBUG_QUIET, "Dumping rescue DAG and exiting "
 					"because of -DumpRescue flag\n" );
-		dagman.dag->Rescue( dagman.primaryDagFile.Value(),
+		dagman.dag->Rescue( dagman.primaryDagFile.c_str(),
 					dagman.multiDags, dagman.maxRescueDagNum, false,
 					false, false );
 		ExitSuccess();
@@ -1493,7 +1494,7 @@ Dagman::CheckLogFileMode( const CondorVersionInfo &submitFileVersion )
 			// a Pegasus-generated sub-DAG.
 
 			// Check for existence of the default log file
-		bool has_new_default_log = access( dagman._defaultNodeLog.Value(),
+		bool has_new_default_log = access( dagman._defaultNodeLog.c_str(),
 					F_OK ) == 0;
 
 			// Note:  we can run into trouble here -- the default log
@@ -1516,8 +1517,8 @@ Dagman::CheckLogFileMode( const CondorVersionInfo &submitFileVersion )
 void
 Dagman::ResolveDefaultLog()
 {
-	char *dagDir = condor_dirname( primaryDagFile.Value() );
-	const char *dagFile = condor_basename( primaryDagFile.Value() );
+	char *dagDir = condor_dirname( primaryDagFile.c_str() );
+	const char *dagFile = condor_basename( primaryDagFile.c_str() );
 
 	MyString owner;
 	MyString nodeName;
@@ -1528,14 +1529,14 @@ Dagman::ResolveDefaultLog()
 	string cluster( std::to_string( DAGManJobId._cluster ) );
 	_defaultNodeLog.replaceString( "@(CLUSTER)", cluster.c_str() );
 	free( dagDir );
-	_defaultNodeLog.replaceString( "@(OWNER)", owner.Value() );
-	_defaultNodeLog.replaceString( "@(NODE_NAME)", nodeName.Value() );
+	_defaultNodeLog.replaceString( "@(OWNER)", owner.c_str() );
+	_defaultNodeLog.replaceString( "@(NODE_NAME)", nodeName.c_str() );
 
 	if ( _defaultNodeLog.find( "@(" ) >= 0 ) {
 		debug_printf( DEBUG_QUIET, "Warning: "
 					"default node log file %s contains a '@(' character "
 					"sequence -- unresolved macro substituion?\n",
-					_defaultNodeLog.Value() );
+					_defaultNodeLog.c_str() );
 		check_warning_strictness( DAG_STRICT_1 );
 	}
 
@@ -1553,7 +1554,7 @@ Dagman::ResolveDefaultLog()
 	if ( _defaultNodeLog.find( "/tmp" ) == 0 ) {
 		debug_printf( DEBUG_QUIET, "Warning: "
 					"default node log file %s is in /tmp\n",
-					_defaultNodeLog.Value() );
+					_defaultNodeLog.c_str() );
 		check_warning_strictness( DAG_STRICT_1 );
 	}
 
@@ -1577,15 +1578,15 @@ Dagman::ResolveDefaultLog()
 		// This function returns true if the log file is on NFS and
 		// that is an error.  If the log file is on NFS, but nfsIsError
 		// is false, it prints a warning but returns false.
-	if ( MultiLogFiles::logFileNFSError( _defaultNodeLog.Value(),
+	if ( MultiLogFiles::logFileNFSError( _defaultNodeLog.c_str(),
 				nfsLogIsError ) ) {
 		debug_printf( DEBUG_QUIET, "Error: log file %s on NFS\n",
-					_defaultNodeLog.Value() );
+					_defaultNodeLog.c_str() );
 		DC_Exit( EXIT_ERROR );
 	}
 
 	debug_printf( DEBUG_NORMAL, "Default node log file is: <%s>\n",
-				_defaultNodeLog.Value() );
+				_defaultNodeLog.c_str() );
 }
 
 void
@@ -1595,7 +1596,7 @@ Dagman::PublishStats() {
 	dagman._dagmanStats.Publish(statsAd);
 	sPrintAd( statsString, statsAd );
 	statsString.replaceString("\n", "; ");
-	debug_printf( DEBUG_VERBOSE, "DAGMan Runtime Statistics: [ %s]\n", statsString.Value() );
+	debug_printf( DEBUG_VERBOSE, "DAGMan Runtime Statistics: [ %s]\n", statsString.c_str() );
 }
 
 void
@@ -1919,13 +1920,13 @@ main_pre_dc_init ( int, char*[] )
 	const char*	logFile = GetEnv( "_CONDOR_DAGMAN_LOG" );
 	if ( logFile && !fullpath( logFile ) ) {
 		newLogFile = currentDir + logFile;
-		SetEnv( "_CONDOR_DAGMAN_LOG", newLogFile.Value() );
+		SetEnv( "_CONDOR_DAGMAN_LOG", newLogFile.c_str() );
 	}
 
 		// If a log filename is still not set, assign it a default
 	if ( !GetEnv( "_CONDOR_DAGMAN_LOG" ) ) {
 		newLogFile = currentDir + ".condor_dagman.out";
-		SetEnv( "_CONDOR_DAGMAN_LOG", newLogFile.Value() );
+		SetEnv( "_CONDOR_DAGMAN_LOG", newLogFile.c_str() );
 	}
 }
 
