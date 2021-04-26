@@ -1,5 +1,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_attributes.h"
 
 #include "classad/classad.h"
 #include "compat_classad.h"
@@ -78,6 +79,13 @@ decode( classad::ClassAd * ca, Tag & tag ) {
     long long when;
     ca->EvaluateAttrNumber( "When", when );
     ca->EvaluateAttrNumber( "HowCode", (int &)tag.howCode );
+
+    if( ca->EvaluateAttrBool( ATTR_ON_EXIT_BY_SIGNAL, tag.exitBySignal )) {
+        ca->EvaluateAttrNumber(
+            tag.exitBySignal ? ATTR_ON_EXIT_SIGNAL : ATTR_ON_EXIT_CODE,
+            tag.signalOrExitCode
+        );
+    }
 
     char whenStr[ISO8601_DateAndTimeBufferMax];
     struct tm eventTime;
@@ -158,6 +166,14 @@ encode( const Tag & tag, classad::ClassAd * ca ) {
     ca->InsertAttr( "How", tag.how );
     ca->InsertAttr( "When",tag.when );
     ca->InsertAttr( "HowCode", (int)tag.howCode );
+
+    if( tag.howCode == ToE::OfItsOwnAccord ) {
+        ca->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, tag.exitBySignal );
+        ca->InsertAttr(
+            tag.exitBySignal ? ATTR_ON_EXIT_SIGNAL : ATTR_ON_EXIT_CODE,
+            tag.signalOrExitCode
+        );
+    }
 
     return true;
 }

@@ -18,6 +18,11 @@ namespace ToE {
         std::string when;
         unsigned int howCode;
 
+        // These _must_ be initialized this way so that we can detect
+        // when we read an old tag without exit information.
+        bool exitBySignal = true;
+        int signalOrExitCode = 0;
+
         bool writeToString( std::string & out ) const;
         bool readFromString( const std::string & in );
     };

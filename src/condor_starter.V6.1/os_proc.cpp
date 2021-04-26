@@ -788,6 +788,14 @@ OsProc::JobReaper( int pid, int status )
 				condor_gettimestamp( exitTime );
 				tag->InsertAttr( "When", (long long)exitTime.tv_sec );
 
+				if(WIFSIGNALED(status)) {
+					tag->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, true );
+					tag->InsertAttr( ATTR_ON_EXIT_SIGNAL, WTERMSIG(status));
+				} else {
+					tag->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, false );
+					tag->InsertAttr( ATTR_ON_EXIT_CODE, WEXITSTATUS(status));
+				}
+
 				classad::ClassAd toe;
 				toe.Insert( ATTR_JOB_TOE, tag );
 

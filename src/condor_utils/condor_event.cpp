@@ -3606,8 +3606,18 @@ JobTerminatedEvent::formatBody( std::string &out )
 		ToE::Tag tag;
 		if( ToE::decode( toeTag, tag ) ) {
 			if( tag.howCode == 0 ) {
-				if( formatstr_cat( out, "\n\tJob terminated of its own accord at %s.\n", tag.when.c_str() ) < 0 ) {
-					return false;
+				// There is no signal 0, so this combination means we read
+				// an old tag with no exit information.
+				if( tag.exitBySignal && tag.signalOrExitCode == 0 ) {
+					if( formatstr_cat( out, "\n\tJob terminated of its own accord at %s.\n", tag.when.c_str() ) < 0 ) {
+						return false;
+					}
+				} else {
+					// Both 'signal' and 'exit-code' must not contain spaces
+					// because of the way that sscanf() works.
+					if( formatstr_cat( out, "\n\tJob terminated of its own accord at %s with %s %d.\n", tag.when.c_str(), tag.exitBySignal ? "signal" : "exit-code", tag.signalOrExitCode ) < 0 ) {
+						return false;
+					}
 				}
 			} else {
 				rv = tag.writeToString( out );
@@ -3656,6 +3666,21 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 			struct tm eventTime;
 			iso8601_to_time( line.c_str(), & eventTime, NULL, NULL );
 			toeTag->InsertAttr( "When", timegm(&eventTime) );
+
+			char type[16];
+			int signalOrExitCode;
+			size_t offset = line.find(" with ");
+			if( offset != std::string::npos ) {
+				if( 2 == sscanf( line.c_str() + offset, " with %15s %d", type, & signalOrExitCode )) {
+					if( strcmp( type, "signal" ) == 0 ) {
+						toeTag->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, true );
+						toeTag->InsertAttr( ATTR_ON_EXIT_SIGNAL, signalOrExitCode );
+					} else if( strcmp( type, "exit-code" ) == 0 ) {
+						toeTag->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, false );
+						toeTag->InsertAttr( ATTR_ON_EXIT_CODE, signalOrExitCode );
+					}
+				}
+			}
 		} else if( line.remove_prefix( "\tJob terminated by " ) ) {
 			ToE::Tag tag;
 			if(! tag.readFromString( line )) {
