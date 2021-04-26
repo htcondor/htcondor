@@ -41,6 +41,11 @@ Bugs Fixed:
   in matchmaking ignoring attributes changed by ``job_machine_attrs``.
   :jira:`414`
 
+- Fixed a bug in *condor_submit* when a ``SEC_CREDENTIAL_PRODUCER`` was
+  configured that could result in *condor_submit* reporting that the
+  Queue statement of a submit file was missing or invalid.
+  :jira:`427`
+
 
 Version 9.0.0
 -------------
