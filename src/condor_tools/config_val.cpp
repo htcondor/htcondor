@@ -1341,7 +1341,7 @@ main( int argc, const char* argv[] )
 						raw_value = name_used;
 						//raw_value.upper_case();
 						raw_value += " = ";
-						raw_value += val;
+						raw_value += val ? val : "";
 					}
 					if (pmet) {
 						param_get_location(pmet, file_and_line);
