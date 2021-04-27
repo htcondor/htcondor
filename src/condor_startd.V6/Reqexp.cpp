@@ -58,29 +58,30 @@ char * Reqexp::param(const char * name) {
 void
 Reqexp::config( ) // formerly compute(A_STATIC)
 {
-	{
-		if( origstart ) {
-			free( origstart );
-		}
-		origstart = param( "START" );
-		if( !origstart ) {
-			EXCEPT( "START expression not defined!" );
-		}
+	// note that this param call will pick up the slot_type param overrides
+	if (origstart) { free(origstart); }
+	origstart = param( "START" );
+	if( !origstart ) {
+		EXCEPT( "START expression not defined!" );
+	}
 
-		if( m_within_resource_limits_expr != NULL ) {
-			free(m_within_resource_limits_expr);
-			m_within_resource_limits_expr = NULL;
-		}
+	if (m_within_resource_limits_expr) { free(m_within_resource_limits_expr); }
+	m_within_resource_limits_expr = param(ATTR_WITHIN_RESOURCE_LIMITS);
+	if (m_within_resource_limits_expr) {
+		// WithinResourceLimits set by param, unusual, but if it is, we are done here...
+		dprintf(D_FULLDEBUG, "config " ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", m_within_resource_limits_expr);
+		return;
+	}
 
-		char *tmp = param( ATTR_WITHIN_RESOURCE_LIMITS );
-		if( tmp != NULL ) {
-			m_within_resource_limits_expr = tmp;
-		}
-		else
+	// The WithinResourceLimits expression can be set by param, but it usually isn't
+	// instead we usually build it up by iterating the names of the resources
+	// The clauses here a different when consumption policy is in place than when it isn't
+
+	bool has_consumption_policy = m_rip->r_has_cp || (m_rip->get_parent() && m_rip->get_parent()->r_has_cp);
+	if (has_consumption_policy) {
 			// In the below, _condor_RequestX attributes may be explicitly set by
 			// the schedd; if they are not set, go with the RequestX that derived from
 			// the user's original submission.
-            if (m_rip->r_has_cp || (m_rip->get_parent() && m_rip->get_parent()->r_has_cp)) {
                 dprintf(D_FULLDEBUG, "Using CP variant of WithinResourceLimits\n");
                 // a CP-supporting p-slot, or a d-slot derived from one, gets variation
                 // that supports zeroed resource assets, and refers to consumption
@@ -119,7 +120,7 @@ Reqexp::config( ) // formerly compute(A_STATIC)
                 estr += ")";
 
                 m_within_resource_limits_expr = strdup(estr.c_str());
-		} else {
+	} else {
 			static const char * climit_full =
 				"("
 				 "ifThenElse(TARGET._condor_RequestCpus =!= UNDEFINED,"
@@ -141,7 +142,7 @@ Reqexp::config( ) // formerly compute(A_STATIC)
 						"FALSE))"
 				")";
 
-			// This one assumes job._condor_Request* never set
+			// This one assumes job._condor_Request* attributes never present
 			//  and job.Request* is always set to some value.  If 
 			//  if job.RequestCpus is undefined, job won't match, instead of defaulting to one Request cpu
 			static const char *climit_simple = 
@@ -153,10 +154,15 @@ Reqexp::config( ) // formerly compute(A_STATIC)
 
 			static const char *climit = nullptr;
 	
-			if (param_boolean("STARTD_JOB_HAS_REQUEST_ATTRS", false)) {
-				climit = climit_full;	
+			// We can build the WithinResourceLimits expression with or without the
+			// JOB._condor_request* sub expressions.  We did it with them for many years
+			// but they were never used, and added a lot to negotiation overhead, so now
+			// these we build by default without them.
+			const bool job_has_request_attrs = param_boolean("STARTD_JOB_HAS_REQUEST_ATTRS", false);
+			if (job_has_request_attrs) {
+				climit = climit_full;
 			} else {
-				climit = climit_simple;	
+				climit = climit_simple;
 			}
 
 			const CpuAttributes::slotres_map_t& resmap = m_rip->r_attr->get_slotres_map();
@@ -169,7 +175,7 @@ Reqexp::config( ) // formerly compute(A_STATIC)
 				CpuAttributes::slotres_map_t::const_iterator it(resmap.begin());
 				for ( ; it != resmap.end();  ++it) {
 					const char * rn = it->first.c_str();
-					if (param_boolean("STARTD_JOB_HAS_REQUEST_ATTRS", false)) {
+					if (job_has_request_attrs) {
 							formatstr_cat(wrlimit,
 							" && "
 							 "(TARGET.Request%s is UNDEFINED ||"
@@ -190,9 +196,8 @@ Reqexp::config( ) // formerly compute(A_STATIC)
 				wrlimit += ")";
 				m_within_resource_limits_expr = strdup(wrlimit.c_str());
 			}
-		}
-		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_WITHIN_RESOURCE_LIMITS, m_within_resource_limits_expr);
 	}
+	dprintf(D_FULLDEBUG, ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", m_within_resource_limits_expr);
 }
 
 
