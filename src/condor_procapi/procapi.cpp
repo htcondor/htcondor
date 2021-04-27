@@ -1916,12 +1916,13 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 	bool saw_ppid = false;
 	bool saw_pid = false;
 
-	newPidList.clear();
 	condor_DIR * dirp = condor_opendir("/proc");
 	if( dirp == NULL ) {
 		dprintf( D_ALWAYS, "ProcAPI: opendir('/proc') failed (%d): %s\n", errno, strerror(errno) );
 		return -1;
 	}
+
+	newPidList.clear();
 
 	int total_entries = 0;
 	int pid_entries = 0;
@@ -2003,14 +2004,14 @@ ProcAPI::buildPidList() {
 
 		std::stringstream buffer;
 
-		for( unsigned i = 0; i < pidList.size(); ++i ) {
-			buffer << " " << pidList[i];
+		for( auto pid : pidList ) {
+			buffer << " " << pid;
 		}
 		dprintf( D_ALWAYS, "ProcAPI: previous PID list:%s\n",
 			buffer.str().c_str() );
 
-		for( unsigned i = 0; i < newPidList.size(); ++i ) {
-			buffer << " " << newPidList[i];
+		for( auto pid: newPidList ) {
+			buffer << " " << pid;
 		}
 		dprintf( D_ALWAYS, "ProcAPI: new PID list:%s\n",
 			buffer.str().c_str() );
