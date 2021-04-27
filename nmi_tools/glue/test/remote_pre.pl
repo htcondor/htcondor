@@ -160,7 +160,7 @@ if( TestGlue::is_windows() ) {
 	}
 
 	# lets get our base config in place
-	my $genericconfig = "$targetdir" . "\\etc\\condor_config.generic";
+	my $genericconfig = "$targetdir" . "\\etc\\condor_config.base";
 	my $mainconfig = "$targetdir" . "\\condor_config";
 	my $localonfig = "$targetdir" . "\\condor_config.local";
 	my $localdir = $targetdir;

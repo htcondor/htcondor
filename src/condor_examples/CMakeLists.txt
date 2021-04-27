@@ -133,25 +133,14 @@ else()
 
 endif()
 else()
-						 
-    add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor_config.win
-						 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-						 COMMAND awk
-						 ARGS -f convert_config_to_win32.awk condor_config.generic > "${CMAKE_CURRENT_BINARY_DIR}/condor_config.win"
-					   )
-						 
-	add_custom_target(	patch_configurations
-						ALL
-						DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/condor_config.win)
-						
-	install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor_config.win
+	install(FILES		condor_config.windows.base
 			DESTINATION	"${C_ETC}"
-			RENAME		condor_config.generic
-	        )
-			
+			RENAME	condor_config.base)
+
 	install(FILES
 	        condor_config.power
 	        condor_config.submit.generic
+	        condor_config.local.blank
 	        condor_config.local.generic
 	        condor_config.local.credd 
 	        condor_config.local.central.manager
