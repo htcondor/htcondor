@@ -19,6 +19,17 @@ logger.setLevel(logging.DEBUG)
 # old and new events both round-trip through the system properly.
 #
 
+#
+# If run against a build from hash 6a48d2aa4282eddc9ee6b57a840dc5fa9b8ad10a or
+# earlier, this test will fail as written because old readers can't reproduce
+# the new (exit) information.  This is OK; the point of the running the test
+# against the older build is to verify that it doesn't crash.
+#
+# If we feel ambitious at some point, we could port this test to the stable
+# branch and update the assertion to reflect that the only permissible
+# difference is after the datestamp on the last line of each event.
+#
+
 EVENTS = [
 ('old',
 """005 (3817.000.000) 2021-04-26 10:22:28 Job terminated.
