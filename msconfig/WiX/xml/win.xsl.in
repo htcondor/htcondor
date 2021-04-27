@@ -56,6 +56,13 @@
               </RegistryKey>
               <Condition>RUNJOBS = "I" Or RUNJOBS = "C"</Condition>
             </Component>
+            <Component Id="CondorConfigBase" Guid="9BEBF8B3-2A13-42B1-BA4C-1B24402D62CF">
+              <File Id="condor_config" Name="condor_config" Source="$(var.Source)\etc\condor_config.base" Checksum="no" />
+            </Component>
+            <Component Id="CondorConfigIni" Guid="5AD8ADAA-A724-4D98-A64E-58C30F7AF4B5">
+              <CreateFolder/> <!-- suppress warning about directory not being created -->
+              <IniFile Id="configIniPath" Directory="INSTALLDIR" Name="condor_config" Section="HTCONDOR" Action="addLine" Key="RELEASE_DIR" Value="[INSTALLDIR]" />
+            </Component>
             <Directory Id="LogDir" Name="log">
               <Component Id="CreatingLogDir" Guid="F6731DF5-5E28-405F-82EC-5F269FD434E5" Permanent="no" NeverOverwrite="yes">
                 <CreateFolder />
@@ -69,6 +76,21 @@
             <Directory Id="SpoolDir" Name="spool">
               <Component Id="CreatingSpoolDir" Guid="A1F2F929-7417-4C67-851C-1645D587540A" Permanent="no" NeverOverwrite="yes">
                 <CreateFolder />
+              </Component>
+            </Directory>
+            <Directory Id="TokenKeyDir" Name="tokens.sk">
+              <Component Id="CreatingTokenKeyDir" Guid="C4EF0FB3-7741-4A31-A95C-8F1D407D56AE" Permanent="no" NeverOverwrite="yes">
+                <CreateFolder>
+                   <Permission User="SYSTEM" GenericAll="yes" />
+                   <Permission User="Administrators" ReadPermission="yes" Traverse="yes" Synchronize="yes" CreateFile="yes" Delete="yes" />
+                </CreateFolder>
+              </Component>
+            </Directory>
+            <Directory Id="TokenDir" Name="tokens.d">
+              <Component Id="CreatingTokenDir" Guid="43DFF135-7439-4B18-9E83-B48276D53F7D" Permanent="no" NeverOverwrite="yes">
+                <CreateFolder>
+                   <Permission User="Administrators" GenericAll="yes" />
+                </CreateFolder>
               </Component>
             </Directory>
           </Directory>
@@ -199,8 +221,8 @@
         <Property Id="POOLHOSTNAME" Value="$$(IP_ADDRESS)" />
         <!--Permissions properties-->
         <Property Id="HOSTALLOWREAD" Value="*" />
-        <Property Id="HOSTALLOWWRITE" Value="$$(CONDOR_HOST), $$(IP_ADDRESS), *.cs.wisc.edu" />
-        <Property Id="HOSTALLOWADMINISTRATOR" Value="$$(IP_ADDRESS)" />
+        <Property Id="HOSTALLOWWRITE" Value="*" />
+        <CustomAction Id="AdminUserProp" Property="HOSTALLOWADMINISTRATOR" Value="Administrator@*, [LogonUser]@*" />
         <!--VM Universe properties-->
         <Property Id="VMVERSION" Value="server1.0" />
         <Property Id="VMMEMORY" Value="256" />
@@ -250,12 +272,23 @@
            ]]>
         </CustomAction>
 
+    <!-- tj experiments 9.0.1
+        <CustomAction Id="MakeAdminToken"
+            Impersonate="no" Execute="deferred"
+            Return="check"
+            FileKey="fil52C9AA2969232F2E9EBA01AD91DC5976"
+            ExeCommand="-authz ADMINISTRATOR -sid [UserSID] -token Admin" 
+         />
+    -->
+
         <InstallExecuteSequence>
           <Custom Action="PreventDowngrade" After="FindRelatedProducts">NEWPRODUCTFOUND</Custom>
           <Custom Action="PreventUpgrade" After="FindRelatedProducts">TOOOLDFOUND</Custom>
+          <Custom Action="AdminUserProp" After="FindRelatedProducts" >Not UPGRADEFOUND</Custom>
           <RemoveExistingProducts After="InstallValidate">UPGRADEFOUND</RemoveExistingProducts>
           <Custom Action="CondorConfigLocal" After="InstallFinalize">Not Installed</Custom>
-          <ScheduleReboot After="CondorConfigLocal" />
+          <!-- <Custom Action="MakeAdminToken" After="InstallFinalize">Not Installed</Custom> -->
+          <!-- <ScheduleReboot After="CondorConfigLocal" /> -->
         </InstallExecuteSequence>
 
         <InstallUISequence>
@@ -270,9 +303,13 @@
             <xsl:apply-templates select="wix:Fragment" mode="CompRef"/>
             <!-- Import any merge references -->
             @WIX_MERGE_REFS@
+            <ComponentRef Id="CondorConfigBase" />
+            <ComponentRef Id="CondorConfigIni" />
             <ComponentRef Id="CondorRegNEnv" />
             <ComponentRef Id="CondorKBDDReg" />
             <ComponentRef Id="CreatingSpoolDir" />
+            <ComponentRef Id="CreatingTokenKeyDir" />
+            <ComponentRef Id="CreatingTokenDir" />
             <ComponentRef Id="CreatingExecuteDir"/>
             <ComponentRef Id="CreatingLogDir" />
           </Feature>
