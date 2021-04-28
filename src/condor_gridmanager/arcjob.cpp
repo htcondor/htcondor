@@ -55,6 +55,7 @@
 #define GM_RECOVER_QUERY		16
 #define GM_START				17
 #define GM_CANCEL_COMMIT		18
+#define GM_DELEGATE_PROXY		19
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -76,6 +77,7 @@ static const char *GMStateNames[] = {
 	"GM_RECOVER_QUERY",
 	"GM_START",
 	"GM_CANCEL_COMMIT",
+	"GM_DELEGATE_PROXY",
 };
 
 #define REMOTE_STATE_ACCEPTING		"ACCEPTING"
@@ -395,8 +397,36 @@ void ArcJob::doEvaluateState()
 				gmState = GM_DELETE;
 				break;
 			} else {
-				gmState = GM_SUBMIT;
+				gmState = GM_DELEGATE_PROXY;
 			}
+			} break;
+		case GM_DELEGATE_PROXY: {
+			if ( condorState == REMOVED || condorState == HELD ) {
+				myResource->CancelSubmit( this );
+				gmState = GM_UNSUBMITTED;
+				break;
+			}
+			std::string deleg_id;
+
+			rc = gahp->arc_delegation_new( resourceManagerString,
+			                               deleg_id );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+
+			if ( rc == HTTP_200_OK ) {
+				ASSERT( !deleg_id.empty() );
+				delegationId = deleg_id;
+				gmState = GM_SUBMIT;
+			} else {
+				errorString = gahp->getErrorString();
+				dprintf(D_ALWAYS,"(%d.%d) proxy delegation failed: %s\n",
+				        procID.cluster, procID.proc,
+				        errorString.c_str() );
+				gmState = GM_UNSUBMITTED;
+			}
+
 			} break;
 		case GM_SUBMIT: {
 			if ( condorState == REMOVED || condorState == HELD ) {
@@ -456,7 +486,7 @@ void ArcJob::doEvaluateState()
 							procID.cluster, procID.proc,
 							errorString.c_str() );
 					myResource->CancelSubmit( this );
-					gmState = GM_UNSUBMITTED;
+					gmState = GM_HOLD;
 				}
 
 			} else {

@@ -5760,6 +5760,136 @@ GahpClient::arc_job_clean(const std::string &service_url,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
+int
+GahpClient::arc_delegation_new(const std::string &service_url,
+                               std::string &deleg_id)
+{
+	static const char* command = "ARC_DELEGATION_NEW";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	std::string reqline;
+	char *esc1 = strdup( escapeGahpString(service_url) );
+	int x = formatstr(reqline,"%s", esc1 );
+	free( esc1 );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc < 3 || result->argc > 4) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
+		} else {
+			error_string = "";
+		}
+		deleg_id.clear();
+		if ( result->argc == 4 ) {
+			if ( strcasecmp(result->argv[3], NULLSTRING) ) {
+				deleg_id = result->argv[3];
+			}
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
+GahpClient::arc_delegation_renew(const std::string &service_url,
+                                 const std::string &deleg_id)
+{
+	static const char* command = "ARC_DELEGATION_NEW";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	std::string reqline;
+	char *esc1 = strdup( escapeGahpString(service_url) );
+	char *esc2 = strdup( escapeGahpString(deleg_id) );
+	int x = formatstr(reqline,"%s %s", esc1, esc2 );
+	free( esc1 );
+	free( esc2 );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc != 3) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
+		} else {
+			error_string = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
 int 
 GahpClient::unicore_job_create(
 	const char * description,

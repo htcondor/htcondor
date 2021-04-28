@@ -80,6 +80,8 @@ class ArcJob : public BaseJob
 	ArcResource *myResource;
 	GahpClient *gahp;
 
+	std::string delegationId;
+
 		// If we're in the middle of a gahp call that requires an RSL,
 		// the RSL is stored here (so that we don't have to reconstruct the
 		// RSL every time we test the call for completion). It should be

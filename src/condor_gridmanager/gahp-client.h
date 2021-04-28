@@ -600,6 +600,14 @@ class GahpClient : public GenericGahpClient {
 		arc_job_clean(const std::string &service_url,
 		              const std::string &job_id);
 
+		int
+		arc_delegation_new(const std::string &service_url,
+		                   std::string &deleg_id);
+
+		int
+		arc_delegation_renew(const std::string &service_url,
+		                     const std::string &deleg_id);
+
 		///
 		int 
 		unicore_job_create(const char * description,
