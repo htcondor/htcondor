@@ -59,11 +59,15 @@ class HttpRequest {
 	std::string requestBody;
 	std::string requestBodyFilename;
 	std::string contentType;
+	size_t requestBodyReadPos;
 
 	std::string responseBody;
 	std::string responseBodyFilename;
+	std::map<std::string, std::string> responseHeaders;
 
 	bool includeResponseHeader;
+
+	static size_t CurlReadCb(char *buffer, size_t size, size_t nitems, void *userdata);
 };
 
 // ARC Commands

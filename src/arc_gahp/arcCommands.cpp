@@ -190,9 +190,27 @@ HttpRequest::HttpRequest()
 
 	includeResponseHeader = false;
 	contentType = "application/json";
+	requestBodyReadPos = 0;
 }
 
 HttpRequest::~HttpRequest() { }
+
+// This function is called by libcurl while none of our locks are held.
+// Don't call any Condor functions or access any variables outside of
+// the HttpRequest in userdata.
+size_t HttpRequest::CurlReadCb(char *buffer, size_t size, size_t nitems, void *userdata)
+{
+	HttpRequest *request = (HttpRequest*)userdata;
+	size_t copy_sz = size * nitems;
+	if ( copy_sz + request->requestBodyReadPos > request->requestBody.length() ) {
+		copy_sz = request->requestBody.length() - request->requestBodyReadPos;
+	}
+	if ( copy_sz > 0 ) {
+		memcpy(buffer, &request->requestBody[request->requestBodyReadPos], copy_sz);
+		request->requestBodyReadPos += copy_sz;
+	}
+	return copy_sz;
+}
 
 pthread_mutex_t globalCurlMutex = PTHREAD_MUTEX_INITIALIZER;
 bool HttpRequest::SendRequest() 
@@ -305,26 +323,51 @@ bool HttpRequest::SendRequest()
 			goto error_return;
 		}
 
-		in_fp = fopen(this->requestBodyFilename.c_str(), "r");
-		if( in_fp == NULL ) {
-			this->errorCode = "E_CURL_LIB";
-			this->errorMessage = "Failed to open file";
-			dprintf( D_ALWAYS, "fopen(%s) failed (%d): '%s', failing.\n",
-			         this->requestBodyFilename.c_str(), errno, strerror( errno ) );
-			goto error_return;
+		curl_off_t filesize = 0;
+
+		if( ! requestBodyFilename.empty() ) {
+			in_fp = fopen(this->requestBodyFilename.c_str(), "r");
+			if( in_fp == NULL ) {
+				this->errorCode = "E_CURL_LIB";
+				this->errorMessage = "Failed to open file";
+				dprintf( D_ALWAYS, "fopen(%s) failed (%d): '%s', failing.\n",
+			             this->requestBodyFilename.c_str(), errno, strerror( errno ) );
+				goto error_return;
+			}
+
+			rv = curl_easy_setopt( curl, CURLOPT_READDATA, in_fp );
+			if( rv != CURLE_OK ) {
+				this->errorCode = "E_CURL_LIB";
+				this->errorMessage = "curl_easy_setopt( CURLOPT_READDATA ) failed.";
+				dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READDATA ) failed (%d): '%s', failing.\n",
+				         rv, curl_easy_strerror( rv ) );
+				goto error_return;
+			}
+
+			StatWrapper stw(this->requestBodyFilename.c_str());
+			filesize = stw.GetBuf()->st_size;
+		} else {
+			rv = curl_easy_setopt( curl, CURLOPT_READFUNCTION, & CurlReadCb );
+			if( rv != CURLE_OK ) {
+				this->errorCode = "E_CURL_LIB";
+				this->errorMessage = "curl_easy_setopt( CURLOPT_READFUNCTION ) failed.";
+				dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READFUNCTION ) failed (%d): '%s', failing.\n",
+				         rv, curl_easy_strerror( rv ) );
+				goto error_return;
+			}
+
+			rv = curl_easy_setopt( curl, CURLOPT_READDATA, this );
+			if( rv != CURLE_OK ) {
+				this->errorCode = "E_CURL_LIB";
+				this->errorMessage = "curl_easy_setopt( CURLOPT_READDATA ) failed.";
+				dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READDATA ) failed (%d): '%s', failing.\n",
+				         rv, curl_easy_strerror( rv ) );
+				goto error_return;
+			}
+
+			filesize = requestBody.length();
 		}
 
-		rv = curl_easy_setopt( curl, CURLOPT_READDATA, in_fp );
-		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
-			this->errorMessage = "curl_easy_setopt( CURLOPT_READDATA ) failed.";
-			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READDATA ) failed (%d): '%s', failing.\n",
-					 rv, curl_easy_strerror( rv ) );
-			goto error_return;
-		}
-
-		StatWrapper stw(this->requestBodyFilename.c_str());
-		curl_off_t filesize = stw.GetBuf()->st_size;
 		rv = curl_easy_setopt( curl, CURLOPT_INFILESIZE_LARGE, filesize );
 		if( rv != CURLE_OK ) {
 			this->errorCode = "E_CURL_LIB";
@@ -534,6 +577,21 @@ bool HttpRequest::SendRequest()
 		dprintf( D_ALWAYS, "curl_easy_getinfo( CURLINFO_RESPONSE_CODE ) failed (%d): '%s', failing.\n",
 				 rv, curl_easy_strerror( rv ) );
 		goto error_return;
+	}
+
+	if( includeResponseHeader ) {
+		size_t end_pos = responseBody.find("\r\n\r\n");
+		if( end_pos == std::string::npos ) {
+			end_pos = 0;
+		}
+		size_t start_pos = responseBody.find("\r\n") + 2;
+		while( start_pos < end_pos ) {
+			size_t sep_pos = responseBody.find(": ", start_pos);
+			size_t endl_pos = responseBody.find("\r\n", start_pos);
+			responseHeaders[responseBody.substr(start_pos, sep_pos-start_pos)] = responseBody.substr(sep_pos+2, endl_pos-(sep_pos+2));
+			start_pos = endl_pos + 2;
+		}
+		responseBody.erase(0, end_pos + 4);
 	}
 
 	curl_easy_cleanup( curl );
