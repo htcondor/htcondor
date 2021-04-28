@@ -769,6 +769,13 @@ bool ArcJobNewWorkerFunction(GahpRequest *gahp_request)
 	}
 	submit_request.errorMessage = val;
 
+	if ( submit_request.errorCode[0] != '2' ) {
+		gahp_request->m_result = create_result_string( request_id,
+									submit_request.errorCode,
+									submit_request.errorMessage );
+		return true;
+	}
+
 	std::vector<std::string> result_args;
 
 	val.clear();
