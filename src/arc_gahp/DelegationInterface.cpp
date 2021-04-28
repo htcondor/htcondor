@@ -40,7 +40,7 @@
 
 #include "DelegationInterface.h"
 
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
 
 #define X509_getm_notAfter X509_get_notAfter
 #define X509_getm_notBefore X509_get_notBefore
