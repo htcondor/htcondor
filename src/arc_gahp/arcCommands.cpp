@@ -28,6 +28,7 @@
 #include <sstream>
 #include <curl/curl.h>
 #include "thread_control.h"
+#include "Regex.h"
 
 using std::string;
 using std::map;
@@ -42,6 +43,32 @@ const char * nullStringIfEmpty( const string & str ) {
 	if( str.empty() ) { return NULLSTRING; }
 	else { return str.c_str(); }
 }
+
+// Fill in missing components of the service URL with defaults, like so:
+//   https://hostname:443/arex/rest/1.0
+// The hostname is the only required component.
+std::string fillURL(const char *url)
+{
+	Regex r; int errCode = 0; const char * errString = 0;
+	bool patternOK = r.compile( "([^:]+://)?([^:/]+)(:[0-9]*)?(.*)", & errString, & errCode );
+	ASSERT( patternOK );
+	ExtArray<MyString> groups(5);
+	if(! r.match( url, & groups )) {
+		return url;
+	}
+	if( groups[1].empty() ) {
+		groups[1] = "https://";
+	}
+	if( groups[3].empty() ) {
+		groups[3] = ":443";
+	}
+	if( groups[4].empty() ) {
+		groups[4] = "/arex/rest/1.0";
+	}
+
+	return groups[1] + groups[2] + groups[3] + groups[4];
+}
+
 
 // Utility function for parsing the JSON response returned by the server.
 bool ParseJSONLine( const char *&input, string &key, string &value, int &nesting )
@@ -584,7 +611,7 @@ bool ArcPingWorkerFunction(GahpRequest *gahp_request)
 
 	// Fill in required attributes & parameters.
 	HttpRequest ping_request;
-	ping_request.serviceURL = argv[2];
+	ping_request.serviceURL = fillURL(argv[2]);
 	ping_request.serviceURL += "/jobs";
 	ping_request.requestMethod = "GET";
 	ping_request.proxyFile = gahp_request->m_proxy_file;
@@ -629,7 +656,7 @@ bool ArcJobNewWorkerFunction(GahpRequest *gahp_request)
 
 	// Fill in required attributes & parameters.
 	HttpRequest submit_request;
-	submit_request.serviceURL = argv[2];
+	submit_request.serviceURL = fillURL(argv[2]);
 	submit_request.serviceURL += "/jobs?action=new";
  	submit_request.requestMethod = "POST";
 	submit_request.proxyFile = gahp_request->m_proxy_file;
@@ -727,7 +754,7 @@ bool ArcJobStatusWorkerFunction(GahpRequest *gahp_request)
 
 	// Fill in required attributes & parameters.
 	HttpRequest status_request;
-	status_request.serviceURL = argv[2];
+	status_request.serviceURL = fillURL(argv[2]);
 	status_request.serviceURL += "/jobs?action=status";
  	status_request.requestMethod = "POST";
 	status_request.proxyFile = gahp_request->m_proxy_file;
@@ -820,7 +847,7 @@ bool ArcJobStatusAllWorkerFunction(GahpRequest *gahp_request)
 
 	// Fill in required attributes & parameters.
 	HttpRequest query_request;
-	query_request.serviceURL = argv[2];
+	query_request.serviceURL = fillURL(argv[2]);
 	query_request.serviceURL += "/jobs";
 	if( argv[3][0] != '\0' && strcasecmp( argv[3], NULLSTRING ) ) {
 		query_request.serviceURL += "?state=";
@@ -841,7 +868,7 @@ bool ArcJobStatusAllWorkerFunction(GahpRequest *gahp_request)
 		// TODO feed query result to status_request
 	// Fill in required attributes & parameters.
 	HttpRequest status_request;
-	status_request.serviceURL = argv[2];
+	status_request.serviceURL = fillURL(argv[2]);
 	status_request.serviceURL += "/jobs?action=status";
  	status_request.requestMethod = "POST";
 	status_request.proxyFile = gahp_request->m_proxy_file;
@@ -935,7 +962,7 @@ bool ArcJobInfoWorkerFunction(GahpRequest *gahp_request)
 
 	// Fill in required attributes & parameters.
 	HttpRequest status_request;
-	status_request.serviceURL = argv[2];
+	status_request.serviceURL = fillURL(argv[2]);
 	status_request.serviceURL += "/jobs?action=info";
  	status_request.requestMethod = "POST";
 	status_request.proxyFile = gahp_request->m_proxy_file;
@@ -1051,7 +1078,8 @@ bool ArcJobStageInWorkerFunction(GahpRequest *gahp_request)
 	put_request.proxyFile = gahp_request->m_proxy_file;
 
 	for ( int i = 5; i < cnt + 5; i++ ) {
-		formatstr(put_request.serviceURL, "%s/jobs/%s/session/%s", argv[2], argv[3], condor_basename(argv[i]));
+		put_request.serviceURL = fillURL(argv[2]);
+		formatstr_cat(put_request.serviceURL, "/jobs/%s/session/%s", argv[3], condor_basename(argv[i]));
 		put_request.requestBodyFilename = argv[i];
 
 		// Send the request.
@@ -1103,7 +1131,8 @@ bool ArcJobStageOutWorkerFunction(GahpRequest *gahp_request)
 	get_request.proxyFile = gahp_request->m_proxy_file;
 
 	for ( int i = 5; i < (2*cnt + 5); i += 2 ) {
-		formatstr(get_request.serviceURL, "%s/jobs/%s/session/%s", argv[2], argv[3], condor_basename(argv[i]));
+		get_request.serviceURL = fillURL(argv[2]);
+		formatstr_cat(get_request.serviceURL, "/jobs/%s/session/%s", argv[3], condor_basename(argv[i]));
 		get_request.responseBodyFilename = argv[i+1];
 		
 		// Send the request.
@@ -1149,7 +1178,7 @@ bool ArcJobKillWorkerFunction(GahpRequest *gahp_request)
 
 	// Fill in required attributes & parameters.
 	HttpRequest status_request;
-	status_request.serviceURL = argv[2];
+	status_request.serviceURL = fillURL(argv[2]);
 	status_request.serviceURL += "/jobs?action=kill";
  	status_request.requestMethod = "POST";
 	status_request.proxyFile = gahp_request->m_proxy_file;
@@ -1229,7 +1258,7 @@ bool ArcJobCleanWorkerFunction(GahpRequest *gahp_request)
 
 	// Fill in required attributes & parameters.
 	HttpRequest status_request;
-	status_request.serviceURL = argv[2];
+	status_request.serviceURL = fillURL(argv[2]);
 	status_request.serviceURL += "/jobs?action=clean";
  	status_request.requestMethod = "POST";
 	status_request.proxyFile = gahp_request->m_proxy_file;
