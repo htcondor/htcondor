@@ -818,14 +818,14 @@
 
     ARC_JOB_NEW
 
-    Create a new job with the given RSL description.
+    Create a new job with the given ALD or RSL description.
 
     + Request Line:
 
         ARC_JOB_NEW <SP> <request-ID> <SP> <service-URL>
-            <SP> <rsl> <CRLF>
+            <SP> <job-desc> <CRLF>
 
-        * rsl = valid RSL string describing the job
+        * job-desc = valid ADL or RSL string describing the job
 
     + Result Line:
 

@@ -117,6 +117,29 @@ static const char *GMStateNames[] = {
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
 
+static
+const std::string& escapeXML(const std::string& in)
+{
+	static std::string out;
+	out.clear();
+	for ( char c : in ) {
+		switch( c ) {
+		case '<':
+			out += "&lt;";
+			break;
+		case '>':
+			out += "&gt;";
+			break;
+		case '&':
+			out += "&amp;";
+			break;
+		default:
+			out += c;
+		}
+	}
+	return out;
+}
+
 void ArcJobInit()
 {
 }
@@ -175,7 +198,6 @@ ArcJob::ArcJob( ClassAd *classad )
 	jobProxy = NULL;
 	myResource = NULL;
 	gahp = NULL;
-	RSL = NULL;
 	stageList = NULL;
 	stageLocalList = NULL;
 
@@ -279,9 +301,6 @@ ArcJob::~ArcJob()
 	}
 	if ( gahp != NULL ) {
 		delete gahp;
-	}
-	if ( RSL ) {
-		delete RSL;
 	}
 	if ( stageList ) {
 		delete stageList;
@@ -453,16 +472,16 @@ void ArcJob::doEvaluateState()
 					break;
 				}
 
-				if ( RSL == NULL ) {
-					RSL = buildSubmitRSL();
-				}
-				if ( RSL == NULL ) {
-					gmState = GM_HOLD;
-					break;
+				if ( RSL.empty() ) {
+//					if ( ! buildSubmitRSL() ) {
+					if ( ! buildJobADL() ) {
+						gmState = GM_HOLD;
+						break;
+					}
 				}
 				rc = gahp->arc_job_new(
 									resourceManagerString,
-									*RSL,
+									RSL,
 									job_id,
 									job_status );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -887,11 +906,8 @@ void ArcJob::doEvaluateState()
 			enteredCurrentGmState = time(NULL);
 
 			// If we were calling a gahp call that used RSL, we're done
-			// with it now, so free it.
-			if ( RSL ) {
-				delete RSL;
-				RSL = NULL;
-			}
+			// with it now, so clear it.
+			RSL.clear();
 			if ( stageList ) {
 				delete stageList;
 				stageList = NULL;
@@ -927,10 +943,143 @@ void ArcJob::SetRemoteJobId( const char *job_id )
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
-std::string *ArcJob::buildSubmitRSL()
+bool ArcJob::buildJobADL()
 {
 	bool transfer_exec = true;
-	std::string *rsl = new std::string;
+	StringList *stage_list = NULL;
+	std::string attr_value;
+	std::string iwd;
+	std::string executable;
+	std::string remote_stdout_name;
+	std::string remote_stderr_name;
+	char *file;
+
+	RSL.clear();
+
+	GetRemoteStdoutNames( remote_stdout_name, remote_stderr_name );
+
+	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) != 1 ) {
+		errorString = "ATTR_JOB_IWD not defined";
+		RSL.clear();
+		return false;
+	}
+
+	//Start off the ADL
+	RSL = "<?xml version=\"1.0\"?>";
+	RSL += "<ActivityDescription xmlns=\"http://www.eu-emi.eu/es/2010/12/adl\">";
+	RSL += "<Application>";
+
+	//We're assuming all job clasads have a command attribute
+	GetJobExecutable( jobAd, executable );
+	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_exec );
+
+	RSL += "<Executable><Path>";
+	// If we're transferring the executable, strip off the path for the
+	// remote machine, since it refers to the submit machine.
+	if ( transfer_exec ) {
+		RSL += escapeXML(condor_basename( executable.c_str() ));
+	} else {
+		RSL += escapeXML(executable);
+	}
+	RSL += "</Path>";
+
+	ArgList args;
+	MyString arg_errors;
+	if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
+		dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
+				procID.cluster, procID.proc, arg_errors.Value());
+		formatstr(errorString,"Failed to read job arguments: %s\n",
+				arg_errors.Value());
+		RSL.clear();
+		return false;
+	}
+	for(int i=0;i<args.Count();i++) {
+		RSL += "<Argument>";
+		RSL += escapeXML(args.GetArg(i));
+		RSL += "</Argument>";
+	}
+
+	RSL += "</Executable>";
+
+	if ( jobAd->LookupString( ATTR_JOB_INPUT, attr_value ) ) {
+		// only add to list if not NULL_FILE (i.e. /dev/null)
+		if ( ! nullFile(attr_value.c_str()) ) {
+			RSL += "<Input>";
+			RSL += escapeXML(condor_basename(attr_value.c_str()));
+			RSL += "</Input>";
+		}
+	}
+
+	if ( jobAd->LookupString( ATTR_JOB_OUTPUT, attr_value ) ) {
+		// only add to list if not NULL_FILE (i.e. /dev/null)
+		if ( ! nullFile(attr_value.c_str()) ) {
+			RSL += "<Output>";
+			RSL += escapeXML(remote_stdout_name);
+			RSL += "</Output>";
+		}
+	}
+
+	if ( jobAd->LookupString( ATTR_JOB_ERROR, attr_value ) ) {
+		// only add to list if not NULL_FILE (i.e. /dev/null)
+		if ( ! nullFile(attr_value.c_str()) ) {
+			RSL += "<Error>";
+			RSL += escapeXML(remote_stderr_name);
+			RSL += "</Error>";
+		}
+	}
+
+	// TODO Add setting of environment variables
+
+	RSL += "</Application>";
+	RSL += "<Resources>";
+	RSL += "<RuntimeEnvironment>";
+	RSL += "<Name>ENV/PROXY</Name>";
+	RSL += "<Option>USE_DELEGATION_DB</Option>";
+	RSL += "</RuntimeEnvironment>";
+	RSL += "</Resources>";
+	RSL += "<DataStaging>";
+	RSL += "<DelegationID>";
+	RSL += escapeXML(delegationId);
+	RSL += "</DelegationID>";
+
+	stage_list = buildStageInList();
+
+	stage_list->rewind();
+	while ( (file = stage_list->next()) != NULL ) {
+		RSL += "<InputFile><Name>";
+		RSL += escapeXML(condor_basename(file));
+		RSL += "</Name>";
+		if ( transfer_exec && ! strcmp(executable.c_str(), file) ) {
+			RSL += "<IsExecutable>true</IsExecutable>";
+		}
+		RSL += "</InputFile>";
+	}
+
+	delete stage_list;
+	stage_list = NULL;
+
+	stage_list = buildStageOutList();
+
+	stage_list->rewind();
+	while ( (file = stage_list->next()) != NULL ) {
+		RSL += "<OutputFile><Name>";
+		RSL += escapeXML(condor_basename(file));
+		RSL += "</Name></OutputFile>";
+	}
+
+	delete stage_list;
+	stage_list = NULL;
+
+	RSL += "</DataStaging>";
+	RSL += "</ActivityDescription>";
+
+dprintf(D_FULLDEBUG,"*** ADL='%s'\n",RSL.c_str());
+	return true;
+}
+
+bool ArcJob::buildSubmitRSL()
+{
+	bool transfer_exec = true;
 	StringList *stage_list = NULL;
 	StringList *stage_local_list = NULL;
 	char *attr_value = NULL;
@@ -940,23 +1089,26 @@ std::string *ArcJob::buildSubmitRSL()
 	std::string remote_stdout_name;
 	std::string remote_stderr_name;
 
+	RSL.clear();
+
 	GetRemoteStdoutNames( remote_stdout_name, remote_stderr_name );
 
 	if ( jobAd->LookupString( ATTR_ARC_RSL, rsl_suffix ) &&
 						   rsl_suffix[0] == '&' ) {
-		*rsl = rsl_suffix;
-		return rsl;
+		RSL = rsl_suffix;
+		return true;
 	}
 
 	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) != 1 ) {
 		errorString = "ATTR_JOB_IWD not defined";
-		delete rsl;
-		return NULL;
+		RSL.clear();
+		return false;
 	}
 
 	//Start off the RSL
 	attr_value = param( "FULL_HOSTNAME" );
-	formatstr( *rsl, "&(savestate=yes)(action=request)(hostname=%s)", attr_value );
+//	formatstr( RSL, "&(savestate=yes)(action=request)(hostname=%s)(DelegationID=%s)", attr_value, delegationId.c_str() );
+	formatstr( RSL, "&(savestate=yes)(action=request)(hostname=%s)", attr_value );
 	free( attr_value );
 	attr_value = NULL;
 
@@ -964,13 +1116,13 @@ std::string *ArcJob::buildSubmitRSL()
 	GetJobExecutable( jobAd, executable );
 	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_exec );
 
-	*rsl += "(executable=";
+	RSL += "(executable=";
 	// If we're transferring the executable, strip off the path for the
 	// remote machine, since it refers to the submit machine.
 	if ( transfer_exec ) {
-		*rsl += condor_basename( executable.c_str() );
+		RSL += condor_basename( executable.c_str() );
 	} else {
-		*rsl += executable;
+		RSL += executable;
 	}
 
 	{
@@ -982,8 +1134,8 @@ std::string *ArcJob::buildSubmitRSL()
 					procID.cluster, procID.proc, arg_errors.Value());
 			formatstr(errorString,"Failed to read job arguments: %s\n",
 					arg_errors.Value());
-			delete rsl;
-			return NULL;
+			RSL.clear();
+			return false;
 		}
 		if(args.Count() != 0) {
 			if(args.InputWasV1()) {
@@ -994,8 +1146,8 @@ std::string *ArcJob::buildSubmitRSL()
 							procID.cluster,procID.proc,arg_errors.Value());
 					formatstr(errorString,"Failed to get job arguments: %s\n",
 							arg_errors.Value());
-					delete rsl;
-					return NULL;
+					RSL.clear();
+					return false;
 				}
 			}
 			else {
@@ -1007,23 +1159,23 @@ std::string *ArcJob::buildSubmitRSL()
 					rsl_args += rsl_stringify(args.GetArg(i));
 				}
 			}
-			*rsl += ")(arguments=";
-			*rsl += rsl_args;
+			RSL += ")(arguments=";
+			RSL += rsl_args;
 		}
 	}
 
 	// If we're transferring the executable, tell ARC to set the
 	// execute bit on the transferred executable.
 	if ( transfer_exec ) {
-		*rsl += ")(executables=";
-		*rsl += condor_basename( executable.c_str() );
+		RSL += ")(executables=";
+		RSL += condor_basename( executable.c_str() );
 	}
 
 	if ( jobAd->LookupString( ATTR_JOB_INPUT, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
-			*rsl += ")(stdin=";
-			*rsl += condor_basename(attr_value);
+			RSL += ")(stdin=";
+			RSL += condor_basename(attr_value);
 		}
 		free( attr_value );
 		attr_value = NULL;
@@ -1035,15 +1187,15 @@ std::string *ArcJob::buildSubmitRSL()
 		char *file;
 		stage_list->rewind();
 
-		*rsl += ")(inputfiles=";
+		RSL += ")(inputfiles=";
 
 		while ( (file = stage_list->next()) != NULL ) {
-			*rsl += "(";
-			*rsl += condor_basename(file);
+			RSL += "(";
+			RSL += condor_basename(file);
 			if ( IsUrl( file ) ) {
-				formatstr_cat( *rsl, " \"%s\")", file );
+				formatstr_cat( RSL, " \"%s\")", file );
 			} else {
-				*rsl += " \"\")";
+				RSL += " \"\")";
 			}
 		}
 	}
@@ -1054,8 +1206,8 @@ std::string *ArcJob::buildSubmitRSL()
 	if ( jobAd->LookupString( ATTR_JOB_OUTPUT, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
-			*rsl += ")(stdout=";
-			*rsl += remote_stdout_name;
+			RSL += ")(stdout=";
+			RSL += remote_stdout_name;
 		}
 		free( attr_value );
 		attr_value = NULL;
@@ -1064,8 +1216,8 @@ std::string *ArcJob::buildSubmitRSL()
 	if ( jobAd->LookupString( ATTR_JOB_ERROR, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
-			*rsl += ")(stderr=";
-			*rsl += remote_stderr_name;
+			RSL += ")(stderr=";
+			RSL += remote_stderr_name;
 		}
 		free( attr_value );
 	}
@@ -1079,16 +1231,16 @@ std::string *ArcJob::buildSubmitRSL()
 		stage_list->rewind();
 		stage_local_list->rewind();
 
-		*rsl += ")(outputfiles=";
+		RSL += ")(outputfiles=";
 
 		while ( (file = stage_list->next()) != NULL ) {
 			local_file = stage_local_list->next();
-			*rsl += "(";
-			*rsl += condor_basename(file);
+			RSL += "(";
+			RSL += condor_basename(file);
 			if ( IsUrl( local_file ) ) {
-				formatstr_cat( *rsl, " \"%s\")", local_file );
+				formatstr_cat( RSL, " \"%s\")", local_file );
 			} else {
-				*rsl += " \"\")";
+				RSL += " \"\")";
 			}
 		}
 	}
@@ -1098,14 +1250,14 @@ std::string *ArcJob::buildSubmitRSL()
 	delete stage_local_list;
 	stage_local_list = NULL;
 
-	*rsl += ')';
+	RSL += ')';
 
 	if ( !rsl_suffix.empty() ) {
-		*rsl += rsl_suffix;
+		RSL += rsl_suffix;
 	}
 
-dprintf(D_FULLDEBUG,"*** RSL='%s'\n",rsl->c_str());
-	return rsl;
+dprintf(D_FULLDEBUG,"*** RSL='%s'\n",RSL.c_str());
+	return true;
 }
 
 StringList *ArcJob::buildStageInList()

@@ -721,6 +721,11 @@ bool ArcJobNewWorkerFunction(GahpRequest *gahp_request)
  	submit_request.requestMethod = "POST";
 	submit_request.proxyFile = gahp_request->m_proxy_file;
 	submit_request.requestBody = argv[3];
+	if ( argv[3][0] == '<' ) {
+		submit_request.contentType = "application/xml";
+	} else {
+		submit_request.contentType = "applicaton/rsl";
+	}
 
 	// Send the request.
 	if( ! submit_request.SendRequest() ) {

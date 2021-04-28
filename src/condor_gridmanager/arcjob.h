@@ -85,13 +85,14 @@ class ArcJob : public BaseJob
 		// If we're in the middle of a gahp call that requires an RSL,
 		// the RSL is stored here (so that we don't have to reconstruct the
 		// RSL every time we test the call for completion). It should be
-		// freed and reset to NULL once the call completes.
-	std::string *RSL;
+		// cleared once the call completes.
+	std::string RSL;
 		// Same as for RSL, but used by the file staging calls.
 	StringList *stageList;
 	StringList *stageLocalList;
 
-	std::string *buildSubmitRSL();
+	bool buildJobADL();
+	bool buildSubmitRSL();
 	StringList *buildStageInList();
 	StringList *buildStageOutList( bool old_stdout = false );
 	StringList *buildStageOutLocalList( StringList *stage_list, bool old_stdout = false );
