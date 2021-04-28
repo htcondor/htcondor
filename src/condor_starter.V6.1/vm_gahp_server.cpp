@@ -26,7 +26,6 @@
 #include "env.h"
 #include "starter.h"
 #include "condor_daemon_core.h"
-#include "MyString.h"
 #include "gahp_common.h"
 #include "strupr.h"
 #include "my_popen.h"
@@ -205,14 +204,14 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 
 	if( !m_job_ad ) {
 		start_err_msg = "No JobAd in VMGahpServer::startUp()";
-		dprintf(D_ALWAYS,"%s\n", start_err_msg.Value());
+		dprintf(D_ALWAYS,"%s\n", start_err_msg.c_str());
 		return false;
 	}
 
-	MyString JobName;
-	if( m_vmgahp_server.IsEmpty() ) {
+	std::string JobName;
+	if( m_vmgahp_server.empty() ) {
 		start_err_msg = "No path for vmgahp in VMGahpServer::startUp()";
-		dprintf(D_ALWAYS,"%s\n", start_err_msg.Value());
+		dprintf(D_ALWAYS,"%s\n", start_err_msg.c_str());
 		return false;
 	}
 
@@ -230,7 +229,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 				false // write end blocking
 				)) {
 		start_err_msg = "unable to create pipe to stdin of VM gahp";
-		dprintf(D_ALWAYS,"%s\n", start_err_msg.Value());
+		dprintf(D_ALWAYS,"%s\n", start_err_msg.c_str());
 		return false;
 	}
 	if(!daemonCore->Create_Pipe(stdout_pipefds,
@@ -241,7 +240,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 				)) {
 		// blocking read
 		start_err_msg = "unable to create pipe to stdout of VM gahp";
-		dprintf(D_ALWAYS,"%s\n", start_err_msg.Value());
+		dprintf(D_ALWAYS,"%s\n", start_err_msg.c_str());
 		return false;
 	}
 	if( m_include_gahp_log ) {
@@ -253,7 +252,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 					)) {
 			// nonblocking read
 			start_err_msg = "unable to create pipe to stderr of VM gahp";
-			dprintf(D_ALWAYS,"%s\n", start_err_msg.Value());
+			dprintf(D_ALWAYS,"%s\n", start_err_msg.c_str());
 			return false;
 		}
 	}
@@ -278,7 +277,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	ArgList vmgahp_args;
 
 	vmgahp_args.SetArgV1SyntaxToCurrentPlatform();
-	vmgahp_args.AppendArg(m_vmgahp_server.Value());
+	vmgahp_args.AppendArg(m_vmgahp_server.c_str());
 
 	// Add daemonCore options
 	vmgahp_args.AppendArg("-f");
@@ -288,10 +287,10 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	vmgahp_args.AppendArg("-M");
 	vmgahp_args.AppendArg(VMGAHP_STANDALONE_MODE);
 
-	MyString args_string;
-	vmgahp_args.GetArgsStringForDisplay(&args_string, 1);
-	dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.Value(),
-			args_string.Value() );
+	std::string args_string;
+	vmgahp_args.GetArgsStringForDisplay(args_string, 1);
+	dprintf( D_ALWAYS, "About to exec %s %s\n", JobName.c_str(),
+			args_string.c_str() );
 
 #if !defined(WIN32)
 	uid_t vmgahp_user_uid = (uid_t) -1;
@@ -314,22 +313,22 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 			vmgahp_user_gid = vmgahp_user_uid;
 		}
 
-		MyString tmp_str;
-		tmp_str.formatstr("%d", (int)vmgahp_user_uid);
-		job_env->SetEnv("VMGAHP_USER_UID", tmp_str.Value());
-		tmp_str.formatstr("%d", (int)vmgahp_user_gid);
-		job_env->SetEnv("VMGAHP_USER_GID", tmp_str.Value());
+		std::string tmp_str;
+		formatstr(tmp_str, "%d", (int)vmgahp_user_uid);
+		job_env->SetEnv("VMGAHP_USER_UID", tmp_str.c_str());
+		formatstr(tmp_str, "%d", (int)vmgahp_user_gid);
+		job_env->SetEnv("VMGAHP_USER_GID", tmp_str.c_str());
 	}
 #endif
 
-	job_env->SetEnv("VMGAHP_VMTYPE", m_vm_type.Value());
+	job_env->SetEnv("VMGAHP_VMTYPE", m_vm_type.c_str());
 	job_env->SetEnv("VMGAHP_WORKING_DIR", workingdir);
 
 	// Grab the full environment back out of the Env object
 	if(IsFulldebug(D_FULLDEBUG)) {
-		MyString env_str;
-		job_env->getDelimitedStringForDisplay(&env_str);
-		dprintf(D_FULLDEBUG, "Env = %s\n", env_str.Value());
+		std::string env_str;
+		job_env->getDelimitedStringForDisplay( env_str);
+		dprintf(D_FULLDEBUG, "Env = %s\n", env_str.c_str());
 	}
 
 	priv_state vmgahp_priv = PRIV_ROOT;
@@ -339,13 +338,13 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	// It seems like a bug of VMware. VMware command line tool such as "vmrun" 
 	// requires Administrator privilege.
 	// -jaeyoung 06/15/07
-	if( strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == MATCH ) {
+	if( strcasecmp(m_vm_type.c_str(), CONDOR_VM_UNIVERSE_VMWARE ) == MATCH ) {
 		vmgahp_priv = PRIV_UNKNOWN;
 	}
 #endif
 
 	m_vmgahp_pid = daemonCore->Create_Process(
-			JobName.Value(), //Name of executable
+			JobName.c_str(), //Name of executable
 			vmgahp_args,	//Args
 			vmgahp_priv, 	//Priv state
 			1, 		//id for our registered reaper
@@ -379,20 +378,20 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	if ( m_vmgahp_pid == FALSE ) {
 		m_vmgahp_pid = -1;
 		start_err_msg = "Failed to start vm-gahp server";
-		dprintf(D_ALWAYS, "%s (%s)\n", start_err_msg.Value(), 
-				m_vmgahp_server.Value());
+		dprintf(D_ALWAYS, "%s (%s)\n", start_err_msg.c_str(), 
+				m_vmgahp_server.c_str());
 		if(create_process_error) {
-			MyString err_msg = "Failed to execute '";
-			err_msg += m_vmgahp_server.Value(),
+			std::string err_msg = "Failed to execute '";
+			err_msg += m_vmgahp_server;
 			err_msg += "'";
-			if(!args_string.IsEmpty()) {
+			if(!args_string.empty()) {
 				err_msg += " with arguments ";
-				err_msg += args_string.Value();
+				err_msg += args_string;
 			}
 			err_msg += ": ";
 			err_msg += create_process_error;
 			dprintf(D_ALWAYS, "Failed to start vmgahp server (%s)\n", 
-					err_msg.Value());
+					err_msg.c_str());
 		}
 		return false;
 	}
@@ -420,7 +419,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		return false;
 	}
 	
-	dprintf(D_FULLDEBUG,"VMGAHP server version: %s\n", m_vmgahp_version.Value());
+	dprintf(D_FULLDEBUG,"VMGAHP server version: %s\n", m_vmgahp_version.c_str());
 
 	// Now see what commands this server supports.
 	if( command_commands() == false ) {
@@ -752,7 +751,7 @@ VMGahpServer::err_pipe_ready(void)
 			*newline = '\0';
 			dprintf( D_ALWAYS, "VMGAHP[%d] (stderr) -> %s%s\n", 
 					m_vmgahp_pid, 
-					m_vmgahp_error_buffer.Value(), 
+					m_vmgahp_error_buffer.c_str(), 
 					prev_line );
 			prev_line = newline + 1;
 			m_vmgahp_error_buffer = "";
@@ -785,10 +784,10 @@ VMGahpServer::write_line(const char *command) const
 		return false;
 	}
 
-	MyString debug;
-	debug.formatstr( "'%s'", command );
+	std::string debug;
+	formatstr( debug, "'%s'", command );
 	dprintf( D_FULLDEBUG, "VMGAHP[%d] <- %s\n", m_vmgahp_pid,
-			debug.Value() );
+			debug.c_str() );
 
 	return true;
 }
@@ -804,14 +803,14 @@ VMGahpServer::write_line(const char *command, int req, const char *args) const
 		return false;
 	}
 
-	MyString buf;
-	buf.formatstr(" %d ",req);
+	std::string buf;
+	formatstr(buf, " %d ",req);
 	if( daemonCore->Write_Pipe(m_vmgahp_writefd,command,strlen(command)) <= 0 ) {
 		dprintf( D_ALWAYS, "VMGAHP write line(%s) Error\n", command);
 		return false;
 	}
-	if( daemonCore->Write_Pipe(m_vmgahp_writefd,buf.Value(),buf.Length()) <= 0 ) {
-		dprintf( D_ALWAYS, "VMGAHP write line(%s) Error\n", buf.Value());
+	if( daemonCore->Write_Pipe(m_vmgahp_writefd,buf.c_str(),buf.length()) <= 0 ) {
+		dprintf( D_ALWAYS, "VMGAHP write line(%s) Error\n", buf.c_str());
 		return false;
 	}
 	if( args ) {
@@ -825,14 +824,14 @@ VMGahpServer::write_line(const char *command, int req, const char *args) const
 			return false;
 	}
 
-	MyString debug;
+	std::string debug;
 	if( args ) {
-		debug.formatstr( "'%s%s%s'", command, buf.Value(), args );
+		formatstr( debug, "'%s%s%s'", command, buf.c_str(), args );
 	} else {
-		debug.formatstr( "'%s%s'", command, buf.Value() );
+		formatstr( debug, "'%s%s'", command, buf.c_str() );
 	}
 	dprintf( D_FULLDEBUG, "VMGAHP[%d] <- %s\n", m_vmgahp_pid,
-			debug.Value() );
+			debug.c_str() );
 
 	return true;
 }
@@ -922,7 +921,7 @@ VMGahpServer::read_argv(Gahp_Args &g_args)
 			//   will be printed in the log after the RESULTS line
 			//   is logged. This implied reversal of causality isn't
 			//   easy to fix, so we leave it as-is.
-			static MyString debug;
+			static std::string debug;
 			debug = "";
 			if( g_args.argc > 0 ) {
 				debug += "'";
@@ -937,7 +936,7 @@ VMGahpServer::read_argv(Gahp_Args &g_args)
 				debug += "'";
 			}
 			dprintf( D_FULLDEBUG, "VMGAHP[%d] -> %s\n", m_vmgahp_pid,
-					debug.Value() );
+					debug.c_str() );
 
 			// check for a single "R".  This means we should check
 			// for results in vmgahp async mode.  
@@ -1352,10 +1351,10 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 	}
 
 	// Send Working directory
-	MyString vmAttr;
-	vmAttr.formatstr("VM_WORKING_DIR = \"%s\"", workingdir);
+	std::string vmAttr;
+	formatstr(vmAttr, "VM_WORKING_DIR = \"%s\"", workingdir);
 
-	if ( write_line( vmAttr.Value() ) == false ) {
+	if ( write_line( vmAttr.c_str() ) == false ) {
 		return false;
 	}
 
@@ -1399,12 +1398,12 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 			continue;
 		}
 
-		vmAttr.formatstr( "%s = %s", name, ExprTreeToString( expr ) );
+		formatstr( vmAttr, "%s = %s", name, ExprTreeToString( expr ) );
 
-		if ( write_line( vmAttr.Value() ) == false ) {
+		if ( write_line( vmAttr.c_str() ) == false ) {
 			return false;
 		}
-		total_len += vmAttr.Length();
+		total_len += vmAttr.length();
 		if( total_len > 2048 ) {
 			// Give some time for vmgahp to read this pipe
 			sleep(1);
@@ -1438,17 +1437,17 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 void
 VMGahpServer::killVM(void)
 {
-	if( m_vm_type.IsEmpty() || m_vmgahp_server.IsEmpty() ) {
+	if( m_vm_type.empty() || m_vmgahp_server.empty() ) {
 		return;
 	}
 
-	if( m_workingdir.IsEmpty() ) {
+	if( m_workingdir.empty() ) {
 		dprintf(D_ALWAYS, "VMGahpServer::killVM() : no workingdir\n");
 		return;
 	}
 
 	std::string matchstring;
-	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH) ) {
+	if( (strcasecmp(m_vm_type.c_str(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.c_str(), CONDOR_VM_UNIVERSE_KVM ) == MATCH) ) {
 		if( create_name_for_VM(m_job_ad, matchstring) == false ) {
 			dprintf(D_ALWAYS, "VMGahpServer::killVM() : "
 					"cannot make the name of VM\n");
@@ -1483,14 +1482,14 @@ VMGahpServer::killVM(void)
 
 #if !defined(WIN32)
 	if( can_switch_ids() ) {
-		MyString tmp_str;
-		tmp_str.formatstr("%d", (int)get_condor_uid());
-		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
+		std::string tmp_str;
+		formatstr(tmp_str, "%d", (int)get_condor_uid());
+		SetEnv("VMGAHP_USER_UID", tmp_str.c_str());
 	}
 #endif
 
 	priv_state oldpriv; 
-	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH) ) {
+	if( (strcasecmp(m_vm_type.c_str(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.c_str(), CONDOR_VM_UNIVERSE_KVM ) == MATCH) ) {
 		oldpriv = set_root_priv();
 	}else {
 		oldpriv = set_user_priv();

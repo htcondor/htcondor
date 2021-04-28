@@ -175,7 +175,7 @@ JobstateLog::InitializeRecovery()
 				_lastTimestampLines.insert( line );
 				debug_printf( DEBUG_DEBUG_2,
 							"Appended <%s> to _lastTimestampLines\n",
-							line.Value() );
+							line.c_str() );
 			}
 		}
 	}
@@ -324,7 +324,7 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 		MyString condorID;
 		CondorID2Str( event->cluster, event->proc, condorID );
 		time_t eventTime = event->GetEventclock();
-		Write( &eventTime, node, eventName, condorID.Value() );
+		Write( &eventTime, node, eventName, condorID.c_str() );
 	}
 }
 
@@ -344,7 +344,7 @@ JobstateLog::WriteJobSuccessOrFailure( Job *node )
 	retval.formatstr( "%d", node->retval );
 
 	time_t timestamp = node->GetLastEventTime();
-	Write( &timestamp, node, eventName, retval.Value() );
+	Write( &timestamp, node, eventName, retval.c_str() );
 }
 
 //---------------------------------------------------------------------------
@@ -374,7 +374,7 @@ JobstateLog::WriteScriptStarted( Job *node, ScriptType type )
 		CondorID2Str( node->GetCluster(), procID, condorID );
 	}
 	time_t timestamp = node->GetLastEventTime();
-	Write( &timestamp, node, eventName, condorID.Value() );
+	Write( &timestamp, node, eventName, condorID.c_str() );
 }
 
 //---------------------------------------------------------------------------
@@ -407,7 +407,7 @@ JobstateLog::WriteScriptSuccessOrFailure( Job *node, ScriptType type )
 	}
 
 	time_t timestamp = node->GetLastEventTime();
-	Write( &timestamp, node, eventName, condorID.Value() );
+	Write( &timestamp, node, eventName, condorID.c_str() );
 }
 
 //---------------------------------------------------------------------------
@@ -463,7 +463,7 @@ JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 	}
 
 	MyString outline;
-	outline.formatstr( "%lu %s", (unsigned long)eventTime, info.Value() );
+	outline.formatstr( "%lu %s", (unsigned long)eventTime, info.c_str() );
 
 		//
 		// If this event's time matches the time of the last "real"
@@ -487,7 +487,7 @@ JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 		}
 	}
 
-	fprintf( _outfile, "%s\n", outline.Value() );
+	fprintf( _outfile, "%s\n", outline.c_str() );
 }
 
 //---------------------------------------------------------------------------
@@ -511,7 +511,7 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 {
 	line.chomp();
 	MyStringTokener tok;
-	tok.Tokenize(line.Value());
+	tok.Tokenize(line.c_str());
 	const char* timestampTok = tok.GetNextToken( " ", false );
 	const char* nodeNameTok = tok.GetNextToken( " ", false );
 	(void)tok.GetNextToken( " ", false ); // event name
@@ -522,7 +522,7 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 
 	if ( (timestampTok == NULL) || (nodeNameTok == NULL) ) {
 		debug_printf( DEBUG_QUIET, "Warning: error parsing "
-					"jobstate.log file line <%s>\n", line.Value() );
+					"jobstate.log file line <%s>\n", line.c_str() );
 		check_warning_strictness( DAG_STRICT_1 );
 		return false;
 	}
@@ -535,7 +535,7 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 	if (pend == timestampTok) {
 		debug_printf( DEBUG_QUIET, "Warning: error reading "
 					"timestamp in jobstate.log file line <%s>\n",
-					line.Value() );
+					line.c_str() );
 		check_warning_strictness( DAG_STRICT_1 );
 		return false;
 	}
@@ -548,7 +548,7 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 		if (pend == seqNumTok) {
 			debug_printf( DEBUG_QUIET, "Warning: error reading "
 						"sequence number in jobstate.log file line <%s>\n",
-						line.Value() );
+						line.c_str() );
 			check_warning_strictness( DAG_STRICT_1 );
 			return false;
 		}

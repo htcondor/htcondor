@@ -160,7 +160,7 @@ extern const std::string & attr_JobUser; // the attribute name we use for the "o
 // Hash table with an entry for every job owner that
 // has existed in the queue since this schedd has been
 // running.  Used by SuperUserAllowedToSetOwnerTo().
-static HashTable<MyString,int> owner_history(hashFunction);
+static HashTable<std::string,int> owner_history(hashFunction);
 
 int		do_Q_request(QmgmtPeer &,bool &may_fork);
 #if 0 // not used?
@@ -189,7 +189,7 @@ static int cluster_maximum_val = 0;     // maximum cluster id (default is 0, or 
 static int job_queued_count = 0;
 static Regex *queue_super_user_may_impersonate_regex = NULL;
 
-static void AddOwnerHistory(const MyString &user);
+static void AddOwnerHistory(const std::string &user);
 
 typedef _condor_auto_accum_runtime< stats_entry_probe<double> > condor_auto_runtime;
 
@@ -453,7 +453,7 @@ ClusterCleanup(int cluster_id)
 	}
 
 	// pull out the owner and hash used for ickpt sharing
-	MyString hash, owner, digest;
+	std::string hash, owner, digest;
 	GetAttributeString(cluster_id, -1, ATTR_JOB_CMD_HASH, hash);
 	if ( ! hash.empty()) {
 		GetAttributeString(cluster_id, -1, ATTR_OWNER, owner);
@@ -474,8 +474,8 @@ ClusterCleanup(int cluster_id)
 	// garbage collect the shared ickpt file if necessary
 	// As of 9.0 new jobs will be unable to submit shared executables
 	// but there may still be some jobs in the queue that have that.
-	if (!hash.IsEmpty()) {
-		ickpt_share_try_removal(owner.Value(), hash.Value());
+	if (!hash.empty()) {
+		ickpt_share_try_removal(owner.c_str(), hash.c_str());
 	}
 }
 
@@ -1012,7 +1012,7 @@ QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 	}
 
 	addr = raddr;
-	myendpoint = strdup(addr.to_ip_string().Value());
+	myendpoint = strdup(addr.to_ip_string().c_str());
 
 	return true;
 }
@@ -1575,14 +1575,14 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	ASSERT(qmgmt_was_initialized);	// make certain our parameters are setup
 	ASSERT(!JobQueue);
 
-	MyString spool;
+	std::string spool;
 	if( !param(spool,"SPOOL") ) {
 		EXCEPT("SPOOL must be defined.");
 	}
 
 	int spool_min_version = 0;
 	int spool_cur_version = 0;
-	CheckSpoolVersion(spool.Value(),SPOOL_MIN_VERSION_SCHEDD_SUPPORTS,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS,spool_min_version,spool_cur_version);
+	CheckSpoolVersion(spool.c_str(),SPOOL_MIN_VERSION_SCHEDD_SUPPORTS,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS,spool_min_version,spool_cur_version);
 
 	JobQueue = new JobQueueType(new ConstructClassAdLogTableEntry<JobQueuePayload>(),job_queue_name,max_historical_logs);
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(hashFuncInt);
@@ -1602,7 +1602,6 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	std::string	owner;
 	std::string	user;
 	std::string correct_user;
-	MyString	buf;
 	std::string	attr_scheduler;
 	std::string correct_scheduler;
 	std::string buffer;
@@ -2021,7 +2020,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	std::list< PROC_ID > spool_rename_list;
 
 	if( spool_cur_version < 1 ) {
-		SpoolHierarchyChangePass1(spool.Value(),spool_rename_list);
+		SpoolHierarchyChangePass1(spool.c_str(),spool_rename_list);
 	}
 
 
@@ -2038,11 +2037,11 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	}
 
 	if( spool_cur_version < 1 ) {
-		SpoolHierarchyChangePass2(spool.Value(),spool_rename_list);
+		SpoolHierarchyChangePass2(spool.c_str(),spool_rename_list);
 	}
 
 	if( spool_cur_version != SPOOL_CUR_VERSION_SCHEDD_SUPPORTS ) {
-		WriteSpoolVersion(spool.Value(),SPOOL_MIN_VERSION_SCHEDD_WRITES,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS);
+		WriteSpoolVersion(spool.c_str(),SPOOL_MIN_VERSION_SCHEDD_WRITES,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS);
 	}
 }
 
@@ -2168,7 +2167,7 @@ static int OpenSpoolFactoryFile(int cluster_id, const char * filename, int &fd, 
 // the materialize itemdata is *also* stored in the submit pending JobFactory so we don't have to read it from the
 // spool file on initial submit.
 // 
-int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & spooled_filename, int &row_count, int &terrno)
+int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, std::string & spooled_filename, int &row_count, int &terrno)
 {
 	int rval = -1;
 	SetAttributeFlags_t flags = 0;
@@ -2314,7 +2313,7 @@ int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * 
 
 			// If the submit digest parsed correctly, we need to write it to spool so we can re-load if the schedd is restarted
 			//
-			MyString spooled_filename;
+			std::string spooled_filename;
 			GetSpooledSubmitDigestPath(spooled_filename, cluster_id, Spool);
 			const char * filename = spooled_filename.c_str();
 
@@ -2432,12 +2431,12 @@ isQueueSuperUser( const char* user )
 }
 
 static void
-AddOwnerHistory(const MyString &user) {
+AddOwnerHistory(const std::string &user) {
 	owner_history.insert(user,1);
 }
 
 static bool
-SuperUserAllowedToSetOwnerTo(const MyString &user) {
+SuperUserAllowedToSetOwnerTo(const std::string &user) {
 		// To avoid giving the queue super user (e.g. condor)
 		// the ability to run as innocent people who have never
 		// even run a job, only allow them to set the owner
@@ -2446,10 +2445,10 @@ SuperUserAllowedToSetOwnerTo(const MyString &user) {
 		// root/condor.
 
 	if( queue_super_user_may_impersonate_regex ) {
-		if( queue_super_user_may_impersonate_regex->match(user.Value()) ) {
+		if( queue_super_user_may_impersonate_regex->match(user.c_str()) ) {
 			return true;
 		}
-		dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this does not match the QUEUE_SUPER_USER_MAY_IMPERSONATE regular expression.\n",user.Value());
+		dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this does not match the QUEUE_SUPER_USER_MAY_IMPERSONATE regular expression.\n",user.c_str());
 		return false;
 	}
 
@@ -2457,7 +2456,7 @@ SuperUserAllowedToSetOwnerTo(const MyString &user) {
 	if( owner_history.lookup(user,junk) != -1 ) {
 		return true;
 	}
-	dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this instance of the schedd has never seen that user submit any jobs.\n",user.Value());
+	dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this instance of the schedd has never seen that user submit any jobs.\n",user.c_str());
 	return false;
 }
 
@@ -3552,7 +3551,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 				// Take care of ATTR_REMOVE_REASON
 				if( reason ) {
-					MyString fixed_reason;
+					std::string fixed_reason;
 					if( reason[0] == '"' ) {
 						fixed_reason += reason;
 					} else {
@@ -3561,7 +3560,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 						fixed_reason += '"';
 					}
 					if( SetAttribute(cluster_id, proc_id, ATTR_REMOVE_REASON, 
-									 fixed_reason.Value()) < 0 ) {
+									 fixed_reason.c_str()) < 0 ) {
 						dprintf( D_ALWAYS, "WARNING: Failed to set %s to \"%s\" for "
 								 "job %d.%d\n", ATTR_REMOVE_REASON, reason, cluster_id,
 								 proc_id );
@@ -3649,7 +3648,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 	// both an input constraint and OnlyMyJobs is set.
 	YourString owner;
 	YourString user;
-	MyString owner_expr;
+	std::string owner_expr;
 	if (flags & SetAttribute_OnlyMyJobs) {
 			// TODO: Owner should be 'nobody' for non-local UID domain.
 		user = EffectiveUser(Q_SOCK); // user is "" if no Q_SOCK
@@ -3665,7 +3664,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 			// for queue superusers, disable the OnlyMyJobs flag - they get to act on all jobs.
 			flags &= ~SetAttribute_OnlyMyJobs;
 		} else {
-			owner_expr.formatstr("(%s == \"%s\")", attr_JobUser.c_str(), user.c_str());
+			formatstr(owner_expr, "(%s == \"%s\")", attr_JobUser.c_str(), user.c_str());
 			if (constraint_str) {
 				owner_expr += " && ";
 				owner_expr += constraint_str;
@@ -4196,17 +4195,17 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 			// We can't just use attr_value, since it contains '"'
 			// marks.  Carefully remove them here.
-		MyString owner_buf;
+		std::string owner_buf;
 		char const *owner = attr_value;
 		bool owner_is_quoted = false;
 		if( *owner == '"' ) {
 			owner_buf = owner+1;
-			if( owner_buf.Length() && owner_buf[owner_buf.Length()-1] == '"' )
+			if( owner_buf.length() && owner_buf[owner_buf.length()-1] == '"' )
 			{
-				owner_buf.truncate(owner_buf.Length()-1);
+				owner_buf.erase(owner_buf.length()-1);
 				owner_is_quoted = true;
 			}
-			owner = owner_buf.Value();
+			owner = owner_buf.c_str();
 		}
 
 		bool set_to_nobody = false;
@@ -4257,7 +4256,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 
-		MyString orig_owner;
+		std::string orig_owner;
 		if( GetAttributeString(cluster_id,proc_id,ATTR_OWNER,orig_owner) >= 0
 			&& orig_owner != owner
 			&& !qmgmt_all_users_trusted )
@@ -4267,9 +4266,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// See gittrack #1018.
 			dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s when previously set to \"%s\"\n",
-					attr_value, orig_owner.Value());
+					attr_value, orig_owner.c_str());
 			if (err) err->pushf("QMGMT", EACCES, "Setting owner to %s when previously "
-				"set to %s is not permitted.", attr_value, orig_owner.Value());
+				"set to %s is not permitted.", attr_value, orig_owner.c_str());
 			errno = EACCES;
 			return -1;
 		}
@@ -4331,13 +4330,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				// the job queue.
 		#ifdef NO_DEPRECATED_NICE_USER
 			int nice_user = 0;
-			MyString user;
+			std::string user;
 
 			GetAttributeInt( cluster_id, proc_id, ATTR_NICE_USER,
 							 &nice_user );
-			user.formatstr( "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
+			formatstr( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
 					 owner, scheduler.uidDomain() );
-			SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags, nullptr );
+			SetAttribute( cluster_id, proc_id, ATTR_USER, user.c_str(), flags, nullptr );
 		#else
 			auto new_user = std::string("\"") + owner + "@" + scheduler.uidDomain() + "\"";
 			SetAttribute(cluster_id, proc_id, ATTR_USER, new_user.c_str());
@@ -4376,13 +4375,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			}
 			// TODO: handle the case where nice-user was true, but now is being set to false?
 		} else {
-			MyString owner;
-			MyString user;
+			std::string owner;
+			std::string user;
 			if( GetAttributeString(cluster_id, proc_id, ATTR_OWNER, owner)
 				>= 0 ) {
-				user.formatstr( "\"%s%s@%s\"", (nice_user) ? "nice-user." :
-						 "", owner.Value(), scheduler.uidDomain() );
-				SetAttribute( cluster_id, proc_id, ATTR_USER, user.Value(), flags, nullptr );
+				formatstr( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." :
+						 "", owner.c_str(), scheduler.uidDomain() );
+				SetAttribute( cluster_id, proc_id, ATTR_USER, user.c_str(), flags, nullptr );
 			}
 		}
 	}
@@ -4585,11 +4584,11 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	// This block handles rounding of attributes.
-	MyString round_param_name;
+	std::string round_param_name;
 	round_param_name = "SCHEDD_ROUND_ATTR_";
 	round_param_name += attr_name;
 
-	char *round_param = param(round_param_name.Value());
+	char *round_param = param(round_param_name.c_str());
 
 	if( round_param && *round_param && strcmp(round_param,"0") ) {
 		classad::Value::ValueType attr_type = classad::Value::NULL_VALUE;
@@ -4641,7 +4640,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					percent > 1000 || percent < 0 )
 				{
 					EXCEPT("Invalid rounding parameter %s=%s",
-						   round_param_name.Value(),round_param);
+						   round_param_name.c_str(),round_param);
 				}
 				if( fabs(fvalue) < 0.000001 || percent < 0.000001 ) {
 					new_value = attr_value; // unmodified
@@ -4663,7 +4662,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			else {
 					// round to specified power of 10
 				unsigned int base;
-				int exp = param_integer(round_param_name.Value(),0,0,9);
+				int exp = param_integer(round_param_name.c_str(),0,0,9);
 
 					// now compute the rounded value
 					// set base to be 10^exp
@@ -4688,7 +4687,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		} else {
 			dprintf(D_FULLDEBUG,
 				"%s=%s, but value '%s' is not a scalar - ignored\n",
-				round_param_name.Value(),round_param,attr_value);
+				round_param_name.c_str(),round_param,attr_value);
 		}
 	}
 	free( round_param );
@@ -5035,23 +5034,23 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	}
 
 	// Create filename
-	MyString filename;
-	filename.formatstr( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
+	std::string filename;
+	formatstr( filename, "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
 
 	// Swith to root temporarily
 	priv_state old_priv = set_root_priv();
 	// Delete the file
 	struct stat stat_buff;
-	if (stat (filename.Value(), &stat_buff) == 0) {
+	if (stat (filename.c_str(), &stat_buff) == 0) {
 		// If the file exists, delete it
-		if (unlink (filename.Value()) && errno != ENOENT) {
+		if (unlink (filename.c_str()) && errno != ENOENT) {
 			set_priv(old_priv);
 			return -1;
 		}
 	}
 
 	// Create the file
-	int fd = safe_open_wrapper_follow(filename.Value(), O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
+	int fd = safe_open_wrapper_follow(filename.c_str(), O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
@@ -5094,8 +5093,8 @@ DestroyMyProxyPassword( int cluster_id, int proc_id )
 		return 0;
 	}
 
-	MyString filename;
-	filename.formatstr( "%s%cmpp.%d.%d", Spool, DIR_DELIM_CHAR,
+	std::string filename;
+	formatstr( filename, "%s%cmpp.%d.%d", Spool, DIR_DELIM_CHAR,
 					  cluster_id, proc_id );
 
   	// Swith to root temporarily
@@ -5103,17 +5102,17 @@ DestroyMyProxyPassword( int cluster_id, int proc_id )
 
 	// Delete the file
 	struct stat stat_buff;
-	if( stat(filename.Value(), &stat_buff) == 0 ) {
+	if( stat(filename.c_str(), &stat_buff) == 0 ) {
 			// If the file exists, delete it
-		if( unlink( filename.Value()) < 0 && errno != ENOENT ) {
+		if( unlink( filename.c_str()) < 0 && errno != ENOENT ) {
 			dprintf( D_ALWAYS, "unlink(%s) failed: errno %d (%s)\n",
-					 filename.Value(), errno, strerror(errno) );
+					 filename.c_str(), errno, strerror(errno) );
 		 	set_priv(old_priv);
 			return -1;
 
 		}
 		dprintf( D_FULLDEBUG, "Destroyed MPP %d.%d: %s\n", cluster_id, 
-				 proc_id, filename.Value() );
+				 proc_id, filename.c_str() );
 	}
 
 	// Switch back to non-root
@@ -5135,9 +5134,9 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	// Swith to root temporarily
 	priv_state old_priv = set_root_priv();
 	
-	MyString filename;
-	filename.formatstr( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
-	int fd = safe_open_wrapper_follow(filename.Value(), O_RDONLY);
+	std::string filename;
+	formatstr( filename, "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
+	int fd = safe_open_wrapper_follow(filename.c_str(), O_RDONLY);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
@@ -5814,7 +5813,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 
 								// we need to let MakeJobFactory know whether the digest has been spooled or not
 								// because it needs to know whether to impersonate the user or not.
-								MyString spooled_filename;
+								std::string spooled_filename;
 								GetSpooledSubmitDigestPath(spooled_filename, clusterad->jid.cluster, Spool);
 								bool spooled_digest = YourStringNoCase(spooled_filename) == submit_digest;
 
@@ -6497,18 +6496,18 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 					MyString expr_to_add;
 					expr_to_add.formatstr("string(%s", name + 1);
-					expr_to_add.setAt(expr_to_add.Length()-1, ')');
+					expr_to_add.setAt(expr_to_add.length()-1, ')');
 
 						// Any backwacked double quotes or backwacks
 						// within the []'s should be unbackwacked.
 					int read_pos;
 					int write_pos;
 					for( read_pos = 0, write_pos = 0;
-						 read_pos < expr_to_add.Length();
+						 read_pos < expr_to_add.length();
 						 read_pos++, write_pos++ )
 					{
 						if( expr_to_add[read_pos] == '\\'  &&
-							read_pos+1 < expr_to_add.Length() &&
+							read_pos+1 < expr_to_add.length() &&
 							( expr_to_add[read_pos+1] == '\"' ||
 							  expr_to_add[read_pos+1] == '\\' ) )
 						{
@@ -6525,7 +6524,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					ClassAd tmpJobAd(*ad);
 					const char * INTERNAL_DD_EXPR = "InternalDDExpr";
 
-					bool isok = tmpJobAd.AssignExpr(INTERNAL_DD_EXPR, expr_to_add.Value());
+					bool isok = tmpJobAd.AssignExpr(INTERNAL_DD_EXPR, expr_to_add.c_str());
 					if( ! isok ) {
 						attribute_not_found = true;
 						break;
@@ -6537,16 +6536,16 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						attribute_not_found = true;
 						break;
 					}
-					MyString replacement_value;
+					std::string replacement_value;
 					replacement_value += left;
 					replacement_value += result;
-					search_pos = replacement_value.Length();
+					search_pos = replacement_value.length();
 					replacement_value += right;
-					expanded_ad->AssignExpr(curr_attr_to_expand, replacement_value.Value());
-					dprintf(D_FULLDEBUG,"$$([]) substitution: %s=%s\n",curr_attr_to_expand,replacement_value.Value());
+					expanded_ad->AssignExpr(curr_attr_to_expand, replacement_value.c_str());
+					dprintf(D_FULLDEBUG,"$$([]) substitution: %s=%s\n",curr_attr_to_expand,replacement_value.c_str());
 
 					free(attribute_value);
-					attribute_value = strdup(replacement_value.Value());
+					attribute_value = strdup(replacement_value.c_str());
 
 
 				} else  {
@@ -6587,10 +6586,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						value_came_from_jobad = false;
 					} else {
 							// No startd ad -- use value from last match.
-						MyString expr;
+						std::string expr;
 						expr = "MATCH_";
 						expr += name;
-						value = sPrintExpr(*ad, expr.Value());
+						value = sPrintExpr(*ad, expr.c_str());
 						value_came_from_jobad = true;
 					}
 
@@ -6628,7 +6627,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					// re-insert it if we got the value from the job ad
 					// in the first place.
 					if ( !value_came_from_jobad && persist_expansions) {
-						MyString expr;
+						std::string expr;
 						expr = "MATCH_";
 						expr += name;
 
@@ -6643,10 +6642,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						// the GRID universe, but we now need it for flocked
 						// jobs using disconnected starter-shadow (job-leases).
 						// So just always do it.
-						if ( SetAttribute(cluster_id,proc_id,expr.Value(),tvalue) < 0 )
+						if ( SetAttribute(cluster_id,proc_id,expr.c_str(),tvalue) < 0 )
 						{
 							EXCEPT("Failed to store %s into job ad %d.%d",
-								expr.Value(),cluster_id,proc_id);
+								expr.c_str(),cluster_id,proc_id);
 						}
 					}
 					// skip any quotation marks around strings
@@ -6713,12 +6712,12 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					ASSERT(new_value);
 					expanded_ad->AssignExpr(itr->first,new_value);
 
-					MyString match_exp_name = MATCH_EXP;
+					std::string match_exp_name = MATCH_EXP;
 					match_exp_name += itr->first;
-					if ( SetAttribute(cluster_id,proc_id,match_exp_name.Value(),new_value) < 0 )
+					if ( SetAttribute(cluster_id,proc_id,match_exp_name.c_str(),new_value) < 0 )
 					{
 						EXCEPT("Failed to store '%s=%s' into job ad %d.%d",
-						       match_exp_name.Value(), new_value, cluster_id, proc_id);
+						       match_exp_name.c_str(), new_value, cluster_id, proc_id);
 					}
 				}
 			}
@@ -6782,11 +6781,11 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 
 		if ( attribute_not_found ) {
-			MyString hold_reason;
+			std::string hold_reason;
 			// Don't put the $$(expr) literally in the hold message, otherwise
 			// if we fix the original problem, we won't be able to expand the one
 			// in the hold message
-			hold_reason.formatstr("Cannot expand $$ expression (%s).",name);
+			formatstr(hold_reason,"Cannot expand $$ expression (%s).",name);
 
 			// no ClassAd in the match record; probably
 			// an older negotiator.  put the job on hold and send email.
@@ -6799,7 +6798,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			// a client.  Then restore Q_SOCK back to the original value.
 			QmgmtPeer* saved_sock = Q_SOCK;
 			Q_SOCK = NULL;
-			holdJob(cluster_id, proc_id, hold_reason.Value());
+			holdJob(cluster_id, proc_id, hold_reason.c_str());
 			Q_SOCK = saved_sock;
 
 			char buf[256];
@@ -6844,18 +6843,18 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			   !env_obj.InsertEnvIntoClassAd(expanded_ad,&env_error_msg,opsys,&ver_info))
 			{
 				attribute_not_found = true;
-				MyString hold_reason;
-				hold_reason.formatstr(
+				std::string hold_reason;
+				formatstr(hold_reason,
 					"Failed to convert environment to target syntax"
 					" for starter (opsys=%s): %s",
-					opsys ? opsys : "NULL",env_error_msg.Value());
+					opsys ? opsys : "NULL",env_error_msg.c_str());
 
 
 				dprintf( D_ALWAYS, 
 					"Putting job %d.%d on hold - cannot convert environment"
 					" to target syntax for starter (opsys=%s): %s\n",
 					cluster_id, proc_id, opsys ? opsys : "NULL",
-						 env_error_msg.Value() );
+						 env_error_msg.c_str() );
 
 				// SetAttribute does security checks if Q_SOCK is
 				// not NULL.  So, set Q_SOCK to be NULL before
@@ -6865,30 +6864,30 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 				QmgmtPeer* saved_sock = Q_SOCK;
 				Q_SOCK = NULL;
-				holdJob(cluster_id, proc_id, hold_reason.Value());
+				holdJob(cluster_id, proc_id, hold_reason.c_str());
 				Q_SOCK = saved_sock;
 			}
 
 
 			// Now convert the arguments to a form understood by the starter.
 			ArgList arglist;
-			MyString arg_error_msg;
-			if(!arglist.AppendArgsFromClassAd(expanded_ad,&arg_error_msg) ||
-			   !arglist.InsertArgsIntoClassAd(expanded_ad,&ver_info,&arg_error_msg))
+			std::string arg_error_msg;
+			if(!arglist.AppendArgsFromClassAd(expanded_ad,arg_error_msg) ||
+			   !arglist.InsertArgsIntoClassAd(expanded_ad,&ver_info,arg_error_msg))
 			{
 				attribute_not_found = true;
-				MyString hold_reason;
-				hold_reason.formatstr(
+				std::string hold_reason;
+				formatstr(hold_reason,
 					"Failed to convert arguments to target syntax"
 					" for starter: %s",
-					arg_error_msg.Value());
+					arg_error_msg.c_str());
 
 
 				dprintf( D_ALWAYS, 
 					"Putting job %d.%d on hold - cannot convert arguments"
 					" to target syntax for starter: %s\n",
 					cluster_id, proc_id,
-					arg_error_msg.Value() );
+					arg_error_msg.c_str() );
 
 				// SetAttribute does security checks if Q_SOCK is
 				// not NULL.  So, set Q_SOCK to be NULL before
@@ -6898,7 +6897,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 				QmgmtPeer* saved_sock = Q_SOCK;
 				Q_SOCK = NULL;
-				holdJob(cluster_id, proc_id, hold_reason.Value());
+				holdJob(cluster_id, proc_id, hold_reason.c_str());
 				Q_SOCK = saved_sock;
 			}
 
@@ -7495,7 +7494,7 @@ SendSpoolFileIfNeeded(ClassAd& /*ad*/)
 					hash = "";
 			}
 
-			MyString cluster_owner;
+			std::string cluster_owner;
 			if( GetAttributeString(active_cluster_num,-1,ATTR_OWNER,cluster_owner) == -1 ) {
 					// The owner is not set in the cluster ad.  We
 					// need it to be set so we can attempt to clean up
@@ -8023,7 +8022,7 @@ void load_job_factories()
 
 			// we need to let MakeJobFactory know whether the digest has been spooled or not
 			// because it needs to know whether to impersonate the user or not.
-			MyString spooled_filename;
+			std::string spooled_filename;
 			GetSpooledSubmitDigestPath(spooled_filename, clusterad->jid.cluster, Spool);
 			bool spooled_digest = YourStringNoCase(spooled_filename) == submit_digest;
 
@@ -8227,17 +8226,17 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	jobid.proc = -1;	
 
 	int i;
-	MyString owner;
+	std::string owner;
 	if (user_is_the_new_owner) {
 	} else {
-		owner = user;
+		owner = user ? user : "";
 
 		// We have been passed user, which is owner@uid.  We want just
 		// owner, place a NULL at the '@'.
 
-		int at_sign_pos = owner.FindChar('@');
-		if (at_sign_pos >= 0) {
-			owner.truncate(at_sign_pos);
+		size_t at_sign_pos = owner.find('@');
+		if (at_sign_pos != std::string::npos) {
+			owner.erase(at_sign_pos);
 			user = owner.c_str();
 		}
 	}

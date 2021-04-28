@@ -114,8 +114,8 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 			if (!fullpath(path)) {
 				if (condor_getcwd(full_pathname)) {
 					MyString result;
-					full_pathname = dircat(full_pathname.Value(), path, result);
-					path = full_pathname.Value();
+					full_pathname = dircat(full_pathname.c_str(), path, result);
+					path = full_pathname.c_str();
 				}
 				else {
 					allow = false;

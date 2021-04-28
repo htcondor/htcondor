@@ -356,9 +356,14 @@ ReliSock::put_bytes_nobuffer( const char *buffer, int length, int send_size )
 	int pagesize = 65536;  // Optimize large writes to be page sized.
 	const char * cur;
 	unsigned char * buf = NULL;
-        
+
+	if (crypto_state_ && crypto_state_->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
+		dprintf(D_ALWAYS, "ReliSock::put_bytes_nobuffer is not allowed with AES encryption, failing\n");
+		return -1;
+	}
+
 	// First, encrypt the data if necessary
-	if (get_encryption() && crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
+	if (get_encryption()) {
 		if (!wrap((const unsigned char *) buffer, length,  buf , l_out)) {
 			dprintf(D_SECURITY, "Encryption failed\n");
 			goto error;
@@ -429,6 +434,11 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 	ASSERT(buffer != NULL);
 	ASSERT(max_length > 0);
 
+	if (crypto_state_ && crypto_state_->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
+		dprintf(D_ALWAYS, "ReliSock::get_bytes_nobuffer is not allowed with AES encryption, failing\n");
+		return -1;
+	}
+
 	// Find out how big the file is going to be, if requested.
 	// No receive_size means read max_length bytes.
 	this->decode();
@@ -462,7 +472,7 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 	} 
 	else {
 		// See if it needs to be decrypted
-		if (get_encryption() && crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) {
+		if (get_encryption()) {
 			unwrap((unsigned char *) buffer, result, buf, length);  // I am reusing length
 			memcpy(buffer, buf, result);
 			free(buf);
@@ -1167,8 +1177,13 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 		ns = cipher_sz;
 		len = (int) htonl(ns);
 
-		buf.grow_buf(cipher_sz);
-		Buf new_buf(p_sock, cipher_sz + header_size);
+		// TODO In a large message, this code will grow the max packet
+		//   size by 16 bytes per packet sent. When a small packet
+		//   comes through (at the end of a message), the max packet
+		//   size will shrink back down (but no smaller than
+		//   CONDOR_IO_BUF_SIZE).
+		Buf new_buf(p_sock);
+		new_buf.grow_buf(cipher_sz + header_size);
 		new_buf.alloc_buf();
 		memcpy(&hdr[1], &len, 4);
 		unsigned char *aad_data = reinterpret_cast<unsigned char *>(hdr);
@@ -1318,7 +1333,7 @@ ReliSock::type() const
 char * ReliSock::serializeMsgInfo() const
 {
 	char *buf = new char[20 + 3*m_final_mds.size()];
-	sprintf(buf, "%i*%i*%i*%i*%lu",
+	sprintf(buf, "%i*%i*%i*%i*%zu",
 		m_final_send_header,
 		m_final_recv_header,
 		m_finished_send_header,
@@ -1329,7 +1344,7 @@ char * ReliSock::serializeMsgInfo() const
 	if(m_final_mds.size()) {
 		strcat(buf, "*");
 		char * ptr = buf + strlen(buf);
-		unsigned char * vecdata = const_cast<unsigned char*>(&(m_final_mds[0]));
+		const unsigned char * vecdata = m_final_mds.data();
 		for (unsigned int i=0; i < m_final_mds.size(); i++, vecdata++, ptr+=2) {
 			sprintf(ptr, "%02X", *vecdata);
 		}
@@ -1345,16 +1360,23 @@ const char * ReliSock::serializeMsgInfo(const char * buf)
 {
 	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: reading MsgInfo at beginning of %s.\n", buf);
 
-	long unsigned int vecsize;
-	int num_read = sscanf(buf, "%i*%i*%i*%i*%lu*",
-		(int*)&m_final_send_header,
-		(int*)&m_final_recv_header,
-		(int*)&m_finished_send_header,
-		(int*)&m_finished_recv_header,
-		(long unsigned int*)&vecsize
+	size_t vecsize;
+	int final_send_header, final_recv_header, finished_send_header, finished_recv_header;
+
+	int num_read = sscanf(buf, "%i*%i*%i*%i*%zu*",
+		&final_send_header,
+		&final_recv_header,
+		&finished_send_header,
+		&finished_recv_header,
+		&vecsize
 		);
 
 	ASSERT(num_read == 5)
+
+	this->m_final_send_header = (final_send_header == 0)       ? false : true;
+	this->m_final_recv_header = (final_recv_header == 0)       ? false : true;
+	this->m_finished_send_header = (finished_send_header == 0) ? false : true;
+	this->m_finished_recv_header = (finished_recv_header == 0) ? false : true;
 
 	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: set header vals: %i %i %i %i.\n",
 		m_final_send_header,
@@ -1369,14 +1391,14 @@ const char * ReliSock::serializeMsgInfo(const char * buf)
 	}
 	buf--;
 
-	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: consuming %lu hex bytes of vector data from  %s.\n", vecsize, buf);
+	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: consuming %zu hex bytes of vector data from  %s.\n", vecsize, buf);
 	m_final_mds.resize(vecsize);
 
 	int citems = 1;
 	if (vecsize) {
 		buf++;
 		unsigned int hex;
-		char* ptr = (char*)(&m_final_mds[0]);
+		unsigned char* ptr = m_final_mds.data();
 		for (unsigned int i = 0; i < vecsize; i++) {
 			citems = sscanf(buf, "%2X", &hex);
 			if (citems != 1) break;
@@ -1405,7 +1427,7 @@ ReliSock::serialize() const
 	char * msg = serializeMsgInfo();
 	char * md = serializeMdInfo();
 
-	formatstr( state, "%s%d*%s*%s*%s*%s*", parent_state, _special_state, _who.to_sinful().Value(), crypto, msg, md );
+	formatstr( state, "%s%d*%s*%s*%s*%s*", parent_state, _special_state, _who.to_sinful().c_str(), crypto, msg, md );
 
 	delete[] parent_state;
 	delete[] crypto;

@@ -60,7 +60,7 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 	m_mac[STRING_MAC_ADDRESS_LENGTH-1] = '\0';
     strncpy ( m_subnet, subnet, MAX_IP_ADDRESS_LENGTH-1 );
 	m_subnet[MAX_IP_ADDRESS_LENGTH-1] = '\0';
-    strncpy ( m_public_ip, my_ip.Value(), MAX_IP_ADDRESS_LENGTH-1 );
+    strncpy ( m_public_ip, my_ip.c_str(), MAX_IP_ADDRESS_LENGTH-1 );
 	m_public_ip[MAX_IP_ADDRESS_LENGTH-1] = '\0';
     m_can_wake = initialize ();	
 

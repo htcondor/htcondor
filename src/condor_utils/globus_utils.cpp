@@ -798,13 +798,17 @@ int x509_proxy_seconds_until_expire( globus_gsi_cred_handle_t handle )
 	return (int)time_diff;
 }
 
+#if !defined(HAVE_EXT_VOMS)
+int
+extract_VOMS_info( globus_gsi_cred_handle_t, int, char **, char **, char **)
+{
+	return 1;
+}
+#else
 int
 extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN)
 {
 
-#if !defined(HAVE_EXT_VOMS)
-	return 1;
-#else
 
 	int ret;
 	struct vomsdata *voms_data = NULL;
@@ -994,9 +998,8 @@ end:
 		sk_X509_pop_free(chain, X509_free);
 
 	return ret;
-#endif
-
 }
+#endif
 
 
 int

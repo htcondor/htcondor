@@ -156,10 +156,10 @@ short_print(
                 cluster,
                 proc,
                 owner,
-                SubmitDateStr.Value(),
+                SubmitDateStr.c_str(),
                 format_time(time),
                 encode_status(status),
-                CompDateStr.Value(),
+                CompDateStr.c_str(),
                 cmd
         );
 }

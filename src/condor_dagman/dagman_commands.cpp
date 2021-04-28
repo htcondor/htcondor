@@ -80,7 +80,7 @@ AddNode( Dag *dag, const char *name,
 	if( done && type == NodeType::FINAL ) {
 		failReason.formatstr( "Warning: FINAL Job %s cannot be set to DONE\n",
 					name );
-        debug_printf( DEBUG_QUIET, "%s", failReason.Value() );
+        debug_printf( DEBUG_QUIET, "%s", failReason.c_str() );
 		(void)check_warning_strictness( DAG_STRICT_1, false );
 		done = false;
 	}

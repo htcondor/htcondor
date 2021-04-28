@@ -21,7 +21,7 @@
 #include "MyString.h"
 #include "condor_ftp.h"
 
-void stm_to_string(SandboxTransferMethod stm, MyString &str)
+void stm_to_string(SandboxTransferMethod stm, std::string &str)
 {
 	switch(stm)
 	{
@@ -41,14 +41,14 @@ void stm_to_string(SandboxTransferMethod stm, MyString &str)
 	str = "STM_UNKNOWN";
 }
 
-void string_to_stm(const MyString &str, SandboxTransferMethod &stm)
+void string_to_stm(const std::string &str, SandboxTransferMethod &stm)
 {
-	MyString tmp;
+	std::string tmp;
 
 	tmp = str;
 
-	tmp.trim();
-	tmp.upper_case();
+	trim(tmp);
+	upper_case(tmp);
 
 	// a default value incase nothing matches.
 	stm = STM_UNKNOWN;

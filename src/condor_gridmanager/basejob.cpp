@@ -768,11 +768,11 @@ int BaseJob::EvalPeriodicJobExpr()
 
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 
-	MyString reason_buf;
+	std::string reason_buf;
 	int reason_code;
 	int reason_subcode;
 	user_policy.FiringReason(reason_buf,reason_code,reason_subcode);
-	char const *reason = reason_buf.Value();
+	char const *reason = reason_buf.c_str();
 	if ( reason == NULL || !reason[0] ) {
 		reason = "Unknown user policy expression";
 	}
@@ -848,11 +848,11 @@ int BaseJob::EvalOnExitJobExpr()
 		jobAd->AssignExpr( ATTR_ON_EXIT_SIGNAL, "Undefined" );
 	}
 
-	MyString reason_buf;
+	std::string reason_buf;
 	int reason_code;
 	int reason_subcode;
 	user_policy.FiringReason(reason_buf,reason_code,reason_subcode);
-	const char *reason = reason_buf.Value();
+	const char *reason = reason_buf.c_str();
 	if ( reason == NULL || !reason[0] ) {
 		reason = "Unknown user policy expression";
 	}

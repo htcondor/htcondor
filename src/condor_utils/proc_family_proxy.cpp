@@ -118,8 +118,8 @@ ProcFamilyProxy::ProcFamilyProxy(const char* address_suffix)
 		if (!start_procd()) {
 			EXCEPT("unable to spawn the ProcD");
 		}
-		SetEnv("CONDOR_PROCD_ADDRESS_BASE", procd_addr_base.Value());
-		SetEnv("CONDOR_PROCD_ADDRESS", m_procd_addr.Value());
+		SetEnv("CONDOR_PROCD_ADDRESS_BASE", procd_addr_base.c_str());
+		SetEnv("CONDOR_PROCD_ADDRESS", m_procd_addr.c_str());
 	}
 	else {
 		const char* addr_from_env = GetEnv("CONDOR_PROCD_ADDRESS");
@@ -134,7 +134,7 @@ ProcFamilyProxy::ProcFamilyProxy(const char* address_suffix)
 	//
 	m_client = new ProcFamilyClient;
 	ASSERT(m_client != NULL);
-	if (!m_client->initialize(m_procd_addr.Value())) {
+	if (!m_client->initialize(m_procd_addr.c_str())) {
 		dprintf(D_ALWAYS,
 		        "ProcFamilyProxy: error initializing ProcFamilyClient\n");
 		recover_from_procd_error();
@@ -440,7 +440,7 @@ ProcFamilyProxy::start_procd()
 
 	// the (optional) procd log file
 	//
-	if (m_procd_log.Length() > 0 && log_size != 0) {
+	if (m_procd_log.length() > 0 && log_size != 0) {
 		args.AppendArg("-L");
 		args.AppendArg(m_procd_log);
 	
@@ -449,7 +449,7 @@ ProcFamilyProxy::start_procd()
 			MyString size_arg;
 			size_arg.serialize_int(log_size);
 			args.AppendArg("-R");
-			args.AppendArg(size_arg.Value());
+			args.AppendArg(size_arg.c_str());
 		}
 	}
 
@@ -548,7 +548,7 @@ ProcFamilyProxy::start_procd()
 		MyString glexec_kill;
 		glexec_kill.formatstr("%s/condor_glexec_kill", libexec);
 		free(libexec);
-		args.AppendArg(glexec_kill.Value());
+		args.AppendArg(glexec_kill.c_str());
 		char* glexec = param("GLEXEC");
 		if (glexec == NULL) {
 			EXCEPT("GLEXEC_JOB is defined, but GLEXEC not configured");
@@ -594,7 +594,7 @@ ProcFamilyProxy::start_procd()
 
 	// use Create_Process to start the procd
 	//
-	m_procd_pid = daemonCore->Create_Process(exe.Value(),
+	m_procd_pid = daemonCore->Create_Process(exe.c_str(),
 	                                         args,
 	                                         PRIV_ROOT,
 	                                         m_reaper_id,
@@ -726,7 +726,7 @@ ProcFamilyProxy::recover_from_procd_error()
 
 		m_client = new ProcFamilyClient;
 		ASSERT(m_client != NULL);
-		if (!m_client->initialize(m_procd_addr.Value())) {
+		if (!m_client->initialize(m_procd_addr.c_str())) {
 			dprintf(D_ALWAYS,
 			        "recover_from_procd_error: "
 			            "error initializing ProcFamilyClient\n");

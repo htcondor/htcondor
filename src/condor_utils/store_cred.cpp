@@ -119,24 +119,31 @@ static bool wake_the_credmon(int mode)
 
 namespace {
 
-class NamedCredentialCache
+class IssuerKeyNameCache
 {
 private:
-	std::vector<std::string> m_creds;
-	std::chrono::steady_clock::time_point m_last_refresh;
+	std::string m_name_list;
+	time_t m_last_refresh;
 
 public:
-	NamedCredentialCache() {}
+	IssuerKeyNameCache() : m_last_refresh(0) {}
 
-	void Refresh() {
-		m_creds.clear();
-		m_last_refresh = std::chrono::steady_clock::time_point();
+	void Clear() {
+		m_name_list.clear();
+		m_last_refresh = 0;
 	}
 
-	bool List(std::vector<std::string> &creds, CondorError *err);
+	const std::string & Peek(time_t * last_ref=NULL) {
+		if (last_ref) *last_ref = m_last_refresh;
+		return m_name_list;
+	}
+
+	const std::string & NameList(CondorError *err);
 };
 
-NamedCredentialCache g_cred_cache;
+IssuerKeyNameCache g_issuer_name_cache;
+
+}
 
 char *
 read_password_from_filename(const char *filename, CondorError *err)
@@ -172,7 +179,6 @@ read_password_from_filename(const char *filename, CondorError *err)
 	return nullptr;
 }
 
-}
 
 
 #ifndef WIN32
@@ -187,7 +193,7 @@ void SecureZeroMemory(void *p, size_t n)
 #endif
 
 int
-cred_matches(MyString & credfile, const ClassAd * requestAd)
+cred_matches(const std::string & credfile, const ClassAd * requestAd)
 {
 	// read the file back to make sure the scopes & audience match
 	// the request
@@ -227,18 +233,18 @@ cred_matches(MyString & credfile, const ClassAd * requestAd)
 }
 
 long long
-PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int rawlen, int mode, MyString & ccfile)
+PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int rawlen, int mode, std::string & ccfile)
 {
 	dprintf(D_ALWAYS, "PWD store cred user %s len %i mode %i\n", username, rawlen, mode);
 
 	ccfile.clear();
 
 	int rc;
-	MyString pw;
+	std::string pw;
 	if ((mode & MODE_MASK) == GENERIC_ADD) {
-		pw.set((const char *)rawbuf, rawlen);
+		pw.assign((const char *)rawbuf, rawlen);
 		// check for null characters in password, we don't support those
-		if (pw.length() != (int)strlen(pw.c_str())) {
+		if (pw.length() != strlen(pw.c_str())) {
 			dprintf(D_ALWAYS, "Failed to add password for user %s, password contained NULL characters\n", username);
 			return FAILURE_BAD_PASSWORD;
 		}
@@ -288,7 +294,7 @@ bool okay_for_oauth_filename(std::string s) {
 }
 
 long long
-OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, const ClassAd * ad, ClassAd & return_ad, MyString & ccfile)
+OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, const ClassAd * ad, ClassAd & return_ad, std::string & ccfile)
 {
 	// store an OAuth token, this is presumed to be a refresh token (*.top file) unless the classad argument
 	// indicates that it is not a refresh token, in which case it is stored as a *.use file
@@ -337,7 +343,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 	credmon_clear_mark(cred_dir, username);
 
 	// the user's creds go into a directory
-	MyString user_cred_path;
+	std::string user_cred_path;
 	dircat(cred_dir, username, user_cred_path);
 
 	// lookup and validate service name
@@ -524,7 +530,7 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 
 // this is a helper function massages the info enough that we can call the oauth store cred
 long long
-LOCAL_STORE_CRED(const char *username, const char *servicename, MyString &ccfile) {
+LOCAL_STORE_CRED(const char *username, const char *servicename, std::string &ccfile) {
 
 	// put the service name in an ad so the oauth code can extract it
 	ClassAd ad, ret;
@@ -552,7 +558,7 @@ LOCAL_STORE_CRED(const char *username, const char *servicename, MyString &ccfile
 //   but the caller should wait for a .cc file before proceeding,
 //   the ccfile argument will be returned
 long long
-KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, ClassAd & return_ad, MyString & ccfile, bool &detected_local_cred)
+KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credlen, int mode, ClassAd & return_ad, std::string & ccfile, bool &detected_local_cred)
 {
 	dprintf(D_ALWAYS, "Krb store cred user %s len %i mode %i\n", username, credlen, mode);
 
@@ -644,7 +650,7 @@ KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credle
 		return cred_stat_buf.st_mtime;
 	}
 
-	MyString credfile;
+	std::string credfile;
 	dircat(cred_dir, username, ".cred", credfile);
 	const char *filename = credfile.c_str();
 
@@ -699,8 +705,8 @@ UNIX_GET_CRED(const char *user, const char *domain, size_t & len)
 	}
 
 	// create filenames
-	MyString filename;
-	filename.formatstr("%s%c%s.cred", cred_dir.ptr(), DIR_DELIM_CHAR, user);
+	std::string filename;
+	formatstr(filename,"%s%c%s.cred", cred_dir.ptr(), DIR_DELIM_CHAR, user);
 	dprintf(D_ALWAYS, "CREDS: reading data from %s\n", filename.c_str());
 
 	// read the file (fourth argument "true" means as_root)
@@ -713,7 +719,7 @@ UNIX_GET_CRED(const char *user, const char *domain, size_t & len)
 }
 
 
-long long store_cred_blob(const char *user, int mode, const unsigned char *blob, int bloblen, const ClassAd * ad, MyString &ccfile)
+long long store_cred_blob(const char *user, int mode, const unsigned char *blob, int bloblen, const ClassAd * ad, std::string &ccfile)
 {
 	int domain_pos = -1;
 	if (username_is_pool_password(user, &domain_pos)) {
@@ -777,7 +783,7 @@ unsigned char* getStoredCredential(int mode, const char *username, const char *d
 	}
 
 	// create filenames
-	MyString credfile;
+	std::string credfile;
 	const char * filename = dircat(cred_dir, username, ".cred", credfile);
 
 	dprintf(D_ALWAYS, "CREDS: reading data from %s\n", filename);
@@ -1181,7 +1187,7 @@ cred_get_password_handler(int /*i*/, Stream *s)
 	if ( s->type() != Stream::reli_sock ) {
 		dprintf(D_ALWAYS,
 			"WARNING - password fetch attempt via UDP from %s\n",
-				((Sock*)s)->peer_addr().to_sinful().Value());
+				((Sock*)s)->peer_addr().to_sinful().c_str());
 		return TRUE;
 	}
 
@@ -1192,7 +1198,7 @@ cred_get_password_handler(int /*i*/, Stream *s)
 	if ( !sock->isAuthenticated() ) {
 		dprintf(D_ALWAYS,
 				"WARNING - authentication failed for password fetch attempt from %s\n",
-				sock->peer_addr().to_sinful().Value());
+				sock->peer_addr().to_sinful().c_str());
 		goto bail_out;
 	}
 
@@ -1203,7 +1209,7 @@ cred_get_password_handler(int /*i*/, Stream *s)
 	if ( !sock->get_encryption() ) {
 		dprintf(D_ALWAYS,
 			"WARNING - password fetch attempt without encryption from %s\n",
-				sock->peer_addr().to_sinful().Value());
+				sock->peer_addr().to_sinful().c_str());
 		goto bail_out;
 	}
 
@@ -1233,7 +1239,16 @@ cred_get_password_handler(int /*i*/, Stream *s)
 
 	client_user = strdup(sock->getOwner());
 	client_domain = strdup(sock->getDomain());
-	client_ipaddr = strdup(sock->peer_addr().to_sinful().Value());
+	client_ipaddr = strdup(sock->peer_addr().to_sinful().c_str());
+
+	// we do not want to send out the pool password through a command handler
+	if(strcmp(user, POOL_PASSWORD_USERNAME) == 0) {
+		dprintf(D_ALWAYS,
+			"Refusing to fetch password for %s@%s requested by %s@%s at %s\n",
+			user,domain,
+			client_user,client_domain,client_ipaddr);
+		goto bail_out;
+	}
 
 		// Now fetch the password from the secure store --
 		// If not LocalSystem, this step will fail.
@@ -1300,7 +1315,7 @@ cred_get_cred_handler(int /*i*/, Stream *s)
 	if ( s->type() != Stream::reli_sock ) {
 		dprintf(D_ALWAYS,
 			"WARNING - credential fetch attempt via UDP from %s\n",
-			((Sock*)s)->peer_addr().to_sinful().Value());
+			((Sock*)s)->peer_addr().to_sinful().c_str());
 		return TRUE;
 	}
 
@@ -1311,7 +1326,7 @@ cred_get_cred_handler(int /*i*/, Stream *s)
 	if ( !sock->isAuthenticated() ) {
 		dprintf(D_ALWAYS,
 			"WARNING - authentication failed for credential fetch attempt from %s\n",
-			sock->peer_addr().to_sinful().Value());
+			sock->peer_addr().to_sinful().c_str());
 		goto bail_out;
 	}
 
@@ -1322,7 +1337,7 @@ cred_get_cred_handler(int /*i*/, Stream *s)
 	if ( !sock->get_encryption() ) {
 		dprintf(D_ALWAYS,
 			"WARNING - credential fetch attempt without encryption from %s\n",
-			sock->peer_addr().to_sinful().Value());
+			sock->peer_addr().to_sinful().c_str());
 		goto bail_out;
 	}
 
@@ -1358,7 +1373,7 @@ cred_get_cred_handler(int /*i*/, Stream *s)
 
 	client_user = strdup(sock->getOwner());
 	client_domain = strdup(sock->getDomain());
-	client_ipaddr = strdup(sock->peer_addr().to_sinful().Value());
+	client_ipaddr = strdup(sock->peer_addr().to_sinful().c_str());
 
 	// Now fetch the password from the secure store --
 	// If not LocalSystem, this step will fail.
@@ -1437,7 +1452,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 	std::string fulluser; // full username including domain
 	std::string username; // just the username part before the @ of the above
 	std::string pass;	  // password, if the password is a string and mode is LEGACY
-	MyString ccfile;   // credmon completion file to watch for before returning
+	std::string ccfile;   // credmon completion file to watch for before returning
 	ClassAd     ad;
 	ClassAd     return_ad;
 	auto_free_ptr cred;
@@ -1458,7 +1473,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 	if ( s->type() != Stream::reli_sock ) {
 		dprintf(D_ALWAYS,
 			"WARNING - credential store attempt via UDP from %s\n",
-				((Sock*)s)->peer_addr().to_sinful().Value());
+				((Sock*)s)->peer_addr().to_sinful().c_str());
 		return FALSE;
 	}
 
@@ -1469,7 +1484,7 @@ int store_cred_handler(int /*i*/, Stream *s)
 	if ( !sock->isAuthenticated() ) {
 		dprintf(D_ALWAYS,
 			"WARNING - authentication failed for credential store attempt from %s\n",
-			sock->peer_addr().to_sinful().Value());
+			sock->peer_addr().to_sinful().c_str());
 		return FALSE;
 	}
 
@@ -1770,7 +1785,7 @@ int store_pool_cred_handler(int, Stream *s)
 	int result;
 	char *pw = NULL;
 	char *domain = NULL;
-	MyString username = POOL_PASSWORD_USERNAME "@";
+	std::string username = POOL_PASSWORD_USERNAME "@";
 
 	if (s->type() != Stream::reli_sock) {
 		dprintf(D_ALWAYS, "ERROR: pool password set attempt via UDP\n");
@@ -1783,20 +1798,20 @@ int store_pool_cred_handler(int, Stream *s)
 	char *credd_host = param("CREDD_HOST");
 	if (credd_host) {
 
-		MyString my_fqdn_str = get_local_fqdn();
-		MyString my_hostname_str = get_local_hostname();
+		std::string my_fqdn_str = get_local_fqdn();
+		std::string my_hostname_str = get_local_hostname();
 		// TODO: Arbitrarily picking IPv4
-		MyString my_ip_str = get_local_ipaddr(CP_IPV4).to_ip_string();
+		std::string my_ip_str = get_local_ipaddr(CP_IPV4).to_ip_string();
 
 		// figure out if we're on the CREDD_HOST
-		bool on_credd_host = (strcasecmp(my_fqdn_str.Value(), credd_host) == MATCH);
-		on_credd_host = on_credd_host || (strcasecmp(my_hostname_str.Value(), credd_host) == MATCH);
-		on_credd_host = on_credd_host || (strcmp(my_ip_str.Value(), credd_host) == MATCH);
+		bool on_credd_host = (strcasecmp(my_fqdn_str.c_str(), credd_host) == MATCH);
+		on_credd_host = on_credd_host || (strcasecmp(my_hostname_str.c_str(), credd_host) == MATCH);
+		on_credd_host = on_credd_host || (strcmp(my_ip_str.c_str(), credd_host) == MATCH);
 
 		if (on_credd_host) {
 				// we're the CREDD_HOST; make sure the source address matches ours
 			const char *addr = ((ReliSock*)s)->peer_ip_str();
-			if (!addr || strcmp(my_ip_str.Value(), addr)) {
+			if (!addr || strcmp(my_ip_str.c_str(), addr)) {
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password remotely\n");
 				free(credd_host);
 				return CLOSE_STREAM;
@@ -1822,11 +1837,11 @@ int store_pool_cred_handler(int, Stream *s)
 
 	// do the real work
 	if (pw && *pw) {
-		result = store_cred_password(username.Value(), pw, GENERIC_ADD);
+		result = store_cred_password(username.c_str(), pw, GENERIC_ADD);
 		SecureZeroMemory(pw, strlen(pw));
 	}
 	else {
-		result = store_cred_password(username.Value(), NULL, GENERIC_DELETE);
+		result = store_cred_password(username.c_str(), NULL, GENERIC_DELETE);
 	}
 
 	s->encode();
@@ -2016,7 +2031,7 @@ do_store_cred (
 	long return_val;
 #endif
 	Sock* sock = NULL;
-	MyString daemonid; // for error messages
+	std::string daemonid; // for error messages
 
 	// to help future debugging, print out the mode we are in
 	dprintf ( D_ALWAYS,  "STORE_CRED: In mode %d '%s', user is \"%s\"\n", mode, mode_name[mode & MODE_MASK], user);
@@ -2043,7 +2058,7 @@ do_store_cred (
 	// If not, then send the request over the wire to a remote credd or schedd.
 
 	if ( is_root() && d == NULL ) {
-		MyString ccfile;	// we don't care about a completion file, but we have to pass this in anyway
+		std::string ccfile;	// we don't care about a completion file, but we have to pass this in anyway
 		if (mode >= STORE_CRED_LEGACY_PWD && mode <= STORE_CRED_LAST_MODE) {
 			return_val = store_cred_password(user, (const char *)cred, mode);
 		} else {
@@ -2060,8 +2075,8 @@ do_store_cred (
 			if ((cred_type != STORE_CRED_LEGACY_PWD) && (cred_type != STORE_CRED_USER_PWD)) {
 				return FAILURE_BAD_ARGS;
 			}
-			MyString pw;
-			if (cred) pw.set((const char *)cred, credlen);
+			std::string pw;
+			if (cred) pw.assign((const char *)cred, credlen);
 			return do_store_cred(user, pw.c_str(), mode, d);
 		}
 		if ((domain_pos <= 0) && user[0]) {
@@ -2096,9 +2111,9 @@ do_store_cred (
 			return FAILURE_NOT_SECURE;
 		}
 
-		MyString pw;
+		std::string pw;
 		if (mode & STORE_CRED_LEGACY) {
-			if (cred) pw.set((const char *)cred, credlen);
+			if (cred) pw.assign((const char *)cred, credlen);
 		} else {
 			// TODO: password field could be used for other data, perhaps cred subtype?
 		}
@@ -2219,7 +2234,7 @@ int do_check_oauth_creds (
 {
 	ReliSock * sock;
 	CondorError err;
-	MyString daemonid;
+	std::string daemonid;
 
 	outputURL.clear();
 	if (num_ads < 0) {
@@ -2447,120 +2462,241 @@ get_password() {
 }
 
 
-bool
-NamedCredentialCache::List(std::vector<std::string> &creds, CondorError *err)
+const std::string & IssuerKeyNameCache::NameList(CondorError * err)
 {
-	// First, check to see if our cache is still usable; if so, make a copy.
-	auto current = std::chrono::steady_clock::now();
-	if (std::chrono::duration_cast<std::chrono::seconds>(current - m_last_refresh).count() < 10) {
-		std::copy(m_creds.begin(), m_creds.end(), std::back_inserter(creds));
-		return true;
+	// First, check to see if our cache is still usable; if so, return it
+	time_t now = time(NULL);
+	if ((now - m_last_refresh) < param_integer("SEC_TOKEN_POOL_SIGNING_DIR_REFRESH_TIME",0)) {
+		return m_name_list;
 	}
+	m_last_refresh = now;
 
-	// Next, iterate through the passwords directory and cache the names
-	// Note we reuse the exclude regexp from the configuration subsys.
+	std::string poolkeypath;
+	param(poolkeypath, "SEC_TOKEN_POOL_SIGNING_KEY_FILE");
 
-	std::string dirpath;
-	if (!param(dirpath, "SEC_PASSWORD_DIRECTORY")) {
-		if (err) err->push("CRED", 1, "SEC_PASSWORD_DIRECTORY is undefined");
-		return false;
-	}
-
-	const char* _errstr;
-	int _erroffset;
-	std::string excludeRegex;
-		// We simply fail invalid regex as the config subsys should have EXCEPT'd
-		// in this case.
-	if (!param(excludeRegex, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP")) {
-		if (err) err->push("CRED", 1, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP is unset");
-		return false;
-	}
+	// we also get all other signing keys from the token key directory if there is one
+	// it is not an error to have no directory, nor is it an error to have no exclusion list
 	Regex excludeFilesRegex;
-	if (!excludeFilesRegex.compile(excludeRegex, &_errstr, &_erroffset)) {
-		if (err) err->pushf("CRED", 1, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
-			"config parameter is not a valid "
-			"regular expression.  Value: %s,  Error: %s",
-			excludeRegex.c_str(), _errstr ? _errstr : "");
-		return false;
-	}
-	if(!excludeFilesRegex.isInitialized() ) {
-		if (err) err->push("CRED", 1, "Failed to initialize exclude files regex.");
-		return false;
+	auto_free_ptr dirpath(param("SEC_PASSWORD_DIRECTORY"));
+	if (dirpath) {
+		auto_free_ptr excludeRegex(param("LOCAL_CONFIG_DIR_EXCLUDE_REGEXP"));
+		if (excludeRegex) {
+			const char* _errstr;
+			int _erroffset;
+			if (!excludeFilesRegex.compile(excludeRegex.ptr(), &_errstr, &_erroffset)) {
+				if (err) err->pushf("TOKEN", 1, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
+					"config parameter is not a valid "
+					"regular expression.  Value: %s,  Error: %s",
+					excludeRegex.ptr(), _errstr ? _errstr : "");
+				return m_name_list;
+			}
+			if (!excludeFilesRegex.isInitialized()) {
+				if (err) err->push("TOKEN", 1, "Failed to initialize exclude files regex.");
+				return m_name_list;
+			}
+		}
 	}
 
-		// If we can, try reading out the passwords as root.
+	// If we can, try reading out the passwords as root.
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 
-	m_creds.clear();
-	std::unordered_set<std::string> tmp_creds;
+	// check access on the pool key, and scan the key directory
+	std::set<std::string> keys;
 
-	std::string pool_password;
-	if (param(pool_password, "SEC_PASSWORD_FILE")) {
-		if (0 == access(pool_password.c_str(), R_OK)) {
-			tmp_creds.insert("POOL");
+	size_t keyslen = 0;
+	if ( ! poolkeypath.empty()) { // this is currently the pool key
+		if (0 == access(poolkeypath.c_str(), R_OK)) {
+			keys.insert("POOL");
+			keyslen += 4;
 		}
 	}
 
-	Directory dir(dirpath.c_str());
-	if (!dir.Rewind()) {
-		if (err) {
-			err->pushf("CRED", 1, "Cannot open %s: %s (errno=%d)",
-				dirpath.c_str(), strerror(errno), errno);
-		}
-		if (!tmp_creds.empty()) {
-			std::copy(tmp_creds.begin(), tmp_creds.end(), std::back_inserter(m_creds));
-			std::copy(m_creds.begin(), m_creds.end(), std::back_inserter(creds));
-		} else {
-			return false;
-		}
-	}
-
-	const char *file;
-	while( (file = dir.Next()) ) {
-		if (dir.IsDirectory()) {
-			continue;
-		}
-		if(!excludeFilesRegex.match(file)) {
-			if (0 == access(dir.GetFullPath(), R_OK)) {
-				tmp_creds.insert(file);
+	// do we have a directory? 
+	if (dirpath) {
+		Directory dir(dirpath);
+		if (!dir.Rewind()) {
+			if (err) {
+				err->pushf("CRED", 1, "Cannot open %s: %s (errno=%d)",
+					dirpath.ptr(), strerror(errno), errno);
 			}
 		} else {
-			dprintf(D_FULLDEBUG|D_SECURITY, "Ignoring password file "
-				"based on LOCAL_CONFIG_DIR_EXCLUDE_REGEXP: "
-				"'%s'\n", dir.GetFullPath());
+
+			const char *file;
+			while ((file = dir.Next())) {
+				if (dir.IsDirectory()) {
+					continue;
+				}
+				if (!excludeFilesRegex.isInitialized() || !excludeFilesRegex.match(file)) {
+					if (0 == access(dir.GetFullPath(), R_OK)) {
+						keys.insert(file);
+						keyslen += strlen(file);
+					}
+				} else {
+					dprintf(D_FULLDEBUG | D_SECURITY, "Skipping TOKEN key file "
+						"based on LOCAL_CONFIG_DIR_EXCLUDE_REGEXP: "
+						"'%s'\n", dir.GetFullPath());
+				}
+			}
 		}
 	}
 
-	std::copy(tmp_creds.begin(), tmp_creds.end(), std::back_inserter(m_creds));
-	std::sort(m_creds.begin(), m_creds.end());
-	std::copy(m_creds.begin(), m_creds.end(), std::back_inserter(creds));
+	// now turn the temporary set of keys into a comma separated string
 
+	m_name_list.clear();
+	if ( ! keys.empty()) {
+		m_name_list.reserve(keyslen + 1 + 2 * keys.size());
+		for (auto it = keys.begin(); it != keys.end(); ++it) {
+			if (! m_name_list.empty()) m_name_list += ", ";
+			m_name_list += *it;
+		}
+	}
+
+	return m_name_list;
+}
+
+// helper function for getTokenSigningKeyPath and hasTokenSigningKey
+// takes a key_id and returns the path to the file that should contain the signing key
+// will set the CondorError if the configuration is missing knobs necessary to determine the path
+// will optionally set is_legacy_pool_pass if the signing key should be loaded using backward compat hacks for pool passwords
+bool getTokenSigningKeyPath(const std::string &key_id, std::string &fullpath, CondorError *err, bool * is_pool_pass)
+{
+	bool is_pool = false;
+	if (key_id.empty() || (key_id == "POOL") || starts_with(key_id, POOL_PASSWORD_USERNAME "@")) {
+		param(fullpath, "SEC_TOKEN_POOL_SIGNING_KEY_FILE");
+		if (fullpath.empty()) {
+			if (err) err->push("TOKEN", 1, "No master pool token key setup in SEC_TOKEN_POOL_SIGNING_KEY_FILE");
+			return false;
+		}
+		// 
+		is_pool = true;
+
+	} else {
+
+		// we get all other signing keys from the token key directory
+		auto_free_ptr dirpath(param("SEC_PASSWORD_DIRECTORY"));
+		if ( ! dirpath) {
+			if (err) err->push("TOKEN", 1, "SEC_PASSWORD_DIRECTORY is undefined");
+			return false;
+		}
+		dircat(dirpath, key_id.c_str(), fullpath);
+	}
+
+	if (is_pool_pass) *is_pool_pass = is_pool;
 	return true;
 }
 
+// returns true if the token signing key file for this key id exists and is readable by root
+// will set CondorError and return false if not.
+bool hasTokenSigningKey(const std::string &key_id, CondorError *err) {
 
-bool getNamedCredential(const std::string &cred, std::string &contents, CondorError *err) {
-	std::string dirpath;
-	if (!param(dirpath, "SEC_PASSWORD_DIRECTORY")) {
-		if (err) err->push("CRED", 1, "SEC_PASSWORD_DIRECTORY is undefined");
+	// do a quick check in the issuer name cache, but don't rebuild it
+	auto keys = g_issuer_name_cache.Peek();
+	if ( ! keys.empty()) {
+		StringList list(keys.c_str());
+		if (list.contains(key_id.c_str())) {
+			return true;
+		}
+	}
+
+	std::string fullpath;
+	if ( ! getTokenSigningKeyPath(key_id, fullpath, err, nullptr)) {
 		return false;
 	}
-	std::string fullpath = dirpath + DIR_DELIM_CHAR + cred;
-	std::unique_ptr<char> password(read_password_from_filename(fullpath.c_str(), err));
+	// check to see if the file exits and is readable
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	if (0 == access(fullpath.c_str(), R_OK)) {
+		return true;
+	}
+	return false;
+}
 
-	if (!password.get()) {
+bool getTokenSigningKey(const std::string &key_id, std::string &contents, CondorError *err) {
+
+	// If using the POOL password as the signing key may have to truncate at first null for backward compat
+	bool truncate_at_first_null = false;
+	// for backward compatibility, if using the pool password we may want to double the key
+	bool double_the_key = false; 
+
+	// We get the "pool" signing key for this pool from a specific knob
+	std::string fullpath;
+	bool is_pool = false;
+	if ( ! getTokenSigningKeyPath(key_id, fullpath, err, &is_pool)) {
 		return false;
 	}
-	contents = std::string(password.get());
+	// so that tokens issued against a non-trucated POOL signing key pre 8.9.12 still work
+	// we will always double the pool key
+	double_the_key = is_pool;
+	if (is_pool) {
+			// secret knob to tell us to process the token signing key the way we would pre 9.0
+			// Set this to true if the key has imbedded nulls and had been used to sign tokens with
+			// an earlier version of Condor, and for some reason you don't want to just truncate the
+			// file itself
+		truncate_at_first_null = param_boolean("SEC_TOKEN_POOL_SIGNING_KEY_IS_PASSWORD", false);
+	}
+
+	dprintf(D_SECURITY, "getTokenSigningKey(): for id=%s, pool=%d v84mode=%d reading %s\n",
+		key_id.c_str(), is_pool, truncate_at_first_null, fullpath.c_str());
+
+	char* buf = nullptr;
+	size_t len = 0;
+	const bool as_root = true; // TODO: don't require root if we can't do priv switching
+	if ( ! read_secure_file(fullpath.c_str(), (void**)&buf, &len, as_root) || ! buf) {
+		if (err) err->pushf("TOKEN", 1, "Failed to read file %s securely.", fullpath.c_str());
+		dprintf(D_ALWAYS, "getTokenSigningKey(): read_secure_file(%s) failed!\n", fullpath.c_str());
+		return false;
+	}
+	size_t file_len = len;
+	if (truncate_at_first_null) {
+		// buffer now contains the binary contents from the file.
+		// due to the way 8.4.X and earlier version wrote the file,
+		// there will be trailing NULL characters, although they are
+		// ignored in 8.4.X by the code that reads them.  As such, for
+		// us to agree on the password, we also need to discard
+		// everything after the first NULL.  we do this by simply
+		// resetting the len.  there is a function "strnlen" but it's a
+		// GNU extension so we just do the raw scan here:
+		size_t newlen = 0;
+		while(newlen < len && buf[newlen]) {
+			newlen++;
+		}
+		len = newlen;
+	}
+
+	// copy back the result, undoing the trivial scramble
+	// and doubling the key if needed
+	std::vector<char> pw;
+	if (double_the_key) {
+		pw.resize(len*2+1);
+		simple_scramble(reinterpret_cast<char*>(pw.data()), buf, (int)len);
+		if (truncate_at_first_null) {
+			// we want to be sure that post-scramble we still have no imbedded nulls
+			// so we force null after the end of the buffer and then get the length again. 
+			pw[len] = 0;
+			len = strlen(pw.data());
+		}
+		memcpy(&pw[len], &pw[0], len);
+		if (len < file_len) {
+			dprintf(D_ALWAYS, "WARNING: pool signing key truncated from %d to %d bytes because of internal NUL characters\n",
+				(int)file_len, (int)len);
+		}
+		len *= 2;
+	} else {
+		pw.resize(len);
+		simple_scramble(reinterpret_cast<char*>(pw.data()), buf, (int)len);
+	}
+	free(buf);
+
+	contents.assign(pw.data(), len);
 	return true;
 }
 
-
-bool
-listNamedCredentials(std::vector<std::string> &creds, CondorError *err) {
-	return g_cred_cache.List(creds, err);
+const std::string & getCachedIssuerKeyNames(CondorError * err)
+{
+	return g_issuer_name_cache.NameList(err);
 }
 
-void refreshNamedCredentials() {
-	g_cred_cache.Refresh();
+void clearIssuerKeyNameCache()
+{
+	g_issuer_name_cache.Clear();
 }
+

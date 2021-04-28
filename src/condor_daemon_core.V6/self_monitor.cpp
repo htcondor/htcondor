@@ -470,7 +470,7 @@ double DaemonCore::Stats::AddSample(const char * name, int as, double val)
    if ( ! probe) {
        MyString attr(name);
        cleanStringForUseAsAttr(attr);
-       probe = Pool.NewProbe< stats_entry_probe<double> >(name, attr.Value(), as);
+       probe = Pool.NewProbe< stats_entry_probe<double> >(name, attr.c_str(), as);
    }
 
    if (probe)
@@ -548,7 +548,7 @@ void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int 
       case AS_COUNT | IS_RECENT:
          {
          stats_entry_recent<int> * probe =
-         Pool.NewProbe< stats_entry_recent<int> >(name,  attr.Value(), as);
+         Pool.NewProbe< stats_entry_recent<int> >(name,  attr.c_str(), as);
          probe->SetRecentMax(this->RecentWindowMax / this->RecentWindowQuantum);
          ret = probe;
          }
@@ -557,7 +557,7 @@ void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int 
      case  AS_COUNT | IS_CLS_EMA:
          {
          stats_entry_ema<int>* probe =
-         Pool.NewProbe< stats_entry_ema<int> >(name, attr.Value(), as | stats_entry_ema<int>::PubDefault);
+         Pool.NewProbe< stats_entry_ema<int> >(name, attr.c_str(), as | stats_entry_ema<int>::PubDefault);
          probe->ConfigureEMAHorizons(ema_config);
          probe->Clear();
          ret = probe;
@@ -567,7 +567,7 @@ void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int 
      case  STATS_ENTRY_TYPE_DOUBLE | IS_CLS_EMA:
          {
          stats_entry_ema<double>* probe =
-         Pool.NewProbe< stats_entry_ema<double> >(name, attr.Value(), as | stats_entry_ema<double>::PubDefault);
+         Pool.NewProbe< stats_entry_ema<double> >(name, attr.c_str(), as | stats_entry_ema<double>::PubDefault);
          probe->ConfigureEMAHorizons(ema_config);
          probe->Clear();
          ret = probe;
@@ -577,7 +577,7 @@ void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int 
      case  AS_COUNT | IS_CLS_SUM_EMA_RATE:
          {
          stats_entry_sum_ema_rate<int>* probe =
-         Pool.NewProbe< stats_entry_sum_ema_rate<int> >(name, attr.Value(), as | stats_entry_sum_ema_rate<int>::PubDefault);
+         Pool.NewProbe< stats_entry_sum_ema_rate<int> >(name, attr.c_str(), as | stats_entry_sum_ema_rate<int>::PubDefault);
          probe->ConfigureEMAHorizons(ema_config);
          probe->Clear();
          ret = probe;
@@ -587,7 +587,7 @@ void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int 
      case  STATS_ENTRY_TYPE_DOUBLE | IS_CLS_SUM_EMA_RATE:
          {
          stats_entry_sum_ema_rate<double>* probe =
-         Pool.NewProbe< stats_entry_sum_ema_rate<double> >(name, attr.Value(), as | stats_entry_sum_ema_rate<double>::PubDefault);
+         Pool.NewProbe< stats_entry_sum_ema_rate<double> >(name, attr.c_str(), as | stats_entry_sum_ema_rate<double>::PubDefault);
          probe->ConfigureEMAHorizons(ema_config);
          probe->Clear();
          ret = probe;
@@ -598,7 +598,7 @@ void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int 
       case AS_RELTIME | IS_RECENT:
          {
          stats_entry_recent<time_t> * probe =
-         Pool.NewProbe< stats_entry_recent<time_t> >(name,  attr.Value(), as);
+         Pool.NewProbe< stats_entry_recent<time_t> >(name,  attr.c_str(), as);
          probe->SetRecentMax(this->RecentWindowMax / this->RecentWindowQuantum);
          ret = probe;
          }
@@ -610,7 +610,7 @@ void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int 
          as &= ~(IS_CLASS_MASK);  // strip off IS_RTC class
          as |= IS_CLS_PROBE | IF_RT_SUM; // and set IS_CLS_PROBE & IF_RT_SUM classes
          stats_entry_probe<double> * probe =
-         Pool.NewProbe< stats_entry_probe<double> >(name, attr.Value(), as);
+         Pool.NewProbe< stats_entry_probe<double> >(name, attr.c_str(), as);
          ret = probe;
          }
          break;
@@ -620,7 +620,7 @@ void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int 
       case AS_RELTIME | IS_RCT:
          {
          stats_recent_counter_timer * probe =
-         Pool.NewProbe<stats_recent_counter_timer>(name, attr.Value(), as);
+         Pool.NewProbe<stats_recent_counter_timer>(name, attr.c_str(), as);
         #if 0 // def DEBUG
          attr += "Debug";
          Pool.AddPublish(attr.Value(), probe, NULL, 0, 
@@ -651,7 +651,7 @@ dc_stats_auto_runtime_probe::dc_stats_auto_runtime_probe(const char * name, int 
        attr += name;
        cleanStringForUseAsAttr(attr);
        int as_pub = as | stats_entry_recent<Probe>::PubValueAndRecent;
-       this->probe = pool->NewProbe< stats_entry_recent<Probe> >(name, attr.Value(), as_pub);
+       this->probe = pool->NewProbe< stats_entry_recent<Probe> >(name, attr.c_str(), as_pub);
        if (this->probe) {
           this->probe->SetRecentMax(daemonCore->dc_stats.RecentWindowMax / daemonCore->dc_stats.RecentWindowQuantum);
        }

@@ -21,7 +21,6 @@
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
 #include "condor_td.h"
-#include "MyString.h"
 #include "condor_io.h"
 
 

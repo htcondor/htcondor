@@ -13,11 +13,21 @@ Version 8.8.13
 
 Release Notes:
 
-- HTCondor version 8.8.13 not yet released.
-
-.. HTCondor version 8.8.13 released on Month Date, 2021.
+- HTCondor version 8.8.13 released on March 23, 2021.
 
 New Features:
+
+- Docker version 20.10.4 has a serious bug that prevents Docker Universe from 
+  working.  HTCondor now detects this version of Docker, and sets 
+  HasDocker = false in the slot ad, so Docker Universe jobs will not match on
+  such machines.
+  :jira:`310`
+
+- condor_ssh_to_job into a container now properly maps carriage return and 
+  newline.  The most common symptom of this problem was that the nano
+  editor would not work properly. Also, the performance of transferring large
+  amounts of data has been substantially improved.
+  :jira:`311`
 
 - The HA replication mechanism can now accept either SHA-2 or MD5 checksums.
   This is because support for MD5 checksums must be removed in the 9.0 release of HTCondor.
@@ -35,6 +45,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where ``condor_annex`` would crash when executing the ``-status``
+  or ``status`` commands if built with sufficiently-modern compilers.
+  :jira:`318`
+
 - Fixed a bug where ``use feature: GPUsMonitor`` set the wrong path to the
   GPU monitor binary on Windows.
   :jira:`125`
@@ -45,11 +59,24 @@ Bugs Fixed:
   :jira:`144`
 
 - Fixed a bug with pslot preemption and disks with more than 4 TB of space.
-  :jira:`194`
+  :jira:`195`
 
 - Fixed a bug where the counts of job reconnections can be off in the
   Schedd Restart Report.
   :jira:`190`
+
+- Fixed a bug that in rare cases can crash the *condor_schedd* if a DAG
+  is quickly released and then removed.
+  :jira:`309`
+
+- Fixed a bug in DAGMan that prevented the use of the ``@`` symbol in the event
+  log file path, where it was mistaken as an unresolved macro substitution.
+  We now look for the ``@(`` character sequence to identify unresolved macros.
+  :jira:`159`
+
+- Fixed a bug where the Operating System and Version information were not
+  detected on the Amazon Linux platform.
+  :jira:`342`
 
 Version 8.8.12
 --------------

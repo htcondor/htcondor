@@ -48,7 +48,6 @@
 #include "match_prefix.h"
 
 #include "HashTable.h"
-#include "MyString.h"
 #include "string_list.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
@@ -160,7 +159,7 @@ bool allow_crlf_script = false;
 // For mpi universe testing
 bool use_condor_mpi_universe = false;
 
-MyString LastExecutable; // used to pass executable between the check_file callback and SendExecutableb
+std::string LastExecutable; // used to pass executable between the check_file callback and SendExecutableb
 bool     SpoolLastExecutable;
 
 time_t get_submit_time()
@@ -386,25 +385,6 @@ struct SubmitStepFromQArgs {
 	bool has_items() { return m_fea.items.number() > 0; }
 	bool done() { return m_done; }
 
-#if 0
-	// populate the foreach data from the given queue arguments.
-	void begin(const JOB_ID_KEY & id, const char * qargs, MacroStream & ms) {
-		m_jidInit = id;
-		m_nextProcId = id.proc;
-		m_fea.clear();
-		auto_free_ptr expanded_qargs(m_hash.expand_macro(qargs ? qargs : ""));
-		if (expanded_qargs) {
-			if (m_fea.parse_queue_args(expanded_qargs.ptr()) < 0)
-		}
-		m_step_size = m_fea.queue_num ? m_fea.queue_num : 1;
-		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
-			m_hash.set_live_submit_variable(key, "", false);
-		}
-		m_hash.optimize();
-		m_hash.load_inline_q_foreach_items(ms, m_fea, errmsg);
-	}
-#endif
-
 	// returns < 0 on error
 	// returns 0 if done iterating
 	// returns 2 for first iteration
@@ -539,7 +519,7 @@ main( int argc, const char *argv[] )
 	const char **ptr;
 	const char *pcolon = NULL;
 	const char *cmd_file = NULL;
-	MyString method;
+	std::string method;
 
 	setbuf( stdout, NULL );
 
@@ -724,11 +704,11 @@ main( int argc, const char *argv[] )
 					exit( 1 );
 				}
 				const char * bname = *ptr;
-				MyString tmp; // if -batch-name was specified, this holds the string 'MY.JobBatchName = "name"'
+				std::string tmp; // if -batch-name was specified, this holds the string 'MY.JobBatchName = "name"'
 				if (*bname == '"') {
-					tmp.formatstr("MY.%s = %s", ATTR_JOB_BATCH_NAME, bname);
+					formatstr(tmp,"MY.%s = %s", ATTR_JOB_BATCH_NAME, bname);
 				} else {
-					tmp.formatstr("MY.%s = \"%s\"", ATTR_JOB_BATCH_NAME, bname);
+					formatstr(tmp,"MY.%s = \"%s\"", ATTR_JOB_BATCH_NAME, bname);
 				}
 				// if batch_name_line is not NULL,  we will leak a bit here, but that's better than
 				// freeing something behind the back of the extraLines
@@ -741,11 +721,11 @@ main( int argc, const char *argv[] )
 					exit( 1 );
 				}
 				const char * bid = *ptr;
-				MyString tmp; // if -batch-id was specified, this holds the string 'MY.JobBatchId = "id"'
+				std::string tmp; // if -batch-id was specified, this holds the string 'MY.JobBatchId = "id"'
 				if (*bid == '"') {
-					tmp.formatstr("MY.%s = %s", ATTR_JOB_BATCH_ID, bid);
+					formatstr(tmp,"MY.%s = %s", ATTR_JOB_BATCH_ID, bid);
 				} else {
-					tmp.formatstr("MY.%s = \"%s\"", ATTR_JOB_BATCH_ID, bid);
+					formatstr(tmp,"MY.%s = \"%s\"", ATTR_JOB_BATCH_ID, bid);
 				}
 				// if batch_id_line is not NULL,  we will leak a bit here, but that's better than
 				// freeing something behind the back of the extraLines
@@ -907,7 +887,7 @@ main( int argc, const char *argv[] )
 	// ensure I have a known transfer method
 	if (STMethod == STM_UNKNOWN) {
 		fprintf( stderr, 
-			"%s: Unknown sandbox transfer method: %s\n", MyName, method.Value());
+			"%s: Unknown sandbox transfer method: %s\n", MyName, method.c_str());
 		usage();
 		exit(1);
 	}
@@ -917,7 +897,7 @@ main( int argc, const char *argv[] )
 	if ( DumpClassAdToFile && STMethod != STM_USE_SCHEDD_ONLY ) {
 		fprintf( stderr, 
 			"%s: Dumping ClassAds to a file is not compatible with sandbox "
-			"transfer method: %s\n", MyName, method.Value());
+			"transfer method: %s\n", MyName, method.c_str());
 		usage();
 		exit(1);
 	}
@@ -961,7 +941,7 @@ main( int argc, const char *argv[] )
 
 #ifdef WIN32
 		// setup the username to query
-		MyString userdom;
+		std::string userdom;
 		auto_free_ptr the_username(my_username());
 		auto_free_ptr the_domainname(my_domainname());
 		userdom = the_username;
@@ -1381,7 +1361,7 @@ bool is_crlf_shebang(const char *path)
 }
 
 // callback passed to make_job_ad on the submit_hash that gets passed each input or output file
-// so we can choose to do file checks. 
+// so we can choose to do file checks.
 int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const char * pathname, int flags)
 {
 	if ((pathname == NULL) && (role != SFR_PSEUDO_EXECUTABLE)) {
@@ -1428,13 +1408,12 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 		return 0;
 
 	} else if (role == SFR_EXECUTABLE || role == SFR_PSEUDO_EXECUTABLE) {
-
 		const char * ename = pathname;
 		bool transfer_it = (flags & 1) != 0;
 
 		if (!ename) transfer_it = false;
 
-		LastExecutable = ename;
+        empty_if_null(LastExecutable, ename);
 		SpoolLastExecutable = false;
 
 		// ensure the executables exist and spool them only if no
@@ -1616,69 +1595,9 @@ int ParseDashAppendLines(List<const char> &exlines, MACRO_SOURCE& source, MACRO_
 	return 0;
 }
 
-MyString last_submit_executable;
-MyString last_submit_cmd;
-
-#if 0 // no longer used
-int SpecialSubmitPreQueue(const char* queue_args, bool from_file, MACRO_SOURCE& source, MACRO_SET& macro_set, std::string & errmsg)
-{
-	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
-	int rval = 0;
-
-	GotQueueCommand = true;
-
-	// parse the extra lines before doing $ expansion on the queue line
-	rval = ParseDashAppendLines(extraLines, source, macro_set);
-	if (rval < 0)
-		return rval;
-	ErrContext.phase = PHASE_QUEUE;
-	ErrContext.step = -1;
-
-	if (DashDryRun && DumpSubmitHash) {
-		auto_free_ptr expanded_queue_args(expand_macro(queue_args, macro_set, ctx));
-		char * pqargs = expanded_queue_args.ptr();
-		ASSERT(pqargs);
-		fprintf(stdout, "\n----- Queue arguments -----\nSpecified: %s\nExpanded : %s", queue_args, pqargs);
-	}
-
-	if ( ! queueCommandLine.empty() && from_file) {
-		errmsg = "-queue argument conflicts with queue statement in submit file";
-		return -1;
-	}
-
-	// HACK! the queue function uses a global flag to know whether or not to ask for a new cluster
-	// In 8.2 this flag is set whenever the "executable" or "cmd" value is set in the submit file.
-	// As of 8.3, we don't believe this is still necessary, but we are afraid to change it. This
-	// code is *mostly* the same, but will differ in cases where the users is setting cmd or executble
-	// to the *same* value between queue statements. - hopefully this is close enough.
-	MyString cur_submit_executable(lookup_macro_exact_no_default(SUBMIT_KEY_Executable, macro_set, 0));
-	if (last_submit_executable != cur_submit_executable) {
-		NewExecutable = true;
-		last_submit_executable = cur_submit_executable;
-	}
-	MyString cur_submit_cmd(lookup_macro_exact_no_default("cmd", macro_set, 0));
-	if (last_submit_cmd != cur_submit_cmd) {
-		NewExecutable = true;
-		last_submit_cmd = cur_submit_cmd;
-	}
-
-	return rval;
-}
-
-int SpecialSubmitPostQueue()
-{
-	if (dash_interactive && !InteractiveSubmitFile) {
-		// for interactive jobs, just one queue statement
-		// a return of 1 tells it to stop scanning, but is not an error.
-		return 1;
-	}
-	ErrContext.phase = PHASE_READ_SUBMIT;
-	return 0;
-}
-
-#endif
-
 bool CheckForNewExecutable(MACRO_SET& macro_set) {
+    static std::string last_submit_executable;
+    static std::string last_submit_cmd;
 
 	bool new_exe = false;
 
@@ -1688,12 +1607,12 @@ bool CheckForNewExecutable(MACRO_SET& macro_set) {
 	// code is *mostly* the same, but will differ in cases where the users is setting cmd or executble
 	// to the *same* value between queue statements. - hopefully this is close enough.
 
-	MyString cur_submit_executable(lookup_macro_exact_no_default(SUBMIT_KEY_Executable, macro_set, 0));
+	std::string cur_submit_executable(lookup_macro_exact_no_default(SUBMIT_KEY_Executable, macro_set, 0));
 	if (last_submit_executable != cur_submit_executable) {
 		new_exe = true;
 		last_submit_executable = cur_submit_executable;
 	}
-	MyString cur_submit_cmd(lookup_macro_exact_no_default("cmd", macro_set, 0));
+	std::string cur_submit_cmd(lookup_macro_exact_no_default("cmd", macro_set, 0));
 	if (last_submit_cmd != cur_submit_cmd) {
 		new_exe = true;
 		last_submit_cmd = cur_submit_cmd;
@@ -1795,31 +1714,11 @@ int submit_jobs (
 		if (rval < 0)
 			break;
 
-
-		// OAUTH (SCITOKENS) CODE INSERT
-		//
-		// This should not stay here.  We would like a separate API
-		// that can be called by python bindings and condor_store_cred
-		// (as well is submit) to do this work.
-		//
-		// But for now, here it is, and this should be refactored in
-		// the 8.9 series.
-		//
-		int cred_result = process_job_credentials();
-
-		// zero means success, we should continue.  otherwise bail.
-		if (cred_result) {
-			// what is the best way to bail out / abort the submit process?
-			printf("BAILING OUT: %i\n", cred_result);
-			exit(1);
-		}
-
-
 		// we'll use the GotQueueCommand flag as a convenient flag for 'this is the first iteration of the loop'
 		if ( ! GotQueueCommand) {
 			// If this turns out to be late materialization, the schedd will need to know what the
 			// current working directory was when we parsed the submit file. so stuff it into the submit hash
-			MyString FactoryIwd;
+			std::string FactoryIwd;
 			condor_getcwd(FactoryIwd);
 			insert_macro("FACTORY.Iwd", FactoryIwd.c_str(), submit_hash.macros(), DetectedMacro, ctx);
 
@@ -1880,6 +1779,24 @@ int submit_jobs (
 		rval = submit_hash.parse_q_args(queue_args, o, errmsg);
 		if (rval)
 			break;
+
+
+		// OAUTH (SCITOKENS) CODE INSERT
+		//
+		// This should not stay here.  We would like a separate API
+		// that can be called by python bindings and condor_store_cred
+		// (as well is submit) to do this work.
+		//
+		// But for now, here it is, and this should be refactored in
+		// the 8.9 series.
+		//
+		int cred_result = process_job_credentials();
+		if (cred_result) { // zero means success, otherwise bail.
+			// what is the best way to bail out / abort the submit process?
+			printf("BAILING OUT: %i\n", cred_result);
+			exit(1);
+		}
+
 
 		// load the foreach data
 		rval = submit_hash.load_inline_q_foreach_items(ms, o, errmsg);
@@ -1982,7 +1899,7 @@ int submit_jobs (
 
 			// if generating a dry-run digest file with a generic name, also generate a dry-run itemdata file
 			if (create_local_factory_file && (MyQ->get_type() == AbstractQ_TYPE_SIM)) {
-				MyString items_fn = create_local_factory_file;
+				std::string items_fn = create_local_factory_file;
 				items_fn += ".items";
 				static_cast<SimScheddQ*>(MyQ)->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
 			}
@@ -1998,7 +1915,7 @@ int submit_jobs (
 			// write the submit digest to the current working directory.
 			//PRAGMA_REMIND("todo: force creation of local factory file if schedd is version < 8.7.3?")
 			if (create_local_factory_file) {
-				MyString factory_path = submit_hash.full_path(create_local_factory_file, false);
+				std::string factory_path = submit_hash.full_path(create_local_factory_file, false);
 				rval = write_factory_file(factory_path.c_str(), submit_digest.data(), (int)submit_digest.size(), 0644);
 				if (rval < 0)
 					break;
@@ -2598,7 +2515,7 @@ void
 init_params()
 {
 	char *tmp = NULL;
-	MyString method;
+	std::string method;
 
 	const char * err = init_submit_default_macros();
 	if (err) {
@@ -2609,8 +2526,8 @@ init_params()
 
 	My_fs_domain = param( "FILESYSTEM_DOMAIN" );
 		// Will always return something, since config() will put in a
-		// value (full hostname) if it's not in the config file.  
-	
+		// value (full hostname) if it's not in the config file.
+
 
 	// The default is set as the global initializer for STMethod
 	tmp = param( "SANDBOX_TRANSFER_METHOD" );
@@ -2676,7 +2593,7 @@ bool get_oauth_service_requests(std::string & service_requests) {
 	return true;
 }
 
-bool credd_has_tokens(std::string & tokens, MyString & URL) {
+bool credd_has_tokens(std::string & tokens, std::string & URL) {
 
 	URL.clear();
 	tokens.clear();
@@ -2759,7 +2676,7 @@ int process_job_credentials()
 		return 0;
 	}
 
-	MyString storer;
+	std::string storer;
 	if(param(storer, "SEC_CREDENTIAL_STORER")) {
 		// SEC_CREDENTIAL_STORER is a script to run that calls
 		// condor_store_cred when it has new credentials to store.
@@ -2794,17 +2711,17 @@ int process_job_credentials()
 		// create a "request file" and provide a URL that references
 		// it.  we forward this URL to the user so they can obtain the
 		// tokens needed.
-		MyString URL;
+		std::string URL;
 		std::string tokens_needed;
 		if (credd_has_tokens(tokens_needed, URL)) {
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
 					// report to user a URL
 					char *my_un = my_username();
-					fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_un, URL.Value());
+					fprintf(stdout, "\nHello, %s.\nPlease visit: %s\n\n", my_un, URL.c_str());
 					free(my_un);
 				} else {
-					fprintf(stderr, "\nOAuth error: %s\n\n", URL.Value());
+					fprintf(stderr, "\nOAuth error: %s\n\n", URL.c_str());
 				}
 				exit(1);
 			}
@@ -2860,7 +2777,7 @@ int process_job_credentials()
 
 	// deal with credentials generated by a user-invoked script
 
-	MyString producer;
+	std::string producer;
 	if(!param(producer, "SEC_CREDENTIAL_PRODUCER")) {
 		// nothing to do
 		return 0;
@@ -2874,7 +2791,7 @@ int process_job_credentials()
 	// If SEC_CREDENTIAL_PRODUCER is anything else, then consider it to be the
 	// name of a script we should spawn to create the credential.
 
-	if ( strcasecmp(producer.Value(),"CREDENTIAL_ALREADY_STORED") != MATCH ) {
+	if ( strcasecmp(producer.c_str(),"CREDENTIAL_ALREADY_STORED") != MATCH ) {
 		// If we made it here, we need to spawn a credential producer process.
 		dprintf(D_ALWAYS, "CREDMON: invoking %s\n", producer.c_str());
 		ArgList args;
@@ -2896,7 +2813,6 @@ int process_job_credentials()
 				exit( 1 );
 			}
 
-#if 1 // support new credd commands only
 			dprintf(D_ALWAYS, "CREDMON: storing credential with CredD.\n");
 			Daemon my_credd(DT_CREDD);
 			if (my_credd.locate()) {
@@ -2931,44 +2847,6 @@ int process_job_credentials()
 				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
 				exit( 1 );
 			}
-#else
-			// immediately convert to base64
-			char* ut64 = zkm_base64_encode(uber_ticket, (int)bytes_read);
-
-			// sanity check:  convert it back.
-			//unsigned char *zkmbuf = 0;
-			int zkmlen = -1;
-			unsigned char* zkmbuf = NULL;
-			zkm_base64_decode(ut64, &zkmbuf, &zkmlen);
-
-			// zkmbuf IS LEAKING
-			dprintf(D_FULLDEBUG, "CREDMON: b64: %i %i\n", (int)bytes_read, zkmlen);
-			dprintf(D_FULLDEBUG, "CREDMON: b64: %s %s\n", (char*)uber_ticket, (char*)zkmbuf);
-
-			char preview[64];
-			strncpy(preview,ut64, 63);
-			preview[63]=0;
-
-			dprintf(D_FULLDEBUG | D_SECURITY, "CREDMON: read %i bytes {%s...}\n", (int)bytes_read, preview);
-
-			// my_domainname() returns NULL on UNIX... no need to use this
-
-			dprintf(D_ALWAYS, "CREDMON: storing cred for user %s\n", userdom);
-			Daemon my_credd(DT_CREDD);
-			int store_cred_result;
-			if (my_credd.locate()) {
-				store_cred_result = do_store_cred(userdom.c_str(), ut64, STORE_CRED_LEGACY | ADD_KRB_MODE, &my_credd);
-				if ( store_cred_result != SUCCESS ) {
-					fprintf( stderr, "\nERROR: store_cred failed!\n");
-					exit( 1 );
-				}
-			} else {
-				fprintf( stderr, "\nERROR: locate(credd) failed!\n");
-				exit( 1 );
-			}
-			free(ut64);
-			free(zkmbuf);
-#endif
 		}
 	}  // end of block to run a credential producer
 
@@ -2988,9 +2866,9 @@ int process_job_credentials()
 
 int SendLastExecutable()
 {
-	const char * ename = LastExecutable.empty() ? NULL : LastExecutable.Value();
+	const char * ename = LastExecutable.empty() ? NULL : LastExecutable.c_str();
 	bool copy_to_spool = SpoolLastExecutable;
-	MyString SpoolEname(ename);
+	std::string SpoolEname(ename ? ename : "");
 
 	// spool executable if necessary
 	if ( ename && copy_to_spool ) {
@@ -2998,12 +2876,12 @@ int SendLastExecutable()
 		char * chkptname = GetSpooledExecutablePath(submit_hash.getClusterId(), "");
 		SpoolEname = chkptname;
 		if (chkptname) free(chkptname);
-		int ret = MyQ->send_SpoolFile(SpoolEname.Value());
+		int ret = MyQ->send_SpoolFile(SpoolEname.c_str());
 
 		if (ret < 0) {
 			fprintf( stderr,
 						"\nERROR: Request to transfer executable %s failed\n",
-						SpoolEname.Value() );
+						SpoolEname.c_str() );
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
@@ -3075,7 +2953,7 @@ static int MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & 
 	unparser.SetOldClassAd( true, true );
 	std::string rhs; rhs.reserve(120);
 
-	MyString keybuf;
+	std::string keybuf;
 	key.sprint(keybuf);
 	const char * keystr = keybuf.c_str();
 
@@ -3191,129 +3069,12 @@ setupAuthentication()
 }
 
 
-#if 1
-//PRAGMA_REMIND("make a proper queue args unit test.")
+// PRAGMA_REMIND("make a proper queue args unit test.")
+//
+// The old pre-submit_utils unit tests should be a good refernce,
+// and can be pulled out of git's history of this file from the hash
+// d7f3ffdd8fac1316344cdf30eeb65b95b355da99 and earlier.
 int DoUnitTests(int options)
 {
 	return (options > 1) ? 1 : 0;
 }
-#else
-// old pre submit_utils unit tests. for reference.
-int DoUnitTests(int options)
-{
-	static const struct {
-		int          rval;
-		const char * args;
-		int          num;
-		int          mode;
-		int          cvars;
-		int          citems;
-	} trials[] = {
-	// rval  args          num    mode      vars items
-		{0,  "in (a b)",     1, foreach_in,   0,  2},
-		{0,  "ARG in (a,b)", 1, foreach_in,   1,  2},
-		{0,  "ARG in(a)",    1, foreach_in,   1,  1},
-		{0,  "ARG\tin\t(a)", 1, foreach_in,   1,  1},
-		{0,  "arg IN ()",    1, foreach_in,   1,  0},
-		{0,  "2 ARG in ( a, b, cd )",  2, foreach_in,   1,  3},
-		{0,  "100 ARG In a, b, cd",  100, foreach_in,   1,  3},
-		{0,  "  ARG In a b cd e",  1, foreach_in,   1,  4},
-
-		{0,  "matching *.dat",               1, foreach_matching,   0,  1},
-		{0,  "FILE matching *.dat",          1, foreach_matching,   1,  1},
-		{0,  "glob MATCHING (*.dat *.foo)",  1, foreach_matching,   1,  2},
-		{0,  "glob MATCHING files (*.foo)",  1, foreach_matching_files,   1,  1},
-		{0,  " dir matching */",             1, foreach_matching,   1,  1},
-		{0,  " dir matching dirs */",        1, foreach_matching_dirs,   1,  1},
-
-		{0,  "Executable,Arguments From args.lst",  1, foreach_from,   2,  0},
-		{0,  "Executable,Arguments From (sleep.exe 10)",  1, foreach_from,   2,  1},
-		{0,  "9 Executable Arguments From (sleep.exe 10)",  9, foreach_from,   2,  1},
-
-		{0,  "arg from [1]  args.lst",     1, foreach_from,   1,  0},
-		{0,  "arg from [:1] args.lst",     1, foreach_from,   1,  0},
-		{0,  "arg from [::] args.lst",     1, foreach_from,   1,  0},
-
-		{0,  "arg from [100::] args.lst",     1, foreach_from,   1,  0},
-		{0,  "arg from [:100:] args.lst",     1, foreach_from,   1,  0},
-		{0,  "arg from [::100] args.lst",     1, foreach_from,   1,  0},
-
-		{0,  "arg from [100:10:5] args.lst",     1, foreach_from,   1,  0},
-		{0,  "arg from [10:100:5] args.lst",     1, foreach_from,   1,  0},
-
-		{0,  "",             1, 0, 0, 0},
-		{0,  "2",            2, 0, 0, 0},
-		{0,  "9 - 2",        7, 0, 0, 0},
-		{0,  "1 -1",         0, 0, 0, 0},
-		{0,  "2*2",          4, 0, 0, 0},
-		{0,  "(2+3)",        5, 0, 0, 0},
-		{0,  "2 * 2 + 5",    9, 0, 0, 0},
-		{0,  "2 * (2 + 5)", 14, 0, 0, 0},
-		{-2, "max(2,3)",    -1, 0, 0, 0},
-		{0,  "max({2,3})",   3, 0, 0, 0},
-
-	};
-
-	for (int ii = 0; ii < (int)COUNTOF(trials); ++ii) {
-		int foreach_mode=-1;
-		int queue_num=-1;
-		StringList vars;
-		StringList items;
-		qslice     slice;
-		MyString   items_filename;
-		char * pqargs = strdup(trials[ii].args);
-		int rval = parse_queue_args(pqargs, foreach_mode, queue_num, vars, items, slice, items_filename);
-
-		int cvars = vars.number();
-		int citems = items.number();
-		bool ok = (rval == trials[ii].rval && foreach_mode == trials[ii].mode && queue_num == trials[ii].num && cvars == trials[ii].cvars && citems == trials[ii].citems);
-
-		char * vars_list = vars.print_to_string();
-		if ( ! vars_list) vars_list = strdup("");
-
-		char * items_list = items.print_to_delimed_string("|");
-		if ( ! items_list) items_list = strdup("");
-		else if (strlen(items_list) > 50) { items_list[50] = 0; items_list[49] = '.'; items_list[48] = '.'; items_list[46] = '.'; }
-
-		fprintf(stderr, "%s num:   %d/%d  mode:  %d/%d  vars:  %d/%d {%s} ", ok ? " " : "!",
-				queue_num, trials[ii].num, foreach_mode, trials[ii].mode, cvars, trials[ii].cvars, vars_list);
-		fprintf(stderr, "  items: %d/%d {%s}", citems, trials[ii].citems, items_list);
-		if (slice.initialized()) { char sz[16*3]; slice.to_string(sz, sizeof(sz)); fprintf(stderr, " slice: %s", sz); }
-		if ( ! items_filename.empty()) { fprintf(stderr, " file:'%s'\n", items_filename.Value()); }
-		fprintf(stderr, "\tqargs: '%s' -> '%s'\trval: %d/%d\n", trials[ii].args, pqargs, rval, trials[ii].rval);
-
-		free(pqargs);
-		free(vars_list);
-		free(items_list);
-	}
-
-	/// slice tests
-	static const struct {
-		const char * val;
-		int start; int end;
-	} slices[] = {
-		{ "[:]",  0, 10 },
-		{ "[0]",  0, 10 },
-		{ "[0:3]",  0, 10 },
-		{ "[:1]",  0, 10 },
-		{ "[-1]", 0, 10 },
-		{ "[:-1]", 0, 10 },
-		{ "[::2]", 0, 10 },
-		{ "[1::2]", 0, 10 },
-	};
-
-	for (int ii = 0; ii < (int)COUNTOF(slices); ++ii) {
-		qslice slice;
-		slice.set(const_cast<char*>(slices[ii].val));
-		fprintf(stderr, "%s : %s\t", slices[ii].val, slice.initialized() ? "init" : " no ");
-		for (int ix = slices[ii].start; ix < slices[ii].end; ++ix) {
-			if (slice.selected(ix, slices[ii].end)) {
-				fprintf(stderr, " %d", ix);
-			}
-		}
-		fprintf(stderr, "\n");
-	}
-
-	return (options > 1) ? 1 : 0;
-}
-#endif

@@ -4179,6 +4179,11 @@ details.
     trusted users to run with full linux capabilities within the
     container.
 
+:macro-def:`DOCKER_PERFORM_TEST`
+    When the *condor_startd* starts up, it runs a simple docker
+    container to verify that docker completely works.  If 
+    DOCKER_PERFORM_TEST is false, this test is skipped.
+
 :macro-def:`DOCKER_EXTRA_ARGUMENTS`
     Any additional command line options the administrator wants to be
     added to the docker container create command line can be set with
@@ -5606,10 +5611,10 @@ condor_starter Configuration File Entries
 These settings affect the *condor_starter*.
 
 :macro-def:`DISABLE_SETUID`
-    By default, HTCondor prevents jobs from running setuid executables
+    HTCondor can prevent jobs from running setuid executables
     on Linux by setting the no-new-privileges flag.  This can be
-    disabled (i.e. to allow setuid binaries) by setting ``DISABLE_SETIUD``
-    to false.
+    enabled (i.e. to disallow setuid binaries) by setting ``DISABLE_SETIUD``
+    to true.
 
 :macro-def:`EXEC_TRANSFER_ATTEMPTS`
     Sometimes due to a router misconfiguration, kernel bug, or other
@@ -5683,7 +5688,7 @@ These settings affect the *condor_starter*.
     Defaults to
     CUBACORES, GOMAXPROCS, JULIA_NUM_THREADS, MKL_NUM_THREADS,
     NUMEXPR_NUM_THREADS, OMP_NUM_THREADS, OMP_THREAD_LIMIT,
-    TF_LOOP_PARALLEL_ITERATIONS, TF_NUM_THREADS.
+    OPENBLAS_NUM_THREADS, TF_LOOP_PARALLEL_ITERATIONS, TF_NUM_THREADS.
 
 :macro-def:`STARTER_UPDATE_INTERVAL`
     An integer value representing the number of seconds between ClassAd
@@ -7661,7 +7666,7 @@ These macros affect the *condor_gridmanager*.
 
 :macro-def:`BATCH_GAHP_CHECK_STATUS_ATTEMPTS`
     The number of times a failed status command issued to the
-    *batch_gahp* should be retried. These retries allow the
+    *blahpd* should be retried. These retries allow the
     *condor_gridmanager* to tolerate short-lived failures of the
     underlying batch system. The default value is 5.
 
@@ -7719,7 +7724,7 @@ These macros affect the *condor_gridmanager*.
 :macro-def:`BATCH_GAHP`
     The complete path and file name of the batch GAHP executable, to be
     used for PBS, LSF, SGE, and similar batch systems. The default
-    location is ``$(GLITE_LOCATION)``/bin/batch_gahp.
+    location is ``$(BIN)``/blahpd.
 
 :macro-def:`PBS_GAHP`
     The complete path and file name of the PBS GAHP executable. The use
@@ -9177,8 +9182,14 @@ macros are described in the :doc:`/admin-manual/security` section.
     pool password for password authentication.
 
 :macro-def:`SEC_PASSWORD_DIRECTORY`
-    For Unix machines, the path to the directory containing password files
-    for token authentication.  Defaults to ``/etc/condor/passwords.d``.
+    The path to the directory containing signing key files
+    for token authentication.  Defaults to ``/etc/condor/passwords.d`` on
+    Unix and to ``$(RELEASE_DIR)\tokens.sk`` on Windows.
+
+:macro-def:`SEC_TOKEN_POOL_SIGNING_KEY_FILE`
+    The path and filename for the file containing the default signing key
+    for token authentication.  Defaults to ``/etc/condor/passwords.d/POOL`` on Unix
+    and to ``$(RELEASE_DIR)\tokens.sk\POOL`` on Windows.
 
 :macro-def:`SEC_TOKEN_SYSTEM_DIRECTORY`
     For Unix machines, the path to the directory containing tokens for
@@ -9347,11 +9358,17 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SCITOKENS_FILE`
     The path and file name of a file containing a SciToken for use by
     the client during the SCITOKENS authentication methods.  This variable
-    has no default value.
+    has no default value.  If left unset, HTCondor will use the bearer
+    token discovery protocol defined by the WLCG (https://zenodo.org/record/3937438)
+    to find one.
 
 :macro-def:`SEC_CREDENTIAL_SWEEP_DELAY`
     The number of seconds to wait before cleaning up unused credentials.
     Defaults to 3,600 seconds (1 hour).
+
+:macro-def:`SEC_CREDENTIAL_DIRECTORY_KRB`
+    The directory that users' Kerberos credentials should be stored in.
+    This variable has no default value.
 
 :macro-def:`SEC_CREDENTIAL_DIRECTORY_OAUTH`
     The directory that users' OAuth2 credentials should be stored in.
@@ -9769,11 +9786,11 @@ These macros affect the high availability operation of HTCondor.
 :macro-def:`HAD_FIPS_MODE`
     Controls what type of checksum will be sent along with files that are replicated.
     Set it to 0 for MD5 checksums and to 1 for SHA-2 checksums. Default value is 0.
-    Prior to verions 8.8.14 and 8.9.12 only MD5 checksums are supported. In the 9.0 and
+    Prior to verions 8.8.13 and 8.9.12 only MD5 checksums are supported. In the 9.0 and
     later release of HTCondor, MD5 support will be removed and only SHA-2 will be
     supported.  This configuration variable is intended to provide a transition
     between the 8.8 and 9.0 releases.  As soon as all of machines involved in replication
-    are running HTCondor 8.8.14 or 8.9.12 or later you should set this configuration variable
+    are running HTCondor 8.8.13 or 8.9.12 or later you should set this configuration variable
     to 1 to prepare for the transiation to 9.0
 
 :macro-def:`REPLICATION_LIST`

@@ -175,7 +175,7 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
 
 	std::string			m_fqan;
 #ifdef WIN32
-    typedef HashTable<MyString, MyString> Grid_Map_t;
+    typedef HashTable<std::string, std::string> Grid_Map_t;
     static Grid_Map_t * GridMap;
 #endif
 	static bool m_globusActivated;

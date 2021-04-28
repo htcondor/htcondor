@@ -224,9 +224,9 @@ MyString* convert_string_array(const char** str, int size, const char* delim){
 void delete_helper(char** array, int num_strs) {
 	int i;
 	for(i = 0; i < num_strs; i++) {
-		delete[] array[i];		
+		free(array[i]);
 	}
-	delete[] array;
+	free(array);
 }
 
 void get_tm(ISO8601Type type, const struct tm &time, MyString* str)

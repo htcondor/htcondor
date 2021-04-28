@@ -79,9 +79,11 @@ as a ClassAd within a ClassAd.  However, this will have to wait until
 new ClassAds are deployed.
 */
 int filename_remap_find( const char *input, const char *filename, MyString &output, int cur_nesting_level = 0);
+int filename_remap_find( const char *input, const char *filename, std::string &output, int cur_nesting_level = 0);
 
-void canonicalize_dir_delimiters( MyString &path );
+void canonicalize_dir_delimiters( std::string &path );
 void filename_url_parse( char *input, MyString &method, MyString &server, int *port, MyString &path );
+void filename_url_parse( char *input, std::string & method, std::string & server, int * port, std::string & path );
 #endif
 
 #endif

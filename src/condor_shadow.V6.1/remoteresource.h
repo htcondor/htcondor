@@ -215,13 +215,13 @@ class RemoteResource : public Service {
 		*/
 	bool getSecSessionInfo(
 		char const *starter_reconnect_session_info,
-		MyString &reconnect_session_id,
-		MyString &reconnect_session_info,
-		MyString &reconnect_session_key,
+		std::string &reconnect_session_id,
+		std::string &reconnect_session_info,
+		std::string &reconnect_session_key,
 		char const *starter_filetrans_session_info,
-		MyString &filetrans_session_id,
-		MyString &filetrans_session_info,
-		MyString &filetrans_session_key);
+		std::string &filetrans_session_id,
+		std::string &filetrans_session_info,
+		std::string &filetrans_session_key);
 
 		/** Set the reason this host exited.  
 			@param reason Why did it exit?  Film at 11.

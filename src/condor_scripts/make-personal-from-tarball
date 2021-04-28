@@ -1,7 +1,7 @@
 #!/bin/bash
 
 RELEASE_DIR=`pwd`
-LOCK=$(mktemp /tmp/condor-lock-XXXXXX)
+LOCK=$(mktemp -d /tmp/condor-lock-XXXXXX)
 LOCAL_DIR=${RELEASE_DIR}/local
 LOCAL_CONFIG_DIR=${LOCAL_DIR}/config.d
 USER_ID=`id -u`

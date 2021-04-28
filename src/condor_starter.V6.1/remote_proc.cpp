@@ -31,7 +31,7 @@ RemoteProc::RemoteProc( ClassAd * job_ad )
 	dprintf ( D_FULLDEBUG, "In RemoteProc::RemoteProc()\n" );
 	JobAd = job_ad;
 
-	formatstr( m_remoteJobId, "%s-%ld", Starter->getMySlotName().Value(), (long)daemonCore->getpid() );
+	formatstr( m_remoteJobId, "%s-%ld", Starter->getMySlotName().c_str(), (long)daemonCore->getpid() );
 }
 
 RemoteProc::~RemoteProc() {
@@ -128,6 +128,7 @@ bool RemoteProc::JobReaper( int pid, int status )
 					int r = read(fd, buf, 511);
 					if (r < 0) {
 						dprintf(D_ALWAYS, "Cannot read worker output file on job submission. Errno %d\n", errno);
+						sprintf(buf, "Cannot read worker output file on job submission. Errno %d\n", errno);
 					} else {
 						buf[r] = '\0';
 						int buflen = strlen(buf);

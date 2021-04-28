@@ -28,7 +28,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_io.h"
-#include "MyString.h"
 #include "format_time.h"
 #include "daemon.h"
 #include "condor_distribution.h"
@@ -83,7 +82,7 @@ enum {
 };
 
 struct LineRec {
-  MyString Name;
+  std::string Name;
   float Priority;
   int Res;
   float wtRes;
@@ -92,7 +91,7 @@ struct LineRec {
   float Factor;
   int BeginUsage;
   int LastUsage;
-  MyString AcctGroup;
+  std::string AcctGroup;
   bool IsAcctGroup;
   int   HasDetail;      // one or more of Detailxxx flags indicating the that data exists.
   float EffectiveQuota;
@@ -208,8 +207,8 @@ struct LineRecLT {
                   return a.IsAcctGroup > b.IsAcctGroup;
 
             } else if (group_order == SortGroupsByName) { // sort by group name
-               const MyString * pa = a.IsAcctGroup ? &a.Name : &a.AcctGroup;
-               const MyString * pb = b.IsAcctGroup ? &b.Name : &b.AcctGroup;
+               const std::string * pa = a.IsAcctGroup ? &a.Name : &a.AcctGroup;
+               const std::string * pb = b.IsAcctGroup ? &b.Name : &b.AcctGroup;
                if (*pa != *pb)
                   return *pa < *pb;
                if (a.IsAcctGroup != b.IsAcctGroup)
@@ -319,7 +318,7 @@ static void PrintModularAds(
 		prioAds = accountingAds;
 	}
 
-	MyString my_constraint;
+	std::string my_constraint;
 	constraint.makeQuery(my_constraint);
 	// if (diagnostic) { fprintf(stderr, "Using effective constraint: %s\n", my_constraint.c_str()); }
 
@@ -1537,11 +1536,11 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
    int max_name = 10;
    for (int j = 0; j < NumElem; ++j) {
       if (LR[j].LastUsage >= MinLastUsageTime) {
-         int name_length = LR[j].Name.Length();
+         int name_length = LR[j].Name.length();
          if (HierFlag && ! LR[j].IsAcctGroup) {
             name_length += 2;
             if (LR[j].GroupId != 0)
-               name_length -= LR[j].AcctGroup.Length();
+               name_length -= LR[j].AcctGroup.length();
          }
          if (name_length > max_name) max_name = name_length;
       }
@@ -1642,12 +1641,12 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
 
       // write group/user name into Line
       if ( ! HierFlag || is_group) {
-         CopyAndPadToWidth(Line,LR[j].Name.Value(),max_name+1,' ');
+         CopyAndPadToWidth(Line,LR[j].Name.c_str(),max_name+1,' ');
       } else {
          Line[0] = Line[1] = ' ';
-         const char * pszName = LR[j].Name.Value();
+         const char * pszName = LR[j].Name.c_str();
          if (LR[j].GroupId > 0) 
-            pszName +=  strlen(LR[j].AcctGroup.Value())+1;
+            pszName +=  strlen(LR[j].AcctGroup.c_str())+1;
          CopyAndPadToWidth(Line+2, pszName, max_name+1-2, ' ');
       }
       ix = max_name;

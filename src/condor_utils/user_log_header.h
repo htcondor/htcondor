@@ -21,7 +21,6 @@
 #define _USER_LOG_HEADER_H
 
 #include <time.h>
-#include "MyString.h"
 #include "read_user_log_state.h"
 #include "write_user_log.h"
 
@@ -40,11 +39,11 @@ public:
 	bool IsValid( void ) const { return m_valid; };
 
 	// Get/set methods
-	void getId( MyString &id ) const
+	void getId( std::string &id ) const
 		{ id = m_id; };
-	const MyString &getId( void ) const
+	const std::string &getId( void ) const
 		{ return m_id; };
-	void setId( const MyString &id )
+	void setId( const std::string &id )
 		{ m_id = id; };
 
 	int getSequence( void ) const
@@ -88,11 +87,11 @@ public:
 	int setMaxRotation( int max_rotation )
 		{ return m_max_rotation = max_rotation; };
 
-	void getCreatorName( MyString &name ) const
+	void getCreatorName( std::string &name ) const
 		{ name = m_creator_name; };
-	const MyString & getCreatorName( void ) const
+	const std::string & getCreatorName( void ) const
 		{ return m_creator_name; };
-	void setCreatorName( const MyString &name )
+	void setCreatorName( const std::string &name )
 		{ m_creator_name = name; };
 	void setCreatorName( const char *name )
 		{ m_creator_name = name; };
@@ -101,12 +100,12 @@ public:
 	int ExtractEvent( const ULogEvent *);
 
 	// Debug
-	void sprint_cat( MyString &s ) const;
-	void dprint( int level, MyString &buf ) const;
+	void sprint_cat( std::string &s ) const;
+	void dprint( int level, std::string &buf ) const;
 	void dprint( int level, const char *label ) const;
 
 protected:
-	MyString	m_id;
+	std::string	m_id;
 	int			m_sequence;
 	time_t		m_ctime;			// Creation time
 	filesize_t	m_size;				// Size of this file
@@ -114,7 +113,7 @@ protected:
 	filesize_t	m_file_offset;		// Offset in the "big file"
 	int64_t		m_event_offset;		// Event offset in the "big file"
 	int			m_max_rotation;		// Max rotation
-	MyString	m_creator_name;		// Name of the file's creator
+	std::string	m_creator_name;		// Name of the file's creator
 
 	bool		m_valid;
 };

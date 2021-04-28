@@ -3,7 +3,11 @@
 Linux (as user)
 ===============
 
-Installing HTCondor on Linux as a normal user is a multi-step process.
+Installing HTCondor on Linux as a normal user is a multi-step process. Note
+that a user-install of HTCondor is always self-contained on a single
+machine; if you want to create a multi-machine HTCondor pool, you will need
+to have administrative privileges on the relevant machines and follow the
+instructions here: :doc:`admin-quick-start`.
 
 Download
 --------
@@ -17,7 +21,7 @@ otherwise, we recommend using our download script, as follows.
 .. code-block:: shell
 
     cd
-    curl -fsSL https://get.htcondor.com | /bin/bash -s -- --download
+    curl -fsSL https://get.htcondor.org | /bin/bash -s -- --download
 
 Install
 -------

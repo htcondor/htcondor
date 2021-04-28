@@ -720,14 +720,15 @@ and to upload ``output.txt`` to ``my_private_files/output.txt`` on a second acco
 
 **Transferring files to and from S3**
 
-Securely downloading a file from, or uploading a file to, Amazon's Simple
-Storage Service (S3) requires a two-part credential, the "access key ID"
-and the "secret key ID".  To reduce the risk of transferring these tokens
-from the submit node to the execute node, HTCondor can instead use them
-on the submit node to construct pre-signed ``https`` URLs that temporarily allow
-the bearer access to the file specified in the URL.  Those URLs are then
-encrypted for transfer to the execute node, which downloads the files using
-its ``https`` plug-in.  To make use of this feature, specify a file containing
+HTCondor supports downloading files from and uploading files to Amazon's Simple
+Storage Service (S3) using ``s3://`` URLs.  Downloading or uploading requires
+a two-part credential: the "access key ID" and the "secret key ID".  HTCondor
+does not transfer these credentials off the submit node; instead, it uses
+them to construct "pre-signed" ``https://`` URLs that temporarily allow
+the bearer access.  (Thus, an execute node needs to support ``https://``
+URLs for S3 URLs to work.)
+
+To make use of this feature, specify a file containing
 your access key ID (and nothing else), a file containing your secret access
 key (and nothing else), and one or more S3 URLs in one of three forms:
 
@@ -744,9 +745,13 @@ key (and nothing else), and one or more S3 URLs in one of three forms:
     # Optionally, specify a region for S3 URLs which don't include one:
     aws_region = <region>
 
-You may also specify an S3 URL (where instead of a ``key``, you're specifying
-a ``prefix``) for the ``output_destination`` command.  The ``aws_region``
-command may also be used to specify a region for S3 URLs which don't
-include one (even for non-AWS services).
+The ``aws_region`` command may also be used to specify a region for S3 URLs
+which don't include one (even for non-AWS services).
+
+HTCondor does not currently support transferring entire buckets or directories
+from S3.  However, if you specify an ``s3://`` URL as the
+``output_destination``, that URL will be used a prefix for each output file's
+location; if you specify a URL ending a ``/``, it will be treated like a
+directory.
 
 You may also use S3 URLs in ``transfer_output_remaps``.

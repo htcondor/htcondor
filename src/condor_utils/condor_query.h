@@ -168,7 +168,7 @@ class CondorQuery
 
 	// get the query filter ad --- useful for debugging
 	QueryResult getQueryAd (ClassAd &);
-	QueryResult getRequirements (MyString & req) { return (QueryResult) query.makeQuery (req); }
+	QueryResult getRequirements (std::string & req) { return (QueryResult) query.makeQuery (req); }
 	
 	// set the type for the next generic query
 	void setGenericQueryType(const char*);

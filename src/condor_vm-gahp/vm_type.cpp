@@ -24,7 +24,6 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_arglist.h"
-#include "MyString.h"
 #include "util_lib_proto.h"
 #include "setenv.h"
 #include "vmgahp_common.h"
@@ -83,9 +82,9 @@ VMType::~VMType()
 	m_cpu_time = 0;
 
 	if( m_delete_working_files && !m_is_checkpointed ) {
-		if( m_workingpath.IsEmpty() == false ) {
+		if( m_workingpath.empty() == false ) {
 			// We will delete all files in the working directory.
-			Directory working_dir(m_workingpath.Value(), PRIV_USER);
+			Directory working_dir(m_workingpath.c_str(), PRIV_USER);
 			working_dir.Remove_Entire_Directory();
 		}
 	}
@@ -151,7 +150,7 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 			}
 		}else {
 			// vm_networking_type is undefined
-			if( vmgahp->m_gahp_config->m_vm_default_networking_type.IsEmpty() == false ) {
+			if( vmgahp->m_gahp_config->m_vm_default_networking_type.empty() == false ) {
 				m_vm_networking_type = vmgahp->m_gahp_config->m_vm_default_networking_type;
 			}else {
 				m_vm_networking_type = "nat";
@@ -201,12 +200,12 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 
 	m_classad_arg = "";
 	ArgList arglist;
-	MyString error_msg;
-	if(!arglist.GetArgsStringV1or2Raw(&m_classAd, &m_classad_arg, &error_msg)) {
+	std::string error_msg;
+	if(!arglist.GetArgsStringV1or2Raw(&m_classAd, m_classad_arg, error_msg)) {
 		m_classad_arg = "";
 	}
 
-	if( m_classad_arg.IsEmpty() == false ) {
+	if( m_classad_arg.empty() == false ) {
 
         // Create a file for arguments
 		FILE *argfile_fp = safe_fopen_wrapper_follow(VM_UNIV_ARGUMENT_FILE, "w");
@@ -217,7 +216,7 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
 			return false;
 		}
-		if( fprintf(argfile_fp, "%s", m_classad_arg.Value()) < 0) {
+		if( fprintf(argfile_fp, "%s", m_classad_arg.c_str()) < 0) {
 			fclose(argfile_fp);
 			IGNORE_RETURN unlink(VM_UNIV_ARGUMENT_FILE);
 			vmprintf(D_ALWAYS, "failed to fprintf in CreateConfigFile(%s:%s)\n",
@@ -228,7 +227,7 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 		fclose(argfile_fp);
 
         //??
-		m_arg_file.formatstr("%s%c%s", m_workingpath.Value(), 
+		formatstr(m_arg_file, "%s%c%s", m_workingpath.c_str(), 
 				DIR_DELIM_CHAR, VM_UNIV_ARGUMENT_FILE);
 
     }
@@ -267,7 +266,7 @@ VMType::createInitialFileList()
 	m_transfer_input_files.clearAll();
 
 	// Create m_initial_working_files
-	find_all_files_in_dir(m_workingpath.Value(), m_initial_working_files, true);
+	find_all_files_in_dir(m_workingpath.c_str(), m_initial_working_files, true);
 
 	// Read Intermediate files from Job classAd
 	m_classAd.LookupString( ATTR_TRANSFER_INTERMEDIATE_FILES, intermediate_files);
@@ -306,7 +305,7 @@ VMType::deleteNonTransferredFiles()
 	m_initial_working_files.clearAll();
 
 	// Find all files in working directory
-	find_all_files_in_dir(m_workingpath.Value(), m_initial_working_files, true);
+	find_all_files_in_dir(m_workingpath.c_str(), m_initial_working_files, true);
 
 	const char *tmp_file = NULL;
 	m_initial_working_files.rewind();
@@ -341,13 +340,13 @@ VMType::createVMName(ClassAd *ad, std::string& vmname)
 // The last six characters of template_string must be XXXXXX.
 // outname is the full path name of a created file;
 bool
-VMType::createTempFile(const char *template_string, const char *suffix, MyString &outname)
+VMType::createTempFile(const char *template_string, const char *suffix, std::string &outname)
 {
-	MyString tmp_config_name;
-	tmp_config_name.formatstr("%s%c%s",m_workingpath.Value(), 
+	std::string tmp_config_name;
+	formatstr(tmp_config_name, "%s%c%s", m_workingpath.c_str(), 
 			DIR_DELIM_CHAR, template_string);
 
-	char *config_name = strdup(tmp_config_name.Value() );
+	char *config_name = strdup(tmp_config_name.c_str() );
 	ASSERT(config_name);
 
 	int config_fd = -1;
@@ -364,11 +363,11 @@ VMType::createTempFile(const char *template_string, const char *suffix, MyString
 	outname = config_name;
 
 	if( suffix ) {
-		tmp_config_name.formatstr("%s%s",config_name, suffix);
+		formatstr(tmp_config_name, "%s%s",config_name, suffix);
 
-		if( rename(config_name, tmp_config_name.Value()) < 0 ) {
+		if( rename(config_name, tmp_config_name.c_str()) < 0 ) {
 			vmprintf(D_ALWAYS, "Cannot rename the temporary config file(%s), '%s' (errno %d) in "
-					"VMType::createTempFile()\n", tmp_config_name.Value(), 
+					"VMType::createTempFile()\n", tmp_config_name.c_str(), 
 					strerror(errno), errno );
 			free(config_name);
 			return false;
@@ -383,19 +382,19 @@ VMType::createTempFile(const char *template_string, const char *suffix, MyString
 // if so, fullname will have full path in working directory.
 // Otherwise, fullname will be same to file_name
 bool 
-VMType::isTransferedFile(const char* file_name, MyString& fullname) 
+VMType::isTransferedFile(const char* file_name, std::string& fullname) 
 {
 	if( !file_name || m_initial_working_files.isEmpty() ) {
 		return false;
 	}
 
 	// check if this file was transferred.
-	MyString tmp_fullname;
+	std::string tmp_fullname;
 	if( filelist_contains_file(file_name,
 				&m_initial_working_files, true) ) {
 		// this file was transferred.
 		// make full path with workingdir
-		tmp_fullname.formatstr("%s%c%s", m_workingpath.Value(), 
+		formatstr(tmp_fullname, "%s%c%s", m_workingpath.c_str(), 
 				DIR_DELIM_CHAR, condor_basename(file_name));
 		fullname = tmp_fullname;
 		return true;
@@ -417,7 +416,7 @@ VMType::createConfigUsingScript(const char* configfile)
 {
 	vmprintf(D_FULLDEBUG, "Inside VMType::createConfigUsingScript\n");
 
-	if( !configfile || m_scriptname.IsEmpty() ) {
+	if( !configfile || m_scriptname.empty() ) {
 		return false;
 	}
 
@@ -439,7 +438,7 @@ VMType::createConfigUsingScript(const char* configfile)
 	}
 
 	ArgList systemcmd;
-	if( m_prog_for_script.IsEmpty() == false ) {
+	if( m_prog_for_script.empty() == false ) {
 		systemcmd.AppendArg(m_prog_for_script);
 	}
 	systemcmd.AppendArg(m_scriptname);
@@ -458,7 +457,7 @@ VMType::createConfigUsingScript(const char* configfile)
 	if( result != 0 ) {
 		vmprintf(D_ALWAYS, "Failed to create Configuration file('%s') using "
 				"script program('%s')\n", configfile, 
-				m_scriptname.Value());
+				m_scriptname.c_str());
 		return false;
 	}
 	return true;

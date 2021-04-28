@@ -767,7 +767,7 @@ int _condorOutMsg::sendMsg(const int sock,
 
 		dprintf( D_NETWORK, "SEND [%d] %s ", sent, sock_to_string(sock) );
 		dprintf( D_NETWORK|D_NOHEADER, "%s\n",
-				 who.to_sinful().Value());
+				 who.to_sinful().c_str());
 		total += sent;
 		delete tempPkt;
         md = 0;
@@ -798,7 +798,7 @@ int _condorOutMsg::sendMsg(const int sock,
         //}
         //dprintf(D_NETWORK, "--->packet [%d bytes]: %s\n", sent, str);
 		dprintf( D_NETWORK, "SEND [%d] %s ", sent, sock_to_string(sock) );
-		dprintf( D_NETWORK|D_NOHEADER, "%s\n", who.to_sinful().Value());
+		dprintf( D_NETWORK|D_NOHEADER, "%s\n", who.to_sinful().c_str());
 		total = sent;
     }
     else {
@@ -818,7 +818,7 @@ int _condorOutMsg::sendMsg(const int sock,
         //}
         //dprintf(D_NETWORK, "--->packet [%d bytes]: %s\n", sent, str);
         dprintf( D_NETWORK, "SEND [%d] %s ", sent, sock_to_string(sock) );
-        dprintf( D_NETWORK|D_NOHEADER, "%s\n", who.to_sinful().Value());
+        dprintf( D_NETWORK|D_NOHEADER, "%s\n", who.to_sinful().c_str());
         total += sent;
     }
 

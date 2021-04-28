@@ -93,9 +93,9 @@ JICLocalConfig::getLocalJobAd( void )
 #if defined ( WIN32 )	
 		// Windows "owners" may be of the form domain\user,
 		// so we'll need to parse it...
-	MyString buffer;
-	buffer.formatstr( "%s_%s", key, ATTR_OWNER );
-	char *owner_defined = param( buffer.Value () );
+	std::string buffer;
+	formatstr( buffer, "%s_%s", key, ATTR_OWNER );
+	char *owner_defined = param( buffer.c_str() );
 	if ( owner_defined ) {			
 			// On Windows we need to set RunAsOwner for it to 
 			// respect the owner attribute (but only when the 

@@ -44,7 +44,6 @@
 #include "condor_string.h"  /* for strnewp() */
 #include "string_list.h"
 #include "condor_daemon_core.h"
-#include "extArray.h"
 #include "HashTable.h"
 #include <set>
 #include "dagman_metrics.h"
@@ -139,7 +138,7 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 	_metrics			  (NULL),
 	_schedd				  (schedd)
 {
-	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.Value() );
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.c_str() );
 
 	// If this dag is a splice, then it may have been specified with a DIR
 	// directive. If so, then this records what it was so we can later
@@ -223,18 +222,19 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 //-------------------------------------------------------------------------
 Dag::~Dag()
 {
-	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::~Dag()\n", _spliceScope.Value() );
+	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::~Dag()\n", _spliceScope.c_str() );
 
 	if ( _condorLogRdr.activeLogFileCount() > 0 ) {
 		(void) UnmonitorLogFile();
 	}
-		// remember kids, delete is safe *even* if ptr == NULL...
 
-	// delete all jobs in _jobs
-	auto it = _jobs.begin();
-	while (it != _jobs.end()) {
-		_jobs.erase(it);
+	// Delete all job objects in _jobs
+	for (auto *job : _jobs) {
+		delete job;
 	}
+
+	// And remove them from the vector
+	_jobs.clear();
 
     delete _preScriptQ;
     delete _postScriptQ;
@@ -858,11 +858,11 @@ Dag::RemoveBatchJob(Job *node) {
 		// be extra-careful to avoid removing someone else's
 		// job.
 	constraint.formatstr(ATTR_DAGMAN_JOB_ID "==%d", _DAGManJobId->_cluster);
-	args.AppendArg( constraint.Value() );
+	args.AppendArg( constraint.c_str() );
 	
 	MyString display;
 	args.GetArgsStringForDisplay( &display );
-	debug_printf( DEBUG_VERBOSE, "Executing: %s\n", display.Value() );
+	debug_printf( DEBUG_VERBOSE, "Executing: %s\n", display.c_str() );
 	if ( _dagmanUtils.popen( args ) != 0 ) {
 			// Note: error here can't be fatal because there's a
 			// race condition where you could do a condor_rm on
@@ -987,8 +987,8 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 					// Normal termination -- POST script failed
 				errStr.formatstr( "failed with status %d",
 							termEvent->returnValue );
-				debug_printf( DEBUG_NORMAL, "%s%s\n", header.Value(),
-							errStr.Value() );
+				debug_printf( DEBUG_NORMAL, "%s%s\n", header.c_str(),
+							errStr.c_str() );
 				debug_printf( DEBUG_QUIET,
 					"POST for Node %s returned %d\n",
 					job->GetJobName(),termEvent->returnValue);
@@ -999,13 +999,13 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				errStr.formatstr( "died on signal %d",
 							termEvent->signalNumber );
 				debug_printf( DEBUG_NORMAL,
-							"%s%s\n", header.Value(), errStr.Value() );
+							"%s%s\n", header.c_str(), errStr.c_str() );
 
 				job->retval = (0 - termEvent->signalNumber);
 			}
 
 			job->error_text.formatstr(
-						"POST script %s", errStr.Value() );
+						"POST script %s", errStr.c_str() );
 
 				// Log post script success or failure if necessary.
 			_jobstateLog.WriteScriptSuccessOrFailure( job, ScriptType::POST );
@@ -1056,7 +1056,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				// POST script succeeded.
 			ASSERT( termEvent->returnValue == 0 );
 			debug_printf( DEBUG_NORMAL,
-						"%scompleted successfully.\n", header.Value() );
+						"%scompleted successfully.\n", header.c_str() );
 			job->retval = 0;
 				// Log post script success or failure if necessary.
 			_jobstateLog.WriteScriptSuccessOrFailure( job, ScriptType::POST );
@@ -1418,7 +1418,6 @@ Dag::FindAllNodesByName( const char* nodeName,
 		else {
 			node = NULL;
 		}
-		ASSERT( _allNodesIt == _jobs.end() || !( node->GetType() == NodeType::FINAL ) );
 	}
 
 	return node;
@@ -1636,12 +1635,12 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		// Check whether the held file exists -- if so, we don't submit
 		// any jobs or run scripts.
 	bool prevDagIsHalted = _dagIsHalted;
-	_dagIsHalted = ( access( _haltFile.Value() , F_OK ) == 0 );
+	_dagIsHalted = ( access( _haltFile.c_str() , F_OK ) == 0 );
 
 	if ( _dagIsHalted ) {
 		debug_printf( DEBUG_QUIET,
 					"DAG is halted because halt file %s exists\n",
-					_haltFile.Value() );
+					_haltFile.c_str() );
 		if ( _finalNodeRun ) {
 			debug_printf( DEBUG_QUIET,
 						"Continuing to allow final node to run\n" );
@@ -1739,7 +1738,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 					catThrottle->_currentJobs >= catThrottle->_maxJobs ) {
 			debug_printf( DEBUG_DEBUG_1,
 						"Node %s deferred by category throttle (%s, %d)\n",
-						job->GetJobName(), catThrottle->_category->Value(),
+						job->GetJobName(), catThrottle->_category->c_str(),
 						catThrottle->_maxJobs );
 			deferredJobs.Prepend( job, -job->_effectivePriority );
 			_catThrottleDeferredCount++;
@@ -2190,7 +2189,7 @@ void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
 
 		// NOTE: having whitespace in the constraint argument will cause quoting problems on windows
 		constraint.formatstr(ATTR_DAGMAN_JOB_ID "==%d", dmJobId._cluster );
-		args.AppendArg( constraint.Value() );
+		args.AppendArg( constraint.c_str() );
 		if ( _dagmanUtils.popen( args ) != 0 ) {
 			debug_printf( DEBUG_NORMAL, "Error removing DAGMan jobs\n");
 		}
@@ -2266,7 +2265,7 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 		// should be avoided by the lock file, though, so I'm not doing
 		// anything about it right now.  wenger 2007-02-27
 
-	WriteRescue( rescueDagFile.Value(), dagFile, parseFailed, isPartial );
+	WriteRescue( rescueDagFile.c_str(), dagFile, parseFailed, isPartial );
 }
 
 static const char *RESCUE_DAG_VERSION = "2.0.1";
@@ -2504,7 +2503,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 			// Print the CATEGORY line, if any.
 		if ( node->GetThrottleInfo() ) {
 			fprintf( fp, "CATEGORY %s %s\n", node->GetJobName(),
-						node->GetThrottleInfo()->_category->Value() );
+						node->GetThrottleInfo()->_category->c_str() );
 		}
 	}
 
@@ -2666,12 +2665,12 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
 	    debug_printf( level, "Event: %s for %s Node %s (%d.%d.%d) {%s}%s\n",
 					  event->eventName(), node->JobTypeString(),
 					  node->GetJobName(), event->cluster, event->proc,
-					  event->subproc, timestr.Value(), recovStr );
+					  event->subproc, timestr.c_str(), recovStr );
 	} else {
         debug_printf( level, "Event: %s for unknown Node (%d.%d.%d) {%s}: "
 					  "ignoring...%s\n", event->eventName(),
 					  event->cluster, event->proc,
-					  event->subproc, timestr.Value(), recovStr );
+					  event->subproc, timestr.c_str(), recovStr );
 	}
 }
 
@@ -2955,12 +2954,12 @@ Dag::DumpDotFile(void)
 
 		temp_dot_file_name = current_dot_file_name + ".temp";
 
-		_dagmanUtils.tolerant_unlink(temp_dot_file_name.Value());
-		temp_dot_file = safe_fopen_wrapper_follow(temp_dot_file_name.Value(), "w");
+		_dagmanUtils.tolerant_unlink(temp_dot_file_name.c_str());
+		temp_dot_file = safe_fopen_wrapper_follow(temp_dot_file_name.c_str(), "w");
 		if (temp_dot_file == NULL) {
 			debug_dprintf(D_ALWAYS, DEBUG_NORMAL,
 						  "Can't create dot file '%s'\n", 
-						  temp_dot_file_name.Value());
+						  temp_dot_file_name.c_str());
 		} else {
 			time_t current_time;
 			char   *time_string;
@@ -2992,14 +2991,14 @@ Dag::DumpDotFile(void)
 			fclose(temp_dot_file);
 				// Note:  we do tolerant_unlink because renaming over an
 				// existing file fails on Windows.
-			_dagmanUtils.tolerant_unlink(current_dot_file_name.Value());
-			if ( rename(temp_dot_file_name.Value(),
-						current_dot_file_name.Value()) != 0 ) {
+			_dagmanUtils.tolerant_unlink(current_dot_file_name.c_str());
+			if ( rename(temp_dot_file_name.c_str(),
+						current_dot_file_name.c_str()) != 0 ) {
 				debug_printf( DEBUG_NORMAL,
 					  		"Warning: can't rename temporary dot "
 					  		"file (%s) to permanent file (%s): %s\n",
-					  		temp_dot_file_name.Value(),
-							current_dot_file_name.Value(),
+					  		temp_dot_file_name.c_str(),
+							current_dot_file_name.c_str(),
 					  		strerror( errno ) );
 				check_warning_strictness( DAG_STRICT_1 );
 			}
@@ -3080,13 +3079,13 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	tmpStatusFile += ".tmp";
 		// Note: it's not an error if this fails (file may not
 		// exist).
-	_dagmanUtils.tolerant_unlink( tmpStatusFile.Value() );
+	_dagmanUtils.tolerant_unlink( tmpStatusFile.c_str() );
 
-	FILE *outfile = safe_fopen_wrapper_follow( tmpStatusFile.Value(), "w" );
+	FILE *outfile = safe_fopen_wrapper_follow( tmpStatusFile.c_str(), "w" );
 	if ( outfile == NULL ) {
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't create node status file '%s': %s\n", 
-					  tmpStatusFile.Value(), strerror( errno ) );
+					  tmpStatusFile.c_str(), strerror( errno ) );
 		check_warning_strictness( DAG_STRICT_1 );
 		return;
 	}
@@ -3113,7 +3112,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	timeStr.chomp();
 	fprintf( outfile, "  Timestamp = %lu; /* %s */\n",
 				(unsigned long)startTime,
-				EscapeClassadString( timeStr.Value() ) );
+				EscapeClassadString( timeStr.c_str() ) );
 
 		// If markNodesError is true, this means that we want to mark
 		// nodes in the PRERUN, SUBMITTED, and POSTRUN states as being
@@ -3185,7 +3184,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	statusStr += statusNote;
 	statusStr += ")";
 	fprintf( outfile, "  DagStatus = %d; /* %s */\n", dagJobStatus,
-				EscapeClassadString( statusStr.Value() ) );
+				EscapeClassadString( statusStr.c_str() ) );
 
 	int nodesPre = PreRunNodeCount();
 	int nodesQueued = NumJobsSubmitted();
@@ -3253,7 +3252,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 			}
 
 		} else if ( status == Job::STATUS_ERROR ) {
-			nodeNote = (*it)->error_text.Value();
+			nodeNote = (*it)->error_text.c_str();
 
 		} else if ( status == Job::STATUS_PRERUN ) {
 			if ( markNodesError ) {
@@ -3273,7 +3272,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		statusStr = Job::status_t_names[status];
 		statusStr.trim();
 		fprintf( outfile, "  NodeStatus = %d; /* %s */\n", status,
-					EscapeClassadString( statusStr.Value() ) );
+					EscapeClassadString( statusStr.c_str() ) );
 		// fprintf( outfile, "  /* HTCondorStatus = xxx; */\n" );
 		fprintf( outfile, "  StatusDetails = %s;\n",
 					EscapeClassadString( nodeNote ) );
@@ -3298,7 +3297,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	timeStr.chomp();
 	fprintf( outfile, "  EndTime = %lu; /* %s */\n",
 				(unsigned long)endTime,
-				EscapeClassadString( timeStr.Value() ) );
+				EscapeClassadString( timeStr.c_str() ) );
 
 	time_t nextTime;
 	if ( FinishedRunning( true ) || removed ) {
@@ -3311,7 +3310,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	}
 	fprintf( outfile, "  NextUpdate = %lu; /* %s */\n",
 				(unsigned long)nextTime,
-				EscapeClassadString( timeStr.Value() ) );
+				EscapeClassadString( timeStr.c_str() ) );
 	fprintf( outfile, "]\n" );
 
 	fclose( outfile );
@@ -3328,12 +3327,12 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	debug_printf( DEBUG_QUIET, "Writing node status file %s\n",
 				statusFileName.Value() );
 #endif
-	_dagmanUtils.tolerant_unlink( statusFileName.Value() );
-	if ( rename( tmpStatusFile.Value(), statusFileName.Value() ) != 0 ) {
+	_dagmanUtils.tolerant_unlink( statusFileName.c_str() );
+	if ( rename( tmpStatusFile.c_str(), statusFileName.c_str() ) != 0 ) {
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't rename temporary node status "
 					  "file (%s) to permanent file (%s): %s\n",
-					  tmpStatusFile.Value(), statusFileName.Value(),
+					  tmpStatusFile.c_str(), statusFileName.c_str(),
 					  strerror( errno ) );
 		check_warning_strictness( DAG_STRICT_1 );
 		return;
@@ -3481,12 +3480,12 @@ Dag::CheckAllJobs()
 	result = _checkCondorEvents.CheckAllJobs(jobError);
 	if ( result == CheckEvents::EVENT_ERROR ) {
 		debug_printf( DEBUG_QUIET, "Error checking HTCondor job events: %s\n",
-				jobError.Value() );
+				jobError.c_str() );
 		ASSERT( false );
 	} else if ( result == CheckEvents::EVENT_BAD_EVENT ||
 				result == CheckEvents::EVENT_WARNING ) {
 		debug_printf( DEBUG_NORMAL, "Warning checking HTCondor job events: %s\n",
-				jobError.Value() );
+				jobError.c_str() );
 		check_warning_strictness( DAG_STRICT_3 );
 	} else {
 		debug_printf( DEBUG_DEBUG_1, "All HTCondor job events okay\n");
@@ -3591,20 +3590,20 @@ Dag::CheckThrottleCats()
 	_catThrottles.StartIterations();
 	while ( _catThrottles.Iterate( info ) ) {
 		debug_printf( DEBUG_DEBUG_1, "Category %s has %d jobs, "
-					"throttle setting of %d\n", info->_category->Value(),
+					"throttle setting of %d\n", info->_category->c_str(),
 					info->_totalJobs, info->_maxJobs );
 		ASSERT( info->_totalJobs >= 0 );
 		if ( info->_totalJobs < 1 ) {
 			debug_printf( DEBUG_NORMAL, "Warning: category %s has no "
 						"assigned nodes, so the throttle setting (%d) "
-						"will have no effect\n", info->_category->Value(),
+						"will have no effect\n", info->_category->c_str(),
 						info->_maxJobs );
 			check_warning_strictness( DAG_STRICT_2 );
 		}
 
 		if ( !info->isSet() ) {
 			debug_printf( DEBUG_NORMAL, "Warning: category %s has no "
-						"throttle value set\n", info->_category->Value() );
+						"throttle value set\n", info->_category->c_str() );
 			check_warning_strictness( DAG_STRICT_2 );
 		}
 	}
@@ -3784,7 +3783,7 @@ Dag::ChooseDotFileName(MyString &dot_file_name)
 			FILE *fp;
 
 			dot_file_name.formatstr("%s.%d", _dot_file_name, _dot_file_name_suffix);
-			fp = safe_fopen_wrapper_follow(dot_file_name.Value(), "r");
+			fp = safe_fopen_wrapper_follow(dot_file_name.c_str(), "r");
 			if (fp != NULL) {
 				fclose(fp);
 				_dot_file_name_suffix++;
@@ -4190,7 +4189,7 @@ Dag::EventSanityCheck( const ULogEvent* event,
 		return true;
 	}
 
-	debug_printf( DEBUG_NORMAL, "%s\n", eventError.Value() );
+	debug_printf( DEBUG_NORMAL, "%s\n", eventError.c_str() );
 	//debug_printf( DEBUG_NORMAL, "WARNING: bad event here may indicate a "
 				  //"serious bug in HTCondor -- beware!\n" );
 
@@ -4202,7 +4201,7 @@ Dag::EventSanityCheck( const ULogEvent* event,
 	if( checkResult == CheckEvents::EVENT_BAD_EVENT ) {
 		debug_printf( DEBUG_NORMAL, "Continuing with DAG in spite of bad "
 					  "event (%s) because of allow_events setting\n",
-					  eventError.Value() );
+					  eventError.c_str() );
 	
 			// Don't do any further processing of this event,
 			// because it can goof us up (e.g., decrement count
@@ -4213,7 +4212,7 @@ Dag::EventSanityCheck( const ULogEvent* event,
 
 	if( checkResult == CheckEvents::EVENT_ERROR ) {
 		debug_printf( DEBUG_QUIET, "ERROR: aborting DAG because of bad event "
-					  "(%s)\n", eventError.Value() );
+					  "(%s)\n", eventError.c_str() );
 			// set *result to indicate we should abort the DAG
 		*result = false;
 		return false;
@@ -4257,14 +4256,14 @@ Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node ) const
 		debug_printf( DEBUG_QUIET, "%s  Aborting DAG; set "
 					"DAGMAN_ABORT_ON_SCARY_SUBMIT to false if you are "
 					"*sure* this shouldn't cause an abort.\n",
-					message.Value() );
+					message.c_str() );
 		main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
 		return true;
 	} else {
 		debug_printf( DEBUG_QUIET,
 					"%s  Trusting the userlog for now (because of "
 					"DAGMAN_ABORT_ON_SCARY_SUBMIT setting), but this is "
-					"scary!\n", message.Value() );
+					"scary!\n", message.c_str() );
 	}
 	return false;
 }
@@ -4374,7 +4373,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		if ( !node->GetDagFile() && dm._batchName == " " ) {
 			batchName = "";
 		} else {
-			batchName = dm._batchName.Value();
+			batchName = dm._batchName.c_str();
 		}
 		if ( !node->GetDagFile() && dm._batchId == " " ) {
 			batchId = "";
@@ -4414,7 +4413,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		if (!node->GetDagFile() && dm._batchName == " ") {
 			batchName = "";
 		} else {
-			batchName = dm._batchName.Value();
+			batchName = dm._batchName.c_str();
 		}
 				if ( !node->GetDagFile() && dm._batchId == " " ) {
 			batchId = "";
@@ -4604,7 +4603,7 @@ bool
 Dag::SetPinInOut( bool isPinIn, const char *nodeName, int pinNum )
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::SetPinInOut(%d, %s, %d)\n",
-				_spliceScope.Value(), isPinIn, nodeName, pinNum );
+				_spliceScope.c_str(), isPinIn, nodeName, pinNum );
 
 	ASSERT( pinNum > 0 );
 
@@ -4647,7 +4646,7 @@ const Dag::PinNodes *
 Dag::GetPinInOut( bool isPinIn, int pinNum ) const
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag(%s)::GetPinInOut(%d, %d)\n",
-				_spliceScope.Value(), isPinIn, pinNum );
+				_spliceScope.c_str(), isPinIn, pinNum );
 
 	ASSERT( pinNum > 0 );
 
@@ -4693,12 +4692,12 @@ bool
 Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 {
 	debug_printf( DEBUG_DEBUG_1, "Dag::ConnectSplices(%s, %s)\n",
-				parentSplice->_spliceScope.Value(),
-				childSplice->_spliceScope.Value() );
+				parentSplice->_spliceScope.c_str(),
+				childSplice->_spliceScope.c_str() );
 
 	MyString parentName = parentSplice->_spliceScope;
 		// Trim trailing '+' from parentName.
-	int last = parentName.Length() - 1;
+	int last = parentName.length() - 1;
 	ASSERT( last >= 0 );
 	if ( parentName[last] == '+' ) {
 		parentName.truncate( last );
@@ -4706,7 +4705,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 
 	MyString childName = childSplice->_spliceScope;
 		// Trim trailing '+' from childName.
-	last = childName.Length() - 1;
+	last = childName.length() - 1;
 	ASSERT( last >= 0 );
 	if ( childName[last] == '+' ) {
 		childName.truncate( last );
@@ -4719,7 +4718,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 	if ( pinOutCount <= 0 ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: parent splice %s has 0 pin_outs\n",
-					parentName.Value() );
+					parentName.c_str() );
 		return false;
 	}
 
@@ -4727,15 +4726,15 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 	if ( pinInCount <= 0 ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: child splice %s has 0 pin_ins\n",
-					childName.Value() );
+					childName.c_str() );
 		return false;
 	}
 
 	if ( pinOutCount != pinInCount ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: pin_in/out mismatch:  parent splice %s has %d pin_outs; child splice %s has %d pin_ins\n",
-					parentName.Value(), pinOutCount,
-					childName.Value(), pinInCount );
+					parentName.c_str(), pinOutCount,
+					childName.c_str(), pinInCount );
 		return false;
 	}
 
@@ -4752,7 +4751,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 		if ( !parentPNs ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: parent splice %s has no node for pin_out %d\n",
-						parentName.Value(), pinNum );
+						parentName.c_str(), pinNum );
 			return false;
 		}
 
@@ -4760,7 +4759,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 		if ( !childPNs ) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: child splice %s has no node for pin_in %d\n",
-						childName.Value(), pinNum );
+						childName.c_str(), pinNum );
 			return false;
 		}
 
@@ -4822,7 +4821,7 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 	MyString key;
 
 	debug_printf(DEBUG_DEBUG_1, "Entering: Dag::PrefixAllNodeNames()"
-		" with prefix %s\n",prefix.Value());
+		" with prefix %s\n",prefix.c_str());
 
 	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
 		(*it)->PrefixName(prefix);
@@ -4870,7 +4869,7 @@ Dag::LookupSplice(MyString name, Dag *&splice_dag)
 // This represents not the actual initial nodes of the dag just after
 // the file containing the dag had been parsed.
 // You must NOT free the returned array or the contained pointers.
-ExtArray<Job*>*
+std::vector<Job*>*
 Dag::InitialRecordedNodes(void)
 {
 	return &_splice_initial_nodes;
@@ -4880,7 +4879,7 @@ Dag::InitialRecordedNodes(void)
 // This represents not the actual final nodes of the dag just after
 // the file containing the dag had been parsed.
 // You must NOT free the returned array or the contained pointers.
-ExtArray<Job*>*
+std::vector<Job*>*
 Dag::FinalRecordedNodes(void)
 {
 	return &_splice_terminal_nodes;
@@ -4897,12 +4896,12 @@ Dag::RecordInitialAndTerminalNodes(void)
 
 		// record the initial nodes
 		if ((*it)->NoParents()) {
-			_splice_initial_nodes.add(*it);
+			_splice_initial_nodes.push_back(*it);
 		}
 
 		// record the final nodes
 		if ((*it)->NoChildren()) {
-			_splice_terminal_nodes.add(*it);
+			_splice_terminal_nodes.push_back(*it);
 		}
 	}
 }
@@ -4915,12 +4914,12 @@ Dag::RelinquishNodeOwnership(void)
 {
 	MyString key;
 
-	ExtArray<Job*> *nodes = new ExtArray<Job*>();
+	std::vector<Job*> *nodes = new std::vector<Job*>();
 
 	// 1. Copy the jobs
 	auto it = _jobs.begin();
 	while (it != _jobs.end()) {
-		nodes->add(*it);
+		nodes->push_back(*it);
 		it = _jobs.erase(it);
 	}
 
@@ -4947,7 +4946,7 @@ Dag::LiftSplices(SpliceLayer layer)
 	// recurse down the splice tree moving everything up into myself.
 	_splices.startIterations();
 	while(_splices.iterate(key, splice)) {
-		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", key.Value());
+		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", key.c_str());
 		om = splice->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
 		AssumeOwnershipofNodes(key, om);
@@ -4992,11 +4991,11 @@ void
 Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 {
 	Job *job = NULL;
-	int i;
+	unsigned int i;
 	MyString key;
 	JobID_t key_id;
 
-	ExtArray<Job*> *nodes = om->nodes;
+	std::vector<Job*> *nodes = om->nodes;
 
 	// 0. Take ownership of the categories
 
@@ -5016,10 +5015,10 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 					mainThrottle->_maxJobs != spliceThrottle->_maxJobs ) {
 			debug_printf( DEBUG_NORMAL, "Warning: higher-level (%s) "
 						"maxjobs value of %d for category %s overrides "
-						"splice %s value of %d\n", _spliceScope.Value(),
+						"splice %s value of %d\n", _spliceScope.c_str(),
 						mainThrottle->_maxJobs,
-						mainThrottle->_category->Value(),
-						spliceName.Value(), spliceThrottle->_maxJobs );
+						mainThrottle->_category->c_str(),
+						spliceName.c_str(), spliceThrottle->_maxJobs );
 			check_warning_strictness( DAG_STRICT_2 );
 		} else {
 			_catThrottles.SetThrottle( spliceThrottle->_category,
@@ -5031,13 +5030,13 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 
 	// 1a. If there are any actual initial/final nodes, then ensure to record
 	// it into the recorded initial and final nodes for this node.
-	for (i = 0; i < nodes->length(); i++) {
+	for (i = 0; i < nodes->size(); i++) {
 		if ((*nodes)[i]->NoParents()) {
-			_splice_initial_nodes.add((*nodes)[i]);
+			_splice_initial_nodes.push_back((*nodes)[i]);
 			continue;
 		}
 		if ((*nodes)[i]->NoChildren()) {
-			_splice_terminal_nodes.add((*nodes)[i]);
+			_splice_terminal_nodes.push_back((*nodes)[i]);
 		}
 	}
 
@@ -5045,39 +5044,39 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 	// 1b. Re-set the node categories (if any) so they point to the
 	// ThrottleByCategory object in *this* DAG rather than the splice
 	// DAG (which will be deleted soon).
-	for ( i = 0; i < nodes->length(); i++ ) {
+	for ( i = 0; i < nodes->size(); i++ ) {
 		Job *tmpNode = (*nodes)[i];
 		spliceThrottle = tmpNode->GetThrottleInfo();
 		if ( spliceThrottle != NULL ) {
 				// Now re-set the category in the node, so that the
 				// category info points to the upper DAG rather than the
 				// splice DAG.
-			tmpNode->SetCategory( spliceThrottle->_category->Value(),
+			tmpNode->SetCategory( spliceThrottle->_category->c_str(),
 						_catThrottles );
 		}
 	}
 
 	// 1c. Copy the nodes into _jobs.
-	for (i = 0; i < nodes->length(); i++) {
+	for (i = 0; i < nodes->size(); i++) {
 		_jobs.push_back((*nodes)[i]);
 	}
 
 	// 2. Update our name hash to include the new nodes.
-	for (i = 0; i < nodes->length(); i++) {
+	for (i = 0; i < nodes->size(); i++) {
 		key = (*nodes)[i]->GetJobName();
 
 		debug_printf(DEBUG_DEBUG_1, "Creating view hash fixup for: job %s\n", 
-			key.Value());
+			key.c_str());
 
 		if (_nodeNameHash.insert(key, (*nodes)[i]) != 0) {
 			debug_printf(DEBUG_QUIET, 
 				"Found name collision while taking ownership of node: %s\n",
-				key.Value());
+				key.c_str());
 			debug_printf(DEBUG_QUIET, "Trying to insert key %s, node:\n",
-				key.Value());
+				key.c_str());
 			(*nodes)[i]->Dump( this );
 			debug_printf(DEBUG_QUIET, "but it collided with key %s, node:\n", 
-				key.Value());
+				key.c_str());
 			if (_nodeNameHash.lookup(key, job) == 0) {
 				job->Dump( this );
 			} else {
@@ -5089,7 +5088,7 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 	}
 
 	// 3. Update our node id hash to include the new nodes.
-	for (i = 0; i < nodes->length(); i++) {
+	for (i = 0; i < nodes->size(); i++) {
 		key_id = (*nodes)[i]->GetJobID();
 		if (_nodeIDHash.insert(key_id, (*nodes)[i]) != 0) {
 			debug_error(1, DEBUG_QUIET, 

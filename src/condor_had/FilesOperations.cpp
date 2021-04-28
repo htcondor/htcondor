@@ -42,12 +42,12 @@ FilesOperations::rotateFile( const char* filePath,
     dprintf( D_ALWAYS, "FilesOperations::rotateFile %s with extension %s "
 					   "started\n",
              filePath, temporaryFilesExtension );
-    MyString temporaryFilePath = filePath;
+    std::string temporaryFilePath = filePath;
 
     temporaryFilePath += ".";
     temporaryFilePath += temporaryFilesExtension;
 
-    if( rotate_file( temporaryFilePath.Value( ), filePath ) < 0 ) {
+    if( rotate_file( temporaryFilePath.c_str( ), filePath ) < 0 ) {
         dprintf( D_ALWAYS, "FilesOperations::rotateFile "
                            "cannot rotate file %s\n", filePath );
         return false;
@@ -67,15 +67,15 @@ FilesOperations::copyFile( const char* filePath,
 {
     dprintf( D_ALWAYS, "FilesOperations::copyFile %s with extension %s "
 					   "started\n", filePath, temporaryFilesExtension );
-    MyString temporaryFilePath = filePath;
+    std::string temporaryFilePath = filePath;
 
     temporaryFilePath += ".";
     temporaryFilePath += temporaryFilesExtension;
 
-    if( copy_file( filePath, temporaryFilePath.Value( ) ) ) {
+    if( copy_file( filePath, temporaryFilePath.c_str( ) ) ) {
         dprintf( D_ALWAYS, "FilesOperations::copyFile "
                            "unable to copy %s to %s\n",
-                    filePath, temporaryFilePath.Value( ) );
+                    filePath, temporaryFilePath.c_str( ) );
         return false;
     }
     return true;
@@ -94,7 +94,7 @@ FilesOperations::unlinkFile( const char* filePath,
 {
     dprintf( D_ALWAYS, "FilesOperations::unlinkFile %s with extension %s "
 					   "started\n", filePath, temporaryFilesExtension );
-	MyString temporaryFilePath = filePath;
+    std::string temporaryFilePath = filePath;
 
     temporaryFilePath += ".";
     temporaryFilePath += temporaryFilesExtension;
@@ -103,14 +103,14 @@ FilesOperations::unlinkFile( const char* filePath,
 	
 	if ( statWrapper.GetRc( ) && statWrapper.GetErrno( ) == ENOENT ) {
 		dprintf( D_ALWAYS, "FilesOperations::unlinkFile the specified file %s "
-						   "does not exist\n", temporaryFilePath.Value( ) );
+						   "does not exist\n", temporaryFilePath.c_str( ) );
 		return true;
     }
 	
-	if( unlink( temporaryFilePath.Value( ) ) != 0 ) {
+	if( unlink( temporaryFilePath.c_str( ) ) != 0 ) {
         dprintf( D_ALWAYS, "FilesOperations::unlinkFile unable "
                            "to unlink %s, reason: %s\n",
-                   temporaryFilePath.Value( ), strerror(errno));
+                   temporaryFilePath.c_str( ), strerror(errno));
         return false;
     }
     return true;

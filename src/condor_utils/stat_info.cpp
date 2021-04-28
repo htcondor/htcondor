@@ -71,7 +71,7 @@ StatInfo::StatInfo( const char *param_dirpath,
 	this->dirpath = make_dirpath( param_dirpath );
 	MyString buf;
 	dircat( param_dirpath, param_filename, buf );
-	fullpath = strdup( buf.Value() );
+	fullpath = strdup( buf.c_str() );
 	stat_file( fullpath );
 }
 

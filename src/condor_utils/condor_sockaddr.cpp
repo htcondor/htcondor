@@ -279,8 +279,8 @@ MyString condor_sockaddr::to_sinful_wildcard_okay() const
 	return ret;
 }
 
-bool condor_sockaddr::from_sinful(const MyString& sinful) {
-	return from_sinful(sinful.Value());
+bool condor_sockaddr::from_sinful(const std::string& sinful) {
+	return from_sinful(sinful.c_str());
 }
 
 // faithful reimplementation of 'string_to_sin' of internet.c
@@ -397,9 +397,14 @@ socklen_t condor_sockaddr::get_socklen() const
 		return sizeof(sockaddr_storage);
 }
 
+bool condor_sockaddr::from_ip_string(const std::string & ip_string)
+{
+	return from_ip_string(ip_string.c_str());
+}
+
 bool condor_sockaddr::from_ip_string(const MyString& ip_string)
 {
-	return from_ip_string(ip_string.Value());
+	return from_ip_string(ip_string.c_str());
 }
 
 bool condor_sockaddr::from_ip_and_port_string( const char * ip_and_port_string ) {

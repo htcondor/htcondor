@@ -107,7 +107,7 @@ class CollectorEngine : public Service
 	//int publishStats( ClassAd *ad );
 
 		// returns true on success; false on failure (and sets error_desc)
-	bool setCollectorRequirements( char const *str, MyString &error_desc );
+	bool setCollectorRequirements( char const *str, std::string &error_desc );
 
   private:
 	typedef bool (*HashFunc) (AdNameHashKey &, const ClassAd *);
@@ -149,14 +149,14 @@ class CollectorEngine : public Service
 	int walkGenericTables(int (*scanFunction)(ClassAd *));
 
 	// relevant variables from the config file
-	int	clientTimeout; 
+	int	clientTimeout;
 	int	machineUpdateInterval;
 
 	void  housekeeper ();
 	int  housekeeperTimerID;
 	void cleanHashTable (CollectorHashTable &, time_t, HashFunc) const;
 	ClassAd* updateClassAd(CollectorHashTable&,const char*, const char *,
-						   ClassAd*,AdNameHashKey&, const MyString &, int &, 
+						   ClassAd*,AdNameHashKey&, const std::string &, int &,
 						   const condor_sockaddr& );
 
 	ClassAd * mergeClassAd (CollectorHashTable &hashTable,
@@ -164,12 +164,12 @@ class CollectorEngine : public Service
 							const char *label,
 							ClassAd *new_ad,
 							AdNameHashKey &hk,
-							const MyString &hashString,
+							const std::string &hashString,
 							int  &insert,
 							const condor_sockaddr& /*from*/ );
 
 	// support for dynamically created tables
-	CollectorHashTable *findOrCreateTable(MyString &str);
+	CollectorHashTable *findOrCreateTable(std::string &str);
 
 	bool ValidateClassAd(int command,ClassAd *clientAd,Sock *sock);
 

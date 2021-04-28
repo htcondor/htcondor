@@ -19,7 +19,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "MyString.h"
 #include "proc.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
@@ -154,7 +153,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 		std::string remaps;
 		ad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_REMAPS,remaps);
 		if( !is_sandboxed && remaps.size() ) {
-			MyString remap_filename;
+			std::string remap_filename;
 			std::string filename,filenames;
 
 				// Don't need the remaps in the grid copy of the ad.
@@ -162,13 +161,13 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 
 			if( ad->EvaluateAttrString(ATTR_JOB_OUTPUT,filename) ) {
 				if( filename_remap_find(remaps.c_str(),filename.c_str(),remap_filename) ) {
-					ad->InsertAttr(ATTR_JOB_OUTPUT,remap_filename.Value());
+					ad->InsertAttr(ATTR_JOB_OUTPUT,remap_filename.c_str());
 				}
 			}
 
 			if( ad->EvaluateAttrString(ATTR_JOB_ERROR,filename) ) {
 				if( filename_remap_find(remaps.c_str(),filename.c_str(),remap_filename) ) {
-					ad->InsertAttr(ATTR_JOB_ERROR,remap_filename.Value());
+					ad->InsertAttr(ATTR_JOB_ERROR,remap_filename.c_str());
 				}
 			}
 
@@ -185,7 +184,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 				while( (fname=output_files.next()) ) {
 					if( filename_remap_find(remaps.c_str(),fname,remap_filename) )
 						{
-							new_list.append(remap_filename.Value());
+							new_list.append(remap_filename.c_str());
 						}
 					else {
 						new_list.append(fname);

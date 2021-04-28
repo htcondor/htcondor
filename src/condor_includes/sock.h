@@ -552,6 +552,7 @@ protected:
 	const KeyInfo& get_md_key() const;
 	void resetCrypto();
 	virtual bool canEncrypt() const;
+	virtual bool mustEncrypt() const;
 
 	/*
 	**	Data structures

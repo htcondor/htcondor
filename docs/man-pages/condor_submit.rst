@@ -1010,6 +1010,11 @@ FILE TRANSFER COMMANDS
     method of encryption utilized will be as agreed upon in security
     negotiation; if that negotiation failed, then the file transfer
     mechanism must also fail for files to be network encrypted.
+    :index:`erase_output_and_error_on_restart<single: erase_output_and_error_on_restart; submit commands>`
+ erase_output_and_error_on_restart
+    If false, and ``when_to_transfer_output`` is ``ON_EXIT_OR_EVICT``, HTCondor
+    will append to the output and error logs rather than erase (truncate) them
+    when the job restarts.
     :index:`max_transfer_input_mb<single: max_transfer_input_mb; submit commands>`
  max_transfer_input_mb = <ClassAd Integer Expression>
     This integer expression specifies the maximum allowed total size in
@@ -1198,6 +1203,9 @@ FILE TRANSFER COMMANDS
     ``aws_secret_access_key_file`` for the files containing the corresponding
     temporary token, and ``+EC2SessionToken`` for the file containing the
     session token.
+
+    HTCondor does not presently support transferring entire buckets or
+    directories from S3.
 
     Temporary credentials have a limited lifetime.  If you are using S3 only
     to download input files, the job must start before the credentials
@@ -1392,7 +1400,15 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     If **retry_until** is an integer, the job exiting with that exit
     code will cause retries to cease. If **retry_until** is a ClassAd
     expression, the expression evaluating to ``True`` will cause retries
-    to cease. :index:`success_exit_code<single: success_exit_code; submit commands>`
+    to cease.  For example, if you only want to retry exit codes
+    17, 34, and 81:
+
+    .. code-block:: condor-submit
+
+        max_retries = 5
+        retry_until = !member( ExitCode, {17, 34, 81} )
+
+    :index:`success_exit_code<single: success_exit_code; submit commands>`
 
  success_exit_code = <integer>
     The exit code that is considered successful for this job. Defaults

@@ -20,15 +20,15 @@
 #ifndef IPV6_HOSTNAME_H
 #define IPV6_HOSTNAME_H
 
-#include "MyString.h"
+#include <string>
 #include <vector>
 #include "condor_sockaddr.h"
 
 void reset_local_hostname();
 
 condor_sockaddr get_local_ipaddr(condor_protocol proto);
-MyString get_local_hostname();
-MyString get_local_fqdn();
+std::string get_local_hostname();
+std::string get_local_fqdn();
 
 // returns fully-qualified-domain-name from given hostname.
 // this is replacement of previous get_full_hostname()
@@ -39,7 +39,7 @@ MyString get_local_fqdn();
 //    it will look into h_alias from gethostbyname().
 // 3) if FQDN still not be found, it will add DEFAULT_DOMAIN_NAME.
 // 4) if DEFAULT_DOMAIN_NAME is not defined, it will return an empty string.
-MyString get_fqdn_from_hostname(const MyString& hostname);
+std::string get_fqdn_from_hostname(const std::string& hostname);
 
 // returns 'best' IP address and fully-qualified-domain-name for given hostname
 // the criteria for picking best IP address is
@@ -52,33 +52,33 @@ MyString get_fqdn_from_hostname(const MyString& hostname);
 // Return value:
 // 0 - if failed
 // 1 - if succeeded
-int get_fqdn_and_ip_from_hostname(const MyString& hostname,
-		MyString& fqdn, condor_sockaddr& addr);
+int get_fqdn_and_ip_from_hostname(const std::string & hostname,
+		std::string & fqdn, condor_sockaddr & addr );
 
 // returns just hostname for given addr
-MyString get_hostname(const condor_sockaddr& addr);
+std::string get_hostname(const condor_sockaddr& addr);
 
 // returns a set of hostname for given addr
-std::vector<MyString> get_hostname_with_alias(const condor_sockaddr& addr);
+std::vector<std::string> get_hostname_with_alias(const condor_sockaddr& addr);
 
 // returns a fully-qualified domain name for given addr
 //
 // IT IS DIFFERENT FROM PREVIOUS get_full_hostname()
-MyString get_full_hostname(const condor_sockaddr& addr);
+std::string get_full_hostname(const condor_sockaddr& addr);
 
 // DNS-lookup for given hostname
-std::vector<condor_sockaddr> resolve_hostname(const MyString& hostname);
+std::vector<condor_sockaddr> resolve_hostname(const std::string& hostname);
 std::vector<condor_sockaddr> resolve_hostname(const char* hostname);
 
 // _raw function directly calls getaddrinfo, does not do any of NO_DNS
 // related handlings.
-std::vector<condor_sockaddr> resolve_hostname_raw(const MyString& hostname);
+std::vector<condor_sockaddr> resolve_hostname_raw(const std::string& hostname);
 
 // NODNS functions
 //
 // Construct fake hostnames based on an underlying IP address,
 // avoiding any use of DNS.
-MyString convert_ipaddr_to_fake_hostname(const condor_sockaddr& addr);
-condor_sockaddr convert_fake_hostname_to_ipaddr(const MyString& fullname);
+std::string convert_ipaddr_to_fake_hostname(const condor_sockaddr& addr);
+condor_sockaddr convert_fake_hostname_to_ipaddr(const std::string& fullname);
 
 #endif // IPV6_HOSTNAME_H

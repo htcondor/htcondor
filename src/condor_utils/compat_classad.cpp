@@ -506,7 +506,7 @@ bool userMap_func( const char * /*name*/,
 
 	MyString output;
 	if (user_map_do_mapping(mapName.c_str(), userName.c_str(), output)) {
-		StringList items(output.Value(), ",");
+		StringList items(output.c_str(), ",");
 
 		if (cargs == 2) {
 			// 2 arg form, return a list.
@@ -752,14 +752,14 @@ ArgsToList( const char * name,
 	if ((vers == 1) && !arg_list.AppendArgsV1Raw(args.c_str(), &error_msg))
 	{
 		std::stringstream ss;
-		ss << "Error when parsing argument to arg V1: " << error_msg.Value();
+		ss << "Error when parsing argument to arg V1: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
 	else if ((vers == 2) && !arg_list.AppendArgsV2Raw(args.c_str(), &error_msg))
 	{
 		std::stringstream ss;
-		ss << "Error when parsing argument to arg V2: " << error_msg.Value();
+		ss << "Error when parsing argument to arg V2: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
@@ -872,18 +872,18 @@ ListToArgs(const char * name,
 	if ((vers == 1) && !arg_list.GetArgsStringV1Raw(&result_mystr, &error_msg))
 	{
 		std::stringstream ss;
-		ss << "Error when parsing argument to arg V1: " << error_msg.Value();
+		ss << "Error when parsing argument to arg V1: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
 	else if ((vers == 2) && !arg_list.GetArgsStringV2Raw(&result_mystr, &error_msg))
 	{
 		std::stringstream ss;
-		ss << "Error when parsing argument to arg V2: " << error_msg.Value();
+		ss << "Error when parsing argument to arg V2: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
-	result.SetStringValue(result_mystr.Value());
+	result.SetStringValue(result_mystr.c_str());
 	return true;
 }
 
@@ -929,13 +929,13 @@ EnvironmentV1ToV2(const char * name,
 	if (!env.MergeFromV1Raw(args.c_str(), &error_msg))
 	{
 		std::stringstream ss;
-		ss << "Error when parsing argument to environment V1: " << error_msg.Value();
+		ss << "Error when parsing argument to environment V1: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
 	MyString result_mystr;
 	env.getDelimitedStringV2Raw(&result_mystr, NULL);
-	result.SetStringValue(result_mystr.Value());
+	result.SetStringValue(result_mystr.c_str());
 	return true;
 }
 
@@ -984,7 +984,7 @@ MergeEnvironment(const char * /*name*/,
 	}
 	MyString result_mystr;
 	env.getDelimitedStringV2Raw(&result_mystr, NULL);
-	result.SetStringValue(result_mystr.Value());
+	result.SetStringValue(result_mystr.c_str());
 	return true;
 }
 
@@ -1988,7 +1988,7 @@ fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringLi
 		sPrintAdWithSecrets( buffer, ad, attr_white_list );
 	}
 
-	if ( fprintf(file, "%s", buffer.Value()) < 0 ) {
+	if ( fprintf(file, "%s", buffer.c_str()) < 0 ) {
 		return FALSE;
 	} else {
 		return TRUE;
@@ -2007,7 +2007,7 @@ dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private )
 			sPrintAdWithSecrets( buffer, ad );
 		}
 
-		dprintf( level|D_NOHEADER, "%s", buffer.Value() );
+		dprintf( level|D_NOHEADER, "%s", buffer.c_str() );
 	}
 }
 

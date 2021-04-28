@@ -141,7 +141,7 @@ class BaseShadow : public Service
 			informational purposes only.  It may be empty if there
 			is no appropriate answer (and function will return false).
 		*/
-	virtual bool getMachineName( MyString &machineName );
+	virtual bool getMachineName( std::string &machineName );
 
 		/** Put this job on hold, if requested, notify the user about
 			it.  This function does _not_ exit.  Use holdJobAndExit()
@@ -406,7 +406,7 @@ class BaseShadow : public Service
 
 	virtual void logDisconnectedEvent( const char* reason ) = 0;
 
-	char const *getTransferQueueContactInfo() {return m_xfer_queue_contact_info.Value();}
+	char const *getTransferQueueContactInfo() {return m_xfer_queue_contact_info.c_str();}
 
 		/** True if attemping a reconnect from startup, i.e. if
 			reconnecting based upon command-line flag -reconnect. 
@@ -484,7 +484,7 @@ class BaseShadow : public Service
 	std::string iwd;
 	char *scheddAddr;
 	char *core_file_name;
-	MyString m_xfer_queue_contact_info;
+	std::string m_xfer_queue_contact_info;
 
 		/// Timer id for the job cleanup retry handler.
 	int m_cleanup_retry_tid;

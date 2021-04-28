@@ -46,9 +46,9 @@ Options
  **-version**
     Display version information
  **-graceful**
-    Gracefully shutdown daemons (the default)
+    The default. If jobs are running, wait for up to the configured grace period for them to finish, then exit
  **-fast**
-    Quickly shutdown daemons. A minimum of the first two characters of
+    Quickly shutdown daemons, immediately evicting any running jobs. A minimum of the first two characters of
     this option must be specified, to distinguish it from the
     **-force-graceful** command.
  **-peaceful**
@@ -82,6 +82,29 @@ Options
  **-daemon** *daemonname*
     Send the command to the named daemon. Without this option, the
     command is sent to the *condor_master* daemon.
+
+Graceful vs. Peaceful vs Fast
+-----------------------------
+
+A "fast" shutdown will cause the requested daemon to exit.  Jobs
+running under a startd that is shutdown fast will be evicted. Jobs
+running on a schedd that is shutdown fast will be left running for
+their job lease duration (default of 20 minutes). (That is, assuming
+the corresponding startd is not also being shut down). If that schedd restarts
+before the job lease expires, it will reconnect to these running jobs
+and continue to run them, as long as the schedd and startd are running.
+
+A "graceful" shutdown of a schedd is functionally the same as a "fast"
+shutdown of a schedd.
+
+A "graceful" shutdown of a startd that has jobs running under it causes
+the startd to wait for the jobs to exit of their own accord, up to the 
+MaxJobRetirementTime.  After the MaxJobRetirementTime, the startd will evict
+any remaining running jobs and exit.
+
+A "peaceful" shutdown of a startd or schedd will cause that daemon to
+wait indefinitely for all existing jobs to exit before shutting down.
+During this time, no new jobs will start.
 
 Exit Status
 -----------

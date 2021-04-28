@@ -20,6 +20,8 @@
 #ifndef __DOMAIN_TOOLS_H
 #define __DOMAIN_TOOLS_H
 
+#include <string>
+
 // returns true if the two specified accounts and domains match
 bool
 domainAndNameMatch( const char *account1, 
@@ -33,6 +35,6 @@ void
 getDomainAndName( char* namestr, char* &domain, char* &name );
 
 void
-joinDomainAndName( char const *domain, char const *name, class MyString &result );
+joinDomainAndName( char const *domain, char const *name, std::string &result );
 
 #endif  /* __DOMAIN_TOOLS_H */

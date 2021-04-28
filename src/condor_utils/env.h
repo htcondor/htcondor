@@ -131,6 +131,7 @@ class Env {
 		// string.  If the string begins with a double-quote, it will
 		// be treated as V2Quoted; otherwise it will be read as V1Raw.
 	bool MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString *error_msg );
+	bool MergeFromV1RawOrV2Quoted( const char *delimitedString, std::string & error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
 		// If the string is not in V2Quoted format, this function
@@ -140,10 +141,12 @@ class Env {
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V2 format.
 	bool MergeFromV2Raw( const char *delimitedString, MyString *error_msg );
+	bool MergeFromV2Raw( const char *delimitedString, std::string & error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V1 format.
 	bool MergeFromV1Raw( const char *delimitedString, MyString *error_msg );
+	bool MergeFromV1Raw( const char *delimitedString, std::string & error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V1or2 format,
@@ -169,6 +172,7 @@ class Env {
 
 		// Add (or overwrite) environment entries from a ClassAd.
 	bool MergeFrom( const ClassAd *ad, MyString *error_msg );
+	bool MergeFrom( const ClassAd *ad, std::string & error_msg );
 
 		// Add (or overwrite) a key=value environment entry.
 	bool SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg );
@@ -198,6 +202,7 @@ class Env {
 		// format depending on the Condor version and opsys of the
 		// receiver.
 	bool InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys=NULL, CondorVersionInfo *condor_version=NULL ) const;
+	bool InsertEnvIntoClassAd( ClassAd *ad, std::string & error_msg, char const *opsys=NULL, CondorVersionInfo *condor_version=NULL ) const;
 
 		// Returns true if specified condor version requires V1 env syntax.
 	static bool CondorVersionRequiresV1(CondorVersionInfo const &condor_version);
@@ -206,6 +211,7 @@ class Env {
 		// If mark_v2=true, then result will be identifiable as V2 by
 		// MergeV1or2()
 	bool getDelimitedStringV2Raw(MyString *result,MyString *error_msg,bool mark_v2=false) const;
+	bool getDelimitedStringV2Raw(std::string & result, bool mark_v2=false) const;
 
 	 // old-style ; or | delimited
 	bool getDelimitedStringV1Raw(MyString *result,MyString *error_msg,char delim='\0') const;
@@ -229,6 +235,7 @@ class Env {
 
 		// Get a string describing the environment in this Env object.
 	void getDelimitedStringForDisplay(MyString *result) const;
+	void getDelimitedStringForDisplay(std::string & result) const;
 
 #if defined(WIN32)
 		// Caller should delete the string.
@@ -243,7 +250,10 @@ class Env {
 	void Walk(bool (*walk_func)(void* pv, const MyString &var, MyString &val), void* pv);
 	void Walk(bool (*walk_func)(void* pv, const MyString &var, const MyString &val), void* pv) const;
 
+    void Walk(bool (*walk_func)(void* pv, const std::string & var, const std::string & val), void* pv) const;
+
 	bool GetEnv(MyString const &var,MyString &val) const;
+	bool GetEnv(const std::string &var, std::string &val) const;
 
 		// Returns true if string is safe to insert in old-style
 		// ; or | delimited string.

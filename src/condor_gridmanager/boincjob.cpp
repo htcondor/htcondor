@@ -883,7 +883,7 @@ void BoincJob::BuildOutputInfo( std::string &iwd, std::string &std_err,
 	if ( jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, tmp_str ) ) {
 		char *filename;
 		char *remaps = NULL;
-		MyString new_name;
+		std::string new_name;
 		transfer_all = false;
 		jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
 
@@ -896,7 +896,7 @@ void BoincJob::BuildOutputInfo( std::string &iwd, std::string &std_err,
 				filename_remap_find( remaps, filename, new_name );
 			}
 
-			outputs.push_back( pair<std::string,std::string>( filename, new_name.Value() ) );
+			outputs.push_back( pair<std::string,std::string>( filename, new_name ));
 		}
 
 		free( remaps );
@@ -932,11 +932,11 @@ std::string BoincJob::GetVar(const char * str)
 ArgList *BoincJob::GetArgs()
 {
 	ArgList *args = new ArgList();
-	MyString arg_errors;
+	std::string arg_errors;
 
-	if( !args->AppendArgsFromClassAd( jobAd, &arg_errors ) ) {
+	if( !args->AppendArgsFromClassAd( jobAd, arg_errors ) ) {
 		dprintf( D_ALWAYS, "(%d.%d) Failed to read job arguments: %s\n",
-				 procID.cluster, procID.proc, arg_errors.Value());
+				 procID.cluster, procID.proc, arg_errors.c_str());
 	}
 
 	return args;

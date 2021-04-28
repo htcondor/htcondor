@@ -52,15 +52,6 @@ specified IDs and/or submitted by the specified owner. The *-constraint*
 option can be used to display jobs that satisfy a specified boolean
 expression.
 
-The history file is kept in chronological order, implying that new
-entries are appended at the end of the file. As of Condor version
-6.7.19, the format of the history file is altered to enable faster
-reading of the history file backwards (most recent job first). History
-files written with earlier versions of Condor, as well as those that
-have entries of both the older and newer format need to be converted to
-the new format. See the :doc:`/man-pages/condor_convert_history` manual page
-for details on converting history files to the new format.
-
 Options
 -------
 

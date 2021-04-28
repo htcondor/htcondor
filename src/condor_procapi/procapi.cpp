@@ -1908,7 +1908,7 @@ ProcAPI::initProcInfoRaw(procInfoRaw& procRaw){
 
 #if !defined(Darwin) && !defined(CONDOR_FREEBSD)
 int
-build_pid_list( std::vector<pid_t> & pidList ) {
+build_pid_list( std::vector<pid_t> & newPidList ) {
 	pid_t my_pid = getpid();
 	pid_t my_ppid = getppid();
 
@@ -1916,9 +1916,10 @@ build_pid_list( std::vector<pid_t> & pidList ) {
 	bool saw_ppid = false;
 	bool saw_pid = false;
 
-	pidList.clear();
+	newPidList.clear();
 	condor_DIR * dirp = condor_opendir("/proc");
 	if( dirp == NULL ) {
+		dprintf( D_ALWAYS, "ProcAPI: opendir('/proc') failed (%d): %s\n", errno, strerror(errno) );
 		return -1;
 	}
 
@@ -1934,7 +1935,7 @@ build_pid_list( std::vector<pid_t> & pidList ) {
 		++total_entries;
 		if( isdigit(direntp->d_name[0]) ) {
 			pid_t the_pid = (pid_t)atol(direntp->d_name);
-			pidList.push_back(the_pid);
+			newPidList.push_back(the_pid);
 			++pid_entries;
 
 			if( the_pid == 1 ) { saw_pid1 = true; }
@@ -1945,6 +1946,7 @@ build_pid_list( std::vector<pid_t> & pidList ) {
 	if( errno != 0 ) {
 		dprintf(D_ALWAYS, "ProcAPI: readdir() failed: errno %d (%s)\n",
 			errno, strerror(errno));
+		condor_closedir( dirp );
 		return -2;
 	}
 	condor_closedir( dirp );
@@ -2007,7 +2009,7 @@ ProcAPI::buildPidList() {
 		dprintf( D_ALWAYS, "ProcAPI: previous PID list:%s\n",
 			buffer.str().c_str() );
 
-		for( unsigned i = 1; i < newPidList.size(); ++i ) {
+		for( unsigned i = 0; i < newPidList.size(); ++i ) {
 			buffer << " " << newPidList[i];
 		}
 		dprintf( D_ALWAYS, "ProcAPI: new PID list:%s\n",
@@ -2119,8 +2121,6 @@ ProcAPI::buildProcInfoList() {
 	temp = allProcInfos;
 	allProcInfos = allProcInfos->next;
 	delete temp;
-
-	pidList.clear();
 
 	return PROCAPI_SUCCESS;
 }

@@ -238,7 +238,7 @@ daemon::runs_on_this_host()
 				param_boolean_crufty(flag_in_config_file, false) ? TRUE : FALSE;
 		} else {
 			if (!this_host_addr_cached) {
-				MyString local_hostname = get_local_hostname();
+				std::string local_hostname = get_local_hostname();
 				this_host_addr = resolve_hostname(local_hostname);
 				if (!this_host_addr.empty()) {
 					this_host_addr_cached = true;
@@ -400,12 +400,12 @@ daemon::DoConfig( bool init )
 	char *env_string = param( buf );
 
 	Env env_parser;
-	MyString env_error_msg;
+	std::string env_error_msg;
 
-	if(!env_parser.MergeFromV1RawOrV2Quoted(env_string,&env_error_msg)) {
+	if(!env_parser.MergeFromV1RawOrV2Quoted(env_string, env_error_msg)) {
 		EXCEPT("ERROR: Failed to parse %s_ENVIRONMENT in config file: %s",
 		       name_in_config_file,
-			   env_error_msg.Value());
+			   env_error_msg.c_str());
 	}
 	free(env_string);
 
@@ -562,7 +562,7 @@ int daemon::RealStart( )
 	const char	*shortname;
 	int 	command_port = isDC ? TRUE : FALSE;
 	char const *daemon_sock = NULL;
-	MyString daemon_sock_buf;
+	std::string daemon_sock_buf;
 	std::string default_id;
 	char	buf[512];
 	ArgList args;
@@ -603,8 +603,8 @@ int daemon::RealStart( )
 		return 0;
 	}
 
-	if( !m_after_startup_wait_for_file.IsEmpty() ) {
-		if (0 != remove( m_after_startup_wait_for_file.Value())) {
+	if( !m_after_startup_wait_for_file.empty() ) {
+		if (0 != remove( m_after_startup_wait_for_file.c_str())) {
 			dprintf(D_ALWAYS, "Cannot remove wait-for-startup file %s\n", m_after_startup_wait_for_file.c_str());
 			// Now what?  restart?  exit?
 		}
@@ -641,11 +641,11 @@ int daemon::RealStart( )
 		dprintf ( 
 			D_FULLDEBUG, 
 			"Looking for matching Collector on '%s' ...\n", 
-			get_local_fqdn().Value());
+			get_local_fqdn().c_str());
 		CollectorList* collectors = NULL;
 		if ((collectors = daemonCore->getCollectorList())) {
-			MyString my_fqdn_str = get_local_fqdn();
-			const char * my_hostname = my_fqdn_str.Value();
+			std::string my_fqdn_str = get_local_fqdn();
+			const char * my_hostname = my_fqdn_str.c_str();
 			Daemon * my_daemon;
 			collectors->rewind();
 			while (collectors->next (my_daemon)) {
@@ -656,22 +656,22 @@ int daemon::RealStart( )
 					my_daemon->fullHostname (),
 					my_daemon->port () );
 				
-				MyString cm_sinful = my_daemon->addr();
+				std::string cm_sinful = my_daemon->addr();
 				condor_sockaddr cm_sockaddr;
 				cm_sockaddr.from_sinful(cm_sinful);
-				MyString cm_hostname;
+				std::string cm_hostname;
 				if(my_daemon->fullHostname()) {
 					cm_hostname = my_daemon->fullHostname();
 				}
 
 				if( cm_sockaddr.is_loopback() ||
 					same_host (my_hostname, 
-							   cm_hostname.Value())) {
+							   cm_hostname.c_str())) {
 					Sinful sinful( my_daemon->addr() );
 					if( sinful.getSharedPortID() ) {
 							// collector is using a shared port
 						daemon_sock_buf = sinful.getSharedPortID();
-						daemon_sock = daemon_sock_buf.Value();
+						daemon_sock = daemon_sock_buf.c_str();
 						command_port = 1;
 					}
 					else {
@@ -817,15 +817,15 @@ int daemon::RealStart( )
 			// win, but we might as well do it right.
 			bool foundLocalName = false;
 			ArgList configArgs;
-			MyString configError;
-			if( configArgs.AppendArgsV1RawOrV2Quoted( daemon_args, & configError ) ) {
+			std::string configError;
+			if( configArgs.AppendArgsV1RawOrV2Quoted( daemon_args, configError ) ) {
 				for( int i = 0; i < configArgs.Count(); ++i ) {
 					char const * configArg = configArgs.GetArg( i );
 					if( strcmp( configArg, "-local-name" ) == 0 ) {
 						foundLocalName = true;
 						if( i + 1 < configArgs.Count() ) {
 							daemon_sock_buf = configArgs.GetArg(i + 1);
-							daemon_sock_buf.lower_case();
+							lower_case(daemon_sock_buf);
 							daemon_sock = daemon_sock_buf.c_str();
 							localName = daemon_sock_buf;
 							setLocalName = true;
@@ -872,11 +872,11 @@ int daemon::RealStart( )
 		}
 	}
 
-	MyString args_error;
-	if(!args.AppendArgsV1RawOrV2Quoted(daemon_args,&args_error)) {
+	std::string args_error;
+	if(!args.AppendArgsV1RawOrV2Quoted(daemon_args, args_error)) {
 		dprintf(D_ALWAYS,"ERROR: failed to parse %s daemon arguments: %s\n",
 				buf,
-				args_error.Value());
+				args_error.c_str());
 		Restart();
 		free(daemon_args);
 		return 0;
@@ -961,7 +961,7 @@ int daemon::RealStart( )
 		// We checked for local names already, use the config name here.
 		if( isDC ) {
 			daemon_sock_buf = name_in_config_file;
-			daemon_sock_buf.lower_case();
+			lower_case(daemon_sock_buf);
 			// Because the master only starts daemons named in the config
 			// file, and those names are by definition unique, we don't
 			// need to further uniquify them with a sequence number, and
@@ -1026,9 +1026,9 @@ int daemon::RealStart( )
 
 	const char	*proc_type = command_port ? "DaemonCore " : "";
 	if ( IsFulldebug(D_FULLDEBUG) ) {
-		MyString	 args_string, tmp;
-		args.GetArgsStringForDisplay( &tmp, 1 );
-		if( tmp.Length() ) {
+		std::string	 args_string, tmp;
+		args.GetArgsStringForDisplay( tmp, 1 );
+		if( tmp.length() ) {
 			args_string  = " ";
 			args_string += tmp;
 		}
@@ -1037,7 +1037,7 @@ int daemon::RealStart( )
 		}
 		dprintf( D_ALWAYS,
 				 "Started %sprocess \"%s%s\", pid and pgroup = %d\n",
-				 proc_type, process_name, args_string.Value(), pid );
+				 proc_type, process_name, args_string.c_str(), pid );
 	}
 	else {
 		dprintf( D_ALWAYS,
@@ -1080,19 +1080,19 @@ daemon::WaitBeforeStartingOtherDaemons(bool first_time)
 	}
 
 	bool wait = false;
-	if( !m_after_startup_wait_for_file.IsEmpty() ) {
-		StatInfo si( m_after_startup_wait_for_file.Value() );
+	if( !m_after_startup_wait_for_file.empty() ) {
+		StatInfo si( m_after_startup_wait_for_file.c_str() );
 		if( si.Error() != 0 ) {
 			wait = true;
 			dprintf(D_ALWAYS,"Waiting for %s to appear.\n",
-					m_after_startup_wait_for_file.Value() );
+					m_after_startup_wait_for_file.c_str() );
 			if( DaemonStartFastPoll ) {
 				Sleep(100);
 			}
 		}
 		else if( !first_time ) {
 			dprintf(D_ALWAYS,"Found %s.\n",
-					m_after_startup_wait_for_file.Value() );
+					m_after_startup_wait_for_file.c_str() );
 		}
 	}
 
@@ -1404,17 +1404,17 @@ daemon::Obituary( int status )
 
     char buf[1000];
 
-	MyString email_subject;
-	email_subject.formatstr("Problem %s: %s ", get_local_fqdn().Value(), 
+	std::string email_subject;
+	formatstr(email_subject, "Problem %s: %s ", get_local_fqdn().c_str(), 
 						  condor_basename(process_name));
 	if ( was_not_responding ) {
 		email_subject += "killed (unresponsive)";
 	} else {
-		MyString fmt;
+		std::string fmt;
 		if( WIFSIGNALED(status) ) {
-			fmt.formatstr("died (%d)", WTERMSIG(status));
+			formatstr(fmt, "died (%d)", WTERMSIG(status));
 		} else {
-			fmt.formatstr("exited (%d)", WEXITSTATUS(status));
+			formatstr(fmt, "exited (%d)", WEXITSTATUS(status));
 		}
 		email_subject += fmt;
 	}
@@ -1422,10 +1422,10 @@ daemon::Obituary( int status )
     sprintf( buf, "%s_ADMIN_EMAIL", name_in_config_file );
     char *address = param(buf);
     if(address) {
-        mailer = email_nonjob_open(address, email_subject.Value());
+        mailer = email_nonjob_open(address, email_subject.c_str());
         free(address);
     } else {
-        mailer = email_admin_open(email_subject.Value());
+        mailer = email_admin_open(email_subject.c_str());
     }
 
     if( mailer == NULL ) {
@@ -1433,7 +1433,7 @@ daemon::Obituary( int status )
     }
 
 	fprintf( mailer, "\"%s\" on \"%s\" ",process_name, 
-			 get_local_fqdn().Value() );
+			 get_local_fqdn().c_str() );
 
 	if ( was_not_responding ) {
 		fprintf( mailer, "was killed because\nit was no longer responding.\n");
@@ -1673,11 +1673,11 @@ daemon::SetupHighAvailability( void )
 {
 	char		*tmp;
 	char		*url;
-	MyString	name;
+	std::string	name;
 
 	// Get the URL
-	name.formatstr("HA_%s_LOCK_URL", name_in_config_file );
-	tmp = param( name.Value() );
+	formatstr(name, "HA_%s_LOCK_URL", name_in_config_file );
+	tmp = param( name.c_str() );
 	if ( ! tmp ) {
 		tmp = param( "HA_LOCK_URL" );
 	}
@@ -1691,8 +1691,8 @@ daemon::SetupHighAvailability( void )
 
 	// Get the length of the lock
 	time_t		lock_hold_time = 60 * 60;	// One hour
-	name.formatstr( "HA_%s_LOCK_HOLD_TIME", name_in_config_file );
-	tmp = param( name.Value( ) );
+	formatstr( name, "HA_%s_LOCK_HOLD_TIME", name_in_config_file );
+	tmp = param( name.c_str( ) );
 	if ( ! tmp ) {
 		tmp = param( "HA_LOCK_HOLD_TIME" );
 	}
@@ -1709,8 +1709,8 @@ daemon::SetupHighAvailability( void )
 
 	// Get the lock poll time
 	time_t		poll_period = 5 * 60;		// Five minutes
-	name.formatstr( "HA_%s_POLL_PERIOD", name_in_config_file );
-	tmp = param( name.Value() );
+	formatstr( name, "HA_%s_POLL_PERIOD", name_in_config_file );
+	tmp = param( name.c_str() );
 	if ( ! tmp ) {
 		tmp = param( "HA_POLL_PERIOD" );
 	}
@@ -2860,9 +2860,9 @@ Daemons::ExecMaster()
 			if( runfor <= 0 ) {
 				runfor = 1; // minimum 1
 			}
-			MyString runfor_str;
-			runfor_str.formatstr("%d",runfor);
-			argv[i++] = strdup(runfor_str.Value());
+			std::string runfor_str;
+			formatstr(runfor_str, "%d",runfor);
+			argv[i++] = strdup(runfor_str.c_str());
 		}
 	}
 	argv[i++] = NULL;
@@ -2901,13 +2901,13 @@ Daemons::FinalRestartMaster()
 
 			::GetSystemDirectory(systemshell,MAX_PATH);
 			strcat(systemshell,"\\cmd.exe");
-			MyString command;
-			command.formatstr("net stop %s & net start %s", 
+			std::string command;
+			formatstr(command, "net stop %s & net start %s", 
 				_condor_myServiceName, _condor_myServiceName);
 			dprintf( D_ALWAYS, "Doing exec( \"%s /Q /C %s\" )\n", 
-				 systemshell,command.Value());
+				 systemshell,command.c_str());
 			(void)execl(systemshell, "/Q", "/C",
-				command.Value(), 0);
+				command.c_str(), 0);
 #endif
 		} else if ( !sd.PrepareForExec() ) {
 			dprintf( D_ALWAYS, "Systemd services in use, exiting to be restarted by systemd\n" );

@@ -39,10 +39,10 @@ HookClientMgr::~HookClientMgr() {
 		m_client_list.DeleteCurrent();
 		delete client;
 	}
-	if (m_reaper_output_id != -1) {
+	if (daemonCore && m_reaper_output_id != -1) {
 		daemonCore->Cancel_Reaper(m_reaper_output_id);
 	}
-	if (m_reaper_ignore_id != -1) {
+	if (daemonCore && m_reaper_ignore_id != -1) {
 		daemonCore->Cancel_Reaper(m_reaper_ignore_id);
 	}
 }
@@ -62,6 +62,11 @@ HookClientMgr::initialize() {
 	return (m_reaper_output_id != FALSE && m_reaper_ignore_id != FALSE);
 }
 
+bool
+HookClientMgr::spawn(HookClient* client, ArgList* args, const std::string & hook_stdin, priv_state priv, Env *env) {
+    MyString ms(hook_stdin);
+    return spawn(client, args, &ms, priv, env);
+}
 
 bool
 HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, priv_state priv, Env *env) {
@@ -76,7 +81,7 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, pr
 	}
 
     int std_fds[3] = {DC_STD_FD_NOPIPE, DC_STD_FD_NOPIPE, DC_STD_FD_NOPIPE};
-    if (hook_stdin && hook_stdin->Length()) {
+    if (hook_stdin && hook_stdin->length()) {
 		std_fds[0] = DC_STD_FD_PIPE;
 	}
 	if (wants_output) {
@@ -104,9 +109,9 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, pr
 	}
 
 		// If we've got initial input to write to stdin, do so now.
-    if (hook_stdin && hook_stdin->Length()) {
-		daemonCore->Write_Stdin_Pipe(pid, hook_stdin->Value(),
-									 hook_stdin->Length());
+    if (hook_stdin && hook_stdin->length()) {
+		daemonCore->Write_Stdin_Pipe(pid, hook_stdin->c_str(),
+									 hook_stdin->length());
 	}
 
 	if (wants_output) {

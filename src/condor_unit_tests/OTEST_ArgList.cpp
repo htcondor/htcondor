@@ -756,7 +756,7 @@ static bool test_get_args_string_win32_return() {
 		"initialized with AppendArgsV1Raw().");
 	MyString win32_result;
 	arglist.AppendArgsV1Raw(test_win32_v1,NULL);
-	bool ret_val = arglist.GetArgsStringWin32(&win32_result, 1, NULL);
+	bool ret_val = arglist.GetArgsStringWin32(&win32_result, 1);
 	emit_input_header();
 	emit_param("Result", "");
 	emit_param("Skip Arg", "1");
@@ -778,7 +778,7 @@ static bool test_get_args_string_win32_append_return() {
 		"AppendArgsV1Raw().");
 	MyString win32_result;
 	arglist.AppendArgsV1Raw(test_win32_v1,NULL);
-	arglist.GetArgsStringWin32(&win32_result, 1, NULL);
+	arglist.GetArgsStringWin32(&win32_result, 1);
 	arglist.Clear();
 	arglist.SetArgV1Syntax(ArgList::WIN32_ARGV1_SYNTAX);
 	bool ret_val = arglist.AppendArgsV1Raw(win32_result.Value(),NULL);
@@ -802,7 +802,7 @@ static bool test_get_args_string_win32_append_count() {
 		"initialized with AppendArgsV1Raw().");
 	MyString win32_result;
 	arglist.AppendArgsV1Raw(test_win32_v1,NULL);
-	arglist.GetArgsStringWin32(&win32_result, 1, NULL);
+	arglist.GetArgsStringWin32(&win32_result, 1);
 	arglist.Clear();
 	arglist.SetArgV1Syntax(ArgList::WIN32_ARGV1_SYNTAX);
 	arglist.AppendArgsV1Raw(win32_result.Value(),NULL);
@@ -827,7 +827,7 @@ static bool test_get_args_string_win32_append_args() {
 		"AppendArgsV1Raw().");
 	MyString win32_result;
 	arglist.AppendArgsV1Raw(test_win32_v1,NULL);
-	arglist.GetArgsStringWin32(&win32_result, 1, NULL);
+	arglist.GetArgsStringWin32(&win32_result, 1);
 	arglist.Clear();
 	arglist.SetArgV1Syntax(ArgList::WIN32_ARGV1_SYNTAX);
 	arglist.AppendArgsV1Raw(win32_result.Value(),NULL);
@@ -856,7 +856,7 @@ static bool test_get_args_string_win32_was() {
 		"GetArgsStringWin32().");
 	MyString win32_result;
 	arglist.AppendArgsV1Raw(test_win32_v1,NULL);
-	arglist.GetArgsStringWin32(&win32_result, 1, NULL);
+	arglist.GetArgsStringWin32(&win32_result, 1);
 	arglist.Clear();
 	arglist.SetArgV1Syntax(ArgList::WIN32_ARGV1_SYNTAX);
 	arglist.AppendArgsV1Raw(win32_result.Value(),NULL);

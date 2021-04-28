@@ -59,14 +59,14 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 	bool wants_update = false;
 
 		// if args isn't NULL, then we may have a uniqueness tag for the ad and/or publication arguments
-	MyString tagged_name;
+	std::string tagged_name;
 	if (args) {
 		StringList arglist(args);
 		arglist.rewind();
 		const char * arg = arglist.next();
 		// the first token may be a uniqueness tag for the ad, but not if it contains a :
 		if (arg && ! strchr(arg, ':')) {
-			tagged_name.formatstr("%s.%s", ad_name, arg);
+			formatstr(tagged_name, "%s.%s", ad_name, arg);
 			ad_name = tagged_name.c_str();
 		} else {
 			// if first arg had a : it's not a tag, so we want to re-parse it as an argument.
@@ -102,7 +102,7 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 			if ( ! oldAd) {
 				rval = 1; // a new ad is a changed ad
 			} else {
-				MyString ignore(GetPrefix()); ignore += "LastUpdate";
+				std::string ignore(GetPrefix()); ignore += "LastUpdate";
 				StringList ignore_list(ignore.c_str());
 				rval =  ! ClassAdsAreSame(ad, oldAd, &ignore_list);
 			}
