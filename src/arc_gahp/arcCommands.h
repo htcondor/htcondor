@@ -24,15 +24,17 @@
 #include <curl/curl.h>
 
 // ARC Commands
-#define ARC_COMMAND_PING			"ARC_PING"
-#define ARC_COMMAND_JOB_NEW			"ARC_JOB_NEW"
-#define ARC_COMMAND_JOB_STATUS		"ARC_JOB_STATUS"
-#define ARC_COMMAND_JOB_STATUS_ALL	"ARC_JOB_STATUS_ALL"
-#define ARC_COMMAND_JOB_INFO		"ARC_JOB_INFO"
-#define ARC_COMMAND_JOB_STAGE_IN	"ARC_JOB_STAGE_IN"
-#define ARC_COMMAND_JOB_STAGE_OUT	"ARC_JOB_STAGE_OUT"
-#define ARC_COMMAND_JOB_KILL		"ARC_JOB_KILL"
-#define ARC_COMMAND_JOB_CLEAN		"ARC_JOB_CLEAN"
+#define ARC_COMMAND_PING              "ARC_PING"
+#define ARC_COMMAND_JOB_NEW           "ARC_JOB_NEW"
+#define ARC_COMMAND_JOB_STATUS        "ARC_JOB_STATUS"
+#define ARC_COMMAND_JOB_STATUS_ALL    "ARC_JOB_STATUS_ALL"
+#define ARC_COMMAND_JOB_INFO          "ARC_JOB_INFO"
+#define ARC_COMMAND_JOB_STAGE_IN      "ARC_JOB_STAGE_IN"
+#define ARC_COMMAND_JOB_STAGE_OUT     "ARC_JOB_STAGE_OUT"
+#define ARC_COMMAND_JOB_KILL          "ARC_JOB_KILL"
+#define ARC_COMMAND_JOB_CLEAN         "ARC_JOB_CLEAN"
+#define ARC_COMMAND_DELEGATION_NEW    "ARC_DELEGATION_NEW"
+#define ARC_COMMAND_DELEGATION_RENEW  "ARC_DELEGATION_RENEW"
 
 #define GENERAL_GAHP_ERROR_CODE             "GAHPERROR"
 #define GENERAL_GAHP_ERROR_MSG              "GAHP_ERROR"
@@ -98,5 +100,11 @@ bool ArcJobKillWorkerFunction( GahpRequest *gahp_request );
 
 bool ArcJobCleanArgsCheck( char **argv, int argc );
 bool ArcJobCleanWorkerFunction( GahpRequest *gahp_request );
+
+bool ArcDelegationNewArgsCheck( char **argv, int argc );
+bool ArcDelegationNewWorkerFunction( GahpRequest *gahp_request );
+
+bool ArcDelegationRenewArgsCheck( char **argv, int argc );
+bool ArcDelegationRenewWorkerFunction( GahpRequest *gahp_request );
 
 #endif

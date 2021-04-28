@@ -112,6 +112,12 @@ registerAllArcCommands(void)
 	registerArcGahpCommand(ARC_COMMAND_JOB_CLEAN,
 			ArcJobCleanArgsCheck, ArcJobCleanWorkerFunction);
 
+	registerArcGahpCommand(ARC_COMMAND_DELEGATION_NEW,
+			ArcDelegationNewArgsCheck, ArcDelegationNewWorkerFunction);
+
+	registerArcGahpCommand(ARC_COMMAND_DELEGATION_RENEW,
+			ArcDelegationRenewArgsCheck, ArcDelegationRenewWorkerFunction);
+
 	return true;
 }
 

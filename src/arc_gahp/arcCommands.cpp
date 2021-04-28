@@ -30,6 +30,8 @@
 #include "thread_control.h"
 #include "Regex.h"
 
+#include "DelegationInterface.h"
+
 using std::string;
 using std::map;
 using std::vector;
@@ -1371,3 +1373,141 @@ bool ArcJobCleanWorkerFunction(GahpRequest *gahp_request)
 	return true;
 }
 
+// Expecting:ARC_DELEGATION_NEW <req_id> <serviceurl>
+bool ArcDelegationNewArgsCheck(char **argv, int argc)
+{
+	return verify_number_args(argc, 3) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]);
+}
+
+// Expecting:ARC_DELEGATION_NEW <req_id> <serviceurl>
+bool ArcDelegationNewWorkerFunction(GahpRequest *gahp_request)
+{
+	int argc = gahp_request->m_args.argc;
+	char **argv = gahp_request->m_args.argv;
+	int request_id = gahp_request->m_reqid;
+
+	if( ! verify_number_args( argc, 3 ) ) {
+		gahp_request->m_result = create_result_string(request_id, "499", "Wrong_Argument_Number");
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 3, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	HttpRequest deleg1_request;
+	deleg1_request.serviceURL = fillURL(argv[2]);
+	deleg1_request.serviceURL += "/delegations?action=new";
+	deleg1_request.requestMethod = "POST";
+	deleg1_request.proxyFile = gahp_request->m_proxy_file;
+	deleg1_request.includeResponseHeader = true;
+
+	// Send the request.
+	if( ! deleg1_request.SendRequest() ) {
+		// TODO Fix construction of error message
+		gahp_request->m_result = create_result_string( request_id,
+								deleg1_request.errorCode,
+								deleg1_request.errorMessage );
+		return true;
+	}
+
+	std::string deleg_url = deleg1_request.responseHeaders["location"];
+	std::string deleg_id = deleg_url.substr(deleg_url.rfind('/')+1);
+	std::string deleg_cert_request = deleg1_request.responseBody;
+	DelegationProvider deleg_provider(gahp_request->m_proxy_file, "");
+	std::string deleg_resp = deleg_provider.Delegate(deleg_cert_request);
+
+	HttpRequest deleg2_request;
+	deleg2_request.serviceURL = fillURL(argv[2]);
+	deleg2_request.serviceURL += "/delegations/";
+	deleg2_request.serviceURL += deleg_id;
+	deleg2_request.requestMethod = "PUT";
+	deleg2_request.proxyFile = gahp_request->m_proxy_file;
+	deleg2_request.requestBody = deleg_resp;
+
+	// Send the request.
+	if( ! deleg2_request.SendRequest() ) {
+		// TODO Fix construction of error message
+		gahp_request->m_result = create_result_string( request_id,
+								deleg2_request.errorCode,
+								deleg2_request.errorMessage );
+		return true;
+	}
+
+	std::vector<std::string> result_args;
+	result_args.push_back(deleg_id);
+	gahp_request->m_result = create_result_string( request_id,
+								deleg2_request.errorCode,
+								deleg2_request.errorMessage, result_args );
+	return true;
+}
+
+// Expecting:ARC_DELEGATION_RENEW <req_id> <serviceurl> <deleg-id>
+bool ArcDelegationRenewArgsCheck(char **argv, int argc)
+{
+	return verify_number_args(argc, 4) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]);
+}
+
+// Expecting:ARC_DELEGATION_RENEW <req_id> <serviceurl> <deleg-id>
+bool ArcDelegationRenewWorkerFunction(GahpRequest *gahp_request)
+{
+	int argc = gahp_request->m_args.argc;
+	char **argv = gahp_request->m_args.argv;
+	int request_id = gahp_request->m_reqid;
+
+	if( ! verify_number_args( argc, 4 ) ) {
+		gahp_request->m_result = create_result_string(request_id, "499", "Wrong_Argument_Number");
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 4, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	HttpRequest deleg1_request;
+	deleg1_request.serviceURL = fillURL(argv[2]);
+	deleg1_request.serviceURL += "/delegations/";
+	deleg1_request.serviceURL += argv[3];
+	deleg1_request.serviceURL += "?action=renew";
+	deleg1_request.requestMethod = "POST";
+	deleg1_request.proxyFile = gahp_request->m_proxy_file;
+	deleg1_request.includeResponseHeader = true;
+
+	// Send the request.
+	if( ! deleg1_request.SendRequest() ) {
+		// TODO Fix construction of error message
+		gahp_request->m_result = create_result_string( request_id,
+								deleg1_request.errorCode,
+								deleg1_request.errorMessage );
+		return true;
+	}
+
+	std::string deleg_cert_request = deleg1_request.responseBody;
+	DelegationProvider deleg_provider(gahp_request->m_proxy_file, "");
+	std::string deleg_resp = deleg_provider.Delegate(deleg_cert_request);
+
+	HttpRequest deleg2_request;
+	deleg2_request.serviceURL = fillURL(argv[2]);
+	deleg2_request.serviceURL += "/delegations/";
+	deleg2_request.serviceURL += argv[3];
+	deleg2_request.requestMethod = "PUT";
+	deleg2_request.proxyFile = gahp_request->m_proxy_file;
+	deleg2_request.requestBody = deleg_resp;
+
+	// Send the request.
+	if( ! deleg2_request.SendRequest() ) {
+		// TODO Fix construction of error message
+		gahp_request->m_result = create_result_string( request_id,
+								deleg2_request.errorCode,
+								deleg2_request.errorMessage );
+		return true;
+	}
+
+	gahp_request->m_result = create_result_string( request_id,
+								deleg2_request.errorCode,
+								deleg2_request.errorMessage );
+	return true;
+}
