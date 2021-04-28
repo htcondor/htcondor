@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include <map>
 
 #include "gcejob.h"
 #include "baseresource.h"
@@ -37,7 +38,7 @@ class GCEResource : public BaseResource
 public:
 	void Reconfig();
 
-	static const char *HashName( const char *resource_name,
+	static std::string & HashName( const char *resource_name,
 								 const char *project,
 								 const char *zone,
 								 const char *auth_file,
@@ -60,7 +61,7 @@ public:
 
 	~GCEResource();
 
-	static HashTable <std::string, GCEResource *> ResourcesByName;
+	static std::map <std::string, GCEResource *> ResourcesByName;
 
 	const char *ResourceType();
 

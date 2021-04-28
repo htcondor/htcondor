@@ -518,6 +518,7 @@
 #define ATTR_NEXT_JOB_START_DELAY  "NextJobStartDelay"
 #define ATTR_NODE  "Node"
 #define ATTR_NORDUGRID_RSL  "NordugridRSL"
+#define ATTR_ARC_RSL  "ArcRSL"
 #define ATTR_NOTIFY_USER  "NotifyUser"
 #define ATTR_NT_DOMAIN  "NTDomain"
 #define ATTR_TRANSFER_QUEUE_USER_EXPR "TransferQueueUserExpr"
