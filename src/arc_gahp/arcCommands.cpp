@@ -240,7 +240,7 @@ bool HttpRequest::SendRequest()
 	// mutex, since we know that means only one thread is running.
 	CURLcode rv = curl_global_init( CURL_GLOBAL_ALL );
 	if( rv != 0 ) {
-		this->errorCode = "E_CURL_LIB";
+		this->errorCode = "499";
 		this->errorMessage = "curl_global_init() failed.";
 		dprintf( D_ALWAYS, "curl_global_init() failed, failing.\n" );
 		return false;
@@ -248,7 +248,7 @@ bool HttpRequest::SendRequest()
 
 	CURL * curl = curl_easy_init();
 	if( curl == NULL ) {
-		this->errorCode = "E_CURL_LIB";
+		this->errorCode = "499";
 		this->errorMessage = "curl_easy_init() failed.";
 		dprintf( D_ALWAYS, "curl_easy_init() failed, failing.\n" );
 		goto error_return;
@@ -257,7 +257,7 @@ bool HttpRequest::SendRequest()
 	char errorBuffer[CURL_ERROR_SIZE];
 	rv = curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, errorBuffer );
 	if( rv != CURLE_OK ) {
-		this->errorCode = "E_CURL_LIB";
+		this->errorCode = "499";
 		this->errorMessage = "curl_easy_setopt( CURLOPT_ERRORBUFFER ) failed.";
 		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_ERRORBUFFER ) failed (%d): '%s', failing.\n",
 				 rv, curl_easy_strerror( rv ) );
@@ -268,7 +268,7 @@ bool HttpRequest::SendRequest()
 	// and dumped via dprintf() to allow control via EC2_GAHP_DEBUG.
 	rv = curl_easy_setopt( curl, CURLOPT_VERBOSE, 1 );
 	if( rv != CURLE_OK ) {
-		this->errorCode = "E_CURL_LIB";
+		this->errorCode = "499";
 		this->errorMessage = "curl_easy_setopt( CURLOPT_VERBOSE ) failed.";
 		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_VERBOSE ) failed (%d): '%s', failing.\n",
 			rv, curl_easy_strerror( rv ) );
@@ -278,7 +278,7 @@ bool HttpRequest::SendRequest()
 
 	rv = curl_easy_setopt( curl, CURLOPT_URL, finalURI.c_str() );
 	if( rv != CURLE_OK ) {
-		this->errorCode = "E_CURL_LIB";
+		this->errorCode = "499";
 		this->errorMessage = "curl_easy_setopt( CURLOPT_URL ) failed.";
 		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_URL ) failed (%d): '%s', failing.\n",
 				 rv, curl_easy_strerror( rv ) );
@@ -287,7 +287,7 @@ bool HttpRequest::SendRequest()
 
 	rv = curl_easy_setopt( curl, CURLOPT_NOPROGRESS, 1 );
 	if( rv != CURLE_OK ) {
-		this->errorCode = "E_CURL_LIB";
+		this->errorCode = "499";
 		this->errorMessage = "curl_easy_setopt( CURLOPT_NOPROGRESS ) failed.";
 		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_NOPROGRESS ) failed (%d): '%s', failing.\n",
 				 rv, curl_easy_strerror( rv ) );
@@ -298,7 +298,7 @@ bool HttpRequest::SendRequest()
 
 		rv = curl_easy_setopt( curl, CURLOPT_POST, 1 );
 		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
+			this->errorCode = "499";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_POST ) failed.";
 			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POST ) failed (%d): '%s', failing.\n",
 					 rv, curl_easy_strerror( rv ) );
@@ -307,7 +307,7 @@ bool HttpRequest::SendRequest()
 		
 		rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, requestBody.c_str() );
 		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
+			this->errorCode = "499";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed.";
 			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed (%d): '%s', failing.\n",
 					 rv, curl_easy_strerror( rv ) );
@@ -318,7 +318,7 @@ bool HttpRequest::SendRequest()
 
 		rv = curl_easy_setopt( curl, CURLOPT_PUT, 1 );
 		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
+			this->errorCode = "499";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_PUT ) failed.";
 			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_PUT ) failed (%d): '%s', failing.\n",
 					 rv, curl_easy_strerror( rv ) );
@@ -330,7 +330,7 @@ bool HttpRequest::SendRequest()
 		if( ! requestBodyFilename.empty() ) {
 			in_fp = fopen(this->requestBodyFilename.c_str(), "r");
 			if( in_fp == NULL ) {
-				this->errorCode = "E_CURL_LIB";
+				this->errorCode = "499";
 				this->errorMessage = "Failed to open file";
 				dprintf( D_ALWAYS, "fopen(%s) failed (%d): '%s', failing.\n",
 			             this->requestBodyFilename.c_str(), errno, strerror( errno ) );
@@ -339,7 +339,7 @@ bool HttpRequest::SendRequest()
 
 			rv = curl_easy_setopt( curl, CURLOPT_READDATA, in_fp );
 			if( rv != CURLE_OK ) {
-				this->errorCode = "E_CURL_LIB";
+				this->errorCode = "499";
 				this->errorMessage = "curl_easy_setopt( CURLOPT_READDATA ) failed.";
 				dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READDATA ) failed (%d): '%s', failing.\n",
 				         rv, curl_easy_strerror( rv ) );
@@ -351,7 +351,7 @@ bool HttpRequest::SendRequest()
 		} else {
 			rv = curl_easy_setopt( curl, CURLOPT_READFUNCTION, & CurlReadCb );
 			if( rv != CURLE_OK ) {
-				this->errorCode = "E_CURL_LIB";
+				this->errorCode = "499";
 				this->errorMessage = "curl_easy_setopt( CURLOPT_READFUNCTION ) failed.";
 				dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READFUNCTION ) failed (%d): '%s', failing.\n",
 				         rv, curl_easy_strerror( rv ) );
@@ -360,7 +360,7 @@ bool HttpRequest::SendRequest()
 
 			rv = curl_easy_setopt( curl, CURLOPT_READDATA, this );
 			if( rv != CURLE_OK ) {
-				this->errorCode = "E_CURL_LIB";
+				this->errorCode = "499";
 				this->errorMessage = "curl_easy_setopt( CURLOPT_READDATA ) failed.";
 				dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_READDATA ) failed (%d): '%s', failing.\n",
 				         rv, curl_easy_strerror( rv ) );
@@ -372,7 +372,7 @@ bool HttpRequest::SendRequest()
 
 		rv = curl_easy_setopt( curl, CURLOPT_INFILESIZE_LARGE, filesize );
 		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
+			this->errorCode = "499";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_INFILESIZE_LARGE ) failed.";
 			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_INFILESIZE_LARGE ) failed (%d): '%s', failing.\n",
 					 rv, curl_easy_strerror( rv ) );
@@ -383,7 +383,7 @@ bool HttpRequest::SendRequest()
 
 		rv = curl_easy_setopt( curl, CURLOPT_CUSTOMREQUEST, requestMethod.c_str() );
 		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
+			this->errorCode = "499";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_CUSTOMREQUEST ) failed.";
 			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_CUSTOMREQUEST ) failed (%d): '%s', failing.\n",
 					 rv, curl_easy_strerror( rv ) );
@@ -395,7 +395,7 @@ bool HttpRequest::SendRequest()
 	buf += contentType;
 	curl_headers = curl_slist_append( curl_headers, buf.c_str() );
 	if ( curl_headers == NULL ) {
-		this->errorCode = "E_CURL_LIB";
+		this->errorCode = "499";
 		this->errorMessage = "curl_slist_append() failed.";
 		dprintf( D_ALWAYS, "curl_slist_append() failed, failing.\n" );
 		goto error_return;
@@ -403,7 +403,7 @@ bool HttpRequest::SendRequest()
 
 	curl_headers = curl_slist_append( curl_headers, "Accept: application/json" );
 	if ( curl_headers == NULL ) {
-		this->errorCode = "E_CURL_LIB";
+		this->errorCode = "499";
 		this->errorMessage = "curl_slist_append() failed.";
 		dprintf( D_ALWAYS, "curl_slist_append() failed, failing.\n" );
 		goto error_return;
@@ -411,7 +411,7 @@ bool HttpRequest::SendRequest()
 
 	rv = curl_easy_setopt( curl, CURLOPT_HTTPHEADER, curl_headers );
 	if( rv != CURLE_OK ) {
-		this->errorCode = "E_CURL_LIB";
+		this->errorCode = "499";
 		this->errorMessage = "curl_easy_setopt( CURLOPT_HTTPHEADER ) failed.";
 		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_HTTPHEADER ) failed (%d): '%s', failing.\n",
 				 rv, curl_easy_strerror( rv ) );
@@ -421,7 +421,7 @@ bool HttpRequest::SendRequest()
 	if ( includeResponseHeader ) {
 		rv = curl_easy_setopt( curl, CURLOPT_HEADER, 1 );
 		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
+			this->errorCode = "499";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_HEADER ) failed.";
 			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_HEADER ) failed (%d): '%s', failing.\n",
 					 rv, curl_easy_strerror( rv ) );
@@ -432,7 +432,7 @@ bool HttpRequest::SendRequest()
 	if ( ! this->responseBodyFilename.empty() ) {
 		out_fp = fopen(this->responseBodyFilename.c_str(), "w");
 		if( out_fp == NULL ) {
-			this->errorCode = "E_CURL_LIB";
+			this->errorCode = "499";
 			this->errorMessage = "Failed to open file";
 			dprintf( D_ALWAYS, "fopen(%s) failed (%d): '%s', failing.\n",
 			         this->responseBodyFilename.c_str(), errno, strerror( errno ) );
@@ -441,7 +441,7 @@ bool HttpRequest::SendRequest()
 
 		rv = curl_easy_setopt( curl, CURLOPT_WRITEDATA, out_fp );
 		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
+			this->errorCode = "499";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_WRITEDATA ) failed.";
 			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_WRITEDATA ) failed (%d): '%s', failing.\n",
 					 rv, curl_easy_strerror( rv ) );
@@ -450,7 +450,7 @@ bool HttpRequest::SendRequest()
 	} else {
 		rv = curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, & appendToString );
 		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
+			this->errorCode = "499";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_WRITEFUNCTION ) failed.";
 			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_WRITEFUNCTION ) failed (%d): '%s', failing.\n",
 			         rv, curl_easy_strerror( rv ) );
@@ -459,7 +459,7 @@ bool HttpRequest::SendRequest()
 
 		rv = curl_easy_setopt( curl, CURLOPT_WRITEDATA, & this->responseBody );
 		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
+			this->errorCode = "499";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_WRITEDATA ) failed.";
 			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_WRITEDATA ) failed (%d): '%s', failing.\n",
 			         rv, curl_easy_strerror( rv ) );
@@ -472,7 +472,7 @@ bool HttpRequest::SendRequest()
 	//
 	rv = curl_easy_setopt( curl, CURLOPT_SSL_VERIFYPEER, 1 );
 	if( rv != CURLE_OK ) {
-		this->errorCode = "E_CURL_LIB";
+		this->errorCode = "499";
 		this->errorMessage = "curl_easy_setopt( CURLOPT_SSL_VERIFYPEER ) failed.";
 		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_SSL_VERIFYPEER ) failed (%d): '%s', failing.\n",
 				 rv, curl_easy_strerror( rv ) );
@@ -481,7 +481,7 @@ bool HttpRequest::SendRequest()
 
 	rv = curl_easy_setopt( curl, CURLOPT_SSL_VERIFYHOST, 2 );
 	if( rv != CURLE_OK ) {
-		this->errorCode = "E_CURL_LIB";
+		this->errorCode = "499";
 		this->errorMessage = "curl_easy_setopt( CURLOPT_SSL_VERIFYHOST ) failed.";
 		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_SSL_VERIFYHOST ) failed (%d): '%s', failing.\n",
 				 rv, curl_easy_strerror( rv ) );
@@ -503,7 +503,7 @@ bool HttpRequest::SendRequest()
 
 	rv = curl_easy_setopt( curl, CURLOPT_CAPATH, ca_dir );
 	if( rv != CURLE_OK ) {
-		this->errorCode = "E_CURL_LIB";
+		this->errorCode = "499";
 		this->errorMessage = "curl_easy_setopt( CURLOPT_CAPATH ) failed.";
 		dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_CAPATH ) failed (%d): '%s', failing.\n",
 				 rv, curl_easy_strerror( rv ) );
@@ -519,7 +519,7 @@ bool HttpRequest::SendRequest()
 		// TODO Add support for proxy files
 		rv = curl_easy_setopt( curl, CURLOPT_SSLCERT, proxyFile.c_str() );
 		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
+			this->errorCode = "499";
 			this->errorMessage = "curl_easy_setopt(CURLOPT_SSLCERT) failed";
 			dprintf(D_ALWAYS, "curl_easy_setopt(CURLOPT_SSLCERT) failed (%d): '%s', failing\n",
 			        rv, curl_easy_strerror(rv));
@@ -528,7 +528,7 @@ bool HttpRequest::SendRequest()
 
 		rv = curl_easy_setopt( curl, CURLOPT_SSLCERTTYPE, "PEM" );
 		if( rv != CURLE_OK ) {
-			this->errorCode = "E_CURL_LIB";
+			this->errorCode = "499";
 			this->errorMessage = "curl_easy_setopt(CURLOPT_SSLCERTTYPE) failed";
 			dprintf(D_ALWAYS, "curl_easy_setopt(CURLOPT_SSLCERTTYPE) failed (%d): '%s', failing\n",
 			        rv, curl_easy_strerror(rv));
@@ -547,7 +547,7 @@ bool HttpRequest::SendRequest()
 
 			rv = curl_easy_setopt( curl, CURLOPT_CAINFO, proxyFile.c_str() );
 			if( rv != CURLE_OK ) {
-				this->errorCode = "E_CURL_LIB";
+				this->errorCode = "499";
 				this->errorMessage = "curl_easy_setopt( CURLOPT_CAINFO ) failed.";
 				dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_CAINFO ) failed (%d): '%s', failing.\n",
 				         rv, curl_easy_strerror( rv ) );
@@ -563,10 +563,8 @@ bool HttpRequest::SendRequest()
 	pthread_mutex_unlock( & globalCurlMutex );
 	arc_gahp_grab_big_mutex();
 	if( rv != 0 ) {
-		this->errorCode = "E_CURL_IO";
-		std::ostringstream error;
-		error << "curl_easy_perform() failed (" << rv << "): '" << curl_easy_strerror( rv ) << "'.";
-		this->errorMessage = error.str();
+		this->errorCode = "499";
+		formatstr( this->errorMessage, "curl_easy_perform() failed (%d): '%s'.", rv, curl_easy_strerror(rv) );
 		dprintf( D_ALWAYS, "%s\n", this->errorMessage.c_str() );
 		dprintf( D_FULLDEBUG, "%s\n", errorBuffer );
 		goto error_return;
@@ -574,7 +572,7 @@ bool HttpRequest::SendRequest()
 
 	rv = curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, & response_code );
 	if( rv != CURLE_OK ) {
-		this->errorCode = "E_CURL_LIB";
+		this->errorCode = "499";
 		this->errorMessage = "curl_easy_getinfo() failed.";
 		dprintf( D_ALWAYS, "curl_easy_getinfo( CURLINFO_RESPONSE_CODE ) failed (%d): '%s', failing.\n",
 				 rv, curl_easy_strerror( rv ) );
