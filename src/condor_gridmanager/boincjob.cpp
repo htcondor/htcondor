@@ -113,12 +113,8 @@ void BoincJobReconfig()
 	BoincJob::setConnectFailureRetry( tmp_int );
 
 	// Tell all the resource objects to deal with their new config values
-	BoincResource *next_resource;
-
-	BoincResource::ResourcesByName.startIterations();
-	
-	while ( BoincResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		next_resource->Reconfig();
+	for (auto &elem : BoincResource::ResourcesByName) {
+		elem.second->Reconfig();
 	}
 }
 

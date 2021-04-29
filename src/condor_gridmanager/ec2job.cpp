@@ -118,12 +118,8 @@ void EC2JobReconfig()
 	EC2Job::setConnectFailureRetry( cfrc );
 
 	// Tell all the resource objects to deal with their new config values
-	EC2Resource *next_resource;
-
-	EC2Resource::ResourcesByName.startIterations();
-
-	while ( EC2Resource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		next_resource->Reconfig();
+	for (auto &elem : EC2Resource::ResourcesByName) {
+		elem.second->Reconfig();
 	}
 }
 

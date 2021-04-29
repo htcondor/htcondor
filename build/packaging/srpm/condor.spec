@@ -1378,6 +1378,7 @@ rm -rf %{buildroot}
 %_sbindir/nordugrid_gahp
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
+%_sbindir/arc_gahp
 %_libexecdir/condor/condor_gpu_discovery
 %_libexecdir/condor/condor_gpu_utilization
 %_sbindir/condor_vm-gahp-vmware

@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2021, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -30,7 +30,7 @@
 
 #include "globus_utils.h"
 #include "gridmanager.h"
-#include "nordugridjob.h"
+#include "arcjob.h"
 #include "condor_config.h"
 #include "globusjob.h" // for rsl_stringify()
 
@@ -54,7 +54,8 @@
 #define GM_EXIT_INFO			15
 #define GM_RECOVER_QUERY		16
 #define GM_START				17
-#define GM_STAGE_OUT_OLD		18
+#define GM_CANCEL_COMMIT		18
+#define GM_DELEGATE_PROXY		19
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -75,7 +76,8 @@ static const char *GMStateNames[] = {
 	"GM_EXIT_INFO",
 	"GM_RECOVER_QUERY",
 	"GM_START",
-	"GM_STAGE_OUT_OLD",
+	"GM_CANCEL_COMMIT",
+	"GM_DELEGATE_PROXY",
 };
 
 #define REMOTE_STATE_ACCEPTING		"ACCEPTING"
@@ -83,23 +85,23 @@ static const char *GMStateNames[] = {
 #define REMOTE_STATE_PREPARING		"PREPARING"
 #define REMOTE_STATE_PREPARED		"PREPARED"
 #define REMOTE_STATE_SUBMITTING		"SUBMITTING"
-#define REMOTE_STATE_INLRMS_R		"INLRMS: R"
-#define REMOTE_STATE_INLRMS_R2		"INLRMS:R"
-#define REMOTE_STATE_INLRMS_Q		"INLRMS: Q"
-#define REMOTE_STATE_INLRMS_Q2		"INLRMS:Q"
-#define REMOTE_STATE_INLRMS_S		"INLRMS: S"
-#define REMOTE_STATE_INLRMS_S2		"INLRMS:S"
-#define REMOTE_STATE_INLRMS_E		"INLRMS: E"
-#define REMOTE_STATE_INLRMS_E2		"INLRMS:E"
-#define REMOTE_STATE_INLRMS_O		"INLRMS: O"
-#define REMOTE_STATE_INLRMS_O2		"INLRMS:O"
+#define REMOTE_STATE_RUNNING		"RUNNING"
+#define REMOTE_STATE_QUEUING		"QUEUING"
+#define REMOTE_STATE_HELD			"HELD"
+#define REMOTE_STATE_EXITINGLRMS	"EXITINGLRMS"
+#define REMOTE_STATE_OTHER			"OTHER"
 #define REMOTE_STATE_KILLING		"KILLING"
 #define REMOTE_STATE_EXECUTED		"EXECUTED"
 #define REMOTE_STATE_FINISHING		"FINISHING"
 #define REMOTE_STATE_FINISHED		"FINISHED"
 #define REMOTE_STATE_FAILED			"FAILED"
 #define REMOTE_STATE_KILLED			"KILLED"
-#define REMOTE_STATE_DELETED		"DELETED"
+#define REMOTE_STATE_WIPED			"WIPED"
+
+#define HTTP_200_OK			200
+#define HTTP_201_CREATED	201
+#define HTTP_202_ACCEPTED	202
+#define HTTP_404_NOT_FOUND	404
 
 #define REMOTE_STDOUT_NAME	"_condor_stdout"
 #define REMOTE_STDERR_NAME	"_condor_stderr"
@@ -115,46 +117,69 @@ static const char *GMStateNames[] = {
 // evalute PeriodicHold expression in job ad.
 #define MAX_SUBMIT_ATTEMPTS	1
 
-void NordugridJobInit()
+static
+const std::string& escapeXML(const std::string& in)
+{
+	static std::string out;
+	out.clear();
+	for ( char c : in ) {
+		switch( c ) {
+		case '<':
+			out += "&lt;";
+			break;
+		case '>':
+			out += "&gt;";
+			break;
+		case '&':
+			out += "&amp;";
+			break;
+		default:
+			out += c;
+		}
+	}
+	return out;
+}
+
+void ArcJobInit()
 {
 }
 
-void NordugridJobReconfig()
+void ArcJobReconfig()
 {
 	int tmp_int;
 
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
-	NordugridJob::setGahpCallTimeout( tmp_int );
+	ArcJob::setGahpCallTimeout( tmp_int );
 
 	// Tell all the resource objects to deal with their new config values
-	for (auto &elem : NordugridResource::ResourcesByName) {
+	for (auto &elem : ArcResource::ResourcesByName) {
 		elem.second->Reconfig();
 	}
 }
 
-bool NordugridJobAdMatch( const ClassAd *job_ad ) {
+bool ArcJobAdMatch( const ClassAd *job_ad ) {
 	int universe;
 	std::string resource;
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
-		 strncasecmp( resource.c_str(), "nordugrid ", 10 ) == 0 ) {
+		 strncasecmp( resource.c_str(), "arc ", 4 ) == 0 ) {
 
 		return true;
 	}
 	return false;
 }
 
-BaseJob *NordugridJobCreate( ClassAd *jobad )
+BaseJob *ArcJobCreate( ClassAd *jobad )
 {
-	return (BaseJob *)new NordugridJob( jobad );
+	return (BaseJob *)new ArcJob( jobad );
 }
 
-int NordugridJob::submitInterval = 300;	// default value
-int NordugridJob::gahpCallTimeout = 300;	// default value
-int NordugridJob::maxConnectFailures = 3;	// default value
+int ArcJob::submitInterval = 300;	// default value
+int ArcJob::gahpCallTimeout = 300;	// default value
+int ArcJob::maxConnectFailures = 3;	// default value
 
-NordugridJob::NordugridJob( ClassAd *classad )
+ArcJob::ArcJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	char buff[4096];
@@ -173,7 +198,6 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	jobProxy = NULL;
 	myResource = NULL;
 	gahp = NULL;
-	RSL = NULL;
 	stageList = NULL;
 	stageLocalList = NULL;
 
@@ -195,12 +219,12 @@ NordugridJob::NordugridJob( ClassAd *classad )
 		goto error_exit;
 	}
 
-	gahp_path = param( "NORDUGRID_GAHP" );
+	gahp_path = param( "ARC_GAHP" );
 	if ( gahp_path == NULL ) {
-		error_string = "NORDUGRID_GAHP not defined";
+		error_string = "ARC_GAHP not defined";
 		goto error_exit;
 	}
-	snprintf( buff, sizeof(buff), "NORDUGRID/%s",
+	snprintf( buff, sizeof(buff), "ARC/%s",
 			  jobProxy->subject->fqan );
 	gahp = new GahpClient( buff, gahp_path );
 	gahp->setNotificationTimerId( evaluateStateTid );
@@ -218,8 +242,8 @@ NordugridJob::NordugridJob( ClassAd *classad )
 		Tokenize( buff );
 
 		token = GetNextToken( " ", false );
-		if ( !token || strcasecmp( token, "nordugrid" ) ) {
-			formatstr( error_string, "%s not of type nordugrid",
+		if ( !token || strcasecmp( token, "arc" ) ) {
+			formatstr( error_string, "%s not of type arc",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -239,7 +263,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 		goto error_exit;
 	}
 
-	myResource = NordugridResource::FindOrCreateResource( resourceManagerString,
+	myResource = ArcResource::FindOrCreateResource( resourceManagerString,
 														  jobProxy );
 	myResource->RegisterJob( this );
 
@@ -264,7 +288,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	return;
 }
 
-NordugridJob::~NordugridJob()
+ArcJob::~ArcJob()
 {
 	if ( jobProxy != NULL ) {
 		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
@@ -278,9 +302,6 @@ NordugridJob::~NordugridJob()
 	if ( gahp != NULL ) {
 		delete gahp;
 	}
-	if ( RSL ) {
-		delete RSL;
-	}
 	if ( stageList ) {
 		delete stageList;
 	}
@@ -289,13 +310,13 @@ NordugridJob::~NordugridJob()
 	}
 }
 
-void NordugridJob::Reconfig()
+void ArcJob::Reconfig()
 {
 	BaseJob::Reconfig();
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-void NordugridJob::doEvaluateState()
+void ArcJob::doEvaluateState()
 {
 	int old_gm_state;
 	bool reevaluate_state = true;
@@ -395,8 +416,36 @@ void NordugridJob::doEvaluateState()
 				gmState = GM_DELETE;
 				break;
 			} else {
-				gmState = GM_SUBMIT;
+				gmState = GM_DELEGATE_PROXY;
 			}
+			} break;
+		case GM_DELEGATE_PROXY: {
+			if ( condorState == REMOVED || condorState == HELD ) {
+				myResource->CancelSubmit( this );
+				gmState = GM_UNSUBMITTED;
+				break;
+			}
+			std::string deleg_id;
+
+			rc = gahp->arc_delegation_new( resourceManagerString,
+			                               deleg_id );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+
+			if ( rc == HTTP_200_OK ) {
+				ASSERT( !deleg_id.empty() );
+				delegationId = deleg_id;
+				gmState = GM_SUBMIT;
+			} else {
+				errorString = gahp->getErrorString();
+				dprintf(D_ALWAYS,"(%d.%d) proxy delegation failed: %s\n",
+				        procID.cluster, procID.proc,
+				        errorString.c_str() );
+				gmState = GM_UNSUBMITTED;
+			}
+
 			} break;
 		case GM_SUBMIT: {
 			if ( condorState == REMOVED || condorState == HELD ) {
@@ -414,7 +463,8 @@ void NordugridJob::doEvaluateState()
 			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {
 
-				char *job_id = NULL;
+				std::string job_id;
+				std::string job_status;
 
 				// Once RequestSubmit() is called at least once, you must
 				// CancelRequest() once you're done with the request call
@@ -422,17 +472,18 @@ void NordugridJob::doEvaluateState()
 					break;
 				}
 
-				if ( RSL == NULL ) {
-					RSL = buildSubmitRSL();
+				if ( RSL.empty() ) {
+//					if ( ! buildSubmitRSL() ) {
+					if ( ! buildJobADL() ) {
+						gmState = GM_HOLD;
+						break;
+					}
 				}
-				if ( RSL == NULL ) {
-					gmState = GM_HOLD;
-					break;
-				}
-				rc = gahp->nordugrid_submit( 
-										resourceManagerString,
-										RSL->c_str(),
-										job_id );
+				rc = gahp->arc_job_new(
+									resourceManagerString,
+									RSL,
+									job_id,
+									job_status );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -441,10 +492,11 @@ void NordugridJob::doEvaluateState()
 				lastSubmitAttempt = time(NULL);
 				numSubmitAttempts++;
 
-				if ( rc == 0 ) {
-					ASSERT( job_id != NULL );
-					SetRemoteJobId( job_id );
-					free( job_id );
+				if ( rc == HTTP_201_CREATED ) {
+					ASSERT( !job_id.empty() );
+					SetRemoteJobId( job_id.c_str() );
+					remoteJobState = job_status;
+					SetRemoteJobStatus( job_status.c_str() );
 					WriteGridSubmitEventToUserLog( jobAd );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
@@ -453,14 +505,14 @@ void NordugridJob::doEvaluateState()
 							procID.cluster, procID.proc,
 							errorString.c_str() );
 					myResource->CancelSubmit( this );
-					gmState = GM_UNSUBMITTED;
+					gmState = GM_HOLD;
 				}
 
 			} else {
 				unsigned int delay = 0;
 				if ( (lastSubmitAttempt + submitInterval) > now ) {
 					delay = (lastSubmitAttempt + submitInterval) - now;
-				}				
+				}
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}
 			} break;
@@ -486,12 +538,12 @@ void NordugridJob::doEvaluateState()
 					}
 				}
 			}
-			rc = gahp->nordugrid_stage_in( resourceManagerString, remoteJobId,
-										   *stageList );
+			rc = gahp->arc_job_stage_in( resourceManagerString, remoteJobId,
+									   *stageList );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
-			} else if ( rc != 0 ) {
+			} else if ( rc != HTTP_200_OK && rc != HTTP_201_CREATED ) {
 				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) file stage in failed: %s\n",
 						 procID.cluster, procID.proc, errorString.c_str() );
@@ -504,7 +556,7 @@ void NordugridJob::doEvaluateState()
 			if ( remoteJobState == REMOTE_STATE_FINISHED ||
 				 remoteJobState == REMOTE_STATE_FAILED ||
 				 remoteJobState == REMOTE_STATE_KILLED ||
-				 remoteJobState == REMOTE_STATE_DELETED ) {
+				 remoteJobState == REMOTE_STATE_WIPED ) {
 					gmState = GM_EXIT_INFO;
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
@@ -516,7 +568,7 @@ void NordugridJob::doEvaluateState()
 					lastProbeTime = 0;
 					probeNow = false;
 				}
-/*
+#if 0
 				int probe_interval = myResource->GetJobPollInterval();
 				if ( now >= lastProbeTime + probe_interval ) {
 					gmState = GM_PROBE_JOB;
@@ -525,53 +577,43 @@ void NordugridJob::doEvaluateState()
 				unsigned int delay = 0;
 				if ( (lastProbeTime + probe_interval) > now ) {
 					delay = (lastProbeTime + probe_interval) - now;
-				}				
+				}
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
-*/
+#endif
 			}
 			} break;
 		case GM_PROBE_JOB: {
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				char *new_status = NULL;
-				rc = gahp->nordugrid_status( resourceManagerString,
-											 remoteJobId, new_status );
+				std::string new_status;
+				rc = gahp->arc_job_status( resourceManagerString,
+										 remoteJobId, new_status );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
-				} else if ( rc != 0 ) {
+				} else if ( rc != HTTP_200_OK ) {
 					// What to do about failure?
 					errorString = gahp->getErrorString();
 					dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s\n",
 							 procID.cluster, procID.proc,
 							 errorString.c_str() );
 				} else {
-					if ( new_status ) {
-						remoteJobState = new_status;
-					} else {
-						remoteJobState = "";
-					}
-					SetRemoteJobStatus( new_status );
-				}
-				if ( new_status ) {
-					free( new_status );
+					remoteJobState = new_status;
+					SetRemoteJobStatus( new_status.c_str() );
 				}
 				lastProbeTime = now;
 				gmState = GM_SUBMITTED;
 			}
 			} break;
 		case GM_EXIT_INFO: {
-			std::string filter;
-			StringList reply;
-			formatstr( filter, "nordugrid-job-globalid=gsiftp://%s:2811/jobs/%s",
-							resourceManagerString, remoteJobId );
+			std::string reply;
 
-			rc = gahp->nordugrid_ldap_query( resourceManagerString, "mds-vo-name=local,o=grid", filter.c_str(), "nordugrid-job-usedcputime,nordugrid-job-usedwalltime,nordugrid-job-exitcode", reply );
+			rc = gahp->arc_job_info( resourceManagerString, remoteJobId, reply );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
-			} else if ( rc != 0 ) {
+			} else if ( rc != HTTP_200_OK ) {
 				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) exit info gathering failed: %s\n",
 						 procID.cluster, procID.proc, errorString.c_str() );
@@ -580,27 +622,28 @@ void NordugridJob::doEvaluateState()
 				int exit_code = 0;
 				int wallclock = 0;
 				int cpu = 0;
-				const char *entry;
-				reply.rewind();
-				while ( (entry = reply.next()) ) {
-					if ( !strncmp( entry, "nordugrid-job-usedcputime: ", 27 ) ) {
-						entry = strchr( entry, ' ' ) + 1;
-						cpu = atoi( entry );
-					} else if ( !strncmp( entry, "nordugrid-job-usedwalltime: ", 28 ) ) {
-						entry = strchr( entry, ' ' ) + 1;
-						wallclock = atoi( entry );
-					} else if ( !strncmp( entry, "nordugrid-job-exitcode: ", 24 ) ) {
-						entry = strchr( entry, ' ' ) + 1;
-						exit_code = atoi( entry );
-					}
-				}
-				if ( reply.isEmpty() ) {
+				if ( reply.empty() ) {
 					errorString = "Job exit information missing";
 					dprintf( D_ALWAYS, "(%d.%d) exit info missing\n",
 							 procID.cluster, procID.proc );
 					gmState = GM_CANCEL;
 					break;
 				}
+				std::string val;
+				ClassAd info_ad;
+				classad::ClassAdParser parser;
+				parser.ParseClassAd(reply, info_ad, true);
+
+				if ( info_ad.LookupString("ExitCode", val ) ) {
+					exit_code = atoi(val.c_str());
+				}
+				if ( info_ad.LookupString("UsedTotalWallTime", val ) ) {
+					wallclock = atoi(val.c_str());
+				}
+				if ( info_ad.LookupString("UsedTotalCPUTime", val ) ) {
+					cpu = atoi(val.c_str());
+				}
+
 				// We can't distinguish between normal job exit and
 				// exit-by-signal.
 				// Assume it's always a normal exit.
@@ -628,55 +671,18 @@ void NordugridJob::doEvaluateState()
 				}
 				}
 			}
-			rc = gahp->nordugrid_stage_out2( resourceManagerString,
-											 remoteJobId,
-											 *stageList, *stageLocalList );
+			rc = gahp->arc_job_stage_out( resourceManagerString,
+										 remoteJobId,
+										 *stageList, *stageLocalList );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
-			} else if ( rc != 0 ) {
+			} else if ( rc != HTTP_200_OK ) {
 				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) file stage out failed: %s\n",
 						 procID.cluster, procID.proc, errorString.c_str() );
 				dprintf( D_ALWAYS, "(%d.%d) retrying with old stdout/err names\n",
 						 procID.cluster, procID.proc );
-				gmState = GM_STAGE_OUT_OLD;
-				//gmState = GM_CANCEL;
-			} else {
-				gmState = GM_DONE_SAVE;
-			}
-			} break;
-		case GM_STAGE_OUT_OLD: {
-			// CRUFT: Condor 8.0.5 introduced new names for the stdout and
-			//   stderr files on the nordugrid server. In case jobs were
-			//   queued during an upgrade from pre-8.0.5, trying using the
-			//   old names when transferring the output sandbox.
-			if ( stageList == NULL ) {
-				stageList = buildStageOutList( true );
-			}
-			if ( stageLocalList == NULL ) {
-				const char *file;
-				stageLocalList = buildStageOutLocalList( stageList, true );
-				stageList->rewind();
-				stageLocalList->rewind();
-				while ( (file = stageLocalList->next()) ) {
-					ASSERT( stageList->next() );
-					if ( IsUrl( file ) ) {
-						stageList->deleteCurrent();
-						stageLocalList->deleteCurrent();
-				}
-				}
-			}
-			rc = gahp->nordugrid_stage_out2( resourceManagerString,
-											 remoteJobId,
-											 *stageList, *stageLocalList );
-			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-				 rc == GAHPCLIENT_COMMAND_PENDING ) {
-				break;
-			} else if ( rc != 0 ) {
-				errorString = gahp->getErrorString();
-				dprintf( D_ALWAYS, "(%d.%d) file stage out failed: %s\n",
-						 procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_CANCEL;
 			} else {
 				gmState = GM_DONE_SAVE;
@@ -695,11 +701,11 @@ void NordugridJob::doEvaluateState()
 			gmState = GM_DONE_COMMIT;
 			} break;
 		case GM_DONE_COMMIT: {
-			rc = gahp->nordugrid_cancel( resourceManagerString, remoteJobId );
+			rc = gahp->arc_job_clean( resourceManagerString, remoteJobId );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
-			} else if ( rc != 0 ) {
+			} else if ( rc != HTTP_202_ACCEPTED ) {
 				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) job cleanup failed: %s\n",
 						 procID.cluster, procID.proc, errorString.c_str() );
@@ -719,16 +725,31 @@ void NordugridJob::doEvaluateState()
 			}
 			} break;
 		case GM_CANCEL: {
-			rc = gahp->nordugrid_cancel( resourceManagerString, remoteJobId );
+			rc = gahp->arc_job_kill( resourceManagerString, remoteJobId );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
-			} else if ( rc == 0 ) {
-				gmState = GM_FAILED;
+			} else if ( rc == HTTP_202_ACCEPTED ) {
+				gmState = GM_CANCEL_COMMIT;
 			} else {
 				// What to do about a failed cancel?
 				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s\n",
+						 procID.cluster, procID.proc, errorString.c_str() );
+				gmState = GM_FAILED;
+			}
+			} break;
+		case GM_CANCEL_COMMIT: {
+			rc = gahp->arc_job_clean( resourceManagerString, remoteJobId );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			} else if ( rc == HTTP_202_ACCEPTED ) {
+				gmState = GM_FAILED;
+			} else {
+				// What to do about a failed clean?
+				errorString = gahp->getErrorString();
+				dprintf( D_ALWAYS, "(%d.%d) job cancel cleanup failed: %s\n",
 						 procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_FAILED;
 			}
@@ -765,8 +786,8 @@ void NordugridJob::doEvaluateState()
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
 			if ( remoteJobId != NULL
-				     && condorState != REMOVED 
-					 && wantResubmit == false 
+				     && condorState != REMOVED
+					 && wantResubmit == false
 					 && doResubmit == 0 ) {
 				gmState = GM_HOLD;
 				break;
@@ -800,7 +821,7 @@ void NordugridJob::doEvaluateState()
 				}
 			}
 			myResource->CancelSubmit( this );
-			
+
 			if ( wantRematch ) {
 				dprintf(D_ALWAYS,
 						"(%d.%d) Requesting schedd to rematch job because %s==TRUE\n",
@@ -819,7 +840,7 @@ void NordugridJob::doEvaluateState()
 				gmState = GM_DELETE;
 				break;
 			}
-			
+
 			// If there are no updates to be done when we first enter this
 			// state, requestScheddUpdate will return done immediately
 			// and not waste time with a needless connection to the
@@ -885,11 +906,8 @@ void NordugridJob::doEvaluateState()
 			enteredCurrentGmState = time(NULL);
 
 			// If we were calling a gahp call that used RSL, we're done
-			// with it now, so free it.
-			if ( RSL ) {
-				delete RSL;
-				RSL = NULL;
-			}
+			// with it now, so clear it.
+			RSL.clear();
 			if ( stageList ) {
 				delete stageList;
 				stageList = NULL;
@@ -903,12 +921,12 @@ void NordugridJob::doEvaluateState()
 	} while ( reevaluate_state );
 }
 
-BaseResource *NordugridJob::GetResource()
+BaseResource *ArcJob::GetResource()
 {
 	return (BaseResource *)myResource;
 }
 
-void NordugridJob::SetRemoteJobId( const char *job_id )
+void ArcJob::SetRemoteJobId( const char *job_id )
 {
 	free( remoteJobId );
 	if ( job_id ) {
@@ -919,16 +937,149 @@ void NordugridJob::SetRemoteJobId( const char *job_id )
 
 	std::string full_job_id;
 	if ( job_id ) {
-		formatstr( full_job_id, "nordugrid %s %s", resourceManagerString,
+		formatstr( full_job_id, "arc %s %s", resourceManagerString,
 							 job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
-std::string *NordugridJob::buildSubmitRSL()
+bool ArcJob::buildJobADL()
 {
 	bool transfer_exec = true;
-	std::string *rsl = new std::string;
+	StringList *stage_list = NULL;
+	std::string attr_value;
+	std::string iwd;
+	std::string executable;
+	std::string remote_stdout_name;
+	std::string remote_stderr_name;
+	char *file;
+
+	RSL.clear();
+
+	GetRemoteStdoutNames( remote_stdout_name, remote_stderr_name );
+
+	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) != 1 ) {
+		errorString = "ATTR_JOB_IWD not defined";
+		RSL.clear();
+		return false;
+	}
+
+	//Start off the ADL
+	RSL = "<?xml version=\"1.0\"?>";
+	RSL += "<ActivityDescription xmlns=\"http://www.eu-emi.eu/es/2010/12/adl\">";
+	RSL += "<Application>";
+
+	//We're assuming all job clasads have a command attribute
+	GetJobExecutable( jobAd, executable );
+	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_exec );
+
+	RSL += "<Executable><Path>";
+	// If we're transferring the executable, strip off the path for the
+	// remote machine, since it refers to the submit machine.
+	if ( transfer_exec ) {
+		RSL += escapeXML(condor_basename( executable.c_str() ));
+	} else {
+		RSL += escapeXML(executable);
+	}
+	RSL += "</Path>";
+
+	ArgList args;
+	MyString arg_errors;
+	if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
+		dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
+				procID.cluster, procID.proc, arg_errors.Value());
+		formatstr(errorString,"Failed to read job arguments: %s\n",
+				arg_errors.Value());
+		RSL.clear();
+		return false;
+	}
+	for(int i=0;i<args.Count();i++) {
+		RSL += "<Argument>";
+		RSL += escapeXML(args.GetArg(i));
+		RSL += "</Argument>";
+	}
+
+	RSL += "</Executable>";
+
+	if ( jobAd->LookupString( ATTR_JOB_INPUT, attr_value ) ) {
+		// only add to list if not NULL_FILE (i.e. /dev/null)
+		if ( ! nullFile(attr_value.c_str()) ) {
+			RSL += "<Input>";
+			RSL += escapeXML(condor_basename(attr_value.c_str()));
+			RSL += "</Input>";
+		}
+	}
+
+	if ( jobAd->LookupString( ATTR_JOB_OUTPUT, attr_value ) ) {
+		// only add to list if not NULL_FILE (i.e. /dev/null)
+		if ( ! nullFile(attr_value.c_str()) ) {
+			RSL += "<Output>";
+			RSL += escapeXML(remote_stdout_name);
+			RSL += "</Output>";
+		}
+	}
+
+	if ( jobAd->LookupString( ATTR_JOB_ERROR, attr_value ) ) {
+		// only add to list if not NULL_FILE (i.e. /dev/null)
+		if ( ! nullFile(attr_value.c_str()) ) {
+			RSL += "<Error>";
+			RSL += escapeXML(remote_stderr_name);
+			RSL += "</Error>";
+		}
+	}
+
+	// TODO Add setting of environment variables
+
+	RSL += "</Application>";
+	RSL += "<Resources>";
+	RSL += "<RuntimeEnvironment>";
+	RSL += "<Name>ENV/PROXY</Name>";
+	RSL += "<Option>USE_DELEGATION_DB</Option>";
+	RSL += "</RuntimeEnvironment>";
+	RSL += "</Resources>";
+	RSL += "<DataStaging>";
+	RSL += "<DelegationID>";
+	RSL += escapeXML(delegationId);
+	RSL += "</DelegationID>";
+
+	stage_list = buildStageInList();
+
+	stage_list->rewind();
+	while ( (file = stage_list->next()) != NULL ) {
+		RSL += "<InputFile><Name>";
+		RSL += escapeXML(condor_basename(file));
+		RSL += "</Name>";
+		if ( transfer_exec && ! strcmp(executable.c_str(), file) ) {
+			RSL += "<IsExecutable>true</IsExecutable>";
+		}
+		RSL += "</InputFile>";
+	}
+
+	delete stage_list;
+	stage_list = NULL;
+
+	stage_list = buildStageOutList();
+
+	stage_list->rewind();
+	while ( (file = stage_list->next()) != NULL ) {
+		RSL += "<OutputFile><Name>";
+		RSL += escapeXML(condor_basename(file));
+		RSL += "</Name></OutputFile>";
+	}
+
+	delete stage_list;
+	stage_list = NULL;
+
+	RSL += "</DataStaging>";
+	RSL += "</ActivityDescription>";
+
+dprintf(D_FULLDEBUG,"*** ADL='%s'\n",RSL.c_str());
+	return true;
+}
+
+bool ArcJob::buildSubmitRSL()
+{
+	bool transfer_exec = true;
 	StringList *stage_list = NULL;
 	StringList *stage_local_list = NULL;
 	char *attr_value = NULL;
@@ -938,23 +1089,26 @@ std::string *NordugridJob::buildSubmitRSL()
 	std::string remote_stdout_name;
 	std::string remote_stderr_name;
 
+	RSL.clear();
+
 	GetRemoteStdoutNames( remote_stdout_name, remote_stderr_name );
 
-	if ( jobAd->LookupString( ATTR_NORDUGRID_RSL, rsl_suffix ) &&
+	if ( jobAd->LookupString( ATTR_ARC_RSL, rsl_suffix ) &&
 						   rsl_suffix[0] == '&' ) {
-		*rsl = rsl_suffix;
-		return rsl;
+		RSL = rsl_suffix;
+		return true;
 	}
 
 	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) != 1 ) {
 		errorString = "ATTR_JOB_IWD not defined";
-		delete rsl;
-		return NULL;
+		RSL.clear();
+		return false;
 	}
 
 	//Start off the RSL
 	attr_value = param( "FULL_HOSTNAME" );
-	formatstr( *rsl, "&(savestate=yes)(action=request)(hostname=%s)", attr_value );
+//	formatstr( RSL, "&(savestate=yes)(action=request)(hostname=%s)(DelegationID=%s)", attr_value, delegationId.c_str() );
+	formatstr( RSL, "&(savestate=yes)(action=request)(hostname=%s)", attr_value );
 	free( attr_value );
 	attr_value = NULL;
 
@@ -962,38 +1116,38 @@ std::string *NordugridJob::buildSubmitRSL()
 	GetJobExecutable( jobAd, executable );
 	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_exec );
 
-	*rsl += "(executable=";
+	RSL += "(executable=";
 	// If we're transferring the executable, strip off the path for the
 	// remote machine, since it refers to the submit machine.
 	if ( transfer_exec ) {
-		*rsl += condor_basename( executable.c_str() );
+		RSL += condor_basename( executable.c_str() );
 	} else {
-		*rsl += executable;
+		RSL += executable;
 	}
 
 	{
 		ArgList args;
-		std::string arg_errors;
-		std::string rsl_args;
-		if(!args.AppendArgsFromClassAd(jobAd, arg_errors)) {
+		MyString arg_errors;
+		MyString rsl_args;
+		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
-					procID.cluster, procID.proc, arg_errors.c_str());
+					procID.cluster, procID.proc, arg_errors.Value());
 			formatstr(errorString,"Failed to read job arguments: %s\n",
-					arg_errors.c_str());
-			delete rsl;
-			return NULL;
+					arg_errors.Value());
+			RSL.clear();
+			return false;
 		}
 		if(args.Count() != 0) {
 			if(args.InputWasV1()) {
 					// In V1 syntax, the user's input _is_ RSL
-				if(!args.GetArgsStringV1Raw(rsl_args, arg_errors)) {
+				if(!args.GetArgsStringV1Raw(&rsl_args,&arg_errors)) {
 					dprintf(D_ALWAYS,
 							"(%d.%d) Failed to get job arguments: %s\n",
-							procID.cluster,procID.proc,arg_errors.c_str());
+							procID.cluster,procID.proc,arg_errors.Value());
 					formatstr(errorString,"Failed to get job arguments: %s\n",
-							arg_errors.c_str());
-					delete rsl;
-					return NULL;
+							arg_errors.Value());
+					RSL.clear();
+					return false;
 				}
 			}
 			else {
@@ -1005,23 +1159,23 @@ std::string *NordugridJob::buildSubmitRSL()
 					rsl_args += rsl_stringify(args.GetArg(i));
 				}
 			}
-			*rsl += ")(arguments=";
-			*rsl += rsl_args;
+			RSL += ")(arguments=";
+			RSL += rsl_args;
 		}
 	}
 
-	// If we're transferring the executable, tell Nordugrid to set the
+	// If we're transferring the executable, tell ARC to set the
 	// execute bit on the transferred executable.
 	if ( transfer_exec ) {
-		*rsl += ")(executables=";
-		*rsl += condor_basename( executable.c_str() );
+		RSL += ")(executables=";
+		RSL += condor_basename( executable.c_str() );
 	}
 
 	if ( jobAd->LookupString( ATTR_JOB_INPUT, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
-			*rsl += ")(stdin=";
-			*rsl += condor_basename(attr_value);
+			RSL += ")(stdin=";
+			RSL += condor_basename(attr_value);
 		}
 		free( attr_value );
 		attr_value = NULL;
@@ -1033,15 +1187,15 @@ std::string *NordugridJob::buildSubmitRSL()
 		char *file;
 		stage_list->rewind();
 
-		*rsl += ")(inputfiles=";
+		RSL += ")(inputfiles=";
 
 		while ( (file = stage_list->next()) != NULL ) {
-			*rsl += "(";
-			*rsl += condor_basename(file);
+			RSL += "(";
+			RSL += condor_basename(file);
 			if ( IsUrl( file ) ) {
-				formatstr_cat( *rsl, " \"%s\")", file );
+				formatstr_cat( RSL, " \"%s\")", file );
 			} else {
-				*rsl += " \"\")";
+				RSL += " \"\")";
 			}
 		}
 	}
@@ -1052,8 +1206,8 @@ std::string *NordugridJob::buildSubmitRSL()
 	if ( jobAd->LookupString( ATTR_JOB_OUTPUT, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
-			*rsl += ")(stdout=";
-			*rsl += remote_stdout_name;
+			RSL += ")(stdout=";
+			RSL += remote_stdout_name;
 		}
 		free( attr_value );
 		attr_value = NULL;
@@ -1062,8 +1216,8 @@ std::string *NordugridJob::buildSubmitRSL()
 	if ( jobAd->LookupString( ATTR_JOB_ERROR, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
-			*rsl += ")(stderr=";
-			*rsl += remote_stderr_name;
+			RSL += ")(stderr=";
+			RSL += remote_stderr_name;
 		}
 		free( attr_value );
 	}
@@ -1077,16 +1231,16 @@ std::string *NordugridJob::buildSubmitRSL()
 		stage_list->rewind();
 		stage_local_list->rewind();
 
-		*rsl += ")(outputfiles=";
+		RSL += ")(outputfiles=";
 
 		while ( (file = stage_list->next()) != NULL ) {
 			local_file = stage_local_list->next();
-			*rsl += "(";
-			*rsl += condor_basename(file);
+			RSL += "(";
+			RSL += condor_basename(file);
 			if ( IsUrl( local_file ) ) {
-				formatstr_cat( *rsl, " \"%s\")", local_file );
+				formatstr_cat( RSL, " \"%s\")", local_file );
 			} else {
-				*rsl += " \"\")";
+				RSL += " \"\")";
 			}
 		}
 	}
@@ -1096,17 +1250,17 @@ std::string *NordugridJob::buildSubmitRSL()
 	delete stage_local_list;
 	stage_local_list = NULL;
 
-	*rsl += ')';
+	RSL += ')';
 
 	if ( !rsl_suffix.empty() ) {
-		*rsl += rsl_suffix;
+		RSL += rsl_suffix;
 	}
 
-dprintf(D_FULLDEBUG,"*** RSL='%s'\n",rsl->c_str());
-	return rsl;
+dprintf(D_FULLDEBUG,"*** RSL='%s'\n",RSL.c_str());
+	return true;
 }
 
-StringList *NordugridJob::buildStageInList()
+StringList *ArcJob::buildStageInList()
 {
 	StringList *tmp_list = NULL;
 	StringList *stage_list = NULL;
@@ -1160,7 +1314,7 @@ StringList *NordugridJob::buildStageInList()
 	return stage_list;
 }
 
-StringList *NordugridJob::buildStageOutList( bool old_stdout )
+StringList *ArcJob::buildStageOutList( bool old_stdout )
 {
 	StringList *stage_list = NULL;
 	std::string buf;
@@ -1197,12 +1351,12 @@ StringList *NordugridJob::buildStageOutList( bool old_stdout )
 	return stage_list;
 }
 
-StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list,
-												  bool old_stdout )
+StringList *ArcJob::buildStageOutLocalList( StringList *stage_list,
+											  bool old_stdout )
 {
 	StringList *stage_local_list;
 	char *remaps = NULL;
-	std::string local_name;
+	MyString local_name;
 	char *remote_name;
 	std::string stdout_name = "";
 	std::string stderr_name = "";
@@ -1241,11 +1395,11 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list,
 			local_name = condor_basename( remote_name );
 		}
 
-		if ( (local_name.length() && local_name[0] == '/')
-			 || IsUrl( local_name.c_str() ) ) {
+		if ( (local_name.Length() && local_name[0] == '/')
+			 || IsUrl( local_name.Value() ) ) {
 			buff = local_name;
 		} else {
-			formatstr( buff, "%s%s", iwd.c_str(), local_name.c_str() );
+			formatstr( buff, "%s%s", iwd.c_str(), local_name.Value() );
 		}
 		stage_local_list->append( buff.c_str() );
 	}
@@ -1257,27 +1411,23 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list,
 	return stage_local_list;
 }
 
-void NordugridJob::NotifyNewRemoteStatus( const char *status )
+void ArcJob::NotifyNewRemoteStatus( const char *status )
 {
 	if ( SetRemoteJobStatus( status ) ) {
 		remoteJobState = status;
 		SetEvaluateState();
 
 		if ( condorState == IDLE &&
-			 ( remoteJobState == REMOTE_STATE_INLRMS_R ||
-			   remoteJobState == REMOTE_STATE_INLRMS_R2 ||
-			   remoteJobState == REMOTE_STATE_INLRMS_E ||
-			   remoteJobState == REMOTE_STATE_INLRMS_E2 ||
+			 ( remoteJobState == REMOTE_STATE_RUNNING ||
+			   remoteJobState == REMOTE_STATE_EXITINGLRMS ||
 			   remoteJobState == REMOTE_STATE_EXECUTED ||
 			   remoteJobState == REMOTE_STATE_FINISHING ||
 			   remoteJobState == REMOTE_STATE_FINISHED ||
 			   remoteJobState == REMOTE_STATE_FAILED ) ) {
 			JobRunning();
 		} else if ( condorState == RUNNING &&
-					( remoteJobState == REMOTE_STATE_INLRMS_Q ||
-					  remoteJobState == REMOTE_STATE_INLRMS_Q2 ||
-					  remoteJobState == REMOTE_STATE_INLRMS_S ||
-					  remoteJobState == REMOTE_STATE_INLRMS_S2 ) ) {
+					( remoteJobState == REMOTE_STATE_QUEUING ||
+					  remoteJobState == REMOTE_STATE_HELD ) ) {
 			JobIdle();
 		}
 	}
@@ -1298,7 +1448,7 @@ void NordugridJob::NotifyNewRemoteStatus( const char *status )
 // the GlobalJobId attribute. For users who have jobs submitted when
 // upgrading to this version or beyond, we will try using the old names
 // when transferring output if we fail using the new names.
-void NordugridJob::GetRemoteStdoutNames( std::string &std_out, std::string &std_err, bool use_old_names )
+void ArcJob::GetRemoteStdoutNames( std::string &std_out, std::string &std_err, bool use_old_names )
 {
 	if ( use_old_names ) {
 		std_out = REMOTE_STDOUT_NAME;

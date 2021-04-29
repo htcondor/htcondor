@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2021, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef NORDUGRIDRESOURCE_H
-#define NORDUGRIDRESOURCE_H
+#ifndef ARCRESOURCE_H
+#define ARCRESOURCE_H
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
@@ -28,22 +28,22 @@
 #include "baseresource.h"
 #include "gahp-client.h"
 
-class NordugridJob;
-class NordugridResource;
+class ArcJob;
+class ArcResource;
 
-class NordugridResource : public BaseResource
+class ArcResource : public BaseResource
 {
  public:
 
-	NordugridResource( const char *resource_name, const Proxy *proxy );
-	~NordugridResource();
+	ArcResource( const char *resource_name, const Proxy *proxy );
+	~ArcResource();
 
 	const char *ResourceType();
 	void Reconfig();
 
 	static std::string & HashName( const char *resource_name,
 								 const char *proxy_subject );
-	static NordugridResource *FindOrCreateResource( const char *resource_name,
+	static ArcResource *FindOrCreateResource( const char *resource_name,
 													const Proxy *proxy );
 
 	const char *GetHashName();
@@ -54,7 +54,7 @@ class NordugridResource : public BaseResource
 	char *proxyFQAN;
 	GahpClient *gahp;
 
-	static std::map <std::string, NordugridResource *> ResourcesByName;
+	static std::map <std::string, ArcResource *> ResourcesByName;
 
  private:
 	void DoPing( unsigned& ping_delay, bool& ping_complete,

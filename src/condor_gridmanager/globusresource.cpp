@@ -38,8 +38,8 @@ int GlobusResource::monitorDisableLength = DEFAULT_GM_DISABLE_LENGTH;
 int GlobusResource::gahpCallTimeout = 300;	// default value
 bool GlobusResource::enableGridMonitor = false;
 
-HashTable <std::string, GlobusResource *>
-    GlobusResource::ResourcesByName( hashFunction );
+std::map <std::string, GlobusResource *>
+    GlobusResource::ResourcesByName;
 
 static unsigned int g_MonitorUID = 0;
 
@@ -47,26 +47,24 @@ GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
 													  const Proxy *proxy,
 													  bool is_gt5 )
 {
-	int rc;
 	GlobusResource *resource = NULL;
 
 	const char *canonical_name = CanonicalName( resource_name );
 	ASSERT(canonical_name);
 
-	const char *hash_name = HashName( canonical_name, proxy->subject->fqan );
-	ASSERT(hash_name);
-
-	rc = ResourcesByName.lookup( hash_name, resource );
-	if ( rc != 0 ) {
+	std::string &key = HashName( canonical_name, proxy->subject->fqan );
+	auto itr = ResourcesByName.find( key );
+	if ( itr == ResourcesByName.end() ) {
 		resource = new GlobusResource( canonical_name, proxy, is_gt5 );
 		ASSERT(resource);
 		if ( resource->Init() == false ) {
 			delete resource;
 			resource = NULL;
 		} else {
-			ResourcesByName.insert( hash_name, resource );
+			ResourcesByName[key] = resource;
 		}
 	} else {
+		resource = itr->second;
 		ASSERT(resource);
 	}
 
@@ -116,7 +114,7 @@ GlobusResource::GlobusResource( const char *resource_name,
 
 GlobusResource::~GlobusResource()
 {
-	ResourcesByName.remove( HashName( resourceName, proxyFQAN ) );
+	ResourcesByName.erase( HashName( resourceName, proxyFQAN ) );
 	if ( checkMonitorTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( checkMonitorTid );
 	}
@@ -225,19 +223,19 @@ const char *GlobusResource::CanonicalName( const char *name )
 	return canonical.c_str();
 }
 
-const char *GlobusResource::HashName( const char *resource_name,
+std::string & GlobusResource::HashName( const char *resource_name,
 									  const char *proxy_subject )
 {
 	static std::string hash_name;
 
 	formatstr( hash_name, "gt2 %s#%s", resource_name, proxy_subject );
 
-	return hash_name.c_str();
+	return hash_name;
 }
 
 const char *GlobusResource::GetHashName()
 {
-	return HashName( resourceName, proxyFQAN );
+	return HashName( resourceName, proxyFQAN ).c_str();
 }
 
 void GlobusResource::PublishResourceAd( ClassAd *resource_ad )
