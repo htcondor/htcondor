@@ -919,7 +919,7 @@ Starter::peek(int /*cmd*/, Stream *sock)
 	const char *jic_iwd = GetWorkingDir(0);
 	if (!jic_iwd) return PeekFailed(s, "Unknown job remote IWD.");
 	std::string iwd = jic_iwd;
-	std::vector<char> real_iwd; real_iwd.reserve(MAXPATHLEN+1);
+	char real_iwd[MAXPATHLEN+1];
 	if (!realpath(iwd.c_str(), &real_iwd[0]))
 	{
 		return PeekFailed(s, "Unable to resolve IWD %s to real path. (errno=%d, %s)", iwd.c_str(), errno, strerror(errno));
@@ -1084,7 +1084,7 @@ Starter::peek(int /*cmd*/, Stream *sock)
 	ssize_t remaining = max_xfer;
 	TemporaryPrivSentry sentry(PRIV_USER);
 	std::vector<off_t>::iterator it2 = offsets_list.begin();
-	std::vector<char> real_filename; real_filename.reserve(MAXPATHLEN+1);
+	char real_filename[MAXPATHLEN+1];
 	unsigned idx = 0;
 	for (std::vector<std::string>::iterator it = file_list.begin();
 		it != file_list.end() && it2 != offsets_list.end();
@@ -1097,11 +1097,11 @@ Starter::peek(int /*cmd*/, Stream *sock)
 		{
 			*it = iwd + DIR_DELIM_CHAR + *it;
 		}
-		if (!realpath(it->c_str(), &(real_filename[0])))
+		if (!realpath(it->c_str(), real_filename))
 		{
 			return PeekRetry(s, "Unable to resolve file %s to real path. (errno=%d, %s)", it->c_str(), errno, strerror(errno));
 		}
-		*it = &(real_filename[0]);
+		*it = real_filename;
 		if (it->substr(0, iwd.size()) != iwd)
 		{
 			return PeekFailed(s, "Invalid symlink or filename (%s) outside sandbox (%s)", it->c_str(), iwd.c_str());

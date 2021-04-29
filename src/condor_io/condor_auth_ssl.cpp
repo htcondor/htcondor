@@ -591,8 +591,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 			m_auth_state->m_done = 0;
 			m_auth_state->m_round_ctr = 0;
 			uint32_t network_size = htonl(scitoken.size());
-			std::vector<unsigned char> network_bytes;
-			network_bytes.reserve(sizeof(network_size) + scitoken.size());
+			std::vector<unsigned char> network_bytes(sizeof(network_size) + scitoken.size(), 0);
 			memcpy(&network_bytes[0], static_cast<void*>(&network_size), sizeof(network_size));
 			memcpy(&network_bytes[0] + sizeof(network_size), scitoken.c_str(), scitoken.size());
 			while(!m_auth_state->m_done) {
@@ -951,7 +950,7 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 				}
 			}
 			if (m_auth_state->m_token_length >= 0) {
-				token_contents.reserve(m_auth_state->m_token_length + sizeof(uint32_t));
+				token_contents.resize(m_auth_state->m_token_length + sizeof(uint32_t), 0);
 				m_auth_state->m_ssl_status = (*SSL_read_ptr)(m_auth_state->m_ssl,
 					static_cast<void*>(&token_contents[0]),
 					m_auth_state->m_token_length + sizeof(uint32_t));

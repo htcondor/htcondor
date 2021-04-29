@@ -97,12 +97,12 @@ htcondor::generate_client_id()
 {
 	std::string subsys_name = get_mySubSystemName();
 
-	std::vector<char> hostname;
-	hostname.reserve(MAXHOSTNAMELEN);
-	hostname[0] = '\0';
-	condor_gethostname(&hostname[0], MAXHOSTNAMELEN);
+	char hostname[MAXHOSTNAMELEN];
+	if (condor_gethostname(hostname, sizeof(hostname))) { // returns 0 or -1
+		hostname[0] = 0;
+	}
 
-	return subsys_name + "-" + std::string(&hostname[0]) + "-" +
+	return subsys_name + "-" + std::string(hostname) + "-" +
 		std::to_string(get_csrng_uint() % 100000);
 }
 
