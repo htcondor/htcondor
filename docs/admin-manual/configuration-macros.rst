@@ -4184,6 +4184,10 @@ details.
     container to verify that docker completely works.  If 
     DOCKER_PERFORM_TEST is false, this test is skipped.
 
+:macro-def:`DOCKER_RUN_UNDER_INIT`
+    A boolean value which defaults to true, which tells the worker
+    node to run docker universe jobs with the --init option.
+    
 :macro-def:`DOCKER_EXTRA_ARGUMENTS`
     Any additional command line options the administrator wants to be
     added to the docker container create command line can be set with

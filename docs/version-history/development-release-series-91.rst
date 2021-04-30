@@ -21,6 +21,12 @@ New Features:
 - gdb and strace should now work in Docker Universe jobs.
   :jira:`349`
 
+- Docker universe jobs are now run under the built-in docker
+  init process, which means that zombie processes are automatically
+  reaped.  This can be turned off with the knob 
+  *DOCKER_RUN_UNDER_INIT* = false
+  :jira:`462`
+
 - The *condor_startd* on platforms that support Docker now
   runs a simple Docker container at startup to verify that
   docker universe completely works.  This can be disabled with the
