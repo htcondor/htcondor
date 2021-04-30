@@ -18,6 +18,10 @@ Release Notes:
 
 New Features:
 
+- The "ToE tag" entry in the job event log now includes the exit code or
+  signal number, if and as appropriate.
+  :jira:`429`
+
 - gdb and strace should now work in Docker Universe jobs.
   :jira:`349`
 
