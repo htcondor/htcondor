@@ -72,6 +72,9 @@ class LocalCredmon(OAuthCredmon):
         aud_list = self.token_aud.strip().split()
         if aud_list:
             token.update_claims({'aud': aud_list})
+        elif self.token_ver.lower() == "scitokens:2.0":
+            self.log.error('No "aud" claim, LOCAL_CREDMON_TOKEN_AUDIENCE must be set when requesting a scitokens:2.0 token')
+            return False
 
         # Serialize the token and write it to a file
         try:
