@@ -46,6 +46,12 @@ Bugs Fixed:
   Queue statement of a submit file was missing or invalid.
   :jira:`427`
 
+- Fixed some bugs that caused ``bosco_cluster --add`` to fail.
+  Allow ``remote_gahp`` to work with older Bosco installations via
+  the ``--rgahp-script`` option.
+  :jira:`438`
+  :jira:`433`
+  :jira:`451`
 
 Version 9.0.0
 -------------
