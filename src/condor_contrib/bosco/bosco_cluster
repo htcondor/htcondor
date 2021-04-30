@@ -1026,6 +1026,10 @@ echo $(basename $archive_dir) >> $remote_glite_dir/Manifest.txt
 rsync -rLptgoq $archive_dir/libexec/glite/[^l]* $remote_glite_dir/ 2>/dev/null
 # Copy over libraries preserving symlinks and directory name
 rsync -aq  $archive_dir/$libdir/lib*.so* $remote_glite_dir/$libdir/ 2>/dev/null
+if [ -d $archive_dir/$libdir/condor ] ; then
+    # Older Condor releases put Globus libraries here
+    rsync -aq  $archive_dir/$libdir/condor $remote_glite_dir/$libdir/ 2>/dev/null
+fi
 if [ -d $archive_dir/libexec/glite/libexec ] ; then
     # This is actually a symbolic link
     rsync -aq $archive_dir/libexec/glite/libexec $remote_glite_dir/

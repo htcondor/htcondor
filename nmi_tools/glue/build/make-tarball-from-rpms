@@ -139,6 +139,10 @@ for package in $externals; do
 done
 
 $cmd_dir/make-tarball-links tarball
+if [ $? -ne 0 ];then
+    echo 'ERROR: tarball link script failed'
+    exit 1
+fi
 $cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64'
 
 # Fixup directory permissions for the tarball
