@@ -5175,6 +5175,10 @@ type=bool
 default=true
 type=bool
 
+[DOCKER_RUN_UNDER_INIT]
+default=true
+type=bool
+
 [DOCKER_TEST_IMAGE_PATH]
 default=$(LIBEXEC)/htcondor_docker_test
 type=string
