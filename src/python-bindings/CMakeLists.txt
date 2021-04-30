@@ -370,7 +370,11 @@ else()
         if ( NOT CMAKE_SKIP_RPATH )
           set_target_properties( collector_python3_plugin PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}")
         endif()
+        add_custom_command( OUTPUT libcollector_python3_plugin.so
+          COMMAND ${CMAKE_COMMAND} -E create_symlink "libcollector_python_plugin.${PYTHON3_MODULE_SUFFIX}" "libcollector_python3_plugin.so"
+          DEPENDS collector_python3_plugin )
         install ( TARGETS collector_python3_plugin DESTINATION "${C_LIBEXEC}" )
+        install ( FILES libcollector_python3_plugin.so DESTINATION "${C_LIBEXEC}" )
       endif()
 
       # See note below about deprecating log_reader.cpp.

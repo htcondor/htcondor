@@ -1539,6 +1539,7 @@ rm -rf %{buildroot}
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
 %_libexecdir/condor/libcollector_python_plugin.cpython-3*.so
+%_libexecdir/condor/libcollector_python3_plugin.so
 /usr/lib64/python%{python3_version}/site-packages/classad/
 /usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
