@@ -85,6 +85,11 @@ else
     # Remove the python2 packages
     rm -rf usr/lib/python2*
 fi
+# Add links and configuration for Bosco
+if [ ! -f etc/blah.config ]; then
+    # Fedora does not have blahp (yet)
+    exit 0
+fi
 # batch_gahp -> blahp compatibility links
 ln -s blahpd usr/bin/batch_gahp
 ln -s blahpd_daemon usr/sbin/batch_gahp_daemon
@@ -115,3 +120,31 @@ fi
 sed -i -e s/blah_libexec_directory/#blah_libexec_directory/ etc/blah.config
 # Make absolute links relative
 (cd usr/libexec/blahp; ln -sf ../../../etc/blahp/*_local_submit_attributes.sh .)
+# Patch blahp.py to find the blah.config based on GLITE_LOCATION
+patch -p1 <<'EOF'
+--- a/usr/libexec/blahp/blah.py
++++ b/usr/libexec/blahp/blah.py
+@@ -1,11 +1,13 @@
+ """Common functions for BLAH python scripts"""
+ 
++import os
+ from configparser import RawConfigParser
+ from io import StringIO
+ 
+ class BlahConfigParser(RawConfigParser, object):
+ 
+     def __init__(self, path='/etc/blah.config', defaults=None):
++        path = '%s/etc/blah.config' % (os.environ['GLITE_LOCATION'])
+         # RawConfigParser requires ini-style [section headers] but since
+         # blah.config is also used as a shell script we need to fake one
+         self.header = 'blahp'
+EOF
+if [ $? -ne 0 ]; then
+    echo 'ERROR: blah.py patch failed to apply'
+    # Allow this to slide on bare metal (x86_64_CentOS7)
+    # We only release from the Docker build and the
+    # blahp can lag on the bare metal machine
+    if [ -f /.dockerenv ]; then
+        exit 1
+    fi
+fi
