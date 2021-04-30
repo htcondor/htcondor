@@ -65,9 +65,9 @@ Conda
 
 
 The bindings are available
-`on conda-forge <https://anaconda.org/conda-forge/htcondor>`_.
+`on conda-forge <https://anaconda.org/conda-forge/python-htcondor>`_.
 To install using ``conda``, run
 
 .. code-block:: shell
 
-    conda install -c conda-forge htcondor
+    conda install -c conda-forge python-htcondor

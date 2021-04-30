@@ -1988,11 +1988,20 @@ ProcAPI::buildPidList() {
             fraction = d;
         }
     }
-    dprintf( D_ALWAYS, "PROCAPI_RETRY_FRACTION = %f\n", fraction );
 
+    //
+    // FIXME: this code doesn't ever reset the expected number of PIDs,
+    // so the test suite (and possible others) gets stuck in a loop of
+    // "bad" reads which continues to return increasingly-obsolete data
+    // about the PIDs until something (e.g., registration of a job's PID
+    // by the starter) fails.  So I'm disabling this test until we figure
+    // out something saner to do.  Since this test was broken for months
+    // without causing CHTC any problems, maybe we won't have to.
+    //
     bool suddenly_too_many_fewer = false;
     if( rv >= 0 && rv < (int)(pidList.size() * fraction) ) {
-        suddenly_too_many_fewer = true;
+        dprintf( D_ALWAYS, "PROCAPI_RETRY_FRACTION = %f means that the current read of %d is suddenly too much smaller than the previous read of %zu\n", fraction, rv, pidList.size() );
+        // suddenly_too_many_fewer = true;
     }
 
 	if( rv == -1 ) {
