@@ -968,7 +968,7 @@ install -Dp -m 0644 %{SOURCE3} %{buildroot}%{_unitdir}/condor.service.d/osg-env.
 %endif
 
 %if 0%{?rhel} >= 7
-mkdir %{buildroot}%{_datadir}/condor/
+mkdir -p %{buildroot}%{_datadir}/condor/
 cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
 %endif
 

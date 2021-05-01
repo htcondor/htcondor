@@ -48,7 +48,6 @@ install (FILES
 		condor.boot.rpm
 		condor_config.local.ha_condor_had
 		condor_config.generic
-		condor_config.generic.redhat
 		condor_config.local.dedicated.resource
 		condor_config.local.view_server
 		#condor_config.generic.debian.patch
