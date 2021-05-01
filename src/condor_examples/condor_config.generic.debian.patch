@@ -1,6 +1,6 @@
---- condor_config.generic	2019-08-04 17:15:38.663989094 -0500
-+++ condor_config.patched	2019-08-04 18:44:20.953175955 -0500
-@@ -19,25 +19,23 @@
+--- condor_config.generic	2021-05-01 07:31:58.090876247 -0500
++++ condor_config.patched	2021-05-01 07:33:10.903564239 -0500
+@@ -19,27 +19,25 @@
  ######################################################################
  
  ##  Where have you installed the bin, sbin and lib condor directories?
@@ -23,15 +23,17 @@
 -#REQUIRE_LOCAL_CONFIG_FILE = true
 +REQUIRE_LOCAL_CONFIG_FILE = false
  
- ##  The normal way to do configuration with RPMs is to read all of the
+ ##  The normal way to do configuration with RPM and Debian packaging is to read all of the
  ##  files in a given directory that don't match a regex as configuration files.
  ##  Config files are read in lexicographic order.
+ ##  Multiple directories may be specified, separated by commas; directories
+ ##  are read in left-to-right order.
 -LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config
-+LOCAL_CONFIG_DIR = /etc/condor/config.d
++LOCAL_CONFIG_DIR = /usr/share/condor/config.d,/etc/condor/config.d
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##
-@@ -67,5 +65,36 @@ LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config
+@@ -68,5 +66,36 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
