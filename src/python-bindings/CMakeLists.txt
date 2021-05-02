@@ -371,7 +371,7 @@ else()
           set_target_properties( collector_python3_plugin PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}")
         endif()
         add_custom_command( TARGET collector_python3_plugin POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E create_symlink "libcollector_python_plugin.${PYTHON3_MODULE_SUFFIX}" "libcollector_python3_plugin.so"
+          COMMAND ${CMAKE_COMMAND} -E create_symlink "libcollector_python_plugin${PYTHON3_MODULE_SUFFIX}" "libcollector_python3_plugin.so"
 	  COMMENT "Creating libcollector_python3_plugin.so symlink")
         install ( TARGETS collector_python3_plugin DESTINATION "${C_LIBEXEC}" )
         install ( FILES libcollector_python3_plugin.so DESTINATION "${C_LIBEXEC}" )
