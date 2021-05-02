@@ -267,17 +267,22 @@ class TestCustomMachineResources:
         # -----------------------------------------
         #    (monitor period * number of periods)
         #
-        # BUT in practice, you usually get the monitor period wrong by a second due to rounding.
-        # What we observe is that very often, some increments will be a second longer or shorter
-        # than the increment period. So we could get something like
+        # BUT in practice, you usually get the monitor period wrong by a
+        # second due to rounding.  What we observe is that very often,
+        # some increments will be a second longer or shorter
+        # than the increment period.  So we could get something like
         #
         #          (increment amount * number of periods)
-        # ---------------------------------------------------------
-        # (monitor period * number of periods) + (number of periods)
+        # -----------------------------------------------------------
+        # (monitor period * number of periods) +/- (number of periods)
         #
-        # Also, we could get one more increment than expected
-        # (which only matters if we also got the long periods; otherwise, it just cancels out).
-        # This gives us three kinds of possibilities to check against.
+        # The other complication is that we could get one more increment
+        # than expected.  So we could something like
+        #
+        #          (increment amount * (number of periods + 1))
+        # ----------------------------------------------------------------
+        # (monitor period * (number of periods+1)) +/- (number of periods)
+        #
 
         all_options = []
         for ad in ads:
@@ -296,12 +301,16 @@ class TestCustomMachineResources:
                 )
             )
 
+            # In practice, we've never had to check for more than
+            # (net) period being long or short.  We can adjust if
+            # we ever do see one.
             exact = [fractions.Fraction(increment, MONITOR_PERIOD)]
             dither_periods = [
                 fractions.Fraction(
                     increment * NUM_PERIODS,
                     ((MONITOR_PERIOD * NUM_PERIODS) + extra_periods),
                 )
+                # range() is not inclusive.
                 for extra_periods in range(-1, +1 + 1)
             ]
             extra_period = [
@@ -309,6 +318,7 @@ class TestCustomMachineResources:
                     increment * (NUM_PERIODS + 1),
                     ((MONITOR_PERIOD * (NUM_PERIODS + 1)) + extra_periods),
                 )
+                # range is not inclusive
                 for extra_periods in range(-1, +1 + 1)
             ]
 
