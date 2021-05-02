@@ -1442,7 +1442,8 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 
 			int birth;
 			if(! daemonCore->getStartTime(birth)) { continue; }
-			int duration = time(NULL) - birth;
+			time_t now = time(NULL);
+			int duration = now - birth;
 			double average = uptimeValue / duration;
 			// Since we don't have a whole-machine ad, we won't bother to
 			// include the device name in this attribute name; people will
@@ -1451,7 +1452,17 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			// GPU in every slot?
 			std::string computedName = "Device" + resourceName + "AverageUsage";
 			public_ad.Assign( computedName, average );
-
+#ifdef CMR_DEBUG
+			dprintf( D_ALWAYS, "[CMR_DEBUG] for %s --\n"
+			    "average = uptimeValue / duration\n"
+			    "%f = %f / %d\n"
+			    "duration = now - birth\n"
+			    "%d = %d - %d\n",
+			    computedName.c_str(),
+			    average, uptimeValue, duration,
+			    duration, now, birth
+			);
+#endif /* CMR_DEBUG */
 		} else if (name.find("StartOfJob") == 0) {
 
 			// Compute the SUM metrics' *Usage values.  The PEAK metrics
@@ -1481,6 +1492,27 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			double usageValue;
 			if (! v.IsNumber(usageValue)) { continue; }
 			public_ad.Assign(usageName, usageValue);
+
+#ifdef CMR_DEBUG
+			int a, b, c, d; a = b = c = d = 0;
+			public_ad.LookupInteger(uptimeName, a);
+			public_ad.LookupInteger(name, b);
+			public_ad.LookupInteger(lastUpdateName, c);
+			public_ad.LookupInteger(firstUpdateName, d);
+			dprintf(D_ALWAYS, "[CMR_DEBUG] for %s --\n"
+			    "%s\n"
+			    "usageValue = (%s - %s) / (%s - %s)\n"
+			    "%f = (%d - %d)/(%d - %d)\n"
+			    "(%d - %d) = %d\n"
+			    "(%d - %d) = %d\n",
+			    usageName.c_str(),
+			    usageExpr.c_str(),
+			    uptimeName.c_str(), name.c_str(), lastUpdateName.c_str(), firstUpdateName.c_str(),
+			    usageValue, a, b, c, d,
+			    a, b, a - b,
+			    c, d, c - d
+			);
+#endif /* CMR_DEBUG */
 
 			deleteList.push_back(uptimeName);
 			deleteList.push_back(name);

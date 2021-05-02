@@ -102,6 +102,7 @@ def condor(test_dir, slot_config, discovery_script, monitor_script):
         local_dir=test_dir / "condor",
         config={**slot_config, "TEST_DIR": test_dir.as_posix()},
     ) as condor:
+        # FIXME -- make this deterministic or at least abort testing if not
         # try to make sure the monitor runs before we continue with the test
         time.sleep(MONITOR_PERIOD * 1.5)
         yield condor
@@ -135,9 +136,9 @@ def num_jobs_running_history(condor, handle, num_resources):
     return track_quantity(
         condor.job_queue.filter(lambda j, e: j in handle.job_ids),
         increment_condition=lambda id_event: id_event[-1]
-        == SetJobStatus(JobStatus.RUNNING),
+            == SetJobStatus(JobStatus.RUNNING),
         decrement_condition=lambda id_event: id_event[-1]
-        == SetJobStatus(JobStatus.COMPLETED),
+            == SetJobStatus(JobStatus.COMPLETED),
         max_quantity=num_resources,
         expected_quantity=num_resources,
     )
@@ -301,14 +302,14 @@ class TestCustomMachineResources:
                     increment * NUM_PERIODS,
                     ((MONITOR_PERIOD * NUM_PERIODS) + extra_periods),
                 )
-                for extra_periods in range(-NUM_PERIODS, NUM_PERIODS + 1)
+                for extra_periods in range(-1, +1 + 1)
             ]
             extra_period = [
                 fractions.Fraction(
-                    increment * NUM_PERIODS + 1,
+                    increment * (NUM_PERIODS + 1),
                     ((MONITOR_PERIOD * (NUM_PERIODS + 1)) + extra_periods),
                 )
-                for extra_periods in range(-(NUM_PERIODS + 1), NUM_PERIODS + 2)
+                for extra_periods in range(-1, +1 + 1)
             ]
 
             print(
@@ -331,8 +332,14 @@ class TestCustomMachineResources:
             # build the list of possibilities here, but delay assertions until we've printed all the debug messages
             all_options.append(exact + dither_periods + extra_period)
 
+        # Make the assertions ad-specific to simplify debugging.
+        for ad, options in zip(ads, all_options):
+            usage = fractions.Fraction(float(ad["XXXAverageUsage"])).limit_denominator(30)
+            assert(usage in options)
+
         assert all(
             fractions.Fraction(float(ad["XXXAverageUsage"])).limit_denominator(30)
             in options
             for ad, options in zip(ads, all_options)
         )
+
