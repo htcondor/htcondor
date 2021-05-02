@@ -370,9 +370,9 @@ else()
         if ( NOT CMAKE_SKIP_RPATH )
           set_target_properties( collector_python3_plugin PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}")
         endif()
-        add_custom_command( OUTPUT libcollector_python3_plugin.so
+        add_custom_command( TARGET collector_python3_plugin POST_BUILD
           COMMAND ${CMAKE_COMMAND} -E create_symlink "libcollector_python_plugin.${PYTHON3_MODULE_SUFFIX}" "libcollector_python3_plugin.so"
-          DEPENDS collector_python3_plugin )
+	  COMMENT "Creating libcollector_python3_plugin.so symlink")
         install ( TARGETS collector_python3_plugin DESTINATION "${C_LIBEXEC}" )
         install ( FILES libcollector_python3_plugin.so DESTINATION "${C_LIBEXEC}" )
       endif()
