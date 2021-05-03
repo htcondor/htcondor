@@ -602,9 +602,11 @@ bool HttpRequest::SendRequest()
 
 	if ( in_fp ) {
 		fclose(in_fp);
+		in_fp = NULL;
 	}
 	if ( out_fp ) {
 		fclose(out_fp);
+		out_fp = NULL;
 	}
 
 	if( response_code < 200 || response_code > 299 ) {
