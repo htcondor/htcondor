@@ -952,6 +952,7 @@ bool ArcJob::buildJobADL()
 	std::string executable;
 	std::string remote_stdout_name;
 	std::string remote_stderr_name;
+	std::string user_resources;
 	char *file;
 
 	RSL.clear();
@@ -1031,11 +1032,15 @@ bool ArcJob::buildJobADL()
 	// TODO Add setting of environment variables
 
 	RSL += "</Application>";
+
+	jobAd->LookupString( ATTR_ARC_RESOURCES, user_resources );
+
 	RSL += "<Resources>";
-	RSL += "<RuntimeEnvironment>";
-	RSL += "<Name>ENV/PROXY</Name>";
-	RSL += "<Option>USE_DELEGATION_DB</Option>";
-	RSL += "</RuntimeEnvironment>";
+//	RSL += "<RuntimeEnvironment>";
+//	RSL += "<Name>ENV/PROXY</Name>";
+//	RSL += "<Option>USE_DELEGATION_DB</Option>";
+//	RSL += "</RuntimeEnvironment>";
+	RSL += user_resources;
 	RSL += "</Resources>";
 	RSL += "<DataStaging>";
 	RSL += "<DelegationID>";
