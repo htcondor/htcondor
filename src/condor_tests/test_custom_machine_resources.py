@@ -117,6 +117,8 @@ def handle(test_dir, condor, num_resources):
             "request_XXX": "1",
             "log": (test_dir / "events.log").as_posix(),
             "LeaveJobInQueue": "true",
+            "should_transfer_files": "true",
+            "transfer_executable": "false",
         },
         count=num_resources * 2,
     )
@@ -214,7 +216,7 @@ class TestCustomMachineResources:
     ):
         assert max(num_busy_slots_history) <= num_resources
 
-    def test_num_busy_slots_hits__num_resources(
+    def test_num_busy_slots_hits_num_resources(
         self, num_busy_slots_history, num_resources
     ):
         assert num_resources in num_busy_slots_history
