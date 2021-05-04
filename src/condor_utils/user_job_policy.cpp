@@ -150,13 +150,8 @@ ClassAd* user_job_policy(ClassAd *jad)
 			*/
 
 			UserPolicy userpolicy;
-#ifdef USE_NON_MUTATING_USERPOLICY
 			userpolicy.Init();
 			int analyze_result = userpolicy.AnalyzePolicy(*jad, PERIODIC_ONLY);
-#else
-			userpolicy.Init(jad);
-			int analyze_result = userpolicy.AnalyzePolicy(PERIODIC_ONLY);
-#endif
 
 			/* should I perform a periodic hold? */
 			if(analyze_result == HOLD_IN_QUEUE)
@@ -323,28 +318,17 @@ int JadKind(ClassAd *suspect)
 
 /* NEW INTERFACE */
 
-#ifdef USE_NON_MUTATING_USERPOLICY
   #define POLICY_NONE                    SYS_POLICY_NONE
   #define POLICY_SYSTEM_PERIODIC_HOLD    SYS_POLICY_PERIODIC_HOLD
   #define POLICY_SYSTEM_PERIODIC_RELEASE SYS_POLICY_PERIODIC_RELEASE
   #define POLICY_SYSTEM_PERIODIC_REMOVE  SYS_POLICY_PERIODIC_REMOVE
-#else
-  #define POLICY_NONE                    NULL
-  #define POLICY_SYSTEM_PERIODIC_HOLD    PARAM_SYSTEM_PERIODIC_HOLD
-  #define POLICY_SYSTEM_PERIODIC_RELEASE PARAM_SYSTEM_PERIODIC_RELEASE
-  #define POLICY_SYSTEM_PERIODIC_REMOVE  PARAM_SYSTEM_PERIODIC_REMOVE
-#endif
 
 
 UserPolicy::UserPolicy()
-#ifdef USE_NON_MUTATING_USERPOLICY
 	: m_sys_periodic_hold(NULL)
 	, m_sys_periodic_release(NULL)
 	, m_sys_periodic_remove(NULL)
 	, m_fire_subcode(0)
-#else
-	: m_ad(NULL)
-#endif
 	, m_fire_expr_val(-1)
 	, m_fire_source(FS_NotYet)
 	, m_fire_expr(NULL)
@@ -353,15 +337,9 @@ UserPolicy::UserPolicy()
 
 UserPolicy::~UserPolicy()
 {
-#ifdef USE_NON_MUTATING_USERPOLICY
 	ClearConfig();
-#else
-	m_ad = NULL;
-#endif
 	m_fire_expr = NULL;
 }
-
-#ifdef USE_NON_MUTATING_USERPOLICY
 
 void UserPolicy::Init()
 {
@@ -415,67 +393,9 @@ void UserPolicy::ResetTriggers()
 	m_fire_expr = NULL;
 }
 
-#else
-
-void UserPolicy::Init(ClassAd *ad)
-{
-	ASSERT(ad);
-	
-	m_ad = ad;
-	m_fire_expr = NULL;
-	m_fire_expr_val = -1;
-
-	this->SetDefaults();
-}
-
-void UserPolicy::SetDefaults()
-{
-	ExprTree *ph_expr = m_ad->LookupExpr(ATTR_PERIODIC_HOLD_CHECK);
-	ExprTree *pr_expr = m_ad->LookupExpr(ATTR_PERIODIC_REMOVE_CHECK);
-	ExprTree *pl_expr = m_ad->LookupExpr(ATTR_PERIODIC_RELEASE_CHECK);
-	ExprTree *oeh_expr = m_ad->LookupExpr(ATTR_ON_EXIT_HOLD_CHECK);
-	ExprTree *oer_expr = m_ad->LookupExpr(ATTR_ON_EXIT_REMOVE_CHECK);
-
-	/* if the default user policy expressions do not exist, then add them
-		here and now with the usual defaults */
-	if (ph_expr == NULL) {
-		m_ad->Assign(ATTR_PERIODIC_HOLD_CHECK, false);
-	}
-
-	if (pr_expr == NULL) {
-		m_ad->Assign(ATTR_PERIODIC_REMOVE_CHECK, false);
-	}
-
-	if (pl_expr == NULL) {
-		m_ad->Assign(ATTR_PERIODIC_RELEASE_CHECK, false);
-	}
-
-	if (oeh_expr == NULL) {
-		m_ad->Assign(ATTR_ON_EXIT_HOLD_CHECK, false);
-	}
-
-	if (oer_expr == NULL) {
-		m_ad->Assign(ATTR_ON_EXIT_REMOVE_CHECK, true);
-	}
-}
-
-#endif
-
-#ifdef USE_NON_MUTATING_USERPOLICY
 int
 UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 {
-#else
-int
-UserPolicy::AnalyzePolicy( int mode )
-{
-	if (m_ad == NULL)
-	{
-		EXCEPT("UserPolicy Error: Must call Init() first!");
-	}
-
-	ClassAd & ad = *m_ad;
-#endif
 
 	int timer_remove;
 	int state;
@@ -514,9 +434,7 @@ UserPolicy::AnalyzePolicy( int mode )
 		{
 			m_fire_expr_val = -1;
 			m_fire_source = FS_JobAttribute;
-		#ifdef USE_NON_MUTATING_USERPOLICY
 			ExprTreeToString(expr, m_fire_unparsed_expr);
-		#endif
 			return UNDEFINED_EVAL;
 		}
 		timer_remove = -1;
@@ -524,9 +442,7 @@ UserPolicy::AnalyzePolicy( int mode )
 	if( timer_remove >= 0 && timer_remove < time(NULL) ) {
 		m_fire_expr_val = 1;
 		m_fire_source = FS_JobAttribute;
-	#ifdef USE_NON_MUTATING_USERPOLICY
 		ExprTreeToString(ad.Lookup(ATTR_TIMER_REMOVE_CHECK), m_fire_unparsed_expr);
-	#endif
 		return REMOVE_FROM_QUEUE;
 	}
 
@@ -596,45 +512,27 @@ UserPolicy::AnalyzePolicy( int mode )
 #endif
 
 	/* Should I remove on exit? */
-#if 1
 	ExprTree * expr = ad.Lookup(ATTR_ON_EXIT_REMOVE_CHECK);
 	if ( ! expr) {
 		// If no expression, the default behavior is to remove on exit.
 		m_fire_expr_val = 1; 
 		m_fire_expr = ATTR_ON_EXIT_REMOVE_CHECK;
 		m_fire_source = FS_JobAttribute;
-	#ifdef USE_NON_MUTATING_USERPOLICY
 		m_fire_reason.clear();
 		m_fire_unparsed_expr = "true";
-	#endif
 		return REMOVE_FROM_QUEUE;
 	}
 	if (AnalyzeSinglePeriodicPolicy(ad, ATTR_ON_EXIT_REMOVE_CHECK, POLICY_NONE, REMOVE_FROM_QUEUE, retval)) {
 		return retval;
 	}
-#ifdef USE_NON_MUTATING_USERPOLICY
 	ExprTreeToString(expr, m_fire_unparsed_expr);
-#endif
-#else
-	m_fire_expr = ATTR_ON_EXIT_REMOVE_CHECK;
-	if( ! m_ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, m_ad, on_exit_remove) ) {
-		m_fire_source = FS_JobAttribute;
-		return UNDEFINED_EVAL;
-	}
-	if( on_exit_remove ) {
-		m_fire_expr_val = 1;
-		m_fire_source = FS_JobAttribute;
-		return REMOVE_FROM_QUEUE;
-	}
-#endif
+
 		// If we didn't want to remove it, OnExitRemove was false,
 		// which means we want the job to stay in the queue...
 	m_fire_expr_val = 0;
 	m_fire_source = FS_JobAttribute;
 	return STAYS_IN_QUEUE;
 }
-
-#ifdef USE_NON_MUTATING_USERPOLICY
 
 bool UserPolicy::AnalyzeSinglePeriodicPolicy(ClassAd & ad, ExprTree * expr, int on_true_return, int & retval)
 {
@@ -733,15 +631,10 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(ClassAd & ad, const char * attrname
 	}
 
 	if (expr) {
-#if 0 // don't do this, undefined system periodic expressions don't fire
-		int result_ok = AnalyzeSinglePeriodicPolicy(ad, expr, on_true_return, retval);
-		if (result_ok && m_fire_expr_val) {
-#else
 		long long ival = 0;
 		classad::Value val;
 		if (ad.EvaluateExpr(expr, val) && val.IsNumber(ival) && ival != 0) {
 			m_fire_expr_val = 1;
-#endif
 			m_fire_expr = policy_name;
 			m_fire_source = FS_SystemMacro;
 			m_fire_reason.clear();
@@ -777,112 +670,8 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(ClassAd & ad, const char * attrname
 		}
 	}
 
-	/*
-	// TODO: parse these macros into exprs outside of the loop.
-	if (macroname) {
-		param(m_fire_unparsed_expr, macroname, "");
-		if ( ! m_fire_unparsed_expr.empty()) {
-			// Just temporarily toss the expression into the job ad
-			ad.AssignExpr(ATTR_SCRATCH_EXPRESSION, m_fire_unparsed_expr.c_str());
-			expr = ad.Lookup(ATTR_SCRATCH_EXPRESSION);
-			int result_ok = expr && AnalyzeSinglePeriodicPolicy(ad, expr, on_true_return, retval);
-			ad.Delete(ATTR_SCRATCH_EXPRESSION);
-			if (result_ok && m_fire_expr_val) {
-				m_fire_expr = macroname;
-				m_fire_source = FS_SystemMacro;
-				m_fire_reason.clear();
-				m_fire_subcode = 0;
-
-				retval = on_true_return;
-
-				std::string param_name(macroname); param_name += "_SUBCODE";
-				std::string param_expr;
-				if (param(param_expr, param_name.c_str(), "") && ! param_expr.empty()) {
-					long long ival;
-					classad::Value val;
-					if (ad.EvaluateExpr(param_expr, val) && val.IsNumber(ival)) {
-						m_fire_subcode = (int)ival;
-					}
-				}
-				param_name = m_fire_expr; param_name += "_REASON";
-				if (param(param_expr, param_name.c_str(), "") && ! param_expr.empty()) {
-					classad::Value val;
-					if (ad.EvaluateExpr(param_expr, val) && val.IsStringValue(m_fire_reason)) {
-						//
-					}
-				}
-
-				return true;
-			}
-
-			m_fire_unparsed_expr.clear();
-		}
-	}
-	*/
-
 	return false;
 }
-#else
-
-bool UserPolicy::AnalyzeSinglePeriodicPolicy(ClassAd & /*ad*/, const char * attrname, const char * macroname, int on_true_return, int & retval)
-{
-	ASSERT(attrname);
-
-	// Evaluate the specified expression in the job ad
-	bool result;
-	m_fire_expr = attrname;
-	if(!m_ad->EvalBool(attrname, m_ad, result)) {
-        //check to see if the attribute actually exists, or if it's really
-        //  undefined.
-        //originally this if-statement wasn't here, so when the expression
-        //  tied to this attribute had an undefined value in it, e.g.
-        //      PeriodicRemove = DoesNotExist > 0
-        //  the function would set retval = UNDEFINED_EVAL and return
-        //
-        //now it can differentiate between the something in the 
-        //expression being undefined, and the attribute itself 
-        //being undefined.
-        if(m_ad->Lookup(attrname) != NULL)
-        {
-            m_fire_expr_val = -1;
-            m_fire_source = FS_JobAttribute;
-        }
-        retval = UNDEFINED_EVAL;
-		return true;
-	}
-	if( result ) {
-		m_fire_expr_val = 1;
-		m_fire_source = FS_JobAttribute;
-		retval = on_true_return;
-		return true;
-	}
-	if(macroname) {
-		char * sysexpr = param(macroname);
-		if(sysexpr && sysexpr[0]) {
-			// Just temporarily toss the expression into the job ad
-			m_ad->AssignExpr(ATTR_SCRATCH_EXPRESSION, sysexpr);
-			free(sysexpr);
-			sysexpr = NULL;
-			int result_ok = m_ad->EvalBool(ATTR_SCRATCH_EXPRESSION, m_ad, result);
-			m_ad->Delete(ATTR_SCRATCH_EXPRESSION);
-			if(result_ok && result) {
-				m_fire_expr = macroname;
-				m_fire_expr_val = 1;
-				m_fire_source = FS_SystemMacro;
-				retval = on_true_return;
-				return true;
-			}
-		}
-		free(sysexpr);
-	}
-
-	return false;
-
-	//MyString macroname = "system_";
-	//macroname += attrname;
-}
-
-#endif
 
 const char* UserPolicy::FiringExpression(void)
 {
@@ -911,15 +700,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 	reason = "";
 
 	const char * expr_src;
-#ifdef USE_NON_MUTATING_USERPOLICY
 	std::string exprString;
-#else
-	MyString exprString;
-	std::string reason_expr_param;
-	std::string reason_expr_attr;
-	std::string subcode_expr_param;
-	std::string subcode_expr_attr;
-#endif
 	switch(m_fire_source) {
 		case FS_NotYet:
 			expr_src = "UNKNOWN (never set)";
@@ -928,7 +709,6 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 		case FS_JobAttribute:
 		{
 			expr_src = "job attribute";
-#ifdef USE_NON_MUTATING_USERPOLICY
 			exprString = m_fire_unparsed_expr.c_str();
 			if (m_fire_expr_val == -1) {
 				reason_code = CONDOR_HOLD_CODE_JobPolicyUndefined;
@@ -937,30 +717,12 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 				reason_subcode = m_fire_subcode;
 				reason = m_fire_reason;
 			}
-#else
-			ExprTree *tree;
-			tree = m_ad->LookupExpr( m_fire_expr );
-
-			// Get a formatted expression string
-			if( tree ) {
-				exprString = ExprTreeToString( tree );
-			}
-			if( m_fire_expr_val == -1 ) {
-				reason_code = CONDOR_HOLD_CODE_JobPolicyUndefined;
-			}
-			else {
-				reason_code = CONDOR_HOLD_CODE_JobPolicy;
-				formatstr(reason_expr_attr,"%sReason", m_fire_expr);
-				formatstr(subcode_expr_attr,"%sSubCode", m_fire_expr);
-			}
-#endif
 			break;
 		}
 
 		case FS_SystemMacro:
 		{
 			expr_src = "system macro";
-#ifdef USE_NON_MUTATING_USERPOLICY
 			exprString = m_fire_unparsed_expr.c_str();
 			if( m_fire_expr_val == -1 ) {
 				reason_code = CONDOR_HOLD_CODE_SystemPolicyUndefined;
@@ -970,19 +732,6 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 				reason_subcode = m_fire_subcode;
 				reason = m_fire_reason;
 			}
-#else
-			char * val = param(m_fire_expr);
-			exprString = val;
-			free(val);
-			if( m_fire_expr_val == -1 ) {
-				reason_code = CONDOR_HOLD_CODE_SystemPolicyUndefined;
-			}
-			else {
-				reason_code = CONDOR_HOLD_CODE_SystemPolicy;
-				formatstr(reason_expr_param,"%s_REASON", m_fire_expr);
-				formatstr(subcode_expr_param,"%s_SUBCODE", m_fire_expr);
-			}
-#endif
 			break;
 		}
 
@@ -990,39 +739,6 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 			expr_src = "UNKNOWN (bad value)";
 			break;
 	}
-
-
-#ifdef USE_NON_MUTATING_USERPOLICY
-	// don't need this. it's handled above.
-#else
-	MyString subcode_expr;
-	if( !subcode_expr_param.empty() &&
-		param(subcode_expr,subcode_expr_param.c_str(),NULL) &&
-		!subcode_expr.IsEmpty())
-	{
-		m_ad->AssignExpr(ATTR_SCRATCH_EXPRESSION, subcode_expr.Value());
-		m_ad->LookupInteger(ATTR_SCRATCH_EXPRESSION, reason_subcode);
-		m_ad->Delete(ATTR_SCRATCH_EXPRESSION);
-	}
-	else if( !subcode_expr_attr.empty() )
-	{
-		m_ad->LookupInteger(subcode_expr_attr, reason_subcode);
-	}
-
-	MyString reason_expr;
-	if( !reason_expr_param.empty() &&
-		param(reason_expr,reason_expr_param.c_str(),NULL) &&
-		!reason_expr.IsEmpty())
-	{
-		m_ad->AssignExpr(ATTR_SCRATCH_EXPRESSION, reason_expr.Value());
-		m_ad->LookupString(ATTR_SCRATCH_EXPRESSION, reason);
-		m_ad->Delete(ATTR_SCRATCH_EXPRESSION);
-	}
-	else if( !reason_expr_attr.empty() )
-	{
-		m_ad->LookupString(reason_expr_attr, reason);
-	}
-#endif
 
 	if( !reason.empty() ) {
 		return true;
