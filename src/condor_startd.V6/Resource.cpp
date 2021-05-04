@@ -1371,22 +1371,35 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 	// It looks like attributes you add during an iteration may also be
 	// seen during that iteration.  This could cause problems later, but
 	// doesn't seem like it's worth fixing now.
+	//
+	// Actually, adding attributes during an iteration can force a rehash,
+	// which invalidates the iterator.  Let's just cache the keys before we
+	// actually do anything with them.
+
+	std::vector<std::string> attrNames;
+	for( const auto & ad : public_ad ) {
+		attrNames.push_back(ad.first);
+	}
+
+	// This isn't necessary to work around the iterators any more, but
+	// not deleting attributes is handy when taking snapshots.
 	std::vector< std::string > deleteList;
-	for( auto i = public_ad.begin(); i != public_ad.end(); ++i ) {
-		const std::string & name = i->first;
+	for( const auto & name : attrNames ) {
+		ExprTree * value = public_ad.Lookup(name);
+		if(value == NULL) { continue; }
 
 		// if this attribute has an expression with the SlotEval function
 		// flatten that function and write the flattened expression into the ad
 		//
-		if (ExprHasSlotEval(i->second)) {
+		if (ExprHasSlotEval(value)) {
 			unparse_buffer.clear();
-			if (ExprTreeIsSlotEval(i->second)) {
+			if (ExprTreeIsSlotEval(value)) {
 				// if the entire expression is a single SlotEval call, just flatten it
 				//    Foo = SlotEval("slot1",expr)
 				// becomes
 				//    Foo = <value of expr evaluated against slot1>
 				unparser.setIndirectThroughAttr(false);
-				unparser.Unparse(unparse_buffer, i->second);
+				unparser.Unparse(unparse_buffer, value);
 			} else {
 				// if the expression *contains* a SlotEval, the unparser will
 				// create an intermediate attribute to contain the value.
@@ -1398,9 +1411,9 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 				// slot1_Activity is stored in the unparser, we will insert it into the ad
 				// after this loop exits
 				unparser.setIndirectThroughAttr(true);
-				unparser.Unparse(unparse_buffer, i->second);
+				unparser.Unparse(unparse_buffer, value);
 			}
-			public_ad.AssignExpr(i->first, unparse_buffer.c_str());
+			public_ad.AssignExpr(name, unparse_buffer.c_str());
 		}
 
 		//
@@ -1428,13 +1441,12 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			if(! StartdCronJobParams::attributeIsSumMetric( name ) ) { continue; }
 			if(! StartdCronJobParams::getResourceNameFromAttributeName( name, resourceName )) { continue; }
 			if(! param_boolean( "ADVERTISE_CMR_UPTIME_SECONDS", false )) {
-			    deleteList.push_back( name );
+				deleteList.push_back( name );
 			}
 
 			classad::Value v;
 			double uptimeValue;
-			ExprTree * expr = i->second;
-			expr->Evaluate( v );
+			value->Evaluate( v );
 			if(! v.IsNumber( uptimeValue )) {
 				dprintf( D_ALWAYS, "Metric %s is not a number, ignoring.\n", name.c_str() );
 				continue;
@@ -1442,8 +1454,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 
 			int birth;
 			if(! daemonCore->getStartTime(birth)) { continue; }
-			time_t now = time(NULL);
-			int duration = now - birth;
+			int duration = time(NULL) - birth;
 			double average = uptimeValue / duration;
 			// Since we don't have a whole-machine ad, we won't bother to
 			// include the device name in this attribute name; people will
@@ -1452,17 +1463,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			// GPU in every slot?
 			std::string computedName = "Device" + resourceName + "AverageUsage";
 			public_ad.Assign( computedName, average );
-#ifdef CMR_DEBUG
-			dprintf( D_ALWAYS, "[CMR_DEBUG] for %s --\n"
-			    "average = uptimeValue / duration\n"
-			    "%f = %f / %d\n"
-			    "duration = now - birth\n"
-			    "%d = %d - %d\n",
-			    computedName.c_str(),
-			    average, uptimeValue, duration,
-			    duration, now, birth
-			);
-#endif /* CMR_DEBUG */
+
 		} else if (name.find("StartOfJob") == 0) {
 
 			// Compute the SUM metrics' *Usage values.  The PEAK metrics
@@ -1493,39 +1494,19 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			if (! v.IsNumber(usageValue)) { continue; }
 			public_ad.Assign(usageName, usageValue);
 
-#ifdef CMR_DEBUG
-			int a, b, c, d; a = b = c = d = 0;
-			public_ad.LookupInteger(uptimeName, a);
-			public_ad.LookupInteger(name, b);
-			public_ad.LookupInteger(lastUpdateName, c);
-			public_ad.LookupInteger(firstUpdateName, d);
-			dprintf(D_ALWAYS, "[CMR_DEBUG] for %s --\n"
-			    "%s\n"
-			    "usageValue = (%s - %s) / (%s - %s)\n"
-			    "%f = (%d - %d)/(%d - %d)\n"
-			    "(%d - %d) = %d\n"
-			    "(%d - %d) = %d\n",
-			    usageName.c_str(),
-			    usageExpr.c_str(),
-			    uptimeName.c_str(), name.c_str(), lastUpdateName.c_str(), firstUpdateName.c_str(),
-			    usageValue, a, b, c, d,
-			    a, b, a - b,
-			    c, d, c - d
-			);
-#endif /* CMR_DEBUG */
-
 			deleteList.push_back(uptimeName);
 			deleteList.push_back(name);
 			deleteList.push_back(lastUpdateName);
 			deleteList.push_back(firstUpdateName);
 
 		} else if( name.find( "StartOfJobUptime" ) == 0
-			|| (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
-			|| name.find( "FirstUpdate" ) == 0 ) {
-		deleteList.push_back( name );
+		  || (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
+		  || name.find( "FirstUpdate" ) == 0 ) {
+			deleteList.push_back( name );
 		}
 
 	}
+
 	if ( ! snapshot) {
 		for (auto i = deleteList.begin(); i != deleteList.end(); ++i) {
 			public_ad.Delete(* i);

@@ -117,8 +117,6 @@ def handle(test_dir, condor, num_resources):
             "request_XXX": "1",
             "log": (test_dir / "events.log").as_posix(),
             "LeaveJobInQueue": "true",
-            "should_transfer_files": "true",
-            "transfer_executable": "false",
         },
         count=num_resources * 2,
     )
@@ -343,11 +341,6 @@ class TestCustomMachineResources:
 
             # build the list of possibilities here, but delay assertions until we've printed all the debug messages
             all_options.append(exact + dither_periods + extra_period)
-
-        # Make the assertions ad-specific to simplify debugging.
-        for ad, options in zip(ads, all_options):
-            usage = fractions.Fraction(float(ad["XXXAverageUsage"])).limit_denominator(30)
-            assert(usage in options)
 
         assert all(
             fractions.Fraction(float(ad["XXXAverageUsage"])).limit_denominator(30)
