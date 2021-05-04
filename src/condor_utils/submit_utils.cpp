@@ -3088,6 +3088,11 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
+	if( (tmp = submit_param(SUBMIT_KEY_ArcResources, ATTR_ARC_RESOURCES)) ) {
+		AssignJobString(ATTR_ARC_RESOURCES, tmp);
+		free( tmp );
+	}
+
 	if( (tmp = submit_param(SUBMIT_KEY_CreamAttributes, ATTR_CREAM_ATTRIBUTES)) ) {
 		AssignJobString ( ATTR_CREAM_ATTRIBUTES, tmp );
 		free( tmp );
