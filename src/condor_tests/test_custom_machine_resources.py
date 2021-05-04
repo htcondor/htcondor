@@ -284,12 +284,14 @@ class TestCustomMachineResources:
         # (monitor period * (number of periods+1)) +/- (number of periods)
         #
 
+        print() # If we actually see the output, we'll need the line break.
         all_options = []
         for ad in ads:
             increment = resources[ad["AssignedXXX"]]
             usage = fractions.Fraction(float(ad["XXXAverageUsage"])).limit_denominator(
                 30
             )
+
             print(
                 "Job {}.{}, resource {}, increment {}, usage {} ({})".format(
                     ad["ClusterID"],
@@ -311,7 +313,7 @@ class TestCustomMachineResources:
                     ((MONITOR_PERIOD * NUM_PERIODS) + extra_periods),
                 )
                 # range() is not inclusive.
-                for extra_periods in range(-1, +1 + 1)
+                for extra_periods in range(-1, +3 + 1)
             ]
             extra_period = [
                 fractions.Fraction(
@@ -319,7 +321,23 @@ class TestCustomMachineResources:
                     ((MONITOR_PERIOD * (NUM_PERIODS + 1)) + extra_periods),
                 )
                 # range is not inclusive
-                for extra_periods in range(-1, +1 + 1)
+                for extra_periods in range(-1, +3 + 1)
+            ]
+            two_extra_period = [
+                fractions.Fraction(
+                    increment * (NUM_PERIODS + 2),
+                    ((MONITOR_PERIOD * (NUM_PERIODS + 2)) + extra_periods),
+                )
+                # range is not inclusive
+                for extra_periods in range(-1, +3 + 1)
+            ]
+            missed_period = [
+                fractions.Fraction(
+                    increment * (NUM_PERIODS - 1),
+                    ((MONITOR_PERIOD * (NUM_PERIODS - 1)) + extra_periods),
+                )
+                # range is not inclusive
+                for extra_periods in range(-1, +3 + 1)
             ]
 
             print(
@@ -337,10 +355,20 @@ class TestCustomMachineResources:
                 "dither, extra increment".ljust(25),
                 ",".join(str(f) for f in extra_period),
             )
+            print(
+                "*" if usage in two_extra_period else " ",
+                "dither, two extra increments".ljust(25),
+                ",".join(str(f) for f in two_extra_period),
+            )
+            print(
+                "*" if usage in missed_period else " ",
+                "dither, missed increment".ljust(25),
+                ",".join(str(f) for f in missed_period),
+            )
             print()
 
             # build the list of possibilities here, but delay assertions until we've printed all the debug messages
-            all_options.append(exact + dither_periods + extra_period)
+            all_options.append(exact + dither_periods + extra_period + missed_period)
 
         assert all(
             fractions.Fraction(float(ad["XXXAverageUsage"])).limit_denominator(30)
