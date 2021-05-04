@@ -952,7 +952,9 @@ bool ArcJob::buildJobADL()
 	std::string executable;
 	std::string remote_stdout_name;
 	std::string remote_stderr_name;
-	std::string user_resources;
+	std::string resources;
+	std::string slot_req;
+	int int_value;
 	char *file;
 
 	RSL.clear();
@@ -965,7 +967,21 @@ bool ArcJob::buildJobADL()
 		return false;
 	}
 
-	//Start off the ADL
+	// The ADL description of a job consists of three primary elements
+	// (under the top-level <ActivityDescription> element):
+	// <Application>
+	//   Describes how to run the job (executable, arguments, stdin/out/err).
+	// <Resources>
+	//   Describes the environment the job needs to run in (physical
+	//   resources, batch system parameters).
+	//   Includes special RunTimeEnvironment labels that trigger arbitrary
+	//   additional configuration of the execution envrionment.
+	// <DataStaging>
+	//   Describes input/output files be to staged for the job.
+	//   Includes delegated proxies and whether client or server will
+	//   transfer files.
+
+	//Start off the ADL and start the <Application> element
 	RSL = "<?xml version=\"1.0\"?>";
 	RSL += "<ActivityDescription xmlns=\"http://www.eu-emi.eu/es/2010/12/adl\">";
 	RSL += "<Application>";
@@ -1033,15 +1049,79 @@ bool ArcJob::buildJobADL()
 
 	RSL += "</Application>";
 
-	jobAd->LookupString( ATTR_ARC_RESOURCES, user_resources );
+	// Now handle the <Resources> element.
+	// This needs to merge ADL elements derived from standard job ad
+	// attributes and arbitrary ADL elements from the ArcResources job
+	// attribute.
+	jobAd->LookupString( ATTR_ARC_RESOURCES, resources );
+
+	// <NumberOfSlots> goes under <SlotRequirement>.
+	// If ArcResources contains <SlotRequiment> with other elements under it,
+	// ensure we end up with only one <SlotRequirment>.
+	if ( jobAd->LookupInteger(ATTR_REQUEST_CPUS, int_value) && int_value > 1 ) {
+		slot_req += "<NumberOfSlots>";
+		slot_req += std::to_string(int_value);
+		slot_req += "</NumberOfSlots>";
+	}
+	if ( ! slot_req.empty() ) {
+		size_t insert_pos = resources.find("</SlotRequirement>");
+		if ( insert_pos == std::string::npos ) {
+			resources += "<SlotRequirement>";
+			resources += slot_req;
+			resources += "</SlotRequirement>";
+		} else {
+			resources.insert(insert_pos, slot_req);
+		}
+	}
+
+	if ( jobAd->LookupInteger(ATTR_REQUEST_MEMORY, int_value) &&
+	     resources.find("<IndividualPhysicalMemory>") == std::string::npos ) {
+		resources += "<IndividualPhysicalMemory>";
+		resources += std::to_string(int_value);
+		resources += "</IndividualPhysicalMemory>";
+	}
+
+	if ( jobAd->LookupString(ATTR_BATCH_QUEUE, attr_value) ) {
+		resources += "<QueueName>";
+		resources += attr_value;
+		resources += "</QueueName>";
+	}
+
+	if ( jobAd->LookupString(ATTR_ARC_RTE, attr_value) ) {
+		const char *next_rte;
+		StringList rte_list(attr_value, ",");
+		rte_list.rewind();
+		while ( (next_rte = rte_list.next()) ) {
+			const char *next_opt;
+			StringList rte_opts(next_rte, " ");
+			rte_opts.rewind();
+			next_opt = rte_opts.next();
+			if ( next_opt == nullptr ) {
+				// This shouldn't happen, but let's be safe
+				continue;
+			}
+			resources += "<RunTimeEnvironment>";
+			resources += "<Name>";
+			resources += next_opt;
+			resources += "</Name>";
+			while ( (next_opt = rte_opts.next()) ) {
+				resources += "<Option>";
+				resources += next_opt;
+				resources += "</Option>";
+			}
+			resources += "</RunTimeEnvironment>";
+		}
+	}
 
 	RSL += "<Resources>";
 //	RSL += "<RuntimeEnvironment>";
 //	RSL += "<Name>ENV/PROXY</Name>";
 //	RSL += "<Option>USE_DELEGATION_DB</Option>";
 //	RSL += "</RuntimeEnvironment>";
-	RSL += user_resources;
+	RSL += resources;
 	RSL += "</Resources>";
+
+	// Now handle the <DataStaging> element.
 	RSL += "<DataStaging>";
 	RSL += "<DelegationID>";
 	RSL += escapeXML(delegationId);

@@ -106,6 +106,7 @@
 #define SUBMIT_KEY_GlobusRSL "globus_rsl"
 #define SUBMIT_KEY_NordugridRSL "nordugrid_rsl"
 #define SUBMIT_KEY_ArcRSL "arc_rsl"
+#define SUBMIT_KEY_ArcRte "arc_rte"
 #define SUBMIT_KEY_ArcResources "arc_resources"
 #define SUBMIT_KEY_RendezvousDir "rendezvousdir"
 #define SUBMIT_KEY_KeystoreFile "keystore_file"
