@@ -142,7 +142,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 		{
 			/*	The user_policy is checked in this
 				order. The first one to succeed is the winner:
-		
+
 				periodic_hold
 				periodic_exit
 				on_exit_hold
@@ -192,14 +192,14 @@ ClassAd* user_job_policy(ClassAd *jad)
 				return result;
 			}
 
-			/* Check to see if ExitSignal or ExitCode 
+			/* Check to see if ExitSignal or ExitCode
 				are defined, if not, then assume the
 				job hadn't exited and don't check the
 				policy. This could hide a mistake of
 				the caller to insert those attributes
 				correctly but allows checking of the
 				job ad in a periodic context. */
-			if (jad->LookupExpr(ATTR_ON_EXIT_CODE) == 0 && 
+			if (jad->LookupExpr(ATTR_ON_EXIT_CODE) == 0 &&
 				jad->LookupExpr(ATTR_ON_EXIT_SIGNAL) == 0)
 			{
 				return result;
@@ -416,7 +416,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 
 	/*	The user_policy is checked in this
 			order. The first one to succeed is the winner:
-	
+
 			ATTR_TIMER_REMOVE_CHECK
 			ATTR_PERIODIC_HOLD_CHECK
 			ATTR_PERIODIC_RELEASE_CHECK
@@ -451,20 +451,20 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 	/* should I perform a periodic hold? */
 	if(state!=HELD) {
 		if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_HOLD_CHECK, POLICY_SYSTEM_PERIODIC_HOLD, HOLD_IN_QUEUE, retval)) {
-			return retval;
+			if( retval != UNDEFINED_EVAL ) { return retval; }
 		}
 	}
 
 	/* Should I perform a periodic release? */
 	if(state==HELD) {
 		if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_RELEASE_CHECK, POLICY_SYSTEM_PERIODIC_RELEASE, RELEASE_FROM_HOLD, retval)) {
-			return retval;
+			if( retval != UNDEFINED_EVAL ) { return retval; }
 		}
 	}
 
 	/* Should I perform a periodic remove? */
 	if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_REMOVE_CHECK, POLICY_SYSTEM_PERIODIC_REMOVE, REMOVE_FROM_QUEUE, retval)) {
-		return retval;
+		if( retval != UNDEFINED_EVAL ) { return retval; }
 	}
 
 	if( mode == PERIODIC_ONLY ) {
@@ -482,40 +482,26 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 				ATTR_ON_EXIT_BY_SIGNAL );
 	}
 
-	/* Check to see if ExitSignal or ExitCode 
+	/* Check to see if ExitSignal or ExitCode
 		are defined, if not, then except because
 		caller should have filled this in if calling
 		this function saying to check the exit policies. */
-	if( ad.LookupExpr(ATTR_ON_EXIT_CODE) == 0 && 
+	if( ad.LookupExpr(ATTR_ON_EXIT_CODE) == 0 &&
 		ad.LookupExpr(ATTR_ON_EXIT_SIGNAL) == 0 )
 	{
 		EXCEPT( "UserPolicy Error: No signal/exit codes in job ad!" );
 	}
 
 	/* Should I hold on exit? */
-#if 1
 	if (AnalyzeSinglePeriodicPolicy(ad, ATTR_ON_EXIT_HOLD_CHECK, POLICY_NONE, HOLD_IN_QUEUE, retval)) {
-		return retval;
+		if( retval != UNDEFINED_EVAL ) { return retval; }
 	}
-#else
-	bool on_exit_hold, on_exit_remove;
-	m_fire_expr = ATTR_ON_EXIT_HOLD_CHECK;
-	if( ! ad.EvalBool(ATTR_ON_EXIT_HOLD_CHECK, m_ad, on_exit_hold) ) {
-		m_fire_source = FS_JobAttribute;
-		return UNDEFINED_EVAL;
-	}
-	if( on_exit_hold ) {
-		m_fire_expr_val = 1;
-		m_fire_source = FS_JobAttribute;
-		return HOLD_IN_QUEUE;
-	}
-#endif
 
 	/* Should I remove on exit? */
 	ExprTree * expr = ad.Lookup(ATTR_ON_EXIT_REMOVE_CHECK);
 	if ( ! expr) {
 		// If no expression, the default behavior is to remove on exit.
-		m_fire_expr_val = 1; 
+		m_fire_expr_val = 1;
 		m_fire_expr = ATTR_ON_EXIT_REMOVE_CHECK;
 		m_fire_source = FS_JobAttribute;
 		m_fire_reason.clear();
@@ -523,7 +509,11 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 		return REMOVE_FROM_QUEUE;
 	}
 	if (AnalyzeSinglePeriodicPolicy(ad, ATTR_ON_EXIT_REMOVE_CHECK, POLICY_NONE, REMOVE_FROM_QUEUE, retval)) {
-		return retval;
+		if( retval == UNDEFINED_EVAL ) {
+			return REMOVE_FROM_QUEUE;
+		} else {
+			return retval;
+		}
 	}
 	ExprTreeToString(expr, m_fire_unparsed_expr);
 
@@ -587,29 +577,6 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(ClassAd & ad, const char * attrname
 		}
 		return true;
 	}
-
-	/* the old code.  looks like this always returns if there is no attrname expression, which is probably wrong...
-	int result = 0;
-	if(!ad.EvalBool(attrname, m_ad, result)) {
-        //check to see if the attribute actually exists, or if it's really
-        //  undefined.
-        //originally this if-statement wasn't here, so when the expression
-        //  tied to this attribute had an undefined value in it, e.g.
-        //      PeriodicRemove = DoesNotExist > 0
-        //  the function would set retval = UNDEFINED_EVAL and return
-        //
-        //now it can differentiate between the something in the 
-        //expression being undefined, and the attribute itself 
-        //being undefined.
-        if(m_ad->Lookup(attrname) != NULL)
-        {
-            m_fire_expr_val = -1;
-            m_fire_source = FS_JobAttribute;
-        }
-        retval = UNDEFINED_EVAL;
-		return true;
-	}
-	*/
 
 	const char * policy_name = NULL;
 	switch (sys_policy) {
