@@ -28,13 +28,8 @@
 #include "emit.h"
 #include "user_job_policy.h"
 
-#ifdef USE_NON_MUTATING_USERPOLICY
   #define POLICY_INIT(ad) policy.Init()
   #define POLICY_ANALYZE(ad,mode) policy.AnalyzePolicy(*ad,mode)
-#else
-  #define POLICY_INIT(ad) policy.Init(ad)
-  #define POLICY_ANALYZE(ad,mode) policy.AnalyzePolicy(mode)
-#endif
 
 #define CLEANUP \
 	classad_string.clear(); \
@@ -195,12 +190,7 @@ static const char
 	"OnExitRemove = true\n\t\tExitBySignal = true\n\t\tExitSignal = 123\n\t\t"
 	"ExitCode = 321\n\t\tJobStatus = 2",
 	*DEFAULT = 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	"[ ]";
-#else
-	"[ PeriodicHold = false; PeriodicRemove = false; PeriodicRelease = false; "
-	"OnExitHold = false; OnExitRemove = true ]";
-#endif
 
 bool OTEST_UserPolicy(void) {
 	emit_object("UserPolicy");
@@ -341,12 +331,7 @@ static bool test_init_null() {
 }
 
 static bool test_init_empty() {
-#ifdef USE_NON_MUTATING_USERPOLICY
 	emit_test("Test that Init() does not insert any policy expressions into an empty classad.");
-#else
-	emit_test("Test that Init() sets the required attributes to the default "
-		"values when passed an empty ClassAd.");
-#endif
 	emit_input_header();
 	emit_param("ClassAd", "");
 	emit_output_expected_header();
@@ -357,7 +342,6 @@ static bool test_init_empty() {
 	unparser.Unparse(classad_string, ad);
 	emit_output_actual_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-#ifdef USE_NON_MUTATING_USERPOLICY
 	bool val1, val2, val3, val4, val5;
 	if ( ! ad->LookupBool(ATTR_PERIODIC_HOLD_CHECK, val1) &&
 		! ad->LookupBool(ATTR_PERIODIC_REMOVE_CHECK, val2) &&
@@ -368,7 +352,6 @@ static bool test_init_empty() {
 		CLEANUP;
 		PASS;
 	}
-#endif
 	if(!user_policy_ad_checker(ad, false, false, false, false, true)) {
 		CLEANUP;
 		FAIL;
@@ -404,26 +387,13 @@ static bool test_init_non_empty() {
 }
 
 static bool test_init_non_empty_miss1() {
-#ifdef USE_NON_MUTATING_USERPOLICY
 	emit_test("Test that Init() does not insert any default attributes "
 		"when passed a ClassAd that already contains the first three "
 		"of the attributes needed for UserPolicy.");
-#else
-	emit_test("Test that Init() sets the required attributes to the default "
-		"values when passed a ClassAd that already contains the first three "
-		"of the attributes needed for UserPolicy.");
-#endif
 	const char* input = 
 		"[ TimerRemove = 0; PeriodicHold = true; PeriodicRemove = true ]";
-#ifdef USE_NON_MUTATING_USERPOLICY
 	const char* expect = input;
 	const int absent_mask = 0x78;
-#else
-	const char* expect = 
-		"[ TimerRemove = 0; PeriodicHold = true; PeriodicRemove = true; "
-		"PeriodicRelease = false; OnExitHold = false; OnExitRemove = true ]";
-	const int absent_mask = 0;
-#endif
 	emit_input_header();
 	emit_param("ClassAd", "%s", input);
 	emit_output_expected_header();
@@ -445,25 +415,13 @@ static bool test_init_non_empty_miss1() {
 }
 
 static bool test_init_non_empty_miss2() {
-#ifdef USE_NON_MUTATING_USERPOLICY
 	emit_test("Test that Init() does not insert any default attributes "
 		"when passed a ClassAd that already contains the last three "
 		"of the attributes needed for UserPolicy.");
-#else
-	emit_test("Test that Init() sets the required attributes to the default "
-		"values when passed a ClassAd that already contains the last three "
-		"of the attributes needed for UserPolicy.");
-#endif
 	const char* input = "[ PeriodicRelease = true; OnExitHold = true; "
 		"OnExitRemove = true ]";
-#ifdef USE_NON_MUTATING_USERPOLICY
 	const char* expect = input;
 	const int absent_mask = 0x03;
-#else
-	const char* expect = "[ PeriodicHold = false; PeriodicRemove = false; "
-		"PeriodicRelease = true; OnExitHold = true; OnExitRemove = true ]";
-	const int absent_mask = 0;
-#endif
 	emit_input_header();
 	emit_param("ClassAd", "%s", input);
 	emit_output_expected_header();

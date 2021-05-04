@@ -838,15 +838,9 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 	bool ret_val = false;
 
 	converted_ad = job->src_ad;
-#ifdef USE_NON_MUTATING_USERPOLICY
 	user_policy.Init();
 
 	action = user_policy.AnalyzePolicy(converted_ad, PERIODIC_ONLY);
-#else
-	user_policy.Init(&converted_ad);
-
-	action = user_policy.AnalyzePolicy(PERIODIC_ONLY);
-#endif
 
 	user_policy.FiringReason(reason,reason_code,reason_subcode);
 	if ( reason == "" ) {
