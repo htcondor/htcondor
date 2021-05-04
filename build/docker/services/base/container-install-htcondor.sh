@@ -106,7 +106,7 @@ elif [[ $OS_ID == ubuntu ]]; then
     if [[ $HTCONDOR_SERIES = 8.9 ]]; then
         wget -qO - "https://research.cs.wisc.edu/htcondor/ubuntu/HTCondor-Release.gpg.key" | apt-key add -
     else
-        wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-$SERIES-Key" | apt-key add -
+        wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${HTCONDOR_SERIES}-Key" | apt-key add -
     fi
     set +o pipefail
 
