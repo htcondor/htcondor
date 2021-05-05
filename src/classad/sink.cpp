@@ -30,6 +30,7 @@ using namespace std;
 
 namespace classad {
 
+static References reserved_words { "error", "false", "is", "isnt", "parent", "true", "undefined" };
 static bool identifierNeedsQuoting( const string & );
 
 
@@ -772,6 +773,9 @@ identifierNeedsQuoting( const string &str )
 		// needs quoting if we found a special character
 		// before the end of the string.
 		needs_quoting =  !(*ch == '\0' );
+	}
+	if( reserved_words.find(str) != reserved_words.end() ) {
+		needs_quoting = true;
 	}
 	return needs_quoting;
 }
