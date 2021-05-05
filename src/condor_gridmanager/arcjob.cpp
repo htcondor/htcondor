@@ -983,7 +983,7 @@ bool ArcJob::buildJobADL()
 
 	//Start off the ADL and start the <Application> element
 	RSL = "<?xml version=\"1.0\"?>";
-	RSL += "<ActivityDescription xmlns=\"http://www.eu-emi.eu/es/2010/12/adl\">";
+	RSL += "<ActivityDescription xmlns=\"http://www.eu-emi.eu/es/2010/12/adl\" xmlns:ng-adl=\"http://www.nordugrid.org/es/2011/12/nordugrid-adl\">";
 	RSL += "<Application>";
 
 	//We're assuming all job clasads have a command attribute
@@ -1123,9 +1123,9 @@ bool ArcJob::buildJobADL()
 
 	// Now handle the <DataStaging> element.
 	RSL += "<DataStaging>";
-	RSL += "<DelegationID>";
+	RSL += "<ng-adl:DelegationID>";
 	RSL += escapeXML(delegationId);
-	RSL += "</DelegationID>";
+	RSL += "</ng-adl:DelegationID>";
 
 	stage_list = buildStageInList();
 
