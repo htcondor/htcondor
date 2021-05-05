@@ -26,6 +26,16 @@ New Features:
   to quietly ignore the requested accounting group instead.
   :jira:`426`
 
+- Added the OpenBLAS environment variable ``OPENBLAS_NUM_THREADS`` to the list
+  of environment variables exported by the *condor_starter* per these
+  `recommendations <https://github.com/xianyi/OpenBLAS/wiki/faq#how-can-i-use-openblas-in-multi-threaded-applications>`_.
+  :jira:`444`
+
+- HTCondor now parses ``/usr/share/condor/config.d/`` for configuration before
+  ``/etc/condor/config.d``, so that packagers have a convenient place to adjust
+  the HTCondor configuration.
+  :jira:`45`
+
 Bugs Fixed:
 
 - Fixed a bug in the implementation of the submit commands ``max_retries``
