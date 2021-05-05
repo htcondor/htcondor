@@ -54,7 +54,7 @@
 #define GM_EXIT_INFO			15
 #define GM_RECOVER_QUERY		16
 #define GM_START				17
-#define GM_CANCEL_COMMIT		18
+#define GM_CANCEL_CLEAN			18
 #define GM_DELEGATE_PROXY		19
 
 static const char *GMStateNames[] = {
@@ -76,7 +76,7 @@ static const char *GMStateNames[] = {
 	"GM_EXIT_INFO",
 	"GM_RECOVER_QUERY",
 	"GM_START",
-	"GM_CANCEL_COMMIT",
+	"GM_CANCEL_CLEAN",
 	"GM_DELEGATE_PROXY",
 };
 
@@ -178,6 +178,8 @@ BaseJob *ArcJobCreate( ClassAd *jobad )
 int ArcJob::submitInterval = 300;	// default value
 int ArcJob::gahpCallTimeout = 300;	// default value
 int ArcJob::maxConnectFailures = 3;	// default value
+// If ARC_JOB_INFO retruns stale data, how long to wait before retrying
+int ArcJob::jobInfoInterval = 60;
 
 ArcJob::ArcJob( ClassAd *classad )
 	: BaseJob( classad )
@@ -194,6 +196,7 @@ ArcJob::ArcJob( ClassAd *classad )
 	enteredCurrentGmState = time(NULL);
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
+	lastJobInfoTime = 0;
 	resourceManagerString = NULL;
 	jobProxy = NULL;
 	myResource = NULL;
@@ -619,37 +622,57 @@ void ArcJob::doEvaluateState()
 		case GM_EXIT_INFO: {
 			std::string reply;
 
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_CANCEL_CLEAN;
+				break;
+			}
 			// The job info is not always immediately available, especially
 			// for a failed job.
-			if ( now < enteredCurrentGmState + 60 ) {
-				daemonCore->Reset_Timer( evaluateStateTid, (enteredCurrentGmState + 60) - now );
+			if ( now < lastJobInfoTime + jobInfoInterval ) {
+				daemonCore->Reset_Timer( evaluateStateTid, (lastJobInfoTime + jobInfoInterval) - now );
 				break;
 			}
 			rc = gahp->arc_job_info( resourceManagerString, remoteJobId, reply );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
-			} else if ( rc != HTTP_200_OK ) {
+			}
+			lastJobInfoTime = time(NULL);
+			if ( rc != HTTP_200_OK ) {
 				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) exit info gathering failed: %s\n",
 						 procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_CANCEL;
-			} else {
+			}
+
+			if ( reply.empty() ) {
+				errorString = "Job exit information missing";
+				dprintf( D_ALWAYS, "(%d.%d) exit info missing\n",
+				         procID.cluster, procID.proc );
+				gmState = GM_CANCEL;
+				break;
+			}
+			std::string val;
+			ClassAd info_ad;
+			classad::ClassAdParser parser;
+			if ( ! parser.ParseClassAd(reply, info_ad, true) ) {
+				errorString = "Job exit information invalid format";
+				dprintf( D_ALWAYS, "(%d.%d) Job exit info invalid: %s\n",
+				         procID.cluster, procID.proc, reply.c_str() );
+				gmState = GM_CANCEL_CLEAN;
+				break;
+			}
+
+			if ( info_ad.Lookup("EndTime") == NULL ) {
+				dprintf(D_FULLDEBUG, "(%d.%d) Job info is stale, will retry in %ds.\n", procID.cluster, procID.proc, jobInfoInterval);
+				daemonCore->Reset_Timer( evaluateStateTid, (lastJobInfoTime + jobInfoInterval) - now );
+				break;
+			}
+
+			if ( remoteJobState == REMOTE_STATE_FINISHED ) {
 				int exit_code = 0;
 				int wallclock = 0;
 				int cpu = 0;
-				if ( reply.empty() ) {
-					errorString = "Job exit information missing";
-					dprintf( D_ALWAYS, "(%d.%d) exit info missing\n",
-							 procID.cluster, procID.proc );
-					gmState = GM_CANCEL;
-					break;
-				}
-				std::string val;
-				ClassAd info_ad;
-				classad::ClassAdParser parser;
-				parser.ParseClassAd(reply, info_ad, true);
-
 				if ( info_ad.LookupString("ExitCode", val ) ) {
 					exit_code = atoi(val.c_str());
 				}
@@ -667,6 +690,13 @@ void ArcJob::doEvaluateState()
 				jobAd->Assign( ATTR_ON_EXIT_CODE, exit_code );
 				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock * 60.0 );
 				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu * 60.0 );
+				gmState = GM_STAGE_OUT;
+			} else {
+				if ( info_ad.LookupString("Error", val) ) {
+					errorString = "ARC job failed: " + val;
+				} else {
+					errorString = "ARC job failed for unknown reason";
+				}
 				gmState = GM_STAGE_OUT;
 			}
 			} break;
@@ -698,11 +728,16 @@ void ArcJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			} else if ( rc != HTTP_200_OK ) {
-				formatstr(errorString, "File stage-out failed: %s",
-				          gahp->getErrorString());
-				dprintf( D_ALWAYS, "(%d.%d) %s\n",
-				         procID.cluster, procID.proc, errorString.c_str() );
+				// If the ARC job failed, we want to keep that error message
+				if ( remoteJobState == REMOTE_STATE_FINISHED || errorString.empty() ) {
+					formatstr(errorString, "File stage-out failed: %s",
+				              gahp->getErrorString());
+				}
+				dprintf( D_ALWAYS, "(%d.%d) File stage-out failed: %s\n",
+				         procID.cluster, procID.proc, gahp->getErrorString() );
 				gmState = GM_HOLD;
+			} else if ( remoteJobState != REMOTE_STATE_FINISHED ) {
+				gmState = GM_CANCEL_CLEAN;
 			} else {
 				gmState = GM_DONE_SAVE;
 			}
@@ -749,7 +784,7 @@ void ArcJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			} else if ( rc == HTTP_202_ACCEPTED ) {
-				gmState = GM_CANCEL_COMMIT;
+				gmState = GM_CANCEL_CLEAN;
 			} else {
 				// What to do about a failed cancel?
 				errorString = gahp->getErrorString();
@@ -758,7 +793,7 @@ void ArcJob::doEvaluateState()
 				gmState = GM_FAILED;
 			}
 			} break;
-		case GM_CANCEL_COMMIT: {
+		case GM_CANCEL_CLEAN: {
 			rc = gahp->arc_job_clean( resourceManagerString, remoteJobId );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -780,7 +815,7 @@ void ArcJob::doEvaluateState()
 				gmState = GM_DELETE;
 			} else {
 				SetRemoteJobId( NULL );
-				gmState = GM_CLEAR_REQUEST;
+				gmState = GM_HOLD;
 			}
 			} break;
 		case GM_DELETE: {
@@ -894,21 +929,17 @@ void ArcJob::doEvaluateState()
 
 				// Set the hold reason as best we can
 				// TODO: set the hold reason in a more robust way.
-				char holdReason[1024];
-				holdReason[0] = '\0';
-				holdReason[sizeof(holdReason)-1] = '\0';
-				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-									 sizeof(holdReason) );
-				if ( holdReason[0] == '\0' && errorString != "" ) {
-					strncpy( holdReason, errorString.c_str(),
-							 sizeof(holdReason) - 1 );
+				std::string holdReason;
+				jobAd->LookupString( ATTR_HOLD_REASON, holdReason );
+				if ( holdReason.empty() && errorString != "" ) {
+					holdReason = errorString;
 				}
-				if ( holdReason[0] == '\0' ) {
-					strncpy( holdReason, "Unspecified gridmanager error",
-							 sizeof(holdReason) - 1 );
+				if ( holdReason.empty() ) {
+					holdReason = "Unspecified gridmanager error";
+
 				}
 
-				JobHeld( holdReason );
+				JobHeld( holdReason.c_str() );
 			}
 			gmState = GM_DELETE;
 			} break;
@@ -981,7 +1012,7 @@ bool ArcJob::buildJobADL()
 	GetRemoteStdoutNames( remote_stdout_name, remote_stderr_name );
 
 	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) != 1 ) {
-		errorString = "ATTR_JOB_IWD not defined";
+		formatstr(errorString, "%s not defined", ATTR_JOB_IWD);
 		RSL.clear();
 		return false;
 	}
