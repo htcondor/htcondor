@@ -425,6 +425,11 @@ void ArcJob::doEvaluateState()
 				gmState = GM_UNSUBMITTED;
 				break;
 			}
+			if ( ! delegationId.empty() ) {
+				gmState = GM_SUBMIT;
+				break;
+			}
+
 			std::string deleg_id;
 
 			rc = gahp->arc_delegation_new( resourceManagerString,
@@ -538,28 +543,33 @@ void ArcJob::doEvaluateState()
 					}
 				}
 			}
-			rc = gahp->arc_job_stage_in( resourceManagerString, remoteJobId,
+			if ( stageList->isEmpty() ) {
+				rc = HTTP_200_OK;
+			} else {
+				rc = gahp->arc_job_stage_in( resourceManagerString, remoteJobId,
 									   *stageList );
+			}
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			} else if ( rc != HTTP_200_OK && rc != HTTP_201_CREATED ) {
-				errorString = gahp->getErrorString();
-				dprintf( D_ALWAYS, "(%d.%d) file stage in failed: %s\n",
-						 procID.cluster, procID.proc, errorString.c_str() );
+				formatstr(errorString, "File stage-in failed: %s",
+				          gahp->getErrorString());
+				dprintf( D_ALWAYS, "(%d.%d) %s\n",
+				         procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_CANCEL;
 			} else {
 				gmState = GM_SUBMITTED;
 			}
 			} break;
 		case GM_SUBMITTED: {
-			if ( remoteJobState == REMOTE_STATE_FINISHED ||
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_CANCEL;
+			} else if ( remoteJobState == REMOTE_STATE_FINISHED ||
 				 remoteJobState == REMOTE_STATE_FAILED ||
 				 remoteJobState == REMOTE_STATE_KILLED ||
 				 remoteJobState == REMOTE_STATE_WIPED ) {
 					gmState = GM_EXIT_INFO;
-			} else if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_CANCEL;
 			} else {
 				if ( lastProbeTime < enteredCurrentGmState ) {
 					lastProbeTime = enteredCurrentGmState;
@@ -609,6 +619,12 @@ void ArcJob::doEvaluateState()
 		case GM_EXIT_INFO: {
 			std::string reply;
 
+			// The job info is not always immediately available, especially
+			// for a failed job.
+			if ( now < enteredCurrentGmState + 60 ) {
+				daemonCore->Reset_Timer( evaluateStateTid, (enteredCurrentGmState + 60) - now );
+				break;
+			}
 			rc = gahp->arc_job_info( resourceManagerString, remoteJobId, reply );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -668,22 +684,25 @@ void ArcJob::doEvaluateState()
 					if ( IsUrl( file ) ) {
 						stageList->deleteCurrent();
 						stageLocalList->deleteCurrent();
-				}
+					}
 				}
 			}
-			rc = gahp->arc_job_stage_out( resourceManagerString,
+			if ( stageList->isEmpty() ) {
+				rc = HTTP_200_OK;
+			} else {
+				rc = gahp->arc_job_stage_out( resourceManagerString,
 										 remoteJobId,
 										 *stageList, *stageLocalList );
+			}
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			} else if ( rc != HTTP_200_OK ) {
-				errorString = gahp->getErrorString();
-				dprintf( D_ALWAYS, "(%d.%d) file stage out failed: %s\n",
-						 procID.cluster, procID.proc, errorString.c_str() );
-				dprintf( D_ALWAYS, "(%d.%d) retrying with old stdout/err names\n",
-						 procID.cluster, procID.proc );
-				gmState = GM_CANCEL;
+				formatstr(errorString, "File stage-out failed: %s",
+				          gahp->getErrorString());
+				dprintf( D_ALWAYS, "(%d.%d) %s\n",
+				         procID.cluster, procID.proc, errorString.c_str() );
+				gmState = GM_HOLD;
 			} else {
 				gmState = GM_DONE_SAVE;
 			}
@@ -954,7 +973,7 @@ bool ArcJob::buildJobADL()
 	std::string remote_stderr_name;
 	std::string resources;
 	std::string slot_req;
-	int int_value;
+	long int_value;
 	char *file;
 
 	RSL.clear();
@@ -1077,7 +1096,7 @@ bool ArcJob::buildJobADL()
 	if ( jobAd->LookupInteger(ATTR_REQUEST_MEMORY, int_value) &&
 	     resources.find("<IndividualPhysicalMemory>") == std::string::npos ) {
 		resources += "<IndividualPhysicalMemory>";
-		resources += std::to_string(int_value);
+		resources += std::to_string(int_value*1024*1024);
 		resources += "</IndividualPhysicalMemory>";
 	}
 
