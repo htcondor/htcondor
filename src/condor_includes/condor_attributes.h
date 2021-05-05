@@ -519,6 +519,7 @@
 #define ATTR_NODE  "Node"
 #define ATTR_NORDUGRID_RSL  "NordugridRSL"
 #define ATTR_ARC_RSL  "ArcRSL"
+#define ATTR_ARC_RTE  "ArcRte"
 #define ATTR_ARC_RESOURCES  "ArcResources"
 #define ATTR_NOTIFY_USER  "NotifyUser"
 #define ATTR_NT_DOMAIN  "NTDomain"
