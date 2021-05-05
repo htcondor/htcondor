@@ -610,6 +610,7 @@ bool HttpRequest::SendRequest()
 	}
 
 	if( response_code < 200 || response_code > 299 ) {
+		this->errorCode = std::to_string(response_code);
 		ExtractErrorMessage( responseBody, this->errorMessage );
 		if( this->errorMessage.empty() ) {
 			formatstr( this->errorMessage, "HTTP response was %lu, not 2XX, and no error message was returned.", response_code );
@@ -1149,6 +1150,10 @@ bool ArcJobStageInWorkerFunction(GahpRequest *gahp_request)
  	put_request.requestMethod = "PUT";
 	put_request.proxyFile = gahp_request->m_proxy_file;
 
+	// If we're giving 0 files to transfer, just fake a successful result.
+	put_request.errorCode = "200";
+	put_request.errorMessage = "OK";
+
 	for ( int i = 5; i < cnt + 5; i++ ) {
 		put_request.serviceURL = fillURL(argv[2]);
 		formatstr_cat(put_request.serviceURL, "/jobs/%s/session/%s", argv[3], condor_basename(argv[i]));
@@ -1201,6 +1206,10 @@ bool ArcJobStageOutWorkerFunction(GahpRequest *gahp_request)
 	HttpRequest get_request;
  	get_request.requestMethod = "GET";
 	get_request.proxyFile = gahp_request->m_proxy_file;
+
+	// If we're giving 0 files to transfer, just fake a successful result.
+	get_request.errorCode = "200";
+	get_request.errorMessage = "OK";
 
 	for ( int i = 5; i < (2*cnt + 5); i += 2 ) {
 		get_request.serviceURL = fillURL(argv[2]);
