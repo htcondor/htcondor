@@ -654,7 +654,7 @@ void ArcJob::doEvaluateState()
 			}
 			std::string val;
 			ClassAd info_ad;
-			classad::ClassAdParser parser;
+			classad::ClassAdJsonParser parser;
 			if ( ! parser.ParseClassAd(reply, info_ad, true) ) {
 				errorString = "Job exit information invalid format";
 				dprintf( D_ALWAYS, "(%d.%d) Job exit info invalid: %s\n",

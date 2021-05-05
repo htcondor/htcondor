@@ -226,6 +226,7 @@ bool HttpRequest::SendRequest()
 	FILE *out_fp = NULL;
 
 	this->responseBody.clear();
+	this->errorMessage.clear();
 
 	// Generate the final URI.
 	// TODO Eliminate this copy if we always use the serviceURL unmodified
@@ -1100,7 +1101,7 @@ bool ArcJobInfoWorkerFunction(GahpRequest *gahp_request)
 	std::vector<std::string> result_args;
 	result_args.push_back("");
 
-	classad::ClassAdUnParser unparser;
+	classad::ClassAdJsonUnParser unparser;
 	if ( argc == 5 ) {
 		classad::References refs;
 		Tokenize(argv[4]);

@@ -902,7 +902,7 @@
             <info> <CRLF>
 
         * info = the ComputingActivity element of the job info response,
-                 represented as a ClassAd
+                 represented in JSON
 
     -----------------------------------------------
 
