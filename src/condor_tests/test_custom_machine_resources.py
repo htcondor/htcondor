@@ -39,10 +39,10 @@ NUM_PERIODS = 3
             "NUM_SLOTS": "16",
             "ADVERTISE_CMR_UPTIME_SECONDS": "TRUE",
             "MACHINE_RESOURCE_INVENTORY_XXX": "$(TEST_DIR)/discovery.py",
-            "STARTD_CRON_XXX_MONITOR_EXECUTABLE": "$(TEST_DIR)/monitor.py",
             "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) XXX_MONITOR",
-            "STARTD_CRON_XXX_MONITOR_MODE": "periodic",
-            "STARTD_CRON_XXX_MONITOR_PERIOD": str(MONITOR_PERIOD),
+            "STARTD_CRON_XXX_MONITOR_MODE": "WaitForExit",
+            "STARTD_CRON_XXX_MONITOR_PERIOD": "1",
+            "STARTD_CRON_XXX_MONITOR_EXECUTABLE": "$(TEST_DIR)/monitor.py",
             "STARTD_CRON_XXX_MONITOR_METRICS": "SUM:XXX",
         }
     }
@@ -72,19 +72,20 @@ def discovery_script(resources):
 @config
 def monitor_script(resources):
     return format_script(
-        "#!/usr/bin/python3\n"
-        + "".join(
+        "#!/usr/bin/python3\n" +
+        "import time\n" +
+        "while True:\n" +
+        textwrap.indent("".join(
             textwrap.dedent(
-                """
+            """
             print('SlotMergeConstraint = StringListMember( "{name}", AssignedXXX )')
             print('UptimeXXXSeconds = {increment}')
-            print('- {name}')
-            """.format(
-                    name=name, increment=increment
-                )
+            print('- {name}', flush=True)
+            """.format(name=name, increment=increment)
             )
             for name, increment in resources.items()
-        )
+        ), "    ") +
+           "    "  + "time.sleep(5)\n"
     )
 
 
@@ -283,6 +284,7 @@ class TestCustomMachineResources:
         # ----------------------------------------------------------------
         # (monitor period * (number of periods+1)) +/- (number of periods)
         #
+        # In some cases we can actually get one fewer period than expected!
 
         print() # If we actually see the output, we'll need the line break.
         all_options = []
@@ -303,9 +305,6 @@ class TestCustomMachineResources:
                 )
             )
 
-            # In practice, we've never had to check for more than
-            # (net) period being long or short.  We can adjust if
-            # we ever do see one.
             exact = [fractions.Fraction(increment, MONITOR_PERIOD)]
             dither_periods = [
                 fractions.Fraction(
