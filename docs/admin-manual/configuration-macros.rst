@@ -7745,9 +7745,12 @@ These macros affect the *condor_gridmanager*.
     defined.
 
 :macro-def:`NORDUGRID_GAHP`
-    The complete path and file name of the wrapper script that invokes
-    the NorduGrid GAHP executable. The default value is
-    ``$(SBIN)``/nordugrid_gahp.
+    The complete path and file name of the NorduGrid GAHP executable.
+    The default value is ``$(SBIN)``/nordugrid_gahp.
+
+:macro-def:`ARC_GAHP`
+    The complete path and file name of the ARC GAHP executable.
+    The default value is ``$(SBIN)``/arc_gahp.
 
 :macro-def:`SGE_GAHP`
     The complete path and file name of the SGE GAHP executable. The use
