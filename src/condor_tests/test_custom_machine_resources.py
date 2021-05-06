@@ -175,7 +175,10 @@ class TestCustomMachineResources:
         # if a slot doesn't have a resource, it simply has no entry in its ad
         assert len([ad for ad in result if "AssignedXXX" in ad]) == num_resources
 
-    def test_correct_uptimes_from_monitor(self, condor, resources):
+    #
+    # See HTCONDOR-472 for an extended discussion.
+    #
+    def test_correct_uptimes_from_monitor(self, condor, resources, handle):
         direct = condor.direct_status(
             htcondor.DaemonTypes.Startd,
             htcondor.AdTypes.Startd,
@@ -196,7 +199,7 @@ class TestCustomMachineResources:
         # emitted by the monitor script
         assert any(
             {multiplier * u for u in resources.values()} == measured_uptimes
-            for multiplier in range(1000)
+            for multiplier in range(2, 100)
         )
 
     def test_never_more_jobs_running_than_num_resources(
@@ -250,128 +253,3 @@ class TestCustomMachineResources:
         )
 
         assert jobid_to_usage_via_ad == jobid_to_usage_via_event
-
-    def test_reported_usage_in_job_ads_makes_sense(self, handle, resources):
-        ads = handle.query(
-            projection=[
-                "ClusterID",
-                "ProcID",
-                "AssignedXXX",
-                "XXXAverageUsage",
-                "RemoteWallClockTime",
-            ]
-        )
-
-        # Here's the deal: XXXAverageUsage is
-        #
-        #   (increment amount * number of periods)
-        # -----------------------------------------
-        #    (monitor period * number of periods)
-        #
-        # BUT in practice, you usually get the monitor period wrong by a
-        # second due to rounding.  What we observe is that very often,
-        # some increments will be a second longer or shorter
-        # than the increment period.  So we could get something like
-        #
-        #          (increment amount * number of periods)
-        # -----------------------------------------------------------
-        # (monitor period * number of periods) +/- (number of periods)
-        #
-        # The other complication is that we could get one more increment
-        # than expected.  So we could something like
-        #
-        #          (increment amount * (number of periods + 1))
-        # ----------------------------------------------------------------
-        # (monitor period * (number of periods+1)) +/- (number of periods)
-        #
-        # In some cases we can actually get one fewer period than expected!
-
-        print() # If we actually see the output, we'll need the line break.
-        all_options = []
-        for ad in ads:
-            increment = resources[ad["AssignedXXX"]]
-            usage = fractions.Fraction(float(ad["XXXAverageUsage"])).limit_denominator(
-                30
-            )
-
-            print(
-                "Job {}.{}, resource {}, increment {}, usage {} ({})".format(
-                    ad["ClusterID"],
-                    ad["ProcID"],
-                    ad["AssignedXXX"],
-                    increment,
-                    usage,
-                    float(usage),
-                )
-            )
-
-            exact = [fractions.Fraction(increment, MONITOR_PERIOD)]
-            dither_periods = [
-                fractions.Fraction(
-                    increment * NUM_PERIODS,
-                    ((MONITOR_PERIOD * NUM_PERIODS) + extra_periods),
-                )
-                # range() is not inclusive.
-                for extra_periods in range(-2, +3 + 1)
-            ]
-            extra_period = [
-                fractions.Fraction(
-                    increment * (NUM_PERIODS + 1),
-                    ((MONITOR_PERIOD * (NUM_PERIODS + 1)) + extra_periods),
-                )
-                # range is not inclusive
-                for extra_periods in range(-2, +3 + 1)
-            ]
-            two_extra_period = [
-                fractions.Fraction(
-                    increment * (NUM_PERIODS + 2),
-                    ((MONITOR_PERIOD * (NUM_PERIODS + 2)) + extra_periods),
-                )
-                # range is not inclusive
-                for extra_periods in range(-2, +3 + 1)
-            ]
-            missed_period = [
-                fractions.Fraction(
-                    increment * (NUM_PERIODS - 1),
-                    ((MONITOR_PERIOD * (NUM_PERIODS - 1)) + extra_periods),
-                )
-                # range is not inclusive
-                for extra_periods in range(-2, +3 + 1)
-            ]
-
-            print(
-                "*" if usage in exact else " ",
-                "exact".ljust(25),
-                ",".join(str(f) for f in exact),
-            )
-            print(
-                "*" if usage in dither_periods else " ",
-                "dither periods".ljust(25),
-                ",".join(str(f) for f in dither_periods),
-            )
-            print(
-                "*" if usage in extra_period else " ",
-                "dither, extra increment".ljust(25),
-                ",".join(str(f) for f in extra_period),
-            )
-            print(
-                "*" if usage in two_extra_period else " ",
-                "dither, two extra increments".ljust(25),
-                ",".join(str(f) for f in two_extra_period),
-            )
-            print(
-                "*" if usage in missed_period else " ",
-                "dither, missed increment".ljust(25),
-                ",".join(str(f) for f in missed_period),
-            )
-            print()
-
-            # build the list of possibilities here, but delay assertions until we've printed all the debug messages
-            all_options.append(exact + dither_periods + extra_period + two_extra_period + missed_period)
-
-        assert all(
-            fractions.Fraction(float(ad["XXXAverageUsage"])).limit_denominator(30)
-            in options
-            for ad, options in zip(ads, all_options)
-        )
-
