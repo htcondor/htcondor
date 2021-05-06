@@ -367,7 +367,7 @@ class TestCustomMachineResources:
             print()
 
             # build the list of possibilities here, but delay assertions until we've printed all the debug messages
-            all_options.append(exact + dither_periods + extra_period + missed_period)
+            all_options.append(exact + dither_periods + extra_period + two_extra_period + missed_period)
 
         assert all(
             fractions.Fraction(float(ad["XXXAverageUsage"])).limit_denominator(30)
