@@ -57,33 +57,46 @@
               <Condition>RUNJOBS = "I" Or RUNJOBS = "C"</Condition>
             </Component>
             <Component Id="CondorConfigBase" Guid="9BEBF8B3-2A13-42B1-BA4C-1B24402D62CF">
-              <File Id="condor_config" Name="condor_config" Source="$(var.Source)\etc\condor_config.base" Checksum="no" />
+              <File Id="condor_config" Name="condor_config" Source="$(var.Source)\etc\condor_config.base" Checksum="no" >
+                <Permission User="Administrators" GenericAll="yes" />
+              </File>
+            </Component>
+            <Component Id="LocalConfigFile" Guid="829D8812-2B4D-4FE4-9C53-F99D9AACB91A">
+              <File Id="condor_config.local" Name="condor_config.local" Source="$(var.Source)\etc\condor_config.local.blank" Checksum="no" >
+                <Permission User="Administrators" GenericAll="yes" />
+              </File>
             </Component>
             <Component Id="CondorConfigIni" Guid="5AD8ADAA-A724-4D98-A64E-58C30F7AF4B5">
               <CreateFolder/> <!-- suppress warning about directory not being created -->
-              <IniFile Id="configIniPath" Directory="INSTALLDIR" Name="condor_config" Section="HTCONDOR" Action="addLine" Key="RELEASE_DIR" Value="[INSTALLDIR]" />
+              <IniFile Id="configIniPath" Directory="INSTALLDIR" Name="condor_config" Section="HTCONDOR" Action="addLine" Key="RELEASE_DIR" Value="[INSTALLDIR]." />
+              <!-- <RemoveFile Id="local_config" On="uninstall" Name="condor_config.local" /> -->
             </Component>
             <Directory Id="LogDir" Name="log">
               <Component Id="CreatingLogDir" Guid="F6731DF5-5E28-405F-82EC-5F269FD434E5" Permanent="no" NeverOverwrite="yes">
                 <CreateFolder />
+                <RemoveFile Id="LogFiles" On="uninstall" Name="*" />
               </Component>
             </Directory>
             <Directory Id="ExecuteDir" Name="execute">
               <Component Id="CreatingExecuteDir" Guid="389E40FD-5B03-4740-B42A-A9F81AEB853D" Permanent="no" NeverOverwrite="yes">
                 <CreateFolder />
+                <RemoveFile Id="SandboxFiles" On="uninstall" Name="*" />
               </Component>
             </Directory>
             <Directory Id="SpoolDir" Name="spool">
               <Component Id="CreatingSpoolDir" Guid="A1F2F929-7417-4C67-851C-1645D587540A" Permanent="no" NeverOverwrite="yes">
                 <CreateFolder />
+                <!-- <RemoveFile Id="SpoolFiles" On="uninstall" Name="*" /> -->
               </Component>
             </Directory>
             <Directory Id="TokenKeyDir" Name="tokens.sk">
               <Component Id="CreatingTokenKeyDir" Guid="C4EF0FB3-7741-4A31-A95C-8F1D407D56AE" Permanent="no" NeverOverwrite="yes">
                 <CreateFolder>
                    <Permission User="SYSTEM" GenericAll="yes" />
-                   <Permission User="Administrators" ReadPermission="yes" Traverse="yes" Synchronize="yes" CreateFile="yes" Delete="yes" />
+                   <!-- <Permission User="Administrators" ChangePermission="yes" ReadPermission="yes" Traverse="yes" Synchronize="yes" CreateFile="yes" Delete="yes" DeleteChild="yes" /> -->
+                   <Permission User="Administrators" GenericAll="yes" />
                 </CreateFolder>
+                <RemoveFile Id="LocalSigningKey" On="uninstall" Name="LOCAL" />
               </Component>
             </Directory>
             <Directory Id="TokenDir" Name="tokens.d">
@@ -91,6 +104,7 @@
                 <CreateFolder>
                    <Permission User="Administrators" GenericAll="yes" />
                 </CreateFolder>
+                <RemoveFile Id="AdminTokenFile" On="uninstall" Name="admin" />
               </Component>
             </Directory>
           </Directory>
@@ -253,8 +267,26 @@
         <SetProperty Id="PERLLOCATION" Value="[OLD_PERLLOCATION]" After="AppSearch">UPGRADEFOUND</SetProperty>
 
         <!-- Begin custom actions and install sequence -->
-        <CustomAction Id="CondorConfigLocal"
-                 Script="vbscript">
+        <CustomAction Id="SetInstallProbe"
+            Property="InstallProbe" Value="[INSTALLDIR]bin\win_install_probe.exe"
+            Execute="immediate"
+        />
+        <CustomAction Id="ProbeInstall"
+            Impersonate="no" Execute="deferred" Return="check"
+            Property="InstallProbe"
+            ExeCommand="-log [INSTALLDIR]probe.log -sid [UserSID]"
+         />
+        <CustomAction Id="SetInstallHelper"
+            Property="InstallHelper" Value="[INSTALLDIR]bin\win_install_helper.exe"
+            Execute="immediate"
+        />
+        <CustomAction Id="MakeAdminToken"
+            Impersonate="no" Execute="deferred" Return="check"
+            Property="InstallHelper"
+            ExeCommand="-config [INSTALLDIR]condor_config -sid [UserSID] -key LOCAL -token [INSTALLDIR]tokens.d\admin"
+         />
+
+         <CustomAction Id="EditCondorConfig" Script="vbscript">
           <![CDATA[
             Function CreateConfig()
               Set fso = CreateObject("Scripting.FileSystemObject")
@@ -272,23 +304,17 @@
            ]]>
         </CustomAction>
 
-    <!-- tj experiments 9.0.1
-        <CustomAction Id="MakeAdminToken"
-            Impersonate="no" Execute="deferred"
-            Return="check"
-            FileKey="fil52C9AA2969232F2E9EBA01AD91DC5976"
-            ExeCommand="-authz ADMINISTRATOR -sid [UserSID] -token Admin" 
-         />
-    -->
-
         <InstallExecuteSequence>
           <Custom Action="PreventDowngrade" After="FindRelatedProducts">NEWPRODUCTFOUND</Custom>
           <Custom Action="PreventUpgrade" After="FindRelatedProducts">TOOOLDFOUND</Custom>
           <Custom Action="AdminUserProp" After="FindRelatedProducts" >Not UPGRADEFOUND</Custom>
           <RemoveExistingProducts After="InstallValidate">UPGRADEFOUND</RemoveExistingProducts>
-          <Custom Action="CondorConfigLocal" After="InstallFinalize">Not Installed</Custom>
-          <!-- <Custom Action="MakeAdminToken" After="InstallFinalize">Not Installed</Custom> -->
-          <!-- <ScheduleReboot After="CondorConfigLocal" /> -->
+          <Custom Action="SetInstallHelper" After="InstallFiles">Not Installed</Custom>
+          <Custom Action="SetInstallProbe" After="InstallFiles">Not Installed</Custom>
+          <Custom Action="MakeAdminToken" After="SetInstallHelper">Not Installed</Custom>
+          <Custom Action="EditCondorConfig" After="InstallFinalize">Not Installed</Custom>
+          <!-- <Custom Action="ProbeInstall" After="SetInstallProbe">Not Installed</Custom> -->
+          <!-- <ScheduleReboot After="InstallFinalize" /> -->
         </InstallExecuteSequence>
 
         <InstallUISequence>
@@ -304,6 +330,7 @@
             <!-- Import any merge references -->
             @WIX_MERGE_REFS@
             <ComponentRef Id="CondorConfigBase" />
+            <ComponentRef Id="LocalConfigFile" />
             <ComponentRef Id="CondorConfigIni" />
             <ComponentRef Id="CondorRegNEnv" />
             <ComponentRef Id="CondorKBDDReg" />

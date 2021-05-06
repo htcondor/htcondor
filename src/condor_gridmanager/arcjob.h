@@ -53,6 +53,7 @@ class ArcJob : public BaseJob
 	static int submitInterval;
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
+	static int jobInfoInterval;
 
 	static void setSubmitInterval( int new_interval )
 		{ submitInterval = new_interval; }
@@ -69,6 +70,7 @@ class ArcJob : public BaseJob
 	time_t enteredCurrentGmState;
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
+	time_t lastJobInfoTime;
 
 	std::string errorString;
 	char *resourceManagerString;
