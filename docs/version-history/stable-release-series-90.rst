@@ -23,7 +23,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug that prevented docker universe jobs from running on machines
+  whose hostnames were longer than about 60 characters.
+  :jira:`473`
 
 Version 9.0.1
 -------------
