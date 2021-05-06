@@ -312,7 +312,7 @@ class TestCustomMachineResources:
                     ((MONITOR_PERIOD * NUM_PERIODS) + extra_periods),
                 )
                 # range() is not inclusive.
-                for extra_periods in range(-1, +3 + 1)
+                for extra_periods in range(-2, +3 + 1)
             ]
             extra_period = [
                 fractions.Fraction(
@@ -320,7 +320,7 @@ class TestCustomMachineResources:
                     ((MONITOR_PERIOD * (NUM_PERIODS + 1)) + extra_periods),
                 )
                 # range is not inclusive
-                for extra_periods in range(-1, +3 + 1)
+                for extra_periods in range(-2, +3 + 1)
             ]
             two_extra_period = [
                 fractions.Fraction(
@@ -328,7 +328,7 @@ class TestCustomMachineResources:
                     ((MONITOR_PERIOD * (NUM_PERIODS + 2)) + extra_periods),
                 )
                 # range is not inclusive
-                for extra_periods in range(-1, +3 + 1)
+                for extra_periods in range(-2, +3 + 1)
             ]
             missed_period = [
                 fractions.Fraction(
@@ -336,7 +336,7 @@ class TestCustomMachineResources:
                     ((MONITOR_PERIOD * (NUM_PERIODS - 1)) + extra_periods),
                 )
                 # range is not inclusive
-                for extra_periods in range(-1, +3 + 1)
+                for extra_periods in range(-2, +3 + 1)
             ]
 
             print(
