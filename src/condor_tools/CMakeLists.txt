@@ -90,7 +90,9 @@ endif(WINDOWS)
 condor_exe(condor_stats "stats.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 if( WINDOWS )
-	condor_exe(condor_setup "condor_setup.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+	# condor_exe(condor_setup "condor_setup.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+	condor_exe(win_install_helper "win_install_helper.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+	condor_exe(win_install_probe "win_install_probe.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 	condor_exe(condor_set_acls "condor_set_acls.c" ${C_BIN} "" OFF)
 endif()
 
