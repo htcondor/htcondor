@@ -1002,7 +1002,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 
 		// Read in the global file
 	if( config_source ) {
-		process_config_source( config_source, 0, "global config source", NULL, true );
+		process_config_source( config_source, 0, "global config source", NULL, !continue_if_no_config );
 		global_config_source = config_source;
 		config_source = NULL;
 	}
