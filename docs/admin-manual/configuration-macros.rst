@@ -8252,6 +8252,14 @@ General
     resulting in a significant improvement to the *condor_dagman* memory 
     footprint, parse time, and submit speed.
 
+:macro-def:`DAGMAN_PUT_FAILED_JOBS_ON_HOLD`
+    A boolean value that controls what happens when a job in a DAG fails.
+    When set to ``True``, *condor_dagman* will keep the job in the queue and
+    put it on hold. If the failure was due to a transient error (ie. a
+    temporary network outage), this gives users an opportunity to fix the
+    problem, release the job and continue their DAG execution. Defaults 
+    to ``False``.
+
 Throttling
 ''''''''''
 
