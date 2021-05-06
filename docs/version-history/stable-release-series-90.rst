@@ -38,6 +38,11 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where sending an updated proxy to an execute node could
+  cause the *condor_starter* to segfault when AES encryption was enabled
+  (which is the default).
+  :jira:`456`
+
 - Fixed a bug in the implementation of the submit commands ``max_retries``
   and ``success_exit_code`` which would cause jobs which exited on a
   signal to go on hold (instead of exiting or being retried).
