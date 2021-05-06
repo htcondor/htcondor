@@ -145,7 +145,7 @@ const char *escapeJSONString( const char *value )
 
 // From the body of a failure reply from the server, extract the best
 // human-readable error message.
-void ExtractErrorMessage( const string &response, string &err_msg )
+void ExtractErrorMessage( const string &response, int response_code, string &err_msg )
 {
 	string key;
 	string value;
@@ -157,6 +157,23 @@ void ExtractErrorMessage( const string &response, string &err_msg )
 			err_msg = value;
 			return;
 		}
+	}
+	switch (response_code) {
+	case 400:
+		err_msg = "Bad Request";
+		break;
+	case 401:
+		err_msg = "Unauthorized";
+		break;
+	case 403:
+		err_msg = "Forbidden";
+		break;
+	case 404:
+		err_msg = "Not Found";
+		break;
+	default:
+		formatstr(err_msg, "HTTP response %d", response_code);
+		break;
 	}
 }
 
@@ -612,7 +629,7 @@ bool HttpRequest::SendRequest()
 
 	if( response_code < 200 || response_code > 299 ) {
 		this->errorCode = std::to_string(response_code);
-		ExtractErrorMessage( responseBody, this->errorMessage );
+		ExtractErrorMessage( responseBody, response_code, this->errorMessage );
 		if( this->errorMessage.empty() ) {
 			formatstr( this->errorMessage, "HTTP response was %lu, not 2XX, and no error message was returned.", response_code );
 		}
@@ -1162,11 +1179,13 @@ bool ArcJobStageInWorkerFunction(GahpRequest *gahp_request)
 
 		// Send the request.
 		if( ! put_request.SendRequest() ) {
-		
-			// TODO Fix construction of error message
+
+			std::string err_msg;
+			formatstr(err_msg, "Transfer of %s failed: %s", condor_basename(argv[i]), put_request.errorMessage.c_str());
+
 			gahp_request->m_result = create_result_string( request_id,
 								put_request.errorCode,
-								put_request.errorMessage );
+								err_msg );
 			return true;
 		}
 	}
@@ -1220,10 +1239,12 @@ bool ArcJobStageOutWorkerFunction(GahpRequest *gahp_request)
 		// Send the request.
 		if( ! get_request.SendRequest() ) {
 		
-			// TODO Fix construction of error message
+			std::string err_msg;
+			formatstr(err_msg, "Transfer of %s failed: %s", condor_basename(argv[i+1]), get_request.errorMessage.c_str());
+
 			gahp_request->m_result = create_result_string( request_id,
 								get_request.errorCode,
-								get_request.errorMessage );
+								err_msg );
 			return true;
 		}
 	}
