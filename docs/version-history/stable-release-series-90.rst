@@ -27,13 +27,6 @@ Bugs Fixed:
   whose hostnames were longer than about 60 characters.
   :jira:`473`
 
-- Fixed bug where HTCondor would incorrectly use its cached view of the
-  system's process list, potentially for many polling cycles.  This bug
-  would manifest, for instance, as problems starting jobs, with the
-  ``condor_starter`` logging an error about being unable to register the
-  new job process (since it didn't exist in the old, cached view).
-  :jira:`194`
-
 Version 9.0.1
 -------------
 
