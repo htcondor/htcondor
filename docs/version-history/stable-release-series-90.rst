@@ -87,6 +87,10 @@ Bugs Fixed:
   the default of "scitokens:2.0" by setting ``LOCAL_ISSUER_TOKEN_VERSION``.
   :jira:`445`
 
+- Fixed several bugs that could result in the *condor_token_* tools aborting with
+  a c++ runtime error on newer versions of Linux.
+  :jira:`449`
+
 Version 9.0.0
 -------------
 
