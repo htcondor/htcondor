@@ -176,6 +176,52 @@ start_ssh () {
 
 }    
 
+
+ssh_get_output () {
+    # Execute a remote command via SSH and get its output; use markers to avoid
+    # getting extraneous output (e.g. from MOTDs)
+    # Important: you must pass a `--` before the command to separate it from
+    # the other arguments to SSH, e.g.
+    #
+    #   output=$(ssh_get_output -l $user $remote_host -- "uname -s")
+    #
+    local -a ssh_args command
+    local arg index=0
+    for arg; do
+        ((index++))
+        if [[ $arg == "--" ]]; then
+            break
+        else
+            ssh_args+=("$arg")
+        fi
+    done
+    shift $index
+    command=("$@")
+
+    local r=${RANDOM}
+    local begin_string=XXXBEGIN${r}XXX
+    local end_string=XXXEND${r}XXX
+
+    local bounded_output
+    bounded_output=$(ssh "${ssh_args[@]}" 'sh -c "
+    echo '$begin_string';
+    '"${command[*]}"'; ret=$?;
+    echo
+    echo '$end_string';
+    exit $ret
+    "'); ret=$?
+
+    awk '
+    BEGIN { output=0 }
+    /'$end_string'/ { exit }
+    output
+    /'$begin_string'/ { output=1 }
+    ' <<< "$bounded_output"
+
+    return $ret
+}
+
+
 ssh_upload_and_run () {
     # upload_and_run remote_host command start_dir
     # 1. remote host
@@ -190,13 +236,13 @@ ssh_upload_and_run () {
     # redirect stderr to /dev/null suppresses errors as well
     if [ "x$start_dir" == "xDEFAULT" ]; then
         # OS X mktemp requires a template
-        start_dir=`ssh $remote_host "mktemp -d /tmp/tmp_bosco_probe.XXXXXXXX" 2>/dev/null` 
+        start_dir=`ssh_get_output $remote_host -- "mktemp -d /tmp/tmp_bosco_probe.XXXXXXXX" 2>/dev/null`
     else
         ssh $remote_host "mkdir -p $start_dir" 
     fi
     scp $local_script $remote_host:$start_dir/bosco_run
-    cmd_out=`ssh -o ControlMaster=auto -o "ControlPath=$ssh_control_path" $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $@"  2>/dev/null`
-    #cmd_out=`ssh $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $4 $5 $6"`
+    cmd_out=`ssh_get_output -o ControlMaster=auto -o "ControlPath=$ssh_control_path" $remote_host -- "cd $start_dir; chmod +x bosco_run; ./bosco_run $@"  2>/dev/null`
+    #cmd_out=`ssh_get_output $remote_host -- "cd $start_dir; chmod +x bosco_run; ./bosco_run $4 $5 $6"`
     cmd_ec=$?
     if [ $cmd_ec -eq 0 ]; then
         # output only if successful
@@ -248,14 +294,13 @@ show_progress () {
 }
 
 
-
 ssh_find_remote () {
     # Find the platform of the remote host
     # 1. remote host
     remote_host=$1
 
     # Returns 'Darwin' for Mac OS X or 'Linux'
-    detect_os=`ssh $remote_host "uname -s"`
+    detect_os=`ssh_get_output $remote_host -- "uname -s"`
     [[ $? -eq 0 ]] || return 1
 
     case "$detect_os" in
@@ -279,7 +324,7 @@ ssh_detect_linux_distro () {
     # 1. remote host
     remote_host=$1
 
-    os_release=`ssh $remote_host "cat /etc/os-release" 2> /dev/null`
+    os_release=`ssh_get_output $remote_host -- "cat /etc/os-release" 2> /dev/null`
     [[ $? -eq 0 ]] || return 1
 
     dist=`echo "$os_release" | awk -F '=' '/^ID=/ {print $2}' | tr -d '"'`
