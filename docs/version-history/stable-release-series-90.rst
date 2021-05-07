@@ -36,6 +36,12 @@ New Features:
   the HTCondor configuration.
   :jira:`45`
 
+- Added a boolean option ``LOCAL_CREDMON_TOKEN_USE_JSON`` for the local issuer
+  *condor_credmon_oauth* that is used to decide whether or not the bare token
+  string in a generated access token file is wrapped in JSON. Default is
+  ``LOCAL_CREDMON_TOKEN_USE_JSON = true`` (wrap token in JSON).
+  :jira:`367`
+
 Bugs Fixed:
 
 - Fixed bug where HTCondor would incorrectly use its cached view of the
