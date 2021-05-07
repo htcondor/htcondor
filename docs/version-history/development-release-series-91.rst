@@ -33,6 +33,10 @@ New Features:
   fail and then release it, allowing the DAG execution to continue.
   :jira:`245`
 
+- On Linux machines with performance counter support, vanilla universe jobs
+  now report the number of machine instructions executed
+  :jira:`390`
+
 Bugs Fixed:
 
 - None.
