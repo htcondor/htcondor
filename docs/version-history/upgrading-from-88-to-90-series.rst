@@ -39,7 +39,7 @@ and thus are relying solely on host-based authentication (i.e. a list of
 allowed hostnames or IP addresses), you have three options:
 
 - **Option A**.  Use `get_htcondor` to reinstall your pool with a fresh
-  installation; see the `instructions <https://htcondor.readthedocs.io/getting-htcondor/index.html>`_.
+  installation; see the :doc:`instructions </getting-htcondor/index>`.
   The `get_htcondor` tool will configure your pool with our recommended
   security configuration for you.  Once it's done, you can copy your
   site-specific configuration from your old installation to the new
