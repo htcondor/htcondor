@@ -38,8 +38,8 @@ Release Notes:
 
 New Features:
 
-- When The ``AssignAccountingGroup`` configuration template is in effect
-  And a user submits a job with a requested accounting group that they are not
+- When the ``AssignAccountingGroup`` configuration template is in effect
+  and a user submits a job with a requested accounting group that they are not
   permitted to use, the submit will be rejected with an error message.
   This configuration template has a new optional second argument that can be used
   to quietly ignore the requested accounting group instead.
@@ -56,6 +56,13 @@ New Features:
   :jira:`45`
 
 Bugs Fixed:
+
+- Fixed bug where HTCondor would incorrectly use its cached view of the
+  system's process list, potentially for many polling cycles.  This bug
+  would manifest, for instance, as problems starting jobs, with the
+  ``condor_starter`` logging an error about being unable to register the
+  new job process (since it didn't exist in the old, cached view).
+  :jira:`194`
 
 - Fixed a bug where sending an updated proxy to an execute node could
   cause the *condor_starter* to segfault when AES encryption was enabled

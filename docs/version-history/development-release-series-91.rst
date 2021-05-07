@@ -42,6 +42,12 @@ New Features:
   knob DOCKER_PERFORM_TEST
   :jira:`325`
 
+- Added a new option in DAGMan to put failed jobs on hold and keep them in the
+  queue when :macro:`DAGMAN_PUT_FAILED_JOBS_ON_HOLD` is True. For some types
+  of transient failures, this allows users to fix whatever caused their job to
+  fail and then release it, allowing the DAG execution to continue.
+  :jira:`245`
+
 Bugs Fixed:
 
 - None.
