@@ -2339,7 +2339,7 @@ void PrintParam(const char * tmp)
 				raw_value = name_used;
 				//raw_value.upper_case();
 				raw_value += " = ";
-				raw_value += val;
+				raw_value += val ? val : "";
 			}
 			param_get_location(pmet, file_and_line);
 			if (pmet->ref_count) {
