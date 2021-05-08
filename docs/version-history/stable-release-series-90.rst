@@ -80,6 +80,7 @@ Bugs Fixed:
   :jira:`438`
   :jira:`433`
   :jira:`451`
+  :jira:`452`
 
 - Fixed a bug in the local issuer *condor_credmon_oauth* where SciTokens version
   2.0 tokens were being generated without an "aud" claim. The "aud" claim is now
