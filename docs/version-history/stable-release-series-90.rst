@@ -55,6 +55,12 @@ New Features:
   the HTCondor configuration.
   :jira:`45`
 
+- Added a boolean option ``LOCAL_CREDMON_TOKEN_USE_JSON`` for the local issuer
+  *condor_credmon_oauth* that is used to decide whether or not the bare token
+  string in a generated access token file is wrapped in JSON. Default is
+  ``LOCAL_CREDMON_TOKEN_USE_JSON = true`` (wrap token in JSON).
+  :jira:`367`
+
 Bugs Fixed:
 
 - Fixed bug where HTCondor would incorrectly use its cached view of the
@@ -93,12 +99,17 @@ Bugs Fixed:
   :jira:`438`
   :jira:`433`
   :jira:`451`
+  :jira:`452`
 
 - Fixed a bug in the local issuer *condor_credmon_oauth* where SciTokens version
   2.0 tokens were being generated without an "aud" claim. The "aud" claim is now
   set to ``LOCAL_ISSUER_TOKEN_AUDIENCE``. The "ver" claim can be changed from
   the default of "scitokens:2.0" by setting ``LOCAL_ISSUER_TOKEN_VERSION``.
   :jira:`445`
+
+- Fixed several bugs that could result in the *condor_token_* tools aborting with
+  a c++ runtime error on newer versions of Linux.
+  :jira:`449`
 
 Version 9.0.0
 -------------
