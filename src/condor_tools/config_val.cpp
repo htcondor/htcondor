@@ -2149,7 +2149,8 @@ void PrintMetaKnob(const char * metaval, bool expand, bool verbose)
 			printf("%s\n", line);
 		}
 		if (is_use && expand) {
-			std::string cat(toks.next()), remain;
+			const char *cat_str = toks.next();
+			std::string cat(cat_str ? cat_str : ""), remain;
 			int len, ix = toks.next_token(len);
 			if (ix > 0) { remain = line + ix; }
 			PrintExpandedMetaParams(cat.c_str(), remain.c_str(), verbose);
