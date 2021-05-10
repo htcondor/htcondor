@@ -2504,7 +2504,7 @@ tags=store_cred
 
 [SEC_TOKEN_SYSTEM_DIRECTORY]
 default=/etc/condor/tokens.d
-win32_default=
+win32_default=$(RELEASE_DIR)\tokens.d
 type=path
 tags=condor_auth_passwd
 
@@ -5175,6 +5175,10 @@ type=bool
 default=true
 type=bool
 
+[DOCKER_RUN_UNDER_INIT]
+default=true
+type=bool
+
 [DOCKER_TEST_IMAGE_PATH]
 default=$(LIBEXEC)/htcondor_docker_test
 type=string
@@ -5496,6 +5500,12 @@ default=$(SBIN)/AzureGAHPServer
 win32_default=$(SBIN)\AzureGAHPServer.py
 type=path
 
+[ARC_GAHP]
+default=$(SBIN)/arc_gahp
+
+[ARC_GAHP_LOG]
+default=/tmp/ArcGahpLog.$(USERNAME)
+
 [GAHP_SSL_CAFILE]
 default=
 type=path
@@ -5544,6 +5554,15 @@ type=path
 [LOCAL_CREDMON_TOKEN_USE_JSON]
 default=true
 type=bool
+
+[LOCAL_CREDMON_TOKEN_AUDIENCE]
+default=
+type=string
+
+[LOCAL_CREDMON_TOKEN_VERSION]
+default=scitokens:2.0
+type=string
+
 
 # standard API endpoints for common OAuth token providers
 [BOX_AUTHORIZATION_URL]
@@ -6534,6 +6553,7 @@ use role:execute
 ## Version-specific knobx.
 ##
 [$SECURITY.recommended_v9_0]
+description = default security config for 9.0 and later args:([service [, admins]])
 default: @end
 # Make it easy to detect if this metaknob was set.
 SECURITY_MODEL = 9.0
@@ -6548,9 +6568,9 @@ SEC_READ_AUTHENTICATION = OPTIONAL
 SEC_READ_ENCRYPTION = OPTIONAL
 SEC_READ_INTEGRITY = OPTIONAL
 
-ALLOW_ADMINISTRATOR = root@*, condor@*, condor_pool@*
-ALLOW_DAEMON = condor@*, condor_pool@*
-ALLOW_NEGOTIATOR = condor@*, condor_pool@*
+ALLOW_ADMINISTRATOR = $(1:condor)@* condor_pool@* $(2:root@*) $(3+)
+ALLOW_DAEMON = $(1:condor)@*  condor_pool@*
+ALLOW_NEGOTIATOR = $(1:condor)@* condor_pool@*
 ALLOW_WRITE = *
 ALLOW_READ = *
 @end

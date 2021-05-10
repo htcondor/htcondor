@@ -500,7 +500,7 @@ std::string convert_ipaddr_to_fake_hostname(const condor_sockaddr& addr)
 	std::string ret;
 	std::string default_domain;
 	if (!param(default_domain, "DEFAULT_DOMAIN_NAME")) {
-		dprintf(D_HOSTNAME,
+		dprintf(D_ALWAYS,
 				"NO_DNS: DEFAULT_DOMAIN_NAME must be defined in your "
 				"top-level config file\n");
 		return ret;
@@ -532,8 +532,8 @@ condor_sockaddr convert_fake_hostname_to_ipaddr(const std::string& fullname)
 	if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
 		std::string dotted_domain = ".";
 		dotted_domain += default_domain;
-		int pos = fullname.find(dotted_domain.c_str());
-		if (pos != -1) {
+		size_t pos = fullname.find(dotted_domain.c_str());
+		if (pos != std::string::npos) {
 			truncated = true;
 			hostname = fullname.substr(0, pos);
 		}

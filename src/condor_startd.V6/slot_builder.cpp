@@ -219,8 +219,16 @@ void initTypes( int max_types, StringList **type_strings, int except )
 		if (!tmp) {
 				continue;
 		}
+		//dprintf(D_ALWAYS, "reading SLOT_TYPE_%d=%s\n", i, tmp);
 		type_strings[i] = new StringList();
-		type_strings[i]->initializeFromString( tmp );
+		if (strchr(tmp, '\n')) {
+			type_strings[i]->initializeFromString(tmp, '\n');
+		} else {
+			type_strings[i]->initializeFromString(tmp);
+		}
+		//for (const char * str = type_strings[i]->first(); str != NULL; str = type_strings[i]->next()) {
+		//	dprintf(D_ALWAYS, "\t[%s]\n", str);
+		//}
 		free( tmp );
 	}
 }
@@ -338,12 +346,14 @@ const int UNSET_SHARE = -9998;
 
 CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list, int type, bool except )
 {
-    typedef CpuAttributes::slotres_map_t slotres_map_t;
+	typedef CpuAttributes::slotres_map_t slotres_map_t;
+	typedef CpuAttributes::slotres_constraint_map_t slotres_constraint_map_t;
 	double cpus = UNSET_SHARE;
 	int ram = UNSET_SHARE; // this is in MB so an int is enough
 	double disk_fraction = UNSET_SHARE;
 	double swap_fraction = UNSET_SHARE;
 	slotres_map_t slotres;
+	slotres_constraint_map_t slotres_req;
 	special_share_t default_share_special = SPECIAL_SHARE_AUTO;
 	double default_share = AUTO_SHARE;
 	bool allow_fractional_cpu = false;
@@ -361,7 +371,7 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
           slotres[j->first] = default_share;
       }
 
-	  return new CpuAttributes( m_attr, type, cpus, ram, AUTO_SHARE, AUTO_SHARE, slotres, execute_dir, partition_id );
+	  return new CpuAttributes( m_attr, type, cpus, ram, AUTO_SHARE, AUTO_SHARE, slotres, slotres_req, execute_dir, partition_id );
 	}
 		// For this parsing code, deal with the following example
 		// string list:
@@ -408,7 +418,8 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 			// Get the value for this attribute.  It'll either be a
 			// percentage, or it'll be a distinct value (in which
 			// case, parse_share_value() will return negative.
-        string val = attr_expr.substr(1+eqpos);
+		std::string val = attr_expr.substr(1+eqpos); trim(val);
+		std::string constr;
 		if (val.empty()) {
 			dprintf(D_ALWAYS, "Can't parse attribute \"%s\" in description of slot type %d\n",
 					attr_expr.c_str(), type);
@@ -417,6 +428,13 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 			} else {
 				return NULL;
 			}
+		}
+		string::size_type colonpos = val.find(':');
+		if (string::npos != colonpos) {
+			constr = val.substr(colonpos + 1);
+			trim(constr);
+			val = val.substr(0, colonpos);
+			trim(val);
 		}
 		special_share_t share_special = SPECIAL_SHARE_NONE;
 		double share = parse_share_value(val.c_str(), type, except, share_special);
@@ -427,6 +445,9 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 		slotres_map_t::const_iterator f(m_attr->machres().find(attr));
 		if (f != m_attr->machres().end()) {
 			slotres[f->first] = compute_local_resource(f->second, share);
+			if ( ! constr.empty()) {
+				slotres_req[f->first] = constr;
+			}
 			continue;
 		}
 
@@ -529,6 +550,6 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 	}
 
 		// Now create the object.
-	return new CpuAttributes( m_attr, type, cpus, ram, swap_fraction, disk_fraction, slotres, execute_dir, partition_id );
+	return new CpuAttributes( m_attr, type, cpus, ram, swap_fraction, disk_fraction, slotres, slotres_req, execute_dir, partition_id );
 }
 

@@ -8,8 +8,9 @@ REM
 if "%~1"=="" goto usage
 if "%~2"=="" goto usage
 
-set _ARCH_ARG=
+set _ARCH_ARG=-arch x64
 if "%~3"=="x64" set _ARCH_ARG=-arch x64
+if "%~3"=="x86" set _ARCH_ARG=
 
 set RUNEVAL=-sval
 if "%USERNAME%" == "" goto noruneval
@@ -26,7 +27,7 @@ rem echo %_WXS_FILES%
 rem echo %_WXS_FILES:.wxs=.wixobj%
 set _WIXOBJ_FILES=%_WXS_FILES:xml\=%
 
-heat dir %_condor_path% -ke -g1 -srd -gg -var var.Source -t:xml\condor.xsl -out "%~n2.wxs"
+heat dir %_condor_path% -ke -g1 -srd -sreg -gg -var var.Source -t xml\condor.xsl -out "%~n2.wxs"
 
 candle -ext WixFirewallExtension %_ARCH_ARG% -dSource=%_condor_path% "%~n2.wxs" %_WXS_FILES%
 
@@ -42,5 +43,5 @@ goto finis
 @echo  {msi_fullpath} is the full_path of the output package file
 @echo  for example {msi_fullpath} might be c:\scratch\temp\condor-7.5.5.msi
 @echo  .
-@echo  The optional last argument indicates the platform architecture, x86 is the default
+@echo  The optional last argument indicates the platform architecture, x64 is the default
 :finis

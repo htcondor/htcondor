@@ -34,9 +34,11 @@ LOCAL_CONFIG_FILE = $(LOCAL_DIR)/condor_config.local
 ##  If the local config file is not present, is it an error? (WARNING: This is a potential security issue.)
 #REQUIRE_LOCAL_CONFIG_FILE = true
 
-##  The normal way to do configuration with RPMs is to read all of the
+##  The normal way to do configuration with RPM and Debian packaging is to read all of the
 ##  files in a given directory that don't match a regex as configuration files.
 ##  Config files are read in lexicographic order.
+##  Multiple directories may be specified, separated by commas; directories
+##  are read in left-to-right order.
 LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config
 #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
 

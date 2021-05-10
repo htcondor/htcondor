@@ -217,10 +217,8 @@ orphanCallbackHandler()
 		return;
 	}
 
-	GlobusResource *next_resource;
-	GlobusResource::ResourcesByName.startIterations();
-
-	while ( GlobusResource::ResourcesByName.iterate( next_resource ) != 0 ) {
+	for (auto &elem : GlobusResource::ResourcesByName) {
+		GlobusResource *next_resource = elem.second;
 		if ( next_resource->monitorGramJobId && !strcmp( orphan->job_contact, next_resource->monitorGramJobId ) ) {
 			next_resource->gridMonitorCallback( orphan->state,
 												orphan->errorcode );
@@ -257,10 +255,8 @@ gramCallbackHandler( void * /* user_arg */, char *job_contact, int state,
 		return;
 	}
 
-	GlobusResource *next_resource;
-	GlobusResource::ResourcesByName.startIterations();
-
-	while ( GlobusResource::ResourcesByName.iterate( next_resource ) != 0 ) {
+	for (auto &elem : GlobusResource::ResourcesByName) {
+		GlobusResource *next_resource = elem.second;
 		if ( next_resource->monitorGramJobId && !strcmp( job_contact, next_resource->monitorGramJobId ) ) {
 			next_resource->gridMonitorCallback( state, errorcode );
 			return;
@@ -305,12 +301,8 @@ void GlobusJobReconfig()
 	GlobusResource::setGridMonitorDisableLength( tmp_int );
 
 	// Tell all the resource objects to deal with their new config values
-	GlobusResource *next_resource;
-
-	GlobusResource::ResourcesByName.startIterations();
-
-	while ( GlobusResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		next_resource->Reconfig();
+	for (auto &elem : GlobusResource::ResourcesByName) {
+		elem.second->Reconfig();
 	}
 }
 

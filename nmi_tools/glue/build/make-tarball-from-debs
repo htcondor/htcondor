@@ -131,6 +131,10 @@ mkdir -p tarball/var/lib/condor/execute
 mkdir -p tarball/var/lib/condor/oauth_credentials
 
 $cmd_dir/make-tarball-links tarball
+if [ $? -ne 0 ];then
+    echo 'ERROR: tarball link script failed'
+    exit 1
+fi
 $cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib'
 
 # Package final tarball

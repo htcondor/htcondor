@@ -127,12 +127,8 @@ void NordugridJobReconfig()
 	NordugridJob::setGahpCallTimeout( tmp_int );
 
 	// Tell all the resource objects to deal with their new config values
-	NordugridResource *next_resource;
-
-	NordugridResource::ResourcesByName.startIterations();
-
-	while ( NordugridResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		next_resource->Reconfig();
+	for (auto &elem : NordugridResource::ResourcesByName) {
+		elem.second->Reconfig();
 	}
 }
 

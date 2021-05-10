@@ -8,6 +8,25 @@ series.
 
 The details of each version are described below.
 
+Version 9.0.2
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.2 released on Month Date, 2021.
+
+- HTCondor version 9.0.2 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug that prevented docker universe jobs from running on machines
+  whose hostnames were longer than about 60 characters.
+  :jira:`473`
+
 Version 9.0.1
 -------------
 
@@ -19,9 +38,42 @@ Release Notes:
 
 New Features:
 
-- None.
+- When the ``AssignAccountingGroup`` configuration template is in effect
+  and a user submits a job with a requested accounting group that they are not
+  permitted to use, the submit will be rejected with an error message.
+  This configuration template has a new optional second argument that can be used
+  to quietly ignore the requested accounting group instead.
+  :jira:`426`
+
+- Added the OpenBLAS environment variable ``OPENBLAS_NUM_THREADS`` to the list
+  of environment variables exported by the *condor_starter* per these
+  `recommendations <https://github.com/xianyi/OpenBLAS/wiki/faq#how-can-i-use-openblas-in-multi-threaded-applications>`_.
+  :jira:`444`
+
+- HTCondor now parses ``/usr/share/condor/config.d/`` for configuration before
+  ``/etc/condor/config.d``, so that packagers have a convenient place to adjust
+  the HTCondor configuration.
+  :jira:`45`
+
+- Added a boolean option ``LOCAL_CREDMON_TOKEN_USE_JSON`` for the local issuer
+  *condor_credmon_oauth* that is used to decide whether or not the bare token
+  string in a generated access token file is wrapped in JSON. Default is
+  ``LOCAL_CREDMON_TOKEN_USE_JSON = true`` (wrap token in JSON).
+  :jira:`367`
 
 Bugs Fixed:
+
+- Fixed bug where HTCondor would incorrectly use its cached view of the
+  system's process list, potentially for many polling cycles.  This bug
+  would manifest, for instance, as problems starting jobs, with the
+  ``condor_starter`` logging an error about being unable to register the
+  new job process (since it didn't exist in the old, cached view).
+  :jira:`194`
+
+- Fixed a bug where sending an updated proxy to an execute node could
+  cause the *condor_starter* to segfault when AES encryption was enabled
+  (which is the default).
+  :jira:`456`
 
 - Fixed a bug in the implementation of the submit commands ``max_retries``
   and ``success_exit_code`` which would cause jobs which exited on a
@@ -35,6 +87,29 @@ Bugs Fixed:
 - Fixed a bug in the way ``AutoClusterAttrs`` was calculated that could
   in matchmaking ignoring attributes changed by ``job_machine_attrs``.
   :jira:`414`
+
+- Fixed a bug in *condor_submit* when a ``SEC_CREDENTIAL_PRODUCER`` was
+  configured that could result in *condor_submit* reporting that the
+  Queue statement of a submit file was missing or invalid.
+  :jira:`427`
+
+- Fixed some bugs that caused ``bosco_cluster --add`` to fail.
+  Allow ``remote_gahp`` to work with older Bosco installations via
+  the ``--rgahp-script`` option.
+  :jira:`438`
+  :jira:`433`
+  :jira:`451`
+  :jira:`452`
+
+- Fixed a bug in the local issuer *condor_credmon_oauth* where SciTokens version
+  2.0 tokens were being generated without an "aud" claim. The "aud" claim is now
+  set to ``LOCAL_ISSUER_TOKEN_AUDIENCE``. The "ver" claim can be changed from
+  the default of "scitokens:2.0" by setting ``LOCAL_ISSUER_TOKEN_VERSION``.
+  :jira:`445`
+
+- Fixed several bugs that could result in the *condor_token_* tools aborting with
+  a c++ runtime error on newer versions of Linux.
+  :jira:`449`
 
 Version 9.0.0
 -------------

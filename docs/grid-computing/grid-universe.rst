@@ -843,7 +843,12 @@ Advanced Resource Connector (ARC). See the NorduGrid web page
 (`http://www.nordugrid.org <http://www.nordugrid.org>`_) for more
 information about NorduGrid software.
 
-HTCondor jobs may be submitted to NorduGrid resources using the **grid**
+NorduGrid ARC supports multiple job submission interfaces.
+The **nordugrid** grid type uses their older gridftp-based interface,
+which is due to be retired. We recommend using the new REST-based
+interface, available via the grid type **arc**, documented below.
+
+HTCondor jobs may be submitted to NorduGrid ARC resources using the **grid**
 universe. The
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
 command specifies the name of the NorduGrid resource as follows:
@@ -873,6 +878,79 @@ format this submit description file command is
 .. code-block:: text
 
     nordugrid_rsl = (name=value)(name=value)
+
+The arc Grid Type
+-----------------------
+
+:index:`ARC CE`
+:index:`submitting jobs to ARC CE<single: submitting jobs to ARC CE; grid computing>`
+
+NorduGrid is a project to develop free grid middleware named the
+Advanced Resource Connector (ARC). See the NorduGrid web page
+(`http://www.nordugrid.org <http://www.nordugrid.org>`_) for more
+information about NorduGrid software.
+
+NorduGrid ARC supports multiple job submission interfaces.
+The **arc** grid type uses their new REST interface.
+
+HTCondor jobs may be submitted to ARC CE resources using the **grid**
+universe. The
+**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
+command specifies the name of the ARC CE service as follows:
+
+.. code-block:: text
+
+    grid_resource = arc https://arc.example.com:443/arex/rest/1.0
+
+Only the hostname portion of the URL is required.
+Appropriate defaults will be used for the other components.
+
+ARC uses X.509 credentials for authentication, usually in the form
+a proxy certificate. *condor_submit* looks in default locations for the
+proxy. The submit description file command
+**x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` may be
+used to give the full path name to the directory containing the proxy,
+when the proxy is not in a default location. If this optional command is
+not present in the submit description file, then the value of the
+environment variable ``X509_USER_PROXY`` is checked for the location of
+the proxy. If this environment variable is not present, then the proxy
+in the file ``/tmp/x509up_uXXXX`` is used, where the characters XXXX in
+this file name are replaced with the Unix user id.
+
+ARC CE allows sites to define Runtime Environment (RTE) labels that alter
+the environment in which a job runs.
+Jobs can request one or move of these labels.
+For example, the ``ENV/PROXY`` label makes the user's X.509 proxy
+available to the job when it executes.
+Some of these labels have optional parameters for customization.
+The submit description file command
+**arc_rte** :index:`arc_rte<single: arc_resources; submit commands>`
+can be used to request one of more of these labels.
+It is a comma-delimited list. If a label supports optional parameters, they
+can be provided after the label spearated by spaces.
+Here is an example showing use of two standard RTE labels, one with
+an optional parameter:
+
+.. code-block:: text
+
+    arc_rte = ENV/RTE,ENV/PROXY USE_DELEGATION_DB
+
+ARC CE uses ADL (Activity Description Language) syntax to describe jobs.
+The specification of the language can be found
+`here <https://www.nordugrid.org/documents/EMI-ES-Specification_v1.16.pdf>`_.
+HTCondor constructs an ADL description of the job based on attributes in
+the job ClassAd, but some ADL elements don't have an equivalent job ClassAd
+attribute.
+The submit description file command
+**arc_resources** :index:`arc_resoruces<single: arc_resources; submit commands>`
+can be used to specify these elements if they fall under the ``<Resources>``
+element of the ADL.
+The value should be a chunk of XML text that could be inserted inside the
+``<Resources>`` element. For example:
+
+.. code-block:: text
+
+    arc_resources = <NetworkInfo>gigabitethernet</NetworkInfo>
 
 The batch Grid Type (for PBS, LSF, SGE, and SLURM)
 --------------------------------------------------

@@ -1663,8 +1663,22 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
     configuration macros.
 
-COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit commands>`
+COMMANDS FOR THE GRID
 
+    :index:`arc_resources<single: arc_resources; submit commands>`
+ arc_resources = <XML-string>
+    For grid universe jobs of type **arc**, provides additional XML
+    attributes under the ``<Resources>`` section of the ARC ADL job
+    description which are not covered by regular submit description file
+    parameters.
+    :index:`arc_rte<single: arc_rte; submit commands>`
+ arc_rte = < rte1 option,rte2 >
+    For grid universe jobs of type **arc**, provides a list of Runtime
+    Environment names that the job requires on the ARC system.
+    The list is comma-delimited. If a Runtime Environment name supports
+    options, those can be provided after the name, separated by spaces.
+    Runtime Environment names are defined by the ARC server.
+    :index:`azure_admin_key<single: azure_admin_key; submit commands>`
  azure_admin_key = <pathname>
     For grid type **azure** jobs, specifies the path and file name of a
     file that contains an SSH public key. This key can be used to log
@@ -1958,13 +1972,14 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     values that must specified. This submit description file command
     allows each to be given in a space-separated list. Allowable
     **grid-type-string** values are **batch**, **condor**,
-    **ec2**, **gt2**, **gt5**, **lsf**, **nordugrid**, **pbs**, and **sge**.
+    **ec2**, **gt2**, **gt5**, **lsf**, **nordugrid**, **arc**, **pbs**,
+    and **sge**.
     The HTCondor manual chapter on Grid Computing
     details the variety of grid types.
 
     For a **grid-type-string** of **batch**, the single parameter is the
     name of the local batch system, and will be one of ``pbs``, ``lsf``,
-    or ``sge``.
+    ``slurm``, or ``sge``.
 
     For a **grid-type-string** of **condor**, the first parameter is the
     name of the remote *condor_schedd* daemon. The second parameter is
@@ -1984,8 +1999,8 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     For a **grid-type-string** of **lsf**, no additional parameters are
     used.
 
-    For a **grid-type-string** of **nordugrid**, the single parameter is
-    the name of the NorduGrid resource to be used.
+    For a **grid-type-string** of **nordugrid** or **arc**, the single
+    parameter is the name of the ARC resource to be used.
 
     For a **grid-type-string** of **pbs**, no additional parameters are
     used.
@@ -2104,7 +2119,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` is
     relevant when the **universe** is **vanilla**, or when the
     **universe** is **grid** and the type of grid system is one of
-    **gt2**, **gt5**, **condor**, or **nordugrid**. Defining
+    **gt2**, **gt5**, **condor**, **arc**, or **nordugrid**. Defining
     a value causes the proxy to be delegated to the execute machine.
     Further, VOMS attributes defined in the proxy will appear in the job
     ClassAd.

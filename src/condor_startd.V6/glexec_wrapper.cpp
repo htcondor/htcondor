@@ -64,8 +64,8 @@ main(int, char* argv[])
 	char* env_buf = read_env(sock_fd);
 	MyString merge_err;
 	if (!env.MergeFromV2Raw(env_buf, &merge_err)) {
-		err.formatstr("Env::MergeFromV2Raw error: %s", merge_err.Value());
-		full_write(sock_fd, err.Value(), err.Length() + 1);
+		formatstr(err, "Env::MergeFromV2Raw error: %s", merge_err.Value());
+		full_write(sock_fd, err.c_str(), err.length() + 1);
 		exit(1);
 	}
 	env.MergeFrom(environ);
@@ -76,15 +76,15 @@ main(int, char* argv[])
 	//
 	int job_fd = read_fd(sock_fd);
 	if (dup2(job_fd, 0) == -1) {
-		err.formatstr("dup2 to FD 0 error: %s", strerror(errno));
-		full_write(sock_fd, err.Value(), err.Length() + 1);
+		formatstr(err, "dup2 to FD 0 error: %s", strerror(errno));
+		full_write(sock_fd, err.c_str(), err.length() + 1);
 		exit(1);
 	}
 	close(job_fd);
 	if (fcntl(sock_fd, F_SETFD, FD_CLOEXEC) == -1) {
-		err.formatstr("fcntl error setting close-on-exec: %s",
+		formatstr(err, "fcntl error setting close-on-exec: %s",
 		            strerror(errno));
-		full_write(sock_fd, err.Value(), err.Length() + 1);
+		full_write(sock_fd, err.c_str(), err.length() + 1);
 		exit(1);
 	}
 
@@ -94,8 +94,8 @@ main(int, char* argv[])
 	//
 	char** envp = env.getStringArray();
 	execve(argv[1], &argv[1], envp);
-	err.formatstr("execve error: %s", strerror(errno));
-	full_write(sock_fd, err.Value(), err.Length() + 1);
+	formatstr(err, "execve error: %s", strerror(errno));
+	full_write(sock_fd, err.c_str(), err.length() + 1);
 	exit(1);
 }
 
@@ -116,7 +116,7 @@ read_env(int sock_fd)
 			            bytes,
 			            sizeof(env_len));
 		}
-		full_write(sock_fd, err.c_str(), err.length()() + 1);
+		full_write(sock_fd, err.c_str(), err.length() + 1);
 		exit(1);
 	}
 	if (env_len <= 0) {

@@ -28,13 +28,8 @@
 #include "emit.h"
 #include "user_job_policy.h"
 
-#ifdef USE_NON_MUTATING_USERPOLICY
   #define POLICY_INIT(ad) policy.Init()
   #define POLICY_ANALYZE(ad,mode) policy.AnalyzePolicy(*ad,mode)
-#else
-  #define POLICY_INIT(ad) policy.Init(ad)
-  #define POLICY_ANALYZE(ad,mode) policy.AnalyzePolicy(mode)
-#endif
 
 #define CLEANUP \
 	classad_string.clear(); \
@@ -83,11 +78,6 @@ static bool test_firing_expression_no_init(void);
 static bool test_firing_expression_no_analyze(void);
 static bool test_firing_expression_empty(void);
 static bool test_firing_expression_undefined_timer_remove(void);
-static bool test_firing_expression_undefined_periodic_hold(void);
-static bool test_firing_expression_undefined_periodic_release(void);
-static bool test_firing_expression_undefined_periodic_remove(void);
-static bool test_firing_expression_undefined_on_exit_hold(void);
-static bool test_firing_expression_undefined_on_exit_remove(void);
 static bool test_firing_expression_only_timer_remove(void);
 static bool test_firing_expression_only_periodic_hold(void);
 static bool test_firing_expression_only_periodic_release(void);
@@ -104,11 +94,6 @@ static bool test_firing_expression_value_no_init(void);
 static bool test_firing_expression_value_no_analyze(void);
 static bool test_firing_expression_value_empty(void);
 static bool test_firing_expression_value_und_timer_remove(void);
-static bool test_firing_expression_value_und_periodic_hold(void);
-static bool test_firing_expression_value_und_periodic_release(void);
-static bool test_firing_expression_value_und_periodic_remove(void);
-static bool test_firing_expression_value_und_on_exit_hold(void);
-static bool test_firing_expression_value_und_on_exit_remove(void);
 static bool test_firing_expression_value_only_timer_remove(void);
 static bool test_firing_expression_value_only_periodic_hold(void);
 static bool test_firing_expression_value_only_periodic_release(void);
@@ -125,11 +110,6 @@ static bool test_firing_reason_no_init(void);
 static bool test_firing_reason_no_analyze(void);
 static bool test_firing_reason_empty(void);
 static bool test_firing_reason_undefined_timer_remove(void);
-static bool test_firing_reason_undefined_periodic_hold(void);
-static bool test_firing_reason_undefined_periodic_release(void);
-static bool test_firing_reason_undefined_periodic_remove(void);
-static bool test_firing_reason_undefined_on_exit_hold(void);
-static bool test_firing_reason_undefined_on_exit_remove(void);
 static bool test_firing_reason_only_timer_remove(void);
 static bool test_firing_reason_only_periodic_hold(void);
 static bool test_firing_reason_only_periodic_release(void);
@@ -195,12 +175,20 @@ static const char
 	"OnExitRemove = true\n\t\tExitBySignal = true\n\t\tExitSignal = 123\n\t\t"
 	"ExitCode = 321\n\t\tJobStatus = 2",
 	*DEFAULT = 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	"[ ]";
-#else
-	"[ PeriodicHold = false; PeriodicRemove = false; PeriodicRelease = false; "
-	"OnExitHold = false; OnExitRemove = true ]";
-#endif
+
+static const char
+	*ONLY_PERIODIC_HOLD = "\tPeriodicHold = true\n\t\tJobStatus = 2",
+	*ONLY_PERIODIC_RELEASE = "\tPeriodicRelease = true\n\t\tJobStatus = 5",
+	*ONLY_PERIODIC_REMOVE = "\tPeriodicRemove = true\n\t\tJobStatus = 2",
+	*ONLY_ON_EXIT_HOLD =
+		"\tOnExitHold = true\n\t\t"
+		"ExitBySignal = true\n\t\tExitSignal = 123\n\t\t"
+		"ExitCode = 321\n\t\tJobStatus = 2",
+	*ONLY_ON_EXIT_REMOVE =
+		"\tOnExitRemove = true\n\t\t"
+		"ExitBySignal = true\n\t\tExitSignal = 123\n\t\t"
+		"ExitCode = 321\n\t\tJobStatus = 2";
 
 bool OTEST_UserPolicy(void) {
 	emit_object("UserPolicy");
@@ -245,11 +233,6 @@ bool OTEST_UserPolicy(void) {
 	driver.register_function(test_firing_expression_no_analyze);
 	driver.register_function(test_firing_expression_empty);
 	driver.register_function(test_firing_expression_undefined_timer_remove);
-	driver.register_function(test_firing_expression_undefined_periodic_hold);
-	driver.register_function(test_firing_expression_undefined_periodic_release);
-	driver.register_function(test_firing_expression_undefined_periodic_remove);
-	driver.register_function(test_firing_expression_undefined_on_exit_hold);
-	driver.register_function(test_firing_expression_undefined_on_exit_remove);
 	driver.register_function(test_firing_expression_only_timer_remove);
 	driver.register_function(test_firing_expression_only_periodic_hold);
 	driver.register_function(test_firing_expression_only_periodic_release);
@@ -266,11 +249,6 @@ bool OTEST_UserPolicy(void) {
 	driver.register_function(test_firing_expression_value_no_analyze);
 	driver.register_function(test_firing_expression_value_empty);
 	driver.register_function(test_firing_expression_value_und_timer_remove);
-	driver.register_function(test_firing_expression_value_und_periodic_hold);
-	driver.register_function(test_firing_expression_value_und_periodic_release);
-	driver.register_function(test_firing_expression_value_und_periodic_remove);
-	driver.register_function(test_firing_expression_value_und_on_exit_hold);
-	driver.register_function(test_firing_expression_value_und_on_exit_remove);
 	driver.register_function(test_firing_expression_value_only_timer_remove);
 	driver.register_function(test_firing_expression_value_only_periodic_hold);
 	driver.register_function(test_firing_expression_value_only_periodic_release);
@@ -287,11 +265,6 @@ bool OTEST_UserPolicy(void) {
 	driver.register_function(test_firing_reason_no_analyze);
 	driver.register_function(test_firing_reason_empty);
 	driver.register_function(test_firing_reason_undefined_timer_remove);
-	driver.register_function(test_firing_reason_undefined_periodic_hold);
-	driver.register_function(test_firing_reason_undefined_periodic_release);
-	driver.register_function(test_firing_reason_undefined_periodic_remove);
-	driver.register_function(test_firing_reason_undefined_on_exit_hold);
-	driver.register_function(test_firing_reason_undefined_on_exit_remove);
 	driver.register_function(test_firing_reason_only_timer_remove);
 	driver.register_function(test_firing_reason_only_periodic_hold);
 	driver.register_function(test_firing_reason_only_periodic_release);
@@ -341,12 +314,7 @@ static bool test_init_null() {
 }
 
 static bool test_init_empty() {
-#ifdef USE_NON_MUTATING_USERPOLICY
 	emit_test("Test that Init() does not insert any policy expressions into an empty classad.");
-#else
-	emit_test("Test that Init() sets the required attributes to the default "
-		"values when passed an empty ClassAd.");
-#endif
 	emit_input_header();
 	emit_param("ClassAd", "");
 	emit_output_expected_header();
@@ -357,7 +325,6 @@ static bool test_init_empty() {
 	unparser.Unparse(classad_string, ad);
 	emit_output_actual_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-#ifdef USE_NON_MUTATING_USERPOLICY
 	bool val1, val2, val3, val4, val5;
 	if ( ! ad->LookupBool(ATTR_PERIODIC_HOLD_CHECK, val1) &&
 		! ad->LookupBool(ATTR_PERIODIC_REMOVE_CHECK, val2) &&
@@ -368,7 +335,6 @@ static bool test_init_empty() {
 		CLEANUP;
 		PASS;
 	}
-#endif
 	if(!user_policy_ad_checker(ad, false, false, false, false, true)) {
 		CLEANUP;
 		FAIL;
@@ -404,26 +370,13 @@ static bool test_init_non_empty() {
 }
 
 static bool test_init_non_empty_miss1() {
-#ifdef USE_NON_MUTATING_USERPOLICY
 	emit_test("Test that Init() does not insert any default attributes "
 		"when passed a ClassAd that already contains the first three "
 		"of the attributes needed for UserPolicy.");
-#else
-	emit_test("Test that Init() sets the required attributes to the default "
-		"values when passed a ClassAd that already contains the first three "
-		"of the attributes needed for UserPolicy.");
-#endif
 	const char* input = 
 		"[ TimerRemove = 0; PeriodicHold = true; PeriodicRemove = true ]";
-#ifdef USE_NON_MUTATING_USERPOLICY
 	const char* expect = input;
 	const int absent_mask = 0x78;
-#else
-	const char* expect = 
-		"[ TimerRemove = 0; PeriodicHold = true; PeriodicRemove = true; "
-		"PeriodicRelease = false; OnExitHold = false; OnExitRemove = true ]";
-	const int absent_mask = 0;
-#endif
 	emit_input_header();
 	emit_param("ClassAd", "%s", input);
 	emit_output_expected_header();
@@ -445,25 +398,13 @@ static bool test_init_non_empty_miss1() {
 }
 
 static bool test_init_non_empty_miss2() {
-#ifdef USE_NON_MUTATING_USERPOLICY
 	emit_test("Test that Init() does not insert any default attributes "
 		"when passed a ClassAd that already contains the last three "
 		"of the attributes needed for UserPolicy.");
-#else
-	emit_test("Test that Init() sets the required attributes to the default "
-		"values when passed a ClassAd that already contains the last three "
-		"of the attributes needed for UserPolicy.");
-#endif
 	const char* input = "[ PeriodicRelease = true; OnExitHold = true; "
 		"OnExitRemove = true ]";
-#ifdef USE_NON_MUTATING_USERPOLICY
 	const char* expect = input;
 	const int absent_mask = 0x03;
-#else
-	const char* expect = "[ PeriodicHold = false; PeriodicRemove = false; "
-		"PeriodicRelease = true; OnExitHold = true; OnExitRemove = true ]";
-	const int absent_mask = 0;
-#endif
 	emit_input_header();
 	emit_param("ClassAd", "%s", input);
 	emit_output_expected_header();
@@ -590,121 +531,123 @@ static bool test_analyze_policy_undefined_timer_remove() {
 	PASS;
 }
 
+// We could add another serieis of tests to make sure that the job policy
+// expressions which don't evaluate to undefined are properly evaluated.
 static bool test_analyze_policy_undefined_periodic_hold() {
-	emit_test("Test that AnalyzePolicy() returns UNDEFINED_EVAL when used with "
+	emit_test("Test that AnalyzePolicy() returns STAYS_IN_QUEUE when used with "
 		"a ClassAd that has PeriodicHold evaluate to undefined.");
 	ad = new ClassAd();
-	initAdFromString(PERIODIC_HOLD, *ad);
+	initAdFromString(ONLY_PERIODIC_HOLD, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
 	emit_param("Mode", "PERIODIC_ONLY");
 	emit_output_expected_header();
-	emit_retval("%d", UNDEFINED_EVAL);
+	emit_retval("%d", STAYS_IN_QUEUE);
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	int ret_val = POLICY_ANALYZE(ad, PERIODIC_ONLY);
 	emit_output_actual_header();
 	emit_retval("%d", ret_val);
 	CLEANUP;
-	if(ret_val != UNDEFINED_EVAL) {
+	if(ret_val != STAYS_IN_QUEUE) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_analyze_policy_undefined_periodic_release() {
-	emit_test("Test that AnalyzePolicy() returns UNDEFINED_EVAL when used with "
+	emit_test("Test that AnalyzePolicy() returns STAYS_IN_QUEUE when used with "
 		"a ClassAd that has PeriodicRelease evaluate to undefined.");
 	ad = new ClassAd();
-	initAdFromString(PERIODIC_RELEASE, *ad);
+	initAdFromString(ONLY_PERIODIC_RELEASE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_RELEASE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
 	emit_param("Mode", "PERIODIC_ONLY");
 	emit_output_expected_header();
-	emit_retval("%d", UNDEFINED_EVAL);
+	emit_retval("%d", STAYS_IN_QUEUE);
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	int ret_val = POLICY_ANALYZE(ad, PERIODIC_ONLY);
 	emit_output_actual_header();
 	emit_retval("%d", ret_val);
 	CLEANUP;
-	if(ret_val != UNDEFINED_EVAL) {
+	if(ret_val != STAYS_IN_QUEUE) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_analyze_policy_undefined_periodic_remove() {
-	emit_test("Test that AnalyzePolicy() returns UNDEFINED_EVAL when used with "
+	emit_test("Test that AnalyzePolicy() returns STAYS_IN_QUEUE when used with "
 		"a ClassAd that has PeriodicRemove evaluate to undefined.");
 	ad = new ClassAd();
-	initAdFromString(PERIODIC_REMOVE, *ad);
+	initAdFromString(ONLY_PERIODIC_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_PERIODIC_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
 	emit_param("Mode", "PERIODIC_ONLY");
 	emit_output_expected_header();
-	emit_retval("%d", UNDEFINED_EVAL);
+	emit_retval("%d", STAYS_IN_QUEUE);
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	int ret_val = POLICY_ANALYZE(ad, PERIODIC_ONLY);
 	emit_output_actual_header();
 	emit_retval("%d", ret_val);
 	CLEANUP;
-	if(ret_val != UNDEFINED_EVAL) {
+	if(ret_val != STAYS_IN_QUEUE) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_analyze_policy_undefined_on_exit_hold() {
-	emit_test("Test that AnalyzePolicy() returns UNDEFINED_EVAL when used with "
+	emit_test("Test that AnalyzePolicy() returns REMOVE_FROM_QUEUE when used with "
 		"a ClassAd that has OnExitHold evaluate to undefined.");
 	ad = new ClassAd();
-	initAdFromString(ON_EXIT_HOLD, *ad);
+	initAdFromString(ONLY_ON_EXIT_HOLD, *ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_HOLD_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
 	emit_param("Mode", "PERIODIC_THEN_EXIT");
 	emit_output_expected_header();
-	emit_retval("%d", UNDEFINED_EVAL);
+	emit_retval("%d", REMOVE_FROM_QUEUE);
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	int ret_val = POLICY_ANALYZE(ad, PERIODIC_THEN_EXIT);
 	emit_output_actual_header();
 	emit_retval("%d", ret_val);
 	CLEANUP;
-	if(ret_val != UNDEFINED_EVAL) {
+	if(ret_val != REMOVE_FROM_QUEUE) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_analyze_policy_undefined_on_exit_remove() {
-	emit_test("Test that AnalyzePolicy() returns UNDEFINED_EVAL when used with "
+	emit_test("Test that AnalyzePolicy() returns REMOVE_FROM_QUEUE when used with "
 		"a ClassAd that has OnExitRemove evaluate to undefined.");
 	ad = new ClassAd();
-	initAdFromString(ON_EXIT_REMOVE, *ad);
+	initAdFromString(ONLY_ON_EXIT_REMOVE, *ad);
 	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "DoesNotExist");
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
 	emit_param("Mode", "PERIODIC_THEN_EXIT");
 	emit_output_expected_header();
-	emit_retval("%d", UNDEFINED_EVAL);
+	emit_retval("%d", REMOVE_FROM_QUEUE);
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	int ret_val = POLICY_ANALYZE(ad, PERIODIC_THEN_EXIT);
 	emit_output_actual_header();
 	emit_retval("%d", ret_val);
 	CLEANUP;
-	if(ret_val != UNDEFINED_EVAL) {
+	if(ret_val != REMOVE_FROM_QUEUE) {
 		FAIL;
 	}
 	PASS;
@@ -1304,131 +1247,6 @@ static bool test_firing_expression_undefined_timer_remove() {
 	PASS;
 }
 
-static bool test_firing_expression_undefined_periodic_hold() {
-	emit_test("Test that FiringExpression() returns PeriodicHold after a call "
-		"to AnalyzePolicy() with a ClassAd that has PeriodicHold evaluate to "
-		"undefined.");
-	ad = new ClassAd();
-	initAdFromString(PERIODIC_HOLD, *ad);
-	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	emit_output_expected_header();
-	emit_retval("%s", ATTR_PERIODIC_HOLD_CHECK);
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_ONLY);
-	const char* ret_val = policy.FiringExpression();
-	emit_output_actual_header();
-	emit_retval("%s", ret_val);
-	CLEANUP;
-	if( ! ret_val || strcmp(ret_val, ATTR_PERIODIC_HOLD_CHECK) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_expression_undefined_periodic_release() {
-	emit_test("Test that FiringExpression() returns PeriodicRelease after a "
-		"call to AnalyzePolicy() with a ClassAd that has PeriodicRelase "
-		"evaluate to undefined.");
-	ad = new ClassAd();
-	initAdFromString(PERIODIC_RELEASE, *ad);
-	insert_into_ad(ad, ATTR_PERIODIC_RELEASE_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	emit_output_expected_header();
-	emit_retval("%s", ATTR_PERIODIC_RELEASE_CHECK);
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_ONLY);
-	const char* ret_val = policy.FiringExpression();
-	emit_output_actual_header();
-	emit_retval("%s", ret_val);
-	CLEANUP;
-	if( ! ret_val || strcmp(ret_val, ATTR_PERIODIC_RELEASE_CHECK) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_expression_undefined_periodic_remove() {
-	emit_test("Test that FiringExpression() returns PeriodicRemove after a "
-		"call to AnalyzePolicy() with a ClassAd that has PeriodicRemove "
-		"evaluate to undefined.");
-	ad = new ClassAd();
-	initAdFromString(PERIODIC_REMOVE, *ad);
-	insert_into_ad(ad, ATTR_PERIODIC_REMOVE_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	emit_output_expected_header();
-	emit_retval("%s", ATTR_PERIODIC_REMOVE_CHECK);
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_ONLY);
-	const char* ret_val = policy.FiringExpression();
-	emit_output_actual_header();
-	emit_retval("%s", ret_val);
-	CLEANUP;
-	if( ! ret_val || strcmp(ret_val, ATTR_PERIODIC_REMOVE_CHECK) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_expression_undefined_on_exit_hold() {
-	emit_test("Test that FiringExpression() returns OnExitHold after a "
-		"call to AnalyzePolicy() with a ClassAd that has OnExitHold "
-		"evaluate to undefined.");
-	ad = new ClassAd();
-	initAdFromString(ON_EXIT_HOLD, *ad);
-	insert_into_ad(ad, ATTR_ON_EXIT_HOLD_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	emit_output_expected_header();
-	emit_retval("%s", ATTR_ON_EXIT_HOLD_CHECK);
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_THEN_EXIT);
-	const char* ret_val = policy.FiringExpression();
-	emit_output_actual_header();
-	emit_retval("%s", ret_val);
-	CLEANUP;
-	if( ! ret_val || strcmp(ret_val, ATTR_ON_EXIT_HOLD_CHECK) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_expression_undefined_on_exit_remove() {
-	emit_test("Test that FiringExpression() returns OnExitRemove after a "
-		"call to AnalyzePolicy() with a ClassAd that has OnExitRemove "
-		"evaluate to undefined.");
-	ad = new ClassAd();
-	initAdFromString(ON_EXIT_REMOVE, *ad);
-	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	emit_output_expected_header();
-	emit_retval("%s", ATTR_ON_EXIT_REMOVE_CHECK);
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_THEN_EXIT);
-	const char* ret_val = policy.FiringExpression();
-	emit_output_actual_header();
-	emit_retval("%s", ret_val);
-	CLEANUP;
-	if( ! ret_val || strcmp(ret_val, ATTR_ON_EXIT_REMOVE_CHECK) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
 static bool test_firing_expression_only_timer_remove() {
 	emit_test("Test that FiringExpression() returns TimerRemove after a call to"
 		" AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that has "
@@ -1799,131 +1617,6 @@ static bool test_firing_expression_value_und_timer_remove() {
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	POLICY_ANALYZE(ad, PERIODIC_ONLY);
-	int ret_val = policy.FiringExpressionValue();
-	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	CLEANUP;
-	if(ret_val != -1) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_expression_value_und_periodic_hold() {
-	emit_test("Test that FiringExpressionValue() returns -1 after a call to "
-		"AnalyzePolicy() with a ClassAd that has PeriodicHold evaluate to "
-		"undefined.");
-	ad = new ClassAd();
-	initAdFromString(PERIODIC_HOLD, *ad);
-	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	emit_output_expected_header();
-	emit_retval("%d", -1);
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_ONLY);
-	int ret_val = policy.FiringExpressionValue();
-	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	CLEANUP;
-	if(ret_val != -1) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_expression_value_und_periodic_release() {
-	emit_test("Test that FiringExpressionValue() returns -1 after a call to "
-		"AnalyzePolicy() with a ClassAd that has PeriodicRelase evaluate to "
-		"undefined.");
-	ad = new ClassAd();
-	initAdFromString(PERIODIC_RELEASE, *ad);
-	insert_into_ad(ad, ATTR_PERIODIC_RELEASE_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	emit_output_expected_header();
-	emit_retval("%d", -1);
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_ONLY);
-	int ret_val = policy.FiringExpressionValue();
-	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	CLEANUP;
-	if(ret_val != -1) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_expression_value_und_periodic_remove() {
-	emit_test("Test that FiringExpressionValue() returns -1 after a call to "
-		"AnalyzePolicy() with a ClassAd that has PeriodicRemove evaluate to "
-		"undefined.");
-	ad = new ClassAd();
-	initAdFromString(PERIODIC_REMOVE, *ad);
-	insert_into_ad(ad, ATTR_PERIODIC_REMOVE_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	emit_output_expected_header();
-	emit_retval("%d", -1);
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_ONLY);
-	int ret_val = policy.FiringExpressionValue();
-	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	CLEANUP;
-	if(ret_val != -1) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_expression_value_und_on_exit_hold() {
-	emit_test("Test that FiringExpressionValue() returns -1 after a call to "
-		"AnalyzePolicy() with a ClassAd that has OnExitHold evaluate to "
-		"undefined.");
-	ad = new ClassAd();
-	initAdFromString(ON_EXIT_HOLD, *ad);
-	insert_into_ad(ad, ATTR_ON_EXIT_HOLD_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	emit_output_expected_header();
-	emit_retval("%d", -1);
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_THEN_EXIT);
-	int ret_val = policy.FiringExpressionValue();
-	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	CLEANUP;
-	if(ret_val != -1) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_expression_value_und_on_exit_remove() {
-	emit_test("Test that FiringExpressionValue() returns -1 after a call to "
-		"AnalyzePolicy() with a ClassAd that has OnExitRemove evaluate to "
-		"undefined.");
-	ad = new ClassAd();
-	initAdFromString(ON_EXIT_REMOVE, *ad);
-	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	emit_output_expected_header();
-	emit_retval("%d", -1);
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_THEN_EXIT);
 	int ret_val = policy.FiringExpressionValue();
 	emit_output_actual_header();
 	emit_retval("%d", ret_val);
@@ -2315,161 +2008,6 @@ static bool test_firing_reason_undefined_timer_remove() {
 	UserPolicy policy;
 	POLICY_INIT(ad);
 	POLICY_ANALYZE(ad, PERIODIC_ONLY);
-	MyString ret_reason;
-	int code;
-	int subcode;
-	policy.FiringReason(ret_reason,code,subcode);
-	emit_output_actual_header();
-	emit_retval("%s", ret_reason.Value());
-	CLEANUP;
-	if(strcmp(ret_reason.Value(), reason.Value()) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_reason_undefined_periodic_hold() {
-	MyString reason;
-	emit_test("Test that FiringReason() returns the correct reason after a call"
-		" to AnalyzePolicy() with a ClassAd that has PeriodicHold evaluate to "
-		"undefined.");
-	ad = new ClassAd();
-	initAdFromString(PERIODIC_HOLD, *ad);
-	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.formatstr("The job attribute %s expression 'DoesNotExist' evaluated to"
-		" UNDEFINED", ATTR_PERIODIC_HOLD_CHECK);
-	emit_output_expected_header();
-	emit_retval("%s", reason.Value());
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_ONLY);
-	MyString ret_reason;
-	int code;
-	int subcode;
-	policy.FiringReason(ret_reason,code,subcode);
-	emit_output_actual_header();
-	emit_retval("%s", ret_reason.Value());
-	CLEANUP;
-	if(strcmp(ret_reason.Value(), reason.Value()) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_reason_undefined_periodic_release() {
-	MyString reason;
-	emit_test("Test that FiringReason() returns the correct reason after a call"
-		" to AnalyzePolicy() with a ClassAd that has PeriodicRelease evaluate "
-		"to undefined.");
-	ad = new ClassAd();
-	initAdFromString(PERIODIC_RELEASE, *ad);
-	insert_into_ad(ad, ATTR_PERIODIC_RELEASE_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.formatstr("The job attribute %s expression 'DoesNotExist' evaluated to"
-		" UNDEFINED", ATTR_PERIODIC_RELEASE_CHECK);
-	emit_output_expected_header();
-	emit_retval("%s", reason.Value());
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_ONLY);
-	MyString ret_reason;
-	int code;
-	int subcode;
-	policy.FiringReason(ret_reason,code,subcode);
-	emit_output_actual_header();
-	emit_retval("%s", ret_reason.Value());
-	CLEANUP;
-	if(strcmp(ret_reason.Value(), reason.Value()) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_reason_undefined_periodic_remove() {
-	MyString reason;
-	emit_test("Test that FiringReason() returns the correct reason after a call"
-		" to AnalyzePolicy() with a ClassAd that has PeriodicRemove evaluate "
-		"to undefined.");
-	ad = new ClassAd();
-	initAdFromString(PERIODIC_REMOVE, *ad);
-	insert_into_ad(ad, ATTR_PERIODIC_REMOVE_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.formatstr("The job attribute %s expression 'DoesNotExist' evaluated to"
-		" UNDEFINED", ATTR_PERIODIC_REMOVE_CHECK);
-	emit_output_expected_header();
-	emit_retval("%s", reason.Value());
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_ONLY);
-	MyString ret_reason;
-	int code;
-	int subcode;
-	policy.FiringReason(ret_reason,code,subcode);
-	emit_output_actual_header();
-	emit_retval("%s", ret_reason.Value());
-	CLEANUP;
-	if(strcmp(ret_reason.Value(), reason.Value()) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_reason_undefined_on_exit_hold() {
-	MyString reason;
-	emit_test("Test that FiringReason() returns the correct reason after a call"
-		" to AnalyzePolicy() with a ClassAd that has OnExitHold evaluate "
-		"to undefined.");
-	ad = new ClassAd();
-	initAdFromString(ON_EXIT_HOLD, *ad);
-	insert_into_ad(ad, ATTR_ON_EXIT_HOLD_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.formatstr("The job attribute %s expression 'DoesNotExist' evaluated to"
-		" UNDEFINED", ATTR_ON_EXIT_HOLD_CHECK);
-	emit_output_expected_header();
-	emit_retval("%s", reason.Value());
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_THEN_EXIT);
-	MyString ret_reason;
-	int code;
-	int subcode;
-	policy.FiringReason(ret_reason,code,subcode);
-	emit_output_actual_header();
-	emit_retval("%s", ret_reason.Value());
-	CLEANUP;
-	if(strcmp(ret_reason.Value(), reason.Value()) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_firing_reason_undefined_on_exit_remove() {
-	MyString reason;
-	emit_test("Test that FiringReason() returns the correct reason after a call"
-		" to AnalyzePolicy() with a ClassAd that has OnExitRemove evaluate "
-		"to undefined.");
-	ad = new ClassAd();
-	initAdFromString(ON_EXIT_REMOVE, *ad);
-	insert_into_ad(ad, ATTR_ON_EXIT_REMOVE_CHECK, "DoesNotExist");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.formatstr("The job attribute %s expression 'DoesNotExist' evaluated to"
-		" UNDEFINED", ATTR_ON_EXIT_REMOVE_CHECK);
-	emit_output_expected_header();
-	emit_retval("%s", reason.Value());
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_THEN_EXIT);
 	MyString ret_reason;
 	int code;
 	int subcode;

@@ -959,7 +959,6 @@ private:
 
 	// useful names
 	char*			CondorAdministrator;
-	char*			Mail;
 	char*			AccountantName;
     char*			UidDomain;
 	std::string		AccountingDomain;
@@ -1085,9 +1084,6 @@ private:
 	int				leaseAliveInterval;  
 	int				aliveid;	// timer id for sending keepalives to startd
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
-
-		// put state into ClassAd return it.  Used for condor_squawk
-	int	dumpState(int, Stream *);
 
 		// get connection info for creating sec session to a running job
 		// (e.g. condor_ssh_to_job)

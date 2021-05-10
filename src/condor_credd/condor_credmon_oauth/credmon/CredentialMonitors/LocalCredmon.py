@@ -26,6 +26,8 @@ class LocalCredmon(OAuthCredmon):
         self.authz_template = "read:/user/{username} write:/user/{username}"
         self.token_lifetime = 60*20
         self.token_use_json = True
+        self.token_aud = ""
+        self.token_ver = "scitokens:2.0"
         if htcondor != None:
             self._private_key_location = htcondor.param.get('LOCAL_CREDMON_PRIVATE_KEY', "/etc/condor/scitokens-private.pem")
             if self._private_key_location != None and os.path.exists(self._private_key_location):
@@ -39,6 +41,8 @@ class LocalCredmon(OAuthCredmon):
             self.authz_template = htcondor.param.get("LOCAL_CREDMON_AUTHZ_TEMPLATE", self.authz_template)
             self.token_lifetime = htcondor.param.get("LOCAL_CREDMON_TOKEN_LIFETIME", self.token_lifetime)
             self.token_use_json = htcondor.param.get("LOCAL_CREDMON_TOKEN_USE_JSON", self.token_use_json)
+            self.token_aud = htcondor.param.get("LOCAL_CREDMON_TOKEN_AUDIENCE", self.token_aud)
+            self.token_ver = htcondor.param.get("LOCAL_CREDMON_TOKEN_VERSION", self.token_ver)
         else:
             self._private_key_location = None
         if not self.token_issuer:
@@ -58,7 +62,19 @@ class LocalCredmon(OAuthCredmon):
         token.update_claims({'sub': username})
         user_authz = self.authz_template.format(username=username)
         token.update_claims({'scope': user_authz})
-        token.update_claims({'ver': 'scitokens:2.0'})
+
+        # Only set the version if we have one.  No version is valid, and implies scitokens:1.0
+        if self.token_ver:
+            token.update_claims({'ver': self.token_ver})
+
+        # Convert the space separated list of audiences to a proper list
+        # No aud is valid for scitokens:1.0 tokens.  Also, no resonable default.
+        aud_list = self.token_aud.strip().split()
+        if aud_list:
+            token.update_claims({'aud': aud_list})
+        elif self.token_ver.lower() == "scitokens:2.0":
+            self.log.error('No "aud" claim, LOCAL_CREDMON_TOKEN_AUDIENCE must be set when requesting a scitokens:2.0 token')
+            return False
 
         # Serialize the token and write it to a file
         try:

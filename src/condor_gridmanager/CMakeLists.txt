@@ -17,6 +17,8 @@
  ############################################################### 
 
 set(GMSRCS
+arcjob.cpp
+arcresource.cpp
 azurejob.cpp
 azureresource.cpp
 basejob.cpp

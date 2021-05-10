@@ -2465,6 +2465,7 @@ int SubmitHash::SetGSICredentials()
 		(gridType == "gt2" ||
 		 gridType == "gt5" ||
 		 gridType == "cream" ||
+		 gridType == "arc" ||
 		 gridType == "nordugrid" ) )
 	{
 		use_proxy = true;
@@ -2863,6 +2864,7 @@ static bool validate_gridtype(MyString & JobGridType) {
 		gridType == "naregi" ||
 		gridType == "condor" ||
 		gridType == "nordugrid" ||
+		gridType == "arc" ||
 		gridType == "ec2" ||
 		gridType == "gce" ||
 		gridType == "azure" ||
@@ -3078,6 +3080,21 @@ int SubmitHash::SetGridParams()
 
 	if( (tmp = submit_param(SUBMIT_KEY_NordugridRSL, ATTR_NORDUGRID_RSL)) ) {
 		AssignJobString(ATTR_NORDUGRID_RSL, tmp);
+		free( tmp );
+	}
+
+	if( (tmp = submit_param(SUBMIT_KEY_ArcRSL, ATTR_ARC_RSL)) ) {
+		AssignJobString(ATTR_ARC_RSL, tmp);
+		free( tmp );
+	}
+
+	if( (tmp = submit_param(SUBMIT_KEY_ArcRte, ATTR_ARC_RTE)) ) {
+		AssignJobString(ATTR_ARC_RTE, tmp);
+		free( tmp );
+	}
+
+	if( (tmp = submit_param(SUBMIT_KEY_ArcResources, ATTR_ARC_RESOURCES)) ) {
+		AssignJobString(ATTR_ARC_RESOURCES, tmp);
 		free( tmp );
 	}
 
@@ -4371,6 +4388,7 @@ int SubmitHash::SetRemoteAttrs()
 	ExprItem tostringize[] = {
 		{ SUBMIT_KEY_GlobusRSL, "globus_rsl", ATTR_GLOBUS_RSL },
 		{ SUBMIT_KEY_NordugridRSL, "nordugrid_rsl", ATTR_NORDUGRID_RSL },
+		{ SUBMIT_KEY_ArcRSL, "arc_rsl", ATTR_ARC_RSL },
 		{ SUBMIT_KEY_GridResource, 0, ATTR_GRID_RESOURCE },
 	};
 	const int tostringizesz = sizeof(tostringize) / sizeof(tostringize[0]);
@@ -4774,7 +4792,7 @@ int SubmitHash::SetUniverse()
 
 		if ( ! valid_grid_type) {
 			push_error(stderr, "Invalid value '%s' for grid type\n"
-				"Must be one of: gt2, gt5, pbs, lsf, sge, nqs, condor, nordugrid, unicore, ec2, gce, azure, cream, or boinc\n",
+				"Must be one of: gt2, gt5, pbs, lsf, sge, nqs, condor, nordugrid, arc, unicore, ec2, gce, azure, cream, or boinc\n",
 				JobGridType.c_str());
 			ABORT_AND_RETURN(1);
 		}
@@ -5060,6 +5078,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_GlobusRematch, ATTR_REMATCH_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GlobusRSL, ATTR_GLOBUS_RSL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_NordugridRSL, ATTR_NORDUGRID_RSL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
+	{SUBMIT_KEY_ArcRSL, ATTR_ARC_RSL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
+	{SUBMIT_KEY_ArcRte, ATTR_ARC_RTE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_CreamAttributes, ATTR_CREAM_ATTRIBUTES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchProject, ATTR_BATCH_PROJECT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchQueue, ATTR_BATCH_QUEUE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },

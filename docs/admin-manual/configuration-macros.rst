@@ -4184,6 +4184,10 @@ details.
     container to verify that docker completely works.  If 
     DOCKER_PERFORM_TEST is false, this test is skipped.
 
+:macro-def:`DOCKER_RUN_UNDER_INIT`
+    A boolean value which defaults to true, which tells the worker
+    node to run docker universe jobs with the --init option.
+    
 :macro-def:`DOCKER_EXTRA_ARGUMENTS`
     Any additional command line options the administrator wants to be
     added to the docker container create command line can be set with
@@ -7745,9 +7749,12 @@ These macros affect the *condor_gridmanager*.
     defined.
 
 :macro-def:`NORDUGRID_GAHP`
-    The complete path and file name of the wrapper script that invokes
-    the NorduGrid GAHP executable. The default value is
-    ``$(SBIN)``/nordugrid_gahp.
+    The complete path and file name of the NorduGrid GAHP executable.
+    The default value is ``$(SBIN)``/nordugrid_gahp.
+
+:macro-def:`ARC_GAHP`
+    The complete path and file name of the ARC GAHP executable.
+    The default value is ``$(SBIN)``/arc_gahp.
 
 :macro-def:`SGE_GAHP`
     The complete path and file name of the SGE GAHP executable. The use
@@ -8251,6 +8258,14 @@ General
     optimizes the graph structure by reducing the number of dependencies, 
     resulting in a significant improvement to the *condor_dagman* memory 
     footprint, parse time, and submit speed.
+
+:macro-def:`DAGMAN_PUT_FAILED_JOBS_ON_HOLD`
+    A boolean value that controls what happens when a job in a DAG fails.
+    When set to ``True``, *condor_dagman* will keep the job in the queue and
+    put it on hold. If the failure was due to a transient error (ie. a
+    temporary network outage), this gives users an opportunity to fix the
+    problem, release the job and continue their DAG execution. Defaults 
+    to ``False``.
 
 Throttling
 ''''''''''

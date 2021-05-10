@@ -855,6 +855,10 @@ populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{versio
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-minicondor
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/50ec2.config
 
+# Install a second config.d directory under /usr/share, used for the
+# convenience of software built on top of Condor such as GlideinWMS.
+mkdir -p -m0755 %{buildroot}/usr/share/condor/config.d
+
 mkdir -p -m0755 %{buildroot}/%{_var}/log/condor
 # Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
@@ -965,7 +969,7 @@ install -Dp -m 0644 %{SOURCE3} %{buildroot}%{_unitdir}/condor.service.d/osg-env.
 %endif
 
 %if 0%{?rhel} >= 7
-mkdir %{buildroot}%{_datadir}/condor/
+mkdir -p %{buildroot}%{_datadir}/condor/
 cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
 %endif
 
@@ -1134,6 +1138,7 @@ rm -rf %{buildroot}
 %dir %_sysconfdir/condor/tokens.d/
 %dir %_sysconfdir/condor/config.d/
 %config(noreplace) %{_sysconfdir}/condor/config.d/00-htcondor-9.0.config
+%dir /usr/share/condor/config.d/
 %_libdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/bash_completion.d/condor
@@ -1378,6 +1383,7 @@ rm -rf %{buildroot}
 %_sbindir/nordugrid_gahp
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
+%_sbindir/arc_gahp
 %_libexecdir/condor/condor_gpu_discovery
 %_libexecdir/condor/condor_gpu_utilization
 %_sbindir/condor_vm-gahp-vmware
@@ -1538,7 +1544,9 @@ rm -rf %{buildroot}
 %_bindir/condor_watch_q
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
+%_libexecdir/condor/libclassad_python3_user.so
 %_libexecdir/condor/libcollector_python_plugin.cpython-3*.so
+%_libexecdir/condor/libcollector_python3_plugin.so
 /usr/lib64/python%{python3_version}/site-packages/classad/
 /usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/

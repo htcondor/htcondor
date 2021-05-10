@@ -150,12 +150,8 @@ void CreamJobReconfig()
 	CreamJob::setConnectFailureRetry( tmp_int );
 
 	// Tell all the resource objects to deal with their new config values
-	CreamResource *next_resource;
-
-	CreamResource::ResourcesByName.startIterations();
-	
-	while ( CreamResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		next_resource->Reconfig();
+	for (auto &elem : CreamResource::ResourcesByName) {
+		elem.second->Reconfig();
 	}
 }
 

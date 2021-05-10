@@ -18,5 +18,10 @@ introduce changes that administrators and users of sites running from an
 older HTCondor version should be aware of when planning an upgrade. Here
 is a list of items that administrators should be aware of.
 
+- The semantics of undefined user job policy expressions has changed.  A
+  policy whose expression evaluates to undefined is now uniformly ignored,
+  instead of either putting the job on hold or treated as false.
+  :jira:`442`
+
 -  Item 1 :jira:`0000`
 -  Item 2

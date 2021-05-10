@@ -158,6 +158,10 @@ int DockerAPI::createContainer(
 		runArgs.AppendArg("--security-opt");
 		runArgs.AppendArg("no-new-privileges");
 	}
+	// Tell docker to run this with an init program
+	if (param_boolean("DOCKER_RUN_UNDER_INIT", true)) {
+		runArgs.AppendArg("--init");
+	}
 
 	// Give the container a useful name
 	std::string hname = makeHostname(&machineAd, &jobAd);
@@ -1397,6 +1401,12 @@ makeHostname(ClassAd *machineAd, ClassAd *jobAd) {
 	machineAd->LookupString(ATTR_MACHINE, machine);
 
 	hostname += machine;
+
+	// Linux allows hostnames up to 256 characters,
+	// but docker throws an error if they are greater then 63
+	if (hostname.length() > 63) {
+		hostname = hostname.substr(0,63);
+	}
 
 	return hostname;
 }

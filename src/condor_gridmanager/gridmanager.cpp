@@ -35,6 +35,7 @@
 
 #include "globusjob.h"
 
+#include "arcjob.h"
 #include "nordugridjob.h"
 #include "unicorejob.h"
 #include "condorjob.h"
@@ -340,6 +341,14 @@ Init()
 	new_type->CreateFunc = NordugridJobCreate;
 	jobTypes.Append( new_type );
 	
+	new_type = new JobType;
+	new_type->Name = strdup( "ARC" );
+	new_type->InitFunc = ArcJobInit;
+	new_type->ReconfigFunc = ArcJobReconfig;
+	new_type->AdMatchFunc = ArcJobAdMatch;
+	new_type->CreateFunc = ArcJobCreate;
+	jobTypes.Append( new_type );
+
 #if defined( LINUX ) || defined(DARWIN) || defined(WIN32)
 	new_type = new JobType;
 	new_type->Name = strdup( "EC2" );

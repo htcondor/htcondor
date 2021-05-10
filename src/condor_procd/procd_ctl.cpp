@@ -437,7 +437,7 @@ get_usage(ProcFamilyClient& pfc, int argc, char* argv[])
 	if (pfu.block_write_bytes >= 0)
 		printf("Bytes written to block devices (KB): %llu\n", (unsigned long long)(pfu.block_write_bytes/1024));
 #ifdef LINUX
-		printf("Instructions: %lu\n", pfu.m_instructions);
+		printf("Instructions: %llu\n", (unsigned long long) pfu.m_instructions);
 #endif
 	return 0;
 }

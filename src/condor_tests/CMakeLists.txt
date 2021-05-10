@@ -223,6 +223,8 @@ if (BUILD_TESTING)
 
 			condor_pl_test(test_manifest "Test manifest functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+            condor_pl_test(test_toe_exit_info "Test ToE exit info" "quick;ctest")
 		endif()
 	endif()
 
@@ -625,15 +627,18 @@ if (BUILD_TESTING)
         add_dependencies_suffix_hack(cmd_wait_shows-partial x_write_joblog_events.exe)
 	condor_pl_test(cmd_wait_shows-timeout "" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog_events.exe")
         add_dependencies_suffix_hack(cmd_wait_shows-timeout x_write_joblog_events.exe)
-	condor_pl_test(job_dagman_fullremove "Ensure a removed dag is completely removed" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_basic "Basic one node dag" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_local "Test local universe under DAGMan" "dagman;quick;ctest")
+		condor_pl_test(job_dagman_fullremove "Ensure a removed dag is completely removed" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_fullremove.dag;src/condor_tests/job_dagman_fullremove.cmd;src/condor_tests/job_dagman_fullremove.pl;src/condor_tests/job_dagman_monitor.pl;${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe")
+	condor_pl_test(job_dagman_basic "Basic one node dag" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_basic.dag;src/condor_tests/job_dagman_basic-node.cmd;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/x_dagman_premonitor.pl;src/condor_tests/job_dagman_monitor.pl")
+	condor_pl_test(job_dagman_local "Test local universe under DAGMan" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_local.dag;src/condor_tests/job_dagman_local.cmd;src/condor_tests/job_dagman_local2.cmd")
 	#condor_pl_test(job_dagman_dont_use_default_node_log "Test for DAGMAN_ALWAYS_USE_NODE_LOG" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_maxpostscripts "Check that throttling by post scripts works" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_maxprescripts "Check that throttling by pre scripts works" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_prepost "Run a dag and verify each nodes pre and post scripts ran" "dagman;quick;ctest")
+	condor_pl_test(job_dagman_maxpostscripts "Check that throttling by post scripts works" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_maxpostscripts.dag;src/condor_tests/job_dagman_maxpostscripts.cmd;src/condor_tests/job_dagman_maxpostscripts-checkin.template;src/condor_tests/x_dagman_boring_prescript.pl;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_dagman_readflowlog.pl")
+	condor_pl_test(job_dagman_maxprescripts "Check that throttling by pre scripts works" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_maxprescripts.dag;src/condor_tests/job_dagman_maxprescripts.cmd;src/condor_tests/job_dagman_maxprescripts-node.cmd;src/condor_tests/job_dagman_maxprescripts-checkin.template;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/job_dagman_monitor.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_dagman_readflowlog.pl")
+
+	condor_pl_test(job_dagman_prepost "Run a dag and verify each nodes pre and post scripts ran" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_prepost.dag;src/condor_tests/job_dagman_prepost-node.cmd;src/condor_tests/job_dagman_prepost-prehello.template;src/condor_tests/job_dagman_prepost-posthello.template;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/job_dagman_monitor.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_dagman_readflowlog.pl;src/condor_tests/x_dagman_readprepostlog.pl;${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe")
+
 	condor_pl_test(job_dagman_retry "Make sure a retry dag runs correctly." "dagman;quick;ctest")
 	condor_pl_test(job_dagman_throttle "Test Dagman throttling ability" "dagman;long")
+
 	condor_pl_test(job_dagman_unlessexit "Test that the retries can be stopped with particular exit values from node." "dagman;quick;ctest")
 	condor_pl_test(job_dagman_abort-A "Test ABORT-DAG-ON" "dagman")
 	condor_pl_test(job_dagman_parallel-A "Test DAGMan handling nodes w/ multiple jobs" "dagman;quick;ctest")
