@@ -54,6 +54,11 @@ Bugs Fixed:
   signal to go on hold (instead of exiting or being retried).
   :jira:`430`
 
+- Fixed a bug with jobs that require running on a different machine
+  after a failure by referring to MachineAttrX attributes in their
+  requirements expression.
+  :jira:`434`
+
 - Fixed a memory leak in the job router, usually triggered when job
   policy expressions cause removal of the job.
   :jira:`408`
