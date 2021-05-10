@@ -3598,8 +3598,8 @@ Dag::SetPendingNodeReportInterval( int interval )
 void
 Dag::CheckThrottleCats()
 {
-	ThrottleByCategory::ThrottleInfo *info;
-	while ( _catThrottles.Iterate( info ) ) {
+	for ( auto throttle: *_catThrottles.GetThrottles() ) {
+		ThrottleByCategory::ThrottleInfo *info = throttle.second;
 		debug_printf( DEBUG_DEBUG_1, "Category %s has %d jobs, "
 					"throttle setting of %d\n", info->_category->c_str(),
 					info->_totalJobs, info->_maxJobs );
@@ -5022,9 +5022,9 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 
 	// Note: by the time we get to here, all category names have already
 	// been prefixed with the proper scope.
-	om->throttles->StartIterations();
 	ThrottleByCategory::ThrottleInfo *spliceThrottle;
-	while ( om->throttles->Iterate( spliceThrottle ) ) {
+	for ( auto throttle: *om->throttles->GetThrottles() ) {
+		spliceThrottle = throttle.second;
 		ThrottleByCategory::ThrottleInfo *mainThrottle =
 					_catThrottles.GetThrottleInfo(
 					spliceThrottle->_category );

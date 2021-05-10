@@ -72,6 +72,10 @@ public:
 	ThrottleInfo *AddCategory( const MyString *category,
 				int maxJobs = noThrottleSetting );
 
+	/** Get a pointer to the full map of throttles
+	*/
+	std::map<MyString, ThrottleInfo *>* GetThrottles() { return &_throttles; }
+
 	/** Set the throttle (max # of jobs) for a category.  Adds the category
 		if it doesn't already exist.
 		@param the category name
