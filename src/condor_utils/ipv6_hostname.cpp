@@ -532,8 +532,8 @@ condor_sockaddr convert_fake_hostname_to_ipaddr(const std::string& fullname)
 	if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
 		std::string dotted_domain = ".";
 		dotted_domain += default_domain;
-		int pos = fullname.find(dotted_domain.c_str());
-		if (pos != -1) {
+		size_t pos = fullname.find(dotted_domain.c_str());
+		if (pos != std::string::npos) {
 			truncated = true;
 			hostname = fullname.substr(0, pos);
 		}
