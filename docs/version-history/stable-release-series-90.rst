@@ -44,13 +44,6 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bug where HTCondor would incorrectly use its cached view of the
-  system's process list, potentially for many polling cycles.  This bug
-  would manifest, for instance, as problems starting jobs, with the
-  ``condor_starter`` logging an error about being unable to register the
-  new job process (since it didn't exist in the old, cached view).
-  :jira:`194`
-
 - Fixed a bug where sending an updated proxy to an execute node could
   cause the *condor_starter* to segfault when AES encryption was enabled
   (which is the default).
