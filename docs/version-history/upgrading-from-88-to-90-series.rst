@@ -93,7 +93,7 @@ most common configuration values that should be changed after an upgrade.
 Step 4
 ------
 
-The following changes my affect but your pool, but are not security
+The following changes may affect but your pool, but are not security
 improvements.  You may have to take action to continue using certain
 features of HTCondor.  If you don't use the feature, you may ignore
 its entry.
