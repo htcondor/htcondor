@@ -1832,6 +1832,11 @@ FileTransfer::ReadTransferPipeMsg()
 				delete [] error_buf;
 				goto read_failed;
 			}
+			
+			// The client should have null terminated this, but
+			// let's write the null just in case it didn't
+			error_buf[error_len - 1] = '\0';
+
 			Info.error_desc = error_buf;
 
 			delete [] error_buf;
