@@ -3521,6 +3521,7 @@ int dc_main( int argc, char** argv )
 				if ( ptmp1 ) {
 					sprintf(ptmp1,"%s_CONFIG=%s", myDistro->GetUc(), ptmp);
 					SetEnv(ptmp1);
+					free(ptmp1);
 				}
 			} else {
 				fprintf( stderr, 
