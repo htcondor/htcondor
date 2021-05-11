@@ -138,10 +138,11 @@ incorporates.
 
     -  ``AssignAccountingGroup( map_filename [, check_request] )`` Sets up a
        *condor_schedd* job transform that assigns an accounting group
-       to each job as it is submitted. The accounting is determined by
-       mapping the Owner attribute of the job using the given map file.
+       to each job as it is submitted. The accounting group is determined by
+       mapping the Owner attribute of the job using the given map file, which
+       should specify the allowed accounting groups each Owner is permitted to use.
        If the submitted job has an accounting group, that is treated as a requested
-       accounting group and validated against the map.  if the optional
+       accounting group and validated against the map.  If the optional
        ``check_request`` argument is true or not present submission will
        fail if the requested accounting group is present and not valid.  If the argument
        is false, the requested accounting group will be ignored if it is not valid.

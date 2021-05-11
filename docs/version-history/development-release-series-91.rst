@@ -48,6 +48,10 @@ Release Notes:
 
 New Features:
 
+- Added support for submission to the ARC CE REST interface via the new
+  grid universe type **arc**.
+  :jira:`138`
+
 - gdb and strace should now work in Docker Universe jobs.
   :jira:`349`
 
