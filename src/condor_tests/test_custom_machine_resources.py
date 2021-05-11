@@ -39,10 +39,10 @@ NUM_PERIODS = 3
             "NUM_SLOTS": "16",
             "ADVERTISE_CMR_UPTIME_SECONDS": "TRUE",
             "MACHINE_RESOURCE_INVENTORY_XXX": "$(TEST_DIR)/discovery.py",
-            "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) XXX_MONITOR",
-            "STARTD_CRON_XXX_MONITOR_MODE": "WaitForExit",
-            "STARTD_CRON_XXX_MONITOR_PERIOD": "1",
             "STARTD_CRON_XXX_MONITOR_EXECUTABLE": "$(TEST_DIR)/monitor.py",
+            "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) XXX_MONITOR",
+            "STARTD_CRON_XXX_MONITOR_MODE": "periodic",
+            "STARTD_CRON_XXX_MONITOR_PERIOD": str(MONITOR_PERIOD),
             "STARTD_CRON_XXX_MONITOR_METRICS": "SUM:XXX",
         }
     }
@@ -72,20 +72,19 @@ def discovery_script(resources):
 @config
 def monitor_script(resources):
     return format_script(
-        "#!/usr/bin/python3\n" +
-        "import time\n" +
-        "while True:\n" +
-        textwrap.indent("".join(
+        "#!/usr/bin/python3\n"
+        + "".join(
             textwrap.dedent(
-            """
+                """
             print('SlotMergeConstraint = StringListMember( "{name}", AssignedXXX )')
             print('UptimeXXXSeconds = {increment}')
-            print('- {name}', flush=True)
-            """.format(name=name, increment=increment)
+            print('- {name}')
+            """.format(
+                    name=name, increment=increment
+                )
             )
             for name, increment in resources.items()
-        ), "    ") +
-           "    "  + "time.sleep(5)\n"
+        )
     )
 
 
