@@ -4,6 +4,36 @@ Development Release Series 9.1
 This is the development release series of HTCondor. The details of each
 version are described below.
 
+Version 9.1.1
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.1.1 released on Month Date, 2021.
+
+- HTCondor version 9.1.1 not yet released.
+
+New Features:
+
+- The semantics of undefined user job policy expressions has changed.  A
+  policy whose expression evaluates to undefined is now uniformly ignored,
+  instead of either putting the job on hold or treated as false.
+  :jira:`442`
+
+- The "ToE tag" entry in the job event log now includes the exit code or
+  signal number, if and as appropriate.
+  :jira:`429`
+
+- Docker universe jobs are now run under the built-in docker
+  init process, which means that zombie processes are automatically
+  reaped.  This can be turned off with the knob
+  *DOCKER_RUN_UNDER_INIT* = false
+  :jira:`462`
+
+Bugs Fixed:
+
+- None.
+
 Version 9.1.0
 -------------
 
@@ -18,23 +48,12 @@ Release Notes:
 
 New Features:
 
-- The semantics of undefined user job policy expressions has changed.  A
-  policy whose expression evaluates to undefined is now uniformly ignored,
-  instead of either putting the job on hold or treated as false.
-  :jira:`442`
-
-- The "ToE tag" entry in the job event log now includes the exit code or
-  signal number, if and as appropriate.
-  :jira:`429`
+- Added support for submission to the ARC CE REST interface via the new
+  grid universe type **arc**.
+  :jira:`138`
 
 - gdb and strace should now work in Docker Universe jobs.
   :jira:`349`
-
-- Docker universe jobs are now run under the built-in docker
-  init process, which means that zombie processes are automatically
-  reaped.  This can be turned off with the knob
-  *DOCKER_RUN_UNDER_INIT* = false
-  :jira:`462`
 
 - The *condor_startd* on platforms that support Docker now
   runs a simple Docker container at startup to verify that

@@ -516,11 +516,20 @@ VanillaProc::StartJob()
 					mount_list.deleteCurrent();
 					continue;
 				}
+
 				// Gah, I wish I could throw an exception to clean up these nested if statements.
 				if (IsDirectory(next_dir)) {
 					std::string fulldirbuf;
 					const char * full_dir = dirscat(working_dir, next_dir, fulldirbuf);
+
 					if (full_dir) {
+							// If the execute dir is under any component of MOUNT_UNDER_SCRATCH,
+							// bad things happen, so give up.
+						if (fulldirbuf.find(next_dir) == 0) {
+							dprintf(D_ALWAYS, "Can't bind mount %s under execute dir %s -- skipping MOUNT_UNDER_SCRATCH\n", next_dir, full_dir);
+							continue;
+						}
+
 						if (!mkdir_and_parents_if_needed( full_dir, S_IRWXU, PRIV_USER )) {
 							dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir);
 							delete fs_remap;

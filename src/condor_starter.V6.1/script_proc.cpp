@@ -90,7 +90,10 @@ ScriptProc::StartJob()
 		exe_path += Starter->GetWorkingDir(0);
 		exe_path += DIR_DELIM_CHAR;
 	}
-	exe_path += tmp;
+
+	if (tmp) {
+		exe_path += tmp;
+	}
 	free( tmp ); 
 	tmp = NULL;
 
