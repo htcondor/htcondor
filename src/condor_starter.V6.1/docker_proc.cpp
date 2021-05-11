@@ -281,6 +281,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 				int r = read(fd, buf, 511);
 				if (r < 0) {
 					dprintf(D_ALWAYS, "Cannot read docker error file on docker create container. Errno %d\n", errno);
+					buf[0] = '\0';
 				} else {
 					buf[r] = '\0';
 					int buflen = strlen(buf);
