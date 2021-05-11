@@ -400,7 +400,7 @@ UserProc::getStdFile( std_file_type type,
 		///////////////////////////////////////////////////////
 		// The regular case of a local file
 		///////////////////////////////////////////////////////
-	out_name = filename;
+	out_name = filename ? filename : "";
 	return true;
 }
 
