@@ -243,8 +243,9 @@ setup( const char * region, const char * pukf, const char * prkf, const char * c
 				setup_usage();
 				return 1;
 			}
+		} else {
+			close( fd );
 		}
-		close( fd );
 	}
 
 	if( privateKeyFile != USE_INSTANCE_ROLE_MAGIC_STRING ) {
@@ -260,8 +261,9 @@ setup( const char * region, const char * pukf, const char * prkf, const char * c
 				setup_usage();
 				return 1;
 			}
+		} else {
+			close( fd );
 		}
-		close( fd );
 	}
 
 
