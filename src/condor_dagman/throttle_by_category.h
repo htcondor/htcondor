@@ -21,6 +21,7 @@
 #ifndef _THROTTLE_BY_CATEGORY_H
 #define _THROTTLE_BY_CATEGORY_H
 
+#include "MyString.h"
 #include <map>
 
 // Note: some of the complexity in this class is to allow a category maxjobs

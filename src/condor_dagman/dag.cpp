@@ -42,7 +42,6 @@
 #include "write_user_log.h"
 #include "simplelist.h"
 #include "condor_string.h"  /* for strnewp() */
-#include "string_list.h"
 #include "condor_daemon_core.h"
 #include <set>
 #include "dagman_metrics.h"

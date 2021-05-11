@@ -28,17 +28,15 @@ const int ThrottleByCategory::noThrottleSetting = -1;
 
 //---------------------------------------------------------------------------
 ThrottleByCategory::ThrottleByCategory() :
-			_throttles( hashFunction )
+			_throttles( {} )
 {
 }
 
 //---------------------------------------------------------------------------
 ThrottleByCategory::~ThrottleByCategory()
 {
-	_throttles.startIterations();
-	ThrottleInfo	*info;
-	while ( _throttles.iterate( info ) ) {
-		delete info;
+	for ( auto throttle: _throttles ) {
+		delete throttle.second;
 	}
 }
 
@@ -63,8 +61,8 @@ ThrottleByCategory::SetThrottle( const MyString *category, int maxJobs )
 {
 	ASSERT( category != NULL );
 
-	ThrottleInfo	*info = _throttles.find( *category );
-	if ( !info ) {
+	auto findResult = _throttles.find( *category );
+	if ( findResult == _throttles.end() ) {
 			// category not in table
 
 			// Coverity complains about not storing the return value here, but
@@ -72,7 +70,7 @@ ThrottleByCategory::SetThrottle( const MyString *category, int maxJobs )
 		AddCategory( category, maxJobs );
 	} else {
 			// category is in table
-
+		ThrottleInfo *info = ( *findResult ).second;
 		if ( info->isSet() && info->_maxJobs != maxJobs ) {
 			debug_printf( DEBUG_NORMAL, "Warning: new maxjobs value %d "
 						"for category %s overrides old value %d\n",
@@ -89,11 +87,11 @@ ThrottleByCategory::GetThrottleInfo( const MyString *category )
 {
 	ASSERT( category != NULL );
 
-	ThrottleInfo	*info = _throttles.lookup( *category );
-	if ( !info ) {
+	auto findResult = _throttles.find( *category );
+	if ( findResult == _throttles.end() ) {
 		return NULL;
 	} else {
-		return info;
+		return ( *findResult ).second;
 	}
 }
 
@@ -107,11 +105,10 @@ ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 		// new names.  Note that we don't need to delete any
 		// ThrottleInfo objects because we're re-using the ones
 		// we already have.
-	HashTable<MyString, ThrottleInfo *> tmpThrottles( hashFunction );
+	std::map<MyString, ThrottleInfo *> tmpThrottles( {} );
 
-	_throttles.startIterations();
-	ThrottleInfo	*info;
-	while ( _throttles.iterate( info ) ) {
+	for ( auto throttle: _throttles ) {
+		ThrottleInfo *info = throttle.second;
 			// Don't change category names for global categories (names
 			// starting with '+') (allows nodes in different splices to
 			// be in the same category).
@@ -121,8 +118,9 @@ ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 			delete info->_category;
 			info->_category = newCat;
 		}
-		if ( tmpThrottles.insert( *(info->_category), info ) != 0 ) {
-			EXCEPT( "HashTable error" );
+		auto insertResult = tmpThrottles.insert( std::make_pair( *(info->_category), info ) );
+		if ( !insertResult.second ) {
+			EXCEPT( "Error inserting temporary throttle" );
 		}
 	}
 
@@ -142,9 +140,8 @@ ThrottleByCategory::PrintThrottles( FILE *fp ) /* const */
 {
 	ASSERT( fp != NULL );
 
-	_throttles.startIterations();
-	ThrottleInfo	*info;
-	while ( _throttles.iterate( info ) ) {
+	for ( auto throttle: _throttles ) {
+		ThrottleInfo *info = throttle.second;
 		if ( info->isSet() ) {
 			fprintf( fp, "MAXJOBS %s %d\n", info->_category->c_str(),
 						info->_maxJobs );
