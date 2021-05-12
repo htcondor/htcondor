@@ -103,8 +103,8 @@ static const char *GMStateNames[] = {
 #define HTTP_202_ACCEPTED	202
 #define HTTP_404_NOT_FOUND	404
 
-#define REMOTE_STDOUT_NAME	"_condor_stdout"
-#define REMOTE_STDERR_NAME	"_condor_stderr"
+#define REMOTE_STDOUT_NAME	"_arc_stdout"
+#define REMOTE_STDERR_NAME	"_arc_stderr"
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
@@ -1000,16 +1000,12 @@ bool ArcJob::buildJobADL()
 	std::string attr_value;
 	std::string iwd;
 	std::string executable;
-	std::string remote_stdout_name;
-	std::string remote_stderr_name;
 	std::string resources;
 	std::string slot_req;
 	long int_value;
 	char *file;
 
 	RSL.clear();
-
-	GetRemoteStdoutNames( remote_stdout_name, remote_stderr_name );
 
 	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) != 1 ) {
 		formatstr(errorString, "%s not defined", ATTR_JOB_IWD);
@@ -1081,7 +1077,7 @@ bool ArcJob::buildJobADL()
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value.c_str()) ) {
 			RSL += "<Output>";
-			RSL += escapeXML(remote_stdout_name);
+			RSL += escapeXML(REMOTE_STDOUT_NAME);
 			RSL += "</Output>";
 		}
 	}
@@ -1090,7 +1086,7 @@ bool ArcJob::buildJobADL()
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value.c_str()) ) {
 			RSL += "<Error>";
-			RSL += escapeXML(remote_stderr_name);
+			RSL += escapeXML(REMOTE_STDERR_NAME);
 			RSL += "</Error>";
 		}
 	}
@@ -1221,12 +1217,8 @@ bool ArcJob::buildSubmitRSL()
 	std::string rsl_suffix;
 	std::string iwd;
 	std::string executable;
-	std::string remote_stdout_name;
-	std::string remote_stderr_name;
 
 	RSL.clear();
-
-	GetRemoteStdoutNames( remote_stdout_name, remote_stderr_name );
 
 	if ( jobAd->LookupString( ATTR_ARC_RSL, rsl_suffix ) &&
 						   rsl_suffix[0] == '&' ) {
@@ -1342,7 +1334,7 @@ bool ArcJob::buildSubmitRSL()
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
 			RSL += ")(stdout=";
-			RSL += remote_stdout_name;
+			RSL += REMOTE_STDOUT_NAME;
 		}
 		free( attr_value );
 		attr_value = NULL;
@@ -1352,7 +1344,7 @@ bool ArcJob::buildSubmitRSL()
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
 			RSL += ")(stderr=";
-			RSL += remote_stderr_name;
+			RSL += REMOTE_STDERR_NAME;
 		}
 		free( attr_value );
 	}
@@ -1449,15 +1441,11 @@ StringList *ArcJob::buildStageInList()
 	return stage_list;
 }
 
-StringList *ArcJob::buildStageOutList( bool old_stdout )
+StringList *ArcJob::buildStageOutList()
 {
 	StringList *stage_list = NULL;
 	std::string buf;
 	bool transfer = true;
-	std::string remote_stdout_name;
-	std::string remote_stderr_name;
-
-	GetRemoteStdoutNames( remote_stdout_name, remote_stderr_name, old_stdout );
 
 	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, buf );
 	stage_list = new StringList( buf.c_str(), "," );
@@ -1466,8 +1454,8 @@ StringList *ArcJob::buildStageOutList( bool old_stdout )
 	if ( transfer && jobAd->LookupString( ATTR_JOB_OUTPUT, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.c_str()) ) {
-			if ( !stage_list->file_contains( remote_stdout_name.c_str() ) ) {
-				stage_list->append( remote_stdout_name.c_str() );
+			if ( !stage_list->file_contains( REMOTE_STDOUT_NAME ) ) {
+				stage_list->append( REMOTE_STDOUT_NAME );
 			}
 		}
 	}
@@ -1477,8 +1465,8 @@ StringList *ArcJob::buildStageOutList( bool old_stdout )
 	if ( transfer && jobAd->LookupString( ATTR_JOB_ERROR, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.c_str()) ) {
-			if ( !stage_list->file_contains( remote_stderr_name.c_str() ) ) {
-				stage_list->append( remote_stderr_name.c_str() );
+			if ( !stage_list->file_contains( REMOTE_STDERR_NAME ) ) {
+				stage_list->append( REMOTE_STDERR_NAME );
 			}
 		}
 	}
@@ -1486,8 +1474,7 @@ StringList *ArcJob::buildStageOutList( bool old_stdout )
 	return stage_list;
 }
 
-StringList *ArcJob::buildStageOutLocalList( StringList *stage_list,
-											  bool old_stdout )
+StringList *ArcJob::buildStageOutLocalList( StringList *stage_list )
 {
 	StringList *stage_local_list;
 	char *remaps = NULL;
@@ -1497,10 +1484,6 @@ StringList *ArcJob::buildStageOutLocalList( StringList *stage_list,
 	std::string stderr_name = "";
 	std::string buff;
 	std::string iwd = "/";
-	std::string remote_stdout_name;
-	std::string remote_stderr_name;
-
-	GetRemoteStdoutNames( remote_stdout_name, remote_stderr_name, old_stdout );
 
 	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) ) {
 		if ( iwd.length() > 1 && iwd[iwd.length() - 1] != '/' ) {
@@ -1519,9 +1502,9 @@ StringList *ArcJob::buildStageOutLocalList( StringList *stage_list,
 	while ( (remote_name = stage_list->next()) ) {
 			// stdout and stderr don't get remapped, and their paths
 			// are evaluated locally
-		if ( strcmp( remote_stdout_name.c_str(), remote_name ) == 0 ) {
+		if ( strcmp( REMOTE_STDOUT_NAME, remote_name ) == 0 ) {
 			local_name = stdout_name.c_str();
-		} else if ( strcmp( remote_stderr_name.c_str(), remote_name ) == 0 ) {
+		} else if ( strcmp( REMOTE_STDERR_NAME, remote_name ) == 0 ) {
 			local_name = stderr_name.c_str();
 		} else if( remaps && filename_remap_find( remaps, remote_name,
 												  local_name ) ) {
@@ -1571,36 +1554,3 @@ void ArcJob::NotifyNewRemoteStatus( const char *status )
 	}
 }
 
-// Return the filenames we should use for stdout and stderr in the job
-// directory on the ARC server. We used to name them _condor_stdout/err,
-// but that can cause problems if ARC is submitting into Condor.
-// ARC uses a wrapper script that redirects the job's output to filenames
-// given in the RSL and lets the batch scheduler capture the wrapper's
-// output. If Condor decides to name the wrapper's output files
-// _condor_stdout/err (like when Condor's file transfer is used),
-// the two outputs get intermingled.
-// So starting with 8.0.5, we generate more unique filenames, based on
-// the GlobalJobId attribute. For users who have jobs submitted when
-// upgrading to this version or beyond, we will try using the old names
-// when transferring output if we fail using the new names.
-void ArcJob::GetRemoteStdoutNames( std::string &std_out, std::string &std_err, bool use_old_names )
-{
-	if ( use_old_names ) {
-		std_out = REMOTE_STDOUT_NAME;
-		std_err = REMOTE_STDERR_NAME;
-	} else {
-		std::string gjid;
-		jobAd->LookupString( ATTR_GLOBAL_JOB_ID, gjid );
-
-		size_t loc = 0;
-		#define FILENAME_FILTER "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-_"
-		while( (loc = gjid.find_first_not_of( FILENAME_FILTER, loc )) != std::string::npos ) {
-			gjid[loc] = '_';
-		}
-
-		std_out = REMOTE_STDOUT_NAME ".";
-		std_out += gjid;
-		std_err = REMOTE_STDERR_NAME ".";
-		std_err += gjid;
-	}
-}
