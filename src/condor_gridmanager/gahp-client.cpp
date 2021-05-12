@@ -387,7 +387,11 @@ GahpServer::Reaper(int pid,int status)
 
 	if ( dead_server ) {
 		if ( !dead_server->m_sec_session_id.empty() ) {
-			daemonCore->getSecMan()->session_cache->remove( dead_server->m_sec_session_id.c_str() );
+			SecMan *secman = daemonCore->getSecMan();
+			IpVerify *ipv = secman->getIpVerify();
+			secman->session_cache->remove( dead_server->m_sec_session_id.c_str() );
+			ipv->FillHole(DAEMON, CONDOR_CHILD_FQU);
+			ipv->FillHole(CLIENT_PERM, CONDOR_CHILD_FQU);
 		}
 		formatstr_cat( buf, " unexpectedly" );
 		if ( dead_server->m_gahp_startup_failed ) {
@@ -1105,10 +1109,12 @@ GahpServer::CreateSecuritySession()
 		return false;
 	}
 
+	SecMan *secman = daemonCore->getSecMan();
+
 	char *session_id = Condor_Crypt_Base::randomHexKey();
 	char *session_key = Condor_Crypt_Base::randomHexKey();
 
-	if ( !daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession( DAEMON,
+	if ( !secman->CreateNonNegotiatedSecuritySession( DAEMON,
 										session_id, session_key, NULL,
 										AUTH_METHOD_FAMILY,
 										CONDOR_CHILD_FQU, NULL, 0, nullptr, true ) ) {
@@ -1118,7 +1124,7 @@ GahpServer::CreateSecuritySession()
 	}
 
 	std::string session_info;
-	if ( !daemonCore->getSecMan()->ExportSecSessionInfo( session_id,
+	if ( !secman->getSecMan()->ExportSecSessionInfo( session_id,
 														 session_info ) ) {
 		free( session_id );
 		free( session_key );
@@ -1151,9 +1157,13 @@ GahpServer::CreateSecuritySession()
 			reason = "Unspecified error";
 		}
 		dprintf( D_ALWAYS, "GAHP command '%s' failed: %s\n", command, reason );
-		daemonCore->getSecMan()->session_cache->remove( claimId.secSessionId() );
+		secman->session_cache->remove( claimId.secSessionId() );
 		return false;
 	}
+
+	IpVerify *ipv = secman->getIpVerify();
+	ipv->PunchHole(DAEMON, CONDOR_CHILD_FQU);
+	ipv->PunchHole(CLIENT_PERM, CONDOR_CHILD_FQU);
 
 	m_sec_session_id = claimId.secSessionId();
 	return true;
