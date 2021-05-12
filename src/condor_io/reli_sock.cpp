@@ -973,9 +973,16 @@ read_packet:
 			aad_with_digest.resize(aad_len,0);
 			aad_data = &aad_with_digest[0];
 			if (!p_sock->m_final_recv_header) {
-				if (1 != EVP_DigestFinal_ex(p_sock->m_recv_md_ctx.get(), aad_data, &md_size)) {
+				if (p_sock->m_recv_md_ctx &&
+					(1 != EVP_DigestFinal_ex(p_sock->m_recv_md_ctx.get(), aad_data, &md_size)))
+				{
 					dprintf(D_ALWAYS, "IO: Failed to compute final received message digest.\n");
 					return false;
+				} else if (!p_sock->m_recv_md_ctx) {
+					memset(aad_data, '\0', md_size);
+					dprintf(D_NETWORK|D_VERBOSE, "Setting first digest in AAD to %u 0's\n", md_size);
+				} else {
+					dprintf(D_NETWORK|D_VERBOSE, "Successfully set first digest in AAD\n");
 				}
 				p_sock->m_final_recv_header = true;
 				p_sock->m_final_mds.resize(2*md_size,0);
@@ -1196,9 +1203,16 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 			aad_with_digest.resize(aad_len,0);
 			aad_data = &aad_with_digest[0];
 			if (!p_sock->m_final_send_header) {
-				if (1 != EVP_DigestFinal_ex(p_sock->m_send_md_ctx.get(), aad_data, &md_size)) {
+				if (p_sock->m_send_md_ctx &&
+					(1 != EVP_DigestFinal_ex(p_sock->m_send_md_ctx.get(), aad_data, &md_size)))
+				{
 					dprintf(D_NETWORK, "IO: Failed to compute final message digest.\n");
 					return false;
+				} else if (!p_sock->m_send_md_ctx) {
+					memset(aad_data, '\0', md_size);
+					dprintf(D_NETWORK|D_VERBOSE, "Setting first digest in AAD to %u 0's\n", md_size);
+				} else {
+					dprintf(D_NETWORK|D_VERBOSE, "Successfully set first digest in AAD\n");
 				}
 				p_sock->m_final_send_header = true;
 				p_sock->m_final_mds.resize(2*md_size,0);
@@ -1214,8 +1228,9 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 					return false;
 				} else if (!p_sock->m_recv_md_ctx) {
 					memset(aad_data + md_size, '\0', md_size);
+					dprintf(D_NETWORK|D_VERBOSE, "Setting second digest in AAD to %u 0's\n", md_size);
 				} else {
-					dprintf(D_NETWORK, "Successfully set second digest in AAD when sending\n");
+					dprintf(D_NETWORK|D_VERBOSE, "Successfully set second digest in AAD when sending\n");
 				}
 				p_sock->m_final_recv_header = true;
 				p_sock->m_final_mds.resize(2*md_size,0);
