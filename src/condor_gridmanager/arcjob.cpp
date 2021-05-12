@@ -1112,6 +1112,9 @@ bool ArcJob::buildJobADL()
 		slot_req += "<NumberOfSlots>";
 		slot_req += std::to_string(int_value);
 		slot_req += "</NumberOfSlots>";
+		slot_req += "<SlotsPerHost>";
+		slot_req += std::to_string(int_value);
+		slot_req += "</SlotsPerHost>";
 	}
 	if ( ! slot_req.empty() ) {
 		size_t insert_pos = resources.find("</SlotRequirement>");
