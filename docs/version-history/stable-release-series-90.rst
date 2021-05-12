@@ -36,6 +36,16 @@ Release Notes:
 
 - HTCondor version 9.0.1 not yet released.
 
+- The installer for Windows will now replace the ``condor_config``
+  file even on an update.  You must use condor_config.local or
+  a configuration directory to customize the config if you wish
+  to preserve configuration changes across updates.
+
+- The is a known issue with installer for Windows where it does
+  not honor the Administrator Access list set in the MSI permissions
+  dialog on a fresh install.  Instead is will always set the
+  Administrator access to the default value.
+
 New Features:
 
 - When the ``AssignAccountingGroup`` configuration template is in effect
@@ -60,6 +70,10 @@ New Features:
   string in a generated access token file is wrapped in JSON. Default is
   ``LOCAL_CREDMON_TOKEN_USE_JSON = true`` (wrap token in JSON).
   :jira:`367`
+
+- Windows MSI installer now sets up user-based authentication and creates 
+  an IDTOKEN for local administration.
+  :jira:`407`
 
 Bugs Fixed:
 
@@ -94,10 +108,13 @@ Bugs Fixed:
 - Fixed some bugs that caused ``bosco_cluster --add`` to fail.
   Allow ``remote_gahp`` to work with older Bosco installations via
   the ``--rgahp-script`` option.
+  Fixed security authorization failure between *condor_gridmanager*
+  and *condor_ft-gahp*.
   :jira:`438`
   :jira:`433`
   :jira:`451`
   :jira:`452`
+  :jira:`487`
 
 - Fixed a bug in the local issuer *condor_credmon_oauth* where SciTokens version
   2.0 tokens were being generated without an "aud" claim. The "aud" claim is now
@@ -116,7 +133,7 @@ Release Notes:
 
 - HTCondor version 9.0.0 released on April 14, 2021.
 
-- The installer was for Windows platforms was not ready for 9.0.0.
+- The installer for Windows platforms was not ready for 9.0.0.
   Windows support will appear in 9.0.1.
 
 - Removed support for CREAM and Unicore grid jobs, glexec privilege separation, DRMAA, and *condor_cod*.
