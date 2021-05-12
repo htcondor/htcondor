@@ -277,15 +277,15 @@ cleanup_execute_dirs( StringList &list )
 			const char * exec_path_full = dirscat(it->second.c_str(), exec_path, dirbuf);
 			if(exec_path_full) {
 				dprintf(D_FULLDEBUG, "Looking at %s\n",exec_path_full);
-			}
-			Directory execute_dir( exec_path_full, PRIV_ROOT );
+				Directory execute_dir( exec_path_full, PRIV_ROOT );
 
-			execute_dir.Rewind();
-			while ( execute_dir.Next() ) {
-				check_recovery_file( execute_dir.GetFullPath() );
-			}
+				execute_dir.Rewind();
+				while ( execute_dir.Next() ) {
+					check_recovery_file( execute_dir.GetFullPath() );
+				}
 
-			execute_dir.Remove_Entire_Directory();
+				execute_dir.Remove_Entire_Directory();
+			}
 		}
 #endif
 	}
