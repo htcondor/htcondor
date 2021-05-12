@@ -108,10 +108,13 @@ Bugs Fixed:
 - Fixed some bugs that caused ``bosco_cluster --add`` to fail.
   Allow ``remote_gahp`` to work with older Bosco installations via
   the ``--rgahp-script`` option.
+  Fixed security authorization failure between *condor_gridmanager*
+  and *condor_ft-gahp*.
   :jira:`438`
   :jira:`433`
   :jira:`451`
   :jira:`452`
+  :jira:`487`
 
 - Fixed a bug in the local issuer *condor_credmon_oauth* where SciTokens version
   2.0 tokens were being generated without an "aud" claim. The "aud" claim is now
