@@ -1124,7 +1124,7 @@ GahpServer::CreateSecuritySession()
 	}
 
 	std::string session_info;
-	if ( !secman->getSecMan()->ExportSecSessionInfo( session_id,
+	if ( !secman->ExportSecSessionInfo( session_id,
 														 session_info ) ) {
 		free( session_id );
 		free( session_key );
