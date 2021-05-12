@@ -1,4 +1,5 @@
 FROM fedora:32
+ENV TZ="America/Chicago"
 
 # Use the bash shell for commands
 SHELL ["/bin/bash", "-c"]
@@ -72,7 +73,7 @@ RUN dnf install -y \
 RUN dnf install -y \
     gdb \
     git \
-    ip-utils \
+    iputils \
     less \
     nano \
     rpmlint \

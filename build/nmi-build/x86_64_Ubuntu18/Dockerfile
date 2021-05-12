@@ -1,4 +1,5 @@
 FROM ubuntu:bionic
+ENV TZ="America/Chicago"
 
 # Use the bash shell for commands
 SHELL ["/bin/bash", "-c"]
