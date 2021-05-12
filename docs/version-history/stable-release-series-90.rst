@@ -62,6 +62,7 @@ Bugs Fixed:
   cause the *condor_starter* to segfault when AES encryption was enabled
   (which is the default).
   :jira:`456`
+  :jira:`490`
 
 - Fixed a bug in the implementation of the submit commands ``max_retries``
   and ``success_exit_code`` which would cause jobs which exited on a
