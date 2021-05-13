@@ -135,9 +135,11 @@ Function CreateConfig2()
    daemonList = daemonList & " SCHEDD"
   End If
 
+  vacate = Session.Property("VACATEJOBS")
   Select Case Session.Property("RUNJOBS")
   Case "A"
    configTxt = ReplaceMetaConfig("POLICY", "(DESKTOP|UWCS_DESKTOP|ALWAYS_RUN_JOBS)", "ALWAYS_RUN_JOBS", configTxt)
+   vacate = "Y"
    'configTxt = ReplaceConfig("START","TRUE",configTxt)
    'configTxt = ReplaceConfig("SUSPEND","FALSE",configTxt)
    'configTxt = ReplaceConfig("WANT_SUSPEND","FALSE",configTxt)
@@ -146,6 +148,7 @@ Function CreateConfig2()
    daemonList = daemonList & " STARTD"
   Case "N"
    'configTxt = ReplaceConfig("START","FALSE",configTxt)
+   vacate = "Y"
   Case "I"
    configTxt = ReplaceMetaConfig("POLICY", "(DESKTOP|UWCS_DESKTOP|ALWAYS_RUN_JOBS)", "DESKTOP", configTxt)
    configTxt = ReplaceConfig("START","KeyboardIdle > $$(StartIdleTime)",configTxt)
@@ -156,7 +159,7 @@ Function CreateConfig2()
    daemonList = daemonList & " STARTD KBDD"
   End Select
 
-  If Session.Property("VACATEJOBS") = "N" Then
+  If vacate = "N" Then
    configTxt = ReplaceConfig("WANT_VACATE","FALSE",configTxt)
    configTxt = ReplaceConfig("WANT_SUSPEND","TRUE",configTxt)
   End If

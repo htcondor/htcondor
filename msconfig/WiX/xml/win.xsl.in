@@ -56,19 +56,22 @@
               </RegistryKey>
               <Condition>RUNJOBS = "I" Or RUNJOBS = "C"</Condition>
             </Component>
-            <Component Id="CondorConfigBase" Guid="9BEBF8B3-2A13-42B1-BA4C-1B24402D62CF">
+            <Component Id="CondorConfigBase" Guid=""> <!-- empty guid prevents removal on uninstall/upgrade -->
               <File Id="condor_config" Name="condor_config" Source="$(var.Source)\etc\condor_config.base" Checksum="no" >
                 <Permission User="Administrators" GenericAll="yes" />
               </File>
+              <Condition>Not UPGRADEFOUND Or HOSTBASEDFOUND</Condition>
             </Component>
-            <Component Id="LocalConfigFile" Guid="829D8812-2B4D-4FE4-9C53-F99D9AACB91A">
+            <Component Id="LocalConfigFile" Guid=""> <!-- empty guid prevents removal on uninstall/upgrade -->
               <File Id="condor_config.local" Name="condor_config.local" Source="$(var.Source)\etc\condor_config.local.blank" Checksum="no" >
                 <Permission User="Administrators" GenericAll="yes" />
               </File>
+              <Condition>Not UPGRADEFOUND</Condition>
             </Component>
             <Component Id="CondorConfigIni" Guid="5AD8ADAA-A724-4D98-A64E-58C30F7AF4B5">
               <CreateFolder/> <!-- suppress warning about directory not being created -->
               <IniFile Id="configIniPath" Directory="INSTALLDIR" Name="condor_config" Section="HTCONDOR" Action="addLine" Key="RELEASE_DIR" Value="[INSTALLDIR]." />
+              <Condition>Not UPGRADEFOUND Or HOSTBASEDFOUND</Condition>
               <!-- <RemoveFile Id="local_config" On="uninstall" Name="condor_config.local" /> -->
             </Component>
             <Directory Id="LogDir" Name="log">
@@ -135,6 +138,13 @@
             IncludeMinimum="no"
             OnlyDetect="yes"
             Property="NEWPRODUCTFOUND"
+            />
+          <UpgradeVersion
+            Language="1033"
+            Maximum="8.9.13"
+            IncludeMaximum="yes"
+            OnlyDetect="yes"
+            Property="HOSTBASEDFOUND"
             />
           <UpgradeVersion
             Language="1033"
@@ -254,13 +264,13 @@
         <SetProperty Id="POOLNAME" Value="[OLD_POOLNAME]" After="AppSearch">UPGRADEFOUND</SetProperty>
         <SetProperty Id="POOLHOSTNAME" Value="[OLD_POOLHOSTNAME]" After="AppSearch">UPGRADEFOUND AND OLD_POOLHOSTNAME</SetProperty>
         <SetProperty Id="ACCOUNTINGDOMAIN" Value="[OLD_ACCOUNTINGDOMAIN]" After="AppSearch">UPGRADEFOUND</SetProperty>
-        <SetProperty Id="CONDOREMAIL" Value="[OLD_CONDOREMAIL]" After="AppSearch">UPGRADEFOUND</SetProperty>
-        <SetProperty Id="SMTPSERVER" Value="[OLD_SMTPSERVER]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="CONDOREMAIL" Value="[OLD_CONDOREMAIL]" After="AppSearch">UPGRADEFOUND AND OLD_CONDOREMAIL</SetProperty>
+        <SetProperty Id="SMTPSERVER" Value="[OLD_SMTPSERVER]" After="AppSearch">UPGRADEFOUND AND OLD_SMTPSERVER</SetProperty>
         <SetProperty Id="HOSTALLOWREAD" Value="[OLD_HOSTALLOWREAD]" After="AppSearch">UPGRADEFOUND</SetProperty>
         <SetProperty Id="HOSTALLOWWRITE" Value="[OLD_HOSTALLOWWRITE]" After="AppSearch">UPGRADEFOUND</SetProperty>
-        <SetProperty Id="HOSTALLOWADMINISTRATOR" Value="[OLD_HOSTALLOWADMINISTRATOR]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HOSTALLOWADMINISTRATOR" Value="[OLD_HOSTALLOWADMINISTRATOR]" After="AppSearch">UPGRADEFOUND AND Not HOSTBASEDFOUND</SetProperty>
         <SetProperty Id="RUNJOBS" Value="[OLD_RUNJOBS]" After="AppSearch">UPGRADEFOUND</SetProperty>
-        <SetProperty Id="VACATEJOBS" Value="[OLD_VACATEJOBS]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="VACATEJOBS" Value="[OLD_VACATEJOBS]" After="AppSearch">UPGRADEFOUND And (RUNJOBS = "I" Or RUNJOBS = "C")</SetProperty>
         <SetProperty Id="USEVMUNIVERSE" Value="[OLD_USEVMUNIVERSE]" After="AppSearch">UPGRADEFOUND</SetProperty>
         <SetProperty Id="VMMAXNUMBER" Value="[OLD_VMMAXNUMBER]" After="AppSearch">UPGRADEFOUND</SetProperty>
         <SetProperty Id="VMMEMORY" Value="[OLD_VMMEMORY]" After="AppSearch">UPGRADEFOUND</SetProperty>
@@ -274,7 +284,7 @@
         <CustomAction Id="ProbeInstall"
             Impersonate="no" Execute="deferred" Return="check"
             Property="InstallProbe"
-            ExeCommand="-log [INSTALLDIR]probe.log -sid [UserSID]"
+            ExeCommand="-log [INSTALLDIR]probe.log -dir [INSTALLDIR] -sid [UserSID]"
          />
         <CustomAction Id="SetInstallHelper"
             Property="InstallHelper" Value="[INSTALLDIR]bin\win_install_helper.exe"
@@ -291,13 +301,21 @@
             Function CreateConfig()
               Set fso = CreateObject("Scripting.FileSystemObject")
               path = Session.Property("INSTALLDIR")
-              Set installpath = fso.GetFolder(path)
-              strippedPath = installpath.ShortPath
-              Set scriptFile = fso.OpenTextFile(strippedPath & "\etc\WiX\config.vbs",1)
-              sText = scriptFile.ReadAll
-              scriptFile.close
-              
-              ExecuteGlobal sText
+              configscript = fso.BuildPath(path, "etc\WiX\config.vbs")
+              If fso.FileExists(configscript) Then
+                 Set scriptFile = fso.OpenTextFile(configscript,1)
+                 sText = scriptFile.ReadAll
+                 scriptFile.close
+                 ExecuteGlobal sText
+              Else
+                 ccpath = fso.BuildPath(path,"condor_config")
+                 set file = fso.OpenTextFile(ccpath, 8)
+                 file.WriteLine("")
+                 file.WriteLine("# make sure the install user can use admin commands")
+                 file.WriteLine("INSTALL_USER = " & Session.Property("LogonUser") & "@*")
+                 file.WriteLine("ALLOW_ADMINISTRATOR = $$(ALLOW_ADMINISTRATOR) $$(INSTALL_USER)")
+                 file.Close
+              End If
             End Function
             
             CreateConfig
@@ -307,8 +325,8 @@
         <InstallExecuteSequence>
           <Custom Action="PreventDowngrade" After="FindRelatedProducts">NEWPRODUCTFOUND</Custom>
           <Custom Action="PreventUpgrade" After="FindRelatedProducts">TOOOLDFOUND</Custom>
-          <Custom Action="AdminUserProp" After="FindRelatedProducts" >Not UPGRADEFOUND</Custom>
           <RemoveExistingProducts After="InstallValidate">UPGRADEFOUND</RemoveExistingProducts>
+          <Custom Action="AdminUserProp" After="AppSearch" >Not UPGRADEFOUND</Custom>
           <Custom Action="SetInstallHelper" After="InstallFiles">Not Installed</Custom>
           <Custom Action="SetInstallProbe" After="InstallFiles">Not Installed</Custom>
           <Custom Action="MakeAdminToken" After="SetInstallHelper">Not Installed</Custom>
