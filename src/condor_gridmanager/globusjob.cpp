@@ -563,8 +563,8 @@ static bool merge_file_into_classad(const char * filename, ClassAd * ad)
 		std::string line;
 		while( readLine(line, fp) ) {
 			chomp(line);
-			int n = line.find(" = ");
-			if(n < 1) {
+			size_t n = line.find(" = ");
+			if(n == 0 || n == std::string::npos) {
 				dprintf( D_ALWAYS,
 					"Failed to parse \"%s\", ignoring.", line.c_str());
 				continue;

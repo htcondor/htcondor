@@ -118,15 +118,15 @@ Tag::readFromString( const std::string & in ) {
     std::string line = in;
 
 	const char * endWhoStr = " at ";
-	int endWho = line.find( endWhoStr );
-	if( endWho == -1 ) { return false; }
+	size_t endWho = line.find( endWhoStr );
+	if( endWho == std::string::npos ) { return false; }
 	std::string whoStr = line.substr( 0, endWho );
 	this->who = whoStr.c_str();
 	line = line.substr( endWho + strlen(endWhoStr), INT_MAX );
 
 	const char * endWhenStr = " (using method ";
-	int endWhen = line.find( endWhenStr );
-	if( endWhen == -1 ) { return false; }
+	size_t endWhen = line.find( endWhenStr );
+	if( endWhen == std::string::npos ) { return false; }
 	std::string whenStr = line.substr( 0, endWhen );
 	line = line.substr( endWhen + strlen(endWhenStr), INT_MAX );
 	// This code gets more complicated if we don't assume UTC i/o.
@@ -135,8 +135,8 @@ Tag::readFromString( const std::string & in ) {
 	formatstr( when, "%ld", timegm(&eventTime) );
 
 	const char * endHowCodeStr = ": ";
-	int endHowCode = line.find( endHowCodeStr );
-	if( endHowCode == -1 ) { return false; }
+	size_t endHowCode = line.find( endHowCodeStr );
+	if( endHowCode == std::sting::npos ) { return false; }
 	std::string howCodeStr = line.substr( 0, endHowCode );
 	line = line.substr( endHowCode + strlen(endHowCodeStr), INT_MAX );
 	char * end = NULL;
@@ -148,8 +148,8 @@ Tag::readFromString( const std::string & in ) {
 	}
 
 	const char * endHowStr = ").";
-	int endHow = line.find( endHowStr );
-	if( endHow == -1 ) { return false; }
+	size_t endHow = line.find( endHowStr );
+	if( endHow == std::string::npos ) { return false; }
 	std::string how = line.substr( 0, endHow );
 	line = line.substr( endHow + strlen(endHowStr), INT_MAX );
 	if(! line.empty()) { return false; }
