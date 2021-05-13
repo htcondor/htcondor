@@ -1182,7 +1182,7 @@ a user can still request multiple credentials by affixing handles to
 
         use_oauth_services = dune_production
 
-    Vault server.  Vault does not require permissions or resources to be
+    Vault does not require permissions or resources to be
     set, but they may be set to reduce the default permissions or restrict
     the resources that may use the credential.  The full service name
     including an underscore may be used in an ``oauth_permissions`` or
