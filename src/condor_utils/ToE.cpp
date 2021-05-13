@@ -136,7 +136,7 @@ Tag::readFromString( const std::string & in ) {
 
 	const char * endHowCodeStr = ": ";
 	size_t endHowCode = line.find( endHowCodeStr );
-	if( endHowCode == std::sting::npos ) { return false; }
+	if( endHowCode == std::string::npos ) { return false; }
 	std::string howCodeStr = line.substr( 0, endHowCode );
 	line = line.substr( endHowCode + strlen(endHowCodeStr), INT_MAX );
 	char * end = NULL;
