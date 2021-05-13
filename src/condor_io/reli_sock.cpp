@@ -905,11 +905,21 @@ check_header:
 	m_tmp->grow_buf(len+1);
 
         if (!p_sock->get_encryption() && !p_sock->m_finished_recv_header && p_sock->_bytes_recvd < MAX_MESSAGE_SIZE) {
-		if (!p_sock->m_recv_md_ctx) {
-			if(!p_sock->init_EVP_context(p_sock->m_recv_md_ctx)) {
-				return false;
-			}
-		}
+                if (!p_sock->m_recv_md_ctx) {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+                        p_sock->m_recv_md_ctx.reset(EVP_MD_CTX_create());
+#else
+                        p_sock->m_recv_md_ctx.reset(EVP_MD_CTX_new());
+#endif
+                        if (!p_sock->m_recv_md_ctx) {
+                                dprintf(D_ALWAYS, "IO: Failed to create a new MD context.\n");
+                                return false;
+                        }
+                        if (1 != EVP_DigestInit_ex(p_sock->m_recv_md_ctx.get(), EVP_sha256(), NULL)) {
+                                dprintf(D_ALWAYS, "IO: Failed to initialize SHA-256 context.\n");
+                                return false;
+                        }
+                }
 		if (1 != EVP_DigestUpdate(p_sock->m_recv_md_ctx.get(), hdr, header_size)) {
 			dprintf(D_ALWAYS, "IO: Failed to update the message digest.\n");
 			return false;
@@ -940,11 +950,6 @@ read_packet:
 		// Note that we don't check the header here as the body may be
 		// split across several function invocations.
 	if (!p_sock->get_encryption() && !p_sock->m_finished_recv_header && p_sock->m_recv_md_ctx && (p_sock->_bytes_recvd < 1024*1024)) {
-		if (!p_sock->m_recv_md_ctx) {
-			if(!p_sock->init_EVP_context(p_sock->m_recv_md_ctx)) {
-				return false;
-			}
-		}
 		if (1 != EVP_DigestUpdate(p_sock->m_recv_md_ctx.get(), m_tmp->get_ptr(), m_tmp->num_untouched())) {
 			dprintf(D_ALWAYS, "IO: Failed to update the message digest.\n");
 			return false;
@@ -968,14 +973,16 @@ read_packet:
 			aad_with_digest.resize(aad_len,0);
 			aad_data = &aad_with_digest[0];
 			if (!p_sock->m_final_recv_header) {
-				if (!p_sock->m_recv_md_ctx) {
-					if(!p_sock->init_EVP_context(p_sock->m_recv_md_ctx)) {
-						return false;
-					}
-				}
-				if (1 != EVP_DigestFinal_ex(p_sock->m_recv_md_ctx.get(), aad_data, &md_size)) {
+				if (p_sock->m_recv_md_ctx &&
+					(1 != EVP_DigestFinal_ex(p_sock->m_recv_md_ctx.get(), aad_data, &md_size)))
+				{
 					dprintf(D_ALWAYS, "IO: Failed to compute final received message digest.\n");
 					return false;
+				} else if (!p_sock->m_recv_md_ctx) {
+					memset(aad_data, '\0', md_size);
+					dprintf(D_NETWORK|D_VERBOSE, "Setting first digest in AAD to %u 0's\n", md_size);
+				} else {
+					dprintf(D_NETWORK|D_VERBOSE, "Successfully set first digest in AAD\n");
 				}
 				p_sock->m_final_recv_header = true;
 				p_sock->m_final_mds.resize(2*md_size,0);
@@ -984,11 +991,6 @@ read_packet:
 				memcpy(aad_data, &p_sock->m_final_mds[0] + md_size, md_size);
 			}
 			if (!p_sock->m_final_send_header) {
-				if (!p_sock->m_send_md_ctx) {
-					if(!p_sock->init_EVP_context(p_sock->m_send_md_ctx)) {
-						return false;
-					}
-				}
 				if (p_sock->m_send_md_ctx &&
 					(1 != EVP_DigestFinal_ex(p_sock->m_send_md_ctx.get(), aad_data + md_size, &md_size)))
 				{
@@ -1112,25 +1114,6 @@ void ReliSock::SndMsg::stash_packet()
 	buf.reset();
 }
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-bool ReliSock::init_EVP_context(std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_destroy)> &ctx) {
-	ctx.reset(EVP_MD_CTX_create());
-#else
-bool ReliSock::init_EVP_context(std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> &ctx) {
-	ctx.reset(EVP_MD_CTX_new());
-#endif
-	if (!ctx) {
-		dprintf(D_NETWORK, "IO: Failed to create a new MD context.\n");
-		return false;
-	}
-	if (1 != EVP_DigestInit_ex(ctx.get(), EVP_sha256(), NULL)) {
-		dprintf(D_NETWORK, "IO: Failed to initialize SHA-256 context.\n");
-		return false;
-	}
-
-	return true;
-}
-
 	// Send the current buffer in a single CEDAR packet.
 	// Return codes:
 	//   - TRUE: successful send.
@@ -1164,7 +1147,17 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 
 	if (!p_sock->get_encryption() && !p_sock->m_finished_send_header && p_sock->_bytes_sent < 1024*1024) {
 		if (!p_sock->m_send_md_ctx) {
-			if(!p_sock->init_EVP_context(p_sock->m_send_md_ctx)) {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+			p_sock->m_send_md_ctx.reset(EVP_MD_CTX_create());
+#else
+			p_sock->m_send_md_ctx.reset(EVP_MD_CTX_new());
+#endif
+			if (!p_sock->m_send_md_ctx) {
+				dprintf(D_NETWORK, "IO: Failed to create a new MD context.\n");
+				return false;
+			}
+			if (1 != EVP_DigestInit_ex(p_sock->m_send_md_ctx.get(), EVP_sha256(), NULL)) {
+				dprintf(D_NETWORK, "IO: Failed to initialize SHA-256 context.\n");
 				return false;
 			}
 		}
@@ -1210,14 +1203,16 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 			aad_with_digest.resize(aad_len,0);
 			aad_data = &aad_with_digest[0];
 			if (!p_sock->m_final_send_header) {
-				if (!p_sock->m_send_md_ctx) {
-					if(!p_sock->init_EVP_context(p_sock->m_send_md_ctx)) {
-						return false;
-					}
-				}
-				if (1 != EVP_DigestFinal_ex(p_sock->m_send_md_ctx.get(), aad_data, &md_size)) {
+				if (p_sock->m_send_md_ctx &&
+					(1 != EVP_DigestFinal_ex(p_sock->m_send_md_ctx.get(), aad_data, &md_size)))
+				{
 					dprintf(D_NETWORK, "IO: Failed to compute final message digest.\n");
 					return false;
+				} else if (!p_sock->m_send_md_ctx) {
+					memset(aad_data, '\0', md_size);
+					dprintf(D_NETWORK|D_VERBOSE, "Setting first digest in AAD to %u 0's\n", md_size);
+				} else {
+					dprintf(D_NETWORK|D_VERBOSE, "Successfully set first digest in AAD\n");
 				}
 				p_sock->m_final_send_header = true;
 				p_sock->m_final_mds.resize(2*md_size,0);
@@ -1226,11 +1221,6 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 				memcpy(aad_data, &p_sock->m_final_mds[0], md_size);
 			}
 			if (!p_sock->m_final_recv_header) {
-				if (!p_sock->m_recv_md_ctx) {
-					if(!p_sock->init_EVP_context(p_sock->m_recv_md_ctx)) {
-						return false;
-					}
-				}
 				if (p_sock->m_recv_md_ctx.get() &&
 						(1 != EVP_DigestFinal_ex(p_sock->m_recv_md_ctx.get(), aad_data + md_size, &md_size)))
 				{
@@ -1238,8 +1228,9 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 					return false;
 				} else if (!p_sock->m_recv_md_ctx) {
 					memset(aad_data + md_size, '\0', md_size);
+					dprintf(D_NETWORK|D_VERBOSE, "Setting second digest in AAD to %u 0's\n", md_size);
 				} else {
-					dprintf(D_NETWORK, "Successfully set second digest in AAD when sending\n");
+					dprintf(D_NETWORK|D_VERBOSE, "Successfully set second digest in AAD when sending\n");
 				}
 				p_sock->m_final_recv_header = true;
 				p_sock->m_final_mds.resize(2*md_size,0);
