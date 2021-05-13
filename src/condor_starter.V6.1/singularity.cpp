@@ -113,7 +113,6 @@ Singularity::detect(CondorError &err)
 	if (IsFulldebug(D_ALWAYS)) {
 		std::string line;
 		while (pgm.output().readLine(line, false)) {
-			pgm.output().readLine(line, false);
 			chomp(line);
 			dprintf( D_FULLDEBUG, "[singularity info] %s\n", line.c_str() );
 		}
