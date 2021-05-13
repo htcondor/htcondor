@@ -365,7 +365,7 @@ bool VirshType::CreateVirshConfigFile(const char*  /*filename*/)
       classad_string += m_vm_bridge_interface;
       classad_string += "\"\n";
     }
-  if(classad_string.find(ATTR_JOB_VM_NETWORKING_TYPE) < 1)
+  if(classad_string.find(ATTR_JOB_VM_NETWORKING_TYPE) == std::string::npos)
     {
       classad_string += ATTR_JOB_VM_NETWORKING_TYPE;
       classad_string += " = \"";
