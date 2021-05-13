@@ -262,6 +262,16 @@ public:
 
 	static classad::References* getResumeProj() { return &m_resume_proj; };
 
+		// Generate a EC P256 keypair for key exchange
+	static std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> GenerateKeyExchange(CondorError *errstack);
+
+		// Given the local key and a base64-encoded EC P256 peerkey, generate a key appropriate
+		// for use as a symmetric key.  The resulting key is passed through HKDF.
+	static bool FinishKeyExchange(std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> mykey, const char *encoded_peerkey, unsigned char *outkey, size_t outlen, CondorError *errstack);
+
+		// Given a keypair, encode the pubkey to base64-encoded DER.
+	static bool EncodePubkey(const EVP_PKEY *pkey, std::string &encoded_pkey, CondorError *errstack);
+
 		// Create a security session from scratch (without doing any
 		// security negotation with the peer).  The session id and
 		// key will presumably be communicated to the peer using some

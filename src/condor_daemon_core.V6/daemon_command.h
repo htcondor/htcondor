@@ -83,6 +83,11 @@ private:
 	int m_cmd_index;
 	CondorError *m_errstack;
 
+		// The base64-encoded copy of our peer's public key (for key exchange).
+	std::string m_peer_pubkey_encoded;
+		// Our keypair for key exchange.
+	std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> m_keyexchange{nullptr, &EVP_PKEY_free};
+
 	bool m_new_session;
 	SecMan::sec_feat_act m_will_enable_encryption;
 	SecMan::sec_feat_act m_will_enable_integrity;
