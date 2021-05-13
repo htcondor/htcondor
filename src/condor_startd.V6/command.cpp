@@ -2180,20 +2180,19 @@ int
 caRequestClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 {
 	ClaimType claim_type;
-	char* ct_str = NULL;
+	std::string ct_str;
 	std::string err_msg; 
 
 		// Now, depending on what kind of claim they're asking for, do
 		// the right thing
-	if( ! req_ad->LookupString(ATTR_CLAIM_TYPE, &ct_str) ) {
+	if( ! req_ad->LookupString(ATTR_CLAIM_TYPE, ct_str) ) {
 		err_msg = "No ";
 		err_msg += ATTR_CLAIM_TYPE;
 		err_msg += " in ClassAd";
 		return sendErrorReply( s, cmd_str, CA_INVALID_REQUEST, 
 							   err_msg.c_str() );
 	}
-	claim_type = getClaimTypeNum( ct_str );
-	free( ct_str ); 
+	claim_type = getClaimTypeNum( ct_str.c_str() );
 	switch( claim_type ) {
 	case CLAIM_COD:
 		return caRequestCODClaim( s, cmd_str, req_ad );
@@ -2201,7 +2200,7 @@ caRequestClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 	case CLAIM_OPPORTUNISTIC:
 		err_msg = ATTR_CLAIM_TYPE;
 		err_msg += " (";
-		err_msg += getClaimTypeString( claim_type );
+		err_msg += ct_str;
 		err_msg += ") not supported by this startd";
 		return sendErrorReply( s, cmd_str, CA_INVALID_REQUEST,
 							   err_msg.c_str() );
@@ -2210,7 +2209,7 @@ caRequestClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		err_msg = "Unrecognized ";
 		err_msg += ATTR_CLAIM_TYPE;
 		err_msg += " (";
-		err_msg += getClaimTypeString( claim_type );
+		err_msg += ct_str;
 		err_msg += ") in request ClassAd";
 		return sendErrorReply( s, cmd_str, CA_INVALID_REQUEST,
 							   err_msg.c_str() );

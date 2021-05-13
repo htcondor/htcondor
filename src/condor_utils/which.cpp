@@ -31,12 +31,15 @@
 std::string
 which(const std::string &strFilename, const std::string &strAdditionalSearchDirs)
 {
-	std::string strPath = getenv( EnvGetName( ENV_PATH ) );
-	dprintf( D_FULLDEBUG, "Path: %s\n", strPath.c_str());
+	const char *strPath = getenv( EnvGetName( ENV_PATH ) );
+	if (strPath == NULL) {
+		strPath = "";
+	}
+	dprintf( D_FULLDEBUG, "Path: %s\n", strPath);
 
 	char path_delim[3];
 	sprintf( path_delim, "%c", PATH_DELIM_CHAR );
-	StringList listDirectoriesInPath( strPath.c_str(), path_delim );
+	StringList listDirectoriesInPath( strPath, path_delim );
 
 #ifdef WIN32
 	int iLength = strFilename.length();
