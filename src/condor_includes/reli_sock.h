@@ -409,11 +409,9 @@ protected:
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_destroy)> m_send_md_ctx;
 	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_destroy)> m_recv_md_ctx;
-	bool init_EVP_context(std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_destroy)> &ctx);
 #else
 	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> m_send_md_ctx;
 	std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> m_recv_md_ctx;
-	bool init_EVP_context(std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> &ctx);
 #endif
 	std::vector<unsigned char> m_final_mds;
 	bool m_final_send_header{false};
