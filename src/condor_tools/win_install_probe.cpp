@@ -30,6 +30,10 @@
 #include <bcrypt.h>
 #pragma comment(linker, "/defaultlib:bcrypt.lib")
 
+// uncomment these pragmas to build this as a GUI app rather than as a console app, but still use main() as the entry point.
+//#pragma comment(linker, "/subsystem:WINDOWS")
+//#pragma comment(linker, "/entry:mainCRTStartup")
+
 #include <sddl.h> // for ConvertSidtoStringSid
 
 // for win8 and later, there a pseudo handles for Impersonation Tokens
@@ -339,17 +343,90 @@ int TraverseDirectoryTree(
 	return err;
 }
 
-
-int __cdecl main()
+bool
+is_arg_prefix(const char * parg, const char * pval, int must_match_length /*= 0*/) 
 {
-	int argc = 0;
+	// no matter what, at least 1 char must match
+	// this also protects us from the case where parg is ""
+	if (!*pval || (*parg != *pval)) return false;
+
+	// do argument matching based on a minimum prefix. when we run out
+	// of characters in parg we must be at a \0 or no match and we
+	// must have matched at least must_match_length characters or no match
+	int match_length = 0;
+	while (*parg == *pval) {
+		++match_length;
+		++parg; ++pval;
+		if (!*pval) break;
+	}
+	if (*parg) return false;
+	if (must_match_length < 0) return (*pval == 0);
+	return match_length >= must_match_length;
+}
+
+bool
+is_dash_arg_prefix(const char * parg, const char * pval, int must_match_length = 0)
+{
+	if (*parg != '-') return false;
+	++parg;
+	// if arg begins with --, then we require an exact match for pval.
+	if (*parg == '-') { ++parg; must_match_length = -1; }
+	return is_arg_prefix(parg, pval, must_match_length);
+}
+
+const char* _appname = "win_install_probe";
+void print_usage(FILE * fp, int exit_code)
+{
+	fprintf(fp,
+		"usage: %s [-help | [-log <file>]]\n"
+		"  -help\t\t\tPrint this message\n"
+		"  -log <file>\t\tLog to <file>, - for stdout\n"
+	, _appname);
+	exit(exit_code);
+}
+
+void arg_needed(const char * arg)
+{
+	fprintf(stderr, "%s needs an argument\n", arg);
+	print_usage(stderr, EXIT_FAILURE);
+}
+
+int __cdecl main(int argc, const char * argv[])
+{
 	LPWSTR argline = GetCommandLineW();
-	//LPWSTR argv = CommandLineToArgvW(argline, &argc);
 	LPWSTR envblock = GetEnvironmentStringsW();
 
-	FILE * fp = fopen("c:\\Condor\\probe.log", "wb");
+	bool close_log_file = false;
+	const char * log = "c:\\Condor\\probe.log";
+	const char * dir = "c:\\Condor";
+	for (int ix = 1; ix < argc; ++ix) {
+		if (0 == strcmp(argv[ix], "-help")) {
+			print_usage(stdout, EXIT_SUCCESS);
+		} else if (is_dash_arg_prefix(argv[ix], "log")) {
+			if (! argv[ix + 1]) {
+				arg_needed("log");
+			} else {
+				log = argv[++ix];
+			}
+		} else if (is_dash_arg_prefix(argv[ix], "dir")) {
+			if (! argv[ix + 1]) {
+				arg_needed("dir");
+			} else {
+				dir = argv[++ix];
+			}
+		}
+	}
 
-	TraverseDirectoryTree(L"C:\\Condor", L"*", TDT_DIRFIRST | TDT_SUBDIRS,
+	FILE * fp = stdout;
+	if (log && 0 != strcmp(log, "-")) {
+		fp = fopen(log, "wb");
+		close_log_file = fp != NULL;
+	}
+
+	WCHAR wdir[MAX_PATH];
+	wsprintfW(wdir, L"%hs", dir);
+
+	TraverseDirectoryTree(wdir, L"*", TDT_DIRFIRST | TDT_SUBDIRS,
 			[](VOID *  pvUser,
 			LPCWSTR pszPath,    // path and filename, may be absolute or relative.
 			size_t  ochName,    // offset from start of pszPath to first char of the file/dir name.
@@ -441,6 +518,10 @@ int __cdecl main()
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
 #endif
+
+	if (close_log_file) {
+		fclose(fp);
+	}
 
 	return EXIT_SUCCESS;
 }
