@@ -37,6 +37,11 @@
 #include <bcrypt.h>
 #pragma comment(linker, "/defaultlib:bcrypt.lib")
 
+// build this as a GUI app rather than as a console app, but still use main() as the entry point.
+// so when we run it under the installer we don't see a console window pop up
+#pragma comment(linker, "/subsystem:WINDOWS")
+#pragma comment(linker, "/entry:mainCRTStartup")
+
 #include <sddl.h> // for ConvertSidtoStringSid
 
 #include <secure_file.h>
