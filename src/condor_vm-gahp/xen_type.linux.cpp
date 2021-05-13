@@ -351,7 +351,7 @@ bool VirshType::CreateVirshConfigFile(const char*  /*filename*/)
   classad_string += " = \"";
   classad_string += m_xen_bootloader;
   classad_string += "\"\n";
-  if(classad_string.find(VMPARAM_XEN_INITRD) < 1)
+  if(classad_string.find(VMPARAM_XEN_INITRD) == std::string::npos)
     {
       classad_string += VMPARAM_XEN_INITRD;
       classad_string += " = \"";
