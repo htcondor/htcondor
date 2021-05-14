@@ -2067,7 +2067,7 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 	std::string expected_subject;
 
 	// for password, this is easy.  we expect to see "condor_pool@<something>".
-	if((m_version == 1)) {
+	if(m_version == 1) {
 		expected_subject = POOL_PASSWORD_USERNAME;
 		expected_subject += "@";
 		expected_subject += getLocalDomain();

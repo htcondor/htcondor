@@ -711,14 +711,14 @@ Env::getDelimitedStringV2Raw(MyString *result,MyString * /*error_msg*/,bool mark
 void
 Env::getDelimitedStringForDisplay(std::string & result) const
 {
-	getDelimitedStringV2Raw(result, NULL);
+	getDelimitedStringV2Raw(result, false);
 }
 
 void
 Env::getDelimitedStringForDisplay(MyString *result) const
 {
 	ASSERT(result);
-	getDelimitedStringV2Raw(result,NULL);
+	getDelimitedStringV2Raw(result,false);
 }
 
 char
