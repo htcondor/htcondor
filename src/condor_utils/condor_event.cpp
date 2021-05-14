@@ -2082,11 +2082,11 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 	if (ix > 0) {
 		MyString et = line.substr(0, ix);
 		et.trim();
-		strncpy(error_type, et.c_str(), sizeof(error_type));
+		strncpy(error_type, et.c_str(), sizeof(error_type) - 1);
 		line = line.substr(ix + 6, line.length());
 		line.trim();
 	} else {
-		strncpy(error_type, "Error", sizeof(error_type));
+		strncpy(error_type, "Error", sizeof(error_type) - 1);
 		retval = -1;
 	}
 
@@ -2096,7 +2096,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 	} else {
 		MyString dn = line.substr(0, ix);
 		dn.trim();
-		strncpy(daemon_name, dn.c_str(), sizeof(daemon_name));
+		strncpy(daemon_name, dn.c_str(), sizeof(daemon_name) - 1);
 		line = line.substr(ix + 4, line.length());
 		line.trim();
 	}
@@ -2105,7 +2105,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 	ix = line.length();
 	if (ix > 0 && line[ix-1] == ':') { line.truncate(ix - 1); }
 
-	strncpy(execute_host, line.c_str(), sizeof(execute_host));
+	strncpy(execute_host, line.c_str(), sizeof(execute_host) - 1);
 #else
     int retval = fscanf(
 	  file,
@@ -2236,7 +2236,7 @@ void
 RemoteErrorEvent::setDaemonName(char const *str)
 {
 	if(!str) str = "";
-	strncpy(daemon_name,str,sizeof(daemon_name));
+	strncpy(daemon_name,str,sizeof(daemon_name) - 1);
 	daemon_name[sizeof(daemon_name)-1] = '\0';
 }
 
@@ -2244,7 +2244,7 @@ void
 RemoteErrorEvent::setExecuteHost(char const *str)
 {
 	if(!str) str = "";
-	strncpy(execute_host,str,sizeof(execute_host));
+	strncpy(execute_host,str,sizeof(execute_host) - 1);
 	execute_host[sizeof(execute_host)-1] = '\0';
 }
 
