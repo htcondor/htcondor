@@ -10809,8 +10809,10 @@ RotateAttributeList( int cluster, int proc, char const *attrname, int start_inde
 		}
 	}
 
-		// Delete the start_index element (it now lives in index start_index+1)
-	DeleteAttribute(cluster, proc, attr_start_index.Value());
+		// While it would make sense to now delete the start_index element (it now lives in index start_index+1),
+		// historically MachineAttr0 was always present in jobs that were held or went back to Idle, so we will
+		// keep it around for legacy happiness as it does no harm.
+	// DeleteAttribute(cluster, proc, attr_start_index.Value());
 }
 
 void
