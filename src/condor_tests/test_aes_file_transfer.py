@@ -3,6 +3,8 @@
 import logging
 import os
 from pathlib import Path
+import stat
+import subprocess
 
 from ornithology import (
     config,
@@ -33,6 +35,22 @@ def condor(test_dir):
 
 
 @action
+def strace_condor_shadow(test_dir):
+    script_file = test_dir / "strace_condor_shadow.sh"
+    script_contents = """#!/bin/sh
+
+while true; do pid=$(pgrep 'condor_shadow' | head -1); if [[ -n \"$pid\" ]]; then strace  -s 2000 -vvtf -p \"$pid\" -o condor_shadow.strace.out; break; fi; done"""
+    script = open(script_file, "w")
+    script.write(script_contents)
+    script.close()
+
+    st = os.stat(script_file)
+    os.chmod(script_file, st.st_mode | stat.S_IEXEC)
+
+    subprocess.Popen([script_file, "&"])
+
+
+@action
 def write_transfer_file(test_dir):
     file_contents = "Hello, AES!"
     file = open(test_dir / "aes.txt", "w")
@@ -54,7 +72,15 @@ def shadow_log(test_dir):
 
 
 @action
-def aes_file_transfer_job(condor, transfer_filename, path_to_sleep):
+def shadow_strace(test_dir):
+    shadow_strace = open(test_dir / "condor_shadow.strace.out", "r")
+    contents = shadow_strace.readlines()
+    shadow_strace.close()
+    return contents
+
+
+@action
+def aes_file_transfer_job(condor, transfer_filename, path_to_sleep, strace_condor_shadow):
     job = condor.submit(
         {
             "executable": path_to_sleep,
@@ -86,3 +112,13 @@ class TestAESFileTransfer:
                 aes_in_log = True
                 break
         assert aes_in_log
+
+    def test_plaintext_in_strace(
+        self, aes_file_transfer_job, shadow_strace
+    ):
+        plaintext_in_strace = False
+        for line in shadow_strace:
+            if "Hello, AES!" in line and "sendto" in line:
+                plaintext_in_strace = True
+                break
+        assert plaintext_in_strace is False
