@@ -622,8 +622,6 @@ AssignExpr(const std::string &name, const char *value)
 
 bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 {
-	bool bRet = false;
-	
 		// sanity checks
 	if( attrName.empty() ) {
 		CondorErrno = ERR_MISSING_ATTRNAME;

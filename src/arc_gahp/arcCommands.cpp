@@ -238,7 +238,6 @@ bool HttpRequest::SendRequest()
 	string buf;
 	unsigned long response_code = 0;
 	const char *ca_dir = NULL;
-	const char *ca_file = NULL;
 	FILE *in_fp = NULL;
 	FILE *out_fp = NULL;
 
@@ -1157,7 +1156,7 @@ bool ArcJobStageInArgsCheck(char **argv, int argc)
 //     <filename>*
 bool ArcJobStageInWorkerFunction(GahpRequest *gahp_request)
 {
-	int argc = gahp_request->m_args.argc;
+	//int argc = gahp_request->m_args.argc;
 	char **argv = gahp_request->m_args.argv;
 	int request_id = gahp_request->m_reqid;
 
@@ -1216,7 +1215,7 @@ bool ArcJobStageOutArgsCheck(char **argv, int argc)
 //     [<remote_filename> <local_filename>]*
 bool ArcJobStageOutWorkerFunction(GahpRequest *gahp_request)
 {
-	int argc = gahp_request->m_args.argc;
+	//int argc = gahp_request->m_args.argc;
 	char **argv = gahp_request->m_args.argv;
 	int request_id = gahp_request->m_reqid;
 

@@ -188,7 +188,7 @@ Unparse( string &buffer, const Value &val )
 			return;
 		}
 		case Value::BOOLEAN_VALUE: {
-			bool b;
+			bool b = false;
 			val.IsBooleanValue( b );
 			buffer += b ? "true" : "false";
 			return;

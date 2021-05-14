@@ -316,7 +316,6 @@ ParseClassAd(LexerSource *lexer_source, bool full)
 bool ClassAdJsonParser::
 parseExpression( ExprTree *&tree, bool full )
 {
-	ExprTree 			*treeL = NULL;
 	Lexer::TokenValue	tv;
 	Lexer::TokenType	tt;
 	

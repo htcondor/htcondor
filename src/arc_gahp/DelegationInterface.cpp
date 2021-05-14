@@ -220,11 +220,13 @@ static bool strip_PEM_request(std::string& val) {
   return strip_PEM(val, ts, te);
 }
 
+#if 0
 static bool strip_PEM_cert(std::string& val) {
   const char* ts = "-----BEGIN CERTIFICATE-----";
   const char* te = "-----END CERTIFICATE-----";
   return strip_PEM(val, ts, te);
 }
+#endif
 
 static void wrap_PEM_request(std::string& val) {
   const char* ts = "-----BEGIN CERTIFICATE REQUEST-----";
@@ -232,11 +234,13 @@ static void wrap_PEM_request(std::string& val) {
   wrap_PEM(val, ts, te);
 }
 
+#if 0
 static void wrap_PEM_cert(std::string& val) {
   const char* ts = "-----BEGIN CERTIFICATE-----";
   const char* te = "-----END CERTIFICATE-----";
   wrap_PEM(val, ts, te);
 }
+#endif
 
 DelegationConsumer::DelegationConsumer(void):key_(NULL) {
   Generate();

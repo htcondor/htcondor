@@ -273,7 +273,6 @@ public:
 		double dMissRatio = 0.0;
 		unsigned long cTotalUseCount = 0;
 		unsigned long cMaxUseCount = 0;
-		unsigned long cTotalPruned = 0;
 		unsigned long cTotalValues = 0;
 		unsigned long cAttribs = 0;
 		unsigned long cSingletonValues = 0;

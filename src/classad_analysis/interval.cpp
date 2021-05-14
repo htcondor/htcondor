@@ -450,7 +450,7 @@ EqualValue( classad::Value &v1, classad::Value &v2 )
 		}
 	}
 	case classad::Value::BOOLEAN_VALUE: {
-		bool b1, b2;
+		bool b1 = false, b2 = false;
 		(void) v1.IsBooleanValue( b1 );
 		(void) v2.IsBooleanValue( b2 );
 		if( b1 == b2 ) {

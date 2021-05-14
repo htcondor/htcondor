@@ -1516,7 +1516,7 @@ WriteUserLog::writeJobAdInfoEvent(char const *attrsToWrite, log_file& log, ULogE
 				// we put it into the eventAd.
 			if ( EvalExprTree(tree,param_jobad,NULL,result) ) {
 					// now inserted evaluated expr
-				bool bval;
+				bool bval = false;
 				int ival;
 				double dval;
 				std::string sval;
