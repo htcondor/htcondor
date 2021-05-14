@@ -521,7 +521,7 @@ std::string DelegationProvider::Delegate(const std::string& request,const Delega
   ASN1_INTEGER *sno = NULL;
   ASN1_OBJECT *obj= NULL;
   ASN1_OCTET_STRING* policy_string = NULL;
-  X509_EXTENSION *ex = NULL;
+  //X509_EXTENSION *ex = NULL;
   PROXY_CERT_INFO_EXTENSION proxy_info;
   PROXY_POLICY proxy_policy;
   const EVP_MD *digest = EVP_sha256();
@@ -772,7 +772,7 @@ err:
   if(pkey) EVP_PKEY_free(pkey);
   if(cert) X509_free(cert);
   if(sno) ASN1_INTEGER_free(sno);
-  if(ex) X509_EXTENSION_free(ex);
+  //if(ex) X509_EXTENSION_free(ex);
   if(obj) ASN1_OBJECT_free(obj);
   if(subject) X509_NAME_free(subject);
   if(policy_string) ASN1_OCTET_STRING_free(policy_string);
