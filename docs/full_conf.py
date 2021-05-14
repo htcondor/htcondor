@@ -303,7 +303,7 @@ def modify_signature(app, what, name, obj, options, signature, return_annotation
 
 
 def setup(app):
-    app.add_stylesheet('css/htcondor-manual.css')
+    app.add_css_file('css/htcondor-manual.css')
     app.connect('autodoc-process-docstring', modify_docstring)
     app.connect('autodoc-process-signature', modify_signature)
 

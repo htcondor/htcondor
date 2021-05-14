@@ -32,21 +32,27 @@ Version 9.0.1
 
 Release Notes:
 
-.. HTCondor version 9.0.1 released on Month Date, 2021.
-
-- HTCondor version 9.0.1 not yet released.
+- HTCondor version 9.0.1 released on May 17, 2021.
 
 - The installer for Windows will now replace the ``condor_config``
   file even on an update.  You must use condor_config.local or
   a configuration directory to customize the config if you wish
   to preserve configuration changes across updates.
 
+Known Issues:
+
 - The is a known issue with installer for Windows where it does
   not honor the Administrator Access list set in the MSI permissions
   dialog on a fresh install.  Instead is will always set the
   Administrator access to the default value.
 
+- MUNGE security is temporarily broken.
+
 New Features:
+
+- Windows MSI installer now sets up user-based authentication and creates 
+  an IDTOKEN for local administration.
+  :jira:`407`
 
 - When the ``AssignAccountingGroup`` configuration template is in effect
   and a user submits a job with a requested accounting group that they are not
@@ -71,10 +77,6 @@ New Features:
   ``LOCAL_CREDMON_TOKEN_USE_JSON = true`` (wrap token in JSON).
   :jira:`367`
 
-- Windows MSI installer now sets up user-based authentication and creates 
-  an IDTOKEN for local administration.
-  :jira:`407`
-
 Bugs Fixed:
 
 - Fixed a bug where sending an updated proxy to an execute node could
@@ -83,39 +85,39 @@ Bugs Fixed:
   :jira:`456`
   :jira:`490`
 
-- Fixed a bug in the implementation of the submit commands ``max_retries``
-  and ``success_exit_code`` which would cause jobs which exited on a
-  signal to go on hold (instead of exiting or being retried).
-  :jira:`430`
-
 - Fixed a bug with jobs that require running on a different machine
   after a failure by referring to MachineAttrX attributes in their
   requirements expression.
   :jira:`434`
 
-- Fixed a memory leak in the job router, usually triggered when job
-  policy expressions cause removal of the job.
-  :jira:`408`
-
 - Fixed a bug in the way ``AutoClusterAttrs`` was calculated that could
   in matchmaking ignoring attributes changed by ``job_machine_attrs``.
   :jira:`414`
 
-- Fixed a bug in *condor_submit* when a ``SEC_CREDENTIAL_PRODUCER`` was
-  configured that could result in *condor_submit* reporting that the
-  Queue statement of a submit file was missing or invalid.
-  :jira:`427`
+- Fixed a bug in the implementation of the submit commands ``max_retries``
+  and ``success_exit_code`` which would cause jobs which exited on a
+  signal to go on hold (instead of exiting or being retried).
+  :jira:`430`
+
+- Fixed a memory leak in the job router, usually triggered when job
+  policy expressions cause removal of the job.
+  :jira:`408`
 
 - Fixed some bugs that caused ``bosco_cluster --add`` to fail.
   Allow ``remote_gahp`` to work with older Bosco installations via
   the ``--rgahp-script`` option.
   Fixed security authorization failure between *condor_gridmanager*
   and *condor_ft-gahp*.
-  :jira:`438`
   :jira:`433`
+  :jira:`438`
   :jira:`451`
   :jira:`452`
   :jira:`487`
+
+- Fixed a bug in *condor_submit* when a ``SEC_CREDENTIAL_PRODUCER`` was
+  configured that could result in *condor_submit* reporting that the
+  Queue statement of a submit file was missing or invalid.
+  :jira:`427`
 
 - Fixed a bug in the local issuer *condor_credmon_oauth* where SciTokens version
   2.0 tokens were being generated without an "aud" claim. The "aud" claim is now
