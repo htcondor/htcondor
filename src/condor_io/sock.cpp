@@ -2941,8 +2941,12 @@ Sock::initialize_crypto(KeyInfo * key)
 
 bool Sock::set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
 {
+	// AES-GCM provides integrity checking as part of the encryption
+	// operation. Don't add an MD5 checksum on top of that.
     if (mode != MD_OFF && crypto_ && crypto_state_->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
-        set_MD_mode(MD_OFF);
+        mode = MD_OFF;
+        key = nullptr;
+        keyId = nullptr;
     }
 
     mdMode_ = mode;

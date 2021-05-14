@@ -1232,6 +1232,30 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto
 {
 	dprintf( D_DAEMONCORE, "DAEMONCORE: EnableCrypto()\n");
 
+	// We must configure encryption before integrity on the socket
+	// when using AES over TCP. If we do integrity first, then ReliSock
+	// will initialize an MD5 context and then tear it down when it
+	// learns it's doing AES. This breaks FIPS compliance.
+	if (m_will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) {
+
+		if (!m_key) {
+			// uhm, there should be a key here!
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		}
+
+		m_sock->decode();
+		if (!m_sock->set_crypto_key(true, m_key) ) {
+			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing request from %s.\n", m_sock->peer_description());
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		} else {
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", m_sid);
+		}
+	} else {
+		m_sock->set_crypto_key(false, m_key);
+	}
+
 	if (m_will_enable_integrity == SecMan::SEC_FEAT_ACT_YES) {
 
 		if (!m_key) {
@@ -1251,27 +1275,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto
 		}
 	} else {
 		m_sock->set_MD_mode(MD_OFF, m_key);
-	}
-
-
-	if (m_will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) {
-
-		if (!m_key) {
-			// uhm, there should be a key here!
-			m_result = FALSE;
-			return CommandProtocolFinished;
-		}
-
-		m_sock->decode();
-		if (!m_sock->set_crypto_key(true, m_key) ) {
-			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing request from %s.\n", m_sock->peer_description());
-			m_result = FALSE;
-			return CommandProtocolFinished;
-		} else {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", m_sid);
-		}
-	} else {
-		m_sock->set_crypto_key(false, m_key);
 	}
 
 	m_state = CommandProtocolVerifyCommand;

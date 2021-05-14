@@ -2205,31 +2205,10 @@ SecManStartCommand::authenticate_inner_finish()
 			// so they don't affect future messages in the stack.
 		m_errstack->clear();
 
-		if (will_enable_mac == SecMan::SEC_FEAT_ACT_YES) {
-
-			if (!m_private_key) {
-				dprintf ( D_ALWAYS, "SECMAN: enable_mac has no key to use, failing...\n");
-				m_errstack->push ("SECMAN", SECMAN_ERR_NO_KEY,
-							"Failed to establish a crypto key." );
-				return StartCommandFailed;
-			}
-
-			if (IsDebugVerbose(D_SECURITY)) {
-				dprintf (D_SECURITY, "SECMAN: about to enable message authenticator.\n");
-				m_sec_man.key_printf(D_SECURITY, m_private_key);
-			}
-
-			m_sock->encode();
-			m_sock->set_MD_mode(MD_ALWAYS_ON, m_private_key);
-
-			dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
-		} else {
-			// we aren't going to enable hasing.  but we should still set the secret key
-			// in case we decide to turn it on later.
-			m_sock->encode();
-			m_sock->set_MD_mode(MD_OFF, m_private_key);
-		}
-
+		// We must configure encryption before integrity on the socket
+		// when using AES over TCP. If we do integrity first, then ReliSock
+		// will initialize an MD5 context and then tear it down when it
+		// learns it's doing AES. This breaks FIPS compliance.
 		if (will_enable_enc == SecMan::SEC_FEAT_ACT_YES) {
 
 			if (!m_private_key) {
@@ -2255,7 +2234,32 @@ SecManStartCommand::authenticate_inner_finish()
 			m_sock->encode();
 			m_sock->set_crypto_key(false, m_private_key);
 		}
-		
+
+		if (will_enable_mac == SecMan::SEC_FEAT_ACT_YES) {
+
+			if (!m_private_key) {
+				dprintf ( D_ALWAYS, "SECMAN: enable_mac has no key to use, failing...\n");
+				m_errstack->push ("SECMAN", SECMAN_ERR_NO_KEY,
+							"Failed to establish a crypto key." );
+				return StartCommandFailed;
+			}
+
+			if (IsDebugVerbose(D_SECURITY)) {
+				dprintf (D_SECURITY, "SECMAN: about to enable message authenticator.\n");
+				m_sec_man.key_printf(D_SECURITY, m_private_key);
+			}
+
+			m_sock->encode();
+			m_sock->set_MD_mode(MD_ALWAYS_ON, m_private_key);
+
+			dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
+		} else {
+			// we aren't going to enable hasing.  but we should still set the secret key
+			// in case we decide to turn it on later.
+			m_sock->encode();
+			m_sock->set_MD_mode(MD_OFF, m_private_key);
+		}
+
 	}
 
 	m_state = ReceivePostAuthInfo;
