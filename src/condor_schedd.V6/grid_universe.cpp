@@ -426,7 +426,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 
 
 #ifndef WIN32
-	if (owner && strcasecmp(owner, "root") == 0 ) {
+	if (strcasecmp(owner, "root") == 0 ) {
 		dprintf(D_ALWAYS, "Tried to start condor_gmanager as root.\n");
 		return NULL;
 	}
