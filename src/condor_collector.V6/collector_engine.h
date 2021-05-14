@@ -169,7 +169,7 @@ class CollectorEngine : public Service
 							const condor_sockaddr& /*from*/ );
 
 	// support for dynamically created tables
-	CollectorHashTable *findOrCreateTable(std::string &str);
+	CollectorHashTable *findOrCreateTable(const std::string &str);
 
 	bool ValidateClassAd(int command,ClassAd *clientAd,Sock *sock);
 
