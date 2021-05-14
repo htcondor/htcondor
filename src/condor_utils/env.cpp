@@ -718,7 +718,7 @@ void
 Env::getDelimitedStringForDisplay(MyString *result) const
 {
 	ASSERT(result);
-	getDelimitedStringV2Raw(result,false);
+	getDelimitedStringV2Raw(result,NULL);
 }
 
 char
