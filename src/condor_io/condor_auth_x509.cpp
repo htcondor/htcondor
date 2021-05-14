@@ -566,7 +566,8 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 #endif
 
 	if (tmp_user) {
-		strcpy( local_user, tmp_user );
+		strncpy( local_user, tmp_user, USER_NAME_MAX-1 );
+		local_user[USER_NAME_MAX-1] = '\0';
 		free(tmp_user);
 		tmp_user = NULL;
 	}
