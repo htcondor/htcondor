@@ -37,7 +37,7 @@ def condor(test_dir):
 @action
 def strace_condor_shadow(test_dir):
     script_file = test_dir / "strace_condor_shadow.sh"
-    script_contents = """#!/bin/sh
+    script_contents = """#!/bin/bash
 
 while true; do pid=$(pgrep 'condor_shadow' | head -1); if [[ -n \"$pid\" ]]; then strace  -s 2000 -vvtf -p \"$pid\" -o condor_shadow.strace.out; break; fi; done"""
     script = open(script_file, "w")
