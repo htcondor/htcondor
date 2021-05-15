@@ -1,3 +1,15 @@
+condor (9.0.1-1) stable; urgency=medium
+
+  * Fix problem where X.509 proxy refresh kills job when using AES encryption
+  * Fix problem when jobs require a different machine after a failure
+  * Fix problem where a job matched a machine it can't use, delaying job start
+  * Fix exit code and retry checking when a job exits because of a signal
+  * Fix a memory leak in the job router when a job is removed via job policy
+  * Fixed the back-end support for the 'bosco_cluster --add' command
+  * An updated Windows installer that supports IDTOKEN authentication
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 14 May 2021 17:46:39 -0500
+
 condor (9.0.0-1) stable; urgency=medium
 
   * Absent any configuration, HTCondor denies authorization to all users
