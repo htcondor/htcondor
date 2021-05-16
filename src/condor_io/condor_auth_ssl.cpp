@@ -1768,6 +1768,10 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
         ouch( "Error setting cipher list (no valid ciphers)\n" );
         goto setup_server_ctx_err;
     }
+
+		// Enable the automatic ephemeral ECDH setup.
+	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_SET_ECDH_AUTO, 1, NULL );
+
     if(cafile)          free(cafile);
     if(cadir)           free(cadir);
     if(certfile)        free(certfile);
