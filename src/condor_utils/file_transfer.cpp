@@ -5637,6 +5637,11 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	// Invoke the plugin
 	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env, drop_privs);
 
+	if (!plugin_pipe) {
+		dprintf (D_ALWAYS, "FILETRANSFER: error execing file transfer plugin %s\n", plugin.c_str());
+		return TransferPluginResult::Error;
+	}
+
 	// Capture stdout from the plugin and dump it to the stats file
 	char single_stat[1024];
 	while( fgets( single_stat, sizeof( single_stat ), plugin_pipe ) ) {
