@@ -262,6 +262,9 @@ public:
 
 	static classad::References* getResumeProj() { return &m_resume_proj; };
 
+		// Generate a EC P256 keypair for key exchange
+	static std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> GenerateKeyExchange(CondorError *errstack);
+
 		// Create a security session from scratch (without doing any
 		// security negotation with the peer).  The session id and
 		// key will presumably be communicated to the peer using some
