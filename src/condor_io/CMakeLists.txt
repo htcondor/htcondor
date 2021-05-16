@@ -20,6 +20,7 @@
 set( CEDAR_UTIL_SRCS 
 ${CMAKE_CURRENT_SOURCE_DIR}/authentication.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/buffers.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/ca_utils.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/cedar_no_ckpt.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/condor_auth_anonymous.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/condor_auth_claim.cpp
