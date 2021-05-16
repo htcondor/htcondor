@@ -39,6 +39,7 @@
 #endif
 
 #include "condor_attributes.h"
+#include "secure_file.h"
 
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
@@ -161,7 +162,11 @@ static const SSL_METHOD *(*SSL_method_ptr)() = NULL;
 #endif
 static char *(*ERR_error_string_ptr)(unsigned long, char *) = nullptr;
 static unsigned long (*ERR_get_error_ptr)(void) = nullptr;
-
+static decltype(&SSL_CTX_get_cert_store) SSL_CTX_get_cert_store_ptr = nullptr;
+static decltype(&PEM_read_X509) PEM_read_X509_ptr = nullptr;
+static decltype(&X509_STORE_add_cert) X509_STORE_add_cert_ptr = nullptr;
+static decltype(&SSL_get_current_cipher) SSL_get_current_cipher_ptr = nullptr;
+static decltype(&SSL_CIPHER_get_name) SSL_CIPHER_get_name_ptr = nullptr;
 
 bool Condor_Auth_SSL::m_initTried = false;
 bool Condor_Auth_SSL::m_initSuccess = false;
@@ -249,6 +254,11 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_set_bio_ptr = (void (*)(SSL *, BIO *, BIO *))dlsym(dl_hdl, "SSL_set_bio")) ||
 		 !(SSL_write_ptr = (int (*)(SSL *, const void *, int))dlsym(dl_hdl, "SSL_write")) ||
 		 !(ERR_error_string_ptr = (char *(*)(unsigned long, char *))dlsym(dl_hdl, "ERR_error_string")) ||
+		 !(SSL_CTX_get_cert_store_ptr = reinterpret_cast<decltype(SSL_CTX_get_cert_store_ptr)>(dlsym(dl_hdl, "SSL_CTX_get_cert_store"))) ||
+		 !(PEM_read_X509_ptr = reinterpret_cast<decltype(PEM_read_X509_ptr)>(dlsym(dl_hdl, "PEM_read_X509"))) ||
+		 !(X509_STORE_add_cert_ptr = reinterpret_cast<decltype(X509_STORE_add_cert_ptr)>(dlsym(dl_hdl, "X509_STORE_add_cert"))) ||
+		 !(SSL_get_current_cipher_ptr = reinterpret_cast<decltype(SSL_get_current_cipher_ptr)>(dlsym(dl_hdl, "SSL_get_current_cipher"))) ||
+		 !(SSL_CIPHER_get_name_ptr = reinterpret_cast<decltype(SSL_CIPHER_get_name_ptr)>(dlsym(dl_hdl, "SSL_CIPHER_get_name"))) ||
 		 !(ERR_get_error_ptr = (unsigned long (*)(void))dlsym(dl_hdl, "ERR_get_error")) ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
@@ -308,6 +318,11 @@ bool Condor_Auth_SSL::Initialize()
 #else
 	SSL_method_ptr = TLS_method;
 #endif
+	SSL_CTX_get_cert_store_ptr = SSL_CTX_get_cert_store;
+	PEM_read_X509_ptr = PEM_read_X509;
+	X509_STORE_add_cert_ptr = X509_STORE_add_cert;
+	SSL_get_current_cipher_ptr = SSL_get_current_cipher;
+	SSL_CIPHER_get_name_ptr = SSL_CIPHER_get_name;
 
 	m_initSuccess = true;
 #endif
@@ -489,6 +504,9 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
             }
         }
         dprintf(D_SECURITY,"Client trying post connection check.\n");
+        dprintf(D_SECURITY, "Cipher used: %s.\n",
+            (*SSL_CIPHER_get_name_ptr)((*SSL_get_current_cipher_ptr)(m_auth_state->m_ssl)));
+
         if((m_auth_state->m_err = post_connection_check(
                 m_auth_state->m_ssl, AUTH_SSL_ROLE_CLIENT )) != X509_V_OK ) {
             ouch( "Error on check of peer certificate\n" );
@@ -1299,6 +1317,55 @@ int Condor_Auth_SSL :: init_OpenSSL(void)
     return AUTH_SSL_A_OK;
 }
 
+bool write_x509_bootstrap(X509 *cert)
+{
+	if (!cert) {
+		dprintf(D_ALWAYS, "SSL bootstrap tried to bootstrap a null certificate.\n");
+		return false;
+	}
+
+	std::string fname;
+	if (!param(fname, "BOOTSTRAP_SSL_SERVER_TRUST_CAFILE")) {
+		dprintf(D_ALWAYS, "SSL bootstrap mode is enabled but BOOTSTRAP_SSL_SERVER_TRUST_CAFILE not set.\n");
+		return false;
+	}
+
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		auto fd = safe_create_fail_if_exists(fname.c_str(), O_RDWR);
+		if (fd == -1) {
+				// We've already been bootstrapped; return silently.
+			if (errno == EEXIST) {
+				return false;
+			}
+			dprintf(D_ALWAYS, "SSL bootstrap mode failed when trying to open trust root at %s: %s (errno=%d).\n", fname.c_str(), strerror(errno), errno);
+			return false;
+		}
+		// We know we "own" this file.
+		close(fd);
+	}
+
+	std::unique_ptr<BIO, decltype(&BIO_free)> bmem(BIO_new(BIO_s_mem()), &BIO_free);
+	if (!bmem) {
+		dprintf(D_ALWAYS, "SSL bootstrap mode failed to allocate OpenSSL memory.\n");
+		return false;
+	}
+
+	if (!PEM_write_bio_X509(bmem.get(), cert)) {
+		dprintf(D_ALWAYS, "SSL bootstrap mode failed to serialize the certificate.\n");
+		return false;
+	}
+
+	char *bmem_data;
+	int bmem_size = BIO_get_mem_data(bmem.get(), &bmem_data);
+
+	if (!replace_secure_file(fname.c_str(), ".tmp", bmem_data, bmem_size, true, true)) {
+		dprintf(D_ALWAYS, "SSL bootstrap mode failed to write out final file.\n");
+		return false;
+	}
+	return true;
+}
+
 int verify_callback(int ok, X509_STORE_CTX *store)
 {
     char data[256];
@@ -1314,6 +1381,16 @@ int verify_callback(int ok, X509_STORE_CTX *store)
         X509_NAME_oneline( X509_get_subject_name( cert ), data, 256 );
         dprintf( D_SECURITY, "  subject  = %s\n", data );
         dprintf( D_SECURITY, "  err %i:%s\n", err, X509_verify_cert_error_string( err ) );
+
+		if (param_boolean("BOOTSTRAP_SSL_SERVER_TRUST", false) &&
+			((err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT)  ||
+			 (err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) ||
+			 (err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN) ||
+			 (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY)
+			))
+		{
+				write_x509_bootstrap(cert);
+		}
     }
  
     return ok;
@@ -1760,6 +1837,25 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
             ouch( "Error loading private key from file\n" );
             goto setup_server_ctx_err;
         }
+
+		std::string bootstrap_chain;
+		if (param(bootstrap_chain, "BOOTSTRAP_SSL_SERVER_TRUST_CAFILE") &&
+			(access(bootstrap_chain.c_str(), R_OK) == 0))
+		{
+			dprintf(D_FULLDEBUG | D_SECURITY, "Loading bootstrap certificates from %s\n",
+				bootstrap_chain.c_str());
+			auto store = (*SSL_CTX_get_cert_store_ptr)(ctx);
+			auto fp = safe_fopen_no_create(bootstrap_chain.c_str(), "r");
+			if (fp) {
+				X509 *cert = nullptr;
+				auto rval = (*PEM_read_X509_ptr)(fp, &cert, nullptr, nullptr);
+				std::unique_ptr<X509, decltype(&X509_free)> cert_ptr(cert, &X509_free);
+				if ((rval != nullptr) && ((*X509_STORE_add_cert_ptr)(store, cert) != 1)) {
+					ouch( "Unable to load new bootstrap cert into trust store.\n" );
+					goto setup_server_ctx_err;
+				}
+			}
+		}
     }
 		// TODO where's this?
     (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
