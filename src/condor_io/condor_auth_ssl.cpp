@@ -118,6 +118,8 @@ bool hostname_match(const char *match_pattern, const char *hostname)
     return !tok1 && !tok2;
 }
 
+int g_last_verify_error_index = -1;
+
 }
 
 // Symbols from libssl
@@ -167,6 +169,13 @@ static decltype(&PEM_read_X509) PEM_read_X509_ptr = nullptr;
 static decltype(&X509_STORE_add_cert) X509_STORE_add_cert_ptr = nullptr;
 static decltype(&SSL_get_current_cipher) SSL_get_current_cipher_ptr = nullptr;
 static decltype(&SSL_CIPHER_get_name) SSL_CIPHER_get_name_ptr = nullptr;
+static decltype(&X509_digest) X509_digest_ptr = nullptr;
+static decltype(&X509_free) X509_free_ptr = nullptr;
+static decltype(&X509_STORE_CTX_get_ex_data) X509_STORE_CTX_get_ex_data_ptr = nullptr;
+static decltype(&SSL_get_ex_data_X509_STORE_CTX_idx) SSL_get_ex_data_X509_STORE_CTX_idx_ptr = nullptr;
+static decltype(&SSL_get_ex_data) SSL_get_ex_data_ptr = nullptr;
+static decltype(&SSL_get_ex_new_index) SSL_get_ex_new_index_ptr = nullptr;
+static decltype(&SSL_set_ex_data) SSL_set_ex_data_ptr = nullptr;
 
 bool Condor_Auth_SSL::m_initTried = false;
 bool Condor_Auth_SSL::m_initSuccess = false;
@@ -259,6 +268,13 @@ bool Condor_Auth_SSL::Initialize()
 		 !(X509_STORE_add_cert_ptr = reinterpret_cast<decltype(X509_STORE_add_cert_ptr)>(dlsym(dl_hdl, "X509_STORE_add_cert"))) ||
 		 !(SSL_get_current_cipher_ptr = reinterpret_cast<decltype(SSL_get_current_cipher_ptr)>(dlsym(dl_hdl, "SSL_get_current_cipher"))) ||
 		 !(SSL_CIPHER_get_name_ptr = reinterpret_cast<decltype(SSL_CIPHER_get_name_ptr)>(dlsym(dl_hdl, "SSL_CIPHER_get_name"))) ||
+		 !(X509_free_ptr = reinterpret_cast<decltype(X509_free_ptr)>(dlsym(dl_hdl, "X509_free"))) ||
+		 !(X509_digest_ptr = reinterpret_cast<decltype(X509_digest_ptr)>(dlsym(dl_hdl, "X509_digest"))) ||
+		 !(X509_STORE_CTX_get_ex_data_ptr = reinterpret_cast<decltype(X509_STORE_CTX_get_ex_data_ptr)>(dlsym(dl_hdl, "X509_STORE_CTX_get_ex_data"))) ||
+		 !(SSL_get_ex_data_X509_STORE_CTX_idx_ptr = reinterpret_cast<decltype(SSL_get_ex_data_X509_STORE_CTX_idx_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data_X509_STORE_CTX_idx"))) ||
+		 !(SSL_get_ex_data_ptr = reinterpret_cast<decltype(SSL_get_ex_data_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data"))) ||
+		 !(SSL_set_ex_data_ptr = reinterpret_cast<decltype(SSL_set_ex_data_ptr)>(dlsym(dl_hdl, "SSL_set_ex_data"))) ||
+		 !(SSL_get_ex_new_index_ptr = reinterpret_cast<decltype(SSL_get_ex_new_index_ptr)>(dlsym(dl_hdl, "SSL_get_ex_new_index"))) ||
 		 !(ERR_get_error_ptr = (unsigned long (*)(void))dlsym(dl_hdl, "ERR_get_error")) ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
@@ -323,6 +339,12 @@ bool Condor_Auth_SSL::Initialize()
 	X509_STORE_add_cert_ptr = X509_STORE_add_cert;
 	SSL_get_current_cipher_ptr = SSL_get_current_cipher;
 	SSL_CIPHER_get_name_ptr = SSL_CIPHER_get_name;
+	X509_free_ptr = X509_free;
+	X509_digest_ptr = X509_digest;
+	X509_STORE_CTX_get_ex_data_ptr = X509_STORE_CTX_get_ex_data;
+	SSL_get_ex_data_X509_STORE_CTX_idx_ptr = SSL_get_ex_data_X509_STORE_CTX_idx;
+	SSL_get_ex_data_ptr = SSL_get_ex_data;
+	SSL_set_ex_data_ptr = SSL_set_ex_data;
 
 	m_initSuccess = true;
 #endif
@@ -416,6 +438,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
             (*SSL_set_bio_ptr)( m_auth_state->m_ssl, m_auth_state->m_conn_in,
 				m_auth_state->m_conn_out );
         }
+		if (g_last_verify_error_index >= 0)
+			(*SSL_set_ex_data_ptr)( m_auth_state->m_ssl, g_last_verify_error_index, &m_last_verify_error);
         m_auth_state->m_server_status = client_share_status( m_auth_state->m_client_status );
         if( m_auth_state->m_server_status != AUTH_SSL_A_OK ||
 		m_auth_state->m_client_status != AUTH_SSL_A_OK ) {
@@ -1366,6 +1390,65 @@ bool write_x509_bootstrap(X509 *cert)
 	return true;
 }
 
+
+bool is_cert_in_bootstrap(X509 *cert)
+{
+	if (!cert) {
+		dprintf(D_ALWAYS, "SSL bootstrap tried to bootstrap a null certificate.\n");
+		return false;
+	}
+
+	std::string fname;
+	if (!param(fname, "BOOTSTRAP_SSL_SERVER_TRUST_CAFILE")) {
+		dprintf(D_ALWAYS, "SSL bootstrap mode is enabled but BOOTSTRAP_SSL_SERVER_TRUST_CAFILE not set.\n");
+		return false;
+	}
+
+	unsigned char cert_md[EVP_MAX_MD_SIZE];
+	unsigned int md_len;
+	const EVP_MD *md_alg = EVP_sha256();
+	if (1 != (*X509_digest_ptr)(cert, md_alg, cert_md, &md_len)) {
+		dprintf(D_ALWAYS, "Failed to get digest of certificate.\n");
+		return false;
+	}
+
+	FILE *fp_raw;
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		fp_raw = safe_fopen_no_create(fname.c_str(), "r");
+		if (!fp_raw) {
+			dprintf(D_ALWAYS, "SSL bootstrap mode failed when trying to open trust root "
+				"at %s: %s (errno=%d).\n", fname.c_str(), strerror(errno), errno);
+			return false;
+		}
+	}
+	std::unique_ptr<FILE, decltype(&fclose)> fp(fp_raw, &fclose);
+	std::unique_ptr<X509, decltype(X509_free_ptr)> ca_cert(nullptr, X509_free_ptr);
+	ca_cert.reset((*PEM_read_X509_ptr)(fp.get(), nullptr, nullptr, nullptr));
+	bool found_matching_cert = false;
+	while (ca_cert) {
+
+		unsigned char ca_cert_md[EVP_MAX_MD_SIZE];
+		unsigned int ca_md_len;
+		if (1 != (*X509_digest_ptr)(ca_cert.get(), md_alg, ca_cert_md, &ca_md_len)) {
+			dprintf(D_ALWAYS, "Failed to get digest of CA certificate.\n");
+			break;
+		}
+
+		if (ca_md_len == md_len && memcmp(ca_cert_md, cert_md, md_len) == 0) {
+			found_matching_cert = true;
+			break;
+		}
+
+		ca_cert.reset((*PEM_read_X509_ptr)(fp.get(), nullptr, nullptr, nullptr));
+	}
+
+	dprintf(D_SECURITY, "%s matching certificate in CA file.\n",
+		found_matching_cert ? "Found" : "Did not find");
+	return found_matching_cert;
+}
+
+
 int verify_callback(int ok, X509_STORE_CTX *store)
 {
     char data[256];
@@ -1382,14 +1465,28 @@ int verify_callback(int ok, X509_STORE_CTX *store)
         dprintf( D_SECURITY, "  subject  = %s\n", data );
         dprintf( D_SECURITY, "  err %i:%s\n", err, X509_verify_cert_error_string( err ) );
 
-		if (param_boolean("BOOTSTRAP_SSL_SERVER_TRUST", false) &&
-			((err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT)  ||
-			 (err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) ||
-			 (err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN) ||
-			 (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY)
-			))
+		const SSL* ssl = (const SSL*)(*X509_STORE_CTX_get_ex_data_ptr)(store, (*SSL_get_ex_data_X509_STORE_CTX_idx_ptr)());
+		Condor_Auth_SSL::LastVerifyError *verify_ptr = (Condor_Auth_SSL::LastVerifyError *)(g_last_verify_error_index >= 0 ? (*SSL_get_ex_data_ptr)(ssl, g_last_verify_error_index) : nullptr);
+		if (verify_ptr) verify_ptr->m_skip_error = 0;
+
+		if (param_boolean("BOOTSTRAP_SSL_SERVER_TRUST", false))
 		{
-				write_x509_bootstrap(cert);
+			if ((err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) ||
+			    (err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN) ||
+			    (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY))
+			{
+				if (write_x509_bootstrap(cert) && is_cert_in_bootstrap(cert)) {
+					// Indicate to skip error and keep processing.
+					if (verify_ptr) verify_ptr->m_skip_error = err;
+					return 1;
+				}
+			} else if (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT &&
+				is_cert_in_bootstrap(cert))
+			{
+				if (verify_ptr) verify_ptr->m_skip_error = err;
+				dprintf(D_ALWAYS, "verify_ptr %p: %d\n", verify_ptr, verify_ptr ? verify_ptr->m_skip_error : 0);
+				return 1;
+			}
 		}
     }
  
@@ -1743,7 +1840,10 @@ success:
 		ouch("Server checks out; returning SSL_get_verify_result.\n");
     
 		X509_free(cert);
-		return (*SSL_get_verify_result_ptr)(ssl);
+
+		auto verify_result = (*SSL_get_verify_result_ptr)( ssl );
+		if (m_last_verify_error.m_skip_error == verify_result) return X509_V_OK;
+		return verify_result;
 	}
 
 err_occured:
@@ -1823,8 +1923,10 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 	// Only load the verify locations if they are explicitly specified;
 	// otherwise, we will use the system default.
     if( (cafile || cadir) && (*SSL_CTX_load_verify_locations_ptr)( ctx, cafile, cadir ) != 1 ) {
-        dprintf(D_SECURITY, "SSL Auth: Error loading CA file (%s) and/or directory (%s) \n",
-		 cafile, cadir);
+        auto error_number = ERR_get_error();
+		auto error_string = error_number ? ERR_error_string(error_number, nullptr) : "Unknown error";
+        dprintf(D_SECURITY, "SSL Auth: Error loading CA file (%s) and/or directory (%s): %s \n",
+			cafile, cadir, error_string);
 	goto setup_server_ctx_err;
     }
     {
@@ -1857,7 +1959,10 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 			}
 		}
     }
-		// TODO where's this?
+
+	if (g_last_verify_error_index < 0)
+		g_last_verify_error_index = (*SSL_get_ex_new_index_ptr)(0, const_cast<char *>("last verify error"), nullptr, nullptr, nullptr);
+
     (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
     (*SSL_CTX_set_verify_depth_ptr)( ctx, 4 ); // TODO arbitrary?
     if((*SSL_CTX_set_cipher_list_ptr)( ctx, cipherlist ) != 1 ) {
