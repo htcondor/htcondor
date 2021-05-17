@@ -109,6 +109,11 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
 	// filesystem; this resets the cache results.
 	static void retry_cert_search() {m_should_search_for_cert = true;}
 
+		// Status of the last verify error.
+	struct LastVerifyError {
+		int m_skip_error{0};
+	};
+
  private:
 
 	enum class Phase {
@@ -237,6 +242,8 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
 	std::string m_scitokens_file;
 	std::string m_scitokens_auth_name;
 	std::string m_client_scitoken;
+
+	LastVerifyError m_last_verify_error;
 
 		// Status of potential SSL auth
 	static bool m_should_search_for_cert; // Should we search for TLS certificates?
