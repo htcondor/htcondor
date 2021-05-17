@@ -37,7 +37,7 @@
 #include "CondorError.h"
 #include "globus_utils.h"
 #include "condor_scitokens.h"
-
+#include "ca_utils.h"
 
 
 #include "condor_debug.h"
@@ -451,6 +451,14 @@ int Authentication::authenticate_finish(CondorError *errstack)
 	}
 	dprintf(D_SECURITY, "Authentication was a %s.\n", retval == 1 ? "Success" : "FAILURE" );
 
+	// If authentication was a success, then we record it in the known_hosts file.
+	// Note SSL has its own special handling for this file.
+	const char *connect_addr = mySock->get_connect_addr();
+	if (connect_addr && retval == 1 && mySock->isClient() && !m_method_name.empty() && m_method_name != "SSL") {
+		Sinful s(connect_addr);
+		const char *alias = s.getAlias();
+		if (alias) htcondor::add_known_hosts(alias, true, m_method_name, authenticator_->getRemoteFQU() ? authenticator_->getRemoteFQU() : "unknown");
+	}
 
 	// at this point, all methods have set the raw authenticated name available
 	// via getAuthenticatedName().

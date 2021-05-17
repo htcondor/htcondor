@@ -32,6 +32,7 @@
 #include "condor_sinful.h"
 #include "condor_secman.h"
 #include "condor_scitokens.h"
+#include "ca_utils.h"
 
 #if defined(DLOPEN_SECURITY_LIBS)
 #include <dlfcn.h>
@@ -385,6 +386,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 	}
 
     if( mySock_->isClient() ) {
+		m_host_alias = "";
         if( init_OpenSSL( ) != AUTH_SSL_A_OK ) {
             ouch( "Error initializing OpenSSL for authentication\n" );
             m_auth_state->m_client_status = AUTH_SSL_ERROR;
@@ -393,6 +395,19 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
             ouch( "Error initializing client security context\n" );
             m_auth_state->m_client_status = AUTH_SSL_ERROR;
         }
+
+		{
+			char const *connect_addr = mySock_->get_connect_addr();
+			if (connect_addr) {
+				Sinful s(connect_addr);
+				char const *alias = s.getAlias();
+				if (alias) {
+					dprintf(D_SECURITY|D_FULLDEBUG,"SSL client host check: using host alias %s for peer %s\n", alias,
+						mySock_->peer_ip_str());
+					m_host_alias = alias;
+				}
+			}
+		}
 
 		std::string scitoken;
 		if (m_scitokens_mode) {
@@ -1341,111 +1356,26 @@ int Condor_Auth_SSL :: init_OpenSSL(void)
     return AUTH_SSL_A_OK;
 }
 
-bool write_x509_bootstrap(X509 *cert)
+
+std::string get_x509_encoded(X509 *cert)
 {
-	if (!cert) {
-		dprintf(D_ALWAYS, "SSL bootstrap tried to bootstrap a null certificate.\n");
-		return false;
+	std::unique_ptr<BIO, decltype(&BIO_free)> b64( BIO_new(BIO_f_base64()), &BIO_free);
+	BIO_set_flags(b64.get(), BIO_FLAGS_BASE64_NO_NL);
+	if (!b64.get()) {return "";}
+
+	decltype(b64) mem(BIO_new(BIO_s_mem()), &BIO_free);
+	if (!mem.get()) {return "";}
+	BIO_push(b64.get(), mem.get());
+
+	if (1 != i2d_X509_bio(b64.get(), cert)) {
+		dprintf(D_SECURITY, "Failed to base64 encode certificate.\n");
+		return "";
 	}
 
-	std::string fname;
-	if (!param(fname, "BOOTSTRAP_SSL_SERVER_TRUST_CAFILE")) {
-		dprintf(D_ALWAYS, "SSL bootstrap mode is enabled but BOOTSTRAP_SSL_SERVER_TRUST_CAFILE not set.\n");
-		return false;
-	}
+	char* dt;
+	auto len = BIO_get_mem_data(mem.get(), &dt);
 
-	{
-		TemporaryPrivSentry sentry(PRIV_ROOT);
-		auto fd = safe_create_fail_if_exists(fname.c_str(), O_RDWR);
-		if (fd == -1) {
-				// We've already been bootstrapped; return silently.
-			if (errno == EEXIST) {
-				return false;
-			}
-			dprintf(D_ALWAYS, "SSL bootstrap mode failed when trying to open trust root at %s: %s (errno=%d).\n", fname.c_str(), strerror(errno), errno);
-			return false;
-		}
-		// We know we "own" this file.
-		close(fd);
-	}
-
-	std::unique_ptr<BIO, decltype(&BIO_free)> bmem(BIO_new(BIO_s_mem()), &BIO_free);
-	if (!bmem) {
-		dprintf(D_ALWAYS, "SSL bootstrap mode failed to allocate OpenSSL memory.\n");
-		return false;
-	}
-
-	if (!PEM_write_bio_X509(bmem.get(), cert)) {
-		dprintf(D_ALWAYS, "SSL bootstrap mode failed to serialize the certificate.\n");
-		return false;
-	}
-
-	char *bmem_data;
-	int bmem_size = BIO_get_mem_data(bmem.get(), &bmem_data);
-
-	if (!replace_secure_file(fname.c_str(), ".tmp", bmem_data, bmem_size, true, true)) {
-		dprintf(D_ALWAYS, "SSL bootstrap mode failed to write out final file.\n");
-		return false;
-	}
-	return true;
-}
-
-
-bool is_cert_in_bootstrap(X509 *cert)
-{
-	if (!cert) {
-		dprintf(D_ALWAYS, "SSL bootstrap tried to bootstrap a null certificate.\n");
-		return false;
-	}
-
-	std::string fname;
-	if (!param(fname, "BOOTSTRAP_SSL_SERVER_TRUST_CAFILE")) {
-		dprintf(D_ALWAYS, "SSL bootstrap mode is enabled but BOOTSTRAP_SSL_SERVER_TRUST_CAFILE not set.\n");
-		return false;
-	}
-
-	unsigned char cert_md[EVP_MAX_MD_SIZE];
-	unsigned int md_len;
-	const EVP_MD *md_alg = EVP_sha256();
-	if (1 != (*X509_digest_ptr)(cert, md_alg, cert_md, &md_len)) {
-		dprintf(D_ALWAYS, "Failed to get digest of certificate.\n");
-		return false;
-	}
-
-	FILE *fp_raw;
-	{
-		TemporaryPrivSentry sentry(PRIV_ROOT);
-		fp_raw = safe_fopen_no_create(fname.c_str(), "r");
-		if (!fp_raw) {
-			dprintf(D_ALWAYS, "SSL bootstrap mode failed when trying to open trust root "
-				"at %s: %s (errno=%d).\n", fname.c_str(), strerror(errno), errno);
-			return false;
-		}
-	}
-	std::unique_ptr<FILE, decltype(&fclose)> fp(fp_raw, &fclose);
-	std::unique_ptr<X509, decltype(X509_free_ptr)> ca_cert(nullptr, X509_free_ptr);
-	ca_cert.reset((*PEM_read_X509_ptr)(fp.get(), nullptr, nullptr, nullptr));
-	bool found_matching_cert = false;
-	while (ca_cert) {
-
-		unsigned char ca_cert_md[EVP_MAX_MD_SIZE];
-		unsigned int ca_md_len;
-		if (1 != (*X509_digest_ptr)(ca_cert.get(), md_alg, ca_cert_md, &ca_md_len)) {
-			dprintf(D_ALWAYS, "Failed to get digest of CA certificate.\n");
-			break;
-		}
-
-		if (ca_md_len == md_len && memcmp(ca_cert_md, cert_md, md_len) == 0) {
-			found_matching_cert = true;
-			break;
-		}
-
-		ca_cert.reset((*PEM_read_X509_ptr)(fp.get(), nullptr, nullptr, nullptr));
-	}
-
-	dprintf(D_SECURITY, "%s matching certificate in CA file.\n",
-		found_matching_cert ? "Found" : "Did not find");
-	return found_matching_cert;
+	return std::string(dt, len);
 }
 
 
@@ -1469,23 +1399,47 @@ int verify_callback(int ok, X509_STORE_CTX *store)
 		Condor_Auth_SSL::LastVerifyError *verify_ptr = (Condor_Auth_SSL::LastVerifyError *)(g_last_verify_error_index >= 0 ? (*SSL_get_ex_data_ptr)(ssl, g_last_verify_error_index) : nullptr);
 		if (verify_ptr) verify_ptr->m_skip_error = 0;
 
-		if (param_boolean("BOOTSTRAP_SSL_SERVER_TRUST", false))
+		if (verify_ptr && ((err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) ||
+			(err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN) ||
+			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY) ||
+			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT)))
 		{
-			if ((err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) ||
-			    (err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN) ||
-			    (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY))
+			bool is_permitted;
+			std::string method, method_info;
+			auto encoded_cert = get_x509_encoded(cert);
+			auto host_alias = *(verify_ptr->m_host_alias);
+			if (!encoded_cert.empty() &&
+				htcondor::get_known_hosts_first_match(host_alias, is_permitted,
+					method, method_info))
 			{
-				if (write_x509_bootstrap(cert) && is_cert_in_bootstrap(cert)) {
-					// Indicate to skip error and keep processing.
-					if (verify_ptr) verify_ptr->m_skip_error = err;
+				if (is_permitted && method == "SSL")
+				{
+					if (method_info == encoded_cert) {
+						dprintf(D_SECURITY, "Skipping validation error as this is a known host.\n");
+						verify_ptr->m_skip_error = err;
+						verify_ptr->m_used_known_host = true;
+						return 1;
+					} else {
+						// We aren't going to accept this - there's an earlier entry for this host;
+						// however, we want to record that we saw it.
+						dprintf(D_SECURITY, "Recording the SSL certificate in the known_hosts file.\n");
+						htcondor::add_known_hosts(host_alias, false, "SSL", encoded_cert);
+					}
+				}
+			} else if (!encoded_cert.empty()) {
+				bool permitted = param_boolean("BOOTSTRAP_SSL_SERVER_TRUST", false);
+				dprintf(D_SECURITY, "Adding remote host as known host with trust set to %s"
+					".\n", permitted ? "on" : "off");
+				htcondor::add_known_hosts(host_alias, permitted, "SSL", encoded_cert);
+				std::string method;
+				if (permitted && htcondor::get_known_hosts_first_match(host_alias,
+					permitted, method, encoded_cert) && method == "SSL")
+				{
+					dprintf(D_ALWAYS, "Skipping validation error as this is a known host.\n");
+					verify_ptr->m_skip_error = err;
+					verify_ptr->m_used_known_host = true;
 					return 1;
 				}
-			} else if (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT &&
-				is_cert_in_bootstrap(cert))
-			{
-				if (verify_ptr) verify_ptr->m_skip_error = err;
-				dprintf(D_ALWAYS, "verify_ptr %p: %d\n", verify_ptr, verify_ptr ? verify_ptr->m_skip_error : 0);
-				return 1;
 			}
 		}
     }
@@ -1687,8 +1641,8 @@ int Condor_Auth_SSL :: client_exchange_messages( int client_status, char *buf, B
 long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 {
 	X509      *cert;
-	bool success = false;
 	std::string fqdn;
+	bool success = false;
 	ouch("post_connection_check.\n");
 
  
@@ -1727,6 +1681,7 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 	if(role == AUTH_SSL_ROLE_SERVER) {
 		X509_free( cert );
 		ouch("Server role: returning from post connection check.\n");
+
 		return (*SSL_get_verify_result_ptr)( ssl );
 	} // else ROLE_CLIENT: check dns (arg 2) against CN and the SAN
 
@@ -1736,18 +1691,7 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 	}
 
 	// Client must know what host it is trying to talk to in order for us to verify the SAN / CN.
-	{
-		char const *connect_addr = mySock_->get_connect_addr();
-		if (connect_addr) {
-			Sinful s(connect_addr);
-			char const *alias = s.getAlias();
-			if (alias) {
-				dprintf(D_SECURITY|D_FULLDEBUG,"SSL host check: using host alias %s for peer %s\n", alias,
-					mySock_->peer_ip_str());
-				fqdn = alias;
-			}
-		}
-	}
+	fqdn = m_host_alias;
 	if (fqdn.empty()) {
 		dprintf(D_SECURITY, "No SSL host name specified.\n");
 		goto err_occured;
@@ -1842,6 +1786,13 @@ success:
 		X509_free(cert);
 
 		auto verify_result = (*SSL_get_verify_result_ptr)( ssl );
+
+		if ((verify_result == X509_V_OK) && mySock_->isClient() && !m_host_alias.empty() &&
+			!m_last_verify_error.m_used_known_host)
+		{
+			htcondor::add_known_hosts(m_host_alias, true, "SSL", "@trusted");
+		}
+
 		if (m_last_verify_error.m_skip_error == verify_result) return X509_V_OK;
 		return verify_result;
 	}
@@ -1861,6 +1812,11 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     char *keyfile      = NULL;
     char *cipherlist   = NULL;
     bool i_need_cert   = is_server;
+
+		// Ensure the verification state is reset.
+	m_last_verify_error.m_used_known_host = false;
+	m_last_verify_error.m_skip_error = -1;
+	m_last_verify_error.m_host_alias = &m_host_alias;
 
 		// Not sure where we want to get these things from but this
 		// will do for now.
@@ -1939,25 +1895,6 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
             ouch( "Error loading private key from file\n" );
             goto setup_server_ctx_err;
         }
-
-		std::string bootstrap_chain;
-		if (param(bootstrap_chain, "BOOTSTRAP_SSL_SERVER_TRUST_CAFILE") &&
-			(access(bootstrap_chain.c_str(), R_OK) == 0))
-		{
-			dprintf(D_FULLDEBUG | D_SECURITY, "Loading bootstrap certificates from %s\n",
-				bootstrap_chain.c_str());
-			auto store = (*SSL_CTX_get_cert_store_ptr)(ctx);
-			auto fp = safe_fopen_no_create(bootstrap_chain.c_str(), "r");
-			if (fp) {
-				X509 *cert = nullptr;
-				auto rval = (*PEM_read_X509_ptr)(fp, &cert, nullptr, nullptr);
-				std::unique_ptr<X509, decltype(&X509_free)> cert_ptr(cert, &X509_free);
-				if ((rval != nullptr) && ((*X509_STORE_add_cert_ptr)(store, cert) != 1)) {
-					ouch( "Unable to load new bootstrap cert into trust store.\n" );
-					goto setup_server_ctx_err;
-				}
-			}
-		}
     }
 
 	if (g_last_verify_error_index < 0)

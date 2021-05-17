@@ -62,8 +62,8 @@ void main_init(int argc, char *argv[])
 #endif
 
 	std::string cafile, cakeyfile;
-	if (param(cafile, "BOOTSTRAP_SSL_SERVER_TRUST_CAFILE") &&
-		param(cakeyfile, "BOOTSTRAP_SSL_SERVER_TRUST_CAKEY"))
+	if (param(cafile, "TRUST_DOMAIN_CAFILE") &&
+		param(cakeyfile, "TRUST_DOMAIN_CAKEY"))
 	{
 		TemporaryPrivSentry sentry(PRIV_ROOT);
 		if (0 != access(cafile.c_str(), R_OK)) {

@@ -112,6 +112,8 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
 		// Status of the last verify error.
 	struct LastVerifyError {
 		int m_skip_error{0};
+		bool m_used_known_host{false};
+		std::string *m_host_alias{nullptr};
 	};
 
  private:
@@ -244,6 +246,7 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
 	std::string m_client_scitoken;
 
 	LastVerifyError m_last_verify_error;
+	std::string m_host_alias;
 
 		// Status of potential SSL auth
 	static bool m_should_search_for_cert; // Should we search for TLS certificates?

@@ -28,4 +28,7 @@ namespace htcondor {
 bool generate_x509_ca(const std::string &cafile, const std::string &cakeyfile);
 bool generate_x509_cert(const std::string &certfile, const std::string &keyfile, const std::string &cafile, const std::string &cakeyfile);
 
+bool get_known_hosts_first_match(const std::string &hostname, bool &permitted, std::string &method, std::string &method_info);
+bool add_known_hosts(const std::string &hostname, bool permitted, const std::string &method, const std::string &method_info);
+
 }
