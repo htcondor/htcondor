@@ -23,7 +23,12 @@
 #include "condor_config.h"
 #include "CondorError.h"
 #include "condor_secman.h"
+#include "condor_uid.h"
+#include "subsystem_info.h"
+#include "condor_blkng_full_disk_io.h"
+#include "directory.h"
 
+#include <sstream>
 #include <memory>
 
 #include <openssl/x509.h>
@@ -231,10 +236,82 @@ std::unique_ptr<X509_NAME, decltype(&X509_NAME_free)> generate_cert_name(const s
 	if (1 != X509_NAME_add_entry_by_txt(x509_name.get(), "CN", MBSTRING_ASC,
 		(const unsigned char *)cn.c_str(), -1, -1, 0))
 	{
-		dprintf(D_ALWAYS, "Failed to create new certificcate name.\n");
+		dprintf(D_ALWAYS, "Failed to create new certificate name.\n");
 		return result;
 	}
 	return x509_name;
+}
+
+
+std::string get_known_hosts()
+{
+	TemporaryPrivSentry tps;
+	auto subsys = get_mySubSystem();
+	if (subsys->isDaemon()) {
+		set_priv(PRIV_ROOT);
+	}
+
+	std::string fname;
+	if (!param(fname, "SEC_KNOWN_HOSTS")) {
+		std::string file_location;
+		if (find_user_file(file_location, "known_hosts", false, false)) {
+			fname = file_location;
+		} else {
+			param(fname, "SEC_SYSTEM_KNOWN_HOSTS");
+		}
+	}
+	make_parents_if_needed(fname.c_str(), 0755);
+
+	if (0 != access(fname.c_str(), R_OK) && errno == ENOENT) {
+		safe_create_keep_if_exists(fname.c_str(), O_RDWR, 0644);
+	}
+
+	return fname;
+}
+
+
+bool check_known_hosts_any_match(const std::string &known_hosts_fname, const std::string &hostname, bool permitted, std::string method, std::string method_info)
+{
+	std::unique_ptr<FILE, decltype(&fclose)> fp(nullptr, &fclose);
+	{
+		TemporaryPrivSentry tps;
+		auto subsys = get_mySubSystem();
+		if (subsys->isDaemon()) {
+			set_priv(PRIV_ROOT);
+		}
+
+		fp.reset(safe_fopen_no_create(known_hosts_fname.c_str(), "r"));
+		if (!fp) {
+			dprintf(D_SECURITY, "Failed to check known hosts file %s: %s (errno=%d)\n",
+				known_hosts_fname.c_str(), strerror(errno), errno);;
+			return false;
+		}
+	}
+
+	for (std::string line; readLine(line, fp.get(),false);) {
+		trim(line);
+		if (line.empty() || line[0] == '#') continue;
+
+		StringList splitter(line, " ");
+		splitter.rewind();
+		char *token;
+		std::vector<std::string> tokens;
+		tokens.reserve(3);
+		while ( (token = splitter.next()) ) {
+			tokens.emplace_back(token);
+		}
+		if (tokens.size() < 3) {
+			dprintf(D_SECURITY, "Incorrect format in known host file.\n");
+			continue;
+		}
+
+		if (method != tokens[1] || method_info != tokens[2]) {continue;}
+
+		std::string host_entry = std::string(permitted ? "" : "!") + hostname;
+		if (host_entry != tokens[0]) {continue;}
+		return true;
+	}
+	return false;
 }
 
 
@@ -374,5 +451,98 @@ bool htcondor::generate_x509_cert(const std::string &certfile, const std::string
 		return false;
 	}
 
+	return true;
+}
+
+
+bool htcondor::get_known_hosts_first_match(const std::string &hostname, bool &permitted, std::string &method, std::string &method_info)
+{
+	auto known_hosts_fname = get_known_hosts();
+
+	std::unique_ptr<FILE, decltype(&fclose)> fp(nullptr, &fclose);
+	{
+		TemporaryPrivSentry tps;
+		auto subsys = get_mySubSystem();
+		if (subsys->isDaemon()) {
+			set_priv(PRIV_ROOT);
+		}
+
+		fp.reset(safe_fopen_no_create(known_hosts_fname.c_str(), "r"));
+		if (!fp) {
+			dprintf(D_SECURITY, "Failed to check known hosts file %s: %s (errno=%d)\n",
+				known_hosts_fname.c_str(), strerror(errno), errno);;
+			return false;
+		}
+	}
+
+	for (std::string line; readLine(line, fp.get(),false);) {
+		trim(line);
+		if (line.empty() || line[0] == '#') continue;
+
+		StringList splitter(line, " ");
+		splitter.rewind();
+		char *token;
+		std::vector<std::string> tokens;
+		tokens.reserve(3);
+		while ( (token = splitter.next()) ) {
+			tokens.emplace_back(token);
+		}
+		if (tokens.size() < 3) {
+			dprintf(D_SECURITY, "Incorrect format in known host file.\n");
+			continue;
+		}
+
+		if (tokens[0].size() && tokens[0][0] == '!' && tokens[0].substr(1) == hostname) {
+			permitted = false;
+			method = tokens[1];
+			method_info = tokens[2];
+			return true;
+		} else if (tokens[0] == hostname) {
+			permitted = true;
+			method = tokens[1];
+			method_info = tokens[2];
+			return true;
+		}
+	}
+	return false;
+}
+
+
+bool htcondor::add_known_hosts(const std::string &hostname, bool permitted, const std::string &method, const std::string &method_info)
+{
+	auto known_hosts_fname = get_known_hosts();
+
+	if (check_known_hosts_any_match(known_hosts_fname, hostname, permitted, method, method_info)) {
+		return true;
+	}
+
+	std::stringstream ss;
+	ss << (permitted ? "" : "!") << hostname << " " << method << " " << method_info << std::endl;
+	std::string line = ss.str();
+
+	int fd;
+	{
+		TemporaryPrivSentry tps;
+		auto subsys = get_mySubSystem();
+		if (subsys->isDaemon()) {
+			set_priv(PRIV_ROOT);
+		}
+
+		fd = safe_open_no_create(known_hosts_fname.c_str(), O_APPEND|O_WRONLY);
+		if (fd < 0) {
+			dprintf(D_SECURITY, "Failed to open known hosts file %s: %s (errno=%d)\n",
+				known_hosts_fname.c_str(), strerror(errno), errno);
+			return false;
+		}
+	}
+
+	if (static_cast<ssize_t>(line.size()) != full_write(fd, line.c_str(), line.size())) {
+		dprintf(D_SECURITY, "Failed to record details for hostname %s into known hosts file %s:"
+			" %s (errno=%d)\n", hostname.c_str(), known_hosts_fname.c_str(), strerror(errno),
+			errno);
+		close(fd);
+		return false;
+	}
+	close(fd);
 	return true;
 }
