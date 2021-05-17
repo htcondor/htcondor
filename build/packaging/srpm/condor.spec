@@ -9,7 +9,6 @@
 # % define fedora   16
 # % define osg      0
 # % define uw_build 1
-# % define vaultcred 1
 # % define devtoolset 0
 
 %define python 0
@@ -36,13 +35,6 @@
 
 %if 0%{?hcc}
 %define blahp 0
-%endif
-
-# enable vaultcred by default for osg
-%if %undefined vaultcred
-%if 0%{?osg}
-%define vaultcred 1
-%endif
 %endif
 
 %define python 1
@@ -555,7 +547,6 @@ OAuth2 endpoints and to use those credentials securely inside running jobs.
 %endif
 
 
-%if 0%{?vaultcred}
 #######################
 %package credmon-vault
 Summary: Vault credmon for HTCondor.
@@ -574,7 +565,6 @@ Conflicts: %name-credmon-oauth
 %description credmon-vault
 The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
-%endif
 
 #######################
 %package bosco
@@ -917,24 +907,16 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/co
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
 %endif
 
-%if 0%{?vaultcred}
 # Move vault credmon config file out of examples and into config.d
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-vault-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-vault-credmon.conf
-%else
-# Otherwise remove installed vault credmon files from the buildroot
-rm -f %{buildroot}/%{_sbindir}/condor_credmon_vault
-rm -f %{buildroot}/%{_bindir}/condor_vault_storer
-%endif
 
 # For non-EL7, remove oauth credmon from the buildroot
 %if 0%{?rhel} > 7 || 0%{?fedora}
 rm -f %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi
 rm -f %{buildroot}/%{_sbindir}/condor_credmon_oauth
 rm -f %{buildroot}/%{_sbindir}/scitokens_credential_producer
-%if ! 0%{?vaultcred}
 rm -rf %{buildroot}/%{_libexecdir}/condor/credmon
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth
-%endif
 %endif
 
 ###
@@ -1575,7 +1557,6 @@ rm -rf %{buildroot}
 ###
 %endif
 
-%if 0%{?vaultcred}
 %files credmon-vault
 %doc examples/condor_credmon_oauth
 %_sbindir/condor_credmon_vault
@@ -1584,7 +1565,6 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/40-vault-credmon.conf
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
-%endif
 
 %files bosco
 %defattr(-,root,root,-)
