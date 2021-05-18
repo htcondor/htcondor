@@ -800,7 +800,7 @@ void MachAttributes::RefreshDevIds(
 bool MachAttributes::ComputeDevProps(
 	ClassAd & ad,
 	std::string tag,
-	slotres_assigned_ids_t & ids)
+	const slotres_assigned_ids_t & ids)
 {
 	std::string attr;
 	ad.Clear();
@@ -1575,13 +1575,13 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable re
 	}
 
 	for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
+		// TODO: handle fractional assigned custome resources?
 		int cAssigned = int(j->second);
 
 		// if this resource already has bound ids, don't bind again.
 		slotres_devIds_map_t::const_iterator m(c_slotres_ids_map.find(j->first));
 		if (m != c_slotres_ids_map.end() && cAssigned == (int)m->second.size())
 			continue;
-
 
 		const char * request = nullptr;
 		slotres_constraint_map_t::const_iterator req(c_slotres_constraint_map.find(j->first));
@@ -1604,8 +1604,14 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable re
 			if (cAllocated < cAssigned) {
 				EXCEPT("Failed to bind local resource '%s'", j->first.c_str());
 			}
-			c_slotres_props_map[j->first].Clear();
-			map->ComputeDevProps(c_slotres_props_map[j->first], j->first, c_slotres_ids_map[j->first]);
+			// if any ids were allocated, calculate the effective properties attributes for the assigned ids
+			// we *dont* want to execute this code if there are no allocated ids, because it has the side effect
+			// of making c_slot_res_ids_map['tag'] exist, which in turn results in the
+			// "Assigned<Tag>" slot attribute being defined rather than undefined.
+			if (cAllocated > 0) {
+				c_slotres_props_map[j->first].Clear();
+				map->ComputeDevProps(c_slotres_props_map[j->first], j->first, c_slotres_ids_map[j->first]);
+			}
 		}
 	}
 
