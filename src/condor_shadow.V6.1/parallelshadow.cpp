@@ -714,12 +714,12 @@ ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 			return;
 		}
 
-		MyString strRh(rhstr);
-		if (strRh.replaceString("#pArAlLeLnOdE#", node))
+		std::string strRh(rhstr);
+		if (replace_str(strRh, "#pArAlLeLnOdE#", node) > 0)
 		{
-			ad->AssignExpr( lhstr, strRh.Value() );
+			ad->AssignExpr( lhstr, strRh.c_str() );
 			dprintf( D_FULLDEBUG, "Replaced $(NODE), now using: %s = %s\n", 
-					 lhstr, strRh.Value() );
+					 lhstr, strRh.c_str() );
 		}
 	}	
 }

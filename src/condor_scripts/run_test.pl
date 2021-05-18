@@ -410,7 +410,6 @@ sub DoChild
 
     my $test_starttime = time();
     debug("Test start @ $test_starttime \n",6);
-    sleep(1);
 
     # with wrapping all test(most) in a personal condor
     # we know where the published directories are if we ask by name
@@ -630,10 +629,10 @@ sub SetupPythonPath {
         system("dir $relpy");
         $relpy .= ";$reldir\\bin";
     } else {
-        system("ls -l $reldir");
-        system("ls -l $reldir/lib");
+        system("ls -lL $reldir");
+        system("ls -lL $reldir/lib");
         print "contents of $relpy:\n";
-        system("ls -l $relpy");
+        system("ls -lL $relpy");
     }
 
     my $pythonpath = "";

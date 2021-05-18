@@ -165,7 +165,7 @@ NegotiationCycleStats::NegotiationCycleStats():
 }
 
 
-static MyString MachineAdID(ClassAd * ad)
+static std::string MachineAdID(ClassAd * ad)
 {
 	ASSERT(ad);
 	std::string addr;
@@ -177,8 +177,8 @@ static MyString MachineAdID(ClassAd * ad)
 		addr = "<No Address>";
 	}
 
-	MyString ID(addr);
-	ID += " ";
+	std::string ID(addr);
+	ID += ' ';
 	ID += name;
 	return ID;
 }
@@ -249,7 +249,7 @@ bool ResourcesInUseByUsersGroup_classad_func( const char * /*name*/,
 
 	float group_quota = 0;
 	float group_usage = 0;
-    string group_name;
+	std::string group_name;
 	if( !matchmaker_for_classad_func->getGroupInfoFromUserId(user.c_str(),group_name,group_quota,group_usage) ) {
 		result.SetErrorValue();
 		return true;
@@ -264,7 +264,7 @@ bool dslotLookup( const classad::ClassAd *ad, const char *name, int idx, classad
 	if ( ad == NULL || name == NULL || idx < 0 ) {
 		return false;
 	}
-	string attr_name = "Child";
+	std::string attr_name = "Child";
 	attr_name += name;
 	// lookup or evaluate Child<name>
 	// set value to idx-th entry of resulting ExprList
@@ -272,7 +272,7 @@ bool dslotLookup( const classad::ClassAd *ad, const char *name, int idx, classad
 	if ( expr_tree == NULL || expr_tree->GetKind() != classad::ExprTree::EXPR_LIST_NODE ) {
 		return false;
 	}
-	vector<classad::ExprTree*> expr_list;
+	std::vector<classad::ExprTree*> expr_list;
 	((const classad::ExprList*)expr_tree)->GetComponents( expr_list );
 	if ( (unsigned)idx >= expr_list.size() ) {
 		return false;
@@ -284,7 +284,7 @@ bool dslotLookup( const classad::ClassAd *ad, const char *name, int idx, classad
 	return true;
 }
 
-bool dslotLookupString( const classad::ClassAd *ad, const char *name, int idx, string &value )
+bool dslotLookupString( const classad::ClassAd *ad, const char *name, int idx, std::string &value )
 {
 	classad::Value val;
 	if ( !dslotLookup( ad, name, idx, val ) ) {
@@ -593,7 +593,7 @@ reinitialize ()
     // (re)build the HGQ group tree from configuration
     // need to do this prior to initializing the accountant
 	delete hgq_root_group;
-    hgq_root_group = GroupEntry::hgq_construct_tree(group_entry_map, hgq_groups, this->autoregroup, this->accept_surplus);
+    hgq_root_group = GroupEntry::hgq_construct_tree(hgq_groups, this->autoregroup, this->accept_surplus);
 
     // Initialize accountant params
     accountant.Initialize(hgq_root_group);
@@ -921,7 +921,7 @@ Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			sinful.c_str(),
 			1200,
-			nullptr
+			nullptr, true
 		);
 
 	}
@@ -1078,7 +1078,7 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 
 		MyString map_output;
 		if (user_map_do_mapping("PRIORITY_FACTOR_AUTHORIZATION", peer_identity, map_output)) {
-			StringList items(map_output.Value(), ",");
+			StringList items(map_output.c_str(), ",");
 			items.rewind();
 			char * item;
 			while ( (item = items.next()) ) {
@@ -1453,7 +1453,7 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 
 
 bool Matchmaker::
-getGroupInfoFromUserId(const char* user, string& groupName, float& groupQuota, float& groupUsage)
+getGroupInfoFromUserId(const char* user, std::string& groupName, float& groupQuota, float& groupUsage)
 {
 	ASSERT(groupQuotasHash);
 
@@ -1463,7 +1463,7 @@ getGroupInfoFromUserId(const char* user, string& groupName, float& groupQuota, f
 
 	if (!user) return false;
 
-    GroupEntry* group = accountant.GetAssignedGroup(user);
+    GroupEntry* group = GroupEntry::GetAssignedGroup(hgq_root_group, user);
 
     // if group quotas not in effect, return here for backward compatability
     if (hgq_groups.size() <= 1) return false;
@@ -1683,356 +1683,38 @@ negotiationTime ()
 
         negotiation_cycle_stats[0]->candidate_slots = cPoolsize;
 
-        // Fill in latest usage/prio info for the groups.
-        // While we're at it, reset fields prior to reloading from submitter ads.
-        for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-            GroupEntry* group = *j;
-
-            group->quota = 0;
-            group->requested = 0;
-            group->currently_requested = 0;
-            group->allocated = 0;
-            group->subtree_quota = 0;
-            group->subtree_requested = 0;
-            if (NULL == group->submitterAds) group->submitterAds = new ClassAdListDoesNotDeleteAds;
-            group->submitterAds->Open();
-            while (ClassAd* ad = group->submitterAds->Next()) {
-                group->submitterAds->Remove(ad);
-            }
-            group->submitterAds->Close();
-
-            group->usage = accountant.GetWeightedResourcesUsed(group->name);
-            group->priority = accountant.GetPriority(group->name);
-        }
-
-
-        // cycle through the submitter ads, and load them into the appropriate group node in the tree
-        dprintf(D_ALWAYS, "group quotas: assigning %d submitters to accounting groups\n", int(submitterAds.MyLength()));
-        submitterAds.Open();
-        while (ClassAd* ad = submitterAds.Next()) {
-            std::string tname;
-            if (!ad->LookupString(ATTR_NAME, tname)) {
-                dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter ad with no name\n");
-                continue;
-            }
-            // this holds the submitter name, which includes group, if present
-            const string subname(tname);
-
-            // is there a username separator?
-            string::size_type pos = subname.find_last_of('@');
-            if (pos==string::npos) {
-                dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter with badly-formed name \"%s\"\n", subname.c_str());
-                continue;
-            }
-
-            GroupEntry* group = accountant.GetAssignedGroup(subname);
-
-            // attach the submitter ad to the assigned group
-            group->submitterAds->Insert(ad);
-
-            // Accumulate the submitter jobs submitted against this group
-            // To do: investigate getting these values directly from schedds.  The
-            // collector info can be a bit stale, direct from schedd might be improvement.
-            int numidle=0;
-            ad->LookupInteger(ATTR_IDLE_JOBS, numidle);
-            int numrunning=0;
-            ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
-
-			// The HGQ codes uses number of idle jobs to determine how to allocate
-			// surplus.  This should really be weighted demand when slot weights
-			// and paritionable slot are in use.  The schedd can tell us the cpu-weighed
-			// demand in ATTR_WEIGHTED_IDLE_JOBS.  If this knob is set, use it.
-
-			if (param_boolean("NEGOTIATOR_USE_WEIGHTED_DEMAND", true)) {
-				double weightedIdle = numidle;
-				double weightedRunning = numrunning;
-
-				int r = ad->LookupFloat(ATTR_WEIGHTED_IDLE_JOBS, weightedIdle);
-				if (!r) {
-					dprintf(D_ALWAYS, "group quotas: can not lookup WEIGHTED_IDLE_JOBS\n");
-				}
-				r = ad->LookupFloat(ATTR_WEIGHTED_RUNNING_JOBS, weightedRunning);
-				if (!r) {
-					dprintf(D_ALWAYS, "group quotas: can not lookup WEIGHTED_RUNNING_JOBS\n");
-				}
-
-            	group->requested += weightedRunning + weightedIdle;
-			} else {
-            	group->requested += numrunning + numidle;
-			}
-			group->currently_requested = group->requested;
-        }
-
-        // Any groups with autoregroup are allowed to also negotiate in root group ("none")
-        if (autoregroup) {
-            unsigned long n = 0;
-            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-                GroupEntry* group = *j;
-                if (group == hgq_root_group) continue;
-                if (!group->autoregroup) continue;
-                group->submitterAds->Open();
-                while (ClassAd* ad = group->submitterAds->Next()) {
-                    hgq_root_group->submitterAds->Insert(ad);
-                }
-                group->submitterAds->Close();
-                ++n;
-            }
-            dprintf(D_ALWAYS, "group quotas: autoregroup mode: appended %lu submitters to group %s negotiation\n", n, hgq_root_group->name.c_str());
-        }
-
         // assign slot quotas based on the config-quotas
         double hgq_total_quota = (accountant.UsingWeightedSlots()) ? weightedPoolsize : effectivePoolsize;
         dprintf(D_ALWAYS, "group quotas: assigning group quotas from %g available%s slots\n",
                 hgq_total_quota,
                 (accountant.UsingWeightedSlots()) ? " weighted" : "");
-        hgq_root_group->hgq_assign_quotas(hgq_total_quota);
 
-        for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-            GroupEntry* group = *j;
-            dprintf(D_FULLDEBUG, "group quotas: group= %s  cquota= %g  static= %d  accept= %d  quota= %g  req= %g  usage= %g\n",
-                    group->name.c_str(), group->config_quota, int(group->static_quota), int(group->accept_surplus), group->quota,
-                    group->requested, group->usage);
-        }
+		GroupEntry::hgq_prepare_for_matchmaking(hgq_total_quota, hgq_root_group, hgq_groups, accountant, submitterAds);
 
-        // A user/admin can set this to > 1, to allow the algorithm an opportunity to re-distribute
-        // slots that were not used due to rejection.
-        int maxrounds = 0;
-        if (param_defined("GROUP_QUOTA_MAX_ALLOCATION_ROUNDS")) {
-            maxrounds = param_integer("GROUP_QUOTA_MAX_ALLOCATION_ROUNDS", 3, 1, INT_MAX);
-        } else {
-            // backward compatability
-            maxrounds = param_integer("HFS_MAX_ALLOCATION_ROUNDS", 3, 1, INT_MAX);
-        }
+		auto callback = [&](GroupEntry *g, int slots) -> void {
+				const char *name = g->name.c_str();
+				if (autoregroup && (g == hgq_root_group)) {
+					name = nullptr;
+				}
+				negotiateWithGroup(cPoolsize,
+								weightedPoolsize,
+								minSlotWeight,
+								startdAds,
+								claimIds,
+								*(g->submitterAds),
+								slots,
+								name);
+		};
 
-        // The allocation of slots may occur multiple times, if rejections
-        // prevent some allocations from being filled.
-        int iter = 0;
-        while (true) {
-            if (iter >= maxrounds) {
-                dprintf(D_ALWAYS, "group quotas: halting allocation rounds after %d iterations\n", iter);
-                break;
-            }
+		GroupEntry::hgq_negotiate_with_all_groups(
+						hgq_root_group, 
+						hgq_groups,
+						groupQuotasHash,
+						hgq_total_quota,
+						accountant,
+						callback,
+						accept_surplus);
 
-            iter += 1;
-            dprintf(D_ALWAYS, "group quotas: allocation round %d\n", iter);
-            negotiation_cycle_stats[0]->slot_share_iterations += 1;
-
-            // make sure working values are reset for this iteration
-            groupQuotasHash->clear();
-            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-                GroupEntry* group = *j;
-                group->allocated = 0;
-                group->subtree_requested = 0;
-                group->rr = false;
-            }
-
-            // Allocate group slot quotas to satisfy group job requests
-            double surplus_quota = hgq_root_group->hgq_fairshare();
-
-            // This step is not relevant in a weighted-slot scenario, where slots may
-            // have a floating-point cost != 1.
-            if (!accountant.UsingWeightedSlots()) {
-                // Recover any fractional slot remainders from fairshare algorithm,
-                // and distribute them using round robin.
-                surplus_quota += hgq_root_group->hgq_recover_remainders();
-            }
-
-            if (autoregroup) {
-                dprintf(D_ALWAYS, "group quotas: autoregroup mode: allocating %g to group %s\n", hgq_total_quota, hgq_root_group->name.c_str());
-                hgq_root_group->quota = hgq_total_quota;
-                hgq_root_group->allocated = hgq_total_quota;
-            }
-
-            double maxdelta = 0;
-            double requested_total = 0;
-            double allocated_total = 0;
-            unsigned long served_groups = 0;
-            unsigned long unserved_groups = 0;
-            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-                GroupEntry* group = *j;
-                dprintf(D_FULLDEBUG, "group quotas: group= %s  quota= %g  requested= %g  allocated= %g  unallocated= %g\n",
-                        group->name.c_str(), group->quota, group->requested+group->allocated, group->allocated, group->requested);
-                groupQuotasHash->insert(MyString(group->name.c_str()), group->quota);
-                requested_total += group->requested;
-                allocated_total += group->allocated;
-                if (group->allocated > 0) served_groups += 1;
-                else if (group->requested > 0) unserved_groups += 1;
-                double target = (accept_surplus) ? group->allocated : group->quota;
-                maxdelta = std::max(maxdelta, std::max(0.0, target - group->usage));
-            }
-
-            dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g  maxdelta= %g\n",
-                    static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, double(effectivePoolsize), requested_total+allocated_total, allocated_total, surplus_quota, maxdelta );
-
-            // The loop below can add a lot of work (and log output) to the negotiation.  I'm going to
-            // default its behavior to execute once, and just negotiate for everything at once.  If a
-            // user is concerned about the "overlapping effective pool" problem, they can decrease this
-            // increment so that round robin happens, and competing groups will not starve one another.
-            double ninc = 0;
-            if (param_defined("GROUP_QUOTA_ROUND_ROBIN_RATE")) {
-                ninc = param_double("GROUP_QUOTA_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
-            } else {
-                // backward compatability
-                ninc = param_double("HFS_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
-            }
-
-            // fill in sorting classad attributes for configurable sorting
-            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-                GroupEntry* group = *j;
-                ClassAd* ad = group->sort_ad;
-                ad->Assign(ATTR_GROUP_QUOTA, group->quota);
-                ad->Assign(ATTR_GROUP_RESOURCES_ALLOCATED, group->allocated);
-                ad->Assign(ATTR_GROUP_RESOURCES_IN_USE, accountant.GetWeightedResourcesUsed(group->name));
-                // Do this after all attributes are filled in
-                float v = 0;
-                if (!ad->LookupFloat(ATTR_SORT_EXPR, v)) {
-                    v = FLT_MAX;
-                    string e;
-                    ad->LookupString(ATTR_SORT_EXPR_STRING, e);
-                    dprintf(D_ALWAYS, "WARNING: sort expression \"%s\" failed to evaluate to floating point for group %s - defaulting to %g\n",
-                            e.c_str(), group->name.c_str(), v);
-                }
-                group->sort_key = v;
-            }
-
-            // present accounting groups for negotiation in "starvation order":
-            vector<GroupEntry*> negotiating_groups(hgq_groups);
-            std::sort(negotiating_groups.begin(), negotiating_groups.end(), group_order(autoregroup, hgq_root_group));
-
-            // This loop implements "weighted round-robin" behavior to gracefully handle case of multiple groups competing
-            // for same subset of available slots.  It gives greatest weight to groups with the greatest difference
-            // between allocated and their current usage
-            double n = 0;
-            while (true) {
-                // Up our fraction of the full deltas.  Note that maxdelta may be zero, but we still
-                // want to negotiate at least once regardless, so loop halting check is at the end.
-                n = std::min(n+ninc, maxdelta);
-                dprintf(D_ALWAYS, "group quotas: entering RR iteration n= %g\n", n);
-
-                // Do the negotiations
-                for (vector<GroupEntry*>::iterator j(negotiating_groups.begin());  j != negotiating_groups.end();  ++j) {
-                    GroupEntry* group = *j;
-
-                    dprintf(D_FULLDEBUG, "Group %s - sortkey= %g\n", group->name.c_str(), group->sort_key);
-
-                    if (group->allocated <= 0) {
-                        dprintf(D_ALWAYS, "Group %s - skipping, zero slots allocated\n", group->name.c_str());
-                        continue;
-                    }
-
-                    if ((group->usage >= group->allocated) && !ConsiderPreemption) {
-                        dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (quota=%g) (usage=%g) (allocation=%g)\n", group->name.c_str(), group->quota, group->usage, group->allocated);
-                        continue;
-                    }
-		
-                    if (group->submitterAds->MyLength() <= 0) {
-                        dprintf(D_ALWAYS, "Group %s - skipping, no submitters (usage=%g)\n", group->name.c_str(), group->usage);
-                        continue;
-                    }
-		
-                    dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
-
-                    // if allocating surplus, use allocated, otherwise just use the group's quota directly
-                    double target = std::max(group->allocated, group->quota);
-
-                    double delta = std::max(0.0, target - group->usage);
-                    // If delta > 0, we know maxdelta also > 0.  Otherwise, it means we actually are using more than
-                    // we just got allocated, so just negotiate for what we were allocated.
-                    double slots = (delta > 0) ? group->usage + (delta * (n / maxdelta)) : target;
-                    // Defensive -- do not exceed allocated slots
-                    slots = std::min(slots, target);
-                    if (!accountant.UsingWeightedSlots()) {
-                        slots = floor(slots);
-                    }
-					
-					if (param_boolean("NEGOTIATOR_STRICT_ENFORCE_QUOTA", true)) {
-						dprintf(D_FULLDEBUG, "NEGOTIATOR_STRICT_ENFORCE_QUOTA is true, current proposed allocation for %s is %g\n", group->name.c_str(), slots);
-						calculate_subtree_usage(hgq_root_group); // usage changes with every negotiation
-						GroupEntry *limitingGroup = group;
-
-						double my_new_allocation = slots - group->usage; // resources above what we already have
-						if (my_new_allocation < 0) {
-							continue; // shouldn't get here
-						}
-
-						while (limitingGroup != NULL) {
-							if (limitingGroup->accept_surplus == false) {
-								// This is the extra available at this node
-								double subtree_available = -1;
-								if (limitingGroup->static_quota) {
-									subtree_available = limitingGroup->config_quota - limitingGroup->subtree_usage;
-								} else {
-									subtree_available = limitingGroup->subtree_quota - limitingGroup->subtree_usage;
-								}
-								if (subtree_available < 0) subtree_available = 0;
-								dprintf(D_FULLDEBUG, "\tmy_new_allocation is %g subtree_available is %g\n", my_new_allocation, subtree_available);
-								if (my_new_allocation > subtree_available) {
-									dprintf(D_ALWAYS, "Group %s with accept_surplus=false has total usage = %g and config quota of %g -- constraining allocation in subgroup %s to %g\n",
-											limitingGroup->name.c_str(), limitingGroup->subtree_usage, limitingGroup->config_quota, group->name.c_str(), subtree_available + group->usage);
-		
-									my_new_allocation = subtree_available; // cap new allocation to the available
-								}
-							}
-							limitingGroup = limitingGroup->parent;
-						}
-						slots = my_new_allocation + group->usage; // negotiation units are absolute quota, not new
-					}
-
-                    if (autoregroup && (group == hgq_root_group)) {
-                        // note that in autoregroup mode, root group is guaranteed to be last group to negotiate
-                        dprintf(D_ALWAYS, "group quotas: autoregroup mode: negotiating with autoregroup for %s\n", group->name.c_str());
-                        negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight,
-                                           startdAds, claimIds, *(group->submitterAds),
-                                           slots, NULL);
-                    } else {
-                        negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight,
-                                           startdAds, claimIds, *(group->submitterAds),
-                                           slots, group->name.c_str());
-                    }
-                }
-
-                // Halt when we have negotiated with full deltas
-                if (n >= maxdelta) break;
-            }
-
-            // After round robin, assess where we are relative to HGQ allocation goals
-            double usage_total = 0;
-            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-                GroupEntry* group = *j;
-
-                double usage = accountant.GetWeightedResourcesUsed(group->name);
-
-                group->usage = usage;
-                dprintf(D_FULLDEBUG, "group quotas: Group %s  allocated= %g  usage= %g\n", group->name.c_str(), group->allocated, group->usage);
-
-                // I do not want to give credit for usage above what was allocated here.
-                usage_total += std::min(group->usage, group->allocated);
-
-                if (group->usage < group->allocated) {
-                    // If we failed to match all the allocated slots for any reason, then take what we
-                    // got and allow other groups a chance at the rest on next iteration
-                    dprintf(D_FULLDEBUG, "group quotas: Group %s - resetting requested to %g\n", group->name.c_str(), group->usage);
-                    group->requested = group->usage;
-                } else {
-                    // otherwise restore requested to its original state for next iteration
-                    group->requested += group->allocated;
-                }
-            }
-
-            dprintf(D_ALWAYS, "Round %d totals: allocated= %g  usage= %g\n", iter, allocated_total, usage_total);
-
-            // If we negotiated successfully for all slots, we're finished
-            if (usage_total >= allocated_total) break;
-        }
-
-        // For the purposes of RR consistency I want to update these after all allocation rounds are completed.
-        for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
-            GroupEntry* group = *j;
-            // If we were served by RR this cycle, then update timestamp of most recent round-robin.
-            // I also update when requested is zero because I want to favor groups that have been actually
-            // waiting for an allocation the longest.
-            if (group->rr || (group->requested <= 0))  group->rr_time = negotiation_cycle_stats[0]->start_time;
-        }
     }
 
     // Leave this in as an easter egg for dev/testing purposes.
@@ -2121,7 +1803,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 
 				bool isGroup;
 
-				GroupEntry *ge = accountant.GetAssignedGroup(name, isGroup);
+				GroupEntry *ge = GroupEntry::GetAssignedGroup(hgq_root_group, name, isGroup);
 				std::string groupName(ge->name);
 
 				updateAd.Assign("IsAccountingGroup", isGroup);
@@ -2159,9 +1841,9 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
 	accountingAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 
 
-    string CustomerName = group->name;
+	std::string CustomerName = group->name;
 
-	ClassAd *CustomerAd = accountant.GetClassAd(string("Customer.") + CustomerName);
+	ClassAd *CustomerAd = accountant.GetClassAd(std::string("Customer.") + CustomerName);
 
     if (CustomerAd == NULL) {
         dprintf(D_ALWAYS, "WARNING: Expected AcctLog entry \"%s\" to exist.\n", CustomerName.c_str());
@@ -2169,7 +1851,7 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
     }
 
     bool isGroup=false;
-    GroupEntry* cgrp = accountant.GetAssignedGroup(CustomerName, isGroup);
+    GroupEntry* cgrp = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName, isGroup);
 
 	if (!cgrp) {
         return;
@@ -2240,7 +1922,7 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
 	cl->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
 
     // Populate group's children recursively, if it has any
-    for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+    for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
         forwardGroupAccounting(cl, *j);
     }
 }
@@ -3164,7 +2846,7 @@ obtainAdsFromCollector (
 				oldAd = NULL;
 				oldAdEntry = NULL;
 
-				MyString adID = MachineAdID(ad);
+				std::string adID = MachineAdID(ad);
 				stashedAds->lookup( adID, oldAdEntry);
 				// if we find it...
 				oldSequence = -1;
@@ -3265,7 +2947,7 @@ obtainAdsFromCollector (
 		} else if( !strcmp(GetMyTypeName(*ad),SUBMITTER_ADTYPE) ) {
 
             std::string subname;
-            string schedd_addr;
+			std::string schedd_addr;
             if (!ad->LookupString(ATTR_NAME, subname) ||
                 !ad->LookupString(ATTR_SCHEDD_IP_ADDR, schedd_addr)) {
 
@@ -3428,8 +3110,8 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 	while( (ad = startdPvtAdList.Next()) ) {
 		std::string name;
 		std::string ip_addr;
-		string claim_id;
-        string claimlist;
+		std::string claim_id;
+		std::string claimlist;
 
 		if( !ad->LookupString(ATTR_NAME, name) ) {
 			continue;
@@ -3448,7 +3130,7 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 		}
 
 			// hash key is name + ip_addr
-        string key = name;
+		std::string key = name;
         key += ip_addr;
         ClaimIdHash::iterator f(claimIds.find(key));
         if (f == claimIds.end()) {
@@ -4016,7 +3698,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 	bool		only_consider_startd_rank = false;
 	bool		display_overlimit = true;
 	bool		limited_by_submitterLimit = false;
-	string remoteUser;
+	std::string remoteUser;
 	double limitUsed = 0.0;
 	double limitUsedUnclaimed = 0.0;
 
@@ -4123,7 +3805,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
         negotiation_cycle_stats[0]->num_jobs_considered += 1;
 
         // information regarding the negotiating group context:
-        string negGroupName = (groupName != NULL) ? groupName : hgq_root_group->name.c_str();
+		std::string negGroupName = (groupName != NULL) ? groupName : hgq_root_group->name.c_str();
         request.Assign(ATTR_SUBMITTER_NEGOTIATING_GROUP, negGroupName);
         request.Assign(ATTR_SUBMITTER_AUTOREGROUP, (autoregroup && (negGroupName == hgq_root_group->name)));
 
@@ -4135,7 +3817,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 		// next insert the submitter user usage attributes into the request
 		request.Assign(ATTR_SUBMITTER_USER_RESOURCES_IN_USE,
 					   accountant.GetWeightedResourcesUsed ( submitterName ));
-        string temp_groupName;
+		std::string temp_groupName;
 		float temp_groupQuota, temp_groupUsage;
 		if (getGroupInfoFromUserId(submitterName, temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
@@ -4181,7 +3863,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 				// 2 = match diagnostics string w/ autocluster + jobid
 				int want_match_diagnostics = 0;
 				request.LookupInteger(ATTR_WANT_MATCH_DIAGNOSTICS,want_match_diagnostics);
-				string diagnostic_message;
+				std::string diagnostic_message;
 				// no match found
 				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
 						cluster, proc, submitterName, scheddAddr.c_str());
@@ -4224,7 +3906,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 				}
 				// add in autocluster and job id info if requested
 				if ( want_match_diagnostics == 2 ) {
-					string diagnostic_jobinfo;
+					std::string diagnostic_jobinfo;
 					formatstr(diagnostic_jobinfo," |%d|%d.%d|",autocluster,cluster,proc);
 					diagnostic_message += diagnostic_jobinfo;
 				}
@@ -4366,7 +4048,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 
 void Matchmaker::
 updateNegCycleEndTime(time_t startTime, ClassAd *submitter) {
-	string schedd_addr;
+	std::string schedd_addr;
 	time_t endTime;
 	int oldTotalTime;
 
@@ -4555,7 +4237,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 	double			candidatePostJobRankValue;
 	double			candidatePreemptRankValue;
 	PreemptState	candidatePreemptState;
-	string			candidateDslotClaims;
+	std::string			candidateDslotClaims;
 		// to store the best candidate so far
 	ClassAd 		*bestSoFar = NULL;	
 	ClassAd 		*cached_bestSoFar = NULL;	
@@ -4564,10 +4246,10 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 	double			bestPostJobRankValue = -(FLT_MAX);
 	double			bestPreemptRankValue = -(FLT_MAX);
 	PreemptState	bestPreemptState = (PreemptState)-1;
-	string			bestDslotClaims;
+	std::string			bestDslotClaims;
 	bool			newBestFound;
 		// to store results of evaluations
-	string remoteUser;
+	std::string remoteUser;
 	classad::Value	result;
 	bool			val;
 		// request attributes
@@ -5243,7 +4925,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	int  cluster = 0;
 	int proc = 0;
 	std::string startdAddr;
-	string remoteUser;
+	std::string remoteUser;
 	char accountingGroup[256];
 	char remoteOwner[256];
 	std::string startdName;
@@ -5290,12 +4972,12 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// claim_id and all_claim_ids will have the primary claim id.
 	// For pslot preemption, all_claim_ids will also have the claim ids
 	// of the dslots being preempted.
-	string claim_id;
-	string all_claim_ids;
-	string dslotDesc;
+	std::string claim_id;
+	std::string all_claim_ids;
+	std::string dslotDesc;
     ClaimIdHash::iterator claimset = claimIds.end();
 	if (want_claiming) {
-        string key = startdName;
+		std::string key = startdName;
         key += startdAddr;
         claimset = claimIds.find(key);
         if ((claimIds.end() == claimset) || (claimset->second.size() < 1)) {
@@ -5306,7 +4988,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		all_claim_ids = claim_id;
 
 		// If there are extra preempting dslot claims, hand them out too
-		string extraClaims;
+		std::string extraClaims;
 		if (offer->LookupString("PreemptDslotClaims", extraClaims)) {
 			all_claim_ids += " ";
 			all_claim_ids += extraClaims;
@@ -5473,7 +5155,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 void
 Matchmaker::calculateSubmitterLimit(
-	const string &submitterName,
+	const std::string &submitterName,
 	char const *groupAccountingName,
 	float groupQuota,
 	float groupusage,
@@ -5605,14 +5287,14 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds,
 	// also, do not factor in ads with the same ATTR_NAME more than once -
 	// ads with the same ATTR_NAME signify the same user submitting from multiple
 	// machines.
-    set<MyString> names;
+	std::set<std::string> names;
 	normalFactor = 0.0;
 	normalAbsFactor = 0.0;
 	submitterAds.Open();
 	while (ClassAd* ad = submitterAds.Next()) {
 		std::string subname;
 		ad->LookupString(ATTR_NAME, subname);
-        std::pair<set<MyString>::iterator, bool> r = names.insert(subname);
+        std::pair<std::set<std::string>::iterator, bool> r = names.insert(subname);
         // Only count each submitter once
         if (!r.second) continue;
 
@@ -5646,15 +5328,15 @@ void Matchmaker::
 addRemoteUserPrios( ClassAd	*ad )
 {	
 	std::string	remoteUser;
-	string buffer,buffer1,buffer2,buffer3;
-	string slot_prefix;
-	string expr;
-	string expr_buffer;
+	std::string buffer,buffer1,buffer2,buffer3;
+	std::string slot_prefix;
+	std::string expr;
+	std::string expr_buffer;
 	float	prio;
 	int     total_slots, i;
 	float     preemptingRank;
 	float temp_groupQuota, temp_groupUsage;
-    string temp_groupName;
+	std::string temp_groupName;
 
 		// If there is a preempting user, use that for computing remote user prio.
 		// Otherwise, use the current user.
@@ -5741,7 +5423,7 @@ reeval(ClassAd *ad)
 	cur_matches = 0;
 	ad->LookupInteger("CurMatches", cur_matches);
 
-	MyString adID = MachineAdID(ad);
+	std::string adID = MachineAdID(ad);
 	stashedAds->lookup( adID, oldAdEntry);
 		
 	cur_matches++;
@@ -5805,7 +5487,7 @@ peek_candidate()
 #endif
 
 ClassAd* Matchmaker::MatchListType::
-pop_candidate(string &dslot_claims)
+pop_candidate(std::string &dslot_claims)
 {
 	ClassAd* candidate = NULL;
 
@@ -5848,7 +5530,7 @@ insert_candidate(ClassAd * candidate,
 	int insert_idx = adListHead;
 	while ( insert_idx < adListLen - 1 )
 	{
-		if ( sort_compare( &new_entry, &AdListArray[insert_idx + 1] ) > 0 ) {
+		if ( sort_compare( new_entry, AdListArray[insert_idx + 1])) {
 			AdListArray[insert_idx] = AdListArray[insert_idx + 1];
 			insert_idx++;
 		} else {
@@ -5856,6 +5538,7 @@ insert_candidate(ClassAd * candidate,
 		}
 	}
 	AdListArray[insert_idx] = new_entry;
+
 	return true;
 }
 
@@ -5978,7 +5661,7 @@ add_candidate(ClassAd * candidate,
 					double candidatePostJobRankValue,
 					double candidatePreemptRankValue,
 					PreemptState candidatePreemptState,
-					const string &candidateDslotClaims)
+					const std::string &candidateDslotClaims)
 {
 	ASSERT(AdListArray);
 	ASSERT(adListLen < adListMaxLen);  // don't write off end of array!
@@ -6028,23 +5711,20 @@ void Matchmaker::DeleteMatchList()
 	unmutatedSlotAds.clear();
 }
 
-int Matchmaker::MatchListType::
-sort_compare(const void* elem1, const void* elem2)
+bool Matchmaker::MatchListType::
+sort_compare(const AdListEntry &Elem1, const AdListEntry &Elem2)
 {
-	const AdListEntry* Elem1 = (const AdListEntry*) elem1;
-	const AdListEntry* Elem2 = (const AdListEntry*) elem2;
+	const double candidateRankValue = Elem1.RankValue;
+	const double candidatePreJobRankValue = Elem1.PreJobRankValue;
+	const double candidatePostJobRankValue = Elem1.PostJobRankValue;
+	const double candidatePreemptRankValue = Elem1.PreemptRankValue;
+	const PreemptState candidatePreemptState = Elem1.PreemptStateValue;
 
-	const double candidateRankValue = Elem1->RankValue;
-	const double candidatePreJobRankValue = Elem1->PreJobRankValue;
-	const double candidatePostJobRankValue = Elem1->PostJobRankValue;
-	const double candidatePreemptRankValue = Elem1->PreemptRankValue;
-	const PreemptState candidatePreemptState = Elem1->PreemptStateValue;
-
-	const double bestRankValue = Elem2->RankValue;
-	const double bestPreJobRankValue = Elem2->PreJobRankValue;
-	const double bestPostJobRankValue = Elem2->PostJobRankValue;
-	const double bestPreemptRankValue = Elem2->PreemptRankValue;
-	const PreemptState bestPreemptState = Elem2->PreemptStateValue;
+	const double bestRankValue = Elem2.RankValue;
+	const double bestPreJobRankValue = Elem2.PreJobRankValue;
+	const double bestPostJobRankValue = Elem2.PostJobRankValue;
+	const double bestPreemptRankValue = Elem2.PreemptRankValue;
+	const PreemptState bestPreemptState = Elem2.PreemptStateValue;
 
 	if ( candidateRankValue == bestRankValue &&
 		 candidatePreJobRankValue == bestPreJobRankValue &&
@@ -6052,7 +5732,7 @@ sort_compare(const void* elem1, const void* elem2)
 		 candidatePreemptRankValue == bestPreemptRankValue &&
 		 candidatePreemptState == bestPreemptState )
 	{
-		return 0;
+		return false;
 	}
 
 	// the quality of a match is determined by a lexicographic sort on
@@ -6088,11 +5768,11 @@ sort_compare(const void* elem1, const void* elem2)
 	}
 
 	if ( newBestFound ) {
-		// candidate is better: candidate is elem1, and qsort man page
-		// says return < 0 is elem1 is less than elem2
-		return -1;
+		// candidate is better: candidate is elem1, and std::sort man page
+		// says return true is elem1 is better than elem2
+		return true;
 	} else {
-		return 1;
+		return false;
 	}
 }
 			
@@ -6105,7 +5785,7 @@ sort()
 
 	// Note: since we must use static members, sort() is
 	// _NOT_ thread safe!!!
-	qsort(AdListArray,adListLen,sizeof(AdListEntry),sort_compare);
+	std::sort(AdListArray,AdListArray + adListLen,sort_compare);
 
 	already_sorted = true;
 }
@@ -6422,20 +6102,6 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
 	}
 }
 
-double
-Matchmaker::calculate_subtree_usage(GroupEntry *group) {
-	double subtree_usage = 0.0;
-
-    for (vector<GroupEntry*>::iterator i(group->children.begin());  i != group->children.end();  i++) {
-		subtree_usage += calculate_subtree_usage(*i);
-	}
-	subtree_usage += accountant.GetWeightedResourcesUsed(group->name);
-
-	group->subtree_usage = subtree_usage;;
-	dprintf(D_FULLDEBUG, "subtree_usage at %s is %g\n", group->name.c_str(), subtree_usage);
-	return subtree_usage;
-}
-
 bool rankPairCompare(std::pair<int,double> lhs, std::pair<int,double> rhs) {
 	return lhs.second < rhs.second;
 }
@@ -6445,7 +6111,7 @@ bool rankPairCompare(std::pair<int,double> lhs, std::pair<int,double> rhs) {
 	// Only consider startd RANK for now.
 bool
 Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitterName,
-                            bool only_startd_rank, string &dslot_claims, PreemptState &candidatePreemptState)
+                            bool only_startd_rank, std::string &dslot_claims, PreemptState &candidatePreemptState)
 {
 	bool isPartitionable = false;
 	PreemptState saved_candidatePreemptState = candidatePreemptState;
@@ -6489,7 +6155,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 	for ( int i = 0; i < numDslots; i++ ) {
 		double currentRank = 0.0; // global default startd rank
 		int retire_time = 0;
-		string state = "";
+		std::string state = "";
 		dslotLookupFloat( machine, ATTR_CURRENT_RANK, i, currentRank );
 		dslotLookupInteger( machine, ATTR_RETIREMENT_TIME_REMAINING, i,
 							retire_time );
@@ -6640,9 +6306,9 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 					result.SetUndefinedValue();
 				}
 
-				int intValue;
-				if (result.IsIntegerValue(intValue)) {
-					machine->Assign(*it, (int) (b4 + intValue));
+				long long longValue;
+				if (result.IsIntegerValue(longValue)) {
+					machine->Assign(*it, (long long) (b4 + longValue));
 				} else if (result.IsRealValue(realValue)) {
 					machine->Assign(*it, (b4 + realValue));
 				} else {

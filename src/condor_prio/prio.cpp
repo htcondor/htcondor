@@ -26,7 +26,6 @@
 #include "sig_install.h"
 #include "daemon.h"
 #include "dc_schedd.h"
-#include "MyString.h"
 
 #include "condor_qmgr.h"
 #include "condor_distribution.h"
@@ -68,10 +67,9 @@ main( int argc, char *argv[] )
 	int				nArgs = 0;
 	int				i;
 	Qmgr_connection	*q;
-	MyString pool_name;
-	MyString schedd_name;
-	MyString schedd_daemon_name;
-	MyString DaemonName;
+	std::string pool_name;
+	std::string schedd_name;
+	std::string DaemonName;
 
 	MyName = argv[0];
 	myDistro->Init( argc, argv );
@@ -129,8 +127,8 @@ main( int argc, char *argv[] )
 	}
 
 	// specifically allow a NULL return value for the strings. 
-	DCSchedd schedd(schedd_name == "" ? NULL : schedd_name.Value(),
-					pool_name == "" ? NULL : pool_name.Value());
+	DCSchedd schedd(schedd_name == "" ? NULL : schedd_name.c_str(),
+					pool_name == "" ? NULL : pool_name.c_str());
 
 	if ( schedd.locate() == false ) {
 		if (schedd_name == "") {
@@ -141,10 +139,10 @@ main( int argc, char *argv[] )
 
 		if (pool_name == "") {
 			fprintf( stderr, "%s: No such schedd named %s in local pool\n", 
-				 MyName, schedd_name.Value() );
+				 MyName, schedd_name.c_str() );
 		} else {
 			fprintf( stderr, "%s: No such schedd named %s in pool %s\n", 
-				 MyName, schedd_name.Value(), pool_name.Value() );
+				 MyName, schedd_name.c_str(), pool_name.c_str() );
 		}
 		exit(1);
 	}
@@ -158,10 +156,10 @@ main( int argc, char *argv[] )
 
 	// Open job queue
 	DaemonName = schedd.addr();
-	q = ConnectQ(DaemonName.Value());
+	q = ConnectQ(DaemonName.c_str());
 	if( !q ) {
 		fprintf( stderr, "Failed to connect to queue manager %s\n", 
-				 DaemonName.Value() );
+				 DaemonName.c_str() );
 		exit(1);
 	}
 	for(i = 0; i < nArgs; i++)

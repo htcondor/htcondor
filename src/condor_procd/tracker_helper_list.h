@@ -84,6 +84,16 @@ public:
 		return NULL;
 	}
 
+	void clear() {
+		ListNode* node = m_head;
+		while (node != nullptr) {
+			ListNode *prev = node;
+			node = node->next;
+			delete prev;
+		}
+		node = nullptr;
+	}
+
 private:
 
 	struct ListNode {

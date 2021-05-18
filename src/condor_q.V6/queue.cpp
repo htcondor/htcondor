@@ -30,7 +30,6 @@
 #include "condor_attributes.h"
 #include "match_prefix.h"
 #include "get_daemon_name.h"
-#include "MyString.h"
 #include "ad_printmask.h"
 #include "internet.h"
 #include "sig_install.h"
@@ -419,12 +418,12 @@ int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd
 			size_t ix1 = schedd_name.find(':');
 			schedd_name = line.substr(ix1+1);
 			ix1 = schedd_name.find_first_of(": \t\n");
-			if (ix1 != string::npos) {
+			if (ix1 != std::string::npos) {
 				size_t ix2 = schedd_name.find_first_not_of(": \t\n", ix1);
-				if (ix2 != string::npos) {
+				if (ix2 != std::string::npos) {
 					schedd_addr = schedd_name.substr(ix2);
 					ix2 = schedd_addr.find_first_of(" \t\n");
-					if (ix2 != string::npos) {
+					if (ix2 != std::string::npos) {
 						schedd_addr = schedd_addr.substr(0,ix2);
 					}
 				}
@@ -466,13 +465,13 @@ int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::Cla
 
 int GetQueueConstraint(CondorQ & q, ConstraintHolder & constr) {
 	int err = 0;
-	MyString query;
+	std::string query;
 	q.useDefaultingOperator(true);
 	q.rawQuery(query);
 	if (query.empty()) {
 		constr.clear();
 	} else {
-		constr.set(query.StrDup());
+		constr.set(strdup(query.c_str()));
 	}
 	constr.Expr(&err);
 	return err;
@@ -1300,7 +1299,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			while (i+1 < argc && *(argv[i+1]) != '-') {
 				++i;
 				GetAllReferencesFromClassAdExpr(argv[i], attrs);
-				MyString lbl = "";
+				std::string lbl = "";
 				int wid = 0;
 				int opts = FormatOptionNoTruncate;
 				if (fheadings || prmask.has_headings()) {
@@ -1309,9 +1308,9 @@ processCommandLineArguments (int argc, const char *argv[])
 					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
 					prmask.set_heading(hd);
 				}
-				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
+				else if (flabel) { formatstr(lbl, "%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
-				prmask.registerFormat(lbl.Value(), wid, opts, argv[i]);
+				prmask.registerFormat(lbl.c_str(), wid, opts, argv[i]);
 			}
 			prmask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
 			//summarize = 0;
@@ -1991,11 +1990,11 @@ render_job_description(std::string & out, ClassAd *ad, Formatter &)
 	if ( ! description.empty()) {
 		formatstr(out, "(%s)", description.c_str());
 	} else {
-		MyString put_result = condor_basename(out.c_str());
-		MyString args_string;
-		ArgList::GetArgsStringForDisplay(ad,&args_string);
-		if ( ! args_string.IsEmpty()) {
-			put_result.formatstr_cat(" %s", args_string.Value());
+		std::string put_result = condor_basename(out.c_str());
+		std::string args_string;
+		ArgList::GetArgsStringForDisplay(ad,args_string);
+		if ( ! args_string.empty()) {
+			formatstr_cat(put_result, " %s", args_string.c_str());
 		}
 		out = put_result;
 	}
@@ -2493,9 +2492,7 @@ render_gridResource(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
 	if (ix4 > ix2) ix4 = ix2;
 	host = str.substr(ix3, ix4-ix3);
 
-	MyString mystr = mgr.c_str();
-	mystr.replaceString(" ", "/");
-	mgr = mystr.Value();
+	replace_str(mgr, " ", "/");
 
     static char result_str[1024];
     if( MATCH == grid_type.compare( "ec2" ) ) {
@@ -2929,7 +2926,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 
 	// if there is a user-override output mask, then use that instead of the code below
 	if ( ! disable_user_print_files) {
-		MyString param_name("Q_DEFAULT_");
+		std::string param_name("Q_DEFAULT_");
 		if (tag[0]) {
 			param_name += tag;
 			param_name += "_";
@@ -2955,7 +2952,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 	if (cputime) {
 		alt_fmt = fmt;
 		size_t ix = alt_fmt.find("RUN_TIME");
-		if (ix != string::npos) {
+		if (ix != std::string::npos) {
 			alt_fmt[ix] = 'C';
 			alt_fmt[ix+1] = 'P';
 			alt_fmt[ix+2] = 'U';
@@ -3947,7 +3944,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		jr.getString(ixOwnerCol, name_width);
 		wids.owner_width = MAX(wids.owner_width, name_width);
 
-		MyString tmp;
+		std::string tmp;
 		union _jobid jid; jid.id = jr.id;
 		if (jr.flags & JROD_SCHEDUNIV) {
 			if (fold_dagman_sibs && jr.batch_uid && jr.next_sib && jr.getString(ixBatchNameCol, name_width)) {
@@ -3957,7 +3954,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 				jr.getString(ixBatchNameCol, name_width);
 				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
 			#else
-				tmp.formatstr("DAG %d", jid.cluster);
+				formatstr(tmp, "DAG %d", jid.cluster);
 				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
 				jr.rov.set_col_valid(ixBatchNameCol, true);
 				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
@@ -3967,7 +3964,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 			if (jr.getString(ixBatchNameCol, name_width)) {
 				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
 			} else {
-				tmp.formatstr("ID: %d", jid.cluster);
+				formatstr(tmp, "ID: %d", jid.cluster);
 				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
 				jr.rov.set_col_valid(ixBatchNameCol, true);
 				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
@@ -3977,12 +3974,12 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		union _jobid jmin, jmax; jmin.id = prog.min_jobid; jmax.id = prog.max_jobid;
 		if (jmin.id != jmax.id) {
 			if (jmin.cluster == jmax.cluster) {
-				tmp.formatstr("%d.%d-%d", jmin.cluster, jmin.proc, jmax.proc);
+				formatstr(tmp, "%d.%d-%d", jmin.cluster, jmin.proc, jmax.proc);
 			} else {
-				tmp.formatstr("%d.%d ... %d.%d", jmin.cluster, jmin.proc, jmax.cluster, jmax.proc);
+				formatstr(tmp, "%d.%d ... %d.%d", jmin.cluster, jmin.proc, jmax.cluster, jmax.proc);
 			}
 		} else {
-			tmp.formatstr("%d.%d", jmin.cluster, jmin.proc);
+			formatstr(tmp, "%d.%d", jmin.cluster, jmin.proc);
 		}
 		jr.rov.Column(ixJobIdsCol)->SetStringValue(tmp.c_str());
 		jr.rov.set_col_valid(ixJobIdsCol, true);
@@ -4077,9 +4074,9 @@ bool print_jobs_analysis (
 
 	// if there is a schedd ad, and we are not summarizing, check and report the schedd's global limits
 	if (pschedd_daemon && (analysis_mode > anaModeBetter) && ! reverse_analyze) {
-		MyString buf;
+		std::string buf;
 		if (warnScheddGlobalLimits(pschedd_daemon, buf)) {
-			fputs(buf.Value(), stdout);
+			fputs(buf.c_str(), stdout);
 		}
 	}
 
@@ -4148,7 +4145,7 @@ bool print_jobs_analysis (
 				job->LookupInteger(ATTR_PROC_ID, proc_id);
 				sprintf(achJobId, "%d.%d", cluster_id, proc_id);
 
-				string owner;
+				std::string owner;
 				if (summarize_with_owner) job->LookupString(ATTR_OWNER, owner);
 				if (owner.empty()) owner = "";
 
@@ -5058,11 +5055,11 @@ static void init_standard_summary_mask(ClassAd * summary_ad)
 	std::string messages;
 	PrintMaskMakeSettings dummySettings;
 	std::vector<GroupByKeyInfo> dummyGrpBy;
-	MyString sumyformat(standard_summary2);
+	std::string sumyformat(standard_summary2);
 	std::string myname;
 	if (summary_ad->LookupString("MyName", myname)) { 
 		sumyformat = standard_summary3;
-		sumyformat.replaceString("$(ME)", myname.c_str());
+		replace_str(sumyformat, "$(ME)", myname);
 	}
 	if (use_legacy_standard_summary) {
 		sumyformat = standard_summary_legacy;

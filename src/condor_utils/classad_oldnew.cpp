@@ -444,7 +444,7 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 			return( false );	 
 		}		
 
-        if(strcmp(inputLine.Value(),SECRET_MARKER) ==0 ){
+        if(strcmp(inputLine.c_str(),SECRET_MARKER) ==0 ){
             char *secret_line = NULL;
             if( !sock->get_secret(secret_line) ) {
                 dprintf(D_FULLDEBUG, "Failed to read encrypted ClassAd expression.\n");
@@ -454,10 +454,10 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 	    free( secret_line );
         }
 
-		if ( strncmp( inputLine.Value(), "ConcurrencyLimit.", 17 ) == 0 ) {
+		if ( strncmp( inputLine.c_str(), "ConcurrencyLimit.", 17 ) == 0 ) {
 			inputLine.setAt( 16, '_' );
 		}
-		buffer += string(inputLine.Value()) + ";";
+		buffer += string(inputLine.c_str()) + ";";
 	}
 	buffer += "]";
 
@@ -569,7 +569,7 @@ int putClassAd (Stream *sock, const classad::ClassAd& ad, int options, const cla
 	}
 
 	bool non_blocking = (options & PUT_CLASSAD_NON_BLOCKING) != 0;
-	ReliSock* rsock = static_cast<ReliSock*>(sock);
+	ReliSock* rsock = dynamic_cast<ReliSock*>(sock);
 	if (non_blocking && rsock)
 	{
 		BlockingModeGuard guard(rsock, true);

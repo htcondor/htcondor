@@ -96,7 +96,7 @@ char *GetSpooledExecutablePath( int cluster, const char *dir )
 	}
 }
 
-void GetSpooledSubmitDigestPath(MyString &path, int cluster, const char *dir /*= NULL*/ )
+void GetSpooledSubmitDigestPath(std::string &path, int cluster, const char *dir /*= NULL*/ )
 {
 	auto_free_ptr spooldir;
 	if ( ! dir) {
@@ -104,10 +104,10 @@ void GetSpooledSubmitDigestPath(MyString &path, int cluster, const char *dir /*=
 		dir = spooldir;
 	}
 
-	path.formatstr("%s%c%d%ccondor_submit.%d.digest", dir, DIR_DELIM_CHAR, cluster % 10000, DIR_DELIM_CHAR, cluster);
+	formatstr(path, "%s%c%d%ccondor_submit.%d.digest", dir, DIR_DELIM_CHAR, cluster % 10000, DIR_DELIM_CHAR, cluster);
 }
 
-void GetSpooledMaterializeDataPath(MyString &path, int cluster, const char *dir /*= NULL*/ )
+void GetSpooledMaterializeDataPath(std::string &path, int cluster, const char *dir /*= NULL*/ )
 {
 	auto_free_ptr spooldir;
 	if ( ! dir) {
@@ -115,7 +115,7 @@ void GetSpooledMaterializeDataPath(MyString &path, int cluster, const char *dir 
 		dir = spooldir;
 	}
 
-	path.formatstr("%s%c%d%ccondor_submit.%d.items", dir, DIR_DELIM_CHAR, cluster % 10000, DIR_DELIM_CHAR, cluster);
+	formatstr(path, "%s%c%d%ccondor_submit.%d.items", dir, DIR_DELIM_CHAR, cluster % 10000, DIR_DELIM_CHAR, cluster);
 }
 
 void

@@ -22,15 +22,16 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "string_list.h"
+#include <openssl/sha.h>
 
 #include "nordugridresource.h"
 #include "nordugridjob.h"
 #include "gridmanager.h"
 
-HashTable <std::string, NordugridResource *>
-    NordugridResource::ResourcesByName( hashFunction );
+std::map <std::string, NordugridResource *>
+    NordugridResource::ResourcesByName;
 
-const char *NordugridResource::HashName( const char *resource_name,
+std::string & NordugridResource::HashName( const char *resource_name,
 										 const char *proxy_subject )
 {
 	static std::string hash_name;
@@ -38,24 +39,22 @@ const char *NordugridResource::HashName( const char *resource_name,
 	formatstr( hash_name, "nordugrid %s#%s", resource_name, 
 					   proxy_subject ? proxy_subject : "NULL" );
 
-	return hash_name.c_str();
+	return hash_name;
 }
 
 NordugridResource *NordugridResource::FindOrCreateResource( const char * resource_name,
 															const Proxy *proxy )
 {
-	int rc;
 	NordugridResource *resource = NULL;
-
-	rc = ResourcesByName.lookup( HashName( resource_name, proxy->subject->fqan ),
-								 resource );
-	if ( rc != 0 ) {
+	std::string &key = HashName( resource_name, proxy->subject->fqan );
+	auto itr = ResourcesByName.find( key );
+	if ( itr == ResourcesByName.end() ) {
 		resource = new NordugridResource( resource_name, proxy );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashName( resource_name, proxy->subject->fqan ),
-								resource );
+		ResourcesByName[key] = resource;
 	} else {
+		resource = itr->second;
 		ASSERT(resource);
 	}
 
@@ -93,7 +92,7 @@ NordugridResource::NordugridResource( const char *resource_name,
 
 NordugridResource::~NordugridResource()
 {
-	ResourcesByName.remove( HashName( resourceName, proxyFQAN ) );
+	ResourcesByName.erase( HashName( resourceName, proxyFQAN ) );
 	free( proxyFQAN );
 	if ( proxySubject ) {
 		free( proxySubject );
@@ -121,7 +120,7 @@ const char *NordugridResource::ResourceType()
 
 const char *NordugridResource::GetHashName()
 {
-	return HashName( resourceName, proxyFQAN );
+	return HashName( resourceName, proxyFQAN ).c_str();
 }
 
 void NordugridResource::PublishResourceAd( ClassAd *resource_ad )
@@ -198,8 +197,15 @@ void NordugridResource::DoJobStatus()
 			ldap_server.erase( pos );
 		}
 
+		// In newer releases of NorduGrid ARC, nordugrid-job-globalowner
+		// is the SHA512 hash of the proxy subject, instead of the proxy
+		// subject itself.
+		char proxy_hash[SHA512_DIGEST_LENGTH];
+		char proxy_hash_str[2*SHA512_DIGEST_LENGTH+1];
+		SHA512((unsigned char*)proxySubject, strlen(proxySubject), (unsigned char*)proxy_hash);
+		debug_hex_dump(proxy_hash_str, proxy_hash, sizeof(proxy_hash), true);
 		std::string filter;
-		formatstr( filter, "(&(objectclass=nordugrid-job)(nordugrid-job-globalowner=%s))", proxySubject );
+		formatstr( filter, "(&(objectclass=nordugrid-job)(|(nordugrid-job-globalowner=%s)(nordugrid-job-globalowner=%s)))", proxySubject, proxy_hash_str );
 		int rc = m_statusGahp->nordugrid_ldap_query( ldap_server.c_str(), "mds-vo-name=local,o=grid", filter.c_str(), "nordugrid-job-globalid,nordugrid-job-status",
 													 results );
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {

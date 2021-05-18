@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -41,7 +40,7 @@ CONDOR_TESTREQ_CONFIG
 
 # add this to the config use use when we start a secondary personal condor
 my $append_config = "
-	use FEATURE : AssignAccountingGroup($path)
+	use FEATURE : AssignAccountingGroup($path, false)
 ";
 
 ###########  create submit file ##################

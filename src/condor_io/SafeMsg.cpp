@@ -119,8 +119,8 @@ bool _condorPacket :: set_encryption_id(const char * keyId)
         outgoingEidLen_   = strlen(outgoingEncKeyId_);
 		if( IsDebugVerbose(D_SECURITY) ) {
 			dprintf( D_SECURITY, 
-					 "set_encryption_id: setting key length %d\n", 
-					 outgoingEidLen_ );  
+					 "set_encryption_id: setting key length %d (%s)\n", 
+					 outgoingEidLen_, keyId );  
 		}
         if ( curIndex == 0 ) {
             curIndex += SAFE_MSG_CRYPTO_HEADER_SIZE;
@@ -264,6 +264,7 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
             incomingHashKeyId_ = (char *) malloc(mdKeyIdLen+1);
             memset(incomingHashKeyId_, 0, mdKeyIdLen+1);
             memcpy(incomingHashKeyId_, data, mdKeyIdLen);
+            dprintf(D_NETWORK|D_VERBOSE, "UDP: HashKeyID is %s\n", incomingHashKeyId_);
             data += mdKeyIdLen;
             length -= mdKeyIdLen;
 
@@ -284,6 +285,7 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
             incomingEncKeyId_ = (char *) malloc(encKeyIdLen+1);
             memset(incomingEncKeyId_, 0, encKeyIdLen + 1);
             memcpy(incomingEncKeyId_, data, encKeyIdLen);
+            dprintf(D_NETWORK|D_VERBOSE, "UDP: EncKeyID is %s\n", incomingEncKeyId_);
             data += encKeyIdLen;
             length -= encKeyIdLen;
         }
@@ -765,7 +767,7 @@ int _condorOutMsg::sendMsg(const int sock,
 
 		dprintf( D_NETWORK, "SEND [%d] %s ", sent, sock_to_string(sock) );
 		dprintf( D_NETWORK|D_NOHEADER, "%s\n",
-				 who.to_sinful().Value());
+				 who.to_sinful().c_str());
 		total += sent;
 		delete tempPkt;
         md = 0;
@@ -796,7 +798,7 @@ int _condorOutMsg::sendMsg(const int sock,
         //}
         //dprintf(D_NETWORK, "--->packet [%d bytes]: %s\n", sent, str);
 		dprintf( D_NETWORK, "SEND [%d] %s ", sent, sock_to_string(sock) );
-		dprintf( D_NETWORK|D_NOHEADER, "%s\n", who.to_sinful().Value());
+		dprintf( D_NETWORK|D_NOHEADER, "%s\n", who.to_sinful().c_str());
 		total = sent;
     }
     else {
@@ -816,7 +818,7 @@ int _condorOutMsg::sendMsg(const int sock,
         //}
         //dprintf(D_NETWORK, "--->packet [%d bytes]: %s\n", sent, str);
         dprintf( D_NETWORK, "SEND [%d] %s ", sent, sock_to_string(sock) );
-        dprintf( D_NETWORK|D_NOHEADER, "%s\n", who.to_sinful().Value());
+        dprintf( D_NETWORK|D_NOHEADER, "%s\n", who.to_sinful().c_str());
         total += sent;
     }
 

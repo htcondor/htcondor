@@ -123,11 +123,11 @@ GLExecPrivSepHelper::run_script(ArgList& args,MyString &error_desc)
 		            "with status %d and following output:\n%s\n",
 		        args.GetArg(0),
 		        ret,
-		        str.Value());
+		        str.c_str());
 		error_desc.formatstr_cat("%s exited with status %d and the following output: %s",
 				       condor_basename(args.GetArg(0)),
 				       ret,
-				       str.Value());
+				       str.c_str());
 		error_desc.replaceString("\n","; ");
 	}
 	return ret;
@@ -207,7 +207,7 @@ GLExecPrivSepHelper::chown_sandbox_to_user(PrivSepError &err)
 			hold_code = 0;
 		}
 
-		err.setHoldInfo( hold_code, rc, error_desc.Value());
+		err.setHoldInfo( hold_code, rc, error_desc.c_str());
 		return false;
 	}
 
@@ -241,7 +241,7 @@ GLExecPrivSepHelper::chown_sandbox_to_condor(PrivSepError &err)
 	if( rc != 0) {
 		err.setHoldInfo(
 			CONDOR_HOLD_CODE_GlexecChownSandboxToCondor, rc,
-			error_desc.Value());
+			error_desc.c_str());
 		return false;
 	}
 
@@ -283,15 +283,13 @@ GLExecPrivSepHelper::create_process(const char* path,
                                     int         dc_job_opts,
                                     FamilyInfo* family_info,
                                     int *,
-									MyString *error_msg)
+                                    std::string & error_msg)
 {
 	ASSERT(m_initialized);
 
 	if (!proxy_valid_right_now()) {
 		dprintf(D_ALWAYS, "GLExecPrivSepHelper::create_process: not invoking glexec since the proxy is not valid!\n");
-		if( error_msg ) {
-			error_msg->formatstr_cat("The job proxy is invalid.");
-		}
+		formatstr_cat(error_msg, "The job proxy is invalid.");
 		return -1;
 	}
 
@@ -347,7 +345,7 @@ GLExecPrivSepHelper::create_process(const char* path,
 		FamilyInfo* fi_ptr = (family_info != NULL) ? family_info : &fi;
 		MyString proxy_path;
 		proxy_path.formatstr("%s.condor/%s", m_sandbox, m_proxy);
-		fi_ptr->glexec_proxy = proxy_path.Value();
+		fi_ptr->glexec_proxy = proxy_path.c_str();
 
 			// At the very least, we need to pass the condor daemon's
 			// X509_USER_PROXY to condor_glexec_run.  Currently, we just
@@ -357,7 +355,7 @@ GLExecPrivSepHelper::create_process(const char* path,
 			// glexec cleanses the environment anyway.
 		dc_job_opts &= ~(DCJOBOPT_NO_ENV_INHERIT);
 
-		int pid = daemonCore->Create_Process(m_run_script.Value(),
+		int pid = daemonCore->Create_Process(m_run_script.c_str(),
 		                                     modified_args,
 		                                     PRIV_USER_FINAL,
 		                                     reaper_id,
@@ -417,9 +415,7 @@ GLExecPrivSepHelper::create_process(const char* path,
 
 		if( !retry ) {
 				// return the most recent glexec error output
-			if( error_msg ) {
-				error_msg->formatstr_cat("%s",glexec_error_msg.Value());
-			}
+			formatstr_cat(error_msg,"%s",glexec_error_msg.c_str());
 			return 0;
 		}
 			// truncated exponential backoff
@@ -530,9 +526,9 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 				}
 			}
 
-			if( !glexec_stderr.IsEmpty() ) {
+			if( !glexec_stderr.empty() ) {
 				glexec_stderr.trim();
-				StringList lines(glexec_stderr.Value(),"\n");
+				StringList lines(glexec_stderr.c_str(),"\n");
 				lines.rewind();
 				char const *line;
 
@@ -547,7 +543,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 					}
 					line_count++;
 
-					if( !glexec_stderr.IsEmpty() ) {
+					if( !glexec_stderr.empty() ) {
 						glexec_stderr += "; ";
 					}
 					dprintf(D_ALWAYS,
@@ -589,12 +585,12 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 	if (!env_to_send.getDelimitedStringV2Raw(&env_str, &merge_err)) {
 		dprintf(D_ALWAYS,
 		        "GLEXEC: Env::getDelimitedStringV2Raw error: %s\n",
-		        merge_err.Value());
+		        merge_err.c_str());
 		close(sock_fds[0]);
 		return FALSE;
 	}
-	const char* env_buf = env_str.Value();
-	int env_len = env_str.Length() + 1;
+	const char* env_buf = env_str.c_str();
+	int env_len = env_str.length() + 1;
 	errno = 0;
 	if (full_write(sock_fds[0], &env_len, sizeof(env_len)) != sizeof(env_len)) {
 		dprintf(D_ALWAYS,

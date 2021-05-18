@@ -23,6 +23,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <random>
 
 static size_t
 ptr_hash_fn(ClassAd* const &index)
@@ -203,7 +204,9 @@ ClassAdListDoesNotDeleteAds::Shuffle()
 		tmp_vect.push_back(item);
 	}
 
-	std::random_shuffle(tmp_vect.begin(), tmp_vect.end());
+	std::random_device rd;
+	std::mt19937 g(rd());
+	std::shuffle(tmp_vect.begin(), tmp_vect.end(), g);
 
 		// empty our list
 	list_head->next = list_head;

@@ -133,7 +133,7 @@ AppendHistory(ClassAd* ad)
   MyString ad_string;
   int ad_size;
   sPrintAd(ad_string, *ad);
-  ad_size = ad_string.Length();
+  ad_size = ad_string.length();
 
   MaybeRotateHistory(ad_size);
 
@@ -248,7 +248,7 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	// is read at the same time we are still writing it.
 
 	// first write out the file to the temp_file_name
-	int fd = safe_open_wrapper_follow(temp_file_name.Value(), O_WRONLY | O_CREAT | O_EXCL, 0644);
+	int fd = safe_open_wrapper_follow(temp_file_name.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
 	if (fd == -1) {
 		dprintf(D_ALWAYS | D_FAILURE,
 		        "error %d (%s) opening per-job history file for job %d.%d\n",
@@ -261,7 +261,7 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 		        "error %d (%s) opening file stream for per-job history for job %d.%d\n",
 		        errno, strerror(errno), cluster, proc);
 		close(fd);
-		unlink(temp_file_name.Value());
+		unlink(temp_file_name.c_str());
 		return;
 	}
 	if (!fPrintAd(fp, *ad)) {
@@ -269,17 +269,17 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 		        "error writing per-job history file for job %d.%d\n",
 		        cluster, proc);
 		fclose(fp);
-		unlink(temp_file_name.Value());
+		unlink(temp_file_name.c_str());
 		return;
 	}
 	fclose(fp);
 
 	// now atomically rename from temp_file_name to file_name
-    if (rotate_file(temp_file_name.Value(), file_name.Value())) {
+    if (rotate_file(temp_file_name.c_str(), file_name.c_str())) {
 		dprintf(D_ALWAYS | D_FAILURE,
 		        "error writing per-job history file for job %d.%d (during rename)\n",
 		        cluster, proc);
-		unlink(temp_file_name.Value());
+		unlink(temp_file_name.c_str());
     }
 }
 
@@ -567,9 +567,9 @@ RotateHistory(void)
 	CloseJobHistoryFile();
 
     // Now rotate the file
-    if (rotate_file(JobHistoryFileName, rotated_history_name.Value())) {
+    if (rotate_file(JobHistoryFileName, rotated_history_name.c_str())) {
         dprintf(D_ALWAYS, "Failed to rotate history file to %s\n",
-                rotated_history_name.Value());
+                rotated_history_name.c_str());
         dprintf(D_ALWAYS, "Because rotation failed, the history file may get very large.\n");
     }
 

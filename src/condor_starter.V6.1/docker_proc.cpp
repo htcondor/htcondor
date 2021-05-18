@@ -153,8 +153,8 @@ int DockerProc::StartJob() {
 
 	ArgList args;
 	args.SetArgV1SyntaxToCurrentPlatform();
-	MyString argsError;
-	if( ! args.AppendArgsFromClassAd( JobAd, & argsError ) ) {
+	std::string argsError;
+	if( ! args.AppendArgsFromClassAd( JobAd, argsError ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to read job arguments from job ad: '%s'.\n", argsError.c_str() );
 		return FALSE;
 	}
@@ -168,9 +168,9 @@ int DockerProc::StartJob() {
 	}
 
 	Env job_env;
-	MyString env_errors;
-	if( !Starter->GetJobEnv(JobAd,&job_env,&env_errors) ) {
-		dprintf( D_ALWAYS, "Aborting DockerProc::StartJob: %s\n", env_errors.Value());
+	std::string env_errors;
+	if( !Starter->GetJobEnv(JobAd,&job_env, env_errors) ) {
+		dprintf( D_ALWAYS, "Aborting DockerProc::StartJob: %s\n", env_errors.c_str());
 		return 0;
 	}
 
@@ -281,6 +281,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 				int r = read(fd, buf, 511);
 				if (r < 0) {
 					dprintf(D_ALWAYS, "Cannot read docker error file on docker create container. Errno %d\n", errno);
+					buf[0] = '\0';
 				} else {
 					buf[r] = '\0';
 					int buflen = strlen(buf);
@@ -612,9 +613,9 @@ DockerProc::AcceptSSHClient(Stream *stream) {
 	args.AppendArg("-i");
 
 	Env env;
-	MyString env_errors;
-	if( !Starter->GetJobEnv(JobAd,&env,&env_errors) ) {
-		dprintf( D_ALWAYS, "Aborting DockerProc::exec: %s\n", env_errors.Value());
+	std::string env_errors;
+	if( !Starter->GetJobEnv(JobAd,&env, env_errors) ) {
+		dprintf( D_ALWAYS, "Aborting DockerProc::exec: %s\n", env_errors.c_str());
 		return 0;
 	}
 
@@ -885,6 +886,15 @@ bool DockerProc::Detect() {
 	CondorError err;
 	bool hasDocker = DockerAPI::detect( err ) == 0;
 
+	if (hasDocker) {
+		int r  = DockerAPI::testImageRuns(err);
+		if (r == 0) {
+			hasDocker = true;
+		} else {
+			hasDocker = false;
+		}
+	}
+
 	return hasDocker;
 }
 
@@ -930,7 +940,7 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 		char *scratchName = 0;
 			// Foreach scratch name...
 		while ( (scratchName=sl.next()) ) {
-			MyString hostdirbuf;
+			std::string hostdirbuf;
 			const char * hostDir = dirscat(workingDir.c_str(), scratchName, hostdirbuf);
 			std::string volumePath;
 			volumePath.append(hostDir).append(":").append(scratchName);

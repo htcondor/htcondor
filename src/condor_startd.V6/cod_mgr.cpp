@@ -265,7 +265,7 @@ CODMgr::release( Stream* s, ClassAd* req, Claim* claim )
 int
 CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 {
-	MyString err_msg;
+	std::string err_msg;
 	ClassAd *mach_classad = rip->r_classad;
 
 	switch( claim->state() ) {
@@ -284,7 +284,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 		err_msg += getClaimStateString( claim->state() );
 		err_msg += ')';
 		return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
-							   CA_INVALID_STATE, err_msg.Value() );
+							   CA_INVALID_STATE, err_msg.c_str() );
 		break;
 	}
 
@@ -300,7 +300,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 			err_msg += ATTR_REQUIREMENTS;
 			err_msg += ", cannot find a valid starter to activate";
 			return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
-								   CA_INVALID_REQUEST, err_msg.Value() ); 
+								   CA_INVALID_REQUEST, err_msg.c_str() ); 
 		}
 		err_msg = "Cannot find starter that satisfies requirements '";
 		err_msg += ExprTreeToString( tree );
@@ -309,7 +309,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 			err_msg += " because no valid starter is installed";
 		}
 		return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
-							   CA_INVALID_REQUEST, err_msg.Value() );
+							   CA_INVALID_REQUEST, err_msg.c_str() );
 	}
 
 		// verify the ClassAd to make sure it's got what we need to
@@ -322,7 +322,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 		err_msg += ", so server has no way to find job information\n";
 		delete tmp_starter;
 		return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
-							   CA_INVALID_REQUEST, err_msg.Value() ); 
+							   CA_INVALID_REQUEST, err_msg.c_str() ); 
 	}
 
 		// we need to make a copy of this, since the original is on
@@ -353,6 +353,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 		// TODO any other info for the reply?
 	sendCAReply( s, "CA_ACTIVATE_CLAIM", &reply );
 
+	delete tmp_starter;
 	return rval;
 }
 
@@ -360,7 +361,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 int
 CODMgr::deactivate( Stream* s, ClassAd* req, Claim* claim )
 {
-	MyString err_msg;
+	std::string err_msg;
 	VacateType vac_type = getVacateType( req );
 
 	claim->setPendingCmd( CA_DEACTIVATE_CLAIM );
@@ -380,7 +381,7 @@ CODMgr::deactivate( Stream* s, ClassAd* req, Claim* claim )
 		err_msg += ')';
 
 		sendErrorReply( s, "CA_DEACTIVATE_CLAIM",
-						CA_INVALID_STATE, err_msg.Value() ); 
+						CA_INVALID_STATE, err_msg.c_str() ); 
 		claim->setRequestStream( NULL );
 		claim->setPendingCmd( -1 );
 		break;
@@ -427,7 +428,7 @@ CODMgr::suspend( Stream* s, ClassAd* /*req*/ /*UNUSED*/, Claim* claim )
 {
 	int rval;
 	ClassAd reply;
-	MyString line;
+	std::string line;
 
 	switch( claim->state() ) {
 
@@ -475,7 +476,7 @@ CODMgr::suspend( Stream* s, ClassAd* /*req*/ /*UNUSED*/, Claim* claim )
 		line += getClaimStateString( claim->state() );
 		line += ')';
 		return sendErrorReply( s, "CA_SUSPEND_CLAIM",
-							   CA_INVALID_STATE, line.Value() );
+							   CA_INVALID_STATE, line.c_str() );
 		break;
 	}
 
@@ -499,7 +500,7 @@ CODMgr::resume( Stream* s, ClassAd* /*req*/ /*UNUSED*/, Claim* claim )
 {
 	int rval;
 	ClassAd reply;
-	MyString line;
+	std::string line;
 
 	switch( claim->state() ) {
 
@@ -553,7 +554,7 @@ CODMgr::resume( Stream* s, ClassAd* /*req*/ /*UNUSED*/, Claim* claim )
 		line += getClaimStateString( claim->state() );
 		line += ')';
 		return sendErrorReply( s, "CA_RESUME_CLAIM",
-							   CA_INVALID_STATE, line.Value() );
+							   CA_INVALID_STATE, line.c_str() );
 		break;
 
 	}

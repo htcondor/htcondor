@@ -71,22 +71,23 @@ void process_err_stack(CondorError *errstack) {
 }
 
 
-void print_useful_info_1(bool rv, char* dname, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
+void print_useful_info_1(bool rv, const char* dname, const std::string & name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
 	std::string  val;
 
 	if(!rv) {
-		printf("%s failed!  Use -verbose for more information.\n", name.Value());
+		printf("%s failed!  Use -verbose for more information.\n", name.c_str());
 		return;
 	}
 
-	printf("%s command using (", name.Value());
+	printf("%s command using (", name.c_str());
 
-	ad->LookupString("encryption", val);
-	if (strcasecmp(val.c_str(), "no") == 0) {
+	std::string encryption_method;
+	ad->LookupString("encryption", encryption_method);
+	if (strcasecmp(encryption_method.c_str(), "no") == 0) {
 		printf("no encryption");
 	} else {
-		ad->LookupString("cryptomethods", val);
-		printf("%s", val.c_str());
+		ad->LookupString("cryptomethods", encryption_method);
+		printf("%s", encryption_method.c_str());
 	}
 
 	printf(", ");
@@ -94,6 +95,8 @@ void print_useful_info_1(bool rv, char* dname, MyString name, Sock*, ClassAd *ad
 	ad->LookupString("integrity", val);
 	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("no integrity");
+	} else if (encryption_method == "AES") {
+		printf("AES");
 	} else {
 #ifdef FIPS_MODE
 		printf("SHA");
@@ -127,11 +130,11 @@ void print_useful_info_1(bool rv, char* dname, MyString name, Sock*, ClassAd *ad
 }
 
 
-void print_useful_info_2(bool rv, char* dname, int cmd, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
+void print_useful_info_2(bool rv, const char* dname, int cmd, const std::string & name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
 	std::string  val;
 
 	if(!rv) {
-		printf("%s failed!\n", name.Value());
+		printf("%s failed!\n", name.c_str());
 		process_err_stack(errstack);
 		printf("\n");
 		return;
@@ -145,21 +148,24 @@ void print_useful_info_2(bool rv, char* dname, int cmd, MyString name, Sock*, Cl
 
 	ad->LookupString("sid", val);
 	printf("Session ID:                  %s\n", val.c_str());
-	printf("Instruction:                 %s\n", name.Value());
+	printf("Instruction:                 %s\n", name.c_str());
 	printf("Command:                     %i\n", cmd);
 
 
-	ad->LookupString("encryption", val);
-	if (strcasecmp(val.c_str(), "no") == 0) {
+	std::string encryption_method;
+	ad->LookupString("encryption", encryption_method);
+	if (strcasecmp(encryption_method.c_str(), "no") == 0) {
 		printf("Encryption:                  none\n");
 	} else {
-		ad->LookupString("cryptomethods", val);
-		printf("Encryption:                  %s\n", val.c_str());
+		ad->LookupString("cryptomethods", encryption_method);
+		printf("Encryption:                  %s\n", encryption_method.c_str());
 	}
 
 	ad->LookupString("integrity", val);
 	if (strcasecmp(val.c_str(), "no") == 0) {
 		printf("Integrity:                   none\n");
+	} else if ("AES" == encryption_method) {
+		printf("Integrity:                   AES\n");
 	} else {
 #ifdef FIPS_MODE
 		printf("Integrity:                   SHA\n");
@@ -196,10 +202,10 @@ void print_useful_info_2(bool rv, char* dname, int cmd, MyString name, Sock*, Cl
 }
 
 
-void print_useful_info_10(bool rv, char*, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
+void print_useful_info_10(bool rv, const char*, const std::string & name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
 	std::string  val;
 
-	printf("%20s", name.Value());
+	printf("%20s", name.c_str());
 
 	if(!rv) {
 		printf ("           FAIL       FAIL      FAIL     FAIL FAIL  (use -verbose for more info)\n");
@@ -214,17 +220,20 @@ void print_useful_info_10(bool rv, char*, MyString name, Sock*, ClassAd *ad, Cla
 	}
 	printf("%15s", val.c_str());
 
-	ad->LookupString("encryption", val);
-	if (strcasecmp(val.c_str(), "no") == 0) {
-		val = "none";
+	std::string encryption_method;
+	ad->LookupString("encryption", encryption_method);
+	if (strcasecmp(encryption_method.c_str(), "no") == 0) {
+		encryption_method = "none";
 	} else {
-		ad->LookupString("cryptomethods", val);
+		ad->LookupString("cryptomethods", encryption_method);
 	}
-	printf("%11s", val.c_str());
+	printf("%11s", encryption_method.c_str());
 
 	ad->LookupString("integrity", val);
 	if (strcasecmp(val.c_str(), "no") == 0) {
 		val = "none";
+	} else if (encryption_method == "AES") {
+		val = encryption_method;
 	} else {
 #ifdef FIPS_MODE
 		val = "SHA";
@@ -245,20 +254,20 @@ void print_useful_info_10(bool rv, char*, MyString name, Sock*, ClassAd *ad, Cla
 }
 
 
-void print_info(bool rv, char* dname, const char * addr, Sock* s, MyString name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
-	MyString cmd_map_ent;
-        const std::string &tag = SecMan::getTag();
+void print_info(bool rv, const char* dname, const char * addr, Sock* s, const std::string & name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
+	std::string cmd_map_ent;
+	const std::string &tag = SecMan::getTag();
 	if (tag.size()) {
-		cmd_map_ent.formatstr ("{%s,%s,<%i>}", tag.c_str(), addr, cmd);
+		formatstr(cmd_map_ent, "{%s,%s,<%i>}", tag.c_str(), addr, cmd);
 	} else {
-		cmd_map_ent.formatstr ("{%s,<%i>}", addr, cmd);
+		formatstr(cmd_map_ent, "{%s,<%i>}", addr, cmd);
 	}
 
-	MyString session_id;
+	std::string session_id;
 	KeyCacheEntry *k = NULL;
 	ClassAd *policy = NULL;
 	int ret = 0;
-	
+
 	if(rv) {
 		// IMPORTANT: this hashtable returns 0 on success!
 		ret = (SecMan::command_map).lookup(cmd_map_ent, session_id);
@@ -268,7 +277,7 @@ void print_info(bool rv, char* dname, const char * addr, Sock* s, MyString name,
 		}
 
 		// IMPORTANT: this hashtable returns 1 on success!
-		ret = (SecMan::session_cache)->lookup(session_id.Value(), k);
+		ret = (SecMan::session_cache)->lookup(session_id.c_str(), k);
 		if (!ret) {
 			printf("no session!\n");
 			return;
@@ -322,7 +331,7 @@ int getSomeCommandFromString ( const char * cmdstring ) {
 }
 
 
-bool do_item(Daemon* d, MyString name, int num, int output_mode) {
+bool do_item(Daemon* d, const std::string & name, int num, int output_mode) {
 
 	CondorError errstack;
 	ClassAd authz_ad;
@@ -342,9 +351,8 @@ bool do_item(Daemon* d, MyString name, int num, int output_mode) {
 				fn_success = true;
 			}
 		}
-		char* dname = const_cast<char*>(d->idStr());
+		const char* dname = d->idStr();
 		print_info(fn_success, dname, sock->get_connect_addr(), sock, name, num, &authz_ad, &errstack, output_mode);
-		free(dname);
 	} else {
 		// we know that d->addr() is not null because we checked before
 		// calling do_item.  but i'll be paranoid and check again.

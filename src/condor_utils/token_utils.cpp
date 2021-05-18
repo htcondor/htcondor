@@ -38,18 +38,22 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
 		printf("%s\n", token.c_str());
 		return 0;
 	}
+
 	TemporaryPrivSentry tps( !owner.empty() );
+	auto subsys = get_mySubSystem();
 	if (!owner.empty()) {
 		if (!init_user_ids(owner.c_str(), NULL)) {
 			dprintf(D_FAILURE, "write_out_token(%s): Failed to switch to user priv\n", owner.c_str());
 			return 0;
 		}
 		set_user_priv();
+	} else if (subsys->isDaemon()) {
+		set_priv(PRIV_ROOT);
 	}
 
 	std::string dirpath;
 	if (!owner.empty() || !param(dirpath, "SEC_TOKEN_DIRECTORY")) {
-		MyString file_location;
+		std::string file_location;
 		if (!find_user_file(file_location, "tokens.d", false, !owner.empty())) {
 			if (!owner.empty()) {
 				dprintf(D_FULLDEBUG, "write_out_token(%s): Unable to find token file for owner.\n",
@@ -63,7 +67,10 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
 	}
 	mkdir_and_parents_if_needed(dirpath.c_str(), 0700);
 
-	std::string token_file = dirpath + DIR_DELIM_CHAR + token_name;
+	// Use condor_basename on the token_name to avoid any '../../' issues; since
+	// we may be writing out a token as root, we want to be certain we are writing it
+	// in the dirpath we got out of the condor_config configuration.
+	std::string token_file = dirpath + DIR_DELIM_CHAR + condor_basename( token_name.c_str() );
     int fd = safe_create_keep_if_exists(token_file.c_str(),
         O_CREAT | O_APPEND | O_WRONLY, 0600);
 	if (-1 == fd) {
@@ -90,33 +97,26 @@ htcondor::generate_client_id()
 {
 	std::string subsys_name = get_mySubSystemName();
 
-	std::vector<char> hostname;
-	hostname.reserve(MAXHOSTNAMELEN);
-	hostname[0] = '\0';
-	condor_gethostname(&hostname[0], MAXHOSTNAMELEN);
+	char hostname[MAXHOSTNAMELEN];
+	if (condor_gethostname(hostname, sizeof(hostname))) { // returns 0 or -1
+		hostname[0] = 0;
+	}
 
-	return subsys_name + "-" + std::string(&hostname[0]) + "-" +
+	return subsys_name + "-" + std::string(hostname) + "-" +
 		std::to_string(get_csrng_uint() % 100000);
 }
 
 
 std::string
 htcondor::get_token_signing_key(CondorError &err) {
-	std::string key_name = "POOL";
-	param(key_name, "SEC_TOKEN_ISSUER_KEY");
-	std::string final_key_name;
-	std::vector<std::string> creds;
-	if (!listNamedCredentials(creds, &err)) {
-		return "";
-	}
-	for (const auto &cred : creds) {
-		if (cred == key_name) {
-			final_key_name = key_name;
-			break;
+	auto_free_ptr key_name(param("SEC_TOKEN_ISSUER_KEY"));
+	if (key_name) {
+		if (hasTokenSigningKey(key_name.ptr(), &err)) {
+			return key_name.ptr();
 		}
+	} else if (hasTokenSigningKey("POOL", &err)) {
+		return "POOL";
 	}
-	if (final_key_name.empty()) {
-		err.push("TOKEN_UTILS", 4, "Server does not have a signing key configured.");
-	}
-	return final_key_name;
+	err.push("TOKEN_UTILS", 4, "Server does not have a signing key configured.");
+	return "";
 }

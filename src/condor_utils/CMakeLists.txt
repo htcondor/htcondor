@@ -587,6 +587,7 @@ endif()
 # Build "Object" libraries, which are just a set of .o files which can later to into libraries
 add_library(condor_api_and_utils_objects OBJECT ${CONDOR_API_AND_UTILS_SRC})
 add_library(condor_utils_objects OBJECT ${CONDOR_UTILS_SRC})
+add_dependencies(condor_utils_objects utils_genparams)
 add_library(condor_extra_objects OBJECT ${EXTRA_SRCS})
 add_library(condor_safe_objects OBJECT ${SAFE_OPEN_SRC})
 
@@ -680,7 +681,7 @@ if (DOCKER_ALLOW_RUN_AS_ROOT)
 	set_source_files_properties(docker-api.cpp PROPERTIES COMPILE_DEFINITIONS DOCKER_ALLOW_RUN_AS_ROOT=1)
 endif()
 
-target_link_libraries(condorapi ${CLASSADS_FOUND};${CMAKE_DL_LIBS};${RT_FOUND})
+target_link_libraries(condorapi classads;${CMAKE_DL_LIBS};${RT_FOUND})
 if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condorapi ${LIBUUID_FOUND})
 endif()

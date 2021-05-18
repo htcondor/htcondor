@@ -97,10 +97,16 @@ bool TimeSensitiveQueue< T >::allowGracePeriod( unsigned seconds ) {
 
 	pthread_t graceThread;
 	rv = pthread_create( & graceThread, NULL, ::timerFunction< T >, this );
-	if( rv != 0 ) { return false; }
+	if( rv != 0 ) { 
+		pthread_mutex_unlock( & graceMutex );
+		return false;
+	}
 
 	rv = pthread_detach( graceThread );
-	if( rv != 0 ) { return false; }
+	if( rv != 0 ) { 
+		pthread_mutex_unlock( & graceMutex );
+		return false;
+	}
 
 	// Block until the timer thread has started.
 	pthread_cond_wait( & graceCond, & graceMutex );

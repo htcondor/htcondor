@@ -424,6 +424,10 @@ getUUIDToMIGDeviceHandleMap( std::map< std::string, nvmlDevice_t > & map ) {
 	nvmlReturn_t r = nvmlDeviceGetCount(& deviceCount);
 	if( NVML_SUCCESS != r ) { return r; }
 
+	// if this version of the library doesn't have a nvmlDeviceGetMaxMigDeviceCount function
+	// then we behave as if the mig device cound was 0, trivial success.
+	if (! nvmlDeviceGetMaxMigDeviceCount) { return NVML_SUCCESS; }
+
 	for( unsigned int i = 0; i < deviceCount; ++i ) {
 		nvmlDevice_t device;
 		r = nvmlDeviceGetHandleByIndex( i, & device );
@@ -453,9 +457,13 @@ nvml_findNVMLDeviceHandle(const std::string & uuid, nvmlDevice_t * device) {
 	if( uuid.find("MIG-") == 0 ) {
 		// Unfortunately, nvmlDeviceGetHandleByUUID() doesn't work when
 		// passed a MIG instance's UUID, so we have to scan them all.
-		std::map< std::string, nvmlDevice_t > uuidsToHandles;
-		nvmlReturn_t r = getUUIDToMIGDeviceHandleMap( uuidsToHandles );
-		if( NVML_SUCCESS != r ) { return r;	}
+		nvmlReturn_t r;
+		static bool mapInitialized = false;
+		static std::map< std::string, nvmlDevice_t > uuidsToHandles;
+		if(! mapInitialized) {
+			r = getUUIDToMIGDeviceHandleMap( uuidsToHandles );
+			if( NVML_SUCCESS != r ) { return r;	}
+		}
 
 		auto iter = uuidsToHandles.find(uuid);
 		if( iter != uuidsToHandles.end() ) {
@@ -484,9 +492,11 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 	}
 
 	nvmlPciInfo_t pci;
-	r = nvmlDeviceGetPciInfo_v3( migDevice, & pci );
-	if( NVML_SUCCESS == r ) {
-		strncpy( p->pciId, pci.busIdLegacy, NVML_DEVICE_PCI_BUS_ID_BUFFER_V2_SIZE );
+	if(nvmlDeviceGetPciInfo_v3) {
+		r = nvmlDeviceGetPciInfo_v3( migDevice, & pci );
+		if( NVML_SUCCESS == r ) {
+			strncpy( p->pciId, pci.busIdLegacy, NVML_DEVICE_PCI_BUS_ID_BUFFER_V2_SIZE );
+		}
 	}
 
 	nvmlMemory_t memory;
@@ -496,10 +506,12 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 	}
 
 	int ccMajor = 0, ccMinor = 0;
-	r = nvmlDeviceGetCudaComputeCapability( migDevice, & ccMajor, & ccMinor );
-	if( NVML_SUCCESS == r ) {
-		p->ccMajor = ccMajor;
-		p->ccMinor = ccMinor;
+	if(nvmlDeviceGetCudaComputeCapability) {
+		r = nvmlDeviceGetCudaComputeCapability( migDevice, & ccMajor, & ccMinor );
+		if( NVML_SUCCESS == r ) {
+			p->ccMajor = ccMajor;
+			p->ccMinor = ccMinor;
+		}
 	}
 
 	// This is not always the same as cuDeviceGetAttribute(CLOCK_RATE).
@@ -512,9 +524,11 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 
 	// This only exists for MIG devices.
 	nvmlDeviceAttributes_t attributes;
-	r = nvmlDeviceGetAttributes( migDevice, & attributes );
-	if( NVML_SUCCESS == r ) {
-		p->multiProcessorCount = attributes.multiprocessorCount;
+	if(nvmlDeviceGetAttributes) {
+		r = nvmlDeviceGetAttributes( migDevice, & attributes );
+		if( NVML_SUCCESS == r ) {
+			p->multiProcessorCount = attributes.multiprocessorCount;
+		}
 	}
 
 	nvmlEnableState_t current, pending;
@@ -528,9 +542,13 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 
 nvmlReturn_t
 enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
-	std::map< std::string, nvmlDevice_t > uuidsToHandles;
-	nvmlReturn_t r = getUUIDToMIGDeviceHandleMap( uuidsToHandles );
-	if( NVML_SUCCESS != r ) { return r;	}
+	nvmlReturn_t r;
+	static bool mapInitialized = false;
+	static std::map< std::string, nvmlDevice_t > uuidsToHandles;
+	if(! mapInitialized) {
+		r = getUUIDToMIGDeviceHandleMap( uuidsToHandles );
+		if( NVML_SUCCESS != r ) { return r;	}
+	}
 
 	for( auto i = uuidsToHandles.begin(); i != uuidsToHandles.end(); ++i ) {
 		nvmlDevice_t migDevice = i->second;
@@ -556,7 +574,9 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 		if( NVML_SUCCESS != r ) { return r; }
 
 		unsigned int maxMigDeviceCount = 0;
-		r = nvmlDeviceGetMaxMigDeviceCount( device, & maxMigDeviceCount );
+		if (nvmlDeviceGetMaxMigDeviceCount) {
+			r = nvmlDeviceGetMaxMigDeviceCount(device, & maxMigDeviceCount);
+		}
 		if( NVML_SUCCESS == r && maxMigDeviceCount == 0 ) {
 			char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
 			r = nvmlDeviceGetUUID( device, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );

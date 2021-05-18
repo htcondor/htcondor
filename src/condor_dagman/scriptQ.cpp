@@ -32,7 +32,7 @@ ScriptQ::ScriptQ( Dag* dag ) :
 	_dag = dag;
 	_numScriptsRunning = 0;
 
-    _scriptPidTable = new HashTable<int,Script*>( &hashFuncInt );
+    _scriptPidTable = new std::map<int,Script*>();
     _waitingQueue = new std::queue<Script*>();
 
     if( _scriptPidTable == NULL || _waitingQueue == NULL ) {
@@ -103,7 +103,8 @@ ScriptQ::Run( Script *script )
 	if( int pid = script->BackgroundRun( _scriptReaperId,
 				_dag->_dagStatus, _dag->NumNodesFailed() ) ) {
 		_numScriptsRunning++;
-		ASSERT( _scriptPidTable->insert( pid, script ) == 0 );
+		auto insertResult = _scriptPidTable->insert( std::make_pair( pid, script ) );
+		ASSERT( insertResult.second == true );
 		debug_printf( DEBUG_DEBUG_1, "\tspawned pid %d: %s\n", pid,
 					  script->_cmd );
 		return 1;
@@ -173,13 +174,12 @@ ScriptQ::NumScriptsRunning() const
 int
 ScriptQ::ScriptReaper( int pid, int status )
 {
-	Script* script = NULL;
-
 	// get the Script* that corresponds to this pid
-	_scriptPidTable->lookup( pid, script );
-	ASSERT( script != NULL );
+	auto findResult = _scriptPidTable->find( pid );
+	ASSERT( findResult != _scriptPidTable->end() );
+	Script* script = (*findResult).second;
 
-	_scriptPidTable->remove( pid );
+	_scriptPidTable->erase( pid );
 	_numScriptsRunning--;
 
 	if ( pid != script->_pid ) {

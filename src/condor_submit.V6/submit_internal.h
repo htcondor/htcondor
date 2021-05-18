@@ -60,7 +60,6 @@ public:
 	virtual int destroy_Cluster(int cluster_id, const char *reason = NULL);
 	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
 	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
-	virtual int send_SpoolFileIfNeeded(ClassAd& ad);
 	virtual int send_SpoolFile(char const *filename);
 	virtual int send_SpoolFileBytes(char const *filename);
 	virtual bool disconnect(bool commit_transaction, CondorError & errstack);
@@ -80,7 +79,7 @@ private:
 	int proc;
 	bool close_file_on_disconnect;
 	bool log_all_communication;
-	MyString echo_itemdata_filepath;
+	std::string echo_itemdata_filepath;
 	FILE * fp;
 };
 

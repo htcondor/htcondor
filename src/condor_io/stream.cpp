@@ -837,7 +837,7 @@ Stream::put_nullstr( char const *s)
 int 
 Stream::put( const MyString &s)
 {
-	return put( s.Value() );
+	return put( s.c_str() );
 }
 
 int
@@ -1485,6 +1485,10 @@ Stream::set_crypto_mode(bool enabled)
 		}
 	}
 
+	if (mustEncrypt()) {
+		return false;
+	}
+
 	// turn off crypto
 	crypto_mode_ = false;
 
@@ -1585,9 +1589,9 @@ Stream::prepare_crypto_for_secret_is_noop() const
 void
 Stream::prepare_crypto_for_secret()
 {
+	dprintf(D_NETWORK,"start encrypting secret\n");
 	m_crypto_state_before_secret = true;
 	if( !prepare_crypto_for_secret_is_noop() ) {
-		dprintf(D_NETWORK,"encrypting secret\n");
 		m_crypto_state_before_secret = get_encryption(); // always false
 		set_crypto_mode(true);
 	}
@@ -1596,6 +1600,7 @@ Stream::prepare_crypto_for_secret()
 void
 Stream::restore_crypto_after_secret()
 {
+	dprintf(D_NETWORK,"done encrypting secret\n");
 	if( !m_crypto_state_before_secret ) {
 		set_crypto_mode(false); //restore crypto mode
 	}

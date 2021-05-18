@@ -221,10 +221,10 @@ bool SaveHistoricalClassAdLogs(
 		return false;
 	}
 
-	dprintf(D_FULLDEBUG,"About to save historical log %s\n",new_histfile.Value());
+	dprintf(D_FULLDEBUG,"About to save historical log %s\n",new_histfile.c_str());
 
-	if( hardlink_or_copy_file(filename, new_histfile.Value()) < 0) {
-		dprintf(D_ALWAYS,"Failed to copy %s to %s.\n", filename, new_histfile.Value());
+	if( hardlink_or_copy_file(filename, new_histfile.c_str()) < 0) {
+		dprintf(D_ALWAYS,"Failed to copy %s to %s.\n", filename, new_histfile.c_str());
 		return false;
 	}
 
@@ -235,15 +235,15 @@ bool SaveHistoricalClassAdLogs(
 		return true; // this is not a fatal error
 	}
 
-	if( unlink(old_histfile.Value()) == 0 ) {
-		dprintf(D_FULLDEBUG,"Removed historical log %s.\n",old_histfile.Value());
+	if( unlink(old_histfile.c_str()) == 0 ) {
+		dprintf(D_FULLDEBUG,"Removed historical log %s.\n",old_histfile.c_str());
 	}
 	else {
 		// It's ok if the old file simply doesn't exist.
 		if( errno != ENOENT ) {
 			// Otherwise, it's not a fatal error, but definitely odd that
 			// we failed to remove it.
-			dprintf(D_ALWAYS,"WARNING: failed to remove '%s': %s\n",old_histfile.Value(),strerror(errno));
+			dprintf(D_ALWAYS,"WARNING: failed to remove '%s': %s\n",old_histfile.c_str(),strerror(errno));
 		}
 		return true; // this is not a fatal error
 	}
@@ -265,19 +265,19 @@ bool TruncateClassAdLog(
 	FILE *new_log_fp;
 
 	tmp_log_filename.formatstr( "%s.tmp", filename);
-	new_log_fd = safe_create_replace_if_exists(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
+	new_log_fd = safe_create_replace_if_exists(tmp_log_filename.c_str(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (new_log_fd < 0) {
 		errmsg.formatstr("failed to rotate log: safe_create_replace_if_exists(%s) failed with errno %d (%s)\n",
-			tmp_log_filename.Value(), errno, strerror(errno));
+			tmp_log_filename.c_str(), errno, strerror(errno));
 		return false;
 	}
 
 	new_log_fp = fdopen(new_log_fd, "r+");
 	if (new_log_fp == NULL) {
 		errmsg.formatstr("failed to rotate log: fdopen(%s) returns NULL\n",
-				tmp_log_filename.Value());
+				tmp_log_filename.c_str());
 		close(new_log_fd);
-		unlink(tmp_log_filename.Value());
+		unlink(tmp_log_filename.c_str());
 		return false;
 	}
 
@@ -287,7 +287,7 @@ bool TruncateClassAdLog(
 
 	// flush our current state into the temp file,
 	// with a future value for sequence number
-	bool success = WriteClassAdLogState(new_log_fp, tmp_log_filename.Value(),
+	bool success = WriteClassAdLogState(new_log_fp, tmp_log_filename.c_str(),
 		future_sequence_number, m_original_log_birthdate,
 		la, maker, errmsg);
 
@@ -300,15 +300,15 @@ bool TruncateClassAdLog(
 	// functions just EXCEPT'ed rather than returning errors.
 	if ( ! success) {
 		fclose(new_log_fp);
-		unlink(tmp_log_filename.Value());
+		unlink(tmp_log_filename.c_str());
 		return false;
 	}
 
 	fclose(new_log_fp);	// avoid sharing violation on move
-	if (rotate_file(tmp_log_filename.Value(), filename) < 0) {
+	if (rotate_file(tmp_log_filename.c_str(), filename) < 0) {
 		errmsg.formatstr("failed to rotate job queue log!\n");
 
-		unlink(tmp_log_filename.Value());
+		unlink(tmp_log_filename.c_str());
 
 		int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 		if (log_fd < 0) {

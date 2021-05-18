@@ -933,13 +933,13 @@ REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *&actual_url)
 
 int REMOTE_CONDOR_ulog_error_printf( int hold_reason_code, int hold_reason_subcode, char const *str, ... )
 {
-	MyString buf;
+	std::string buf;
 	va_list args;
 	int retval;
 
 	va_start(args,str);
-	buf.vformatstr(str,args);
-	retval = REMOTE_CONDOR_ulog_error( hold_reason_code, hold_reason_subcode, buf.Value() );
+	vformatstr(buf, str, args);
+	retval = REMOTE_CONDOR_ulog_error( hold_reason_code, hold_reason_subcode, buf.c_str() );
 	va_end(args);
 
 	return retval;
@@ -1135,13 +1135,13 @@ REMOTE_CONDOR_constrain( char *  expr)
 
 int REMOTE_CONDOR_get_sec_session_info(
 	char const *starter_reconnect_session_info,
-	MyString &reconnect_session_id,
-	MyString &reconnect_session_info,
-	MyString &reconnect_session_key,
+	std::string &reconnect_session_id,
+	std::string &reconnect_session_info,
+	std::string &reconnect_session_key,
 	char const *starter_filetrans_session_info,
-	MyString &filetrans_session_id,
-	MyString &filetrans_session_info,
-	MyString &filetrans_session_key)
+	std::string &filetrans_session_id,
+	std::string &filetrans_session_info,
+	std::string &filetrans_session_key)
 {
 	int	rval=-1;
 	condor_errno_t	terrno;

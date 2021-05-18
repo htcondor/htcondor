@@ -559,7 +559,11 @@ if( NOT WINDOWS)
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
 	check_include_files("inttypes.h" HAVE_INTTYPES_H)
 	check_include_files("ldap.h" HAVE_LDAP_H)
-	find_multiple( "ldap;lber" LDAP_FOUND )
+	if (${OS_NAME} STREQUAL "DARWIN")
+		find_multiple( "LDAP;lber" LDAP_FOUND )
+	else()
+		find_multiple( "ldap;lber" LDAP_FOUND )
+	endif()
 	check_include_files("net/if.h" HAVE_NET_IF_H)
 	check_include_files("os_types.h" HAVE_OS_TYPES_H)
 	check_include_files("resolv.h" HAVE_RESOLV_H)
@@ -600,67 +604,13 @@ if( NOT WINDOWS)
 	set(STATFS_ARGS "2")
 	set(SIGWAIT_ARGS "2")
 
-	check_cxx_source_compiles("
-		#include <sched.h>
-		int main() {
-			cpu_set_t s;
-			sched_setaffinity(0, 1024, &s);
-			return 0;
-		}
-		" HAVE_SCHED_SETAFFINITY )
+	check_function_exists("sched_setaffinity" HAVE_SCHED_SETAFFINITY)
 
-	check_cxx_source_compiles("
-		#include <sched.h>
-		int main() {
-			cpu_set_t s;
-			sched_setaffinity(0, &s);
-			return 0;
-		}
-		" HAVE_SCHED_SETAFFINITY_2ARG )
-
-	if(HAVE_SCHED_SETAFFINITY_2ARG)
-		set(HAVE_SCHED_SETAFFINITY ON)
+	# Some versions of Clang require an additional C++11 flag, as the default stdlib
+	# is from an old GCC version.
+	if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 	endif()
-
-	check_cxx_compiler_flag(-std=c++11 cxx_11)
-	check_cxx_compiler_flag(-std=c++0x cxx_0x)
-	if (cxx_11)
-
-		# Some versions of Clang require an additional C++11 flag, as the default stdlib
-		# is from an old GCC version.
-		if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-		endif()
-
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-
-		check_cxx_source_compiles("
-		#include <unordered_map>
-		#include <memory>
-		int main() {
-			std::unordered_map<int, int> ci;
-			std::shared_ptr<int> foo;
-			return 0;
-		}
-		" PREFER_CPP11 )
-	elseif(cxx_0x)
-		# older g++s support some of c++11 with the c++0x flag
-		# which we should try to enable, if they do not have
-		# the c++11 flag.  This at least gets us std::unique_ptr
-
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-	endif()
-
-
-	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
-	exec_program (${CMAKE_CXX_COMPILER}
-    		ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
-    		OUTPUT_VARIABLE CMAKE_CXX_COMPILER_VERSION )
-
-	exec_program (${CMAKE_C_COMPILER}
-    		ARGS ${CMAKE_C_COMPILER_ARG1} -dumpversion
-    		OUTPUT_VARIABLE CMAKE_C_COMPILER_VERSION )
-
 endif()
 
 find_program(HAVE_VMWARE vmware)
@@ -777,10 +727,12 @@ option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(WANT_CONTRIB "Enable building of contrib modules" OFF)
 option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
-option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
+option(WANT_GLEXEC "Build and install condor glexec functionality" OFF)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
+option(WITH_ADDRESS_SANITIZER "Build with address sanitizer" OFF)
+option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
 option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run as root inside their container" OFF)
 
 #####################################
@@ -806,6 +758,25 @@ if ( NOT CMAKE_SKIP_RPATH )
 	set( CMAKE_INSTALL_RPATH ${CONDOR_RPATH} )
 	set( CMAKE_BUILD_WITH_INSTALL_RPATH TRUE )
 endif()
+
+if (WITH_ADDRESS_SANITIZER)
+	# Condor daemons dup stderr to /dev/null, so to see output need to run with
+	# ASAN_OPTIONS="log_path=/tmp/asan" condor_master 
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+endif()
+
+if (WITH_UB_SANITIZER)
+	# Condor daemons dup stderr to /dev/null, so to see output need to run with
+	# UBSAN_OPTIONS="log_path=/tmp/asan print_stacktrace=true" condor_master 
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+endif()
+
 
 #####################################
 # KBDD option
@@ -886,8 +857,7 @@ endif()
 # above the addition of the .../src/classads subdir:
 if (LINUX
     AND PROPER
-    AND (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-    AND NOT (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 4.4.6))
+    AND (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU"))
 
     # I wrote a nice macro for testing linker flags, but it is useless
     # because at least some older versions of linker ignore all '-z'
@@ -1010,7 +980,7 @@ else ()
 		endif()
 	elseif(DARWIN)
 		exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
-		if (${TEST_VER} MATCHES "10.1[3-9]")
+		if (${TEST_VER} MATCHES "10.1[3-9]" OR ${TEST_VER} MATCHES "11.[1-9]")
 			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/6.0)
 		else()
 			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.5)
@@ -1268,14 +1238,12 @@ else(MSVC)
 	endif(c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
 
 	# check compiler flag not working for this flag.
-	if (NOT CMAKE_C_COMPILER_VERSION VERSION_LESS "4.8")
 	check_c_compiler_flag(-Wdeprecated-declarations c_Wdeprecated_declarations)
 	if (c_Wdeprecated_declarations)
 		# we use deprecated declarations ourselves during refactoring,
 		# so we always want them treated as warnings and not errors
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wdeprecated-declarations -Wno-error=deprecated-declarations")
 	endif(c_Wdeprecated_declarations)
-	endif()
 
 	check_c_compiler_flag(-Wnonnull-compare c_Wnonnull_compare)
 	if (c_Wnonnull_compare)
@@ -1521,14 +1489,8 @@ dprint ( "BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}" )
 # the compiler used for C files
 dprint ( "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}" )
 
-# version information about the compiler
-dprint ( "CMAKE_C_COMPILER_VERSION: ${CMAKE_C_COMPILER_VERSION}" )
-
 # the compiler used for C++ files
 dprint ( "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}" )
-
-# version information about the compiler
-dprint ( "CMAKE_CXX_COMPILER_VERSION: ${CMAKE_CXX_COMPILER_VERSION}" )
 
 # if the compiler is a variant of gcc, this should be set to 1
 dprint ( "CMAKE_COMPILER_IS_GNUCC: ${CMAKE_COMPILER_IS_GNUCC}" )

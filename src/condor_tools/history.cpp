@@ -28,7 +28,6 @@
 #include "dc_schedd.h"
 #include "internet.h"
 #include "print_wrapped_text.h"
-#include "MyString.h"
 #include "metric_units.h"
 #include "ad_printmask.h"
 #include "directory.h"
@@ -312,7 +311,7 @@ main(int argc, const char* argv[])
 		dprintf_config("Tool");
 
 		if (IsFulldebug(D_ALWAYS)) {
-			MyString myargs;
+			std::string myargs;
 			for (int ii = 0; ii < argc; ++ii) { formatstr_cat(myargs, "[%d]%s ", ii, argv[ii]); }
 			dprintf(D_FULLDEBUG, "args: %s\n", myargs.c_str());
 		}
@@ -432,12 +431,11 @@ main(int argc, const char* argv[])
 			PROC_ID jid;
 			const char * pend;
 			if (StrIsProcId(argv[i], jid.cluster, jid.proc, &pend) && !*pend) {
-				MyString buf;
+				std::string buf;
 				if (jid.proc >= 0) {
-					buf.formatstr("ClusterId == %d && ProcId == %d", jid.cluster, jid.proc);
+					formatstr(buf, "ClusterId == %d && ProcId == %d", jid.cluster, jid.proc);
 				} else {
-					buf.formatstr("ClusterId == %d", jid.cluster);
-					//buf.formatstr("CompletionDate <= %d", jid.cluster);
+					formatstr(buf, "ClusterId == %d", jid.cluster);
 				}
 				ParseClassAdRvalExpr(buf.c_str(), sinceExpr);
 			}
@@ -456,7 +454,7 @@ main(int argc, const char* argv[])
 		}
 		
 		delete sinceExpr; sinceExpr = NULL;
-		MyString buf; buf.formatstr("CompletionDate <= %s", argv[i]);
+		std::string buf; formatstr(buf, "CompletionDate <= %s", argv[i]);
 		if (0 != ParseClassAdRvalExpr(buf.c_str(), sinceExpr)) {
 			fprintf( stderr, "Error: '%s' not valid parameter for -completedsince ", argv[i]);
 			exit(1);
@@ -534,7 +532,7 @@ main(int argc, const char* argv[])
 	// Since we only deal with one ad at a time, this doubles the speed of parsing
   classad::ClassAdSetExpressionCaching(false);
  
-  MyString my_constraint;
+  std::string my_constraint;
   constraint.makeQuery(my_constraint);
   if (diagnostic) {
 	  fprintf(stderr, "Using effective constraint: %s\n", my_constraint.c_str());
@@ -1003,7 +1001,7 @@ static long findLastDelimiter(FILE *fd, const char *filename)
     int         i;
     bool        found;
     long        seekOffset, lastOffset;
-    MyString    buf;
+    std::string buf;
     struct stat st;
   
     // Get file size
@@ -1024,11 +1022,11 @@ static long findLastDelimiter(FILE *fd, const char *filename)
 		}
         
         while (1) {
-            if (buf.readLine(fd) == false) 
+            if (readLine(buf,fd) == false) 
                 break;
 	  
             // If line starts with *** and its last line of file
-            if (strncmp(buf.Value(), "***", 3) == 0 && buf.readLine(fd) == false) {
+            if (strncmp(buf.c_str(), "***", 3) == 0 && readLine(buf,fd) == false) {
                 found = true;
                 break;
             }
@@ -1041,7 +1039,7 @@ static long findLastDelimiter(FILE *fd, const char *filename)
     } 
   
     // lastOffset = beginning of delimiter
-    lastOffset = ftell(fd) - buf.Length();
+    lastOffset = ftell(fd) - buf.length();
     
     return lastOffset;
 }
@@ -1052,7 +1050,7 @@ static long findLastDelimiter(FILE *fd, const char *filename)
 // previous delimiter, but the nearest previous delimiter that matches
 static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
 {
-    MyString buf;
+    std::string buf;
     char *owner;
     long prevOffset = -1, completionDate = -1;
     int clusterId = -1, procId = -1;
@@ -1064,24 +1062,24 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
 		exit(1);
 	}
 
-    if (!buf.readLine(fd)) {
+    if (!readLine(buf,fd)) {
 		fprintf(stderr, "Error %d: cannot read from history file %s\n", errno, filename);
 		exit(1);
 	}
   
-    owner = (char *) malloc(buf.Length() * sizeof(char)); 
+    owner = (char *) malloc(buf.length() * sizeof(char)); 
 
     // Current format of the delimiter:
     // *** ProcId = a ClusterId = b Owner = "cde" CompletionDate = f
     // For the moment, owner and completionDate are just parsed in, reserved for future functionalities. 
 
     int scan_result =
-    sscanf(buf.Value(), "%*s %*s %*s %ld %*s %*s %d %*s %*s %d %*s %*s %s %*s %*s %ld", 
+    sscanf(buf.c_str(), "%*s %*s %*s %ld %*s %*s %d %*s %*s %d %*s %*s %s %*s %*s %ld", 
            &prevOffset, &clusterId, &procId, owner, &completionDate);
 
     if (scan_result < 1 || (prevOffset == -1 && clusterId == -1 && procId == -1)) {
-        fprintf(stderr, 
-                "Error: (%s) is an incompatible history file, please run condor_convert_history.\n",
+        fprintf(stderr,
+                "Error: (%s) is an incompatible history file.\n",
                 filename);
         free(owner);
         exit(1);
@@ -1105,12 +1103,12 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
 				exit(1);
 			}
 
-            if (!buf.readLine(fd)) {
+            if (!readLine(buf,fd)) {
 				fprintf(stderr, "Cannot read history file\n");
 				exit(1);
 			}
 
-            void * pvner = realloc (owner, buf.Length() * sizeof(char));
+            void * pvner = realloc (owner, buf.length() * sizeof(char));
             ASSERT( pvner != NULL );
             owner = (char *) pvner;
 
@@ -1119,12 +1117,12 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
 			procId = -1;
 
 			scan_result =
-            sscanf(buf.Value(), "%*s %*s %*s %ld %*s %*s %d %*s %*s %d %*s %*s %s %*s %*s %ld", 
+            sscanf(buf.c_str(), "%*s %*s %*s %ld %*s %*s %d %*s %*s %d %*s %*s %s %*s %*s %ld", 
                    &prevOffset, &clusterId, &procId, owner, &completionDate);
 
 			if (scan_result < 1 || (prevOffset == -1 && clusterId == -1 && procId == -1)) {
-				fprintf(stderr, 
-						"Error: (%s) is an incompatible history file, please run condor_convert_history.\n",
+				fprintf(stderr,
+						"Error: (%s) is an incompatible history file.\n",
 						filename);
 				free(owner);
 				exit(1);
@@ -1147,7 +1145,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 
     long offset = 0;
     bool BOF = false; // Beginning Of File
-    MyString buf;
+    std::string buf;
 
 	int flags = 0;
 	if( !backwards ) {
@@ -1201,7 +1199,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 					exit(1);
 				}
 				// Read one line to skip delimiter and adjust to actual offset of ad
-                if (!buf.readLine(LogFile)) {
+                if (!readLine(buf,LogFile)) {
 					printf( "\t*** Error: Can't read delimiter inside history file: errno %d\n", errno);
 					exit(1);
 				}

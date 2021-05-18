@@ -36,8 +36,16 @@ class KeyCacheEntry {
     KeyCacheEntry(
 			char const * id,
 			const condor_sockaddr* addr,
-			KeyInfo * key,
-			ClassAd * policy,
+			const KeyInfo * key,
+			const ClassAd * policy,
+			int expiration,
+			int session_lease
+			);
+    KeyCacheEntry(
+			char const * id,
+			const condor_sockaddr* addr,
+			std::vector<KeyInfo *> key,
+			const ClassAd * policy,
 			int expiration,
 			int session_lease
 			);
@@ -49,12 +57,14 @@ class KeyCacheEntry {
     char*                 id();
 	const condor_sockaddr*         addr();
     KeyInfo*              key();
+    KeyInfo*              key(Protocol protocol);
     ClassAd*              policy();
     int                   expiration() const;
 	char const *          expirationType() const;
 	void                  setExpiration(int new_expiration);
 	void                  setLingerFlag(bool flag) { _lingering = flag; }
 	bool                  getLingerFlag() const { return _lingering; }
+	bool                  setPreferredProtocol(Protocol preferred);
 
 	void                  renewLease();
  private:
@@ -64,13 +74,14 @@ class KeyCacheEntry {
 
     char *               _id;
     condor_sockaddr*              _addr;
-    KeyInfo*             _key;
+	std::vector<KeyInfo*> _keys;
     ClassAd*             _policy;
     int                  _expiration;
 	int                  _lease_interval;   // max seconds of unused time
 	time_t               _lease_expiration; // time of lease expiration
 	bool                 _lingering; // true if session only exists
 	                                 // to catch lingering communication
+	Protocol             _preferred_protocol;
 };
 
 

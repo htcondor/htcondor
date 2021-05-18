@@ -109,12 +109,13 @@ incorporates.
        Enables use of the vm universe with VMware virtual machines. Note
        that this feature depends on Perl.
 
-    -  ``GPUs``
+    -  ``GPUs([discovery_args])``
 
        Sets configuration based on detection with the
        *condor_gpu_discovery* tool, and defines a custom resource
        using the name ``GPUs``. Supports both OpenCL and CUDA, if
        detected. Automatically includes the ``GPUsMonitor`` feature.
+       Optional discovery_args are passed to *condor_gpu_discovery*
 
     -  ``GPUsMonitor``
 
@@ -135,13 +136,21 @@ incorporates.
        :ref:`admin-manual/policy-configuration:*condor_startd* policy
        configuration` for information on partitionalble slot policies.
 
-    -  ``AssignAccountingGroup( map_filename )`` Sets up a
+    -  ``AssignAccountingGroup( map_filename [, check_request] )`` Sets up a
        *condor_schedd* job transform that assigns an accounting group
-       to each job as it is submitted. The accounting is determined by
-       mapping the Owner attribute of the job using the given map file.
+       to each job as it is submitted. The accounting group is determined by
+       mapping the Owner attribute of the job using the given map file, which
+       should specify the allowed accounting groups each Owner is permitted to use.
+       If the submitted job has an accounting group, that is treated as a requested
+       accounting group and validated against the map.  If the optional
+       ``check_request`` argument is true or not present submission will
+       fail if the requested accounting group is present and not valid.  If the argument
+       is false, the requested accounting group will be ignored if it is not valid.
+
     -  ``ScheddUserMapFile( map_name, map_filename )`` Defines a
        *condor_schedd* usermap named map_name using the given map
        file.
+
     -  ``SetJobAttrFromUserMap( dst_attr, src_attr, map_name [, map_filename] )``
        Sets up a *condor_schedd* job transform that sets the dst_attr
        attribute of each job as it is submitted. The value of dst_attr
@@ -149,6 +158,7 @@ incorporates.
        usermap named map_name. If the optional map_filename argument
        is specifed, then this metaknob also defines a *condor_schedd*
        usermap named map_Name using the given map file.
+
     -  ``StartdCronOneShot( job_name, exe [, hook_args] )``
 
        Create a one-shot *condor_startd* job hook.
@@ -207,10 +217,14 @@ incorporates.
 
        Sets configuration that enables the *condor_credd* and *condor_credmon_oauth* daemons,
        which allow for the automatic renewal of user-supplied OAuth2 credentials.
-       Intended for submit nodes that are also configured
-       with the companion OAuth credmon WSGI application
-       running on a HTTPS-enabled web server.
+       See section :ref:`enabling_oauth_credentials` for more information.
 
+    -  ``Adstash``
+
+       Sets configuration that enables *condor_adstash* to run as a daemon.
+       *condor_adstash* polls job history ClassAds and pushes them to an
+       Elasticsearch index, see section
+       :ref:`admin-manual/monitoring:Elasticsearch` for more information.
 
     -  ``UWCS_Desktop_Policy_Values``
 

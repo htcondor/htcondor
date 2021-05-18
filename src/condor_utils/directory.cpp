@@ -416,6 +416,12 @@ bool
 Directory::do_remove_file( const char* path )
 {
     bool ret_val = true;    // we'll set this to false if we fail
+
+	if (path == nullptr) {
+		errno = EFAULT;
+		return false;
+	}
+
 	Set_Access_Priv();
 
 #if DEBUG_DIRECTORY_CLASS
@@ -829,11 +835,11 @@ Directory::Next()
 		}
 		{
 			path = curr_dir;
-			if(path.Length() == 0 || path[path.Length()-1] != DIR_DELIM_CHAR) {
+			if(path.length() == 0 || path[path.length()-1] != DIR_DELIM_CHAR) {
 				path += DIR_DELIM_CHAR;
 			}
 			path += dirent->d_name;
-			curr = new StatInfo( path.Value() );
+			curr = new StatInfo( path.c_str() );
 			switch( curr->Error() ) {
 			case SINoFile:
 					// This file was deleted, continue with the next file. 
@@ -844,7 +850,7 @@ Directory::Next()
 					// do_stat failed with an error!
 				dprintf( D_FULLDEBUG,
 					 "Directory::stat() failed for \"%s\", errno: %d (%s)\n",
-					 path.Value(), curr->Errno(), strerror(curr->Errno()) );
+					 path.c_str(), curr->Errno(), strerror(curr->Errno()) );
 				delete curr;
 				curr = NULL;
 				break;

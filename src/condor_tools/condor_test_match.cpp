@@ -489,10 +489,10 @@ MatchTest::read_classad_file(const char *filename, ExprTree *constraint_expr, bo
             if( fseek(file,ad_pos - new_pos,SEEK_CUR) != 0 ) {
                 break;
             }
-            MyString line;
-            while( line.readLine(file) ) {
-                line.trim();
-                if( line.IsEmpty() ) {
+            std::string line;
+            while( readLine(line, file) ) {
+                trim(line);
+                if( line.empty() ) {
                     continue; // ignore blank lines
                 }
                 else if( line.find("--") == 0 ) {
@@ -501,7 +501,7 @@ MatchTest::read_classad_file(const char *filename, ExprTree *constraint_expr, bo
                     break;
                 }
                 else {
-                    fprintf(stderr, "Invalid ClassAd in %s beginning at position %ld, and with first line: %s\n",filename,ad_pos,line.Value());
+                    fprintf(stderr, "Invalid ClassAd in %s beginning at position %ld, and with first line: %s\n",filename,ad_pos,line.c_str());
                     break;
                 }
             }

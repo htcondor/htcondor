@@ -92,7 +92,7 @@ class VMGahp : public Service {
 		VMType *findVM(int vm_id);
 
 		VMGahpConfig *m_gahp_config; // Gahp config file
-		MyString m_workingdir;		 // working directory
+		std::string m_workingdir;		 // working directory
 
 	private:
 		int waitForCommand(int pipe_end);

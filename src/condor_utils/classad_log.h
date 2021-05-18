@@ -235,7 +235,7 @@ private:
 	void LogState(FILE* fp);
 	FILE* log_fp;
 
-	char const *logFilename() { return log_filename_buf.Value(); }
+	char const *logFilename() { return log_filename_buf.c_str(); }
 	MyString log_filename_buf;
 	Transaction *active_transaction;
 	int max_historical_logs;
@@ -524,9 +524,9 @@ ClassAdLog<K,AD>::ClassAdLog(const char *filename,int max_historical_logs_arg,co
 		is_clean, requires_successful_cleaning, errmsg);
 
 	if ( ! log_fp) {
-		EXCEPT("%s", errmsg.Value());
+		EXCEPT("%s", errmsg.c_str());
 	} else if ( ! errmsg.empty()) {
-		dprintf(D_ALWAYS, "ClassAdLog %s has the following issues: %s\n", filename, errmsg.Value());
+		dprintf(D_ALWAYS, "ClassAdLog %s has the following issues: %s\n", filename, errmsg.c_str());
 	}
 	if( !is_clean || requires_successful_cleaning ) {
 		if (open_read_only && requires_successful_cleaning) {
@@ -648,10 +648,10 @@ ClassAdLog<K,AD>::TruncLog()
 		errmsg);
 	if ( ! log_fp) {
 		// if after rotation, the log is no longer open, the the failure is fatal, and we must except
-		EXCEPT("%s", errmsg.Value());
+		EXCEPT("%s", errmsg.c_str());
 	}
 	if ( ! errmsg.empty()) {
-		dprintf(D_ALWAYS, "%s", errmsg.Value());
+		dprintf(D_ALWAYS, "%s", errmsg.c_str());
 	}
 
 	return rotated;
@@ -679,7 +679,7 @@ ClassAdLog<K,AD>::LogState(FILE *fp)
 		la, this->GetTableEntryMaker(),
 		errmsg);
 	if (! success) {
-		EXCEPT("%s", errmsg.Value());
+		EXCEPT("%s", errmsg.c_str());
 	}
 }
 

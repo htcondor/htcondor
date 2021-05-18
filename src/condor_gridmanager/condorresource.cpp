@@ -27,44 +27,45 @@
 #include "condorjob.h"
 #include "gridmanager.h"
 
-HashTable <std::string, CondorResource *>
-    CondorResource::ResourcesByName( hashFunction );
+std::map <std::string, CondorResource *>
+    CondorResource::ResourcesByName;
 
 HashTable <std::string, CondorResource::ScheddPollInfo *>
     CondorResource::PollInfoByName( hashFunction );
 
-const char *CondorResource::HashName( const char *resource_name,
-									  const char *pool_name,
-									  const char *proxy_subject )
+std::string & CondorResource::HashName( const char *resource_name,
+                                      const char *pool_name,
+                                      const char *proxy_subject,
+                                      const std::string &scitokens_file )
 {
 	static std::string hash_name;
 
-	formatstr( hash_name, "condor %s %s#%s", resource_name, 
-					   pool_name ? pool_name : "NULL",
-					   proxy_subject ? proxy_subject : "NULL" );
+	formatstr( hash_name, "condor %s %s#%s#%s", resource_name,
+	           pool_name ? pool_name : "NULL",
+	           proxy_subject ? proxy_subject : "NULL",
+	           scitokens_file.c_str() );
 
-	return hash_name.c_str();
+	return hash_name;
 }
 
 CondorResource *CondorResource::FindOrCreateResource( const char * resource_name,
-													  const char *pool_name,
-													  const Proxy *proxy )
+                                                      const char *pool_name,
+                                                      const Proxy *proxy,
+                                                      const std::string &scitokens_file )
 {
-	int rc;
 	CondorResource *resource = NULL;
-
-	rc = ResourcesByName.lookup( HashName( resource_name, pool_name,
-											proxy ? proxy->subject->fqan : NULL ),
-								 resource );
-	if ( rc != 0 ) {
+	std::string &key = HashName( resource_name, pool_name,
+	                             proxy ? proxy->subject->fqan : NULL,
+	                             scitokens_file );
+	auto itr = ResourcesByName.find( key );
+	if ( itr == ResourcesByName.end() ) {
 		resource = new CondorResource( resource_name, pool_name,
-									   proxy );
+		                               proxy, scitokens_file );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashName( resource_name, pool_name,
-										   proxy ? proxy->subject->fqan : NULL ),
-								resource );
+		ResourcesByName[key] = resource;
 	} else {
+		resource = itr->second;
 		ASSERT(resource);
 	}
 
@@ -72,7 +73,7 @@ CondorResource *CondorResource::FindOrCreateResource( const char * resource_name
 }
 
 CondorResource::CondorResource( const char *resource_name, const char *pool_name,
-								const Proxy *proxy )
+                                const Proxy *proxy, const std::string &scitokens_file )
 	: BaseResource( resource_name )
 {
 	hasLeases = true;
@@ -90,6 +91,7 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 	ping_gahp = NULL;
 	scheddStatusActive = false;
 	submitter_constraint = "";
+	m_scitokensFile = scitokens_file;
 
 	if ( pool_name != NULL ) {
 		poolName = strdup( pool_name );
@@ -109,8 +111,9 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 		//   a gahp server can handle multiple schedds
 		std::string buff;
 		ArgList args;
-		formatstr( buff, "CONDOR/%s/%s/%s", poolName ? poolName : "NULL",
-					  scheddName, proxyFQAN ? proxyFQAN : "NULL" );
+		formatstr( buff, "CONDOR/%s/%s/%s#%s", poolName ? poolName : "NULL",
+		           scheddName, proxyFQAN ? proxyFQAN : "NULL",
+		           m_scitokensFile.c_str() );
 		args.AppendArg("-f");
 		args.AppendArg("-s");
 		args.AppendArg(scheddName);
@@ -140,7 +143,7 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 
 CondorResource::~CondorResource()
 {
-	ResourcesByName.remove( HashName( resourceName, poolName, proxyFQAN ) );
+	ResourcesByName.erase( HashName( resourceName, poolName, proxyFQAN, m_scitokensFile ) );
 
 		// Make sure we don't leak a ScheddPollInfo. If there are other
 		// CondorResources that still want to use it, they'll recreate it.
@@ -149,10 +152,10 @@ CondorResource::~CondorResource()
 		// TODO Track how many CondorResources are still using this
 		//   ScheddPollInfo and delete it only if we're the last one.
 	ScheddPollInfo *poll_info = NULL;
-	PollInfoByName.lookup( HashName( scheddName, poolName, NULL ), poll_info );
+	PollInfoByName.lookup( HashName( scheddName, poolName, NULL, "" ), poll_info );
 	if ( poll_info && ( poll_info->m_pollActive == false ||
 		 scheddStatusActive == true ) ) {
-		PollInfoByName.remove( HashName( scheddName, poolName, NULL ) );
+		PollInfoByName.remove( HashName( scheddName, poolName, NULL, "" ) );
 		delete poll_info;
 	}
 	if ( proxySubject != NULL ) {
@@ -191,7 +194,7 @@ const char *CondorResource::ResourceType()
 
 const char *CondorResource::GetHashName()
 {
-	return HashName( resourceName, poolName, proxyFQAN );
+	return HashName( resourceName, poolName, proxyFQAN, m_scitokensFile ).c_str();
 }
 
 void CondorResource::PublishResourceAd( ClassAd *resource_ad )
@@ -207,6 +210,9 @@ void CondorResource::PublishResourceAd( ClassAd *resource_ad )
 	}
 	if ( proxyFQAN ) {
 		resource_ad->Assign( ATTR_X509_USER_PROXY_FQAN, proxyFQAN );
+	}
+	if ( !m_scitokensFile.empty() ) {
+		resource_ad->Assign( ATTR_SCITOKENS_FILE, m_scitokensFile );
 	}
 
 	gahp->PublishStats( resource_ad );
@@ -235,7 +241,7 @@ void CondorResource::UnregisterJob( BaseJob *base_job )
 	CondorJob *job = dynamic_cast<CondorJob*>( base_job );
 
 	ScheddPollInfo *poll_info = NULL;
-	PollInfoByName.lookup( HashName( scheddName, poolName, NULL ), poll_info );
+	PollInfoByName.lookup( HashName( scheddName, poolName, NULL, "" ), poll_info );
 	if ( poll_info ) {
 		poll_info->m_submittedJobs.Delete( job );
 	}
@@ -280,7 +286,7 @@ void CondorResource::DoScheddPoll()
 		return;
 	}
 
-	PollInfoByName.lookup( HashName( scheddName, poolName, NULL ), poll_info );
+	PollInfoByName.lookup( HashName( scheddName, poolName, NULL, "" ), poll_info );
 
 	daemonCore->Reset_Timer( scheddPollTid, TIMER_NEVER );
 
@@ -293,7 +299,7 @@ void CondorResource::DoScheddPoll()
 			poll_info = new ScheddPollInfo;
 			poll_info->m_lastPoll = 0;
 			poll_info->m_pollActive = false;
-			PollInfoByName.insert( HashName( scheddName, poolName, NULL ),
+			PollInfoByName.insert( HashName( scheddName, poolName, NULL, "" ),
 								   poll_info );
 		}
 
@@ -317,11 +323,10 @@ void CondorResource::DoScheddPoll()
 		while ( poll_info->m_submittedJobs.Next() ) {
 			poll_info->m_submittedJobs.DeleteCurrent();
 		}
-		CondorResource *next_resource;
 		BaseJob *job;
 		std::string job_id;
-		ResourcesByName.startIterations();
-		while ( ResourcesByName.iterate( next_resource ) != 0 ) {
+		for (auto &elem : ResourcesByName) {
+			CondorResource *next_resource = elem.second;
 			if ( strcmp( scheddName, next_resource->scheddName ) ||
 				 strcmp( poolName ? poolName : "",
 						 next_resource->poolName ? next_resource->poolName : "" ) ) {

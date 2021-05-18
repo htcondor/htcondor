@@ -150,12 +150,8 @@ void CreamJobReconfig()
 	CreamJob::setConnectFailureRetry( tmp_int );
 
 	// Tell all the resource objects to deal with their new config values
-	CreamResource *next_resource;
-
-	CreamResource::ResourcesByName.startIterations();
-	
-	while ( CreamResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		next_resource->Reconfig();
+	for (auto &elem : CreamResource::ResourcesByName) {
+		elem.second->Reconfig();
 	}
 }
 
@@ -1487,12 +1483,12 @@ char *CreamJob::buildSubmitAd()
 
 		//ARGUMENTS
 	ArgList args;
-	MyString arg_errors;
-	if( !args.AppendArgsFromClassAd( jobAd, &arg_errors ) ) {
+	std::string arg_errors;
+	if( !args.AppendArgsFromClassAd( jobAd, arg_errors ) ) {
 		dprintf( D_ALWAYS, "(%d.%d) Failed to read job arguments: %s\n",
-				 procID.cluster, procID.proc, arg_errors.Value());
+				 procID.cluster, procID.proc, arg_errors.c_str());
 		formatstr( errorString, "Failed to read job arguments: %s\n",
-				   arg_errors.Value() );
+				   arg_errors.c_str() );
 		return NULL;
 	}
 	if(args.Count() != 0) {
@@ -1596,7 +1592,7 @@ char *CreamJob::buildSubmitAd()
 
 	submitAd.Assign("outputsandboxbasedesturi", "gsiftp://localhost");
 
-	MyString ad_string;
+	std::string ad_string;
 	std::string ad_str;
 
 	classad::ClassAdUnParser unparser;
@@ -1620,8 +1616,8 @@ char *CreamJob::buildSubmitAd()
 		}
 		formatstr_cat(buf, "} ]");
 
-		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
-		ad_string.replaceString( "]", buf.c_str(), insert_pos );
+		int insert_pos = strrchr( ad_string.c_str(), ']' ) - ad_string.c_str();
+		replace_str( ad_string, "]", buf.c_str(), insert_pos );
 	}
 
 		//OUTPUT SANDBOX
@@ -1636,18 +1632,18 @@ char *CreamJob::buildSubmitAd()
 		}
 		formatstr_cat(buf, "} ]");
 
-		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
-		ad_string.replaceString( "]", buf.c_str(), insert_pos );
+		int insert_pos = strrchr( ad_string.c_str(), ']' ) - ad_string.c_str();
+		replace_str( ad_string, "]", buf.c_str(), insert_pos );
 	}
 
 		//ENVIRONMENT
 	Env envobj;
-	MyString env_errors;
-	if(!envobj.MergeFrom(jobAd,&env_errors)) {
+	std::string env_errors;
+	if(!envobj.MergeFrom(jobAd, env_errors)) {
 		dprintf(D_ALWAYS,"(%d.%d) Failed to read job environment: %s\n",
-				procID.cluster, procID.proc, env_errors.Value());
+				procID.cluster, procID.proc, env_errors.c_str());
 		formatstr(errorString,"Failed to read job environment: %s\n",
-							env_errors.Value());
+							env_errors.c_str());
 		return NULL;
 	}
 	char **env_vec = envobj.getStringArray();
@@ -1664,22 +1660,22 @@ char *CreamJob::buildSubmitAd()
 		}
 		formatstr_cat( buf, "} ]" );
 
-		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
-		ad_string.replaceString( "]", buf.c_str(), insert_pos );
+		int insert_pos = strrchr( ad_string.c_str(), ']' ) - ad_string.c_str();
+		replace_str( ad_string, "]", buf.c_str(), insert_pos );
 	}
 	deleteStringArray(env_vec);
 
 	if ( jobAd->LookupString( ATTR_CREAM_ATTRIBUTES, tmp_str ) ) {
 		formatstr( buf, "; %s ]", tmp_str.c_str() );
 
-		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
-		ad_string.replaceString( "]", buf.c_str(), insert_pos );
+		int insert_pos = strrchr( ad_string.c_str(), ']' ) - ad_string.c_str();
+		replace_str( ad_string, "]", buf.c_str(), insert_pos );
 	}
 
 /*
 	dprintf(D_FULLDEBUG, "SUBMITAD:\n%s\n",ad_string.Value()); 
 */
-	return strdup( ad_string.Value() );
+	return strdup( ad_string.c_str() );
 }
 
 bool CreamJob::IsConnectionError( const char *msg )
@@ -1800,7 +1796,7 @@ TransferRequest *CreamJob::MakeStageOutRequest()
 	if ( jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, tmp_str ) ) {
 		char *filename;
 		char *remaps = NULL;
-		MyString new_name;
+		std::string new_name;
 		jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
 
 		StringList output_files(tmp_str.c_str());
@@ -1814,7 +1810,7 @@ TransferRequest *CreamJob::MakeStageOutRequest()
 												new_name ) ) {
 				formatstr( buf, "%s%s",
 						 new_name[0] == '/' ? "file://" : iwd_str.c_str(),
-						 new_name.Value() );
+						 new_name.c_str() );
 			} else {
 				formatstr( buf, "%s%s",
 						 iwd_str.c_str(),

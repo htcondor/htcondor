@@ -65,6 +65,9 @@ extern DWORD start_as_service();
 extern void terminate(DWORD);
 #endif
 
+#ifdef LINUX
+#include <sys/prctl.h>
+#endif
 
 // local function prototypes
 void	init_params();
@@ -257,6 +260,7 @@ cleanup_memory( void )
 		free( FS_Preen );
 		FS_Preen = NULL;
 	}
+	daemons.UnRegisterAllDaemons();
 }
 
 #ifdef WIN32
@@ -490,6 +494,9 @@ void do_linux_kernel_tuning() {
 			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to dup /dev/null: %d.\n", errno );
 			exit( 1 );
 		}
+		if( fd > 0 ) {
+			close( fd );
+		}
 		fd = open( kernelTuningLogFile.c_str(), O_WRONLY | O_APPEND, 0644 );
 		if ((fd < 0) && (errno == ENOENT)) {
 			fd = open( kernelTuningLogFile.c_str(), O_WRONLY | O_APPEND | O_CREAT, 0644 );
@@ -505,6 +512,9 @@ void do_linux_kernel_tuning() {
 		if( dup2( fd, 2 ) == -1 ) {
 			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to dup log file '%s' to stderr: %d.\n", kernelTuningLogFile.c_str(), errno );
 			exit( 1 );
+		}
+		if( fd > 2 ) {
+			close( fd );
 		}
 
 		execl( kernelTuningScript.c_str(), kernelTuningScript.c_str(), (char *) NULL );
@@ -631,10 +641,10 @@ main_init( int argc, char* argv[] )
         // We'll give it an absolute time, though runfor is a 
         // relative time. This means that we don't have to update
         // the time each time we restart the daemon.
-		MyString runfor_env;
-		runfor_env.formatstr("%s=%ld", EnvGetName(ENV_DAEMON_DEATHTIME),
+		std::string runfor_env;
+		formatstr(runfor_env,"%s=%ld", EnvGetName(ENV_DAEMON_DEATHTIME),
 						   time(NULL) + (runfor * 60));
-		SetEnv(runfor_env.Value());
+		SetEnv(runfor_env.c_str());
     }
 
 	daemons.SetDefaultReaper();
@@ -906,7 +916,7 @@ agent_starter( ReliSock * s, Stream * )
 int
 handle_agent_fetch_log (ReliSock* stream) {
 
-	MyString daemon;
+	std::string daemon;
 	int  res = FALSE;
 
 	if( ! stream->code(daemon) ||
@@ -1013,21 +1023,21 @@ handle_shutdown_program( int cmd, Stream* stream )
 		EXCEPT( "Unknown command (%d) in handle_shutdown_program", cmd );
 	}
 
-	MyString name;
+	std::string name;
 	stream->decode();
 	if( ! stream->code(name) ) {
 		dprintf( D_ALWAYS, "Can't read program name in handle_shutdown_program\n" );
 	}
 
-	if ( name.IsEmpty() ) {
+	if ( name.empty() ) {
 		return FALSE;
 	}
 
 	// Can we find it in the configuration?
-	MyString	pname;
+	std::string	pname;
 	pname =  "master_shutdown_";
 	pname += name;
-	char	*path = param( pname.Value() );
+	char	*path = param( pname.c_str() );
 	if ( NULL == path ) {
 		dprintf( D_ALWAYS, "No shutdown program defined for '%s'\n", name.c_str() );
 		return FALSE;
@@ -1211,11 +1221,11 @@ init_daemon_list()
 	}
 	else {
 		if ( *dc_daemon_list == '+' ) {
-			MyString	dclist;
+			std::string	dclist;
 			dclist = default_dc_daemon_list;
 			dclist += ", ";
 			dclist += &dc_daemon_list[1];
-			dc_daemon_names.initializeFromString( dclist.Value() );
+			dc_daemon_names.initializeFromString( dclist.c_str() );
 		}
 		else {
 			dc_daemon_names.initializeFromString(dc_daemon_list);
@@ -1598,7 +1608,7 @@ invalidate_ads() {
 	SetMyTypeName( cmd_ad, QUERY_ADTYPE );
 	SetTargetTypeName( cmd_ad, MASTER_ADTYPE );
 	
-	MyString line;
+	std::string line;
 	std::string escaped_name;
 	char* default_name = MasterName ? ::strdup(MasterName) : NULL;
 	if(!default_name) {
@@ -1606,8 +1616,8 @@ invalidate_ads() {
 	}
 	
 	QuoteAdStringValue( default_name, escaped_name );
-	line.formatstr( "( TARGET.%s == %s )", ATTR_NAME, escaped_name.c_str() );
-	cmd_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
+	formatstr( line, "( TARGET.%s == %s )", ATTR_NAME, escaped_name.c_str() );
+	cmd_ad.AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
 	cmd_ad.Assign( ATTR_NAME, default_name );
 	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 	daemonCore->sendUpdates( INVALIDATE_MASTER_ADS, &cmd_ad, NULL, false );
@@ -1713,7 +1723,7 @@ run_preen_now()
 	char *args=NULL;
 	const char	*preen_base;
 	ArgList arglist;
-	MyString error_msg;
+	std::string error_msg;
 
 	dprintf(D_FULLDEBUG, "Entered run_preen.\n");
 	if ( preen_pid > 0 ) {
@@ -1729,8 +1739,8 @@ run_preen_now()
 	arglist.AppendArg(preen_base);
 
 	args = param("PREEN_ARGS");
-	if(!arglist.AppendArgsV1RawOrV2Quoted(args,&error_msg)) {
-		EXCEPT("ERROR: failed to parse preen args: %s",error_msg.Value());
+	if(!arglist.AppendArgsV1RawOrV2Quoted(args, error_msg)) {
+		EXCEPT("ERROR: failed to parse preen args: %s",error_msg.c_str());
 	}
 	free(args);
 
@@ -1742,6 +1752,71 @@ run_preen_now()
 					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
 	dprintf( D_ALWAYS, "Preen pid is %d\n", preen_pid );
 	return TRUE;
+}
+
+void
+create_dirs_at_master_startup()
+{
+#ifndef WIN32
+    //
+    // Create the necessary directories.
+    //
+
+    typedef struct {
+        const char * param;
+        unsigned int uid;
+        unsigned int gid;
+        mode_t mode;
+    } required_directories_t;
+
+    uid_t u = get_condor_uid();
+    gid_t g = get_condor_gid();
+
+    uid_t r = 0;
+    gid_t s = 0;
+    if(! can_switch_ids()) {
+        r= u;
+        s= g;
+    }
+
+	// Note: until such time that we create the parent directories, 
+	// be aware that the order of the below list is significant.  For instance,
+	// we will create LOCAL_DIR before we create subdirectories typically
+	// found in LOCAL_DIR like EXECUTE and SPOOL.
+    std::vector<required_directories_t> required_directories {
+        { "SEC_PASSWORD_DIRECTORY",         r, s, 00700 },
+        { "SEC_TOKEN_SYSTEM_DIRECTORY",     r, s, 00700 },
+        { "LOCAL_DIR",                      u, g, 00755 },
+        { "EXECUTE",                        u, g, 00755 },
+        { "SEC_CREDENTIAL_DIRECTORY_KRB",   r, s, 00755 },
+        { "SEC_CREDENTIAL_DIRECTORY_OAUTH", r, g, 02770 },
+        { "SPOOL",                          u, g, 00755 },
+        { "LOCAL_UNIV_EXECUTE",             u, g, 00755 },
+        { "LOCK",                           u, g, 00755 },
+        { "LOCAL_DISK_LOCK_DIR",            u, g, 01777 },  // typically never defined
+        { "LOG",                            u, g, 00755 },
+        { "RUN",                            u, g, 00755 }
+    };
+
+    struct stat sbuf;
+    for( const auto & dir : required_directories ) {
+        std::string name;
+        param( name, dir.param );
+        // fprintf( stderr, "%s (%s) %u %u %o\n", dir.param, name.c_str(), dir.uid, dir.gid, dir.mode );
+		if( name.empty() ) {
+			continue;
+		}
+		TemporaryPrivSentry tps(PRIV_ROOT);
+        if( stat( name.c_str(), &sbuf ) != 0 && errno == ENOENT ) {
+			// TODO: should we be calling mkdir_and_parents_if_neeed() instead of mkdir() ?
+            if( mkdir( name.c_str(), dir.mode ) == 0 ) {
+                dummyGlobal = chown( name.c_str(), dir.uid, dir.gid );
+                dummyGlobal = chmod( name.c_str(), dir.mode ); // Override umask
+            }
+        }
+    }
+#endif
+	return;
 }
 
 // this is the preen timer callback
@@ -1756,10 +1831,16 @@ RestartMaster()
 void
 main_pre_command_sock_init()
 {
+
+	// Create directories as needed... we need to do this as early as possible,
+	// but after daemonCore initializes the uids (priv) code and config code.
+	// So first thing in main_pre_command_sock_init() seems to be about the best spot.
+	create_dirs_at_master_startup();
+
 	/* Make sure we are the only copy of condor_master running */
 	char*  p;
 #ifndef WIN32
-	MyString lock_file;
+	std::string lock_file;
 
 	// see if a file is given explicitly
 	p = param ("MASTER_INSTANCE_LOCK");
@@ -1787,9 +1868,9 @@ main_pre_command_sock_init()
 			}
 		}
 	}
-	dprintf (D_FULLDEBUG, "Attempting to lock %s.\n", lock_file.Value() );
-	lock_or_except( lock_file.Value() );
-	dprintf (D_FULLDEBUG, "Obtained lock on %s.\n", lock_file.Value() );
+	dprintf (D_FULLDEBUG, "Attempting to lock %s.\n", lock_file.c_str() );
+	lock_or_except( lock_file.c_str() );
+	dprintf (D_FULLDEBUG, "Obtained lock on %s.\n", lock_file.c_str() );
 #endif
 
 	// Do any kernel tuning we've been configured to do.
@@ -1799,6 +1880,11 @@ main_pre_command_sock_init()
 #endif
 	}
 
+#ifdef LINUX
+	if (param_boolean("DISABLE_SETUID", false)) {
+		prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+	}
+#endif
 	// If using CREDENTIAL_DIRECTORY, blow away the CREDMON_COMPLETE file
 	// to force the credmon to refresh everything and to prevent the schedd
 	// from starting up until credentials are ready.
@@ -1843,7 +1929,6 @@ bool main_has_console()
     return false;
 }
 #endif
-
 
 int
 main( int argc, char **argv )
@@ -1892,37 +1977,6 @@ main( int argc, char **argv )
        } else {
           return (int)err;
        }
-    }
-#endif
-
-#ifdef LINUX
-    // Check for necessary directories if we were started by the system
-    if (getuid() == 0 && getppid() == 1) {
-        // If the condor user is in LDAP, systemd will silently fail to create
-        // these necessary directories at boot. The condor user and paths are
-        // hard coded here, because they match the systemd configuration.
-        struct stat sbuf;
-        struct passwd *pwbuf = getpwnam("condor");
-        if (pwbuf) {
-            if (stat("/var/run/condor", &sbuf) != 0 && errno == ENOENT) {
-                if (mkdir("/var/run/condor", 0775) == 0) {
-                    dummyGlobal = chown("/var/run/condor", pwbuf->pw_uid, pwbuf->pw_gid);
-                    dummyGlobal = chmod("/var/run/condor", 0775); // Override umask
-                }
-            }
-            if (stat("/var/lock/condor", &sbuf) != 0 && errno == ENOENT) {
-                if (mkdir("/var/lock/condor", 0775) == 0) {
-                    dummyGlobal = chown("/var/lock/condor", pwbuf->pw_uid, pwbuf->pw_gid);
-                    dummyGlobal = chmod("/var/lock/condor", 0775); // Override umask
-                }
-            }
-            if (stat("/var/lock/condor/local", &sbuf) != 0 && errno == ENOENT) {
-                if (mkdir("/var/lock/condor/local", 01777) == 0) {
-                    dummyGlobal = chown("/var/lock/condor/local", pwbuf->pw_uid, pwbuf->pw_gid);
-                    dummyGlobal = chmod("/var/lock/condor/local", 01777); // Override umask
-                }
-            }
-        }
     }
 #endif
 

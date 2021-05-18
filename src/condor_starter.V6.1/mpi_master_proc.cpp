@@ -131,10 +131,10 @@ MPIMasterProc::alterEnv()
 
     char *tmp;
 	Env envobject;
-	MyString env_errors;
-	if(!envobject.MergeFrom(JobAd,&env_errors)) {
+	std::string env_errors;
+	if(!envobject.MergeFrom(JobAd, env_errors)) {
 		dprintf( D_ALWAYS, "Failed to read environment from job: %s\n",
-				 env_errors.Value());
+				 env_errors.c_str());
 		return 0;
 	}
 
@@ -145,15 +145,15 @@ MPIMasterProc::alterEnv()
         return 0;
     }
 
-	MyString path;
-	MyString new_path;
+	std::string path;
+	std::string new_path;
 
 	new_path = condor_rsh;
 	new_path += ":";
 
 	if(envobject.GetEnv("PATH",path)) {
         // The user gave us a path in env.  Find & alter:
-        dprintf ( D_FULLDEBUG, "$PATH in ad:%s\n", path.Value() );
+        dprintf ( D_FULLDEBUG, "$PATH in ad:%s\n", path.c_str() );
 
 		new_path += path;
 	}
@@ -172,7 +172,7 @@ MPIMasterProc::alterEnv()
 			new_path = condor_rsh;
         }
     }
-	envobject.SetEnv("PATH",new_path.Value());
+	envobject.SetEnv("PATH",new_path.c_str());
     
         /* We want to add one little thing to the environment:
            We want to put the var MPI_MY_ADDRESS in here, 
@@ -192,23 +192,23 @@ MPIMasterProc::alterEnv()
 		// In case the user job is linked with a newer version of
 		// MPICH that honors the P4_RSHCOMMAND env var, let's set
 		// that, too.
-	MyString condor_rsh_command;
+	std::string condor_rsh_command;
 	condor_rsh_command = condor_rsh;
 	condor_rsh_command += "/rsh";
-	envobject.SetEnv( "P4_RSHCOMMAND", condor_rsh_command.Value());
+	envobject.SetEnv( "P4_RSHCOMMAND", condor_rsh_command.c_str());
 
 	free( condor_rsh );
 
 	if(IsFulldebug(D_FULLDEBUG)) {
-		MyString env_str;
-		envobject.getDelimitedStringForDisplay(&env_str);
-		dprintf ( D_FULLDEBUG, "New env: %s\n", env_str.Value() );
+		std::string env_str;
+		envobject.getDelimitedStringForDisplay( env_str);
+		dprintf ( D_FULLDEBUG, "New env: %s\n", env_str.c_str() );
 	}
 
         // now put the env back into the JobAd:
-	if(!envobject.InsertEnvIntoClassAd(JobAd,&env_errors)) {
+	if(!envobject.InsertEnvIntoClassAd(JobAd, env_errors)) {
 		dprintf( D_ALWAYS, "Unable to update env! Aborting: %s\n",
-				 env_errors.Value());
+				 env_errors.c_str());
 		return 0;
 	}
 
@@ -254,17 +254,17 @@ MPIMasterProc::preparePortFile( void )
 		// MPICH puts the port in here.
 
 	Env envobject;
-	MyString env_errors;
+	std::string env_errors;
 
-	if(!envobject.MergeFrom(JobAd,&env_errors)) {
+	if(!envobject.MergeFrom(JobAd, env_errors)) {
 			// Maybe this is a little harsh, but it should never 
 			// happen.   
-		EXCEPT( "MPI Master node failed to initialize job environment: %s",env_errors.Value() );
+		EXCEPT( "MPI Master node failed to initialize job environment: %s",env_errors.c_str() );
 	}
 	envobject.SetEnv("MPICH_EXTRA",port_file);
 
-	if(!envobject.InsertEnvIntoClassAd(JobAd,&env_errors)) {
-		EXCEPT( "MPI Master failed to update job environment: %s",env_errors.Value() );
+	if(!envobject.InsertEnvIntoClassAd(JobAd, env_errors)) {
+		EXCEPT( "MPI Master failed to update job environment: %s",env_errors.c_str() );
 	}
 	return true;
 }

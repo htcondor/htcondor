@@ -63,7 +63,7 @@ class MyString
 	MyString(const char* S);
 
 	/** Constructor to copy a std::string */
-	MyString(const std::string& S);
+	/* explicit */ MyString(const std::string& S);
 
 	/** Copy constructor */
 	MyString(const MyString& S);
@@ -91,7 +91,7 @@ class MyString
 	int Capacity()        const { return capacity;           }
 
 	/** Returns a strdup()ed C string. */
-	char *StrDup() const { return strdup( Value() );         }
+	char *StrDup() const { return strdup( c_str() );         }
 
 	/** alternate names that match std::string method names */
 	int length() const { return Len; }
@@ -100,7 +100,7 @@ class MyString
 	void set(const char* p, int len) { assign_str(p, len); }
 	void append(const char *p, int len) { append_str(p, len); }
 	bool empty() const { return (0 == Len); }
-	const char * c_str() const { return Value(); }
+	const char * c_str() const { return (Data ? Data : ""); }
 
 	/** Returns string. 
 		Note that it never returns NULL, but will return an 
@@ -298,10 +298,6 @@ class MyString
 	 */
 	bool remove_prefix(const char * prefix);
 
-	/** Remove all the whitespace from this string
-	*/
-	void RemoveAllWhitespace( void );
-
 	// ----------------------------------------
 	//           Serialization helpers
 	// ----------------------------------------
@@ -440,7 +436,7 @@ public:
   MyStringTokener &operator=(MyStringTokener &&rhs) noexcept ;
   ~MyStringTokener();
   void Tokenize(const char * str);
-  void Tokenize(const MyString & str) { Tokenize(str.Value()); }
+  void Tokenize(const MyString & str) { Tokenize(str.c_str()); }
   const char *GetNextToken(const char *delim, bool skipBlankTokens);
 protected:
   char *tokenBuf;
@@ -462,7 +458,7 @@ public:
 	//@{ 
 
 	/** Initialize the tokenizing of this string.  */
-	void Tokenize() { tok.Tokenize(Value()); }
+	void Tokenize() { tok.Tokenize(c_str()); }
 
 	/** Get the next token, with tokens separated by the characters
 	    in delim.  Note that the value of delim may change from call to
@@ -566,6 +562,7 @@ public:
 	// returns true if the separator was found, false if not.
 	// if return value is true, the val will be set to the string, if false val is unchanged.
 	bool deserialize_string(MyString & val, const char * sep);
+	bool deserialize_string(std::string & val, const char * sep);
 	// return the current deserialize offset from the start of the string
 	size_t offset() { return (m_str && m_p) ? (m_p - m_str) : 0; }
 	// return the current deserialization pointer into the string.
@@ -600,6 +597,8 @@ public:
 	MyStringFpSource(FILE*_fp=NULL, bool delete_fp=false) : fp(_fp), owns_fp(delete_fp) {}
 	virtual ~MyStringFpSource() { if (fp && owns_fp) fclose(fp); fp = NULL; };
 	virtual bool readLine(MyString & str, bool append = false);
+	// append can't have a default arg until the other overload goes away
+	virtual bool readLine(std::string & str, bool append);
 	virtual bool isEof();
 protected:
 	FILE* fp;
@@ -617,6 +616,7 @@ public:
 	int          pos() const { return ix; }
 	void rewind() { ix = 0; }
 	virtual bool readLine(MyString & str, bool append = false);
+	virtual bool readLine(std::string & str, bool append = false);
 	virtual bool isEof();
 protected:
 	char * ptr;

@@ -21,7 +21,6 @@
 #define TRANSFERD_H
 
 #include "extArray.h"
-#include "MyString.h"
 #include "file_transfer.h"
 #include "condor_transfer_request.h"
 #include "exit.h"
@@ -60,42 +59,42 @@ class Features
 		
 		void set_schedd_sinful(char *sinful)
 		{
-			m_schedd_sinful = sinful;
+			m_schedd_sinful = sinful ? sinful : "";
 		}
 
-		void set_schedd_sinful(MyString sinful)
+		void set_schedd_sinful(std::string sinful)
 		{
 			m_schedd_sinful = sinful;
 		}
 
-		MyString get_schedd_sinful(void)
+		std::string get_schedd_sinful(void)
 		{
 			return m_schedd_sinful;
 		}
 		
 		// XXX DEMO hacking
-		void set_shadow_direction(MyString direction)
+		void set_shadow_direction(std::string direction)
 		{
 			m_shad_dir = direction;
 		}
 
 		// XXX DEMO hacking
-		MyString get_shadow_direction(void)
+		std::string get_shadow_direction(void)
 		{
 			return m_shad_dir;
 		}
 
 		void set_id(char *id)
 		{
-			m_id = id;
+			m_id = id ? id : "";
 		}
 
-		void set_id(MyString id)
+		void set_id(std::string id)
 		{
 			m_id = id;
 		}
 
-		MyString get_id(void)
+		std::string get_id(void)
 		{
 			return m_id;
 		}
@@ -129,7 +128,7 @@ class Features
 
 		// --schedd <sinfulstring>
 		// The schedd with which the transferd registers itself.
-		MyString m_schedd_sinful;
+		std::string m_schedd_sinful;
 
 		// --stdin
 		// Presence of this flag says that the transferd will *also* grab
@@ -141,7 +140,7 @@ class Features
 		// --id <ascii_key>
 		// The identity that the schedd will use to match this transferd
 		// with the request for it.
-		MyString m_id;
+		std::string m_id;
 
 		// --timeout <number of seconds>
 		// The number of seconds the transferd will wait while its transfer
@@ -156,7 +155,7 @@ class Features
 		// In this mode, the transferd must get an active request on stdin.
 		// Then the transferd will simply init a file transfer object for
 		// connecting to the shadow and pass it the job ad supplied.
-		MyString m_shad_dir;
+		std::string m_shad_dir;
 };
 
 class TransferD : public Service

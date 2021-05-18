@@ -44,11 +44,15 @@ my $CHECK_NATIVE_TASK     = "remote_task-check_native";
 my $BUILD_TESTS_TASK      = "remote_task-build_tests";
 my $RUN_UNIT_TESTS        = "remote_task-run_unit_tests";
 my $COVERITY_ANALYSIS     = "remote_task-coverity_analysis";
+my $EXTRACT_TARBALLS_TASK = "remote_task-extract_tarballs";
 
 # autoflush our STDOUT
 $| = 1;
 
 my $boos = 1; # build out of source
+if ($ENV{NMI_PLATFORM} =~ /AmazonLinux|CentOS|Fedora|Debian|Ubuntu/) {
+	$boos = 0; # No need to shuffle stuff around streamlined builds
+}
 if ($boos) {
     # rewrite the directory structures so we can do out of source builds.
 	# we start in dir_nnn/userdir, which is the git clone
@@ -65,18 +69,26 @@ if ($boos) {
 	mkdir 'sources';
 	open(FH, '>', 'swap_userdir.cmd') or print "Cant open swap_userdir.cmd for writing: $!\n";
 	if ($ENV{NMI_PLATFORM} =~ /_win/i) {
-		print FH '"userdir\msconfig\tar.exe" -czf swap_userdir.tgz userdir/BUILD-ID userdir/msconfig userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
+		print FH 'mkdir sources\msconfig' . "\n";
+		print FH 'for %%I in (userdir\msconfig\*) do copy %%I sources\msconfig\%%~nxI' . "\n";
+		print FH 'move userdir\msconfig\WiX sources\msconfig\WiX' . "\n";
+		print FH '"sources\msconfig\tar.exe" -czf swap_userdir.tgz userdir/BUILD-ID userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
 		print FH 'del userdir\condor-*.tgz' . "\n";
-		print FH 'move userdir\* sources' . "\n";
+		print FH 'for %%I in (userdir\*) do move %%I sources' . "\n";
 		print FH 'move userdir\src sources\src' . "\n";
 		print FH 'move userdir\bindings sources\bindings' . "\n";
 		print FH 'move userdir\docs sources\docs' . "\n";
 		print FH 'move userdir\view sources\view' . "\n";
 		print FH 'move userdir\build sources\build' . "\n";
 		print FH 'move userdir\externals sources\externals' . "\n";
-		print FH 'move userdir\msconfig sources\msconfig' . "\n";
 		print FH 'move userdir\nmi_tools sources\nmi_tools' . "\n";
+		print FH 'move userdir\src sources\src' . "\n";
 		print FH '"sources\msconfig\tar.exe" -xvf swap_userdir.tgz' . "\n";
+		# try the necessary directories again, because sometimes we get AccessDenied the first time.
+		print FH 'move userdir\docs sources\docs' . "\n";
+		print FH 'move userdir\view sources\view' . "\n";
+		print FH 'move userdir\build sources\build' . "\n";
+		print FH 'move userdir\externals sources\externals' . "\n";
 	} else {
 		print FH '#!/bin/sh' . "\n";
 		print FH 'tar czf swap_userdir.tgz userdir/BUILD-ID userdir/nmi_tools userdir/src/condor_examples userdir/src/condor_tests' . "\n";
@@ -118,6 +130,12 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     print TASKLIST "$TAR_TESTS_TASK 4h\n";
     print TASKLIST "$RUN_UNIT_TESTS 4h\n";
 }    
+elsif ($ENV{NMI_PLATFORM} =~ /AmazonLinux|CentOS|Fedora|Debian|Ubuntu/) {
+    print TASKLIST "$NATIVE_TASK 4h\n";
+    print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
+    print TASKLIST "$EXTRACT_TARBALLS_TASK 4h\n";
+    print TASKLIST "$CHECK_TAR_TASK 4h\n";
+}
 else {
     # Everything else
     print TASKLIST "$EXTERNALS_TASK 4h\n";
@@ -163,7 +181,9 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	print FH '#!/bin/sh' . "\n";
 	print FH 'pwd && ls -l' . "\n";
 	print FH 'ls -l ..' . "\n";
-	print FH 'ls -l ../sources' . "\n";
+	if ($boos) {
+		print FH 'ls -l ../sources' . "\n";
+	}
 	close(FH);
 	chmod(0777,'probe.cmd');
 }

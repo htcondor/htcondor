@@ -6,9 +6,6 @@ concepts that do not belong in other chapters.
 
 ClassAds and the ClassAd language are presented.
 
-Description and usage of COD (Computing on Demand) extensions to
-HTCondor are presented.
-
 The various hooks that HTCondor implements are described.
 
 The many varieties of logs used by HTCondor are listed and described.
@@ -21,4 +18,4 @@ The many varieties of logs used by HTCondor are listed and described.
    transforms
    hooks
    logging
-   computing-on-demand
+   print-formats

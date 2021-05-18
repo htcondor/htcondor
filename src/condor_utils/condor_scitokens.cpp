@@ -211,8 +211,15 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 	}
 
 	if (ident && IsDebugCategory(D_AUDIT)) {
-		auto jwt = jwt::decode(scitoken_str);
-		dprintf(D_AUDIT, ident, "Examining SciToken with payload %s.\n", jwt.get_payload().c_str());
+		try {
+			auto jwt = jwt::decode(scitoken_str);
+			dprintf(D_AUDIT, ident, "Examining SciToken with payload %s.\n", jwt.get_payload().c_str());
+		} catch (...) {
+			err.pushf("SCITOKENS", 2, "Failed to decode scitoken for audit log.");
+			dprintf(D_AUDIT, ident, "Failed to decode a SciToken in order to examine it - rejecting.\n");
+			return false;
+
+		}
 	}
 
 	SciToken token = nullptr;

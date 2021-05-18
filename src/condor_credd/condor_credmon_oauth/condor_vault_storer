@@ -1,0 +1,205 @@
+#!/bin/bash
+#
+# Obtain and store condor credentials for each given oath_service 
+# Can be run automatically from condor_submit when configured as
+#   SEC_CREDENTIAL_STORER.
+
+ME="${0##*/}"
+
+ARGS=("$@")
+
+# When condor_submit launches this the cursor is not at the beginning
+#   of a new line, so always send a newline before anything else to
+#   stdout or stderr.
+NEWLINENEEDED=true
+newlineifneeded()
+{
+    if $NEWLINENEEDED; then
+        echo
+        NEWLINENEEDED=false
+    fi
+}
+
+usage()
+{
+    newlineifneeded
+    echo "Usage: $ME [-vd] oauth_service ..."
+    echo "  -v shows more progress than normal" 
+    echo "  -d shows a lot of debug information" 
+    echo "  Each oauth_service is an issuer optionally followed by underscore and role"
+    echo "  Options may be added to each oauth_service:"
+    echo "    &handle=<name>       A name to be added to the credential"
+    echo "    &scope=<scopes>      A comma-separated list of scopes to request"
+    echo "    &audience=<audience> A token audience to request"
+    exit 1
+} >&2
+
+fatal()
+{
+    newlineifneeded
+    echo "$ME: $@"
+    if [ "$VERBOSE" = "" ]; then
+        echo "  More details might be available by running"
+        echo "    $ME -v $(printf '"%s" ' "${ARGS[@]}")"
+    fi
+    exit 1
+} >&2
+
+verbose()
+{
+    if [ -n "$VERBOSE" ]; then
+        newlineifneeded
+        echo "$@"
+    fi >&2
+}
+
+VERBOSE=
+while getopts "dv" opt; do
+    case ${opt} in
+        d) VERBOSE="-d";;
+        v) VERBOSE="-v";;
+        \?) usage;;
+    esac
+done
+shift $((OPTIND -1))
+
+if [ "$#" = 0 ]; then
+    usage
+fi
+
+STOREOUT=/dev/null
+if [ "" != "$VERBOSE" ]; then
+    STOREOUT=/dev/stdout
+fi
+
+CONDOROPTS="$(condor_config_val SEC_CREDENTIAL_GETTOKEN_OPTS 2>/dev/null)"
+if [ -z "$CONDOROPTS" ] && [ -z "$HTGETTOKENOPTS" ]; then
+    fatal 'Neither SEC_CREDENTIAL_GETTOKEN_OPTS condor value nor $HTGETTOKENOPTS environment set'
+fi
+
+# Keep the standard duration vault token in $VTOKEN-$SERVICE to make
+#  sure that credmon has a long-duration one, but copy it to $VTOKEN if a
+#  new one is generated.
+ID="`id -u`"
+VTOKEN="/tmp/vt_u$ID"
+BTOKEN=""
+if [ -z "$BEARER_TOKEN_FILE" ]; then
+    # Also store the bearer token with a -$SERVICE suffix
+    BTOKEN="${XDG_RUNTIME_DIR:-/tmp}/bt_u$ID"
+fi
+
+NL="
+"
+
+for REQUEST; do 
+    SHOWSTORING=false
+    if [ -n "$VERBOSE" ]; then
+        SHOWSTORING=true
+    fi
+    IFS="&" read -r -a PARTS <<< "$REQUEST"
+    SERVICE="${PARTS[0]}"
+    ISSUER="${SERVICE%_*}"
+    # using arrays for options works better for quoting
+    read -r -a OPTS <<< "$CONDOROPTS"
+    OPTS+=("-i" "$ISSUER")
+    if [ "$SERVICE" != "$ISSUER" ]; then
+        ROLE="${SERVICE#*_}"
+        OPTS+=("-r" "$ROLE")
+        if [ "$SERVICE" != "${ISSUER}_$ROLE" ]; then
+            fatal "Only one underscore allowed in use_oauth_services name"
+        fi
+    fi
+    STOREOPTS=()
+    for PART in "${PARTS[@]:1}"; do
+        VAL="${PART#*=}"
+        case "$PART" in
+            handle=*)
+                SERVICE+="_$VAL";;
+            scopes=*)
+                STOREOPTS+=("-S" "$VAL")
+                OPTS+=("--scopes=$VAL");;
+            audience=*)
+                STOREOPTS+=("-A" "$VAL")
+                OPTS+=("--audience=$VAL");;
+        esac
+    done
+    STOREOPTS=("-s" "$SERVICE" "${STOREOPTS[@]}")
+    verbose "Checking if ${STOREOPTS[@]} credentials exist"
+    STOREMSG="`condor_store_cred query-oauth "${STOREOPTS[@]}" >$STOREOUT 2>&1`"
+    case $? in
+        0) ;;
+        1)  if [ -n "$STOREMSG" ]; then
+                verbose "$STOREMSG"
+            fi
+            if [ -f "$VTOKEN-$SERVICE" ]; then
+                verbose "Removing $VTOKEN-$SERVICE because there are no $SERVICE credentials stored"
+                rm -f "$VTOKEN-$SERVICE"
+            fi;;
+        2) fatal "Credentials exist that do not match the request.
+They can be removed by
+  condor_store_cred delete-oauth -s $SERVICE
+but make sure no other job is using them."
+            ;;
+        *) fatal "${STOREMSG}${NL}Querying condor credentials failed";;
+    esac
+    if [ -n "$BTOKEN" ]; then
+        OPTS=("-o" "$BTOKEN-$SERVICE" "${OPTS[@]}")
+    fi
+    OPTS=("--vaulttokenttl=28d" "${OPTS[@]}" "--vaulttokeninfile=$VTOKEN-$SERVICE" "--vaulttokenfile=/dev/stdout" "--showbearerurl")
+    verbose "Attempting to get tokens for $SERVICE"
+    # First attempt to get tokens quietly without oidc
+    CRED="`htgettoken "${OPTS[@]}" --nooidc ${VERBOSE:--q}`"
+    if [ $? != 0 ]; then
+        # OIDC authentication probably needed, so remove -q to tell the user
+        #  what is happening
+        SHOWSTORING=true
+        newlineifneeded
+        echo "Authentication needed for $SERVICE" >&2
+        CRED="`htgettoken "${OPTS[@]}" $VERBOSE`"
+        if [ $? != 0 ]; then
+            fatal "htgettoken failed"
+        fi
+    fi
+
+    if [ -n "$BTOKEN" ] && [ -f $BTOKEN-$SERVICE ]; then
+        verbose "Copying bearer token to $BTOKEN"
+        # Copy bearer token to $BTOKEN atomically
+        TMPFILE="`mktemp $BTOKEN.XXXXXXXXXX`"
+        cat $BTOKEN-$SERVICE >$TMPFILE
+        mv $TMPFILE $BTOKEN
+    fi
+
+    if ! [[ "$CRED" =~ ^s\..* ]]; then
+        # No new vault token was generated
+        continue
+    fi 
+
+    # A new long-duration vault token was received, followed by bearer URL
+    # Exchange vault token for a shorter duration vault token on disk
+    # Normally do this quietly
+    echo ${CRED%$NL*}|htgettoken $CONDOROPTS --nobearertoken --vaulttokeninfile=/dev/stdin "--vaulttokenfile=$VTOKEN-$SERVICE" ${VERBOSE:--q} >&2
+    if [ $? != 0 ]; then
+        fatal "Failed to exchange vault token"
+    fi
+
+    verbose "Copying vault token to $VTOKEN"
+    TMPFILE="`mktemp $VTOKEN.XXXXXXXXXX`"
+    cat $VTOKEN-$SERVICE >$TMPFILE
+    mv $TMPFILE $VTOKEN
+
+    if $SHOWSTORING; then
+        echo "Storing condor credentials for $SERVICE" >&2
+    fi
+    echo "$CRED"|(
+        # convert the two lines to json
+        read TOK
+        read URL
+        echo "{"
+        echo "  \"vault_token\": \"$TOK\","
+        echo "  \"vault_url\": \"$URL\""
+        echo "}"
+        )|condor_store_cred add-oauth "${STOREOPTS[@]}" -i - >$STOREOUT
+    if [ $? != 0 ]; then
+        fatal "Failed to store condor credentials for $SERVICE"
+    fi
+done

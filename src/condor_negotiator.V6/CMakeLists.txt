@@ -26,7 +26,7 @@ NegotiatorPluginManager.cpp
 )
 
 if (UNIX)
-		set_source_files_properties(matchmaker.cpp main.cpp Accountant.cpp GroupEntry.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
+		set_source_files_properties(matchmaker.cpp main.cpp Accountant.cpp GroupEntry.cpp hgq_group_tester.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
 endif(UNIX)
 
 condor_daemon( EXE condor_negotiator SOURCES "${negotiatorElements}"
@@ -37,3 +37,4 @@ condor_exe_test( test_protocol_matching
   "${CONDOR_LIBS}" )
 
 condor_exe(accountant_log_fixer "accountant_log_fixer.cpp" ${C_LIBEXEC} "" OFF)
+#condor_exe(hgq_group_tester "hgq_group_tester.cpp;GroupEntry.cpp" ${C_BIN} "${CONDOR_LIBS}" OFF)

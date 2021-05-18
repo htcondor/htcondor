@@ -185,7 +185,7 @@ public:
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		*/
-	bool monitorLogFile(MyString logfile, bool truncateIfFirst,
+	bool monitorLogFile(const MyString & logfile, bool truncateIfFirst,
 				CondorError &errstack);
 
 		/** Unmonitor the given log file
@@ -193,7 +193,7 @@ public:
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		*/
-	bool unmonitorLogFile(MyString logfile, CondorError &errstack);
+	bool unmonitorLogFile(const MyString & logfile, CondorError &errstack);
 
 		/** Returns the number of log files we're actively monitoring
 			at the present time.

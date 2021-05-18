@@ -22,7 +22,6 @@
 #define VM_GAHP_REQUEST_H
 
 #include "condor_common.h"
-#include "MyString.h"
 #include "vmgahp_common.h"
 
 class VMRequest {
@@ -33,9 +32,9 @@ class VMRequest {
 	bool m_has_result;
 	bool m_is_success;
 
-	MyString m_raw_cmd;
+	std::string m_raw_cmd;
 	Gahp_Args m_args;
-	MyString m_result;
+	std::string m_result;
 };
 
 #endif /* VM_GAHP_REQUEST_H */

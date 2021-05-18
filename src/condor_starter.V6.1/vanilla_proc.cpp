@@ -180,7 +180,7 @@ VanillaProc::StartJob()
 	ArgList		arguments;
 	std::string	filename;
 	std::string	jobname;
-	MyString	error;
+	std::string error;
 	
 	if ( extension && !java_universe && !binary_executable ) {
 
@@ -251,15 +251,14 @@ VanillaProc::StartJob()
 			/** We've moved the script to argv[1], so we need to 
 				add	the remaining arguments to positions argv[2]..
 				argv[/n/]. */
-			if ( !arguments.AppendArgsFromClassAd ( JobAd, &error ) ||
-				 !arguments.InsertArgsIntoClassAd ( JobAd, NULL, 
-				&error ) ) {
+			if ( !arguments.AppendArgsFromClassAd ( JobAd, error ) ||
+				 !arguments.InsertArgsIntoClassAd ( JobAd, NULL, error ) ) {
 
 				dprintf (
 					D_ALWAYS,
 					"VanillaProc::StartJob(): ERROR: failed to "
 					"get arguments from job ad: %s\n",
-					error.Value () );
+					error.c_str () );
 
 				return FALSE;
 
@@ -332,7 +331,7 @@ VanillaProc::StartJob()
 	// Determine the cgroup
 	std::string cgroup_base;
 	param(cgroup_base, "BASE_CGROUP", "");
-	MyString cgroup_str;
+	std::string cgroup_str;
 	const char *cgroup = NULL;
 		/* Note on CONDOR_UNIVERSE_LOCAL - The cgroup setup code below
 		 *  requires a unique name for the cgroup. It relies on
@@ -351,7 +350,7 @@ VanillaProc::StartJob()
 		 *  out. -matt 7 nov '12
 		 */
 	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_base.length() && can_switch_ids() && has_sysadmin_cap()) {
-		MyString cgroup_uniq;
+		std::string cgroup_uniq;
 		std::string starter_name, execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
 			// Note: Starter is a global variable from os_proc.cpp
@@ -362,14 +361,14 @@ VanillaProc::StartJob()
 			starter_name = buf;
 		}
 		//ASSERT (starter_name.size());
-		cgroup_uniq.formatstr("%s_%s", execute_str.c_str(), starter_name.c_str());
+		formatstr(cgroup_uniq, "%s_%s", execute_str.c_str(), starter_name.c_str());
 		const char dir_delim[2] = {DIR_DELIM_CHAR, '\0'};
-		cgroup_uniq.replaceString(dir_delim, "_");
-		cgroup_str.formatstr("%s%ccondor%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
-			cgroup_uniq.Value());
+		replace_str(cgroup_uniq, dir_delim, "_");
+		formatstr(cgroup_str, "%s%ccondor%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
+			cgroup_uniq.c_str());
 		cgroup_str += this->CgroupSuffix();
 		
-		cgroup = cgroup_str.Value();
+		cgroup = cgroup_str.c_str();
 		ASSERT (cgroup != NULL);
 		fi.cgroup = cgroup;
 		dprintf(D_FULLDEBUG, "Requesting cgroup %s for job.\n", cgroup);
@@ -396,13 +395,13 @@ VanillaProc::StartJob()
                        chroot_spec.Tokenize();
                        const char * chroot_name = chroot_spec.GetNextToken("=", false);
                        if (chroot_name == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.c_str());
                        }
                        const char * next_dir = chroot_spec.GetNextToken("=", false);
                        if (chroot_name == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.Value());
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.c_str());
                        }
-                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir, chroot_spec.Value());
+                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir, chroot_spec.c_str());
                        if (IsDirectory(next_dir) && chroot_name && (strcmp(requested_chroot_name.c_str(), chroot_name) == 0)) {
                                acceptable_chroot = true;
                                requested_chroot = next_dir;
@@ -466,16 +465,17 @@ VanillaProc::StartJob()
 
 	// On Linux kernel 2.4.19 and later, we can give each job its
 	// own FS mounts.
-	auto_free_ptr mount_under_scratch(param("MOUNT_UNDER_SCRATCH"));
-	if (mount_under_scratch) {
+	std::string mount_under_scratch;
+	param(mount_under_scratch, "MOUNT_UNDER_SCRATCH");
+	if (! mount_under_scratch.empty()) {
 		// try evaluating mount_under_scratch as a classad expression, if it is
 		// an expression it must return a string. if it's not an expression, just
 		// use it as a string (as we did before 8.3.6)
 		classad::Value value;
-		if (JobAd->EvaluateExpr(mount_under_scratch.ptr(), value)) {
+		if (JobAd->EvaluateExpr(mount_under_scratch.c_str(), value)) {
 			const char * pval = NULL;
 			if (value.IsStringValue(pval)) {
-				mount_under_scratch.set(strdup(pval));
+				mount_under_scratch = pval;
 			} else {
 				// was an expression, but not a string, so report and error and fail.
 				dprintf(D_ALWAYS | D_ERROR,
@@ -493,13 +493,13 @@ VanillaProc::StartJob()
 		// prepend /tmp, /var/tmp to whatever admin wanted. don't worry
 		// if admin already listed /tmp etc - subdirs can appear twice
 		// in this list because AddMapping() ok w/ duplicate entries
-		MyString buf("/tmp,/var/tmp,");
-		buf += mount_under_scratch.ptr();
-		mount_under_scratch.set(buf.StrDup());
+		std::string buf("/tmp,/var/tmp,");
+		buf += mount_under_scratch;
+		mount_under_scratch = buf;
 	}
 
 	// mount_under_scratch only works with rootly powers
-	if (mount_under_scratch && can_switch_ids() && has_sysadmin_cap() && (job_universe != CONDOR_UNIVERSE_LOCAL)) {
+	if (! mount_under_scratch.empty() && can_switch_ids() && has_sysadmin_cap() && (job_universe != CONDOR_UNIVERSE_LOCAL)) {
 		const char* working_dir = Starter->GetWorkingDir(0);
 
 		if (IsDirectory(working_dir)) {
@@ -516,11 +516,20 @@ VanillaProc::StartJob()
 					mount_list.deleteCurrent();
 					continue;
 				}
+
 				// Gah, I wish I could throw an exception to clean up these nested if statements.
 				if (IsDirectory(next_dir)) {
-					MyString fulldirbuf;
+					std::string fulldirbuf;
 					const char * full_dir = dirscat(working_dir, next_dir, fulldirbuf);
+
 					if (full_dir) {
+							// If the execute dir is under any component of MOUNT_UNDER_SCRATCH,
+							// bad things happen, so give up.
+						if (fulldirbuf.find(next_dir) == 0) {
+							dprintf(D_ALWAYS, "Can't bind mount %s under execute dir %s -- skipping MOUNT_UNDER_SCRATCH\n", next_dir, full_dir);
+							continue;
+						}
+
 						if (!mkdir_and_parents_if_needed( full_dir, S_IRWXU, PRIV_USER )) {
 							dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir);
 							delete fs_remap;
@@ -547,7 +556,6 @@ VanillaProc::StartJob()
 			delete fs_remap;
 			return FALSE;
 		}
-		mount_under_scratch.clear();
 	}
 #endif
 
@@ -573,7 +581,7 @@ VanillaProc::StartJob()
 
 		// When PID Namespaces are enabled, need to run the job
 		// under the condor_pid_ns_init program, so that signals
-		// propagate through to the child.  
+		// propagate through to the child.
 		// Be aware that StartJob() can be called repeatedly in the
 		// case of a self-checkpointing job, so be careful to only make
 		// modifications to the job classad once.
@@ -582,21 +590,21 @@ VanillaProc::StartJob()
 		// via an environment variable
 		if (!previously_setup_for_pid_namespace && param_boolean("USE_PID_NAMESPACE_INIT", true)) {
 			Env env;
-			MyString env_errors;
-			MyString arg_errors;
+			std::string env_errors;
+			std::string arg_errors;
 			std::string filename;
 
 			filename = Starter->GetWorkingDir(0);
 			filename += "/.condor_pid_ns_status";
-		
-			if (!env.MergeFrom(JobAd, &env_errors)) {
+
+			if (!env.MergeFrom(JobAd,  env_errors)) {
 				dprintf(D_ALWAYS, "Cannot merge environ from classad so cannot run condor_pid_ns_init\n");
 				delete fs_remap;
 				return 0;
 			}
 			env.SetEnv("_CONDOR_PID_NS_INIT_STATUS_FILENAME", filename);
 
-			if (!env.InsertEnvIntoClassAd(JobAd, &env_errors)) {
+			if (!env.InsertEnvIntoClassAd(JobAd,  env_errors)) {
 				dprintf(D_ALWAYS, "Cannot Insert environ from classad so cannot run condor_pid_ns_init\n");
 				delete fs_remap;
 				return 0;
@@ -613,13 +621,13 @@ VanillaProc::StartJob()
 
 			JobAd->LookupString(ATTR_JOB_CMD, cmd);
 			args.AppendArg(cmd);
-			if (!args.AppendArgsFromClassAd(JobAd, &arg_errors)) {
+			if (!args.AppendArgsFromClassAd(JobAd, arg_errors)) {
 				dprintf(D_ALWAYS, "Cannot Append args from classad so cannot run condor_pid_ns_init\n");
 				delete fs_remap;
 				return 0;
 			}
 
-			if (!args.InsertArgsIntoClassAd(JobAd, NULL, & arg_errors)) {
+			if (!args.InsertArgsIntoClassAd(JobAd, NULL, arg_errors)) {
 				dprintf(D_ALWAYS, "Cannot Insert args into classad so cannot run condor_pid_ns_init\n");
 				delete fs_remap;
 				return 0;
@@ -747,6 +755,12 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	if (usage->io_wait >= 0.0) {
 		ad->Assign(ATTR_IO_WAIT, usage->io_wait);
 	}
+
+#ifdef LINUX
+	if (usage->m_instructions > 0) {
+		ad->Assign(ATTR_JOB_CPU_INSTRUCTIONS, usage->m_instructions);
+	}
+#endif
 
 
 		// Update our knowledge of how many processes the job has

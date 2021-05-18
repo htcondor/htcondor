@@ -176,15 +176,15 @@ char *
 globusJobId( const char *contact )
 {
 	static char buff[1024];
-	MyString url_scheme;
-	MyString url_host;
-	MyString url_path;
+	std::string url_scheme;
+	std::string url_host;
+	std::string url_path;
 	int url_port;
 
 	snprintf( buff, sizeof(buff), "%s", contact );
 	filename_url_parse( buff, url_scheme, url_host, &url_port, url_path );
 
-	snprintf( buff, sizeof(buff), "%s://%s%s", url_scheme.Value(), url_host.Value(), url_path.Value() );
+	snprintf( buff, sizeof(buff), "%s://%s%s", url_scheme.c_str(), url_host.c_str(), url_path.c_str() );
 	return buff;
 }
 
@@ -217,10 +217,8 @@ orphanCallbackHandler()
 		return;
 	}
 
-	GlobusResource *next_resource;
-	GlobusResource::ResourcesByName.startIterations();
-
-	while ( GlobusResource::ResourcesByName.iterate( next_resource ) != 0 ) {
+	for (auto &elem : GlobusResource::ResourcesByName) {
+		GlobusResource *next_resource = elem.second;
 		if ( next_resource->monitorGramJobId && !strcmp( orphan->job_contact, next_resource->monitorGramJobId ) ) {
 			next_resource->gridMonitorCallback( orphan->state,
 												orphan->errorcode );
@@ -257,10 +255,8 @@ gramCallbackHandler( void * /* user_arg */, char *job_contact, int state,
 		return;
 	}
 
-	GlobusResource *next_resource;
-	GlobusResource::ResourcesByName.startIterations();
-
-	while ( GlobusResource::ResourcesByName.iterate( next_resource ) != 0 ) {
+	for (auto &elem : GlobusResource::ResourcesByName) {
+		GlobusResource *next_resource = elem.second;
 		if ( next_resource->monitorGramJobId && !strcmp( job_contact, next_resource->monitorGramJobId ) ) {
 			next_resource->gridMonitorCallback( state, errorcode );
 			return;
@@ -305,12 +301,8 @@ void GlobusJobReconfig()
 	GlobusResource::setGridMonitorDisableLength( tmp_int );
 
 	// Tell all the resource objects to deal with their new config values
-	GlobusResource *next_resource;
-
-	GlobusResource::ResourcesByName.startIterations();
-
-	while ( GlobusResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		next_resource->Reconfig();
+	for (auto &elem : GlobusResource::ResourcesByName) {
+		elem.second->Reconfig();
 	}
 }
 
@@ -558,7 +550,7 @@ static bool merge_file_into_classad(const char * filename, ClassAd * ad)
 			full_filename += "/";
 			full_filename += filename;
 		}
-		
+
 		FILE * fp = safe_fopen_wrapper_follow(full_filename.c_str(), "r");
 		if( ! fp ) {
 			dprintf(D_ALWAYS, "Unable to read output ClassAd at %s.  "
@@ -568,25 +560,25 @@ static bool merge_file_into_classad(const char * filename, ClassAd * ad)
 			return false;
 		}
 
-		MyString line;
-		while( line.readLine(fp) ) {
-			line.chomp();
-			int n = line.find(" = ");
-			if(n < 1) {
+		std::string line;
+		while( readLine(line, fp) ) {
+			chomp(line);
+			size_t n = line.find(" = ");
+			if(n == 0 || n == std::string::npos) {
 				dprintf( D_ALWAYS,
-					"Failed to parse \"%s\", ignoring.", line.Value());
+					"Failed to parse \"%s\", ignoring.", line.c_str());
 				continue;
 			}
-			MyString attr = line.substr(0, n);
+			std::string attr = line.substr(0, n);
 
-			dprintf( D_ALWAYS, "FILE: %s\n", line.Value() );
-			if( ! SAVE_ATTRS.contains_anycase(attr.Value()) ) {
+			dprintf( D_ALWAYS, "FILE: %s\n", line.c_str() );
+			if( ! SAVE_ATTRS.contains_anycase(attr.c_str()) ) {
 				continue;
 			}
 
-			if( ! ad->Insert(line.Value()) ) {
+			if( ! ad->Insert(line.c_str()) ) {
 				dprintf( D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
-						 "ignoring.\n", line.Value() );
+						 "ignoring.\n", line.c_str() );
 			}
 		}
 		fclose( fp );
@@ -707,9 +699,9 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		}
 
 		char *args = param("GAHP_ARGS");
-		MyString args_error;
-		if(!gahp_args.AppendArgsV1RawOrV2Quoted(args,&args_error)) {
-			dprintf(D_ALWAYS,"Failed to parse gahp arguments: %s",args_error.Value());
+		std::string args_error;
+		if(!gahp_args.AppendArgsV1RawOrV2Quoted(args, args_error)) {
+			dprintf(D_ALWAYS,"Failed to parse gahp arguments: %s",args_error.c_str());
 			error_string = "ERROR: failed to parse GAHP arguments.";
 			free(args);
 			goto error_exit;
@@ -3013,12 +3005,12 @@ std::string *GlobusJob::buildSubmitRSL()
 		*rsl += " -job-stdin - -job-stdout - -job-stderr -";
 	} else {
 		ArgList args;
-		MyString arg_errors;
-		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
+		std::string arg_errors;
+		if(!args.AppendArgsFromClassAd(jobAd, arg_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
-					procID.cluster, procID.proc, arg_errors.Value());
+					procID.cluster, procID.proc, arg_errors.c_str());
 			formatstr(errorString, "Failed to read job arguments: %s\n",
-					arg_errors.Value());
+					arg_errors.c_str());
 			delete rsl;
 			return NULL;
 		}
@@ -3165,7 +3157,7 @@ std::string *GlobusJob::buildSubmitRSL()
 			}
 
 			char *remaps = NULL;
-			MyString new_name;
+			std::string new_name;
 			jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
 
 			filelist.rewind();
@@ -3211,12 +3203,12 @@ std::string *GlobusJob::buildSubmitRSL()
 		*rsl += "')";
 	} else {
 		Env envobj;
-		MyString env_errors;
-		if(!envobj.MergeFrom(jobAd,&env_errors)) {
+		std::string env_errors;
+		if(!envobj.MergeFrom(jobAd, env_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job environment: %s\n",
-					procID.cluster, procID.proc, env_errors.Value());
+					procID.cluster, procID.proc, env_errors.c_str());
 			formatstr(errorString, "Failed to read job environment: %s\n",
-					env_errors.Value());
+					env_errors.c_str());
 			delete rsl;
 			if (rsl_suffix) free(rsl_suffix);
 			return NULL;

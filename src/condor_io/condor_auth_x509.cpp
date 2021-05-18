@@ -46,7 +46,7 @@ StringList * getDaemonList(char const *param_name,char const *fqh);
 
 
 #ifdef WIN32
-HashTable<MyString, MyString> * Condor_Auth_X509::GridMap = 0;
+HashTable<std::string, std::string> * Condor_Auth_X509::GridMap = 0;
 #endif
 
 bool Condor_Auth_X509::m_globusActivated = false;
@@ -448,7 +448,7 @@ int Condor_Auth_X509::condor_gss_assist_gridmap(const char * from, char ** to) {
 	}
 
 	if (GridMap) {
-		MyString f(from), t;
+		std::string f(from), t;
 		if (GridMap->lookup(f, t) != -1) {
 			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf (D_SECURITY, "GSI: subject %s is mapped to user %s.\n", 
@@ -566,7 +566,8 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 #endif
 
 	if (tmp_user) {
-		strcpy( local_user, tmp_user );
+		strncpy( local_user, tmp_user, USER_NAME_MAX-1 );
+		local_user[USER_NAME_MAX-1] = '\0';
 		free(tmp_user);
 		tmp_user = NULL;
 	}
@@ -577,12 +578,12 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 		return 0;
 	}
 
-	MyString user;
-	MyString domain;
+	std::string user;
+	std::string domain;
 	Authentication::split_canonical_name( local_user, user, domain );
     
-	setRemoteUser  (user.Value());
-	setRemoteDomain(domain.Value());
+	setRemoteUser  (user.c_str());
+	setRemoteDomain(domain.c_str());
 	setAuthenticatedName(GSSClientname);
 	return 1;
 }
@@ -910,7 +911,7 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 				free(voms_fqan);
 			} else {
 				// complain!
-				dprintf(D_SECURITY, "ZKM: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
+				dprintf(D_SECURITY, "VOMS: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
 			}
 		}
 
@@ -1327,7 +1328,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 				free(voname);
 			} else {
 				// complain!
-				dprintf(D_SECURITY, "ZKM: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
+				dprintf(D_SECURITY, "VOMS: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
 			}
 		}
 		mySock_->setPolicyAd(ad);
@@ -1379,7 +1380,7 @@ Condor_Auth_X509::authenticate_server_gss_post(CondorError* errstack, bool non_b
 }
 
 void Condor_Auth_X509::setFQAN(const char *fqan) {
-	dprintf (D_FULLDEBUG, "ZKM: setting FQAN: %s\n", fqan ? fqan : "");
+	dprintf (D_FULLDEBUG, "X509: setting FQAN: %s\n", fqan ? fqan : "");
 	m_fqan = fqan ? fqan : "";
 }
 

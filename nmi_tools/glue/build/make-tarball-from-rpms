@@ -1,0 +1,161 @@
+#!/bin/bash
+# This command takes a directory of HTCondor RPMs and creates a tarball
+# Named externals are download and extracted from existing repositories
+#
+if [ $# -ne 1 ]; then
+    echo 'Error: missing argument'
+    echo "Usage: $(basename $0) RPMs-directory"
+    exit 1
+fi
+rpmdir=$1
+if [ ! -d $rpmdir ]; then
+    echo "Error: $rpmdir is not a directory"
+    echo "Usage: $(basename $0) RPMs-directory"
+    exit 1
+fi
+
+cmd_dir=$(dirname $0)
+
+mkdir tarball
+
+for file in $rpmdir/*.rpm; do
+    if [[ $file == *.src.rpm ]]; then
+        # Skip src RPM
+        echo Skipping $file
+    elif [[ $file == *-debuginfo-* ]]; then
+        # Skip debug information
+        echo Skipping $file
+    elif [[ $file == *-debugsource-* ]]; then
+        # Skip debug source
+        echo Skipping $file
+    elif [[ $file == */python2-* ]]; then
+        # Skip Python 2 bindings
+        echo Skipping $file
+    elif [[ $file == *-credmon-oauth-* ]]; then
+        # Skip oath credmon
+        echo Skipping $file
+    else
+        eval $(perl -e "(\$package, \$version, \$release, \$dist, \$arch) = '$file' =~ m:^.*/(.*)-([0-9][0-9.]*)-([0-9][0-9.]*)\.([^.]+)\.([^.]+)\.rpm$:; print \"package=\$package version=\$version release=\$release dist=\$dist arch=\$arch\";")
+        echo ======= $package-$version-$release.$dist.$arch.rpm =======
+        echo $package-$version-$release.$dist.$arch.rpm >> tarball/Manifest.txt
+        rpm2cpio $rpmdir/$package-$version-$release.$dist.$arch.rpm | (cd tarball; cpio -imd)
+    fi
+done
+
+if [[ $dist == amzn2 ]]; then
+    arch_dist="${arch}_AmazonLinux2"
+elif [[ $dist == el7 ]]; then
+    arch_dist="${arch}_CentOS7"
+elif [[ $dist == el8 ]]; then
+    arch_dist="${arch}_CentOS8"
+elif [[ $dist == fc32 ]]; then
+    arch_dist="${arch}_Fedora32"
+fi
+
+# Blow away whatever BaTLab made
+rm -rf condor_tests-*
+# Repack the testing tarball
+tar xfp tarball/usr/lib64/condor/condor_tests-$version.tar.gz
+rm tarball/usr/lib64/condor/condor_tests-$version.tar.gz
+mv condor_tests-* condor_tests-$version-$release-$arch_dist
+(cd condor_tests-$version-$release-$arch_dist; chmod a+x $(file $(find -type f)|grep 'executable'|sed -e s/:.*//))
+(cd condor_tests-$version-$release-$arch_dist; chmod a+x $(find -type f -name script\*))
+$cmd_dir/set-tarball-rpath condor_tests-$version-$release-$arch_dist '$ORIGIN/../lib64'
+tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$release-$arch_dist
+rm -r condor_tests-$version-$release-$arch_dist
+
+# Move configuration files back to example directory
+mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
+
+uw_externals="blahp condor-boinc"
+
+common_externals="boost169-python3 \
+    globus-callout \
+    globus-common \
+    globus-ftp-client \
+    globus-ftp-control \
+    globus-gass-transfer \
+    globus-gram-client \
+    globus-gram-protocol \
+    globus-gsi-callback \
+    globus-gsi-cert-utils \
+    globus-gsi-credential \
+    globus-gsi-openssl-error \
+    globus-gsi-proxy-core \
+    globus-gsi-proxy-ssl \
+    globus-gsi-sysconfig \
+    globus-gss-assist \
+    globus-gssapi-error \
+    globus-gssapi-gsi \
+    globus-io \
+    globus-openssl-module \
+    globus-rsl \
+    globus-xio \
+    globus-xio-gsi-driver \
+    globus-xio-popen-driver \
+    libcgroup \
+    libgomp \
+    munge-libs \
+    scitokens-cpp \
+    voms"
+
+if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
+    el7_externals="python36-chardet \
+        python36-idna \
+        python36-pysocks \
+        python36-requests \
+        python36-six \
+        python36-urllib3"
+    externals="$common_externals $uw_externals $el7_externals"
+elif [[ $arch_dist =~ CentOS8 ]]; then
+    externals="$common_externals $uw_externals"
+elif [[ $arch_dist =~ Fedora32 ]]; then
+    externals="$common_externals"
+fi
+
+mkdir external-packages
+yumdownloader --downloadonly --destdir=external-packages $externals
+
+# Extract external RPMs
+for file in external-packages/*.rpm; do
+    if [[ $file == *.i686.rpm ]]; then
+        # Skip 32-bit components
+        echo Skipping $file
+    else
+        echo ======= $file =======
+        echo $file >> tarball/Manifest.txt
+        rpm2cpio $file | (cd tarball; cpio -imd)
+    fi
+done
+
+rm -r external-packages
+
+# Check tarball for externals (in case of download errors)
+for package in $externals; do
+    if ! grep $package tarball/Manifest.txt; then
+        echo "ERROR: external $package is missing!"
+        exit 1
+    fi
+done
+
+$cmd_dir/make-tarball-links tarball
+if [ $? -ne 0 ];then
+    echo 'ERROR: tarball link script failed'
+    exit 1
+fi
+$cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64'
+
+# Fixup directory permissions for the tarball
+chmod 755 tarball/etc/condor/passwords.d
+chmod 755 tarball/etc/condor/tokens.d
+chmod 755 tarball/var/lib/condor/execute
+chmod 755 tarball/var/lib/condor/oauth_credentials
+chmod g-s tarball/var/lib/condor/oauth_credentials
+
+# Package final tarball
+mv tarball condor-$version-$release-$arch_dist-stripped
+tar --create --gzip --owner=0 --group=0 --numeric-owner --file=condor-$version-$release-$arch_dist-stripped.tar.gz condor-$version-$release-$arch_dist-stripped
+rm -r condor-$version-$release-$arch_dist-stripped
+
+ls -lh condor*.tar.gz
+exit 0

@@ -1049,11 +1049,11 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 				// by the startd, but for file transfer, it makes more sense
 				// to use the shadow's policy.
 
-			MyString filetrans_claimid;
+			std::string filetrans_claimid;
 				// prepend something to the claim id so that the session id
 				// is different for file transfer than for the claim session
-			filetrans_claimid.formatstr("filetrans.%s",claim_id);
-			m_filetrans_session = ClaimIdParser(filetrans_claimid.Value());
+			formatstr(filetrans_claimid,"filetrans.%s",claim_id);
+			m_filetrans_session = ClaimIdParser(filetrans_claimid.c_str());
 
 				// Get rid of session parameters set by startd.
 				// We will set our own based on the shadow WRITE policy.
@@ -1062,19 +1062,19 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 				// Since we just removed the session info, we must
 				// set ignore_session_info=true in the following call or
 				// we will get NULL for the session id.
-			MyString filetrans_session_id =
+			std::string filetrans_session_id =
 				m_filetrans_session.secSessionId(/*ignore_session_info=*/ true);
 
 			rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 				WRITE,
-				filetrans_session_id.Value(),
+				filetrans_session_id.c_str(),
 				m_filetrans_session.secSessionKey(),
 				NULL,
 				AUTH_METHOD_MATCH,
 				EXECUTE_SIDE_MATCHSESSION_FQU,
 				NULL,
 				0 /*don't expire*/,
-				nullptr );
+				nullptr, true );
 
 			if( !rc ) {
 				dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session for %s, so will fall back on security negotiation\n",m_filetrans_session.publicClaimId());
@@ -1083,16 +1083,16 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 					// fill in session_info so that starter will have
 					// enough info to create a security session
 					// compatible with the one we just created.
-				MyString session_info;
+				std::string session_info;
 				rc = daemonCore->getSecMan()->ExportSecSessionInfo(
-					filetrans_session_id.Value(),
+					filetrans_session_id.c_str(),
 					session_info );
 
 				if( !rc ) {
 					dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to get session info for claim id %s\n",m_filetrans_session.publicClaimId());
 				}
 				else {
-					m_filetrans_session.setSecSessionInfo( session_info.Value() );
+					m_filetrans_session.setSecSessionInfo( session_info.c_str() );
 				}
 			}
 		}
@@ -1478,7 +1478,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     CopyAttribute("Recent" ATTR_BLOCK_READS, *jobAd, *update_ad);
     CopyAttribute("Recent" ATTR_BLOCK_WRITES, *jobAd, *update_ad);
 
+
     CopyAttribute(ATTR_IO_WAIT, *jobAd, *update_ad);
+    CopyAttribute(ATTR_JOB_CPU_INSTRUCTIONS, *jobAd, *update_ad);
 
 	// FIXME: If we're convinced that we want a whitelist here (chirp
 	// would seem to make a mockery of that), we should at least rewrite
@@ -2157,10 +2159,10 @@ RemoteResource::reconnect( void )
 	if( !remaining ) {
 		dprintf( D_ALWAYS, "%s remaining: EXPIRED!\n",
 			 ATTR_JOB_LEASE_DURATION );
-		MyString reason;
+		std::string reason;
 		formatstr( reason, "Job disconnected too long: %s (%d seconds) expired",
 		           ATTR_JOB_LEASE_DURATION, lease_duration );
-		shadow->reconnectFailed( reason.Value() );
+		shadow->reconnectFailed( reason.c_str() );
 	}
 	dprintf( D_ALWAYS, "%s remaining: %d\n", ATTR_JOB_LEASE_DURATION,
 			 remaining );
@@ -2413,7 +2415,7 @@ RemoteResource::requestReconnect( void )
 	ReliSock* rsock = new ReliSock;
 	ClassAd req;
 	ClassAd reply;
-	MyString msg;
+	std::string msg;
 
 		// First, fill up the request with all the data we need
 	shadow->publishShadowAttrs( &req );
@@ -2488,7 +2490,7 @@ RemoteResource::requestReconnect( void )
 			msg = "Starter refused request (";
 			msg += starter.error();
 			msg += ')';
-			shadow->reconnectFailed( msg.Value() );
+			shadow->reconnectFailed( msg.c_str() );
 			break;
 
 				// All the errors that can only be programmer
@@ -2764,13 +2766,13 @@ RemoteResource::checkX509Proxy( void )
 bool
 RemoteResource::getSecSessionInfo(
 	char const *,
-	MyString &reconnect_session_id,
-	MyString &reconnect_session_info,
-	MyString &reconnect_session_key,
+	std::string &reconnect_session_id,
+	std::string &reconnect_session_info,
+	std::string &reconnect_session_key,
 	char const *,
-	MyString &filetrans_session_id,
-	MyString &filetrans_session_info,
-	MyString &filetrans_session_key)
+	std::string &filetrans_session_id,
+	std::string &filetrans_session_info,
+	std::string &filetrans_session_key)
 {
 	if( !param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
 		dprintf(D_ALWAYS,"Request for security session info from starter, but SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION is not True, so ignoring.\n");

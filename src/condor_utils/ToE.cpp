@@ -1,5 +1,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_attributes.h"
 
 #include "classad/classad.h"
 #include "compat_classad.h"
@@ -79,6 +80,13 @@ decode( classad::ClassAd * ca, Tag & tag ) {
     ca->EvaluateAttrNumber( "When", when );
     ca->EvaluateAttrNumber( "HowCode", (int &)tag.howCode );
 
+    if( ca->EvaluateAttrBool( ATTR_ON_EXIT_BY_SIGNAL, tag.exitBySignal )) {
+        ca->EvaluateAttrNumber(
+            tag.exitBySignal ? ATTR_ON_EXIT_SIGNAL : ATTR_ON_EXIT_CODE,
+            tag.signalOrExitCode
+        );
+    }
+
     char whenStr[ISO8601_DateAndTimeBufferMax];
     struct tm eventTime;
     // time_t is a signed long int on all Linux platforms.  We send
@@ -110,29 +118,29 @@ Tag::readFromString( const std::string & in ) {
     std::string line = in;
 
 	const char * endWhoStr = " at ";
-	int endWho = line.find( endWhoStr );
-	if( endWho == -1 ) { return false; }
-	MyString whoStr = line.substr( 0, endWho );
+	size_t endWho = line.find( endWhoStr );
+	if( endWho == std::string::npos ) { return false; }
+	std::string whoStr = line.substr( 0, endWho );
 	this->who = whoStr.c_str();
 	line = line.substr( endWho + strlen(endWhoStr), INT_MAX );
 
 	const char * endWhenStr = " (using method ";
-	int endWhen = line.find( endWhenStr );
-	if( endWhen == -1 ) { return false; }
-	MyString whenStr = line.substr( 0, endWhen );
+	size_t endWhen = line.find( endWhenStr );
+	if( endWhen == std::string::npos ) { return false; }
+	std::string whenStr = line.substr( 0, endWhen );
 	line = line.substr( endWhen + strlen(endWhenStr), INT_MAX );
 	// This code gets more complicated if we don't assume UTC i/o.
 	struct tm eventTime;
-	iso8601_to_time( whenStr.Value(), & eventTime, NULL, NULL );
+	iso8601_to_time( whenStr.c_str(), & eventTime, NULL, NULL );
 	formatstr( when, "%ld", timegm(&eventTime) );
 
 	const char * endHowCodeStr = ": ";
-	int endHowCode = line.find( endHowCodeStr );
-	if( endHowCode == -1 ) { return false; }
-	MyString howCodeStr = line.substr( 0, endHowCode );
+	size_t endHowCode = line.find( endHowCodeStr );
+	if( endHowCode == std::string::npos ) { return false; }
+	std::string howCodeStr = line.substr( 0, endHowCode );
 	line = line.substr( endHowCode + strlen(endHowCodeStr), INT_MAX );
 	char * end = NULL;
-	long lhc = strtol( howCodeStr.Value(), & end, 10 );
+	long lhc = strtol( howCodeStr.c_str(), & end, 10 );
 	if( end && *end == '\0' ) {
 		this->howCode = lhc;
 	} else {
@@ -140,9 +148,9 @@ Tag::readFromString( const std::string & in ) {
 	}
 
 	const char * endHowStr = ").";
-	int endHow = line.find( endHowStr );
-	if( endHow == -1 ) { return false; }
-	MyString how = line.substr( 0, endHow );
+	size_t endHow = line.find( endHowStr );
+	if( endHow == std::string::npos ) { return false; }
+	std::string how = line.substr( 0, endHow );
 	line = line.substr( endHow + strlen(endHowStr), INT_MAX );
 	if(! line.empty()) { return false; }
 	this->how = how.c_str();
@@ -158,6 +166,14 @@ encode( const Tag & tag, classad::ClassAd * ca ) {
     ca->InsertAttr( "How", tag.how );
     ca->InsertAttr( "When",tag.when );
     ca->InsertAttr( "HowCode", (int)tag.howCode );
+
+    if( tag.howCode == ToE::OfItsOwnAccord ) {
+        ca->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, tag.exitBySignal );
+        ca->InsertAttr(
+            tag.exitBySignal ? ATTR_ON_EXIT_SIGNAL : ATTR_ON_EXIT_CODE,
+            tag.signalOrExitCode
+        );
+    }
 
     return true;
 }

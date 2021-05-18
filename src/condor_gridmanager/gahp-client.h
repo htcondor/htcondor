@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2021, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -555,6 +555,58 @@ class GahpClient : public GenericGahpClient {
 
 		int
 		gridftp_transfer(const char *src_url, const char *dst_url);
+
+		int
+		arc_ping(const std::string &service_url);
+
+		int
+		arc_job_new(const std::string &service_url,
+		            const std::string &rsl,
+		            std::string &job_id,
+		            std::string &job_status);
+
+		int
+		arc_job_status(const std::string &service_url,
+		               const std::string &job_id,
+		               std::string &status);
+
+		int
+		arc_job_status_all(const std::string &service_url,
+		                   const std::string &states,
+		                   StringList &job_ids,
+		                   StringList &job_states);
+
+		int
+		arc_job_info(const std::string &service_url,
+		             const std::string &job_id,
+		             std::string &results);
+
+		int
+		arc_job_stage_in(const std::string &service_url,
+		                 const std::string &job_id,
+		                 StringList &files);
+
+		int
+		arc_job_stage_out(const std::string &service_url,
+		                  const std::string &job_id,
+		                  StringList &src_files,
+		                  StringList &dest_files);
+
+		int
+		arc_job_kill(const std::string &service_url,
+		             const std::string &job_id);
+
+		int
+		arc_job_clean(const std::string &service_url,
+		              const std::string &job_id);
+
+		int
+		arc_delegation_new(const std::string &service_url,
+		                   std::string &deleg_id);
+
+		int
+		arc_delegation_renew(const std::string &service_url,
+		                     const std::string &deleg_id);
 
 		///
 		int 

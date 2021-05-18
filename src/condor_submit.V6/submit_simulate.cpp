@@ -31,7 +31,6 @@
 #include "match_prefix.h"
 
 #include "extArray.h"
-#include "MyString.h"
 #include "string_list.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
@@ -55,7 +54,6 @@
 #include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
-#include "condor_md.h"
 #include "submit_internal.h"
 
 #include <algorithm>
@@ -226,13 +224,6 @@ int SimScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
 }
 
 
-int SimScheddQ::send_SpoolFileIfNeeded(ClassAd& ad) {
-	if (fp) {
-		fprintf(fp, "::send_SpoolFileIfNeeded\n");
-		fPrintAd(fp, ad);
-	}
-	return 0;
-}
 int SimScheddQ::send_SpoolFile(char const * filename) {
 	if (fp) { fprintf(fp, "::send_SpoolFile: %s\n", filename); }
 	return 0;

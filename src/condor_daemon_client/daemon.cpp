@@ -1175,7 +1175,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 		// be used directly.  Further name resolution is not necessary.
 	if( nameHasPort ) {
 		condor_sockaddr hostaddr;
-		
+
 		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
 
 		if(host && hostaddr.from_ip_string(host) ) {
@@ -1185,7 +1185,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 					"Host info \"%s\" is an IP address\n", host );
 		} else {
 				// We were given a hostname, not an address.
-			MyString fqdn;
+			std::string fqdn;
 			dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
 					 "finding IP address\n", host );
 			if (!get_fqdn_and_ip_from_hostname(host, fqdn, hostaddr)) {
@@ -1201,10 +1201,10 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 
 				return false;
 			}
-			buf = generate_sinful(hostaddr.to_ip_string().Value(), _port);
+			buf = generate_sinful(hostaddr.to_ip_string().c_str(), _port);
 			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.c_str() );
-			if (fqdn.Length() > 0)
-				New_full_hostname(strdup(fqdn.Value()));
+			if (fqdn.length() > 0)
+				New_full_hostname(strdup(fqdn.c_str()));
 			if( host ) {
 				New_alias( strdup(host) );
 			}
@@ -1271,7 +1271,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
             // name
 		_is_local = true;
 		New_name( localName() );
-		New_full_hostname( strdup(get_local_fqdn().Value()) );
+		New_full_hostname( strdup(get_local_fqdn().c_str()) );
 		dprintf( D_HOSTNAME, "Neither name nor addr specified, using local "
 				 "values - name: \"%s\", full host: \"%s\"\n", 
 				 _name, _full_hostname );
@@ -1467,8 +1467,8 @@ Daemon::getCmInfo( const char* subsys )
 				// everything else (port, hostname, etc), will be
 				// initialized and set correctly by our caller based
 				// on the fullname and the address.
-			New_name( strdup(get_local_fqdn().Value()) );
-			New_full_hostname( strdup(get_local_fqdn().Value()) );
+			New_name( strdup(get_local_fqdn().c_str()) );
+			New_full_hostname( strdup(get_local_fqdn().c_str()) );
 			free( host );
 			return true;
 		}
@@ -1524,8 +1524,8 @@ Daemon::findCmDaemon( const char* cm_name )
 	if( _port == 0 && readAddressFile(_subsys) ) {
 		dprintf( D_HOSTNAME, "Port 0 specified in name, "
 				 "IP/port found in address file\n" );
-		New_name( strdup(get_local_fqdn().Value()) );
-		New_full_hostname( strdup(get_local_fqdn().Value()) );
+		New_name( strdup(get_local_fqdn().c_str()) );
+		New_full_hostname( strdup(get_local_fqdn().c_str()) );
 		return true;
 	}
 
@@ -1564,7 +1564,7 @@ Daemon::findCmDaemon( const char* cm_name )
 		dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
 				 "finding IP address\n", host );
 
-		MyString fqdn;
+		std::string fqdn;
 		int ret = get_fqdn_and_ip_from_hostname(host, fqdn, saddr);
 		if (!ret) {
 				// With a hostname, this is a fatal Daemon error.
@@ -1579,11 +1579,11 @@ Daemon::findCmDaemon( const char* cm_name )
 
 			return false;
 		}
-		sinful.setHost(saddr.to_ip_string().Value());
-		sinful.setAlias(fqdn.Value());
+		sinful.setHost(saddr.to_ip_string().c_str());
+		sinful.setAlias(fqdn.c_str());
 		dprintf( D_HOSTNAME, "Found CM IP address and port %s\n",
 				 sinful.getSinful() ? sinful.getSinful() : "NULL" );
-		New_full_hostname(strdup(fqdn.Value()));
+		New_full_hostname(strdup(fqdn.c_str()));
 		if( host ) {
 			New_alias( strdup(host) );
 		}
@@ -1643,19 +1643,19 @@ Daemon::initHostname( void )
 
 	condor_sockaddr saddr;
 	saddr.from_sinful(_addr);
-	MyString fqdn = get_full_hostname(saddr);
-	if (fqdn.IsEmpty()) {
+	std::string fqdn = get_full_hostname(saddr);
+	if (fqdn.empty()) {
 		New_hostname( NULL );
 		New_full_hostname( NULL );
 		dprintf(D_HOSTNAME, "get_full_hostname() failed for address %s\n",
-				saddr.to_ip_string().Value());
+				saddr.to_ip_string().c_str());
 		std::string err_msg = "can't find host info for ";
 		err_msg += _addr;
 		newError( CA_LOCATE_FAILED, err_msg.c_str() );
 		return false;
 	}
 
-	char* tmp = strdup(fqdn.Value());
+	char* tmp = strdup(fqdn.c_str());
 	New_full_hostname( tmp );
 	initHostnameFromFull();
 	return true;
@@ -1786,7 +1786,7 @@ Daemon::localName( void )
 		my_name = build_valid_daemon_name( tmp );
 		free( tmp );
 	} else {
-		my_name = strdup( get_local_fqdn().Value() );
+		my_name = strdup( get_local_fqdn().c_str() );
 	}
 	return my_name;
 }
@@ -1808,7 +1808,7 @@ Daemon::readAddressFile( const char* subsys )
 	char* addr_file = NULL;
 	FILE* addr_fp;
 	std::string param_name;
-	MyString buf;
+	std::string buf;
 	bool rval = false;
 	bool use_superuser = false;
 
@@ -1844,34 +1844,34 @@ Daemon::readAddressFile( const char* subsys )
 	addr_file = NULL;
 
 		// Read out the sinful string.
-	if( ! buf.readLine(addr_fp) ) {
+	if( ! readLine(buf, addr_fp) ) {
 		dprintf( D_HOSTNAME, "address file contained no data\n" );
 		fclose( addr_fp );
 		return false;
 	}
-	buf.chomp();
-	if( is_valid_sinful(buf.Value()) ) {
+	chomp(buf);
+	if( is_valid_sinful(buf.c_str()) ) {
 		dprintf( D_HOSTNAME, "Found valid address \"%s\" in "
-				 "%s address file\n", buf.Value(), use_superuser ? "superuser" : "local" );
-		New_addr( strdup(buf.Value()) );
+				 "%s address file\n", buf.c_str(), use_superuser ? "superuser" : "local" );
+		New_addr( strdup(buf.c_str()) );
 		rval = true;
 	}
 
 		// Let's see if this is new enough to also have a
 		// version string and platform string...
-	if( buf.readLine(addr_fp) ) {
+	if( readLine(buf, addr_fp) ) {
 			// chop off the newline
-		buf.chomp();
-		New_version( strdup(buf.Value()) );
+		chomp(buf);
+		New_version( strdup(buf.c_str()) );
 		dprintf( D_HOSTNAME,
 				 "Found version string \"%s\" in address file\n",
-				 buf.Value() );
-		if( buf.readLine(addr_fp) ) {
-			buf.chomp();
-			New_platform( strdup(buf.Value()) );
+				 buf.c_str() );
+		if( readLine(buf, addr_fp) ) {
+			chomp(buf);
+			New_platform( strdup(buf.c_str()) );
 			dprintf( D_HOSTNAME,
 					 "Found platform string \"%s\" in address file\n",
-					 buf.Value() );
+					 buf.c_str() );
 		}
 	}
 	fclose( addr_fp );

@@ -111,7 +111,7 @@ setClientTimeout (int timeout)
 }
 
 bool
-CollectorEngine::setCollectorRequirements( char const *str, MyString &error_desc )
+CollectorEngine::setCollectorRequirements( char const *str, std::string &error_desc )
 {
 	if( m_collector_requirements ) {
 		delete m_collector_requirements;
@@ -221,7 +221,7 @@ CollectorEngine::invalidateAds(AdTypes adType, ClassAd &query)
 	int count = 0;
 	ClassAd  *ad;
 	AdNameHashKey  hk;
-	MyString hkString;
+	std::string hkString;
 	(*table).startIterations();
 	while ((*table).iterate (ad)) {
 		if (IsAHalfMatch(&query, ad)) {
@@ -230,11 +230,11 @@ CollectorEngine::invalidateAds(AdTypes adType, ClassAd &query)
 			if ((*table).remove(hk) == -1) {
 				dprintf(D_ALWAYS,
 						"\t\tError while removing ad: \"%s\"\n",
-						hkString.Value());
+						hkString.c_str());
 			} else {
 				dprintf(D_ALWAYS,
 						"\t\t**** Invalidating ad: \"%s\"\n",
-						hkString.Value());
+						hkString.c_str());
 				delete ad;
 				count++;
 			}
@@ -311,11 +311,11 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 }
 
 
-CollectorHashTable *CollectorEngine::findOrCreateTable(MyString &type)
+CollectorHashTable *CollectorEngine::findOrCreateTable(const std::string &type)
 {
 	CollectorHashTable *table=0;
 	if (GenericAds.lookup(type, table) == -1) {
-		dprintf(D_ALWAYS, "creating new table for type %s\n", type.Value());
+		dprintf(D_ALWAYS, "creating new table for type %s\n", type.c_str());
 		table = new CollectorHashTable(&adNameHashFunction);
 		if (GenericAds.insert(type, table) == -1) {
 			dprintf(D_ALWAYS,  "error adding new generic hash table\n");
@@ -851,7 +851,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			  retVal = 0;
 			  break;
 		  }
-		  MyString type(type_str);
+		  std::string type(type_str);
 		  CollectorHashTable *cht = findOrCreateTable(type);
 		  if (cht == NULL) {
 			  dprintf(D_ALWAYS, "collect: findOrCreateTable failed\n");
@@ -935,9 +935,9 @@ int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query, bool *q
 {
 	int iRet = 0;
 	AdNameHashKey hk;
-	CollectorHashTable * table;  
+	CollectorHashTable * table;
 	HashFunc makeKey;
-	MyString hkString;
+	std::string hkString;
 
 	if( query_contains_hash_key ) {
 		*query_contains_hash_key = false;
@@ -956,7 +956,7 @@ int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query, bool *q
 			{
 				hk.sprint( hkString );
 				iRet = !table->remove(hk);
-				dprintf (D_ALWAYS,"\t\t**** Removed(%d) ad(s): \"%s\"\n", iRet, hkString.Value() );
+				dprintf (D_ALWAYS,"\t\t**** Removed(%d) ad(s): \"%s\"\n", iRet, hkString.c_str() );
 				delete pAd;
 			}
 		}
@@ -983,17 +983,17 @@ int CollectorEngine::expire( AdTypes adType, const ClassAd & query, bool * query
                 if( CollectorDaemon::offline_plugin_.expire( * cAd ) == true ) {
                     return rVal;
                 }
-                
+
                 rVal = hTable->remove( hKey );
                 if( rVal == -1 ) {
                     dprintf( D_ALWAYS, "\t\t Error removing ad\n" );
                     return 0;
                 }
                 rVal = (! rVal);
-                
-                MyString hkString;
-                hKey.sprint( hkString );                
-                dprintf( D_ALWAYS, "\t\t**** Removed(%d) stale ad(s): \"%s\"\n", rVal, hkString.Value() );
+
+                std::string hkString;
+                hKey.sprint( hkString );
+                dprintf( D_ALWAYS, "\t\t**** Removed(%d) stale ad(s): \"%s\"\n", rVal, hkString.c_str() );
 
                 delete cAd;
             }
@@ -1028,7 +1028,7 @@ updateClassAd (CollectorHashTable &hashTable,
 			   const char *label,
 			   ClassAd *ad,
 			   AdNameHashKey &hk,
-			   const MyString &hashString,
+			   const std::string &hashString,
 			   int  &insert,
 			   const condor_sockaddr& /*from*/ )
 {
@@ -1056,7 +1056,7 @@ updateClassAd (CollectorHashTable &hashTable,
 	{
 		// no ... new ad
 		last_updateClassAd_was_insert = true;
-		dprintf (D_ALWAYS, "%s: Inserting ** \"%s\"\n", adType, hashString.Value() );
+		dprintf (D_ALWAYS, "%s: Inserting ** \"%s\"\n", adType, hashString.c_str() );
 
 		// Update statistics, but not for private ads we can't see
 		if (strcmp(label, "StartdPvt") != 0) {
@@ -1068,9 +1068,9 @@ updateClassAd (CollectorHashTable &hashTable,
 		{
 			EXCEPT ("Error inserting ad (out of memory)");
 		}
-		
+
 		insert = 1;
-		
+
 		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "StartdPvt" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
 			new_ad->Assign( ATTR_LAST_FORWARDED, (int)time(NULL) );
 		}
@@ -1080,7 +1080,7 @@ updateClassAd (CollectorHashTable &hashTable,
 	else
     {
 		// yes ... old ad must be updated
-		dprintf (D_FULLDEBUG, "%s: Updating ... \"%s\"\n", adType, hashString.Value() );
+		dprintf (D_FULLDEBUG, "%s: Updating ... \"%s\"\n", adType, hashString.c_str() );
 
 		// Update statistics
 		if (strcmp(label, "StartdPvt") != 0) {
@@ -1137,7 +1137,7 @@ mergeClassAd (CollectorHashTable &hashTable,
 			   const char * /*label*/,
 			   ClassAd *new_ad,
 			   AdNameHashKey &hk,
-			   const MyString &hashString,
+			   const std::string &hashString,
 			   int  &insert,
 			   const condor_sockaddr& /*from*/ )
 {
@@ -1147,9 +1147,9 @@ mergeClassAd (CollectorHashTable &hashTable,
 
 	// check if it already exists in the hash table ...
 	if ( hashTable.lookup (hk, old_ad) == -1)
-    {	 	
+    {
 		dprintf (D_ALWAYS, "%s: Failed to merge update for ** \"%s\" because "
-				 "no existing ad matches.\n", adType, hashString.Value() );
+				 "no existing ad matches.\n", adType, hashString.c_str() );
 			// We should _NOT_ delete new_ad if we return NULL
 			// because our caller will delete it in that case.
 		return NULL;
@@ -1158,7 +1158,7 @@ mergeClassAd (CollectorHashTable &hashTable,
     {
 		// yes ... old ad must be updated
 		dprintf (D_FULLDEBUG, "%s: Merging update for ... \"%s\"\n",
-				 adType, hashString.Value() );
+				 adType, hashString.c_str() );
 
 			// Do not allow changes to some attributes
 		ClassAd new_ad_copy(*new_ad);
@@ -1245,12 +1245,12 @@ housekeeper()
 void CollectorEngine::
 cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey) const
 {
-	ClassAd  *ad;
-	int   	 timeStamp;
-	int		 max_lifetime;
-	AdNameHashKey  hk;
-	double   timeDiff;
-	MyString	hkString;
+	ClassAd         *ad;
+	int             timeStamp;
+	int             max_lifetime;
+	AdNameHashKey   hk;
+	double          timeDiff;
+	std::string     hkString;
 
 	hashTable.startIterations ();
 	while (hashTable.iterate (ad))
@@ -1275,10 +1275,10 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey) con
 			(*makeKey) (hk, ad);
 			hk.sprint( hkString );
 			if( timeStamp == 0 ) {
-				dprintf (D_ALWAYS,"\t\t**** Removing invalidated ad: \"%s\"\n", hkString.Value() );
+				dprintf (D_ALWAYS,"\t\t**** Removing invalidated ad: \"%s\"\n", hkString.c_str() );
 			}
 			else {
-				dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.Value() );
+				dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.c_str() );
 			    /* let the off-line plug-in know we are about to expire this ad, so it can
 				   potentially mark the ad absent. if expire() returns false, then delete
 				   the ad as planned; if it return true, it was likely marked as absent,
@@ -1287,7 +1287,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey) con
 					// plugin say to not delete this ad, so continue
 					continue;
 				} else {
-					dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.Value() );
+					dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.c_str() );
 				}
 			}
 			if (hashTable.remove (hk) == -1)

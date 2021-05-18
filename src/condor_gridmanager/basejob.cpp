@@ -752,27 +752,19 @@ int BaseJob::EvalPeriodicJobExpr()
 	bool old_run_time_dirty;
 	UserPolicy user_policy;
 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	user_policy.Init();
-#else
-	user_policy.Init( jobAd );
-#endif
 
 	UpdateJobTime( &old_run_time, &old_run_time_dirty );
 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	int action = user_policy.AnalyzePolicy( *jobAd, PERIODIC_ONLY );
-#else
-	int action = user_policy.AnalyzePolicy( PERIODIC_ONLY );
-#endif
 
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 
-	MyString reason_buf;
+	std::string reason_buf;
 	int reason_code;
 	int reason_subcode;
 	user_policy.FiringReason(reason_buf,reason_code,reason_subcode);
-	char const *reason = reason_buf.Value();
+	char const *reason = reason_buf.c_str();
 	if ( reason == NULL || !reason[0] ) {
 		reason = "Unknown user policy expression";
 	}
@@ -811,11 +803,7 @@ int BaseJob::EvalOnExitJobExpr()
 	bool old_run_time_dirty;
 	UserPolicy user_policy;
 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	user_policy.Init();
-#else
-	user_policy.Init( jobAd );
-#endif
 
 	// The user policy code expects an exit value to be set
 	// If the ON_EXIT attributes haven't been set at all, fake
@@ -834,11 +822,7 @@ int BaseJob::EvalOnExitJobExpr()
 	// TODO: We should just mark the job as done running
 	UpdateJobTime( &old_run_time, &old_run_time_dirty );
 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	int action = user_policy.AnalyzePolicy( *jobAd, PERIODIC_THEN_EXIT );
-#else
-	int action = user_policy.AnalyzePolicy( PERIODIC_THEN_EXIT );
-#endif
 
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 
@@ -848,11 +832,11 @@ int BaseJob::EvalOnExitJobExpr()
 		jobAd->AssignExpr( ATTR_ON_EXIT_SIGNAL, "Undefined" );
 	}
 
-	MyString reason_buf;
+	std::string reason_buf;
 	int reason_code;
 	int reason_subcode;
 	user_policy.FiringReason(reason_buf,reason_code,reason_subcode);
-	const char *reason = reason_buf.Value();
+	const char *reason = reason_buf.c_str();
 	if ( reason == NULL || !reason[0] ) {
 		reason = "Unknown user policy expression";
 	}

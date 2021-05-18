@@ -291,7 +291,7 @@ XFormHash::~XFormHash()
 {
 	delete LocalMacroSet.errors;
 	LocalMacroSet.errors = NULL;
-	delete LocalMacroSet.table;
+	delete [] LocalMacroSet.table;
 	LocalMacroSet.table = NULL;
 	delete LocalMacroSet.metat;
 	LocalMacroSet.metat = NULL;
@@ -860,7 +860,8 @@ int MacroStreamXFormSource::load(FILE* fp, MACRO_SOURCE & FileSource, std::strin
 
 		if (FileSource.line != lineno+1) {
 			// if we read more than a single line, comment the new linenumber
-			MyString buf; buf.formatstr("#opt:lineno:%d", FileSource.line);
+			std::string buf = "#opt:lineno:";
+			buf += std::to_string(FileSource.line);
 			lines.append(buf.c_str());
 		}
 		lines.append(line);
@@ -1003,7 +1004,7 @@ int MacroStreamXFormSource::parse_iterate_args(char * pargs, int expand_options,
 			}
 		} else {
 			MACRO_SOURCE ItemsSource;
-			FILE *fpItems = Open_macro_source(ItemsSource, oa.items_filename.Value(), false, set.macros(), errmsg);
+			FILE *fpItems = Open_macro_source(ItemsSource, oa.items_filename.c_str(), false, set.macros(), errmsg);
 			if ( ! fpItems) {
 				return -1;
 			}

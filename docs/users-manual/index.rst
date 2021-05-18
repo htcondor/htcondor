@@ -5,6 +5,7 @@ Users' Manual
    :maxdepth: 2
    :glob:
 
+   quick-start-guide
    welcome-to-htcondor
    running-a-job-steps
    submitting-a-job

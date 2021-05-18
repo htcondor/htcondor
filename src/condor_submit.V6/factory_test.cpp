@@ -311,16 +311,16 @@ bool JobFactory::RowDataIsLoading(int row)
 	if (fea.foreach_mode == foreach_from_async) {
 
 		// put all of the items we have read so far into the item list
-		MyString str;
+		std::string str;
 		while (reader.output().readLine(str, false)) {
-			str.trim();
+			trim(str);
 			fea.items.append(str.c_str());
 		}
 
 		if (reader.done_reading()) {
 			if (! reader.eof_was_read()) {
 				std::string filename;
-				dprintf(D_ALWAYS, "failed to read all of the item data from '%s', error %d\n", fea.items_filename.Value(), reader.error_code());
+				dprintf(D_ALWAYS, "failed to read all of the item data from '%s', error %d\n", fea.items_filename.c_str(), reader.error_code());
 			}
 			// we have read all we are going to, so close the reader now.
 			reader.close();
@@ -370,7 +370,7 @@ int JobFactory::LoadDigest(MacroStream &ms, int cluster_id, StringList & items, 
 
 			// load the inline foreach data, and check to see if there is external foreach data
 			rval = load_inline_q_foreach_items(ms, fea, errmsg);
-			dprintf(D_MATERIALIZE | D_VERBOSE, "Digest for cluster %d has %d(%d) itemdata %s\n", cluster_id, fea.foreach_mode, rval, fea.items_filename.Value());
+			dprintf(D_MATERIALIZE | D_VERBOSE, "Digest for cluster %d has %d(%d) itemdata %s\n", cluster_id, fea.foreach_mode, rval, fea.items_filename.c_str());
 			if (rval == 1) {
 				rval = 0;
 				// there is external foreach data.  it had better be from a file, because that's the only form we support
@@ -380,7 +380,7 @@ int JobFactory::LoadDigest(MacroStream &ms, int cluster_id, StringList & items, 
 				} else if (fea.items_filename.empty()) {
 					// this is ok?
 				} else if (fea.items_filename == "<" || fea.items_filename == "-") {
-					formatstr(errmsg, "invalid filename '%s' for foreach from", fea.items_filename.Value());
+					formatstr(errmsg, "invalid filename '%s' for foreach from", fea.items_filename.c_str());
 				} else if (reader.eof_was_read()) {
 					// the reader was primed with itemdata sent over the wire...
 				} else if (fea.items.number() > 0) {
@@ -396,12 +396,12 @@ int JobFactory::LoadDigest(MacroStream &ms, int cluster_id, StringList & items, 
 						// setup an async reader for the itemdata
 						rval = reader.open(fea.items_filename.c_str());
 						if (rval) {
-							formatstr(errmsg, "could not open item data file '%s', error = %d", fea.items_filename.Value(), rval);
+							formatstr(errmsg, "could not open item data file '%s', error = %d", fea.items_filename.c_str(), rval);
 							dprintf(D_ALWAYS, "%s\n", errmsg.c_str());
 						} else {
 							rval = reader.queue_next_read();
 							if (rval) {
-								formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d", fea.items_filename.Value(), rval);
+								formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d", fea.items_filename.c_str(), rval);
 								dprintf(D_ALWAYS, "%s\n", errmsg.c_str());
 							} else {
 								fea.foreach_mode = foreach_from_async;
@@ -531,10 +531,8 @@ bool setJobFactoryPauseAndLog(JobFactory * factory, int pause_mode, int /*hold_c
 		}
 	}
 
-	if (factory) {
-		// make sure that the factory state is in sync with the pause mode
-		CheckJobFactoryPause(factory, pause_mode);
-	}
+	// make sure that the factory state is in sync with the pause mode
+	CheckJobFactoryPause(factory, pause_mode);
 
 	// log the change in pause state
 	//const char * reason_ptr = reason.empty() ? NULL : reason.c_str();

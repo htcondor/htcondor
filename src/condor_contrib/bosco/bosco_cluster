@@ -17,15 +17,18 @@ CLUSTERLIST_LOCATION=$HOME/.bosco/.clusterlist
 
 # Check if invoked by a regular user on a BOSCO Multi User installation
 # if PRIVATE_ON_MU is defined will be unable to use glideins and to set the system rouitng
-condor_id=`condor_config_val condor_ids 2>/dev/null`
-if [ "x$condor_id" == "x" ]; then
-    condor_id=`id -u condor 2> /dev/null`
-else
-    condor_id=${condor_id%.*}
-fi 
-if [ ! "x$condor_id" == "x`id -u`" ]; then
+# For now, disable the campus factory code.
+# It has problems with the new tarball layout and the collector binding to
+# a dynamic port (now the default for a Personal Condor).
+#condor_id=`condor_config_val condor_ids 2>/dev/null`
+#if [ "x$condor_id" == "x" ]; then
+#    condor_id=`id -u condor 2> /dev/null`
+#else
+#    condor_id=${condor_id%.*}
+#fi 
+#if [ ! "x$condor_id" == "x`id -u`" ]; then
     PRIVATE_ON_MU=yes
-fi
+#fi
 
 # SSH Control Path
 ssh_control_path="/tmp/bosco_ssh_control.%r@%h:%p"
@@ -253,31 +256,51 @@ ssh_find_remote () {
     # Find the platform of the remote host
     # 1. remote host
     remote_host=$1
-    cmd_out=`ssh $remote_host "python3 -c \"import sys; import platform; mydist = platform.dist(); print('%s %s%s' % (sys.platform, mydist[0], mydist[1]))\"" 2>/dev/null`
-    if [ $? -eq 0 ]; then
-        # check for linux
-        case "$cmd_out" in 
-            (*redhat7* | *centos7*)
-                echo "CentOS7" ;;
-            (*redhat8* | *centos8*)
-                echo "CentOS8" ;;
-            (*debian9*)
-                echo "Debian9" ;;
-            (*debian10*)
-                echo "Debian10" ;;
-            (*Ubuntu16*)
-                echo "Ubuntu16" ;;
-            (*Ubuntu18*)
-                echo "Ubuntu18" ;;
-            (*Ubuntu20*)
-                echo "Ubuntu20" ;;
-            (*darwin*)
-                echo "MacOSX" ;;
-            (*) ;;
-        esac
-        return 0
-    fi
-    return 1
+
+    # Returns 'Darwin' for Mac OS X or 'Linux'
+    detect_os=`ssh $remote_host "uname -s"`
+    [[ $? -eq 0 ]] || return 1
+
+    case "$detect_os" in
+        Linux)
+            ssh_detect_linux_distro "$remote_host"
+            return $?
+            ;;
+        Darwin)
+            echo "MacOSX"
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+
+ssh_detect_linux_distro () {
+    # Find the linux distro of the remote host
+    # 1. remote host
+    remote_host=$1
+
+    os_release=`ssh $remote_host "cat /etc/os-release" 2> /dev/null`
+    [[ $? -eq 0 ]] || return 1
+
+    dist=`echo "$os_release" | awk -F '=' '/^ID=/ {print $2}' | tr -d '"'`
+    ver=`echo "$os_release" | awk -F '=' '/^VERSION_ID=/ {print $2}' | tr -d '"'`
+    major_ver="${ver%%.*}"
+
+    case "$dist" in
+        (rhel|centos|scientific)
+            echo "CentOS${major_ver}" ;;
+        debian)
+            echo "Debian${major_ver}" ;;
+        ubuntu)
+            echo "Ubuntu${major_ver}" ;;
+        (*)
+            return 1
+            ;;
+    esac
+    return 0
 }
 
 
@@ -311,6 +334,12 @@ check_cluster_list2 () {
 }
 
 check_reverse_connectivity() {
+    # Reverse connectivity is only needed for campus factory pilot
+    # submission.
+    if [ -n "$PRIVATE_ON_MU" ]; then
+        return 1
+    fi
+
     # check if the remote host can connect back
     # Return 1 if the test fails (like most unix tools)
     # $1 = cluster to check for
@@ -357,6 +386,7 @@ add_cluster_to_list () {
         mv $tmpfile $CLUSTERLIST_LOCATION
     fi
 
+    mkdir -p `dirname $CLUSTERLIST_LOCATION`
     echo "entry=$remote_host max_queued=$max_queued cluster_type=$cluster_type" >> $CLUSTERLIST_LOCATION
 
     # Always after add/remove
@@ -537,9 +567,8 @@ do_test_cluster () {
     # Test condor submission
     echo -n "Testing bosco submission..."
 
-    # Get the bosco (condor) local dir
-    local_dir=`condor_config_val LOCAL_DIR`
-    root_submit_dir=$local_dir/bosco-test
+    # Put test files under the user's home directory
+    root_submit_dir=$HOME/bosco-test
     mkdir -p $root_submit_dir
     if [ $? -ne 0 ]; then
         echo "Unable to create directory $root_submit_dir"
@@ -990,21 +1019,33 @@ mkdir -p $remote_glite_dir/lib; mkdir -p $remote_glite_dir/log; mkdir -p $local_
 # TODO: uncomment to enable subdirs
 #ssh $remote_host "ln -sfn $remote_base_dir_host $remote_base_dir_default"
 
-
-# Copy over blahp
-rsync -aq $archive_dir/libexec/glite/[^l]* $remote_glite_dir/
-if [ -d $archive_dir/lib64 ] ; then
+if [ -d $archive_dir/usr/lib64 ] ; then
     libdir=lib64
 else
     libdir=lib
 fi
-rsync -aq  $archive_dir/$libdir/libclassad.so* $remote_glite_dir/lib/ 2>/dev/null
-rsync -aq  $archive_dir/$libdir/libcondor_utils* $remote_glite_dir/lib/ 2>/dev/null
+
+# Copy over Manifest
+rsync -aq $archive_dir/Manifest.txt $remote_glite_dir/
+# Record the tarball name in the Manifest
+echo $(basename $archive_dir) >> $remote_glite_dir/Manifest.txt
+
+# Copy over blahp (location change: must follow symbolic links)
+rsync -rLptgoq $archive_dir/libexec/glite/[^l]* $remote_glite_dir/ 2>/dev/null
+# Copy over libraries preserving symlinks and directory name
+rsync -aq  $archive_dir/$libdir/lib*.so* $remote_glite_dir/$libdir/ 2>/dev/null
+if [ -d $archive_dir/$libdir/condor ] ; then
+    # Older Condor releases put Globus libraries here
+    rsync -aq  $archive_dir/$libdir/condor $remote_glite_dir/$libdir/ 2>/dev/null
+fi
 if [ -d $archive_dir/libexec/glite/libexec ] ; then
+    # This is actually a symbolic link
     rsync -aq $archive_dir/libexec/glite/libexec $remote_glite_dir/
 fi
-show_progress "Sending libraries to $remote_host" rsync -aq  $archive_dir/$libdir/condor $remote_glite_dir/lib/ 2>/dev/null
 rsync -aq  $archive_dir/sbin/condor_ft-gahp $remote_glite_dir/bin 2>/dev/null
+
+# link in local submit attributes
+(cd $remote_glite_dir/bin; ln -sf ../etc/blahp/*_local_submit_attributes.sh .)
 
 # create the glidein
 if [ -n "$PRIVATE_ON_MU" ]; then

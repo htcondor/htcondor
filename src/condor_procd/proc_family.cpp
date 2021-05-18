@@ -63,9 +63,15 @@ ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
 	m_initial_sys_cpu(0),
 	m_last_signal_was_sigstop(false)
 #endif
+#ifdef LINUX
+	, m_perf_counter(root_pid)
+#endif
 {
 #if !defined(WIN32)
 	m_proxy = NULL;
+#endif
+#ifdef LINUX
+	m_perf_counter.start();
 #endif
 }
 
@@ -785,6 +791,11 @@ ProcFamily::aggregate_usage(ProcFamilyUsage* usage)
 	//
 	usage->user_cpu_time += m_exited_user_cpu_time;
 	usage->sys_cpu_time += m_exited_sys_cpu_time;
+
+	// the perf counter itself measures for the whole tree, so we don't need to
+#ifdef LINUX
+	usage->m_instructions = m_perf_counter.getInsns();
+#endif
 
 #if defined(HAVE_EXT_LIBCGROUP)
 	aggregate_usage_cgroup(usage);

@@ -66,15 +66,15 @@ X509Credential::GetMetadata() {
 
 
 	class_ad->InsertAttr (CREDATTR_MYPROXY_HOST, 
-						 myproxy_server_host.Value());
+						 myproxy_server_host.c_str());
 	class_ad->InsertAttr (CREDATTR_MYPROXY_DN, 
-						 myproxy_server_dn.Value());
+						 myproxy_server_dn.c_str());
 	class_ad->InsertAttr (CREDATTR_MYPROXY_PASSWORD, 
-						 myproxy_server_password.Value());
+						 myproxy_server_password.c_str());
 	class_ad->InsertAttr (CREDATTR_MYPROXY_CRED_NAME, 
-						 myproxy_credential_name.Value());
+						 myproxy_credential_name.c_str());
 	class_ad->InsertAttr (CREDATTR_MYPROXY_USER,
-						 myproxy_user.Value());
+						 myproxy_user.c_str());
 
 	class_ad->InsertAttr (CREDATTR_EXPIRATION_TIME,
 						 expiration_time);
@@ -83,7 +83,7 @@ X509Credential::GetMetadata() {
 
 const char *
 X509Credential::GetMyProxyServerDN() {
-	return myproxy_server_dn.Value();
+	return myproxy_server_dn.c_str();
 }
 
 
@@ -95,7 +95,7 @@ X509Credential::SetMyProxyServerDN(const char * dn) {
 
 const char *
 X509Credential::GetRefreshPassword() {
-	return myproxy_server_password.Value();
+	return myproxy_server_password.c_str();
 }
 
 
@@ -106,7 +106,7 @@ X509Credential::SetRefreshPassword(const char * pwd) {
 
 const char *
 X509Credential::GetMyProxyServerHost() {
-	return myproxy_server_host.Value();
+	return myproxy_server_host.c_str();
 }
 
 void
@@ -116,7 +116,7 @@ X509Credential::SetMyProxyServerHost(const char * host) {
 
 const char *
 X509Credential::GetCredentialName() {
-	return myproxy_credential_name.Value();
+	return myproxy_credential_name.c_str();
 }
 
 void
@@ -127,7 +127,7 @@ X509Credential::SetCredentialName(const char * name_param) {
 
 const char *
 X509Credential::GetMyProxyUser() {
-	return myproxy_user.Value();
+	return myproxy_user.c_str();
 }
 
 void

@@ -804,6 +804,13 @@ customization=normal
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_PUT_FAILED_JOBS_ON_HOLD]
+default=false
+type=bool
+customization=normal
+tags=dagman,dagman_main
+restart=never
+
 [LIBEXEC]
 default=$(RELEASE_DIR)/libexec
 win32_default=$(BIN)
@@ -1046,7 +1053,7 @@ type=int
 tags=sysapi,reconfig
 
 [RELEASE_DIR]
-default=/tmp/condorinstall0
+default=/usr
 win32_default=c:\condor
 type=string
 usage=Where have you installed the bin, sbin and lib condor directories?
@@ -1270,10 +1277,20 @@ default=
 type=string
 tags=daemon_core
 
+[DISABLE_SETUID]
+default=false
+type=bool
+tags=master
+
 [DISABLE_AUTHENTICATION_IP_CHECK]
 default=false
 type=bool
 tags=daemon_core
+
+[SEC_C_GAHP_WORKER_THREAD_DEFAULT_SESSION_DURATION]
+default=1800
+range=0,
+type=int
 
 [SEC_SESSION_DURATION_SLOP]
 default=20
@@ -1505,7 +1522,7 @@ type=string
 tags=gridmanager,gahp-client
 
 [BATCH_GAHP]
-default=$(GLITE_LOCATION)/bin/batch_gahp
+default=$(BIN)/blahpd
 type=string
 tags=gridmanager,infnbatchjob
 
@@ -2475,31 +2492,39 @@ tags=misc_utils
 
 [SEC_PASSWORD_FILE]
 default=$(SEC_PASSWORD_DIRECTORY)/POOL
-type=string
+win32_default=
+type=path
 tags=store_cred
 
 [SEC_PASSWORD_DIRECTORY]
 default=/etc/condor/passwords.d
-win32_default=
+win32_default=$(RELEASE_DIR)\tokens.sk
 type=path
 tags=store_cred
 
 [SEC_TOKEN_SYSTEM_DIRECTORY]
 default=/etc/condor/tokens.d
-win32_default=
+win32_default=$(RELEASE_DIR)\tokens.d
 type=path
 tags=condor_auth_passwd
 
 [SEC_TOKEN_DIRECTORY]
 default=
 description=Directory containing the tokens for token auth.
-type=string
+type=path
 tags=condor_auth_passwd
 
 [SEC_TOKEN_ISSUER_KEY]
 default=POOL
 description=Name of the key used to issue session tokens
 type=string
+tags=condor_auth_passwd
+
+[SEC_TOKEN_POOL_SIGNING_KEY_FILE]
+default=$(SEC_PASSWORD_FILE)
+win32_default=$(RELEASE_DIR)\tokens.sk\POOL
+type=path
+description=Path to the POOL token signing key
 tags=condor_auth_passwd
 
 [SEC_TOKEN_MAX_AGE]
@@ -2662,7 +2687,7 @@ type=string
 tags=starter
 
 [STARTER_NUM_THREADS_ENV_VARS]
-default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT
+default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT OPENBLAS_NUM_THREADS TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS
 type=string
 tags=starter
 
@@ -5146,6 +5171,22 @@ tags=starter
 default=true
 type=bool
 
+[DOCKER_PERFORM_TEST]
+default=true
+type=bool
+
+[DOCKER_RUN_UNDER_INIT]
+default=true
+type=bool
+
+[DOCKER_TEST_IMAGE_PATH]
+default=$(LIBEXEC)/htcondor_docker_test
+type=string
+
+[DOCKER_TEST_IMAGE_NAME]
+default=htcondor_docker_test
+type=string
+
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
 type=string
@@ -5459,6 +5500,12 @@ default=$(SBIN)/AzureGAHPServer
 win32_default=$(SBIN)\AzureGAHPServer.py
 type=path
 
+[ARC_GAHP]
+default=$(SBIN)/arc_gahp
+
+[ARC_GAHP_LOG]
+default=/tmp/ArcGahpLog.$(USERNAME)
+
 [GAHP_SSL_CAFILE]
 default=
 type=path
@@ -5503,6 +5550,19 @@ type=path
 default=$(SBIN)/condor_credmon_oauth
 win32_default=
 type=path
+
+[LOCAL_CREDMON_TOKEN_USE_JSON]
+default=true
+type=bool
+
+[LOCAL_CREDMON_TOKEN_AUDIENCE]
+default=
+type=string
+
+[LOCAL_CREDMON_TOKEN_VERSION]
+default=scitokens:2.0
+type=string
+
 
 # standard API endpoints for common OAuth token providers
 [BOX_AUTHORIZATION_URL]
@@ -5756,6 +5816,88 @@ customization=const
 [MachineBusy]
 default=($(CPUBusy) || $(KeyboardBusy))
 customization=const
+
+# Defaults for condor_adstash
+[ADSTASH_SAMPLE_INTERVAL]
+description=How often to have condor_adstash poll daemons
+type=int
+default=1200
+[ADSTASH_CHECKPOINT_FILE]
+description=Where condor_adstash should store its checkpoint
+type=path
+default=$(LOG)/adstash_checkpoint.json
+[ADSTASH_LOG]
+description=Where condor_adstash should store its log
+type=path
+default=$(LOG)/adstash.log
+[ADSTASH_DEBUG]
+description=Debug logging options for condor_adstash
+type=string
+default=D_ALWAYS
+[ADSTASH_NUM_THREADS]
+description=How many parallel queries condor_adstash should use
+type=int
+default=1
+[ADSTASH_READ_POOLS]
+description=Comma-separated list of Collectors condor_adstash should query
+type=string
+default=$(CONDOR_HOST)
+[ADSTASH_READ_SCHEDDS]
+description=Comma-separated list of Schedds condor_adstash should query (* for all)
+type=string
+default=*
+[ADSTASH_READ_STARTDS]
+description=Comma-separated list of Startds condor_adstash should query (* for all)
+type=string
+default=*
+[ADSTASH_SCHEDD_HISTORY]
+description=Should condor_adstash query Schedd job history
+type=bool
+default=False
+[ADSTASH_STARTD_HISTORY]
+description=Should condor_adstash query Startd job history
+type=bool
+default=False
+[ADSTASH_SCHEDD_HISTORY_MAX_ADS]
+description=Stop retrieving ads from a Schedd after this many ads per poll
+type=int
+default=10000
+[ADSTASH_STARTD_HISTORY_MAX_ADS]
+description=Stop retrieving ads from a Startd after this many ads per poll
+type=int
+default=10000
+[ADSTASH_SCHEDD_HISTORY_TIMEOUT]
+description=Max time in seconds condor_adstash has to process each Schedd history
+type=int
+default=240
+[ADSTASH_STARTD_HISTORY_TIMEOUT]
+description=Max time in seconds condor_adstash has to process each Startd history
+type=int
+default=240
+[ADSTASH_ES_HOST]
+description=Hostname[:port] for the Elasticsearch instance condor_adstash should push to
+type=string
+default=$(FULL_HOSTNAME):9200
+[ADSTASH_ES_USE_HTTPS]
+description=Should condor_adstash use SSL to connect with Elasticsearch
+type=bool
+default=False
+[ADSTASH_ES_USERNAME]
+description=Elasticsearch username
+type=string
+default=
+[ADSTASH_ES_PASSWORD_FILE]
+description=File containing Elasticsearch password on its first line
+type=path
+default=
+[ADSTASH_ES_BUNCH_SIZE]
+description=How many docs should be pushed to Elasticsearch at a time
+type=int
+default=250
+[ADSTASH_ES_INDEX_NAME]
+description=What Elasticsearch index should condor_adstash push ads to
+type=string
+default=htcondor-000001
 
 ######
 ## add metaknobs below this banner
@@ -6053,6 +6195,9 @@ default : @end
 	ALLOW_WRITE_STARTD=$(ALLOW_WRITE) $(FLOCK_FROM)
 	ALLOW_READ_COLLECTOR=$(ALLOW_READ) $(FLOCK_FROM)
 	ALLOW_READ_STARTD=$(ALLOW_READ) $(FLOCK_FROM)
+
+	# To smooth upgrades from 8.8.
+	LEGACY_ALLOW_SEMANTICS = TRUE
 @end
 
 [$SECURITY.WITH_AUTHENTICATION]
@@ -6089,11 +6234,11 @@ default : @end
 	ALLOW_WRITE_STARTD=$(ALLOW_WRITE) $(FLOCK_FROM)
 	ALLOW_READ_COLLECTOR=$(ALLOW_READ) $(FLOCK_FROM)
 	ALLOW_READ_STARTD=$(ALLOW_READ) $(FLOCK_FROM)
-	use SECURITY : WITH_AUTHENTICATION
+	use SECURITY:WITH_AUTHENTICATION
 @end
 
 [$FEATURE.AssignAccountingGroup]
-description=Set the job accounting attributes by mapping the job's Owner attribute args:(map_file)
+description=Set the job accounting attributes by mapping the job's Owner attribute args:(map_file [,check_request])
 default : @fin
 	if ! $(1?)
 	  error : use FEATURE : AssignAccountingGroup requires a map_file argument
@@ -6103,6 +6248,12 @@ default : @fin
 	JOB_TRANSFORM_AssignAccountingGroup = [ copy_Owner="AcctGroupUser"; copy_AcctGroup="RequestedAcctGroup"; eval_set_AcctGroup=usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup); eval_set_AccountingGroup=join(".",usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup),AcctGroupUser); ]
 	# make sure that the user can't qedit these attributes once they have been set.
 	IMMUTABLE_JOB_ATTRS = $(IMMUTABLE_JOB_ATTRS) AcctGroup AcctGroupUser AccountingGroup
+	# optionally check that the user requested a valid group
+	if $(2:True)
+	  SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) CheckRequestedGroup
+	  SUBMIT_REQUIREMENT_CheckRequestedGroup = RequestedAcctGroup is undefined || RequestedAcctGroup == AcctGroup
+	  SUBMIT_REQUIREMENT_CheckRequestedGroup_REASON = strcat("Permission denied setting accounting_group to ", RequestedAcctGroup)
+	endif
 	# require that the user mapped into an accounting group
 	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) AssignAccountingGroup
 	SUBMIT_REQUIREMENT_AssignAccountingGroup = AcctGroup isnt undefined && AccountingGroup isnt undefined
@@ -6300,6 +6451,129 @@ default: @end
    TOP_COLLECTOR_HOST=$(COLLECTOR_HOST)
 @end
 
+##
+## get_htcondor knobs
+##
+
+[$SECURITY.get_htcondor_idtokens]
+default: @end
+# Authenticate, encrypt, and monitor the integrity of all connections.
+use security:strong
+
+# This configuration specifies authentication methods first, and then
+# specifies various authorizations.  Think of a passport and a visa: the
+# former proves your identity, and the latter proves that that identity
+# is allowed into the country.
+#
+# HTCondor supports a wide variety of authentication methods, but we
+# recommend IDTOKENS as a good blend of simple and capable.  The
+# get_htcondor script will make sure each of your machines has an IDTOKEN,
+# but rather than force each user to acquire one, we add the FS ("filesystem")
+# method, which lets the HTCondor tools use the local filesystem to prove the
+# identity of the user who invoked them.  Finally, we allow ANONYMOUS
+# authentication, for the READ authorization level only, so that if nothing
+# else works, we can allow users read-only access to remote daemons
+# (e.g., for condor_status).
+#
+# Users who want to submit jobs remotely should run `condor_token_fetch` on
+# the machine they want to submit to and cut-and-paste the result to a file
+# in '~/.condor/tokens.d' on the machine they're submitting from.
+#
+# HTCondor does not presently try another authentication method if one
+# succeeds but authorization fails, so the list must be in this order:
+# IDTOKENS before FS because FS gives the daemon a different identity
+# than the IDTOKEN, and FS before ANONYMOUS because ANONYMOUS, of course,
+# gives no specific identity at all.
+SEC_DEFAULT_AUTHENTICATION_METHODS = IDTOKENS, FS
+# Only allow ANONYMOUS authentication for READ-level authorizations.
+SEC_READ_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
+# Since ANONYMOUS is not in the default authentication methods, we must
+# list it in the client methods explicitly (all other methods are server).
+SEC_CLIENT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
+
+# IDTOKENs issued by HTCondor include the identity of the issuer.  This
+# identity is used to determine which IDTOKEN(s) to present to which
+# daemon(s).  The TRUST_DOMAIN variable sets that identity.  Setting it
+# to the same thing on each machine in your pool ensures that a token
+# issued by one machine is presented to every other machine in your pool.
+#
+# When get_htcondor creates an IDTOKEN for a machine, it uses this variable
+# to create the identity for that IDTOKEN.  This makes it easy to look at
+# the authorization lists (see below) and distinguish between IDTOKENS in
+# your pool and (if you allow them) IDTOKENS from other pools.
+TRUST_DOMAIN = $(CONDOR_HOST)
+
+# This section specifies the authorizations of the various identities we
+# expect to see, given the authentication methods above.
+
+# Allow anyone to read.  We could list the other identities here, and include
+# the ANONYMOUS identity, but if we're including ANONYMOUS, why bother?
+ALLOW_READ = *
+
+# Give root on each machine ADMINISTRATOR access (in case something goes
+# wrong with IDTOKENS) and OWNER access (so they can force HTCondor to
+# stop all running jobs on that machine).  Do NOT issue IDTOKENS to root.
+ALLOW_ADMINISTRATOR = root@* condor@$(TRUST_DOMAIN)
+ALLOW_OWNER = root@* condor@$(TRUST_DOMAIN)
+
+# Accept non-read connections only from other daemons in the same pool.
+ALLOW_WRITE = condor@$(TRUST_DOMAIN)
+ALLOW_DAEMON = condor@$(TRUST_DOMAIN)
+ALLOW_NEGOTIATOR = condor@$(TRUST_DOMAIN)
+@end
+
+[$ROLE.get_htcondor_central_manager]
+default: @end
+use security:get_htcondor_idtokens
+
+use role:CentralManager
+@end
+
+[$ROLE.get_htcondor_submit]
+default: @end
+use security:get_htcondor_idtokens
+
+# Allow local users to submit jobs.  Since the only way to authenticate
+# is with IDTOKENS (all of whose holders we trust) and FS (the local users),
+# we can avoid writing things like *@$(HOSTNAME), which will fail if
+# UID_DOMAIN is set (and introduces more opportunities for DNS to fail).
+ALLOW_WRITE = $(ALLOW_WRITE) *
+
+use role:submit
+@end
+
+[$ROLE.get_htcondor_execute]
+default: @end
+use security:get_htcondor_idtokens
+
+use role:execute
+@end
+
+##
+## Version-specific knobx.
+##
+[$SECURITY.recommended_v9_0]
+description = default security config for 9.0 and later args:([service [, admins]])
+default: @end
+# Make it easy to detect if this metaknob was set.
+SECURITY_MODEL = 9.0
+
+# Assume that FS and IDTOKENS are in SEC_DEFAULT_AUTHENTICATION_METHODS,
+# which they are by default.
+use security:strong
+
+# This allows anyone who can access port 9618 to READ, which lets
+# condor_status and condor_q work over the network out of the box.
+SEC_READ_AUTHENTICATION = OPTIONAL
+SEC_READ_ENCRYPTION = OPTIONAL
+SEC_READ_INTEGRITY = OPTIONAL
+
+ALLOW_ADMINISTRATOR = $(1:condor)@* condor_pool@* $(2:root@*) $(3+)
+ALLOW_DAEMON = $(1:condor)@*  condor_pool@*
+ALLOW_NEGOTIATOR = $(1:condor)@* condor_pool@*
+ALLOW_WRITE = *
+ALLOW_READ = *
+@end
 
 ##
 ## Experimental meta knobs
@@ -6488,6 +6762,13 @@ default : @end
 	DAEMON_LIST=$(DAEMON_LIST),CREDMON_OAUTH
 	AUTO_INCLUDE_CREDD_IN_DAEMON_LIST=True
 	TRUST_CREDENTIAL_DIRECTORY=True
+@end
+
+[$FEATURE.ADSTASH]
+description=Enable sending of schedd job history ads to unauthenticated Elasticsearch on localhost
+default : @end
+	ADSTASH_SCHEDD_HISTORY=True
+	DAEMON_LIST=$(DAEMON_LIST),ADSTASH
 @end
 
 

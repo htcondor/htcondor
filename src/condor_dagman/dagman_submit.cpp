@@ -81,7 +81,7 @@ submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
   if (fp == NULL) {
     debug_printf( DEBUG_NORMAL, 
 		  "ERROR: my_popen(%s) in submit_try() failed!\n",
-		  cmd.Value() );
+		  cmd.c_str() );
     return false;
   }
   
@@ -128,7 +128,7 @@ submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
   while (fgets(buffer, UTIL_MAX_LINE_LENGTH, fp)) {
     MyString buf_line = buffer;
 	buf_line.chomp();
-	debug_printf(DEBUG_VERBOSE, "From submit: %s\n", buf_line.Value());
+	debug_printf(DEBUG_VERBOSE, "From submit: %s\n", buf_line.c_str());
 	command_output += buf_line;
     if (strstr(buffer, marker) != NULL) {
 	  keyLine = buf_line;
@@ -142,22 +142,22 @@ submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 
     if (keyLine == "") {
       debug_printf(DEBUG_NORMAL, "failed while reading from pipe.\n");
-      debug_printf(DEBUG_NORMAL, "Read so far: %s\n", command_output.Value());
+      debug_printf(DEBUG_NORMAL, "Read so far: %s\n", command_output.c_str());
       return false;
     }
 
     if (status != 0) {
 		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", 
-					 command_output.Value());
+					 command_output.c_str());
 		debug_printf( DEBUG_QUIET, "ERROR while running \"%s\": "
 					  "my_pclose() failed with status %d (errno %d, %s)!\n",
-					  cmd.Value(), status, errno, strerror( errno ) );
+					  cmd.c_str(), status, errno, strerror( errno ) );
 		return false;
     }
   }
 
   int	jobProcCount;
-  if ( !parseFnc( keyLine.Value(), jobProcCount, condorID._cluster) ) {
+  if ( !parseFnc( keyLine.c_str(), jobProcCount, condorID._cluster) ) {
 		// We are going forward (do not return false here)
 		// Expectation is that higher levels will catch that we
 		// did not get a cluster initialized properly here, fail,
@@ -192,7 +192,7 @@ do_submit( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 {
 	MyString cmd; // for debug output
 	args.GetArgsStringForDisplay( &cmd );
-	debug_printf( DEBUG_VERBOSE, "submitting: %s\n", cmd.Value() );
+	debug_printf( DEBUG_VERBOSE, "submitting: %s\n", cmd.c_str() );
   
 	bool success = false;
 
@@ -200,7 +200,7 @@ do_submit( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 
 	if( !success ) {
 	    debug_printf( DEBUG_QUIET, "ERROR: submit attempt failed\n" );
-		debug_printf( DEBUG_QUIET, "submit command was: %s\n", cmd.Value() );
+		debug_printf( DEBUG_QUIET, "submit command was: %s\n", cmd.c_str() );
 	}
 
 	return success;
@@ -225,7 +225,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
 				"Could not change to node directory %s: %s\n",
-				directory, errMsg.Value() );
+				directory, errMsg.c_str() );
 		return false;
 	}
 	bool success = false;
@@ -249,7 +249,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString nodeName = MyString(ATTR_DAG_NODE_NAME_ALT) + " = " + DAGNodeName;
-	args.AppendArg( nodeName.Value() );
+	args.AppendArg( nodeName.c_str() );
 
 		// append a line adding the parent DAGMan's cluster ID to the job ad
 	if ( dm.DAGManJobId._cluster > 0 ) {
@@ -271,7 +271,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// Pass the batch name to lower levels.
 	if ( batchName != "" ) {
 		args.AppendArg( "-batch-name" );
-		args.AppendArg( batchName.Value() );
+		args.AppendArg( batchName.c_str() );
 	}
 		// Pass the batch ID to lower levels.
 	if ( batchId != "" ) {
@@ -282,7 +282,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString submitEventNotes = MyString(
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
-	args.AppendArg( submitEventNotes.Value() );
+	args.AppendArg( submitEventNotes.c_str() );
 
 	ASSERT( workflowLogFile );
 
@@ -324,12 +324,19 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		args.AppendArg( "log=" );
 	}
 
+		// If this is a hold job, add the attribute to submit on hold
+	if ( node->GetHold() ) {
+		debug_printf( DEBUG_VERBOSE, "Submitting node job on hold\n" );
+		args.AppendArg( "-a" );
+		args.AppendArg( "hold = true" );
+	}
+
 	ArgList parentNameArgs;
 	parentNameArgs.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	MyString parentNodeNames = MyString("+DAGParentNodeNames = ") + "\"";
 	if (DAGParentNodeNames) parentNodeNames += DAGParentNodeNames;
 	parentNodeNames += "\"";
-	parentNameArgs.AppendArg( parentNodeNames.Value() );
+	parentNameArgs.AppendArg( parentNodeNames.c_str() );
 
 		// set any VARS specified in the DAG file
 #ifdef DEAD_CODE
@@ -341,7 +348,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	// allow for $(JOB) expansions in the vars - and also in the submit file.
 	MyString jobarg("JOB="); jobarg += DAGNodeName;
 	args.AppendArg("-a");
-	args.AppendArg(jobarg.Value());
+	args.AppendArg(jobarg.c_str());
 
 	for (auto it = node->varsFromDag.begin(); it != node->varsFromDag.end(); ++it) {
 		Job::NodeVar & nodeVar = *it;
@@ -357,7 +364,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		varStr += value;
 
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-		args.AppendArg( varStr.Value() );
+		args.AppendArg( varStr.c_str() );
 	}
 
 		// Set the special DAG_STATUS variable (mainly for use by
@@ -384,7 +391,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	if (dm._submitDagDeepOpts.suppress_notification) {
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		MyString notify = MyString("notification = never");
-		args.AppendArg( notify.Value() );
+		args.AppendArg( notify.c_str() );
 	}
 
 		//
@@ -414,10 +421,10 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// how big is the command line so far?
 	MyString display;
 	args.GetArgsStringForDisplay( &display );
-	int cmdLineSize = display.Length();
+	int cmdLineSize = display.length();
 
 	parentNameArgs.GetArgsStringForDisplay( &display );
-	int DAGParentNodeNamesLen = display.Length();
+	int DAGParentNodeNamesLen = display.length();
 		// how many additional chars must we still add to command line
 	        // NOTE: according to the POSIX spec, the args +
    	        // environ given to exec() cannot exceed
@@ -443,7 +450,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
 				"Could not change to original directory: %s\n",
-				errMsg.Value() );
+				errMsg.c_str() );
 		success = false;
 	}
 
@@ -504,6 +511,12 @@ static void init_dag_vars(SubmitHash * submitHash,
 	if (dm._suppressJobLogs) {
 		debug_printf(DEBUG_VERBOSE, "Suppressing node job log file\n");
 		submitHash->set_arg_variable(SUBMIT_KEY_UserLogFile, "");
+	}
+
+	// If this is a hold job, add the attribute to submit on hold
+	if ( node->GetHold() ) {
+		debug_printf( DEBUG_VERBOSE, "Submitting node job on hold\n" );
+		submitHash->set_arg_variable(SUBMIT_KEY_Hold, "true");
 	}
 
 	// set any VARS specified in the DAG file
@@ -582,7 +595,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	if (!tmpDir.Cd2TmpDir(directory, errMsg)) {
 		debug_printf(DEBUG_QUIET,
 			"Could not change to node directory %s: %s\n",
-			directory, errMsg.Value());
+			directory, errMsg.c_str());
 		return false;
 	}
 	int rval = 0;
@@ -709,11 +722,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 finis:
 	if (qmgr) {
 		// if qmanager object is still open, cancel any pending transaction and disconnnect it.
-		CondorError errstack;
-		success = DisconnectQ(qmgr, true, &errstack); qmgr = NULL;
-		if (!success) {
-			debug_printf(DEBUG_NORMAL, "Failed to submit job %s: %s\n", node->GetJobName(), errstack.getFullText().c_str());
-		}
+		DisconnectQ(qmgr, false); qmgr = NULL;
 	}
 	// report errors from submit
 	//
@@ -742,7 +751,7 @@ finis:
 	if (!tmpDir.Cd2MainDir(errMsg)) {
 		debug_printf(DEBUG_QUIET,
 			"Could not change to original directory: %s\n",
-			errMsg.Value());
+			errMsg.c_str());
 		success = false;
 	}
 
@@ -785,7 +794,7 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
 				"Could not change to node directory %s: %s\n",
-				directory, errMsg.Value() );
+				directory, errMsg.c_str() );
 		return false;
 	}
 
@@ -818,7 +827,7 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 	MyString subEventNotes("DAG Node: " );
 	subEventNotes += DAGNodeName;
 		// submitEventLogNotes get deleted in SubmitEvent destructor.
-	subEvent.submitEventLogNotes = strnewp( subEventNotes.Value() );
+	subEvent.submitEventLogNotes = strnewp( subEventNotes.c_str() );
 
 	if ( !ulog.writeEvent( &subEvent ) ) {
 		EXCEPT( "Error: writing dummy submit event for NOOP node failed!" );
@@ -850,7 +859,7 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 	if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
 				"Could not change to node directory %s: %s\n",
-				directory, errMsg.Value() );
+				directory, errMsg.c_str() );
 		return false;
 	}
 
@@ -880,7 +889,7 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 	MyString pEventNotes("DAG Node: " );
 	pEventNotes += DAGNodeName;
 		// skipEventLogNotes gets deleted in PreSkipEvent destructor.
-	pEvent.skipEventLogNotes = strnewp( pEventNotes.Value() );
+	pEvent.skipEventLogNotes = strnewp( pEventNotes.c_str() );
 
 	if ( !ulog.writeEvent( &pEvent ) ) {
 		EXCEPT( "Error: writing PRESKIP event failed!" );

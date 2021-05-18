@@ -24,7 +24,8 @@
 enum Protocol {
     CONDOR_NO_PROTOCOL,
     CONDOR_BLOWFISH,
-    CONDOR_3DES
+    CONDOR_3DES,
+    CONDOR_AESGCM
 };
 
 class KeyInfo {
@@ -36,8 +37,9 @@ class KeyInfo {
 
     KeyInfo(const unsigned char * keyData,
             int             keyDataLen,
-            Protocol        protocol = CONDOR_NO_PROTOCOL,
-            int             duration = 0);
+            Protocol        protocol,
+            int             duration);
+
     //------------------------------------------
     // Construct a key object
     //------------------------------------------

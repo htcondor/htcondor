@@ -338,7 +338,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 					// we want this to be set to true!).
 					// In the future, we can always reproduce the entire chain of
 					// logic to determine if TOKEN auth is tried.
-					m_should_try_token_request |= mySock->isClient();
+					m_should_try_token_request |= (mySock->isClient() != 0);
 
 				return 0;
 
@@ -472,7 +472,7 @@ int Authentication::authenticate_finish(CondorError *errstack)
 	// via getAuthenticatedName().
 
 	if(authenticator_) {
-		dprintf (D_SECURITY, "ZKM: setting default map to %s\n",
+		dprintf (D_SECURITY, "AUTHENTICATION: setting default map to %s\n",
 				 authenticator_->getRemoteFQU()?authenticator_->getRemoteFQU():"(null)");
 	}
 
@@ -489,14 +489,14 @@ int Authentication::authenticate_finish(CondorError *errstack)
 	if (retval && use_mapfile && authenticator_) {
 		const char * name_to_map = authenticator_->getAuthenticatedName();
 		if (name_to_map) {
-			dprintf (D_SECURITY, "ZKM: name to map is '%s'\n", name_to_map);
-			dprintf (D_SECURITY, "ZKM: pre-map: current user is '%s'\n",
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: name to map is '%s'\n", name_to_map);
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: pre-map: current user is '%s'\n",
 					authenticator_->getRemoteUser()?authenticator_->getRemoteUser():"(null)");
-			dprintf (D_SECURITY, "ZKM: pre-map: current domain is '%s'\n",
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: pre-map: current domain is '%s'\n",
 					authenticator_->getRemoteDomain()?authenticator_->getRemoteDomain():"(null)");
 			map_authentication_name_to_canonical_name(auth_status, method_used, name_to_map);
 		} else {
-			dprintf (D_SECURITY, "ZKM: name to map is null, not mapping.\n");
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: name to map is null, not mapping.\n");
 		}
 #if defined(HAVE_EXT_GLOBUS)
 	} else if (authenticator_ && (auth_status == CAUTH_GSI)) {
@@ -507,9 +507,9 @@ int Authentication::authenticate_finish(CondorError *errstack)
 		const char * name_to_map = authenticator_->getAuthenticatedName();
 		if (name_to_map) {
 			int retval = ((Condor_Auth_X509*)authenticator_)->nameGssToLocal(name_to_map);
-			dprintf(D_SECURITY, "nameGssToLocal returned %s\n", retval ? "success" : "failure");
+			dprintf(D_SECURITY|D_VERBOSE, "nameGssToLocal returned %s\n", retval ? "success" : "failure");
 		} else {
-			dprintf (D_SECURITY, "ZKM: name to map is null, not calling GSI authorization.\n");
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: name to map is null, not calling GSI authorization.\n");
 		}
 #endif
 	}
@@ -517,11 +517,11 @@ int Authentication::authenticate_finish(CondorError *errstack)
 	// yeah, probably all of the log lines that start with ZKM: should be
 	// updated.  oh, i wish there were a D_ZKM, but alas, we're out of bits.
 	if( authenticator_ ) {
-		dprintf (D_SECURITY, "ZKM: post-map: current user is '%s'\n",
+		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: post-map: current user is '%s'\n",
 				 authenticator_->getRemoteUser()?authenticator_->getRemoteUser():"(null)");
-		dprintf (D_SECURITY, "ZKM: post-map: current domain is '%s'\n",
+		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: post-map: current domain is '%s'\n",
 				 authenticator_->getRemoteDomain()?authenticator_->getRemoteDomain():"(null)");
-		dprintf (D_SECURITY, "ZKM: post-map: current FQU is '%s'\n",
+		dprintf (D_SECURITY, "AUTHENTICATION: post-map: current FQU is '%s'\n",
 				 authenticator_->getRemoteFQU()?authenticator_->getRemoteFQU():"(null)");
 	}
 
@@ -564,10 +564,10 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 			global_map_file = NULL;
 		}
 
-		dprintf (D_SECURITY, "ZKM: Parsing map file.\n");
+		dprintf (D_SECURITY, "AUTHENTICATION: Parsing map file.\n");
 		auto_free_ptr credential_mapfile(param("CERTIFICATE_MAPFILE"));
 		if ( ! credential_mapfile) {
-			dprintf(D_SECURITY, "ZKM: No CERTIFICATE_MAPFILE defined\n");
+			dprintf(D_SECURITY, "AUTHENTICATION: No CERTIFICATE_MAPFILE defined\n");
 		} else {
 			global_map_file = new MapFile();
 
@@ -579,17 +579,17 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 
 			int line;
 			if (0 != (line = global_map_file->ParseCanonicalizationFile(credential_mapfile.ptr(), assume_hash, allow_include))) {
-				dprintf(D_SECURITY, "ZKM: Error parsing %s at line %d", credential_mapfile.ptr(), line);
+				dprintf(D_SECURITY, "AUTHENTICATION: Error parsing %s at line %d", credential_mapfile.ptr(), line);
 				delete global_map_file;
 				global_map_file = NULL;
 			}
 		}
 		global_map_file_load_attempted = true;
 	} else {
-		dprintf (D_SECURITY, "ZKM: map file already loaded.\n");
+		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: map file already loaded.\n");
 	}
 
-	dprintf (D_SECURITY, "ZKM: attempting to map '%s'\n", authentication_name);
+	dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: attempting to map '%s'\n", authentication_name);
 
 	// this will hold what we pass to the mapping function
 	std::string auth_name_to_map = authentication_name;
@@ -601,7 +601,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	if (authentication_type == CAUTH_GSI) {
 		const char *fqan = ((Condor_Auth_X509*)authenticator_)->getFQAN();
 		if (fqan && fqan[0]) {
-			dprintf (D_SECURITY, "ZKM: GSI was used, and FQAN is present.\n");
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: GSI was used, and FQAN is present.\n");
 			auth_name_to_map = fqan;
 			included_voms = true;
 		}
@@ -609,17 +609,17 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 #endif
 
 	if (global_map_file) {
-		MyString canonical_user;
+		std::string canonical_user;
 
-		dprintf (D_SECURITY, "ZKM: 1: attempting to map '%s'\n", auth_name_to_map.c_str());
+		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 1: attempting to map '%s'\n", auth_name_to_map.c_str());
 		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
-		dprintf (D_SECURITY, "ZKM: 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
+		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.c_str());
 
 		// if it did not find a user, and we included voms attrs, try again without voms
 		if (mapret && included_voms) {
-			dprintf (D_SECURITY, "ZKM: now attempting to map '%s'\n", authentication_name);
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: now attempting to map '%s'\n", authentication_name);
 			mapret = global_map_file->GetCanonicalization(method_string, authentication_name, canonical_user);
-			dprintf (D_SECURITY, "ZKM: now 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: now 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.c_str());
 		}
 
 		// if the method is SCITOKENS and mapping failed, try again
@@ -648,7 +648,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 
 		if (!mapret) {
 			// returns true on failure?
-			dprintf (D_FULLDEBUG, "ZKM: successful mapping to %s\n", canonical_user.Value());
+			dprintf (D_FULLDEBUG|D_VERBOSE, "AUTHENTICATION: successful mapping to %s\n", canonical_user.c_str());
 
 			// there is a switch for GSI to use the default globus function for this, in
 			// case there is some custom globus mapping add-on, or the admin just wants
@@ -669,27 +669,27 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 					dprintf (D_SECURITY, "Globus-based mapping failed; will use gsi@unmapped.\n");
 				}
 #else
-				dprintf(D_ALWAYS, "ZKM: GSI not compiled, but was used?!!\n");
+				dprintf(D_ALWAYS, "AUTHENTICATION: GSI not compiled, but was used?!!\n");
 #endif
 				return;
 			} else {
 
-				dprintf (D_SECURITY, "ZKM: found user %s, splitting.\n", canonical_user.Value());
+				dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: found user %s, splitting.\n", canonical_user.c_str());
 
-				MyString user;
-				MyString domain;
+				std::string user;
+				std::string domain;
 
 				// this sets user and domain
 				split_canonical_name( canonical_user, user, domain);
 
-				authenticator_->setRemoteUser( user.Value() );
-				authenticator_->setRemoteDomain( domain.Value() );
+				authenticator_->setRemoteUser( user.c_str() );
+				authenticator_->setRemoteDomain( domain.c_str() );
 
 				// we're done.
 				return;
 			}
 		} else {
-			dprintf (D_FULLDEBUG, "ZKM: did not find user %s.\n", authentication_name);
+			dprintf (D_FULLDEBUG, "AUTHENTICATION: did not find user %s.\n", authentication_name);
 		}
 	} else if (authentication_type == CAUTH_GSI) {
         // See notes above around the nameGssToLocal call about why we invoke GSI authorization here.
@@ -700,10 +700,10 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		int retval = ((Condor_Auth_X509*)authenticator_)->nameGssToLocal(authentication_name);
 		dprintf(D_SECURITY, "nameGssToLocal returned %s\n", retval ? "success" : "failure");
 #else
-		dprintf(D_ALWAYS, "ZKM: GSI not compiled, so can't call nameGssToLocal!!\n");
+		dprintf(D_ALWAYS, "AUTHENTICATION: GSI not compiled, so can't call nameGssToLocal!!\n");
 #endif
 	} else {
-		dprintf (D_FULLDEBUG, "ZKM: global_map_file not present!\n");
+		dprintf (D_FULLDEBUG, "AUTHENTICATION: global_map_file not present!\n");
 	}
 }
 
@@ -711,18 +711,18 @@ void Authentication::split_canonical_name(char const *can_name,char **user,char 
 		// This version of the function exists to avoid use of MyString
 		// in ReliSock, because that gets linked into std univ jobs.
 		// This function is stubbed out in cedar_no_ckpt.C.
-	MyString my_user,my_domain;
+	std::string my_user,my_domain;
 	split_canonical_name(can_name,my_user,my_domain);
-	*user = strdup(my_user.Value());
-	*domain = strdup(my_domain.Value());
+	*user = strdup(my_user.c_str());
+	*domain = strdup(my_domain.c_str());
 }
 
-void Authentication::split_canonical_name(MyString can_name, MyString& user, MyString& domain ) {
+void Authentication::split_canonical_name(const std::string& can_name, std::string& user, std::string& domain ) {
 
     char local_user[256];
  
 	// local storage so we can modify it.
-	strncpy (local_user, can_name.Value(), 255);
+	strncpy (local_user, can_name.c_str(), 255);
 	local_user[255] = 0;
 
     // split it into user@domain
@@ -1010,7 +1010,7 @@ int Authentication::exchangeKey(KeyInfo *& key)
             // Now, unwrap it.  
             if ( authenticator_ && authenticator_->unwrap(encryptedKey,  inputLen, decryptedKey, outputLen) ) {
 					// Success
-				key = new KeyInfo((unsigned char *)decryptedKey, keyLength,(Protocol) protocol,duration);
+				key = new KeyInfo((unsigned char *)decryptedKey, keyLength, (Protocol)protocol, duration);
 			} else {
 					// Failure!
 				retval = 0;

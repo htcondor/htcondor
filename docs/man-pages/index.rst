@@ -14,15 +14,14 @@ Command Reference Manual (man pages)
    bosco_uninstall
    classads
    classad_eval
+   condor_adstash
    condor_advertise
    condor_annex
    condor_check_userlogs
    condor_chirp
-   condor_cod
    condor_configure
    condor_config_val
    condor_continue
-   condor_convert_history
    condor_dagman
    condor_drain
    condor_evicted_files
@@ -88,5 +87,6 @@ Command Reference Manual (man pages)
    condor_wait
    condor_watch_q
    condor_who
+   get_htcondor
    gidd_alloc
    procd_ctl

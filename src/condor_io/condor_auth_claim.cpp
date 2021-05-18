@@ -45,7 +45,7 @@ int Condor_Auth_Claim :: authenticate(const char * /* remoteHost */, CondorError
 
 	if ( mySock_->isClient() ) {
 
-		MyString myUser;
+		std::string myUser;
 		bool error_getting_name = false;
 
 		// get our user name in condor priv
@@ -151,7 +151,7 @@ int Condor_Auth_Claim :: authenticate(const char * /* remoteHost */, CondorError
 				return fail;
 			}
 
-			MyString myUser = tmpUser;
+			std::string myUser = tmpUser;
 
 			// check SEC_CLAIMTOBE_INCLUDE_DOMAIN. this knob exists (and defaults
 			// to false) to provide backwards compatibility. it will be removed
@@ -174,11 +174,11 @@ int Condor_Auth_Claim :: authenticate(const char * /* remoteHost */, CondorError
 				}
 				ASSERT(tmpDomain);
 				setRemoteDomain(tmpDomain);
-				myUser.formatstr("%s@%s", tmpUser, tmpDomain);
+				formatstr(myUser, "%s@%s", tmpUser, tmpDomain);
 				free(tmpDomain);
 			}
 			setRemoteUser(tmpUser);
-			setAuthenticatedName(myUser.Value());
+			setAuthenticatedName(myUser.c_str());
 			free(tmpUser);
 			retval = 1;
 

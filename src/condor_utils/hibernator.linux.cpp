@@ -185,7 +185,7 @@ LinuxHibernator::initialize( void )
 	}
 
 	// Do we have "pm-utils" installed?
-	MyString	methods;
+	std::string	methods;
 	for ( int type = 0;  type < 3;  type++ ) {
 		BaseLinuxHibernator	*lh = NULL;
 		if      ( 0 == type ) {
@@ -200,7 +200,7 @@ LinuxHibernator::initialize( void )
 		ASSERT( lh != NULL );
 
 		const char *name = lh->getName();
-		if ( methods.Length() ) {
+		if ( methods.length() ) {
 			methods += ",";
 		}
 		methods += name;
@@ -245,7 +245,7 @@ LinuxHibernator::initialize( void )
 			 "No hibernation methods detected; hibernation disabled\n" );
 	dprintf( D_FULLDEBUG,
 			 "  methods tried: %s\n",
-			 methods.Length() ? methods.Value() : "<NONE>" );
+			 methods.length() ? methods.c_str() : "<NONE>" );
 	return false;
 }
 
@@ -295,10 +295,10 @@ BaseLinuxHibernator::StandBy ( bool force ) const
 HibernatorBase::SLEEP_STATE
 BaseLinuxHibernator::PowerOff ( bool /*force*/ ) const
 {
-	MyString	command;
+	std::string	command;
 
 	command = POWER_OFF;
-	int status = system( command.Value() );
+	int status = system( command.c_str() );
 	if ( (status >= 0)  &&  (WEXITSTATUS(status) == 0 ) ) {
 		return HibernatorBase::S5;
 	}
@@ -361,19 +361,19 @@ PmUtilLinuxHibernator::Detect ( void )
 		return false;
 	}
 
-	MyString	command;
+	std::string	command;
 	int			status;
 
 	command = PM_UTIL_CHECK;
 	command += " --suspend";
-	status = system( command.Value() );
+	status = system( command.c_str() );
 	if ( (status >= 0)  &&  (WEXITSTATUS(status) == 0 ) ) {
 		m_hibernator->addState( HibernatorBase::S3 );
 	}
 
 	command = PM_UTIL_CHECK;
 	command += " --hibernate";
-	status = system( command.Value() );
+	status = system( command.c_str() );
 	if ( (status >= 0)  &&  (WEXITSTATUS(status) == 0 ) ) {
 		m_hibernator->addState( HibernatorBase::S4 );
 	}

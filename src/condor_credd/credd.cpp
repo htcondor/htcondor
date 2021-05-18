@@ -223,7 +223,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 
 	dprintf(D_ALWAYS, "Got check_creds for %d OAUTH services.\n", numads);
 
-	MyString URL;
+	std::string URL;
 
 	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
 	if ( ! cred_dir) {
@@ -285,7 +285,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 			username = req_user;
 		} else {
 			// a non-super user requested a username that is not theirs.
-			URL.formatstr("ERROR: credentials for user \"%s\" cannot be requested by authenticated user \"%s\".", req_user.c_str(), sock_user.c_str());
+			formatstr(URL, "ERROR: credentials for user \"%s\" cannot be requested by authenticated user \"%s\".", req_user.c_str(), sock_user.c_str());
 			goto bail;
 		}
 
@@ -296,23 +296,24 @@ CredDaemon::check_creds_handler( int, Stream* s)
 
 		// TODO ZKM FIX: eventually we will need to honor domain names.
 		// strip off the domain from the username (if any)
-		MyString user(username);
-		int ix = user.FindChar('@');
-		if (ix >= 0) { user.truncate(ix); }
+		std::string user(username);
+		int ix = user.find("@");
+		if (ix >= 0) { user.resize(ix); }
 
 		// reformat the service and handle into a filename
-		MyString service_fname(service);
-		service_fname.replaceString("/",":"); // TODO: : isn't going to work on Windows. should use ; instead
+		std::string service_fname(service);
+        replace_str( service_fname, "/", ":" ); // TODO: : isn't going to work on Windows. should use ; instead
 		if ( ! handle.empty()) {
 			service_fname += "_";
 			service_fname += handle;
 		}
+		std::string service_name(service_fname);
 		service_fname += ".top";
 
 		dprintf(D_FULLDEBUG, "check_creds: checking for OAUTH %s/%s\n", user.c_str(), service_fname.c_str());
 
 		// concatinate the oauth_cred_dir / user / service_filename
-		MyString tmpfname;
+		std::string tmpfname;
 		dirscat(cred_dir, user.c_str(), tmpfname);
 		tmpfname += service_fname;
 
@@ -324,8 +325,21 @@ CredDaemon::check_creds_handler( int, Stream* s)
 
 		// if the file is not found, add this request to the collection of missing requests
 		if (rc==-1) {
-			dprintf(D_ALWAYS, "check_creds: did not find %s\n", tmpfname.Value());
+			dprintf(D_ALWAYS, "check_creds: did not find %s\n", tmpfname.c_str());
 			missing.Insert(&requests[i]);
+		} else {
+			// check to see if new scopes and audience match previous cred
+			if (cred_matches(tmpfname, &requests[i]) == FAILURE_CRED_MISMATCH) {
+				r->encode();
+				URL = "ERROR - credentials exist that do not match the request";
+				URL += "\n  They can be removed with";
+				URL += "\n    condor_store_cred delete-oauth -s " + service_name;
+				URL += "\n  but make sure no other job is using them.";
+				(void) r->code(URL);
+				r->end_of_message();
+				return CLOSE_STREAM;
+			}
+			// else ignore other problems or a match
 		}
 	}
 
@@ -333,14 +347,14 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		// create unique request file with classad metadata
 		auto_free_ptr key(Condor_Crypt_Base::randomHexKey(32));
 
-		MyString web_prefix;
+		std::string web_prefix;
 		param(web_prefix, "CREDMON_WEB_PREFIX");
 		if (web_prefix.empty()) {
 			web_prefix = "https://";
 			web_prefix += get_local_fqdn();
 		}
 
-		MyString contents; // what we will write to the credential directory for this URL
+		std::string contents; // what we will write to the credential directory for this URL
 
 		missing.Rewind();
 		ClassAd * req;
@@ -400,9 +414,9 @@ CredDaemon::check_creds_handler( int, Stream* s)
 				free(buf);
 			} else {
 				//TODO: make a better error return channel for this command
-				URL.formatstr("Failed to securely read client secret for service %s", service.c_str());
+				formatstr(URL, "Failed to securely read client secret for service %s", service.c_str());
 				if (secret_filename.empty()) {
-					URL.formatstr_cat("; Tell your admin that %s is not configured", tmpname.c_str());
+					formatstr_cat(URL, "; Tell your admin that %s is not configured", tmpname.c_str());
 					dprintf(D_ALWAYS, "check_creds: ERROR: %s not configured for service %s\n", tmpname.c_str(), service.c_str());
 				} else {
 					dprintf(D_ALWAYS, "check_creds: ERROR: could not securely read file '%s' for service %s\n", secret_filename.c_str(), service.c_str());
@@ -444,25 +458,25 @@ CredDaemon::check_creds_handler( int, Stream* s)
 			}
 		}
 
-		MyString path;
+		std::string path;
 		dircat(cred_dir, key, path);
 
-		dprintf(D_ALWAYS, "check_creds: storing %d bytes for %d services to %s\n", contents.Length(), missing.Length(), path.Value());
+		dprintf(D_ALWAYS, "check_creds: storing %lu bytes for %d services to %s\n", contents.length(), missing.Length(), path.c_str());
 		const bool as_root = false; // write as current user
 		const bool group_readable = true;
-		int rc = write_secure_file(path.Value(), contents.Value(), contents.Length(), as_root, group_readable);
+		int rc = write_secure_file(path.c_str(), contents.c_str(), contents.length(), as_root, group_readable);
 
 		if (rc != SUCCESS) {
-			dprintf(D_ALWAYS, "check_creds: failed to write secure temp file %s\n", path.Value());
+			dprintf(D_ALWAYS, "check_creds: failed to write secure temp file %s\n", path.c_str());
 		} else {
 			// on success we return a URL
 			URL = web_prefix;
 			URL += "/key/";
 			URL += key.ptr();
-			dprintf(D_ALWAYS, "check_creds: returning URL %s\n", URL.Value());
+			dprintf(D_ALWAYS, "check_creds: returning URL %s\n", URL.c_str());
 		}
 	} else {
-		dprintf(D_ALWAYS, "check_creds: found all requested OAUTH services. returning empty URL %s\n", URL.Value());
+		dprintf(D_ALWAYS, "check_creds: found all requested OAUTH services. returning empty URL %s\n", URL.c_str());
 	}
 
 bail:

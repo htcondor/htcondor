@@ -119,7 +119,7 @@ SharedPortClient::sendSharedPortID(char const *shared_port_id,Sock *sock)
 	}
 
 		// for debugging
-	if (!sock->put(myName().Value())) {
+	if (!sock->put(myName().c_str())) {
 		dprintf(D_ALWAYS, "SharedPortClient: failed to send my name to %s\n", 
 				sock->peer_description());
 		return false;
@@ -157,6 +157,16 @@ SharedPortClient::sendSharedPortID(char const *shared_port_id,Sock *sock)
 				"SharedPortClient: failed to send target id %s to %s.\n",
 				shared_port_id, sock->peer_description());
 		return false;
+	}
+
+	// If we're talking to anything *but* the shared port daemon itself, the first
+	// CEDAR message will be swallowed by the remote shared_port daemon - resulting
+	// in a MD mismatch if we don't reset now.
+	//
+	// However, if we are talking to the shared port ("self"), the shared_port sees
+	// the whole conversation and we cannot reset.
+	if (strcmp(shared_port_id, "self")) {
+		static_cast<ReliSock*>(sock)->resetHeaderMD();
 	}
 
 	dprintf(D_FULLDEBUG,
@@ -222,11 +232,11 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	SharedPortEndpoint::GetDaemonSocketDir(pipe_name);
 	formatstr_cat(pipe_name, "%c%s", DIR_DELIM_CHAR, shared_port_id);
 
-	MyString requested_by_buf;
+	std::string requested_by_buf;
 	if( !requested_by ) {
-		requested_by_buf.formatstr(
+		formatstr(requested_by_buf,
 			" as requested by %s", sock_to_pass->peer_description());
-		requested_by = requested_by_buf.Value();
+		requested_by = requested_by_buf.c_str();
 	}
 
 	HANDLE child_pipe;

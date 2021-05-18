@@ -93,7 +93,9 @@ executing job that may be useful.
    USER_JOB_WRAPPER. If this file exists, HTCondor assumes that the
    job wrapper has failed and copies the contents of the file to the
    StarterLog for the administrator to debug the problem.
--  ``CUBACORES`` ``GOMAXPROCS`` ``JULIA_NUM_THREADS`` ``MKL_NUM_THREADS`` ``NUMEXPR_NUM_THREADS`` ``OMP_NUM_THREADS`` ``OMP_THREAD_LIMIT``
+-  ``CUBACORES`` ``GOMAXPROCS`` ``JULIA_NUM_THREADS`` ``MKL_NUM_THREADS``
+   ``NUMEXPR_NUM_THREADS`` ``OMP_NUM_THREADS`` ``OMP_THREAD_LIMIT``
+   ``OPENBLAS_NUM_THREADS`` ``TF_LOOP_PARALLEL_ITERATIONS`` ``TF_NUM_THREADS``
    are set to the number of cpu cores provisioned to this job.  Should be
    at least RequestCpus, but HTCondor may match a job to a bigger slot.  Jobs should not 
    spawn more than this number of cpu-bound threads, or their performance will suffer.

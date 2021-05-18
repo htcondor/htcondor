@@ -39,7 +39,7 @@ sub find_cmake
 			$cmake = "$path/$cmake_name";
 			$cmake_ver = `$cmake --version 2>&1`;
 			chomp $cmake_ver;
-			$cmake_ver =~ s/cmake version //g;
+			$cmake_ver =~ s/$cmake_name version //g;
 			@ver = split /\./, $cmake_ver;
 
 			# If the version is better than 2.8.3 (the minimal version of
@@ -79,6 +79,12 @@ sub install_cmake
 {
 	my ($ename, $iloc) = (@_);
 	my ($cmake, $wget);
+
+	# Look for cmake3 on CentOS7
+	$cmake = find_cmake('cmake3');
+	if (defined($cmake)) {
+		return $cmake;
+	}
 
 	# Look for cmake from the OS
 	$cmake = find_cmake('cmake');

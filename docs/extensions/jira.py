@@ -16,7 +16,7 @@ def make_link_node(rawtext, app, type, slug, options):
     base = "https://opensciencegrid.atlassian.net/browse/HTCONDOR-"
     ref = base + slug
     # set_classes(options)
-    node = nodes.reference(rawtext, "(Ticket #" + slug + ")", refuri=ref, **options)
+    node = nodes.reference(rawtext, "(HTCONDOR-" + slug + ")", refuri=ref, **options)
     return node
 
 def ticket_role(name, rawtext, text, lineno, inliner, options={}, content=[]):

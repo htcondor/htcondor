@@ -496,9 +496,9 @@ classad::ClassAdCollection *Scheduler::GetClassAds() const
 	return NULL;
 }
 
-void Scheduler::init() {  m_mirror->init(); }
-void Scheduler::config() { m_mirror->config(); }
-void Scheduler::stop()  { m_mirror->stop(); }
+void Scheduler::init() {  if (m_mirror) m_mirror->init(); }
+void Scheduler::config() { if (m_mirror) m_mirror->config(); }
+void Scheduler::stop()  { if (m_mirror) m_mirror->stop(); }
 void Scheduler::poll()  { }
 int  Scheduler::id() const { return m_id; }
 
@@ -531,14 +531,14 @@ JobRouterHookMgr::getHookKeyword(const classad::ClassAd &ad)
 
 
 
-ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const char * my_identity)
+ClaimJobResult claim_job(int cluster, int proc, std::string * error_details, const char * my_identity)
 {
 	return CJR_OK;
 }
 
 
 
-ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, MyString * error_details, const char * my_identity, bool target_is_sandboxed)
+ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, const char * schedd_name, int cluster, int proc, std::string * error_details, const char * my_identity, bool target_is_sandboxed)
 {
 	classad::ClassAd * job = const_cast<classad::ClassAd*>(&ad);
 	job->InsertAttr(ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
@@ -548,14 +548,14 @@ ClaimJobResult claim_job(classad::ClassAd const &ad, const char * pool_name, con
 	return CJR_OK;
 }
 
-bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad, MyString * error_details, const char * my_identity, bool target_is_sandboxed, bool release_on_hold, bool *keep_trying) {
+bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad, std::string * error_details, const char * my_identity, bool target_is_sandboxed, bool release_on_hold, bool *keep_trying) {
 	return true;
 }
 
 
 bool yield_job(classad::ClassAd const &ad,const char * pool_name,
 	const char * schedd_name, bool done, int cluster, int proc,
-	MyString * error_details, const char * my_identity, bool target_is_sandboxed,
+	std::string * error_details, const char * my_identity, bool target_is_sandboxed,
         bool release_on_hold, bool *keep_trying)
 {
 	return true;
@@ -619,7 +619,7 @@ bool finalize_job(const std::string &owner, const std::string &domain, classad::
 	return true;
 }
 
-bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, MyString &error_desc)
+bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *reason, const char * schedd_name, const char * pool_name, std::string &error_desc)
 {
 	return true;
 }

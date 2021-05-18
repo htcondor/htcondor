@@ -338,12 +338,17 @@ public:
 		// Callbacks for collector updates; determine whether a token request would be useful!
 	static void
 	daemonUpdateCallback(bool success, Sock *sock, CondorError *, const std::string &trust_domain, bool should_try_token_request, void *miscdata) {
-		if (success || !should_try_token_request || !sock) return;
 
-		auto data = reinterpret_cast<DCTokenRequester::DCTokenRequesterData*>(miscdata);
-		if (!data) {
+			// Put our void *miscdata into a managed unique_ptr so it is deallocated on return
+		auto data_ptr = reinterpret_cast<DCTokenRequester::DCTokenRequesterData*>(miscdata);
+		if (!data_ptr) {
 			return;
 		}
+		std::unique_ptr<DCTokenRequester::DCTokenRequesterData> data(data_ptr);
+
+			// No need request a token if we already successfully updated the
+			// collector, or if no request tokens attempts desired...
+		if (success || !should_try_token_request || !sock) return;
 
 			// Avoiding requesting tokens for already-pending requests.
 		for (const auto &pending_request : m_token_requests) {
@@ -371,7 +376,10 @@ public:
 			back.m_daemon->setAuthenticationMethods({"SSL", "TOKEN"});
 		}
 		back.m_callback_fn = &DCTokenRequester::tokenRequestCallback;
-		back.m_callback_data = data;
+		// At this point, the m_callback_data pointer will be deallocated by
+		// tokenRequestCallback(), so do a release() here so it is not
+		// deallocated when data goes out of scope.
+		back.m_callback_data = data.release();
 
 		if (m_token_requests_tid == -1) {
 			m_token_requests_tid = daemonCore->Register_Timer( 0,
@@ -421,15 +429,22 @@ private:
 			m_token_requests_tid = -1;
 		}
 		m_token_requests.erase(
-			std::remove_if(m_token_requests.begin(),
-				m_token_requests.end(),
-				[](const PendingRequest &req) {return req.m_client_id.empty();}),
-					m_token_requests.end()
-			);
+				std::remove_if(
+					m_token_requests.begin(),
+					m_token_requests.end(),
+					[](const PendingRequest &req) {return req.m_client_id.empty();}),
+				m_token_requests.end()
+				);
 	};
 
 	static bool
 	tryTokenRequest(PendingRequest &req) {
+
+		/* NOTE: upon leaving this function, in order to avoid leaking memory,
+		 * we MUST either have a) set req.m_client_id, or b) invoked the callback and 
+		 * cleared the req.m_client_id. 
+		 */
+
 		std::string subsys_name = get_mySubSystemName();
 
 		dprintf(D_SECURITY, "Trying token request to remote host %s for user %s.\n",
@@ -437,6 +452,8 @@ private:
 			req.m_identity == DCTokenRequester::default_identity ? "(default)" : req.m_identity.c_str());
 		if (!req.m_daemon) {
 			dprintf(D_FAILURE, "Logic error!  Token request without associated daemon.\n");
+			req.m_client_id = "";
+			(*req.m_callback_fn)(false, req.m_callback_data);
 			return false;
 		}
 		std::string token;
@@ -460,6 +477,7 @@ private:
 			if (token.empty()) {
 				req.m_request_id = request_id;
 				dprintf(D_ALWAYS, "Token requested; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), request_id.c_str());
+				// m_client_id is set here, so safe to return without calling the callback
 				return true;
 			} else {
 				dprintf(D_ALWAYS, "Token request auto-approved.\n");
@@ -479,6 +497,7 @@ private:
 			if (token.empty()) {
 				dprintf(D_FULLDEBUG|D_SECURITY, "Token request not approved; will retry in 5 seconds.\n");
 				dprintf(D_ALWAYS, "Token requested not yet approved; please ask collector %s admin to approve request ID %s.\n", req.m_daemon->name(), req.m_request_id.c_str());
+				// m_client_id is set here, so safe to return without calling the callback
 				return true;
 			} else {
 				dprintf(D_ALWAYS, "Token request approved.\n");
@@ -645,6 +664,8 @@ DCTokenRequester::tokenRequestCallback(bool success, void *miscdata)
 	std::unique_ptr<DCTokenRequester::DCTokenRequesterData> data_uptr(data);
 
 	(*data->m_callback_fn)(success, data->m_callback_data);
+
+	// Note: miscdata is being deleted now, as data_uptr is going out of scope...
 }
 
 
@@ -891,7 +912,7 @@ kill_daemon_ad_file()
 {
 	MyString param_name;
 	param_name.formatstr( "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
-	char *ad_file = param(param_name.Value());
+	char *ad_file = param(param_name.c_str());
 	if( !ad_file ) {
 		return;
 	}
@@ -917,7 +938,7 @@ drop_addr_file()
 	prefix += get_mySubSystem()->getName();
 
 	// Fill in addrFile[0] and addr[0] with info about regular command port
-	sprintf( addr_file, "%s_ADDRESS_FILE", prefix.Value() );
+	sprintf( addr_file, "%s_ADDRESS_FILE", prefix.c_str() );
 	if( addrFile[0] ) {
 		free( addrFile[0] );
 	}
@@ -930,7 +951,7 @@ drop_addr_file()
 	}
 
 	// Fill in addrFile[1] and addr[1] with info about superuser command port
-	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", prefix.Value() );
+	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", prefix.c_str() );
 	if( addrFile[1] ) {
 		free( addrFile[1] );
 	}
@@ -941,21 +962,21 @@ drop_addr_file()
 		if( addrFile[i] ) {
 			MyString newAddrFile;
 			newAddrFile.formatstr("%s.new",addrFile[i]);
-			if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
+			if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.c_str(), "w")) ) {
 				fprintf( ADDR_FILE, "%s\n", addr[i] );
 				fprintf( ADDR_FILE, "%s\n", CondorVersion() );
 				fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
 				fclose( ADDR_FILE );
-				if( rotate_file(newAddrFile.Value(),addrFile[i])!=0 ) {
+				if( rotate_file(newAddrFile.c_str(),addrFile[i])!=0 ) {
 					dprintf( D_ALWAYS,
 							 "DaemonCore: ERROR: failed to rotate %s to %s\n",
-							 newAddrFile.Value(),
+							 newAddrFile.c_str(),
 							 addrFile[i]);
 				}
 			} else {
 				dprintf( D_ALWAYS,
 						 "DaemonCore: ERROR: Can't open address file %s\n",
-						 newAddrFile.Value() );
+						 newAddrFile.c_str() );
 			}
 		}
 	}	// end of for loop
@@ -1171,11 +1192,11 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 	
 		// Next, try to create the given directory, if it doesn't
 		// already exist.
-	make_dir( newdir.Value() );
+	make_dir( newdir.c_str() );
 
 		// Now, set our own config hashtable entry so we start using
 		// this new directory.
-	config_insert( param_name, newdir.Value() );
+	config_insert( param_name, newdir.c_str() );
 
 	// Finally, insert the _condor_<param_name> environment
 	// variable, so our children get the right configuration.
@@ -1185,7 +1206,7 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 	env_str += param_name;
 	env_str += "=";
 	env_str += newdir;
-	char *env_cstr = strdup( env_str.Value() );
+	char *env_cstr = strdup( env_str.c_str() );
 	if( SetEnv(env_cstr) != TRUE ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
 				 env_cstr );
@@ -1217,7 +1238,7 @@ handle_dynamic_dirs()
 	int mypid = daemonCore->getpid();
 	char buf[256];
 	// TODO: Picking IPv4 arbitrarily.
-	sprintf( buf, "%s-%d", get_local_ipaddr(CP_IPV4).to_ip_string().Value(), mypid );
+	sprintf( buf, "%s-%d", get_local_ipaddr(CP_IPV4).to_ip_string().c_str(), mypid );
 
 	dprintf(D_DAEMONCORE | D_VERBOSE, "Using dynamic directories with suffix: %s\n", buf);
 	set_dynamic_dir( "LOG", buf );
@@ -1675,15 +1696,15 @@ handle_fetch_log(int cmd, Stream *s )
 		full_filename += ext;
 
 		if( strchr(ext,DIR_DELIM_CHAR) ) {
-			dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: invalid file extension specified by user: ext=%s, filename=%s\n",ext,full_filename.Value() );
+			dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: invalid file extension specified by user: ext=%s, filename=%s\n",ext,full_filename.c_str() );
 			free(pname);
 			return FALSE;
 		}
 	}
 
-	int fd = safe_open_wrapper_follow(full_filename.Value(),O_RDONLY);
+	int fd = safe_open_wrapper_follow(full_filename.c_str(),O_RDONLY);
 	if(fd<0) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",full_filename.Value());
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",full_filename.c_str());
 		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
 		if (!stream->code(result)) {
 				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
@@ -1787,7 +1808,7 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 		MyString fullPath(dirName);
 		fullPath += "/";
 		fullPath += filename;
-		int fd = safe_open_wrapper_follow(fullPath.Value(),O_RDONLY);
+		int fd = safe_open_wrapper_follow(fullPath.c_str(),O_RDONLY);
 		if (fd >= 0) {
 			filesize_t size;
 			stream->put_file(&size, fd);
@@ -1994,49 +2015,60 @@ handle_dc_start_token_request(int, Stream* stream)
 		time_t now = time(NULL);
 
 		CondorError err;
+		std::string rule_text;
 		std::string final_key_name = htcondor::get_token_signing_key(err);
 		if (final_key_name.empty()) {
 			result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
 			result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
 			iter = g_request_map.end();
-		}
-
-		std::string rule_text;
-		if ((iter != g_request_map.end()) && TokenRequest::ShouldAutoApprove(*(iter->second), now, rule_text)) {
-			auto token_request = *(iter->second);
-			CondorError err;
-			std::string token;
-			if (!Condor_Auth_Passwd::generate_token(
-				token_request.getRequestedIdentity(),
-				final_key_name,
-				token_request.getBoundingSet(),
-				token_request.getLifetime(),
-				token,
-				static_cast<Sock*>(stream)->getUniqueId(),
-				&err))
-			{
-				result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
-				result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
-				token_request.setFailed();
-			} else {
-				g_request_map.erase(iter);
-				if (token.empty()) {
-					error_code = 6;
-					error_string = "Internal state error.";
+		} else {
+			if ((iter != g_request_map.end()) && TokenRequest::ShouldAutoApprove(*(iter->second), now, rule_text)) {
+				auto token_request = *(iter->second);
+				CondorError err;
+				std::string token;
+				if (!Condor_Auth_Passwd::generate_token(
+					token_request.getRequestedIdentity(),
+					final_key_name,
+					token_request.getBoundingSet(),
+					token_request.getLifetime(),
+					token,
+					static_cast<Sock*>(stream)->getUniqueId(),
+					&err))
+				{
+					result_ad.InsertAttr(ATTR_ERROR_STRING, err.getFullText());
+					result_ad.InsertAttr(ATTR_ERROR_CODE, err.code());
+					token_request.setFailed();
+				} else {
+					g_request_map.erase(iter);
+					if (token.empty()) {
+						error_code = 6;
+						error_string = "Internal state error.";
+					}
+					result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
+					dprintf(D_ALWAYS, "Token request %s approved via auto-approval rule %s.\n",
+						token_request.getPublicString().c_str(), rule_text.c_str());
 				}
-				result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
-				dprintf(D_ALWAYS, "Token request %s approved via auto-approval rule %s.\n",
-					token_request.getPublicString().c_str(), rule_text.c_str());
-			}
 			// Auto-approval rules are effectively host-based security; if we trust the network
 			// blindly, the lack of encryption does not bother us.
 			//
 			// In all other cases, encryption is a hard requirement.
-		} else if (!stream->get_encryption()) {
-			g_request_map.erase(iter);
-			result_ad.Clear();
-			result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was not encrypted.");
-			result_ad.InsertAttr(ATTR_ERROR_CODE, 7);
+			} else if (!stream->get_encryption()) {
+				g_request_map.erase(iter);
+				result_ad.Clear();
+				result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was not encrypted.");
+				result_ad.InsertAttr(ATTR_ERROR_CODE, 7);
+			} else {
+				Sock * sock = dynamic_cast<Sock *>(stream);
+				if( sock ) {
+					const char * method = sock->getAuthenticationMethodUsed();
+					if( strcasecmp( method, "ANONYMOUS" ) == 0 ) {
+						g_request_map.erase(iter);
+						result_ad.Clear();
+						result_ad.InsertAttr(ATTR_ERROR_STRING, "Request to server was made using ANONYMOUS authentication.");
+						result_ad.InsertAttr(ATTR_ERROR_CODE, 7);
+					}
+				}
+			}
 		}
 	}
 
@@ -2855,7 +2887,8 @@ handle_config_val(int idCmd, Stream* stream )
 	if (idCmd == DC_CONFIG_VAL) {
 		int retval = TRUE; // assume success
 
-		MyString name_used, value;
+		std::string name_used;
+		MyString value;
 		const char * def_val = NULL;
 		const MACRO_META * pmet = NULL;
 		const char * subsys = get_mySubSystem()->getName();
@@ -2872,7 +2905,7 @@ handle_config_val(int idCmd, Stream* stream )
 			}
 		} else {
 
-			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
+			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.c_str(), def_val ? def_val : "NULL");
 
 			if (val) { tmp = expand_param(val, local_name, subsys, 0); } else { tmp = NULL; }
 			if( ! stream->code_nullstr(tmp) ) {
@@ -2881,7 +2914,7 @@ handle_config_val(int idCmd, Stream* stream )
 			}
 			if (tmp) {free(tmp);} tmp = NULL;
 
-			name_used.upper_case();
+			upper_case(name_used);
 			name_used += " = ";
 			if (val) name_used += val;
 			if ( ! stream->code(name_used)) {
@@ -3100,13 +3133,13 @@ dc_reconfig()
 		// 12/8/97 (long after this function was first written... 
 		// nice goin', Todd).  *grin*
 
-		/* purify flags this as a stack bounds array read violation when 
-			we're expecting to use the default argument. However, due to
-			_craziness_ in the header file that declares this function
-			as an extern "C" linkage with a default argument(WTF!?) while
-			being called in a C++ context, something goes wrong. So, we'll
-			just supply the errant argument. */
-	config();
+		// We always want to be root when we read config as a daemon
+		// we do this because reading config can run scripts and even create files
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		int want_meta = get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ? 0 : CONFIG_OPT_WANT_META;
+		config_ex(CONFIG_OPT_WANT_QUIET | want_meta);
+	}
 
 		// See if we're supposed to be allowing core files or not
 	if ( doCoreInit ) {
@@ -3136,8 +3169,8 @@ dc_reconfig()
 	// Clear out the passwd cache.
 	clear_passwd_cache();
 
-	// Flush the cached list of keys.
-	refreshNamedCredentials();
+	// Clear out the cached list of IDTOKEN issuer key names.
+	clearIssuerKeyNameCache();
 
 	// Allow us to search for new tokens
 	Condor_Auth_Passwd::retry_token_search();
@@ -3488,6 +3521,7 @@ int dc_main( int argc, char** argv )
 				if ( ptmp1 ) {
 					sprintf(ptmp1,"%s_CONFIG=%s", myDistro->GetUc(), ptmp);
 					SetEnv(ptmp1);
+					free(ptmp1);
 				}
 			} else {
 				fprintf( stderr, 
@@ -3831,11 +3865,11 @@ int dc_main( int argc, char** argv )
 	// See if the config tells us to wait on startup for a debugger to attach.
 	MyString debug_wait_param;
 	debug_wait_param.formatstr("%s_DEBUG_WAIT", get_mySubSystem()->getName() );
-	if (param_boolean(debug_wait_param.Value(), false, false)) {
+	if (param_boolean(debug_wait_param.c_str(), false, false)) {
 		volatile int debug_wait = 1;
 		dprintf(D_ALWAYS,
 				"%s is TRUE, waiting for debugger to attach to pid %d.\n", 
-				debug_wait_param.Value(), (int)::getpid());
+				debug_wait_param.c_str(), (int)::getpid());
 		#ifndef WIN32
 			// since we are about to delay for an arbitrary amount of time, write to the background pipe
 			// so that our forked parent can exit.
@@ -3932,7 +3966,7 @@ int dc_main( int argc, char** argv )
 
 	if (global_config_source != "") {
 		dprintf(D_ALWAYS, "Using config source: %s\n", 
-				global_config_source.Value());
+				global_config_source.c_str());
 	} else {
 		const char* env_name = EnvGetName( ENV_CONFIG );
 		char* env = getenv( env_name );
@@ -4327,7 +4361,7 @@ int dc_main( int argc, char** argv )
 	// send it to the SecMan object so it can include it in any
 	// classads it sends.  if this is NULL, it will not include
 	// the attribute.
-	daemonCore->sec_man->set_parent_unique_id(parent_id.Value());
+	daemonCore->sec_man->set_parent_unique_id(parent_id.c_str());
 
 	// now re-set the identity so that any children we spawn will have it
 	// in their environment

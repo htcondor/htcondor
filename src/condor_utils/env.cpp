@@ -72,6 +72,14 @@ Env::AddErrorMessage(char const *msg,MyString *error_buffer)
 }
 
 bool
+Env::MergeFrom( const ClassAd * ad, std::string & error_msg ) {
+    MyString ms;
+    bool rv = MergeFrom(ad, &ms);
+    if(! ms.empty()) { error_msg = ms; }
+    return rv;
+}
+
+bool
 Env::MergeFrom( const ClassAd *ad, MyString *error_msg )
 {
 	if(!ad) return true;
@@ -107,6 +115,14 @@ Env::CondorVersionRequiresV1(CondorVersionInfo const &condor_version)
 }
 
 bool
+Env::InsertEnvIntoClassAd( ClassAd * ad, std::string & error_msg, char const * opsys, CondorVersionInfo * condor_version) const {
+    MyString ms;
+    bool rv = InsertEnvIntoClassAd(ad, &ms, opsys, condor_version);
+    if(! ms.empty()) { error_msg = ms; }
+    return rv;
+}
+
+bool
 Env::InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys, CondorVersionInfo *condor_version) const
 {
 
@@ -130,7 +146,7 @@ Env::InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys, 
 		if(!getDelimitedStringV2Raw(&env2,error_msg)) {
 			return false;
 		}
-		ad->Assign(ATTR_JOB_ENVIRONMENT2,env2.Value());
+		ad->Assign(ATTR_JOB_ENVIRONMENT2,env2.c_str());
 	}
 	if(has_env1 || requires_env1) {
 		// Record the OPSYS that is being used to delimit the environment.
@@ -171,7 +187,7 @@ Env::InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys, 
 		}
 
 		if(env1_success) {
-			ad->Assign(ATTR_JOB_ENVIRONMENT1,env1.Value());
+			ad->Assign(ATTR_JOB_ENVIRONMENT1,env1.c_str());
 		}
 		else {
 			if(has_env2) {
@@ -190,7 +206,7 @@ Env::InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys, 
 				// at least prevent incorrect behavior.
 
 				ad->Assign(ATTR_JOB_ENVIRONMENT1,"ENVIRONMENT_CONVERSION_ERROR");
-				dprintf(D_FULLDEBUG,"Failed to convert environment to V1 syntax: %s\n",error_msg ? error_msg->Value() : "");
+				dprintf(D_FULLDEBUG,"Failed to convert environment to V1 syntax: %s\n",error_msg ? error_msg->c_str() : "");
 			}
 			else {
 				// Failed to convert to V1 syntax, and the ad does not
@@ -369,6 +385,16 @@ Env::V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *errmsg)
 }
 
 bool
+Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, std::string & error_msg )
+{
+	MyString ms(error_msg);
+	bool rv = MergeFromV1RawOrV2Quoted( delimitedString, & ms );
+	if( ms != error_msg ) { error_msg = ms; }
+	return rv;
+}
+
+
+bool
 Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString *error_msg )
 {
 	if(!delimitedString) return true;
@@ -377,7 +403,7 @@ Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString *error_msg 
 		if(!V2QuotedToV2Raw(delimitedString,&v2,error_msg)) {
 			return false;
 		}
-		return MergeFromV2Raw(v2.Value(),error_msg);
+		return MergeFromV2Raw(v2.c_str(),error_msg);
 	}
 	else {
 		return MergeFromV1Raw(delimitedString,error_msg);
@@ -393,12 +419,20 @@ Env::MergeFromV2Quoted( const char *delimitedString, MyString *error_msg )
 		if(!V2QuotedToV2Raw(delimitedString,&v2,error_msg)) {
 			return false;
 		}
-		return MergeFromV2Raw(v2.Value(),error_msg);
+		return MergeFromV2Raw(v2.c_str(),error_msg);
 	}
 	else {
 		AddErrorMessage("Expecting a double-quoted environment string (V2 format).",error_msg);
 		return false;
 	}
+}
+
+bool
+Env::MergeFromV2Raw( const char *delimitedString, std::string & error_msg ) {
+	MyString ms(error_msg);
+	bool rv = MergeFromV2Raw(delimitedString, & ms);
+	error_msg = ms;
+	return rv;
 }
 
 bool
@@ -415,11 +449,20 @@ Env::MergeFromV2Raw( const char *delimitedString, MyString *error_msg )
 	SimpleListIterator<MyString> it(env_list);
 	MyString *env_entry;
 	while(it.Next(env_entry)) {
-		if(!SetEnvWithErrorMessage(env_entry->Value(),error_msg)) {
+		if(!SetEnvWithErrorMessage(env_entry->c_str(),error_msg)) {
 			return false;
 		}
 	}
 	return true;
+}
+
+bool
+Env::MergeFromV1Raw( const char *delimitedString, std::string & error_msg )
+{
+	MyString ms(error_msg);
+	bool rv = MergeFromV1Raw( delimitedString, &ms );
+	error_msg = ms;
+	return rv;
 }
 
 bool
@@ -517,7 +560,7 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 			else {
 				msg.formatstr("ERROR: missing variable in '%s'.",expr);
 			}
-			AddErrorMessage(msg.Value(),error_msg);
+			AddErrorMessage(msg.c_str(),error_msg);
 		}
 		free(expr);
 		return false;
@@ -543,7 +586,7 @@ Env::SetEnv( const char* var, const char* val )
 bool
 Env::SetEnv( const MyString & var, const MyString & val )
 {
-	if( var.Length() == 0 ) {
+	if( var.length() == 0 ) {
 		return false;
 	}
 	bool ret = (_envTable->insert( var, val, true ) == 0);
@@ -591,7 +634,7 @@ bool
 Env::getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char v1_delim) const
 {
 	ASSERT(result);
-	int old_len = result->Length();
+	int old_len = result->length();
 
 	if(getDelimitedStringV1Raw(result,NULL,v1_delim)) {
 		return true;
@@ -599,7 +642,7 @@ Env::getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char v1_del
 
 	// V1 attempt failed.  Use V2 syntax.
 
-	if(result->Length() > old_len) {
+	if(result->length() > old_len) {
 		// Clear any partial output we may have generated above.
 		result->truncate(old_len);
 	}
@@ -631,6 +674,14 @@ Env::getDelimitedStringV1RawOrV2Quoted(MyString *result,MyString *error_msg) con
 }
 
 bool
+Env::getDelimitedStringV2Raw( std::string & result, bool mark_v2) const {
+    MyString ms;
+    bool rv = getDelimitedStringV2Raw( & ms, NULL, mark_v2 );
+    if(! ms.empty()) { result = ms; }
+    return rv;
+}
+
+bool
 Env::getDelimitedStringV2Raw(MyString *result,MyString * /*error_msg*/,bool mark_v2) const
 {
 	MyString var, val;
@@ -645,7 +696,7 @@ Env::getDelimitedStringV2Raw(MyString *result,MyString * /*error_msg*/,bool mark
 		}
 		else {
 			MyString var_val;
-			var_val.formatstr("%s=%s",var.Value(),val.Value());
+			var_val.formatstr("%s=%s",var.c_str(),val.c_str());
 			env_list.Append(var_val);
 		}
 	}
@@ -655,6 +706,12 @@ Env::getDelimitedStringV2Raw(MyString *result,MyString * /*error_msg*/,bool mark
 	}
 	join_args(env_list,result);
 	return true;
+}
+
+void
+Env::getDelimitedStringForDisplay(std::string & result) const
+{
+	getDelimitedStringV2Raw(result, false);
 }
 
 void
@@ -690,13 +747,13 @@ Env::getDelimitedStringV1Raw(MyString *result,MyString *error_msg,char delim) co
 
 	_envTable->startIterations();
 	while( _envTable->iterate( var, val ) ) {
-		if(!IsSafeEnvV1Value(var.Value(),delim) ||
-		   !IsSafeEnvV1Value(val.Value(),delim)) {
+		if(!IsSafeEnvV1Value(var.c_str(),delim) ||
+		   !IsSafeEnvV1Value(val.c_str(),delim)) {
 
 			if(error_msg) {
 				MyString msg;
-				msg.formatstr("Environment entry is not compatible with V1 syntax: %s=%s",var.Value(),val.Value());
-				AddErrorMessage(msg.Value(),error_msg);
+				msg.formatstr("Environment entry is not compatible with V1 syntax: %s=%s",var.c_str(),val.c_str());
+				AddErrorMessage(msg.c_str(),error_msg);
 			}
 			return false;
 		}
@@ -704,10 +761,10 @@ Env::getDelimitedStringV1Raw(MyString *result,MyString *error_msg,char delim) co
         if( !emptyString ) {
 			(*result) += delim;
         }
-		WriteToDelimitedString(var.Value(),*result);
+		WriteToDelimitedString(var.c_str(),*result);
 		if(val != NO_ENVIRONMENT_VALUE) {
 			WriteToDelimitedString("=",*result);
-			WriteToDelimitedString(val.Value(),*result);
+			WriteToDelimitedString(val.c_str(),*result);
 		}
 		emptyString = false;
 	}
@@ -761,13 +818,13 @@ Env::getStringArray() const {
     _envTable->startIterations();
 	for( i = 0; _envTable->iterate( var, val ); i++ ) {
 		ASSERT( i < numVars );
-		ASSERT( var.Length() > 0 );
-		array[i] = (char *)malloc(var.Length() + val.Length() + 2);
+		ASSERT( var.length() > 0 );
+		array[i] = (char *)malloc(var.length() + val.length() + 2);
 		ASSERT( array[i] );
-		strcpy( array[i], var.Value() );
+		strcpy( array[i], var.c_str() );
 		if(val != NO_ENVIRONMENT_VALUE) {
 			strcat( array[i], "=" );
-			strcat( array[i], val.Value() );
+			strcat( array[i], val.c_str() );
 		}
 	}
 	array[i] = NULL;
@@ -798,11 +855,45 @@ void Env::Walk(bool (*walk_func)(void* pv, const MyString &var, const MyString &
 	}
 }
 
+//
+// This makes me sad.  Consider replacing this (in
+// condor_starter.V6/singulariy.cpp, at any rate), with a function which,
+// once this class's internals are std::string, directly returns the desired
+// std::list<std::string>... or maybe std::vector<std::string>?
+//
+void
+Env::Walk(bool (*walk_func)(void* pv, const std::string &var, const std::string &val), void* pv) const
+{
+	const MyString *var;
+	MyString *val;
+
+	_envTable->startIterations();
+	while (_envTable->iterate_nocopy(&var, &val)) {
+	    std::string s(var->c_str());
+	    std::string t(val->c_str());
+		if ( ! walk_func(pv, s, t))
+			break;
+	}
+
+}
+
 bool
 Env::GetEnv(MyString const &var,MyString &val) const
 {
 	// lookup returns 0 on success
 	return _envTable->lookup(var,val) == 0;
+}
+
+bool
+Env::GetEnv(const std::string &var, std::string &val) const
+{
+	// lookup returns 0 on success
+	MyString mystr;
+	if (_envTable->lookup(var,mystr) == 0) {
+		val = mystr.c_str();
+		return true;
+	}
+	return false;
 }
 
 void
@@ -823,7 +914,7 @@ Env::Import( void )
 				// contain an assignment
 			continue;
 		}
-		if ( varname.IsEmpty() ) {
+		if ( varname.empty() ) {
 				// ignore entries in the environment that contain
 				// an empty variable name
 			continue;

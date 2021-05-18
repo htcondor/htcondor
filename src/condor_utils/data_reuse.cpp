@@ -572,10 +572,12 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 
 	std::unique_ptr<FileEntry> new_entry(new FileEntry(*this, checksum, checksum_type, iter->second->getTag(), stat_buf.st_size, time(NULL)));
 	std::string dest_fname = new_entry->fname();
-        auto dest_fname_template = dest_fname + ".XXXXXX";
-        std::vector<char> dest_tmp_fname;
-        dest_tmp_fname.reserve(dest_fname_template.size() + 1);
-        strcpy(&dest_tmp_fname[0], dest_fname_template.c_str());
+	// create a filename pattern for condor_mkstmp consisting of fname + "." + "XXXXXX"
+	// mkstmp will overwrite the 6 X's to create a unique filename.
+	std::vector<char> dest_tmp_fname(dest_fname.size() + 1 + 6 + 1, 'X');
+	strcpy(&dest_tmp_fname[0], dest_fname.c_str());
+	dest_tmp_fname[dest_fname.size()] = '.';
+	dest_tmp_fname[dest_fname.size() + 1 + 6] = 0;
 	int dest_fd = -1;
 	TemporaryPrivSentry priv_sentry(PRIV_CONDOR);
 	dest_fd = condor_mkstemp(&dest_tmp_fname[0]);
@@ -590,20 +592,28 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	auto mdctx = EVP_MD_CTX_create();
 	EVP_DigestInit_ex(mdctx, md, NULL);
 
-	std::vector<char> memory_buffer;
-	memory_buffer.reserve(64*1024);
+	const int membufsiz = 64 * 1024;
+	std::unique_ptr<void, decltype(&free)> memory_buffer(malloc(membufsiz), free);
 	ssize_t bytes;
 	while (true) {
-		bytes = _condor_full_read(source_fd, &memory_buffer[0], 64*1024);
+		bytes = _condor_full_read(source_fd, memory_buffer.get(), membufsiz);
 		if (bytes <= 0) {
 			break;
 		}
-		auto write_bytes = _condor_full_write(dest_fd, &memory_buffer[0], bytes);
+		auto write_bytes = _condor_full_write(dest_fd, memory_buffer.get(), bytes);
 		if (write_bytes != bytes) {
 			bytes = -1;
 			break;
 		}
-		EVP_DigestUpdate(mdctx, &memory_buffer[0], write_bytes);
+		int result = EVP_DigestUpdate(mdctx, memory_buffer.get(), write_bytes);
+		if (result != 1) {
+			err.pushf("DataReuse", errno, "Failure when updating hash");
+			close(dest_fd);
+			unlink(&dest_tmp_fname[0]);
+			close(source_fd);
+			EVP_MD_CTX_destroy(mdctx);
+			return false;
+		}
 	}
 	if (bytes < 0) {
 		err.pushf("DataReuse", errno, "Failure when copying the file to cache directory: %s",
@@ -621,9 +631,7 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	unsigned int md_len;
 	EVP_DigestFinal_ex(mdctx, md_value, &md_len);
 	EVP_MD_CTX_destroy(mdctx);
-	std::vector<char> computed_checksum;
-	computed_checksum.reserve(2*md_len + 1);
-	computed_checksum[2*md_len] = '\0';
+	std::vector<char> computed_checksum(2*md_len + 1, 0);
 	for (unsigned int idx = 0; idx < md_len; idx++) {
 		sprintf(&computed_checksum[2*idx], "%02x", md_value[idx]);
 	}
@@ -794,20 +802,27 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 	auto mdctx = EVP_MD_CTX_create();
 	EVP_DigestInit_ex(mdctx, md, NULL);
 
-	std::vector<char> memory_buffer;
-	memory_buffer.reserve(64*1024);
+	const int membufsiz = 64 * 1024;
+	std::unique_ptr<void, decltype(&free)> memory_buffer(malloc(membufsiz), free);
 	ssize_t bytes;
 	while (true) {
-		bytes = _condor_full_read(source_fd, &memory_buffer[0], 64*1024);
+		bytes = _condor_full_read(source_fd, memory_buffer.get(), membufsiz);
 		if (bytes <= 0) {
 			break;
 		}
-		auto write_bytes = _condor_full_write(dest_fd, &memory_buffer[0], bytes);
+		auto write_bytes = _condor_full_write(dest_fd, memory_buffer.get(), bytes);
 		if (write_bytes != bytes) {
 			bytes = -1;
 			break;
 		}
-		EVP_DigestUpdate(mdctx, &memory_buffer[0], write_bytes);
+		int result = EVP_DigestUpdate(mdctx, memory_buffer.get(), write_bytes);
+		if (result != 1) {
+			err.pushf("DataReuse", errno, "Failure when updating hash");
+			close(dest_fd);
+			close(source_fd);
+			EVP_MD_CTX_destroy(mdctx);
+			return false;
+		}
 	}
 	if (bytes < 0) {
 		err.pushf("DataReuse", errno, "Failure when copying the file to destination: %s",
@@ -824,9 +839,7 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 	unsigned int md_len;
 	EVP_DigestFinal_ex(mdctx, md_value, &md_len);
 	EVP_MD_CTX_destroy(mdctx);
-	std::vector<char> computed_checksum;
-	computed_checksum.reserve(2*md_len + 1);
-	computed_checksum[2*md_len] = '\0';
+	std::vector<char> computed_checksum(2*md_len + 1, 0);
 	for (unsigned int idx = 0; idx < md_len; idx++) {
 		sprintf(&computed_checksum[2*idx], "%02x", md_value[idx]);
 	}

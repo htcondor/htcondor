@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include <map>
 
 #include "baseresource.h"
 #include "gahp-client.h"
@@ -39,7 +40,7 @@ class CondorResource : public BaseResource
  public:
 
 	CondorResource( const char *resource_name, const char *pool_name,
-					const Proxy *proxy );
+	                const Proxy *proxy, const std::string &scitokens_file );
 	~CondorResource();
 
 	const char *ResourceType();
@@ -49,12 +50,14 @@ class CondorResource : public BaseResource
 
 	void DoScheddPoll();
 
-	static const char *HashName( const char *resource_name,
-								 const char *pool_name,
-								 const char *proxy_subject );
+	static std::string & HashName( const char *resource_name,
+	                             const char *pool_name,
+	                             const char *proxy_subject,
+	                             const std::string &scitokens_file );
 	static CondorResource *FindOrCreateResource( const char *resource_name,
-												 const char *pool_name,
-												 const Proxy *proxy );
+	                                             const char *pool_name,
+	                                             const Proxy *proxy,
+	                                             const std::string &scitokens_file );
 
 	static bool GahpErrorResourceDown( const char *errmsg );
 
@@ -66,8 +69,9 @@ class CondorResource : public BaseResource
 	bool scheddStatusActive;
 	char *proxySubject;
 	char *proxyFQAN;
+	std::string m_scitokensFile;
 
-	static HashTable <std::string, CondorResource *> ResourcesByName;
+	static std::map <std::string, CondorResource *> ResourcesByName;
 
 		// Used by DoPollSchedd() to share poll results across all
 		// CondorResources of the same remote schedd

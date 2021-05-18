@@ -1,0 +1,92 @@
+#!/bin/bash
+
+RELEASE_DIR=`pwd`
+LOCK=$(mktemp -d /tmp/condor-lock-XXXXXX)
+LOCAL_DIR=${RELEASE_DIR}/local
+LOCAL_CONFIG_DIR=${LOCAL_DIR}/config.d
+USER_ID=`id -u`
+GROUP_ID=`id -g`
+CONDOR_IDS=${USER_ID}.${GROUP_ID}
+
+if [[ $USER_ID -eq 0 || $GROUP_ID -eq 0 ]]; then
+    echo "Please visit https://htcondor.readthedocs.io/en/latest/getting-htcondor for instructions on installing HTCondor as root."
+    exit 1
+fi
+
+if [[ ! -x ${RELEASE_DIR}/sbin/condor_master ]]; then
+    echo "This directory doesn't have sbin/condor_master; did you unpack the tarball?"
+    exit 1
+fi
+
+if [[ -e ${RELEASE_DIR}/etc/condor_config ]]; then
+    echo "Refusing to overwrite existing etc/condor_config file, aborting."
+    exit 1
+fi
+
+if [[ -e ${LOCAL_CONFIG_DIR}/00-personal-condor ]]; then
+    echo "Refusing to overwrite existing local/config.d/00-personal-condor file, aborting."
+    exit 1
+fi
+
+if [[ -e ${RELEASE_DIR}/condor.sh ]]; then
+    echo "Refusing to overwrite existing condor.sh, aborting."
+    exit 1
+fi
+
+mkdir -p "${LOCAL_DIR}"
+mkdir -p "${LOCAL_DIR}/log"
+mkdir -p "${LOCAL_DIR}/spool"
+mkdir -p "${LOCAL_DIR}/execute"
+mkdir -p "${LOCAL_CONFIG_DIR}"
+mkdir -p "${RELEASE_DIR}/etc"
+
+if [[ ! -d "${LOCAL_DIR}" ||
+      ! -d "${LOCAL_DIR}/log" ||
+      ! -d "${LOCAL_DIR}/spool" ||
+      ! -d "${LOCAL_DIR}/execute" ||
+      ! -d "${LOCAL_CONFIG_DIR}" ||
+      ! -d "${RELEASE_DIR}/etc" ]]; then
+    echo "Failed to create a subdirectory, aborting."
+    exit 1
+fi
+
+(
+cat <<EOF
+RELEASE_DIR=${RELEASE_DIR}
+LOCAL_DIR=\$(RELEASE_DIR)/local
+LOCAL_CONFIG_DIR=\$(LOCAL_DIR)/config.d
+
+LOCK=${LOCK}
+CONDOR_IDS=${CONDOR_IDS}
+EOF
+) > "${RELEASE_DIR}/etc/condor_config"
+
+#
+# Because user-based authentication includes the hostname as part of the
+# identity, we have to set CONDOR_HOST back to the hostname for condor_off
+# (or other administrative commands) to work.
+#
+(
+cat <<EOF
+use security: user_based
+use role: personal
+CONDOR_HOST = \$(FULL_HOSTNAME)
+EOF
+) > "${LOCAL_CONFIG_DIR}/00-personal-condor"
+
+(
+cat <<EOF
+CONDOR_CONFIG=${RELEASE_DIR}/etc/condor_config
+export CONDOR_CONFIG
+
+PATH=${RELEASE_DIR}/bin:${RELEASE_DIR}/sbin:\$PATH
+export PATH
+
+if [ "X" != "X${PYTHONPATH-}" ]; then
+    PYTHONPATH=${RELEASE_DIR}/lib/python3:\$PYTHONPATH
+else
+    PYTHONPATH=${RELEASE_DIR}/lib/python3
+fi
+export PYTHONPATH
+EOF
+) > "${RELEASE_DIR}/condor.sh"

@@ -21,7 +21,6 @@
 #define DAGMAN_MAIN_H
 
 #include "dag.h"
-#include "string_list.h"
 #include "dagman_classad.h"
 #include "dagman_stats.h"
 #include "utc_time.h"

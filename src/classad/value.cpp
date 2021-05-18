@@ -465,8 +465,8 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 	char                *end_tmp;
 	long long           ivalue;
 	time_t	            rtvalue;
-	abstime_t           atvalue;
-	bool	            bvalue;
+	abstime_t           atvalue = { 0, 0 };
+	bool	            bvalue = false;
 	double	            rvalue;
 	Value::NumberFactor nf;
 
@@ -557,8 +557,8 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
     char                *end;
 	long long           ivalue;
 	time_t	            rtvalue;
-	abstime_t           atvalue;
-	bool	            bvalue;
+	abstime_t           atvalue = { 0, 0 };
+	bool	            bvalue = false;
 	double	            rvalue;
 	Value::NumberFactor nf;
 

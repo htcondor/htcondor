@@ -208,7 +208,7 @@ Unparse(
 			break;
 		}
 		case Value::BOOLEAN_VALUE: {
-			bool b;
+			bool b = false;
 			val.IsBooleanValue( b );
 			if (b) {
 				add_tag(buffer, XMLLexer::tagID_Bool, 

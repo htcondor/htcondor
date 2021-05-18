@@ -1010,6 +1010,11 @@ FILE TRANSFER COMMANDS
     method of encryption utilized will be as agreed upon in security
     negotiation; if that negotiation failed, then the file transfer
     mechanism must also fail for files to be network encrypted.
+    :index:`erase_output_and_error_on_restart<single: erase_output_and_error_on_restart; submit commands>`
+ erase_output_and_error_on_restart
+    If false, and ``when_to_transfer_output`` is ``ON_EXIT_OR_EVICT``, HTCondor
+    will append to the output and error logs rather than erase (truncate) them
+    when the job restarts.
     :index:`max_transfer_input_mb<single: max_transfer_input_mb; submit commands>`
  max_transfer_input_mb = <ClassAd Integer Expression>
     This integer expression specifies the maximum allowed total size in
@@ -1198,6 +1203,9 @@ FILE TRANSFER COMMANDS
     ``aws_secret_access_key_file`` for the files containing the corresponding
     temporary token, and ``+EC2SessionToken`` for the file containing the
     session token.
+
+    HTCondor does not presently support transferring entire buckets or
+    directories from S3.
 
     Temporary credentials have a limited lifetime.  If you are using S3 only
     to download input files, the job must start before the credentials
@@ -1392,7 +1400,15 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     If **retry_until** is an integer, the job exiting with that exit
     code will cause retries to cease. If **retry_until** is a ClassAd
     expression, the expression evaluating to ``True`` will cause retries
-    to cease. :index:`success_exit_code<single: success_exit_code; submit commands>`
+    to cease.  For example, if you only want to retry exit codes
+    17, 34, and 81:
+
+    .. code-block:: condor-submit
+
+        max_retries = 5
+        retry_until = !member( ExitCode, {17, 34, 81} )
+
+    :index:`success_exit_code<single: success_exit_code; submit commands>`
 
  success_exit_code = <integer>
     The exit code that is considered successful for this job. Defaults
@@ -1647,8 +1663,22 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
     configuration macros.
 
-COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit commands>`
+COMMANDS FOR THE GRID
 
+    :index:`arc_resources<single: arc_resources; submit commands>`
+ arc_resources = <XML-string>
+    For grid universe jobs of type **arc**, provides additional XML
+    attributes under the ``<Resources>`` section of the ARC ADL job
+    description which are not covered by regular submit description file
+    parameters.
+    :index:`arc_rte<single: arc_rte; submit commands>`
+ arc_rte = < rte1 option,rte2 >
+    For grid universe jobs of type **arc**, provides a list of Runtime
+    Environment names that the job requires on the ARC system.
+    The list is comma-delimited. If a Runtime Environment name supports
+    options, those can be provided after the name, separated by spaces.
+    Runtime Environment names are defined by the ARC server.
+    :index:`azure_admin_key<single: azure_admin_key; submit commands>`
  azure_admin_key = <pathname>
     For grid type **azure** jobs, specifies the path and file name of a
     file that contains an SSH public key. This key can be used to log
@@ -1713,12 +1743,6 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     the running instance. The label name will be lower-cased; use
     **cloud_label_names** :index:`cloud_label_names<single: cloud_label_names; submit commands>`
     to change the case.
-    :index:`cream_attributes<single: cream_attributes; submit commands>`
- cream_attributes = <name=value;...;name=value>
-    Provides a list of attribute/value pairs to be set in a CREAM job
-    description of a grid universe job destined for the CREAM grid
-    system. The pairs are separated by semicolons, and written in New
-    ClassAd syntax.
     :index:`delegate_job_GSI_credentials_lifetime<single: delegate_job_GSI_credentials_lifetime; submit commands>`
  delegate_job_GSI_credentials_lifetime = <seconds>
     Specifies the maximum number of seconds for which delegated proxies
@@ -1947,25 +1971,20 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     For each **grid-type-string** value, there are further type-specific
     values that must specified. This submit description file command
     allows each to be given in a space-separated list. Allowable
-    **grid-type-string** values are **batch**, **condor**, **cream**,
-    **ec2**, **gt2**, **gt5**, **lsf**, **nordugrid**, **pbs**, **sge**,
-    and **unicore**. The HTCondor manual chapter on Grid Computing
+    **grid-type-string** values are **batch**, **condor**,
+    **ec2**, **gt2**, **gt5**, **lsf**, **nordugrid**, **arc**, **pbs**,
+    and **sge**.
+    The HTCondor manual chapter on Grid Computing
     details the variety of grid types.
 
     For a **grid-type-string** of **batch**, the single parameter is the
     name of the local batch system, and will be one of ``pbs``, ``lsf``,
-    or ``sge``.
+    ``slurm``, or ``sge``.
 
     For a **grid-type-string** of **condor**, the first parameter is the
     name of the remote *condor_schedd* daemon. The second parameter is
     the name of the pool to which the remote *condor_schedd* daemon
     belongs.
-
-    For a **grid-type-string** of **cream**, there are three parameters.
-    The first parameter is the web services address of the CREAM server.
-    The second parameter is the name of the batch system that sits
-    behind the CREAM server. The third parameter identifies a
-    site-specific queue within the batch system.
 
     For a **grid-type-string** of **ec2**, one additional parameter
     specifies the EC2 URL.
@@ -1980,32 +1999,14 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     For a **grid-type-string** of **lsf**, no additional parameters are
     used.
 
-    For a **grid-type-string** of **nordugrid**, the single parameter is
-    the name of the NorduGrid resource to be used.
+    For a **grid-type-string** of **nordugrid** or **arc**, the single
+    parameter is the name of the ARC resource to be used.
 
     For a **grid-type-string** of **pbs**, no additional parameters are
     used.
 
     For a **grid-type-string** of **sge**, no additional parameters are
     used.
-
-    For a **grid-type-string** of **unicore**, the first parameter is
-    the name of the Unicore Usite to be used. The second parameter is
-    the name of the Unicore Vsite to be used.
-    :index:`keystore_alias<single: keystore_alias; submit commands>`
-
- keystore_alias = <name>
-    A string to locate the certificate in a Java keystore file, as used
-    for a **unicore** job.
-    :index:`keystore_file<single: keystore_file; submit commands>`
- keystore_file = <pathname>
-    The complete path and file name of the Java keystore file containing
-    the certificate to be used for a **unicore** job.
-    :index:`keystore_passphrase_file<single: keystore_passphrase_file; submit commands>`
- keystore_passphrase_file = <pathname>
-    The complete path and file name to the file containing the
-    passphrase protecting a Java keystore file containing the
-    certificate. Relevant for a **unicore** job.
     :index:`MyProxyCredentialName<single: MyProxyCredentialName; submit commands>`
  MyProxyCredentialName = <symbolic name>
     The symbolic name that identifies a credential to the *MyProxy*
@@ -2093,7 +2094,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     X.509 user proxy. If **x509userproxy** is set, then that file is
     used for the proxy. Otherwise, the proxy is looked for in the
     standard locations. If **x509userproxy** is set or if the job is a
-    grid universe job of grid type **gt2**, **gt5**, **cream**, or
+    grid universe job of grid type **gt2**, **gt5**, or
     **nordugrid**, then the value of **use_x509userproxy** is forced to
     ``True``. Defaults to ``False``.
     :index:`x509userproxy<single: x509userproxy; submit commands>`
@@ -2118,7 +2119,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` is
     relevant when the **universe** is **vanilla**, or when the
     **universe** is **grid** and the type of grid system is one of
-    **gt2**, **gt5**, **condor**, **cream**, or **nordugrid**. Defining
+    **gt2**, **gt5**, **condor**, **arc**, or **nordugrid**. Defining
     a value causes the proxy to be delegated to the execute machine.
     Further, VOMS attributes defined in the proxy will appear in the job
     ClassAd.

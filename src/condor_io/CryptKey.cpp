@@ -28,7 +28,7 @@ KeyInfo:: KeyInfo()
       protocol_   (CONDOR_NO_PROTOCOL),
       duration_   (0)
 {
-    
+    ASSERT("BLANK KEYS DISALLOWED");
 }
 
 KeyInfo :: KeyInfo(const KeyInfo& copy)
@@ -64,7 +64,6 @@ KeyInfo& KeyInfo :: operator=(const KeyInfo& copy)
 		keyDataLen_ = copy.keyDataLen_;
 		protocol_   = copy.protocol_;
 		duration_   = copy.duration_;
-
 		init(copy.keyData_, copy.keyDataLen_);
 	}
 

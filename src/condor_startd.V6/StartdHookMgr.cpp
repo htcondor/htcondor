@@ -51,7 +51,7 @@ void
 StartdHookMgr::clearHookPaths()
 {
 	int i;
-	MyString key;
+	std::string key;
 	char** hook_paths;
 	m_keyword_hook_paths.startIterations();
 	while (m_keyword_hook_paths.iterate(key, hook_paths)) {
@@ -95,7 +95,7 @@ StartdHookMgr::getHookPath(HookType hook_type, Resource* rip)
 	}
 
 	int i;
-	MyString key(keyword);
+	std::string key(keyword);
 	char** hook_paths;
 	if (m_keyword_hook_paths.lookup(key, hook_paths) < 0) {
 			// No entry, initialize it.
@@ -108,9 +108,9 @@ StartdHookMgr::getHookPath(HookType hook_type, Resource* rip)
 
 	char* path = hook_paths[(int)hook_type];
 	if (!path) {
-		MyString _param;
-		_param.formatstr("%s_HOOK_%s", keyword, getHookTypeString(hook_type));
-		bool hperr = !validateHookPath(_param.Value(), path);
+		std::string _param;
+		formatstr(_param, "%s_HOOK_%s", keyword, getHookTypeString(hook_type));
+		bool hperr = !validateHookPath(_param.c_str(), path);
         // Here the distinction between undefined hook and a hook path error 
         // is being collapsed
 		if ((path == NULL) || (hperr)) {
@@ -119,7 +119,7 @@ StartdHookMgr::getHookPath(HookType hook_type, Resource* rip)
 		else {
 			hook_paths[(int)hook_type] = path;
 		}
-		rip->dprintf(D_FULLDEBUG, "Hook %s: %s\n", _param.Value(),
+		rip->dprintf(D_FULLDEBUG, "Hook %s: %s\n", _param.c_str(),
 					 path ? path : "UNDEFINED");
 	}
 	else if (path == UNDEFINED) {
@@ -381,16 +381,16 @@ FetchClient::reply()
 void
 FetchClient::hookExited(int exit_status) {
 	HookClient::hookExited(exit_status);
-	if (m_std_err.Length()) {
+	if (m_std_err.length()) {
 		dprintf(D_ALWAYS,
 				"Warning, hook %s (pid %d) printed to stderr: %s\n",
-				m_hook_path, (int)m_pid, m_std_err.Value());
+				m_hook_path, (int)m_pid, m_std_err.c_str());
 	}
-	if (m_std_out.Length()) {
+	if (m_std_out.length()) {
 		ASSERT(m_job_ad == NULL);
 		m_job_ad = new ClassAd();
 		MyStringTokener tok;
-		tok.Tokenize(m_std_out.Value());
+		tok.Tokenize(m_std_out.c_str());
 		const char* hook_line = NULL;
 		while ((hook_line = tok.GetNextToken("\n", true))) {
 			if (!m_job_ad->Insert(hook_line)) {

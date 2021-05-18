@@ -22,7 +22,6 @@
 #include "condor_config.h"
 #include "string_list.h"
 #include "condor_arglist.h"
-#include "MyString.h"
 #include "util_lib_proto.h"
 #include "internet.h"
 #include "my_popen.h"
@@ -342,8 +341,8 @@ bool parseURL(	const std::string & url,
     Regex r; int errCode = 0; const char * errString = 0;
     bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", & errString, & errCode );
     ASSERT( patternOK );
-    ExtArray<MyString> groups(5);
-    if(! r.match( url.c_str(), & groups )) { return false; }
+    ExtArray<std::string> groups(5);
+    if(! r.match_str( url.c_str(), & groups )) { return false; }
 
     protocol = groups[1];
     host = groups[3];
@@ -4158,8 +4157,8 @@ bool AmazonCreateStack::SendRequest() {
 		Regex r; int errCode = 0; const char * errString = 0;
 		bool patternOK = r.compile( "<StackId>(.*)</StackId>", & errString, & errCode );
 		ASSERT( patternOK );
-		ExtArray<MyString> groups(2);
-		if( r.match( resultString, & groups ) ) {
+		ExtArray<std::string> groups(2);
+		if( r.match_str( resultString, & groups ) ) {
 			this->stackID = groups[1];
 		}
 	}
@@ -4238,25 +4237,25 @@ bool AmazonDescribeStacks::SendRequest() {
 		Regex r;
 		bool patternOK = r.compile( "<StackStatus>(.*)</StackStatus>", & errString, & errCode );
 		ASSERT( patternOK );
-		ExtArray<MyString> statusGroups( 2 );
-		if( r.match( resultString, & statusGroups ) ) {
+		ExtArray<std::string> statusGroups( 2 );
+		if( r.match_str( resultString, & statusGroups ) ) {
 			this->stackStatus = statusGroups[1];
 		}
 
 		Regex s;
 		patternOK = s.compile( "<Outputs>(.*)</Outputs>", & errString, & errCode, Regex::multiline | Regex::dotall );
 		ASSERT( patternOK );
-		ExtArray<MyString> outputGroups( 2 );
-		if( s.match( resultString, & outputGroups ) ) {
+		ExtArray<std::string> outputGroups( 2 );
+		if( s.match_str( resultString, & outputGroups ) ) {
 			dprintf( D_ALWAYS, "Found output string '%s'.\n", outputGroups[1].c_str() );
-			MyString membersRemaining = outputGroups[1];
+			std::string membersRemaining = outputGroups[1];
 
 			Regex t;
 			patternOK = t.compile( "\\s*<member>\\s*(.*?)\\s*</member>\\s*", & errString, & errCode, Regex::multiline | Regex::dotall );
 			ASSERT( patternOK );
 
-			ExtArray<MyString> memberGroups( 2 );
-			while( t.match( membersRemaining, & memberGroups ) ) {
+			ExtArray<std::string> memberGroups( 2 );
+			while( t.match_str( membersRemaining, & memberGroups ) ) {
 				std::string member = memberGroups[1].c_str();
 				dprintf( D_ALWAYS, "Found member '%s'.\n", member.c_str() );
 
@@ -4265,8 +4264,8 @@ bool AmazonDescribeStacks::SendRequest() {
 				ASSERT( patternOK );
 
 				std::string outputKey;
-				ExtArray<MyString> keyGroups( 2 );
-				if( u.match( member, & keyGroups ) ) {
+				ExtArray<std::string> keyGroups( 2 );
+				if( u.match_str( member, & keyGroups ) ) {
 					outputKey = keyGroups[1];
 				}
 
@@ -4275,8 +4274,8 @@ bool AmazonDescribeStacks::SendRequest() {
 				ASSERT( patternOK );
 
 				std::string outputValue;
-				ExtArray<MyString> valueGroups( 2 );
-				if( v.match( member, & valueGroups ) ) {
+				ExtArray<std::string> valueGroups( 2 );
+				if( v.match_str( member, & valueGroups ) ) {
 					outputValue = valueGroups[1];
 				}
 
@@ -4285,7 +4284,7 @@ bool AmazonDescribeStacks::SendRequest() {
 					outputs.push_back( outputValue );
 				}
 
-				membersRemaining.replaceString( memberGroups[0].c_str(), "" );
+				replace_str( membersRemaining, memberGroups[0].c_str(), "" );
 			}
 		}
 	}

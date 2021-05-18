@@ -434,8 +434,8 @@ private:
 	void	endCODLoadHack( void );
 	int		eval_expr( const char* expr_name, bool fatal, bool check_vanilla );
 
-	MyString m_execute_dir;
-	MyString m_execute_partition_id;
+	std::string m_execute_dir;
+	std::string m_execute_partition_id;
 
 #if HAVE_JOB_HOOKS
 	time_t	m_last_fetch_work_spawned;

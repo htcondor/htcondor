@@ -60,7 +60,7 @@ $success = sub
 	foreach my $item ( @lines )
 	{
 		#CondorTest::debug("ARG -$item-\n",1);
-		if($item =~ /^(.*?\..*?\..*)$/) {
+		if($item =~ /^(.*\..*)$/) {
 			print "MACHINE:$1\n";
 			$statusmachines = $1;
 		} elsif($item =~ /^(\/be\/here\/now).*$/) {
@@ -143,7 +143,7 @@ $success = sub
 				RegisterResult(0,"test_name", $testname);
 			}
 		}
-		elsif( $name =~ /^\s*MACHINE\s+=\s+(.*?\..*?\..*?)\s*$/ )
+		elsif( $name =~ /^\s*MACHINE\s+=\s+(.*\..*)\s*$/ )
 		{
 			if( $1 eq $machinename) {
 				$envmachinefound = 1;

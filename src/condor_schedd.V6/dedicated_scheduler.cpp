@@ -484,10 +484,10 @@ DedicatedScheduler::~DedicatedScheduler()
 		delete shadow_obj;
 		shadow_obj = NULL;
 	}
-	if( hdjt_tid != -1 ) {
+	if( daemonCore && hdjt_tid != -1 ) {
 		daemonCore->Cancel_Timer( hdjt_tid );
 	}
-	if( sanity_tid != -1 ) {
+	if( daemonCore && sanity_tid != -1 ) {
 		daemonCore->Cancel_Timer( sanity_tid );
 	}
 
@@ -1558,7 +1558,7 @@ void
 DedicatedScheduler::listDedicatedJobs( int debug_level )
 {
 	int cluster, proc;
-	MyString owner_str;
+	std::string owner_str;
 
 	if( ! idle_clusters ) {
 		dprintf( debug_level, "DedicatedScheduler: No dedicated jobs\n" );
@@ -1573,7 +1573,7 @@ DedicatedScheduler::listDedicatedJobs( int debug_level )
 		owner_str = "";
 		GetAttributeString( cluster, proc, ATTR_OWNER, owner_str ); 
 		dprintf( debug_level, "Dedicated job: %d.%d %s\n", cluster,
-				 proc, owner_str.Value() );
+				 proc, owner_str.c_str() );
 	}
 }
 
@@ -1585,7 +1585,7 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 	CondorQuery	query(STARTD_AD);
 
 	time_t b4 = time(0);
-	MyString constraint;
+	std::string constraint;
 
 		// Now, clear out any old list we might have for the resources
 		// themselves. 
@@ -1594,8 +1594,8 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 		// Make a new list to hold our resource classads.
 	resources = new ClassAdList;
 
-    constraint.formatstr("DedicatedScheduler == \"%s\"", name());
-	query.addORConstraint( constraint.Value() );
+    formatstr(constraint, "DedicatedScheduler == \"%s\"", name());
+	query.addORConstraint( constraint.c_str() );
 
 		// This should fill in resources with all the classads we care
 		// about
@@ -1616,7 +1616,7 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 		return true;
 	}
 
-	dprintf (D_ALWAYS, "Unable to run query %s\n",  constraint.Value());
+	dprintf (D_ALWAYS, "Unable to run query %s\n",  constraint.c_str());
 	return false;
 }
 
@@ -2058,14 +2058,14 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 				char const *claim = (*(*allocation->matches)[p])[i]->claimId();
 				char const *publicClaim = (*(*allocation->matches)[p])[i]->publicClaimId();
 
-				MyString claim_buf;
+				std::string claim_buf;
 				if( strchr(claim,',') ) {
 						// the claimid contains a comma, which is the delimiter
 						// in the list of claimids, so we must escape it
 					claim_buf = claim;
-					ASSERT( !strstr(claim_buf.Value(),"$(COMMA)") );
-					claim_buf.replaceString(",","$(COMMA)");
-					claim = claim_buf.Value();
+					ASSERT( !strstr(claim_buf.c_str(),"$(COMMA)") );
+					replace_str(claim_buf, ",","$(COMMA)");
+					claim = claim_buf.c_str();
 				}
 
 				claims.append(claim);
@@ -4017,7 +4017,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 	CondorQuery query(STARTD_AD);
 	ClassAdList result;
 	ClassAdList ads;
-	MyString constraint;
+	std::string constraint;
 
 	SimpleList<PROC_ID> jobsToReconnectLater = jobsToReconnect;
 
@@ -4049,7 +4049,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			constraint += "==\"";
 			constraint += host;
 			constraint += "\"";
-			query.addORConstraint(constraint.Value()); 
+			query.addORConstraint(constraint.c_str()); 
 		}
 	}
 
@@ -4142,9 +4142,9 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 
 		escapedClaimList.rewind();
 		while( (claim = escapedClaimList.next()) ) {
-			MyString buf = claim;
-			buf.replaceString("$(COMMA)",",");
-			claimList.append(buf.Value());
+			std::string buf = claim;
+			replace_str(buf, "$(COMMA)",",");
+			claimList.append(buf.c_str());
 		}
 
 			// Foreach host in the stringlist, find matching machine by name

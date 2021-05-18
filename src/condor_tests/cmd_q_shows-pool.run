@@ -52,7 +52,8 @@ print "Fetched collector address with l->GetCollectorAddress(): yields  $collect
 my $localconfig = $condor_instance_local->GetCondorConfig();
 
 # where am I running
-my $currenthost = CondorTest::getFqdnHost();
+my $currenthost = `condor_status -af Machine -limit 1`;
+chomp($currenthost);
 
 if($iswindows) {
 	my @nameparts = split /\./, $currenthost;

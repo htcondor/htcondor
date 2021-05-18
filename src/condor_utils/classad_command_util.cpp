@@ -78,7 +78,7 @@ unknownCmd( Stream* s, const char* cmd_str )
 	line += ") in ClassAd";
 	
 	return sendErrorReply( s, cmd_str, CA_INVALID_REQUEST,
-						   line.Value() ); 
+						   line.c_str() ); 
 }
 
 

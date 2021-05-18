@@ -322,7 +322,7 @@ class FileTransfer final: public Service {
 	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload, std::vector<std::unique_ptr<ClassAd>> *);
 	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long &upload_bytes);
     int OutputFileTransferStats( ClassAd &stats );
-	MyString GetSupportedMethods(CondorError &err);
+	std::string GetSupportedMethods(CondorError &err);
 	void DoPluginConfiguration();
 
 		// Convert directories with a trailing slash to a list of the contents
@@ -331,9 +331,9 @@ class FileTransfer final: public Service {
 		// inputs.  See the lengthy comment in the function body for additional
 		// explanation of why this is necessary.
 		// Returns false on failure and sets error_msg.
-	static bool ExpandInputFileList( ClassAd *job, MyString &error_msg );
+	static bool ExpandInputFileList( ClassAd *job, std::string &error_msg );
 		// use this function when you don't want to party on the job ad like the above function does 
-	static bool ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, MyString &error_msg );
+	static bool ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, std::string &error_msg );
 
 	// When downloading files, store files matching source_name as the name
 	// specified by target_name.
@@ -519,7 +519,7 @@ class FileTransfer final: public Service {
 	// Save failure information with SaveTransferInfo().
 	bool ObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,filesize_t sandbox_size,char const *full_fname,bool &go_ahead_always);
 
-	bool DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,filesize_t sandbox_size,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
+	bool DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,filesize_t sandbox_size,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,std::string &error_desc);
 
 	std::string GetTransferQueueUser();
 

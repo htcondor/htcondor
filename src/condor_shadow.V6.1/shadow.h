@@ -162,7 +162,7 @@ class UniShadow : public BaseShadow
 
 	virtual void logDisconnectedEvent( const char* reason );
 
-	virtual bool getMachineName( MyString &machineName );
+	virtual bool getMachineName( std::string &machineName );
 	
 	/**
 	 * Handle the situation where the job is to be suspended

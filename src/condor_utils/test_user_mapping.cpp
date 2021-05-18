@@ -289,7 +289,7 @@ int read_mapfile(const char * mapfile, bool assume_hash, bool dump_it, const cha
 				MyString input_line;
 				input_line.readLine(src); // Result ignored, we already monitor EOF
 				input_line.trim();
-				if (input_line.IsEmpty() || input_line[0] == '#') {
+				if (input_line.empty() || input_line[0] == '#') {
 					continue;
 				}
 				gmstr.clear();
@@ -356,7 +356,7 @@ int read_gridmap(const char * mapfile, bool assume_hash, const char * user)
 				MyString input_line;
 				input_line.readLine(src); // Result ignored, we already monitor EOF
 				input_line.trim();
-				if (input_line.IsEmpty() || input_line[0] == '#') {
+				if (input_line.empty() || input_line[0] == '#') {
 					continue;
 				}
 				gmstr.clear();
@@ -592,7 +592,7 @@ int main( int /*argc*/, const char ** argv) {
 			MyString line;
 			line.readLine(src); // Result ignored, we already monitor EOF
 			line.chomp();
-			if (line.IsEmpty()) continue;
+			if (line.empty()) continue;
 			users.append(line.c_str());
 		}
 		timed_lookups(show_failed_lookups, lookup_method, users);

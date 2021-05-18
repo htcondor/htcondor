@@ -213,7 +213,7 @@ createConfigTarball(	const char * configDir,
 
 	std::string contents;
 	formatstr( contents,
-		"use security : host_based\n"
+		"use security:host_based\n"
 		"LOCAL_HOSTS = $(FULL_HOSTNAME) $(IP_ADDRESS) 127.0.0.1 $(TCP_FORWARDING_HOST)\n"
 		"CONDOR_HOST = condor_pool@*/* $(LOCAL_HOSTS)\n"
 		"COLLECTOR_HOST = %s\n"
@@ -1418,10 +1418,14 @@ annex_main( int argc, char ** argv ) {
 			return condor_off( annexName, argc, argv, subCommandIndex );
 
 		case ct_condor_status:
+			// Obviously the wrong command int, but it no longer matters.
+			prepareCommandAd( commandArguments, CA_BULK_REQUEST );
 			return condor_status( annexName, sURLy.c_str(),
 				argc, argv, subCommandIndex );
 
 		case ct_status:
+			// Obviously the wrong command int, but it no longer matters.
+			prepareCommandAd( commandArguments, CA_BULK_REQUEST );
 			return status( annexName, wantClassAds, sURLy.c_str() );
 
 		case ct_setup: {

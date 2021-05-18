@@ -37,6 +37,13 @@
 #include "daemon_command.h"
 
 
+// For AES (and newer).
+#define GENERATED_KEY_LENGTH_V9  32
+
+// For BLOWFISH and 3DES
+#define GENERATED_KEY_LENGTH_OLD 24
+
+
 static unsigned int ZZZZZ = 0;
 static int ZZZ_always_increase() {
 	return ZZZZZ++;
@@ -446,7 +453,23 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 			SecMan::sec_feat_act will_enable_encryption = m_sec_man->sec_lookup_feat_act(*session->policy(), ATTR_SEC_ENCRYPTION);
 			bool turn_encryption_on = will_enable_encryption == SecMan::SEC_FEAT_ACT_YES;
 
-			if (!m_sock->set_crypto_key(turn_encryption_on, session->key())) {
+			KeyInfo* key_to_use;
+			KeyInfo* blowfish_key;
+
+			key_to_use = session->key();
+			blowfish_key = session->key(CONDOR_BLOWFISH);
+
+			dprintf(D_NETWORK|D_VERBOSE, "UDP: server normal key (proto %i): %p\n", key_to_use->getProtocol(), key_to_use);
+			dprintf(D_NETWORK|D_VERBOSE, "UDP: server BF key (proto %i): %p\n", (blowfish_key ? blowfish_key->getProtocol() : 0), blowfish_key);
+			dprintf(D_NETWORK|D_VERBOSE, "UDP: server m_is_tcp: 0\n");
+
+			// this is UDP.  if we were going to use AES, use BLOWFISH instead (if it exists)
+			if((key_to_use->getProtocol() == CONDOR_AESGCM) && (blowfish_key)) {
+				dprintf(D_NETWORK, "UDP: SWITCHING FROM AES TO BLOWFISH.\n");
+				key_to_use = blowfish_key;
+			}
+
+			if (!m_sock->set_crypto_key(turn_encryption_on, key_to_use)) {
 				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption for session %s, failing; this session was requested by %s with return address %s\n",sess_id, m_sock->peer_description(), return_address_ss ? return_address_ss : "(none)");
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -759,6 +782,30 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				session->renewLease();
 
+				// If the session has multiple crypto methods, we need to
+				// figure out which one to use.
+				// If the client's resume session ad gives a crypto method
+				// list, use the first entry in it.
+				// Otherwise, the client is 8.9, so if we have a list, use
+				// the first entry that's BLOWFISH or 3DES.
+				// Whichever one we use, set it as the preferred method
+				// for the session, in case we need to connect to our
+				// peer in the future.
+				std::string session_crypto_methods;
+				session->policy()->LookupString(ATTR_SEC_CRYPTO_METHODS, session_crypto_methods);
+				if (session_crypto_methods.find(',') != std::string::npos) {
+					std::string client_crypto_methods;
+					Protocol active_crypto = CONDOR_NO_PROTOCOL;
+					if (m_auth_info.LookupString(ATTR_SEC_CRYPTO_METHODS, client_crypto_methods)) {
+						active_crypto = SecMan::getCryptProtocolNameToEnum(client_crypto_methods.c_str());
+					} else {
+						std::string pick_crypto;
+						pick_crypto = SecMan::getPreferredOldCryptProtocol(session_crypto_methods);
+						active_crypto = SecMan::getCryptProtocolNameToEnum(pick_crypto.c_str());
+					}
+					session->setPreferredProtocol(active_crypto);
+				}
+
 				if (session->key()) {
 					// copy this to the HandleReq() scope
 					m_key = new KeyInfo(*session->key());
@@ -874,7 +921,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					// generate a unique ID.
 					std::string tmpStr;
 					formatstr( tmpStr, "%s:%i:%i:%i",
-									get_local_hostname().Value(), daemonCore->mypid,
+									get_local_hostname().c_str(), daemonCore->mypid,
 							 (int)time(0), ZZZ_always_increase() );
 					assert (m_sid == NULL);
 					m_sid = strdup(tmpStr.c_str());
@@ -888,14 +935,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 							return CommandProtocolFinished;
 						}
 
-						unsigned char* rkey = Condor_Crypt_Base::randomKey(24);
-						unsigned char  rbuf[24];
+						unsigned char* rkey = Condor_Crypt_Base::randomKey(GENERATED_KEY_LENGTH_V9);
+						unsigned char  rbuf[GENERATED_KEY_LENGTH_V9];
 						if (rkey) {
-							memcpy (rbuf, rkey, 24);
+							memcpy (rbuf, rkey, GENERATED_KEY_LENGTH_V9);
 							// this was malloced in randomKey
 							free (rkey);
 						} else {
-							memset (rbuf, 0, 24);
+							memset (rbuf, 0, GENERATED_KEY_LENGTH_V9);
 							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: unable to generate key for request from %s - no crypto available!\n", m_sock->peer_description() );							
 							free( crypto_method );
 							crypto_method = NULL;
@@ -903,19 +950,24 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 							return CommandProtocolFinished;
 						}
 
-						switch (toupper(crypto_method[0])) {
-							case 'B': // blowfish
+						Protocol method = SecMan::getCryptProtocolNameToEnum(crypto_method);
+						switch (method) {
+							case CONDOR_BLOWFISH:
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, 24, CONDOR_BLOWFISH);
+								m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_OLD, CONDOR_BLOWFISH, 0);
 								break;
-							case '3': // 3des
-							case 'T': // Tripledes
+							case CONDOR_3DES:
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, 24, CONDOR_3DES);
+								m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_OLD, CONDOR_3DES, 0);
+								break;
+							case CONDOR_AESGCM: {
+								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %s...\n", m_sid);
+								m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_V9, CONDOR_AESGCM, 0);
+								}
 								break;
 							default:
 								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, 24);
+								m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_OLD, CONDOR_NO_PROTOCOL, 0);
 								break;
 						}
 
@@ -928,6 +980,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						}
 
 						m_sec_man->key_printf (D_SECURITY, m_key);
+
+						// Update the session policy to reflect the
+						// crypto method we're using
+						m_policy->Assign(ATTR_SEC_CRYPTO_METHODS, SecMan::getCryptProtocolEnumToName(method));
+					} else {
+						m_policy->Delete(ATTR_SEC_CRYPTO_METHODS);
 					}
 
 					m_new_session = true;
@@ -1174,6 +1232,30 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto
 {
 	dprintf( D_DAEMONCORE, "DAEMONCORE: EnableCrypto()\n");
 
+	// We must configure encryption before integrity on the socket
+	// when using AES over TCP. If we do integrity first, then ReliSock
+	// will initialize an MD5 context and then tear it down when it
+	// learns it's doing AES. This breaks FIPS compliance.
+	if (m_will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) {
+
+		if (!m_key) {
+			// uhm, there should be a key here!
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		}
+
+		m_sock->decode();
+		if (!m_sock->set_crypto_key(true, m_key) ) {
+			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing request from %s.\n", m_sock->peer_description());
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		} else {
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", m_sid);
+		}
+	} else {
+		m_sock->set_crypto_key(false, m_key);
+	}
+
 	if (m_will_enable_integrity == SecMan::SEC_FEAT_ACT_YES) {
 
 		if (!m_key) {
@@ -1193,27 +1275,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto
 		}
 	} else {
 		m_sock->set_MD_mode(MD_OFF, m_key);
-	}
-
-
-	if (m_will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) {
-
-		if (!m_key) {
-			// uhm, there should be a key here!
-			m_result = FALSE;
-			return CommandProtocolFinished;
-		}
-
-		m_sock->decode();
-		if (!m_sock->set_crypto_key(true, m_key) ) {
-			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing request from %s.\n", m_sock->peer_description());
-			m_result = FALSE;
-			return CommandProtocolFinished;
-		} else {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", m_sid);
-		}
-	} else {
-		m_sock->set_crypto_key(false, m_key);
 	}
 
 	m_state = CommandProtocolVerifyCommand;
@@ -1612,14 +1673,40 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		}
 
 
-		// add the key to the cache
+		// add the key(s) to the cache
+
+		// if this is AES, we'll also create a derived BLOWFISH key (for UDP), if BLOWFISH is allowed
+
+		std::vector<KeyInfo*> keyvec;
+		dprintf(D_SECURITY|D_VERBOSE, "SESSION: server checking key type: %i\n", (m_key ? m_key->getProtocol() : -1));
+		if (m_key) {
+			// put the normal key into the vector
+			keyvec.push_back(new KeyInfo(*m_key));
+
+			// now see if we want to (and are allowed) to add a BLOWFISH key in addition to AES
+			if (m_key->getProtocol() == CONDOR_AESGCM) {
+				std::string all_methods;
+				if (m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS_LIST, all_methods)) {
+					dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
+					StringList sl(all_methods.c_str());
+					if (sl.contains_anycase("BLOWFISH")) {
+						keyvec.push_back(new KeyInfo(m_key->getKeyData(), 24, CONDOR_BLOWFISH, 0));
+						dprintf(D_SECURITY, "SESSION: server duplicated AES to BLOWFISH key for UDP.\n");
+					} else {
+						dprintf(D_SECURITY, "SESSION: BLOWFISH not allowed.  UDP will not work.\n");
+					}
+				} else {
+					dprintf(D_ALWAYS, "SESSION: no crypto methods list\n");
+				}
+			}
+		}
 
 		// This is a session for incoming connections, so
 		// do not pass in m_sock->peer_addr() as addr,
 		// because then this key would get confused for an
 		// outgoing session to a daemon with that IP and
 		// port as its command socket.
-		KeyCacheEntry tmp_key(m_sid, NULL, m_key, m_policy, expiration_time, session_lease );
+		KeyCacheEntry tmp_key(m_sid, NULL, keyvec, m_policy, expiration_time, session_lease );
 		m_sec_man->session_cache->insert(tmp_key);
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid, durint, session_lease, return_addr ? return_addr : "unknown");
 		if (IsDebugVerbose(D_SECURITY)) {

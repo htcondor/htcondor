@@ -1315,6 +1315,7 @@ handle_refresh_proxy_from_file(void * user_arg)
 		environ_variable = (char *) malloc(strlen(file_name) + 1);
 		strcpy(environ_variable, file_name); 
 		setenv("X509_USER_PROXY", environ_variable, 1);
+		free(environ_variable);
 	}
 
 	// this is a macro, not a function - hence the lack of a semicolon

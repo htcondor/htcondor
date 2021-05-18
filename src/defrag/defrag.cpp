@@ -32,10 +32,8 @@
 #include "util_lib_proto.h"
 #include "dc_startd.h"
 #include "get_daemon_name.h"
-//#include "compat_classad.h"
 #include <algorithm>
 #include <iterator>
-#include <sstream>
 #include "defrag.h"
 
 #include <list>

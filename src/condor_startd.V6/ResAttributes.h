@@ -191,12 +191,27 @@ public:
 class MachAttributes
 {
 public:
+	// quantity (double) of resource for each resource tag
 	typedef std::map<string, double, classad::CaseIgnLTStr> slotres_map_t;
-	typedef std::vector<std::string> slotres_assigned_ids_t;
-	typedef std::vector<FullSlotId> slotres_assigned_id_owners_t;
+
+	// these are used for non-fungible ids to track resource IDs that cannot be assigned
+	// for each resource tag, which resource IDs are offline. note that this is a SET rather than a VECTOR
 	typedef std::set<std::string> slotres_offline_ids_t;
-	typedef std::map<string, slotres_assigned_ids_t, classad::CaseIgnLTStr> slotres_devIds_map_t;
 	typedef std::map<string, slotres_offline_ids_t, classad::CaseIgnLTStr> slotres_offline_ids_map_t;
+
+	// some slots may have constraints on which non-fungible resources they can use, this is handled
+	// by having an optional property classad for each unique non-fungible id, and a optional constraint
+	// for each type of nonfungible id for each slot
+	typedef std::map<std::string, std::string, classad::CaseIgnLTStr> slotres_constraint_map_t;
+	typedef std::map<std::string, ClassAd> slotres_props_t;
+	typedef std::map<std::string, slotres_props_t, classad::CaseIgnLTStr> slotres_devProps_map_t;
+
+	// these are used for non-fungible ids to track which resources are bound to which slots
+	// for each resource tag, which resource IDs are assigned
+	typedef std::vector<std::string> slotres_assigned_ids_t;
+	typedef std::map<string, slotres_assigned_ids_t, classad::CaseIgnLTStr> slotres_devIds_map_t;
+	// for each resource tag, which slot is bound to which resource ID
+	typedef std::vector<FullSlotId> slotres_assigned_id_owners_t;
 	typedef std::map<string, slotres_assigned_id_owners_t, classad::CaseIgnLTStr> slotres_devIdOwners_map_t;
 
 	MachAttributes();
@@ -248,11 +263,13 @@ public:
 	const slotres_map_t& machres() const { return m_machres_map; }
 	const slotres_devIds_map_t& machres_devIds() const { return m_machres_devIds_map; }
 	const ClassAd& machres_attrs() const { return m_machres_attr; }
-	const char * AllocateDevId(const std::string & tag, int assign_to, int assign_to_sub);
+	const char * AllocateDevId(const std::string & tag, const char* request, int assign_to, int assign_to_sub);
 	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub);
+	bool         DevIdMatches(const std::string & tag, int ix, const char* request);
 	const char * DumpDevIds(std::string & buf, const char * tag = NULL, const char * sep = "\n");
 	void         ReconfigOfflineDevIds();
 	void         RefreshDevIds(slotres_map_t::iterator & slot_res_count, slotres_devIds_map_t::iterator & slot_res_devids, int assign_to, int assign_to_sub);
+	bool         ComputeDevProps(ClassAd & ad, std::string tag, slotres_assigned_ids_t & ids);
 	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
 private:
@@ -284,6 +301,7 @@ private:
 	long long		m_total_disk; // the value of total_disk if m_recompute_disk is false
 	slotres_map_t   m_machres_map;
 	slotres_devIds_map_t m_machres_devIds_map;
+	slotres_devProps_map_t m_machres_devProps_map;
 	slotres_devIds_map_t m_machres_offline_devIds_map; // startup list of offline ids
 	slotres_offline_ids_map_t m_machres_runtime_offline_ids_map; // dynamic list of offline ids (unique set of ids, startup + runtime)
 	slotres_devIdOwners_map_t m_machres_devIdOwners_map;
@@ -337,8 +355,10 @@ class CpuAttributes
 public:
     typedef MachAttributes::slotres_map_t slotres_map_t;
 	typedef MachAttributes::slotres_devIds_map_t slotres_devIds_map_t;
+	typedef MachAttributes::slotres_props_t slotres_props_t;
 	typedef MachAttributes::slotres_offline_ids_map_t slotres_offline_ids_map_t;
 	typedef MachAttributes::slotres_assigned_ids_t slotres_assigned_ids_t;
+	typedef MachAttributes::slotres_constraint_map_t slotres_constraint_map_t;
 
 	friend class AvailAttributes;
 
@@ -346,7 +366,8 @@ public:
 				   int num_phys_mem, double virt_mem_fraction,
 				   double disk_fraction,
 				   const slotres_map_t& slotres_map,
-				   MyString &execute_dir, MyString &execute_partition_id );
+				   const slotres_constraint_map_t& slotres_req_map,
+				   const std::string &execute_dir, const std::string &execute_partition_id );
 
 	void attach( Resource* );	// Attach to the given Resource
 	void bind_DevIds(int slot_id, int slot_sub_id);   // bind non-fungable resource ids to a slot
@@ -374,15 +395,15 @@ public:
 
 	void display(int dpf_flags) const;
 	void dprintf( int, const char*, ... ) const;
-	void cat_totals(MyString & buf) const;
+	void cat_totals(std::string & buf) const;
 
 	double num_cpus() const { return c_num_cpus; }
 	bool allow_fractional_cpus(bool allow) { bool old = c_allow_fractional_cpus; c_allow_fractional_cpus = allow; return old; }
 	long long get_disk() const { return c_disk; }
 	double get_disk_fraction() const { return c_disk_fraction; }
 	long long get_total_disk() const { return c_total_disk; }
-	char const *executeDir() { return c_execute_dir.Value(); }
-	char const *executePartitionID() { return c_execute_partition_id.Value(); }
+	char const *executeDir() { return c_execute_dir.c_str(); }
+	char const *executePartitionID() { return c_execute_partition_id.c_str(); }
     const slotres_map_t& get_slotres_map() { return c_slotres_map; }
     const slotres_devIds_map_t & get_slotres_ids_map() { return c_slotres_ids_map; }
     const MachAttributes* get_mach_attr() { return map; }
@@ -440,7 +461,9 @@ private:
     // custom slot resources
     slotres_map_t c_slotres_map;
     slotres_map_t c_slottot_map;
+	slotres_constraint_map_t c_slotres_constraint_map;
 	slotres_devIds_map_t c_slotres_ids_map;
+	slotres_props_t c_slotres_props_map; // map if resource tag to aggregate ClassAd of props for custom resource
 
     // totals
 	double			c_num_slot_cpus;
@@ -451,8 +474,8 @@ private:
 
 	double			c_disk_fraction; // share of execute dir partition
 	double			c_slot_disk; // share of execute dir partition
-	MyString        c_execute_dir;
-	MyString        c_execute_partition_id;  // unique id for partition
+	std::string     c_execute_dir;
+	std::string     c_execute_partition_id;  // unique id for partition
 
 	int				c_type;		// The type of this resource
 };	
@@ -479,7 +502,7 @@ public:
 	bool decrement( CpuAttributes* cap );
 	bool computeRemainder(slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
 	bool computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
-	void cat_totals(MyString & buf, const char * execute_partition_id);
+	void cat_totals(std::string & buf, const char * execute_partition_id);
 
 private:
 	int				a_num_cpus;
@@ -493,9 +516,9 @@ private:
     slotres_map_t a_autocnt_map;
 
 		// number of slots using "auto" for disk share in each partition
-	HashTable<MyString,AvailDiskPartition> m_execute_partitions;
+	HashTable<std::string,AvailDiskPartition> m_execute_partitions;
 
-	AvailDiskPartition &GetAvailDiskPartition(MyString const &execute_partition_id);
+	AvailDiskPartition &GetAvailDiskPartition(std::string const &execute_partition_id);
 };
 
 #endif /* _RES_ATTRIBUTES_H */

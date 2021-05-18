@@ -1,0 +1,146 @@
+#!/bin/bash
+# This command takes a directory of HTCondor debs and creates a tarball
+# Named externals are download and extracted from existing repositories
+#
+if [ $# -ne 1 ]; then
+    echo 'Error: missing argument'
+    echo "Usage: $(basename $0) debs-directory"
+    exit 1
+fi
+debdir=$1
+if [ ! -d $debdir ]; then
+    echo "Error: $debdir is not a directory"
+    echo "Usage: $(basename $0) debs-directory"
+    exit 1
+fi
+
+cmd_dir=$(dirname $0)
+
+mkdir tarball
+
+for file in $debdir/*.deb; do
+    if [[ $file == *-dbg_* ]]; then
+        # Skip debug information
+        echo Skipping $file
+    else
+        eval $(perl -e "(\$package, \$version, \$release, \$arch) = '$file' =~ m:^.*/(.*)_([0-9][0-9.]*)-([0-9][0-9.]*)_([^.]+)\.deb$:; print \"package=\$package version=\$version release=\$release arch=\$arch\";")
+        echo ======= ${package}_$version-${release}_$arch.deb =======
+        echo ${package}_$version-${release}_$arch.deb >> tarball/Manifest.txt
+        ar p $debdir/${package}_$version-${release}_$arch.deb data.tar.xz | (cd tarball; tar xfpJ -)
+    fi
+done
+
+arch=$(uname -m)
+
+if $(grep -qi stretch /etc/os-release); then
+    arch_dist="${arch}_Debian9"
+elif $(grep -qi buster /etc/os-release); then
+    arch_dist="${arch}_Debian10"
+elif $(grep -qi bullseye /etc/os-release); then
+    arch_dist="${arch}_Debian11"
+elif $(grep -qi xenial /etc/os-release); then
+    arch_dist="${arch}_Ubuntu16"
+elif $(grep -qi bionic /etc/os-release); then
+    arch_dist="${arch}_Ubuntu18"
+elif $(grep -qi focal /etc/os-release); then
+    arch_dist="${arch}_Ubuntu20"
+fi
+
+# Blow away whatever BaTLab made
+rm -rf condor_tests-*
+# Repack the testing tarball
+tar xfp tarball/usr/lib/condor/condor_tests-$version.tar.gz
+rm tarball/usr/lib/condor/condor_tests-$version.tar.gz
+mv condor_tests-* condor_tests-$version-$release-$arch_dist
+(cd condor_tests-$version-$release-$arch_dist; chmod a+x $(file $(find -type f)|grep 'executable'|sed -e s/:.*//))
+(cd condor_tests-$version-$release-$arch_dist; chmod a+x $(find -type f -name script\*))
+$cmd_dir/set-tarball-rpath condor_tests-$version-$release-$arch_dist '$ORIGIN/../lib'
+tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$release-$arch_dist
+rm -r condor_tests-$version-$release-$arch_dist
+
+# Move configuration files back to example directory
+mv tarball/etc/condor/config.d/* tarball/usr/share/doc/htcondor/examples/
+
+common_externals="blahp \
+    condor-boinc \
+    libcgroup1 \
+    libglobus-callout0 \
+    libglobus-common0 \
+    libglobus-ftp-client2 \
+    libglobus-ftp-control1 \
+    libglobus-gass-transfer2 \
+    libglobus-gram-client3 \
+    libglobus-gram-protocol3 \
+    libglobus-gsi-callback0 \
+    libglobus-gsi-cert-utils0 \
+    libglobus-gsi-credential1 \
+    libglobus-gsi-openssl-error0 \
+    libglobus-gsi-proxy-core0 \
+    libglobus-gsi-proxy-ssl1 \
+    libglobus-gsi-sysconfig1 \
+    libglobus-gss-assist3 \
+    libglobus-gssapi-error2 \
+    libglobus-gssapi-gsi4 \
+    libglobus-io3 \
+    libglobus-openssl-module0 \
+    libglobus-rsl2 \
+    libglobus-xio0 \
+    libglobus-xio-gsi-driver \
+    libglobus-xio-popen-driver \
+    libgomp1 \
+    libmunge2 \
+    libscitokens0 \
+    libvomsapi1v5"
+
+if [[ $arch_dist =~ Debian9 ]]; then
+    externals="$common_externals libboost-python1.62.0"
+elif [[ $arch_dist =~ Debian10 ]]; then
+    externals="$common_externals libboost-python1.67.0"
+elif [[ $arch_dist =~ Ubuntu16 ]]; then
+    externals="$common_externals libboost-python1.58.0"
+elif [[ $arch_dist =~ Ubuntu18 ]]; then
+    externals="$common_externals libboost-python1.65.1"
+elif [[ $arch_dist =~ Ubuntu20 ]]; then
+    externals="$common_externals libboost-python1.71.0"
+fi
+
+mkdir external-packages
+(cd external-packages; apt download $externals)
+
+# Extract external debs
+for file in external-packages/*.deb; do
+    echo ======= $file =======
+    echo $file >> tarball/Manifest.txt
+    ar p $file data.tar.xz | (cd tarball; tar xfpJ -)
+done
+
+rm -r external-packages
+
+# Check tarball for externals (in case of download errors)
+for package in $externals; do
+    if ! grep $package tarball/Manifest.txt; then
+        echo "ERROR: external $package is missing!"
+        exit 1
+    fi
+done
+
+# Make necessary?? directories
+mkdir -p tarball/etc/condor/passwords.d
+mkdir -p tarball/etc/condor/tokens.d
+mkdir -p tarball/var/lib/condor/execute
+mkdir -p tarball/var/lib/condor/oauth_credentials
+
+$cmd_dir/make-tarball-links tarball
+if [ $? -ne 0 ];then
+    echo 'ERROR: tarball link script failed'
+    exit 1
+fi
+$cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib'
+
+# Package final tarball
+mv tarball condor-$version-$release-$arch_dist-stripped
+tar --create --gzip --owner=0 --group=0 --numeric-owner --file=condor-$version-$release-$arch_dist-stripped.tar.gz condor-$version-$release-$arch_dist-stripped
+rm -r condor-$version-$release-$arch_dist-stripped
+
+ls -lh condor*.tar.gz
+exit 0

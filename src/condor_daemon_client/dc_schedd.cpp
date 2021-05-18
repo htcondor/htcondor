@@ -708,7 +708,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 					"DCSchedd::receiveJobSandbox",
 					FILETRANSFER_DOWNLOAD_FAILED,
 					"File transfer failed for target job %d.%d: %s",
-					cluster, proc, ft_info.error_desc.Value() );
+					cluster, proc, ft_info.error_desc.c_str() );
 			}
 			return false;
 		}
@@ -911,8 +911,8 @@ DCSchedd::requestSandboxLocation(int direction,
 }
 
 // using a constraint for which the schedd must iterate over all the jobads.
-bool 
-DCSchedd::requestSandboxLocation(int direction, MyString &constraint, 
+bool
+DCSchedd::requestSandboxLocation(int direction, std::string & constraint,
 	int protocol, ClassAd *respad, CondorError * errstack)
 {
 	ClassAd reqad;
@@ -927,7 +927,7 @@ DCSchedd::requestSandboxLocation(int direction, MyString &constraint,
 	reqad.Assign(ATTR_TREQ_DIRECTION, direction);
 	reqad.Assign(ATTR_TREQ_PEER_VERSION, CondorVersion());
 	reqad.Assign(ATTR_TREQ_HAS_CONSTRAINT, true);
-	reqad.Assign(ATTR_TREQ_CONSTRAINT, constraint.Value());
+	reqad.Assign(ATTR_TREQ_CONSTRAINT, constraint.c_str());
 
 	// XXX This should be a realized function to convert between the
 	// protocol enum and a string description. That way both functions can
@@ -1002,7 +1002,7 @@ DCSchedd::requestSandboxLocation(ClassAd *reqad, ClassAd *respad,
 	//	ATTR_TREQ_HAS_CONSTRAINT
 	//	ATTR_TREQ_JOBID_LIST
 	//	ATTR_TREQ_FTP
-	// 
+	//
 	// OR
 	//
 	//	ATTR_TREQ_DIRECTION
@@ -1292,7 +1292,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 					"DCSchedd::spoolJobFiles",
 					FILETRANSFER_UPLOAD_FAILED,
 					"File transfer failed for target job %d.%d: %s",
-					cluster, proc, ft_info.error_desc.Value() );
+					cluster, proc, ft_info.error_desc.c_str() );
 			}
 			return false;
 		}
@@ -1487,7 +1487,7 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 	rsock.code(reply);
 	rsock.end_of_message();
 
-	if ( reply == 1 ) 
+	if ( reply == 1 )
 		return true;
 	else
 		return false;
@@ -1495,7 +1495,7 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 
 ClassAd*
 DCSchedd::actOnJobs( JobAction action,
-					 const char* constraint, StringList* ids, 
+					 const char* constraint, StringList* ids,
 					 const char* reason, const char* reason_attr,
 					 const char* reason_code, const char* reason_code_attr,
 					 action_result_type_t result_type,
@@ -1530,8 +1530,8 @@ DCSchedd::actOnJobs( JobAction action,
 			return NULL;
 		}			
 	} else if( ids ) {
-		char* action_ids = ids->print_to_string();
-		if ( action_ids ) {
+		std::string action_ids = ids->to_string();
+		if (!action_ids.empty()) {
 			cmd_ad.Assign( ATTR_ACTION_IDS, action_ids );
 		}
 	} else {
@@ -2040,7 +2040,7 @@ bool DCSchedd::getJobConnectInfo(
 	return result;
 }
 
-bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, MyString &error_msg )
+bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, std::string & error_msg )
 {
 	int timeout = 300;
 	CondorError errstack;
@@ -2052,19 +2052,19 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 
 	ReliSock sock;
 	if( !connectSock(&sock,timeout,&errstack) ) {
-		error_msg.formatstr("Failed to connect to schedd: %s",
+		formatstr(error_msg, "Failed to connect to schedd: %s",
 						  errstack.getFullText().c_str());
 		return false;
 	}
 
 	if( !startCommand(RECYCLE_SHADOW, &sock, timeout, &errstack) ) {
-		error_msg.formatstr("Failed to send RECYCLE_SHADOW to schedd: %s",
+		formatstr(error_msg, "Failed to send RECYCLE_SHADOW to schedd: %s",
 						  errstack.getFullText().c_str());
 		return false;
 	}
 
 	if( !forceAuthentication(&sock, &errstack) ) {
-		error_msg.formatstr("Failed to authenticate: %s",
+		formatstr(error_msg, "Failed to authenticate: %s",
 						  errstack.getFullText().c_str());
 		return false;
 	}

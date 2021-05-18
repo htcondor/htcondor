@@ -41,7 +41,7 @@ static void fatal_error();
 static char* read_env();
 static void get_std_fd(int, char*);
 
-static MyString err;
+static std::string err;
 static int sock_fd;
 
 int
@@ -53,7 +53,7 @@ main(int argc, char* argv[])
 	do {
 		sock_fd = dup(0);
 		if (sock_fd == -1) {
-			err.formatstr("dup error on FD 0: %s", strerror(errno));
+			formatstr(err, "dup error on FD 0: %s", strerror(errno));
 			sock_fd = 0;
 			fatal_error();
 		}
@@ -62,7 +62,7 @@ main(int argc, char* argv[])
 	// deal with our arguments
 	//
 	if (argc < 5) {
-		err.formatstr("usage: %s <in> <out> <err> <cmd> [<arg> ...]",
+		formatstr(err, "usage: %s <in> <out> <err> <cmd> [<arg> ...]",
 		            argv[0]);
 		fatal_error();
 	}
@@ -90,7 +90,7 @@ main(int argc, char* argv[])
 	char* env_buf = read_env();
 	MyString merge_err;
 	if (!env.MergeFromV2Raw(env_buf, &merge_err)) {
-		err.formatstr("Env::MergeFromV2Raw error: %s", merge_err.Value());
+		formatstr(err, "Env::MergeFromV2Raw error: %s", merge_err.Value());
 		fatal_error();
 	}
 	delete[] env_buf;
@@ -125,7 +125,7 @@ main(int argc, char* argv[])
 	// that the job has begun execution
 	//
 	if (fcntl(sock_fd, F_SETFD, FD_CLOEXEC) == -1) {
-		err.formatstr("fcntl error setting close-on-exec: %s",
+		formatstr(err, "fcntl error setting close-on-exec: %s",
 		            strerror(errno));
 		fatal_error();
 	}
@@ -136,7 +136,7 @@ main(int argc, char* argv[])
 	//
 	char** envp = env.getStringArray();
 	execve(job_argv[0], &job_argv[0], envp);
-	err.formatstr("execve error: %s", strerror(errno));
+	formatstr(err, "execve error: %s", strerror(errno));
 	fatal_error();
 }
 
@@ -145,7 +145,7 @@ static int error_return;
 static void
 fatal_error()
 {
-	error_return = write(sock_fd, err.Value(), err.Length() + 1);
+	error_return = write(sock_fd, err.c_str(), err.length() + 1);
 	exit(1);
 }
 
@@ -157,33 +157,33 @@ read_env()
 	bytes = full_read(0, &env_len, sizeof(env_len));
 	if (bytes != sizeof(env_len)) {
 		if (bytes == -1) {
-			err.formatstr("read error getting env size: %s",
+			formatstr(err, "read error getting env size: %s",
 			            strerror(errno));
 		}
 		else {
-			err.formatstr("short read of env size: %d of %u bytes",
+			formatstr(err, "short read of env size: %d of %u bytes",
 			            bytes,
 			            (unsigned)sizeof(env_len));
 		}
 		fatal_error();
 	}
 	if (env_len <= 0) {
-		err.formatstr("invalid env size %d read from stdin", env_len);
+		formatstr(err, "invalid env size %d read from stdin", env_len);
 		fatal_error();
 	}
 	char* env_buf = new char[env_len];
 	if (env_buf == NULL) {
-		err.formatstr("failure to allocate %d bytes", env_len);
+		formatstr(err, "failure to allocate %d bytes", env_len);
 		fatal_error();
 	}
 	bytes = full_read(0, env_buf, env_len);
 	if (bytes != env_len) {
 		if (bytes == -1) {
-			err.formatstr("read error getting env: %s",
+			formatstr(err, "read error getting env: %s",
 			            strerror(errno));
 		}
 		else {
-			err.formatstr("short read of env: %d of %d bytes",
+			formatstr(err, "short read of env: %d of %d bytes",
 			            bytes,
 			            env_len);
 		}
@@ -216,7 +216,7 @@ get_std_fd(int std_fd, char* name)
 		}
 		new_fd = safe_open_wrapper_follow(name, flags, 0600);
 		if (new_fd == -1) {
-			err.formatstr("safe_open_wrapper_follow error on %s: %s",
+			formatstr(err, "safe_open_wrapper_follow error on %s: %s",
 			            name,
 			            strerror(errno));
 			fatal_error();
@@ -224,7 +224,7 @@ get_std_fd(int std_fd, char* name)
 	}
 	if (new_fd != std_fd) {
 		if (dup2(new_fd, std_fd) == -1) {
-			err.formatstr("dup2 error (%d to %d): %s",
+			formatstr(err, "dup2 error (%d to %d): %s",
 			            new_fd,
 			            std_fd,
 			            strerror(errno));

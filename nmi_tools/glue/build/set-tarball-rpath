@@ -1,0 +1,20 @@
+#!/bin/sh
+# This command sets the RPATH for all the executables on a tarball directory
+if [ $# -ne 2 ]; then
+    echo 'Error: missing argument'
+    echo "Usage: $(basename $0) tarball-directory rpath"
+    exit 1
+fi
+tarball=$1
+rpath=$2
+if [ ! -d $tarball ]; then
+    echo "Error: $tarball is not a directory"
+    echo "Usage: $(basename $0) tarball-directory rpath"
+    exit 1
+fi
+
+cd $tarball
+for file in $(file $(find -type f)|grep  ' ELF '|sed -e s/:.*//); do
+    echo Setting RPATH to $rpath in $file
+    patchelf --set-rpath $rpath $file
+done

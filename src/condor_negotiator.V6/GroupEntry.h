@@ -8,6 +8,11 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <functional>
+
+typedef HashTable<std::string, float> groupQuotasHashType;
+
+void parse_group_name(const std::string& gname, std::vector<std::string>& gpath);
 
 struct GroupEntry {
 		typedef std::vector<int>::size_type size_type;
@@ -16,7 +21,6 @@ struct GroupEntry {
 		~GroupEntry();
 
         static GroupEntry *hgq_construct_tree(
-       	 	std::map<std::string, GroupEntry*> &group_entry_map,
        	 	std::vector<GroupEntry*> &hgq_groups,
 			bool &global_autoregroup,
 			bool &global_accept_surplus);
@@ -27,6 +31,38 @@ struct GroupEntry {
 		double hgq_allocate_surplus(double surplus);
 		double hgq_recover_remainders();
 		double hgq_round_robin(double surplus);
+		double strict_enforce_quota(Accountant &accountant, GroupEntry *hgq_root_group, double slots);
+
+		static void hgq_prepare_for_matchmaking(
+				double hgq_total_quota,
+				GroupEntry *hgq_root_group,
+				std::vector<GroupEntry *> &hgq_groups,
+				Accountant &accountant,
+				ClassAdListDoesNotDeleteAds &submitterAds);
+
+		static void hgq_negotiate_with_all_groups(
+						GroupEntry *hgq_root_group, 
+						std::vector<GroupEntry *> &hqg_groups, 
+						groupQuotasHashType *groupQuotasHash, 
+						double hgq_total_quota, 
+						Accountant &accountant,
+						const std::function<void(GroupEntry *g, int limit)> &fn,
+						bool global_accept_surplus);
+
+		// This maps submitter names to their assigned accounting group.
+		// When called with a defined group name, it maps that group name to itself.
+		static GroupEntry *GetAssignedGroup(GroupEntry *hgq_root_group, const std::string& CustomerName);
+		static GroupEntry *GetAssignedGroup(GroupEntry *hgq_root_group, const std::string& CustomerName, bool &IsGroup);
+		static void Initialize(GroupEntry *hgq_root_group);
+
+		struct ci_less {
+			bool operator()(const std::string& a, const std::string& b) const {
+				return strcasecmp(a.c_str(), b.c_str()) < 0;
+			}
+		};
+  		static std::map<std::string, GroupEntry*, ci_less> hgq_submitter_group_map;
+
+		void displayGroups(int dprintfLevel, bool onlyConfigInfo, bool firstLine = true) const;
 
 		// these are set from configuration
 		std::string name;
@@ -38,7 +74,6 @@ struct GroupEntry {
 		// current usage information coming into this negotiation cycle
 		double usage;
 		ClassAdListDoesNotDeleteAds* submitterAds;
-		double priority;
 
 		// slot quota as computed by HGQ
 		double quota;
@@ -64,7 +99,7 @@ struct GroupEntry {
 		// tree structure
 		GroupEntry* parent;
 		std::vector<GroupEntry*> children;
-		std::map<std::string, size_type, Accountant::ci_less> chmap;
+		std::map<std::string, size_type, GroupEntry::ci_less> chmap;
 
 		// attributes for configurable sorting
 		ClassAd* sort_ad;
@@ -91,9 +126,10 @@ struct group_order {
 		// I don't want anybody defaulting this obj by accident
 		group_order() : autoregroup(false), root_group(0) {}
 };
+double calculate_subtree_usage(Accountant &accountant, GroupEntry *group);
 
 struct ord_by_rr_time {
-		vector<GroupEntry*>* data;
+		std::vector<GroupEntry*>* data;
 		bool operator()(unsigned long const& ja, unsigned long const& jb) const {
 				GroupEntry* a = (*data)[ja];
 				GroupEntry* b = (*data)[jb];

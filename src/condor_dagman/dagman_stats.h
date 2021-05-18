@@ -21,7 +21,6 @@
  #define __DAGMAN_STATS_H__
  
  #include "condor_classad.h"
- #include "extArray.h"
  #include "generic_stats.h"
  
 

@@ -789,7 +789,7 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 
 		m_global_sequence = writer.incSequence( );
 
-		MyString file_id;
+		std::string file_id;
 		GenerateGlobalId( file_id );
 		writer.setId( file_id );
 
@@ -808,8 +808,8 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 
 		ret_val = writer.Write( *this );
 
-		MyString	s;
-		s.formatstr( "openGlobalLog: header: %s", m_global_path );
+		std::string	s;
+		formatstr( s, "openGlobalLog: header: %s", m_global_path );
 		writer.dprint( D_FULLDEBUG, s );
 
 		// TODO: we should should add the number of events in the
@@ -968,8 +968,8 @@ WriteUserLog::checkGlobalLogRotation( void )
 					 m_global_path );
 		}
 		else {
-			MyString	s;
-			s.formatstr( "read %s header:", m_global_path );
+			std::string s;
+			formatstr( s, "read %s header:", m_global_path );
 			header_reader.dprint( D_FULLDEBUG, s );
 		}
 
@@ -1020,8 +1020,8 @@ WriteUserLog::checkGlobalLogRotation( void )
 		header_writer.setCreatorName( m_creator_name );
 	}
 
-	MyString	s;
-	s.formatstr( "checkGlobalLogRotation(): %s", m_global_path );
+	std::string s;
+	formatstr( s, "checkGlobalLogRotation(): %s", m_global_path );
 	header_writer.dprint( D_FULLDEBUG, s );
 
 	// And write the updated header
@@ -1034,8 +1034,8 @@ WriteUserLog::checkGlobalLogRotation( void )
 		header_writer.Write( *this, header_fd );
 		close( header_fd );
 
-		MyString	tmps;
-		tmps.formatstr( "WriteUserLog: Wrote header to %s", m_global_path );
+		std::string tmps;
+		formatstr( tmps, "WriteUserLog: Wrote header to %s", m_global_path );
 		header_writer.dprint( D_FULLDEBUG, tmps );
 	}
 	if ( fake_lock ) {
@@ -1050,13 +1050,13 @@ WriteUserLog::checkGlobalLogRotation( void )
 			 time1 );
 # endif
 
-	MyString	rotated;
+	std::string rotated;
 	int num_rotations = doRotation( m_global_path, m_global_fd,
 									rotated, m_global_max_rotations );
 	if ( num_rotations ) {
 		dprintf(D_FULLDEBUG,
 				"WriteUserLog: Rotated event log %s to %s at size %lu bytes\n",
-				m_global_path, rotated.Value(),
+				m_global_path, rotated.c_str(),
 				(unsigned long) current_filesize);
 	}
 
@@ -1147,7 +1147,7 @@ WriteUserLog::globalLogRotated( ReadUserLogHeader &reader )
 
 int
 WriteUserLog::doRotation( const char *path, int &fd,
-						  MyString &rotated, int max_rotations )
+						  std::string &rotated, int max_rotations )
 {
 
 	int  num_rotations = 0;
@@ -1158,16 +1158,16 @@ WriteUserLog::doRotation( const char *path, int &fd,
 	else {
 		rotated += ".1";
 		for( int i=max_rotations;  i>1;  i--) {
-			MyString old1( path );
-			old1.formatstr_cat(".%d", i-1 );
+			std::string old1( path );
+			formatstr_cat(old1, ".%d", i-1 );
 
 			StatWrapper	s( old1 );
 			if ( 0 == s.GetRc() ) {
-				MyString old2( path );
-				old2.formatstr_cat(".%d", i );
-				if (rename( old1.Value(), old2.Value() )) {
+				std::string old2( path );
+				formatstr_cat(old2, ".%d", i );
+				if (rename( old1.c_str(), old2.c_str() )) {
 					dprintf(D_FULLDEBUG, "WriteUserLog failed to rotate old log from '%s' to '%s' errno=%d\n",
-							old1.Value(), old2.Value(), errno);
+							old1.c_str(), old2.c_str(), errno);
 				}
 				num_rotations++;
 			}
@@ -1187,7 +1187,7 @@ WriteUserLog::doRotation( const char *path, int &fd,
 	// Before time
 	double before = condor_gettimestamp_double();
 
-	if ( rotate_file( path, rotated.Value()) == 0 ) {
+	if ( rotate_file( path, rotated.c_str()) == 0 ) {
 		double after = condor_gettimestamp_double();
 		dprintf(D_FULLDEBUG, "WriteUserLog before .1 rot: %.6f\n", before );
 		dprintf(D_FULLDEBUG, "WriteUserLog after  .1 rot: %.6f\n", after );
@@ -1516,7 +1516,7 @@ WriteUserLog::writeJobAdInfoEvent(char const *attrsToWrite, log_file& log, ULogE
 				// we put it into the eventAd.
 			if ( EvalExprTree(tree,param_jobad,NULL,result) ) {
 					// now inserted evaluated expr
-				bool bval;
+				bool bval = false;
 				int ival;
 				double dval;
 				std::string sval;
@@ -1581,20 +1581,20 @@ WriteUserLog::GetGlobalIdBase( void )
 	if ( m_global_id_base ) {
 		return m_global_id_base;
 	}
-	MyString	base;
+	std::string base;
 	struct timeval now;
 	condor_gettimestamp( now );
 
 	formatstr( base, "%d.%d.%ld.%ld.", getuid(), getpid(), (long)now.tv_sec,
 	           (long)now.tv_usec );
 
-	m_global_id_base = strdup( base.Value( ) );
+	m_global_id_base = strdup( base.c_str( ) );
 	return m_global_id_base;
 }
 
 // Generates a uniq global file ID
 void
-WriteUserLog::GenerateGlobalId( MyString &id )
+WriteUserLog::GenerateGlobalId( std::string &id )
 {
 	struct timeval now;
 	condor_gettimestamp( now );

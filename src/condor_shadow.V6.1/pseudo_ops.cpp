@@ -37,7 +37,7 @@ extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
 extern RemoteResource *parallelMasterResource;
 
-static void append_buffer_info( MyString &url, const char *method, char const *path );
+static void append_buffer_info( std::string &url, const char *method, char const *path );
 static int use_append( const char *method, const char *path );
 static int use_compress( const char *method, const char *path );
 static int use_fetch( const char *method, const char *path );
@@ -255,12 +255,12 @@ moved around, but there is no such notion in this shadow,
 so CurrentWorkingDir is replaced with the job's iwd.
 */
  
-static void complete_path( const char *short_path, MyString &full_path )
+static void complete_path( const char *short_path, std::string &full_path )
 {
 	if ( fullpath(short_path) ) {
 		full_path = short_path;
 	} else {
-		full_path.formatstr("%s%s%s",
+		formatstr(full_path, "%s%s%s",
 						  Shadow->getIwd(),
 						  DIR_DELIM_STRING,
 						  short_path);
@@ -276,11 +276,11 @@ the file from.  For example, joe/data might become buffer:remote:/usr/joe/data
 int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 {
 	std::string remap_list;
-	MyString	split_dir;
-	MyString	split_file;
-	MyString	full_path;
-	MyString	remap;
-	MyString urlbuf;
+	std::string split_dir;
+	std::string split_file;
+	std::string full_path;
+	std::string remap;
+	std::string urlbuf;
 	const char	*method = NULL;
 
 	dprintf( D_SYSCALLS, "\tlogical_name = \"%s\"\n", logical_name );
@@ -297,48 +297,48 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 
 	if(Shadow->getJobAd()->LookupString(ATTR_FILE_REMAPS,remap_list) &&
 	  (filename_remap_find( remap_list.c_str(), logical_name, remap ) ||
-	   filename_remap_find( remap_list.c_str(), split_file.Value(), remap ) ||
-	   filename_remap_find( remap_list.c_str(), full_path.Value(), remap ))) {
+	   filename_remap_find( remap_list.c_str(), split_file.c_str(), remap ) ||
+	   filename_remap_find( remap_list.c_str(), full_path.c_str(), remap ))) {
 
-		dprintf(D_SYSCALLS,"\tremapped to: %s\n",remap.Value());
+		dprintf(D_SYSCALLS,"\tremapped to: %s\n",remap.c_str());
 
 		/* If the remap is a full URL, return right away */
 		/* Otherwise, continue processing */
 
-		if(strchr(remap.Value(),':')) {
+		if(strchr(remap.c_str(),':')) {
 			dprintf(D_SYSCALLS,"\tremap is complete url\n");
-			actual_url = strdup(remap.Value());
+			actual_url = strdup(remap.c_str());
 			return 0;
 		} else {
 			dprintf(D_SYSCALLS,"\tremap is simple file\n");
-			complete_path( remap.Value(), full_path );
+			complete_path( remap.c_str(), full_path );
 		}
 	} else {
 		dprintf(D_SYSCALLS,"\tnot remapped\n");
 	}
 
-	dprintf( D_SYSCALLS,"\tfull_path = \"%s\"\n", full_path.Value() );
+	dprintf( D_SYSCALLS,"\tfull_path = \"%s\"\n", full_path.c_str() );
 
 	/* Now, we have a full pathname. */
 	/* Figure out what url modifiers to slap on it. */
 
-	if( use_local_access(full_path.Value()) ) {
+	if( use_local_access(full_path.c_str()) ) {
 		method = "local";
 	} else {
 		method = "remote";
 	}
 
-	if( use_fetch(method,full_path.Value()) ) {
+	if( use_fetch(method,full_path.c_str()) ) {
 		urlbuf += "fetch:";
 	}
 
-	if( use_compress(method,full_path.Value()) ) {
+	if( use_compress(method,full_path.c_str()) ) {
 		urlbuf += "compress:";
 	}
 
-	append_buffer_info(urlbuf,method,full_path.Value());
+	append_buffer_info(urlbuf,method,full_path.c_str());
 
-	if( use_append(method,full_path.Value()) ) {
+	if( use_append(method,full_path.c_str()) ) {
 		urlbuf += "append:";
 	}
 
@@ -347,19 +347,19 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 		urlbuf += ":";
 	}
 	urlbuf += full_path;
-	actual_url = strdup(urlbuf.Value());
+	actual_url = strdup(urlbuf.c_str());
 
 	dprintf(D_SYSCALLS,"\tactual_url: %s\n",actual_url);
 
 	return 0;
 }
 
-static void append_buffer_info( MyString &url, const char *method, char const *path )
+static void append_buffer_info( std::string &url, const char *method, char const *path )
 {
 	std::string buffer_list;
-	MyString buffer_string;
-	MyString dir;
-	MyString file;
+	std::string buffer_string;
+	std::string dir;
+	std::string file;
 	int s,bs,ps;
 	int result;
 
@@ -376,13 +376,13 @@ static void append_buffer_info( MyString &url, const char *method, char const *p
 
 	if(Shadow->getJobAd()->LookupString(ATTR_BUFFER_FILES,buffer_list)) {
 		if( filename_remap_find(buffer_list.c_str(),path,buffer_string) ||
-		    filename_remap_find(buffer_list.c_str(),file.Value(),buffer_string) ) {
+		    filename_remap_find(buffer_list.c_str(),file.c_str(),buffer_string) ) {
 
 			/* If the file is merely mentioned, turn on the default buffer */
 			url += "buffer:";
 
 			/* If there is also a size setting, use that */
-			result = sscanf(buffer_string.Value(),"(%d,%d)",&s,&bs);
+			result = sscanf(buffer_string.c_str(),"(%d,%d)",&s,&bs);
 			if( result==2 ) url += buffer_string;
 
 			return;
@@ -474,7 +474,7 @@ pseudo_ulog( ClassAd *ad )
 	ULogEvent *event = instantiateEvent(ad);
 	int result = 0;
 	char const *critical_error = NULL;
-	MyString CriticalErrorBuf;
+	std::string CriticalErrorBuf;
 	bool event_already_logged = false;
 	bool put_job_on_hold = false;
 	char const *hold_reason = NULL;
@@ -483,12 +483,12 @@ pseudo_ulog( ClassAd *ad )
 	int hold_reason_sub_code = 0;
 
 	if(!event) {
-		MyString add_str;
+		std::string add_str;
 		sPrintAd(add_str, *ad);
 		dprintf(
 		  D_ALWAYS,
 		  "invalid event ClassAd in pseudo_ulog: %s\n",
-		  add_str.Value());
+		  add_str.c_str());
 		return -1;
 	}
 
@@ -513,12 +513,13 @@ pseudo_ulog( ClassAd *ad )
 		}
 
 		if(err->isCriticalError()) {
-			CriticalErrorBuf.formatstr(
+			formatstr(
+			  CriticalErrorBuf,
 			  "Error from %s: %s",
 			  err->getExecuteHost(),
 			  err->getErrorText());
 
-			critical_error = CriticalErrorBuf.Value();
+			critical_error = CriticalErrorBuf.c_str();
 			if(!hold_reason) {
 				hold_reason = critical_error;
 			}
@@ -533,12 +534,12 @@ pseudo_ulog( ClassAd *ad )
 	}
 
 	if( !event_already_logged && !Shadow->uLog.writeEvent( event, ad ) ) {
-		MyString add_str;
+		std::string add_str;
 		sPrintAd(add_str, *ad);
 		dprintf(
 		  D_ALWAYS,
 		  "unable to log event in pseudo_ulog: %s\n",
-		  add_str.Value());
+		  add_str.c_str());
 		result = -1;
 	}
 
@@ -564,7 +565,7 @@ pseudo_ulog( ClassAd *ad )
 }
 
 int
-pseudo_phase( char *phase )
+pseudo_phase( const std::string &phase )
 {
 	RemoteResource *remote;
 	if (parallelMasterResource == NULL) {
@@ -574,8 +575,8 @@ pseudo_phase( char *phase )
 	}
 
 	// currently we only understand "output"
-	if (strcasecmp( phase, "output" ) != 0) {
-		dprintf(D_SYSCALLS,"pseudo_phase(%s) not understood, failed\n",phase);
+	if (strcasecmp( phase.c_str(), "output" ) != 0) {
+		dprintf(D_SYSCALLS,"pseudo_phase(%s) not understood, failed\n",phase.c_str());
 		return -1;
 	}
 
@@ -592,25 +593,25 @@ pseudo_phase( char *phase )
 	ClassAd *ead;
 
 	// setInfoText truncates name to 128 bytes
-	MyString eventtext = "Job indicated transition to phase: ";
+	std::string eventtext = "Job indicated transition to phase: ";
 	eventtext += phase;
-	event.setInfoText( eventtext.Value() );
+	event.setInfoText( eventtext.c_str() );
 
 	ead = event.toClassAd(true);
 	ASSERT(ead);
 
 	// write the event
 	if( !Shadow->uLog.writeEvent( &event, ead ) ) {
-		MyString add_str;
+		std::string add_str;
 		sPrintAd(add_str, *ead);
 		dprintf(
 		  D_ALWAYS,
 		  "unable to log event in pseudo_phase: %s\n",
-		  add_str.Value());
+		  add_str.c_str());
 		return -1;
 	}
 
-	dprintf(D_SYSCALLS,"pseudo_phase(%s) succeeded\n",phase);
+	dprintf(D_SYSCALLS,"pseudo_phase(%s) succeeded\n",phase.c_str());
 
 	return 0;
 }
@@ -630,7 +631,7 @@ pseudo_get_job_ad( ClassAd* &ad )
 
 
 int
-pseudo_get_job_attr( const char *name, MyString &expr )
+pseudo_get_job_attr( const char *name, std::string &expr )
 {
 	RemoteResource *remote;
 	if (parallelMasterResource == NULL) {
@@ -643,7 +644,7 @@ pseudo_get_job_attr( const char *name, MyString &expr )
 	ExprTree *e = ad->LookupExpr(name);
 	if(e) {
 		expr = ExprTreeToString(e);
-		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr.Value());
+		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) = %s\n",name,expr.c_str());
 		return 0;
 	} else {
 		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) is UNDEFINED\n",name);
@@ -676,8 +677,8 @@ pseudo_set_job_attr( const char *name, const char *expr, bool log )
 int
 pseudo_constrain( const char *expr )
 {
-	MyString reqs;
-	MyString newreqs;
+	std::string reqs;
+	std::string newreqs;
 
 	dprintf(D_SYSCALLS,"pseudo_constrain(%s)\n",expr);
 	dprintf(D_SYSCALLS,"\tchanging AgentRequirements to %s\n",expr);
@@ -685,25 +686,25 @@ pseudo_constrain( const char *expr )
 	if(pseudo_set_job_attr("AgentRequirements",expr)!=0) return -1;
 	if(pseudo_get_job_attr("Requirements",reqs)!=0) return -1;
 
-	if(strstr(reqs.Value(),"AgentRequirements")) {
+	if(strstr(reqs.c_str(),"AgentRequirements")) {
 		dprintf(D_SYSCALLS,"\tRequirements already refers to AgentRequirements\n");
 		return 0;
 	} else {
-		newreqs.formatstr("(%s) && AgentRequirements",reqs.Value());
-		dprintf(D_SYSCALLS,"\tchanging Requirements to %s\n",newreqs.Value());
-		return pseudo_set_job_attr("Requirements",newreqs.Value());
+		formatstr(newreqs, "(%s) && AgentRequirements", reqs.c_str());
+		dprintf(D_SYSCALLS,"\tchanging Requirements to %s\n",newreqs.c_str());
+		return pseudo_set_job_attr("Requirements",newreqs.c_str());
 	}
 }
 
 int pseudo_get_sec_session_info(
 	char const *starter_reconnect_session_info,
-	MyString &reconnect_session_id,
-	MyString &reconnect_session_info,
-	MyString &reconnect_session_key,
+	std::string &reconnect_session_id,
+	std::string &reconnect_session_info,
+	std::string &reconnect_session_key,
 	char const *starter_filetrans_session_info,
-	MyString &filetrans_session_id,
-	MyString &filetrans_session_info,
-	MyString &filetrans_session_key)
+	std::string &filetrans_session_id,
+	std::string &filetrans_session_info,
+	std::string &filetrans_session_key)
 {
 	RemoteResource *remote;
 	if (parallelMasterResource == NULL) {

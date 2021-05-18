@@ -11,4 +11,10 @@ echo "* add -D_DEBUG:BOOL=FALSE to get non-optimized code for debugging"
 echo "* Another option would be to run ccmake or cmake-gui"
 echo "-------------------------------------------------------------------"
 PWD=`pwd`
-cmake -DUW_BUILD:BOOL=TRUE -D_VERBOSE:BOOL=TRUE -DBUILDID:STRING=UW_development -DCMAKE_INSTALL_PREFIX:PATH=${PWD}/release_dir -DCMAKE_EXPORT_COMPILE_COMMANDS=YES "$@"
+# Use cmake3 if it's in the PATH
+if which cmake3 >/dev/null 2>&1 ; then
+  CMAKE=cmake3
+else
+  CMAKE=cmake
+fi
+${CMAKE} -DUW_BUILD:BOOL=TRUE -D_VERBOSE:BOOL=TRUE -DBUILDID:STRING=UW_development -DCMAKE_INSTALL_PREFIX:PATH=${PWD}/../release_dir -DCMAKE_EXPORT_COMPILE_COMMANDS=YES "$@"

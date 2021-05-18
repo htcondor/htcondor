@@ -21,7 +21,6 @@
 #define UTILS_H
 
 #include "condor_daemon_core.h"
-#include "MyString.h"
 
 #define DEFAULT_SEND_COMMAND_TIMEOUT                             (5)
 #define DEFAULT_MAX_TRANSFER_LIFETIME                           (300)
@@ -41,23 +40,23 @@
  *               daemonName - the name of daemon, the parameter of which
  *                            caused the error; "HAD" and "REPLICATION" names
  *                            are supported currently
- * Return value: MyString - the error to be written to the logs
+ * Return value: std::string - the error to be written to the logs
  * Description : returns the error string, stating that no such parameter is
  *               found in the specified daemon's configuration parameters
  */
-MyString
+std::string
 utilNoParameterError( const char* parameter, const char* daemonName );
 /* Function    : utilConfigurationParameter
  * Arguments   : parameter - configuration parameter, which caused the error
  *				 daemonName - the name of daemon, the parameter of which 
  *                            caused the error; "HAD" and "REPLICATION" names
  *							  are supported currently
- * Return value: MyString - the error to be written to the logs
+ * Return value: std::string - the error to be written to the logs
  * Description : returns the error string, stating that the parameter is
  *               configured incorrectly in the specified daemon's 
  *				 configuration parameters
  */
-MyString
+std::string
 utilConfigurationError( const char* parameter, const char* daemonName );
 /* Function    : utilCrucialError 
  * Arguments   : message - message to be printed before the daemon aborts 
@@ -107,7 +106,7 @@ utilClearList( StringList& list );
  *				 2) the socket has to be connected to the receiving side
  */
 bool
-utilSafePutFile( ReliSock& socket, const MyString& filePath, int fips_mode );
+utilSafePutFile( ReliSock& socket, const std::string& filePath, int fips_mode );
 
 /* Function    : utilSafeGetFile
  * Arguments   : socket   - socket, through which the file will be received
@@ -123,7 +122,7 @@ utilSafePutFile( ReliSock& socket, const MyString& filePath, int fips_mode );
  *				 2) the socket has to be connected to the transferring side
  */
 bool
-utilSafeGetFile( ReliSock& socket, const MyString& filePath, int fips_mode );
+utilSafeGetFile( ReliSock& socket, const std::string& filePath, int fips_mode );
 
 /* Function   : utilClearList
  * Arguments  : list - the list to be cleared
@@ -156,7 +155,7 @@ utilCopyList(List<T>& lhs, List<T>& rhs)
     while( ( rhs.Next( element ) ) )
     {
         dprintf( D_FULLDEBUG, "utilCopyList: %s ", 
-				 element->toString().Value() );
+				 element->toString().c_str() );
         lhs.Append( element );
     }
 

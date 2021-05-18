@@ -122,18 +122,18 @@ bool StarterHookMgr::getHookPath(HookType hook_type, char*& hpath)
 {
     hpath = NULL;
 	if (!m_hook_keyword) return true;
-	MyString _param;
-	_param.formatstr("%s_HOOK_%s", m_hook_keyword, getHookTypeString(hook_type));
-	return validateHookPath(_param.Value(), hpath);
+	std::string _param;
+	formatstr(_param, "%s_HOOK_%s", m_hook_keyword, getHookTypeString(hook_type));
+	return validateHookPath(_param.c_str(), hpath);
 }
 
 
 int StarterHookMgr::getHookTimeout(HookType hook_type, int def_value)
 {
 	if (!m_hook_keyword) return 0;
-	MyString _param;
-	_param.formatstr("%s_HOOK_%s_TIMEOUT", m_hook_keyword, getHookTypeString(hook_type));
-	return param_integer(_param.Value(), def_value);
+	std::string _param;
+	formatstr(_param, "%s_HOOK_%s_TIMEOUT", m_hook_keyword, getHookTypeString(hook_type));
+	return param_integer(_param.c_str(), def_value);
 }
 
 
@@ -145,7 +145,7 @@ StarterHookMgr::tryHookPrepareJob()
 		return 0;
 	}
 
-	MyString hook_stdin;
+	std::string hook_stdin;
 	ClassAd* job_ad = Starter->jic->jobClassAd();
 	sPrintAd(hook_stdin, *job_ad);
 
@@ -154,14 +154,14 @@ StarterHookMgr::tryHookPrepareJob()
 	Env env;
 	Starter->PublishToEnv(&env);
 
-	if (!spawn(hook_client, NULL, &hook_stdin, PRIV_USER_FINAL, &env)) {
-		MyString err_msg;
-		err_msg.formatstr("failed to execute HOOK_PREPARE_JOB (%s)",
+	if (!spawn(hook_client, NULL, hook_stdin, PRIV_USER_FINAL, &env)) {
+		std::string err_msg;
+		formatstr(err_msg, "failed to execute HOOK_PREPARE_JOB (%s)",
 						m_hook_prepare_job);
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in StarterHookMgr::tryHookPrepareJob: %s\n",
-				err_msg.Value());
-		Starter->jic->notifyStarterError(err_msg.Value(), true,
+				err_msg.c_str());
+		Starter->jic->notifyStarterError(err_msg.c_str(), true,
 						 CONDOR_HOLD_CODE_HookPrepareJobFailure, 0);
 		delete hook_client;
 		return -1;
@@ -185,7 +185,7 @@ StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
 	ClassAd update_ad(*(Starter->jic->jobClassAd()));
 	MergeClassAds(&update_ad, job_info, true);
 
-	MyString hook_stdin;
+	std::string hook_stdin;
 	sPrintAd(hook_stdin, update_ad);
 
 		// Since we're not saving the output, this can just live on
@@ -195,7 +195,7 @@ StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
 	Env env;
 	Starter->PublishToEnv(&env);
 
-	if (!spawn(&client, NULL, &hook_stdin, PRIV_USER_FINAL, &env)) {
+	if (!spawn(&client, NULL, hook_stdin, PRIV_USER_FINAL, &env)) {
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in StarterHookMgr::hookUpdateJobInfo: "
 				"failed to spawn HOOK_UPDATE_JOB_INFO (%s)\n",
@@ -241,7 +241,7 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 	ASSERT(job_info);
 	ASSERT(exit_reason);
 
-	MyString hook_stdin;
+	std::string hook_stdin;
 	sPrintAd(hook_stdin, *job_info);
 
 	ArgList args;
@@ -252,7 +252,7 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 	Env env;
 	Starter->PublishToEnv(&env);
 
-	if (!spawn(hook_client, &args, &hook_stdin, PRIV_USER_FINAL, &env)) {
+	if (!spawn(hook_client, &args, hook_stdin, PRIV_USER_FINAL, &env)) {
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in StarterHookMgr::tryHookJobExit: "
 				"failed to spawn HOOK_JOB_EXIT (%s)\n", m_hook_job_exit);
@@ -291,21 +291,21 @@ HookPrepareJobClient::hookExited(int exit_status) {
 		else {
 			subcode = WEXITSTATUS(exit_status);
 		}
-		MyString err_msg;
-		err_msg.formatstr("HOOK_PREPARE_JOB (%s) failed (%s)", m_hook_path,
+		std::string err_msg;
+		formatstr(err_msg, "HOOK_PREPARE_JOB (%s) failed (%s)", m_hook_path,
 						status_msg.c_str());
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in StarterHookMgr::tryHookPrepareJob: %s\n",
-				err_msg.Value());
-		Starter->jic->notifyStarterError(err_msg.Value(), true,
+				err_msg.c_str());
+		Starter->jic->notifyStarterError(err_msg.c_str(), true,
 							 CONDOR_HOLD_CODE_HookPrepareJobFailure, subcode);
 		Starter->RemoteShutdownFast(0);
 	}
 	else {
 			// Make an update ad from the stdout of the hook
-		MyString out(*getStdOut());
+		std::string out(*getStdOut());
 		ClassAd updateAd;
-		initAdFromString(out.Value(), updateAd);
+		initAdFromString(out.c_str(), updateAd);
 		dprintf(D_FULLDEBUG, "Prepare hook output classad\n");
 		dPrintAd(D_FULLDEBUG, updateAd);
 

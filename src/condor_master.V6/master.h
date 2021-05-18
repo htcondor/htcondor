@@ -151,7 +151,7 @@ private:
 	int		num_controllees;
 	class daemon  *controllees[MAX_CONTROLLEES];
 
-	MyString m_after_startup_wait_for_file;
+	std::string m_after_startup_wait_for_file;
 	bool m_reload_shared_port_addr_after_startup;
 	bool m_never_use_shared_port;
 	bool m_waiting_for_startup;
@@ -177,6 +177,7 @@ class Daemons : public Service
 public:
 	Daemons();
 	void	RegisterDaemon(class daemon *);
+	void 	UnRegisterAllDaemons() { for(auto &kvpair: daemon_ptr) { delete kvpair.second;} ; daemon_ptr.clear();}
 	void 	InitParams();
 
 	void	CheckForNewExecutable();

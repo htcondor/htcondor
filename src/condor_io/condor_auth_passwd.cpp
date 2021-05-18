@@ -72,8 +72,10 @@ bool Condor_Auth_Passwd::m_tokens_avail = false;
 #define OPENSSL10
 #endif
 
+#if ! defined WIN32
 #if defined(__cpp_attributes) && !defined(__has_cpp_attribute)
 #undef __cpp_attributes
+#endif
 #endif
 
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
@@ -138,6 +140,7 @@ bool checkToken(const std::string &line,
 		} else {
 			dprintf(D_ALWAYS, "Failed to decode provided JWT; ignoring.\n");
 		}
+		return false;
 	}
 	return true;
 }
@@ -173,7 +176,7 @@ bool findToken(const std::string &tokenfilename,
 bool
 findTokens(const std::string &issuer,
         const std::set<std::string> &server_key_ids,
-	const std::string &owner,
+        const std::string &owner,
         std::string &username,
         std::string &token,
         std::string &signature)
@@ -185,12 +188,11 @@ findTokens(const std::string &issuer,
 		return true;
 	}
 
-	auto subsys = get_mySubSystem();
-
 		// If we are supposed to retrieve a token on behalf of a user, then
 		// owner will be set and we will use PRIV_USER.  In all other cases,
-		// if we are a daemon we should read the token as PRIV_CONDOR.
+		// if we are a daemon we should read the token as PRIV_ROOT.
 	TemporaryPrivSentry tps( !owner.empty() );
+	auto subsys = get_mySubSystem();
 	if (!owner.empty()) {
 		if (!init_user_ids(owner.c_str(), NULL)) {
 			dprintf(D_FAILURE, "findTokens(%s): Failed to switch to user priv\n", owner.c_str());
@@ -198,13 +200,13 @@ findTokens(const std::string &issuer,
 		}
 		set_user_priv();
 	} else if (subsys->isDaemon()) {
-		set_priv(PRIV_CONDOR);
+		set_priv(PRIV_ROOT);
 	}
 
 	// Note we reuse the exclude regexp from the configuration subsys.
 	std::string dirpath;
 	if (!owner.empty() || !param(dirpath, "SEC_TOKEN_DIRECTORY")) {
-		MyString file_location;
+		std::string file_location;
 			// Only utilize a "user_file" if the owner is set.
 		if (!find_user_file(file_location, "tokens.d", false, !owner.empty())) {
 			if (!owner.empty()) {
@@ -228,7 +230,7 @@ findTokens(const std::string &issuer,
 		return false;
 	}
 	Regex excludeFilesRegex;
-	if (!excludeFilesRegex.compile(excludeRegex, &_errstr, &_erroffset)) {
+	if (!excludeFilesRegex.compile(MyString(excludeRegex), &_errstr, &_erroffset)) {
 		dprintf(D_FULLDEBUG, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
 			"config parameter is not a valid "
 			"regular expression.  Value: %s,  Error: %s",
@@ -273,6 +275,9 @@ findTokens(const std::string &issuer,
 	if (!subsys_token_file.empty() && findToken(subsys_token_file, issuer,
 		server_key_ids, username, token, signature))
 	{
+		//dprintf(D_SECURITY, "token %s sig %s\n", token.c_str(), signature.c_str());
+		//dprintf(D_SECURITY | D_BACKTRACE, "found subsys token for user %s in file %s\n",
+		//	username.c_str(), subsys_token_file.c_str());
 		return true;
 	}
 
@@ -280,6 +285,9 @@ findTokens(const std::string &issuer,
 		if (findToken(token_filename, issuer, server_key_ids,
 			username, token, signature))
 		{
+			//dprintf(D_SECURITY, "token %s sig %s\n", token.c_str(), signature.c_str());
+			//dprintf(D_SECURITY | D_BACKTRACE, "found token for user %s in file %s\n",
+			//	username.c_str(), token_filename.c_str());
 			return true;
 		}
 	}
@@ -418,111 +426,77 @@ Condor_Auth_Passwd :: ~Condor_Auth_Passwd()
     if (m_k_prime) free(m_k_prime);
 }
 
-// Determine the password to use for key derivation.
-// - For protocol version 1, the password is the pool password concatenated twice.
-//   - The intent appears to have been to allow multiple users within this protocol and to concatenate
-//     the two unique passwords from two unique users.  This was never implemented.
-// - For protocol version 2, the token is decoded and the key id ('kid' claim in the header) is used
-//   as the password name; the corresponding named credential is fetched.
 char *
-Condor_Auth_Passwd::fetchPassword(const char* nameA, const std::string &token, const char* nameB)
+Condor_Auth_Passwd::fetchTokenSharedKey(const std::string &token, int & len)
 {
-	char *name, *domain, *passwordA, *passwordB;
-
-	if ( !nameA || !nameB ) {
-		return NULL;
-	}
-
-	if (!token.empty()) {
-		std::string key_id;
-		try {
-				// Append a '.' to the token; we only send the <header>.<payload>, while
-				// a valid token is <header>.<payload>.<signature>.  The resulting string
-				// does not have a valid signature, of course... but we'll generate that
-				// later.
-			auto decoded_jwt = jwt::decode(token + ".");
-			if (!decoded_jwt.has_key_id()) {
-				dprintf(D_SECURITY, "Client JWT is missing a key ID.\n");
-				return nullptr;
-			}
-			key_id = decoded_jwt.get_key_id();
-		} catch (...) {
-			dprintf(D_SECURITY, "Failed to decode JWT for determining the signing key.\n");
+	len = 0;
+	std::string key_id;
+	try {
+			// Append a '.' to the token; we only send the <header>.<payload>, while
+			// a valid token is <header>.<payload>.<signature>.  The resulting string
+			// does not have a valid signature, of course... but we'll generate that
+			// later.
+		auto decoded_jwt = jwt::decode(token + ".");
+		if (!decoded_jwt.has_key_id()) {
+			dprintf(D_SECURITY, "Client JWT is missing a key ID.\n");
 			return nullptr;
 		}
-		if (key_id.empty()) {
-			// At one point, we considered allowing an empty key ID (which would imply POOL);
-			// we decided against this as explicit is better than implicit.
-			dprintf(D_SECURITY, "Client JWT has empty key ID\n");
-			return nullptr;
-		}
-		std::string shared_key;
-		CondorError err;
-		if (key_id == "POOL") {
-			std::unique_ptr<char> pool_passwd(getStoredPassword(POOL_PASSWORD_USERNAME, ""));
-			if (!pool_passwd.get()) {
-				return nullptr;
-			}
-			auto pw_len = strlen(pool_passwd.get());
-			auto result = reinterpret_cast<char*>(malloc(2*pw_len + 1));
-			memcpy(result, pool_passwd.get(), pw_len);
-			memcpy(result + pw_len, pool_passwd.get(), pw_len);
-			result[2*pw_len] = '\0';
-			return result;
-		}
-		if (!getNamedCredential(key_id, shared_key, &err)) {
-			dprintf(D_SECURITY, "Failed to fetch key named %s: %s\n", key_id.c_str(), err.getFullText().c_str());
-			return nullptr;
-		}
-		return strdup(shared_key.c_str());
+		key_id = decoded_jwt.get_key_id();
+	} catch (...) {
+		dprintf(D_SECURITY, "Failed to decode JWT for determining the signing key.\n");
+		return nullptr;
 	}
-
-		// Split nameA into name and domain, then get password
-	name = strdup(nameA);	// copy string cuz input is const
-	ASSERT(name);
-	domain = strchr(name,'@');	// name and domain seperated by @
-	if (domain) {
-		*domain = '\0';
-		domain++;
+	if (key_id.empty()) {
+		// At one point, we considered allowing an empty key ID (which would imply POOL);
+		// we decided against this as explicit is better than implicit.
+		dprintf(D_SECURITY, "Client JWT has empty key ID\n");
+		return nullptr;
 	}
-	//TODO: the 'password here on Unix is actually the cred converted to base64. is that right?
-	passwordA = getStoredPassword(name,domain);
-	free(name);
-
-		// Split nameB into name and domain, then get password
-	name = strdup(nameB);	// copy string cuz input is const
-	ASSERT(name);
-	domain = strchr(name,'@');	// name and domain seperated by @
-	if (domain) {
-		*domain = '\0';
-		domain++;
+	std::string shared_key;
+	CondorError err;
+	if (!getTokenSigningKey(key_id, shared_key, &err)) {
+		dprintf(D_SECURITY, "Failed to fetch key named %s: %s\n", key_id.c_str(), err.getFullText().c_str());
+		return nullptr;
 	}
-	//TODO: the 'password' here on Unix is actually the cred converted to base64. is that right?
-	passwordB = getStoredPassword(name,domain);
-	free(name);
-
-		// If we failed to find either password, fail.
-		// Someday, perhaps we should allow one them to be NULL, which
-		// would enable assymetric authentication.  
-	if ( !passwordA || !passwordB ) {
-		if (passwordA) free(passwordA);
-		if (passwordB) free(passwordB);
-		return NULL;
-	}
-
-		// The result, the shared secret, is the password
-		// for nameA concatenated with nameB.
-	int len = strlen(passwordA) + strlen(passwordB) + 5;
-	char *shared_secret = (char*) malloc(len);
-	shared_secret[0] = '\0';
-	strcpy(shared_secret,passwordA);
-	strcat(shared_secret,passwordB);
-
-	free(passwordA);
-	free(passwordB);
-
-	return shared_secret;
+	len = (int)shared_key.size();
+	char * buf = (char*)malloc(len);
+	memcpy(buf, shared_key.data(), len);
+	return buf;
 }
+
+char *
+Condor_Auth_Passwd::fetchPoolSharedKey(int & len)
+{
+	len = 0;
+	std::string shared_key;
+	CondorError err;
+	if (!getTokenSigningKey("", shared_key, &err)) {
+		dprintf(D_SECURITY, "Failed to fetch POOL key: %s\n", err.getFullText().c_str());
+		return nullptr;
+	}
+	len = (int)shared_key.size();
+	char * buf = (char*)malloc(len);
+	memcpy(buf, shared_key.data(), len);
+	return buf;
+}
+
+char* Condor_Auth_Passwd::fetchPoolPassword(int & len)
+{
+	len = 0;
+	// TODO: use correct domain for windows?
+	auto_free_ptr pwd(getStoredPassword(POOL_PASSWORD_USERNAME, getLocalDomain()));
+	if ( ! pwd) {
+		dprintf(D_SECURITY, "Failed to fetch pool password\n");
+		return NULL;
+	}
+	len = (int)strlen(pwd.ptr()) * 2;
+	char * buf = (char*)malloc(len+1);
+	strcpy(buf, pwd.ptr());
+	strcat(buf, pwd.ptr());
+	buf[len] = 0;
+	return buf;
+}
+
 
 char *
 Condor_Auth_Passwd::fetchLogin()
@@ -548,45 +522,40 @@ Condor_Auth_Passwd::fetchLogin()
 			param(issuer, "TRUST_DOMAIN");
 			issuer = issuer.substr(0, issuer.find_first_of(", \t"));
 			if (m_server_issuer == issuer && !m_server_keys.empty()) {
-					// We use the same issuer; iterate through compatible keys.
-				std::vector<std::string> local_creds;
 				CondorError err;
-				if (!listNamedCredentials(local_creds, &err)) {
-					dprintf(D_SECURITY, "Failed to determine available credentials: %s\n", err.getFullText().c_str());
-					return nullptr;
-				}
 				std::string match_key;
 				for (auto const &server_key : m_server_keys) {
-					for ( auto const &local_key : local_creds ) {
-						if (server_key == local_key) {
-							match_key = local_key;
-							break;
-						}
-					}
-					if (!match_key.empty()) {
+					if (hasTokenSigningKey(server_key, &err)) {
+						match_key = server_key;
 						break;
+					}
+					if (!err.empty()) {
+						dprintf(D_SECURITY, "Failed to read token signing key %s: %s\n", server_key.c_str(), err.getFullText().c_str());
 					}
 				}
 				if (!match_key.empty()) {
 					CondorError err;
-					std::string identity = POOL_PASSWORD_USERNAME; identity += "@";
 					std::vector<std::string> authz_list;
 					int lifetime = 60;
+					username = POOL_PASSWORD_USERNAME "@";
 					std::string local_token;
 						// Note we don't log the token generation here as it is an ephemeral token
 						// used server-side to complete the secret generation process.
-					if (!Condor_Auth_Passwd::generate_token(identity, match_key,
+					if (!Condor_Auth_Passwd::generate_token(username, match_key,
 						authz_list, lifetime, local_token, 0, &err))
 					{
 						dprintf(D_SECURITY, "Failed to generate a token: %s\n",
 							err.getFullText().c_str());
 					}
 					else {
-						username = identity;
-						auto decoded_jwt = jwt::decode(local_token);
-						signature = decoded_jwt.get_signature();
-						token = decoded_jwt.get_header_base64() + "." + decoded_jwt.get_payload_base64();
-						found_token = true;
+						try {
+							auto decoded_jwt = jwt::decode(local_token);
+							signature = decoded_jwt.get_signature();
+							token = decoded_jwt.get_header_base64() + "." + decoded_jwt.get_payload_base64();
+							found_token = true;
+						} catch (...) {
+							dprintf(D_SECURITY, "Generated pool_password token is malformed\n");
+						}
 					}
 				} else {
 					dprintf(D_SECURITY, "No compatible security key found.\n");
@@ -674,18 +643,18 @@ Condor_Auth_Passwd::fetchLogin()
 		return strdup(username.c_str());
 	}
 
-	MyString login;
+	std::string login;
 	
 		// decide the login name we will try to authenticate with.  
 	if ( is_root() ) {
-		login.formatstr("%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
+		formatstr(login,"%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
 	} else {
 		// for now, always use the POOL_PASSWORD_USERNAME.  at some
 		// point this code should call my_username() my_domainname().
-		login.formatstr("%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
+		formatstr(login,"%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
 	}
 
-	return strdup( login.Value() );
+	return strdup( login.c_str() );
 }
 
 bool
@@ -703,7 +672,7 @@ Condor_Auth_Passwd::setupCrypto(const unsigned char* key, const int keylen)
 	}
 
 		// This could be 3des -- maybe we should use "best crypto" indirection.
-	KeyInfo thekey(key,keylen,CONDOR_3DES);
+	KeyInfo thekey(key, keylen, CONDOR_3DES, 0);
 	m_crypto = new Condor_Crypt_3des();
 	if ( m_crypto ) {
 		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
@@ -815,7 +784,7 @@ Condor_Auth_Passwd::unwrap(const char *   input,
 bool
 Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init_text)
 {
-	if ( sk->shared_key == NULL ) {
+	if ( sk->shared_key == NULL || sk->len <= 0) {
 		return false;
 	}
 
@@ -856,8 +825,6 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 		memcpy(seed_kb + AUTH_PW_KEY_LEN, init_text.c_str(), init_text.size());
 	}
 
-    sk->len = strlen(sk->shared_key);
-
 		// Generate the shared keys K and K'
 	if (m_version == 1) {
 		hmac((unsigned char *)sk->shared_key, sk->len,
@@ -869,7 +836,7 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 			 kb, &kb_len );
 	} else {
 		// Re-derive the signing key
-		std::vector<unsigned char> jwt_key; jwt_key.reserve(key_strength_bytes_v2());
+		std::vector<unsigned char> jwt_key; jwt_key.resize(key_strength_bytes_v2(), 0);
 		if (hkdf((unsigned char *)sk->shared_key, sk->len,
 			reinterpret_cast<const unsigned char *>("htcondor"), 8,
 			(const unsigned char *)"master jwt", 10,
@@ -1611,26 +1578,14 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	int ident,
 	CondorError *err)
 {
-	std::string example_username(POOL_PASSWORD_USERNAME);
-	example_username += "@";
-	std::string master_password_str;
-	std::unique_ptr<char> master_password;
-	if (key_id.empty() || key_id == "POOL") {
-		master_password.reset(fetchPassword(example_username.c_str(), "", example_username.c_str()));
-		if (master_password.get() == nullptr) {
-			err->push("PASSWD", 1, "No master pool password setup in SEC_PASSWORD_FILE");
-			return false;
-		}
-	} else if (!getNamedCredential(key_id, master_password_str, err)) {
+	std::string shared_key;
+	if (!getTokenSigningKey(key_id, shared_key, err)) {
 		return false;
 	}
-	const char *passwd_ref = master_password.get() ? master_password.get() : master_password_str.c_str();
-	size_t master_password_len = strlen(passwd_ref);
-	std::vector<unsigned char> shared_key; shared_key.reserve(master_password_len);
-	memcpy(&shared_key[0], passwd_ref, master_password_len);
 
-	std::vector<unsigned char> jwt_key; jwt_key.reserve(key_strength_bytes_v2());
-	if (hkdf(&shared_key[0], master_password_len,
+	std::vector<unsigned char> jwt_key;
+	jwt_key.resize(key_strength_bytes_v2(), 0);
+	if (hkdf(reinterpret_cast<const unsigned char *>(shared_key.data()), shared_key.size(),
 		reinterpret_cast<const unsigned char *>("htcondor"), 8,
 		(const unsigned char *)"master jwt", 10,
 		&jwt_key[0],
@@ -1647,7 +1602,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	}
 	issuer = issuer.substr(0, issuer.find_first_of(", \t"));
 
-	std::string jwt_key_str(reinterpret_cast<const char *>(&jwt_key[0]), key_strength_bytes_v2());
+	std::string jwt_key_str(reinterpret_cast<const char *>(jwt_key.data()), key_strength_bytes_v2());
 	auto jwt_builder = jwt::create()
 		.set_issuer(issuer)
 		.set_subject(id)
@@ -1667,9 +1622,9 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 		jwt_builder.set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds(lifetime));
 	}
 		// Set a unique JTI so we can identify the token we issued later on.
-	std::unique_ptr<char,decltype(&::free)> hexkey( Condor_Crypt_Base::randomHexKey(16), free );
+	auto_free_ptr hexkey(Condor_Crypt_Base::randomHexKey(16));
 	if (hexkey) {
-		jwt_builder.set_id(hexkey.get());
+		jwt_builder.set_id(hexkey.ptr());
 	}
 
 	try {
@@ -1702,7 +1657,7 @@ void
 Condor_Auth_Passwd::destroy_sk(struct sk_buf *sk) 
 {
     if(sk->shared_key) {
-		memset(sk->shared_key, 0, sk->len);
+        memset(sk->shared_key, 0, sk->len);
         free(sk->shared_key);
     }
 	if(sk->ka) {
@@ -1833,8 +1788,13 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 				m_sk.kb = m_k_prime; m_k_prime = NULL;
 				m_sk.kb_len = m_k_prime_len; m_k_prime_len = 0;
 			} else {
-				dprintf(D_SECURITY, "PW: Client using pool password.\n");
-				m_sk.shared_key = fetchPassword(m_t_client.a, "", m_t_server.b);
+				if (m_version == 2) {
+					dprintf(D_SECURITY, "PW: Client using pool shared key.\n");
+					m_sk.shared_key = fetchPoolSharedKey(m_sk.len);
+				} else {
+					dprintf(D_SECURITY, "PW: Client using pool password.\n");
+					m_sk.shared_key = fetchPoolPassword(m_sk.len);
+				}
 				dprintf(D_SECURITY, "PW: Client setting keys.\n");
 				if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
 					m_client_status = AUTH_PW_ERROR;
@@ -1973,7 +1933,20 @@ Condor_Auth_Passwd::doServerRec1(CondorError* /*errstack*/, bool non_blocking) {
 			// However, the client ID might not actually be condor_pool@whatever;
 			// hence, in this case we just use the server name twice (which is
 			// mandated to be the pool username).
-		m_sk.shared_key = fetchPassword(m_version == 2 ? m_t_server.b : m_t_client.a, m_t_client.a_token, m_t_server.b);
+		if (m_t_client.a_token.empty()) {
+			if (m_version == 2) {
+				m_sk.shared_key = fetchPoolSharedKey(m_sk.len);
+			} else {
+				m_sk.shared_key = fetchPoolPassword(m_sk.len);
+			}
+		} else {
+			m_sk.shared_key = fetchTokenSharedKey(m_t_client.a_token, m_sk.len);
+		}
+		// In version 1, the only thing that is ever sent in practice is 
+		// condor_pool@whatever, and in that case, m_t_server.b == m_t_client.a
+		// and we could simplify the line of code above to this:
+		//     m_sk.shared_key = fetchPassword(m_t_server.b, m_t_client.a_token, m_t_server.b);
+
 		if(!setup_shared_keys(&m_sk, m_t_client.a_token)) {
 			m_server_status = AUTH_PW_ERROR;
 		} else {
@@ -2065,28 +2038,60 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 		m_ret_value = 0;
 	}
 
+	// the protocol has the client sending their claimed identity.  we'll log it
+	// here, but it should not be trusted.
+	dprintf (D_SECURITY | D_FULLDEBUG, "PW: client in mode %i and ID %s.\n", getMode(), m_t_client.a);
 
-		//m_ret_value is 1 for success, 0 for failure.
-	if ( m_ret_value == 1 ) {
-			// if all is good, set the remote user and domain names
-		char *login, *domain;
-		login = m_t_client.a; // client is remote to server
-		ASSERT(login);
-		domain = strchr(login,'@');
-		if (domain) {
-			*domain='\0';
-			domain++;
-		}
+	// sanity check -- we shouldn't be in this code if not using these methods
+	if ((getMode() != CAUTH_PASSWORD) && (getMode() != CAUTH_TOKEN)) {
+		dprintf(D_ALWAYS, "PW: ERROR: in ServerRec2 in unknown mode %i.\n", getMode());
+		m_ret_value = 0;  // signal failure
+	}
 
-		setRemoteUser(login);
-		setRemoteDomain(domain);
+	// we need to enforce that the id sent by the client matches what was
+	// extracted from the token (for IDTOKENS) or is the "condor pool"
+	// identity.
+	//
+	// the "expected_subject" string below will hold the expected value,
+	// and it is set below in two different ways.
+	//
+	// for password, it's going to be the POOL_PASSWORD_USERNAME (or, if
+	// SEC_PASSWORD_REPLACE_USERNAME is set to false it will be the user
+	// the client sent.) name that was sent.
+	//
+	// for token, it will be the subject extracted from the token.
+	//
+	// after everything is done / extracted, we will compare the "real"
+	// subject with what the client initially sent and only succeed if they
+	// match.
+	std::string expected_subject;
 
+	// for password, this is easy.  we expect to see "condor_pool@<something>".
+	if(m_version == 1) {
+		expected_subject = POOL_PASSWORD_USERNAME;
+		expected_subject += "@";
+		expected_subject += getLocalDomain();
+	}
+
+	// if the protocol was so far successful, process the token if it exists.
+	if ( m_ret_value == 1 ) { //m_ret_value is 1 for success, 0 for failure.
+		// we have a token, let's decode it
 		if (!m_t_client.a_token.empty()) {
 			std::vector<std::string> authz, scopes;
 			time_t expiry = 0;
 			std::string username, issuer, groups, jti;
 			try {
 				auto decoded_jwt = jwt::decode(m_t_client.a_token + ".");
+				dprintf(D_SECURITY | D_FULLDEBUG, "PW: decoded JWT.\n");
+
+				// extract the expected_subject
+				if(! decoded_jwt.has_subject() ) {
+					dprintf(D_ALWAYS, "JWT is missing a subject claim.\n");
+					throw; // skips rest of token handling
+				}
+				expected_subject = decoded_jwt.get_subject();
+
+				// extract other useful information
 				if (decoded_jwt.has_payload_claim("scope")) {
 						// throws std::bad_cast if this isn't a string; caught below.
 					const std::string &scopes_str = decoded_jwt.get_payload_claim("scope").as_string();
@@ -2154,12 +2159,70 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 				ad.InsertAttr("TokenExpirationTime", expiry);
 			}
 			mySock_->setPolicyAd(ad);
+		} else {
+			// no token present.  that's expected for PASSWORD, but
+			// that's a failure if it's IDTOKENS auth.
+			if(getMode() == CAUTH_TOKEN) {
+				// no actual token present when using IDTOKENS is a
+				// failure.  set no ID and change the return code.
+				dprintf(D_ALWAYS, "PW: ERROR: There was no token present!\n");
+				m_ret_value = 0;
+			}
+		}
+	}
+
+	// if everything is still good, validate and set the authenticated information
+	if(m_ret_value) {
+		// for password... should the domain matter?  historically it has not,
+		// since we just accepted what the client sent in the first place.  so
+		// for password we only check up to the '@', and for tokens we check
+		// the whole thing.
+		bool match = false;
+		if (getMode() == CAUTH_PASSWORD) {
+			match = !strncmp(m_t_client.a, expected_subject.c_str(), strlen(POOL_PASSWORD_USERNAME)+1);
+		} else {
+			match = !strcmp(m_t_client.a, expected_subject.c_str());
+		}
+		if (match) {
+			char * login = strdup(expected_subject.c_str());
+			char * domain = strchr(login,'@');
+			if (domain) {
+				*domain='\0';
+				domain++;
+			}
+
+			dprintf(D_SECURITY | D_FULLDEBUG, "PW: setting authenticated user (%s) and domain (%s)\n",
+				login, domain ? domain : "NULL");
+			setRemoteUser(login);
+			setRemoteDomain(domain);
+			// TODO FIXME ZKM: in the next devel release:
+			// setAuthenticatedName(expected_subject.c_str());
+
+			free(login);
+		} else {
+			dprintf(D_ALWAYS, "PW: WARNING: client ID (%s) and expected ID (%s) do not match.  Failing.\n",
+				m_t_client.a, expected_subject.c_str());
+			m_ret_value = 0;
 		}
 	}
 
 	destroy_t_buf(&m_t_client);
 	destroy_t_buf(&m_t_server);
 	destroy_sk(&m_sk);
+
+	// an unfortunate issue here is that if we have failed, there is no
+	// communication back to the client.  if we have reached this point the
+	// client has already assumed success.  thus, the two sides will now be
+	// out of sync as the client is waiting to exchange keys at this point.
+	//
+	// fortunately, the server is operating in non-blocking mode so this
+	// will not interrupt operation.  the client will hang for 20 seconds
+	// before timing out.
+	//
+	// nevertheless, we must fail for now.  perhaps down the road the
+	// protocol could be expanded such that we could inform the client of
+	// this status and the connection could recover to potentially try
+	// other authentication methods, but now is not that time.
 
 		//return 1 for success, 0 for failure.
 	return (m_ret_value==1) ? Success : Fail;
@@ -2824,7 +2887,7 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 
 	dprintf(D_SECURITY, "Key length: %d\n", key_len);
 		// Fill the key structure.
-	KeyInfo thekey(key,(int)key_len,CONDOR_3DES);
+	KeyInfo thekey(key, (int)key_len, CONDOR_3DES, 0);
 	m_crypto = new Condor_Crypt_3des();
 	if ( m_crypto ) {
 		m_crypto_state = new Condor_Crypto_State(CONDOR_3DES,thekey);
@@ -2834,7 +2897,6 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 			m_crypto = NULL;
 		}
 	}
-
 	if ( key ) free(key);	// KeyInfo makes a copy of the key
 
 	return m_crypto ? true : false;
@@ -2856,39 +2918,34 @@ bool
 Condor_Auth_Passwd::preauth_metadata(classad::ClassAd &ad)
 {
 	dprintf(D_SECURITY, "Inserting pre-auth metadata for TOKEN.\n");
-	std::vector<std::string> creds;
 	CondorError err;
-	if (!listNamedCredentials(creds, &err)) {
-		dprintf(D_SECURITY, "Failed to determine available credentials: %s\n", err.getFullText().c_str());
+	const std::string & keys = getCachedIssuerKeyNames(&err);
+	if ( ! err.empty()) {
+		dprintf(D_SECURITY, "Failed to determine available TOKEN keys: %s\n", err.getFullText().c_str());
 		return false;
 	}
-	if (!creds.empty()) {
-		std::stringstream ss;
-		for (const auto & name: creds) {
-			ss << name << ",";
-		}
-		const std::string &creds_str = ss.str();
-		ad.InsertAttr(ATTR_SEC_ISSUER_KEYS, creds_str.c_str(), creds_str.size()-1);
+	if ( ! keys.empty()) {
+		ad.Assign(ATTR_SEC_ISSUER_KEYS, keys);
 	}
 	return true;
 }
 
 void
-Condor_Auth_Passwd::create_pool_password_if_needed()
+Condor_Auth_Passwd::create_pool_signing_key_if_needed()
 {
 	// This method is invoked by DaemonCore upon startup and a reconfig.
 
-	// Currently only the Collector will generate a pool password by default...
+	// Currently only the Collector will generate a token signing key by default...
 	if (!get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR)) {
 		return;
 	}
 
-	std::string pool_password;
-	if (!param(pool_password, "SEC_PASSWORD_FILE")) {
+	std::string filepath;
+	if (!param(filepath, "SEC_TOKEN_POOL_SIGNING_KEY_FILE")) {
 		return;
 	}
 
-		// Try to create the pool password file if it doesn't exist.
+		// Try to create the signing key file if it doesn't exist.
 	int fd = -1;
 	{
 #ifdef WIN32
@@ -2899,7 +2956,7 @@ Condor_Auth_Passwd::create_pool_password_if_needed()
 		mode_t access_mode = 0600;
 
 		TemporaryPrivSentry sentry(PRIV_ROOT);
-		fd = safe_open_wrapper_follow(pool_password.c_str(), open_flags, access_mode);
+		fd = safe_open_wrapper_follow(filepath.c_str(), open_flags, access_mode);
 	}
 	if (fd < 0) {
 		return;
@@ -2907,20 +2964,19 @@ Condor_Auth_Passwd::create_pool_password_if_needed()
 		close(fd);
 	}
 
-		// Generate a password.
-	char password_buffer[65];
-	password_buffer[64] = '\0';
-	if (!RAND_bytes(reinterpret_cast<unsigned char *>(password_buffer), 64)) {
+		// Generate a signing key.
+	char rand_buffer[64];
+	if (!RAND_bytes(reinterpret_cast<unsigned char *>(rand_buffer), sizeof(rand_buffer))) {
 		// Insufficient entropy available; bail out!
 		return;
 	}
 
-		// Write out the password.
-	if (TRUE == write_password_file(pool_password.c_str(), password_buffer)) {
-		dprintf(D_ALWAYS, "Created a pool password in file %s\n", pool_password.c_str());
+		// Write out the signing key.
+	if (TRUE == write_binary_password_file(filepath.c_str(), rand_buffer, sizeof(rand_buffer))) {
+		dprintf(D_ALWAYS, "Created a POOL token signing key in file %s\n", filepath.c_str());
 	}
 	else {
-		dprintf(D_ALWAYS, "WARNING: Failed to create a pool password in file %s\n", pool_password.c_str());
+		dprintf(D_ALWAYS, "WARNING: Failed to create a POOL token signing keyin file %s\n", filepath.c_str());
 	}
 }
 
@@ -2929,11 +2985,14 @@ bool
 Condor_Auth_Passwd::should_try_auth()
 {
 	bool has_named_creds = false;
-	std::vector<std::string> creds;
 	CondorError err;
-	if (listNamedCredentials(creds, &err)) {
-		has_named_creds = !creds.empty();
+	const std::string & keys = getCachedIssuerKeyNames(&err);
+	if ( ! err.empty()) {
+		dprintf(D_SECURITY, "Failed to determine available TOKEN keys: %s\n", err.getFullText().c_str());
+		// return TRUE because we are probably a tool that does not have read access to the signing keys
+		return true;
 	}
+	has_named_creds = ! keys.empty();
 	if (has_named_creds) {
 		dprintf(D_SECURITY|D_FULLDEBUG,
 			"Can try token auth because we have at least one named credential.\n");
@@ -2953,7 +3012,7 @@ Condor_Auth_Passwd::should_try_auth()
 
 	m_tokens_avail = findTokens(issuer, server_key_ids, SecMan::getTagCredentialOwner(), username, token, signature);
 	if (m_tokens_avail) {
-		dprintf(D_SECURITY|D_FULLDEBUG,
+		dprintf(D_SECURITY/*|D_FULLDEBUG*/,
 			"Can try token auth because we have at least one token.\n");
 	}
 	return m_tokens_avail;

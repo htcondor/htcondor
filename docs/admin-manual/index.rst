@@ -6,7 +6,6 @@ Administrators' Manual
    :glob:
 
    introduction-admin-manual
-   quick-start-condor-pool
    installation-startup-shutdown-reconfiguration
    introduction-to-configuration
    configuration-templates
@@ -22,4 +21,6 @@ Administrators' Manual
    java-support-installation
    setting-up-vm-docker-universes
    singularity-support
-   power-management      
+   power-management
+   windows-installer
+   directories

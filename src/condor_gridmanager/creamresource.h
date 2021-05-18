@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include <map>
 
 #include "proxymanager.h"
 #include "baseresource.h"
@@ -59,7 +60,7 @@ class CreamResource : public BaseResource
 	const char *getLeaseError();
 
 	static const char *CanonicalName( const char *name );
-	static const char *HashName( const char *resource_name,
+	static std::string & HashName( const char *resource_name,
 								 const char *proxy_subject,
 								 const char *proxy_first_fqan );
 
@@ -72,7 +73,7 @@ class CreamResource : public BaseResource
 	void ProxyCallback() const;
 
 	// This should be private, but CreamJob references it directly for now
-	static HashTable <std::string, CreamResource *> ResourcesByName;
+	static std::map <std::string, CreamResource *> ResourcesByName;
 
  private:
 	void DoPing( unsigned& ping_delay, bool& ping_complete,

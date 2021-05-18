@@ -257,7 +257,7 @@ class TransferRequest
 
 /* converts a protcol ASCII line to an enum which represents and encapsulation
 	method for the protocol. */
-EncapMethod encap_method(MyString &line);
+EncapMethod encap_method(const std::string &line);
 
 /* converts an ASCII representation of a transfer request mode into the enum */
 TreqMode transfer_mode(MyString mode);

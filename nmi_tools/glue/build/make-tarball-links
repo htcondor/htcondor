@@ -1,0 +1,150 @@
+#!/bin/sh
+if [ $# -ne 1 ]; then
+    echo 'Error: missing argument'
+    echo "Usage: $(basename $0) RPMs-directory"
+    exit 1
+fi
+tarball=$1
+if [ ! -d $tarball ]; then
+    echo "Error: $tarball is not a directory"
+    echo "Usage: $(basename $0) RPMs-directory"
+    exit 1
+fi
+
+cd $tarball
+
+if [ ! -d etc -o ! -d usr -o ! -d var ]; then
+    echo That does not look like an HTCondor tarball
+    exit 1
+fi
+# On Debian and Unbuntu consolidate shared objects into a single directory
+if [ -d lib ]; then
+    find lib -name \*.so\* -exec mv {} usr/lib \;
+    rm -rf lib
+fi
+if [ -d usr/lib/x86_64-linux-gnu ]; then
+    find usr/lib/x86_64-linux-gnu -name \*.so\* -exec mv {} usr/lib \;
+fi
+# Make compatabilty links to conform to the old tarball layout
+ln -s usr/bin bin
+ln -s usr/sbin sbin
+ln -s usr/lib lib
+if [ -d usr/lib64 ]; then
+    ln -s usr/lib64 lib64
+fi
+if [ -d usr/libexec/condor ]; then
+    ln -s usr/libexec/condor libexec
+fi
+if [ -d usr/lib/condor/libexec ]; then
+    ln -s usr/lib/condor/libexec libexec
+fi
+ln -s usr/share/man man
+ln -s usr/include include
+ln -s sbin/bosco_install bosco_install
+ln -s sbin/condor_configure condor_configure
+ln -s sbin/condor_install condor_install
+if [ -d usr/share/doc/htcondor/examples/etc ]; then
+    # Debian and Ubuntu
+    ln -s usr/share/doc/htcondor/examples/etc examples
+    cp -p /usr/share/common-licenses/Apache-2.0 LICENSE-2.0.txt
+    ln -s usr/share/doc/htcondor/NOTICE.txt NOTICE.txt
+elif [ -d usr/share/doc/condor/examples ]; then
+    # Modern RPM
+    ln -s usr/share/doc/condor/examples examples
+    ln -s usr/share/doc/condor/LICENSE-2.0.txt LICENSE-2.0.txt
+    ln -s usr/share/doc/condor/NOTICE.txt NOTICE.txt
+else
+    # Old RPM
+    ln -s usr/share/doc/condor-[0-9]*/examples examples
+    ln -s usr/share/doc/condor-[0-9]*/LICENSE-2.0.txt LICENSE-2.0.txt
+    ln -s usr/share/doc/condor-[0-9]*/NOTICE.txt NOTICE.txt
+fi
+ln -s ../examples etc/examples
+if [ -d usr/lib64 ]; then
+    # RPM based systems
+    # Link to pickup condor_ssh_to_job_template
+    ln -s ../lib64/condor/condor_ssh_to_job_sshd_config_template usr/lib/condor_ssh_to_job_sshd_config_template
+    # Link for executables to pick up shared libaries
+    ln -s ../lib64 usr/libexec/lib64
+    (cd usr/lib64/python3*/site-packages; ln -s ../.. lib64)
+    # Links for Java Universe
+    (cd usr/lib; ln -s ../share/condor/*.class .)
+    # Standard place for Python3 packages)
+    (cd lib; ln -s ../lib64/python3*/site-packages python3)
+else
+    # Debian based systems
+    # Link to pickup condor_ssh_to_job_template
+    ln -s condor/condor_ssh_to_job_sshd_config_template usr/lib/condor_ssh_to_job_sshd_config_template
+    # Link for executables to pick up shared libaries
+    ln -s .. usr/lib/condor/lib
+    (cd usr/lib/python3/dist-packages; ln -s ../.. lib)
+    # Links for Java Universe
+    (cd usr/lib; ln -s condor/*.class .)
+    # Standard place for Python3 packages)
+    (cd lib; mv python3 tmp; mv tmp/dist-packages python3; rmdir tmp)
+    # Remove the python2 packages
+    rm -rf usr/lib/python2*
+fi
+# Add links and configuration for Bosco
+if [ ! -f etc/blah.config ]; then
+    # Fedora does not have blahp (yet)
+    exit 0
+fi
+# batch_gahp -> blahp compatibility links
+ln -s blahpd usr/bin/batch_gahp
+ln -s blahpd_daemon usr/sbin/batch_gahp_daemon
+# Construct a glite directory for Bosco
+if [ -d usr/libexec/condor/glite ]; then
+    # RPM based systems
+    mkdir -p usr/libexec/condor/glite/etc
+    (cd usr/libexec/condor/glite/etc; ln -s ../../../../../etc/bl* .)
+    mkdir -p usr/libexec/condor/glite/bin
+    (cd usr/libexec/condor/glite/bin; ln -s ../../../../bin/bl* .)
+    (cd usr/libexec/condor/glite/bin; ln -s ../../../../sbin/bl* .)
+    (cd usr/libexec/condor/glite/bin; ln -s ../../../blahp/* .)
+    ln -s ../../../lib64 usr/libexec/condor/glite
+    ln -s bin usr/libexec/condor/glite/libexec
+fi
+if [ -d usr/lib/condor/libexec/glite ]; then
+    # Debian based systems
+    mkdir -p usr/lib/condor/libexec/glite/etc
+    (cd usr/lib/condor/libexec/glite/etc; ln -s ../../../../../../etc/bl* .)
+    mkdir -p usr/lib/condor/libexec/glite/bin
+    (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../bin/bl* .)
+    (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../sbin/bl* .)
+    (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../libexec/blahp/* .)
+    ln -s ../../.. usr/lib/condor/libexec/glite/lib
+    ln -s bin usr/lib/condor/libexec/glite/libexec
+fi
+# Comment out default blahp location
+sed -i -e s/blah_libexec_directory/#blah_libexec_directory/ etc/blah.config
+# Make absolute links relative
+(cd usr/libexec/blahp; ln -sf ../../../etc/blahp/*_local_submit_attributes.sh .)
+# Patch blahp.py to find the blah.config based on GLITE_LOCATION
+patch -p1 <<'EOF'
+--- a/usr/libexec/blahp/blah.py
++++ b/usr/libexec/blahp/blah.py
+@@ -1,11 +1,13 @@
+ """Common functions for BLAH python scripts"""
+ 
++import os
+ from configparser import RawConfigParser
+ from io import StringIO
+ 
+ class BlahConfigParser(RawConfigParser, object):
+ 
+     def __init__(self, path='/etc/blah.config', defaults=None):
++        path = '%s/etc/blah.config' % (os.environ['GLITE_LOCATION'])
+         # RawConfigParser requires ini-style [section headers] but since
+         # blah.config is also used as a shell script we need to fake one
+         self.header = 'blahp'
+EOF
+if [ $? -ne 0 ]; then
+    echo 'ERROR: blah.py patch failed to apply'
+    # Allow this to slide on bare metal (x86_64_CentOS7)
+    # We only release from the Docker build and the
+    # blahp can lag on the bare metal machine
+    if [ -f /.dockerenv ]; then
+        exit 1
+    fi
+fi

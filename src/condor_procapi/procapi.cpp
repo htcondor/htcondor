@@ -1908,7 +1908,7 @@ ProcAPI::initProcInfoRaw(procInfoRaw& procRaw){
 
 #if !defined(Darwin) && !defined(CONDOR_FREEBSD)
 int
-build_pid_list( std::vector<pid_t> & pidList ) {
+build_pid_list( std::vector<pid_t> & newPidList ) {
 	pid_t my_pid = getpid();
 	pid_t my_ppid = getppid();
 
@@ -1916,11 +1916,13 @@ build_pid_list( std::vector<pid_t> & pidList ) {
 	bool saw_ppid = false;
 	bool saw_pid = false;
 
-	pidList.clear();
 	condor_DIR * dirp = condor_opendir("/proc");
 	if( dirp == NULL ) {
+		dprintf( D_ALWAYS, "ProcAPI: opendir('/proc') failed (%d): %s\n", errno, strerror(errno) );
 		return -1;
 	}
+
+	newPidList.clear();
 
 	int total_entries = 0;
 	int pid_entries = 0;
@@ -1934,7 +1936,7 @@ build_pid_list( std::vector<pid_t> & pidList ) {
 		++total_entries;
 		if( isdigit(direntp->d_name[0]) ) {
 			pid_t the_pid = (pid_t)atol(direntp->d_name);
-			pidList.push_back(the_pid);
+			newPidList.push_back(the_pid);
 			++pid_entries;
 
 			if( the_pid == 1 ) { saw_pid1 = true; }
@@ -1945,6 +1947,7 @@ build_pid_list( std::vector<pid_t> & pidList ) {
 	if( errno != 0 ) {
 		dprintf(D_ALWAYS, "ProcAPI: readdir() failed: errno %d (%s)\n",
 			errno, strerror(errno));
+		condor_closedir( dirp );
 		return -2;
 	}
 	condor_closedir( dirp );
@@ -1965,7 +1968,18 @@ ProcAPI::buildPidList() {
 	std::vector<pid_t> newPidList;
 	int rv = build_pid_list(newPidList);
 
-    double fraction = 0.70;
+    //
+    // Based on analysis of our logs from December 2020 and the first
+    // three weeks of 2021.  On the faulting machines, approximately
+    // 1 read in 4337 results in 10% fewer PIDs than the previous read;
+    // depending on the machine, as few as 2 in 26 or as many as 2 in 3
+    // of these short reads result in a failure we (humans) noticed.
+    //
+    // Conversely, every observed failure had a read short by at least
+    // 15%, so even with a high false positive rate, it's worth the low
+    // overhead to use the 10% threshold.
+    //
+    double fraction = 0.90;
     char * fraction_str = getenv( "_CONDOR_PROCAPI_RETRY_FRACTION" );
     if( fraction_str ) {
         char * endptr = NULL;
@@ -1974,11 +1988,20 @@ ProcAPI::buildPidList() {
             fraction = d;
         }
     }
-    dprintf( D_ALWAYS, "PROCAPI_RETRY_FRACTION = %f\n", fraction );
 
+    //
+    // FIXME: this code doesn't ever reset the expected number of PIDs,
+    // so the test suite (and possible others) gets stuck in a loop of
+    // "bad" reads which continues to return increasingly-obsolete data
+    // about the PIDs until something (e.g., registration of a job's PID
+    // by the starter) fails.  So I'm disabling this test until we figure
+    // out something saner to do.  Since this test was broken for months
+    // without causing CHTC any problems, maybe we won't have to.
+    //
     bool suddenly_too_many_fewer = false;
-    if( rv >= 0 && rv < (int)(pidList.size() * 0.70) ) {
-        suddenly_too_many_fewer = true;
+    if( rv >= 0 && rv < (int)(pidList.size() * fraction) ) {
+        dprintf( D_ALWAYS, "PROCAPI_RETRY_FRACTION = %f means that the current read of %d is suddenly too much smaller than the previous read of %zu\n", fraction, rv, pidList.size() );
+        // suddenly_too_many_fewer = true;
     }
 
 	if( rv == -1 ) {
@@ -1990,14 +2013,14 @@ ProcAPI::buildPidList() {
 
 		std::stringstream buffer;
 
-		for( unsigned i = 0; i < pidList.size(); ++i ) {
-			buffer << " " << pidList[i];
+		for( auto pid : pidList ) {
+			buffer << " " << pid;
 		}
 		dprintf( D_ALWAYS, "ProcAPI: previous PID list:%s\n",
 			buffer.str().c_str() );
 
-		for( unsigned i = 1; i < newPidList.size(); ++i ) {
-			buffer << " " << newPidList[i];
+		for( auto pid: newPidList ) {
+			buffer << " " << pid;
 		}
 		dprintf( D_ALWAYS, "ProcAPI: new PID list:%s\n",
 			buffer.str().c_str() );
@@ -2108,8 +2131,6 @@ ProcAPI::buildProcInfoList() {
 	temp = allProcInfos;
 	allProcInfos = allProcInfos->next;
 	delete temp;
-
-	pidList.clear();
 
 	return PROCAPI_SUCCESS;
 }
