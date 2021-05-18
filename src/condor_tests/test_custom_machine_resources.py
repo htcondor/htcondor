@@ -120,7 +120,8 @@ def sum_check_matching_usage(handle):
 
     # make sure we got the right number of terminate events and ads
     # before doing the real assertion
-    assert len(terminated_events) == len(ads) == len(handle)
+    assert len(terminated_events) == len(ads)
+    assert len(ads) == len(handle)
 
     jobid_to_usage_via_event = {
         JobID.from_job_event(event): event["SQUIDsUsage"]
@@ -172,7 +173,7 @@ def peak_check_correct_uptimes(condor, handle):
         resource = ad["AssignedSQUIDs"]
         peak = int(ad["DeviceSQUIDsMemoryPeakUsage"])
         logger.info(f"Measured peak for {resource} was {peak}")
-        assert(peak in sequences[resource])
+        assert peak in sequences[resource]
 
     #
     # Then assert that the periodic polling recorded by the job recorded
@@ -189,20 +190,20 @@ def peak_check_correct_uptimes(condor, handle):
 
     # Assert that we only logged one resource for each job.
     for ad in ads:
-        assert(len(observed_peaks[ad["ProcID"]]) == 1)
+        assert len(observed_peaks[ad["ProcID"]]) == 1
 
     # Assert that the observed peaks are valid for their resource.
     for ad in ads:
         for resource in observed_peaks[ad["ProcID"]]:
             values = sequences[resource]
             observed = observed_peaks[ad["ProcID"]][resource]
-            assert(all([value in values for value in observed]))
+            assert all([value in values for value in observed])
 
     # Assert that the observed peaks are all monotonically increasing.
     for ad in ads:
         for sequence in observed_peaks[ad["ProcID"]].values():
             for i in range(0, len(sequence) - 1):
-                assert(sequence[i] <= sequence[i+1])
+                assert sequence[i] <= sequence[i+1]
 
 
 def peak_check_matching_usage(handle):
@@ -213,7 +214,8 @@ def peak_check_matching_usage(handle):
 
     # make sure we got the right number of terminate events and ads
     # before doing the real assertion
-    assert len(terminated_events) == len(ads) == len(handle)
+    assert len(terminated_events) == len(ads)
+    assert len(ads) == len(handle)
 
     jobid_to_usage_via_event = {
         JobID.from_job_event(event): event["SQUIDsMemoryUsage"]
@@ -372,8 +374,8 @@ def handle(test_dir, condor, num_resources, the_job):
 
     # we must wait for both the handle and the job queue here,
     # because we want to use both later
-    handle.wait(verbose=True)
-    condor.job_queue.wait_for_job_completion(handle.job_ids)
+    assert(handle.wait(verbose=True))
+    assert(condor.job_queue.wait_for_job_completion(handle.job_ids))
 
     yield handle
 
