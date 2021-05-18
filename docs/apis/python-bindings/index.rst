@@ -7,9 +7,6 @@ They utilize the same C++ libraries as HTCondor itself, meaning they have nearly
 :doc:`install`
     Instructions on installing the HTCondor Python bindings.
 
-:doc:`tutorials/index`
-    Learn how to use the HTCondor Python bindings.
-
 :doc:`api/classad`
     Documentation for :mod:`classad`.
 
@@ -31,7 +28,6 @@ They utilize the same C++ libraries as HTCondor itself, meaning they have nearly
    :hidden:
 
    install
-   tutorials/index
    api/classad
    api/htcondor
    api/htchirp
