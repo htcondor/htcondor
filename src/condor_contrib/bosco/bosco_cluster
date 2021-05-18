@@ -290,7 +290,7 @@ ssh_detect_linux_distro () {
     major_ver="${ver%%.*}"
 
     case "$dist" in
-        (rhel|centos)
+        (rhel|centos|scientific)
             echo "CentOS${major_ver}" ;;
         debian)
             echo "Debian${major_ver}" ;;
