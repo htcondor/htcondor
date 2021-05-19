@@ -17645,9 +17645,9 @@ Scheduler::token_request_callback(bool success, void *miscdata)
 
 
 bool
-Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const char * ckpt_dir /*="##"*/)
+Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const char * new_spool_dir /*="##"*/)
 {
-	dprintf(D_ALWAYS,"ExportJobs(...,'%s','%s')\n",output_dir,ckpt_dir);
+	dprintf(D_ALWAYS,"ExportJobs(...,'%s','%s')\n",output_dir,new_spool_dir);
 	OwnerInfo * owner = nullptr;
 
 	// verify that all of the jobs have the same owner and get the owner
@@ -17662,7 +17662,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 		if ( ! owner) {
 			owner = jqc->ownerinfo;
 		} else if ( owner != jqc->ownerinfo ) {
-			result.Assign("Reason", "Cannot export for more than one user");
+			result.Assign(ATTR_ERROR_STRING, "Cannot export for more than one user");
 			dprintf(D_ALWAYS, "ExportJobs(): Multiple owners %s and %s, aborting\n", owner->Name(), jqc->ownerinfo->Name());
 			return false;
 		}
@@ -17671,7 +17671,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 		// TODO check for active jobs (running, externally managed)
 	}
 	if ( clusters.empty() ) {
-		result.Assign("Reason", "No clusters to export");
+		result.Assign(ATTR_ERROR_STRING, "No clusters to export");
 		dprintf(D_ALWAYS, "ExportJobs(): No clusters to export\n");
 		return false;
 	}
@@ -17681,7 +17681,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 	TemporaryPrivSentry tps(true);
 	JobQueueCluster * jqc = GetClusterAd(*(clusters.begin()));
 	if ( ! jqc->ownerinfo || !init_user_ids_from_ad(*jqc) ) {
-		result.Assign("Reason", "Failed to init user ids");
+		result.Assign(ATTR_ERROR_STRING, "Failed to init user ids");
 		dprintf(D_ALWAYS, "ExportJobs(): Failed to init user ids!\n");
 		return false;
 	}
@@ -17747,7 +17747,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 				if (YourStringNoCase(ATTR_JOB_LEAVE_IN_QUEUE) == attr_itr->first.c_str()) {
 					// nothing
 				} else if (YourStringNoCase(ATTR_JOB_IWD) == attr_itr->first.c_str()) {
-					char *dir = gen_ckpt_name(ckpt_dir, job->jid.cluster, job->jid.proc, 0);
+					char *dir = gen_ckpt_name(new_spool_dir, job->jid.cluster, job->jid.proc, 0);
 					std::string val;
 					val = '"';
 					val += dir;
@@ -17783,7 +17783,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 
 		for ( auto attr_itr = src_ad->begin(); attr_itr != src_ad->end(); attr_itr++ ) {
 			if ( !strcasecmp(attr_itr->first.c_str(), ATTR_JOB_IWD) && src_ad->IsJob() ) {
-				char *dir = gen_ckpt_name(ckpt_dir, job_id.cluster, job_id.proc, 0);
+				char *dir = gen_ckpt_name(new_spool_dir, job_id.cluster, job_id.proc, 0);
 				std::string val;
 				val = '"';
 				val += dir;
@@ -17816,8 +17816,8 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 
 	result.Assign("Log", queue_fname);
 	result.Assign("User", jqc->ownerinfo->Name());
-	result.Assign("NumJobs", num_jobs);
-	result.Assign("NumClusters", (long)clusters.size());
+	result.Assign(ATTR_TOTAL_JOB_ADS, num_jobs);
+	result.Assign(ATTR_TOTAL_CLUSTER_ADS, (long)clusters.size());
 
 	dprintf(D_ALWAYS,"ExportJobs() returning true\n");
 	return true;
@@ -17831,7 +17831,7 @@ Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 
 	// IWD of exported jobs will be re-written to use this directory as a base 
 	// the default value of ## is intended to be replaced by a script that post-processes the job log.
-	std::string ckpt_dir("##");
+	std::string new_spool_dir("##");
 
 	stream->decode();
 	stream->timeout(15);
@@ -17842,16 +17842,17 @@ Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 
 	std::string export_list;    // list of cluster ids to export
 	std::string export_dir;     // where to write the exported job queue and other files
-	ExprTree * constr_expr = reqAd.Lookup("Constraint");
+	ExprTree * constr_expr = reqAd.Lookup(ATTR_ACTION_CONSTRAINT);
 	if ( ! reqAd.LookupString("ExportDir", export_dir) ||
-		( ! constr_expr && ! reqAd.LookupString("ClusterIds", export_list)))
+		( ! constr_expr && ! reqAd.LookupString(ATTR_ACTION_IDS, export_list)))
 	{
-		resultAd.Assign("Reason", "Invalid arguments");
-		resultAd.Assign("Error", SCHEDD_ERR_MISSING_ARGUMENT);
+		resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
+		resultAd.Assign(ATTR_ERROR_STRING, "Invalid arguments");
+		resultAd.Assign(ATTR_ERROR_CODE, SCHEDD_ERR_MISSING_ARGUMENT);
 	}
 	else 
 	{
-		reqAd.LookupString("CkptDir", ckpt_dir); // the reqest ad *may* contain an override for the checkpoint directory
+		reqAd.LookupString("NewSpoolDir", new_spool_dir); // the reqest ad *may* contain an override for the checkpoint directory
 		std::set<int> clusters;
 		// we have a constrain expression, so we have to turn that into a set of cluster ids
 		if (constr_expr) {
@@ -17883,8 +17884,11 @@ Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 				clusters.insert(atoi(id));
 			}
 		}
-		if ( ! ExportJobs(resultAd, clusters, export_dir.c_str(), ckpt_dir.c_str())) {
-			resultAd.Assign("Error", SCHEDD_ERR_EXPORT_FAILED);
+		if ( ! ExportJobs(resultAd, clusters, export_dir.c_str(), new_spool_dir.c_str())) {
+			resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
+			resultAd.Assign(ATTR_ERROR_CODE, SCHEDD_ERR_EXPORT_FAILED);
+		} else {
+			resultAd.Assign(ATTR_ACTION_RESULT, OK);
 		}
 	}
 
@@ -18014,7 +18018,7 @@ Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir)
 
 	CommitTransactionOrDieTrying();
 
-	result.Assign("NumJobs", num_jobs);
+	result.Assign(ATTR_TOTAL_JOB_ADS, num_jobs);
 
 	dprintf(D_ALWAYS,"ImportExportedJobResults() returning true\n");
 	return true;
@@ -18036,14 +18040,18 @@ Scheduler::import_exported_job_results_handler(int /*cmd*/, Stream *stream)
 	std::string import_dir;     // directory containing the modified job queue and other files from previous export
 	if ( ! reqAd.LookupString("ExportDir", import_dir) || import_dir.empty())
 	{
-		resultAd.Assign("Reason", "Invalid arguments");
-		resultAd.Assign("Error", true);
+		resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
+		resultAd.Assign(ATTR_ERROR_STRING, "Invalid arguments");
+		resultAd.Assign(ATTR_ERROR_CODE,SCHEDD_ERR_MISSING_ARGUMENT );
 	}
 	else 
 	{
 		dprintf(D_ALWAYS,"Calling ImportExportedJobResults(%s)\n", import_dir.c_str());
 		if ( ! ImportExportedJobResults(resultAd, import_dir.c_str())) {
-			resultAd.Assign("Error", true);
+			resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
+			resultAd.Assign(ATTR_ERROR_CODE, 1);
+		} else {
+			resultAd.Assign(ATTR_ACTION_RESULT, OK);
 		}
 	}
 

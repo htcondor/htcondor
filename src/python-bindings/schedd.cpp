@@ -1709,7 +1709,7 @@ struct Schedd {
         return actOnJobs(action, job_spec, object("Python-initiated action."));
     }
 
-	object exportJobs(object job_spec, std::string export_dir, std::string ckpt_dir)
+	object exportJobs(object job_spec, std::string export_dir, std::string new_spool_dir)
 	{
 		std::string constraint;
 		StringList ids;
@@ -1745,15 +1745,14 @@ struct Schedd {
 		DCSchedd schedd(m_addr.c_str());
 		ClassAd *result = NULL;
 		CondorError errstack;
+		const char * spool = new_spool_dir.empty() ? nullptr : new_spool_dir.c_str();
 		if (use_ids)
 		{
 			condor::ModuleLock ml;
-			const char * ckpt = ckpt_dir.empty() ? nullptr : ckpt_dir.c_str();
-			result = schedd.exportJobs(&ids, export_dir.c_str(), ckpt, &errstack);
+			result = schedd.exportJobs(&ids, export_dir.c_str(), spool, &errstack);
 		} else {
 			condor::ModuleLock ml;
-			const char * ckpt = ckpt_dir.empty() ? nullptr : ckpt_dir.c_str();
-			result = schedd.exportJobs(constraint.c_str(), export_dir.c_str(), ckpt, &errstack);
+			result = schedd.exportJobs(constraint.c_str(), export_dir.c_str(), spool, &errstack);
 		}
 
 		if (errstack.code() > 0) {
@@ -4349,11 +4348,11 @@ void export_schedd()
                 Only jobs matching this description will be acted upon.
             :type job_spec: list[str] or str or ExprTree
             :param str export_dir: The path to the directory that exported jobs will be written into.
-            :param str ckpt_dir: The path to the base directory that exported jobs will use as IWD while they are exported
+            :param str new_spool_dir: The path to the base directory that exported jobs will use as IWD while they are exported
             :return: A ClassAd containing information about the export operation.
             :rtype: :class:`~classad.ClassAd`
             )C0ND0R",
-            boost::python::args("self", "job_spec", "export_dir", "ckpt_dir"))
+            boost::python::args("self", "job_spec", "export_dir", "new_spool_dir"))
         .def("import_exported_job_results", &Schedd::importExportedJobResults,
             R"C0ND0R(
             Import results from previously exported jobs, and take those jobs back out of the externally managed state.

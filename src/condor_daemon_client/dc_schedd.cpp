@@ -309,7 +309,7 @@ DCSchedd::exportJobsWorker(
 	StringList* ids_list,
 	const char * constraint_str,
 	const char * export_dir,
-	const char * ckpt_dir,
+	const char * new_spool_dir,
 	CondorError * errstack)
 {
 	if ( ! export_dir || ( ! ids_list && ! constraint_str)) {
@@ -326,9 +326,9 @@ DCSchedd::exportJobsWorker(
 	ClassAd cmd_ad;
 	if (ids_list) {
 		auto_free_ptr ids(ids_list->print_to_string());
-		cmd_ad.Assign("ClusterIds", (const char *)ids);
+		cmd_ad.Assign(ATTR_ACTION_IDS, (const char *)ids);
 	} else {
-		if ( ! cmd_ad.AssignExpr("Constraint", constraint_str)) {
+		if ( ! cmd_ad.AssignExpr(ATTR_ACTION_CONSTRAINT, constraint_str)) {
 			dprintf(D_ALWAYS, "DCSchedd::exportJobs invalid constraint : %s\n", constraint_str);
 			if (errstack) {
 				errstack->push("DCSchedd::exportJobs", SCHEDD_ERR_MISSING_ARGUMENT,
@@ -337,7 +337,7 @@ DCSchedd::exportJobsWorker(
 		}
 	}
 	cmd_ad.Assign("ExportDir", export_dir);
-	if (ckpt_dir) { cmd_ad.Assign("CkptDir", ckpt_dir); }
+	if (new_spool_dir) { cmd_ad.Assign("NewSpoolDir", new_spool_dir); }
 
 	rsock.timeout(20);   // years of research... :)
 	if ( ! rsock.connect(_addr)) {
@@ -383,13 +383,16 @@ DCSchedd::exportJobsWorker(
 		// reason trying to continue.  However, we still want to
 		// return the result ad we got back so that our caller can
 		// figure out what went wrong.
-	int err = false;
-	if (result_ad->LookupInteger("Error", err) && err) {
+	int result_code = NOT_OK;
+	result_ad->LookupInteger(ATTR_ACTION_RESULT, result_code);
+	if (result_code != OK) {
+		int err_code = 0;
 		std::string reason("Unknown reason");
-		result_ad->LookupString("Reason", reason);
+		result_ad->LookupInteger(ATTR_ERROR_CODE, err_code);
+		result_ad->LookupString(ATTR_ERROR_STRING, reason);
 		dprintf( D_ALWAYS, "DCSchedd:exportJobs: Export failed - %s\n", reason.c_str());
 		if (errstack) {
-			errstack->push("DCSchedd::exportJobs", err, reason.c_str());
+			errstack->push("DCSchedd::exportJobs", err_code, reason.c_str());
 		}
 	}
 
@@ -397,15 +400,15 @@ DCSchedd::exportJobsWorker(
 }
 
 ClassAd*
-DCSchedd::exportJobs(StringList* ids_list, const char * export_dir, const char * ckpt_dir, CondorError * errstack)
+DCSchedd::exportJobs(StringList* ids_list, const char * export_dir, const char * new_spool_dir, CondorError * errstack)
 {
-	return exportJobsWorker(ids_list, nullptr, export_dir, ckpt_dir, errstack);
+	return exportJobsWorker(ids_list, nullptr, export_dir, new_spool_dir, errstack);
 }
 
 ClassAd*
-DCSchedd::exportJobs(const char * constraint_str, const char * export_dir, const char * ckpt_dir, CondorError * errstack)
+DCSchedd::exportJobs(const char * constraint_str, const char * export_dir, const char * new_spool_dir, CondorError * errstack)
 {
-	return exportJobsWorker(nullptr, constraint_str, export_dir, ckpt_dir, errstack);
+	return exportJobsWorker(nullptr, constraint_str, export_dir, new_spool_dir, errstack);
 }
 
 	/** import the results from a previously exported job_queue.log managed by Lumberjack
@@ -472,13 +475,16 @@ DCSchedd::importExportedJobResults(const char * import_dir, CondorError * errsta
 		// reason trying to continue.  However, we still want to
 		// return the result ad we got back so that our caller can
 		// figure out what went wrong.
-	int err = false;
-	if (result_ad->LookupInteger("Error", err) && err) {
+	int result_code = NOT_OK;
+	result_ad->LookupInteger(ATTR_ACTION_RESULT, result_code);
+	if (result_code != OK) {
+		int err_code = 0;
 		std::string reason("Unknown reason");
-		result_ad->LookupString("Reason", reason);
+		result_ad->LookupInteger(ATTR_ERROR_CODE, err_code);
+		result_ad->LookupString(ATTR_ERROR_STRING, reason);
 		dprintf( D_ALWAYS, "DCSchedd:importExportedJobResults: Import failed - %s\n", reason.c_str());
 		if (errstack) {
-			errstack->push("DCSchedd::importExportedJobResults", err, reason.c_str());
+			errstack->push("DCSchedd::importExportedJobResults", err_code, reason.c_str());
 		}
 	}
 
