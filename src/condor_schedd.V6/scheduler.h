@@ -805,7 +805,7 @@ class Scheduler : public Service
 	JobSets *jobSets;
 
 	bool ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const char * ckpt_dir="##");
-	bool ImportExportedJobResults(ClassAd & result, const char * job_log_file);
+	bool ImportExportedJobResults(ClassAd & result, const char * import_dir);
 
 private:
 

@@ -287,9 +287,9 @@ public:
 	ClassAd* exportJobs( const char * constraint, const char * export_dir, const char * ckpt_dir, CondorError * errstack);
 
 	/** import the results from a previously exported job_queue.log managed by Lumberjack
-			@param exported_job_log path to the exported job_queue.log
+	    @param import_dir directory containing the exported job_queue.log and job files to be imported
 	*/
-	ClassAd* importExportedJobResults(const char * exported_job_log, CondorError * errstack);
+	ClassAd* importExportedJobResults(const char * import_dir, CondorError * errstack);
 
 	/** Vacate the victim and schedule the beneficiary on its slot.  Hard-
 		kills the job.  The caller must authenticate as a queue user or

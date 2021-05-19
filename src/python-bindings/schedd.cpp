@@ -1769,14 +1769,14 @@ struct Schedd {
 		return result_obj;
 	}
 
-	object importExportedJobResults(std::string job_log)
+	object importExportedJobResults(std::string import_dir)
 	{
 		DCSchedd schedd(m_addr.c_str());
 		ClassAd *result = NULL;
 		CondorError errstack;
 		{
 			condor::ModuleLock ml;
-			result = schedd.importExportedJobResults(job_log.c_str(), &errstack);
+			result = schedd.importExportedJobResults(import_dir.c_str(), &errstack);
 		}
 		// TODO: throw if export fails (as indicated by no result ad or "Error" in the result ad)
 
@@ -4358,11 +4358,11 @@ void export_schedd()
             R"C0ND0R(
             Import results from previously exported jobs, and take those jobs back out of the externally managed state.
 
-            :param str job_log: The path to the job_queue.log file from the external schedd that has the completed jobs.
+            :param str import_dir: The path to the modified form of a previously-exported direcory.
             :return: A ClassAd containing information about the import operation.
             :rtype: :class:`~classad.ClassAd`
             )C0ND0R",
-            boost::python::args("self", "job_log"))
+            boost::python::args("self", "import_dir"))
         .def("reschedule", &Schedd::reschedule,
             R"C0ND0R(
             Send reschedule command to the schedd.

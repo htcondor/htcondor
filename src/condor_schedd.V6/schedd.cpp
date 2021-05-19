@@ -17904,12 +17904,15 @@ Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 
 
 bool
-Scheduler::ImportExportedJobResults(ClassAd & result, const char * job_log_file)
+Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir)
 {
-	dprintf(D_ALWAYS,"ImportExportedJobResults(%s)\n", job_log_file);
+	dprintf(D_ALWAYS,"ImportExportedJobResults(%s)\n", import_dir);
+
+	std::string import_job_log;
+	formatstr(import_job_log, "%s/job_queue.log", import_dir);
 
 	// Load the external job_log
-	GenericClassAdCollection<JobQueueKey, ClassAd*> import_queue(new ConstructClassAdLogTableEntry<ClassAd>(), job_log_file, 0);
+	GenericClassAdCollection<JobQueueKey, ClassAd*> import_queue(new ConstructClassAdLogTableEntry<ClassAd>(), import_job_log.c_str(), 0);
 	// close the log file and disable changes
 	import_queue.StopLog();
 
@@ -18030,16 +18033,16 @@ Scheduler::import_exported_job_results_handler(int /*cmd*/, Stream *stream)
 		return FALSE;
 	}
 
-	std::string import_job_log;     // where to write the exported job queue and other files
-	if ( ! reqAd.LookupString("Log", import_job_log) || import_job_log.empty())
+	std::string import_dir;     // directory containing the modified job queue and other files from previous export
+	if ( ! reqAd.LookupString("ExportDir", import_dir) || import_dir.empty())
 	{
 		resultAd.Assign("Reason", "Invalid arguments");
 		resultAd.Assign("Error", true);
 	}
 	else 
 	{
-		dprintf(D_ALWAYS,"Calling ImportExportedJobResults(%s)\n", import_job_log.c_str());
-		if ( ! ImportExportedJobResults(resultAd, import_job_log.c_str())) {
+		dprintf(D_ALWAYS,"Calling ImportExportedJobResults(%s)\n", import_dir.c_str());
+		if ( ! ImportExportedJobResults(resultAd, import_dir.c_str())) {
 			resultAd.Assign("Error", true);
 		}
 	}

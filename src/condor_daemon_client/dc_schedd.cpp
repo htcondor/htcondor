@@ -412,13 +412,13 @@ DCSchedd::exportJobs(const char * constraint_str, const char * export_dir, const
 			@param exported_job_log path to the exported job_queue.log
 	*/
 ClassAd* 
-DCSchedd::importExportedJobResults(const char * exported_job_log, CondorError * errstack)
+DCSchedd::importExportedJobResults(const char * import_dir, CondorError * errstack)
 {
-	if( ! exported_job_log) {
-		dprintf( D_ALWAYS, "DCSchedd::importExportedJobResults: path to job log is NULL, aborting\n" );
+	if( ! import_dir) {
+		dprintf( D_ALWAYS, "DCSchedd::importExportedJobResults: exported directory path is NULL, aborting\n" );
 		if (errstack) {
 			errstack->push("DCSchedd::importExportedJobResults", SCHEDD_ERR_MISSING_ARGUMENT,
-			              " path to job log is missing");
+			              " exported directory path is missing");
 		}
 		return NULL;
 	}
@@ -426,7 +426,7 @@ DCSchedd::importExportedJobResults(const char * exported_job_log, CondorError * 
 	ReliSock rsock;
 
 	ClassAd cmd_ad;
-	cmd_ad.Assign("Log", exported_job_log);
+	cmd_ad.Assign("ExportDir", import_dir);
 
 	rsock.timeout(20);   // years of research... :)
 	if ( ! rsock.connect(_addr)) {
