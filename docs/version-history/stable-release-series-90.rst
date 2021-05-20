@@ -35,22 +35,22 @@ Release Notes:
 - HTCondor version 9.0.1 released on May 17, 2021.
 
 - The installer for Windows will now replace the ``condor_config``
-  file even on an update.  You must use condor_config.local or
-  a configuration directory to customize the config if you wish
+  file even on an update.  You must use ``condor_config.local`` or
+  a configuration directory to customize the configuration if you wish
   to preserve configuration changes across updates.
 
 Known Issues:
 
-- The is a known issue with installer for Windows where it does
+- There is a known issue with the installer for Windows where it does
   not honor the Administrator Access list set in the MSI permissions
-  dialog on a fresh install.  Instead is will always set the
+  dialog on a fresh install.  Instead it will always set the
   Administrator access to the default value.
 
 - MUNGE security is temporarily broken.
 
 New Features:
 
-- Windows MSI installer now sets up user-based authentication and creates 
+- The Windows MSI installer now sets up user-based authentication and creates 
   an IDTOKEN for local administration.
   :jira:`407`
 
@@ -91,7 +91,7 @@ Bugs Fixed:
   :jira:`434`
 
 - Fixed a bug in the way ``AutoClusterAttrs`` was calculated that could
-  in matchmaking ignoring attributes changed by ``job_machine_attrs``.
+  cause matchmaking to ignore attributes changed by ``job_machine_attrs``.
   :jira:`414`
 
 - Fixed a bug in the implementation of the submit commands ``max_retries``
