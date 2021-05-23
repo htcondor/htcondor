@@ -2359,6 +2359,22 @@ class DaemonCore : public Service
 	void InitSharedPort(bool in_init_dc_command_socket=false);
 
 	std::string m_inherit_parent_sinful;
+
+		// Create a session that permits a remote entity to be an administrator
+		// of this daemon.
+		// - duration: Lifetime of the session.
+		// - capability (output): Resulting serialized session string.
+		// - Return: true on success.
+	bool SetupAdministratorSession(unsigned duration, std::string &capability);
+
+		// Enable remote administration for this daemon.
+	void SetRemoteAdmin(bool remote_admin);
+
+	static unsigned m_remote_admin_seq;
+	static time_t m_startup_time;
+	bool m_enable_remote_admin{false};
+	time_t m_remote_admin_last_time{0};
+	std::string m_remote_admin_last;
 };
 
 /**

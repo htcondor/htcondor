@@ -938,6 +938,12 @@ type=string
 usage=Restrict what authorizations can be enabled with impersonation toekns.
 tags=schedd
 
+[SEC_ENABLE_REMOTE_ADMINISTRATION]
+default=false
+type=bool
+tags=master
+usage=Set to true to allow the collector administrator(s) to manage the daemon
+
 [DELEGATE_JOB_GSI_CREDENTIALS]
 default=true
 type=bool

@@ -3135,7 +3135,8 @@ SecMan::IsAuthenticationSufficient(DCpermission perm, const Sock &sock, CondorEr
 	}
 
 	auto sec_integrity = sec_req_param("SEC_%s_INTEGRITY", perm, SEC_REQ_OPTIONAL);
-	if (sec_integrity == SEC_REQ_REQUIRED && !sock.isOutgoing_Hash_on()) {
+		// Note: mustEncrypt implies AES encryption which technically disables "condor" level integrity.
+	if (sec_integrity == SEC_REQ_REQUIRED && !(sock.isOutgoing_Hash_on() || sock.mustEncrypt())) {
 		err.push("SECMAN", 78, "Integrity is required for this authorization but it is not enabled");
 		return false;
 	}
