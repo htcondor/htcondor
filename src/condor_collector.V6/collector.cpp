@@ -851,13 +851,15 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		// trust it to handle our capabilities.
 	bool filter_private_ads = true;
 	auto *verinfo = sock->get_peer_version();
-	if (verinfo && verinfo->built_since_version(8, 9, 3)) {
-		auto addr = static_cast<ReliSock*>(sock)->peer_addr();
-			// Given failure here is non-fatal, do not log at D_ALWAYS.
-		if (static_cast<Sock*>(sock)->isAuthorizationInBoundingSet("NEGOTIATOR") &&
-			(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", NEGOTIATOR, addr, static_cast<ReliSock*>(sock)->getFullyQualifiedUser(), D_SECURITY|D_FULLDEBUG))) {
-			filter_private_ads = false;
-		}
+	if (verinfo && verinfo->built_since_version(8, 9, 3) &&
+		(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", NEGOTIATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
+	{
+		filter_private_ads = false;
+	}
+	if (verinfo && verinfo->built_since_version(9, 1, 1) &&
+		(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", ADMINISTRATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
+	{
+		filter_private_ads = false;
 	}
 
 	// Pull out relavent state from query_entry
