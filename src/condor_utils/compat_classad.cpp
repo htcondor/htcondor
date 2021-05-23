@@ -1769,10 +1769,22 @@ int CondorClassAdListWriter::writeFooter(FILE* out, bool xml_always_write_header
 
 
 bool
-ClassAdAttributeIsPrivate( const std::string &name )
+ClassAdAttributeIsPrivateV1( const std::string &name )
 {
 	return ClassAdPrivateAttrs.find(name) != ClassAdPrivateAttrs.end();
 }
+
+
+bool
+ClassAdAttributeIsPrivateV2( const std::string &name )
+{
+	return (strncasecmp(name.c_str(), "_condor_priv", 12) == 0) || (ClassAdPrivateAttrs.find(name) != ClassAdPrivateAttrs.end());
+}
+
+
+bool
+ClassAdAttributeIsPrivateAny( const std::string &name ) {return ClassAdAttributeIsPrivateV1(name) || ClassAdAttributeIsPrivateV2(name);}
+
 
 int
 EvalAttr( const char *name, classad::ClassAd *my, classad::ClassAd *target, classad::Value & value)
@@ -2095,7 +2107,7 @@ _sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, S
 				continue; // attribute exists in child ad; we will print it below
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first ) ) {
+				 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 				value = "";
 				unp.Unparse( value, itr->second );
 				// output.formatstr_cat( "%s = %s\n", itr->first.c_str(), value.c_str() );
@@ -2109,7 +2121,7 @@ _sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, S
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first ) ) {
+			 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 			value = "";
 			unp.Unparse( value, itr->second );
 			// output.formatstr_cat( "%s = %s\n", itr->first.c_str(), value.c_str() );
@@ -2167,7 +2179,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first ) ) {
+			 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 			attrs.insert(itr->first);
 		}
 	}
@@ -2182,7 +2194,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 				continue; // not in white-list
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first ) ) {
+				 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 				attrs.insert(itr->first);
 			}
 		}

@@ -6453,7 +6453,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 	{
 		name = itr->c_str();
 		expr = ad->LookupExpr(name);
-		if(expr && !ClassAdAttributeIsPrivate(name))
+		if(expr && !ClassAdAttributeIsPrivateAny(name))
 		{
 			if(!JobQueue->LookupInTransaction(key, name, val) )
 			{
