@@ -127,7 +127,7 @@ list()
 }
 
 # grid_resource = batch queue name@host
-# SUBMIT_EXPRS = grid_resource
+# SUBMIT_ATTRS = grid_resource
 # no reconfig needed because only condor_submit using it, no daemon
 set_bosco_routing () {
     # $1 file to write the routing info into
@@ -148,7 +148,7 @@ set_bosco_routing () {
         cat > $dest_file << EOF 
 # Specifying a default grid_resource doesn't work in HTCondor 8.4.7+/8.5.5+
 #grid_resource = $grid_res
-#SUBMIT_EXPRS = grid_resource
+#SUBMIT_ATTRS = grid_resource
 EOF
     fi
 }

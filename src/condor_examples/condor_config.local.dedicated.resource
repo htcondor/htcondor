@@ -126,4 +126,4 @@ CONDOR_SSH_KEYGEN = /usr/bin/ssh-keygen
 ##  (and you) can identify which machines are configured as dedicated
 ##  resources.
 ##  Note: as of 8.4.1 this setting is automatic
-#STARTD_EXPRS = $(STARTD_EXPRS), DedicatedScheduler
+#STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
