@@ -2628,7 +2628,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 							dprintf(D_FULLDEBUG, "DoDownload: Failed to evaluate list entry to string.\n");
 							signed_urls.emplace_back("");
 						}
-						else if (sign_s3_urls && url_value.substr(0, 5) == "s3://")
+						else if (sign_s3_urls &&
+						  (url_value.substr(0, 5) == "s3://" || url_value.substr(0, 5) == "gs://"))
 						{
 							bool has_good_prefix = false;
 							for (const auto &prefix : output_url_prefixes) {
@@ -3870,13 +3871,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					local_output_url = remap_filename.c_str();
 				}
 			}
-			if (sign_s3_urls && local_output_url.substr(0, 5) == "s3://") {
+			if (sign_s3_urls &&
+			  (local_output_url.substr(0, 5) == "s3://" || local_output_url.substr(0, 5) == "gs://")) {
 				s3_urls_to_sign.push_back(local_output_url);
 			}
 			fileitem.setDestUrl(local_output_url);
 		}
 		const std::string &src_url = fileitem.srcName();
-		if (sign_s3_urls && fileitem.isSrcUrl() && (fileitem.srcScheme() == "s3")) {
+		if (sign_s3_urls && fileitem.isSrcUrl() && (fileitem.srcScheme() == "s3" || fileitem.srcScheme() == "gs")) {
 			std::string new_src_url = "https://" + src_url.substr(5);
 			dprintf(D_FULLDEBUG, "DoUpload: Will sign %s for remote transfer.\n", src_url.c_str());
 			std::string signed_url;
@@ -5956,7 +5958,7 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 		}
 		if( I_support_S3 ) {
 			// method_list must contain at least "https".
-			method_list += ",s3";
+			method_list += ",s3,gs";
 		}
 	}
 	return method_list;

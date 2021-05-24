@@ -6366,17 +6366,18 @@ int SubmitHash::SetRequirements()
 					answer += *it;
 					answer += "\",TARGET.HasFileTransferPluginMethods)";
 
-					if( presignS3URLs && (strcasecmp( it->c_str(), "s3" ) == 0) ) {
+					if( presignS3URLs &&
+					  (strcasecmp( it->c_str(), "s3" ) == 0 || strcasecmp( it->c_str(), "gs" ) == 0) ) {
 						bool present = true;
 						if(! job->Lookup( ATTR_EC2_ACCESS_KEY_ID )) {
 							present = false;
-							push_error(stderr, "s3:// URLs require "
+							push_error(stderr, "[s3|gs]:// URLs require "
 								"[s3|aws|gs]_access_key_id_file"
 								" to be set.\n" );
 						}
 						if(! job->Lookup( ATTR_EC2_SECRET_ACCESS_KEY )) {
 							present = false;
-							push_error(stderr, "s3:// URLS require "
+							push_error(stderr, "[s3|gs]:// URLS require "
 								"[s3|aws|gs]_secret_access_key_file"
 								" to be set.\n" );
 						}
