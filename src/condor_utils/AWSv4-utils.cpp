@@ -247,13 +247,9 @@ generate_presigned_url( const std::string & accessKeyID,
     // Convert gs:// URLs to the equivalent s3:// URLs.
     //
     std::string theURL = s3url;
-    if( starts_with( s3url, "gs://" ) ) {
-        size_t protocolLength = 5; // strlen("gs://")
-        size_t middle = s3url.find( "/", protocolLength );
-        std::string bucket = s3url.substr( protocolLength, middle - protocolLength );
-        std::string key = s3url.substr( middle + 1 );
-
-        formatstr( theURL, "s3://storage.googleapis.com/%s/%s", bucket.c_str(), key.c_str() );
+    if( starts_with_ignore_case( s3url, "gs://" ) ) {
+        std::string bucket_and_key = s3url.substr(5 /* strlen( "gs://") */ );
+        formatstr( theURL, "s3://storage.googleapis.com/%s", bucket_and_key.c_str() );
     }
 
     // If the named bucket isn't valid as part of a DNS name,
@@ -262,7 +258,7 @@ generate_presigned_url( const std::string & accessKeyID,
 
     // Extract the S3 bucket and key from the S3 URL.
     std::string bucket, key;
-    if(! starts_with( theURL, "s3://" )) {
+    if(! starts_with_ignore_case( theURL, "s3://" )) {
         err.push( "AWS SigV4", 1, "an S3 URL must begin with s3://" );
         return false;
     }
