@@ -30,7 +30,7 @@ Repository packages are available for each platform:
 * `CentOS 8 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el8.noarch.rpm>`_
 * `Amazon Linux 2 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.amzn2.noarch.rpm>`_
 
-The HTCondor packages on these platforms depends on the corresponding
+The HTCondor packages on these platforms depend on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
 
 Additionally, the following repositories are required for specific platforms:
