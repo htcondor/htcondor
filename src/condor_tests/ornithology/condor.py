@@ -41,6 +41,8 @@ DEFAULT_PARAMS = {
     "MASTER_ADDRESS_FILE": "$(LOG)/.master_address",
     "COLLECTOR_ADDRESS_FILE": "$(LOG)/.collector_address",
     "SCHEDD_ADDRESS_FILE": "$(LOG)/.schedd_address",
+    "MAIL": "/bin/true",
+    "SENDMAIL": "/bin/true",
     "UPDATE_INTERVAL": "2",
     "POLLING_INTERVAL": "2",
     "NEGOTIATOR_INTERVAL": "2",
