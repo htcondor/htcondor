@@ -55,8 +55,8 @@ void Usage(const char* name, int iExitCode)
 	printf ("Usage: %s [source] [restriction-list] [options]\n"
 		"\n   where [source] is one of\n"
 		"\t-file <file>\t\tRead history data from specified file\n"
-		"\t-local\t\tRead history data from the configured files\n"
-		"\t-startd\t\tRead history data for the Startd\n"
+		"\t-local\t\t\tRead history data from the configured files\n"
+		"\t-startd\t\t\tRead history data for the Startd\n"
 		"\t-userlog <file>\t\tRead job data specified userlog file\n"
 		"\t-name <schedd-name>\tRemote schedd to read from\n"
 		"\t-pool <collector-name>\tPool remote schedd lives in.\n"
@@ -84,7 +84,7 @@ void Usage(const char* name, int iExitCode)
 		"\t-json\t\t\tDisplay classads in JSON format\n"
 		"\t-jsonl\t\t\tDisplay classads in JSON-Lines format: one ad per line\n"
 		"\t-attributes <attr-list>\tDisplay only the given attributes\n"
-		"\t-wide[:<width>]\tcon\tDon't truncate fields to fit into 80 columns\n"
+		"\t-wide[:<width>]\t\tDon't truncate fields to fit into 80 columns\n"
 		"\t-format <fmt> <attr>\tDisplay attr using printf formatting\n"
 		"\t-autoformat[:jlhVr,tng] <attr> [<attr2> [...]]\n"
 		"\t-af[:jlhVr,tng] <attr> [attr2 [...]]\n"
@@ -102,7 +102,6 @@ void Usage(const char* name, int iExitCode)
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
 		"\t-print-format <file>\tUse <file> to specify the attributes and formatting\n"
-		"\t\t\t\t(experimental, see htcondor-wiki for more information)\n"
 		, name);
   exit(iExitCode);
 }
