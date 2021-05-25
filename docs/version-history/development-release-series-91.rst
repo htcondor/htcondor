@@ -30,6 +30,18 @@ New Features:
   *DOCKER_RUN_UNDER_INIT* = false
   :jira:`462`
 
+- Many services support the "S3" protocol.  To reduce confusion, we've
+  added new aliases for the submit-file commands ``aws_access_key_id_file``
+  and ``aws_secret_access_key_file``: ``s3_access_key_id_file`` and
+  ``s3_secret_access_key_file``.  We also added support for ``gs://``-style
+  Google Cloud Storage URLs, with the corresponding ``gs_access_key_id_file``
+  and ``gs_secret_access_key_file`` aliases.  This support, and the aliases,
+  use Google Cloud Storage's "interopability" API.  The HMAC access key ID
+  and secret keys may be obtained from the Google Cloud web console's
+  "Cloud Storage" section, the "Settings" menu item, under the
+  "interoperability" tab.
+  :jira:`453`
+
 Bugs Fixed:
 
 - None.
