@@ -29,7 +29,7 @@ the ``get_htcondor`` tool does and provides a link to the rest of the details.
     you've made.
 
     We don't recommend trying to add a machine configured as a "mini"
-    HTCondor to pool, or trying to add execute machines to an existing
+    HTCondor to the pool, or trying to add execute machines to an existing
     "mini" HTCondor pool.  We also don't recommend creating an entire
     pool out of unprivileged installations.
 
