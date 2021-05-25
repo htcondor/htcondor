@@ -56,7 +56,7 @@ with ``apt-key add`` before adding the repositories below.
 * Debian 9: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/current stretch main``
 * Debian 10: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/current buster main``
 
-Ubuntu 16.04, 18.04, and 20.04
+Ubuntu 18.04 and 20.04
 ##############################
 
 Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-current-Key>`_
