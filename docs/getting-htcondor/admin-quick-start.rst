@@ -188,14 +188,14 @@ may not be behaving precisely as you wish, particularly with respect to
 resource allocation.  You can tune how HTCondor allocates resource to
 users, or groups of users, using the user priority and group quota systems,
 described in :doc:`../admin-manual/user-priorities-negotiation`.  You
-can enforce machine-speficic policies -- for instance, preferring GPU jobs
+can enforce machine-specific policies -- for instance, preferring GPU jobs
 on machines with GPUs -- using the options described in
 :doc:`../admin-manual/policy-configuration`.
 
 .. rubric:: Further Reading
 
 * It may be helpful to at least skim the :doc:`../users-manual/index` to get
-  an idea of what yours users might want or expect, particularly the
+  an idea of what your users might want or expect, particularly the
   sections on :doc:`../users-manual/dagman-workflows`,
   :doc:`../users-manual/choosing-an-htcondor-universe`, and
   :doc:`../users-manual/self-checkpointing-applications`.
