@@ -53,5 +53,5 @@ ranking resource offer ads with resource request ads, making certain
 that all requirements in both ads are satisfied. During this
 match-making process, HTCondor also considers several layers of priority
 values: the priority the user assigned to the resource request ad, the
-priority of the user which submitted the ad, and desire of machines in
+priority of the user which submitted the ad, and the desire of machines in
 the pool to accept certain types of ads over others.
