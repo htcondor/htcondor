@@ -42,5 +42,5 @@ but because of distributed ownership,
 groups have not been able to capitalize on the aggregate institutional
 computing power. And, while distributed ownership is more convenient
 for the users, the utilization of the computing power is lower. Many
-machines sit idle for very long periods of time while their owners 
-are have no work for the machines to do.
+machines sit idle for very long periods of time while their owners
+have no work for the machines to do.
