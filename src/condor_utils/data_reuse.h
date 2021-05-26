@@ -22,7 +22,6 @@
 
 #include "read_user_log.h"
 #include "write_user_log.h"
-#include "MyString.h"
 
 #include <memory>
 #include <string>

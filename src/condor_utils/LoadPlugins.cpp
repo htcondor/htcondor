@@ -61,7 +61,7 @@ LoadPlugins()
 	const char *error;
 	StringList plugins;
 	char *plugin_files;
-	MyString plugin_dir;
+	std::string plugin_dir;
 	const char *plugin_file;
 
 		// Only initialize once /*, except for when we are force'd.*/
