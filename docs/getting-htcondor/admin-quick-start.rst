@@ -11,11 +11,11 @@ jobs.
 This guide begins by briefly describing the three roles required by every
 HTCondor pool, as well as the resources and networking required by each
 of those roles.  This information will enable you to choose which machine(s)
-will perform which role(s).  This guide also include instructions on how to
+will perform which role(s).  This guide also includes instructions on how to
 use the ``get_htcondor`` tool to install and configure Linux (or Mac) machines
 to perform each of the roles.
 
-If you're curious, using Windows machines, or you want to to automate the
+If you're curious, using Windows machines, or you want to automate the
 configuration of their pool using a tool like Puppet, the
 :ref:`last section <the_details>` of this guide briefly describes what
 the ``get_htcondor`` tool does and provides a link to the rest of the details.
@@ -29,7 +29,7 @@ the ``get_htcondor`` tool does and provides a link to the rest of the details.
     you've made.
 
     We don't recommend trying to add a machine configured as a "mini"
-    HTCondor to pool, or trying to add execute machines to an existing
+    HTCondor to the pool, or trying to add execute machines to an existing
     "mini" HTCondor pool.  We also don't recommend creating an entire
     pool out of unprivileged installations.
 
@@ -70,7 +70,7 @@ of an execute machine.)  HTCondor allows arbitrarily many submit roles in a
 pool, but for administrative convenience, most pools only have one, or a
 small number, of machines acting in the submit role.
 
-A submit-role machine requires a bit under of a megabyte of RAM for each
+A submit-role machine requires a bit under a megabyte of RAM for each
 running job, and its ability to transfer data to and from the execute-role
 machines may become a performance bottleneck.  We typically recommend adding
 another submit machine for every twenty thousand simultaneously running
@@ -166,7 +166,7 @@ them, a warning.
     that you don't make changes to the configuration files established by the
     installation procedure; this avoids conflicts between your changes and any
     changes we may have to make to the base configuration in future
-    updates.  Instead, you should add (or edit) files in configuration
+    updates.  Instead, you should add (or edit) files in the configuration
     directory; its location can be determined on a given machine by running
     ``condor_config_val LOCAL_CONFIG_DIR`` there.  HTCondor will process files
     in this directory in lexicographic order, so we recommend naming files
@@ -187,17 +187,17 @@ enabled by default.  Areas of potentially general interest include:
 
 Although your HTCondor pool should be fully functional at this point, it
 may not be behaving precisely as you wish, particularly with respect to
-resource allocation.  You can tune how HTCondor allocates resource to
+resource allocation.  You can tune how HTCondor allocates resources to
 users, or groups of users, using the user priority and group quota systems,
 described in :doc:`../admin-manual/user-priorities-negotiation`.  You
-can enforce machine-speficic policies -- for instance, preferring GPU jobs
+can enforce machine-specific policies -- for instance, preferring GPU jobs
 on machines with GPUs -- using the options described in
 :doc:`../admin-manual/policy-configuration`.
 
 .. rubric:: Further Reading
 
 * It may be helpful to at least skim the :doc:`../users-manual/index` to get
-  an idea of what yours users might want or expect, particularly the
+  an idea of what your users might want or expect, particularly the
   sections on :doc:`../users-manual/dagman-workflows`,
   :doc:`../users-manual/choosing-an-htcondor-universe`, and
   :doc:`../users-manual/self-checkpointing-applications`.
@@ -221,7 +221,7 @@ only two lines long:
 
 * set the HTCondor configuration variable ``CONDOR_HOST`` to the name
   (or IP address) of your central manager;
-* add the appopriate metaknob: ``use role : get_htcondor_central_manager``,
+* add the appropriate metaknob: ``use role : get_htcondor_central_manager``,
   ``use role : get_htcondor_submit``, or ``use role : get_htcondor_execute``.
 
 Putting all of the pool-independent configuration into the metaknobs allows
@@ -229,4 +229,4 @@ us to change the metaknobs to fix problems or work with later versions of
 HTCondor as you upgrade.
 
 The ``get_htcondor`` :doc:`documentation <../man-pages/get_htcondor>`
-describes what the configuration and how to determine the exact details.
+describes what the configuration script does and how to determine the exact details.
