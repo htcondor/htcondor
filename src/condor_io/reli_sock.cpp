@@ -1489,8 +1489,7 @@ ReliSock::serialize(const char *buf)
 
         citems = sscanf(ptmp, "%d*", &len);
 
-        if (1 == citems && len > 0) {
-            ptmp = strchr(ptmp, '*');
+        if (1 == citems && len > 0 && (ptmp = strchr(ptmp, '*'))) {
             ptmp++;
             memcpy(fqu, ptmp, len);
             if ((fqu[0] != ' ') && (fqu[0] != '\0')) {
