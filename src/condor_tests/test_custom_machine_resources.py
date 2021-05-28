@@ -358,6 +358,8 @@ def condor(test_dir, slot_config, discovery_script, monitor_script):
     write_file(test_dir / "discovery.py", discovery_script)
     write_file(test_dir / "monitor.py", monitor_script)
 
+    assert(False)
+
     with Condor(
         local_dir=test_dir / "condor",
         config={**slot_config, "TEST_DIR": test_dir.as_posix()},
@@ -374,7 +376,7 @@ def handle(test_dir, condor, num_resources, the_job):
 
     # we must wait for both the handle and the job queue here,
     # because we want to use both later
-    assert(handle.wait(verbose=True))
+    assert(handle.wait(verbose=True, timeout=180))
     assert(condor.job_queue.wait_for_job_completion(handle.job_ids))
 
     yield handle
