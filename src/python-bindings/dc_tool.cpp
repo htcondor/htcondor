@@ -164,7 +164,7 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     sock.close();
 }
 
-bool get_family_session(std::string sess)
+bool get_family_session(std::string & sess)
 {
 	sess.empty();
 	char *ptmp;
