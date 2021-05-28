@@ -116,25 +116,27 @@ In the command lines below, replace ``$central_manager_name`` with the host
 name or IP address you want to use.
 
 When you :doc:`get HTCondor <index>`, start with the central manager, then add
-the submit machine(s), and then add the execute machine(s).
+the submit machine(s), and then add the execute machine(s).  You may
+not have ``sudo`` installed; you may omit it from the command lines below
+if you run them as root.
 
 .. rubric:: Central Manager
 
 .. code-block:: shell
 
-    sudo curl -fsSL https://get.htcondor.org | GET_HTCONDOR_PASSWORD=$htcondor_password /bin/bash -s -- --no-dry-run --central-manager $central_manager_name
+    curl -fsSL https://get.htcondor.org | GET_HTCONDOR_PASSWORD="$htcondor_password" sudo /bin/bash -s -- --no-dry-run --central-manager $central_manager_name
 
 .. rubric:: Submit
 
 .. code-block:: shell
 
-    sudo curl -fsSL https://get.htcondor.org | GET_HTCONDOR_PASSWORD=$htcondor_password /bin/bash -s -- --no-dry-run --submit $central_manager_name
+    curl -fsSL https://get.htcondor.org | GET_HTCONDOR_PASSWORD="$htcondor_password" sudo /bin/bash -s -- --no-dry-run --submit $central_manager_name
 
 .. rubric:: Execute
 
 .. code-block:: shell
 
-    sudo curl -fsSL https://get.htcondor.org | GET_HTCONDOR_PASSWORD=$htcondor_password /bin/bash -s -- --no-dry-run --execute $central_manager_name
+    curl -fsSL https://get.htcondor.org | GET_HTCONDOR_PASSWORD="$htcondor_password" sudo /bin/bash -s -- --no-dry-run --execute $central_manager_name
 
 At this point, users logged in on the submit machine should be able to see
 execute machines in the pool (using ``condor_status``), submit jobs
