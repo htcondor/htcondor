@@ -389,7 +389,7 @@ dev_idle_time( const char *path, time_t now )
 		return now;
 	}
 
-	strcpy( &pathname[5], path );
+	strncat( pathname, path, sizeof(pathname)-6 );
 	if ( null_major_device == -1 ) {
 		// get the major device number of /dev/null so
 		// we can ignore any device that shares that
