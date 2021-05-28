@@ -2643,7 +2643,8 @@ Sock::my_ip_str() const
 {
 	if (!_my_ip_buf[0]) {
 		std::string ip_str = my_addr().to_ip_string();
-		strcpy(_my_ip_buf, ip_str.c_str());
+		strncpy(_my_ip_buf, ip_str.c_str(), sizeof(_my_ip_buf));
+		_my_ip_buf[sizeof(_my_ip_buf)-1] = '\0';
 	}
 	return _my_ip_buf;
 }
