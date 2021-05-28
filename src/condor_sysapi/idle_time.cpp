@@ -379,7 +379,7 @@ dev_idle_time( const char *path, time_t now )
 {
 	struct stat	buf;
 	time_t answer;
-	static char pathname[100] = "/dev/";
+	char pathname[100] = "/dev/";
 	static int null_major_device = -1;
 
 	if ( !path || path[0]=='\0' ||
