@@ -11,16 +11,16 @@ Synopsis
 **condor_history** [**-help** ]
 
 **condor_history** [**-name** *name*]
-[**-pool** *centralmanagerhostname[:portnumber]*] [**-backwards** ]
-[**-forwards** ] [**-constraint** *expr*] [**-file** *filename*]
+[**-pool** *centralmanagerhostname[:portnumber]*] [**-backwards**]
+[**-forwards**] [**-constraint** *expr*] [**-file** *filename*]
 [**-local**] [**-startd**] [**-userlog** *filename*]
 [**-format** *formatString AttributeName*]
 [**-autoformat[:jlhVr,tng]** *attr1 [attr2 ...]*]
-[**-l | -long | -xml | -json | -jsonl** ] [**-match | -limit** *number*]
+[**-l | -long | -xml | -json | -jsonl**] [**-match | -limit** *number*]
 [**-attributes** *attr1[,attr2...]*]
 [**-print-format** *file* ] [**-wide**]
 [**-since** *time_or_jobid* ] [**-completedsince** *time_expr*] [**-scanlimit** *number*]
-[**cluster | cluster.process | owner** ]
+[**cluster | cluster.process | owner**]
 
 Description
 -----------
