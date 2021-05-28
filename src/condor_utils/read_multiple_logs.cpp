@@ -388,6 +388,8 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 		*/
 	memset(psBuf,0,iLength+1);
 	int ret = fread(psBuf, 1, iLength, pFile);
+	psBuf[iLength] = '\0'; // static analysis doesn't know memset?
+
 	if (ret == 0) {
 		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
 				"fread failed with errno %d (%s)\n", 
