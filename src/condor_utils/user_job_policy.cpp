@@ -613,11 +613,12 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(ClassAd & ad, const char * attrname
 			ExprTreeToString(expr, m_fire_unparsed_expr);
 
 			// temp buffer for building _SUBCODE and _REASON param names.
-			char param_sub[sizeof("SYSTEM_PERIODIC_RELEASE_SUBCODE")+10];
+			std::string param_sub;
 
 			std::string expr_string;
-			strcpy(param_sub, policy_name); strcat(param_sub, "_SUBCODE");
-			if (param(expr_string, param_sub, "") && ! expr_string.empty()) {
+			param_sub = policy_name;
+			param_sub += "_SUBCODE";
+			if (param(expr_string, param_sub.c_str(), "") && ! expr_string.empty()) {
 				long long ival;
 				classad::Value val;
 				if (ad.EvaluateExpr(expr_string, val) && val.IsNumber(ival)) {
@@ -625,8 +626,9 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(ClassAd & ad, const char * attrname
 				}
 			}
 
-			strcpy(param_sub, policy_name); strcat(param_sub, "_REASON");
-			if (param(expr_string, param_sub, "") && ! expr_string.empty()) {
+			param_sub = policy_name;
+			param_sub += "_REASON";
+			if (param(expr_string, param_sub.c_str(), "") && ! expr_string.empty()) {
 				classad::Value val;
 				if (ad.EvaluateExpr(expr_string, val) && val.IsStringValue(m_fire_reason)) {
 					// val.IsStringValue will have already set m_fire_reason
