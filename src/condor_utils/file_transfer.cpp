@@ -3996,7 +3996,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 	std::unordered_map<std::string, std::string> s3_url_map;
 	if (!s3_urls_to_sign.empty()) {
-		dprintf(D_FULLDEBUG, "DoUpload: Requesting %lu URLs to sign.\n", s3_urls_to_sign.size());
+		dprintf(D_FULLDEBUG, "DoUpload: Requesting %zu URLs to sign.\n", s3_urls_to_sign.size());
 
 			// Indicate a ClassAd-based command.
 		if (!s->snd_int(static_cast<int>(TransferCommand::Other), false) || !s->end_of_message()) {

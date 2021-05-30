@@ -1982,7 +1982,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				updates++;
 			}
 		}
-		dprintf(D_FULLDEBUG, "Finished restoring JobSet state, mapping %u jobs into %lu sets\n",
+		dprintf(D_FULLDEBUG, "Finished restoring JobSet state, mapping %u jobs into %zu sets\n",
 			updates, scheduler.jobSets->count());
 	}
 

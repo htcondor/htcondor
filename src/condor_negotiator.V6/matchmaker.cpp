@@ -3051,7 +3051,7 @@ obtainAdsFromCollector (
 
 	MakeClaimIdHash(startdPvtAdList,claimIds);
 
-	dprintf(D_ALWAYS, "Got ads: %d public and %lu private\n",
+	dprintf(D_ALWAYS, "Got ads: %d public and %zu private\n",
 	        allAds.MyLength(),claimIds.size());
 
 	dprintf(D_ALWAYS, "Public ads include %d submitter, %d startd\n",
@@ -4993,7 +4993,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 			all_claim_ids += " ";
 			all_claim_ids += extraClaims;
 			size_t numExtraClaims = std::count(extraClaims.begin(), extraClaims.end(), ' ');
-			formatstr(dslotDesc, "%ld dslots", numExtraClaims);
+			formatstr(dslotDesc, "%zu dslots", numExtraClaims);
 			offer->Delete("PreemptDslotClaims");
 		}
 

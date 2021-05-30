@@ -269,7 +269,7 @@ public:
 		}
 
 		auto peer_location = token_request.getPeerLocation();
-		dprintf(D_FULLDEBUG|D_SECURITY, "Evaluating request against %lu rules.\n", m_approval_rules.size());
+		dprintf(D_FULLDEBUG|D_SECURITY, "Evaluating request against %zu rules.\n", m_approval_rules.size());
 		for (auto &rule : m_approval_rules) {
 			if (!rule.m_approval_netblock->find_matches_withnetwork(
 					peer_location.c_str(), nullptr)) {
@@ -415,7 +415,7 @@ private:
 	static void
 	tryTokenRequests() {
 		bool should_reschedule = false;
-		dprintf(D_SECURITY|D_FULLDEBUG, "There are %lu token requests remaining.\n",
+		dprintf(D_SECURITY|D_FULLDEBUG, "There are %zu token requests remaining.\n",
 		m_token_requests.size());
 		for (auto & request : m_token_requests)
 		{
@@ -2455,7 +2455,7 @@ handle_dc_auto_approve_token_request(int, Stream* stream )
 		time_t now = time(NULL);
 		// We otherwise only evaluate each request as it comes in, so we have to
 		// check all of them now if we want to approve ones that came in recently.
-		dprintf(D_SECURITY|D_FULLDEBUG, "Evaluating %lu existing requests for "
+		dprintf(D_SECURITY|D_FULLDEBUG, "Evaluating %zu existing requests for "
 			"auto-approval.\n", g_request_map.size());
 		for (auto &iter : g_request_map) {
 			if (error_code) {break;}

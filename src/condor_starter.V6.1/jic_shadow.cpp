@@ -2930,7 +2930,7 @@ JICShadow::refreshSandboxCredentialsKRB()
 
 	// read entire ccfilename as root into ccbuf
 	if (!read_secure_file(ccfilename, (void**)(&ccbuf), &cclen, true)) {
-		dprintf(D_ALWAYS, "ERROR: read_secure_file(%s,ccbuf,%lu) failed\n", ccfilename, cclen);
+		dprintf(D_ALWAYS, "ERROR: read_secure_file(%s,ccbuf,%zu) failed\n", ccfilename, cclen);
 		rc = false;
 		goto resettimer;
 	}

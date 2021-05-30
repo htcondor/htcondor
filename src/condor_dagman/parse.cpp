@@ -1319,7 +1319,7 @@ parse_parent(
 
 			std::vector<Job*> *splice_initial;
 			splice_initial = splice_dag->InitialRecordedNodes();
-			debug_printf( DEBUG_DEBUG_1, "Adding %lu initial nodes\n", 
+			debug_printf( DEBUG_DEBUG_1, "Adding %zu initial nodes\n", 
 				splice_initial->size());
 
 			// now add each initial node as a child
@@ -2250,7 +2250,7 @@ parse_splice(
 
 	// pop the just pushed value off of the end of the ext array
 	_spliceScope.pop_back();
-	debug_printf(DEBUG_DEBUG_1, "_spliceScope has length %lu\n", _spliceScope.size());
+	debug_printf(DEBUG_DEBUG_1, "_spliceScope has length %zu\n", _spliceScope.size());
 
 	return true;
 }
