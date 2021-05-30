@@ -25,6 +25,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <algorithm>
 #include "classad/classad_containers.h"
 #include "classad/exprTree.h"
 
@@ -38,7 +39,90 @@ typedef std::map<const ClassAd*, References> PortReferences;
 #include "classad/rectangle.h"
 #endif
 
-typedef classad_unordered<std::string, ExprTree*, ClassadAttrNameHash, CaseIgnEqStr> AttrList;
+//typedef classad_unordered<std::string, ExprTree*, ClassadAttrNameHash, CaseIgnEqStr> AttrList;
+class AttrList {
+	public:
+		using keyValue = std::pair<std::string, ExprTree *>;
+		using container = std::vector<keyValue>;
+		using iterator = container::iterator;
+		using const_iterator = container::const_iterator;
+
+		// The iterators
+		iterator begin() { return _theVector.begin(); }
+		const_iterator begin() const { return _theVector.cbegin(); }
+		iterator end() { return _theVector.end(); }
+		const_iterator end() const { return _theVector.cend(); }
+
+		size_t size() const { return _theVector.size();}
+		void rehash(int capacity) { _theVector.reserve(capacity); return;}
+
+		void clear() { _theVector.clear();}
+
+		iterator find(const std::string &key) {
+			iterator lb = std::lower_bound(begin(), end(), key,
+				[&](const std::pair<std::string, ExprTree *> &lhs, const std::string &rhs) {
+					return lhs.first < rhs;	
+				});
+			if (lb != end() && lb->first == key) {
+				return lb;
+			} else  {
+				return end();
+			}
+		}
+
+
+		const_iterator find(const std::string &key) const {
+			const_iterator lb = std::lower_bound(begin(), end(), key,
+				[&](const std::pair<std::string, ExprTree *> &lhs, const std::string &rhs) {
+					return lhs.first < rhs;	
+				});
+			if (lb != end() && lb->first == key) {
+				return lb;
+			} else  {
+				return end();
+			}
+		}
+
+
+		ExprTree *&  operator[](const std::string &key) {
+			iterator lb = std::lower_bound(begin(), end(), key,
+				[&](const std::pair<std::string, ExprTree *> &lhs, const std::string &rhs) {
+					return lhs.first < rhs;	
+				});
+
+			if (lb != end() && lb->first == key) {
+				return lb->second;
+			} else {
+				return _theVector.insert(lb, std::make_pair(key, nullptr))->second;
+			}
+		}
+
+		void erase(const iterator &it) { _theVector.erase(it);}
+		void erase(const std::string &key) { 
+			iterator it = find(key);
+			if (it != _theVector.end()) {
+				_theVector.erase(it);
+			}
+		}
+
+		std::pair<iterator, bool> emplace(const std::string &key, ExprTree *value) {
+			iterator lb = std::lower_bound(begin(), end(), key,
+				[&](const std::pair<std::string, ExprTree *> &lhs, const std::string &rhs) {
+					return lhs.first < rhs;	
+				});
+
+			if (lb != end() && lb->first == key) {
+				return std::make_pair(lb, false);
+			} else {
+				iterator newit = _theVector.insert(lb, std::make_pair(key, value));
+				return std::make_pair(newit, true);
+			}
+		}
+
+	private:
+		container _theVector;
+};
+
 typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch);
