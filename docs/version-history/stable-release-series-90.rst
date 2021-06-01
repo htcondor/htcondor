@@ -19,7 +19,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added support for using an authenticated smtp relay on port 587 to
+  condor_mail.exe on Windows.
+ :jira:`303`
 
 Bugs Fixed:
 
