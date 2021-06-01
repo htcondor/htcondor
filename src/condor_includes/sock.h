@@ -344,7 +344,7 @@ public:
 	char const *get_sinful_public() const;
 
 	/// sinful address of peer in form of "<a.b.c.d:pppp>"
-	char * get_sinful_peer() const;
+	char const * get_sinful_peer() const;
 
 		// Address that was passed to connect().  This is useful in cases
 		// such as CCB or shared port where our peer address is not the
@@ -613,7 +613,7 @@ private:
 	mutable char _peer_ip_buf[IP_STRING_BUF_SIZE];
 
 	// Buffer to hold the sinful address of our peer
-	mutable char _sinful_peer_buf[SINFUL_STRING_BUF_SIZE];
+	mutable std::string _sinful_peer_buf;
 
 	// Buffer to hold the sinful address of ourself
 	mutable std::string _sinful_self_buf;
