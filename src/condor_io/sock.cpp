@@ -2461,7 +2461,7 @@ Sock::addr_changed()
     _peer_ip_buf[0] = '\0';
     _sinful_self_buf.clear();
     _sinful_public_buf.clear();
-    _sinful_peer_buf[0] = '\0';
+    _sinful_peer_buf.clear();
 }
 
 condor_sockaddr
@@ -2670,14 +2670,13 @@ Sock::get_sinful() const
 	return _sinful_self_buf.c_str();
 }
 
-char *
+char const *
 Sock::get_sinful_peer() const
 {       
-	if ( !_sinful_peer_buf[0] ) {
-		MyString sinful_peer = _who.to_sinful();
-		strcpy(_sinful_peer_buf, sinful_peer.c_str());
+	if ( _sinful_peer_buf.empty() ) {
+		_sinful_peer_buf = _who.to_sinful();
 	}
-	return _sinful_peer_buf;
+	return _sinful_peer_buf.c_str();
 }
 
 char const *
