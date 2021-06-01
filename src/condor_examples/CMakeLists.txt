@@ -73,7 +73,6 @@ install (FILES
 	  openmpiscript
 	  mp2script
 	  mp1script
-	  lamscript
 	 DESTINATION ${C_ETC_EXAMPLES}
 	 PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
