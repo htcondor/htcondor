@@ -1176,7 +1176,7 @@ char const *
 Sock::get_sinful_public() const
 {
 		// In case TCP_FORWARDING_HOST changes, do not cache it.
-	MyString tcp_forwarding_host;
+	std::string tcp_forwarding_host;
 	param(tcp_forwarding_host,"TCP_FORWARDING_HOST");
 	if (!tcp_forwarding_host.empty()) {
 		condor_sockaddr addr;

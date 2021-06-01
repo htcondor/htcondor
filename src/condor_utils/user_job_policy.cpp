@@ -647,17 +647,7 @@ const char* UserPolicy::FiringExpression(void)
 	return m_fire_expr;
 }
 
-bool
-UserPolicy::FiringReason(std::string & reason, int & reason_code, int & reason_subcode) {
-    MyString ms;
-    bool rv = FiringReason(ms, reason_code, reason_subcode);
-    // This update is unconditional because the unconditional assignment
-    // in FiringReason(MyString &...) makes it empty.
-    reason = ms;
-    return rv;
-}
-
-bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subcode)
+bool UserPolicy::FiringReason(std::string &reason,int &reason_code,int &reason_subcode)
 {
 	reason_code = 0;
 	reason_subcode = 0;
@@ -714,7 +704,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 	}
 
 	// Format up the reason string
-	reason.formatstr( "The %s %s expression '%s' evaluated to ",
+	formatstr( reason, "The %s %s expression '%s' evaluated to ",
 					expr_src,
 					m_fire_expr,
 					exprString.c_str());

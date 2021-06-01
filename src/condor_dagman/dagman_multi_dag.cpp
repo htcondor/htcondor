@@ -58,7 +58,7 @@ GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bool useDagDir,
 			//
 		const char *	newDagFile;
 		if ( useDagDir ) {
-			MyString	tmpErrMsg;
+			std::string	tmpErrMsg;
 			if ( !dagDir.Cd2TmpDirFile( dagFile, tmpErrMsg ) ) {
 				AppendError( errMsg,
 						MyString("Unable to change to DAG directory ") +
@@ -163,7 +163,7 @@ GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bool useDagDir,
 			//
 			// Go back to our original directory.
 			//
-		MyString	tmpErrMsg;
+		std::string	tmpErrMsg;
 		if ( !dagDir.Cd2MainDir( tmpErrMsg ) ) {
 			AppendError( errMsg,
 					MyString("Unable to change to original directory ") +

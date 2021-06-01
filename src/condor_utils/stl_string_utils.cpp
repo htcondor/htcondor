@@ -179,6 +179,12 @@ bool readLine(std::string& str, FILE *fp, bool append)
 	}
 }
 
+// populate a std::string from any MyStringSource
+//
+bool readLine( std::string &dst, MyStringSource & src, bool append /*= false*/) {
+	return src.readLine(dst, append);
+}
+
 
 bool chomp(std::string &str)
 {

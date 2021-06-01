@@ -195,7 +195,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		tmpDirectory = dirname;
 		free(dirname);
 
-		MyString	errMsg;
+		std::string	errMsg;
 		if ( !dagDir.Cd2TmpDir( tmpDirectory.c_str(), errMsg ) ) {
 			debug_printf( DEBUG_QUIET,
 					"ERROR: Could not change to DAG directory %s: %s\n",
@@ -757,7 +757,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 	dag->RecordInitialAndTerminalNodes();
 	
 	if ( useDagDir ) {
-		MyString	errMsg;
+		std::string	errMsg;
 		if ( !dagDir.Cd2MainDir( errMsg ) ) {
 			debug_printf( DEBUG_QUIET,
 					"ERROR: Could not change to original directory: %s\n",
@@ -919,7 +919,7 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 				return false;
 			}
 
-			MyString errMsg;
+			std::string errMsg;
 			if ( !nodeDir.Cd2TmpDir(directory, errMsg) ) {
 				debug_printf( DEBUG_QUIET,
 							"ERROR: can't change to directory %s: %s\n",
@@ -1019,7 +1019,7 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 		}
 	}
 
-	MyString errMsg;
+	std::string errMsg;
 	if ( !nodeDir.Cd2MainDir(errMsg) ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: can't change to original directory: %s\n",
@@ -2073,7 +2073,7 @@ parse_splice(
 {
 	const char *example = "SPLICE SpliceName SpliceFileName [DIR directory]";
 	Dag *splice_dag = NULL;
-	MyString errMsg;
+	std::string errMsg;
 
 	//
 	// Next token is the splice name

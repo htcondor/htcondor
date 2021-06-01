@@ -382,7 +382,7 @@ DagmanUtils::runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 
 		// Change to the appropriate directory if necessary.
 	TmpDir tmpDir;
-	MyString errMsg;
+	std::string errMsg;
 	if ( directory ) {
 		if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
 			fprintf( stderr, "Error (%s) changing to node directory\n",
@@ -598,7 +598,7 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 			//
 		const char *	newDagFile;
 		if ( useDagDir ) {
-			MyString	tmpErrMsg;
+			std::string	tmpErrMsg;
 			if ( !dagDir.Cd2TmpDirFile( dagfile_it->c_str(), tmpErrMsg ) ) {
 				AppendError( errMsg,
 						MyString("Unable to change to DAG directory ") +
@@ -705,7 +705,7 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 			//
 			// Go back to our original directory.
 			//
-		MyString tmpErrMsg;
+		std::string tmpErrMsg;
 		if ( !dagDir.Cd2MainDir( tmpErrMsg ) ) {
 			AppendError( errMsg,
 					MyString("Unable to change to original directory ") +

@@ -35,7 +35,7 @@ int java_config( std::string &cmd, ArgList *args, StringList *extra_classpath )
 {
 	char *tmp;
 	char separator;
-	MyString arg_buf;
+	std::string arg_buf;
 
 	tmp = param("JAVA");
 	if(!tmp) return 0;
@@ -87,7 +87,7 @@ int java_config( std::string &cmd, ArgList *args, StringList *extra_classpath )
 			arg_buf += tmp;
 		}
 	}
-	args->AppendArg(arg_buf.c_str());
+	args->AppendArg(arg_buf);
 
 	MyString args_error;
 
