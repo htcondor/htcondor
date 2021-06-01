@@ -212,9 +212,9 @@ XInterface::ReadUtmp() {
 		if (utmp_entry.ut_type == USER_PROCESS) {
 			bool _found_it = false;
 			char user[UT_NAMESIZE + 1];
+			memcpy(user, utmp_entry.ut_user, UT_NAMESIZE);
+			user[UT_NAMESIZE] = 0;
 			for (size_t i=0; (i<logged_on_users->size()) && (! _found_it); i++) {
-				memcpy(user, utmp_entry.ut_user, UT_NAMESIZE);
-				user[UT_NAMESIZE] = 0;
 				if (!strcmp(user, (*logged_on_users)[i])) {
 					_found_it = true;
 				}
@@ -222,7 +222,7 @@ XInterface::ReadUtmp() {
 			if (! _found_it) {
 				dprintf(D_FULLDEBUG, "User %s is logged in.\n",
 					user );
-				logged_on_users->push_back(strdup( utmp_entry.ut_user ));
+				logged_on_users->push_back(strdup(user));
 			}
 		}
 	}
