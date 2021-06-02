@@ -19,7 +19,13 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added support for using an authenticated smtp relay on port 587 to
+  condor_mail.exe on Windows.
+ :jira:`303`
+
+- The maximum line length for ``STARTD_CRON`` and ``SCHEDD_CRON`` job output
+  has been extended from 8k to 64k.
+  :jira:`498`
 
 Bugs Fixed:
 

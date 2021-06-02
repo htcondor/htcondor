@@ -166,7 +166,7 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
 
 bool get_family_session(std::string & sess)
 {
-	sess.empty();
+	sess.clear();
 	char *ptmp;
 	char *private_var = getenv("CONDOR_PRIVATE_INHERIT");
 	StringList private_list(private_var, " ");
