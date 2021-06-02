@@ -340,7 +340,7 @@ void MapFile::clear() // clear all items and free the allocation pool
 size_t
 MapFile::ParseField(const std::string & line, size_t offset, std::string & field, int * popts /*=NULL*/)
 {
-	ASSERT(offset >= 0 && offset <= line.length());
+	ASSERT(offset <= line.length());
 
 		// We consume the leading white space
 	while (offset < line.length() &&
