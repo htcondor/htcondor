@@ -766,12 +766,15 @@ main( int argc, const char** argv)
 			for (MKVP::iterator mit = dev_props.begin(); mit != dev_props.end(); ++mit) {
 				if (mit->second.empty()) continue;
 
+                int global_memory = 0;
 				for (KVP::iterator it = mit->second.begin(); it != mit->second.end(); ++it) {
 					if( it->first == "GlobalMemoryMb" ) {
-						int global_memory = std::stoi( it->second );
-						global_memory = global_memory / opt_repeat;
-						it->second = std::to_string(global_memory);
+						global_memory = std::stoi( it->second );
+						it->second = std::to_string(global_memory / opt_repeat);
 					}
+				}
+				if(global_memory != 0) {
+				    mit->second["DeviceMemoryMb"] = std::to_string(global_memory);
 				}
 			}
 		}
