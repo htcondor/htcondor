@@ -17,11 +17,17 @@ Release Notes:
 
 - HTCondor version 9.0.2 not yet released.
 
+- The `condor_gpu_discovery` tool's ``-repeat`` option now automatically
+  divides the ``GlobalMemoryMb`` attribute by the number of repeats, to
+  avoid overcomitting GPU memory.  To enable th prior behavior, pass the
+  ``-no-adjust`` flag (via ``GPU_DISCOVERY_EXTRA``).
+  :jira:`404`
+
 New Features:
 
 - Added support for using an authenticated smtp relay on port 587 to
   condor_mail.exe on Windows.
- :jira:`303`
+  :jira:`303`
 
 - The maximum line length for ``STARTD_CRON`` and ``SCHEDD_CRON`` job output
   has been extended from 8k to 64k.

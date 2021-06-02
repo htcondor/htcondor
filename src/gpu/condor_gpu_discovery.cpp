@@ -911,6 +911,8 @@ void usage(FILE* out, const char * argv0)
 		"    -config           Output in HTCondor config syntax\n"
 		"    -repeat [<N>]     Repeat list of detected GPUs N (default 2) times\n"
 		"                      (e.g., DetectedGPUS = \"CUDA0, CUDA1, CUDA0, CUDA1\")\n"
+		"                      Divides GlobalMemoryMb attribute by N.\n"
+		"    -no-adjust        When repeating, do not divide GlobalMemoryMb by N.\n"
 		"    -packed           When repeating, repeat each GPU, not the whole list\n"
 		"                      (e.g., DetectedGPUs = \"CUDA0, CUDA0, CUDA1, CUDA1\")\n"
 		"    -cron             Output for use as a STARTD_CRON job, use with -dynamic\n"
