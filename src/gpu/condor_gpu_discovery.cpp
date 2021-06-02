@@ -298,7 +298,6 @@ main( int argc, const char** argv)
 	int opt_hetero = 0;  // don't assume properties are homogeneous
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
-	int opt_cuda_index = 0; // publish by index (I.e CUDA<N>)
 	int opt_uuid = -1;   // publish DetectedGPUs as a list of GPU-<uuid> rather than than CUDA<N>
 	int opt_short_uuid = -1; // use shortened uuids
 	std::list<int> dwl; // Device White List
@@ -311,6 +310,7 @@ main( int argc, const char** argv)
 	const char * opt_pre = "CUDA";
 	const char * opt_pre_arg = NULL;
 	int opt_repeat = 0;
+	int opt_adjust = 1;
 	int opt_packed = 0;
 	const char * pcolon;
 	int i;
@@ -398,6 +398,9 @@ main( int argc, const char** argv)
 				opt_repeat = atoi(argv[++i]);
 			}
 		}
+		else if (is_dash_arg_prefix(argv[i], "no-adjust", -1)) {
+		    opt_adjust = 0;
+		}
 		else if (is_dash_arg_prefix(argv[i], "packed", -1)) {
 			opt_packed = 1;
 		}
@@ -411,17 +414,15 @@ main( int argc, const char** argv)
 			}
 		}
 		else if (is_dash_arg_prefix(argv[i], "by-index", 4)) {
-			opt_cuda_index = 1;
 			opt_short_uuid = opt_uuid = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "uuid", 2)) {
 			opt_uuid = 1;
-			opt_cuda_index = opt_short_uuid = 0;
+			opt_short_uuid = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "short-uuid", -1)) {
 			opt_uuid = 1;
 			opt_short_uuid = 1;
-			opt_cuda_index = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "prefix", 3)) {
 			if (argv[i+1]) {
@@ -758,6 +759,21 @@ main( int argc, const char** argv)
 				if( delim == std::string::npos ) { break; }
 				left = delim + 2;
 			} while( true );
+		}
+
+		// ... and the amount of reported memory per device.
+		if( opt_adjust ) {
+			for (MKVP::iterator mit = dev_props.begin(); mit != dev_props.end(); ++mit) {
+				if (mit->second.empty()) continue;
+
+				for (KVP::iterator it = mit->second.begin(); it != mit->second.end(); ++it) {
+					if( it->first == "GlobalMemoryMb" ) {
+						int global_memory = std::stoi( it->second );
+						global_memory = global_memory / opt_repeat;
+						it->second = std::to_string(global_memory);
+					}
+				}
+			}
 		}
 	}
 
