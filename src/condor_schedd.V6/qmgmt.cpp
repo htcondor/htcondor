@@ -4210,7 +4210,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 
 		bool set_to_nobody = false;
-		if (user_is_the_new_owner && ! ignore_domain_mismatch_when_setting_owner) {
+		if (user_is_the_new_owner && Q_SOCK && ! ignore_domain_mismatch_when_setting_owner) {
 			// Similar to the case above, if UID_DOMAIN != socket FQU domain,
 			// then we map to 'nobody' unless TRUST_UID_DOMAIN is set.
 			//
