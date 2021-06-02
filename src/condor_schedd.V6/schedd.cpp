@@ -8938,6 +8938,8 @@ Scheduler::StartJobHandler()
 			if (proc != 0) {
 				dprintf( D_ALWAYS, "StartJobHandler called for MPI or Parallel job, with "
 					   "non-zero procid for job (%d.%d)\n", cluster, proc);
+
+				continue;
 			}
 			
 				// We've just called callAboutToSpawnJobHandler on procid 0,
