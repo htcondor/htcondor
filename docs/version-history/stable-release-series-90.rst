@@ -33,6 +33,10 @@ Bugs Fixed:
   whose hostnames were longer than about 60 characters.
   :jira:`473`
 
+- Fixed a bug that prevented *bosco_cluster* from detecting the remote host's
+  platform when it is running Scientific Linux 7.
+  :jira:`503`
+
 Version 9.0.1
 -------------
 
