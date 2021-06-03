@@ -2183,15 +2183,12 @@ describe the detected GPUs on the machine.
 Configuring STARTD_ATTRS on a per-slot basis
 '''''''''''''''''''''''''''''''''''''''''''''
 
-The ``STARTD_ATTRS`` :index:`STARTD_ATTRS` (and legacy
-``STARTD_EXPRS``) settings can be configured on a per-slot basis. The
+The ``STARTD_ATTRS`` :index:`STARTD_ATTRS`  settings can be configured on a per-slot basis. The
 *condor_startd* daemon builds the list of items to advertise by
 combining the lists in this order:
 
 #. ``STARTD_ATTRS``
-#. ``STARTD_EXPRS``
 #. ``SLOT<N>_STARTD_ATTRS``
-#. ``SLOT<N>_STARTD_EXPRS``
 
 For example, consider the following configuration:
 

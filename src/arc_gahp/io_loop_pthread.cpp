@@ -480,9 +480,12 @@ IOProcess::stdinPipeHandler()
 				m_active_proxy = args.argv[1];
 				gahp_output_return_success();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_USE_CACHED_PROXY) == 0) {
-				// TODO verify proxy is already cached
-				m_active_proxy = args.argv[1];
-				gahp_output_return_success();
+				if (m_cached_proxies.find(args.argv[1]) == m_cached_proxies.end()) {
+					gahp_output_return_error();
+				} else {
+					m_active_proxy = args.argv[1];
+					gahp_output_return_success();
+				}
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_UNCACHE_PROXY) == 0) {
 				m_cached_proxies.erase(args.argv[1]);
 				if (m_active_proxy == args.argv[1]) {

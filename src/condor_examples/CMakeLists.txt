@@ -43,7 +43,6 @@ install (FILES
 		condor.boot.generic
 		condor_config.local.central.manager
 		condor_config.local.ha_condor_client
-		condor.sysconfig
 		README
 		condor.boot.rpm
 		condor_config.local.ha_condor_had
@@ -73,7 +72,6 @@ install (FILES
 	  openmpiscript
 	  mp2script
 	  mp1script
-	  lamscript
 	 DESTINATION ${C_ETC_EXAMPLES}
 	 PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 

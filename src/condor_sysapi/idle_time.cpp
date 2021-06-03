@@ -255,6 +255,7 @@ utmp_pty_idle_time( time_t now )
 
 		// fread returns number of items read, not bytes
 	while (fread((char *)&utmp_info, sizeof(struct UTMP_KIND), 1, fp) == 1) {
+		utmp_info.ut_line[UT_LINESIZE - 1] = '\0';
 #if defined(LINUX)
 		if (utmp_info.ut_type != USER_PROCESS)
 #else
@@ -379,7 +380,7 @@ dev_idle_time( const char *path, time_t now )
 {
 	struct stat	buf;
 	time_t answer;
-	static char pathname[100] = "/dev/";
+	char pathname[100] = "/dev/";
 	static int null_major_device = -1;
 
 	if ( !path || path[0]=='\0' ||
@@ -389,7 +390,7 @@ dev_idle_time( const char *path, time_t now )
 		return now;
 	}
 
-	strcpy( &pathname[5], path );
+	strncat( pathname, path, sizeof(pathname)-6 );
 	if ( null_major_device == -1 ) {
 		// get the major device number of /dev/null so
 		// we can ignore any device that shares that

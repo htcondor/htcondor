@@ -151,7 +151,6 @@ CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";
 }

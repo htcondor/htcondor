@@ -225,13 +225,15 @@ ProcFamilyServer::use_glexec_for_family()
 	read_from_client(&proxy_len, sizeof(int));
 
 	proc_family_error_t err;
-	if (proxy_len <= 0) {
+	// prevent the client from causing the server to malloc unbounded memory
+	if ((proxy_len <= 0) || (proxy_len > (1024 * 1024)))  {
 		err = PROC_FAMILY_ERROR_BAD_GLEXEC_INFO;
 	}
 	else {
 		char* proxy = new char[proxy_len];
 		ASSERT(proxy != NULL);
 		read_from_client(proxy, proxy_len);
+		proxy[proxy_len - 1] = '\0';
 		err = m_monitor.use_glexec_for_family(pid, proxy);
 		delete[] proxy;
 	}

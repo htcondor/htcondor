@@ -2875,7 +2875,7 @@ int SendLastExecutable()
 
 		char * chkptname = GetSpooledExecutablePath(submit_hash.getClusterId(), "");
 		SpoolEname = chkptname;
-		if (chkptname) free(chkptname);
+		free(chkptname);
 		int ret = MyQ->send_SpoolFile(SpoolEname.c_str());
 
 		if (ret < 0) {

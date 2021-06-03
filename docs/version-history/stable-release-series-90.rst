@@ -19,13 +19,27 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added support for using an authenticated smtp relay on port 587 to
+  condor_mail.exe on Windows.
+ :jira:`303`
+
+- The maximum line length for ``STARTD_CRON`` and ``SCHEDD_CRON`` job output
+  has been extended from 8k to 64k.
+  :jira:`498`
 
 Bugs Fixed:
 
 - Fixed a bug that prevented docker universe jobs from running on machines
   whose hostnames were longer than about 60 characters.
   :jira:`473`
+
+- Fixed a bug that prevented *bosco_cluster* from detecting the remote host's
+  platform when it is running Scientific Linux 7.
+  :jira:`503`
+
+- Attribute ``GridJobId`` is no longer removed from the job ad of grid-type
+  ``batch`` jobs when the job enters ``Completed`` or ``Removed`` status.
+  :jira:`534`
 
 Version 9.0.1
 -------------
@@ -35,22 +49,22 @@ Release Notes:
 - HTCondor version 9.0.1 released on May 17, 2021.
 
 - The installer for Windows will now replace the ``condor_config``
-  file even on an update.  You must use condor_config.local or
-  a configuration directory to customize the config if you wish
+  file even on an update.  You must use ``condor_config.local`` or
+  a configuration directory to customize the configuration if you wish
   to preserve configuration changes across updates.
 
 Known Issues:
 
-- The is a known issue with installer for Windows where it does
+- There is a known issue with the installer for Windows where it does
   not honor the Administrator Access list set in the MSI permissions
-  dialog on a fresh install.  Instead is will always set the
+  dialog on a fresh install.  Instead it will always set the
   Administrator access to the default value.
 
 - MUNGE security is temporarily broken.
 
 New Features:
 
-- Windows MSI installer now sets up user-based authentication and creates 
+- The Windows MSI installer now sets up user-based authentication and creates 
   an IDTOKEN for local administration.
   :jira:`407`
 
@@ -91,7 +105,7 @@ Bugs Fixed:
   :jira:`434`
 
 - Fixed a bug in the way ``AutoClusterAttrs`` was calculated that could
-  in matchmaking ignoring attributes changed by ``job_machine_attrs``.
+  cause matchmaking to ignore attributes changed by ``job_machine_attrs``.
   :jira:`414`
 
 - Fixed a bug in the implementation of the submit commands ``max_retries``

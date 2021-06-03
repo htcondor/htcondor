@@ -291,7 +291,7 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root, int v
 	char *fbuf = (char*)malloc(fsize);
 	if(fbuf == NULL) {
 		dprintf(D_ALWAYS,
-			"ERROR: read_secure_file(%s): malloc(%lu) failed!\n", fname, fsize);
+			"ERROR: read_secure_file(%s): malloc(%zu) failed!\n", fname, fsize);
 		fclose(fp);
 		return false;
 	}
@@ -308,7 +308,7 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root, int v
 	//
 	if(readsize != fsize) {
 		dprintf(D_ALWAYS,
-			"ERROR: read_secure_file(%s): failed due to short read: %lu != %lu!\n",
+			"ERROR: read_secure_file(%s): failed due to short read: %zu != %zu!\n",
 			fname, readsize, fsize);
 		fclose(fp);
 		free(fbuf);

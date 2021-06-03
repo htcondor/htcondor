@@ -46,7 +46,7 @@ public:
 		@param A MyString to hold any error message.
 		@return true if successful, false otherwise
 	*/
-	bool Cd2TmpDir(const char *directory, MyString &errMsg);
+	bool Cd2TmpDir(const char *directory, std::string &errMsg);
 
 	/** Change to the directory containing the given file. (note: if
 		directory is "" or NULL, we don't try to change to it and 
@@ -55,16 +55,16 @@ public:
 		@param A MyString to hold any error message.
 		@return true if successful, false otherwise
 	*/
-	bool Cd2TmpDirFile(const char *filePath, MyString &errMsg);
+	bool Cd2TmpDirFile(const char *filePath, std::string &errMsg);
 
 	/** Change back to the original directory.
 		@return true if successful, false otherwise
 	*/
-	bool Cd2MainDir(MyString &errMsg);
+	bool Cd2MainDir(std::string &errMsg);
 
 protected:
 	bool	hasMainDir;
-	MyString mainDir;
+	std::string mainDir;
 	int		m_objectNum;
 	bool	m_inMainDir;
 

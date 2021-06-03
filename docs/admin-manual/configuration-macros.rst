@@ -1678,9 +1678,8 @@ that DaemonCore uses which affect all HTCondor daemons.
     ClassAd describing itself to the *condor_collector*, it will also
     place a copy of the ClassAd in this file. Currently, this setting
     only works for the *condor_schedd*. :index:`<SUBSYS>_ATTRS`
-    :index:`<SUBSYS>_EXPRS`
 
-:macro-def:`<SUBSYS>_ATTRS` or :macro-def:`<SUBSYS>_EXPRS`
+:macro-def:`<SUBSYS>_ATTRS`
     Allows any DaemonCore daemon to advertise arbitrary expressions from
     the configuration file in its ClassAd. Give the comma-separated list
     of entries from the configuration file you want in the given
@@ -1691,10 +1690,6 @@ that DaemonCore uses which affect all HTCondor daemons.
     The macro is named by substituting ``<SUBSYS>`` with the appropriate
     subsystem string as defined in
     :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
-
-    ``<SUBSYS>_EXPRS`` is a historic setting that functions identically
-    to ``<SUBSYS>_ATTRS``. It may be removed in the future, so use
-    ``<SUBSYS>_ATTRS``.
 
     .. note::
 
@@ -3286,9 +3281,7 @@ section.
         Since these are already ClassAd expressions, do not do anything
         unusual with strings. By default, the job ClassAd attributes
         JobUniverse, NiceUser, ExecutableSize and ImageSize are advertised
-        into the machine ClassAd. This setting was formerly called
-        ``STARTD_JOB_EXPRS``. The older name is still supported, but support
-        for the older name may be removed in a future version of HTCondor.
+        into the machine ClassAd.
 
 :macro-def:`STARTD_ATTRS`
     This macro is described in :macro:`<SUBSYS>_ATTRS`.
@@ -3639,9 +3632,7 @@ section for details.
 :macro-def:`STARTD_SLOT_ATTRS`
     The list of ClassAd attribute names that should be shared across all
     slots on the same machine. This setting was formerly know as
-    ``STARTD_VM_ATTRS`` :index:`STARTD_VM_ATTRS` or
-    ``STARTD_VM_EXPRS`` :index:`STARTD_VM_EXPRS` (before version
-    6.9.3). For each attribute in the list, the attribute's value is
+    ``STARTD_VM_ATTRS`` :index:`STARTD_VM_ATTRS` For each attribute in the list, the attribute's value is
     taken from each slot's machine ClassAd and placed into the machine
     ClassAd of all the other slots within the machine. For example, if
     the configuration file for a 2-slot machine contains
@@ -6255,9 +6246,7 @@ do not specify their own with:
     forgotten in a job's submit description file. The command in the
     submit description file results in actions by *condor_submit*,
     while the use of ``SUBMIT_ATTRS`` adds a job ClassAd attribute at a
-    later point in time. ``SUBMIT_EXPRS`` is a historic setting that
-    functions identically to ``SUBMIT_ATTRS``. It may be removed in the
-    future, so use ``SUBMIT_ATTRS``.
+    later point in time.
 
 :macro-def:`SUBMIT_ALLOW_GETENV`
     A boolean attribute which defaults to true. If set to false, the
@@ -6901,8 +6890,8 @@ These macros affect the *condor_negotiator*.
     the ClassAd of the idle (candidate) job. There is no direct access
     to the currently running job, but attributes of the currently
     running job that need to be accessed in ``PREEMPTION_REQUIREMENTS``
-    can be placed in the machine ClassAd using ``STARTD_JOB_EXPRS``
-    :index:`STARTD_JOB_EXPRS`. If not explicitly set in the
+    can be placed in the machine ClassAd using ``STARTD_JOB_ATTRS``
+    :index:`STARTD_JOB_ATTRS`. If not explicitly set in the
     HTCondor configuration file, the default value for this expression
     is ``False``. ``PREEMPTION_REQUIREMENTS`` should include the term
     ``(SubmitterGroup =?= RemoteGroup)``, if a preemption policy that

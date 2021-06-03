@@ -30,7 +30,7 @@ Repository packages are available for each platform:
 * `CentOS 8 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el8.noarch.rpm>`_
 * `Amazon Linux 2 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.amzn2.noarch.rpm>`_
 
-The HTCondor packages on these platforms depends on the corresponding
+The HTCondor packages on these platforms depend on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
 
 Additionally, the following repositories are required for specific platforms:
@@ -56,8 +56,8 @@ with ``apt-key add`` before adding the repositories below.
 * Debian 9: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/current stretch main``
 * Debian 10: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/current buster main``
 
-Ubuntu 16.04, 18.04, and 20.04
-##############################
+Ubuntu 18.04 and 20.04
+######################
 
 Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-current-Key>`_
 with ``apt-key add`` before adding the repositories below.

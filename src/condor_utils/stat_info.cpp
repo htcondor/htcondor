@@ -69,7 +69,7 @@ StatInfo::StatInfo( const char *param_dirpath,
 {
 	this->filename = strdup( param_filename );
 	this->dirpath = make_dirpath( param_dirpath );
-	MyString buf;
+	std::string buf;
 	dircat( param_dirpath, param_filename, buf );
 	fullpath = strdup( buf.c_str() );
 	stat_file( fullpath );
@@ -92,9 +92,9 @@ StatInfo::StatInfo( const char* dirpath, const char* filename,
 {
 	this->dirpath = strdup( dirpath );
 	this->filename = strdup( filename );
-	MyString buf;
+	std::string buf;
 	dircat( dirpath, filename, buf);
-	fullpath = strdup( buf.Value() );
+	fullpath = strdup( buf.c_str() );
 	si_error = SIGood;
 	si_errno = 0;
 	access_time = time_access;

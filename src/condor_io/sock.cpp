@@ -1236,7 +1236,7 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr ) {
 	// If we don't multiply by -1 and instead use rbegin()/rend(),
 	// then addresses of the same desirability will be checked in
 	// the reverse order.
-	dprintf( D_HOSTNAME, "Found address %lu candidates:\n", v->size() );
+	dprintf( D_HOSTNAME, "Found address %zu candidates:\n", v->size() );
 	for( unsigned i = 0; i < v->size(); ++i ) {
 		condor_sockaddr c = (*v)[i];
 		int d = -1 * c.desirability();
@@ -2106,7 +2106,7 @@ char * Sock::serializeCryptoInfo() const
 
 		char * ptr = outbuf + strlen(outbuf);
 		unsigned char * ccs_serial = (unsigned char*)(&(crypto_state_->m_stream_crypto_state));
-		dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: encoding %lu bytes.\n", sizeof(StreamCryptoState));
+		dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: encoding %zu bytes.\n", sizeof(StreamCryptoState));
 		for (unsigned int i=0; i < sizeof(StreamCryptoState); i++, ccs_serial++, ptr+=2) {
 			sprintf(ptr, "%02X", *ccs_serial);
 		}
@@ -2254,7 +2254,7 @@ const char * Sock::serializeCryptoInfo(const char * buf)
         // StreamCryptoState with what we deserialized above.
         dprintf(D_NETWORK|D_VERBOSE, "SOCK: protocol is %i, crypto_ is %p, crypto_state_ is %p.\n", protocol, crypto_, crypto_state_);
         if(protocol == CONDOR_AESGCM) {
-            dprintf(D_NETWORK|D_VERBOSE, "SOCK: MEMCPY to %p from %p size %lu.\n", &(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
+            dprintf(D_NETWORK|D_VERBOSE, "SOCK: MEMCPY to %p from %p size %zu.\n", &(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
             memcpy(&(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
         }
 
@@ -2461,7 +2461,7 @@ Sock::addr_changed()
     _peer_ip_buf[0] = '\0';
     _sinful_self_buf.clear();
     _sinful_public_buf.clear();
-    _sinful_peer_buf[0] = '\0';
+    _sinful_peer_buf.clear();
 }
 
 condor_sockaddr
@@ -2643,7 +2643,8 @@ Sock::my_ip_str() const
 {
 	if (!_my_ip_buf[0]) {
 		std::string ip_str = my_addr().to_ip_string();
-		strcpy(_my_ip_buf, ip_str.c_str());
+		strncpy(_my_ip_buf, ip_str.c_str(), sizeof(_my_ip_buf));
+		_my_ip_buf[sizeof(_my_ip_buf)-1] = '\0';
 	}
 	return _my_ip_buf;
 }
@@ -2669,14 +2670,13 @@ Sock::get_sinful() const
 	return _sinful_self_buf.c_str();
 }
 
-char *
+char const *
 Sock::get_sinful_peer() const
 {       
-	if ( !_sinful_peer_buf[0] ) {
-		MyString sinful_peer = _who.to_sinful();
-		strcpy(_sinful_peer_buf, sinful_peer.c_str());
+	if ( _sinful_peer_buf.empty() ) {
+		_sinful_peer_buf = _who.to_sinful();
 	}
-	return _sinful_peer_buf;
+	return _sinful_peer_buf.c_str();
 }
 
 char const *

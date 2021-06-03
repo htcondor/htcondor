@@ -34,7 +34,7 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 
 		// Change to the appropriate directory if necessary.
 	TmpDir tmpDir;
-	MyString errMsg;
+	std::string errMsg;
 	if ( directory ) {
 		if ( !tmpDir.Cd2TmpDir( directory, errMsg ) ) {
 			fprintf( stderr, "Error (%s) changing to node directory\n",

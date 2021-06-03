@@ -613,11 +613,12 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(ClassAd & ad, const char * attrname
 			ExprTreeToString(expr, m_fire_unparsed_expr);
 
 			// temp buffer for building _SUBCODE and _REASON param names.
-			char param_sub[sizeof("SYSTEM_PERIODIC_RELEASE_SUBCODE")+10];
+			std::string param_sub;
 
 			std::string expr_string;
-			strcpy(param_sub, policy_name); strcat(param_sub, "_SUBCODE");
-			if (param(expr_string, param_sub, "") && ! expr_string.empty()) {
+			param_sub = policy_name;
+			param_sub += "_SUBCODE";
+			if (param(expr_string, param_sub.c_str(), "") && ! expr_string.empty()) {
 				long long ival;
 				classad::Value val;
 				if (ad.EvaluateExpr(expr_string, val) && val.IsNumber(ival)) {
@@ -625,8 +626,9 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(ClassAd & ad, const char * attrname
 				}
 			}
 
-			strcpy(param_sub, policy_name); strcat(param_sub, "_REASON");
-			if (param(expr_string, param_sub, "") && ! expr_string.empty()) {
+			param_sub = policy_name;
+			param_sub += "_REASON";
+			if (param(expr_string, param_sub.c_str(), "") && ! expr_string.empty()) {
 				classad::Value val;
 				if (ad.EvaluateExpr(expr_string, val) && val.IsStringValue(m_fire_reason)) {
 					// val.IsStringValue will have already set m_fire_reason
@@ -645,17 +647,7 @@ const char* UserPolicy::FiringExpression(void)
 	return m_fire_expr;
 }
 
-bool
-UserPolicy::FiringReason(std::string & reason, int & reason_code, int & reason_subcode) {
-    MyString ms;
-    bool rv = FiringReason(ms, reason_code, reason_subcode);
-    // This update is unconditional because the unconditional assignment
-    // in FiringReason(MyString &...) makes it empty.
-    reason = ms;
-    return rv;
-}
-
-bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subcode)
+bool UserPolicy::FiringReason(std::string &reason,int &reason_code,int &reason_subcode)
 {
 	reason_code = 0;
 	reason_subcode = 0;
@@ -712,7 +704,7 @@ bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subc
 	}
 
 	// Format up the reason string
-	reason.formatstr( "The %s %s expression '%s' evaluated to ",
+	formatstr( reason, "The %s %s expression '%s' evaluated to ",
 					expr_src,
 					m_fire_expr,
 					exprString.c_str());

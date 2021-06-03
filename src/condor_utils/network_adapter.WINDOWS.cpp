@@ -58,15 +58,15 @@ CONDOR_DEFINE_GUID(CONDOR_GUID_NDIS_LAN_CLASS, 0xad498944, 0x762f,
 WindowsNetworkAdapter::WindowsNetworkAdapter (void) noexcept
 : _exists ( false ) {
     // TODO: Picking IPv4 arbitrarily.
-    MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
-    strncpy ( _ip_address, my_ip.Value(), IP_STRING_BUF_SIZE );
+	std::string my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+    strncpy ( _ip_address, my_ip.c_str(), IP_STRING_BUF_SIZE );
     _description[0] = '\0';
 }
 
 WindowsNetworkAdapter::WindowsNetworkAdapter ( const condor_sockaddr & ip_addr)
 	noexcept
 : _exists ( false ) {
-    strncpy ( _ip_address, ip_addr.to_ip_string().Value(), IP_STRING_BUF_SIZE );
+    strncpy ( _ip_address, ip_addr.to_ip_string().c_str(), IP_STRING_BUF_SIZE );
     _description[0] = '\0';
 }
 

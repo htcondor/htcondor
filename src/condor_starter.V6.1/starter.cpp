@@ -1218,7 +1218,7 @@ Starter::peek(int /*cmd*/, Stream *sock)
 	}
 	if (!s->code(file_count) || !s->end_of_message())
 	{
-		dprintf(D_ALWAYS, "Failed to send file count %ld for peeking at logs.\n", file_count);
+		dprintf(D_ALWAYS, "Failed to send file count %zu for peeking at logs.\n", file_count);
 	}
 	return file_count == file_list.size();
 }

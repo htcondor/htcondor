@@ -162,6 +162,8 @@ class PersonalCondor(object):
         "STARTER_INITIAL_UPDATE_INTERVAL" : 5,
         "NEGOTIATOR_CYCLE_DELAY" : 5,
         "MachineMaxVacateTime" : 5,
+        "MAIL" : "/bin/true",
+        "SENDMAIL" : "/bin/true",
     }
 
     # Sets up local system environment we'll use to stand up the PersonalCondor instance.

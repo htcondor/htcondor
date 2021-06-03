@@ -1279,6 +1279,12 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_tail.1.gz
 %_mandir/man1/condor_who.1.gz
 %_mandir/man1/condor_now.1.gz
+%_mandir/man1/classad_eval.1.gz
+%_mandir/man1/classads.1.gz
+%_mandir/man1/condor_adstash.1.gz
+%_mandir/man1/condor_evicted_files.1.gz
+%_mandir/man1/condor_watch_q.1.gz
+%_mandir/man1/get_htcondor.1.gz
 # bin/condor is a link for checkpoint, reschedule, vacate
 %_bindir/condor_submit_dag
 %_bindir/condor_who
@@ -1674,6 +1680,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu May 20 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.0-1
+- Support for submitting to ARC-CE via the REST interface
+- DAGMan can put failed jobs on hold (user can correct problems and release)
+- Can run gdb and ptrace within Docker containers
+- A small Docker test job is run on the execute node to verify functionality
+- The number of instructions executed is reported in the job Ad on Linux
+
 * Mon May 17 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.1-1
 - Fix problem where X.509 proxy refresh kills job when using AES encryption
 - Fix problem when jobs require a different machine after a failure

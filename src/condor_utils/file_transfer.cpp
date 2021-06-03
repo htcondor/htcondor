@@ -2628,7 +2628,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 							dprintf(D_FULLDEBUG, "DoDownload: Failed to evaluate list entry to string.\n");
 							signed_urls.emplace_back("");
 						}
-						else if (sign_s3_urls && url_value.substr(0, 5) == "s3://")
+						else if (sign_s3_urls &&
+						  (starts_with_ignore_case(url_value, "s3://") || starts_with_ignore_case(url_value, "gs://")))
 						{
 							bool has_good_prefix = false;
 							for (const auto &prefix : output_url_prefixes) {
@@ -3870,13 +3871,15 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					local_output_url = remap_filename.c_str();
 				}
 			}
-			if (sign_s3_urls && local_output_url.substr(0, 5) == "s3://") {
+			if (sign_s3_urls &&
+			  (starts_with_ignore_case(local_output_url, "s3://") || starts_with_ignore_case(local_output_url, "gs://"))) {
 				s3_urls_to_sign.push_back(local_output_url);
 			}
 			fileitem.setDestUrl(local_output_url);
 		}
 		const std::string &src_url = fileitem.srcName();
-		if (sign_s3_urls && fileitem.isSrcUrl() && (fileitem.srcScheme() == "s3")) {
+		if (sign_s3_urls && fileitem.isSrcUrl() &&
+		  (strcasecmp(fileitem.srcScheme().c_str(), "s3") == 0 || strcasecmp(fileitem.srcScheme().c_str(), "gs") == 0)) {
 			std::string new_src_url = "https://" + src_url.substr(5);
 			dprintf(D_FULLDEBUG, "DoUpload: Will sign %s for remote transfer.\n", src_url.c_str());
 			std::string signed_url;
@@ -3993,7 +3996,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 	std::unordered_map<std::string, std::string> s3_url_map;
 	if (!s3_urls_to_sign.empty()) {
-		dprintf(D_FULLDEBUG, "DoUpload: Requesting %lu URLs to sign.\n", s3_urls_to_sign.size());
+		dprintf(D_FULLDEBUG, "DoUpload: Requesting %zu URLs to sign.\n", s3_urls_to_sign.size());
 
 			// Indicate a ClassAd-based command.
 		if (!s->snd_int(static_cast<int>(TransferCommand::Other), false) || !s->end_of_message()) {
@@ -5956,7 +5959,7 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 		}
 		if( I_support_S3 ) {
 			// method_list must contain at least "https".
-			method_list += ",s3";
+			method_list += ",s3,gs";
 		}
 	}
 	return method_list;

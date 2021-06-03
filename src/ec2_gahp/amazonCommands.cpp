@@ -927,7 +927,7 @@ bool AmazonRequest::SendJSONRequest( const std::string & payload ) {
 // via us-east-1, which is moderately crazy.
 bool AmazonRequest::SendS3Request( const std::string & payload ) {
 	headers[ "Content-Type" ] = "binary/octet-stream";
-	std::string contentLength; formatstr( contentLength, "%lu", payload.size() );
+	std::string contentLength; formatstr( contentLength, "%zu", payload.size() );
 	headers[ "Content-Length" ] = contentLength;
 	// Another undocumented CURL feature: transfer-encoding is "chunked"
 	// by default for "PUT", which we really don't want.

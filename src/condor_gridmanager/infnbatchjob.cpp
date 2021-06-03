@@ -1091,7 +1091,6 @@ void INFNBatchJob::doEvaluateState()
 			}
 #endif
 
-			SetRemoteIds( NULL, NULL );
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
@@ -1388,9 +1387,10 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
-		if ( ( next_expr = jobAd->LookupExpr( attrs_to_copy[index] ) ) != NULL ) {
-			ExprTree * pTree = next_expr->Copy();
-			submit_ad->Insert( attrs_to_copy[index], pTree );
+		classad::Value val;
+		classad::Literal *new_literal;
+		if ( jobAd->EvaluateAttr(attrs_to_copy[index], val) && (new_literal = classad::Literal::MakeLiteral(val)) ) {
+			submit_ad->Insert(attrs_to_copy[index], new_literal);
 		}
 	}
 

@@ -1,6 +1,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_sinful.h"
+#include "stl_string_utils.h"
 
 #include <stdio.h>
 
@@ -23,8 +24,8 @@ int main( int argc, char * argv[] ) {
 	// Windows doesn't have argument arrays, so anything with spaces in
 	// it will get broken up.  Bypass everything.  Cargo culted from TJ.
 
-	MyString cmdline;
-	cmdline.formatstr( "%S", GetCommandLineW() );
+	std::string cmdline;
+	formatstr(cmdline, "%S", GetCommandLineW() );
 	const char * sinful = cmdline.c_str();
 	int numSpaces = 0;
 	for( int i = 0; i < cmdline.length() && numSpaces < 2; ++i ) {

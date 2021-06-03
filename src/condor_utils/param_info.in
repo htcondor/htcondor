@@ -1968,12 +1968,6 @@ customization=devel
 description=Startd Slot Attrs needed by HTCondor
 tags=startd,startd_main
 
-[STARTD_SLOT_EXPRS]
-default=
-type=string
-description=Obsolete name for startd Slot Attrs
-tags=startd,startd_main
-
 [KEYBOARD_CPUS]
 default=1
 type=int
@@ -2179,12 +2173,6 @@ tags=submit
 default=
 type=string
 description=Names of config attributes that should be automatically inserted into jobs by condor_submit
-tags=submit
-
-[SUBMIT_EXPRS]
-default=
-type=string
-description=Obsolete name for SUBMIT_ATTRS
 tags=submit
 
 [APPEND_REQ_VANILLA]

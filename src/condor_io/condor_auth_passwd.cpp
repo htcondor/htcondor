@@ -121,7 +121,7 @@ bool checkToken(const std::string &line,
 			dprintf(D_SECURITY|D_FULLDEBUG, "Ignoring token as it was signed with key %s (not known to the server).\n", tmp_key_id.c_str());
 			return false;
 		}
-		dprintf(D_SECURITY|D_FULLDEBUG, "JWT object was signed with server key %s (out of %lu possible keys)\n", tmp_key_id.c_str(), server_key_ids.size());
+		dprintf(D_SECURITY|D_FULLDEBUG, "JWT object was signed with server key %s (out of %zu possible keys)\n", tmp_key_id.c_str(), server_key_ids.size());
 		const std::string &tmp_issuer = decoded_jwt.get_issuer();
 		if (!issuer.empty() && issuer != tmp_issuer) {
 			dprintf(D_SECURITY|D_FULLDEBUG, "Ignoring token as it is from trust domain %s (server trust domain is %s).\n", tmp_issuer.c_str(), issuer.c_str());
@@ -1782,7 +1782,7 @@ Condor_Auth_Passwd::authenticate(const char * /* remoteHost */,
 		if(m_client_status == AUTH_PW_A_OK && m_server_status == AUTH_PW_A_OK) {
 			// If we have a pre-derived key, use that.
 			if (m_k && m_k_prime) {
-				dprintf(D_SECURITY, "PW: Client using pre-derived key of length %lu.\n", m_k_len);
+				dprintf(D_SECURITY, "PW: Client using pre-derived key of length %zu.\n", m_k_len);
 				m_sk.ka = m_k; m_k = NULL;
 				m_sk.ka_len = m_k_len; m_k_len = 0;
 				m_sk.kb = m_k_prime; m_k_prime = NULL;
