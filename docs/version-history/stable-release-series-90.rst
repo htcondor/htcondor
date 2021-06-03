@@ -41,6 +41,11 @@ Bugs Fixed:
   ``batch`` jobs when the job enters ``Completed`` or ``Removed`` status.
   :jira:`534`
 
+- Fixed a bug that caused the ``query-krb`` and ``delete-krb`` options of *condor_store_cred*
+  to fail.  This bug also affected the python bindings ``query_user_cred`` and ``delete_user_cred``
+  methods
+  :jira:`533`
+
 Version 9.0.1
 -------------
 
