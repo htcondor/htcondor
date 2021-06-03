@@ -570,8 +570,8 @@ KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credle
 	// "LOCAL:", we are not actually going to store anything in the krb directory,
 	// but instead simply touch a file in the OAuth directory.  detect this right away
 	// and call that function instead.
-	if (cred && starts_with((const char*)cred, "LOCAL:")) {
-		std::string servicename((const char*)&cred[6]);
+	if (cred && credlen > 6 && MATCH == strncmp((const char*)cred, "LOCAL:", 6)) {
+		std::string servicename((const char*)&cred[6], credlen-6);
 
 		if ((mode & MODE_MASK) != GENERIC_ADD) {
 			dprintf(D_ALWAYS, "LOCAL_STORE_CRED does not support QUERY or DELETE modes, aborting the command.");
