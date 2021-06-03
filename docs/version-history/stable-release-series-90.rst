@@ -37,6 +37,10 @@ Bugs Fixed:
   platform when it is running Scientific Linux 7.
   :jira:`503`
 
+- Attribute ``GridJobId`` is no longer removed from the job ad of grid-type
+  ``batch`` jobs when the job enters ``Completed`` or ``Removed`` status.
+  :jira:`534`
+
 Version 9.0.1
 -------------
 
