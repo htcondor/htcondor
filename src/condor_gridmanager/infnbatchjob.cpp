@@ -1094,6 +1094,7 @@ void INFNBatchJob::doEvaluateState()
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
+				SetRemoteIds( NULL, NULL );
 				gmState = GM_CLEAR_REQUEST;
 			}
 		} break;
