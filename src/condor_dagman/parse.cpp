@@ -290,9 +290,9 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					// Check for duplicate keys in dag->SubmitDescriptions
 					// If a duplicate exists, std::map.insert() will not throw any
 					// errors but it also won't overwrite the existing value.
-					// In this case, throw an error and proceed as normal.
+					// In this case, throw a warning and proceed as normal.
 					if(dag->SubmitDescriptions.find(std::string(nodename.Value())) != dag->SubmitDescriptions.end()) {
-						debug_printf(DEBUG_NORMAL, "Error: a submit description "
+						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
 							"already exists with name %s, will not be overwritten."
 							"\n", nodename.Value());
 					}
@@ -350,9 +350,9 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					// Check for duplicate keys in dag->SubmitDescriptions
 					// If a duplicate exists, std::map.insert() will not throw any
 					// errors but it also won't overwrite the existing value.
-					// In this case, throw an error and proceed as normal.
+					// In this case, throw a warning and proceed as normal.
 					if(dag->SubmitDescriptions.find(std::string(nodename.Value())) != dag->SubmitDescriptions.end()) {
-						debug_printf(DEBUG_NORMAL, "Error: a submit description "
+						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
 							"already exists with name %s, will not be overwritten."
 							"\n", nodename.Value());
 					}
@@ -416,9 +416,9 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					// Check for duplicate keys in dag->SubmitDescriptions
 					// If a duplicate exists, std::map.insert() will not throw any
 					// errors but it also won't overwrite the existing value.
-					// In this case, throw an error and proceed as normal.
-					if(dag->SubmitDescriptions.find(std::string(descName.Value())) == dag->SubmitDescriptions.end()) {
-						debug_printf(DEBUG_NORMAL, "Error: a submit description "
+					// In this case, throw a warning and proceed as normal.
+					if(dag->SubmitDescriptions.find(std::string(descName.Value())) != dag->SubmitDescriptions.end()) {
+						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
 							"already exists with name %s, will not be overwritten."
 							"\n", descName.Value());
 					}
