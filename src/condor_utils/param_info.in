@@ -2090,7 +2090,7 @@ type=string
 tags=submit
 
 [SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS]
-description=Submit should generate requirements clauses for job attribues that begin with Request
+description=Submit should generate requirements clauses for job attributes that begin with Request
 default=true
 type=bool
 tags=submit
