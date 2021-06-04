@@ -330,6 +330,10 @@ public:
 	bool spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack);
 
 	bool receiveJobSandbox(const char* constraint, CondorError * errstack, int * numdone = 0);
+	
+	bool transferInputSandbox(const char* constraint, const MyString &destination, CondorError * errstack, int * numdone = 0);
+	
+	bool transferOutputSandbox(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack);
 
 
 	bool register_transferd(const std::string &sinful, const std::string &id, int timeout, 

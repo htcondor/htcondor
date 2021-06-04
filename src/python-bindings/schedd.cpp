@@ -1964,6 +1964,65 @@ struct Schedd {
         }
     }
 
+    void transferInputSandbox(std::string jobs, const std::string &destination)
+    {
+        CondorError errstack;
+        DCSchedd schedd(m_addr.c_str());
+        bool result;
+        {
+        condor::ModuleLock ml;
+        result = !schedd.transferInputSandbox(jobs.c_str(), destination, &errstack);
+        }
+        if (result)
+        {
+            THROW_EX(RuntimeError, errstack.getFullText(true).c_str());
+        }
+    }
+    
+    void transferOutputSandbox(object jobs)
+    {
+        // Jobs is a list of tuples, or should be
+        // I'm not sure how to sanity check this though
+        int len = py_len(jobs);
+        std::vector<compat_classad::ClassAd*> job_array;
+        std::vector<boost::shared_ptr<compat_classad::ClassAd> > job_tmp_array;
+        job_array.reserve(len);
+        job_tmp_array.reserve(len);
+        for (int i=0; i<len; i++)
+        {
+            // Check the length of the item, make sure it's a tuple of exactly length 2
+            if (py_len(jobs[i]) != 2) {
+                PyErr_SetString(PyExc_ValueError, "Jobs object is not a list of tuples with exactly length 2");
+                throw_error_already_set();
+            }
+            
+            // Get the tuple
+            const boost::python::tuple job_info_tuple = extract<boost::python::tuple>(jobs[i]);
+            const ClassAdWrapper wrapper = extract<ClassAdWrapper>(job_info_tuple[0]);
+            const std::string path = extract<std::string>(job_info_tuple[1]);
+            boost::shared_ptr<compat_classad::ClassAd> tmp_ad(new compat_classad::ClassAd());
+            job_tmp_array.push_back(tmp_ad);
+            tmp_ad->CopyFrom(wrapper);
+            tmp_ad->InsertAttr(ATTR_JOB_IWD, path);
+            job_array.push_back(job_tmp_array[i].get());
+        }
+        CondorError errstack;
+        bool result;
+        DCSchedd schedd(m_addr.c_str());
+        {
+        condor::ModuleLock ml;
+        result = schedd.transferOutputSandbox( len,
+                                       &job_array[0],
+                                       &errstack );
+        }
+        if (!result)
+        {
+            PyErr_SetString(PyExc_RuntimeError, errstack.getFullText(true).c_str());
+            throw_error_already_set();
+        }
+    }
+
+
     int refreshGSIProxy(int cluster, int proc, std::string proxy_filename, int lifetime=-1)
     {
         time_t now = time(NULL);
@@ -4219,6 +4278,22 @@ void export_schedd()
 
             :param job_spec: An expression matching the list of job output sandboxes to retrieve.
             :type job_spec: str or list[:class:`~classad.ClassAd`]
+            )C0ND0R")
+        .def("transferInputSandbox", &Schedd::transferInputSandbox, 
+            R"C0ND0R(
+            Download the input sandbox for multiple jobs.
+
+            :param jobs: A expression string matching the list of job output sandboxes to retrieve.
+            :type jobs: str
+            :param destination: Destination directory of the input sandbox.
+            :type destination: str
+            )C0ND0R")
+        .def("transferOutputSandbox", &Schedd::transferOutputSandbox, 
+            R"C0ND0R(
+            Upload the output sandbox for multiple jobs
+
+            :param ads: A python list of tuples in the format (ClassAd, path) where path is the path to the output sandbox on the local machine.
+            :type ads: list[(:class:`~classad.ClassAds`, str)]
             )C0ND0R")
         .def("edit", &Schedd::edit,
             R"C0ND0R(
