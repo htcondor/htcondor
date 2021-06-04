@@ -303,7 +303,7 @@ file.
     ``$(Process)`` or ``$(ProcId)`` will have the same value as the job
     ClassAd attribute ``ProcId``.
 
-``$$(a_machine_classad_attribue)``
+``$$(a_machine_classad_attribute)``
     When the machine is matched to this job for it to run on, any
     dollar-dollar expressions are looked up from the machine ad, and then
     expanded.  This lets you put the value of some machine ad attribute
