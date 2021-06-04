@@ -55,6 +55,7 @@ my %skipad = (
 	"ServerTime" => 1,
 	"ShadowBday" => 1,
 	"EnteredCurrentStatus" => 1,
+	"AutoClusterId" => 1,
 );
 
 my $firstappend_condor_config = '
