@@ -194,6 +194,10 @@ $success = sub
 				# too many race conditions viz-a-vis jobs
 			next if ($line =~ /INTERNAL/);
 
+				# skip a submit failed.  This (rarely) happens
+				# when schedd is overloaded. dagman will retry
+			next if ($line =~ /Node[^E] SUBMIT_FAILURE/);
+
 			if( $line =~ /$target/ ) {
 
 				CondorTest::debug("$name: $line\n",1);
