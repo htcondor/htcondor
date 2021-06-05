@@ -259,7 +259,9 @@ class PersonalCondor(object):
     # TODO: Eventually want to do this using python bindings
     # For internal use only.
     def _WaitForReadyDaemons(self):
-        is_ready_attempts = 6
+        # 120 seconds to start a personal condor seems like a lot
+        # but it matches the years of experience in the perl tests
+        is_ready_attempts = 24
         for i in range(is_ready_attempts):
             time.sleep(5)
             Utils.TLog("[PC: {0}] Checking for condor_who output".format(self._name))
