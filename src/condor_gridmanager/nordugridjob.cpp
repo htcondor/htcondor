@@ -744,7 +744,7 @@ void NordugridJob::doEvaluateState()
 				gmState = GM_DELETE;
 			} else {
 				SetRemoteJobId( NULL );
-				gmState = GM_CLEAR_REQUEST;
+				gmState = GM_HOLD;
 			}
 			} break;
 		case GM_DELETE: {
