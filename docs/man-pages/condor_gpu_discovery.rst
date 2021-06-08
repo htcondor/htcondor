@@ -155,9 +155,13 @@ Options
     By default, this will divide the attribute ``GlobalMemoryMb`` by
     the number of repeats.  This is to prevent you from accidentally
     overcommitting your GPU's memory.
- **-no-adjust**
-    Do not divide the attribute ``GlobalMemoryMb`` by the number of
-    repeats if repeating.
+
+    Do not mix with **-divide**.
+ **-divide** [*N*]
+    Like **-repeat**, except also divide the attribute ``GlobalMemoryMb``
+    by *N*.
+
+    Do not mix with **-repeat**.
  **-packed**
     When repeating GPUs, repeat each GPU *N* times, not the whole list.
     This results in a list that looks like ``CUDA0, CUDA0, CUDA1, CUDA1``.

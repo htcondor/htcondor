@@ -310,7 +310,7 @@ main( int argc, const char** argv)
 	const char * opt_pre = "CUDA";
 	const char * opt_pre_arg = NULL;
 	int opt_repeat = 0;
-	int opt_adjust = 1;
+	int opt_divide = 0;
 	int opt_packed = 0;
 	const char * pcolon;
 	int i;
@@ -398,8 +398,13 @@ main( int argc, const char** argv)
 				opt_repeat = atoi(argv[++i]);
 			}
 		}
-		else if (is_dash_arg_prefix(argv[i], "no-adjust", -1)) {
-		    opt_adjust = 0;
+		else if (is_dash_arg_prefix(argv[i], "divide", -1)) {
+			if (! argv[i+1] || '-' == *argv[i+1]) {
+				opt_repeat = 2;
+			} else {
+				opt_repeat = atoi(argv[++i]);
+			}
+		    opt_divide = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "packed", -1)) {
 			opt_packed = 1;
@@ -762,7 +767,7 @@ main( int argc, const char** argv)
 		}
 
 		// ... and the amount of reported memory per device.
-		if( opt_adjust ) {
+		if( opt_divide ) {
 			for (MKVP::iterator mit = dev_props.begin(); mit != dev_props.end(); ++mit) {
 				if (mit->second.empty()) continue;
 
@@ -912,7 +917,7 @@ void usage(FILE* out, const char * argv0)
 		"    -repeat [<N>]     Repeat list of detected GPUs N (default 2) times\n"
 		"                      (e.g., DetectedGPUS = \"CUDA0, CUDA1, CUDA0, CUDA1\")\n"
 		"                      Divides GlobalMemoryMb attribute by N.\n"
-		"    -no-adjust        When repeating, do not divide GlobalMemoryMb by N.\n"
+		"    -divide [<N>]     As -repeat, but divide GlobalMemoryMb by N.\n"
 		"    -packed           When repeating, repeat each GPU, not the whole list\n"
 		"                      (e.g., DetectedGPUs = \"CUDA0, CUDA0, CUDA1, CUDA1\")\n"
 		"    -cron             Output for use as a STARTD_CRON job, use with -dynamic\n"

@@ -17,10 +17,11 @@ Release Notes:
 
 - HTCondor version 9.0.2 not yet released.
 
-- The `condor_gpu_discovery` tool's ``-repeat`` option now automatically
-  divides the ``GlobalMemoryMb`` attribute by the number of repeats, to
-  avoid overcomitting GPU memory.  To enable th prior behavior, pass the
-  ``-no-adjust`` flag (via ``GPU_DISCOVERY_EXTRA``).
+- Added new command-line flag to `condor_gpu_discovery`, ``-divide``,
+  which functions like ``-repeat``, except that it divides the GPU attribute
+  ``GlobalMemoryMb`` by the number of repeats (and adds the GPU
+  attribute ``DeviceMemoryMb``, which is the undivided total).  To enable
+  this new behavior, modify ``GPU_DISCOVERY_EXTRA`` appropriately.
   :jira:`404`
 
 New Features:
