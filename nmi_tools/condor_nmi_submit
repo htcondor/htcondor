@@ -1972,7 +1972,7 @@ sub getPlatformsFromRunid() {
     # this is the only place we need to talk to the DB, so we'll only
     # incur the cost and complication of initializing our DB settings
     # (i.e. finding and parsing the NMI config file, etc) if we really
-    # need to... 
+    # need to...
     initializeDB();
 
     my @platforms = ();
@@ -1982,18 +1982,37 @@ sub getPlatformsFromRunid() {
         runid='$runid'/;
     print "$cmd_str\n";
 
+    my $foundDockerPlatforms = 0;
     my $handle = $db->prepare("$cmd_str");
     $handle->execute();
     while ( my $row = $handle->fetchrow_hashref() ) {
         $platform = $row->{'platform'};
-		# remove the problem cause by no API and plaform becomming nmi:platform
-		$_ = $platform;
-		s/nmi://;
-		$platform = $_;
+        # remove the problem cause by no API and plaform becomming nmi:platform
+        $_ = $platform;
+        s/nmi://;
+        $platform = $_;
+
+        if( $platform =~ /^nmi-zdev:/ ) { $foundDockerPlatforms = 1; next; }
+
         push(@platforms, $platform) unless $platform =~ /local/;
     }
     $handle->finish();
     $db->disconnect;
+
+    if( $foundDockerPlatforms ) {
+        my $output = `${nmi_bin}/nmi_rundir $runid`;
+        my( $r, $s ) = split(/ /, $output);
+        my( $h, $dir ) = split(":", $s);
+        chomp($dir);
+        my $list = "${dir}/docker_platforms";
+
+        open( LIST, "<", $list ) or die( "Problem opening '${list}', aborting.\n" );
+        while(my $p = <LIST>) {
+            chomp($p);
+            push(@platforms, "docker://${p}");
+        }
+        close( LIST );
+    }
 
     return @platforms;
 }
