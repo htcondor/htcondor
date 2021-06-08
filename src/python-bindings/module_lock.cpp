@@ -193,9 +193,9 @@ ModuleLock::release()
 
     if (m_release_gil && m_owned)
     {
+        m_owned = false;
         MODULE_LOCK_MUTEX_UNLOCK(&m_mutex);
         PyEval_RestoreThread(m_save);
-        m_owned = false;
     }
 }
 
