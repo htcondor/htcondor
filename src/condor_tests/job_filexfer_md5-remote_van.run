@@ -41,7 +41,7 @@ $success = sub {
 if( ! -e "data")
 {
 	CondorTest::debug("Making data file\n",1);
-	CreateMd5Data(200,"data");
+	CreateMd5Data(2,"data");
 }
 else
 {
