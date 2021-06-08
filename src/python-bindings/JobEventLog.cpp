@@ -186,7 +186,7 @@ std::string
 JobEventLog::Py_Repr() {
 	std::string constructorish;
 	formatstr( constructorish,
-		"JobEventLog(filename=%s, deadline=%ld, offset=%lu)",
+		"JobEventLog(filename=%s, deadline=%ld, offset=%zu)",
 		wful.getFilename().c_str(), deadline, wful.getOffset() );
 	return constructorish;
 }
