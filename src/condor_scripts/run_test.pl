@@ -599,13 +599,19 @@ sub StartTestPersonal {
 
     my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"remote_task.$test");
 
+  eval {
     CondorTest::StartCondorWithParams(
         condor_name => "condor",
         fresh_local => "TRUE",
         condorlocalsrc => "$configfile",
         test_name => "$test",
         runs_dir => "$RunsDir"
-    );
+    ); 1;
+  } or do {
+    my $msg = $@ || "Condor did not start";
+    say STDERR "$msg";
+    exit(136); # metronome wants 136 for setup error
+  }
 }
 
 sub StopTestPersonal {
