@@ -392,10 +392,6 @@ main( int argc, const char** argv)
 			g_diagnostic = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "repeat", -1)) {
-			if( opt_divide != 0 ) {
-					fprintf (stderr, "Error: -repeat can't be used with -divide\n");
-					return 1;
-			}
 			if (! argv[i+1] || '-' == *argv[i+1]) {
 				opt_repeat = 2;
 			} else {
@@ -403,16 +399,12 @@ main( int argc, const char** argv)
 			}
 		}
 		else if (is_dash_arg_prefix(argv[i], "divide", -1)) {
-			if( opt_repeat != 0 ) {
-					fprintf (stderr, "Error: -divide can't be used with -repeat\n");
-					return 1;
-			}
 			if (! argv[i+1] || '-' == *argv[i+1]) {
 				opt_repeat = 2;
 			} else {
 				opt_repeat = atoi(argv[++i]);
 			}
-			opt_divide = 1;
+		    opt_divide = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "packed", -1)) {
 			opt_packed = 1;
@@ -515,9 +507,9 @@ main( int argc, const char** argv)
 			// isn't, maybe this should only show up in -debug?
 			print_error(MODE_ERROR, "Unable to load NVML; will not discover dynamic properties or MIG instances.\n" );
 		} else {
-			nvmlReturn_t r = nvmlInit();
+		    nvmlReturn_t r = nvmlInit();
 			if( r != NVML_SUCCESS ) {
-				print_error(MODE_ERROR, "Warning: nvmlInit() failed with error %d; will not discover dynamic properties or MIG instances.\n", r );
+			    print_error(MODE_ERROR, "Warning: nvmlInit() failed with error %d; will not discover dynamic properties or MIG instances.\n", r );
 				dlclose( nvml_handle );
 				nvml_handle = NULL;
 			}
@@ -779,7 +771,7 @@ main( int argc, const char** argv)
 			for (MKVP::iterator mit = dev_props.begin(); mit != dev_props.end(); ++mit) {
 				if (mit->second.empty()) continue;
 
-				int global_memory = 0;
+                int global_memory = 0;
 				for (KVP::iterator it = mit->second.begin(); it != mit->second.end(); ++it) {
 					if( it->first == "GlobalMemoryMb" ) {
 						global_memory = std::stoi( it->second );
@@ -787,7 +779,7 @@ main( int argc, const char** argv)
 					}
 				}
 				if(global_memory != 0) {
-					mit->second["DeviceMemoryMb"] = std::to_string(global_memory);
+				    mit->second["DeviceMemoryMb"] = std::to_string(global_memory);
 				}
 			}
 		}
