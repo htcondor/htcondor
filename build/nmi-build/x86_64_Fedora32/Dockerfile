@@ -43,6 +43,11 @@ RUN useradd --uid  6004 --gid wheel --shell /bin/bash --create-home condorauto &
 RUN mkdir -p /usr/local/condor/etc/examples && \
     echo 'use SECURITY : HOST_BASED' > /usr/local/condor/etc/examples/condor_config.generic
 
+# Add tools to add the HTCondor repository
+RUN dnf install -y \
+    https://research.cs.wisc.edu/htcondor/repo/9.1/htcondor-release-current.fc32.noarch.rpm \
+    && dnf clean all
+
 # Need HTCondor to build and test HTCondor (BaTLab style)
 RUN dnf install -y \
     condor \
@@ -77,6 +82,7 @@ RUN dnf install -y \
     less \
     nano \
     rpmlint \
+    strace \
     sudo \
     vim \
     && dnf clean all
@@ -155,3 +161,6 @@ RUN dnf install -y \
     && dnf clean all
 
 RUN dnf install -y python3-pip && dnf clean all && pip3 install pytest pytest-httpserver
+
+# Enable daily repo to get latest packages for tarballs
+RUN dnf config-manager --set-enabled htcondor-daily

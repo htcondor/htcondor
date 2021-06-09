@@ -47,7 +47,7 @@ RUN mkdir -p /usr/local/condor/etc/examples && \
 RUN dnf install -y \
     'dnf-command(config-manager)' \
     epel-release \
-    https://research.cs.wisc.edu/htcondor/repo/8.9/htcondor-release-current.el8.noarch.rpm \
+    https://research.cs.wisc.edu/htcondor/repo/9.1/htcondor-release-current.el8.noarch.rpm \
     && dnf config-manager --set-enabled powertools \
     && dnf clean all
 
@@ -78,6 +78,7 @@ RUN dnf install -y \
     less \
     nano \
     rpmlint \
+    strace \
     sudo \
     vim \
     && dnf clean all
@@ -86,6 +87,7 @@ RUN dnf install -y \
 RUN echo '%wheel ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/wheel
 
 # HTCondor build dependencies
+# libarchive included because of missing dependcy from cmake
 RUN dnf install -y \
     'bind-utils' \
     'bison' \
@@ -100,6 +102,7 @@ RUN dnf install -y \
     'gcc-c++' \
     'glibc-static' \
     'krb5-devel' \
+    'libarchive' \
     'libcgroup-devel' \
     'libcurl-devel' \
     'libstdc++-static' \
@@ -162,3 +165,6 @@ RUN dnf install -y \
     && dnf clean all
 
 RUN pip3 install pytest pytest-httpserver
+
+# Enable daily repo to get latest packages for tarballs
+RUN dnf config-manager --set-enabled htcondor-daily
