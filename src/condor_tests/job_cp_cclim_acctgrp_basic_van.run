@@ -227,7 +227,7 @@ CondorTest::RegisterAbort($testname, \&exit_callback);
 
 if (CondorTest::RunTest($testname, $submit_filename, 0)) {
     CondorTest::debug("$testname: SUCCESS\n",1);
-    exit(0);
+	CondorTest::EndTest()
 } else {
     die "$testname: CondorTest::RunTest() failed\n";
 }

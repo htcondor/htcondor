@@ -116,7 +116,7 @@ if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 		die "$testname: failed -- no $outfile file!\n";
 	}
 	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
+	CondorTest::EndTest();
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";
 }
