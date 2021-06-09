@@ -114,7 +114,7 @@ elif [[ $arch_dist =~ Fedora32 ]]; then
 fi
 
 mkdir external-packages
-yumdownloader --downloadonly --destdir=external-packages $externals
+yumdownloader --assumeyes --downloadonly --destdir=external-packages $externals
 
 # Extract external RPMs
 for file in external-packages/*.rpm; do
