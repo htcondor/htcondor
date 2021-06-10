@@ -358,8 +358,6 @@ def condor(test_dir, slot_config, discovery_script, monitor_script):
     write_file(test_dir / "discovery.py", discovery_script)
     write_file(test_dir / "monitor.py", monitor_script)
 
-    assert(False)
-
     with Condor(
         local_dir=test_dir / "condor",
         config={**slot_config, "TEST_DIR": test_dir.as_posix()},
