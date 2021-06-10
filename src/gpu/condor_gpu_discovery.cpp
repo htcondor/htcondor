@@ -392,23 +392,18 @@ main( int argc, const char** argv)
 			g_diagnostic = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "repeat", -1)) {
-			if( opt_divide != 0 ) {
-					fprintf (stderr, "Error: -repeat can't be used with -divide\n");
-					return 1;
-			}
 			if (! argv[i+1] || '-' == *argv[i+1]) {
-				opt_repeat = 2;
+			    // This preserves the value from -divide.
+			    if( opt_repeat == 0 ) { opt_repeat = 2; }
 			} else {
 				opt_repeat = atoi(argv[++i]);
 			}
+            opt_divide = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "divide", -1)) {
-			if( opt_repeat != 0 ) {
-					fprintf (stderr, "Error: -divide can't be used with -repeat\n");
-					return 1;
-			}
 			if (! argv[i+1] || '-' == *argv[i+1]) {
-				opt_repeat = 2;
+			    // This preserves the setting from -repeat.
+			    if( opt_repeat == 0 ) { opt_repeat = 2; }
 			} else {
 				opt_repeat = atoi(argv[++i]);
 			}
@@ -926,6 +921,9 @@ void usage(FILE* out, const char * argv0)
 		"                      (e.g., DetectedGPUS = \"CUDA0, CUDA1, CUDA0, CUDA1\")\n"
 		"                      Divides GlobalMemoryMb attribute by N.\n"
 		"    -divide [<N>]     As -repeat, but divide GlobalMemoryMb by N.\n"
+		"                      With both -repeat and -divide:\n"
+		"                        the last flag wins,\n"
+		"                        but the default won't reset an explicit N.\n"
 		"    -packed           When repeating, repeat each GPU, not the whole list\n"
 		"                      (e.g., DetectedGPUs = \"CUDA0, CUDA0, CUDA1, CUDA1\")\n"
 		"    -cron             Output for use as a STARTD_CRON job, use with -dynamic\n"

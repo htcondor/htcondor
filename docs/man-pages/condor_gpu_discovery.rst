@@ -37,7 +37,7 @@ names. Where there is more than one GPU of a particular type, the
 *prefix string* includes an GPU id value identifying the device; these
 can be integer values that monotonically increase from 0 when the ``-by-index``
 option is used or globally unique identfiers when the ``-short-uuid`` or
-``-uuid`` argument is used.  
+``-uuid`` argument is used.
 
 For example, a discovery of two GPUs with ``-by-index`` may
 output
@@ -156,12 +156,16 @@ Options
     the number of repeats.  This is to prevent you from accidentally
     overcommitting your GPU's memory.
 
-    Do not mix with **-divide**.
+    If used with **-divide**, the last one on the command-line wins,
+    but you must specify `2` if you want it; the default value only
+    applies to the first flag.
  **-divide** [*N*]
     Like **-repeat**, except also divide the attribute ``GlobalMemoryMb``
     by *N*.
 
-    Do not mix with **-repeat**.
+    If used with **-repeat**, the last one on the command-line wins,
+    but you must specify `2` if you want it; the default value only
+    applies to the first flag.
  **-packed**
     When repeating GPUs, repeat each GPU *N* times, not the whole list.
     This results in a list that looks like ``CUDA0, CUDA0, CUDA1, CUDA1``.
