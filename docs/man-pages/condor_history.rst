@@ -11,13 +11,16 @@ Synopsis
 **condor_history** [**-help** ]
 
 **condor_history** [**-name** *name*]
-[**-pool** *centralmanagerhostname[:portnumber]*] [**-backwards** ]
-[**-forwards** ] [**-constraint** *expr*] [**-file** *filename*]
+[**-pool** *centralmanagerhostname[:portnumber]*] [**-backwards**]
+[**-forwards**] [**-constraint** *expr*] [**-file** *filename*]
 [**-local**] [**-startd**] [**-userlog** *filename*]
 [**-format** *formatString AttributeName*]
-[**-autoformat[:jlhVr,tng]  ** *attr1 [attr2 ...]*]
-[**-l | -long | -xml | -json | -jsonl** ] [**-match | -limit  ** *number*]
-[**cluster | cluster.process | owner** ]
+[**-autoformat[:jlhVr,tng]** *attr1 [attr2 ...]*]
+[**-l | -long | -xml | -json | -jsonl**] [**-match | -limit** *number*]
+[**-attributes** *attr1[,attr2...]*]
+[**-print-format** *file* ] [**-wide**]
+[**-since** *time_or_jobid* ] [**-completedsince** *time_expr*] [**-scanlimit** *number*]
+[**cluster | cluster.process | owner**]
 
 Description
 -----------
@@ -81,17 +84,26 @@ Options
     distinguish this option from the **-file** and **-format** options.
  **-constraint** *expr*
     Display jobs that satisfy the expression.
- **-attributes** *attrs*
-    Display only the given attributes when the **-long** *o* ption is
-    used.
  **-since** *jobid or expr*
     Stop scanning when the given jobid is found or when the expression
     becomes true.
+ **-completedsince** *time_expr*
+    Scan until the first job that completed on or before the given unix
+    timestamp.  The argument can be any expression that evaluates to a unix timestamp.
+    This option is equivalent to **-since** *'CompletionDate<=time_expr'*.
+ **-scanlimit** *Number*
+    Stop scanning when the given number of ads have been read.
+ **-limit** *Number*
+    Limit the number of jobs displayed to *Number*. Same option as **-match**.
+ **-match** *Number*
+    Limit the number of jobs displayed to *Number*. Same option as **-limit**.
  **-local**
     Read from local history files even if there is a SCHEDD_HOST
     configured.
  **-startd**
     Read from Startd history files rather than Schedd history files.
+    If used with the *-name* option, query is sent as a command to the given Startd
+    which must be version 9.0 or later.
  **-file** *filename*
     Use the specified file instead of the default history file.
  **-userlog** *filename*
@@ -144,14 +156,15 @@ Options
     The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
 
+ **-print-format** *file*
+    Read output formatting information from the given custom print format file.
+    see :doc:`/misc-concepts/print-formats` for more information about custom print format files.
+
  **-l** or **-long**
     Display job ClassAds in long format.
- **-limit** *Number*
-    Limit the number of jobs displayed to *Number*. Same option as
-    **-match**.
- **-match** *Number*
-    Limit the number of jobs displayed to *Number*. Same option as
-    **-limit**.
+ **-attributes** *attrs*
+    Display only the given attributes when the **-long** *o* ption is
+    used.
  **-xml**
     Display job ClassAds in XML format. The XML format is fully defined
     in the reference manual, obtained from the ClassAds web page, with a
@@ -161,6 +174,9 @@ Options
     Display job ClassAds in JSON format.
  **-jsonl**
     Display job ClassAds in JSON-Lines format: one job ad per line.
+ **-wide[:number]**
+    Restrict output to the given column width.  Default width is 80 columns, if **-wide** is
+    used without the optional *number* argument, the width of the output is not restricted.
 
 Exit Status
 -----------

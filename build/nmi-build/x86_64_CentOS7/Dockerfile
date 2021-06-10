@@ -1,4 +1,5 @@
 FROM centos:7
+ENV TZ="America/Chicago"
 
 # Use the bash shell for commands
 SHELL ["/bin/bash", "-c"]
@@ -7,36 +8,36 @@ SHELL ["/bin/bash", "-c"]
 # The HTCondor that runs inside the container needs to have the user defined
 RUN for i in {1..161}; do \
         uid=$(($i+5000)); \
-        useradd --uid  $uid --shell /bin/bash --create-home slot$i; \
+        useradd --uid  $uid --gid wheel --shell /bin/bash --create-home slot$i; \
     done
 
 RUN for i in {1..161}; do \
         uid=$(($i+5299)); \
-        useradd --uid  $uid --shell /bin/bash --create-home slot1_$i; \
+        useradd --uid  $uid --gid wheel --shell /bin/bash --create-home slot1_$i; \
     done
 
-RUN useradd --uid  6004 --shell /bin/bash --create-home condorauto && \
-    useradd --uid 22537 --shell /bin/bash --create-home bbockelm && \
-    useradd --uid 20343 --shell /bin/bash --create-home blin && \
-    useradd --uid 20003 --shell /bin/bash --create-home cat && \
-    useradd --uid 20849 --shell /bin/bash --create-home ckoch5 && \
-    useradd --uid 21640 --shell /bin/bash --create-home coatsworth && \
-    useradd --uid 20342 --shell /bin/bash --create-home edquist && \
-    useradd --uid 20006 --shell /bin/bash --create-home gthain && \
-    useradd --uid 20839 --shell /bin/bash --create-home iaross && \
-    useradd --uid 21356 --shell /bin/bash --create-home jcpatton && \
-    useradd --uid 20007 --shell /bin/bash --create-home jfrey && \
-    useradd --uid 20018 --shell /bin/bash --create-home johnkn && \
-    useradd --uid 22968 --shell /bin/bash --create-home kcramer && \
-    useradd --uid 20005 --shell /bin/bash --create-home kupsch && \
-    useradd --uid 20383 --shell /bin/bash --create-home lmichael && \
-    useradd --uid 20020 --shell /bin/bash --create-home matyas && \
-    useradd --uid 10006 --shell /bin/bash --create-home moate && \
-    useradd --uid 20013 --shell /bin/bash --create-home tannenba && \
-    useradd --uid 20345 --shell /bin/bash --create-home tim && \
-    useradd --uid 22109 --shell /bin/bash --create-home tjslauson && \
-    useradd --uid 20015 --shell /bin/bash --create-home tlmiller && \
-    useradd --uid 20017 --shell /bin/bash --create-home zmiller
+RUN useradd --uid  6004 --gid wheel --shell /bin/bash --create-home condorauto && \
+    useradd --uid 22537 --gid wheel --shell /bin/bash --create-home bbockelm && \
+    useradd --uid 20343 --gid wheel --shell /bin/bash --create-home blin && \
+    useradd --uid 20003 --gid wheel --shell /bin/bash --create-home cat && \
+    useradd --uid 20849 --gid wheel --shell /bin/bash --create-home ckoch5 && \
+    useradd --uid 21640 --gid wheel --shell /bin/bash --create-home coatsworth && \
+    useradd --uid 20342 --gid wheel --shell /bin/bash --create-home edquist && \
+    useradd --uid 20006 --gid wheel --shell /bin/bash --create-home gthain && \
+    useradd --uid 20839 --gid wheel --shell /bin/bash --create-home iaross && \
+    useradd --uid 21356 --gid wheel --shell /bin/bash --create-home jcpatton && \
+    useradd --uid 20007 --gid wheel --shell /bin/bash --create-home jfrey && \
+    useradd --uid 20018 --gid wheel --shell /bin/bash --create-home johnkn && \
+    useradd --uid 22968 --gid wheel --shell /bin/bash --create-home kcramer && \
+    useradd --uid 20005 --gid wheel --shell /bin/bash --create-home kupsch && \
+    useradd --uid 20383 --gid wheel --shell /bin/bash --create-home lmichael && \
+    useradd --uid 20020 --gid wheel --shell /bin/bash --create-home matyas && \
+    useradd --uid 10006 --gid wheel --shell /bin/bash --create-home moate && \
+    useradd --uid 20013 --gid wheel --shell /bin/bash --create-home tannenba && \
+    useradd --uid 20345 --gid wheel --shell /bin/bash --create-home tim && \
+    useradd --uid 22109 --gid wheel --shell /bin/bash --create-home tjslauson && \
+    useradd --uid 20015 --gid wheel --shell /bin/bash --create-home tlmiller && \
+    useradd --uid 20017 --gid wheel --shell /bin/bash --create-home zmiller
 
 # Provide a condor_config.generic
 RUN mkdir -p /usr/local/condor/etc/examples && \
@@ -46,7 +47,7 @@ RUN mkdir -p /usr/local/condor/etc/examples && \
 RUN yum install -y \
     epel-release \
     centos-release-scl \
-    https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el7.noarch.rpm \
+    https://research.cs.wisc.edu/htcondor/repo/8.9/htcondor-release-current.el7.noarch.rpm \
     && yum clean all
 
 # Need HTCondor to build and test HTCondor (BaTLab style)
@@ -65,6 +66,21 @@ RUN yum install -y \
     rpm-build \
     which \
     && yum clean all
+
+# Useful tools for debugging
+RUN yum install -y \
+    gdb \
+    git \
+    ip-utils \
+    less \
+    nano \
+    rpmlint \
+    sudo \
+    vim \
+    && yum clean all
+
+# Container users can sudo
+RUN echo '%wheel ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/wheel
 
 # HTCondor build dependencies
 RUN yum install -y \

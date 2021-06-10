@@ -1293,6 +1293,12 @@ makeHostname(ClassAd *machineAd, ClassAd *jobAd) {
 
 	hostname += machine;
 
+	// Linux allows hostnames up to 256 characters,
+	// but docker throws an error if they are greater then 63
+	if (hostname.length() > 63) {
+		hostname = hostname.substr(0,63);
+	}
+
 	return hostname;
 }
 

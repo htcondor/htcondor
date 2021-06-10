@@ -18,8 +18,10 @@ import os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-# sys.path.insert(0, os.path.abspath('exts'))
-sys.path.append(os.path.abspath('extensions'))
+#
+# If this is not inserted at the beginning of the list, our 'jira' ticket
+# extension is hidden by the system 'jira' API, if it exists.
+sys.path.insert(0, os.path.abspath('extensions'))
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src', 'condor_tests'))
 
 # -- General configuration ------------------------------------------------
@@ -34,7 +36,6 @@ extensions = [
     'ticket',
     'macro',
     'macro-def',
-    'index',
     'jira',
 ]
 
@@ -63,7 +64,7 @@ Licensed under the Apache License, Version 2.0.'
 # The short X.Y version.
 version = '9.0'
 # The full version, including alpha/beta/rc tags.
-release = '9.0.1'
+release = '9.0.2'
 
 rst_epilog = """
 .. |release_date| replace:: Month Day, 2021
@@ -120,6 +121,9 @@ man_pages = [
     ('man-pages/bosco_start', 'bosco_start', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/bosco_stop', 'bosco_stop', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/bosco_uninstall', 'bosco_uninstall', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/classad_eval', 'classad_eval', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/classads', 'classads', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/condor_adstash', 'condor_adstash', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_advertise', 'condor_advertise', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_annex', 'condor_annex', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_check_userlogs', 'condor_check_userlogs', u'HTCondor Manual', [u'HTCondor Team'], 1),
@@ -130,6 +134,7 @@ man_pages = [
     ('man-pages/condor_convert_history', 'condor_convert_history', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_dagman', 'condor_dagman', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_drain', 'condor_drain', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/condor_evicted_files', 'condor_evicted_files', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_fetchlog', 'condor_fetchlog', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_findhost', 'condor_findhost', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_gather_info', 'condor_gather_info', u'HTCondor Manual', [u'HTCondor Team'], 1),
@@ -148,15 +153,15 @@ man_pages = [
     ('man-pages/condor_preen', 'condor_preen', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_prio', 'condor_prio', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_procd', 'condor_procd', u'HTCondor Manual', [u'HTCondor Team'], 1),
-    ('man-pages/condor_qedit', 'condor_qedit', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_q', 'condor_q', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/condor_qedit', 'condor_qedit', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_qsub', 'condor_qsub', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_reconfig', 'condor_reconfig', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_release', 'condor_release', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_reschedule', 'condor_reschedule', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_restart', 'condor_restart', u'HTCondor Manual', [u'HTCondor Team'], 1),
-    ('man-pages/condor_rmdir', 'condor_rmdir', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_rm', 'condor_rm', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/condor_rmdir', 'condor_rmdir', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_router_history', 'condor_router_history', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_router_q', 'condor_router_q', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_router_rm', 'condor_router_rm', u'HTCondor Manual', [u'HTCondor Team'], 1),
@@ -167,8 +172,8 @@ man_pages = [
     ('man-pages/condor_stats', 'condor_stats', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_status', 'condor_status', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_store_cred', 'condor_store_cred', u'HTCondor Manual', [u'HTCondor Team'], 1),
-    ('man-pages/condor_submit_dag', 'condor_submit_dag', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_submit', 'condor_submit', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/condor_submit_dag', 'condor_submit_dag', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_suspend', 'condor_suspend', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_tail', 'condor_tail', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_token_create', 'condor_token_create', u'HTCondor Manual', [u'HTCondor Team'], 1),
@@ -186,11 +191,13 @@ man_pages = [
     ('man-pages/condor_urlfetch', 'condor_urlfetch', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_userlog', 'condor_userlog', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_userprio', 'condor_userprio', u'HTCondor Manual', [u'HTCondor Team'], 1),
-    ('man-pages/condor_vacate_job', 'condor_vacate_job', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_vacate', 'condor_vacate', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/condor_vacate_job', 'condor_vacate_job', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_version', 'condor_version', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_wait', 'condor_wait', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/condor_watch_q', 'condor_watch_q', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_who', 'condor_who', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/get_htcondor', 'get_htcondor', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/gidd_alloc', 'gidd_alloc', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/procd_ctl', 'procd_ctl', u'HTCondor Manual', [u'HTCondor Team'], 1)
 ]

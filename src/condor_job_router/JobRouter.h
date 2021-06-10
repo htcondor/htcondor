@@ -242,7 +242,7 @@ private:
 		bool allow_empty_requirements,
 		HashTable<std::string,int> & hash_order,
 		RoutingTable *new_routes );
-#ifdef USE_XFORM_UTILS
+
 	void ParseRoute(const char * route_text,
 		const char * name,
 		bool allow_empty_requirements,
@@ -254,7 +254,6 @@ private:
 	SimpleList<MacroStreamXFormSource*> m_pre_route_xfms;
 	SimpleList<MacroStreamXFormSource*> m_post_route_xfms;
 	void clear_pre_and_post_xfms();
-#endif
 
 	JobRoute *GetRouteByName(char const *name);
 

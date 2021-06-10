@@ -12,8 +12,8 @@ Command Reference Manual (man pages)
    bosco_start
    bosco_stop
    bosco_uninstall
-   classads
    classad_eval
+   classads
    condor_adstash
    condor_advertise
    condor_annex
@@ -44,15 +44,15 @@ Command Reference Manual (man pages)
    condor_preen
    condor_prio
    condor_procd
-   condor_qedit
    condor_q
+   condor_qedit
    condor_qsub
    condor_reconfig
    condor_release
    condor_reschedule
    condor_restart
-   condor_rmdir
    condor_rm
+   condor_rmdir
    condor_router_history
    condor_router_q
    condor_router_rm
@@ -63,8 +63,8 @@ Command Reference Manual (man pages)
    condor_stats
    condor_status
    condor_store_cred
-   condor_submit_dag
    condor_submit
+   condor_submit_dag
    condor_suspend
    condor_tail
    condor_token_create

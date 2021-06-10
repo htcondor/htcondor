@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2013, Condor Team, Computer Sciences Department,
@@ -228,7 +227,7 @@ CondorTest::RegisterAbort($testname, \&exit_callback);
 
 if (CondorTest::RunTest($testname, $submit_filename, 0)) {
     CondorTest::debug("$testname: SUCCESS\n",1);
-    exit(0);
+	CondorTest::EndTest()
 } else {
     die "$testname: CondorTest::RunTest() failed\n";
 }

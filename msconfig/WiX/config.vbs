@@ -43,6 +43,15 @@ Function CreateConfig2()
   if Not fso.FileExists(cclpath) Then
    Set lc = fso.CreateTextFile(cclpath)
    lc.WriteLine("## Customize the condor configuration here" & VbCrLf)
+   ' enable these to make testing/debugging of install auth lists easier
+   If Session.Property("DEBUG") = "Y" Then
+     lc.WriteLine("SEC_TOKEN_DIRECTORY = $(SEC_TOKEN_SYSTEM_DIRECTORY)")
+     lc.WriteLine("ALL_DEBUG = D_CAT")
+     lc.WriteLine("TOOL_DEBUG = D_ALWAYS:2 D_SECURITY:1 D_COMMAND:1")
+     lc.WriteLine("MASTER_DEBUG = D_ALWAYS:2 D_SECURITY:1 D_COMMAND:1")
+     lc.WriteLine("COLLECTOR_DEBUG = D_ALWAYS:2 D_SECURITY:1 D_COMMAND:1")
+     lc.WriteLine("SCHEDD_DEBUG = D_ALWAYS:2 D_SECURITY:1 D_COMMAND:1")
+   End If
    lc.Close
   End If
 
@@ -84,10 +93,10 @@ Function CreateConfig2()
   If propval = "" Then
      if daemonuser = "SYSTEM" Then
         propval = "Administrator@*"
+        If Not(installuser = "") Then propval = propval & ", $(INSTALL_USER)@*"
      Else
         propval = "$(USERNAME)@*"
      End If
-     if Not(installuser = "") Then propval = propval & ", $(INSTALL_USER)@*"
   End If
 
   propval = "recommended_v9_0(" & daemonuser & ", " & propval & ")"
@@ -126,9 +135,11 @@ Function CreateConfig2()
    daemonList = daemonList & " SCHEDD"
   End If
 
+  vacate = Session.Property("VACATEJOBS")
   Select Case Session.Property("RUNJOBS")
   Case "A"
    configTxt = ReplaceMetaConfig("POLICY", "(DESKTOP|UWCS_DESKTOP|ALWAYS_RUN_JOBS)", "ALWAYS_RUN_JOBS", configTxt)
+   vacate = "Y"
    'configTxt = ReplaceConfig("START","TRUE",configTxt)
    'configTxt = ReplaceConfig("SUSPEND","FALSE",configTxt)
    'configTxt = ReplaceConfig("WANT_SUSPEND","FALSE",configTxt)
@@ -137,6 +148,7 @@ Function CreateConfig2()
    daemonList = daemonList & " STARTD"
   Case "N"
    'configTxt = ReplaceConfig("START","FALSE",configTxt)
+   vacate = "Y"
   Case "I"
    configTxt = ReplaceMetaConfig("POLICY", "(DESKTOP|UWCS_DESKTOP|ALWAYS_RUN_JOBS)", "DESKTOP", configTxt)
    configTxt = ReplaceConfig("START","KeyboardIdle > $$(StartIdleTime)",configTxt)
@@ -147,7 +159,7 @@ Function CreateConfig2()
    daemonList = daemonList & " STARTD KBDD"
   End Select
 
-  If Session.Property("VACATEJOBS") = "N" Then
+  If vacate = "N" Then
    configTxt = ReplaceConfig("WANT_VACATE","FALSE",configTxt)
    configTxt = ReplaceConfig("WANT_SUSPEND","TRUE",configTxt)
   End If
@@ -170,14 +182,6 @@ Function CreateConfig2()
   End if
 
   configTxt = ReplaceConfig("DAEMON_LIST",daemonList,configTxt)
-
-  ' enable these to make testing/debugging of install auth lists easier
-  If Session.Property("DEBUG") = "Y" Then
-    configTxt = ReplaceConfig("ALL_DEBUG","D_CAT",configTxt)
-    configTxt = ReplaceConfig("TOOL_DEBUG","D_ALWAYS:2 D_SECURITY:1 D_COMMAND:1",configTxt)
-    configTxt = ReplaceConfig("MASTER_DEBUG","D_ALWAYS:2 D_SECURITY:1 D_COMMAND:1",configTxt)
-    configTxt = ReplaceConfig("COLLECTOR_DEBUG","D_ALWAYS:2 D_SECURITY:1 D_COMMAND:1",configTxt)
-  End If
 
   Set Configfile = fso.OpenTextFile(ccpath, 2, True)
   Configfile.WriteLine configTxt

@@ -1278,6 +1278,12 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_tail.1.gz
 %_mandir/man1/condor_who.1.gz
 %_mandir/man1/condor_now.1.gz
+%_mandir/man1/classad_eval.1.gz
+%_mandir/man1/classads.1.gz
+%_mandir/man1/condor_adstash.1.gz
+%_mandir/man1/condor_evicted_files.1.gz
+%_mandir/man1/condor_watch_q.1.gz
+%_mandir/man1/get_htcondor.1.gz
 # bin/condor is a link for checkpoint, reschedule, vacate
 %_bindir/condor_submit_dag
 %_bindir/condor_who
@@ -1543,7 +1549,9 @@ rm -rf %{buildroot}
 %_bindir/condor_watch_q
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
+%_libexecdir/condor/libclassad_python3_user.so
 %_libexecdir/condor/libcollector_python_plugin.cpython-3*.so
+%_libexecdir/condor/libcollector_python3_plugin.so
 /usr/lib64/python%{python3_version}/site-packages/classad/
 /usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
@@ -1671,6 +1679,15 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon May 17 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.1-1
+- Fix problem where X.509 proxy refresh kills job when using AES encryption
+- Fix problem when jobs require a different machine after a failure
+- Fix problem where a job matched a machine it can't use, delaying job start
+- Fix exit code and retry checking when a job exits because of a signal
+- Fix a memory leak in the job router when a job is removed via job policy
+- Fixed the back-end support for the 'bosco_cluster --add' command
+- An updated Windows installer that supports IDTOKEN authentication
+
 * Wed Apr 14 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.0-1
 - Absent any configuration, HTCondor denies authorization to all users
 - AES encryption is used for all communication and file transfers by default

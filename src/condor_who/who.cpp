@@ -398,6 +398,23 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 		if (line) data = line;
 	}
 
+	// If headers have spaces in them, change to underline
+	size_t lpos = headings.find("Local Address");
+	size_t rpos = headings.find("Foreign Address");
+	size_t ppos = headings.find("PID/Program name");
+
+	if (lpos != std::string::npos) {
+			headings[lpos + 5] = '_';
+	}
+
+	if (rpos != std::string::npos) {
+			headings[rpos + 7] = '_';
+	}
+
+	if (ppos != std::string::npos) {
+			headings = headings.substr(0, ppos + 3);
+	}
+
 	if (App.diagnostic > 2) { printf("HD: %s\n", headings.c_str()); printf("SH: %s\n", subhead.c_str()); }
 
 	while ( ! data.empty()) {
@@ -752,8 +769,11 @@ static void get_address_table(TABULAR_MAP & table)
 	cmdargs.AppendArg("netstat");
 	cmdargs.AppendArg("-ano");
 #else
-	cmdargs.AppendArg("lsof");
-	cmdargs.AppendArg("-nPi");
+	cmdargs.AppendArg("netstat");
+	cmdargs.AppendArg("-n");
+	cmdargs.AppendArg("-t");
+	cmdargs.AppendArg("-p");
+	cmdargs.AppendArg("-w");
 #endif
 
 	FILE * stream = my_popen(cmdargs, "r", 0);
@@ -769,6 +789,9 @@ static void get_address_table(TABULAR_MAP & table)
 		}
 		if (App.diagnostic > 1) { printf("skipping: %s\n", line); }
 		fMultiWord = true;
+		#else
+			// on Linux skip first line of netstat output
+		getline_trim(stream);
 		#endif
 		get_fields_from_tabular_stream(stream, table, fMultiWord);
 		my_pclose(stream);
@@ -902,7 +925,7 @@ bool determine_address_for_pid(pid_t pid, TABULAR_MAP & address_table, TABULAR_M
 	addr.clear();
 
 	TABULAR_MAP::const_iterator itPID  = address_table.find("PID");
-	TABULAR_MAP::const_iterator itAddr = address_table.find("NAME");
+	TABULAR_MAP::const_iterator itAddr = address_table.find("Local_Address");
 
 	std::string temp;
 	if (itPID != address_table.end() && itAddr != address_table.end()) {
