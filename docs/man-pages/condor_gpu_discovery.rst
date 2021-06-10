@@ -157,14 +157,14 @@ Options
     overcommitting your GPU's memory.
 
     If used with **-divide**, the last one on the command-line wins,
-    but you must specify `2` if you want it; the default value only
+    but you must specify ``2`` if you want it; the default value only
     applies to the first flag.
  **-divide** [*N*]
     Like **-repeat**, except also divide the attribute ``GlobalMemoryMb``
     by *N*.
 
     If used with **-repeat**, the last one on the command-line wins,
-    but you must specify `2` if you want it; the default value only
+    but you must specify ``2`` if you want it; the default value only
     applies to the first flag.
  **-packed**
     When repeating GPUs, repeat each GPU *N* times, not the whole list.
