@@ -35,7 +35,13 @@ $testname = "job_core_time-deferral";
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	NUM_CPUS = 2
-	NEGOTIATOR_INTERVAL = 5
+	NEGOTIATOR_INTERVAL=1
+	NEGOTIATOR_CYCLE_DELAY=1
+	SCHEDD_INTERVAL=1
+	SCHEDD_MIN_INTERVAL=1
+	RUNBENCHMARKS=false
+	MAIL=/bin/true
+	SENDMAIL=/bin/true
 ';
 
 $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"timedeferral");
@@ -123,9 +129,9 @@ my $ABORTING = 0;
 ## This will be a better test when offsets are in place
 ##
 push(@exact,   1);
-push(@deltas,  180);
-push(@windows, 180);
-push(@preps,   120);
+push(@deltas,  60);
+push(@windows, 60);
+push(@preps,   20);
 push(@fail,    0);
 
 ##
@@ -180,11 +186,11 @@ push(@fail,    0);
 ## This assumes that our clocks are in synch
 ## This will be a better test when offsets are in place
 ##
-push(@exact,   1);
-push(@deltas,  180);
-push(@windows, 180);
-push(@preps,   120);
-push(@fail,    0);
+#push(@exact,   1);
+#push(@deltas,  180);
+#push(@windows, 180);
+#push(@preps,   120);
+#push(@fail,    0);
 
 ##
 ## Test #3
@@ -193,11 +199,11 @@ push(@fail,    0);
 ## jobs that missed their run time but are within the
 ## the window can still run.
 ##
-push(@exact,   1);
-push(@deltas,  -120);  # 120 sec = 2 min
-push(@windows, 720); # 180 sec = 3 min
-push(@preps,   120);
-push(@fail,    0);
+#push(@exact,   1);
+#push(@deltas,  -120);  # 120 sec = 2 min
+#push(@windows, 720); # 180 sec = 3 min
+#push(@preps,   120);
+#push(@fail,    0);
 
 ## -----------------------------------------------------
 ## PREPARE & SUBMIT TESTS
@@ -225,12 +231,7 @@ for ( $ctr = 0, $cnt = $loopcount; $ctr < $cnt; $ctr++ ) {
 	my $outFile = "job_core_time-deferral-$mypid-$ctr";
 
 	print "********************************* TEST $ctr *********************************\n";
-	if($ctr > $universeswitch)  {
-		$universe = "vanilla";
-		print "************** Just switch tests to vanilla universe **************\n";
-	} else {
-		$universe = "local";
-	}
+	$universe = "local";
 
 	my $deferraltime = "";
 	my $deferralpreptime = "";
