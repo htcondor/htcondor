@@ -134,7 +134,7 @@ class PersonalCondor(object):
 
     def Start(self):
         try:
-            process = subprocess.Popen(["condor_master", "-f &"])
+            process = subprocess.Popen(["condor_master", "-f"])
             if not process:
                 Utils.TLog("[PC: {0}] Child was terminated by signal: {1}".format(self._name, str(process)))
                 return False
