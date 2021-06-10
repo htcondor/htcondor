@@ -280,6 +280,19 @@ def peak_job(test_dir):
     }
 
 
+def both_monitor_script():
+    return sum_monitor_script() + "\n" + peak_monitor_script();
+
+
+def both_check_correct_uptimes(condor, handle):
+    sum_check_correct_uptimes(condor, handle)
+    peak_check_correct_uptimes(condor, handle)
+
+
+def both_check_matching_usage(handle):
+    sum_check_matching_usage(handle)
+    peak_check_matching_usage(handle)
+
 @config(
     params={
         "SQUIDsUsage": {
@@ -315,6 +328,24 @@ def peak_job(test_dir):
             "monitor": peak_monitor_script(),
             "uptime_check": peak_check_correct_uptimes,
             "matching_check": peak_check_matching_usage,
+            "job": peak_job,
+        },
+
+        "SQUIDsUsageAndMemory": {
+            "config": {
+                "NUM_CPUS": "16",
+                "NUM_SLOTS": "16",
+                "ADVERTISE_CMR_UPTIME_SECONDS": "TRUE",
+                "MACHINE_RESOURCE_INVENTORY_SQUIDs": "$(TEST_DIR)/discovery.py",
+                "STARTD_CRON_SQUIDs_MONITOR_EXECUTABLE": "$(TEST_DIR)/monitor.py",
+                "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) SQUIDs_MONITOR",
+                "STARTD_CRON_SQUIDs_MONITOR_MODE": "periodic",
+                "STARTD_CRON_SQUIDs_MONITOR_PERIOD": str(MONITOR_PERIOD),
+                "STARTD_CRON_SQUIDs_MONITOR_METRICS": "SUM:SQUIDs, PEAK:SQUIDsMemory",
+            },
+            "monitor": both_monitor_script(),
+            "uptime_check": both_check_correct_uptimes,
+            "matching_check": both_check_matching_usage,
             "job": peak_job,
         },
     }
