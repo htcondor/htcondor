@@ -81,7 +81,7 @@ JOB B {{
     request_disk = 30
     notification=NEVER
 }}
-JOB C ../{jobfile}
+JOB C {jobfile} DIR ../
 JOB D {{
     executable = sendmail.sh
     universe = local
