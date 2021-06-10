@@ -18,7 +18,7 @@ def HttpSuccessUrlHandler(request):
     request.send_response(200)
     request.send_header("Content-type", "text/html")
     request.end_headers()
-    request.wfile.write("<html>Great success!</html>")
+    request.wfile.write("<html>Great success!</html>".encode())
 
 def HttpServerErrorUrlHandler(request):
     request.send_response(500)
@@ -80,7 +80,9 @@ def main():
     # Stand up a PersonalCondor.  Explicitly set FILETRANSFER_PLUGINS as the ctest
     # driver disables the built-in values for expediency sake.
     personal = CondorTest.StartPersonalCondor("cmd_curl_plugin",
-        {"FILETRANSFER_PLUGINS": "$(LIBEXEC)/curl_plugin"})
+        {"FILETRANSFER_PLUGINS": "$(LIBEXEC)/curl_plugin",
+        "STARTD_ENVIRONMENT": "\"CONDOR_CURL_MAX_RETRY_ATTEMPTS=2\"",
+		})
     if personal == -1:
         Utils.TLog("Failed to start the PersonalCondor environment. Exiting.")
         sys.exit(1)
