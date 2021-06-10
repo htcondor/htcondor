@@ -930,10 +930,10 @@ sub createSubmitFilesNew
     print CMDFILE "inputs = " . join(', ', @fetch_files) . "\n";
 
 
-    if( $runtype eq "build" ) {
-        print CMDFILE "run_type = build\n";
-        writeBuildPrereqsNew( *CMDFILE );
-        writeBuildGlueNew( *CMDFILE, $tag, $module );
+	if( $runtype eq "build" ) {
+		print CMDFILE "run_type = build\n";
+		writeBuildPrereqsNew( *CMDFILE );
+		writeBuildGlueNew( *CMDFILE, $tag, $module );
 		writeBuildXTestSpecsNew( *CMDFILE );
 
 		# This disk requirement is intended to override the default
@@ -944,19 +944,19 @@ sub createSubmitFilesNew
 		# requirements fail because the job's DiskUsage gets updated
 		# in the first attempt to run the job and then prevent the job
 		# from matching in the second attempt.
-		print CMDFILE 
-		"append_requirements = Disk =!= UNDEFINED && TotalDisk >= 10000000\n";
+		print CMDFILE "append_requirements = Disk =!= UNDEFINED && TotalDisk >= 10000000\n";
 
-    } else {
+	} else {
 
-        print CMDFILE "run_type = test\n";
-	 	print CMDFILE "platform_job_timeout = 16h\n";
+		print CMDFILE "run_type = test\n";
+		print CMDFILE "platform_job_timeout = 16h\n";
 		# allow tests on changing systems like unmanaged-x86_rhap_5.1"
 		print CMDFILE "++unmanaged = true \n";
+		print CMDFILE "append_requirements = DedicatedForBaTLab == true\n";
 
-        writeTestPrereqsNew( *CMDFILE );
+		writeTestPrereqsNew( *CMDFILE );
 		writeTestGlueNew( *CMDFILE );
-    }
+	}
 
 	# Not all builds should be public (e.g. security releases).  Set the flag
 	# if defined
