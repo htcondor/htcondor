@@ -81,7 +81,7 @@ JOB B {{
     request_disk = 30
     notification=NEVER
 }}
-JOB C {jobfile}
+JOB C ../{jobfile}
 JOB D {{
     executable = sendmail.sh
     universe = local
@@ -117,6 +117,17 @@ VARS C +WantFlocking="True"
         st = os.stat(TMP_DIR / "sendmail.sh")
         os.chmod(TMP_DIR / "sendmail.sh", st.st_mode | stat.S_IEXEC)
 
+        ec2_annex_sh = f"""#!/bin/sh
+
+yes | /usr/bin/condor_annex -count $1 -duration $2 -annex-name EC2Annex
+"""
+        ec2_annex_sh_file = open(TMP_DIR / "ec2_annex.sh", "w")
+        ec2_annex_sh_file.write(ec2_annex_sh)
+        ec2_annex_sh_file.close()
+        st = os.stat(TMP_DIR / "ec2_annex.sh")
+        os.chmod(TMP_DIR / "ec2_annex.sh", st.st_mode | stat.S_IEXEC)
+
+
         ec2_config = "DAGMAN_USE_CONDOR_SUBMIT = False"
         ec2_config_file = open(TMP_DIR / "ec2_submit.config", "w")
         ec2_config_file.write(ec2_config)
@@ -129,13 +140,15 @@ VARS C +WantFlocking="True"
     request_disk = 10M
 }}
 JOB B {{
-    executable = condor_annex
-    arguments = -count {node_count} -duration {runtime} -annex-name EC2Annex
+    executable = ec2_annex.sh
+    arguments = {node_count} {runtime}
     output = job-B-ec2_annex.$(Cluster).$(Process).out
     error = job-B-ec2_annex.$(Cluster).$(Process).err
     log = ec2_annex.log
+    universe = local
+    request_disk = 10M
 }}
-JOB C {jobfile}
+JOB C {jobfile} DIR ../
 JOB D {{
     executable = sendmail.sh
     universe = local
@@ -147,6 +160,10 @@ PARENT A CHILD B C
 PARENT B C CHILD D
 
 CONFIG ec2_submit.config
+
+VARS C Requirements="(EC2InstanceID =!= undefined) && (TRUE || TARGET.OpSysMajorVer)"
+VARS C +MayUseAWS="True"
+VARS C +WantFlocking="True"
 """
 
         dag_file = open(TMP_DIR / "ec2_submit.dag", "w")

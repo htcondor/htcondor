@@ -67,7 +67,8 @@ class Job:
 
             # Clear contents of TMP_DIR to ensure we can write/submit the dag
             # TODO: Find a safer way to manage tmp files
-            shutil.rmtree(TMP_DIR)
+            if os.path.isdir(TMP_DIR):
+                shutil.rmtree(TMP_DIR)
             os.mkdir(TMP_DIR)
 
             DAGMan.write_slurm_dag(file, options["runtime"], options["node_count"])
@@ -102,7 +103,8 @@ class Job:
 
             # Clear contents of TMP_DIR to ensure we can write/submit the dag
             # TODO: Find a safer way to manage tmp files
-            shutil.rmtree(TMP_DIR)
+            if os.path.isdir(TMP_DIR):
+                shutil.rmtree(TMP_DIR)
             os.mkdir(TMP_DIR)
 
             DAGMan.write_ec2_dag(file, options["runtime"], options["node_count"])
@@ -154,7 +156,7 @@ class Job:
             
         if "ResourceType" in job[0]:
             resource_type = job[0]["ResourceType"].lower()
-
+        
         # Now, produce job status based on the resource type
         if resource_type == "htcondor":
             if JobStatus[job[0]['JobStatus']] is "RUNNING":
@@ -168,7 +170,7 @@ class Job:
 
         # Jobs running on provisioned Slurm resources need to retrieve
         # additional information from the provisioning DAGMan log
-        elif resource_type == "slurm":
+        elif resource_type == "slurm" or resource_type == "ec2":
 
             # Variables specific to jobs running on Slurm clusters
             jobs_running = 0
@@ -182,11 +184,11 @@ class Job:
             dagman_dag, dagman_out, dagman_log = DAGMan.get_files(id)
 
             if dagman_dag is None:
-                print(f"No Slurm job found for ID {id}.")
+                print(f"No {resource_type} job found for ID {id}.")
                 sys.exit(0)
 
             # Parse the .dag file to retrieve some user input values
-            dagman_dag_file = open(dagman_dag, "r")
+            dagman_dag_file = open(TMP_DIR / dagman_dag, "r")
             for line in dagman_dag_file.readlines():
                 if "annex_node_count =" in line:
                     slurm_nodes_requested = line.split("=")[1].strip()
@@ -194,7 +196,7 @@ class Job:
                     slurm_runtime = int(line.split("=")[1].strip())
             
             # Parse the DAGMan event log for useful information
-            dagman_events = htcondor.JobEventLog(dagman_log)
+            dagman_events = htcondor.JobEventLog(str(TMP_DIR / dagman_log))
             for event in dagman_events.events(0):
                 if "LogNotes" in event.keys() and event["LogNotes"] == "DAG Node: B":
                     provisioner_cluster_id = event.cluster
@@ -229,7 +231,7 @@ class Job:
                 print("")
 
         else:
-            print("Error: The 'job status' command does not support {resource_type} resources.")
+            print(f"Error: The 'job status' command does not support {resource_type} resources.")
             sys.exit(1)
 
 
