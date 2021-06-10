@@ -282,6 +282,8 @@ date_util.cpp
 date_util.h
 dc_service.cpp
 dc_service.h
+DelegationInterface.cpp
+DelegationInterface.h
 d_format_time.cpp
 docker-api.cpp
 docker-api.h
