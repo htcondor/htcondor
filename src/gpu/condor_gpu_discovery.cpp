@@ -298,7 +298,6 @@ main( int argc, const char** argv)
 	int opt_hetero = 0;  // don't assume properties are homogeneous
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
-	int opt_cuda_index = 0; // publish by index (I.e CUDA<N>)
 	int opt_uuid = -1;   // publish DetectedGPUs as a list of GPU-<uuid> rather than than CUDA<N>
 	int opt_short_uuid = -1; // use shortened uuids
 	std::list<int> dwl; // Device White List
@@ -311,6 +310,7 @@ main( int argc, const char** argv)
 	const char * opt_pre = "CUDA";
 	const char * opt_pre_arg = NULL;
 	int opt_repeat = 0;
+	int opt_divide = 0;
 	int opt_packed = 0;
 	const char * pcolon;
 	int i;
@@ -393,10 +393,21 @@ main( int argc, const char** argv)
 		}
 		else if (is_dash_arg_prefix(argv[i], "repeat", -1)) {
 			if (! argv[i+1] || '-' == *argv[i+1]) {
-				opt_repeat = 2;
+			    // This preserves the value from -divide.
+			    if( opt_repeat == 0 ) { opt_repeat = 2; }
 			} else {
 				opt_repeat = atoi(argv[++i]);
 			}
+            opt_divide = 0;
+		}
+		else if (is_dash_arg_prefix(argv[i], "divide", -1)) {
+			if (! argv[i+1] || '-' == *argv[i+1]) {
+			    // This preserves the setting from -repeat.
+			    if( opt_repeat == 0 ) { opt_repeat = 2; }
+			} else {
+				opt_repeat = atoi(argv[++i]);
+			}
+			opt_divide = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "packed", -1)) {
 			opt_packed = 1;
@@ -411,17 +422,15 @@ main( int argc, const char** argv)
 			}
 		}
 		else if (is_dash_arg_prefix(argv[i], "by-index", 4)) {
-			opt_cuda_index = 1;
 			opt_short_uuid = opt_uuid = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "uuid", 2)) {
 			opt_uuid = 1;
-			opt_cuda_index = opt_short_uuid = 0;
+			opt_short_uuid = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "short-uuid", -1)) {
 			opt_uuid = 1;
 			opt_short_uuid = 1;
-			opt_cuda_index = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "prefix", 3)) {
 			if (argv[i+1]) {
@@ -501,9 +510,9 @@ main( int argc, const char** argv)
 			// isn't, maybe this should only show up in -debug?
 			print_error(MODE_ERROR, "Unable to load NVML; will not discover dynamic properties or MIG instances.\n" );
 		} else {
-		    nvmlReturn_t r = nvmlInit();
+			nvmlReturn_t r = nvmlInit();
 			if( r != NVML_SUCCESS ) {
-			    print_error(MODE_ERROR, "Warning: nvmlInit() failed with error %d; will not discover dynamic properties or MIG instances.\n", r );
+				print_error(MODE_ERROR, "Warning: nvmlInit() failed with error %d; will not discover dynamic properties or MIG instances.\n", r );
 				dlclose( nvml_handle );
 				nvml_handle = NULL;
 			}
@@ -759,6 +768,24 @@ main( int argc, const char** argv)
 				left = delim + 2;
 			} while( true );
 		}
+
+		// ... and the amount of reported memory per device.
+		if( opt_divide ) {
+			for (MKVP::iterator mit = dev_props.begin(); mit != dev_props.end(); ++mit) {
+				if (mit->second.empty()) continue;
+
+				int global_memory = 0;
+				for (KVP::iterator it = mit->second.begin(); it != mit->second.end(); ++it) {
+					if( it->first == "GlobalMemoryMb" ) {
+						global_memory = std::stoi( it->second );
+						it->second = std::to_string(global_memory / opt_repeat);
+					}
+				}
+				if(global_memory != 0) {
+					mit->second["DeviceMemoryMb"] = std::to_string(global_memory);
+				}
+			}
+		}
 	}
 
 
@@ -892,6 +919,11 @@ void usage(FILE* out, const char * argv0)
 		"    -config           Output in HTCondor config syntax\n"
 		"    -repeat [<N>]     Repeat list of detected GPUs N (default 2) times\n"
 		"                      (e.g., DetectedGPUS = \"CUDA0, CUDA1, CUDA0, CUDA1\")\n"
+		"                      Divides GlobalMemoryMb attribute by N.\n"
+		"    -divide [<N>]     As -repeat, but divide GlobalMemoryMb by N.\n"
+		"                      With both -repeat and -divide:\n"
+		"                        the last flag wins,\n"
+		"                        but the default won't reset an explicit N.\n"
 		"    -packed           When repeating, repeat each GPU, not the whole list\n"
 		"                      (e.g., DetectedGPUs = \"CUDA0, CUDA0, CUDA1, CUDA1\")\n"
 		"    -cron             Output for use as a STARTD_CRON job, use with -dynamic\n"
