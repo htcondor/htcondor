@@ -68,7 +68,7 @@ sequences = { f"{resource}{i}": j for i, j in enumerate(peaks) }
                 "STARTD_CRON_SQUIDs_MONITOR_PERIOD": str(monitor_period),
                 "STARTD_CRON_SQUIDs_MONITOR_METRICS": "PEAK:SQUIDsMemory",
             },
-            "monitor": peak_monitor_script(sequences),
+            "monitor": peak_monitor_script(resource, sequences),
             "uptime_check": lambda c, h: peak_check_correct_uptimes(c, h, resource, sequences),
             "matching_check": lambda h: peak_check_matching_usage(h, resource),
             "job": lambda t: peak_job(t, resource),

@@ -155,18 +155,19 @@ def peak_job(test_dir, resource):
     }
 
 
-def peak_monitor_script(sequences):
+def peak_monitor_script(resource, sequences):
     return "#!/usr/bin/python3\n" + textwrap.dedent("""
         import math
         import time
 
+        """ + f"resource = '{resource}'" + """
         """ + f"sequences = {sequences}" + """
 
         positionInSequence = math.floor((time.time() % 60) / 10);
-        for index in ["SQUID0", "SQUID1", "SQUID2", "SQUID3"]:
+        for index in sequences.keys():
             usage = sequences[index][positionInSequence]
-            print(f'SlotMergeConstraint = StringListMember("{index}", AssignedSQUIDs)' )
-            print(f'UptimeSQUIDsMemoryPeakUsage = {usage}');
+            print(f'SlotMergeConstraint = StringListMember("{index}", Assigned{resource}s)' )
+            print(f'Uptime{resource}sMemoryPeakUsage = {usage}');
             print(f'- {index}')
         """)
 
@@ -282,4 +283,4 @@ def both_check_matching_usage(handle, resource):
 
 
 def both_monitor_script(resource, resources, sequences):
-    return sum_monitor_script(resource, resources) + "\n" + peak_monitor_script(sequences);
+    return sum_monitor_script(resource, resources) + "\n" + peak_monitor_script(resource, sequences);
