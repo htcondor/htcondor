@@ -665,12 +665,14 @@ linux_count_cpus_id( CpuInfo *cpuinfo )
 						( proc->physical_id != tproc->physical_id )  ) ||
 					  ( ( proc->core_id >= 0 ) &&
 						( proc->core_id != tproc->core_id ) )  ) {
-					dprintf( D_LOAD | D_VERBOSE,
+					if (IsDebugVerbose(D_LOAD)) {
+						dprintf( D_LOAD | D_VERBOSE,
 							 "Comparing P#%-3d and P#%-3d: "
 							 "pid:%d!=%d or  cid:%d!=%d (match=No)\n",
 							 pnum, tpnum,
 							 proc->physical_id, tproc->physical_id,
 							 proc->core_id, tproc->core_id );
+					}
 					continue;
 				}
 

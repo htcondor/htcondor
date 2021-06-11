@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -25,6 +24,13 @@ use Check::SimpleJob;
 use CheckOutputFormats;
 use strict;
 use warnings;
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+NEGOTIATOR_INTERVAL = 5
+NUM_CPUS = 32
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 my $testname = "cmd_status-transform";
 
