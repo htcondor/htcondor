@@ -1152,17 +1152,17 @@ static bool test_get_access_time_close() {
 	emit_param("Directory", "%s", tmp_dir.Value());
 	Directory dir(tmp_dir.Value());
 	const char* next = dir.Next();
-	emit_param("Current File", "%s", next);
 	struct stat st;
 	MyString file;
 	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
 	stat(file.Value(), &st);
+	emit_param("Current File", "%s", next);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_atime);
 	time_t atime = dir.GetAccessTime();
 	emit_output_actual_header();
 	emit_retval("%d", atime);
-	if(atime != st.st_atime) {
+	if(atime+1 < st.st_atime || atime > st.st_atime+1) { // allow 1 second slop because underlying file times are sub-second.
 		FAIL;
 	}
 	PASS;
@@ -1228,17 +1228,17 @@ static bool test_get_modify_time_close() {
 	emit_param("Directory", "%s", tmp_dir.Value());
 	Directory dir(tmp_dir.Value());
 	const char* next = dir.Next();
-	emit_param("Current File", "%s", next);
 	struct stat st;
 	MyString file;
 	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
 	stat(file.Value(), &st);
+	emit_param("Current File", "%s", next);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_mtime);
 	time_t mtime = dir.GetModifyTime();
 	emit_output_actual_header();
 	emit_retval("%d", mtime);
-	if(mtime != st.st_mtime) {
+	if(mtime+1 < st.st_mtime || mtime > st.st_mtime+1) { // allow 1 second slop because underlying file times are sub-second.
 		FAIL;
 	}
 	PASS;
@@ -1304,17 +1304,17 @@ static bool test_get_create_time_close() {
 	emit_param("Directory", "%s", tmp_dir.Value());
 	Directory dir(tmp_dir.Value());
 	const char* next = dir.Next();
-	emit_param("Current File", "%s", next);
 	struct stat st;
 	MyString file;
 	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
 	stat(file.Value(), &st);
+	emit_param("Current File", "%s", next);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_ctime);
 	time_t ctime = dir.GetCreateTime();
 	emit_output_actual_header();
 	emit_retval("%d", ctime);
-	if(ctime != st.st_ctime) {
+	if(ctime+1 < st.st_ctime || ctime > st.st_ctime+1) { // allow 1 second slop because underlying file times are sub-second.
 		FAIL;
 	}
 	PASS;
