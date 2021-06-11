@@ -172,12 +172,14 @@ def peak_monitor_script(resource, sequences):
         """)
 
 
-def read_peaks_from_file(filename):
+def read_peaks_from_file(filename, resourcename):
     peaks = {}
     with open(filename, "r") as f:
         for line in f:
             [resource, value] = line.split()
             if value == "undefined":
+                continue
+            if resource != resourcename:
                 continue
             if not resource in peaks:
                 peaks[resource] = []
@@ -212,13 +214,9 @@ def peak_check_correct_uptimes(condor, handle, resource, sequences):
     observed_peaks = {}
     ads = handle.query(projection=["ClusterID", "ProcID", "Out"])
     for ad in ads:
-        observed_peaks[ad["ProcID"]] = read_peaks_from_file(ad["Out"])
+        observed_peaks[ad["ProcID"]] = read_peaks_from_file(ad["Out"], resource)
 
     logger.info(f"Obversed peaks were {observed_peaks}")
-
-    # Assert that we only logged one resource for each job.
-    for ad in ads:
-        assert len(observed_peaks[ad["ProcID"]]) == 1
 
     # Assert that the observed peaks are valid for their resource.
     for ad in ads:

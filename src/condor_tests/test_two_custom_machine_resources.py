@@ -40,6 +40,8 @@ peaks = {
         [ 4400, 4400, 1400, 9400, 5400, 5400 ],
     ],
 }
+# sequence = { resource: { f"{resource}{i}": j for i, j in enumerate(usages[resource]) } for resource in resources }
+# seqeunces = { resource: { f"{resource}{i}": j for i, j in enumerate(peaks[resource]) } for resource in resources }
 
 
 @config(
@@ -52,17 +54,17 @@ peaks = {
 
                 "MACHINE_RESOURCE_INVENTORY_SQUIDs": "$(TEST_DIR)/SQUID-discovery.py",
                 "STARTD_CRON_SQUIDs_MONITOR_EXECUTABLE": "$(TEST_DIR)/SQUID-monitor.py",
-                "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) SQUIDs_MONITOR",
                 "STARTD_CRON_SQUIDs_MONITOR_MODE": "periodic",
                 "STARTD_CRON_SQUIDs_MONITOR_PERIOD": str(monitor_period),
                 "STARTD_CRON_SQUIDs_MONITOR_METRICS": "SUM:SQUIDs, PEAK:SQUIDsMemory",
 
                 "MACHINE_RESOURCE_INVENTORY_TAKOs": "$(TEST_DIR)/TAKO-discovery.py",
                 "STARTD_CRON_TAKOs_MONITOR_EXECUTABLE": "$(TEST_DIR)/TAKO-monitor.py",
-                "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) TAKOs_MONITOR",
                 "STARTD_CRON_TAKOs_MONITOR_MODE": "periodic",
                 "STARTD_CRON_TAKOs_MONITOR_PERIOD": str(monitor_period),
                 "STARTD_CRON_TAKOs_MONITOR_METRICS": "SUM:TAKOs, PEAK:TAKOsMemory",
+
+                "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) SQUIDs_MONITOR TAKOs_MONITOR",
             },
         },
     }
@@ -94,6 +96,60 @@ def condor(test_dir, slot_config):
         yield condor
 
 
+def the_job(test_dir, resources):
+    job_script = format_script( "#!/usr/bin/python3\n" + textwrap.dedent("""
+        import os
+        import sys
+        import time
+
+        elapsed = 0;
+        while elapsed < int(sys.argv[1]):""" +
+
+        "".join( f"""
+            os.system('condor_status -ads ${{_CONDOR_SCRATCH_DIR}}/.update.ad -af Assigned{resource}s {resource}sMemoryUsage')
+        """ for resource in resources
+        ) +
+
+        """
+            time.sleep(1)
+            elapsed += 1
+        """)
+    )
+
+    script_file = test_dir / "poll-memory.py"
+    write_file(script_file, job_script)
+
+    job_spec = {
+                "executable": script_file.as_posix(),
+                "arguments": "17",
+                "log": (test_dir / "events.log").as_posix(),
+                "output": (test_dir / "poll-memory.$(Cluster).$(Process).out").as_posix(),
+                "error": (test_dir / "poll-memory.$(Cluster).$(Process).err").as_posix(),
+                "getenv": "true",
+                "LeaveJobInQueue": "true",
+    }
+
+    for resource in resources:
+        job_spec[f"request_{resource}s"] = "1"
+
+    return job_spec
+
+
+@action
+def handle(test_dir, condor):
+    handle = condor.submit(
+        description=the_job(test_dir, resources.keys()),
+        count=len(resources.keys()) * 2
+    )
+
+    assert(handle.wait(verbose=True, timeout=180))
+    assert(condor.job_queue.wait_for_job_completion(handle.job_ids))
+
+    yield handle
+
+    handle.remove()
+
+
 class TestCustomMachineResources:
 
     def test_correct_number_of_resources_assigned(self, condor):
@@ -105,3 +161,13 @@ class TestCustomMachineResources:
             )
 
             assert len([ad for ad in result if f"Assigned{resource}s" in ad]) == number
+
+    def test_correct_uptimes_from_monitors(self, condor, handle):
+        for resource in resources.keys():
+            sequence = { f"{resource}{i}": j for i, j in enumerate(usages[resource]) }
+            sum_check_correct_uptimes(condor, handle, resource, sequence)
+
+    def test_correct_peaks_from_monitors(self, condor, handle):
+        for resource in resources.keys():
+            sequences = { f"{resource}{i}": j for i, j in enumerate(peaks[resource]) }
+            peak_check_correct_uptimes(condor, handle, resource, sequences)
