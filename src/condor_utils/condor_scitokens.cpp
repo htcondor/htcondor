@@ -39,7 +39,7 @@ static void (*enforcer_acl_free_ptr)(Acl *acls) = nullptr;
 static int (*scitoken_get_expiration_ptr)(const SciToken token, long long *value, char **err_msg) =
 	nullptr;
 static int (*scitoken_get_claim_string_list_ptr)(const SciToken token, const char *key, char ***value, char **err_msg) = nullptr;
-static int (*scitoken_free_string_list_ptr)(char **value) = nullptr;
+static void (*scitoken_free_string_list_ptr)(char **value) = nullptr;
 
 #define LIBSCITOKENS_SO "libSciTokens.so.0"
 
@@ -152,7 +152,7 @@ htcondor::init_scitokens()
 			// Note: these methods are only in a more recent version of the SciTokens library; hence, if they
 			// are missing it's considered non-fatal.
 		scitoken_get_claim_string_list_ptr = (int (*)(const SciToken token, const char *key, char ***value, char **err_msg))dlsym(dl_hdl, "scitoken_get_claim_string_list");
-		scitoken_free_string_list_ptr = (int (*)(char **value))dlsym(dl_hdl, "scitoken_free_string_list");
+		scitoken_free_string_list_ptr = (void (*)(char **value))dlsym(dl_hdl, "scitoken_free_string_list");
 	}
 #else
 	dprintf(D_SECURITY, "SciTokens is not supported on Windows.\n");
