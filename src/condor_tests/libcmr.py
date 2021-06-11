@@ -18,13 +18,14 @@ logger.setLevel(logging.DEBUG)
 #
 
 
-def discovery_script_for(resources):
+def discovery_script_for(resource, resources):
     script = """
     #!/usr/bin/python3
 
-    print('DetectedSQUIDs="{res}"')
+    print('Detected{resource}s="{list}"')
     """.format(
-        res=", ".join(resources.keys())
+        resource=resource,
+        list=", ".join(resources.keys())
     )
     return script
 
@@ -34,29 +35,29 @@ def discovery_script_for(resources):
 #
 
 
-def sum_job(test_dir, monitor_period):
+def sum_job(test_dir, monitor_period, resource):
     return {
                 "executable": "/bin/sleep",
                 "arguments": str((monitor_period * 3) + 2),
-                "request_SQUIDs": "1",
+               f"request_{resource}s": "1",
                 "log": (test_dir / "events.log").as_posix(),
                 "LeaveJobInQueue": "true",
     }
 
 
-def sum_monitor_script(resources):
+def sum_monitor_script(resource, resources):
     return "#!/usr/bin/python3\n" + "".join(
         textwrap.dedent(
             """
-            print('SlotMergeConstraint = StringListMember( "{name}", AssignedSQUIDs )')
-            print('UptimeSQUIDsSeconds = {increment}')
+            print('SlotMergeConstraint = StringListMember( "{name}", Assigned{resource}s )')
+            print('Uptime{resource}sSeconds = {increment}')
             print('- {name}')
-            """.format(name=name, increment=increment)
+            """.format(name=name, increment=increment, resource=resource)
         ) for name, increment in resources.items()
     )
 
 
-def sum_check_correct_uptimes(condor, handle, resources):
+def sum_check_correct_uptimes(condor, handle, resource, resources):
     #
     # See HTCONDOR-472 for an extended discussion.
     #
@@ -64,11 +65,11 @@ def sum_check_correct_uptimes(condor, handle, resources):
     direct = condor.direct_status(
         htcondor.DaemonTypes.Startd,
         htcondor.AdTypes.Startd,
-        constraint="AssignedSQUIDs =!= undefined",
-        projection=["SlotID", "AssignedSQUIDs", "UptimeSQUIDsSeconds"],
+        constraint=f"Assigned{resource}s =!= undefined",
+        projection=["SlotID", f"Assigned{resource}s", f"Uptime{resource}sSeconds"],
     )
 
-    measured_uptimes = set(int(ad["UptimeSQUIDsSeconds"]) for ad in direct)
+    measured_uptimes = set(int(ad[f"Uptime{resource}sSeconds"]) for ad in direct)
 
     logger.info(
         "Measured uptimes were {}, expected multiples of {} (not necessarily in order)".format(
@@ -85,11 +86,11 @@ def sum_check_correct_uptimes(condor, handle, resources):
     )
 
 
-def sum_check_matching_usage(handle):
+def sum_check_matching_usage(handle, resource):
     terminated_events = handle.event_log.filter(
         lambda e: e.type is htcondor.JobEventType.JOB_TERMINATED
     )
-    ads = handle.query(projection=["ClusterID", "ProcID", "SQUIDsAverageUsage"])
+    ads = handle.query(projection=["ClusterID", "ProcID", f"{resource}sAverageUsage"])
 
     # make sure we got the right number of terminate events and ads
     # before doing the real assertion
@@ -97,12 +98,12 @@ def sum_check_matching_usage(handle):
     assert len(ads) == len(handle)
 
     jobid_to_usage_via_event = {
-        JobID.from_job_event(event): event["SQUIDsUsage"]
+        JobID.from_job_event(event): event[f"{resource}sUsage"]
         for event in sorted(terminated_events, key=lambda e: e.proc)
     }
 
     jobid_to_usage_via_ad = {
-        JobID.from_job_ad(ad): round(ad["SQUIDsAverageUsage"], 2)
+        JobID.from_job_ad(ad): round(ad[f"{resource}sAverageUsage"], 2)
         for ad in sorted(ads, key=lambda ad: ad["ProcID"])
     }
 
@@ -123,29 +124,29 @@ def sum_check_matching_usage(handle):
 #
 
 
-def peak_job_script():
-    return format_script( "#!/usr/bin/python3\n" + textwrap.dedent("""
+def peak_job_script(resource):
+    return format_script( "#!/usr/bin/python3\n" + textwrap.dedent(f"""
         import os
         import sys
         import time
 
         elapsed = 0;
         while elapsed < int(sys.argv[1]):
-            os.system('condor_status -ads ${_CONDOR_SCRATCH_DIR}/.update.ad -af AssignedSQUIDs SQUIDsMemoryUsage')
+            os.system('condor_status -ads ${{_CONDOR_SCRATCH_DIR}}/.update.ad -af Assigned{resource}s {resource}sMemoryUsage')
             time.sleep(1)
             elapsed += 1
         """)
     )
 
 
-def peak_job(test_dir):
+def peak_job(test_dir, resource):
     script_file = (test_dir / "poll-memory.py")
-    write_file(script_file, peak_job_script())
+    write_file(script_file, peak_job_script(resource))
 
     return {
                 "executable": script_file.as_posix(),
                 "arguments": "17",
-                "request_SQUIDs": "1",
+               f"request_{resource}s": "1",
                 "log": (test_dir / "events.log").as_posix(),
                 "output": (test_dir / "poll-memory.$(Cluster).$(Process).out").as_posix(),
                 "error": (test_dir / "poll-memory.$(Cluster).$(Process).err").as_posix(),
@@ -183,7 +184,7 @@ def read_peaks_from_file(filename):
     return peaks;
 
 
-def peak_check_correct_uptimes(condor, handle, sequences):
+def peak_check_correct_uptimes(condor, handle, resource, sequences):
     #
     # First, assert that the startd reported something sane.
     #
@@ -191,15 +192,15 @@ def peak_check_correct_uptimes(condor, handle, sequences):
     direct = condor.direct_status(
         htcondor.DaemonTypes.Startd,
         htcondor.AdTypes.Startd,
-        constraint="AssignedSQUIDs =!= undefined",
-        projection=["SlotID", "AssignedSQUIDs", "DeviceSQUIDsMemoryPeakUsage"],
+        constraint=f"Assigned{resource}s =!= undefined",
+        projection=["SlotID", f"Assigned{resource}s", f"Device{resource}sMemoryPeakUsage"],
     )
 
     for ad in direct:
-        resource = ad["AssignedSQUIDs"]
-        peak = int(ad["DeviceSQUIDsMemoryPeakUsage"])
-        logger.info(f"Measured peak for {resource} was {peak}")
-        assert peak in sequences[resource]
+        r = ad[f"Assigned{resource}s"]
+        peak = int(ad[f"Device{resource}sMemoryPeakUsage"])
+        logger.info(f"Measured peak for {r} was {peak}")
+        assert peak in sequences[r]
 
     #
     # Then assert that the periodic polling recorded by the job recorded
@@ -232,11 +233,11 @@ def peak_check_correct_uptimes(condor, handle, sequences):
                 assert sequence[i] <= sequence[i+1]
 
 
-def peak_check_matching_usage(handle):
+def peak_check_matching_usage(handle, resource):
     terminated_events = handle.event_log.filter(
         lambda e: e.type is htcondor.JobEventType.JOB_TERMINATED
     )
-    ads = handle.query(projection=["ClusterID", "ProcID", "SQUIDsMemoryUsage"])
+    ads = handle.query(projection=["ClusterID", "ProcID", f"{resource}sMemoryUsage"])
 
     # make sure we got the right number of terminate events and ads
     # before doing the real assertion
@@ -244,12 +245,12 @@ def peak_check_matching_usage(handle):
     assert len(ads) == len(handle)
 
     jobid_to_usage_via_event = {
-        JobID.from_job_event(event): event["SQUIDsMemoryUsage"]
+        JobID.from_job_event(event): event[f"{resource}sMemoryUsage"]
         for event in sorted(terminated_events, key=lambda e: e.proc)
     }
 
     jobid_to_usage_via_ad = {
-        JobID.from_job_ad(ad): round(ad["SQUIDsMemoryUsage"], 2)
+        JobID.from_job_ad(ad): round(ad[f"{resource}sMemoryUsage"], 2)
         for ad in sorted(ads, key=lambda ad: ad["ProcID"])
     }
 
@@ -270,15 +271,15 @@ def peak_check_matching_usage(handle):
 #
 
 
-def both_check_correct_uptimes(condor, handle, resources, sequences):
-    sum_check_correct_uptimes(condor, handle, resources)
-    peak_check_correct_uptimes(condor, handle, sequences)
+def both_check_correct_uptimes(condor, handle, resource, resources, sequences):
+    sum_check_correct_uptimes(condor, handle, resource, resources)
+    peak_check_correct_uptimes(condor, handle, resource, sequences)
 
 
-def both_check_matching_usage(handle):
-    sum_check_matching_usage(handle)
-    peak_check_matching_usage(handle)
+def both_check_matching_usage(handle, resource):
+    sum_check_matching_usage(handle, resource)
+    peak_check_matching_usage(handle, resource)
 
 
-def both_monitor_script(resources, sequences):
-    return sum_monitor_script(resources) + "\n" + peak_monitor_script(sequences);
+def both_monitor_script(resource, resources, sequences):
+    return sum_monitor_script(resource, resources) + "\n" + peak_monitor_script(sequences);

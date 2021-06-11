@@ -24,13 +24,16 @@ logger.setLevel(logging.DEBUG)
 
 
 monitor_period = 5
-resources = {"SQUID0": 1, "SQUID1": 4, "SQUID2": 5, "SQUID3": 9}
-sequences = {
-    "SQUID0": [ 51, 51, 91, 11, 41, 41 ],
-    "SQUID1": [ 42, 42, 92, 12, 52, 52 ],
-    "SQUID2": [ 53, 53, 13, 93, 43, 43 ],
-    "SQUID3": [ 44, 44, 14, 94, 54, 54 ],
-};
+resource = "SQUID"
+usages = [1, 4, 5, 9]
+resources = { f"{resource}{i}": j for i, j in enumerate(usages) }
+peaks = [
+    [ 51, 51, 91, 11, 41, 41 ],
+    [ 42, 42, 92, 12, 52, 52 ],
+    [ 53, 53, 13, 93, 43, 43 ],
+    [ 44, 44, 14, 94, 54, 54 ],
+]
+sequences = { f"{resource}{i}": j for i, j in enumerate(peaks) }
 
 
 @config(
@@ -47,10 +50,10 @@ sequences = {
                 "STARTD_CRON_SQUIDs_MONITOR_PERIOD": str(monitor_period),
                 "STARTD_CRON_SQUIDs_MONITOR_METRICS": "SUM:SQUIDs",
             },
-            "monitor": sum_monitor_script(resources),
-            "uptime_check": lambda c, h: sum_check_correct_uptimes(c, h, resources),
-            "matching_check": sum_check_matching_usage,
-            "job": lambda t: sum_job(t, monitor_period),
+            "monitor": sum_monitor_script(resource, resources),
+            "uptime_check": lambda c, h: sum_check_correct_uptimes(c, h, resource, resources),
+            "matching_check": lambda h: sum_check_matching_usage(h, resource),
+            "job": lambda t: sum_job(t, monitor_period, resource),
         },
 
         "SQUIDsMemory": {
@@ -66,9 +69,9 @@ sequences = {
                 "STARTD_CRON_SQUIDs_MONITOR_METRICS": "PEAK:SQUIDsMemory",
             },
             "monitor": peak_monitor_script(sequences),
-            "uptime_check": lambda c, h: peak_check_correct_uptimes(c, h, sequences),
-            "matching_check": peak_check_matching_usage,
-            "job": peak_job,
+            "uptime_check": lambda c, h: peak_check_correct_uptimes(c, h, resource, sequences),
+            "matching_check": lambda h: peak_check_matching_usage(h, resource),
+            "job": lambda t: peak_job(t, resource),
         },
 
         "SQUIDsUsageAndMemory": {
@@ -83,10 +86,10 @@ sequences = {
                 "STARTD_CRON_SQUIDs_MONITOR_PERIOD": str(monitor_period),
                 "STARTD_CRON_SQUIDs_MONITOR_METRICS": "SUM:SQUIDs, PEAK:SQUIDsMemory",
             },
-            "monitor": both_monitor_script(resources, sequences),
-            "uptime_check": lambda c, h: both_check_correct_uptimes(c, h, resources, sequences),
-            "matching_check": both_check_matching_usage,
-            "job": peak_job,
+            "monitor": both_monitor_script(resource, resources, sequences),
+            "uptime_check": lambda c, h: both_check_correct_uptimes(c, h, resource, resources, sequences),
+            "matching_check": lambda h: both_check_matching_usage(h, resource),
+            "job": lambda t: peak_job(t, resource),
         },
     }
 )
@@ -96,7 +99,7 @@ def the_config(request):
 
 @config
 def discovery_script():
-    return format_script(discovery_script_for(resources))
+    return format_script(discovery_script_for(resource, resources))
 
 
 @config
@@ -195,11 +198,11 @@ def num_busy_slots_history(startd_log_file, handle, num_resources):
 class TestCustomMachineResources:
     def test_correct_number_of_resources_assigned(self, condor, num_resources):
         result = condor.status(
-            ad_type=htcondor.AdTypes.Startd, projection=["SlotID", "AssignedSQUIDs"]
+            ad_type=htcondor.AdTypes.Startd, projection=["SlotID", f"Assigned{resource}s"]
         )
 
         # if a slot doesn't have a resource, it simply has no entry in its ad
-        assert len([ad for ad in result if "AssignedSQUIDs" in ad]) == num_resources
+        assert len([ad for ad in result if f"Assigned{resource}s" in ad]) == num_resources
 
     def test_correct_uptimes_from_monitor(self, condor, handle, uptime_check):
         uptime_check(condor, handle)
