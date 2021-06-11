@@ -21,25 +21,11 @@ logger.setLevel(logging.DEBUG)
 
 
 @standup
-def condor(test_dir):
-    with Condor(
-        local_dir=test_dir / "condor",
-        config={
-            "SEC_DEFAULT_ENCRYPTION": "required",
-            "SEC_DEFAULT_CRYPTO_METHODS": "AES",
-            "SHADOW_DEBUG": "D_SECURITY:2",
-            "STARTER_DEBUG": "D_SECURITY:2"
-        },
-    ) as condor:
-        yield condor
-
-
-@action
 def strace_condor_shadow(test_dir):
     script_file = test_dir / "strace_condor_shadow.sh"
-    script_contents = """#!/bin/bash
+    script_contents = f"""#!/bin/bash
 
-while true; do pid=$(pgrep 'condor_shadow' | head -1); if [[ -n \"$pid\" ]]; then strace  -s 2000 -vvtf -p \"$pid\" -o condor_shadow.strace.out; break; fi; done"""
+exec strace -o {test_dir}/condor_shadow.strace.out -s 2000 condor_shadow "$@" """
     script = open(script_file, "w")
     script.write(script_contents)
     script.close()
@@ -47,7 +33,20 @@ while true; do pid=$(pgrep 'condor_shadow' | head -1); if [[ -n \"$pid\" ]]; the
     st = os.stat(script_file)
     os.chmod(script_file, st.st_mode | stat.S_IEXEC)
 
-    subprocess.Popen([script_file, "&"])
+
+@standup
+def condor(test_dir, strace_condor_shadow):
+    with Condor(
+        local_dir=test_dir / "condor",
+        config={
+            "SEC_DEFAULT_ENCRYPTION": "required",
+            "SEC_DEFAULT_CRYPTO_METHODS": "AES",
+            "SHADOW": test_dir / "strace_condor_shadow.sh",
+            "SHADOW_DEBUG": "D_SECURITY:2",
+            "STARTER_DEBUG": "D_SECURITY:2"
+        },
+    ) as condor:
+        yield condor
 
 
 @action
