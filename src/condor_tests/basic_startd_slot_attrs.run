@@ -30,11 +30,10 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
+my $testname = "basic_startd_slot_attrs";
 
-my $ClusterId = 0;
-my $expect_return = 0;
-
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	WANT_SUSPEND = FALSE
 	KILLING_TIMEOUT = 1
@@ -44,6 +43,7 @@ my $firstappend_condor_config = '
 	START = TRUE
 	TOOL_DEBUG = D_FULLDEBUG
 	ALL_DEBUG = D_ALWAYS
+
 	NUM_CPUS = 4
 	STARTD_SLOT_ATTRS = activity,state,memory
 	SLOT_TYPE_1 = cpus=25%,mem=500
@@ -58,7 +58,8 @@ my $firstappend_condor_config = '
 	SLOT_TYPE_4 = cpus=25%,mem=300
 	SLOT_TYPE_4_PARTITIONABLE = FALSE
 	NUM_SLOTS_TYPE_4 = 1
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 my %memoryhash = (
 	slot1 => 500,
@@ -67,16 +68,9 @@ my %memoryhash = (
 	slot4 => 300,
 );
 
+my $ClusterId = 0;
+my $expect_return = 0;
 
-my $testname = "basic_startd_slot_attrs";
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"startdslotattrs");
-
-CondorTest::StartCondorWithParams(
-	condor_name => "startdslotattrs",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
 
 my $on_abort = sub {
 	CondorTest::debug("Abort from removing trap signal job.\n",1);
