@@ -30,14 +30,15 @@ class Job:
     @staticmethod
     def submit(file, options=None):
 
+        # Make sure the specified submit file exists and is readable!
+        if os.access(file, os.R_OK) is False:
+            print(f"Error: could not read file {file}")
+            sys.exit(1)
+
+        # If no resource specified, submit job to the local schedd
         if "resource" not in options:
 
-            # If no resource specified, submit job to the local schedd
-            try:
-                submit_file = open(file)
-            except:
-                print(f"Error: could not read file {file}")
-                sys.exit(1)
+            submit_file = open(file)
             submit_data = submit_file.read()
             submit_file.close()
             submit_description = htcondor.Submit(submit_data)
@@ -65,16 +66,9 @@ class Job:
                 print("Error: Slurm resources must specify a --node_count argument")
                 sys.exit(1)
 
-            # Clear contents of TMP_DIR to ensure we can write/submit the dag
-            # TODO: Find a safer way to manage tmp files
-            if os.path.isdir(TMP_DIR):
-                shutil.rmtree(TMP_DIR)
             os.mkdir(TMP_DIR)
-
             DAGMan.write_slurm_dag(file, options["runtime"], options["node_count"])
-            print(str(TMP_DIR / "slurm_submit.dag"))
-            # DAG must be submitted from TMP_DIR
-            os.chdir(TMP_DIR)
+            os.chdir(TMP_DIR) # DAG must be submitted from TMP_DIR
             submit_description = htcondor.Submit.from_dag(str(TMP_DIR / "slurm_submit.dag"))
             submit_description["+ResourceType"] = "\"Slurm\""
             
@@ -101,15 +95,9 @@ class Job:
                 print("Error: EC2 resources must specify a --node_count argument")
                 sys.exit(1)
 
-            # Clear contents of TMP_DIR to ensure we can write/submit the dag
-            # TODO: Find a safer way to manage tmp files
-            if os.path.isdir(TMP_DIR):
-                shutil.rmtree(TMP_DIR)
             os.mkdir(TMP_DIR)
-
             DAGMan.write_ec2_dag(file, options["runtime"], options["node_count"])
-            # DAG must be submitted from TMP_DIR
-            os.chdir(TMP_DIR)
+            os.chdir(TMP_DIR) # DAG must be submitted from TMP_DIR
             submit_description = htcondor.Submit.from_dag("ec2_submit.dag")
             submit_description["+ResourceType"] = "\"EC2\""
 

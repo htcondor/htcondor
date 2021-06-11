@@ -1,5 +1,7 @@
 import os
+import tempfile
+import time
 
 from pathlib import Path
 
-TMP_DIR = os.getcwd() / Path(".htcondor_cli.tmp")
+TMP_DIR = tempfile.gettempdir() / Path("htcondor_cli") / Path(str(time.time()))

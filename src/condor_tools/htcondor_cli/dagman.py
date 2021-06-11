@@ -61,27 +61,25 @@ class DAGMan:
     request_disk = 10M
 }}
 JOB B {{
+    executable = /home/jfrey/hobblein/hobblein_remote.sh
+    universe = grid
+    grid_resource = batch slurm hpclogin1.chtc.wisc.edu
+    transfer_executable = false
+    output = job-B.$(Cluster).$(Process).out
+    error = job-B.$(Cluster).$(Process).err
+    log = job-B.$(Cluster).$(Process).log
     annex_runtime = {runtime}
     annex_node_count = {node_count}
     annex_name = {getpass.getuser()}-test
     annex_user = {getpass.getuser()}
-    universe=grid
-    grid_resource=batch slurm hpclogin1.chtc.wisc.edu
-    transfer_executable=false
-    executable=/home/jfrey/hobblein/hobblein_remote.sh
     # args: <node count> <run time> <annex name> <user>
-    arguments=$(annex_node_count) $(annex_runtime) $(annex_name) $(annex_user)
-    +NodeNumber=$(annex_node_count)
-    #+HostNumber=$(annex_node_count)
-    +BatchRuntime=$(annex_runtime)
-    #+WholeNodes=true
-    output = job-B.$(Cluster).$(Process).out
-    error = job-B.$(Cluster).$(Process).err
-    log = annex.log
+    arguments = $(annex_node_count) $(annex_runtime) $(annex_name) $(annex_user)
+    +NodeNumber = $(annex_node_count)
+    +BatchRuntime = $(annex_runtime)
     request_disk = 30
-    notification=NEVER
+    notification = NEVER
 }}
-JOB C {jobfile} DIR ../
+JOB C {jobfile} DIR {os.getcwd()}
 JOB D {{
     executable = sendmail.sh
     universe = local
@@ -119,14 +117,13 @@ VARS C +WantFlocking="True"
 
         ec2_annex_sh = f"""#!/bin/sh
 
-yes | /usr/bin/condor_annex -count $1 -duration $2 -annex-name EC2Annex
+yes | /usr/bin/condor_annex -count $1 -duration $2 -annex-name EC2Annex-{int(time.time())}
 """
         ec2_annex_sh_file = open(TMP_DIR / "ec2_annex.sh", "w")
         ec2_annex_sh_file.write(ec2_annex_sh)
         ec2_annex_sh_file.close()
         st = os.stat(TMP_DIR / "ec2_annex.sh")
         os.chmod(TMP_DIR / "ec2_annex.sh", st.st_mode | stat.S_IEXEC)
-
 
         ec2_config = "DAGMAN_USE_CONDOR_SUBMIT = False"
         ec2_config_file = open(TMP_DIR / "ec2_submit.config", "w")
@@ -148,7 +145,7 @@ JOB B {{
     universe = local
     request_disk = 10M
 }}
-JOB C {jobfile} DIR ../
+JOB C {jobfile} DIR {os.getcwd()}
 JOB D {{
     executable = sendmail.sh
     universe = local
