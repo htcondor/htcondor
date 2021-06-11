@@ -33,6 +33,7 @@
 #include <openssl/pem.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
+#include <openssl/x509.h>
 
 #include <string>
 #include <iostream>
@@ -242,16 +243,25 @@ static void wrap_PEM_cert(std::string& val) {
 }
 #endif
 
-DelegationConsumer::DelegationConsumer(void):key_(NULL) {
+DelegationConsumer::DelegationConsumer(void):key_(NULL),cert_(NULL),chain_(NULL) {
   Generate();
 }
 
-DelegationConsumer::DelegationConsumer(const std::string& content):key_(NULL) {
+DelegationConsumer::DelegationConsumer(const std::string& content):key_(NULL),cert_(NULL),chain_(NULL) {
   Restore(content);
 }
 
 DelegationConsumer::~DelegationConsumer(void) {
   if(key_) RSA_free((RSA*)key_);
+  if(cert_) X509_free((X509*)cert_);
+  if(chain_) {
+    for(;;) {
+      X509* v = sk_X509_pop((STACK_OF(X509) *)chain_);
+      if(!v) break;
+      X509_free(v);
+    };
+    sk_X509_free((STACK_OF(X509) *)chain_);
+  };
 }
 
 const std::string& DelegationConsumer::ID(void) {
@@ -346,44 +356,73 @@ bool DelegationConsumer::Generate(void) {
 bool DelegationConsumer::Request(std::string& content) {
   bool res = false;
   content.resize(0);
+  X509_REQ *req = Request();
+  if(req) {
+    BIO *out = BIO_new(BIO_s_mem());
+    if(out) {
+      if(PEM_write_bio_X509_REQ(out,req)) {
+        res=true;
+        for(;;) {
+          char s[256];
+          int l = BIO_read(out,s,sizeof(s));
+          if(l <= 0) break;
+          content.append(s,l);;
+        };
+      } else {
+        LogError();
+        std::cerr<<"PEM_write_bio_X509_REQ failed"<<std::endl;
+      };
+      BIO_free_all(out);
+    };
+    X509_REQ_free(req);
+  };
+  return res;
+}
+
+bool DelegationConsumer::Request(BIO* content) {
+  bool res = false;
+  X509_REQ *req = Request();
+  if(req) {
+    if(i2d_X509_REQ_bio(content,req)) {
+      res=true;
+    } else {
+      LogError();
+      std::cerr<<"PEM_write_bio_X509_REQ failed"<<std::endl;
+    };
+    X509_REQ_free(req);
+  };
+  return res;
+}
+
+X509_REQ* DelegationConsumer::Request() {
+  bool res = false;
+  X509_REQ *req = NULL;
   EVP_PKEY *pkey = EVP_PKEY_new();
   const EVP_MD *digest = EVP_sha256();
   if(pkey) {
     RSA *rsa = (RSA*)key_;
     if(rsa) {
       if(EVP_PKEY_set1_RSA(pkey, rsa)) {
-        X509_REQ *req = X509_REQ_new();
+        req = X509_REQ_new();
         if(req) {
           //if(X509_REQ_set_version(req,0L)) {
           if(X509_REQ_set_version(req,2L)) {
             if(X509_REQ_set_pubkey(req,pkey)) {
               if(X509_REQ_sign(req,pkey,digest)) {
-                BIO *out = BIO_new(BIO_s_mem());
-                if(out) {
-                  if(PEM_write_bio_X509_REQ(out,req)) {
-                    res=true;
-                    for(;;) {
-                      char s[256];
-                      int l = BIO_read(out,s,sizeof(s));
-                      if(l <= 0) break;
-                      content.append(s,l);;
-                    };
-                  } else {
-                    LogError();
-                    std::cerr<<"PEM_write_bio_X509_REQ failed"<<std::endl;
-                  };
-                  BIO_free_all(out);
-                };
+                res = true;
               };
             };
           };
-          X509_REQ_free(req);
+          if(!res && req) {
+            X509_REQ_free(req);
+            req = NULL;
+          }
         };
       };
     };
     EVP_PKEY_free(pkey);
   };
-  return res;
+  return req;
 }
 
 bool DelegationConsumer::Acquire(std::string& content) {
@@ -392,32 +431,86 @@ bool DelegationConsumer::Acquire(std::string& content) {
 }
 
 bool DelegationConsumer::Acquire(std::string& content, std::string& identity) {
-  X509 *cert = NULL;
-  STACK_OF(X509) *cert_sk = NULL;
+  bool res = false;
+
+  if(!key_) return false;
+  if(cert_) return false;
+
+  if(!string_to_x509(content, cert_, chain_)) goto err;
+
+  if(!GetInfo(content, identity)) goto err;
+
+  res=true;
+err:
+  if(!res) LogError();
+  if(!res && cert_) {
+    X509_free(cert_);
+    cert_ = NULL;
+  }
+  if(!res && chain_) {
+    sk_X509_pop_free(chain_, X509_free);
+    chain_ = NULL;
+  };
+  return res;
+}
+
+bool DelegationConsumer::Acquire(BIO* in, std::string& content, std::string& identity) {
+  bool res = false;
+
+  if(!key_) return false;
+  if(cert_) return false;
+
+  if(!(chain_=sk_X509_new_null())) goto err;
+
+  if(!d2i_X509_bio(in, &cert_)) goto err;
+  while(!BIO_eof(in))
+  {
+    X509* tmp_cert = NULL;
+    tmp_cert = d2i_X509_bio(in, &tmp_cert);
+    if(tmp_cert == NULL) goto err;
+    sk_X509_push(chain_, tmp_cert);
+  }
+
+  if(!GetInfo(content, identity)) goto err;
+
+  res=true;
+err:
+  if(!res) LogError();
+  if(!res && cert_) {
+    X509_free(cert_);
+    cert_ = NULL;
+  }
+  if(!res && chain_) {
+    sk_X509_pop_free(chain_, X509_free);
+    chain_ = NULL;
+  };
+  return res;
+}
+
+bool DelegationConsumer::GetInfo(std::string& content, std::string& identity) {
   bool res = false;
   std::string subject;
 
   if(!key_) return false;
-
-  if(!string_to_x509(content,cert,cert_sk)) goto err;
+  if(!cert_) return false;
 
   content.resize(0);
-  if(!x509_to_string(cert,content)) goto err;
+  if(!x509_to_string(cert_,content)) goto err;
   {
-    char* buf = X509_NAME_oneline(X509_get_subject_name(cert),NULL,0);
+    char* buf = X509_NAME_oneline(X509_get_subject_name(cert_),NULL,0);
     if(buf) {
       subject=buf;
       OPENSSL_free(buf);
     };
   };
-  if(X509_get_ext_by_NID(cert,NID_proxyCertInfo,-1) < 0) {
+  if(X509_get_ext_by_NID(cert_,NID_proxyCertInfo,-1) < 0) {
     identity=subject;
   };
 
   if(!x509_to_string((RSA*)key_,content)) goto err;
-  if(cert_sk) {
-    for(int n=0;n<sk_X509_num((STACK_OF(X509) *)cert_sk);++n) {
-      X509* v = sk_X509_value((STACK_OF(X509) *)cert_sk,n);
+  if(chain_) {
+    for(int n=0;n<sk_X509_num((STACK_OF(X509) *)chain_);++n) {
+      X509* v = sk_X509_value((STACK_OF(X509) *)chain_,n);
       if(!v) goto err;
       if(!x509_to_string(v,content)) goto err;
       if(identity.empty()) {
@@ -436,14 +529,6 @@ bool DelegationConsumer::Acquire(std::string& content, std::string& identity) {
   res=true;
 err:
   if(!res) LogError();
-  if(cert) X509_free(cert);
-  if(cert_sk) {
-    for(int i = 0;i<sk_X509_num(cert_sk);++i) {
-      X509* v = sk_X509_value(cert_sk,i);
-      if(v) X509_free(v);
-    };
-    sk_X509_free(cert_sk);
-  };
   return res;
 }
 
@@ -521,33 +606,7 @@ std::string DelegationProvider::Delegate(const std::string& request,const Delega
   X509 *cert = NULL;
   X509_REQ *req = NULL;
   BIO* in = NULL;
-  EVP_PKEY *pkey = NULL;
-  ASN1_INTEGER *sno = NULL;
-  ASN1_OBJECT *obj= NULL;
-  ASN1_OCTET_STRING* policy_string = NULL;
-  //X509_EXTENSION *ex = NULL;
-  PROXY_CERT_INFO_EXTENSION proxy_info;
-  PROXY_POLICY proxy_policy;
-  const EVP_MD *digest = EVP_sha256();
-  X509_NAME *subject = NULL;
-  const char* need_ext = "critical,digitalSignature,keyEncipherment";
-  std::string proxy_cn;
   std::string res;
-  time_t validity_start_adjustment = 300; //  5 minute grace period for unsync clocks
-  time_t validity_start = time(NULL);
-  time_t validity_end = (time_t)(-1);
-  DelegationRestrictions& restrictions_ = (DelegationRestrictions&)restrictions;
-  std::string proxyPolicy;
-  std::string proxyPolicyFile;
-
-  if(!cert_) {
-    std::cerr<<"Missing certificate chain"<<std::endl;
-    return "";
-  };
-  if(!key_) {
-    std::cerr<<"Missing private key"<<std::endl;
-    return "";
-  };
 
   // Unify format of request
   std::string prequest = request;
@@ -560,14 +619,100 @@ std::string DelegationProvider::Delegate(const std::string& request,const Delega
   if((!PEM_read_bio_X509_REQ(in,&req,NULL,NULL)) || (!req)) goto err;
   BIO_free_all(in); in=NULL;
 
- 
-  //subject=X509_REQ_get_subject_name(req);
+  cert = Delegate(req, restrictions);
+  if(!cert) goto err;
+
+  if(!x509_to_string(cert,res)) { res=""; goto err; };
+  // Append chain of certificates
+  if(!x509_to_string((X509*)cert_,res)) { res=""; goto err; };
+  if(chain_) {
+    for(int n=0;n<sk_X509_num((STACK_OF(X509) *)chain_);++n) {
+      X509* v = sk_X509_value((STACK_OF(X509) *)chain_,n);
+      if(!v) { res=""; goto err; };
+      if(!x509_to_string(v,res)) { res=""; goto err; };
+    };
+  };
+
+err:
+  if(res.empty()) LogError();
+  if(in) BIO_free_all(in);
+  if(req) X509_REQ_free(req);
+  if(cert) X509_free(cert);
+  return res;
+}
+
+BIO* DelegationProvider::Delegate(BIO* request, const DelegationRestrictions& restrictions) {
+  bool res = false;
+  X509 *cert = NULL;
+  X509_REQ *req = NULL;
+  BIO* out = NULL;
+
+  if((!d2i_X509_REQ_bio(request,&req)) || (!req)) goto err;
+
+  cert = Delegate(req, restrictions);
+  if(!cert) goto err;
+
+  out = BIO_new(BIO_s_mem());
+  if(!i2d_X509_bio(out, cert)) goto err;
+  if(!i2d_X509_bio(out, (X509*)cert_)) goto err;
+  if(chain_) {
+    for(int n=0;n<sk_X509_num((STACK_OF(X509) *)chain_);++n) {
+      X509* v = sk_X509_value((STACK_OF(X509) *)chain_,n);
+      if(!v) goto err;
+      if(!i2d_X509_bio(out, v)) goto err;
+    };
+  };
+
+  res = true;
+
+err:
+  if(res == NULL) LogError();
+  if(req) X509_REQ_free(req);
+  if(cert) X509_free(cert);
+  if(!res && out) {
+    BIO_free_all(out);
+    out = NULL;
+  }
+  return out;
+}
+
+X509* DelegationProvider::Delegate(X509_REQ* request, const DelegationRestrictions& restrictions) {
+  bool res = false;
+  X509 *cert = NULL;
+  EVP_PKEY *pkey = NULL;
+  ASN1_INTEGER *sno = NULL;
+  ASN1_OBJECT *obj= NULL;
+  ASN1_OCTET_STRING* policy_string = NULL;
+  //X509_EXTENSION *ex = NULL;
+  PROXY_CERT_INFO_EXTENSION proxy_info;
+  PROXY_POLICY proxy_policy;
+  const EVP_MD *digest = EVP_sha256();
+  X509_NAME *subject = NULL;
+  const char* need_ext = "critical,digitalSignature,keyEncipherment";
+  std::string proxy_cn;
+  time_t validity_start_adjustment = 300; //  5 minute grace period for unsync clocks
+  time_t validity_start = time(NULL);
+  time_t validity_end = (time_t)(-1);
+  DelegationRestrictions& restrictions_ = (DelegationRestrictions&)restrictions;
+  std::string proxyPolicy;
+  std::string proxyPolicyFile;
+
+  if(!cert_) {
+    std::cerr<<"Missing certificate chain"<<std::endl;
+    return NULL;
+  };
+  if(!key_) {
+    std::cerr<<"Missing private key"<<std::endl;
+    return NULL;
+  };
+
+  //subject=X509_REQ_get_subject_name(request);
   //char* buf = X509_NAME_oneline(subject, 0, 0);
   //std::cerr<<"subject="<<buf<<std::endl;
   //OPENSSL_free(buf);
 
-  if((pkey=X509_REQ_get_pubkey(req)) == NULL) goto err;
-  if(X509_REQ_verify(req,pkey) <= 0) goto err;
+  if((pkey=X509_REQ_get_pubkey(request)) == NULL) goto err;
+  if(X509_REQ_verify(request,pkey) <= 0) goto err;
 
   cert=X509_new();
   if(!cert) goto err;
@@ -758,29 +903,21 @@ std::string DelegationProvider::Delegate(const std::string& request,const Delega
   }
   */
 
-  if(!x509_to_string(cert,res)) { res=""; goto err; };
-  // Append chain of certificates
-  if(!x509_to_string((X509*)cert_,res)) { res=""; goto err; };
-  if(chain_) {
-    for(int n=0;n<sk_X509_num((STACK_OF(X509) *)chain_);++n) {
-      X509* v = sk_X509_value((STACK_OF(X509) *)chain_,n);
-      if(!v) { res=""; goto err; };
-      if(!x509_to_string(v,res)) { res=""; goto err; };
-    };
-  };
+  res = true;
 
 err:
-  if(res.empty()) LogError();
-  if(in) BIO_free_all(in);
-  if(req) X509_REQ_free(req);
+  if(!res) LogError();
   if(pkey) EVP_PKEY_free(pkey);
-  if(cert) X509_free(cert);
+  if(!res && cert) {
+    X509_free(cert);
+    cert = NULL;
+  }
   if(sno) ASN1_INTEGER_free(sno);
   //if(ex) X509_EXTENSION_free(ex);
   if(obj) ASN1_OBJECT_free(obj);
   if(subject) X509_NAME_free(subject);
   if(policy_string) ASN1_OCTET_STRING_free(policy_string);
-  return res;
+  return cert;
 }
 
 void DelegationProvider::LogError(void) {

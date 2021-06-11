@@ -32,6 +32,8 @@
 #include <string>
 #include <list>
 #include <map>
+#include <openssl/bio.h>
+#include <openssl/x509.h>
 
 typedef std::map<std::string,std::string> DelegationRestrictions;
 
@@ -45,6 +47,8 @@ typedef std::map<std::string,std::string> DelegationRestrictions;
 class DelegationConsumer {
  protected:
   void* key_; /** Private key */
+  X509* cert_; /** Public key/certificate corresponding to public key */
+  STACK_OF(X509)* chain_; /** Chain of other certificates needed to verify 'cert_' if any */
   bool Generate(void); /** Creates private key */
   void LogError(void);
  public:
@@ -63,12 +67,16 @@ class DelegationConsumer {
   bool Restore(const std::string& content);
   /** Make X509 certificate request from internal private key */
   bool Request(std::string& content);
+  bool Request(BIO* content);
+  X509_REQ* Request();
   /** Ads private key into certificates chain in 'content'
      On exit content contains complete delegated credentials.  */
   bool Acquire(std::string& content);
   /** Includes the functionality of Acquire(content) plus extracting the 
      credential identity. */  
   bool Acquire(std::string& content,std::string& identity);
+  bool Acquire(BIO* in, std::string& content,std::string& identity);
+  bool GetInfo(std::string& content,std::string& identity);
 };
 
 /** A provider of delegated credentials.
@@ -99,6 +107,8 @@ class DelegationProvider {
    excluding private key. Result is then to be fed into 
    DelegationConsumer::Acquire */
   std::string Delegate(const std::string& request,const DelegationRestrictions& restrictions = DelegationRestrictions());
+  BIO* Delegate(BIO* request,const DelegationRestrictions& restrictions = DelegationRestrictions());
+  X509* Delegate(X509_REQ* request,const DelegationRestrictions& restrictions = DelegationRestrictions());
 };
 
 #endif /* __ARC_DELEGATIONINTERFACE_H__ */
