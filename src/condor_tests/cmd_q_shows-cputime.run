@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -24,6 +23,8 @@ use CondorUtils;
 use Check::SimpleJob;
 use strict;
 use warnings;
+
+#testreq: personal
 
 my $testname = "cmd_q_shows-cputime";
 my $ClusterId = 0;
