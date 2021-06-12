@@ -70,18 +70,27 @@ def sum_check_correct_uptimes(condor, handle, resource, resources):
     )
 
     measured_uptimes = set(int(ad[f"Uptime{resource}sSeconds"]) for ad in direct)
+    logger.info(f"Measured uptimes were {measured_uptimes} (may be out of order)")
 
-    logger.info(
-        "Measured uptimes were {}, expected multiples of {} (not necessarily in order)".format(
-            measured_uptimes, resources.values()
-        )
-    )
+    increments = {}
+    assigned_resources_set = set(ad[f"Assigned{resource}s"] for ad in direct)
+    if all( rs.count(",") == 0 for rs in assigned_resources_set):
+        increments = resources
+    else:
+        for assigned_resources in assigned_resources_set:
+            the_sum = 0
+            names = assigned_resources.split(",")
+            for name in names:
+                the_sum += resources[name]
+
+            increments[assigned_resources] = the_sum
+    logger.info(f"Allowed increments are {increments} (may be out of order)")
 
     # the uptimes are increasing over time, so we
     # assert that we have some reasonable multiple of the increments being
     # emitted by the monitor script
     assert any(
-        {multiplier * u for u in resources.values()} == measured_uptimes
+        {multiplier * u for u in increments.values()} == measured_uptimes
         for multiplier in range(2, 100)
     )
 
@@ -200,10 +209,22 @@ def peak_check_correct_uptimes(condor, handle, resource, sequences):
     )
 
     for ad in direct:
-        r = ad[f"Assigned{resource}s"]
+        assigned_resource_str = ad[f"Assigned{resource}s"]
         peak = int(ad[f"Device{resource}sMemoryPeakUsage"])
-        logger.info(f"Measured peak for {r} was {peak}")
-        assert peak in sequences[r]
+        logger.info(f"Measured peak for {assigned_resource_str} was {peak}")
+
+        possible_peaks = []
+        assigned_resources = assigned_resource_str.split(",")
+        for r in assigned_resources:
+            sequence = sequences[r]
+            if len(possible_peaks) == 0:
+                possible_peaks = sequence
+            else:
+                assert len(possible_peaks) == len(sequence)
+                possible_peaks = [max(possible_peaks[i], sequence[i]) for i in range(len(possible_peaks))]
+
+        logger.info(f"Possible peaks are {possible_peaks}")
+        assert peak in possible_peaks
 
     #
     # Then assert that the periodic polling recorded by the job recorded

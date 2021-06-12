@@ -49,10 +49,12 @@ peaks = {
 
 @config(
     params={
-        "SQUIDsAndTAKOsUsageAndMemory": {
+        "TwoInstancesPerSlot": {
             "config": {
-                "NUM_CPUS": "16",
-                "NUM_SLOTS": "16",
+                "NUM_CPUS": "8",
+                "NUM_SLOTS": "2",
+                "NUM_SLOTS_TYPE_1": "2",
+                "SLOT_TYPE_1": "SQUIDs=2 TAKOs=2 CPUS=2",
                 "ADVERTISE_CMR_UPTIME_SECONDS": "TRUE",
 
                 "MACHINE_RESOURCE_INVENTORY_SQUIDs": "$(TEST_DIR)/SQUID-discovery.py",
@@ -202,27 +204,27 @@ class TestCustomMachineResources:
                 ad_type=htcondor.AdTypes.Startd, projection=["SlotID", f"Assigned{resource}s"]
             )
 
-            assert len([ad for ad in result if f"Assigned{resource}s" in ad]) == number
+            assert len([ad for ad in result if f"Assigned{resource}s" in ad]) == (number/2)
 
     def test_enough_jobs_running(
         self, num_jobs_running_history, num_resources
     ):
-        assert num_resources in num_jobs_running_history
+        assert (num_resources/2) in num_jobs_running_history
 
     def test_never_too_many_jobs_running(
         self, num_jobs_running_history, num_resources
     ):
-        assert max(num_jobs_running_history) <= num_resources
+        assert max(num_jobs_running_history) <= (num_resources/2)
 
     def test_enough_busy_slots(
         self, num_busy_slots_history, num_resources
     ):
-        assert num_resources in num_busy_slots_history
+        assert (num_resources/2) in num_busy_slots_history
 
     def test_never_too_many_busy_slots(
         self, num_busy_slots_history, num_resources
     ):
-        assert max(num_busy_slots_history) <= num_resources
+        assert max(num_busy_slots_history) <= (num_resources/2)
 
     def test_correct_uptimes_from_monitors(self, condor, handle):
         for resource in resources.keys():
