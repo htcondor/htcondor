@@ -8,7 +8,12 @@ from ornithology import (
     config,
     standup,
     action,
-    Condor
+    Condor,
+    format_script,
+    write_file,
+    track_quantity,
+    SetJobStatus,
+    JobStatus,
 )
 
 from libcmr import *
@@ -167,6 +172,28 @@ def num_jobs_running_history(condor, handle, num_resources):
         expected_quantity=num_resources,
     )
 
+
+@action
+def startd_log_file(condor):
+    return condor.startd_log.open()
+
+
+@action
+def num_busy_slots_history(startd_log_file, handle, num_resources):
+    logger.debug("Checking Startd log file...")
+    logger.debug("Expected Job IDs are: {}".format(handle.job_ids))
+
+    active_claims_history = track_quantity(
+        startd_log_file.read(),
+        increment_condition=lambda msg: "Changing activity: Idle -> Busy" in msg,
+        decrement_condition=lambda msg: "Changing activity: Busy -> Idle" in msg,
+        max_quantity=num_resources,
+        expected_quantity=num_resources,
+    )
+
+    return active_claims_history
+
+
 class TestCustomMachineResources:
 
     def test_correct_number_of_resources_assigned(self, condor):
@@ -187,6 +214,16 @@ class TestCustomMachineResources:
     ):
         assert max(num_jobs_running_history) <= num_resources
 
+    def test_enough_busy_slots(
+        self, num_busy_slots_history, num_resources
+    ):
+        assert num_resources in num_busy_slots_history
+
+    def test_never_too_many_busy_slots(
+        self, num_busy_slots_history, num_resources
+    ):
+        assert max(num_busy_slots_history) <= num_resources
+
     def test_correct_uptimes_from_monitors(self, condor, handle):
         for resource in resources.keys():
             sequence = { f"{resource}{i}": j for i, j in enumerate(usages[resource]) }
@@ -196,3 +233,9 @@ class TestCustomMachineResources:
         for resource in resources.keys():
             sequences = { f"{resource}{i}": j for i, j in enumerate(peaks[resource]) }
             peak_check_correct_uptimes(condor, handle, resource, sequences)
+
+    def test_reported_usage_in_job_ads_and_event_log_match(
+        self, handle
+    ):
+        for resource in resources.keys():
+            both_check_matching_usage(handle, resource)

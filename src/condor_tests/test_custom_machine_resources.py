@@ -204,28 +204,28 @@ class TestCustomMachineResources:
         # if a slot doesn't have a resource, it simply has no entry in its ad
         assert len([ad for ad in result if f"Assigned{resource}s" in ad]) == num_resources
 
-    def test_correct_uptimes_from_monitor(self, condor, handle, uptime_check):
-        uptime_check(condor, handle)
+    def test_num_jobs_running_hits_num_resources(
+        self, num_jobs_running_history, num_resources
+    ):
+        assert num_resources in num_jobs_running_history
 
     def test_never_more_jobs_running_than_num_resources(
         self, num_jobs_running_history, num_resources
     ):
         assert max(num_jobs_running_history) <= num_resources
 
-    def test_num_jobs_running_hits_num_resources(
-        self, num_jobs_running_history, num_resources
+    def test_num_busy_slots_hits_num_resources(
+        self, num_busy_slots_history, num_resources
     ):
-        assert num_resources in num_jobs_running_history
+        assert num_resources in num_busy_slots_history
 
     def test_never_more_busy_slots_than_num_resources(
         self, num_busy_slots_history, num_resources
     ):
         assert max(num_busy_slots_history) <= num_resources
 
-    def test_num_busy_slots_hits_num_resources(
-        self, num_busy_slots_history, num_resources
-    ):
-        assert num_resources in num_busy_slots_history
+    def test_correct_uptimes_from_monitor(self, condor, handle, uptime_check):
+        uptime_check(condor, handle)
 
     def test_reported_usage_in_job_ads_and_event_log_match(self, handle, matching_check):
         matching_check(handle)
