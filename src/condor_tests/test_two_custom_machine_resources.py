@@ -40,8 +40,6 @@ peaks = {
         [ 4400, 4400, 1400, 9400, 5400, 5400 ],
     ],
 }
-# sequence = { resource: { f"{resource}{i}": j for i, j in enumerate(usages[resource]) } for resource in resources }
-# seqeunces = { resource: { f"{resource}{i}": j for i, j in enumerate(peaks[resource]) } for resource in resources }
 
 
 @config(
@@ -76,6 +74,13 @@ def the_config(request):
 @config
 def slot_config(the_config):
     return the_config["config"]
+
+
+@config
+def num_resources():
+    nr = next(iter(resources.values()))
+    assert all(number == nr for number in resources.values())
+    return nr
 
 
 @standup
@@ -136,10 +141,10 @@ def the_job(test_dir, resources):
 
 
 @action
-def handle(test_dir, condor):
+def handle(test_dir, condor, num_resources):
     handle = condor.submit(
         description=the_job(test_dir, resources.keys()),
-        count=len(resources.keys()) * 2
+        count=num_resources * 2
     )
 
     assert(handle.wait(verbose=True, timeout=180))
@@ -150,17 +155,37 @@ def handle(test_dir, condor):
     handle.remove()
 
 
+@action
+def num_jobs_running_history(condor, handle, num_resources):
+    return track_quantity(
+        condor.job_queue.filter(lambda j, e: j in handle.job_ids),
+        increment_condition=lambda id_event: id_event[-1]
+            == SetJobStatus(JobStatus.RUNNING),
+        decrement_condition=lambda id_event: id_event[-1]
+            == SetJobStatus(JobStatus.COMPLETED),
+        max_quantity=num_resources,
+        expected_quantity=num_resources,
+    )
+
 class TestCustomMachineResources:
 
     def test_correct_number_of_resources_assigned(self, condor):
         for resource, number in resources.items():
-            print(f"{resource} {number}\n")
-
             result = condor.status(
                 ad_type=htcondor.AdTypes.Startd, projection=["SlotID", f"Assigned{resource}s"]
             )
 
             assert len([ad for ad in result if f"Assigned{resource}s" in ad]) == number
+
+    def test_enough_jobs_running(
+        self, num_jobs_running_history, num_resources
+    ):
+        assert num_resources in num_jobs_running_history
+
+    def test_never_too_many_jobs_running(
+        self, num_jobs_running_history, num_resources
+    ):
+        assert max(num_jobs_running_history) <= num_resources
 
     def test_correct_uptimes_from_monitors(self, condor, handle):
         for resource in resources.keys():
