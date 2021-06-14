@@ -693,6 +693,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 		if (tmp_status == CondorAuthSSLRetval::Fail) {
 			return static_cast<int>(authenticate_fail());
 		}
+
 		return static_cast<int>(tmp_status);
 	}
 	return static_cast<int>(authenticate_finish(errstack, non_blocking));
