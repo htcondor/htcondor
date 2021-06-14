@@ -1,5 +1,6 @@
 #!/usr/bin/env pytest
 
+import pytest
 import logging
 
 import htcondor
@@ -38,7 +39,7 @@ sequences = { f"{resource}{i}": j for i, j in enumerate(peaks) }
 
 @config(
     params={
-        "SQUIDsUsage": {
+        "SQUIDsUsage": pytest.param({
             "config": {
                 "NUM_CPUS": "16",
                 "NUM_SLOTS": "16",
@@ -54,9 +55,10 @@ sequences = { f"{resource}{i}": j for i, j in enumerate(peaks) }
             "uptime_check": lambda c, h: sum_check_correct_uptimes(c, h, resource, resources),
             "matching_check": lambda h: sum_check_matching_usage(h, resource),
             "job": lambda t: sum_job(t, monitor_period, resource),
-        },
+        }, marks=pytest.mark.skip),
+        # }),
 
-        "SQUIDsMemory": {
+        "SQUIDsMemory": pytest.param({
             "config": {
                 "NUM_CPUS": "16",
                 "NUM_SLOTS": "16",
@@ -72,9 +74,10 @@ sequences = { f"{resource}{i}": j for i, j in enumerate(peaks) }
             "uptime_check": lambda c, h: peak_check_correct_uptimes(c, h, resource, sequences),
             "matching_check": lambda h: peak_check_matching_usage(h, resource),
             "job": lambda t: peak_job(t, resource),
-        },
+        }, marks=pytest.mark.skip),
+        # }),
 
-        "SQUIDsUsageAndMemory": {
+        "SQUIDsBoth": {
             "config": {
                 "NUM_CPUS": "16",
                 "NUM_SLOTS": "16",
