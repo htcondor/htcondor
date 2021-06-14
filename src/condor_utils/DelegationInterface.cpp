@@ -666,7 +666,7 @@ BIO* DelegationProvider::Delegate(BIO* request, const DelegationRestrictions& re
   res = true;
 
 err:
-  if(res == NULL) LogError();
+  if(!res) LogError();
   if(req) X509_REQ_free(req);
   if(cert) X509_free(cert);
   if(!res && out) {
@@ -688,7 +688,7 @@ X509* DelegationProvider::Delegate(X509_REQ* request, const DelegationRestrictio
   PROXY_POLICY proxy_policy;
   const EVP_MD *digest = EVP_sha256();
   X509_NAME *subject = NULL;
-  const char* need_ext = "critical,digitalSignature,keyEncipherment";
+  char need_ext[] = "critical,digitalSignature,keyEncipherment";
   std::string proxy_cn;
   time_t validity_start_adjustment = 300; //  5 minute grace period for unsync clocks
   time_t validity_start = time(NULL);
@@ -797,6 +797,9 @@ X509* DelegationProvider::Delegate(X509_REQ* request, const DelegationRestrictio
     proxy_policy.policyLanguage=obj;
     proxy_policy.policy=policy_string;
   } else {
+    // The presence of a "policyLimited" restriction indicates to create a
+    // limited proxy. The value doesn't matter.
+    bool limited=restrictions_.find("policyLimited")!=restrictions_.end();
     PROXY_CERT_INFO_EXTENSION *pci =
         (PROXY_CERT_INFO_EXTENSION*)X509_get_ext_d2i((X509*)cert_,NID_proxyCertInfo,NULL,NULL);
     if(pci) {
@@ -813,14 +816,16 @@ X509* DelegationProvider::Delegate(X509_REQ* request, const DelegationRestrictio
             // independent. Independent proxies has little sense in Grid
             // world. So here we make our proxy globus-limited to allow
             // it to be used with globus code.
-            obj=OBJ_txt2obj(GLOBUS_LIMITED_PROXY_OID,1);
+            limited = true;
           };
         };
         delete[] buf;
       };
       PROXY_CERT_INFO_EXTENSION_free(pci);
     };
-    if(!obj) {
+    if(limited) {
+      obj=OBJ_txt2obj(GLOBUS_LIMITED_PROXY_OID,1); // Limited proxy
+    } else {
       obj=OBJ_nid2obj(NID_id_ppl_inheritAll);  // Unrestricted proxy
     };
     if(!obj) goto err;
@@ -849,17 +854,16 @@ X509* DelegationProvider::Delegate(X509_REQ* request, const DelegationRestrictio
   if(!X509_NAME_add_entry_by_NID(subject,NID_commonName,MBSTRING_ASC,(unsigned char*)(proxy_cn.c_str()),proxy_cn.length(),-1,0)) goto err;
   if(!X509_set_subject_name(cert,subject)) goto err;
   X509_NAME_free(subject); subject=NULL;
-  /* TODO Do we want to support these options?
+  // This was changed from the original to expect only unix epoch time values.
   if(!(restrictions_["validityStart"].empty())) {
-    validity_start=Time(restrictions_["validityStart"]).GetTime();
+    validity_start=atoll(restrictions_["validityStart"].c_str());
     validity_start_adjustment = 0;
   };
   if(!(restrictions_["validityEnd"].empty())) {
-    validity_end=Time(restrictions_["validityEnd"]).GetTime();
+    validity_end=atoll(restrictions_["validityEnd"].c_str());
   } else if(!(restrictions_["validityPeriod"].empty())) {
-    validity_end=validity_start+Period(restrictions_["validityPeriod"]).GetPeriod();
+    validity_end=validity_start+atoll(restrictions_["validityPeriod"].c_str());
   };
-  */
   validity_start -= validity_start_adjustment;
   //Set "notBefore"
   if( X509_cmp_time(X509_getm_notBefore((X509*)cert_), &validity_start) < 0) {
@@ -872,7 +876,7 @@ X509* DelegationProvider::Delegate(X509_REQ* request, const DelegationRestrictio
   if(validity_end == (time_t)(-1)) {
     X509_set1_notAfter(cert,X509_getm_notAfter((X509*)cert_));
   } else {
-    X509_gmtime_adj(X509_getm_notAfter(cert), (validity_end-validity_start));
+    X509_gmtime_adj(X509_getm_notAfter(cert), (validity_end-time(NULL)));
   };
   X509_set_pubkey(cert,pkey);
   EVP_PKEY_free(pkey); pkey=NULL;

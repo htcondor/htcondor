@@ -102,6 +102,7 @@ class DelegationProvider {
   ~DelegationProvider(void);
   operator bool(void) { return key_ != NULL; };
   bool operator!(void) { return key_ == NULL; };
+  X509* GetSrcCert() { return (X509*)cert_; };
   /** Perform delegation.
     Takes X509 certificate request and creates proxy credentials
    excluding private key. Result is then to be fed into 
