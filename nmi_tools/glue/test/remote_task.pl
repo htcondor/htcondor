@@ -137,6 +137,10 @@ if (1) {
     my @knobs;
     foreach my $key (keys %ENV) {
         if ( $key =~ m/^_CONDOR_/i ) {
+
+			# keep the _CONDOR_ANCESTOR_* variables, for our parent
+			# condor to find us and in the darkness bind us.
+			next if ($key =~ m/_CONDOR_ANCESTOR_/i);
             push @knobs, $key;
             delete($ENV{$key});
         }
