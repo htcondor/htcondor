@@ -22,6 +22,59 @@ use CondorTest;
 use CondorUtils;
 
 
+my $testname = "job_hgq_negfail_basic_van";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+# This was a hack to allow the test pool and harness pool to
+# coexist peacefully on my sandbox.  I dont think they are needed
+# in a "real" testing environment:
+#COLLECTOR_ARGS = -p 42424
+#COLLECTOR_HOST = $(CONDOR_HOST):0
+#COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
+
+DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+SCHEDD_INTERVAL	= 30
+NEGOTIATOR_INTERVAL = 20
+
+# turn off preemption
+MAXJOBRETIREMENTTIME = 3600 * 24
+PREEMPT = False
+PREEMPTION_REQUIREMENTS = False
+RANK = 0
+NEGOTIATOR_CONSIDER_PREEMPTION = False
+
+# no slot weights
+NEGOTIATOR_USE_SLOT_WEIGHTS = FALSE
+
+NUM_CPUS = 40
+
+# turn on round-robin for this test, since we are testing
+# an overlapping-effective-pool scenario
+HFS_ROUND_ROBIN_RATE = 1.0
+
+# turn on multiple allocation rounds, since we are testing
+# slot rejection scenario as well
+HFS_MAX_ALLOCATION_ROUNDS = 3
+
+GROUP_NAMES = a, b, a.a, a.b, b.a, b.b
+
+GROUP_QUOTA_DYNAMIC_a = 0.5
+GROUP_QUOTA_DYNAMIC_b = 0.5
+GROUP_QUOTA_DYNAMIC_a.a = 0.5
+GROUP_QUOTA_DYNAMIC_a.b = 0.5
+GROUP_QUOTA_DYNAMIC_b.a = 0.5
+GROUP_QUOTA_DYNAMIC_b.b = 0.5
+
+# Have "a" and "b" subtrees manage their quota independently
+GROUP_ACCEPT_SURPLUS = TRUE
+GROUP_ACCEPT_SURPLUS_a = FALSE
+GROUP_ACCEPT_SURPLUS_b = FALSE
+
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+
 # trip whitespace from beginning and end of a string
 sub trimws($) {
     my $string = shift;
@@ -31,7 +84,6 @@ sub trimws($) {
 }
 
 
-my $testname = "job_hgq_negfail_basic_van";
 my $test_passed = 0;
 my $pre_execution = 1;
 
@@ -125,59 +177,6 @@ sub exit_callback {
 
 sub imageupdated {
 }
-
-
-my $append_condor_config = '
-# This was a hack to allow the test pool and harness pool to
-# coexist peacefully on my sandbox.  I dont think they are needed
-# in a "real" testing environment:
-#COLLECTOR_ARGS = -p 42424
-#COLLECTOR_HOST = $(CONDOR_HOST):0
-#COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
-
-DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-SCHEDD_INTERVAL	= 30
-NEGOTIATOR_INTERVAL = 20
-
-# turn off preemption
-MAXJOBRETIREMENTTIME = 3600 * 24
-PREEMPT = False
-PREEMPTION_REQUIREMENTS = False
-RANK = 0
-NEGOTIATOR_CONSIDER_PREEMPTION = False
-
-# no slot weights
-NEGOTIATOR_USE_SLOT_WEIGHTS = FALSE
-
-NUM_CPUS = 40
-
-# turn on round-robin for this test, since we are testing
-# an overlapping-effective-pool scenario
-HFS_ROUND_ROBIN_RATE = 1.0
-
-# turn on multiple allocation rounds, since we are testing
-# slot rejection scenario as well
-HFS_MAX_ALLOCATION_ROUNDS = 3
-
-GROUP_NAMES = a, b, a.a, a.b, b.a, b.b
-
-GROUP_QUOTA_DYNAMIC_a = 0.5
-GROUP_QUOTA_DYNAMIC_b = 0.5
-GROUP_QUOTA_DYNAMIC_a.a = 0.5
-GROUP_QUOTA_DYNAMIC_a.b = 0.5
-GROUP_QUOTA_DYNAMIC_b.a = 0.5
-GROUP_QUOTA_DYNAMIC_b.b = 0.5
-
-# Have "a" and "b" subtrees manage their quota independently
-GROUP_ACCEPT_SURPLUS = TRUE
-GROUP_ACCEPT_SURPLUS_a = FALSE
-GROUP_ACCEPT_SURPLUS_b = FALSE
-';
-
-CondorTest::StartCondorWithParams(
-	local_fresh => "TRUE",
-    append_condor_config => $append_condor_config
-);
 
 
 my $job_log = "$testname.log";
