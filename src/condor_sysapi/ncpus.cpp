@@ -665,6 +665,11 @@ linux_count_cpus_id( CpuInfo *cpuinfo )
 						( proc->physical_id != tproc->physical_id )  ) ||
 					  ( ( proc->core_id >= 0 ) &&
 						( proc->core_id != tproc->core_id ) )  ) {
+
+					// Note this won't actually dprintf in the usual case where we are
+					// called from a global ctor before main, because dprintf hasn't been
+					// configured, but the shadow can't afford to allocate memory to dprint buffers
+
 					if (IsDebugVerbose(D_LOAD)) {
 						dprintf( D_LOAD | D_VERBOSE,
 							 "Comparing P#%-3d and P#%-3d: "
