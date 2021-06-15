@@ -215,7 +215,7 @@ def default_condor(test_dir):
         yield condor
 
 
-custom_exit_status = None
+custom_exit_status = 0
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -226,16 +226,17 @@ def pytest_runtest_makereport(item: Item, call: CallInfo):
     global custom_exit_status
 
     result = outcome.get_result()
-    if result.failed and custom_exit_status is None:
+    if result.failed and custom_exit_status != 1:
         if result.when == "setup":
             custom_exit_status = 136
         elif result.when == "teardown":
             custom_exit_status = 137
-
+        else:
+            custom_exit_status = 1
 
 @pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):
     global custom_exit_status
 
-    if custom_exit_status is not None:
+    if custom_exit_status > 1:
         session.exitstatus = custom_exit_status
