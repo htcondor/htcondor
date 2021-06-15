@@ -37,6 +37,8 @@
 
 typedef std::map<std::string,std::string> DelegationRestrictions;
 
+bool string_to_x509(const std::string& cert_file,const std::string& key_file,const std::string& inpwd,X509* &cert,EVP_PKEY* &pkey,STACK_OF(X509)* &cert_sk);
+
 /** A consumer of delegated X509 credentials.
   During delegation procedure this class acquires
  delegated credentials aka proxy - certificate, private key and
@@ -98,11 +100,12 @@ class DelegationProvider {
      Credentials are used to sign delegated credentials.
      Arguments should contain filesystem path to PEM-encoded certificate and
      private key. Optionally cert_file may contain certificates chain. */
-  DelegationProvider(const std::string& cert_file,const std::string& key_file,std::istream* inpwd = NULL);
+  DelegationProvider(const std::string& cert_file,const std::string& key_file,const std::string& inpwd = "");
   ~DelegationProvider(void);
   operator bool(void) { return key_ != NULL; };
   bool operator!(void) { return key_ == NULL; };
   X509* GetSrcCert() { return (X509*)cert_; };
+  STACK_OF(X509)* GetSrcChain() { return (STACK_OF(X509)*)chain_; };
   /** Perform delegation.
     Takes X509 certificate request and creates proxy credentials
    excluding private key. Result is then to be fed into 
