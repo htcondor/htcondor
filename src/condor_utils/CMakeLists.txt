@@ -146,14 +146,10 @@ endif(WINDOWS)
 
 if(NOT WINDOWS)
 	list(APPEND CONDOR_API_AND_UTILS_SRC
-		credential.unix.cpp
-		credential.unix.h
 		lock_file.unix.cpp
 		passwd_cache.unix.cpp
 		passwd_cache.unix.h
 		sig_install.unix.cpp
-		X509credential.unix.cpp
-		X509credential.unix.h
 	)
 endif(NOT WINDOWS)
 
