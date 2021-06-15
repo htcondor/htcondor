@@ -628,7 +628,7 @@ def testTransaction():
 def main():
 
     # Setup condor environment variables that will be used globally across all tests
-    os.environ["_condor_PORT"] = "9622"
+    #os.environ["_condor_PORT"] = "9622"
     os.environ["_condor_SCHEDD_NAME"] = "python_bindings_htcondor"
 
     # Now run the tests!
@@ -637,8 +637,9 @@ def main():
     if Utils.IsWindows() is False:
         print("Running Linux-only tests")
         testRemoteSetParam()
-        testLocate()
-        testLocateList()
+		# These two rely on listening on a fixed port, which fails when we run concurrent tests
+        #testLocate()
+        #testLocateList()
         #testRemoteLocate() # FIXME
         #testScheddLocate() # FIXME
         #testCollectorAdvertise() # FIXME
