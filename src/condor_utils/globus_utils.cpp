@@ -23,6 +23,7 @@
 #include "condor_debug.h"
 #include "util_lib_proto.h"
 #include "condor_auth_ssl.h"
+#include "DelegationInterface.h"
 
 #if defined(DLOPEN_GSI_LIBS)
 #include <dlfcn.h>
@@ -668,6 +669,104 @@ time_t x509_proxy_expiration_time( globus_gsi_cred_handle_t handle )
 	return time(NULL) + time_left;
 }
 
+// This is a slightly modified verson of globus_gsi_cert_utils_make_time()
+// from the Grid Community Toolkit. It turns an ASN1_UTCTIME into a time_t.
+// libressl and older openssl don't provide a way to do this conversion.
+static
+time_t my_globus_gsi_cert_utils_make_time(const ASN1_UTCTIME *ctm)
+{
+	char *str;
+	time_t offset;
+	char buff1[24];
+	char *p;
+	int i;
+	struct tm tm;
+	time_t newtime = -1;
+
+	p = buff1;
+	i = ctm->length;
+	str = (char *)ctm->data;
+	if ((i < 11) || (i > 17)) {
+		newtime = 0;
+	}
+	memcpy(p,str,10);
+	p += 10;
+	str += 10;
+
+	if ((*str == 'Z') || (*str == '-') || (*str == '+')) {
+		*(p++)='0'; *(p++)='0';
+	} else {
+		*(p++)= *(str++); *(p++)= *(str++);
+	}
+	*(p++)='Z';
+	*(p++)='\0';
+
+	if (*str == 'Z') {
+		offset=0;
+	} else {
+		if ((*str != '+') && (str[5] != '-')) {
+			newtime = 0;
+		}
+		offset=((str[1]-'0')*10+(str[2]-'0'))*60;
+		offset+=(str[3]-'0')*10+(str[4]-'0');
+		if (*str == '-') {
+			offset=-offset;
+		}
+	}
+
+	tm.tm_isdst = 0;
+	tm.tm_year = (buff1[0]-'0')*10+(buff1[1]-'0');
+
+	if (tm.tm_year < 70) {
+		tm.tm_year+=100;
+	}
+
+	tm.tm_mon   = (buff1[2]-'0')*10+(buff1[3]-'0')-1;
+	tm.tm_mday  = (buff1[4]-'0')*10+(buff1[5]-'0');
+	tm.tm_hour  = (buff1[6]-'0')*10+(buff1[7]-'0');
+	tm.tm_min   = (buff1[8]-'0')*10+(buff1[9]-'0');
+	tm.tm_sec   = (buff1[10]-'0')*10+(buff1[11]-'0');
+
+	newtime = (timegm(&tm) + offset*60*60);
+
+	return newtime;
+}
+
+time_t x509_proxy_expiration_time( X509 *cert, STACK_OF(X509)* chain )
+{
+	time_t expiration_time = -1;
+	X509 *curr_cert = cert;
+	int cert_cnt = 0;
+	if ( chain ) {
+		cert_cnt = sk_X509_num(chain);
+	}
+
+	while ( curr_cert ) {
+		time_t curr_expire = 0;
+#if defined(ASN1_TIME_diff)
+		int diff_days = 0;
+		int diff_secs = 0;
+		if ( ! ASN1_TIME_diff(&diff_days, &diff_secs, NULL, X509_get_notAfter(curr_cert)) ) {
+			_globus_error_message = "Failed to calculate expration time";
+			expiration_time = -1;
+			break;
+		} else {
+			expiration_time = time(NULL) + diff_secs + 24*3600*diff_days;
+		}
+#else
+		curr_expire = my_globus_gsi_cert_utils_make_time(X509_get_notAfter(curr_cert));
+#endif
+		if ( expiration_time == -1 || curr_expire < expiration_time ) {
+			expiration_time = curr_expire;
+		}
+		if ( chain && cert_cnt ) {
+			cert_cnt--;
+			curr_cert = sk_X509_value(chain, cert_cnt);
+		}
+	}
+	return expiration_time;
+}
+
 char* x509_proxy_email( globus_gsi_cred_handle_t handle )
 {
 	X509_NAME *email_orig = NULL;
@@ -1223,8 +1322,6 @@ x509_proxy_seconds_until_expire( const char *proxy_file )
 #endif /* !defined(GSS_AUTHENTICATION) */
 }
 
-#if defined(HAVE_EXT_GLOBUS)
-
 static int
 buffer_to_bio( char *buffer, size_t buffer_len, BIO **bio )
 {
@@ -1267,8 +1364,6 @@ bio_to_buffer( BIO *bio, char **buffer, size_t *buffer_len )
 	return TRUE;
 }
 
-#endif /* defined(HAVE_EXT_GLOBUS) */
-
 int
 x509_send_delegation( const char *source_file,
 					  time_t expiration_time,
@@ -1278,272 +1373,100 @@ x509_send_delegation( const char *source_file,
 					  int (*send_data_func)(void *, void *, size_t),
 					  void *send_data_ptr )
 {
-#if !defined(HAVE_EXT_GLOBUS)
-	(void) source_file;
-	(void) expiration_time;
-	(void) result_expiration_time;
-	(void) recv_data_func;
-	(void) recv_data_ptr;
-	(void) send_data_func;
-	(void) send_data_ptr;
-
-	_globus_error_message = NOT_SUPPORTED_MSG;
-	return -1;
-
-#else
-	int rc = 0;
-	int error_line = 0;
-	globus_result_t result = GLOBUS_SUCCESS;
-	globus_gsi_cred_handle_t source_cred =  NULL;
-	globus_gsi_proxy_handle_t new_proxy = NULL;
-	char *buffer = NULL;
+	int rc = -1;
+	char *buffer = nullptr;
 	size_t buffer_len = 0;
-	BIO *bio = NULL;
-	X509 *cert = NULL;
-	STACK_OF(X509) *cert_chain = NULL;
-	int idx = 0;
-	globus_gsi_cert_utils_cert_type_t cert_type;
-	int is_limited;
+	BIO *in_bio = nullptr;
+	BIO *out_bio = nullptr;
+	X509 *src_cert = nullptr;
+	STACK_OF(X509) *src_chain = nullptr;
 	bool did_recv = false;
 	bool did_send = false;
-
-	if ( activate_globus_gsi() != 0 ) {
-		return -1;
-	}
-
-	result = (*globus_gsi_cred_handle_init_ptr)( &source_cred, NULL );
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
-		goto cleanup;
-	}
-
-	result = (*globus_gsi_proxy_handle_init_ptr)( &new_proxy, NULL );
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
-		goto cleanup;
-	}
-
-	result = (*globus_gsi_cred_read_proxy_ptr)( source_cred, source_file );
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
-		goto cleanup;
-	}
+	DelegationRestrictions restrict;
+	DelegationProvider deleg_provider(source_file, "");
 
 	did_recv = true;
 	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 || buffer == NULL ) {
-		rc = -1;
 		_globus_error_message = "Failed to receive delegation request";
-		error_line = __LINE__;
 		goto cleanup;
 	}
 
-	if ( buffer_to_bio( buffer, buffer_len, &bio ) == FALSE ) {
-		rc = -1;
+	if ( buffer_to_bio( buffer, buffer_len, &in_bio ) == FALSE ) {
 		_globus_error_message = "buffer_to_bio() failed";
-		error_line = __LINE__;
 		goto cleanup;
 	}
 
-	free( buffer );
-	buffer = NULL;
+	free(buffer);
+	buffer = nullptr;
 
-	result = (*globus_gsi_proxy_inquire_req_ptr)( new_proxy, bio );
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
+	if ( ! param_boolean("DELEGATE_FULL_JOB_GSI_CREDENTIALS", false) ) {
+		restrict["policyLimited"] = "true";
+	}
+
+	src_cert = deleg_provider.GetSrcCert();
+	src_chain = deleg_provider.GetSrcChain();
+	if ( ! src_cert ) {
+		_globus_error_message = "Failed to read proxy file";
 		goto cleanup;
 	}
 
-	BIO_free( bio );
-	bio = NULL;
-
-		// modify certificate properties
-		// set the appropriate proxy type
-	result = (*globus_gsi_cred_get_cert_type_ptr)( source_cred, &cert_type );
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
-		goto cleanup;
-	}
-	switch ( cert_type ) {
-	case GLOBUS_GSI_CERT_UTILS_TYPE_CA:
-		rc = -1;
-		_globus_error_message = "delegating CA certs not supported";
-		error_line = __LINE__;
-		goto cleanup;
-	case GLOBUS_GSI_CERT_UTILS_TYPE_EEC:
-	case GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_INDEPENDENT_PROXY:
-	case GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_RESTRICTED_PROXY:
-		cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_IMPERSONATION_PROXY;
-		break;
-	case GLOBUS_GSI_CERT_UTILS_TYPE_RFC_INDEPENDENT_PROXY:
-	case GLOBUS_GSI_CERT_UTILS_TYPE_RFC_RESTRICTED_PROXY:
-		cert_type = GLOBUS_GSI_CERT_UTILS_TYPE_RFC_IMPERSONATION_PROXY;
-		break;
-	case GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_IMPERSONATION_PROXY:
-	case GLOBUS_GSI_CERT_UTILS_TYPE_GSI_3_LIMITED_PROXY:
-	case GLOBUS_GSI_CERT_UTILS_TYPE_GSI_2_PROXY:
-	case GLOBUS_GSI_CERT_UTILS_TYPE_GSI_2_LIMITED_PROXY:
-	case GLOBUS_GSI_CERT_UTILS_TYPE_RFC_IMPERSONATION_PROXY:
-	case GLOBUS_GSI_CERT_UTILS_TYPE_RFC_LIMITED_PROXY:
-	default:
-			// Use the same certificate type
-		break;
-	}
-	result = (*globus_gsi_proxy_handle_set_type_ptr)( new_proxy, cert_type);
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
-		goto cleanup;
-	}
-
-	// see if this should be made a limited proxy
-	is_limited = !(param_boolean_int("DELEGATE_FULL_JOB_GSI_CREDENTIALS", 0));
-	if (is_limited) {
-		result = (*globus_gsi_proxy_handle_set_is_limited_ptr)( new_proxy, GLOBUS_TRUE);
-		if ( result != GLOBUS_SUCCESS ) {
-			rc = -1;
-			error_line = __LINE__;
-			goto cleanup;
-		}
-	}
-
-	if( expiration_time || result_expiration_time ) {
-		time_t time_left = 0;
-		result = (*globus_gsi_cred_get_lifetime_ptr)( source_cred, &time_left );
-		if ( result != GLOBUS_SUCCESS ) {
-			rc = -1;
-			error_line = __LINE__;
-			goto cleanup;
-		}
-
-		time_t now = time(NULL);
-		int orig_expiration_time = now + time_left;
-
-		if( result_expiration_time ) {
-			*result_expiration_time = orig_expiration_time;
-		}
+	if ( expiration_time || result_expiration_time ) {
+		time_t orig_expiration_time = x509_proxy_expiration_time(src_cert, src_chain);
 
 		if( expiration_time && orig_expiration_time > expiration_time ) {
-			int time_valid = (expiration_time - now)/60;
+			restrict["validityEnd"] = std::to_string(expiration_time);
+		}
 
-			result = (*globus_gsi_proxy_handle_set_time_valid_ptr)( new_proxy, time_valid );
-			if ( result != GLOBUS_SUCCESS ) {
-				rc = -1;
-				error_line = __LINE__;
-				goto cleanup;
-			}
-			if( result_expiration_time ) {
-				*result_expiration_time = expiration_time;
-			}
+		if( result_expiration_time ) {
+			*result_expiration_time = expiration_time;
 		}
 	}
 
-	/* TODO Do we have to destroy and re-create bio, or can we reuse it? */
-	bio = BIO_new( BIO_s_mem() );
-	if ( bio == NULL ) {
-		rc = -1;
-		_globus_error_message = "BIO_new() failed";
-		error_line = __LINE__;
+	out_bio = deleg_provider.Delegate(in_bio, restrict);
+	if ( ! out_bio ) {
+		_globus_error_message = "DelegationProvider::Delegate() failed";
 		goto cleanup;
 	}
 
-	result = (*globus_gsi_proxy_sign_req_ptr)( new_proxy, source_cred, bio );
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
-		goto cleanup;
-	}
-
-		// Now we need to stuff the certificate chain into in the bio.
-		// This consists of the signed certificate and its whole chain.
-	result = (*globus_gsi_cred_get_cert_ptr)( source_cred, &cert );
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
-		goto cleanup;
-	}
-	i2d_X509_bio( bio, cert );
-	X509_free( cert );
-	cert = NULL;
-
-	result = (*globus_gsi_cred_get_cert_chain_ptr)( source_cred, &cert_chain );
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
-		goto cleanup;
-	}
-
-	for( idx = 0; idx < sk_X509_num( cert_chain ); idx++ ) {
-		X509 *next_cert;
-		next_cert = sk_X509_value( cert_chain, idx );
-		i2d_X509_bio( bio, next_cert );
-	}
-	sk_X509_pop_free( cert_chain, X509_free );
-	cert_chain = NULL;
-
-	if ( bio_to_buffer( bio, &buffer, &buffer_len ) == FALSE ) {
-		rc = -1;
+	if ( bio_to_buffer( out_bio, &buffer, &buffer_len ) == FALSE ) {
 		_globus_error_message = "bio_to_buffer() failed";
-		error_line = __LINE__;
 		goto cleanup;
 	}
 
 	did_send = true;
 	if ( send_data_func( send_data_ptr, buffer, buffer_len ) != 0 ) {
-		rc = -1;
 		_globus_error_message = "Failed to send delegated proxy";
-		error_line = __LINE__;
 		goto cleanup;
 	}
 
- cleanup:
-	if ( rc == -1 && result != GLOBUS_SUCCESS ) {
-		if ( !set_error_string( result ) ) {
-			formatstr( _globus_error_message, "x509_send_delegation() failed at line %d", error_line );
-		}
-	}
+	rc = 0;
 
-	if ( !did_recv ) {
+ cleanup:
+	if ( ! did_recv ) {
 		recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len );
 	}
-	if ( !did_send ) {
+	if ( ! did_send ) {
 		send_data_func( send_data_ptr, NULL, 0 );
-	}
-	if ( bio ) {
-		BIO_free( bio );
 	}
 	if ( buffer ) {
 		free( buffer );
 	}
-	if ( new_proxy ) {
-		(*globus_gsi_proxy_handle_destroy_ptr)( new_proxy );
+	if ( in_bio ) {
+		BIO_free( in_bio );
 	}
-	if ( source_cred ) {
-		(*globus_gsi_cred_handle_destroy_ptr)( source_cred );
-	}
-	if ( cert ) {
-		X509_free( cert );
-	}
-	if ( cert_chain ) {
-		sk_X509_pop_free( cert_chain, X509_free );
+	if ( out_bio ) {
+		BIO_free( out_bio );
 	}
 
 	return rc;
-#endif
 }
 
 
-#if defined(HAVE_EXT_GLOBUS)
 struct x509_delegation_state
 {
-	char                           *m_dest;
-	globus_gsi_proxy_handle_t       m_request_handle;
+	std::string m_dest;
+	DelegationConsumer m_deleg_consumer;
 };
-#endif
 
 
 int
@@ -1554,145 +1477,40 @@ x509_receive_delegation( const char *destination_file,
 						 void *send_data_ptr,
 						 void ** state_ptr )
 {
-#if !defined(HAVE_EXT_GLOBUS)
-	(void) destination_file;		// Quiet compiler warnings
-	(void) recv_data_func;			// Quiet compiler warnings
-	(void) recv_data_ptr;			// Quiet compiler warnings
-	(void) send_data_func;			// Quiet compiler warnings
-	(void) send_data_ptr;			// Quiet compiler warnings
-	(void) state_ptr;			// Quiet compiler warnings
-	_globus_error_message = NOT_SUPPORTED_MSG;
-	return -1;
-
-#else
-	int rc = 0;
-	int error_line = 0;
+	int rc = -1;
 	x509_delegation_state *st = new x509_delegation_state();
-	st->m_dest = strdup(destination_file);
-	globus_result_t result = GLOBUS_SUCCESS;
-	st->m_request_handle = NULL;
-	globus_gsi_proxy_handle_attrs_t handle_attrs = NULL;
+	st->m_dest = destination_file;
 	char *buffer = NULL;
 	size_t buffer_len = 0;
 	BIO *bio = NULL;
 	bool did_send = false;
 
-	if ( activate_globus_gsi() != 0 ) {
-		if ( st->m_dest ) { free(st->m_dest); }
-		delete st;
-		return -1;
-	}
-
-	// declare some vars we'll need
-	int globus_bits = 0;
-	int bits = 0;
-	int skew = 0;
-
-	// prepare any special attributes desired
-	result = (*globus_gsi_proxy_handle_attrs_init_ptr)( &handle_attrs );
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
-		goto cleanup;
-	}
-
-	// first, get the default that globus is using
-	result = (*globus_gsi_proxy_handle_attrs_get_keybits_ptr)( handle_attrs, &globus_bits );
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
-		goto cleanup;
-	}
-
-	// As of January 2015, NIST recommends asymmetric key lengths no less than
-	// 2048 bits, so make sure Globus is defaulting to at least that large
-	if (globus_bits < 2048) {
-		globus_bits = 2048;
-		result = (*globus_gsi_proxy_handle_attrs_set_keybits_ptr)( handle_attrs, globus_bits );
-		if ( result != GLOBUS_SUCCESS ) {
-			rc = -1;
-			error_line = __LINE__;
-			goto cleanup;
-		}
-	}
-
-	// also allow the condor admin to increase it if they really feel the need
-	bits = param_integer("GSI_DELEGATION_KEYBITS", 0);
-	if (bits > globus_bits) {
-		result = (*globus_gsi_proxy_handle_attrs_set_keybits_ptr)( handle_attrs, bits );
-		if ( result != GLOBUS_SUCCESS ) {
-			rc = -1;
-			error_line = __LINE__;
-			goto cleanup;
-		}
-	}
-
-	// default for clock skew is currently (2013-03-27) 5 minutes, but allow
-	// that to be changed
-	skew = param_integer("GSI_DELEGATION_CLOCK_SKEW_ALLOWABLE", 0);
-
-	if (skew) {
-		result = (*globus_gsi_proxy_handle_attrs_set_clock_skew_allowable_ptr)( handle_attrs, skew );
-		if ( result != GLOBUS_SUCCESS ) {
-			rc = -1;
-			error_line = __LINE__;
-			goto cleanup;
-		}
-	}
-
-	// Note: inspecting the Globus implementation, globus_gsi_proxy_handle_init creates a copy
-	// of handle_attrs; hence, it's OK for handle_attrs to be destroyed before m_request_handle.
-	result = (*globus_gsi_proxy_handle_init_ptr)( &(st->m_request_handle), handle_attrs );
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
-		goto cleanup;
-	}
-
+		// make cert request
 	bio = BIO_new( BIO_s_mem() );
-	if ( bio == NULL ) {
-		rc = -1;
+	if ( bio == nullptr ) {
 		_globus_error_message = "BIO_new() failed";
-		error_line = __LINE__;
 		goto cleanup;
 	}
 
-	result = (*globus_gsi_proxy_create_req_ptr)( st->m_request_handle, bio );
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
+	if ( ! st->m_deleg_consumer.Request(bio) ) {
+		_globus_error_message = "DelegationConsumer::Request() failed";
 		goto cleanup;
 	}
-
 
 	if ( bio_to_buffer( bio, &buffer, &buffer_len ) == FALSE ) {
-		rc = -1;
 		_globus_error_message = "bio_to_buffer() failed";
-		error_line = __LINE__;
 		goto cleanup;
 	}
-
-	BIO_free( bio );
-	bio = NULL;
 
 	did_send = true;
 	if ( send_data_func( send_data_ptr, buffer, buffer_len ) != 0 ) {
-		rc = -1;
 		_globus_error_message = "Failed to send delegation request";
-		error_line = __LINE__;
 		goto cleanup;
 	}
 
-	free( buffer );
-	buffer = NULL;
+	rc = 0;
 
-cleanup:
-	if ( rc == -1 && result != GLOBUS_SUCCESS ) {
-		if ( !set_error_string( result ) ) {
-			formatstr( _globus_error_message, "x509_send_delegation() failed at line %d", error_line );
-		}
-	}
-
+ cleanup:
 	if ( !did_send ) {
 		send_data_func( send_data_ptr, NULL, 0 );
 	}
@@ -1702,15 +1520,9 @@ cleanup:
 	if ( buffer ) {
 		free( buffer );
 	}
-	if (handle_attrs) {
-		(*globus_gsi_proxy_handle_attrs_destroy_ptr)( handle_attrs );
-	}
+
 	// Error!  Cleanup memory immediately and return.
 	if ( rc ) {
-		if ( st->m_request_handle ) {
-			(*globus_gsi_proxy_handle_destroy_ptr)( st->m_request_handle );
-		}
-		if ( st->m_dest ) { free(st->m_dest); }
 		delete st;
 		return rc;
 	}
@@ -1724,7 +1536,6 @@ cleanup:
 
 	// Else, we block and finish up immediately.
 	return x509_receive_delegation_finish(recv_data_func, recv_data_ptr, st);
-#endif
 }
 
 
@@ -1735,63 +1546,46 @@ int x509_receive_delegation_finish(int (*recv_data_func)(void *, void **, size_t
                                void *recv_data_ptr,
                                void *state_ptr_raw)
 {
-#if !defined(HAVE_EXT_GLOBUS)
-	(void) recv_data_func;			// Quiet compiler warnings
-	(void) recv_data_ptr;			// Quiet compiler warnings
-	(void) state_ptr_raw;			// Quiet compiler warnings
-	_globus_error_message = NOT_SUPPORTED_MSG;
-	return -1;
-
-#else
+	int rc = -1;
 	x509_delegation_state *state_ptr = static_cast<x509_delegation_state*>(state_ptr_raw);
-	globus_result_t result = GLOBUS_SUCCESS;
-	globus_gsi_cred_handle_t proxy_handle =  NULL;
-	int rc = 0;
-	int error_line = 0;
-	char *buffer = NULL;
+	char *buffer = nullptr;
 	size_t buffer_len = 0;
-	BIO *bio = NULL;
+	BIO *bio = nullptr;
+	std::string proxy_contents;
+	std::string proxy_subject;
+	int fd = -1;
 
 	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 || buffer == NULL ) {
-		rc = -1;
 		_globus_error_message = "Failed to receive delegated proxy";
-		error_line = __LINE__;
 		goto cleanup;
 	}
 
 	if ( buffer_to_bio( buffer, buffer_len, &bio ) == FALSE ) {
-		rc = -1;
 		_globus_error_message = "buffer_to_bio() failed";
-		error_line = __LINE__;
 		goto cleanup;
 	}
 
-	result = (*globus_gsi_proxy_assemble_cred_ptr)( state_ptr->m_request_handle, &proxy_handle,
-	                                                bio );
-
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
+	if ( ! state_ptr->m_deleg_consumer.Acquire(bio, proxy_contents, proxy_subject) ) {
+		_globus_error_message = "DelegationConsumer::Acquire() failed";
 		goto cleanup;
 	}
 
-	/* globus_gsi_cred_write_proxy() declares its second argument non-const,
-	 * but never modifies it. The copy gets rid of compiler warnings.
-	 */
-	result = (*globus_gsi_cred_write_proxy_ptr)( proxy_handle, state_ptr->m_dest );
-	if ( result != GLOBUS_SUCCESS ) {
-		rc = -1;
-		error_line = __LINE__;
+		// write proxy file
+		// safe_open O_WRONLY|O_EXCL|O_CREAT, S_IRUSR|S_IWUSR
+	fd = safe_open_wrapper_follow(state_ptr->m_dest.c_str(), O_WRONLY|O_EXCL|O_CREAT, S_IRUSR|S_IWUSR);
+	if ( fd < 0 ) {
+		_globus_error_message = "Failed to open proxy file";
 		goto cleanup;
 	}
+
+	if ( write(fd, proxy_contents.c_str(), proxy_contents.size()) < (ssize_t)proxy_contents.size() ) {
+		_globus_error_message = "Failed to write proxy file";
+		goto cleanup;
+	}
+
+	rc = 0;
 
  cleanup:
-	if ( rc == -1 && result != GLOBUS_SUCCESS ) {
-		if ( !set_error_string( result ) ) {
-			formatstr( _globus_error_message, "x509_send_delegation() failed at line %d", error_line );
-		}
-	}
-
 	if ( bio ) {
 		BIO_free( bio );
 	}
@@ -1799,18 +1593,13 @@ int x509_receive_delegation_finish(int (*recv_data_func)(void *, void **, size_t
 		free( buffer );
 	}
 	if ( state_ptr ) {
-		if ( state_ptr->m_request_handle ) {
-			(*globus_gsi_proxy_handle_destroy_ptr)( state_ptr->m_request_handle );
-		}
-		if ( state_ptr->m_dest ) { free(state_ptr->m_dest); }
 		delete state_ptr;
 	}
-	if ( proxy_handle ) {
-		(*globus_gsi_cred_handle_destroy_ptr)( proxy_handle );
+	if ( fd >= 0 ) {
+		close(fd);
 	}
 
 	return rc;
-#endif
 }
 
 void parse_resource_manager_string( const char *string, char **host,
