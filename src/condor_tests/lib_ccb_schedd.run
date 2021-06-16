@@ -23,7 +23,8 @@ use Check::SimpleJob;
 use Check::CondorLog;
 
 
-my $append_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
   # test with submit daemons using CCB
   PRIVATE_NETWORK_NAME=BAR
   SCHEDD.PRIVATE_NETWORK_NAME=FOO
@@ -34,12 +35,8 @@ my $append_condor_config = '
   COLLECTOR_DEBUG = $(COLLECTOR_DEBUG) D_FULLDEBUG
 
   USE_SHARED_PORT = FALSE
-';
-
-CondorTest::StartCondorWithParams(
-    condor_name => "local",
-    append_condor_config => $append_condor_config
-);
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 # verify that a job runs
 SimpleJob::RunCheck();

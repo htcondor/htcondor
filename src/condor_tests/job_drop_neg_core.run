@@ -30,11 +30,10 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
+my $test_name = "job_drop_neg_core";
 
-my $ClusterId = 0;
-my $expect_return = 0;
-
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	WANT_SUSPEND = FALSE
 	KILLING_TIMEOUT = 1
@@ -42,24 +41,17 @@ my $firstappend_condor_config = '
 	NEGOTIATION_INTERVAL = 10
 	KILL = TRUE
 	ALL_DEBUG = D_ALWAYS D_CMD D_DAEMONCORE
-';
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobdropnegcore");
-
-CondorTest::StartCondorWithParams(
-	condor_name => "dropnegcore",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 my $on_abort = sub {
 	CondorTest::debug("Abort from removing trap signal job.\n",1);
 };
 
+
 my $return = "";
 my $executecount = 0;
 my $result = 1;
-my $test_name = "job_drop_neg_core";
 
 my $on_match = sub {
 	$match = shift;
@@ -86,27 +78,6 @@ my $on_hold = sub {
 #Do a job before setting tesing exit codes
 print "First test basic job\n";
 $result = SimpleJob::RunCheck(); # jobid 1
-
-#system("rm -f $catchlog");
-
-#$expect_return = 0;
-#$result = SimpleJob::RunCheck(
-	#test_name => "$test_name",
-	#on_abort => $on_abort,
-	#on_hold => $on_hold,
-	#on_execute => $on_execute,
-	#timeout => 120,
-	#should_transfer_files => "YES",
-	#when_to_transfer_output => "ON_EXIT",
-	#queue_sz => 1,
-	#duration => 1,
-#);
-#print "******************** Test for KILL = TRUE\n";
-#if($result == 1) {
-	#print "ok\n\n\n";
-#} else {
-	#print "bad\n\n\n";
-#}
 
 CondorLog::RunCheckMultiple(
 	daemon => "Negotiator",

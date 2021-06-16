@@ -32,21 +32,15 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	NUM_CPUS = 2
 	MachineMaxVacateTime = 10
 	NEGOTIATOR_INTERVAL = 5
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobfilexferminus1");
-print "local config file:$configfile\n";
-
-CondorTest::StartCondorWithParams(
-    condor_name => "jobfilexferminus1",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
 
 my $job = $$;
 my $baseoutfile = "submit_filetrans_output" . "$job";
