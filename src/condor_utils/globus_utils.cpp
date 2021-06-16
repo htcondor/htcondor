@@ -31,6 +31,8 @@
 
 #include "globus_utils.h"
 
+#include <openssl/x509v3.h>
+
 static std::string _globus_error_message;
 
 #if defined(HAVE_EXT_GLOBUS)
@@ -299,9 +301,11 @@ get_x509_proxy_filename( void )
 {
 	char *proxy_file = getenv("X509_USER_PROXY");
 	if ( proxy_file == nullptr ) {
+#if !defined(WIN32)
 		std::string tmp_file;
 		formatstr(tmp_file, "/tmp/x509up_u%d", geteuid());
 		proxy_file = strdup(tmp_file.c_str());
+#endif
 	} else {
 		proxy_file = strdup(proxy_file);
 	}
@@ -479,6 +483,7 @@ X509Credential* x509_proxy_read( const char *proxy_file )
 // This is a slightly modified verson of globus_gsi_cert_utils_make_time()
 // from the Grid Community Toolkit. It turns an ASN1_UTCTIME into a time_t.
 // libressl and older openssl don't provide a way to do this conversion.
+#if !defined(ASN1_TIME_diff)
 static
 time_t my_globus_gsi_cert_utils_make_time(const ASN1_UTCTIME *ctm)
 {
@@ -538,6 +543,7 @@ time_t my_globus_gsi_cert_utils_make_time(const ASN1_UTCTIME *ctm)
 
 	return newtime;
 }
+#endif
 
 time_t x509_proxy_expiration_time( X509 *cert, STACK_OF(X509)* chain )
 {
@@ -1252,7 +1258,7 @@ int x509_receive_delegation_finish(int (*recv_data_func)(void *, void **, size_t
 
 		// write proxy file
 		// safe_open O_WRONLY|O_EXCL|O_CREAT, S_IRUSR|S_IWUSR
-	fd = safe_open_wrapper_follow(state_ptr->m_dest.c_str(), O_WRONLY|O_EXCL|O_CREAT, S_IRUSR|S_IWUSR);
+	fd = safe_open_wrapper_follow(state_ptr->m_dest.c_str(), O_WRONLY|O_EXCL|O_CREAT, 0600);
 	if ( fd < 0 ) {
 		_globus_error_message = "Failed to open proxy file";
 		goto cleanup;
