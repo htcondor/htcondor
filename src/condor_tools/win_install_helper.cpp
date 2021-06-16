@@ -207,9 +207,9 @@ int __cdecl main(int argc, const char * argv[])
 	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	if (root_config) {
-		config_host(NULL, CONFIG_OPT_NO_EXIT | CONFIG_OPT_USE_THIS_ROOT_CONFIG, root_config);
-	} else {
 		config_ex(CONFIG_OPT_NO_EXIT);
+	} else {
+		config_host(NULL, CONFIG_OPT_NO_EXIT | CONFIG_OPT_USE_THIS_ROOT_CONFIG, root_config);
 	}
 
 	auto_free_ptr key_path;
