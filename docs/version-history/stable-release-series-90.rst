@@ -26,6 +26,11 @@ Release Notes:
 
 New Features:
 
+- Reduced `condor_shadow` memory usage by 40% or more on machines with many
+  (> 64) cores.  This allows a correspondingly greater number of shadows and thus
+  jobs to run on these submit machines.
+  :jira:`540`
+
 - Added support for using an authenticated smtp relay on port 587 to
   condor_mail.exe on Windows.
   :jira:`303`
