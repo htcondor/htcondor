@@ -762,6 +762,8 @@ time_t x509_proxy_expiration_time( X509 *cert, STACK_OF(X509)* chain )
 		if ( chain && cert_cnt ) {
 			cert_cnt--;
 			curr_cert = sk_X509_value(chain, cert_cnt);
+		} else {
+			curr_cert = NULL;
 		}
 	}
 	return expiration_time;
