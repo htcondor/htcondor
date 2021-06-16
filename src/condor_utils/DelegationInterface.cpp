@@ -80,11 +80,11 @@ static bool x509_to_string(X509* cert,std::string& str) {
   return true;
 }
 
-static bool x509_to_string(RSA* key,std::string& str) {
+static bool x509_to_string(EVP_PKEY* key,std::string& str) {
   BIO *out = BIO_new(BIO_s_mem());
   if(!out) return false;
   EVP_CIPHER *enc = NULL;
-  if(!PEM_write_bio_RSAPrivateKey(out,key,enc,NULL,0,NULL,NULL)) { BIO_free_all(out); return false; };
+  if(!PEM_write_bio_PrivateKey(out,key,enc,NULL,0,NULL,NULL)) { BIO_free_all(out); return false; };
   for(;;) {
     char s[256];
     int l = BIO_read(out,s,sizeof(s));
@@ -112,7 +112,7 @@ static bool string_to_x509(const std::string& str,X509* &cert,EVP_PKEY* &pkey,ST
   return true;
 }
 
-bool string_to_x509(const std::string& cert_file,const std::string& key_file,const std::string& inpwd,X509* &cert,EVP_PKEY* &pkey,STACK_OF(X509)* &cert_sk) {
+static bool string_to_x509(const std::string& cert_file,const std::string& key_file,const std::string& inpwd,X509* &cert,EVP_PKEY* &pkey,STACK_OF(X509)* &cert_sk) {
   BIO *in = NULL;
   cert=NULL; pkey=NULL; cert_sk=NULL;
   if(cert_file.empty()) return false;
@@ -230,30 +230,14 @@ static void wrap_PEM_cert(std::string& val) {
 }
 #endif
 
-DelegationConsumer::DelegationConsumer(void):key_(NULL),cert_(NULL),chain_(NULL) {
-  Generate();
+X509Credential::X509Credential(void):key_(NULL),cert_(NULL),chain_(NULL) {
+  GenerateKey();
 }
 
-DelegationConsumer::DelegationConsumer(const std::string& content):key_(NULL),cert_(NULL),chain_(NULL) {
-  Restore(content);
-}
-
-DelegationConsumer::~DelegationConsumer(void) {
-  if(key_) RSA_free((RSA*)key_);
-  if(cert_) X509_free((X509*)cert_);
-  if(chain_) {
-    for(;;) {
-      X509* v = sk_X509_pop((STACK_OF(X509) *)chain_);
-      if(!v) break;
-      X509_free(v);
-    };
-    sk_X509_free((STACK_OF(X509) *)chain_);
-  };
-}
-
-const std::string& DelegationConsumer::ID(void) {
-  static std::string s;
-  return s;
+X509Credential::~X509Credential(void) {
+  if(key_) EVP_PKEY_free(key_);
+  if(cert_) X509_free(cert_);
+  if(chain_) sk_X509_pop_free(chain_, X509_free);
 }
 
 static int ssl_err_cb(const char *str, size_t len, void *u) {
@@ -262,67 +246,37 @@ static int ssl_err_cb(const char *str, size_t len, void *u) {
   return 1;
 }
 
-void DelegationConsumer::LogError(void) {
+void X509Credential::LogError(void) {
   std::string ssl_err;
   ERR_print_errors_cb(&ssl_err_cb,&ssl_err);
   dprintf(D_ALWAYS, "Delegation error: %s\n", ssl_err.c_str());
 }
 
-bool DelegationConsumer::Backup(std::string& content) {
-  bool res = false;
-  content.resize(0);
-  RSA *rsa = (RSA*)key_;
-  if(rsa) {
-    BIO *out = BIO_new(BIO_s_mem());
-    if(out) {
-      EVP_CIPHER *enc = NULL;
-      if(PEM_write_bio_RSAPrivateKey(out,rsa,enc,NULL,0,NULL,NULL)) {
-        res=true;
-        for(;;) {
-          char s[256];
-          int l = BIO_read(out,s,sizeof(s));
-          if(l <= 0) break;
-          content.append(s,l);;
-        };
-      } else {
-        LogError();
-        dprintf(D_ALWAYS, "PEM_write_bio_RSAPrivateKey failed\n");
-      };
-      BIO_free_all(out);
-    };
-  };
-  return res;
+void X509Credential::CleanError(void) {
+  std::string ssl_err;
+  ERR_print_errors_cb(&ssl_err_cb,&ssl_err);
 }
 
-bool DelegationConsumer::Restore(const std::string& content) {
-  RSA *rsa = NULL;
-  BIO *in = BIO_new_mem_buf((void*)(content.c_str()),content.length());
-  if(in) {
-    if(PEM_read_bio_RSAPrivateKey(in,&rsa,NULL,NULL)) {
-      if(rsa) {
-        if(key_) RSA_free((RSA*)key_);
-        key_=rsa;
-      };
-    };
-    BIO_free_all(in);
-  };
-  return rsa;
-}
-
-bool DelegationConsumer::Generate(void) {
+bool X509Credential::GenerateKey(void) {
   bool res = false;
   int num = 2048;
   //BN_GENCB cb;
   BIGNUM *bn = BN_new();
   RSA *rsa = RSA_new();
+  EVP_PKEY* pkey = EVP_PKEY_new();
 
   //BN_GENCB_set(&cb,&progress_cb,NULL);
   if(bn && rsa) {
     if(BN_set_word(bn,RSA_F4)) {
       //if(RSA_generate_key_ex(rsa,num,bn,&cb)) {
       if(RSA_generate_key_ex(rsa,num,bn,NULL)) {
-        if(key_) RSA_free((RSA*)key_);
-        key_=rsa; rsa=NULL; res=true;
+        if(EVP_PKEY_assign_RSA(pkey, rsa)) {
+          if(key_) EVP_PKEY_free(key_);
+          key_=pkey; pkey=NULL; rsa=NULL; res=true;
+        } else {
+          LogError();
+          dprintf(D_ALWAYS, "EVP_PKEY_assign_RSA failed\n");
+        }
       } else {
         LogError();
         dprintf(D_ALWAYS, "RSA_generate_key_ex failed\n");
@@ -337,10 +291,11 @@ bool DelegationConsumer::Generate(void) {
   };
   if(bn) BN_free(bn);
   if(rsa) RSA_free(rsa);
+  if(pkey) EVP_PKEY_free(pkey);
   return res;
 }
 
-bool DelegationConsumer::Request(std::string& content) {
+bool X509Credential::Request(std::string& content) {
   bool res = false;
   content.resize(0);
   X509_REQ *req = Request();
@@ -366,7 +321,7 @@ bool DelegationConsumer::Request(std::string& content) {
   return res;
 }
 
-bool DelegationConsumer::Request(BIO* content) {
+bool X509Credential::Request(BIO* content) {
   bool res = false;
   X509_REQ *req = Request();
   if(req) {
@@ -381,43 +336,37 @@ bool DelegationConsumer::Request(BIO* content) {
   return res;
 }
 
-X509_REQ* DelegationConsumer::Request() {
+X509_REQ* X509Credential::Request() {
   bool res = false;
+  if(!key_ && !GenerateKey()) {
+    return NULL;
+  }
   X509_REQ *req = NULL;
-  EVP_PKEY *pkey = EVP_PKEY_new();
   const EVP_MD *digest = EVP_sha256();
-  if(pkey) {
-    RSA *rsa = (RSA*)key_;
-    if(rsa) {
-      if(EVP_PKEY_set1_RSA(pkey, rsa)) {
-        req = X509_REQ_new();
-        if(req) {
-          //if(X509_REQ_set_version(req,0L)) {
-          if(X509_REQ_set_version(req,2L)) {
-            if(X509_REQ_set_pubkey(req,pkey)) {
-              if(X509_REQ_sign(req,pkey,digest)) {
-                res = true;
-              };
-            };
-          };
-          if(!res && req) {
-            X509_REQ_free(req);
-            req = NULL;
-          }
+  req = X509_REQ_new();
+  if(req) {
+    //if(X509_REQ_set_version(req,0L)) {
+    if(X509_REQ_set_version(req,2L)) {
+      if(X509_REQ_set_pubkey(req,key_)) {
+        if(X509_REQ_sign(req,key_,digest)) {
+          res = true;
         };
       };
     };
-    EVP_PKEY_free(pkey);
+    if(!res && req) {
+      X509_REQ_free(req);
+      req = NULL;
+    }
   };
   return req;
 }
 
-bool DelegationConsumer::Acquire(std::string& content) {
+bool X509Credential::Acquire(std::string& content) {
   std::string identity;
   return Acquire(content,identity);
 }
 
-bool DelegationConsumer::Acquire(std::string& content, std::string& identity) {
+bool X509Credential::Acquire(std::string& content, std::string& identity) {
   bool res = false;
 
   if(!key_) return false;
@@ -441,7 +390,7 @@ err:
   return res;
 }
 
-bool DelegationConsumer::Acquire(BIO* in, std::string& content, std::string& identity) {
+bool X509Credential::Acquire(BIO* in, std::string& content, std::string& identity) {
   bool res = false;
 
   if(!key_) return false;
@@ -474,7 +423,7 @@ err:
   return res;
 }
 
-bool DelegationConsumer::GetInfo(std::string& content, std::string& identity) {
+bool X509Credential::GetInfo(std::string& content, std::string& identity) {
   bool res = false;
   std::string subject;
 
@@ -494,7 +443,7 @@ bool DelegationConsumer::GetInfo(std::string& content, std::string& identity) {
     identity=subject;
   };
 
-  if(!x509_to_string((RSA*)key_,content)) goto err;
+  if(!x509_to_string(key_,content)) goto err;
   if(chain_) {
     for(int n=0;n<sk_X509_num((STACK_OF(X509) *)chain_);++n) {
       X509* v = sk_X509_value((STACK_OF(X509) *)chain_,n);
@@ -521,7 +470,7 @@ err:
 
 // ---------------------------------------------------------------------------------
 
-DelegationProvider::DelegationProvider(const std::string& credentials):key_(NULL),cert_(NULL),chain_(NULL) {
+X509Credential::X509Credential(const std::string& credentials):key_(NULL),cert_(NULL),chain_(NULL) {
   EVP_PKEY *pkey = NULL;
   X509 *cert = NULL;
   STACK_OF(X509) *cert_sk = NULL;
@@ -548,7 +497,7 @@ err:
   };
 }
 
-DelegationProvider::DelegationProvider(const std::string& cert_file,const std::string& key_file,const std::string& inpwd):key_(NULL),cert_(NULL),chain_(NULL) {
+X509Credential::X509Credential(const std::string& cert_file,const std::string& key_file,const std::string& inpwd):key_(NULL),cert_(NULL),chain_(NULL) {
   EVP_PKEY *pkey = NULL;
   X509 *cert = NULL;
   STACK_OF(X509) *cert_sk = NULL;
@@ -576,20 +525,7 @@ err:
   };
 }
 
-DelegationProvider::~DelegationProvider(void) {
-  if(key_) EVP_PKEY_free((EVP_PKEY*)key_);
-  if(cert_) X509_free((X509*)cert_);
-  if(chain_) {
-    for(;;) {
-      X509* v = sk_X509_pop((STACK_OF(X509) *)chain_);
-      if(!v) break;
-      X509_free(v);
-    };
-    sk_X509_free((STACK_OF(X509) *)chain_);
-  };
-}
-
-std::string DelegationProvider::Delegate(const std::string& request,const DelegationRestrictions& restrictions) {
+std::string X509Credential::Delegate(const std::string& request,const DelegationRestrictions& restrictions) {
   X509 *cert = NULL;
   X509_REQ *req = NULL;
   BIO* in = NULL;
@@ -628,7 +564,7 @@ err:
   return res;
 }
 
-BIO* DelegationProvider::Delegate(BIO* request, const DelegationRestrictions& restrictions) {
+BIO* X509Credential::Delegate(BIO* request, const DelegationRestrictions& restrictions) {
   bool res = false;
   X509 *cert = NULL;
   X509_REQ *req = NULL;
@@ -663,7 +599,7 @@ err:
   return out;
 }
 
-X509* DelegationProvider::Delegate(X509_REQ* request, const DelegationRestrictions& restrictions) {
+X509* X509Credential::Delegate(X509_REQ* request, const DelegationRestrictions& restrictions) {
   bool res = false;
   X509 *cert = NULL;
   EVP_PKEY *pkey = NULL;
@@ -911,14 +847,4 @@ err:
   return cert;
 }
 
-void DelegationProvider::LogError(void) {
-  std::string ssl_err;
-  ERR_print_errors_cb(&ssl_err_cb,&ssl_err);
-  dprintf(D_ALWAYS, "Delegation error: %s\n", ssl_err.c_str());
-}
-
-void DelegationProvider::CleanError(void) {
-  std::string ssl_err;
-  ERR_print_errors_cb(&ssl_err_cb,&ssl_err);
-}
 

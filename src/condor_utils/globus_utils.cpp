@@ -1385,7 +1385,7 @@ x509_send_delegation( const char *source_file,
 	bool did_recv = false;
 	bool did_send = false;
 	DelegationRestrictions restrict;
-	DelegationProvider deleg_provider(source_file, "");
+	X509Credential deleg_provider(source_file, "");
 
 	did_recv = true;
 	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 || buffer == NULL ) {
@@ -1405,8 +1405,8 @@ x509_send_delegation( const char *source_file,
 		restrict["policyLimited"] = "true";
 	}
 
-	src_cert = deleg_provider.GetSrcCert();
-	src_chain = deleg_provider.GetSrcChain();
+	src_cert = deleg_provider.GetCert();
+	src_chain = deleg_provider.GetChain();
 	if ( ! src_cert ) {
 		_globus_error_message = "Failed to read proxy file";
 		goto cleanup;
@@ -1426,7 +1426,7 @@ x509_send_delegation( const char *source_file,
 
 	out_bio = deleg_provider.Delegate(in_bio, restrict);
 	if ( ! out_bio ) {
-		_globus_error_message = "DelegationProvider::Delegate() failed";
+		_globus_error_message = "X509Credential::Delegate() failed";
 		goto cleanup;
 	}
 
@@ -1467,7 +1467,7 @@ x509_send_delegation( const char *source_file,
 struct x509_delegation_state
 {
 	std::string m_dest;
-	DelegationConsumer m_deleg_consumer;
+	X509Credential m_deleg_consumer;
 };
 
 
@@ -1495,7 +1495,7 @@ x509_receive_delegation( const char *destination_file,
 	}
 
 	if ( ! st->m_deleg_consumer.Request(bio) ) {
-		_globus_error_message = "DelegationConsumer::Request() failed";
+		_globus_error_message = "X509Credential::Request() failed";
 		goto cleanup;
 	}
 
@@ -1568,7 +1568,7 @@ int x509_receive_delegation_finish(int (*recv_data_func)(void *, void **, size_t
 	}
 
 	if ( ! state_ptr->m_deleg_consumer.Acquire(bio, proxy_contents, proxy_subject) ) {
-		_globus_error_message = "DelegationConsumer::Acquire() failed";
+		_globus_error_message = "X509Credential::Acquire() failed";
 		goto cleanup;
 	}
 

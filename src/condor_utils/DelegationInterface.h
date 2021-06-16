@@ -37,36 +37,37 @@
 
 typedef std::map<std::string,std::string> DelegationRestrictions;
 
-bool string_to_x509(const std::string& cert_file,const std::string& key_file,const std::string& inpwd,X509* &cert,EVP_PKEY* &pkey,STACK_OF(X509)* &cert_sk);
-
-/** A consumer of delegated X509 credentials.
-  During delegation procedure this class acquires
- delegated credentials aka proxy - certificate, private key and
- chain of previous certificates. 
-  Delegation procedure consists of calling Request() method
- for generating certificate request followed by call to Acquire()
- method for making complete credentials from certificate chain. */
-class DelegationConsumer {
- protected:
-  void* key_; /** Private key */
-  X509* cert_; /** Public key/certificate corresponding to public key */
+/* A class to hold an X509 credential, including it public certificate,
+ * private key, and a chain of any parent non-CA certificates (for proxies).
+ * The class is heavily focused on supporting delegation of proxy 
+ * certificate over the network.
+ */
+class X509Credential
+{
+  EVP_PKEY* key_; /** Private key */
+  X509* cert_;/** Public key/certificate corresponding to private key */
   STACK_OF(X509)* chain_; /** Chain of other certificates needed to verify 'cert_' if any */
-  bool Generate(void); /** Creates private key */
+  bool GenerateKey(void); /** Creates private key */
   void LogError(void);
+  void CleanError(void);
  public:
-  /** Creates object with new private key */
-  DelegationConsumer(void);
-  /** Creates object with provided private key */
-  DelegationConsumer(const std::string& content);
-  ~DelegationConsumer(void);
-  operator bool(void) { return key_ != NULL; };
-  bool operator!(void) { return key_ == NULL; };
-  /** Return identifier of this object - not implemented */
-  const std::string& ID(void);
-  /** Stores content of this object into a string */
-  bool Backup(std::string& content);
-  /** Restores content of object from string */
-  bool Restore(const std::string& content);
+  /** Creates object with new private key.
+     Intended for starting a delegation request. */
+  X509Credential(void);
+  /** Creates instance from provided credentials.
+     Arguments should contain PEM-encoded certificate, private key and 
+     optionally certificates chain. */
+  X509Credential(const std::string& credentials);
+  /** Creates instance from provided credentials.
+     Arguments should contain filesystem path to PEM-encoded certificate and
+     private key. Optionally cert_file may contain private key and
+     certificates chain. */
+  X509Credential(const std::string& cert_file,const std::string& key_file,const std::string& inpwd = "");
+  ~X509Credential(void);
+  EVP_PKEY* GetKey() { return key_; };
+  X509* GetCert() { return cert_; };
+  STACK_OF(X509)* GetChain() { return chain_; };
+
   /** Make X509 certificate request from internal private key */
   bool Request(std::string& content);
   bool Request(BIO* content);
@@ -79,33 +80,7 @@ class DelegationConsumer {
   bool Acquire(std::string& content,std::string& identity);
   bool Acquire(BIO* in, std::string& content,std::string& identity);
   bool GetInfo(std::string& content,std::string& identity);
-};
 
-/** A provider of delegated credentials.
-  During delegation procedure this class generates new credential
- to be used in proxy/delegated credential. */
-class DelegationProvider {
-  void* key_; /** Private key used to sign delegated certificate */
-  void* cert_; /** Public key/certificate corresponding to public key */
-  void* chain_; /** Chain of other certificates needed to verify 'cert_' if any */
-  void LogError(void);
-  void CleanError(void);
- public:
-  /** Creates instance from provided credentials.
-     Credentials are used to sign delegated credentials.
-     Arguments should contain PEM-encoded certificate, private key and 
-     optionally certificates chain. */
-  DelegationProvider(const std::string& credentials);
-  /** Creates instance from provided credentials.
-     Credentials are used to sign delegated credentials.
-     Arguments should contain filesystem path to PEM-encoded certificate and
-     private key. Optionally cert_file may contain certificates chain. */
-  DelegationProvider(const std::string& cert_file,const std::string& key_file,const std::string& inpwd = "");
-  ~DelegationProvider(void);
-  operator bool(void) { return key_ != NULL; };
-  bool operator!(void) { return key_ == NULL; };
-  X509* GetSrcCert() { return (X509*)cert_; };
-  STACK_OF(X509)* GetSrcChain() { return (STACK_OF(X509)*)chain_; };
   /** Perform delegation.
     Takes X509 certificate request and creates proxy credentials
    excluding private key. Result is then to be fed into 
