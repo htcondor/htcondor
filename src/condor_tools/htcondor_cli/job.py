@@ -67,7 +67,7 @@ class Job:
                 sys.exit(1)
 
             os.mkdir(TMP_DIR)
-            DAGMan.write_slurm_dag(file, options["runtime"], options["node_count"])
+            DAGMan.write_slurm_dag(file, options["runtime"], options["node_count"], options["email"])
             os.chdir(TMP_DIR) # DAG must be submitted from TMP_DIR
             submit_description = htcondor.Submit.from_dag(str(TMP_DIR / "slurm_submit.dag"))
             submit_description["+ResourceType"] = "\"Slurm\""
@@ -96,7 +96,7 @@ class Job:
                 sys.exit(1)
 
             os.mkdir(TMP_DIR)
-            DAGMan.write_ec2_dag(file, options["runtime"], options["node_count"])
+            DAGMan.write_ec2_dag(file, options["runtime"], options["node_count"], options["email"])
             os.chdir(TMP_DIR) # DAG must be submitted from TMP_DIR
             submit_description = htcondor.Submit.from_dag("ec2_submit.dag")
             submit_description["+ResourceType"] = "\"EC2\""

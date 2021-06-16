@@ -78,6 +78,11 @@ def parse_args():
     if args.resource is not None:
         options["resource"] = args.resource.lower()
 
+    if args.email is not None:
+        options["email"] = args.email.lower()
+    else:
+        options["email"] = None
+
     if args.runtime is not None:
         try:
             options["runtime"] = int(args.runtime)

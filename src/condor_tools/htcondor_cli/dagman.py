@@ -36,12 +36,11 @@ class DAGMan:
         return dag, out, log
 
     @staticmethod
-    def write_slurm_dag(jobfile, runtime, node_count, email="user@domain.com"):
+    def write_slurm_dag(jobfile, runtime, node_count, email):
 
-        sendmail_sh = f"""#!/bin/sh
-
-#sendmail {email}
-"""
+        sendmail_sh = "#!/bin/sh\n"
+        if email is not None:
+            sendmail_sh += f"\necho -e '$2' | mail -v -s '$1' {email}\n"
 
         sendmail_sh_file = open(TMP_DIR / "sendmail.sh", "w")
         sendmail_sh_file.write(sendmail_sh)
@@ -49,13 +48,14 @@ class DAGMan:
         st = os.stat(TMP_DIR / "sendmail.sh")
         os.chmod(TMP_DIR / "sendmail.sh", st.st_mode | stat.S_IEXEC)
 
-        slurm_config = "DAGMAN_USE_CONDOR_SUBMIT = False"
+        slurm_config = "DAGMAN_USE_CONDOR_SUBMIT = False\nDAGMAN_USE_STRICT = 0\n"
         slurm_config_file = open(TMP_DIR / "slurm_submit.config", "w")
         slurm_config_file.write(slurm_config)
         slurm_config_file.close()
 
         slurm_dag = f"""JOB A {{
     executable = sendmail.sh
+    arguments = \\\"Job submitted to run on Slurm\\\" \\\"Your job ({jobfile}) has been submitted to run on a Slurm resource\\\"
     universe = local
     output = job-A-email.$(cluster).$(process).out
     request_disk = 10M
@@ -82,6 +82,7 @@ JOB B {{
 JOB C {jobfile} DIR {os.getcwd()}
 JOB D {{
     executable = sendmail.sh
+    arguments = \\\"Job completed run on Slurm\\\" \\\"Your job ({jobfile}) has completed running on a Slurm resource\\\"
     universe = local
     output = job-D-email.$(cluster).$(process).out
     request_disk = 10M
@@ -102,12 +103,11 @@ VARS C +WantFlocking="True"
         dag_file.close()
 
     @staticmethod
-    def write_ec2_dag(jobfile, runtime, node_count, email="user@domain.com"):
+    def write_ec2_dag(jobfile, runtime, node_count, email):
 
-        sendmail_sh = f"""#!/bin/sh
-
-#sendmail {email}
-"""
+        sendmail_sh = "#!/bin/sh\n"
+        if email is not None:
+            sendmail_sh += f"\necho -e '$2' | mail -v -s '$1' {email}\n"
 
         sendmail_sh_file = open(TMP_DIR / "sendmail.sh", "w")
         sendmail_sh_file.write(sendmail_sh)
@@ -125,13 +125,14 @@ yes | /usr/bin/condor_annex -count $1 -duration $2 -annex-name EC2Annex-{int(tim
         st = os.stat(TMP_DIR / "ec2_annex.sh")
         os.chmod(TMP_DIR / "ec2_annex.sh", st.st_mode | stat.S_IEXEC)
 
-        ec2_config = "DAGMAN_USE_CONDOR_SUBMIT = False"
+        ec2_config = "DAGMAN_USE_CONDOR_SUBMIT = False\nDAGMAN_USE_STRICT = 0\n"
         ec2_config_file = open(TMP_DIR / "ec2_submit.config", "w")
         ec2_config_file.write(ec2_config)
         ec2_config_file.close()
 
         ec2_dag = f"""JOB A {{
     executable = sendmail.sh
+    arguments = \\\"Job submitted to run on EC2\\\" \\\"Your job ({jobfile}) has been submitted to run on a EC2 resource\\\"
     universe = local
     output = job-A-email.$(cluster).$(process).out
     request_disk = 10M
@@ -148,6 +149,7 @@ JOB B {{
 JOB C {jobfile} DIR {os.getcwd()}
 JOB D {{
     executable = sendmail.sh
+    arguments = \\\"Job completed run on EC2\\\" \\\"Your job ({jobfile}) has completed running on a EC2 resource\\\"
     universe = local
     output = job-D-email.$(cluster).$(process).out
     request_disk = 10M
