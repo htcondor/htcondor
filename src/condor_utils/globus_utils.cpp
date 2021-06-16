@@ -483,7 +483,7 @@ X509Credential* x509_proxy_read( const char *proxy_file )
 // This is a slightly modified verson of globus_gsi_cert_utils_make_time()
 // from the Grid Community Toolkit. It turns an ASN1_UTCTIME into a time_t.
 // libressl and older openssl don't provide a way to do this conversion.
-#if !defined(ASN1_TIME_diff)
+#if defined(LIBRESSL_VERSION_NUMBER)
 static
 time_t my_globus_gsi_cert_utils_make_time(const ASN1_UTCTIME *ctm)
 {
@@ -556,7 +556,7 @@ time_t x509_proxy_expiration_time( X509 *cert, STACK_OF(X509)* chain )
 
 	while ( curr_cert ) {
 		time_t curr_expire = 0;
-#if defined(ASN1_TIME_diff)
+#if !defined(LIBRESSL_VERSION_NUMBER)
 		int diff_days = 0;
 		int diff_secs = 0;
 		if ( ! ASN1_TIME_diff(&diff_days, &diff_secs, NULL, X509_get_notAfter(curr_cert)) ) {
