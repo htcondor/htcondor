@@ -31,14 +31,6 @@
 
 #include "globus_utils.h"
 
-#if defined(HAVE_EXT_GLOBUS)
-// Note: this is from OpenSSL, but should be present if Globus is.
-// Only used if HAVE_EXT_GLOBUS.
-#     include "openssl/x509v3.h"
-#endif
-
-#define DEFAULT_MIN_TIME_LEFT 8*60*60;
-
 static std::string _globus_error_message;
 
 #if defined(HAVE_EXT_GLOBUS)
@@ -52,67 +44,11 @@ int (*globus_module_activate_ptr)(
 	globus_module_descriptor_t *) = NULL;
 int (*globus_thread_set_model_ptr)(
 	const char *) = NULL;
-globus_object_t *(*globus_error_peek_ptr)(
-	globus_result_t) = NULL;
-char *(*globus_error_print_friendly_ptr)(
-	globus_object_t *) = NULL;
-// Symbols from libglobus_gsi_sysconfig
-globus_result_t (*globus_gsi_sysconfig_get_proxy_filename_unix_ptr)(
-	char **, globus_gsi_proxy_file_type_t) = NULL;
 // Symbols from libglobus_gsi_credential
 globus_result_t (*globus_gsi_cred_get_cert_ptr)(
 	globus_gsi_cred_handle_t, X509 **) = NULL;
 globus_result_t (*globus_gsi_cred_get_cert_chain_ptr)(
 	globus_gsi_cred_handle_t, STACK_OF(X509) **) = NULL;
-globus_result_t (*globus_gsi_cred_get_cert_type_ptr)(
-	globus_gsi_cred_handle_t, globus_gsi_cert_utils_cert_type_t *) = NULL;
-globus_result_t (*globus_gsi_cred_get_identity_name_ptr)(
-	globus_gsi_cred_handle_t, char **) = NULL;
-globus_result_t (*globus_gsi_cred_get_lifetime_ptr)(
-	globus_gsi_cred_handle_t, time_t *) = NULL;
-globus_result_t (*globus_gsi_cred_get_subject_name_ptr)(
-	globus_gsi_cred_handle_t, char **) = NULL;
-globus_result_t (*globus_gsi_cred_handle_attrs_destroy_ptr)(
-	globus_gsi_cred_handle_attrs_t) = NULL;
-globus_result_t (*globus_gsi_cred_handle_attrs_init_ptr)(
-	globus_gsi_cred_handle_attrs_t *) = NULL;
-globus_result_t (*globus_gsi_cred_handle_destroy_ptr)(
-	globus_gsi_cred_handle_t) = NULL;
-globus_result_t (*globus_gsi_cred_handle_init_ptr)(
-	globus_gsi_cred_handle_t *, globus_gsi_cred_handle_attrs_t) = NULL;
-globus_result_t (*globus_gsi_cred_read_proxy_ptr)(
-	globus_gsi_cred_handle_t, const char *) = NULL;
-globus_result_t (*globus_gsi_cred_write_proxy_ptr)(
-	globus_gsi_cred_handle_t, char *) = NULL;
-// Symbols for libglobus_gsi_proxy_core
-globus_result_t (*globus_gsi_proxy_assemble_cred_ptr)(
-	globus_gsi_proxy_handle_t, globus_gsi_cred_handle_t *, BIO *) = NULL;
-globus_result_t (*globus_gsi_proxy_create_req_ptr)(
-	globus_gsi_proxy_handle_t, BIO *) = NULL;
-globus_result_t (*globus_gsi_proxy_handle_attrs_destroy_ptr)(
-	globus_gsi_proxy_handle_attrs_t) = NULL;
-globus_result_t (*globus_gsi_proxy_handle_attrs_get_keybits_ptr)(
-	globus_gsi_proxy_handle_attrs_t, int *) = NULL;
-globus_result_t (*globus_gsi_proxy_handle_attrs_init_ptr)(
-	globus_gsi_proxy_handle_attrs_t *) = NULL;
-globus_result_t (*globus_gsi_proxy_handle_attrs_set_clock_skew_allowable_ptr)(
-	globus_gsi_proxy_handle_attrs_t, int) = NULL;
-globus_result_t (*globus_gsi_proxy_handle_attrs_set_keybits_ptr)(
-	globus_gsi_proxy_handle_attrs_t, int) = NULL;
-globus_result_t (*globus_gsi_proxy_handle_destroy_ptr)(
-	globus_gsi_proxy_handle_t) = NULL;
-globus_result_t (*globus_gsi_proxy_handle_init_ptr)(
-	globus_gsi_proxy_handle_t *, globus_gsi_proxy_handle_attrs_t) = NULL;
-globus_result_t (*globus_gsi_proxy_handle_set_is_limited_ptr)(
-	globus_gsi_proxy_handle_t, globus_bool_t) = NULL;
-globus_result_t (*globus_gsi_proxy_handle_set_time_valid_ptr)(
-	globus_gsi_proxy_handle_t, int) = NULL;
-globus_result_t (*globus_gsi_proxy_handle_set_type_ptr)(
-	globus_gsi_proxy_handle_t, globus_gsi_cert_utils_cert_type_t) = NULL;
-globus_result_t (*globus_gsi_proxy_inquire_req_ptr)(
-	globus_gsi_proxy_handle_t, BIO *) = NULL;
-globus_result_t (*globus_gsi_proxy_sign_req_ptr)(
-	globus_gsi_proxy_handle_t, globus_gsi_cred_handle_t, BIO *) = NULL;
 // Symbols from libglobus_gssapi_gsi
 OM_uint32 (*gss_accept_sec_context_ptr)(
 	OM_uint32 *, gss_ctx_id_t *, const gss_cred_id_t, const gss_buffer_t,
@@ -126,9 +62,6 @@ OM_uint32 (*gss_delete_sec_context_ptr)(
 	OM_uint32 *, gss_ctx_id_t *, gss_buffer_t) = NULL;
 OM_uint32 (*gss_display_name_ptr)(
 	OM_uint32 *, const gss_name_t, gss_buffer_t, gss_OID *) = NULL;
-OM_uint32 (*gss_import_cred_ptr)(
-	OM_uint32 *, gss_cred_id_t *, const gss_OID, OM_uint32,
-	const gss_buffer_t, OM_uint32, OM_uint32 *) = NULL;
 OM_uint32 (*gss_import_name_ptr)(
 	OM_uint32 *, const gss_buffer_t, const gss_OID, gss_name_t *) = NULL;
 OM_uint32 (*gss_inquire_context_ptr)(
@@ -226,22 +159,6 @@ set_error_string( const char *message )
 	_globus_error_message = message;
 }
 
-#if defined(HAVE_EXT_GLOBUS)
-static
-bool
-set_error_string( globus_result_t result )
-{
-	globus_object_t *err_obj = (*globus_error_peek_ptr)( result );
-	char *msg = NULL;
-	if ( err_obj && (msg = (*globus_error_print_friendly_ptr)( err_obj )) ) {
-		_globus_error_message = msg;
-		free( msg );
-		return true;
-	}
-	return false;
-}
-#endif
-
 /* Activate the globus gsi modules for use by functions in this file.
  * Returns zero if the modules were successfully activated. Returns -1 if
  * something went wrong.
@@ -278,45 +195,18 @@ activate_globus_gsi( void )
 		 (dl_hdl = dlopen(LIBGLOBUS_COMMON_SO, RTLD_LAZY)) == NULL ||
 		 !(globus_module_activate_ptr = (int (*)(globus_module_descriptor_t*))dlsym(dl_hdl, "globus_module_activate")) ||
 		 !(globus_thread_set_model_ptr = (int (*)(const char*))dlsym(dl_hdl, "globus_thread_set_model")) ||
-		 !(globus_error_peek_ptr = (globus_object_t* (*)(globus_result_t))dlsym(dl_hdl, "globus_error_peek")) ||
-		 !(globus_error_print_friendly_ptr = (char* (*)(globus_object_t*))dlsym(dl_hdl, "globus_error_print_friendly")) ||
 		 (dl_hdl = dlopen(LIBGLOBUS_CALLOUT_SO, RTLD_LAZY)) == NULL ||
 		 (dl_hdl = dlopen(LIBGLOBUS_PROXY_SSL_SO, RTLD_LAZY)) == NULL ||
 		 (dl_hdl = dlopen(LIBGLOBUS_OPENSSL_ERROR_SO, RTLD_LAZY)) == NULL ||
 		 (dl_hdl = dlopen(LIBGLOBUS_OPENSSL_SO, RTLD_LAZY)) == NULL ||
 		 (dl_hdl = dlopen(LIBGLOBUS_GSI_CERT_UTILS_SO, RTLD_LAZY)) == NULL ||
 		 (dl_hdl = dlopen(LIBGLOBUS_GSI_SYSCONFIG_SO, RTLD_LAZY)) == NULL ||
-		 !(globus_gsi_sysconfig_get_proxy_filename_unix_ptr = (globus_result_t (*)(char**, globus_gsi_proxy_file_type_t))dlsym(dl_hdl, "globus_gsi_sysconfig_get_proxy_filename_unix")) ||
 		 (dl_hdl = dlopen(LIBGLOBUS_OLDGAA_SO, RTLD_LAZY)) == NULL ||
 		 (dl_hdl = dlopen(LIBGLOBUS_GSI_CALLBACK_SO, RTLD_LAZY)) == NULL ||
 		 (dl_hdl = dlopen(LIBGLOBUS_GSI_CREDENTIAL_SO, RTLD_LAZY))== NULL ||
 		 !(globus_gsi_cred_get_cert_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s*, X509**))dlsym(dl_hdl, "globus_gsi_cred_get_cert")) ||
 		 !(globus_gsi_cred_get_cert_chain_ptr = (globus_result_t (*)(globus_gsi_cred_handle_t, STACK_OF(X509)**))dlsym(dl_hdl, "globus_gsi_cred_get_cert_chain")) ||
-		 !(globus_gsi_cred_get_cert_type_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s*, globus_gsi_cert_utils_cert_type_t*))dlsym(dl_hdl, "globus_gsi_cred_get_cert_type")) ||
-		 !(globus_gsi_cred_get_identity_name_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s*, char**))dlsym(dl_hdl, "globus_gsi_cred_get_identity_name")) ||
-		 !(globus_gsi_cred_get_lifetime_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s*, time_t*))dlsym(dl_hdl, "globus_gsi_cred_get_lifetime")) ||
-		 !(globus_gsi_cred_get_subject_name_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s*, char**))dlsym(dl_hdl, "globus_gsi_cred_get_subject_name")) ||
-		 !(globus_gsi_cred_handle_attrs_destroy_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_attrs_s*))dlsym(dl_hdl, "globus_gsi_cred_handle_attrs_destroy")) ||
-		 !(globus_gsi_cred_handle_attrs_init_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_attrs_s**))dlsym(dl_hdl, "globus_gsi_cred_handle_attrs_init")) ||
-		 !(globus_gsi_cred_handle_destroy_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s*))dlsym(dl_hdl, "globus_gsi_cred_handle_destroy")) ||
-		 !(globus_gsi_cred_handle_init_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s**, globus_l_gsi_cred_handle_attrs_s*))dlsym(dl_hdl, "globus_gsi_cred_handle_init")) ||
-		 !(globus_gsi_cred_read_proxy_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s*, const char*))dlsym(dl_hdl, "globus_gsi_cred_read_proxy")) ||
-		 !(globus_gsi_cred_write_proxy_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s*, char*))dlsym(dl_hdl, "globus_gsi_cred_write_proxy")) ||
 		 (dl_hdl = dlopen(LIBGLOBUS_GSI_PROXY_CORE_SO, RTLD_LAZY)) == NULL ||
-		 !(globus_gsi_proxy_assemble_cred_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s*, globus_l_gsi_cred_handle_s**, BIO*))dlsym(dl_hdl, "globus_gsi_proxy_assemble_cred")) ||
-		 !(globus_gsi_proxy_create_req_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s*, BIO*))dlsym(dl_hdl, "globus_gsi_proxy_create_req")) ||
-		 !(globus_gsi_proxy_handle_attrs_destroy_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_attrs_s*))dlsym(dl_hdl, "globus_gsi_proxy_handle_attrs_destroy")) ||
-		 !(globus_gsi_proxy_handle_attrs_get_keybits_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_attrs_s*, int*))dlsym(dl_hdl, "globus_gsi_proxy_handle_attrs_get_keybits")) ||
-		 !(globus_gsi_proxy_handle_attrs_init_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_attrs_s**))dlsym(dl_hdl, "globus_gsi_proxy_handle_attrs_init")) ||
-		 !(globus_gsi_proxy_handle_attrs_set_clock_skew_allowable_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_attrs_s*, int))dlsym(dl_hdl, "globus_gsi_proxy_handle_attrs_set_clock_skew_allowable")) ||
-		 !(globus_gsi_proxy_handle_attrs_set_keybits_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_attrs_s*, int))dlsym(dl_hdl, "globus_gsi_proxy_handle_attrs_set_keybits")) ||
-		 !(globus_gsi_proxy_handle_destroy_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s*))dlsym(dl_hdl, "globus_gsi_proxy_handle_destroy")) ||
-		 !(globus_gsi_proxy_handle_init_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s**, globus_l_gsi_proxy_handle_attrs_s*))dlsym(dl_hdl, "globus_gsi_proxy_handle_init")) ||
-		 !(globus_gsi_proxy_handle_set_is_limited_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s*, globus_bool_t))dlsym(dl_hdl, "globus_gsi_proxy_handle_set_is_limited")) ||
-		 !(globus_gsi_proxy_handle_set_time_valid_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s*, int))dlsym(dl_hdl, "globus_gsi_proxy_handle_set_time_valid")) ||
-		 !(globus_gsi_proxy_handle_set_type_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s*, globus_gsi_cert_utils_cert_type_t))dlsym(dl_hdl, "globus_gsi_proxy_handle_set_type")) ||
-		 !(globus_gsi_proxy_inquire_req_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s*, BIO*))dlsym(dl_hdl, "globus_gsi_proxy_inquire_req")) ||
-		 !(globus_gsi_proxy_sign_req_ptr = (globus_result_t (*)(globus_l_gsi_proxy_handle_s*, globus_l_gsi_cred_handle_s*, BIO*))dlsym(dl_hdl, "globus_gsi_proxy_sign_req")) ||
 		 (dl_hdl = dlopen(LIBGLOBUS_GSSAPI_GSI_SO, RTLD_LAZY)) == NULL ||
 		 !(gss_accept_sec_context_ptr = (OM_uint32 (*)(OM_uint32 *, gss_ctx_id_t *, const gss_cred_id_t, const gss_buffer_t, const gss_channel_bindings_t, gss_name_t *, gss_OID *, gss_buffer_t, OM_uint32 *, OM_uint32 *, gss_cred_id_t *))dlsym(dl_hdl, "gss_accept_sec_context")) ||
 		 !(gss_compare_name_ptr = (OM_uint32 (*)(OM_uint32*, const gss_name_t, const gss_name_t, int*))dlsym(dl_hdl, "gss_compare_name")) ||
@@ -324,7 +214,6 @@ activate_globus_gsi( void )
 		 !(gss_delete_sec_context_ptr = (OM_uint32 (*)(OM_uint32*, gss_ctx_id_t*, gss_buffer_t))dlsym(dl_hdl, "gss_delete_sec_context")) ||
 		 !(gss_display_name_ptr = (OM_uint32 (*)( OM_uint32*, const gss_name_t, gss_buffer_t, gss_OID*))dlsym(dl_hdl, "gss_display_name")) ||
 		 !(gss_import_cred_ptr = (OM_uint32 (*)(OM_uint32*, gss_cred_id_desc_struct**, gss_OID_desc_struct*, OM_uint32, gss_buffer_desc_struct*, OM_uint32, OM_uint32*))dlsym(dl_hdl, "gss_import_cred")) ||
-		 !(gss_import_name_ptr = (OM_uint32 (*)(OM_uint32*, const gss_buffer_t, const gss_OID, gss_name_t*))dlsym(dl_hdl, "gss_import_name")) ||
 		 !(gss_inquire_context_ptr = (OM_uint32 (*)(OM_uint32*, const gss_ctx_id_t, gss_name_t*, gss_name_t*, OM_uint32*, gss_OID*, OM_uint32*, int*, int*))dlsym(dl_hdl, "gss_inquire_context")) ||
 		 !(gss_release_buffer_ptr = (OM_uint32 (*)(OM_uint32*, gss_buffer_t))dlsym(dl_hdl, "gss_release_buffer")) ||
 		 !(gss_release_cred_ptr = (OM_uint32 (*)(OM_uint32*, gss_cred_id_desc_struct**))dlsym(dl_hdl, "gss_release_cred")) ||
@@ -358,41 +247,13 @@ activate_globus_gsi( void )
 #else
 	globus_module_activate_ptr = globus_module_activate;
 	globus_thread_set_model_ptr = globus_thread_set_model;
-	globus_error_peek_ptr = globus_error_peek;
-	globus_error_print_friendly_ptr = globus_error_print_friendly;
-	globus_gsi_sysconfig_get_proxy_filename_unix_ptr = globus_gsi_sysconfig_get_proxy_filename_unix;
 	globus_gsi_cred_get_cert_ptr = globus_gsi_cred_get_cert;
 	globus_gsi_cred_get_cert_chain_ptr = globus_gsi_cred_get_cert_chain;
-	globus_gsi_cred_get_cert_type_ptr = globus_gsi_cred_get_cert_type;
-	globus_gsi_cred_get_identity_name_ptr = globus_gsi_cred_get_identity_name;
-	globus_gsi_cred_get_lifetime_ptr = globus_gsi_cred_get_lifetime;
-	globus_gsi_cred_get_subject_name_ptr = globus_gsi_cred_get_subject_name;
-	globus_gsi_cred_handle_attrs_destroy_ptr = globus_gsi_cred_handle_attrs_destroy;
-	globus_gsi_cred_handle_attrs_init_ptr = globus_gsi_cred_handle_attrs_init;
-	globus_gsi_cred_handle_destroy_ptr = globus_gsi_cred_handle_destroy;
-	globus_gsi_cred_handle_init_ptr = globus_gsi_cred_handle_init;
-	globus_gsi_cred_read_proxy_ptr = globus_gsi_cred_read_proxy;
-	globus_gsi_cred_write_proxy_ptr = reinterpret_cast<globus_result_t (*)(globus_l_gsi_cred_handle_s*, char*)>(globus_gsi_cred_write_proxy);
-	globus_gsi_proxy_assemble_cred_ptr = globus_gsi_proxy_assemble_cred;
-	globus_gsi_proxy_create_req_ptr = globus_gsi_proxy_create_req;
-	globus_gsi_proxy_handle_attrs_destroy_ptr = globus_gsi_proxy_handle_attrs_destroy;
-	globus_gsi_proxy_handle_attrs_get_keybits_ptr = globus_gsi_proxy_handle_attrs_get_keybits;
-	globus_gsi_proxy_handle_attrs_init_ptr = globus_gsi_proxy_handle_attrs_init;
-	globus_gsi_proxy_handle_attrs_set_clock_skew_allowable_ptr = globus_gsi_proxy_handle_attrs_set_clock_skew_allowable;
-	globus_gsi_proxy_handle_attrs_set_keybits_ptr = globus_gsi_proxy_handle_attrs_set_keybits;
-	globus_gsi_proxy_handle_destroy_ptr = globus_gsi_proxy_handle_destroy;
-	globus_gsi_proxy_handle_init_ptr = globus_gsi_proxy_handle_init;
-	globus_gsi_proxy_handle_set_is_limited_ptr = globus_gsi_proxy_handle_set_is_limited;
-	globus_gsi_proxy_handle_set_time_valid_ptr = globus_gsi_proxy_handle_set_time_valid;
-	globus_gsi_proxy_handle_set_type_ptr = globus_gsi_proxy_handle_set_type;
-	globus_gsi_proxy_inquire_req_ptr = globus_gsi_proxy_inquire_req;
-	globus_gsi_proxy_sign_req_ptr = globus_gsi_proxy_sign_req;
 	gss_accept_sec_context_ptr = gss_accept_sec_context;
 	gss_compare_name_ptr = gss_compare_name;
 	gss_context_time_ptr = gss_context_time;
 	gss_delete_sec_context_ptr = gss_delete_sec_context;
 	gss_display_name_ptr = gss_display_name;
-	gss_import_cred_ptr = gss_import_cred;
 	gss_import_name_ptr = gss_import_name;
 	gss_inquire_context_ptr = gss_inquire_context;
 	gss_release_buffer_ptr = gss_release_buffer;
@@ -437,19 +298,14 @@ activate_globus_gsi( void )
 char *
 get_x509_proxy_filename( void )
 {
-	char *proxy_file = NULL;
-#if defined(HAVE_EXT_GLOBUS)
-	globus_gsi_proxy_file_type_t     file_type    = GLOBUS_PROXY_FILE_INPUT;
-
-	if ( activate_globus_gsi() != 0 ) {
-		return NULL;
+	char *proxy_file = getenv("X509_USER_PROXY");
+	if ( proxy_file == nullptr ) {
+		std::string tmp_file;
+		formatstr(tmp_file, "/tmp/x509up_u%d", geteuid());
+		proxy_file = strdup(tmp_file.c_str());
+	} else {
+		proxy_file = strdup(proxy_file);
 	}
-
-	if ( (*globus_gsi_sysconfig_get_proxy_filename_unix_ptr)(&proxy_file, file_type) !=
-		 GLOBUS_SUCCESS ) {
-		set_error_string( "unable to locate proxy file" );
-	}
-#endif
 	return proxy_file;
 }
 
@@ -585,30 +441,11 @@ quote_x509_string( char* instr) {
 }
 #endif /* defined(HAVE_EXT_VOMS) */
 
-#if defined(HAVE_EXT_GLOBUS)
-
-globus_gsi_cred_handle_t x509_proxy_read( const char *proxy_file )
+X509Credential* x509_proxy_read( const char *proxy_file )
 {
-	globus_gsi_cred_handle_t         handle       = NULL;
-	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
+	X509Credential *cred = nullptr;
 	char *my_proxy_file = NULL;
 	bool error = false;
-
-	if ( activate_globus_gsi() != 0 ) {
-		return NULL;
-	}
-
-	if ((*globus_gsi_cred_handle_attrs_init_ptr)(&handle_attrs)) {
-		set_error_string( "problem during internal initialization1" );
-		error = true;
-		goto cleanup;
-	}
-
-	if ((*globus_gsi_cred_handle_init_ptr)(&handle, handle_attrs)) {
-		set_error_string( "problem during internal initialization2" );
-		error = true;
-		goto cleanup;
-	}
 
 	/* Check for proxy file */
 	if (proxy_file == NULL) {
@@ -620,7 +457,8 @@ globus_gsi_cred_handle_t x509_proxy_read( const char *proxy_file )
 	}
 
 	// We should have a proxy file, now, try to read it
-	if ((*globus_gsi_cred_read_proxy_ptr)(handle, proxy_file)) {
+	cred = new X509Credential(proxy_file, "");
+	if (! cred->GetCert()) {
 		set_error_string( "unable to read proxy file" );
 		error = true;
 		goto cleanup;
@@ -631,42 +469,12 @@ globus_gsi_cred_handle_t x509_proxy_read( const char *proxy_file )
 		free(my_proxy_file);
 	}
 
-	if (handle_attrs) {
-		(*globus_gsi_cred_handle_attrs_destroy_ptr)(handle_attrs);
+	if (error && cred) {
+		delete cred;
+		cred = nullptr;
 	}
 
-	if (error && handle) {
-		(*globus_gsi_cred_handle_destroy_ptr)(handle);
-		handle = NULL;
-	}
-
-	return handle;
-}
-
-void x509_proxy_free( globus_gsi_cred_handle_t handle )
-{
-	if ( activate_globus_gsi() != 0 ) {
-		return;
-	}
-	if (handle) {
-		(*globus_gsi_cred_handle_destroy_ptr)(handle);
-	}
-}
-
-time_t x509_proxy_expiration_time( globus_gsi_cred_handle_t handle )
-{
-	time_t time_left;
-
-	if ( activate_globus_gsi() != 0 ) {
-		return -1;
-	}
-
-	if ((*globus_gsi_cred_get_lifetime_ptr)(handle, &time_left)) {
-		set_error_string( "unable to extract expiration time" );
-		return -1;
-    }
-
-	return time(NULL) + time_left;
+	return cred;
 }
 
 // This is a slightly modified verson of globus_gsi_cert_utils_make_time()
@@ -769,31 +577,27 @@ time_t x509_proxy_expiration_time( X509 *cert, STACK_OF(X509)* chain )
 	return expiration_time;
 }
 
-char* x509_proxy_email( globus_gsi_cred_handle_t handle )
+time_t x509_proxy_expiration_time(X509Credential* cred)
+{
+	return x509_proxy_expiration_time(cred->GetCert(), cred->GetChain());
+}
+
+char* x509_proxy_email( X509 *cert, STACK_OF(X509)* cert_chain )
 {
 	X509_NAME *email_orig = NULL;
-        STACK_OF(X509) *cert_chain = NULL;
 	GENERAL_NAME *gen;
 	GENERAL_NAMES *gens;
-        X509 *cert = NULL;
+	X509 *tmp_cert = NULL;
 	char *email = NULL, *email2 = NULL;
 	int i, j;
 
-	if ( activate_globus_gsi() != 0 ) {
-		return NULL;
-	}
-
-	if ((*globus_gsi_cred_get_cert_chain_ptr)(handle, &cert_chain)) {
-		cert = NULL;
-		set_error_string( "unable to find certificate in proxy" );
-		goto cleanup;
-	}
-
+	// TODO We ignore the end-point certificate. This is fine for the
+	//   usual case with a proxy certificate, but is wrong.
 	for(i = 0; i < sk_X509_num(cert_chain) && email == NULL; ++i) {
-		if((cert = sk_X509_value(cert_chain, i)) == NULL) {
+		if((tmp_cert = sk_X509_value(cert_chain, i)) == NULL) {
 			continue;
 		}
-		if ((email_orig = (X509_NAME *)X509_get_ext_d2i(cert, NID_pkcs9_emailAddress, 0, 0)) != NULL) {
+		if ((email_orig = (X509_NAME *)X509_get_ext_d2i(tmp_cert, NID_pkcs9_emailAddress, 0, 0)) != NULL) {
 			if ((email2 = X509_NAME_oneline(email_orig, NULL, 0)) == NULL) {
 				continue;
 			} else {
@@ -803,7 +607,7 @@ char* x509_proxy_email( globus_gsi_cred_handle_t handle )
 				break;
 			}
 		}
-		gens = (GENERAL_NAMES *)X509_get_ext_d2i(cert, NID_subject_alt_name, 0, 0);
+		gens = (GENERAL_NAMES *)X509_get_ext_d2i(tmp_cert, NID_subject_alt_name, 0, 0);
 		if (gens) {
 			for (j = 0; j < sk_GENERAL_NAME_num(gens); ++j) {
 				if ((gen = sk_GENERAL_NAME_value(gens, j)) == NULL) {
@@ -834,10 +638,6 @@ char* x509_proxy_email( globus_gsi_cred_handle_t handle )
 	}
 
  cleanup:
-	if (cert_chain) {
-		sk_X509_pop_free(cert_chain, X509_free);
-	}
-
 	if (email_orig) {
 		X509_NAME_free(email_orig);
 	}
@@ -845,69 +645,72 @@ char* x509_proxy_email( globus_gsi_cred_handle_t handle )
 	return email;
 }
 
-char* x509_proxy_subject_name( globus_gsi_cred_handle_t handle )
+char* x509_proxy_email(X509Credential* cred)
+{
+	return x509_proxy_email(cred->GetCert(), cred->GetChain());
+}
+
+char* x509_proxy_subject_name(X509* cert)
 {
 	char *subject_name = NULL;
 
-	if ( activate_globus_gsi() != 0 ) {
-		return NULL;
-	}
-
-	if ((*globus_gsi_cred_get_subject_name_ptr)(handle, &subject_name)) {
+	char* buf = X509_NAME_oneline(X509_get_subject_name(cert), NULL, 0);
+	if(buf) {
+		// Return something that we can free().
+		subject_name = strdup(buf);
+		OPENSSL_free(buf);
+	} else {
 		set_error_string( "unable to extract subject name" );
-		return NULL;
 	}
 
 	return subject_name;
 }
 
-char* x509_proxy_identity_name( globus_gsi_cred_handle_t handle )
+char* x509_proxy_subject_name(X509Credential* cred)
 {
-	char *subject_name = NULL;
-
-	if ( activate_globus_gsi() != 0 ) {
-		return NULL;
-	}
-
-	if ((*globus_gsi_cred_get_identity_name_ptr)(handle, &subject_name)) {
-		set_error_string( "unable to extract identity name" );
-		return NULL;
-	}
-
-	return subject_name;
+	return x509_proxy_subject_name(cred->GetCert());
 }
 
-int x509_proxy_seconds_until_expire( globus_gsi_cred_handle_t handle )
+char* x509_proxy_identity_name(X509 *cert, STACK_OF(X509)* cert_chain)
 {
-	time_t time_now;
-	time_t time_expire;
-	time_t time_diff;
+	X509* target_cert = NULL;
+	X509* tmp_cert = NULL;
 
-	time_now = time(NULL);
-	time_expire = x509_proxy_expiration_time( handle );
-
-	if ( time_expire == -1 ) {
-		return -1;
+	if (X509_get_ext_by_NID(cert, NID_proxyCertInfo, -1) < 0) {
+		target_cert = cert;
 	}
 
-	time_diff = time_expire - time_now;
-
-	if ( time_diff < 0 ) {
-		time_diff = 0;
+	for (int i = 0; i < sk_X509_num(cert_chain) && target_cert == NULL; ++i) {
+		if ((tmp_cert = sk_X509_value(cert_chain, i)) == NULL) {
+			continue;
+		}
+		if (X509_get_ext_by_NID(tmp_cert, NID_proxyCertInfo, -1) < 0) {
+			target_cert = tmp_cert;
+		}
 	}
 
-	return (int)time_diff;
+	if (tmp_cert) {
+		return x509_proxy_subject_name(target_cert);
+	}
+
+	set_error_string( "unable to extract identity name" );
+	return NULL;
+}
+
+char* x509_proxy_identity_name(X509Credential* cred)
+{
+	return x509_proxy_identity_name(cred->GetCert(), cred->GetChain());
 }
 
 #if !defined(HAVE_EXT_VOMS)
 int
-extract_VOMS_info( globus_gsi_cred_handle_t, int, char **, char **, char **)
+extract_VOMS_info( X509*, STACK_OF(X509)*, int, char **, char **, char **)
 {
 	return 1;
 }
 #else
 int
-extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN)
+extract_VOMS_info( X509 *cert, STACK_OF(X509) *chain, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN)
 {
 
 
@@ -920,9 +723,6 @@ extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char *
 	int fqan_len = 0;
 	char *retfqan = NULL;
 	char *tmp_scan_ptr = NULL;
-
-	STACK_OF(X509) *chain = NULL;
-	X509 *cert = NULL;
 
 	char* x509_fqan_delimiter = NULL;
 
@@ -937,19 +737,8 @@ extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char *
 		return 1;
 	}
 
-	ret = (*globus_gsi_cred_get_cert_chain_ptr)(cred_handle, &chain);
-	if(ret != GLOBUS_SUCCESS) {
-		ret = 10;
-		goto end;
-	}
-
-	ret = (*globus_gsi_cred_get_cert_ptr)(cred_handle, &cert);
-	if(ret != GLOBUS_SUCCESS) {
-		ret = 11;
-		goto end;
-	}
-
-	if ((*globus_gsi_cred_get_identity_name_ptr)(cred_handle, &subject_name)) {
+	subject_name = x509_proxy_identity_name(cert, chain);
+	if (subject_name == NULL) {
 		set_error_string( "unable to extract subject name" );
 		ret = 12;
 		goto end;
@@ -1093,78 +882,33 @@ end:
 	free(x509_fqan_delimiter);
 	if (voms_data)
 		(*VOMS_Destroy_ptr)(voms_data);
-	if (cert)
-		X509_free(cert);
-	if(chain)
-		sk_X509_pop_free(chain, X509_free);
 
 	return ret;
 }
 #endif
 
+int
+extract_VOMS_info( X509Credential* cred, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN)
+{
+	return extract_VOMS_info(cred->GetCert(), cred->GetChain(), verify_type, voname, firstfqan, quoted_DN_and_FQAN);
+}
 
 int
 extract_VOMS_info_from_file( const char* proxy_file, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN)
 {
+	int rc = 1;
+	X509Credential* cred = x509_proxy_read( proxy_file );
 
-	globus_gsi_cred_handle_t         handle       = NULL;
-	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
-	char *my_proxy_file = NULL;
-	int error = 0;
-
-	if ( activate_globus_gsi() != 0 ) {
-		return 2;
+	if ( cred == NULL ) {
+		return rc;
 	}
 
-	if ((*globus_gsi_cred_handle_attrs_init_ptr)(&handle_attrs)) {
-		set_error_string( "problem during internal initialization1" );
-		error = 3;
-		goto cleanup;
-	}
+	rc = extract_VOMS_info(cred->GetCert(), cred->GetChain(), verify_type, voname, firstfqan, quoted_DN_and_FQAN);
 
-	if ((*globus_gsi_cred_handle_init_ptr)(&handle, handle_attrs)) {
-		set_error_string( "problem during internal initialization2" );
-		error = 4;
-		goto cleanup;
-	}
+	delete cred;
 
-	/* Check for proxy file */
-	if (proxy_file == NULL) {
-		my_proxy_file = get_x509_proxy_filename();
-		if (my_proxy_file == NULL) {
-			error = 5;
-			goto cleanup;
-		}
-		proxy_file = my_proxy_file;
-	}
-
-	// We should have a proxy file, now, try to read it
-	if ((*globus_gsi_cred_read_proxy_ptr)(handle, proxy_file)) {
-		set_error_string( "unable to read proxy file" );
-		error = 6;
-		goto cleanup;
-	}
-
-	error = extract_VOMS_info( handle, verify_type, voname, firstfqan, quoted_DN_and_FQAN );
-
-
- cleanup:
-	if (my_proxy_file) {
-		free(my_proxy_file);
-	}
-
-	if (handle_attrs) {
-		(*globus_gsi_cred_handle_attrs_destroy_ptr)(handle_attrs);
-	}
-
-	if (handle) {
-		(*globus_gsi_cred_handle_destroy_ptr)(handle);
-	}
-
-	return error; // success
-
+	return rc;
 }
-#endif /* defined(HAVE_EXT_GLOBUS) */
 
 /* Return the email of a given proxy cert. 
   On error, return NULL.
@@ -1175,14 +919,8 @@ extract_VOMS_info_from_file( const char* proxy_file, int verify_type, char **von
 char *
 x509_proxy_email( const char *proxy_file )
 {
-#if !defined(HAVE_EXT_GLOBUS)
-	(void) proxy_file;
-	set_error_string( NOT_SUPPORTED_MSG );
-	return NULL;
-#else
-
 	char *email = NULL;
-	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( proxy_file );
+	X509Credential* proxy_handle = x509_proxy_read( proxy_file );
 
 	if ( proxy_handle == NULL ) {
 		return NULL;
@@ -1190,10 +928,9 @@ x509_proxy_email( const char *proxy_file )
 
 	email = x509_proxy_email( proxy_handle );
 
-	x509_proxy_free( proxy_handle );
+	delete proxy_handle;
 
 	return email;
-#endif /* !defined(HAVE_EXT_GLOBUS) */
 }
 
 /* Return the subject name of a given proxy cert. 
@@ -1205,13 +942,8 @@ x509_proxy_email( const char *proxy_file )
 char *
 x509_proxy_subject_name( const char *proxy_file )
 {
-#if !defined(HAVE_EXT_GLOBUS)
-	(void) proxy_file;
-	set_error_string( NOT_SUPPORTED_MSG );
-	return NULL;
-#else
 	char *subject_name = NULL;
-	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( proxy_file );
+	X509Credential* proxy_handle = x509_proxy_read( proxy_file );
 
 	if ( proxy_handle == NULL ) {
 		return NULL;
@@ -1219,11 +951,9 @@ x509_proxy_subject_name( const char *proxy_file )
 
 	subject_name = x509_proxy_subject_name( proxy_handle );
 
-	x509_proxy_free( proxy_handle );
+	delete proxy_handle;
 
 	return subject_name;
-
-#endif /* !defined(HAVE_EXT_GLOBUS) */
 }
 
 
@@ -1240,14 +970,8 @@ x509_proxy_subject_name( const char *proxy_file )
 char *
 x509_proxy_identity_name( const char *proxy_file )
 {
-#if !defined(HAVE_EXT_GLOBUS)
-	(void) proxy_file;
-	set_error_string( NOT_SUPPORTED_MSG );
-	return NULL;
-#else
-
 	char *subject_name = NULL;
-	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( proxy_file );
+	X509Credential* proxy_handle = x509_proxy_read( proxy_file );
 
 	if ( proxy_handle == NULL ) {
 		return NULL;
@@ -1255,11 +979,9 @@ x509_proxy_identity_name( const char *proxy_file )
 
 	subject_name = x509_proxy_identity_name( proxy_handle );
 
-	x509_proxy_free( proxy_handle );
+	delete proxy_handle;
 
 	return subject_name;
-
-#endif /* !defined(GSS_AUTHENTICATION) */
 }
 
 /* Return the time at which the proxy expires. On error, return -1.
@@ -1267,14 +989,8 @@ x509_proxy_identity_name( const char *proxy_file )
 time_t
 x509_proxy_expiration_time( const char *proxy_file )
 {
-#if !defined(HAVE_EXT_GLOBUS)
-	(void) proxy_file;
-	set_error_string( NOT_SUPPORTED_MSG );
-	return -1;
-#else
-
 	time_t expiration_time = -1;
-	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( proxy_file );
+	X509Credential* proxy_handle = x509_proxy_read( proxy_file );
 
 	if ( proxy_handle == NULL ) {
 		return -1;
@@ -1282,46 +998,9 @@ x509_proxy_expiration_time( const char *proxy_file )
 
 	expiration_time = x509_proxy_expiration_time( proxy_handle );
 
-	x509_proxy_free( proxy_handle );
+	delete proxy_handle;
 
 	return expiration_time;
-
-#endif /* !defined(GSS_AUTHENTICATION) */
-}
-
-/* Return the number of seconds until the supplied proxy
- * file will expire.  
- * On error, return -1.    - Todd <tannenba@cs.wisc.edu>
- */
-int
-x509_proxy_seconds_until_expire( const char *proxy_file )
-{
-#if !defined(HAVE_EXT_GLOBUS)
-	(void) proxy_file;
-	set_error_string( NOT_SUPPORTED_MSG );
-	return -1;
-#else
-
-	time_t time_now;
-	time_t time_expire;
-	time_t time_diff;
-
-	time_now = time(NULL);
-	time_expire = x509_proxy_expiration_time( proxy_file );
-
-	if ( time_expire == -1 ) {
-		return -1;
-	}
-
-	time_diff = time_expire - time_now;
-
-	if ( time_diff < 0 ) {
-		time_diff = 0;
-	}
-
-	return (int)time_diff;
-
-#endif /* !defined(GSS_AUTHENTICATION) */
 }
 
 static int
