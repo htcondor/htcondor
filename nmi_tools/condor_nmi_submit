@@ -998,9 +998,8 @@ sub createSubmitFilesNew
 		print CMDFILE "request_memory = 4G\n";
 		print CMDFILE "request_disk = 8G\n";
 
-		# Docker host networking is already the nmi default for all but CentOS6
-		#print CMDFILE "docker_network_type = host\n"; # What we really want
-		#print CMDFILE "++DockerNetworkType = \"host\"\n"; # Work-around for 8.8
+		# Override Docker host network to avoid port exhaustion when running lots of test runs
+		print CMDFILE "docker_network_type = nat\n"; # What we really want
 	}
 
 	close CMDFILE;
