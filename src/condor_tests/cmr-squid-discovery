@@ -1,3 +1,0 @@
-#!/bin/bash
-echo 'DetectedSQUIDs="SQUID0, SQUID1, SQUID2, SQUID3"'
-exit 0
