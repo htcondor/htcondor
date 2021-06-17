@@ -21,6 +21,73 @@
 use CondorTest;
 use CondorUtils;
 
+my $testname = "job_cp_cclim_acctgrp_basic_van";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD
+
+NUM_CPUS = 8
+
+# startd-wide consumption policy config
+CONSUMPTION_POLICY = True
+
+CONSUMPTION_CPUS = 1
+CONSUMPTION_MEMORY = 25
+CONSUMPTION_DISK = 100
+
+# use a memory-centric slot weight
+SLOT_WEIGHT = floor(Memory / 25)
+
+# slot type 1: will demo/test a memory-centric policy
+SLOT_TYPE_1 = cpus=8,memory=150,disk=100%
+SLOT_TYPE_1_PARTITIONABLE = True
+NUM_SLOTS_TYPE_1 = 1
+
+# turn this off to demonstrate that consumption policy will handle this kind of logic
+MUST_MODIFY_REQUEST_EXPRS = False
+
+# turn off schedd-side resource splitting since we are demonstrating neg-side alternative
+CLAIM_PARTITIONABLE_LEFTOVERS = False
+
+# keep slot weights enabled for match costing
+NEGOTIATOR_USE_SLOT_WEIGHTS = True
+
+# for simplicity, turn off preemption, caching, worklife
+CLAIM_WORKLIFE=0
+MAXJOBRETIREMENTTIME = 3600
+PREEMPT = False
+RANK = 0
+PREEMPTION_REQUIREMENTS = False
+NEGOTIATOR_CONSIDER_PREEMPTION = False
+NEGOTIATOR_MATCHLIST_CACHING = False
+
+# verbose logging
+ALL_DEBUG = D_FULLDEBUG | D_ACCOUNTANT
+
+YYZ_LIMIT = 2
+
+GROUP_NAMES = a, b, c
+GROUP_QUOTA_a = 1
+GROUP_QUOTA_b = 2
+GROUP_QUOTA_c = 3
+GROUP_ACCEPT_SURPLUS = False
+GROUP_AUTOREGROUP = False
+
+# reduce daemon update latencies
+NEGOTIATOR_INTERVAL = 20
+SCHEDD_INTERVAL = 10
+
+# currently (circa 8.1.1) there is some weird interaction between
+# classad caching and calls to quantize() where 2nd arg is a list,
+# so just disabling caching for the time being.
+ENABLE_CLASSAD_CACHING = False
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $test_passed = 0;
+my $pre_execution = 1;
+
 
 # trip whitespace from beginning and end of a string
 sub trimws($) {
@@ -29,11 +96,6 @@ sub trimws($) {
     $string =~ s/\s+$//;
     return $string;
 }
-
-
-my $testname = "job_cp_cclim_acctgrp_basic_van";
-my $test_passed = 0;
-my $pre_execution = 1;
 
 
 sub timed_callback {
@@ -113,71 +175,6 @@ sub exit_callback {
         #die "Failed to find expected pattern of running jobs";
     #}
 }
-
-
-my $append_condor_config = '
-DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD
-
-NUM_CPUS = 8
-
-# startd-wide consumption policy config
-CONSUMPTION_POLICY = True
-
-CONSUMPTION_CPUS = 1
-CONSUMPTION_MEMORY = 25
-CONSUMPTION_DISK = 100
-
-# use a memory-centric slot weight
-SLOT_WEIGHT = floor(Memory / 25)
-
-# slot type 1: will demo/test a memory-centric policy
-SLOT_TYPE_1 = cpus=8,memory=150,disk=100%
-SLOT_TYPE_1_PARTITIONABLE = True
-NUM_SLOTS_TYPE_1 = 1
-
-# turn this off to demonstrate that consumption policy will handle this kind of logic
-MUST_MODIFY_REQUEST_EXPRS = False
-
-# turn off schedd-side resource splitting since we are demonstrating neg-side alternative
-CLAIM_PARTITIONABLE_LEFTOVERS = False
-
-# keep slot weights enabled for match costing
-NEGOTIATOR_USE_SLOT_WEIGHTS = True
-
-# for simplicity, turn off preemption, caching, worklife
-CLAIM_WORKLIFE=0
-MAXJOBRETIREMENTTIME = 3600
-PREEMPT = False
-RANK = 0
-PREEMPTION_REQUIREMENTS = False
-NEGOTIATOR_CONSIDER_PREEMPTION = False
-NEGOTIATOR_MATCHLIST_CACHING = False
-
-# verbose logging
-ALL_DEBUG = D_FULLDEBUG | D_ACCOUNTANT
-
-YYZ_LIMIT = 2
-
-GROUP_NAMES = a, b, c
-GROUP_QUOTA_a = 1
-GROUP_QUOTA_b = 2
-GROUP_QUOTA_c = 3
-GROUP_ACCEPT_SURPLUS = False
-GROUP_AUTOREGROUP = False
-
-# reduce daemon update latencies
-NEGOTIATOR_INTERVAL = 20
-SCHEDD_INTERVAL = 10
-
-# currently (circa 8.1.1) there is some weird interaction between
-# classad caching and calls to quantize() where 2nd arg is a list,
-# so just disabling caching for the time being.
-ENABLE_CLASSAD_CACHING = False
-';
-
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
-);
 
 
 # submit jobs

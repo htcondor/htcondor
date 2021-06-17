@@ -23,9 +23,14 @@ use CondorUtils;
 use Check::SimpleJob;
 #use Check::CondorLog;
 
-my $configfile = "";
-my $ClusterId = 0;
 my $testname =  "job_basic_bad_exe_test";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 5
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 
 $foo = <<"_EOX";
@@ -64,20 +69,6 @@ close(NE);
 system("cat $runmefile");
 system("chmod 755 $runmefile");
 
-my $firstappend_condor_config = '
-	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	NUM_CPUS = 5
-';
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"name1");
-
-my $condorinfo =CondorTest::StartCondorWithParams(
-	condor_name => "name1",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
-print "We know this about the just started personal condor <$condorinfo>\n";
 
 my $sleepforever = '
 	universe = vanilla

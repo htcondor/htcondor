@@ -24,21 +24,20 @@ use Check::JobDoesNotRun;
 use Check::JobIsEvicted;
 use Check::CondorLog;
 
-my $hostname = `condor_config_val full_hostname`;
-CondorUtils::fullchomp($hostname);
+## TODO test is missing RegisterResult,  RunCheck() not a good substitute
 
-my $append_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
   DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
   NEGOTIATOR_INTERVAL = 5
   NUM_CPUS = 12
   MaxJobRetirementTime = 120
   MachineMaxVacateTime = 5
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
-);
-
+my $hostname = `condor_config_val full_hostname`;
+CondorUtils::fullchomp($hostname);
 
 # verify that a job runs
 SimpleJob::RunCheck();

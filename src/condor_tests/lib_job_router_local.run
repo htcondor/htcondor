@@ -22,27 +22,25 @@ use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
 
-my $append_condor_config = '
-JOB_ROUTER_DEFAULTS = \
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+  JOB_ROUTER_DEFAULTS = \
   [ \
     requirements=target.WantJobRouter is True; \
     delete_WantJobRouter = true; \
     set_requirements = true; \
   ]
 
-JOB_ROUTER_ENTRIES = \
+  JOB_ROUTER_ENTRIES = \
    [ TargetUniverse = 12; \
      name = "Site 1"; \
    ]
 
-DAEMON_LIST = MASTER, SCHEDD, JOB_ROUTER, COLLECTOR, NEGOTIATOR
+  DAEMON_LIST = MASTER, SCHEDD, JOB_ROUTER, COLLECTOR, NEGOTIATOR
 
-JOB_ROUTER_POLLING_PERIOD = 10
-';
-
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
-);
+  JOB_ROUTER_POLLING_PERIOD = 10
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 # We submit a vanilla job with requirements=false and no startd,
 # so we can be pretty sure that if it runs, it went through the job router

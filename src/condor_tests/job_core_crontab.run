@@ -43,37 +43,18 @@ use strict;
 use warnings;
 use Check::SimpleJob;
 
-my $topdir = getcwd();
-print scalar localtime() . "\n";
-
 my $testname = "job_core_crontab";
-my $base_name = $testname;
 
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	NUM_CPUS = 2
 	NEGOTIATOR_INTERVAL = 5
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobcorecrontab");
-print "local config file:$configfile\n";
 
-CondorTest::StartCondorWithParams(
-    condor_name => "jobcorecrontab",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
-
-# where am I running
-my $currenthost = CondorTest::getFqdnHost();
-
-my $mypid = $$;
-my $mysaveme = $testname . ".saveme";
 my $finalresult = 0;
-
-if($mypid == 0) {
-	die "Saveme setup for test failed\n";
-}
 
 my $bulksubmitentries = '
 ##
