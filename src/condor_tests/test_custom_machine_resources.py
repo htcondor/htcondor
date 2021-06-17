@@ -1,5 +1,11 @@
 #!/usr/bin/env pytest
 
+#
+# Test one each of two different custom machine resources in the same job,
+# checking the sum and peak metrics for each.  These tests are run against
+# static slots for simplicity.
+#
+
 import logging
 
 import htcondor

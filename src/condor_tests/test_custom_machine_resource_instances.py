@@ -1,5 +1,16 @@
 #!/usr/bin/env pytest
 
+#
+# Test two each of two different custom machine resources in the same job,
+# checking the sum and peak metrics for each.  This set of tests is run
+# against static slots for simplicity.
+#
+# Then repeat the test using partitionable slots.  I've never seen the
+# custom resource code fail in partitionable slots if it was working in
+# static slots, so if you find a problem with partitionable slots and
+# want to test the pieces individually, you'll have to change the code.
+#
+
 import logging
 
 import htcondor

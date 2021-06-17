@@ -1,5 +1,21 @@
 #!/usr/bin/env pytest
 
+#
+# Test one custom machine resource.  These tests are the model for the tests
+# in test_custom_machine_{resources,intances}.py.  This test is run against
+# static slots for simplicity.
+#
+# These tests verify that a custom machine resource is assigned properly (to
+# slots), that no more slots are ever busy simultaneously than there are
+# resources, that the peak number of simultaneously running jobs equals the
+# number of resources, that the SUM- and PEAK- style usage is the same for the
+# job and the slot, and that the reported usage is correct.
+#
+# This test SKIPS testing the SUM- and PEAK- style usages separately because
+# I've never seen the tests fails independently.  Remove `marks=...` from
+# `the_config` if you ever want to run them separately.
+#
+
 import pytest
 import logging
 
