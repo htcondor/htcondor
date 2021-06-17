@@ -33,15 +33,10 @@ use Check::SimpleJob;
 use Check::CondorLog;
 
 
-my $ClusterId = 0;
-my $expect_return = 0;
-my $suspend_count = 0;
-my $continue_count = 0;
 my $testname = "job_basic_suspend_continue_test";
 
-	#NEGOTIATE_ALL_JOBS_IN_CLUSTER = True
-
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	MAX_NEGOTIATOR_LOG = 5000000000
 	MAX_SCHEDD_LOG = 5000000000
@@ -50,15 +45,14 @@ my $firstappend_condor_config = '
 	WANT_SUSPEND = True
 	PREEMPT = FALSE
 	KILL = FALSE
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"negotiator");
+	#NEGOTIATE_ALL_JOBS_IN_CLUSTER = True
 
-CondorTest::StartCondorWithParams(
-	condor_name => "suspendandcontinue",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
+my $suspend_count = 0;
+my $continue_count = 0;
+
 
 my $on_execute = sub {
 	TLOG("Job Executing\n");

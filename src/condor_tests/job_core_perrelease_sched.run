@@ -22,6 +22,17 @@ use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
 
+my $testname = "job_core_perrelease_sched";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	PERIODIC_EXPR_interval = 30
+    NUM_CPUS = 2
+    NEGOTIATOR_INTERVAL = 5
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 ##
 ## Status Values
 ##
@@ -29,31 +40,7 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-$testname = "job_core_perrelease_sched";
-
-# where am I running
-$currenthost = CondorTest::getFqdnHost();
-
-print scalar localtime() . "\n";
-
 my $variation = "perreleasefalse";
-
-my $firstappend_condor_config = '
-    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	PERIODIC_EXPR_interval = 30
-    NUM_CPUS = 2
-    NEGOTIATOR_INTERVAL = 5
-';
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"perreleasesched");
-print "local config file:$configfile\n";
-
-CondorTest::StartCondorWithParams(
-    condor_name => "perreleasesched",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
-
 
 my %info;
 my $cluster;
