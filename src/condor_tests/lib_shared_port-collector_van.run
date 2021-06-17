@@ -22,8 +22,7 @@ use CondorTest;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-#testreq: personal
-my $config = <<CONDOR_TESTREQ_CONFIG;
+my $append_condor_config = '
   USE_SHARED_PORT = True
   DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 
@@ -35,8 +34,11 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
   # named sockets cannot have very long paths (~100 chars), so put them
   # in /tmp to avoid problems
   DAEMON_SOCKET_DIR = /tmp/$(USERNAME)-condor-test-sock'.$$.'
-CONDOR_TESTREQ_CONFIG
-#endtestreq
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
 
 # Force the master to send an update to the collector via shared port
 # The first update might not make it, if we are waiting for the shared port
