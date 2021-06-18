@@ -6550,6 +6550,7 @@ ALLOW_READ = *
 ## FIPS mode settings
 ##
 [$SECURITY.FIPS]
+default: @end
 FIPS = True
 use security:strong
 SEC_DEFAULT_CRYPTO_METHODS = AES,3DES
