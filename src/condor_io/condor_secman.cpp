@@ -1541,8 +1541,17 @@ SecManStartCommand::sendAuthInfo_inner()
 
 		// tweak the session if it's UDP
 		if(!m_is_tcp) {
-			dprintf(D_SECURITY, "SESSION: for outgoing UDP, forcing BLOWFISH, no MD5\n");
-			m_auth_info.Assign(ATTR_SEC_CRYPTO_METHODS, "BLOWFISH");
+			// There's no AES support for UDP, so fall back to
+			// BLOWFISH (default) or 3DES if specified.  3DES would
+			// be preferred in FIPS mode.
+			std::string fallback_method_str = "BLOWFISH";
+			if (param_boolean("FIPS", false)) {
+				fallback_method_str = "3DES";
+			}
+			dprintf(D_SECURITY|D_VERBOSE, "SESSION: fallback crypto method would be %s.\n", fallback_method_str.c_str());
+
+			dprintf(D_SECURITY, "SESSION: for outgoing UDP, forcing %s, no MD5\n", fallback_method_str.c_str());
+			m_auth_info.Assign(ATTR_SEC_CRYPTO_METHODS, fallback_method_str.c_str());
 			// Integrity not needed since these packets are assumed
 			// not to be leaving the local host.  Leaving it on
 			// might use MD5 and make us non-FIPS compliant.
@@ -1771,20 +1780,31 @@ SecManStartCommand::sendAuthInfo_inner()
 			KeyInfo* ki  = NULL;
 			if (m_enc_key->key()) {
 				KeyInfo* key_to_use;
-				KeyInfo* blowfish_key;
+				KeyInfo* fallback_key;
+
+				// There's no AES support for UDP, so fall back to
+				// BLOWFISH (default) or 3DES if specified.  3DES would
+				// be preferred in FIPS mode.
+				std::string fallback_method_str = "BLOWFISH";
+				Protocol fallback_method = CONDOR_BLOWFISH;
+				if (param_boolean("FIPS", false)) {
+					fallback_method_str = "3DES";
+					fallback_method = CONDOR_3DES;
+				}
+				dprintf(D_SECURITY|D_VERBOSE, "SESSION: fallback crypto method would be %s.\n", fallback_method_str.c_str());
 
 				key_to_use = m_enc_key->key();
-				blowfish_key = m_enc_key->key(CONDOR_BLOWFISH);
+				fallback_key = m_enc_key->key(fallback_method);
 
 				dprintf(D_SECURITY|D_VERBOSE, "UDP: client normal key (proto %i): %p\n", key_to_use->getProtocol(), key_to_use);
-				dprintf(D_SECURITY|D_VERBOSE, "UDP: client BF key (proto %i): %p\n", (blowfish_key ? blowfish_key->getProtocol() : 0), blowfish_key);
+				dprintf(D_SECURITY|D_VERBOSE, "UDP: client fallback key (proto %i): %p\n", (fallback_key ? fallback_key->getProtocol() : 0), fallback_key);
 				dprintf(D_SECURITY|D_VERBOSE, "UDP: client m_is_tcp: %i\n", m_is_tcp);
 
-				// if UDP, and we were going to use AES, use BLOWFISH instead (if it exists)
+				// if UDP, and we were going to use AES, use fallback instead (if it exists)
 				if(!m_is_tcp && (key_to_use->getProtocol() == CONDOR_AESGCM)) {
-					if(blowfish_key) {
-						dprintf(D_SECURITY, "UDP: SWITCHING CRYPTO FROM AES TO BLOWFISH.\n");
-						key_to_use = blowfish_key;
+					if(fallback_key) {
+						dprintf(D_SECURITY, "UDP: SWITCHING CRYPTO FROM AES TO %s.\n", fallback_method_str.c_str());
+						key_to_use = fallback_key;
 					} else {
 						// Fail now since this isn't going to work.
 						dprintf(D_ALWAYS, "UDP: ERROR: AES not supported for UDP.\n");
@@ -2447,15 +2467,26 @@ SecManStartCommand::receivePostAuthInfo_inner()
 
 				// now see if we want to (and are allowed) to add a BLOWFISH key in addition to AES
 				if (m_private_key->getProtocol() == CONDOR_AESGCM) {
+					// There's no AES support for UDP, so fall back to
+					// BLOWFISH (default) or 3DES if specified.  3DES would
+					// be preferred in FIPS mode.
+					std::string fallback_method_str = "BLOWFISH";
+					Protocol fallback_method = CONDOR_BLOWFISH;
+					if (param_boolean("FIPS", false)) {
+						fallback_method_str = "3DES";
+						fallback_method = CONDOR_3DES;
+					}
+					dprintf(D_SECURITY|D_VERBOSE, "SESSION: fallback crypto method would be %s.\n", fallback_method_str.c_str());
+
 					std::string all_methods;
 					if (m_auth_info.LookupString(ATTR_SEC_CRYPTO_METHODS_LIST, all_methods)) {
 						dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
 						StringList sl(all_methods.c_str());
-						if (sl.contains_anycase("BLOWFISH")) {
-							keyvec.push_back(new KeyInfo(m_private_key->getKeyData(), 24, CONDOR_BLOWFISH, 0));
-							dprintf(D_SECURITY, "SESSION: client duplicated AES to BLOWFISH key for UDP.\n");
+						if (sl.contains_anycase(fallback_method_str.c_str())) {
+							keyvec.push_back(new KeyInfo(m_private_key->getKeyData(), 24, fallback_method, 0));
+							dprintf(D_SECURITY, "SESSION: client duplicated AES to %s key for UDP.\n", fallback_method_str.c_str());
 						} else {
-							dprintf(D_SECURITY, "SESSION: BLOWFISH not allowed.  UDP will not work.\n");
+							dprintf(D_SECURITY, "SESSION: %s not allowed.  UDP will not work.\n", fallback_method_str.c_str());
 						}
 					} else {
 						dprintf(D_ALWAYS, "SESSION: no crypto methods list\n");
@@ -3582,7 +3613,14 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 		unsigned char* keybuf;
 		if (crypt_protocol != CONDOR_AESGCM) {
-			keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
+			if(param_boolean("FIPS", false)) {
+				// if operating in FIPS mode, we can't use
+				// oneWayHashKey since that is MD5.
+				keybuf = Condor_Crypt_Base::hkdf(reinterpret_cast<const unsigned char *>(private_key), strlen(private_key), 24);
+				dprintf(D_SECURITY, "SECMAN: in FIPS mode, used used hkdf for key protocol %i.\n", crypt_protocol);
+			} else {
+				keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
+			}
 		} else {
 			keybuf = Condor_Crypt_Base::hkdf(reinterpret_cast<const unsigned char *>(private_key), strlen(private_key), 32);
 		}
