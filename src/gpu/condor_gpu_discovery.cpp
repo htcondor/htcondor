@@ -82,6 +82,7 @@ int ConvertSMVer2Cores(int major, int minor)
 		{ 0x72, 64 }, // Volta Generation (SM 7.2) GV10B class
 		{ 0x75, 64 }, // Turing Generation (SM 7.5) TU1xx class
 		{ 0x80, 64 }, // Ampere Generation (SM 8.0) GA100 class
+		{ 0x86, 128}, // Ampere Generation (SM 8.6) GA10x class  (GeForce  RTX 3060)
 		{   -1, -1 }
 	};
 
