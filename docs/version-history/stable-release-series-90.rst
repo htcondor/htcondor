@@ -44,7 +44,7 @@ New Features:
   jobs are matched when using the ``-match`` or ``-route`` options.
   :jira:`525`
 
-- *condor_gpu_discovery* no recognises Capability 8.6 devices and reports the
+- *condor_gpu_discovery* now recognises Capability 8.6 devices and reports the
   correct number of cores per GU.
   :jira:`544`
 
