@@ -564,7 +564,7 @@ time_t x509_proxy_expiration_time( X509 *cert, STACK_OF(X509)* chain )
 			expiration_time = -1;
 			break;
 		} else {
-			expiration_time = time(NULL) + diff_secs + 24*3600*diff_days;
+			curr_expire = time(NULL) + diff_secs + 24*3600*diff_days;
 		}
 #else
 		curr_expire = my_globus_gsi_cert_utils_make_time(X509_get_notAfter(curr_cert));
@@ -587,7 +587,7 @@ time_t x509_proxy_expiration_time(X509Credential* cred)
 	return x509_proxy_expiration_time(cred->GetCert(), cred->GetChain());
 }
 
-char* x509_proxy_email( X509 *cert, STACK_OF(X509)* cert_chain )
+char* x509_proxy_email( X509 * /*cert*/, STACK_OF(X509)* cert_chain )
 {
 	X509_NAME *email_orig = NULL;
 	GENERAL_NAME *gen;
