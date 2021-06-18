@@ -17,14 +17,14 @@ Release Notes:
 
 - HTCondor version 9.0.2 not yet released.
 
+New Features:
+
 - Added new command-line flag to `condor_gpu_discovery`, ``-divide``,
   which functions like ``-repeat``, except that it divides the GPU attribute
   ``GlobalMemoryMb`` by the number of repeats (and adds the GPU
   attribute ``DeviceMemoryMb``, which is the undivided total).  To enable
   this new behavior, modify ``GPU_DISCOVERY_EXTRA`` appropriately.
   :jira:`404`
-
-New Features:
 
 - Reduced `condor_shadow` memory usage by 40% or more on machines with many
   (> 64) cores.  This allows a correspondingly greater number of shadows and thus
@@ -38,6 +38,11 @@ New Features:
 - The maximum line length for ``STARTD_CRON`` and ``SCHEDD_CRON`` job output
   has been extended from 8k to 64k.
   :jira:`498`
+
+- The `condor_job_router_info` tool will now show info for a rootly JobRouter
+  even when the tool is not running as root.  This change affects the way
+  jobs are matched when using the ``-match`` or ``-route`` options.
+  :jira:`525`
 
 Bugs Fixed:
 
