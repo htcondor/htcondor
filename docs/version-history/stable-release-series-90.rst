@@ -50,6 +50,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug that cause the *condor_master* to hang for up to two minutes 
+  when shutting down, if it was configured to be a personal condor.
+  :jira:`548`
+
 - Fixed a bug that prevented docker universe jobs from running on machines
   whose hostnames were longer than about 60 characters.
   :jira:`473`
