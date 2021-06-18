@@ -1804,7 +1804,8 @@ SecManStartCommand::sendAuthInfo_inner()
 				}
 
 				if (IsDebugVerbose(D_SECURITY)) {
-					dprintf (D_SECURITY, "SECMAN: about to enable message authenticator.\n");
+					dprintf (D_SECURITY, "SECMAN: about to enable message authenticator with key type %i\n",
+								ki->getProtocol());
 					m_sec_man.key_printf(D_SECURITY, ki);
 				}
 
@@ -1819,7 +1820,15 @@ SecManStartCommand::sendAuthInfo_inner()
 				}
 
 				m_sock->encode();
-				m_sock->set_MD_mode(MD_ALWAYS_ON, ki, key_id.Value());
+
+				// if the encryption method is AES, we don't actually want to enable the MAC
+				// here as that instantiates an MD5 object which will cause FIPS to blow up.
+				if(ki->getProtocol() != CONDOR_AESGCM) {
+					m_sock->set_MD_mode(MD_ALWAYS_ON, ki, key_id.Value());
+				} else {
+					dprintf(D_SECURITY|D_VERBOSE, "SECMAN: because protocal is AES, not using other MAC.\n");
+					m_sock->set_MD_mode(MD_OFF, ki, key_id.Value());
+				}
 
 				dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
 			} // if (will_enable_mac)
@@ -2244,12 +2253,21 @@ SecManStartCommand::authenticate_inner_finish()
 			}
 
 			if (IsDebugVerbose(D_SECURITY)) {
-				dprintf (D_SECURITY, "SECMAN: about to enable message authenticator.\n");
+				dprintf (D_SECURITY, "SECMAN: about to enable message authenticator with key type %i\n",
+							m_private_key->getProtocol());
 				m_sec_man.key_printf(D_SECURITY, m_private_key);
 			}
 
 			m_sock->encode();
-			m_sock->set_MD_mode(MD_ALWAYS_ON, m_private_key);
+
+			// if the encryption method is AES, we don't actually want to enable the MAC
+			// here as that instantiates an MD5 object which will cause FIPS to blow up.
+			if(m_private_key->getProtocol() != CONDOR_AESGCM) {
+				m_sock->set_MD_mode(MD_ALWAYS_ON, m_private_key);
+			} else {
+				dprintf(D_SECURITY|D_VERBOSE, "SECMAN: because protocal is AES, not using other MAC.\n");
+				m_sock->set_MD_mode(MD_OFF, m_private_key);
+			}
 
 			dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
 		} else {
