@@ -1265,7 +1265,18 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto
 		}
 
 		m_sock->decode();
-		if (!m_sock->set_MD_mode(MD_ALWAYS_ON, m_key)) {
+
+		// if the encryption method is AES, we don't actually want to enable the MAC
+		// here as that instantiates an MD5 object which will cause FIPS to blow up.
+		bool result;
+		if(m_key->getProtocol() != CONDOR_AESGCM) {
+			result = m_sock->set_MD_mode(MD_ALWAYS_ON, m_key);
+		} else {
+			dprintf(D_SECURITY|D_VERBOSE, "SECMAN: because protocal is AES, not using other MAC.\n");
+			result = m_sock->set_MD_mode(MD_OFF, m_key);
+		}
+
+		if (!result) {
 			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing request from %s.\n", m_sock->peer_description());
 			m_result = FALSE;
 			return CommandProtocolFinished;
