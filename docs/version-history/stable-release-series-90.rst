@@ -44,11 +44,15 @@ New Features:
   jobs are matched when using the ``-match`` or ``-route`` options.
   :jira:`525`
 
-- *condor_gpu_discovery* no recognises Capability 8.6 devices and reports the
+- *condor_gpu_discovery* now recognises Capability 8.6 devices and reports the
   correct number of cores per GU.
   :jira:`544`
 
 Bugs Fixed:
+
+- Fixed a bug that cause the *condor_master* to hang for up to two minutes 
+  when shutting down, if it was configured to be a personal condor.
+  :jira:`548`
 
 - Fixed a bug that prevented docker universe jobs from running on machines
   whose hostnames were longer than about 60 characters.
