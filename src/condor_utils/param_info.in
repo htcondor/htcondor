@@ -6547,6 +6547,15 @@ ALLOW_READ = *
 @end
 
 ##
+## FIPS mode settings
+##
+[$SECURITY.FIPS]
+FIPS = True
+use security:strong
+SEC_DEFAULT_CRYPTO_METHODS = AES,3DES
+@end
+
+##
 ## Experimental meta knobs
 ##
 
