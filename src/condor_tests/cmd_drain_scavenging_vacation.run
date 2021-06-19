@@ -164,6 +164,8 @@ CondorUtils::fullchomp( $hostName );
 
 my $testingPhase = 0;
 my $longJobsRunningCount = 0;
+my %jobsIveRemoved;
+
 my $execute = sub {
 	my %info = @_;
 	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
@@ -390,6 +392,8 @@ my $evicted = sub {
 		runCommandCarefully( undef, "condor_drain -cancel ${hostName}" );
 
 		print( "Removing evicted job ${ID}...\n" );
+		$jobsIveRemoved{$ID} = 1;
+
 		runCommandCarefully( undef, 'condor_rm', $ID );
 
 		print( "Calling condor_reschedule...\n" );
@@ -402,8 +406,13 @@ my $evicted = sub {
 			die( "Job ${ID} evicted, aborting.\n" );
 		}
 
-		print( "Removing evicted job ${ID}...\n" );
-		runCommandCarefully( undef, 'condor_rm', $ID );
+		if (! exists($jobsIveRemoved{$ID})) {
+			print( "Removing evicted job ${ID}...\n" );
+			runCommandCarefully( undef, 'condor_rm', $ID );
+			$jobsIveRemoved{$ID} = 1;
+		} else {
+			print("Caught eviction of job I already removed, ignoring\n");
+		}
 	} else {
 		die( "evicted() called unexpectedly in testing phase ${testingPhase}, aborting.\n" );
 	}

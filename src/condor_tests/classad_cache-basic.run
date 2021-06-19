@@ -21,14 +21,12 @@
 use CondorTest;
 use Check::SimpleJob;
 
-my $append_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
   DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
   ENABLE_CLASSAD_CACHING = true
-';
-
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
-);
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 # verify that a job runs
 SimpleJob::RunCheck();

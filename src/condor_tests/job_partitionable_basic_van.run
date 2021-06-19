@@ -22,8 +22,26 @@ use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
 
-
 my $testname = "job_partitionable_basic_van";
+
+# personal condor, with 5 partitionable slots, 4 cpus each (total 20 cpus)
+# set the negotiator interval down to so test runs faster.
+# also set CLAIM_PARTITIONABLE_LEFTOVERS to false - with it
+# set to true (which is the default), there is no guarantee that
+# the dynamic slots will be evenly divided across the partitionable
+# slots like this test expects.
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+  DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+  NEGOTIATOR_INTERVAL = 5
+  NUM_CPUS = 20
+  SLOT_TYPE_1 = cpus=20
+  SLOT_TYPE_1_PARTITIONABLE = TRUE
+  NUM_SLOTS_TYPE_1 = 1
+  CLAIM_PARTITIONABLE_LEFTOVERS = true
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 my $test_passed = 0;
 my $callbacks = 1;
 my $callback_limit = 10;
@@ -112,25 +130,6 @@ my $abort = sub {
     }
 };
 
-# personal condor, with 5 partitionable slots, 4 cpus each (total 20 cpus)
-# set the negotiator interval down to so test runs faster.
-# also set CLAIM_PARTITIONABLE_LEFTOVERS to false - with it
-# set to true (which is the default), there is no guarantee that
-# the dynamic slots will be evenly divided across the partitionable
-# slots like this test expects.
-my $append_condor_config = "
-DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-NEGOTIATOR_INTERVAL = 5
-NUM_CPUS = 20
-SLOT_TYPE_1 = cpus=20
-SLOT_TYPE_1_PARTITIONABLE = TRUE
-NUM_SLOTS_TYPE_1 = 1
-CLAIM_PARTITIONABLE_LEFTOVERS = true
-";
-
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
-);
 
 
 my $on_evictedwithoutcheckpoint = sub {

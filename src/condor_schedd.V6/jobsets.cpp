@@ -191,13 +191,13 @@ JobSets::JobSet* JobSets::getOrCreateSet(JobQueueJob & job)
 bool JobSets::removeSet(JobSet* & set)
 {
 	if (!set) return false;	
-	dprintf(D_ALWAYS, "Removing JobSet %s id=%d (%lu jobs) for owner %s\n",
+	dprintf(D_ALWAYS, "Removing JobSet %s id=%d (%zu jobs) for owner %s\n",
 		set->name.c_str(), set->id, set->jobsInSet.size(), set->owner.c_str());
 	mapAliasToId.erase(set->owner + set->name);
 	mapIdToSet.erase(set->id);
 	bool ret = JobSetDestroy(set->id);
 	if (!ret) {
-		dprintf(D_ALWAYS, "WARNING: unable to remove from log JobSet %s id=%d (%lu jobs) for owner %s\n",
+		dprintf(D_ALWAYS, "WARNING: unable to remove from log JobSet %s id=%d (%zu jobs) for owner %s\n",
 			set->name.c_str(), set->id, set->jobsInSet.size(), set->owner.c_str());
 	}
 	delete set;
@@ -289,7 +289,7 @@ bool JobSets::JobSet::persistSetInfo()
 {
 	
 	if (dirty) {		
-		dprintf(D_ALWAYS, "Updating JobSet %s id=%d (%lu jobs) for owner %s\n",
+		dprintf(D_ALWAYS, "Updating JobSet %s id=%d (%zu jobs) for owner %s\n",
 			name.c_str(), id, jobsInSet.size(), owner.c_str());
 
 		if (!setAd) {

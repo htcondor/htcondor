@@ -24,29 +24,21 @@ use Check::SimpleJob;
 
 $testname = "job_schedd_restart-runningjobs-ok";
 
-# where am I running
-$currenthost = CondorTest::getFqdnHost();
-
-print scalar localtime() . "\n";
-
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
     DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
     WANT_SUSPEND = FALSE
     NEGOTIATION_INTERVAL = 5
     ALL_DEBUG = D_FULLDEBUG
     NUM_CPUS = 6
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"scheddrestartrunningjobs");
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
 
-# First order up the config but do not start it. If the condor_config_val fails
-# there is no reason to go on
+TLOG "$testname test started\n";
 
-CondorTest::StartCondorWithParams(
-    condor_name => "scheddrestartrunningjobs",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
 
 my $alreadydone=0;
 $beforequeue = "job_schedd_restart-runningjobs.before";

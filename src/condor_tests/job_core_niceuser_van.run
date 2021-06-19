@@ -25,8 +25,16 @@ use strict;
 use warnings;
 
 my $testname = "job_core_niceuser_van";
-my $debuglevel = 2;
 
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+    NUM_CPUS = 1
+    NEGOTIATOR_INTERVAL = 5
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $debuglevel = 2;
 my $pid = $$;
 
 # ---  TESTING STRATEGY ----
@@ -37,22 +45,7 @@ my $pid = $$;
 #  on completion of the cluster
 #
 
-print scalar localtime() . "\n";
-
-my $firstappend_condor_config = '
-    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-    NUM_CPUS = 1
-    NEGOTIATOR_INTERVAL = 5
-';
-
-my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobcoreniceuservan");
-print "local config file:$configfile\n";
-
-CondorTest::StartCondorWithParams(
-    condor_name => "jobcoreniceuservan",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
+TLOG "Test $testname started pid=$pid\n";
 
 my @vdata =
 (
@@ -63,7 +56,7 @@ my @vdata =
 );
 
 my @skiplines = ();
-my $datafile = "job_core_niceuser_van$pid.data";
+my $datafile = "$testname$pid.data";
 my $count = 4;
 
 my $ExitSuccess = sub 

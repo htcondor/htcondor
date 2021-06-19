@@ -28,16 +28,14 @@ my $smap_dump = 0;    # set this to non-zero to dump entire smap
 my $testname = CondorTest::GetDefaultTestName();
 my $temptest = CondorTest::TempFileName("$testname");
 
-my $append_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
   DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
   SHADOW = $(SBIN)/condor_shadow_s
   ChirpPath = "$(LIBEXEC)/condor_chirp"
   STARTD_ATTRS = $(STARTD_ATTRS) ChirpPath
-';
-
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
-);
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 # run a job and look at shadow memory usage
 my $append_submit_commands = '

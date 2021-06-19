@@ -832,10 +832,10 @@ struct SubmitStepFromPyIter {
 			}
 			const char * key = m_fea.vars.first();
 			for (Py_ssize_t ix = 0; ix < num; ++ix) {
+				if ( ! key) break;
 				PyObject * v = PyList_GetItem(obj, ix);
 				m_livevars[key] = extract<std::string>(v);
 				key = m_fea.vars.next();
-				if ( ! key) break;
 			}
 		} else {
 			// not a list or a dict, the item must be a string.

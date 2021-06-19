@@ -20,7 +20,6 @@
 #ifndef TRANSFER_REQUEST_H
 #define TRANSFER_REQUEST_H
 
-#include "MyString.h"
 #include "file_transfer.h"
 #include "proc.h"
 #include "condor_classad.h"
@@ -182,22 +181,22 @@ class TransferRequest
 		// Callback at various processing points of this request so the 
 		// schedd can do work.
 		/////////////////////////////////////////////////////////////////////
-		void set_pre_push_callback(MyString desc, 
+		void set_pre_push_callback(std::string desc, 
 			TreqPrePushCallback callback, Service *base);
 		TreqAction call_pre_push_callback(TransferRequest *treq, 
 			TransferDaemon *td);
 
-		void set_post_push_callback(MyString desc,
+		void set_post_push_callback(std::string desc,
 			TreqPostPushCallback callback, Service *base);
 		TreqAction call_post_push_callback(TransferRequest *treq, 
 			TransferDaemon *td);
 
-		void set_update_callback(MyString desc, 
+		void set_update_callback(std::string desc, 
 			TreqUpdateCallback callback, Service *base);
 		TreqAction call_update_callback(TransferRequest *treq, 
 			TransferDaemon *td, ClassAd *update);
 
-		void set_reaper_callback(MyString desc, 
+		void set_reaper_callback(std::string desc, 
 			TreqReaperCallback callback, Service *base);
 		TreqAction call_reaper_callback(TransferRequest *treq);
 
@@ -238,19 +237,19 @@ class TransferRequest
 		std::string m_rejected_reason;
 
 		// the various callbacks
-		MyString m_pre_push_func_desc;
+		std::string m_pre_push_func_desc;
 		TreqPrePushCallback m_pre_push_func;
 		Service *m_pre_push_func_this;
 
-		MyString m_post_push_func_desc;
+		std::string m_post_push_func_desc;
 		TreqPostPushCallback m_post_push_func;
 		Service *m_post_push_func_this;
 
-		MyString m_update_func_desc;
+		std::string m_update_func_desc;
 		TreqUpdateCallback m_update_func;
 		Service *m_update_func_this;
 
-		MyString m_reaper_func_desc;
+		std::string m_reaper_func_desc;
 		TreqReaperCallback m_reaper_func;
 		Service *m_reaper_func_this;
 };
@@ -260,7 +259,7 @@ class TransferRequest
 EncapMethod encap_method(const std::string &line);
 
 /* converts an ASCII representation of a transfer request mode into the enum */
-TreqMode transfer_mode(MyString mode);
+TreqMode transfer_mode(std::string mode);
 TreqMode transfer_mode(const char *mode);
 
 

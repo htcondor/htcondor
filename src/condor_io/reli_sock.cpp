@@ -758,7 +758,11 @@ bool ReliSock::RcvMsg::init_MD(CONDOR_MD_MODE mode, KeyInfo * key)
     delete mdChecker_;
 	mdChecker_ = 0;
 
-    if (key) {
+    // only instantiate if we have a key and will use it.  unlike encryption,
+    // which previously could be turned on/off during a stream, we either turn
+    // MD on at the setup of a stream and leave it on, or we never turn it on
+    // at all.
+    if (key && (mode != MD_OFF)) {
         mdChecker_ = new Condor_MD_MAC(key);
     }
 
@@ -1303,7 +1307,11 @@ bool ReliSock::SndMsg::init_MD(CONDOR_MD_MODE mode, KeyInfo * key)
     delete mdChecker_;
 	mdChecker_ = 0;
 
-    if (key) {
+    // only instantiate if we have a key and will use it.  unlike encryption,
+    // which previously could be turned on/off during a stream, we either turn
+    // MD on at the setup of a stream and leave it on, or we never turn it on
+    // at all.
+    if (key && (mode != MD_OFF)) {
         mdChecker_ = new Condor_MD_MAC(key);
     }
 
@@ -1489,8 +1497,7 @@ ReliSock::serialize(const char *buf)
 
         citems = sscanf(ptmp, "%d*", &len);
 
-        if (1 == citems && len > 0) {
-            ptmp = strchr(ptmp, '*');
+        if (1 == citems && len > 0 && (ptmp = strchr(ptmp, '*'))) {
             ptmp++;
             memcpy(fqu, ptmp, len);
             if ((fqu[0] != ' ') && (fqu[0] != '\0')) {

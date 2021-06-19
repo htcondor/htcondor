@@ -108,7 +108,7 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	}
 
 	// Determine the full path of the access file.
-	MyString accessFilePath;
+	std::string accessFilePath;
 	dircat(goodPath, newLink.c_str(), accessFilePath);
 	accessFilePath += ".access";
 	
@@ -163,7 +163,7 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	// owned by the same owner of the file. If the link already exists, don't do 
 	// anything at this point, we'll check later to make sure it points to the
 	// correct inode.
-	MyString linkpathbuf;
+	std::string linkpathbuf;
 	const char *const targetLinkPath = dircat(goodPath, newLink.c_str(), linkpathbuf);
 
 	// Switch to root privileges, so we can test if the link exists, and create

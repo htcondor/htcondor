@@ -56,7 +56,7 @@ public:
 private:
 	std::list<SocketProxyPair> m_socket_pairs;
 	bool m_error;
-	MyString m_error_msg;
+	std::string m_error_msg;
 
 	bool setNonBlocking(int s);
 	bool fdInUse(int fd);

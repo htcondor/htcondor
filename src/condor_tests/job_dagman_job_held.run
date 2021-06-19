@@ -21,29 +21,23 @@
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_job_held.dag';
-$testdesc =  'Condor submit dag - job held test - scheduler U';
 $testname = "job_dagman_job_held";
-$dagman_args = "-verbose";
 
 # I think this special configuration is just to make the test
 # run faster.  wenger 2016-06-14
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	NUM_CPUS = 6
 	NEGOTIATOR_INTERVAL = 5
 	MachineMaxVacateTime = 10
 	PERIODIC_EXPR_INTERVAL = 30
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobdagmanjobheld");
-print "local config file:$configfile\n";
-
-CondorTest::StartCondorWithParams(
-    condor_name => "jobdagmanjobheld",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
+$cmd = 'job_dagman_job_held.dag';
+$testdesc =  'Condor submit dag - job held test - scheduler U';
+$dagman_args = "-verbose";
 
 @logfiles = ("job_dagman_job_held.dag.dagman.out");
 
@@ -151,7 +145,6 @@ CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
-	exit(0);
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";
 }

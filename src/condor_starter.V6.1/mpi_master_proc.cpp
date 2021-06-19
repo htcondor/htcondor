@@ -305,7 +305,7 @@ MPIMasterProc::checkPortFile( void )
 				// string we need and stuff it in a ClassAd 
 				// // TODO: Arbitrarily chooses IPv4, shouldn't?
 			sprintf( buf, "%s:%d",
-					 get_local_ipaddr(CP_IPV4).to_ip_string().Value(), port );
+					 get_local_ipaddr(CP_IPV4).to_ip_string().c_str(), port );
 			ClassAd ad;
 			ad.Assign( ATTR_MPI_MASTER_ADDR, buf );
 

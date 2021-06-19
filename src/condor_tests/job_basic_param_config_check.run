@@ -24,12 +24,10 @@ use Check::SimpleJob;
 #use Check::CondorLog;
 use Check::ProcInfo;
 
-my $configfile = "";
-my $ClusterId = 0;
 my $test_name =  "job_basic_param_config_check";
 
-
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	NUM_CPUS = 5
 	foo = 1
@@ -38,15 +36,10 @@ my $firstappend_condor_config = '
 	GOO = baz
 	master.GOO = $(GOO), bar
 	ALL_DEBUG = 
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"name1");
-
-my $condorinfo =CondorTest::StartCondorWithParams(
-	condor_name => "name1",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
+my $result = 0;
 
 my $fooindex = 0;
 my @foos = (
@@ -86,11 +79,10 @@ my $on_submit = sub {
 	#}
 };
 
-print "We know this about the just started personal condor <$condorinfo>\n";
 print "First test basic job\n";
 $result = SimpleJob::RunCheck();
 
-my $result = SimpleJob::RunCheck(
+$result = SimpleJob::RunCheck(
 	test_name => "$test_name",
 	on_submit => $on_submit,
 	duration => 10,

@@ -100,7 +100,7 @@ CondorTest::StartCondorWithParams(
 	condor_name => "libinclude",
 	fresh_local => "TRUE",
 	condorlocalsrc => "$configfile",
-	#do_not_start => "TRUE",
+	do_not_start => "TRUE",
 );
 
 my $fetch = "";
@@ -118,5 +118,5 @@ foreach my $term (@expected) {
 }
 
 
-EndTest();
+CondorTest::EndTest();
 

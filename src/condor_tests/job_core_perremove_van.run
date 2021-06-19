@@ -24,6 +24,15 @@ use Check::SimpleJob;
 
 $testname = "job_core_perremove_van";
 
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	PERIODIC_EXPR_interval = 30
+    NUM_CPUS = 2
+    NEGOTIATOR_INTERVAL = 5
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 ##
 ## Status Values
 ##
@@ -31,34 +40,10 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-# where am I running
-$currenthost = CondorTest::getFqdnHost();
-
-print scalar localtime() . "\n";
-
 my $variation = "perremovefalse";
-
-my $firstappend_condor_config = '
-    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	PERIODIC_EXPR_interval = 30
-    NUM_CPUS = 2
-    NEGOTIATOR_INTERVAL = 5
-';
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"perremovevan");
-print "local config file:$configfile\n";
-
-CondorTest::StartCondorWithParams(
-    condor_name => "perremovevan",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
-
 
 my %info;
 my $cluster;
-
-#my $nostatus = CondorTest::verbose_system("./job_core_perremove-false_van.pl");
 
 $executed = sub
 {
@@ -109,13 +94,4 @@ my $truepolicy = '
 	);
 
 CondorTest::EndTest();
-print scalar localtime() . "\n";
-my $result = 0;
-
-if( $result != 0 )
-{
-    exit(1);
-}
-
-CondorTest::debug("$testname SUCCESS\n",1);
 exit(0);

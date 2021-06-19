@@ -1220,7 +1220,7 @@ with the configuration:
 
 .. code-block:: text
 
-    STARTD_JOB_EXPRS = JobPrio
+    STARTD_JOB_ATTRS = JobPrio
     SCHEDD_PREEMPTION_REQUIREMENTS = (My.JobPrio < Target.JobPrio)
     SCHEDD_PREEMPTION_RANK = 0.0
 
@@ -1955,8 +1955,7 @@ script.
 
 If additional functionality is added to the script, an administrator is
 likely to use the ``USER_JOB_WRAPPER`` script in conjunction with
-``SUBMIT_ATTRS`` :index:`SUBMIT_ATTRS` or ``SUBMIT_EXPRS``
-:index:`SUBMIT_EXPRS` to force the job ClassAd to contain
+``SUBMIT_ATTRS`` :index:`SUBMIT_ATTRS` to force the job ClassAd to contain
 attributes that the ``USER_JOB_WRAPPER`` script expects to have defined.
 
 The following variables are set in the environment of the the

@@ -532,8 +532,6 @@ bool HttpRequest::SendRequest()
 	}
 
 	if ( !proxyFile.empty() ) {
-		// TODO Add support for seperate cert and key files
-		// TODO Add support for proxy files
 		rv = curl_easy_setopt( curl, CURLOPT_SSLCERT, proxyFile.c_str() );
 		if( rv != CURLE_OK ) {
 			this->errorCode = "499";
@@ -955,7 +953,6 @@ bool ArcJobStatusAllWorkerFunction(GahpRequest *gahp_request)
 		return true;
 	}
 
-		// TODO feed query result to status_request
 	// Fill in required attributes & parameters.
 	HttpRequest status_request;
 	status_request.serviceURL = fillURL(argv[2]);

@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -21,9 +20,8 @@
 
 use CondorTest;
 use CondorUtils;
-use Check::SimpleJob;
-#use Check::CondorLog;
-use Check::ProcInfo;
+#use Check::SimpleJob;
+#use Check::ProcInfo;
 
 my $configfile = "";
 my $ClusterId = 0;
@@ -38,7 +36,6 @@ $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"name1");
 my $condorinfo =CondorTest::StartCondorWithParams(
 	condor_name => "name1",
 	fresh_local => "TRUE",
-	do_not_start => "TRUE",
 	config_minimal => "TRUE",
 	condorlocalsrc => "$configfile",
 );
@@ -113,23 +110,3 @@ print "We had <$errors> param default failures\n";
 CondorTest::RegisterResult(1,{test_name => $testname});
 
 CondorTest::EndTest();
-
-
-sub SubmitReturnCluster
-{
-	my $submitfile = shift;
-	my $cluster = 0;
-
-	my @output = `condor_submit $submitfile`;
-
-	foreach my $line (@output) {
-		chomp($line);
-		if($line =~ /^.*cluster (\d+).*$/) {
-			#print "$line\n";
-			#print "returning $1\n";
-			$cluster = $1;
-			return($cluster);
-		}
-	}
-	return(0);
-}

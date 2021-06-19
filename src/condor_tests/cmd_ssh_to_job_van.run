@@ -20,6 +20,14 @@
 
 use CondorTest;
 
+my $testname = "cmd_ssh_to_job_van";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 my $cluster = 1;
 my $temp_file = CondorTest::TempFileName("cmd_ssh_to_job_van.temp");
 
@@ -62,19 +70,6 @@ $success = sub {
     CondorTest::EndTest();
 };
 
-my $firstappend_condor_config = '
-    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-';
-
-my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"condorssshtojob");
-
-CondorTest::StartCondorWithParams(
-	condor_name => "condorssshtojob",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
-my $testname = "cmd_ssh_to_job_van";
 CondorTest::RegisterSubmit( $testname, $submit );
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterExitedSuccess ($testname, $success);

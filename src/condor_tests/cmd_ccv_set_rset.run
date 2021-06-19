@@ -30,15 +30,10 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my @submitfiles =	();
+my $testname = "cmd_ccv_set_rest";
 
-my $pid = $$;
-my $ClusterId = 0;
-
-my $totalcpus = 6;
-my $totalgpus = 4;
-
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	#ENABLE_RUNTIME_CONFIG = TRUE
 	#ENABLE_PERSISTENT_CONFIG = TRUE
 	#PERSISTENT_CONFIG_DIR = $(spool)
@@ -51,24 +46,9 @@ my $firstappend_condor_config = '
 	UPDATE_COLLECTOR_WITH_TCP = TRUE
 	ALL_DEBUG = D_FULLDEBUG
 	MASTER_DEBUG = D_SECURITY:1 D_COMMAND:1
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 # don't forget PERSISTENT_CONFIG settings
-
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"ccvrsetset");
-
-my $testname = "cmd_ccv_set_rest";
-
-# First order up the config but do not start it. If the condor_config_val fails
-# there is no reason to go on
-
-CondorTest::StartCondorWithParams(
-	condor_name => "ccvrsetset",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
-#print "************************** CONDOR_CONFIG now set to:$ENV{CONDOR_CONFIG} ******************\n";
 
 
 my @configlines = ();

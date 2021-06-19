@@ -19,7 +19,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "MyString.h"
 #include "simplelist.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
@@ -164,7 +163,7 @@ TransferRequest::get_procids(void)
 void
 TransferRequest::dprintf(unsigned int lvl)
 {
-	MyString pv;
+	std::string pv;
 
 	ASSERT(m_ip != NULL);
 
@@ -372,7 +371,7 @@ TransferRequest::get_rejected(void) const
 }
 
 void 
-TransferRequest::set_pre_push_callback(MyString desc, 
+TransferRequest::set_pre_push_callback(std::string desc, 
 	TreqPrePushCallback callback, Service *base)
 {
 	m_pre_push_func_desc = desc;
@@ -388,7 +387,7 @@ TransferRequest::call_pre_push_callback(TransferRequest *treq,
 }
 
 void
-TransferRequest::set_post_push_callback(MyString desc, 
+TransferRequest::set_post_push_callback(std::string desc, 
 	TreqPostPushCallback callback, Service *base)
 {
 	m_post_push_func_desc = desc;
@@ -404,7 +403,7 @@ TransferRequest::call_post_push_callback(TransferRequest *treq,
 }
 
 void 
-TransferRequest::set_update_callback(MyString desc, 
+TransferRequest::set_update_callback(std::string desc, 
 	TreqUpdateCallback callback, Service *base)
 {
 	m_update_func_desc = desc;
@@ -420,7 +419,7 @@ TransferRequest::call_update_callback(TransferRequest *treq,
 }
 
 void 
-TransferRequest::set_reaper_callback(MyString desc, 
+TransferRequest::set_reaper_callback(std::string desc, 
 	TreqReaperCallback callback, Service *base)
 {
 	m_reaper_func_desc = desc;
@@ -475,7 +474,7 @@ encap_method(const std::string &line)
 }
 
 TreqMode
-transfer_mode(MyString mode)
+transfer_mode(std::string mode)
 {
 	return transfer_mode(mode.c_str());
 }

@@ -606,7 +606,7 @@ sub check_status {
 		return $_[1] eq 'X86_64';
 	}
 },
-'State' => sub{return $_[1] eq 'Unclaimed';},
+'State' => sub{return $_[1] =~ /Unclaimed|Claimed/;},
 'Activity' => sub{return $_[1] eq 'Idle';},
 'LoadAv' => sub{
 	my $loadavg = sprintf "%.3f",$Attr_new{$_[0]-1}{CondorLoadAvg};

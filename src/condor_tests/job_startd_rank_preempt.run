@@ -23,17 +23,16 @@ use CondorTest;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my $append_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
   RANK = TARGET.TimeSensitive =?= True
   MaxJobRetirementTime = 0
   PREEMPTION_REQUIREMENTS = False
   NUM_CPUS = 1
   DAEMON_LIST = MASTER,COLLECTOR,NEGOTIATOR,SCHEDD,STARTD
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
-);
 
 my $testname = CondorTest::GetDefaultTestName();
 

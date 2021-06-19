@@ -195,7 +195,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		tmpDirectory = dirname;
 		free(dirname);
 
-		MyString	errMsg;
+		std::string	errMsg;
 		if ( !dagDir.Cd2TmpDir( tmpDirectory.c_str(), errMsg ) ) {
 			debug_printf( DEBUG_QUIET,
 					"ERROR: Could not change to DAG directory %s: %s\n",
@@ -288,9 +288,9 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					// Check for duplicate keys in dag->SubmitDescriptions
 					// If a duplicate exists, std::map.insert() will not throw any
 					// errors but it also won't overwrite the existing value.
-					// In this case, throw an error and proceed as normal.
-					if(dag->SubmitDescriptions.find(std::string(nodename.c_str())) != dag->SubmitDescriptions.end()) {
-						debug_printf(DEBUG_NORMAL, "Error: a submit description "
+					// In this case, throw a warning and proceed as normal.
+					if(dag->SubmitDescriptions.find(std::string(nodename.Value())) != dag->SubmitDescriptions.end()) {
+						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
 							"already exists with name %s, will not be overwritten."
 							"\n", nodename.c_str());
 					}
@@ -348,9 +348,9 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					// Check for duplicate keys in dag->SubmitDescriptions
 					// If a duplicate exists, std::map.insert() will not throw any
 					// errors but it also won't overwrite the existing value.
-					// In this case, throw an error and proceed as normal.
-					if(dag->SubmitDescriptions.find(std::string(nodename.c_str())) != dag->SubmitDescriptions.end()) {
-						debug_printf(DEBUG_NORMAL, "Error: a submit description "
+					// In this case, throw a warning and proceed as normal.
+					if(dag->SubmitDescriptions.find(std::string(nodename.Value())) != dag->SubmitDescriptions.end()) {
+						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
 							"already exists with name %s, will not be overwritten."
 							"\n", nodename.c_str());
 					}
@@ -414,9 +414,9 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					// Check for duplicate keys in dag->SubmitDescriptions
 					// If a duplicate exists, std::map.insert() will not throw any
 					// errors but it also won't overwrite the existing value.
-					// In this case, throw an error and proceed as normal.
-					if(dag->SubmitDescriptions.find(std::string(descName.c_str())) == dag->SubmitDescriptions.end()) {
-						debug_printf(DEBUG_NORMAL, "Error: a submit description "
+					// In this case, throw a warning and proceed as normal.
+					if(dag->SubmitDescriptions.find(std::string(descName.Value())) != dag->SubmitDescriptions.end()) {
+						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
 							"already exists with name %s, will not be overwritten."
 							"\n", descName.c_str());
 					}
@@ -757,7 +757,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 	dag->RecordInitialAndTerminalNodes();
 	
 	if ( useDagDir ) {
-		MyString	errMsg;
+		std::string	errMsg;
 		if ( !dagDir.Cd2MainDir( errMsg ) ) {
 			debug_printf( DEBUG_QUIET,
 					"ERROR: Could not change to original directory: %s\n",
@@ -919,7 +919,7 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 				return false;
 			}
 
-			MyString errMsg;
+			std::string errMsg;
 			if ( !nodeDir.Cd2TmpDir(directory, errMsg) ) {
 				debug_printf( DEBUG_QUIET,
 							"ERROR: can't change to directory %s: %s\n",
@@ -1019,7 +1019,7 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 		}
 	}
 
-	MyString errMsg;
+	std::string errMsg;
 	if ( !nodeDir.Cd2MainDir(errMsg) ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: can't change to original directory: %s\n",
@@ -1319,7 +1319,7 @@ parse_parent(
 
 			std::vector<Job*> *splice_initial;
 			splice_initial = splice_dag->InitialRecordedNodes();
-			debug_printf( DEBUG_DEBUG_1, "Adding %lu initial nodes\n", 
+			debug_printf( DEBUG_DEBUG_1, "Adding %zu initial nodes\n", 
 				splice_initial->size());
 
 			// now add each initial node as a child
@@ -2073,7 +2073,7 @@ parse_splice(
 {
 	const char *example = "SPLICE SpliceName SpliceFileName [DIR directory]";
 	Dag *splice_dag = NULL;
-	MyString errMsg;
+	std::string errMsg;
 
 	//
 	// Next token is the splice name
@@ -2250,7 +2250,7 @@ parse_splice(
 
 	// pop the just pushed value off of the end of the ext array
 	_spliceScope.pop_back();
-	debug_printf(DEBUG_DEBUG_1, "_spliceScope has length %lu\n", _spliceScope.size());
+	debug_printf(DEBUG_DEBUG_1, "_spliceScope has length %zu\n", _spliceScope.size());
 
 	return true;
 }

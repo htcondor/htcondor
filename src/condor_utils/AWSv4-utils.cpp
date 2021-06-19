@@ -243,25 +243,35 @@ generate_presigned_url( const std::string & accessKeyID,
     char date[] = "YYYYMMDD";
     strftime( date, sizeof(date), "%Y%m%d", & brokenDownTime );
 
+    //
+    // Convert gs:// URLs to the equivalent s3:// URLs.
+    //
+    std::string theURL = s3url;
+    if( starts_with_ignore_case( s3url, "gs://" ) ) {
+        std::string bucket_and_key = s3url.substr(5 /* strlen( "gs://") */ );
+        formatstr( theURL, "s3://storage.googleapis.com/%s", bucket_and_key.c_str() );
+    }
+
     // If the named bucket isn't valid as part of a DNS name,
     // we assume it's an old "path-style"-only bucket.
     std::string canonicalURI( "/" );
 
     // Extract the S3 bucket and key from the S3 URL.
     std::string bucket, key;
-    if(! starts_with( s3url, "s3://" )) {
+    if(! starts_with_ignore_case( theURL, "s3://" )) {
         err.push( "AWS SigV4", 1, "an S3 URL must begin with s3://" );
         return false;
     }
     size_t protocolLength = 5; // std::string("s3://").size()
-    size_t middle = s3url.find( "/", protocolLength );
+    size_t middle = theURL.find( "/", protocolLength );
     if( middle == std::string::npos ) {
         err.push( "AWS SigV4", 2, "an S3 URL must be of the form s3://<bucket>/<object>, "
             "s3://<bucket>.s3.<region>.amazonaws.com/<object>, or s3://.../... for non-AWS endpoints" );
         return false;
     }
     std::string region = input_region;
-    auto bucket_or_hostname = s3url.substr( protocolLength, middle - protocolLength );
+    auto bucket_or_hostname = theURL.substr( protocolLength, middle - protocolLength );
+
     // Strip out the port number for now in order to simplify logic below.
     auto port_idx = bucket_or_hostname.find(":");
     std::string port_number;
@@ -306,7 +316,7 @@ generate_presigned_url( const std::string & accessKeyID,
     if (!port_number.empty()) {
         host = host + ":" + port_number;
     }
-    key = s3url.substr( middle + 1 );
+    key = theURL.substr( middle + 1 );
     // Pick a default region.
     if (region.empty()) {
         region = "us-east-1";

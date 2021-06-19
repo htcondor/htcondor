@@ -30,11 +30,10 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
+my $test_name = "job_basic_kill";
 
-my $ClusterId = 0;
-my $expect_return = 0;
-
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	WANT_SUSPEND = FALSE
 	KILLING_TIMEOUT = 1
@@ -42,25 +41,20 @@ my $firstappend_condor_config = '
 	NEGOTIATION_INTERVAL = 10
 	KILL = TRUE
 	ALL_DEBUG = D_ALWAYS D_CMD D_DAEMONCORE
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobbasickill");
 
-CondorTest::StartCondorWithParams(
-	condor_name => "basickill",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
+my $ClusterId = 0;
+my $expect_return = 0;
+my $return = "";
+my $executecount = 0;
+my $result = 1;
+my $catchlog  = "catchallsignals.out";
 
 my $on_abort = sub {
 	CondorTest::debug("Abort from removing trap signal job.\n",1);
 };
-
-my $return = "";
-my $executecount = 0;
-my $result = 1;
-my $test_name = "job_basic_kill";
-my $catchlog  = "catchallsignals.out";
 
 my $on_execute = sub {
 	print "********************************** OnExecute *****************************\n";

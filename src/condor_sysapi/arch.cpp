@@ -742,8 +742,7 @@ sysapi_get_unix_info( const char *sysname,
 			|| !strcmp(release, "5.11") )
 		{
 			pver = "211";
-		}
-		if ( !strcmp(release, "2.10") //LDAP entry
+		} else if ( !strcmp(release, "2.10") //LDAP entry
 			|| !strcmp(release, "5.10") )
 		{
 			pver = "210";

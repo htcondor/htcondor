@@ -24,6 +24,17 @@ use Check::SimpleJob;
 use Check::CondorLog;
 
 my $testname = "job_max_running.run";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 12
+	MAX_JOBS_RUNNING = 8
+	NEGOTIATOR_INTERVAL = 5
+	ALL_DEBUG = 
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 my %children = ();
 my $submitfile = "";
 my $taskname = "";
@@ -38,25 +49,8 @@ my %taskmorejobs = (
 	"maxjobs1" => 12,
 );
 
-my @host = `hostname`;
-fullchomp($host[0]);
-print "Running on:$host[0]\n";
-my $firstappend_condor_config = '
-	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	NUM_CPUS = 12
-	MAX_JOBS_RUNNING = 8
-	NEGOTIATOR_INTERVAL = 5
-	ALL_DEBUG = 
-	';
 
 my $negotiatorcycle = 5;
-
-
-# OK First personal has no concurrency limits
-CondorTest::StartCondorWithParams(
-    append_condor_config => $firstappend_condor_config,
-	local_fresh => "TRUE",
-);
 
 
 my $on_submitnameknown = sub {

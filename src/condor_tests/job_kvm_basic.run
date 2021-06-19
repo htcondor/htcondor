@@ -30,17 +30,14 @@ use Check::SimpleJob;
 my $testName = "job_kvm_basic";
 
 # Turn on KVM.
-my $condorConfigFragment = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
     VM_TYPE = kvm
     VM_MEMORY = 256
     VM_NETWORKING = FALSE
-    ';
-
-# Start a KVM-enabled personal HTCondor.
-CondorTest::StartCondorWithParams(
-    append_condor_config    => $condorConfigFragment,
-    daemon_list             => 'MASTER, STARTD, COLLECTOR, NEGOTIATOR, SCHEDD',
-);
+    DAEMON_LIST = MASTER STARTD COLLECTOR NEGOTIATOR SCHEDD
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 my $submitFragment = '
     vm_type         = kvm

@@ -30,10 +30,10 @@ the :doc:`admin-quick-start` for more details.
 
 .. code-block:: shell
 
-    sudo curl -fsSL https://get.htcondor.org | /bin/bash -s -- --no-dry-run
+    curl -fsSL https://get.htcondor.org | sudo /bin/bash -s -- --no-dry-run
 
 If you see an error like ``bash: sudo: command not found``, try re-running
-the command above without the leading ``sudo``.
+the command above without the ``sudo``.
 
 .. _inspecting_the_script:
 

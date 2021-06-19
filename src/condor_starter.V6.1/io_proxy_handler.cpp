@@ -376,7 +376,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		classad::ExprTree *expr_tree;
 		if (strlen(expr) > 993)
 		{
-			dprintf(D_FULLDEBUG, "Chirp update too long! (%lu)\n", strlen(expr));
+			dprintf(D_FULLDEBUG, "Chirp update too long! (%zu)\n", strlen(expr));
 			result = -1;
 			errno = ENAMETOOLONG;
 		}

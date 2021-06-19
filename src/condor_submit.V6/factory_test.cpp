@@ -531,10 +531,8 @@ bool setJobFactoryPauseAndLog(JobFactory * factory, int pause_mode, int /*hold_c
 		}
 	}
 
-	if (factory) {
-		// make sure that the factory state is in sync with the pause mode
-		CheckJobFactoryPause(factory, pause_mode);
-	}
+	// make sure that the factory state is in sync with the pause mode
+	CheckJobFactoryPause(factory, pause_mode);
 
 	// log the change in pause state
 	//const char * reason_ptr = reason.empty() ? NULL : reason.c_str();

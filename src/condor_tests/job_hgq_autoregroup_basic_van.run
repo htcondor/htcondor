@@ -21,6 +21,56 @@
 use CondorTest;
 use CondorUtils;
 
+my $testname = "job_hgq_autoregroup_basic_van";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+# This was a hack to allow the test pool and harness pool to
+# coexist peacefully on my sandbox.  I dont think they are needed
+# in a "real" testing environment:
+#COLLECTOR_ARGS = -p 42424
+#COLLECTOR_HOST = $(CONDOR_HOST):0
+#COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
+DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD
+
+NEGOTIATOR_DEBUG = D_FULLDEBUG
+
+SCHEDD_INTERVAL	= 30
+NEGOTIATOR_INTERVAL = 20
+
+CLAIM_WORKLIFE = 0
+
+# turn off preemption
+MAXJOBRETIREMENTTIME = 3600 * 24
+PREEMPT = False
+PREEMPTION_REQUIREMENTS = False
+RANK = 0
+NEGOTIATOR_CONSIDER_PREEMPTION = False
+
+# no slot weights
+NEGOTIATOR_USE_SLOT_WEIGHTS = FALSE
+
+NUM_CPUS = 4
+
+# turn off round robin and multiple allocation rounds
+HFS_ROUND_ROBIN_RATE = 100000000
+HFS_MAX_ALLOCATION_ROUNDS = 1
+
+GROUP_NAMES = a, b
+
+# 2 slots are left over for root group "none"
+GROUP_QUOTA_a = 1
+GROUP_QUOTA_b = 1
+
+# autoregroup is on, accept-surplus is off:
+GROUP_ACCEPT_SURPLUS = FALSE
+GROUP_AUTOREGROUP = TRUE
+
+# sorts "b" before "a":
+GROUP_SORT_EXPR = ifThenElse(AccountingGroup=?="a", 2, ifThenElse(AccountingGroup=?="b", 1, 3.40282e+38))
+
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 # trip whitespace from beginning and end of a string
 sub trimws($) {
@@ -36,7 +86,6 @@ my $on_evictedwithoutcheckpoint = sub {
 my $aborted = sub {
 };
 
-my $testname = "job_hgq_autoregroup_basic_van";
 my $execute_test_passed = 0;
 my $negotiate_test_passed = 0;
 my $pre_execution = 1;
@@ -161,56 +210,6 @@ sub exit_callback {
 }
 
 
-
-my $append_condor_config = '
-# This was a hack to allow the test pool and harness pool to
-# coexist peacefully on my sandbox.  I dont think they are needed
-# in a "real" testing environment:
-#COLLECTOR_ARGS = -p 42424
-#COLLECTOR_HOST = $(CONDOR_HOST):0
-#COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
-DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD
-
-NEGOTIATOR_DEBUG = D_FULLDEBUG
-
-SCHEDD_INTERVAL	= 30
-NEGOTIATOR_INTERVAL = 20
-
-CLAIM_WORKLIFE = 0
-
-# turn off preemption
-MAXJOBRETIREMENTTIME = 3600 * 24
-PREEMPT = False
-PREEMPTION_REQUIREMENTS = False
-RANK = 0
-NEGOTIATOR_CONSIDER_PREEMPTION = False
-
-# no slot weights
-NEGOTIATOR_USE_SLOT_WEIGHTS = FALSE
-
-NUM_CPUS = 4
-
-# turn off round robin and multiple allocation rounds
-HFS_ROUND_ROBIN_RATE = 100000000
-HFS_MAX_ALLOCATION_ROUNDS = 1
-
-GROUP_NAMES = a, b
-
-# 2 slots are left over for root group "none"
-GROUP_QUOTA_a = 1
-GROUP_QUOTA_b = 1
-
-# autoregroup is on, accept-surplus is off:
-GROUP_ACCEPT_SURPLUS = FALSE
-GROUP_AUTOREGROUP = TRUE
-
-# sorts "b" before "a":
-GROUP_SORT_EXPR = ifThenElse(AccountingGroup=?="a", 2, ifThenElse(AccountingGroup=?="b", 1, 3.40282e+38))
-';
-
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
-);
 
 my $job_log = "$testname.log";
 

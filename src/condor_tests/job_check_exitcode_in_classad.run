@@ -30,29 +30,25 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
+my $test_name = "job_check_exitcode_in_classad";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	ALL_DEBUG = 
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 
 my $ClusterId = 0;
 my $expect_return = 0;
-
-my $firstappend_condor_config = '
-	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	ALL_DEBUG = 
-';
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"affinityoff");
-
-CondorTest::StartCondorWithParams(
-	condor_name => "affinityoff",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
+my $result = 1;
 
 my $on_abort = sub {
 	CondorTest::debug("Abort from removing sleep 0 jobs.\n",1);
 };
 
-my $result = 1;
-my $test_name = "job_check_exitcode_in_classad";
+
 my $on_execute = sub {
 	#print "********************************** OnExecute *****************************\n";
 

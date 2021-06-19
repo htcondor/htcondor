@@ -3103,6 +3103,11 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
+	if( (tmp = submit_param(SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS)) ) {
+		AssignJobString ( ATTR_BATCH_EXTRA_SUBMIT_ARGS, tmp );
+		free( tmp );
+	}
+
 	if( (tmp = submit_param(SUBMIT_KEY_BatchProject, ATTR_BATCH_PROJECT)) ) {
 		AssignJobString ( ATTR_BATCH_PROJECT, tmp );
 		free( tmp );
@@ -5035,9 +5040,15 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_CheckpointExitCode, ATTR_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
 
 	// Presigned S3 URLs
+	{SUBMIT_KEY_AWSRegion, ATTR_AWS_REGION, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_AWSAccessKeyIdFile, ATTR_EC2_ACCESS_KEY_ID, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_AWSSecretAccessKeyFile, ATTR_EC2_SECRET_ACCESS_KEY, SimpleSubmitKeyword::f_as_string},
-	{SUBMIT_KEY_AWSRegion, ATTR_AWS_REGION, SimpleSubmitKeyword::f_as_string},
+
+	// Simple aliases for now; will eventually be their own thing.
+	{SUBMIT_KEY_S3AccessKeyIdFile, ATTR_EC2_ACCESS_KEY_ID, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_S3SecretAccessKeyFile, ATTR_EC2_SECRET_ACCESS_KEY, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_GSAccessKeyIdFile, ATTR_EC2_ACCESS_KEY_ID, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_GSSecretAccessKeyFile, ATTR_EC2_SECRET_ACCESS_KEY, SimpleSubmitKeyword::f_as_string},
 
 	// EraseOutputAndErrorOnRestart only applies when when_to_transfer_output
 	// is ON_EXIT_OR_EVICT, which we may want to warn people about.
@@ -5081,6 +5092,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_ArcRSL, ATTR_ARC_RSL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_ArcRte, ATTR_ARC_RTE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_CreamAttributes, ATTR_CREAM_ATTRIBUTES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
+	{SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchProject, ATTR_BATCH_PROJECT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchQueue, ATTR_BATCH_QUEUE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchRuntime, ATTR_BATCH_RUNTIME, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
@@ -6360,18 +6372,19 @@ int SubmitHash::SetRequirements()
 					answer += *it;
 					answer += "\",TARGET.HasFileTransferPluginMethods)";
 
-					if( presignS3URLs && (strcasecmp( it->c_str(), "s3" ) == 0) ) {
+					if( presignS3URLs &&
+					  (strcasecmp( it->c_str(), "s3" ) == 0 || strcasecmp( it->c_str(), "gs" ) == 0) ) {
 						bool present = true;
 						if(! job->Lookup( ATTR_EC2_ACCESS_KEY_ID )) {
 							present = false;
-							push_error(stderr, "s3:// URLs require "
-								SUBMIT_KEY_AWSAccessKeyIdFile
+							push_error(stderr, "[s3|gs]:// URLs require "
+								"[s3|aws|gs]_access_key_id_file"
 								" to be set.\n" );
 						}
 						if(! job->Lookup( ATTR_EC2_SECRET_ACCESS_KEY )) {
 							present = false;
-							push_error(stderr, "s3:// URLS require "
-								SUBMIT_KEY_AWSSecretAccessKeyFile
+							push_error(stderr, "[s3|gs]:// URLS require "
+								"[s3|aws|gs]_secret_access_key_file"
 								" to be set.\n" );
 						}
 						if(! present) {

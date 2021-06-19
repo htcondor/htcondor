@@ -1408,10 +1408,12 @@ static ExprTree * XFormCopyValueToTree(classad::Value & val)
 	if (vtyp == classad::Value::LIST_VALUE) {
 		classad::ExprList * list = NULL;
 		(void) val.IsListValue(list);
+		ASSERT(list);
 		tree = list->Copy();
 	} else if (vtyp == classad::Value::SLIST_VALUE) {
 		classad_shared_ptr<classad::ExprList> list;
 		(void) val.IsSListValue(list);
+		ASSERT(list.get());
 		tree = list.get()->Copy();
 	} else if (vtyp == classad::Value::CLASSAD_VALUE || vtyp == classad::Value::SCLASSAD_VALUE) {
 		classad::ClassAd* aval = NULL;

@@ -28,15 +28,13 @@ my $smap_dump = 0;    # set this to non-zero to dump entire smap
 my $testname = CondorTest::GetDefaultTestName();
 my $temptest = CondorTest::TempFileName("$testname");
 
-my $append_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
   DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
   ChirpPath = "$(LIBEXEC)/condor_chirp"
   STARTD_ATTRS = $(STARTD_ATTRS) ChirpPath
-';
-
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
-);
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 # expected memory for shadows by platform.
 # these are lowercase so that we can do case-insensitive lookup

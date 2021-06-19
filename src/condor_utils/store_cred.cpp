@@ -541,7 +541,8 @@ LOCAL_STORE_CRED(const char *username, const char *servicename, std::string &ccf
 	// doesn't matter what the contents of the cred are, just that it exists,
 	// so we just store the username in there as the cred contents.
 	//
-	// mode is zero (not a QUERY or DELETE command).
+	// mode is ADD (not a QUERY or DELETE command).
+	int mode = ADD_OAUTH_MODE;
 	//
 	// ad is constructed above.
 	//
@@ -549,7 +550,7 @@ LOCAL_STORE_CRED(const char *username, const char *servicename, std::string &ccf
 	//
 	// ccfile reference just passed through.
 
-	return OAUTH_STORE_CRED(username, (unsigned const char*)username, strlen(username), 0, &ad, ret, ccfile);
+	return OAUTH_STORE_CRED(username, (unsigned const char*)username, strlen(username), mode, &ad, ret, ccfile);
 }
 
 
@@ -562,12 +563,6 @@ KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credle
 {
 	dprintf(D_ALWAYS, "Krb store cred user %s len %i mode %i\n", username, credlen, mode);
 
-	// sanity check
-	if(!cred) {
-		dprintf(D_ALWAYS, "KRB_STORE_CRED: cred was NULL!  Error.\n");
-		return FAILURE;
-	}
-
 	// default to this being a real krb store cred
 	detected_local_cred = false;
 
@@ -575,8 +570,13 @@ KRB_STORE_CRED(const char *username, const unsigned char *cred, const int credle
 	// "LOCAL:", we are not actually going to store anything in the krb directory,
 	// but instead simply touch a file in the OAuth directory.  detect this right away
 	// and call that function instead.
-	if (strncmp((const char*)cred, "LOCAL:", 6) == MATCH) {
-		std::string servicename((const char*)&cred[6]);
+	if (cred && credlen > 6 && MATCH == strncmp((const char*)cred, "LOCAL:", 6)) {
+		std::string servicename((const char*)&cred[6], credlen-6);
+
+		if ((mode & MODE_MASK) != GENERIC_ADD) {
+			dprintf(D_ALWAYS, "LOCAL_STORE_CRED does not support QUERY or DELETE modes, aborting the command.");
+			return FAILURE;
+		}
 
 		// capture return value
 		long long rv = LOCAL_STORE_CRED(username, servicename.c_str(), ccfile);

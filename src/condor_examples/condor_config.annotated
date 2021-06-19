@@ -1245,7 +1245,7 @@ benchmarks_kflops_job_load = 1.0
 #CONSOLE_DEVICES = mouse, console
 
 
-##  The STARTD_ATTRS (formerly STARTD_EXPRS) entry allows you to
+##  The STARTD_ATTRS entry allows you to
 ##  have the startd advertise arbitrary attributes from the config
 ##  file in its ClassAd.  Give the comma-separated list of entries
 ##  from the config file you want in the startd ClassAd.
@@ -1660,7 +1660,7 @@ WINDOWS_SOFTKILL = $(SBIN)/condor_softkill
 
 ##  If you want condor_submit to automatically append expressions to
 ##  the job ClassAds it creates, you can uncomment and define the
-##  SUBMIT_ATTRS (formerly SUBMIT_EXPRS) setting.  It works just like the STARTD_ATTRS
+##  SUBMIT_ATTRS It works just like the STARTD_ATTRS
 ##  described above with respect to ClassAd vs. config file syntax,
 ##  strings, etc.  One common use would be to have the full hostname
 ##  of the machine where a job was submitted placed in the job

@@ -3324,6 +3324,14 @@ Daemons::Update( ClassAd* ca )
 void
 Daemons::UpdateCollector()
 {
+	// If we are shutting down, we've already send our invalidation
+	// and we shouldn't further update and un-invalidate or worse,
+	// try to update a collector in a personal condor we just killed.
+
+	if (MasterShuttingDown) {
+		return;
+	}
+
 	dprintf(D_FULLDEBUG, "enter Daemons::UpdateCollector\n");
 
 	Update(ad);

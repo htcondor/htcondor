@@ -23,7 +23,8 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my $append_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
   VIEW_COLLECTOR = $(COLLECTOR)
   VIEW_COLLECTOR_ARGS = -local-name VIEW_COLLECTOR
   VIEW_COLLECTOR.COLLECTOR_LOG = $(LOG)/ViewCollectorLog
@@ -44,11 +45,9 @@ my $append_condor_config = '
   ALLOW_ADVERTISE = $(ALLOW_ADVERTISE) $(FULL_HOSTNAME) $(IP_ADDRESS) 127.0.0.1
   ALLOW_NEGOTIATOR = $(ALLOW_NEGOTIATOR) $(FULL_HOSTNAME) $(IP_ADDRESS) 127.0.0.1
   ALLOW_ADMINISTRATOR = $(ALLOW_ADMINISTRATOR) $(FULL_HOSTNAME) $(IP_ADDRESS) 127.0.0.1
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
-);
 
 # Sanity, the Negotiator showed up in the Collector
 CondorLog::RunCheck(

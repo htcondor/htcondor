@@ -288,6 +288,15 @@ sub hasIPv4 {
 # See #5533.
 sub hasIPv6 {
 	# See #5534 -- our Windows interface detection code doesn't for IPv6.
-	my $platformString = $ENV{ 'NMI_PLATFORM' };
-	return (!($platformString =~ /_winnt_/ || $platformString =~ /_Win/));
+	print "Checking for IPv6.  One ping only, Vasily\n";
+	my $pingRet = system("ping -c 1 -6 localhost");
+	if ($pingRet == 0) {
+		print "ping IPv6 mode succeeded, will run ipv6 tests\n";
+		# See #5534 -- our Windows interface detection code doesn't work for IPv6.
+		my $platformString = $ENV{ 'NMI_PLATFORM' };
+		return (!($platformString =~ /_winnt_/ || $platformString =~ /_Win/));
+	} else {
+		print "ping IPv6 mode failed, will skip ipv6 tests\n";
+		return 0;
+	}
 }

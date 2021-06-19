@@ -42,13 +42,11 @@ char* temp_dir_path();
   @param result  The output buffer
   @return Value() of result parameter after it has been set by this function
 */
-const char* dircat(const char* dirpath, const char* filename, MyString & result);
 const char* dircat(const char* dirpath, const char* filename, std::string &result);
 
 /*
  same as above but filename and fileext are concatenated together to produce the effect filename
 */
-const char* dircat(const char* dirpath, const char* filename, const char * fileext, MyString & result);
 const char* dircat(const char* dirpath, const char* filename, const char * fileext, std::string & result);
 
 
@@ -66,7 +64,6 @@ const char* dircat(const char* dirpath, const char* filename, const char * filee
   @param result  The output buffer
   @return Value() of result parameter after it has been set by this function
 */
-const char* dirscat(const char* dirpath, const char* subdir, MyString & result);
 const char* dirscat(const char* dirpath, const char* subdir, std::string &result);
 
 /** Touch a file and create directory path as well if necessary

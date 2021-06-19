@@ -573,6 +573,10 @@ Options
     The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
 
+ **-print-format** *file*
+    Read output formatting information from the given custom print format file.
+    see :doc:`/misc-concepts/print-formats` for more information about custom print format files.
+
  **-analyze[:<qual>]**
     (analyze option) Perform a matchmaking analysis on why the requested
     jobs are not running. First a simple analysis determines if the job

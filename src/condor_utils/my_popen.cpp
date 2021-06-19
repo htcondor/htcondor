@@ -514,7 +514,12 @@ my_popenv_impl( const char *const args[],
 			egid = getegid();
 			if( seteuid( 0 ) ) { }
 			if( setgid( egid ) ) { }
-			if( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
+
+			// Some linux environment make this an error, even when
+			// setuid'ing to our current euid.  So don't check for error.
+			// This matches what we do in uids.cpp
+			
+			if (setuid(euid)) {}
 		}
 
 			/* before we exec(), clear the signal mask and reset SIGPIPE

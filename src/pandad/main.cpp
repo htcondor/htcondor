@@ -426,7 +426,7 @@ void updateStatisticsLog( const TimeSensitiveQueue<T> & queue, bool forceUpdate 
 
 template< class T >
 bool sendPostField( const std::string & postString, CURL * curl, const std::string & url, const std::string & verb, char * curlErrorBuffer, unsigned long & responseCode, const TimeSensitiveQueue< T > & queue ) {
-dprintf( D_ALWAYS, "sendPostField(): body length %lu, url %s, verb %s.\n", postString.length(), url.c_str(), verb.c_str() );
+dprintf( D_ALWAYS, "sendPostField(): body length %zu, url %s, verb %s.\n", postString.length(), url.c_str(), verb.c_str() );
 	++curlCalledCount;
 
 	dprintf( D_FULLDEBUG, "Sending commands to URL '%s'.\n", url.c_str() );

@@ -1356,8 +1356,8 @@ trigger rate-limiting by the service; while HTCondor will react
 appropriately (by retrying with an exponential back-off), it may be more
 efficient to configure a longer interval.
 
-Secure Communication with and EC2 Service
-'''''''''''''''''''''''''''''''''''''''''
+Secure Communication with an EC2 Service
+''''''''''''''''''''''''''''''''''''''''
 
 The specification of a service with an ``https://``, an ``x509://``, or
 an ``euca3s://`` URL validates that service's certificate, checking that

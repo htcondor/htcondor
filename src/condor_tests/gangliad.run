@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -36,6 +35,10 @@ if( -e "../gangliad/ganglia_default_metrics" ) {
 elsif( -e "../condor/etc/condor/ganglia.d/00_default_metrics" ) {
     # nightly test
     copy("../condor/etc/condor/ganglia.d/00_default_metrics",$configd . "/ganglia_default_metrics") or die "Failed to copy ganglia_default_metrics";
+}
+elsif( -e "ganglia_default_metrics" ) {
+    # ctest
+    copy("ganglia_default_metrics", $configd . "/ganglia_default_metrics") or die "Failed to copy ganglia_default_metrics";
 }
 else {
     die "Failed to find ganglia_default_metrics";

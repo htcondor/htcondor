@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "stl_string_utils.h"
 #include "SourceRoute.h"
 
 condor_sockaddr SourceRoute::getSockAddr() const {

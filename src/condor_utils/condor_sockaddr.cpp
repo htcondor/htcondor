@@ -1,11 +1,10 @@
 #include "condor_common.h"
-#include "MyString.h"
 #include "condor_sockaddr.h"
 #include "condor_netaddr.h"
 #include "ipv6_hostname.h"
 #include "condor_debug.h"
 
-#include <sstream>
+#include "stl_string_utils.h"
 
 //
 // We could use the parse table defaults look-up code instead, if
@@ -21,18 +20,18 @@
 #define CP_INVALID_MAX_STRING	"invalid-max"
 #define CP_PARSE_INVALID_STRING	"parse-invalid"
 
-MyString condor_protocol_to_str(condor_protocol p) {
+std::string condor_protocol_to_str(condor_protocol p) {
 	switch(p) {
-		case CP_PRIMARY: return CP_PRIMARY_STRING;
-		case CP_INVALID_MIN: return CP_INVALID_MIN_STRING;
-		case CP_IPV4: return CP_IPV4_STRING;
-		case CP_IPV6: return CP_IPV6_STRING;
-		case CP_INVALID_MAX: return CP_INVALID_MAX_STRING;
-		case CP_PARSE_INVALID: return CP_PARSE_INVALID_STRING;
+		case CP_PRIMARY: return std::string{CP_PRIMARY_STRING};
+		case CP_INVALID_MIN: return std::string{CP_INVALID_MIN_STRING};
+		case CP_IPV4: return std::string{CP_IPV4_STRING};
+		case CP_IPV6: return std::string{CP_IPV6_STRING};
+		case CP_INVALID_MAX: return std::string{CP_INVALID_MAX_STRING};
+		case CP_PARSE_INVALID: return std::string{CP_PARSE_INVALID_STRING};
 		default: break;
 	}
-	MyString ret;
-	ret.formatstr( "Unknown protocol %d\n", int(p));
+	std::string ret;
+	formatstr( ret, "Unknown protocol %d\n", int(p));
 	return ret;
 }
 
@@ -238,16 +237,16 @@ void condor_sockaddr::set_port(unsigned short port)
 	}
 }
 
-MyString condor_sockaddr::to_sinful() const
+std::string condor_sockaddr::to_sinful() const
 {
 	// TODO: Implement in terms of Sinful object.
-	MyString ret;
+	std::string ret;
 	char tmp[IP_STRING_BUF_SIZE];
 		// if it is not ipv4 or ipv6, to_ip_string_ex will fail.
 	if ( !to_ip_string_ex(tmp, IP_STRING_BUF_SIZE, true) )
 		return ret;
 
-	ret.formatstr("<%s:%d>", tmp, ntohs(v4.sin_port));
+	formatstr(ret, "<%s:%d>", tmp, ntohs(v4.sin_port));
 
 	return ret;
 }
@@ -265,16 +264,16 @@ const char* condor_sockaddr::to_sinful(char* buf, int len) const
 	return buf;
 }
 
-MyString condor_sockaddr::to_sinful_wildcard_okay() const
+std::string condor_sockaddr::to_sinful_wildcard_okay() const
 {
 	// TODO: Implement in terms of Sinful object.
-	MyString ret;
+	std::string ret;
 	char tmp[IP_STRING_BUF_SIZE];
 		// if it is not ipv4 or ipv6, to_ip_string will fail.
 	if ( !to_ip_string(tmp, IP_STRING_BUF_SIZE, true) )
 		return ret;
 
-	ret.formatstr("<%s:%d>", tmp, ntohs(v4.sin_port));
+	formatstr(ret, "<%s:%d>", tmp, ntohs(v4.sin_port));
 
 	return ret;
 }
@@ -402,10 +401,12 @@ bool condor_sockaddr::from_ip_string(const std::string & ip_string)
 	return from_ip_string(ip_string.c_str());
 }
 
+/*
 bool condor_sockaddr::from_ip_string(const MyString& ip_string)
 {
 	return from_ip_string(ip_string.c_str());
 }
+*/
 
 bool condor_sockaddr::from_ip_and_port_string( const char * ip_and_port_string ) {
 	ASSERT( ip_and_port_string );
@@ -534,25 +535,24 @@ const char* condor_sockaddr::to_ip_string(char* buf, int len, bool decorate) con
 	}
 }
 
-MyString condor_sockaddr::to_ip_string(bool decorate) const
+std::string condor_sockaddr::to_ip_string(bool decorate) const
 {
 	char tmp[IP_STRING_BUF_SIZE];
-	MyString ret;
+	std::string ret;
 	if ( !to_ip_string(tmp, IP_STRING_BUF_SIZE, decorate) )
 		return ret;
 	ret = tmp;
 	return ret;
 }
 
-MyString condor_sockaddr::to_ip_and_port_string() const {
-	// Using formatstr() would be better in every possible way, but it
-	// doesn't exist in libcondorsyscall.
-	std::ostringstream oss;
-	oss << to_ip_string( true ).c_str() << ":" << get_port();
-	return oss.str().c_str();
+std::string condor_sockaddr::to_ip_and_port_string() const {
+	std::string ret (to_ip_string(true));
+	ret += ':';
+	ret += std::to_string(get_port());
+	return ret;
 }
 
-MyString condor_sockaddr::to_ccb_safe_string() const {
+std::string condor_sockaddr::to_ccb_safe_string() const {
 	//
 	// For backwards-compatibility with broken 8.2 Sinful code, we can't
 	// allow a colon to appear in a CCB ID string.  That includes both
@@ -560,21 +560,20 @@ MyString condor_sockaddr::to_ccb_safe_string() const {
 	//
 	char colonated[IP_STRING_BUF_SIZE];
 	if(! to_ip_string( colonated, IP_STRING_BUF_SIZE, true )) {
-		return MyString();
+		return std::string();
 	}
 
 	for( unsigned i = 0; colonated[i] != '\0' && i < IP_STRING_BUF_SIZE; ++i ) {
 		if( colonated[i] == ':' ) { colonated[i] = '-'; }
 	}
 
-	// Using formatstr() would be better in every possible way, but it
-	// doesn't exist in libcondorsyscall.
-	std::ostringstream oss;
-	oss << colonated << "-" << get_port();
-	return oss.str().c_str();
+	std::string ret = colonated;
+	ret += '-';
+	ret += std::to_string(get_port());
+	return ret;
 }
 
-MyString condor_sockaddr::to_ip_string_ex(bool decorate) const
+std::string condor_sockaddr::to_ip_string_ex(bool decorate) const
 {
 		// no need to check is_valid()
 	if ( is_addr_any() )

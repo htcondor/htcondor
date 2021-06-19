@@ -36,7 +36,7 @@ def HttpSuccessUrlHandler(request):
     request.send_response(200)
     request.send_header("Content-type", "text/html")
     request.end_headers()
-    request.wfile.write("<html>Great success!</html>")
+    request.wfile.write("<html>Great success!</html>".encode())
 
 
 def main():

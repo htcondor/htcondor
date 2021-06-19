@@ -1,6 +1,7 @@
 #include "condor_common.h"
 #include "directory.h"
 #include "condor_debug.h"
+#include "stl_string_utils.h"
 
 #ifdef LINUX
 bool isChildOf(const char *subdir, pid_t parent);

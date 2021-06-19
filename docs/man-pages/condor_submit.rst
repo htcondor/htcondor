@@ -1198,20 +1198,35 @@ FILE TRANSFER COMMANDS
         # If necessary
         aws_region = <region>
 
+    You may specify the corresponding access key ID and secret access key
+    with ``s3_access_key_id_file`` and ``s3_secret_access_key_file`` if
+    you prefer (which may reduce confusion, if you're not using AWS).
+
     If you must access S3 using temporary credentials, you may specify the
     temporary credentials using ``aws_access_key_id_file`` and
     ``aws_secret_access_key_file`` for the files containing the corresponding
     temporary token, and ``+EC2SessionToken`` for the file containing the
     session token.
 
-    HTCondor does not presently support transferring entire buckets or
-    directories from S3.
-
     Temporary credentials have a limited lifetime.  If you are using S3 only
     to download input files, the job must start before the credentials
     expire.  If you are using S3 to upload output files, the job must finish
     before the credentials expire.  HTCondor does not know when the credentials
     will expire; if they do so before they are needed, file transfer will fail.
+
+    HTCondor does not presently support transferring entire buckets or
+    directories from S3.
+
+    HTCondor supports Google Cloud Storage URLs -- ``gs://`` -- via Google's
+    "interoperability" API.  You may specify ``gs://`` URLs as if they were
+    ``s3://`` URLs, and they work the same way.
+    You may specify the corresponding access key ID and secret access key
+    with ``gs_access_key_id_file`` and ``gs_secret_access_key_file`` if
+    you prefer (which may reduce confusion).
+
+    Note that (at present), you may not provide more than one set of
+    credentials for ``s3://`` or ``gs://`` file transfer; this implies
+    that all such URLs download from or upload to the same service.
 
     :index:`transfer_output_files<single: transfer_output_files; submit commands>`
 
@@ -1358,20 +1373,37 @@ FILE TRANSFER COMMANDS
 
     In all three cases, the job will go on hold if ``transfer_output_files``
     specifies a file which does not exist at transfer time.
+    :index:`aws_access_key_id_file<single: aws_access_key_id_file; submit commands>`
+    :index:`s3_access_key_id_file<single: s3_access_key_id_file; submit commands>`
 
- aws_access_key_id_file
-    Required if you specify an S3 URL, this command specifies the file containing
-    the access key ID (and only the access key ID) used to pre-sign the
-    S3 URLs.  Required.
+ aws_access_key_id_file, s3_access_key_id_file
+    One of these commands is required if you specify an ``s3://`` URL; they
+    specify the file containing the access key ID (and only the access key
+    ID) used to pre-sign the URLs.  Use only one.
+    :index:`aws_secret_access_key_file<single: aws_secret_access_key_file; submit commands>`
+    :index:`s3_secret_access_key_file<single: s3_secret_access_key_file; submit commands>`
 
- aws_secret_access_key_file
-    Required if you specify an S3 URL, this command specifies the file containing
-    the secret access key (and only the secret access key) used to
-    pre-sign the S3 URLs.
+ aws_secret_access_key_file, s3_secret_access_key_file
+    One of these commands is required if you specify an ``s3://`` URL; they
+    specify the file containing the secret access key (and only the secret
+    access key) used to pre-sign the URLs.  Use only one.
+    :index:`aws_region<single: aws_region; submit commands>`
 
  aws_region
     Optional if you specify an S3 URL (and ignored otherwise), this command
     specifies the region to use if one is not specified in the URL.
+    :index:`gs_access_key_id_file<single: gs_access_key_id_file; submit commands>`
+
+ gs_access_key_id_file
+    Required if you specify a ``gs://`` URLs, ths command
+    specifies the file containing the access key ID (and only the access key
+    ID) used to pre-sign the URLs.
+    :index:`gs_secret_access_key_file<single: gs_secret_access_key_file; submit commands>`
+
+ gs_secret_access_key_file
+    Required if you specify a ``gs://`` URLs, this command
+    specifies the file containing the secret access key (and only the secret
+    access key) used to pre-sign the URLs.
 
 POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 
@@ -1663,9 +1695,8 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
     configuration macros.
 
-COMMANDS FOR THE GRID
+COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit commands>`
 
-    :index:`arc_resources<single: arc_resources; submit commands>`
  arc_resources = <XML-string>
     For grid universe jobs of type **arc**, provides additional XML
     attributes under the ``<Resources>`` section of the ARC ADL job

@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -23,10 +22,22 @@ use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
 
+$testname = "lib_eventlog-xml";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	EVENT_LOG = $(LOG)/EventLog
+	MAX_EVENT_LOG = 1000000
+	EVENT_LOG_USE_XML = true
+	EVENT_LOG_JOB_AD_INFORMATION_ATTRS =  BillString, JobStatus, BillInt , BillBool , StreamErr
+	ALL_DEBUG = D_FULLDEBUG
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
 
-$testname = "lib_eventlog-xml";
 TLOG("$testname begins\n");
 
 my $on_execute = sub {
@@ -38,23 +49,6 @@ my $on_success = sub {
 my $on_submit = sub {
 };
 
-my $firstappend_condor_config = '
-	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	EVENT_LOG = $(LOG)/EventLog
-	MAX_EVENT_LOG = 1000000
-	EVENT_LOG_USE_XML = true
-	EVENT_LOG_JOB_AD_INFORMATION_ATTRS =  BillString, JobStatus, BillInt , BillBool , StreamErr
-	ALL_DEBUG = D_FULLDEBUG
-';
-
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"libeventlogxml");
-
-CondorTest::StartCondorWithParams(
-	condor_name => "libeventlogxml",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
 
 my $appended_submit_info = '
     +BillString = "Good"

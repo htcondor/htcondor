@@ -23,12 +23,21 @@ use Check::SimpleJob;
 
 $testname = "job_core_perhold_local";
 
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	PERIODIC_EXPR_interval = 30
+    NUM_CPUS = 2
+    NEGOTIATOR_INTERVAL = 5
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+
 # truly const variables in perl
 sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-#my $nostatus = CondorTest::verbose_system("./job_core_perhold-false_local.pl");
 ##
 ## PERIOIDIC_HOLD - False
 ## Check to make sure that the job never goes on hold
@@ -37,21 +46,6 @@ sub RUNNING{2};
 my %info;
 my $cluster;
 
-my $firstappend_condor_config = '
-    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	PERIODIC_EXPR_interval = 30
-    NUM_CPUS = 2
-    NEGOTIATOR_INTERVAL = 5
-';
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"perholdvan");
-print "local config file:$configfile\n";
-
-CondorTest::StartCondorWithParams(
-    condor_name => "perholdvan",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
 
 ##
 ## executed

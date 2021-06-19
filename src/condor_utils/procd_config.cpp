@@ -23,10 +23,10 @@
 #include "directory.h"
 #include "procd_config.h"
 
-MyString
+std::string
 get_procd_address()
 {
-	MyString ret;
+	std::string ret;
 
 	char* procd_addr = param("PROCD_ADDRESS");
 	if (procd_addr != NULL) {

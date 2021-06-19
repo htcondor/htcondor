@@ -337,10 +337,10 @@ void MapFile::clear() // clear all items and free the allocation pool
 }
 #endif
 
-int
-MapFile::ParseField(MyString & line, int offset, MyString & field, int * popts /*=NULL*/)
+size_t
+MapFile::ParseField(const std::string & line, size_t offset, std::string & field, int * popts /*=NULL*/)
 {
-	ASSERT(offset >= 0 && offset <= line.length());
+	ASSERT(offset <= line.length());
 
 		// We consume the leading white space
 	while (offset < line.length() &&
@@ -462,15 +462,15 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 #endif
 
 	while ( ! src.isEof()) {
-		MyString input_line;
-		int offset;
-		MyString method;
-		MyString principal;
-		MyString canonicalization;
+		std::string input_line;
+		size_t offset;
+		std::string method;
+		std::string principal;
+		std::string canonicalization;
 
 		line++;
 
-		input_line.readLine(src); // Result ignored, we already monitor EOF
+		readLine(input_line, src); // Result ignored, we already monitor EOF
 
 		if (input_line.empty()) {
 			continue;
@@ -484,7 +484,7 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 				dprintf(D_ALWAYS, "ERROR: @include directive not allowed in the map file %s (line %d)\n", srcname, line);
 				continue;
 			}
-			MyString path;
+			std::string path;
 			offset = ParseField(input_line, offset, path);
 			if (path.empty()) {
 				dprintf(D_ALWAYS, "ERROR: Empty filename for @include directive in the map %s (line %d)\n", srcname, line);
@@ -521,7 +521,7 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 		int regex_opts = assume_hash ? 0 : PCRE_NOTEMPTY;
 		offset = ParseField(input_line, offset, principal, assume_hash ? &regex_opts : NULL);
 #else
-		method.lower_case();
+		lower_case(method);
 		offset = ParseField(input_line, offset, principal);
 #endif
 		offset = ParseField(input_line, offset, canonicalization);
@@ -609,14 +609,14 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 #endif
 
     while ( ! src.isEof()) {
-		MyString input_line;
-		int offset;
-		MyString canonicalization;
-		MyString user;
+		std::string input_line;
+		size_t offset;
+		std::string canonicalization;
+		std::string user;
 
 		line++;
 
-		input_line.readLine(src); // Result ignored, we already monitor EOF
+		readLine(input_line, src); // Result ignored, we already monitor EOF
 
 		if (input_line.empty()) {
 			continue;
@@ -659,7 +659,7 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 											  &errptr,
 											  &erroffset)) {
 			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- %s\n",
-					canonicalization.Value(),
+					canonicalization.c_str(),
 					errptr);
 
 			return line;

@@ -43,14 +43,14 @@ Exceptional Features
     HTCondor allows users to specify very flexible policies for 
     how they want jobs to be run.  Conversely, it independently
     allows the owners of machines to specify very flexible policies
-    about what jobs (if any) should be run on their machines.  Together
+    about what jobs (if any) should be run on their machines.  Together,
     HTCondor merges and adjudicates these policy requests into one
     coherent system.
 
     The ClassAd mechanism :index:`ClassAd`\ in HTCondor provides
     an expressive framework for matchmaking resource
     requests with resource offers. Users can easily request both job
-    requirements and job desires. For example, a user can require that a
+    requirements and job desires. For example, a user can require that
     for a job to run at all, it must be started on a machine with a
     certain amount of memory, but should there be multiple available
     machines that meet that criteria, to select the one with the most

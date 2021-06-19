@@ -30,11 +30,10 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
+my $test_name = "cmd_ccval_remote";
 
-my $ClusterId = 0;
-my $mismatch = 0;
-
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	WANT_SUSPEND = FALSE
 	KILLING_TIMEOUT = 1
@@ -48,20 +47,15 @@ my $firstappend_condor_config = '
 	GOO = baz
 	master.GOO = $(GOO), bar
 	ALL_DEBUG = D_ALWAYS D_CMD D_DAEMONCORE
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"ccvremote");
 
-CondorTest::StartCondorWithParams(
-	condor_name => "remotecccv",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
+my $ClusterId = 0;
+my $mismatch = 0;
 my $return = "";
 my $executecount = 0;
 my $result = 1;
-my $test_name = "cmd_ccval_remote";
 
 my $on_execute = sub {
 	print "********************************** OnExecute *****************************\n";

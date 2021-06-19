@@ -134,7 +134,7 @@ class PersonalCondor(object):
 
     def Start(self):
         try:
-            process = subprocess.Popen(["condor_master", "-f &"])
+            process = subprocess.Popen(["condor_master", "-f"])
             if not process:
                 Utils.TLog("[PC: {0}] Child was terminated by signal: {1}".format(self._name, str(process)))
                 return False
@@ -162,6 +162,8 @@ class PersonalCondor(object):
         "STARTER_INITIAL_UPDATE_INTERVAL" : 5,
         "NEGOTIATOR_CYCLE_DELAY" : 5,
         "MachineMaxVacateTime" : 5,
+        "MAIL" : "/bin/true",
+        "SENDMAIL" : "/bin/true",
     }
 
     # Sets up local system environment we'll use to stand up the PersonalCondor instance.
@@ -259,7 +261,9 @@ class PersonalCondor(object):
     # TODO: Eventually want to do this using python bindings
     # For internal use only.
     def _WaitForReadyDaemons(self):
-        is_ready_attempts = 6
+        # 120 seconds to start a personal condor seems like a lot
+        # but it matches the years of experience in the perl tests
+        is_ready_attempts = 24
         for i in range(is_ready_attempts):
             time.sleep(5)
             Utils.TLog("[PC: {0}] Checking for condor_who output".format(self._name))

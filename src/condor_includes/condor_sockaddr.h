@@ -21,13 +21,11 @@
 #ifndef CONDOR_SOCKADDR_H
 #define CONDOR_SOCKADDR_H
 
-#include "MyString.h"
-
 enum condor_protocol { CP_PRIMARY, CP_INVALID_MIN, CP_IPV4, CP_IPV6, CP_INVALID_MAX, CP_PARSE_INVALID };
 
 // Return a human friendly(ish) name for a protocol. Suitable for
 // use in log messages.
-MyString condor_protocol_to_str(condor_protocol p);
+std::string condor_protocol_to_str(condor_protocol p);
 condor_protocol str_to_condor_protocol( const std::string & str );
 
 class condor_sockaddr
@@ -100,7 +98,7 @@ public:
 	void set_scope_id(uint32_t scope_id);
 
 	bool from_ip_string(const std::string& ip_string);
-	bool from_ip_string(const MyString& ip_string);
+	//bool from_ip_string(const MyString& ip_string);
 	bool from_ip_string(const char* ip_string);
 
 	bool from_ip_and_port_string( const char * ip_and_port_string );
@@ -113,9 +111,9 @@ public:
 	bool from_sinful(const char* sinful);
 		// The sinful string will fit in a buffer whose size is at least
 		// SINFUL_STRING_BUF_SIZE.
-	MyString to_sinful() const;
+	std::string to_sinful() const;
 	const char* to_sinful(char* buf, int len) const;
-	MyString to_sinful_wildcard_okay() const;
+	std::string to_sinful_wildcard_okay() const;
 
 		// returns IP address string as it is. (i.e. not returning local ip
 		// address when inaddr_any)
@@ -125,11 +123,11 @@ public:
 		//                  for the protocol. As of 2014 only puts
 		//                  square brackets around IPv6 addresses,
 		//                  eg "[::1]"
-	MyString to_ip_string(bool decorate=false) const;
+	std::string to_ip_string(bool decorate=false) const;
 		// We must "decorate".
-	MyString to_ip_and_port_string() const;
+	std::string to_ip_and_port_string() const;
 		// Have I mentioned recently how much I hate life?
-	MyString to_ccb_safe_string() const;
+	std::string to_ccb_safe_string() const;
 		// The string will fit in a buffer whose size is as least
 		// IP_STRING_BUF_SIZE.
 		// if it fails on inet_ntop(), returns NULL and given buf
@@ -146,7 +144,7 @@ public:
 		//                  for the protocol. As of 2014 only puts
 		//                  square brackets around IPv6 addresses,
 		//                  eg "[::1]"
-	MyString to_ip_string_ex(bool decorate=false) const; 
+	std::string to_ip_string_ex(bool decorate=false) const; 
 	const char* to_ip_string_ex(char* buf, int len, bool decorate=false) const;
 
 #if 0

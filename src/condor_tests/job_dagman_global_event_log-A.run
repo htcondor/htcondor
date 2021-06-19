@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -25,28 +24,21 @@ use Condor;
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_global_event_log-A.dag';
-$testdesc =  'Condor submit dag - Global event log - scheduler U';
 $testname = "job_dagman_global_event_log-A";
-$userlog = "job_dagman_global_event_log-A.log";
-$dagman_args = "-verbose";
 
-# Static slot set up for local resources
-# also test 50% and 1/2
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
     DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
     ALL_DEBUG =
     NEGOTIATOR_INTERVAL = 5
 	EVENT_LOG = $(LOG)/EventLog
-';
- 
-my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"dagmanglobaleventlog");
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-CondorTest::StartCondorWithParams(
-    condor_name => "dagmanglobaleventlog",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
+$testdesc =  'Condor submit dag - Global event log - scheduler U';
+$cmd = 'job_dagman_global_event_log-A.dag';
+$userlog = "job_dagman_global_event_log-A.log";
+$dagman_args = "-verbose";
 
 $outfile = "job_dagman_global_event_log-A.nodes.out";
 

@@ -269,7 +269,7 @@ public:
 	const char * DumpDevIds(std::string & buf, const char * tag = NULL, const char * sep = "\n");
 	void         ReconfigOfflineDevIds();
 	void         RefreshDevIds(slotres_map_t::iterator & slot_res_count, slotres_devIds_map_t::iterator & slot_res_devids, int assign_to, int assign_to_sub);
-	bool         ComputeDevProps(ClassAd & ad, std::string tag, slotres_assigned_ids_t & ids);
+	bool         ComputeDevProps(ClassAd & ad, std::string tag, const slotres_assigned_ids_t & ids);
 	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
 private:

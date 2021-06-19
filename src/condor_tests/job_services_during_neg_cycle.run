@@ -40,8 +40,8 @@ my $expect_return = 0;
 
 my $testname = "job_services_during_neg_cycle";
 
-TLOG "$testname test started\n";
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	MAX_NEGOTIATOR_LOG = 150 Mb
 	MAX_SCHEDD_LOG = 150 Mb
@@ -51,18 +51,15 @@ my $firstappend_condor_config = '
 	NEGOTIATOR_DEBUG = D_COMMAND, D_MATCH
 	NUM_CPUS = 12
 	DEBUG = D_FULLDEBUG
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"negotiator");
 
-CondorTest::StartCondorWithParams(
-	condor_name => "watchingnegotiator",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
+TLOG "$testname test started\n";
 
 my $count = 0;
 my $targetjobcount = 10000;
+
 my $on_execute = sub {
 };
 

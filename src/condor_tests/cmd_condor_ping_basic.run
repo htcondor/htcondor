@@ -28,17 +28,14 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-
-my $ClusterId = 0;
-my $expect_return = 0;
-
-	#NEGOTIATE_ALL_JOBS_IN_CLUSTER = True
+my $test_name = "cmd_condor_ping_basic";
 
 #
 # Make our expectations about ALLOW vs DENY explicit.  Not sure where the
 # 'ALLOW' line comes from.
 #
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	ALLOW_READ = *
 	ALLOW_WRITE = *
@@ -50,21 +47,10 @@ my $firstappend_condor_config = '
 	ALLOW_ADVERTISE_STARTD = *
 	ALLOW_ADVERTISE_SCHEDD = *
 	ALLOW_ADVERTISE_MASTER = *
-';
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"cping");
-
-CondorTest::StartCondorWithParams(
-	condor_name => "condorping",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
-my $count = 0;
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 my $result = 1;
-my $test_name = "cmd_condor_ping_basic";
-
 
 
 #Do a job before setting tesing exit codes
