@@ -1,9 +1,14 @@
 #!/usr/bin/env pytest
 
 #
-# Test one each of two different custom machine resources in the same job,
-# checking the sum and peak metrics for each.  These tests are run against
-# static slots for simplicity.
+# Test two each of two different custom machine resources in the same job,
+# checking the sum and peak metrics for each.  This set of tests is run
+# against static slots for simplicity.
+#
+# Then repeat the test using partitionable slots.  I've never seen the
+# custom resource code fail in partitionable slots if it was working in
+# static slots, so if you find a problem with partitionable slots and
+# want to test the pieces individually, you'll have to change the code.
 #
 
 import logging
@@ -55,10 +60,36 @@ peaks = {
 
 @config(
     params={
-        "SQUIDsAndTAKOsUsageAndMemory": {
+        "TwoInstancesPerSlot": {
             "config": {
-                "NUM_CPUS": "16",
-                "NUM_SLOTS": "16",
+                "NUM_CPUS": "8",
+                "NUM_SLOTS": "2",
+                "NUM_SLOTS_TYPE_1": "2",
+                "SLOT_TYPE_1": "SQUIDs=2 TAKOs=2 CPUS=2",
+                "ADVERTISE_CMR_UPTIME_SECONDS": "TRUE",
+
+                "MACHINE_RESOURCE_INVENTORY_SQUIDs": "$(TEST_DIR)/SQUID-discovery.py",
+                "STARTD_CRON_SQUIDs_MONITOR_EXECUTABLE": "$(TEST_DIR)/SQUID-monitor.py",
+                "STARTD_CRON_SQUIDs_MONITOR_MODE": "periodic",
+                "STARTD_CRON_SQUIDs_MONITOR_PERIOD": str(monitor_period),
+                "STARTD_CRON_SQUIDs_MONITOR_METRICS": "SUM:SQUIDs, PEAK:SQUIDsMemory",
+
+                "MACHINE_RESOURCE_INVENTORY_TAKOs": "$(TEST_DIR)/TAKO-discovery.py",
+                "STARTD_CRON_TAKOs_MONITOR_EXECUTABLE": "$(TEST_DIR)/TAKO-monitor.py",
+                "STARTD_CRON_TAKOs_MONITOR_MODE": "periodic",
+                "STARTD_CRON_TAKOs_MONITOR_PERIOD": str(monitor_period),
+                "STARTD_CRON_TAKOs_MONITOR_METRICS": "SUM:TAKOs, PEAK:TAKOsMemory",
+
+                "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) SQUIDs_MONITOR TAKOs_MONITOR",
+            },
+        },
+        "PartitionableSlots": {
+            "config": {
+                "NUM_CPUS": "8",
+                "NUM_SLOTS": "1",
+                "NUM_SLOTS_TYPE_1": "1",
+                "SLOT_TYPE_1": "100%",
+                "SLOT_TYPE_1_PARTITIONABLE": "TRUE",
                 "ADVERTISE_CMR_UPTIME_SECONDS": "TRUE",
 
                 "MACHINE_RESOURCE_INVENTORY_SQUIDs": "$(TEST_DIR)/SQUID-discovery.py",
@@ -146,7 +177,7 @@ def the_job(test_dir, resources):
     }
 
     for resource in resources:
-        job_spec[f"request_{resource}s"] = "1"
+        job_spec[f"request_{resource}s"] = "2"
 
     return job_spec
 
@@ -208,27 +239,31 @@ class TestCustomMachineResources:
                 ad_type=htcondor.AdTypes.Startd, projection=["SlotID", f"Assigned{resource}s"]
             )
 
-            assert len([ad for ad in result if f"Assigned{resource}s" in ad]) == number
+            count = 0
+            for ad in result:
+                count += len(ad[f"Assigned{resource}s"].split(","))
+
+            assert(count == number)
 
     def test_enough_jobs_running(
         self, num_jobs_running_history, num_resources
     ):
-        assert num_resources in num_jobs_running_history
+        assert (num_resources/2) in num_jobs_running_history
 
     def test_never_too_many_jobs_running(
         self, num_jobs_running_history, num_resources
     ):
-        assert max(num_jobs_running_history) <= num_resources
+        assert max(num_jobs_running_history) <= (num_resources/2)
 
     def test_enough_busy_slots(
         self, num_busy_slots_history, num_resources
     ):
-        assert num_resources in num_busy_slots_history
+        assert (num_resources/2) in num_busy_slots_history
 
     def test_never_too_many_busy_slots(
         self, num_busy_slots_history, num_resources
     ):
-        assert max(num_busy_slots_history) <= num_resources
+        assert max(num_busy_slots_history) <= (num_resources/2)
 
     def test_correct_uptimes_from_monitors(self, condor, handle):
         for resource in resources.keys():
