@@ -2091,7 +2091,7 @@ type=string
 tags=submit
 
 [SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS]
-description=Submit should generate requirements clauses for job attribues that begin with Request
+description=Submit should generate requirements clauses for job attributes that begin with Request
 default=true
 type=bool
 tags=submit
@@ -6561,6 +6561,16 @@ ALLOW_DAEMON = $(1:condor)@*  condor_pool@*
 ALLOW_NEGOTIATOR = $(1:condor)@* condor_pool@*
 ALLOW_WRITE = *
 ALLOW_READ = *
+@end
+
+##
+## FIPS mode settings
+##
+[$SECURITY.FIPS]
+default: @end
+FIPS = True
+use security:strong
+SEC_DEFAULT_CRYPTO_METHODS = AES,3DES
 @end
 
 ##

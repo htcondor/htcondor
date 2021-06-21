@@ -23,6 +23,16 @@ use CondorUtils;
 use Check::SimpleJob;
 
 my $testname = "job_core_perhold_sched";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	PERIODIC_EXPR_interval = 30
+    NUM_CPUS = 2
+    NEGOTIATOR_INTERVAL = 5
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 my $variation = "perholdfalse";
 
 # truly const variables in perl
@@ -33,21 +43,6 @@ sub RUNNING{2};
 my %info;
 my $cluster;
 
-my $firstappend_condor_config = '
-    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	PERIODIC_EXPR_interval = 30
-    NUM_CPUS = 2
-    NEGOTIATOR_INTERVAL = 5
-';
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"perholdvan");
-print "local config file:$configfile\n";
-
-CondorTest::StartCondorWithParams(
-    condor_name => "perholdvan",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
 
 $executed = sub
 {
@@ -159,13 +154,4 @@ if(is_windows()) {
 }
 
 CondorTest::EndTest();
-print scalar localtime() . "\n";
-my $result = 0;
-
-if( $result != 0 )
-{
-    exit(1);
-}
-
-CondorTest::debug("$testname SUCCESS\n",1);
 exit(0);

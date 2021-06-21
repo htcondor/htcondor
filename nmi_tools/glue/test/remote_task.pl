@@ -137,6 +137,10 @@ if (1) {
     my @knobs;
     foreach my $key (keys %ENV) {
         if ( $key =~ m/^_CONDOR_/i ) {
+
+			# keep the _CONDOR_ANCESTOR_* variables, for our parent
+			# condor to find us and in the darkness bind us.
+			next if ($key =~ m/_CONDOR_ANCESTOR_/i);
             push @knobs, $key;
             delete($ENV{$key});
         }
@@ -411,12 +415,18 @@ sub StartTestPersonal {
 
     my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"remotetask$test");
 
+  eval {
     CondorTest::StartCondorWithParams(
         condor_name => "remotetask$test",
         fresh_local => "TRUE",
         condorlocalsrc => "$configfile",
         test_glue => "TRUE",
-    );
+    ); 1;
+  } or do {
+    my $msg = $@ || "Condor did not start";
+    say STDERR "$msg";
+    exit(136); # metronome wants 136 for setup error
+  }
 }
 
 sub showEnv {

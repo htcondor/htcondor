@@ -19,15 +19,40 @@ Release Notes:
 
 New Features:
 
+- Added new command-line flag to `condor_gpu_discovery`, ``-divide``,
+  which functions like ``-repeat``, except that it divides the GPU attribute
+  ``GlobalMemoryMb`` by the number of repeats (and adds the GPU
+  attribute ``DeviceMemoryMb``, which is the undivided total).  To enable
+  this new behavior, modify ``GPU_DISCOVERY_EXTRA`` appropriately.
+  :jira:`404`
+
+- Reduced `condor_shadow` memory usage by 40% or more on machines with many
+  (> 64) cores.  This allows a correspondingly greater number of shadows and thus
+  jobs to run on these submit machines.
+  :jira:`540`
+
 - Added support for using an authenticated smtp relay on port 587 to
   condor_mail.exe on Windows.
- :jira:`303`
+  :jira:`303`
 
 - The maximum line length for ``STARTD_CRON`` and ``SCHEDD_CRON`` job output
   has been extended from 8k to 64k.
   :jira:`498`
 
+- The `condor_job_router_info` tool will now show info for a rootly JobRouter
+  even when the tool is not running as root.  This change affects the way
+  jobs are matched when using the ``-match`` or ``-route`` options.
+  :jira:`525`
+
+- *condor_gpu_discovery* now recognises Capability 8.6 devices and reports the
+  correct number of cores per GU.
+  :jira:`544`
+
 Bugs Fixed:
+
+- Fixed a bug that cause the *condor_master* to hang for up to two minutes 
+  when shutting down, if it was configured to be a personal condor.
+  :jira:`548`
 
 - Fixed a bug that prevented docker universe jobs from running on machines
   whose hostnames were longer than about 60 characters.
@@ -36,6 +61,15 @@ Bugs Fixed:
 - Fixed a bug that prevented *bosco_cluster* from detecting the remote host's
   platform when it is running Scientific Linux 7.
   :jira:`503`
+
+- Attribute ``GridJobId`` is no longer removed from the job ad of grid-type
+  ``batch`` jobs when the job enters ``Completed`` or ``Removed`` status.
+  :jira:`534`
+
+- Fixed a bug that caused the ``query-krb`` and ``delete-krb`` options of *condor_store_cred*
+  to fail.  This bug also affected the python bindings ``query_user_cred`` and ``delete_user_cred``
+  methods
+  :jira:`533`
 
 Version 9.0.1
 -------------

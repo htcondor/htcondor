@@ -15,6 +15,7 @@
 #include <rapidjson/document.h>
 
 #define MAX_RETRY_ATTEMPTS 20
+int max_retry_attempts = MAX_RETRY_ATTEMPTS;
 
 // Setup a transfer progress callback. We'll use this to manually timeout 
 // any transfers that are not making forward progress.
@@ -629,7 +630,7 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
             }
             // If we have not exceeded the maximum number of retries, and we encounter
             // a non-fatal error, stay in the loop and try again
-            else if( retry_count <= MAX_RETRY_ATTEMPTS &&
+            else if( retry_count <= max_retry_attempts &&
                      ShouldRetryTransfer(file_rval) ) {
                 continue;
             }
@@ -718,7 +719,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
             }
             // If we have not exceeded the maximum number of retries, and we encounter
             // a non-fatal error, stay in the loop and try again
-            else if( retry_count <= MAX_RETRY_ATTEMPTS && 
+            else if( retry_count <= max_retry_attempts && 
                      ShouldRetryTransfer(rval) ) {
                 continue;
             }
@@ -1007,6 +1008,14 @@ main( int argc, char **argv ) {
         fprintf( stderr, "\t-upload\t\tRun the plugin in upload mode, copying files to a remote location\n\n" );
         return -1;
     }
+
+	// Mainly for testing to not wait forever to see errors
+	const char *attempts_str = getenv("CONDOR_CURL_MAX_RETRY_ATTEMPTS");
+	if (attempts_str) {
+		if (atoi(attempts_str) > 0) {
+			max_retry_attempts = atoi(attempts_str);
+		}
+	}
 
     // Instantiate a MultiFileCurlPlugin object and handle the request
     MultiFileCurlPlugin curl_plugin( diagnostic );

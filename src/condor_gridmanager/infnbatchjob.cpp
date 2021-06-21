@@ -1094,6 +1094,7 @@ void INFNBatchJob::doEvaluateState()
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
+				SetRemoteIds( NULL, NULL );
 				gmState = GM_CLEAR_REQUEST;
 			}
 		} break;
@@ -1373,7 +1374,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		"SMPGranularity",
 		"WholeNodes",
 		"HostSMPSize",
-		"BatchExtraSubmitArgs",
+		ATTR_BATCH_EXTRA_SUBMIT_ARGS,
 		"StageCmd",
 		ATTR_BATCH_PROJECT,
 		ATTR_BATCH_RUNTIME,

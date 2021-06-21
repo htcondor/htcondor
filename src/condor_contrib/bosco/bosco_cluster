@@ -9,6 +9,9 @@
 # Bosco key location
 bosco_key=$HOME/.ssh/bosco_key.rsa
 
+# Should the bosco ssh key be copied to the remote host being added
+copy_ssh_key=yes
+
 # Bosco password location
 PASSPHRASE_LOCATION=$HOME/.bosco/.pass
 
@@ -50,6 +53,7 @@ commands:
  -o|--override directory    Override the bosco installation with a directory structure
  -b|--base-dir directory    Set the name of the remote base install directory (default: bosco)
  -u|--url URL               Set the URL to fetch HTCondor binaries from
+ --copy-ssh-key (yes|no)    Should the ssh key be copied to the cluster host (default: yes)
  -d|--debug                 Display debugging output
  -h|--help                  Show this help message
 
@@ -771,7 +775,7 @@ if [ `uname` = "Darwin" ] ; then
     # Mac OS X doesn't have GNU getopt, so not fancy argument checking here
     TEMP="$@"
 else
-    TEMP=`getopt -a -o a:ls:t:r:dhp:o:b:u: --longoptions add:,platform:,list,status:,test:,remove:,debug,help,override:,base-dir:,url:  -n 'bosco_cluster' -- "$@"`
+    TEMP=`getopt -a -o a:ls:t:r:dhp:o:b:u: --longoptions add:,platform:,list,status:,test:,remove:,debug,help,override:,base-dir:,url:,copy-ssh-key:  -n 'bosco_cluster' -- "$@"`
 
     if [ $? != 0 ]; then usage; echo "Terminating..." >&2; exit 1; fi
 fi
@@ -802,6 +806,7 @@ while true; do
         -o|--override) override_dir=$2; shift 2;;
         -b|--base-dir) remote_base_dir_host=$2; shift 2;;
         -u|--url) release_url=$2; shift 2;;
+        --copy-ssh-key) copy_ssh_key=$2; shift 2;;
         --) echo "No command found" >&2; usage; exit 1;;
         *) echo "Unknown option: $1" >&2; usage; exit 1;;
     esac
@@ -867,12 +872,14 @@ if [ ! -e $bosco_key ]; then
 fi
 
 
-# Transfer the public key to the remote host
-echo "Enter the password to copy the ssh keys to $remote_host:"
-cat ${bosco_key}.pub | ssh $remote_host "umask 077; test -d ~/.ssh || mkdir ~/.ssh ; cat >> ~/.ssh/authorized_keys"
-if [ $? -ne 0 ]; then
-    echo "Error copying BOSCO key.  Please make sure you password is correct."
-    exit 1
+if [ $copy_ssh_key = "yes" ] ; then
+    # Transfer the public key to the remote host
+    echo "Enter the password to copy the ssh keys to $remote_host:"
+    cat ${bosco_key}.pub | ssh $remote_host "umask 077; test -d ~/.ssh || mkdir ~/.ssh ; cat >> ~/.ssh/authorized_keys"
+    if [ $? -ne 0 ]; then
+        echo "Error copying BOSCO key.  Please make sure you password is correct."
+        exit 1
+    fi
 fi
 
 start_ssh

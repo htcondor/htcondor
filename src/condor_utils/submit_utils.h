@@ -113,6 +113,7 @@
 #define SUBMIT_KEY_KeystoreAlias "keystore_alias"
 #define SUBMIT_KEY_KeystorePassphraseFile "keystore_passphrase_file"
 #define SUBMIT_KEY_CreamAttributes "cream_attributes"
+#define SUBMIT_KEY_BatchExtraSubmitArgs "batch_extra_submit_args"
 #define SUBMIT_KEY_BatchProject "batch_project"
 #define SUBMIT_KEY_BatchQueue "batch_queue"
 #define SUBMIT_KEY_BatchRuntime "batch_runtime"

@@ -23,11 +23,15 @@ use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
 
-my $firstappend_condor_config = '
+my $testname = "job_core_perremove_local";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
     DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	PERIODIC_EXPR_INTERVAL = 15
     NEGOTIATOR_INTERVAL = 5
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 # which job am I
 my $jobcount = 1;
@@ -56,17 +60,8 @@ my $on_evictedwithoutcheckpoint = sub {
 	}
 };
 
-my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"static");
-my $testname = "job_core_perremove_local.run";
-
-CondorTest::StartCondorWithParams(
-    condor_name => "coreperremovelocal",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
 
 $testdesc =  'Condor PERIODIC_REMOVE policy test - local U';
-$testname = "job_core_perremove_local";
 
 
 my $append_submit_commands_false_rm = '

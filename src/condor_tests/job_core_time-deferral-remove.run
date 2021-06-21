@@ -27,35 +27,15 @@ use Cwd;
 use POSIX;
 use Check::SimpleJob;
 
-$topdir = getcwd();
-print scalar localtime() . "\n";
-
 $testname = "job_core_time-deferral-remove";
 
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	NUM_CPUS = 2
 	NEGOTIATOR_INTERVAL = 5
-';
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"timedeferralremove");
-print "local config file:$configfile\n";
-
-CondorTest::StartCondorWithParams(
-    condor_name => "timedeferralremove",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
-
-# where am I running
-$currenthost = CondorTest::getFqdnHost();
-
-$mypid = $$;
-$mysaveme = $corename . ".saveme";
-
-if($mypid == 0) {
-	die "Saveme setup for test failed\n";
-}
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 ##
 ## Universe
@@ -249,12 +229,4 @@ SimpleJob::RunCheck(
 );
 
 CondorTest::EndTest();
-print scalar localtime() . "\n";
-
-if( $result != 0 )
-{
-	exit(1);
-}
-
-CondorTest::debug("job_core_time-deferral-hold_local SUCCESS\n",1);
 exit(0);

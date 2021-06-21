@@ -40,6 +40,11 @@ CondorTest::StartCondorWithParams(
     append_condor_config => $append_condor_config
 );
 
+# Force the master to send an update to the collector via shared port
+# The first update might not make it, if we are waiting for the shared port
+# to start during the timer callback for the first update
+system("condor_reconfig");
+
 # verify that a job runs
 SimpleJob::RunCheck();
 

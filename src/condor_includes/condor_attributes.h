@@ -61,6 +61,7 @@
 #define ATTR_AZURE_VM_ID  "AzureVmId"
 #define ATTR_BADPUT_CAUSED_BY_DRAINING  "BadputCausedByDraining"
 #define ATTR_BADPUT_CAUSED_BY_PREEMPTION  "BadputCausedByPreemption"
+#define ATTR_BATCH_EXTRA_SUBMIT_ARGS  "BatchExtraSubmitArgs"
 #define ATTR_BATCH_PROJECT  "BatchProject"
 #define ATTR_BATCH_QUEUE  "BatchQueue"
 #define ATTR_BATCH_RUNTIME  "BatchRuntime"

@@ -5096,6 +5096,7 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 				key.Value());
 			auto findResult = _nodeNameHash.find(key);
 			if (findResult != _nodeNameHash.end()) {
+				job = (*findResult).second;
 				job->Dump( this );
 			} else {
 				debug_error(1, DEBUG_QUIET, "What? This is impossible!\n");

@@ -54,9 +54,8 @@ RUN apt update && apt install -y \
     && apt clean
 
 # Add HTCondor repository
-RUN wget -qO - https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-Release.gpg.key | apt-key add -
-RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/8.9 bionic main" > /etc/apt/sources.list.d/htcondor.list
-RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/8.9-externals bionic main" > /etc/apt/sources.list.d/htcondor-externals.list
+RUN wget -qO - https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-9.1-Key | apt-key add -
+RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/9.1 bionic main" > /etc/apt/sources.list.d/htcondor.list
 
 # Need HTCondor to build HTCondor (BatLab style)
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
@@ -78,6 +77,7 @@ RUN apt update && apt install -y \
     less \
     nano \
     net-tools \
+    strace \
     sudo \
     vim \
     && apt clean
@@ -149,3 +149,7 @@ RUN apt update && apt install -y \
     && apt clean
 
 RUN pip3 install pytest pytest-httpserver
+
+# Add daily HTCondor repository for the latest externals for tarballs
+RUN wget -qO - https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-9.1-Daily-Key | apt-key add -
+RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/9.1-daily bionic main" > /etc/apt/sources.list.d/htcondor-daily.list
