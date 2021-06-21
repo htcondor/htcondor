@@ -76,22 +76,6 @@ if (NOT WINDOWS)
      condor_exe( unicore_gahp "unicore_gahp_wrapper.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF )
    endif()
 
-   if (HAVE_EXT_BLAHP)
-     install (FILES
-       kubernetes_cancel.sh
-       kubernetes_hold.sh
-       kubernetes_resume.sh
-       kubernetes_status.sh
-       kubernetes_submit.sh
-       nqs_cancel.sh
-       nqs_hold.sh
-       nqs_resume.sh
-       nqs_status.sh
-       nqs_submit.sh
-       DESTINATION ${C_LIBEXEC}/glite/bin
-       PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-   endif()
-
    install (FILES remote_gahp DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 endif()
