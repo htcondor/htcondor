@@ -6198,18 +6198,20 @@ Scheduler::actOnJobs(int, Stream* s)
 				jobs[i].cluster = -1;
 				continue;
 			}
-			if( SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-								 ATTR_HOLD_REASON_CODE,
-								 CONDOR_HOLD_CODE_UserRequest ) < 0 ) {
-				results.record( tmp_id, AR_PERMISSION_DENIED );
-				jobs[i].cluster = -1;
-				continue;
-			}
-			if( SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-								 ATTR_HOLD_REASON_SUBCODE,
-								 hold_reason_subcode ) < 0 )
+			if (holdJob(tmp_id.cluster, tmp_id.proc,
+				reason.c_str(),	// hold reason string
+				CONDOR_HOLD_CODE::UserRequest,	// hold reason code
+				hold_reason_subcode,	// hold reason subcode
+				false,	// use_transaction
+				false,	// email user?
+				false,	// email admin?
+				false,	// system hold?
+				false	// write to user log?  Set to false cause actOnJobs does not do this here...
+				) == false)
 			{
-				results.record( tmp_id, AR_PERMISSION_DENIED );
+				// We already tested above for all possibilities other than AR_PERMISSION_DENIED
+				// before calling holdJob(), so if holdJob() fails it is because permission denied...
+				results.record(tmp_id, AR_PERMISSION_DENIED);
 				jobs[i].cluster = -1;
 				continue;
 			}
@@ -6226,7 +6228,8 @@ Scheduler::actOnJobs(int, Stream* s)
 		}
 
 			// Ok, we're happy, do the deed.
-		if( action == JA_VACATE_JOBS || 
+		if( action == JA_HOLD_JOBS ||   // if hold, we already invoked holdJobs() above so all done
+			action == JA_VACATE_JOBS ||
 			action == JA_VACATE_FAST_JOBS || 
 		    action == JA_SUSPEND_JOBS || 
 		    action == JA_CONTINUE_JOBS ) {
