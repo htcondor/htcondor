@@ -15770,7 +15770,41 @@ abortJobsByConstraint( const char *constraint,
 	return result;
 }
 
+static void
+incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nestedAdAttrName = nullptr)
+{
+	int val = 0;
+	if (!attrName || !attrName[0]) return;
+	if (nestedAdAttrName) {
+		// Here we are going to increment an attribute in an ad nested inside the job ad.
 
+		// First, get the nested ad as a string, and parse to a classad
+		classad::ClassAdParser parser;
+		char *adAsString = nullptr;
+		ClassAd ad;
+		GetAttributeExprNew(cluster, proc, nestedAdAttrName, &adAsString);
+		if (adAsString) {
+			parser.ParseClassAd(adAsString, ad, true);
+			free(adAsString);
+		}
+
+		// Next update the unparsed ad
+		ad.LookupInteger(attrName, val);
+		ad.Assign(attrName, ++val);
+
+		// Finally unparse ad back to a string, and write it back to the job log.
+		classad::ClassAdUnParser unparser;
+		std::string result;
+		unparser.Unparse(result, &ad);
+		SetAttribute(cluster, proc, nestedAdAttrName, result.c_str());
+	} else {
+		// Here we are going to increment an attribute in the job ad.
+
+		GetAttributeInt(cluster, proc, attrName, &val);
+		SetAttributeInt(cluster, proc, attrName, ++val);
+	}
+
+}
 
 /*
 Hold a job by stopping the shadow, changing the job state,
@@ -15788,7 +15822,6 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	PROC_ID tmp_id;
 	tmp_id.cluster = cluster;
 	tmp_id.proc = proc;
-	int system_holds = 0;
 
 	if ( cluster < 1 || proc < 0 ) {
 		dprintf(D_FULLDEBUG,"holdJobRaw failed, job id (%d.%d) is malformed\n",
@@ -15805,10 +15838,6 @@ holdJobRaw( int cluster, int proc, const char* reason,
 		dprintf( D_ALWAYS, "Job %d.%d is already on hold\n",
 				 cluster, proc );
 		return false;
-	}
-
-	if ( system_hold ) {
-		GetAttributeInt(cluster, proc, ATTR_NUM_SYSTEM_HOLDS, &system_holds);
 	}
 
 	if( reason ) {
@@ -15859,9 +15888,23 @@ holdJobRaw( int cluster, int proc, const char* reason,
 				 ATTR_LAST_SUSPENSION_TIME, cluster, proc );
 	}
 
+	// Update count in job ad of how many times job was put on hold
+	incrementJobAdAttr(cluster, proc, ATTR_NUM_HOLDS);
+
+	// Update count per hold reason in the job ad.
+	// If the reason_code int is not a valid CONDOR_HOLD_CODE enum, an exception will be thrown.
+	try {
+		incrementJobAdAttr(cluster, proc, (CONDOR_HOLD_CODE::_from_integral(reason_code))._to_string(), ATTR_NUM_HOLDS_BY_REASON);
+	}
+	catch (std::runtime_error) {
+		// Somehow reason_code is not a valid hold reason, so consider it as Unspecified here.
+		incrementJobAdAttr(cluster, proc, (+CONDOR_HOLD_CODE::Unspecified)._to_string(), ATTR_NUM_HOLDS_BY_REASON);
+	}
+
+	// Update count in job ad of "system holds", whatever that is supposed to mean
+	// (this is a legacy attribute from way back when, keep it the same as it was for now)
 	if ( system_hold ) {
-		system_holds++;
-		SetAttributeInt(cluster, proc, ATTR_NUM_SYSTEM_HOLDS, system_holds);
+		incrementJobAdAttr(cluster, proc, ATTR_NUM_SYSTEM_HOLDS);
 	}
 
 	dprintf( D_ALWAYS, "Job %d.%d put on hold: %s\n", cluster, proc,
