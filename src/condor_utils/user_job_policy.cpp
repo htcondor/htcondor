@@ -670,9 +670,9 @@ bool UserPolicy::FiringReason(std::string &reason,int &reason_code,int &reason_s
 			expr_src = "job attribute";
 			exprString = m_fire_unparsed_expr.c_str();
 			if (m_fire_expr_val == -1) {
-				reason_code = CONDOR_HOLD_CODE_JobPolicyUndefined;
+				reason_code = CONDOR_HOLD_CODE::JobPolicyUndefined;
 			} else {
-				reason_code = CONDOR_HOLD_CODE_JobPolicy;
+				reason_code = CONDOR_HOLD_CODE::JobPolicy;
 				reason_subcode = m_fire_subcode;
 				reason = m_fire_reason;
 			}
@@ -684,10 +684,10 @@ bool UserPolicy::FiringReason(std::string &reason,int &reason_code,int &reason_s
 			expr_src = "system macro";
 			exprString = m_fire_unparsed_expr.c_str();
 			if( m_fire_expr_val == -1 ) {
-				reason_code = CONDOR_HOLD_CODE_SystemPolicyUndefined;
+				reason_code = CONDOR_HOLD_CODE::SystemPolicyUndefined;
 			}
 			else {
-				reason_code = CONDOR_HOLD_CODE_SystemPolicy;
+				reason_code = CONDOR_HOLD_CODE::SystemPolicy;
 				reason_subcode = m_fire_subcode;
 				reason = m_fire_reason;
 			}

@@ -529,7 +529,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				starterErrorMessage += singErrorMessage;
 				Starter->jic->notifyStarterError( starterErrorMessage.c_str(),
 			    	                              	true,
-			        	                          CONDOR_HOLD_CODE_SingularityTestFailed,
+			        	                          CONDOR_HOLD_CODE::SingularityTestFailed,
 			            	                      0);
 				return 0;
 			}
@@ -744,7 +744,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			if( !ThisProcRunsAlongsideMainProc() ) {
 				Starter->jic->notifyStarterError( err_msg.c_str(),
 			    	                              true,
-			        	                          CONDOR_HOLD_CODE_FailedToCreateProcess,
+			        	                          CONDOR_HOLD_CODE::FailedToCreateProcess,
 			            	                      create_process_errno );
 			}
 		}

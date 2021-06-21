@@ -143,7 +143,7 @@ bool RemoteProc::JobReaper( int pid, int status )
 				unlink(".worker_stdout");
 			}
 			message = buf;
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
 			return UserProc::JobReaper( pid, status );
 		}
 

@@ -2064,17 +2064,17 @@ int SubmitHash::SetJobStatus()
 			ABORT_AND_RETURN( 1 );
 		}
 		AssignJobVal(ATTR_JOB_STATUS, HELD);
-		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SubmittedOnHold);
+		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::SubmittedOnHold);
 		SubmitOnHold = true;
-		SubmitOnHoldCode = CONDOR_HOLD_CODE_SubmittedOnHold;
+		SubmitOnHoldCode = CONDOR_HOLD_CODE::SubmittedOnHold;
 
 		AssignJobString(ATTR_HOLD_REASON, "submitted on hold at user's request");
 	} else 
 	if ( IsRemoteJob ) {
 		AssignJobVal(ATTR_JOB_STATUS, HELD);
-		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput);
+		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::SpoolingInput);
 		SubmitOnHold = true;
-		SubmitOnHoldCode = CONDOR_HOLD_CODE_SpoolingInput;
+		SubmitOnHoldCode = CONDOR_HOLD_CODE::SpoolingInput;
 
 		AssignJobString(ATTR_HOLD_REASON, "Spooling input data files");
 	} else {

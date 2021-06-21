@@ -1024,7 +1024,7 @@ int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *
 			int hold_reason_code;
 			if( GetAttributeInt(cluster,proc,ATTR_HOLD_REASON_CODE,
 					&hold_reason_code) >= 0) {
-				if(hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput) {
+				if(hold_reason_code == CONDOR_HOLD_CODE::SpoolingInput) {
 					dprintf( D_FULLDEBUG, "Job %d.%d held for spooling. "
 						"Checking how long...\n",cluster,proc);
 					int stage_in_start;
@@ -3696,7 +3696,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 				formatstr(msg, "Unable to switch to user: %s", owner.c_str());
 #endif
 				holdJob(job_id.cluster, job_id.proc, msg.c_str(), 
-						CONDOR_HOLD_CODE_FailedToAccessUserAccount, 0,
+						CONDOR_HOLD_CODE::FailedToAccessUserAccount, 0,
 					false, true, false, false);
 				return;
 			}
@@ -3818,7 +3818,7 @@ ResponsibleForPeriodicExprs( JobQueueJob *jobad, int & status )
 	if( status == HELD ) {
 		int hold_reason_code = -1;
 		jobad->LookupInteger(ATTR_HOLD_REASON_CODE,hold_reason_code);
-		if( hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput ) {
+		if( hold_reason_code == CONDOR_HOLD_CODE::SpoolingInput ) {
 			dprintf(D_FULLDEBUG,"Skipping periodic expressions for job %d.%d, because hold reason code is '%d'\n",
 				jobad->jid.cluster, jobad->jid.proc, hold_reason_code);
 			return 0;
@@ -5328,7 +5328,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 							ATTR_HOLD_REASON_CODE,&holdcode) >= 0) {
 						dprintf( D_FULLDEBUG, "job_status is %d\n", job_status);
 						if(job_status == HELD &&
-								holdcode != CONDOR_HOLD_CODE_SpoolingInput) {
+								holdcode != CONDOR_HOLD_CODE::SpoolingInput) {
 							dprintf( D_AUDIT | D_FAILURE, *rsock, "Job %d.%d is not in hold state for "
 								"spooling. Do not allow stagein\n",
 								a_job.cluster, a_job.proc);
@@ -5962,7 +5962,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				// input files to be spooled, (or cluster ads - so late materialization works)
 			snprintf( buf, 256, "(ProcId is undefined || (%s==%d && %s=!=%d)) && (", ATTR_JOB_STATUS,
 					  HELD, ATTR_HOLD_REASON_CODE,
-					  CONDOR_HOLD_CODE_SpoolingInput );
+					  CONDOR_HOLD_CODE::SpoolingInput );
 			break;
 		case JA_SUSPEND_JOBS:
 				// Only suspend running/staging jobs outside local & sched unis
@@ -6147,7 +6147,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		case JA_RELEASE_JOBS:
 			GetAttributeInt(tmp_id.cluster, tmp_id.proc,
 							ATTR_HOLD_REASON_CODE, &hold_reason_code);
-			if( status != HELD || hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput ) {
+			if( status != HELD || hold_reason_code == CONDOR_HOLD_CODE::SpoolingInput ) {
 				results.record( tmp_id, AR_BAD_STATUS );
 				jobs[i].cluster = -1;
 				continue;
@@ -6424,9 +6424,9 @@ Scheduler::actOnJobs(int, Stream* s)
 			continue;
 		if (action == JA_HOLD_JOBS) {
 			// log the change in pause state
-			setJobFactoryPauseAndLog(clusterad, mmHold, CONDOR_HOLD_CODE_UserRequest, reason.c_str());
+			setJobFactoryPauseAndLog(clusterad, mmHold, CONDOR_HOLD_CODE::UserRequest, reason.c_str());
 		} else if (action == JA_RELEASE_JOBS) {
-			setJobFactoryPauseAndLog(clusterad, mmRunning, CONDOR_HOLD_CODE_UserRequest, reason.c_str());
+			setJobFactoryPauseAndLog(clusterad, mmRunning, CONDOR_HOLD_CODE::UserRequest, reason.c_str());
 		}
 	}
 
@@ -9908,7 +9908,7 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 		// hold the job, since we won't be able to run it without
 		// human intervention
 	holdJob( job_id.cluster, job_id.proc, hold_reason, 
-			 CONDOR_HOLD_CODE_NoCompatibleShadow, 0,
+			 CONDOR_HOLD_CODE::NoCompatibleShadow, 0,
 			 true, true, *notify_admin );
 
 		// regardless of what it used to be, we need to record that we
@@ -9977,7 +9977,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 				 job_id->proc );
 		holdJob( job_id->cluster, job_id->proc,
 				 "No condor_starter installed that supports local universe",
-				 CONDOR_HOLD_CODE_NoCompatibleShadow, 0,
+				 CONDOR_HOLD_CODE::NoCompatibleShadow, 0,
 				 false, notify_admin, true );
 		delete_shadow_rec( srec );
 		notify_admin = false;
@@ -10218,7 +10218,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		formatstr(tmpstr, "Unable to switch to user: %s", owner.c_str());
 #endif
 		holdJob(job_id->cluster, job_id->proc, tmpstr.c_str(),
-				CONDOR_HOLD_CODE_FailedToAccessUserAccount, 0,
+				CONDOR_HOLD_CODE::FailedToAccessUserAccount, 0,
 				false, true, false, false);
 		goto wrapup;
 	}
@@ -10247,7 +10247,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
 			holdJob(job_id->cluster, job_id->proc, 
 				"Spooled executable is not executable!",
-					CONDOR_HOLD_CODE_FailedToCreateProcess, EACCES,
+					CONDOR_HOLD_CODE::FailedToCreateProcess, EACCES,
 				false, true, false, false );
 
 			delete filestat;
@@ -10272,7 +10272,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			set_priv( priv );  // back to regular privs...
 			holdJob(job_id->cluster, job_id->proc, 
 				"Executable unknown - not specified in job ad!",
-					CONDOR_HOLD_CODE_FailedToCreateProcess, ENOENT,
+					CONDOR_HOLD_CODE::FailedToCreateProcess, ENOENT,
 				false, true, false, false );
 			goto wrapup;
 		}
@@ -10296,7 +10296,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			formatstr( tmpstr, "File '%s' is missing or not executable", a_out_name.c_str() );
 			set_priv( priv );  // back to regular privs...
 			holdJob(job_id->cluster, job_id->proc, tmpstr.c_str(),
-					CONDOR_HOLD_CODE_FailedToCreateProcess, EACCES,
+					CONDOR_HOLD_CODE::FailedToCreateProcess, EACCES,
 					false, true, false, false);
 			goto wrapup;
 		}
@@ -12377,11 +12377,11 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			}
 			if ( SetAttributeInt(job_id.cluster, job_id.proc,
 								 ATTR_HOLD_REASON_CODE,
-								 CONDOR_HOLD_CODE_MissedDeferredExecutionTime)
+								 CONDOR_HOLD_CODE::MissedDeferredExecutionTime)
 				 < 0 ) {
 				dprintf( D_ALWAYS, "WARNING: Failed to set %s to %d for "
 						 "job %d.%d\n", ATTR_HOLD_REASON_CODE,
-						 CONDOR_HOLD_CODE_MissedDeferredExecutionTime,
+						 CONDOR_HOLD_CODE::MissedDeferredExecutionTime,
 						 job_id.cluster, job_id.proc );
 			}
 			dprintf( D_ALWAYS, "Job %d.%d missed its deferred execution time\n",
@@ -12702,7 +12702,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			reason2 += ") ";
 			reason2 += reason;
 			holdJob(job_id.cluster, job_id.proc, reason2.c_str(),
-					CONDOR_HOLD_CODE_JobPolicyUndefined, 0,
+					CONDOR_HOLD_CODE::JobPolicyUndefined, 0,
 				true,false,false,true);
 			break;
 	}
@@ -16737,7 +16737,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			//	system_hold		- false
 			//
 		holdJob( id.cluster, id.proc, reason.c_str(),
-				 CONDOR_HOLD_CODE_InvalidCronSettings, 0,
+				 CONDOR_HOLD_CODE::InvalidCronSettings, 0,
 				 true, true, false, false );
 	}
 	

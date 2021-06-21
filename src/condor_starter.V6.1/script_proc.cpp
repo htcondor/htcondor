@@ -300,7 +300,7 @@ ScriptProc::StartJob()
 			}
 			err_msg += ": ";
 			err_msg += create_process_error;
-			Starter->jic->notifyStarterError( err_msg.c_str(), true, CONDOR_HOLD_CODE_FailedToCreateProcess, create_process_errno );
+			Starter->jic->notifyStarterError( err_msg.c_str(), true, CONDOR_HOLD_CODE::FailedToCreateProcess, create_process_errno );
 		}
 
 		EXCEPT( "Create_Process(%s,%s, ...) failed",

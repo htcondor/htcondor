@@ -928,7 +928,7 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		job_ad->LookupString( ATTR_HOLD_REASON, hold_reason );
 		if ( hold_reason == "Spooling input data files" ) {
 			job_ad->Assign( ATTR_HOLD_REASON_CODE,
-							CONDOR_HOLD_CODE_SpoolingInput );
+							CONDOR_HOLD_CODE::SpoolingInput );
 		}
 	}
 
@@ -1906,7 +1906,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				// we need to redo the rewriting here.
 			int hold_code = -1;
 			ad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
-			if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE_SpoolingInput ) {
+			if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE::SpoolingInput ) {
 				if ( rewriteSpooledJobAd( ad, cluster, proc, true ) ) {
 					JobQueueDirty = true;
 				}
@@ -3786,7 +3786,7 @@ enum {
 	catSubmitterIdent = 0x0040,
 	catNewMaterialize = 0x0080,  // attributes that control the job factory
 	catMaterializeState = 0x0100, // change in state of job factory
-	catSpoolingHold = 0x0200,    // hold reason was set to CONDOR_HOLD_CODE_SpoolingInput
+	catSpoolingHold = 0x0200,    // hold reason was set to CONDOR_HOLD_CODE::SpoolingInput
 	catPostSubmitClusterChange = 0x400, // a cluster ad was changed after submit time which calls for special processing in commit transaction
 	catCallbackTrigger = 0x1000, // indicates that a callback should happen on commit of this attribute
 	catCallbackNow = 0x20000,    // indicates that a callback should happen when setAttribute is called
@@ -4549,7 +4549,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		bool is_spooling_hold = false;
 		if (attr_id == idATTR_HOLD_REASON_CODE) {
 			int hold_reason = (int)strtol( attr_value, NULL, 10 );
-			is_spooling_hold = (CONDOR_HOLD_CODE_SpoolingInput == hold_reason);
+			is_spooling_hold = (CONDOR_HOLD_CODE::SpoolingInput == hold_reason);
 		} else if (attr_id == idATTR_HOLD_REASON) {
 			is_spooling_hold = YourString("Spooling input data files") == attr_value;
 		}
@@ -5903,7 +5903,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 				int hold_code = -1;
 				procad->LookupInteger(ATTR_JOB_STATUS, job_status);
 				procad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
-				if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE_SpoolingInput ) {
+				if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE::SpoolingInput ) {
 					SpooledJobFiles::createJobSpoolDirectory(procad,PRIV_UNKNOWN);
 				}
 
@@ -5948,7 +5948,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 								  ATTR_TRANSFER_INPUT_SIZE_MB, (int)xfer_input_size_mb,
 								  "MAX_TRANSFER_INPUT_MB", (int)max_xfer_input_mb);
 						holdJob(job_id.cluster, job_id.proc, hold_reason.c_str(),
-								CONDOR_HOLD_CODE_MaxTransferInputSizeExceeded, 0);
+								CONDOR_HOLD_CODE::MaxTransferInputSizeExceeded, 0);
 					}
 				}
 			}
