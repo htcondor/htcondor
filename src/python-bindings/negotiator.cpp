@@ -130,6 +130,12 @@ struct Negotiator {
         sendUserValue(SET_LASTTIME, user, time);
     }
 
+	void setCeiling(const std::string &user, float ceiling) 
+	{
+        if (ceiling < -1) THROW_EX(HTCondorValueError, "Ceiling must be greater than -1.");
+        sendUserValue(SET_CEILING, user, ceiling);
+	}
+
     void resetUsage(const std::string &user)
     {
         sendUserCmd(RESET_USAGE, user);
@@ -342,6 +348,14 @@ void export_negotiator()
             :param float factor: The priority factor to be set for the user; must be greater-than or equal-to 1.0.
             )C0ND0R",
             boost::python::args("self", "user", "factor"))
+        .def("setCeiling", &Negotiator::setCeiling,
+            R"C0ND0R(
+            Set the submitter ceiling of a specified user.
+
+            :param str user: A fully-qualified user name (``USER@DOMAIN``).
+            :param float ceiling: The ceiling t be set for the submitter; must be greater-than or equal-to -1.0.
+            )C0ND0R",
+            boost::python::args("self", "user", "ceiling"))
         .def("setUsage", &Negotiator::setUsage,
             R"C0ND0R(
             Set the accumulated usage of a specified user.
