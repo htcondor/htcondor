@@ -209,9 +209,6 @@ if (BUILD_TESTING)
 			condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_late_materialization "Test that late materialization options work correctly with each other" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_custom_machine_resource "Test that a custom machine resource is assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcmr.py")
-			condor_pl_test(test_custom_machine_resources "Test that multiple custom machine resources are assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcmr.py")
-			condor_pl_test(test_custom_machine_resource_instances "Test that multiple instances of custom machine resources are assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcmr.py")
 			condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_condor_now "Test that condow_now works and never leaks memory" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_condor_now_internals "Test condow_now internals" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -224,9 +221,17 @@ if (BUILD_TESTING)
 			condor_pl_test(test_python_bindings_dagman "Test DAGMan submission from the Python bindings" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_manifest "Test manifest functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
 			condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_toe_exit_info "Test ToE exit info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			# These tests require Python 3.6 or later.
+			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
+				condor_pl_test(test_custom_machine_resource "Test that a custom machine resource is assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_custom_machine_resources "Test that multiple custom machine resources are assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_custom_machine_resource_instances "Test that multiple instances of custom machine resources are assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			endif()
 		endif()
 	endif()
 
