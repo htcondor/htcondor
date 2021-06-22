@@ -1946,6 +1946,11 @@ list indicates the highest preference. Possible values are
     BLOWFISH
     3DES
 
+As of version 9.0.2 HTCondor can be configured to be FIPS compliant.  This
+disallows BLOWFISH as an encryption method.  Please see the
+:ref:`admin-manual/security:FIPS` section below.
+
+
 Integrity
 ---------
 
@@ -2016,6 +2021,12 @@ included within the AES data regardless of any INTEGRITY settings.
 If another type of encryption was used (i.e. ``BLOWFISH`` or ``3DES``),
 then a signed MD5 check sum is the only available method for
 integrity checking. Its use is implied whenever integrity checks occur.
+
+As of version 9.0.2 HTCondor can be configured to be FIPS compliant.  This
+disallows MD5 as an integrity method.  We suggest you use AES encryption as the
+AES-GCM mode we have implemented also provides integrity checks.  Please see
+the :ref:`admin-manual/security:FIPS` section below.
+
 
 Authorization
 -------------
@@ -2331,6 +2342,32 @@ Typos in DNS mappings are an occasional source of unexpected behavior.
 If the authorization policy is not behaving as expected, carefully
 compare the names in the policy with the host names HTCondor mentions in
 the explanations of why requests are granted or denied.
+
+
+FIPS
+----
+As of version 9.0.2, HTCondor is now FIPS compliant when configured to be so.
+In practice this means that MD5 digests and Blowfish encryption are no longer
+used anywhere.  To make this easy to configure, we have added a configuration
+macro, and all you need to add to your config is the following:
+
+      .. code-block:: condor-config
+ 
+            use security:FIPS
+ 
+This will configure HTCondor to use AES encryption with AES-GCM message digests
+for all TCP network connections.  If you are using UDP for any reason, HTCondor
+will then fall back to using 3DES for UDP packet encryption because HTCondor
+does not currently support AES for UDP.  The main reasons anyone would be using
+UDP would be if you had configured a large pool to be supported by Collector
+trees using UDP, or if you are using Windows (because HTCondor sends signals to
+daemons on Windows using UDP).
+ 
+[optional inclusion depending on HAD test success/failure] Currently, the use
+of the High-Availability Daemon (HAD) is not supported when running on a
+machine that is FIPS compliant.
+
+
 
 Security Sessions
 -----------------
