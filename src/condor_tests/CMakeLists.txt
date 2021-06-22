@@ -177,7 +177,7 @@ if (BUILD_TESTING)
 		condor_pl_test (python_bindings_classad "Python bindings classad module" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/python_bindings")
 		condor_pl_test (python_bindings_htcondor "Python bindings htcondor module" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_echostring.pl;src/condor_tests/python_bindings")
 		condor_pl_test (python_bindings_dagman "Python bindings for dagman" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_echostring.pl;src/condor_tests/python_bindings")
-		condor_pl_test (python_collector_query "tests of the query method of the collector class" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
+		#condor_pl_test (python_collector_query "tests of the query method of the collector class" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
 		condor_pl_test (python_bindings_jobeventlog "tests the JobEvent class" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/python_bindings;${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog.exe")
 		add_dependencies_suffix_hack(python_bindings_jobeventlog x_write_joblog.exe)
 
@@ -218,6 +218,7 @@ if (BUILD_TESTING)
 			condor_pl_test(test_curl_plugin "Test the curl file transfer plugin" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_python_bindings_collector "Test that the Python htcondor.Collector bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_dagman "Test DAGMan submission from the Python bindings" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_manifest "Test manifest functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
