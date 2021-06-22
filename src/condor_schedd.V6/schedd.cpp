@@ -15782,6 +15782,9 @@ incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nest
 		// Here we are going to increment an attribute in an ad nested inside the job ad.
 
 		// First, get the nested ad as a string, and parse to a classad
+		// This nested ad just has attrname=integer attributes - since it
+		// will not contain any string values we do not need to worry about
+		// setting up the parser for old vs new quoting rules.
 		classad::ClassAdParser parser;
 		char *adAsString = nullptr;
 		ClassAd ad;
