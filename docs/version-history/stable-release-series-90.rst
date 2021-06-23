@@ -48,6 +48,12 @@ New Features:
   correct number of cores per GU.
   :jira:`544`
 
+- Added command line option `--copy-ssh-key` to *bosco_cluster*. When set
+  to `no`, this option prevents *bosco_cluster* from installing an ssh
+  key on the remote system, and assume passwordless ssh is already
+  possible.
+  :jira:`270`
+
 Bugs Fixed:
 
 - Fixed a bug that cause the *condor_master* to hang for up to two minutes 
@@ -70,6 +76,10 @@ Bugs Fixed:
   to fail.  This bug also affected the python bindings ``query_user_cred`` and ``delete_user_cred``
   methods
   :jira:`533`
+
+- Using expressions for values in the ads of grid universe jobs of type
+  `batch` now works correctly.
+  :jira:`507`
 
 Version 9.0.1
 -------------
