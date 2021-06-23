@@ -48,6 +48,12 @@ New Features:
   correct number of cores per GU.
   :jira:`544`
 
+- Added command line option `--copy-ssh-key` to *bosco_cluster*. When set
+  to `no`, this option prevents *bosco_cluster* from installing an ssh
+  key on the remote system, and assume passwordless ssh is already
+  possible.
+  :jira:`270`
+
 Bugs Fixed:
 
 - Fixed a bug that cause the *condor_master* to hang for up to two minutes 
