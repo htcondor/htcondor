@@ -77,6 +77,10 @@ Bugs Fixed:
   methods
   :jira:`533`
 
+- Using expressions for values in the ads of grid universe jobs of type
+  `batch` now works correctly.
+  :jira:`507`
+
 Version 9.0.1
 -------------
 
