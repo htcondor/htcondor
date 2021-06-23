@@ -227,17 +227,7 @@ activate_globus_gsi( void )
 		 !(globus_gss_assist_map_and_authorize_ptr = (globus_result_t (*)(gss_ctx_id_t, char*, char*, char*, unsigned int))dlsym(dl_hdl, "globus_gss_assist_map_and_authorize")) ||
 		 !(globus_gss_assist_acquire_cred_ptr = (OM_uint32 (*)(OM_uint32*, gss_cred_usage_t, gss_cred_id_t*))dlsym(dl_hdl, "globus_gss_assist_acquire_cred")) ||
 		 !(globus_gss_assist_init_sec_context_ptr = (OM_uint32 (*)(OM_uint32*, const gss_cred_id_t, gss_ctx_id_t*, char*, OM_uint32, OM_uint32*, int*, int (*)(void*, void**, size_t*), void*, int (*)(void*, void*, size_t), void*))dlsym(dl_hdl, "globus_gss_assist_init_sec_context")) ||
-		 !(globus_i_gsi_gss_assist_module_ptr = (globus_module_descriptor_t*)dlsym(dl_hdl, "globus_i_gsi_gss_assist_module")) ||
-#if defined(HAVE_EXT_VOMS)
-		 (dl_hdl = dlopen(LIBVOMSAPI_SO, RTLD_LAZY)) == NULL ||
-		 !(VOMS_Destroy_ptr = (void (*)(vomsdata*))dlsym(dl_hdl, "VOMS_Destroy")) ||
-		 !(VOMS_ErrorMessage_ptr = (char* (*)(vomsdata*, int, char*, int))dlsym(dl_hdl, "VOMS_ErrorMessage")) ||
-		 !(VOMS_Init_ptr = (vomsdata* (*)(char*, char*))dlsym(dl_hdl, "VOMS_Init")) ||
-		 !(VOMS_Retrieve_ptr = (int (*)(X509*, STACK_OF(X509)*, int, struct vomsdata*, int*))dlsym(dl_hdl, "VOMS_Retrieve")) ||
-		 !(VOMS_SetVerificationType_ptr = (int (*)(int, vomsdata*, int*))dlsym(dl_hdl, "VOMS_SetVerificationType"))
-#else
-		 false
-#endif
+		 !(globus_i_gsi_gss_assist_module_ptr = (globus_module_descriptor_t*)dlsym(dl_hdl, "globus_i_gsi_gss_assist_module"))
 		 ) {
 			 // Error in the dlopen/sym calls, return failure.
 		const char *err = dlerror();
@@ -268,13 +258,6 @@ activate_globus_gsi( void )
 	globus_gss_assist_acquire_cred_ptr = globus_gss_assist_acquire_cred;
 	globus_gss_assist_init_sec_context_ptr = globus_gss_assist_init_sec_context;
 	globus_i_gsi_gss_assist_module_ptr = &globus_i_gsi_gss_assist_module;
-#if defined(HAVE_EXT_VOMS)
-	VOMS_Destroy_ptr = VOMS_Destroy;
-	VOMS_ErrorMessage_ptr = VOMS_ErrorMessage;
-	VOMS_Init_ptr = VOMS_Init;
-	VOMS_Retrieve_ptr = VOMS_Retrieve;
-	VOMS_SetVerificationType_ptr = VOMS_SetVerificationType;
-#endif /* defined(HAVE_EXT_VOMS) */
 #endif
 
 	// If this fails, it means something already configured a threaded
@@ -314,6 +297,60 @@ get_x509_proxy_filename( void )
 
 
 #if defined(HAVE_EXT_VOMS)
+static
+int
+initialize_voms()
+{
+#if !defined(HAVE_EXT_VOMS)
+	set_error_string( NOT_SUPPORTED_MSG );
+	return -1;
+#else
+	static bool voms_initialized = false;
+	static bool initialization_failed = false;
+
+	if ( voms_initialized ) {
+		return 0;
+	}
+	if ( initialization_failed ) {
+		return -1;
+	}
+
+	if ( Condor_Auth_SSL::Initialize() == false ) {
+		// Error in the dlopen/sym calls for libssl, return failure.
+		_globus_error_message = "Failed to open SSL library";
+		initialization_failed = true;
+		return -1;
+	}
+
+#if defined(DLOPEN_GSI_LIBS)
+	void *dl_hdl;
+
+	if ( (dl_hdl = dlopen(LIBVOMSAPI_SO, RTLD_LAZY)) == NULL ||
+		 !(VOMS_Destroy_ptr = (void (*)(vomsdata*))dlsym(dl_hdl, "VOMS_Destroy")) ||
+		 !(VOMS_ErrorMessage_ptr = (char* (*)(vomsdata*, int, char*, int))dlsym(dl_hdl, "VOMS_ErrorMessage")) ||
+		 !(VOMS_Init_ptr = (vomsdata* (*)(char*, char*))dlsym(dl_hdl, "VOMS_Init")) ||
+		 !(VOMS_Retrieve_ptr = (int (*)(X509*, STACK_OF(X509)*, int, struct vomsdata*, int*))dlsym(dl_hdl, "VOMS_Retrieve")) ||
+		 !(VOMS_SetVerificationType_ptr = (int (*)(int, vomsdata*, int*))dlsym(dl_hdl, "VOMS_SetVerificationType"))
+		 ) {
+			 // Error in the dlopen/sym calls, return failure.
+		const char *err = dlerror();
+		formatstr( _globus_error_message, "Failed to open VOMS library: %s", err ? err : "Unknown error" );
+		initialization_failed = true;
+		return -1;
+	}
+#else
+	VOMS_Destroy_ptr = VOMS_Destroy;
+	VOMS_ErrorMessage_ptr = VOMS_ErrorMessage;
+	VOMS_Init_ptr = VOMS_Init;
+	VOMS_Retrieve_ptr = VOMS_Retrieve;
+	VOMS_SetVerificationType_ptr = VOMS_SetVerificationType;
+#endif
+
+	voms_initialized = true;
+	return 0;
+#endif
+}
+
 // caller must free result
 static
 char* trim_quotes( char* instr ) {
@@ -731,7 +768,7 @@ extract_VOMS_info( X509 *cert, STACK_OF(X509) *chain, int verify_type, char **vo
 
 	char* x509_fqan_delimiter = NULL;
 
-	if ( activate_globus_gsi() != 0 ) {
+	if ( initialize_voms() != 0 ) {
 		return 1;
 	}
 

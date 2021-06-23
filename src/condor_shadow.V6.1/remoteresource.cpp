@@ -122,10 +122,6 @@ QueryJobProxy( const char *proxy_file, time_t *expiration_time, char **identity,
 			// Child
 		close( fds[0] );
 
-		if ( activate_globus_gsi() != 0 ) {
-			dprintf( D_ALWAYS, "QueryJobProxy(): %s\n", x509_error_string() );
-		}
-
 		std::string reply;
 		if ( expiration_time ) {
 			formatstr_cat( reply, "%ld\n", (long)x509_proxy_expiration_time( proxy_file ) );
@@ -253,10 +249,6 @@ StartdDelegateX509Proxy( DCStartd *dc_startd, const char* proxy, time_t expirati
 			// Child
 		close( fds[0] );
 
-		if ( activate_globus_gsi() != 0 ) {
-			dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): %s\n", x509_error_string() );
-		}
-
 		// Call delegation
 		int dReply = dc_startd->delegateX509Proxy (proxy, expiration_time, NULL );
 
@@ -323,10 +315,6 @@ StarterDelegateX509Proxy(DCStarter *dc_starter, const char * filename, time_t ex
 	} else if ( child_pid == 0 ) {
 			// Child
 		close( fds[0] );
-
-		if ( activate_globus_gsi() != 0 ) {
-			dprintf( D_ALWAYS, "StarterDelegateX509Proxy(): %s\n", x509_error_string() );
-		}
 
 		// Call delegation
 		DCStarter::X509UpdateStatus dReply = dc_starter->delegateX509Proxy (filename, expiration_time, sec_session_id, result_expiration_time );
