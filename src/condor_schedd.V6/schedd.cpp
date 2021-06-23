@@ -15902,7 +15902,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	try {
 		incrementJobAdAttr(cluster, proc, (CONDOR_HOLD_CODE::_from_integral(reason_code))._to_string(), ATTR_NUM_HOLDS_BY_REASON);
 	}
-	catch (std::runtime_error) {
+	catch (std::runtime_error const&) {
 		// Somehow reason_code is not a valid hold reason, so consider it as Unspecified here.
 		incrementJobAdAttr(cluster, proc, (+CONDOR_HOLD_CODE::Unspecified)._to_string(), ATTR_NUM_HOLDS_BY_REASON);
 	}
