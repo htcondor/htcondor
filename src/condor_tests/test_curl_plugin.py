@@ -52,17 +52,21 @@ def good_url(server):
 
 
 @action
-def multiple_urls(server):
-    server.expect_request("/url1").respond_with_data("url1")
-    server.expect_request("/url2").respond_with_data("url2")
-    server.expect_request("/url3").respond_with_data("url3")
-    return "http://localhost:{}/url1, http://localhost:{}/url2, http://localhost:{}/url3".format(server.port, server.port, server.port)
+def multiple_good_urls(server):
+    server.expect_request("/goodurl1").respond_with_data("goodurl1")
+    server.expect_request("/goodurl2").respond_with_data("goodurl2")
+    server.expect_request("/goodurl3").respond_with_data("goodurl3")
+    return "http://localhost:{}/goodurl1, http://localhost:{}/goodurl2, http://localhost:{}/goodurl3".format(server.port, server.port, server.port)
 
 
 @action
-def partial_content(server):
-    server.expect_request("/partialcontent").r
-    return "http://localhost:{}/goodurl".format(server.port)
+def multiple_bad_urls(server):
+    # We want at least one url to work correctly
+    server.expect_request("/badurl1").respond_with_data("badurl1")
+    # But the rest of them should return a 500 error
+    server.expect_request("/badurl2").respond_with_data(status=500)
+    server.expect_request("/badurl3").respond_with_data(status=500)
+    return "http://localhost:{}/badurl1, http://localhost:{}/badurl2, http://localhost:{}/badurl3".format(server.port, server.port, server.port)
 
 
 @action
@@ -95,15 +99,32 @@ def job_with_bad_url(default_condor, bad_url, test_dir, path_to_sleep):
     assert job.wait(condition=ClusterState.all_terminal)
     return job
 
+
 @action
-def job_with_multiple_urls(default_condor, multiple_urls, test_dir, path_to_sleep):
+def job_with_multiple_good_urls(default_condor, multiple_good_urls, test_dir, path_to_sleep):
     job = default_condor.submit(
         {
             "executable": path_to_sleep,
             "arguments": "1",
-            "log": (test_dir / "multiple_urls.log").as_posix(),
-            "transfer_input_files": multiple_urls,
-            "transfer_output_files": "url1, url2, url3",
+            "log": (test_dir / "multiple_good_urls.log").as_posix(),
+            "transfer_input_files": multiple_good_urls,
+            "transfer_output_files": "goodurl1, goodurl2, goodurl3",
+            "should_transfer_files": "YES",
+        }
+    )
+    assert job.wait(condition=ClusterState.all_terminal)
+    return job
+
+
+@action
+def job_with_multiple_bad_urls(default_condor, multiple_bad_urls, test_dir, path_to_sleep):
+    job = default_condor.submit(
+        {
+            "executable": path_to_sleep,
+            "arguments": "1",
+            "log": (test_dir / "multiple_bad_urls.log").as_posix(),
+            "transfer_input_files": multiple_bad_urls,
+            "transfer_output_files": "badurl1, badurl2, badurl3",
             "should_transfer_files": "YES",
         }
     )
@@ -123,10 +144,10 @@ class TestCurlPlugin:
     def test_job_with_bad_url_holds(self, job_with_bad_url):
         assert job_with_bad_url.state[0] == JobStatus.HELD
 
-    def test_job_with_multiple_urls_succeeds(self, job_with_multiple_urls):
-        assert job_with_multiple_urls.state[0] == JobStatus.COMPLETED
+    def test_job_with_multiple_good_urls_succeeds(self, job_with_multiple_good_urls):
+        assert job_with_multiple_good_urls.state[0] == JobStatus.COMPLETED
 
-    def test_job_with_multiple_urls_invokes_plugin_once(self, job_with_multiple_urls, start_log):
+    def test_job_with_multiple_good_urls_invokes_plugin_once(self, job_with_multiple_good_urls, start_log):
         plugin_invocations = 0
         for line in start_log:
             if "invoking" in line:
@@ -134,3 +155,6 @@ class TestCurlPlugin:
         # We actually expect to see 5 invocations of the curl_plugin because all the other tests are logged in the same file.
         # TODO: Figure out a better way to isolate this so we're only looking for a single invocation
         assert plugin_invocations == 5
+
+    def test_job_with_multiple_bad_urls_holds(self, job_with_multiple_bad_urls):
+        assert job_with_multiple_bad_urls.state[0] == JobStatus.HELD
