@@ -42,6 +42,14 @@ New Features:
   "interoperability" tab.
   :jira:`453`
 
+- Add new submit command ``batch_extra_submit_args`` for grid universe jobs
+  of type ``batch``.
+  This lets the user supply arbitrary command-line arguments to the submit
+  command of the target batch system.
+  These are supplied in addition to the command line arguments derived
+  from other attributes of the job ClassAd.
+  :jira:`526`
+
 Bugs Fixed:
 
 - None.
