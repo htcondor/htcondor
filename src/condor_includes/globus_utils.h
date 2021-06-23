@@ -38,6 +38,8 @@ extern "C"
 }
 #endif
 
+#include "DelegationInterface.h"
+
 #define NULL_JOB_CONTACT	"X"
 
 // Keep these in synch with the values defined in the Globus header files.
@@ -247,6 +249,8 @@ extern int (*globus_thread_set_model_ptr)(
 	const char *);
 extern globus_result_t (*globus_gsi_cred_get_cert_ptr)(
 	globus_gsi_cred_handle_t, X509 **);
+extern globus_result_t (*globus_gsi_cred_get_cert_chain_ptr)(
+	globus_gsi_cred_handle_t, STACK_OF(X509) **);
 extern OM_uint32 (*globus_gss_assist_display_status_str_ptr)(
 	char **, char *, OM_uint32, OM_uint32, int);
 extern globus_result_t (*globus_gss_assist_map_and_authorize_ptr)(
@@ -269,9 +273,6 @@ extern OM_uint32 (*gss_delete_sec_context_ptr)(
 	OM_uint32 *, gss_ctx_id_t *, gss_buffer_t);
 extern OM_uint32 (*gss_display_name_ptr)(
 	OM_uint32 *, const gss_name_t, gss_buffer_t, gss_OID *);
-extern OM_uint32 (*gss_import_cred_ptr)(
-	OM_uint32 *, gss_cred_id_t *, const gss_OID, OM_uint32,
-	const gss_buffer_t, OM_uint32, OM_uint32 *);
 extern OM_uint32 (*gss_import_name_ptr)(
 	OM_uint32 *, const gss_buffer_t, const gss_OID, gss_name_t *);
 extern OM_uint32 (*gss_inquire_context_ptr)(
@@ -305,8 +306,6 @@ char* x509_proxy_email( const char *proxy_file);
 char* x509_proxy_subject_name( const char *proxy_file);
 
 char* x509_proxy_identity_name( const char *proxy_file);
-
-int x509_proxy_seconds_until_expire( const char *proxy_file );
 
 const char* x509_error_string( void );
 
@@ -363,26 +362,24 @@ void parse_resource_manager_string( const char *string, char **host,
    (specifically, globus-url-copy) can handle */
 int is_globus_friendly_url(const char * path);
 
-#if defined(HAVE_EXT_GLOBUS)
+X509Credential* x509_proxy_read( const char *proxy_file );
 
-globus_gsi_cred_handle_t x509_proxy_read( const char *proxy_file );
+time_t x509_proxy_expiration_time( X509 *cert, STACK_OF(X509)* chain );
+time_t x509_proxy_expiration_time( X509Credential* cred );
 
-void x509_proxy_free( globus_gsi_cred_handle_t handle );
+char* x509_proxy_email( X509 *cert, STACK_OF(X509)* chain );
+char* x509_proxy_email( X509Credential* cred );
 
-time_t x509_proxy_expiration_time( globus_gsi_cred_handle_t handle );
+char* x509_proxy_subject_name( X509* cert );
+char* x509_proxy_subject_name( X509Credential* cred );
 
-char* x509_proxy_email( globus_gsi_cred_handle_t handle );
-
-char* x509_proxy_subject_name( globus_gsi_cred_handle_t handle );
-
-char* x509_proxy_identity_name( globus_gsi_cred_handle_t handle );
-
-int x509_proxy_seconds_until_expire( globus_gsi_cred_handle_t handle );
+char* x509_proxy_identity_name( X509 *cert, STACK_OF(X509)* chain );
+char* x509_proxy_identity_name( X509Credential* cred );
 
 /* functions for extracting voms attributes */
-int extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
+int extract_VOMS_info( X509* cert, STACK_OF(X509)* chain, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
+int extract_VOMS_info( X509Credential* cred, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
 int extract_VOMS_info_from_file( const char* proxy_file, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
-#endif
 
 #endif
 

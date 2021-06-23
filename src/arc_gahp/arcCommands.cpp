@@ -1454,7 +1454,7 @@ bool ArcDelegationNewWorkerFunction(GahpRequest *gahp_request)
 	std::string deleg_url = deleg1_request.responseHeaders["location"];
 	std::string deleg_id = deleg_url.substr(deleg_url.rfind('/')+1);
 	std::string deleg_cert_request = deleg1_request.responseBody;
-	DelegationProvider deleg_provider(gahp_request->m_proxy_file, "");
+	X509Credential deleg_provider(gahp_request->m_proxy_file, "");
 	std::string deleg_resp = deleg_provider.Delegate(deleg_cert_request);
 
 	HttpRequest deleg2_request;
@@ -1525,7 +1525,7 @@ bool ArcDelegationRenewWorkerFunction(GahpRequest *gahp_request)
 	}
 
 	std::string deleg_cert_request = deleg1_request.responseBody;
-	DelegationProvider deleg_provider(gahp_request->m_proxy_file, "");
+	X509Credential deleg_provider(gahp_request->m_proxy_file, "");
 	std::string deleg_resp = deleg_provider.Delegate(deleg_cert_request);
 
 	HttpRequest deleg2_request;

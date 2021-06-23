@@ -146,14 +146,10 @@ endif(WINDOWS)
 
 if(NOT WINDOWS)
 	list(APPEND CONDOR_API_AND_UTILS_SRC
-		credential.unix.cpp
-		credential.unix.h
 		lock_file.unix.cpp
 		passwd_cache.unix.cpp
 		passwd_cache.unix.h
 		sig_install.unix.cpp
-		X509credential.unix.cpp
-		X509credential.unix.h
 	)
 endif(NOT WINDOWS)
 
@@ -282,6 +278,8 @@ date_util.cpp
 date_util.h
 dc_service.cpp
 dc_service.h
+DelegationInterface.cpp
+DelegationInterface.h
 d_format_time.cpp
 docker-api.cpp
 docker-api.h

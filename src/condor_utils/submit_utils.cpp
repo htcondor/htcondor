@@ -2503,8 +2503,7 @@ int SubmitHash::SetGSICredentials()
 				submit_sends_x509 = false;
 			}
 
-			globus_gsi_cred_handle_t proxy_handle;
-			proxy_handle = x509_proxy_read( proxy_file );
+			X509Credential* proxy_handle = x509_proxy_read( proxy_file );
 			if ( proxy_handle == NULL ) {
 				push_error(stderr, "%s\n", x509_error_string() );
 				ABORT_AND_RETURN( 1 );
@@ -2515,15 +2514,15 @@ int SubmitHash::SetGSICredentials()
 			proxy_expiration = x509_proxy_expiration_time(proxy_handle);
 			if (proxy_expiration == -1) {
 				push_error(stderr, "%s\n", x509_error_string() );
-				x509_proxy_free( proxy_handle );
+				delete proxy_handle;
 				ABORT_AND_RETURN( 1 );
 			} else if ( proxy_expiration < submit_time ) {
 				push_error( stderr, "proxy has expired\n" );
-				x509_proxy_free( proxy_handle );
+				delete proxy_handle;
 				ABORT_AND_RETURN( 1 );
 			} else if ( proxy_expiration < submit_time + param_integer( "CRED_MIN_TIME_LEFT" ) ) {
 				push_error( stderr, "proxy lifetime too short\n" );
-				x509_proxy_free( proxy_handle );
+				delete proxy_handle;
 				ABORT_AND_RETURN( 1 );
 			}
 
@@ -2537,7 +2536,7 @@ int SubmitHash::SetGSICredentials()
 
 				if ( !proxy_subject ) {
 					push_error(stderr, "%s\n", x509_error_string() );
-					x509_proxy_free( proxy_handle );
+					delete proxy_handle;
 					ABORT_AND_RETURN( 1 );
 				}
 
@@ -2581,7 +2580,7 @@ int SubmitHash::SetGSICredentials()
 				// classad holding the VOMS atributes.  -zmiller
 			}
 
-			x509_proxy_free( proxy_handle );
+			delete proxy_handle;
 		}
 // this is the end of the big, not-properly indented block (see above) that
 // causes submit to send the x509 attributes only when talking to older
