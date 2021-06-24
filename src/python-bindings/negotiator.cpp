@@ -224,6 +224,7 @@ struct Negotiator {
         attrs.push_back("AccountingGroup");
         attrs.push_back("IsAccountingGroup");
         attrs.push_back("AccumulatedUsage");
+        attrs.push_back("Ceiling");
         return toList(ad, attrs);
     }
 
