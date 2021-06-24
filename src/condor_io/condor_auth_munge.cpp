@@ -286,15 +286,8 @@ Condor_Auth_MUNGE::decrypt(const unsigned char* input, int input_len, unsigned c
 }
 
 bool
-Condor_Auth_MUNGE::encrypt_or_decrypt(bool /*want_encrypt*/, const unsigned char* /*input*/, int /*input_len*/, unsigned char* &/*output*/, int &/*output_len*/)
+Condor_Auth_MUNGE::encrypt_or_decrypt(bool want_encrypt, const unsigned char* input, int input_len, unsigned char* &output, int &output_len)
 {
-
-	// what is going on here?  munge has 3DES hard-coded to do wrap/unwrap.
-	// this isn't negotiated or configurable.  i'm working on #7725 so not
-	// digging more into this now.
-	return false;
-
-#ifdef THIS_DEAD_CODE_WILL_BE_REINSTATED_WITH_7725
 	bool result;
 
 	// clean up any old buffers that perhaps were left over
@@ -335,7 +328,6 @@ Condor_Auth_MUNGE::encrypt_or_decrypt(bool /*want_encrypt*/, const unsigned char
 
 	// if we made it here, we're golden!
 	return true;
-#endif
 }
 
 int

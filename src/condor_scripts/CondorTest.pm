@@ -196,6 +196,7 @@ sub EndTest
 {
 	my $no_exit = shift;
     my $extra_notes = "";
+	my $shutdown_errors = 0;
 
     my $exit_status = 0;
     if( Cleanup() == 0 ) {
@@ -214,9 +215,16 @@ sub EndTest
 		my $down = CondorPersonal::ProcessStateWanted($condor->{condor_config});
 		$amidown .= "<$name>:$down ";
 		if ($down ne "down") {
-			RegisterResult(0, test_name=>$handle, check_name=>"<$name> is_down");
+			if (defined $no_exit) {
+			} else {
+			    RegisterResult(0, test_name=>$handle, check_name=>"<$name> is_down");
+			}
+			$shutdown_errors += 1;
 		} else {
-			RegisterResult(1, test_name=>$handle, check_name=>"<$name> is_down");
+			if (defined $no_exit) {
+			} else {
+			    RegisterResult(1, test_name=>$handle, check_name=>"<$name> is_down");
+			}
 		}
 	}
 	
@@ -250,9 +258,10 @@ sub EndTest
 	TestDebug( "Final status for $testname: $result_str\n", 1);
 
 	if(defined $no_exit) {
+		if ($exit_status == 0) { if ($shutdown_errors > 0) { return(137); } }
 		return($exit_status);
 	} else {
-    	exit($exit_status);
+		exit($exit_status);
 	}
 	#return($exit_status);
 }

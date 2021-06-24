@@ -7531,7 +7531,7 @@ These macros affect the *condor_gridmanager*.
 
     .. code-block:: condor-config
 
-          GRIDMANAGER_JOB_PROBE_INTERVAL_GT5 = 300
+          GRIDMANAGER_JOB_PROBE_INTERVAL_NORDUGRID = 300
 
 
 :macro-def:`GRIDMANAGER_JOB_PROBE_RATE`
@@ -7546,7 +7546,7 @@ These macros affect the *condor_gridmanager*.
 
     .. code-block:: condor-config
 
-          GRIDMANAGER_JOB_PROBE_RATE_GT5 = 15
+          GRIDMANAGER_JOB_PROBE_RATE_NORDUGRID = 15
 
 
 :macro-def:`GRIDMANAGER_RESOURCE_PROBE_INTERVAL`
@@ -7588,25 +7588,6 @@ These macros affect the *condor_gridmanager*.
     In this example, the job limit for all PBS resources is 300.
     Defaults to 1000.
 
-:macro-def:`GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE`
-    For grid jobs of type **gt2**, limits the number of
-    globus-job-manager processes that the *condor_gridmanager* lets run
-    at a time on the remote head node. Allowing too many
-    globus-job-managers to run causes severe load on the head note,
-    possibly making it non-functional. This number may be exceeded if it
-    is reduced through the use of *condor_reconfig* while the
-    *condor_gridmanager* is running, or if some globus-job-managers
-    take a few extra seconds to exit. The value 0 means there is no
-    limit. The default value is 10.
-
-:macro-def:`GAHP`
-    The full path to the binary of the GAHP server. This configuration
-    variable is no longer used. Use :macro:`GT2_GAHP` instead.
-
-:macro-def:`GAHP_ARGS`
-    Arguments to be passed to the GAHP server. This configuration
-    variable is no longer used.
-
 :macro-def:`GAHP_DEBUG_HIDE_SENSITIVE_DATA`
     A boolean value that determines when sensitive data such as security
     keys and passwords are hidden, when communication to or from a GAHP
@@ -7629,16 +7610,6 @@ These macros affect the *condor_gridmanager*.
     The number of times to retry a command that failed due to a timeout
     or a failed connection. The default is 3.
 
-:macro-def:`GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT`
-    The duration, in seconds, of the two phase commit timeout to Globus
-    for gt2 jobs only. This maps directly to the ``two_phase`` setting
-    in the Globus RSL.
-
-:macro-def:`GLOBUS_GATEKEEPER_TIMEOUT`
-    The number of seconds after which if a gt2 grid universe job fails
-    to ping the gatekeeper, the job will be put on hold. Defaults to 5
-    days (in seconds).
-
 :macro-def:`EC2_RESOURCE_TIMEOUT`
     The number of seconds after which if an EC2 grid universe job fails
     to ping the EC2 service, the job will be put on hold. Defaults to
@@ -7648,16 +7619,6 @@ These macros affect the *condor_gridmanager*.
 :macro-def:`EC2_GAHP_RATE_LIMIT`
     The minimum interval, in whole milliseconds, between requests to the
     same EC2 service with the same credentials. Defaults to 100.
-
-:macro-def:`GRAM_VERSION_DETECTION`
-    A boolean value that defaults to ``True``. When ``True``, the
-    *condor_gridmanager* treats grid types ``gt2`` and ``gt5``
-    identically, and queries each server to determine which protocol it
-    is using. When ``False``, the *condor_gridmanager* trusts the grid
-    type provided in job attribute ``GridResource``, and treats the
-    server accordingly. Beware that identifying a ``gt2`` server as
-    ``gt5`` can result in overloading the server, if a large number of
-    jobs are submitted.
 
 :macro-def:`BATCH_GAHP_CHECK_STATUS_ATTEMPTS`
     The number of times a failed status command issued to the
@@ -7712,46 +7673,15 @@ These macros affect the *condor_gridmanager*.
     The complete path and file name of the EC2 GAHP executable. The
     default value is ``$(SBIN)``/ec2_gahp.
 
-:macro-def:`GT2_GAHP`
-    The complete path and file name of the GT2 GAHP executable. The
-    default value is ``$(SBIN)``/gahp_server.
-
 :macro-def:`BATCH_GAHP`
     The complete path and file name of the batch GAHP executable, to be
     used for PBS, LSF, SGE, and similar batch systems. The default
     location is ``$(BIN)``/blahpd.
 
-:macro-def:`PBS_GAHP`
-    The complete path and file name of the PBS GAHP executable. The use
-    of the configuration variable ``BATCH_GAHP`` is preferred and
-    encouraged, as this variable may no longer be supported in a future
-    version of HTCondor. A value given with this configuration variable
-    will override a value specified by ``BATCH_GAHP``, and the value
-    specified by ``BATCH_GAHP`` is the default if this variable is not
-    defined.
-
-:macro-def:`LSF_GAHP`
-    The complete path and file name of the LSF GAHP executable. The use
-    of the configuration variable ``BATCH_GAHP`` is preferred and
-    encouraged, as this variable may no longer be supported in a future
-    version of HTCondor. A value given with this configuration variable
-    will override a value specified by ``BATCH_GAHP``, and the value
-    specified by ``BATCH_GAHP`` is the default if this variable is not
-    defined.
-
 :macro-def:`NORDUGRID_GAHP`
     The complete path and file name of the wrapper script that invokes
     the NorduGrid GAHP executable. The default value is
     ``$(SBIN)``/nordugrid_gahp.
-
-:macro-def:`SGE_GAHP`
-    The complete path and file name of the SGE GAHP executable. The use
-    of the configuration variable ``BATCH_GAHP`` is preferred and
-    encouraged, as this variable may no longer be supported in a future
-    version of HTCondor. A value given with this configuration variable
-    will override a value specified by ``BATCH_GAHP``, and the value
-    specified by ``BATCH_GAHP`` is the default if this variable is not
-    defined.
 
 :macro-def:`GCE_GAHP`
     The complete path and file name of the GCE GAHP executable. The
@@ -8101,56 +8031,6 @@ in configuration. This allows multiple instances of the
     to the *condor_collector*. It is used to further constrain the
     types of ClassAds from the *condor_collector*. There is no default
     value, resulting in no constraints being placed on query.
-
-Grid Monitor Configuration File Entries
----------------------------------------
-
-:index:`Grid Monitor configuration variables<single: Grid Monitor configuration variables; configuration>`
-
-These macros affect the Grid Monitor.
-
-:macro-def:`ENABLE_GRID_MONITOR`
-    A boolean value that when ``True`` enables the Grid Monitor. The
-    Grid Monitor is used to reduce load on Globus gatekeepers. This
-    parameter only affects grid jobs of type **gt2**. The variable
-    ``GRID_MONITOR`` must also be correctly configured. Defaults to
-    ``True``. See :ref:`grid-computing/grid-universe:htcondor-g, the gt2,
-    and gt5 grid types` for more information.
-
-:macro-def:`GRID_MONITOR`
-    The complete path name of the *grid_monitor.sh* tool used to reduce
-    the load on Globus gatekeepers. This parameter only affects grid
-    jobs of type **gt2**. This parameter is not referenced unless
-    ``ENABLE_GRID_MONITOR`` is set to ``True`` (the default value).
-
-:macro-def:`GRID_MONITOR_HEARTBEAT_TIMEOUT`
-    The integer number of seconds that may pass without hearing from a
-    working Grid Monitor before it is assumed to be dead. Defaults to
-    300 (5 minutes). Increasing this number will improve the ability of
-    the Grid Monitor to survive in the face of transient problems, but
-    will also increase the time before HTCondor notices a problem.
-
-:macro-def:`GRID_MONITOR_RETRY_DURATION`
-    When HTCondor-G attempts to start the Grid Monitor at a particular
-    site, it will wait this many seconds to start hearing from the Grid
-    Monitor. Defaults to 900 (15 minutes). If this duration passes
-    without success, the Grid Monitor will be disabled for the site in
-    question for the period of time set by ``GRID_MONITOR_DISABLE_TIME``
-    :index:`GRID_MONITOR_DISABLE_TIME`.
-
-:macro-def:`GRID_MONITOR_NO_STATUS_TIMEOUT`
-    Jobs can disappear from the Grid Monitor's status reports for short
-    periods of time under normal circumstances, but a prolonged absence
-    is often a sign of problems on the remote machine. This variable
-    sets the amount of time (in seconds) that a job can be absent before
-    the *condor_gridmanager* reacts by restarting the GRAM
-    *jobmanager*. The default is 900, which is 15 minutes.
-
-:macro-def:`GRID_MONITOR_DISABLE_TIME`
-    When an error occurs with a Grid Monitor job, this parameter
-    controls how long the *condor_gridmanager* will wait before
-    attempting to start a new Grid Monitor job. The value is in seconds
-    and the default is 3600 (1 hour).
 
 Configuration File Entries for DAGMan
 -------------------------------------

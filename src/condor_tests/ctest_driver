@@ -29,6 +29,7 @@ MAIL=/bin/true
 SENDMAIL=/bin/true
 FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin
 LOCAL_CONFIG_FILE={pwd}/condor_config.local
+DOCKER_PERFORM_TEST=false
 # ctest allows tests to run for up to 1500 seconds; after that, we are
 # potentially a runaway personal condor instance.
 DAEMON_SHUTDOWN=time() - DaemonStartTime > 1500
