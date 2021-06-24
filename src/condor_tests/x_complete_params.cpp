@@ -62,4 +62,5 @@ int main(int argc,char **argv)
 		/*printf("%d\n",atoi(argv[myarg]));*/
 	}
 
+	return 0;
 }
