@@ -15773,8 +15773,8 @@ abortJobsByConstraint( const char *constraint,
 	return result;
 }
 
-static void
-incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nestedAdAttrName = nullptr)
+void
+incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nestedAdAttrName)
 {
 	int val = 0;
 	if (!attrName || !attrName[0]) return;
@@ -15892,19 +15892,6 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	if( SetAttributeInt(cluster, proc, ATTR_LAST_SUSPENSION_TIME, 0) < 0 ) {
 		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
 				 ATTR_LAST_SUSPENSION_TIME, cluster, proc );
-	}
-
-	// Update count in job ad of how many times job was put on hold
-	incrementJobAdAttr(cluster, proc, ATTR_NUM_HOLDS);
-
-	// Update count per hold reason in the job ad.
-	// If the reason_code int is not a valid CONDOR_HOLD_CODE enum, an exception will be thrown.
-	try {
-		incrementJobAdAttr(cluster, proc, (CONDOR_HOLD_CODE::_from_integral(reason_code))._to_string(), ATTR_NUM_HOLDS_BY_REASON);
-	}
-	catch (std::runtime_error const&) {
-		// Somehow reason_code is not a valid hold reason, so consider it as Unspecified here.
-		incrementJobAdAttr(cluster, proc, (+CONDOR_HOLD_CODE::Unspecified)._to_string(), ATTR_NUM_HOLDS_BY_REASON);
 	}
 
 	// Update count in job ad of "system holds", whatever that is supposed to mean

@@ -4546,10 +4546,26 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		// if the hold reason is set to one of the magic values that indicate a hold for spooling
 		// data, we want to attach a trigger to the transaction so we know to do filepath fixups
 		// after the transaction is committed.
+		// if the hold reason code is NOT spooling for data, then we want to update aggregates
+		// on the number of holds and number of holds per reason.
 		bool is_spooling_hold = false;
 		if (attr_id == idATTR_HOLD_REASON_CODE) {
 			int hold_reason = (int)strtol( attr_value, NULL, 10 );
 			is_spooling_hold = (CONDOR_HOLD_CODE::SpoolingInput == hold_reason);
+			if (!is_spooling_hold) {
+				// Update count in job ad of how many times job was put on hold
+				incrementJobAdAttr(cluster_id, proc_id, ATTR_NUM_HOLDS);
+
+				// Update count per hold reason in the job ad.
+				// If the reason_code int is not a valid CONDOR_HOLD_CODE enum, an exception will be thrown.
+				try {
+					incrementJobAdAttr(cluster_id, proc_id, (CONDOR_HOLD_CODE::_from_integral(hold_reason))._to_string(), ATTR_NUM_HOLDS_BY_REASON);
+				}
+				catch (std::runtime_error const&) {
+					// Somehow reason_code is not a valid hold reason, so consider it as Unspecified here.
+					incrementJobAdAttr(cluster_id, proc_id, (+CONDOR_HOLD_CODE::Unspecified)._to_string(), ATTR_NUM_HOLDS_BY_REASON);
+				}
+			}
 		} else if (attr_id == idATTR_HOLD_REASON) {
 			is_spooling_hold = YourString("Spooling input data files") == attr_value;
 		}
