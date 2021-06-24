@@ -2861,7 +2861,6 @@ static bool validate_gridtype(MyString & JobGridType) {
 		gridType == "ec2" ||
 		gridType == "gce" ||
 		gridType == "azure" ||
-		gridType == "unicore" ||
 		gridType == "boinc") {
 		// We're ok
 		// Values are case-insensitive for gridmanager, so we don't need to change case
@@ -3063,31 +3062,6 @@ int SubmitHash::SetGridParams()
 	if( (tmp = submit_param(SUBMIT_KEY_BatchRuntime, ATTR_BATCH_RUNTIME)) ) {
 		AssignJobExpr ( ATTR_BATCH_RUNTIME, tmp );
 		free( tmp );
-	}
-
-	if ( (tmp = submit_param( SUBMIT_KEY_KeystoreFile, ATTR_KEYSTORE_FILE )) ) {
-		AssignJobString(ATTR_KEYSTORE_FILE, tmp);
-		free( tmp );
-	} else if (gridType == "unicore" && ! job->Lookup(ATTR_KEYSTORE_FILE)) {
-		push_error(stderr, "Unicore grid jobs require a " SUBMIT_KEY_KeystoreFile " parameter\n");
-		ABORT_AND_RETURN( 1 );
-	}
-
-	if ( (tmp = submit_param( SUBMIT_KEY_KeystoreAlias, ATTR_KEYSTORE_ALIAS )) ) {
-		AssignJobString(ATTR_KEYSTORE_ALIAS, tmp);
-		free( tmp );
-	} else if (gridType == "unicore" && ! job->Lookup(ATTR_KEYSTORE_ALIAS)) {
-		push_error(stderr, "Unicore grid jobs require a " SUBMIT_KEY_KeystoreAlias " parameter\n");
-		ABORT_AND_RETURN( 1 );
-	}
-
-	if ( (tmp = submit_param( SUBMIT_KEY_KeystorePassphraseFile,
-							  ATTR_KEYSTORE_PASSPHRASE_FILE )) ) {
-		AssignJobString(ATTR_KEYSTORE_PASSPHRASE_FILE, tmp);
-		free( tmp );
-	} else if (gridType == "unicore" && ! job->Lookup(ATTR_KEYSTORE_PASSPHRASE_FILE)) {
-		push_error(stderr, "Unicore grid jobs require a " SUBMIT_KEY_KeystorePassphraseFile " parameter\n");
-		ABORT_AND_RETURN( 1 );
 	}
 
 	//
@@ -4707,7 +4681,7 @@ int SubmitHash::SetUniverse()
 
 		if ( ! valid_grid_type) {
 			push_error(stderr, "Invalid value '%s' for grid type\n"
-				"Must be one of: pbs, lsf, sge, nqs, condor, nordugrid, unicore, ec2, gce, azure, or boinc\n",
+				"Must be one of: condor, batch, nordugrid, ec2, gce, azure, or boinc\n",
 				JobGridType.Value());
 			ABORT_AND_RETURN(1);
 		}
@@ -4992,9 +4966,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_BatchProject, ATTR_BATCH_PROJECT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchQueue, ATTR_BATCH_QUEUE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchRuntime, ATTR_BATCH_RUNTIME, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_KeystoreFile, ATTR_KEYSTORE_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_KeystoreAlias, ATTR_KEYSTORE_ALIAS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_KeystorePassphraseFile,ATTR_KEYSTORE_PASSPHRASE_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2KeyPair, ATTR_EC2_KEY_PAIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },

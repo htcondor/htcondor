@@ -365,7 +365,8 @@ Init()
 	new_type->CreateFunc = AzureJobCreate;
 	jobTypes.Append( new_type );
 #endif
-	
+
+#if 0
 	new_type = new JobType;
 	new_type->Name = strdup( "Unicore" );
 	new_type->InitFunc = UnicoreJobInit;
@@ -373,6 +374,7 @@ Init()
 	new_type->AdMatchFunc = UnicoreJobAdMatch;
 	new_type->CreateFunc = UnicoreJobCreate;
 	jobTypes.Append( new_type );
+#endif
 
 	new_type = new JobType;
 	new_type->Name = strdup( "INFNBatch" );
