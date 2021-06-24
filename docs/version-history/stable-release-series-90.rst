@@ -17,6 +17,8 @@ Release Notes:
 
 - HTCondor version 9.0.2 not yet released.
 
+- Removed support for GRAM grid jobs.
+
 New Features:
 
 - Added new command-line flag to `condor_gpu_discovery`, ``-divide``,
@@ -80,6 +82,9 @@ Bugs Fixed:
 - Using expressions for values in the ads of grid universe jobs of type
   `batch` now works correctly.
   :jira:`507`
+
+- Fixed Munge authentication, which was broken starting with HTConor 8.9.9.
+  :jira:`378`
 
 Version 9.0.1
 -------------

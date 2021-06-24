@@ -30,4 +30,4 @@ else()
 
 	message(STATUS "NOTE: *gt2* targets will not be built HAVE_EXT_GLOBUS=${HAVE_EXT_GLOBUS}")
 
-endif (HAVE_EXT_GLOBUS)
+endif()

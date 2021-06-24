@@ -539,10 +539,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     before execution to the remote scratch directory of the machine
     where the job is executed. If not specified, the default value of
     ``/dev/null`` is used for submission to a Unix machine. If not
-    specified, input is ignored for submission to a Windows machine. For
-    grid universe jobs,
-    **input** :index:`input<single: input; submit commands>` may be a URL that
-    the Globus tool *globus_url_copy* understands.
+    specified, input is ignored for submission to a Windows machine.
 
     Note that this command does not refer to the command-line arguments
     of the program. The command-line arguments are specified by the
@@ -1789,9 +1786,8 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     to one day. A value of 0 indicates that the delegated proxy should
     be valid for as long as allowed by the credential used to create the
     proxy. This setting currently only applies to proxies delegated for
-    non-grid jobs and for HTCondor-C jobs. It does not currently apply
-    to globus grid jobs, which always behave as though this setting were
-    0. This variable has no effect if the configuration variable
+    non-grid jobs and for HTCondor-C jobs.
+    This variable has no effect if the configuration variable
     ``DELEGATE_JOB_GSI_CREDENTIALS``
     :index:`DELEGATE_JOB_GSI_CREDENTIALS` is ``False``, because in
     that case the job proxy is copied rather than delegated.
@@ -1995,21 +1991,14 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     may be useful if there is a desire to give up on a previous
     submission and try again. Note that this may result in the same job
     running more than once. Do not treat this operation lightly.
-    :index:`globus_rsl<single: globus_rsl; submit commands>`
 
- globus_rsl = <RSL-string>
-    Used to provide any additional Globus RSL string attributes which
-    are not covered by other submit description file commands or job
-    attributes. Used for **grid** **universe** jobs, where the grid
-    resource has a **grid-type-string** of **gt2**.
     :index:`grid_resource<single: grid_resource; submit commands>`
  grid_resource = <grid-type-string> <grid-specific-parameter-list>
     For each **grid-type-string** value, there are further type-specific
     values that must specified. This submit description file command
     allows each to be given in a space-separated list. Allowable
-    **grid-type-string** values are **batch**, **condor**,
-    **ec2**, **gt2**, **gt5**, **lsf**, **nordugrid**, **arc**, **pbs**,
-    and **sge**.
+    **grid-type-string** values are **arc**, **azure**, **batch**, **boinc**,
+    **condor**, **ec2**, **gce**, and **nordugrid**.
     The HTCondor manual chapter on Grid Computing
     details the variety of grid types.
 
@@ -2025,24 +2014,9 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     For a **grid-type-string** of **ec2**, one additional parameter
     specifies the EC2 URL.
 
-    For a **grid-type-string** of **gt2**, the single parameter is the
-    name of the pre-WS GRAM resource to be used.
-
-    For a **grid-type-string** of **gt5**, the single parameter is the
-    name of the pre-WS GRAM resource to be used, which is the same as
-    for the **grid-type-string** of **gt2**.
-
-    For a **grid-type-string** of **lsf**, no additional parameters are
-    used.
-
     For a **grid-type-string** of **nordugrid** or **arc**, the single
     parameter is the name of the ARC resource to be used.
 
-    For a **grid-type-string** of **pbs**, no additional parameters are
-    used.
-
-    For a **grid-type-string** of **sge**, no additional parameters are
-    used.
     :index:`MyProxyCredentialName<single: MyProxyCredentialName; submit commands>`
  MyProxyCredentialName = <symbolic name>
     The symbolic name that identifies a credential to the *MyProxy*
@@ -2130,7 +2104,7 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     X.509 user proxy. If **x509userproxy** is set, then that file is
     used for the proxy. Otherwise, the proxy is looked for in the
     standard locations. If **x509userproxy** is set or if the job is a
-    grid universe job of grid type **gt2**, **gt5**, or
+    grid universe job of grid type **arc** or
     **nordugrid**, then the value of **use_x509userproxy** is forced to
     ``True``. Defaults to ``False``.
     :index:`x509userproxy<single: x509userproxy; submit commands>`
@@ -2155,7 +2129,7 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` is
     relevant when the **universe** is **vanilla**, or when the
     **universe** is **grid** and the type of grid system is one of
-    **gt2**, **gt5**, **condor**, **arc**, or **nordugrid**. Defining
+    **condor**, **arc**, or **nordugrid**. Defining
     a value causes the proxy to be delegated to the execute machine.
     Further, VOMS attributes defined in the proxy will appear in the job
     ClassAd.
