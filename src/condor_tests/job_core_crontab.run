@@ -395,28 +395,7 @@ SimpleJob::RunCheck(
 	append_submit_commands=>$bulksubmitentries,
 );
 
-# reinitialize so we can do the same test for vanilla universe
-
-$run_ctr = 0;
-$max_run_ctr = 2;
-$DEFERRAL_TIME = 0;
-$LAST_DEFERRAL_TIME = 0;
-$longuniverse = "vanilla"; #this is the default if we do not mention universe
-
-SimpleJob::RunCheck(
-	runthis=>"x_time.pl",
-	on_submit=>$submitted,
-	on_execute=>$executed,
-	on_success=>$success,
-	on_hold=>$held,
-	duration=>20,
-	on_evictedwithrequeue=>$evicted,
-	append_submit_commands=>$bulksubmitentries,
-);
-
-
 CondorTest::EndTest();
-print scalar localtime() . "\n";
 
 if( $finalresult != 0 )
 {
