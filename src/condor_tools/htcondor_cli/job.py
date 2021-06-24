@@ -1,6 +1,7 @@
 import htcondor
 import os
 import shutil
+import subprocess
 import sys
 
 from datetime import datetime, timedelta
@@ -64,6 +65,13 @@ class Job:
                 sys.exit(1)
             if "node_count" not in options:
                 print("Error: Slurm resources must specify a --node_count argument")
+                sys.exit(1)
+
+            # Verify that we have Slurm access; if not, run bosco_clutser to create it
+            try:
+                subprocess.check_output(["bosco_cluster", "--status", "hpclogin1.chtc.wisc.edu"])
+            except:
+                print(f"Unable to access Slurm cluster. Please run the following command in your terminal:\n\nbosco_cluster --add hpclogin1.chtc.wisc.edu slurm\n")
                 sys.exit(1)
 
             os.mkdir(TMP_DIR)

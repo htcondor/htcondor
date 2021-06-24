@@ -61,7 +61,7 @@ class DAGMan:
     request_disk = 10M
 }}
 JOB B {{
-    executable = /home/jfrey/hobblein/hobblein_remote.sh
+    executable = /home/chtcshare/hobblein/hobblein_remote.sh
     universe = grid
     grid_resource = batch slurm hpclogin1.chtc.wisc.edu
     transfer_executable = false
@@ -70,7 +70,7 @@ JOB B {{
     log = job-B.$(Cluster).$(Process).log
     annex_runtime = {runtime}
     annex_node_count = {node_count}
-    annex_name = {getpass.getuser()}-test
+    annex_name = {getpass.getuser()}-annex
     annex_user = {getpass.getuser()}
     # args: <node count> <run time> <annex name> <user>
     arguments = $(annex_node_count) $(annex_runtime) $(annex_name) $(annex_user)
