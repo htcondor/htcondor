@@ -56,11 +56,13 @@ New Features:
   possible.
   :jira:`270`
 
+- Added two new commands to *condor_submit* - ``use_scitokens`` and ``scitokens_file``.
+  :jira:`408`
+
 Bugs Fixed:
 
-- Fixed a bug that cause the *condor_master* to hang for up to two minutes 
-  when shutting down, if it was configured to be a personal condor.
-  :jira:`548`
+- Fixed Munge authentication, which was broken starting with HTConor 8.9.9.
+  :jira:`378`
 
 - Fixed a bug that prevented docker universe jobs from running on machines
   whose hostnames were longer than about 60 characters.
@@ -70,21 +72,28 @@ Bugs Fixed:
   platform when it is running Scientific Linux 7.
   :jira:`503`
 
-- Attribute ``GridJobId`` is no longer removed from the job ad of grid-type
-  ``batch`` jobs when the job enters ``Completed`` or ``Removed`` status.
-  :jira:`534`
-
 - Fixed a bug that caused the ``query-krb`` and ``delete-krb`` options of *condor_store_cred*
   to fail.  This bug also affected the python bindings ``query_user_cred`` and ``delete_user_cred``
   methods
   :jira:`533`
 
+- Attribute ``GridJobId`` is no longer removed from the job ad of grid-type
+  ``batch`` jobs when the job enters ``Completed`` or ``Removed`` status.
+  :jira:`534`
+
+- Fixed a bug that could prevent HTCondor from noticing new events in job
+  event logs, if those logs were being written from one machine and read
+  from another via AFS.
+  :jira:`463`
+
 - Using expressions for values in the ads of grid universe jobs of type
   `batch` now works correctly.
   :jira:`507`
 
-- Fixed Munge authentication, which was broken starting with HTConor 8.9.9.
-  :jira:`378`
+- Fixed a bug that cause the *condor_master* to hang for up to two minutes
+  when shutting down, if it was configured to be a personal condor.
+  :jira:`548`
+
 
 Version 9.0.1
 -------------

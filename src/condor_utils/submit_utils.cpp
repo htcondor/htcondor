@@ -2640,6 +2640,52 @@ int SubmitHash::SetGSICredentials()
 		free( tmp );
 	}
 
+	// ScitokenPath
+	if ( ! clusterAd) {
+		// Slightly complicated logic to determine if we want to include a scitoken attribute in the job:
+		// If use_scitoken = auto :: we include the attribute if we have been given a token file
+		//    we get the token file either from the scitoken_path submit command or from the environment
+		//    if neither is defined then quietly do nothing.
+		// if use_scitoken = true :: include the attribute
+		//    we get the token file either from the scitoken_path submit command or from the environment
+		//    if neither is defined then generate an error
+		// if use_scitoken = false :: ignore the scitoken_path submit command and also the env
+		// if use_scitoken is undefined and scitoken_path is defined :: include the attribute using the supplied path
+		auto_free_ptr use_scitokens_cmd(submit_param(SUBMIT_KEY_UseScitokens, SUBMIT_KEY_UseScitokensAlt));
+		auto_free_ptr scitokens_file(submit_param(SUBMIT_KEY_ScitokensFile, ATTR_SCITOKENS_FILE));
+		bool use_scitokens =  ! scitokens_file.empty();
+		if (use_scitokens_cmd) {
+			if (MATCH == strcasecmp(use_scitokens_cmd, "auto")) {
+				if (scitokens_file) {
+					use_scitokens = true; // because scitokens_file keyword was used
+				} else {
+					// if there is a BEARER_TOKEN_FILE environment variable, then set use_scitokens to true
+					// otherwise leave it as false.
+					const char * tmp = getenv("BEARER_TOKEN_FILE");
+					use_scitokens = tmp && tmp[0];
+				}
+			} else if ( ! string_is_boolean_param(use_scitokens_cmd, use_scitokens)) {
+				push_error(stderr, SUBMIT_KEY_UseScitokens " error. Value should be true, false, or auto.\n");
+				ABORT_AND_RETURN(1);
+			}
+		}
+
+		// At this point we have decided to include the scitoken file attribute
+		// and should generate an error if we can't.
+		if (use_scitokens) {
+			const char * token_file = scitokens_file;
+			if ( ! token_file) { token_file = getenv("BEARER_TOKEN_FILE"); }
+			if ( ! token_file) {
+				push_error(stderr, "No Scitokens filename specified. Expected either "
+					SUBMIT_KEY_ScitokensFile " command or the BEARER_TOKEN_FILE environment variable to be set.\n");
+				ABORT_AND_RETURN(1);
+			}
+			// promote to fullpath and store in the job ad
+			scitokens_file.set(strdup(full_path(token_file)));
+			AssignJobString(ATTR_SCITOKENS_FILE, scitokens_file);
+		}
+	}
+
 	// END MyProxy-related crap
 	return 0;
 }
@@ -5126,6 +5172,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// invoke SetGSICredentials
 	{SUBMIT_KEY_UseX509UserProxy, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_gsicred },
 	{SUBMIT_KEY_X509UserProxy, ATTR_X509_USER_PROXY, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_gsicred },
+	{SUBMIT_KEY_UseScitokens, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_gsicred },
+	{SUBMIT_KEY_UseScitokensAlt, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_gsicred },
+	{SUBMIT_KEY_ScitokensFile, ATTR_SCITOKENS_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_gsicred },
 	{ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME, ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_gsicred },
 	{ATTR_MYPROXY_HOST_NAME, ATTR_MYPROXY_HOST_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_gsicred },
 	{ATTR_MYPROXY_SERVER_DN, ATTR_MYPROXY_SERVER_DN, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_gsicred },
