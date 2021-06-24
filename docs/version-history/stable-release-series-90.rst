@@ -83,6 +83,9 @@ Bugs Fixed:
   `batch` now works correctly.
   :jira:`507`
 
+- Fixed Munge authentication, which was broken starting with HTConor 8.9.9.
+  :jira:`378`
+
 Version 9.0.1
 -------------
 
