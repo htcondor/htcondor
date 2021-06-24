@@ -17,6 +17,8 @@ Release Notes:
 
 - HTCondor version 9.0.2 not yet released.
 
+- Removed support for GRAM grid jobs.
+
 New Features:
 
 - Added new command-line flag to `condor_gpu_discovery`, ``-divide``,
