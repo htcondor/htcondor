@@ -26,7 +26,7 @@
 
 include (FindOpenSSL)
 if (LINUX AND "${OPENSSL_VERSION}" VERSION_LESS "1.1.0")
-	option( WITH_CREAM "Compiling with support for CREAM" ON )
+	option( WITH_CREAM "Compiling with support for CREAM" OFF )
 endif()
 
 if ( WITH_CREAM )

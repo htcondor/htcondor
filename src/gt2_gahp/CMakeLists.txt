@@ -16,8 +16,9 @@
  # 
  ############################################################### 
 
+option( WITH_GRAM_GAHP "Compiling with support for GRAM" OFF )
 
-if (HAVE_EXT_GLOBUS)
+if (HAVE_EXT_GLOBUS AND WITH_GRAM_GAHP)
 
 	condor_exe( gahp_server "gahp_server.cpp;my_ez.cpp" ${C_SBIN}
 	"${GLOBUS_GRID_UNIVERSE_GT2};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND};${KRB5_FOUND};${OPENSSL_FOUND};${CMAKE_DL_LIBS}" OFF )
