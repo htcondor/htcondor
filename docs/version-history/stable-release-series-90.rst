@@ -56,6 +56,9 @@ New Features:
   possible.
   :jira:`270`
 
+- Added two new commands to *condor_submit* - ``use_scitokens`` and ``scitokens_file``.
+  :jira:`408`
+
 Bugs Fixed:
 
 - Fixed a bug that cause the *condor_master* to hang for up to two minutes 
