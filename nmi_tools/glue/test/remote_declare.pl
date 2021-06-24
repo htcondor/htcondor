@@ -38,26 +38,7 @@ TestGlue::setup_test_environment();
 
 parseOptions();
 
-#
-# Before we even try to run a test, check to see if all of its requirements
-# can be met.  Of the currently-known requirements (cygwin, personal, IPv4),
-# this can't be true for only the last; we can always start a personal
-# Condor, and all BaTLab Windows machines have cygwin installed (if that
-# changes, we can add a cygwin check in the same place as the IPv4 check
-# below).
-#
-# We only detect IPv4 being explicitly disabled in the append file.  It will
-# otherwise be enabled, unless something Very Strange is going on.
-#
 my $appendFile = parseAppendFile();
-my $requirements = processAllTestRequirements();
-
-my $ipV4Disabled = 0;
-if( exists( $appendFile->{ "ENABLE_IPV4" } ) &&
-  ($appendFile->{ "ENABLE_IPV4" } =~ m/false/i || $appendFile->{ "ENABLE_IPV4" } eq "0") ) {
-  	print( "Marking IPv4 as disabled.\n" );
-	$ipV4Disabled = 1;
-}
 
 ######################################################################
 # generate list of all tests to run
@@ -153,12 +134,6 @@ foreach my $task (sort prio_sort keys %tasklist) {
         $skipped_count += 1;
         next;
     }
-
-	if( $ipV4Disabled && $requirements->{ $task }->{ IPv4 } ) {
-		print( "Skipping '${task}' because it requires IPv4 but the config append file disabled it.\n" );
-		$skipped_count += 1;
-		next;
-	}
 
     my $test_count = defined($RuncountChanges{$task}) ? $RuncountChanges{$task} : 1;
 
@@ -388,24 +363,4 @@ sub parseAppendFile {
 	}
 
 	return $appendFile;
-}
-
-sub processAllTestRequirements {
-	my $requirements;
-
-	my $requirementslist = "condor_tests/Test_Requirements";
-	open( TR, "< ${requirementslist}" ) or die( "Failed to open '${requirementslist}': $!\n" );
-	while( my $line = <TR> ) {
-		TestGlue::fullchomp( $line );
-		$line =~ s/^\s*([^:\s]+)\s*://;
-		my $testName = $1;
-		my @requirementList = split( /\s*,\s*/, $line );
-		foreach my $requirement (@requirementList) {
-			$requirement =~ s/^\s+//;
-			$requirement =~ s/\s+$//;
-			$requirements->{ $testName }->{ $requirement } = 1;
-		}
-	}
-
-	return $requirements;
 }

@@ -1738,6 +1738,11 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
  azure_size = <machine type>
     For grid type **azure** jobs, the hardware configuration that the
     virtual machine instance is to run on.
+    :index:`batch_extra_submit_args<single: batch_extra_submit_args; submit commands>`
+ batch_extra_submit_args = <command-line arguments>
+    Used for **batch** grid universe jobs.
+    Specifies additional command-line arguments to be given to the target
+    batch system's job submission command.
     :index:`batch_project<single: batch_project; submit commands>`
  batch_project = <projectname>
     Used for **batch** grid universe jobs.

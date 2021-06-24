@@ -101,6 +101,13 @@ all attributes.
     A string recording the unique identifier of the authentication token (IDTOKENS or
     SCITOKENS) used to submit the job.
 
+:index:`BatchExtraSubmitArgs<single: BatchExtraSubmitArgs; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; BatchExtraSubmitArgs>`
+
+``BatchExtraSubmitArgs``
+    For **batch** grid universe jobs, additional command-line arguments
+    to be given to the target batch system's job submission command.
+
 :index:`BatchProject<single: BatchProject; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; BatchProject>`
 

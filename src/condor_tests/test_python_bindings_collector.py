@@ -28,30 +28,29 @@ def condor(test_dir):
 @standup
 def collector(condor):
     collector = condor.get_local_collector()
-    # Certain ad types require various fields to exist to be recognized correctly
-    collector.advertise([classad.ClassAd({"MyType": "Accounting", "Name": "Accounting-1"})], "UPDATE_ACCOUNTING_AD")
-    collector.advertise([classad.ClassAd({"MyType": "Accounting", "Name": "Accounting-2"})], "UPDATE_ACCOUNTING_AD")
-    collector.advertise([classad.ClassAd({"MyType": "Collector", "Name": "Collector-1", "MyAddress": "<127.0.0.1:38900?addrs=127.0.0.1-38900&alias=localhost&noUDP&sock=startd_6695_1b0e>", "UpdatesLost": 0})], "UPDATE_COLLECTOR_AD")
-    collector.advertise([classad.ClassAd({"MyType": "DaemonMaster", "Name": "DaemonMaster-1"})], "UPDATE_MASTER_AD")
-    collector.advertise([classad.ClassAd({"MyType": "Machine", "Name": "Machine-1"})], "UPDATE_STARTD_AD")
-    collector.advertise([classad.ClassAd({"MyType": "Machine", "Name": "Machine-2"})], "UPDATE_STARTD_AD")
-    collector.advertise([classad.ClassAd({"MyType": "Machine", "Name": "Machine-3"})], "UPDATE_STARTD_AD")
-    collector.advertise([classad.ClassAd({"MyType": "Machine", "Name": "Machine-4"})], "UPDATE_STARTD_AD")
-    collector.advertise([classad.ClassAd({"MyType": "Negotiator", "Name": "Negotiator-1"})], "UPDATE_NEGOTIATOR_AD")
-    collector.advertise([classad.ClassAd({"MyType": "Scheduler", "Name": "Scheduler-1", "MyAddress": "<127.0.0.1:38900?addrs=127.0.0.1-38900&alias=localhost&noUDP&sock=startd_6695_1b0e>"})], "UPDATE_SCHEDD_AD")
-    collector.advertise([classad.ClassAd({"MyType": "Submitter", "Name": "Submitter-1", "MyAddress": "<127.0.0.1:38900?addrs=127.0.0.1-38900&alias=localhost&noUDP&sock=startd_6695_1b0e>"})], "UPDATE_SUBMITTOR_AD")
+    collector.advertise([classad.ClassAd({"MyType": "Accounting", "Name": "Accounting-1", "IsPytest": True})], "UPDATE_ACCOUNTING_AD")
+    collector.advertise([classad.ClassAd({"MyType": "Accounting", "Name": "Accounting-2", "IsPytest": True})], "UPDATE_ACCOUNTING_AD")
+    collector.advertise([classad.ClassAd({"MyType": "Collector", "Name": "Collector-1", "IsPytest": True})], "UPDATE_COLLECTOR_AD")
+    collector.advertise([classad.ClassAd({"MyType": "DaemonMaster", "Name": "DaemonMaster-1", "IsPytest": True})], "UPDATE_MASTER_AD")
+    collector.advertise([classad.ClassAd({"MyType": "Machine", "Name": "Machine-1", "IsPytest": True})], "UPDATE_STARTD_AD")
+    collector.advertise([classad.ClassAd({"MyType": "Machine", "Name": "Machine-2", "IsPytest": True})], "UPDATE_STARTD_AD")
+    collector.advertise([classad.ClassAd({"MyType": "Machine", "Name": "Machine-3", "IsPytest": True})], "UPDATE_STARTD_AD")
+    collector.advertise([classad.ClassAd({"MyType": "Machine", "Name": "Machine-4", "IsPytest": True})], "UPDATE_STARTD_AD")
+    collector.advertise([classad.ClassAd({"MyType": "Negotiator", "Name": "Negotiator-1", "IsPytest": True})], "UPDATE_NEGOTIATOR_AD")
+    collector.advertise([classad.ClassAd({"MyType": "Scheduler", "Name": "Scheduler-1", "MyAddress": "<127.0.0.1:38900?addrs=127.0.0.1-38900&alias=localhost&noUDP&sock=startd_6695_1b0e>", "IsPytest": True})], "UPDATE_SCHEDD_AD")
+    collector.advertise([classad.ClassAd({"MyType": "Submitter", "Name": "Submitter-1", "MyAddress": "<127.0.0.1:38900?addrs=127.0.0.1-38900&alias=localhost&noUDP&sock=startd_6695_1b0e>", "IsPytest": True})], "UPDATE_SUBMITTOR_AD")
     yield collector
 
 
 @action
 def accounting_ads(collector):
-    ads = collector.query(htcondor.AdTypes.Accounting, True, [])
+    ads = collector.query(htcondor.AdTypes.Accounting, "IsPytest == True", [])
     return ads
 
 
 @action
 def collector_ad_counts(collector):
-    ads = collector.query()
+    ads = collector.query(htcondor.AdTypes.Any, "IsPytest == True")
     counts = {}
     for ad in ads :
         if ad['MyType'] in counts:
@@ -63,44 +62,50 @@ def collector_ad_counts(collector):
 
 @action
 def collector_ads(collector):
-    ads = collector.query(htcondor.AdTypes.Collector, True, [])
+    ads = collector.query(htcondor.AdTypes.Collector, "IsPytest == True", [])
     return ads
 
 
 @action
 def machine_ads(collector):
-    ads = collector.query(htcondor.AdTypes.Startd, True, ["MyType", "Name", "Arch", "OpSys"])
+    ads = collector.query(htcondor.AdTypes.Startd, "IsPytest == True", [])
     return ads
 
 
 @action
 def master_ads(collector):
-    ads = collector.query(htcondor.AdTypes.Master, True, [])
+    ads = collector.query(htcondor.AdTypes.Master, "IsPytest == True", [])
     return ads
 
 
 @action
 def negotiator_ads(collector):
-    ads = collector.query(htcondor.AdTypes.Negotiator, True, [])
+    ads = collector.query(htcondor.AdTypes.Negotiator, "IsPytest == True", [])
+    return ads
+
+
+@action
+def scheduler_ads(collector):
+    ads = collector.query(htcondor.AdTypes.Schedd, "IsPytest == True", [])
     return ads
 
 
 @action
 def submitter_ads(collector):
-    ads = collector.query(htcondor.AdTypes.Submitter, True, ["MyType", "Name", "MyAddress", "IdleJobs", "RunningJobs"])
+    ads = collector.query(htcondor.AdTypes.Submitter, "IsPytest == True", [])
     return ads
 
 
-@standup
-def collector_locate_ad(collector):
-    collector_ad = collector.locate(htcondor.DaemonTypes.Collector)
-    return collector_ad
+@action
+def locate_collector_ad(collector):
+    locate_collector_ad = collector.locate(htcondor.DaemonTypes.Collector)
+    return locate_collector_ad
 
 
-@standup
-def collector_locate_all_startd_ads(collector):
-    collector_locate_all_startd_ads = collector.locateAll(htcondor.DaemonTypes.Startd)
-    return collector_locate_all_startd_ads
+@action
+def locate_all_startd_ads(collector):
+    locate_all_startd_ads = collector.locateAll(htcondor.DaemonTypes.Startd)
+    return locate_all_startd_ads
 
 
 class TestCollectorQuery:
@@ -129,11 +134,14 @@ class TestCollectorQuery:
     def test_negotiator_ads(self, negotiator_ads):
         assert len(negotiator_ads) == 1
 
+    def test_scheduler_ads(self, scheduler_ads):
+        assert len(scheduler_ads) == 1
+
     def test_submitter_ads(self, submitter_ads):
         assert len(submitter_ads) == 1
 
-    def test_collector_locate(self, collector_locate_ad):
-        assert collector_locate_ad["MyType"] == "Collector"
+    def test_locate(self, locate_collector_ad):
+        assert locate_collector_ad["MyType"] == "Collector"
 
-    def test_collector_locate_all(self, collector_locate_all_startd_ads):
-        assert len(collector_locate_all_startd_ads) == 4
+    def test_locate_all(self, locate_all_startd_ads):
+        assert len(locate_all_startd_ads) == 4
