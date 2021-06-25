@@ -50,6 +50,12 @@ New Features:
   from other attributes of the job ClassAd.
   :jira:`526`
 
+- When GSI authentication is used, a warning is now printed to daemon logs
+  and the stderr of tools.
+  This warning can be suppressed by setting configuration parameter
+  ``WARN_ON_GSI_USAGE`` to ``False``.
+  :jira:`517`
+
 Bugs Fixed:
 
 - None.
