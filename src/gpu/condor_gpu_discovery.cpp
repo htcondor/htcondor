@@ -586,20 +586,19 @@ main( int argc, const char** argv)
 		if( shouldEnumerateNVMLDevices && nvml_handle ) {
 			nvmlReturn_t r = enumerateNVMLDevices(nvmlDevices);
 			if(r != NVML_SUCCESS) {
-				fprintf( stderr, "Failed to enumerate MIG devices (%d: %s), aborting.\n", r, nvmlErrorString(r) );
-				return 1;
-			}
-
-			// We don't want to report the parent device of any MIG instance
-			// as available for use (to avoid overcommitting it), so construct
-			// a list of parent devices to skip in the loop below.
-			for( const BasicProps & bp : nvmlDevices ) {
-				std::string parentUUID = bp.uuid;
-				if( parentUUID.find( "MIG-GPU-" ) != 0 ) { continue; }
-				parentUUID = parentUUID.substr( 8 );
-				parentUUID.erase( parentUUID.find( "/" ), std::string::npos );
-				migDevices.insert(parentUUID);
-				// fprintf( stderr, "Adding %s to MIG device list for MIG instance %s\n", parentUUID.c_str(), bp.uuid.c_str() );
+				fprintf( stderr, "# Failed to enumerate MIG devices (%d: %s), skipping.\n", r, nvmlErrorString(r) );
+			} else {
+				// We don't want to report the parent device of any MIG instance
+				// as available for use (to avoid overcommitting it), so construct
+				// a list of parent devices to skip in the loop below.
+				for( const BasicProps & bp : nvmlDevices ) {
+					std::string parentUUID = bp.uuid;
+					if( parentUUID.find( "MIG-GPU-" ) != 0 ) { continue; }
+					parentUUID = parentUUID.substr( 8 );
+					parentUUID.erase( parentUUID.find( "/" ), std::string::npos );
+					migDevices.insert(parentUUID);
+					// fprintf( stderr, "Adding %s to MIG device list for MIG instance %s\n", parentUUID.c_str(), bp.uuid.c_str() );
+				}
 			}
 		}
 	}
