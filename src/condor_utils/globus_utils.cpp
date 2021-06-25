@@ -1103,12 +1103,10 @@ x509_send_delegation( const char *source_file,
 	BIO *out_bio = nullptr;
 	X509 *src_cert = nullptr;
 	STACK_OF(X509) *src_chain = nullptr;
-	bool did_recv = false;
 	bool did_send = false;
 	DelegationRestrictions restrict;
 	X509Credential deleg_provider(source_file, "");
 
-	did_recv = true;
 	if ( recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len ) != 0 || buffer == NULL ) {
 		_globus_error_message = "Failed to receive delegation request";
 		goto cleanup;
@@ -1165,9 +1163,6 @@ x509_send_delegation( const char *source_file,
 	rc = 0;
 
  cleanup:
-	if ( ! did_recv ) {
-		recv_data_func( recv_data_ptr, (void **)&buffer, &buffer_len );
-	}
 	if ( ! did_send ) {
 		send_data_func( send_data_ptr, NULL, 0 );
 	}
