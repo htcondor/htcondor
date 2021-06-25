@@ -16,7 +16,7 @@
  # 
  ############################################################### 
 
-option(WITH_UNICOREGAHP "Compiling with support for UNICOREGAHP" ON)
+option(WITH_UNICOREGAHP "Compiling with support for UNICOREGAHP" OFF)
 
 if ( WITH_UNICOREGAHP AND NOT PROPER )
 

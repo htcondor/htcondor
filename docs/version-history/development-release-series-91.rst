@@ -13,6 +13,11 @@ Release Notes:
 
 - HTCondor version 9.1.1 not yet released.
 
+- GSI is no longer in the list of default authentication methods.
+  To use GSI, you must enable it by setting one or more of the
+  ``SEC_<access-level>_AUTHENTICATION_METHODS`` configuration parameters.
+  :jira:`518`
+
 New Features:
 
 - The semantics of undefined user job policy expressions has changed.  A
@@ -41,6 +46,20 @@ New Features:
   "Cloud Storage" section, the "Settings" menu item, under the
   "interoperability" tab.
   :jira:`453`
+
+- Add new submit command ``batch_extra_submit_args`` for grid universe jobs
+  of type ``batch``.
+  This lets the user supply arbitrary command-line arguments to the submit
+  command of the target batch system.
+  These are supplied in addition to the command line arguments derived
+  from other attributes of the job ClassAd.
+  :jira:`526`
+
+- When GSI authentication is used, a warning is now printed to daemon logs
+  and the stderr of tools.
+  This warning can be suppressed by setting configuration parameter
+  ``WARN_ON_GSI_USAGE`` to ``False``.
+  :jira:`517`
 
 Bugs Fixed:
 

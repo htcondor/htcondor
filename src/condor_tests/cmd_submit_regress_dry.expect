@@ -68,10 +68,8 @@ OutputDestination=/"/scratch/output/[0-9]+"/
 ParallelScriptShadow="shadow.cmd"
 ParallelScriptStarter="starter.cmd"
 RemoteIwd="sandbox"
-Remote_GlobusRSL="what goes here"
 Remote_GridResource="condor stuff"
 Remote_NordugridRSL="or here"
-Remote_Remote_GlobusRSL="what goes over there"
 Remote_Remote_GridResource="condor remoter stuff"
 Remote_Remote_NordugridRSL="or over there"
 Requirements=/TARGET\.HasEncryptExecuteDirectory.+TARGET\.HasJobDeferral.+DeferralTime.+DeferralPrepTime/
@@ -287,14 +285,6 @@ PeriodicRelease=HoldSubCode == 93
 PeriodicRemove=(time() - QDate) > 3600 * 2
 
 ==x509.sub
-DelegateJobGSICredentialsLifetime=2600
-MyProxyCredentialName="bob"
-MyProxyHost="example"
-MyProxyNewProxyLifetime=1 * 60 + 20
-MyProxyPassword=really - secure - huh
-MyProxyRefreshThreshold=2 * 60
-MyProxyServerDN="example.com"
-x509userproxy=/".+proxy"/
 
 ==notify.sub
 EmailAttributes="the,quick,red,fox"

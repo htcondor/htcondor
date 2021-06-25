@@ -177,7 +177,7 @@ if (BUILD_TESTING)
 		condor_pl_test (python_bindings_classad "Python bindings classad module" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/python_bindings")
 		condor_pl_test (python_bindings_htcondor "Python bindings htcondor module" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_echostring.pl;src/condor_tests/python_bindings")
 		condor_pl_test (python_bindings_dagman "Python bindings for dagman" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_echostring.pl;src/condor_tests/python_bindings")
-		condor_pl_test (python_collector_query "tests of the query method of the collector class" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
+		#condor_pl_test (python_collector_query "tests of the query method of the collector class" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
 		condor_pl_test (python_bindings_jobeventlog "tests the JobEvent class" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/python_bindings;${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog.exe")
 		add_dependencies_suffix_hack(python_bindings_jobeventlog x_write_joblog.exe)
 
@@ -189,7 +189,6 @@ if (BUILD_TESTING)
 		condor_pl_test (cmd_curl_plugin_multifile_success "Successful multifile_curl_plugin many file download" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_echostring.pl")
 		condor_pl_test (cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
 		condor_pl_test (job_late_materialize_py "Late materialization of jobs via python" "quick") # current doesn't work in ctest  CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
-		condor_pl_test (cmd_drain_policies "condor_drain and job policies" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
 		condor_pl_test (cmd_now_internals "testing condor_now internals" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
 		condor_pl_test (cmd_now "condor_now functional tests" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
 		condor_pl_test (job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
@@ -210,7 +209,6 @@ if (BUILD_TESTING)
 			condor_pl_test(test_num_holds "Test Hold Aggregates" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_late_materialization "Test that late materialization options work correctly with each other" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			# condor_pl_test(test_custom_machine_resources "Test that custom machine resources are assigned and limited correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_condor_now "Test that condow_now works and never leaks memory" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_condor_now_internals "Test condow_now internals" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -220,12 +218,21 @@ if (BUILD_TESTING)
 			condor_pl_test(test_curl_plugin "Test the curl file transfer plugin" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_python_bindings_collector "Test that the Python htcondor.Collector bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_dagman "Test DAGMan submission from the Python bindings" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_manifest "Test manifest functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
 			condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_toe_exit_info "Test ToE exit info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			# These tests require Python 3.6 or later.
+			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
+				condor_pl_test(test_custom_machine_resource "Test that a custom machine resource is assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcmr.py")
+				condor_pl_test(test_custom_machine_resources "Test that multiple custom machine resources are assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcmr.py")
+				condor_pl_test(test_custom_machine_resource_instances "Test that multiple instances of custom machine resources are assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcmr.py")
+			endif()
 		endif()
 	endif()
 
@@ -478,21 +485,6 @@ if (BUILD_TESTING)
 
 	if(LINUX)
 		condor_pl_test(job_cpu_affinity_check "ensure Matlog has only matches" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_getmyprocinfo.pl;src/condor_tests/x_sleep.pl")
-
-		condor_pl_test(cmr-monitor-basic "custom machine resource monitors" "quick;ctest " CTEST DEPENDS "src/condor_tests/cmr-squid-discovery;src/condor_tests/cmr-tako-discovery;src/condor_tests/CustomMachineResource.pm;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/x_sleep.pl;src/condor_tests/cmr-squid-monitor;src/condor_tests/cmr-monitor-basic-ad.pl")
-		condor_pl_test(cmr-monitor-basic-partitionable "custom machine resource monitors - partitionable" "quick;ctest" CTEST DEPENDS "src/condor_tests/cmr-squid-discovery;src/condor_tests/cmr-tako-discovery;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/CustomMachineResource.pm;src/condor_tests/x_sleep.pl;src/condor_tests/cmr-squid-monitor;src/condor_tests/cmr-monitor-basic-ad.pl")
-
-		condor_pl_test(cmr-monitor-memory "custom machine resource monitors (memory)" "quick;ctest" CTEST DEPENDS "src/condor_tests/cmr-squid-discovery;src/condor_tests/cmr-tako-discovery;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/CustomMachineResource.pm;src/condor_tests/cmr-monitor-memory-ad.pl;src/condor_tests/cmr-squid-monitor-memory")
-		condor_pl_test(cmr-monitor-memory-partitionable "custom machine resource monitors (memory) - partitionable" "quick;ctest" CTEST DEPENDS "src/condor_tests/cmr-squid-discovery;src/condor_tests/cmr-tako-discovery;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/CustomMachineResource.pm;src/condor_tests/cmr-monitor-memory-ad.pl;src/condor_tests/cmr-squid-monitor-memory")
-
-		condor_pl_test(cmr-monitor-both "custom machine resource monitors (both)" "quick;ctest" CTEST DEPENDS "src/condor_tests/cmr-squid-discovery;src/condor_tests/cmr-tako-discovery;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/CustomMachineResource.pm;src/condor_tests/x_sleep.pl;src/condor_tests/cmr-squid-monitor-both;src/condor_tests/cmr-tako-monitor;src/condor_tests/cmr-monitor-basic-ad.pl;src/condor_tests/cmr-monitor-memory-ad.pl")
-		condor_pl_test(cmr-monitor-both-partitionable "custom machine resource monitors (both) - partitionable" "quick;ctest" CTEST DEPENDS "src/condor_tests/cmr-squid-discovery;src/condor_tests/cmr-tako-discovery;src/condor_tests/cmr-monitor-memory-ad.pl;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/CustomMachineResource.pm;src/condor_tests/x_sleep.pl;src/condor_tests/cmr-squid-monitor-both;src/condor_tests/cmr-tako-monitor;src/condor_tests/cmr-monitor-basic-ad.pl;src/condor_tests/cmr-monitor-memory-ad.pl")
-
-		condor_pl_test(cmr-monitor-many "custom machine resource monitors (many)" "quick;ctest" CTEST DEPENDS "src/condor_tests/cmr-squid-discovery;src/condor_tests/cmr-tako-discovery;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/CustomMachineResource.pm;src/condor_tests/cmr-tako-monitor;src/condor_tests/cmr-squid-monitor-both;src/condor_tests/x_sleep.pl;src/condor_tests/cmr-monitor-basic-ad.pl;src/condor_tests/cmr-monitor-memory-ad.pl")
-		condor_pl_test(cmr-monitor-many-partitionable "custom machine resource monitors (many) - partitionable" "quick;ctest" CTEST DEPENDS "src/condor_tests/cmr-squid-discovery;src/condor_tests/cmr-tako-discovery;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/CustomMachineResource.pm;src/condor_tests/cmr-tako-monitor;src/condor_tests/cmr-squid-monitor-both;src/condor_tests/x_sleep.pl;src/condor_tests/cmr-monitor-basic-ad.pl;src/condor_tests/cmr-monitor-memory-ad.pl")
-
-		condor_pl_test(cmr-monitor-many-instances "custom machine resource monitors (many, many instances)" "quick;ctest" CTEST DEPENDS "src/condor_tests/cmr-squid-discovery;src/condor_tests/cmr-tako-discovery;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/CustomMachineResource.pm;src/condor_tests/x_sleep.pl;src/condor_tests/cmr-tako-monitor;src/condor_tests/cmr-squid-monitor-both;src/condor_tests/cmr-monitor-basic-ad.pl;src/condor_tests/cmr-monitor-memory-ad.pl")
-		condor_pl_test(cmr-monitor-many-instances-partitionable "custom machine resource monitors (many, many instances) - partitionable" "quick;ctest" CTEST DEPENDS "src/condor_tests/cmr-squid-discovery;src/condor_tests/cmr-tako-discovery;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm;src/condor_tests/CustomMachineResource.pm;src/condor_tests/x_sleep.pl;src/condor_tests/cmr-tako-monitor;src/condor_tests/cmr-squid-monitor-both;src/condor_tests/cmr-monitor-basic-ad.pl;src/condor_tests/cmr-monitor-memory-ad.pl")
 	endif ( LINUX )
 
 	condor_pl_test(job_basic_preempt "preempt and nopreempt tests" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")

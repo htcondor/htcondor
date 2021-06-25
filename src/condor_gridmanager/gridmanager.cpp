@@ -323,7 +323,7 @@ Init()
 
 	JobType *new_type;
 
-#if !defined(WIN32)
+#if 0
 	new_type = new JobType;
 	new_type->Name = strdup( "Cream" );
 	new_type->InitFunc = CreamJobInit;
@@ -374,7 +374,8 @@ Init()
 	new_type->CreateFunc = AzureJobCreate;
 	jobTypes.Append( new_type );
 #endif
-	
+
+#if 0
 	new_type = new JobType;
 	new_type->Name = strdup( "Unicore" );
 	new_type->InitFunc = UnicoreJobInit;
@@ -382,6 +383,7 @@ Init()
 	new_type->AdMatchFunc = UnicoreJobAdMatch;
 	new_type->CreateFunc = UnicoreJobCreate;
 	jobTypes.Append( new_type );
+#endif
 
 	new_type = new JobType;
 	new_type->Name = strdup( "INFNBatch" );
@@ -407,6 +409,7 @@ Init()
 	new_type->CreateFunc = CondorJobCreate;
 	jobTypes.Append( new_type );
 
+#if 0
 	new_type = new JobType;
 	new_type->Name = strdup( "Globus" );
 	new_type->InitFunc = GlobusJobInit;
@@ -414,6 +417,7 @@ Init()
 	new_type->AdMatchFunc = GlobusJobAdMatch;
 	new_type->CreateFunc = GlobusJobCreate;
 	jobTypes.Append( new_type );
+#endif
 
 	jobTypes.Rewind();
 	while ( jobTypes.Next( new_type ) ) {

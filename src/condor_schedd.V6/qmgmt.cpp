@@ -5477,7 +5477,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 		return false;
 	}
 
-	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( file );
+	X509Credential* proxy_handle = x509_proxy_read( file );
 
 	if ( proxy_handle == NULL ) {
 		dprintf( D_FAILURE, "Failed to read job proxy: %s\n",
@@ -5493,7 +5493,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 	char *fullfqan = NULL;
 	extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &fullfqan );
 
-	x509_proxy_free( proxy_handle );
+	delete proxy_handle;
 
 	x509_attrs.Assign( ATTR_X509_USER_PROXY_EXPIRATION, expire_time );
 	x509_attrs.Assign( ATTR_X509_USER_PROXY_SUBJECT, proxy_identity );

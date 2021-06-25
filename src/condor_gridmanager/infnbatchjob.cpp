@@ -1386,11 +1386,16 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	submit_ad = new ClassAd;
 
+	classad::EvalState state;
+	state.SetScopes(jobAd);
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
 		classad::Value val;
 		classad::Literal *new_literal;
-		if ( jobAd->EvaluateAttr(attrs_to_copy[index], val) && (new_literal = classad::Literal::MakeLiteral(val)) ) {
+		if ( (next_expr = jobAd->LookupExpr(attrs_to_copy[index])) &&
+		     next_expr->Evaluate(state, val) &&
+		     (new_literal = classad::Literal::MakeLiteral(val)) )
+		{
 			submit_ad->Insert(attrs_to_copy[index], new_literal);
 		}
 	}

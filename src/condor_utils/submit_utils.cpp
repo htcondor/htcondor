@@ -2453,7 +2453,7 @@ int SubmitHash::SetGSICredentials()
 
 		// Find the X509 user proxy
 		// First param for it in the submit file. If it's not there
-		// and the job type requires an x509 proxy (globus, nordugrid),
+		// and the job type requires an x509 proxy (nordugrid),
 		// then check the usual locations (as defined by GSI) and
 		// bomb out if we can't find it.
 
@@ -2462,10 +2462,7 @@ int SubmitHash::SetGSICredentials()
 
 	YourStringNoCase gridType(JobGridType.c_str());
 	if (JobUniverse == CONDOR_UNIVERSE_GRID &&
-		(gridType == "gt2" ||
-		 gridType == "gt5" ||
-		 gridType == "cream" ||
-		 gridType == "arc" ||
+		(gridType == "arc" ||
 		 gridType == "nordugrid" ) )
 	{
 		use_proxy = true;
@@ -2482,9 +2479,7 @@ int SubmitHash::SetGSICredentials()
 	}
 
 	if (proxy_file != NULL && ! clusterAd) {
-		char *full_proxy_file = strdup( full_path( proxy_file ) );
-		free( proxy_file );
-		proxy_file = full_proxy_file;
+		std::string full_proxy_file = full_path( proxy_file );
 #if defined(HAVE_EXT_GLOBUS)
 // this code should get torn out at some point (8.7.0) since the SchedD now
 // manages these attributes securely and the values provided by submit should
@@ -2503,8 +2498,7 @@ int SubmitHash::SetGSICredentials()
 				submit_sends_x509 = false;
 			}
 
-			globus_gsi_cred_handle_t proxy_handle;
-			proxy_handle = x509_proxy_read( proxy_file );
+			X509Credential* proxy_handle = x509_proxy_read( full_proxy_file.c_str() );
 			if ( proxy_handle == NULL ) {
 				push_error(stderr, "%s\n", x509_error_string() );
 				ABORT_AND_RETURN( 1 );
@@ -2515,15 +2509,15 @@ int SubmitHash::SetGSICredentials()
 			proxy_expiration = x509_proxy_expiration_time(proxy_handle);
 			if (proxy_expiration == -1) {
 				push_error(stderr, "%s\n", x509_error_string() );
-				x509_proxy_free( proxy_handle );
+				delete proxy_handle;
 				ABORT_AND_RETURN( 1 );
 			} else if ( proxy_expiration < submit_time ) {
 				push_error( stderr, "proxy has expired\n" );
-				x509_proxy_free( proxy_handle );
+				delete proxy_handle;
 				ABORT_AND_RETURN( 1 );
 			} else if ( proxy_expiration < submit_time + param_integer( "CRED_MIN_TIME_LEFT" ) ) {
 				push_error( stderr, "proxy lifetime too short\n" );
-				x509_proxy_free( proxy_handle );
+				delete proxy_handle;
 				ABORT_AND_RETURN( 1 );
 			}
 
@@ -2537,7 +2531,7 @@ int SubmitHash::SetGSICredentials()
 
 				if ( !proxy_subject ) {
 					push_error(stderr, "%s\n", x509_error_string() );
-					x509_proxy_free( proxy_handle );
+					delete proxy_handle;
 					ABORT_AND_RETURN( 1 );
 				}
 
@@ -2564,7 +2558,7 @@ int SubmitHash::SetGSICredentials()
 						// no attributes, skip silently.
 					} else {
 						// log all other errors
-						push_warning(stderr, "unable to extract VOMS attributes (proxy: %s, erro: %i). continuing \n", proxy_file, error );
+						push_warning(stderr, "unable to extract VOMS attributes (proxy: %s, erro: %i). continuing \n", full_proxy_file.c_str(), error );
 					}
 				} else {
 					AssignJobString(ATTR_X509_USER_PROXY_VONAME, voname);
@@ -2581,7 +2575,7 @@ int SubmitHash::SetGSICredentials()
 				// classad holding the VOMS atributes.  -zmiller
 			}
 
-			x509_proxy_free( proxy_handle );
+			delete proxy_handle;
 		}
 // this is the end of the big, not-properly indented block (see above) that
 // causes submit to send the x509 attributes only when talking to older
@@ -2589,9 +2583,10 @@ int SubmitHash::SetGSICredentials()
 // out. -zmiller
 #endif
 
-		AssignJobString(ATTR_X509_USER_PROXY, proxy_file);
-		free( proxy_file );
+		AssignJobString(ATTR_X509_USER_PROXY, full_proxy_file.c_str());
 	}
+
+	free(proxy_file);
 
 	char* tmp = submit_param(SUBMIT_KEY_DelegateJobGSICredentialsLifetime,ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME);
 	if( tmp ) {
@@ -2642,6 +2637,52 @@ int SubmitHash::SetGSICredentials()
 	if ((tmp = submit_param (ATTR_MYPROXY_NEW_PROXY_LIFETIME))) { 
 		AssignJobExpr(ATTR_MYPROXY_NEW_PROXY_LIFETIME, tmp);
 		free( tmp );
+	}
+
+	// ScitokenPath
+	if ( ! clusterAd) {
+		// Slightly complicated logic to determine if we want to include a scitoken attribute in the job:
+		// If use_scitoken = auto :: we include the attribute if we have been given a token file
+		//    we get the token file either from the scitoken_path submit command or from the environment
+		//    if neither is defined then quietly do nothing.
+		// if use_scitoken = true :: include the attribute
+		//    we get the token file either from the scitoken_path submit command or from the environment
+		//    if neither is defined then generate an error
+		// if use_scitoken = false :: ignore the scitoken_path submit command and also the env
+		// if use_scitoken is undefined and scitoken_path is defined :: include the attribute using the supplied path
+		auto_free_ptr use_scitokens_cmd(submit_param(SUBMIT_KEY_UseScitokens, SUBMIT_KEY_UseScitokensAlt));
+		auto_free_ptr scitokens_file(submit_param(SUBMIT_KEY_ScitokensFile, ATTR_SCITOKENS_FILE));
+		bool use_scitokens =  ! scitokens_file.empty();
+		if (use_scitokens_cmd) {
+			if (MATCH == strcasecmp(use_scitokens_cmd, "auto")) {
+				if (scitokens_file) {
+					use_scitokens = true; // because scitokens_file keyword was used
+				} else {
+					// if there is a BEARER_TOKEN_FILE environment variable, then set use_scitokens to true
+					// otherwise leave it as false.
+					const char * tmp = getenv("BEARER_TOKEN_FILE");
+					use_scitokens = tmp && tmp[0];
+				}
+			} else if ( ! string_is_boolean_param(use_scitokens_cmd, use_scitokens)) {
+				push_error(stderr, SUBMIT_KEY_UseScitokens " error. Value should be true, false, or auto.\n");
+				ABORT_AND_RETURN(1);
+			}
+		}
+
+		// At this point we have decided to include the scitoken file attribute
+		// and should generate an error if we can't.
+		if (use_scitokens) {
+			const char * token_file = scitokens_file;
+			if ( ! token_file) { token_file = getenv("BEARER_TOKEN_FILE"); }
+			if ( ! token_file) {
+				push_error(stderr, "No Scitokens filename specified. Expected either "
+					SUBMIT_KEY_ScitokensFile " command or the BEARER_TOKEN_FILE environment variable to be set.\n");
+				ABORT_AND_RETURN(1);
+			}
+			// promote to fullpath and store in the job ad
+			scitokens_file.set(strdup(full_path(token_file)));
+			AssignJobString(ATTR_SCITOKENS_FILE, scitokens_file);
+		}
 	}
 
 	// END MyProxy-related crap
@@ -2853,9 +2894,7 @@ static bool validate_gridtype(MyString & JobGridType) {
 	//   system names should be used (pbs, lsf). Glite are the only
 	//   people who care about the old value. This changed happend in
 	//   Condor 6.7.12.
-	if (gridType == "gt2" ||
-		gridType == "gt5" ||
-		gridType == "blah" ||
+	if (gridType == "blah" ||
 		gridType == "batch" ||
 		gridType == "pbs" ||
 		gridType == "sge" ||
@@ -2868,14 +2907,9 @@ static bool validate_gridtype(MyString & JobGridType) {
 		gridType == "ec2" ||
 		gridType == "gce" ||
 		gridType == "azure" ||
-		gridType == "unicore" ||
-		gridType == "boinc" ||
-		gridType == "cream") {
+		gridType == "boinc") {
 		// We're ok
 		// Values are case-insensitive for gridmanager, so we don't need to change case
-		return true;
-	} else if (gridType == "globus") {
-		JobGridType = "gt2";
 		return true;
 	}
 
@@ -3039,8 +3073,6 @@ int SubmitHash::SetGridParams()
 
 	YourStringNoCase gridType(JobGridType.c_str());
 	if ( gridType == NULL ||
-		 gridType == "gt2" ||
-		 gridType == "gt5" ||
 		 gridType == "nordugrid" ) {
 
 		if( (tmp = submit_param(SUBMIT_KEY_GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
@@ -3051,31 +3083,11 @@ int SubmitHash::SetGridParams()
 		}
 	}
 
-	if ( (tmp = submit_param(SUBMIT_KEY_GridShell, ATTR_USE_GRID_SHELL)) ) {
-
-		if( tmp[0] == 't' || tmp[0] == 'T' ) {
-			AssignJobVal(ATTR_USE_GRID_SHELL, true);
-		}
-		free(tmp);
-	}
-
-	if ( gridType == NULL ||
-		 gridType == "gt2" ||
-		 gridType == "gt5" ) {
-		AssignJobVal(ATTR_GLOBUS_STATUS, GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED);
-		AssignJobVal(ATTR_NUM_GLOBUS_SUBMITS, 0);
-	}
-
 	AssignJobVal(ATTR_WANT_CLAIMING, false);
 
 	if( (tmp = submit_param(SUBMIT_KEY_GlobusRematch,ATTR_REMATCH_CHECK)) ) {
 		AssignJobExpr(ATTR_REMATCH_CHECK, tmp);
 		free(tmp);
-	}
-
-	if( (tmp = submit_param(SUBMIT_KEY_GlobusRSL, ATTR_GLOBUS_RSL)) ) {
-		AssignJobString(ATTR_GLOBUS_RSL, tmp);
-		free( tmp );
 	}
 
 	if( (tmp = submit_param(SUBMIT_KEY_NordugridRSL, ATTR_NORDUGRID_RSL)) ) {
@@ -3098,11 +3110,6 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
-	if( (tmp = submit_param(SUBMIT_KEY_CreamAttributes, ATTR_CREAM_ATTRIBUTES)) ) {
-		AssignJobString ( ATTR_CREAM_ATTRIBUTES, tmp );
-		free( tmp );
-	}
-
 	if( (tmp = submit_param(SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS)) ) {
 		AssignJobString ( ATTR_BATCH_EXTRA_SUBMIT_ARGS, tmp );
 		free( tmp );
@@ -3121,31 +3128,6 @@ int SubmitHash::SetGridParams()
 	if( (tmp = submit_param(SUBMIT_KEY_BatchRuntime, ATTR_BATCH_RUNTIME)) ) {
 		AssignJobExpr ( ATTR_BATCH_RUNTIME, tmp );
 		free( tmp );
-	}
-
-	if ( (tmp = submit_param( SUBMIT_KEY_KeystoreFile, ATTR_KEYSTORE_FILE )) ) {
-		AssignJobString(ATTR_KEYSTORE_FILE, tmp);
-		free( tmp );
-	} else if (gridType == "unicore" && ! job->Lookup(ATTR_KEYSTORE_FILE)) {
-		push_error(stderr, "Unicore grid jobs require a " SUBMIT_KEY_KeystoreFile " parameter\n");
-		ABORT_AND_RETURN( 1 );
-	}
-
-	if ( (tmp = submit_param( SUBMIT_KEY_KeystoreAlias, ATTR_KEYSTORE_ALIAS )) ) {
-		AssignJobString(ATTR_KEYSTORE_ALIAS, tmp);
-		free( tmp );
-	} else if (gridType == "unicore" && ! job->Lookup(ATTR_KEYSTORE_ALIAS)) {
-		push_error(stderr, "Unicore grid jobs require a " SUBMIT_KEY_KeystoreAlias " parameter\n");
-		ABORT_AND_RETURN( 1 );
-	}
-
-	if ( (tmp = submit_param( SUBMIT_KEY_KeystorePassphraseFile,
-							  ATTR_KEYSTORE_PASSPHRASE_FILE )) ) {
-		AssignJobString(ATTR_KEYSTORE_PASSPHRASE_FILE, tmp);
-		free( tmp );
-	} else if (gridType == "unicore" && ! job->Lookup(ATTR_KEYSTORE_PASSPHRASE_FILE)) {
-		push_error(stderr, "Unicore grid jobs require a " SUBMIT_KEY_KeystorePassphraseFile " parameter\n");
-		ABORT_AND_RETURN( 1 );
 	}
 
 	//
@@ -3594,36 +3576,6 @@ int SubmitHash::SetGridParams()
 	} else if (gridType == "azure" && ! job->Lookup(ATTR_AZURE_ADMIN_KEY)) {
 		push_error(stderr, "\nERROR: Azure jobs require an \"%s\" parameter\n", SUBMIT_KEY_AzureAdminKey );
 		ABORT_AND_RETURN( 1 );
-	}
-
-	// CREAM clients support an alternate representation for resources:
-	//   host.edu:8443/cream-batchname-queuename
-	// Transform this representation into our regular form:
-	//   host.edu:8443/ce-cream/services/CREAM2 batchname queuename
-	if ( gridType == "cream" ) {
-		tmp = submit_param( SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE );
-		MyString resource = tmp;
-		free( tmp );
-
-		int pos = resource.FindChar( ' ', 0 );
-		if ( pos >= 0 && resource.FindChar( ' ', pos + 1 ) < 0 ) {
-			int pos2 = resource.find( "://", pos + 1 );
-			if ( pos2 < 0 ) {
-				pos2 = pos + 1;
-			} else {
-				pos2 = pos2 + 3;
-			}
-			if ( ( pos = resource.find( "/cream-", pos2 ) ) >= 0 ) {
-				// We found the shortened form
-				resource.replaceString( "/cream-", "/ce-cream/services/CREAM2 ", pos );
-				pos += 26;
-				if ( ( pos2 = resource.find( "-", pos ) ) >= 0 ) {
-					resource.setAt( pos2, ' ' );
-				}
-
-				AssignJobString(ATTR_GRID_RESOURCE, resource.c_str() );
-			}
-		}
 	}
 	return 0;
 }
@@ -4391,7 +4343,6 @@ int SubmitHash::SetRemoteAttrs()
 	};
 
 	ExprItem tostringize[] = {
-		{ SUBMIT_KEY_GlobusRSL, "globus_rsl", ATTR_GLOBUS_RSL },
 		{ SUBMIT_KEY_NordugridRSL, "nordugrid_rsl", ATTR_NORDUGRID_RSL },
 		{ SUBMIT_KEY_ArcRSL, "arc_rsl", ATTR_ARC_RSL },
 		{ SUBMIT_KEY_GridResource, 0, ATTR_GRID_RESOURCE },
@@ -4797,8 +4748,8 @@ int SubmitHash::SetUniverse()
 
 		if ( ! valid_grid_type) {
 			push_error(stderr, "Invalid value '%s' for grid type\n"
-				"Must be one of: gt2, gt5, pbs, lsf, sge, nqs, condor, nordugrid, arc, unicore, ec2, gce, azure, cream, or boinc\n",
-				JobGridType.c_str());
+				"Must be one of: condor, batch, nordugrid, arc, ec2, gce, azure, or boinc\n",
+				JobGridType.Value());
 			ABORT_AND_RETURN(1);
 		}
 
@@ -4942,10 +4893,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_RemoteInitialDir, ATTR_JOB_REMOTE_IWD, SimpleSubmitKeyword::f_as_string},
 	// formerly SetRemoteAttrs (2 levels of remoteness hard coded here)
 	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_GridResource,  SUBMIT_KEY_REMOTE_PREFIX ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string},
-	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_GlobusRSL, SUBMIT_KEY_REMOTE_PREFIX ATTR_GLOBUS_RSL, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_NordugridRSL, SUBMIT_KEY_REMOTE_PREFIX ATTR_NORDUGRID_RSL, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_GridResource, SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string},
-	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_GlobusRSL, SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX ATTR_GLOBUS_RSL, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_NordugridRSL, SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX ATTR_NORDUGRID_RSL, SimpleSubmitKeyword::f_as_string},
 
 	// formerly SetOutputDestination
@@ -5085,20 +5034,14 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// invoke SetGridParams
 	{SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid},
 	{SUBMIT_KEY_GlobusResubmit, ATTR_GLOBUS_RESUBMIT_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_GridShell, ATTR_USE_GRID_SHELL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GlobusRematch, ATTR_REMATCH_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_GlobusRSL, ATTR_GLOBUS_RSL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_NordugridRSL, ATTR_NORDUGRID_RSL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_ArcRSL, ATTR_ARC_RSL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_ArcRte, ATTR_ARC_RTE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_CreamAttributes, ATTR_CREAM_ATTRIBUTES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchProject, ATTR_BATCH_PROJECT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchQueue, ATTR_BATCH_QUEUE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchRuntime, ATTR_BATCH_RUNTIME, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_KeystoreFile, ATTR_KEYSTORE_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_KeystoreAlias, ATTR_KEYSTORE_ALIAS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_KeystorePassphraseFile,ATTR_KEYSTORE_PASSPHRASE_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2KeyPair, ATTR_EC2_KEY_PAIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
@@ -5228,6 +5171,9 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// invoke SetGSICredentials
 	{SUBMIT_KEY_UseX509UserProxy, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_gsicred },
 	{SUBMIT_KEY_X509UserProxy, ATTR_X509_USER_PROXY, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_gsicred },
+	{SUBMIT_KEY_UseScitokens, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_gsicred },
+	{SUBMIT_KEY_UseScitokensAlt, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_gsicred },
+	{SUBMIT_KEY_ScitokensFile, ATTR_SCITOKENS_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_gsicred },
 	{ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME, ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_gsicred },
 	{ATTR_MYPROXY_HOST_NAME, ATTR_MYPROXY_HOST_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_gsicred },
 	{ATTR_MYPROXY_SERVER_DN, ATTR_MYPROXY_SERVER_DN, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_gsicred },

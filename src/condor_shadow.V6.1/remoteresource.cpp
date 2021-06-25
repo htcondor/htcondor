@@ -55,323 +55,6 @@ static const char *Resource_State_String [] = {
 	"CHECKPOINTED",
 };
 
-#if defined(DLOPEN_GSI_LIBS)
-/* The following functions use a child process to call GSI and VOMS
- * functions. This allows us to not dlopen() the GSI and VOMS libraries
- * in the main shadow process, thus reducing memory usage.
- */
-
-/* This function works like fgets(), with the follow exceptions:
- *   - It reads from a file descriptor.
- *   - If the buffer s is filled, it continues to read from the fd until
- *     a newline or EOF. The additional input is discarded.
- *   - When a newline is read, it is discarded (not placed in the buffer).
- */
-static char *
-my_fgets( char *s, int size, int fd )
-{
-	int rc;
-	int i = 0;
-	char c;
-
-	rc = read( fd, &c, 1 );
-	if ( rc <= 0 ) {
-		s[0] = '\0';
-		return NULL;
-	}
-	while ( rc > 0 && c != '\n' ) {
-		if ( i < size - 1 ) {
-			s[i] = c;
-			i++;
-		}
-		rc = read( fd, &c, 1 );
-	}
-	s[i] = '\0';
-	return s;
-}
-
-/* Inspect the job's proxy in a child process and read information about
- * it via a pipe from the child.
- */
-static int
-QueryJobProxy( const char *proxy_file, time_t *expiration_time, char **identity,
-			   char **voname, char **firstfqan, char **quoted_DN_and_FQAN )
-{
-	int result = 1;
-	int rc;
-	int fds[2];
-	pid_t child_pid = 0;
-	int child_status = 0;
-
-	if ( pipe( fds ) < 0 ) {
-		dprintf( D_ALWAYS, "QueryJobProxy(): pipe() failed: errno %d (%s)\n",
-				 errno, strerror( errno ) );
-		return 1;
-	}
-
-	child_pid = fork();
-	if ( child_pid < 0 ) {
-			// Error
-		dprintf( D_ALWAYS, "QueryJobProxy(): fork() failed: errno %d (%s)\n",
-				 errno, strerror( errno ) );
-		close( fds[0] );
-		close( fds[1] );
-		return 1;
-
-	} else if ( child_pid == 0 ) {
-			// Child
-		close( fds[0] );
-
-		if ( activate_globus_gsi() != 0 ) {
-			dprintf( D_ALWAYS, "QueryJobProxy(): %s\n", x509_error_string() );
-		}
-
-		std::string reply;
-		if ( expiration_time ) {
-			formatstr_cat( reply, "%ld\n", (long)x509_proxy_expiration_time( proxy_file ) );
-		}
-
-		if ( identity ) {
-			char *id = x509_proxy_identity_name( proxy_file );
-			formatstr_cat( reply, "%s\n", id ? id : "" );
-			free( id );
-		}
-
-		if ( voname || firstfqan || quoted_DN_and_FQAN ) {
-		//   query voms if wanted, write result to pipe
-			int vomserr = 1;
-#if defined(HAVE_EXT_VOMS)
-			vomserr = extract_VOMS_info_from_file( proxy_file,
-												   0, /*do not verify*/
-												   voname,
-												   firstfqan,
-												   quoted_DN_and_FQAN);
-#endif
-			if ( voname ) {
-				formatstr_cat( reply, "%s\n", !vomserr && *voname ? *voname : "" );
-			}
-			if ( firstfqan ) {
-				formatstr_cat( reply, "%s\n", !vomserr && *firstfqan ? *firstfqan : "" );
-			}
-			if ( quoted_DN_and_FQAN ) {
-				formatstr_cat( reply, "%s\n", !vomserr && *quoted_DN_and_FQAN ? *quoted_DN_and_FQAN : "" );
-			}
-
-		}
-
-		if ( write( fds[1], reply.c_str(), reply.length() ) < (ssize_t)reply.length() ) {
-			dprintf( D_ALWAYS, "QueryJobProxy(): Failed to write reply to parent!\n" );
-			_exit( 1 );
-		}
-		close( fds[1] );
-
-			// TODO we always indicate success. Do we want to signal failure
-			//   in any situation?
-		_exit( 0 );
-	}
-
-		// Parent
-	close( fds[1] );
-
-	char buf[1024];
-	if ( expiration_time ) {
-		if ( my_fgets( buf, sizeof(buf), fds[0] ) ) {
-			*expiration_time = atol( buf );
-		} else {
-			*expiration_time = -1;
-		}
-	}
-	if ( identity ) {
-		if ( my_fgets( buf, sizeof(buf), fds[0] ) ) {
-			*identity = strdup( buf );
-		} else {
-			*identity = strdup( "" );
-		}
-	}
-	if ( voname ) {
-		if ( my_fgets( buf, sizeof(buf), fds[0] ) ) {
-			*voname = strdup( buf );
-		} else {
-			*voname = strdup( "" );
-		}
-	}
-	if ( firstfqan ) {
-		if ( my_fgets( buf, sizeof(buf), fds[0] ) ) {
-			*firstfqan = strdup( buf );
-		} else {
-			*firstfqan = strdup( "" );
-		}
-	}
-	if ( quoted_DN_and_FQAN ) {
-		if ( my_fgets( buf, sizeof(buf), fds[0] ) ) {
-			*quoted_DN_and_FQAN = strdup( buf );
-		} else {
-			*quoted_DN_and_FQAN = strdup( "" );
-		}
-	}
-
-	close( fds[0] );
-
-	do {
-		rc = waitpid( child_pid, &child_status, 0 );
-	} while ( rc < 0 && errno == EINTR );
-
-	if ( child_status != 0 ) {
-		result = 1;
-	}
-
-	return result;
-}
-
-/* Call DCStartd::delegateX509Proxy() in a child process.
- */
-static int
-StartdDelegateX509Proxy( DCStartd *dc_startd, const char* proxy, time_t expiration_time )
-{
-	int result = -1;
-	int rc;
-	int fds[2];
-	pid_t child_pid = 0;
-	int child_status = 0;
-
-	if ( pipe( fds ) < 0 ) {
-		dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): pipe() failed: errno %d (%s)\n",
-				 errno, strerror( errno ) );
-		return -1;
-	}
-
-	child_pid = fork();
-	if ( child_pid < 0 ) {
-			// Error
-		dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): fork() failed: errno %d (%s)\n",
-				 errno, strerror( errno ) );
-		close( fds[0] );
-		close( fds[1] );
-		return -1;
-
-	} else if ( child_pid == 0 ) {
-			// Child
-		close( fds[0] );
-
-		if ( activate_globus_gsi() != 0 ) {
-			dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): %s\n", x509_error_string() );
-		}
-
-		// Call delegation
-		int dReply = dc_startd->delegateX509Proxy (proxy, expiration_time, NULL );
-
-		if ( write( fds[1], &dReply, sizeof(int) ) < (ssize_t)sizeof(int) ) {
-			dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): Failed to write reply to parent!\n" );
-			_exit( 1 );
-		}
-		close( fds[1] );
-
-			// TODO we always indicate success. Do we want to signal failure
-			//   in any situation?
-		_exit( 0 );
-	}
-
-		// Parent
-	close( fds[1] );
-
-	rc = read( fds[0], &result, sizeof(int) );
-	if ( rc < (int)sizeof(int) ) {
-		dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): read() returned %d\n", rc );
-		result = -1;
-	}
-
-	close( fds[0] );
-
-	do {
-		rc = waitpid( child_pid, &child_status, 0 );
-	} while ( rc < 0 && errno == EINTR );
-
-	if ( child_status != 0 ) {
-		dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): child exited with status %d\n", child_status );
-		result = -1;
-	}
-
-	return result;
-}
-
-/* Call DCStarter::delegateX509Proxy() in a child process
- */
-static DCStarter::X509UpdateStatus
-StarterDelegateX509Proxy(DCStarter *dc_starter, const char * filename, time_t expiration_time,char const *sec_session_id, time_t *result_expiration_time)
-{
-	DCStarter::X509UpdateStatus result = DCStarter::XUS_Error;
-	int rc;
-	int fds[2];
-	pid_t child_pid = 0;
-	int child_status = 0;
-
-	if ( pipe( fds ) < 0 ) {
-		dprintf( D_ALWAYS, "StarterDelegateX509Proxy(): pipe() failed: errno %d (%s)\n",
-				 errno, strerror( errno ) );
-		return result;
-	}
-
-	child_pid = fork();
-	if ( child_pid < 0 ) {
-			// Error
-		dprintf( D_ALWAYS, "StarterDelegateX509Proxy(): fork() failed: errno %d (%s)\n",
-				 errno, strerror( errno ) );
-		close( fds[0] );
-		close( fds[1] );
-		return result;
-
-	} else if ( child_pid == 0 ) {
-			// Child
-		close( fds[0] );
-
-		if ( activate_globus_gsi() != 0 ) {
-			dprintf( D_ALWAYS, "StarterDelegateX509Proxy(): %s\n", x509_error_string() );
-		}
-
-		// Call delegation
-		DCStarter::X509UpdateStatus dReply = dc_starter->delegateX509Proxy (filename, expiration_time, sec_session_id, result_expiration_time );
-
-		if ( write( fds[1], &dReply, sizeof(DCStarter::X509UpdateStatus) ) < (ssize_t)sizeof(DCStarter::X509UpdateStatus) ||
-			 write( fds[1], result_expiration_time, sizeof(time_t) ) < (ssize_t)sizeof(time_t) ) {
-			dprintf( D_ALWAYS, "StarerDelegateX509Proxy(): Failed to write reply to parent!\n" );
-			_exit( 1 );
-		}
-		close( fds[1] );
-
-			// TODO we always indicate success. Do we want to signal failure
-			//   in any situation?
-		_exit( 0 );
-	}
-
-		// Parent
-	close( fds[1] );
-
-	rc = read( fds[0], &result, sizeof(DCStarter::X509UpdateStatus) );
-	if ( rc < (int)sizeof(int) ) {
-		dprintf( D_ALWAYS, "StarterDelegateX509Proxy(): read() returned %d\n", rc );
-		result = DCStarter::XUS_Error;
-	}
-	rc = read( fds[0], result_expiration_time, sizeof(time_t) );
-	if ( rc < (int)sizeof(time_t) ) {
-		dprintf( D_ALWAYS, "StarterDelegateX509Proxy(): read() returned %d\n", rc );
-		result = DCStarter::XUS_Error;
-	}
-
-	close( fds[0] );
-
-	do {
-		rc = waitpid( child_pid, &child_status, 0 );
-	} while ( rc < 0 && errno == EINTR );
-
-	if ( child_status != 0 ) {
-		dprintf( D_ALWAYS, "StarterDelegateX509Proxy(): child exited with status %d\n", child_status );
-		result = DCStarter::XUS_Error;
-	}
-
-	return result;
-}
-#endif /* defined(DLOPEN_GSI_LIBS) */
-
 
 RemoteResource::RemoteResource( BaseShadow *shad ) 
 	: m_want_remote_updates(false),
@@ -500,11 +183,7 @@ RemoteResource::activateClaim( int starterVersion )
 		dprintf( D_FULLDEBUG,
 	                 "trying early delegation (for glexec) of proxy: %s\n", proxy );
 		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
-#if defined(DLOPEN_GSI_LIBS)
-		int dReply = StartdDelegateX509Proxy( dc_startd, proxy, expiration_time );
-#else
 		int dReply = dc_startd->delegateX509Proxy( proxy, expiration_time, NULL );
-#endif
 		if( dReply == OK ) {
 			// early delegation was successful. this means the startd
 			// is going to launch the starter using glexec, so we need
@@ -2577,13 +2256,7 @@ RemoteResource::setRemoteProxyRenewTime()
 	}
 
 	time_t desired_expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
-#if defined(DLOPEN_GSI_LIBS)
-	time_t proxy_expiration_time = -1;
-	QueryJobProxy( proxy_path.c_str(), &proxy_expiration_time, NULL, NULL,
-				   NULL, NULL );
-#else
 	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.c_str());
-#endif
 	time_t expiration_time = desired_expiration_time;
 
 	if( proxy_expiration_time == (time_t)-1 ) {
@@ -2616,11 +2289,7 @@ RemoteResource::updateX509Proxy(const char * filename)
 	if ( param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) == true ) {
 		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
 		time_t result_expiration_time = 0;
-#if defined(DLOPEN_GSI_LIBS)
-		ret = StarterDelegateX509Proxy(&starter, filename, expiration_time, m_claim_session.secSessionId(),&result_expiration_time);
-#else
 		ret = starter.delegateX509Proxy(filename, expiration_time, m_claim_session.secSessionId(),&result_expiration_time);
-#endif
 		if( ret == DCStarter::XUS_Okay ) {
 			setRemoteProxyRenewTime(result_expiration_time);
 		}
@@ -2677,85 +2346,13 @@ RemoteResource::checkX509Proxy( void )
 	}
 
 
-	// if the proxy has been modified, attempt to reload various attributes
-	// and update them in the jobAd.  we do this on the submit side regardless
+	// if the proxy has been modified, attempt to reload the expiration time
+	// and update it in the jobAd.  we do this on the submit side regardless
 	// of whether or not the remote side succesfully receives the proxy, since
 	// this allows us to use the attributes in job policy (periodic_hold, etc.)
 
-#if defined(DLOPEN_GSI_LIBS)
-	char *proxy_subject = NULL;
-	time_t proxy_expiration_time = -1;
-	char *voname = NULL;
-	char *firstfqan = NULL;
-	char *quoted_DN_and_FQAN = NULL;
-	QueryJobProxy( proxy_path.c_str(), &proxy_expiration_time, &proxy_subject,
-				   &voname, &firstfqan, &quoted_DN_and_FQAN );
-
-	jobAd->Assign(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration_time);
-	/* These are secure attributes, only settable by the schedd.
-	 * Assume they won't change during job execution.
-	if ( proxy_subject && *proxy_subject ) {
-		jobAd->Assign(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
-	}
-	if ( voname && *voname ) {
-		jobAd->Assign(ATTR_X509_USER_PROXY_VONAME, voname);
-	}
-	if ( firstfqan && *firstfqan ) {
-		jobAd->Assign(ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);
-	}
-	if ( quoted_DN_and_FQAN && *quoted_DN_and_FQAN ) {
-		jobAd->Assign(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);
-	}
-	*/
-	free( proxy_subject );
-	free( voname );
-	free( firstfqan );
-	free( quoted_DN_and_FQAN );
-#else
-	// first, do the DN and expiration time, which all proxies have
-	char* proxy_subject = x509_proxy_identity_name(proxy_path.c_str());
 	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.c_str());
-	/* This is a secure attribute, only settable by the schedd.
-	 * Assume it won't change during job execution.
-	jobAd->Assign(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
-	*/
 	jobAd->Assign(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration_time);
-	if (proxy_subject) {
-		free(proxy_subject);
-	}
-
-#if defined(HAVE_EXT_VOMS)
-	// second, worry about the VOMS attributes, which may or may not be present
-	char * voname = NULL;
-	char * firstfqan = NULL;
-	char * quoted_DN_and_FQAN = NULL;
-	int vomserr = extract_VOMS_info_from_file(
-			proxy_path.c_str(),
-			0 /*do not verify*/,
-			&voname,
-			&firstfqan,
-			&quoted_DN_and_FQAN);
-	if (vomserr == 0) {
-		// VOMS attributes were found
-		if (IsDebugVerbose(D_SECURITY)) {
-			dprintf(D_SECURITY, "VOMS attributes were found\n");
-		}
-		/* These are secure attributes, only settable by the schedd.
-		 * Assume they won't change during job execution.
-		jobAd->Assign(ATTR_X509_USER_PROXY_VONAME, voname);
-		jobAd->Assign(ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);
-		jobAd->Assign(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);
-		*/
-		free(voname);
-		free(firstfqan);
-		free(quoted_DN_and_FQAN);
-	} else {
-		if (IsDebugVerbose(D_SECURITY)) {
-			dprintf(D_SECURITY, "VOMS attributes were not found\n");
-		}
-	}
-#endif
-#endif
 	shadow->updateJobInQueue(U_X509);
 
 	// Proxy file updated.  Time to upload

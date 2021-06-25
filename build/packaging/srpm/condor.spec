@@ -1372,7 +1372,7 @@ rm -rf %{buildroot}
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
 %_sbindir/condor_gridshell
-%_sbindir/gahp_server
+# % _sbindir/gahp_server
 %_sbindir/grid_monitor
 %_sbindir/remote_gahp
 %_sbindir/nordugrid_gahp

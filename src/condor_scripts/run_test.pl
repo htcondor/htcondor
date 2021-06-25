@@ -558,27 +558,6 @@ sub load_test_requirements
         }
     }
 
-    # If the test file does not contain the requirements for it to
-    # run then try to read requirements from the "Test_Requirements"
-    # file. This file will be depraceted so new test file should
-    # mention the requirements in itself rather than adding an
-    # entry in "Test_Requirements"
-    if (!defined($requirements)) {
-        my $requirementslist = "Test_Requirements";
-        open(TR, "< ${requirementslist}") or return $requirements;
-        while (my $line = <TR>) {
-            CondorUtils::fullchomp( $line );
-            if ($line =~ /\s*$name\s*:\s*(.*)/) {
-                my @requirementList = split(/,/, $1);
-                foreach my $requirement (@requirementList) {
-                    $requirement =~ s/^\s+//;
-                    $requirement =~ s/\s+$//;
-                    $requirements->{$requirement} = 1;
-                }
-            }
-        }
-    }
-
     return $requirements;
 }
 

@@ -293,11 +293,12 @@ class Condor:
                 time.sleep(1)
                 continue
 
-            # TODO: what if we aren't starting up a startd?
+            if "STARTD" in daemons:
+                who_command = "condor_who -wait:10 'IsReady && STARTD_State =?= \"Ready\"'"
+            else:
+                who_command = "condor_who -wait:10 'IsReady'"
             who = self.run_command(
-                shlex.split(
-                    "condor_who -wait:10 'IsReady && STARTD_State =?= \"Ready\"'"
-                ),
+                shlex.split(who_command),
                 echo=False,
                 suppress=True,
             )
@@ -312,10 +313,9 @@ class Condor:
 
             who_ad = dict(kv.split(" = ") for kv in who.stdout.splitlines())
 
-            # TODO: same as above - what if we aren't starting up a startd?
             if (
                 who_ad.get("IsReady") == "true"
-                and who_ad.get("STARTD_State") == '"Ready"'
+                and ("STARTD" not in daemons or who_ad.get("STARTD_State") == '"Ready"')
                 and all(who_ad.get(d) == '"Alive"' for d in daemons)
             ):
                 self.condor_is_ready = True

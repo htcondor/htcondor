@@ -884,6 +884,16 @@ ReadUserLog::readEventWithLock (ULogEvent *& event, bool store_state, FileLockBa
 		if ( ULOG_OK != status ) {
 			return status;
 		}
+	} else {
+		// If the file wasn't closed, and the file is on AFS, we need
+		// to stat() it to make sure that AFS notices if some other
+		// machine wrote to the file since we last looked at it.
+		//
+		// See HTCONDOR-463 for details.  If it ends up mattering, we
+		// could check at object construction time if this file is on
+		// AFS (using statfs) and skip this system call if not.
+		struct stat statbuf;
+		int ignored = fstat(m_fd, &statbuf);
 	}
 
 	if ( !m_fp ) {
