@@ -20,16 +20,17 @@ class DAGMan:
         DAGMan cluster id
         """
     
-        dag, log, out = None, None, None
+        dag, iwd, log, out = None, None, None, None
 
         env = schedd.query(
             constraint=f"ClusterId == {dagman_id}",
-            projection=["Env"],
+            projection=["Env", "Iwd"],
         )
 
         if env:
-            env = dict(item.split("=", 1) for item in env[0]["Env"].split(";"))
-            out = env["_CONDOR_DAGMAN_LOG"]
+            iwd = env[0]["Iwd"]
+            env = dict(item.split("=", 1) for item in env[0]["Env"].split(";")) 
+            out = iwd + "/" + env["_CONDOR_DAGMAN_LOG"]
             log = out.replace(".dagman.out", ".nodes.log")
             dag = out.replace(".dagman.out", "")
 

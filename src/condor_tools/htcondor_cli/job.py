@@ -185,7 +185,7 @@ class Job:
                 sys.exit(0)
 
             # Parse the .dag file to retrieve some user input values
-            dagman_dag_file = open(TMP_DIR / dagman_dag, "r")
+            dagman_dag_file = open(dagman_dag, "r")
             for line in dagman_dag_file.readlines():
                 if "annex_node_count =" in line:
                     slurm_nodes_requested = line.split("=")[1].strip()
@@ -193,7 +193,7 @@ class Job:
                     slurm_runtime = int(line.split("=")[1].strip())
             
             # Parse the DAGMan event log for useful information
-            dagman_events = htcondor.JobEventLog(str(TMP_DIR / dagman_log))
+            dagman_events = htcondor.JobEventLog(dagman_log)
             for event in dagman_events.events(0):
                 if "LogNotes" in event.keys() and event["LogNotes"] == "DAG Node: B":
                     provisioner_cluster_id = event.cluster
