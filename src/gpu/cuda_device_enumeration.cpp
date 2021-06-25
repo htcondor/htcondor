@@ -439,7 +439,10 @@ getUUIDToMIGDeviceHandleMap( std::map< std::string, nvmlDevice_t > & map ) {
 			for( unsigned int index = 0; index < maxMigDeviceCount; ++index ) {
 				nvmlDevice_t migDevice;
 				r = nvmlDeviceGetMigDeviceHandleByIndex( device, index, & migDevice );
-				if( NVML_SUCCESS != r ) { return r; }
+				// It is possible to enable MIG on a MIG-capable device but
+				// not create any compute instances.  Since nobody can use
+				// those devices, ignore them.
+				if( NVML_SUCCESS != r ) { continue; }
 
 				char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
 				r = nvmlDeviceGetUUID( migDevice, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
