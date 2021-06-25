@@ -13,6 +13,11 @@ Release Notes:
 
 - HTCondor version 9.1.1 not yet released.
 
+- GSI is no longer in the list of default authentication methods.
+  To use GSI, you must enable it by setting one or more of the
+  ``SEC_<access-level>_AUTHENTICATION_METHODS`` configuration parameters.
+  :jira:`518`
+
 New Features:
 
 - The semantics of undefined user job policy expressions has changed.  A

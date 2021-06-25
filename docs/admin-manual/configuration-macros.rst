@@ -8758,7 +8758,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     See the :doc:`/admin-manual/security` section for a discussion of the
     relative merits of each method; some, such as ``CLAIMTOBE`` provide effectively
     no security at all.  The default authentication methods are
-    ``NTSSPI,FS,IDTOKENS,KERBEROS,GSI,SSL``.
+    ``NTSSPI,FS,IDTOKENS,KERBEROS,SSL``.
 
     These methods are tried in order until one succeeds or they all fail; for
     this reason, we do not recommend changing the default method list.
