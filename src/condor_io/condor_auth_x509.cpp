@@ -193,6 +193,7 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
 		}
         
 		if ( mySock_->isClient() ) {
+			warn_on_gsi_usage();
 			status = authenticate_client_gss(errstack);
 		} else {
 			CondorAuthX509Retval rc = authenticate_server_gss(errstack, non_blocking);
@@ -1145,6 +1146,7 @@ Condor_Auth_X509::authenticate_server_pre(CondorError* errstack, bool non_blocki
 			"side was not able to acquire its credentials.");
 			return Fail;  // The other side failed, abort
 	}
+	warn_on_gsi_usage();
 	m_state = GSSAuth;
 	return Continue;
 }

@@ -293,6 +293,8 @@ extern OM_uint32 (*gss_wrap_ptr)(
 extern gss_OID_desc **gss_nt_host_ip_ptr;
 #endif
 
+void warn_on_gsi_usage();
+
 int activate_globus_gsi();
 
 const char *GlobusJobStatusName( int status );

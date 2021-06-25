@@ -24,6 +24,7 @@
 #include "util_lib_proto.h"
 #include "condor_auth_ssl.h"
 #include "DelegationInterface.h"
+#include "subsystem_info.h"
 
 #if defined(DLOPEN_GSI_LIBS)
 #include <dlfcn.h>
@@ -146,6 +147,27 @@ GlobusJobStatusName( int status )
 	snprintf( buf, GRAM_STATUS_STR_LEN, "%d", status );
 	return buf;
 #endif
+}
+
+void
+warn_on_gsi_usage()
+{
+	static time_t last_warn = 0;
+	time_t now = time(NULL);
+	if ( now < last_warn + (12*60*60) ) {
+		return;
+	}
+	last_warn = now;
+	if ( ! param_boolean("WARN_ON_GSI_USAGE", true) ) {
+		return;
+	}
+	SubsystemInfo* my_subsys = get_mySubSystem();
+	SubsystemType subsys_type = my_subsys ? my_subsys->getType() : SUBSYSTEM_TYPE_MIN;
+	if ( subsys_type == SUBSYSTEM_TYPE_TOOL || subsys_type == SUBSYSTEM_TYPE_SUBMIT ) {
+		fprintf(stderr, "WARNING: GSI authentication is being attempted! This will not work in future releases.\n");
+	} else {
+		dprintf(D_ALWAYS, "WARNING: GSI authentication is being attempted! This will not work in future releases. (Will warn again after 12 hours)\n");
+	}
 }
 
 const char *
