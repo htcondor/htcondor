@@ -3321,10 +3321,6 @@ getDefaultAuthenticationMethods(DCpermission perm) {
 	methods += ",KERBEROS";
 #endif
 
-#if defined(HAVE_EXT_GLOBUS)
-	methods += ",GSI";
-#endif
-
 #if defined(HAVE_EXT_SCITOKENS)
 	methods += ",SCITOKENS";
 #endif
