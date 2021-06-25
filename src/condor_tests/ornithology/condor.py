@@ -192,7 +192,7 @@ class Condor:
             self.passwords_dir,
             self.tokens_dir,
         ):
-            dir.mkdir(parents=True, exist_ok=False)
+            dir.mkdir(parents=True, exist_ok=not self.clean_local_dir_before)
             # logger.debug("Created dir {}".format(dir))
 
     def _write_config(self):
