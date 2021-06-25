@@ -77,8 +77,8 @@ Directory::Directory( const char *name, priv_state priv )
 {
 	initialize( priv );
 
+	ASSERT(name)
 	curr_dir = strdup(name);
-	//dprintf(D_FULLDEBUG, "Initializing Directory: curr_dir = %s\n",curr_dir?curr_dir:"NULL");
 	ASSERT(curr_dir);
 
 #ifndef WIN32
@@ -97,6 +97,7 @@ Directory::Directory( StatInfo* info, priv_state priv )
 	ASSERT(info);
 	initialize( priv );
 
+	ASSERT( info->FullPath() );
 	curr_dir = strdup( info->FullPath() );
 	ASSERT(curr_dir);
 

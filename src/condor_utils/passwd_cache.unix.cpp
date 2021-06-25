@@ -346,7 +346,7 @@ passwd_cache::cache_uid(const struct passwd *pwent) {
 		return false;
 	} else {
 
-		index = pwent->pw_name;
+		index = pwent->pw_name ? pwent->pw_name : "";
 
 		if ( uid_table->lookup(index, cache_entry) < 0 ) {
 				/* if we don't already have this entry, create a new one */
