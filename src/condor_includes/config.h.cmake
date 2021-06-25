@@ -208,9 +208,6 @@
 /* Do we have the scitokens external (USED)*/
 #cmakedefine HAVE_EXT_SCITOKENS 1
 
-/* Do we have the unicoregahp external (USED)*/
-#cmakedefine HAVE_EXT_UNICOREGAHP 1
-
 /* Do we have the voms external (USED)*/
 #cmakedefine HAVE_EXT_VOMS 1
 
