@@ -2479,6 +2479,8 @@ int SubmitHash::SetGSICredentials()
 
 	if (proxy_file != NULL && ! clusterAd) {
 		std::string full_proxy_file = full_path( proxy_file );
+		free(proxy_file);
+		proxy_file = NULL;
 #if defined(HAVE_EXT_GLOBUS)
 // this code should get torn out at some point (8.7.0) since the SchedD now
 // manages these attributes securely and the values provided by submit should
