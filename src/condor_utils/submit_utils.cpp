@@ -9058,7 +9058,7 @@ const char* SubmitHash::to_string(std::string & out, int flags)
 		const char * key = hash_iter_key(it);
 		if (key && key[0] == '$') continue; // dont dump meta params.
 		const char * val = hash_iter_value(it);
-		out += key;
+		out += key ? key : "";
 		out += "=";
 		if (val) { out += val; }
 		out += "\n";
