@@ -6533,7 +6533,7 @@ int SubmitHash::SetAccountingGroup()
 
 	// if nice-user is not a prefix, then it conflicts with accounting_group
 	// TODO? should this be a knob?
-	bool nice_user_is_prefix = false;
+	const bool nice_user_is_prefix = false;
 
 	// is a group setting in effect?
 	auto_free_ptr group(submit_param(SUBMIT_KEY_AcctGroup, ATTR_ACCOUNTING_GROUP));

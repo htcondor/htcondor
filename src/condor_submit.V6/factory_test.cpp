@@ -737,8 +737,8 @@ int  MaterializeNextFactoryJob(FILE* out, JobFactory * factory, int & retry_dela
 	JOB_ID_KEY jid(ClusterAd->jid.cluster, next_proc_id);
 	dprintf(D_ALWAYS, "Trying to Materializing new job %d.%d step=%d row=%d\n", jid.cluster, jid.proc, step, row);
 
-	bool check_empty = true;
-	bool fail_empty = false;
+	const bool check_empty = true;
+	const bool fail_empty = false;
 	std::string empty_var_names;
 	int row_num = factory->LoadRowData(row, check_empty ? &empty_var_names : NULL);
 	if (row_num < row) {
