@@ -200,7 +200,6 @@ endif ()
 		condor_pl_test (cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
 		condor_pl_test (job_late_materialize_py "Late materialization of jobs via python" "quick" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
 		condor_pl_test (cmd_now_internals "testing condor_now internals" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
-		condor_pl_test (cmd_now "condor_now functional tests" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
 		condor_pl_test (job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
 		condor_pl_test (lib_auth_protocol-token "TOKEN authentication test" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
 
