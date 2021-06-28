@@ -8,6 +8,28 @@ series.
 
 The details of each version are described below.
 
+Version 9.0.3
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.3 released on Month Date, 2021.
+
+- HTCondor version 9.0.3 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where ``condor_gpu_discovery`` would not report any GPUs if
+  any MIG-enabled GPU on the system were configured in certain ways.  Fixed
+  a bug which could cause ``condor_gpu_discovery``'s output to become
+  unparseable after certain errors.
+  :jira:`476`
+
+
 Version 9.0.2
 -------------
 
