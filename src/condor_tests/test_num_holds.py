@@ -28,7 +28,8 @@ def condor(test_dir):
 @action
 def job(condor, path_to_sleep):
     handle = condor.submit(
-            description={"executable": "/bin/true",
+            description={"executable": path_to_sleep,
+                "arguments": "0",
                 "universe": "scheduler",
                 "on_exit_hold": "true",
                 "log": "job_events.log"
