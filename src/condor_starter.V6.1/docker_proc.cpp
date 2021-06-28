@@ -295,7 +295,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			}
 			}
 			message = buf;
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_InvalidDockerImage, 0);
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
 			{
 			TemporaryPrivSentry sentry(PRIV_USER);
 			unlink("docker_stderror");
@@ -481,7 +481,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
 
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
 			DockerAPI::rm( containerName, error );
 
 			if ( Starter->Hold( ) ) {
@@ -506,7 +506,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
 
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
 			DockerAPI::rm( containerName, error );
 
 			if ( Starter->Hold( ) ) {

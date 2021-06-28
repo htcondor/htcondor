@@ -25,8 +25,8 @@ import time
 if __name__ == "__main__":
     request = int(sys.argv[1])
 
-    # if the request is 0 or less, sleep forever
-    if request <= 0:
+    # if the request is less than 0, sleep forever
+    if request < 0:
         cycles = itertools.count()
     else:
         cycles = range(request)
