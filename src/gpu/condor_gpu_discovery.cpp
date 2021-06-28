@@ -198,6 +198,7 @@ void usage(FILE* output, const char* argv0);
 bool addToDeviceWhiteList( char * list, std::list<int> & dwl ) {
 	char * tokenizer = strdup( list );
 	if( tokenizer == NULL ) {
+		// Deliberately unparseable.
 		fprintf( stderr, "Error: device list too long\n" );
 		return false;
 	}
@@ -228,7 +229,6 @@ typedef std::map<std::string, KVP> MKVP;
 void
 setPropertiesFromDynamicProps( KVP & props, nvmlDevice_t device ) {
 
-	// fprintf( stderr, "printDynamicProperties(%s)\n", gpuID.c_str() );
 	unsigned int tuint;
 	nvmlReturn_t result = nvmlDeviceGetFanSpeed(device,&tuint);
 	if ( result == NVML_SUCCESS ) {
@@ -437,6 +437,7 @@ main( int argc, const char** argv)
 			if (argv[i+1]) {
 				opt_pre_arg = argv[++i];
 				if (strlen(opt_pre_arg) > 80) {
+						// Deliberately unparseable.
 						fprintf (stderr, "Error: -prefix should be less than 80 characters\n");
 						return 1;
 				}
@@ -444,6 +445,7 @@ main( int argc, const char** argv)
 		}
 		else if (is_dash_arg_prefix(argv[i], "device", 3)) {
 			if (! argv[i+1] || '-' == *argv[i+1]) {
+				// Deliberately unparseable.
 				fprintf (stderr, "Error: -device requires an argument\n");
 				usage(stderr, argv[0]);
 				return 1;
@@ -455,6 +457,7 @@ main( int argc, const char** argv)
 			if (pcolon) {
 				sim_index = atoi(pcolon+1);
 				if (sim_index < 0 || sim_index > sim_index_max) {
+					// Deliberately unparseable.
 					fprintf(stderr, "Error: simulation must be in range of 0-%d\r\n", sim_index_max);
 					usage(stderr, argv[0]);
 					return 1;
@@ -558,7 +561,9 @@ main( int argc, const char** argv)
 	std::vector< BasicProps > enumeratedDevices;
 	if(! opt_opencl) {
 		if(! enumerateCUDADevices(enumeratedDevices)) {
-			fprintf( stderr, "Failed to enumerate GPU devices, aborting.\n" );
+			const char * problem = "Failed to enumerate GPU devices";
+			fprintf( stderr, "# %s, aborting.\n", problem );
+			fprintf( stdout, "condor_gpu_discovery_error = \"%s\"\n", problem );
 			return 1;
 		}
 
@@ -576,9 +581,10 @@ main( int argc, const char** argv)
 				// NVML and CUDA UUIDs differ in this prefix.
 				std::string UUID = "GPU-" + bp.uuid;
 				cudaDevices.insert( UUID );
-				// fprintf( stderr, "Adding %s to the CUDA device list\n", UUID.c_str() );
 			} else {
-				fprintf( stderr, "Not enumerating NVML devices because a CUDA device has no UUID.  This usually means you should upgrade your CUDA libaries.\n" );
+				const char * problem = "Not enumerating NVML devices because a CUDA device has no UUID.  This usually means you should upgrade your CUDA libaries.";
+				fprintf( stderr, "# %s\n", problem );
+				fprintf( stdout, "condor_gpu_discovery_error = \"%s\"\n", problem );
 				shouldEnumerateNVMLDevices = false;
 			}
 		}
@@ -586,7 +592,9 @@ main( int argc, const char** argv)
 		if( shouldEnumerateNVMLDevices && nvml_handle ) {
 			nvmlReturn_t r = enumerateNVMLDevices(nvmlDevices);
 			if(r != NVML_SUCCESS) {
-				fprintf( stderr, "Failed to enumerate MIG devices (%d: %s), aborting.\n", r, nvmlErrorString(r) );
+				const char * problem = "Failed to enumerate MIG devices";
+				fprintf( stderr, "# %s (%d: %s)\n", problem, r, nvmlErrorString(r) );
+				fprintf( stdout, "condor_gpu_discovery_error = \"%s\"\n", problem );
 				return 1;
 			}
 
@@ -599,7 +607,6 @@ main( int argc, const char** argv)
 				parentUUID = parentUUID.substr( 8 );
 				parentUUID.erase( parentUUID.find( "/" ), std::string::npos );
 				migDevices.insert(parentUUID);
-				// fprintf( stderr, "Adding %s to MIG device list for MIG instance %s\n", parentUUID.c_str(), bp.uuid.c_str() );
 			}
 		}
 	}
@@ -632,7 +639,6 @@ main( int argc, const char** argv)
 		if((! opt_opencl) && nvml_handle) {
 			const std::string & UUID = enumeratedDevices[dev].uuid;
 			if( migDevices.find( UUID ) != migDevices.end() ) {
-				// fprintf( stderr, "[CUDA dev_props] Skipping %s.\n", UUID.c_str() );
 				continue;
 			}
 		}
@@ -641,11 +647,10 @@ main( int argc, const char** argv)
 		detected_gpus += gpuID;
 		++filteredDeviceCount;
 
-		// fprintf( stderr, "[CUDA dev_props] Adding CUDA device %s\n", gpuID.c_str() );
-
 		if(! opt_basic) { continue; }
 
 		dev_props[gpuID].clear();
+
 		KVP & props = dev_props.find(gpuID)->second;
 
 		if(! opt_opencl) {
@@ -713,12 +718,10 @@ main( int argc, const char** argv)
 	//
 	for( const BasicProps & bp : nvmlDevices ) {
 		if( migDevices.find( bp.uuid ) != migDevices.end() ) {
-			// fprintf( stderr, "[nvml dev_props] Skipping MIG device parent %s.\n", bp.uuid.c_str() );
 			continue;
 		}
 
 		if( cudaDevices.find( bp.uuid ) != cudaDevices.end() ) {
-			// fprintf( stderr, "[nvml dev_props] Skipping CUDA device %s.\n", bp.uuid.c_str() );
 			continue;
 		}
 
@@ -728,9 +731,6 @@ main( int argc, const char** argv)
 		++filteredDeviceCount;
 
 		dev_props[gpuID].clear();
-
-		// fprintf( stderr, "[nvml dev_props] Adding NVML device %s\n", gpuID.c_str() );
-
 		if(! opt_basic) { continue; }
 
 		KVP & props = dev_props.find(gpuID)->second;
@@ -910,6 +910,53 @@ main( int argc, const char** argv)
 		}
 	}
 
+<<<<<<< HEAD
+=======
+
+	//
+	// Dynamic properties
+	//
+	if(! opt_dynamic) { return 0; }
+
+	// Dynamic properties for CUDA devices
+	for( dev = 0; dev < deviceCount; ++dev ) {
+		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
+			continue;
+		}
+
+		// Determine the GPU ID.
+		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
+
+		const std::string & UUID = enumeratedDevices[dev].uuid;
+		if( migDevices.find( UUID ) != migDevices.end() ) {
+			continue;
+		}
+
+		nvmlDevice_t device;
+		if(NVML_SUCCESS != findNVMLDeviceHandle(enumeratedDevices[dev].uuid, & device)) {
+			continue;
+		}
+
+		printDynamicProperties( gpuID, device );
+	}
+
+	// Dynamic properties for NVML devices
+	for( auto bp : nvmlDevices ) {
+		if( cudaDevices.find( bp.uuid ) != cudaDevices.end() ) {
+			continue;
+		}
+
+		nvmlDevice_t device;
+		if(NVML_SUCCESS != findNVMLDeviceHandle(bp.uuid, & device)) {
+			continue;
+		}
+
+		std::string gpuID = gpuIDFromUUID( bp.uuid, opt_short_uuid );
+		printDynamicProperties( gpuID, device );
+	}
+
+
+>>>>>>> V9_0-branch
 	//
 	// Clean up on the way out.
 	//

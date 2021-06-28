@@ -23,7 +23,12 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where ``condor_gpu_discovery`` would not report any GPUs if
+  any MIG-enabled GPU on the system were configured in certain ways.  Fixed
+  a bug which could cause ``condor_gpu_discovery``'s output to become
+  unparseable after certain errors.
+  :jira:`476`
+
 
 Version 9.0.2
 -------------
