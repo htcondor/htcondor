@@ -2478,9 +2478,9 @@ int SubmitHash::SetGSICredentials()
 	}
 
 	if (proxy_file != NULL && ! clusterAd) {
-		char *full_proxy_file = strdup( full_path( proxy_file ) );
-		free( proxy_file );
-		proxy_file = full_proxy_file;
+		std::string full_proxy_file = full_path( proxy_file );
+		free(proxy_file);
+		proxy_file = NULL;
 #if defined(HAVE_EXT_GLOBUS)
 // this code should get torn out at some point (8.7.0) since the SchedD now
 // manages these attributes securely and the values provided by submit should
@@ -2500,7 +2500,7 @@ int SubmitHash::SetGSICredentials()
 			}
 
 			globus_gsi_cred_handle_t proxy_handle;
-			proxy_handle = x509_proxy_read( proxy_file );
+			proxy_handle = x509_proxy_read( full_proxy_file.c_str() );
 			if ( proxy_handle == NULL ) {
 				push_error(stderr, "%s\n", x509_error_string() );
 				ABORT_AND_RETURN( 1 );
@@ -2560,7 +2560,7 @@ int SubmitHash::SetGSICredentials()
 						// no attributes, skip silently.
 					} else {
 						// log all other errors
-						push_warning(stderr, "unable to extract VOMS attributes (proxy: %s, erro: %i). continuing \n", proxy_file, error );
+						push_warning(stderr, "unable to extract VOMS attributes (proxy: %s, erro: %i). continuing \n", full_proxy_file.c_str(), error );
 					}
 				} else {
 					AssignJobString(ATTR_X509_USER_PROXY_VONAME, voname);
@@ -2585,9 +2585,10 @@ int SubmitHash::SetGSICredentials()
 // out. -zmiller
 #endif
 
-		AssignJobString(ATTR_X509_USER_PROXY, proxy_file);
-		free( proxy_file );
+		AssignJobString(ATTR_X509_USER_PROXY, full_proxy_file.c_str());
 	}
+
+	free(proxy_file);
 
 	char* tmp = submit_param(SUBMIT_KEY_DelegateJobGSICredentialsLifetime,ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME);
 	if( tmp ) {
