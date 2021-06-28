@@ -28,8 +28,6 @@ boincjob.cpp
 boincresource.cpp
 condorjob.cpp
 condorresource.cpp
-creamjob.cpp
-creamresource.cpp
 ec2-gahp-client.cpp
 ec2job.cpp
 ec2resource.cpp
@@ -46,7 +44,6 @@ infnbatchresource.cpp
 nordugridjob.cpp
 nordugridresource.cpp
 proxymanager.cpp
-transferrequest.cpp
 )
 
 if ( LINUX )

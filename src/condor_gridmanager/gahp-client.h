@@ -603,39 +603,6 @@ class GahpClient : public GenericGahpClient {
 		arc_delegation_renew(const std::string &service_url,
 		                     const std::string &deleg_id);
 
-		int cream_delegate(const char *delg_service, const char *delg_id);
-		
-		int cream_job_register(const char *service, const char *delg_id, 
-							   const char *jdl, const char *lease_id, char **job_id, char **upload_url, char **download_url);
-		
-		int cream_job_start(const char *service, const char *job_id);
-		
-		int cream_job_purge(const char *service, const char *job_id);
-
-		int cream_job_cancel(const char *service, const char *job_id);
-
-		int cream_job_suspend(const char *service, const char *job_id);
-
-		int cream_job_resume(const char *service, const char *job_id);
-
-		int cream_job_status(const char *service, const char *job_id, 
-							 char **job_status, int *exit_code, char **failure_reason);
-
-		struct CreamJobStatus {
-			std::string job_id;
-			std::string job_status;
-			int exit_code;
-			std::string failure_reason;
-		};
-		typedef std::map<std::string, CreamJobStatus> CreamJobStatusMap;
-		int cream_job_status_all(const char *service, CreamJobStatusMap & job_ids);
-		
-		int cream_proxy_renew(const char *delg_service, const char *delg_id);
-		
-		int cream_ping(const char * service);
-		
-		int cream_set_lease(const char *service, const char *lease_id, time_t &lease_expiry);
-
 		int gce_ping( const std::string &service_url,
 					  const std::string &auth_file,
 					  const std::string &account,

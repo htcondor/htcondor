@@ -1498,10 +1498,6 @@ default=50
 type=int
 tags=gridmanager,gahp-client
 
-[CREAM_GAHP_WORKER_THREADS]
-default=$(GRIDMANAGER_MAX_PENDING_REQUESTS)
-type=int
-
 [GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_EC2]
 default=20
 type=int
@@ -1643,11 +1639,6 @@ tags=gridmanager,gahp-client
 default=
 type=string
 tags=gridmanager,condorjob
-
-[CREAM_GAHP]
-default=$(SBIN)/cream_gahp
-type=string
-tags=gridmanager,creamjob
 
 [COLLECTOR_HOST]
 default=$(CONDOR_HOST)
@@ -6663,7 +6654,6 @@ default=
 win32_default : @end
 	GT2_GAHP
 	NORDUGRID_GAHP
-	CREAM_GAHP
 	LIBVIRT_XML_SCRIPT
 @end
 

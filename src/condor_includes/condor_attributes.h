@@ -115,7 +115,6 @@
 #define ATTR_CONTINUE  "Continue"
 #define ATTR_CONTINUE_REASON  "ContinueReason"
 #define ATTR_CORE_SIZE  "CoreSize"
-#define ATTR_CREAM_ATTRIBUTES  "CreamAttributes"
 #define ATTR_CRON_MINUTES  "CronMinute"
 #define ATTR_CRON_HOURS  "CronHour"
 #define ATTR_CRON_DAYS_OF_MONTH  "CronDayOfMonth"

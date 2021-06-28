@@ -214,9 +214,6 @@
 /* Do we have the libvirt external (USED)*/
 #cmakedefine HAVE_EXT_LIBVIRT 1
 
-///* Do we have the cream external (Imake?)*/
-#cmakedefine HAVE_EXT_CREAM
-
 ///* Do we have the curl external (Imake)*/
 #cmakedefine HAVE_EXT_CURL
 

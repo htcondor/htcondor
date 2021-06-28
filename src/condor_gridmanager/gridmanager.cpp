@@ -46,10 +46,6 @@
 #include "gcejob.h"
 #include "azurejob.h"
 
-#if !defined(WIN32)
-#  include "creamjob.h"
-#endif
-
 #define QMGMT_TIMEOUT 15
 
 #define UPDATE_SCHEDD_DELAY		5
@@ -321,16 +317,6 @@ Init()
 	}
 
 	JobType *new_type;
-
-#if 0
-	new_type = new JobType;
-	new_type->Name = strdup( "Cream" );
-	new_type->InitFunc = CreamJobInit;
-	new_type->ReconfigFunc = CreamJobReconfig;
-	new_type->AdMatchFunc = CreamJobAdMatch;
-	new_type->CreateFunc = CreamJobCreate;
-	jobTypes.Append( new_type );
-#endif
 
 	new_type = new JobType;
 	new_type->Name = strdup( "Nordugrid" );
