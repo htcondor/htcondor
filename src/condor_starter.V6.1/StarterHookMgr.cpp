@@ -162,7 +162,7 @@ StarterHookMgr::tryHookPrepareJob()
 				"ERROR in StarterHookMgr::tryHookPrepareJob: %s\n",
 				err_msg.c_str());
 		Starter->jic->notifyStarterError(err_msg.c_str(), true,
-						 CONDOR_HOLD_CODE_HookPrepareJobFailure, 0);
+						 CONDOR_HOLD_CODE::HookPrepareJobFailure, 0);
 		delete hook_client;
 		return -1;
 	}
@@ -298,7 +298,7 @@ HookPrepareJobClient::hookExited(int exit_status) {
 				"ERROR in StarterHookMgr::tryHookPrepareJob: %s\n",
 				err_msg.c_str());
 		Starter->jic->notifyStarterError(err_msg.c_str(), true,
-							 CONDOR_HOLD_CODE_HookPrepareJobFailure, subcode);
+							 CONDOR_HOLD_CODE::HookPrepareJobFailure, subcode);
 		Starter->RemoteShutdownFast(0);
 	}
 	else {

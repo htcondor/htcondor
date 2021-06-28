@@ -981,7 +981,7 @@ void GlobusJob::doEvaluateState()
 				jobAd->Assign( ATTR_HOLD_REASON,
 							   "Proxy file missing or corrupted" );
 				jobAd->Assign(ATTR_HOLD_REASON_CODE,
-							   CONDOR_HOLD_CODE_CorruptedCredential);
+							   CONDOR_HOLD_CODE::CorruptedCredential);
 				jobAd->Assign(ATTR_HOLD_REASON_SUBCODE, 0);
 				gmState = GM_HOLD;
 				break;
@@ -2249,27 +2249,27 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				if ( holdReason[0] == '\0' && globusStateErrorCode == 0 &&
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 					snprintf( holdReason, 1024, "Job failed, no reason given by GRAM server" );
-					holdCode = CONDOR_HOLD_CODE_GlobusGramError;
+					holdCode = CONDOR_HOLD_CODE::GlobusGramError;
 					holdSubCode = 0;
 				}
 				if ( holdReason[0] == '\0' && globusStateErrorCode != 0 ) {
 					snprintf( holdReason, 1024, "Globus error %d: %s",
 							  globusStateErrorCode,
 							  gahp->globus_gram_client_error_string( globusStateErrorCode ) );
-					holdCode = CONDOR_HOLD_CODE_GlobusGramError;
+					holdCode = CONDOR_HOLD_CODE::GlobusGramError;
 					holdSubCode = globusStateErrorCode;
 				}
 				if ( holdReason[0] == '\0' && globusError != 0 ) {
 					snprintf( holdReason, 1024, "Globus error %d: %s", globusError,
 							  gahp->globus_gram_client_error_string( globusError ) );
-					holdCode = CONDOR_HOLD_CODE_GlobusGramError;
+					holdCode = CONDOR_HOLD_CODE::GlobusGramError;
 					holdSubCode = globusError;
 				}
 				if ( holdReason[0] == '\0' && previousGlobusError != 0 ) {
 					snprintf( holdReason, 1024, "Globus error %d: %s",
 							  previousGlobusError,
 							  gahp->globus_gram_client_error_string( previousGlobusError ) );
-					holdCode = CONDOR_HOLD_CODE_GlobusGramError;
+					holdCode = CONDOR_HOLD_CODE::GlobusGramError;
 					holdSubCode = previousGlobusError;
 				}
 				if ( holdReason[0] == '\0' ) {

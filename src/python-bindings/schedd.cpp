@@ -149,7 +149,7 @@ make_spool(classad::ClassAd& ad)
         THROW_EX(HTCondorInternalError, "Unable to set job to hold.");
     if (!ad.InsertAttr(ATTR_HOLD_REASON, "Spooling input data files"))
         THROW_EX(HTCondorInternalError, "Unable to set job hold reason.")
-    if (!ad.InsertAttr(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput))
+    if (!ad.InsertAttr(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::SpoolingInput))
         THROW_EX(HTCondorInternalError, "Unable to set job hold code.")
     std::stringstream ss;
     ss << ATTR_JOB_STATUS << " == " << COMPLETED << " && ( ";
