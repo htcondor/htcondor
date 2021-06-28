@@ -121,12 +121,18 @@ def reconfigure_daemons(condor, token_config_file):
     time.sleep(5)
 
 
+@action
+def token_list(condor):
+    cmd = condor.run_command(["condor_token_list"], timeout=20)
+    assert cmd.returncode == 0
+    return cmd.stdout
+
+
 # copy the POOL key to the filename that tools use
 @action
 def copy_pool_key(condor, reconfigure_daemons, pool_signing_key, password_file):
     shutil.copyfile(pool_signing_key, password_file)
     os.chmod(password_file, 0o600)
-
 
 class TestAuthProtocolToken:
 
@@ -134,8 +140,81 @@ class TestAuthProtocolToken:
         assert os.path.isfile(pool_signing_key)
 
     def test_generated_token_signing_key(self, condor, copy_pool_key):
-        rval = condor.run_command(["condor_ping", "-type", "collector", "-table", "ALL", "-debug"], timeout=20)
-        assert rval.returncode == 0
+        cmd = condor.run_command(["condor_ping", "-type", "collector", "-table", "ALL", "-debug"], timeout=20)
+        assert cmd.returncode == 0
+
+    def test_move_password_removes_access(self, condor, password_file, offline_password_file):
+        os.rename(password_file, offline_password_file)
+        cmd = condor.run_command(["condor_ping", "-type", "collector", "-table", "ALL", "-debug"], timeout=20)
+        assert cmd.returncode == 1
+
+    def test_wrong_master_password_fails(self, condor, password_file, wrong_password_file):
+        os.rename(wrong_password_file, password_file)
+        cmd = condor.run_command(["condor_ping", "-type", "collector", "-table", "ALL", "-debug"], timeout=20)
+        assert cmd.returncode == 1
+
+    def test_correct_master_password_succeeds(self, condor, password_file, wrong_password_file, offline_password_file):
+        # Switch back to the correct password
+        os.rename(password_file, wrong_password_file)
+        os.rename(offline_password_file, password_file)
+        # Verify condor_ping
+        cmd = condor.run_command(["condor_ping", "-type", "collector", "-table", "ALL", "-debug"], timeout=20)
+        assert cmd.returncode == 0
+
+    def test_create_valid_token_authorized_user(self, condor):
+        cmd = condor.run_command(["condor_token_create", "-identity", "administrator@domain", "-token", "tokenfile"], timeout=20)
+        assert cmd.returncode == 0
+
+    def test_command_succeeds_with_token_but_no_common_pool_key(self, condor, password_file, offline_password_file, wrong_password_file):
+        # Switch back to wrong POOL signing key
+        os.rename(password_file, offline_password_file)
+        os.rename(wrong_password_file, password_file)
+        # Verify condor_ping
+        cmd = condor.run_command(["condor_ping", "-type", "master", "-table", "ALL"], timeout=20)
+        assert cmd.returncode == 0
+
+    def test_list_tokens(self, token_list):
+        assert token_list
+
+    def test_ping_fails_after_deleting_authorized_token(self, condor, token_list):
+        token_file = token_list.split(' ')[-1]
+        os.unlink(token_file)
+        cmd = condor.run_command(["condor_ping", "-type", "master", "-table", "ALL"], timeout=20)
+        assert cmd.returncode == 1
+
+    def test_create_valid_token_unauthorized_user(self, condor, password_file, offline_password_file, wrong_password_file):
+        # Switch back to correct POOL signing key
+        os.rename(password_file, wrong_password_file)
+        os.rename(offline_password_file, password_file)
+        # Verify condor_token_create
+        cmd = condor.run_command(["condor_token_create", "-identity", "test@trust-domain", "-token", "tokenfile"], timeout=20)
+        assert cmd.returncode == 0
+
+    def test_ping_fails_with_unauthorized_identity(self, condor, password_file, offline_password_file, wrong_password_file):
+        # Switch back to wrong POOL signing key
+        os.rename(password_file, offline_password_file)
+        os.rename(wrong_password_file, password_file)
+        # Verify condor_ping
+        cmd = condor.run_command(["condor_ping", "-type", "master", "-table", "ALL"], timeout=20)
+        assert cmd.returncode == 1
+
+    def test_condor_fetch(self, condor, password_file, offline_password_file, wrong_password_file):
+        # Switch back to correct POOL signing key
+        os.rename(password_file, wrong_password_file)
+        os.rename(offline_password_file, password_file)
+        # Verify condor_token_fetch
+        cmd = condor.run_command(["condor_token_fetch", "-type", "master", "-token", "tokenfile"], timeout=20)
+        assert cmd.returncode == 0
+
+    def test_ping_with_fetched_token(self, condor, password_file, offline_password_file, wrong_password_file):
+        # Switch back to wrong POOL signing key
+        os.rename(password_file, offline_password_file)
+        os.rename(wrong_password_file, password_file)
+        # Verify condor_ping
+        cmd = condor.run_command(["condor_ping", "-type", "master", "-table", "ALL"], timeout=20)
+        assert cmd.returncode == 1
+
+
 
 
 
