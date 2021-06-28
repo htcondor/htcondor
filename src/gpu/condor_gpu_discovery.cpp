@@ -592,8 +592,11 @@ main( int argc, const char** argv)
 		if( shouldEnumerateNVMLDevices && nvml_handle ) {
 			nvmlReturn_t r = enumerateNVMLDevices(nvmlDevices);
 			if(r != NVML_SUCCESS) {
-				const char * problem = "Failed to enumerate MIG devices";
-				fprintf( stderr, "# %s (%d: %s)\n", problem, r, nvmlErrorString(r) );
+				char problem[1024];
+				snprintf( problem, 1024, "Failed to enumerate MIG devices (%d: %s)", r, nvmlErrorString(r) );
+				problem[1023] = '\0';
+
+				fprintf( stderr, "# %s, aborting.\n" );
 				fprintf( stdout, "condor_gpu_discovery_error = \"%s\"\n", problem );
 				return 1;
 			}
