@@ -910,53 +910,6 @@ main( int argc, const char** argv)
 		}
 	}
 
-<<<<<<< HEAD
-=======
-
-	//
-	// Dynamic properties
-	//
-	if(! opt_dynamic) { return 0; }
-
-	// Dynamic properties for CUDA devices
-	for( dev = 0; dev < deviceCount; ++dev ) {
-		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
-			continue;
-		}
-
-		// Determine the GPU ID.
-		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
-
-		const std::string & UUID = enumeratedDevices[dev].uuid;
-		if( migDevices.find( UUID ) != migDevices.end() ) {
-			continue;
-		}
-
-		nvmlDevice_t device;
-		if(NVML_SUCCESS != findNVMLDeviceHandle(enumeratedDevices[dev].uuid, & device)) {
-			continue;
-		}
-
-		printDynamicProperties( gpuID, device );
-	}
-
-	// Dynamic properties for NVML devices
-	for( auto bp : nvmlDevices ) {
-		if( cudaDevices.find( bp.uuid ) != cudaDevices.end() ) {
-			continue;
-		}
-
-		nvmlDevice_t device;
-		if(NVML_SUCCESS != findNVMLDeviceHandle(bp.uuid, & device)) {
-			continue;
-		}
-
-		std::string gpuID = gpuIDFromUUID( bp.uuid, opt_short_uuid );
-		printDynamicProperties( gpuID, device );
-	}
-
-
->>>>>>> V9_0-branch
 	//
 	// Clean up on the way out.
 	//
