@@ -47,7 +47,6 @@ nordugridjob.cpp
 nordugridresource.cpp
 proxymanager.cpp
 transferrequest.cpp
-unicorejob.cpp
 )
 
 if ( LINUX )

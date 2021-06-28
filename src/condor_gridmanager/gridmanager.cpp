@@ -37,7 +37,6 @@
 
 #include "arcjob.h"
 #include "nordugridjob.h"
-#include "unicorejob.h"
 #include "condorjob.h"
 #include "infnbatchjob.h"
 #include "boincjob.h"
@@ -372,16 +371,6 @@ Init()
 	new_type->ReconfigFunc = AzureJobReconfig;
 	new_type->AdMatchFunc = AzureJobAdMatch;
 	new_type->CreateFunc = AzureJobCreate;
-	jobTypes.Append( new_type );
-#endif
-
-#if 0
-	new_type = new JobType;
-	new_type->Name = strdup( "Unicore" );
-	new_type->InitFunc = UnicoreJobInit;
-	new_type->ReconfigFunc = UnicoreJobReconfig;
-	new_type->AdMatchFunc = UnicoreJobAdMatch;
-	new_type->CreateFunc = UnicoreJobCreate;
 	jobTypes.Append( new_type );
 #endif
 
