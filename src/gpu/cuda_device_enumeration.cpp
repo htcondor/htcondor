@@ -403,7 +403,7 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
 			cudaGetDevicePropertiesOfIndeterminateStructure =
 				(cuda_DevicePropBuf_int)dlsym( cudart_handle, "cudaGetDeviceProperties" );
 		} else {
-			fprintf( stderr, "Unable to find cudaRuntimGetVersion().\n" );
+			fprintf( stderr, "# Unable to find cudaRuntimGetVersion().\n" );
 			dlclose( cudart_handle );
 			return NULL;
 		}
@@ -411,7 +411,7 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
 		findNVMLDeviceHandle = nvml_findNVMLDeviceHandle;
 		return cudart_handle;
 	} else {
-		fprintf( stderr, "Unable to load a CUDA library (%s or %s).\n",
+		fprintf( stderr, "# Unable to load a CUDA library (%s or %s).\n",
 			cuda_library, cudart_library );
 		return NULL;
 	}
@@ -590,7 +590,6 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 			r = nvml_getBasicProps( device, & bp );
 			if( NVML_SUCCESS != r ) { return r; }
 
-			// fprintf( stderr, "Adding NVML device %s\n", uuid );
 			devices.push_back( bp );
 		}
 	}
