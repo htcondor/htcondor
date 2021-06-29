@@ -59,6 +59,11 @@ New Features:
 - Added two new commands to *condor_submit* - ``use_scitokens`` and ``scitokens_file``.
   :jira:`408`
 
+- Update to be able to link in scitokens-cpp library directly, rather than
+  always using dlopen(). This allows SciTokens to be used with the conda-forge
+  build.
+  :jira:`541`
+
 Bugs Fixed:
 
 - Fixed Munge authentication, which was broken starting with HTConor 8.9.9.
