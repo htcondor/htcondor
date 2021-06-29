@@ -42,6 +42,7 @@
 #include "ipv6_hostname.h"
 #include "condor_auth_passwd.h"
 #include "condor_auth_ssl.h"
+#include "globus_utils.h" // for warn_on_gsi_config()
 
 #include <sstream>
 #include <algorithm>
@@ -370,6 +371,9 @@ SecMan::getAuthenticationMethods(DCpermission perm) {
 		methods = getDefaultAuthenticationMethods(perm);
 	} else {
 		methods = std::string(config_methods.get());
+	}
+	if (strstr(methods.c_str(), "GSI")) {
+		warn_on_gsi_config();
 	}
 
 	return filterAuthenticationMethods(perm, methods);

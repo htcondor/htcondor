@@ -170,6 +170,27 @@ warn_on_gsi_usage()
 	}
 }
 
+void
+warn_on_gsi_config()
+{
+	static time_t last_warn = 0;
+	time_t now = time(NULL);
+	if ( now < last_warn + (12*60*60) ) {
+		return;
+	}
+	last_warn = now;
+	if ( ! param_boolean("WARN_ON_GSI_CONFIGURATION", true) ) {
+		return;
+	}
+	SubsystemInfo* my_subsys = get_mySubSystem();
+	SubsystemType subsys_type = my_subsys ? my_subsys->getType() : SUBSYSTEM_TYPE_MIN;
+	if ( subsys_type == SUBSYSTEM_TYPE_TOOL || subsys_type == SUBSYSTEM_TYPE_SUBMIT ) {
+		fprintf(stderr, "WARNING: GSI authentication is enabled by your security configuration! This will not work in future releases.\n");
+	} else {
+		dprintf(D_ALWAYS, "WARNING: GSI authentication is is enabled by your security configuration! This will not work in future releases. (Will warn again after 12 hours)\n");
+	}
+}
+
 const char *
 x509_error_string( void )
 {
