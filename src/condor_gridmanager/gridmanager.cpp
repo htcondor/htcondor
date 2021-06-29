@@ -33,8 +33,6 @@
 #include "gridmanager.h"
 #include "gahp-client.h"
 
-#include "globusjob.h"
-
 #include "arcjob.h"
 #include "nordugridjob.h"
 #include "condorjob.h"
