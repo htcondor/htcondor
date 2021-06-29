@@ -8773,6 +8773,14 @@ macros are described in the :doc:`/admin-manual/security` section.
     the setting per authorization level; it is recommended to leave these
     settings untouched.
 
+:macro-def:`WARN_ON_GSI_CONFIGURATION"`
+    A boolean varaiables that controls whether a warning is printed
+    whenver GSI seen in a configured list of authentication methods.
+    Daemons will print the warning to their log (no more frequently than
+    once every 12 hours).
+    Tools will print the warning to their stderr.
+    The default value is ``True``.
+
 :macro-def:`WARN_ON_GSI_USAGE`
     A boolean varaiables that controls whether a warning is printed
     whenver GSI is used for authentication over a network connection with
