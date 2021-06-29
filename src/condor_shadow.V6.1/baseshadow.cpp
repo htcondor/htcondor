@@ -319,7 +319,7 @@ int BaseShadow::cdToIwd() {
 		formatstr(hold_reason, "Cannot access initial working directory %s: %s",
 		                    iwd.c_str(), strerror(chdir_errno));
 		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
-		holdJobAndExit(hold_reason.c_str(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
+		holdJobAndExit(hold_reason.c_str(),CONDOR_HOLD_CODE::IwdError,chdir_errno);
 		iRet = -1;
 	}
 	
@@ -829,7 +829,7 @@ void BaseShadow::initUserLog()
 		formatstr(hold_reason,"Failed to initialize user log");
 		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
 		holdJobAndExit(hold_reason.c_str(),
-				CONDOR_HOLD_CODE_UnableToInitUserLog,0);
+				CONDOR_HOLD_CODE::UnableToInitUserLog,0);
 			// holdJobAndExit() should not return, but just in case it does
 			// EXCEPT
 		EXCEPT("Failed to initialize user log: %s",hold_reason.c_str());

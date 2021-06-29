@@ -474,7 +474,7 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		// we need to submit on hold (taken from condor_submit.V6/submit.C)
 		src.Assign(ATTR_JOB_STATUS, 5); // 5==HELD
 		src.Assign(ATTR_HOLD_REASON, "Spooling input data files");
-		src.Assign(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput);
+		src.Assign(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::SpoolingInput);
 
 			// See the comment in the function body of ExpandInputFileList
 			// for an explanation of what is going on here.

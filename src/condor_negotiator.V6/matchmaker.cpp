@@ -1090,7 +1090,7 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 	}
 	if (!authorized) {
 		errstack.pushf("NEGOTIATOR", 4, "Client %s requested to set the priority factor of %s but is not authorized.",
-			peer_identity ? peer_identity : "(unknown)", submitter.c_str());
+			peer_identity, submitter.c_str());
 		return returnPrioFactor(strm, errstack);
 	}
 

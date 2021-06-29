@@ -361,8 +361,8 @@ UserProc::getStdFile( std_file_type type,
 			std::string err_msg;
 			formatstr( err_msg, "unable to establish %s stream", phrase );
 			Starter->jic->notifyStarterError( err_msg.c_str(), true,
-			    is_output ? CONDOR_HOLD_CODE_UnableToOpenOutputStream :
-			                CONDOR_HOLD_CODE_UnableToOpenInputStream, 0 );
+			    is_output ? CONDOR_HOLD_CODE::UnableToOpenOutputStream :
+			                CONDOR_HOLD_CODE::UnableToOpenInputStream, 0 );
 			return false;
 		}
 		*out_fd = handler->GetJobPipe();
@@ -472,8 +472,8 @@ UserProc::openStdFile( std_file_type type,
 		                 errno );
 		dprintf( D_ALWAYS, "%s\n", err_msg.c_str() );
 		Starter->jic->notifyStarterError( err_msg.c_str(), true,
-		  is_output ? CONDOR_HOLD_CODE_UnableToOpenOutput :
-		              CONDOR_HOLD_CODE_UnableToOpenInput, open_errno );
+		  is_output ? CONDOR_HOLD_CODE::UnableToOpenOutput :
+		              CONDOR_HOLD_CODE::UnableToOpenInput, open_errno );
 		return -1;
 	}
 	dprintf( (filename == NULL_FILE) ? D_FULLDEBUG : D_ALWAYS,

@@ -529,6 +529,8 @@
 #define ATTR_NUM_DYNAMIC_SLOTS  "NumDynamicSlots"
 #define ATTR_NUM_MATCHES  "NumJobMatches"
 #define ATTR_LIMIT_RESULTS "LimitResults"
+#define ATTR_NUM_HOLDS "NumHolds"
+#define ATTR_NUM_HOLDS_BY_REASON "NumHoldsByReason"
 #define ATTR_NUM_JOB_STARTS  "NumJobStarts"
 #define ATTR_NUM_JOB_COMPLETIONS "NumJobCompletions"
 #define ATTR_NUM_JOB_RECONNECTS  "NumJobReconnects"

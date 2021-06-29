@@ -1,9 +1,11 @@
 import htcondor
 import os
 import shutil
+import subprocess
 import sys
 
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from .conf import *
 from .dagman import DAGMan
@@ -66,7 +68,14 @@ class Job:
                 print("Error: Slurm resources must specify a --node_count argument")
                 sys.exit(1)
 
-            os.mkdir(TMP_DIR)
+            # Verify that we have Slurm access; if not, run bosco_clutser to create it
+            try:
+                subprocess.check_output(["bosco_cluster", "--status", "hpclogin1.chtc.wisc.edu"])
+            except:
+                print(f"You need to install support software to access the Slurm cluster. Please run the following command in your terminal:\n\nbosco_cluster --add hpclogin1.chtc.wisc.edu slurm\n")
+                sys.exit(1)
+
+            Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
             DAGMan.write_slurm_dag(file, options["runtime"], options["node_count"], options["email"])
             os.chdir(TMP_DIR) # DAG must be submitted from TMP_DIR
             submit_description = htcondor.Submit.from_dag(str(TMP_DIR / "slurm_submit.dag"))
@@ -95,7 +104,7 @@ class Job:
                 print("Error: EC2 resources must specify a --node_count argument")
                 sys.exit(1)
 
-            os.mkdir(TMP_DIR)
+            Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
             DAGMan.write_ec2_dag(file, options["runtime"], options["node_count"], options["email"])
             os.chdir(TMP_DIR) # DAG must be submitted from TMP_DIR
             submit_description = htcondor.Submit.from_dag("ec2_submit.dag")
@@ -176,7 +185,7 @@ class Job:
                 sys.exit(0)
 
             # Parse the .dag file to retrieve some user input values
-            dagman_dag_file = open(TMP_DIR / dagman_dag, "r")
+            dagman_dag_file = open(dagman_dag, "r")
             for line in dagman_dag_file.readlines():
                 if "annex_node_count =" in line:
                     slurm_nodes_requested = line.split("=")[1].strip()
@@ -184,7 +193,7 @@ class Job:
                     slurm_runtime = int(line.split("=")[1].strip())
             
             # Parse the DAGMan event log for useful information
-            dagman_events = htcondor.JobEventLog(str(TMP_DIR / dagman_log))
+            dagman_events = htcondor.JobEventLog(dagman_log)
             for event in dagman_events.events(0):
                 if "LogNotes" in event.keys() and event["LogNotes"] == "DAG Node: B":
                     provisioner_cluster_id = event.cluster

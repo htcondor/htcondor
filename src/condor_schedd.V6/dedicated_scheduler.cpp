@@ -1372,7 +1372,7 @@ DedicatedScheduler::sortJobs( void )
 
 		formatstr(fifoConstraint, "%s == %d && %s == %d && %s == %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PARALLEL, 
 																ATTR_JOB_STATUS, HELD, 
-																ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput);
+																ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::SpoolingInput);
 		ClassAd *spoolingInJob = NULL;
 		bool firstTime = true;
 		while ((spoolingInJob = GetNextJobByConstraint(fifoConstraint.c_str(), firstTime))) {

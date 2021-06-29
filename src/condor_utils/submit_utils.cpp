@@ -2058,17 +2058,17 @@ int SubmitHash::SetJobStatus()
 			ABORT_AND_RETURN( 1 );
 		}
 		AssignJobVal(ATTR_JOB_STATUS, HELD);
-		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SubmittedOnHold);
+		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::SubmittedOnHold);
 		SubmitOnHold = true;
-		SubmitOnHoldCode = CONDOR_HOLD_CODE_SubmittedOnHold;
+		SubmitOnHoldCode = CONDOR_HOLD_CODE::SubmittedOnHold;
 
 		AssignJobString(ATTR_HOLD_REASON, "submitted on hold at user's request");
 	} else 
 	if ( IsRemoteJob ) {
 		AssignJobVal(ATTR_JOB_STATUS, HELD);
-		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput);
+		AssignJobVal(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::SpoolingInput);
 		SubmitOnHold = true;
-		SubmitOnHoldCode = CONDOR_HOLD_CODE_SpoolingInput;
+		SubmitOnHoldCode = CONDOR_HOLD_CODE::SpoolingInput;
 
 		AssignJobString(ATTR_HOLD_REASON, "Spooling input data files");
 	} else {
@@ -6527,7 +6527,7 @@ int SubmitHash::SetAccountingGroup()
 
 	// if nice-user is not a prefix, then it conflicts with accounting_group
 	// TODO? should this be a knob?
-	bool nice_user_is_prefix = false;
+	const bool nice_user_is_prefix = false;
 
 	// is a group setting in effect?
 	auto_free_ptr group(submit_param(SUBMIT_KEY_AcctGroup, ATTR_ACCOUNTING_GROUP));
@@ -9052,7 +9052,7 @@ const char* SubmitHash::to_string(std::string & out, int flags)
 		const char * key = hash_iter_key(it);
 		if (key && key[0] == '$') continue; // dont dump meta params.
 		const char * val = hash_iter_value(it);
-		out += key;
+		out += key ? key : "";
 		out += "=";
 		if (val) { out += val; }
 		out += "\n";

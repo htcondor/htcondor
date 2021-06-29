@@ -20,16 +20,17 @@ class DAGMan:
         DAGMan cluster id
         """
     
-        dag, log, out = None, None, None
+        dag, iwd, log, out = None, None, None, None
 
         env = schedd.query(
             constraint=f"ClusterId == {dagman_id}",
-            projection=["Env"],
+            projection=["Env", "Iwd"],
         )
 
         if env:
-            env = dict(item.split("=", 1) for item in env[0]["Env"].split(";"))
-            out = env["_CONDOR_DAGMAN_LOG"]
+            iwd = env[0]["Iwd"]
+            env = dict(item.split("=", 1) for item in env[0]["Env"].split(";")) 
+            out = iwd + "/" + env["_CONDOR_DAGMAN_LOG"]
             log = out.replace(".dagman.out", ".nodes.log")
             dag = out.replace(".dagman.out", "")
 
@@ -61,7 +62,7 @@ class DAGMan:
     request_disk = 10M
 }}
 JOB B {{
-    executable = /home/jfrey/hobblein/hobblein_remote.sh
+    executable = /home/chtcshare/hobblein/hobblein_remote.sh
     universe = grid
     grid_resource = batch slurm hpclogin1.chtc.wisc.edu
     transfer_executable = false
@@ -70,7 +71,7 @@ JOB B {{
     log = job-B.$(Cluster).$(Process).log
     annex_runtime = {runtime}
     annex_node_count = {node_count}
-    annex_name = {getpass.getuser()}-test
+    annex_name = {getpass.getuser()}-annex
     annex_user = {getpass.getuser()}
     # args: <node count> <run time> <annex name> <user>
     arguments = $(annex_node_count) $(annex_runtime) $(annex_name) $(annex_user)
