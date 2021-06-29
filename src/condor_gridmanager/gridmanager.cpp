@@ -384,16 +384,6 @@ Init()
 	new_type->CreateFunc = CondorJobCreate;
 	jobTypes.Append( new_type );
 
-#if 0
-	new_type = new JobType;
-	new_type->Name = strdup( "Globus" );
-	new_type->InitFunc = GlobusJobInit;
-	new_type->ReconfigFunc = GlobusJobReconfig;
-	new_type->AdMatchFunc = GlobusJobAdMatch;
-	new_type->CreateFunc = GlobusJobCreate;
-	jobTypes.Append( new_type );
-#endif
-
 	jobTypes.Rewind();
 	while ( jobTypes.Next( new_type ) ) {
 		new_type->InitFunc();

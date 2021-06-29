@@ -35,8 +35,6 @@ gahp-client.cpp
 gcejob.cpp
 gceresource.cpp
 generic-gahp-client.cpp
-globusjob.cpp
-globusresource.cpp
 gridmanager.cpp
 gridmanager_main.cpp
 infnbatchjob.cpp
@@ -60,14 +58,6 @@ else()
  endif()
 
 if (NOT WINDOWS)
-   if (HAVE_EXT_GLOBUS)
-     add_custom_target( grid_monitor
-       ALL cat ${CMAKE_CURRENT_SOURCE_DIR}/grid_monitor_wrapper ${CMAKE_CURRENT_SOURCE_DIR}/grid_manager_monitor_agent > "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor" && chmod 755 "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor"
-       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/grid_monitor_wrapper ${CMAKE_CURRENT_SOURCE_DIR}/grid_manager_monitor_agent
-       )
-     install (FILES "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor" DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-   endif()
-
    install (FILES remote_gahp DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 endif()

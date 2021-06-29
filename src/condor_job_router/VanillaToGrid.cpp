@@ -312,7 +312,6 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		ATTR_JOB_REMOTE_SYS_CPU,
 		ATTR_JOB_REMOTE_USER_CPU,
 		ATTR_NUM_CKPTS,
-		ATTR_NUM_GLOBUS_SUBMITS,
 		ATTR_NUM_JOB_STARTS,
 		ATTR_NUM_JOB_RECONNECTS,
 		ATTR_NUM_SHADOW_EXCEPTIONS,
