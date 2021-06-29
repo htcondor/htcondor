@@ -90,6 +90,10 @@ Bugs Fixed:
   `batch` now works correctly.
   :jira:`507`
 
+- Fixed a bug that prevented a  personal condor from running in a private
+  user namespace.
+  :jira:`550`
+
 - Fixed a bug that cause the *condor_master* to hang for up to two minutes
   when shutting down, if it was configured to be a personal condor.
   :jira:`548`
