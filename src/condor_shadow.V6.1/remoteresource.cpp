@@ -335,6 +335,7 @@ RemoteResource::killStarter( bool graceful )
 	jobAd->LookupBool(ATTR_RELEASE_CLAIM, wantReleaseClaim);
 	if (wantReleaseClaim) {
 		classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg(RELEASE_CLAIM, dc_startd->getClaimId());
+		msg->setSecSessionId(m_claim_session.secSessionId());
 		msg->setSuccessDebugLevel(D_ALWAYS);
 		msg->setTimeout( 20);
 		msg->setStreamType(Stream::reli_sock);
