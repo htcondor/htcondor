@@ -63,7 +63,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where jobs cannot start on Linux if the execute directory is placed
+  under /tmp or /var/tmp.  The problem is this breaks the default MOUNT_UNDER_SCRATCH
+  option.  As a result, if the administrator located EXECUTE under tmp, HTCondor can
+  no longer make a private /tmp or /var/tmp directory for the job.
+  :jira:`484`
 
 Version 9.1.0
 -------------

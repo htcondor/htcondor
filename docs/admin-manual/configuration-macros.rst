@@ -196,6 +196,10 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     Do not stage other files in this directory; any files not created by
     HTCondor in this directory are subject to removal.
 
+    Ideally, this directory should not be placed under /tmp or /var/tmp, if
+    it is, HTCondor loses the ability to make private instances of /tmp and /var/tmp
+    for jobs.
+
 :macro-def:`TMP_DIR`
     A directory path to a directory where temporary files are placed by
     various portions of the HTCondor system. The daemons and tools that

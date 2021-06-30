@@ -58,4 +58,8 @@ Directories use by the Execute Role
     for a job to its subdirectory; the job's standard output and standard
     error streams are also logged here.  Jobs will also almost always
     generate their output here as well, so the ``EXECUTE`` directory should
-    provide a plenty of space.
+    provide a plenty of space.  ``EXECUTE`` should not be placed under /tmp
+    or /var/tmp if possible, as HTCondor loses the ability to make /tmp and
+    /var/tmp private to the job.  While not a requirement, ideally ``EXECUTE``
+    should be on a distinct filesytem, so that it is impossible for a rogue job
+    to fill up non-HTCondor related partitions.
