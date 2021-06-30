@@ -45,13 +45,10 @@ struct GahpProxyInfo
 	int num_references;
 };
 
-typedef void (* unicore_gahp_callback_func_t)(const char *update_ad_string);
-
 class BoincJob;
 class BoincResource;
 
-#define GAHPCLIENT_DEFAULT_SERVER_ID "DEFAULT"
-#define GAHPCLIENT_DEFAULT_SERVER_PATH "DEFAULT"
+#define GAHP_SUCCESS 0
 
 // Additional error values that GAHP calls can return
 ///
@@ -228,15 +225,6 @@ class GahpServer : public Service {
 
 	std::string m_sec_session_id;
 
-	char *globus_gass_server_url;
-	char *globus_gt2_gram_callback_contact;
-	void *globus_gt2_gram_user_callback_arg;
-	globus_gram_client_callback_func_t globus_gt2_gram_callback_func;
-	int globus_gt2_gram_callback_reqid;
-
-	unicore_gahp_callback_func_t unicore_gahp_callback_func;
-	int unicore_gahp_callback_reqid;
-
 	BoincResource *m_currentBoincResource;
 
 	GahpProxyInfo *master_proxy;
@@ -250,8 +238,8 @@ class GenericGahpClient : public Service {
 	friend class GahpServer;
 
 	public:
-		GenericGahpClient(	const char * id = GAHPCLIENT_DEFAULT_SERVER_ID,
-							const char * path = GAHPCLIENT_DEFAULT_SERVER_PATH,
+		GenericGahpClient(	const char * id,
+							const char * path = NULL,
 							const ArgList * args = NULL );
 		virtual ~GenericGahpClient();
 
@@ -353,8 +341,8 @@ class GahpClient : public GenericGahpClient {
 		//@{
 	
 			/// Constructor
-		GahpClient(const char *id=GAHPCLIENT_DEFAULT_SERVER_ID,
-				   const char *path=GAHPCLIENT_DEFAULT_SERVER_PATH,
+		GahpClient(const char *id,
+				   const char *path=NULL,
 				   const ArgList *args=NULL);
 			/// Destructor
 		~GahpClient();
@@ -367,81 +355,11 @@ class GahpClient : public GenericGahpClient {
 
 		//-----------------------------------------------------------
 		
-		/**@name Globus Methods
-		 * These methods have the exact same API as their native Globus
-		 * Toolkit counterparts.  
+		/**@name Scheduler-specific Methods
+		 * These methods are for gahp commands specific to individual
+		 * remote schedulers.
 		 */
 		//@{
-
-		const char *
-			getGlobusGassServerUrl() { return server->globus_gass_server_url; }
-
-		const char *getGt2CallbackContact()
-			{ return server->globus_gt2_gram_callback_contact; }
-
-		/// cache it from the gahp
-		const char *
-		globus_gram_client_error_string(int error_code);
-
-		///
-		int 
-		globus_gram_client_callback_allow(
-			globus_gram_client_callback_func_t callback_func,
-			void * user_callback_arg,
-			char ** callback_contact);
-
-		///
-		int 
-		globus_gram_client_job_request(const char * resource_manager_contact,
-			const char * description,
-			const int limited_deleg,
-			const char * callback_contact,
-			std::string & job_contact,
-			bool is_restart);
-
-		///
-		int 
-		globus_gram_client_job_cancel(const char * job_contact);
-
-		///
-		int
-		globus_gram_client_job_status(const char * job_contact,
-			int * job_status,
-			int * failure_code);
-
-		///
-		int
-		globus_gram_client_job_signal(const char * job_contact,
-			globus_gram_protocol_job_signal_t signal,
-			const char * signal_arg,
-			int * job_status,
-			int * failure_code);
-
-		///
-		int
-		globus_gram_client_job_callback_register(const char * job_contact,
-			const int job_state_mask,
-			const char * callback_contact,
-			int * job_status,
-			int * failure_code);
-
-		///
-		int 
-		globus_gram_client_ping(const char * resource_manager_contact);
-
-		///
-		int
-		globus_gram_client_job_refresh_credentials(const char *job_contact,
-												   int limited_deleg);
-
-		///
-		int
-		globus_gass_server_superez_init( char **gass_url, int port );
-
-		///
-		int 
-		globus_gram_client_get_jobmanager_version(const char * resource_manager_contact);
-
 
 		int
 		condor_job_submit(const char *schedd_name, ClassAd *job_ad,
@@ -608,64 +526,6 @@ class GahpClient : public GenericGahpClient {
 		arc_delegation_renew(const std::string &service_url,
 		                     const std::string &deleg_id);
 
-		///
-		int 
-		unicore_job_create(const char * description,
-						   char ** job_contact);
-
-		///
-		int
-		unicore_job_start(const char *job_contact);
-
-		///
-		int 
-		unicore_job_destroy(const char * job_contact);
-
-		///
-		int
-		unicore_job_status(const char * job_contact,
-						   char **job_status);
-
-		///
-		int
-		unicore_job_recover(const char * description);
-
-		int
-		unicore_job_callback(unicore_gahp_callback_func_t callback_func);
-
-		int cream_delegate(const char *delg_service, const char *delg_id);
-		
-		int cream_job_register(const char *service, const char *delg_id, 
-							   const char *jdl, const char *lease_id, char **job_id, char **upload_url, char **download_url);
-		
-		int cream_job_start(const char *service, const char *job_id);
-		
-		int cream_job_purge(const char *service, const char *job_id);
-
-		int cream_job_cancel(const char *service, const char *job_id);
-
-		int cream_job_suspend(const char *service, const char *job_id);
-
-		int cream_job_resume(const char *service, const char *job_id);
-
-		int cream_job_status(const char *service, const char *job_id, 
-							 char **job_status, int *exit_code, char **failure_reason);
-
-		struct CreamJobStatus {
-			std::string job_id;
-			std::string job_status;
-			int exit_code;
-			std::string failure_reason;
-		};
-		typedef std::map<std::string, CreamJobStatus> CreamJobStatusMap;
-		int cream_job_status_all(const char *service, CreamJobStatusMap & job_ids);
-		
-		int cream_proxy_renew(const char *delg_service, const char *delg_id);
-		
-		int cream_ping(const char * service);
-		
-		int cream_set_lease(const char *service, const char *lease_id, time_t &lease_expiry);
-
 		int gce_ping( const std::string &service_url,
 					  const std::string &auth_file,
 					  const std::string &account,
@@ -750,19 +610,6 @@ class GahpClient : public GenericGahpClient {
 
 		int boinc_set_lease( const char *batch_name,
 							 time_t new_lease_time );
-
-#ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
-	// Not yet ready for prime time...
-	globus_duroc_control_barrier_release();
-	globus_duroc_control_init();
-	globus_duroc_control_job_cancel();
-	globus_duroc_control_job_request();
-	globus_duroc_control_subjob_states();
-	globus_duroc_error_get_gram_client_error();
-	globus_duroc_error_string();
-#endif /* ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC */
-
-		//@}
 
 	private:
 

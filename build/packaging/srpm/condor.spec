@@ -738,7 +738,6 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
-       -DWITH_CREAM:BOOL=FALSE \
        -DWITH_DRMAA:BOOL=FALSE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -788,7 +787,6 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
-       -DWITH_CREAM:BOOL=FALSE \
        -DWITH_GLOBUS:BOOL=TRUE \
        -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
        -DWITH_LIBCGROUP:BOOL=TRUE \
@@ -1372,8 +1370,6 @@ rm -rf %{buildroot}
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
 %_sbindir/condor_gridshell
-# % _sbindir/gahp_server
-%_sbindir/grid_monitor
 %_sbindir/remote_gahp
 %_sbindir/nordugrid_gahp
 %_sbindir/AzureGAHPServer

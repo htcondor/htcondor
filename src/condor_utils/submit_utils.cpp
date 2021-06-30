@@ -1373,19 +1373,13 @@ int SubmitHash::CheckStdFile(
 			ABORT_AND_RETURN( 1 );
 		}
 
-		/* Globus jobs are allowed to specify urls */
-		if (JobUniverse == CONDOR_UNIVERSE_GRID && is_globus_friendly_url(file.c_str())) {
-			transfer_it = false;
-			stream_it = false;
-		} else {
-			if (check_and_universalize_path(file) != 0) {
-				ABORT_AND_RETURN( 1 );
-			}
+		if (check_and_universalize_path(file) != 0) {
+			ABORT_AND_RETURN( 1 );
+		}
 
-			if (transfer_it && ! JobDisableFileChecks) {
-				check_open(role, file.c_str(), access);
-				RETURN_IF_ABORT();
-			}
+		if (transfer_it && ! JobDisableFileChecks) {
+			check_open(role, file.c_str(), access);
+			RETURN_IF_ABORT();
 		}
 	}
 	return 0;

@@ -1498,23 +1498,9 @@ default=50
 type=int
 tags=gridmanager,gahp-client
 
-[CREAM_GAHP_WORKER_THREADS]
-default=$(GRIDMANAGER_MAX_PENDING_REQUESTS)
-type=int
-
 [GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_EC2]
 default=20
 type=int
-
-[GAHP]
-default=
-type=string
-tags=gridmanager,gahp-client
-
-[GAHP_ARGS]
-default=
-type=string
-tags=gridmanager,gahp-client
 
 [GLITE_LOCATION]
 default=$(LIBEXEC)/glite
@@ -1589,28 +1575,8 @@ default=0.01
 type=double
 range=0.0,1.0
 
-[ENABLE_GRID_MONITOR]
-default=true
-type=bool
-tags=gridmanager,globusjob
-
-[GRIDMANAGER_JM_EXIT_LIMIT]
-default=30
-type=int
-tags=gridmanager,globusjob
-
 [GRIDMANAGER_CONNECT_FAILURE_RETRY_INTERVAL]
 default=5
-type=int
-tags=gridmanager,globusjob
-
-[GRIDSHELL]
-default=
-type=string
-tags=gridmanager,globusjob
-
-[GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT]
-default=600
 type=int
 tags=gridmanager,globusjob
 
@@ -1644,11 +1610,6 @@ default=
 type=string
 tags=gridmanager,condorjob
 
-[CREAM_GAHP]
-default=$(SBIN)/cream_gahp
-type=string
-tags=gridmanager,creamjob
-
 [COLLECTOR_HOST]
 default=$(CONDOR_HOST)
 type=string
@@ -1666,33 +1627,6 @@ default="$(COLLECTOR_HOST)"
 default=COLLECTOR_HOST_STRING DedicatedScheduler
 description=Configuration attibutes that HTCondor needs to insert into STARTD ads
 customization=devel
-
-[UNICORE_GAHP]
-default=$(SBIN)/unicore_gahp
-win32_default=$(SBIN)\unicore_gahp.exe
-type=path
-tags=gridmanager,unicorejob
-
-[GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE]
-default=10
-type=int
-tags=gridmanager,globusresource
-
-[GRID_MONITOR_HEARTBEAT_TIMEOUT]
-default=300
-type=int
-tags=gridmanager,globusresource
-
-[GRID_MONITOR_RETRY_DURATION]
-default=900
-type=int
-tags=gridmanager,globusresource
-
-[GRID_MONITOR]
-default=$(SBIN)/grid_monitor
-win32_default=$(SBIN)\grid_monitor.exe
-type=path
-tags=gridmanager,globusresource
 
 [NO_DNS]
 default=false
@@ -4172,12 +4106,6 @@ range=0,
 type=int
 tags=schedd
 
-[GRAM_VERSION_DETECTION]
-default=true
-type=bool
-usage=true if gridmanager should automatically detect the version of GRAM servers, false otherwise
-tags=gridmanager
-
 [CREATE_LOCKS_ON_LOCAL_DISK]
 default=true
 type=bool
@@ -5462,9 +5390,6 @@ win32_default=NUL
 default=D_PID
 description=Debug logging options for the ec2_gahp
 
-[GT2_GAHP]
-default=$(SBIN)/gahp_server
-
 [EC2_GAHP]
 default=$(SBIN)/ec2_gahp
 
@@ -6667,10 +6592,7 @@ default : @end
 description=Platform specific file knobs that should be ignored on upgrade
 default=
 win32_default : @end
-	GT2_GAHP
-	UNICORE_GAHP
 	NORDUGRID_GAHP
-	CREAM_GAHP
 	LIBVIRT_XML_SCRIPT
 @end
 

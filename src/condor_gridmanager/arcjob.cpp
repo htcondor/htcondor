@@ -32,7 +32,7 @@
 #include "gridmanager.h"
 #include "arcjob.h"
 #include "condor_config.h"
-#include "globusjob.h" // for rsl_stringify()
+#include "nordugridjob.h" // for rsl_stringify()
 
 
 // GridManager job states
