@@ -278,10 +278,10 @@ this case, it's just to make the output prettier.
 Specification
 -------------
 
-For use in HTCondor, see
+For use in HTCondor, including a complete list of functions, see
 https://htcondor.readthedocs.io/en/latest/misc-concepts/classad-mechanism.html.
 
-For a complete language specification,
+For the language specification,
 see https://research.cs.wisc.edu/htcondor/classad/refman/.
 
 Author
