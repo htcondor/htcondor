@@ -599,18 +599,15 @@ do_download() {
 			OS_NAME=AmazonLinux
 			;;
 		*)
-			if [ -z "$lsb_dist" ]; then
-				if is_darwin; then
-					echo
-					echo "Error: Unsupported operating system 'macOS'"
-					echo
-					exit 1
-				fi
+			if is_darwin; then
+				OS_NAME=MacOSX
+				OS_VERSION=
+			else
+				echo
+				echo "Error: Unsupported distribution '$lsb_dist'"
+				echo
+				exit 1
 			fi
-			echo
-			echo "Error: Unsupported distribution '$lsb_dist'"
-			echo
-			exit 1
 			;;
 	esac
 

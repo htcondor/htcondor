@@ -142,6 +142,8 @@ queue 3
 arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 60
 +IsInterruptible		= true
 MaxJobRetirementTime	= 3600
+# prevent job from restarting after eviction before we can kill it
+Requirements			= (NumJobStarts?:0) < 1
 
 queue 1
 
@@ -164,7 +166,6 @@ CondorUtils::fullchomp( $hostName );
 
 my $testingPhase = 0;
 my $longJobsRunningCount = 0;
-my %jobsIveRemoved;
 
 my $execute = sub {
 	my %info = @_;
@@ -392,7 +393,6 @@ my $evicted = sub {
 		runCommandCarefully( undef, "condor_drain -cancel ${hostName}" );
 
 		print( "Removing evicted job ${ID}...\n" );
-		$jobsIveRemoved{$ID} = 1;
 
 		runCommandCarefully( undef, 'condor_rm', $ID );
 
@@ -406,13 +406,8 @@ my $evicted = sub {
 			die( "Job ${ID} evicted, aborting.\n" );
 		}
 
-		if (! exists($jobsIveRemoved{$ID})) {
-			print( "Removing evicted job ${ID}...\n" );
-			runCommandCarefully( undef, 'condor_rm', $ID );
-			$jobsIveRemoved{$ID} = 1;
-		} else {
-			print("Caught eviction of job I already removed, ignoring\n");
-		}
+		print( "Removing evicted job ${ID}...\n" );
+		runCommandCarefully( undef, 'condor_rm', $ID );
 	} else {
 		die( "evicted() called unexpectedly in testing phase ${testingPhase}, aborting.\n" );
 	}
