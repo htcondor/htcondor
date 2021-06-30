@@ -1327,7 +1327,17 @@ sub GatherDryData {
 	# my $res = system("$cmdtorun");
 	$res = $?;
 	if($res != 0) {
-		die "non-zero return from condor_submit\n";
+		print "condor_submit -dry-run $targetfile $submitfile failed with error $?:\n";
+		print join("\n", @out);
+
+		print "$submitfile contains\n";
+		open(SF,"<$submitfile") or die "Failed to open submitfile :$submitfile:$!\n";
+		while (<SF>) {
+			print $_;
+		}
+		close(SF);
+
+		die "non-zero return from condor_submit -dry-run\n";
 	} elsif ($targetfile eq "-") {
 		foreach (@out) {
 			fullchomp($_);
