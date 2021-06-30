@@ -59,6 +59,11 @@ New Features:
 - Added two new commands to *condor_submit* - ``use_scitokens`` and ``scitokens_file``.
   :jira:`408`
 
+- Update to be able to link in scitokens-cpp library directly, rather than
+  always using dlopen(). This allows SciTokens to be used with the conda-forge
+  build.
+  :jira:`541`
+
 Bugs Fixed:
 
 - Fixed Munge authentication, which was broken starting with HTConor 8.9.9.
@@ -89,6 +94,10 @@ Bugs Fixed:
 - Using expressions for values in the ads of grid universe jobs of type
   `batch` now works correctly.
   :jira:`507`
+
+- Fixed a bug that prevented a  personal condor from running in a private
+  user namespace.
+  :jira:`550`
 
 - Fixed a bug that cause the *condor_master* to hang for up to two minutes
   when shutting down, if it was configured to be a personal condor.
