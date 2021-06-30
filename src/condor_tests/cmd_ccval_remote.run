@@ -46,7 +46,6 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
 	MY_LOG = $(LOG)/me
 	GOO = baz
 	master.GOO = $(GOO), bar
-	ALL_DEBUG = D_ALWAYS D_CMD D_DAEMONCORE
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 

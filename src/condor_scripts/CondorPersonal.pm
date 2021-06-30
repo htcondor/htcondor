@@ -65,6 +65,7 @@ my $installdir = "";
 
 my $masterconfig = ""; #one built by batch_test and moving to test glue
 my $currentlocation;
+my $addl_log_flags = ""; # flags to add to all log files, perhaps D_COMMAND:1
 
 sub Initialize
 {
@@ -1328,7 +1329,7 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 	}
 
 	#lets always overrule existing A__DEBUG with one that adds to it D_CMD
-	print NEW "ALL_DEBUG = \$(ALL_DEBUG) D_CMD:1\n";
+	print NEW "ALL_DEBUG = D_CAT D_SUB_SECOND \$(ALL_DEBUG) $addl_log_flags\n";
 	# we are testing. dramatically reduce MaxVacateTime
 	print NEW "JOB_MAX_VACATE_TIME = 15\n";
 
