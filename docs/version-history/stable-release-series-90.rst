@@ -107,6 +107,9 @@ Bugs Fixed:
   when shutting down, if it was configured to be a personal condor.
   :jira:`548`
 
+- When a grid universe job of type **nordugrid** fails on the remote system,
+  the local job is now put on hold, instead of automatically resubmitted.
+  :jira:`535`
 
 Version 9.0.1
 -------------
