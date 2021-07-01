@@ -95,6 +95,10 @@ Bugs Fixed:
   from another via AFS.
   :jira:`463`
 
+- When a singularity container is started, and the test is run before the job,
+  and the test fails, the job is now put back to idle instead of held.
+  :jira:`539`
+
 - Using expressions for values in the ads of grid universe jobs of type
   `batch` now works correctly.
   :jira:`507`
