@@ -122,6 +122,10 @@ Bugs Fixed:
 - Fixed a bug that caused SSL authentication to potential segfault.
   :jira:`428`
 
+- Added the missing Ceiling attribute to negotiator user priorities in the
+  Python bindings.
+  :jira:`560`
+
 
 Version 9.0.1
 -------------
