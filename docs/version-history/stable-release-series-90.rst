@@ -21,6 +21,10 @@ Release Notes:
 
 New Features:
 
+- HTCondor is now FIPS-compliant when configured to be so using the new
+  configuration macro ``use security:FIPS``
+  :jira:`319`
+
 - Added new command-line flag to `condor_gpu_discovery`, ``-divide``,
   which functions like ``-repeat``, except that it divides the GPU attribute
   ``GlobalMemoryMb`` by the number of repeats (and adds the GPU
@@ -99,9 +103,20 @@ Bugs Fixed:
   user namespace.
   :jira:`550`
 
+- Fixed a bug in the *condor_who* program that caused it to hang on Linux
+  systems, especially those running AFS or other shared filesystems.
+  :jira:`530`
+
 - Fixed a bug that cause the *condor_master* to hang for up to two minutes
   when shutting down, if it was configured to be a personal condor.
   :jira:`548`
+
+- When a grid universe job of type **nordugrid** fails on the remote system,
+  the local job is now put on hold, instead of automatically resubmitted.
+  :jira:`535`
+
+- Fixed a bug that caused SSL authentication to potential segfault.
+  :jira:`428`
 
 
 Version 9.0.1
