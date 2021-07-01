@@ -111,6 +111,10 @@ Bugs Fixed:
   the local job is now put on hold, instead of automatically resubmitted.
   :jira:`535`
 
+- Fixed a bug that caused SSL authentication to potential segfault.
+  :jira:`428`
+
+
 Version 9.0.1
 -------------
 
