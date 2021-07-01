@@ -126,6 +126,10 @@ Bugs Fixed:
   Python bindings.
   :jira:`560`
 
+- Fixed a bug in DAGMan where `SUBMIT-DESCRIPTION` statements were incorrectly
+  logging duplicate description warnings.
+  :jira:`511`
+
 
 Version 9.0.1
 -------------
