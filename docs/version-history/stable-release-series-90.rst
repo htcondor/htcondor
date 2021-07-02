@@ -130,6 +130,10 @@ Bugs Fixed:
   logging duplicate description warnings.
   :jira:`511`
 
+- Fixed a bug in the Windows MSI installer where installation would only succeed
+  at the default location of ``C:\Condor``.
+  :jira:`543`
+
 
 Version 9.0.1
 -------------
