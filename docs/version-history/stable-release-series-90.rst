@@ -8,6 +8,28 @@ series.
 
 The details of each version are described below.
 
+Version 9.0.3
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.3 released on Month Date, 2021.
+
+- HTCondor version 9.0.3 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where ``condor_gpu_discovery`` would not report any GPUs if
+  any MIG-enabled GPU on the system were configured in certain ways.  Fixed
+  a bug which could cause ``condor_gpu_discovery``'s output to become
+  unparseable after certain errors.
+  :jira:`476`
+
+
 Version 9.0.2
 -------------
 
@@ -17,7 +39,13 @@ Release Notes:
 
 - HTCondor version 9.0.2 not yet released.
 
+- Removed support for GRAM grid jobs.
+
 New Features:
+
+- HTCondor is now FIPS-compliant when configured to be so using the new
+  configuration macro ``use security:FIPS``
+  :jira:`319`
 
 - Added new command-line flag to `condor_gpu_discovery`, ``-divide``,
   which functions like ``-repeat``, except that it divides the GPU attribute
@@ -54,11 +82,18 @@ New Features:
   possible.
   :jira:`270`
 
+- Added two new commands to *condor_submit* - ``use_scitokens`` and ``scitokens_file``.
+  :jira:`408`
+
+- Update to be able to link in scitokens-cpp library directly, rather than
+  always using dlopen(). This allows SciTokens to be used with the conda-forge
+  build.
+  :jira:`541`
+
 Bugs Fixed:
 
-- Fixed a bug that cause the *condor_master* to hang for up to two minutes 
-  when shutting down, if it was configured to be a personal condor.
-  :jira:`548`
+- Fixed Munge authentication, which was broken starting with HTConor 8.9.9.
+  :jira:`378`
 
 - Fixed a bug that prevented docker universe jobs from running on machines
   whose hostnames were longer than about 60 characters.
@@ -68,18 +103,55 @@ Bugs Fixed:
   platform when it is running Scientific Linux 7.
   :jira:`503`
 
-- Attribute ``GridJobId`` is no longer removed from the job ad of grid-type
-  ``batch`` jobs when the job enters ``Completed`` or ``Removed`` status.
-  :jira:`534`
-
 - Fixed a bug that caused the ``query-krb`` and ``delete-krb`` options of *condor_store_cred*
   to fail.  This bug also affected the python bindings ``query_user_cred`` and ``delete_user_cred``
   methods
   :jira:`533`
 
+- Attribute ``GridJobId`` is no longer removed from the job ad of grid-type
+  ``batch`` jobs when the job enters ``Completed`` or ``Removed`` status.
+  :jira:`534`
+
+- Fixed a bug that could prevent HTCondor from noticing new events in job
+  event logs, if those logs were being written from one machine and read
+  from another via AFS.
+  :jira:`463`
+
+- When a singularity container is started, and the test is run before the job,
+  and the test fails, the job is now put back to idle instead of held.
+  :jira:`539`
+
 - Using expressions for values in the ads of grid universe jobs of type
   `batch` now works correctly.
   :jira:`507`
+
+- Fixed a bug that prevented a  personal condor from running in a private
+  user namespace.
+  :jira:`550`
+
+- Fixed a bug in the *condor_who* program that caused it to hang on Linux
+  systems, especially those running AFS or other shared filesystems.
+  :jira:`530`
+
+- Fixed a bug that cause the *condor_master* to hang for up to two minutes
+  when shutting down, if it was configured to be a personal condor.
+  :jira:`548`
+
+- When a grid universe job of type **nordugrid** fails on the remote system,
+  the local job is now put on hold, instead of automatically resubmitted.
+  :jira:`535`
+
+- Fixed a bug that caused SSL authentication to potential segfault.
+  :jira:`428`
+
+- Added the missing Ceiling attribute to negotiator user priorities in the
+  Python bindings.
+  :jira:`560`
+
+- Fixed a bug in DAGMan where `SUBMIT-DESCRIPTION` statements were incorrectly
+  logging duplicate description warnings.
+  :jira:`511`
+
 
 Version 9.0.1
 -------------
