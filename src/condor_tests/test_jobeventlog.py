@@ -69,6 +69,12 @@ def compareEvent(event, count):
 		print("Event {0}'s timestamp is from more than thirty seconds ago.".format(count))
 		return False
 
+    #
+    # Properly, expectedEventAttributes should a PyTest fixture, probably
+    # a little @config accessor function like the_config() in
+    # test_custom_machine_resource.py.
+    #
+
 	# This set of attributes is extensive but not necessarily comprehensive.
 	# In some cases (e.g., TerminatedNormally being True and CoreFile being
 	# nonempty), a comprehensive test would require writing more than one
@@ -187,7 +193,6 @@ class TestJobEventLog:
 		with htcondor.JobEventLog(logfile) as jel:
 			for i in range(0, 30):
 				event = next(jel)
-				assert(compareEvent(event, i))
 		try:
 			event = next(jel)
 			assert(False)
