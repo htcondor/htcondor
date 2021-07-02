@@ -30,7 +30,7 @@ class DAGMan:
         if env:
             iwd = env[0]["Iwd"]
             env = dict(item.split("=", 1) for item in env[0]["Env"].split(";")) 
-            out = iwd + "/" + env["_CONDOR_DAGMAN_LOG"]
+            out = iwd + "/" + env["_CONDOR_DAGMAN_LOG"].split("/")[-1]
             log = out.replace(".dagman.out", ".nodes.log")
             dag = out.replace(".dagman.out", "")
 
