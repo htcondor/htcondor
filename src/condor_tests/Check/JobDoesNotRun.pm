@@ -66,8 +66,10 @@ sub RunCheck
     while( $i < $timeout ) {
         $i=$i+1;
 
-        my $q_output = `$q_cmd`;
-        my @fields=split(" ",$q_output);
+        my @lines = ();
+        my $result = CondorTest::runCondorTool( $q_cmd, \@lines, 2, { emit_output => 0 } );
+        # my $q_output = `$q_cmd`;
+        my @fields=split(" ", $lines[0]);
 
         my $job_matched = $fields[0];
         my $job_rejected = $fields[1];
