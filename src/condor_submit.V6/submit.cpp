@@ -529,6 +529,7 @@ main( int argc, const char *argv[] )
 	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
+	classad::ClassAdSetExpressionCaching(false);
 
 	// We pass this in to submit_utils, but it isn't used to set the Owner attribute for remote submits
 	// it's only used to set the default accounting user
