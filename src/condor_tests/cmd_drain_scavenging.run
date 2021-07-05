@@ -23,6 +23,7 @@ use strict;
 use warnings;
 
 use Cwd;
+use Date::Manip;
 
 #
 # This file has an almost-exact copy in cmd_drain_scavenging_vacation.  Sorry.
@@ -441,6 +442,32 @@ sub touch {
 	return $rv;
 }
 
+sub tsDelta {
+	my( $first, $last ) = @_;
+
+	#
+	# Sadly, DateManip ignores fractional seconds entirely.  Also, it
+	# totally fails to parse two-digit years correctly, so just add
+	# 2000.  I will celebrate if I'm not dead or retired by the time
+	# that stops working.  Also, be aghast that this test is still running.
+	#
+	my $tsMatch = '(\d\d)\/(\d\d)\/(\d\d) (\d\d):(\d\d):(\d\d)\.(\d\d\d)';
+
+	my( $month, $day, $year,
+	    $hour, $minute, $second, $millisecond ) =
+	    ( $first =~ $tsMatch );
+	$year += 2000;
+	my $parsedFirstDate = ParseDateString("$year/$month/$day $hour:$minute:$second");
+
+	my( $m, $d, $y, $h, $mi, $s, $milli ) = ( $last =~ $tsMatch );
+	$y += 2000;
+	my $parsedLastDate = ParseDateString("$y/$m/$d $h:$mi:$s");
+
+	# Date::Manip::DateCalc has the wrong sign for deltas.
+	my $delta = DateCalc($parsedFirstDate, $parsedLastDate);
+	return Delta_Format($delta, "%st");
+}
+
 sub checkTiming {
 	my( $logFileName, $progress ) = @_;
 
@@ -469,30 +496,27 @@ sub checkTiming {
 	my $state = 0;
 	my $slotID = '';
 	my $jobIDMatch = '\[1\.3\]';
-	my $secondsMatch = '\d\d\/\d\d\/\d\d \d\d:\d\d:(\d\d)(\.\d\d\d)?( \(.*\))?';
+	my $timestampMatch = '(\d\d\/\d\d\/\d\d \d\d:\d\d:\d\d\.\d\d\d)';
+	my $categoryMatch = '( \(.*\))?';
 	my $finalDrainStartTime = undef;
 	while( my $line = <LOG> ) {
 		CondorUtils::fullchomp( $line );
 
-		if( $state == 0 && $line =~ /^${secondsMatch} (slot1_\d): Remote job ID is 1.3$/ ) {
-			my @candidates = ($1, $2, $3, $4, $5);
-			foreach my $candidate (@candidates) {
-				if( $candidate =~ /^slot1_\d$/ ) {
-					$slotID = $candidate;
-					last;
-				}
-			}
+		if( $state == 0 && $line =~ /^.* (slot1_\d): Remote job ID is 1.3$/ ) {
+			$slotID = $1;
+			next;
 		}
 
-		if( $state == 0 && $line =~ /^${secondsMatch} Initiating final draining \(all original jobs complete\)\.$/ ) {
+		if( $state == 0 && $line =~ /^${timestampMatch}${categoryMatch} Initiating final draining \(all original jobs complete\)\.$/ ) {
 			$finalDrainStartTime = $1;
 			$state = 1;
 			next;
 		}
 
 		# I have no idea why this log message doesn't have a job ID.
-		if( $state == 1 && $line =~ /^${secondsMatch} ${slotID}: Changing activity: Busy -> Retiring$/ ) {
-			if( $finalDrainStartTime != $1 ) {
+		if( $state == 1 && $line =~ /^${timestampMatch}${categoryMatch} ${slotID}: Changing activity: Busy -> Retiring$/ ) {
+			my $retiringTime = $1;
+			if( tsDelta($finalDrainStartTime, $retiringTime) > 1 ) {
 				die( "${slotID} did not start retiring immediately, aborting.\n" );
 			} else {
 				$state = 2;
@@ -501,8 +525,9 @@ sub checkTiming {
 		}
 
 		# I have no idea why this log message doesn't have a job ID.
-		if( $state == 2 && $line =~ /^${secondsMatch} ${slotID}: State change: claim retirement ended\/expired$/ ) {
-			if( $finalDrainStartTime != $1 ) {
+		if( $state == 2 && $line =~ /^${timestampMatch}${categoryMatch} ${slotID}: State change: claim retirement ended\/expired$/ ) {
+			my $expiredTime = $1;
+			if( tsDelta($finalDrainStartTime, $expiredTime) > 1 ) {
 				die( "MaxJobRetirementTime was not 0, aborting.\n" );
 			} else {
 				$state = 3;
@@ -511,8 +536,9 @@ sub checkTiming {
 		}
 
 		# I have no idea why this log message doesn't have a job ID.
-		if( $state == 3 && $line =~ /^${secondsMatch} ${slotID}: Changing state and activity: Claimed\/Retiring -> Preempting\/Vacating$/ ) {
-			if( $finalDrainStartTime != $1 ) {
+		if( $state == 3 && $line =~ /^${timestampMatch}${categoryMatch} ${slotID}: Changing state and activity: Claimed\/Retiring -> Preempting\/Vacating$/ ) {
+			my $preemptingTime = $1;
+			if( tsDelta($finalDrainStartTime, $preemptingTime) > 1 ) {
 				die( "slot1_1 did not immediately switch from retiring to preempting.\n" );
 			} else {
 				$state = 4;
@@ -520,9 +546,11 @@ sub checkTiming {
 			}
 		}
 
-		if( $state == 4 && $line =~ /^${secondsMatch} ${slotID}${jobIDMatch}: max vacate time expired.  Escalating to a fast shutdown of the job.$/ ) {
+		if( $state == 4 && $line =~ /^${timestampMatch}${categoryMatch} ${slotID}${jobIDMatch}: max vacate time expired.  Escalating to a fast shutdown of the job.$/ ) {
 			# Especially with sub-second reporting, allow the startd some time to work.
-			if( (($finalDrainStartTime + 5) % 60) != $1 && (($finalDrainStartTime + 6) % 60) != $1 ) {
+			my $maxVacateTime = $1;
+			my $delta = tsDelta($finalDrainStartTime, $maxVacateTime );
+			if(! (5 <= $delta && $delta <= 6)) {
 				die( "MaxMachineVacateTime was not 5.\n" );
 			} else {
 				$state = 5;
