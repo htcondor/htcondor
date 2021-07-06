@@ -33,16 +33,16 @@ New Features:
   :jira:`404`
 
 - Reduced `condor_shadow` memory usage by 40% or more on machines with many
-  (> 64) cores.  This allows a correspondingly greater number of shadows and thus
+  (more than 64) cores.  This allows a correspondingly greater number of shadows and thus
   jobs to run on these submit machines.
   :jira:`540`
 
-- Added support for using an authenticated smtp relay on port 587 to
+- Added support for using an authenticated SMTP relay on port 587 to
   condor_mail.exe on Windows.
   :jira:`303`
 
 - The maximum line length for ``STARTD_CRON`` and ``SCHEDD_CRON`` job output
-  has been extended from 8k to 64k.
+  has been extended from 8k bytes to 64k bytes.
   :jira:`498`
 
 - The `condor_job_router_info` tool will now show info for a rootly JobRouter
@@ -50,8 +50,8 @@ New Features:
   jobs are matched when using the ``-match`` or ``-route`` options.
   :jira:`525`
 
-- *condor_gpu_discovery* now recognises Capability 8.6 devices and reports the
-  correct number of cores per GU.
+- *condor_gpu_discovery* now recognizes Capability 8.6 devices and reports the
+  correct number of cores per Compute Unit.
   :jira:`544`
 
 - Added command line option `--copy-ssh-key` to *bosco_cluster*. When set
@@ -65,12 +65,12 @@ New Features:
 
 - Update to be able to link in scitokens-cpp library directly, rather than
   always using dlopen(). This allows SciTokens to be used with the conda-forge
-  build.
+  build of HTCondor.
   :jira:`541`
 
 Bugs Fixed:
 
-- Fixed Munge authentication, which was broken starting with HTConor 8.9.9.
+- Fixed Munge authentication, which was broken starting with HTCondor 8.9.9.
   :jira:`378`
 
 - Fixed a bug that prevented docker universe jobs from running on machines
@@ -82,7 +82,7 @@ Bugs Fixed:
   :jira:`503`
 
 - Fixed a bug that caused the ``query-krb`` and ``delete-krb`` options of *condor_store_cred*
-  to fail.  This bug also affected the python bindings ``query_user_cred`` and ``delete_user_cred``
+  to fail.  This bug also affected the Python bindings ``query_user_cred`` and ``delete_user_cred``
   methods
   :jira:`533`
 
@@ -119,7 +119,7 @@ Bugs Fixed:
   the local job is now put on hold, instead of automatically resubmitted.
   :jira:`535`
 
-- Fixed a bug that caused SSL authentication to potential segfault.
+- Fixed a bug that caused SSL authentication to crash on rare occasions.
   :jira:`428`
 
 - Added the missing Ceiling attribute to negotiator user priorities in the
