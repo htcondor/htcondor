@@ -104,6 +104,7 @@ Interacting with Negotiators
    .. automethod:: resetAllUsage
    .. automethod:: resetUsage
    .. automethod:: setBeginUsage
+   .. automethod:: setCeiling
    .. automethod:: setLastUsage
    .. automethod:: setFactor
    .. automethod:: setPriority
