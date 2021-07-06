@@ -525,11 +525,15 @@ sub checkTiming {
 		}
 
 		if( $state == 4 && $line =~ /^${timestampMatch}${categoryMatch} ${slotID}${jobIDMatch}: max vacate time expired.  Escalating to a fast shutdown of the job.$/ ) {
-			# Especially with sub-second reporting, allow the startd some time to work.
 			my $maxVacateTime = $1;
 			my $delta = tsDelta($finalDrainStartTime, $maxVacateTime );
-			if(! (5 <= $delta && $delta <= 6)) {
-				die( "MaxMachineVacateTime was $delta, not 5.\n" );
+			# TimerManager::NewTimer(), called by DaemonCore::Register_Timer(),
+			# which is called to schedule the end of vacation time, adds the
+			# the delay to time(NULL) to determine the deadline.  This can
+			# result in the timer firing up to .999... seconds early, as
+			# time(2) is (apparently) allowed to truncate.
+			if(! (4 <= $delta && $delta <= 6)) {
+				die( "MaxMachineVacateTime was $delta, not ~5.\n" );
 			} else {
 				$state = 5;
 				next;
