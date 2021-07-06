@@ -263,6 +263,9 @@ BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 # openssh-server needed for condor_ssh_to_job
 Requires: openssh-server
 
+# net-tools needed to provide netstat for condor_who
+Requires: net-tools
+
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
