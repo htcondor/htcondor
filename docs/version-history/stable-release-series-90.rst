@@ -18,6 +18,7 @@ Release Notes:
 - HTCondor version 9.0.2 not yet released.
 
 - Removed support for GRAM grid jobs.
+  :jira:`561`
 
 New Features:
 
@@ -30,7 +31,7 @@ New Features:
   ``GlobalMemoryMb`` by the number of repeats (and adds the GPU
   attribute ``DeviceMemoryMb``, which is the undivided total).  To enable
   this new behavior, modify ``GPU_DISCOVERY_EXTRA`` appropriately.
-  :jira:`404`
+  :jira:`454`
 
 - Reduced `condor_shadow` memory usage by 40% or more on machines with many
   (more than 64) cores.  This allows a correspondingly greater number of shadows and thus
@@ -61,7 +62,7 @@ New Features:
   :jira:`270`
 
 - Added two new commands to *condor_submit* - ``use_scitokens`` and ``scitokens_file``.
-  :jira:`408`
+  :jira:`508`
 
 - Update to be able to link in scitokens-cpp library directly, rather than
   always using dlopen(). This allows SciTokens to be used with the conda-forge
@@ -110,6 +111,7 @@ Bugs Fixed:
 - Fixed a bug in the *condor_who* program that caused it to hang on Linux
   systems, especially those running AFS or other shared filesystems.
   :jira:`530`
+  :jira:`573`
 
 - Fixed a bug that cause the *condor_master* to hang for up to two minutes
   when shutting down, if it was configured to be a personal condor.
@@ -133,6 +135,9 @@ Bugs Fixed:
 - Fixed a bug in the Windows MSI installer where installation would only succeed
   at the default location of ``C:\Condor``.
   :jira:`543`
+
+- Add the missing libltdl library back to the HTCondor tarball.
+  :jira:`576`
 
 
 Version 9.0.1
