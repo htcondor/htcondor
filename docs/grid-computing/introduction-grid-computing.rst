@@ -1,30 +1,33 @@
 Introduction
 ============
 
-A goal of grid computing is to allow the utilization of resources that
-span many administrative domains. An HTCondor pool often includes
-resources owned and controlled by many different people. Yet
-collaborating researchers from different organizations may not find it
-feasible to combine all of their computers into a single, large HTCondor
-pool. HTCondor shines in grid computing, continuing to evolve with the
-field.
+A goal of grid computing is to allow an authorized batch scheduler to send
+jobs to run on some remote pool, even when that remote pool is running
+a non-HTCondor system.
 
-Due to the field's rapid evolution, HTCondor has its own native
-mechanisms for grid computing as well as developing interactions with
-other grid systems.
+There are several mechanisms in HTCondor to do this.
 
-Flocking is a native mechanism that allows HTCondor jobs submitted from
-within one pool to execute on another, separate HTCondor pool. Flocking
-is enabled by configuration within each of the pools. An advantage to
-flocking is that jobs migrate from one pool to another based on the
-availability of machines to execute jobs. When the local HTCondor pool
-is not able to run the job (due to a lack of currently available
-machines), the job flocks to another pool. A second advantage to using
-flocking is that the user (who submits the job) does not need to be
+Flocking allows HTCondor jobs submitted from one pool to execute on another,
+separate HTCondor pool. Flocking is enabled by configuration on both of 
+the pools. An advantage to flocking is that jobs migrate from one pool 
+to another based on the availability of machines to execute jobs. When 
+the local HTCondor pool is not able to run the job (due to a lack of 
+currently available machines), the job flocks to another pool. A second 
+advantage to using flocking is that the submitting user does not need to be
 concerned with any aspects of the job. The user's submit description
 file (and the job's
 **universe** :index:`universe<single: universe; submit commands>`) are independent
-of the flocking mechanism.
+of the flocking mechanism. Flocking only works when the remote pool is
+also an HTCondor pool.
+
+Glidein is the technique where *condor_startds* are submitted as jobs to 
+some remote batch systems, and configured with report to, and expand the
+local HTCondor batch system.  We call these jobs that run startds "pilot
+jobs", to distinguish them from the "payload jobs" which run the real user's
+domain work.  HTCondor itself does not provide an implementation of glidein,
+there is a very complete implementation the HEP community has built, named
+GlideinWMS, and several HTCondor users have written their own glidein
+systems.
 
 Other forms of grid computing are enabled by using the **grid**
 **universe** and further specified with the **grid_type**. For any
@@ -32,7 +35,8 @@ HTCondor job, the job is submitted on a machine in the local HTCondor
 pool. The location where it is executed is identified as the remote
 machine or remote resource. These various grid computing mechanisms
 offered by HTCondor are distinguished by the software running on the
-remote resource.
+remote resource.  Often implementations of Glidein use grid universe
+to send the pilot jobs to a remote system.
 
 When HTCondor is running on the remote resource, and the desired grid
 computing mechanism is to move the job from the local pool's job queue
@@ -44,6 +48,15 @@ affect the execution of the job. A further advantage of HTCondor-C jobs
 is that the **universe** of the job at the remote resource is not
 restricted.
 
+One disadvantage of grid universe is the destination must be declared
+in the submit file when condor_submit is run, locking the job to that
+remote site.  The condor job router is a condor daemon which can
+periodically scan the scheduler's job queue, and change a vanilla universe
+job intended to run on the local cluster into a grid job, destined for 
+a remote cluster.  It can also be configured so that if this grid job is
+idle for too long, it can undo the transformation, so that the job isn't
+stuck forever in a remote queue.
+
 When other middleware is running on the remote resource, such as Globus,
 HTCondor can still submit and manage jobs to be executed on remote
 resources. A **grid** **universe** job, with a **grid_type** of **gt2**
@@ -51,13 +64,6 @@ or **gt5** calls on Globus software to execute the job on a remote
 resource. Like HTCondor-C jobs, a network partition does not affect the
 execution of the job. The remote resource must have Globus software
 running. :index:`glidein` :index:`glidein<single: glidein; grid computing>`
-
-HTCondor permits the temporary addition of a Globus-controlled resource
-to a local pool. This is called glidein. Globus software is utilized to
-execute HTCondor daemons on the remote resource. The remote resource
-appears to have joined the local HTCondor pool. A user submitting a job
-may then explicitly specify the remote resource as the execution site of
-a job.
 
 Starting with HTCondor Version 6.7.0, the **grid** universe replaces the
 **globus** universe. Further specification of a **grid** universe job is
