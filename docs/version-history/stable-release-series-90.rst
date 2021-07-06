@@ -22,8 +22,8 @@ Release Notes:
 
 New Features:
 
-- HTCondor is now FIPS-compliant when configured to be so using the new
-  configuration macro ``use security:FIPS``
+- HTCondor can now be configured to only use FIPS 140-2 approved security
+  functions by using the new configuration template: ``use security:FIPS``.
   :jira:`319`
 
 - Added new command-line flag to `condor_gpu_discovery`, ``-divide``,
@@ -136,7 +136,8 @@ Bugs Fixed:
   at the default location of ``C:\Condor``.
   :jira:`543`
 
-- Add the missing libltdl library back to the HTCondor tarball.
+- Add the libltdl library to the HTCondor tarball. This library was
+  inadvertently omitted when streamlining the build process in version 8.9.12.
   :jira:`576`
 
 
