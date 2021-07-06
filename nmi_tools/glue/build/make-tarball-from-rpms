@@ -95,6 +95,7 @@ common_externals="boost169-python3 \
     globus-xio-popen-driver \
     libcgroup \
     libgomp \
+    libtool-ltdl \
     munge-libs \
     scitokens-cpp \
     voms"
