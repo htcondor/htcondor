@@ -152,9 +152,9 @@ class TestCurlPlugin:
         for line in start_log:
             if "invoking" in line:
                 plugin_invocations += 1
-        # We actually expect to see 4 invocations of the curl_plugin because all the other tests are logged in the same file.
+        # We actually expect to see 5 invocations of the curl_plugin because all the other tests are logged in the same file.
         # TODO: Figure out a better way to isolate this so we only see the invocation we care about
-        assert plugin_invocations == 4
+        assert plugin_invocations == 5
 
     def test_job_with_multiple_bad_urls_holds(self, job_with_multiple_bad_urls):
         assert job_with_multiple_bad_urls.state[0] == JobStatus.HELD
