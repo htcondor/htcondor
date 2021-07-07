@@ -111,11 +111,11 @@ if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
 elif [[ $arch_dist =~ CentOS8 ]]; then
     externals="$common_externals $uw_externals"
 elif [[ $arch_dist =~ Fedora32 ]]; then
-    externals="$common_externals"
+    externals="$common_externals $uw_externals"
 fi
 
 mkdir external-packages
-yumdownloader --downloadonly --destdir=external-packages $externals
+yumdownloader -y --downloadonly --destdir=external-packages $externals
 
 # Extract external RPMs
 for file in external-packages/*.rpm; do
