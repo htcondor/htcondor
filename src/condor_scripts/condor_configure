@@ -938,7 +938,7 @@ sub install( $ )
 	foreach my $d ( @release_dirs ) {
 		my $dir = "$release_src_dir/$d";
 		if ( ! -d $dir ) {
-			push( @missing, $d ) if ( ! ($d eq 'man'));
+			push( @missing, $d ) if ( ! ($d eq 'man' || $d eq 'lib64' || $d eq 'usr'));
 		}
 	}
 
