@@ -40,7 +40,14 @@ def collector(condor):
     collector.advertise([classad.ClassAd({"MyType": "Negotiator", "Name": "Negotiator-1", "IsPytest": True})], "UPDATE_NEGOTIATOR_AD")
     collector.advertise([classad.ClassAd({"MyType": "Scheduler", "Name": "Scheduler-1", "MyAddress": "<127.0.0.1:38900?addrs=127.0.0.1-38900&alias=localhost&noUDP&sock=startd_6695_1b0e>", "IsPytest": True})], "UPDATE_SCHEDD_AD")
     collector.advertise([classad.ClassAd({"MyType": "Submitter", "Name": "Submitter-1", "MyAddress": "<127.0.0.1:38900?addrs=127.0.0.1-38900&alias=localhost&noUDP&sock=startd_6695_1b0e>", "IsPytest": True})], "UPDATE_SUBMITTOR_AD")
-    return collector
+    # Wait for all ads to appear in the collector before returning
+    for i in range(30):
+        ads = collector.query(htcondor.AdTypes.Any, "IsPytest == True")
+        if len(ads) == 11:
+            return collector
+        time.sleep(1)
+    # If they did not all appear within 30 seconds, something is wrong
+    assert False
 
 
 @action
