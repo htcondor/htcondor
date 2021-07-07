@@ -1610,8 +1610,18 @@ FileTransfer::HandleCommands(int command, Stream *s)
 				} else {
 						// We aren't looking at the userlog file... ship it!
 					const char *filename = spool_space.GetFullPath();
-					if ( !transobject->InputFiles->file_contains(filename) &&
-						 !transobject->InputFiles->file_contains(condor_basename(filename)) ) {
+
+					// If the spool contains a file whose basename is in the input list,
+					// prefer the copy of the file in spool, because it might have been
+					// uploaded as part of a checkpoint.
+					//
+					// If the spool contains a file with the same absolute path as a
+					// file in the input list, do nothing -- don't duplicate it.
+					if( transobject->InputFiles->file_contains(condor_basename(filename)) ) {
+						transobject->InputFiles->remove(condor_basename(filename));
+						transobject->InputFiles->append(filename);
+					} else if( transobject->InputFiles->file_contains(filename) ) {
+					} else {
 						transobject->InputFiles->append(filename);
 					}
 				}
