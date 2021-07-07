@@ -1,9 +1,9 @@
 .. _user_install_linux:
 
-Linux (as user)
-===============
+Linux or macOS (as user)
+========================
 
-Installing HTCondor on Linux as a normal user is a multi-step process. Note
+Installing HTCondor on Linux or macOS as a normal user is a multi-step process. Note
 that a user-install of HTCondor is always self-contained on a single
 machine; if you want to create a multi-machine HTCondor pool, you will need
 to have administrative privileges on the relevant machines and follow the
