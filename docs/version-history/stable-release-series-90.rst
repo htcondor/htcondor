@@ -29,6 +29,11 @@ Bugs Fixed:
   unparseable after certain errors.
   :jira:`476`
 
+- Fixed a bug on the Windows platform where *condor_submit* would crash
+  rarely after succesfully submitting a job.  This caused problems for programs
+  that look at the return status of *condor_submit*, including *condor_dagman*
+  :jira:`579`
+
 
 Version 9.0.2
 -------------
