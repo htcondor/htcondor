@@ -188,6 +188,7 @@ protected:
 	static int __failed__;
 	static std::string __adType__;
 	static ExprTree *__filter__;
+	static bool __hidePvtAttrs__;
 
 	static TrackTotals* normalTotals;
 	static int submittorRunningJobs;
