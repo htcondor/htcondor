@@ -1618,11 +1618,18 @@ FileTransfer::HandleCommands(int command, Stream *s)
 					// prefer the copy of the file in spool, because it might have been
 					// uploaded as part of a checkpoint.
 					if( transobject->InputFiles->file_contains(filename) ) {
-					    ;
+						// dprintf( D_ALWAYS, "[FT] Found full path %s in input files and SPOOL, doing nothing.\n", filename );
 					} else if( transobject->InputFiles->file_contains(condor_basename(filename)) ) {
 						transobject->InputFiles->remove(condor_basename(filename));
 						transobject->InputFiles->append(filename);
+						// dprintf( D_ALWAYS, "[FT] Found base name %s in input files and SPOOL, removing it and adding %s.\n", condor_basename(filename), filename );
+						if( transobject->ExecFile && strcmp( condor_basename(filename), transobject->ExecFile ) == 0 ) {
+							// dprintf( D_ALWAYS, "[FT] Changing executable name from %s to %s.\n", transobject->ExecFile, filename );
+							free(transobject->ExecFile);
+							transobject->ExecFile = strdup(filename);
+						}
 					} else {
+						// dprintf( D_ALWAYS, "[FT] Full path %s not in SPOOL but not input files, appending to intput files.\n", filename );
 						transobject->InputFiles->append(filename);
 					}
 				}
