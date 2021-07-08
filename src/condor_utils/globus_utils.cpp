@@ -164,9 +164,11 @@ warn_on_gsi_usage()
 	SubsystemInfo* my_subsys = get_mySubSystem();
 	SubsystemType subsys_type = my_subsys ? my_subsys->getType() : SUBSYSTEM_TYPE_MIN;
 	if ( subsys_type == SUBSYSTEM_TYPE_TOOL || subsys_type == SUBSYSTEM_TYPE_SUBMIT ) {
-		fprintf(stderr, "WARNING: GSI authentication is being attempted! This will not work in future releases.\n");
+		fprintf(stderr, "WARNING: GSI authentication is being attempted! GSI will not work in future releases.\n");
+		fprintf(stderr, "For details, see https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=PlanToReplaceGridCommunityToolkit\n");
 	} else {
-		dprintf(D_ALWAYS, "WARNING: GSI authentication is being attempted! This will not work in future releases. (Will warn again after 12 hours)\n");
+		dprintf(D_ALWAYS, "WARNING: GSI authentication is being attempted! GSI will not work in future releases. (Will warn again after 12 hours)\n");
+		dprintf(D_ALWAYS, "For details, see https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=PlanToReplaceGridCommunityToolkit\n");
 	}
 }
 
@@ -185,9 +187,11 @@ warn_on_gsi_config()
 	SubsystemInfo* my_subsys = get_mySubSystem();
 	SubsystemType subsys_type = my_subsys ? my_subsys->getType() : SUBSYSTEM_TYPE_MIN;
 	if ( subsys_type == SUBSYSTEM_TYPE_TOOL || subsys_type == SUBSYSTEM_TYPE_SUBMIT ) {
-		fprintf(stderr, "WARNING: GSI authentication is enabled by your security configuration! This will not work in future releases.\n");
+		fprintf(stderr, "WARNING: GSI authentication is enabled by your security configuration! GSI will not work in future releases.\n");
+		fprintf(stderr, "For details, see https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=PlanToReplaceGridCommunityToolkit\n");
 	} else {
-		dprintf(D_ALWAYS, "WARNING: GSI authentication is is enabled by your security configuration! This will not work in future releases. (Will warn again after 12 hours)\n");
+		dprintf(D_ALWAYS, "WARNING: GSI authentication is is enabled by your security configuration! GSI will not work in future releases. (Will warn again after 12 hours)\n");
+		dprintf(D_ALWAYS, "For details, see https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=PlanToReplaceGridCommunityToolkit\n");
 	}
 }
 
