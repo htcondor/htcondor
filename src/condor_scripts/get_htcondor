@@ -451,7 +451,7 @@ do_install() {
 			echo -e "\n# Installing the HTCondor repo"
 			$sh_c "yum install -y ${yum_repo_rpm} || yum reinstall -y ${yum_repo_rpm}"
 
-			echo -e "\n$ Installing HTCondor"
+			echo -e "\n# Installing HTCondor"
 			if [ -z "${ROLE}" ]; then
 				$sh_c "yum install ${YUM_REPO} -y minicondor"
 			else
