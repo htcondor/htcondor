@@ -183,23 +183,6 @@ endif ()
 		# An example test that depends on python bindings.
 		# condor_pl_test (python_bindings_example "Sample python bindings test" "quick;ctest")
 
-		# Tests of the python bindings.
-		condor_pl_test (python_bindings_classad "Python bindings classad module" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/python_bindings")
-		condor_pl_test (python_bindings_htcondor "Python bindings htcondor module" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_echostring.pl;src/condor_tests/python_bindings")
-		condor_pl_test (python_bindings_dagman "Python bindings for dagman" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_echostring.pl;src/condor_tests/python_bindings")
-		condor_pl_test (python_collector_query "tests of the query method of the collector class" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
-
-		# Tests of the pytest suite.
-		condor_pl_test (job_basic_pytest "Basic pytest suite test, runs a simple job" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_echostring.pl")
-
-		# Tests that require the python bindings.
-		condor_pl_test (cmd_curl_plugin "Testing various curl_plugin functions" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_echostring.pl")
-		condor_pl_test (cmd_curl_plugin_multifile_success "Successful multifile_curl_plugin many file download" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_echostring.pl")
-		condor_pl_test (cmd_curl_plugin_multifile_failure "Failed multifile_curl_plugin many file download" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
-		condor_pl_test (job_late_materialize_py "Late materialization of jobs via python" "quick" CTEST DEPENDS "src/condor_tests/pytest_old;src/condor_tests/x_sleep.pl")
-		condor_pl_test (job_core_scheduler_priority "Testing priority for Scheduler Universe jobs" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
-		condor_pl_test (lib_auth_protocol-token "TOKEN authentication test" "quick;ctest" CTEST DEPENDS "src/condor_tests/pytest_old")
-
 		# htcondor.dags test suite
 		condor_pl_test (test_htcondor_dags "htcondor-dags test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_dags")
 
