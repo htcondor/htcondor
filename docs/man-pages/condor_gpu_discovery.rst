@@ -152,16 +152,12 @@ Options
     Repeat listed GPUs *N* (default 2) times.  This results in a list
     that looks like ``CUDA0, CUDA1, CUDA0, CUDA1``.
 
-    By default, this will divide the attribute ``GlobalMemoryMb`` by
-    the number of repeats.  This is to prevent you from accidentally
-    overcommitting your GPU's memory.
-
     If used with **-divide**, the last one on the command-line wins,
     but you must specify ``2`` if you want it; the default value only
     applies to the first flag.
  **-divide** [*N*]
     Like **-repeat**, except also divide the attribute ``GlobalMemoryMb``
-    by *N*.
+    by *N*.  This may help you avoid overcommitting your GPU's memory.
 
     If used with **-repeat**, the last one on the command-line wins,
     but you must specify ``2`` if you want it; the default value only

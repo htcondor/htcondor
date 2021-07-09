@@ -945,7 +945,6 @@ void usage(FILE* out, const char * argv0)
 		"    -config           Output in HTCondor config syntax\n"
 		"    -repeat [<N>]     Repeat list of detected GPUs N (default 2) times\n"
 		"                      (e.g., DetectedGPUS = \"CUDA0, CUDA1, CUDA0, CUDA1\")\n"
-		"                      Divides GlobalMemoryMb attribute by N.\n"
 		"    -divide [<N>]     As -repeat, but divide GlobalMemoryMb by N.\n"
 		"                      With both -repeat and -divide:\n"
 		"                        the last flag wins,\n"
