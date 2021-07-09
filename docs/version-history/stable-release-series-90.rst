@@ -13,16 +13,15 @@ Version 9.0.2
 
 Release Notes:
 
-.. HTCondor version 9.0.2 released on Month Date, 2021.
-
-- HTCondor version 9.0.2 not yet released.
+- HTCondor version 9.0.2 released on July 8, 2021.
 
 - Removed support for GRAM grid jobs.
+  :jira:`561`
 
 New Features:
 
-- HTCondor is now FIPS-compliant when configured to be so using the new
-  configuration macro ``use security:FIPS``
+- HTCondor can now be configured to only use FIPS 140-2 approved security
+  functions by using the new configuration template: ``use security:FIPS``.
   :jira:`319`
 
 - Added new command-line flag to `condor_gpu_discovery`, ``-divide``,
@@ -30,48 +29,56 @@ New Features:
   ``GlobalMemoryMb`` by the number of repeats (and adds the GPU
   attribute ``DeviceMemoryMb``, which is the undivided total).  To enable
   this new behavior, modify ``GPU_DISCOVERY_EXTRA`` appropriately.
-  :jira:`404`
+  :jira:`454`
+
+- The maximum line length for ``STARTD_CRON`` and ``SCHEDD_CRON`` job output
+  has been extended from 8k bytes to 64k bytes.
+  :jira:`498`
+
+- Added two new commands to *condor_submit* - ``use_scitokens`` and ``scitokens_file``.
+  :jira:`508`
 
 - Reduced `condor_shadow` memory usage by 40% or more on machines with many
-  (> 64) cores.  This allows a correspondingly greater number of shadows and thus
+  (more than 64) cores.  This allows a correspondingly greater number of shadows and thus
   jobs to run on these submit machines.
   :jira:`540`
 
-- Added support for using an authenticated smtp relay on port 587 to
+- Added support for using an authenticated SMTP relay on port 587 to
   condor_mail.exe on Windows.
   :jira:`303`
-
-- The maximum line length for ``STARTD_CRON`` and ``SCHEDD_CRON`` job output
-  has been extended from 8k to 64k.
-  :jira:`498`
 
 - The `condor_job_router_info` tool will now show info for a rootly JobRouter
   even when the tool is not running as root.  This change affects the way
   jobs are matched when using the ``-match`` or ``-route`` options.
   :jira:`525`
 
-- *condor_gpu_discovery* now recognises Capability 8.6 devices and reports the
-  correct number of cores per GU.
+- *condor_gpu_discovery* now recognizes Capability 8.6 devices and reports the
+  correct number of cores per Compute Unit.
   :jira:`544`
 
-- Added command line option `--copy-ssh-key` to *bosco_cluster*. When set
+- Added command line option ``--copy-ssh-key`` to *bosco_cluster*. When set
   to `no`, this option prevents *bosco_cluster* from installing an ssh
   key on the remote system, and assume passwordless ssh is already
   possible.
   :jira:`270`
 
-- Added two new commands to *condor_submit* - ``use_scitokens`` and ``scitokens_file``.
-  :jira:`408`
-
 - Update to be able to link in scitokens-cpp library directly, rather than
   always using dlopen(). This allows SciTokens to be used with the conda-forge
-  build.
+  build of HTCondor.
   :jira:`541`
 
 Bugs Fixed:
 
-- Fixed Munge authentication, which was broken starting with HTConor 8.9.9.
+- When a Singularity container is started, and the test is run before the job,
+  and the test fails, the job is now put back to idle instead of held.
+  :jira:`539`
+
+- Fixed Munge authentication, which was broken starting with HTCondor 8.9.9.
   :jira:`378`
+
+- Fixed a bug in the Windows MSI installer where installation would only succeed
+  at the default location of ``C:\Condor``.
+  :jira:`543`
 
 - Fixed a bug that prevented docker universe jobs from running on machines
   whose hostnames were longer than about 60 characters.
@@ -82,7 +89,7 @@ Bugs Fixed:
   :jira:`503`
 
 - Fixed a bug that caused the ``query-krb`` and ``delete-krb`` options of *condor_store_cred*
-  to fail.  This bug also affected the python bindings ``query_user_cred`` and ``delete_user_cred``
+  to fail.  This bug also affected the Python bindings ``query_user_cred`` and ``delete_user_cred``
   methods
   :jira:`533`
 
@@ -95,10 +102,6 @@ Bugs Fixed:
   from another via AFS.
   :jira:`463`
 
-- When a singularity container is started, and the test is run before the job,
-  and the test fails, the job is now put back to idle instead of held.
-  :jira:`539`
-
 - Using expressions for values in the ads of grid universe jobs of type
   `batch` now works correctly.
   :jira:`507`
@@ -110,16 +113,17 @@ Bugs Fixed:
 - Fixed a bug in the *condor_who* program that caused it to hang on Linux
   systems, especially those running AFS or other shared filesystems.
   :jira:`530`
+  :jira:`573`
 
 - Fixed a bug that cause the *condor_master* to hang for up to two minutes
   when shutting down, if it was configured to be a personal condor.
   :jira:`548`
 
-- When a grid universe job of type **nordugrid** fails on the remote system,
+- When a grid universe job of type ``nordugrid`` fails on the remote system,
   the local job is now put on hold, instead of automatically resubmitted.
   :jira:`535`
 
-- Fixed a bug that caused SSL authentication to potential segfault.
+- Fixed a bug that caused SSL authentication to crash on rare occasions.
   :jira:`428`
 
 - Added the missing Ceiling attribute to negotiator user priorities in the
@@ -130,9 +134,9 @@ Bugs Fixed:
   logging duplicate description warnings.
   :jira:`511`
 
-- Fixed a bug in the Windows MSI installer where installation would only succeed
-  at the default location of ``C:\Condor``.
-  :jira:`543`
+- Add the libltdl library to the HTCondor tarball. This library was
+  inadvertently omitted when streamlining the build process in version 8.9.12.
+  :jira:`576`
 
 
 Version 9.0.1

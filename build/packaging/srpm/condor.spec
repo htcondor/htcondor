@@ -264,6 +264,9 @@ BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 # openssh-server needed for condor_ssh_to_job
 Requires: openssh-server
 
+# net-tools needed to provide netstat for condor_who
+Requires: net-tools
+
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
@@ -1671,6 +1674,15 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jul 08 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.2-1
+- HTCondor can be set up to use only FIPS 140-2 approved security functions
+- If the Singularity test fails, the job goes idle rather than getting held
+- Can divide GPU memory, when making multiple GPU entries for a single GPU
+- Startd and Schedd cron job maximum line length increased to 64k bytes
+- Added first class submit keywords for SciTokens
+- Fixed MUNGE authentication
+- Fixed Windows installer to work when the install location isn't C:\Condor
+
 * Thu May 20 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.0-1
 - Support for submitting to ARC-CE via the REST interface
 - DAGMan can put failed jobs on hold (user can correct problems and release)
