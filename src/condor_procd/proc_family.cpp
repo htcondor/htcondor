@@ -676,6 +676,8 @@ ProcFamily::aggregate_usage_cgroup(ProcFamilyUsage* usage)
 			found_rss = true;
 		} else if (_check_stat_uint64(stats, "total_mapped_file", &tmp)) {
 			image += tmp;
+		} else if (_check_stat_uint64(stats, "total_shmem", &tmp)) {
+			image += tmp;
 		} 
 		err = cgroup_read_stats_next(&handle, &stats);
 	}
