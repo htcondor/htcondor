@@ -197,14 +197,17 @@ sub findTests {
 
     # set (rough) priorities for some of the tests.
     foreach (keys %tasklist) {
-        if ($_ =~ /unit_test/) { $tasklist{$_} += 20; }
+	# these few are slow, start them first to get them out of the long tail
+	if ($_ =~ /test_late_material/) { $tasklist{$_} += 20; }
+	if ($_ =~ /log_rotation/) { $tasklist{$_} += 20; }
+	if ($_ =~ /job_dagman_splice-N/) { $tasklist{$_} += 20; }
+	if ($_ =~ /job_dagman_splice-O/) { $tasklist{$_} += 20; }
+	if ($_ =~ /job_basic_preempt/) { $tasklist{$_} += 20; }
+
         if ($_ =~ /basic/) { $tasklist{$_} += 7; }
-        if ($_ =~ /^config/) { $tasklist{$_} += 4; }
-        if ($_ =~ /^lib_/) { $tasklist{$_} += 3; }
         if ($_ =~ /^cmd_/) { $tasklist{$_} += 2; }
-        if ($_ =~ /_core_/) { $tasklist{$_} += 2; }
-        if ($_ =~ /^job_f/) { $tasklist{$_} += 1; }
-        if ($_ =~ /concurrency/) { $tasklist{$_} -= 1; } # these are very slow tests.
+        #if ($_ =~ /_core_/) { $tasklist{$_} += 2; }
+        if ($_ =~ /concurrency/) { $tasklist{$_} += 10; } # these are very slow tests.
     }
 
     print join("\n", sort keys %tasklist) . "\n";
