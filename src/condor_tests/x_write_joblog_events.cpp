@@ -53,7 +53,9 @@ main(int argc, char **argv)
 	}
 
 	char *logname = argv[1];
-	int count = atoi(argv[3]);
+
+	// Prevent static analysis taint complaint by max'ing to 100000-
+	int count = std::min(100000, atoi(argv[3]));
 
 	if( strcmp(argv[2],"submit") == 0) {
 		//printf("Drop submit events\n");
