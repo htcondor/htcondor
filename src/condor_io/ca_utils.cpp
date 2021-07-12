@@ -29,6 +29,7 @@
 #include "directory.h"
 
 #include <sstream>
+#include <iostream>
 #include <memory>
 
 #include <openssl/x509.h>
@@ -545,4 +546,21 @@ bool htcondor::add_known_hosts(const std::string &hostname, bool permitted, cons
 	}
 	close(fd);
 	return true;
+}
+
+
+bool htcondor::ask_cert_confirmation(const std::string &host_alias, const std::string &fingerprint)
+{
+	printf("The remote host %s presented an untrusted certificate with the following fingerprint:\n",
+		host_alias.c_str());
+	printf("SHA-256: %s\n", fingerprint.c_str());
+	printf("Would you like to trust this server for current and future communications?\n");
+
+	std::string response;
+	do {
+		printf("Please type 'yes' or 'no':\n");
+		std::getline(std::cin, response);
+	} while (response != "yes" && response != "no");
+
+	return response == "yes";
 }

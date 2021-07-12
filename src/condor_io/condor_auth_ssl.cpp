@@ -41,6 +41,7 @@
 
 #include "condor_attributes.h"
 #include "secure_file.h"
+#include "subsystem_info.h"
 
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
@@ -48,6 +49,7 @@
 
 #include <algorithm>
 #include <sstream>
+#include <iomanip>
 #include <string.h>
 
 namespace {
@@ -1407,6 +1409,24 @@ int verify_callback(int ok, X509_STORE_CTX *store)
 			bool is_permitted;
 			std::string method, method_info;
 			auto encoded_cert = get_x509_encoded(cert);
+
+			unsigned char         md[EVP_MAX_MD_SIZE];
+			auto digest = EVP_get_digestbyname("sha256");
+			unsigned int len;
+			if (1 != (*X509_digest_ptr)(cert, digest, md, &len)) {
+				dprintf(D_SECURITY, "Failed to create a digest of the provided X.509 certificate.\n");
+				return ok;
+			}
+			std::stringstream ss;
+			ss << std::hex << std::setw(2) << std::setfill('0');
+			bool first = true;
+			for (unsigned idx = 0; idx < len; idx++) {
+				ss << static_cast<int>(md[idx]);
+				if (!first) ss << ":";
+				first = false;
+			}
+			std::string fingerprint = ss.str();
+
 			auto host_alias = *(verify_ptr->m_host_alias);
 			if (!encoded_cert.empty() &&
 				htcondor::get_known_hosts_first_match(host_alias, is_permitted,
@@ -1430,6 +1450,12 @@ int verify_callback(int ok, X509_STORE_CTX *store)
 				bool permitted = param_boolean("BOOTSTRAP_SSL_SERVER_TRUST", false);
 				dprintf(D_SECURITY, "Adding remote host as known host with trust set to %s"
 					".\n", permitted ? "on" : "off");
+				// Provide an opportunity for users to manually confirm the SSL fingerprint.
+				if (!permitted && (get_mySubSystem()->isType(SUBSYSTEM_TYPE_TOOL) ||
+					get_mySubSystem()->isType(SUBSYSTEM_TYPE_SUBMIT)) && isatty(0))
+				{
+					permitted = htcondor::ask_cert_confirmation(host_alias, fingerprint);
+				}
 				htcondor::add_known_hosts(host_alias, permitted, "SSL", encoded_cert);
 				std::string method;
 				if (permitted && htcondor::get_known_hosts_first_match(host_alias,
