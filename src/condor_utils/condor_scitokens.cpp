@@ -288,6 +288,10 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 	} else {
 			// Success block - everything checks out!
 		std::vector<std::string> authz;
+		// add a "dummy" entry so the list is not empty.  empty could
+		// be interpreted later as "no restrictions" but for SciTokens
+		// should mean "no capabilities".
+		authz.push_back("DENY");
 		if (acls) {
 			int idx = 0;
 			Acl acl = acls[idx++];
