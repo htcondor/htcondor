@@ -31,4 +31,6 @@ bool generate_x509_cert(const std::string &certfile, const std::string &keyfile,
 bool get_known_hosts_first_match(const std::string &hostname, bool &permitted, std::string &method, std::string &method_info);
 bool add_known_hosts(const std::string &hostname, bool permitted, const std::string &method, const std::string &method_info);
 
+// Ask the terminal user if a given certificate is acceptable.
+bool ask_cert_confirmation(const std::string &host_alias, const std::string &fingerprint);
 }
