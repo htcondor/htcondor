@@ -8050,7 +8050,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	int proc = job->proc;
 	char* pool = NULL;
 	std::string user;
-	char* claim_id = NULL;
+	std::string claim_id;
 	char* startd_addr = NULL;
 	char* startd_name = NULL;
 	char* startd_principal = NULL;
@@ -8071,7 +8071,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		// if using fully qualified usernames, we have to append the domain to accounting groups
 		user += std::string("@") + AccountingDomain;
 	}
-	if( GetAttributeStringNew(cluster, proc, ATTR_CLAIM_ID, &claim_id) < 0 ) {
+	if( GetPrivateAttributeString(cluster, proc, ATTR_CLAIM_ID, claim_id) < 0 ) {
 			//
 			// No attribute. Clean up and return
 			//
@@ -8089,7 +8089,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
 				ATTR_REMOTE_HOST, cluster, proc );
 		mark_job_stopped( job );
-		free( claim_id );
 		scheduler.stats.JobsRestartReconnectsAttempting -= 1;
 		scheduler.stats.JobsRestartReconnectsFailed += 1;
 		return;
@@ -8100,7 +8099,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 			// rely on the claim id to tell us how to connect to the startd.
 		dprintf( D_ALWAYS, "WARNING: %s not in job queue for %d.%d, "
 				 "so using claimid.\n", ATTR_STARTD_IP_ADDR, cluster, proc );
-		ClaimIdParser id_parser(claim_id);
+		ClaimIdParser id_parser(claim_id.c_str());
 		startd_addr = strdup(id_parser.startdSinfulAddr());
 		SetAttributeString(cluster, proc, ATTR_STARTD_IP_ADDR, startd_addr);
 	}
@@ -8138,13 +8137,13 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 
 	dprintf( D_FULLDEBUG, "Adding match record for disconnected job %d.%d "
 			 "(%s: %s)\n", cluster, proc, attr_JobUser.c_str(), user.c_str() );
-	ClaimIdParser idp( claim_id );
+	ClaimIdParser idp( claim_id.c_str() );
 	dprintf( D_FULLDEBUG, "ClaimId: %s\n", idp.publicClaimId() );
 	if( pool ) {
 		dprintf( D_FULLDEBUG, "Pool: %s (via flocking)\n", pool );
 	}
 		// note: AddMrec will makes its own copy of match_ad
-	match_rec *mrec = AddMrec( claim_id, startd_addr, job, match_ad, 
+	match_rec *mrec = AddMrec( claim_id.c_str(), startd_addr, job, match_ad, 
 							   user.c_str(), pool );
 
 		// authorize this startd for READ access
@@ -8169,7 +8168,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 	//   a match_rec for, link the two together.
 	std::string paired_claim_id;
 	match_rec *paired_mrec = NULL;
-	if ( GetAttributeString( cluster, proc, ATTR_PAIRED_CLAIM_ID,
+	if ( GetPrivateAttributeString( cluster, proc, ATTR_PAIRED_CLAIM_ID,
 							 paired_claim_id ) >= 0 &&
 			 matches->lookup( paired_claim_id, paired_mrec ) == 0 ) {
 
@@ -8191,8 +8190,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		free( startd_name );
 		startd_name = NULL;
 	}
-	free( claim_id );
-	claim_id = NULL;
 
 		// this should never be NULL, particularly after the checks
 		// above, but just to be extra safe, check here, too.
@@ -9744,7 +9741,16 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			// as appropriate...  
 		return false;
 	}
-
+	std::string secret;
+	if (GetPrivateAttributeString(job_id->cluster, job_id->proc, ATTR_CLAIM_ID, secret) == 0) {
+		job_ad->Assign(ATTR_CLAIM_ID, secret);
+	}
+	if (GetPrivateAttributeString(job_id->cluster, job_id->proc, ATTR_CLAIM_IDS, secret) == 0) {
+		job_ad->Assign(ATTR_CLAIM_IDS, secret);
+	}
+	if (GetPrivateAttributeString(job_id->cluster, job_id->proc, ATTR_PAIRED_CLAIM_ID, secret) == 0) {
+		job_ad->Assign(ATTR_PAIRED_CLAIM_ID, secret);
+	}
 
 	FamilyInfo fi;
 	FamilyInfo *fip = NULL;
@@ -10033,7 +10039,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	char *public_part = Condor_Crypt_Base::randomHexKey();
 	char *private_part = Condor_Crypt_Base::randomHexKey();
 	ClaimIdParser cidp(public_part,NULL,private_part);
-	SetAttributeString( job_id->cluster, job_id->proc, ATTR_CLAIM_ID, cidp.claimId() );
+	SetPrivateAttributeString( job_id->cluster, job_id->proc, ATTR_CLAIM_ID, cidp.claimId() );
 	free( public_part );
 	free( private_part );
 
@@ -10980,13 +10986,13 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			// or, in the case of ATTR_LAST_JOB_LEASE_RENEWAL,
 			// clobbers accurate info with a now-bogus value.
 
-		SetAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->claimId() );
+		SetPrivateAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->claimId() );
 		SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->publicClaimId() );
 		SetAttributeString( cluster, proc, ATTR_STARTD_IP_ADDR, mrec->peer );
 		SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL,
 						 (int)time(0) ); 
 		if ( mrec->m_paired_mrec ) {
-			SetAttributeString( cluster, proc, ATTR_PAIRED_CLAIM_ID,
+			SetPrivateAttributeString( cluster, proc, ATTR_PAIRED_CLAIM_ID,
 								mrec->m_paired_mrec->claimId() );
 		}
 
@@ -11292,10 +11298,10 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// when the schedd comes back online.
 		//
 	if ( (!rec->keepClaimAttributes) || job_status == COMPLETED || job_status == REMOVED ) {
-		DeleteAttribute( cluster, proc, ATTR_PAIRED_CLAIM_ID );
-		DeleteAttribute( cluster, proc, ATTR_CLAIM_ID );
+		DeletePrivateAttribute( cluster, proc, ATTR_PAIRED_CLAIM_ID );
+		DeletePrivateAttribute( cluster, proc, ATTR_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );
-		DeleteAttribute( cluster, proc, ATTR_CLAIM_IDS );
+		DeletePrivateAttribute( cluster, proc, ATTR_CLAIM_IDS );
 		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_IDS );
 		DeleteAttribute( cluster, proc, ATTR_STARTD_IP_ADDR );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_HOST );
@@ -15310,7 +15316,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		std::string claim_ids;
 		std::string remote_hosts_string;
 		int subproc = -1;
-		if( jobad->LookupString(ATTR_CLAIM_IDS,claim_ids) &&
+		if( GetPrivateAttributeString(jobid.cluster,jobid.proc,ATTR_CLAIM_IDS,claim_ids)==0 &&
 			jobad->LookupString(ATTR_ALL_REMOTE_HOSTS,remote_hosts_string) ) {
 			StringList claim_idlist(claim_ids.c_str(),",");
 			StringList remote_hosts(remote_hosts_string.c_str(),",");
@@ -15359,7 +15365,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 				break;
 			}
 			starter_ad.Assign(ATTR_STARTER_IP_ADDR,starter_addr);
-			jobad->LookupString(ATTR_CLAIM_ID,job_claimid_buf);
+			GetPrivateAttributeString(jobid.cluster,jobid.proc,ATTR_CLAIM_ID,job_claimid_buf);
 			job_claimid = job_claimid_buf.c_str();
 			match_sec_session_id = NULL; // no match sessions for local univ
 			job_is_suitable = true;
@@ -17076,6 +17082,16 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 
 			jobExitCode( new_job_id, JOB_SHOULD_REQUEUE );
 			srec->exit_already_handled = true;
+		}
+		std::string secret;
+		if (GetPrivateAttributeString(new_job_id.cluster, new_job_id.proc, ATTR_CLAIM_ID, secret) == 0) {
+			new_ad->Assign(ATTR_CLAIM_ID, secret);
+		}
+		if (GetPrivateAttributeString(new_job_id.cluster, new_job_id.proc, ATTR_CLAIM_IDS, secret) == 0) {
+			new_ad->Assign(ATTR_CLAIM_IDS, secret);
+		}
+		if (GetPrivateAttributeString(new_job_id.cluster, new_job_id.proc, ATTR_PAIRED_CLAIM_ID, secret) == 0) {
+			new_ad->Assign(ATTR_PAIRED_CLAIM_ID, secret);
 		}
 	}
 	if( new_ad ) {
