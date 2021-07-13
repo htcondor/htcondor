@@ -7400,6 +7400,10 @@ condor_procd Configuration File Macros
     disable cgroup tracking, define this to an empty string. See
     :ref:`admin-manual/setting-up-special-environments:cgroup-based process
     tracking` for a description of cgroup-based process tracking.
+    An administrator can configure distinct cgroup roots for 
+    different slot types within the same startd by prefixing
+    the *BASE_CGROUP* macro with the slot type. e.g. setting
+    SLOT_TYPE_1.BASE_CGROUP = hiprio_cgroup and SLOT_TYPE_2.BASE_CGROUP = low_prio
 
 condor_credd Configuration File Macros
 ---------------------------------------
