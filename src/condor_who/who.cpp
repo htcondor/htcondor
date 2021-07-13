@@ -775,6 +775,10 @@ static void get_address_table(TABULAR_MAP & table)
 	cmdargs.AppendArg("-w");
 #endif
 
+#ifndef WIN32
+	fclose(stderr);
+#endif
+
 	FILE * stream = my_popen(cmdargs, "r", 0);
 	if (stream) {
 		bool fMultiWord = false; // output has multi-word headings.
