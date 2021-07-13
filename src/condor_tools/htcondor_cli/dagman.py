@@ -6,7 +6,12 @@ import stat
 
 from .conf import *
 
-schedd = htcondor.Schedd()
+# Make sure we have a schedd!
+try:
+    schedd = htcondor.Schedd()
+except:
+    print(f"Could not access local schedd. This tool must be a run from an HTCondor submit machine.")
+    sys.exit(1)
 
 class DAGMan:
     """
