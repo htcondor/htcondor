@@ -1233,6 +1233,7 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 				print NEW "SCHEDD_INTERVAL = 5\n";
 				print NEW "UPDATE_INTERVAL = 5\n";
 				print NEW "NEGOTIATOR_INTERVAL = 5\n";
+				print NEW "NEGOTIATOR_CYCLE_DELAY = 1\n";
 				print NEW "CONDOR_ADMIN = \n";
 				print NEW "CONDOR_JOB_POLL_INTERVAL = 5\n";
 				print NEW "PERIODIC_EXPR_TIMESLICE = .99\n";

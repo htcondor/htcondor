@@ -156,6 +156,7 @@ htcondor::init_scitokens()
 		scitoken_free_string_list_ptr = (void (*)(char **value))dlsym(dl_hdl, "scitoken_free_string_list");
 	}
 #else
+#if defined(HAVE_EXT_SCITOKENS)
 	scitoken_deserialize_ptr = scitoken_deserialize;
 	scitoken_get_claim_string_ptr = scitoken_get_claim_string;
 	scitoken_destroy_ptr = scitoken_destroy;
@@ -166,12 +167,16 @@ htcondor::init_scitokens()
 	scitoken_get_expiration_ptr = scitoken_get_expiration;
 	scitoken_get_claim_string_list_ptr = scitoken_get_claim_string_list;
 	scitoken_free_string_list_ptr = scitoken_free_string_list;
+	g_init_tried = true;
+#else
+	dprintf(D_SECURITY, "SciTokens support is not compiled in.\n");
+	g_init_success = false;
+#endif
 #endif
 #else
 	dprintf(D_SECURITY, "SciTokens is not supported on Windows.\n");
 	g_init_success = false;
 #endif
-	g_init_tried = true;
 	return g_init_success;
 }
 
