@@ -1610,8 +1610,26 @@ FileTransfer::HandleCommands(int command, Stream *s)
 				} else {
 						// We aren't looking at the userlog file... ship it!
 					const char *filename = spool_space.GetFullPath();
-					if ( !transobject->InputFiles->file_contains(filename) &&
-						 !transobject->InputFiles->file_contains(condor_basename(filename)) ) {
+
+					// If the spool contains a file with the same full path as a
+					// file in the input list, do nothing (don't duplicate it).
+					//
+					// If the spool contains a file whose basename is in the input list,
+					// prefer the copy of the file in spool, because it might have been
+					// uploaded as part of a checkpoint.
+					if( transobject->InputFiles->file_contains(filename) ) {
+						// dprintf( D_ALWAYS, "[FT] Found full path %s in input files and SPOOL, doing nothing.\n", filename );
+					} else if( transobject->InputFiles->file_contains(condor_basename(filename)) ) {
+						transobject->InputFiles->remove(condor_basename(filename));
+						transobject->InputFiles->append(filename);
+						// dprintf( D_ALWAYS, "[FT] Found base name %s in input files and SPOOL, removing it and adding %s.\n", condor_basename(filename), filename );
+						if( transobject->ExecFile && strcmp( condor_basename(filename), transobject->ExecFile ) == 0 ) {
+							// dprintf( D_ALWAYS, "[FT] Changing executable name from %s to %s.\n", transobject->ExecFile, filename );
+							free(transobject->ExecFile);
+							transobject->ExecFile = strdup(filename);
+						}
+					} else {
+						// dprintf( D_ALWAYS, "[FT] Full path %s not in SPOOL but not input files, appending to intput files.\n", filename );
 						transobject->InputFiles->append(filename);
 					}
 				}
