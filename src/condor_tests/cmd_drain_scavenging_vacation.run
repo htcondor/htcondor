@@ -137,6 +137,7 @@ MaxJobRetirementTime	= 60
 
 log						= cmd_drain_scavenging_vacation.log
 
+Requirements			= (NumJobStarts?:0) < 1
 queue 3
 
 arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 60
