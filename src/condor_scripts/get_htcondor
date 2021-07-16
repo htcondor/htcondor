@@ -111,7 +111,7 @@ check_forked() {
 					lsb_dist=debian
 				fi
 				dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
-				case "$dist_version" in
+				case $dist_version in
 					10)
 						dist_version_number=10
 						dist_version="buster"
@@ -148,7 +148,7 @@ get_distribution() {
 	# An empty string for lsb_dist should be alright since the
 	# case statements don't act unless you provide an actual value
 
-	case "$lsb_dist" in
+	case $lsb_dist in
 
 		ubuntu)
 			if command_exists lsb_release; then
@@ -164,7 +164,7 @@ get_distribution() {
 			# better on Devuan and is simpler... is that file missing on
 			# raspbian?
 			dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
-			case "$dist_version" in
+			case $dist_version in
 				10)
 					dist_version="buster"
 				;;
@@ -285,7 +285,7 @@ do_install() {
 
 			You may update the existing install, or remove and then re-install.
 		EOF
-		case "$lsb_dist" in
+		case $lsb_dist in
 		ubuntu|debian)
 			PACKAGE=htcondor
 			if [[ ! $ROLE ]]; then
@@ -342,7 +342,7 @@ do_install() {
 	fi
 
 	# Run install binaries for each distro accordingly
-	case "$lsb_dist" in
+	case $lsb_dist in
 		ubuntu|debian)
 			(
 				if ! is_dry_run; then
@@ -485,7 +485,7 @@ do_install() {
 
 	# Configure the role, if any.
 	echo -e "\n# Configuring role, if any ..."
-	case "${ROLE}" in
+	case $ROLE in
 		"central manager")
 			CONFIG_FILE="/etc/condor/config.d/01-central-manager.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
@@ -543,7 +543,7 @@ do_download() {
 	TARBALL_DIR_URL=${TARBALL_BASE_URL}/${CHANNEL_DIR}/current
 
 	OS_VERSION=$dist_version
-	case "$lsb_dist" in
+	case $lsb_dist in
 		# We don't release HTCondor for Fedora.
 		# fedora)
 		#	;;
@@ -596,7 +596,7 @@ PASSWORD=${GET_HTCONDOR_PASSWORD}
 
 # Process command-line options
 while [ $# -gt 0 ]; do
-	case "$1" in
+	case $1 in
 		--password)
 			PASSWORD=$2
 			if [[ ! $PASSWORD ]]; then
@@ -653,7 +653,7 @@ while [ $# -gt 0 ]; do
 			shift
 			;;
 		--channel)
-			case "$2" in
+			case $2 in
 				stable)
 					CHANNEL="stable"
 					;;
