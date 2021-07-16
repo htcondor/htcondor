@@ -57,27 +57,15 @@ install_config_file() {
 }
 
 is_download() {
-	if [ -z "$DOWNLOAD" ]; then
-		return 1
-	else
-		return 0
-	fi
+	[[ $DOWNLOAD ]]
 }
 
 is_dry_run() {
-	if [ -z "$DRY_RUN" ]; then
-		return 1
-	else
-		return 0
-	fi
+	[[ $DRY_RUN ]]
 }
 
 is_display_dist() {
-	if [ -z "$DIST" ]; then
-		return 1
-	else
-		return 0
-	fi
+	[[ $DIST ]]
 }
 
 is_darwin() {
@@ -95,21 +83,16 @@ check_forked() {
 	# Check for lsb_release command existence, it usually exists in forked distros
 	if command_exists lsb_release; then
 		# Check if the `-u` option is supported
-		set +e
-		lsb_release -a -u > /dev/null 2>&1
-		lsb_release_exit_code=$?
-		set -e
-
-		# Check if the command has exited successfully, it means we're in a forked distro
-		if [ "$lsb_release_exit_code" = "0" ]; then
+		# If the command has exited successfully, it means we're in a forked distro
+		if lsb_release -a -u > /dev/null 2>&1; then
 			# Print info about current distro
 			cat <<-EOF
 			You're using '$lsb_dist' version '$dist_version'.
 			EOF
 
 			# Get the upstream release info
-			lsb_dist=$(lsb_release -a -u 2>&1 | tr '[:upper:]' '[:lower:]' | grep -E 'id' | cut -d ':' -f 2 | tr -d '[:space:]')
-			dist_version=$(lsb_release -a -u 2>&1 | tr '[:upper:]' '[:lower:]' | grep -E 'codename' | cut -d ':' -f 2 | tr -d '[:space:]')
+			lsb_dist=$(lsb_release --id -u | cut -f2)
+			dist_version=$(lsb_release --codename -u | cut -f2)
 
 			# Print info about upstream distro
 			cat <<-EOF
@@ -413,47 +396,37 @@ do_install() {
 			fi
 
 			repo_dist=${lsb_dist}
-			if [ "${repo_dist}" = "centos" ]; then
-				repo_dist="rhel"
-			fi
-			if [ "${repo_dist}" = "rhel" ]; then
-				repo_dist="el"
-			fi
+			case $repo_dist in
+				centos ) repo_dist=rhel ;;
+				rhel   ) repo_dist=el   ;;
+			esac
 			repo_suffix="${repo_dist}${dist_version}"
 			yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL}/htcondor-release-current.${repo_suffix}.noarch.rpm"
 
 			echo -e "\n# Installing EPEL"
 			epel_version="${dist_version}"
-			if [ "${lsb_dist}" = "amzn" ]; then
-				if [ "${dist_version}" -eq 2 ]; then
-					epel_version="7"
-				fi
-			fi
+			case ${lsb_dist}.${dist_version} in
+				amzn.2 ) epel_version="7" ;;
+			esac
 			$sh_c "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || yum reinstall -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
 
-			if [ "${lsb_dist}" != "amzn" ]; then
-				#
-				# Just to make our lives harder, the packages we need from
-				# EPEL depend on repositories which are disabled by default,
-				# and those repositories and how to enable them between
-				# RHEL and CentOS and between version 7 and 8.
-				#
-				if [ "${lsb_dist}" = "centos" ]; then
-					if [ "${dist_version}" -eq 8 ]; then
-						$sh_c "dnf -y install dnf-plugins-core"
-						$sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
-					fi
-				elif [ "${lsb_dist}" = "rhel" ]; then
-					# subscription-manager only works if you've already
-					# "register"ed and "attach"ed the system.
-					if [ "${dist_version}" -eq 7 ]; then
-						$sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
-					elif [ "${dist_version}" -eq 8 ]; then
-						ARCH=$(/bin/arch)
-						$sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-8-${ARCH}-rpms\""
-					fi
-				fi
-			fi
+			# Just to make our lives harder, the packages we need from
+			# EPEL depend on repositories which are disabled by default,
+			# and those repositories and how to enable them between
+			# RHEL and CentOS and between version 7 and 8.
+			#
+			case ${lsb_dist}.${dist_version} in
+				centos.8 ) $sh_c "dnf -y install dnf-plugins-core"
+				           $sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
+				           ;;
+				# subscription-manager only works if you've already
+				# "register"ed and "attach"ed the system.
+				rhel.7 ) $sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
+				         ;;
+				rhel.8 ) ARCH=$(/bin/arch)
+				         $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-8-${ARCH}-rpms\""
+				         ;;
+			esac
 
 			echo -e "\n# Installing the HTCondor repo"
 			$sh_c "yum install -y ${yum_repo_rpm} || yum reinstall -y ${yum_repo_rpm}"
@@ -585,7 +558,7 @@ do_download() {
 		ubuntu)
 			OS_NAME=Ubuntu
 			dist_version_number="$(. /etc/os-release && echo "$VERSION_ID")"
-			dist_version_number=`echo $dist_version_number | sed -e s'/\.[0-9]*//'`
+			dist_version_number="$(echo $dist_version_number | sed -e s'/\.[0-9]*//')"
 			OS_VERSION=$dist_version_number
 			;;
 		debian)
@@ -724,7 +697,7 @@ while [ $# -gt 0 ]; do
 			exit 1
 			;;
 	esac
-	shift $(( $# > 0 ? 1 : 0 ))
+	shift
 done
 
 # We have to update this once every stable release; we don't want
