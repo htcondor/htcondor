@@ -154,7 +154,7 @@ get_distribution() {
 			if command_exists lsb_release; then
 				dist_version="$(lsb_release --codename | cut -f2)"
 			fi
-			if [ -z "$dist_version" ] && [ -r /etc/lsb-release ]; then
+			if [[ ! $dist_version ]] && [ -r /etc/lsb-release ]; then
 				dist_version="$(. /etc/lsb-release && echo "$DISTRIB_CODENAME")"
 			fi
 		;;
@@ -178,7 +178,7 @@ get_distribution() {
 		;;
 
 		centos|rhel)
-			if [ -z "$dist_version" ] && [ -r /etc/os-release ]; then
+			if [[ ! $dist_version ]] && [ -r /etc/os-release ]; then
 				dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
 			fi
 			dist_version="$(echo "$dist_version" | cut -d. -f1)"
@@ -188,7 +188,7 @@ get_distribution() {
 			if command_exists lsb_release; then
 				dist_version="$(lsb_release --release | cut -f2)"
 			fi
-			if [ -z "$dist_version" ] && [ -r /etc/os-release ]; then
+			if [[ ! $dist_version ]] && [ -r /etc/os-release ]; then
 				dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
 			fi
 		;;
@@ -288,7 +288,7 @@ do_install() {
 		case "$lsb_dist" in
 		ubuntu|debian)
 			PACKAGE=htcondor
-			if [ -z "${ROLE}" ]; then
+			if [[ ! $ROLE ]]; then
 				PACKAGE=minihtcondor
 			fi
 
@@ -299,7 +299,7 @@ do_install() {
 			;;
 		centos|rhel|amzn)
 			PACKAGE=condor
-			if [ -z "${ROLE}" ]; then
+			if [[ ! $ROLE ]]; then
 				PACKAGE=minicondor
 			fi
 
@@ -317,7 +317,7 @@ do_install() {
 	# Check for the pool password / default signing key before installing.
 	#
 	if [[ $var ]]; then
-		if [ -z "${PASSWORD}" ]; then
+		if [[ ! $PASSWORD ]]; then
 			if ! is_dry_run; then
 				echo -n "Enter a pool password: "
 				read PASSWORD
@@ -327,7 +327,7 @@ do_install() {
 			fi
 		fi
 
-		if [ -z "${PASSWORD}" ]; then
+		if [[ ! $PASSWORD ]]; then
 			echo
 			echo "You must set a password!  Did you replace \$htcondor_password with a password?"
 			echo
@@ -335,7 +335,7 @@ do_install() {
 		fi
 	fi
 
-	if [ -z "${ROLE}" ]; then
+	if [[ ! $ROLE ]]; then
 		echo -e "\n# Installing mini HTCondor for ${lsb_dist^} $dist_version"
 	else
 		echo -e "\n# Installing HTCondor as ${ROLE} for ${lsb_dist^} $dist_version"
@@ -374,7 +374,7 @@ do_install() {
 				# this file).  How much do we care?
 
 				echo -e "\n# Installing HTCondor binaries and dependencies"
-				if [ -z "${ROLE}" ]; then
+				if [[ ! $ROLE ]]; then
 					$sh_c "apt-get install -y minihtcondor"
 				else
 					$sh_c "apt-get install -y htcondor"
@@ -424,7 +424,7 @@ do_install() {
 			$sh_c "yum install -y ${yum_repo_rpm} || yum reinstall -y ${yum_repo_rpm}"
 
 			echo -e "\n$ Installing HTCondor"
-			if [ -z "${ROLE}" ]; then
+			if [[ ! $ROLE ]]; then
 				$sh_c "yum install ${YUM_REPO} -y minicondor"
 			else
 				$sh_c "yum install ${YUM_REPO} -y condor"
@@ -432,7 +432,7 @@ do_install() {
 			)
 			;;
 		*)
-			if [ -z "$lsb_dist" ]; then
+			if [[ ! $lsb_dist ]]; then
 				if is_darwin; then
 					echo
 					echo "Error: Unsupported operating system 'macOS'"
@@ -564,7 +564,7 @@ do_download() {
 			OS_NAME=AmazonLinux
 			;;
 		*)
-			if [ -z "$lsb_dist" ]; then
+			if [[ ! $lsb_dist ]]; then
 				if is_darwin; then
 					echo
 					echo "Error: Unsupported operating system 'macOS'"
@@ -599,7 +599,7 @@ while [ $# -gt 0 ]; do
 	case "$1" in
 		--password)
 			PASSWORD=$2
-			if [ -z "${PASSWORD}" ]; then
+			if [[ ! $PASSWORD ]]; then
 				echo "--password requires an argument"
 				exit 1
 			fi
@@ -607,7 +607,7 @@ while [ $# -gt 0 ]; do
 			;;
 		--shared-filesystem-domain)
 			SHARED_FS_DOMAIN=$2
-			if [ -z "${SHARED_FS_DOMAIN}" ]; then
+			if [[ ! $SHARED_FS_DOMAIN ]]; then
 				echo "--shared-filesystem-domain requires an argument"
 				exit 1
 			fi
@@ -619,7 +619,7 @@ while [ $# -gt 0 ]; do
 		--central-manager)
 			ROLE="central manager"
 			CONDOR_HOST=$2
-			if [ -z "${CONDOR_HOST}" ]; then
+			if [[ ! $CONDOR_HOST ]]; then
 				echo "--central-manager requires its external name as an argument"
 				exit 1
 			fi
@@ -628,7 +628,7 @@ while [ $# -gt 0 ]; do
 		--submit)
 			ROLE="submit"
 			CONDOR_HOST=$2
-			if [ -z "${CONDOR_HOST}" ]; then
+			if [[ ! $CONDOR_HOST ]]; then
 				echo "--submit requires the central manager as an argument"
 				exit 1
 			fi
@@ -637,7 +637,7 @@ while [ $# -gt 0 ]; do
 		--execute)
 			ROLE="execute"
 			CONDOR_HOST=$2
-			if [ -z "${CONDOR_HOST}" ]; then
+			if [[ ! $CONDOR_HOST ]]; then
 				echo "--execute requires the central manager as an argument"
 				exit 1
 			fi
@@ -645,7 +645,7 @@ while [ $# -gt 0 ]; do
 			;;
 		--yum-repo)
 			REPO_SUFFIX=$2
-			if [ -z "${REPO_SUFFIX}" ]; then
+			if [[ ! $REPO_SUFFIX ]]; then
 				echo "--yum-repo requires a repo-suffix as an argument"
 				exit 1
 			fi
