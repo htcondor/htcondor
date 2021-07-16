@@ -316,7 +316,7 @@ do_install() {
 	#
 	# Check for the pool password / default signing key before installing.
 	#
-	if [ -n "${ROLE}" ]; then
+	if [[ $var ]]; then
 		if [ -z "${PASSWORD}" ]; then
 			if ! is_dry_run; then
 				echo -n "Enter a pool password: "
@@ -447,7 +447,7 @@ do_install() {
 			;;
 	esac
 
-	if [ -n "${SHARED_FS_DOMAIN}" ]; then
+	if [[ $SHARED_FS_DOMAIN ]]; then
 		DOMAIN_CONFIG=$(cat <<-EOF
 
 			# HTCondor assumes that any two machines with the same value
@@ -501,7 +501,7 @@ do_install() {
 			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_submit' >> ${CONFIG_FILE}"
 			$sh_c "echo 'use role : get_htcondor_submit' >> ${CONFIG_FILE}"
 
-			if [ -n "${SHARED_FS_DOMAIN}" ]; then
+			if [[ ${SHARED_FS_DOMAIN} ]]; then
 				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
 			fi
 
@@ -514,7 +514,7 @@ do_install() {
 			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_execute' >> ${CONFIG_FILE}"
 			$sh_c "echo 'use role : get_htcondor_execute' >> ${CONFIG_FILE}"
 
-			if [ -n "${SHARED_FS_DOMAIN}" ]; then
+			if [[ "${SHARED_FS_DOMAIN}" ]]; then
 				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
 			fi
 
