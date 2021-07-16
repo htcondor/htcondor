@@ -105,12 +105,12 @@ check_forked() {
 			if [ -r /etc/debian_version ] && [ "$lsb_dist" != "ubuntu" ] && [ "$lsb_dist" != "raspbian" ]; then
 				if [ "$lsb_dist" = "osmc" ]; then
 					# OSMC runs Raspbian
-					lsb_dist=raspbian
+					lsb_dist="raspbian"
 				else
 					# We're Debian and don't even know it!
-					lsb_dist=debian
+					lsb_dist="debian"
 				fi
-				dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
+				dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
 				case $dist_version in
 					10)
 						dist_version_number=10
@@ -141,9 +141,9 @@ get_distribution() {
 	lsb_dist=""
 	# Every system that we officially support has /etc/os-release
 	if [ -r /etc/os-release ]; then
-		lsb_dist="$(. /etc/os-release && echo "$ID")"
+		lsb_dist=$(. /etc/os-release && echo "$ID")
 	fi
-	lsb_dist="$(echo "$lsb_dist" | tr '[:upper:]' '[:lower:]')"
+	lsb_dist=$(echo "$lsb_dist" | tr '[:upper:]' '[:lower:]')
 
 	# An empty string for lsb_dist should be alright since the
 	# case statements don't act unless you provide an actual value
@@ -152,10 +152,10 @@ get_distribution() {
 
 		ubuntu)
 			if command_exists lsb_release; then
-				dist_version="$(lsb_release --codename | cut -f2)"
+				dist_version=$(lsb_release --codename | cut -f2)
 			fi
 			if [[ ! $dist_version ]] && [ -r /etc/lsb-release ]; then
-				dist_version="$(. /etc/lsb-release && echo "$DISTRIB_CODENAME")"
+				dist_version=$(. /etc/lsb-release && echo "$DISTRIB_CODENAME")
 			fi
 		;;
 
@@ -163,7 +163,7 @@ get_distribution() {
 			# Echoing VERSION_CODENAME out of /etc/os-release works
 			# better on Devuan and is simpler... is that file missing on
 			# raspbian?
-			dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
+			dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
 			case $dist_version in
 				10)
 					dist_version="buster"
@@ -179,17 +179,17 @@ get_distribution() {
 
 		centos|rhel)
 			if [[ ! $dist_version ]] && [ -r /etc/os-release ]; then
-				dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
+				dist_version=$(. /etc/os-release && echo "$VERSION_ID")
 			fi
-			dist_version="$(echo "$dist_version" | cut -d. -f1)"
+			dist_version=$(echo "$dist_version" | cut -d. -f1)
 		;;
 
 		*)
 			if command_exists lsb_release; then
-				dist_version="$(lsb_release --release | cut -f2)"
+				dist_version=$(lsb_release --release | cut -f2)
 			fi
 			if [[ ! $dist_version ]] && [ -r /etc/os-release ]; then
-				dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
+				dist_version=$(. /etc/os-release && echo "$VERSION_ID")
 			fi
 		;;
 
@@ -254,7 +254,7 @@ do_install() {
 	# This will set $lsb_dist and $dist_version.
 	get_distribution
 
-	user="$(id -un 2>/dev/null || true)"
+	user=$(id -un 2>/dev/null || true)
 
 	if is_dry_run; then
 		sh_c="echo"
@@ -287,9 +287,9 @@ do_install() {
 		EOF
 		case $lsb_dist in
 		ubuntu|debian)
-			PACKAGE=htcondor
+			PACKAGE="htcondor"
 			if [[ ! $ROLE ]]; then
-				PACKAGE=minihtcondor
+				PACKAGE="minihtcondor"
 			fi
 
 			cat >&2 <<-EOF
@@ -298,9 +298,9 @@ do_install() {
 			EOF
 			;;
 		centos|rhel|amzn)
-			PACKAGE=condor
+			PACKAGE="condor"
 			if [[ ! $ROLE ]]; then
-				PACKAGE=minicondor
+				PACKAGE="minicondor"
 			fi
 
 			cat >&2 <<-EOF
@@ -387,18 +387,18 @@ do_install() {
 				set -x
 			fi
 
-			repo_dist=${lsb_dist}
+			repo_dist=$lsb_dist
 			case $repo_dist in
-				centos ) repo_dist=rhel ;;
-				rhel   ) repo_dist=el   ;;
+				centos ) repo_dist="rhel" ;;
+				rhel   ) repo_dist="el"   ;;
 			esac
 			repo_suffix="${repo_dist}${dist_version}"
 			yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL}/htcondor-release-current.${repo_suffix}.noarch.rpm"
 
 			echo -e "\n# Installing EPEL"
-			epel_version="${dist_version}"
+			epel_version=$dist_version
 			case ${lsb_dist}.${dist_version} in
-				amzn.2 ) epel_version="7" ;;
+				amzn.2 ) epel_version=7 ;;
 			esac
 			$sh_c "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || yum reinstall -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
 
@@ -539,8 +539,8 @@ do_install() {
 do_download() {
 	get_distribution
 
-	TARBALL_BASE_URL=${DOWNLOAD_URL}/tarball
-	TARBALL_DIR_URL=${TARBALL_BASE_URL}/${CHANNEL_DIR}/current
+	TARBALL_BASE_URL="${DOWNLOAD_URL}/tarball"
+	TARBALL_DIR_URL="${TARBALL_BASE_URL}/${CHANNEL_DIR}/current"
 
 	OS_VERSION=$dist_version
 	case $lsb_dist in
@@ -548,20 +548,20 @@ do_download() {
 		# fedora)
 		#	;;
 		ubuntu)
-			OS_NAME=Ubuntu
-			dist_version_number="$(. /etc/os-release && echo "$VERSION_ID")"
-			dist_version_number="$(echo $dist_version_number | sed -e s'/\.[0-9]*//')"
+			OS_NAME="Ubuntu"
+			dist_version_number=$(. /etc/os-release && echo "$VERSION_ID")
+			dist_version_number=$(echo $dist_version_number | sed -e s'/\.[0-9]*//')
 			OS_VERSION=$dist_version_number
 			;;
 		debian)
-			OS_NAME=Debian
+			OS_NAME="Debian"
 			OS_VERSION=$dist_version_number
 			;;
 		centos|rhel)
-			OS_NAME=CentOS
+			OS_NAME="CentOS"
 			;;
 		amzn)
-			OS_NAME=AmazonLinux
+			OS_NAME="AmazonLinux"
 			;;
 		*)
 			if [[ ! $lsb_dist ]]; then
@@ -579,8 +579,8 @@ do_download() {
 			;;
 	esac
 
-	TARBALL_NAME=condor-x86_64_${OS_NAME}${OS_VERSION}-stripped.tar.gz
-	TARBALL_URL=${TARBALL_DIR_URL}/${TARBALL_NAME}
+	TARBALL_NAME="condor-x86_64_${OS_NAME}${OS_VERSION}-stripped.tar.gz"
+	TARBALL_URL="${TARBALL_DIR_URL}/${TARBALL_NAME}"
 
 	echo "Downloading to condor.tar.gz..."
 	curl -fSL ${TARBALL_URL} -o condor.tar.gz
@@ -592,7 +592,7 @@ DOWNLOAD_URL="https://research.cs.wisc.edu/htcondor"
 DRY_RUN=1
 sh_c='sh -c'
 unset DIST
-PASSWORD=${GET_HTCONDOR_PASSWORD}
+PASSWORD=$GET_HTCONDOR_PASSWORD
 
 # Process command-line options
 while [ $# -gt 0 ]; do
@@ -661,7 +661,7 @@ while [ $# -gt 0 ]; do
 					CHANNEL="current"
 					;;
 				*-rc)
-					CHANNEL="$2"
+					CHANNEL=$2
 					;;
 				*)
 					echo "Illegal option $2 for --channel"
@@ -701,7 +701,7 @@ done
 if [ "${CHANNEL}" = "stable" ]; then
 	CHANNEL_DIR=9.0
 else
-	CHANNEL_DIR=${CHANNEL}
+	CHANNEL_DIR=$CHANNEL
 fi
 
 # wrapped up in functions so that we have some protection against only getting
