@@ -61,11 +61,12 @@ Unpack the tarball.
 
 You won't need ``condor.tar.gz`` again, so you can remove it now if you wish.
 
-Copy the files to /usr/local/condor and set up the default configuration
+Copy the files to ``/usr/local/condor`` and set up the default configuration
 file.
 
 .. code-block:: shell
 
+    mkdir -p /usr/local/condor
     cp -a condor-*stripped /usr/local/condor
     rm -rf condor-*stripped
     cd /usr/local/condor
@@ -78,6 +79,8 @@ file.
 
 If you are setting up a single-machine pool, then run the following
 command to finish the configuration.
+
+.. code-block:: shell
 
     cp etc/examples/00-minicondor local/config.d
 
@@ -117,8 +120,8 @@ the daemons.
 Using HTCondor
 --------------
 
-You'll want to add the HTCondor bin and sbin directories to your PATH
-environment variable.
+You'll want to add the HTCondor ``bin`` and ``sbin`` directories to your
+``PATH`` environment variable.
 
 .. code-block:: shell
 
