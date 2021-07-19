@@ -71,14 +71,14 @@ file.
     mkdir -p local/log
     mkdir -p local/spool
     mkdir -p local/execute
-    mkdir -p local/config
+    mkdir -p local/config.d
     cp etc/examples/condor_config etc/condor_config
-    cp etc/examples/00-htcondor-9.0.config local/config
+    cp etc/examples/00-htcondor-9.0.config local/config.d
 
 If you are setting up a single-machine pool, then run the following
 command to finish the configuration.
 
-    cp etc/examples/00-minicondor local/config
+    cp etc/examples/00-minicondor local/config.d
 
 If you are setting up part of a multi-machine pool, then you'll have to
 make some other configuration changes, which we don't cover here.
