@@ -223,7 +223,7 @@ if (BUILD_TESTING)
 			condor_pl_test(test_manifest "Test manifest functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-
+			condor_pl_test(test_htcondor_cli "Test the htcondor CLI tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_toe_exit_info "Test ToE exit info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
