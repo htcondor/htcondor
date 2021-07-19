@@ -17,9 +17,10 @@ The condor Service Account
 
 The first step is to create a service account under which the HTCondor
 daemons will run.
-The commands that specify a PrimaryGroupID or UniqueID may fail with an
-error that includes the message eDSRecordAlreadyExists.
-If that occurs, you will have to retry the command with a different id number.
+The commands that specify a ``PrimaryGroupID`` or ``UniqueID`` may fail with an
+error that includes ``eDSRecordAlreadyExists``.
+If that occurs, you will have to retry the command with a different id number
+(other than ``300``).
 
 .. code-block:: shell
 
