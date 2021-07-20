@@ -78,7 +78,7 @@ void lower_case(std::string &str);
 void upper_case(std::string &str);
 void title_case(std::string &str); // capitalize each word
 
-const char * empty_if_null(const char * c_str) { if( c_str == NULL ) { return ""; } else { return c_str; } }
+void empty_if_null(std::string & str, const char * c_str);
 
 // Return a string based on string src, but for each character in Q that
 // occurs in src, insert the character escape before it.

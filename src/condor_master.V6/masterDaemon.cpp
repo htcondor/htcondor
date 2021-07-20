@@ -655,8 +655,8 @@ int daemon::RealStart( )
 					"Matching '%s:%d'\n", 
 					my_daemon->fullHostname (),
 					my_daemon->port () );
-
-				std::string cm_sinful = empty_if_null(my_daemon->addr());
+				
+				std::string cm_sinful = my_daemon->addr();
 				condor_sockaddr cm_sockaddr;
 				cm_sockaddr.from_sinful(cm_sinful);
 				std::string cm_hostname;
