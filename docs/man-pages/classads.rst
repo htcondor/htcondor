@@ -192,20 +192,26 @@ The words ``UNDEFINED``, ``ERROR``, ``IS``, ``ISNT``, ``TRUE``, ``FALSE``,
 Testing ClassAd Expressions
 ---------------------------
 
-If your pool has machines in it, you can use ``condor_status`` to evaluate
-a ClassAd expression on the command-line.  For instance, if you can't remember
-which kind of regular expressions the ``regexp()`` function uses,
-you could check in the following way (on Linux):
+If your pool has machines in it, you can use ``condor_status`` with some
+options to evaluate a ClassAd expression on the command-line.  For 
+instance, if you want to test to see if a regular expression matches
+some fixed string, you could check in the following way (on Linux):
 
 .. code-block:: console
 
-    $ condor_status -limit 1 -af 'regexp( "*tr*", "string" )'
     $ condor_status -limit 1 -af 'regexp( ".*tr.*", "string" )'
 
-This will print out ``false`` and then ``true``; if you have no machines
+This will print out ``true`` if you have at least one machine in
+your pool; if you have no machines
 in your pool, it will print nothing.  (For each ad ``condor_status``
 fetches, it evaluates the expression(s) passed to ``-af`` and prints
 the result; the ``-limit 1`` ensures that this is at most 1 ad.)
+Note that the expression after the -af option is evaluated in the context
+of some slot classad, but in this case, the expression references nothing
+outside of itself, we are just using *condor_status* as a handy 
+launching point to test expressions.
+
+For more thorough testing of classads, check out the *classad_eval* command.
 
 Examples
 --------
