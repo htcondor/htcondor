@@ -495,6 +495,26 @@ pcccStopCallback::dcMessageCallback( DCMsgCallback * cb ) {
 			// leftovers, so we'll let the startd deal with them.
 			coalescedMatch->setStatus( M_CLAIMED );
 
+			// Although we're already talking with the startd and don't
+			// need to add an auth hole for us, we need to set auth_hole_id
+			// to allow the shadow to accept file download requests.
+			if( coalescedMatch->auth_hole_id == NULL ) {
+				coalescedMatch->auth_hole_id = new MyString("execute-side@matchsession");
+				ASSERT(coalescedMatch->auth_hole_id != NULL);
+
+				// It will probably deathly confuse the rest of the
+				// code if we don't do this.
+				IpVerify * ipv = daemonCore->getSecMan()->getIpVerify();
+				if(! ipv->PunchHole(READ, * coalescedMatch->auth_hole_id) ) {
+					dprintf( D_ALWAYS, "[now job %d.%d]: failed to punch hold for startd\n", nowJob.cluster, nowJob.proc );
+
+					send_matchless_vacate( name, NULL, addr,
+						claimID.c_str(), RELEASE_CLAIM );
+					pcccStopCoalescing( nowJob );
+					return;
+				}
+			}
+
 			// Start the now job.
 			scheduler.StartJob( coalescedMatch );
 			// If we didn't, delete the mrec so the user can try again
