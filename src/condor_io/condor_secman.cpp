@@ -2831,6 +2831,52 @@ SecManStartCommand::SocketCallback( Stream *stream )
 }
 
 
+std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)>
+SecMan::GenerateKeyExchange(CondorError *errstack)
+{
+	std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> pctx(nullptr, &EVP_PKEY_CTX_free);
+	std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> kctx(nullptr, &EVP_PKEY_CTX_free);
+	std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> params(nullptr, &EVP_PKEY_free);
+	std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> pkey(nullptr, &EVP_PKEY_free);
+
+	pctx.reset(EVP_PKEY_CTX_new_id(EVP_PKEY_EC, nullptr));
+	if (!pctx ||
+		1 != EVP_PKEY_paramgen_init(pctx.get()) ||
+		1 != EVP_PKEY_CTX_set_ec_paramgen_curve_nid(pctx.get(), NID_X9_62_prime256v1))
+	{
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to allocate a new param context for key exchange.");
+		return pkey;
+	}
+
+	EVP_PKEY *params_raw = nullptr;
+	if (!EVP_PKEY_paramgen(pctx.get(), &params_raw)) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to allocate a new parameter object for key exchange.");
+		return pkey;
+	}
+	params.reset(params_raw);
+
+	kctx.reset(EVP_PKEY_CTX_new(params.get(), nullptr));
+	if (!kctx || !EVP_PKEY_keygen_init(kctx.get())) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to setup new key context for key exchange.");
+		return pkey;
+	}
+
+	EVP_PKEY *pkey_raw = nullptr;
+	if (1 != EVP_PKEY_keygen(kctx.get(), &pkey_raw)) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to generate new key for key exchange.");
+		return pkey;
+	}
+
+	auto ec_key = EVP_PKEY_get1_EC_KEY(pkey_raw);
+	EC_KEY_set_asn1_flag(ec_key, OPENSSL_EC_NAMED_CURVE);
+
+	pkey.reset(pkey_raw);
+	return pkey;
+}
 // Given a sinful string, clear out any associated sessions (incoming or outgoing)
 void
 SecMan::invalidateHost(const char * sin)
