@@ -3,4 +3,3 @@ nbsphinx==0.8.6
 ipython==6.5.0
 Jinja2>=3.0
 htcondor==9.1.2
-classad==0.4.1
