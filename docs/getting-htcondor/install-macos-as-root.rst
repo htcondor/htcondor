@@ -66,7 +66,6 @@ file.
 
 .. code-block:: shell
 
-    mkdir -p /usr/local/condor
     cp -a condor-*stripped /usr/local/condor
     rm -rf condor-*stripped
     cd /usr/local/condor
