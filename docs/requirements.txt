@@ -2,5 +2,5 @@ sphinx-autodoc-typehints==1.11.0
 nbsphinx==0.8.6
 ipython==6.5.0
 Jinja2>=3.0
-htcondor
-classad
+htcondor==9.1.2
+classad==0.4.1
