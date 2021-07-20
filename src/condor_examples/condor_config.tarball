@@ -33,7 +33,7 @@ LOCAL_DIR = $(RELEASE_DIR)/local
 ##  Config files are read in lexicographic order.
 ##  Multiple directories may be specified, separated by commas; directories
 ##  are read in left-to-right order.
-LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config
+LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config.d
 #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
 
 ## The location of the command line tool to send e-mail.
