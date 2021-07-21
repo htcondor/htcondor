@@ -1,14 +1,4 @@
-#!/usr/bin/python3
-
-import os
-import sys
-import time
-
-import htcondor
-
-from pytest_old.CondorTest import CondorTest
-from pytest_old.Utils import Utils
-from pytest_old.Globals import *
+#!/usr/bin/env pytest
 
 #
 # Test the JobEventLog code.
@@ -18,22 +8,72 @@ from pytest_old.Globals import *
 # are what we expect them to be.
 #
 
+import pytest
+import logging
+
+import time
+
+import htcondor
+
+from ornithology import (
+	action,
+	run_command
+)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# To make sure we test each event type, run x_write_joblog.exe.
+@action
+def logfile(pytestconfig, test_dir):
+	logFilePath = test_dir / "local.pybind-jel.log"
+	# exeFilePath = pytestconfig.rootdir/ "x_write_joblog.exe"
+	exeFilePath = pytestconfig.invocation_dir/ "x_write_joblog.exe"
+	completedProcess = run_command([exeFilePath, logFilePath.as_posix()])
+	assert(completedProcess.returncode == 0)
+	return logFilePath.as_posix()
+
+
+@action
+def synthetic(logfile):
+	new = ""
+	jel = htcondor.JobEventLog(logfile)
+	for event in jel.events(stop_after=0):
+		new = new + str(event) + "...\n"
+	return new
+
+
+@action
+def original(logfile):
+	old = ""
+	log = open(logfile, "r")
+	for line in log:
+   		old += line
+	return old
+
+
 def compareEvent(event, count):
 	if event.type != count:
-		Utils.TLog("Event {0} has wrong type".format(count))
+		print("Event {0} has wrong type".format(count))
 		return False
 
 	if event.cluster != 14:
-		Utils.TLog("Event {0} has wrong cluster ID".format(count))
+		print("Event {0} has wrong cluster ID".format(count))
 		return False
 
 	if event.proc != 55:
-		Utils.TLog("Event {0} has wrong proc ID".format(count))
+		print("Event {0} has wrong proc ID".format(count))
 		return False
 
 	if time.time() - event.timestamp > 30:
-		Utils.TLog("Event {0}'s timestamp is from more than thirty seconds ago.".format(count))
+		print("Event {0}'s timestamp is from more than thirty seconds ago.".format(count))
 		return False
+
+    #
+    # Properly, expectedEventAttributes should a PyTest fixture, probably
+    # a little @config accessor function like the_config() in
+    # test_custom_machine_resource.py.
+    #
 
 	# This set of attributes is extensive but not necessarily comprehensive.
 	# In some cases (e.g., TerminatedNormally being True and CoreFile being
@@ -113,97 +153,63 @@ def compareEvent(event, count):
 	if expectedEventAttributes.get(count) is not None:
 		for attr, value in list(expectedEventAttributes[count].items()):
 			if attr not in event:
-				Utils.TLog("Event {0}'s {1} is missing".format(count, attr))
+				print("Event {0}'s {1} is missing".format(count, attr))
 				return False
 			if event[attr] != expectedEventAttributes[count][attr]:
-				Utils.TLog("Event {0}'s {1} was '{2}', not '{3}'".format(count, attr, event[attr], expectedEventAttributes[count][attr]))
+				print("Event {0}'s {1} was '{2}', not '{3}'".format(count, attr, event[attr], expectedEventAttributes[count][attr]))
 				return False
 		d = set(event.keys()) - set(expectedEventAttributes[count].keys()) - set(boringAttrs)
 		if d:
-			Utils.TLog("Found extra attributes in event {0}: {1}".format(count, ", ".join(sorted(d))))
+			print("Found extra attributes in event {0}: {1}".format(count, ", ".join(sorted(d))))
 			return False
 	else:
 		# To help add new events to the test.
-		Utils.TLog("Unknown event {0}:".format(count))
+		print("Unknown event {0}:".format(count))
 		for attr in event:
 			if attr in boringAttrs:
 				continue
-			Utils.TLog("{0} = '{1}'".format(attr, event[attr]))
+			print("{0} = '{1}'".format(attr, event[attr]))
 		return False
 
 	return True
 
 
-# Be sure to generate the test events in a different file than C++ test uses.
-logFileName = "local.pybind-jel.log"
-if not Utils.RunCommandCarefully(( "./x_write_joblog.exe", logFileName )):
-	CondorTest.RegisterFailure("pybind-jel", "x_write_joblog command failed")
-	sys.exit(TEST_FAILURE)
+class TestJobEventLog:
 
+	# Instantiate a JobEventLog and make sure that the JobEvents it returns
+	# are what we expect them to be.
+	def test_correct_events_read(self, logfile):
+		count = 0
+		jel = htcondor.JobEventLog(logfile)
+		for event in jel.events(stop_after=0):
+			assert(compareEvent(event, count))
+			count += 1
 
-jel = htcondor.JobEventLog(logFileName)
-count = 0
-# No need to wait for a complete logfile.
-for event in jel.events(stop_after=0):
-	if not compareEvent(event, count):
-		CondorTest.RegisterFailure("pybind-jel-{0}".format(count), "Event {0} was wrong".format(count))
-	count += 1
+		assert(count == 39)
 
-if count != 39:
-	CondorTest.RegisterFailure("pybind-jel", "Found the wrong number of events: {0}".format(count))
-	sys.exit(TEST_FAILURE)
-else:
-	CondorTest.RegisterSuccess("pybind-jel", "Found the right number of (correct) events.")
+	# To check that __exit__() closes the log, we need to leave at least one
+	# event in the log for the log to not return.
+	def test_enter_and_exit(self, logfile):
+		with htcondor.JobEventLog(logfile) as jel:
+			for i in range(0, 30):
+				event = next(jel)
+		try:
+			event = next(jel)
+			assert(False)
+		except StopIteration as si:
+			pass
 
+	# To test __str__(), use it to reconstruct the original log string and
+	# then compare to the value of the log file.
+	def test_string_conversion(self, synthetic, original):
+		assert(synthetic == original)
 
-# Test __enter__() and __exit__().  To check that __exit__() closes the log,
-# we need to leave at least one event in the log for the log to not return.
-with htcondor.JobEventLog(logFileName) as jel:
-	for i in range(0, 30):
-		event = next(jel)
-		if not compareEvent(event, i):
-			CondorTest.RegisterFailure("pybind-jel-icm", "Event {0} was wrong".format(i))
-
-try:
-	event = next(jel)
-	CondorTest.RegisterFailure("pybind-jel-icm", "__exit__() failed to close jel")
-except StopIteration as si:
-	CondorTest.RegisterSuccess("pybind-jel-icm", "__exit__() properly closed jel.")
-
-
-#
-# To test __str__(), use it to reconstruct the original log string and
-# then compare to the value of the log file.
-#
-
-new = ""
-jel = htcondor.JobEventLog(logFileName)
-for event in jel.events(stop_after=0):
-	new = new + str(event) + "...\n"
-
-old = ""
-log = open(logFileName, "r")
-for line in log:
-	old += line
-
-if new != old:
-	CondorTest.RegisterFailure("pybind-jel-str", "Original and synthesized log differ.")
-	print("Old: '{0}'".format(old))
-	print("New: '{0}'".format(new))
-else:
-	CondorTest.RegisterSuccess("pybind-jel-str", "Original and synthesized log are identical.")
-
-
-# Test close().
-with htcondor.JobEventLog(logFileName) as jel:
-	e = next(jel)
-	jel.close()
-	try:
-		e = next(jel)
-		CondorTest.RegisterFailure("pybind-jel-close", "Event found after close().")
-	except StopIteration as si:
-		CondorTest.RegisterSuccess("pybind-jel-close", "No events found after close().");
-
-
-sys.exit(TEST_SUCCESS)
-
+	def test_close(self, logfile):
+		with htcondor.JobEventLog(logfile) as jel:
+			e = next(jel)
+			jel.close()
+			try:
+				e = next(jel)
+				assert(False)
+			except StopIteration as si:
+				pass

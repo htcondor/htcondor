@@ -1,4 +1,32 @@
+
+# These are expanded in setup.py.cmake_template
 set(PACKAGES      "classad" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/compat_enum")
+
+# The python sources to copy
+set(PYTHON_SOURCES
+htcondor/compat_enum/__init__.py
+htcondor/compat_enum/LICENSE
+htcondor/_wrap.py
+htcondor/__init__.py
+htcondor/_lock.py
+htcondor/personal.py
+htcondor/htchirp/__init__.py
+htcondor/htchirp/htchirp.py
+htcondor/dags/writer.py
+htcondor/dags/exceptions.py
+htcondor/dags/__init__.py
+htcondor/dags/formatter.py
+htcondor/dags/dag.py
+htcondor/dags/walk_order.py
+htcondor/dags/edges.py
+htcondor/dags/utils.py
+htcondor/dags/rescue.py
+htcondor/dags/node.py
+htcondor/_deprecation.py
+htcondor/_job_status.py
+classad/__init__.py
+)
+
 set(SETUP_PY_IN   "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.cmake_template")
 set(SETUP_PY      "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
 set(INSTALL_SH    "${CMAKE_CURRENT_SOURCE_DIR}/install.sh")
@@ -84,7 +112,7 @@ if (WITH_PYTHON_BINDINGS)
         set(SYSTEM_NAME "darwin")
     endif()
 
-    if (NOT WINDOWS AND PYTHON3LIBS_FOUND AND NOT ${SYSTEM_NAME} MATCHES "fc27")
+    if (NOT WINDOWS AND PYTHON3LIBS_FOUND)
         set(TIMESTAMP3_FILE "${CMAKE_CURRENT_BINARY_DIR}/build/timestamp3")
         add_custom_command(
             OUTPUT ${TIMESTAMP3_FILE}

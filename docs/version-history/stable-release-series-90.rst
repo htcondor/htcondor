@@ -8,6 +8,38 @@ series.
 
 The details of each version are described below.
 
+Version 9.0.3
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.3 released on Month Date, 2021.
+
+- HTCondor version 9.0.3 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where ``condor_gpu_discovery`` would not report any GPUs if
+  any MIG-enabled GPU on the system were configured in certain ways.  Fixed
+  a bug which could cause ``condor_gpu_discovery``'s output to become
+  unparseable after certain errors.
+  :jira:`476`
+
+- Fixed a bug on the Windows platform where *condor_submit* would crash
+  rarely after succesfully submitting a job.  This caused problems for programs
+  that look at the return status of *condor_submit*, including *condor_dagman*
+  :jira:`579`
+
+- HTCondor no longer ignores files in a job's spool directory if they happen
+  to share a name with an entry in ``transfer_input_files``.  This allows
+  jobs to specify the same file in ``transfer_input_files`` and in
+  ``transfer_checkpoint_files``, and still resume properly after a checkpoint.
+  :jira:`583`
+
 Version 9.0.2
 -------------
 

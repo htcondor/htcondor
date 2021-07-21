@@ -18,6 +18,7 @@ def condor(test_dir):
     with Condor(
         local_dir=test_dir / "condor", 
         config={
+            "COLLECTOR_DEBUG": "D_FULLDEBUG",
             "DAEMON_LIST": "COLLECTOR MASTER",
             "USE_SHARED_PORT": False
         }
