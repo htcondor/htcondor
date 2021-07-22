@@ -6738,8 +6738,16 @@ These macros affect the *condor_negotiator*.
     for defaults and composition of valid HTCondor daemon names.
 
 :macro-def:`NEGOTIATOR_INTERVAL`
-    Sets how often the *condor_negotiator* starts a negotiation cycle.
+    Sets the maximum time the *condor_negotiator* will wait before
+    starting a new negotiation cycle, counting from the start of the
+    previous cycle.
     It is defined in seconds and defaults to 60 (1 minute).
+
+:macro-def:`NEGOTIATOR_MIN_INTERVAL`
+    Sets the minimum time the *condor_negotiator* will wait before
+    starting a new negotiation cycle, counting from the start of the
+    previous cycle.
+    It is defined in seconds and defaults to 5.
 
 :macro-def:`NEGOTIATOR_UPDATE_INTERVAL`
     This macro determines how often the *condor_negotiator* daemon

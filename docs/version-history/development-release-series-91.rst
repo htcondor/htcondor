@@ -15,7 +15,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added new configuration parameter ``NEGOTIATOR_MIN_INTERVAL``, which
+  sets the minimum amount of the time between the start of one
+  negotiation cycle and the next.
+  :jira:`606`
 
 Bugs Fixed:
 
