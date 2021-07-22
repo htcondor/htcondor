@@ -985,6 +985,25 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 			} else {
 				m_auth_state->m_server_status = AUTH_SSL_QUITTING;
 			}
+
+
+			// We don't currently go back and try another authentication method
+			// if authorization fails, so check for a succesful mapping here.
+			//
+			// We can't delay this info authentication_finish() because we
+			// need to be able to tell the client that the authN failed.
+			MyString canonical_user;
+			Authentication::load_map_file();
+			auto global_map_file = Authentication::getGlobalMapFile();
+			bool mapFailed = global_map_file->GetCanonicalization(
+				"SCITOKENS", m_scitokens_auth_name, canonical_user );
+			if( mapFailed ) {
+				dprintf(D_SECURITY, "Failed to map SCITOKENS authenticated identity '%s', failing authentication to give another authentication method a go.\n", m_scitokens_auth_name.c_str() );
+
+				m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+			} else {
+				dprintf(D_SECURITY|D_VERBOSE, "Mapped SCITOKENS authenticated identity '%s' to %s, assuming authorization will succeed.\n", m_scitokens_auth_name.c_str(), canonical_user.c_str() );
+			}
 		}
 		if(m_auth_state->m_round_ctr % 2 == 1) {
 			if(AUTH_SSL_ERROR == server_send_message(
@@ -1089,30 +1108,6 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 	if (m_scitokens_mode) {
 		setRemoteUser("scitokens");
 		setAuthenticatedName( m_scitokens_auth_name.c_str() );
-
-		if(! mySock_->isClient()) {
-			// We don't currently go back and try another authentication method
-			// if authorization fails, so check for a succesful mapping here.
-			//
-			// Only do this on the server because the client, of course,
-			// doesn't have the map.
-			MyString canonical_user;
-			Authentication::load_map_file();
-			auto global_map_file = Authentication::getGlobalMapFile();
-			bool mapFailed = global_map_file->GetCanonicalization(
-				"SCITOKENS", m_scitokens_auth_name, canonical_user );
-			if( mapFailed ) {
-				dprintf(D_SECURITY, "Failed to map SCITOKENS authenticated identity '%s', failing authentication to give another authentication method a go.\n", m_scitokens_auth_name.c_str() );
-				retval = CondorAuthSSLRetval::Fail;
-
-				// Tell the client we're bailing.  If this doesn't work
-				// here, we may have to move this entire patch into
-				// authenticate_server_key().
-				send_message(AUTH_SSL_QUITTING, m_auth_state->m_buffer, 0);
-			} else {
-				dprintf(D_SECURITY|D_VERBOSE, "Mapped SCITOKENS authenticated identity '%s' to %s, assuming authorization will succeed.\n", m_scitokens_auth_name.c_str(), canonical_user.c_str() );
-			}
-		}
 	} else {
 		X509 *peer = (*SSL_get_peer_certificate_ptr)(m_auth_state->m_ssl);
 		if (peer) {
@@ -1126,9 +1121,7 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 		setAuthenticatedName( subjectname );
 	}
 
-	if( retval == CondorAuthSSLRetval::Success ) {
-		dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", getAuthenticatedName());
-	}
+	dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", getAuthenticatedName());
 	m_auth_state.reset();
 	return retval;
 }
