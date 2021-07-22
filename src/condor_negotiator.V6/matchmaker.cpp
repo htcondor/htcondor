@@ -401,6 +401,7 @@ Matchmaker ()
 	ConsiderEarlyPreemption = false;
 	want_nonblocking_startd_contact = true;
 
+	startedLastCycleTime = 0;
 	completedLastCycleTime = (time_t) 0;
 
 	publicAd = NULL;
@@ -441,6 +442,7 @@ Matchmaker ()
 	preemption_rank_unstable = true;
 	NegotiatorTimeout = 30;
  	NegotiatorInterval = 60;
+	NegotiatorMinInterval = 5;
  	MaxTimePerSubmitter = 31536000;
 	MaxTimePerSchedd = 31536000;
  	MaxTimePerSpin = 31536000;
@@ -616,6 +618,8 @@ reinitialize ()
 
  	NegotiatorInterval = param_integer("NEGOTIATOR_INTERVAL",60);
 
+	NegotiatorMinInterval = param_integer("NEGOTIATOR_MIN_INTERVAL",5);
+
 	NegotiatorTimeout = param_integer("NEGOTIATOR_TIMEOUT",30);
 
 	// up to 1 year per negotiation cycle
@@ -705,6 +709,7 @@ reinitialize ()
 	dprintf (D_ALWAYS,"ACCOUNTANT_HOST = %s\n", AccountantHost ?
 			AccountantHost : "None (local)");
 	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %d sec\n",NegotiatorInterval);
+	dprintf (D_ALWAYS,"NEGOTIATOR_MIN_INTERVAL = %d sec\n",NegotiatorMinInterval);
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT = %d sec\n",NegotiatorTimeout);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_CYCLE = %d sec\n",MaxTimePerCycle);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_SUBMITTER = %d sec\n",MaxTimePerSubmitter);
@@ -1544,6 +1549,17 @@ negotiationTime ()
 		return;
 	}
 
+	elapsed = time(NULL) - startedLastCycleTime;
+	if ( elapsed < NegotiatorMinInterval ) {
+		daemonCore->Reset_Timer(negotiation_timerID,
+							NegotiatorMinInterval - elapsed,
+							NegotiatorInterval);
+		dprintf(D_FULLDEBUG,
+			"New cycle requested but last one started too recently -- delaying %u secs\n",
+			NegotiatorMinInterval - elapsed);
+		return;
+	}
+
     if (param_boolean("NEGOTIATOR_READ_CONFIG_BEFORE_CYCLE", false)) {
         // All things being equal, it would be preferable to invoke a full neg reconfig here
         // instead of just config(), however frequent reconfigs apparently create new nonblocking
@@ -1730,6 +1746,7 @@ negotiationTime ()
     // ----- Done with the negotiation cycle
     dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
 
+	startedLastCycleTime = start_time;
     completedLastCycleTime = time(NULL);
 
     negotiation_cycle_stats[0]->end_time = completedLastCycleTime;

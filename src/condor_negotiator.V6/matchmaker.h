@@ -312,7 +312,8 @@ class Matchmaker : public Service
 
 		// configuration information
 		char *AccountantHost;		// who (if at all) is the accountant?
-		int  NegotiatorInterval;	// interval between negotiation cycles
+		int  NegotiatorInterval;	// max interval between negotiation cycles
+		int  NegotiatorMinInterval;	// min interval between negotiation cycles
 		int  NegotiatorTimeout;		// timeouts for communication
 		int  MaxTimePerCycle;		// how long for total negotiation cycle
 		int  MaxTimePerSubmitter;   // how long to talk to any one submitter
@@ -373,7 +374,8 @@ class Matchmaker : public Service
 		// external references in startd ads ... used for autoclustering
 		char * job_attr_references;
 
-		// Epoch time when we finished most rescent negotiation cycle
+		// Epoch time when we started/finished most rescent negotiation cycle
+		time_t startedLastCycleTime;
 		time_t completedLastCycleTime;
 
 		// diagnostics

@@ -2686,6 +2686,10 @@ default=60
 type=int
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_MIN_INTERVAL]
+default=5
+type=int
+
 [NEGOTIATOR_UPDATE_AFTER_CYCLE]
 default=false
 type=bool
