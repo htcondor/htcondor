@@ -1093,6 +1093,7 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 		// We don't currently go back and try another authentication method
 		// if authorization fails, so check for a succesful mapping here.
 		MyString canonical_user;
+		Authentication::load_map_file();
 		auto global_map_file = Authentication::getGlobalMapFile();
 		bool mapFailed = global_map_file->GetCanonicalization(
 			"SCITOKENS", m_scitokens_auth_name, canonical_user );
