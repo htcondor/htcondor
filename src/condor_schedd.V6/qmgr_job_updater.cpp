@@ -366,6 +366,10 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		job_queue_attrs = x509_job_queue_attrs;
 		break;
 	case U_STATUS:
+		// This fixes a problem where OnExitHold evaluating to true
+		// prevented ExitCode from being set; see HTCONDOR-599.
+		job_queue_attrs = terminate_job_queue_attrs;
+		break;
 	case U_PERIODIC:
 			// No special attributes needed...
 		break;
