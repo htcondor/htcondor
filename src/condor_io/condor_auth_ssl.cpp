@@ -1104,6 +1104,11 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 			if( mapFailed ) {
 				dprintf(D_SECURITY, "Failed to map SCITOKENS authenticated identity '%s', failing authentication to give another authentication method a go.\n", m_scitokens_auth_name.c_str() );
 				retval = CondorAuthSSLRetval::Fail;
+
+				// Tell the client we're bailing.  If this doesn't work
+				// here, we may have to move this entire patch into
+				// authenticate_server_key().
+				send_message(AUTH_SSL_QUITTING, m_auth_state->m_buffer, 0);
 			} else {
 				dprintf(D_SECURITY|D_VERBOSE, "Mapped SCITOKENS authenticated identity '%s' to %s, assuming authorization will succeed.\n", m_scitokens_auth_name.c_str(), canonical_user.c_str() );
 			}
