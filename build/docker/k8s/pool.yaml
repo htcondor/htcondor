@@ -23,7 +23,7 @@ spec:
  restartPolicy: Never
  containers:
   - name: cm
-    image: htcondor/cm:8.9.11-el7
+    image: htcondor/cm:9.0.1-el7
     imagePullPolicy: Always
     resources:
       limits:
@@ -36,7 +36,10 @@ spec:
         ephemeral-storage: "10G"
     volumeMounts:
       - name: htcondor-pool-password
-        mountPath: /root/secrets
+        mountPath: /etc/condor/passwords-orig.d
+        readOnly: true
+      - name: htcondor-pool-token
+        mountPath: /etc/condor/tokens-orig.d
         readOnly: true
  volumes:
   - name: htcondor-pool-password
@@ -45,6 +48,12 @@ spec:
       items:
       - key: htcondor-pool-password
         path: pool_password
+  - name: htcondor-pool-token
+    secret:
+      secretName: htcondor-pool-token
+      items:
+      - key: htcondor-pool-token
+        path: pool_token
 ---
 apiVersion: v1
 kind: Pod
@@ -56,7 +65,7 @@ spec:
  restartPolicy: Never
  containers:
   - name: submit-container
-    image: htcondor/submit:8.9.11-el7
+    image: htcondor/submit:9.0.1-el7
     imagePullPolicy: Always
     resources:
       limits:
@@ -69,7 +78,10 @@ spec:
         ephemeral-storage: "10G"
     volumeMounts:
       - name: htcondor-pool-password
-        mountPath: /root/secrets
+        mountPath: /etc/condor/passwords-orig.d
+        readOnly: true
+      - name: htcondor-pool-token
+        mountPath: /etc/condor/tokens-orig.d
         readOnly: true
  volumes:
   - name: htcondor-pool-password
@@ -78,6 +90,13 @@ spec:
       items:
       - key: htcondor-pool-password
         path: pool_password
+  - name: htcondor-pool-token
+    secret:
+      secretName: htcondor-pool-token
+      items:
+      - key: htcondor-pool-token
+        path: pool_token
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -97,7 +116,7 @@ spec:
     spec:
             containers:
              - name: execute
-               image: htcondor/execute:8.9.11-el7
+               image: htcondor/execute:9.0.1-el7
                imagePullPolicy: Always
                resources:
                  limits:
@@ -110,7 +129,10 @@ spec:
                    ephemeral-storage: "10G"
                volumeMounts:
                  - name: htcondor-pool-password
-                   mountPath: /root/secrets
+                   mountPath: /etc/condor/passwords-orig.d
+                   readOnly: true
+                 - name: htcondor-pool-token
+                   mountPath: /etc/condor/tokens-orig.d
                    readOnly: true
                  - name: docker-shared
                    mountPath: /shared
@@ -141,3 +163,9 @@ spec:
                  items:
                  - key: htcondor-pool-password
                    path: pool_password
+             - name: htcondor-pool-token
+               secret:
+                 secretName: htcondor-pool-token
+                 items:
+                 - key: htcondor-pool-token
+                   path: pool_token
