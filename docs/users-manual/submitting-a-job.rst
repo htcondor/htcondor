@@ -1170,31 +1170,29 @@ a user can still request multiple credentials by affixing handles to
     cloudboxdrive_oauth_permissions_personal =
     cloudboxdrive_oauth_permissions_public =
 
-.. only:: Vault
+When the Vault credential monitor is configured, the service name may
+optionally be split into two parts with an underscore between them,
+where the first part is the issuer and the second part is the role.  In
+this example the issuer is "dune" and the role is "production", both
+as configured by the administrator of the Vault server:
 
-    When the Vault credential monitor is configured, the service name may
-    optionally be split into two parts with an underscore between them,
-    where the first part is the issuer and the second part is the role.  In
-    this example the issuer is "dune" and the role is "production", both
-    as configured by the administrator of the Vault server:
+.. code-block:: condor-submit
 
-    .. code-block:: condor-submit
+    use_oauth_services = dune_production
 
-        use_oauth_services = dune_production
+Vault does not require permissions or resources to be
+set, but they may be set to reduce the default permissions or restrict
+the resources that may use the credential.  The full service name
+including an underscore may be used in an ``oauth_permissions`` or
+``oauth_resource``.  Avoid using handles that might be confused as
+role names.  For example, the following will result in a conflict
+between two credentials called ``dune_production.use``:
 
-    Vault server.  Vault does not require permissions or resources to be
-    set, but they may be set to reduce the default permissions or restrict
-    the resources that may use the credential.  The full service name
-    including an underscore may be used in an ``oauth_permissions`` or
-    ``oauth_resource``.  Avoid using handles that might be confused as
-    role names.  For example, the following will result in a conflict
-    between two credentials called ``dune_production.use``:
+.. code-block:: condor-submit
 
-    .. code-block:: condor-submit
-
-        use_oauth_services = dune, dune_production
-        dune_oauth_permissions_production =
-        dune_production_oauth_permissions =
+    use_oauth_services = dune, dune_production
+    dune_oauth_permissions_production =
+    dune_production_oauth_permissions =
 
 
 Jobs That Require GPUs
