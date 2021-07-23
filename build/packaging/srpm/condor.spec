@@ -46,6 +46,12 @@
 
 %define python 1
 
+%if 0%{?osg}
+%define globus 0
+%else
+%define globus 1
+%endif
+
 # Temporarily turn parallel_setup off
 %define parallel_setup 0
 
@@ -69,7 +75,7 @@ Version: %{tarball_version}
 %else
         %define condor_release %condor_base_release
 %endif
-Release: %condor_release%{?dist}
+Release: %{condor_release}%{?dist}
 
 License: ASL 2.0
 Group: Applications/System
@@ -183,6 +189,7 @@ BuildRequires: libcurl-devel
 %endif
 
 # Globus GSI build requirements
+%if %globus
 BuildRequires: globus-gssapi-gsi-devel
 BuildRequires: globus-gass-server-ez-devel
 BuildRequires: globus-gass-transfer-devel
@@ -205,9 +212,10 @@ BuildRequires: globus-callout-devel
 BuildRequires: globus-common-devel
 BuildRequires: globus-ftp-client-devel
 BuildRequires: globus-ftp-control-devel
+BuildRequires: voms-devel
+%endif
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
-BuildRequires: voms-devel
 BuildRequires: libtool-ltdl-devel
 
 BuildRequires: libcgroup-devel
@@ -316,6 +324,7 @@ Requires(post): selinux-policy-targeted
 
 # Require libraries that we dlopen
 # Ganglia is optional as well as nVidia and cuda libraries
+%if %globus
 Requires: globus-callout
 Requires: globus-common
 Requires: globus-gsi-callback
@@ -329,6 +338,8 @@ Requires: globus-gss-assist
 Requires: globus-gssapi-gsi
 Requires: globus-openssl-module
 Requires: globus-xio-gsi-driver
+Requires: voms
+%endif
 Requires: krb5-libs
 Requires: libcom_err
 Requires: libtool-ltdl
@@ -336,7 +347,6 @@ Requires: munge-libs
 Requires: openssl-libs
 Requires: scitokens-cpp
 Requires: systemd-libs
-Requires: voms
 
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
@@ -789,7 +799,11 @@ export CMAKE_PREFIX_PATH=/usr
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
        -DWITH_CREAM:BOOL=FALSE \
+%if %globus
        -DWITH_GLOBUS:BOOL=TRUE \
+%else
+       -DWITH_GLOBUS:BOOL=FALSE \
+%endif
        -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
        -DWITH_LIBCGROUP:BOOL=TRUE \
        -DLIBCGROUP_FOUND_SEARCH_cgroup=/%{_lib}/libcgroup.so.1
@@ -1161,6 +1175,13 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_job_router
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
+%if %globus
+%_sbindir/condor_gridshell
+# % _sbindir/gahp_server
+%_sbindir/grid_monitor
+%_sbindir/grid_monitor.sh
+%_sbindir/nordugrid_gahp
+%endif
 %if %blahp
 %dir %_libexecdir/condor/glite/bin
 %_libexecdir/condor/glite/bin/kubernetes_cancel.sh
@@ -1385,11 +1406,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_updates_stats
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
-%_sbindir/condor_gridshell
-# % _sbindir/gahp_server
-%_sbindir/grid_monitor
 %_sbindir/remote_gahp
-%_sbindir/nordugrid_gahp
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
 %_libexecdir/condor/condor_gpu_discovery
