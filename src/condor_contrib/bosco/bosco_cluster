@@ -294,7 +294,7 @@ ssh_detect_linux_distro () {
     ver=`echo "$os_release" | awk -F '=' '/^VERSION_ID=/ {print $2}' | tr -d '"'`
     major_ver="${ver%%.*}"
 
-    if [[ $dist_id_like = *rhel* ]]; then
+    if [[ $dist_id_like =~ (rhel|centos|fedora) ]]; then
         echo "CentOS${major_ver}"
     else
         case "$dist_id" in
