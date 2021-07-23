@@ -1177,9 +1177,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_urlfetch
 %if %globus
 %_sbindir/condor_gridshell
-# % _sbindir/gahp_server
 %_sbindir/grid_monitor
-%_sbindir/grid_monitor.sh
 %_sbindir/nordugrid_gahp
 %endif
 %if %blahp
