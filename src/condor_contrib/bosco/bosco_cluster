@@ -1104,7 +1104,7 @@ fi
 # If patch is set, perform the patch
 if [ ! -z "${override_dir}" ]; then
     echo "Patching bosco installation from directory: $override_dir"
-    rsync -aq $override_dir/ "$local_install_dir"
+    rsync -aq --backup --suffix .orig $override_dir/ "$local_install_dir"
 fi
 
 # Do the actual rsync
