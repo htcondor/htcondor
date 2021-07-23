@@ -40,6 +40,10 @@ Bugs Fixed:
   ``transfer_checkpoint_files``, and still resume properly after a checkpoint.
   :jira:`583`
 
+- The job attribute ``ExitCode`` is no longer missing from the job ad after
+  ``OxExitHold`` triggers.
+  :jira:`599`
+
 Version 9.0.2
 -------------
 
