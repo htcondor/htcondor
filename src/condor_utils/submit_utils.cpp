@@ -5337,7 +5337,7 @@ int SubmitHash::SetRequestMem(const char * /*key*/)
 	}
 
 	if (mem) {
-		// if input is an integer followed by K,M,G or T, scale it MB and 
+		// if input is an integer followed by K,M,G or T, scale it MiB and
 		// insert it into the jobAd, otherwise assume it is an expression
 		// and insert it as text into the jobAd.
 		int64_t req_memory_mb = 0;
@@ -5372,7 +5372,7 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 	}
 
 	if (disk) {
-		// if input is an integer followed by K,M,G or T, scale it MB and 
+		// if input is an integer followed by K,M,G or T, scale it KiB and
 		// insert it into the jobAd, otherwise assume it is an expression
 		// and insert it as text into the jobAd.
 		int64_t req_disk_kb = 0;
