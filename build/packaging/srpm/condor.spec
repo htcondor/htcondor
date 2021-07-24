@@ -1179,7 +1179,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/htcondor_docker_test
 %if %globus
 %_sbindir/condor_gridshell
-%_sbindir/grid_monitor
 %_sbindir/nordugrid_gahp
 %endif
 %_libexecdir/condor/condor_limits_wrapper.sh
