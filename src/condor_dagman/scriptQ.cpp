@@ -21,7 +21,6 @@
 #include "condor_common.h"
 
 #include "script.h"
-#include "util.h"
 #include "job.h"
 
 #include "dag.h"
