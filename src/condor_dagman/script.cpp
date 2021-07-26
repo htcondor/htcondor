@@ -21,7 +21,6 @@
 #include "condor_common.h"
 
 #include "script.h"
-#include "util.h"
 #include "job.h"
 #include "tmp_dir.h"
 #include "dagman_main.h"

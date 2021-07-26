@@ -36,7 +36,6 @@
 #include "dagman_main.h"
 #include "dag.h"
 #include "dagman_submit.h"
-#include "util.h"
 #include "debug.h"
 #include "tmp_dir.h"
 #include "write_user_log.h"
