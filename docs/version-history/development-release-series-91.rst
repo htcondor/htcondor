@@ -19,7 +19,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- HTCondor no longer crashes on start-up if ``COLLECTOR_HOST`` is set to
+  a string with a colon and a port number, but no host part.
+  :jira:`602`
 
 Version 9.1.1
 -------------
