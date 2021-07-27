@@ -156,10 +156,10 @@ class Job:
         
         # Now, produce job status based on the resource type
         if resource_type == "htcondor":
-            if JobStatus[job[0]['JobStatus']] is "RUNNING":
+            if JobStatus[job[0]['JobStatus']] == "RUNNING":
                 job_running_time = datetime.now() - datetime.fromtimestamp(job[0]["JobStartDate"])
                 print(f"Job is {JobStatus[job[0]['JobStatus']]} since {round(job_running_time.seconds/3600)}h{round(job_running_time.seconds/60)}m{(job_running_time.seconds%60)}s")
-            elif JobStatus[job[0]['JobStatus']] is "HELD":
+            elif JobStatus[job[0]['JobStatus']] == "HELD":
                 job_held_time = datetime.now() - datetime.fromtimestamp(job[0]["LastVacateTime"])
                 print(f"Job is {JobStatus[job[0]['JobStatus']]} since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s")
             else:
@@ -216,9 +216,9 @@ class Job:
             # Now that we have all the information we want, display it
             current_time = datetime.now()
             time_diff = None
-            if job_status is "PROVISIONING REQUEST PENDING":
+            if job_status == "PROVISIONING REQUEST PENDING":
                 time_diff = current_time - provisioner_job_submitted_time
-            elif job_status is "RUNNING":
+            elif job_status == "RUNNING":
                 time_diff = current_time - job_started_time
 
             print(f"Job is {job_status}", end='')
@@ -317,15 +317,15 @@ class Job:
                     job_status = "ERROR"
 
             # Now that we have all the information we want, display it
-            if job_status is "PROVISIONING REQUEST PENDING":
+            if job_status == "PROVISIONING REQUEST PENDING":
                 print(f"Job is still waiting for {slurm_nodes_requested} Slurm nodes to provision")
-            elif job_status is "RUNNING":
+            elif job_status == "RUNNING":
                 print(f"Job is running on {jobs_running}/{slurm_nodes_requested} requested Slurm nodes")
-            elif job_status is "ERROR":
+            elif job_status == "ERROR":
                 print(f"An error occurred provisioning Slurm resources")
 
             # Show information about time remaining
-            if job_status is "RUNNING" or job_status is "COMPLETE":
+            if job_status == "RUNNING" or job_status == "COMPLETE":
                 current_time = datetime.now()
                 if current_time < provisioner_job_scheduled_end_time:
                     time_diff = provisioner_job_scheduled_end_time - current_time

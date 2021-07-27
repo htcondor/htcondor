@@ -821,7 +821,7 @@ bool MachAttributes::ComputeDevProps(
 	// we begin by assuming that the device 0 props are common to all
 	// and build a temporary map of common properties.
 	// note that this map does not own the exprtrees it holds.
-	std::map<std::string, classad::ExprTree*> common;
+	std::map<std::string, classad::ExprTree*, classad::CaseIgnLTStr> common;
 	for (auto & kvp : ip->second) { common[kvp.first] = kvp.second; }
 
 	// remove items from the common props map that are do not have the same value  for all devices
@@ -836,7 +836,7 @@ bool MachAttributes::ComputeDevProps(
 		// if we find a mismatch, remove it from the common list
 		// and reserve space in the array of non-common props
 		ClassAd & ad1 = ip->second;
-		std::map<std::string, classad::ExprTree*>::iterator ct = common.begin();
+		std::map<std::string, classad::ExprTree*, classad::CaseIgnLTStr>::iterator ct = common.begin();
 		while (ct != common.end()) {
 			auto et = ct++;
 			auto it = ad1.find(et->first);
@@ -979,7 +979,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 
 			// find attributes that are nested ads, we want to store those as properties
 			// rather than leaving them in the ad
-			std::map<std::string, classad::ClassAd*> nested;
+			std::map<std::string, classad::ClassAd*, classad::CaseIgnLTStr> nested;
 			for (auto & it : ad) {
 				if (it.second->GetKind() == classad::ExprTree::CLASSAD_NODE) {
 					nested[it.first] = dynamic_cast<classad::ClassAd*>(it.second);
@@ -990,11 +990,12 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 			if ( ! nested.empty()) {
 				// if there is an ad called common, make it the properties for all ids
 				// then remove it from the nested ad collection so we don't see it when we iterate
-				std::map<std::string, classad::ClassAd*>::iterator common_it = nested.find("common");
+				auto common_it = nested.find("common");
 				if (common_it != nested.end()) {
 					for (auto id : unique_ids) {
 						m_machres_devProps_map[tag][id].Update(*common_it->second);
 					}
+					ad.Delete(common_it->first);
 					nested.erase(common_it);
 				}
 

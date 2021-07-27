@@ -111,13 +111,21 @@ if ($enable_vs14 && $ENV{VS140COMNTOOLS} =~ /common7/i) {
 if( $taskname eq $EXTERNALS_TASK ) {
     # Since we do not declare the externals task on Windows, we don't have
     # to handle invoking the Windows build tools in this step.
-    $execstr = "make VERBOSE=1 externals";
+    my $num_cores = 1;
+    if (defined($ENV{"OMP_NUM_THREADS"})) {
+	$num_cores = $ENV{"OMP_NUM_THREADS"};
+    }
+    $execstr = "make VERBOSE=1 -j ${num_cores} externals";
 }
 elsif( $taskname eq $BUILD_TASK ) {
     # Since we do not declare the externals task on Windows, we don't have
     # to handle invoking the Windows build tools in this step.
+    my $num_cores = 1;
+    if (defined($ENV{"OMP_NUM_THREADS"})) {
+	$num_cores = $ENV{"OMP_NUM_THREADS"};
+    }
     $execstr = get_cmake_args();
-    $execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 install";
+    $execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 -j ${num_cores} install";
 }
 elsif( $taskname eq $BUILD_TESTS_TASK ) {
     $execstr = "make VERBOSE=1 tests";

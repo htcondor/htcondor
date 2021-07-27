@@ -89,4 +89,5 @@ Command Reference Manual (man pages)
    condor_who
    get_htcondor
    gidd_alloc
+   htcondor
    procd_ctl

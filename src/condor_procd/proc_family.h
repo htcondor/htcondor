@@ -180,6 +180,9 @@ private:
 	char* m_proxy;
 #endif
 
+#ifdef LINUX
+	PerfCounter m_perf_counter;
+#endif
 #if defined(HAVE_EXT_LIBCGROUP)
 	Cgroup m_cgroup;
 	std::string m_cgroup_string;
@@ -196,9 +199,6 @@ private:
 	// this flag will be true.  This avoids a Linux kernel panic.
 	bool m_last_signal_was_sigstop;
 
-#ifdef LINUX
-	PerfCounter m_perf_counter;
-#endif
 	int count_tasks_cgroup();
 	int aggregate_usage_cgroup_blockio(ProcFamilyUsage*);
 	int aggregate_usage_cgroup_blockio_io_serviced(ProcFamilyUsage*);

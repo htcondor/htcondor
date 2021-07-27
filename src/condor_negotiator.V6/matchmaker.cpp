@@ -561,6 +561,12 @@ initialize (const char *neg_name)
     daemonCore->Register_Command (GET_RESLIST, "GetResList",
 		(CommandHandlercpp) &Matchmaker::GET_RESLIST_commandHandler,
 			"GET_RESLIST_commandHandler", this, READ);
+    daemonCore->Register_Command (QUERY_NEGOTIATOR_ADS, "QUERY_NEGOTIATOR_ADS",
+		(CommandHandlercpp) &Matchmaker::QUERY_ADS_commandHandler,
+			"QUERY_ADS_commandHandler", this, READ);
+    daemonCore->Register_Command (QUERY_ACCOUNTING_ADS, "QUERY_ACCOUNTING_ADS",
+		(CommandHandlercpp) &Matchmaker::QUERY_ADS_commandHandler,
+			"QUERY_ADS_commandHandler", this, READ);
 
 	// Set a timer to renegotiate.
     negotiation_timerID = daemonCore->Register_Timer (0,  NegotiatorInterval,
@@ -1294,6 +1300,72 @@ GET_RESLIST_commandHandler (int, Stream *strm)
 
 	delete ad;
 
+	return TRUE;
+}
+
+int Matchmaker::
+QUERY_ADS_commandHandler (int cmd, Stream *strm)
+{
+	bool query_negotiator_ad =  (cmd == QUERY_NEGOTIATOR_ADS);
+	bool query_accounting_ads = (cmd == QUERY_ACCOUNTING_ADS);
+
+	ClassAd queryAd;
+	ClassAd *ad;
+	ClassAdList ads;
+	int more = 1, num_ads = 0;
+	dprintf( D_FULLDEBUG, "In QUERY_ADS_commandHandler cmd=%d\n", cmd );
+
+	strm->decode();
+	strm->timeout(15);
+	if( !getClassAd(strm, queryAd) || !strm->end_of_message()) {
+		dprintf( D_ALWAYS, "Failed to receive query on TCP: aborting\n" );
+		return FALSE;
+	}
+
+		// Construct a list of all our ClassAds that match the query
+	if (query_negotiator_ad) {
+		std::string stats_config;
+		queryAd.LookupString("STATISTICS_TO_PUBLISH", stats_config);
+		if ( ! publicAd) { init_public_ad(); }
+		if (publicAd) {
+			ad = new ClassAd(*publicAd);
+			publishNegotiationCycleStats(ad);
+			daemonCore->dc_stats.Publish(*ad, stats_config.c_str());
+			daemonCore->monitor_data.ExportData(ad);
+			ads.Insert(ad);
+		}
+	}
+	if (query_accounting_ads) {
+		this->accountant.ReportState(queryAd, ads);
+	}
+
+	classad::References proj;
+	std::string projection;
+	if (queryAd.LookupString(ATTR_PROJECTION, projection) && ! projection.empty()) {
+		StringTokenIterator list(projection);
+		const std::string * attr;
+		while ((attr = list.next_string())) { proj.insert(*attr); }
+	}
+
+		// Now, return the ClassAds that match.
+	strm->encode();
+	ads.Open();
+	while( (ad = ads.Next()) ) {
+		if( !strm->code(more) || !putClassAd(strm, *ad, PUT_CLASSAD_NO_PRIVATE, proj.empty() ? NULL : &proj) ) {
+			dprintf (D_ALWAYS, 
+						"Error sending query result to client -- aborting\n");
+			return FALSE;
+		}
+		num_ads++;
+	}
+
+		// Finally, close up shop.  We have to send NO_MORE.
+	more = 0;
+	if( !strm->code(more) || !strm->end_of_message() ) {
+		dprintf( D_ALWAYS, "Error sending EndOfResponse (0) to client\n" );
+		return FALSE;
+	}
+	dprintf( D_FULLDEBUG, "Sent %d ads in response to query\n", num_ads ); 
 	return TRUE;
 }
 

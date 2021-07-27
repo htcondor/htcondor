@@ -34,6 +34,15 @@ Bugs Fixed:
   that look at the return status of *condor_submit*, including *condor_dagman*
   :jira:`579`
 
+- HTCondor no longer ignores files in a job's spool directory if they happen
+  to share a name with an entry in ``transfer_input_files``.  This allows
+  jobs to specify the same file in ``transfer_input_files`` and in
+  ``transfer_checkpoint_files``, and still resume properly after a checkpoint.
+  :jira:`583`
+
+- The job attribute ``ExitCode`` is no longer missing from the job ad after
+  ``OxExitHold`` triggers.
+  :jira:`599`
 
 Version 9.0.2
 -------------

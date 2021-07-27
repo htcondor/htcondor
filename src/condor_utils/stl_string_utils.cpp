@@ -667,11 +667,11 @@ replace_str( std::string & str, const std::string & from, const std::string & to
     return replacements;
 }
 
-void
-empty_if_null(std::string & str, const char * c_str) {
-    if(c_str) {
-        str = c_str;
-    } else {
-        str.clear();
+const char * empty_if_null(const char * c_str) {
+    if( c_str == NULL ) {
+        return "";
     }
+
+    return c_str;
 }
+

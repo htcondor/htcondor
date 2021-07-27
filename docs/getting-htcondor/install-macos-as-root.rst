@@ -17,9 +17,10 @@ The condor Service Account
 
 The first step is to create a service account under which the HTCondor
 daemons will run.
-The commands that specify a PrimaryGroupID or UniqueID may fail with an
-error that includes the message eDSRecordAlreadyExists.
-If that occurs, you will have to retry the command with a different id number.
+The commands that specify a ``PrimaryGroupID`` or ``UniqueID`` may fail with an
+error that includes ``eDSRecordAlreadyExists``.
+If that occurs, you will have to retry the command with a different id number
+(other than ``300``).
 
 .. code-block:: shell
 
@@ -60,7 +61,7 @@ Unpack the tarball.
 
 You won't need ``condor.tar.gz`` again, so you can remove it now if you wish.
 
-Copy the files to /usr/local/condor and set up the default configuration
+Copy the files to ``/usr/local/condor`` and set up the default configuration
 file.
 
 .. code-block:: shell
@@ -71,14 +72,16 @@ file.
     mkdir -p local/log
     mkdir -p local/spool
     mkdir -p local/execute
-    mkdir -p local/config
+    mkdir -p local/config.d
     cp etc/examples/condor_config etc/condor_config
-    cp etc/examples/00-htcondor-9.0.config local/config
+    cp etc/examples/00-htcondor-9.0.config local/config.d
 
 If you are setting up a single-machine pool, then run the following
 command to finish the configuration.
 
-    cp etc/examples/00-minicondor local/config
+.. code-block:: shell
+
+    cp etc/examples/00-minicondor local/config.d
 
 If you are setting up part of a multi-machine pool, then you'll have to
 make some other configuration changes, which we don't cover here.
@@ -116,8 +119,8 @@ the daemons.
 Using HTCondor
 --------------
 
-You'll want to add the HTCondor bin and sbin directories to your PATH
-environment variable.
+You'll want to add the HTCondor ``bin`` and ``sbin`` directories to your
+``PATH`` environment variable.
 
 .. code-block:: shell
 

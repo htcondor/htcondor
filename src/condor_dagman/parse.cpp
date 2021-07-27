@@ -30,7 +30,6 @@
 
 #include "job.h"
 #include "parse.h"
-#include "util.h"
 #include "debug.h"
 #include "util_lib_proto.h"
 #include "dagman_commands.h"
@@ -1398,12 +1397,8 @@ parse_parent(
 		// Now connect all parents and children to the join node
 		for (auto it = parents.begin(); it != parents.end(); ++it) {
 			Job *parent = *it;
-#ifdef DEAD_CODE
-			if (!dag->AddDependency(parent, joinNode)) {
-#else
 			std::forward_list<Job*> lst = { joinNode };
 			if (!parent->AddChildren(lst, failReason)) {
-#endif
 				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
 					" to add dependency between parent"
 					" node \"%s\" and join node \"%s\"\n",
@@ -1420,22 +1415,6 @@ parse_parent(
 
 	for (auto it = parents.begin(); it != parents.end(); ++it) {
 		Job *parent = *it;
-#ifdef DEAD_CODE
-		children.Rewind();
-		while ((child = children.Next()) != NULL) {
-			if (!dag->AddDependency (parent, child)) {
-				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
-						" to add dependency between %s"
-						" node \"%s\" and child node \"%s\"\n",
-							filename, lineNumber, parent_type,
-							parent->GetJobName(), child->GetJobName() );
-				return false;
-			}
-			debug_printf( DEBUG_DEBUG_3,
-						"Added Dependency PARENT: %s  CHILD: %s\n",
-						parent->GetJobName(), child->GetJobName() );
-		}
-#else
 		if ( ! parent->AddChildren(children, failReason)) {
 			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) failed"
 				" to add dependencies between %s"
@@ -1443,7 +1422,6 @@ parse_parent(
 				filename, lineNumber, parent_type,
 				parent->GetJobName(), failReason.c_str());
 		}
-#endif
 	}
 	return true;
 }
@@ -1774,40 +1752,6 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 	MyString varValue;
 
 	char *varsStr = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
-#if 0 
-	char *str = varsStr;
-
-	// build a temporary vector of vars in case we are doing ALL_NODES
-	std::vector<Job::NodeVar> vars;
-
-	int numPairs;
-	for (numPairs = 0; ; numPairs++) {  // for each name="value" pair
-		if (str == NULL) { // this happens when the above strtok returns NULL
-			break;
-		}
-
-		varName.clear();
-		varValue.clear();
-
-		if (!get_next_var(filename, lineNumber, str, varName, varValue)) {
-			return false;
-		}
-		if (varName.empty()) {
-			break;
-		}
-
-		const char * name = Job::dedup_str(varName.c_str());
-		const char * value = Job::dedup_str(varValue.c_str());
-		vars.push_back(Job::NodeVar(name, value));
-	}
-
-	if (numPairs == 0) {
-		debug_printf(DEBUG_QUIET,
-			"ERROR: %s (line %d): No valid name-value pairs\n",
-			filename, lineNumber);
-		return false;
-	}
-#endif
 
 	Job *job;
 	while ( ( job = dag->FindAllNodesByName( jobName,
@@ -1839,33 +1783,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 				break;
 			}
 
-#ifdef DEAD_CODE
-			// This will be inefficient for jobs with lots of variables
-			// As in O(N^2)
-			job->varsFromDag->Rewind();
-			while(Job::NodeVar *var = job->varsFromDag->Next()){
-				if ( varName == var->_name ) {
-					debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
-						"is already defined in job \"%s\" "
-						"(Discovered at file \"%s\", line %d)\n",
-						varName.Value(), job->GetJobName(), filename,
-						lineNumber);
-					check_warning_strictness( DAG_STRICT_3 );
-					debug_printf(DEBUG_NORMAL,"Warning: Setting VAR \"%s\" "
-						"= \"%s\"\n", varName.Value(), varValue.Value());
-					delete var;
-					job->varsFromDag->DeleteCurrent();
-				}
-			}
-			Job::NodeVar *var = new Job::NodeVar();
-			var->_name = varName;
-			var->_value = varValue;
-			bool appendResult;
-			appendResult = job->varsFromDag->Append( var );
-			ASSERT( appendResult );
-#else
 			job->AddVar(varName.c_str(), varValue.c_str(), filename, lineNumber);
-#endif
 			debug_printf(DEBUG_DEBUG_1,
 				"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
 				varName.c_str(), varValue.c_str());
