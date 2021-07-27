@@ -360,7 +360,12 @@ bool Dag::Bootstrap (bool recovery)
     if( DEBUG_LEVEL( DEBUG_DEBUG_2 ) ) {
 		PrintJobList();
 		PrintReadyQ( DEBUG_DEBUG_2 );
-    }	
+    }
+
+		// If we have any service nodes, start those right away
+	if( !_service_nodes.empty() ) {
+		StartServiceNodes();
+	}
     
 		// If we have a provisioner job, submit that before any other jobs
 	if( HasProvisionerNode() ) {
@@ -1600,6 +1605,22 @@ Dag::StartFinalNode()
 
 //-------------------------------------------------------------------------
 bool
+Dag::StartServiceNodes()
+{
+	for ( auto& node: _service_nodes ) {
+		if ( node->GetStatus() == Job::STATUS_READY ) {
+			debug_printf( DEBUG_QUIET, "Starting service node %s...\n", node->GetJobName() );
+			if ( StartNode( node, false ) ) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+//-------------------------------------------------------------------------
+bool
 Dag::StartProvisionerNode()
 {
 	if ( _provisioner_node && _provisioner_node->GetStatus() == Job::STATUS_READY ) {
@@ -2087,8 +2108,18 @@ Dag::FinishedRunning( bool includeFinalNode ) const
 		return NumJobsSubmitted() == 0 && NumScriptsRunning() == 0;
 	}
 
-	return NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
-				ScriptRunNodeCount() == 0;
+	if ( NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
+				ScriptRunNodeCount() == 0 ) {
+		return true;
+	}
+
+	// If the only remaining nodes are service nodes, we are finished.
+	// Terminate them and return true
+	if ( NumNodesReady() == 0 && NumJobsSubmitted() > 0 ) {
+
+	}
+
+	return false;
 }
 
 //---------------------------------------------------------------------------
@@ -3836,6 +3867,10 @@ bool Dag::Add( Job& job )
 			return false;
 		}
 		_provisioner_node = &job;
+	}
+
+	if ( ( job.GetType() == NodeType::PROVISIONER ) ) {
+		_service_nodes.push_back( &job );
 	}
 
 	_jobs.push_back(&job);

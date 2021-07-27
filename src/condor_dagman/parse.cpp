@@ -390,6 +390,17 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					   "submitfile" );
 		}
 
+		// Handle a SERVICE spec
+		else if(strcasecmp(token, "SERVICE") == 0) {
+			MyString nodename;
+			const char * subfile;
+			pre_parse_node(nodename, subfile);
+			parsed_line_successfully = parse_node( dag, nodename.c_str(), subfile,
+					   token,
+					   filename, lineNumber, tmpDirectory.c_str(), "",
+					   "submitfile" );
+		}
+
 		// Handle a Splice spec
 		else if(strcasecmp(token, "SPLICE") == 0) {
 			parsed_line_successfully = parse_splice(dag, filename,
@@ -531,6 +542,12 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 
 		// Handle a PROVISIONER spec
 		else if(strcasecmp(token, "PROVISIONER") == 0) {
+				// Parsed in first pass.
+			parsed_line_successfully = true;
+		}
+
+		// Handle a SERVICE spec
+		else if(strcasecmp(token, "SERVICE") == 0) {
 				// Parsed in first pass.
 			parsed_line_successfully = true;
 		}
@@ -734,7 +751,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
 				"ERROR: expected JOB, DATA, SUBDAG, FINAL, SCRIPT, PARENT, "
 				"RETRY, ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, "
-				"MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, PROVISIONER, "
+				"MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, PROVISIONER, SERVICE, "
 				"NODE_STATUS_FILE, REJECT, JOBSTATE_LOG, PRE_SKIP, DONE, "
 				"CONNECT, PIN_IN, PIN_OUT, INCLUDE or SUBMIT-DESCRIPTION token "
 				"(found %s)\n",
@@ -849,6 +866,7 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 	NodeType type = NodeType::JOB;
 	if ( strcasecmp ( nodeTypeKeyword, "FINAL" ) == 0 ) type = NodeType::FINAL;
 	if ( strcasecmp ( nodeTypeKeyword, "PROVISIONER" ) == 0 ) type = NodeType::PROVISIONER;
+	if ( strcasecmp ( nodeTypeKeyword, "SERVICE" ) == 0 ) type = NodeType::SERVICE;
 
 		// NOTE: fear not -- any missing tokens resulting in NULL
 		// strings will be error-handled correctly by AddNode()
@@ -1524,8 +1542,14 @@ parse_retry(
 
 		if ( job->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
-			  			"ERROR: %s (line %d): Final job %s cannot have RETRY specification\n",
-			  			filename, lineNumber, job->GetJobName() );
+						"ERROR: %s (line %d): Final job %s cannot have RETRY specification\n",
+						filename, lineNumber, job->GetJobName() );
+			return false;
+		}
+		if ( job->GetType() == NodeType::SERVICE ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: %s (line %d): SERVICE node %s cannot have RETRY specification\n",
+						filename, lineNumber, job->GetJobName() );
 			return false;
 		}
 
@@ -1949,6 +1973,12 @@ parse_priority(
 			  			filename, lineNumber, job->GetJobName() );
 			return false;
 		}
+		if ( job->GetType() == NodeType::SERVICE ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: %s (line %d): SERVICE node %s cannot have PRIORITY specification\n",
+						filename, lineNumber, job->GetJobName() );
+			return false;
+		}
 
 		if ( ( job->_explicitPriority != 0 )
 					&& ( job->_explicitPriority != priorityVal ) ) {
@@ -2043,6 +2073,12 @@ parse_category(
 			debug_printf( DEBUG_QUIET, 
 			  			"ERROR: %s (line %d): Final job %s cannot have CATEGORY specification\n",
 			  			filename, lineNumber, job->GetJobName() );
+			return false;
+		}
+		if ( job->GetType() == NodeType::SERVICE ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: %s (line %d): SERVICE node %s cannot have CATEGORY specification\n",
+						filename, lineNumber, job->GetJobName() );
 			return false;
 		}
 
@@ -2615,8 +2651,14 @@ parse_done(
 
 	if ( job->GetType() == NodeType::FINAL ) {
 		debug_printf( DEBUG_QUIET, 
-					  "Warning: %s (line %d): FINAL Job %s cannot be set to DONE\n",
-					  filename, lineNumber, jobNameOrig );
+					"Warning: %s (line %d): FINAL Job %s cannot be set to DONE\n",
+					filename, lineNumber, jobNameOrig );
+		return !check_warning_strictness( DAG_STRICT_1, false );
+	}
+	if ( job->GetType() == NodeType::SERVICE ) {
+		debug_printf( DEBUG_QUIET,
+					"Warning: %s (line %d): SERVICE node %s cannot be set to DONE\n",
+					filename, lineNumber, jobNameOrig );
 		return !check_warning_strictness( DAG_STRICT_1, false );
 	}
 

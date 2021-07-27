@@ -778,6 +778,10 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 		whynot = "Tried to add a parent to a Final node";
 		return false;
 	}
+	if( GetType() == NodeType::SERVICE ) {
+		whynot = "Tried to add a parent to a SERVICE node";
+		return false;
+	}
 
 		// we don't currently allow a new parent to be added to a
 		// child that has already been started (unless the parent is
@@ -802,6 +806,10 @@ bool Job::CanAddChildren(std::forward_list<Job*> & children, MyString &whynot)
 	}
 	if ( GetType() == NodeType::PROVISIONER ) {
 		whynot = "Tried to add a child to a provisioner node";
+		return false;
+	}
+	if ( GetType() == NodeType::SERVICE ) {
+		whynot = "Tried to add a child to a SERVICE node";
 		return false;
 	}
 
@@ -1129,6 +1137,10 @@ Job::CanAddChild( Job* child, MyString &whynot ) const
 		whynot = "Tried to add a child to a provisioner node";
 		return false;
 	}
+	if( GetType() == NodeType::SERVICE ) {
+		whynot = "Tried to add a child to a SERVICE node";
+		return false;
+	}
 	whynot = "n/a";
 	return true;
 }
@@ -1376,6 +1388,7 @@ void
 Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 {
 	ASSERT( _type != NodeType::FINAL );
+	ASSERT( _type != NodeType::SERVICE );
 
 	MyString	tmpName( categoryName );
 
