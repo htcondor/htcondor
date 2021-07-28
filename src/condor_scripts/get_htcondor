@@ -91,7 +91,7 @@ check_forked() {
 			EOF
 
 			# Get the upstream release info
-			    lsb_dist=$(lsb_release       --id -u | cut -f2 | tr '[:upper:]' '[:lower:]')
+			lsb_dist=$(lsb_release           --id -u | cut -f2 | tr '[:upper:]' '[:lower:]')
 			dist_version=$(lsb_release --codename -u | cut -f2 | tr '[:upper:]' '[:lower:]')
 
 			# Print info about upstream distro
