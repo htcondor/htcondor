@@ -1191,6 +1191,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/data_plugin
 %_libexecdir/condor/box_plugin.py
 %_libexecdir/condor/gdrive_plugin.py
+%_libexecdir/condor/google_cloud_metadata_classads.py
 %_libexecdir/condor/onedrive_plugin.py
 # TODO: get rid of these
 # Not sure where these are getting built
@@ -1199,6 +1200,8 @@ rm -rf %{buildroot}
 %_libexecdir/condor/box_plugin.pyo
 %_libexecdir/condor/gdrive_plugin.pyc
 %_libexecdir/condor/gdrive_plugin.pyo
+%_libexecdir/condor/google_cloud_metadata_classads.pyc
+%_libexecdir/condor/google_cloud_metadata_classads.pyo
 %_libexecdir/condor/onedrive_plugin.pyc
 %_libexecdir/condor/onedrive_plugin.pyo
 %_libexecdir/condor/adstash/__init__.pyc
