@@ -82,7 +82,7 @@ export CONDOR_CONFIG
 PATH=${RELEASE_DIR}/bin:${RELEASE_DIR}/sbin:\$PATH
 export PATH
 
-if [ "X" != "X${PYTHONPATH-}" ]; then
+if [ "X" != "X\${PYTHONPATH-}" ]; then
     PYTHONPATH=${RELEASE_DIR}/lib/python3:\$PYTHONPATH
 else
     PYTHONPATH=${RELEASE_DIR}/lib/python3

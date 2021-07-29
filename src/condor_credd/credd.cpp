@@ -461,7 +461,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		std::string path;
 		dircat(cred_dir, key, path);
 
-		dprintf(D_ALWAYS, "check_creds: storing %lu bytes for %d services to %s\n", contents.length(), missing.Length(), path.c_str());
+		dprintf(D_ALWAYS, "check_creds: storing %zu bytes for %d services to %s\n", contents.length(), missing.Length(), path.c_str());
 		const bool as_root = false; // write as current user
 		const bool group_readable = true;
 		int rc = write_secure_file(path.c_str(), contents.c_str(), contents.length(), as_root, group_readable);

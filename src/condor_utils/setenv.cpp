@@ -223,5 +223,5 @@ const char *GetEnv( const char *env_var, MyString &result )
 #else
 	result = getenv( env_var );
 #endif
-	return result.Value();
+	return result.c_str();
 }

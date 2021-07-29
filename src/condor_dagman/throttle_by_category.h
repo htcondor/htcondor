@@ -21,12 +21,11 @@
 #ifndef _THROTTLE_BY_CATEGORY_H
 #define _THROTTLE_BY_CATEGORY_H
 
-#include "HashTable.h"
+#include "MyString.h"
+#include <map>
 
 // Note: some of the complexity in this class is to allow a category maxjobs
-// line to come before or after the corresponding node(s).  Also, the fact
-// that HashTable doesn't provide a way to get the index, and we want to
-// avoid duplicate MyStrings causes more complexity.  wenger 2007-10-10.
+// line to come before or after the corresponding node(s). wenger 2007-10-10.
 
 class ThrottleByCategory {
 public:
@@ -74,6 +73,10 @@ public:
 	ThrottleInfo *AddCategory( const MyString *category,
 				int maxJobs = noThrottleSetting );
 
+	/** Get a pointer to the full map of throttles
+	*/
+	std::map<MyString, ThrottleInfo *>* GetThrottles() { return &_throttles; }
+
 	/** Set the throttle (max # of jobs) for a category.  Adds the category
 		if it doesn't already exist.
 		@param the category name
@@ -98,20 +101,8 @@ public:
 	*/
 	void		PrintThrottles( FILE *fp ) /* const */;
 
-	/** Start iterating through the list of ThrottleInfo objects
-		owned by this object.
-	*/
-	void StartIterations() { _throttles.startIterations(); }
-
-	/** Get the next ThrottleInfo object while iterating.
-		@param A ThrottleInfo pointer, which will receive a value
-			pointing to the next object
-		@return 0 if we're at the end of the list, 1 otherwise
-	*/
-	int Iterate(ThrottleInfo *&info) { return _throttles.iterate( info ); }
-
 private:
-	HashTable<MyString, ThrottleInfo *>	_throttles;
+	std::map<MyString, ThrottleInfo *>	_throttles;
 };
 
 #endif	// _THROTTLE_BY_CATEGORY_H

@@ -55,11 +55,7 @@ void
 BaseUserPolicy::init( ClassAd* job_ad_ptr )
 {
 	this->job_ad = job_ad_ptr;
-#ifdef USE_NON_MUTATING_USERPOLICY
 	this->user_policy.Init();
-#else
-	this->user_policy.Init( this->job_ad );
-#endif
 	this->interval = param_integer("PERIODIC_EXPR_INTERVAL",
 								   DEFAULT_PERIODIC_EXPR_INTERVAL);
 }
@@ -70,7 +66,7 @@ BaseUserPolicy::init( ClassAd* job_ad_ptr )
 void
 BaseUserPolicy::cancelTimer( void )
 {
-	if ( this->tid != -1 ) {
+	if ( daemonCore && this->tid != -1 ) {
 		daemonCore->Cancel_Timer( this->tid );
 		this->tid = -1;
 	}
@@ -115,11 +111,7 @@ BaseUserPolicy::checkAtExit( void )
 	double old_run_time;
 	this->updateJobTime( &old_run_time );
 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	int action = this->user_policy.AnalyzePolicy( *(this->job_ad), PERIODIC_THEN_EXIT );
-#else
-	int action = this->user_policy.AnalyzePolicy( PERIODIC_THEN_EXIT );
-#endif
 	this->restoreJobTime( old_run_time );
 
 		//
@@ -141,11 +133,7 @@ BaseUserPolicy::checkPeriodic( void )
 	double old_run_time;
 	this->updateJobTime( &old_run_time );
 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	int action = this->user_policy.AnalyzePolicy( *(this->job_ad), PERIODIC_ONLY );
-#else
-	int action = this->user_policy.AnalyzePolicy( PERIODIC_ONLY );
-#endif
 
 	this->restoreJobTime( old_run_time );
 

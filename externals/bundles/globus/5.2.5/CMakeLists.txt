@@ -179,17 +179,6 @@ if (WITH_GLOBUS)
 		endif()
 			
 		if ( LINUX )
-			set (GLOBUS_GRID_UNIVERSE_GT2
-				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gass_transfer.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_client.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_protocol.so")
-		elseif ( DARWIN )
-			set (GLOBUS_GRID_UNIVERSE_GT2
-				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gass_transfer.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_client.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_protocol.dylib")
-		else()
-			set (GLOBUS_GRID_UNIVERSE_GT2
-				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gass_transfer.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_client.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_protocol.a")
-		endif()
-
-		if ( LINUX )
 			set (GLOBUS_GRID_UNIVERSE_NORDUGRID
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.so")
 		elseif ( DARWIN )
@@ -200,7 +189,7 @@ if (WITH_GLOBUS)
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.a")
 		endif()
 
-		condor_post_external( globus include/globus OFF "${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_GT2};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND}" )
+		condor_post_external( globus include/globus OFF "${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND}" )
 
 		if ( LINUX )
 			# Install the Globus libraries manually.
@@ -288,7 +277,6 @@ if (WITH_GLOBUS)
 
 		find_multiple( "globus_gss_assist;globus_gssapi_gsi;globus_gsi_proxy_core;globus_gsi_credential;globus_gsi_callback;globus_gsi_sysconfig;globus_oldgaa;globus_gsi_cert_utils;globus_openssl;globus_openssl_error;globus_proxy_ssl;globus_callout;globus_common;ltdl" GLOBUS_FOUND )
 		find_multiple( "globus_gssapi_error;globus_xio;globus_io;globus_rsl" GLOBUS_GRID_UNIVERSE_COMMON )
-		find_multiple( "globus_gass_transfer;globus_gram_client;globus_gram_protocol" GLOBUS_GRID_UNIVERSE_GT2 )
 		find_multiple( "globus_ftp_client" GLOBUS_GRID_UNIVERSE_NORDUGRID)
 		if (GLOBUS_FOUND)
 		  find_program(DPKG_ARCHITECTURE dpkg-architecture)
@@ -317,11 +305,6 @@ if (WITH_GLOBUS)
 			message( STATUS "(GLOBUS_GRID_UNIVERSE_COMMON=${GLOBUS_GRID_UNIVERSE_COMMON})" )
 			set( GLOBUS_GRID_UNIVERSE_COMMON ${GLOBUS_GRID_UNIVERSE_COMMON} PARENT_SCOPE )
 		endif(GLOBUS_GRID_UNIVERSE_COMMON)
-
-		if (GLOBUS_GRID_UNIVERSE_GT2)
-			message( STATUS "(GLOBUS_GRID_UNIVERSE_GT2=${GLOBUS_GRID_UNIVERSE_GT2})" )
-			set( GLOBUS_GRID_UNIVERSE_GT2 ${GLOBUS_GRID_UNIVERSE_GT2} PARENT_SCOPE )
-		endif(GLOBUS_GRID_UNIVERSE_GT2)
 
 		if (GLOBUS_GRID_UNIVERSE_NORDUGRID)
 			message( STATUS "(GLOBUS_GRID_UNIVERSE_NORDUGRID=${GLOBUS_GRID_UNIVERSE_NORDUGRID})" )

@@ -164,9 +164,9 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     sock.close();
 }
 
-bool get_family_session(std::string sess)
+bool get_family_session(std::string & sess)
 {
-	sess.empty();
+	sess.clear();
 	char *ptmp;
 	char *private_var = getenv("CONDOR_PRIVATE_INHERIT");
 	StringList private_list(private_var, " ");
@@ -436,7 +436,9 @@ export_dc_tool()
         .value("SubSecond", DSUBSECOND)
         .value("Timestamp", DTIMESTAMP)
         .value("PID", DPID)
+#ifndef __arm__
         .value("NoHeader", DNOHEADER)
+#endif
         ;
 
     def("send_command", send_command, send_command_overloads(

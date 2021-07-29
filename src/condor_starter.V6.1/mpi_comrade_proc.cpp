@@ -72,10 +72,10 @@ MPIComradeProc::addEnvVars()
 
 	   // Pull the environment out of the job ad...
 	Env env;
-	MyString env_errors;
-	if ( !env.MergeFrom(JobAd,&env_errors) ) {
+	std::string env_errors;
+	if ( !env.MergeFrom(JobAd, env_errors) ) {
 		dprintf( D_ALWAYS, "Failed to read environment from JobAd: %s\n", 
-				 env_errors.Value() );
+				 env_errors.c_str() );
 		return 0;
 	}
 
@@ -105,8 +105,8 @@ MPIComradeProc::addEnvVars()
         return 0;
     }
 
-	MyString path;
-	MyString new_path;
+	std::string path;
+	std::string new_path;
 	char *tmp;
 
 	new_path = bin;
@@ -114,7 +114,7 @@ MPIComradeProc::addEnvVars()
 
 	if(env.GetEnv("PATH",path)) {
         // The user gave us a path in env.  Find & alter:
-        dprintf ( D_FULLDEBUG, "$PATH in ad:%s\n", path.Value() );
+        dprintf ( D_FULLDEBUG, "$PATH in ad:%s\n", path.c_str() );
 
 		new_path += path;
 	}
@@ -133,7 +133,7 @@ MPIComradeProc::addEnvVars()
 			new_path = bin;
         }
     }
-	env.SetEnv("PATH",new_path.Value());
+	env.SetEnv("PATH",new_path.c_str());
 
 	char *condor_config = getenv( "CONDOR_CONFIG");
 	if (condor_config) {
@@ -141,17 +141,17 @@ MPIComradeProc::addEnvVars()
 	}
 	
 	if(IsFulldebug(D_FULLDEBUG)) {
-		MyString env_str;
-		env.getDelimitedStringForDisplay(&env_str);
-		dprintf ( D_FULLDEBUG, "New env: %s\n", env_str.Value() );
+		std::string env_str;
+		env.getDelimitedStringForDisplay( env_str);
+		dprintf ( D_FULLDEBUG, "New env: %s\n", env_str.c_str() );
 	}
 
 	free(bin);
 
         // now put the env back into the JobAd:
-	if(!env.InsertEnvIntoClassAd(JobAd,&env_errors)) {
+	if(!env.InsertEnvIntoClassAd(JobAd, env_errors)) {
 		dprintf( D_ALWAYS, "Unable to update env! Aborting: %s\n",
-				 env_errors.Value());
+				 env_errors.c_str());
 		return 0;
 	}
 

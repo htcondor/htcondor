@@ -12,13 +12,14 @@ Getting HTCondor
     from-our-repositories
 
     install-linux-as-user
+    install-macos-as-root
 
     for-docker
 
     admin-quick-start
 
-These instructions show how to install HTCondor and run all of its
-components on a single computer, so that you can test HTCondor and
+These instructions show how to create a complete HTCondor installation with
+all of its components on a single computer, so that you can test HTCondor and
 explore its features.  We recommend that new users start with the
 :ref:`first set of instructions <install_with_administrative_privileges>`
 here and then continue with the :doc:`../users-manual/quick-start-guide`;
@@ -28,12 +29,15 @@ If you know how to use Docker, you may find it easier to start with the
 ``htcondor/mini`` image; see the :ref:`docker` entry.  If you're familiar
 with cloud computing, you may also get HTCondor :ref:`in the cloud<cloud>`.
 
+.. rubric:: Installing HTCondor on a Cluster
+
 Experienced users who want to make an HTCondor pool out of multiple
-machines should read the :doc:`admin-quick-start` first.
+machines should follow the :doc:`admin-quick-start`.  If you're new to
+HTCondor administration, you may want to read the :doc:`../admin-manual/index`.
 
 .. _install_with_administrative_privileges:
 
-.. rubric:: Installing HTCondor with Administrative Privileges
+.. rubric:: Installing HTCondor on a Single Machine with Administrative Privileges
 
 If you have administrative privileges on your machine, choose the
 instructions corresponding to your operating system:
@@ -42,10 +46,11 @@ instructions corresponding to your operating system:
 * :doc:`Linux <install-linux-as-root>`.  HTCondor supports Enterprise Linux 7
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
   Ubuntu 18.04 and 20.04.
+* :doc:`macOS <install-macos-as-root>`.  HTCondor supports macOS 10.15 and later.
 
 .. _hand_install_with_user_privileges:
 
-.. rubric:: Hand-Installation of HTCondor with User Privileges
+.. rubric:: Hand-Installation of HTCondor on a Single Machine with User Privileges
 
 If you don't have administrative privileges on your machine, you can still
 install HTCondor.  An unprivileged installation isn't able to effectively
@@ -57,6 +62,8 @@ misbehaving jobs.
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
   Ubuntu 18.04 and 20.04.
 
+* :doc:`macOS <install-linux-as-user>`.  HTCondor supports macOS 10.15 and later.
+
 .. _docker:
 
 .. rubric:: Docker Images
@@ -64,8 +71,8 @@ misbehaving jobs.
 HTCondor is also `available <https://hub.docker.com/u/htcondor>`_ on Docker Hub.
 
 If you're new to HTCondor, the ``htcondor/mini`` image is equivalent to
-following any of the the instructions above, and once you've started the
-container, you can proceed directly to :ref:`quick_start_guide` and learn
+following any of the instructions above, and once you've started the
+container, you can proceed directly to the :ref:`quick_start_guide` and learn
 how to run jobs.
 
 For other options, see our :doc:`docker image list <for-docker>`.
@@ -101,9 +108,3 @@ HTCondor also supports cloud-native distribution.
   following those instructions.
 * We also have documention on creating a
   :doc:`../cloud-computing/condor-in-the-cloud` by hand.
-
-.. rubric:: For New Administrators
-
-If you're new to HTCondor administration, consider reading the
-:doc:`admin-quick-start` before the rest of the
-:doc:`../admin-manual/index`.

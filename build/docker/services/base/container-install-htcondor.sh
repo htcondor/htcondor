@@ -7,7 +7,7 @@ PS4='+ ${LINENO}: '
 update_os=false
 extra_packages_centos=(openssh-clients openssh-server supervisor)
 extra_packages_ubuntu=(ssh supervisor)
-repo_base_ubuntu=https://research.cs.wisc.edu/htcondor/ubuntu
+repo_base_ubuntu=https://research.cs.wisc.edu/htcondor/repo/ubuntu
 repo_base_centos=https://research.cs.wisc.edu/htcondor/repo
 
 
@@ -102,12 +102,16 @@ elif [[ $OS_ID == ubuntu ]]; then
     fi
     $apt_install gnupg2 wget
 
-    # TODO Is there a per-series key I should be using instead?
     set -o pipefail
-    wget -qO - "${repo_base_ubuntu}/HTCondor-Release.gpg.key" | apt-key add -
+    if [[ $HTCONDOR_SERIES = 8.9 ]]; then
+        wget -qO - "https://research.cs.wisc.edu/htcondor/ubuntu/HTCondor-Release.gpg.key" | apt-key add -
+    else
+        wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${HTCONDOR_SERIES}-Key" | apt-key add -
+    fi
     set +o pipefail
-    echo "deb     ${repo_base_ubuntu}/${HTCONDOR_SERIES}/${OS_UBUNTU_CODENAME} ${OS_UBUNTU_CODENAME} contrib" >> /etc/apt/sources.list
-    echo "deb-src ${repo_base_ubuntu}/${HTCONDOR_SERIES}/${OS_UBUNTU_CODENAME} ${OS_UBUNTU_CODENAME} contrib" >> /etc/apt/sources.list
+
+    echo "deb     ${repo_base_ubuntu}/${HTCONDOR_SERIES} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    echo "deb-src ${repo_base_ubuntu}/${HTCONDOR_SERIES} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
 
     apt-get update -q
     $apt_install "${extra_packages_ubuntu[@]}"

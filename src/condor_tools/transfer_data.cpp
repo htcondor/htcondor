@@ -30,7 +30,6 @@
 #include "condor_distribution.h"
 #include "basename.h"
 #include "internet.h"
-#include "MyString.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_ftp.h"

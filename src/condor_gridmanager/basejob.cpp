@@ -752,19 +752,11 @@ int BaseJob::EvalPeriodicJobExpr()
 	bool old_run_time_dirty;
 	UserPolicy user_policy;
 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	user_policy.Init();
-#else
-	user_policy.Init( jobAd );
-#endif
 
 	UpdateJobTime( &old_run_time, &old_run_time_dirty );
 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	int action = user_policy.AnalyzePolicy( *jobAd, PERIODIC_ONLY );
-#else
-	int action = user_policy.AnalyzePolicy( PERIODIC_ONLY );
-#endif
 
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 
@@ -811,11 +803,7 @@ int BaseJob::EvalOnExitJobExpr()
 	bool old_run_time_dirty;
 	UserPolicy user_policy;
 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	user_policy.Init();
-#else
-	user_policy.Init( jobAd );
-#endif
 
 	// The user policy code expects an exit value to be set
 	// If the ON_EXIT attributes haven't been set at all, fake
@@ -834,11 +822,7 @@ int BaseJob::EvalOnExitJobExpr()
 	// TODO: We should just mark the job as done running
 	UpdateJobTime( &old_run_time, &old_run_time_dirty );
 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	int action = user_policy.AnalyzePolicy( *jobAd, PERIODIC_THEN_EXIT );
-#else
-	int action = user_policy.AnalyzePolicy( PERIODIC_THEN_EXIT );
-#endif
 
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 

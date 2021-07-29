@@ -154,7 +154,7 @@ LinuxNetworkAdapter::findAdapter( const condor_sockaddr& ip_addr )
 		dprintf( D_FULLDEBUG,
 				 "Found interface %s that matches %s\n",
 				 interfaceName( ),
-				 addr.to_sinful().Value()
+				 addr.to_sinful().c_str()
 				 );
 	}
 	else
@@ -162,7 +162,7 @@ LinuxNetworkAdapter::findAdapter( const condor_sockaddr& ip_addr )
 		m_if_name = NULL;
 		dprintf( D_FULLDEBUG,
 				 "No interface for address %s\n",
-				 addr.to_sinful().Value()
+				 addr.to_sinful().c_str()
 				 );
 	}
 
@@ -205,7 +205,7 @@ LinuxNetworkAdapter::findAdapter( const char *name )
 		dprintf( D_FULLDEBUG,
 				 "Found interface %s with ip %s\n",
 				 name,
-				 m_ip_addr.to_ip_string().Value()
+				 m_ip_addr.to_ip_string().c_str()
 				 );
 	}
 	else

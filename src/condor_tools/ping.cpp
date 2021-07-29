@@ -71,15 +71,15 @@ void process_err_stack(CondorError *errstack) {
 }
 
 
-void print_useful_info_1(bool rv, const char* dname, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
+void print_useful_info_1(bool rv, const char* dname, const std::string & name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
 	std::string  val;
 
 	if(!rv) {
-		printf("%s failed!  Use -verbose for more information.\n", name.Value());
+		printf("%s failed!  Use -verbose for more information.\n", name.c_str());
 		return;
 	}
 
-	printf("%s command using (", name.Value());
+	printf("%s command using (", name.c_str());
 
 	std::string encryption_method;
 	ad->LookupString("encryption", encryption_method);
@@ -130,11 +130,11 @@ void print_useful_info_1(bool rv, const char* dname, MyString name, Sock*, Class
 }
 
 
-void print_useful_info_2(bool rv, const char* dname, int cmd, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
+void print_useful_info_2(bool rv, const char* dname, int cmd, const std::string & name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
 	std::string  val;
 
 	if(!rv) {
-		printf("%s failed!\n", name.Value());
+		printf("%s failed!\n", name.c_str());
 		process_err_stack(errstack);
 		printf("\n");
 		return;
@@ -148,7 +148,7 @@ void print_useful_info_2(bool rv, const char* dname, int cmd, MyString name, Soc
 
 	ad->LookupString("sid", val);
 	printf("Session ID:                  %s\n", val.c_str());
-	printf("Instruction:                 %s\n", name.Value());
+	printf("Instruction:                 %s\n", name.c_str());
 	printf("Command:                     %i\n", cmd);
 
 
@@ -202,10 +202,10 @@ void print_useful_info_2(bool rv, const char* dname, int cmd, MyString name, Soc
 }
 
 
-void print_useful_info_10(bool rv, const char*, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
+void print_useful_info_10(bool rv, const char*, const std::string & name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
 	std::string  val;
 
-	printf("%20s", name.Value());
+	printf("%20s", name.c_str());
 
 	if(!rv) {
 		printf ("           FAIL       FAIL      FAIL     FAIL FAIL  (use -verbose for more info)\n");
@@ -254,7 +254,7 @@ void print_useful_info_10(bool rv, const char*, MyString name, Sock*, ClassAd *a
 }
 
 
-void print_info(bool rv, const char* dname, const char * addr, Sock* s, MyString name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
+void print_info(bool rv, const char* dname, const char * addr, Sock* s, const std::string & name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
 	std::string cmd_map_ent;
 	const std::string &tag = SecMan::getTag();
 	if (tag.size()) {
@@ -331,7 +331,7 @@ int getSomeCommandFromString ( const char * cmdstring ) {
 }
 
 
-bool do_item(Daemon* d, MyString name, int num, int output_mode) {
+bool do_item(Daemon* d, const std::string & name, int num, int output_mode) {
 
 	CondorError errstack;
 	ClassAd authz_ad;

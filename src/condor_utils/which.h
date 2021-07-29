@@ -21,7 +21,7 @@
 #ifndef WHICH_H
 #define WHICH_H
 
-#include "MyString.h"
+#include <string>
 
 // Searches the $PATH for the given filename.
 // Returns the full path to the file, or "" if it wasn't found
@@ -30,8 +30,6 @@
 // application loaded," (which is in the LoadLibrary search order) because
 // you might want to call which in order to find what .dll file a specific
 // application might use.  That's what the 2nd parameter is for.  
-MyString which(const MyString &strFilename, const MyString &strAdditionalSearchDir = "");
-
-MyString which( const char* strFilename, const char* strAdditionalSearchDir = NULL );
+std::string which(const std::string &strFilename, const std::string &strAdditionalSearchDir = "");
 
 #endif // WHICH_H

@@ -56,7 +56,7 @@ cudaError_t CUDACALL sim_cudaGetDeviceCount(int* pdevs) {
 	if (sim_index < 0 || sim_index > sim_index_max)
 		return cudaErrorInvalidValue;
 	if (sim_index == sim_index_max) {
-		*pdevs = sim_index_max;
+		*pdevs = sim_index_max * (sim_device_count?sim_device_count:1);
 	} else if (sim_device_count) {
 		*pdevs = sim_device_count;
 	} else {
@@ -79,7 +79,8 @@ cudaError_t CUDACALL sim_getBasicProps(int devID, BasicProps * p) {
 
 	const struct _simulated_cuda_device * dev;
 	if (sim_index == sim_index_max) {
-		dev = aSimConfig[devID].device;
+		int iter = (sim_device_count ? sim_device_count : 1);
+		dev = aSimConfig[devID/iter].device;
 	} else {
 		int cDevs = sim_device_count ? sim_device_count : aSimConfig[sim_index].deviceCount;
 		if (devID < 0 || devID > cDevs)

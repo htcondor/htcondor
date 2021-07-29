@@ -481,18 +481,21 @@ in their job submit files.
 
 .. only:: Vault
 
+    .. _installing_credmon_vault:
+
     Using Vault as the OAuth client
     '''''''''''''''''''''''''''''''
 
     To instead configure HTCondor to use Vault as the OAuth client,
-    install the ``condor-credmon-vault`` rpm.  Also install the
-    `htgettoken <https://github.com/fermitools/htgettoken>`_
+    install the ``condor-credmon-vault`` rpm.  Also install the htgettoken
+    (`https://github.com/fermitools/htgettoken <https://github.com/fermitools/htgettoken>`_)
     rpm on the submit machine.  Additionally, on the submit machine
     set the ``SEC_CREDENTIAL_GETTOKEN_OPTS`` configuration option to
     ``-a <vault.name>`` where <vault.name> is the fully qualified domain name
     of the Vault machine.  *condor_submit* users will then be able to select
     the oauth services that are defined on the Vault server.  See the
-    `htvault-config <https://gitub.com/fermitools/htvault-config>`_
+    htvault-config
+    (`https://github.com/fermitools/htvault-config <https://github.com/fermitools/htvault-config>`_)
     documentation to see how to set up and configure the Vault server.
 
 Configuring HTCondor for Multiple Platforms
@@ -1217,7 +1220,7 @@ with the configuration:
 
 .. code-block:: text
 
-    STARTD_JOB_EXPRS = JobPrio
+    STARTD_JOB_ATTRS = JobPrio
     SCHEDD_PREEMPTION_REQUIREMENTS = (My.JobPrio < Target.JobPrio)
     SCHEDD_PREEMPTION_RANK = 0.0
 
@@ -1952,8 +1955,7 @@ script.
 
 If additional functionality is added to the script, an administrator is
 likely to use the ``USER_JOB_WRAPPER`` script in conjunction with
-``SUBMIT_ATTRS`` :index:`SUBMIT_ATTRS` or ``SUBMIT_EXPRS``
-:index:`SUBMIT_EXPRS` to force the job ClassAd to contain
+``SUBMIT_ATTRS`` :index:`SUBMIT_ATTRS` to force the job ClassAd to contain
 attributes that the ``USER_JOB_WRAPPER`` script expects to have defined.
 
 The following variables are set in the environment of the the

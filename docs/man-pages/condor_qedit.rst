@@ -11,16 +11,27 @@ Synopsis
 
 **condor_qedit** [**-debug** ] [**-n** *schedd-name*]
 [**-pool** *pool-name*] *{cluster | cluster.proc | owner |
--constraint constraint}* *attribute-name* *attribute-value* *...*
+-constraint constraint}* *edit-list*
 
 Description
 -----------
 
 *condor_qedit* modifies job ClassAd attributes of queued HTCondor jobs.
 The jobs are specified either by cluster number, job ID, owner, or by a
-ClassAd constraint expression. The *attribute-value* may be any ClassAd
-expression. String expressions must be surrounded by double quotes.
-Multiple attribute value pairs may be listed on the same command line.
+ClassAd constraint expression. The *edit-list* can take one of 3 forms
+
+-  *attribute-name* *attribute-value* *...*
+    This is the older form, which behaves the same as the format below.
+
+-  *attribute-name=attribute-value* *...*
+    The *attribute-value* may be any ClassAd
+    expression. String expressions must be surrounded by double quotes.
+    Multiple attribute value pairs may be listed on the same command line.
+
+-  **-edits[:auto|long|xml|json|new]** *file-name*
+    The file indicated by *file-name* is read as a classad of the given format.
+    If no format is specified or ``auto`` is specified the format will be detected.
+    if *file-name* is ``-`` standard input will be read.
 
 To ensure security and correctness, *condor_qedit* will not allow
 modification of the following ClassAd attributes:
@@ -46,7 +57,7 @@ The same is true for other periodic expressions, such as
 
 *condor_qedit* validates both attribute names and attribute values,
 checking for correct ClassAd syntax. An error message is printed, and no
-attribute is set or changed if the name or value is invalid.
+attribute is set or changed if any name or value is invalid.
 
 Options
 -------
@@ -69,9 +80,9 @@ Examples
     Set attribute "answer". 
     $ condor_qedit -name perdita 1849.0 In '"myinput"' 
     Set attribute "In". 
-    $ condor_qedit jbasney NiceUser TRUE 
-    Set attribute "NiceUser". 
-    $ condor_qedit -constraint 'JobUniverse == 1' Requirements '(Arch == "INTEL") && (OpSys == "SOLARIS26") && (Disk >= ExecutableSize) && (VirtualMemory >= ImageSize)' 
+    % condor_qedit jbasney OnExitRemove=FALSE
+    Set attribute "OnExitRemove".
+    % condor_qedit -constraint 'JobUniverse == 1' 'Requirements=(Arch == "INTEL") && (OpSys == "SOLARIS26") && (Disk >= ExecutableSize) && (VirtualMemory >= ImageSize)'
     Set attribute "Requirements".
 
 General Remarks

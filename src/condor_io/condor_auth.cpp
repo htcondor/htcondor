@@ -64,7 +64,7 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode) :
 		// this will *always* succeed
 	localDomain_ = param( "UID_DOMAIN" );
 
-	setRemoteHost(mySock_->peer_addr().to_ip_string().Value());
+	setRemoteHost(mySock_->peer_addr().to_ip_string().c_str());
 		//setRemoteHost(inet_ntoa(mySock_->peer_addr()->sin_addr));
     // This is done for protocols such as fs, anonymous. Kerberos should
     // override this with the ip address from Kerbeos

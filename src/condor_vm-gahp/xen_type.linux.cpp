@@ -26,7 +26,6 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_mkstemp.h"
-#include "MyString.h"
 #include "util_lib_proto.h"
 #include "vmgahp_common.h"
 #include "vm_type.h"
@@ -339,8 +338,8 @@ bool VirshType::CreateVirshConfigFile(const char*  /*filename*/)
   tmp = param("LIBVIRT_XML_SCRIPT_ARGS");
   if(tmp != NULL)
     {
-      MyString errormsg;
-      if (!args.AppendArgsV1RawOrV2Quoted(tmp,&errormsg)) {
+      std::string errormsg;
+      if (!args.AppendArgsV1RawOrV2Quoted(tmp, errormsg)) {
 		vmprintf(D_ALWAYS, "Cannot parse LIBVIRT_XML_SCRIPT_ARGS: %s\n", tmp);
 	  }
       free(tmp);
@@ -352,7 +351,7 @@ bool VirshType::CreateVirshConfigFile(const char*  /*filename*/)
   classad_string += " = \"";
   classad_string += m_xen_bootloader;
   classad_string += "\"\n";
-  if(classad_string.find(VMPARAM_XEN_INITRD) < 1)
+  if(classad_string.find(VMPARAM_XEN_INITRD) == std::string::npos)
     {
       classad_string += VMPARAM_XEN_INITRD;
       classad_string += " = \"";
@@ -366,7 +365,7 @@ bool VirshType::CreateVirshConfigFile(const char*  /*filename*/)
       classad_string += m_vm_bridge_interface;
       classad_string += "\"\n";
     }
-  if(classad_string.find(ATTR_JOB_VM_NETWORKING_TYPE) < 1)
+  if(classad_string.find(ATTR_JOB_VM_NETWORKING_TYPE) == std::string::npos)
     {
       classad_string += ATTR_JOB_VM_NETWORKING_TYPE;
       classad_string += " = \"";

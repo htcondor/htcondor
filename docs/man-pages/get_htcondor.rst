@@ -18,8 +18,11 @@ Synopsis
 Description
 -----------
 
-See https://htcondor.readthedocs.io/en/latest/getting-htcondor for detailed
-instructions on using this tool.
+This tool installs and configure HTCondor on Linux machines.  See
+https://htcondor.readthedocs.io/en/latest/getting-htcondor for detailed
+instructions.  This page is intended as a quick reference to its options;
+it also includes a section about the reasons for the configurations it
+installs.
 
 Options
 -------
@@ -28,10 +31,10 @@ Options
         Print a usage reminder.
 
     **--dry-run**
-        Issue all the commands needed to install HTCondor.
+        Do not issue commands, only print them.  [default]
 
     **--no-dry-run**
-        Do not issue commands, only print them.  [default]
+        Issue all the commands needed to install HTCondor.
 
     **--channel** *name*
         Specify channel *name* to install; *name* may be
@@ -68,39 +71,45 @@ Installed Configuration
 -----------------------
 
 This tool may install four different configurations.  We discuss the
-minicondor configuration first, and then the three pool configurations
-as group.
+single-machine configuration first, and then the three parts of the
+multi-machine configuration as a group.  Our goal is to document the
+reasoning behind the details, because the details can obscure that
+reasoning, and because the details will change as we continue to
+improve HTCondor.
 
-The configurations this tool installs makes extensive use of metaknobs,
-lines in HTCondor configuration files that look like ``use x : y``.  To
-determine exactly what configuration a metaknob sets, run
+As a general note, the configurations this tool installs make extensive
+use of metaknobs, lines in HTCondor configuration files that look like
+``use x : y``.  To determine exactly what configuration a metaknob sets, run
 ``condor_config_val use x:y``.
 
-Minicondor
-##########
+Single-Machine Installation
+###########################
 
-A minicondor performs all of the roles on a single machine, so we can force
+The single-machine installation performed by *get_htcondor* uses the
+``minicondor`` package.  (A "mini" HTCondor is a single-machine HTCondor
+system installed with administrative privileges.)  Because the different
+roles in the HTCondor system are all on the same machine, we configure
 all network communications to occur over the loopback device, where we don't
 have to worry about eavesdropping or requiring encryption.  We
 use the ``FS`` method, which depends on the local filesytem, to identify
 which user is attempting to connect, and restrict access correspondingly.
 
-This tools installs the standard minicondor package from the HTCondor
-repositories; see the file it creates,
+The *get_htcondor* tool installs the standard minicondor package from the
+HTCondor repositories; see the file it creates,
 ``/etc/condor/config.d/00-minicondor``, for details.
 
-The Three Roles
-###############
+Multi-Machine Installation
+##########################
 
 Because the three roles must communicate over the network to form a complete
-pool, security is a much bigger concern; we therefore require authentication
-and encryption on every connection.  Thankfully, almost all of the network
-communication is daemon-to-daemon, so we don't have to burden individual
-users with that aspect of security.  Instead, users submit jobs on the
-submit-role machine, using ``FS`` to authenticate.  Users may also need to
-contact the central manager, but they never need to write anything to it,
-so they use the ``ANONYMOUS`` method to authenticate, and the central
-manager is configured to allow the ``ANONYMOUS`` identity only to read.
+pool in this case,, security is a much bigger concern; we therefore require
+authentication and encryption on every connection.  Thankfully, almost all
+of the network communication is daemon-to-daemon, so we don't have to burden
+individual users with that aspect of security.  Instead, users submit jobs on
+the submit-role machine, using ``FS`` to authenticate.  Users may also need to
+contact the central manager (when running ``condor_status``, for example),
+but they never need to write anything to it, so we've configured
+authentication for read-only commands to be optional.
 
 Daemon-to-daemon communication is authenticated with the IDTOKENS method.
 (If a user needs to submit jobs remotely, they can also use the IDTOKENS

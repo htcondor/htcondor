@@ -78,7 +78,7 @@ while [ $# != 0 ] ; do
             echo -e "$USAGE"
             exit 1;;
         -- ) shift
-            if [ "$REMOTE_CMD" = "" ] ; then
+            if [ "$REMOTE_CMD" = "" -o "$1" = "condor_ft-gahp" ] ; then
                 REMOTE_CMD="$1"
                 shift
             fi
@@ -92,7 +92,7 @@ while [ $# != 0 ] ; do
                     REMOTE_PORT="${BASH_REMATCH[5]:-$REMOTE_PORT}"
                 fi
                 shift
-            elif [ "$REMOTE_CMD" = "" ] ; then
+            elif [ "$REMOTE_CMD" = "" -o "$1" = "condor_ft-gahp" ] ; then
                 REMOTE_CMD="$1"
                 shift
             else
@@ -150,8 +150,8 @@ SSH_ARGS=(-p $REMOTE_PORT)
 [[ $SSH_BATCHMODE == "yes" ]] && SSH_ARGS+=(-o "BatchMode yes")
 
 #echo "** Follows output of: ssh ${SSH_ARGS[@]} $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/blahpd $*'\""
-if [ "${REMOTE_CMD}" = "blahpd" ] ; then
-    ssh "${SSH_ARGS[@]}" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/blahpd $*'"
+if [[ $REMOTE_CMD == "blahpd" || $REMOTE_CMD == "batch_gahp" ]] ; then
+    ssh "${SSH_ARGS[@]}" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/$REMOTE_CMD $*'"
     SSH_STATUS=$?
 elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
     # We need to set up a tunnel from the remote machine for the file

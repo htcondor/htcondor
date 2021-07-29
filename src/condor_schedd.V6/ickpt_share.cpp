@@ -28,7 +28,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "link.h"
-#include "MyString.h"
 
 extern char* Spool;
 

@@ -35,7 +35,7 @@
 class SharedPortEndpoint: Service {
  public:
 
-	static MyString GenerateEndpointName(char const *daemon_name=NULL,
+	static std::string GenerateEndpointName(char const *daemon_name=NULL,
 		bool addSequenceNo = true);
 
 	SharedPortEndpoint(char const *sock_name=NULL);
@@ -125,7 +125,7 @@ class SharedPortEndpoint: Service {
 	bool CheckListenerReady(Selector &selector);
 
 		// returns true if this process should use a shared port
-	static bool UseSharedPort(MyString *why_not=NULL,bool already_open=false);
+	static bool UseSharedPort(std::string *why_not=NULL,bool already_open=false);
 
 	void DoListenerAccept(ReliSock *return_remote_sock);
 
@@ -141,12 +141,12 @@ class SharedPortEndpoint: Service {
 	bool m_is_file_socket; // Set to false if we are using a Linux abstract socket.
 	bool m_listening;
 	bool m_registered_listener;
-	MyString m_socket_dir;// dirname of socket
-	MyString m_full_name; // full path of socket
-	MyString m_local_id;  // basename of socket
-	MyString m_remote_addr;  // SharedPortServer addr with our local_id inserted
+	std::string m_socket_dir;// dirname of socket
+	std::string m_full_name; // full path of socket
+	std::string m_local_id;  // basename of socket
+	std::string m_remote_addr;  // SharedPortServer addr with our local_id inserted
 	std::vector<Sinful> m_remote_addrs;
-	MyString m_local_addr;
+	std::string m_local_addr;
 	int m_retry_remote_addr_timer;
 	int m_max_accepts;
 #ifdef WIN32

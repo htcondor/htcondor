@@ -137,7 +137,6 @@ int SetJobFactory(int cluster_id, int qnum, const char * factory_filename, const
 
 // spool the materialize item data, getting back the filename of the spooled file and number of items that were sent.
 int SendMaterializeData(int cluster_id, int flags, int (*next)(void* pv, std::string&item), void* pv, std::string & filename, int* pnum_items);
-int SendMaterializeData(int cluster_id, int flags, int (*next)(void* pv, std::string&item), void* pv, MyString & filename, int* pnum_items);
 
 // send a cluster ad or proc ad as a series of SetAttribute calls.
 // this function does a *shallow* iterate of the given ad, ignoring attributes in the chained parent ad (if any)

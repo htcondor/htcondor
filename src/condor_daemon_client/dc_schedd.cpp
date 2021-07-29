@@ -526,7 +526,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 					"DCSchedd::receiveJobSandbox",
 					FILETRANSFER_DOWNLOAD_FAILED,
 					"File transfer failed for target job %d.%d: %s",
-					cluster, proc, ft_info.error_desc.Value() );
+					cluster, proc, ft_info.error_desc.c_str() );
 			}
 			return false;
 		}
@@ -1110,7 +1110,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 					"DCSchedd::spoolJobFiles",
 					FILETRANSFER_UPLOAD_FAILED,
 					"File transfer failed for target job %d.%d: %s",
-					cluster, proc, ft_info.error_desc.Value() );
+					cluster, proc, ft_info.error_desc.c_str() );
 			}
 			return false;
 		}

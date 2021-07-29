@@ -387,7 +387,7 @@ ReadUserLogState::GeneratePath( int rotation,
 	}
 
 	// No base path set???  Nothing we can do here.
-	if ( !m_base_path.Length() ) {
+	if ( !m_base_path.length() ) {
 		path = "";
 		return false;
 	}
@@ -478,7 +478,7 @@ ReadUserLogState::ScoreFile( int rot ) const
 	if ( !GeneratePath( rot, path ) ) {
 		return -1;
 	}
-	return ScoreFile( path.Value(), rot );
+	return ScoreFile( path.c_str(), rot );
 }
 
 int
@@ -548,7 +548,7 @@ ReadUserLogState::ScoreFile( const StatStructType &statbuf, int rot ) const
 
 	if ( IsFulldebug(D_FULLDEBUG) ) {
 		dprintf( D_FULLDEBUG, "ScoreFile: match list: %s\n",
-				 MatchList.Value() );
+				 MatchList.c_str() );
 	}
 
 	// Min score is zero
@@ -595,8 +595,8 @@ ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 		(void) sb.Stat( fd );
 	}
 
-	if ( m_cur_path.Length() && !sb.IsBufValid() ) {
-		(void) sb.Stat( m_cur_path.Value() );
+	if ( m_cur_path.length() && !sb.IsBufValid() ) {
+		(void) sb.Stat( m_cur_path.c_str() );
 	}
 
 	if ( sb.GetRc() ) {
@@ -612,7 +612,7 @@ ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 	// deleted. Send back an error.
 	if ( num_hard_links < 1 ) {
 		dprintf( D_ALWAYS, "ERROR: log file %s has been deleted. "
-			"Aborting.\n", m_cur_path.Value() );
+			"Aborting.\n", m_cur_path.c_str() );
 		return ReadUserLog::LOG_STATUS_ERROR;
 	}
 
@@ -635,7 +635,7 @@ ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 	else {
 		status = ReadUserLog::LOG_STATUS_SHRUNK;
 		dprintf( D_ALWAYS, "ERROR: log file %s has shrunk, probably due to being"
-			" overwritten. Aborting.\n", m_cur_path.Value() );
+			" overwritten. Aborting.\n", m_cur_path.c_str() );
 	}
 	m_status_size = size;
 	Update();
@@ -676,9 +676,9 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 	// The paths shouldn't change... copy them only the first time
 	if( !strlen( istate->m_base_path ) ) {
 		memset( istate->m_base_path, 0, sizeof(istate->m_base_path) );
-		if ( m_base_path.Value() ) {
+		if ( m_base_path.c_str() ) {
 			strncpy( istate->m_base_path,
-					 m_base_path.Value(),
+					 m_base_path.c_str(),
 					 sizeof(istate->m_base_path) - 1 );
 		}
 	}
@@ -690,9 +690,9 @@ ReadUserLogState::GetState( ReadUserLog::FileState &state ) const
 
 	istate->m_log_type = m_log_type;
 
-	if( m_uniq_id.Value() ) {
+	if( m_uniq_id.c_str() ) {
 		strncpy( istate->m_uniq_id,
-				 m_uniq_id.Value(),
+				 m_uniq_id.c_str(),
 				 sizeof(istate->m_uniq_id) );
 		istate->m_uniq_id[sizeof(istate->m_uniq_id) - 1] = '\0';
 	}
@@ -762,7 +762,7 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 
 	MyString	str;
 	GetStateString( str, "Restored reader state" );
-	dprintf( D_FULLDEBUG, "%s", str.Value() );
+	dprintf( D_FULLDEBUG, "%s", str.c_str() );
 
 	return true;
 }
@@ -780,8 +780,8 @@ ReadUserLogState::GetStateString( MyString &str, const char *label ) const
 		"  UniqId = %s, seq = %d\n"
 		"  rotation = %d; max = %d; offset = %ld; event = %ld; type = %d\n"
 		"  inode = %u; ctime = %d; size = %ld\n",
-		m_base_path.Value(), m_cur_path.Value(),
-		m_uniq_id.Value(), m_sequence,
+		m_base_path.c_str(), m_cur_path.c_str(),
+		m_uniq_id.c_str(), m_sequence,
 		m_cur_rot, m_max_rotations, (long) m_offset,
 		(long) m_event_num, m_log_type,
 		(unsigned)m_stat_buf.st_ino, (int)m_stat_buf.st_ctime,
@@ -852,7 +852,7 @@ ReadUserLogState::CurPath( const ReadUserLog::FileState &state ) const
 	if ( !GeneratePath( istate->m_rotation, path, true ) ) {
 		return NULL;
 	}
-	return path.Value();
+	return path.c_str();
 }
 
 int

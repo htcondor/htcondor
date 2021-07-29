@@ -5,7 +5,7 @@ ARG BASE_IMAGE
 # ^^ Previous BASE_IMAGE has gone out of scope
 
 ARG VERSION=latest
-ARG SERIES=8.9
+ARG SERIES=9.0
 
 LABEL org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.title="HTCondor Base Image derived from ${BASE_IMAGE}" \

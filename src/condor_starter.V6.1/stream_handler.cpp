@@ -66,9 +66,9 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io, int f )
 		flags = flags & (~O_APPEND);
 	}
 
-	remote_fd = REMOTE_CONDOR_open(filename.Value(),(open_flags_t)flags,0666);
+	remote_fd = REMOTE_CONDOR_open(filename.c_str(),(open_flags_t)flags,0666);
 	if(remote_fd<0) {
-		dprintf(D_ALWAYS,"Couldn't open %s to stream %s: %s\n",filename.Value(),streamname.Value(),strerror(errno));
+		dprintf(D_ALWAYS,"Couldn't open %s to stream %s: %s\n",filename.c_str(),streamname.c_str(),strerror(errno));
 		return false;
 	}
 
@@ -76,7 +76,7 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io, int f )
 	if( shouldAppend ) {
 		offset = REMOTE_CONDOR_lseek( remote_fd, 0, SEEK_END );
 		if( offset < 0 ) {
-			dprintf( D_ALWAYS, "Couldn't seek to end of %s for stream %s when append mode was requested: %s\n", filename.Value(), streamname.Value(), strerror( errno ) );
+			dprintf( D_ALWAYS, "Couldn't seek to end of %s for stream %s when append mode was requested: %s\n", filename.c_str(), streamname.c_str(), strerror( errno ) );
 			return false;
 		}
 		dprintf( D_SYSCALLS, "StreamHandler: Sought to %ld as a result of append request.\n", (long)offset );
@@ -90,7 +90,7 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io, int f )
 					 false,         // blocking write
 					 STREAM_BUFFER_SIZE);
 	if(result==0) {
-		dprintf(D_ALWAYS,"Couldn't create pipe to stream %s: %s\n",streamname.Value(),strerror(errno));
+		dprintf(D_ALWAYS,"Couldn't create pipe to stream %s: %s\n",streamname.c_str(),strerror(errno));
 		REMOTE_CONDOR_close(remote_fd);
 		return false;
 	}
@@ -149,14 +149,14 @@ int StreamHandler::Handler( int  /* fd */)
 
 	if(is_output) {
 		// Output from the job to the shadow
-		dprintf(D_SYSCALLS,"StreamHandler: %s: stream ready\n",streamname.Value());
+		dprintf(D_SYSCALLS,"StreamHandler: %s: stream ready\n",streamname.c_str());
 
 		// As STREAM_BUFFER_SIZE should be <= PIPE_BUF, following should
 		// never block
 		result = daemonCore->Read_Pipe(handler_pipe,buffer,STREAM_BUFFER_SIZE);
 
 		if(result>0) {
-			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes available, seeking to offset %ld\n",streamname.Value(),result,(long)offset);
+			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes available, seeking to offset %ld\n",streamname.c_str(),result,(long)offset);
 			errno = 0;
 			pending = result;
 			REMOTE_CONDOR_lseek(remote_fd,offset,SEEK_SET);
@@ -169,7 +169,7 @@ int StreamHandler::Handler( int  /* fd */)
 			// i/o error, so punt.
 
 			if (errno != 0) {
-				EXCEPT("StreamHandler: %s: couldn't lseek on %s to %d: %s",streamname.Value(),filename.Value(),(int)offset, strerror(errno));
+				EXCEPT("StreamHandler: %s: couldn't lseek on %s to %d: %s",streamname.c_str(),filename.c_str(),(int)offset, strerror(errno));
 			}
 
 			errno = 0;
@@ -180,12 +180,12 @@ int StreamHandler::Handler( int  /* fd */)
 			}
 
 			if(actual!=result) {
-				EXCEPT("StreamHandler: %s: couldn't write to %s: %s (%d!=%d)",streamname.Value(),filename.Value(),strerror(errno),actual,result);
+				EXCEPT("StreamHandler: %s: couldn't write to %s: %s (%d!=%d)",streamname.c_str(),filename.c_str(),strerror(errno),actual,result);
 			}
-			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes written to %s\n",streamname.Value(),result,filename.Value());
+			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes written to %s\n",streamname.c_str(),result,filename.c_str());
 			offset+=actual;
 		} else if(result==0) {
-			dprintf(D_SYSCALLS,"StreamHandler: %s: end of stream\n",streamname.Value());
+			dprintf(D_SYSCALLS,"StreamHandler: %s: end of stream\n",streamname.c_str());
 			daemonCore->Cancel_Pipe(handler_pipe);
 			daemonCore->Close_Pipe(handler_pipe);
 			done=true;
@@ -198,7 +198,7 @@ int StreamHandler::Handler( int  /* fd */)
 				// to recover, as we haven't saved the data.
 				// just punt
 
-				EXCEPT("StreamHandler:: %s: couldn't fsync %s: %s", streamname.Value(), filename.Value(), strerror(errno));
+				EXCEPT("StreamHandler:: %s: couldn't fsync %s: %s", streamname.c_str(), filename.c_str(), strerror(errno));
 			}
 
 				// If close fails, that's OK, we know the bytes are on disk
@@ -206,11 +206,11 @@ int StreamHandler::Handler( int  /* fd */)
 
 			handlers.remove( this );
 		} else if(result<0) {
-			dprintf(D_SYSCALLS,"StreamHandler: %s: unable to read: %s\n",streamname.Value(),strerror(errno));
+			dprintf(D_SYSCALLS,"StreamHandler: %s: unable to read: %s\n",streamname.c_str(),strerror(errno));
 			// Why don't we EXCEPT here?
 		}
 	} else {
-		dprintf(D_SYSCALLS,"StreamHandler: %s: stream ready\n",streamname.Value());
+		dprintf(D_SYSCALLS,"StreamHandler: %s: stream ready\n",streamname.c_str());
 
 		errno = 0;
 		REMOTE_CONDOR_lseek(remote_fd,offset,SEEK_SET);
@@ -227,23 +227,23 @@ int StreamHandler::Handler( int  /* fd */)
 		}
 
 		if(result>0) {
-			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes read from %s\n",streamname.Value(),result,filename.Value());
+			dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes read from %s\n",streamname.c_str(),result,filename.c_str());
 			actual = daemonCore->Write_Pipe(handler_pipe,buffer,result);
 			if(actual>=0) {
-				dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes consumed by job\n",streamname.Value(),actual);
+				dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes consumed by job\n",streamname.c_str(),actual);
 				offset+=actual;
 			} else {
-				dprintf(D_SYSCALLS,"StreamHandler: %s: nothing consumed by job\n",streamname.Value());
+				dprintf(D_SYSCALLS,"StreamHandler: %s: nothing consumed by job\n",streamname.c_str());
 			}
 		} else if(result==0) {
-			dprintf(D_SYSCALLS,"StreamHandler: %s: end of file\n",streamname.Value());
+			dprintf(D_SYSCALLS,"StreamHandler: %s: end of file\n",streamname.c_str());
 			done=true;
 			daemonCore->Cancel_Pipe(handler_pipe);
 			daemonCore->Close_Pipe(handler_pipe);
 			REMOTE_CONDOR_close(remote_fd);
 			handlers.remove( this );
 		} else if(result<0) {
-			EXCEPT("StreamHandler: %s: unable to read from %s: %s",streamname.Value(),filename.Value(),strerror(errno));
+			EXCEPT("StreamHandler: %s: unable to read from %s: %s",streamname.c_str(),filename.c_str(),strerror(errno));
 		}
 	}
 
@@ -280,7 +280,7 @@ bool
 StreamHandler::Reconnect() {
 	HandlerType handler_mode;
 
-	dprintf(D_ALWAYS, "Streaming i/o handler reconnecting %s to shadow\n", filename.Value());
+	dprintf(D_ALWAYS, "Streaming i/o handler reconnecting %s to shadow\n", filename.c_str());
 
 	if(is_output) {
 		handler_mode = HANDLE_READ;
@@ -291,9 +291,9 @@ StreamHandler::Reconnect() {
 	// Never permit truncation on a reconnect; what sense does that make?
 	flags = flags & (~O_TRUNC);
 
-	remote_fd = REMOTE_CONDOR_open(filename.Value(),(open_flags_t)flags,0666);
+	remote_fd = REMOTE_CONDOR_open(filename.c_str(),(open_flags_t)flags,0666);
 	if(remote_fd<0) {
-		EXCEPT("Couldn't reopen %s to stream %s: %s",filename.Value(),streamname.Value(),strerror(errno));
+		EXCEPT("Couldn't reopen %s to stream %s: %s",filename.c_str(),streamname.c_str(),strerror(errno));
 	}
 
 	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",static_cast<PipeHandlercpp>(&StreamHandler::Handler),"Stream I/O Handler",this,handler_mode);
@@ -308,7 +308,7 @@ StreamHandler::Reconnect() {
 		// and always doing it makes it easier to test
 
 		errno = 0;
-		dprintf(D_ALWAYS, "Retrying streaming write to %s of %d bytes at %ld after reconnect\n", filename.Value(), pending, (long)offset);
+		dprintf(D_ALWAYS, "Retrying streaming write to %s of %d bytes at %ld after reconnect\n", filename.c_str(), pending, (long)offset);
 		REMOTE_CONDOR_lseek(remote_fd,offset,SEEK_SET);
 		if (errno == ETIMEDOUT) {
 			Disconnect();
@@ -322,9 +322,9 @@ StreamHandler::Reconnect() {
 			return false;
 		}
 		if(actual!=pending) {
-			EXCEPT("StreamHandler: %s: couldn't write to %s: %s (%d!=%d)",streamname.Value(),filename.Value(),strerror(errno),actual,pending);
+			EXCEPT("StreamHandler: %s: couldn't write to %s: %s (%d!=%d)",streamname.c_str(),filename.c_str(),strerror(errno),actual,pending);
 		}
-		dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes written to %s\n",streamname.Value(),pending,filename.Value());
+		dprintf(D_SYSCALLS,"StreamHandler: %s: %d bytes written to %s\n",streamname.c_str(),pending,filename.c_str());
 		offset+=actual;
 	} else {
 
@@ -338,7 +338,7 @@ StreamHandler::Reconnect() {
 
 void
 StreamHandler::Disconnect() {
-	dprintf(D_ALWAYS, "Streaming i/o handler disconnecting %s from shadow\n", filename.Value());
+	dprintf(D_ALWAYS, "Streaming i/o handler disconnecting %s from shadow\n", filename.c_str());
 	connected=false;
 	daemonCore->Cancel_Pipe(handler_pipe);
 	Starter->jic->disconnect();
@@ -354,7 +354,7 @@ StreamHandler::VerifyOutputFile() {
 	off_t size = REMOTE_CONDOR_lseek(remote_fd,0,SEEK_END);
 
 	if (size == (off_t)-1) {
-		EXCEPT("StreamHandler: cannot lseek to output file %s on reconnect: %d", filename.Value(), errno);
+		EXCEPT("StreamHandler: cannot lseek to output file %s on reconnect: %d", filename.c_str(), errno);
 		return false;
 	}
 
@@ -362,7 +362,7 @@ StreamHandler::VerifyOutputFile() {
 		// Damn.  Older writes that returned successfully didn't actually
 		// survive the reboot (or maybe someone else mucked with the file
 		// in the interim.  Rerun the whole job
-		EXCEPT("StreamHandler: output file %s is length %d, expected at least %d", filename.Value(), (int)size, (int)offset);
+		EXCEPT("StreamHandler: output file %s is length %d, expected at least %d", filename.c_str(), (int)size, (int)offset);
 		return false;
 	}
 	return true;

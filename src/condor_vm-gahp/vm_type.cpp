@@ -24,7 +24,6 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_arglist.h"
-#include "MyString.h"
 #include "util_lib_proto.h"
 #include "setenv.h"
 #include "vmgahp_common.h"
@@ -201,12 +200,12 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 
 	m_classad_arg = "";
 	ArgList arglist;
-	MyString error_msg;
-	if(!arglist.GetArgsStringV1or2Raw(&m_classAd, &m_classad_arg, &error_msg)) {
+	std::string error_msg;
+	if(!arglist.GetArgsStringV1or2Raw(&m_classAd, m_classad_arg, error_msg)) {
 		m_classad_arg = "";
 	}
 
-	if( m_classad_arg.IsEmpty() == false ) {
+	if( m_classad_arg.empty() == false ) {
 
         // Create a file for arguments
 		FILE *argfile_fp = safe_fopen_wrapper_follow(VM_UNIV_ARGUMENT_FILE, "w");
@@ -217,7 +216,7 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
 			return false;
 		}
-		if( fprintf(argfile_fp, "%s", m_classad_arg.Value()) < 0) {
+		if( fprintf(argfile_fp, "%s", m_classad_arg.c_str()) < 0) {
 			fclose(argfile_fp);
 			IGNORE_RETURN unlink(VM_UNIV_ARGUMENT_FILE);
 			vmprintf(D_ALWAYS, "failed to fprintf in CreateConfigFile(%s:%s)\n",

@@ -171,21 +171,15 @@ FileModifiedTrigger::notify_or_sleep( int timeout_in_ms ) {
 
 #else
 
-#if defined(WINDOWS)
-int usleep( long long microseconds ) {
-	HANDLE timer;
-	LARGE_INTEGER timerIntervals = { microseconds * -10 };
-	timer = CreateWaitableTimer( NULL, true, NULL );
-	SetWaitableTimer( timer, & timerIntervals, 0, NULL, NULL, false );
-	WaitForSingleObject( timer, INFINITE );
-	CloseHandle( timer );
-	return 0;
-}
-#endif /* defined(WINDOWS) */
+#ifdef WIN32
+int ms_sleep(int ms) { Sleep(ms); return 0; }
+#else
+int ms_sleep(int ms) { return usleep((useconds_t)ms * 1000); }
+#endif
 
 int
 FileModifiedTrigger::notify_or_sleep( int timeout_in_ms ) {
-	return usleep( timeout_in_ms * 1000 );
+	return ms_sleep( timeout_in_ms );
 }
 
 #endif /* defined( LINUX ) */

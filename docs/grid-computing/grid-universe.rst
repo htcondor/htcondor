@@ -229,608 +229,7 @@ description file defines the Windows domain of the remote machine with
       +remote_NTDomain = "DomainAtRemoteMachine"
 
 A Windows machine not part of a domain defines the Windows domain as the
-machine name. :index:`HTCondor-C` :index:`HTCondor-G`
-
-HTCondor-G, the gt2, and gt5 Grid Types
----------------------------------------
-
-HTCondor-G is the name given to HTCondor when **grid** **universe** jobs
-are sent to grid resources utilizing Globus software for job execution.
-The Globus Toolkit provides a framework for building grid systems and
-applications. See the Globus Alliance web page at
-`http://www.globus.org <http://www.globus.org>`_ for descriptions and
-details of the Globus software.
-
-HTCondor provides the same job management capabilities for HTCondor-G
-jobs as for other jobs. From HTCondor, a user may effectively submit
-jobs, manage jobs, and have jobs execute on widely distributed machines.
-
-It may appear that HTCondor-G is a simple replacement for the Globus
-Toolkit's *globusrun* command. However, HTCondor-G does much more. It
-allows the submission of many jobs at once, along with the monitoring of
-those jobs with a convenient interface. There is notification when jobs
-complete or fail and maintenance of Globus credentials that may expire
-while a job is running. On top of this, HTCondor-G is a fault-tolerant
-system; if a machine crashes, all of these functions are again available
-as the machine returns.
-
-Globus Protocols and Terminology
-''''''''''''''''''''''''''''''''
-
-The Globus software provides a well-defined set of protocols that allow
-authentication, data transfer, and remote job execution. Authentication
-is a mechanism by which an identity is verified. Given proper
-authentication, authorization to use a resource is required.
-Authorization is a policy that determines who is allowed to do what.
-
-HTCondor (and Globus) utilize the following protocols and terminology.
-The protocols allow HTCondor to interact with grid machines toward the
-end result of executing jobs.
-
-GSI
-    :index:`GSI (Grid Security Infrastructure)` The Globus
-    Toolkit's Grid Security Infrastructure (GSI) provides essential
-    :index:`GSI<single: GSI; HTCondor-G>`\ building blocks for other grid
-    protocols and HTCondor-G. This authentication and authorization
-    system makes it possible to authenticate a user just once, using
-    public key infrastructure (PKI) mechanisms to verify a user-supplied
-    grid credential. GSI then handles the mapping of the grid credential
-    to the diverse local credentials and authentication/authorization
-    mechanisms that apply at each site.
-
-GRAM
-    The Grid Resource Allocation and Management (GRAM) protocol supports
-    remote
-    :index:`GRAM<single: GRAM; HTCondor-G>`\ :index:`GRAM (Grid Resource Allocation and Management)`
-    submission of a computational request (for example, to run a
-    program) to a remote computational resource, and it supports
-    subsequent monitoring and control of the computation. GRAM is the
-    Globus protocol that HTCondor-G uses to talk to remote Globus
-    jobmanagers.
-
-GASS
-    The Globus Toolkit's Global Access to Secondary Storage (GASS)
-    service provides
-    :index:`GASS<single: GASS; HTCondor-G>`\ :index:`GASS (Global Access to Secondary Storage)`
-    mechanisms for transferring data to and from a remote HTTP, FTP, or
-    GASS server. GASS is used by HTCondor for the **gt2** grid type to
-    transfer a job's files to and from the machine where the job is
-    submitted and the remote resource.
-
-GridFTP
-    GridFTP is an extension of FTP that provides strong security and
-    high-performance options for large data transfers.
-
-RSL
-    RSL (Resource Specification Language) is the language GRAM accepts
-    to specify job information.
-
-gatekeeper
-    A gatekeeper is a software daemon executing on a remote machine on
-    the grid. It is relevant only to the **gt2** grid type, and this
-    daemon handles the initial communication between HTCondor and a
-    remote resource.
-
-jobmanager
-    A jobmanager is the Globus service that is initiated at a remote
-    resource to submit, keep track of, and manage grid I/O for jobs
-    running on an underlying batch system. There is a specific
-    jobmanager for each type of batch system supported by Globus
-    (examples are HTCondor, LSF, and PBS).
-
-In its interaction with Globus software, HTCondor contains a GASS
-server, used to transfer the executable, ``stdin``, ``stdout``, and
-``stderr`` to and from the remote job execution site. HTCondor uses the
-GRAM protocol to contact the remote gatekeeper and request that a new
-jobmanager be started. The GRAM protocol is also used to when monitoring
-the job's progress. HTCondor detects and intelligently handles cases
-such as if the remote resource crashes.
-
-There are now two different versions of the GRAM protocol in common
-usage: **gt2** and **gt5**. HTCondor supports both of them.
-
-gt2
-    This initial GRAM protocol is used in Globus Toolkit versions 1 and
-    2. It is still used by many production systems. Where available in
-    the other, more recent versions of the protocol, **gt2** is referred
-    to as the pre-web services GRAM (or pre-WS GRAM) or GRAM2.
-
-gt5
-    This latest GRAM protocol is an extension of GRAM2 that is intended
-    to be more scalable and robust. It is usually referred to as GRAM5.
-
-The gt2 Grid Type
-'''''''''''''''''
-
-:index:`grid, grid type gt2<single: grid, grid type gt2; universe>`
-:index:`submitting jobs to gt2<single: submitting jobs to gt2; grid computing>`
-
-HTCondor-G supports submitting jobs to remote resources running the
-Globus Toolkit's GRAM2 (or pre-WS GRAM) service. This flavor of GRAM is
-the most common. These HTCondor-G jobs are submitted the same as any
-other HTCondor job. The **universe** is **grid**, and the pre-web
-services GRAM protocol is specified by setting the type of grid as
-**gt2** in the
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
-command. :index:`job submission<single: job submission; HTCondor-G>`
-:index:`proxy<single: proxy; HTCondor-G>` :index:`proxy`
-
-Under HTCondor, successful job submission to the **grid** **universe**
-with **gt2** requires credentials.
-:index:`X.509 certificate<single: X.509 certificate; HTCondor-G>`\ An X.509 certificate is
-used to create a proxy, and an account, authorization, or allocation to
-use a grid resource is required. For general information on proxies and
-certificates, please consult the Globus page at
-
-`http://www-unix.globus.org/toolkit/docs/4.0/security/key-index.html <http://www-unix.globus.org/toolkit/docs/4.0/security/key-index.html>`_
-
-Before submitting a job to HTCondor under the **grid** universe, use
-*grid-proxy-init* to create a proxy.
-
-Here is a simple submit description file.
-:index:`grid universe<single: grid universe; submit description file>`\ The example
-specifies a **gt2** job to be run on an NCSA machine.
-
-.. code-block:: condor-submit
-
-    executable = test
-    universe = grid
-    grid_resource = gt2 modi4.ncsa.uiuc.edu/jobmanager
-    output = test.out
-    log = test.log
-    queue
-
-The **executable** :index:`executable<single: executable; submit commands>` for this
-example is transferred from the local machine to the remote machine. By
-default, HTCondor transfers the executable, as well as any files
-specified by an **input** :index:`input<single: input; submit commands>`
-command. Note that the executable must be compiled for its intended
-platform. :index:`grid_resource<single: grid_resource; submit commands>`
-
-The command
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>` is a
-required command for grid universe jobs. The second field specifies the
-scheduling software to be used on the remote resource. There is a
-specific jobmanager for each type of batch system supported by Globus.
-The full syntax for this command line appears as
-
-.. code-block:: condor-submit
-
-    grid_resource = gt2 machinename[:port]/jobmanagername[:X.509 distinguished name]
-
-The portions of this syntax specification enclosed within square
-brackets ([ and ]) are optional. On a machine where the jobmanager is
-listening on a nonstandard port, include the port number. The
-jobmanagername is a site-specific string. The most common one is
-jobmanager-fork, but others are
-
-.. code-block:: text
-
-    jobmanager
-    jobmanager-condor
-    jobmanager-pbs
-    jobmanager-lsf
-    jobmanager-sge
-
-The Globus software running on the remote resource uses this string to
-identify and select the correct service to perform. Other jobmanagername
-strings are used, where additional services are defined and implemented.
-
-The job log file is maintained on the submit machine.
-
-Example output from *condor_q* for this submission looks like:
-
-.. code-block:: console
-
-    $ condor_q
-
-
-    -- Submitter: wireless48.cs.wisc.edu : <128.105.48.148:33012> : wireless48.cs.wi
-
-     ID      OWNER         SUBMITTED     RUN_TIME ST PRI SIZE CMD
-       7.0   smith        3/26 14:08   0+00:00:00 I  0   0.0  test
-
-    1 jobs; 1 idle, 0 running, 0 held
-
-After a short time, the Globus resource accepts the job. Again running
-*condor_q* will now result in
-
-.. code-block:: console
-
-    $ condor_q
-
-
-    -- Submitter: wireless48.cs.wisc.edu : <128.105.48.148:33012> : wireless48.cs.wi
-
-     ID      OWNER         SUBMITTED     RUN_TIME ST PRI SIZE CMD
-       7.0   smith        3/26 14:08   0+00:01:15 R  0   0.0  test
-
-    1 jobs; 0 idle, 1 running, 0 held
-
-Then, very shortly after that, the queue will be empty again, because
-the job has finished:
-
-.. code-block:: console
-
-    $ condor_q
-
-
-    -- Submitter: wireless48.cs.wisc.edu : <128.105.48.148:33012> : wireless48.cs.wi
-
-     ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
-
-    0 jobs; 0 idle, 0 running, 0 held
-
-A second example of a submit description file runs the Unix *ls* program
-on a different Globus resource.
-
-.. code-block:: condor-submit
-
-    executable = /bin/ls
-    transfer_executable = false
-    universe = grid
-    grid_resource = gt2 vulture.cs.wisc.edu/jobmanager
-    output = ls-test.out
-    log = ls-test.log
-    queue
-
-In this example, the executable (the binary) has been pre-staged. The
-executable is on the remote machine, and it is not to be transferred
-before execution. Note that the required **grid_resource** and
-**universe** commands are present. The command
-
-.. code-block:: condor-submit
-
-    transfer_executable = false
-
-within the submit description file identifies the executable as being
-pre-staged. In this case, the **executable** command gives the path to
-the executable on the remote machine.
-
-A third example submits a Perl script to be run as a submitted HTCondor
-job. The Perl script both lists and sets environment variables for a
-job. Save the following Perl script with the name ``env-test.pl``, to be
-used as an HTCondor job executable.
-
-.. code-block:: perl
-
-    #!/usr/bin/env perl
-
-    foreach $key (sort keys(%ENV))
-    {
-       print "$key = $ENV{$key}\n"
-    }
-
-    exit 0;
-
-Run the Unix command
-
-.. code-block:: console
-
-    $ chmod 755 env-test.pl
-
-to make the Perl script executable.
-
-Now create the following submit description file. Replace
-``example.cs.wisc.edu/jobmanager`` with a resource you are authorized to
-use.
-
-.. code-block:: condor-submit
-
-    executable = env-test.pl
-    universe = grid
-    grid_resource = gt2 example.cs.wisc.edu/jobmanager
-    environment = foo=bar; zot=qux
-    output = env-test.out
-    log = env-test.log
-    queue
-
-When the job has completed, the output file, ``env-test.out``, should
-contain something like this:
-
-.. code-block:: condor-config
-
-    GLOBUS_GRAM_JOB_CONTACT = https://example.cs.wisc.edu:36213/30905/1020633947/
-    GLOBUS_GRAM_MYJOB_CONTACT = URLx-nexus://example.cs.wisc.edu:36214
-    GLOBUS_LOCATION = /usr/local/globus
-    GLOBUS_REMOTE_IO_URL = /home/smith/.globus/.gass_cache/globus_gass_cache_1020633948
-    HOME = /home/smith
-    LANG = en_US
-    LOGNAME = smith
-    X509_USER_PROXY = /home/smith/.globus/.gass_cache/globus_gass_cache_1020633951
-    foo = bar
-    zot = qux
-
-Of particular interest is the ``GLOBUS_REMOTE_IO_URL`` environment
-variable. HTCondor-G automatically starts up a GASS remote I/O server on
-the submit machine. Because of the potential for either side of the
-connection to fail, the URL for the server cannot be passed directly to
-the job. Instead, it is placed into a file, and the
-``GLOBUS_REMOTE_IO_URL`` environment variable points to this file.
-Remote jobs can read this file and use the URL it contains to access the
-remote GASS server running inside HTCondor-G. If the location of the
-GASS server changes (for example, if HTCondor-G restarts), HTCondor-G
-will contact the Globus gatekeeper and update this file on the machine
-where the job is running. It is therefore important that all accesses to
-the remote GASS server check this file for the latest location.
-
-The following example is a Perl script that uses the GASS server in
-HTCondor-G to copy input files to the execute machine. In this example,
-the remote job counts the number of lines in a file.
-
-.. code-block:: perl
-
-    #!/usr/bin/env perl
-    use FileHandle;
-    use Cwd;
-
-    STDOUT->autoflush();
-    $gassUrl = `cat $ENV{GLOBUS_REMOTE_IO_URL}`;
-    chomp $gassUrl;
-
-    $ENV{LD_LIBRARY_PATH} = $ENV{GLOBUS_LOCATION}. "/lib";
-    $urlCopy = $ENV{GLOBUS_LOCATION}."/bin/globus-url-copy";
-
-    # globus-url-copy needs a full path name
-    $pwd = getcwd();
-    print "$urlCopy $gassUrl/etc/hosts file://$pwd/temporary.hosts\n\n";
-    `$urlCopy $gassUrl/etc/hosts file://$pwd/temporary.hosts`;
-
-    open(file, "temporary.hosts");
-    while(<file>) {
-    print $_;
-    }
-
-    exit 0;
-
-The submit description file used to submit the Perl script as an
-HTCondor job appears as:
-
-.. code-block:: condor-submit
-
-    executable = gass-example.pl
-    universe = grid
-    grid_resource = gt2 example.cs.wisc.edu/jobmanager
-    output = gass.out
-    log = gass.log
-    queue
-
-There are two optional submit description file commands of note:
-**x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` and
-**globus_rsl** :index:`globus_rsl<single: globus_rsl; submit commands>`. The
-**x509userproxy** command specifies the path to an X.509 proxy. The
-command is of the form:
-
-.. code-block:: condor-submit
-
-    x509userproxy = /path/to/proxy
-
-If this optional command is not present in the submit description file,
-then HTCondor-G checks the value of the environment variable
-``X509_USER_PROXY`` for the location of the proxy. If this environment
-variable is not present, then HTCondor-G looks for the proxy in the file
-``/tmp/x509up_uXXXX``, where the characters XXXX in this file name are
-replaced with the Unix user id.
-
-The **globus_rsl** command is used to add additional attribute settings
-to a job's RSL string. The format of the **globus_rsl** command is
-
-.. code-block:: condor-submit
-
-    globus_rsl = (name=value)(name=value)
-
-Here is an example of this command from a submit description file:
-
-.. code-block:: condor-submit
-
-    globus_rsl = (project=Test_Project)
-
-This example's attribute name for the additional RSL is ``project``, and
-the value assigned is ``Test_Project``.
-
-The gt5 Grid Type
-'''''''''''''''''
-
-:index:`grid, grid type gt5<single: grid, grid type gt5; universe>`
-:index:`submitting jobs to gt5<single: submitting jobs to gt5; grid computing>`
-
-The Globus GRAM5 protocol works the same as the gt2 grid type. Its
-implementation differs from gt2 in the following 3 items:
-
--  The Grid Monitor is disabled.
--  Globus job managers are not stopped and restarted.
--  The configuration variable
-   ``GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE``
-   :index:`GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE` is not
-   applied (for gt5 jobs).
-
-Normally, HTCondor will automatically detect whether a service is GRAM2
-or GRAM5 and interact with it accordingly. It does not matter whether
-gt2 or gt5 is specified. Disable this detection by setting the
-configuration variable ``GRAM_VERSION_DETECTION``
-:index:`GRAM_VERSION_DETECTION` to ``False``. If disabled, each
-resource must be accurately identified as either gt2 or gt5 in the
-**grid_resource** submit command.
-
-Credential Management with *MyProxy*
-''''''''''''''''''''''''''''''''''''
-
-:index:`renewal with<single: renewal with; proxy>`
-
-HTCondor-G can use *MyProxy* software to automatically renew GSI proxies
-for **grid** **universe** jobs with grid type **gt2**. *MyProxy* is a
-software component developed at NCSA and used widely throughout the grid
-community. For more information see:
-`http://grid.ncsa.illinois.edu/myproxy/ <http://grid.ncsa.illinois.edu/myproxy/>`_
-
-Difficulties with proxy expiration occur in two cases. The first case
-are long running jobs, which do not complete before the proxy expires.
-The second case occurs when great numbers of jobs are submitted. Some of
-the jobs may not yet be started or not yet completed before the proxy
-expires. One proposed solution to these difficulties is to generate
-longer-lived proxies. This, however, presents a greater security
-problem. Remember that a GSI proxy is sent to the remote Globus
-resource. If a proxy falls into the hands of a malicious user at the
-remote site, the malicious user can impersonate the proxy owner for the
-duration of the proxy's lifetime. The longer the proxy's lifetime, the
-more time a malicious user has to misuse the owner's credentials. To
-minimize the window of opportunity of a malicious user, it is
-recommended that proxies have a short lifetime (on the order of several
-hours).
-
-The *MyProxy* software generates proxies using credentials (a user
-certificate or a long-lived proxy) located on a secure *MyProxy* server.
-HTCondor-G talks to the MyProxy server, renewing a proxy as it is about
-to expire. Another advantage that this presents is it relieves the user
-from having to store a GSI user certificate and private key on the
-machine where jobs are submitted. This may be particularly important if
-a shared HTCondor-G submit machine is used by several users.
-
-In the a typical case, the following steps occur:
-
-#. The user creates a long-lived credential on a secure *MyProxy*
-   server, using the *myproxy-init* command. Each organization generally
-   has their own *MyProxy* server.
-#. The user creates a short-lived proxy on a local submit machine, using
-   *grid-proxy-init* or *myproxy-get-delegation*.
-#. The user submits an HTCondor-G job, specifying:
-
-       *MyProxy* server name (host:port)
-       *MyProxy* credential name (optional)
-       *MyProxy* password
-
-#. At the short-lived proxy expiration HTCondor-G talks to the *MyProxy*
-   server to refresh the proxy.
-
-HTCondor-G keeps track of the password to the *MyProxy* server for
-credential renewal. Although HTCondor-G tries to keep the password
-encrypted and secure, it is still possible (although highly unlikely)
-for the password to be intercepted from the HTCondor-G machine (more
-precisely, from the machine that the *condor_schedd* daemon that
-manages the grid universe jobs runs on, which may be distinct from the
-machine from where jobs are submitted). The following safeguard
-practices are recommended.
-
-#. Provide time limits for credentials on the *MyProxy* server. The
-   default is one week, but you may want to make it shorter.
-#. Create several different *MyProxy* credentials, maybe as many as one
-   for each submitted job. Each credential has a unique name, which is
-   identified with the ``MyProxyCredentialName`` command in the submit
-   description file.
-#. Use the following options when initializing the credential on the
-   *MyProxy* server:
-
-   .. code-block:: console
-
-       $ myproxy-init -s <host> -x -r <cert subject> -k <cred name>
-
-   The option **-x -r** *<cert subject>* essentially tells the
-   *MyProxy* server to require two forms of authentication:
-
-   #. a password (initially set with *myproxy-init*)
-   #. an existing proxy (the proxy to be renewed)
-
-#. A submit description file may include the password. An example
-   contains commands of the form:
-
-   .. code-block:: text
-
-       executable      = /usr/bin/my-executable
-       universe        = grid
-       grid_resource   = gt2 condor-unsup-7
-       MyProxyHost     = example.cs.wisc.edu:7512
-       MyProxyServerDN = /O=doesciencegrid.org/OU=People/CN=Jane Doe 25900
-       MyProxyPassword = password
-       MyProxyCredentialName = my_executable_run
-       queue
-
-   Note that placing the password within the submit description file is
-   not really secure, as it relies upon security provided by the file
-   system. This may still be better than option 5.
-
-#. Use the **-p** option to *condor_submit*. The submit command appears
-   as
-
-   .. code-block:: console
-
-       $ condor_submit -p mypassword /home/user/myjob.submit
-
-   The argument list for *condor_submit* defaults to being publicly
-   available. An attacker with a login on that local machine could
-   generate a simple shell script to watch for the password.
-
-Currently, HTCondor-G calls the *myproxy-get-delegation* command-line
-tool, passing it the necessary arguments. The location of the
-*myproxy-get-delegation* executable is determined by the configuration
-variable ``MYPROXY_GET_DELEGATION``
-:index:`MYPROXY_GET_DELEGATION` in the configuration file on the
-HTCondor-G machine. This variable is read by the *condor_gridmanager*.
-If *myproxy-get-delegation* is a dynamically-linked executable (verify
-this with ``ldd myproxy-get-delegation``), point
-``MYPROXY_GET_DELEGATION`` to a wrapper shell script that sets
-``LD_LIBRARY_PATH`` to the correct *MyProxy* library or Globus library
-directory and then calls *myproxy-get-delegation*. Here is an example of
-such a wrapper script:
-
-.. code-block:: text
-
-    #!/bin/sh
-    export LD_LIBRARY_PATH=/opt/myglobus/lib
-    exec /opt/myglobus/bin/myproxy-get-delegation $@
-
-The Grid Monitor
-''''''''''''''''
-
-:index:`Grid Monitor`
-:index:`Grid Monitor<single: Grid Monitor; grid computing>`
-:index:`using the Grid Monitor<single: using the Grid Monitor; scalability>`
-
-HTCondor's Grid Monitor is designed to improve the scalability of
-machines running the Globus Toolkit's GRAM2 gatekeeper. Normally, this
-service runs a jobmanager process for every job submitted to the
-gatekeeper. This includes both currently running jobs and jobs waiting
-in the queue. Each jobmanager runs a Perl script at frequent intervals
-(every 10 seconds) to poll the state of its job in the local batch
-system. For example, with 400 jobs submitted to a gatekeeper, there will
-be 400 jobmanagers running, each regularly starting a Perl script. When
-a large number of jobs have been submitted to a single gatekeeper, this
-frequent polling can heavily load the gatekeeper. When the gatekeeper is
-under heavy load, the system can become non-responsive, and a variety of
-problems can occur.
-
-HTCondor's Grid Monitor temporarily replaces these jobmanagers. It is
-named the Grid Monitor, because it replaces the monitoring (polling)
-duties previously done by jobmanagers. When the Grid Monitor runs,
-HTCondor attempts to start a single process to poll all of a user's jobs
-at a given gatekeeper. While a job is waiting in the queue, but not yet
-running, HTCondor shuts down the associated jobmanager, and instead
-relies on the Grid Monitor to report changes in status. The jobmanager
-started to add the job to the remote batch system queue is shut down.
-The jobmanager restarts when the job begins running.
-
-The Grid Monitor requires that the gatekeeper support the fork
-jobmanager with the name *jobmanager-fork*. If the gatekeeper does not
-support the fork jobmanager, the Grid Monitor will not be used for that
-site. The *condor_gridmanager* log file reports any problems using the
-Grid Monitor.
-
-The Grid Monitor is enabled by default, and the configuration macro
-``GRID_MONITOR`` :index:`GRID_MONITOR` identifies the location of
-the executable.
-
-Limitations of HTCondor-G
-'''''''''''''''''''''''''
-
-:index:`limitations<single: limitations; HTCondor-G>`
-
-Submitting jobs to run under the grid universe has not yet been
-perfected. The following is a list of known limitations:
-
-#. No checkpoints.
-#. No job exit codes are available when using **gt2**.
-#. Limited platform availability. Windows support is not available.
-
-:index:`HTCondor-G`
+machine name. :index:`HTCondor-C`
 
 The nordugrid Grid Type
 -----------------------
@@ -843,7 +242,12 @@ Advanced Resource Connector (ARC). See the NorduGrid web page
 (`http://www.nordugrid.org <http://www.nordugrid.org>`_) for more
 information about NorduGrid software.
 
-HTCondor jobs may be submitted to NorduGrid resources using the **grid**
+NorduGrid ARC supports multiple job submission interfaces.
+The **nordugrid** grid type uses their older gridftp-based interface,
+which is due to be retired. We recommend using the new REST-based
+interface, available via the grid type **arc**, documented below.
+
+HTCondor jobs may be submitted to NorduGrid ARC resources using the **grid**
 universe. The
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
 command specifies the name of the NorduGrid resource as follows:
@@ -873,6 +277,79 @@ format this submit description file command is
 .. code-block:: text
 
     nordugrid_rsl = (name=value)(name=value)
+
+The arc Grid Type
+-----------------------
+
+:index:`ARC CE`
+:index:`submitting jobs to ARC CE<single: submitting jobs to ARC CE; grid computing>`
+
+NorduGrid is a project to develop free grid middleware named the
+Advanced Resource Connector (ARC). See the NorduGrid web page
+(`http://www.nordugrid.org <http://www.nordugrid.org>`_) for more
+information about NorduGrid software.
+
+NorduGrid ARC supports multiple job submission interfaces.
+The **arc** grid type uses their new REST interface.
+
+HTCondor jobs may be submitted to ARC CE resources using the **grid**
+universe. The
+**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
+command specifies the name of the ARC CE service as follows:
+
+.. code-block:: text
+
+    grid_resource = arc https://arc.example.com:443/arex/rest/1.0
+
+Only the hostname portion of the URL is required.
+Appropriate defaults will be used for the other components.
+
+ARC uses X.509 credentials for authentication, usually in the form
+a proxy certificate. *condor_submit* looks in default locations for the
+proxy. The submit description file command
+**x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` may be
+used to give the full path name to the directory containing the proxy,
+when the proxy is not in a default location. If this optional command is
+not present in the submit description file, then the value of the
+environment variable ``X509_USER_PROXY`` is checked for the location of
+the proxy. If this environment variable is not present, then the proxy
+in the file ``/tmp/x509up_uXXXX`` is used, where the characters XXXX in
+this file name are replaced with the Unix user id.
+
+ARC CE allows sites to define Runtime Environment (RTE) labels that alter
+the environment in which a job runs.
+Jobs can request one or move of these labels.
+For example, the ``ENV/PROXY`` label makes the user's X.509 proxy
+available to the job when it executes.
+Some of these labels have optional parameters for customization.
+The submit description file command
+**arc_rte** :index:`arc_rte<single: arc_resources; submit commands>`
+can be used to request one of more of these labels.
+It is a comma-delimited list. If a label supports optional parameters, they
+can be provided after the label spearated by spaces.
+Here is an example showing use of two standard RTE labels, one with
+an optional parameter:
+
+.. code-block:: text
+
+    arc_rte = ENV/RTE,ENV/PROXY USE_DELEGATION_DB
+
+ARC CE uses ADL (Activity Description Language) syntax to describe jobs.
+The specification of the language can be found
+`here <https://www.nordugrid.org/documents/EMI-ES-Specification_v1.16.pdf>`_.
+HTCondor constructs an ADL description of the job based on attributes in
+the job ClassAd, but some ADL elements don't have an equivalent job ClassAd
+attribute.
+The submit description file command
+**arc_resources** :index:`arc_resoruces<single: arc_resources; submit commands>`
+can be used to specify these elements if they fall under the ``<Resources>``
+element of the ADL.
+The value should be a chunk of XML text that could be inserted inside the
+``<Resources>`` element. For example:
+
+.. code-block:: text
+
+    arc_resources = <NetworkInfo>gigabitethernet</NetworkInfo>
 
 The batch Grid Type (for PBS, LSF, SGE, and SLURM)
 --------------------------------------------------
@@ -1278,8 +755,8 @@ trigger rate-limiting by the service; while HTCondor will react
 appropriately (by retrying with an exponential back-off), it may be more
 efficient to configure a longer interval.
 
-Secure Communication with and EC2 Service
-'''''''''''''''''''''''''''''''''''''''''
+Secure Communication with an EC2 Service
+''''''''''''''''''''''''''''''''''''''''
 
 The specification of a service with an ``https://``, an ``x509://``, or
 an ``euca3s://`` URL validates that service's certificate, checking that

@@ -22,14 +22,12 @@ use CondorTest;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my $append_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
   DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
   NEGOTIATOR_MATCH_LOG = MatchLog
-';
-
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
-);
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 # verify that a job runs
 SimpleJob::RunCheck();

@@ -101,15 +101,16 @@
 #define SUBMIT_KEY_GridResource "grid_resource"
 #define SUBMIT_KEY_X509UserProxy "x509userproxy"
 #define SUBMIT_KEY_UseX509UserProxy "use_x509userproxy"
+#define SUBMIT_KEY_UseScitokens "use_scitokens"
+#define SUBMIT_KEY_UseScitokensAlt "use_scitoken"
+#define SUBMIT_KEY_ScitokensFile "scitokens_file"
 #define SUBMIT_KEY_DelegateJobGSICredentialsLifetime "delegate_job_gsi_credentials_lifetime"
-#define SUBMIT_KEY_GridShell "gridshell"
-#define SUBMIT_KEY_GlobusRSL "globus_rsl"
 #define SUBMIT_KEY_NordugridRSL "nordugrid_rsl"
+#define SUBMIT_KEY_ArcRSL "arc_rsl"
+#define SUBMIT_KEY_ArcRte "arc_rte"
+#define SUBMIT_KEY_ArcResources "arc_resources"
 #define SUBMIT_KEY_RendezvousDir "rendezvousdir"
-#define SUBMIT_KEY_KeystoreFile "keystore_file"
-#define SUBMIT_KEY_KeystoreAlias "keystore_alias"
-#define SUBMIT_KEY_KeystorePassphraseFile "keystore_passphrase_file"
-#define SUBMIT_KEY_CreamAttributes "cream_attributes"
+#define SUBMIT_KEY_BatchExtraSubmitArgs "batch_extra_submit_args"
 #define SUBMIT_KEY_BatchProject "batch_project"
 #define SUBMIT_KEY_BatchQueue "batch_queue"
 #define SUBMIT_KEY_BatchRuntime "batch_runtime"
@@ -292,6 +293,10 @@
 #define SUBMIT_KEY_AWSAccessKeyIdFile "aws_access_key_id_file"
 #define SUBMIT_KEY_AWSSecretAccessKeyFile "aws_secret_access_key_file"
 #define SUBMIT_KEY_AWSRegion "aws_region"
+#define SUBMIT_KEY_S3AccessKeyIdFile "s3_access_key_id_file"
+#define SUBMIT_KEY_S3SecretAccessKeyFile "s3_secret_access_key_file"
+#define SUBMIT_KEY_GSAccessKeyIdFile "gs_access_key_id_file"
+#define SUBMIT_KEY_GSSecretAccessKeyFile "gs_secret_access_key_file"
 #define SUBMIT_KEY_EC2AmiID "ec2_ami_id"
 #define SUBMIT_KEY_EC2UserData "ec2_user_data"
 #define SUBMIT_KEY_EC2UserDataFile "ec2_user_data_file"
@@ -452,7 +457,7 @@ public:
 	StringList vars;           // loop variable names
 	StringList items;          // list of items to iterate over
 	qslice     slice;          // may be initialized to slice if "[]" is parsed.
-	MyString   items_filename; // file to read list of items from, if it is "<" list should be read from submit file until )
+	std::string   items_filename; // file to read list of items from, if it is "<" list should be read from submit file until )
 };
 
 
@@ -651,7 +656,7 @@ public:
 	int getProcId() const    { return jid.proc; }
 	time_t getSubmitTime() const { return submit_time; } // aka QDATE, if this is 0, baseJob has never been initialized
 	bool getSubmitOnHold(int & code) const { code = SubmitOnHoldCode; return SubmitOnHold; }
-	const char * getScheddVersion() { return ScheddVersion.Value(); }
+	const char * getScheddVersion() { return ScheddVersion.c_str(); }
 	const char * getIWD();
 	const char * full_path(const char *name, bool use_iwd=true);
 	int check_and_universalize_path(MyString &path);

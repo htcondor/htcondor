@@ -48,7 +48,8 @@ typedef enum {
   /** startd ad */                           ADVERTISE_STARTD_PERM,
   /** schedd ad */                           ADVERTISE_SCHEDD_PERM,
   /** master ad */                           ADVERTISE_MASTER_PERM,
-  /** Place holder, must be last */          LAST_PERM
+  /** Place holder, must be last */          LAST_PERM,
+  /** Perm value is unset*/                  UNSET_PERM
 } DCpermission;
 
 // convenience macro for iterating through DCpermission values

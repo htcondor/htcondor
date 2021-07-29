@@ -95,6 +95,7 @@ common_externals="boost169-python3 \
     globus-xio-popen-driver \
     libcgroup \
     libgomp \
+    libtool-ltdl \
     munge-libs \
     scitokens-cpp \
     voms"
@@ -110,11 +111,11 @@ if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
 elif [[ $arch_dist =~ CentOS8 ]]; then
     externals="$common_externals $uw_externals"
 elif [[ $arch_dist =~ Fedora32 ]]; then
-    externals="$common_externals"
+    externals="$common_externals $uw_externals"
 fi
 
 mkdir external-packages
-yumdownloader --downloadonly --destdir=external-packages $externals
+yumdownloader --assumeyes --downloadonly --destdir=external-packages $externals
 
 # Extract external RPMs
 for file in external-packages/*.rpm; do
@@ -129,7 +130,20 @@ for file in external-packages/*.rpm; do
 done
 
 rm -r external-packages
+
+# Check tarball for externals (in case of download errors)
+for package in $externals; do
+    if ! grep $package tarball/Manifest.txt; then
+        echo "ERROR: external $package is missing!"
+        exit 1
+    fi
+done
+
 $cmd_dir/make-tarball-links tarball
+if [ $? -ne 0 ];then
+    echo 'ERROR: tarball link script failed'
+    exit 1
+fi
 $cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64'
 
 # Fixup directory permissions for the tarball

@@ -48,7 +48,6 @@ public:
 	};
 
 	Regex();
-		//const Regex & operator = (const MyString & pattern);
 	Regex(const Regex & copy);
 	const Regex & operator = (const Regex & copy);
 	~Regex();
@@ -61,7 +60,15 @@ public:
 		 * construction may have failed. True is returned upon
 		 * success, false otherwise.
 		 */
+	bool compile(const char * pattern,
+				 const char ** errstr,
+				 int * erroffset,
+				 int options = 0);
 	bool compile(const MyString & pattern,
+				 const char ** errstr,
+				 int * erroffset,
+				 int options = 0);
+	bool compile(const std::string & pattern,
 				 const char ** errstr,
 				 int * erroffset,
 				 int options = 0);
@@ -76,11 +83,13 @@ public:
 		 */
 	bool match(const MyString & string,
 			   ExtArray<MyString> * groups = NULL);
-			   
+	bool match_str(const std::string & string,
+			   ExtArray<std::string> * groups = NULL);
+
 		/**
-		 * If the object has been initialized properly and 
+		 * If the object has been initialized properly and
 		 * can now match patterns, return true
-		 * 
+		 *
 		 * @return true if a pattern was compiled successfully, false otherwise
 		 **/
 	bool isInitialized( );

@@ -158,6 +158,10 @@ int DockerAPI::createContainer(
 		runArgs.AppendArg("--security-opt");
 		runArgs.AppendArg("no-new-privileges");
 	}
+	// Tell docker to run this with an init program
+	if (param_boolean("DOCKER_RUN_UNDER_INIT", true)) {
+		runArgs.AppendArg("--init");
+	}
 
 	// Give the container a useful name
 	std::string hname = makeHostname(&machineAd, &jobAd);
@@ -324,7 +328,7 @@ int DockerAPI::createContainer(
 	char *tmp = param("DOCKER_EXTRA_ARGUMENTS");
 	if(!runArgs.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
 		dprintf(D_ALWAYS,"docker: failed to parse extra arguments: %s\n",
-		args_error.Value());
+		args_error.c_str());
 		free(tmp);
 		return -1;
 	}
@@ -356,9 +360,33 @@ int DockerAPI::createContainer(
 	build_env_for_docker_cli(cliEnvironment);
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
 
+	//
+	// The following two commented-out Create_Process() calls were
+	// left in as examples of (respectively) that bad old way,
+	// the bad new way (in case you actually need to set all of
+	// the default arguments), and the good new way (in case you
+	// don't, in which case it's both shorter and clearer).
+	//
+
+	/*
 	int childPID = daemonCore->Create_Process( runArgs.GetArg(0), runArgs,
 		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
 		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT );
+	*/
+
+	/*
+	std::string err_return_msg;
+	int childPID = daemonCore->CreateProcessNew( runArgs.GetArg(0), runArgs,
+		{ PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
+		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT,
+		NULL, NULL, NULL, err_return_msg, NULL, 0l } );
+	*/
+
+	int childPID = daemonCore->CreateProcessNew( runArgs.GetArg(0), runArgs,
+		OptionalCreateProcessArgs().priv(PRIV_CONDOR_FINAL)
+			.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+			.env(&cliEnvironment).cwd("/").familyInfo(& fi)
+			.std(childFDs).jobOptMask(DCJOBOPT_NO_ENV_INHERIT) );
 
 	if( childPID == FALSE ) {
 		dprintf( D_ALWAYS, "Create_Process() failed.\n" );
@@ -1306,7 +1334,7 @@ gc_image(const std::string & image) {
   fclose(f);
   }
 
-  dprintf(D_ALWAYS, "Found %lu entries in docker image cache.\n", images.size());
+  dprintf(D_ALWAYS, "Found %zu entries in docker image cache.\n", images.size());
 
    std::list<std::string>::iterator iter;
    int remove_count = (int)images.size() - cache_size;
@@ -1373,6 +1401,12 @@ makeHostname(ClassAd *machineAd, ClassAd *jobAd) {
 	machineAd->LookupString(ATTR_MACHINE, machine);
 
 	hostname += machine;
+
+	// Linux allows hostnames up to 256 characters,
+	// but docker throws an error if they are greater then 63
+	if (hostname.length() > 63) {
+		hostname = hostname.substr(0,63);
+	}
 
 	return hostname;
 }

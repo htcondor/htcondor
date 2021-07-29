@@ -263,7 +263,7 @@ is_valid_sinful( const char *sinful )
 		int colon_pos = ipaddr.FindChar(':');
 		if(colon_pos == -1) { return false; }
 		ipaddr.truncate(colon_pos);
-		if( ! is_ipv4_addr_implementation(ipaddr.Value(),NULL,NULL,false) ) {
+		if( ! is_ipv4_addr_implementation(ipaddr.c_str(),NULL,NULL,false) ) {
 			return FALSE;
 		}
 		acc = acc + colon_pos;

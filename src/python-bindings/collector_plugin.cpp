@@ -37,15 +37,22 @@
 static std::string
 handle_pyerror()
 {
-    PyObject *exc,*val,*tb;
-    boost::python::object formatted_list, formatted;
-    PyErr_Fetch(&exc,&val,&tb);
-    boost::python::handle<> hexc(exc), hval(boost::python::allow_null(val)), htb(boost::python::allow_null(tb));
-    boost::python::object traceback(py_import("traceback"));
-    boost::python::object format_exception(traceback.attr("format_exception"));
-    formatted_list = format_exception(hexc,hval,htb);
-    formatted = boost::python::str("\n").join(formatted_list);
-    return boost::python::extract<std::string>(formatted);
+    try {
+        PyObject *exc,*val,*tb;
+        boost::python::object formatted_list, formatted;
+        PyErr_Fetch(&exc,&val,&tb);
+        if ((tb == nullptr) || (val == nullptr) || (exc == nullptr)) {
+           return "(Python unable to provide exception)";
+        }
+        boost::python::handle<> hexc(exc), hval(boost::python::allow_null(val)), htb(boost::python::allow_null(tb));
+        boost::python::object traceback(py_import("traceback"));
+        boost::python::object format_exception(traceback.attr("format_exception"));
+        formatted_list = format_exception(hexc,hval,htb);
+        formatted = boost::python::str("\n").join(formatted_list);
+        return boost::python::extract<std::string>(formatted);
+    } catch (...) {
+        return "(Another exception occurred while generating a traceback)";
+    }
 }
 
 
@@ -139,14 +146,11 @@ PythonCollectorPlugin::shutdown()
 {
    if (m_shutdown_funcs.empty()) {return;}
 
-    boost::python::list pyArgs;
-    boost::python::dict pyKw;
-
     std::vector<boost::python::object>::const_iterator iter = m_shutdown_funcs.begin();
     for (; iter != m_shutdown_funcs.end(); iter++) {
         try
         {
-            py_import("__main__").attr("__builtins__").attr("apply")(*iter, pyArgs, pyKw);
+            (*iter)();
         }
         catch (boost::python::error_already_set &)
         {
@@ -166,7 +170,6 @@ PythonCollectorPlugin::update(int command, const ClassAd &ad)
    if (m_update_funcs.empty()) {return;}
 
     boost::python::list pyArgs;
-    boost::python::dict pyKw;
 
     try
     {
@@ -194,7 +197,9 @@ PythonCollectorPlugin::update(int command, const ClassAd &ad)
     {
         try
         {
-            py_import("__main__").attr("__builtins__").attr("apply")(*iter, pyArgs, pyKw);
+            boost::python::object arg1 = pyArgs[0];
+            boost::python::object arg2 = pyArgs[1];
+            (*iter)(arg1, arg2);
         }
         catch (boost::python::error_already_set &)
         {
@@ -214,7 +219,6 @@ PythonCollectorPlugin::invalidate(int command, const ClassAd &ad)
    if (m_invalidate_funcs.empty()) {return;}
 
     boost::python::list pyArgs;
-    boost::python::dict pyKw;
 
     boost::shared_ptr<ClassAdWrapper> adWrapper(new ClassAdWrapper());
     adWrapper->CopyFrom(ad);
@@ -241,7 +245,9 @@ PythonCollectorPlugin::invalidate(int command, const ClassAd &ad)
     {
         try
         {
-            py_import("__main__").attr("__builtins__").attr("apply")(*iter, pyArgs, pyKw);
+            boost::python::object arg1 = pyArgs[0];
+            boost::python::object arg2 = pyArgs[1];
+            (*iter)(arg1, arg2);
         }
         catch (boost::python::error_already_set &)
         {

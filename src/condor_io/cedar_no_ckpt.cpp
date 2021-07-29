@@ -340,6 +340,10 @@ ReliSock::put_empty_file( filesize_t *size )
 {
 	bool buffered = get_encryption() && get_crypto_state()->m_keyInfo.getProtocol() == CONDOR_AESGCM;
 	*size = 0;
+	// the put(1) here is required because the other size is expecting us
+	// to send the size of messages we are going to use.  however, we're
+	// send zero bytes total so we just need to send any int at all, which
+	// then gets ignored on the other side.
 	if(!put(*size) || !(buffered ? put(1) : 1) || !end_of_message()) {
 		dprintf(D_ALWAYS,"ReliSock: put_file: failed to send dummy file size\n");
 		return -1;
@@ -989,7 +993,7 @@ int Sock::special_connect(char const *host,int /*port*/,bool nonblocking)
 		//   We should do a better job of detecting whether sinful
 		//   points to a local interface.
 		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
-		if( sinful.getHost() && strcmp(my_ip.Value(),sinful.getHost())==0 ) {
+		if( sinful.getHost() && strcmp(my_ip.c_str(),sinful.getHost())==0 ) {
 			same_host = true;
 		}
 
@@ -1172,9 +1176,9 @@ char const *
 Sock::get_sinful_public() const
 {
 		// In case TCP_FORWARDING_HOST changes, do not cache it.
-	MyString tcp_forwarding_host;
+	std::string tcp_forwarding_host;
 	param(tcp_forwarding_host,"TCP_FORWARDING_HOST");
-	if (!tcp_forwarding_host.IsEmpty()) {
+	if (!tcp_forwarding_host.empty()) {
 		condor_sockaddr addr;
 		
 		if (!addr.from_ip_string(tcp_forwarding_host)) {
@@ -1182,13 +1186,13 @@ Sock::get_sinful_public() const
 			if (addrs.empty()) {
 				dprintf(D_ALWAYS,
 					"failed to resolve address of TCP_FORWARDING_HOST=%s\n",
-					tcp_forwarding_host.Value());
+					tcp_forwarding_host.c_str());
 				return NULL;
 			}
 			addr = addrs.front();
 		}
 		addr.set_port(get_port());
-		_sinful_public_buf = addr.to_sinful().Value();
+		_sinful_public_buf = addr.to_sinful().c_str();
 
 		std::string alias;
 		if( param(alias,"HOST_ALIAS") ) {

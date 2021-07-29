@@ -86,8 +86,8 @@ update_spec_define condor_base_release "0.$condor_build_id"
 VERBOSE=1
 export VERBOSE
 
-# Only use 1 CPU on BaTLab
-export RPM_BUILD_NCPUS=1
+# Use as many CPUs as are in the condor slot we are in, 1 if undefined
+export RPM_BUILD_NCPUS=${OMP_NUM_THREADS-1}
 
 rpmbuild -v $buildmethod "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 

@@ -737,6 +737,15 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 				"for writing password, aborting\n");
 		return FALSE;
 	}
+
+	// Just to be sure
+	if ((myProxyEntry->get_delegation_password_pipe[0] < 0) ||
+		(myProxyEntry->get_delegation_password_pipe[1] < 0)) {
+
+		dprintf(D_ALWAYS, "pipe(2) returned negative fds in RefreshProxyThruMyProxy, aborting\n");
+	   return FALSE;
+	}	   
+
 	int written = write (myProxyEntry->get_delegation_password_pipe[1],
 		   myProxyEntry->myproxy_password,
 		   strlen (myProxyEntry->myproxy_password));

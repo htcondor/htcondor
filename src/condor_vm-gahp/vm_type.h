@@ -25,7 +25,6 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
-#include "MyString.h"
 #include "gahp_common.h"
 #include "utc_time.h"
 #include "directory.h"
@@ -114,7 +113,7 @@ protected:
 	bool m_vm_checkpoint;
 	bool m_vm_no_output_vm;
 	bool m_vm_hardware_vt;
-	MyString m_classad_arg;
+	std::string m_classad_arg;
 	std::string m_arg_file;
 
 	// Usually, when we suspend a VM, the memory being used by the VM 

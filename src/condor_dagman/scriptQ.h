@@ -23,7 +23,6 @@
 
 #include <utility>
 
-#include "HashTable.h"
 #include <queue>
 
 #include "condor_daemon_core.h"
@@ -73,8 +72,8 @@ class ScriptQ : public Service {
     // number of PRE/POST scripts currently running
 	int _numScriptsRunning;
 
-	// hash table to map PRE/POST script pids to Script* objects
-	HashTable<int, Script*> *_scriptPidTable;
+	// map PRE/POST script pids to Script* objects
+	std::map<int, Script*> *_scriptPidTable;
 
 	// queue of scripts waiting to be run
 	std::queue<Script*> *_waitingQueue;

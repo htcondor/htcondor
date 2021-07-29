@@ -18,9 +18,11 @@
 
 if(WINDOWS)
 
-	file (GLOB RmdirFiles condor_rmdir.* main.* common.h bprint.* harylist.*)
+	set(RmdirFiles 
+		condor_rmdir.cpp 
+		main.cpp 
+		tokenize.cpp)
 	
 	condor_exe( condor_rmdir "${RmdirFiles}" ${C_BIN} "" OFF )
-
 
 endif(WINDOWS)

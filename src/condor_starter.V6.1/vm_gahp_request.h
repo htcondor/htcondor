@@ -24,7 +24,6 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "gahp_common.h"
-#include "MyString.h"
 #include "condor_arglist.h"
 #include "vm_proc.h"
 #include "vm_gahp_server.h"
@@ -61,7 +60,7 @@ class VMGahpRequest : public Service {
 			BLOCKING
 		};
 
-		const char* getCommand() { return m_command.Value(); }
+		const char* getCommand() { return m_command.c_str(); }
 		void setMode(reqmode m);
 		void setTimeout(int t);
 		int getTimeout() const;
@@ -77,7 +76,7 @@ class VMGahpRequest : public Service {
 		int getReqId() const;
 		Gahp_Args* getResult();
 		bool hasValidResult();
-		bool checkResult(MyString& errmsg);
+		bool checkResult(std::string& errmsg);
 
 		reqstatus getPendingStatus();
 		void clearPending();
@@ -106,7 +105,7 @@ class VMGahpRequest : public Service {
 		void pending_timer_fn();
 
 		reqmode m_mode;
-		MyString m_command;
+		std::string m_command;
 		VMGahpServer *m_server;
 
 		int m_timeout;
@@ -115,7 +114,6 @@ class VMGahpRequest : public Service {
 		int m_pending_timeout_tid;
 
 		reqstatus m_pending_status;
-		MyString m_pending_args;
 		int m_pending_reqid;
 
 		Gahp_Args *m_pending_result;

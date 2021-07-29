@@ -123,6 +123,7 @@ public:
 	MyStringAioSource(MyAsyncFileReader& _aio) : aio(_aio) {}
 	virtual ~MyStringAioSource() {};
 	virtual bool readLine(MyString & str, bool append = false);
+	virtual bool readLine(std::string & str, bool append = false);
 	virtual bool isEof();
 	bool allDataIsAvailable(); // becomes true once EOF has been buffered.
 

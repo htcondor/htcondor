@@ -604,7 +604,7 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 	}
 	if (file_count != remote_file_count)
 	{
-		formatstr(error_msg, "Received %ld files, but remote side thought it sent %ld files\n", file_count, remote_file_count);
+		formatstr(error_msg, "Received %zu files, but remote side thought it sent %zu files\n", file_count, remote_file_count);
 		return false;
 	}
 	if ((total_files != file_count) && !error_msg.size())

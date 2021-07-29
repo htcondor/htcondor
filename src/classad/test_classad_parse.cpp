@@ -326,13 +326,8 @@ int parse_ads(bool with_cache, bool verbose=false, bool lazy=false)
 		while (szInput[vpos] == ' ') { vpos++; }
 		szValue = szInput.substr(vpos);
 
-#ifdef TJ_NEWCACHE
-		MyStringView msv(szInput.data() + bpos, npos - bpos);
-		if ( ! pAd->InsertViaCache(msv, szValue, lazy))
-#else
 		name = szInput.substr(bpos, npos - bpos);
 		if ( ! pAd->InsertViaCache(name, szValue, lazy) )
-#endif
 		{
 			++barf_counter;
 			fprintf(stdout, "BARFED ON: %s\n", szInput.c_str());

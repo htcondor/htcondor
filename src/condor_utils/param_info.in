@@ -1498,23 +1498,9 @@ default=50
 type=int
 tags=gridmanager,gahp-client
 
-[CREAM_GAHP_WORKER_THREADS]
-default=$(GRIDMANAGER_MAX_PENDING_REQUESTS)
-type=int
-
 [GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_EC2]
 default=20
 type=int
-
-[GAHP]
-default=
-type=string
-tags=gridmanager,gahp-client
-
-[GAHP_ARGS]
-default=
-type=string
-tags=gridmanager,gahp-client
 
 [GLITE_LOCATION]
 default=$(LIBEXEC)/glite
@@ -1589,28 +1575,8 @@ default=0.01
 type=double
 range=0.0,1.0
 
-[ENABLE_GRID_MONITOR]
-default=true
-type=bool
-tags=gridmanager,globusjob
-
-[GRIDMANAGER_JM_EXIT_LIMIT]
-default=30
-type=int
-tags=gridmanager,globusjob
-
 [GRIDMANAGER_CONNECT_FAILURE_RETRY_INTERVAL]
 default=5
-type=int
-tags=gridmanager,globusjob
-
-[GRIDSHELL]
-default=
-type=string
-tags=gridmanager,globusjob
-
-[GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT]
-default=600
 type=int
 tags=gridmanager,globusjob
 
@@ -1644,11 +1610,6 @@ default=
 type=string
 tags=gridmanager,condorjob
 
-[CREAM_GAHP]
-default=$(SBIN)/cream_gahp
-type=string
-tags=gridmanager,creamjob
-
 [COLLECTOR_HOST]
 default=$(CONDOR_HOST)
 type=string
@@ -1666,33 +1627,6 @@ default="$(COLLECTOR_HOST)"
 default=COLLECTOR_HOST_STRING DedicatedScheduler
 description=Configuration attibutes that HTCondor needs to insert into STARTD ads
 customization=devel
-
-[UNICORE_GAHP]
-default=$(SBIN)/unicore_gahp
-win32_default=$(SBIN)\unicore_gahp.exe
-type=path
-tags=gridmanager,unicorejob
-
-[GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE]
-default=10
-type=int
-tags=gridmanager,globusresource
-
-[GRID_MONITOR_HEARTBEAT_TIMEOUT]
-default=300
-type=int
-tags=gridmanager,globusresource
-
-[GRID_MONITOR_RETRY_DURATION]
-default=900
-type=int
-tags=gridmanager,globusresource
-
-[GRID_MONITOR]
-default=$(SBIN)/grid_monitor
-win32_default=$(SBIN)\grid_monitor.exe
-type=path
-tags=gridmanager,globusresource
 
 [NO_DNS]
 default=false
@@ -1968,12 +1902,6 @@ customization=devel
 description=Startd Slot Attrs needed by HTCondor
 tags=startd,startd_main
 
-[STARTD_SLOT_EXPRS]
-default=
-type=string
-description=Obsolete name for startd Slot Attrs
-tags=startd,startd_main
-
 [KEYBOARD_CPUS]
 default=1
 type=int
@@ -2097,7 +2025,7 @@ type=string
 tags=submit
 
 [SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS]
-description=Submit should generate requirements clauses for job attribues that begin with Request
+description=Submit should generate requirements clauses for job attributes that begin with Request
 default=true
 type=bool
 tags=submit
@@ -2179,12 +2107,6 @@ tags=submit
 default=
 type=string
 description=Names of config attributes that should be automatically inserted into jobs by condor_submit
-tags=submit
-
-[SUBMIT_EXPRS]
-default=
-type=string
-description=Obsolete name for SUBMIT_ATTRS
 tags=submit
 
 [APPEND_REQ_VANILLA]
@@ -2504,7 +2426,7 @@ tags=store_cred
 
 [SEC_TOKEN_SYSTEM_DIRECTORY]
 default=/etc/condor/tokens.d
-win32_default=
+win32_default=$(RELEASE_DIR)\tokens.d
 type=path
 tags=condor_auth_passwd
 
@@ -2687,7 +2609,7 @@ type=string
 tags=starter
 
 [STARTER_NUM_THREADS_ENV_VARS]
-default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS
+default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT OPENBLAS_NUM_THREADS TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS
 type=string
 tags=starter
 
@@ -4184,12 +4106,6 @@ range=0,
 type=int
 tags=schedd
 
-[GRAM_VERSION_DETECTION]
-default=true
-type=bool
-usage=true if gridmanager should automatically detect the version of GRAM servers, false otherwise
-tags=gridmanager
-
 [CREATE_LOCKS_ON_LOCAL_DISK]
 default=true
 type=bool
@@ -5175,6 +5091,10 @@ type=bool
 default=true
 type=bool
 
+[DOCKER_RUN_UNDER_INIT]
+default=true
+type=bool
+
 [DOCKER_TEST_IMAGE_PATH]
 default=$(LIBEXEC)/htcondor_docker_test
 type=string
@@ -5470,9 +5390,6 @@ win32_default=NUL
 default=D_PID
 description=Debug logging options for the ec2_gahp
 
-[GT2_GAHP]
-default=$(SBIN)/gahp_server
-
 [EC2_GAHP]
 default=$(SBIN)/ec2_gahp
 
@@ -5495,6 +5412,12 @@ type=path
 default=$(SBIN)/AzureGAHPServer
 win32_default=$(SBIN)\AzureGAHPServer.py
 type=path
+
+[ARC_GAHP]
+default=$(SBIN)/arc_gahp
+
+[ARC_GAHP_LOG]
+default=/tmp/ArcGahpLog.$(USERNAME)
 
 [GAHP_SSL_CAFILE]
 default=
@@ -5540,6 +5463,19 @@ type=path
 default=$(SBIN)/condor_credmon_oauth
 win32_default=
 type=path
+
+[LOCAL_CREDMON_TOKEN_USE_JSON]
+default=true
+type=bool
+
+[LOCAL_CREDMON_TOKEN_AUDIENCE]
+default=
+type=string
+
+[LOCAL_CREDMON_TOKEN_VERSION]
+default=scitokens:2.0
+type=string
+
 
 # standard API endpoints for common OAuth token providers
 [BOX_AUTHORIZATION_URL]
@@ -6211,11 +6147,11 @@ default : @end
 	ALLOW_WRITE_STARTD=$(ALLOW_WRITE) $(FLOCK_FROM)
 	ALLOW_READ_COLLECTOR=$(ALLOW_READ) $(FLOCK_FROM)
 	ALLOW_READ_STARTD=$(ALLOW_READ) $(FLOCK_FROM)
-	use SECURITY : WITH_AUTHENTICATION
+	use SECURITY:WITH_AUTHENTICATION
 @end
 
 [$FEATURE.AssignAccountingGroup]
-description=Set the job accounting attributes by mapping the job's Owner attribute args:(map_file)
+description=Set the job accounting attributes by mapping the job's Owner attribute args:(map_file [,check_request])
 default : @fin
 	if ! $(1?)
 	  error : use FEATURE : AssignAccountingGroup requires a map_file argument
@@ -6225,6 +6161,12 @@ default : @fin
 	JOB_TRANSFORM_AssignAccountingGroup = [ copy_Owner="AcctGroupUser"; copy_AcctGroup="RequestedAcctGroup"; eval_set_AcctGroup=usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup); eval_set_AccountingGroup=join(".",usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup),AcctGroupUser); ]
 	# make sure that the user can't qedit these attributes once they have been set.
 	IMMUTABLE_JOB_ATTRS = $(IMMUTABLE_JOB_ATTRS) AcctGroup AcctGroupUser AccountingGroup
+	# optionally check that the user requested a valid group
+	if $(2:True)
+	  SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) CheckRequestedGroup
+	  SUBMIT_REQUIREMENT_CheckRequestedGroup = RequestedAcctGroup is undefined || RequestedAcctGroup == AcctGroup
+	  SUBMIT_REQUIREMENT_CheckRequestedGroup_REASON = strcat("Permission denied setting accounting_group to ", RequestedAcctGroup)
+	endif
 	# require that the user mapped into an accounting group
 	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) AssignAccountingGroup
 	SUBMIT_REQUIREMENT_AssignAccountingGroup = AcctGroup isnt undefined && AccountingGroup isnt undefined
@@ -6429,7 +6371,7 @@ default: @end
 [$SECURITY.get_htcondor_idtokens]
 default: @end
 # Authenticate, encrypt, and monitor the integrity of all connections.
-use security : strong
+use security:strong
 
 # This configuration specifies authentication methods first, and then
 # specifies various authorizations.  Think of a passport and a visa: the
@@ -6495,14 +6437,14 @@ ALLOW_NEGOTIATOR = condor@$(TRUST_DOMAIN)
 
 [$ROLE.get_htcondor_central_manager]
 default: @end
-use security : get_htcondor_idtokens
+use security:get_htcondor_idtokens
 
-use role : CentralManager
+use role:CentralManager
 @end
 
 [$ROLE.get_htcondor_submit]
 default: @end
-use security : get_htcondor_idtokens
+use security:get_htcondor_idtokens
 
 # Allow local users to submit jobs.  Since the only way to authenticate
 # is with IDTOKENS (all of whose holders we trust) and FS (the local users),
@@ -6510,37 +6452,50 @@ use security : get_htcondor_idtokens
 # UID_DOMAIN is set (and introduces more opportunities for DNS to fail).
 ALLOW_WRITE = $(ALLOW_WRITE) *
 
-use role : submit
+use role:submit
 @end
 
 [$ROLE.get_htcondor_execute]
 default: @end
-use security : get_htcondor_idtokens
+use security:get_htcondor_idtokens
 
-use role : execute
+use role:execute
 @end
 
 ##
 ## Version-specific knobx.
 ##
 [$SECURITY.recommended_v9_0]
+description = default security config for 9.0 and later args:([service [, admins]])
 default: @end
 # Make it easy to detect if this metaknob was set.
 SECURITY_MODEL = 9.0
 
 # Assume that FS and IDTOKENS are in SEC_DEFAULT_AUTHENTICATION_METHODS,
 # which they are by default.
-use security : strong
+use security:strong
 
 # This allows anyone who can access port 9618 to READ, which lets
 # condor_status and condor_q work over the network out of the box.
 SEC_READ_AUTHENTICATION = OPTIONAL
+SEC_READ_ENCRYPTION = OPTIONAL
+SEC_READ_INTEGRITY = OPTIONAL
 
-ALLOW_ADMINISTRATOR = root@*, condor@*, condor_pool@*
-ALLOW_DAEMON = condor@*, condor_pool@*
-ALLOW_NEGOTIATOR = condor@*, condor_pool@*
+ALLOW_ADMINISTRATOR = $(1:condor)@* condor_pool@* $(2:root@*) $(3+)
+ALLOW_DAEMON = $(1:condor)@*  condor_pool@*
+ALLOW_NEGOTIATOR = $(1:condor)@* condor_pool@*
 ALLOW_WRITE = *
 ALLOW_READ = *
+@end
+
+##
+## FIPS mode settings
+##
+[$SECURITY.FIPS]
+default: @end
+FIPS = True
+use security:strong
+SEC_DEFAULT_CRYPTO_METHODS = AES,3DES
 @end
 
 ##
@@ -6637,10 +6592,7 @@ default : @end
 description=Platform specific file knobs that should be ignored on upgrade
 default=
 win32_default : @end
-	GT2_GAHP
-	UNICORE_GAHP
 	NORDUGRID_GAHP
-	CREAM_GAHP
 	LIBVIRT_XML_SCRIPT
 @end
 

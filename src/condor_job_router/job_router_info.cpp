@@ -231,10 +231,8 @@ int main(int argc, const char *argv[])
 	g_silence_dprintf = dash_diagnostic ? false : true;
 	g_save_dprintfs = true;
 	unsigned int tool_flags = JOB_ROUTER_TOOL_FLAG_AS_TOOL;
-#ifdef WIN32
-	// non-windows tools can just run as root.  but on Windows tools cannot run as LOCAL_SYSTEM so we fake it.
+	// assume job router will be running as root even if we (the tool) are not.
 	tool_flags |= JOB_ROUTER_TOOL_FLAG_CAN_SWITCH_IDS;
-#endif
 	if (dash_diagnostic) {
 		tool_flags |= dash_diagnostic;
 	}
@@ -496,9 +494,9 @@ classad::ClassAdCollection *Scheduler::GetClassAds() const
 	return NULL;
 }
 
-void Scheduler::init() {  m_mirror->init(); }
-void Scheduler::config() { m_mirror->config(); }
-void Scheduler::stop()  { m_mirror->stop(); }
+void Scheduler::init() {  if (m_mirror) m_mirror->init(); }
+void Scheduler::config() { if (m_mirror) m_mirror->config(); }
+void Scheduler::stop()  { if (m_mirror) m_mirror->stop(); }
 void Scheduler::poll()  { }
 int  Scheduler::id() const { return m_id; }
 

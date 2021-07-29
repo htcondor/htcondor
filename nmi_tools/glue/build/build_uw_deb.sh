@@ -65,6 +65,9 @@ else
     suffix=''
 fi
 
+# if running in a condor slot, set parallelism to slot size
+export DEB_BUILD_OPTIONS="parallel=${OMP_NUM_THREADS-1}"
+
 # Distribution should be one of experimental, unstable, testing, stable, oldstable, oldoldstable
 # unstable -> daily repo
 # testing -> rc repo

@@ -79,7 +79,7 @@ void
 ScheddClassad::SetAttribute( const char *attrName, const MyString &value ) const
 {
 	if ( SetAttributeString( _jobId._cluster, _jobId._proc,
-						  attrName, value.Value() ) != 0 ) {
+						  attrName, value.c_str() ) != 0 ) {
 		debug_printf( DEBUG_QUIET,
 					  "WARNING: failed to set attribute %s\n", attrName );
 		check_warning_strictness( DAG_STRICT_3 );
@@ -338,7 +338,7 @@ DagmanClassad::GetSetBatchName( const MyString &primaryDagFile,
 	if ( !GetAttribute( ATTR_JOB_BATCH_NAME, batchName, false ) ) {
 			// Default batch name is top-level DAG's primary
 			// DAG file (base name only).
-		batchName = condor_basename( primaryDagFile.Value() );
+		batchName = condor_basename( primaryDagFile.c_str() );
 		batchName += "+";
 		batchName += std::to_string( _jobId._cluster );
 		SetAttribute( ATTR_JOB_BATCH_NAME, batchName );
@@ -347,7 +347,7 @@ DagmanClassad::GetSetBatchName( const MyString &primaryDagFile,
 	CloseConnection( queue );
 
 	debug_printf( DEBUG_VERBOSE, "Workflow batch-name: <%s>\n",
-				batchName.Value() );
+				batchName.c_str() );
 }
 
 //---------------------------------------------------------------------------
@@ -367,11 +367,11 @@ DagmanClassad::GetAcctInfo( MyString &group, MyString &user )
 
 	GetAttribute( ATTR_ACCT_GROUP, group, false );
 	debug_printf( DEBUG_VERBOSE, "Workflow accounting_group: <%s>\n",
-				group.Value() );
+				group.c_str() );
 
 	GetAttribute( ATTR_ACCT_GROUP_USER, user, false );
 	debug_printf( DEBUG_VERBOSE, "Workflow accounting_group_user: <%s>\n",
-				user.Value() );
+				user.c_str() );
 
 	CloseConnection( queue );
 

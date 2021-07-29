@@ -10,6 +10,7 @@
 # % define osg      0
 # % define uw_build 1
 # % define vaultcred 1
+# % define devtoolset 0
 
 %define python 0
 
@@ -23,6 +24,7 @@
 %endif
 
 %if %uw_build
+%define devtoolset 0
 %define debug 1
 %endif
 
@@ -44,6 +46,12 @@
 %endif
 
 %define python 1
+
+%if 0%{?osg}
+%define globus 0
+%else
+%define globus 1
+%endif
 
 # Temporarily turn parallel_setup off
 %define parallel_setup 0
@@ -68,7 +76,7 @@ Version: %{tarball_version}
 %else
         %define condor_release %condor_base_release
 %endif
-Release: %condor_release%{?dist}
+Release: %{condor_release}%{?dist}
 
 License: ASL 2.0
 Group: Applications/System
@@ -182,6 +190,7 @@ BuildRequires: libcurl-devel
 %endif
 
 # Globus GSI build requirements
+%if %globus
 BuildRequires: globus-gssapi-gsi-devel
 BuildRequires: globus-gass-server-ez-devel
 BuildRequires: globus-gass-transfer-devel
@@ -204,15 +213,16 @@ BuildRequires: globus-callout-devel
 BuildRequires: globus-common-devel
 BuildRequires: globus-ftp-client-devel
 BuildRequires: globus-ftp-control-devel
+BuildRequires: voms-devel
+%endif
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
-BuildRequires: voms-devel
 BuildRequires: libtool-ltdl-devel
 
 BuildRequires: libcgroup-devel
 Requires: libcgroup
 
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
+%if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
 BuildRequires: which
 BuildRequires: devtoolset-9-toolchain
 %endif
@@ -262,6 +272,9 @@ BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 # openssh-server needed for condor_ssh_to_job
 Requires: openssh-server
 
+# net-tools needed to provide netstat for condor_who
+Requires: net-tools
+
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
@@ -272,7 +285,7 @@ Requires: condor-boinc
 %endif
 
 %if %blahp
-Requires: blahp >= 1.16.1
+Requires: blahp >= 2.0.1
 %endif
 
 # Useful tools are using the Python bindings
@@ -312,6 +325,7 @@ Requires(post): selinux-policy-targeted
 
 # Require libraries that we dlopen
 # Ganglia is optional as well as nVidia and cuda libraries
+%if %globus
 Requires: globus-callout
 Requires: globus-common
 Requires: globus-gsi-callback
@@ -325,6 +339,8 @@ Requires: globus-gss-assist
 Requires: globus-gssapi-gsi
 Requires: globus-openssl-module
 Requires: globus-xio-gsi-driver
+Requires: voms
+%endif
 Requires: krb5-libs
 Requires: libcom_err
 Requires: libtool-ltdl
@@ -332,7 +348,6 @@ Requires: munge-libs
 Requires: openssl-libs
 Requires: scitokens-cpp
 Requires: systemd-libs
-Requires: voms
 
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
@@ -704,7 +719,7 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 
 %build
 
-%if 0%{?rhel} == 7 && ! 0%{?amzn}
+%if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
 . /opt/rh/devtoolset-9/enable
 export CC=$(which cc)
 export CXX=$(which c++)
@@ -723,6 +738,7 @@ export CMAKE_PREFIX_PATH=/usr
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
+       -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -D_VERBOSE:BOOL=TRUE \
@@ -735,7 +751,6 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
-       -DWITH_CREAM:BOOL=FALSE \
        -DWITH_DRMAA:BOOL=FALSE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -764,6 +779,7 @@ export CMAKE_PREFIX_PATH=/usr
 %endif
        -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
+       -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
@@ -784,8 +800,11 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
-       -DWITH_CREAM:BOOL=FALSE \
+%if %globus
        -DWITH_GLOBUS:BOOL=TRUE \
+%else
+       -DWITH_GLOBUS:BOOL=FALSE \
+%endif
        -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
        -DWITH_LIBCGROUP:BOOL=TRUE \
        -DLIBCGROUP_FOUND_SEARCH_cgroup=/%{_lib}/libcgroup.so.1
@@ -853,6 +872,10 @@ populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{versio
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-minicondor
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/50ec2.config
 
+# Install a second config.d directory under /usr/share, used for the
+# convenience of software built on top of Condor such as GlideinWMS.
+mkdir -p -m0755 %{buildroot}/usr/share/condor/config.d
+
 mkdir -p -m0755 %{buildroot}/%{_var}/log/condor
 # Note we use %{_var}/lib instead of %{_sharedstatedir} for RHEL5 compatibility
 mkdir -p -m0755 %{buildroot}/%{_var}/lib/condor/spool
@@ -897,6 +920,7 @@ rm -f %{buildroot}/%{_bindir}/condor_top
 rm -f %{buildroot}/%{_bindir}/classad_eval
 rm -f %{buildroot}/%{_bindir}/condor_watch_q
 rm -f %{buildroot}/%{_bindir}/condor_check_password
+rm -f %{buildroot}/%{_bindir}/condor_check_config
 %endif
 
 # For EL7, move oauth credmon WSGI script out of libexec to /var/www
@@ -962,7 +986,7 @@ install -Dp -m 0644 %{SOURCE3} %{buildroot}%{_unitdir}/condor.service.d/osg-env.
 %endif
 
 %if 0%{?rhel} >= 7
-mkdir %{buildroot}%{_datadir}/condor/
+mkdir -p %{buildroot}%{_datadir}/condor/
 cp %{SOURCE8} %{buildroot}%{_datadir}/condor/
 %endif
 
@@ -1131,6 +1155,7 @@ rm -rf %{buildroot}
 %dir %_sysconfdir/condor/tokens.d/
 %dir %_sysconfdir/condor/config.d/
 %config(noreplace) %{_sysconfdir}/condor/config.d/00-htcondor-9.0.config
+%dir /usr/share/condor/config.d/
 %_libdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/bash_completion.d/condor
@@ -1152,18 +1177,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
 %_libexecdir/condor/htcondor_docker_test
-%if %blahp
-%dir %_libexecdir/condor/glite/bin
-%_libexecdir/condor/glite/bin/kubernetes_cancel.sh
-%_libexecdir/condor/glite/bin/kubernetes_hold.sh
-%_libexecdir/condor/glite/bin/kubernetes_resume.sh
-%_libexecdir/condor/glite/bin/kubernetes_status.sh
-%_libexecdir/condor/glite/bin/kubernetes_submit.sh
-%_libexecdir/condor/glite/bin/nqs_cancel.sh
-%_libexecdir/condor/glite/bin/nqs_hold.sh
-%_libexecdir/condor/glite/bin/nqs_resume.sh
-%_libexecdir/condor/glite/bin/nqs_status.sh
-%_libexecdir/condor/glite/bin/nqs_submit.sh
+%if %globus
+%_sbindir/condor_gridshell
+%_sbindir/nordugrid_gahp
 %endif
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster
@@ -1197,6 +1213,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/panda-plugin.so
 %_libexecdir/condor/pandad
+%_libexecdir/condor/ce-audit.so
 %_libexecdir/condor/adstash/__init__.py
 %_libexecdir/condor/adstash/config.py
 %_libexecdir/condor/adstash/convert.py
@@ -1208,7 +1225,6 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_config_val.1.gz
-%_mandir/man1/condor_convert_history.1.gz
 %_mandir/man1/condor_dagman.1.gz
 %_mandir/man1/condor_fetchlog.1.gz
 %_mandir/man1/condor_findhost.1.gz
@@ -1271,6 +1287,12 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_tail.1.gz
 %_mandir/man1/condor_who.1.gz
 %_mandir/man1/condor_now.1.gz
+%_mandir/man1/classad_eval.1.gz
+%_mandir/man1/classads.1.gz
+%_mandir/man1/condor_adstash.1.gz
+%_mandir/man1/condor_evicted_files.1.gz
+%_mandir/man1/condor_watch_q.1.gz
+%_mandir/man1/get_htcondor.1.gz
 # bin/condor is a link for checkpoint, reschedule, vacate
 %_bindir/condor_submit_dag
 %_bindir/condor_who
@@ -1289,6 +1311,7 @@ rm -rf %{buildroot}
 %_bindir/condor_reschedule
 %_bindir/condor_userprio
 %_bindir/condor_check_password
+%_bindir/condor_check_config
 %_bindir/condor_dagman
 %_bindir/condor_rm
 %_bindir/condor_vacate
@@ -1339,7 +1362,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
-%_sbindir/condor_convert_history
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
 %_sbindir/condor_had
@@ -1369,12 +1391,10 @@ rm -rf %{buildroot}
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
 %_sbindir/condor_gridshell
-%_sbindir/gahp_server
-%_sbindir/grid_monitor
 %_sbindir/remote_gahp
-%_sbindir/nordugrid_gahp
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
+%_sbindir/arc_gahp
 %_libexecdir/condor/condor_gpu_discovery
 %_libexecdir/condor/condor_gpu_utilization
 %_sbindir/condor_vm-gahp-vmware
@@ -1533,12 +1553,16 @@ rm -rf %{buildroot}
 %_bindir/condor_top
 %_bindir/classad_eval
 %_bindir/condor_watch_q
+%_bindir/htcondor
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
+%_libexecdir/condor/libclassad_python3_user.so
 %_libexecdir/condor/libcollector_python_plugin.cpython-3*.so
+%_libexecdir/condor/libcollector_python3_plugin.so
 /usr/lib64/python%{python3_version}/site-packages/classad/
 /usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
+/usr/lib64/python%{python3_version}/site-packages/htcondor_cli/
 %endif
 %endif
 %endif
@@ -1663,6 +1687,60 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.1-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+* Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.3-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+* Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.14-1
+- Fix for security issue
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+
+* Thu Jul 08 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.2-1
+- HTCondor can be set up to use only FIPS 140-2 approved security functions
+- If the Singularity test fails, the job goes idle rather than getting held
+- Can divide GPU memory, when making multiple GPU entries for a single GPU
+- Startd and Schedd cron job maximum line length increased to 64k bytes
+- Added first class submit keywords for SciTokens
+- Fixed MUNGE authentication
+- Fixed Windows installer to work when the install location isn't C:\Condor
+
+* Thu May 20 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.0-1
+- Support for submitting to ARC-CE via the REST interface
+- DAGMan can put failed jobs on hold (user can correct problems and release)
+- Can run gdb and ptrace within Docker containers
+- A small Docker test job is run on the execute node to verify functionality
+- The number of instructions executed is reported in the job Ad on Linux
+
+* Mon May 17 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.1-1
+- Fix problem where X.509 proxy refresh kills job when using AES encryption
+- Fix problem when jobs require a different machine after a failure
+- Fix problem where a job matched a machine it can't use, delaying job start
+- Fix exit code and retry checking when a job exits because of a signal
+- Fix a memory leak in the job router when a job is removed via job policy
+- Fixed the back-end support for the 'bosco_cluster --add' command
+- An updated Windows installer that supports IDTOKEN authentication
+
+* Wed Apr 14 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.0-1
+- Absent any configuration, HTCondor denies authorization to all users
+- AES encryption is used for all communication and file transfers by default
+- New IDTOKEN authentication method enables fine-grained authorization
+- IDTOKEN authentication method is designed to replace GSI
+- Improved support for GPUs, including machines with multiple GPUs
+- New condor_watch_q tool that efficiently provides live job status updates
+- Many improvements to the Python bindings
+- New Python bindings for DAGMan and chirp
+- Improved file transfer plugins supporting uploads and authentication
+- File transfer times are now recorded in the job log
+- Added support for jobs that need to acquire and use OAUTH tokens
+- Many memory footprint and performance improvements in DAGMan
+- Submitter ceilings can limit the number of jobs per user in a pool
+
 * Tue Mar 30 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.13-1
 - Host based security is no longer the default security model
 - Hardware accelerated integrity and AES encryption used by default

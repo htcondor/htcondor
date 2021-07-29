@@ -126,6 +126,7 @@ class ArgList {
 		// Parse args string in plain old V1 syntax.
 		// Double-quotes should not be backwacked.
 	bool AppendArgsV1Raw(char const *args,MyString *error_msg);
+	bool AppendArgsV1Raw(char const *args, std::string & error_msg);
 
 		// Parse args string in V1Raw or V2Quoted syntax.  This is used
 		// anywhere except for arguments strings in submit files (that
@@ -187,6 +188,7 @@ class ArgList {
 
 		// ...
 	void GetArgsStringForLogging( MyString * result ) const;
+	void GetArgsStringForLogging( std::string & result ) const;
 
 		// Return a NULL-terminated string array of args.
 		// Caller should delete array (e.g. with deleteStringArray())
@@ -215,11 +217,13 @@ class ArgList {
 		// necessary markings to make it correctly recognized as V2
 		// by AppendArgsV1or2Raw().
 	bool GetArgsStringV1or2Raw(MyString *result,MyString *error_msg) const;
+	bool GetArgsStringV1or2Raw(std::string & result) const;
 
 		// From args in ClassAd, create V1 args string if
 		// possible. o.w. V2, with necessary markings to make it
 		// correctly recognized as V2 by AppendArgsV1or2Raw().
 	bool GetArgsStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *error_msg);
+	bool GetArgsStringV1or2Raw(ClassAd const *ad, std::string & result, std::string & error_msg);
 
 		// Create an args string for windows CreateProcess().
 	bool GetArgsStringWin32(MyString *result,int skip_args) const;
@@ -229,6 +233,7 @@ class ArgList {
 		// and so that it is treated as a single argument even if it contains
 		// spaces.
 	bool GetArgsStringSystem(MyString *result,int skip_args) const;
+	bool GetArgsStringSystem(std::string & result,int skip_args) const;
 
 	bool InputWasV1() const {return input_was_unknown_platform_v1;}
 

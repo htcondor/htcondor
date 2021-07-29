@@ -28,7 +28,6 @@
 #include "dc_collector.h"
 #include "extArray.h"
 #include "string_list.h"
-#include "MyString.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
 #include "condor_api.h"
 #include "condor_string.h"   // for strnewp()
@@ -107,7 +106,7 @@ static struct AppType {
 	bool   ping_all_addrs;	 //
 	int    query_ready_timeout;
 	int    poll_for_master_time; // time spent polling for the master
-	MyString query_ready_requirements;
+	std::string query_ready_requirements;
 	int    test_backward;   // test backward reading code.
 	vector<pid_t> query_pids;
 	vector<const char *> query_log_dirs;
@@ -396,6 +395,23 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 		// first line after headings is not data, but underline
 		line = getline_trim(stream);
 		if (line) data = line;
+	}
+
+	// If headers have spaces in them, change to underline
+	size_t lpos = headings.find("Local Address");
+	size_t rpos = headings.find("Foreign Address");
+	size_t ppos = headings.find("PID/Program name");
+
+	if (lpos != std::string::npos) {
+			headings[lpos + 5] = '_';
+	}
+
+	if (rpos != std::string::npos) {
+			headings[rpos + 7] = '_';
+	}
+
+	if (ppos != std::string::npos) {
+			headings = headings.substr(0, ppos + 3);
 	}
 
 	if (App.diagnostic > 2) { printf("HD: %s\n", headings.c_str()); printf("SH: %s\n", subhead.c_str()); }
@@ -731,9 +747,9 @@ static void get_process_table(TABULAR_MAP & table)
 	}
 
 	if (App.diagnostic > 1) {
-		MyString args;
-		cmdargs.GetArgsStringForDisplay(&args);
-		printf("Parsed command output> %s\n", args.Value());
+		std::string args;
+		cmdargs.GetArgsStringForDisplay(args);
+		printf("Parsed command output> %s\n", args.c_str());
 
 		printf("with filter> %s\n", "cmd_contains(\"condor\")");
 		dump_tabular_map(table, tm_cmd_contains("condor"));
@@ -752,8 +768,15 @@ static void get_address_table(TABULAR_MAP & table)
 	cmdargs.AppendArg("netstat");
 	cmdargs.AppendArg("-ano");
 #else
-	cmdargs.AppendArg("lsof");
-	cmdargs.AppendArg("-nPi");
+	cmdargs.AppendArg("netstat");
+	cmdargs.AppendArg("-n");
+	cmdargs.AppendArg("-t");
+	cmdargs.AppendArg("-p");
+	cmdargs.AppendArg("-w");
+#endif
+
+#ifndef WIN32
+	fclose(stderr);
 #endif
 
 	FILE * stream = my_popen(cmdargs, "r", 0);
@@ -769,15 +792,18 @@ static void get_address_table(TABULAR_MAP & table)
 		}
 		if (App.diagnostic > 1) { printf("skipping: %s\n", line); }
 		fMultiWord = true;
+		#else
+			// on Linux skip first line of netstat output
+		getline_trim(stream);
 		#endif
 		get_fields_from_tabular_stream(stream, table, fMultiWord);
 		my_pclose(stream);
 	}
 
 	if (App.diagnostic > 1) {
-		MyString args;
-		cmdargs.GetArgsStringForDisplay(&args);
-		printf("Parsed command output> %s\n", args.Value());
+		std::string args;
+		cmdargs.GetArgsStringForDisplay(args);
+		printf("Parsed command output> %s\n", args.c_str());
 
 		printf("with filter> %s\n", "true");
 		dump_tabular_map(table, tabular_map_constraint());
@@ -805,8 +831,8 @@ void convert_to_sinful_addr(std::string & out, const std::string & str)
 
 	if (port_offset) {
 		// TODO Picking IPv4 arbitrarily.
-		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
-		formatstr(out, "<%s:%s>", my_ip.Value(), str.substr(port_offset).c_str());
+		std::string my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		formatstr(out, "<%s:%s>", my_ip.c_str(), str.substr(port_offset).c_str());
 	} else {
 		formatstr(out, "<%s>", str.c_str());
 	}
@@ -902,7 +928,7 @@ bool determine_address_for_pid(pid_t pid, TABULAR_MAP & address_table, TABULAR_M
 	addr.clear();
 
 	TABULAR_MAP::const_iterator itPID  = address_table.find("PID");
-	TABULAR_MAP::const_iterator itAddr = address_table.find("NAME");
+	TABULAR_MAP::const_iterator itAddr = address_table.find("Local_Address");
 
 	std::string temp;
 	if (itPID != address_table.end() && itAddr != address_table.end()) {
@@ -1177,7 +1203,7 @@ void parse_args(int /*argc*/, char *argv[])
 						}
 					}
 
-					MyString lbl = "";
+					std::string lbl = "";
 					int wid = 0;
 					int opts = FormatOptionNoTruncate;
 					if (fheadings || App.print_head.Length() > 0) {
@@ -1186,17 +1212,17 @@ void parse_args(int /*argc*/, char *argv[])
 						opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
 						App.print_head.Append(hd);
 					}
-					else if (flabel) { lbl.formatstr("%s = ", parg); wid = 0; opts = 0; }
+					else if (flabel) { formatstr(lbl,"%s = ", parg); wid = 0; opts = 0; }
 
 					lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 					if (App.diagnostic) {
 						printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %llx[%s]\n",
-							ixArg, lbl.Value(), wid, opts, (long long)(StringCustomFormat)cust_fmt, pattr);
+							ixArg, lbl.c_str(), wid, opts, (long long)(StringCustomFormat)cust_fmt, pattr);
 					}
 					if (cust_fmt) {
 						App.print_mask.registerFormat(NULL, wid, opts, cust_fmt, pattr);
 					} else {
-						App.print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
+						App.print_mask.registerFormat(lbl.c_str(), wid, opts, pattr);
 					}
 				}
 			} else if (IsArg(parg, "job", 3)) {
@@ -1795,7 +1821,7 @@ static void read_address_file(const char * filename, std::string & addr)
 	close(fd);
 
 	// return the address
-	addr = buf;
+	if (cbRead > 0) addr.assign(buf, cbRead);
 }
 
 

@@ -82,6 +82,7 @@ int ConvertSMVer2Cores(int major, int minor)
 		{ 0x72, 64 }, // Volta Generation (SM 7.2) GV10B class
 		{ 0x75, 64 }, // Turing Generation (SM 7.5) TU1xx class
 		{ 0x80, 64 }, // Ampere Generation (SM 8.0) GA100 class
+		{ 0x86, 128}, // Ampere Generation (SM 8.6) GA10x class  (GeForce  RTX 3060)
 		{   -1, -1 }
 	};
 
@@ -197,6 +198,7 @@ void usage(FILE* output, const char* argv0);
 bool addToDeviceWhiteList( char * list, std::list<int> & dwl ) {
 	char * tokenizer = strdup( list );
 	if( tokenizer == NULL ) {
+		// Deliberately unparseable.
 		fprintf( stderr, "Error: device list too long\n" );
 		return false;
 	}
@@ -214,50 +216,45 @@ constructGPUID( const char * opt_pre, int dev, int opt_uuid, int opt_opencl, int
 	std::string gpuID = Format( "%s%i", opt_pre, dev );
 
 	// The -uuid and -short-uuid flags don't imply -properties.
-	if( opt_uuid && !opt_opencl ) {
+	if( opt_uuid && !opt_opencl && !enumeratedDevices[dev].uuid.empty()) {
 		gpuID = gpuIDFromUUID( enumeratedDevices[dev].uuid, opt_short_uuid );
 	}
 
 	return gpuID;
 }
 
+typedef std::map<std::string, std::string> KVP;
+typedef std::map<std::string, KVP> MKVP;
 
 void
-printDynamicProperties( std::string gpuID, nvmlDevice_t device ) {
-	std::replace( gpuID.begin(), gpuID.end(), '-', '_' );
-	std::replace( gpuID.begin(), gpuID.end(), '/', '_' );
+setPropertiesFromDynamicProps( KVP & props, nvmlDevice_t device ) {
 
-	// fprintf( stderr, "printDynamicProperties(%s)\n", gpuID.c_str() );
 	unsigned int tuint;
 	nvmlReturn_t result = nvmlDeviceGetFanSpeed(device,&tuint);
 	if ( result == NVML_SUCCESS ) {
-		printf("%sFanSpeedPct=%u\n",gpuID.c_str(),tuint);
+		props["FanSpeedPct"] = Format("%u",tuint);
 	}
 
 	result = nvmlDeviceGetPowerUsage(device,&tuint);
 	if ( result == NVML_SUCCESS ) {
-		printf("%sPowerUsage_mw=%u\n",gpuID.c_str(),tuint);
+		props["PowerUsage_mw"] = Format("%u",tuint);
 	}
 
 	result = nvmlDeviceGetTemperature(device,NVML_TEMPERATURE_GPU,&tuint);
 	if ( result == NVML_SUCCESS ) {
-		printf("%sDieTempC=%u\n",gpuID.c_str(),tuint);
+		props["DieTempC"] = Format("%u",tuint);
 	}
 
 	unsigned long long eccCounts;
 	result = nvmlDeviceGetTotalEccErrors(device,NVML_SINGLE_BIT_ECC,NVML_VOLATILE_ECC,&eccCounts);
 	if ( result == NVML_SUCCESS ) {
-		printf("%sEccErrorsSingleBit=%llu\n",gpuID.c_str(),eccCounts);
+		props["EccErrorsSingleBit"] = Format("%llu",eccCounts);
 	}
 	result = nvmlDeviceGetTotalEccErrors(device,NVML_DOUBLE_BIT_ECC,NVML_VOLATILE_ECC,&eccCounts);
 	if ( result == NVML_SUCCESS ) {
-		printf("%sEccErrorsDoubleBit=%llu\n",gpuID.c_str(),eccCounts);
+		props["EccErrorsDoubleBit"] = Format("%llu",eccCounts);
 	}
 }
-
-
-typedef std::map<std::string, std::string> KVP;
-typedef std::map<std::string, KVP> MKVP;
 
 void
 setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra ) {
@@ -298,7 +295,7 @@ main( int argc, const char** argv)
 	int opt_hetero = 0;  // don't assume properties are homogeneous
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
-	int opt_cuda_index = 0; // publish by index (I.e CUDA<N>)
+	int opt_nested = 0;  // publish properties using nested ads
 	int opt_uuid = -1;   // publish DetectedGPUs as a list of GPU-<uuid> rather than than CUDA<N>
 	int opt_short_uuid = -1; // use shortened uuids
 	std::list<int> dwl; // Device White List
@@ -311,6 +308,7 @@ main( int argc, const char** argv)
 	const char * opt_pre = "CUDA";
 	const char * opt_pre_arg = NULL;
 	int opt_repeat = 0;
+	int opt_divide = 0;
 	int opt_packed = 0;
 	const char * pcolon;
 	int i;
@@ -360,6 +358,9 @@ main( int argc, const char** argv)
 			opt_basic = 1; // publish basic GPU properties
 			opt_extra = 1; // publish extra GPU properties
 		}
+		else if (is_dash_arg_prefix(argv[i], "nested", 2)) {
+			opt_nested = 1;
+		}
 		else if (is_dash_arg_prefix(argv[i], "dynamic", 3)) {
 			// We need the basic properties in order to determine the
 			// dynamic ones (most noticeably, the PCI bus ID).
@@ -393,10 +394,21 @@ main( int argc, const char** argv)
 		}
 		else if (is_dash_arg_prefix(argv[i], "repeat", -1)) {
 			if (! argv[i+1] || '-' == *argv[i+1]) {
-				opt_repeat = 2;
+			    // This preserves the value from -divide.
+			    if( opt_repeat == 0 ) { opt_repeat = 2; }
 			} else {
 				opt_repeat = atoi(argv[++i]);
 			}
+            opt_divide = 0;
+		}
+		else if (is_dash_arg_prefix(argv[i], "divide", -1)) {
+			if (! argv[i+1] || '-' == *argv[i+1]) {
+			    // This preserves the setting from -repeat.
+			    if( opt_repeat == 0 ) { opt_repeat = 2; }
+			} else {
+				opt_repeat = atoi(argv[++i]);
+			}
+			opt_divide = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "packed", -1)) {
 			opt_packed = 1;
@@ -411,22 +423,21 @@ main( int argc, const char** argv)
 			}
 		}
 		else if (is_dash_arg_prefix(argv[i], "by-index", 4)) {
-			opt_cuda_index = 1;
 			opt_short_uuid = opt_uuid = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "uuid", 2)) {
 			opt_uuid = 1;
-			opt_cuda_index = opt_short_uuid = 0;
+			opt_short_uuid = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "short-uuid", -1)) {
 			opt_uuid = 1;
 			opt_short_uuid = 1;
-			opt_cuda_index = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "prefix", 3)) {
 			if (argv[i+1]) {
 				opt_pre_arg = argv[++i];
 				if (strlen(opt_pre_arg) > 80) {
+						// Deliberately unparseable.
 						fprintf (stderr, "Error: -prefix should be less than 80 characters\n");
 						return 1;
 				}
@@ -434,6 +445,7 @@ main( int argc, const char** argv)
 		}
 		else if (is_dash_arg_prefix(argv[i], "device", 3)) {
 			if (! argv[i+1] || '-' == *argv[i+1]) {
+				// Deliberately unparseable.
 				fprintf (stderr, "Error: -device requires an argument\n");
 				usage(stderr, argv[0]);
 				return 1;
@@ -445,6 +457,7 @@ main( int argc, const char** argv)
 			if (pcolon) {
 				sim_index = atoi(pcolon+1);
 				if (sim_index < 0 || sim_index > sim_index_max) {
+					// Deliberately unparseable.
 					fprintf(stderr, "Error: simulation must be in range of 0-%d\r\n", sim_index_max);
 					usage(stderr, argv[0]);
 					return 1;
@@ -501,9 +514,9 @@ main( int argc, const char** argv)
 			// isn't, maybe this should only show up in -debug?
 			print_error(MODE_ERROR, "Unable to load NVML; will not discover dynamic properties or MIG instances.\n" );
 		} else {
-		    nvmlReturn_t r = nvmlInit();
+			nvmlReturn_t r = nvmlInit();
 			if( r != NVML_SUCCESS ) {
-			    print_error(MODE_ERROR, "Warning: nvmlInit() failed with error %d; will not discover dynamic properties or MIG instances.\n", r );
+				print_error(MODE_ERROR, "Warning: nvmlInit() failed with error %d; will not discover dynamic properties or MIG instances.\n", r );
 				dlclose( nvml_handle );
 				nvml_handle = NULL;
 			}
@@ -548,7 +561,9 @@ main( int argc, const char** argv)
 	std::vector< BasicProps > enumeratedDevices;
 	if(! opt_opencl) {
 		if(! enumerateCUDADevices(enumeratedDevices)) {
-			fprintf( stderr, "Failed to enumerate GPU devices, aborting.\n" );
+			const char * problem = "Failed to enumerate GPU devices";
+			fprintf( stderr, "# %s, aborting.\n", problem );
+			fprintf( stdout, "condor_gpu_discovery_error = \"%s\"\n", problem );
 			return 1;
 		}
 
@@ -566,9 +581,10 @@ main( int argc, const char** argv)
 				// NVML and CUDA UUIDs differ in this prefix.
 				std::string UUID = "GPU-" + bp.uuid;
 				cudaDevices.insert( UUID );
-				// fprintf( stderr, "Adding %s to the CUDA device list\n", UUID.c_str() );
 			} else {
-				fprintf( stderr, "Not enumerating NVML devices because a CUDA device has no UUID.  This usually means you should upgrade your CUDA libaries.\n" );
+				const char * problem = "Not enumerating NVML devices because a CUDA device has no UUID.  This usually means you should upgrade your CUDA libaries.";
+				fprintf( stderr, "# %s\n", problem );
+				fprintf( stdout, "condor_gpu_discovery_error = \"%s\"\n", problem );
 				shouldEnumerateNVMLDevices = false;
 			}
 		}
@@ -576,7 +592,9 @@ main( int argc, const char** argv)
 		if( shouldEnumerateNVMLDevices && nvml_handle ) {
 			nvmlReturn_t r = enumerateNVMLDevices(nvmlDevices);
 			if(r != NVML_SUCCESS) {
-				fprintf( stderr, "Failed to enumerate MIG devices (%d: %s), aborting.\n", r, nvmlErrorString(r) );
+				const char * problem = "Failed to enumerate MIG devices";
+				fprintf( stderr, "# %s (%d: %s)\n", problem, r, nvmlErrorString(r) );
+				fprintf( stdout, "condor_gpu_discovery_error = \"%s\"\n", problem );
 				return 1;
 			}
 
@@ -589,7 +607,6 @@ main( int argc, const char** argv)
 				parentUUID = parentUUID.substr( 8 );
 				parentUUID.erase( parentUUID.find( "/" ), std::string::npos );
 				migDevices.insert(parentUUID);
-				// fprintf( stderr, "Adding %s to MIG device list for MIG instance %s\n", parentUUID.c_str(), bp.uuid.c_str() );
 			}
 		}
 	}
@@ -601,6 +618,7 @@ main( int argc, const char** argv)
 	// we are looking at a homogenous or heterogeneous pool
 	//
 	MKVP dev_props;
+	KVP common; // props that have a common value for all GPUS will be set in this collection
 
 	std::string detected_gpus;
 	int filteredDeviceCount = 0;
@@ -610,13 +628,17 @@ main( int argc, const char** argv)
 			continue;
 		}
 
+		// if we are defaulting to UUID, but the device has no UUID, switch the default to -by-index
+		if ((opt_uuid < 0) && enumeratedDevices[dev].uuid.empty()) {
+			opt_short_uuid = opt_uuid = 0;
+		}
+
 		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
 
 		// Skip devices which have MIG instances associated with them.
 		if((! opt_opencl) && nvml_handle) {
 			const std::string & UUID = enumeratedDevices[dev].uuid;
 			if( migDevices.find( UUID ) != migDevices.end() ) {
-				// fprintf( stderr, "[CUDA dev_props] Skipping %s.\n", UUID.c_str() );
 				continue;
 			}
 		}
@@ -625,11 +647,10 @@ main( int argc, const char** argv)
 		detected_gpus += gpuID;
 		++filteredDeviceCount;
 
-		// fprintf( stderr, "[CUDA dev_props] Adding CUDA device %s\n", gpuID.c_str() );
-
 		if(! opt_basic) { continue; }
 
 		dev_props[gpuID].clear();
+
 		KVP & props = dev_props.find(gpuID)->second;
 
 		if(! opt_opencl) {
@@ -697,12 +718,10 @@ main( int argc, const char** argv)
 	//
 	for( const BasicProps & bp : nvmlDevices ) {
 		if( migDevices.find( bp.uuid ) != migDevices.end() ) {
-			// fprintf( stderr, "[nvml dev_props] Skipping MIG device parent %s.\n", bp.uuid.c_str() );
 			continue;
 		}
 
 		if( cudaDevices.find( bp.uuid ) != cudaDevices.end() ) {
-			// fprintf( stderr, "[nvml dev_props] Skipping CUDA device %s.\n", bp.uuid.c_str() );
 			continue;
 		}
 
@@ -711,13 +730,86 @@ main( int argc, const char** argv)
 		detected_gpus += gpuID;
 		++filteredDeviceCount;
 
-		// fprintf( stderr, "[nvml dev_props] Adding NVML device %s\n", gpuID.c_str() );
-
+		dev_props[gpuID].clear();
 		if(! opt_basic) { continue; }
 
-		dev_props[gpuID].clear();
 		KVP & props = dev_props.find(gpuID)->second;
 		setPropertiesFromBasicProps( props, bp, opt_extra );
+	}
+
+	// check for device homogeneity so we can print out simpler
+	// config/device attributes. we do this before we set dynamic props
+	// so that dynamic props never end up in the common collection
+	if (opt_basic) {
+		if (! opt_hetero && ! dev_props.empty()) {
+			const KVP & dev0 = dev_props.begin()->second;
+			for (KVP::const_iterator it = dev0.begin(); it != dev0.end(); ++it) {
+				bool all_match = true;
+				MKVP::const_iterator mit = dev_props.begin();
+				while (++mit != dev_props.end()) {
+					const KVP & devN = mit->second;
+					KVP::const_iterator pair = devN.find(it->first);
+					if (pair == devN.end() || pair->second != it->second) {
+						all_match = false;
+					}
+					if (! all_match) break;
+				}
+				if (all_match) {
+					common[it->first] = it->second;
+				}
+			}
+		}
+	}
+
+	//
+	// Dynamic properties
+	//
+	if (opt_dynamic) {
+
+		// Dynamic properties for CUDA devices
+		for (dev = 0; dev < deviceCount; ++dev) {
+			if ((!dwl.empty()) && std::find(dwl.begin(), dwl.end(), dev) == dwl.end()) {
+				continue;
+			}
+
+			// Determine the GPU ID.
+			std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
+
+			const std::string & UUID = enumeratedDevices[dev].uuid;
+			if (migDevices.find(UUID) != migDevices.end()) {
+				// fprintf( stderr, "[dynamic CUDA properties] Skipping MIG parent device %s.\n", UUID.c_str() );
+				continue;
+			}
+
+			nvmlDevice_t device;
+			if (NVML_SUCCESS != findNVMLDeviceHandle(enumeratedDevices[dev].uuid, & device)) {
+				continue;
+			}
+
+			KVP & props = dev_props.find(gpuID)->second;
+			setPropertiesFromDynamicProps(props, device);
+		}
+
+		// Dynamic properties for NVML devices
+		for (auto bp : nvmlDevices) {
+			if (cudaDevices.find(bp.uuid) != cudaDevices.end()) {
+				// fprintf( stderr, "[dynamic NVML properties] Skipping CUDA device %s.\n", bp.uuid.c_str() );
+				continue;
+			}
+
+			nvmlDevice_t device;
+			if (NVML_SUCCESS != findNVMLDeviceHandle(bp.uuid, & device)) {
+				// fprintf( stderr, "[dynamic NVML properties] Skipping NVML device %s because I can't find its handle.\n", bp.uuid.c_str() );
+				continue;
+			}
+
+			std::string gpuID = gpuIDFromUUID(bp.uuid, opt_short_uuid);
+			auto gt = dev_props.find(gpuID);
+			if (gt != dev_props.end()) {
+				KVP & props = gt->second;
+				setPropertiesFromDynamicProps(props, device);
+			}
+		}
 	}
 
 	//
@@ -754,6 +846,24 @@ main( int argc, const char** argv)
 				left = delim + 2;
 			} while( true );
 		}
+
+		// ... and the amount of reported memory per device.
+		if( opt_divide ) {
+			for (MKVP::iterator mit = dev_props.begin(); mit != dev_props.end(); ++mit) {
+				if (mit->second.empty()) continue;
+
+				int global_memory = 0;
+				for (KVP::iterator it = mit->second.begin(); it != mit->second.end(); ++it) {
+					if( it->first == "GlobalMemoryMb" ) {
+						global_memory = std::stoi( it->second );
+						it->second = std::to_string(global_memory / opt_repeat);
+					}
+				}
+				if(global_memory != 0) {
+					mit->second["DeviceMemoryMb"] = std::to_string(global_memory);
+				}
+			}
+		}
 	}
 
 
@@ -766,92 +876,39 @@ main( int argc, const char** argv)
 	}
 
 
-	// check for device homogeneity so we can print out simpler
-	// config/device attributes
+	// now print out device properties.
 	if (opt_basic) {
-		KVP common;
-		if (! opt_hetero && ! dev_props.empty()) {
-			const KVP & dev0 = dev_props.begin()->second;
-			for (KVP::const_iterator it = dev0.begin(); it != dev0.end(); ++it) {
-				bool all_match = true;
-				MKVP::const_iterator mit = dev_props.begin();
-				while (++mit != dev_props.end()) {
-					const KVP & devN = mit->second;
-					KVP::const_iterator pair = devN.find(it->first);
-					if (pair == devN.end() || pair->second != it->second) {
-						all_match = false;
-					}
-					if (! all_match) break;
-				}
-				if (all_match) {
-					common[it->first] = it->second;
-				}
-			}
-		}
-
-		// now print out device properties.
 		if (! common.empty()) {
+			if (opt_nested) {
+				printf("Common=[ ");
+				for (KVP::const_iterator it = common.begin(); it != common.end(); ++it) {
+					printf("%s=%s; ", it->first.c_str(), it->second.c_str());
+				}
+				printf("]\n");
+			} else
 			for (KVP::const_iterator it = common.begin(); it != common.end(); ++it) {
 				printf("%s%s=%s\n", opt_pre, it->first.c_str(), it->second.c_str());
 			}
 		}
 		for (MKVP::const_iterator mit = dev_props.begin(); mit != dev_props.end(); ++mit) {
+			if (mit->second.empty()) continue;
+			std::string attrpre(mit->first.c_str());
+			std::replace(attrpre.begin(), attrpre.end(), '-', '_');
+			std::replace(attrpre.begin(), attrpre.end(), '/', '_');
+			if (opt_nested) {
+				printf("%s=[ id=\"%s\"; ", attrpre.c_str(), mit->first.c_str());
+				for (KVP::const_iterator it = mit->second.begin(); it != mit->second.end(); ++it) {
+					if (common.find(it->first) != common.end()) continue;
+					printf("%s=%s; ", it->first.c_str(), it->second.c_str());
+				}
+				printf("]\n");
+			} else
 			for (KVP::const_iterator it = mit->second.begin(); it != mit->second.end(); ++it) {
 				if (common.find(it->first) != common.end()) continue;
-				std::string attrpre(mit->first.c_str());
-				std::replace(attrpre.begin(), attrpre.end(), '-', '_');
-				std::replace(attrpre.begin(), attrpre.end(), '/', '_');
 				printf("%s%s=%s\n", attrpre.c_str(), it->first.c_str(), it->second.c_str());
 			}
 		}
 	}
-
-
-	//
-	// Dynamic properties
-	//
-	if(! opt_dynamic) { return 0; }
-
-	// Dynamic properties for CUDA devices
-	for( dev = 0; dev < deviceCount; ++dev ) {
-		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
-			continue;
-		}
-
-		// Determine the GPU ID.
-		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
-
-		const std::string & UUID = enumeratedDevices[dev].uuid;
-		if( migDevices.find( UUID ) != migDevices.end() ) {
-			// fprintf( stderr, "[dynamic CUDA properties] Skipping MIG parent device %s.\n", UUID.c_str() );
-			continue;
-		}
-
-		nvmlDevice_t device;
-		if(NVML_SUCCESS != findNVMLDeviceHandle(enumeratedDevices[dev].uuid, & device)) {
-			continue;
-		}
-
-		printDynamicProperties( gpuID, device );
-	}
-
-	// Dynamic properties for NVML devices
-	for( auto bp : nvmlDevices ) {
-		if( cudaDevices.find( bp.uuid ) != cudaDevices.end() ) {
-			// fprintf( stderr, "[dynamic NVML properties] Skipping CUDA device %s.\n", bp.uuid.c_str() );
-			continue;
-		}
-
-		nvmlDevice_t device;
-		if(NVML_SUCCESS != findNVMLDeviceHandle(bp.uuid, & device)) {
-			// fprintf( stderr, "[dynamic NVML properties] Skipping NVML device %s because I can't find its handle.\n", bp.uuid.c_str() );
-			continue;
-		}
-
-		std::string gpuID = gpuIDFromUUID( bp.uuid, opt_short_uuid );
-		printDynamicProperties( gpuID, device );
-	}
-
 
 	//
 	// Clean up on the way out.
@@ -873,6 +930,7 @@ void usage(FILE* out, const char * argv0)
 		"    -extra            Include extra GPU device properties\n"
 		"    -dynamic          Include dynamic GPU device properties\n"
 		"    -mixed            Assume mixed GPU configuration\n"
+//		"    -nested           Print properties using nested ClassAds\n"
 		"    -device <N>       Include properties only for GPU device N\n"
 		"    -tag <string>     use <string> as resource tag, default is GPUs\n"
 		"    -prefix <string>  use <string> as property prefix, default is CUDA or OCL\n"
@@ -887,6 +945,10 @@ void usage(FILE* out, const char * argv0)
 		"    -config           Output in HTCondor config syntax\n"
 		"    -repeat [<N>]     Repeat list of detected GPUs N (default 2) times\n"
 		"                      (e.g., DetectedGPUS = \"CUDA0, CUDA1, CUDA0, CUDA1\")\n"
+		"    -divide [<N>]     As -repeat, but divide GlobalMemoryMb by N.\n"
+		"                      With both -repeat and -divide:\n"
+		"                        the last flag wins,\n"
+		"                        but the default won't reset an explicit N.\n"
 		"    -packed           When repeating, repeat each GPU, not the whole list\n"
 		"                      (e.g., DetectedGPUs = \"CUDA0, CUDA0, CUDA1, CUDA1\")\n"
 		"    -cron             Output for use as a STARTD_CRON job, use with -dynamic\n"

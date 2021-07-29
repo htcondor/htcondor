@@ -89,7 +89,7 @@ bool
 StartdHibernator::initialize( void )
 {
 	ArgList	argList;
-	argList.AppendArg( m_plugin_path.Value() );
+	argList.AppendArg( m_plugin_path );
 
 	if ( m_plugin_args ) {
 		m_plugin_args->rewind();
@@ -108,14 +108,14 @@ StartdHibernator::initialize( void )
 	FILE *fp = my_popenv( args, "r", MY_POPEN_OPT_WANT_STDERR );
 	deleteStringArray( args );
 
-	MyString	cmd;
-	argList.GetArgsStringForDisplay( &cmd );
+	std::string	cmd;
+	argList.GetArgsStringForDisplay( cmd );
 	dprintf( D_FULLDEBUG,
-			 "Initially invoking hibernation plugin '%s'\n", cmd.Value() );
+			 "Initially invoking hibernation plugin '%s'\n", cmd.c_str() );
 
 	if( ! fp ) {
 		dprintf( D_ALWAYS, "Failed to run hibernation plugin '%s ad'\n",
-				 m_plugin_path.Value() );
+				 m_plugin_path.c_str() );
 		return false;
 	}
 
@@ -134,7 +134,7 @@ StartdHibernator::initialize( void )
 	if( ! read_something ) {
 		dprintf( D_ALWAYS,
 				 "\"%s ad\" did not produce any output, ignoring\n",
-				 m_plugin_path.Value() );
+				 m_plugin_path.c_str() );
 		return false;
 	}
 
@@ -143,7 +143,7 @@ StartdHibernator::initialize( void )
 	if( !m_ad.LookupString( ATTR_HIBERNATION_SUPPORTED_STATES, tmp ) ) {
 		dprintf( D_ALWAYS,
 				 "%s missing in ad from hibernation plugin %s\n",
-				 ATTR_HIBERNATION_SUPPORTED_STATES, m_plugin_path.Value() );
+				 ATTR_HIBERNATION_SUPPORTED_STATES, m_plugin_path.c_str() );
 		return false;
 	}
 	unsigned	mask;
@@ -151,7 +151,7 @@ StartdHibernator::initialize( void )
 		dprintf( D_ALWAYS,
 				 "%s invalid '%s' in ad from hibernation plugin %s\n",
 				 ATTR_HIBERNATION_SUPPORTED_STATES,
-				 tmp.c_str(), m_plugin_path.Value() );
+				 tmp.c_str(), m_plugin_path.c_str() );
 		return false;
 	}
 	setStateMask( mask );
@@ -163,7 +163,7 @@ HibernatorBase::SLEEP_STATE
 StartdHibernator::enterState( SLEEP_STATE state, bool /*force*/ ) const
 {
 	ArgList		args;
-	args.AppendArg( m_plugin_path.Value() );
+	args.AppendArg( m_plugin_path );
 
 	if( param_boolean("HIBERNATION_DEBUG", false) ) {
 		args.AppendArg( "-d" );
@@ -179,8 +179,8 @@ StartdHibernator::enterState( SLEEP_STATE state, bool /*force*/ ) const
 	args.AppendArg( "set" );
 	args.AppendArg( sleepStateToString(state) );
 
-	MyString	cmd;
-	args.GetArgsStringForDisplay( &cmd );
+	std::string	cmd;
+	args.GetArgsStringForDisplay( cmd );
 
 	priv_state	priv = set_root_priv();
 	int status = my_system( args );
@@ -188,7 +188,7 @@ StartdHibernator::enterState( SLEEP_STATE state, bool /*force*/ ) const
 	if( status ) {
 		dprintf( D_ALWAYS,
 				 "Failed to run hibernation plugin '%s': status = %d\n",
-				 cmd.Value(), status );
+				 cmd.c_str(), status );
 		return NONE;
 	}
 	return state;

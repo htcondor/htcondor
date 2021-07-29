@@ -225,7 +225,7 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 	cache += (tstamp + fds + line + cid);
 
 	// if the cache has surpassed the highwater mark, then flush it.
-	if (cache.Length() > cache_size) {
+	if (cache.length() > cache_size) {
 		debug_cache_flush();
 	}
 }
@@ -240,7 +240,7 @@ debug_cache_flush(void)
 
 	if (cache != "") {
 		dprintf(D_ALWAYS, "LOG LINE CACHE: Begin Flush\n");
-		dprintf(D_ALWAYS | D_NOHEADER, "%s", cache.Value());
+		dprintf(D_ALWAYS | D_NOHEADER, "%s", cache.c_str());
 		dprintf(D_ALWAYS, "LOG LINE CACHE: End Flush\n");
 		cache = "";
 	}

@@ -32,13 +32,28 @@ set(CollectorLibSrcs
 	collector_engine.cpp
 	view_server.cpp
 	collector.cpp
-        ad_transforms.cpp
+	ad_transforms.cpp
 )
-
-#
-#condor_static_lib ( collectorlib "${CollectorLibSrcs}")
 
 condor_daemon ( EXE condor_collector
   SOURCES "${collectorElements};${CollectorLibSrcs}"
   LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}"
   INSTALL ${C_SBIN} )
+
+if (LINUX)
+    # Linux doesn't require a library's libraries to be on the link line,
+    # and none of the other invocations of condor_plugin() use the library
+    # argument -- although they're all explicitly Linux-specific.  For now,
+    # only pass the libraries in on Windows and Mac.
+    condor_plugin( ce-audit "ce-audit-plugin.cpp" "${C_LIBEXEC}" "" off )
+else()
+    # Collector plug-ins can't be be built on Windows or Mac because the
+    # CollectorPlugin constructor and destructor are implemented in the
+    # collector binary, not in a library we can link against.  If anybody
+    # ever actually cares, we can probably change that.
+    #
+    # Moving the CollectorPlugin constructor to a library would probably
+    # also require moving the plugin manager to a library, since they
+    # need to be able to find each other.
+    # condor_plugin( ce-audit "ce-audit-plugin.cpp" "${C_LIBEXEC}" "${CONDOR_LIBS}" off )
+endif()

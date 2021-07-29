@@ -10,7 +10,6 @@ namespace classad {
 	class ClassAd;
 }
 class ArgList;
-class MyString;
 class Env;
 
 namespace htcondor {
@@ -56,7 +55,7 @@ private:
   static bool m_enabled;
   static bool m_probed;
   static int m_default_timeout;
-  static MyString m_singularity_version;
+  static std::string m_singularity_version;
 };
 
 }

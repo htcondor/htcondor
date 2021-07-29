@@ -111,12 +111,8 @@ void CondorJobReconfig()
 	CondorJob::setConnectFailureRetry( tmp_int );
 
 	// Tell all the resource objects to deal with their new config values
-	CondorResource *next_resource;
-
-	CondorResource::ResourcesByName.startIterations();
-
-	while ( CondorResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		next_resource->Reconfig();
+	for (auto &elem : CondorResource::ResourcesByName) {
+		elem.second->Reconfig();
 	}
 
 }
@@ -465,7 +461,7 @@ void CondorJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc != GLOBUS_SUCCESS ) {
+			if ( rc != GAHP_SUCCESS ) {
 				// unhandled error
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_status_constrained() failed: %s\n",
@@ -584,7 +580,7 @@ void CondorJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc == GLOBUS_SUCCESS ) {
+				if ( rc == GAHP_SUCCESS ) {
 					SetRemoteJobId( job_id_string );
 					WriteGridSubmitEventToUserLog( jobAd );
 					gmState = GM_SUBMIT_SAVE;
@@ -777,7 +773,7 @@ void CondorJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 					dprintf( D_ALWAYS,
 							 "(%d.%d) condor_job_refresh_proxy() failed: %s\n",
@@ -823,7 +819,7 @@ void CondorJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc != GLOBUS_SUCCESS ) {
+			if ( rc != GAHP_SUCCESS ) {
 				const char *err = gahp->getErrorString();
 				if ( strcmp( err, "Already done" ) ) {
 					dprintf( D_FULLDEBUG,
@@ -852,7 +848,7 @@ void CondorJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc != GLOBUS_SUCCESS ) {
+			if ( rc != GAHP_SUCCESS ) {
 				const char *err = gahp->getErrorString();
 				if ( strcmp( err, "Already done" ) ) {
 					dprintf( D_FULLDEBUG,
@@ -888,7 +884,7 @@ void CondorJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc != GLOBUS_SUCCESS ) {
+			if ( rc != GAHP_SUCCESS ) {
 				// unhandled error
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_status_constrained() failed: %s\n",
@@ -992,7 +988,7 @@ void CondorJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc != GLOBUS_SUCCESS ) {
+			if ( rc != GAHP_SUCCESS ) {
 				// unhandled error
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_update() failed: %s\n",
@@ -1040,7 +1036,7 @@ void CondorJob::doEvaluateState()
 				//   is a poor way to distinguish specific types of
 				//   errors. We should have something more formalized
 				//   in the GAHP protocol.
-			if ( rc != GLOBUS_SUCCESS &&
+			if ( rc != GAHP_SUCCESS &&
 				 strcmp( gahp->getErrorString(), "Job not found" ) != 0 &&
 				 strcmp( gahp->getErrorString(), "Already done" ) != 0 ) {
 
@@ -1290,7 +1286,6 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_JOB_REMOTE_SYS_CPU,
 		ATTR_JOB_REMOTE_USER_CPU,
 		ATTR_NUM_CKPTS,
-		ATTR_NUM_GLOBUS_SUBMITS,
 		ATTR_NUM_JOB_STARTS,
 		ATTR_NUM_JOB_RECONNECTS,
 		ATTR_NUM_SHADOW_EXCEPTIONS,
@@ -1490,7 +1485,7 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	submit_ad->Assign( ATTR_JOB_STATUS, HELD );
 	submit_ad->Assign( ATTR_HOLD_REASON, "Spooling input data files" );
-	submit_ad->Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput );
+	submit_ad->Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::SpoolingInput );
 	submit_ad->Assign( ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA );
 
 	submit_ad->Assign( ATTR_Q_DATE, now );

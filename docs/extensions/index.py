@@ -41,5 +41,5 @@ def index_role(typ, rawtext, text, lineno, inliner, options={}, content=[]):
     return [indexnode, targetnode, textnode], []
 
 def setup(app):
-    app.add_role("index", index_role)
+    app.add_role("index", index_role, override=True)
 

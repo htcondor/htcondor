@@ -22,7 +22,6 @@
 #include "read_user_log.h"
 #include "write_user_log.h"
 #include <time.h>
-#include "MyString.h"
 #include "condor_config.h"
 #include "stat_wrapper.h"
 #include "user_log_header.h"

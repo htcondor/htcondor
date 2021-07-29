@@ -136,7 +136,6 @@ public:
 
 	// return a pointer to the class that this qelm is part of.
 	template <typename T> T* as() {
-		if ( ! this) return NULL;
 		char * p = (char*)this - offsetof(T,qe);
 		return reinterpret_cast<T*>(p);
 	}
@@ -329,7 +328,7 @@ void ScheduleClusterForDeferredCleanup(int cluster_id);
 
 // called by qmgmt_recievers to handle the SetJobFactory RPC call
 int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * digest_text);
-int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & filename, int& row_count, int &terrno);
+int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, std::string & filename, int& row_count, int &terrno);
 
 void SetMaxHistoricalLogs(int max_historical_logs);
 time_t GetOriginalJobQueueBirthdate();
@@ -589,5 +588,9 @@ extern int Runnable(PROC_ID*);
 extern int Runnable(JobQueueJob *job, const char *& reason);
 
 extern class ForkWork schedd_forker;
+
+int SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value);
+int GetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, std::string &attr_value);
+int DeletePrivateAttribute(int cluster_id, int proc_id, const char *attr_name);
 
 #endif /* _QMGMT_H */

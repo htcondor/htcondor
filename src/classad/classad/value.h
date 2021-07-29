@@ -433,8 +433,11 @@ bool convertValueToStringValue(const Value value, Value &stringValue);
 inline bool Value::
 IsBooleanValue( bool& b ) const
 {
-	b = booleanValue;
-	return( valueType == BOOLEAN_VALUE );
+	if (valueType == BOOLEAN_VALUE ) {
+		b = booleanValue;
+		return true;
+	}
+	return false;
 }
 
 inline bool Value::

@@ -79,7 +79,7 @@ StatWrapper::StatWrapper( const MyString &path, bool do_lstat )
 	memset( &m_statbuf, 0, sizeof(StatStructType) );
 
 	if ( !path.empty() ) {
-		m_path = path.Value();
+		m_path = path.c_str();
 		Stat();
 	}
 }
@@ -152,7 +152,7 @@ StatWrapper::IsInitialized( void ) const
 void
 StatWrapper::SetPath( const MyString &path, bool do_lstat )
 {
-	SetPath( path.Value(), do_lstat );
+	SetPath( path.c_str(), do_lstat );
 }
 
 // Set the path(s)

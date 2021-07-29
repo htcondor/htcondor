@@ -315,8 +315,8 @@ int main( int argc, char *argv[] )
 			if( !ad->Lookup( ATTR_MY_ADDRESS ) ) {
 				std::string tmp;
 				// TODO: Picking IPv4 arbitrarily.
-				MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
-				formatstr( tmp, "<%s:0>", my_ip.Value() );
+				std::string my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+				formatstr( tmp, "<%s:0>", my_ip.c_str() );
 				ad->Assign( ATTR_MY_ADDRESS, tmp );
 			}
 

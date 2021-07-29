@@ -82,13 +82,11 @@ my @minimal_build_configure_args =
 	 '-DPROPER:BOOL'			 => 'OFF',
 	 '-D_VERBOSE:BOOL'			  => 'ON',
 	 '-DWITH_BLAHP:BOOL'		 => 'OFF',
-	 '-DWITH_CREAM:BOOL'		 => 'OFF',
 	 '-DWITH_DRMAA:BOOL'		 => 'OFF',
 	 '-DWITH_GLOBUS:BOOL'		 => 'OFF',
 	 '-DWITH_HADOOP:BOOL'		 => 'OFF',
 	 '-DWITH_LIBVIRT:BOOL'		 => 'OFF',
 	 '-DWITH_LIBXML2:BOOL'		 => 'OFF',
-	 '-DWITH_UNICOREGAHP:BOOL'	 => 'OFF',
 	 '-DWITH_VOMS:BOOL'			 => 'OFF',
 	);
 
@@ -653,9 +651,7 @@ our %submit_info = (
 
 	'x86_64_Ubuntu18'	=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DWITH_CREAM:BOOL' => 'OFF',
-			},
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 		},
 

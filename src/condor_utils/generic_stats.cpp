@@ -306,10 +306,10 @@ void stats_recent_counter_timer::Unpublish(ClassAd & ad, const char * pattr) con
    ad.Delete(pattr);
    MyString attr;
    attr.formatstr("Recent%s",pattr);
-   ad.Delete(attr.Value());
+   ad.Delete(attr.c_str());
    attr.formatstr("Recent%sRuntime",pattr);
-   ad.Delete(attr.Value());
-   ad.Delete(attr.Value()+6); // +6 to skip "Recent" prefix
+   ad.Delete(attr.c_str());
+   ad.Delete(attr.c_str()+6); // +6 to skip "Recent" prefix
 }
 
 void stats_recent_counter_timer::Publish(ClassAd & ad, const char * pattr, int flags) const
@@ -321,13 +321,13 @@ void stats_recent_counter_timer::Publish(ClassAd & ad, const char * pattr, int f
    MyString attrR("Recent");
    attrR += pattr;
 
-   ClassAdAssign(ad, attr.Value(), this->count.value);
-   ClassAdAssign(ad, attrR.Value(), this->count.recent);
+   ClassAdAssign(ad, attr.c_str(), this->count.value);
+   ClassAdAssign(ad, attrR.c_str(), this->count.recent);
 
    attr += "Runtime";
    attrR += "Runtime";
-   ClassAdAssign(ad, attr.Value(), this->runtime.value);
-   ClassAdAssign(ad, attrR.Value(), this->runtime.recent);
+   ClassAdAssign(ad, attr.c_str(), this->runtime.value);
+   ClassAdAssign(ad, attrR.c_str(), this->runtime.recent);
 
 }
 
@@ -340,7 +340,7 @@ void stats_recent_counter_timer::PublishDebug(ClassAd & ad, const char * pattr, 
 
    MyString attr(pattr);
    attr += "Runtime";
-   this->runtime.PublishDebug(ad, attr.Value(), flags);
+   this->runtime.PublishDebug(ad, attr.c_str(), flags);
 }
 
 template <class T>
@@ -483,24 +483,24 @@ int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe)
 {
    MyString attr;
    attr.formatstr("%sCount", pattr);
-   ad.Assign(attr.Value(), probe.Count);
+   ad.Assign(attr.c_str(), probe.Count);
 
    attr.formatstr("%sSum", pattr);
-   int ret = ad.Assign(attr.Value(), probe.Sum);
+   int ret = ad.Assign(attr.c_str(), probe.Sum);
 
    if (probe.Count > 0)
       {
       attr.formatstr("%sAvg", pattr);
-      ad.Assign(attr.Value(), probe.Avg());
+      ad.Assign(attr.c_str(), probe.Avg());
 
       attr.formatstr("%sMin", pattr);
-      ad.Assign(attr.Value(), probe.Min);
+      ad.Assign(attr.c_str(), probe.Min);
 
       attr.formatstr("%sMax", pattr);
-      ad.Assign(attr.Value(), probe.Max);
+      ad.Assign(attr.c_str(), probe.Max);
 
       attr.formatstr("%sStd", pattr);
-      ad.Assign(attr.Value(), probe.Std());
+      ad.Assign(attr.c_str(), probe.Std());
       }
    return ret;
 }
@@ -521,19 +521,19 @@ int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe, int Deta
       double val = MIN(avg, probe.Min);
       if ( ! if_nonzero || val > 0.0 || val < 0.0) {
          attr.formatstr("%sMin", pattr);
-         ad.Assign(attr.Value(), val);
+         ad.Assign(attr.c_str(), val);
       }
       val = MAX(avg, probe.Max);
       if ( ! if_nonzero || val > 0.0 || val < 0.0) {
          attr.formatstr("%sMax", pattr);
-         ad.Assign(attr.Value(), val);
+         ad.Assign(attr.c_str(), val);
       }
    } else if (DetailMode == ProbeDetailMode_RT_SUM) {
       // for RT_SUM, publish the count without a suffix and the Sum as "Runtime"
       // this gives sort of probe is useful for function/process timings.
       ret = ad.Assign(pattr, probe.Count);
       attr.formatstr("%sRuntime", pattr);
-      ad.Assign(attr.Value(), probe.Sum);
+      ad.Assign(attr.c_str(), probe.Sum);
    } else if (DetailMode == ProbeDetailMode_Tot) {
       // for Totals, publish the Sum without a suffix
       ret = ad.Assign(pattr, (long long)probe.Sum);
@@ -541,17 +541,17 @@ int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe, int Deta
       // for CAMM, publish the Avg and the Min & Max and Count using their normal names
       // publish Avg, Min and Max only if count is non-zero
       attr.formatstr("%sCount", pattr);
-      ret = ad.Assign(attr.Value(), probe.Count);
+      ret = ad.Assign(attr.c_str(), probe.Count);
 
       if (probe.Count != 0) {
          attr.formatstr("%sAvg", pattr);
-         ad.Assign(attr.Value(), probe.Avg());
+         ad.Assign(attr.c_str(), probe.Avg());
 
          attr.formatstr("%sMin", pattr);
-         ad.Assign(attr.Value(), probe.Min);
+         ad.Assign(attr.c_str(), probe.Min);
 
          attr.formatstr("%sMax", pattr);
-         ad.Assign(attr.Value(), probe.Max);
+         ad.Assign(attr.c_str(), probe.Max);
       }
    }
    return ret;
@@ -562,26 +562,26 @@ template <> void stats_entry_recent<Probe>::Unpublish(ClassAd& ad, const char * 
    MyString attr;
    ad.Delete(pattr);
    attr.formatstr("Recent%s", pattr);
-   ad.Delete(attr.Value());
+   ad.Delete(attr.c_str());
 
    attr.formatstr("Recent%sCount", pattr);
-   ad.Delete(attr.Value());
-   ad.Delete(attr.Value()+6);
+   ad.Delete(attr.c_str());
+   ad.Delete(attr.c_str()+6);
    attr.formatstr("Recent%sSum", pattr);
-   ad.Delete(attr.Value());
-   ad.Delete(attr.Value()+6);
+   ad.Delete(attr.c_str());
+   ad.Delete(attr.c_str()+6);
    attr.formatstr("Recent%sAvg", pattr);
-   ad.Delete(attr.Value());
-   ad.Delete(attr.Value()+6);
+   ad.Delete(attr.c_str());
+   ad.Delete(attr.c_str()+6);
    attr.formatstr("Recent%sMin", pattr);
-   ad.Delete(attr.Value());
-   ad.Delete(attr.Value()+6);
+   ad.Delete(attr.c_str());
+   ad.Delete(attr.c_str()+6);
    attr.formatstr("Recent%sMax", pattr);
-   ad.Delete(attr.Value());
-   ad.Delete(attr.Value()+6);
+   ad.Delete(attr.c_str());
+   ad.Delete(attr.c_str()+6);
    attr.formatstr("Recent%sStd", pattr);
-   ad.Delete(attr.Value());
-   ad.Delete(attr.Value()+6);
+   ad.Delete(attr.c_str());
+   ad.Delete(attr.c_str()+6);
 }
 
 template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pattr, int flags) const
@@ -608,7 +608,7 @@ template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pa
       if (flags & this->PubDecorateAttr) {
          attr.formatstr("Recent%s", pattr);
       }
-      ClassAdAssign(ad, attr.Value(), recent, flags & this->PubDetailMask, flags & IF_NONZERO);
+      ClassAdAssign(ad, attr.c_str(), recent, flags & this->PubDetailMask, flags & IF_NONZERO);
    }
 }
 
@@ -621,13 +621,13 @@ void stats_entry_recent<Probe>::PublishDebug(ClassAd & ad, const char * pattr, i
    ProbeToStringDebug(var1, this->value);
    ProbeToStringDebug(var2, this->recent);
 
-   formatstr_cat(str, "(%s) (%s)", var1.Value(), var2.Value());
+   formatstr_cat(str, "(%s) (%s)", var1.c_str(), var2.c_str());
    formatstr_cat(str, " {h:%d c:%d m:%d a:%d}",
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
          ProbeToStringDebug(var1, this->buf.pbuf[ix]);
-         formatstr_cat(str, !ix ? "[%s" : (ix == this->buf.cMax ? "|%s" : ",%s"), var1.Value());
+         formatstr_cat(str, !ix ? "[%s" : (ix == this->buf.cMax ? "|%s" : ",%s"), var1.c_str());
          }
       str += "]";
       }
@@ -1197,7 +1197,7 @@ int StatisticsPool::SetVerbosities(classad::References & attrs, int pub_flags, b
       if ( ! item.Publish) continue;
 
       // if the base attribute name matches, the it's a match
-      const char * pattr = item.pattr ? item.pattr : name->Value();
+      const char * pattr = item.pattr ? item.pattr : name->c_str();
       bool attr_match = attrs.find(pattr) != attrs.end();
 
       // if this is a multi-attribute probe we have to check against actual
@@ -1255,7 +1255,7 @@ void StatisticsPool::Publish(ClassAd & ad, int flags) const
 
       if (item.Publish) {
          stats_entry_base * probe = (stats_entry_base *)item.pitem;
-         (probe->*(item.Publish))(ad, item.pattr ? item.pattr : name.Value(), item_flags);
+         (probe->*(item.Publish))(ad, item.pattr ? item.pattr : name.c_str(), item_flags);
          }
       }
 }
@@ -1283,8 +1283,8 @@ void StatisticsPool::Publish(ClassAd & ad, const char * prefix, int flags) const
       if (item.Publish) {
          stats_entry_base * probe = (stats_entry_base *)item.pitem;
          MyString attr(prefix);
-         attr += (item.pattr ? item.pattr : name.Value());
-         (probe->*(item.Publish))(ad, attr.Value(), item_flags);
+         attr += (item.pattr ? item.pattr : name.c_str());
+         (probe->*(item.Publish))(ad, attr.c_str(), item_flags);
          }
       }
 }
@@ -1300,7 +1300,7 @@ void StatisticsPool::Unpublish(ClassAd & ad) const
    pthis->pub.startIterations();
    while (pthis->pub.iterate(name,item)) 
       {
-      const char * pattr = item.pattr ? item.pattr : name.Value();
+      const char * pattr = item.pattr ? item.pattr : name.c_str();
       if (item.Unpublish) 
          {
          stats_entry_base * probe = (stats_entry_base *)item.pitem;
@@ -1323,14 +1323,14 @@ void StatisticsPool::Unpublish(ClassAd & ad, const char * prefix) const
    while (pthis->pub.iterate(name,item)) 
       {
       MyString attr(prefix);
-      attr += (item.pattr ? item.pattr : name.Value());
+      attr += (item.pattr ? item.pattr : name.c_str());
       if (item.Unpublish) 
          {
          stats_entry_base * probe = (stats_entry_base *)item.pitem;
-         (probe->*(item.Unpublish))(ad, attr.Value());
+         (probe->*(item.Unpublish))(ad, attr.c_str());
          }
       else
-         ad.Delete(attr.Value());
+         ad.Delete(attr.c_str());
       }
 }
 

@@ -211,10 +211,10 @@ int filename_remap_find( const char *input, const char *filename, MyString &outp
 	if(found) {
 		// recurse, using the same remap rules (input)
 		MyString new_map;
-		int res = filename_remap_find( input, output.Value(), new_map, cur_remap_level+1 );
+		int res = filename_remap_find( input, output.c_str(), new_map, cur_remap_level+1 );
 		if (res == -1) {
 			MyString tmp = output;
-			output.formatstr("<%i: %s>%s", cur_remap_level, filename, new_map.Value());
+			output.formatstr("<%i: %s>%s", cur_remap_level, filename, new_map.c_str());
 			return -1;
 		}
 		if (res) {
@@ -225,14 +225,14 @@ int filename_remap_find( const char *input, const char *filename, MyString &outp
 		MyString entry;
     	if(filename_split( filename, parent, entry )) {
 			MyString new_parent;
-			int res = filename_remap_find( input, parent.Value(), new_parent, cur_remap_level+1 );
+			int res = filename_remap_find( input, parent.c_str(), new_parent, cur_remap_level+1 );
 			if (res == -1) {
-				output.formatstr("<%i: %s>%s", cur_remap_level, filename, new_parent.Value());
+				output.formatstr("<%i: %s>%s", cur_remap_level, filename, new_parent.c_str());
 				return -1;
 			}
 			if (res) {
 				found = 1;
-				output.formatstr("%s%c%s",new_parent.Value(),DIR_DELIM_CHAR,entry.Value());
+				output.formatstr("%s%c%s",new_parent.c_str(),DIR_DELIM_CHAR,entry.c_str());
 			}
 		} else {
 			// can't be split
@@ -245,37 +245,10 @@ int filename_remap_find( const char *input, const char *filename, MyString &outp
 // changes all directory separators to match the DIR_DELIM_CHAR
 // makes changes in place
 void
-canonicalize_dir_delimiters( MyString &path ) {
+canonicalize_dir_delimiters( std::string &path ) {
 
-	char *tmp = strdup(path.Value());
+	char *tmp = strdup(path.c_str());
 	canonicalize_dir_delimiters( tmp );
 	path = tmp;
 	free( tmp );
-}
-
-void
-filename_url_parse( char * input, std::string & method, std::string & server, int * port, std::string & path ) {
-	char *tmp_method = NULL;
-	char *tmp_server = NULL;
-	char *tmp_path = NULL;
-	filename_url_parse_malloc(input,&tmp_method,&tmp_server,port,&tmp_path);
-	method = tmp_method;
-	server = tmp_server;
-	path = tmp_path;
-	free( tmp_method );
-	free( tmp_server );
-	free( tmp_path );
-}
-
-void filename_url_parse( char *input, MyString &method, MyString &server, int *port, MyString &path ) {
-	char *tmp_method = NULL;
-	char *tmp_server = NULL;
-	char *tmp_path = NULL;
-	filename_url_parse_malloc(input,&tmp_method,&tmp_server,port,&tmp_path);
-	method = tmp_method;
-	server = tmp_server;
-	path = tmp_path;
-	free( tmp_method );
-	free( tmp_server );
-	free( tmp_path );
 }

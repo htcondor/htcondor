@@ -226,7 +226,7 @@ HibernatorBase::maskToStates(
 
 bool
 HibernatorBase::statesToString( const std::vector<SLEEP_STATE> &_states,
-								MyString &str )
+								std::string &str )
 {
 	str = "";
 	for( size_t i = 0;  i < _states.size();  i++ ) {
@@ -239,7 +239,7 @@ HibernatorBase::statesToString( const std::vector<SLEEP_STATE> &_states,
 }
 
 bool
-HibernatorBase::maskToString( unsigned mask, MyString &str )
+HibernatorBase::maskToString( unsigned mask, std::string &str )
 {
 	std::vector<SLEEP_STATE>	_states;
 	if( !maskToStates( mask, _states ) ) {

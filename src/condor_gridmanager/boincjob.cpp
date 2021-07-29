@@ -113,12 +113,8 @@ void BoincJobReconfig()
 	BoincJob::setConnectFailureRetry( tmp_int );
 
 	// Tell all the resource objects to deal with their new config values
-	BoincResource *next_resource;
-
-	BoincResource::ResourcesByName.startIterations();
-	
-	while ( BoincResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		next_resource->Reconfig();
+	for (auto &elem : BoincResource::ResourcesByName) {
+		elem.second->Reconfig();
 	}
 }
 
@@ -491,7 +487,7 @@ void BoincJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 					LOG_BOINC_ERROR( "boinc_fetch_output()", rc );
 					gahpErrorString = gahp->getErrorString();
@@ -532,7 +528,7 @@ void BoincJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 					LOG_BOINC_ERROR( "boinc_retire_batch()", rc );
 					gahpErrorString = gahp->getErrorString();
@@ -564,7 +560,7 @@ void BoincJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc != GLOBUS_SUCCESS ) {
+			if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 				LOG_BOINC_ERROR( "boinc_abort_jobs()", rc );
 				gahpErrorString = gahp->getErrorString();
@@ -588,7 +584,7 @@ void BoincJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 					LOG_BOINC_ERROR( "boinc_retire_batch()", rc );
 					gahpErrorString = gahp->getErrorString();

@@ -50,7 +50,7 @@ const char STR_DEFAULT_CONDOR_SERVICE[] = "host";
 #define KERBEROS_MUTUAL  3
 #define KERBEROS_PROCEED 4
 
-HashTable<MyString, MyString> * Condor_Auth_Kerberos::RealmMap = 0;
+HashTable<std::string, std::string> * Condor_Auth_Kerberos::RealmMap = 0;
 //----------------------------------------------------------------------
 // Kerberos Implementation
 //----------------------------------------------------------------------
@@ -627,10 +627,10 @@ int Condor_Auth_Kerberos :: init_daemon()
 	sname = tmpsname;
 	free (tmpsname);
 
-	dprintf(D_SECURITY, "init_daemon: Trying to get tgt credential for service %s\n", sname.Value());
+	dprintf(D_SECURITY, "init_daemon: Trying to get tgt credential for service %s\n", sname.c_str());
 
 	priv = set_root_priv();   // Get the old privilige
-	code = (*krb5_get_init_creds_keytab_ptr)(krb_context_, creds_, krb_principal_, keytab, 0, const_cast<char*>(sname.Value()), 0);
+	code = (*krb5_get_init_creds_keytab_ptr)(krb_context_, creds_, krb_principal_, keytab, 0, const_cast<char*>(sname.c_str()), 0);
 	set_priv(priv);
 	if(code) {
 		goto error;
@@ -1280,13 +1280,13 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
     // two cases, if domain is the same as the current uid domain,
     // then we are okay, other wise, see if we have a map
     if (RealmMap) {
-        MyString from(domain), to;
+        std::string from(domain), to;
         if (RealmMap->lookup(from, to) != -1) {
 			if (IsFulldebug(D_SECURITY)) {
 				dprintf (D_SECURITY, "KERBEROS: mapping realm %s to domain %s.\n", 
-					from.Value(), to.Value());
+					from.c_str(), to.c_str());
 			}
-            setRemoteDomain(to.Value());
+            setRemoteDomain(to.c_str());
             return TRUE;
         } else {
 			// if the map exists, they must be listed.  and they're NOT!
@@ -1354,7 +1354,7 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 		char *f, * t;
 		while ( (f = from.next()) ) {
 			t = to.next();
-			RealmMap->insert(MyString(f), MyString(t));
+			RealmMap->insert(std::string(f), std::string(t));
 			from.deleteCurrent();
 			to.deleteCurrent();
 		}
@@ -1425,15 +1425,15 @@ int Condor_Auth_Kerberos :: init_server_info()
     // if we are client side, figure out remote server_ credentials
     if (mySock_->isClient()) {
 
-        MyString remoteName = get_hostname(mySock_->peer_addr());
+		std::string remoteName = get_hostname(mySock_->peer_addr());
 
         char *service = param(STR_KERBEROS_SERVER_SERVICE);
         if (!service)
             service = strdup(STR_DEFAULT_CONDOR_SERVICE);
 
-        err = (*krb5_sname_to_principal_ptr)(krb_context_, remoteName.Value(), service, KRB5_NT_SRV_HST, &server_);
+        err = (*krb5_sname_to_principal_ptr)(krb_context_, remoteName.c_str(), service, KRB5_NT_SRV_HST, &server_);
         dprintf(D_SECURITY, "KERBEROS: get remote server principal for \"%s/%s\"%s\n",
-                service, remoteName.Value(), err ? " FAILED" : "");
+                service, remoteName.c_str(), err ? " FAILED" : "");
 
         if (!err)
             err = !map_kerberos_name(&server_);

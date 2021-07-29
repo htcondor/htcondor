@@ -27,8 +27,8 @@
 #include "condor_cron_job_io.h"
 
 // Size of the buffer for reading from the child process
-#define STDOUT_LINEBUF_SIZE	8192
-#define STDERR_LINEBUF_SIZE	128
+#define STDOUT_LINEBUF_SIZE	(64*1024)
+#define STDERR_LINEBUF_SIZE	1024
 
 // Cron's Line I/O base class constructor
 CronJobIO::CronJobIO( class CronJob &job, unsigned buf_size )

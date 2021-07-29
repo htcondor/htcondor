@@ -30,7 +30,6 @@
 #include <sys/stat.h>
 #endif
 #include "match_prefix.h"
-#include "MyString.h"
 #include "string_list.h"
 #include "filename_tools.h"
 #include <submit_utils.h>
@@ -75,9 +74,9 @@ static int ingest_attrs_from_file(const char * filename, classad::References & o
 	}
 	MyStringFpSource ms(fp, true); // this will free the fp
 
-	MyString attr;
+	std::string attr;
 	while (ms.readLine(attr, false)) {
-		attr.trim();
+		trim(attr);
 		out.insert(attr.c_str());
 	}
 	return (int)out.size();

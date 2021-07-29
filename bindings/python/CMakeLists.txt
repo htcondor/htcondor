@@ -1,4 +1,32 @@
+
+# These are expanded in setup.py.cmake_template
 set(PACKAGES      "classad" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/compat_enum")
+
+# The python sources to copy
+set(PYTHON_SOURCES
+htcondor/compat_enum/__init__.py
+htcondor/compat_enum/LICENSE
+htcondor/_wrap.py
+htcondor/__init__.py
+htcondor/_lock.py
+htcondor/personal.py
+htcondor/htchirp/__init__.py
+htcondor/htchirp/htchirp.py
+htcondor/dags/writer.py
+htcondor/dags/exceptions.py
+htcondor/dags/__init__.py
+htcondor/dags/formatter.py
+htcondor/dags/dag.py
+htcondor/dags/walk_order.py
+htcondor/dags/edges.py
+htcondor/dags/utils.py
+htcondor/dags/rescue.py
+htcondor/dags/node.py
+htcondor/_deprecation.py
+htcondor/_job_status.py
+classad/__init__.py
+)
+
 set(SETUP_PY_IN   "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.cmake_template")
 set(SETUP_PY      "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
 set(INSTALL_SH    "${CMAKE_CURRENT_SOURCE_DIR}/install.sh")
@@ -8,15 +36,20 @@ if (WITH_PYTHON_BINDINGS)
 
     configure_file(${SETUP_PY_IN} ${SETUP_PY})
 
-    # Copy over module directories if __init__.py is missing, i.e. out of
-    # source build.  This is broken (see the remove-file hack below)
-    foreach(PACKAGE ${PACKAGES})
-        set(PKG_DIR "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}")
-        add_custom_command(OUTPUT "${PKG_DIR}/__init__.py"
-            COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/${PACKAGE}" "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}"
-            DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${PACKAGE}"
-        )
-        list(APPEND DEPS "${PKG_DIR}/__init__.py")
+	# Make the target directories for python source tree
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/dags)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/htchirp)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/compat_enum)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad)
+
+	# Now make a command to copy each source file to the destination
+	foreach(PYTHON_SOURCE_FILE ${PYTHON_SOURCES})
+		add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}"
+			COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_SOURCE_FILE}" "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}"
+			DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_SOURCE_FILE}"
+    )
+	list(APPEND DEPS "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}")
     endforeach()
 
     if (WINDOWS AND DEFINED PYTHON_VERSION_STRING)
@@ -49,11 +82,6 @@ if (WITH_PYTHON_BINDINGS)
         endif()
         add_custom_target(python_bindings ALL DEPENDS ${TIMESTAMP_FILE})
 
-		# This is an awful hack, but it's easier than fixing than this file.
-		add_custom_command(TARGET python_bindings POST_BUILD
-			COMMAND ${CMAKE_COMMAND} ARGS -E remove -f "${CMAKE_CURRENT_BINARY_DIR}/*/__init__.py"
-			)
-
         if (WINDOWS) # Windows can call setup.py as normal
             install(CODE "execute_process(
                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
@@ -84,7 +112,7 @@ if (WITH_PYTHON_BINDINGS)
         set(SYSTEM_NAME "darwin")
     endif()
 
-    if (NOT WINDOWS AND PYTHON3LIBS_FOUND AND NOT ${SYSTEM_NAME} MATCHES "fc27")
+    if (NOT WINDOWS AND PYTHON3LIBS_FOUND)
         set(TIMESTAMP3_FILE "${CMAKE_CURRENT_BINARY_DIR}/build/timestamp3")
         add_custom_command(
             OUTPUT ${TIMESTAMP3_FILE}
@@ -104,7 +132,6 @@ if (WITH_PYTHON_BINDINGS)
                 endif()
         ")
     endif()
-
 
 endif()
 

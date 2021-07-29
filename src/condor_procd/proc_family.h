@@ -29,6 +29,10 @@
 #include "../condor_starter.V6.1/cgroup.linux.h"
 #endif
 
+#ifdef LINUX
+#include "../condor_utils/perf_counter.linux.h"
+#endif
+
 class ProcFamilyMonitor;
 
 class ProcFamily {
@@ -176,6 +180,9 @@ private:
 	char* m_proxy;
 #endif
 
+#ifdef LINUX
+	PerfCounter m_perf_counter;
+#endif
 #if defined(HAVE_EXT_LIBCGROUP)
 	Cgroup m_cgroup;
 	std::string m_cgroup_string;

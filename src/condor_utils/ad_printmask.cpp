@@ -322,7 +322,7 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 		MyString tmp_fmt;
 		if (fmt->width) {
 			tmp_fmt.formatstr("%%-%ds", fmt->width);
-			retval.formatstr_cat(tmp_fmt.Value(), pszHead);
+			retval.formatstr_cat(tmp_fmt.c_str(), pszHead);
 		} else {
 			retval += pszHead;
 		}
@@ -333,14 +333,14 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 
 	}
 
-	if (overall_max_width && retval.Length() > overall_max_width)
+	if (overall_max_width && retval.length() > overall_max_width)
 		retval.truncate(overall_max_width);
 
 	if (row_suffix)
 		retval += row_suffix;
 
 	// Convert return MyString to new char *.
-	return strdup(retval.Value() );
+	return strdup(retval.c_str() );
 }
 
 char * AttrListPrintMask::
@@ -396,7 +396,7 @@ PrintCol(MyString * prow, Formatter & fmt, const char * value)
 	if (col_prefix && ! (fmt.options & FormatOptionNoPrefix))
 		(*prow) += col_prefix;
 
-	int col_start = prow->Length();
+	int col_start = prow->length();
 
 	const char * printfFmt = fmt.printfFmt;
 	if ( ! printfFmt && fmt.width) {
@@ -418,7 +418,7 @@ PrintCol(MyString * prow, Formatter & fmt, const char * value)
 	}
 
 	if (fmt.options & FormatOptionAutoWidth) {
-		int col_width = prow->Length() - col_start;
+		int col_width = prow->length() - col_start;
 		fmt.width = MAX(fmt.width, col_width);
 	}
 
@@ -1244,9 +1244,9 @@ int parse_autoformat_args (
 		lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 		if (diagnostic) {
 			printf ("Arg %d --- register format [%s] width=%d, opt=0x%x [%s]\n",
-				ixArg, lbl.Value(), wid, opts, pattr);
+				ixArg, lbl.c_str(), wid, opts, pattr);
 		}
-		print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
+		print_mask.registerFormat(lbl.c_str(), wid, opts, pattr);
 		++ixArg;
 	}
 	return ixArg;

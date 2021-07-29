@@ -60,6 +60,7 @@ bool operator>=(const std::string& L, const MyString& R);
 
 // to replace MyString with std::string we need a compatible read-line function
 bool readLine(std::string& dst, FILE *fp, bool append = false);
+bool readLine(std::string& dst, MyStringSource& src, bool append = false);
 
 //Return true iff the given string is a blank line.
 int blankline ( const char *str );
@@ -76,6 +77,8 @@ void trim(std::string &str);
 void lower_case(std::string &str);
 void upper_case(std::string &str);
 void title_case(std::string &str); // capitalize each word
+
+const char * empty_if_null(const char * c_str);
 
 // Return a string based on string src, but for each character in Q that
 // occurs in src, insert the character escape before it.

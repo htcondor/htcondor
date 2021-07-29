@@ -224,6 +224,7 @@ DWORD SystemInfoUtils::GetNTMajorVersion()
    ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
 
+   MSC_SUPPRESS_WARNING_FOREVER(4996) // 'GetVersionExA': was declared deprecated
    bOsVersionInfoEx = GetVersionEx ((OSVERSIONINFO *) &osvi);
 
    if( bOsVersionInfoEx == 0 )
@@ -231,6 +232,8 @@ DWORD SystemInfoUtils::GetNTMajorVersion()
       // If OSVERSIONINFOEX doesn't work, try OSVERSIONINFO.
 
       osvi.dwOSVersionInfoSize = sizeof (OSVERSIONINFO);
+
+      MSC_SUPPRESS_WARNING_FOREVER(4996) // 'GetVersionExA': was declared deprecated
       if (! GetVersionEx ( (OSVERSIONINFO *) &osvi) ) 
          return FALSE;
    }

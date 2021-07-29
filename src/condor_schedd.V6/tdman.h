@@ -57,15 +57,7 @@ enum TDMode {
 class TDUpdateContinuation
 {
 	public:
-		TDUpdateContinuation(MyString s, MyString f, MyString i, MyString n)
-		{
-			sinful = s;
-			fquser = f;
-			id = i;
-			name = n;
-		}
-
-		TDUpdateContinuation(char *s, char *f, char *i, char *n)
+		TDUpdateContinuation(std::string s, std::string f, std::string i, std::string n)
 		{
 			sinful = s;
 			fquser = f;
@@ -74,46 +66,46 @@ class TDUpdateContinuation
 		}
 
 		// sinful string of the td
-		MyString sinful;
+		std::string sinful;
 		// fully qualified user the td is running as
-		MyString fquser;
+		std::string fquser;
 		// the id string the schedd gave to the ransferd
-		MyString id;
+		std::string id;
 		// the registration name for the socket handler
-		MyString name;
+		std::string name;
 };
 
 // This represents the invocation, and current status, of a transfer daemon
 class TransferDaemon 
 {
 	public:
-		TransferDaemon(MyString fquser, MyString id, TDMode status);
+		TransferDaemon(std::string fquser, std::string id, TDMode status);
 		~TransferDaemon();
 
 		// A handler that gets called when this transferd registers itself
 		// properly.
-		void set_reg_callback(MyString desc, TDRegisterCallback callback, 
+		void set_reg_callback(std::string desc, TDRegisterCallback callback, 
 			Service *base);
-		void get_reg_callback(MyString &desc, TDRegisterCallback &callback,
+		void get_reg_callback(std::string &desc, TDRegisterCallback &callback,
 			Service *&base);
 		TdAction call_reg_callback(TransferDaemon *td);
 
 		// If the transfer daemon has died, then this callback gets invoked
 		// so the schedd can clean things up a bit.
-		void set_reaper_callback(MyString desc, TDReaperCallback callback,
+		void set_reaper_callback(std::string desc, TDReaperCallback callback,
 			Service *base);
-		void get_reaper_callback(MyString &desc, TDReaperCallback &callback,
+		void get_reaper_callback(std::string &desc, TDReaperCallback &callback,
 			Service *&base);
 		TdAction call_reaper_callback(long pid, int status, TransferDaemon *td);
 
 		// This transferd had been started on behalf of a fully qualified user
 		// This records who that user is.
-		void set_fquser(MyString fquser);
-		MyString get_fquser(void);
+		void set_fquser(std::string fquser);
+		std::string get_fquser(void);
 
 		// Set the specific ID string associated with this td.
-		void set_id(MyString id);
-		MyString get_id(void);
+		void set_id(std::string id);
+		std::string get_id(void);
 
 		// The schedd changes the state of this object according to what it
 		// knows about the status of the daemon itself.
@@ -121,8 +113,8 @@ class TransferDaemon
 		TDMode get_status(void);
 
 		// To whom should this td report?
-		void set_schedd_sinful(MyString sinful);
-		MyString get_schedd_sinful(void);
+		void set_schedd_sinful(std::string sinful);
+		std::string get_schedd_sinful(void);
 
 		// Who is this transferd (after it registers)
 		void set_sinful(const std::string &sinful);
@@ -166,13 +158,13 @@ class TransferDaemon
 		std::string m_sinful;
 
 		// the owner of the transferd
-		MyString m_fquser;
+		std::string m_fquser;
 
 		// The id string associated with this td
-		MyString m_id;
+		std::string m_id;
 
 		// The schedd to which this td must report
-		MyString m_schedd_sinful;
+		std::string m_schedd_sinful;
 
 		// current status about this transferd I requested
 		TDMode m_status;
@@ -192,13 +184,13 @@ class TransferDaemon
 
 		// When the tranferd wakes up and registers, call this when the
 		// registration process in complete
-		MyString m_reg_func_desc;
+		std::string m_reg_func_desc;
 		TDRegisterCallback m_reg_func;
 		Service *m_reg_func_this;
 
 		// If the transferd dies, invoke this callback with its identification
 		// and how it died.
-		MyString m_reap_func_desc;
+		std::string m_reap_func_desc;
 		TDReaperCallback m_reap_func;
 		Service *m_reap_func_this;
 };
@@ -212,13 +204,11 @@ class TDMan : public Service
 		// returns NULL if no td is currently available. Returns the
 		// transfer daemon object invoked for this user. If no such transferd
 		// exists, then return NULL;
-		TransferDaemon* find_td_by_user(MyString fquser);
-		TransferDaemon* find_td_by_user(char *fquser);
+		TransferDaemon* find_td_by_user(std::string fquser);
 
 		// when the td registers itself, figure out to which of my objects its
 		// identity string pairs.
-		TransferDaemon* find_td_by_ident(MyString id);
-		TransferDaemon* find_td_by_ident(char *ident);
+		TransferDaemon* find_td_by_ident(std::string id);
 
 		// I've determined that I have to create a transfer daemon, so have the
 		// caller set up a TransferDaemon object, and then I'll be responsible
@@ -252,12 +242,12 @@ class TDMan : public Service
 		// This is where I store the table of transferd objects, each
 		// representing the status and connection to a transferd.
 		// Key: fquser, Value: transferd
-		HashTable<MyString, TransferDaemon*> *m_td_table;
+		HashTable<std::string, TransferDaemon*> *m_td_table;
 
 		// Store an association between an id given to a specific transferd
 		// and the user that id ultimately identifies.
 		// Key: id, Value: fquser
-		HashTable<MyString, MyString> *m_id_table;
+		HashTable<std::string, std::string> *m_id_table;
 
 		// a table of pids associated with running transferds so reapers
 		// can do their work, among other things. This is a hash table

@@ -21,7 +21,15 @@ option(WITH_KRB5 "Compiling with support for KRB5" ON)
   
 if (WITH_KRB5)
 
-	if ( WINDOWS )
+	if ( WINDOWS AND CMAKE_SIZEOF_VOID_P EQUAL 8 )
+		find_multiple( "krb5_64;comerr64;gssapi64;xpprof64" KRB5_FOUND )
+	elseif ( WINDOWS )
+		find_multiple( "krb5_32;comerr32;gssapi32;xpprof32" KRB5_FOUND )
+	else ( WINDOWS AND CMAKE_SIZEOF_VOID_P EQUAL 8 )
+		find_multiple( "krb5;com_err;k5crypto;krb5support;gssapi_krb5" KRB5_FOUND )
+	endif ( WINDOWS AND CMAKE_SIZEOF_VOID_P EQUAL 8 )
+
+	if ( NOT KRB5_FOUND AND WINDOWS )
   
 		condor_pre_external( KRB5 krb5-1.14.5 "lib;include" "include/krb5.h")
     
@@ -88,10 +96,6 @@ if (WITH_KRB5)
 			endif ()
 
 		condor_post_external( krb5 include OFF "" )
-
-	else()
-
-		find_multiple( "krb5;com_err;k5crypto;krb5support;gssapi_krb5" KRB5_FOUND )
 
 	endif( )
 

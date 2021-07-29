@@ -27,14 +27,10 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my @submitfiles =	();
+my $testname = "job_rank_and_aclustering";
 
-my $pid = $$;
-my $ClusterId = 0;
-my $jobcount = 5;
-my $runcount = 0;
-
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	WANT_SUSPEND = FALSE
 	NEGOTIATION_INTERVAL = 5
@@ -46,26 +42,14 @@ my $firstappend_condor_config = '
 	SLOT3_MachineDataSet = "S02"
 	SLOT4_MachineDataSet = "S03"
 	SLOT5_MachineDataSet = "S04"
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
+TLOG "$testname test started\n";
 
-my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobrankautoclustering");
-
-my $testname = "job_rank_and_aclustering";
-
-# First order up the config but do not start it. If the condor_config_val fails
-# there is no reason to go on
-
-CondorTest::StartCondorWithParams(
-	condor_name => "jobrankautoclustering",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
-#print "************************** CONDOR_CONFIG now set to:$ENV{CONDOR_CONFIG} ******************\n";
-
-
-# now start the personal condor to ensure it comes up
+my $ClusterId = 0;
+my $jobcount = 5;
+my $runcount = 0;
 
 #Do a job before setting tesing exit codes
 print "First test basic job\n";

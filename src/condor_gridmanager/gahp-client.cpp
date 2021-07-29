@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2021, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -116,10 +116,6 @@ GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 	int rc;
 	GahpServer *server = NULL;
 
-	if ( path == NULL ) {
-		path = GAHPCLIENT_DEFAULT_SERVER_PATH;
-	}
-
 	rc = GahpServersById.lookup( id, server );
 	if ( rc != 0 ) {
 		server = new GahpServer( id, path, args );
@@ -162,18 +158,9 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	requestTable = new HashTable<int,GenericGahpClient*>( &hashFuncInt );
 	ASSERT(requestTable);
 
-	globus_gass_server_url = NULL;
-	globus_gt2_gram_user_callback_arg = NULL;
-	globus_gt2_gram_callback_func = NULL;
-	globus_gt2_gram_callback_reqid = 0;
-	globus_gt2_gram_callback_contact = NULL;
-
-	unicore_gahp_callback_func = NULL;
-	unicore_gahp_callback_reqid = 0;
-
 	m_ssh_forward_port = 0;
 	my_id = strdup(id);
-	binary_path = strdup(path);
+	binary_path = path ? strdup(path) : nullptr;
 	if ( args != NULL ) {
 		binary_args.AppendArgsFromArgList( *args );
 	}
@@ -200,12 +187,6 @@ GahpServer::~GahpServer()
 	}
 	free( m_buffer );
 	delete m_commands_supported;
-	if ( globus_gass_server_url != NULL ) {
-		free( globus_gass_server_url );
-	}
-	if ( globus_gt2_gram_callback_contact != NULL ) {
-		free( globus_gt2_gram_callback_contact );
-	}
 	if ( my_id != NULL ) {
 		free(my_id);
 	}
@@ -387,7 +368,11 @@ GahpServer::Reaper(int pid,int status)
 
 	if ( dead_server ) {
 		if ( !dead_server->m_sec_session_id.empty() ) {
-			daemonCore->getSecMan()->session_cache->remove( dead_server->m_sec_session_id.c_str() );
+			SecMan *secman = daemonCore->getSecMan();
+			IpVerify *ipv = secman->getIpVerify();
+			secman->session_cache->remove( dead_server->m_sec_session_id.c_str() );
+			ipv->FillHole(DAEMON, CONDOR_CHILD_FQU);
+			ipv->FillHole(CLIENT_PERM, CONDOR_CHILD_FQU);
 		}
 		formatstr_cat( buf, " unexpectedly" );
 		if ( dead_server->m_gahp_startup_failed ) {
@@ -757,21 +742,12 @@ GahpServer::Startup()
 
 		// No GAHP server is running yet, so we need to start one up.
 		// First, get path to the GAHP server.
-	if ( binary_path && strcmp( binary_path, GAHPCLIENT_DEFAULT_SERVER_PATH ) != 0 ) {
-		gahp_path = strdup(binary_path);
-		gahp_args.AppendArgsFromArgList(binary_args);
-	} else {
-		gahp_path = param("GAHP");
-
-		char *args = param("GAHP_ARGS");
-		std::string args_error;
-		if(!gahp_args.AppendArgsV1RawOrV2Quoted(args, args_error)) {
-			EXCEPT("Failed to parse arguments: %s",args_error.c_str());
-		}
-		free(args);
+	if ( ! binary_path ) {
+		dprintf(D_ALWAYS, "No path to start gahp id '%s'\n", my_id);
+		return false;
 	}
-
-	if (!gahp_path) return false;
+	gahp_path = binary_path;
+	gahp_args.AppendArgsFromArgList(binary_args);
 
 	// Insert binary_path as argv[0] for Create_Process().
 	gahp_args.InsertArg( gahp_path, 0);
@@ -811,13 +787,6 @@ GahpServer::Startup()
 	tmp_char = param("GLITE_LOCATION");
 	if ( tmp_char ) {
 		newenv.SetEnv( "GLITE_LOCATION", tmp_char );
-		free( tmp_char );
-	}
-
-		// Number of worker threads the cream_gahp should create
-	tmp_char = param("CREAM_GAHP_WORKER_THREADS");
-	if ( tmp_char ) {
-		newenv.SetEnv( "CREAM_GAHP_WORKER_THREADS", tmp_char );
 		free( tmp_char );
 	}
 
@@ -897,9 +866,6 @@ GahpServer::Startup()
 	} else {
 		dprintf(D_ALWAYS,"GAHP server pid = %d\n",m_gahp_pid);
 	}
-
-	free( gahp_path );
-	gahp_path = NULL;
 
 		// Now that the GAHP server is running, close the sides of
 		// the pipes we gave away to the server, and stash the ones
@@ -1105,10 +1071,12 @@ GahpServer::CreateSecuritySession()
 		return false;
 	}
 
+	SecMan *secman = daemonCore->getSecMan();
+
 	char *session_id = Condor_Crypt_Base::randomHexKey();
 	char *session_key = Condor_Crypt_Base::randomHexKey();
 
-	if ( !daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession( DAEMON,
+	if ( !secman->CreateNonNegotiatedSecuritySession( DAEMON,
 										session_id, session_key, NULL,
 										AUTH_METHOD_FAMILY,
 										CONDOR_CHILD_FQU, NULL, 0, nullptr, true ) ) {
@@ -1118,7 +1086,7 @@ GahpServer::CreateSecuritySession()
 	}
 
 	std::string session_info;
-	if ( !daemonCore->getSecMan()->ExportSecSessionInfo( session_id,
+	if ( !secman->ExportSecSessionInfo( session_id,
 														 session_info ) ) {
 		free( session_id );
 		free( session_key );
@@ -1151,9 +1119,13 @@ GahpServer::CreateSecuritySession()
 			reason = "Unspecified error";
 		}
 		dprintf( D_ALWAYS, "GAHP command '%s' failed: %s\n", command, reason );
-		daemonCore->getSecMan()->session_cache->remove( claimId.secSessionId() );
+		secman->session_cache->remove( claimId.secSessionId() );
 		return false;
 	}
+
+	IpVerify *ipv = secman->getIpVerify();
+	ipv->PunchHole(DAEMON, CONDOR_CHILD_FQU);
+	ipv->PunchHole(CLIENT_PERM, CONDOR_CHILD_FQU);
 
 	m_sec_session_id = claimId.secSessionId();
 	return true;
@@ -1981,590 +1953,6 @@ GahpServer::command_condor_version()
 	return true;
 }
 
-const char *
-GahpClient::globus_gram_client_error_string(int error_code)
-{
-	static char buf[200];
-	static const char* command = "GRAM_ERROR_STRING";
-
-		// Return "Unknown error" if GAHP doesn't support this command
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		strcpy(buf,"Unknown error");
-		return buf;
-	}
-
-	int x = snprintf(buf,sizeof(buf),"%s %d",command,error_code);
-	ASSERT( x > 0 && x < (int)sizeof(buf) );
-	server->write_line(buf);
-	Gahp_Args result;
-	server->read_argv(result);
-	if ( result.argc < 2 || result.argv[0][0] != 'S' ) {
-		dprintf(D_ALWAYS,"GAHP command '%s' failed: error_code=%d\n",
-						command,error_code);
-		return NULL;
-	}
-		// Copy error string into our static buffer.
-	strncpy(buf,result.argv[1],sizeof(buf)-1);
-	buf[sizeof(buf)-1] = '\0';
-
-	return buf;
-}
-
-int 
-GahpClient::globus_gass_server_superez_init( char **gass_url, int port )
-{
-
-	static const char* command = "GASS_SERVER_INIT";
-
-	if ( server->globus_gass_server_url != NULL ) {
-		*gass_url = strdup( server->globus_gass_server_url );
-		return 0;
-	}
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	std::string reqline;
-	int x = formatstr(reqline,"%d",port);
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc = atoi(result->argv[1]);
-		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
-			*gass_url = strdup(result->argv[2]);
-			server->globus_gass_server_url = strdup(result->argv[2]);
-		}
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-int 
-GahpClient::globus_gram_client_job_request(
-	const char * resource_manager_contact,
-	const char * description,
-	const int limited_deleg,
-	const char * callback_contact,
-	std::string & job_contact,
-	bool is_restart)
-{
-
-	static const char* command = "GRAM_JOB_REQUEST";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!resource_manager_contact) resource_manager_contact=NULLSTRING;
-	if (!description) description=NULLSTRING;
-	if (!callback_contact) callback_contact=NULLSTRING;
-	std::string reqline;
-	char *esc1 = strdup( escapeGahpString(resource_manager_contact) );
-	char *esc2 = strdup( escapeGahpString(callback_contact) );
-	char *esc3 = strdup( escapeGahpString(description) );
-	int x = formatstr(reqline,"%s %s %d %s", esc1, esc2, limited_deleg, esc3 );
-	free( esc1 );
-	free( esc2 );
-	free( esc3 );
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-	
-	PrioLevel priority = low_prio;
-	if ( is_restart ) {
-		priority = medium_prio;
-	}
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,deleg_proxy,priority);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc = atoi(result->argv[1]);
-		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
-			job_contact = result->argv[2];
-		} else {
-			job_contact = "";
-		}
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-int 
-GahpClient::globus_gram_client_job_cancel(const char * job_contact)
-{
-
-	static const char* command = "GRAM_JOB_CANCEL";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!job_contact) job_contact=NULLSTRING;
-	std::string reqline;
-	int x = formatstr(reqline,"%s",escapeGahpString(job_contact));
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,normal_proxy);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 2) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc = atoi(result->argv[1]);
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-int
-GahpClient::globus_gram_client_job_status(const char * job_contact,
-	int * job_status,
-	int * failure_code)
-{
-	static const char* command = "GRAM_JOB_STATUS";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!job_contact) job_contact=NULLSTRING;
-	std::string reqline;
-	int x = formatstr(reqline,"%s",escapeGahpString(job_contact));
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,normal_proxy);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 4) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc = atoi(result->argv[1]);
-		*failure_code = atoi(result->argv[2]);
-		if ( rc == 0 ) {
-			*job_status = atoi(result->argv[3]);
-		}
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-
-int
-GahpClient::globus_gram_client_job_signal(const char * job_contact,
-	globus_gram_protocol_job_signal_t signal,
-	const char * signal_arg,
-	int * job_status,
-	int * failure_code)
-{
-	static const char* command = "GRAM_JOB_SIGNAL";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!job_contact) job_contact=NULLSTRING;
-	if (!signal_arg) signal_arg=NULLSTRING;
-	std::string reqline;
-	char *esc1 = strdup( escapeGahpString(job_contact) );
-	char *esc2 = strdup( escapeGahpString(signal_arg) );
-	int x = formatstr(reqline,"%s %d %s",esc1,signal,esc2);
-	free( esc1 );
-	free( esc2 );
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-	PrioLevel priority = medium_prio;
-	if ( signal == GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST ||
-		 signal == GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END ) {
-		priority = high_prio;
-	}
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,normal_proxy,priority);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 4) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc = atoi(result->argv[1]);
-		*failure_code = atoi(result->argv[2]);
-		if ( rc == 0 ) {
-			*job_status = atoi(result->argv[3]);
-		}
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-
-int
-GahpClient::globus_gram_client_job_callback_register(const char * job_contact,
-	const int /* job_state_mask */,
-	const char * callback_contact,
-	int * job_status,
-	int * failure_code)
-{
-	static const char* command = "GRAM_JOB_CALLBACK_REGISTER";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!job_contact) job_contact=NULLSTRING;
-	if (!callback_contact) callback_contact=NULLSTRING;
-	std::string reqline;
-	char *esc1 = strdup( escapeGahpString(job_contact) );
-	char *esc2 = strdup( escapeGahpString(callback_contact) );
-	int x = formatstr(reqline,"%s %s",esc1,esc2);
-	free( esc1 );
-	free( esc2 );
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,normal_proxy);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 4) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc = atoi(result->argv[1]);
-		*failure_code = atoi(result->argv[2]);
-		if ( rc == 0 ) {
-			*job_status = atoi(result->argv[3]);
-		}
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-
-int 
-GahpClient::globus_gram_client_ping(const char * resource_contact)
-{
-	static const char* command = "GRAM_PING";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!resource_contact) resource_contact=NULLSTRING;
-	std::string reqline;
-	int x = formatstr(reqline,"%s",escapeGahpString(resource_contact));
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,normal_proxy,high_prio);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 2) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc = atoi(result->argv[1]);
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-int
-GahpClient::globus_gram_client_job_refresh_credentials(const char *job_contact,
-													   int limited_deleg)
-{
-	static const char* command = "GRAM_JOB_REFRESH_PROXY";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!job_contact) job_contact=NULLSTRING;
-	std::string reqline;
-	int x = formatstr(reqline,"%s %d",escapeGahpString(job_contact),limited_deleg);
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,deleg_proxy);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 2) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc = atoi(result->argv[1]);
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-int 
-GahpClient::globus_gram_client_get_jobmanager_version(const char * resource_contact)
-{
-	static const char* command = "GRAM_GET_JOBMANAGER_VERSION";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!resource_contact) resource_contact=NULLSTRING;
-	std::string reqline;
-	int x = formatstr(reqline,"%s",escapeGahpString(resource_contact));
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,normal_proxy,high_prio);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc < 2) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc = atoi(result->argv[1]);
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
 
 bool
 GenericGahpClient::is_pending(const char *command, const char * /* buf */) 
@@ -2852,33 +2240,6 @@ GahpServer::poll()
 			continue;
 		}
 
-			// Check and see if this is a gram_client_callback.  If so,
-			// deal with it here and now.
-		if ( result_reqid == globus_gt2_gram_callback_reqid ) {
-			if ( result->argc == 4 ) {
-				(*globus_gt2_gram_callback_func)( globus_gt2_gram_user_callback_arg, result->argv[1], 
-								atoi(result->argv[2]), atoi(result->argv[3]) );
-			} else {
-				dprintf(D_FULLDEBUG,
-					"GAHP - Bad client_callback results line\n");
-			}
-			continue;
-		}
-
-			// Check and see if this is a unicore callback.  If so,
-			// deal with it here and now.
-		if ( result_reqid == unicore_gahp_callback_reqid ) {
-			if ( result->argc == 2 ) {
-				(*unicore_gahp_callback_func)( 
-									strcmp(result->argv[1],NULLSTRING) ?
-									result->argv[1] : NULL );
-			} else {
-				dprintf(D_FULLDEBUG,
-					"GAHP - Bad unicore callback results line\n");
-			}
-			continue;
-		}
-
 			// Now lookup in our hashtable....
 		entry = NULL;
 		requestTable->lookup(result_reqid,entry);
@@ -2968,76 +2329,6 @@ GenericGahpClient::check_pending_timeout(const char *,const char *)
 	}
 
 	return false;
-}
-
-
-int 
-GahpClient::globus_gram_client_callback_allow(
-	globus_gram_client_callback_func_t callback_func,
-	void * user_callback_arg,
-	char ** callback_contact)
-{
-	char buf[150];
-	static const char* command = "GRAM_CALLBACK_ALLOW";
-
-		// Clear this now in case we exit out with an error...
-	if (callback_contact) {
-		*callback_contact = NULL;
-	}
-		// First check if we already enabled callbacks; if so,
-		// just return our stashed contact.
-	if ( server->globus_gt2_gram_callback_contact ) {
-			// previously called... make certain nothing changed
-		if ( callback_func != server->globus_gt2_gram_callback_func || 
-						user_callback_arg != server->globus_gt2_gram_user_callback_arg )
-		{
-			EXCEPT("globus_gram_client_callback_allow called twice");
-		}
-		if (callback_contact) {
-			*callback_contact = strdup(server->globus_gt2_gram_callback_contact);
-			ASSERT(*callback_contact);
-		}
-		return 0;
-	}
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// This command is always synchronous, so results_only mode
-		// must always fail...
-	if ( m_mode == results_only ) {
-		return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-	}
-
-	int reqid = server->new_reqid();
-	int x = snprintf(buf,sizeof(buf),"%s %d 0",command,reqid);
-	ASSERT( x > 0 && x < (int)sizeof(buf) );
-	server->write_line(buf);
-	Gahp_Args result;
-	server->read_argv(result);
-	if ( result.argc != 2 || result.argv[0][0] != 'S' ) {
-			// Badness !
-		int ec = result.argc >= 2 ? atoi(result.argv[1]) : GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-		const char *es = result.argc >= 3 ? result.argv[2] : "???";
-		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s error_code=%d\n",
-				command, es,ec);
-		return ec;
-	} 
-
-		// Goodness !
-	server->globus_gt2_gram_callback_reqid = reqid;
- 	server->globus_gt2_gram_callback_func = callback_func;
-	server->globus_gt2_gram_user_callback_arg = user_callback_arg;
-	server->globus_gt2_gram_callback_contact = strdup(result.argv[1]);
-	ASSERT(server->globus_gt2_gram_callback_contact);
-	if (callback_contact) {
-		*callback_contact = strdup(server->globus_gt2_gram_callback_contact);
-		ASSERT(*callback_contact);
-	}
-
-	return 0;
 }
 
 
@@ -5130,133 +4421,10 @@ GahpClient::gridftp_transfer(const char *src_url, const char *dst_url)
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int 
-GahpClient::unicore_job_create(
-	const char * description,
-	char ** job_contact)
-{
-
-	static const char* command = "UNICORE_JOB_CREATE";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!description) description=NULLSTRING;
-char *desc = strdup(description);
-int i = strlen( desc );
-if ( i > 0 && desc[i-1] == '\n' ) {
-desc[i-1] = '\0';
-}
-description = desc;
-	std::string reqline;
-	int x = formatstr( reqline, "%s", escapeGahpString(description) );
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-free(desc);
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,deleg_proxy);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 4) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc = 1;
-		if ( result->argv[1][0] == 'S' ) {
-			rc = 0;
-		}
-		if ( result->argv[2] && strcasecmp(result->argv[2], NULLSTRING) ) {
-			*job_contact = strdup(result->argv[2]);
-		}
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-int 
-GahpClient::unicore_job_start(const char * job_contact)
-{
-	static const char* command = "UNICORE_JOB_START";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!job_contact) job_contact=NULLSTRING;
-	std::string reqline;
-	int x = formatstr(reqline,"%s",escapeGahpString(job_contact));
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,normal_proxy);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc = 1;
-		if ( result->argv[1][0] == 'S' ) {
-			rc = 0;
-		}
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
 int
-GahpClient::unicore_job_destroy(const char * job_contact)
+GahpClient::arc_ping(const std::string &service_url)
 {
-	static const char* command = "UNICORE_JOB_DESTROY";
+	static const char* command = "ARC_PING";
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -5264,9 +4432,8 @@ GahpClient::unicore_job_destroy(const char * job_contact)
 	}
 
 		// Generate request line
-	if (!job_contact) job_contact=NULLSTRING;
 	std::string reqline;
-	int x = formatstr(reqline,"%s",escapeGahpString(job_contact));
+	int x = formatstr(reqline, "%s", escapeGahpString(service_url));
 	ASSERT( x > 0 );
 	const char *buf = reqline.c_str();
 
@@ -5282,7 +4449,7 @@ GahpClient::unicore_job_destroy(const char * job_contact)
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
@@ -5290,245 +4457,13 @@ GahpClient::unicore_job_destroy(const char * job_contact)
 		if (result->argc != 3) {
 			EXCEPT("Bad %s Result",command);
 		}
-		int rc = 1;
-		if ( result->argv[1][0] == 'S' ) {
-			rc = 0;
-		}
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-
-int
-GahpClient::unicore_job_status(const char * job_contact,
-	char **job_status)
-{
-	static const char* command = "UNICORE_JOB_STATUS";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!job_contact) job_contact=NULLSTRING;
-	std::string reqline;
-	int x = formatstr(reqline,"%s",escapeGahpString(job_contact));
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,normal_proxy);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 4) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc = 1;
-		if ( result->argv[1][0] == 'S' ) {
-			rc = 0;
-		}
-		if ( result->argv[2] && strcasecmp(result->argv[2], NULLSTRING) ) {
-			*job_status = strdup(result->argv[2]);
-		}
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-int 
-GahpClient::unicore_job_recover(
-	const char * description)
-{
-
-	static const char* command = "UNICORE_JOB_RECOVER";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!description) description=NULLSTRING;
-char *desc = strdup(description);
-int i = strlen( desc );
-if ( i > 0 && desc[i-1] == '\n' ) {
-desc[i-1] = '\0';
-}
-description = desc;
-	std::string reqline;
-	int x = formatstr( reqline, "%s", escapeGahpString(description) );
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-free(desc);
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,deleg_proxy);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 3) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc = 1;
-		if ( result->argv[1][0] == 'S' ) {
-			rc = 0;
-		}
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-int 
-GahpClient::unicore_job_callback(unicore_gahp_callback_func_t callback_func)
-{
-	char buf[150];
-	static const char* command = "UNICORE_JOB_CALLBACK";
-
-		// First check if we already enabled callbacks; if so,
-		// just return our stashed contact.
-	if ( server->unicore_gahp_callback_func != NULL ) {
-		if ( callback_func != server->unicore_gahp_callback_func ) {
-			EXCEPT("unicore_job_callback called twice");
-		}
-		return 0;
-	}
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// This command is always synchronous, so results_only mode
-		// must always fail...
-	if ( m_mode == results_only ) {
-		return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-	}
-
-	int reqid = server->new_reqid();
-	int x = snprintf(buf,sizeof(buf),"%s %d",command,reqid);
-	ASSERT( x > 0 && x < (int)sizeof(buf) );
-	server->write_line(buf);
-	Gahp_Args result;
-	server->read_argv(result);
-	if ( result.argc != 1 || result.argv[0][0] != 'S' ) {
-			// Badness !
-		dprintf(D_ALWAYS,"GAHP command '%s' failed\n",command);
-		error_string = "";
-		return 1;
-	} 
-
-		// Goodness !
-	server->unicore_gahp_callback_reqid = reqid;
- 	server->unicore_gahp_callback_func = callback_func;
-
-	return 0;
-}
-
-int 
-GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
-{
-	static const char* command = "CREAM_DELEGATE";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!delg_service) delg_service=NULLSTRING;
-	if (!delg_id) delg_id=NULLSTRING;
-	std::string reqline;
-	char *esc1 = strdup( escapeGahpString(delg_service) );
-	char *esc2 = strdup( escapeGahpString(delg_id) );
-	int x = formatstr(reqline, "%s %s", esc2, esc1);
-	free( esc1 );
-	free( esc2 );
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,deleg_proxy,high_prio);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-
-		// command completed.
-		if (result->argc != 2) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) {
-			rc = 0;
+		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
 		} else {
-			rc = 1;
-			error_string = result->argv[1];
+			error_string = "";
 		}
-
 		delete result;
 		return rc;
 	}
@@ -5544,11 +4479,13 @@ GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int 
-GahpClient::cream_job_register(const char *service, const char *delg_id, 
-							   const char *jdl, const char *lease_id, char **job_id, char **upload_url, char **download_url)
+int
+GahpClient::arc_job_new(const std::string &service_url,
+                        const std::string &rsl,
+                        std::string &job_id,
+                        std::string &job_status)
 {
-	static const char* command = "CREAM_JOB_REGISTER";
+	static const char* command = "ARC_JOB_NEW";
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -5556,24 +4493,15 @@ GahpClient::cream_job_register(const char *service, const char *delg_id,
 	}
 
 		// Generate request line
-	if (!service) service=NULLSTRING;
-	if (!delg_id) delg_id=NULLSTRING;
-	if (!jdl) jdl = NULLSTRING;
-	if (!lease_id) lease_id = "";
-
 	std::string reqline;
-	char *esc1 = strdup( escapeGahpString(service) );
-	char *esc2 = strdup( escapeGahpString(delg_id) );
-	char *esc3 = strdup( escapeGahpString(jdl) );
-	char *esc4 = strdup( escapeGahpString(lease_id) );
-	int x = formatstr( reqline, "%s %s %s %s", esc1, esc2, esc3, esc4 );
+	char *esc1 = strdup( escapeGahpString(service_url) );
+	char *esc2 = strdup( escapeGahpString(rsl) );
+	int x = formatstr(reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
-	free( esc3 );
-	free( esc4 );
 	ASSERT( x > 0 );
 	const char *buf = reqline.c_str();
-	
+
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -5582,108 +4510,37 @@ GahpClient::cream_job_register(const char *service, const char *delg_id,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy,low_prio);
+		now_pending(command,buf,deleg_proxy);
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
-
 	if ( result ) {
 		// command completed.
-		int rc = 0;
-		if ( result->argc == 2 ) {
-			if ( !strcmp( result->argv[1], NULLSTRING ) ) {
-				EXCEPT( "Bad %s result", command );
-			}
-			error_string = result->argv[1];
-			rc = 1;
-		} else if ( result->argc == 5 ) {
-			if ( strcmp( result->argv[1], NULLSTRING ) ) {
-				EXCEPT( "Bad %s result", command );
-			}
-
-			if ( strcasecmp(result->argv[2], NULLSTRING) ) {
-				*job_id = strdup(result->argv[2]);
-			}
+		if (result->argc < 3) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
+		} else {
+			error_string = "";
+		}
+		job_id.clear();
+		if ( result->argc == 5 ) {
 			if ( strcasecmp(result->argv[3], NULLSTRING) ) {
-				*upload_url = strdup(result->argv[3]);
+				job_id = result->argv[3];
 			}
+		}
+		job_status.clear();
+		if ( result->argc == 5 ) {
 			if ( strcasecmp(result->argv[4], NULLSTRING) ) {
-				*download_url = strdup(result->argv[4]);
+				job_status = result->argv[4];
 			}
-			rc = 0;
-		} else {
-			EXCEPT( "Bad %s result", command );
 		}
-		
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-int 
-GahpClient::cream_job_start(const char *service, const char *job_id)
-{
-	static const char* command = "CREAM_JOB_START";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!service) service=NULLSTRING;
-	if (!job_id) job_id=NULLSTRING;
-	std::string reqline;
-	char *esc1 = strdup( escapeGahpString(service) );
-	char *esc2 = strdup( escapeGahpString(job_id) );
-		// Just start one job
-	int x = formatstr(reqline, "%s 1 %s", esc1, esc2);
-	free( esc1 );
-	free( esc2 );
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-	
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,deleg_proxy,medium_prio);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 2) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) {
-			rc = 0;
-		} else {
-			rc = 1;
-			error_string = result->argv[1];
-		}
-
 		delete result;
 		return rc;
 	}
@@ -5700,9 +4557,11 @@ GahpClient::cream_job_start(const char *service, const char *job_id)
 }
 
 int
-GahpClient::cream_job_purge(const char *service, const char *job_id)
+GahpClient::arc_job_status(const std::string &service_url,
+                           const std::string &job_id,
+                           std::string &status)
 {
-	static const char* command = "CREAM_JOB_PURGE";
+	static const char* command = "ARC_JOB_STATUS";
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -5710,13 +4569,10 @@ GahpClient::cream_job_purge(const char *service, const char *job_id)
 	}
 
 		// Generate request line
-	if (!service) service=NULLSTRING;
-	if (!job_id) job_id=NULLSTRING;
 	std::string reqline;
-	char *esc1 = strdup( escapeGahpString(service) );
+	char *esc1 = strdup( escapeGahpString(service_url) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
-	int job_number = 1;  // Just query 1 job for now
-	int x = formatstr(reqline, "%s %d %s", esc1, job_number, esc2);
+	int x = formatstr(reqline,"%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
 	ASSERT( x > 0 );
@@ -5730,26 +4586,31 @@ GahpClient::cream_job_purge(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy,medium_prio);
+		now_pending(command,buf,deleg_proxy);
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 2) {
+		if (result->argc < 3 || result->argc > 4) {
 			EXCEPT("Bad %s Result",command);
 		}
-		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) {
-			rc = 0;
+		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
 		} else {
-			rc = 1;
-			error_string = result->argv[1];
+			error_string = "";
 		}
-
+		status.clear();
+		if ( result->argc == 4 ) {
+			if ( strcasecmp(result->argv[3], NULLSTRING) ) {
+				status = result->argv[3];
+			}
+		}
 		delete result;
 		return rc;
 	}
@@ -5766,9 +4627,12 @@ GahpClient::cream_job_purge(const char *service, const char *job_id)
 }
 
 int
-GahpClient::cream_job_cancel(const char *service, const char *job_id)
+GahpClient::arc_job_status_all(const std::string &service_url,
+                               const std::string &states,
+                               StringList &job_ids,
+                               StringList &job_states)
 {
-	static const char* command = "CREAM_JOB_CANCEL";
+	static const char* command = "ARC_JOB_STATUS_ALL";
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -5776,13 +4640,10 @@ GahpClient::cream_job_cancel(const char *service, const char *job_id)
 	}
 
 		// Generate request line
-	if (!service) service=NULLSTRING;
-	if (!job_id) job_id=NULLSTRING;
 	std::string reqline;
-	char *esc1 = strdup( escapeGahpString(service) );
-	char *esc2 = strdup( escapeGahpString(job_id) );
-	int job_number = 1;  // Just query 1 job for now
-	int x = formatstr(reqline, "%s %d %s", esc1, job_number, esc2);
+	char *esc1 = strdup( escapeGahpString(service_url) );
+	char *esc2 = strdup( escapeGahpString(states) );
+	int x = formatstr(reqline,"%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
 	ASSERT( x > 0 );
@@ -5796,326 +4657,33 @@ GahpClient::cream_job_cancel(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy,medium_prio);
+		now_pending(command,buf,deleg_proxy);
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 2) {
+		if (result->argc < 3) {
 			EXCEPT("Bad %s Result",command);
 		}
-		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) {
-			rc = 0;
+		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
 		} else {
-			rc = 1;
-			error_string = result->argv[1];
+			error_string = "";
 		}
-		
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-int
-GahpClient::cream_job_suspend(const char *service, const char *job_id)
-{
-	static const char* command = "CREAM_JOB_SUSPEND";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!service) service=NULLSTRING;
-	if (!job_id) job_id=NULLSTRING;
-	std::string reqline;
-	char *esc1 = strdup( escapeGahpString(service) );
-	char *esc2 = strdup( escapeGahpString(job_id) );
-	int job_number = 1;  // Just query 1 job for now
-	int x = formatstr(reqline, "%s %d %s", esc1, job_number, esc2);
-	free( esc1 );
-	free( esc2 );
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,normal_proxy,medium_prio);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 2) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) {
-			rc = 0;
-		} else {
-			rc = 1;
-			error_string = result->argv[1];
-		}
-
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-int
-GahpClient::cream_job_resume(const char *service, const char *job_id)
-{
-	static const char* command = "CREAM_JOB_RESUME";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!service) service=NULLSTRING;
-	if (!job_id) job_id=NULLSTRING;
-	std::string reqline;
-	char *esc1 = strdup( escapeGahpString(service) );
-	char *esc2 = strdup( escapeGahpString(job_id) );
-	int job_number = 1;  // Just query 1 job for now
-	int x = formatstr(reqline, "%s %d %s", esc1, job_number, esc2);
-	free( esc1 );
-	free( esc2 );
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,normal_proxy,medium_prio);
-	}
-
-		// If we made it here, command is pending.
-		
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc != 2) {
-			EXCEPT("Bad %s Result",command);
-		}
-		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) {
-			rc = 0;
-		} else {
-			rc = 1;
-			error_string = result->argv[1];
-		}
-
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-int
-GahpClient::cream_job_status(const char *service, const char *job_id, 
-									char **job_status, int *exit_code, char **failure_reason)
-{
-	static const char* command = "CREAM_JOB_STATUS";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-		// Generate request line
-	if (!service) service=NULLSTRING;
-	if (!job_id) job_id=NULLSTRING;
-	std::string reqline;
-	char *esc1 = strdup( escapeGahpString(service) );
-	char *esc2 = strdup( escapeGahpString(job_id) );
-	int job_number = 1;  // Just query 1 job for now
-	int x = formatstr(reqline, "%s %d %s", esc1, job_number, esc2);
-	free( esc1 );
-	free( esc2 );
-	ASSERT( x > 0 );
-	const char *buf = reqline.c_str();
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,normal_proxy,medium_prio);
-	}
-
-		// If we made it here, command is pending.
-
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		if (result->argc > 2) {
-			if( result->argc != 3 + atoi(result->argv[2]) * 4){
+		if (result->argc > 3) {
+			int cnt = atoi(result->argv[3]);
+			if ( 2*cnt + 4 != result->argc ) {
 				EXCEPT("Bad %s Result",command);
 			}
-		}
-		else if (result->argc != 2) {
-			EXCEPT("Bad %s Result",command);
-		}
-		
-		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) {
-			rc = 0;
-		} else {
-			rc = 1;
-			error_string = result->argv[1];
-		}
-		
-		if ( rc == 0 ) {
-			*job_status = strdup(result->argv[4]);
-			*exit_code = atoi(result->argv[5]);
-			if ( strcasecmp(result->argv[6], NULLSTRING) ) {
-				*failure_reason = strdup(result->argv[6]);
-			} else {
-				*failure_reason = NULL;
-			}
-		}
-		delete result;
-		return rc;
-	}
-
-		// Now check if pending command timed out.
-	if ( check_pending_timeout(command,buf) ) {
-		// pending command timed out.
-		formatstr( error_string, "%s timed out", command );
-		return GAHPCLIENT_COMMAND_TIMED_OUT;
-	}
-
-		// If we made it here, command is still pending...
-	return GAHPCLIENT_COMMAND_PENDING;
-}
-
-int 
-GahpClient::cream_job_status_all(const char *service, 
-	GahpClient::CreamJobStatusMap & results)
-{
-	static const char* command = "CREAM_JOB_STATUS";
-
-		// Check if this command is supported
-	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
-		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-	}
-
-	std::string reqline;
-
-	char *esc1 = strdup( escapeGahpString(service) );
-	int job_number = 0; // "all"
-	int x = formatstr(reqline, "%s %d", esc1, job_number);
-	ASSERT( x > 0 );
-	free( esc1 );
-	const char *buf = reqline.c_str();
-
-		// Check if this request is currently pending.  If not, make
-		// it the pending request.
-	if ( !is_pending(command,buf) ) {
-		// Command is not pending, so go ahead and submit a new one
-		// if our command mode permits.
-		if ( m_mode == results_only ) {
-			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-		}
-		now_pending(command,buf,normal_proxy,high_prio);
-	}
-
-		// If we made it here, command is pending.
-	const int FIRST_RESULT = 3; // Field 3 (0 indexed) is the first
-	                            // record result.
-	const int RECORD_FIELDS = 4; // How many fields in a record?
-
-		// Check first if command completed.
-	Gahp_Args* result = get_pending_result(command,buf);
-	if ( result ) {
-		// command completed.
-		int num_results = 0;
-		if (result->argc > 2) {
-			num_results = atoi(result->argv[2]);
-			if( result->argc != FIRST_RESULT + num_results * RECORD_FIELDS) {
-				EXCEPT("Bad %s Result",command);
-			}
-		}
-		else if (result->argc != 2) {
-			EXCEPT("Bad %s Result",command);
-		}
-		
-		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) {
-			rc = 0;
-		} else {
-			rc = 1;
-			error_string = result->argv[1];
-		}
-		
-		if ( rc == 0 ) {
-			for(int i = 0; i < num_results; i++) {
-				CreamJobStatus status;
-				int offset = FIRST_RESULT + i * RECORD_FIELDS;
-				status.job_id = result->argv[offset + 0];
-				status.job_status = result->argv[offset + 1];
-				status.exit_code = atoi(result->argv[offset + 2]);
-				if ( strcasecmp(result->argv[offset + 3], NULLSTRING) ) {
-					status.failure_reason = result->argv[offset + 3];
-				}
-
-				results[status.job_id] = status;
+			for ( int i = 4;  (i + 1) < result->argc; i += 2 ) {
+				job_ids.append(result->argv[i]);
+				job_states.append(result->argv[i + 1]);
 			}
 		}
 		delete result;
@@ -6134,9 +4702,11 @@ GahpClient::cream_job_status_all(const char *service,
 }
 
 int
-GahpClient::cream_proxy_renew(const char *delg_service, const char *delg_id)
+GahpClient::arc_job_info(const std::string &service_url,
+                         const std::string &job_id,
+                         std::string &results)
 {
-	static const char* command = "CREAM_PROXY_RENEW";
+	static const char* command = "ARC_JOB_INFO";
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -6144,12 +4714,10 @@ GahpClient::cream_proxy_renew(const char *delg_service, const char *delg_id)
 	}
 
 		// Generate request line
-	if (!delg_service) delg_service=NULLSTRING;
-	if (!delg_id) delg_id=NULLSTRING;
 	std::string reqline;
-	char *esc1 = strdup( escapeGahpString(delg_service) );
-	char *esc2 = strdup( escapeGahpString(delg_id) );
-	int x = formatstr(reqline, "%s %s", esc1, esc2);
+	char *esc1 = strdup( escapeGahpString(service_url) );
+	char *esc2 = strdup( escapeGahpString(job_id) );
+	int x = formatstr(reqline,"%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
 	ASSERT( x > 0 );
@@ -6163,26 +4731,31 @@ GahpClient::cream_proxy_renew(const char *delg_service, const char *delg_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy,high_prio);
+		now_pending(command,buf,deleg_proxy);
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		if (result->argc != 2) {
+		if (result->argc < 3 || result->argc > 4) {
 			EXCEPT("Bad %s Result",command);
 		}
-		int rc;
-		if (strcmp(result->argv[1], NULLSTRING) == 0) {
-			rc = 0;
+		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
 		} else {
-			rc = 1;
-			error_string = result->argv[1];
+			error_string = "";
 		}
-		
+		results.clear();
+		if ( result->argc == 4 ) {
+			if ( strcasecmp(result->argv[3], NULLSTRING) ) {
+				results = result->argv[3];
+			}
+		}
 		delete result;
 		return rc;
 	}
@@ -6198,21 +4771,34 @@ GahpClient::cream_proxy_renew(const char *delg_service, const char *delg_id)
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int 
-GahpClient::cream_ping(const char * service)
+int
+GahpClient::arc_job_stage_in(const std::string &service_url,
+                             const std::string &job_id,
+                             StringList &files)
 {
-	static const char* command = "CREAM_PING";
-	
+	static const char* command = "ARC_JOB_STAGE_IN";
+
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
 		// Generate request line
-	if (!service) service=NULLSTRING;
 	std::string reqline;
-	int x = formatstr(reqline,"%s",escapeGahpString(service));
+	char *esc1 = strdup( escapeGahpString(service_url) );
+	char *esc2 = strdup( escapeGahpString(job_id) );
+	int x = formatstr(reqline,"%s %s %d", esc1, esc2, files.number() );
+	free( esc1 );
+	free( esc2 );
 	ASSERT( x > 0 );
+	int cnt = 0;
+	const char *filename;
+	files.rewind();
+	while ( (filename = files.next()) ) {
+		formatstr_cat(reqline, " %s", filename);
+		cnt++;
+	}
+	ASSERT( cnt == files.number() );
 	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
@@ -6223,39 +4809,32 @@ GahpClient::cream_ping(const char * service)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy,high_prio);
+		now_pending(command,buf,deleg_proxy);
 	}
-	
+
 		// If we made it here, command is pending.
-	
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
-			// command completed.
-		int rc = 0;
-		if (result->argc < 2 || result->argc > 3) {
+		// command completed.
+		if (result->argc != 3) {
 			EXCEPT("Bad %s Result",command);
 		}
-			// We don't distinguish between the ping() call having an
-			// exception and it returning false.
-		if (strcmp(result->argv[1], NULLSTRING) == 0) {
-			if ( strcasecmp( result->argv[2], "true" ) ) {
-				rc = 0;
-			} else {
-				rc = 1;
-				error_string = "";
-			}
+		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
 		} else {
-			rc = 1;
-			error_string = result->argv[1];
+			error_string = "";
 		}
 		delete result;
 		return rc;
 	}
-	
+
 		// Now check if pending command timed out.
 	if ( check_pending_timeout(command,buf) ) {
-			// pending command timed out.
+		// pending command timed out.
 		formatstr( error_string, "%s timed out", command );
 		return GAHPCLIENT_COMMAND_TIMED_OUT;
 	}
@@ -6265,21 +4844,102 @@ GahpClient::cream_ping(const char * service)
 }
 
 int
-GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &lease_expiry)
+GahpClient::arc_job_stage_out(const std::string &service_url,
+                              const std::string &job_id,
+                              StringList &src_files,
+                              StringList &dest_files)
 {
-	static const char* command = "CREAM_SET_LEASE";
+	static const char* command = "ARC_JOB_STAGE_OUT";
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
+
 		// Generate request line
-	if (!service) service=NULLSTRING;
-	if (!lease_id) lease_id=NULLSTRING;
 	std::string reqline;
-	char *esc1 = strdup( escapeGahpString(service) );
-	char *esc2 = strdup( escapeGahpString(lease_id) );
-	int x = formatstr(reqline, "%s %s %ld", esc1, esc2, (long)lease_expiry);
+	char *esc1 = strdup( escapeGahpString(service_url) );
+	char *esc2 = strdup( escapeGahpString(job_id) );
+	int x = formatstr(reqline,"%s %s %d", esc1, esc2, src_files.number() );
+	free( esc1 );
+	free( esc2 );
+	ASSERT( x > 0 );
+	int cnt = 0;
+	const char *src_filename;
+	const char *dest_filename;
+	src_files.rewind();
+	dest_files.rewind();
+	while ( (src_filename = src_files.next()) &&
+			(dest_filename = dest_files.next()) ) {
+		esc1 = strdup( escapeGahpString(src_filename) );
+		esc2 = strdup( escapeGahpString(dest_filename) );
+		formatstr_cat(reqline," %s %s", esc1, esc2);
+		cnt++;
+		free( esc1 );
+		free( esc2 );
+	}
+	ASSERT( cnt == src_files.number() );
+	ASSERT( cnt == dest_files.number() );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc != 3) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
+		} else {
+			error_string = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
+GahpClient::arc_job_kill(const std::string &service_url,
+                         const std::string &job_id)
+{
+	static const char* command = "ARC_JOB_KILL";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	std::string reqline;
+	char *esc1 = strdup( escapeGahpString(service_url) );
+	char *esc2 = strdup( escapeGahpString(job_id) );
+	int x = formatstr(reqline, "%s %s", esc1, esc2 );
 	free( esc1 );
 	free( esc2 );
 	ASSERT( x > 0 );
@@ -6293,35 +4953,218 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy,high_prio);
+		now_pending(command,buf,deleg_proxy);
 	}
 
 		// If we made it here, command is pending.
-		
+
 		// Check first if command completed.
 	Gahp_Args* result = get_pending_result(command,buf);
 	if ( result ) {
 		// command completed.
-		int rc = 0;
-		if ( result->argc == 2 ) {
-			if ( !strcmp( result->argv[1], NULLSTRING ) ) {
-				EXCEPT( "Bad %s result", command );
-			}
-			error_string = result->argv[1];
-			rc = 1;
-		} else if ( result->argc == 3 ) {
-			if ( strcmp( result->argv[1], NULLSTRING ) ) {
-				EXCEPT( "Bad %s result", command );
-			}
-
-			if ( strcasecmp(result->argv[2], NULLSTRING) ) {
-				lease_expiry = atoi( result->argv[2] );
-			}
-			rc = 0;
-		} else {
-			EXCEPT( "Bad %s result", command );
+		if (result->argc != 3) {
+			EXCEPT("Bad %s Result",command);
 		}
-			
+		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
+		} else {
+			error_string = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
+GahpClient::arc_job_clean(const std::string &service_url,
+                          const std::string &job_id)
+{
+	static const char* command = "ARC_JOB_CLEAN";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	std::string reqline;
+	char *esc1 = strdup( escapeGahpString(service_url) );
+	char *esc2 = strdup( escapeGahpString(job_id) );
+	int x = formatstr(reqline, "%s %s", esc1, esc2 );
+	free( esc1 );
+	free( esc2 );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc != 3) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
+		} else {
+			error_string = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
+GahpClient::arc_delegation_new(const std::string &service_url,
+                               std::string &deleg_id)
+{
+	static const char* command = "ARC_DELEGATION_NEW";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	std::string reqline;
+	char *esc1 = strdup( escapeGahpString(service_url) );
+	int x = formatstr(reqline,"%s", esc1 );
+	free( esc1 );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc < 3 || result->argc > 4) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
+		} else {
+			error_string = "";
+		}
+		deleg_id.clear();
+		if ( result->argc == 4 ) {
+			if ( strcasecmp(result->argv[3], NULLSTRING) ) {
+				deleg_id = result->argv[3];
+			}
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
+GahpClient::arc_delegation_renew(const std::string &service_url,
+                                 const std::string &deleg_id)
+{
+	static const char* command = "ARC_DELEGATION_NEW";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	std::string reqline;
+	char *esc1 = strdup( escapeGahpString(service_url) );
+	char *esc2 = strdup( escapeGahpString(deleg_id) );
+	int x = formatstr(reqline,"%s %s", esc1, esc2 );
+	free( esc1 );
+	free( esc2 );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc != 3) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = atoi(result->argv[1]);
+		rc = (rc == 0) ? 499 : rc;
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
+		} else {
+			error_string = "";
+		}
 		delete result;
 		return rc;
 	}

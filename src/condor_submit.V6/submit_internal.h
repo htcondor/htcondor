@@ -79,7 +79,7 @@ private:
 	int proc;
 	bool close_file_on_disconnect;
 	bool log_all_communication;
-	MyString echo_itemdata_filepath;
+	std::string echo_itemdata_filepath;
 	FILE * fp;
 };
 

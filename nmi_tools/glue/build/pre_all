@@ -127,11 +127,9 @@ system("rm -rf /tmp/$runid");
 if(!(defined $opt_skip_doc)){
 	print "Building man page nroff source\n";
 	chdir( "$DocDir" ) || die "Can't chdir($DocDir): $!\n";
-	system("patch -p2 -i old-sphinx.patch");
 	my $doc_log = "$CommonDir/nroff.log";
-	# submit-3.batlab.org (SL6) has sphinx 1.0.8 from EPEL 6
 	open( DOC, "make SPHINXBUILD='sphinx-build' man 2>&1|" ) ||
-        die "Can't open 'make just-man-pages': $!\n";
+        die "Can't open 'make SPHINXBUILD='sphinx-build' man': $!\n";
 	open( DOC_LOG, ">$doc_log" ) || die "Can't open $doc_log: $!\n";
 	$oldfh = select(DOC_LOG); $| = 1; select($oldfh);
 	while( <DOC> ) {

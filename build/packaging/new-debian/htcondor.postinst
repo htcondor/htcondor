@@ -54,6 +54,7 @@ case "$1" in
         # make sure the config and home dir are complete
         condor_make_homedir
         # create needed directories
+        mkdir -p /usr/share/condor/config.d
         mkdir -p /etc/condor/passwords.d
         chmod 0700 /etc/condor/passwords.d
         mkdir -p /etc/condor/tokens.d

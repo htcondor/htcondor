@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "MyString.h"
 #include "string_list.h"
 
 // Removes leading/tailing single(') or double(") quote

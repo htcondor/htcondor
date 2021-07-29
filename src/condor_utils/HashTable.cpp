@@ -82,7 +82,7 @@ size_t hashFunction( const std::string &key )
 
 size_t hashFunction( const MyString &key )
 {
-	return hashFunction( key.Value() );
+	return hashFunction( key.c_str() );
 }
 
 size_t hashFunction( const YourString &key )

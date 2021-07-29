@@ -21,7 +21,6 @@
 #define _USER_LOG_HEADER_H
 
 #include <time.h>
-#include "MyString.h"
 #include "read_user_log_state.h"
 #include "write_user_log.h"
 

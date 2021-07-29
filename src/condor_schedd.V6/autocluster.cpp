@@ -228,6 +228,18 @@ int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * 
 		ExprTree * tree = job.Lookup(*attr);
 		sigset.push_back(tree);
 		if (expand_refs && tree) {
+			// bare attribute references that are not resolved locally show up as external refs
+			// but they may be something like JobMachineAttrs that get added to the job later.
+			// Also When something like Requirements has MY.foo, foo shows up as external ref foo when
+			// the job does not have a foo.  So we get the fully qualified external refs and then
+			// delete those that have a "." in them which gets rid of the unambiguously external refs.
+			// (Also we can't tolerate dotted attribute names in the significant attrs list)
+			job.GetExternalReferences(tree, exattrs, true);
+			for (auto it = exattrs.begin(); it != exattrs.end();) { // c++ 20 has erase_if, but we can't use it
+				auto tmp = it++;
+				if (tmp->find_first_of('.') != std::string::npos) { exattrs.erase(tmp); }
+			}
+			// now add in the internal refs
 			job.GetInternalReferences(tree, exattrs, false);
 		}
 	}

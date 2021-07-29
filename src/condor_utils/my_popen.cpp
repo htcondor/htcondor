@@ -514,7 +514,15 @@ my_popenv_impl( const char *const args[],
 			egid = getegid();
 			if( seteuid( 0 ) ) { }
 			if( setgid( egid ) ) { }
-			if( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
+
+			// Some linux environment make it an error, to
+			// setuid'ing to our current euid.  So don't check first
+			
+			if (getuid() != euid) {
+				if (setuid(euid) < 0) {
+					_exit(ENOEXEC);
+				}
+			}
 		}
 
 			/* before we exec(), clear the signal mask and reset SIGPIPE
@@ -531,14 +539,14 @@ my_popenv_impl( const char *const args[],
 		if (env_ptr) {
 			char **m_unix_env = NULL;
 			m_unix_env = env_ptr->getStringArray();
-			execve(cmd.Value(), const_cast<char *const*>(args), m_unix_env );
+			execve(cmd.c_str(), const_cast<char *const*>(args), m_unix_env );
 
 				// delete the memory even though we're on our way out
 				// if exec failed.
 			deleteStringArray(m_unix_env);
 
 		} else {
-			execvp(cmd.Value(), const_cast<char *const*>(args) );
+			execvp(cmd.c_str(), const_cast<char *const*>(args) );
 		}
 
 			/* If we get here, inform the parent of our errno */

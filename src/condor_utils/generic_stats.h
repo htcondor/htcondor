@@ -463,7 +463,7 @@ template <class T>
 inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2, T value) {
    MyString attr(pattr1);
    attr += pattr2;
-   return ClassAdAssign(ad, attr.Value(), value);
+   return ClassAdAssign(ad, attr.c_str(), value);
 }
 /*
 template <>
@@ -544,7 +544,7 @@ public:
       ad.Delete(pattr);
       MyString attr(pattr);
       attr += "Peak";
-      ad.Delete(attr.Value());
+      ad.Delete(attr.c_str());
       };
 
    void Clear() {
@@ -851,7 +851,7 @@ public:
       ad.Delete(pattr);
       MyString attr;
       attr.formatstr("Recent%s", pattr);
-      ad.Delete(attr.Value());
+      ad.Delete(attr.c_str());
       };
 
    void PublishDebug(ClassAd & ad, const char * pattr, int flags) const;
@@ -979,7 +979,7 @@ public:
       ad.Delete(pattr);
       MyString attr;
       attr.formatstr("Recent%s", pattr);
-      ad.Delete(attr.Value());
+      ad.Delete(attr.c_str());
       };
 
    void Clear() {

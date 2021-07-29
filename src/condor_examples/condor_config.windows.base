@@ -1,0 +1,48 @@
+######################################################################
+##
+##  condor_config
+##
+##  This is the global configuration file for condor. This is where
+##  you define where the local config file is. Any settings
+##  made here may potentially be overridden in the local configuration
+##  file.  KEEP THAT IN MIND!  To double-check that a variable is
+##  getting set from the configuration file that you expect, use
+##  condor_config_val -v <variable name>
+##
+##  condor_config.annotated is a more detailed sample config file
+##
+##  Unless otherwise specified, settings that are commented out show
+##  the defaults that are used if you don't define a value.  Settings
+##  that are defined here MUST BE DEFINED since they have no default
+##  value.
+##
+######################################################################
+[HTCONDOR]
+##  Where have you installed the Condor binaries
+##  by default this is also where the runtime log,spool and execute directories live
+RELEASE_DIR = C:\Condor
+#LOCAL_DIR = $(RELEASE_DIR)
+
+##  Where is the machine-specific local config file for each host?
+LOCAL_CONFIG_FILE = $(LOCAL_DIR)\condor_config.local
+##  If the local config file is not present, is it an error? (WARNING: Having this be false may be insecure)
+#REQUIRE_LOCAL_CONFIG_FILE = true
+
+##  The normal way to do configuration with RPMs is to read all of the
+##  files in a given directory that don't match a regex as configuration files.
+##  Config files are read in lexicographic order.  You can enable this on Windows
+##  by creating the directory listed here
+LOCAL_CONFIG_DIR = $(LOCAL_DIR)\config
+#LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
+
+## HOST_BASED authorization was the default for the 8.8 series (and earlier), but it is
+## intrinsically insecure. To make the 9.0 series secure by default, we switched to
+## authorization based on usernames.  You can re-enable HOST_BASED authentication
+## by uncommenting the line below, and commenting out use SECURITY:recommended_v9_0
+## But please don't do that - embrace the new more-secure configuration instead
+#use SECURITY:HOST_BASED
+use SECURITY:recommended_v9_0(SYSTEM, Administrator@*)
+
+##--------------------------------------------------------------------
+## Settings from the the installer questions
+##--------------------------------------------------------------------

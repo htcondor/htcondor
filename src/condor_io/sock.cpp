@@ -738,7 +738,7 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port)
 		} else {
 			addr = get_local_ipaddr(proto);
 			if(!addr.is_valid()) {
-				dprintf(D_ALWAYS, "Asked to bind to a single %s interface, but cannot find a suitable interface\n", condor_protocol_to_str(proto).Value());
+				dprintf(D_ALWAYS, "Asked to bind to a single %s interface, but cannot find a suitable interface\n", condor_protocol_to_str(proto).c_str());
 				return FALSE;
 			}
 		}
@@ -874,7 +874,7 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback, co
 		} else {
 			addr = get_local_ipaddr(proto);
 			if(!addr.is_valid()) {
-				dprintf(D_ALWAYS, "Asked to bind to a single %s interface, but cannot find a suitable interface\n", condor_protocol_to_str(proto).Value());
+				dprintf(D_ALWAYS, "Asked to bind to a single %s interface, but cannot find a suitable interface\n", condor_protocol_to_str(proto).c_str());
 				return FALSE;
 			}
 		}
@@ -1159,7 +1159,7 @@ bool Sock::guess_address_string(char const* host, int port, condor_sockaddr& add
 	if (host[0] == '<') {
 		addr.from_sinful(host);
 		dprintf(D_HOSTNAME, "it was sinful string. ip = %s, port = %d\n",
-				addr.to_ip_string().Value(), addr.get_port());
+				addr.to_ip_string().c_str(), addr.get_port());
 	}
 	/* try to get a decimal notation 	 			*/
 	else if ( addr.from_ip_string(host) ) {
@@ -1236,7 +1236,7 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr ) {
 	// If we don't multiply by -1 and instead use rbegin()/rend(),
 	// then addresses of the same desirability will be checked in
 	// the reverse order.
-	dprintf( D_HOSTNAME, "Found address %lu candidates:\n", v->size() );
+	dprintf( D_HOSTNAME, "Found address %zu candidates:\n", v->size() );
 	for( unsigned i = 0; i < v->size(); ++i ) {
 		condor_sockaddr c = (*v)[i];
 		int d = -1 * c.desirability();
@@ -1321,7 +1321,7 @@ int Sock::do_connect(
 			set_connect_addr(host);
 		}
 		else { // otherwise, just use ip string.
-			set_connect_addr(_who.to_ip_string().Value());
+			set_connect_addr(_who.to_ip_string().c_str());
 		}
     	addr_changed();
     }
@@ -2106,7 +2106,7 @@ char * Sock::serializeCryptoInfo() const
 
 		char * ptr = outbuf + strlen(outbuf);
 		unsigned char * ccs_serial = (unsigned char*)(&(crypto_state_->m_stream_crypto_state));
-		dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: encoding %lu bytes.\n", sizeof(StreamCryptoState));
+		dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: encoding %zu bytes.\n", sizeof(StreamCryptoState));
 		for (unsigned int i=0; i < sizeof(StreamCryptoState); i++, ccs_serial++, ptr+=2) {
 			sprintf(ptr, "%02X", *ccs_serial);
 		}
@@ -2254,7 +2254,7 @@ const char * Sock::serializeCryptoInfo(const char * buf)
         // StreamCryptoState with what we deserialized above.
         dprintf(D_NETWORK|D_VERBOSE, "SOCK: protocol is %i, crypto_ is %p, crypto_state_ is %p.\n", protocol, crypto_, crypto_state_);
         if(protocol == CONDOR_AESGCM) {
-            dprintf(D_NETWORK|D_VERBOSE, "SOCK: MEMCPY to %p from %p size %lu.\n", &(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
+            dprintf(D_NETWORK|D_VERBOSE, "SOCK: MEMCPY to %p from %p size %zu.\n", &(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
             memcpy(&(crypto_state_->m_stream_crypto_state), &scs, sizeof(StreamCryptoState));
         }
 
@@ -2461,7 +2461,7 @@ Sock::addr_changed()
     _peer_ip_buf[0] = '\0';
     _sinful_self_buf.clear();
     _sinful_public_buf.clear();
-    _sinful_peer_buf[0] = '\0';
+    _sinful_peer_buf.clear();
 }
 
 condor_sockaddr
@@ -2493,8 +2493,8 @@ const char *
 Sock::peer_ip_str() const
 {
 	if (!_peer_ip_buf[0]) {
-		MyString peer_ip = _who.to_ip_string();
-		strcpy(_peer_ip_buf, peer_ip.Value());
+		std::string peer_ip = _who.to_ip_string();
+		strcpy(_peer_ip_buf, peer_ip.c_str());
 	}
 	return _peer_ip_buf;
 		/*
@@ -2642,8 +2642,9 @@ const char *
 Sock::my_ip_str() const
 {
 	if (!_my_ip_buf[0]) {
-		MyString ip_str = my_addr().to_ip_string();
-		strcpy(_my_ip_buf, ip_str.Value());
+		std::string ip_str = my_addr().to_ip_string();
+		strncpy(_my_ip_buf, ip_str.c_str(), sizeof(_my_ip_buf));
+		_my_ip_buf[sizeof(_my_ip_buf)-1] = '\0';
 	}
 	return _my_ip_buf;
 }
@@ -2669,14 +2670,13 @@ Sock::get_sinful() const
 	return _sinful_self_buf.c_str();
 }
 
-char *
+char const *
 Sock::get_sinful_peer() const
 {       
-	if ( !_sinful_peer_buf[0] ) {
-		MyString sinful_peer = _who.to_sinful();
-		strcpy(_sinful_peer_buf, sinful_peer.Value());
+	if ( _sinful_peer_buf.empty() ) {
+		_sinful_peer_buf = _who.to_sinful();
 	}
-	return _sinful_peer_buf;
+	return _sinful_peer_buf.c_str();
 }
 
 char const *
@@ -2941,8 +2941,12 @@ Sock::initialize_crypto(KeyInfo * key)
 
 bool Sock::set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
 {
+	// AES-GCM provides integrity checking as part of the encryption
+	// operation. Don't add an MD5 checksum on top of that.
     if (mode != MD_OFF && crypto_ && crypto_state_->m_keyInfo.getProtocol() == CONDOR_AESGCM) {
-        set_MD_mode(MD_OFF);
+        mode = MD_OFF;
+        key = nullptr;
+        keyId = nullptr;
     }
 
     mdMode_ = mode;

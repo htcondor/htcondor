@@ -20,12 +20,12 @@
 #ifndef _CLASSAD_VISA_H
 #define _CLASSAD_VISA_H
 
-class MyString;
+#include <string>
 
 extern bool classad_visa_write(ClassAd* ad,
                                const char* daemon_type,
                                const char* daemon_sinful,
                                const char* dir_path,
-                               MyString* filename_used);
+                               std::string* filename_used);
 
 #endif

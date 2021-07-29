@@ -23,15 +23,13 @@ MINT_TO_UBUNTU_VERSION = {'18': '16',
 
 # download URLs for the different platforms
 URL_DICT={
-  "DEB9": "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Debian9.tar.gz",
-  "DEB10": "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Debian10.tar.gz",
-  "MAC": "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_MacOSX.tar.gz",
-  "RH6": "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_RedHat6.tar.gz",
-  "RH7": "https://research.cs.wisc.edu/htcondor/bosco/1.3/bosco-1.3-x86_64_RedHat7.tar.gz",
-  "RH8": "https://research.cs.wisc.edu/htcondor/bosco/1.3/bosco-1.3-x86_64_RedHat8.tar.gz",
-  "UBUNTU16": "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Ubuntu16.tar.gz",
-  "UBUNTU18": "https://research.cs.wisc.edu/htcondor/bosco/1.3/bosco-1.3-x86_64_Ubuntu18.tar.gz",
-  "UBUNTU20": "https://research.cs.wisc.edu/htcondor/bosco/1.2/bosco-1.2-x86_64_Ubuntu20.tar.gz",
+  "DEB9": "https://research.cs.wisc.edu/htcondor/tarball/9.0/current/condor-current-x86_64_Debian9-stripped.tar.gz",
+  "DEB10": "https://research.cs.wisc.edu/htcondor/tarball/9.0/current/condor-current-x86_64_Debian10-stripped.tar.gz",
+  "MAC": "https://research.cs.wisc.edu/htcondor/tarball/9.0/current/condor-current-x86_64_MacOSX-stripped.tar.gz",
+  "RH7": "https://research.cs.wisc.edu/htcondor/tarball/9.0/current/condor-current-x86_64_CentOS7-stripped.tar.gz",
+  "RH8": "https://research.cs.wisc.edu/htcondor/tarball/9.0/current/condor-current-x86_64_CentOS8-stripped.tar.gz",
+  "UBUNTU18": "https://research.cs.wisc.edu/htcondor/tarball/9.0/current/condor-current-x86_64_Ubuntu18-stripped.tar.gz",
+  "UBUNTU20": "https://research.cs.wisc.edu/htcondor/tarball/9.0/current/condor-current-x86_64_Ubuntu20-stripped.tar.gz",
 }
 
 BIT32="32bit"

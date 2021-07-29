@@ -25,10 +25,10 @@
 #include "gceresource.h"
 #include "gridmanager.h"
 
-HashTable <std::string, GCEResource *>
-    GCEResource::ResourcesByName( hashFunction );
+std::map <std::string, GCEResource *>
+    GCEResource::ResourcesByName;
 
-const char * GCEResource::HashName( const char *resource_name,
+std::string & GCEResource::HashName( const char *resource_name,
 									const char *project,
 									const char *zone,
 									const char *auth_file,
@@ -36,7 +36,7 @@ const char * GCEResource::HashName( const char *resource_name,
 {
 	static std::string hash_name;
 	formatstr( hash_name, "gce %s %s %s#%s#%s", resource_name, project, zone, auth_file, account );
-	return hash_name.c_str();
+	return hash_name;
 }
 
 
@@ -46,16 +46,16 @@ GCEResource* GCEResource::FindOrCreateResource( const char *resource_name,
 												const char *auth_file,
 												const char *account )
 {
-	int rc;
 	GCEResource *resource = NULL;
-
-	rc = ResourcesByName.lookup( HashName( resource_name, project, zone, auth_file, account ), resource );
-	if ( rc != 0 ) {
+	std::string &key = HashName( resource_name, project, zone, auth_file, account );
+	auto itr = ResourcesByName.find( key );
+	if ( itr == ResourcesByName.end() ) {
 		resource = new GCEResource( resource_name, project, zone, auth_file, account );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashName( resource_name, project, zone, auth_file, account ), resource );
+		ResourcesByName[key] = resource;
 	} else {
+		resource = itr->second;
 		ASSERT(resource);
 	}
 
@@ -109,7 +109,7 @@ GCEResource::GCEResource( const char *resource_name,
 
 GCEResource::~GCEResource()
 {
-	ResourcesByName.remove( HashName( resourceName, m_project, m_zone, m_auth_file, m_account ) );
+	ResourcesByName.erase( HashName( resourceName, m_project, m_zone, m_auth_file, m_account ) );
 	delete gahp;
 	free( m_auth_file );
 	free( m_account );
@@ -131,7 +131,7 @@ const char *GCEResource::ResourceType()
 
 const char *GCEResource::GetHashName()
 {
-	return HashName( resourceName, m_project, m_zone, m_auth_file, m_account );
+	return HashName( resourceName, m_project, m_zone, m_auth_file, m_account ).c_str();
 }
 
 void GCEResource::PublishResourceAd( ClassAd *resource_ad )

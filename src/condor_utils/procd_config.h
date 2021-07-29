@@ -22,6 +22,6 @@
 
 #include "MyString.h"
 
-MyString get_procd_address();
+std::string get_procd_address();
 
 #endif

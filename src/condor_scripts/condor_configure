@@ -920,7 +920,7 @@ sub install( $ )
 {
     my $release_dir=shift(@_);
 
-    my @release_dirs = qw( etc include lib libexec bin sbin man );
+    my @release_dirs = qw( etc examples include lib lib64 libexec bin sbin man usr );
 
 	# Get the absolute path to the release directory
 	my $release_src_dir;
@@ -938,7 +938,7 @@ sub install( $ )
 	foreach my $d ( @release_dirs ) {
 		my $dir = "$release_src_dir/$d";
 		if ( ! -d $dir ) {
-			push( @missing, $d ) if ( ! ($d eq 'man'));
+			push( @missing, $d ) if ( ! ($d eq 'man' || $d eq 'lib64' || $d eq 'usr'));
 		}
 	}
 

@@ -248,7 +248,7 @@ send_email()
 	FILE	*mailer;
 	std::string subject,szTmp;
 	formatstr(subject, "condor_preen results %s: %d old file%s found", 
-		get_local_fqdn().Value(), BadFiles->number(), 
+		get_local_fqdn().c_str(), BadFiles->number(), 
 		(BadFiles->number() > 1)?"s":"");
 
 	if( MailFlag ) {
@@ -265,7 +265,7 @@ send_email()
 		mailer = stdout;
 	}
 
-	formatstr(szTmp, "The condor_preen process has found the following stale condor files on <%s>:\n\n",  get_local_hostname().Value());
+	formatstr(szTmp, "The condor_preen process has found the following stale condor files on <%s>:\n\n",  get_local_hostname().c_str());
 	dprintf(D_ALWAYS, "%s", szTmp.c_str()); 
 		
 	if( MailFlag ) {

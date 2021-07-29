@@ -149,7 +149,7 @@ private:
 
 		// data that only makes sense once this Starter object has
 		// been assigned to a given resource and spawned.
-	MyString        s_dpf; // prefix for all dprintf messages (normally the slot id)
+	std::string     s_dpf; // prefix for all dprintf messages (normally the slot id)
 	pid_t           s_pid;
 	ProcFamilyUsage s_usage;
 	time_t          s_birthdate;

@@ -396,14 +396,14 @@ bool SecManWrapper::applyThreadLocalConfigOverrides(ConfigOverrides & old)
         return false;
 }
 
-void SecManWrapper::setFamilySession(const std::string & sess)
+bool SecManWrapper::setFamilySession(const std::string & sess)
 {
-    if ( ! m_key_allocated) return;
+    if ( ! m_key_allocated) return false;
 
     SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
     if (man) { 
         ClaimIdParser claimid(sess.c_str());
-        man->m_secman.CreateNonNegotiatedSecuritySession(
+        return man->m_secman.CreateNonNegotiatedSecuritySession(
                 DAEMON,
                 claimid.secSessionId(),
                 claimid.secSessionKey(),
@@ -414,6 +414,7 @@ void SecManWrapper::setFamilySession(const std::string & sess)
                 0,
                 nullptr);
     }
+	return false;
 }
 
 

@@ -25,16 +25,16 @@
 #include "azureresource.h"
 #include "gridmanager.h"
 
-HashTable <std::string, AzureResource *>
-AzureResource::ResourcesByName( hashFunction );
+std::map <std::string, AzureResource *>
+    AzureResource::ResourcesByName;
 
-const char *AzureResource::HashName( const char *resource_name,
+std::string & AzureResource::HashName( const char *resource_name,
                                      const char *subscription,
                                      const char *auth_file )
 {
 	static std::string hash_name;
 	formatstr( hash_name, "azure %s %s#%s", resource_name, subscription, auth_file );
-	return hash_name.c_str();
+	return hash_name;
 }
 
 
@@ -42,16 +42,16 @@ AzureResource* AzureResource::FindOrCreateResource( const char *resource_name,
                                                     const char *subscription,
                                                     const char *auth_file )
 {
-	int rc;
 	AzureResource *resource = NULL;
-
-	rc = ResourcesByName.lookup( HashName( resource_name, subscription, auth_file ), resource );
-	if ( rc != 0 ) {
+	std::string &key = HashName( resource_name, subscription, auth_file );
+	auto itr = ResourcesByName.find( key );
+	if ( itr == ResourcesByName.end() ) {
 		resource = new AzureResource( resource_name, subscription, auth_file );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashName( resource_name, subscription, auth_file ), resource );
+		ResourcesByName[key] = resource;
 	} else {
+		resource = itr->second;
 		ASSERT(resource);
 	}
 
@@ -98,7 +98,7 @@ AzureResource::AzureResource( const char *resource_name,
 
 AzureResource::~AzureResource()
 {
-	ResourcesByName.remove( HashName( resourceName, m_subscription, m_auth_file ) );
+	ResourcesByName.erase( HashName( resourceName, m_subscription, m_auth_file ) );
 	delete gahp;
 	free( m_auth_file );
 	free( m_subscription );
@@ -118,7 +118,7 @@ const char *AzureResource::ResourceType()
 
 const char *AzureResource::GetHashName()
 {
-	return HashName( resourceName, m_subscription, m_auth_file );
+	return HashName( resourceName, m_subscription, m_auth_file ).c_str();
 }
 
 void AzureResource::PublishResourceAd( ClassAd *resource_ad )

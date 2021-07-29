@@ -27,13 +27,13 @@
 #include "condorjob.h"
 #include "gridmanager.h"
 
-HashTable <std::string, CondorResource *>
-    CondorResource::ResourcesByName( hashFunction );
+std::map <std::string, CondorResource *>
+    CondorResource::ResourcesByName;
 
 HashTable <std::string, CondorResource::ScheddPollInfo *>
     CondorResource::PollInfoByName( hashFunction );
 
-const char *CondorResource::HashName( const char *resource_name,
+std::string & CondorResource::HashName( const char *resource_name,
                                       const char *pool_name,
                                       const char *proxy_subject,
                                       const std::string &scitokens_file )
@@ -45,7 +45,7 @@ const char *CondorResource::HashName( const char *resource_name,
 	           proxy_subject ? proxy_subject : "NULL",
 	           scitokens_file.c_str() );
 
-	return hash_name.c_str();
+	return hash_name;
 }
 
 CondorResource *CondorResource::FindOrCreateResource( const char * resource_name,
@@ -53,23 +53,19 @@ CondorResource *CondorResource::FindOrCreateResource( const char * resource_name
                                                       const Proxy *proxy,
                                                       const std::string &scitokens_file )
 {
-	int rc;
 	CondorResource *resource = NULL;
-
-	rc = ResourcesByName.lookup( HashName( resource_name, pool_name,
-	                                       proxy ? proxy->subject->fqan : NULL,
-	                                       scitokens_file ),
-	                             resource );
-	if ( rc != 0 ) {
+	std::string &key = HashName( resource_name, pool_name,
+	                             proxy ? proxy->subject->fqan : NULL,
+	                             scitokens_file );
+	auto itr = ResourcesByName.find( key );
+	if ( itr == ResourcesByName.end() ) {
 		resource = new CondorResource( resource_name, pool_name,
 		                               proxy, scitokens_file );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashName( resource_name, pool_name,
-		                                  proxy ? proxy->subject->fqan : NULL,
-		                                  scitokens_file ),
-		                        resource );
+		ResourcesByName[key] = resource;
 	} else {
+		resource = itr->second;
 		ASSERT(resource);
 	}
 
@@ -147,7 +143,7 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 
 CondorResource::~CondorResource()
 {
-	ResourcesByName.remove( HashName( resourceName, poolName, proxyFQAN, m_scitokensFile ) );
+	ResourcesByName.erase( HashName( resourceName, poolName, proxyFQAN, m_scitokensFile ) );
 
 		// Make sure we don't leak a ScheddPollInfo. If there are other
 		// CondorResources that still want to use it, they'll recreate it.
@@ -198,7 +194,7 @@ const char *CondorResource::ResourceType()
 
 const char *CondorResource::GetHashName()
 {
-	return HashName( resourceName, poolName, proxyFQAN, m_scitokensFile );
+	return HashName( resourceName, poolName, proxyFQAN, m_scitokensFile ).c_str();
 }
 
 void CondorResource::PublishResourceAd( ClassAd *resource_ad )
@@ -327,11 +323,10 @@ void CondorResource::DoScheddPoll()
 		while ( poll_info->m_submittedJobs.Next() ) {
 			poll_info->m_submittedJobs.DeleteCurrent();
 		}
-		CondorResource *next_resource;
 		BaseJob *job;
 		std::string job_id;
-		ResourcesByName.startIterations();
-		while ( ResourcesByName.iterate( next_resource ) != 0 ) {
+		for (auto &elem : ResourcesByName) {
+			CondorResource *next_resource = elem.second;
 			if ( strcmp( scheddName, next_resource->scheddName ) ||
 				 strcmp( poolName ? poolName : "",
 						 next_resource->poolName ? next_resource->poolName : "" ) ) {

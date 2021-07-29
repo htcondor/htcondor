@@ -27,7 +27,6 @@
 #include "condor_distribution.h"
 #include "gahp_common.h"
 #include "HashTable.h"
-#include "MyString.h"
 #include "condor_arglist.h"
 #include "vm_gahp_request.h"
 
@@ -62,7 +61,7 @@ class VMGahpServer : public Service {
 		int getVMGahpServerPid(void) const {return m_vmgahp_pid;}
 
 		// Return VM type 
-		const char* getVMType(void) {return m_vm_type.Value();}
+		const char* getVMType(void) {return m_vm_type.c_str();}
 
 		bool isSupportedCommand(const char *command);
 		bool isSupportedVMType(const char *vmtype);
@@ -75,7 +74,7 @@ class VMGahpServer : public Service {
 		void printSystemErrorMsg(void);
 
 		// Error message during startUp
-		MyString start_err_msg;
+		std::string start_err_msg;
 
 	protected:
 		bool read_argv(Gahp_Args &g_args);
@@ -109,11 +108,10 @@ class VMGahpServer : public Service {
 		// Does Starter log include log from vmgahp?
 		bool m_include_gahp_log;
 
-		MyString m_vm_type;
-		MyString m_vmgahp_server;
-		MyString m_vmgahp_config;
+		std::string m_vm_type;
+		std::string m_vmgahp_server;
 		ClassAd *m_job_ad;
-		MyString m_workingdir;
+		std::string m_workingdir;
 
 		int m_vmgahp_pid;
 		int m_vm_id;
@@ -131,8 +129,8 @@ class VMGahpServer : public Service {
 		int m_next_reqid;
 		bool m_rotated_reqids;
 
-		MyString m_vmgahp_version;
-		MyString m_vmgahp_error_buffer;
+		std::string m_vmgahp_version;
+		std::string m_vmgahp_error_buffer;
 		StringList m_commands_supported;
 		StringList m_vms_supported;
 

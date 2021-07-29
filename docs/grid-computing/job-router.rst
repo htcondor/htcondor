@@ -109,13 +109,6 @@ for routing.
    it is important to explicitly specify all output files that must be
    transferred upon job completion.
 
-   An additional difference between the vanilla universe jobs and
-   **gt2** grid universe jobs is that **gt2** jobs do not return any
-   information about the job's exit status. The exit status as reported
-   in the job ClassAd and job event log are always 0. Therefore, jobs
-   that may be routed to a **gt2** grid site must not rely upon a
-   non-zero job exit status.
-
 -  One configuration for routed jobs requires the jobs to identify
    themselves as candidates for Job Routing. This may be accomplished by
    inventing a ClassAd attribute that the configuration utilizes in
@@ -263,7 +256,7 @@ will be considered in the order given by this configuration variable.
     @rt
 
     # define a pre-route transform that does the transforms all routes should do
-    JOB_ROUTER_PRE_ROUTE_TRANSFORMS = Defaults
+    JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES = Defaults
 
     JOB_ROUTER_TRANSFORM_Defaults @=jrd
        # remove routed job if it goes on hold or stays idle for over 6 hours
