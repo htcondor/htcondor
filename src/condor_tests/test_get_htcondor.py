@@ -19,6 +19,11 @@ from ornithology import (
     action,
 )
 
+
+# You can change this to simplify testing new version of get_htcondor.
+THE_URL = "https://get.htcondor.org"
+
+
 # PyTest gets the ordering wrong unless I make it explicit.  *sigh*
 #
 # IMAGES_BY_CHANNEL seems the most natural way to list those mappings.
@@ -31,37 +36,47 @@ IMAGES_BY_CHANNEL = {
     "stable": [
         "debian:9",
         "debian:10",
+        "ubuntu:18.04",
+        "ubuntu:20.04",
     ],
     "current": [
+        "ubuntu:18.04",
         "ubuntu:20.04",
         "debian:10",
     ],
 }
 
+#
+# The --help test is essentially the null test; it can be helpful for
+# testing the test, but doesn't tell us anything the other tests
+# don't.  The --no-dry-run and --minicondor tests should be identical;
+# if you're feeling paranoid, you can check, but it's not worth waiting
+# around for if you're just smoke-testing a release.  The default test
+# is also a no-op test, useful for debugging, but otherwise not worth
+# the time.
+#
 TESTS = {
-    "help": {
-        "flag": "--help",
-    },
+    # "help": {
+    #    "flag": "--help",
+    # },
     "download": {
         "flag": "--download",
     },
+    # "default": {
+    #     "flag": "",
+    # },
+    # "no_dry_run": {
+    #     "flag": "--no-dry-run",
+    # },
     "minicondor": {
-        "flag": "--minicondor",
-    },
-    "minicondor_for_real": {
         "flag": "--minicondor --no-dry-run",
-    },
-    "default": {
-        "flag": "",
-    },
-    "default_for_real": {
-        "flag": "--no-dry-run",
     },
 }
 
 PREFICES_BY_IMAGE = {
     "debian:9" : "apt-get update && apt-get install -y curl",
     "debian:10" : "apt-get update && apt-get install -y curl",
+    "ubuntu:18.04": "apt-get update && apt-get install -y curl",
     "ubuntu:20.04": "apt-get update && apt-get install -y curl",
 }
 
@@ -77,7 +92,7 @@ PARAMS = {}
 for image, channels in CHANNELS_BY_IMAGE.items():
     for channel in channels:
         for testname, test in TESTS.items():
-            PARAMS[f"{image} [{channel}] {testname}"] = {
+            PARAMS[f"{image}_{channel}_{testname}"] = {
                 "channel": channel,
                 "image": image,
                 "test": test,
@@ -105,11 +120,12 @@ def flag(the_test_case):
 
 
 # This should avoid any potential problems with concurrently pulling the
-# same container image.
+# same container image... but it may count as a pull request even if you
+# already have the latest image?
 @action
 def cached_container_image(container_image):
-    cp = subprocess.run(['docker', 'pull', container_image])
-    assert(cp.returncode == 0)
+    # cp = subprocess.run(['docker', 'pull', container_image])
+    # assert(cp.returncode == 0)
     return container_image
 
 
@@ -122,10 +138,9 @@ def results_from_container(channel, cached_container_image, flag):
     # The 'set -o pipefail' is bash magic to make the scriptlet return
     # the failure if any command in the pipe fails.  This is super-useful
     # for catching a failure in/of curl.
-    the_url = "https://get.htcondor.org"
     args  = [ "docker", "run", "-t", cached_container_image, "/bin/bash", "-c",
               "set -o pipefail; " + platform_specific_prefix
-              + "curl -fsSL " + the_url
+              + "curl -fsSL " + THE_URL
               + " | /bin/bash -s -- " + f"--channel {channel} " + flag,
             ]
     logger.debug(args)
