@@ -101,33 +101,34 @@ check_forked() {
 			if is_display_dist; then
 				exit 0
 			fi
-		else
-			if [ -r /etc/debian_version ] && [ "$lsb_dist" != "ubuntu" ] && [ "$lsb_dist" != "raspbian" ]; then
-				if [ "$lsb_dist" = "osmc" ]; then
-					# OSMC runs Raspbian
-					lsb_dist="raspbian"
-				else
-					# We're Debian and don't even know it!
-					lsb_dist="debian"
-				fi
-				dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
-				case $dist_version in
-					10)
-						dist_version_number=10
-						dist_version="buster"
-					;;
-					9)
-						dist_version_number=9
-						dist_version="stretch"
-					;;
-					8|'Kali Linux 2')
-						dist_version_number=8
-						dist_version="jessie"
-					;;
-				esac
+		fi
+	else
+		if [ -r /etc/debian_version ] && [ "$lsb_dist" != "ubuntu" ] && [ "$lsb_dist" != "raspbian" ]; then
+			if [ "$lsb_dist" = "osmc" ]; then
+				# OSMC runs Raspbian
+				lsb_dist="raspbian"
+			else
+				# We're Debian and don't even know it!
+				lsb_dist="debian"
 			fi
+			dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
+			case $dist_version in
+				10)
+					dist_version_number=10
+					dist_version="buster"
+				;;
+				9)
+					dist_version_number=9
+					dist_version="stretch"
+				;;
+				8|'Kali Linux 2')
+					dist_version_number=8
+					dist_version="jessie"
+				;;
+			esac
 		fi
 	fi
+
 	if is_display_dist; then
 		cat <<-EOF
 		You're using '$lsb_dist' version '$dist_version'.
