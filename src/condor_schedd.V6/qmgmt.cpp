@@ -254,7 +254,6 @@ std::map<JobQueueKey, std::map<std::string, std::string>> PrivateAttrs;
 int
 SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value)
 {
-dprintf(D_ALWAYS,"JEF SetPrivateAttributeString(%d, %d, %s, %s)\n",cluster_id, proc_id, attr_name, attr_value);
 	if (attr_name == NULL || attr_value == NULL) {return -1;}
 
 	ClassAd *job_ad = GetJobAd(cluster_id, proc_id);
@@ -274,7 +273,6 @@ dprintf(D_ALWAYS,"JEF SetPrivateAttributeString(%d, %d, %s, %s)\n",cluster_id, p
 int
 GetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, std::string &attr_value)
 {
-dprintf(D_ALWAYS,"JEF GetPrivateAttributeString(%d, %d, %s)\n",cluster_id, proc_id, attr_name);
 	if (attr_name == NULL) {return -1;}
 	JobQueueKey job_id(cluster_id, proc_id);
 	auto job_itr = PrivateAttrs.find(job_id);
@@ -288,7 +286,6 @@ dprintf(D_ALWAYS,"JEF GetPrivateAttributeString(%d, %d, %s)\n",cluster_id, proc_
 int
 DeletePrivateAttribute(int cluster_id, int proc_id, const char *attr_name)
 {
-dprintf(D_ALWAYS,"JEF DeletePrivateAttribute(%d, %d, %s)\n",cluster_id, proc_id, attr_name);
 	if (attr_name == NULL) {return -1;}
 	ClassAd *job_ad = GetJobAd(cluster_id, proc_id);
 	if (job_ad == NULL) {return -1;}
