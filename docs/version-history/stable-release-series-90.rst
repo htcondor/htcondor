@@ -13,9 +13,9 @@ Version 9.0.4
 
 Release Notes:
 
-.. HTCondor version 9.0.3 released on Month Date, 2021.
+.. HTCondor version 9.0.4 released on Month Date, 2021.
 
-- HTCondor version 9.0.3 not yet released.
+- HTCondor version 9.0.4 not yet released.
 
 New Features:
 
