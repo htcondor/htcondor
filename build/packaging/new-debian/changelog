@@ -1,3 +1,10 @@
+condor (8.8.15-1) stable; urgency=high
+
+  * Fix for security issue
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 Jul 2021 10:35:12 -0500
+
 condor (8.8.14-1) stable; urgency=high
 
   * Fix for security issue
