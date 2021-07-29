@@ -8,7 +8,7 @@ series.
 
 The details of each version are described below.
 
-Version 9.0.3
+Version 9.0.4
 -------------
 
 Release Notes:
@@ -43,6 +43,30 @@ Bugs Fixed:
 - The job attribute ``ExitCode`` is no longer missing from the job ad after
   ``OxExitHold`` triggers.
   :jira:`599`
+
+
+Version 9.0.3
+-------------
+
+Release Notes:
+
+-  HTCondor version 9.0.3 released on July 27, 2021.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes a security-related bug
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004.html>`_.
+
+   :jira:`509`
+   :jira:`587`
+
 
 Version 9.0.2
 -------------
