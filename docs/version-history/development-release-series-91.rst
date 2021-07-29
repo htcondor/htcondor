@@ -9,9 +9,9 @@ Version 9.1.2
 
 Release Notes:
 
-.. HTCondor version 9.1.1 released on Month Date, 2021.
+.. HTCondor version 9.1.2 released on Month Date, 2021.
 
-- HTCondor version 9.1.1 not yet released.
+- HTCondor version 9.1.2 not yet released.
 
 - GSI is no longer in the list of default authentication methods.
   To use GSI, you must enable it by setting one or more of the
