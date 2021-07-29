@@ -6698,5 +6698,18 @@ default : @end
 	DAEMON_LIST=$(DAEMON_LIST),ADSTASH
 @end
 
+[$FEATURE.GoogleCloudMetadataClassAds]
+description=Enable an execute node to advertise ClassAds featuring Google Cloud VM instance metadata args:(optional args)
+default : @end
+        if $(1?)
+                use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/google_cloud_machine_classads.py, $(1))
+        else
+                use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/google_cloud_machine_classads.py)
+        endif
+@end
+
+[$FEATURE.ScheddTrackCloudInstanceIds]
+description=When a job runs on a Machine in the cloud, add the node's instance ID to the job ClassAd
+default = SYSTEM_JOB_MACHINE_ATTRS = $(SYSTEM_JOB_MACHINE_ATTRS) CloudInstanceId
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^
