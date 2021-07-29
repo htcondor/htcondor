@@ -249,6 +249,59 @@ static const char *default_super_user =
 	"root";
 #endif
 
+std::map<JobQueueKey, std::map<std::string, std::string>> PrivateAttrs;
+
+int
+SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value)
+{
+dprintf(D_ALWAYS,"JEF SetPrivateAttributeString(%d, %d, %s, %s)\n",cluster_id, proc_id, attr_name, attr_value);
+	if (attr_name == NULL || attr_value == NULL) {return -1;}
+
+	ClassAd *job_ad = GetJobAd(cluster_id, proc_id);
+	if (job_ad == NULL) {return -1;}
+
+	Transaction *xact = JobQueue->getActiveTransaction();
+	std::string quoted_value;
+	QuoteAdStringValue(attr_value, quoted_value);
+	JobQueueKey job_id(cluster_id, proc_id);
+	JobQueue->SetAttribute(job_id, attr_name, quoted_value.c_str(), SETDIRTY);
+	job_ad->Delete(attr_name);
+	PrivateAttrs[job_id][attr_name] = attr_value;
+	JobQueue->setActiveTransaction(xact);
+	return 0;
+}
+
+int
+GetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, std::string &attr_value)
+{
+dprintf(D_ALWAYS,"JEF GetPrivateAttributeString(%d, %d, %s)\n",cluster_id, proc_id, attr_name);
+	if (attr_name == NULL) {return -1;}
+	JobQueueKey job_id(cluster_id, proc_id);
+	auto job_itr = PrivateAttrs.find(job_id);
+	if (job_itr == PrivateAttrs.end()) {return -1;}
+	auto attr_itr = job_itr->second.find(attr_name);
+	if (attr_itr == job_itr->second.end()) {return -1;}
+	attr_value = attr_itr->second;
+	return 0;
+}
+
+int
+DeletePrivateAttribute(int cluster_id, int proc_id, const char *attr_name)
+{
+dprintf(D_ALWAYS,"JEF DeletePrivateAttribute(%d, %d, %s)\n",cluster_id, proc_id, attr_name);
+	if (attr_name == NULL) {return -1;}
+	ClassAd *job_ad = GetJobAd(cluster_id, proc_id);
+	if (job_ad == NULL) {return -1;}
+	job_ad->InsertAttr(attr_name, "");
+	DeleteAttribute(cluster_id, proc_id, attr_name);
+	JobQueueKey job_id(cluster_id, proc_id);
+	PrivateAttrs[job_id].erase(attr_name);
+	if (PrivateAttrs[job_id].empty()) {
+		PrivateAttrs.erase(job_id);
+	}
+	return 0;
+}
+
 // in schedd.cpp
 void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, int increment /*, JobQueueJob * job*/);
 
@@ -1963,6 +2016,18 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				ad->Delete(ATTR_JOB_TRANSFERRING_OUTPUT_TIME);
 				JobQueueDirty = true;
 			}
+			if( ad->LookupString(ATTR_CLAIM_ID, buffer) ) {
+				ad->Delete(ATTR_CLAIM_ID);
+				PrivateAttrs[key][ATTR_CLAIM_ID] = buffer;
+			}
+			if( ad->LookupString(ATTR_CLAIM_IDS, buffer) ) {
+				ad->Delete(ATTR_CLAIM_IDS);
+				PrivateAttrs[key][ATTR_CLAIM_IDS] = buffer;
+			}
+			if( ad->LookupString(ATTR_PAIRED_CLAIM_ID, buffer) ) {
+				ad->Delete(ATTR_PAIRED_CLAIM_ID);
+				PrivateAttrs[key][ATTR_PAIRED_CLAIM_ID] = buffer;
+			}
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			int num_procs = IncrementClusterSize(cluster_num);
@@ -2030,12 +2095,14 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// The spool renaming also needs to be saved here.  This is not
 		// optional, so we cannot just call CleanJobQueue() here, because
 		// that does not abort on failure.
+#if 0
 	if( JobQueueDirty ) {
 		if( !JobQueue->TruncLog() ) {
 			EXCEPT("Failed to write the modified job queue log to disk, so cannot continue.");
 		}
 		JobQueueDirty = false;
 	}
+#endif
 
 	if( spool_cur_version < 1 ) {
 		SpoolHierarchyChangePass2(spool.Value(),spool_rename_list);
@@ -2053,6 +2120,22 @@ CleanJobQueue()
 	if (JobQueueDirty) {
 		dprintf(D_ALWAYS, "Cleaning job queue...\n");
 		JobQueue->TruncLog();
+
+		auto job_itr = PrivateAttrs.begin();
+		while (job_itr != PrivateAttrs.end()) {
+			ClassAd *job_ad = GetJobAd(job_itr->first);
+			if (job_ad == NULL) {
+				job_itr = PrivateAttrs.erase(job_itr);
+			} else {
+				for (auto &attr : job_itr->second) {
+					if (SetAttributeString(job_itr->first.cluster, job_itr->first.proc, attr.first.c_str(), attr.second.c_str()) == 0) {
+						job_ad->Delete(attr.first.c_str());
+					}
+				}
+				job_itr++;
+			}
+		}
+
 		JobQueueDirty = false;
 	}
 }
