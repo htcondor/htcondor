@@ -381,10 +381,14 @@ do_install() {
 				# apt-get will succeed if these packages are already installed,
 				# but for now let's not risk screwing things up by adding them
 				# on the platforms that don't need them.
-				if [[ $lsb_dist = "ubuntu" && $dist_version = "focal" ]]; then
-					echo -e "\n# Preconfiguring packages for Ubuntu 20.04."
-					$sh_c "DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration console-setup tzdata"
-				fi
+				case $lsb_dist.$dist_version in
+				    ubuntu.focal)
+				    ;&
+				    ubuntu.bionic)
+    					echo -e "\n# Preconfiguring packages for Ubuntu."
+	    				$sh_c "DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration console-setup tzdata"
+                    ;;
+                esac
 
 				echo -e "\n# Installing HTCondor binaries and dependencies"
 				if [[ ! $ROLE ]]; then
