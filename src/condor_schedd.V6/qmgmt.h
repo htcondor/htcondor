@@ -589,4 +589,8 @@ extern int Runnable(JobQueueJob *job, const char *& reason);
 
 extern class ForkWork schedd_forker;
 
+int SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value);
+int GetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, std::string &attr_value);
+int DeletePrivateAttribute(int cluster_id, int proc_id, const char *attr_name);
+
 #endif /* _QMGMT_H */
