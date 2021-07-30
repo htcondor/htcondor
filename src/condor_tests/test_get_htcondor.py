@@ -98,6 +98,7 @@ TESTS = {
                           "yum install -y tar && yum install -y gzip; " +
                       "fi && " +
                       "tar -z -t -f condor.tar.gz | tail -1 | cut -d / -f 1",
+        "postscript-lines": [-1],
     },
     # "default": {
     #     "flag": "",
@@ -107,6 +108,8 @@ TESTS = {
     # },
     "minicondor": {
         "flag": "--minicondor --no-dry-run",
+        "postscript": "condor_version",
+        "postscript-lines": [-2, -1],
     },
 }
 
@@ -164,6 +167,14 @@ def postscript(the_test_case):
         return None
 
 
+@config
+def postscript_lines(the_test_case):
+    if "postscript-lines" in the_test_case["test"]:
+        return the_test_case["test"]["postscript-lines"]
+    else:
+        return None
+
+
 # This should avoid any potential problems with concurrently pulling the
 # same container image... but it may count as a pull request even if you
 # already have the latest image?
@@ -202,7 +213,12 @@ def results_from_container(channel, cached_container_image, flag, postscript):
 # We can parameterize further to string(s) required to be in the log,
 # or with functions which inspect the log.
 class TestGetHTCondor:
-    def test_results_from_container(self, results_from_container):
+    def test_results_from_container(self, results_from_container, postscript_lines):
         logger.debug(results_from_container.stdout)
-        logger.info(results_from_container.stdout.splitlines()[-1])
+        # There is undoubtedly a more-Pythonic way to do this, possibly
+        # involving the parameter being a slice.
+        if postscript_lines is not None:
+            lines = results_from_container.stdout.splitlines()
+            for line_number in postscript_lines:
+                logger.info(lines[line_number])
         assert(results_from_container.returncode == 0)
