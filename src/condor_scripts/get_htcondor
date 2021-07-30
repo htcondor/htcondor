@@ -404,6 +404,12 @@ do_install() {
 				set -x
 			fi
 
+			# The Amazon Linux container doesn't include ps by default.
+			if [ "${lsb_dist}" = "amzn" ]; then
+				echo -e "\n# Installing ps"a
+				$sh_c "yum install -y procps"
+			fi
+
 			repo_dist=$lsb_dist
 			if [ "${repo_dist}" = "centos" ]; then
 				repo_dist="rhel"
