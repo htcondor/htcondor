@@ -38,11 +38,17 @@ IMAGES_BY_CHANNEL = {
         "debian:10",
         "ubuntu:18.04",
         "ubuntu:20.04",
+        "centos:7",
+        "centos:8",
+        "amazonlinux:2",
     ],
     "current": [
         "ubuntu:18.04",
         "ubuntu:20.04",
         "debian:10",
+        "centos:7",
+        "centos:8",
+        "amazonlinux:2",
     ],
 }
 
@@ -148,7 +154,7 @@ def results_from_container(channel, cached_container_image, flag):
     return subprocess.run(args,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        timeout=120)
+        timeout=150)
 
 
 # We can parameterize further to string(s) required to be in the log,
