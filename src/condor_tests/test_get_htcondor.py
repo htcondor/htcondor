@@ -207,7 +207,7 @@ def results_from_container(channel, cached_container_image, flag, postscript):
     return subprocess.run(args,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        timeout=150)
+        timeout=240)
 
 
 # We can parameterize further to string(s) required to be in the log,
