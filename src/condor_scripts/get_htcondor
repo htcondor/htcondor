@@ -405,10 +405,13 @@ do_install() {
 			fi
 
 			repo_dist=$lsb_dist
-			case $repo_dist in
-				centos ) repo_dist="rhel" ;;
-				rhel   ) repo_dist="el"   ;;
-			esac
+			if [ "${repo_dist}" = "centos" ]; then
+				repo_dist="rhel"
+			fi
+			# The fall-through here is deliberate.
+			if [ "${repo_dist}" = "rhel" ]; then
+				repo_dist="el"
+			fi
 			repo_suffix="${repo_dist}${dist_version}"
 			yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL}/htcondor-release-current.${repo_suffix}.noarch.rpm"
 
