@@ -8,14 +8,31 @@ series.
 
 The details of each version are described below.
 
-Version 9.0.3
+Version 9.0.5
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.0.3 released on Month Date, 2021.
+.. HTCondor version 9.0.5 released on Month Date, 2021.
 
-- HTCondor version 9.0.3 not yet released.
+- HTCondor version 9.0.5 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
+Version 9.0.4
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.4 released on Month Date, 2021.
+
+- HTCondor version 9.0.4 not yet released.
 
 New Features:
 
@@ -39,6 +56,34 @@ Bugs Fixed:
   jobs to specify the same file in ``transfer_input_files`` and in
   ``transfer_checkpoint_files``, and still resume properly after a checkpoint.
   :jira:`583`
+
+- The job attribute ``ExitCode`` is no longer missing from the job ad after
+  ``OxExitHold`` triggers.
+  :jira:`599`
+
+
+Version 9.0.3
+-------------
+
+Release Notes:
+
+-  HTCondor version 9.0.3 released on July 27, 2021.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes a security-related bug
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004.html>`_.
+
+   :jira:`509`
+   :jira:`587`
+
 
 Version 9.0.2
 -------------

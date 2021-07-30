@@ -4,6 +4,25 @@ Development Release Series 9.1
 This is the development release series of HTCondor. The details of each
 version are described below.
 
+Version 9.1.3
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.1.3 released on Month Date, 2021.
+
+- HTCondor version 9.1.3 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- HTCondor no longer crashes on start-up if ``COLLECTOR_HOST`` is set to
+  a string with a colon and a port number, but no host part.
+  :jira:`602`
+
 Version 9.1.2
 -------------
 
@@ -12,23 +31,6 @@ Release Notes:
 .. HTCondor version 9.1.2 released on Month Date, 2021.
 
 - HTCondor version 9.1.2 not yet released.
-
-New Features:
-
-- None.
-
-Bugs Fixed:
-
-- None.
-
-Version 9.1.1
--------------
-
-Release Notes:
-
-.. HTCondor version 9.1.1 released on Month Date, 2021.
-
-- HTCondor version 9.1.1 not yet released.
 
 - GSI is no longer in the list of default authentication methods.
   To use GSI, you must enable it by setting one or more of the
@@ -85,6 +87,29 @@ Bugs Fixed:
   option.  As a result, if the administrator located EXECUTE under tmp, HTCondor can
   no longer make a private /tmp or /var/tmp directory for the job.
   :jira:`484`
+
+
+Version 9.1.1
+-------------
+
+Release Notes:
+
+-  HTCondor version 9.1.1 released on July 27, 2021.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes a security-related bug
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004.html>`_.
+
+   :jira:`509`
+   :jira:`587`
 
 Version 9.1.0
 -------------

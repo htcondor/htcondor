@@ -133,6 +133,7 @@ bool HideUsers  = false;            // set to true when it doesn't make sense to
 time_t MinLastUsageTime;
 bool fromCollector = false; // query accounting ad from collector instead of negotiator
 bool forceFromCollector = false; // don't use default value
+bool negotiatorCanDoDirect = false; // set to true if negotiator supports direct query
 
 enum {
    SortByColumn1 = 0,  // sort by prio or by usage depending on which is in column 1 
@@ -372,8 +373,10 @@ main(int argc, const char* argv[])
   bool ResetAll=false;
   int GetResList=0;
   int UserPrioFile=0;
-  std::string neg_name;
-  std::string pool;
+  const char * neg_name = NULL;
+  const char * pool_name = NULL;
+  std::vector<const char *> full_user_names;
+  std::string short_user_names;
   AttrListPrintMask print_mask;
   GenericQuery constraint; // used to build a complex constraint.
   bool customFormat = false;
@@ -560,7 +563,7 @@ main(int argc, const char* argv[])
     }
     else if (IsArg(argv[i],"pool",1)) {
       if (argc-i<=1) usage(argv[0]);
-      pool = argv[i+1];
+      pool_name = argv[i+1];
       i++;
     }
     else if (IsArg(argv[i],"name")) {
@@ -577,17 +580,26 @@ main(int argc, const char* argv[])
 	    forceFromCollector = true;
 	}
     else {
-      usage(argv[0]);
+		if (isalpha(argv[i][0]) || MATCH == strcmp(argv[i], "<none>")) {
+			if (strchr(argv[i], '@') || MATCH == strcmp(argv[i], "<none>")) {
+				full_user_names.push_back(argv[i]);
+			} else {
+				if (!short_user_names.empty()) short_user_names += ",";
+				short_user_names += argv[i];
+			}
+		} else {
+			usage(argv[0]);
+		}
     }
   }
       
   //----------------------------------------------------------
 
 	  // Get info on our negotiator
-  Daemon negotiator(DT_NEGOTIATOR, (neg_name != "") ? neg_name.c_str() : NULL, (pool != "") ? pool.c_str() : NULL);
+  Daemon negotiator(DT_NEGOTIATOR, neg_name, pool_name);
   if (!negotiator.locate(Daemon::LOCATE_FOR_LOOKUP)) {
 	  fprintf(stderr, "%s: Can't locate negotiator in %s\n", 
-              argv[0], (pool != "") ? pool.c_str() : "local pool");
+              argv[0], pool_name ? pool_name : "local pool");
 	  exit(1);
   }
 
@@ -598,6 +610,14 @@ main(int argc, const char* argv[])
 	if (!forceFromCollector && vsi.built_since_version(8,5,3)) {
 		fromCollector = true;
 	}
+	negotiatorCanDoDirect = vsi.built_since_version(9,1,1);
+  } else {
+	// no version means that the negotiator is local, so it must be our version... right?
+	negotiatorCanDoDirect = true;
+  }
+  // knob to disable negotiator modular direct query, in case this causes problems (the results *are* a bit different)
+  if ( ! param_boolean("USERPRIO_USE_NEGOTIATOR_MODULAR_QUERY", false)) {
+	  negotiatorCanDoDirect = false;
   }
 
   if (SetPrio) { // set priority
@@ -991,24 +1011,51 @@ main(int argc, const char* argv[])
 	ClassAd *ad = NULL;
 	std::vector<ClassAd> accountingAds;
 
-	if (fromCollector) {
+	if (fromCollector || (negotiatorCanDoDirect && ! GroupRollup)) {
 		CondorQuery query(ACCOUNTING_AD);
 		ClassAdList ads;
 		CondorError errstack;
 		QueryResult q;
 
-		if ( !neg_name.empty() ) {
+		if (neg_name) {
 			std::string constraint;
-			formatstr(constraint, "%s == \"%s\"", ATTR_NEGOTIATOR_NAME, neg_name.c_str());
+			formatstr(constraint, ATTR_NEGOTIATOR_NAME " == \"%s\"", ATTR_NEGOTIATOR_NAME, neg_name);
 			query.addANDConstraint(constraint.c_str());
 		}
 
-		CollectorList * collectors = CollectorList::create((pool.length() > 0) ? pool.c_str() : 0);
-		q = collectors->query (query, ads, &errstack);
-		delete collectors;
-		if (q != Q_OK) {
-			fprintf(stderr, "Can't query collector for ads: %s\n", errstack.getFullText().c_str());
-			exit(1);
+		// build a constraint for usernames
+		// we compare fully qualified usernames using a comparison for each -- (Name =?= "bob@cs"|| Name =?= "alice@cs")
+		// but we compare partially qualfied usernames by using list member -- StringListMemember(splitusername(Name)[0], "bob,alice")
+		// we do this mostly for efficiency, to minimize the number of split calls for a long list of names
+		// TODO: recognise patterns in the names like *@group and do a regex query?
+		if ( ! full_user_names.empty() || ! short_user_names.empty()) {
+			std::string constraint;
+			constraint.reserve(full_user_names.size() * 32 + short_user_names.size() + 64);
+			for (auto name : full_user_names) {
+				if (!constraint.empty()) constraint += " || ";
+				formatstr_cat(constraint, ATTR_NAME "=?=\"%s\"", name); // =?= so we get case-sensitive matching
+			}
+			if ( ! short_user_names.empty()) {
+				if (!constraint.empty()) constraint += " || ";
+				formatstr_cat(constraint, "StringListMember(splitusername(Name)[0], \"%s\")", short_user_names.c_str());
+			}
+			query.addANDConstraint(constraint.c_str());
+		}
+
+		if (fromCollector) {
+			CollectorList * collectors = CollectorList::create(pool_name);
+			q = collectors->query(query, ads, &errstack);
+			delete collectors;
+			if (q != Q_OK) {
+				fprintf(stderr, "Can't query collector for ads: %s\n", errstack.getFullText().c_str());
+				exit(1);
+			}
+		} else {
+			q = query.fetchAds(ads, negotiator.addr(), &errstack);
+			if (q != Q_OK) {
+				fprintf(stderr, "Can't query negotiator for ads: %s\n", errstack.getFullText().c_str());
+				exit(1);
+			}
 		}
         ads.Open();
         while (ClassAd* oneAd = ads.Next()) {
@@ -1813,7 +1860,7 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
 //-----------------------------------------------------------------
 
 static void usage(const char* name) {
-  fprintf( stderr, "usage: %s [options] [edit-option | display-options]\n"
+  fprintf( stderr, "usage: %s [options] [edit-option | display-options [usernames]]\n"
      "    where [options] are\n"
      "\t-name <name>\t\tName of negotiator\n"
      "\t-pool <host>\t\tUse host as the central manager to query\n"
@@ -1866,7 +1913,8 @@ static void usage(const char* name) {
      "\t        g   newline between ClassAds, no space before values\n"
      "\t    use -af:h to get tabular values with headings\n"
      "\t    use -af:lrng to get -long equivalent format\n"
-     , name );
+     "   if [usernames] is specified, output will be restricted to the given names if possible.\n"
+   , name );
   exit(1);
 }
 

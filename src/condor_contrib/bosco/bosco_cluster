@@ -289,21 +289,23 @@ ssh_detect_linux_distro () {
     os_release=`ssh $remote_host "cat /etc/os-release" 2> /dev/null`
     [[ $? -eq 0 ]] || return 1
 
-    dist=`echo "$os_release" | awk -F '=' '/^ID=/ {print $2}' | tr -d '"'`
+    dist_id=`echo "$os_release" | awk -F '=' '/^ID=/ {print $2}'`
+    dist_id_like=`echo "$os_release" | awk -F '=' '/^ID_LIKE=/ {print $2}'`
     ver=`echo "$os_release" | awk -F '=' '/^VERSION_ID=/ {print $2}' | tr -d '"'`
     major_ver="${ver%%.*}"
 
-    case "$dist" in
-        (rhel|centos|scientific)
-            echo "CentOS${major_ver}" ;;
-        debian)
-            echo "Debian${major_ver}" ;;
-        ubuntu)
-            echo "Ubuntu${major_ver}" ;;
-        (*)
-            return 1
-            ;;
-    esac
+    if [[ $dist_id_like =~ (rhel|centos|fedora) ]]; then
+        echo "CentOS${major_ver}"
+    else
+        case "$dist_id" in
+            debian)
+                echo "Debian${major_ver}" ;;
+            ubuntu)
+                echo "Ubuntu${major_ver}" ;;
+            *)
+                return 1 ;;
+        esac
+    fi
     return 0
 }
 
@@ -1104,7 +1106,7 @@ fi
 # If patch is set, perform the patch
 if [ ! -z "${override_dir}" ]; then
     echo "Patching bosco installation from directory: $override_dir"
-    rsync -aq $override_dir/ "$local_install_dir"
+    rsync -aq --backup --suffix .orig $override_dir/ "$local_install_dir"
 fi
 
 # Do the actual rsync

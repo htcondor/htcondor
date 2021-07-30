@@ -1,3 +1,7 @@
 sphinx-autodoc-typehints==1.11.0
-nbsphinx==0.5.1
+nbsphinx==0.8.6
 ipython==6.5.0
+Jinja2>=3.0
+htcondor>=9.0
+Sphinx==4.0.2
+sphinx-rtd-theme==0.5.2

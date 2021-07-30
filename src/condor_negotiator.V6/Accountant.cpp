@@ -214,6 +214,9 @@ void Accountant::Initialize(GroupEntry* root_group)
 			// skip records that are not customer records...
 		if (strncmp(CustomerRecord.c_str(),key,CustomerRecord.length())) continue;
 		char const *thisUser = &(key[CustomerRecord.length()]);
+		if (! isalpha(*thisUser)) {
+			dprintf(D_ALWAYS, "questionable user %s\n", thisUser);
+		}
 			// if we made it here, append to our list of users
 		users.append( thisUser );
 	  }
@@ -1082,7 +1085,6 @@ ClassAd* Accountant::ReportState(const string& CustomerName) {
     return ad;
 }
 
-
 void Accountant::CheckResources(const string& CustomerName, int& NumResources, float& NumResourcesRW) {
     dprintf(D_ACCOUNTANT, "Checking Resources for customer %s\n", CustomerName.c_str());
 
@@ -1234,7 +1236,6 @@ ClassAd* Accountant::ReportState(bool rollup) {
 
     return ad;
 }
-
 
 void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::map<string, int>& gnmap) {
     // begin by loading straight "non-rolled" data into the attributes for (group)
@@ -1390,6 +1391,89 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::
     formatstr(tmp, "LastUsageTime%d", pnum);
     ad->LookupInteger(tmp, ival);
     ad->Assign(tmp, std::max(ival, LastUsageTime));
+}
+
+bool Accountant::ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup /*= false*/)
+{
+	dprintf(D_ACCOUNTANT, "Reporting State for AccountingAd query\n");
+
+	// check for a qyery constraint, treat a trivial true constraint as no constraint. 
+	bool bval = true;
+	classad::ExprTree * constraint = queryAd.Lookup(ATTR_REQUIREMENTS);
+	if (constraint && ExprTreeIsLiteralBool(constraint, bval) && bval) {
+		constraint = nullptr;
+	}
+
+	// is there a result limit?
+	long long result_limit = 0;
+	bool has_limit = queryAd.EvaluateAttrInt(ATTR_LIMIT_RESULTS, result_limit);
+
+	std::string HK;
+	ClassAd* CustomerAd = NULL;
+	AcctLog->table.startIterations();
+	while (AcctLog->table.iterate(HK, CustomerAd)) {
+		if (strncmp(CustomerRecord.c_str(), HK.c_str(), CustomerRecord.length())) continue;
+		string CustomerName = HK.c_str() + CustomerRecord.length();
+
+		if (has_limit && ads.Length() >= result_limit) {
+			break;
+		}
+
+		bool isGroup = false;
+		GroupEntry* cgrp = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName, isGroup);
+
+		// GetPriority has side effects, It can end up setting Priority and PriorityFactor
+		// also it actually returns Priority*PriorityFactor which is what we put into
+		// the Priority field of ads we send to the collector (or return from a direct query)
+		double effectivePriority = GetPriority(CustomerName);
+		if (isGroup && rollup) { effectivePriority = 0; }
+		int ceiling = GetCeiling(CustomerName);
+
+		ClassAd * ad = new ClassAd(*CustomerAd);
+		ad->Assign(ATTR_NAME, CustomerName);
+		SetMyTypeName(*ad, "Accounting"); // MyType in the accounting log is * (so is target type actually)
+		SetTargetTypeName(*ad, "none");
+		ad->Assign(PriorityAttr, effectivePriority);
+		ad->Assign(CeilingAttr, ceiling);
+		ad->Assign("IsAccountingGroup", isGroup);
+		if (cgrp) {
+			ad->Assign("AccountingGroup", cgrp->name);
+			if (isGroup) {
+				ad->Assign("EffectiveQuota", cgrp->quota);
+				ad->Assign("ConfigQuota", cgrp->config_quota);
+				ad->Assign("SubtreeQuota", cgrp->subtree_quota);
+				ad->Assign("GroupSortKey", cgrp->sort_key);
+				const char * policy = "no";
+				if (cgrp->autoregroup) policy = "regroup";
+				else if (cgrp->accept_surplus) policy = "byquota";
+				ad->Assign("SurplusPolicy", policy);
+				ad->Assign("Requested", cgrp->currently_requested);
+			}
+		}
+		ad->Delete("CurrentTime"); // some ads have a current time attribute
+
+		// delete some attributes to facilitate comparison between -moduler and non-modular queries
+		const bool testing_hack = true;
+		if (testing_hack) {
+			ad->Delete(ATTR_MY_TYPE);
+			ad->Delete(ATTR_TARGET_TYPE);
+			ad->Delete("UnchargedTime");
+			ad->Delete("WeightedUnchargedTime");
+			float truncated_prio = (float)effectivePriority;
+			ad->Assign(PriorityAttr, truncated_prio);
+		}
+
+		// now that we have built the ad, we can check it against the constraint
+		// and either insert it into the result list, or delete it
+		if ( ! constraint || EvalExprBool(ad, constraint)) {
+			//dPrintAd(D_FULLDEBUG, *ad, false);
+			ads.Insert(ad);
+		} else {
+			delete ad;
+		}
+	}
+
+	return true;
 }
 
 

@@ -89,6 +89,7 @@ public:
 
   ClassAd* ReportState(bool rollup = false);
   ClassAd* ReportState(const std::string& CustomerName);
+  bool ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup = false);
 
   void CheckResources(const std::string& CustomerName, int& NumResources, float& NumResourcesRW);
 
