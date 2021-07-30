@@ -198,6 +198,7 @@ man_pages = [
     ('man-pages/condor_who', 'condor_who', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/get_htcondor', 'get_htcondor', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/gidd_alloc', 'gidd_alloc', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/htcondor', 'htcondor', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/procd_ctl', 'procd_ctl', u'HTCondor Manual', [u'HTCondor Team'], 1)
 ]
 

@@ -61,6 +61,15 @@ New Features:
   ``WARN_ON_GSI_CONFIGURATION`` and ``WARN_ON_GSI_USAGE`` to ``False``.
   :jira:`517`
 
+- Introduced a new command-line tool, ``htcondor`` 
+  (see :doc:`man page <../man-pages/htcondor>`) for managing HTCondor jobs
+  and resources. This tool also includes new capabilities for running
+  HTCondor jobs on Slurm machines which are temporarily acquired
+  to act as HTCondor execution points 
+  (see :ref:`grid-computing/htcondor-and-slurm:acquiring resources from slurm`).
+  :jira:`252`
+
+
 Bugs Fixed:
 
 - Fixed a bug where jobs cannot start on Linux if the execute directory is placed
