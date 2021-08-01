@@ -30,9 +30,9 @@ Version 9.0.4
 
 Release Notes:
 
-.. HTCondor version 9.0.4 released on Month Date, 2021.
+.. HTCondor version 9.0.5 released on Month Date, 2021.
 
-- HTCondor version 9.0.4 not yet released.
+- HTCondor version 9.0.5 not yet released.
 
 New Features:
 
@@ -62,12 +62,12 @@ Bugs Fixed:
   :jira:`599`
 
 
-Version 9.0.3
+Version 9.0.4
 -------------
 
 Release Notes:
 
--  HTCondor version 9.0.3 released on July 27, 2021.
+-  HTCondor version 9.0.4 released on July 29, 2021.
 
 New Features:
 
@@ -84,6 +84,21 @@ Bugs Fixed:
    :jira:`509`
    :jira:`587`
 
+
+Version 9.0.3
+-------------
+
+Release Notes:
+
+-  HTCondor version 9.0.3 released on July 27, 2021 and pulled two days later when an issue was found with a patch.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  None.
 
 Version 9.0.2
 -------------

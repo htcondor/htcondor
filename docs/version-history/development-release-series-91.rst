@@ -4,14 +4,14 @@ Development Release Series 9.1
 This is the development release series of HTCondor. The details of each
 version are described below.
 
-Version 9.1.3
+Version 9.1.4
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.1.3 released on Month Date, 2021.
+.. HTCondor version 9.1.4 released on Month Date, 2021.
 
-- HTCondor version 9.1.3 not yet released.
+- HTCondor version 9.1.4 not yet released.
 
 New Features:
 
@@ -23,14 +23,14 @@ Bugs Fixed:
   a string with a colon and a port number, but no host part.
   :jira:`602`
 
-Version 9.1.2
+Version 9.1.3
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.1.2 released on Month Date, 2021.
+.. HTCondor version 9.1.3 released on Month Date, 2021.
 
-- HTCondor version 9.1.2 not yet released.
+- HTCondor version 9.1.3 not yet released.
 
 - GSI is no longer in the list of default authentication methods.
   To use GSI, you must enable it by setting one or more of the
@@ -98,12 +98,12 @@ Bugs Fixed:
   :jira:`484`
 
 
-Version 9.1.1
+Version 9.1.2
 -------------
 
 Release Notes:
 
--  HTCondor version 9.1.1 released on July 27, 2021.
+-  HTCondor version 9.1.2 released on July 29, 2021.
 
 New Features:
 
@@ -119,6 +119,19 @@ Bugs Fixed:
 
    :jira:`509`
    :jira:`587`
+
+Version 9.1.1
+-------------
+
+Release Notes:
+
+-  HTCondor version 9.1.1 released on July 27, 2021 and pulled two days later when an issue was found with a patch.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
 
 Version 9.1.0
 -------------
