@@ -1,3 +1,11 @@
+condor (9.1.2-1) stable; urgency=high
+
+  * Fixes for security issues
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 Jul 2021 10:35:12 -0500
+
 condor (9.1.1-1) stable; urgency=high
 
   * Fixes for security issues
