@@ -1697,6 +1697,15 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.4-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+* Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.15-1
+- Fix for security issue
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+
 * Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.3-1
 - Fixes for security issues
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
