@@ -8,4 +8,5 @@ Grid Computing
    introduction-grid-computing
    connecting-pools-with-flocking
    grid-universe
-   job-router     
+   htcondor-and-slurm
+   job-router
