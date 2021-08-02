@@ -48,6 +48,12 @@ Bugs Fixed:
   ``OxExitHold`` triggers.
   :jira:`599`
 
+- Fixed a bug in the *condor_now* tool, where the *condor_schedd* would
+  not use an existing security session to run the selected job on the
+  claimed resources.
+  This could often lead to the job being unable to start.
+  :jira:`603`
+
 
 Version 9.0.4
 -------------
