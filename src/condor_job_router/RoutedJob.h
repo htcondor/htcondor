@@ -147,7 +147,8 @@ class JobRoute {
 	bool ApplyRoutingJobEdits(
 		ClassAd *src_ad,
 		SimpleList<MacroStreamXFormSource*>& pre_route_xfms,
-		SimpleList<MacroStreamXFormSource*>& post_route_xfms);
+		SimpleList<MacroStreamXFormSource*>& post_route_xfms,
+		unsigned int xform_flags);
 
 	bool AcceptingMoreJobs() const;
 	void IncrementCurrentRoutedJobs() {m_num_jobs++;}

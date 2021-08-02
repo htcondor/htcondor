@@ -1942,8 +1942,12 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 		return;
 	}
 
+	unsigned int xform_flags = 0;
+	if (m_operate_as_tool & JOB_ROUTER_TOOL_FLAG_LOG_XFORM_ERRORS) { xform_flags |= XFORM_UTILS_LOG_ERRORS; }
+	if (m_operate_as_tool & JOB_ROUTER_TOOL_FLAG_LOG_XFORM_STEPS) { xform_flags |= XFORM_UTILS_LOG_STEPS; }
+
 	// The route ClassAd may change some things in the routed ad.
-	if(!route->ApplyRoutingJobEdits(reinterpret_cast<ClassAd*>(&job->dest_ad), m_pre_route_xfms, m_post_route_xfms)) {
+	if(!route->ApplyRoutingJobEdits(reinterpret_cast<ClassAd*>(&job->dest_ad), m_pre_route_xfms, m_post_route_xfms, xform_flags)) {
 		dprintf(D_FULLDEBUG,"JobRouter failure (%s): failed to apply route ClassAd modifications to target ad.\n",job->JobDesc().c_str());
 		GracefullyRemoveJob(job);
 		return;
@@ -2890,7 +2894,8 @@ bool
 JobRoute::ApplyRoutingJobEdits(
 	ClassAd *src_ad,
 	SimpleList<MacroStreamXFormSource*>& pre_route,
-	SimpleList<MacroStreamXFormSource*>& post_route)
+	SimpleList<MacroStreamXFormSource*>& post_route,
+	unsigned int xform_flags)
 {
 	XFormHash mset(CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO /* | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_WANT_META */);
 	//mset.init();
@@ -2907,7 +2912,8 @@ JobRoute::ApplyRoutingJobEdits(
 				dprintf(D_FULLDEBUG, "JobRouter pre-route transform %s: does not match job. skippping it.\n", xfm->getName());
 				continue;
 			}
-			rval = TransformClassAd(src_ad, *xfm, mset, errmsg);
+			if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying pre-route transform: %s\n", xfm->getName()); }
+			rval = TransformClassAd(src_ad, *xfm, mset, errmsg, xform_flags);
 			if (rval < 0) {
 				// transform failed, errmsg says why.
 				dprintf(D_ALWAYS, "JobRouter failure in pre-route transform %s: %s.\n", xfm->getName(), errmsg.c_str());
@@ -2919,7 +2925,8 @@ JobRoute::ApplyRoutingJobEdits(
 		optimize_macros(mset.macros());
 	}
 
-	rval = TransformClassAd(src_ad, m_route, mset, errmsg);
+	if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying route: %s\n", m_route.getName()); }
+	rval = TransformClassAd(src_ad, m_route, mset, errmsg, xform_flags);
 	if (rval < 0) {
 		// transform failed, errmsg says why.
 		dprintf(D_ALWAYS,"JobRouter failure (route=%s): %s.\n",Name(), errmsg.c_str());
@@ -2934,7 +2941,8 @@ JobRoute::ApplyRoutingJobEdits(
 				dprintf(D_FULLDEBUG, "JobRouter post-route transform %s: does not match job. skippping it.\n", xfm->getName());
 				continue;
 			}
-			rval = TransformClassAd(src_ad, *xfm, mset, errmsg);
+			if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying post-route transform: %s\n", xfm->getName()); }
+			rval = TransformClassAd(src_ad, *xfm, mset, errmsg, xform_flags);
 			if (rval < 0) {
 				// transform failed, errmsg says why.
 				dprintf(D_ALWAYS, "JobRouter failure in pre-route transform %s: %s.\n", xfm->getName(), errmsg.c_str());

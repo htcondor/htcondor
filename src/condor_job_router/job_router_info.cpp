@@ -66,7 +66,8 @@ usage(int retval = 1)
 		"\t-version\tPrint HTCondor version and exit\n"
 		"\t-config\t\tPrint configured routes\n"
 		"\t-match-jobs\tMatch jobs to routes and print the first match\n"
-		"\t-route-jobs\tMatch jobs to routes and print the routed jobs\n"
+		"\t-route-jobs <file>\tMatch jobs to routes and print the routed jobs to the file\n"
+		"\t-log-steps\tLog the routing steps as jobs are routed. Use with -route-jobs\n"
 		"\t-ignore-prior-routing\tRemove routing attributes from the job ClassAd and set JobStatus to IDLE before matching\n"
 		"\t-jobads <file>\tWhen operation requires job ClassAds, Read them from <file>\n\t\t\tIf <file> is -, read from stdin\n"
 		"\n"
@@ -158,6 +159,7 @@ int main(int argc, const char *argv[])
 	bool dash_config = false;
 	bool dash_match_jobs = false;
 	bool dash_route_jobs = false;
+	bool dash_log_route_steps = false;
 	int  dash_diagnostic = 0;
 	bool dash_ignore_prior_routing = false;
 	//bool dash_d_fulldebug = false;
@@ -195,6 +197,8 @@ int main(int argc, const char *argv[])
 			dash_match_jobs = true;
 			dash_route_jobs = true;
 			route_jobs_filename = use_next_arg("route-jobs", argv, i);
+		} else if (is_dash_arg_prefix(argv[i], "log-steps", 2)) {
+			dash_log_route_steps = true;
 		} else if (is_dash_arg_prefix(argv[i], "ignore-prior-routing", 2)) {
 			dash_ignore_prior_routing = true;
 		} else if (is_dash_arg_prefix(argv[i], "jobads", 1)) {
@@ -215,7 +219,7 @@ int main(int argc, const char *argv[])
 	unsigned int cat_and_flags = D_FULLDEBUG | D_CAT;
 	//if (dash_d_fulldebug) { cat_and_flags |= D_FULLDEBUG; }
 	DebugOutputChoice choice=1<<D_ERROR;
-	if (dash_diagnostic) { choice |= 1<<D_ALWAYS; }
+	if (dash_diagnostic || dash_log_route_steps) { choice |= 1<<D_ALWAYS; }
 	dprintf_set_output_intercept(cat_and_flags, choice, _dprintf_intercept);
 
 
@@ -230,11 +234,14 @@ int main(int argc, const char *argv[])
 
 	g_silence_dprintf = dash_diagnostic ? false : true;
 	g_save_dprintfs = true;
-	unsigned int tool_flags = JOB_ROUTER_TOOL_FLAG_AS_TOOL;
+	unsigned int tool_flags = JOB_ROUTER_TOOL_FLAG_AS_TOOL | JOB_ROUTER_TOOL_FLAG_LOG_XFORM_ERRORS;
 	// assume job router will be running as root even if we (the tool) are not.
 	tool_flags |= JOB_ROUTER_TOOL_FLAG_CAN_SWITCH_IDS;
 	if (dash_diagnostic) {
 		tool_flags |= dash_diagnostic;
+	}
+	if (dash_log_route_steps) {
+		tool_flags |= JOB_ROUTER_TOOL_FLAG_LOG_XFORM_STEPS;
 	}
 	JobRouter job_router(tool_flags);
 	job_router.set_schedds(schedd, schedd2);

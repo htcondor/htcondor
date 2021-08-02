@@ -1194,12 +1194,24 @@ void MacroStreamXFormSource::reset(XFormHash &set)
 //
 // **************************************************************************************
 
+struct _parse_rules_args {
+	MacroStreamXFormSource & xfm;
+	XFormHash & mset;
+	ClassAd * ad;
+	void (*fnlog)(struct _parse_rules_args & args, bool is_error, const char * fmt, ...);
+	FILE * errfd;
+	FILE * outfd;
+	unsigned int options;
+};
+
+
 // delete an attribute of the given classad.
 // returns 0  if the delete did not happen
 // returns 1  if the delete happened.
-static int DoDeleteAttr(ClassAd * ad, const std::string & attr, unsigned int flags)
+static int DoDeleteAttr(ClassAd * ad, const std::string & attr, struct _parse_rules_args *pra)
 {
-	if (flags&2) fprintf(stdout, "DELETE %s\n", attr.c_str());
+	bool log_steps = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_STEPS));
+	if (log_steps) { pra->fnlog(*pra, false, "DELETE %s\n", attr.c_str()); }
 	if (ad->Delete(attr)) {
 		// Mark the attribute we just removed as dirty, since the schedd relies
 		// upon the ClassAd dirty attribute list to see what changed, and it must
@@ -1217,11 +1229,13 @@ static int DoDeleteAttr(ClassAd * ad, const std::string & attr, unsigned int fla
 // returns -1 if the new attribute is invalid
 // returns 0  if the rename did not happen
 // returns 1  if the rename happened.
-static int DoRenameAttr(ClassAd * ad, const std::string & attr, const char * attrNew, unsigned int flags)
+static int DoRenameAttr(ClassAd * ad, const std::string & attr, const char * attrNew, struct _parse_rules_args *pra)
 {
-	if (flags&2) fprintf(stdout, "RENAME %s to %s\n", attr.c_str(), attrNew);
+	bool log_errs  = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_ERRORS));
+	bool log_steps = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_STEPS));
+	if (log_steps) pra->fnlog(*pra, false, "RENAME %s to %s\n", attr.c_str(), attrNew);
 	if ( ! IsValidAttrName(attrNew)) {
-		if (flags&1) fprintf(stderr, "ERROR: RENAME %s new name %s is not valid\n", attr.c_str(), attrNew);
+		if (log_errs) pra->fnlog(*pra, true, "ERROR: RENAME %s new name %s is not valid\n", attr.c_str(), attrNew);
 		return -1;
 	} else {
 		ExprTree * tree = ad->Remove(attr);
@@ -1229,7 +1243,7 @@ static int DoRenameAttr(ClassAd * ad, const std::string & attr, const char * att
 			if (ad->Insert(attrNew, tree)) {
 				return 1;
 			} else {
-				if (flags&1) fprintf(stderr, "ERROR: could not rename %s to %s\n", attr.c_str(), attrNew);
+				if (log_errs) pra->fnlog(*pra, true, "ERROR: could not rename %s to %s\n", attr.c_str(), attrNew);
 				if ( ! ad->Insert(attr, tree)) {
 					delete tree;
 				}
@@ -1243,11 +1257,13 @@ static int DoRenameAttr(ClassAd * ad, const std::string & attr, const char * att
 // returns -1 if the new attribute is invalid
 // returns 0  if the copy did not happen
 // returns 1  if the copy happened.
-static int DoCopyAttr(ClassAd * ad, const std::string & attr, const char * attrNew, unsigned int flags)
+static int DoCopyAttr(ClassAd * ad, const std::string & attr, const char * attrNew, struct _parse_rules_args *pra)
 {
-	if (flags&2) fprintf(stdout, "COPY %s to %s\n", attr.c_str(), attrNew);
+	bool log_errs  = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_ERRORS));
+	bool log_steps = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_STEPS));
+	if (log_steps) pra->fnlog(*pra, false, "COPY %s to %s\n", attr.c_str(), attrNew);
 	if ( ! IsValidAttrName(attrNew)) {
-		if (flags&1) fprintf(stderr, "ERROR: COPY %s new name %s is not valid\n", attr.c_str(), attrNew);
+		if (log_steps) pra->fnlog(*pra, true, "ERROR: COPY %s new name %s is not valid\n", attr.c_str(), attrNew);
 		return -1;
 	} else {
 		ExprTree * tree = ad->Lookup(attr);
@@ -1256,7 +1272,7 @@ static int DoCopyAttr(ClassAd * ad, const std::string & attr, const char * attrN
 			if (ad->Insert(attrNew, tree)) {
 				return 1;
 			} else {
-				if (flags&1) fprintf(stderr, "ERROR: could not copy %s to %s\n", attr.c_str(), attrNew);
+				if (log_steps) pra->fnlog(*pra, true, "ERROR: could not copy %s to %s\n", attr.c_str(), attrNew);
 				delete tree;
 			}
 		}
@@ -1309,12 +1325,6 @@ static const Keyword ActionKeywordItems[] = {
 static const KeywordTable ActionKeywords = SORTED_TOKENER_TABLE(ActionKeywordItems);
 
 
-struct _parse_rules_args {
-	MacroStreamXFormSource & xfm;
-	XFormHash & mset;
-	ClassAd * ad;
-	unsigned int flags;
-};
 
 // substitute regex groups into a string, appending the output to a std::string
 //
@@ -1347,7 +1357,7 @@ const char * append_substituted_regex (
 
 // Handle kw_COPY, kw_RENAME and kw_DELETE when the first argument is a regex.
 // 
-static int DoRegexAttrOp(int kw_value, ClassAd *ad, pcre* re, int re_options, const char * replacement, bool verbose)
+static int DoRegexAttrOp(int kw_value, ClassAd *ad, pcre* re, int re_options, const char * replacement, struct _parse_rules_args *verbose)
 {
 	const int max_group_count = 11; // only \0 through \9 allowed.
 	int ovector[3 * (max_group_count + 1)]; // +1 for the string itself
@@ -1475,8 +1485,9 @@ static int ValidateRulesCallback(void* /*pv*/, MACRO_SOURCE& /*source*/, MACRO_S
 static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*/, char * line, std::string & errmsg)
 {
 	struct _parse_rules_args * pargs = (struct _parse_rules_args*)pv;
-	const bool verbose = (pargs->flags & 2) != 0;
-	const bool is_tool = (pargs->flags & 1) != 0;
+	void (*log)(struct _parse_rules_args & args, bool is_error, const char * fn, ...) = pargs->fnlog;
+	const bool log_steps = log && ((pargs->options & XFORM_UTILS_LOG_STEPS) != 0);
+	//const bool is_tool = (pargs->options & 1) != 0;
 	ClassAd * ad = pargs->ad;
 	XFormHash & mset = pargs->mset;
 	MacroStreamXFormSource & xform = pargs->xfm;
@@ -1549,28 +1560,28 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 	switch (pkw->value) {
 	// these keywords are envelope information
 	case kw_NAME:
-		if (verbose) fprintf(stdout, "NAME %s\n", rhs.ptr());
+		if (log_steps) log(*pargs, false, "NAME %s\n", rhs.ptr());
 		break;
 	case kw_UNIVERSE:
-		if (verbose) fprintf(stdout, "UNIVERSE %d\n", CondorUniverseNumberEx(attr.c_str()));
+		if (log_steps) log(*pargs, false, "UNIVERSE %d\n", CondorUniverseNumberEx(attr.c_str()));
 		break;
 	case kw_REQUIREMENTS:
-		if (verbose) fprintf(stdout, "REQUIREMENTS %s\n", rhs.ptr());
+		if (log_steps) log(*pargs, false, "REQUIREMENTS %s\n", rhs.ptr());
 		break;
 
 		// evaluate an expression, then set a value into the ad.
 	case kw_EVALMACRO:
-		if (verbose) fprintf(stdout, "EVALMACRO %s to %s\n", attr.c_str(), rhs.ptr());
+		if (log_steps) log(*pargs, false, "EVALMACRO %s to %s\n", attr.c_str(), rhs.ptr());
 		if ( ! rhs) {
-			if (is_tool) fprintf(stderr, "ERROR: EVALMACRO %s has no value", attr.c_str());
+			if (log) log(*pargs, true, "ERROR: EVALMACRO %s has no value", attr.c_str());
 		} else {
 			classad::Value val;
 			if ( ! ad->EvaluateExpr(rhs.ptr(), val)) {
-				if (is_tool) fprintf(stderr, "ERROR: EVALMACRO %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
+				if (log) log(*pargs, true, "ERROR: EVALMACRO %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				XFormValueToString(val, tmp3);
 				insert_macro(attr.c_str(), tmp3.c_str(), mset.macros(), source, xform.context());
-				if (verbose) { fprintf(stdout, "          %s = %s\n", attr.c_str(), tmp3.c_str()); }
+				if (log_steps) { log(*pargs, false, "          %s = %s\n", attr.c_str(), tmp3.c_str()); }
 			}
 		}
 		break;
@@ -1587,7 +1598,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 			int expand_options = EXPAND_GLOBS_WARN_EMPTY;
 			int rval = pargs->xforms->parse_iterate_args(rhs.ptr(), expand_options, mset, errmsg);
 			if (rval < 0) {
-				if (is_tool) fprintf(stderr, "ERROR: %s\n", errmsg.c_str()); return -1;
+				if (is_tool) log(*pargs, "ERROR: %s\n", errmsg.c_str()); return -1;
 			}
 		}
 #endif
@@ -1595,23 +1606,23 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 
 	// these keywords manipulate the ad
 	case kw_DEFAULT:
-		if (verbose) fprintf(stdout, "DEFAULT %s to %s\n", attr.c_str(), rhs.ptr());
+		if (log_steps) log(*pargs, false, "DEFAULT %s to %s\n", attr.c_str(), rhs.ptr());
 		if (ad->Lookup(attr) != NULL) {
 			// this attribute already has a value.
 			break;
 		}
 		// fall through
 	case kw_SET:
-		if (verbose) fprintf(stdout, "SET %s to %s\n", attr.c_str(), rhs.ptr());
+		if (log_steps) log(*pargs, false, "SET %s to %s\n", attr.c_str(), rhs.ptr());
 		if ( ! rhs) {
-			if (is_tool) fprintf(stderr, "ERROR: SET %s has no value", attr.c_str());
+			if (log) log(*pargs, true, "ERROR: SET %s has no value", attr.c_str());
 		} else {
 			ExprTree * expr = NULL;
 			if ( ! parser.ParseExpression(rhs.ptr(), expr, true)) {
-				if (is_tool) fprintf(stderr, "ERROR: SET %s invalid expression : %s\n", attr.c_str(), rhs.ptr());
+				if (log) log(*pargs, true, "ERROR: SET %s invalid expression : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				if ( ! ad->Insert(attr, expr)) {
-					if (is_tool) fprintf(stderr, "ERROR: could not set %s to %s\n", attr.c_str(), rhs.ptr());
+					if (log) log(*pargs, true, "ERROR: could not set %s to %s\n", attr.c_str(), rhs.ptr());
 					delete expr;
 				}
 			}
@@ -1619,20 +1630,20 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 		break;
 
 	case kw_EVALSET:
-		if (verbose) fprintf(stdout, "EVALSET %s to %s\n", attr.c_str(), rhs.ptr());
+		if (log_steps) log(*pargs, false, "EVALSET %s to %s\n", attr.c_str(), rhs.ptr());
 		if ( ! rhs) {
-			if (is_tool) fprintf(stderr, "ERROR: EVALSET %s has no value", attr.c_str());
+			if (log) log(*pargs, true, "ERROR: EVALSET %s has no value", attr.c_str());
 		} else {
 			classad::Value val;
 			if ( ! ad->EvaluateExpr(rhs.ptr(), val)) {
-				if (is_tool) fprintf(stderr, "ERROR: EVALSET %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
+				if (log) log(*pargs, true, "ERROR: EVALSET %s could not evaluate : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				ExprTree * tree = XFormCopyValueToTree(val);
 				if ( ! ad->Insert(attr, tree)) {
-					if (is_tool) fprintf(stderr, "ERROR: could not set %s to %s\n", attr.c_str(), XFormValueToString(val, tmp3));
+					if (log) log(*pargs, true, "ERROR: could not set %s to %s\n", attr.c_str(), XFormValueToString(val, tmp3));
 					delete tree;
-				} else if (verbose) {
-					if (is_tool) fprintf(stdout, "    SET %s to %s\n", attr.c_str(), XFormValueToString(val, tmp3));
+				} else if (log_steps) {
+					log(*pargs, false, "    SET %s to %s\n", attr.c_str(), XFormValueToString(val, tmp3));
 				}
 			}
 		}
@@ -1646,22 +1657,39 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 			int erroffset;
 			pcre * re = pcre_compile(attr.c_str(), regex_flags, &errptr, &erroffset, NULL);
 			if (! re) {
-				if (is_tool) fprintf(stderr, "ERROR: Error compiling regex '%s'. %s. this entry will be ignored.\n", attr.c_str(), errptr);
+				if (log) log(*pargs, true, "ERROR: Error compiling regex '%s'. %s. this entry will be ignored.\n", attr.c_str(), errptr);
 			} else {
-				DoRegexAttrOp(pkw->value, ad, re, regex_flags, rhs.ptr(), verbose);
+				DoRegexAttrOp(pkw->value, ad, re, regex_flags, rhs.ptr(), pargs);
 				pcre_free(re);
 			}
 		} else {
 			switch (pkw->value) {
-				case kw_DELETE: DoDeleteAttr(ad, attr, verbose); break;
-				case kw_RENAME: DoRenameAttr(ad, attr, rhs.ptr(), verbose); break;
-				case kw_COPY:   DoCopyAttr(ad, attr, rhs.ptr(), verbose); break;
+				case kw_DELETE: DoDeleteAttr(ad, attr, pargs); break;
+				case kw_RENAME: DoRenameAttr(ad, attr, rhs.ptr(), pargs); break;
+				case kw_COPY:   DoCopyAttr(ad, attr, rhs.ptr(), pargs); break;
 			}
 		}
 	}
 
 	return 0; // line handled, keep scanning.
 }
+
+static void ParseRulesStdLog(struct _parse_rules_args & ra, bool is_error, const char * fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	vfprintf(is_error ? ra.errfd : ra.outfd, fmt, args);
+	va_end(args);
+}
+
+static void ParseRuleDprintLog(struct _parse_rules_args & ra, bool is_error, const char * fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+	_condor_dprintf_va(D_ALWAYS, (DPF_IDENT)0, fmt, args);
+	va_end(args);
+}
+
 
 // in-place transform of a single ad 
 // using the transform rules in xfm,
@@ -1673,14 +1701,23 @@ int TransformClassAd (
 	MacroStreamXFormSource & xfm,  // the set of transform rules
 	XFormHash & mset,              // the hashtable used as temporary storage
 	std::string & errmsg,          // holds parse errors on failure
-	unsigned int  flags)  // (flags&1) - errors to stderr, (flags&2) - verbose logging to stdout
+	unsigned int  flags)           // One or more of XFORM_UTILS_* flags
 {
 	MACRO_EVAL_CONTEXT_EX & ctx = xfm.context();
 	ctx.ad = input_ad;
 	ctx.adname = "MY.";
 	ctx.also_in_config = true;
 
-	_parse_rules_args args = { xfm, mset, input_ad, flags };
+	_parse_rules_args args = { xfm, mset, input_ad, nullptr, nullptr, nullptr, flags };
+	if (flags) {
+		if (flags & XFORM_UTILS_LOG_TO_DPRINTF) {
+			args.fnlog = ParseRuleDprintLog;
+		} else {
+			args.fnlog = ParseRulesStdLog;
+			args.errfd = stderr;
+			args.outfd = stdout;
+		}
+	}
 
 	xfm.rewind();
 	int rval = Parse_macros(xfm, 0, mset.macros(), READ_MACROS_SUBMIT_SYNTAX, &ctx, errmsg, ParseRulesCallback, &args);
@@ -2272,7 +2309,7 @@ bool ValidateXForm (
 	const char * name = xfm.getName();
 	if ( ! name) name = "";
 
-	_parse_rules_args args = { xfm, mset, NULL, 0 };
+	_parse_rules_args args = { xfm, mset, nullptr, nullptr, nullptr, nullptr, 0 };
 
 	xfm.rewind();
 	int rval = Parse_macros(xfm, 0, mset.macros(), READ_MACROS_SUBMIT_SYNTAX, &ctx, errmsg, ValidateRulesCallback, &args);
