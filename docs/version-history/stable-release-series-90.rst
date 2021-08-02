@@ -19,7 +19,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- If the SCITOKENS authentication method succeeds (that is, the client
+  presented a valid SciToken) but the user-mapping fails, HTCondor will
+  try the next authentication method in the list instead of failing.
+  :jira:`589`
 
 Bugs Fixed:
 
