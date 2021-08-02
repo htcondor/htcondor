@@ -29,6 +29,10 @@ Bugs Fixed:
   unparseable after certain errors.
   :jira:`476`
 
+- Fixed a bug where jobs running on Linux machines with cgroups enabled
+  would not count files created in /dev/shm in the MemoryUsage attribute.
+  :jira:`586`
+
 - Fixed a bug on the Windows platform where *condor_submit* would crash
   rarely after succesfully submitting a job.  This caused problems for programs
   that look at the return status of *condor_submit*, including *condor_dagman*
