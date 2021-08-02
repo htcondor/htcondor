@@ -124,6 +124,13 @@ public:
 		m_sec_session_id = sesid ? sesid : "";
 	}
 
+	void setPeerFqu(const std::string& peer_fqu) {
+		m_peer_fqu = peer_fqu;
+	}
+	void setPeerAddr(const condor_sockaddr& peer_addr) {
+		m_peer_addr = peer_addr;
+	}
+
 	Stream::stream_type getStreamType() {return m_stream_type;}
 	int getTimeout() const {return m_timeout;}
 	time_t getDeadline() const {return m_deadline;}
@@ -133,6 +140,8 @@ public:
 		return m_sec_session_id.c_str()[0] ? m_sec_session_id.c_str() : NULL;
 	}
 	int getCommand() const {return m_cmd;}
+	std::string getPeerFqu() const {return m_peer_fqu;}
+	condor_sockaddr getPeerAddr() const {return m_peer_addr;}
 
 
 	enum MessageClosureEnum {
@@ -248,6 +257,8 @@ private:
 	bool m_raw_protocol;
 	std::string m_sec_session_id;
 
+	std::string m_peer_fqu;
+	condor_sockaddr m_peer_addr;
 
 	void connectFailure( DCMessenger *messenger );
 
