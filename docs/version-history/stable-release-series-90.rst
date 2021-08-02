@@ -36,6 +36,11 @@ Bugs Fixed:
   would not count files created in /dev/shm in the MemoryUsage attribute.
   :jira:`586`
 
+- Fixed a bug where running *condor_who* as a non-root user on a Unix
+  system would print a confusing warning to stderr about running as
+  non-root.
+  :jira:`590`
+
 - Fixed a bug on the Windows platform where *condor_submit* would crash
   rarely after succesfully submitting a job.  This caused problems for programs
   that look at the return status of *condor_submit*, including *condor_dagman*
