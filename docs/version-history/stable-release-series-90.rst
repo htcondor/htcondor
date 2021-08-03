@@ -36,7 +36,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- If the SCITOKENS authentication method succeeds (that is, the client
+  presented a valid SciToken) but the user-mapping fails, HTCondor will
+  try the next authentication method in the list instead of failing.
+  :jira:`589`
 
 Bugs Fixed:
 
@@ -45,6 +48,15 @@ Bugs Fixed:
   a bug which could cause ``condor_gpu_discovery``'s output to become
   unparseable after certain errors.
   :jira:`476`
+
+- Fixed a bug where jobs running on Linux machines with cgroups enabled
+  would not count files created in /dev/shm in the MemoryUsage attribute.
+  :jira:`586`
+
+- Fixed a bug where running *condor_who* as a non-root user on a Unix
+  system would print a confusing warning to stderr about running as
+  non-root.
+  :jira:`590`
 
 - Fixed a bug on the Windows platform where *condor_submit* would crash
   rarely after succesfully submitting a job.  This caused problems for programs
@@ -60,6 +72,12 @@ Bugs Fixed:
 - The job attribute ``ExitCode`` is no longer missing from the job ad after
   ``OxExitHold`` triggers.
   :jira:`599`
+
+- Fixed a bug in the *condor_now* tool, where the *condor_schedd* would
+  not use an existing security session to run the selected job on the
+  claimed resources.
+  This could often lead to the job being unable to start.
+  :jira:`603`
 
 
 Version 9.0.4
