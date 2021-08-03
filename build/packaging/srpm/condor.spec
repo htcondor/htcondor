@@ -1215,6 +1215,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/utils.py
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
+%_mandir/man1/condor_check_password.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_config_val.1.gz
