@@ -13,7 +13,7 @@ Synopsis
 
 **condor_userprio** [**-name** *negotiatorname*]
 [**-pool** *centralmanagerhostname[:portnumber]*] [**Edit option** ]
-| [**Display options** ] [**-inputfile** *filename*]
+| [**Display options** [*username*] ] [**-inputfile** *filename*]
 
 Description
 -----------
@@ -60,6 +60,10 @@ or whose priority is greater than the minimum are listed.
 
 The **-pool** option can be used to contact a different central manager
 than the local one (the default).
+
+Options that do not begin with a - are treated as a username and results
+will restricted to users that match the given name. More than one username
+can be specified.
 
 For security purposes of authentication and authorization, specifying an
 Edit Option requires the ADMINISTRATOR level of access.

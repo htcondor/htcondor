@@ -641,7 +641,7 @@ int ApplyTransform (
 	apply_transform_args & args = *(apply_transform_args*)pv;
 	//const ClassAd * job = input_ad;
 
-	unsigned int flags = 1 | (dash_verbose ? 2 : 0);
+	unsigned int flags = XFORM_UTILS_LOG_ERRORS | (dash_verbose ? XFORM_UTILS_LOG_STEPS : 0);
 
 	// TODO: defer expansion of iterate args until the first SET statement?
 

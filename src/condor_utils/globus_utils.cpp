@@ -226,6 +226,7 @@ activate_globus_gsi( void )
 		 !(gss_context_time_ptr = (OM_uint32 (*)(OM_uint32*, const gss_ctx_id_t, OM_uint32*))dlsym(dl_hdl, "gss_context_time")) ||
 		 !(gss_delete_sec_context_ptr = (OM_uint32 (*)(OM_uint32*, gss_ctx_id_t*, gss_buffer_t))dlsym(dl_hdl, "gss_delete_sec_context")) ||
 		 !(gss_display_name_ptr = (OM_uint32 (*)( OM_uint32*, const gss_name_t, gss_buffer_t, gss_OID*))dlsym(dl_hdl, "gss_display_name")) ||
+		 !(gss_import_name_ptr = (OM_uint32 (*)(OM_uint32*, const gss_buffer_t, const gss_OID, gss_name_t*))dlsym(dl_hdl, "gss_import_name")) ||
 		 !(gss_inquire_context_ptr = (OM_uint32 (*)(OM_uint32*, const gss_ctx_id_t, gss_name_t*, gss_name_t*, OM_uint32*, gss_OID*, OM_uint32*, int*, int*))dlsym(dl_hdl, "gss_inquire_context")) ||
 		 !(gss_release_buffer_ptr = (OM_uint32 (*)(OM_uint32*, gss_buffer_t))dlsym(dl_hdl, "gss_release_buffer")) ||
 		 !(gss_release_cred_ptr = (OM_uint32 (*)(OM_uint32*, gss_cred_id_desc_struct**))dlsym(dl_hdl, "gss_release_cred")) ||

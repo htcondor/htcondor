@@ -8,18 +8,38 @@ series.
 
 The details of each version are described below.
 
-Version 9.0.3
+Version 9.0.6
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.0.3 released on Month Date, 2021.
+.. HTCondor version 9.0.6 released on Month Date, 2021.
 
-- HTCondor version 9.0.3 not yet released.
+- HTCondor version 9.0.6 not yet released.
 
 New Features:
 
 - None.
+
+Bugs Fixed:
+
+- None.
+
+Version 9.0.5
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.5 released on Month Date, 2021.
+
+- HTCondor version 9.0.5 not yet released.
+
+New Features:
+
+- If the SCITOKENS authentication method succeeds (that is, the client
+  presented a valid SciToken) but the user-mapping fails, HTCondor will
+  try the next authentication method in the list instead of failing.
+  :jira:`589`
 
 Bugs Fixed:
 
@@ -28,6 +48,15 @@ Bugs Fixed:
   a bug which could cause ``condor_gpu_discovery``'s output to become
   unparseable after certain errors.
   :jira:`476`
+
+- Fixed a bug where jobs running on Linux machines with cgroups enabled
+  would not count files created in /dev/shm in the MemoryUsage attribute.
+  :jira:`586`
+
+- Fixed a bug where running *condor_who* as a non-root user on a Unix
+  system would print a confusing warning to stderr about running as
+  non-root.
+  :jira:`590`
 
 - Fixed a bug on the Windows platform where *condor_submit* would crash
   rarely after succesfully submitting a job.  This caused problems for programs
@@ -39,6 +68,55 @@ Bugs Fixed:
   jobs to specify the same file in ``transfer_input_files`` and in
   ``transfer_checkpoint_files``, and still resume properly after a checkpoint.
   :jira:`583`
+
+- The job attribute ``ExitCode`` is no longer missing from the job ad after
+  ``OxExitHold`` triggers.
+  :jira:`599`
+
+- Fixed a bug in the *condor_now* tool, where the *condor_schedd* would
+  not use an existing security session to run the selected job on the
+  claimed resources.
+  This could often lead to the job being unable to start.
+  :jira:`603`
+
+
+Version 9.0.4
+-------------
+
+Release Notes:
+
+-  HTCondor version 9.0.4 released on July 29, 2021.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes a security-related bug
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004.html>`_.
+
+   :jira:`509`
+   :jira:`587`
+
+
+Version 9.0.3
+-------------
+
+Release Notes:
+
+-  HTCondor version 9.0.3 released on July 27, 2021 and pulled two days later when an issue was found with a patch.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  None.
 
 Version 9.0.2
 -------------
