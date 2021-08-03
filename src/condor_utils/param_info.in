@@ -1701,8 +1701,7 @@ description=Path to sendmail
 tags=MAIL,
 
 [MAIL]
-# default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
-default=/bin/mail
+default=/usr/bin/mail
 win32_default=$(BIN)\condor_mail.exe
 type=path
 tags=MAIL,
