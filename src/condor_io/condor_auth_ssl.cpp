@@ -995,8 +995,10 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 			MyString canonical_user;
 			Authentication::load_map_file();
 			auto global_map_file = Authentication::getGlobalMapFile();
-			bool mapFailed = global_map_file->GetCanonicalization(
-				"SCITOKENS", m_scitokens_auth_name, canonical_user );
+			bool mapFailed = true;
+			if( global_map_file != NULL ) {
+				mapFailed = global_map_file->GetCanonicalization( "SCITOKENS", m_scitokens_auth_name, canonical_user );
+			}
 			if( mapFailed ) {
 				dprintf(D_SECURITY, "Failed to map SCITOKENS authenticated identity '%s', failing authentication to give another authentication method a go.\n", m_scitokens_auth_name.c_str() );
 
