@@ -441,6 +441,9 @@ void DCMessenger::writeMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 		   messageSent() later, after the delivery.  For now, we do it
 		   all synchronously, right here. */
 
+	msg->setPeerFqu(sock->getFullyQualifiedUser());
+	msg->setPeerAddr(sock->peer_addr());
+
 	sock->encode();
 
 	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED ) {

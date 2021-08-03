@@ -18,6 +18,11 @@ if [[ ! -x ${RELEASE_DIR}/sbin/condor_master ]]; then
     exit 1
 fi
 
+if [[ ! -e ${RELEASE_DIR}/etc/examples/condor_config.tarball ]]; then
+    echo "Can't find template config file etc/examples/condor_config.tarball, aborting."
+    exit 1
+fi
+
 if [[ -e ${RELEASE_DIR}/etc/condor_config ]]; then
     echo "Refusing to overwrite existing etc/condor_config file, aborting."
     exit 1
@@ -50,16 +55,15 @@ if [[ ! -d "${LOCAL_DIR}" ||
     exit 1
 fi
 
+sed -e "s|^RELEASE_DIR *=.*|RELEASE_DIR = ${RELEASE_DIR}|" ${RELEASE_DIR}/etc/examples/condor_config.tarball >${RELEASE_DIR}/etc/condor_config
+
 (
 cat <<EOF
-RELEASE_DIR=${RELEASE_DIR}
-LOCAL_DIR=\$(RELEASE_DIR)/local
-LOCAL_CONFIG_DIR=\$(LOCAL_DIR)/config.d
 
 LOCK=${LOCK}
 CONDOR_IDS=${CONDOR_IDS}
 EOF
-) > "${RELEASE_DIR}/etc/condor_config"
+) >> "${RELEASE_DIR}/etc/condor_config"
 
 #
 # Because user-based authentication includes the hostname as part of the
