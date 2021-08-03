@@ -30,12 +30,15 @@ class XFormHash;
 // variables live in the hashtable mset.
 // returns < 0 on failure, errmsg will have details
 //
+#define XFORM_UTILS_LOG_ERRORS      0x0001  // Log errors to stderr or dprintf
+#define XFORM_UTILS_LOG_STEPS       0x0002  // Log errors to stdout or dprintf
+#define XFORM_UTILS_LOG_TO_DPRINTF  0xFF00  // Dprintf category, if 0 log to stdout/stderr
 int TransformClassAd (
 	ClassAd * input_ad,           // the ad to be transformed
 	MacroStreamXFormSource & xfm, // the set of transform rules
 	XFormHash & mset,             // the hashtable used as temporary storage
 	std::string & errmsg,
-	unsigned int  flags=0);  // flags control output to stdout/stderr. 0x0001 = errors to stdout, 0x0002 = verbose logging to stdout.
+	unsigned int  flags=0);  // One or move of XFORM_UTILS_* flags
 
 /*
 Basic workflow for classad transformation is 
