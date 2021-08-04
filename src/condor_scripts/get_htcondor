@@ -317,7 +317,7 @@ do_install() {
 	#
 	# Check for the pool password / default signing key before installing.
 	#
-	if [[ $var ]]; then
+	if [[ $ROLE ]]; then
 		if [[ ! $PASSWORD ]]; then
 			if ! is_dry_run; then
 				echo -n "Enter a pool password: "
