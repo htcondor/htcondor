@@ -1797,6 +1797,7 @@ void condor_event_timer () {
 	//
 	if( dagman.dag->DoneSuccess( true ) ) {
 		ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
+		dagman.dag->RemoveServiceNodes();
 		dagman.dag->CheckAllJobs();
 		debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
 		dagman.dag->PrintDeferrals( DEBUG_NORMAL, true );

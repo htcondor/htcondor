@@ -488,6 +488,11 @@ class Dag {
 		*/
 	bool StartServiceNodes();
 
+		/** Terminate the DAG's service nodes, if any exist
+			@return true iff all service nodes were actually started.
+		*/
+	bool RemoveServiceNodes();
+
 		/** Start the DAG's provisioner node if there is one.
 			@return true iff the provisioner node was actually started.
 		*/
@@ -1157,6 +1162,9 @@ private:
 	// queue of submitted jobs not yet matched with submit events in
 	// the HTCondor job log
 	std::queue<Job*>* _submitQ;
+
+	// Queue of actively running jobs
+	std::queue<Job*>* _runningQ;
 
 	ScriptQ* _preScriptQ;
 	ScriptQ* _postScriptQ;

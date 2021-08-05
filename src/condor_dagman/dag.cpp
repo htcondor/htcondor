@@ -1589,6 +1589,19 @@ Dag::StartServiceNodes()
 	return false;
 }
 
+
+//-------------------------------------------------------------------------
+bool
+Dag::RemoveServiceNodes()
+{
+	for ( auto& node: _service_nodes ) {
+		RemoveBatchJob( node );
+		TerminateJob( node, false, false );
+	}
+
+	return true;
+}
+
 //-------------------------------------------------------------------------
 bool
 Dag::StartProvisionerNode()
@@ -2078,18 +2091,8 @@ Dag::FinishedRunning( bool includeFinalNode ) const
 		return NumJobsSubmitted() == 0 && NumScriptsRunning() == 0;
 	}
 
-	if ( NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
-				ScriptRunNodeCount() == 0 ) {
-		return true;
-	}
-
-	// If the only remaining nodes are service nodes, we are finished.
-	// Terminate them and return true
-	if ( NumNodesReady() == 0 && NumJobsSubmitted() > 0 ) {
-
-	}
-
-	return false;
+	return NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
+				ScriptRunNodeCount() == 0;
 }
 
 //---------------------------------------------------------------------------
@@ -2154,7 +2157,12 @@ Dag::NumNodes( bool includeFinal ) const
 	if ( !includeFinal && HasFinalNode() ) {
 		result--;
 	}
-
+	// If this DAG includes any service nodes, these should not be counted
+	/*
+	if ( !_service_nodes.empty() ) {
+		result -= _service_nodes.size();
+	}
+	*/
 	return result;
 }
 
@@ -2544,12 +2552,22 @@ Dag::WriteScriptToRescue( FILE *fp, Script *script )
 void
 Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 {
+	debug_printf(DEBUG_NORMAL, "MRC [Dag::TerminateJob] called\n");
 	ASSERT( !(recovery && bootstrap) );
     ASSERT( job != NULL );
 
 	job->TerminateSuccess(); // marks job as STATUS_DONE
 	if ( job->GetStatus() != Job::STATUS_DONE ) {
 		EXCEPT( "Node %s is not in DONE state", job->GetJobName() );
+	}
+
+		// If this was a service node, we have nothing left to do here
+	if (job->GetType() == NodeType::SERVICE) {
+		debug_printf(DEBUG_NORMAL, "MRC [Dag::TerminateJob] this is a service node, returning\n");
+		_metrics->NodeFinished( job->GetDagFile() != NULL, true );
+		job->countedAsDone = true;
+		job->SetProcEvent( job->GetProc(), ABORT_TERM_MASK );
+		return;
 	}
 
 		// this is a little ugly, but since this function can be
@@ -3696,8 +3714,10 @@ bool Dag::Add( Job& job )
 		_provisioner_node = &job;
 	}
 
-	if ( ( job.GetType() == NodeType::PROVISIONER ) ) {
+	if ( ( job.GetType() == NodeType::SERVICE ) ) {
 		_service_nodes.push_back( &job );
+		// Service nodes do not get included in the _jobs list
+		return true;
 	}
 
 	_jobs.push_back(&job);
@@ -4157,8 +4177,10 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 		// we see the submit events so that we don't accidentally exceed
 		// maxjobs (now really maxnodes) if it takes a while to see
 		// the submit events.  wenger 2006-02-10.
-	UpdateJobCounts( node, 1 );
-    
+	if ( node->GetType() != NodeType::SERVICE ) {
+		UpdateJobCounts( node, 1 );
+	}
+
         // stash the job ID reported by the submit command, to compare
         // with what we see in the userlog later as a sanity-check
         // (note: this sanity-check is not possible during recovery,

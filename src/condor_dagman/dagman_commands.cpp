@@ -118,6 +118,7 @@ AddNode( Dag *dag, const char *name,
 	if( !dag->Add( *node ) ) {
 		failReason = "unknown failure adding ";
 		failReason += ( node->GetType() == NodeType::FINAL )? "Final " : "";
+		failReason += ( node->GetType() == NodeType::SERVICE )? "SERVICE " : "";
 		failReason += "node to DAG";
 		delete node;
 		return NULL;
