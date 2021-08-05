@@ -23,7 +23,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug that could cause the *condor_had* daemon to fail at startup
+  when the local machine has multiple IP addresses.
+  This bug is particularly likely to happen if ``PREFER_IPV4`` is set to
+  ``False``.
+  :jira:`625`
 
 Version 9.0.5
 -------------
