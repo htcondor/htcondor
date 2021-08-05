@@ -396,7 +396,11 @@ endif ()
 	endif()
 	condor_pl_test(cmd_drain "condor_drain" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(defrag "condor_defrag" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
-	condor_pl_test(cmd_drain_scavenging "condor_drain -start" "quick;ctest" CTEST DEPENDS "src/condor_tests/CustomMachineResource.pm;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm")
+
+	if (NOT WINDOWS)
+		condor_pl_test(cmd_drain_scavenging "condor_drain -start" "quick;ctest" CTEST DEPENDS "src/condor_tests/CustomMachineResource.pm;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm")
+	endif(NOT WINDOWS)
+
 	condor_pl_test(cmd_drain_scavenging_vacation "condor_drain -start with lazy job" "quick;ctest" CTEST DEPENDS "src/condor_tests/CustomMachineResource.pm;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm")
 
 	##### lib log tests
