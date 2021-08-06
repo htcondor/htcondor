@@ -191,6 +191,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 
 #define EXPORT_JOBS (SCHED_VERS+126) // Schedd: export selected jobs to a new job_queue.log put jobs into externally managed state
 #define IMPORT_EXPORTED_JOB_RESULTS (SCHED_VERS+127) // Schedd: import changes to previously exported jobs and take them out of managed state
+#define UNEXPORT_JOBS (SCHED_VERS+128) // Schedd: undo previous export of selected jobs, taking them out of managed state
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0

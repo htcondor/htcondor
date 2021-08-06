@@ -292,6 +292,12 @@ public:
 	*/
 	ClassAd* importExportedJobResults(const char * import_dir, CondorError * errstack);
 
+	/** unexport jobs that were previously exported via exportJobs().
+	    @param ids or constraint What jobs to act on
+	*/
+	ClassAd* unexportJobs( StringList* ids, CondorError * errstack);
+	ClassAd* unexportJobs( const char * constraint, CondorError * errstack);
+
 	/** Vacate the victim and schedule the beneficiary on its slot.  Hard-
 		kills the job.  The caller must authenticate as a queue user or
 		the owner of both jobs; the victim must be running and the beneficiary
@@ -425,6 +431,8 @@ private:
 	int requestImpersonationTokenFinish(Stream *stream);
 
 	ClassAd* exportJobsWorker( StringList* ids, const char * constraint, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
+
+	ClassAd* unexportJobsWorker( StringList* ids, const char * constraint, CondorError * errstack);
 
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );

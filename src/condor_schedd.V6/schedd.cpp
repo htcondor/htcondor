@@ -13828,6 +13828,10 @@ Scheduler::Register()
 								  (CommandHandlercpp)&Scheduler::import_exported_job_results_handler,
 								  "import_exported_job_results_handler", this, WRITE,
 								  D_COMMAND, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload( UNEXPORT_JOBS, "UNEXPORT_JOBS",
+								  (CommandHandlercpp)&Scheduler::unexport_jobs_handler,
+								  "unexport_jobs_handler", this, WRITE,
+								  D_COMMAND, true /*force authentication*/);
 
 	 // These commands are for a startd reporting directly to the schedd sans negotiation
 	daemonCore->Register_CommandWithPayload(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
@@ -18061,6 +18065,125 @@ Scheduler::import_exported_job_results_handler(int /*cmd*/, Stream *stream)
 	stream->encode();
 	if ( ! putClassAd(stream, resultAd)) {
 		dprintf( D_ALWAYS, "Error sending export-jobs result to client, aborting.\n" );
+		return FALSE;
+	}
+	if ( ! stream->end_of_message()) {
+		dprintf( D_ALWAYS, "Error sending end-of-message to client, aborting.\n" );
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+bool
+Scheduler::UnexportJobs(ClassAd & result, std::set<int> & clusters)
+{
+	dprintf(D_ALWAYS,"UnexportJobs(...)\n");
+
+	if ( clusters.empty() ) {
+		result.Assign(ATTR_ERROR_STRING, "No clusters to unexport");
+		dprintf(D_ALWAYS, "ExportJobs(): No clusters to unexport\n");
+		return false;
+	}
+	// TODO check that client is authorized to modify this owner's jobs
+
+	BeginTransaction();
+
+	int num_jobs = 0;
+	for (auto cid = clusters.begin(); cid != clusters.end(); ++cid) {
+		JobQueueCluster * jqc = GetClusterAd(*cid);
+		if ( ! jqc) continue;
+
+		// unexport all jobs in the cluster
+		for (JobQueueJob * job = jqc->FirstJob(); job != NULL; job = jqc->NextJob(job)) {
+			// skip jobs that are not externally managed.
+			if (!jobExternallyManaged(job)) continue;
+
+			// TODO: verify external manager is "Lumberjack"?
+
+			// take the job out of the managed state
+			DeleteAttribute(job->jid.cluster, job->jid.proc, ATTR_JOB_MANAGED);
+			DeleteAttribute(job->jid.cluster, job->jid.proc, ATTR_JOB_MANAGED_MANAGER);
+			++num_jobs;
+		}
+	}
+
+	CommitTransactionOrDieTrying();
+
+	result.Assign(ATTR_TOTAL_JOB_ADS, num_jobs);
+	result.Assign(ATTR_TOTAL_CLUSTER_ADS, (long)clusters.size());
+
+	dprintf(D_ALWAYS,"UnexportJobs() returning true\n");
+	return true;
+}
+
+int
+Scheduler::unexport_jobs_handler(int /*cmd*/, Stream *stream)
+{
+	ClassAd reqAd; // classad specifying arguments for the unexport
+	ClassAd resultAd; // classad returning results of the unexport
+
+	stream->decode();
+	stream->timeout(15);
+	if( !getClassAd(stream, reqAd) || !stream->end_of_message()) {
+		dprintf( D_ALWAYS, "unexport_jobs_handler Failed to receive classad in the request\n" );
+		return FALSE;
+	}
+
+	std::string unexport_list;    // list of cluster ids to unexport
+	ExprTree * constr_expr = reqAd.Lookup(ATTR_ACTION_CONSTRAINT);
+	if ( ! constr_expr && ! reqAd.LookupString(ATTR_ACTION_IDS, unexport_list) )
+	{
+		resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
+		resultAd.Assign(ATTR_ERROR_STRING, "Invalid arguments");
+		resultAd.Assign(ATTR_ERROR_CODE, SCHEDD_ERR_MISSING_ARGUMENT);
+	}
+	else
+	{
+		std::set<int> clusters;
+		// we have a constrain expression, so we have to turn that into a set of cluster ids
+		if (constr_expr) {
+			schedd_runtime_probe runtime;
+			struct _cluster_ids_args {
+				std::set<int> * pids;
+				ExprTree * constraint;
+			} args = { &clusters, constr_expr };
+
+			// build up a set of cluster ids that match the constraint expression
+			WalkNonJobQueue3(
+				[](JobQueueJob *job, const JOB_ID_KEY & cid, void * pv) -> int {
+					struct _cluster_ids_args & args = *(struct _cluster_ids_args*)pv;
+					if (job->IsCluster()) {
+						if ( ! args.constraint || EvalExprBool(job, args.constraint)) {
+							args.pids->insert(cid.cluster);
+						}
+					}
+					return 0;
+				},
+				&args,
+				runtime);
+
+		} else {
+			// we have a string list of cluster ids
+			// build a set of cluster ids from the string of ids that was passed
+			StringTokenIterator sit(unexport_list);
+			for (const char * id = sit.first(); id != NULL; id = sit.next()) {
+				clusters.insert(atoi(id));
+			}
+		}
+		if ( ! UnexportJobs(resultAd, clusters) ) {
+			resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
+			resultAd.Assign(ATTR_ERROR_CODE, 1);
+		} else {
+			resultAd.Assign(ATTR_ACTION_RESULT, OK);
+		}
+	}
+
+	// send a reply consisting of a result classad
+	stream->encode();
+	if ( ! putClassAd(stream, resultAd)) {
+		dprintf( D_ALWAYS, "Error sending unexport-jobs result to client, aborting.\n" );
 		return FALSE;
 	}
 	if ( ! stream->end_of_message()) {
