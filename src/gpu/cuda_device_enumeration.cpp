@@ -639,7 +639,7 @@ gpuIDFromUUID( const std::string & uuid, int opt_short_uuid ) {
 	// UUIDs from CUDA are _just_ the UUID.  UUIDs from NVML may include
 	// a leading "GPU-", or, as of driver version 470, a leading "MIG-".
 	//
-	// However, the gpu IDs with a leading "MIG-" don't work if shortened,
+	// However, the GPU IDs with a leading "MIG-" don't work if shortened,
 	// so never do that.
 	//
 
@@ -647,9 +647,21 @@ gpuIDFromUUID( const std::string & uuid, int opt_short_uuid ) {
 		return gpuID;
 	}
 
+	//
+	// By a "GPU ID", we mean an identifier that can be used in
+	// CUDA_VISIBLE_DEVICES.  Oddly, the bare UUID returned from CUDA
+	// can't; the UUID must be prefixed with "GPU-", to make it look
+	// like an NVML "UUID".
+	//
+
 	if( gpuID.find( "GPU-" ) == std::string::npos ) {
 		gpuID = "GPU-" + gpuID;
 	}
+
+	//
+	// GPU IDs don't have to include the entire UUID, just enough of
+	// a prefix to uniquely identify the device.
+	//
 
 	if( opt_short_uuid ) {
 		// MIG-GPU-<UUID>/x/y
