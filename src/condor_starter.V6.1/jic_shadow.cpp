@@ -1856,7 +1856,7 @@ JICShadow::proxyExpiring()
 {
 	// we log the return value, but even if it failed we still try to clean up
 	// because we are about to lose control of the job otherwise.
-	holdJob("Proxy about to expire", CONDOR_HOLD_CODE_CorruptedCredential, 0);
+	holdJob("Proxy about to expire", CONDOR_HOLD_CODE::CorruptedCredential, 0);
 
 	// this will actually clean up the job
 	if ( Starter->Hold( ) ) {
@@ -2930,7 +2930,7 @@ JICShadow::refreshSandboxCredentialsKRB()
 
 	// read entire ccfilename as root into ccbuf
 	if (!read_secure_file(ccfilename, (void**)(&ccbuf), &cclen, true)) {
-		dprintf(D_ALWAYS, "ERROR: read_secure_file(%s,ccbuf,%lu) failed\n", ccfilename, cclen);
+		dprintf(D_ALWAYS, "ERROR: read_secure_file(%s,ccbuf,%zu) failed\n", ccfilename, cclen);
 		rc = false;
 		goto resettimer;
 	}

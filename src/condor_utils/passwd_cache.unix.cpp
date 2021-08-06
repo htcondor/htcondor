@@ -46,7 +46,7 @@ passwd_cache::reset() {
 
 	group_entry *gent;
 	uid_entry *uent;
-	MyString index;
+	std::string index;
 
 	group_table->startIterations();
 	while ( group_table->iterate(index, gent) ) {
@@ -87,19 +87,19 @@ parseGid(char const *str,gid_t *gid) {
 }
 
 void
-passwd_cache::getUseridMap(MyString &usermap)
+passwd_cache::getUseridMap(std::string &usermap)
 {
 	// fill in string with entries of form expected by loadConfig()
 	uid_entry *uent;
 	group_entry *gent;
-	MyString index;
+	std::string index;
 
 	uid_table->startIterations();
 	while ( uid_table->iterate(index, uent) ) {
 		if( !usermap.empty() ) {
 			usermap += " ";
 		}
-		usermap.formatstr_cat("%s=%ld,%ld",index.c_str(),(long)uent->uid,(long)uent->gid);
+		formatstr_cat(usermap, "%s=%ld,%ld",index.c_str(),(long)uent->uid,(long)uent->gid);
 		if( group_table->lookup(index,gent) == 0 ) {
 			unsigned i;
 			for(i=0;i<gent->gidlist_sz;i++) {
@@ -107,12 +107,12 @@ passwd_cache::getUseridMap(MyString &usermap)
 					// already included this gid, because it is the primary
 					continue;
 				}
-				usermap.formatstr_cat(",%ld",(long)gent->gidlist[i]);
+				formatstr_cat(usermap, ",%ld",(long)gent->gidlist[i]);
 			}
 		}
 		else {
 			// indicate that supplemental groups are unknown
-			usermap.formatstr_cat(",?");
+			formatstr_cat(usermap, ",?");
 		}
 	}
 }
@@ -338,7 +338,7 @@ bool
 passwd_cache::cache_uid(const struct passwd *pwent) {
 	
 	uid_entry *cache_entry;
-	MyString index;
+	std::string index;
 
    
 	if ( pwent == NULL ) {
@@ -348,7 +348,7 @@ passwd_cache::cache_uid(const struct passwd *pwent) {
 
 		index = pwent->pw_name;
 
-		if ( uid_table->lookup(index.c_str(), cache_entry) < 0 ) {
+		if ( uid_table->lookup(index, cache_entry) < 0 ) {
 				/* if we don't already have this entry, create a new one */
 			init_uid_entry(cache_entry);
 			uid_table->insert(index, cache_entry);
@@ -486,7 +486,7 @@ passwd_cache::get_user_name(const uid_t uid, char *&user) {
 
 	uid_entry *ent;
 	struct passwd *pwd;
-	MyString index;
+	std::string index;
 
 	uid_table->startIterations();
 	while ( uid_table->iterate(index, ent) ) {
@@ -568,7 +568,7 @@ passwd_cache::init_groups( const char* user, gid_t additional_gid ) {
 bool
 passwd_cache::lookup_uid(const char *user, uid_entry *&uce) {
 
-	if ( uid_table->lookup(user, uce) < 0 ) {
+	if ( !user || uid_table->lookup(user, uce) < 0 ) {
 		/* cache miss */
 		return false;
 	} else {
@@ -589,7 +589,7 @@ passwd_cache::lookup_uid(const char *user, uid_entry *&uce) {
 bool
 passwd_cache::lookup_group(const char *user, group_entry *&gce) {
 
-	if ( group_table->lookup(user, gce) < 0 ) {
+	if ( !user || group_table->lookup(user, gce) < 0 ) {
 			/* cache miss */
 		return false;
 	} else {

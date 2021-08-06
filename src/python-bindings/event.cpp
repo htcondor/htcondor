@@ -96,7 +96,10 @@ void
 EventIterator::reset_to(off_t location)
 {
     m_done = 0;
-    fseek(m_source, location, SEEK_SET);
+    int r = fseek(m_source, location, SEEK_SET);
+	if (r != 0) {
+		THROW_EX(HTCondorIOError, "Can't fseek event log");
+	}
     m_reader.reset(new ReadUserLog(m_source, m_is_xml));
 }
 

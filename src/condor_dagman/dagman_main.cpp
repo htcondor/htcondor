@@ -31,8 +31,6 @@
 #include "condor_environ.h"
 #include "dagman_main.h"
 #include "dagman_commands.h"
-#include "dagman_multi_dag.h"
-#include "util.h"
 #include "condor_getcwd.h"
 #include "condor_version.h"
 #include "subsystem_info.h"

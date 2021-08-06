@@ -149,7 +149,7 @@ make_spool(classad::ClassAd& ad)
         THROW_EX(HTCondorInternalError, "Unable to set job to hold.");
     if (!ad.InsertAttr(ATTR_HOLD_REASON, "Spooling input data files"))
         THROW_EX(HTCondorInternalError, "Unable to set job hold reason.")
-    if (!ad.InsertAttr(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput))
+    if (!ad.InsertAttr(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::SpoolingInput))
         THROW_EX(HTCondorInternalError, "Unable to set job hold code.")
     std::stringstream ss;
     ss << ATTR_JOB_STATUS << " == " << COMPLETED << " && ( ";
@@ -832,10 +832,10 @@ struct SubmitStepFromPyIter {
 			}
 			const char * key = m_fea.vars.first();
 			for (Py_ssize_t ix = 0; ix < num; ++ix) {
+				if ( ! key) break;
 				PyObject * v = PyList_GetItem(obj, ix);
 				m_livevars[key] = extract<std::string>(v);
 				key = m_fea.vars.next();
-				if ( ! key) break;
 			}
 		} else {
 			// not a list or a dict, the item must be a string.
@@ -1999,11 +1999,10 @@ struct Schedd {
             }
             // Note: x509_error_string() is not thread-safe; hence, we are not using the HTCondor-generated
             // error handling.
-            int result = x509_proxy_seconds_until_expire(proxy_filename.c_str());
-            if (result < 0) {
+            result_expiration = x509_proxy_expiration_time(proxy_filename.c_str());
+            if (result_expiration < 0) {
                 THROW_EX(HTCondorValueError, "Unable to determine proxy expiration time");
             }
-            return result;
         }
         return result_expiration - now;
     }

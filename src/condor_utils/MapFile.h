@@ -145,8 +145,8 @@ class MapFile
 						MyString & output);
 #endif
 
-	int
-	ParseField(MyString & line, int offset, MyString & field, int * popts = NULL);
+	size_t
+	ParseField(const std::string & line, size_t offset, std::string & field, int * popts = NULL);
 };
 
 #endif

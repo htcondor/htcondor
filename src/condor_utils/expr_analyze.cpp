@@ -669,7 +669,7 @@ void AnalyzeRequirementsForEachTarget(
 {
 	int console_width = fmt.console_width;
 	bool show_work = (fmt.detail_mask & detail_diagnostic) != 0;
-	bool count_soft_matches = false; // when true, "soft" always and never show  up as counts of machines
+	const bool count_soft_matches = false; // when true, "soft" always and never show  up as counts of machines
 
 	/*
 	bool request_is_machine = false;

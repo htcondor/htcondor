@@ -137,6 +137,10 @@ if (1) {
     my @knobs;
     foreach my $key (keys %ENV) {
         if ( $key =~ m/^_CONDOR_/i ) {
+
+			# keep the _CONDOR_ANCESTOR_* variables, for our parent
+			# condor to find us and in the darkness bind us.
+			next if ($key =~ m/_CONDOR_ANCESTOR_/i);
             push @knobs, $key;
             delete($ENV{$key});
         }
@@ -159,16 +163,6 @@ chdir($test_dir) || c_die("Can't chdir($test_dir): $!\n");
 ## Here we examine some requirements which we know about
 ## now and in the future we already have a list for personals
 ## but we could expand those into our new more general way.
-##
-## The new list Test_Requirements file
-## has the base test name separated by a colon to a commma
-## separated list of requirements
-##
-## claasad_cache-basic : cygwin
-##
-## So we look for our test to have requirements by reading the file
-## and if we find it we split the requirements into an array
-## and then process the array of requirements.
 ##
 ############################################################
 
@@ -363,28 +357,6 @@ sub ProcessTestRequirements
         }
     }
 
-    # If the test file does not contain the requirements for it to
-    # run then try to read requirements from the "Test_Requirements"
-    # file. This file will be depraceted so new test file should
-    # mention the requirements in itself rather than adding an
-    # entry in "Test_Requirements"
-    if (!defined($requirements)) {
-        my $requirementslist = "Test_Requirements";
-        open(TR, "< ${requirementslist}") or c_die("Failed to open '${requirementslist}': $!\n");
-        while (my $line = <TR>) {
-            TestGlue::fullchomp($line);
-            if ($line =~ /\s*$testname\s*:\s*(.*)/) {
-                my @requirementList = split(/,/, $1);
-                foreach my $requirement (@requirementList) {
-                    $requirement =~ s/^\s+//;
-                    $requirement =~ s/\s+$//;
-                    out("${testname} needs '${requirement}'");
-                    $requirements->{$requirement} = 1;
-                }
-            }
-        }
-    }
-
     return $requirements;
 }
 
@@ -411,12 +383,18 @@ sub StartTestPersonal {
 
     my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"remotetask$test");
 
+  eval {
     CondorTest::StartCondorWithParams(
         condor_name => "remotetask$test",
         fresh_local => "TRUE",
         condorlocalsrc => "$configfile",
         test_glue => "TRUE",
-    );
+    ); 1;
+  } or do {
+    my $msg = $@ || "Condor did not start";
+    say STDERR "$msg";
+    exit(136); # metronome wants 136 for setup error
+  }
 }
 
 sub showEnv {

@@ -25,8 +25,6 @@
 #include "daemon.h"	// for global_dc_sinful()
 #include "condor_config.h"
 
-#include <sstream>
-
 /* Split "<host:port?params>" into parts: host, port, and params. If
    the port or params are not in the string, the result is set to
    NULL.  Any of the result char** values may be NULL, in which case
@@ -398,9 +396,7 @@ Sinful::setPort(char const *port)
 void
 Sinful::setPort(int port)
 {
-	std::ostringstream tmp;
-	tmp << port;
-	m_port = tmp.str();
+	m_port = std::to_string(port);
 	regenerateStrings();
 }
 

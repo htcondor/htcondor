@@ -24,8 +24,6 @@ use warnings;
 use CondorTest;
 use CondorUtils;
 
-#testreq: personal
-
 my $cmd_template = "job_core_chirp_par.template";
 my $testdesc =  'job_core_chirp_par - Simple parallel job';
 my $testname = "job_core_chirp_par";

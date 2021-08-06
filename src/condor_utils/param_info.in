@@ -1968,12 +1968,6 @@ customization=devel
 description=Startd Slot Attrs needed by HTCondor
 tags=startd,startd_main
 
-[STARTD_SLOT_EXPRS]
-default=
-type=string
-description=Obsolete name for startd Slot Attrs
-tags=startd,startd_main
-
 [KEYBOARD_CPUS]
 default=1
 type=int
@@ -2097,7 +2091,7 @@ type=string
 tags=submit
 
 [SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS]
-description=Submit should generate requirements clauses for job attribues that begin with Request
+description=Submit should generate requirements clauses for job attributes that begin with Request
 default=true
 type=bool
 tags=submit
@@ -2179,12 +2173,6 @@ tags=submit
 default=
 type=string
 description=Names of config attributes that should be automatically inserted into jobs by condor_submit
-tags=submit
-
-[SUBMIT_EXPRS]
-default=
-type=string
-description=Obsolete name for SUBMIT_ATTRS
 tags=submit
 
 [APPEND_REQ_VANILLA]
@@ -6573,6 +6561,16 @@ ALLOW_DAEMON = $(1:condor)@*  condor_pool@*
 ALLOW_NEGOTIATOR = $(1:condor)@* condor_pool@*
 ALLOW_WRITE = *
 ALLOW_READ = *
+@end
+
+##
+## FIPS mode settings
+##
+[$SECURITY.FIPS]
+default: @end
+FIPS = True
+use security:strong
+SEC_DEFAULT_CRYPTO_METHODS = AES,3DES
 @end
 
 ##

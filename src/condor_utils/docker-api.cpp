@@ -1334,7 +1334,7 @@ gc_image(const std::string & image) {
   fclose(f);
   }
 
-  dprintf(D_ALWAYS, "Found %lu entries in docker image cache.\n", images.size());
+  dprintf(D_ALWAYS, "Found %zu entries in docker image cache.\n", images.size());
 
    std::list<std::string>::iterator iter;
    int remove_count = (int)images.size() - cache_size;

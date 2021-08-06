@@ -22,17 +22,14 @@ use CondorTest;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my $append_condor_configREG = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
   USE_SHARED_PORT = false
   DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_configREG
-);
-
-# verify that a job runs
-SimpleJob::RunCheck();
+## TODO: turn off condor master and verify that it turns off.
 
 CondorTest::EndTest();
 system("condor_config_val log");

@@ -158,7 +158,7 @@ pcccStartCoalescing( PROC_ID nowJob, int retriesRemaining ) {
 	auto i = matches.begin();
 	match_rec * match = * i;
 	classy_counted_ptr<DCStartd> startd = new DCStartd( match->description(),
-		NULL, match->peer, NULL );
+		NULL, match->peer, match->claimId() );
 
 	ClassAd commandAd;
 	std::string claimIDList;
@@ -184,6 +184,7 @@ pcccStartCoalescing( PROC_ID nowJob, int retriesRemaining ) {
 
 	classy_counted_ptr<TwoClassAdMsg> cMsg = new TwoClassAdMsg( COALESCE_SLOTS, commandAd, * jobAd );
 	cMsg->setStreamType( Stream::reli_sock );
+	cMsg->setSecSessionId( match->secSessionId() );
 	cMsg->setSuccessDebugLevel( D_FULLDEBUG );
 	pcccStopCallback * pcs = new pcccStopCallback( nowJob, cMsg, match->description(), match->peer, retriesRemaining );
 	// Annoyingly, the deadline only applies to /sending/ the message.
@@ -490,10 +491,39 @@ pcccStopCallback::dcMessageCallback( DCMsgCallback * cb ) {
 				return;
 			}
 			// See Scheduler::claimedStartd() for the things we're
-			// skipping.  We're ignoring the auth hole (we're already
-			// talking with the startd); we didn't ask for claim
+			// skipping. We didn't ask for claim
 			// leftovers, so we'll let the startd deal with them.
 			coalescedMatch->setStatus( M_CLAIMED );
+
+			// Add an authorization hole for the startd for this new
+			// coalesced match, just as if we had just done a regular
+			// claim request. The authorization holes punched for the
+			// old matches are already filled in.
+			if( coalescedMatch->auth_hole_id == NULL ) {
+				coalescedMatch->auth_hole_id = new std::string;
+				ASSERT(coalescedMatch->auth_hole_id != NULL);
+				if (!msg->getPeerFqu().empty()) {
+					formatstr(*coalescedMatch->auth_hole_id, "%s/%s",
+					          msg->getPeerFqu().c_str(),
+					          msg->getPeerAddr().to_ip_string().c_str());
+				} else {
+					*coalescedMatch->auth_hole_id = msg->getPeerAddr().to_ip_string();
+				}
+
+				// It will probably deathly confuse the rest of the
+				// code if we don't do this.
+				IpVerify * ipv = daemonCore->getSecMan()->getIpVerify();
+				if(! ipv->PunchHole(READ, * coalescedMatch->auth_hole_id) ) {
+					dprintf( D_ALWAYS, "[now job %d.%d]: failed to punch hole for startd\n", nowJob.cluster, nowJob.proc );
+
+					delete coalescedMatch->auth_hole_id;
+					coalescedMatch->auth_hole_id = NULL;
+					send_matchless_vacate( name, NULL, addr,
+						claimID.c_str(), RELEASE_CLAIM );
+					pcccStopCoalescing( nowJob );
+					return;
+				}
+			}
 
 			// Start the now job.
 			scheduler.StartJob( coalescedMatch );

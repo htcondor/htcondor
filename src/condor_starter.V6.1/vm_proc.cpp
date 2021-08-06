@@ -321,7 +321,7 @@ VMProc::StartJob()
 		formatstr(err_msg, "%s cannot be found in job classAd.", ATTR_JOB_CMD);
 		dprintf(D_ALWAYS, "%s\n", err_msg.c_str());
 		Starter->jic->notifyStarterError( err_msg.c_str(), true,
-				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
+				CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
 		return false;
 	}
 	m_job_name = vm_job_name;
@@ -332,7 +332,7 @@ VMProc::StartJob()
 		formatstr(err_msg, "%s cannot be found in job classAd.", ATTR_JOB_VM_TYPE);
 		dprintf(D_ALWAYS, "%s\n", err_msg.c_str());
 		Starter->jic->notifyStarterError( err_msg.c_str(), true,
-				CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
+				CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
 		return false;
 	}
 	lower_case(vm_type_name);
@@ -643,7 +643,7 @@ VMProc::StartJob()
 				// Using i for the hold reason subcode is entirely arbitrary,
 				// but may assist in writing periodic release expressions,
 				// which I understand to be the point.
-				Starter->jic->notifyStarterError( holdReason.c_str(), true, CONDOR_HOLD_CODE_FailedToCreateProcess, i );
+				Starter->jic->notifyStarterError( holdReason.c_str(), true, CONDOR_HOLD_CODE::FailedToCreateProcess, i );
 
 				free( errorString );
 				return false;

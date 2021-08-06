@@ -800,7 +800,7 @@ void MachAttributes::RefreshDevIds(
 bool MachAttributes::ComputeDevProps(
 	ClassAd & ad,
 	std::string tag,
-	slotres_assigned_ids_t & ids)
+	const slotres_assigned_ids_t & ids)
 {
 	std::string attr;
 	ad.Clear();
@@ -821,7 +821,7 @@ bool MachAttributes::ComputeDevProps(
 	// we begin by assuming that the device 0 props are common to all
 	// and build a temporary map of common properties.
 	// note that this map does not own the exprtrees it holds.
-	std::map<std::string, classad::ExprTree*> common;
+	std::map<std::string, classad::ExprTree*, classad::CaseIgnLTStr> common;
 	for (auto & kvp : ip->second) { common[kvp.first] = kvp.second; }
 
 	// remove items from the common props map that are do not have the same value  for all devices
@@ -836,7 +836,7 @@ bool MachAttributes::ComputeDevProps(
 		// if we find a mismatch, remove it from the common list
 		// and reserve space in the array of non-common props
 		ClassAd & ad1 = ip->second;
-		std::map<std::string, classad::ExprTree*>::iterator ct = common.begin();
+		std::map<std::string, classad::ExprTree*, classad::CaseIgnLTStr>::iterator ct = common.begin();
 		while (ct != common.end()) {
 			auto et = ct++;
 			auto it = ad1.find(et->first);
@@ -979,7 +979,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 
 			// find attributes that are nested ads, we want to store those as properties
 			// rather than leaving them in the ad
-			std::map<std::string, classad::ClassAd*> nested;
+			std::map<std::string, classad::ClassAd*, classad::CaseIgnLTStr> nested;
 			for (auto & it : ad) {
 				if (it.second->GetKind() == classad::ExprTree::CLASSAD_NODE) {
 					nested[it.first] = dynamic_cast<classad::ClassAd*>(it.second);
@@ -990,11 +990,12 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 			if ( ! nested.empty()) {
 				// if there is an ad called common, make it the properties for all ids
 				// then remove it from the nested ad collection so we don't see it when we iterate
-				std::map<std::string, classad::ClassAd*>::iterator common_it = nested.find("common");
+				auto common_it = nested.find("common");
 				if (common_it != nested.end()) {
 					for (auto id : unique_ids) {
 						m_machres_devProps_map[tag][id].Update(*common_it->second);
 					}
+					ad.Delete(common_it->first);
 					nested.erase(common_it);
 				}
 
@@ -1575,13 +1576,13 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable re
 	}
 
 	for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
+		// TODO: handle fractional assigned custome resources?
 		int cAssigned = int(j->second);
 
 		// if this resource already has bound ids, don't bind again.
 		slotres_devIds_map_t::const_iterator m(c_slotres_ids_map.find(j->first));
 		if (m != c_slotres_ids_map.end() && cAssigned == (int)m->second.size())
 			continue;
-
 
 		const char * request = nullptr;
 		slotres_constraint_map_t::const_iterator req(c_slotres_constraint_map.find(j->first));
@@ -1604,8 +1605,14 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable re
 			if (cAllocated < cAssigned) {
 				EXCEPT("Failed to bind local resource '%s'", j->first.c_str());
 			}
-			c_slotres_props_map[j->first].Clear();
-			map->ComputeDevProps(c_slotres_props_map[j->first], j->first, c_slotres_ids_map[j->first]);
+			// if any ids were allocated, calculate the effective properties attributes for the assigned ids
+			// we *dont* want to execute this code if there are no allocated ids, because it has the side effect
+			// of making c_slot_res_ids_map['tag'] exist, which in turn results in the
+			// "Assigned<Tag>" slot attribute being defined rather than undefined.
+			if (cAllocated > 0) {
+				c_slotres_props_map[j->first].Clear();
+				map->ComputeDevProps(c_slotres_props_map[j->first], j->first, c_slotres_ids_map[j->first]);
+			}
 		}
 	}
 

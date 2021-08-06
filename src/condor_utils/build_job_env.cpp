@@ -50,7 +50,7 @@ void build_job_env(Env &job_env, const ClassAd & ad, bool using_file_transfer)
 		}
 		if( ! fullpath(X509Path.c_str()) ) {
 			// It's not a full path, so glob on the IWD onto the front
-			MyString tmp;
+			std::string tmp;
 			dircat(Iwd.c_str(), X509Path.c_str(), tmp);
 			X509Path = tmp;
 		}

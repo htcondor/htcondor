@@ -60,6 +60,7 @@ bool operator>=(const std::string& L, const MyString& R);
 
 // to replace MyString with std::string we need a compatible read-line function
 bool readLine(std::string& dst, FILE *fp, bool append = false);
+bool readLine(std::string& dst, MyStringSource& src, bool append = false);
 
 //Return true iff the given string is a blank line.
 int blankline ( const char *str );

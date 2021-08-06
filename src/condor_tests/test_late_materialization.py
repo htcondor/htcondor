@@ -57,7 +57,7 @@ def max_materialize(request):
 def jobids_for_sleep_jobs(test_dir, path_to_sleep, condor, max_idle, max_materialize):
     sub_description = """
         executable = {exe}
-        arguments = 10
+        arguments = 1
 
         request_memory = 1MB
         request_disk = 1MB

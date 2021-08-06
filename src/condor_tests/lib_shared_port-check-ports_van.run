@@ -142,9 +142,9 @@ $on_execute = sub {
 
 	my $netstatlength = @netstat_result;
 
-	print "Show netstat capture\n";
+	print "Show netstat capture ($netstatlength lines)\n";
 	foreach my $line (@netstat_result) {
-		chomp($line);
+		fullchomp($line);
 		print "nstat: $line\n"
 	}
 
@@ -249,7 +249,7 @@ $on_execute = sub {
 	my $found_listening_daemon = 0;
 	my $unexpected_listening_daemon = 1;
 	foreach my $candidate (@netstat_result) {
-		chomp($candidate);
+		fullchomp($candidate);
 		print "considering <$candidate>\n";
 		if(is_windows()) {
 

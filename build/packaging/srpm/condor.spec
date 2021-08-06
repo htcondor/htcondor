@@ -39,6 +39,12 @@
 
 %define python 1
 
+%if 0%{?osg}
+%define globus 0
+%else
+%define globus 1
+%endif
+
 # Temporarily turn parallel_setup off
 %define parallel_setup 0
 
@@ -62,7 +68,7 @@ Version: %{tarball_version}
 %else
         %define condor_release %condor_base_release
 %endif
-Release: %condor_release%{?dist}
+Release: %{condor_release}%{?dist}
 
 License: ASL 2.0
 Group: Applications/System
@@ -176,6 +182,7 @@ BuildRequires: libcurl-devel
 %endif
 
 # Globus GSI build requirements
+%if %globus
 BuildRequires: globus-gssapi-gsi-devel
 BuildRequires: globus-gass-server-ez-devel
 BuildRequires: globus-gass-transfer-devel
@@ -198,9 +205,10 @@ BuildRequires: globus-callout-devel
 BuildRequires: globus-common-devel
 BuildRequires: globus-ftp-client-devel
 BuildRequires: globus-ftp-control-devel
+BuildRequires: voms-devel
+%endif
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
-BuildRequires: voms-devel
 BuildRequires: libtool-ltdl-devel
 
 BuildRequires: libcgroup-devel
@@ -256,6 +264,9 @@ BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 # openssh-server needed for condor_ssh_to_job
 Requires: openssh-server
 
+# net-tools needed to provide netstat for condor_who
+Requires: net-tools
+
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
@@ -306,6 +317,7 @@ Requires(post): selinux-policy-targeted
 
 # Require libraries that we dlopen
 # Ganglia is optional as well as nVidia and cuda libraries
+%if %globus
 Requires: globus-callout
 Requires: globus-common
 Requires: globus-gsi-callback
@@ -319,6 +331,8 @@ Requires: globus-gss-assist
 Requires: globus-gssapi-gsi
 Requires: globus-openssl-module
 Requires: globus-xio-gsi-driver
+Requires: voms
+%endif
 Requires: krb5-libs
 Requires: libcom_err
 Requires: libtool-ltdl
@@ -326,7 +340,6 @@ Requires: munge-libs
 Requires: openssl-libs
 Requires: scitokens-cpp
 Requires: systemd-libs
-Requires: voms
 
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
@@ -715,6 +728,7 @@ export CMAKE_PREFIX_PATH=/usr
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
+       -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -D_VERBOSE:BOOL=TRUE \
@@ -756,6 +770,7 @@ export CMAKE_PREFIX_PATH=/usr
 %endif
        -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
+       -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
@@ -777,7 +792,11 @@ export CMAKE_PREFIX_PATH=/usr
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
        -DWITH_CREAM:BOOL=FALSE \
+%if %globus
        -DWITH_GLOBUS:BOOL=TRUE \
+%else
+       -DWITH_GLOBUS:BOOL=FALSE \
+%endif
        -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
        -DWITH_LIBCGROUP:BOOL=TRUE \
        -DLIBCGROUP_FOUND_SEARCH_cgroup=/%{_lib}/libcgroup.so.1
@@ -1142,18 +1161,10 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
 %_libexecdir/condor/htcondor_docker_test
-%if %blahp
-%dir %_libexecdir/condor/glite/bin
-%_libexecdir/condor/glite/bin/kubernetes_cancel.sh
-%_libexecdir/condor/glite/bin/kubernetes_hold.sh
-%_libexecdir/condor/glite/bin/kubernetes_resume.sh
-%_libexecdir/condor/glite/bin/kubernetes_status.sh
-%_libexecdir/condor/glite/bin/kubernetes_submit.sh
-%_libexecdir/condor/glite/bin/nqs_cancel.sh
-%_libexecdir/condor/glite/bin/nqs_hold.sh
-%_libexecdir/condor/glite/bin/nqs_resume.sh
-%_libexecdir/condor/glite/bin/nqs_status.sh
-%_libexecdir/condor/glite/bin/nqs_submit.sh
+%if %globus
+%_sbindir/condor_gridshell
+%_sbindir/grid_monitor
+%_sbindir/nordugrid_gahp
 %endif
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster
@@ -1196,6 +1207,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/utils.py
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
+%_mandir/man1/condor_check_password.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_config_val.1.gz
@@ -1261,6 +1273,13 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_tail.1.gz
 %_mandir/man1/condor_who.1.gz
 %_mandir/man1/condor_now.1.gz
+%_mandir/man1/classad_eval.1.gz
+%_mandir/man1/classads.1.gz
+%_mandir/man1/condor_adstash.1.gz
+%_mandir/man1/condor_evicted_files.1.gz
+%_mandir/man1/condor_watch_q.1.gz
+%_mandir/man1/get_htcondor.1.gz
+%_mandir/man1/htcondor.1.gz
 # bin/condor is a link for checkpoint, reschedule, vacate
 %_bindir/condor_submit_dag
 %_bindir/condor_who
@@ -1358,11 +1377,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_updates_stats
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
-%_sbindir/condor_gridshell
-%_sbindir/gahp_server
-%_sbindir/grid_monitor
 %_sbindir/remote_gahp
-%_sbindir/nordugrid_gahp
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
 %_sbindir/arc_gahp
@@ -1524,6 +1539,7 @@ rm -rf %{buildroot}
 %_bindir/condor_top
 %_bindir/classad_eval
 %_bindir/condor_watch_q
+%_bindir/htcondor
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
 %_libexecdir/condor/libclassad_python3_user.so
@@ -1532,6 +1548,7 @@ rm -rf %{buildroot}
 /usr/lib64/python%{python3_version}/site-packages/classad/
 /usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
+/usr/lib64/python%{python3_version}/site-packages/htcondor_cli/
 %endif
 %endif
 %endif
@@ -1654,6 +1671,59 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.2-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+* Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.4-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+* Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.15-1
+- Fix for security issue
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+
+* Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.1-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+* Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.3-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+* Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.14-1
+- Fix for security issue
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+
+* Thu Jul 08 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.2-1
+- HTCondor can be set up to use only FIPS 140-2 approved security functions
+- If the Singularity test fails, the job goes idle rather than getting held
+- Can divide GPU memory, when making multiple GPU entries for a single GPU
+- Startd and Schedd cron job maximum line length increased to 64k bytes
+- Added first class submit keywords for SciTokens
+- Fixed MUNGE authentication
+- Fixed Windows installer to work when the install location isn't C:\Condor
+
+* Thu May 20 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.0-1
+- Support for submitting to ARC-CE via the REST interface
+- DAGMan can put failed jobs on hold (user can correct problems and release)
+- Can run gdb and ptrace within Docker containers
+- A small Docker test job is run on the execute node to verify functionality
+- The number of instructions executed is reported in the job Ad on Linux
+
+* Mon May 17 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.1-1
+- Fix problem where X.509 proxy refresh kills job when using AES encryption
+- Fix problem when jobs require a different machine after a failure
+- Fix problem where a job matched a machine it can't use, delaying job start
+- Fix exit code and retry checking when a job exits because of a signal
+- Fix a memory leak in the job router when a job is removed via job policy
+- Fixed the back-end support for the 'bosco_cluster --add' command
+- An updated Windows installer that supports IDTOKEN authentication
+
 * Wed Apr 14 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.0-1
 - Absent any configuration, HTCondor denies authorization to all users
 - AES encryption is used for all communication and file transfers by default

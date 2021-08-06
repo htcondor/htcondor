@@ -158,15 +158,14 @@ static bool test_delete_file_later_file(void);
 static bool test_delete_file_later_dir(void);
 
 // Global variables
-static MyString
-	original_dir,
-	tmp_dir,
-	invalid_dir,
-	empty_dir,
-	full_dir,
-	file_dir,
-	tmp,
-	dircatbuf;
+static std::string original_dir;
+static std::string tmp_dir;
+static std::string invalid_dir;
+static std::string empty_dir;
+static std::string full_dir;
+static std::string file_dir;
+static std::string tmp;
+static std::string dircatbuf;
 
 static const char
 	*readme = "README";
@@ -360,18 +359,18 @@ static void setup() {
 	cut_assert_true( condor_getcwd(original_dir) );
 	
 	// Directory strings
-	cut_assert_true( tmp.formatstr("testtmp%d", getpid()) );
+	cut_assert_true( formatstr(tmp, "testtmp%d", getpid()) );
 	
 	// Make a temporary directory to test
-	cut_assert_z( mkdir(tmp.Value(), 0700) );
-	cut_assert_z( chdir(tmp.Value()) );
+	cut_assert_z( mkdir(tmp.c_str(), 0700) );
+	cut_assert_z( chdir(tmp.c_str()) );
 	
 	// Store some directories
 	cut_assert_true( condor_getcwd(tmp_dir) );
-	empty_dir.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "empty_dir");
-	full_dir.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir");
-	invalid_dir.formatstr("%s%c", "DoesNotExist", DIR_DELIM_CHAR);
-	file_dir.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file");
+	formatstr(empty_dir, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "empty_dir");
+	formatstr(full_dir, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "full_dir");
+	formatstr(invalid_dir, "%s%c", "DoesNotExist", DIR_DELIM_CHAR);
+	formatstr(file_dir, "%s%c%s", full_dir.c_str(), DIR_DELIM_CHAR, "full_file");
 	
 	// Put some files/directories in there
 	cut_assert_z( mkdir("empty_dir", 0700) );
@@ -420,14 +419,14 @@ static void setup() {
 	// Create some symbolic links
 #ifdef WIN32
 #else
-	MyString link;
-	cut_assert_true( link.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file") );
-	cut_assert_z( symlink(link.Value(), "symlink_file") );
-	cut_assert_true( link.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "link_dir") );
-	cut_assert_z( symlink(link.Value(), "symlink_dir") );
+	std::string link;
+	cut_assert_true( formatstr(link, "%s%c%s", full_dir.c_str(), DIR_DELIM_CHAR, "full_file") );
+	cut_assert_z( symlink(link.c_str(), "symlink_file") );
+	cut_assert_true( formatstr(link, "%s%c%s", full_dir.c_str(), DIR_DELIM_CHAR, "link_dir") );
+	cut_assert_z( symlink(link.c_str(), "symlink_dir") );
 #endif
 	// Get back to original directory
-	cut_assert_z( chdir(original_dir.Value()) );
+	cut_assert_z( chdir(original_dir.c_str()) );
 
 	// Close FILE* that was written to
 	cut_assert_z( fclose(file_1) );
@@ -436,8 +435,8 @@ static void setup() {
 MSC_DISABLE_WARNING(6031) // return value ignored.
 static void cleanup() {
 	// Remove the created files/directories/symlinks
-	cut_assert_z( chdir(original_dir.Value()) );
-	cut_assert_z( chdir(tmp.Value()) );
+	cut_assert_z( chdir(original_dir.c_str()) );
+	cut_assert_z( chdir(tmp.c_str()) );
 	cut_assert_z( rmdir("empty_dir") );
 #ifdef WIN32
 #else
@@ -489,7 +488,7 @@ static void cleanup() {
 	cut_assert_z( rmdir("full_dir") );
 	cut_assert_z( chdir("..") );
 	
-	cut_assert_z( rmdir(tmp.Value()) );
+	cut_assert_z( rmdir(tmp.c_str()) );
 }
 MSC_RESTORE_WARNING(6031) // return value ignored.
 
@@ -510,14 +509,14 @@ static bool test_path_constructor_current() {
 	emit_test("Test the Directory constructor when passed the current working "
 		"directory as a directory path.");
 	emit_input_header();
-	emit_param("Directory Path", original_dir.Value());
+	emit_param("Directory Path", original_dir.c_str());
 	emit_output_expected_header();
-	emit_param("Directory Path", "%s", original_dir.Value());
-	Directory dir(original_dir.Value());
+	emit_param("Directory Path", "%s", original_dir.c_str());
+	Directory dir(original_dir.c_str());
 	const char* dir_path = dir.GetDirectoryPath();
 	emit_output_actual_header();
 	emit_param("Directory Path", "%s", dir_path);
-	if(strcmp(dir_path, original_dir.Value()) != MATCH) {
+	if(strcmp(dir_path, original_dir.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -526,17 +525,17 @@ static bool test_path_constructor_current() {
 static bool test_path_constructor_file() {
 	emit_test("Test the Directory constructor when passed a file path as a "
 		"directory path.");
-	MyString path;
-	path.formatstr("%s%cfull_file", full_dir.Value(), DIR_DELIM_CHAR);
+	std::string path;
+	formatstr(path, "%s%cfull_file", full_dir.c_str(), DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Directory Path", path.Value());
+	emit_param("Directory Path", path.c_str());
 	emit_output_expected_header();
-	emit_param("Directory Path", "%s", path.Value());
-	Directory dir(path.Value());
+	emit_param("Directory Path", "%s", path.c_str());
+	Directory dir(path.c_str());
 	const char* dir_path = dir.GetDirectoryPath();
 	emit_output_actual_header();
 	emit_param("Directory Path", "%s", dir_path);
-	if(strcmp(dir_path, path.Value()) != MATCH) {
+	if(strcmp(dir_path, path.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -560,15 +559,15 @@ static bool test_stat_constructor_current() {
 	emit_test("Test the Directory constructor when passed a StatInfo pointer "
 		"constructed from the current working directory.");
 	emit_input_header();
-	emit_param("StatInfo", "%s", original_dir.Value());
+	emit_param("StatInfo", "%s", original_dir.c_str());
 	emit_output_expected_header();
-	emit_param("Directory Path", "%s", original_dir.Value());
-	StatInfo stat(original_dir.Value());
+	emit_param("Directory Path", "%s", original_dir.c_str());
+	StatInfo stat(original_dir.c_str());
 	Directory dir(&stat);
 	const char* dir_path = dir.GetDirectoryPath();
 	emit_output_actual_header();
 	emit_param("Directory Path", "%s", dir_path);
-	if(strcmp(dir_path, original_dir.Value()) != MATCH) {
+	if(strcmp(dir_path, original_dir.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -577,18 +576,18 @@ static bool test_stat_constructor_current() {
 static bool test_stat_constructor_file() {
 	emit_test("Test the Directory constructor when passed a StatInfo pointer "
 		"constructed from a file path as a directory path.");
-	MyString path;
-	path.formatstr("%s%cfull_file", full_dir.Value(), DIR_DELIM_CHAR);
+	std::string path;
+	formatstr(path, "%s%cfull_file", full_dir.c_str(), DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Directory Path", path.Value());
+	emit_param("Directory Path", path.c_str());
 	emit_output_expected_header();
-	emit_param("Directory Path", "%s", path.Value());
-	StatInfo stat(path.Value());
+	emit_param("Directory Path", "%s", path.c_str());
+	StatInfo stat(path.c_str());
 	Directory dir(&stat);
 	const char* dir_path = dir.GetDirectoryPath();
 	emit_output_actual_header();
 	emit_param("Directory Path", "%s", dir_path);
-	if(strcmp(dir_path, path.Value()) != MATCH) {
+	if(strcmp(dir_path, path.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -633,14 +632,14 @@ static bool test_get_directory_path_path_current() {
 		"Directory constructed from the current working directory as a "
 		"directory path.");
 	emit_input_header();
-	emit_param("Directory Path", original_dir.Value());
+	emit_param("Directory Path", original_dir.c_str());
 	emit_output_expected_header();
-	emit_param("Directory Path", "%s", original_dir.Value());
-	Directory dir(original_dir.Value());
+	emit_param("Directory Path", "%s", original_dir.c_str());
+	Directory dir(original_dir.c_str());
 	const char* dir_path = dir.GetDirectoryPath();
 	emit_output_actual_header();
 	emit_param("Directory Path", "%s", dir_path);
-	if(strcmp(dir_path, original_dir.Value()) != MATCH) {
+	if(strcmp(dir_path, original_dir.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -650,14 +649,14 @@ static bool test_get_directory_path_path_dir() {
 	emit_test("Test that GetDirectoryPath() returns the expected path for a "
 		"Directory constructed from a valid directory as a directory path.");
 	emit_input_header();
-	emit_param("Directory Path", "%s", tmp.Value());
+	emit_param("Directory Path", "%s", tmp.c_str());
 	emit_output_expected_header();
-	emit_param("Directory Path", "%s", tmp.Value());
-	Directory dir(tmp.Value());
+	emit_param("Directory Path", "%s", tmp.c_str());
+	Directory dir(tmp.c_str());
 	const char* dir_path = dir.GetDirectoryPath();
 	emit_output_actual_header();
 	emit_param("Directory Path", "%s", dir_path);
-	if(strcmp(dir_path, tmp.Value()) != MATCH) {
+	if(strcmp(dir_path, tmp.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -706,15 +705,15 @@ static bool test_get_directory_path_stat_current() {
 		"Directory constructed from a StatInfo pointer constructed from the "
 		"current working directory as a directory path.");
 	emit_input_header();
-	emit_param("StatInfo", "%s", original_dir.Value());
+	emit_param("StatInfo", "%s", original_dir.c_str());
 	emit_output_actual_header();
-	emit_param("Directory Path", "%s", original_dir.Value());
-	StatInfo stat(original_dir.Value());
+	emit_param("Directory Path", "%s", original_dir.c_str());
+	StatInfo stat(original_dir.c_str());
 	Directory dir(&stat);
 	const char* dir_path = dir.GetDirectoryPath();
 	emit_output_actual_header();
 	emit_param("Directory Path", "%s", dir_path);
-	if(strcmp(dir_path, original_dir.Value()) != MATCH) {
+	if(strcmp(dir_path, original_dir.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -725,15 +724,15 @@ static bool test_get_directory_path_stat_dir() {
 		"Directory constructed from a StatInfo pointer constructed from a "
 		"valid directory as a directory path.");
 	emit_input_header();
-	emit_param("StatInfo", "%s", tmp.Value());
+	emit_param("StatInfo", "%s", tmp.c_str());
 	emit_output_actual_header();
-	emit_param("Directory Path", "%s", tmp.Value());
-	StatInfo stat(tmp.Value());
+	emit_param("Directory Path", "%s", tmp.c_str());
+	StatInfo stat(tmp.c_str());
 	Directory dir(&stat);
 	const char* dir_path = dir.GetDirectoryPath();
 	emit_output_actual_header();
 	emit_param("Directory Path", "%s", dir_path);
-	if(strcmp(dir_path, tmp.Value()) != MATCH) {
+	if(strcmp(dir_path, tmp.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -743,8 +742,8 @@ static bool test_next_valid() {
 	emit_test("Test that Next() returns a non-NULL file name for a valid "
 		"directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
-	Directory dir(full_dir.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
+	Directory dir(full_dir.c_str());
 	const char* next = dir.Next();
 	emit_output_actual_header();
 	emit_param("Next File", "%s", next);
@@ -758,24 +757,29 @@ static bool test_next_valid_multiple() {
 	emit_test("Test that Next() returns non-NULL file names for multiple calls"
 		" in a valid directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
-	Directory dir(tmp_dir.Value());
-	MyString next_1(dir.Next());
-	MyString next_2(dir.Next());
+	emit_param("Directory", "%s", tmp_dir.c_str());
+	Directory dir(tmp_dir.c_str());
+	const char *next;
+	next = dir.Next();
+	std::string next_1(next ? next : "");
+	next = dir.Next();
+	std::string next_2(next ? next : "");
 #ifndef WIN32
-	MyString next_3(dir.Next());
-	MyString next_4(dir.Next());
+	next = dir.Next();
+	std::string next_3(next ? next : "");
+	next = dir.Next();
+	std::string next_4(next ? next : "");
 #endif
 	emit_output_actual_header();
-	emit_param("Next File 1", "%s", next_1.Value());
-	emit_param("Next File 2", "%s", next_2.Value());
+	emit_param("Next File 1", "%s", next_1.c_str());
+	emit_param("Next File 2", "%s", next_2.c_str());
 #ifndef WIN32
-	emit_param("Next File 3", "%s", next_3.Value());
-	emit_param("Next File 4", "%s", next_4.Value());
+	emit_param("Next File 3", "%s", next_3.c_str());
+	emit_param("Next File 4", "%s", next_4.c_str());
 #endif
-	if(next_1.IsEmpty() || next_2.IsEmpty()
+	if(next_1.empty() || next_2.empty()
 #ifndef WIN32
-	   || next_3.IsEmpty() || next_4.IsEmpty()
+	   || next_3.empty() || next_4.empty()
 #endif
 	   )
 	{
@@ -789,28 +793,34 @@ static bool test_next_valid_multiple_null() {
 		" in a valid directory, then a NULL file name when the entire directory"
 		" has been traversed.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
-	Directory dir(tmp_dir.Value());
-	MyString next_1(dir.Next());
-	MyString next_2(dir.Next());
-	MyString next_3(dir.Next());
+	emit_param("Directory", "%s", tmp_dir.c_str());
+	Directory dir(tmp_dir.c_str());
+	const char *next;
+	next = dir.Next();
+	std::string next_1(next ? next : "");
+	next = dir.Next();
+	std::string next_2(next ? next : "");
+	next = dir.Next();
+	std::string next_3(next ? next : "");
 #ifndef WIN32
-	MyString next_4(dir.Next());
-	MyString next_5(dir.Next());
+	next = dir.Next();
+	std::string next_4(next ? next : "");
+	next = dir.Next();
+	std::string next_5(next ? next : "");
 #endif
 	emit_output_actual_header();
-	emit_param("Next File 1", "%s", next_1.Value());
-	emit_param("Next File 2", "%s", next_2.Value());
-	emit_param("Next File 3", "%s", next_3.Value());
+	emit_param("Next File 1", "%s", next_1.c_str());
+	emit_param("Next File 2", "%s", next_2.c_str());
+	emit_param("Next File 3", "%s", next_3.c_str());
 #ifndef WIN32
-	emit_param("Next File 4", "%s", next_4.Value());
-	emit_param("Next File 5", "%s", next_5.Value());
+	emit_param("Next File 4", "%s", next_4.c_str());
+	emit_param("Next File 5", "%s", next_5.c_str());
 #endif
-	if(next_1.IsEmpty() || next_2.IsEmpty() || 
+	if(next_1.empty() || next_2.empty() || 
 #ifdef WIN32
-	   !next_3.IsEmpty())
+	   !next_3.empty())
 #else
-	   next_3.IsEmpty() || next_4.IsEmpty() || !next_5.IsEmpty())
+	   next_3.empty() || next_4.empty() || !next_5.empty())
 #endif
 	{
 		FAIL;
@@ -821,10 +831,10 @@ static bool test_next_valid_multiple_null() {
 static bool test_next_invalid() {
 	emit_test("Test that Next() returns NULL for an invalid directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", invalid_dir.Value());
+	emit_param("Directory", "%s", invalid_dir.c_str());
 	emit_output_expected_header();
 	emit_param("Next File is NULL", "TRUE");
-	Directory dir(invalid_dir.Value());
+	Directory dir(invalid_dir.c_str());
 	const char* next = dir.Next();
 	emit_output_actual_header();
 	emit_param("Next File is NULL", "%s", tfstr(next == NULL));
@@ -837,10 +847,10 @@ static bool test_next_invalid() {
 static bool test_next_empty() {
 	emit_test("Test that Next() returns NULL for an empty directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", empty_dir.Value());
+	emit_param("Directory", "%s", empty_dir.c_str());
 	emit_output_expected_header();
 	emit_param("Next File is NULL", "TRUE");
-	Directory dir(empty_dir.Value());
+	Directory dir(empty_dir.c_str());
 	const char* next = dir.Next();
 	emit_output_actual_header();
 	emit_param("Next File is NULL", "%s", tfstr(next == NULL));
@@ -854,10 +864,10 @@ static bool test_next_filepath() {
 	emit_test("Test that Next() returns NULL for a Directory constructed from "
 		"a file path.");
 	emit_input_header();
-	emit_param("Directory", "%s", file_dir.Value());
+	emit_param("Directory", "%s", file_dir.c_str());
 	emit_output_expected_header();
 	emit_param("Next File is NULL", "TRUE");
-	Directory dir(file_dir.Value());
+	Directory dir(file_dir.c_str());
 	const char* next = dir.Next();
 	emit_output_actual_header();
 	emit_param("Next File is NULL", "%s", tfstr(next == NULL));
@@ -871,10 +881,10 @@ static bool test_rewind_before() {
 	emit_test("Test that Rewind() restarts the iteration before calling "
 		"Next().");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	bool ret_val = dir.Rewind();
 	const char* next = dir.Next();
 	emit_output_actual_header();
@@ -890,17 +900,20 @@ static bool test_rewind_same() {
 	emit_test("Test that Rewind() restarts the iteration by checking that "
 		"Next() returns the same file name before and after calling Rewind().");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	Directory dir(original_dir.Value());
-	MyString before(dir.Next());
+	Directory dir(original_dir.c_str());
+	const char *next;
+	next = dir.Next();
+	std::string before(next ? next : "");
 	bool ret_val = dir.Rewind();
-	MyString after(dir.Next());
+	next = dir.Next();
+	std::string after(next ? next : "");
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
-	emit_param("Next File Before", "%s", before.Value());
-	emit_param("Next File After", "%s", after.Value());
+	emit_param("Next File Before", "%s", before.c_str());
+	emit_param("Next File After", "%s", after.c_str());
 	if(!ret_val || before != after) {
 		FAIL;
 	}
@@ -911,25 +924,32 @@ static bool test_rewind_end() {
 	emit_test("Test that Rewind() restarts the iteration after iterating "
 		"through all the files in the directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
+	emit_param("Directory", "%s", tmp_dir.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	Directory dir(tmp_dir.Value());
-	MyString next_1(dir.Next());
-	MyString next_2(dir.Next());
-	MyString next_3(dir.Next());
-	MyString next_4(dir.Next());
-	MyString next_5(dir.Next());
+	Directory dir(tmp_dir.c_str());
+	const char *next;
+	next = dir.Next();
+	std::string next_1(next ? next : "");
+	next = dir.Next();
+	std::string next_2(next ? next : "");
+	next = dir.Next();
+	std::string next_3(next ? next : "");
+	next = dir.Next();
+	std::string next_4(next ? next : "");
+	next = dir.Next();
+	std::string next_5(next ? next : "");
 	bool ret_val = dir.Rewind();
-	MyString after(dir.Next());
+	next = dir.Next();
+	std::string after(next ? next : "");
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
-	emit_param("Next File 1", "%s", next_1.Value());
-	emit_param("Next File 2", "%s", next_2.Value());
-	emit_param("Next File 3", "%s", next_3.Value());
-	emit_param("Next File 4", "%s", next_4.Value());
-	emit_param("Next File 5", "%s", next_5.Value());
-	emit_param("Next File 1", "%s", after.Value());
+	emit_param("Next File 1", "%s", next_1.c_str());
+	emit_param("Next File 2", "%s", next_2.c_str());
+	emit_param("Next File 3", "%s", next_3.c_str());
+	emit_param("Next File 4", "%s", next_4.c_str());
+	emit_param("Next File 5", "%s", next_5.c_str());
+	emit_param("Next File 1", "%s", after.c_str());
 	if(!ret_val || next_1 != after) {
 		FAIL;
 	}
@@ -940,19 +960,22 @@ static bool test_rewind_empty() {
 	emit_test("Test that Rewind() restarts the iteration in an empty directory "
 		"by checking that Next() still returns NULL.");
 	emit_input_header();
-	emit_param("Directory", "%s", empty_dir.Value());
+	emit_param("Directory", "%s", empty_dir.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Next File Before", "");
 	emit_param("Next File After", "");
-	Directory dir(empty_dir.Value());
-	MyString before(dir.Next());
+	Directory dir(empty_dir.c_str());
+	const char *next;
+	next = dir.Next();
+	std::string before(next ? next : "");
 	bool ret_val = dir.Rewind();
-	MyString after(dir.Next());
+	next = dir.Next();
+	std::string after(next ? next : "");
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
-	emit_param("Next File Before", "%s", before.Value());
-	emit_param("Next File After", "%s", after.Value());
+	emit_param("Next File Before", "%s", before.c_str());
+	emit_param("Next File After", "%s", after.c_str());
 	if(!ret_val || before != after) {
 		FAIL;
 	}
@@ -966,19 +989,22 @@ static bool test_rewind_filepath() {
 	emit_problem("Constructing a Directory() object on a file doesn't work on Windows.");
 #else
 	emit_input_header();
-	emit_param("Directory", "%s", file_dir.Value());
-	Directory dir(file_dir.Value());
+	emit_param("Directory", "%s", file_dir.c_str());
+	Directory dir(file_dir.c_str());
 	emit_output_expected_header();
 	emit_retval("FALSE");
 	emit_param("Next File Before", "");
 	emit_param("Next File After", "");
-	MyString before(dir.Next());
+	const char *next;
+	next = dir.Next();
+	std::string before(next ? next : "");
 	bool ret_val = dir.Rewind();
-	MyString after(dir.Next());
+	next = dir.Next();
+	std::string after(next ? next : "");
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
-	emit_param("Next File Before", "%s", before.Value());
-	emit_param("Next File After", "%s", after.Value());
+	emit_param("Next File Before", "%s", before.c_str());
+	emit_param("Next File After", "%s", after.c_str());
 	if(ret_val || before != after) {
 		FAIL;
 	}
@@ -990,19 +1016,22 @@ static bool test_rewind_multiple() {
 	emit_test("Test that Rewind() restarts the iteration when called multiple "
 		"times.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
+	emit_param("Directory", "%s", tmp_dir.c_str());
 	emit_output_actual_header();
 	emit_retval("TRUE");
-	Directory dir(tmp_dir.Value());
-	MyString before(dir.Next());
+	Directory dir(tmp_dir.c_str());
+	const char *next;
+	next = dir.Next();
+	std::string before(next ? next : "");
 	bool ret_val = dir.Rewind();
 	ret_val &= dir.Rewind();
 	ret_val &= dir.Rewind();
-	MyString after(dir.Next());
+	next = dir.Next();
+	std::string after(next ? next : "");
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
-	emit_param("Next File Before", "%s", before.Value());
-	emit_param("Next File After", "%s", after.Value());
+	emit_param("Next File Before", "%s", before.c_str());
+	emit_param("Next File After", "%s", after.c_str());
 	if(before != after) {
 		FAIL;
 	}
@@ -1017,11 +1046,11 @@ static bool test_find_named_entry_null() {
 		"unit test framework.");
 	emit_comment("See ticket #1616");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("File Name", "NULL");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	//Directory dir(original_dir.Value());
+	//Directory dir(original_dir.c_str());
 	//bool ret_val = dir.Find_Named_Entry(NULL);
 	//emit_output_actual_header();
 	//emit_retval("%s", tfstr(ret_val));
@@ -1035,11 +1064,11 @@ static bool test_find_named_entry_empty() {
 	emit_test("Test that Find_Named_Entry() returns false when in an empty "
 		"directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", empty_dir.Value());
+	emit_param("Directory", "%s", empty_dir.c_str());
 	emit_param("File Name", "DoesNotExist");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(empty_dir.Value());
+	Directory dir(empty_dir.c_str());
 	bool ret_val = dir.Find_Named_Entry("DoesNotExist");
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -1053,11 +1082,11 @@ static bool test_find_named_entry_exists() {
 	emit_test("Test that Find_Named_Entry() returns true for a file that "
 		"exists.");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("File Name", "%s", readme);
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	bool ret_val = dir.Find_Named_Entry(readme);
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -1070,12 +1099,12 @@ static bool test_find_named_entry_remove() {
 	emit_test("Test that Find_Named_Entry() returns true for a file that exists"
 		" and then false after removing the file with Remove_Entry().");
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
 	emit_param("File Name", "delete_file_1");
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_retval("FALSE");
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	bool ret_val_1 = dir.Find_Named_Entry("delete_file_1");
 	if(!dir.Find_Named_Entry("delete_file_1") || !dir.Remove_Current_File()) {
 		emit_alert("delete_file_1 does not exist.");
@@ -1095,11 +1124,11 @@ static bool test_find_named_entry_not_exist() {
 	emit_test("Test that Find_Named_Entry() returns false for a file that does "
 		"not exist.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
+	emit_param("Directory", "%s", tmp_dir.c_str());
 	emit_param("File Name", "DoesNotExist");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(tmp_dir.Value());
+	Directory dir(tmp_dir.c_str());
 	bool ret_val = dir.Find_Named_Entry("DoesNotExist");
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -1112,11 +1141,11 @@ static bool test_find_named_entry_not_exist() {
 static bool test_get_access_time_before() {
 	emit_test("Test that GetAccessTime() returns 0 when called before Next().");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("%d", 0);
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	time_t atime = dir.GetAccessTime();
 	emit_output_actual_header();
 	emit_retval("%d", atime);
@@ -1130,11 +1159,11 @@ static bool test_get_access_time_empty() {
 	emit_test("Test that GetAccessTime() returns 0 after calling Next() in an "
 		"empty directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", empty_dir.Value());
+	emit_param("Directory", "%s", empty_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("%d", 0);
-	Directory dir(empty_dir.Value());
+	Directory dir(empty_dir.c_str());
 	dir.Next();
 	time_t atime = dir.GetAccessTime();
 	emit_output_actual_header();
@@ -1149,20 +1178,20 @@ static bool test_get_access_time_close() {
 	emit_test("Test that GetAccessTime() returns the same time as stat() for a "
 		"file that was just created.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
-	Directory dir(tmp_dir.Value());
+	emit_param("Directory", "%s", tmp_dir.c_str());
+	Directory dir(tmp_dir.c_str());
 	const char* next = dir.Next();
-	emit_param("Current File", "%s", next);
 	struct stat st;
-	MyString file;
-	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
-	stat(file.Value(), &st);
+	std::string file;
+	formatstr(file, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, next);
+	stat(file.c_str(), &st);
+	emit_param("Current File", "%s", next);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_atime);
 	time_t atime = dir.GetAccessTime();
 	emit_output_actual_header();
 	emit_retval("%d", atime);
-	if(atime != st.st_atime) {
+	if(atime+1 < st.st_atime || atime > st.st_atime+1) { // allow 1 second slop because underlying file times are sub-second.
 		FAIL;
 	}
 	PASS;
@@ -1171,11 +1200,11 @@ static bool test_get_access_time_close() {
 static bool test_get_modify_time_before() {
 	emit_test("Test that GetModifyTime() returns 0 when called before Next().");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("%d", 0);
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	time_t mtime = dir.GetModifyTime();
 	emit_output_actual_header();
 	emit_retval("%d", mtime);
@@ -1189,11 +1218,11 @@ static bool test_get_modify_time_empty() {
 	emit_test("Test that GetModifyTime() returns 0 after calling Next() in an "
 		"empty directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", empty_dir.Value());
+	emit_param("Directory", "%s", empty_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("%d", 0);
-	Directory dir(empty_dir.Value());
+	Directory dir(empty_dir.c_str());
 	dir.Next();
 	time_t mtime = dir.GetModifyTime();
 	emit_output_actual_header();
@@ -1208,8 +1237,8 @@ static bool test_get_modify_time_valid() {
 	emit_test("Test that GetModifyTime() doesn't return 0 after calling Next() "
 		"in a non-empty directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
-	Directory dir(original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
+	Directory dir(original_dir.c_str());
 	const char* next = dir.Next();
 	emit_param("Current File", "%s", next);
 	time_t mtime = dir.GetModifyTime();
@@ -1225,20 +1254,20 @@ static bool test_get_modify_time_close() {
 	emit_test("Test that GetModifyTime() returns a time close to the current "
 		"time for a file that was just created.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
-	Directory dir(tmp_dir.Value());
+	emit_param("Directory", "%s", tmp_dir.c_str());
+	Directory dir(tmp_dir.c_str());
 	const char* next = dir.Next();
-	emit_param("Current File", "%s", next);
 	struct stat st;
-	MyString file;
-	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
-	stat(file.Value(), &st);
+	std::string file;
+	formatstr(file, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, next);
+	stat(file.c_str(), &st);
+	emit_param("Current File", "%s", next);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_mtime);
 	time_t mtime = dir.GetModifyTime();
 	emit_output_actual_header();
 	emit_retval("%d", mtime);
-	if(mtime != st.st_mtime) {
+	if(mtime+1 < st.st_mtime || mtime > st.st_mtime+1) { // allow 1 second slop because underlying file times are sub-second.
 		FAIL;
 	}
 	PASS;
@@ -1247,11 +1276,11 @@ static bool test_get_modify_time_close() {
 static bool test_get_create_time_before() {
 	emit_test("Test that GetCreateTime() returns 0 when called before Next().");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("%d", 0);
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	time_t ctime = dir.GetCreateTime();
 	emit_output_actual_header();
 	emit_retval("%d", ctime);
@@ -1265,11 +1294,11 @@ static bool test_get_create_time_empty() {
 	emit_test("Test that GetCreateTime() returns 0 after calling Next() in an "
 		"empty directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", empty_dir.Value());
+	emit_param("Directory", "%s", empty_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("%d", 0);
-	Directory dir(empty_dir.Value());
+	Directory dir(empty_dir.c_str());
 	dir.Next();
 	time_t ctime = dir.GetCreateTime();
 	emit_output_actual_header();
@@ -1284,8 +1313,8 @@ static bool test_get_create_time_valid() {
 	emit_test("Test that GetCreateTime() doesn't return 0 after calling Next() "
 		"in a non-empty directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
-	Directory dir(original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
+	Directory dir(original_dir.c_str());
 	const char* next = dir.Next();
 	emit_param("Current File", "%s", next);
 	time_t ctime = dir.GetCreateTime();
@@ -1301,20 +1330,20 @@ static bool test_get_create_time_close() {
 	emit_test("Test that GetCreateTime() returns a time close to the current "
 		"time for a file that was just created.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
-	Directory dir(tmp_dir.Value());
+	emit_param("Directory", "%s", tmp_dir.c_str());
+	Directory dir(tmp_dir.c_str());
 	const char* next = dir.Next();
-	emit_param("Current File", "%s", next);
 	struct stat st;
-	MyString file;
-	file.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
-	stat(file.Value(), &st);
+	std::string file;
+	formatstr(file, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, next);
+	stat(file.c_str(), &st);
+	emit_param("Current File", "%s", next);
 	emit_output_expected_header();
 	emit_retval("%d", st.st_ctime);
 	time_t ctime = dir.GetCreateTime();
 	emit_output_actual_header();
 	emit_retval("%d", ctime);
-	if(ctime != st.st_ctime) {
+	if(ctime+1 < st.st_ctime || ctime > st.st_ctime+1) { // allow 1 second slop because underlying file times are sub-second.
 		FAIL;
 	}
 	PASS;
@@ -1323,11 +1352,11 @@ static bool test_get_create_time_close() {
 static bool test_get_file_size_before() {
 	emit_test("Test that GetFileSize() returns 0 when called before Next().");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("%d", 0);
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	filesize_t ret_val = dir.GetFileSize();
 	emit_output_actual_header();
 	emit_retval(FILESIZE_T_FORMAT, ret_val);
@@ -1341,11 +1370,11 @@ static bool test_get_file_size_empty_dir() {
 	emit_test("Test that GetFileSize() returns 0 after calling Next() in an "
 		"empty directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", empty_dir.Value());
+	emit_param("Directory", "%s", empty_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("%d", 0);
-	Directory dir(empty_dir.Value());
+	Directory dir(empty_dir.c_str());
 	dir.Next();
 	filesize_t ret_val = dir.GetFileSize();
 	emit_output_actual_header();
@@ -1360,11 +1389,11 @@ static bool test_get_file_size_empty_file() {
 	emit_test("Test that GetFileSize() returns 0 after calling Next() for an "
 		"empty file.");
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
 	emit_param("Current File", "empty_file");
 	emit_output_expected_header();
 	emit_retval("%d", 0);
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	dir.Find_Named_Entry("empty_file");
 	filesize_t ret_val = dir.GetFileSize();
 	emit_output_actual_header();
@@ -1378,9 +1407,9 @@ static bool test_get_file_size_empty_file() {
 static bool test_get_file_size_valid() {
 	emit_test("Test that GetFileSize() doesn't return 0 for a non-empty file.");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Current File", "%s", readme);
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	dir.Find_Named_Entry(readme);
 	filesize_t ret_val = dir.GetFileSize();
 	emit_output_actual_header();
@@ -1395,16 +1424,16 @@ static bool test_get_file_size_same() {
 	emit_test("Test that GetFileSize() returns the equivalent size as using "
 		"stat().");
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
 	emit_param("Current File", "full_file");
 	struct stat size;
-	MyString file;
-	file.formatstr("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
+	std::string file;
+	formatstr(file, "%s%cfull_dir%cfull_file", tmp.c_str(), DIR_DELIM_CHAR,
 		DIR_DELIM_CHAR);
-	stat(file.Value(), &size);
+	stat(file.c_str(), &size);
 	emit_output_expected_header();
 	emit_retval("%d", size.st_size);
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	dir.Find_Named_Entry("full_file");
 	filesize_t ret_val = dir.GetFileSize();
 	emit_output_actual_header();
@@ -1418,11 +1447,11 @@ static bool test_get_file_size_same() {
 static bool test_get_mode_before() {
 	emit_test("Test that GetMode() returns 0 when called before Next().");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("%d", 0);
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	mode_t ret_val = dir.GetMode();
 	emit_output_actual_header();
 	emit_retval("%d", ret_val);
@@ -1436,11 +1465,11 @@ static bool test_get_mode_empty() {
 	emit_test("Test that GetMode() returns 0 after calling Next() in an empty "
 		"directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", empty_dir.Value());
+	emit_param("Directory", "%s", empty_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("%o", 0);
-	Directory dir(empty_dir.Value());
+	Directory dir(empty_dir.c_str());
 	dir.Next();
 	mode_t ret_val = dir.GetMode();
 	emit_output_actual_header();
@@ -1454,9 +1483,9 @@ static bool test_get_mode_empty() {
 static bool test_get_mode_valid_file() {
 	emit_test("Test that GetMode() doesn't return 0 for a valid file.");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Current File", "%s", readme);
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	dir.Find_Named_Entry(readme);
 	mode_t ret_val = dir.GetMode();
 	emit_output_actual_header();
@@ -1470,10 +1499,10 @@ static bool test_get_mode_valid_file() {
 static bool test_get_mode_valid_dir() {
 	emit_test("Test that GetMode() doesn't return 0 for a valid directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
-	emit_param("Current File", "%s%c", tmp.Value(), DIR_DELIM_CHAR);
-	Directory dir(original_dir.Value());
-	dir.Find_Named_Entry(tmp.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
+	emit_param("Current File", "%s%c", tmp.c_str(), DIR_DELIM_CHAR);
+	Directory dir(original_dir.c_str());
+	dir.Find_Named_Entry(tmp.c_str());
 	mode_t ret_val = dir.GetMode();
 	emit_output_actual_header();
 	emit_retval("%o", ret_val);
@@ -1486,16 +1515,16 @@ static bool test_get_mode_valid_dir() {
 static bool test_get_mode_same() {
 	emit_test("Test that GetMode() returns the same mode as stat().");
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
 	emit_param("Current File", "full_file");
 	struct stat size;
-	MyString file;
-	file.formatstr("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
+	std::string file;
+	formatstr(file, "%s%cfull_dir%cfull_file", tmp.c_str(), DIR_DELIM_CHAR,
 		DIR_DELIM_CHAR);
-	stat(file.Value(), &size);
+	stat(file.c_str(), &size);
 	emit_output_expected_header();
 	emit_retval("%o", size.st_mode);
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	dir.Find_Named_Entry("full_file");
 	mode_t ret_val = dir.GetMode();
 	emit_output_actual_header();
@@ -1509,10 +1538,10 @@ static bool test_get_mode_same() {
 static bool test_get_directory_size_empty() {
 	emit_test("Test that GetDirectorySize() returns 0 for an empty directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", empty_dir.Value());
+	emit_param("Directory", "%s", empty_dir.c_str());
 	emit_output_expected_header();
 	emit_retval("%d", 0);
-	Directory dir(empty_dir.Value());
+	Directory dir(empty_dir.c_str());
 	filesize_t ret_val = dir.GetDirectorySize();
 	emit_output_actual_header();
 	emit_retval(FILESIZE_T_FORMAT, ret_val);
@@ -1526,8 +1555,8 @@ static bool test_get_directory_size_not_empty() {
 	emit_test("Test that GetDirectorySize() doesn't return 0 for a non-empty "
 		"directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
-	Directory dir(original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
+	Directory dir(original_dir.c_str());
 	filesize_t ret_val = dir.GetDirectorySize();
 	emit_output_actual_header();
 	emit_retval(FILESIZE_T_FORMAT, ret_val);
@@ -1541,10 +1570,10 @@ static bool test_get_directory_size_filepath() {
 	emit_test("Test that GetDirectorySize() returns 0 for a Directory "
 		"constructed from a file path.");
 	emit_input_header();
-	emit_param("Directory", "%s", file_dir.Value());
+	emit_param("Directory", "%s", file_dir.c_str());
 	emit_output_expected_header();
 	emit_retval("%d", 0);
-	Directory dir(file_dir.Value());
+	Directory dir(file_dir.c_str());
 	filesize_t ret_val = dir.GetDirectorySize();
 	emit_output_actual_header();
 	emit_retval(FILESIZE_T_FORMAT, ret_val);
@@ -1558,15 +1587,15 @@ static bool test_get_directory_size_same() {
 	emit_test("Test that GetDirectorySize() is equivalent to calling "
 		"stat() for each non-empty file within the directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
 	struct stat size;
-	MyString file;
-	file.formatstr("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
+	std::string file;
+	formatstr(file, "%s%cfull_dir%cfull_file", tmp.c_str(), DIR_DELIM_CHAR,
 		DIR_DELIM_CHAR);
-	stat(file.Value(), &size);
+	stat(file.c_str(), &size);
 	emit_output_expected_header();
 	emit_retval("%d", size.st_size);
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	filesize_t ret_val = dir.GetDirectorySize();
 	emit_output_actual_header();
 	emit_retval(FILESIZE_T_FORMAT, ret_val);
@@ -1580,11 +1609,11 @@ static bool test_get_full_path_before() {
 	emit_test("Test that GetFullPath() returns NULL when called before "
 		"Next().");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_param("Returns NULL", "TRUE");
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	const char* ret_val = dir.GetFullPath();
 	emit_output_actual_header();
 	emit_param("Returns NULL", tfstr(ret_val == NULL));
@@ -1598,11 +1627,11 @@ static bool test_get_full_path_empty() {
 	emit_test("Test that GetFullPath() returns 0 after calling Next() in an empty "
 		"directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", empty_dir.Value());
+	emit_param("Directory", "%s", empty_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_param("Returns NULL", "TRUE");
-	Directory dir(empty_dir.Value());
+	Directory dir(empty_dir.c_str());
 	dir.Next();
 	const char* ret_val = dir.GetFullPath();
 	emit_output_actual_header();
@@ -1617,18 +1646,18 @@ static bool test_get_full_path_file() {
 	emit_test("Test that GetFullPath() returns the correct full path for a "
 		"valid file.");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Current File", "%s", readme);
-	MyString full_path;
-	full_path.formatstr("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR, readme);
+	std::string full_path;
+	formatstr(full_path, "%s%c%s", original_dir.c_str(), DIR_DELIM_CHAR, readme);
 	emit_output_expected_header();
-	emit_retval("%s", full_path.Value());
-	Directory dir(original_dir.Value());
+	emit_retval("%s", full_path.c_str());
+	Directory dir(original_dir.c_str());
 	dir.Find_Named_Entry(readme);
 	const char* ret_val = dir.GetFullPath();
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
-	if(niceStrCmp(full_path.Value(), ret_val) != MATCH) {
+	if(niceStrCmp(full_path.c_str(), ret_val) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -1638,19 +1667,19 @@ static bool test_get_full_path_dir() {
 	emit_test("Test that GetFullPath() returns the correct full path for a "
 		"valid directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
-	emit_param("Current File", "%s", tmp.Value());
-	MyString full_path;
-	full_path.formatstr("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
-		tmp.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
+	emit_param("Current File", "%s", tmp.c_str());
+	std::string full_path;
+	formatstr(full_path, "%s%c%s", original_dir.c_str(), DIR_DELIM_CHAR,
+		tmp.c_str());
 	emit_output_expected_header();
-	emit_retval("%s", full_path.Value());
-	Directory dir(original_dir.Value());
-	dir.Find_Named_Entry(tmp.Value());
+	emit_retval("%s", full_path.c_str());
+	Directory dir(original_dir.c_str());
+	dir.Find_Named_Entry(tmp.c_str());
 	const char* ret_val = dir.GetFullPath();
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
-	if(niceStrCmp(full_path.Value(), ret_val) != MATCH) {
+	if(niceStrCmp(full_path.c_str(), ret_val) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -1660,11 +1689,11 @@ static bool test_is_directory_before() {
 	emit_test("Test that IsDirectory() returns false when called before "
 		"Next().");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	bool ret_val = dir.IsDirectory();
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -1678,11 +1707,11 @@ static bool test_is_directory_empty() {
 	emit_test("Test that IsDirectory() returns false after calling Next() in "
 		"an empty directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", empty_dir.Value());
+	emit_param("Directory", "%s", empty_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(empty_dir.Value());
+	Directory dir(empty_dir.c_str());
 	dir.Next();
 	bool ret_val = dir.IsDirectory();
 	emit_output_actual_header();
@@ -1696,11 +1725,11 @@ static bool test_is_directory_empty() {
 static bool test_is_directory_file() {
 	emit_test("Test that IsDirectory() returns false for a file.");
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
 	emit_param("Current File", "full_file");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	dir.Find_Named_Entry("full_file");
 	bool ret_val = dir.IsDirectory();
 	emit_output_actual_header();
@@ -1714,11 +1743,11 @@ static bool test_is_directory_file() {
 static bool test_is_directory_dir() {
 	emit_test("Test that IsDirectory() returns true for a directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
+	emit_param("Directory", "%s", tmp_dir.c_str());
 	emit_param("Current File", "full_dir");
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	Directory dir(tmp_dir.Value());
+	Directory dir(tmp_dir.c_str());
 	dir.Find_Named_Entry("full_dir");
 	bool ret_val = dir.IsDirectory();
 	emit_output_actual_header();
@@ -1733,11 +1762,11 @@ static bool test_is_directory_symlink_file() {
 	emit_test("Test that IsDirectory() returns false for a symbolic link to a "
 		"file.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
+	emit_param("Directory", "%s", tmp_dir.c_str());
 	emit_param("Current File", "symlink_file");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(tmp_dir.Value());
+	Directory dir(tmp_dir.c_str());
 	dir.Find_Named_Entry("symlink_file");
 	bool ret_val = dir.IsDirectory();
 	emit_output_actual_header();
@@ -1752,11 +1781,11 @@ static bool test_is_directory_symlink_dir() {
 	emit_test("Test that IsDirectory() returns true for a symbolic link to a "
 		"directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
+	emit_param("Directory", "%s", tmp_dir.c_str());
 	emit_param("Current File", "symlink_dir");
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	Directory dir(tmp_dir.Value());
+	Directory dir(tmp_dir.c_str());
 	dir.Find_Named_Entry("symlink_dir");
 	bool ret_val = dir.IsDirectory();
 	emit_output_actual_header();
@@ -1771,11 +1800,11 @@ static bool test_is_symlink_before() {
 	emit_test("Test that IsSymlink() returns false when called before "
 		"Next().");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	bool ret_val = dir.IsSymlink();
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -1789,11 +1818,11 @@ static bool test_is_symlink_empty() {
 	emit_test("Test that IsSymlink() returns false after calling Next() in "
 		"an empty directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", empty_dir.Value());
+	emit_param("Directory", "%s", empty_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(empty_dir.Value());
+	Directory dir(empty_dir.c_str());
 	dir.Next();
 	bool ret_val = dir.IsSymlink();
 	emit_output_actual_header();
@@ -1807,11 +1836,11 @@ static bool test_is_symlink_empty() {
 static bool test_is_symlink_file() {
 	emit_test("Test that IsSymlink() returns false for a normal file.");
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
 	emit_param("Current File", "full_file");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	dir.Find_Named_Entry("full_file");
 	bool ret_val = dir.IsSymlink();
 	emit_output_actual_header();
@@ -1825,11 +1854,11 @@ static bool test_is_symlink_file() {
 static bool test_is_symlink_dir() {
 	emit_test("Test that IsSymlink() returns false for a normal directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
+	emit_param("Directory", "%s", tmp_dir.c_str());
 	emit_param("Current File", "full_dir");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(tmp_dir.Value());
+	Directory dir(tmp_dir.c_str());
 	dir.Find_Named_Entry("full_dir");
 	bool ret_val = dir.IsSymlink();
 	emit_output_actual_header();
@@ -1844,11 +1873,11 @@ static bool test_is_symlink_symlink_file() {
 	emit_test("Test that IsSymlink() returns true for a symbolic link to a "
 		"file.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
+	emit_param("Directory", "%s", tmp_dir.c_str());
 	emit_param("Current File", "symlink_file");
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	Directory dir(tmp_dir.Value());
+	Directory dir(tmp_dir.c_str());
 	dir.Find_Named_Entry("symlink_file");
 	bool ret_val = dir.IsSymlink();
 	emit_output_actual_header();
@@ -1863,11 +1892,11 @@ static bool test_is_symlink_symlink_dir() {
 	emit_test("Test that IsSymlink() returns true for a symbolic link to a "
 		"directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
+	emit_param("Directory", "%s", tmp_dir.c_str());
 	emit_param("Current File", "symlink_dir");
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	Directory dir(tmp_dir.Value());
+	Directory dir(tmp_dir.c_str());
 	dir.Find_Named_Entry("symlink_dir");
 	bool ret_val = dir.IsSymlink();
 	emit_output_actual_header();
@@ -1882,11 +1911,11 @@ static bool test_remove_current_file_before() {
 	emit_test("Test that Remove_Current_File() returns false when called "
 		"before Next().");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	bool ret_val = dir.Remove_Current_File();
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -1900,11 +1929,11 @@ static bool test_remove_current_file_empty() {
 	emit_test("Test that Remove_Current_File() returns false after calling "
 		"Next() in an empty directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", empty_dir.Value());
+	emit_param("Directory", "%s", empty_dir.c_str());
 	emit_param("Current File", "");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(empty_dir.Value());
+	Directory dir(empty_dir.c_str());
 	dir.Next();
 	bool ret_val = dir.Remove_Current_File();
 	emit_output_actual_header();
@@ -1919,12 +1948,12 @@ static bool test_remove_current_file_file() {
 	emit_test("Test that Remove_Current_File() returns true and removes a "
 		"file.");
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
 	emit_param("Current File", "delete_file_2");
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Successfully Deleted", "TRUE");
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	if(!dir.Find_Named_Entry("delete_file_2")) {	// Make sure it exists
 		emit_alert("delete_file_2 does not exist.");
 		ABORT;
@@ -1944,12 +1973,12 @@ static bool test_remove_current_file_dir_empty() {
 	emit_test("Test that Remove_Current_File() returns true and removes an "
 		"empty directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
 	emit_param("Current File", "delete_dir_1");
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Successfully Deleted", "TRUE");
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	if(!dir.Find_Named_Entry("delete_dir_1")) {	// Make sure it exists
 		emit_alert("delete_dir_1 does not exist.");
 		ABORT;
@@ -1969,12 +1998,12 @@ static bool test_remove_current_file_dir_full() {
 	emit_test("Test that Remove_Current_File() returns true and removes a non-"
 		"empty directory.");
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
 	emit_param("Current File", "delete_dir_11");
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Successfully Deleted", "TRUE");
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	if(!dir.Find_Named_Entry("delete_dir_11")) {	// Make sure it exists
 		emit_alert("delete_dir_11 does not exist.");
 		ABORT;
@@ -1996,11 +2025,11 @@ static bool test_remove_full_path_null() {
 	emit_problem("Remove_Full_Path(NULL) works returns true on windows.");
 #else
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Path", "NULL");
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	bool ret_val = dir.Remove_Full_Path(NULL);
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -2014,11 +2043,11 @@ static bool test_remove_full_path_null() {
 static bool test_remove_full_path_empty() {
 	emit_test("Test that Remove_Full_Path() returns true for an empty string.");
 	emit_input_header();
-	emit_param("Directory", "%s", original_dir.Value());
+	emit_param("Directory", "%s", original_dir.c_str());
 	emit_param("Path", "");
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	Directory dir(original_dir.Value());
+	Directory dir(original_dir.c_str());
 	bool ret_val = dir.Remove_Full_Path("");
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -2031,15 +2060,15 @@ static bool test_remove_full_path_empty() {
 static bool test_remove_full_path_not_exist() {
 	emit_test("Test that Remove_Full_Path() returns true for a path that "
 		"doesn't exist or was already removed.");
-	MyString path;
-	path.formatstr("%s%cDoesNotExist", tmp_dir.Value(), DIR_DELIM_CHAR);
+	std::string path;
+	formatstr(path, "%s%cDoesNotExist", tmp_dir.c_str(), DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Directory", "%s", tmp_dir.Value());
-	emit_param("Path", "%s", path.Value());
+	emit_param("Directory", "%s", tmp_dir.c_str());
+	emit_param("Path", "%s", path.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	Directory dir(tmp_dir.Value());
-	bool ret_val = dir.Remove_Full_Path(path.Value());
+	Directory dir(tmp_dir.c_str());
+	bool ret_val = dir.Remove_Full_Path(path.c_str());
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
 	if(!ret_val) {
@@ -2051,20 +2080,20 @@ static bool test_remove_full_path_not_exist() {
 static bool test_remove_full_path_file() {
 	emit_test("Test that Remove_Full_Path() returns true and removes a "
 		"file.");
-	MyString path;
-	path.formatstr("%s%cdelete_file_3", full_dir.Value(), DIR_DELIM_CHAR);
+	std::string path;
+	formatstr(path, "%s%cdelete_file_3", full_dir.c_str(), DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
-	emit_param("Path", "%s", path.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
+	emit_param("Path", "%s", path.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Successfully Deleted", "TRUE");
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	if(!dir.Find_Named_Entry("delete_file_3")) {	// Make sure it exists
 		emit_alert("delete_file_3 does not exist.");
 		ABORT;
 	}
-	bool ret_val = dir.Remove_Full_Path(path.Value());
+	bool ret_val = dir.Remove_Full_Path(path.c_str());
 	bool found = dir.Find_Named_Entry("delete_file_3");
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -2078,21 +2107,21 @@ static bool test_remove_full_path_file() {
 static bool test_remove_full_path_filepath() {
 	emit_test("Test that Remove_Full_Path() returns true and removes a file "
 		"for a Directory constructed from a file path.");
-	MyString path;
-	path.formatstr("%s%cdelete_file_4", full_dir.Value(), DIR_DELIM_CHAR);
+	std::string path;
+	formatstr(path, "%s%cdelete_file_4", full_dir.c_str(), DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Directory", "%s", path.Value());
-	emit_param("Path", "%s", path.Value());
+	emit_param("Directory", "%s", path.c_str());
+	emit_param("Path", "%s", path.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Successfully Deleted", "TRUE");
-	Directory dir(path.Value());
-	Directory parent(full_dir.Value());
+	Directory dir(path.c_str());
+	Directory parent(full_dir.c_str());
 	if(!parent.Find_Named_Entry("delete_file_4")) {	// Make sure it exists
 		emit_alert("delete_file_4 does not exist.");
 		ABORT;
 	}
-	bool ret_val = dir.Remove_Full_Path(path.Value());
+	bool ret_val = dir.Remove_Full_Path(path.c_str());
 	bool found = parent.Find_Named_Entry("delete_file_4");
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -2106,20 +2135,20 @@ static bool test_remove_full_path_filepath() {
 static bool test_remove_full_path_dir_empty() {
 	emit_test("Test that Remove_Full_Path() returns true and removes an "
 		"empty directory.");
-	MyString path;
-	path.formatstr("%s%cdelete_dir_2", full_dir.Value(), DIR_DELIM_CHAR);
+	std::string path;
+	formatstr(path, "%s%cdelete_dir_2", full_dir.c_str(), DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
-	emit_param("Path", "%s", path.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
+	emit_param("Path", "%s", path.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Successfully Deleted", "TRUE");
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	if(!dir.Find_Named_Entry("delete_dir_2")) {	// Make sure it exists
 		emit_alert("delete_dir_2 does not exist.");
 		ABORT;
 	}
-	bool ret_val = dir.Remove_Full_Path(path.Value());
+	bool ret_val = dir.Remove_Full_Path(path.c_str());
 	bool found = dir.Find_Named_Entry("delete_dir_2");
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -2133,20 +2162,20 @@ static bool test_remove_full_path_dir_empty() {
 static bool test_remove_full_path_dir_full() {
 	emit_test("Test that Remove_Full_Path() returns true and removes a non-"
 		"empty directory.");
-	MyString path;
-	path.formatstr("%s%cdelete_dir_12", full_dir.Value(), DIR_DELIM_CHAR);
+	std::string path;
+	formatstr(path, "%s%cdelete_dir_12", full_dir.c_str(), DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
-	emit_param("Path", "%s", path.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
+	emit_param("Path", "%s", path.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Successfully Deleted", "TRUE");
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	if(!dir.Find_Named_Entry("delete_dir_12")) {	// Make sure it exists
 		emit_alert("delete_dir_12 does not exist.");
 		ABORT;
 	}
-	bool ret_val = dir.Remove_Full_Path(path.Value());
+	bool ret_val = dir.Remove_Full_Path(path.c_str());
 	bool found = dir.Find_Named_Entry("delete_dir_12");
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -2160,21 +2189,21 @@ static bool test_remove_full_path_dir_full() {
 static bool test_remove_full_path_dir_current() {
 	emit_test("Test that Remove_Full_Path() returns true and removes the "
 		"directory it was constructed with.");
-	MyString delete_dir;
-	delete_dir.formatstr("%s%cdelete_dir_3", full_dir.Value(), DIR_DELIM_CHAR);
+	std::string delete_dir;
+	formatstr(delete_dir, "%s%cdelete_dir_3", full_dir.c_str(), DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Directory", "%s", delete_dir.Value());
-	emit_param("Path", "%s", delete_dir.Value());
+	emit_param("Directory", "%s", delete_dir.c_str());
+	emit_param("Path", "%s", delete_dir.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Successfully Deleted", "TRUE");
-	Directory dir(delete_dir.Value());
-	Directory parent(full_dir.Value());
+	Directory dir(delete_dir.c_str());
+	Directory parent(full_dir.c_str());
 	if(!parent.Find_Named_Entry("delete_dir_3")) {	// Make sure it exists
 		emit_alert("delete_dir_3 does not exist.");
 		ABORT;
 	}
-	bool ret_val = dir.Remove_Full_Path(delete_dir.Value());
+	bool ret_val = dir.Remove_Full_Path(delete_dir.c_str());
 	bool found = parent.Find_Named_Entry("delete_dir_3");
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -2192,14 +2221,14 @@ static bool test_remove_entire_directory_filepath() {
 #ifdef WIN32
 	emit_problem("Remove_Entire_Directory() returns true on Windows when the directory object is really a file.");
 #else
-	MyString delete_dir;
-	delete_dir.formatstr("%s%cempty_file", full_dir.Value(), DIR_DELIM_CHAR);
+	std::string delete_dir;
+	formatstr(delete_dir, "%s%cempty_file", full_dir.c_str(), DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Directory", "%s", delete_dir.Value());
+	emit_param("Directory", "%s", delete_dir.c_str());
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	Directory dir(delete_dir.Value());
-	Directory parent(full_dir.Value());
+	Directory dir(delete_dir.c_str());
+	Directory parent(full_dir.c_str());
 	bool ret_val = dir.Remove_Entire_Directory();
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
@@ -2213,14 +2242,14 @@ static bool test_remove_entire_directory_filepath() {
 static bool test_remove_entire_directory_dir_empty() {
 	emit_test("Test that Remove_Entire_Directory() returns true for an empty "
 		"directory.");
-	MyString delete_dir;
-	delete_dir.formatstr("%s%cempty_dir", tmp_dir.Value(), DIR_DELIM_CHAR);
+	std::string delete_dir;
+	formatstr(delete_dir, "%s%cempty_dir", tmp_dir.c_str(), DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Directory", "%s", delete_dir.Value());
+	emit_param("Directory", "%s", delete_dir.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Successfully Deleted", "TRUE");
-	Directory dir(delete_dir.Value());
+	Directory dir(delete_dir.c_str());
 	bool ret_val = dir.Remove_Entire_Directory();
 	bool found = (dir.Next() != NULL);
 	emit_output_actual_header();
@@ -2235,14 +2264,14 @@ static bool test_remove_entire_directory_dir_empty() {
 static bool test_remove_entire_directory_dir_full() {
 	emit_test("Test that Remove_Entire_Directory() returns true and removes "
 		"everything in a non-empty directory.");
-	MyString delete_dir;
-	delete_dir.formatstr("%s%cdir", full_dir.Value(), DIR_DELIM_CHAR);
+	std::string delete_dir;
+	formatstr(delete_dir, "%s%cdir", full_dir.c_str(), DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Directory", "%s", delete_dir.Value());
+	emit_param("Directory", "%s", delete_dir.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
 	emit_param("Successfully Deleted", "TRUE");
-	Directory dir(delete_dir.Value());
+	Directory dir(delete_dir.c_str());
 	if(dir.Next() == NULL) {	// Make sure directory is not empty
 		emit_alert("dir is empty.");
 		ABORT;
@@ -2266,11 +2295,11 @@ static bool test_recursive_chown() {
 	emit_comment("This test doesn't actually do anything because "
 		"Recursive_Chown() needs root access in order to change ownership. See "
 		"ticket #1609.");
-	StatInfo old_info(full_dir.Value());
+	StatInfo old_info(full_dir.c_str());
 	uid_t src_uid = old_info.GetOwner();
 	gid_t src_gid = old_info.GetGroup();
 	emit_input_header();
-	emit_param("Directory", "%s", full_dir.Value());
+	emit_param("Directory", "%s", full_dir.c_str());
 	emit_param("Source uid_t", "%d", src_uid);
 	emit_param("Source gid_t", "%d", src_gid);
 	emit_param("Destination uid_t", "%d", src_uid);
@@ -2279,9 +2308,9 @@ static bool test_recursive_chown() {
 	emit_retval("TRUE");
 	emit_param("Result uid_t", "%u", src_uid);
 	emit_param("Result gid_t", "%u", src_gid);
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	bool ret_val = dir.Recursive_Chown(src_uid, src_uid, src_uid);
-	StatInfo info(full_dir.Value());
+	StatInfo info(full_dir.c_str());
 	uid_t new_uid = info.GetOwner();
 	uid_t new_gid = info.GetGroup();
 	emit_output_actual_header();
@@ -2329,13 +2358,13 @@ static bool test_standalone_is_directory_not_exist() {
 static bool test_standalone_is_directory_file() {
 	emit_test("Test that the standalone IsDirectory() returns false for a file "
 		"path.");
-	MyString path;
-	path.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
+	std::string path;
+	formatstr(path, "%s%c%s", full_dir.c_str(), DIR_DELIM_CHAR, "empty_file");
 	emit_input_header();
-	emit_param("Path", "%s", path.Value());
+	emit_param("Path", "%s", path.c_str());
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	bool ret_val = IsDirectory(path.Value());
+	bool ret_val = IsDirectory(path.c_str());
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
 	if(ret_val) {
@@ -2348,10 +2377,10 @@ static bool test_standalone_is_directory_dir() {
 	emit_test("Test that the standalone IsDirectory() returns true for a "
 		"directory path.");
 	emit_input_header();
-	emit_param("Path", "%s", full_dir.Value());
+	emit_param("Path", "%s", full_dir.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	bool ret_val = IsDirectory(full_dir.Value());
+	bool ret_val = IsDirectory(full_dir.c_str());
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
 	if(!ret_val) {
@@ -2363,13 +2392,13 @@ static bool test_standalone_is_directory_dir() {
 static bool test_standalone_is_directory_symlink_file() {
 	emit_test("Test that the standalone IsDirectory() returns false for a "
 		"symlink file path.");
-	MyString path;
-	path.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
+	std::string path;
+	formatstr(path, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "symlink_file");
 	emit_input_header();
-	emit_param("Path", "%s", path.Value());
+	emit_param("Path", "%s", path.c_str());
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	bool ret_val = IsDirectory(path.Value());
+	bool ret_val = IsDirectory(path.c_str());
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
 	if(ret_val) {
@@ -2381,13 +2410,13 @@ static bool test_standalone_is_directory_symlink_file() {
 static bool test_standalone_is_directory_symlink_dir() {
 	emit_test("Test that the standalone IsDirectory() returns true for a "
 		"symlink directory path.");
-	MyString path;
-	path.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
+	std::string path;
+	formatstr(path, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "symlink_dir");
 	emit_input_header();
-	emit_param("Path", "%s", path.Value());
+	emit_param("Path", "%s", path.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	bool ret_val = IsDirectory(path.Value());
+	bool ret_val = IsDirectory(path.c_str());
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
 	if(!ret_val) {
@@ -2431,13 +2460,13 @@ static bool test_standalone_is_symlink_not_exist() {
 static bool test_standalone_is_symlink_file() {
 	emit_test("Test that the standalone IsSymlink() returns false for a file "
 		"path.");
-	MyString path;
-	path.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
+	std::string path;
+	formatstr(path, "%s%c%s", full_dir.c_str(), DIR_DELIM_CHAR, "empty_file");
 	emit_input_header();
-	emit_param("Path", "%s", path.Value());
+	emit_param("Path", "%s", path.c_str());
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	bool ret_val = IsSymlink(path.Value());
+	bool ret_val = IsSymlink(path.c_str());
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
 	if(ret_val) {
@@ -2450,10 +2479,10 @@ static bool test_standalone_is_symlink_dir() {
 	emit_test("Test that the standalone IsSymlink() returns false for a "
 		"directory path.");
 	emit_input_header();
-	emit_param("Path", "%s", full_dir.Value());
+	emit_param("Path", "%s", full_dir.c_str());
 	emit_output_expected_header();
 	emit_retval("FALSE");
-	bool ret_val = IsSymlink(full_dir.Value());
+	bool ret_val = IsSymlink(full_dir.c_str());
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
 	if(ret_val) {
@@ -2465,13 +2494,13 @@ static bool test_standalone_is_symlink_dir() {
 static bool test_standalone_is_symlink_symlink_file() {
 	emit_test("Test that the standalone IsSymlink() returns true for a "
 		"symlink file path.");
-	MyString path;
-	path.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
+	std::string path;
+	formatstr(path, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "symlink_file");
 	emit_input_header();
-	emit_param("Path", "%s", path.Value());
+	emit_param("Path", "%s", path.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	bool ret_val = IsSymlink(path.Value());
+	bool ret_val = IsSymlink(path.c_str());
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
 	if(!ret_val) {
@@ -2483,13 +2512,13 @@ static bool test_standalone_is_symlink_symlink_file() {
 static bool test_standalone_is_symlink_symlink_dir() {
 	emit_test("Test that the standalone IsSymlink() returns true for a "
 		"symlink directory path.");
-	MyString path;
-	path.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
+	std::string path;
+	formatstr(path, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "symlink_dir");
 	emit_input_header();
-	emit_param("Path", "%s", path.Value());
+	emit_param("Path", "%s", path.c_str());
 	emit_output_expected_header();
 	emit_retval("TRUE");
-	bool ret_val = IsSymlink(path.Value());
+	bool ret_val = IsSymlink(path.c_str());
 	emit_output_actual_header();
 	emit_retval("%s", tfstr(ret_val));
 	if(!ret_val) {
@@ -2529,14 +2558,14 @@ static bool test_dircat_empty_path() {
 	emit_input_header();
 	emit_param("Path", "");
 	emit_param("File name", "File");
-	MyString expect;
-	expect.formatstr("%c%s", DIR_DELIM_CHAR, "File");
+	std::string expect;
+	formatstr(expect, "%c%s", DIR_DELIM_CHAR, "File");
 	emit_output_expected_header();
-	emit_retval("%s", expect.Value());
+	emit_retval("%s", expect.c_str());
 	const char* ret_val = dircat("", "File", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
-	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
+	if(niceStrCmp(ret_val, expect.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -2547,14 +2576,14 @@ static bool test_dircat_empty_file() {
 	emit_input_header();
 	emit_param("Path", "Path");
 	emit_param("File name", "");
-	MyString expect;
-	expect.formatstr("%s%c", "Path", DIR_DELIM_CHAR);
+	std::string expect;
+	formatstr(expect, "%s%c", "Path", DIR_DELIM_CHAR);
 	emit_output_expected_header();
-	emit_retval("%s", expect.Value());
+	emit_retval("%s", expect.c_str());
 	const char* ret_val = dircat("Path", "", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
-	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
+	if(niceStrCmp(ret_val, expect.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -2563,19 +2592,19 @@ static bool test_dircat_empty_file() {
 static bool test_dircat_empty_file_delim() {
 	emit_test("Test dircat() when passed an empty file name, when the path "
 		"name includes the directory delimiter.");
-	MyString path;
-	path.formatstr("%s%c", "Path", DIR_DELIM_CHAR);
+	std::string path;
+	formatstr(path, "%s%c", "Path", DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Path", "%s", path.Value());
+	emit_param("Path", "%s", path.c_str());
 	emit_param("File name", "");
-	MyString expect;
-	expect.formatstr("%s%c", "Path", DIR_DELIM_CHAR);
+	std::string expect;
+	formatstr(expect, "%s%c", "Path", DIR_DELIM_CHAR);
 	emit_output_expected_header();
-	emit_retval("%s", expect.Value());
-	const char* ret_val = dircat(path.Value(), "", dircatbuf);
+	emit_retval("%s", expect.c_str());
+	const char* ret_val = dircat(path.c_str(), "", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
-	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
+	if(niceStrCmp(ret_val, expect.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -2586,14 +2615,14 @@ static bool test_dircat_non_empty() {
 	emit_input_header();
 	emit_param("Path", "Path");
 	emit_param("File name", "File");
-	MyString expect;
-	expect.formatstr("%s%c%s", "Path", DIR_DELIM_CHAR, "File");
+	std::string expect;
+	formatstr(expect, "%s%c%s", "Path", DIR_DELIM_CHAR, "File");
 	emit_output_expected_header();
 	emit_retval("Path%cFile", DIR_DELIM_CHAR);
 	const char* ret_val = dircat("Path", "File", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
-	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
+	if(niceStrCmp(ret_val, expect.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -2602,20 +2631,20 @@ static bool test_dircat_non_empty() {
 static bool test_dircat_non_empty_delim() {
 	emit_test("Test dircat() when passed a non-empty file name and a non-empty "
 		"path name that include the directory delimiter.");
-	MyString path;
-	path.formatstr("Path%cTo%cFile%c", DIR_DELIM_CHAR, DIR_DELIM_CHAR,
+	std::string path;
+	formatstr(path, "Path%cTo%cFile%c", DIR_DELIM_CHAR, DIR_DELIM_CHAR,
 				 DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Path", "%s", path.Value());
+	emit_param("Path", "%s", path.c_str());
 	emit_param("File name", "File");
-	MyString expect;
-	expect.formatstr("%s%s", path.Value(), "File");
+	std::string expect;
+	formatstr(expect, "%s%s", path.c_str(), "File");
 	emit_output_expected_header();
-	emit_retval("%s", expect.Value());
-	const char* ret_val = dircat(path.Value(), "File", dircatbuf);
+	emit_retval("%s", expect.c_str());
+	const char* ret_val = dircat(path.c_str(), "File", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
-	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
+	if(niceStrCmp(ret_val, expect.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -2624,19 +2653,19 @@ static bool test_dircat_non_empty_delim() {
 static bool test_dirscat_no_delim() {
 	emit_test("Test dirscat() when passed a non-empty file name and a non-empty "
 		"path name that do not have directory delimiters");
-	MyString path;
-	path.formatstr("Path%cTo%cFile", DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	std::string path;
+	formatstr(path, "Path%cTo%cFile", DIR_DELIM_CHAR, DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Path", "%s", path.Value());
+	emit_param("Path", "%s", path.c_str());
 	emit_param("File name", "File");
-	MyString expect;
-	expect.formatstr("%s%c%s%c", path.Value(), DIR_DELIM_CHAR, "File", DIR_DELIM_CHAR);
+	std::string expect;
+	formatstr(expect, "%s%c%s%c", path.c_str(), DIR_DELIM_CHAR, "File", DIR_DELIM_CHAR);
 	emit_output_expected_header();
-	emit_retval("%s", expect.Value());
-	const char* ret_val = dirscat(path.Value(), "File", dircatbuf);
+	emit_retval("%s", expect.c_str());
+	const char* ret_val = dirscat(path.c_str(), "File", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
-	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
+	if(niceStrCmp(ret_val, expect.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -2645,19 +2674,19 @@ static bool test_dirscat_no_delim() {
 static bool test_dirscat_delim() {
 	emit_test("Test dirscat() when passed a non-empty file name and a non-empty "
 		"path name that include the directory delimiter.");
-	MyString path;
-	path.formatstr("Path%cTo%cFile%c", DIR_DELIM_CHAR, DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	std::string path;
+	formatstr(path, "Path%cTo%cFile%c", DIR_DELIM_CHAR, DIR_DELIM_CHAR, DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Path", "%s", path.Value());
+	emit_param("Path", "%s", path.c_str());
 	emit_param("File name", "/File");
-	MyString expect;
-	expect.formatstr("%s%s%c", path.Value(), "File", DIR_DELIM_CHAR);
+	std::string expect;
+	formatstr(expect, "%s%s%c", path.c_str(), "File", DIR_DELIM_CHAR);
 	emit_output_expected_header();
-	emit_retval("%s", expect.Value());
-	const char* ret_val = dirscat(path.Value(), "/File", dircatbuf);
+	emit_retval("%s", expect.c_str());
+	const char* ret_val = dirscat(path.c_str(), "/File", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
-	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
+	if(niceStrCmp(ret_val, expect.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -2666,19 +2695,19 @@ static bool test_dirscat_delim() {
 static bool test_dirscat_alt_delim() {
 	emit_test("Test dirscat() when passed a non-empty file name and a non-empty "
 		"path name that include the directory delimiter.");
-	MyString path;
-	path.formatstr("Path%cTo%cFile%c", DIR_DELIM_CHAR, DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	std::string path;
+	formatstr(path, "Path%cTo%cFile%c", DIR_DELIM_CHAR, DIR_DELIM_CHAR, DIR_DELIM_CHAR);
 	emit_input_header();
-	emit_param("Path", "%s", path.Value());
+	emit_param("Path", "%s", path.c_str());
 	emit_param("File name", "File/");
-	MyString expect;
-	expect.formatstr("%s%s%c", path.Value(), "File", DIR_DELIM_CHAR);
+	std::string expect;
+	formatstr(expect, "%s%s%c", path.c_str(), "File", DIR_DELIM_CHAR);
 	emit_output_expected_header();
-	emit_retval("%s", expect.Value());
-	const char* ret_val = dirscat(path.Value(), "File/", dircatbuf);
+	emit_retval("%s", expect.c_str());
+	const char* ret_val = dirscat(path.c_str(), "File/", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
-	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
+	if(niceStrCmp(ret_val, expect.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -2687,20 +2716,20 @@ static bool test_dirscat_alt_delim() {
 static bool test_dirscat_extra_delim() {
 	emit_test("Test dirscat() when passed a non-empty file name and a non-empty "
 		"path name that include exceess directory delimiters.");
-	MyString barepath;
-	barepath.formatstr("Path%cTo%cFile", DIR_DELIM_CHAR, DIR_DELIM_CHAR);
-	MyString path(barepath); path += "//";
+	std::string barepath;
+	formatstr(barepath, "Path%cTo%cFile", DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	std::string path(barepath); path += "//";
 	emit_input_header();
-	emit_param("Path", "%s", path.Value());
+	emit_param("Path", "%s", path.c_str());
 	emit_param("File name", "/File//");
-	MyString expect;
-	expect.formatstr("%s%c%s%c", barepath.Value(), DIR_DELIM_CHAR, "File", DIR_DELIM_CHAR);
+	std::string expect;
+	formatstr(expect, "%s%c%s%c", barepath.c_str(), DIR_DELIM_CHAR, "File", DIR_DELIM_CHAR);
 	emit_output_expected_header();
-	emit_retval("%s", expect.Value());
-	const char* ret_val = dirscat(path.Value(), "/File//", dircatbuf);
+	emit_retval("%s", expect.c_str());
+	const char* ret_val = dirscat(path.c_str(), "/File//", dircatbuf);
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
-	if(niceStrCmp(ret_val, expect.Value()) != MATCH) {
+	if(niceStrCmp(ret_val, expect.c_str()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -2779,18 +2808,18 @@ static bool test_delete_file_later_null() {
 static bool test_delete_file_later_file() {
 	emit_test("Test that the DeleteFileLater class deletes the file when the "
 		"class instance is deleted.");
-	MyString path;
-	path.formatstr("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "delete_file_6");
+	std::string path;
+	formatstr(path, "%s%c%s", full_dir.c_str(), DIR_DELIM_CHAR, "delete_file_6");
 	emit_input_header();
-	emit_param("File Name", "%s", path.Value());
+	emit_param("File Name", "%s", path.c_str());
 	emit_output_expected_header();
 	emit_param("Successfully Deleted", "TRUE");
-	Directory dir(full_dir.Value());
+	Directory dir(full_dir.c_str());
 	if(!dir.Find_Named_Entry("delete_file_6")) {	// Make sure it exists
 		emit_alert("delete_file_6 does not exist.");
 		ABORT;
 	}
-	DeleteFileLater* later = new DeleteFileLater(path.Value());
+	DeleteFileLater* later = new DeleteFileLater(path.c_str());
 	delete later;
 	bool found = dir.Find_Named_Entry("delete_file_6");
 	emit_output_actual_header();
@@ -2804,18 +2833,18 @@ static bool test_delete_file_later_file() {
 static bool test_delete_file_later_dir() {
 	emit_test("Test that the DeleteFileLater class doesn't delete the directory"
 		" when the class instance is deleted.");
-	MyString path;
-	path.formatstr("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "empty_dir");
+	std::string path;
+	formatstr(path, "%s%c%s", tmp_dir.c_str(), DIR_DELIM_CHAR, "empty_dir");
 	emit_input_header();
-	emit_param("File Name", "%s", path.Value());
+	emit_param("File Name", "%s", path.c_str());
 	emit_output_expected_header();
 	emit_param("Successfully Deleted", "FALSE");
-	Directory dir(tmp_dir.Value());
+	Directory dir(tmp_dir.c_str());
 	if(!dir.Find_Named_Entry("empty_dir")) {	// Make sure it exists
 		emit_alert("empty_dir does not exist.");
 		ABORT;
 	}
-	DeleteFileLater* later = new DeleteFileLater(path.Value());
+	DeleteFileLater* later = new DeleteFileLater(path.c_str());
 	delete later;
 	bool found = dir.Find_Named_Entry("empty_dir");
 	emit_output_actual_header();

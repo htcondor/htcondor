@@ -311,7 +311,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 }
 
 
-CollectorHashTable *CollectorEngine::findOrCreateTable(std::string &type)
+CollectorHashTable *CollectorEngine::findOrCreateTable(const std::string &type)
 {
 	CollectorHashTable *table=0;
 	if (GenericAds.lookup(type, table) == -1) {

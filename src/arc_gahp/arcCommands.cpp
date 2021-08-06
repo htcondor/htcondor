@@ -238,7 +238,6 @@ bool HttpRequest::SendRequest()
 	string buf;
 	unsigned long response_code = 0;
 	const char *ca_dir = NULL;
-	const char *ca_file = NULL;
 	FILE *in_fp = NULL;
 	FILE *out_fp = NULL;
 
@@ -533,8 +532,6 @@ bool HttpRequest::SendRequest()
 	}
 
 	if ( !proxyFile.empty() ) {
-		// TODO Add support for seperate cert and key files
-		// TODO Add support for proxy files
 		rv = curl_easy_setopt( curl, CURLOPT_SSLCERT, proxyFile.c_str() );
 		if( rv != CURLE_OK ) {
 			this->errorCode = "499";
@@ -956,7 +953,6 @@ bool ArcJobStatusAllWorkerFunction(GahpRequest *gahp_request)
 		return true;
 	}
 
-		// TODO feed query result to status_request
 	// Fill in required attributes & parameters.
 	HttpRequest status_request;
 	status_request.serviceURL = fillURL(argv[2]);
@@ -1157,7 +1153,7 @@ bool ArcJobStageInArgsCheck(char **argv, int argc)
 //     <filename>*
 bool ArcJobStageInWorkerFunction(GahpRequest *gahp_request)
 {
-	int argc = gahp_request->m_args.argc;
+	//int argc = gahp_request->m_args.argc;
 	char **argv = gahp_request->m_args.argv;
 	int request_id = gahp_request->m_reqid;
 
@@ -1216,7 +1212,7 @@ bool ArcJobStageOutArgsCheck(char **argv, int argc)
 //     [<remote_filename> <local_filename>]*
 bool ArcJobStageOutWorkerFunction(GahpRequest *gahp_request)
 {
-	int argc = gahp_request->m_args.argc;
+	//int argc = gahp_request->m_args.argc;
 	char **argv = gahp_request->m_args.argv;
 	int request_id = gahp_request->m_reqid;
 
@@ -1458,7 +1454,7 @@ bool ArcDelegationNewWorkerFunction(GahpRequest *gahp_request)
 	std::string deleg_url = deleg1_request.responseHeaders["location"];
 	std::string deleg_id = deleg_url.substr(deleg_url.rfind('/')+1);
 	std::string deleg_cert_request = deleg1_request.responseBody;
-	DelegationProvider deleg_provider(gahp_request->m_proxy_file, "");
+	X509Credential deleg_provider(gahp_request->m_proxy_file, "");
 	std::string deleg_resp = deleg_provider.Delegate(deleg_cert_request);
 
 	HttpRequest deleg2_request;
@@ -1529,7 +1525,7 @@ bool ArcDelegationRenewWorkerFunction(GahpRequest *gahp_request)
 	}
 
 	std::string deleg_cert_request = deleg1_request.responseBody;
-	DelegationProvider deleg_provider(gahp_request->m_proxy_file, "");
+	X509Credential deleg_provider(gahp_request->m_proxy_file, "");
 	std::string deleg_resp = deleg_provider.Delegate(deleg_cert_request);
 
 	HttpRequest deleg2_request;

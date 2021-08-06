@@ -7715,7 +7715,7 @@ bool
 ReserveSpaceEvent::formatBody(std::string &out)
 {
 	if (m_reserved_space &&
-		formatstr_cat(out, "\n\tBytes reserved: %lu\n",
+		formatstr_cat(out, "\n\tBytes reserved: %zu\n",
 		m_reserved_space) < 0)
 	{
 		return false;
@@ -7943,7 +7943,7 @@ FileCompleteEvent::toClassAd(bool event_time_utc) {
 bool
 FileCompleteEvent::formatBody(std::string &out)
 {
-	if (formatstr_cat(out, "\n\tBytes: %lu\n", m_size) < 0)
+	if (formatstr_cat(out, "\n\tBytes: %zu\n", m_size) < 0)
 	{
 		return false;
 	}
@@ -8192,7 +8192,7 @@ FileRemovedEvent::toClassAd(bool event_time_utc) {
 bool
 FileRemovedEvent::formatBody(std::string &out)
 {
-	if (formatstr_cat(out, "\n\tBytes: %lu\n", m_size) < 0)
+	if (formatstr_cat(out, "\n\tBytes: %zu\n", m_size) < 0)
 	{
 		return false;
 	}

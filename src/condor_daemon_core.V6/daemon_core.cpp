@@ -6252,27 +6252,6 @@ void CreateProcessForkit::exec() {
 		if( !m_privateinheritbuf.empty() ) {
 			m_envobject.SetEnv( EnvGetName( ENV_PRIVATE ), m_privateinheritbuf.c_str() );
 		}
-			// Make sure PURIFY can open windows for the daemons when
-			// they start. This functionality appears to only exist when we've
-			// decided to inherit the parent's environment. I'm not sure
-			// what the ramifications are if we include it all the time so here
-			// it stays for now.
-		char *display;
-		display = param ( "PURIFY_DISPLAY" );
-		if ( display ) {
-			m_envobject.SetEnv( "DISPLAY", display );
-			free ( display );
-			char *purebuf;
-			purebuf = (char*)malloc(sizeof(char) * 
-									(strlen("-program-name=") + strlen(m_executable) + 
-									 1));
-			if (purebuf == NULL) {
-				EXCEPT("Create_Process: PUREOPTIONS is out of memory!");
-			}
-			sprintf ( purebuf, "-program-name=%s", m_executable );
-			m_envobject.SetEnv( "PUREOPTIONS", purebuf );
-			free(purebuf);
-		}
 	}
 
 		// Now we add/override  things that must ALWAYS be in the child's 

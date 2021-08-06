@@ -529,6 +529,7 @@ main( int argc, const char *argv[] )
 	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
+	classad::ClassAdSetExpressionCaching(false);
 
 	// We pass this in to submit_utils, but it isn't used to set the Owner attribute for remote submits
 	// it's only used to set the default accounting user
@@ -2875,7 +2876,7 @@ int SendLastExecutable()
 
 		char * chkptname = GetSpooledExecutablePath(submit_hash.getClusterId(), "");
 		SpoolEname = chkptname;
-		if (chkptname) free(chkptname);
+		free(chkptname);
 		int ret = MyQ->send_SpoolFile(SpoolEname.c_str());
 
 		if (ret < 0) {

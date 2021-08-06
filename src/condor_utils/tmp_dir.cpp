@@ -47,7 +47,7 @@ TmpDir::~TmpDir()
 	dprintf( D_FULLDEBUG, "TmpDir(%d)::~TmpDir()\n", m_objectNum );
 
 	if ( !m_inMainDir ) {
-		MyString	errMsg;
+		std::string errMsg;
 		if ( !Cd2MainDir(errMsg) ) {
 			dprintf( D_ALWAYS,
 					"ERROR: Cd2Main fails in TmpDir::~TmpDir(): %s\n",
@@ -58,7 +58,7 @@ TmpDir::~TmpDir()
 
 //-------------------------------------------------------------------------
 bool
-TmpDir::Cd2TmpDir(const char *directory, MyString &errMsg)
+TmpDir::Cd2TmpDir(const char *directory, std::string &errMsg)
 {
 	dprintf( D_FULLDEBUG, "TmpDir(%d)::Cd2TmpDir(%s)\n",
 				m_objectNum, directory );
@@ -97,7 +97,7 @@ TmpDir::Cd2TmpDir(const char *directory, MyString &errMsg)
 
 //-------------------------------------------------------------------------
 bool
-TmpDir::Cd2TmpDirFile(const char *filePath, MyString &errMsg)
+TmpDir::Cd2TmpDirFile(const char *filePath, std::string &errMsg)
 {
 	dprintf( D_FULLDEBUG, "TmpDir(%d)::Cd2TmpDirFile(%s)\n",
 				m_objectNum, filePath );
@@ -113,7 +113,7 @@ TmpDir::Cd2TmpDirFile(const char *filePath, MyString &errMsg)
 
 //-------------------------------------------------------------------------
 bool
-TmpDir::Cd2MainDir(MyString &errMsg)
+TmpDir::Cd2MainDir(std::string &errMsg)
 {
 	dprintf( D_FULLDEBUG, "TmpDir(%d)::Cd2MainDir()\n", m_objectNum );
 

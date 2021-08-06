@@ -21,7 +21,6 @@
 #include "condor_common.h"
 
 #include "script.h"
-#include "util.h"
 #include "job.h"
 #include "tmp_dir.h"
 #include "dagman_main.h"
@@ -65,7 +64,7 @@ int
 Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 {
 	TmpDir		tmpDir;
-	MyString	errMsg;
+	std::string	errMsg;
 	if ( !tmpDir.Cd2TmpDir( _node->GetDirectory(), errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
 				"Could not change to node directory %s: %s\n",

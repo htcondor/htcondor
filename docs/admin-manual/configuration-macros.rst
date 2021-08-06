@@ -196,6 +196,10 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     Do not stage other files in this directory; any files not created by
     HTCondor in this directory are subject to removal.
 
+    Ideally, this directory should not be placed under /tmp or /var/tmp, if
+    it is, HTCondor loses the ability to make private instances of /tmp and /var/tmp
+    for jobs.
+
 :macro-def:`TMP_DIR`
     A directory path to a directory where temporary files are placed by
     various portions of the HTCondor system. The daemons and tools that
@@ -1678,9 +1682,8 @@ that DaemonCore uses which affect all HTCondor daemons.
     ClassAd describing itself to the *condor_collector*, it will also
     place a copy of the ClassAd in this file. Currently, this setting
     only works for the *condor_schedd*. :index:`<SUBSYS>_ATTRS`
-    :index:`<SUBSYS>_EXPRS`
 
-:macro-def:`<SUBSYS>_ATTRS` or :macro-def:`<SUBSYS>_EXPRS`
+:macro-def:`<SUBSYS>_ATTRS`
     Allows any DaemonCore daemon to advertise arbitrary expressions from
     the configuration file in its ClassAd. Give the comma-separated list
     of entries from the configuration file you want in the given
@@ -1691,10 +1694,6 @@ that DaemonCore uses which affect all HTCondor daemons.
     The macro is named by substituting ``<SUBSYS>`` with the appropriate
     subsystem string as defined in
     :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
-
-    ``<SUBSYS>_EXPRS`` is a historic setting that functions identically
-    to ``<SUBSYS>_ATTRS``. It may be removed in the future, so use
-    ``<SUBSYS>_ATTRS``.
 
     .. note::
 
@@ -3286,9 +3285,7 @@ section.
         Since these are already ClassAd expressions, do not do anything
         unusual with strings. By default, the job ClassAd attributes
         JobUniverse, NiceUser, ExecutableSize and ImageSize are advertised
-        into the machine ClassAd. This setting was formerly called
-        ``STARTD_JOB_EXPRS``. The older name is still supported, but support
-        for the older name may be removed in a future version of HTCondor.
+        into the machine ClassAd.
 
 :macro-def:`STARTD_ATTRS`
     This macro is described in :macro:`<SUBSYS>_ATTRS`.
@@ -3639,9 +3636,7 @@ section for details.
 :macro-def:`STARTD_SLOT_ATTRS`
     The list of ClassAd attribute names that should be shared across all
     slots on the same machine. This setting was formerly know as
-    ``STARTD_VM_ATTRS`` :index:`STARTD_VM_ATTRS` or
-    ``STARTD_VM_EXPRS`` :index:`STARTD_VM_EXPRS` (before version
-    6.9.3). For each attribute in the list, the attribute's value is
+    ``STARTD_VM_ATTRS`` :index:`STARTD_VM_ATTRS` For each attribute in the list, the attribute's value is
     taken from each slot's machine ClassAd and placed into the machine
     ClassAd of all the other slots within the machine. For example, if
     the configuration file for a 2-slot machine contains
@@ -6255,9 +6250,7 @@ do not specify their own with:
     forgotten in a job's submit description file. The command in the
     submit description file results in actions by *condor_submit*,
     while the use of ``SUBMIT_ATTRS`` adds a job ClassAd attribute at a
-    later point in time. ``SUBMIT_EXPRS`` is a historic setting that
-    functions identically to ``SUBMIT_ATTRS``. It may be removed in the
-    future, so use ``SUBMIT_ATTRS``.
+    later point in time.
 
 :macro-def:`SUBMIT_ALLOW_GETENV`
     A boolean attribute which defaults to true. If set to false, the
@@ -6901,8 +6894,8 @@ These macros affect the *condor_negotiator*.
     the ClassAd of the idle (candidate) job. There is no direct access
     to the currently running job, but attributes of the currently
     running job that need to be accessed in ``PREEMPTION_REQUIREMENTS``
-    can be placed in the machine ClassAd using ``STARTD_JOB_EXPRS``
-    :index:`STARTD_JOB_EXPRS`. If not explicitly set in the
+    can be placed in the machine ClassAd using ``STARTD_JOB_ATTRS``
+    :index:`STARTD_JOB_ATTRS`. If not explicitly set in the
     HTCondor configuration file, the default value for this expression
     is ``False``. ``PREEMPTION_REQUIREMENTS`` should include the term
     ``(SubmitterGroup =?= RemoteGroup)``, if a preemption policy that
@@ -7409,6 +7402,10 @@ condor_procd Configuration File Macros
     disable cgroup tracking, define this to an empty string. See
     :ref:`admin-manual/setting-up-special-environments:cgroup-based process
     tracking` for a description of cgroup-based process tracking.
+    An administrator can configure distinct cgroup roots for 
+    different slot types within the same startd by prefixing
+    the *BASE_CGROUP* macro with the slot type. e.g. setting
+    SLOT_TYPE_1.BASE_CGROUP = hiprio_cgroup and SLOT_TYPE_2.BASE_CGROUP = low_prio
 
 condor_credd Configuration File Macros
 ---------------------------------------
@@ -7540,7 +7537,7 @@ These macros affect the *condor_gridmanager*.
 
     .. code-block:: condor-config
 
-          GRIDMANAGER_JOB_PROBE_INTERVAL_GT5 = 300
+          GRIDMANAGER_JOB_PROBE_INTERVAL_NORDUGRID = 300
 
 
 :macro-def:`GRIDMANAGER_JOB_PROBE_RATE`
@@ -7555,7 +7552,7 @@ These macros affect the *condor_gridmanager*.
 
     .. code-block:: condor-config
 
-          GRIDMANAGER_JOB_PROBE_RATE_GT5 = 15
+          GRIDMANAGER_JOB_PROBE_RATE_NORDUGRID = 15
 
 
 :macro-def:`GRIDMANAGER_RESOURCE_PROBE_INTERVAL`
@@ -7597,25 +7594,6 @@ These macros affect the *condor_gridmanager*.
     In this example, the job limit for all PBS resources is 300.
     Defaults to 1000.
 
-:macro-def:`GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE`
-    For grid jobs of type **gt2**, limits the number of
-    globus-job-manager processes that the *condor_gridmanager* lets run
-    at a time on the remote head node. Allowing too many
-    globus-job-managers to run causes severe load on the head note,
-    possibly making it non-functional. This number may be exceeded if it
-    is reduced through the use of *condor_reconfig* while the
-    *condor_gridmanager* is running, or if some globus-job-managers
-    take a few extra seconds to exit. The value 0 means there is no
-    limit. The default value is 10.
-
-:macro-def:`GAHP`
-    The full path to the binary of the GAHP server. This configuration
-    variable is no longer used. Use :macro:`GT2_GAHP` instead.
-
-:macro-def:`GAHP_ARGS`
-    Arguments to be passed to the GAHP server. This configuration
-    variable is no longer used.
-
 :macro-def:`GAHP_DEBUG_HIDE_SENSITIVE_DATA`
     A boolean value that determines when sensitive data such as security
     keys and passwords are hidden, when communication to or from a GAHP
@@ -7638,16 +7616,6 @@ These macros affect the *condor_gridmanager*.
     The number of times to retry a command that failed due to a timeout
     or a failed connection. The default is 3.
 
-:macro-def:`GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT`
-    The duration, in seconds, of the two phase commit timeout to Globus
-    for gt2 jobs only. This maps directly to the ``two_phase`` setting
-    in the Globus RSL.
-
-:macro-def:`GLOBUS_GATEKEEPER_TIMEOUT`
-    The number of seconds after which if a gt2 grid universe job fails
-    to ping the gatekeeper, the job will be put on hold. Defaults to 5
-    days (in seconds).
-
 :macro-def:`EC2_RESOURCE_TIMEOUT`
     The number of seconds after which if an EC2 grid universe job fails
     to ping the EC2 service, the job will be put on hold. Defaults to
@@ -7657,16 +7625,6 @@ These macros affect the *condor_gridmanager*.
 :macro-def:`EC2_GAHP_RATE_LIMIT`
     The minimum interval, in whole milliseconds, between requests to the
     same EC2 service with the same credentials. Defaults to 100.
-
-:macro-def:`GRAM_VERSION_DETECTION`
-    A boolean value that defaults to ``True``. When ``True``, the
-    *condor_gridmanager* treats grid types ``gt2`` and ``gt5``
-    identically, and queries each server to determine which protocol it
-    is using. When ``False``, the *condor_gridmanager* trusts the grid
-    type provided in job attribute ``GridResource``, and treats the
-    server accordingly. Beware that identifying a ``gt2`` server as
-    ``gt5`` can result in overloading the server, if a large number of
-    jobs are submitted.
 
 :macro-def:`BATCH_GAHP_CHECK_STATUS_ATTEMPTS`
     The number of times a failed status command issued to the
@@ -7721,32 +7679,10 @@ These macros affect the *condor_gridmanager*.
     The complete path and file name of the EC2 GAHP executable. The
     default value is ``$(SBIN)``/ec2_gahp.
 
-:macro-def:`GT2_GAHP`
-    The complete path and file name of the GT2 GAHP executable. The
-    default value is ``$(SBIN)``/gahp_server.
-
 :macro-def:`BATCH_GAHP`
     The complete path and file name of the batch GAHP executable, to be
     used for PBS, LSF, SGE, and similar batch systems. The default
     location is ``$(BIN)``/blahpd.
-
-:macro-def:`PBS_GAHP`
-    The complete path and file name of the PBS GAHP executable. The use
-    of the configuration variable ``BATCH_GAHP`` is preferred and
-    encouraged, as this variable may no longer be supported in a future
-    version of HTCondor. A value given with this configuration variable
-    will override a value specified by ``BATCH_GAHP``, and the value
-    specified by ``BATCH_GAHP`` is the default if this variable is not
-    defined.
-
-:macro-def:`LSF_GAHP`
-    The complete path and file name of the LSF GAHP executable. The use
-    of the configuration variable ``BATCH_GAHP`` is preferred and
-    encouraged, as this variable may no longer be supported in a future
-    version of HTCondor. A value given with this configuration variable
-    will override a value specified by ``BATCH_GAHP``, and the value
-    specified by ``BATCH_GAHP`` is the default if this variable is not
-    defined.
 
 :macro-def:`NORDUGRID_GAHP`
     The complete path and file name of the NorduGrid GAHP executable.
@@ -7755,15 +7691,6 @@ These macros affect the *condor_gridmanager*.
 :macro-def:`ARC_GAHP`
     The complete path and file name of the ARC GAHP executable.
     The default value is ``$(SBIN)``/arc_gahp.
-
-:macro-def:`SGE_GAHP`
-    The complete path and file name of the SGE GAHP executable. The use
-    of the configuration variable ``BATCH_GAHP`` is preferred and
-    encouraged, as this variable may no longer be supported in a future
-    version of HTCondor. A value given with this configuration variable
-    will override a value specified by ``BATCH_GAHP``, and the value
-    specified by ``BATCH_GAHP`` is the default if this variable is not
-    defined.
 
 :macro-def:`GCE_GAHP`
     The complete path and file name of the GCE GAHP executable. The
@@ -8113,56 +8040,6 @@ in configuration. This allows multiple instances of the
     to the *condor_collector*. It is used to further constrain the
     types of ClassAds from the *condor_collector*. There is no default
     value, resulting in no constraints being placed on query.
-
-Grid Monitor Configuration File Entries
----------------------------------------
-
-:index:`Grid Monitor configuration variables<single: Grid Monitor configuration variables; configuration>`
-
-These macros affect the Grid Monitor.
-
-:macro-def:`ENABLE_GRID_MONITOR`
-    A boolean value that when ``True`` enables the Grid Monitor. The
-    Grid Monitor is used to reduce load on Globus gatekeepers. This
-    parameter only affects grid jobs of type **gt2**. The variable
-    ``GRID_MONITOR`` must also be correctly configured. Defaults to
-    ``True``. See :ref:`grid-computing/grid-universe:htcondor-g, the gt2,
-    and gt5 grid types` for more information.
-
-:macro-def:`GRID_MONITOR`
-    The complete path name of the *grid_monitor.sh* tool used to reduce
-    the load on Globus gatekeepers. This parameter only affects grid
-    jobs of type **gt2**. This parameter is not referenced unless
-    ``ENABLE_GRID_MONITOR`` is set to ``True`` (the default value).
-
-:macro-def:`GRID_MONITOR_HEARTBEAT_TIMEOUT`
-    The integer number of seconds that may pass without hearing from a
-    working Grid Monitor before it is assumed to be dead. Defaults to
-    300 (5 minutes). Increasing this number will improve the ability of
-    the Grid Monitor to survive in the face of transient problems, but
-    will also increase the time before HTCondor notices a problem.
-
-:macro-def:`GRID_MONITOR_RETRY_DURATION`
-    When HTCondor-G attempts to start the Grid Monitor at a particular
-    site, it will wait this many seconds to start hearing from the Grid
-    Monitor. Defaults to 900 (15 minutes). If this duration passes
-    without success, the Grid Monitor will be disabled for the site in
-    question for the period of time set by ``GRID_MONITOR_DISABLE_TIME``
-    :index:`GRID_MONITOR_DISABLE_TIME`.
-
-:macro-def:`GRID_MONITOR_NO_STATUS_TIMEOUT`
-    Jobs can disappear from the Grid Monitor's status reports for short
-    periods of time under normal circumstances, but a prolonged absence
-    is often a sign of problems on the remote machine. This variable
-    sets the amount of time (in seconds) that a job can be absent before
-    the *condor_gridmanager* reacts by restarting the GRAM
-    *jobmanager*. The default is 900, which is 15 minutes.
-
-:macro-def:`GRID_MONITOR_DISABLE_TIME`
-    When an error occurs with a Grid Monitor job, this parameter
-    controls how long the *condor_gridmanager* will wait before
-    attempting to start a new Grid Monitor job. The value is in seconds
-    and the default is 3600 (1 hour).
 
 Configuration File Entries for DAGMan
 -------------------------------------
@@ -8889,7 +8766,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     See the :doc:`/admin-manual/security` section for a discussion of the
     relative merits of each method; some, such as ``CLAIMTOBE`` provide effectively
     no security at all.  The default authentication methods are
-    ``NTSSPI,FS,IDTOKENS,KERBEROS,GSI,SSL``.
+    ``NTSSPI,FS,IDTOKENS,KERBEROS,SSL``.
 
     These methods are tried in order until one succeeds or they all fail; for
     this reason, we do not recommend changing the default method list.
@@ -8903,6 +8780,23 @@ macros are described in the :doc:`/admin-manual/security` section.
     values are ``3DES`` or ``BLOWFISH``.  There is little benefit in varying
     the setting per authorization level; it is recommended to leave these
     settings untouched.
+
+:macro-def:`WARN_ON_GSI_CONFIGURATION"`
+    A boolean varaiables that controls whether a warning is printed
+    whenver GSI seen in a configured list of authentication methods.
+    Daemons will print the warning to their log (no more frequently than
+    once every 12 hours).
+    Tools will print the warning to their stderr.
+    The default value is ``True``.
+
+:macro-def:`WARN_ON_GSI_USAGE`
+    A boolean varaiables that controls whether a warning is printed
+    whenver GSI is used for authentication over a network connection with
+    an HTCondor daemon.
+    Daemons will print the warning to their log (no more frequently than
+    once every 12 hours).
+    Tools will print the warning to their stderr.
+    The default value is ``True``.
 
 :macro-def:`GSI_DAEMON_NAME`
     This configuration variable is retired. Instead use ``ALLOW_CLIENT``

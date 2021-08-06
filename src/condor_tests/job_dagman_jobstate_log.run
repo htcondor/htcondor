@@ -37,7 +37,7 @@ $dagman_args = "-verbose";
 # Note: we must find these lines *in the specified order*.
 # Pre script events, and POST_SCRIPT_STARTED events, are not currently
 # generated in recovery mode.
-@outlines = ('^\d+ INTERNAL \*\*\* DAGMAN_STARTED \d+\.0 \*\*\*$',
+@outlines = (
 	'^\d+ NodeA PRE_SCRIPT_STARTED - local - 1$',
 	'^\d+ NodeA PRE_SCRIPT_SUCCESS - local - 1$',
 	'^\d+ NodeA SUBMIT \d+.\d local - 1$',
@@ -82,14 +82,8 @@ $dagman_args = "-verbose";
 	'^\d+ NodeC POST_SCRIPT_SUCCESS \d+.0 - - 4$',
 	'^\d+ NodeD SUBMIT \d+.0 - - 5$',
 	'^\d+ NodeD EXECUTE \d+.0 - - 5$',
-	'^\d+ INTERNAL \*\*\* DAGMAN_FINISHED 3 \*\*\*$',
-	'^\d+ INTERNAL \*\*\* DAGMAN_STARTED \d+\.0 \*\*\*$',
-	'^\d+ INTERNAL \*\*\* RECOVERY_STARTED \*\*\*$',
 	'^\d+ NodeD JOB_TERMINATED \d+.0 - - 5$',
 	'^\d+ NodeD JOB_FAILURE 1 - - 5$',
-	'^\d+ INTERNAL \*\*\* RECOVERY_FINISHED \*\*\*$',
-	'^\d+ INTERNAL \*\*\* DAGMAN_FINISHED 1 \*\*\*$',
-	'^\d+ INTERNAL \*\*\* DAGMAN_STARTED \d+\.0 \*\*\*$',
 	'^\d+ NodeD SUBMIT \d+.0 - - 6$',
 	'^\d+ NodeD EXECUTE \d+.0 - - 6$',
 	'^\d+ NodeD JOB_TERMINATED \d+.0 - - 6$',
@@ -98,8 +92,7 @@ $dagman_args = "-verbose";
 	'^\d+ NodeE SUBMIT_FAILURE - - - 7$',
 	'^\d+ NodeE POST_SCRIPT_STARTED - - - 7$',
 	'^\d+ NodeE POST_SCRIPT_TERMINATED - - - 7$',
-	'^\d+ NodeE POST_SCRIPT_SUCCESS - - - 7$',
-	'^\d+ INTERNAL \*\*\* DAGMAN_FINISHED 0 \*\*\*$');
+	'^\d+ NodeE POST_SCRIPT_SUCCESS - - - 7$');
 
 my $killedchosen = 0;
 
@@ -196,7 +189,17 @@ $success = sub
 			chomp();
 			$line = $_;
 			$target = $outlines[$outindex];
+
+				# skip the internal dagman lines, they cause
+				# too many race conditions viz-a-vis jobs
+			next if ($line =~ /INTERNAL/);
+
+				# skip a submit failed.  This (rarely) happens
+				# when schedd is overloaded. dagman will retry
+			next if ($line =~ /Node[^E] SUBMIT_FAILURE/);
+
 			if( $line =~ /$target/ ) {
+
 				CondorTest::debug("$name: $line\n",1);
 				$outindex++;
 				if ($outindex > $#outlines) {

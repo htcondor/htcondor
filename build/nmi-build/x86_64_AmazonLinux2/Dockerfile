@@ -51,7 +51,7 @@ RUN mkdir -p /usr/local/condor/etc/examples && \
 # Add tools to add the HTCondor repository
 RUN yum install -y \
     https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm \
-    https://research.cs.wisc.edu/htcondor/repo/8.9/htcondor-release-current.amzn2.noarch.rpm \
+    https://research.cs.wisc.edu/htcondor/repo/9.1/htcondor-release-current.amzn2.noarch.rpm \
     && yum clean all
 
 # Need HTCondor to build and test HTCondor (BaTLab style)
@@ -82,6 +82,7 @@ RUN yum install -y \
     less \
     nano \
     rpmlint \
+    strace \
     sudo \
     vim \
     && yum clean all
@@ -169,3 +170,6 @@ RUN yum install -y \
     && yum clean all
 
 RUN pip3 install pytest pytest-httpserver
+
+# Enable daily repo to get latest packages for tarballs
+RUN yum-config-manager --enablerepo=htcondor-daily

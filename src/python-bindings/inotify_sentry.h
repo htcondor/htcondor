@@ -28,8 +28,17 @@ public:
         {
             THROW_EX(HTCondorIOError, "Failed to create inotify instance.");
         }
-        fcntl(m_fd, F_SETFD, FD_CLOEXEC);
-        fcntl(m_fd, F_SETFL, O_NONBLOCK);
+		int r = 0;
+        r = fcntl(m_fd, F_SETFD, FD_CLOEXEC);
+		if (r < 0) 
+		{
+            THROW_EX(HTCondorIOError, "Failed to set close on exec flag.");
+		}
+        r = fcntl(m_fd, F_SETFL, O_NONBLOCK);
+		if (r < 0) 
+		{
+            THROW_EX(HTCondorIOError, "Failed to set nonblocking flag.");
+		}
 
         if (inotify_add_watch(m_fd, fname.c_str(), IN_MODIFY | IN_ATTRIB | IN_DELETE_SELF) == -1)
         {

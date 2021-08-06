@@ -1218,7 +1218,7 @@ Starter::peek(int /*cmd*/, Stream *sock)
 	}
 	if (!s->code(file_count) || !s->end_of_message())
 	{
-		dprintf(D_ALWAYS, "Failed to send file count %ld for peeking at logs.\n", file_count);
+		dprintf(D_ALWAYS, "Failed to send file count %zu for peeking at logs.\n", file_count);
 	}
 	return file_count == file_list.size();
 }
@@ -2814,7 +2814,7 @@ Starter::Reaper(int pid, int exit_status)
 			// This kills the shadow, which should cause us to catch a
 			// SIGQUIT from the startd in short order...
 			jic->holdJob( "Pre script failed.",
-				CONDOR_HOLD_CODE_PreScriptFailed,
+				CONDOR_HOLD_CODE::PreScriptFailed,
 				0 );
 
 			// ... but we might as well do what the SIGQUIT handler does
@@ -2852,7 +2852,7 @@ Starter::Reaper(int pid, int exit_status)
 			// This kills the shadow, which should cause us to catch a
 			// SIGQUIT from the startd in short order...
 			jic->holdJob( "Post script failed.",
-				CONDOR_HOLD_CODE_PostScriptFailed,
+				CONDOR_HOLD_CODE::PostScriptFailed,
 				0 );
 
 			// ... but we might as well do what the SIGQUIT handler does

@@ -410,6 +410,11 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		attr_name = NULL;
 	}
 
+	if ( !owner ) {
+		dprintf(D_ALWAYS,"ERROR - missing owner field\n");
+		return NULL;
+	}
+
 	if ( (gman_node=lookupGmanByOwner(owner, attr_value, cluster, proc)) ) {
 		// found it
 		return gman_node;
@@ -426,7 +431,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 
 
 #ifndef WIN32
-	if (owner && strcasecmp(owner, "root") == 0 ) {
+	if (strcasecmp(owner, "root") == 0 ) {
 		dprintf(D_ALWAYS, "Tried to start condor_gmanager as root.\n");
 		return NULL;
 	}
@@ -470,12 +475,6 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	}
 	free(gman_args);
 
-	// build a constraint
-	if ( !owner ) {
-		dprintf(D_ALWAYS,"ERROR - missing owner field\n");
-		free(gman_binary);
-		return NULL;
-	}
 	std::string constraint;
 	if ( !attr_name  ) {
 		formatstr(constraint, "(%s=?=\"%s\"&&%s==%d)",

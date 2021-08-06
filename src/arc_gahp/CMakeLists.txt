@@ -27,7 +27,6 @@ if( NOT WINDOWS )
 		arcgahp_common.cpp
 		io_loop_pthread.cpp
 		PipeBuffer.cpp
-		DelegationInterface.cpp
 	)
 
 	condor_exe( arc_gahp

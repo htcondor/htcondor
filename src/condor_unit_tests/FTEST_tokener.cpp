@@ -70,10 +70,6 @@ typedef nocase_sorted_tokener_lookup_table<TestTableItem> NocaseTestTable;
 enum { item_foo, item_bar, item_BAZ, item_aaa, item_AAA, item_bbb, item_CCC };
 #define TBLITEM(n,x) { #n, item_ ## n, x }
 
-static const TestTableItem SingleItem[] = { TBLITEM(foo,0) };
-static const TestTableItem TwoItems[] = { TBLITEM(bar,0), TBLITEM(foo,1) };
-static const TestTableItem ThreeItems[] = { TBLITEM(AAA,0), TBLITEM(BAZ,1), TBLITEM(CCC,2) };
-
 static const TestTableItem UnsortedTestItems[] = {
 	TBLITEM(CCC,0),
 	TBLITEM(bbb,1),

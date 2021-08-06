@@ -1,12 +1,12 @@
 #!/usr/bin/env pytest
 
-# this test replicates cmr-monitor-basic
+#
+# Test one each of two different custom machine resources in the same job,
+# checking the sum and peak metrics for each.  These tests are run against
+# static slots for simplicity.
+#
 
 import logging
-
-import textwrap
-import fractions
-import time
 
 import htcondor
 
@@ -15,115 +15,151 @@ from ornithology import (
     standup,
     action,
     Condor,
+    format_script,
     write_file,
-    JobID,
+    track_quantity,
     SetJobStatus,
     JobStatus,
-    track_quantity,
-    format_script,
 )
+
+from libcmr import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# TODO: these are hard-coded based on the parameters below
-# TODO: should be possible to un-hard-code them...
-MONITOR_PERIOD = 5
-NUM_PERIODS = 3
+
+monitor_period = 5
+resources = {
+    "SQUID": 4,
+    "TAKO": 4,
+}
+usages = {
+    "SQUID": [5, 1, 9, 4],
+    "TAKO": [500, 100, 900, 400],
+}
+peaks = {
+    "SQUID": [
+        [ 51, 51, 91, 11, 41, 41 ],
+        [ 42, 42, 92, 12, 52, 52 ],
+        [ 53, 53, 13, 93, 43, 43 ],
+        [ 44, 44, 14, 94, 54, 54 ],
+    ],
+    "TAKO": [
+        [ 5100, 5100, 9100, 1100, 4100, 4100 ],
+        [ 4200, 4200, 9200, 1200, 5200, 5200 ],
+        [ 5300, 5300, 1300, 9300, 4300, 4300 ],
+        [ 4400, 4400, 1400, 9400, 5400, 5400 ],
+    ],
+}
 
 
 @config(
     params={
-        "static_slots": {
-            "NUM_CPUS": "16",
-            "NUM_SLOTS": "16",
-            "ADVERTISE_CMR_UPTIME_SECONDS": "TRUE",
-            "MACHINE_RESOURCE_INVENTORY_XXX": "$(TEST_DIR)/discovery.py",
-            "STARTD_CRON_XXX_MONITOR_EXECUTABLE": "$(TEST_DIR)/monitor.py",
-            "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) XXX_MONITOR",
-            "STARTD_CRON_XXX_MONITOR_MODE": "periodic",
-            "STARTD_CRON_XXX_MONITOR_PERIOD": str(MONITOR_PERIOD),
-            "STARTD_CRON_XXX_MONITOR_METRICS": "SUM:XXX",
-        }
+        "SQUIDsAndTAKOsUsageAndMemory": {
+            "config": {
+                "NUM_CPUS": "16",
+                "NUM_SLOTS": "16",
+                "ADVERTISE_CMR_UPTIME_SECONDS": "TRUE",
+
+                "MACHINE_RESOURCE_INVENTORY_SQUIDs": "$(TEST_DIR)/SQUID-discovery.py",
+                "STARTD_CRON_SQUIDs_MONITOR_EXECUTABLE": "$(TEST_DIR)/SQUID-monitor.py",
+                "STARTD_CRON_SQUIDs_MONITOR_MODE": "periodic",
+                "STARTD_CRON_SQUIDs_MONITOR_PERIOD": str(monitor_period),
+                "STARTD_CRON_SQUIDs_MONITOR_METRICS": "SUM:SQUIDs, PEAK:SQUIDsMemory",
+
+                "MACHINE_RESOURCE_INVENTORY_TAKOs": "$(TEST_DIR)/TAKO-discovery.py",
+                "STARTD_CRON_TAKOs_MONITOR_EXECUTABLE": "$(TEST_DIR)/TAKO-monitor.py",
+                "STARTD_CRON_TAKOs_MONITOR_MODE": "periodic",
+                "STARTD_CRON_TAKOs_MONITOR_PERIOD": str(monitor_period),
+                "STARTD_CRON_TAKOs_MONITOR_METRICS": "SUM:TAKOs, PEAK:TAKOsMemory",
+
+                "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) SQUIDs_MONITOR TAKOs_MONITOR",
+            },
+        },
     }
 )
-def slot_config(request):
-    return request.param
-
-
-@config(params={"one_resource_type": {"XXX0": 1, "XXX1": 4, "XXX2": 5, "XXX3": 9}})
-def resources(request):
+def the_config(request):
     return request.param
 
 
 @config
-def discovery_script(resources):
-    return format_script(
-        """
-        #!/usr/bin/python3
-
-        print('DetectedXXX="{res}"')
-        """.format(
-            res=", ".join(resources.keys())
-        )
-    )
+def slot_config(the_config):
+    return the_config["config"]
 
 
 @config
-def monitor_script(resources):
-    return format_script(
-        "#!/usr/bin/python3\n"
-        + "".join(
-            textwrap.dedent(
-                """
-            print('SlotMergeConstraint = StringListMember( "{name}", AssignedXXX )')
-            print('UptimeXXXSeconds = {increment}')
-            print('- {name}')
-            """.format(
-                    name=name, increment=increment
-                )
-            )
-            for name, increment in resources.items()
-        )
-    )
-
-
-@config
-def num_resources(resources):
-    return len(resources)
+def num_resources():
+    nr = next(iter(resources.values()))
+    assert all(number == nr for number in resources.values())
+    return nr
 
 
 @standup
-def condor(test_dir, slot_config, discovery_script, monitor_script):
-    write_file(test_dir / "discovery.py", discovery_script)
-    write_file(test_dir / "monitor.py", monitor_script)
+def condor(test_dir, slot_config):
+    for resource in resources.keys():
+        sequence = { f"{resource}{i}": j for i, j in enumerate(usages[resource]) }
+        discovery_script = format_script(discovery_script_for(resource, sequence))
+        write_file(test_dir / f"{resource}-discovery.py", discovery_script)
+
+        sequences = { f"{resource}{i}": j for i, j in enumerate(peaks[resource]) }
+        monitor_script = both_monitor_script(resource, sequence, sequences)
+        write_file(test_dir / f"{resource}-monitor.py", monitor_script)
 
     with Condor(
         local_dir=test_dir / "condor",
         config={**slot_config, "TEST_DIR": test_dir.as_posix()},
     ) as condor:
-        # try to make sure the monitor runs before we continue with the test
-        time.sleep(MONITOR_PERIOD * 1.5)
         yield condor
+
+
+def the_job(test_dir, resources):
+    job_script = format_script( "#!/usr/bin/python3\n" + textwrap.dedent("""
+        import os
+        import sys
+        import time
+
+        elapsed = 0;
+        while elapsed < int(sys.argv[1]):""" +
+
+        "".join( f"""
+            os.system('condor_status -ads ${{_CONDOR_SCRATCH_DIR}}/.update.ad -af Assigned{resource}s {resource}sMemoryUsage')
+        """ for resource in resources
+        ) +
+
+        """
+            time.sleep(1)
+            elapsed += 1
+        """)
+    )
+
+    script_file = test_dir / "poll-memory.py"
+    write_file(script_file, job_script)
+
+    job_spec = {
+                "executable": script_file.as_posix(),
+                "arguments": "17",
+                "log": (test_dir / "events.log").as_posix(),
+                "output": (test_dir / "poll-memory.$(Cluster).$(Process).out").as_posix(),
+                "error": (test_dir / "poll-memory.$(Cluster).$(Process).err").as_posix(),
+                "getenv": "true",
+                "LeaveJobInQueue": "true",
+    }
+
+    for resource in resources:
+        job_spec[f"request_{resource}s"] = "1"
+
+    return job_spec
 
 
 @action
 def handle(test_dir, condor, num_resources):
     handle = condor.submit(
-        description={
-            "executable": "/bin/sleep",
-            "arguments": "17",
-            "request_XXX": "1",
-            "log": (test_dir / "events.log").as_posix(),
-            "LeaveJobInQueue": "true",
-        },
-        count=num_resources * 2,
+        description=the_job(test_dir, resources.keys()),
+        count=num_resources * 2
     )
 
-    # we must wait for both the handle and the job queue here,
-    # because we want to use both later
-    handle.wait(verbose=True)
-    condor.job_queue.wait_for_job_completion(handle.job_ids)
+    assert(handle.wait(verbose=True, timeout=180))
+    assert(condor.job_queue.wait_for_job_completion(handle.job_ids))
 
     yield handle
 
@@ -135,9 +171,9 @@ def num_jobs_running_history(condor, handle, num_resources):
     return track_quantity(
         condor.job_queue.filter(lambda j, e: j in handle.job_ids),
         increment_condition=lambda id_event: id_event[-1]
-        == SetJobStatus(JobStatus.RUNNING),
+            == SetJobStatus(JobStatus.RUNNING),
         decrement_condition=lambda id_event: id_event[-1]
-        == SetJobStatus(JobStatus.COMPLETED),
+            == SetJobStatus(JobStatus.COMPLETED),
         max_quantity=num_resources,
         expected_quantity=num_resources,
     )
@@ -165,174 +201,47 @@ def num_busy_slots_history(startd_log_file, handle, num_resources):
 
 
 class TestCustomMachineResources:
-    def test_correct_number_of_resources_assigned(self, condor, num_resources):
-        result = condor.status(
-            ad_type=htcondor.AdTypes.Startd, projection=["SlotID", "AssignedXXX"]
-        )
 
-        # if a slot doesn't have a resource, it simply has no entry in its ad
-        assert len([ad for ad in result if "AssignedXXX" in ad]) == num_resources
-
-    def test_correct_uptimes_from_monitor(self, condor, resources):
-        direct = condor.direct_status(
-            htcondor.DaemonTypes.Startd,
-            htcondor.AdTypes.Startd,
-            constraint="AssignedXXX =!= undefined",
-            projection=["SlotID", "AssignedXXX", "UptimeXXXSeconds"],
-        )
-
-        measured_uptimes = set(int(ad["UptimeXXXSeconds"]) for ad in direct)
-
-        logger.info(
-            "Measured uptimes were {}, expected multiples of {} (not necessarily in order)".format(
-                measured_uptimes, resources.values()
+    def test_correct_number_of_resources_assigned(self, condor):
+        for resource, number in resources.items():
+            result = condor.status(
+                ad_type=htcondor.AdTypes.Startd, projection=["SlotID", f"Assigned{resource}s"]
             )
-        )
 
-        # the uptimes are increasing over time, so we
-        # assert that we have some reasonable multiple of the increments being
-        # emitted by the monitor script
-        assert any(
-            {multiplier * u for u in resources.values()} == measured_uptimes
-            for multiplier in range(1000)
-        )
+            assert len([ad for ad in result if f"Assigned{resource}s" in ad]) == number
 
-    def test_never_more_jobs_running_than_num_resources(
+    def test_enough_jobs_running(
+        self, num_jobs_running_history, num_resources
+    ):
+        assert num_resources in num_jobs_running_history
+
+    def test_never_too_many_jobs_running(
         self, num_jobs_running_history, num_resources
     ):
         assert max(num_jobs_running_history) <= num_resources
 
-    def test_num_jobs_running_hits_num_resources(
-        self, num_jobs_running_history, resources
-    ):
-        num_resources = len(resources)
-        assert num_resources in num_jobs_running_history
-
-    def test_never_more_busy_slots_than_num_resources(
-        self, num_busy_slots_history, num_resources
-    ):
-        assert max(num_busy_slots_history) <= num_resources
-
-    def test_num_busy_slots_hits__num_resources(
+    def test_enough_busy_slots(
         self, num_busy_slots_history, num_resources
     ):
         assert num_resources in num_busy_slots_history
 
-    def test_reported_usage_in_job_ads_and_event_log_match(self, handle):
-        terminated_events = handle.event_log.filter(
-            lambda e: e.type is htcondor.JobEventType.JOB_TERMINATED
-        )
-        ads = handle.query(projection=["ClusterID", "ProcID", "XXXAverageUsage"])
+    def test_never_too_many_busy_slots(
+        self, num_busy_slots_history, num_resources
+    ):
+        assert max(num_busy_slots_history) <= num_resources
 
-        # make sure we got the right number of terminate events and ads
-        # before doing the real assertion
-        assert len(terminated_events) == len(ads) == len(handle)
+    def test_correct_uptimes_from_monitors(self, condor, handle):
+        for resource in resources.keys():
+            sequence = { f"{resource}{i}": j for i, j in enumerate(usages[resource]) }
+            sum_check_correct_uptimes(condor, handle, resource, sequence)
 
-        jobid_to_usage_via_event = {
-            JobID.from_job_event(event): event["XXXUsage"]
-            for event in sorted(terminated_events, key=lambda e: e.proc)
-        }
+    def test_correct_peaks_from_monitors(self, condor, handle):
+        for resource in resources.keys():
+            sequences = { f"{resource}{i}": j for i, j in enumerate(peaks[resource]) }
+            peak_check_correct_uptimes(condor, handle, resource, sequences)
 
-        jobid_to_usage_via_ad = {
-            JobID.from_job_ad(ad): round(ad["XXXAverageUsage"], 2)
-            for ad in sorted(ads, key=lambda ad: ad["ProcID"])
-        }
-
-        logger.debug(
-            "Custom resource usage from job event log: {}".format(
-                jobid_to_usage_via_event
-            )
-        )
-        logger.debug(
-            "Custom resource usage from job ads: {}".format(jobid_to_usage_via_ad)
-        )
-
-        assert jobid_to_usage_via_ad == jobid_to_usage_via_event
-
-    def test_reported_usage_in_job_ads_makes_sense(self, handle, resources):
-        ads = handle.query(
-            projection=[
-                "ClusterID",
-                "ProcID",
-                "AssignedXXX",
-                "XXXAverageUsage",
-                "RemoteWallClockTime",
-            ]
-        )
-
-        # Here's the deal: XXXAverageUsage is
-        #
-        #   (increment amount * number of periods)
-        # -----------------------------------------
-        #    (monitor period * number of periods)
-        #
-        # BUT in practice, you usually get the monitor period wrong by a second due to rounding.
-        # What we observe is that very often, some increments will be a second longer or shorter
-        # than the increment period. So we could get something like
-        #
-        #          (increment amount * number of periods)
-        # ---------------------------------------------------------
-        # (monitor period * number of periods) + (number of periods)
-        #
-        # Also, we could get one more increment than expected
-        # (which only matters if we also got the long periods; otherwise, it just cancels out).
-        # This gives us three kinds of possibilities to check against.
-
-        all_options = []
-        for ad in ads:
-            increment = resources[ad["AssignedXXX"]]
-            usage = fractions.Fraction(float(ad["XXXAverageUsage"])).limit_denominator(
-                30
-            )
-            print(
-                "Job {}.{}, resource {}, increment {}, usage {} ({})".format(
-                    ad["ClusterID"],
-                    ad["ProcID"],
-                    ad["AssignedXXX"],
-                    increment,
-                    usage,
-                    float(usage),
-                )
-            )
-
-            exact = [fractions.Fraction(increment, MONITOR_PERIOD)]
-            dither_periods = [
-                fractions.Fraction(
-                    increment * NUM_PERIODS,
-                    ((MONITOR_PERIOD * NUM_PERIODS) + extra_periods),
-                )
-                for extra_periods in range(-NUM_PERIODS, NUM_PERIODS + 1)
-            ]
-            extra_period = [
-                fractions.Fraction(
-                    increment * NUM_PERIODS + 1,
-                    ((MONITOR_PERIOD * (NUM_PERIODS + 1)) + extra_periods),
-                )
-                for extra_periods in range(-(NUM_PERIODS + 1), NUM_PERIODS + 2)
-            ]
-
-            print(
-                "*" if usage in exact else " ",
-                "exact".ljust(25),
-                ",".join(str(f) for f in exact),
-            )
-            print(
-                "*" if usage in dither_periods else " ",
-                "dither periods".ljust(25),
-                ",".join(str(f) for f in dither_periods),
-            )
-            print(
-                "*" if usage in extra_period else " ",
-                "dither, extra increment".ljust(25),
-                ",".join(str(f) for f in extra_period),
-            )
-            print()
-
-            # build the list of possibilities here, but delay assertions until we've printed all the debug messages
-            all_options.append(exact + dither_periods + extra_period)
-
-        assert all(
-            fractions.Fraction(float(ad["XXXAverageUsage"])).limit_denominator(30)
-            in options
-            for ad, options in zip(ads, all_options)
-        )
+    def test_reported_usage_in_job_ads_and_event_log_match(
+        self, handle
+    ):
+        for resource in resources.keys():
+            both_check_matching_usage(handle, resource)

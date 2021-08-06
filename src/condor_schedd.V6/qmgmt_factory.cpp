@@ -583,7 +583,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 		std::string txt(factory->error_stack()->getFullText()); if (txt.empty()) { txt = ""; }
 		formatstr(msg, "failed to create ClassAd for Job %d.%d : %s", jid.cluster, jid.proc, txt.c_str());
 		dprintf(D_ALWAYS, "ERROR: %s", msg.c_str());
-		setJobFactoryPauseAndLog(ClusterAd, mmHold, CONDOR_HOLD_CODE_Unspecified, msg);
+		setJobFactoryPauseAndLog(ClusterAd, mmHold, CONDOR_HOLD_CODE::Unspecified, msg);
 		//factory->Pause(mmHold);
 		//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSED, mmHold);
 		//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSE_REASON, msg);

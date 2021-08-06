@@ -249,6 +249,56 @@ static const char *default_super_user =
 	"root";
 #endif
 
+std::map<JobQueueKey, std::map<std::string, std::string>> PrivateAttrs;
+
+int
+SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value)
+{
+	if (attr_name == NULL || attr_value == NULL) {return -1;}
+
+	ClassAd *job_ad = GetJobAd(cluster_id, proc_id);
+	if (job_ad == NULL) {return -1;}
+
+	Transaction *xact = JobQueue->getActiveTransaction();
+	std::string quoted_value;
+	QuoteAdStringValue(attr_value, quoted_value);
+	JobQueueKey job_id(cluster_id, proc_id);
+	JobQueue->SetAttribute(job_id, attr_name, quoted_value.c_str(), SETDIRTY);
+	job_ad->Delete(attr_name);
+	PrivateAttrs[job_id][attr_name] = attr_value;
+	JobQueue->setActiveTransaction(xact);
+	return 0;
+}
+
+int
+GetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, std::string &attr_value)
+{
+	if (attr_name == NULL) {return -1;}
+	JobQueueKey job_id(cluster_id, proc_id);
+	auto job_itr = PrivateAttrs.find(job_id);
+	if (job_itr == PrivateAttrs.end()) {return -1;}
+	auto attr_itr = job_itr->second.find(attr_name);
+	if (attr_itr == job_itr->second.end()) {return -1;}
+	attr_value = attr_itr->second;
+	return 0;
+}
+
+int
+DeletePrivateAttribute(int cluster_id, int proc_id, const char *attr_name)
+{
+	if (attr_name == NULL) {return -1;}
+	ClassAd *job_ad = GetJobAd(cluster_id, proc_id);
+	if (job_ad == NULL) {return -1;}
+	job_ad->InsertAttr(attr_name, "");
+	DeleteAttribute(cluster_id, proc_id, attr_name);
+	JobQueueKey job_id(cluster_id, proc_id);
+	PrivateAttrs[job_id].erase(attr_name);
+	if (PrivateAttrs[job_id].empty()) {
+		PrivateAttrs.erase(job_id);
+	}
+	return 0;
+}
+
 // in schedd.cpp
 void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, int increment /*, JobQueueJob * job*/);
 
@@ -928,7 +978,7 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		job_ad->LookupString( ATTR_HOLD_REASON, hold_reason );
 		if ( hold_reason == "Spooling input data files" ) {
 			job_ad->Assign( ATTR_HOLD_REASON_CODE,
-							CONDOR_HOLD_CODE_SpoolingInput );
+							CONDOR_HOLD_CODE::SpoolingInput );
 		}
 	}
 
@@ -1906,7 +1956,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				// we need to redo the rewriting here.
 			int hold_code = -1;
 			ad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
-			if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE_SpoolingInput ) {
+			if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE::SpoolingInput ) {
 				if ( rewriteSpooledJobAd( ad, cluster, proc, true ) ) {
 					JobQueueDirty = true;
 				}
@@ -1962,6 +2012,18 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				ad->Delete(ATTR_JOB_TRANSFERRING_OUTPUT_TIME);
 				JobQueueDirty = true;
 			}
+			if( ad->LookupString(ATTR_CLAIM_ID, buffer) ) {
+				ad->Delete(ATTR_CLAIM_ID);
+				PrivateAttrs[key][ATTR_CLAIM_ID] = buffer;
+			}
+			if( ad->LookupString(ATTR_CLAIM_IDS, buffer) ) {
+				ad->Delete(ATTR_CLAIM_IDS);
+				PrivateAttrs[key][ATTR_CLAIM_IDS] = buffer;
+			}
+			if( ad->LookupString(ATTR_PAIRED_CLAIM_ID, buffer) ) {
+				ad->Delete(ATTR_PAIRED_CLAIM_ID);
+				PrivateAttrs[key][ATTR_PAIRED_CLAIM_ID] = buffer;
+			}
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			int num_procs = IncrementClusterSize(cluster_num);
@@ -1982,7 +2044,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				updates++;
 			}
 		}
-		dprintf(D_FULLDEBUG, "Finished restoring JobSet state, mapping %u jobs into %lu sets\n",
+		dprintf(D_FULLDEBUG, "Finished restoring JobSet state, mapping %u jobs into %zu sets\n",
 			updates, scheduler.jobSets->count());
 	}
 
@@ -2029,12 +2091,14 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// The spool renaming also needs to be saved here.  This is not
 		// optional, so we cannot just call CleanJobQueue() here, because
 		// that does not abort on failure.
+#if 0
 	if( JobQueueDirty ) {
 		if( !JobQueue->TruncLog() ) {
 			EXCEPT("Failed to write the modified job queue log to disk, so cannot continue.");
 		}
 		JobQueueDirty = false;
 	}
+#endif
 
 	if( spool_cur_version < 1 ) {
 		SpoolHierarchyChangePass2(spool.c_str(),spool_rename_list);
@@ -2052,6 +2116,22 @@ CleanJobQueue()
 	if (JobQueueDirty) {
 		dprintf(D_ALWAYS, "Cleaning job queue...\n");
 		JobQueue->TruncLog();
+
+		auto job_itr = PrivateAttrs.begin();
+		while (job_itr != PrivateAttrs.end()) {
+			ClassAd *job_ad = GetJobAd(job_itr->first);
+			if (job_ad == NULL) {
+				job_itr = PrivateAttrs.erase(job_itr);
+			} else {
+				for (auto &attr : job_itr->second) {
+					if (SetAttributeString(job_itr->first.cluster, job_itr->first.proc, attr.first.c_str(), attr.second.c_str()) == 0) {
+						job_ad->Delete(attr.first.c_str());
+					}
+				}
+				job_itr++;
+			}
+		}
+
 		JobQueueDirty = false;
 	}
 }
@@ -3786,7 +3866,7 @@ enum {
 	catSubmitterIdent = 0x0040,
 	catNewMaterialize = 0x0080,  // attributes that control the job factory
 	catMaterializeState = 0x0100, // change in state of job factory
-	catSpoolingHold = 0x0200,    // hold reason was set to CONDOR_HOLD_CODE_SpoolingInput
+	catSpoolingHold = 0x0200,    // hold reason was set to CONDOR_HOLD_CODE::SpoolingInput
 	catPostSubmitClusterChange = 0x400, // a cluster ad was changed after submit time which calls for special processing in commit transaction
 	catCallbackTrigger = 0x1000, // indicates that a callback should happen on commit of this attribute
 	catCallbackNow = 0x20000,    // indicates that a callback should happen when setAttribute is called
@@ -4209,7 +4289,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 
 		bool set_to_nobody = false;
-		if (user_is_the_new_owner && ! ignore_domain_mismatch_when_setting_owner) {
+		if (user_is_the_new_owner && Q_SOCK && ! ignore_domain_mismatch_when_setting_owner) {
 			// Similar to the case above, if UID_DOMAIN != socket FQU domain,
 			// then we map to 'nobody' unless TRUST_UID_DOMAIN is set.
 			//
@@ -4546,10 +4626,26 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		// if the hold reason is set to one of the magic values that indicate a hold for spooling
 		// data, we want to attach a trigger to the transaction so we know to do filepath fixups
 		// after the transaction is committed.
+		// if the hold reason code is NOT spooling for data, then we want to update aggregates
+		// on the number of holds and number of holds per reason.
 		bool is_spooling_hold = false;
 		if (attr_id == idATTR_HOLD_REASON_CODE) {
 			int hold_reason = (int)strtol( attr_value, NULL, 10 );
-			is_spooling_hold = (CONDOR_HOLD_CODE_SpoolingInput == hold_reason);
+			is_spooling_hold = (CONDOR_HOLD_CODE::SpoolingInput == hold_reason);
+			if (!is_spooling_hold) {
+				// Update count in job ad of how many times job was put on hold
+				incrementJobAdAttr(cluster_id, proc_id, ATTR_NUM_HOLDS);
+
+				// Update count per hold reason in the job ad.
+				// If the reason_code int is not a valid CONDOR_HOLD_CODE enum, an exception will be thrown.
+				try {
+					incrementJobAdAttr(cluster_id, proc_id, (CONDOR_HOLD_CODE::_from_integral(hold_reason))._to_string(), ATTR_NUM_HOLDS_BY_REASON);
+				}
+				catch (std::runtime_error const&) {
+					// Somehow reason_code is not a valid hold reason, so consider it as Unspecified here.
+					incrementJobAdAttr(cluster_id, proc_id, (+CONDOR_HOLD_CODE::Unspecified)._to_string(), ATTR_NUM_HOLDS_BY_REASON);
+				}
+			}
 		} else if (attr_id == idATTR_HOLD_REASON) {
 			is_spooling_hold = YourString("Spooling input data files") == attr_value;
 		}
@@ -5461,7 +5557,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 		return false;
 	}
 
-	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( file );
+	X509Credential* proxy_handle = x509_proxy_read( file );
 
 	if ( proxy_handle == NULL ) {
 		dprintf( D_FAILURE, "Failed to read job proxy: %s\n",
@@ -5477,7 +5573,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 	char *fullfqan = NULL;
 	extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &fullfqan );
 
-	x509_proxy_free( proxy_handle );
+	delete proxy_handle;
 
 	x509_attrs.Assign( ATTR_X509_USER_PROXY_EXPIRATION, expire_time );
 	x509_attrs.Assign( ATTR_X509_USER_PROXY_SUBJECT, proxy_identity );
@@ -5903,7 +5999,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 				int hold_code = -1;
 				procad->LookupInteger(ATTR_JOB_STATUS, job_status);
 				procad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
-				if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE_SpoolingInput ) {
+				if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE::SpoolingInput ) {
 					SpooledJobFiles::createJobSpoolDirectory(procad,PRIV_UNKNOWN);
 				}
 
@@ -5948,7 +6044,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 								  ATTR_TRANSFER_INPUT_SIZE_MB, (int)xfer_input_size_mb,
 								  "MAX_TRANSFER_INPUT_MB", (int)max_xfer_input_mb);
 						holdJob(job_id.cluster, job_id.proc, hold_reason.c_str(),
-								CONDOR_HOLD_CODE_MaxTransferInputSizeExceeded, 0);
+								CONDOR_HOLD_CODE::MaxTransferInputSizeExceeded, 0);
 					}
 				}
 			}

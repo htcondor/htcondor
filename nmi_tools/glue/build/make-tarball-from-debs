@@ -88,6 +88,7 @@ common_externals="blahp \
     libglobus-xio-gsi-driver \
     libglobus-xio-popen-driver \
     libgomp1 \
+    libltdl7 \
     libmunge2 \
     libscitokens0 \
     libvomsapi1v5"

@@ -527,10 +527,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				job_not_started = true;
 				std::string starterErrorMessage = "Singularity test failed:";
 				starterErrorMessage += singErrorMessage;
-				Starter->jic->notifyStarterError( starterErrorMessage.c_str(),
-			    	                              	true,
-			        	                          CONDOR_HOLD_CODE_SingularityTestFailed,
-			            	                      0);
+				EXCEPT("%s", starterErrorMessage.c_str());
 				return 0;
 			}
 		}
@@ -744,7 +741,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			if( !ThisProcRunsAlongsideMainProc() ) {
 				Starter->jic->notifyStarterError( err_msg.c_str(),
 			    	                              true,
-			        	                          CONDOR_HOLD_CODE_FailedToCreateProcess,
+			        	                          CONDOR_HOLD_CODE::FailedToCreateProcess,
 			            	                      create_process_errno );
 			}
 		}

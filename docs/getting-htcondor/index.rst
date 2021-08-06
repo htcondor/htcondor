@@ -12,6 +12,7 @@ Getting HTCondor
     from-our-repositories
 
     install-linux-as-user
+    install-macos-as-root
 
     for-docker
 
@@ -45,6 +46,7 @@ instructions corresponding to your operating system:
 * :doc:`Linux <install-linux-as-root>`.  HTCondor supports Enterprise Linux 7
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
   Ubuntu 18.04 and 20.04.
+* :doc:`macOS <install-macos-as-root>`.  HTCondor supports macOS 10.15 and later.
 
 .. _hand_install_with_user_privileges:
 
@@ -60,6 +62,8 @@ misbehaving jobs.
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
   Ubuntu 18.04 and 20.04.
 
+* :doc:`macOS <install-linux-as-user>`.  HTCondor supports macOS 10.15 and later.
+
 .. _docker:
 
 .. rubric:: Docker Images
@@ -67,8 +71,8 @@ misbehaving jobs.
 HTCondor is also `available <https://hub.docker.com/u/htcondor>`_ on Docker Hub.
 
 If you're new to HTCondor, the ``htcondor/mini`` image is equivalent to
-following any of the the instructions above, and once you've started the
-container, you can proceed directly to :ref:`quick_start_guide` and learn
+following any of the instructions above, and once you've started the
+container, you can proceed directly to the :ref:`quick_start_guide` and learn
 how to run jobs.
 
 For other options, see our :doc:`docker image list <for-docker>`.

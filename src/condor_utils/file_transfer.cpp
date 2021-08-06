@@ -1610,8 +1610,26 @@ FileTransfer::HandleCommands(int command, Stream *s)
 				} else {
 						// We aren't looking at the userlog file... ship it!
 					const char *filename = spool_space.GetFullPath();
-					if ( !transobject->InputFiles->file_contains(filename) &&
-						 !transobject->InputFiles->file_contains(condor_basename(filename)) ) {
+
+					// If the spool contains a file with the same full path as a
+					// file in the input list, do nothing (don't duplicate it).
+					//
+					// If the spool contains a file whose basename is in the input list,
+					// prefer the copy of the file in spool, because it might have been
+					// uploaded as part of a checkpoint.
+					if( transobject->InputFiles->file_contains(filename) ) {
+						// dprintf( D_ALWAYS, "[FT] Found full path %s in input files and SPOOL, doing nothing.\n", filename );
+					} else if( transobject->InputFiles->file_contains(condor_basename(filename)) ) {
+						transobject->InputFiles->remove(condor_basename(filename));
+						transobject->InputFiles->append(filename);
+						// dprintf( D_ALWAYS, "[FT] Found base name %s in input files and SPOOL, removing it and adding %s.\n", condor_basename(filename), filename );
+						if( transobject->ExecFile && strcmp( condor_basename(filename), transobject->ExecFile ) == 0 ) {
+							// dprintf( D_ALWAYS, "[FT] Changing executable name from %s to %s.\n", transobject->ExecFile, filename );
+							free(transobject->ExecFile);
+							transobject->ExecFile = strdup(filename);
+						}
+					} else {
+						// dprintf( D_ALWAYS, "[FT] Full path %s not in SPOOL but not input files, appending to intput files.\n", filename );
 						transobject->InputFiles->append(filename);
 					}
 				}
@@ -2230,7 +2248,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 			download_success = false;
 			try_again = false;
-			hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+			hold_code = CONDOR_HOLD_CODE::DownloadFileError;
 			hold_subcode = EPERM;
 
 			error_buf.formatstr_cat(
@@ -2261,7 +2279,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				dprintf(D_ALWAYS,"REMAP: DoDownload: %s\n",error_buf.c_str());
 				download_success = false;
 				try_again = false;
-				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+				hold_code = CONDOR_HOLD_CODE::DownloadFileError;
 				hold_subcode = EPERM;
 
 					// In order for the wire protocol to remain in a well
@@ -2279,7 +2297,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						dprintf(D_ALWAYS, "REMAP: DoDownload: %s\n",error_buf.c_str());
 						download_success = false;
 						try_again = false;
-						hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+						hold_code = CONDOR_HOLD_CODE::DownloadFileError;
 						hold_subcode = EPERM;
 						fullname = NULL_FILE;
 					} else {
@@ -2309,7 +2327,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.Value());
 				download_success = false;
 				try_again = false;
-				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+				hold_code = CONDOR_HOLD_CODE::DownloadFileError;
 				hold_subcode = EPERM;
 
 					// In order for the wire protocol to remain in a well
@@ -2484,7 +2502,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						s->my_ip_str(),fullname.c_str());
 					download_success = false;
 					try_again = false;
-					hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+					hold_code = CONDOR_HOLD_CODE::DownloadFileError;
 					hold_subcode = rt_result;
 
 					dprintf(D_ALWAYS,
@@ -2628,7 +2646,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 							dprintf(D_FULLDEBUG, "DoDownload: Failed to evaluate list entry to string.\n");
 							signed_urls.emplace_back("");
 						}
-						else if (sign_s3_urls && url_value.substr(0, 5) == "s3://")
+						else if (sign_s3_urls &&
+						  (starts_with_ignore_case(url_value, "s3://") || starts_with_ignore_case(url_value, "gs://")))
 						{
 							bool has_good_prefix = false;
 							for (const auto &prefix : output_url_prefixes) {
@@ -2649,7 +2668,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 								if (!htcondor::generate_presigned_url(jobAd, url_value, "PUT", signed_url, err)) {
 								    std::string errorMessage;
 								    formatstr( errorMessage, "DoDownload: Failure when signing URL '%s': %s", url_value.c_str(), err.message() );
-								    result_ad.Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_DownloadFileError );
+								    result_ad.Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::DownloadFileError );
 								    result_ad.Assign( ATTR_HOLD_REASON_SUBCODE, err.code() );
 								    result_ad.Assign( ATTR_HOLD_REASON, errorMessage.c_str() );
 								    dprintf( D_ALWAYS, "%s\n", errorMessage.c_str() );
@@ -2842,7 +2861,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						strerror(the_error),the_error);
 					download_success = false;
 					try_again = false;
-					hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+					hold_code = CONDOR_HOLD_CODE::DownloadFileError;
 					hold_subcode = the_error;
 
 					dprintf(D_ALWAYS,
@@ -2902,7 +2921,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				// be periodically released from hold.
 
 				try_again = false;
-				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+				hold_code = CONDOR_HOLD_CODE::DownloadFileError;
 				hold_subcode = the_error;
 
 				dprintf(D_ALWAYS,
@@ -2916,14 +2935,14 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				// well defined in this case, so we can't report a specific
 				// error message.
 				try_again = true;
-				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+				hold_code = CONDOR_HOLD_CODE::DownloadFileError;
 				hold_subcode = the_error;
 
 				if( rc == GET_FILE_MAX_BYTES_EXCEEDED ) {
 					try_again = false;
 					error_buf.formatstr_cat(": max total download bytes exceeded (max=%ld MB)",
 											(long int)(MaxDownloadBytes/1024/1024));
-					hold_code = CONDOR_HOLD_CODE_MaxTransferOutputSizeExceeded;
+					hold_code = CONDOR_HOLD_CODE::MaxTransferOutputSizeExceeded;
 					hold_subcode = 0;
 				}
 
@@ -3028,7 +3047,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				dprintf( D_ALWAYS, "FILETRANSFER: Multiple file download failed: %s\n",
 					errstack.getFullText().c_str() );
 				download_success = false;
-				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+				hold_code = CONDOR_HOLD_CODE::DownloadFileError;
 				hold_subcode = rc;
 				try_again = false;
 				error_buf.formatstr( "%s", errstack.getFullText().c_str() );
@@ -3165,7 +3184,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 		dprintf(D_ALWAYS,"Download acknowledgment missing attribute: %s.  Full classad: [\n%s]\n",ATTR_RESULT,ad_str.c_str());
 		success = false;
 		try_again = false;
-		hold_code = CONDOR_HOLD_CODE_InvalidTransferAck;
+		hold_code = CONDOR_HOLD_CODE::InvalidTransferAck;
 		hold_subcode = 0;
 		error_desc.formatstr("Download acknowledgment missing attribute: %s",ATTR_RESULT);
 		return;
@@ -3870,13 +3889,15 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					local_output_url = remap_filename.c_str();
 				}
 			}
-			if (sign_s3_urls && local_output_url.substr(0, 5) == "s3://") {
+			if (sign_s3_urls &&
+			  (starts_with_ignore_case(local_output_url, "s3://") || starts_with_ignore_case(local_output_url, "gs://"))) {
 				s3_urls_to_sign.push_back(local_output_url);
 			}
 			fileitem.setDestUrl(local_output_url);
 		}
 		const std::string &src_url = fileitem.srcName();
-		if (sign_s3_urls && fileitem.isSrcUrl() && (fileitem.srcScheme() == "s3")) {
+		if (sign_s3_urls && fileitem.isSrcUrl() &&
+		  (strcasecmp(fileitem.srcScheme().c_str(), "s3") == 0 || strcasecmp(fileitem.srcScheme().c_str(), "gs") == 0)) {
 			std::string new_src_url = "https://" + src_url.substr(5);
 			dprintf(D_FULLDEBUG, "DoUpload: Will sign %s for remote transfer.\n", src_url.c_str());
 			std::string signed_url;
@@ -3898,7 +3919,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					/* do upload ACK (required to put job on hold) */ true,
 					/* do download ACK */ false,
 					/* try again */ false,
-					CONDOR_HOLD_CODE_UploadFileError,
+					CONDOR_HOLD_CODE::UploadFileError,
 					/* hold subcode */ 3,
 					errorMessage.c_str(), __LINE__ );
 			}
@@ -3993,7 +4014,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 	std::unordered_map<std::string, std::string> s3_url_map;
 	if (!s3_urls_to_sign.empty()) {
-		dprintf(D_FULLDEBUG, "DoUpload: Requesting %lu URLs to sign.\n", s3_urls_to_sign.size());
+		dprintf(D_FULLDEBUG, "DoUpload: Requesting %zu URLs to sign.\n", s3_urls_to_sign.size());
 
 			// Indicate a ClassAd-based command.
 		if (!s->snd_int(static_cast<int>(TransferCommand::Other), false) || !s->end_of_message()) {
@@ -4042,7 +4063,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 		std::string holdReason;
 		if( signed_ad.LookupString( ATTR_HOLD_REASON, holdReason ) ) {
-			int holdCode = CONDOR_HOLD_CODE_DownloadFileError;
+			int holdCode = CONDOR_HOLD_CODE::DownloadFileError;
 			signed_ad.LookupInteger( ATTR_HOLD_REASON_CODE, holdCode );
 
 			int holdSubCode = -1;
@@ -4185,7 +4206,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			do_upload_ack = true;    // tell receiver that we failed
 			do_download_ack = true;
 			try_again = false; // put job on hold
-			hold_code = CONDOR_HOLD_CODE_UploadFileError;
+			hold_code = CONDOR_HOLD_CODE::UploadFileError;
 			hold_subcode = EPERM;
 			return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
 			                    upload_success,do_upload_ack,do_download_ack,
@@ -4273,7 +4294,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					first_failed_file_transfer_happened = true;
 					first_failed_upload_success = false;
 					first_failed_try_again = false;
-					first_failed_hold_code = CONDOR_HOLD_CODE_UploadFileError;
+					first_failed_hold_code = CONDOR_HOLD_CODE::UploadFileError;
 					first_failed_hold_subcode = 1;
 					first_failed_error_desc = error_desc;
 					first_failed_line_number = __LINE__;
@@ -4582,7 +4603,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			error_desc.formatstr("error sending %s",fullname.c_str());
 			if((rc == PUT_FILE_OPEN_FAILED) || (rc == PUT_FILE_PLUGIN_FAILED) || (rc == PUT_FILE_MAX_BYTES_EXCEEDED)) {
 				try_again = false; // put job on hold
-				hold_code = CONDOR_HOLD_CODE_UploadFileError;
+				hold_code = CONDOR_HOLD_CODE::UploadFileError;
 				hold_subcode = the_error;
 
 				if (rc == PUT_FILE_OPEN_FAILED) {
@@ -4606,7 +4627,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 											 using_peer_max_transfer_bytes ? "download" : "upload",
 											 (long int)(effective_max_upload_bytes/1024/1024),
 											 (long int)(this_file_size/1024/1024));
-					hold_code = using_peer_max_transfer_bytes ? CONDOR_HOLD_CODE_MaxTransferOutputSizeExceeded : CONDOR_HOLD_CODE_MaxTransferInputSizeExceeded;
+					hold_code = using_peer_max_transfer_bytes ? CONDOR_HOLD_CODE::MaxTransferOutputSizeExceeded : CONDOR_HOLD_CODE::MaxTransferInputSizeExceeded;
 					the_error = 0;
 				} else {
 					// add on the error string from the errstack used
@@ -4699,7 +4720,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				first_failed_file_transfer_happened = true;
 				first_failed_upload_success = false;
 				first_failed_try_again = false;
-				first_failed_hold_code = CONDOR_HOLD_CODE_UploadFileError;
+				first_failed_hold_code = CONDOR_HOLD_CODE::UploadFileError;
 				first_failed_hold_subcode = 1;
 				first_failed_error_desc = error_desc;
 				first_failed_line_number = __LINE__;
@@ -4716,7 +4737,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			first_failed_file_transfer_happened = true;
 			first_failed_upload_success = false;
 			first_failed_try_again = false;
-			first_failed_hold_code = CONDOR_HOLD_CODE_UploadFileError;
+			first_failed_hold_code = CONDOR_HOLD_CODE::UploadFileError;
 			first_failed_hold_subcode = 2;
 			first_failed_error_desc = error_desc;
 			first_failed_line_number = __LINE__;
@@ -4994,7 +5015,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 							   "Full classad: [\n%s]",
 							   ATTR_RESULT,msg_str.c_str());
 			try_again = false;
-			hold_code = CONDOR_HOLD_CODE_InvalidTransferGoAhead;
+			hold_code = CONDOR_HOLD_CODE::InvalidTransferGoAhead;
 			hold_subcode = 1;
 			return false;
 		}
@@ -5637,6 +5658,11 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	// Invoke the plugin
 	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env, drop_privs);
 
+	if (!plugin_pipe) {
+		dprintf (D_ALWAYS, "FILETRANSFER: error execing file transfer plugin %s\n", plugin.c_str());
+		return TransferPluginResult::Error;
+	}
+
 	// Capture stdout from the plugin and dump it to the stats file
 	char single_stat[1024];
 	while( fgets( single_stat, sizeof( single_stat ), plugin_pipe ) ) {
@@ -5951,7 +5977,7 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 		}
 		if( I_support_S3 ) {
 			// method_list must contain at least "https".
-			method_list += ",s3";
+			method_list += ",s3,gs";
 		}
 	}
 	return method_list;

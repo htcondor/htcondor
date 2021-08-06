@@ -1091,10 +1091,10 @@ void INFNBatchJob::doEvaluateState()
 			}
 #endif
 
-			SetRemoteIds( NULL, NULL );
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
+				SetRemoteIds( NULL, NULL );
 				gmState = GM_CLEAR_REQUEST;
 			}
 		} break;
@@ -1374,7 +1374,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		"SMPGranularity",
 		"WholeNodes",
 		"HostSMPSize",
-		"BatchExtraSubmitArgs",
+		ATTR_BATCH_EXTRA_SUBMIT_ARGS,
 		"StageCmd",
 		ATTR_BATCH_PROJECT,
 		ATTR_BATCH_RUNTIME,
@@ -1386,11 +1386,17 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	submit_ad = new ClassAd;
 
+	classad::EvalState state;
+	state.SetScopes(jobAd);
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
-		if ( ( next_expr = jobAd->LookupExpr( attrs_to_copy[index] ) ) != NULL ) {
-			ExprTree * pTree = next_expr->Copy();
-			submit_ad->Insert( attrs_to_copy[index], pTree );
+		classad::Value val;
+		classad::Literal *new_literal;
+		if ( (next_expr = jobAd->LookupExpr(attrs_to_copy[index])) &&
+		     next_expr->Evaluate(state, val) &&
+		     (new_literal = classad::Literal::MakeLiteral(val)) )
+		{
+			submit_ad->Insert(attrs_to_copy[index], new_literal);
 		}
 	}
 
