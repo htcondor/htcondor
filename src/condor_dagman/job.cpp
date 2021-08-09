@@ -625,11 +625,11 @@ int Job::PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const ch
 			Edge * edge = Edge::ById(_parent);
 			ASSERT(edge);
 			if ( ! edge->_ary.empty()) {
-				for (auto it = edge->_ary.begin(); it != edge->_ary.end(); ++it) {
+				for (int & it : edge->_ary) {
 					if (buf.size() >= bufmax)
 						break;
 
-					Job * parent = dag->FindNodeByNodeID(*it);
+					Job * parent = dag->FindNodeByNodeID(it);
 					ASSERT(parent != NULL);
 
 					if (count > 0) buf += sep;
@@ -669,11 +669,11 @@ int Job::PrintChildren(std::string & buf, size_t bufmax, const Dag* dag, const c
 			Edge * edge = Edge::ById(_child);
 			ASSERT(edge);
 			if ( ! edge->_ary.empty()) {
-				for (auto it = edge->_ary.begin(); it != edge->_ary.end(); ++it) {
+				for (int & it : edge->_ary) {
 					if (buf.size() >= bufmax)
 						break;
 
-					Job * child = dag->FindNodeByNodeID(*it);
+					Job * child = dag->FindNodeByNodeID(it);
 					ASSERT(child != NULL);
 
 					if (count > 0) buf += sep;
@@ -712,8 +712,8 @@ int Job::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Job* child))
 			Edge * edge = Edge::ById(_child);
 			ASSERT(edge);
 			if ( ! edge->_ary.empty()) {
-				for (auto it = edge->_ary.begin(); it != edge->_ary.end(); ++it) {
-					Job * child = dag.FindNodeByNodeID(*it);
+				for (int & it : edge->_ary) {
+					Job * child = dag.FindNodeByNodeID(it);
 					ASSERT(child != NULL);
 					if (child->ParentComplete(this)) {
 						if (pfn) pfn(dag, child);
@@ -748,8 +748,8 @@ int Job::VisitChildren(Dag& dag, int(*pfn)(Dag& dag, Job* parent, Job* child, vo
 			Edge * edge = Edge::ById(_child);
 			ASSERT(edge);
 			if (! edge->_ary.empty()) {
-				for (auto it = edge->_ary.begin(); it != edge->_ary.end(); ++it) {
-					Job * child = dag.FindNodeByNodeID(*it);
+				for (int & it : edge->_ary) {
+					Job * child = dag.FindNodeByNodeID(it);
 					ASSERT(child != NULL);
 					retval += pfn(dag, this, child, args);
 				}
@@ -805,9 +805,8 @@ bool Job::CanAddChildren(std::forward_list<Job*> & children, MyString &whynot)
 		return false;
 	}
 
-	for (auto it = children.begin(); it != children.end(); ++it) {
-		Job* child = *it;
-		if ( ! child->CanAddParent(this, whynot)) {
+	for (auto child : children) {
+			if ( ! child->CanAddParent(this, whynot)) {
 			return false;
 		}
 	}
@@ -841,13 +840,13 @@ bool Job::AddVar(const char *name, const char *value, const char * filename, int
 int Job::PrintVars(std::string &vars)
 {
 	int num_vars = 0;
-	for (auto it = varsFromDag.begin(); it != varsFromDag.end(); ++it) {
+	for (auto & it : varsFromDag) {
 		vars.push_back(' ');
-		vars.append(it->_name);
+		vars.append(it._name);
 		vars.push_back('=');
 		vars.push_back('\"');
 		// now we print the value, but we have to re-escape certain characters
-		const char * p = it->_value;
+		const char * p = it._value;
 		while (*p) {
 			char c = *p++;
 			if (c == '\"' || c == '\\') {
@@ -922,9 +921,8 @@ bool Job::AddChildren(std::forward_list<Job*> &children, MyString &whynot)
 		edge->_ary.reserve(num_children);
 
 		// populate the edge array, since we know that children is sorted we can just push_back here.
-		for (auto it = children.begin(); it != children.end(); ++it) {
-			Job* child = *it;
-			edge->_ary.push_back(child->GetJobID());
+		for (auto child : children) {
+				edge->_ary.push_back(child->GetJobID());
 			// count the parents of the children so that we can allocate space in AdjustEdges
 			child->_numparents += 1;
 		}
@@ -932,9 +930,8 @@ bool Job::AddChildren(std::forward_list<Job*> &children, MyString &whynot)
 		return true;
 	}
 
-	for (auto it = children.begin(); it != children.end(); ++it) {
-		Job* child = *it;
-
+	for (auto child : children) {
+		
 #ifdef MEMORY_HOG
 		auto ret = _children.insert(child->GetJobID());
 		if (ret.second == false) {
@@ -1036,8 +1033,8 @@ void Job::AdjustEdges(Dag* dag)
 			Edge * edge = Edge::ById(_child);
 			ASSERT(edge);
 			if ( ! edge->_ary.empty()) {
-				for (auto it = edge->_ary.begin(); it != edge->_ary.end(); ++it) {
-					AdjustEdges_AddParentToChild(dag, *it, this);
+				for (int & it : edge->_ary) {
+					AdjustEdges_AddParentToChild(dag, it, this);
 				}
 			}
 		} else {

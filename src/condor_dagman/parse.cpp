@@ -113,11 +113,8 @@ bool
 isReservedWord( const char *token )
 {
     static const char * keywords[] = { "PARENT", "CHILD", Dag::ALL_NODES };
-    static const unsigned int numKeyWords = sizeof(keywords) / 
-		                                    sizeof(const char *);
-
-    for (unsigned int i = 0 ; i < numKeyWords ; i++) {
-        if (!strcasecmp (token, keywords[i])) {
+    for (auto & keyword : keywords) {
+        if (!strcasecmp (token, keyword)) {
     		debug_printf( DEBUG_QUIET,
 						"ERROR: token (%s) is a reserved word\n", token );
 			return true;
@@ -1255,9 +1252,8 @@ parse_parent(
 			splice_final = splice_dag->FinalRecordedNodes();
 
 			// now add each final node as a parent
-			for (unsigned int i = 0; i < splice_final->size(); i++) {
-				Job *job = (*splice_final)[i];
-				last_parent = parents.insert_after(last_parent, job);
+			for (auto job : *splice_final) {
+					last_parent = parents.insert_after(last_parent, job);
 			}
 
 		} else {
@@ -1322,10 +1318,8 @@ parse_parent(
 				splice_initial->size());
 
 			// now add each initial node as a child
-			for (unsigned int i = 0; i < splice_initial->size(); i++) {
-				Job *job = (*splice_initial)[i];
-
-				last_child = children.insert_after(last_child, job);
+			for (auto job : *splice_initial) {
+					last_child = children.insert_after(last_child, job);
 			}
 
 		} else {
@@ -1377,9 +1371,8 @@ parse_parent(
 				" add join node\n", failReason.c_str(), lineNumber);
 		}
 		// Now connect all parents and children to the join node
-		for (auto it = parents.begin(); it != parents.end(); ++it) {
-			Job *parent = *it;
-			std::forward_list<Job*> lst = { joinNode };
+		for (auto parent : parents) {
+				std::forward_list<Job*> lst = { joinNode };
 			if (!parent->AddChildren(lst, failReason)) {
 				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
 					" to add dependency between parent"
@@ -1395,9 +1388,8 @@ parse_parent(
 		parent_type = "join";
 	}
 
-	for (auto it = parents.begin(); it != parents.end(); ++it) {
-		Job *parent = *it;
-		if ( ! parent->AddChildren(children, failReason)) {
+	for (auto parent : parents) {
+			if ( ! parent->AddChildren(children, failReason)) {
 			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) failed"
 				" to add dependencies between %s"
 				" node \"%s\" and child nodes : %s\n",
