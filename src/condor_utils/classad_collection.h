@@ -69,14 +69,14 @@ public:
   {
   }
 
-  /** Constructor (initialization). It reads the log file and initializes
+  /** Open and read the log file, initializing
       the class-ads (that are read from the log file) in memory.
     @param filename the name of the log file.
     @return nothing
   */
-  GenericClassAdCollection(const ConstructLogEntry * pctor,const char* filename,int max_historical_logs=0)
-	: ClassAdLog<K,AD>(filename,max_historical_logs,pctor)
+  bool InitLogFile(const char* filename,int max_historical_logs=0)
   {
+	  return ClassAdLog<K,AD>::InitLogFile(filename, max_historical_logs);
   }
 
   /** Destructor - frees the memory used by the collections

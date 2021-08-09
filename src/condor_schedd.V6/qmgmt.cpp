@@ -1603,7 +1603,10 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	int spool_cur_version = 0;
 	CheckSpoolVersion(spool.c_str(),SPOOL_MIN_VERSION_SCHEDD_SUPPORTS,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS,spool_min_version,spool_cur_version);
 
-	JobQueue = new JobQueueType(new ConstructClassAdLogTableEntry<JobQueuePayload>(),job_queue_name,max_historical_logs);
+	JobQueue = new JobQueueType(new ConstructClassAdLogTableEntry<JobQueuePayload>());
+	if( !JobQueue->InitLogFile(job_queue_name,max_historical_logs) ) {
+		EXCEPT("Failed to initialize job queue log!");
+	}
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(hashFuncInt);
 	TotalJobsCount = 0;
 	jobs_added_this_transaction = 0;

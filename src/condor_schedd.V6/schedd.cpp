@@ -17700,7 +17700,13 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 
 	std::string queue_fname = output_dir;
 	dircat(output_dir, "job_queue.log", queue_fname);
-	GenericClassAdCollection<JobQueueKey, ClassAd*> export_queue(new ConstructClassAdLogTableEntry<ClassAd>(), queue_fname.c_str(), 0);
+	GenericClassAdCollection<JobQueueKey, ClassAd*> export_queue(new ConstructClassAdLogTableEntry<ClassAd>());
+
+	if ( !export_queue.InitLogFile(queue_fname.c_str(), 0) ) {
+		result.Assign(ATTR_ERROR_STRING, "Failed to initialize export job log");
+		dprintf(D_ALWAYS, "ExportJobs(): Failed to initialize export job log\n");
+		return false;
+	}
 
 	// write the a header ad to the job queue
 	JobQueueKey hdr_id(0,0);
@@ -17922,7 +17928,12 @@ Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir)
 	formatstr(import_job_log, "%s/job_queue.log", import_dir);
 
 	// Load the external job_log
-	GenericClassAdCollection<JobQueueKey, ClassAd*> import_queue(new ConstructClassAdLogTableEntry<ClassAd>(), import_job_log.c_str(), 0);
+	GenericClassAdCollection<JobQueueKey, ClassAd*> import_queue(new ConstructClassAdLogTableEntry<ClassAd>());
+	if ( !import_queue.InitLogFile(import_job_log.c_str(), 0) ) {
+		result.Assign(ATTR_ERROR_STRING, "Failed to initialize import job log");
+		dprintf(D_ALWAYS, "ImportJobs(): Failed to initialize import job log\n");
+		return false;
+	}
 	// close the log file and disable changes
 	import_queue.StopLog();
 

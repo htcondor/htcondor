@@ -1504,7 +1504,10 @@ main_init( int argc, char ** argv ) {
 	// Make sure that, e.g., updateInterval is set.
 	main_config();
 
-	commandState = new ClassAdCollection( NULL, commandStateFile.c_str() );
+	commandState = new ClassAdCollection( NULL );
+	if( !commandState->InirLogFile(commandStateFile.c_str()) ) {
+		DC_Exit( 1 );
+	}
 
 	int rv = annex_main( argc, argv );
 	if( rv != 0 ) { DC_Exit( rv ); }
