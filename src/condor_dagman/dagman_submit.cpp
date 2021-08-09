@@ -349,8 +349,8 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	args.AppendArg("-a");
 	args.AppendArg(jobarg.c_str());
 
-	for (auto it = node->varsFromDag.begin(); it != node->varsFromDag.end(); ++it) {
-		Job::NodeVar & nodeVar = *it;
+	for (auto & nodeVar : node->varsFromDag) {
+		
 #endif
 			// Substitute the node retry count if necessary.  Note that
 			// we can't do this in Job::ResolveVarsInterpolations()
@@ -530,8 +530,8 @@ static void init_dag_vars(SubmitHash * submitHash,
 #else
 	// this allows for $(JOB) expansions in the vars (and in the submit file)
 	submitHash->set_arg_variable("JOB", node->GetJobName());
-	for (auto it = node->varsFromDag.begin(); it != node->varsFromDag.end(); ++it) {
-		submitHash->set_arg_variable(it->_name, it->_value);
+	for (auto & it : node->varsFromDag) {
+		submitHash->set_arg_variable(it._name, it._value);
 	}
 #endif
 
