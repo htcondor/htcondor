@@ -72,8 +72,7 @@ New Features:
   (see :doc:`man page <../man-pages/htcondor>`) for managing HTCondor jobs
   and resources. This tool also includes new capabilities for running
   HTCondor jobs on Slurm machines which are temporarily acquired
-  to act as HTCondor execution points 
-  (see :ref:`grid-computing/htcondor-and-slurm:acquiring resources from slurm`).
+  to act as HTCondor execution points.
   :jira:`252`
 
 
