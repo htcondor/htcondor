@@ -469,10 +469,7 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_REMOVE_NODE_JOBS setting: %s\n",
 				_removeNodeJobs ? "True" : "False" );
 
-#ifdef MEMORY_HOG
-#else
 	debug_printf(DEBUG_NORMAL, "DAGMAN will adjust edges after parsing\n");
-#endif
 
 	// enable up the debug cache if needed
 	if (debug_cache_enabled) {
@@ -1345,11 +1342,6 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->CreateMetrics( dagman.primaryDagFile.Value(), rescueDagNum );
 
 	dagman.dag->CheckThrottleCats();
-
-#ifdef DEAD_CODE // we now do this at submit time.
-	// fix up any use of $(JOB) in the vars values for any node
-	dagman.dag->ResolveVarsInterpolations();
-#endif
 
 /*	debug_printf(DEBUG_QUIET, "COMPLETED DAG!\n");*/
 /*	dagman.dag->PrintJobList();*/
