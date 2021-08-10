@@ -17,7 +17,7 @@ logger.setLevel(logging.DEBUG)
 
 @standup
 def config_dir(test_dir):
-    config_dir = test_dir / "condor" / "config"
+    config_dir = test_dir / "condor" / "config.d"
     Path(config_dir).mkdir(parents=True, exist_ok=True)
     return config_dir
 
@@ -78,7 +78,7 @@ def condor(test_dir, passwords_dir, system_tokens_dir, pool_signing_key, passwor
             "TOOL_DEBUG" : "D_SECURITY",
             "SHARED_PORT_PORT" : "0",
 
-            "LOCAL_CONFIG_DIR" : "$(LOCAL_DIR)/config",
+            "LOCAL_CONFIG_DIR" : "$(LOCAL_DIR)/config.d",
 
             "SEC_DEFAULT_AUTHENTICATION" : "REQUIRED",
             "SEC_CLIENT_AUTHENTICATION" : "REQUIRED",
@@ -97,6 +97,8 @@ def condor(test_dir, passwords_dir, system_tokens_dir, pool_signing_key, passwor
             "ALLOW_ADMINISTRATOR" : "condor_pool@*/*, administrator@domain/*",
             "ALLOW_OWNER" : "condor_pool@*/*, administrator@domain/*",
             "ALLOW_CONFIG" : "condor_pool@*/*, administrator@domain/*",
+            "ALLOW_DAEMON" : "condor_pool@*/*, administrator@domain/*",
+            "ALLOW_NEGOTIATOR" : "condor_pool@*/*, administrator@domain/*",
             "DENY_ALL" : "*",
         }
     ) as condor:
