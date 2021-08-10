@@ -225,7 +225,7 @@ class Job {
 		*/
 	void Cleanup();
 
-	void PrefixName(const MyString &prefix);
+	void PrefixName(const std::string &prefix);
 	inline const char* GetJobName() const { return _jobName; }
 	inline const char* GetDirectory() const { return _directory; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
@@ -387,10 +387,10 @@ class Job {
 		// double-check internal data structures for consistency
 	bool SanityCheck() const;
 
-	bool CanAddParent(Job* parent, MyString &whynot);
-	bool CanAddChild(Job* child, MyString &whynot) const;
+	bool CanAddParent(Job* parent, std::string &whynot);
+	bool CanAddChild(Job* child, std::string &whynot) const;
 	// check to see if we can add this as a child, and it allows us as a parent..
-	bool CanAddChildren(std::forward_list<Job*> & children, MyString &whynot);
+	bool CanAddChildren(std::forward_list<Job*> & children, std::string &whynot);
 #ifdef DEAD_CODE
 	bool AddParent( Job* parent );
 	bool AddParent( Job* parent, MyString &whynot );
@@ -401,7 +401,7 @@ class Job {
 	// insert a SORTED list of UNIQUE children.
 	// the caller is responsible for calling sort() and unique() on the list if needed
 	// before passing it to this function
-	bool AddChildren(std::forward_list<Job*> & children, MyString &whynot);
+	bool AddChildren(std::forward_list<Job*> & children, std::string &whynot);
 
 	bool AddVar(const char * name, const char * value, const char* filename, int lineno);
 	void ShrinkVars() { /*varsFromDag.shrink_to_fit();*/ }

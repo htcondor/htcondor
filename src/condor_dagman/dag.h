@@ -136,7 +136,7 @@ class Dag {
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
 		 SubmitDagDeepOptions *submitDagDeepOpts,
 		 bool isSplice = false, DCSchedd *schedd = NULL,
-		 const MyString &spliceScope = "root" );
+		 const std::string &spliceScope = "root" );
 
     ///
     ~Dag();
@@ -338,7 +338,7 @@ class Dag {
 	/** Prefix all of the nodenames with a specified label.
 		@param prefix a MyString of the prefix for all nodes.
 	*/
-	void PrefixAllNodeNames(const MyString &prefix);
+	void PrefixAllNodeNames(const std::string &prefix);
 
     /** Set the event checking level.
 		@param allowEvents what "bad" events to treat as non-fatal (as

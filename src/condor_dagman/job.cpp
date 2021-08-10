@@ -768,7 +768,7 @@ int Job::VisitChildren(Dag& dag, int(*pfn)(Dag& dag, Job* parent, Job* child, vo
 #endif
 
 bool
-Job::CanAddParent( Job* parent, MyString &whynot )
+Job::CanAddParent( Job* parent, std::string &whynot )
 {
 	if( !parent ) {
 		whynot = "parent == NULL";
@@ -786,15 +786,15 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 		// future once we figure out the right way for the DAG to
 		// respond...
 	if( _Status != STATUS_READY && parent->GetStatus() != STATUS_DONE ) {
-		whynot.formatstr( "%s child may not be given a new %s parent",
-						this->GetStatusName(), parent->GetStatusName() );
+		whynot = std::string(this->GetStatusName()) + " child may not be " +
+			"given a new " + std::string(parent->GetStatusName()) + " parent";
 		return false;
 	}
 	whynot = "n/a";
 	return true;
 }
 
-bool Job::CanAddChildren(std::forward_list<Job*> & children, MyString &whynot)
+bool Job::CanAddChildren(std::forward_list<Job*> & children, std::string &whynot)
 {
 	if ( GetType() == NodeType::FINAL ) {
 		whynot = "Tried to add a child to a final node";
@@ -902,7 +902,7 @@ Job::AddChild( Job* child, MyString &whynot )
 #else
 
 
-bool Job::AddChildren(std::forward_list<Job*> &children, MyString &whynot)
+bool Job::AddChildren(std::forward_list<Job*> &children, std::string &whynot)
 {
 	// check if all of this can be our child, and if all are ok being our children
 	if ( ! CanAddChildren(children, whynot)) {
@@ -1112,7 +1112,7 @@ void Job::FinalizeAdjustEdges(Dag* /*dag*/)
 #endif
 
 bool
-Job::CanAddChild( Job* child, MyString &whynot ) const
+Job::CanAddChild( Job* child, std::string &whynot ) const
 {
 	if( !child ) {
 		whynot = "child == NULL";
@@ -1374,7 +1374,7 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 {
 	ASSERT( _type != NodeType::FINAL );
 
-	MyString	tmpName( categoryName );
+	std::string tmpName( categoryName );
 
 	if ( (_throttleInfo != NULL) &&
 				(tmpName != *(_throttleInfo->_category)) ) {
@@ -1405,9 +1405,9 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 }
 
 void
-Job::PrefixName(const MyString &prefix)
+Job::PrefixName(const std::string &prefix)
 {
-	MyString tmp = prefix + _jobName;
+	std::string tmp = prefix + _jobName;
 
 	free(_jobName);
 

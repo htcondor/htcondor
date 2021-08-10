@@ -66,9 +66,9 @@ AddNode( Dag *dag, const char *name,
 		 const char* submitFileOrSubmitDesc,
 		 bool noop,
 		 bool done, NodeType type,
-		 MyString &failReason )
+		 std::string &failReason )
 {
-	MyString why;
+	std::string why;
 	if( !IsValidNodeName( dag, name, why ) ) {
 		failReason = why;
 		return NULL;
@@ -78,8 +78,8 @@ AddNode( Dag *dag, const char *name,
 		return NULL;
 	}
 	if( done && type == NodeType::FINAL ) {
-		failReason.formatstr( "Warning: FINAL Job %s cannot be set to DONE\n",
-					name );
+		failReason = "Warning: FINAL Job " + std::string(name) +
+			" cannot be set to DONE\n";
         debug_printf( DEBUG_QUIET, "%s", failReason.c_str() );
 		(void)check_warning_strictness( DAG_STRICT_1, false );
 		done = false;
@@ -121,20 +121,20 @@ AddNode( Dag *dag, const char *name,
 
 bool
 SetNodeDagFile( Dag *dag, const char *nodeName, const char *dagFile, 
-            MyString &whynot )
+            std::string &whynot )
 {
 	Job *job = dag->FindNodeByName( nodeName );
 	if ( job ) {
 		job->SetDagFile( dagFile );
 		return true;
 	} else {
-		whynot = MyString( "Node " ) + nodeName + " not found!";
+		whynot = "Node " + std::string(nodeName) + " not found!";
 		return false;
 	}
 }
 
 bool
-IsValidNodeName( Dag *dag, const char *name, MyString &whynot )
+IsValidNodeName( Dag *dag, const char *name, std::string &whynot )
 {
 	if( name == NULL ) {
 		whynot = "missing node name";
@@ -145,20 +145,20 @@ IsValidNodeName( Dag *dag, const char *name, MyString &whynot )
 		return false;
 	}
 	if( isReservedWord( name ) ) {
-		whynot.formatstr( "invalid node name: '%s' is a DAGMan reserved word",
-					name );
+		whynot = "invalid node name: '" + std::string(name) + "'" +
+			"is a DAGMan reserved word";
 		return false;
 	}
 	ASSERT( dag != NULL );
 	if( dag->NodeExists( name ) ) {
-		whynot.formatstr( "node name '%s' already exists in DAG", name );
+		whynot = "node name '" + std::string(name) + "' already exists in DAG";
 		return false;
 	}
 	return true;
 }
 
 bool
-IsValidSubmitName( const char *name, MyString &whynot )
+IsValidSubmitName( const char *name, std::string &whynot )
 {
 	if( name == NULL ) {
 		whynot = "missing submit file name";

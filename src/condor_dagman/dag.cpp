@@ -88,7 +88,7 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
 		  const char *defaultNodeLog, bool generateSubdagSubmits,
 		  SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice,
-		  DCSchedd *schedd, const MyString &spliceScope ) :
+		  DCSchedd *schedd, const std::string &spliceScope ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	_maxHoldScripts       (maxHoldScripts),
@@ -4412,7 +4412,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 		return false;
 	}
 
-	MyString failReason;
+	std::string failReason;
 
 		// Go thru the pin_in/pin_out lists, and add parent/child
 		// dependencies between splices as appropriate.  (Note that
@@ -4473,7 +4473,7 @@ Dag::DeletePinList( PinList &pinList )
 
 //---------------------------------------------------------------------------
 void
-Dag::PrefixAllNodeNames(const MyString &prefix)
+Dag::PrefixAllNodeNames(const std::string &prefix)
 {
 	MyString key;
 
