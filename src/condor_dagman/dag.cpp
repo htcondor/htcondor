@@ -3181,14 +3181,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		// existing file fails on Windows.
 		//
 	MyString statusFileName( _statusFileName );
-#if 0 // For testing, to enable manual checking of intermediate states...
-	static int statusFileCount = 0;
-	statusFileName += ++statusFileCount;
-	debug_printf( DEBUG_QUIET, "Writing node status file %s\n",
-				statusFileName.Value() );
-#endif
-	_dagmanUtils.tolerant_unlink( statusFileName.c_str() );
-	if ( rename( tmpStatusFile.c_str(), statusFileName.c_str() ) != 0 ) {
+	_dagmanUtils.tolerant_unlink( statusFileName.Value() );
+	if ( rename( tmpStatusFile.Value(), statusFileName.Value() ) != 0 ) {
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't rename temporary node status "
 					  "file (%s) to permanent file (%s): %s\n",
