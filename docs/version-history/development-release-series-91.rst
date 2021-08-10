@@ -25,6 +25,13 @@ New Features:
   instead of either putting the job on hold or treated as false.
   :jira:`442`
 
+- Added two new attributes to the job classad, ``NumHolds`` and ``NumHoldsByReason``, 
+  that are used to provide historical information about how often this
+  job went on hold and why. Details on all job classad attributes, including
+  these two new attributes, can be found in section:
+  :doc:`../classad-attributes/job-classad-attributes`
+  :jira:`554`
+
 - The "ToE tag" entry in the job event log now includes the exit code or
   signal number, if and as appropriate.
   :jira:`429`
