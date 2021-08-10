@@ -90,8 +90,8 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 		//
 	for (auto & _job : dag->_jobs) {
 		_graphNumVertices++;
-		_graphNumEdges += node->CountChildren();
-		if ( node->GetDagFile() ) {
+		_graphNumEdges += _job->CountChildren();
+		if ( _job->GetDagFile() ) {
 			_subdagNodes++;
 		} else {
 			_simpleNodes++;

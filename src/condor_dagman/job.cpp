@@ -41,7 +41,7 @@ int Job::NOOP_NODE_PROCID = INT_MAX;
 int Job::_nextJobstateSeqNum = 1;
 
 //EdgeID_t Edge::_edgeId_counter = 0; // Initialize the static data memmber
-std::deque<Edge*> Edge::_edgeTable;
+std::deque<std::unique_ptr<Edge>> Edge::_edgeTable;
 
 //---------------------------------------------------------------------------
 // NOTE: this must be kept in sync with the status_t enum
