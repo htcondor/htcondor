@@ -2439,6 +2439,61 @@ int SubmitHash::SetIWD()
 }
 
 
+static bool find_scitoken_filename(MyString & filepath, int &err)
+{
+	const char *token_file = getenv("BEARER_TOKEN_FILE");
+	if (token_file && token_file[0]) {
+		filepath = token_file;
+		return true;
+	}
+
+#ifdef WIN32
+	// no search protocol defined for windows
+#else
+	// search for *nix is $XDG_RUNTIME_DIR/bt_u$UID, /tmp/bt_u$UID
+	// we check for file readability, and stop as soon as we find a readable file
+	// using safe_open here to check readability so that we parallel the behaviour
+	// of condor_scitokens.cpp
+	//
+	std::string fname("bt_u");
+	fname += std::to_string(geteuid());
+
+	const char * token_dir = getenv("XDG_RUNTIME_DIR");
+	if (token_dir && token_dir[0]) {
+		dircat(token_dir, fname.c_str(), filepath);
+		int fd = safe_open_no_create(filepath.c_str(), O_RDONLY);
+		if (fd == -1) {
+			if (errno != ENOENT) {
+				err = errno;
+				return false;
+			}
+			// no file, fall through and keep looking
+		} else {
+			close(fd);
+			return true;
+		}
+		filepath.clear();
+	}
+
+	// last place to check is /tmp/
+	dircat("/tmp", fname.c_str(), filepath);
+	int fd = safe_open_no_create(filepath.c_str(), O_RDONLY);
+	if (fd == -1) {
+		if (errno != ENOENT) {
+			err = errno;
+			return false;
+		}
+		// no file, fall through
+	} else {
+		close(fd);
+		return true;
+	}
+#endif
+
+	filepath.clear();
+	return false;
+}
+
 int SubmitHash::SetGSICredentials()
 {
 	RETURN_IF_ABORT();
@@ -2647,17 +2702,21 @@ int SubmitHash::SetGSICredentials()
 		// if use_scitoken = false :: ignore the scitoken_path submit command and also the env
 		// if use_scitoken is undefined and scitoken_path is defined :: include the attribute using the supplied path
 		auto_free_ptr use_scitokens_cmd(submit_param(SUBMIT_KEY_UseScitokens, SUBMIT_KEY_UseScitokensAlt));
-		auto_free_ptr scitokens_file(submit_param(SUBMIT_KEY_ScitokensFile, ATTR_SCITOKENS_FILE));
+		MyString scitokens_file(submit_param_mystring(SUBMIT_KEY_ScitokensFile, ATTR_SCITOKENS_FILE));
 		bool use_scitokens =  ! scitokens_file.empty();
 		if (use_scitokens_cmd) {
 			if (MATCH == strcasecmp(use_scitokens_cmd, "auto")) {
-				if (scitokens_file) {
+				if (!scitokens_file.empty()) {
 					use_scitokens = true; // because scitokens_file keyword was used
 				} else {
 					// if there is a BEARER_TOKEN_FILE environment variable, then set use_scitokens to true
 					// otherwise leave it as false.
-					const char * tmp = getenv("BEARER_TOKEN_FILE");
-					use_scitokens = tmp && tmp[0];
+					int err = 0;
+					use_scitokens = find_scitoken_filename(scitokens_file, err);
+					if (err) {
+						push_warning(stderr, SUBMIT_KEY_UseScitokens " error, failed to open file %s: %s (errno=%d).\n",
+							scitokens_file.c_str(), strerror(err), err);
+					}
 				}
 			} else if ( ! string_is_boolean_param(use_scitokens_cmd, use_scitokens)) {
 				push_error(stderr, SUBMIT_KEY_UseScitokens " error. Value should be true, false, or auto.\n");
@@ -2668,16 +2727,18 @@ int SubmitHash::SetGSICredentials()
 		// At this point we have decided to include the scitoken file attribute
 		// and should generate an error if we can't.
 		if (use_scitokens) {
-			const char * token_file = scitokens_file;
-			if ( ! token_file) { token_file = getenv("BEARER_TOKEN_FILE"); }
-			if ( ! token_file) {
+			int err = 0;
+			if (scitokens_file.empty() && ! find_scitoken_filename(scitokens_file, err)) {
+				if (err) {
+					push_warning(stderr, SUBMIT_KEY_UseScitokens " error, failed to open file %s: %s (errno=%d).\n",
+							scitokens_file.c_str(), strerror(err), err);
+				}
 				push_error(stderr, "No Scitokens filename specified. Expected either "
 					SUBMIT_KEY_ScitokensFile " command or the BEARER_TOKEN_FILE environment variable to be set.\n");
 				ABORT_AND_RETURN(1);
 			}
 			// promote to fullpath and store in the job ad
-			scitokens_file.set(strdup(full_path(token_file)));
-			AssignJobString(ATTR_SCITOKENS_FILE, scitokens_file);
+			AssignJobString(ATTR_SCITOKENS_FILE, full_path(scitokens_file.c_str()));
 		}
 	}
 

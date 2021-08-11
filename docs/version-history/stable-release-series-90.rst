@@ -19,7 +19,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- *condor_submit* will now look for SCITOKENS in the standard locations if
+  the ``use_scitokens`` command is used but no ``scitokens_file`` is specified
+  in the submit file.
+  :jira:`634`
 
 Bugs Fixed:
 
