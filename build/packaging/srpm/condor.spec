@@ -285,7 +285,7 @@ Requires: condor-boinc
 %endif
 
 %if %blahp
-Requires: blahp >= 2.0.1
+Requires: blahp >= 2.1.1
 %endif
 
 # Useful tools are using the Python bindings
