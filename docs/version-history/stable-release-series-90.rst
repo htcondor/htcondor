@@ -24,6 +24,10 @@ New Features:
   try the next authentication method in the list instead of failing.
   :jira:`589`
 
+- The `bosco_cluster` command now creates backup files when the ``--override``
+  option is used.
+  :jira:`591`
+
 Bugs Fixed:
 
 - Fixed a bug where ``condor_gpu_discovery`` would not report any GPUs if
