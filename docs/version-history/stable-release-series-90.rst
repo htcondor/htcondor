@@ -24,6 +24,12 @@ New Features:
   in the submit file.
   :jira:`634`
 
+- Added configuration parameter ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``,
+  a boolean value which defaults to ``False``.
+  If set to ``True``, then clients that authenticate to a daemon using
+  SSL must present a valid SSL credential.
+  :jira:`236`
+
 Bugs Fixed:
 
 - Fixed a bug that could cause the *condor_had* daemon to fail at startup

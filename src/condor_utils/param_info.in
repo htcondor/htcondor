@@ -2598,6 +2598,10 @@ description=Location of the host private key
 type=path
 tags=condor_auth_ssl
 
+[AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE]
+default=false
+type=bool
+
 [TRUST_DOMAIN]
 default=$(COLLECTOR_HOST)
 type=string

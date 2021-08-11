@@ -9135,6 +9135,14 @@ macros are described in the :doc:`/admin-manual/security` section.
     The path and file name of the file containing the private key for
     the client side of a communication authenticating with SSL.
 
+:macro-def:`AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE`
+    A boolean value that controls whether the client side of a
+    communication authenticating with SSL must have a credential.
+    If set to ``True`` and the client doesn't have a credential, then
+    the SSL authentication will fail and other authentication methods
+    will be tried.
+    The default is ``False``.
+
 :macro-def:`SSL_SKIP_HOST_CHECK`
     A boolean variable that controls whether a host check is performed
     by the client during an SSL authentication of a Condor daemon. This
