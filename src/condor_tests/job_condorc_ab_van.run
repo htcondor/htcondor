@@ -26,6 +26,7 @@ use Check::SimpleJob;
 my $append_condor_config_B = '
   # reduce latency in test
 	NEGOTIATOR_INTERVAL = 5
+	NEGOTIATOR_MIN_INTERVAL = 5
 	NEGOTIATOR_CYCLE_DELAY = 5
 ';
 
