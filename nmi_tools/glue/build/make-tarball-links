@@ -94,7 +94,7 @@ fi
 ln -s blahpd usr/bin/batch_gahp
 ln -s blahpd_daemon usr/sbin/batch_gahp_daemon
 # Construct a glite directory for Bosco
-if [ -d usr/libexec/condor/glite ]; then
+if [ -d usr/libexec/condor ]; then
     # RPM based systems
     mkdir -p usr/libexec/condor/glite/etc
     (cd usr/libexec/condor/glite/etc; ln -s ../../../../../etc/bl* .)
@@ -105,7 +105,7 @@ if [ -d usr/libexec/condor/glite ]; then
     ln -s ../../../lib64 usr/libexec/condor/glite
     ln -s bin usr/libexec/condor/glite/libexec
 fi
-if [ -d usr/lib/condor/libexec/glite ]; then
+if [ -d usr/lib/condor/libexec ]; then
     # Debian based systems
     mkdir -p usr/lib/condor/libexec/glite/etc
     (cd usr/lib/condor/libexec/glite/etc; ln -s ../../../../../../etc/bl* .)
