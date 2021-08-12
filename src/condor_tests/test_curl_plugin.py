@@ -138,38 +138,6 @@ def job_with_multiple_bad_urls(default_condor, multiple_bad_urls, test_dir, path
     return job
 
 
-@action
-def job_with_multiple_good_urls(default_condor, multiple_good_urls, test_dir, path_to_sleep):
-    job = default_condor.submit(
-        {
-            "executable": path_to_sleep,
-            "arguments": "1",
-            "log": (test_dir / "multiple_good_urls.log").as_posix(),
-            "transfer_input_files": multiple_good_urls,
-            "transfer_output_files": "goodurl1, goodurl2, goodurl3",
-            "should_transfer_files": "YES",
-        }
-    )
-    assert job.wait(condition=ClusterState.all_terminal)
-    return job
-
-
-@action
-def job_with_multiple_bad_urls(default_condor, multiple_bad_urls, test_dir, path_to_sleep):
-    job = default_condor.submit(
-        {
-            "executable": path_to_sleep,
-            "arguments": "1",
-            "log": (test_dir / "multiple_bad_urls.log").as_posix(),
-            "transfer_input_files": multiple_bad_urls,
-            "transfer_output_files": "badurl1, badurl2, badurl3",
-            "should_transfer_files": "YES",
-        }
-    )
-    assert job.wait(condition=ClusterState.all_terminal)
-    return job
-
-
 class TestCurlPlugin:
     def test_job_with_good_url_succeeds(self, job_with_good_url):
         assert job_with_good_url.state[0] == JobStatus.COMPLETED
