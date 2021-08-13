@@ -58,6 +58,11 @@ New Features:
   option is used.
   :jira:`591`
 
+- Improved the detection of Red Hat Enterprise Linux based distributions.
+  Previously, only ``CentOS`` was recognized. Now, other distributions such
+  as ``Scientific Linux`` and ``Rocky`` should be recognized.
+  :jira:`609`
+
 Bugs Fixed:
 
 - Fixed a bug where ``condor_gpu_discovery`` would not report any GPUs if
