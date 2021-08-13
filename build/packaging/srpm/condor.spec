@@ -280,7 +280,6 @@ Requires: condor-procd = %{version}-%{release}
 
 %if %uw_build
 Requires: %name-externals = %version-%release
-Requires: condor-boinc
 %endif
 
 %if %blahp
