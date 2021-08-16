@@ -33,6 +33,10 @@ New Features:
   as ``Scientific Linux`` and ``Rocky`` should be recognized.
   :jira:`609`
 
+- The ``condor-boinc`` package is no longer required to be installed with
+  HTCondor, thus making ``condor-boinc`` optional.
+  :jira:`644`
+
 Bugs Fixed:
 
 - Fixed a bug where ``condor_gpu_discovery`` would not report any GPUs if
