@@ -38,6 +38,10 @@ Bugs Fixed:
   ``False``.
   :jira:`625`
 
+- Fixed a bug that ignored the setting of per-Accounting Group
+  GROUP_AUTOREGROUP from working.  Global autoregroup worked correctly.
+  :jira:`632`
+
 Version 9.0.5
 -------------
 
