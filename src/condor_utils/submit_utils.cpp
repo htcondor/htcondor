@@ -2439,7 +2439,7 @@ int SubmitHash::SetIWD()
 }
 
 
-static bool find_scitoken_filename(std::string & filepath, int &err)
+static bool find_scitoken_filename(MyString & filepath, int &err)
 {
 	const char *token_file = getenv("BEARER_TOKEN_FILE");
 	if (token_file && token_file[0]) {
@@ -2702,8 +2702,8 @@ int SubmitHash::SetGSICredentials()
 		// if use_scitoken = false :: ignore the scitoken_path submit command and also the env
 		// if use_scitoken is undefined and scitoken_path is defined :: include the attribute using the supplied path
 		auto_free_ptr use_scitokens_cmd(submit_param(SUBMIT_KEY_UseScitokens, SUBMIT_KEY_UseScitokensAlt));
-		std::string scitokens_file;
-		bool use_scitokens = submit_param_exists(SUBMIT_KEY_ScitokensFile, ATTR_SCITOKENS_FILE, scitokens_file);
+		MyString scitokens_file(submit_param_mystring(SUBMIT_KEY_ScitokensFile, ATTR_SCITOKENS_FILE));
+		bool use_scitokens =  ! scitokens_file.empty();
 		if (use_scitokens_cmd) {
 			if (MATCH == strcasecmp(use_scitokens_cmd, "auto")) {
 				if (!scitokens_file.empty()) {
