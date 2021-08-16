@@ -10,6 +10,7 @@ from pathlib import Path
 from .conf import *
 from .dagman import DAGMan
 
+# Must be consistent with job status definitions in src/condor_includes/proc.h
 JobStatus = [
     "NONE",
     "IDLE",
@@ -158,14 +159,16 @@ class Job:
         if resource_type == "htcondor":
             if JobStatus[job[0]['JobStatus']] == "RUNNING":
                 job_running_time = datetime.now() - datetime.fromtimestamp(job[0]["JobStartDate"])
-                print(f"Job is {JobStatus[job[0]['JobStatus']]} since {round(job_running_time.seconds/3600)}h{round(job_running_time.seconds/60)}m{(job_running_time.seconds%60)}s")
+                print(f"Job is running since {round(job_running_time.seconds/3600)}h{round(job_running_time.seconds/60)}m{(job_running_time.seconds%60)}s")
             elif JobStatus[job[0]['JobStatus']] == "HELD":
                 job_held_time = datetime.now() - datetime.fromtimestamp(job[0]["LastVacateTime"])
-                print(f"Job is {JobStatus[job[0]['JobStatus']]} since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s")
+                print(f"Job is held since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s")
+            elif JobStatus[job[0]['JobStatus']] == "COMPLETED":
+                print("Job has completed")
             else:
                 print(f"Job is {JobStatus[job[0]['JobStatus']]}")
 
-        # Jobs running on provisioned Slurm resources need to retrieve
+        # Jobs running on provisioned Slurm or EC2 resources need to retrieve
         # additional information from the provisioning DAGMan log
         elif resource_type == "slurm" or resource_type == "ec2":
 
@@ -213,7 +216,7 @@ class Job:
                 elif event.type == htcondor.JobEventType.JOB_HELD or event.type == htcondor.JobEventType.EXECUTABLE_ERROR:
                     job_status = "ERROR"
 
-            # Now that we have all the information we want, display it
+            # Calculate how long job has been in its current state
             current_time = datetime.now()
             time_diff = None
             if job_status == "PROVISIONING REQUEST PENDING":
@@ -221,11 +224,18 @@ class Job:
             elif job_status == "RUNNING":
                 time_diff = current_time - job_started_time
 
-            print(f"Job is {job_status}", end='')
-            if time_diff is not None:
-                print(f" since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
+            # Now that we have all the information we want, display it
+            if job_status == "COMPLETED":
+                print("Job has completed")
             else:
-                print("")
+                if job_status == "PROVISIONING REQUEST PENDING":
+                    print(f"Job is waiting for {resource_type.upper()} to provision pending request", end='')
+                else:
+                    print(f"Job is {job_status}", end='')
+                    if time_diff is not None:
+                        print(f" since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
+                    else:
+                        print("")
 
         else:
             print(f"Error: The 'job status' command does not support {resource_type} resources.")
