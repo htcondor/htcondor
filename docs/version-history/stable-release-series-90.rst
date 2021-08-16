@@ -19,10 +19,7 @@ Release Notes:
 
 New Features:
 
-- *condor_submit* will now look for SCITOKENS in the standard locations if
-  the ``use_scitokens`` command is used but no ``scitokens_file`` is specified
-  in the submit file.
-  :jira:`634`
+- None.
 
 - Added configuration parameter ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``,
   a boolean value which defaults to ``False``.
