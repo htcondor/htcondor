@@ -39,6 +39,10 @@ Bugs Fixed:
   GROUP_AUTOREGROUP from working.  Global autoregroup worked correctly.
   :jira:`632`
 
+- The *bosco_cluster* tool now clears out old installation files when
+  the *--add* option is used to update an existing installation.
+  :jira:`577`
+
 Version 9.0.5
 -------------
 
