@@ -53,11 +53,7 @@
 
 bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* DAGNodeName, const char *DAGParentNodeNames,
-#ifdef DEAD_CODE
-					List<Job::NodeVar> *vars, int priority, int retry,
-#else
 					Job* node, int priority, int retry,
-#endif
 					const char* directory, const char *worflowLogFile,
 					bool hold_claim, const MyString &batchName,
 					std::string &batchId );

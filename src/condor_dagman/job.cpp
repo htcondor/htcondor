@@ -40,22 +40,8 @@ JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
 int Job::NOOP_NODE_PROCID = INT_MAX;
 int Job::_nextJobstateSeqNum = 1;
 
-#ifdef MEMORY_HOG
-#else
 //EdgeID_t Edge::_edgeId_counter = 0; // Initialize the static data memmber
 std::deque<Edge*> Edge::_edgeTable;
-#endif
-
-
-#ifdef DEAD_CODE
-//---------------------------------------------------------------------------
-// NOTE: this must be kept in sync with the queue_t enum
-const char *Job::queue_t_names[] = {
-    "Q_PARENTS",
-    "Q_WAITING",
-    "Q_CHILDREN",
-};
-#endif
 
 //---------------------------------------------------------------------------
 // NOTE: this must be kept in sync with the status_t enum
@@ -83,18 +69,6 @@ Job::~Job() {
 
     free(_dagFile); _dagFile = NULL;
     free(_jobName); _jobName = NULL;
-
-#ifdef DEAD_CODE
-	varsFromDag->Rewind();
-	NodeVar *var;
-	while ( (var = varsFromDag->Next()) ) {
-		delete var;
-	}
-	delete varsFromDag;
-#else
-	// similarly, freeing the strings from the VARS is problematic
-	// (and also a waste of time because we are exiting the process now anyway)
-#endif
 
 	delete _scriptPre;
 	delete _scriptPost;
@@ -124,11 +98,6 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 	, countedAsDone(false)
 	, _noop(false)
 	, _type(NodeType::JOB)
-
-#ifdef DEAD_CDE
-	, varsFromDag(new List<NodeVar>)
-#else
-#endif
 	, _queuedNodeJobProcs(0)
 	, _numSubmittedProcs(0)
 	, _explicitPriority(0)
@@ -143,8 +112,6 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 	, _jobName(NULL)
 
 	, _Status(STATUS_READY)
-#ifdef MEMORY_HOG
-#else
 	, _parent(NO_ID)
 	, _child(NO_ID)
 	, _numparents(0)
@@ -152,7 +119,6 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 	, _multiple_children(false)
 	, _parents_done(false)
 	, _spare(false)
-#endif
 	, _jobID(-1)
 	, _jobstateSeqNum(0)
 	, _preskip(PRE_SKIP_INVALID)
@@ -212,18 +178,6 @@ Job::PrefixDirectory(MyString &prefix)
     ASSERT(_directory);
 }
 
-#ifdef DEAD_CODE
-//---------------------------------------------------------------------------
-bool Job::Remove (const queue_t queue, const JobID_t jobID)
-{
-	if (_queues[queue].erase(jobID) == 0) {
-		return false; // element not found
-	}
-
-	return true;
-}  
-#endif
-
 //---------------------------------------------------------------------------
 void Job::Dump ( const Dag *dag ) const {
     dprintf( D_ALWAYS, "---------------------- Job ----------------------\n");
@@ -257,44 +211,11 @@ void Job::Dump ( const Dag *dag ) const {
 				 _CondorID._cluster, _CondorID._proc, _CondorID._subproc );
 	}
 
-#ifdef DEAD_CODE
-    for (int i = 0 ; i < 3 ; i++) {
-        dprintf( D_ALWAYS, "%15s: ", queue_t_names[i] );
-
-		std::set<JobID_t>::const_iterator qit;
-		for (qit = _queues[i].begin(); qit != _queues[i].end(); qit++) {
-			Job *node = dag->Dag::FindNodeByNodeID( *qit );
-			dprintf( D_ALWAYS | D_NOHEADER, "%s, ", node->GetJobName() );
-		}
-        dprintf( D_ALWAYS | D_NOHEADER, "<END>\n" );
-    }
-#else
 	std::string parents, children;
 	PrintParents(parents, 1024, dag, " ");
 	PrintChildren(children, 1024, dag, " ");
 	dprintf(D_ALWAYS, "PARENTS: %s WAITING: %d CHILDREN: %s\n", parents.c_str(), (int)IsWaiting(), children.c_str());
-#endif
 }
-
-#if 0 // not used -- wenger 2015-02-17
-//---------------------------------------------------------------------------
-void Job::Print (bool condorID) const {
-    dprintf( D_ALWAYS, "ID: %4d Name: %s", _jobID, _jobName);
-    if (condorID) {
-        dprintf( D_ALWAYS, "  CondorID: (%d.%d.%d)", _CondorID._cluster,
-				 _CondorID._proc, _CondorID._subproc );
-    }
-}
-
-//---------------------------------------------------------------------------
-void job_print (Job * job, bool condorID) {
-    if (job == NULL) {
-		dprintf( D_ALWAYS, "(UNKNOWN)");
-	} else {
-		job->Print(condorID);
-	}
-}
-#endif
 
 const char*
 Job::GetPreScriptName() const
@@ -369,17 +290,10 @@ Job::GetProcIsIdle( int proc )
 		proc = 0;
 	}
 
-#ifdef DEAD_CODE
-	if ( proc >= static_cast<int>( _isIdle.size() ) ) {
-		_isIdle.resize( proc+1, false );
-	}
-	return _isIdle[proc];
-#else
 	if (proc >= static_cast<int>(_gotEvents.size())) {
 		_gotEvents.resize(proc + 1, 0);
 	}
 	return (_gotEvents[proc] & IDLE_MASK) != 0;
-#endif
 }
 
 //---------------------------------------------------------------------------
@@ -390,12 +304,6 @@ Job::SetProcIsIdle( int proc, bool isIdle )
 		proc = 0;
 	}
 
-#ifdef DEAD_CODE
-	if ( proc >= static_cast<int>( _isIdle.size() ) ) {
-		_isIdle.resize( proc+1, false );
-	}
-	_isIdle[proc] = isIdle;
-#else
 	if (proc >= static_cast<int>(_gotEvents.size())) {
 		_gotEvents.resize(proc + 1, 0);
 	}
@@ -404,7 +312,6 @@ Job::SetProcIsIdle( int proc, bool isIdle )
 	} else {
 		_gotEvents[proc] &= ~IDLE_MASK;
 	}
-#endif
 }
 
 //---------------------------------------------------------------------------
@@ -426,80 +333,17 @@ Job::SetProcEvent( int proc, int event )
 void
 Job::PrintProcIsIdle()
 {
-#ifdef DEAD_CODE
-	for ( int proc = 0;
-				proc < static_cast<int>( _isIdle.size() ); ++proc ) {
-		debug_printf( DEBUG_QUIET, "  Job(%s)::_isIdle[%d]: %d\n",
-					GetJobName(), proc, _isIdle[proc] );
-	}
-#else
 	for (int proc = 0;
 		proc < static_cast<int>(_gotEvents.size()); ++proc) {
 		debug_printf(DEBUG_QUIET, "  Job(%s)::_isIdle[%d]: %d\n",
 			GetJobName(), proc, (_gotEvents[proc] & IDLE_MASK) != 0);
 	}
-#endif
 }
-
-#ifdef DEAD_CODE
-
-//---------------------------------------------------------------------------
-bool
-Job::AddParent( Job* parent )
-{
-	bool success;
-	MyString whynot;
-	success = AddParent( parent, whynot );
-	if( !success ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: AddParent( %s ) failed for node %s: %s\n",
-					  parent ? parent->GetJobName() : "(null)",
-					  this->GetJobName(), whynot.Value() );
-	}
-	return success;
-}
-
-
-bool
-Job::AddParent( Job* parent, MyString &whynot )
-{
-	if( !this->CanAddParent( parent, whynot ) ) {
-		return false;
-	}
-
-	if( HasParent( parent ) ) {
-		debug_printf( DEBUG_QUIET,
-					"Warning: child %s already has parent %s\n",
-					GetJobName(), parent->GetJobName() );
-		check_warning_strictness( DAG_STRICT_3 );
-		return true;
-	}
-
-	if( !Add( Q_PARENTS, parent->GetJobID() ) ) {
-		whynot = "unknown error appending to PARENTS queue";
-		return false;
-	}
-    if( parent->GetStatus() != STATUS_DONE ) {
-		if( !Add( Q_WAITING, parent->GetJobID() ) ) {
-            // this node's dependency queues are now out of sync and
-            // thus the DAG state is FUBAR, so we should bail...
-			EXCEPT( "Failed to add parent %s to job %s",
-						parent->GetJobName(), GetJobName() );
-			return false;
-		}
-	}
-	whynot = "n/a";
-    return true;
-}
-#else
 
 // visit all of the children, either marking them, or checking for cycles
 int Job::CountChildren() const
 {
 	int count = 0;
-#ifdef MEMORY_HOG
-	count = (int)_children.size();
-#else
 	if (_child != NO_ID) {
 		if (_multiple_children) {
 			Edge * edge = Edge::ById(_child);
@@ -515,7 +359,6 @@ int Job::CountChildren() const
 			count = 1;
 		}
 	}
-#endif
 	return count;
 }
 
@@ -524,12 +367,7 @@ bool Job::ParentComplete(Job * parent)
 {
 	bool fail = true;
 	int num_waiting = 0;
-#ifdef MEMORY_HOG
-	fail = _waiting.erase(parent->GetJobID()) != 1;
-	num_waiting = (int)_waiting.size();
-#else
 
- #if 1
 	bool already_done = _parents_done;
 	if (_parent != NO_ID) {
 		if (_multiple_parents) {
@@ -546,53 +384,7 @@ bool Job::ParentComplete(Job * parent)
 			}
 		}
 	}
- #else
-	static int log_count = 0;
-	if (_waiting != NO_ID) {
-		if (_multiple_waiting) {
-			Edge * edge = Edge::ById(_waiting);
-			PRAGMA_REMIND("if Edge instances are shared, it's ok to fail to remove a parent here..")
-			fail = ! edge->Remove(parent->GetJobID());
-			if (fail) {
-				if (++log_count < 10) {
-					debug_printf(DEBUG_QUIET,
-						"ERROR: ParentComplete( %s ) failed for multi-parent child node %s: waiting=%d %d parent=%d %d\n",
-						parent ? parent->GetJobName() : "(null)",
-						this->GetJobName(),
-						_waiting, (int)edge->size(),
-						_parent, (int)Edge::ById(_parent)->size());
-				}
-				fail = false;
-			}
-			if (edge->empty()) {
-				_waiting = NO_ID;
-				_multiple_waiting = false;
-				num_waiting = 0;
-			} else if (fail) {
-				num_waiting = (int)edge->size();
-			}
-		} else {
-			num_waiting = 1;
-			if (parent->GetJobID() == _waiting) {
-				fail = false;
-				_waiting = NO_ID;
-				num_waiting = 0;
-			}
-		}
-		if (fail) {
-			if (++log_count < 10) {
-				debug_printf(DEBUG_QUIET,
-					"ERROR: ParentComplete( %s ) failed for multi-parent child node %s: waiting=%d %d parent=%d %d\n",
-					parent ? parent->GetJobName() : "(null)",
-					this->GetJobName(),
-					_waiting, num_waiting,
-					_parent, (int)Edge::ById(_parent)->size());
-			}
-			fail = false;
-		}
-	}
- #endif
-#endif
+ 
 	if (fail) {
 		debug_printf(DEBUG_QUIET,
 			"ERROR: ParentComplete( %s ) failed for child node %s: num_waiting=%d\n",
@@ -606,19 +398,6 @@ bool Job::ParentComplete(Job * parent)
 int Job::PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const char * sep) const
 {
 	int count = 0;
-#ifdef MEMORY_HOG
-	for (auto it = _parents.begin(); it != _parents.end(); ++it) {
-		if (buf.size() >= bufmax)
-			break;
-
-		Job * parent = dag->FindNodeByNodeID(*it);
-		ASSERT(parent != NULL);
-
-		if (count > 0) buf += sep;
-		buf += parent->GetJobName();
-		++count;
-	}
-#else
 	if (_parent != NO_ID) {
 		if (_multiple_parents) {
 			Edge * edge = Edge::ById(_parent);
@@ -643,26 +422,12 @@ int Job::PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const ch
 			++count;
 		}
 	}
-#endif
 	return count;
 }
 
 int Job::PrintChildren(std::string & buf, size_t bufmax, const Dag* dag, const char * sep) const
 {
 	int count = 0;
-#ifdef MEMORY_HOG
-	for (auto it = _children.begin(); it != _children.end(); ++it) {
-		if (buf.size() >= bufmax)
-			break;
-
-		Job * child = dag->FindNodeByNodeID(*it);
-		ASSERT(child != NULL);
-
-		if (count > 0) buf += sep;
-		buf += child->GetJobName();
-		++count;
-	}
-#else
 	if (_child != NO_ID) {
 		if (_multiple_children) {
 			Edge * edge = Edge::ById(_child);
@@ -687,7 +452,6 @@ int Job::PrintChildren(std::string & buf, size_t bufmax, const Dag* dag, const c
 			++count;
 		}
 	}
-#endif
 	return count;
 }
 
@@ -697,15 +461,6 @@ int Job::PrintChildren(std::string & buf, size_t bufmax, const Dag* dag, const c
 int Job::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Job* child))
 {
 	int count = 0;
-#ifdef MEMORY_HOG
-	for (auto it = _children.begin(); it != _children.end(); ++it) {
-		Job * child = dag.FindNodeByNodeID(*it);
-		ASSERT(child != NULL);
-		if (child->ParentComplete(this)) { // returns ! child->IsWaiting()
-			if (pfn) pfn(dag, child);
-		}
-	}
-#else
 	if (_child != NO_ID) {
 		if (_multiple_children) {
 			Edge * edge = Edge::ById(_child);
@@ -727,7 +482,6 @@ int Job::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Job* child))
 			}
 		}
 	}
-#endif
 	return count;
 }
 
@@ -735,13 +489,6 @@ int Job::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Job* child))
 int Job::VisitChildren(Dag& dag, int(*pfn)(Dag& dag, Job* parent, Job* child, void* args), void* args)
 {
 	int retval = 0;
-#ifdef MEMORY_HOG
-	for (auto it = _children.begin(); it != _children.end(); ++it) {
-		Job * child = dag.FindNodeByNodeID(*it);
-		ASSERT(child != NULL);
-		retval += pfn(dag, this, child, args);
-	}
-#else
 	if (_child != NO_ID) {
 		if (_multiple_children) {
 			Edge * edge = Edge::ById(_child);
@@ -759,12 +506,8 @@ int Job::VisitChildren(Dag& dag, int(*pfn)(Dag& dag, Job* parent, Job* child, vo
 			retval += pfn(dag, this, child, args);
 		}
 	}
-#endif
 	return retval;
 }
-
-
-#endif
 
 bool
 Job::CanAddParent( Job* parent, MyString &whynot )
@@ -860,48 +603,6 @@ int Job::PrintVars(std::string &vars)
 	return num_vars;
 }
 
-#ifdef DEAD_CODE
-bool
-Job::AddChild( Job* child )
-{
-	bool success;
-	MyString whynot;
-	success = AddChild( child, whynot );
-	if( !success ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: AddChild( %s ) failed for node %s: %s\n",
-					  child ? child->GetJobName() : "(null)",
-					  this->GetJobName(), whynot.Value() );
-	}
-	return success;
-}
-
-
-bool
-Job::AddChild( Job* child, MyString &whynot )
-{
-	if( !this->CanAddChild( child, whynot ) ) {
-		return false;
-	}
-
-	if( HasChild( child ) ) {
-		debug_printf( DEBUG_NORMAL,
-					"Warning: parent %s already has child %s\n",
-					GetJobName(), child->GetJobName() );
-		check_warning_strictness( DAG_STRICT_3 );
-		return true;
-	}
-
-	if( !Add( Q_CHILDREN, child->GetJobID() ) ) {
-		whynot = "unknown error appending to CHILDREN queue";
-		return false;
-	}
-	whynot = "n/a";
-    return true;
-}
-#else
-
-
 bool Job::AddChildren(std::forward_list<Job*> &children, MyString &whynot)
 {
 	// check if all of this can be our child, and if all are ok being our children
@@ -934,17 +635,6 @@ bool Job::AddChildren(std::forward_list<Job*> &children, MyString &whynot)
 	for (auto it = children.begin(); it != children.end(); ++it) {
 		Job* child = *it;
 
-#ifdef MEMORY_HOG
-		auto ret = _children.insert(child->GetJobID());
-		if (ret.second == false) {
-			debug_printf(DEBUG_NORMAL,
-				"Warning: parent %s already has child %s\n",
-				GetJobName(), child->GetJobName());
-			check_warning_strictness(DAG_STRICT_3);
-		} else {
-			child->addParent(this);
-		}
-#else
 		// if we have no children, add this as a direct child
 		if (_child == NO_ID) {
 			_multiple_children = false;
@@ -969,7 +659,6 @@ bool Job::AddChildren(std::forward_list<Job*> &children, MyString &whynot)
 			// count parents - used by AdjustEdges to reserve space
 			child->_numparents += 1;
 		}
-#endif
 	}
 	return true;
 }
@@ -1019,16 +708,6 @@ void Job::AdjustEdges_AddParentToChild(Dag* dag, JobID_t child_id, Job* parent)
 // update the waiting edges to contain the unfinished parents
 void Job::AdjustEdges(Dag* dag)
 {
-#ifdef MEMORY_HOG
-	for (auto it = _parents.begin(); it != _parents.end(); ++it) {
-		Job * job = dag->FindNodeByNodeID(*it);
-		if (job->GetStatus() == STATUS_DONE) {
-			_waiting.erase(*it);
-		} else {
-			_waiting.insert(*it);
-		}
-	}
-#else
 	// build parents from children
 	if (_child != NO_ID) {
 		if (_multiple_children) {
@@ -1043,32 +722,7 @@ void Job::AdjustEdges(Dag* dag)
 			AdjustEdges_AddParentToChild(dag, _child, this);
 		}
 	}
-#endif
 }
-
-
-#if 0
-// diabled becuase marking the children as done here confuses bootstrap
-void Job::AdjustEdges_NotifyChild(Dag* dag, JobID_t child_id, Job* parent)
-{
-	JobID_t parent_id = parent->GetJobID();
-	Job * child = dag->FindNodeByNodeID(child_id);
-	ASSERT(child != NULL);
-	bool already_done = child->_parents_done;
-	if (child->_parent == NO_ID) {
-		child->_parents_done = true;
-	} else if (child->_parent == parent_id) {
-		child->_parents_done = true;
-	} else {
-		ASSERT(child->_numparents > 1);
-		ASSERT(child->_multiple_parents);
-		WaitEdge* wedge = WaitEdge::ById(child->_parent);
-		wedge->MarkDone(parent_id, already_done);
-		child->_parents_done = ! wedge->Waiting();
-	}
-}
-
-#endif
 
 void Job::FinalizeAdjustEdges(Dag* /*dag*/)
 {
@@ -1086,32 +740,8 @@ void Job::FinalizeAdjustEdges(Dag* /*dag*/)
 		ASSERT(_numparents == (int)wedge->size());
 	}
 
-	// if I'm done, tell my children
-#if 0
-	// if we do this here, bootstrap will get confused
-	//  this code is left for reference - but disabled.
-	if (GetStatus() == STATUS_DONE) {
-		if (_child != NO_ID) {
-			if (_multiple_children) {
-				Edge * edge = Edge::ById(_child);
-				ASSERT(edge);
-				if (! edge->_ary.empty()) {
-					for (auto it = edge->_ary.begin(); it != edge->_ary.end(); ++it) {
-						AdjustEdges_NotifyChild(dag, *it, this);
-					}
-				}
-			} else {
-				AdjustEdges_NotifyChild(dag, _child, this);
-			}
-		}
-	}
-#else
 	ASSERT(GetStatus() != STATUS_DONE);
-#endif
 }
-
-
-#endif
 
 bool
 Job::CanAddChild( Job* child, MyString &whynot ) const
@@ -1132,7 +762,6 @@ Job::CanAddChild( Job* child, MyString &whynot ) const
 	return true;
 }
 
-
 bool
 Job::TerminateSuccess()
 {
@@ -1146,26 +775,6 @@ Job::TerminateFailure()
 	SetStatus( STATUS_ERROR );
 	return true;
 } 
-
-#ifdef DEAD_CODE
-bool
-Job::Add( const queue_t queue, const JobID_t jobID )
-{
-	std::pair<std::set<JobID_t>::iterator, bool> ret;
-
-	ret = _queues[queue].insert(jobID);
-
-	if (ret.second == false) {
-		dprintf( D_ALWAYS,
-				 "ERROR: can't add Job ID %d to DAG: already present!",
-				 jobID );
-		return false;
-	}
-
-	return true;
-}
-#else
-#endif
 
 bool
 Job::AddScript( ScriptType script_type, const char *cmd, int defer_status, time_t defer_time, MyString &whynot )
@@ -1259,118 +868,6 @@ Job::GetStatusName() const
 	return status_t_names[_Status];
 }
 
-#ifdef DEAD_CODE
-
-bool
-Job::HasChild( Job* child ) {
-	JobID_t cid;
-	std::set<JobID_t>::iterator it;
-
-	if( !child ) {
-		return false;
-	}
-
-	cid = child->GetJobID();
-	it = _queues[Q_CHILDREN].find(cid);
-
-	if (it == _queues[Q_CHILDREN].end()) {
-		return false;
-	}
-
-	return true;
-}
-
-bool
-Job::HasParent( Job* parent ) {
-	JobID_t pid;
-	std::set<JobID_t>::iterator it;
-
-	if( !parent ) {
-		return false;
-	}
-
-	pid = parent->GetJobID();
-	it = _queues[Q_PARENTS].find(pid);
-
-	if (it == _queues[Q_PARENTS].end()) {
-		return false;
-	}
-
-	return true;
-}
-
-
-bool
-Job::RemoveChild( Job* child )
-{
-	bool success;
-	MyString whynot;
-	success = RemoveChild( child, whynot );
-	if( !success ) {
-		debug_printf( DEBUG_QUIET,
-					  "ERROR: RemoveChild( %s ) failed for node %s: %s\n",
-                      child ? child->GetJobName() : "(null)",
-                      this->GetJobName(), whynot.Value() );
-	}
-	return success;
-}
-
-
-bool
-Job::RemoveChild( Job* child, MyString &whynot )
-{
-	if( !child ) {
-		whynot = "child == NULL";
-		return false;
-	}
-	return RemoveDependency( Q_CHILDREN, child->GetJobID(), whynot );
-}
-
-
-bool
-Job::RemoveParent( Job* parent, MyString &whynot )
-{
-	if( !parent ) {
-		whynot = "parent == NULL";
-		return false;
-	}
-	return RemoveDependency( Q_PARENTS, parent->GetJobID(), whynot );
-}
-
-bool
-Job::RemoveDependency( queue_t queue, JobID_t job )
-{
-	MyString whynot;
-	return RemoveDependency( queue, job, whynot );
-}
-
-bool
-Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
-{
-	if (_queues[queue].erase(job) == 0)
-	{
-		whynot = "no such dependency";
-		return false;
-	}
-
-	whynot = "n/a";
-	return true;
-}
-
-int
-Job::NumParents() const
-{
-	return _queues[Q_PARENTS].size();
-}
-
-int
-Job::NumChildren() const
-{
-	return _queues[Q_CHILDREN].size();
-}
-#else
-#endif
-
 void
 Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 {
@@ -1415,25 +912,6 @@ Job::PrefixName(const MyString &prefix)
 
 	_jobName = strdup(tmp.Value());
 }
-
-
-#ifdef DEAD_CODE
-// iterate across the Job's var values, and for any which have $(JOB) in them, 
-// substitute it. This substitution is draconian and will always happen.
-void
-Job::ResolveVarsInterpolations(void)
-{
-	NodeVar *var;
-
-	varsFromDag->Rewind();
-	while( (var = varsFromDag->Next()) != NULL ) {
-		// XXX No way to escape $(JOB) in case, for some crazy reason, you
-		// want a filename component actually to be '$(JOB)'.
-		// It isn't hard to fix, I'll do it later.
-		var->_value.replaceString("$(JOB)", GetJobName());
-	}
-}
-#endif
 
 //---------------------------------------------------------------------------
 void
@@ -1525,19 +1003,12 @@ Job::SetCondorID(const CondorID& cid)
 bool
 Job::Hold(int proc) 
 {
-#ifdef DEAD_CODE
-	if( proc >= static_cast<int>( _onHold.size() ) ) {
-		_onHold.resize( proc+1, 0 );
-	}
-	if( !_onHold[proc] ) {
-		_onHold[proc] = 1;
-#else
 	if (proc >= static_cast<int>(_gotEvents.size())) {
 		_gotEvents.resize(proc + 1, 0);
 	}
 	if ((_gotEvents[proc] & HOLD_MASK) != HOLD_MASK) {
 		_gotEvents[proc] |= HOLD_MASK;
-#endif
+
 		++_jobProcsOnHold;
 		++_timesHeld;
 		return true;
@@ -1552,15 +1023,6 @@ Job::Hold(int proc)
 bool
 Job::Release(int proc)
 {
-#ifdef DEAD_CODE
-	if( proc >= static_cast<int>( _onHold.size() ) ) {
-		dprintf( D_FULLDEBUG, "Received release event for node %s, but job %d.%d "
-			"is not on hold\n", GetJobName(), GetCluster(), GetProc() );
-		return false; // We never marked this as being on hold
-	}
-	if( _onHold[proc] ) {
-		_onHold[proc] = 0;
-#else
 	//PRAGMA_REMIND("tj: this should also test the flags, not just the vector size")
 	if (proc >= static_cast<int>(_gotEvents.size())) {
 		dprintf(D_FULLDEBUG, "Received release event for node %s, but job %d.%d "
@@ -1569,7 +1031,7 @@ Job::Release(int proc)
 	}
 	if (_gotEvents[proc] & HOLD_MASK) {
 		_gotEvents[proc] &= ~HOLD_MASK;
-#endif
+
 		--_jobProcsOnHold;
 		return true;
 	}
@@ -1584,11 +1046,6 @@ Job::Release(int proc)
 void
 Job::Cleanup()
 {
-#ifdef DEAD_CODE
-	std::vector<unsigned char> s;
-	_onHold.swap(s); // Free memory in _onHold
-#endif
-
 	for ( int proc = 0; proc < static_cast<int>( _gotEvents.size() );
 				proc++ ) {
 		if ( _gotEvents[proc] != ( EXEC_MASK | ABORT_TERM_MASK ) ) {
@@ -1601,9 +1058,4 @@ Job::Cleanup()
 
 	std::vector<unsigned char> s2;
 	_gotEvents.swap(s2); // Free memory in _gotEvents
-	
-#ifdef DEAD_CODE
-	std::vector<unsigned char> s3;
-	_isIdle.swap(s3); // Free memory in _isIdle
-#endif
 }

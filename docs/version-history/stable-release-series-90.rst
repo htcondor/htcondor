@@ -21,6 +21,12 @@ New Features:
 
 - None.
 
+- Added configuration parameter ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``,
+  a boolean value which defaults to ``False``.
+  If set to ``True``, then clients that authenticate to a daemon using
+  SSL must present a valid SSL credential.
+  :jira:`236`
+
 Bugs Fixed:
 
 - Fixed a bug that could cause the *condor_had* daemon to fail at startup
@@ -28,6 +34,14 @@ Bugs Fixed:
   This bug is particularly likely to happen if ``PREFER_IPV4`` is set to
   ``False``.
   :jira:`625`
+
+- Fixed a bug that ignored the setting of per-Accounting Group
+  GROUP_AUTOREGROUP from working.  Global autoregroup worked correctly.
+  :jira:`632`
+
+- The *bosco_cluster* tool now clears out old installation files when
+  the *--add* option is used to update an existing installation.
+  :jira:`577`
 
 Version 9.0.5
 -------------
@@ -44,6 +58,15 @@ New Features:
   presented a valid SciToken) but the user-mapping fails, HTCondor will
   try the next authentication method in the list instead of failing.
   :jira:`589`
+
+- The `bosco_cluster` command now creates backup files when the ``--override``
+  option is used.
+  :jira:`591`
+
+- Improved the detection of Red Hat Enterprise Linux based distributions.
+  Previously, only ``CentOS`` was recognized. Now, other distributions such
+  as ``Scientific Linux`` and ``Rocky`` should be recognized.
+  :jira:`609`
 
 Bugs Fixed:
 
