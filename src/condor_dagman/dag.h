@@ -1163,9 +1163,6 @@ private:
 	// the HTCondor job log
 	std::queue<Job*>* _submitQ;
 
-	// Queue of actively running jobs
-	std::queue<Job*>* _runningQ;
-
 	ScriptQ* _preScriptQ;
 	ScriptQ* _postScriptQ;
 	ScriptQ* _holdScriptQ;

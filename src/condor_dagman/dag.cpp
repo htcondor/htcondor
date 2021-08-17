@@ -2157,12 +2157,6 @@ Dag::NumNodes( bool includeFinal ) const
 	if ( !includeFinal && HasFinalNode() ) {
 		result--;
 	}
-	// If this DAG includes any service nodes, these should not be counted
-	/*
-	if ( !_service_nodes.empty() ) {
-		result -= _service_nodes.size();
-	}
-	*/
 	return result;
 }
 
