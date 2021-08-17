@@ -26,6 +26,12 @@ Bugs Fixed:
   a string with a colon and a port number, but no host part.
   :jira:`602`
 
+- Changed the default value of configuration parameter ``MAIL`` to
+  */usr/bin/mail* on unix.
+  This location is valid on all of our supported unix platforms, unlike
+  the previous default value of */bin/mail*.
+  :jira:`581`
+
 Version 9.1.3
 -------------
 
