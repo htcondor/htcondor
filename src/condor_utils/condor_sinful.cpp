@@ -387,16 +387,27 @@ Sinful::setHost(char const *host)
 	regenerateStrings();
 }
 void
-Sinful::setPort(char const *port)
+Sinful::setPort(char const *port, bool update_all)
 {
 	ASSERT(port);
 	m_port = port;
+	if( update_all ) {
+		int portnum = atoi(port);
+		for( auto& addr : addrs) {
+			addr.set_port(portnum);
+		}
+	}
 	regenerateStrings();
 }
 void
-Sinful::setPort(int port)
+Sinful::setPort(int port, bool update_all)
 {
 	m_port = std::to_string(port);
+	if( update_all ) {
+		for( auto& addr : addrs ) {
+			addr.set_port(port);
+		}
+	}
 	regenerateStrings();
 }
 

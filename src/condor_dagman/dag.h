@@ -171,16 +171,6 @@ class Dag {
     /// Add a job to the collection of jobs managed by this Dag.
     bool Add( Job& job );
 
-#ifdef DEAD_CODE
-    /** Specify a dependency between two jobs. The child job will only
-        run after the parent job has finished.
-        @param parent The parent job
-        @param child The child job (depends on the parent)
-        @return true: successful, false: failure
-    */
-    static bool AddDependency (Job * parent, Job * child);
-#endif
-
 	/** Run waiting/deferred scripts that are ready to run.  Note: scripts
 	    are also limited by halt status and maxpre/maxpost.
 	*/
@@ -572,15 +562,6 @@ class Dag {
 
 	std::map<std::string, SubmitHash*> SubmitDescriptions;
 
-#if 0
-	bool RemoveNode( const char *name, MyString &whynot );
-#endif
-
-#ifdef DEAD_CODE
-	bool RemoveDependency( Job *parent, Job *child );
-	bool RemoveDependency( Job *parent, Job *child, MyString &whynot );
-#endif
-	
     /* Detects cycle within dag submitted by user
 	   @return true if there is cycle
 	*/
@@ -621,14 +602,6 @@ class Dag {
 	void SetJobstateLogFileName( const char *logFileName );
 
 	void CheckAllJobs();
-
-#ifdef DEAD_CODE
-		/** Returns a delimited string listing the node names of all
-			of the given node's parents if the number of parents is less than or equal to max_parents
-			@return delimited string of parent node names
-		*/
-	const MyString ParentListString( Job *node, size_t max_parents=256, const char delim = ',' ) const;
-#endif
 
 	int NumIdleJobProcs() const { return _numIdleJobProcs; }
 
@@ -767,13 +740,6 @@ class Dag {
 	// Take an array from RelinquishNodeOwnership) and store it in my self.
 	void AssumeOwnershipofNodes(const MyString &spliceName,
 				OwnedMaterials *om);
-
-#ifdef DEAD_CODE // we now do this at submit time.
-	// This must be called after the toplevel dag has been parsed and
-	// the splices lifted. It will resolve the use of $(JOB) in the value
-	// of the VARS attribute.
-	void ResolveVarsInterpolations(void);
-#endif
 
 	// When parsing a splice (which is itself a dag), there must always be a
 	// DIR concept associated with it. If DIR is left off, then it is ".",

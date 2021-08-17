@@ -377,7 +377,7 @@ getOldSubmitFlags(SubmitDagShallowOptions &shallowOpts)
 			subLine.trim();
 			tok.Tokenize( subLine.c_str() );
 			while( const char* token = tok.GetNextToken( " \t", true ) ) {
-				tokens.push_back( std::string( token ) );
+				tokens.emplace_back( token );
 			}
 
 			const char *first = tokens.front().c_str();
@@ -452,7 +452,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 		{
 				// We assume an argument without a leading hyphen is
 				// a DAG file name.
-			shallowOpts.dagFiles.push_back(strArg.c_str());
+			shallowOpts.dagFiles.emplace_back(strArg.c_str());
 			if ( shallowOpts.primaryDagFile == "" ) {
 				shallowOpts.primaryDagFile = strArg;
 			}
@@ -580,7 +580,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					fprintf(stderr, "-append argument needs a value\n");
 					printUsage();
 				}
-				shallowOpts.appendLines.push_back(argv[++iArg]);
+				shallowOpts.appendLines.emplace_back(argv[++iArg]);
 			}
 			else if (strArg.find("-bat") != -1) // -batch-name
 			{

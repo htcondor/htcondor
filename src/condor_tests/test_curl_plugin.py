@@ -32,8 +32,8 @@ def server():
 
 
 @action
-def start_log(test_dir):
-    start_log = open(test_dir / "condor" / "log" / "StartLog", "r")
+def slot2_starter_log(test_dir):
+    start_log = open(test_dir / "condor" / "log" / "StarterLog.slot2", "r")
     contents = start_log.readlines()
     start_log.close()
     return contents
@@ -79,6 +79,7 @@ def job_with_good_url(default_condor, good_url, test_dir, path_to_sleep):
             "transfer_input_files": good_url,
             "transfer_output_files": "goodurl",
             "should_transfer_files": "YES",
+            "requirements": "(SlotID == 1)"
         }
     )
     assert job.wait(condition=ClusterState.all_terminal)
@@ -94,6 +95,7 @@ def job_with_bad_url(default_condor, bad_url, test_dir, path_to_sleep):
             "log": (test_dir / "bad_url.log").as_posix(),
             "transfer_input_files": bad_url,
             "should_transfer_files": "YES",
+            "requirements": "(SlotID == 1)"
         }
     )
     assert job.wait(condition=ClusterState.all_terminal)
@@ -110,6 +112,9 @@ def job_with_multiple_good_urls(default_condor, multiple_good_urls, test_dir, pa
             "transfer_input_files": multiple_good_urls,
             "transfer_output_files": "goodurl1, goodurl2, goodurl3",
             "should_transfer_files": "YES",
+            # We want to run this specific test on slot2 so that all invocations
+            # of curl_plugin are isolated from the other tests
+            "requirements": "(SlotID == 2)"
         }
     )
     assert job.wait(condition=ClusterState.all_terminal)
@@ -126,6 +131,7 @@ def job_with_multiple_bad_urls(default_condor, multiple_bad_urls, test_dir, path
             "transfer_input_files": multiple_bad_urls,
             "transfer_output_files": "badurl1, badurl2, badurl3",
             "should_transfer_files": "YES",
+            "requirements": "(SlotID == 1)"
         }
     )
     assert job.wait(condition=ClusterState.all_terminal)
@@ -147,14 +153,12 @@ class TestCurlPlugin:
     def test_job_with_multiple_good_urls_succeeds(self, job_with_multiple_good_urls):
         assert job_with_multiple_good_urls.state[0] == JobStatus.COMPLETED
 
-    def test_job_with_multiple_good_urls_invokes_plugin_once(self, job_with_multiple_good_urls, start_log):
+    def test_job_with_multiple_good_urls_invokes_plugin_once(self, job_with_multiple_good_urls, slot2_starter_log):
         plugin_invocations = 0
-        for line in start_log:
+        for line in slot2_starter_log:
             if "invoking" in line:
                 plugin_invocations += 1
-        # We actually expect to see 5 invocations of the curl_plugin because all the other tests are logged in the same file.
-        # TODO: Figure out a better way to isolate this so we only see the invocation we care about
-        assert plugin_invocations == 5
+        assert plugin_invocations == 1
 
     def test_job_with_multiple_bad_urls_holds(self, job_with_multiple_bad_urls):
         assert job_with_multiple_bad_urls.state[0] == JobStatus.HELD

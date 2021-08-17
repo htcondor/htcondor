@@ -1701,8 +1701,7 @@ description=Path to sendmail
 tags=MAIL,
 
 [MAIL]
-# default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
-default=/bin/mail
+default=/usr/bin/mail
 win32_default=$(BIN)\condor_mail.exe
 type=path
 tags=MAIL,
@@ -2527,6 +2526,10 @@ description=Location of the host private key
 type=path
 tags=condor_auth_ssl
 
+[AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE]
+default=false
+type=bool
+
 [TRUST_DOMAIN]
 default=$(COLLECTOR_HOST)
 type=string
@@ -2685,6 +2688,10 @@ tags=negotiator,matchmaker
 default=60
 type=int
 tags=negotiator,matchmaker
+
+[NEGOTIATOR_MIN_INTERVAL]
+default=5
+type=int
 
 [NEGOTIATOR_UPDATE_AFTER_CYCLE]
 default=false

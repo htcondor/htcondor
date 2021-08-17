@@ -1222,15 +1222,20 @@ SSL Authentication
 SSL authentication is similar to GSI authentication, but without GSI's
 delegation (proxy) capabilities. SSL utilizes X.509 certificates.
 
-All SSL authentication is mutual authentication in HTCondor. This means
-that when SSL authentication is used and when one process communicates
-with another, each process must be able to verify the signature on the
-certificate presented by the other process. The process that initiates
-the connection is the client, and the process that receives the
-connection is the server. For example, when a *condor_startd* daemon
-authenticates with a *condor_collector* daemon to provide a machine
-ClassAd, the *condor_startd* daemon initiates the connection and acts
-as the client, and the *condor_collector* daemon acts as the server.
+SSL authentication may be mutual or server-only.
+That is, the server always needs a certificate that can be verified by
+the client, but a certificate for the client may be optional.
+Whether a client certificate is required is controlled by
+configuration variable ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``
+:index:`AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE`, a boolean value
+that defaults to ``False``.
+If the value is ``False``, then the client may present a certificate
+to be verified by the server.
+if the client doesn't have a certificate, then its identity is set to
+``unauthenticated`` by the server.
+If the value is ``True`` and the client doesn't have a certificate, then
+the SSL authentication fails (other authentication methods may then be
+tried).
 
 The names and locations of keys and certificates for clients, servers,
 and the files used to specify trusted certificate authorities (CAs) are
