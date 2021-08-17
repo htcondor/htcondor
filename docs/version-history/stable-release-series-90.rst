@@ -39,25 +39,25 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug where ``condor_gpu_discovery`` would not report any GPUs if
-  any MIG-enabled GPU on the system were configured in certain ways.  Fixed
-  a bug which could cause ``condor_gpu_discovery``'s output to become
-  unparseable after certain errors.
-  :jira:`476`
+- Fixed a bug on the Windows platform where *condor_submit* would crash
+  rarely after successfully submitting a job.  This caused problems for programs
+  that look at the return status of *condor_submit*, including *condor_dagman*
+  :jira:`579`
 
-- Fixed a bug where jobs running on Linux machines with cgroups enabled
-  would not count files created in /dev/shm in the MemoryUsage attribute.
-  :jira:`586`
+- The job attribute ``ExitCode`` is no longer missing from the job ad after
+  ``OxExitHold`` triggers.
+  :jira:`599`
 
 - Fixed a bug where running *condor_who* as a non-root user on a Unix
   system would print a confusing warning to stderr about running as
   non-root.
   :jira:`590`
 
-- Fixed a bug on the Windows platform where *condor_submit* would crash
-  rarely after succesfully submitting a job.  This caused problems for programs
-  that look at the return status of *condor_submit*, including *condor_dagman*
-  :jira:`579`
+- Fixed a bug where ``condor_gpu_discovery`` would not report any GPUs if
+  any MIG-enabled GPU on the system were configured in certain ways.  Fixed
+  a bug which could cause ``condor_gpu_discovery``'s output to become
+  unparseable after certain errors.
+  :jira:`476`
 
 - HTCondor no longer ignores files in a job's spool directory if they happen
   to share a name with an entry in ``transfer_input_files``.  This allows
@@ -65,9 +65,9 @@ Bugs Fixed:
   ``transfer_checkpoint_files``, and still resume properly after a checkpoint.
   :jira:`583`
 
-- The job attribute ``ExitCode`` is no longer missing from the job ad after
-  ``OxExitHold`` triggers.
-  :jira:`599`
+- Fixed a bug where jobs running on Linux machines with cgroups enabled
+  would not count files created in /dev/shm in the MemoryUsage attribute.
+  :jira:`586`
 
 - Fixed a bug in the *condor_now* tool, where the *condor_schedd* would
   not use an existing security session to run the selected job on the
