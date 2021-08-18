@@ -43,6 +43,12 @@ Bugs Fixed:
   the *--add* option is used to update an existing installation.
   :jira:`577`
 
+- For the machine ad attributes ``OpSys*`` and configuration parameters
+  ``OPSYS*``, treat macOS 11.X as if it were macOS 10.16.X.
+  This represents the major version nubmers in a consistent, if somewhat
+  inaccurate manner.
+  :jira:`626`
+
 Version 9.0.5
 -------------
 
