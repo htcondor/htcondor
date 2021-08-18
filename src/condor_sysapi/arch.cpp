@@ -499,11 +499,21 @@ sysapi_get_darwin_info(void)
 	info_str = strdup( "Unknown" );
     }
 
-    int ten = 0, major = 0, minor = 0;
-    int fields = sscanf(ver_str, "%d.%d.%d", &ten, &major, &minor);
-    if ((fields != 3) || ten != 10) {
-        dprintf(D_FULLDEBUG, "UNEXPECTED MacOS version string %s", ver_str);
-    }
+	int ten = 0, major = 0, minor = 0;
+	int fields = sscanf(ver_str, "%d.%d.%d", &ten, &major, &minor);
+	if (ten < 10 || ten > 12 || fields < 2 || (ten == 10 && fields != 3)) {
+		dprintf(D_FULLDEBUG, "UNEXPECTED MacOS version string %s", ver_str);
+	}
+	// Treat 11.X as 10.16.X and 12.X as 10.17.X, since a lot of the
+	// OS version handling ignores the first number of MacOSX versions.
+	// TODO Revamp the OS version code to properly handle new macOS versions.
+	if (ten == 11) {
+		minor = major;
+		major = 16;
+	} else if (ten == 12) {
+		minor = major;
+		major = 17;
+	}
 
     sprintf( tmp_info, "%s%d.%d", os_name, major, minor);
     info_str = strdup( tmp_info );
@@ -547,14 +557,15 @@ sysapi_find_darwin_opsys_name( int tmp_opsys_major_version )
         const char *osname = NULL;
 
 	const char * versions[] = {
-		"Leopard",             // 5
-		"SnowLeopard",         // 6	
-		"Lion",                // 7
-		"MountainLion",        // 8 
+		"HighSierra",      // 13
+		"Mojave",          // 14
+		"Catalina",        // 15
+		"BigSur",          // 16
+		"Monterey",        // 17
 	};
 
-        if (vers >= 5 && (vers-5) < (int)COUNTOF(versions)) {
-		osname = strdup(versions[vers-5]);
+        if (vers >= 13 && (vers-13) < (int)COUNTOF(versions)) {
+		osname = strdup(versions[vers-13]);
         } else {
 		osname = strdup("Unknown");
 	}
