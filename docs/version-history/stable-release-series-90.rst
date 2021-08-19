@@ -29,25 +29,30 @@ New Features:
 
 Bugs Fixed:
 
+- The *bosco_cluster* tool now clears out old installation files when
+  the *--add* option is used to update an existing installation.
+  :jira:`577`
+
+- Updated *condor_gpu_discovery* to be compatible with version 470 of
+  NVidia's drivers.
+  :jira:`620`
+
 - Fixed a bug that could cause the *condor_had* daemon to fail at startup
   when the local machine has multiple IP addresses.
   This bug is particularly likely to happen if ``PREFER_IPV4`` is set to
   ``False``.
   :jira:`625`
 
-- Fixed a bug that ignored the setting of per-Accounting Group
-  GROUP_AUTOREGROUP from working.  Global autoregroup worked correctly.
-  :jira:`632`
-
-- The *bosco_cluster* tool now clears out old installation files when
-  the *--add* option is used to update an existing installation.
-  :jira:`577`
-
 - For the machine ad attributes ``OpSys*`` and configuration parameters
   ``OPSYS*``, treat macOS 11.X as if it were macOS 10.16.X.
   This represents the major version nubmers in a consistent, if somewhat
   inaccurate manner.
   :jira:`626`
+
+- Fixed a bug that ignored the setting of per-Accounting Group
+  GROUP_AUTOREGROUP from working.  Global autoregroup worked correctly.
+  :jira:`632`
+
 
 Version 9.0.5
 -------------
