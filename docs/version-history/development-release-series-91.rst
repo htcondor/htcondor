@@ -9,9 +9,7 @@ Version 9.1.3
 
 Release Notes:
 
-.. HTCondor version 9.1.3 released on Month Date, 2021.
-
-- HTCondor version 9.1.3 not yet released.
+- HTCondor version 9.1.3 released on August 19, 2021.
 
 - Globus GSI is no longer needed for X.509 proxy delegation
 
