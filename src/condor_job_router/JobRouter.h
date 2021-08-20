@@ -42,9 +42,11 @@ typedef std::map<std::string,JobRoute *, classad::CaseIgnLTStr> RoutingTable;
 
 // one or more of these flags can be passed to the JobRouter constructor
 #define JOB_ROUTER_TOOL_FLAG_AS_TOOL          0x0001  // basic operate as tool
-#define JOB_ROUTER_TOOL_FLAG_DIAGNOSTIC       0x0002  // diagnostic level output
-#define JOB_ROUTER_TOOL_FLAG_DEBUG_UMBRELLA   0x0004  // wrap umbrella constraint in debug()
-#define JOB_ROUTER_TOOL_FLAG_CAN_SWITCH_IDS   0x0008  // route as if userid switching was possible
+#define JOB_ROUTER_TOOL_FLAG_LOG_XFORM_ERRORS 0x0002  // log tranform errors to dprintf log
+#define JOB_ROUTER_TOOL_FLAG_LOG_XFORM_STEPS  0x0004  // log tranform steps to dprintf log
+#define JOB_ROUTER_TOOL_FLAG_DIAGNOSTIC       0x0008  // diagnostic level output
+#define JOB_ROUTER_TOOL_FLAG_DEBUG_UMBRELLA   0x0010  // wrap umbrella constraint in debug()
+#define JOB_ROUTER_TOOL_FLAG_CAN_SWITCH_IDS   0x0020  // route as if userid switching was possible
 
 /*
  * The JobRouter is responsible for finding idle jobs of one flavor

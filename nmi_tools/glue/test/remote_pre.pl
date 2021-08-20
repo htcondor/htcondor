@@ -260,14 +260,11 @@ if( not TestGlue::is_windows() ) {
 		system( "ln -s condor/lib64 lib64" );
 	}
     
-	if(-f "condor/condor_install") {
-		system("ls condor");
-		chdir("condor");
-		system("chmod 755 condor_install");
-		system("./condor_install -make-personal-condor");
-		system("ls");
-		chdir("condor");
-	}
+	system("ls condor");
+	chdir("condor");
+	system("chmod 755 bin/make-personal-from-tarball");
+	system("./bin/make-personal-from-tarball");
+	system("ls");
 
     # Remove leftovers from extracting built binaries.
     print "Removing $version tar file and extraction\n";
@@ -279,16 +276,18 @@ if( not TestGlue::is_windows() ) {
 	# tweeking personal condors we have our condor_paths
 	# and CONDOR_CONFIG. 
 
-    #
-    # With 'use security : host_based' now remove from the default HTCondor
-    # config (HTCONDOR-301), we need to update or replace condor_install
-    # (HTCONDOR-52).  Until we do, fix it here by hand.  We'll assume for
-    # now that appending it will do.
-    #
+	# CondorPersonal.pl assumes LOCAL_CONFIG_FILE will be set in the
+	# source configuration, but make-personal-from-tarball doesn't
+	# set it. So append it here.
+	#
+	# Also, the test cmd_q_format_file appends parameters to the local
+	# config file that we define here (instead of creating a derived
+	# configuation).
 	my $mainConfigFile = $ENV{ CONDOR_CONFIG };
 	open( MAIN, ">> $mainConfigFile" ) or die "Failed to open original config file: $mainConfigFile :$!\n";
-	print MAIN "\nuse security : host_based\n";
+	print MAIN "LOCAL_CONFIG_FILE = \$(LOCAL_DIR)/condor_config.local\n";
 	close( MAIN );
+	system("touch local/condor_config.local");
 }
 
 #Look for condor_tests/testconfigappend which we want at the end

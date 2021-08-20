@@ -173,6 +173,18 @@ class Authentication {
 		// Return the current global map file
 	static MapFile* getGlobalMapFile() { return global_map_file; }
 
+    //
+    // In a conventional design, getGlobalMapFile() would call
+    // reconfigMapFile() and only return NULL if a map file could not be
+    // loaded, rather than NULL if one hadn't been loaded yet.  But we
+    // didn't do that, so rather than change a bunch of semantics,
+    // we'll expose the map file loading functionality for authentication
+    // methods that need it (to error out of authN if mapping fails, beacuse
+    // we don't currently retry authN if authZ fails (which it will if the
+    // mapping fails).
+    //
+    static void load_map_file();
+
  private:
 #if !defined(SKIP_AUTHENTICATION)
     Authentication() {}; //should never be called, make private to help that!

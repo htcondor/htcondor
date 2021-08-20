@@ -83,7 +83,8 @@ $pool1->MakeThisTheDefaultInstance();
 
 my $append_submit_commands = '
   request_memory = 1
-  requirements = DrainRank>=4
+  requirements = DrainRank>=4  && ((NumJobStarts?:0) < 1)
+
 ';
 
 # Verify that a 30s job runs on startd4, the startd with the highest

@@ -60,7 +60,6 @@ if(!(defined $killconfig)) {
 	my $firstappend_condor_config = '
 		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 		WANT_SUSPEND = FALSE
-		NEGOTIATION_INTERVAL = 10
 		#MAX_WRITELOG_LOG = 4 Kb
 		#WRITELOG_LOG = $(log)/WriteLogLog
 		#WRITELOG_DEBUG = D_ALWAYS
@@ -150,7 +149,6 @@ if(!(defined $killconfig)) {
 	my $secondappend_condor_config = '
 		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 		WANT_SUSPEND = FALSE
-		NEGOTIATION_INTERVAL = 10
 		MAX_WRITELOG_LOG = 2 Mb
 		WRITELOG_LOG = $(log)/WriteLogLog
 		WRITELOG_DEBUG = D_ALWAYS
@@ -229,7 +227,6 @@ if(!(defined $killconfig)) {
 	my $thirdappend_condor_config = '
 		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 		WANT_SUSPEND = FALSE
-		NEGOTIATION_INTERVAL = 10
 		MAX_WRITELOG_LOG = 60 Sec
 		WRITELOG_LOG = $(log)/WriteLogLog
 		WRITELOG_DEBUG = D_ALWAYS
@@ -287,7 +284,6 @@ if(!(defined $killconfig)) {
 	my $forthappend_condor_config = '
 		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 		WANT_SUSPEND = FALSE
-		NEGOTIATION_INTERVAL = 10
 		MAX_WRITELOG_LOG = 60 Sec
 		WRITELOG_LOG = $(log)/WriteLogLog
 		WRITELOG_DEBUG = D_ALWAYS

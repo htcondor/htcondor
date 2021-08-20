@@ -207,12 +207,6 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 
 		}
 
-#if 0  // not currently used by dagman.
-		if (HdrFlags & D_IDENT) {
-			const void * ident = 0;
-			cid.formatstr("(ident:%p) ", ident);
-		}
-#endif
 		// We skip running of the DebugId function, since it needs to
 		// emit to a FILE* and we can't store it in the cache. It, as of this
 		// time, isn't used in condor_dagman.

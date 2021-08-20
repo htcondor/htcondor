@@ -6738,8 +6738,16 @@ These macros affect the *condor_negotiator*.
     for defaults and composition of valid HTCondor daemon names.
 
 :macro-def:`NEGOTIATOR_INTERVAL`
-    Sets how often the *condor_negotiator* starts a negotiation cycle.
+    Sets the maximum time the *condor_negotiator* will wait before
+    starting a new negotiation cycle, counting from the start of the
+    previous cycle.
     It is defined in seconds and defaults to 60 (1 minute).
+
+:macro-def:`NEGOTIATOR_MIN_INTERVAL`
+    Sets the minimum time the *condor_negotiator* will wait before
+    starting a new negotiation cycle, counting from the start of the
+    previous cycle.
+    It is defined in seconds and defaults to 5.
 
 :macro-def:`NEGOTIATOR_UPDATE_INTERVAL`
     This macro determines how often the *condor_negotiator* daemon
@@ -9164,6 +9172,14 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`AUTH_SSL_CLIENT_KEYFILE`
     The path and file name of the file containing the private key for
     the client side of a communication authenticating with SSL.
+
+:macro-def:`AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE`
+    A boolean value that controls whether the client side of a
+    communication authenticating with SSL must have a credential.
+    If set to ``True`` and the client doesn't have a credential, then
+    the SSL authentication will fail and other authentication methods
+    will be tried.
+    The default is ``False``.
 
 :macro-def:`SSL_SKIP_HOST_CHECK`
     A boolean variable that controls whether a host check is performed
