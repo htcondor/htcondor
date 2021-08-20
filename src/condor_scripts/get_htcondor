@@ -382,9 +382,7 @@ do_install() {
 				# but for now let's not risk screwing things up by adding them
 				# on the platforms that don't need them.
 				case $lsb_dist.$dist_version in
-				    ubuntu.focal)
-				    ;&
-				    ubuntu.bionic)
+				    ubuntu.focal|ubuntu.bionic)
     					echo -e "\n# Preconfiguring packages for Ubuntu."
 	    				$sh_c "DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration console-setup tzdata"
                     ;;
@@ -411,13 +409,10 @@ do_install() {
 			fi
 
 			repo_dist=$lsb_dist
-			if [ "${repo_dist}" = "centos" ]; then
-				repo_dist="rhel"
-			fi
-			# The fall-through here is deliberate.
-			if [ "${repo_dist}" = "rhel" ]; then
-				repo_dist="el"
-			fi
+			case $lsb_dist in
+				centos|rhel)
+					repo_dist="el"
+			esac
 			repo_suffix="${repo_dist}${dist_version}"
 			yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL}/htcondor-release-current.${repo_suffix}.noarch.rpm"
 
