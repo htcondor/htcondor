@@ -53,6 +53,11 @@ Bugs Fixed:
   GROUP_AUTOREGROUP from working.  Global autoregroup worked correctly.
   :jira:`632`
 
+- A self-checkpointing job's output and error logs will no longer be
+  interrupted by eviction if the job specifies ``transfer_checkpoint_files``;
+  HTCondor now automatically considers them part of the checkpoint the way it
+  automatically considers them part of the output.
+  :jira:`656`
 
 Version 9.0.5
 -------------
