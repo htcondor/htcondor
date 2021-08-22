@@ -1383,6 +1383,32 @@ FileTransfer::DetermineWhichFilesToSend() {
 			if( DontEncryptCheckpointFiles ) { delete DontEncryptCheckpointFiles; }
 			DontEncryptCheckpointFiles = new StringList( NULL, "," );
 
+			//
+			// If we're not streaming ATTR_JOB_OUTPUT or ATTR_JOB_ERROR,
+			// send them along as well.  If ATTR_CHECKPOINT_FILES is set,
+			// it's an explicit list, so we don't have to worry about
+			// implicitly sending the file twice.
+			//
+			std::string fn;
+			bool streaming = false;
+			if( jobAd.LookupString( ATTR_JOB_OUTPUT, fn ) ) {
+				jobAd.LookupBool( ATTR_STREAM_OUTPUT, streaming );
+				if( (! streaming) && (! nullFile(fn.c_str())) ) {
+					if(! CheckpointFiles->file_contains(fn.c_str()) ) {
+						CheckpointFiles->append(fn.c_str());
+					}
+				}
+			}
+
+			if( jobAd.LookupString( ATTR_JOB_ERROR, fn ) ) {
+				jobAd.LookupBool( ATTR_STREAM_ERROR, streaming );
+				if( (! streaming) && (! nullFile(fn.c_str())) ) {
+					if(! CheckpointFiles->file_contains(fn.c_str()) ) {
+						CheckpointFiles->append(fn.c_str());
+					}
+				}
+			}
+
 			// Yes, this is stupid, but it'd be a big change to fix.
 			FilesToSend = CheckpointFiles;
 			EncryptFiles = EncryptCheckpointFiles;
