@@ -495,16 +495,18 @@ main( int argc, const char** argv)
 	} else {
 		cuda_handle = setCUDAFunctionPointers( opt_nvcuda, opt_cudart );
 		if( cuda_handle && !opt_cudart ) {
-			CUresult r = cuInit(0);
-			if( r != CUDA_SUCCESS ) {
-				if( r == CUDA_ERROR_NO_DEVICE ) {
-					print_error(MODE_DIAGNOSTIC_MSG, "diag: cuInit found no CUDA-capable devices. code=%d\n", r);
-				} else {
-					print_error(MODE_ERROR, "Error: cuInit returned %d\n", r);
+			if( cuInit ) {
+				CUresult r = cuInit(0);
+				if( r != CUDA_SUCCESS ) {
+					if( r == CUDA_ERROR_NO_DEVICE ) {
+						print_error(MODE_DIAGNOSTIC_MSG, "diag: cuInit found no CUDA-capable devices. code=%d\n", r);
+					} else {
+						print_error(MODE_ERROR, "Error: cuInit returned %d\n", r);
 				}
 
-				dlclose( cuda_handle );
-				cuda_handle = NULL;
+					dlclose( cuda_handle );
+					cuda_handle = NULL;
+				}
 			}
 		}
 
