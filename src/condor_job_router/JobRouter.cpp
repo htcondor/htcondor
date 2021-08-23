@@ -1120,7 +1120,7 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
 		route = it->second;
 		if (0 == new_routes->count(route->Name())) {
-			dprintf(D_ALWAYS,"JobRouter Note: dropping route '%s'\n",route->RouteString().c_str());
+			dprintf(D_ALWAYS,"JobRouter Note: dropping route '%s'\n",route->RouteDescription().c_str());
 		}
 	}
 
@@ -1129,7 +1129,7 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 		route = it->second;
 		auto found = m_routes->find(route->Name());
 		if (found == m_routes->end()) {
-			dprintf(D_ALWAYS,"JobRouter Note: adding new route '%s'\n",route->RouteString().c_str());
+			dprintf(D_ALWAYS,"JobRouter Note: adding new route '%s'\n",route->RouteDescription().c_str());
 		}
 		else {
 				// preserve state from the old route entry
@@ -1889,8 +1889,6 @@ JobRouter::SubmitJob(RoutedJob *job) {
 #if HAVE_JOB_HOOKS
 	if (NULL != m_hook_mgr)
 	{
-	        std::string route_info;
-
 	        // Retrieve the routing definition
 	        JobRoute *route = GetRouteByName(job->route_name.c_str());
         	if(!route) {
@@ -1899,7 +1897,7 @@ JobRouter::SubmitJob(RoutedJob *job) {
         		return;
         	}
 
-		route_info = route->RouteString();
+		std::string route_info = route->RouteDescription();
 		int rval = m_hook_mgr->hookTranslateJob(job, route_info);
 		switch (rval)
 		{
@@ -2796,6 +2794,17 @@ bool JobRoute::AcceptingMoreJobs() const
 		return false;
 	}
 	return m_num_jobs < m_max_jobs;
+}
+// HTCONDOR-646, for backward compatible logging/hooks print a classad containing the route name
+std::string JobRoute::RouteDescription() {
+	std::string info;
+	classad::ClassAd ad;
+	ad.InsertAttr(ATTR_NAME, m_name);
+	ad.InsertAttr(JR_ATTR_TARGET_UNIVERSE, m_target_universe);
+	if ( ! m_grid_resource.empty()) { ad.InsertAttr(ATTR_GRID_RESOURCE, m_grid_resource); }
+	classad::ClassAdUnParser unparser;
+	unparser.Unparse(info,&ad);
+	return info;
 }
 std::string
 JobRoute::ThrottleDesc() {
