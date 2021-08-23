@@ -116,9 +116,11 @@ int main() {
 
 	auto cuda_handle = setCUDAFunctionPointers();
 	if(! cuda_handle) { fail(); }
-	if( cuInit(0) != CUDA_SUCCESS ) {
-		fprintf( stderr, "cuInit(0) failed, aborting.\n" );
-		fail();
+	if( cuInit ) {
+		if( cuInit(0) != CUDA_SUCCESS ) {
+			fprintf( stderr, "cuInit(0) failed, aborting.\n" );
+			fail();
+		}
 	}
 
 	auto nvml_handle = setNVMLFunctionPointers();
