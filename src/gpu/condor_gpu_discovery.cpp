@@ -598,16 +598,16 @@ main( int argc, const char** argv)
 				return 1;
 			}
 
-			// We don't want to report the parent device of any MIG instance
-			// as available for use (to avoid overcommitting it), so construct
-			// a list of parent devices to skip in the loop below.
-			for( const BasicProps & bp : nvmlDevices ) {
-				std::string parentUUID = bp.uuid;
-				if( parentUUID.find( "MIG-GPU-" ) != 0 ) { continue; }
-				parentUUID = parentUUID.substr( 8 );
-				parentUUID.erase( parentUUID.find( "/" ), std::string::npos );
-				migDevices.insert(parentUUID);
+			if( NVML_SUCCESS != getMIGParentDeviceUUIDs( migDevices ) ) {
+				const char * problem = "Failed to enumerate MIG parent devices";
+				fprintf( stderr, "# %s (%d: %s)\n", problem, r, nvmlErrorString(r) );
+				fprintf( stdout, "condor_gpu_discovery_error = \"%s\"\n", problem );
+				return 1;
 			}
+
+			// for( auto parentUUID : migDevices ) {
+			// 	fprintf( stderr, "parent UUID: %s\n", parentUUID.c_str() );
+			// }
 		}
 	}
 
@@ -637,7 +637,8 @@ main( int argc, const char** argv)
 
 		// Skip devices which have MIG instances associated with them.
 		if((! opt_opencl) && nvml_handle) {
-			const std::string & UUID = enumeratedDevices[dev].uuid;
+			// The "UUIDs" from NVML have "GPU-" as a prefix.
+			std::string UUID = "GPU-" + enumeratedDevices[dev].uuid;
 			if( migDevices.find( UUID ) != migDevices.end() ) {
 				continue;
 			}
