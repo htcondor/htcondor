@@ -2546,7 +2546,6 @@ Dag::WriteScriptToRescue( FILE *fp, Script *script )
 void
 Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 {
-	debug_printf(DEBUG_NORMAL, "MRC [Dag::TerminateJob] called\n");
 	ASSERT( !(recovery && bootstrap) );
     ASSERT( job != NULL );
 
@@ -2555,12 +2554,12 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 		EXCEPT( "Node %s is not in DONE state", job->GetJobName() );
 	}
 
-		// If this was a service node, we have nothing left to do here
-	if (job->GetType() == NodeType::SERVICE) {
-		debug_printf(DEBUG_NORMAL, "MRC [Dag::TerminateJob] this is a service node, returning\n");
+		// If this was a service node, set the job as done and exit
+	if ( job->GetType() == NodeType::SERVICE ) {
 		_metrics->NodeFinished( job->GetDagFile() != NULL, true );
 		job->countedAsDone = true;
 		job->SetProcEvent( job->GetProc(), ABORT_TERM_MASK );
+		job->retval = 0;
 		return;
 	}
 
