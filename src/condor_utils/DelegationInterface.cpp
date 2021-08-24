@@ -476,8 +476,12 @@ X509Credential::X509Credential(const std::string& credentials):key_(NULL),cert_(
   STACK_OF(X509) *cert_sk = NULL;
   bool res = false;
 
+  // Load the message digest algorithms used by GSI and ARC.
+  // Avoid a full SSL initialization, as that may bloat the shadow.
 //  OpenSSLInit();
   EVP_add_digest(EVP_sha256());
+  EVP_add_digest(EVP_sha512());
+  EVP_add_digest(EVP_sha1());
 
   if(!string_to_x509(credentials,cert,pkey,cert_sk)) goto err;
   cert_=cert; cert=NULL;
@@ -503,9 +507,12 @@ X509Credential::X509Credential(const std::string& cert_file,const std::string& k
   STACK_OF(X509) *cert_sk = NULL;
   bool res = false;
 
-  
+  // Load the message digest algorithms used by GSI and ARC.
+  // Avoid a full SSL initialization, as that may bloat the shadow.
 //  OpenSSLInit();
   EVP_add_digest(EVP_sha256());
+  EVP_add_digest(EVP_sha512());
+  EVP_add_digest(EVP_sha1());
 
   if(!string_to_x509(cert_file,key_file,inpwd,cert,pkey,cert_sk)) goto err;
   cert_=cert; cert=NULL;
