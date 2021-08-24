@@ -35,14 +35,14 @@ class DAGMan:
         if env:
             iwd = env[0]["Iwd"]
             env = dict(item.split("=", 1) for item in env[0]["Env"].split(";")) 
-            out = iwd + "/" + env["_CONDOR_DAGMAN_LOG"].split("/")[-1]
-            log = out.replace(".dagman.out", ".nodes.log")
-            dag = out.replace(".dagman.out", "")
+            out = Path(iwd) / Path(os.path.split(env["_CONDOR_DAGMAN_LOG"])[1])
+            log = Path(str(out).replace(".dagman.out", ".nodes.log"))
+            dag = Path(str(out).replace(".dagman.out", ""))
 
-        return dag, out, log
+        return str(dag), str(out), str(log)
 
     @staticmethod
-    def write_slurm_dag(jobfile, runtime, node_count, email):
+    def write_slurm_dag(jobfile, runtime, email):
 
         sendmail_sh = "#!/bin/sh\n"
         if email is not None:
@@ -75,7 +75,7 @@ JOB B {{
     error = job-B.$(Cluster).$(Process).err
     log = job-B.$(Cluster).$(Process).log
     annex_runtime = {runtime}
-    annex_node_count = {node_count}
+    annex_node_count = 1
     annex_name = {getpass.getuser()}-annex
     annex_user = {getpass.getuser()}
     # args: <node count> <run time> <annex name> <user>
@@ -109,7 +109,7 @@ VARS C +WantFlocking="True"
         dag_file.close()
 
     @staticmethod
-    def write_ec2_dag(jobfile, runtime, node_count, email):
+    def write_ec2_dag(jobfile, runtime, email):
 
         sendmail_sh = "#!/bin/sh\n"
         if email is not None:
@@ -123,7 +123,7 @@ VARS C +WantFlocking="True"
 
         ec2_annex_sh = f"""#!/bin/sh
 
-yes | /usr/bin/condor_annex -count $1 -duration $2 -annex-name EC2Annex-{int(time.time())}
+yes | /usr/bin/condor_annex -count 1 -duration $1 -annex-name EC2Annex-{int(time.time())}
 """
         with open(TMP_DIR / "ec2_annex.sh", "w") as ec2_annex_sh_file:
             ec2_annex_sh_file.write(ec2_annex_sh)
@@ -145,7 +145,7 @@ yes | /usr/bin/condor_annex -count $1 -duration $2 -annex-name EC2Annex-{int(tim
 }}
 JOB B {{
     executable = ec2_annex.sh
-    arguments = {node_count} {runtime}
+    arguments = {runtime}
     output = job-B-ec2_annex.$(Cluster).$(Process).out
     error = job-B-ec2_annex.$(Cluster).$(Process).err
     log = ec2_annex.log

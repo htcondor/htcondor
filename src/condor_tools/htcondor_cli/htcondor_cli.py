@@ -12,7 +12,7 @@ from .dagman import DAGMan
 from .job import Job
 
 
-def print_help(stream=sys.stderr):
+def print_help(stream=sys.stdout):
     help_msg = """htcondor is a tool for managing HTCondor jobs and resources.
 
 Usage: htcondor <object> <action> [<target>] [<option1> <option2> ...]
@@ -25,7 +25,6 @@ Managing jobs:
     Options:
         --resource=<type>                   Resource to run this job. Supports Slurm and EC2.
         --runtime=<time-seconds>            Runtime for this resource (seconds)
-        --node_count=<count>                Number of nodes to provision
         --email=<address@domain.com>        Email address to receive notifications
 
 """
@@ -40,33 +39,30 @@ def parse_args():
     # htcondor <object> <action> <target> [<option1> <option2> ...]
 
     if len(sys.argv) < 3:
-        print_help()
+        print_help(stream=sys.stderr)
         sys.exit(1)
 
     parser = argparse.ArgumentParser()
     command = {}
     options = {}
 
-    # Command arguments: up to 3 unflagged arguments at the beginning
+    # Command arguments: up to 3 unflagged arguments at the beginning (object, action, target)
     parser.add_argument("command", nargs="*")
     # Options arguments: optional flagged arguments following the command args
-    parser.add_argument("--resource", help="Type of compute resource")
+    parser.add_argument("--resource", help="Type of compute resource (currently supports Slurm, EC2)")
     parser.add_argument("--runtime", type=int, action="store", help="Runtime for provisioned Slurm glideins (seconds)")
-    parser.add_argument("--node_count", type=int, action="store", help="Number of Slurm nodes to provision")
     parser.add_argument("--email", type=str, action="store", help="Email address for notifications")
 
     args = parser.parse_args()
 
-    command_object = args.command[0]
     try:
-        command["object"] = command_object.lower()
+        command["object"] = args.command[0].lower()
     except Exception:
         print(f"Error: Object must be a string")
         sys.exit(1)
 
-    command_action = args.command[1]
     try:
-        command["action"] = command_action.lower()
+        command["action"] = args.command[1].lower()
     except Exception:
         print(f"Error: Action must be a string")
         sys.exit(1)
@@ -87,13 +83,6 @@ def parse_args():
             options["runtime"] = int(args.runtime)
         except Exception:
             print(f"Error: The --runtime argument must take a numeric value")
-            sys.exit(1)
-    
-    if args.node_count is not None:
-        try:
-            options["node_count"] = int(args.node_count)
-        except Exception:
-            print(f"Error: The --node_count argument must take a numeric value")
             sys.exit(1)
 
     return {

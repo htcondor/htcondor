@@ -64,9 +64,6 @@ class Job:
             if "runtime" not in options:
                 print("Error: Slurm resources must specify a --runtime argument")
                 sys.exit(1)
-            if "node_count" not in options:
-                print("Error: Slurm resources must specify a --node_count argument")
-                sys.exit(1)
 
             # Verify that we have Slurm access; if not, run bosco_clutser to create it
             try:
@@ -76,7 +73,7 @@ class Job:
                 sys.exit(1)
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
-            DAGMan.write_slurm_dag(file, options["runtime"], options["node_count"], options["email"])
+            DAGMan.write_slurm_dag(file, options["runtime"], options["email"])
             os.chdir(TMP_DIR) # DAG must be submitted from TMP_DIR
             submit_description = htcondor.Submit.from_dag(str(TMP_DIR / "slurm_submit.dag"))
             submit_description["+ResourceType"] = "\"Slurm\""
@@ -100,12 +97,9 @@ class Job:
             if "runtime" not in options:
                 print("Error: EC2 resources must specify a --runtime argument")
                 sys.exit(1)
-            if "node_count" not in options:
-                print("Error: EC2 resources must specify a --node_count argument")
-                sys.exit(1)
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
-            DAGMan.write_ec2_dag(file, options["runtime"], options["node_count"], options["email"])
+            DAGMan.write_ec2_dag(file, options["runtime"], options["email"])
             os.chdir(TMP_DIR) # DAG must be submitted from TMP_DIR
             submit_description = htcondor.Submit.from_dag("ec2_submit.dag")
             submit_description["+ResourceType"] = "\"EC2\""
@@ -187,8 +181,6 @@ class Job:
             # Parse the .dag file to retrieve some user input values
             with open(dagman_dag, "r") as dagman_dag_file:
                 for line in dagman_dag_file.readlines():
-                    if "annex_node_count =" in line:
-                        slurm_nodes_requested = line.split("=")[1].strip()
                     if "annex_runtime =" in line:
                         slurm_runtime = int(line.split("=")[1].strip())
             dagman_dag_file.close()
@@ -288,8 +280,6 @@ class Job:
             # Parse the .dag file to retrieve some user input values
             with open(dagman_dag, "r") as dagman_dag_file:
                 for line in dagman_dag_file.readlines():
-                    if "annex_node_count =" in line:
-                        slurm_nodes_requested = line.split("=")[1].strip()
                     if "annex_runtime =" in line:
                         slurm_runtime = int(line.split("=")[1].strip())
             dagman_dag_file.close()
