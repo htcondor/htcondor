@@ -54,21 +54,20 @@ def parse_args():
     parser.add_argument("--runtime", type=int, action="store", help="Runtime for provisioned Slurm glideins (seconds)")
     parser.add_argument("--node_count", type=int, action="store", help="Number of Slurm nodes to provision")
     parser.add_argument("--email", type=str, action="store", help="Email address for notifications")
-    #parser.add_argument("--schedd", help="Address to remote schedd to query")
 
     args = parser.parse_args()
 
     command_object = args.command[0]
     try:
         command["object"] = command_object.lower()
-    except:
+    except Exception:
         print(f"Error: Object must be a string")
         sys.exit(1)
 
     command_action = args.command[1]
     try:
         command["action"] = command_action.lower()
-    except:
+    except Exception:
         print(f"Error: Action must be a string")
         sys.exit(1)
 
@@ -86,14 +85,14 @@ def parse_args():
     if args.runtime is not None:
         try:
             options["runtime"] = int(args.runtime)
-        except:
+        except Exception:
             print(f"Error: The --runtime argument must take a numeric value")
             sys.exit(1)
     
     if args.node_count is not None:
         try:
             options["node_count"] = int(args.node_count)
-        except:
+        except Exception:
             print(f"Error: The --node_count argument must take a numeric value")
             sys.exit(1)
 
@@ -118,7 +117,7 @@ def main():
     # Make sure we have a schedd!
     try:
         schedd = htcondor.Schedd()
-    except:
+    except Exception:
         print(f"Could not access local schedd. This tool must be a run from an HTCondor submit machine.")
         sys.exit(1)
 

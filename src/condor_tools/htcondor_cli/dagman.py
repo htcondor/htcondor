@@ -48,15 +48,15 @@ class DAGMan:
         if email is not None:
             sendmail_sh += f"\necho -e '$2' | mail -v -s '$1' {email}\n"
 
-        sendmail_sh_file = open(TMP_DIR / "sendmail.sh", "w")
-        sendmail_sh_file.write(sendmail_sh)
+        with open(TMP_DIR / "sendmail.sh", "w") as sendmail_sh_file:
+            sendmail_sh_file.write(sendmail_sh)
         sendmail_sh_file.close()
         st = os.stat(TMP_DIR / "sendmail.sh")
         os.chmod(TMP_DIR / "sendmail.sh", st.st_mode | stat.S_IEXEC)
 
         slurm_config = "DAGMAN_USE_CONDOR_SUBMIT = False\nDAGMAN_USE_STRICT = 0\n"
-        slurm_config_file = open(TMP_DIR / "slurm_submit.config", "w")
-        slurm_config_file.write(slurm_config)
+        with open(TMP_DIR / "slurm_submit.config", "w") as slurm_config_file:
+            slurm_config_file.write(slurm_config)
         slurm_config_file.close()
 
         slurm_dag = f"""JOB A {{
@@ -104,8 +104,8 @@ VARS C +MayUseSlurm="True"
 VARS C +WantFlocking="True"
 """
 
-        dag_file = open(TMP_DIR / "slurm_submit.dag", "w")
-        dag_file.write(slurm_dag)
+        with open(TMP_DIR / "slurm_submit.dag", "w") as dag_file:
+            dag_file.write(slurm_dag)
         dag_file.close()
 
     @staticmethod
@@ -115,8 +115,8 @@ VARS C +WantFlocking="True"
         if email is not None:
             sendmail_sh += f"\necho -e '$2' | mail -v -s '$1' {email}\n"
 
-        sendmail_sh_file = open(TMP_DIR / "sendmail.sh", "w")
-        sendmail_sh_file.write(sendmail_sh)
+        with open(TMP_DIR / "sendmail.sh", "w") as sendmail_sh_file:
+            sendmail_sh_file.write(sendmail_sh)
         sendmail_sh_file.close()
         st = os.stat(TMP_DIR / "sendmail.sh")
         os.chmod(TMP_DIR / "sendmail.sh", st.st_mode | stat.S_IEXEC)
@@ -125,15 +125,15 @@ VARS C +WantFlocking="True"
 
 yes | /usr/bin/condor_annex -count $1 -duration $2 -annex-name EC2Annex-{int(time.time())}
 """
-        ec2_annex_sh_file = open(TMP_DIR / "ec2_annex.sh", "w")
-        ec2_annex_sh_file.write(ec2_annex_sh)
+        with open(TMP_DIR / "ec2_annex.sh", "w") as ec2_annex_sh_file:
+            ec2_annex_sh_file.write(ec2_annex_sh)
         ec2_annex_sh_file.close()
         st = os.stat(TMP_DIR / "ec2_annex.sh")
         os.chmod(TMP_DIR / "ec2_annex.sh", st.st_mode | stat.S_IEXEC)
 
         ec2_config = "DAGMAN_USE_CONDOR_SUBMIT = False\nDAGMAN_USE_STRICT = 0\n"
-        ec2_config_file = open(TMP_DIR / "ec2_submit.config", "w")
-        ec2_config_file.write(ec2_config)
+        with open(TMP_DIR / "ec2_submit.config", "w") as ec2_config_file:
+            ec2_config_file.write(ec2_config)
         ec2_config_file.close()
 
         ec2_dag = f"""JOB A {{
@@ -171,6 +171,6 @@ VARS C +MayUseAWS="True"
 VARS C +WantFlocking="True"
 """
 
-        dag_file = open(TMP_DIR / "ec2_submit.dag", "w")
-        dag_file.write(ec2_dag)
+        with open(TMP_DIR / "ec2_submit.dag", "w") as dag_file:
+            dag_file.write(ec2_dag)
         dag_file.close()

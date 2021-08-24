@@ -40,8 +40,8 @@ class Job:
         # If no resource specified, submit job to the local schedd
         if "resource" not in options:
 
-            submit_file = open(file)
-            submit_data = submit_file.read()
+            with open(file, "r") as submit_file:
+                submit_data = submit_file.read()
             submit_file.close()
             submit_description = htcondor.Submit(submit_data)
 
@@ -71,7 +71,7 @@ class Job:
             # Verify that we have Slurm access; if not, run bosco_clutser to create it
             try:
                 subprocess.check_output(["bosco_cluster", "--status", "hpclogin1.chtc.wisc.edu"])
-            except:
+            except Exception:
                 print(f"You need to install support software to access the Slurm cluster. Please run the following command in your terminal:\n\nbosco_cluster --add hpclogin1.chtc.wisc.edu slurm\n")
                 sys.exit(1)
 
@@ -143,8 +143,8 @@ class Job:
         except IndexError:
             print(f"No job found for ID {id}.")
             sys.exit(0)
-        except:
-            print(f"Error looking up job status: {sys.exc_info()[0]}")
+        except Exception as err:
+            print(f"Error looking up job status: {err}")
             sys.exit(1)
 
         if len(job) == 0:
@@ -185,12 +185,13 @@ class Job:
                 sys.exit(0)
 
             # Parse the .dag file to retrieve some user input values
-            dagman_dag_file = open(dagman_dag, "r")
-            for line in dagman_dag_file.readlines():
-                if "annex_node_count =" in line:
-                    slurm_nodes_requested = line.split("=")[1].strip()
-                if "annex_runtime =" in line:
-                    slurm_runtime = int(line.split("=")[1].strip())
+            with open(dagman_dag, "r") as dagman_dag_file:
+                for line in dagman_dag_file.readlines():
+                    if "annex_node_count =" in line:
+                        slurm_nodes_requested = line.split("=")[1].strip()
+                    if "annex_runtime =" in line:
+                        slurm_runtime = int(line.split("=")[1].strip())
+            dagman_dag_file.close()
             
             # Parse the DAGMan event log for useful information
             dagman_events = htcondor.JobEventLog(dagman_log)
@@ -285,12 +286,13 @@ class Job:
                 sys.exit(0)
 
             # Parse the .dag file to retrieve some user input values
-            dagman_dag_file = open(dagman_dag, "r")
-            for line in dagman_dag_file.readlines():
-                if "annex_node_count =" in line:
-                    slurm_nodes_requested = line.split("=")[1].strip()
-                if "annex_runtime =" in line:
-                    slurm_runtime = int(line.split("=")[1].strip())
+            with open(dagman_dag, "r") as dagman_dag_file:
+                for line in dagman_dag_file.readlines():
+                    if "annex_node_count =" in line:
+                        slurm_nodes_requested = line.split("=")[1].strip()
+                    if "annex_runtime =" in line:
+                        slurm_runtime = int(line.split("=")[1].strip())
+            dagman_dag_file.close()
 
             # Parse the DAGMan event log for useful information
             dagman_events = htcondor.JobEventLog(dagman_log)
