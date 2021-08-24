@@ -27,6 +27,13 @@ New Features:
   SSL must present a valid SSL credential.
   :jira:`236`
 
+- The *condor_watch_q* command now refuses to watch the queue if
+  doing so would require using more kernel resources ("inotify watches")
+  than allowed.  This limit can be increased by your system
+  administrator, and we expect to remove this limitation in a future
+  version of the tool.
+  :jira:`676`
+
 Bugs Fixed:
 
 - The *bosco_cluster* tool now clears out old installation files when
