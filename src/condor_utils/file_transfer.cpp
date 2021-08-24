@@ -1383,29 +1383,16 @@ FileTransfer::DetermineWhichFilesToSend() {
 			if( DontEncryptCheckpointFiles ) { delete DontEncryptCheckpointFiles; }
 			DontEncryptCheckpointFiles = new StringList( NULL, "," );
 
-			//
-			// If we're not streaming ATTR_JOB_OUTPUT or ATTR_JOB_ERROR,
-			// send them along as well.  If ATTR_CHECKPOINT_FILES is set,
-			// it's an explicit list, so we don't have to worry about
-			// implicitly sending the file twice.
-			//
-			std::string fn;
-			bool streaming = false;
-			if( jobAd.LookupString( ATTR_JOB_OUTPUT, fn ) ) {
-				jobAd.LookupBool( ATTR_STREAM_OUTPUT, streaming );
-				if( (! streaming) && (! nullFile(fn.c_str())) ) {
-					if(! CheckpointFiles->file_contains(fn.c_str()) ) {
-						CheckpointFiles->append(fn.c_str());
-					}
+			// If we'd transfer output or error on success, do so on
+			// checkpoint also.
+			if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStdoutFile.c_str() )) ) {
+				if(! CheckpointFiles->file_contains( JobStdoutFile.c_str() )) {
+					CheckpointFiles->append( JobStdoutFile.c_str() );
 				}
 			}
-
-			if( jobAd.LookupString( ATTR_JOB_ERROR, fn ) ) {
-				jobAd.LookupBool( ATTR_STREAM_ERROR, streaming );
-				if( (! streaming) && (! nullFile(fn.c_str())) ) {
-					if(! CheckpointFiles->file_contains(fn.c_str()) ) {
-						CheckpointFiles->append(fn.c_str());
-					}
+			if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStderrFile.c_str() )) ) {
+				if(! CheckpointFiles->file_contains( JobStderrFile.c_str() )) {
+					CheckpointFiles->append( JobStderrFile.c_str() );
 				}
 			}
 
