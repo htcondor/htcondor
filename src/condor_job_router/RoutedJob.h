@@ -112,6 +112,7 @@ class JobRoute {
 	classad::ExprTree *RouteRequirementExpr() { return m_route.getRequirements(); }
 	char const *RouteRequirementsString() { return m_route.getRequirementsStr(); }
 	bool UsesPreRouteTransform() const { return m_use_pre_route_transform; }
+	std::string RouteDescription(); // return a terse description of the route as a new classad
 	std::string RouteString() {
 		std::string str;
 		if (m_route.getText()) { str = m_route.getText(); } else { str = ""; }

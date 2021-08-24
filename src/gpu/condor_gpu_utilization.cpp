@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 
 // This is a mess, but since Windows.h isn't as safe to include as
 // unistd.h and dlfcn.h, we do the song-and-dance routine here, so
