@@ -670,8 +670,6 @@ void getODIApproval(	ClassAd & commandArguments,
 						const char * odiInstanceType, bool odiInstanceTypeSpecified,
 						bool leaseDurationSpecified, bool unclaimedTimeoutSpecified,
 						long int count, long int leaseDuration, long int unclaimedTimeout, bool skipYesNoPrompt ) {
-	std::string response;
-
 	fprintf( stdout,
 		"Will request %ld %s on-demand instance%s for %.2f hours.  "
 		"Each instance will terminate after being idle for %.2f hours.\n",
@@ -679,6 +677,7 @@ void getODIApproval(	ClassAd & commandArguments,
 		leaseDuration / 3600.0, unclaimedTimeout / 3600.0
 	);
 
+	std::string response;
 	if(! skipYesNoPrompt) {
 		fprintf( stdout, "Is that OK?  (Type 'yes' or 'no'): " );
 		std::getline( std::cin, response );
