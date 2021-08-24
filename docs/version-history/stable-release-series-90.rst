@@ -53,6 +53,10 @@ Bugs Fixed:
   GROUP_AUTOREGROUP from working.  Global autoregroup worked correctly.
   :jira:`632`
 
+- HTCondor now transfers the standard output and error logs when
+  ``when_to_transfer_output`` is ``ON_SUCCESS`` and ``transfer_output_files``
+  is empty.
+  :jira:`673`
 
 Version 9.0.5
 -------------
