@@ -559,6 +559,7 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 		BasicProps bp;
 		bp.uuid = i->first;
 		r = nvml_getBasicProps( migDevice, & bp );
+		print_error(MODE_DIAGNOSTIC_MSG, "# nvml_getBasicProps() for MIG %s returns %d\n", bp.uuid.c_str(), r);
 		if( NVML_SUCCESS != r ) { return r; }
 
 		devices.push_back( bp );
@@ -588,6 +589,7 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 			BasicProps bp;
 			bp.uuid = uuid;
 			r = nvml_getBasicProps( device, & bp );
+			print_error(MODE_DIAGNOSTIC_MSG, "# nvml_getBasicProps() for %s returns %d\n", bp.uuid.c_str(), r);
 			if( NVML_SUCCESS != r ) { return r; }
 
 			devices.push_back( bp );

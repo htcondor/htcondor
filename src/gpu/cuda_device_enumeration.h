@@ -67,7 +67,7 @@ GPUFP nvml_get_attrs    nvmlDeviceGetAttributes;
 GPUFP nvml_get_eccm     nvmlDeviceGetEccMode;
 
 dlopen_return_t setNVMLFunctionPointers();
-void setSimulatedNVMLFunctionPointers();
+bool setSimulatedNVMLFunctionPointers();
 
 typedef nvmlReturn_t (* fndh)(const std::string & uuid, nvmlDevice_t * device);
 GPUFP fndh findNVMLDeviceHandle;
