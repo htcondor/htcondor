@@ -15,7 +15,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Jobs are no longer put on hold if a failure occurs due to the scratch
+  execute directory unexpectedly disappearing. Instead, the jobs will
+  return to idle status to be re-run.
+  :jira:`664`
 
 Bugs Fixed:
 
@@ -92,10 +95,6 @@ New Features:
   to act as HTCondor execution points.
   :jira:`252`
 
-- Jobs are no longer put on hold if a failure occurs due to the scratch
-  execute directory unexpectedly disappearing. Instead, the jobs will
-  return to idle status to be re-run.
-  :jira:`664`
 
 Bugs Fixed:
 
