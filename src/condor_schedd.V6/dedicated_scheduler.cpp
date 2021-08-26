@@ -2083,7 +2083,7 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 
 			char *claims_str = claims.print_to_string();
 			if ( claims_str ) {
-				SetAttributeString(allocation->cluster, p, ATTR_CLAIM_IDS, claims_str);
+				SetPrivateAttributeString(allocation->cluster, p, ATTR_CLAIM_IDS, claims_str);
 				free(claims_str);
 				claims_str = NULL;
 			}
@@ -4128,10 +4128,10 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		char *remote_hosts = NULL;
 		GetAttributeStringNew(id.cluster, id.proc, ATTR_REMOTE_HOSTS, &remote_hosts);
 
-		char *claims = NULL;
-		GetAttributeStringNew(id.cluster, id.proc, ATTR_CLAIM_IDS, &claims);
+		std::string claims;
+		GetPrivateAttributeString(id.cluster, id.proc, ATTR_CLAIM_IDS, claims);
 
-		StringList escapedClaimList(claims,",");
+		StringList escapedClaimList(claims.c_str(),",");
 		StringList claimList;
 		StringList hosts(remote_hosts);
 
@@ -4159,7 +4159,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 						id.cluster, id.proc,
 						host, 
 						remote_hosts ? remote_hosts : "(null)",
-						claims ? claims : "(null)");
+						claims.c_str());
 				dPrintAd(D_ALWAYS, *job);
 					// we will break out of the loop below
 			}
@@ -4233,7 +4233,6 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			sinful = NULL;
 		}
 		free(remote_hosts);
-		free(claims);
 	}
 
 		// Last time through, create the last bit of allocations, if there are any
