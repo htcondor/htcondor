@@ -1580,13 +1580,13 @@ Dag::StartServiceNodes()
 	for ( auto& node: _service_nodes ) {
 		if ( node->GetStatus() == Job::STATUS_READY ) {
 			debug_printf( DEBUG_QUIET, "Starting service node %s...\n", node->GetJobName() );
-			if ( StartNode( node, false ) ) {
-				return true;
+			if ( !StartNode( node, false ) ) {
+				return false;
 			}
 		}
 	}
 
-	return false;
+	return true;
 }
 
 
