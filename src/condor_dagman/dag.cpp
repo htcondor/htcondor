@@ -1595,8 +1595,10 @@ bool
 Dag::RemoveServiceNodes()
 {
 	for ( auto& node: _service_nodes ) {
-		RemoveBatchJob( node );
-		TerminateJob( node, false, false );
+		if ( node->GetStatus() == Job::STATUS_SUBMITTED ) {
+			RemoveBatchJob( node );
+			TerminateJob( node, false, false );
+		}
 	}
 
 	return true;
@@ -4231,7 +4233,11 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 			(void)RunPostScript( node, _alwaysRunPost, 0 );
 		} else {
 			node->TerminateFailure();
-			_numNodesFailed++;
+				// We consider service nodes to be best-effort
+				// Do not count failures in the overall dag count
+			if (node->GetType() != NodeType::SERVICE) {
+				_numNodesFailed++;
+			}
 			_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 			if ( _dagStatus == DAG_STATUS_OK ) {
 				_dagStatus = DAG_STATUS_NODE_FAILED;
