@@ -1383,6 +1383,19 @@ FileTransfer::DetermineWhichFilesToSend() {
 			if( DontEncryptCheckpointFiles ) { delete DontEncryptCheckpointFiles; }
 			DontEncryptCheckpointFiles = new StringList( NULL, "," );
 
+			// If we'd transfer output or error on success, do so on
+			// checkpoint also.
+			if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStdoutFile.c_str() )) ) {
+				if(! CheckpointFiles->file_contains( JobStdoutFile.c_str() )) {
+					CheckpointFiles->append( JobStdoutFile.c_str() );
+				}
+			}
+			if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStderrFile.c_str() )) ) {
+				if(! CheckpointFiles->file_contains( JobStderrFile.c_str() )) {
+					CheckpointFiles->append( JobStderrFile.c_str() );
+				}
+			}
+
 			// Yes, this is stupid, but it'd be a big change to fix.
 			FilesToSend = CheckpointFiles;
 			EncryptFiles = EncryptCheckpointFiles;
@@ -1398,10 +1411,10 @@ FileTransfer::DetermineWhichFilesToSend() {
 		CheckpointFiles = new StringList( NULL, "," );
 
 		// If we'd transfer output or error on success, do so on failure also.
-		if( OutputFiles && OutputFiles->file_contains( JobStdoutFile.c_str() ) ) {
+		if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStdoutFile.c_str() )) ) {
 			CheckpointFiles->append( JobStdoutFile.c_str() );
 		}
-		if( OutputFiles && OutputFiles->file_contains( JobStderrFile.c_str() ) ) {
+		if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStderrFile.c_str() )) ) {
 			CheckpointFiles->append( JobStderrFile.c_str() );
 		}
 
