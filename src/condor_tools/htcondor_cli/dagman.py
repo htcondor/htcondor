@@ -35,28 +35,28 @@ class DAGMan:
         if env:
             iwd = env[0]["Iwd"]
             env = dict(item.split("=", 1) for item in env[0]["Env"].split(";")) 
-            out = Path(iwd) / Path(os.path.split(env["_CONDOR_DAGMAN_LOG"])[1])
-            log = Path(str(out).replace(".dagman.out", ".nodes.log"))
-            dag = Path(str(out).replace(".dagman.out", ""))
+            out = iwd + "/" + env["_CONDOR_DAGMAN_LOG"].split("/")[-1]
+            log = out.replace(".dagman.out", ".nodes.log")
+            dag = out.replace(".dagman.out", "")
 
-        return str(dag), str(out), str(log)
+        return dag, out, log
 
     @staticmethod
-    def write_slurm_dag(jobfile, runtime, email):
+    def write_slurm_dag(jobfile, runtime, node_count, email):
 
         sendmail_sh = "#!/bin/sh\n"
         if email is not None:
             sendmail_sh += f"\necho -e '$2' | mail -v -s '$1' {email}\n"
 
-        with open(TMP_DIR / "sendmail.sh", "w") as sendmail_sh_file:
-            sendmail_sh_file.write(sendmail_sh)
+        sendmail_sh_file = open(TMP_DIR / "sendmail.sh", "w")
+        sendmail_sh_file.write(sendmail_sh)
         sendmail_sh_file.close()
         st = os.stat(TMP_DIR / "sendmail.sh")
         os.chmod(TMP_DIR / "sendmail.sh", st.st_mode | stat.S_IEXEC)
 
         slurm_config = "DAGMAN_USE_CONDOR_SUBMIT = False\nDAGMAN_USE_STRICT = 0\n"
-        with open(TMP_DIR / "slurm_submit.config", "w") as slurm_config_file:
-            slurm_config_file.write(slurm_config)
+        slurm_config_file = open(TMP_DIR / "slurm_submit.config", "w")
+        slurm_config_file.write(slurm_config)
         slurm_config_file.close()
 
         slurm_dag = f"""JOB A {{
@@ -75,7 +75,7 @@ JOB B {{
     error = job-B.$(Cluster).$(Process).err
     log = job-B.$(Cluster).$(Process).log
     annex_runtime = {runtime}
-    annex_node_count = 1
+    annex_node_count = {node_count}
     annex_name = {getpass.getuser()}-annex
     annex_user = {getpass.getuser()}
     # args: <node count> <run time> <annex name> <user>
@@ -104,36 +104,36 @@ VARS C +MayUseSlurm="True"
 VARS C +WantFlocking="True"
 """
 
-        with open(TMP_DIR / "slurm_submit.dag", "w") as dag_file:
-            dag_file.write(slurm_dag)
+        dag_file = open(TMP_DIR / "slurm_submit.dag", "w")
+        dag_file.write(slurm_dag)
         dag_file.close()
 
     @staticmethod
-    def write_ec2_dag(jobfile, runtime, email):
+    def write_ec2_dag(jobfile, runtime, node_count, email):
 
         sendmail_sh = "#!/bin/sh\n"
         if email is not None:
             sendmail_sh += f"\necho -e '$2' | mail -v -s '$1' {email}\n"
 
-        with open(TMP_DIR / "sendmail.sh", "w") as sendmail_sh_file:
-            sendmail_sh_file.write(sendmail_sh)
+        sendmail_sh_file = open(TMP_DIR / "sendmail.sh", "w")
+        sendmail_sh_file.write(sendmail_sh)
         sendmail_sh_file.close()
         st = os.stat(TMP_DIR / "sendmail.sh")
         os.chmod(TMP_DIR / "sendmail.sh", st.st_mode | stat.S_IEXEC)
 
         ec2_annex_sh = f"""#!/bin/sh
 
-yes | /usr/bin/condor_annex -count 1 -duration $1 -annex-name EC2Annex-{int(time.time())}
+yes | /usr/bin/condor_annex -count $1 -duration $2 -annex-name EC2Annex-{int(time.time())}
 """
-        with open(TMP_DIR / "ec2_annex.sh", "w") as ec2_annex_sh_file:
-            ec2_annex_sh_file.write(ec2_annex_sh)
+        ec2_annex_sh_file = open(TMP_DIR / "ec2_annex.sh", "w")
+        ec2_annex_sh_file.write(ec2_annex_sh)
         ec2_annex_sh_file.close()
         st = os.stat(TMP_DIR / "ec2_annex.sh")
         os.chmod(TMP_DIR / "ec2_annex.sh", st.st_mode | stat.S_IEXEC)
 
         ec2_config = "DAGMAN_USE_CONDOR_SUBMIT = False\nDAGMAN_USE_STRICT = 0\n"
-        with open(TMP_DIR / "ec2_submit.config", "w") as ec2_config_file:
-            ec2_config_file.write(ec2_config)
+        ec2_config_file = open(TMP_DIR / "ec2_submit.config", "w")
+        ec2_config_file.write(ec2_config)
         ec2_config_file.close()
 
         ec2_dag = f"""JOB A {{
@@ -145,7 +145,7 @@ yes | /usr/bin/condor_annex -count 1 -duration $1 -annex-name EC2Annex-{int(time
 }}
 JOB B {{
     executable = ec2_annex.sh
-    arguments = {runtime}
+    arguments = {node_count} {runtime}
     output = job-B-ec2_annex.$(Cluster).$(Process).out
     error = job-B-ec2_annex.$(Cluster).$(Process).err
     log = ec2_annex.log
@@ -171,6 +171,6 @@ VARS C +MayUseAWS="True"
 VARS C +WantFlocking="True"
 """
 
-        with open(TMP_DIR / "ec2_submit.dag", "w") as dag_file:
-            dag_file.write(ec2_dag)
+        dag_file = open(TMP_DIR / "ec2_submit.dag", "w")
+        dag_file.write(ec2_dag)
         dag_file.close()
