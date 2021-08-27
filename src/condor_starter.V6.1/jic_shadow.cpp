@@ -928,6 +928,13 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 {
 	u_log->logStarterError( err_msg, critical );
 
+	StatInfo si(Starter->GetWorkingDir(false));
+	if( si.Error() == SINoFile ) {
+		dprintf(D_ALWAYS, "Scratch execute directory disappeared unexpectedly, declining to put job on hold.\n");
+		hold_reason_code = 0;
+		hold_reason_subcode = 0;
+	}
+
 	if( critical ) {
 		if( REMOTE_CONDOR_ulog_error(hold_reason_code, hold_reason_subcode, err_msg) < 0 ) {
 			dprintf( D_ALWAYS, 

@@ -15,12 +15,21 @@ Release Notes:
 
 New Features:
 
+- Jobs are no longer put on hold if a failure occurs due to the scratch
+  execute directory unexpectedly disappearing. Instead, the jobs will
+  return to idle status to be re-run.
+  :jira:`664`
+
 - Added new configuration parameter ``NEGOTIATOR_MIN_INTERVAL``, which
   sets the minimum amount of the time between the start of one
   negotiation cycle and the next.
   :jira:`606`
 
 Bugs Fixed:
+
+- Fixed problems introduced in HTCondor v9.1.3 where 
+  X.509 proxy delegation to older versions of HTCondor would fail.
+  :jira:`674`
 
 - HTCondor no longer crashes on start-up if ``COLLECTOR_HOST`` is set to
   a string with a colon and a port number, but no host part.
