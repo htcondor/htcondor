@@ -362,7 +362,10 @@ bool Dag::Bootstrap (bool recovery)
 
 		// If we have any service nodes, start those right away
 	if( !_service_nodes.empty() ) {
-		StartServiceNodes();
+		if ( !StartServiceNodes() ) {
+			debug_printf( DEBUG_QUIET, "Warning: unable to start service nodes."
+				" Proceeding with the DAG workflow.\n");
+		}
 	}
     
 		// If we have a provisioner job, submit that before any other jobs
