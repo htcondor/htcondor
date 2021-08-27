@@ -930,8 +930,6 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/co
 rm -f %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi
 rm -f %{buildroot}/%{_sbindir}/condor_credmon_oauth
 rm -f %{buildroot}/%{_sbindir}/scitokens_credential_producer
-rm -rf %{buildroot}/%{_libexecdir}/condor/credmon
-rm -rf %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth
 %endif
 
 ###
