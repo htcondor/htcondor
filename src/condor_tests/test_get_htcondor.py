@@ -66,7 +66,7 @@ IMAGES_BY_CHANNEL = {
         "centos:7",
         "centos:8",
         "amazonlinux:2",
-        "scientific/sl:7",
+        "scientificlinux/sl:7",
     ],
     "current": [
         "ubuntu:18.04",
@@ -75,7 +75,7 @@ IMAGES_BY_CHANNEL = {
         "centos:7",
         "centos:8",
         "amazonlinux:2",
-        "scientific/sl:7",
+        "scientificlinux/sl:7",
     ],
 }
 
