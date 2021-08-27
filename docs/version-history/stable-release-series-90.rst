@@ -66,6 +66,11 @@ Bugs Fixed:
   automatically considers them part of the output.
   :jira:`656`
 
+- HTCondor now transfers the standard output and error logs when
+  ``when_to_transfer_output`` is ``ON_SUCCESS`` and ``transfer_output_files``
+  is empty.
+  :jira:`673`
+
 Version 9.0.5
 -------------
 
