@@ -99,7 +99,7 @@ static bool string_to_x509(const std::string& str,X509* &cert,EVP_PKEY* &pkey,ST
   BIO *in = NULL;
   cert=NULL; pkey=NULL; cert_sk=NULL;
   if(str.empty()) return false;
-  if(!(in=BIO_new_mem_buf((void*)(str.c_str()),str.length()))) return false;
+  if(!(in=BIO_new_mem_buf((void *)(const_cast<char *>(str.c_str())),str.length()))) return false;
   if((!PEM_read_bio_X509(in,&cert,NULL,NULL)) || (!cert)) { BIO_free_all(in); return false; };
   if((!PEM_read_bio_PrivateKey(in,&pkey,NULL,NULL)) || (!pkey)) { BIO_free_all(in); return false; };
   if(!(cert_sk=sk_X509_new_null())) { BIO_free_all(in); return false; };
@@ -119,7 +119,7 @@ static bool string_to_x509(const std::string& cert_file,const std::string& key_f
   if(!(in=BIO_new_file(cert_file.c_str(),"r"))) return false;
   if((!PEM_read_bio_X509(in,&cert,NULL,NULL)) || (!cert)) { BIO_free_all(in); return false; };
   if(key_file.empty()) {
-    if((!PEM_read_bio_PrivateKey(in,&pkey,NULL,(void*)inpwd.c_str())) || (!pkey)) { BIO_free_all(in); return false; };
+    if((!PEM_read_bio_PrivateKey(in,&pkey,NULL,(void *)const_cast<char *>(inpwd.c_str()))) || (!pkey)) { BIO_free_all(in); return false; };
   };
   if(!(cert_sk=sk_X509_new_null())) { BIO_free_all(in); return false; };
   for(;;) {
@@ -131,7 +131,7 @@ static bool string_to_x509(const std::string& cert_file,const std::string& key_f
   if(!pkey) {
     BIO_free_all(in); in=NULL;
     if(!(in=BIO_new_file(key_file.c_str(),"r"))) return false;
-    if((!PEM_read_bio_PrivateKey(in,&pkey,NULL,(void*)inpwd.c_str())) || (!pkey)) { BIO_free_all(in); return false; };
+    if((!PEM_read_bio_PrivateKey(in,&pkey,NULL,(void *)const_cast<char *>(inpwd.c_str()))) || (!pkey)) { BIO_free_all(in); return false; };
   };
   BIO_free_all(in);
   return true;
@@ -140,7 +140,7 @@ static bool string_to_x509(const std::string& cert_file,const std::string& key_f
 static bool string_to_x509(const std::string& str,X509* &cert,STACK_OF(X509)* &cert_sk) {
   BIO *in = NULL;
   if(str.empty()) return false;
-  if(!(in=BIO_new_mem_buf((void*)(str.c_str()),str.length()))) return false;
+  if(!(in=BIO_new_mem_buf((void*)const_cast<char *>(str.c_str()),str.length()))) return false;
   if((!PEM_read_bio_X509(in,&cert,NULL,NULL)) || (!cert)) { BIO_free_all(in); return false; };
   if(!(cert_sk=sk_X509_new_null())) { BIO_free_all(in); return false; };
   for(;;) {
@@ -536,7 +536,7 @@ std::string X509Credential::Delegate(const std::string& request,const Delegation
   strip_PEM_request(prequest);
   wrap_PEM_request(prequest);
 
-  in = BIO_new_mem_buf((void*)(prequest.c_str()),prequest.length());
+  in = BIO_new_mem_buf((void*)const_cast<char *>(prequest.c_str()),prequest.length());
   if(!in) goto err;
 
   if((!PEM_read_bio_X509_REQ(in,&req,NULL,NULL)) || (!req)) goto err;
@@ -616,7 +616,7 @@ X509* X509Credential::Delegate(X509_REQ* request, const DelegationRestrictions& 
   time_t validity_start_adjustment = 300; //  5 minute grace period for unsync clocks
   time_t validity_start = time(NULL);
   time_t validity_end = (time_t)(-1);
-  DelegationRestrictions& restrictions_ = (DelegationRestrictions&)restrictions;
+  DelegationRestrictions& restrictions_ = const_cast<DelegationRestrictions &>(restrictions);
   std::string proxyPolicy;
   std::string proxyPolicyFile;
 
@@ -774,7 +774,7 @@ X509* X509Credential::Delegate(X509_REQ* request, const DelegationRestrictions& 
   subject=X509_NAME_dup(subject);
   if(!subject) goto err;
   if(!X509_set_issuer_name(cert,subject)) goto err;
-  if(!X509_NAME_add_entry_by_NID(subject,NID_commonName,MBSTRING_ASC,(unsigned char*)(proxy_cn.c_str()),proxy_cn.length(),-1,0)) goto err;
+  if(!X509_NAME_add_entry_by_NID(subject,NID_commonName,MBSTRING_ASC,(unsigned char *)proxy_cn.c_str(),proxy_cn.length(),-1,0)) goto err;
   if(!X509_set_subject_name(cert,subject)) goto err;
   X509_NAME_free(subject); subject=NULL;
   // This was changed from the original to expect only unix epoch time values.

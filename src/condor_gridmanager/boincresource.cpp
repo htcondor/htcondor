@@ -41,6 +41,9 @@ using std::set;
 #define SUBMIT_DELAY				2
 #define LEASE_RETRY_INTERVAL		(5 * 60)
 
+// This result code from the boinc_gahp looks like a bad copy-pasta
+// from the gram gahp. But I'm leaving it alone for now.
+#define GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER 79
 
 int BoincResource::gahpCallTimeout = 300;	// default value
 

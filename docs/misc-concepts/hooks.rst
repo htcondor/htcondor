@@ -751,9 +751,12 @@ expected output. All hooks must exit successfully.
     Command-line arguments passed to the hook
        None.
     Standard input given to the hook
-       The first line will be the route that the job matched as defined
-       in HTCondor's configuration files followed by the job ClassAd,
-       separated by the string "------" and a new line.
+       The first line will be the information on route that the job matched
+       including the route name. This information will be formated as a classad.
+       If the route has a  ``TargetUniverse`` or ``GridResource`` they will be
+       included in the classad. The route information classad will be followed
+       by a separator line of dashes like ``------`` followed by a newline.
+       The remainder of the input will be the job ClassAd.
     Expected standard output from the hook
        The transformed job.
     Exit status of the hook

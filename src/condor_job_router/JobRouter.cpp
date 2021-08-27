@@ -1120,7 +1120,7 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
 		route = it->second;
 		if (0 == new_routes->count(route->Name())) {
-			dprintf(D_ALWAYS,"JobRouter Note: dropping route '%s'\n",route->RouteString().c_str());
+			dprintf(D_ALWAYS,"JobRouter Note: dropping route '%s'\n",route->RouteDescription().c_str());
 		}
 	}
 
@@ -1129,7 +1129,7 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 		route = it->second;
 		auto found = m_routes->find(route->Name());
 		if (found == m_routes->end()) {
-			dprintf(D_ALWAYS,"JobRouter Note: adding new route '%s'\n",route->RouteString().c_str());
+			dprintf(D_ALWAYS,"JobRouter Note: adding new route '%s'\n",route->RouteDescription().c_str());
 		}
 		else {
 				// preserve state from the old route entry
@@ -1889,8 +1889,6 @@ JobRouter::SubmitJob(RoutedJob *job) {
 #if HAVE_JOB_HOOKS
 	if (NULL != m_hook_mgr)
 	{
-	        std::string route_info;
-
 	        // Retrieve the routing definition
 	        JobRoute *route = GetRouteByName(job->route_name.c_str());
         	if(!route) {
@@ -1899,7 +1897,7 @@ JobRouter::SubmitJob(RoutedJob *job) {
         		return;
         	}
 
-		route_info = route->RouteString();
+		std::string route_info = route->RouteDescription();
 		int rval = m_hook_mgr->hookTranslateJob(job, route_info);
 		switch (rval)
 		{
@@ -1942,8 +1940,12 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 		return;
 	}
 
+	unsigned int xform_flags = 0;
+	if (m_operate_as_tool & JOB_ROUTER_TOOL_FLAG_LOG_XFORM_ERRORS) { xform_flags |= XFORM_UTILS_LOG_ERRORS; }
+	if (m_operate_as_tool & JOB_ROUTER_TOOL_FLAG_LOG_XFORM_STEPS) { xform_flags |= XFORM_UTILS_LOG_STEPS; }
+
 	// The route ClassAd may change some things in the routed ad.
-	if(!route->ApplyRoutingJobEdits(reinterpret_cast<ClassAd*>(&job->dest_ad), m_pre_route_xfms, m_post_route_xfms)) {
+	if(!route->ApplyRoutingJobEdits(reinterpret_cast<ClassAd*>(&job->dest_ad), m_pre_route_xfms, m_post_route_xfms, xform_flags)) {
 		dprintf(D_FULLDEBUG,"JobRouter failure (%s): failed to apply route ClassAd modifications to target ad.\n",job->JobDesc().c_str());
 		GracefullyRemoveJob(job);
 		return;
@@ -2793,6 +2795,17 @@ bool JobRoute::AcceptingMoreJobs() const
 	}
 	return m_num_jobs < m_max_jobs;
 }
+// HTCONDOR-646, for backward compatible logging/hooks print a classad containing the route name
+std::string JobRoute::RouteDescription() {
+	std::string info;
+	classad::ClassAd ad;
+	ad.InsertAttr(ATTR_NAME, m_name);
+	ad.InsertAttr(JR_ATTR_TARGET_UNIVERSE, m_target_universe);
+	if ( ! m_grid_resource.empty()) { ad.InsertAttr(ATTR_GRID_RESOURCE, m_grid_resource); }
+	classad::ClassAdUnParser unparser;
+	unparser.Unparse(info,&ad);
+	return info;
+}
 std::string
 JobRoute::ThrottleDesc() {
 	return ThrottleDesc(m_throttle);
@@ -2888,7 +2901,8 @@ bool
 JobRoute::ApplyRoutingJobEdits(
 	ClassAd *src_ad,
 	SimpleList<MacroStreamXFormSource*>& pre_route,
-	SimpleList<MacroStreamXFormSource*>& post_route)
+	SimpleList<MacroStreamXFormSource*>& post_route,
+	unsigned int xform_flags)
 {
 	XFormHash mset(CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO /* | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_WANT_META */);
 	//mset.init();
@@ -2905,7 +2919,8 @@ JobRoute::ApplyRoutingJobEdits(
 				dprintf(D_FULLDEBUG, "JobRouter pre-route transform %s: does not match job. skippping it.\n", xfm->getName());
 				continue;
 			}
-			rval = TransformClassAd(src_ad, *xfm, mset, errmsg);
+			if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying pre-route transform: %s\n", xfm->getName()); }
+			rval = TransformClassAd(src_ad, *xfm, mset, errmsg, xform_flags);
 			if (rval < 0) {
 				// transform failed, errmsg says why.
 				dprintf(D_ALWAYS, "JobRouter failure in pre-route transform %s: %s.\n", xfm->getName(), errmsg.c_str());
@@ -2917,7 +2932,8 @@ JobRoute::ApplyRoutingJobEdits(
 		optimize_macros(mset.macros());
 	}
 
-	rval = TransformClassAd(src_ad, m_route, mset, errmsg);
+	if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying route: %s\n", m_route.getName()); }
+	rval = TransformClassAd(src_ad, m_route, mset, errmsg, xform_flags);
 	if (rval < 0) {
 		// transform failed, errmsg says why.
 		dprintf(D_ALWAYS,"JobRouter failure (route=%s): %s.\n",Name(), errmsg.c_str());
@@ -2932,7 +2948,8 @@ JobRoute::ApplyRoutingJobEdits(
 				dprintf(D_FULLDEBUG, "JobRouter post-route transform %s: does not match job. skippping it.\n", xfm->getName());
 				continue;
 			}
-			rval = TransformClassAd(src_ad, *xfm, mset, errmsg);
+			if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying post-route transform: %s\n", xfm->getName()); }
+			rval = TransformClassAd(src_ad, *xfm, mset, errmsg, xform_flags);
 			if (rval < 0) {
 				// transform failed, errmsg says why.
 				dprintf(D_ALWAYS, "JobRouter failure in pre-route transform %s: %s.\n", xfm->getName(), errmsg.c_str());

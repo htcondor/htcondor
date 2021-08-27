@@ -36,15 +36,20 @@ if (WITH_PYTHON_BINDINGS)
 
     configure_file(${SETUP_PY_IN} ${SETUP_PY})
 
-    # Copy over module directories if __init__.py is missing, i.e. out of
-    # source build.  This is broken (see the remove-file hack below)
-    foreach(PACKAGE ${PACKAGES})
-        set(PKG_DIR "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}")
-        add_custom_command(OUTPUT "${PKG_DIR}/__init__.py"
-            COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/${PACKAGE}" "${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE}"
-            DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${PACKAGE}"
-        )
-        list(APPEND DEPS "${PKG_DIR}/__init__.py")
+	# Make the target directories for python source tree
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/dags)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/htchirp)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/compat_enum)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad)
+
+	# Now make a command to copy each source file to the destination
+	foreach(PYTHON_SOURCE_FILE ${PYTHON_SOURCES})
+		add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}"
+			COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_SOURCE_FILE}" "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}"
+			DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_SOURCE_FILE}"
+    )
+	list(APPEND DEPS "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}")
     endforeach()
 
     if (WINDOWS AND DEFINED PYTHON_VERSION_STRING)
@@ -76,11 +81,6 @@ if (WITH_PYTHON_BINDINGS)
             )
         endif()
         add_custom_target(python_bindings ALL DEPENDS ${TIMESTAMP_FILE})
-
-		# This is an awful hack, but it's easier than fixing than this file.
-		add_custom_command(TARGET python_bindings POST_BUILD
-			COMMAND ${CMAKE_COMMAND} ARGS -E remove -f "${CMAKE_CURRENT_BINARY_DIR}/*/__init__.py"
-			)
 
         if (WINDOWS) # Windows can call setup.py as normal
             install(CODE "execute_process(
@@ -132,7 +132,6 @@ if (WITH_PYTHON_BINDINGS)
                 endif()
         ")
     endif()
-
 
 endif()
 

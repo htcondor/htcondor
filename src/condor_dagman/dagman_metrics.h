@@ -116,19 +116,6 @@ private:
 		*/
 	static MyString GetVersion();
 
-#ifdef DEAD_CODE
-	/** Returns the height of the graph, ie. the longest possible route
-			 from root node to leaf node.
-		*/
-	static int GetGraphHeight( Dag* dag );
-	static int GetGraphHeightRecursive( Job* node, Dag* dag, unordered_map<string, bool>* visited );
-
-		/** Returns the width of the graph, ie. the largest number of siblings
-			 that occurs for any given node.
-		*/
-	static int GetGraphWidth( Dag* dag );
-#endif
-
 		// The time at which this DAGMan run started, in seconds since
 		// the epoch.
 	static double _startTime;

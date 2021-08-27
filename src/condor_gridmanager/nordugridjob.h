@@ -97,5 +97,8 @@ class NordugridJob : public BaseJob
  protected:
 };
 
+const char *rsl_stringify( const std::string& src );
+const char *rsl_stringify( const char *string );
+
 #endif
 

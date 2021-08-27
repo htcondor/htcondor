@@ -33,7 +33,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##
-@@ -68,5 +66,36 @@
+@@ -68,5 +66,35 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -59,7 +59,6 @@
 +SBIN    = $(RELEASE_DIR)/sbin
 +LIBEXEC = $(RELEASE_DIR)/lib/condor/libexec
 +SHARE   = $(RELEASE_DIR)/share/condor
-+MAIL    = /usr/bin/mail
 +GANGLIA_LIB64_PATH = /lib,/usr/lib,/usr/local/lib
 +
 +PROCD_ADDRESS = $(RUN)/procd_pipe

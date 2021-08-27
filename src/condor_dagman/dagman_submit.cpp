@@ -210,11 +210,7 @@ do_submit( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, const char *DAGParentNodeNames,
-#ifdef DEAD_CODE
-			   List<Job::NodeVar> *vars, int priority, int retry,
-#else
 			   Job * node, int priority, int retry,
-#endif
 			   const char* directory, const char *workflowLogFile,
 			   bool hold_claim, const MyString &batchName,
 			   std::string &batchId )
@@ -337,21 +333,13 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	parentNodeNames += "\"";
 	parentNameArgs.AppendArg( parentNodeNames.c_str() );
 
-		// set any VARS specified in the DAG file
-#ifdef DEAD_CODE
-	MyString anotherLine;
-	ListIterator<Job::NodeVar> varsIter(*vars);
-	Job::NodeVar nodeVar;
-	while ( varsIter.Next(nodeVar) ) {
-#else
 	// allow for $(JOB) expansions in the vars - and also in the submit file.
 	MyString jobarg("JOB="); jobarg += DAGNodeName;
 	args.AppendArg("-a");
 	args.AppendArg(jobarg.c_str());
 
-	for (auto it = node->varsFromDag.begin(); it != node->varsFromDag.end(); ++it) {
-		Job::NodeVar & nodeVar = *it;
-#endif
+	for (auto & nodeVar : node->varsFromDag) {
+		
 			// Substitute the node retry count if necessary.  Note that
 			// we can't do this in Job::ResolveVarsInterpolations()
 			// because that's only called at parse time.
@@ -518,22 +506,11 @@ static void init_dag_vars(SubmitHash * submitHash,
 		submitHash->set_arg_variable(SUBMIT_KEY_Hold, "true");
 	}
 
-	// set any VARS specified in the DAG file
-	//PRAGMA_REMIND("TODO: move down? and make these live vars?")
-#ifdef DEAD_CODE
-	List<Job::NodeVar> *vars = node->varsFromDag;
-	ListIterator<Job::NodeVar> varsIter(*vars);
-	Job::NodeVar nodeVar;
-	while (varsIter.Next(nodeVar)) {
-		submitHash.set_arg_variable(nodeVar._name.c_str(), nodeVar._value.c_str());
-	}
-#else
 	// this allows for $(JOB) expansions in the vars (and in the submit file)
 	submitHash->set_arg_variable("JOB", node->GetJobName());
-	for (auto it = node->varsFromDag.begin(); it != node->varsFromDag.end(); ++it) {
-		submitHash->set_arg_variable(it->_name, it->_value);
+	for (auto & it : node->varsFromDag) {
+		submitHash->set_arg_variable(it._name, it._value);
 	}
-#endif
 
 	// set RETRY for $(RETRY) substitution
 	submitHash->set_arg_variable("RETRY", std::to_string(retry).c_str());

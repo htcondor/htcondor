@@ -108,6 +108,7 @@ def condor(test_dir, slot_config, concurrency_limit):
             #
             # I'm not sure why the claim-and-report cycle is so long.
             "NEGOTIATOR_INTERVAL": "1",
+            "NEGOTIATOR_MIN_INTERVAL": "1",
             "NEGOTIATOR_CYCLE_DELAY": "1",
             "UPDATE_INTERVAL": "1",
             # This MUST include D_MATCH, which is the default.

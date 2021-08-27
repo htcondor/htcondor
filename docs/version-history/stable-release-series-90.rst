@@ -8,14 +8,75 @@ series.
 
 The details of each version are described below.
 
+Version 9.0.6
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.6 released on Month Date, 2021.
+
+- HTCondor version 9.0.6 not yet released.
+
+New Features:
+
+- None.
+
+- Added configuration parameter ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``,
+  a boolean value which defaults to ``False``.
+  If set to ``True``, then clients that authenticate to a daemon using
+  SSL must present a valid SSL credential.
+  :jira:`236`
+
+- The *condor_watch_q* command now refuses to watch the queue if
+  doing so would require using more kernel resources ("inotify watches")
+  than allowed.  This limit can be increased by your system
+  administrator, and we expect to remove this limitation in a future
+  version of the tool.
+  :jira:`676`
+
+Bugs Fixed:
+
+- The *bosco_cluster* tool now clears out old installation files when
+  the *--add* option is used to update an existing installation.
+  :jira:`577`
+
+- Updated *condor_gpu_discovery* to be compatible with version 470 of
+  NVidia's drivers.
+  :jira:`620`
+
+- Fixed a bug that could cause the *condor_had* daemon to fail at startup
+  when the local machine has multiple IP addresses.
+  This bug is particularly likely to happen if ``PREFER_IPV4`` is set to
+  ``False``.
+  :jira:`625`
+
+- For the machine ad attributes ``OpSys*`` and configuration parameters
+  ``OPSYS*``, treat macOS 11.X as if it were macOS 10.16.X.
+  This represents the major version nubmers in a consistent, if somewhat
+  inaccurate manner.
+  :jira:`626`
+
+- Fixed a bug that ignored the setting of per-Accounting Group
+  GROUP_AUTOREGROUP from working.  Global autoregroup worked correctly.
+  :jira:`632`
+
+- A self-checkpointing job's output and error logs will no longer be
+  interrupted by eviction if the job specifies ``transfer_checkpoint_files``;
+  HTCondor now automatically considers them part of the checkpoint the way it
+  automatically considers them part of the output.
+  :jira:`656`
+
+- HTCondor now transfers the standard output and error logs when
+  ``when_to_transfer_output`` is ``ON_SUCCESS`` and ``transfer_output_files``
+  is empty.
+  :jira:`673`
+
 Version 9.0.5
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.0.5 released on Month Date, 2021.
-
-- HTCondor version 9.0.5 not yet released.
+- HTCondor version 9.0.5 released on August 18, 2021.
 
 New Features:
 
@@ -24,7 +85,34 @@ New Features:
   try the next authentication method in the list instead of failing.
   :jira:`589`
 
+- The `bosco_cluster` command now creates backup files when the ``--override``
+  option is used.
+  :jira:`591`
+
+- Improved the detection of Red Hat Enterprise Linux based distributions.
+  Previously, only ``CentOS`` was recognized. Now, other distributions such
+  as ``Scientific Linux`` and ``Rocky`` should be recognized.
+  :jira:`609`
+
+- The ``condor-boinc`` package is no longer required to be installed with
+  HTCondor, thus making ``condor-boinc`` optional.
+  :jira:`644`
+
 Bugs Fixed:
+
+- Fixed a bug on the Windows platform where *condor_submit* would crash
+  rarely after successfully submitting a job.  This caused problems for programs
+  that look at the return status of *condor_submit*, including *condor_dagman*
+  :jira:`579`
+
+- The job attribute ``ExitCode`` is no longer missing from the job ad after
+  ``OxExitHold`` triggers.
+  :jira:`599`
+
+- Fixed a bug where running *condor_who* as a non-root user on a Unix
+  system would print a confusing warning to stderr about running as
+  non-root.
+  :jira:`590`
 
 - Fixed a bug where ``condor_gpu_discovery`` would not report any GPUs if
   any MIG-enabled GPU on the system were configured in certain ways.  Fixed
@@ -32,29 +120,15 @@ Bugs Fixed:
   unparseable after certain errors.
   :jira:`476`
 
-- Fixed a bug where jobs running on Linux machines with cgroups enabled
-  would not count files created in /dev/shm in the MemoryUsage attribute.
-  :jira:`586`
-
-- Fixed a bug where running *condor_who* as a non-root user on a Unix
-  system would print a confusing warning to stderr about running as
-  non-root.
-  :jira:`590`
-
-- Fixed a bug on the Windows platform where *condor_submit* would crash
-  rarely after succesfully submitting a job.  This caused problems for programs
-  that look at the return status of *condor_submit*, including *condor_dagman*
-  :jira:`579`
-
 - HTCondor no longer ignores files in a job's spool directory if they happen
   to share a name with an entry in ``transfer_input_files``.  This allows
   jobs to specify the same file in ``transfer_input_files`` and in
   ``transfer_checkpoint_files``, and still resume properly after a checkpoint.
   :jira:`583`
 
-- The job attribute ``ExitCode`` is no longer missing from the job ad after
-  ``OxExitHold`` triggers.
-  :jira:`599`
+- Fixed a bug where jobs running on Linux machines with cgroups enabled
+  would not count files created in /dev/shm in the MemoryUsage attribute.
+  :jira:`586`
 
 - Fixed a bug in the *condor_now* tool, where the *condor_schedd* would
   not use an existing security session to run the selected job on the

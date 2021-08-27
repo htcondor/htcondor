@@ -487,7 +487,7 @@ void BoincJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 					LOG_BOINC_ERROR( "boinc_fetch_output()", rc );
 					gahpErrorString = gahp->getErrorString();
@@ -528,7 +528,7 @@ void BoincJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 					LOG_BOINC_ERROR( "boinc_retire_batch()", rc );
 					gahpErrorString = gahp->getErrorString();
@@ -560,7 +560,7 @@ void BoincJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc != GLOBUS_SUCCESS ) {
+			if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 				LOG_BOINC_ERROR( "boinc_abort_jobs()", rc );
 				gahpErrorString = gahp->getErrorString();
@@ -584,7 +584,7 @@ void BoincJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 					LOG_BOINC_ERROR( "boinc_retire_batch()", rc );
 					gahpErrorString = gahp->getErrorString();

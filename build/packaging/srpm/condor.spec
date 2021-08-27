@@ -273,11 +273,10 @@ Requires: condor-procd = %{version}-%{release}
 
 %if %uw_build
 Requires: %name-externals = %version-%release
-Requires: condor-boinc
 %endif
 
 %if %blahp
-Requires: blahp >= 2.0.1
+Requires: blahp >= 2.1.1
 %endif
 
 # Useful tools are using the Python bindings
@@ -741,7 +740,6 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
-       -DWITH_CREAM:BOOL=FALSE \
        -DWITH_DRMAA:BOOL=FALSE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
@@ -791,7 +789,6 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
-       -DWITH_CREAM:BOOL=FALSE \
 %if %globus
        -DWITH_GLOBUS:BOOL=TRUE \
 %else
@@ -1163,7 +1160,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/htcondor_docker_test
 %if %globus
 %_sbindir/condor_gridshell
-%_sbindir/grid_monitor
 %_sbindir/nordugrid_gahp
 %endif
 %_libexecdir/condor/condor_limits_wrapper.sh
@@ -1377,6 +1373,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_updates_stats
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
+%_sbindir/condor_gridshell
 %_sbindir/remote_gahp
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
@@ -1671,6 +1668,21 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Aug 19 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.3-1
+- Globus GSI is no longer needed for X.509 proxy delegation
+- Globus GSI authentication is disabled by default
+- The job ad now contains a history of job holds and hold reasons
+- If a user job policy expression evaluates to undefined, it is ignored
+
+* Wed Aug 18 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.5-1
+- Other authentication methods are tried if mapping fails using SciTokens
+- Fix rare crashes from successful condor_submit, which caused DAGMan issues
+- Fix bug where ExitCode attribute would be suppressed when OnExitHold fired
+- condor_who now suppresses spurious warnings coming from netstat
+- The online manual now has detailed instructions for installing on MacOS
+- Fix bug where misconfigured MIG devices confused condor_gpu_discovery
+- The transfer_checkpoint_file list may now include input files
+
 * Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.2-1
 - Fixes for security issues
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html

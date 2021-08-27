@@ -4,14 +4,42 @@ Development Release Series 9.1
 This is the development release series of HTCondor. The details of each
 version are described below.
 
+Version 9.1.4
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.1.4 released on Month Date, 2021.
+
+- HTCondor version 9.1.4 not yet released.
+
+New Features:
+
+- Added new configuration parameter ``NEGOTIATOR_MIN_INTERVAL``, which
+  sets the minimum amount of the time between the start of one
+  negotiation cycle and the next.
+  :jira:`606`
+
+Bugs Fixed:
+
+- HTCondor no longer crashes on start-up if ``COLLECTOR_HOST`` is set to
+  a string with a colon and a port number, but no host part.
+  :jira:`602`
+
+- Changed the default value of configuration parameter ``MAIL`` to
+  */usr/bin/mail* on unix.
+  This location is valid on all of our supported unix platforms, unlike
+  the previous default value of */bin/mail*.
+  :jira:`581`
+
 Version 9.1.3
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.1.3 released on Month Date, 2021.
+- HTCondor version 9.1.3 released on August 19, 2021.
 
-- HTCondor version 9.1.3 not yet released.
+- Globus GSI is no longer needed for X.509 proxy delegation
 
 - GSI is no longer in the list of default authentication methods.
   To use GSI, you must enable it by setting one or more of the
@@ -24,6 +52,13 @@ New Features:
   policy whose expression evaluates to undefined is now uniformly ignored,
   instead of either putting the job on hold or treated as false.
   :jira:`442`
+
+- Added two new attributes to the job ClassAd, ``NumHolds`` and ``NumHoldsByReason``, 
+  that are used to provide historical information about how often this
+  job went on hold and why. Details on all job ClassAd attributes, including
+  these two new attributes, can be found in section:
+  :doc:`../classad-attributes/job-classad-attributes`
+  :jira:`554`
 
 - The "ToE tag" entry in the job event log now includes the exit code or
   signal number, if and as appropriate.
@@ -41,7 +76,7 @@ New Features:
   ``s3_secret_access_key_file``.  We also added support for ``gs://``-style
   Google Cloud Storage URLs, with the corresponding ``gs_access_key_id_file``
   and ``gs_secret_access_key_file`` aliases.  This support, and the aliases,
-  use Google Cloud Storage's "interopability" API.  The HMAC access key ID
+  use Google Cloud Storage's "interoperability" API.  The HMAC access key ID
   and secret keys may be obtained from the Google Cloud web console's
   "Cloud Storage" section, the "Settings" menu item, under the
   "interoperability" tab.
@@ -65,8 +100,7 @@ New Features:
   (see :doc:`man page <../man-pages/htcondor>`) for managing HTCondor jobs
   and resources. This tool also includes new capabilities for running
   HTCondor jobs on Slurm machines which are temporarily acquired
-  to act as HTCondor execution points 
-  (see :ref:`grid-computing/htcondor-and-slurm:acquiring resources from slurm`).
+  to act as HTCondor execution points.
   :jira:`252`
 
 

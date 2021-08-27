@@ -469,10 +469,7 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_REMOVE_NODE_JOBS setting: %s\n",
 				_removeNodeJobs ? "True" : "False" );
 
-#ifdef MEMORY_HOG
-#else
 	debug_printf(DEBUG_NORMAL, "DAGMAN will adjust edges after parsing\n");
-#endif
 
 	// enable up the debug cache if needed
 	if (debug_cache_enabled) {
@@ -737,7 +734,7 @@ void main_init (int argc, char ** const argv) {
 	for (i = 1; i < argc; i++) {
 		// If argument is not a flag/option, assume it's a dag filename
 		if( argv[i][0] != '-') {
-			dagman.dagFiles.push_back( std::string(argv[i]) );
+			dagman.dagFiles.emplace_back(argv[i] );
 		}
 		else if( !strcasecmp( "-Debug", argv[i] ) ) {
 			i++;
@@ -761,7 +758,7 @@ void main_init (int argc, char ** const argv) {
 				debug_printf( DEBUG_SILENT, "No DAG specified\n" );
 				Usage();
 			}
-			dagman.dagFiles.push_back( std::string(argv[i]) );
+			dagman.dagFiles.emplace_back(argv[i] );
 		} else if( !strcasecmp( "-MaxIdle", argv[i] ) ) {
 			i++;
 			if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -1144,8 +1141,8 @@ void main_init (int argc, char ** const argv) {
 	} else {
 		MyString msg = "DAG Input files are ";
 
-		for ( auto it = dagman.dagFiles.begin(); it != dagman.dagFiles.end(); ++it ) {
-			msg += it->c_str();
+		for (auto & dagFile : dagman.dagFiles) {
+			msg += dagFile.c_str();
 			msg += " ";
 		}
 		msg += "\n";
@@ -1248,10 +1245,10 @@ void main_init (int argc, char ** const argv) {
 	// of the parsing, copies of the dagman.dagFile string list happen which
 	// mess up the iteration of this list.
 	std::list<std::string> sl( dagman.dagFiles );
-	for ( auto it = sl.begin(); it != sl.end(); ++it ) {
-		debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", it->c_str() );
+	for (auto & it : sl) {
+		debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", it.c_str() );
 
-		if( !parse( dagman.dag, it->c_str(), dagman.useDagDir, dagman._schedd ) ) {
+		if( !parse( dagman.dag, it.c_str(), dagman.useDagDir, dagman._schedd ) ) {
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.
@@ -1273,7 +1270,7 @@ void main_init (int argc, char ** const argv) {
 			
 				// Note: debug_error calls DC_Exit().
 			debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
-					 	it->c_str() );
+					 	it.c_str() );
 		}
 	}
 	if( dagman.dag->GetDagPriority() != 0 ) {
@@ -1345,11 +1342,6 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->CreateMetrics( dagman.primaryDagFile.c_str(), rescueDagNum );
 
 	dagman.dag->CheckThrottleCats();
-
-#ifdef DEAD_CODE // we now do this at submit time.
-	// fix up any use of $(JOB) in the vars values for any node
-	dagman.dag->ResolveVarsInterpolations();
-#endif
 
 /*	debug_printf(DEBUG_QUIET, "COMPLETED DAG!\n");*/
 /*	dagman.dag->PrintJobList();*/
@@ -1797,6 +1789,7 @@ void condor_event_timer () {
 	//
 	if( dagman.dag->DoneSuccess( true ) ) {
 		ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
+		dagman.dag->RemoveServiceNodes();
 		dagman.dag->CheckAllJobs();
 		debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
 		dagman.dag->PrintDeferrals( DEBUG_NORMAL, true );

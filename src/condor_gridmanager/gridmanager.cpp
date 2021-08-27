@@ -33,11 +33,8 @@
 #include "gridmanager.h"
 #include "gahp-client.h"
 
-#include "globusjob.h"
-
 #include "arcjob.h"
 #include "nordugridjob.h"
-#include "unicorejob.h"
 #include "condorjob.h"
 #include "infnbatchjob.h"
 #include "boincjob.h"
@@ -46,10 +43,6 @@
 #include "ec2job.h"
 #include "gcejob.h"
 #include "azurejob.h"
-
-#if !defined(WIN32)
-#  include "creamjob.h"
-#endif
 
 #define QMGMT_TIMEOUT 15
 
@@ -323,16 +316,6 @@ Init()
 
 	JobType *new_type;
 
-#if 0
-	new_type = new JobType;
-	new_type->Name = strdup( "Cream" );
-	new_type->InitFunc = CreamJobInit;
-	new_type->ReconfigFunc = CreamJobReconfig;
-	new_type->AdMatchFunc = CreamJobAdMatch;
-	new_type->CreateFunc = CreamJobCreate;
-	jobTypes.Append( new_type );
-#endif
-
 	new_type = new JobType;
 	new_type->Name = strdup( "Nordugrid" );
 	new_type->InitFunc = NordugridJobInit;
@@ -375,16 +358,6 @@ Init()
 	jobTypes.Append( new_type );
 #endif
 
-#if 0
-	new_type = new JobType;
-	new_type->Name = strdup( "Unicore" );
-	new_type->InitFunc = UnicoreJobInit;
-	new_type->ReconfigFunc = UnicoreJobReconfig;
-	new_type->AdMatchFunc = UnicoreJobAdMatch;
-	new_type->CreateFunc = UnicoreJobCreate;
-	jobTypes.Append( new_type );
-#endif
-
 	new_type = new JobType;
 	new_type->Name = strdup( "INFNBatch" );
 	new_type->InitFunc = INFNBatchJobInit;
@@ -408,16 +381,6 @@ Init()
 	new_type->AdMatchFunc = CondorJobAdMatch;
 	new_type->CreateFunc = CondorJobCreate;
 	jobTypes.Append( new_type );
-
-#if 0
-	new_type = new JobType;
-	new_type->Name = strdup( "Globus" );
-	new_type->InitFunc = GlobusJobInit;
-	new_type->ReconfigFunc = GlobusJobReconfig;
-	new_type->AdMatchFunc = GlobusJobAdMatch;
-	new_type->CreateFunc = GlobusJobCreate;
-	jobTypes.Append( new_type );
-#endif
 
 	jobTypes.Rewind();
 	while ( jobTypes.Next( new_type ) ) {

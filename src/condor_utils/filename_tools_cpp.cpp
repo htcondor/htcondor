@@ -252,30 +252,3 @@ canonicalize_dir_delimiters( std::string &path ) {
 	path = tmp;
 	free( tmp );
 }
-
-void
-filename_url_parse( char * input, std::string & method, std::string & server, int * port, std::string & path ) {
-	char *tmp_method = NULL;
-	char *tmp_server = NULL;
-	char *tmp_path = NULL;
-	filename_url_parse_malloc(input,&tmp_method,&tmp_server,port,&tmp_path);
-	method = tmp_method ? tmp_method : "";
-	server = tmp_server ? tmp_server : "";
-	path = tmp_path ? tmp_path : "";
-	free( tmp_method );
-	free( tmp_server );
-	free( tmp_path );
-}
-
-void filename_url_parse( char *input, MyString &method, MyString &server, int *port, MyString &path ) {
-	char *tmp_method = NULL;
-	char *tmp_server = NULL;
-	char *tmp_path = NULL;
-	filename_url_parse_malloc(input,&tmp_method,&tmp_server,port,&tmp_path);
-	method = tmp_method;
-	server = tmp_server;
-	path = tmp_path;
-	free( tmp_method );
-	free( tmp_server );
-	free( tmp_path );
-}
