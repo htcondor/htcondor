@@ -145,7 +145,9 @@ int ocl_Init(void) {
 	unsigned int cPlatforms = 0;
 	clReturn clr = ocl.GetPlatformIDs(0, NULL, &cPlatforms);
 	if (clr != CL_SUCCESS) {
-		print_error(MODE_ERROR, "ocl.GetPlatformIDs returned error=%d and %d platforms\n", clr, cPlatforms);
+		// if the error code is just 'no devices', we don't really want to report that as an error
+		int mode = ((clr == CL_DEVICE_NOT_FOUND) || (clr == CL_PLATFORM_NOT_FOUND_KHR)) ? MODE_DIAGNOSTIC_MSG : MODE_ERROR;
+		print_error(mode, "ocl.GetPlatformIDs returned error=%d and %d platforms\n", clr, cPlatforms);
 	}
 	if (cPlatforms > 0) {
 		cl_platforms.reserve(cPlatforms);
