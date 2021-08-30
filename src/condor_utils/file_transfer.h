@@ -214,7 +214,7 @@ class FileTransfer final: public Service {
 	struct FileTransferInfo {
 		FileTransferInfo() : bytes(0), duration(0), type(NoType),
 		    success(true), in_progress(false), xfer_status(XFER_STATUS_UNKNOWN),
-			try_again(true), hold_code(0), hold_subcode(0) {}
+			try_again(true), hold_code(0), hold_subcode(0), num_files(0) {}
 
 		void addSpooledFile(char const *name_in_spool);
 
@@ -227,6 +227,7 @@ class FileTransfer final: public Service {
 		bool try_again;
 		int hold_code;
 		int hold_subcode;
+		int num_files;
 		MyString error_desc;
 			// List of files we created in remote spool.
 			// This is intended to become SpooledOutputFiles.
@@ -495,17 +496,17 @@ class FileTransfer final: public Service {
 	bool LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize);
 
 	// Called internally by DoUpload() in order to handle common wrapup tasks.
-	int ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line);
+	int ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line, int num_files);
 
 	// Send acknowledgment of success/failure after downloading files.
-	void SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
+	void SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason,int num_files=-1);
 
 	// Receive acknowledgment of success/failure after downloading files.
 	void GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc) const;
 
 	// Stash transfer success/failure info that will be propagated back to
 	// caller of file transfer operation, using GetInfo().
-	void SaveTransferInfo(bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
+	void SaveTransferInfo(bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason,int num_files=-1);
 
 	// Receive message indicating that the peer is ready to receive the file
 	// and save failure information with SaveTransferInfo().

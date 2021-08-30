@@ -1833,6 +1833,11 @@ FileTransfer::ReadTransferPipeMsg()
 								   sizeof( int ) );
 		if(n != sizeof( int )) goto read_failed;
 
+		n = daemonCore->Read_Pipe( TransferPipe[0],
+								   (char *)&Info.num_files,
+								   sizeof( int ) );
+		if(n != sizeof( int )) goto read_failed;
+
 		int error_len = 0;
 		n = daemonCore->Read_Pipe( TransferPipe[0],
 								   (char *)&error_len,
@@ -2091,6 +2096,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	int delegation_method = 0; /* 0 means this transfer is not a delegation. 1 means it is.*/
 	time_t start, elapsed;
 	int numFiles = 0;
+	int numCedarFiles = 0; // number of files transferred directly from access point (via cedar)
 	ClassAd pluginStatsAd;
 
 	// Variable for deferred transfers, used to transfer multiple files at once
@@ -2951,7 +2957,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 					// The wire protocol is not in a well defined state
 					// at this point.  Try sending the ack message indicating
 					// what went wrong, for what it is worth.
-				SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,error_buf.c_str());
+				SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,error_buf.c_str(),numCedarFiles);
 
 				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
@@ -3004,6 +3010,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		bytes = 0;
 
 		numFiles++;
+		if (thisFileStats.TransferProtocol == "cedar") {
+			numCedarFiles++;
+		}
 
 		// Gather a few more statistics
 		thisFileStats.TransferSuccess = download_success;
@@ -3086,7 +3095,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 		download_success = false;
 		SendTransferAck(s,download_success,upload_try_again,upload_hold_code,
-						upload_hold_subcode,download_error_buf.c_str());
+						upload_hold_subcode,download_error_buf.c_str(),numCedarFiles);
 
 			// store full-duplex error description, because only our side
 			// of the story was stored in above call to SendTransferAck
@@ -3098,7 +3107,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 	if( !download_success ) {
 		SendTransferAck(s,download_success,try_again,hold_code,
-						hold_subcode,error_buf.c_str());
+						hold_subcode,error_buf.c_str(),numCedarFiles);
 
 		dprintf( D_FULLDEBUG, "DoDownload: exiting with download errors\n" );
 		return_and_resetpriv( -1 );
@@ -3134,7 +3143,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	downloadEndTime = condor_gettimestamp_double();
 
 	download_success = true;
-	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
+	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL,numCedarFiles);
 
 		// Log some tcp statistics about this transfer
 	if (*total_bytes > 0) {
@@ -3216,22 +3225,23 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 }
 
 void
-FileTransfer::SaveTransferInfo(bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason)
+FileTransfer::SaveTransferInfo(bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason,int num_files)
 {
 	Info.success = success;
 	Info.try_again = try_again;
 	Info.hold_code = hold_code;
 	Info.hold_subcode = hold_subcode;
+	Info.num_files = num_files;
 	if( hold_reason ) {
 		Info.error_desc = hold_reason;
 	}
 }
 
 void
-FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason)
+FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason,int num_files)
 {
 	// Save failure information.
-	SaveTransferInfo(success,try_again,hold_code,hold_subcode,hold_reason);
+	SaveTransferInfo(success,try_again,hold_code,hold_subcode,hold_reason,num_files);
 
 	if(!PeerDoesTransferAck) {
 		dprintf(D_FULLDEBUG,"SendTransferAck: skipping transfer ack, because peer does not support it.\n");
@@ -3459,6 +3469,12 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&Info.hold_subcode,
+				   sizeof(int) );
+		if(n != sizeof(int)) write_failed = true;
+	}
+	if(!write_failed) {
+		n = daemonCore->Write_Pipe( TransferPipe[1],
+				   (char *)&Info.num_files,
 				   sizeof(int) );
 		if(n != sizeof(int)) write_failed = true;
 	}
@@ -3743,6 +3759,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	int hold_code = 0;
 	int hold_subcode = 0;
 	int numFiles = 0;
+	int numCedarFiles = 0;  // number of files transferred directly to access point (via cedar)
 	MyString error_desc;
 	bool I_go_ahead_always = false;
 	bool peer_goes_ahead_always = false;
@@ -3921,7 +3938,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					/* try again */ false,
 					CONDOR_HOLD_CODE::UploadFileError,
 					/* hold subcode */ 3,
-					errorMessage.c_str(), __LINE__ );
+					errorMessage.c_str(), __LINE__, numCedarFiles );
 			}
 		}
 	}
@@ -4079,7 +4096,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				/* do upload ACK (required to avoid hanging the shadow and starter */ true,
 				/* do download ACK */ false,
 				/* try again */ false,
-				holdCode, holdSubCode, holdReason.c_str(), __LINE__ );
+				holdCode, holdSubCode, holdReason.c_str(), __LINE__, numCedarFiles );
 		}
 
 		classad::Value value;
@@ -4673,7 +4690,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 								socket_default_crypto,upload_success,
 								do_upload_ack,do_download_ack,
 			                    try_again,hold_code,hold_subcode,
-			                    error_desc.c_str(),__LINE__);
+			                    error_desc.c_str(),__LINE__,numCedarFiles);
 			}
 		}
 
@@ -4684,6 +4701,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 		*total_bytes += bytes;
 		numFiles++;
+
+		if (!fileitem.isSrcUrl() && !fileitem.isDestUrl()) {
+			numCedarFiles++;
+		}
 
 			// The spooled files list is used to generate
 			// SpooledOutputFiles, which replaces TransferOutputFiles
@@ -4752,7 +4773,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			first_failed_upload_success,do_upload_ack,do_download_ack,
 			first_failed_try_again,first_failed_hold_code,
 			first_failed_hold_subcode,first_failed_error_desc.c_str(),
-			first_failed_line_number);
+			first_failed_line_number,numCedarFiles);
 	}
 
 	uploadEndTime = condor_gettimestamp_double();
@@ -4760,7 +4781,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	upload_success = true;
 	return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
 	                    upload_success,do_upload_ack,do_download_ack,
-	                    try_again,hold_code,hold_subcode,NULL,__LINE__);
+	                    try_again,hold_code,hold_subcode,NULL,__LINE__,numCedarFiles);
 }
 
 void
@@ -5081,7 +5102,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 }
 
 int
-FileTransfer::ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line)
+FileTransfer::ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line,int num_files)
 {
 	int rc = upload_success ? 0 : -1;
 	bool download_success = false;
@@ -5122,7 +5143,7 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock
 				}
 			}
 			SendTransferAck(s,upload_success,try_again,hold_code,hold_subcode,
-			                error_desc_to_send.c_str());
+			                error_desc_to_send.c_str(),num_files);
 		}
 	} else {
 		// go back to the state we were in before file transfer

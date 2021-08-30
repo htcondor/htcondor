@@ -2013,9 +2013,11 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 
 	if( info.type == FileTransfer::DownloadFilesType ) {
 		m_download_xfer_status = info.xfer_status;
+		m_download_xfer_file_count = info.num_files;
 	}
 	else {
 		m_upload_xfer_status = info.xfer_status;
+		m_upload_xfer_file_count = info.num_files;
 	}
 	shadow->updateJobInQueue(U_PERIODIC);
 	return 0;
