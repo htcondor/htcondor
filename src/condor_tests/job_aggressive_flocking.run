@@ -30,7 +30,6 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
     WANT_SUSPEND = FALSE
     KILLING_TIMEOUT = 1
     MachineMaxVacateTime = 5
-    NEGOTIATION_INTERVAL = 5
     UPDATE_INTERVAL = 5
     KILL = FALSE
     START = TRUE

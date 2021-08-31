@@ -6738,8 +6738,16 @@ These macros affect the *condor_negotiator*.
     for defaults and composition of valid HTCondor daemon names.
 
 :macro-def:`NEGOTIATOR_INTERVAL`
-    Sets how often the *condor_negotiator* starts a negotiation cycle.
+    Sets the maximum time the *condor_negotiator* will wait before
+    starting a new negotiation cycle, counting from the start of the
+    previous cycle.
     It is defined in seconds and defaults to 60 (1 minute).
+
+:macro-def:`NEGOTIATOR_MIN_INTERVAL`
+    Sets the minimum time the *condor_negotiator* will wait before
+    starting a new negotiation cycle, counting from the start of the
+    previous cycle.
+    It is defined in seconds and defaults to 5.
 
 :macro-def:`NEGOTIATOR_UPDATE_INTERVAL`
     This macro determines how often the *condor_negotiator* daemon
@@ -9165,6 +9173,14 @@ macros are described in the :doc:`/admin-manual/security` section.
     The path and file name of the file containing the private key for
     the client side of a communication authenticating with SSL.
 
+:macro-def:`AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE`
+    A boolean value that controls whether the client side of a
+    communication authenticating with SSL must have a credential.
+    If set to ``True`` and the client doesn't have a credential, then
+    the SSL authentication will fail and other authentication methods
+    will be tried.
+    The default is ``False``.
+
 :macro-def:`SSL_SKIP_HOST_CHECK`
     A boolean variable that controls whether a host check is performed
     by the client during an SSL authentication of a Condor daemon. This
@@ -9288,20 +9304,18 @@ macros are described in the :doc:`/admin-manual/security` section.
     using the kerberos type of credentials.  No parameters are passed,
     and credentials most be sent to stdout.
 
-.. only:: Vault
-
-    :macro-def:`SEC_CREDENTIAL_STORER`
-        A script for *condor_submit* to execute to produce credentials while
-        using the OAuth2 type of credentials.  The oauth services specified
-        in the ``use_auth_services`` line in the submit file are passed as
-        parameters to the script, and the script should use
-        ``condor_store_cred`` to store credentials for each service.
-        Additional modifiers to each service may be passed: &handle=,
-        &scopes=, or &audience=.  The handle should be appended after
-        an underscore to the service name used with ``condor_store_cred``,
-        the comma-separated list of scopes should be passed to the command
-        with the -S option, and the audience should be passed to it with the
-        -A option.
+:macro-def:`SEC_CREDENTIAL_STORER`
+    A script for *condor_submit* to execute to produce credentials while
+    using the OAuth2 type of credentials.  The oauth services specified
+    in the ``use_auth_services`` line in the submit file are passed as
+    parameters to the script, and the script should use
+    ``condor_store_cred`` to store credentials for each service.
+    Additional modifiers to each service may be passed: &handle=,
+    &scopes=, or &audience=.  The handle should be appended after
+    an underscore to the service name used with ``condor_store_cred``,
+    the comma-separated list of scopes should be passed to the command
+    with the -S option, and the audience should be passed to it with the
+    -A option.
 
 :macro-def:`LEGACY_ALLOW_SEMANTICS`
     A boolean parameter that defaults to ``False``.

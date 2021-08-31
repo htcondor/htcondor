@@ -112,6 +112,7 @@ class JobRoute {
 	classad::ExprTree *RouteRequirementExpr() { return m_route.getRequirements(); }
 	char const *RouteRequirementsString() { return m_route.getRequirementsStr(); }
 	bool UsesPreRouteTransform() const { return m_use_pre_route_transform; }
+	std::string RouteDescription(); // return a terse description of the route as a new classad
 	std::string RouteString() {
 		std::string str;
 		if (m_route.getText()) { str = m_route.getText(); } else { str = ""; }
@@ -147,7 +148,8 @@ class JobRoute {
 	bool ApplyRoutingJobEdits(
 		ClassAd *src_ad,
 		SimpleList<MacroStreamXFormSource*>& pre_route_xfms,
-		SimpleList<MacroStreamXFormSource*>& post_route_xfms);
+		SimpleList<MacroStreamXFormSource*>& post_route_xfms,
+		unsigned int xform_flags);
 
 	bool AcceptingMoreJobs() const;
 	void IncrementCurrentRoutedJobs() {m_num_jobs++;}

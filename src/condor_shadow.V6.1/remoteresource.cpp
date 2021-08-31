@@ -334,8 +334,12 @@ RemoteResource::killStarter( bool graceful )
 	bool wantReleaseClaim = false;
 	jobAd->LookupBool(ATTR_RELEASE_CLAIM, wantReleaseClaim);
 	if (wantReleaseClaim) {
-		ClassAd replyAd;
-		dc_startd->releaseClaim(VACATE_FAST, &replyAd);
+		classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg(RELEASE_CLAIM, dc_startd->getClaimId());
+		msg->setSecSessionId(m_claim_session.secSessionId());
+		msg->setSuccessDebugLevel(D_ALWAYS);
+		msg->setTimeout( 20);
+		msg->setStreamType(Stream::reli_sock);
+		dc_startd->sendBlockingMsg(msg.get());
 	}
 	return true;
 }

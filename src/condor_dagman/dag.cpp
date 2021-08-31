@@ -295,9 +295,9 @@ bool Dag::Bootstrap (bool recovery)
 
     // update dependencies for pre-completed jobs (jobs marked DONE in
     // the DAG input file)
-    for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		if( (*it)->GetStatus() == Job::STATUS_DONE ) {
-			TerminateJob(*it, false, true);
+    for (auto & _job : _jobs) {
+		if( _job->GetStatus() == Job::STATUS_DONE ) {
+			TerminateJob(_job, false, true);
 		}
     }
     debug_printf( DEBUG_VERBOSE, "Number of pre-completed nodes: %d\n",
@@ -333,9 +333,9 @@ bool Dag::Bootstrap (bool recovery)
 		}
 
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
-		for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-			if( (*it)->GetStatus() == Job::STATUS_POSTRUN ) {
-				if ( !RunPostScript( *it, _alwaysRunPost, 0, false ) ) {
+		for (auto & _job : _jobs) {
+			if( _job->GetStatus() == Job::STATUS_POSTRUN ) {
+				if ( !RunPostScript( _job, _alwaysRunPost, 0, false ) ) {
 					debug_cache_stop_caching();
 					_jobstateLog.WriteRecoveryFailure();
 					return false;
@@ -358,7 +358,15 @@ bool Dag::Bootstrap (bool recovery)
     if( DEBUG_LEVEL( DEBUG_DEBUG_2 ) ) {
 		PrintJobList();
 		PrintReadyQ( DEBUG_DEBUG_2 );
-    }	
+    }
+
+		// If we have any service nodes, start those right away
+	if( !_service_nodes.empty() ) {
+		if ( !StartServiceNodes() ) {
+			debug_printf( DEBUG_QUIET, "Warning: unable to start service nodes."
+				" Proceeding with the DAG workflow.\n");
+		}
+	}
     
 		// If we have a provisioner job, submit that before any other jobs
 	if( HasProvisionerNode() ) {
@@ -366,9 +374,9 @@ bool Dag::Bootstrap (bool recovery)
 	}
 		// Note: we're bypassing the ready queue here...
 	else {
-		for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-			if( (*it)->CanSubmit() ) {
-				StartNode( *it, false );
+		for (auto & _job : _jobs) {
+			if( _job->CanSubmit() ) {
+				StartNode( _job, false );
 			}
 		}
 	}
@@ -1487,8 +1495,8 @@ Dag::PrintDagFiles( /* const */ std::list<std::string> &dagFiles )
 	if ( dagFiles.size() > 1 ) {
 		debug_printf( DEBUG_VERBOSE, "All DAG files:\n");
 		int thisDagNum = 0;
-		for ( auto it = dagFiles.begin(); it != dagFiles.end(); ++it ) {
-			debug_printf( DEBUG_VERBOSE, "  %s (DAG #%d)\n", it->c_str(),
+		for (auto & dagFile : dagFiles) {
+			debug_printf( DEBUG_VERBOSE, "  %s (DAG #%d)\n", dagFile.c_str(),
 						thisDagNum++);
 		}
 	}
@@ -1570,6 +1578,37 @@ Dag::StartFinalNode()
 
 //-------------------------------------------------------------------------
 bool
+Dag::StartServiceNodes()
+{
+	for ( auto& node: _service_nodes ) {
+		if ( node->GetStatus() == Job::STATUS_READY ) {
+			debug_printf( DEBUG_QUIET, "Starting service node %s...\n", node->GetJobName() );
+			if ( !StartNode( node, false ) ) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+
+//-------------------------------------------------------------------------
+bool
+Dag::RemoveServiceNodes()
+{
+	for ( auto& node: _service_nodes ) {
+		if ( node->GetStatus() == Job::STATUS_SUBMITTED ) {
+			RemoveBatchJob( node );
+			TerminateJob( node, false, false );
+		}
+	}
+
+	return true;
+}
+
+//-------------------------------------------------------------------------
+bool
 Dag::StartProvisionerNode()
 {
 	if ( _provisioner_node && _provisioner_node->GetStatus() == Job::STATUS_READY ) {
@@ -1646,9 +1685,9 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 			// submitting the other jobs in the dag
 		if ( GetProvisionerJobAdState() == ProvisionerState::PROVISIONING_COMPLETE ) {
 			_provisioner_ready = true;
-			for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-				if( (*it)->CanSubmit() ) {
-					StartNode( *it, false );
+			for (auto & _job : _jobs) {
+				if( _job->CanSubmit() ) {
+					StartNode( _job, false );
 				}
 			}
 		}
@@ -1999,8 +2038,8 @@ Dag::HoldScriptReaper( Job *job )
 
 //---------------------------------------------------------------------------
 void Dag::PrintJobList() const {
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-        (*it)->Dump( this );
+	for (auto & _job : _jobs) {
+        _job->Dump( this );
     }
     dprintf( D_ALWAYS, "---------------------------------------\t<END>\n" );
 }
@@ -2009,9 +2048,9 @@ void Dag::PrintJobList() const {
 void
 Dag::PrintJobList( Job::status_t status ) const
 {
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		if( (*it)->GetStatus() == status ) {
-			(*it)->Dump( this );
+	for (auto & _job : _jobs) {
+		if( _job->GetStatus() == status ) {
+			_job->Dump( this );
 		}
     }
     dprintf( D_ALWAYS, "---------------------------------------\t<END>\n" );
@@ -2123,7 +2162,6 @@ Dag::NumNodes( bool includeFinal ) const
 	if ( !includeFinal && HasFinalNode() ) {
 		result--;
 	}
-
 	return result;
 }
 
@@ -2182,36 +2220,36 @@ void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
 //---------------------------------------------------------------------------
 void Dag::RemoveRunningScripts ( ) const {
 
-    for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		ASSERT( *it != NULL );
+    for (auto & _job : _jobs) {
+		ASSERT( _job != NULL );
 
 		// if node is running a PRE script, hard kill it
-        if( (*it)->GetStatus() == Job::STATUS_PRERUN ) {
-			if ( !(*it)->_scriptPre ) {
-				EXCEPT( "Node %s has no PRE script!", (*it)->GetJobName() );
+        if( _job->GetStatus() == Job::STATUS_PRERUN ) {
+			if ( !_job->_scriptPre ) {
+				EXCEPT( "Node %s has no PRE script!", _job->GetJobName() );
 			}
-			if ( (*it)->_scriptPre->_pid != 0 ) {
+			if ( _job->_scriptPre->_pid != 0 ) {
 				debug_printf( DEBUG_DEBUG_1, "Killing PRE script %d\n",
-							(*it)->_scriptPre->_pid );
-				if (daemonCore->Shutdown_Fast((*it)->_scriptPre->_pid) == FALSE) {
+							_job->_scriptPre->_pid );
+				if (daemonCore->Shutdown_Fast(_job->_scriptPre->_pid) == FALSE) {
 					debug_printf(DEBUG_QUIET,
 								"WARNING: shutdown_fast() failed on pid %d: %s\n",
-								(*it)->_scriptPre->_pid, strerror(errno));
+								_job->_scriptPre->_pid, strerror(errno));
 				}
 			}
         }
 		// if node is running a POST script, hard kill it
-        else if( (*it)->GetStatus() == Job::STATUS_POSTRUN ) {
-			if ( !(*it)->_scriptPost ) {
-				EXCEPT( "Node %s has no POST script!", (*it)->GetJobName() );
+        else if( _job->GetStatus() == Job::STATUS_POSTRUN ) {
+			if ( !_job->_scriptPost ) {
+				EXCEPT( "Node %s has no POST script!", _job->GetJobName() );
 			}
-			if ( (*it)->_scriptPost->_pid != 0 ) {
+			if ( _job->_scriptPost->_pid != 0 ) {
 				debug_printf( DEBUG_DEBUG_1, "Killing POST script %d\n",
-							(*it)->_scriptPost->_pid );
-				if(daemonCore->Shutdown_Fast((*it)->_scriptPost->_pid) == FALSE) {
+							_job->_scriptPost->_pid );
+				if(daemonCore->Shutdown_Fast(_job->_scriptPost->_pid) == FALSE) {
 					debug_printf(DEBUG_QUIET,
 								"WARNING: shutdown_fast() failed on pid %d: %s\n",
-								(*it)->_scriptPost->_pid, strerror( errno ));
+								_job->_scriptPost->_pid, strerror( errno ));
 				}
 			}
         }
@@ -2296,9 +2334,9 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
     // Print the names of failed Jobs
     //
     fprintf(fp, "#   ");
-    for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-        if ((*it)->GetStatus() == Job::STATUS_ERROR) {
-            fprintf(fp, "%s,", (*it)->GetJobName());
+    for (auto & _job : _jobs) {
+        if (_job->GetStatus() == Job::STATUS_ERROR) {
+            fprintf(fp, "%s,", _job->GetJobName());
         }
     }
     fprintf(fp, "<ENDLIST>\n\n");
@@ -2336,8 +2374,8 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
     //
     // Print per-node information.
     //
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		WriteNodeToRescue( fp, *(it), reset_retries_upon_rescue, isPartial );
+	for (auto & _job : _jobs) {
+		WriteNodeToRescue( fp, _job, reset_retries_upon_rescue, isPartial );
     }
 
     //
@@ -2345,12 +2383,12 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
     //
 	if ( !isPartial ) {
     	fprintf(fp, "\n");
-		for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+		for (auto & _job : _jobs) {
 
-			if ( ! (*it)->NoChildren()) {
-				fprintf(fp, "PARENT %s CHILD ", (*it)->GetJobName());
+			if ( ! _job->NoChildren()) {
+				fprintf(fp, "PARENT %s CHILD ", _job->GetJobName());
 
-				(*it)->VisitChildren(*this,
+				_job->VisitChildren(*this,
 					[](Dag&, Job*, Job* child, void* pv) -> int {
 						fprintf((FILE*)pv, " %s", child->GetJobName());
 						return 1;
@@ -2519,6 +2557,15 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 	job->TerminateSuccess(); // marks job as STATUS_DONE
 	if ( job->GetStatus() != Job::STATUS_DONE ) {
 		EXCEPT( "Node %s is not in DONE state", job->GetJobName() );
+	}
+
+		// If this was a service node, set the job as done and exit
+	if ( job->GetType() == NodeType::SERVICE ) {
+		_metrics->NodeFinished( job->GetDagFile() != NULL, true );
+		job->countedAsDone = true;
+		job->SetProcEvent( job->GetProc(), ABORT_TERM_MASK );
+		job->retval = 0;
+		return;
 	}
 
 		// this is a little ugly, but since this function can be
@@ -2703,14 +2750,14 @@ Dag::isCycle ()
 	_graph_widths.push_back(0);
 
 	//Visit all jobs in DAG and number them	
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		if ( !(*it)->_visited && (*it)->NoParents())
-			DFSVisit (*it, 0);
+	for (auto & _job : _jobs) {
+		if ( !_job->_visited && _job->NoParents())
+			DFSVisit (_job, 0);
 	}
 
 	//Detect cycle
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		if ((*it)->VisitChildren(*this,
+	for (auto & _job : _jobs) {
+		if (_job->VisitChildren(*this,
 			[](Dag&, Job* parent, Job* child, void*) -> int {
 				if (child->_dfsOrder >= parent->_dfsOrder) {
 		#ifdef REPORT_CYCLE
@@ -2958,9 +3005,9 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		//
 	fprintf( outfile, "  DagFiles = {\n" );
 	const char *separator = "";
-	for ( auto it = _dagFiles.begin(); it != _dagFiles.end(); ++it ) {
+	for (auto & _dagFile : _dagFiles) {
 		fprintf( outfile, "%s    %s", separator,
-					EscapeClassadString( it->c_str() ) );
+					EscapeClassadString( _dagFile.c_str() ) );
 		separator = ",\n";
 	}
 	fprintf( outfile, "\n  };\n" );
@@ -3079,20 +3126,20 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		//
 		// Print status of all nodes.
 		//
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+	for (auto & _job : _jobs) {
 		fprintf( outfile, "[\n" );
 		fprintf( outfile, "  Type = \"NodeStatus\";\n" );
 
-		int jobProcsQueued = (*it)->_queuedNodeJobProcs;
-		int jobProcsHeld = (*it)->_jobProcsOnHold;
+		int jobProcsQueued = _job->_queuedNodeJobProcs;
+		int jobProcsHeld = _job->_jobProcsOnHold;
 
-		Job::status_t status = (*it)->GetStatus();
+		Job::status_t status = _job->GetStatus();
 		const char *nodeNote = "";
 		if ( status == Job::STATUS_READY ) {
 				// Note:  Job::STATUS_READY only means that the job is
 				// ready to submit if it doesn't have any unfinished
 				// parents.
-			if ( !(*it)->CanSubmit() ) {
+			if ( !_job->CanSubmit() ) {
 				status = Job::STATUS_NOT_READY;
 			}
 
@@ -3106,13 +3153,13 @@ Dag::DumpNodeStatus( bool held, bool removed )
 					// This isn't really the right thing to do for multi-
 					// proc nodes, but I want to get in a fix for
 					// gittrac #5333 today...  wenger 2015-11-05
-				nodeNote = (*it)->GetProcIsIdle( 0 ) ? "idle" : "not_idle";
+				nodeNote = _job->GetProcIsIdle( 0 ) ? "idle" : "not_idle";
 				// Note: add info here about whether the job(s) are
 				// held, once that code is integrated.
 			}
 
 		} else if ( status == Job::STATUS_ERROR ) {
-			nodeNote = (*it)->error_text.c_str();
+			nodeNote = _job->error_text.c_str();
 
 		} else if ( status == Job::STATUS_PRERUN ) {
 			if ( markNodesError ) {
@@ -3128,7 +3175,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		}
 
 		fprintf( outfile, "  Node = %s;\n",
-					EscapeClassadString((*it)->GetJobName() ) );
+					EscapeClassadString(_job->GetJobName() ) );
 		statusStr = Job::status_t_names[status];
 		statusStr.trim();
 		fprintf( outfile, "  NodeStatus = %d; /* %s */\n", status,
@@ -3136,7 +3183,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		// fprintf( outfile, "  /* HTCondorStatus = xxx; */\n" );
 		fprintf( outfile, "  StatusDetails = %s;\n",
 					EscapeClassadString( nodeNote ) );
-		fprintf( outfile, "  RetryCount = %d;\n", (*it)->GetRetries() );
+		fprintf( outfile, "  RetryCount = %d;\n", _job->GetRetries() );
 		// fprintf( outfile, "  /* JobProcsTotal = xxx; */\n" );
 		fprintf( outfile, "  JobProcsQueued = %d;\n", jobProcsQueued );
 		// fprintf( outfile, "  /* JobProcsRunning = xxx; */\n" );
@@ -3181,14 +3228,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		// existing file fails on Windows.
 		//
 	MyString statusFileName( _statusFileName );
-#if 0 // For testing, to enable manual checking of intermediate states...
-	static int statusFileCount = 0;
-	statusFileName += ++statusFileCount;
-	debug_printf( DEBUG_QUIET, "Writing node status file %s\n",
-				statusFileName.Value() );
-#endif
-	_dagmanUtils.tolerant_unlink( statusFileName.c_str() );
-	if ( rename( tmpStatusFile.c_str(), statusFileName.c_str() ) != 0 ) {
+	_dagmanUtils.tolerant_unlink( statusFileName.Value() );
+	if ( rename( tmpStatusFile.Value(), statusFileName.Value() ) != 0 ) {
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't rename temporary node status "
 					  "file (%s) to permanent file (%s): %s\n",
@@ -3293,12 +3334,12 @@ Dag::SetMaxJobsSubmitted(int newMax) {
 	// Optionally remove jobs to meet the new limit, starting with most recent
 	if (isChanged && removeJobsAfterLimitChange) {
 		int submittedJobsCount = 0;
-		for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-			if ((*it)->GetStatus() == Job::STATUS_SUBMITTED) {
+		for (auto & _job : _jobs) {
+			if (_job->GetStatus() == Job::STATUS_SUBMITTED) {
 				submittedJobsCount++;
 				if (submittedJobsCount > _maxJobsSubmitted) {
-					(*it)->retry_max++;
-					RemoveBatchJob(*it);
+					_job->retry_max++;
+					RemoveBatchJob(_job);
 				}
 			}
 		}
@@ -3357,8 +3398,8 @@ int
 Dag::NumHeldJobProcs()
 {
 	int numHeldProcs = 0;
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		numHeldProcs += (*it)->_jobProcsOnHold;
+	for (auto & _job : _jobs) {
+		numHeldProcs += _job->_jobProcsOnHold;
 	}
 	return numHeldProcs;
 }
@@ -3416,14 +3457,14 @@ Dag::PrintPendingNodes() const
 {
 	dprintf( D_ALWAYS, "Pending DAG nodes:\n" );
 
-    for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		switch ((*it)->GetStatus() ) {
+    for (auto & _job : _jobs) {
+		switch (_job->GetStatus() ) {
 		case Job::STATUS_PRERUN:
 		case Job::STATUS_SUBMITTED:
 		case Job::STATUS_POSTRUN:
 			dprintf( D_ALWAYS, "  Node %s, HTCondor ID %d, status %s\n",
-						(*it)->GetJobName(), (*it)->GetCluster(),
-						(*it)->GetStatusName() );
+						_job->GetJobName(), _job->GetCluster(),
+						_job->GetStatusName() );
 			break;
 
 		default:
@@ -3518,11 +3559,11 @@ Dag::IncludeExtraDotCommands(
 void 
 Dag::DumpDotFileNodes(FILE *temp_dot_file)
 {
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+	for (auto & _job : _jobs) {
 		const char *node_name;
 		
-		node_name = (*it)->GetJobName();
-		switch ((*it)->GetStatus()) {
+		node_name = _job->GetJobName();
+		switch (_job->GetStatus()) {
 		case Job::STATUS_READY:
 			fprintf(temp_dot_file, 
 				"    \"%s\" [shape=ellipse label=\"%s (I)\"];\n",
@@ -3577,9 +3618,9 @@ Dag::DumpDotFileNodes(FILE *temp_dot_file)
 void 
 Dag::DumpDotFileArcs(FILE *temp_dot_file)
 {
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		if ((*it)->GetJobName()) {
-			(*it)->VisitChildren(*this,
+	for (auto & _job : _jobs) {
+		if (_job->GetJobName()) {
+			_job->VisitChildren(*this,
 				[](Dag&, Job* parent, Job* child, void* pv) -> int {
 					FILE* fp = (FILE*)pv;
 					const char * child_name = child->GetJobName();
@@ -3663,6 +3704,12 @@ bool Dag::Add( Job& job )
 			return false;
 		}
 		_provisioner_node = &job;
+	}
+
+	if ( ( job.GetType() == NodeType::SERVICE ) ) {
+		_service_nodes.push_back( &job );
+		// Service nodes do not get included in the _jobs list
+		return true;
 	}
 
 	_jobs.push_back(&job);
@@ -4122,8 +4169,10 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 		// we see the submit events so that we don't accidentally exceed
 		// maxjobs (now really maxnodes) if it takes a while to see
 		// the submit events.  wenger 2006-02-10.
-	UpdateJobCounts( node, 1 );
-    
+	if ( node->GetType() != NodeType::SERVICE ) {
+		UpdateJobCounts( node, 1 );
+	}
+
         // stash the job ID reported by the submit command, to compare
         // with what we see in the userlog later as a sanity-check
         // (note: this sanity-check is not possible during recovery,
@@ -4187,7 +4236,11 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 			(void)RunPostScript( node, _alwaysRunPost, 0 );
 		} else {
 			node->TerminateFailure();
-			_numNodesFailed++;
+				// We consider service nodes to be best-effort
+				// Do not count failures in the overall dag count
+			if (node->GetType() != NodeType::SERVICE) {
+				_numNodesFailed++;
+			}
 			_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 			if ( _dagStatus == DAG_STATUS_OK ) {
 				_dagStatus = DAG_STATUS_NODE_FAILED;
@@ -4261,8 +4314,8 @@ Dag::PropagateDirectoryToAllNodes(void)
 	}
 
 	// Propagate the directory setting to all nodes in the DAG.
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		(*it)->PrefixDirectory(m_directory);
+	for (auto & _job : _jobs) {
+		_job->PrefixDirectory(m_directory);
 	}
 
 	// I wipe out m_directory here. If this gets called multiple
@@ -4434,16 +4487,9 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 			return false;
 		}
 
-		for ( int parentNodeNum = 0;
-					parentNodeNum < static_cast<int>( parentPNs->size() );
-					++parentNodeNum ) {
-			Job *parentNode = parentPNs->at(parentNodeNum);
-			for ( int childNodeNum = 0;
-						childNodeNum < static_cast<int>( childPNs->size() );
-						++childNodeNum ) {
-				Job *childNode = childPNs->at(childNodeNum);
-
-				std::forward_list<Job*> lst = { childNode };
+		for (auto parentNode : *parentPNs) {
+				for (auto childNode : *childPNs) {
+					std::forward_list<Job*> lst = { childNode };
 				if ( ! parentNode->AddChildren(lst, failReason)) {
 					debug_printf( DEBUG_QUIET,
 								"ERROR: unable to add parent/child dependency for pin %d\n", pinNum );
@@ -4457,11 +4503,11 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 		// Check for "orphan" nodes in the child splice -- nodes that
 		// don't have either a parent within the splice or a pin_in
 		// connection.
-	for (auto it = childSplice->_jobs.begin(); it != childSplice->_jobs.end(); it++) {
-		if ((*it)->NoParents()) {
+	for (auto & _job : childSplice->_jobs) {
+		if (_job->NoParents()) {
 			debug_printf( DEBUG_QUIET,
 						"ERROR: child splice node %s has no parents after making pin connections; add pin_in or parent\n",
-						(*it)->GetJobName() );
+						_job->GetJobName() );
 			return false;
 		}
 	}
@@ -4473,10 +4519,8 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 void
 Dag::DeletePinList( PinList &pinList )
 {
-	for ( int pinNum = 0; pinNum < static_cast<int>( pinList.size() );
-				++pinNum ) {
-		PinNodes *pn = pinList[pinNum];
-		delete pn;
+	for (auto pn : pinList) {
+			delete pn;
 	}
 }
 
@@ -4489,8 +4533,8 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 	debug_printf(DEBUG_DEBUG_1, "Entering: Dag::PrefixAllNodeNames()"
 		" with prefix %s\n",prefix.c_str());
 
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		(*it)->PrefixName(prefix);
+	for (auto & _job : _jobs) {
+		_job->PrefixName(prefix);
 	}
 
 	// Here we must reindex the hash view with the prefixed name.
@@ -4503,9 +4547,9 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 	}
 
 	// Then, reindex all the jobs keyed by their new name
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		key = (*it)->GetJobName();
-		auto insertResult = _nodeNameHash.insert(std::make_pair(key, *it));
+	for (auto & _job : _jobs) {
+		key = _job->GetJobName();
+		auto insertResult = _nodeNameHash.insert(std::make_pair(key, _job));
 		if (insertResult.second != true) {
 			// I'm reinserting everything newly, so this should never happen
 			// unless two jobs have an identical name, which means another
@@ -4564,16 +4608,16 @@ Dag::FinalRecordedNodes(void)
 void
 Dag::RecordInitialAndTerminalNodes(void)
 {
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
+	for (auto & _job : _jobs) {
 
 		// record the initial nodes
-		if ((*it)->NoParents()) {
-			_splice_initial_nodes.push_back(*it);
+		if (_job->NoParents()) {
+			_splice_initial_nodes.push_back(_job);
 		}
 
 		// record the final nodes
-		if ((*it)->NoChildren()) {
-			_splice_terminal_nodes.push_back(*it);
+		if (_job->NoChildren()) {
+			_splice_terminal_nodes.push_back(_job);
 		}
 	}
 }
@@ -4640,14 +4684,14 @@ Dag::LiftSplices(SpliceLayer layer)
 void
 Dag::AdjustEdges()
 {
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		(*it)->BeginAdjustEdges(this);
+	for (auto & _job : _jobs) {
+		_job->BeginAdjustEdges(this);
 	}
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		(*it)->AdjustEdges(this);
+	for (auto & _job : _jobs) {
+		_job->AdjustEdges(this);
 	}
-	for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-		(*it)->FinalizeAdjustEdges(this);
+	for (auto & _job : _jobs) {
+		_job->FinalizeAdjustEdges(this);
 	}
 }
 
@@ -4781,8 +4825,8 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 void Dag::SetNodePriorities()
 {
 	if ( GetDagPriority() != 0 ) {
-		for (auto it = _jobs.begin(); it != _jobs.end(); it++) {
-			(*it)->_effectivePriority += GetDagPriority();
+		for (auto & _job : _jobs) {
+			_job->_effectivePriority += GetDagPriority();
 		}
 	}
 }

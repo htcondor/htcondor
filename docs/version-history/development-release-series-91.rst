@@ -20,11 +20,26 @@ New Features:
   return to idle status to be re-run.
   :jira:`664`
 
+- Added new configuration parameter ``NEGOTIATOR_MIN_INTERVAL``, which
+  sets the minimum amount of the time between the start of one
+  negotiation cycle and the next.
+  :jira:`606`
+
 Bugs Fixed:
 
 - Fixed a problem introduced in HTCondor version 9.1.3 where
   X.509 proxy delegation to older versions of HTCondor would fail.
   :jira:`674`
+
+- HTCondor no longer crashes on start-up if ``COLLECTOR_HOST`` is set to
+  a string with a colon and a port number, but no host part.
+  :jira:`602`
+
+- Changed the default value of configuration parameter ``MAIL`` to
+  */usr/bin/mail* on unix.
+  This location is valid on all of our supported unix platforms, unlike
+  the previous default value of */bin/mail*.
+  :jira:`581`
 
 Version 9.1.3
 -------------

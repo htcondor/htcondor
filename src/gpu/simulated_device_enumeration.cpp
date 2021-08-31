@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 
 // For pi_dynlink.h
 #ifdef WIN32

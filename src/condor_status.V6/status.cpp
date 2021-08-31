@@ -224,7 +224,7 @@ typedef struct {
 PrettyPrinter mainPP( PP_NOTSET, PP_NOTSET, STD_HEADFOOT );
 
 // function declarations
-void usage 		();
+void usage 		(const char * opts=NULL);
 void firstPass  (int, char *[]);
 void secondPass (int, char *[]);
 
@@ -1561,7 +1561,7 @@ static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseT
 
 
 void
-usage ()
+usage (const char * opts)
 {
 	fprintf (stderr,"Usage: %s [help-opt] [query-opt] [custom-opts] [display-opts] [name ...]\n", myName);
 
@@ -1650,6 +1650,23 @@ usage ()
 		"\t-print-format <file>\tUse <file> to set display attributes and formatting\n"
 		"\t\t\t\t(experimental, see htcondor-wiki for more information)\n"
 		);
+
+	if (opts) {
+		if (is_arg_prefix(opts,"all", -1) || is_arg_prefix(opts, "subsystem", 3)) {
+			fprintf(stderr, "\n\n    subsystem types:\n");
+			fprintf(stderr, "\tschedd\n");
+			fprintf(stderr, "\tsubmitters\n");
+			fprintf(stderr, "\tstartd\n");
+			fprintf(stderr, "\tdefrag\n");
+			fprintf(stderr, "\tgrid\n");
+			fprintf(stderr, "\taccounting\n");
+			fprintf(stderr, "\tnegotiator\n");
+			fprintf(stderr, "\tmaster\n");
+			fprintf(stderr, "\tcollector\n");
+			fprintf(stderr, "\tgeneric\n");
+			fprintf(stderr, "\thad\n");
+		}
+	}
 }
 
 
@@ -1856,7 +1873,7 @@ firstPass (int argc, char *argv[])
 			mainPP.setMode (SDO_Defrag, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "help", 1)) {
-			usage ();
+			usage (argv[i+1]);
 			exit (0);
 		} else
 		if (is_dash_arg_prefix(argv[i], "limit", 2)) {
@@ -2014,7 +2031,7 @@ firstPass (int argc, char *argv[])
 			if( !argv[i] || *argv[i] == '-') {
 				fprintf( stderr, "%s: -subsystem requires another argument\n",
 						 myName );
-				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				fprintf( stderr, "Use \"%s -help subsys\" for details\n", myName );
 				exit( 1 );
 			}
 			static const struct { const char * tag; int sm; } asub[] = {

@@ -1531,8 +1531,11 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 		if (mySock_->isClient()) {
 			dprintf(D_SECURITY,"SSL_get_peer_certificate returned null.\n" );
 			goto err_occured;
+		} else if (!m_scitokens_mode && param_boolean("AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE", false)) {
+			dprintf(D_SECURITY,"SSL Auth: Anonymous client is not allowed.\n");
+			goto err_occured;
 		} else {
-			dprintf(D_SECURITY, "Peer is anonymous; not checking.\n");
+			dprintf(D_SECURITY, "SSL Auth: Anonymous client is allowed; not checking.\n");
 			return X509_V_OK;
 		}
 	}
@@ -1680,6 +1683,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     char *certfile     = NULL;
     char *keyfile      = NULL;
     char *cipherlist   = NULL;
+    bool i_need_cert   = is_server;
 
 		// Not sure where we want to get these things from but this
 		// will do for now.
@@ -1697,6 +1701,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 			// default credential.  All non-default credential owners
 			// will auth anonymously.
 		} else if (SecMan::getTagCredentialOwner().empty()) {
+			i_need_cert = param_boolean("AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE", false);
 			certfile   = param( AUTH_SSL_CLIENT_CERTFILE_STR );
 			keyfile    = param( AUTH_SSL_CLIENT_KEYFILE_STR );
 		}
@@ -1705,10 +1710,11 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if( cipherlist == NULL ) {
 		cipherlist = strdup(AUTH_SSL_DEFAULT_CIPHERLIST);
     }
-    if( is_server && (!certfile || !keyfile) ) {
-        ouch( "Please specify path to server certificate and key\n" );
+    if( i_need_cert && (!certfile || !keyfile) ) {
+        ouch( "Please specify path to local certificate and key\n" );
         dprintf(D_SECURITY, "in config file : '%s' and '%s'.\n",
-                AUTH_SSL_SERVER_CERTFILE_STR, AUTH_SSL_SERVER_KEYFILE_STR );
+                is_server ? AUTH_SSL_SERVER_CERTFILE_STR : AUTH_SSL_CLIENT_CERTFILE_STR,
+                is_server ? AUTH_SSL_SERVER_KEYFILE_STR : AUTH_SSL_CLIENT_KEYFILE_STR);
 		ctx = NULL;
         goto setup_server_ctx_err;
     }

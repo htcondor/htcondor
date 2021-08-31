@@ -208,17 +208,11 @@
 /* Do we have the scitokens external (USED)*/
 #cmakedefine HAVE_EXT_SCITOKENS 1
 
-/* Do we have the unicoregahp external (USED)*/
-#cmakedefine HAVE_EXT_UNICOREGAHP 1
-
 /* Do we have the voms external (USED)*/
 #cmakedefine HAVE_EXT_VOMS 1
 
 /* Do we have the libvirt external (USED)*/
 #cmakedefine HAVE_EXT_LIBVIRT 1
-
-///* Do we have the cream external (Imake?)*/
-#cmakedefine HAVE_EXT_CREAM
 
 ///* Do we have the curl external (Imake)*/
 #cmakedefine HAVE_EXT_CURL

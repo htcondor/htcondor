@@ -19,7 +19,18 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added configuration parameter ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``,
+  a boolean value which defaults to ``False``.
+  If set to ``True``, then clients that authenticate to a daemon using
+  SSL must present a valid SSL credential.
+  :jira:`236`
+
+- The *condor_watch_q* command now refuses to watch the queue if
+  doing so would require using more kernel resources ("inotify watches")
+  than allowed.  This limit can be increased by your system
+  administrator, and we expect to remove this limitation in a future
+  version of the tool.
+  :jira:`676`
 
 Bugs Fixed:
 
@@ -27,6 +38,41 @@ Bugs Fixed:
   and ``GPU-<uuid>`` formatted values, in addition to integer values.
   :jira:`669`
 
+
+- The *bosco_cluster* tool now clears out old installation files when
+  the *--add* option is used to update an existing installation.
+  :jira:`577`
+
+- Updated *condor_gpu_discovery* to be compatible with version 470 of
+  NVidia's drivers.
+  :jira:`620`
+
+- Fixed a bug that could cause the *condor_had* daemon to fail at startup
+  when the local machine has multiple IP addresses.
+  This bug is particularly likely to happen if ``PREFER_IPV4`` is set to
+  ``False``.
+  :jira:`625`
+
+- For the machine ad attributes ``OpSys*`` and configuration parameters
+  ``OPSYS*``, treat macOS 11.X as if it were macOS 10.16.X.
+  This represents the major version nubmers in a consistent, if somewhat
+  inaccurate manner.
+  :jira:`626`
+
+- Fixed a bug that ignored the setting of per-Accounting Group
+  GROUP_AUTOREGROUP from working.  Global autoregroup worked correctly.
+  :jira:`632`
+
+- A self-checkpointing job's output and error logs will no longer be
+  interrupted by eviction if the job specifies ``transfer_checkpoint_files``;
+  HTCondor now automatically considers them part of the checkpoint the way it
+  automatically considers them part of the output.
+  :jira:`656`
+
+- HTCondor now transfers the standard output and error logs when
+  ``when_to_transfer_output`` is ``ON_SUCCESS`` and ``transfer_output_files``
+  is empty.
+  :jira:`673`
 
 Version 9.0.5
 -------------

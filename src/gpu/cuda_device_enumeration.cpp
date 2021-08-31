@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 
 // For pi_dynlink.h
 #if       defined(WIN32)
@@ -419,6 +420,39 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
 
 
 nvmlReturn_t
+getMIGParentDeviceUUIDs( std::set< std::string > & parentDeviceUUIDs ) {
+	unsigned int deviceCount = 0;
+	nvmlReturn_t r = nvmlDeviceGetCount(& deviceCount);
+	if( NVML_SUCCESS != r ) { return r; }
+
+	for( unsigned int i = 0; i < deviceCount; ++i ) {
+		nvmlDevice_t device;
+		r = nvmlDeviceGetHandleByIndex( i, & device );
+		if( NVML_SUCCESS != r ) { return r; }
+
+		unsigned int maxMigDeviceCount = 0;
+		r = nvmlDeviceGetMaxMigDeviceCount( device, & maxMigDeviceCount );
+		if( NVML_SUCCESS == r && maxMigDeviceCount != 0 ) {
+			for( unsigned int index = 0; index < maxMigDeviceCount; ++index ) {
+				nvmlDevice_t migDevice;
+				r = nvmlDeviceGetMigDeviceHandleByIndex( device, index, & migDevice );
+				if( NVML_SUCCESS != r ) { continue; }
+
+				char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
+				r = nvmlDeviceGetUUID( device, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
+				if( NVML_SUCCESS != r ) { return r; }
+
+				parentDeviceUUIDs.insert( uuid );
+				break;
+			}
+		}
+	}
+
+	return NVML_SUCCESS;
+}
+
+
+nvmlReturn_t
 getUUIDToMIGDeviceHandleMap( std::map< std::string, nvmlDevice_t > & map ) {
 	unsigned int deviceCount = 0;
 	nvmlReturn_t r = nvmlDeviceGetCount(& deviceCount);
@@ -550,7 +584,7 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 	static std::map< std::string, nvmlDevice_t > uuidsToHandles;
 	if(! mapInitialized) {
 		r = getUUIDToMIGDeviceHandleMap( uuidsToHandles );
-		if( NVML_SUCCESS != r ) { return r;	}
+		if( NVML_SUCCESS != r ) { return r; }
 	}
 
 	for( auto i = uuidsToHandles.begin(); i != uuidsToHandles.end(); ++i ) {
@@ -603,10 +637,33 @@ std::string
 gpuIDFromUUID( const std::string & uuid, int opt_short_uuid ) {
 	std::string gpuID = uuid;
 
-	// Some of our UUIDs came from CUDA.
+	//
+	// UUIDs from CUDA are _just_ the UUID.  UUIDs from NVML may include
+	// a leading "GPU-", or, as of driver version 470, a leading "MIG-".
+	//
+	// However, the GPU IDs with a leading "MIG-" don't work if shortened,
+	// so never do that.
+	//
+
+	if( gpuID.find( "MIG-" ) == 0 ) {
+		return gpuID;
+	}
+
+	//
+	// By a "GPU ID", we mean an identifier that can be used in
+	// CUDA_VISIBLE_DEVICES.  Oddly, the bare UUID returned from CUDA
+	// can't; the UUID must be prefixed with "GPU-", to make it look
+	// like an NVML "UUID".
+	//
+
 	if( gpuID.find( "GPU-" ) == std::string::npos ) {
 		gpuID = "GPU-" + gpuID;
 	}
+
+	//
+	// GPU IDs don't have to include the entire UUID, just enough of
+	// a prefix to uniquely identify the device.
+	//
 
 	if( opt_short_uuid ) {
 		// MIG-GPU-<UUID>/x/y

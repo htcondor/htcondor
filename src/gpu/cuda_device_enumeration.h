@@ -143,6 +143,7 @@ class BasicProps {
 
 bool enumerateCUDADevices( std::vector< BasicProps > & devices );
 nvmlReturn_t enumerateNVMLDevices( std::vector< BasicProps > & devices );
+nvmlReturn_t getMIGParentDeviceUUIDs( std::set< std::string > & parentDeviceUUIDs );
 
 std::string gpuIDFromUUID( const std::string & uuid, int opt_short_uuid );
 

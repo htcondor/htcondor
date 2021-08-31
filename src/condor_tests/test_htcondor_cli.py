@@ -47,7 +47,7 @@ def resource_missing_args(default_condor, test_dir, submit_success):
 
 @action
 def slurm_not_setup(default_condor, test_dir):
-    p = default_condor.run_command(["htcondor", "job", "submit", test_dir / "helloworld.sub", "--resource", "slurm", "--runtime", "1", "--node_count", "1"])
+    p = default_condor.run_command(["htcondor", "job", "submit", test_dir / "helloworld.sub", "--resource", "slurm", "--runtime", "1"])
     return p
 
 

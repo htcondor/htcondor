@@ -10,6 +10,7 @@ from pathlib import Path
 from .conf import *
 from .dagman import DAGMan
 
+# Must be consistent with job status definitions in src/condor_includes/proc.h
 JobStatus = [
     "NONE",
     "IDLE",
@@ -40,9 +41,8 @@ class Job:
         # If no resource specified, submit job to the local schedd
         if "resource" not in options:
 
-            submit_file = open(file)
-            submit_data = submit_file.read()
-            submit_file.close()
+            with open(file, "r") as submit_file:
+                submit_data = submit_file.read()
             submit_description = htcondor.Submit(submit_data)
 
             # The Job class can only submit a single job at a time
@@ -64,19 +64,16 @@ class Job:
             if "runtime" not in options:
                 print("Error: Slurm resources must specify a --runtime argument")
                 sys.exit(1)
-            if "node_count" not in options:
-                print("Error: Slurm resources must specify a --node_count argument")
-                sys.exit(1)
 
             # Verify that we have Slurm access; if not, run bosco_clutser to create it
             try:
                 subprocess.check_output(["bosco_cluster", "--status", "hpclogin1.chtc.wisc.edu"])
-            except:
+            except Exception:
                 print(f"You need to install support software to access the Slurm cluster. Please run the following command in your terminal:\n\nbosco_cluster --add hpclogin1.chtc.wisc.edu slurm\n")
                 sys.exit(1)
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
-            DAGMan.write_slurm_dag(file, options["runtime"], options["node_count"], options["email"])
+            DAGMan.write_slurm_dag(file, options["runtime"], options["email"])
             os.chdir(TMP_DIR) # DAG must be submitted from TMP_DIR
             submit_description = htcondor.Submit.from_dag(str(TMP_DIR / "slurm_submit.dag"))
             submit_description["+ResourceType"] = "\"Slurm\""
@@ -100,12 +97,9 @@ class Job:
             if "runtime" not in options:
                 print("Error: EC2 resources must specify a --runtime argument")
                 sys.exit(1)
-            if "node_count" not in options:
-                print("Error: EC2 resources must specify a --node_count argument")
-                sys.exit(1)
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
-            DAGMan.write_ec2_dag(file, options["runtime"], options["node_count"], options["email"])
+            DAGMan.write_ec2_dag(file, options["runtime"], options["email"])
             os.chdir(TMP_DIR) # DAG must be submitted from TMP_DIR
             submit_description = htcondor.Submit.from_dag("ec2_submit.dag")
             submit_description["+ResourceType"] = "\"EC2\""
@@ -143,8 +137,8 @@ class Job:
         except IndexError:
             print(f"No job found for ID {id}.")
             sys.exit(0)
-        except:
-            print(f"Error looking up job status: {sys.exc_info()[0]}")
+        except Exception as err:
+            print(f"Error looking up job status: {err}")
             sys.exit(1)
 
         if len(job) == 0:
@@ -158,14 +152,16 @@ class Job:
         if resource_type == "htcondor":
             if JobStatus[job[0]['JobStatus']] == "RUNNING":
                 job_running_time = datetime.now() - datetime.fromtimestamp(job[0]["JobStartDate"])
-                print(f"Job is {JobStatus[job[0]['JobStatus']]} since {round(job_running_time.seconds/3600)}h{round(job_running_time.seconds/60)}m{(job_running_time.seconds%60)}s")
+                print(f"Job is running since {round(job_running_time.seconds/3600)}h{round(job_running_time.seconds/60)}m{(job_running_time.seconds%60)}s")
             elif JobStatus[job[0]['JobStatus']] == "HELD":
                 job_held_time = datetime.now() - datetime.fromtimestamp(job[0]["LastVacateTime"])
-                print(f"Job is {JobStatus[job[0]['JobStatus']]} since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s")
+                print(f"Job is held since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s")
+            elif JobStatus[job[0]['JobStatus']] == "COMPLETED":
+                print("Job has completed")
             else:
                 print(f"Job is {JobStatus[job[0]['JobStatus']]}")
 
-        # Jobs running on provisioned Slurm resources need to retrieve
+        # Jobs running on provisioned Slurm or EC2 resources need to retrieve
         # additional information from the provisioning DAGMan log
         elif resource_type == "slurm" or resource_type == "ec2":
 
@@ -185,13 +181,11 @@ class Job:
                 sys.exit(0)
 
             # Parse the .dag file to retrieve some user input values
-            dagman_dag_file = open(dagman_dag, "r")
-            for line in dagman_dag_file.readlines():
-                if "annex_node_count =" in line:
-                    slurm_nodes_requested = line.split("=")[1].strip()
-                if "annex_runtime =" in line:
-                    slurm_runtime = int(line.split("=")[1].strip())
-            
+            with open(dagman_dag, "r") as dagman_dag_file:
+                for line in dagman_dag_file.readlines():
+                    if "annex_runtime =" in line:
+                        slurm_runtime = int(line.split("=")[1].strip())
+
             # Parse the DAGMan event log for useful information
             dagman_events = htcondor.JobEventLog(dagman_log)
             for event in dagman_events.events(0):
@@ -213,7 +207,7 @@ class Job:
                 elif event.type == htcondor.JobEventType.JOB_HELD or event.type == htcondor.JobEventType.EXECUTABLE_ERROR:
                     job_status = "ERROR"
 
-            # Now that we have all the information we want, display it
+            # Calculate how long job has been in its current state
             current_time = datetime.now()
             time_diff = None
             if job_status == "PROVISIONING REQUEST PENDING":
@@ -221,11 +215,18 @@ class Job:
             elif job_status == "RUNNING":
                 time_diff = current_time - job_started_time
 
-            print(f"Job is {job_status}", end='')
-            if time_diff is not None:
-                print(f" since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
+            # Now that we have all the information we want, display it
+            if job_status == "COMPLETED":
+                print("Job has completed")
             else:
-                print("")
+                if job_status == "PROVISIONING REQUEST PENDING":
+                    print(f"Job is waiting for {resource_type.upper()} to provision pending request", end='')
+                else:
+                    print(f"Job is {job_status}", end='')
+                    if time_diff is not None:
+                        print(f" since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
+                    else:
+                        print("")
 
         else:
             print(f"Error: The 'job status' command does not support {resource_type} resources.")
@@ -285,12 +286,10 @@ class Job:
                 sys.exit(0)
 
             # Parse the .dag file to retrieve some user input values
-            dagman_dag_file = open(dagman_dag, "r")
-            for line in dagman_dag_file.readlines():
-                if "annex_node_count =" in line:
-                    slurm_nodes_requested = line.split("=")[1].strip()
-                if "annex_runtime =" in line:
-                    slurm_runtime = int(line.split("=")[1].strip())
+            with open(dagman_dag, "r") as dagman_dag_file:
+                for line in dagman_dag_file.readlines():
+                    if "annex_runtime =" in line:
+                        slurm_runtime = int(line.split("=")[1].strip())
 
             # Parse the DAGMan event log for useful information
             dagman_events = htcondor.JobEventLog(dagman_log)

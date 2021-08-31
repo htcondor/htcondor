@@ -616,7 +616,7 @@ void INFNBatchJob::doEvaluateState()
 			if ( !myResource->GahpIsRemote() ) {
 				numSubmitAttempts++;
 			}
-			if ( rc == GLOBUS_SUCCESS ) {
+			if ( rc == GAHP_SUCCESS ) {
 				SetRemoteJobId( job_id_string );
 				if(jobProxy) {
 					remoteProxyExpireTime = jobProxy->expiration_time;
@@ -696,7 +696,7 @@ void INFNBatchJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc != GLOBUS_SUCCESS ) {
+			if ( rc != GAHP_SUCCESS ) {
 				// unhandled error
 				numStatusCheckAttempts++;
 				if (numStatusCheckAttempts < param_integer("BATCH_GAHP_CHECK_STATUS_ATTEMPTS", 5)) {
@@ -780,7 +780,7 @@ void INFNBatchJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 					dprintf( D_ALWAYS,
 							 "(%d.%d) blah_download_proxy() failed: %s\n",
@@ -814,7 +814,7 @@ void INFNBatchJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 					dprintf( D_ALWAYS,
 							 "(%d.%d) blah_job_refresh_proxy() failed: %s\n",
@@ -950,7 +950,7 @@ void INFNBatchJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 					dprintf( D_ALWAYS,
 							 "(%d.%d) blah_job_cancel() failed: %s\n",

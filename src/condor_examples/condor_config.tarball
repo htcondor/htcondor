@@ -35,7 +35,3 @@ LOCAL_DIR = $(RELEASE_DIR)/local
 ##  are read in left-to-right order.
 LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config.d
 #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
-
-## The location of the command line tool to send e-mail.
-## The default is /bin/mail, which is wrong on many platforms.
-MAIL = /usr/bin/mail

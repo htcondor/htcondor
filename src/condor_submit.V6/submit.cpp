@@ -1414,7 +1414,7 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 
 		if (!ename) transfer_it = false;
 
-        empty_if_null(LastExecutable, ename);
+        LastExecutable = empty_if_null(ename);
 		SpoolLastExecutable = false;
 
 		// ensure the executables exist and spool them only if no
