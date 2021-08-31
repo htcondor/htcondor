@@ -19,15 +19,25 @@ Release Notes:
 
 New Features:
 
-- None.
-
 - Added configuration parameter ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``,
   a boolean value which defaults to ``False``.
   If set to ``True``, then clients that authenticate to a daemon using
   SSL must present a valid SSL credential.
   :jira:`236`
 
+- The *condor_watch_q* command now refuses to watch the queue if
+  doing so would require using more kernel resources ("inotify watches")
+  than allowed.  This limit can be increased by your system
+  administrator, and we expect to remove this limitation in a future
+  version of the tool.
+  :jira:`676`
+
 Bugs Fixed:
+
+- The ``CUDA_VISIBLE_DEVICES`` environment variable may now contain ``CUDA<n>``
+  and ``GPU-<uuid>`` formatted values, in addition to integer values.
+  :jira:`669`
+
 
 - The *bosco_cluster* tool now clears out old installation files when
   the *--add* option is used to update an existing installation.
@@ -53,6 +63,16 @@ Bugs Fixed:
   GROUP_AUTOREGROUP from working.  Global autoregroup worked correctly.
   :jira:`632`
 
+- A self-checkpointing job's output and error logs will no longer be
+  interrupted by eviction if the job specifies ``transfer_checkpoint_files``;
+  HTCondor now automatically considers them part of the checkpoint the way it
+  automatically considers them part of the output.
+  :jira:`656`
+
+- HTCondor now transfers the standard output and error logs when
+  ``when_to_transfer_output`` is ``ON_SUCCESS`` and ``transfer_output_files``
+  is empty.
+  :jira:`673`
 
 Version 9.0.5
 -------------

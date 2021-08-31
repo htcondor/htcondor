@@ -4,6 +4,23 @@ Development Release Series 9.1
 This is the development release series of HTCondor. The details of each
 version are described below.
 
+Version 9.1.5
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.1.5 released on Month Date, 2021.
+
+- HTCondor version 9.1.5 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 9.1.4
 -------------
 
@@ -15,12 +32,21 @@ Release Notes:
 
 New Features:
 
+- Jobs are no longer put on hold if a failure occurs due to the scratch
+  execute directory unexpectedly disappearing. Instead, the jobs will
+  return to idle status to be re-run.
+  :jira:`664`
+
 - Added new configuration parameter ``NEGOTIATOR_MIN_INTERVAL``, which
   sets the minimum amount of the time between the start of one
   negotiation cycle and the next.
   :jira:`606`
 
 Bugs Fixed:
+
+- Fixed a problem introduced in HTCondor version 9.1.3 where
+  X.509 proxy delegation to older versions of HTCondor would fail.
+  :jira:`674`
 
 - HTCondor no longer crashes on start-up if ``COLLECTOR_HOST`` is set to
   a string with a colon and a port number, but no host part.

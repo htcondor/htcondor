@@ -195,7 +195,41 @@ is_dash_arg_colon_prefix(const char * parg, const char * pval, const char ** ppc
 
 void usage(FILE* output, const char* argv0);
 
-bool addToDeviceWhiteList( char * list, std::list<int> & dwl ) {
+// trim leading and trailing whitespace from the input string and return as a std::string.
+static std::string trim(const char* str) {
+	while (*str && isspace(*str)) ++str; // trim leading
+	std::string tmp(str);
+	int end = (int)tmp.length() - 1;
+	while (end >= 0 && isspace(tmp[end])) { --end; }
+	return tmp.substr(0, end + 1);
+}
+
+// returns true if pre is non-empty and str is the same as pre up to pre.size()
+static bool starts_with(const std::string& str, const std::string& pre) {
+	size_t cp = pre.size();
+	if (cp <= 0)
+		return false;
+
+	size_t cs = str.size();
+	if (cs < cp)
+		return false;
+
+	for (size_t ix = 0; ix < cp; ++ix) {
+		if (str[ix] != pre[ix])
+			return false;
+	}
+	return true;
+}
+
+static bool uuid_match(const std::string & item, const std::string & uuid) {
+	if (item.find("GPU-")) {
+		return item.substr(4) == uuid;
+	}
+	return item == uuid;
+}
+
+// split the input list on , and and put the resulting items into the whitelist after trimming leading and trailing spaces
+bool addItemsToSet( const char * list, std::set<std::string> & whitelist ) {
 	char * tokenizer = strdup( list );
 	if( tokenizer == NULL ) {
 		// Deliberately unparseable.
@@ -204,11 +238,83 @@ bool addToDeviceWhiteList( char * list, std::list<int> & dwl ) {
 	}
 	char * next = strtok( tokenizer, "," );
 	for( ; next != NULL; next = strtok( NULL, "," ) ) {
-		dwl.push_back( atoi( next ) );
+		std::string item(trim(next));
+		if ( ! item.empty()) { whitelist.insert(item); }
 	}
 	free( tokenizer );
 	return true;
 }
+
+class DeviceWhitelist {
+public:
+	DeviceWhitelist() {}
+	DeviceWhitelist(std::set<std::string> & combined_list) {
+		for (auto item : combined_list) {
+			// scan the item to see if it matches the pattern ^[A-Za-z]*[0-9]+$
+			// if so, capture the numeric part as an int, otherwise treat is a GPUID rather than as an index
+			const char * p = item.c_str();
+			while (isalpha(*p)) { ++p; }
+			if (isdigit(*p)) {
+				char * endp = nullptr;
+				int ix = strtol(p, &endp, 10);
+				if (endp && *endp == 0) {
+					by_index.insert(ix);
+					continue;
+				}
+			}
+			// not an index type entry, assume it's a prefix type entry
+			// TODO: distinguish between uuids and prefixes
+			by_prefix.insert(item);
+		}
+	}
+
+	bool empty() { return by_index.empty() && by_prefix.empty() && by_uuid.empty(); }
+
+	bool is_whitelisted_index(int index) {
+		if (by_index.empty()) return true;
+		return by_index.count(index) > 0;
+	}
+
+	bool is_whitelisted(const std::string & GPUID, int index) {
+		bool match = true; // assume empty lists
+		for (auto pre : by_prefix) {
+			if (starts_with(GPUID, pre)) return true;
+			match = false;
+		}
+		for (auto uuid : by_uuid) {
+			if (uuid_match(GPUID, uuid)) return true;
+			match = false;
+		}
+		if (by_index.empty()) {
+			return match;
+		} else {
+			return by_index.count(index) > 0;
+		}
+	}
+
+	// use to early out iteration,
+	// we can only do this when the whitelist consists entirely of device indexes
+	bool ignore_device(int index) {
+		if (by_prefix.empty() && by_uuid.empty()) {
+			return ! is_whitelisted_index(index);
+		}
+		return false;
+	}
+
+	// use this to add a MIG-GPU-<uuid> prefix to the whitelist
+	void add_prefix(const std::string & GPUID) {
+		by_prefix.insert(GPUID);
+	}
+	// use this to add MIG parent GPU uuids into the whitelist
+	void add_uuid(const std::string & GPUID) {
+		by_uuid.insert(GPUID);
+	}
+
+private:
+	std::set<int> by_index;
+	std::set<std::string> by_prefix;
+	std::set<std::string> by_uuid;
+};
 
 std::string
 constructGPUID( const char * opt_pre, int dev, int opt_uuid, int opt_opencl, int opt_short_uuid, std::vector< BasicProps > & enumeratedDevices ) {
@@ -298,9 +404,10 @@ main( int argc, const char** argv)
 	int opt_nested = 0;  // publish properties using nested ads
 	int opt_uuid = -1;   // publish DetectedGPUs as a list of GPU-<uuid> rather than than CUDA<N>
 	int opt_short_uuid = -1; // use shortened uuids
-	std::list<int> dwl; // Device White List
+	std::set<std::string> whitelist; // combined whitelist from CUDA_VISIBLE_DEVICES, GPU_DEVICE_ORDINAL and/or -devices arg
 	bool opt_nvcuda = false; // force use of nvcuda rather than cudart
 	bool opt_cudart = false; // force use of use cudart rather than nvcuda
+	bool clean_environ = true; // clean the environment before enumerating
 	int opt_opencl = 0; // prefer opencl detection
 	int opt_cuda_only = 0; // require cuda detection
 
@@ -321,26 +428,16 @@ main( int argc, const char** argv)
 	//
 	char * cvd = getenv( "CUDA_VISIBLE_DEVICES" );
 	if( cvd != NULL ) {
-		if(! addToDeviceWhiteList( cvd, dwl )) { return 1; }
+		if(! addItemsToSet( cvd, whitelist )) { return 1; }
 	}
-#if defined(WINDOWS)
-	_putenv( "CUDA_VISIBLE_DEVICES=" );
-#else
-	unsetenv( "CUDA_VISIBLE_DEVICES" );
-#endif
 
 	// Ditto for GPU_DEVICE_ORDINAL.  If we ever handle dissimilar GPUs
 	// properly (right now, the negotiator can't tell them apart), we'll
 	// have to change this program to filter for specific types of GPUs.
 	char * gdo = getenv( "GPU_DEVICE_ORDINAL" );
 	if( gdo != NULL ) {
-		if(! addToDeviceWhiteList( gdo, dwl )) { return 1; }
+		if(! addItemsToSet( gdo, whitelist )) { return 1; }
 	}
-#if defined( WINDOWS)
-	_putenv( "GPU_DEVICE_ORDINAL=" );
-#else
-	unsetenv( "GPU_DEVICE_ORDINAL" );
-#endif
 
 	//
 	// Argument parsing.
@@ -450,7 +547,7 @@ main( int argc, const char** argv)
 				usage(stderr, argv[0]);
 				return 1;
 			}
-			dwl.push_back( atoi(argv[++i]) );
+			addItemsToSet(argv[++i], whitelist);
 		}
 		else if (is_dash_arg_colon_prefix(argv[i], "simulate", &pcolon, 3)) {
 			opt_simulate = 1;
@@ -474,6 +571,9 @@ main( int argc, const char** argv)
 			// use cudart instead of nvcuda (option is for testing)
 			opt_cudart = true;
 		}
+		else if (is_dash_arg_prefix(argv[i], "dirty-environment", 4)) {
+			clean_environ = false;
+		}
 		else {
 			fprintf(stderr, "option %s is not valid\n", argv[i]);
 			usage(stderr, argv[0]);
@@ -481,6 +581,19 @@ main( int argc, const char** argv)
 		}
 	}
 
+	if (clean_environ) {
+		print_error(MODE_DIAGNOSTIC_MSG, "diag: clearing environment before device enumeration\n");
+	#if defined(WINDOWS)
+		_putenv( "CUDA_VISIBLE_DEVICES=" );
+		_putenv( "GPU_DEVICE_ORDINAL=" );
+	#else
+		unsetenv( "CUDA_VISIBLE_DEVICES" );
+		unsetenv( "GPU_DEVICE_ORDINAL" );
+	#endif
+	}
+
+
+	DeviceWhitelist dwl(whitelist);
 
 	//
 	// Load and prepare libraries.
@@ -488,10 +601,11 @@ main( int argc, const char** argv)
 	dlopen_return_t cuda_handle = NULL;
 	dlopen_return_t nvml_handle = NULL;
 	dlopen_return_t ocl_handle = NULL;
+	bool canEnumerateNVMLDevices = false;
 
 	if( opt_simulate ) {
 		setSimulatedCUDAFunctionPointers();
-		setSimulatedNVMLFunctionPointers();
+		canEnumerateNVMLDevices = setSimulatedNVMLFunctionPointers();
 	} else {
 		cuda_handle = setCUDAFunctionPointers( opt_nvcuda, opt_cudart );
 		if( cuda_handle && !opt_cudart ) {
@@ -505,6 +619,7 @@ main( int argc, const char** argv)
 
 				dlclose( cuda_handle );
 				cuda_handle = NULL;
+				cuDeviceGetCount = NULL; // no longer safe to call this.
 			}
 		}
 
@@ -521,6 +636,7 @@ main( int argc, const char** argv)
 				nvml_handle = NULL;
 			}
 		}
+		canEnumerateNVMLDevices = nvml_handle != NULL;
 
 		if(! opt_cuda_only) {
 			ocl_handle = setOCLFunctionPointers();
@@ -556,7 +672,7 @@ main( int argc, const char** argv)
 	// We're doing it this way so that we can share the device-enumeration
 	// logic between condor_gpu_discovery and condor_gpu_utilization.
 	std::set< std::string > migDevices;
-	std::set< std::string > cudaDevices;
+	std::map< std::string, int > cudaDevices;
 	std::vector< BasicProps > nvmlDevices;
 	std::vector< BasicProps > enumeratedDevices;
 	if(! opt_opencl) {
@@ -572,16 +688,12 @@ main( int argc, const char** argv)
 		// GPU prevents CUDA from reporting any MIG-capable GPU, even
 		// if we wouldn't otherwise report it because it hasn't enabled
 		// MIG.  Since don't know if that applies to non-MIG-capable GPUs,
-		// record all the UUIDs we found via CUDA and skip them when
+		// we will record all the UUIDs we found via CUDA and skip them when
 		// reporting the devices we found via NVML.
 		//
 		bool shouldEnumerateNVMLDevices = true;
 		for( const BasicProps & bp : enumeratedDevices ) {
-			if(! bp.uuid.empty()) {
-				// NVML and CUDA UUIDs differ in this prefix.
-				std::string UUID = "GPU-" + bp.uuid;
-				cudaDevices.insert( UUID );
-			} else {
+			if (bp.uuid.empty()) {
 				const char * problem = "Not enumerating NVML devices because a CUDA device has no UUID.  This usually means you should upgrade your CUDA libaries.";
 				fprintf( stderr, "# %s\n", problem );
 				fprintf( stdout, "condor_gpu_discovery_error = \"%s\"\n", problem );
@@ -589,7 +701,7 @@ main( int argc, const char** argv)
 			}
 		}
 
-		if( shouldEnumerateNVMLDevices && nvml_handle ) {
+		if( shouldEnumerateNVMLDevices && canEnumerateNVMLDevices ) {
 			nvmlReturn_t r = enumerateNVMLDevices(nvmlDevices);
 			if(r != NVML_SUCCESS) {
 				const char * problem = "Failed to enumerate MIG devices";
@@ -623,23 +735,48 @@ main( int argc, const char** argv)
 	std::string detected_gpus;
 	int filteredDeviceCount = 0;
 	for( dev = 0; dev < deviceCount; ++dev ) {
-		// Skip devices not on the whitelist.
-		if( (!dwl.empty()) && std::find( dwl.begin(), dwl.end(), dev ) == dwl.end() ) {
+		// for later NVML enumeration, we need a map of cuda device uuid to index
+		if ( ! enumeratedDevices[dev].uuid.empty()) {
+			cudaDevices[enumeratedDevices[dev].uuid] = dev;
+		}
+
+		// Skip devices not on the whitelist, this skips nothing when the whitelist is not index based
+		if( dwl.ignore_device(dev) ) {
+			print_error(MODE_DIAGNOSTIC_MSG, "diag: skipping %d uuid=%s during CUDA enumeration because of index\n",
+				dev, enumeratedDevices[dev].uuid.empty() ? "<none>" : enumeratedDevices[dev].uuid.c_str());
 			continue;
 		}
 
 		// if we are defaulting to UUID, but the device has no UUID, switch the default to -by-index
 		if ((opt_uuid < 0) && enumeratedDevices[dev].uuid.empty()) {
 			opt_short_uuid = opt_uuid = 0;
+		} else {
+			std::string id = gpuIDFromUUID( enumeratedDevices[dev].uuid, false );
+			if ( ! dwl.is_whitelisted(id, dev)) {
+				print_error(MODE_DIAGNOSTIC_MSG, "diag: skipping %d GPUid=%s during CUDA enumeration because of whitelist\n",
+					dev, id.c_str());
+				continue;
+			}
 		}
 
 		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
 
 		// Skip devices which have MIG instances associated with them.
-		if((! opt_opencl) && nvml_handle) {
+		if(!migDevices.empty()) {
 			// The "UUIDs" from NVML have "GPU-" as a prefix.
-			std::string UUID = "GPU-" + enumeratedDevices[dev].uuid;
-			if( migDevices.find( UUID ) != migDevices.end() ) {
+			std::string id = "GPU-" + enumeratedDevices[dev].uuid;
+			if( migDevices.find( id ) != migDevices.end() ) {
+				print_error(MODE_DIAGNOSTIC_MSG, "diag: skipping %d GPUid=%s during CUDA enumeration because it is MIG parent\n",
+					dev, id.c_str());
+				if ( ! dwl.empty() && dwl.is_whitelisted_index(dev)) {
+					// if there is a whitelist, and this is a GPU whitelisted by index
+					// add it to the whitelist by uuid and by prefix
+					// prefix is so that MIG devices of type MIG-GPU-<uuid>/<x>/<y> are whitelisted
+					std::string migpre = "MIG-" + id;
+					print_error(MODE_DIAGNOSTIC_MSG, "diag: adding %s as prefix to whitelist\n", migpre.c_str());
+					dwl.add_prefix(migpre);
+					dwl.add_uuid(enumeratedDevices[dev].uuid);
+				}
 				continue;
 			}
 		}
@@ -718,13 +855,36 @@ main( int argc, const char** argv)
 	// a MIG device or (b) a CUDA device we've already included.
 	//
 	for( const BasicProps & bp : nvmlDevices ) {
-		if( migDevices.find( bp.uuid ) != migDevices.end() ) {
+
+		// NVML "uuid" field is not actually a uuid.  depending on the driver version it may be
+		// GPU-<uuid>,  MIG-GPU-<uuid>/<migid>/<cid>, or MIG-<uuid>
+		// the first type of "uuid" should be a match for a GPU we already enumerated via CUDA
+		// the second two are various forms of MIG devices,
+		// the first form for driver version < 470, the second form for driver version >= 470
+		std::string uuid(bp.uuid);
+		if (uuid.find("MIG-") == 0) { uuid = uuid.substr(4); }
+		if (uuid.find("GPU-") == 0) { uuid = uuid.substr(4); }
+		// skip devices we already enumerated as cuda devices (even if we skipped them because of a whitelist)
+		if( cudaDevices.find( uuid ) != cudaDevices.end() ) {
+			print_error(MODE_DIAGNOSTIC_MSG, "diag: skipping uuid=%s during nvml enumeration because it matches CUDA%d\n",
+				bp.uuid.c_str(), cudaDevices[uuid]);
+			continue;
+		}
+		// TODO: track parent UUID of MIG devices and whitelist them if the parent is whitelisted.
+		// this is needed for MIG devices that have their own uuid (driver 470 and later)
+		// TODO: handle the case where whitelist is of the form <X>:<Y> where X is GPU index and Y is MIG index
+		if ( ! dwl.is_whitelisted(bp.uuid, -1)) {
+			print_error(MODE_DIAGNOSTIC_MSG, "diag: skipping uuid=%s during nvml enumeration because of whitelist\n", bp.uuid.c_str());
 			continue;
 		}
 
-		if( cudaDevices.find( bp.uuid ) != cudaDevices.end() ) {
+		// skip devices known to be parents of MIGs since these devices can't actually be used
+		if( migDevices.find( bp.uuid ) != migDevices.end() ) {
+			print_error(MODE_DIAGNOSTIC_MSG, "diag: skipping MIG parent %s during nvml enumeration\n", bp.uuid.c_str());
 			continue;
 		}
+
+		print_error(MODE_DIAGNOSTIC_MSG, "diag: adding device uuid=%s which was not found during CUDA enum\n", bp.uuid.c_str());
 
 		std::string gpuID = gpuIDFromUUID( bp.uuid, opt_short_uuid );
 		if (! detected_gpus.empty()) { detected_gpus += ", "; }
@@ -769,18 +929,39 @@ main( int argc, const char** argv)
 
 		// Dynamic properties for CUDA devices
 		for (dev = 0; dev < deviceCount; ++dev) {
-			if ((!dwl.empty()) && std::find(dwl.begin(), dwl.end(), dev) == dwl.end()) {
+#if 1
+			if( dwl.ignore_device(dev) ) {
 				continue;
 			}
 
-			// Determine the GPU ID.
-			std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
+			// in case we have a whitelist of GPUid's or uuids, construct the full uuid
+			// and check it against the whitelist
+			if( opt_uuid && !opt_opencl && !enumeratedDevices[dev].uuid.empty()) {
+				std::string id = gpuIDFromUUID( enumeratedDevices[dev].uuid, false );
+				if ( ! dwl.is_whitelisted(id, dev)) {
+					continue;
+				}
+			}
+
+			// skip devices that have active MIG children
+			const std::string & UUID = enumeratedDevices[dev].uuid;
+			if( migDevices.find( UUID ) != migDevices.end() ) {
+				continue;
+			}
+#else
+
+			if ((!dwl.empty()) && std::find(dwl.begin(), dwl.end(), dev) == dwl.end()) {
+				continue;
+			}
 
 			const std::string & UUID = enumeratedDevices[dev].uuid;
 			if (migDevices.find(UUID) != migDevices.end()) {
 				// fprintf( stderr, "[dynamic CUDA properties] Skipping MIG parent device %s.\n", UUID.c_str() );
 				continue;
 			}
+#endif
+			// Determine the GPU ID.
+			std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
 
 			nvmlDevice_t device;
 			if (NVML_SUCCESS != findNVMLDeviceHandle(enumeratedDevices[dev].uuid, & device)) {
@@ -793,7 +974,10 @@ main( int argc, const char** argv)
 
 		// Dynamic properties for NVML devices
 		for (auto bp : nvmlDevices) {
-			if (cudaDevices.find(bp.uuid) != cudaDevices.end()) {
+			std::string uuid(bp.uuid);
+			if (uuid.find("MIG-") == 0) { uuid = uuid.substr(4); }
+			if (uuid.find("GPU-") == 0) { uuid = uuid.substr(4); }
+			if (cudaDevices.find(uuid) != cudaDevices.end()) {
 				// fprintf( stderr, "[dynamic NVML properties] Skipping CUDA device %s.\n", bp.uuid.c_str() );
 				continue;
 			}

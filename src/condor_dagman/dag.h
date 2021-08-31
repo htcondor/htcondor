@@ -473,6 +473,16 @@ class Dag {
 		*/
 	bool StartFinalNode();
 
+		/** Start the DAG's service nodes, if any exist
+			@return true iff all service nodes were actually started.
+		*/
+	bool StartServiceNodes();
+
+		/** Terminate the DAG's service nodes, if any exist
+			@return true iff all service nodes were actually started.
+		*/
+	bool RemoveServiceNodes();
+
 		/** Start the DAG's provisioner node if there is one.
 			@return true iff the provisioner node was actually started.
 		*/
@@ -1056,6 +1066,8 @@ private:
 	ProvisionerClassad* _provisionerClassad = NULL;
 
 	bool _provisioner_ready = false;
+
+	std::list<Job*> _service_nodes{};
 
 	std::map<MyString, Job *>		_nodeNameHash;
 
