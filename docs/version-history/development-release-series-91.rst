@@ -22,7 +22,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed problems introduced in HTCondor v9.1.3 where 
+- Fixed a problem introduced in HTCondor version 9.1.3 where
   X.509 proxy delegation to older versions of HTCondor would fail.
   :jira:`674`
 

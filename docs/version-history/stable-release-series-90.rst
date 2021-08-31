@@ -8,6 +8,26 @@ series.
 
 The details of each version are described below.
 
+Version 9.0.6
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.6 released on Month Date, 2021.
+
+- HTCondor version 9.0.6 not yet released.
+
+New Features:
+
+- :macro:`CUDA_VISIBLE_DEVICES` now accepts ``CUDA<n>`` and ``GPU-<uuid>``
+  formatted values, in addition to integer values.
+  :jira:`669`
+
+Bugs Fixed:
+
+- None.
+
+
 Version 9.0.5
 -------------
 
