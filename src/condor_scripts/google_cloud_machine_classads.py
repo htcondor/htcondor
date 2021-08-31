@@ -1,9 +1,9 @@
 #!/usr/bin/python3
-r"""Print HTCondor Machine ClassAds derived from Google Cloud Metadata Servers
+r"""Print HTCondor machine ClassAd attributes derived from Google Cloud Metadata Servers
 
 Converts Google Cloud instance metadata into HTCondor ClassAd Attribute/Value
-pairs to be advertised by an HTCondor Machine. ClassAd attributes are limited
-to alphanumeric characters and the underscore. Values are strings parsed
+pairs to be advertised by an HTCondor startd.  ClassAd attributes are limited
+to alphanumeric characters and the underscore.  Values are strings parsed
 according to a set of matching rules.
 
 https://cloud.google.com/compute/docs/metadata/default-metadata-values
@@ -46,7 +46,7 @@ def query_google_cloud_metadata(scheme: str = "http",
       params: parameters to add to HTTP query, indicating format for response
 
     Returns:
-      An object whose attributes correspond to the instance metadata. Because
+      An object whose attributes correspond to the instance metadata.  Because
       the metadata were JSON-deserialized, they are in Python native types.
       e.g.,
 
@@ -73,9 +73,9 @@ def safe_htcondor_attribute(attribute: str) -> str:
     """Convert input attribute name into a valid HTCondor attribute name
 
     HTCondor ClassAd attribute names consist only of alphanumeric characters or
-    underscores. It is not clearly documented, but the alphanumeric characters
-    are probably restricted to ASCII. Attribute names created from multiple
-    words, typically capitalize the first letter in each word for readability,
+    underscores.  It is not clearly documented, but the alphanumeric characters
+    are probably restricted to ASCII.  Attribute names created from multiple
+    words typically capitalize the first letter in each word for readability,
     although all comparisions are case-insensitive.
 
     e.g., "central-manager" -> "CentralManager"
@@ -85,7 +85,7 @@ def safe_htcondor_attribute(attribute: str) -> str:
 
     Returns:
       The attribute name stripped of invalid characters and re-capitalized in
-      the manner typical to HTCondor documentation.
+      the manner typical of HTCondor ClassAd attributes.
 
     Raises:
       None
@@ -96,7 +96,7 @@ def safe_htcondor_attribute(attribute: str) -> str:
     return safe_attr
 
 
-def convert_metadata_classad(
+def convert_metadata_to_classad(
         metadata: SimpleNamespace,
         use_short_id: bool = True,
         custom_metadata_keys: Optional[Sequence[str]] = None) -> dict:
@@ -111,7 +111,7 @@ def convert_metadata_classad(
         in the returned ClassAd
 
     Returns:
-      A dictionary that represents an HTCondor Machine ClassAd
+      A dictionary that represents part of an HTCondor machine ClassAd
 
     Raises:
       None
@@ -121,32 +121,32 @@ def convert_metadata_classad(
     if custom_metadata_keys is None:
         custom_metadata_keys = []
 
-    ads = {}
+    ad = {}
     # begin by populating the fields whose values are long "resource names"
     # such as "projects/centos-cloud/global/images/centos-7-v20210701". The
     # boolean value use_short_id will shorten to id "centos-7-v20210701".
-    ads["Image"] = metadata.instance.image
-    ads["Type"] = metadata.instance.machineType
-    ads["Zone"] = metadata.instance.zone
-    ads["Region"] = metadata.instance.zone.rsplit("-", 1)[0]
+    ad["Image"] = metadata.instance.image
+    ad["Type"] = metadata.instance.machineType
+    ad["Zone"] = metadata.instance.zone
+    ad["Region"] = metadata.instance.zone.rsplit("-", 1)[0]
 
     # optionally convert the resource names to short resource IDs
     if use_short_id:
-        ads = {k: v.rsplit("/", 1)[-1] for k, v in ads.items()}
+        ad = {k: v.rsplit("/", 1)[-1] for k, v in ads.items()}
 
     # remaining values should not be in resource name format
-    ads["InstanceId"] = metadata.instance.id
-    ads["Provider"] = "Google"
-    ads["Platform"] = "GCE"
-    ads["Preemptible"] = metadata.instance.scheduling.preemptible.capitalize()
+    ad["InstanceID"] = metadata.instance.id
+    ad["Provider"] = "Google"
+    ad["Platform"] = "GCE"
+    ad["Preemptible"] = metadata.instance.scheduling.preemptible.capitalize()
 
     # have to sanitize custom metadata keys
     for key in custom_metadata_keys:
         safe_val = getattr(metadata.instance.attributes, key, None)
         if safe_val:
             safe_attr = safe_htcondor_attribute(key)
-            ads[safe_attr] = safe_val
-    return ads
+            ad[safe_attr] = safe_val
+    return ad
 
 
 def main():
@@ -158,7 +158,7 @@ def main():
                         "--custom-metadata-keys",
                         type=str,
                         nargs="+",
-                        help="VM custom metadata to add to Machine ClassAd")
+                        help="VM custom metadata to add to machine ClassAd")
     parser.add_argument("--protocol",
                         type=str,
                         dest="scheme",
@@ -186,12 +186,12 @@ def main():
         # But, for now, we don't really care about the why of failure
         raise SystemExit("Metadata server did not return valid JSON!") from err
 
-    classads = convert_metadata_classad(
+    classad = convert_metadata_to_classad(
         metadata,
         use_short_id=not args.no_short_id,
         custom_metadata_keys=args.custom_metadata_keys)
 
-    for attr, val in classads.items():
+    for attr, val in classad.items():
         print(f"{attr}={val}")
 
 

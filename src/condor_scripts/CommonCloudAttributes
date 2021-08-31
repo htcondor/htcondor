@@ -1,0 +1,14 @@
+COMMON         |                   GCP                    | AWS
+
+Image          | metadata.instance.image                  | latest/meta-data/ami-id
+Type           | metatdata.instance.machineType           | latest/meta-data/instance-type
+Zone           | metadata.instance.zone                   | latest/meta-data/placement/availability-zone
+Region         | *                                        | latest/meta-data/placement/region
+
+InstanceID     | metadata.instance.id                     | latest/meta-data/instance-id
+Provider       | "Google"                                 | "AWS"
+Platform       | "GCE"                                    | "EC2"
+Interruptable  | metadata.instance.scheduling.preemptible | latest/meta-data/instance-life-cycle
+
+*: metadata.instance.zone.rsplit("-", 1)[0]
+
