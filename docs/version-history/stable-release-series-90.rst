@@ -19,13 +19,13 @@ Release Notes:
 
 New Features:
 
-- :macro:`CUDA_VISIBLE_DEVICES` now accepts ``CUDA<n>`` and ``GPU-<uuid>``
-  formatted values, in addition to integer values.
-  :jira:`669`
+- None.
 
 Bugs Fixed:
 
-- None.
+- The ``CUDA_VISIBLE_DEVICES`` environment variable may now contain ``CUDA<n>``
+  and ``GPU-<uuid>`` formatted values, in addition to integer values.
+  :jira:`669`
 
 
 Version 9.0.5
