@@ -19,8 +19,6 @@ Release Notes:
 
 New Features:
 
-- None.
-
 - Added configuration parameter ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``,
   a boolean value which defaults to ``False``.
   If set to ``True``, then clients that authenticate to a daemon using
@@ -35,6 +33,11 @@ New Features:
   :jira:`676`
 
 Bugs Fixed:
+
+- The ``CUDA_VISIBLE_DEVICES`` environment variable may now contain ``CUDA<n>``
+  and ``GPU-<uuid>`` formatted values, in addition to integer values.
+  :jira:`669`
+
 
 - The *bosco_cluster* tool now clears out old installation files when
   the *--add* option is used to update an existing installation.
