@@ -4228,7 +4228,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
 			                    upload_success,do_upload_ack,do_download_ack,
 								try_again,hold_code,hold_subcode,
-								error_desc.Value(),__LINE__);
+								error_desc.Value(),__LINE__,numCedarFiles);
 		}
 #else
 		if (is_the_executable) {} // Done to get rid of the compiler set-but-not-used warnings.
