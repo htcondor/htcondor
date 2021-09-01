@@ -248,6 +248,7 @@ class BaseShadow : public Service
 		*/
 	virtual float bytesReceived() { return 0.0; }
 
+	virtual void getFileTransferStats(int &upload_file_cnt, int &download_file_cnt) = 0;
 	virtual void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status) = 0;
 
 	virtual int getExitReason( void ) = 0;

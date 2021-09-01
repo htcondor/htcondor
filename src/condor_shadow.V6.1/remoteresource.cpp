@@ -99,6 +99,8 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	m_started_attempting_shutdown = 0;
 	m_upload_xfer_status = XFER_STATUS_UNKNOWN;
 	m_download_xfer_status = XFER_STATUS_UNKNOWN;
+	m_upload_xfer_file_count = 0;
+	m_download_xfer_file_count = 0;
 
 	std::string prefix;
 	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX");

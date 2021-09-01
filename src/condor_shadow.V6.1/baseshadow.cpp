@@ -1321,6 +1321,12 @@ BaseShadow::updateJobInQueue( update_t type )
 
 	ftAd.Assign(ATTR_BYTES_RECVD, (prev_run_bytes_recvd + bytesSent()) );
 
+	int upload_file_cnt = 0;
+	int download_file_cnt = 0;
+	getFileTransferStats(upload_file_cnt, download_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_INPUT_FILES_COUNT, upload_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_OUTPUT_FILES_COUNT, download_file_cnt);
+
 	FileTransferStatus upload_status = XFER_STATUS_UNKNOWN;
 	FileTransferStatus download_status = XFER_STATUS_UNKNOWN;
 	getFileTransferStatus(upload_status,download_status);

@@ -347,6 +347,13 @@ UniShadow::bytesReceived()
 }
 
 void
+UniShadow::getFileTransferStats(int &upload_file_cnt, int &download_file_cnt)
+{
+	upload_file_cnt = remRes->m_upload_xfer_file_count;
+	download_file_cnt = remRes->m_download_xfer_file_count;
+}
+
+void
 UniShadow::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status)
 {
 	remRes->getFileTransferStatus(upload_status,download_status);

@@ -884,6 +884,19 @@ ParallelShadow::bytesReceived( void )
 }
 
 void
+ParallelShadow::getFileTransferStats(int &upload_file_cnt,int &download_file_cnt)
+{
+	upload_file_cnt = 0;
+	download_file_cnt = 0;
+	MpiResource* mpi_res;
+	for( size_t i=0; i<ResourceList.size() ; i++ ) {
+		mpi_res = ResourceList[i];
+		upload_file_cnt += mpi_res->m_upload_xfer_file_count;
+		download_file_cnt += mpi_res->m_download_xfer_file_count;
+	}
+}
+
+void
 ParallelShadow::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status)
 {
 	MpiResource* mpi_res;
