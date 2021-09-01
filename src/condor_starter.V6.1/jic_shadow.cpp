@@ -928,11 +928,19 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 {
 	u_log->logStarterError( err_msg, critical );
 
-	StatInfo si(Starter->GetWorkingDir(false));
-	if( si.Error() == SINoFile ) {
-		dprintf(D_ALWAYS, "Scratch execute directory disappeared unexpectedly, declining to put job on hold.\n");
-		hold_reason_code = 0;
-		hold_reason_subcode = 0;
+	// If the scratch working directory has disappeared when it should exist,
+	// that is likely connected to the error. Don't tell the shadow to put
+	// the job on hold, as it's likely not the fault of the job.
+	// Make an exception for local universe jobs
+	// (SCHEDD_USES_STARTD_FOR_LOCAL_UNIVERSE=True), as they have nowhere
+	// else to go if this is a recurring problem.
+	if( Starter->WorkingDirExists() && job_universe != CONDOR_UNIVERSE_LOCAL ) {
+		StatInfo si(Starter->GetWorkingDir(false));
+		if( si.Error() == SINoFile ) {
+			dprintf(D_ALWAYS, "Scratch execute directory disappeared unexpectedly, declining to put job on hold.\n");
+			hold_reason_code = 0;
+			hold_reason_subcode = 0;
+		}
 	}
 
 	if( critical ) {
