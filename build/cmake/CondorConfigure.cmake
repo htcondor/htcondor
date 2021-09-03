@@ -728,7 +728,6 @@ if(${OS_NAME} STREQUAL "LINUX")
     endif()
 
 	dprint("Threaded functionality only enabled in Linux, Windows, and Mac OS X > 10.6")
-	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 
 	# Even if the flavor of linux we are compiling on doesn't
@@ -754,10 +753,8 @@ elseif(${OS_NAME} STREQUAL "DARWIN")
 	check_symbol_exists(PTHREAD_RECURSIVE_MUTEX_INITIALIZER "pthread.h" HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER)
 	check_symbol_exists(PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP "pthread.h" HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
 	if (HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER OR HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
-		set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 		set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 	else()
-		set(HAS_PTHREADS FALSE)
 		set(HAVE_PTHREADS FALSE)
 	endif()
 
@@ -996,12 +993,9 @@ if (WINDOWS)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1)
   endif()
 
-  # DRMAA currently punted on Windows until we can figure out correct build
-  #add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.2)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 else ()
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.2)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
   if (DARWIN)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
