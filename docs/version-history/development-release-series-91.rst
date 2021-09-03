@@ -4,14 +4,29 @@ Development Release Series 9.1
 This is the development release series of HTCondor. The details of each
 version are described below.
 
+Version 9.1.5
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.1.5 released on Month Date, 2021.
+
+- HTCondor version 9.1.5 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 9.1.4
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.1.4 released on Month Date, 2021.
-
-- HTCondor version 9.1.4 not yet released.
+- HTCondor version 9.1.4 limited release on August 31, 2021.
 
 New Features:
 
