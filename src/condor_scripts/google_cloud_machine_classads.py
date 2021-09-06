@@ -132,7 +132,7 @@ def convert_metadata_to_classad(
 
     # optionally convert the resource names to short resource IDs
     if use_short_id:
-        ad = {k: v.rsplit("/", 1)[-1] for k, v in ads.items()}
+        ad = {k: v.rsplit("/", 1)[-1] for k, v in ad.items()}
 
     # remaining values should not be in resource name format
     ad["InstanceID"] = metadata.instance.id
