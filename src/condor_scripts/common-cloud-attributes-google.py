@@ -134,11 +134,14 @@ def convert_metadata_to_classad(
     if use_short_id:
         ad = {k: v.rsplit("/", 1)[-1] for k, v in ad.items()}
 
+    # All strings must be quoted.
+    ad = {k: f'"{v}"' for k, v in ad.items()}
+
     # remaining values should not be in resource name format
-    ad["InstanceID"] = metadata.instance.id
-    ad["Provider"] = "Google"
-    ad["Platform"] = "GCE"
-    ad["Preemptible"] = metadata.instance.scheduling.preemptible.capitalize()
+    ad["InstanceID"] = f'"{metadata.instance.id}"'
+    ad["Provider"] = '"Google"'
+    ad["Platform"] = '"GCE"'
+    ad["Interruptible"] = metadata.instance.scheduling.preemptible.capitalize()
 
     # have to sanitize custom metadata keys
     for key in custom_metadata_keys:
@@ -193,6 +196,7 @@ def main():
 
     for attr, val in classad.items():
         print(f"{attr}={val}")
+    print("- update:true")
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ Region         | *                                        | latest/meta-data/pla
 InstanceID     | metadata.instance.id                     | latest/meta-data/instance-id
 Provider       | "Google"                                 | "AWS"
 Platform       | "GCE"                                    | "EC2"
-Interruptable  | metadata.instance.scheduling.preemptible | latest/meta-data/instance-life-cycle
+Interruptible  | metadata.instance.scheduling.preemptible | latest/meta-data/instance-life-cycle
 
 *: metadata.instance.zone.rsplit("-", 1)[0]
 
