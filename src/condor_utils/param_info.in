@@ -6698,13 +6698,13 @@ default : @end
 	DAEMON_LIST=$(DAEMON_LIST),ADSTASH
 @end
 
-[$FEATURE.GoogleCloudMachineAds]
-description=Enable an execute node to advertise ClassAds featuring Google Cloud VM instance metadata args:(optional args)
+[$FEATURE.CommonCloudAttributesGoogle]
+description=Enable an execute node to advertise common cloud attributes on Google
 default : @end
 	if $(1?)
-		use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/google_cloud_machine_classads.py, $(1))
+		use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/common-cloud-attributes-google.py, $(1))
 	else
-		use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/google_cloud_machine_classads.py)
+		use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/common-cloud-attributes-google.py)
 	endif
 @end
 

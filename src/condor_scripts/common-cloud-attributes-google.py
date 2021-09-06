@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 r"""Print HTCondor machine ClassAd attributes derived from Google Cloud Metadata Servers
 
-Converts Google Cloud instance metadata into HTCondor ClassAd Attribute/Value
+Converts Google Cloud instance metadata into HTCondor ClassAd attribute/value
 pairs to be advertised by an HTCondor startd.  ClassAd attributes are limited
 to alphanumeric characters and the underscore.  Values are strings parsed
 according to a set of matching rules.
@@ -12,12 +12,12 @@ https://htcondor.readthedocs.io/en/latest/misc-concepts/classad-mechanism.html#c
 
 For help:
 
-    python3 google_cloud_machine_classads.py --help
+    python3 common-cloud-attributes-google.py --help
 
 Style and linting:
-    pylint google_cloud_machine_classads.py
+    pylint common-cloud-attributes-google.py
     yapf -i --style '{based_on_style: google, column_limit: 80}' \
-            google_cloud_machine_classads.py
+            common-cloud-attributes-google.py
 
 License:
     Apache 2.0
