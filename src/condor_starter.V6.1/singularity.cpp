@@ -403,6 +403,15 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 
 	errorMessage = buf;
 
+	// my_pclose will return an error if there is more than a pipe full
+	// of output at close time.  Drain the input pipe to prevent this.
+	while (!feof(sing_test_output)) {
+		int r = fread(buf,1,255, sing_test_output);
+		if (r < 0) {
+			dprintf(D_ALWAYS, "Error %d draining singularity test pipe\n", errno);
+		}
+	}
+
 	int rc = my_pclose(sing_test_output);
 	dprintf(D_ALWAYS, "singularity test returns %d\n", rc);
 
