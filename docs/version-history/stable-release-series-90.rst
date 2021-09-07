@@ -77,6 +77,12 @@ Bugs Fixed:
   is empty.
   :jira:`673`
 
+- The Windows MSI installer has been updated so that it no longer reports that a script
+  failed during installation on the latest version of Windows 10.  This update also changes
+  the permissions of the configuration files created by the installer so the installing user has
+  edit access and all users have read access.
+  :jira:`684`
+
 Version 9.0.5
 -------------
 
