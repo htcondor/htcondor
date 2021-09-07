@@ -32,6 +32,12 @@ New Features:
   version of the tool.
   :jira:`676`
 
+- The stdin passed to *condor_job_router* hooks of type ``_TRANSLATE_JOB`` will
+  now be passed information on the route in a format that is the same as what was passed
+  in the 8.8 series.  It will always be a classad, and include the route ``Name`` as
+  an attribute.
+  :jira:`646`
+
 Bugs Fixed:
 
 - The *bosco_cluster* tool now clears out old installation files when
