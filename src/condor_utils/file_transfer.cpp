@@ -3931,6 +3931,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				filesize_t logTCPStats = 0;
 				return ExitDoUpload( & logTCPStats,
 					/* num files */ 0,
+					/* num cedar files */ 0,
 					s, saved_priv, socket_default_crypto,
 					/* upload success */ false,
 					/* do upload ACK (required to put job on hold) */ true,
@@ -3938,7 +3939,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					/* try again */ false,
 					CONDOR_HOLD_CODE::UploadFileError,
 					/* hold subcode */ 3,
-					errorMessage.c_str(), __LINE__, numCedarFiles );
+					errorMessage.c_str(), __LINE__ );
 			}
 		}
 	}
@@ -4091,12 +4092,13 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			filesize_t logTCPStats = 0;
 			return ExitDoUpload( & logTCPStats,
 				/* num files */ 0,
+				/* num cedar files */ 0,
 				s, saved_priv, socket_default_crypto,
 				/* upload success */ false,
 				/* do upload ACK (required to avoid hanging the shadow and starter */ true,
 				/* do download ACK */ false,
 				/* try again */ false,
-				holdCode, holdSubCode, holdReason.c_str(), __LINE__, numCedarFiles );
+				holdCode, holdSubCode, holdReason.c_str(), __LINE__ );
 		}
 
 		classad::Value value;
@@ -4225,10 +4227,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			try_again = false; // put job on hold
 			hold_code = CONDOR_HOLD_CODE::UploadFileError;
 			hold_subcode = EPERM;
-			return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
+			return ExitDoUpload(total_bytes,numFiles, numCedarFiles, s,saved_priv,socket_default_crypto,
 			                    upload_success,do_upload_ack,do_download_ack,
 								try_again,hold_code,hold_subcode,
-								error_desc.Value(),__LINE__,numCedarFiles);
+								error_desc.Value(),__LINE__);
 		}
 #else
 		if (is_the_executable) {} // Done to get rid of the compiler set-but-not-used warnings.
@@ -4686,11 +4688,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 				// for the more interesting reasons why the transfer failed,
 				// we can try again and see what happens.
-				return ExitDoUpload(total_bytes,numFiles, s,saved_priv,
+				return ExitDoUpload(total_bytes,numFiles, numCedarFiles, s,saved_priv,
 								socket_default_crypto,upload_success,
 								do_upload_ack,do_download_ack,
 			                    try_again,hold_code,hold_subcode,
-			                    error_desc.c_str(),__LINE__,numCedarFiles);
+			                    error_desc.c_str(),__LINE__);
 			}
 		}
 
@@ -4769,19 +4771,19 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	do_upload_ack = true;
 
 	if (first_failed_file_transfer_happened == true) {
-		return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
+		return ExitDoUpload(total_bytes,numFiles, numCedarFiles, s,saved_priv,socket_default_crypto,
 			first_failed_upload_success,do_upload_ack,do_download_ack,
 			first_failed_try_again,first_failed_hold_code,
 			first_failed_hold_subcode,first_failed_error_desc.c_str(),
-			first_failed_line_number,numCedarFiles);
+			first_failed_line_number);
 	}
 
 	uploadEndTime = condor_gettimestamp_double();
 
 	upload_success = true;
-	return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
+	return ExitDoUpload(total_bytes,numFiles, numCedarFiles, s,saved_priv,socket_default_crypto,
 	                    upload_success,do_upload_ack,do_download_ack,
-	                    try_again,hold_code,hold_subcode,NULL,__LINE__,numCedarFiles);
+	                    try_again,hold_code,hold_subcode,NULL,__LINE__);
 }
 
 void
@@ -5102,7 +5104,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 }
 
 int
-FileTransfer::ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line,int num_files)
+FileTransfer::ExitDoUpload(const filesize_t *total_bytes, int numFiles, int num_cedar_files, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line)
 {
 	int rc = upload_success ? 0 : -1;
 	bool download_success = false;
@@ -5143,7 +5145,7 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock
 				}
 			}
 			SendTransferAck(s,upload_success,try_again,hold_code,hold_subcode,
-			                error_desc_to_send.c_str(),num_files);
+			                error_desc_to_send.c_str(),num_cedar_files);
 		}
 	} else {
 		// go back to the state we were in before file transfer
