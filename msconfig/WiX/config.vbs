@@ -34,15 +34,19 @@ Function ReplaceMetaConfig(metaCat, oldVals, newValue, srcTxt)
 End Function
 
 Function CreateConfig2()
+  Const ForReading = 1, ForWriting = 2, ForAppending = 8
+
   Set fso = CreateObject("Scripting.FileSystemObject")
   path = Session.Property("INSTALLDIR")
   Set installpath = fso.GetFolder(path)
   strippedPath = installpath.ShortPath
 
+  On Error Resume Next
+
   cclpath = fso.BuildPath(path,"condor_config.local")
   if Not fso.FileExists(cclpath) Then
    Set lc = fso.CreateTextFile(cclpath)
-   lc.WriteLine("## Customize the condor configuration here" & VbCrLf)
+   lc.WriteLine("## Customize the condor configuration here.." & VbCrLf)
    ' enable these to make testing/debugging of install auth lists easier
    If Session.Property("DEBUG") = "Y" Then
      lc.WriteLine("SEC_TOKEN_DIRECTORY = $(SEC_TOKEN_SYSTEM_DIRECTORY)")
@@ -57,13 +61,25 @@ Function CreateConfig2()
 
   ccpath = fso.BuildPath(path,"condor_config")
   If Not fso.FileExists(ccpath) Then
-    ccgpath = fso.BuildPath(path, "etc\condor_config.base")
+    ccinpath = fso.BuildPath(path, "etc\condor_config.base")
+  Else
+    ccinpath = ccpath
   End if
 
-  Set ConfigBase = fso.OpenTextFile(ccpath, 1, True)
-  configTxt = ConfigBase.ReadAll
-  configTxt = configTxt & VbCrLf
-  ConfigBase.Close
+  configTxt = ""
+  Set ConfigBase = fso.OpenTextFile(ccinpath, ForReading, TristateFalse)
+  If Err Then
+     logpath = fso.BuildPath(path, "rerr" & Err.Description)
+     Set log = fso.CreateTextFile(logpath, True, False)
+     log.WriteLine(" error " & Err.Number & " Reading " & ccinpath)
+     log.WriteLine("  : " & Err.Description)
+     log.Close
+     Err.Clear
+  Else
+     configTxt = ConfigBase.ReadAll
+     configTxt = configTxt & VbCrLf
+     ConfigBase.Close
+  End If
 
   daemonList = "MASTER"
   configTxt = ReplaceConfig("RELEASE_DIR",strippedPath,configTxt)
@@ -183,9 +199,18 @@ Function CreateConfig2()
 
   configTxt = ReplaceConfig("DAEMON_LIST",daemonList,configTxt)
 
-  Set Configfile = fso.OpenTextFile(ccpath, 2, True)
-  Configfile.WriteLine configTxt
-  Configfile.Close
+  Set Configfile = fso.CreateTextFile(ccpath, True, False)
+  If Err Then
+     logpath = fso.BuildPath(path, "werr" & Err.Description)
+     Set log = fso.CreateTextFile(logpath, True, False)
+     log.WriteLine(" error " & Err.Number & " Writing " & ccpath)
+     log.WriteLine("  : " & Err.Description)
+     log.Close
+  Else
+    Configfile.WriteLine configTxt
+    Configfile.Close
+  End If
+
 End Function
 
 CreateConfig2
