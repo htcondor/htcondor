@@ -34,11 +34,6 @@ New Features:
 
 Bugs Fixed:
 
-- The ``CUDA_VISIBLE_DEVICES`` environment variable may now contain ``CUDA<n>``
-  and ``GPU-<uuid>`` formatted values, in addition to integer values.
-  :jira:`669`
-
-
 - The *bosco_cluster* tool now clears out old installation files when
   the *--add* option is used to update an existing installation.
   :jira:`577`
@@ -68,6 +63,14 @@ Bugs Fixed:
   HTCondor now automatically considers them part of the checkpoint the way it
   automatically considers them part of the output.
   :jira:`656`
+
+- If run with only the CUDA runtime library available, *condor_gpu_discovery*
+  and *condor_gpu_utilization* no longer crash.
+  :jira:`668`
+
+- The ``CUDA_VISIBLE_DEVICES`` environment variable may now contain ``CUDA<n>``
+  and ``GPU-<uuid>`` formatted values, in addition to integer values.
+  :jira:`669`
 
 - HTCondor now transfers the standard output and error logs when
   ``when_to_transfer_output`` is ``ON_SUCCESS`` and ``transfer_output_files``
