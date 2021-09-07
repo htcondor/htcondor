@@ -32,6 +32,12 @@ New Features:
   version of the tool.
   :jira:`676`
 
+- The stdin passed to *condor_job_router* hooks of type ``_TRANSLATE_JOB`` will
+  now be passed information on the route in a format that is the same as what was passed
+  in the 8.8 series.  It will always be a classad, and include the route ``Name`` as
+  an attribute.
+  :jira:`646`
+
 Bugs Fixed:
 
 - The *bosco_cluster* tool now clears out old installation files when
@@ -76,6 +82,12 @@ Bugs Fixed:
   ``when_to_transfer_output`` is ``ON_SUCCESS`` and ``transfer_output_files``
   is empty.
   :jira:`673`
+
+- The Windows MSI installer has been updated so that it no longer reports that a script
+  failed during installation on the latest version of Windows 10.  This update also changes
+  the permissions of the configuration files created by the installer so the installing user has
+  edit access and all users have read access.
+  :jira:`684`
 
 Version 9.0.5
 -------------
