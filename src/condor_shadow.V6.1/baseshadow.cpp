@@ -76,6 +76,8 @@ BaseShadow::BaseShadow() {
 	attemptingReconnectAtStartup = false;
 	m_force_fast_starter_shutdown = false;
 	m_committed_time_finalized = false;
+	m_prev_run_upload_file_cnt = 0;
+	m_prev_run_download_file_cnt = 0;
 }
 
 BaseShadow::~BaseShadow() {
@@ -135,6 +137,9 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	if( !jobAd->LookupFloat(ATTR_BYTES_RECVD, prev_run_bytes_recvd) ) {
 		prev_run_bytes_recvd = 0;
 	}
+
+	jobAd->LookupInteger(ATTR_TRANSFER_INPUT_FILES_COUNT, m_prev_run_upload_file_cnt);
+	jobAd->LookupInteger(ATTR_TRANSFER_OUTPUT_FILES_COUNT, m_prev_run_download_file_cnt);
 
 		// construct the core file name we'd get if we had one.
 	std::string tmp_name = iwd;
@@ -1324,8 +1329,8 @@ BaseShadow::updateJobInQueue( update_t type )
 	int upload_file_cnt = 0;
 	int download_file_cnt = 0;
 	getFileTransferStats(upload_file_cnt, download_file_cnt);
-	ftAd.Assign(ATTR_TRANSFER_INPUT_FILES_COUNT, upload_file_cnt);
-	ftAd.Assign(ATTR_TRANSFER_OUTPUT_FILES_COUNT, download_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_INPUT_FILES_COUNT, m_prev_run_upload_file_cnt + upload_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_OUTPUT_FILES_COUNT, m_prev_run_download_file_cnt + download_file_cnt);
 
 	FileTransferStatus upload_status = XFER_STATUS_UNKNOWN;
 	FileTransferStatus download_status = XFER_STATUS_UNKNOWN;

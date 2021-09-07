@@ -2010,16 +2010,20 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 {
 	ASSERT(jobAd);
 
-	FileTransfer::FileTransferInfo info = transobject->GetInfo();
+	const FileTransfer::FileTransferInfo& info = transobject->GetInfo();
 	dprintf(D_FULLDEBUG,"RemoteResource::transferStatusUpdateCallback(in_progress=%d)\n",info.in_progress);
 
 	if( info.type == FileTransfer::DownloadFilesType ) {
 		m_download_xfer_status = info.xfer_status;
-		m_download_xfer_file_count = info.num_files;
+		if( ! info.in_progress ) {
+			m_download_xfer_file_count += info.num_files;
+		}
 	}
 	else {
 		m_upload_xfer_status = info.xfer_status;
-		m_upload_xfer_file_count = info.num_files;
+		if( ! info.in_progress ) {
+			m_upload_xfer_file_count += info.num_files;
+		}
 	}
 	shadow->updateJobInQueue(U_PERIODIC);
 	return 0;
