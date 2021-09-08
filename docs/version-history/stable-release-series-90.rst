@@ -32,12 +32,17 @@ New Features:
   version of the tool.
   :jira:`676`
 
+- The stdin passed to *condor_job_router* hooks of type ``_TRANSLATE_JOB`` will
+  now be passed information on the route in a format that is the same as what was passed
+  in the 8.8 series.  It will always be a classad, and include the route ``Name`` as
+  an attribute.
+  :jira:`646`
+
 Bugs Fixed:
 
-- The ``CUDA_VISIBLE_DEVICES`` environment variable may now contain ``CUDA<n>``
-  and ``GPU-<uuid>`` formatted values, in addition to integer values.
-  :jira:`669`
-
+- Fixed a bug that prevented Singularity jobs from running when the singularity
+  binary emitted many warning messages to stderr.
+  :jira:`698`
 
 - The *bosco_cluster* tool now clears out old installation files when
   the *--add* option is used to update an existing installation.
@@ -69,10 +74,24 @@ Bugs Fixed:
   automatically considers them part of the output.
   :jira:`656`
 
+- If run with only the CUDA runtime library available, *condor_gpu_discovery*
+  and *condor_gpu_utilization* no longer crash.
+  :jira:`668`
+
+- The ``CUDA_VISIBLE_DEVICES`` environment variable may now contain ``CUDA<n>``
+  and ``GPU-<uuid>`` formatted values, in addition to integer values.
+  :jira:`669`
+
 - HTCondor now transfers the standard output and error logs when
   ``when_to_transfer_output`` is ``ON_SUCCESS`` and ``transfer_output_files``
   is empty.
   :jira:`673`
+
+- The Windows MSI installer has been updated so that it no longer reports that a script
+  failed during installation on the latest version of Windows 10.  This update also changes
+  the permissions of the configuration files created by the installer so the installing user has
+  edit access and all users have read access.
+  :jira:`684`
 
 Version 9.0.5
 -------------
