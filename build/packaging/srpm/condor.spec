@@ -1181,8 +1181,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/box_plugin.pyo
 %_libexecdir/condor/gdrive_plugin.pyc
 %_libexecdir/condor/gdrive_plugin.pyo
-%_libexecdir/condor/common-cloud-attributes-aws.pyc
-%_libexecdir/condor/common-cloud-attributes-aws.pyo
 %_libexecdir/condor/onedrive_plugin.pyc
 %_libexecdir/condor/onedrive_plugin.pyo
 %_libexecdir/condor/adstash/__init__.pyc
