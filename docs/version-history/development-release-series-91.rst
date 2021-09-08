@@ -4,21 +4,16 @@ Development Release Series 9.1
 This is the development release series of HTCondor. The details of each
 version are described below.
 
-Version 9.1.4
+Version 9.2.0
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.1.4 released on Month Date, 2021.
+.. HTCondor version 9.2.0 released on Month Date, 2021.
 
-- HTCondor version 9.1.4 not yet released.
+- HTCondor version 9.2.0 not yet released.
 
 New Features:
-
-- Jobs are no longer put on hold if a failure occurs due to the scratch
-  execute directory unexpectedly disappearing. Instead, the jobs will
-  return to idle status to be re-run.
-  :jira:`664`
 
 - Added new configuration parameter ``NEGOTIATOR_MIN_INTERVAL``, which
   sets the minimum amount of the time between the start of one
@@ -26,10 +21,6 @@ New Features:
   :jira:`606`
 
 Bugs Fixed:
-
-- Fixed a problem introduced in HTCondor version 9.1.3 where
-  X.509 proxy delegation to older versions of HTCondor would fail.
-  :jira:`674`
 
 - HTCondor no longer crashes on start-up if ``COLLECTOR_HOST`` is set to
   a string with a colon and a port number, but no host part.
@@ -40,6 +31,45 @@ Bugs Fixed:
   This location is valid on all of our supported unix platforms, unlike
   the previous default value of */bin/mail*.
   :jira:`581`
+
+Version 9.1.5
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.1.5 released on Month Date, 2021.
+
+- HTCondor version 9.1.5 not yet released.
+
+New Features:
+
+- The number of files transferred between the *condor_shadow* and
+  *condor_starter* is now recorded in the job ad with the new attributes.
+  :jira:`679`
+
+Bugs Fixed:
+
+- None.
+
+Version 9.1.4
+-------------
+
+Release Notes:
+
+- HTCondor version 9.1.4 limited release on August 31, 2021.
+
+New Features:
+
+- Jobs are no longer put on hold if a failure occurs due to the scratch
+  execute directory unexpectedly disappearing. Instead, the jobs will
+  return to idle status to be re-run.
+  :jira:`664`
+
+Bugs Fixed:
+
+- Fixed a problem introduced in HTCondor version 9.1.3 where
+  X.509 proxy delegation to older versions of HTCondor would fail.
+  :jira:`674`
 
 Version 9.1.3
 -------------
