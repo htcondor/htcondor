@@ -39,8 +39,11 @@
 
 %define python 1
 
-# Unconditionally turn off globus
+%if 0%{?osg}
 %define globus 0
+%else
+%define globus 1
+%endif
 
 # Temporarily turn parallel_setup off
 %define parallel_setup 0
@@ -1368,6 +1371,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_updates_stats
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
+%_sbindir/condor_gridshell
 %_sbindir/remote_gahp
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
