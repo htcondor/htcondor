@@ -16,8 +16,7 @@ Release Notes:
 New Features:
 
 - The number of files transferred beteween the *condor_shadow* and
-  *condor_starter* is now recorded in the job ad with the new attributes
-  ``TransferInputFilesCount`` and ``TransferOutputFilesCount``.
+  *condor_starter* is now recorded in the job ad with the new attributes.
   :jira:`679`
 
 Bugs Fixed:
