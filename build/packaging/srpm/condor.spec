@@ -740,7 +740,6 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
-       -DWITH_DRMAA:BOOL=FALSE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
        -DCMAKE_INSTALL_PREFIX:PATH=/usr \

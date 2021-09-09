@@ -82,7 +82,6 @@ my @minimal_build_configure_args =
 	 '-DPROPER:BOOL'			 => 'OFF',
 	 '-D_VERBOSE:BOOL'			  => 'ON',
 	 '-DWITH_BLAHP:BOOL'		 => 'OFF',
-	 '-DWITH_DRMAA:BOOL'		 => 'OFF',
 	 '-DWITH_GLOBUS:BOOL'		 => 'OFF',
 	 '-DWITH_HADOOP:BOOL'		 => 'OFF',
 	 '-DWITH_LIBVIRT:BOOL'		 => 'OFF',
