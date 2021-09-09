@@ -2,5 +2,5 @@
 
 # filter out requirements that come from condor-external-libs
 
-$(rpm --eval %__find_requires) "$@" | egrep -v '^lib(drmaa|globus|vomsapi)' || :
+$(rpm --eval %__find_requires) "$@" | egrep -v '^lib(globus|vomsapi)' || :
 

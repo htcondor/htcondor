@@ -118,9 +118,6 @@
 /* Define if HAS_INET_NTOA*/
 #cmakedefine HAS_INET_NTOA 1
 
-/* Define if pthreads are available for DRMAA */
-#cmakedefine HAS_PTHREADS 1
-
 /* Define if pthreads are available (USED)*/
 #cmakedefine HAVE_PTHREADS 1
 
@@ -222,9 +219,6 @@
 
 ///* Do we have the curl external (Imake)*/
 #cmakedefine HAVE_EXT_CURL
-
-///* Do we have the drmaa external (Imake)*/
-#cmakedefine HAVE_EXT_DRMAA
 
 ///* Do we have the glibc external*/
 #cmakedefine HAVE_EXT_GLIBC
