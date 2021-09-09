@@ -225,12 +225,7 @@ int main(int argc, const char *argv[])
 
 	// before we call init() for the router, we need to install a pseudo-schedd object
 	// so that init() doesn't install a real schedd object.
-	Scheduler* schedd = new Scheduler("JOB_ROUTER_SCHEDD1_SPOOL");
-	Scheduler* schedd2 = NULL;
-	std::string spool2;
-	if (param(spool2, "JOB_ROUTER_SCHEDD2_SPOOL")) {
-		schedd2 = new Scheduler("JOB_ROUTER_SCHEDD2_SPOOL");
-	}
+	Scheduler* schedd = new Scheduler(0);
 
 	g_silence_dprintf = dash_diagnostic ? false : true;
 	g_save_dprintfs = true;
@@ -244,7 +239,7 @@ int main(int argc, const char *argv[])
 		tool_flags |= JOB_ROUTER_TOOL_FLAG_LOG_XFORM_STEPS;
 	}
 	JobRouter job_router(tool_flags);
-	job_router.set_schedds(schedd, schedd2);
+	job_router.set_schedds(schedd, nullptr);
 	job_router.init();
 	g_silence_dprintf = false;
 	g_save_dprintfs = false;
@@ -465,11 +460,11 @@ static bool read_classad_file(const char *filename, classad::ClassAdCollection &
 }
 
 
-// this is how we will feed job ad's into the router
+// this is how we will feed job ads into the router
 //
 class JobLogMirror {
 public:
-	JobLogMirror(char const *spool_param=NULL) {}
+	JobLogMirror(char const *job_queue=NULL) {}
 	~JobLogMirror() {}
 
 	void init() {}
@@ -479,11 +474,12 @@ public:
 private:
 };
 
-Scheduler::Scheduler(char const *_alt_spool_param /*=NULL*/, int id /*=0*/)
+Scheduler::Scheduler(int id /*=0*/)
 	: m_consumer(NULL)
 	, m_mirror(NULL)
+	, m_follow_log(id ? NULL : "job_router_info")
 	, m_id(id)
-{ 
+{
 }
 
 Scheduler::~Scheduler()
@@ -505,7 +501,6 @@ void Scheduler::init() {  if (m_mirror) m_mirror->init(); }
 void Scheduler::config() { if (m_mirror) m_mirror->config(); }
 void Scheduler::stop()  { if (m_mirror) m_mirror->stop(); }
 void Scheduler::poll()  { }
-int  Scheduler::id() const { return m_id; }
 
 
 // 

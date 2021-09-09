@@ -6797,6 +6797,10 @@ These macros affect the *condor_negotiator*.
     :doc:`/admin-manual/user-priorities-negotiation` for details.
     Defaults to 10000000.
 
+:macro-def:`ACCOUNTANT_DATABASE_FILE`
+    Defines the full path of the accountant database log file.
+    The default value is ``$(SPOOL)/Accountantnew.log``
+
 :macro-def:`ACCOUNTANT_LOCAL_DOMAIN`
     Describes the local UID domain. This variable is used to decide if a
     user is local or remote. A user is considered to be in the local

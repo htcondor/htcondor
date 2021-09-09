@@ -264,25 +264,36 @@ JobRouter::config() {
 	bool allow_empty_requirements = false;
 	m_enable_job_routing = true;
 
-	if( !m_scheduler ) {
-		m_scheduler = new Scheduler("JOB_ROUTER_SCHEDD1_SPOOL");
-		m_scheduler->init();
-	}
+	// NOTE the Scheduler() class and the underlying JobLogMirror class does not handle
+	// a reconfig that changes what file that class is following, so we will param for
+	// the filename only once.  It is a restart knob, not a reconfig knob
+	// the param calls happen inside the constructors of the Scheduler() class.
 
-	std::string spool2;
-	if( param(spool2,"JOB_ROUTER_SCHEDD2_SPOOL") ) {
-		if( !m_scheduler2 ) {
-				// schedd2_spool is configured, but we have no schedd2, so create it
-			dprintf(D_ALWAYS,"Reading destination schedd spool %s\n",spool2.c_str());
-			m_scheduler2 = new Scheduler("JOB_ROUTER_SCHEDD2_SPOOL");
+	if (!m_scheduler) {
+		// we pass 0 here so that it will param for JOB_QUEUE_LOG if there is
+		// no configured JOB_ROUTER_SCHEDD1_* knobs to define the log
+		m_scheduler = new Scheduler(0);
+		if ( ! m_scheduler->following()) {
+			// if there was no configured file to follow, we abort
+			EXCEPT("No job_queue.log to follow for source schedd (SCHEDD1)");
+		}
+		m_scheduler->init();
+
+		m_scheduler2 = new Scheduler(2);
+		if (m_scheduler2->following()) {
 			m_scheduler2->init();
+		} else {
+			// SCHEDD2 is not configured, so just delete the class
+			delete m_scheduler2;
+			m_scheduler2 = nullptr;
 		}
 	}
-	else if( m_scheduler2 ) {
-			// schedd2_spool is not configured, but we have a schedd2, so delete it
-		dprintf(D_ALWAYS,"Destination schedd spool is now same as source schedd spool\n");
-		delete m_scheduler2;
-		m_scheduler2 = NULL;
+
+	dprintf(D_ALWAYS, "Following source schedd (SCHEDD1): %s\n", m_scheduler->following());
+	if (m_scheduler2) {
+		dprintf(D_ALWAYS, "Watching destination schedd (SCHEDD2): %s\n", m_scheduler2->following());
+	} else {
+		dprintf(D_ALWAYS, "Destination schedd (SCHEDD2) not configured, using source schedd as destintation also\n");
 	}
 
 	m_scheduler->config();

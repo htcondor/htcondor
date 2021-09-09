@@ -20,48 +20,26 @@
 #ifndef _SCHEDULER_H_
 #define _SCHEDULER_H_
 
-#include "condor_common.h"
-
-#if 1
-
 class JobLogMirror;
 class NewClassAdJobLogConsumer;
 class Scheduler {
 public:
-	Scheduler(char const *_alt_spool_param=NULL, int id=0);
+	Scheduler(int id);
 	~Scheduler();
 	classad::ClassAdCollection *GetClassAds() const;
 	void init();
 	void config();
 	void stop();
 	void poll();
-	int id() const;
+	int id() const { return m_id; };
+	const char * following() const { return m_follow_log.empty() ? NULL : m_follow_log.c_str(); };
 
 private:
 
 	NewClassAdJobLogConsumer * m_consumer;
 	JobLogMirror * m_mirror;
+	std::string m_follow_log;
 	int m_id; // id of this instance
 };
-#else
-#include "JobLogMirror.h"
-#include "NewClassAdJobLogConsumer.h"
-
-class Scheduler: virtual public JobLogMirror {
-public:
-	Scheduler(NewClassAdJobLogConsumer *_consumer,char const *_alt_spool_param=NULL):
-		JobLogMirror(_consumer,_alt_spool_param),
-		m_consumer(_consumer)
-	{ }
-
-	classad::ClassAdCollection *GetClassAds()
-	{
-		return m_consumer->GetClassAds();
-	}
-
-private:
-	NewClassAdJobLogConsumer *m_consumer;
-};
-#endif
 
 #endif
