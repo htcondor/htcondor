@@ -20,6 +20,12 @@ New Features:
   negotiation cycle and the next.
   :jira:`606`
 
+- Added a ``SERVICE`` node type to *condor_dagman*: a special node which runs
+  in parallel to a DAG for the duration of its workflow. This can be used to
+  run tasks that monitor or report on a DAG workflow without directly
+  impacting it.
+  :jira:`437`
+
 Bugs Fixed:
 
 - HTCondor no longer crashes on start-up if ``COLLECTOR_HOST`` is set to

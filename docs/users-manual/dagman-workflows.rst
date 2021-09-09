@@ -2843,6 +2843,36 @@ get terminated automatically at the end of a DAG workflow. The expectation
 is that it needs to explicitly deprovision any resources, such as expensive
 cloud computing instances that should not be allowed to run indefinitely. 
 
+SERVICE node
+''''''''''''
+
+:index:`SERVICE command<single: SERVICE command; DAG input file>`
+:index:`SERVICE node<single: SERVICE node; DAGMan>`
+
+A **SERVICE** node is a special type of node that is always run at the
+beginning of a DAG. These are typically used to run tasks that need to run
+alongside a DAGMan workflow (ie. progress monitoring) without any direct
+dependencies to the other nodes in the workflow.
+
+The syntax used for the *SERVICE* command is
+
+.. code-block:: condor-dagman
+
+    SERVICE ServiceName SubmitDescriptionFileName
+
+When a SERVICE is defined in a DAG, it gets started at the beginning of the
+workflow. There is no guarantee that it will start running before any of the
+other nodes, although running it directly from the access point using
+``universe = local`` or ``universe = scheduler`` will almost always make this 
+go first.
+
+A SERVICE node runs on a **best-effort basis**. If this node fails to submit
+correctly, this will not register as an error and the DAG workflow 
+will continue normally.
+
+If a DAGMan workflow finishes while there are SERVICE nodes still running,
+it will shut these down and then exit the workflow successfully.
+
 FINAL node
 ''''''''''
 
