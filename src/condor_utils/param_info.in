@@ -1502,8 +1502,8 @@ tags=gridmanager,gahp-client
 default=20
 type=int
 
-[GLITE_LOCATION]
-default=$(LIBEXEC)/glite
+[BLAHPD_LOCATION]
+default=$(RELEASE_DIR)
 type=string
 tags=gridmanager,gahp-client
 

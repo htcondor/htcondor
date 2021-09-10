@@ -149,9 +149,9 @@ SSH_ARGS=(-p $REMOTE_PORT)
 # https://opensciencegrid.atlassian.net/browse/SOFTWARE-4239
 [[ $SSH_BATCHMODE == "yes" ]] && SSH_ARGS+=(-o "BatchMode yes")
 
-#echo "** Follows output of: ssh ${SSH_ARGS[@]} $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/blahpd $*'\""
+#echo "** Follows output of: ssh ${SSH_ARGS[@]} $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'BLAHPD_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/blahpd $*'\""
 if [[ $REMOTE_CMD == "blahpd" || $REMOTE_CMD == "batch_gahp" ]] ; then
-    ssh "${SSH_ARGS[@]}" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/$REMOTE_CMD $*'"
+    ssh "${SSH_ARGS[@]}" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'BLAHPD_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/$REMOTE_CMD $*'"
     SSH_STATUS=$?
 elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
     # We need to set up a tunnel from the remote machine for the file
