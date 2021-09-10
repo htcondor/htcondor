@@ -873,6 +873,12 @@ default=
 type=string
 tags=accountant
 
+[ACCOUNTANT_DATABASE_FILE]
+default=$(SPOOL)/Accountantnew.log
+win32_default=$(SPOOL)\Accountantnew.log
+type=path
+tags=accountant
+
 [MAX_ACCOUNTANT_DATABASE_SIZE]
 default=1000000
 type=int
@@ -3129,10 +3135,16 @@ win32_default=$(SBIN)\condor_starter.exe
 type=path
 tags=schedd
 
+[JOB_QUEUE_LOG]
+default=$(SPOOL)/job_queue.log
+win32_default=$(SPOOL)\job_queue.log
+type=path
+tags=schedd
+
 [LOCAL_UNIV_EXECUTE]
 default=$(SPOOL)/local_univ_execute
 win32_default=$(SPOOL)\local_univ_execute
-type=string
+type=path
 tags=schedd
 
 [SCHED_UNIV_RENICE_INCREMENT]

@@ -136,14 +136,10 @@ main_init(int argc, char* argv[])
 	scheduler.Register();
 
 		// Initialize the job queue
-	char *job_queue_param_name = param("JOB_QUEUE_LOG");
-
-	if (job_queue_param_name == NULL) {
+	param(job_queue_name, "JOB_QUEUE_LOG");
+	if (job_queue_name.empty()) {
 		// the default place for the job_queue.log is in spool
-		formatstr( job_queue_name, "%s/job_queue.log", Spool);
-	} else {
-		job_queue_name = job_queue_param_name; // convert char * to std::string
-		free(job_queue_param_name);
+		formatstr(job_queue_name, "%s/job_queue.log", Spool);
 	}
 
 		// Make a backup of the job queue?
