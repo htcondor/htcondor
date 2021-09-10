@@ -38,6 +38,13 @@ New Features:
   an attribute.
   :jira:`646`
 
+- The location of database files for the *condor_schedd* and the *condor_negotiator* can
+  now be configured directly by using the configuration variables ``JOB_QUEUE_LOG`` and
+  ``ACCOUNTANT_DATABASE_FILE`` respectively.  Formerly you could control the directory
+  of the negotiator database by configuring ``SPOOL`` but not otherwise, and the
+  configuration variable ``JOB_QUEUE_LOG`` existed but was not visible.
+  :jira:`601`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented Singularity jobs from running when the singularity
