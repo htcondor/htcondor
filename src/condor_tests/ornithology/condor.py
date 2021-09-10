@@ -50,7 +50,6 @@ DEFAULT_PARAMS = {
     "NEGOTIATOR_CYCLE_DELAY": "2",
     "MachineMaxVacateTime": "2",
     "RUNBENCHMARKS": "0",
-#    "JOB_QUEUE_LOG": "$(SPOOL)/job_queue.log",
     "MAX_JOB_QUEUE_LOG_ROTATIONS": "10",
     "STARTER_LIST": "STARTER",  # no standard universe starter
 }
