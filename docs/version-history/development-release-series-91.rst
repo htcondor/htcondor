@@ -26,6 +26,10 @@ New Features:
   impacting it.
   :jira:`437`
 
+- The *condor_userprio* tool now accepts one or more username arguments and will report
+  priority and useage for only those users
+  :jira:`559`
+
 Bugs Fixed:
 
 - HTCondor no longer crashes on start-up if ``COLLECTOR_HOST`` is set to
