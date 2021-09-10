@@ -17255,23 +17255,33 @@ Scheduler::launch_local_startd() {
 	  // The arguments for our startd
 	ArgList args;
 	args.AppendArg("condor_startd");
-	args.AppendArg("-f"); // The startd is daemon-core, so run in the "foreground"
+	// no longer needed, foreground is default for daemons other than the master
+	//args.AppendArg("-f"); // The startd is daemon-core, so run in the "foreground"
 	args.AppendArg("-local-name"); // This is the local startd, not the vanilla one
 	args.AppendArg("LOCALSTARTD");
+
 
 	Env env;
 	env.Import(); // copy schedd's environment
 	env.SetEnv("_condor_STARTD_LOG", "$(LOG)" DIR_DELIM_STR "LocalStartLog");
-	env.SetEnv("_condor_EXECUTE", "$(SPOOL)" DIR_DELIM_STR "local_univ_execute");
 
-	// Force start expression to be START_LOCAL_UNIVERSE
-	char *localStartExpr = 0;
-	localStartExpr = param("START_LOCAL_UNIVERSE");
-	std::string localConstraint = "(JobUniverse == 12) && ";
-	localConstraint += localStartExpr;
-	env.SetEnv("_condor_START", localConstraint);
-	free(localStartExpr);
+	// set the EXECUTE knob
+	std::string tmpstr;
+	param(tmpstr, "LOCAL_UNIV_EXECUTE");
+	if ( ! tmpstr.empty()) {
+		env.SetEnv("_condor_EXECUTE", tmpstr.c_str());
+		tmpstr.clear();
+	}
 
+	// Force START expression to be START_LOCAL_UNIVERSE and only match local universe jobs
+	std::string localConstraint;
+	formatstr(localConstraint, "(" ATTR_JOB_UNIVERSE " == %d)", CONDOR_UNIVERSE_LOCAL);
+	param(tmpstr, "START_LOCAL_UNIVERSE");
+	if ( ! tmpstr.empty()) {
+		localConstraint += " && ";
+		localConstraint += tmpstr;
+	}
+	env.SetEnv("_condor_START", localConstraint.c_str());
 
 	std::string mysinful(daemonCore->publicNetworkIpAddr());
 	mysinful.erase(0,1);
