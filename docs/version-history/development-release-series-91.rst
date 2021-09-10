@@ -19,7 +19,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug that prevented Singularity jobs from running when the singularity
+  binary emitted many warning messages to stderr.
+  :jira:`698`
 
 Version 9.1.5
 -------------
