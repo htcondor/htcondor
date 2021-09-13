@@ -2083,7 +2083,7 @@ FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
 
 
 int
-FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
+FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 {
 	int rc = 0;
 	filesize_t bytes=0;
@@ -2115,7 +2115,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	CondorError errstack;
 
 	priv_state saved_priv = PRIV_UNKNOWN;
-	*total_bytes = 0;
+	*total_bytes_ptr = 0;
 
 	downloadStartTime = condor_gettimestamp_double();
 
@@ -2390,7 +2390,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		if( MaxDownloadBytes < 0 ) {
 			this_file_max_bytes = -1; // no limit
 		}
-		else if( MaxDownloadBytes + max_bytes_slack >= *total_bytes ) {
+		else if( MaxDownloadBytes + max_bytes_slack >= *total_bytes_ptr ) {
 
 				// We have told the sender our limit, and a
 				// well-behaved sender will not send more than that.
@@ -2403,7 +2403,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				// hits its limit first, the connection is closed, and
 				// the sender will not understand why.
 
-			this_file_max_bytes = MaxDownloadBytes + max_bytes_slack - *total_bytes;
+			this_file_max_bytes = MaxDownloadBytes + max_bytes_slack - *total_bytes_ptr;
 		}
 		else {
 			this_file_max_bytes = 0;
@@ -3005,7 +3005,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		if( !s->end_of_message() ) {
 			return_and_resetpriv( -1 );
 		}
-		*total_bytes += bytes;
+		*total_bytes_ptr += bytes;
 		thisFileStats.TransferFileBytes += bytes;
 		thisFileStats.TransferTotalBytes += bytes;
 		bytes = 0;
@@ -3065,7 +3065,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	// go back to the state we were in before file transfer
 	s->set_crypto_mode(socket_default_crypto);
 
-	bytesRcvd += (*total_bytes);
+	bytesRcvd += (*total_bytes_ptr);
 
 	// Receive final report from the sender to make sure all went well.
 	bool upload_success = false;
@@ -3144,7 +3144,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
 
 		// Log some tcp statistics about this transfer
-	if (*total_bytes > 0) {
+	if (*total_bytes_ptr > 0) {
 		char *stats = s->get_statistics();
 		int cluster = -1;
 		int proc = -1;
@@ -3153,7 +3153,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 		std::string full_stats;
 		formatstr(full_stats, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n",
-			cluster, proc, numFiles, (long long)*total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
+			cluster, proc, numFiles, (long long)*total_bytes_ptr, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
 		Info.tcp_stats = full_stats.c_str();
 		dprintf(D_STATS, "%s", full_stats.c_str());
 	}
@@ -3736,7 +3736,7 @@ FileTransfer::ParseDataManifest()
 
 
 int
-FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
+FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 {
 	int rc = 0;
 	MyString fullname;
@@ -3795,7 +3795,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 	uploadStartTime = condor_gettimestamp_double();
 
-	*total_bytes = 0;
+	*total_bytes_ptr = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
 	dprintf(D_FULLDEBUG,"DoUpload: Output URL plugins %s be run\n",
 		should_invoke_output_plugins ? "will" : "will not");
@@ -3914,7 +3914,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				formatstr( errorMessage, "DoUpload: Failure when signing URL '%s': %s", src_url.c_str(), err.message() );
 				dprintf( D_ALWAYS, "%s\n",errorMessage.c_str() );
 
-				// While (* total_bytes) and numFiles should both be 0
+				// While (* total_bytes_ptr) and numFiles should both be 0
 				// at this point, we should probably be explicit.
 				filesize_t logTCPStats = 0;
 				return ExitDoUpload( & logTCPStats,
@@ -4074,7 +4074,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			int holdSubCode = -1;
 			signed_ad.LookupInteger( ATTR_HOLD_REASON_SUBCODE, holdSubCode );
 
-			// While (* total_bytes) and numFiles should both be 0
+			// While (* total_bytes_ptr) and numFiles should both be 0
 			// at this point, we should probably be explicit.
 			filesize_t logTCPStats = 0;
 			return ExitDoUpload( & logTCPStats,
@@ -4213,7 +4213,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			try_again = false; // put job on hold
 			hold_code = CONDOR_HOLD_CODE_UploadFileError;
 			hold_subcode = EPERM;
-			return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
+			return ExitDoUpload(total_bytes_ptr,numFiles, s,saved_priv,socket_default_crypto,
 			                    upload_success,do_upload_ack,do_download_ack,
 								try_again,hold_code,hold_subcode,
 								error_desc.Value(),__LINE__);
@@ -4438,8 +4438,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		if( effective_max_upload_bytes < 0 ) {
 			this_file_max_bytes = -1; // no limit
 		}
-		else if( effective_max_upload_bytes >= *total_bytes ) {
-			this_file_max_bytes = effective_max_upload_bytes - *total_bytes;
+		else if( effective_max_upload_bytes >= *total_bytes_ptr ) {
+			this_file_max_bytes = effective_max_upload_bytes - *total_bytes_ptr;
 		}
 		else {
 			this_file_max_bytes = 0;
@@ -4674,7 +4674,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 				// for the more interesting reasons why the transfer failed,
 				// we can try again and see what happens.
-				return ExitDoUpload(total_bytes,numFiles, s,saved_priv,
+				return ExitDoUpload(total_bytes_ptr,numFiles, s,saved_priv,
 								socket_default_crypto,upload_success,
 								do_upload_ack,do_download_ack,
 			                    try_again,hold_code,hold_subcode,
@@ -4687,7 +4687,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 
-		*total_bytes += bytes;
+		*total_bytes_ptr += bytes;
 		numFiles++;
 
 			// The spooled files list is used to generate
@@ -4731,7 +4731,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				first_failed_line_number = __LINE__;
 			}
 		}
-		*total_bytes += upload_bytes;
+		*total_bytes_ptr += upload_bytes;
 	}
 
 	// If we had an error when parsing the data manifest, it occurred far too early for us to
@@ -4753,7 +4753,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	do_upload_ack = true;
 
 	if (first_failed_file_transfer_happened == true) {
-		return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
+		return ExitDoUpload(total_bytes_ptr,numFiles, s,saved_priv,socket_default_crypto,
 			first_failed_upload_success,do_upload_ack,do_download_ack,
 			first_failed_try_again,first_failed_hold_code,
 			first_failed_hold_subcode,first_failed_error_desc.Value(),
@@ -4763,7 +4763,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	uploadEndTime = condor_gettimestamp_double();
 
 	upload_success = true;
-	return ExitDoUpload(total_bytes,numFiles, s,saved_priv,socket_default_crypto,
+	return ExitDoUpload(total_bytes_ptr,numFiles, s,saved_priv,socket_default_crypto,
 	                    upload_success,do_upload_ack,do_download_ack,
 	                    try_again,hold_code,hold_subcode,NULL,__LINE__);
 }
@@ -5086,7 +5086,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 }
 
 int
-FileTransfer::ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line)
+FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line)
 {
 	int rc = upload_success ? 0 : -1;
 	bool download_success = false;
@@ -5100,7 +5100,7 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock
 		_set_priv(saved_priv,__FILE__,DoUpload_exit_line,1);
 	}
 
-	bytesSent += *total_bytes;
+	bytesSent += *total_bytes_ptr;
 
 	if(do_upload_ack) {
 		// peer is still expecting us to send a file command
@@ -5188,7 +5188,7 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock
 	Info.error_desc = error_desc;
 
 		// Log some tcp statistics about this transfer
-	if (*total_bytes > 0) {
+	if (*total_bytes_ptr > 0) {
 		int cluster = -1;
 		int proc = -1;
 		jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
@@ -5197,7 +5197,7 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock
 		char *stats = s->get_statistics();
 		std::string full_stats;
 		formatstr(full_stats, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n",
-			cluster, proc, numFiles, (long long)*total_bytes, (uploadEndTime - uploadStartTime), s->peer_ip_str(), (stats ? stats : ""));
+			cluster, proc, numFiles, (long long)*total_bytes_ptr, (uploadEndTime - uploadStartTime), s->peer_ip_str(), (stats ? stats : ""));
 		Info.tcp_stats = full_stats.c_str();
 		dprintf(D_STATS, "%s", full_stats.c_str());
 	}
