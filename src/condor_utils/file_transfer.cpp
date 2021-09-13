@@ -4731,7 +4731,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				first_failed_line_number = __LINE__;
 			}
 		}
-		total_bytes += upload_bytes;
+		*total_bytes += upload_bytes;
 	}
 
 	// If we had an error when parsing the data manifest, it occurred far too early for us to
