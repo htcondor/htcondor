@@ -369,32 +369,12 @@ description file.
 The second argument on the right hand side will be one of ``pbs``,
 ``lsf``, ``sge``, or ``slurm``.
 
-Any of these batch grid types requires two variables to be set in the
-HTCondor configuration file. ``BATCH_GAHP`` :index:`BATCH_GAHP` is
-the path to the GAHP server binary that is to be used to submit one of
-these batch jobs. ``GLITE_LOCATION`` :index:`GLITE_LOCATION` is
-the path to the directory containing the GAHP's configuration file and
-auxiliary binaries. In the HTCondor distribution, these files are
-located in ``$(LIBEXEC)``/glite. The batch GAHP's configuration file is
-in ``$(GLITE_LOCATION)``/etc/blah.config. The batch GAHP's
-auxiliary binaries are to be in the directory ``$(GLITE_LOCATION)``/bin.
-The HTCondor configuration file appears
-
-.. code-block:: text
-
-    GLITE_LOCATION = $(LIBEXEC)/glite
-    BATCH_GAHP     = $(BIN)/blahpd
-
-The batch GAHP's configuration file has variables that must be modified
-to tell it where to find
-
- PBS
-    on the local system. ``pbs_binpath`` is the directory that contains
-    the PBS binaries. ``pbs_spoolpath`` is the PBS spool directory.
- LSF
-    on the local system. ``lsf_binpath`` is the directory that contains
-    the LSF binaries. ``lsf_confpath`` is the location of the LSF
-    configuration file.
+The batch GAHP server is a piece of software called the blahp.
+The configuration parameters ``BATCH_GAHP`` and ``BLAHPD_LOCATION``
+specify the locations of the main blahp binary and its dependent
+files, respectively.
+The blahp has its own configuration file, located at /etc/blah.config
+(``$(RELEASE_DIR)``/etc/blah.config for a tarball release).
 
 The batch GAHP supports translating certain job classad attributes into the corresponding batch system submission parameters. However, note that not all parameters are supported.
 
