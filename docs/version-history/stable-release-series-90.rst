@@ -25,19 +25,6 @@ New Features:
   SSL must present a valid SSL credential.
   :jira:`236`
 
-- The *condor_watch_q* command now refuses to watch the queue if
-  doing so would require using more kernel resources ("inotify watches")
-  than allowed.  This limit can be increased by your system
-  administrator, and we expect to remove this limitation in a future
-  version of the tool.
-  :jira:`676`
-
-- The stdin passed to *condor_job_router* hooks of type ``_TRANSLATE_JOB`` will
-  now be passed information on the route in a format that is the same as what was passed
-  in the 8.8 series.  It will always be a classad, and include the route ``Name`` as
-  an attribute.
-  :jira:`646`
-
 - The location of database files for the *condor_schedd* and the *condor_negotiator* can
   now be configured directly by using the configuration variables ``JOB_QUEUE_LOG`` and
   ``ACCOUNTANT_DATABASE_FILE`` respectively.  Formerly you could control the directory
@@ -45,11 +32,20 @@ New Features:
   configuration variable ``JOB_QUEUE_LOG`` existed but was not visible.
   :jira:`601`
 
-Bugs Fixed:
+- The stdin passed to *condor_job_router* hooks of type ``_TRANSLATE_JOB`` will
+  now be passed information on the route in a format that is the same as what was passed
+  in the 8.8 series.  It will always be a classad, and include the route ``Name`` as
+  an attribute.
+  :jira:`646`
 
-- Fixed a bug that prevented Singularity jobs from running when the singularity
-  binary emitted many warning messages to stderr.
-  :jira:`698`
+- The *condor_watch_q* command now refuses to watch the queue if
+  doing so would require using more kernel resources ("inotify watches")
+  than allowed.  This limit can be increased by your system
+  administrator, and we expect to remove this limitation in a future
+  version of the tool.
+  :jira:`676`
+
+Bugs Fixed:
 
 - The *bosco_cluster* tool now clears out old installation files when
   the *--add* option is used to update an existing installation.
@@ -99,6 +95,15 @@ Bugs Fixed:
   the permissions of the configuration files created by the installer so the installing user has
   edit access and all users have read access.
   :jira:`684`
+
+- Fixed a bug that prevented Singularity jobs from running when the singularity
+  binary emitted many warning messages to stderr.
+  :jira:`698`
+
+- Fixed a bug that could the starter to crash after transferring files under
+  certain rare circumstances.   This also corrected a problem which may have
+  been causing the number of bytes transferred to be undercounted.
+  :jira:`722`
 
 Version 9.0.5
 -------------
