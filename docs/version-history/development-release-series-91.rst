@@ -47,6 +47,10 @@ New Features:
   priority and useage for only those users
   :jira:`559`
 
+- Added a new ``-yes`` command-line argument to the *condor_annex*, allowing
+  it to request EC2 instances without manual user confirmation.
+  :jira:`443`
+
 Bugs Fixed:
 
 - HTCondor no longer crashes on start-up if ``COLLECTOR_HOST`` is set to
