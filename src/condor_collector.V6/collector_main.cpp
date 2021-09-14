@@ -52,6 +52,10 @@ void main_init(int argc, char *argv[])
 	Daemon=new ViewServer();
 	Daemon->Init();
 
+		// Any private attribute we manage stays encrypted in
+		// the ClassAd.
+	setEncryptPrivateAttributes();
+
 #if defined(UNIX) && !defined(DARWIN)
 	CollectorPluginManager::Load();
 
