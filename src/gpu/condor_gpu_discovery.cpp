@@ -617,11 +617,11 @@ main( int argc, const char** argv)
 					} else {
 						print_error(MODE_ERROR, "Error: cuInit returned %d\n", r);
 					}
-				}
 
-				dlclose( cuda_handle );
-				cuda_handle = NULL;
-				cuDeviceGetCount = NULL; // no longer safe to call this.
+					dlclose( cuda_handle );
+					cuda_handle = NULL;
+					cuDeviceGetCount = NULL; // no longer safe to call this.
+				}
 			}
 		}
 
