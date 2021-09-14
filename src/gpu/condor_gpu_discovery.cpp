@@ -1033,7 +1033,7 @@ main( int argc, const char** argv)
 		}
 
 		// skip devices that have active MIG children
-		if (!has_uuid) {
+		if (has_uuid) {
 			const std::string & UUID = enumeratedDevices[dev].uuid;
 			if( migDevices.find( UUID ) != migDevices.end() ) {
 				continue;
