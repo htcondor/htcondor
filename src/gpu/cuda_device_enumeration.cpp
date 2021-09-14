@@ -325,7 +325,7 @@ setNVMLFunctionPointers() {
 //
 
 dlopen_return_t
-setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
+setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart, bool must_load ) {
 	//
 	// We try to load and initialize the nvcuda library; if that fails,
 	// we load the cudart library, instead.
@@ -411,11 +411,14 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
 
 		findNVMLDeviceHandle = nvml_findNVMLDeviceHandle;
 		return cudart_handle;
-	} else {
+	} else if (must_load) {
 		fprintf( stderr, "# Unable to load a CUDA library (%s or %s).\n",
 			cuda_library, cudart_library );
-		return NULL;
+	} else {
+		print_error(MODE_DIAGNOSTIC_MSG, "# Unable to load a CUDA library (%s or %s).\n",
+			cuda_library, cudart_library);
 	}
+	return NULL;
 }
 
 
