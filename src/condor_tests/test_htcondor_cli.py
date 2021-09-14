@@ -53,15 +53,15 @@ def slurm_not_setup(default_condor, test_dir):
 
 class TestCurlPlugin:
     def test_invoke_no_args(self, invoke_no_args):
-        assert invoke_no_args.stderr[0:60] == "htcondor is a tool for managing HTCondor jobs and resources."
+        assert "A tool for managing HTCondor jobs and resources." in invoke_no_args.stderr
         assert "Traceback (most recent call last)" not in invoke_no_args.stdout
         assert "Traceback (most recent call last)" not in invoke_no_args.stderr
 
     def test_submit_fail(self, submit_failure):
-        assert submit_failure.stdout == "Error: could not read file does_not_exist.sub"
+        assert submit_failure.stderr == "Error while trying to run job submit:\nCould not find file: does_not_exist.sub"
 
     def test_submit_success(self, test_dir, submit_success):
-        assert submit_success.stdout == "Job 1 was submitted."
+        assert submit_success.stderr == "Job 1 was submitted."
         jel = htcondor.JobEventLog((test_dir / "helloworld.log").as_posix())
         # Wait for the job to finish by watching its event log
         for event in jel.events(stop_after=None):
@@ -70,7 +70,7 @@ class TestCurlPlugin:
         assert Path(test_dir / "helloworld.out").read_text() == "Hello, World!\n"
 
     def test_resource_missing_args(self, test_dir, resource_missing_args):
-        assert resource_missing_args.stdout == "Error: EC2 resources must specify a --runtime argument"
+        assert resource_missing_args.stderr == "Error while trying to run job submit:\nError: EC2 resources must specify a --runtime argument"
 
     def test_slurm_not_setup(self, test_dir, slurm_not_setup):
-        assert slurm_not_setup.stdout[0:65] == "You need to install support software to access the Slurm cluster."
+        assert slurm_not_setup.stderr[0:103] == "Error while trying to run job submit:\nYou need to install support software to access the Slurm cluster."

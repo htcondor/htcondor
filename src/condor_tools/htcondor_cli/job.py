@@ -98,7 +98,7 @@ class Submit(Verb):
                 bosco_cmd = "bosco_cluster --status hpclogin1.chtc.wisc.edu"
                 logger.debug(f"Attempting to run: {bosco_cmd}")
                 subprocess.check_output(shlex.split(bosco_cmd))
-            except FileNotFoundError:
+            except (FileNotFoundError, subprocess.CalledProcessError):
                 install_bosco = (
 """
 You need to install support software to access the Slurm cluster.
