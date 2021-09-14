@@ -317,12 +317,12 @@ private:
 };
 
 std::string
-constructGPUID( const char * opt_pre, int dev, int opt_uuid, int opt_opencl, int opt_short_uuid, std::vector< BasicProps > & enumeratedDevices ) {
+constructGPUID( const char * opt_pre, int dev, int opt_uuid, bool has_uuid, int opt_short_uuid, std::vector< BasicProps > & enumeratedDevices ) {
 	// Determine the GPU ID.
 	std::string gpuID = Format( "%s%i", opt_pre, dev );
 
 	// The -uuid and -short-uuid flags don't imply -properties.
-	if( opt_uuid && !opt_opencl && !enumeratedDevices[dev].uuid.empty()) {
+	if( opt_uuid && has_uuid && !enumeratedDevices[dev].uuid.empty()) {
 		gpuID = gpuIDFromUUID( enumeratedDevices[dev].uuid, opt_short_uuid );
 	}
 
@@ -607,7 +607,7 @@ main( int argc, const char** argv)
 		setSimulatedCUDAFunctionPointers();
 		canEnumerateNVMLDevices = setSimulatedNVMLFunctionPointers();
 	} else {
-		cuda_handle = setCUDAFunctionPointers( opt_nvcuda, opt_cudart );
+		cuda_handle = setCUDAFunctionPointers( opt_nvcuda, opt_cudart, false );
 		if( cuda_handle && !opt_cudart ) {
 			if( cuInit ) {
 				CUresult r = cuInit(0);
@@ -627,9 +627,9 @@ main( int argc, const char** argv)
 
 		nvml_handle = setNVMLFunctionPointers();
 		if(! nvml_handle) {
-			// We should definitely warn if opt_dynamic is set, but if it
-			// isn't, maybe this should only show up in -debug?
-			print_error(MODE_ERROR, "Unable to load NVML; will not discover dynamic properties or MIG instances.\n" );
+			// this is a failure if -dynamic is set, but not otherwise
+			print_error(opt_dynamic ? MODE_ERROR : MODE_DIAGNOSTIC_MSG,
+				"# Unable to load NVML; will not discover dynamic properties or MIG instances.\n" );
 		} else {
 			nvmlReturn_t r = nvmlInit();
 			if( r != NVML_SUCCESS ) {
@@ -658,6 +658,8 @@ main( int argc, const char** argv)
 	if( ocl_handle && (deviceCount == 0 || opt_opencl) ) {
 		ocl_GetDeviceCount( & deviceCount );
 		opt_pre = "OCL";
+		// opencl devices have no uuid
+		if (opt_uuid < 0) { opt_short_uuid = opt_uuid = 0; }
 	}
 
 	if( deviceCount == 0 ) {
@@ -678,7 +680,7 @@ main( int argc, const char** argv)
 	std::vector< BasicProps > nvmlDevices;
 	std::vector< BasicProps > enumeratedDevices;
 	if(! opt_opencl) {
-		if(! enumerateCUDADevices(enumeratedDevices)) {
+		if (cuDeviceGetCount && ! enumerateCUDADevices(enumeratedDevices)) {
 			const char * problem = "Failed to enumerate GPU devices";
 			fprintf( stderr, "# %s, aborting.\n", problem );
 			fprintf( stdout, "condor_gpu_discovery_error = \"%s\"\n", problem );
@@ -694,12 +696,22 @@ main( int argc, const char** argv)
 		// reporting the devices we found via NVML.
 		//
 		bool shouldEnumerateNVMLDevices = true;
-		for( const BasicProps & bp : enumeratedDevices ) {
-			if (bp.uuid.empty()) {
-				const char * problem = "Not enumerating NVML devices because a CUDA device has no UUID.  This usually means you should upgrade your CUDA libaries.";
-				fprintf( stderr, "# %s\n", problem );
-				fprintf( stdout, "condor_gpu_discovery_error = \"%s\"\n", problem );
+		for (dev = 0; dev < (int)enumeratedDevices.size(); ++dev) {
+			if (enumeratedDevices[dev].uuid.empty()) {
+				if (opt_uuid) {
+					const char * problem = "Not enumerating NVML devices because a CUDA device has no UUID.  This usually means you should upgrade your CUDA libaries.";
+					fprintf( stderr, "# %s\n", problem );
+					// print this warning to stdout as a key=value pair so it parses as a classad attribute
+					fprintf(stdout, "condor_gpu_discovery_error = \"%s\"\n", problem);
+				}
+				// if we are defaulting to UUID, but the device has no UUID, switch the default to -by-index
+				if (opt_uuid < 0) {
+					opt_short_uuid = opt_uuid = 0;
+				}
 				shouldEnumerateNVMLDevices = false;
+			} else {
+				// for later NVML enumeration, we need a map of cuda device uuid to index
+				cudaDevices[enumeratedDevices[dev].uuid] = dev;
 			}
 		}
 
@@ -719,9 +731,9 @@ main( int argc, const char** argv)
 				return 1;
 			}
 
-			// for( auto parentUUID : migDevices ) {
-			// 	fprintf( stderr, "parent UUID: %s\n", parentUUID.c_str() );
-			// }
+			for( auto parentUUID : migDevices ) {
+				print_error(MODE_DIAGNOSTIC_MSG, "diag: MIG parent uuid: %s\n", parentUUID.c_str());
+			}
 		}
 	}
 
@@ -737,10 +749,6 @@ main( int argc, const char** argv)
 	std::string detected_gpus;
 	int filteredDeviceCount = 0;
 	for( dev = 0; dev < deviceCount; ++dev ) {
-		// for later NVML enumeration, we need a map of cuda device uuid to index
-		if ( ! enumeratedDevices[dev].uuid.empty()) {
-			cudaDevices[enumeratedDevices[dev].uuid] = dev;
-		}
 
 		// Skip devices not on the whitelist, this skips nothing when the whitelist is not index based
 		if( dwl.ignore_device(dev) ) {
@@ -749,10 +757,9 @@ main( int argc, const char** argv)
 			continue;
 		}
 
-		// if we are defaulting to UUID, but the device has no UUID, switch the default to -by-index
-		if ((opt_uuid < 0) && enumeratedDevices[dev].uuid.empty()) {
-			opt_short_uuid = opt_uuid = 0;
-		} else {
+		// check device against the uuid whitelist
+		bool has_uuid = dev < (int)enumeratedDevices.size() && ! enumeratedDevices[dev].uuid.empty();
+		if (has_uuid) {
 			std::string id = gpuIDFromUUID( enumeratedDevices[dev].uuid, false );
 			if ( ! dwl.is_whitelisted(id, dev)) {
 				print_error(MODE_DIAGNOSTIC_MSG, "diag: skipping %d GPUid=%s during CUDA enumeration because of whitelist\n",
@@ -761,7 +768,7 @@ main( int argc, const char** argv)
 			}
 		}
 
-		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
+		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, has_uuid, opt_short_uuid, enumeratedDevices);
 
 		// Skip devices which have MIG instances associated with them.
 		if(!migDevices.empty()) {
@@ -793,7 +800,7 @@ main( int argc, const char** argv)
 
 		KVP & props = dev_props.find(gpuID)->second;
 
-		if(! opt_opencl) {
+		if(! enumeratedDevices.empty()) {
 			// Report CUDA properties.
 			BasicProps bp = enumeratedDevices[dev];
 			setPropertiesFromBasicProps( props, bp, opt_extra );
@@ -931,14 +938,15 @@ main( int argc, const char** argv)
 
 		// Dynamic properties for CUDA devices
 		for (dev = 0; dev < deviceCount; ++dev) {
-#if 1
 			if( dwl.ignore_device(dev) ) {
 				continue;
 			}
 
+			bool has_uuid = dev < (int)enumeratedDevices.size() && ! enumeratedDevices[dev].uuid.empty();
+
 			// in case we have a whitelist of GPUid's or uuids, construct the full uuid
 			// and check it against the whitelist
-			if( opt_uuid && !opt_opencl && !enumeratedDevices[dev].uuid.empty()) {
+			if( opt_uuid && has_uuid ) {
 				std::string id = gpuIDFromUUID( enumeratedDevices[dev].uuid, false );
 				if ( ! dwl.is_whitelisted(id, dev)) {
 					continue;
@@ -946,24 +954,16 @@ main( int argc, const char** argv)
 			}
 
 			// skip devices that have active MIG children
-			const std::string & UUID = enumeratedDevices[dev].uuid;
-			if( migDevices.find( UUID ) != migDevices.end() ) {
-				continue;
-			}
-#else
-
-			if ((!dwl.empty()) && std::find(dwl.begin(), dwl.end(), dev) == dwl.end()) {
-				continue;
+			if (has_uuid) {
+				// The "UUIDs" from NVML have "GPU-" as a prefix.
+				std::string id = "GPU-" + enumeratedDevices[dev].uuid;
+				if( migDevices.find( id ) != migDevices.end() ) {
+					continue;
+				}
 			}
 
-			const std::string & UUID = enumeratedDevices[dev].uuid;
-			if (migDevices.find(UUID) != migDevices.end()) {
-				// fprintf( stderr, "[dynamic CUDA properties] Skipping MIG parent device %s.\n", UUID.c_str() );
-				continue;
-			}
-#endif
 			// Determine the GPU ID.
-			std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, opt_opencl, opt_short_uuid, enumeratedDevices);
+			std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, has_uuid, opt_short_uuid, enumeratedDevices);
 
 			nvmlDevice_t device;
 			if (NVML_SUCCESS != findNVMLDeviceHandle(enumeratedDevices[dev].uuid, & device)) {

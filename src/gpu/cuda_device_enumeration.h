@@ -110,7 +110,7 @@ GPUFP cuda_pciid_t              cuDeviceGetPCIBusId;
 GPUFP cuda_ga_t                 cuDeviceGetAttribute;
 GPUFP cuda_cc_t                 cuDeviceComputeCapability;
 
-dlopen_return_t setCUDAFunctionPointers( bool force_nvcuda = false, bool force_cudart = false );
+dlopen_return_t setCUDAFunctionPointers( bool force_nvcuda = false, bool force_cudart = false, bool must_load = true );
 void setSimulatedCUDAFunctionPointers();
 
 #undef GPUFP
