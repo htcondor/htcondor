@@ -105,6 +105,10 @@ Bugs Fixed:
   edit access and all users have read access.
   :jira:`684`
 
+- Fixed a bug in *condor_gpu_discovery* that could result in no output or a segmentation fault
+  when the ``-opencl`` argument was used.
+  :jira:`729`
+
 Version 9.0.5
 -------------
 
