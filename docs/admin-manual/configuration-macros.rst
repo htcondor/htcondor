@@ -3071,16 +3071,6 @@ section.
     :index:`MachineMaxVacateTime` and ``KILL``
     :index:`KILL`. The default value is ``True``.
 
-:macro-def:`ENABLE_VERSIONED_OPSYS`
-    A boolean expression that determines whether pre-7.7.2 strings used
-    for the machine ClassAd attribute ``OpSys`` are used or not.
-    Defaults to ``False`` on Windows platforms, meaning that the newer
-    behavior of setting ``OpSys = "WINDOWS"`` and ``OpSysVer = 601``
-    (for example), while ``OpSysAndVer = "WINNT61"``. On platforms other
-    than Windows, the default value is ``True``, meaning that the values
-    for ``OpSys`` and ``OpSysAndVer`` are the same, implementing the
-    pre-7.7.2 behavior.
-
 :macro-def:`IS_OWNER`
     A boolean expression that determines when a machine ad should enter
     the ``Owner`` state. While in the ``Owner`` state, the machine ad

@@ -424,7 +424,7 @@ init_arch(void)
 		//    opsys           is "SOLARIS"
 		//    opsys_short_name is "Solaris"
 		//    opsys_versioned  is "Solaris11"
-		opsys_long_name = sysapi_get_unix_info( buf.sysname, buf.release, buf.version, _sysapi_opsys_is_versioned );
+		opsys_long_name = sysapi_get_unix_info( buf.sysname, buf.release, buf.version );
 		char * p = strdup( opsys_long_name );
 		opsys_name = p; p = strchr(p, ' '); if (p) *p = 0;
 		opsys_legacy = p = strdup( opsys_name ); for (; *p; ++p) { *p = toupper(*p); }
@@ -738,8 +738,7 @@ sysapi_find_linux_name( const char *info_str )
 const char *
 sysapi_get_unix_info( const char *sysname,
 			const char *release,
-			const char *version,
-                        int         append_version)
+			const char *version)
 {
 	char tmp[64];
 	const char * pver="";
@@ -800,7 +799,7 @@ sysapi_get_unix_info( const char *sysname,
 		sprintf( tmp, "%s", sysname);
         pver = release;
 	}
-        if (append_version && pver) {
+        if (pver) {
             strcat( tmp, pver );
         }
 
