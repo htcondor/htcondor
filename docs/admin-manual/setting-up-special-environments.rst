@@ -257,6 +257,12 @@ for the relevant service(s) before they can be used.
 See :ref:`enabling_oauth_credentials` for how to enable users
 to fetch OAuth2 credentials.
 
+An example template for a file transfer plugin is available in our
+source repository under `/src/condor_examples/filetransfer_example_plugin.py
+<https://github.com/htcondor/htcondor/blob/master/src/condor_examples/filetranser_example_plugin.py>`_.
+This provides most of the functionality required in the plugin, except for
+the transfer logic itself, which is clearly indicated in the comments.
+
 The transfer of output files in this manner was introduced in HTCondor
 version 7.6.0. Incompatibility and inability to function will result if
 the executables for the *condor_starter* and *condor_shadow* are
