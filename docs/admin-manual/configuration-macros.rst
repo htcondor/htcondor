@@ -7667,11 +7667,10 @@ These macros affect the *condor_gridmanager*.
     higher-priority) commands are read and performed.
     The default value is 10.
 
-:macro-def:`GLITE_LOCATION`
-    The complete path to the directory containing the Glite software.
-    The default value is ``$(LIBEXEC)``/glite. The necessary Glite
-    software is included with HTCondor, and is required for grid-type
-    batch jobs.
+:macro-def:`BLAHPD_LOCATION`
+    The complete path to the directory containing the *blahp* software,
+    which is required for grid-type batch jobs.
+    The default value is ``$(RELEASE_DIR)``.
 
 :macro-def:`GAHP_SSL_CADIR`
     The path to a directory that may contain the certificates (each in
@@ -7693,7 +7692,7 @@ These macros affect the *condor_gridmanager*.
 
 :macro-def:`BATCH_GAHP`
     The complete path and file name of the batch GAHP executable, to be
-    used for PBS, LSF, SGE, and similar batch systems. The default
+    used for Slurm, PBS, LSF, SGE, and similar batch systems. The default
     location is ``$(BIN)``/blahpd.
 
 :macro-def:`NORDUGRID_GAHP`

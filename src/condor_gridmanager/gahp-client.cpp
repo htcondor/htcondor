@@ -783,10 +783,15 @@ GahpServer::Startup()
 	}
 #endif
 
-		// GLITE_LOCATION needs to be set for the blahp
-	tmp_char = param("GLITE_LOCATION");
-	if ( tmp_char ) {
-		newenv.SetEnv( "GLITE_LOCATION", tmp_char );
+	// set BLAHPD_LOCATION for the blahp if required
+	// a value of "/usr" means a rootly install, which is the blahp's
+	// default, so no environment variable needed
+	tmp_char = param("BLAHPD_LOCATION");
+	if ( ! tmp_char ) {
+		tmp_char = param("GLITE_LOCATION");
+	}
+	if ( tmp_char && strcmp(tmp_char, "/usr") ) {
+		newenv.SetEnv( "BLAHPD_LOCATION", tmp_char );
 		free( tmp_char );
 	}
 
