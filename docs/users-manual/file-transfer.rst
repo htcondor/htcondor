@@ -771,8 +771,8 @@ After generating HMAC credentials, they can be used within an HTCondor job:
 
 .. code-block:: condor-submit
 
-    gs_access_key_id_file = $ENV(HOME)/credentials/bucket_access_key_id
-    gs_secret_access_key_file = $ENV(HOME)/credentials/bucket_secret_access_key
+    gs_access_key_id_file = /home/example/secrets/bucket_access_key_id
+    gs_secret_access_key_file = /home/example/secrets/bucket_secret_access_key
     transfer_input_files = gs://<bucket-name>/<input-key-name>
     transfer_output_remaps = "output.dat = gs://<bucket-name>/<output-key-name>"
 
@@ -782,7 +782,7 @@ approach defined above. e.g.
 
 .. code-block:: condor-submit
 
-    gs_access_key_id_file = $ENV(HOME)/credentials/bucket_access_key_id
-    gs_secret_access_key_file = $ENV(HOME)/credentials/bucket_secret_access_key
+    gs_access_key_id_file = /home/example/secrets/bucket_access_key_id
+    gs_secret_access_key_file = /home/example/secrets/bucket_secret_access_key
     transfer_input_files = s3://<cloud-storage-private-endpoint>/<bucket-name>/<input-key-name>
     transfer_output_remaps = "output.dat = s3://<cloud-storage-private-endpoint>/<bucket-name>/<output-key-name>"
