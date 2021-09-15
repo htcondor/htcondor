@@ -118,6 +118,10 @@ Bugs Fixed:
   edit access and all users have read access.
   :jira:`684`
 
+- Fixed a bug in *condor_gpu_discovery* that could result in no output or a segmentation fault
+  when the ``-opencl`` argument was used.
+  :jira:`729`
+
 - Fixed a bug that prevented Singularity jobs from running when the singularity
   binary emitted many warning messages to stderr.
   :jira:`698`
