@@ -15,7 +15,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Improved and simplified how HTCondor locates the blahp software.
+  Configuration parameter ``GLITE_LOCATION`` has been replaced by
+  ``BLAHPD_LOCATION``.
+  :jira:`713`
 
 Bugs Fixed:
 
