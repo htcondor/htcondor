@@ -45,6 +45,11 @@ New Features:
   configuration variable ``JOB_QUEUE_LOG`` existed but was not visible.
   :jira:`601`
 
+- Added a new option ``-log-steps`` to *condor_job_router_info*.  When used with the
+  ``-route-jobs`` option, this option will log each step of the route transforms
+  as they are applied.
+  :jira:`578`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented Singularity jobs from running when the singularity
