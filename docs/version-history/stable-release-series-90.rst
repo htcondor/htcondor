@@ -62,6 +62,11 @@ New Features:
   version of the tool.
   :jira:`676`
 
+- Added a new option ``-log-steps`` to *condor_job_router_info*.  When used with the
+  ``-route-jobs`` option, this option will log each step of the route transforms
+  as they are applied.
+  :jira:`578`
+
 Bugs Fixed:
 
 - The *bosco_cluster* tool now clears out old installation files when
