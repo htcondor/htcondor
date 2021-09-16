@@ -37,10 +37,8 @@ def main():
         classad[common] = f'"{value}"'
 
     # Interruptable requires a little more translation.
-    classad["Interruptable"] = "False"
     interruptable = fetch_value(token, "instance-life-cycle")
-    if interruptable == "spot":
-        classad["Interruptable"] = "True"
+    classad["Interruptable"] = "True" if interruptable == "spot" else "False"
 
     for k,v in classad.items():
         print(f"{k}={v}")
