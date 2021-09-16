@@ -34,7 +34,7 @@ New Features:
 
 - The stdin passed to *condor_job_router* hooks of type ``_TRANSLATE_JOB`` will
   now be passed information on the route in a format that is the same as what was passed
-  in the 8.8 series.  It will always be a classad, and include the route ``Name`` as
+  in the 8.8 series.  It will always be a ClassAd, and include the route ``Name`` as
   an attribute.
   :jira:`646`
 
@@ -65,7 +65,7 @@ Bugs Fixed:
   :jira:`577`
 
 - Updated *condor_gpu_discovery* to be compatible with version 470 of
-  NVidia's drivers.
+  nVidia's drivers.
   :jira:`620`
 
 - Fixed a bug that could cause the *condor_had* daemon to fail at startup
@@ -76,7 +76,7 @@ Bugs Fixed:
 
 - For the machine ad attributes ``OpSys*`` and configuration parameters
   ``OPSYS*``, treat macOS 11.X as if it were macOS 10.16.X.
-  This represents the major version nubmers in a consistent, if somewhat
+  This represents the major version numbers in a consistent, if somewhat
   inaccurate manner.
   :jira:`626`
 
