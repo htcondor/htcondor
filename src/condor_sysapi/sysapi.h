@@ -131,7 +131,7 @@ void sysapi_get_darwin_info(void);
 const char * sysapi_get_bsd_info(const char *opsys_short_name, const char *release); 
 const char * sysapi_get_linux_info(void);
 const char * sysapi_find_linux_name( const char *opsys_long_name );
-const char * sysapi_get_unix_info( const char *sysname, const char *release, const char *version, int append_version );
+const char * sysapi_get_unix_info( const char *sysname, const char *release, const char *version );
 void sysapi_get_windows_info( void );
 
 /* set appropriate resource limits on each platform */
