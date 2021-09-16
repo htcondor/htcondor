@@ -69,6 +69,14 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug that prevented Singularity jobs from running when the singularity
+  binary emitted many warning messages to stderr.
+  :jira:`698`
+
+- Fixed a bug that prevented *condor_ssh_to_job* from working to a personal
+  or non-rootly condor.
+  :jira:`485`
+
 - The *bosco_cluster* tool now clears out old installation files when
   the *--add* option is used to update an existing installation.
   :jira:`577`
