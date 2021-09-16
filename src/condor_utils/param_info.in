@@ -4270,14 +4270,6 @@ tags=schedd
 restart=true
 customization=expert
 
-[ENABLE_VERSIONED_OPSYS]
-default=true
-win32_default=false
-type=bool
-customization=devel
-description=Append OS version to the value of OPSYS
-tags=startd
-
 [WANT_SUSPEND]
 default=False
 [WANT_VACATE]

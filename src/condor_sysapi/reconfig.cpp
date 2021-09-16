@@ -80,7 +80,6 @@ int _sysapi_reserve_memory = 0;
 int _sysapi_getload = 0;
 
 bool _sysapi_net_devices_cached = false;
-bool _sysapi_opsys_is_versioned = false;
 
 /* needed by processor_flags.c */
 const char * _sysapi_processor_flags_raw = NULL;
@@ -98,12 +97,7 @@ sysapi_reconfig(void)
 {
 	char *tmp = NULL;
 
-#ifdef WIN32
-    /* configuration set up to enable legacy OpSys values (WINNT51 etc) */
-    _sysapi_opsys_is_versioned = param_boolean( "ENABLE_VERSIONED_OPSYS", false );
-#else
-    _sysapi_opsys_is_versioned = param_boolean( "ENABLE_VERSIONED_OPSYS", true );
-
+#if !defined(WIN32)
 	/* configuration set up for idle_time.C */
     if( _sysapi_console_devices ) {
         delete( _sysapi_console_devices );
