@@ -15,6 +15,14 @@ Release Notes:
 
 New Features:
 
+- Revamped machine ad attribute ``OpSys*`` and configuration parameter
+  ``OPSYS*`` values for macOS.
+  The OS name is now ``macOS`` and the version number no longer ignores
+  the initial ``10.`` or ``11.`` of the actual OS version.
+  For example, for macOS 10.15.4, the value of machine attribute
+  ``OpSysLongName`` is now ``"macOS 10.15"`` instead of ``"MacOSX 15.4"``.
+  :jira:`627`
+
 - Improved and simplified how HTCondor locates the blahp software.
   Configuration parameter ``GLITE_LOCATION`` has been replaced by
   ``BLAHPD_LOCATION``.
