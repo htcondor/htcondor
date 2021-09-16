@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+"""
+This is an example template for a custom HTCondor file transfer plugin.
+In this example, it transfers files described by an example://path/to/file URL
+by copying them from the path indicated to a job's working directory.
+To make this a functional plugin, change everything in this file that comes
+after a #CHANGE ME HERE comment.
+"""
+
 import classad
 import json
 import os
@@ -10,10 +18,10 @@ import socket
 import sys
 import time
 
-from urllib.parse import urlparse # Python 3
+from urllib.parse import urlparse
 
 DEFAULT_TIMEOUT = 30
-EXAMPLE_PLUGIN_VERSION = '1.0.0'
+PLUGIN_VERSION = '1.0.0'
 
 def print_help(stream = sys.stderr):
     help_msg = '''Usage: {0} -infile <input-filename> -outfile <output-filename>
@@ -33,8 +41,11 @@ def print_capabilities():
     capabilities = {
          'MultipleFileSupport': True,
          'PluginType': 'FileTransfer',
+         # SupportedMethods indicates which URL methods/types this plugin supports
+         #CHANGE ME HERE
          'SupportedMethods': 'example',
-         'Version': EXAMPLE_PLUGIN_VERSION,
+         #END CHANGE
+         'Version': PLUGIN_VERSION,
     }
     sys.stdout.write(classad.ClassAd(capabilities).printOld())
 
@@ -97,7 +108,9 @@ def get_error_dict(error, url = ''):
 
     return error_dict
 
+#CHANGE ME HERE
 class ExamplePlugin:
+#END CHANGE
 
     # Extract whatever information we want from the url provided.
     # In this example, convert the example://path/to/file url to a 
@@ -113,9 +126,11 @@ class ExamplePlugin:
         # Download transfer logic goes here
         # In this example, we simply copy the file from a path indicated in the
         # URL string to the current working directory.
+        #CHANGE ME HERE
         example_file_path = self.parse_url(url)
         shutil.copy(example_file_path, local_file_path)
         file_size = os.stat(local_file_path).st_size
+        #END CHANGE
 
         end_time = time.time()
 
@@ -142,9 +157,11 @@ class ExamplePlugin:
         # Upload transfer logic goes here
         # In this example, we simply copy the file to a path indicated in the
         # URL string from the current working directory.
+        #CHANGE ME HERE
         example_file_path = self.parse_url(url)
         shutil.copy(local_file_path, example_file_path)
         file_size = os.stat(local_file_path).st_size
+        #END CHANGE
 
         end_time = time.time()
 
@@ -173,7 +190,9 @@ if __name__ == '__main__':
     except Exception:
         sys.exit(1)
 
+    #CHANGE ME HERE
     example_plugin = ExamplePlugin()
+    #END CHANGE
 
     # Parse in the classads stored in the input file. 
     # Each ad represents a single file to be transferred.
@@ -194,9 +213,13 @@ if __name__ == '__main__':
             for ad in infile_ads:
                 try:
                     if not args['upload']:
+                        #CHANGE ME HERE
                         outfile_dict = example_plugin.download_file(ad['Url'], ad['LocalFileName'])
+                        #END CHANGE
                     else:
+                        #CHANGE ME HERE
                         outfile_dict = example_plugin.upload_file(ad['Url'], ad['LocalFileName'])
+                        #END CHANGE
 
                     outfile.write(str(classad.ClassAd(outfile_dict)))
 
