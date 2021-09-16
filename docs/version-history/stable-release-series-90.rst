@@ -45,6 +45,11 @@ New Features:
   configuration variable ``JOB_QUEUE_LOG`` existed but was not visible.
   :jira:`601`
 
+- Added a new option ``-log-steps`` to *condor_job_router_info*.  When used with the
+  ``-route-jobs`` option, this option will log each step of the route transforms
+  as they are applied.
+  :jira:`578`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented Singularity jobs from running when the singularity
@@ -99,6 +104,10 @@ Bugs Fixed:
   the permissions of the configuration files created by the installer so the installing user has
   edit access and all users have read access.
   :jira:`684`
+
+- Fixed a bug in *condor_gpu_discovery* that could result in no output or a segmentation fault
+  when the ``-opencl`` argument was used.
+  :jira:`729`
 
 Version 9.0.5
 -------------
