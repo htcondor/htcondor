@@ -28,6 +28,10 @@ New Features:
   ``BLAHPD_LOCATION``.
   :jira:`713`
 
+- Added an example template for a custom file transfer plugin, which can be
+  used to build new plugins.
+  :jira:`728`
+
 Bugs Fixed:
 
 - None.
