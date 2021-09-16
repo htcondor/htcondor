@@ -113,6 +113,11 @@ Bugs Fixed:
   when the ``-opencl`` argument was used.
   :jira:`729`
 
+- Fixed a bug that could the starter to crash after transferring files under
+  certain rare circumstances.   This also corrected a problem which may have
+  been causing the number of bytes transferred to be undercounted.
+  :jira:`722`
+
 Version 9.0.5
 -------------
 
