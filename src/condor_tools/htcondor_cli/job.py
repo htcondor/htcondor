@@ -1,16 +1,24 @@
-import htcondor
-import os
-import shutil
-import subprocess
 import sys
+import os
+import logging
+import subprocess
+import shlex
+import tempfile
+import time
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
-from .conf import *
-from .dagman import DAGMan
+import htcondor
 
-# Must be consistent with job status definitions in src/condor_includes/proc.h
+from htcondor_cli.noun import Noun
+from htcondor_cli.verb import Verb
+from htcondor_cli.dagman import DAGMan
+from htcondor_cli import TMP_DIR
+
+
+# Must be consistent with job status definitions in
+# src/condor_includes/proc.h
 JobStatus = [
     "NONE",
     "IDLE",
@@ -23,80 +31,109 @@ JobStatus = [
     "JOB_STATUS_MAX"
 ]
 
-schedd = htcondor.Schedd()
 
-class Job:
+class Submit(Verb):
     """
-    A :class:`Job` holds all operations related to HTCondor jobs
+    Submits a job when given a submit file
     """
 
-    @staticmethod
-    def submit(file, options=None):
+    options = {
+        "submit_file": {
+            "args": ("submit_file",),
+            "help": "Submit file",
+        },
+        "resource": {
+            "args": ("--resource",),
+            "help": "Resource to run this job. Supports Slurm and EC2",
+        },
+        "runtime": {
+            "args": ("--runtime",),
+            "help": "Runtime for the given resource (seconds)",
+            "type": int,
+        },
+        "email": {
+            "args": ("--email",),
+            "help": "Email address to receive notifications",
+        },
+    }
 
-        # Make sure the specified submit file exists and is readable!
-        if os.access(file, os.R_OK) is False:
-            print(f"Error: could not read file {file}")
-            sys.exit(1)
+    def __init__(self, logger, submit_file, **options):
+        # Make sure the specified submit file exists and is readable
+        submit_file = Path(submit_file)
+        if not submit_file.exists():
+            raise FileNotFoundError(f"Could not find file: {str(submit_file)}")
+        if os.access(submit_file, os.R_OK) is False:
+            raise PermissionError(f"Could not access file: {str(submit_file)}")
+
+        # Get schedd
+        schedd = htcondor.Schedd()
 
         # If no resource specified, submit job to the local schedd
-        if "resource" not in options:
+        options["resource"] = options["resource"] or "htcondor"
+        if options["resource"].casefold() == "htcondor":
 
-            with open(file, "r") as submit_file:
-                submit_data = submit_file.read()
+            with submit_file.open() as f:
+                submit_data = f.read()
             submit_description = htcondor.Submit(submit_data)
 
             # The Job class can only submit a single job at a time
             submit_qargs = submit_description.getQArgs()
             if submit_qargs != "" and submit_qargs != "1":
-                print("Error: can only submit one job at a time")
-                sys.exit(1)
+                raise ValueError("Can only submit one job at a time")
 
             with schedd.transaction() as txn:
                 try:
                     cluster_id = submit_description.queue(txn, 1)
-                    print(f"Job {cluster_id} was submitted.")
-                except Exception as error:
-                    print(f"Error submitting job: {error}")
-                    sys.exit(1)
+                    logger.info(f"Job {cluster_id} was submitted.")
+                except Exception as e:
+                    raise RuntimeError(f"Error submitting job:\n{str(e)}")
 
-        elif options["resource"] == "slurm":
+        elif options["resource"].casefold() == "slurm":
 
-            if "runtime" not in options:
-                print("Error: Slurm resources must specify a --runtime argument")
-                sys.exit(1)
+            if options["runtime"] is None:
+                raise TypeError("Slurm resources must specify a runtime argument")
 
             # Verify that we have Slurm access; if not, run bosco_clutser to create it
             try:
-                subprocess.check_output(["bosco_cluster", "--status", "hpclogin1.chtc.wisc.edu"])
-            except Exception:
-                print(f"You need to install support software to access the Slurm cluster. Please run the following command in your terminal:\n\nbosco_cluster --add hpclogin1.chtc.wisc.edu slurm\n")
-                sys.exit(1)
+                bosco_cmd = "bosco_cluster --status hpclogin1.chtc.wisc.edu"
+                logger.debug(f"Attempting to run: {bosco_cmd}")
+                subprocess.check_output(shlex.split(bosco_cmd))
+            except (FileNotFoundError, subprocess.CalledProcessError):
+                install_bosco = (
+"""
+You need to install support software to access the Slurm cluster.
+Please run the following command in your terminal:
+
+bosco_cluster --add hpclogin1.chtc.wisc.edu slurm
+"""
+                ).strip()
+                raise RuntimeError(install_bosco)
+            except Exception as e:
+                raise RuntimeError(f"Could not execute {bosco_cmd}:\n{str(e)}")
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
-            DAGMan.write_slurm_dag(file, options["runtime"], options["email"])
+            DAGMan.write_slurm_dag(submit_file, options["runtime"], options["email"])
             os.chdir(TMP_DIR) # DAG must be submitted from TMP_DIR
             submit_description = htcondor.Submit.from_dag(str(TMP_DIR / "slurm_submit.dag"))
             submit_description["+ResourceType"] = "\"Slurm\""
-            
+
             # The Job class can only submit a single job at a time
             submit_qargs = submit_description.getQArgs()
             if submit_qargs != "" and submit_qargs != "1":
-                print("Error: can only submit one job at a time. See the job-set syntax for submitting multiple jobs.")
-                sys.exit(1)
+                raise ValueError("Can only submit one job at a time. "
+                    "See the job-set syntax for submitting multiple jobs.")
 
             with schedd.transaction() as txn:
                 try:
                     cluster_id = submit_description.queue(txn, 1)
-                    print(f"Job {cluster_id} was submitted.")
-                except Exception as error:
-                    print(f"Error submitting job: f{error}")
-                    sys.exit(1)
+                    logger.info(f"Job {cluster_id} was submitted.")
+                except Exception as e:
+                    raise RuntimeError(f"Error submitting job:\n{str(e)}")
 
         elif options["resource"] == "ec2":
 
-            if "runtime" not in options:
-                print("Error: EC2 resources must specify a --runtime argument")
-                sys.exit(1)
+            if options["runtime"] is None:
+                raise TypeError("Error: EC2 resources must specify a --runtime argument")
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
             DAGMan.write_ec2_dag(file, options["runtime"], options["email"])
@@ -107,63 +144,69 @@ class Job:
             # The Job class can only submit a single job at a time
             submit_qargs = submit_description.getQArgs()
             if submit_qargs != "" and submit_qargs != "1":
-                print("Error: can only submit one job at a time. See the job-set syntax for submitting multiple jobs.")
-                sys.exit(1)
+                raise ValueError("Can only submit one job at a time. "
+                    "See the job-set syntax for submitting multiple jobs.")
 
             with schedd.transaction() as txn:
                 try:
                     cluster_id = submit_description.queue(txn, 1)
-                    print(f"Job {cluster_id} was submitted.")
-                except Exception as error:
-                    print(f"Error submitting job: f{error}")
-                    sys.exit(1)
+                    logger.info(f"Job {cluster_id} was submitted.")
+                except Exception as e:
+                    raise RuntimeError(f"Error submitting job:\n{str(e)}")
+
+class Status(Verb):
+    """
+    Shows current status of a job when given a job id
+    """
+
+    options = {
+        "job_id": {
+            "args": ("job_id",),
+            "help": "Job ID",
+        },
+    }
 
 
-    @staticmethod
-    def status(id, options=None):
-        """
-        Displays the status of a job
-        """
-
+    def __init__(self, logger, job_id, **options):
         job = None
         job_status = "IDLE"
         resource_type = "htcondor"
 
+        # Get schedd
+        schedd = htcondor.Schedd()
+
+        # Query schedd
         try:
             job = schedd.query(
-                constraint=f"ClusterId == {id}",
+                constraint=f"ClusterId == {job_id}",
                 projection=["JobStartDate", "JobStatus", "LastVacateTime", "ResourceType"]
             )
         except IndexError:
-            print(f"No job found for ID {id}.")
-            sys.exit(0)
-        except Exception as err:
-            print(f"Error looking up job status: {err}")
-            sys.exit(1)
-
+            raise RuntimeError(f"No job found for ID {job_id}.")
+        except Exception as e:
+            raise RuntimeError(f"Error looking up job status: {str(e)}")
         if len(job) == 0:
-            print(f"No job found for ID {id}.")
-            sys.exit(0)
-            
-        if "ResourceType" in job[0]:
-            resource_type = job[0]["ResourceType"].lower()
-        
+            raise RuntimeError(f"No job found for ID {job_id}.")
+
+        resource_type = job[0].get("ResourceType", "htcondor") or "htcondor"
+        resource_type = resource_type.casefold()
+
         # Now, produce job status based on the resource type
         if resource_type == "htcondor":
             if JobStatus[job[0]['JobStatus']] == "RUNNING":
                 job_running_time = datetime.now() - datetime.fromtimestamp(job[0]["JobStartDate"])
-                print(f"Job is running since {round(job_running_time.seconds/3600)}h{round(job_running_time.seconds/60)}m{(job_running_time.seconds%60)}s")
+                logger.info(f"Job is running since {round(job_running_time.seconds/3600)}h{round(job_running_time.seconds/60)}m{(job_running_time.seconds%60)}s")
             elif JobStatus[job[0]['JobStatus']] == "HELD":
                 job_held_time = datetime.now() - datetime.fromtimestamp(job[0]["LastVacateTime"])
-                print(f"Job is held since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s")
+                logger.info(f"Job is held since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s")
             elif JobStatus[job[0]['JobStatus']] == "COMPLETED":
-                print("Job has completed")
+                logger.info("Job has completed")
             else:
-                print(f"Job is {JobStatus[job[0]['JobStatus']]}")
+                logger.info(f"Job is {JobStatus[job[0]['JobStatus']]}")
 
         # Jobs running on provisioned Slurm or EC2 resources need to retrieve
         # additional information from the provisioning DAGMan log
-        elif resource_type == "slurm" or resource_type == "ec2":
+        elif resource_type in ["slurm", "ec2"]:
 
             # Variables specific to jobs running on Slurm clusters
             jobs_running = 0
@@ -177,8 +220,7 @@ class Job:
             dagman_dag, dagman_out, dagman_log = DAGMan.get_files(id)
 
             if dagman_dag is None:
-                print(f"No {resource_type} job found for ID {id}.")
-                sys.exit(0)
+                raise RuntimeError(f"No {resource_type} job found for ID {job_id}.")
 
             # Parse the .dag file to retrieve some user input values
             with open(dagman_dag, "r") as dagman_dag_file:
@@ -217,59 +259,72 @@ class Job:
 
             # Now that we have all the information we want, display it
             if job_status == "COMPLETED":
-                print("Job has completed")
+                logger.info("Job has completed")
             else:
                 if job_status == "PROVISIONING REQUEST PENDING":
-                    print(f"Job is waiting for {resource_type.upper()} to provision pending request", end='')
+                    logger.info(f"Job is waiting for {resource_type.upper()} to provision pending request", end='')
                 else:
-                    print(f"Job is {job_status}", end='')
+                    info_str = f"Job is {job_status}"
                     if time_diff is not None:
-                        print(f" since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
-                    else:
-                        print("")
+                        info_str = f"{info_str} since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s"
+                    logger.info(info_str)
 
         else:
-            print(f"Error: The 'job status' command does not support {resource_type} resources.")
-            sys.exit(1)
+            raise ValueError(f"Error: The 'job status' command does not support {resource_type} resources.")
 
 
-    @staticmethod
-    def resources(id, options=None):
-        """
-        Displays the resources used by a specified job
-        """
+class Resources(Verb):
+    """
+    Shows resources used by a job when given a job id
+    """
+
+    options = {
+        "job_id": {
+            "args": ("job_id",),
+            "help": "Job ID",
+        },
+        "resource": {
+            "args": ("--resource",),
+            "help": "Resource used by job. Required for Slurm jobs.",
+        },
+    }
+
+    def __init__(self, logger, job_id, **options):
+        # Get schedd
+        schedd = htcondor.Schedd()
 
         # If no resource specified, assume job is running on local pool
-        if "resource" not in options:
+        resource = options.get("resource", "htcondor") or "htcondor"
+        resource = resource.casefold()
+        if resource == "htcondor":
             try:
                 job = schedd.query(
-                    constraint=f"ClusterId == {id}",
+                    constraint=f"ClusterId == {job_id}",
                     projection=["RemoteHost"]
                 )
             except IndexError:
-                print(f"No jobs found for ID {id}.")
-                sys.exit(0)
+                raise RuntimeError(f"No jobs found for ID {job_id}.")
             except:
-                print(f"Unable to look up job resources")
-                sys.exit(1)
-                
+                raise RuntimeError(f"Unable to look up job resources")
             if len(job) == 0:
-                print(f"No jobs found for ID {id}.")
-                sys.exit(0)
-            
-            # TODO: Make this work correctly for jobs that havne't started running yet 
-            job_host = job[0]["RemoteHost"]
-            print(f"Job is using resource {job_host}")
+                raise RuntimeError(f"No jobs found for ID {job_id}.")
+
+            # TODO: Make this work correctly for jobs that haven't started running yet
+            try:
+                job_host = job[0]["RemoteHost"]
+            except KeyError:
+                raise RuntimeError(f"Job {job_id} is not running yet.")
+            logger.info(f"Job is using resource {job_host}")
 
         # Jobs running on provisioned Slurm resources need to retrieve
         # additional information from the provisioning DAGMan log
-        elif options["resource"] == "slurm":
+        elif resource == "slurm":
 
             # Internal variables
             dagman_cluster_id = None
             provisioner_cluster_id = None
             slurm_cluster_id = None
-        
+
             # User-facing variables (all values set below are default/initial state)
             provisioner_job_submitted_time = None
             provisioner_job_scheduled_end_time = None
@@ -282,8 +337,7 @@ class Job:
             dagman_dag, dagman_out, dagman_log = DAGMan.get_files(id)
 
             if dagman_dag is None:
-                print(f"No Slurm job found for ID {id}.")
-                sys.exit(0)
+                raise RuntimeError(f"No Slurm job found for ID {job_id}.")
 
             # Parse the .dag file to retrieve some user input values
             with open(dagman_dag, "r") as dagman_dag_file:
@@ -317,18 +371,39 @@ class Job:
 
             # Now that we have all the information we want, display it
             if job_status == "PROVISIONING REQUEST PENDING":
-                print(f"Job is still waiting for {slurm_nodes_requested} Slurm nodes to provision")
+                logger.info(f"Job is still waiting for {slurm_nodes_requested} Slurm nodes to provision")
             elif job_status == "RUNNING":
-                print(f"Job is running on {jobs_running}/{slurm_nodes_requested} requested Slurm nodes")
+                logger.info(f"Job is running on {jobs_running}/{slurm_nodes_requested} requested Slurm nodes")
             elif job_status == "ERROR":
-                print(f"An error occurred provisioning Slurm resources")
+                logger.info(f"An error occurred provisioning Slurm resources")
 
             # Show information about time remaining
             if job_status == "RUNNING" or job_status == "COMPLETE":
                 current_time = datetime.now()
                 if current_time < provisioner_job_scheduled_end_time:
                     time_diff = provisioner_job_scheduled_end_time - current_time
-                    print(f"Slurm resources are reserved for another {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
+                    logger.info(f"Slurm resources are reserved for another {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
                 else:
                     time_diff = current_time - provisioner_job_scheduled_end_time
-                    print(f"Slurm resources were terminated since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
+                    logger.info(f"Slurm resources were terminated since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
+
+
+
+class Job(Noun):
+    """
+    Run operations on HTCondor jobs
+    """
+
+    class submit(Submit):
+        pass
+
+    class status(Status):
+        pass
+
+    class resources(Resources):
+        pass
+
+    @classmethod
+    def verbs(cls):
+        return [cls.submit, cls.status, cls.resources]
+
