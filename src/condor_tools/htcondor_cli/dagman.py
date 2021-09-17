@@ -3,28 +3,30 @@ import htcondor
 import os
 import sys
 import stat
+import tempfile
+import time
 
-from .conf import *
+from pathlib import Path
 
-# Make sure we have a schedd!
-try:
-    schedd = htcondor.Schedd()
-except:
-    print(f"Could not access local schedd. This tool must be a run from an HTCondor submit machine.")
-    sys.exit(1)
+from htcondor_cli import TMP_DIR
+
+
+schedd = htcondor.Schedd()
+
 
 class DAGMan:
     """
     A :class:`DAGMan` holds internal operations related to DAGMan jobs
     """
 
+
     @staticmethod
     def get_files(dagman_id):
         """
-        Retrieve the filenames of a DAGs output and event logs based on 
+        Retrieve the filenames of a DAGs output and event logs based on
         DAGMan cluster id
         """
-    
+
         dag, iwd, log, out = None, None, None, None
 
         env = schedd.query(
@@ -34,12 +36,13 @@ class DAGMan:
 
         if env:
             iwd = env[0]["Iwd"]
-            env = dict(item.split("=", 1) for item in env[0]["Env"].split(";")) 
+            env = dict(item.split("=", 1) for item in env[0]["Env"].split(";"))
             out = Path(iwd) / Path(os.path.split(env["_CONDOR_DAGMAN_LOG"])[1])
             log = Path(str(out).replace(".dagman.out", ".nodes.log"))
             dag = Path(str(out).replace(".dagman.out", ""))
 
         return str(dag), str(out), str(log)
+
 
     @staticmethod
     def write_slurm_dag(jobfile, runtime, email):
@@ -50,14 +53,12 @@ class DAGMan:
 
         with open(TMP_DIR / "sendmail.sh", "w") as sendmail_sh_file:
             sendmail_sh_file.write(sendmail_sh)
-        sendmail_sh_file.close()
         st = os.stat(TMP_DIR / "sendmail.sh")
         os.chmod(TMP_DIR / "sendmail.sh", st.st_mode | stat.S_IEXEC)
 
         slurm_config = "DAGMAN_USE_CONDOR_SUBMIT = False\nDAGMAN_USE_STRICT = 0\n"
         with open(TMP_DIR / "slurm_submit.config", "w") as slurm_config_file:
             slurm_config_file.write(slurm_config)
-        slurm_config_file.close()
 
         slurm_dag = f"""JOB A {{
     executable = sendmail.sh
@@ -106,6 +107,7 @@ VARS C +WantFlocking="True"
 
         with open(TMP_DIR / "slurm_submit.dag", "w") as dag_file:
             dag_file.write(slurm_dag)
+
 
     @staticmethod
     def write_ec2_dag(jobfile, runtime, email):
