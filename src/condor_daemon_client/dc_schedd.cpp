@@ -412,7 +412,7 @@ DCSchedd::exportJobs(const char * constraint_str, const char * export_dir, const
 }
 
 	/** import the results from a previously exported job_queue.log managed by Lumberjack
-			@param exported_job_log path to the exported job_queue.log
+			@param import_dir directory containing the exported job_queue.log and job files to be imported
 	*/
 ClassAd* 
 DCSchedd::importExportedJobResults(const char * import_dir, CondorError * errstack)
