@@ -46,6 +46,10 @@ Bugs Fixed:
   the previous default value of */bin/mail*.
   :jira:`581`
 
+- Removed unnecessary limit on history ad polling and fixed some
+  configuration parameter checks in *condor_adstash*.
+  :jira:`629`
+
 Version 9.1.6
 -------------
 
