@@ -46,14 +46,29 @@ Bugs Fixed:
   the previous default value of */bin/mail*.
   :jira:`581`
 
+Version 9.1.6
+-------------
+
+Release Notes:
+
+- HTCondor version 9.1.6 limited release on September 14, 2021.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug that prevented Singularity jobs from running when the singularity
+  binary emitted many warning messages to stderr.
+  :jira:`698`
+
 Version 9.1.5
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.1.5 released on Month Date, 2021.
-
-- HTCondor version 9.1.5 not yet released.
+- HTCondor version 9.1.5 limited release on September 8, 2021.
 
 New Features:
 
