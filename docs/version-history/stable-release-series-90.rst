@@ -19,24 +19,22 @@ Release Notes:
 
 New Features:
 
-- Added configuration parameter ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``,
-  a boolean value which defaults to ``False``.
-  If set to ``True``, then clients that authenticate to a daemon using
-  SSL must present a valid SSL credential.
-  :jira:`236`
-
-- The *condor_watch_q* command now refuses to watch the queue if
-  doing so would require using more kernel resources ("inotify watches")
-  than allowed.  This limit can be increased by your system
-  administrator, and we expect to remove this limitation in a future
-  version of the tool.
-  :jira:`676`
+- Added a new option ``-log-steps`` to *condor_job_router_info*.  When used with the
+  ``-route-jobs`` option, this option will log each step of the route transforms
+  as they are applied.
+  :jira:`578`
 
 - The stdin passed to *condor_job_router* hooks of type ``_TRANSLATE_JOB`` will
   now be passed information on the route in a format that is the same as what was passed
   in the 8.8 series.  It will always be a ClassAd, and include the route ``Name`` as
   an attribute.
   :jira:`646`
+
+- Added configuration parameter ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``,
+  a boolean value which defaults to ``False``.
+  If set to ``True``, then clients that authenticate to a daemon using
+  SSL must present a valid SSL credential.
+  :jira:`236`
 
 - The location of database files for the *condor_schedd* and the *condor_negotiator* can
   now be configured directly by using the configuration variables ``JOB_QUEUE_LOG`` and
@@ -45,16 +43,40 @@ New Features:
   configuration variable ``JOB_QUEUE_LOG`` existed but was not visible.
   :jira:`601`
 
-- Added a new option ``-log-steps`` to *condor_job_router_info*.  When used with the
-  ``-route-jobs`` option, this option will log each step of the route transforms
-  as they are applied.
-  :jira:`578`
+- The *condor_watch_q* command now refuses to watch the queue if
+  doing so would require using more kernel resources ("inotify watches")
+  than allowed.  This limit can be increased by your system
+  administrator, and we expect to remove this limitation in a future
+  version of the tool.
+  :jira:`676`
 
 Bugs Fixed:
+
+- The ``CUDA_VISIBLE_DEVICES`` environment variable may now contain ``CUDA<n>``
+  and ``GPU-<uuid>`` formatted values, in addition to integer values.
+  :jira:`669`
+
+- Updated *condor_gpu_discovery* to be compatible with version 470 of
+  nVidia's drivers.
+  :jira:`620`
+
+- If run with only the CUDA runtime library available, *condor_gpu_discovery*
+  and *condor_gpu_utilization* no longer crash.
+  :jira:`668`
+
+- Fixed a bug in *condor_gpu_discovery* that could result in no output or a segmentation fault
+  when the ``-opencl`` argument was used.
+  :jira:`729`
 
 - Fixed a bug that prevented Singularity jobs from running when the singularity
   binary emitted many warning messages to stderr.
   :jira:`698`
+
+- The Windows MSI installer has been updated so that it no longer reports that a script
+  failed during installation on the latest version of Windows 10.  This update also changes
+  the permissions of the configuration files created by the installer so the installing user has
+  edit access and all users have read access.
+  :jira:`684`
 
 - Fixed a bug that prevented *condor_ssh_to_job* from working to a personal
   or non-rootly condor.
@@ -63,10 +85,6 @@ Bugs Fixed:
 - The *bosco_cluster* tool now clears out old installation files when
   the *--add* option is used to update an existing installation.
   :jira:`577`
-
-- Updated *condor_gpu_discovery* to be compatible with version 470 of
-  nVidia's drivers.
-  :jira:`620`
 
 - Fixed a bug that could cause the *condor_had* daemon to fail at startup
   when the local machine has multiple IP addresses.
@@ -90,28 +108,10 @@ Bugs Fixed:
   automatically considers them part of the output.
   :jira:`656`
 
-- If run with only the CUDA runtime library available, *condor_gpu_discovery*
-  and *condor_gpu_utilization* no longer crash.
-  :jira:`668`
-
-- The ``CUDA_VISIBLE_DEVICES`` environment variable may now contain ``CUDA<n>``
-  and ``GPU-<uuid>`` formatted values, in addition to integer values.
-  :jira:`669`
-
 - HTCondor now transfers the standard output and error logs when
   ``when_to_transfer_output`` is ``ON_SUCCESS`` and ``transfer_output_files``
   is empty.
   :jira:`673`
-
-- The Windows MSI installer has been updated so that it no longer reports that a script
-  failed during installation on the latest version of Windows 10.  This update also changes
-  the permissions of the configuration files created by the installer so the installing user has
-  edit access and all users have read access.
-  :jira:`684`
-
-- Fixed a bug in *condor_gpu_discovery* that could result in no output or a segmentation fault
-  when the ``-opencl`` argument was used.
-  :jira:`729`
 
 - Fixed a bug that could the starter to crash after transferring files under
   certain rare circumstances.   This also corrected a problem which may have
