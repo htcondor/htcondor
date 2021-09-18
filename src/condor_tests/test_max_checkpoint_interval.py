@@ -2,16 +2,16 @@
 
 import logging
 
+from htcondor import (
+    JobEventType,
+)
+
 from ornithology import (
     config,
     standup,
     action,
 
-    in_order,
-    JobQueue,
-    JobStatus,
     write_file,
-    SetJobStatus,
     ClusterState,
     format_script,
 )
@@ -190,10 +190,8 @@ def final_job_one_handle(default_condor, job_one_handle, all_job_handles):
 
 
 @action
-def job_one_events(default_condor, final_job_one_handle):
-    job_queue = JobQueue(default_condor)
-    job_queue.wait_for_job_completion(final_job_one_handle.job_ids)
-    return job_queue.by_jobid[final_job_one_handle.job_ids[0]]
+def job_one_events(final_job_one_handle):
+    return final_job_one_handle.event_log.events
 
 
 @action
@@ -231,32 +229,55 @@ def final_job_three_handle(default_condor, job_three_handle, all_job_handles):
 
 
 @action
-def job_three_events(default_condor, final_job_three_handle):
-    job_queue = JobQueue(default_condor)
-    job_queue.wait_for_job_completion(final_job_three_handle.job_ids)
-    return job_queue.by_jobid[final_job_three_handle.job_ids[0]]
+def job_three_events(final_job_three_handle):
+    return final_job_three_handle.event_log.events
+
+
+def types_in_events(types, events):
+    # event_types = [e.type for e in events]
+    # return any(type in event_types for type in types)
+    return any(t in [e.type for e in events] for t in types)
+
+
+def event_types_in_order(types, events):
+    t = 0
+    for i in range(0, len(events)):
+        event = events[i]
+
+        if event.type == types[t]:
+            t += 1
+            if t == len(types):
+                return True
+    else:
+        return False
 
 
 class TestMaxCheckpointInterval:
     def test_job_one_completed(self, job_one_events):
-        assert SetJobStatus(JobStatus.HELD) not in job_one_events
-        assert in_order(
-            job_one_events,
+        assert not types_in_events(
+            [JobEventType.JOB_HELD], job_one_events
+        )
+
+        assert event_types_in_order(
             [
-                SetJobStatus(JobStatus.IDLE),
-                SetJobStatus(JobStatus.RUNNING),
-                SetJobStatus(JobStatus.COMPLETED),
+                JobEventType.SUBMIT,
+                JobEventType.EXECUTE,
+                JobEventType.JOB_TERMINATED,
             ],
+            job_one_events
         )
 
 
     def test_job_three_held(self, job_three_events):
-        assert SetJobStatus(JobStatus.COMPLETED) not in job_three_events
-        assert in_order(
-            job_three_events,
+        assert not types_in_events(
+            [JobEventType.JOB_TERMINATED], job_three_events
+        )
+
+        assert event_types_in_order(
             [
-                SetJobStatus(JobStatus.IDLE),
-                SetJobStatus(JobStatus.RUNNING),
-                SetJobStatus(JobStatus.HELD),
+                JobEventType.SUBMIT,
+                JobEventType.EXECUTE,
+                JobEventType.JOB_HELD,
             ],
+            job_three_events
         )
