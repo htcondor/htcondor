@@ -8,6 +8,7 @@ from ornithology import (
     action,
 
     in_order,
+    JobQueue,
     JobStatus,
     write_file,
     SetJobStatus,
@@ -33,6 +34,12 @@ logger.setLevel(logging.DEBUG)
 #    checkpoint become so if it's restarted after its first checkpoint?
 #
 
+#
+# Please don't try to edit the constants to speed this test up.
+#
+# If you must, make sure, among other things, that this job takes
+# longer to complete than twice the specified MaxCheckpointInterval.
+#
 
 @action
 def path_to_the_job_script(test_dir):
@@ -41,6 +48,13 @@ def path_to_the_job_script(test_dir):
 
     import sys
     import time
+    import getopt
+
+    opt_slow_step = -1
+    (list, remainder) = getopt.getopt(sys.argv[1:], '', ['normal', 'slow='])
+    for option, value in list:
+        if option == "--slow":
+            opt_slow_step = int(value)
 
     total_steps = 24
     num_completed_steps = 0
@@ -52,7 +66,11 @@ def path_to_the_job_script(test_dir):
 
     while num_completed_steps < total_steps:
         print(f"Starting step {num_completed_steps}.")
-        time.sleep(1)
+
+        if num_completed_steps == opt_slow_step:
+            time.sleep(60)
+        else:
+            time.sleep(3)
         num_completed_steps += 1
 
         if num_completed_steps % 5 == 0:
@@ -76,15 +94,11 @@ def path_to_the_job_script(test_dir):
 
 
 @action
-def the_job_description(test_dir, path_to_the_job_script):
+def the_job_description(path_to_the_job_script):
     return {
         # Setting this means that all terminal job states leave the job
         # in the queue until it's removed, which is convenient.
         "LeaveJobInQueue":              "true",
-
-        "output":                       test_dir / "job_one.out",
-        "error":                        test_dir / "job_one.err",
-        "log":                          test_dir / "job.log",
 
         "executable":                   path_to_the_job_script.as_posix(),
         "transfer_executable":          "true",
@@ -94,6 +108,7 @@ def the_job_description(test_dir, path_to_the_job_script):
         "checkpoint_exit_code":         "17",
         "transfer_checkpoint_files":    "saved-state",
 
+        # Desired "first-class" implementation.
         # "max_checkpoint_interval":    "30",
 
         "+MaxCheckpointInterval":       "30",
@@ -108,7 +123,7 @@ def the_job_description(test_dir, path_to_the_job_script):
 
 
 #
-# FIXME: We submit the jobs for tests #1, #3, and #4, at the same time,
+# We submit the jobs for tests #1, #3, and #4, at the same time,
 # because we don't need to interact with them while they're running, just
 # check their log when they're done.
 #
@@ -128,10 +143,29 @@ def the_job_description(test_dir, path_to_the_job_script):
 # so right at the moment.
 #
 
+#
+# This fixture depends on all of the job_*_handle fixtures we want to run
+# concurrently.  Since each of the final_job_*_handle fixtures depend
+# on this fixture, each job will have been submitted before we start
+# waiting on the first one, whichever one that might be.
+#
 
 @action
-def job_one_handle(default_condor, the_job_description):
-    job_one_description = {** the_job_description, ** {"arguments": "FIXME"}}
+def all_job_handles(job_one_handle, job_three_handle):
+    pass
+
+
+@action
+def job_one_handle(default_condor, test_dir, the_job_description):
+    job_one_description = {
+        ** the_job_description,
+        ** {
+            "arguments":    "--normal",
+            "log":          test_dir / "job_one.log",
+            "output":       test_dir / "job_one.out",
+            "error":        test_dir / "job_one.err",
+        }
+    }
 
     job_one_handle = default_condor.submit(
         description = job_one_description,
@@ -143,47 +177,86 @@ def job_one_handle(default_condor, the_job_description):
     job_one_handle.remove()
 
 
-#
-# This fixture depends on all of the job_*_handle fixtures we want to run
-# concurrently.  Since each of the completed_job_*_handle fixtures depend
-# on this fixture, each job will have been submitted before we start
-# waiting on the first one, whichever one that might be.
-#
-
-
 @action
-def all_job_handles(job_one_handle):
-    pass
-
-
-@action
-def completed_job_one_handle(default_condor, job_one_handle, all_job_handles):
+def final_job_one_handle(default_condor, job_one_handle, all_job_handles):
     job_one_handle.wait(
         verbose = True,
         timeout = 180,
+        condition = ClusterState.all_complete,
         fail_condition = ClusterState.any_held,
     )
-
-    # We must also wait for the job queue here, because we assume it's in
-    # sync with the job handle later.
-    default_condor.job_queue.wait_for_job_completion(job_one_handle.job_ids)
 
     return job_one_handle
 
 
 @action
-def completed_job_one_events(default_condor, completed_job_one_handle):
-    return default_condor.job_queue.by_jobid[completed_job_one_handle.job_ids[0]]
+def job_one_events(default_condor, final_job_one_handle):
+    job_queue = JobQueue(default_condor)
+    job_queue.wait_for_job_completion(final_job_one_handle.job_ids)
+    return job_queue.by_jobid[final_job_one_handle.job_ids[0]]
+
+
+@action
+def job_three_handle(default_condor, test_dir, the_job_description):
+    job_three_description = {
+        ** the_job_description,
+        ** {
+            "arguments":    "--slow 0",
+            "log":          test_dir / "job_three.log",
+            "output":       test_dir / "job_three.out",
+            "error":        test_dir / "job_three.err",
+       }
+    }
+
+    job_three_handle = default_condor.submit(
+        description = job_three_description,
+        count = 1,
+    )
+
+    yield job_three_handle
+
+    job_three_handle.remove()
+
+
+@action
+def final_job_three_handle(default_condor, job_three_handle, all_job_handles):
+    job_three_handle.wait(
+        verbose = True,
+        timeout = 180,
+        condition = ClusterState.any_held,
+        fail_condition = ClusterState.all_complete,
+    )
+
+    return job_three_handle
+
+
+@action
+def job_three_events(default_condor, final_job_three_handle):
+    job_queue = JobQueue(default_condor)
+    job_queue.wait_for_job_completion(final_job_three_handle.job_ids)
+    return job_queue.by_jobid[final_job_three_handle.job_ids[0]]
 
 
 class TestMaxCheckpointInterval:
-    def test_job_completion(self, completed_job_one_events):
-        assert SetJobStatus(JobStatus.HELD) not in completed_job_one_events
+    def test_job_one_completed(self, job_one_events):
+        assert SetJobStatus(JobStatus.HELD) not in job_one_events
         assert in_order(
-            completed_job_one_events,
+            job_one_events,
             [
                 SetJobStatus(JobStatus.IDLE),
                 SetJobStatus(JobStatus.RUNNING),
                 SetJobStatus(JobStatus.COMPLETED),
+            ],
+        )
+
+
+    def test_job_three_held(self, job_three_events):
+        assert SetJobStatus(JobStatus.COMPLETED) not in job_three_events
+        assert in_order(
+            job_three_events,
+            [
+                SetJobStatus(JobStatus.IDLE),
+                SetJobStatus(JobStatus.RUNNING),
+                SetJobStatus(JobStatus.HELD),
             ],
         )
