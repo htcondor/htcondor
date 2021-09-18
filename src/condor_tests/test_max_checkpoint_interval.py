@@ -151,7 +151,7 @@ def the_job_description(path_to_the_job_script):
 #
 
 @action
-def all_job_handles(job_one_handle, job_three_handle):
+def all_job_handles(job_one_handle, job_three_handle, job_four_handle):
     pass
 
 
@@ -233,9 +233,50 @@ def job_three_events(final_job_three_handle):
     return final_job_three_handle.event_log.events
 
 
+@action
+def job_four_handle(default_condor, test_dir, the_job_description):
+    job_four_description = {
+        ** the_job_description,
+        ** {
+            "arguments":    "--slow 6",
+            "log":          test_dir / "job_four.log",
+            "output":       test_dir / "job_four.out",
+            "error":        test_dir / "job_four.err",
+       }
+    }
+
+    job_four_handle = default_condor.submit(
+        description = job_four_description,
+        count = 1,
+    )
+
+    yield job_four_handle
+
+    job_four_handle.remove()
+
+
+@action
+def final_job_four_handle(default_condor, job_four_handle, all_job_handles):
+    job_four_handle.wait(
+        verbose = True,
+        timeout = 180,
+        condition = ClusterState.any_held,
+        fail_condition = ClusterState.all_complete,
+    )
+
+    return job_four_handle
+
+
+@action
+def job_four_events(final_job_four_handle):
+    return final_job_four_handle.event_log.events
+
+
+#
+# Utility functions for the tests.
+#
+
 def types_in_events(types, events):
-    # event_types = [e.type for e in events]
-    # return any(type in event_types for type in types)
     return any(t in [e.type for e in events] for t in types)
 
 
@@ -280,4 +321,19 @@ class TestMaxCheckpointInterval:
                 JobEventType.JOB_HELD,
             ],
             job_three_events
+        )
+
+
+    def test_job_four_held(self, job_four_events):
+        assert not types_in_events(
+            [JobEventType.JOB_TERMINATED], job_four_events
+        )
+
+        assert event_types_in_order(
+            [
+                JobEventType.SUBMIT,
+                JobEventType.EXECUTE,
+                JobEventType.JOB_HELD,
+            ],
+            job_four_events
         )
