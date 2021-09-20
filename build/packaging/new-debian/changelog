@@ -22,8 +22,8 @@ condor (9.0.5-1) stable; urgency=medium
 condor (9.1.2-1) stable; urgency=high
 
   * Fixes for security issues
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
 
  -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 Jul 2021 10:35:12 -0500
 
@@ -45,8 +45,8 @@ condor (8.8.15-1) stable; urgency=high
 condor (9.1.1-1) stable; urgency=high
 
   * Fixes for security issues
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
 
  -- Tim Theisen <tim@cs.wisc.edu>  Tue, 13 Jul 2021 09:11:38 -0500
 

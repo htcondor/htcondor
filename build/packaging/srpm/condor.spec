@@ -1707,8 +1707,8 @@ fi
 
 * Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.2-1
 - Fixes for security issues
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
 
 * Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.4-1
 - Fixes for security issues
@@ -1721,8 +1721,8 @@ fi
 
 * Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.1-1
 - Fixes for security issues
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
 
 * Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.3-1
 - Fixes for security issues
