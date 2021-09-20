@@ -90,8 +90,8 @@ Bugs Fixed:
 -  *Security Item*: This release of HTCondor fixes a security-related bug
    described at
 
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003.html>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004/>`_.
 
    :jira:`509`
    :jira:`587`
