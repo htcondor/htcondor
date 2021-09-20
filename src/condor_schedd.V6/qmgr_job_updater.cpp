@@ -137,8 +137,10 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( "TransferOutQueued" );
 	common_job_queue_attrs->insert( "TransferOutStarted" );
 	common_job_queue_attrs->insert( "TransferOutFinished" );
-	common_job_queue_attrs->insert( ATTR_TRANSFER_INPUT_FILES_COUNT );
-	common_job_queue_attrs->insert( ATTR_TRANSFER_OUTPUT_FILES_COUNT );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_INPUT_FILES_LAST_RUN_COUNT );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_INPUT_FILES_TOTAL_COUNT );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_OUTPUT_FILES_LAST_RUN_COUNT );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_OUTPUT_FILES_TOTAL_COUNT );
 
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_EXECUTING_DATE );
 	common_job_queue_attrs->insert( ATTR_CUMULATIVE_TRANSFER_TIME );
