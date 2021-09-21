@@ -109,17 +109,7 @@ def the_job_description(path_to_the_job_script):
         "checkpoint_exit_code":         "17",
         "transfer_checkpoint_files":    "saved-state",
 
-        # Desired "first-class" implementation.
-        # "max_checkpoint_interval":    "30",
-
-        "+MaxCheckpointInterval":       "30",
-        "+HasCheckpointedThisTime":     "TransferOutFinished =!= undefined && TransferOutFinished > EnteredCurrentStatus",
-        "+IsRunning":                   "JobStatus == 2",
-        "+TimeSinceLastCheckpoint":     "CurrentTime - TransferOutFinished",
-        "+TimeSinceThisTimeStarted":    "CurrentTime - EnteredCurrentStatus",
-        "+OverMaxCheckpointInterval":   "IsRunning && (ifthenelse(HasCheckpointedThisTime, TimeSinceLastCheckpoint, TimeSinceThisTimeStarted) > MaxCheckpointInterval)",
-
-        "periodic_hold":                "OverMaxCheckpointInterval",
+        "max_checkpoint_interval":       "30",
     }
 
 
