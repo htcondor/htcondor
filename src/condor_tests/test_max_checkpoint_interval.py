@@ -135,6 +135,12 @@ def the_job_description(path_to_the_job_script):
 #
 
 #
+# The code for this test could be improved: job two is a clone of job
+# job one, except for the special finalization code, which could be shared
+# with job five, which is a clone of job four otherwise.
+#
+
+#
 # FIXME: We should check at the end of every otherwise-successful test
 # to see if the final the output log is what we expect.
 #
@@ -366,6 +372,92 @@ def job_four_events(final_job_four_handle):
     return final_job_four_handle.event_log.events
 
 
+@action
+def job_five_handle(default_condor, test_dir, the_job_description):
+    job_five_description = {
+        ** the_job_description,
+        ** {
+            "arguments":    "--slow 6",
+            "log":          test_dir / "job_five.log",
+            "output":       test_dir / "job_five.out",
+            "error":        test_dir / "job_five.err",
+        }
+    }
+
+    job_five_handle = default_condor.submit(
+        description = job_five_description,
+        count = 1,
+    )
+
+    yield job_five_handle
+
+    job_five_handle.remove()
+
+
+@action
+def final_job_five_handle(default_condor, job_five_handle):
+    # We can determine if the job has checkpointed by waiting for the
+    # second of a pair of file transfer events after an execute event.
+    # No other events are allowed between the two file transfer events,
+    # to prevent us from detecting a restart.
+
+    #
+    # This code is awful and super detail-oriented.
+    #
+    job_started = False
+    checkpoint_started = False
+    checkpoint_completed = False
+    for delay in range(60):
+        for event in job_five_handle.event_log.read_events():
+            if not job_started:
+                if event.type == JobEventType.EXECUTE:
+                    logger.debug("Found EXECUTE event")
+                    job_started = True
+                continue
+
+            if not checkpoint_started:
+                if event.type == JobEventType.FILE_TRANSFER:
+                    logger.debug("Found first TILE_TRANSFER event")
+                    checkpoint_started = True
+            else:
+                if event.type == JobEventType.IMAGE_SIZE:
+                    logger.debug("Found IMAGE_SIZE event")
+                    continue
+                assert event.type == JobEventType.FILE_TRANSFER
+                logger.debug("Found second TILE_TRANSFER event")
+                checkpoint_completed = True
+                break
+        if checkpoint_completed:
+            break
+        time.sleep(1)
+    assert checkpoint_completed
+
+    default_condor.run_command(
+        ['condor_vacate_job', str(job_five_handle.job_ids[0])],
+        timeout=5, echo=True)
+    # This is amazingly stupid but nonetheless necessary for some reason.
+    default_condor.run_command(
+        ['condor_reschedule'],
+        timeout=5, echo=True)
+
+    # This actually reads events out of the event_log trace, so it won't
+    # miss the events that we just read in the loop above.  That might be
+    # problematic in other cases, but not this one...
+    job_five_handle.wait(
+        verbose = True,
+        timeout = 180,
+        condition = ClusterState.any_held,
+        fail_condition = ClusterState.all_complete,
+    )
+
+    return job_five_handle
+
+
+@action
+def job_five_events(final_job_five_handle):
+    return final_job_five_handle.event_log.events
+
+
 #
 # Utility functions for the tests.
 #
@@ -451,4 +543,21 @@ class TestMaxCheckpointInterval:
                 JobEventType.JOB_HELD,
             ],
             job_four_events
+        )
+
+
+    def test_job_five_held(self, job_five_events):
+        assert not types_in_events(
+            [JobEventType.JOB_TERMINATED], job_five_events
+        )
+
+        assert event_types_in_order(
+            [
+                JobEventType.SUBMIT,
+                JobEventType.EXECUTE,
+                JobEventType.FILE_TRANSFER,
+                JobEventType.EXECUTE,
+                JobEventType.JOB_HELD,
+            ],
+            job_five_events
         )
