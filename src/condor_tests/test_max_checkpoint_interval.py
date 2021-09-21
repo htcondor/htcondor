@@ -1,5 +1,6 @@
 #!/usr/bin/env pytest
 
+import time
 import logging
 
 from htcondor import (
@@ -12,6 +13,7 @@ from ornithology import (
     action,
 
     write_file,
+    run_command,
     ClusterState,
     format_script,
 )
@@ -24,8 +26,7 @@ logger.setLevel(logging.DEBUG)
 # 1) Does a self-checkpointing job that should complete do so when
 #    max_checkpoint_interval is set?
 # 2) Does a self-checkpointing job that should complete do so when
-#    max_checkpoint_interval is set if it's vacated?
-#    [FIXME: Consider carefully if the timing of the vacate matters]
+#    max_checkpoint_interval is set if it's vacated (after a checkpoint)?
 # 3) Does a self-checkpointing job that should be held before its first
 #    checkpoint become so?
 # 4) Does a self-checkpointing job that should be held before its second
@@ -127,9 +128,10 @@ def the_job_description(path_to_the_job_script):
 # because we don't need to interact with them while they're running, just
 # check their log when they're done.
 #
-# Tests #2 and #5 require that the job be vacated at specific times.
-# FIXME: If those jobs can vacate themselves (once), that could immensely
-# simplify writing this test.
+# Tests #2 and #5 require that the job be vacated at specific times.  There's
+# an environment variable in the job that points at the HTCondor binaries,
+# but not for the host HTCondor's configuration or the location of the job's
+# schedd, so we can't have the job vacate itself.
 #
 
 #
@@ -192,6 +194,98 @@ def final_job_one_handle(default_condor, job_one_handle, all_job_handles):
 @action
 def job_one_events(final_job_one_handle):
     return final_job_one_handle.event_log.events
+
+
+@action
+def job_two_handle(default_condor, test_dir, the_job_description):
+    job_two_description = {
+        ** the_job_description,
+        ** {
+            "arguments":    "--normal",
+            "log":          test_dir / "job_two.log",
+            "output":       test_dir / "job_two.out",
+            "error":        test_dir / "job_two.err",
+        }
+    }
+
+    job_two_handle = default_condor.submit(
+        description = job_two_description,
+        count = 1,
+    )
+
+    yield job_two_handle
+
+    job_two_handle.remove()
+
+
+#
+# Note that job_two can not simply run until it reaches a terminal state;
+# the test requires that it be interrupted (vacated) before it writes out
+# its last checkpoint (to verify the doing so does not cause it to wrongly
+# go on hold).
+#
+@action
+def final_job_two_handle(default_condor, job_two_handle):
+    # We can determine if the job has checkpointed by waiting for the
+    # second of a pair of file transfer events after an execute event.
+    # No other events are allowed between the two file transfer events,
+    # to prevent us from detecting a restart.
+
+    #
+    # This code is awful and super detail-oriented.
+    #
+    job_started = False
+    checkpoint_started = False
+    checkpoint_completed = False
+    for delay in range(60):
+        for event in job_two_handle.event_log.read_events():
+            if not job_started:
+                if event.type == JobEventType.EXECUTE:
+                    logger.debug("Found EXECUTE event")
+                    job_started = True
+                continue
+
+            if not checkpoint_started:
+                if event.type == JobEventType.FILE_TRANSFER:
+                    logger.debug("Found first TILE_TRANSFER event")
+                    checkpoint_started = True
+            else:
+                if event.type == JobEventType.IMAGE_SIZE:
+                    logger.debug("Found IMAGE_SIZE event")
+                    continue
+                assert event.type == JobEventType.FILE_TRANSFER
+                logger.debug("Found second TILE_TRANSFER event")
+                checkpoint_completed = True
+                break
+        if checkpoint_completed:
+            break
+        time.sleep(1)
+    assert checkpoint_completed
+
+    default_condor.run_command(
+        ['condor_vacate_job', str(job_two_handle.job_ids[0])],
+        timeout=5, echo=True)
+    # This is amazingly stupid but nonetheless necessary for some reason.
+    default_condor.run_command(
+        ['condor_reschedule'],
+        timeout=5, echo=True)
+
+    # This actually reads events out of the event_log trace, so it won't
+    # miss the events that we just read in the loop above.  That might be
+    # problematic in other cases, but not this one...
+    job_two_handle.wait(
+        verbose = True,
+        timeout = 180,
+        condition = ClusterState.all_complete,
+        fail_condition = ClusterState.any_held,
+    )
+
+    return job_two_handle
+
+
+@action
+def job_two_events(final_job_two_handle):
+    return final_job_two_handle.event_log.events
 
 
 @action
@@ -303,12 +397,32 @@ class TestMaxCheckpointInterval:
             [
                 JobEventType.SUBMIT,
                 JobEventType.EXECUTE,
+                JobEventType.FILE_TRANSFER,
                 JobEventType.JOB_TERMINATED,
             ],
             job_one_events
         )
 
 
+    def test_job_two_completed(self, job_two_events):
+        assert not types_in_events(
+            [JobEventType.JOB_HELD], job_two_events
+        )
+
+        assert event_types_in_order(
+            [
+                JobEventType.SUBMIT,
+                JobEventType.EXECUTE,
+                JobEventType.FILE_TRANSFER,
+                JobEventType.EXECUTE,
+                JobEventType.JOB_TERMINATED,
+            ],
+            job_two_events
+        )
+
+
+    # We can't easily assert the absence of a checkpoint for this job
+    # because the event type is used the same used for initial transfer in.
     def test_job_three_held(self, job_three_events):
         assert not types_in_events(
             [JobEventType.JOB_TERMINATED], job_three_events
@@ -333,6 +447,7 @@ class TestMaxCheckpointInterval:
             [
                 JobEventType.SUBMIT,
                 JobEventType.EXECUTE,
+                JobEventType.FILE_TRANSFER,
                 JobEventType.JOB_HELD,
             ],
             job_four_events
