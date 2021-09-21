@@ -822,6 +822,7 @@
 
 #define ATTR_CONDOR_VERSION "CondorVersion"
 #define ATTR_CHECKPOINT_FILES "TransferCheckpoint"
+#define ATTR_MAX_CHECKPOINT_INTERVAL "MaxCheckpointInterval"
 #define ATTR_PRESERVE_RELATIVE_PATHS "PreserveRelativePaths"
 
 #define ATTR_TRANSFER_SOCKET  "TransferSocket"

@@ -2138,18 +2138,41 @@ int SubmitHash::SetPeriodicExpressions()
 {
 	RETURN_IF_ABORT();
 
+	auto_free_ptr mci(submit_param(SUBMIT_KEY_MaxCheckpointInterval, ATTR_MAX_CHECKPOINT_INTERVAL));
 	auto_free_ptr pec(submit_param(SUBMIT_KEY_PeriodicHoldCheck, ATTR_PERIODIC_HOLD_CHECK));
-	if ( ! pec)
-	{
-		/* user didn't have one, so add one */
+	if(! mci && ! pec) {
+		/* user didn't have set periodic_hold, so add the default */
 		if ( ! job->Lookup(ATTR_PERIODIC_HOLD_CHECK)) {
 			AssignJobVal(ATTR_PERIODIC_HOLD_CHECK, false);
 		}
-	}
-	else
-	{
-		/* user had a value for it, leave it alone */
+	} else if(! mci && pec) {
+		/* user set periodic_hold, don't change it */
 		AssignJobExpr(ATTR_PERIODIC_HOLD_CHECK, pec);
+	} else {
+		if(! job->Lookup( ATTR_MAX_CHECKPOINT_INTERVAL )) {
+			AssignJobExpr( ATTR_MAX_CHECKPOINT_INTERVAL, mci.ptr() );
+		}
+
+		/* user set max_checkpoint_interval, construct periodic_hold */
+		const char * IsRunning = "JobStatus == 2";
+		const char * HasCheckpointedThisTime = "TransferOutFinished =!= undefined && TransferOutFinished > EnteredCurrentStatus";
+		const char * TimeSinceLastCheckpoint = "CurrentTime - TransferOutFinished";
+		const char * TimeSinceThisTimeStarted = "CurrentTime - EnteredCurrentStatus";
+		// If we ever get around to caring about how ugly the periodic hold
+		// expression is, we should set the above as ClassAd attributes, add
+		// the following attribute and refer to it in periodic_hold.
+		//
+		// OverMaxCheckpointInterval = IsRunning && (ifthenelse(HasCheckpointedThisTime, TimeSinceLastCheckpoint, TimeSinceThisTimeStarted) > MaxCheckpointInterval)
+		std::string OverMaxCheckpointInterval;
+		formatstr( OverMaxCheckpointInterval, "%s && (ifthenelse(%s, %s, %s) > %s)",
+			IsRunning, HasCheckpointedThisTime, TimeSinceLastCheckpoint,
+			TimeSinceThisTimeStarted, ATTR_MAX_CHECKPOINT_INTERVAL );
+
+		if(pec) {
+			formatstr( OverMaxCheckpointInterval,
+				"(%s) || (%s)", pec.ptr(), OverMaxCheckpointInterval.c_str());
+		}
+		AssignJobExpr( ATTR_PERIODIC_HOLD_CHECK, OverMaxCheckpointInterval.c_str() );
 	}
 
 	pec.set(submit_param(SUBMIT_KEY_PeriodicHoldReason, ATTR_PERIODIC_HOLD_REASON));
@@ -4984,6 +5007,12 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// Self-checkpointing
 	{SUBMIT_KEY_CheckpointExitCode, ATTR_CHECKPOINT_EXIT_CODE, SimpleSubmitKeyword::f_as_int },
 
+	// The only special processing that the checkpoint files list requires
+	// is handled by SetRequirements().
+	{SUBMIT_KEY_TransferCheckpointFiles, ATTR_CHECKPOINT_FILES, SimpleSubmitKeyword::f_as_string },
+	{SUBMIT_KEY_PreserveRelativePaths, ATTR_PRESERVE_RELATIVE_PATHS, SimpleSubmitKeyword::f_as_bool },
+	{SUBMIT_KEY_MaxCheckpointInterval, ATTR_MAX_CHECKPOINT_INTERVAL, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_periodic },
+
 	// Presigned S3 URLs
 	{SUBMIT_KEY_AWSRegion, ATTR_AWS_REGION, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_AWSAccessKeyIdFile, ATTR_EC2_ACCESS_KEY_ID, SimpleSubmitKeyword::f_as_string},
@@ -4998,11 +5027,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// EraseOutputAndErrorOnRestart only applies when when_to_transfer_output
 	// is ON_EXIT_OR_EVICT, which we may want to warn people about.
 	{SUBMIT_KEY_EraseOutputAndErrorOnRestart, ATTR_DONT_APPEND, SimpleSubmitKeyword::f_as_bool},
-
-	// The only special processing that the checkpoint files list requires
-	// is handled by SetRequirements().
-	{SUBMIT_KEY_TransferCheckpointFiles, ATTR_CHECKPOINT_FILES, SimpleSubmitKeyword::f_as_string },
-	{SUBMIT_KEY_PreserveRelativePaths, ATTR_PRESERVE_RELATIVE_PATHS, SimpleSubmitKeyword::f_as_bool },
 
 	// The special processing for require_cuda_version is in SetRequirements().
 	{SUBMIT_KEY_CUDAVersion, ATTR_CUDA_VERSION, SimpleSubmitKeyword::f_as_string },
