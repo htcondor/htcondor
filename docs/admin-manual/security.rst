@@ -318,6 +318,12 @@ Integrity
 Quick Configuration of Security
 -------------------------------
 
+**Note:** This method of configuring security is experimental.
+Many tools and daemons that send administrative commands between machines
+(e.g. *condor_off*, *condor_drain*, or *condor_defrag*)
+won't work without further setup.
+We plan to remove this limitation in future releases.
+
 While pool administrators with complex configurations or application developers may need to
 understand the full security model described in this chapter, HTCondor
 strives to make it easy to enable reasonable security settings for new pools.
