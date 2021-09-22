@@ -1462,6 +1462,14 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     successfully taking a checkpoint.  The checkpoint will transferred
     and the executable restarted.  See
     :ref:`users-manual/self-checkpointing-applications:Self-Checkpointing Applications` for details.
+    :index:`max_checkpoint_interval<single: max_checkpoint_interval; submit commands>`
+
+ max_checkpoint_interval = <integer>
+    The number of seconds a self-checkpointing has to write out its
+    next checkpoint.  Exceeding this duration puts the job on hold.  To
+    be clear: a job has this amount of time to write out its first
+    checkpoint, each subsequent checkpoint, and to finish after its
+    last checkpoint.
     :index:`hold<single: hold; submit commands>`
 
  hold = <True | False>

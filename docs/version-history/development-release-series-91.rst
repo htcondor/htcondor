@@ -23,6 +23,12 @@ New Features:
   ``OpSysLongName`` is now ``"macOS 10.15"`` instead of ``"MacOSX 15.4"``.
   :jira:`627`
 
+- Added ``max_checkpoint_interval`` to the submit language.  It specifies
+  the largest permitted interval, in seconds, between checkpoints.  Exceeding
+  this interval puts the job on hold.  This command is intended to prevent
+  "stuck" self-checkponting jobs from wasting resources.
+  :jira:`650`
+
 - Improved and simplified how HTCondor locates the blahp software.
   Configuration parameter ``GLITE_LOCATION`` has been replaced by
   ``BLAHPD_LOCATION``.
