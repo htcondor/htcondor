@@ -23,7 +23,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fix a bug in *condor_watch_q* which would cause it to fail when run
+  on older kernels.
+  :jira:`745`
 
 Version 9.0.6
 -------------
