@@ -1329,7 +1329,9 @@ BaseShadow::updateJobInQueue( update_t type )
 	int upload_file_cnt = 0;
 	int download_file_cnt = 0;
 	getFileTransferStats(upload_file_cnt, download_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_INPUT_FILES_LAST_RUN_COUNT, upload_file_cnt);
 	ftAd.Assign(ATTR_TRANSFER_INPUT_FILES_TOTAL_COUNT, m_prev_run_upload_file_cnt + upload_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_OUTPUT_FILES_LAST_RUN_COUNT, download_file_cnt);
 	ftAd.Assign(ATTR_TRANSFER_OUTPUT_FILES_TOTAL_COUNT, m_prev_run_download_file_cnt + download_file_cnt);
 
 	FileTransferStatus upload_status = XFER_STATUS_UNKNOWN;
