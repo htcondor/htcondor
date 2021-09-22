@@ -459,8 +459,21 @@ def watch_q(
         users, cluster_ids, event_logs, batches, collector=collector, schedd=schedd,
     )
 
-    with open('/proc/sys/user/max_inotify_instances') as limitfile:
-        max_watches = int(limitfile.readline())
+    max_watches = None
+
+    try:
+        with open('/proc/sys/user/max_inotify_instances') as limitfile:
+            max_watches = int(limitfile.readline())
+    except IOError:
+        pass
+
+    try:
+        with open('/proc/sys/fs/inotify/max_user_instances') as limitfile:
+            max_watches = int(limitfile.readline())
+    except IOError:
+        pass
+
+    if max_watches is not None:
         if max_watches != 0 and len(event_logs) >= max_watches:
             warning("Too many log files to watch at once.  You can ask your administrator to increase '/proc/sys/user/max_inotify_instances' for you, or watch fewer jobs.")
             sys.exit(0)
