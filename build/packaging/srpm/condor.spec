@@ -1370,7 +1370,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_updates_stats
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
-%_sbindir/condor_gridshell
 %_sbindir/remote_gahp
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
