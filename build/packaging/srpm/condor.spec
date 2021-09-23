@@ -1664,6 +1664,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Sep 23 2021 Tim Theisen <tim@cs.wisc.edu> - 9.2.0-1
+- Add SERVICE node that runs alongside the DAG for the duration of the DAG
+- Fix problem where proxy delegation to older HTCondor versions failed
+- Jobs are now re-run if the execute directory unexpectedly disappears
+- HTCondor counts the number of files transfered at the submit node
+- Fix a bug that caused jobs to fail when using newer Singularity versions
+
 * Thu Sep 23 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.6-1
 - CUDA_VISIBLE_DEVICES can now contain GPU-<uuid> formatted values
 - Fixed a bug that caused jobs to fail when using newer Singularity versions
