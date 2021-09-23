@@ -23,7 +23,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fix a bug in *condor_watch_q* which would cause it to fail when run
+  on older kernels.
+  :jira:`745`
 
 Version 9.0.6
 -------------
@@ -132,10 +134,6 @@ Bugs Fixed:
   certain rare circumstances.   This also corrected a problem which may have
   been causing the number of bytes transferred to be undercounted.
   :jira:`722`
-
-- Fixed a bug that prevented Singularity jobs from running when the singularity
-  binary emitted many warning messages to stderr.
-  :jira:`698`
 
 - Fixed a bug that could the starter to crash after transferring files under
   certain rare circumstances.   This also corrected a problem which may have
