@@ -15,6 +15,8 @@ def fetch_value(token, attribute):
         f"http://169.254.169.254/latest/meta-data/{attribute}",
         headers={"X-aws-ec2-metadata-token": token},
     )
+    if response.status_code == 404:
+        return None
     response.raise_for_status()
     return response.text
 
