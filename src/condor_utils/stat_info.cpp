@@ -41,9 +41,13 @@ StatInfo::StatInfo( const char *path )
 		// a copy of whatever is beyond it as the filename, and put a
 		// NULL in the first character after the delim character so
 		// that the dirpath always contains the directory delim.
-	for( s = dirpath; s && *s != '\0'; s++ ) {
-		if( *s == '\\' || *s == '/' ) {
-			last = s;
+	for (s = dirpath; s && *s != '\0'; s++ ) {
+		if (
+#ifdef WIN32
+			*s == '\\' ||
+#endif
+			*s == '/' ) {
+				last = s;
 		}
 	}
 	if( last != NULL && last[1] ) {
@@ -85,8 +89,8 @@ StatInfo::StatInfo( int fd )
 }
 
 #ifdef WIN32
-StatInfo::StatInfo( const char* dirpath, const char* filename, 
-					time_t time_access, time_t time_create, 
+StatInfo::StatInfo( const char* dirpath, const char* filename,
+					time_t time_access, time_t time_create,
 					time_t time_modify, filesize_t fsize,
 					bool is_dir, bool is_symlink )
 {
@@ -189,7 +193,7 @@ StatInfo::stat_file( const char *path )
 		if (( ENOENT == si_errno ) || (EBADF == si_errno) ) {
 			si_error = SINoFile;
 		} else {
-			dprintf( D_FULLDEBUG, 
+			dprintf( D_FULLDEBUG,
 					 "StatInfo::%s(%s) failed, errno: %d = %s\n",
 					 statbuf.GetStatFn(),path,si_errno,strerror(si_errno) );
 		}
@@ -234,7 +238,7 @@ StatInfo::stat_file( int fd )
 		if (( ENOENT == si_errno ) || (EBADF == si_errno) ) {
 			si_error = SINoFile;
 		} else {
-			dprintf( D_FULLDEBUG, 
+			dprintf( D_FULLDEBUG,
 					 "StatInfo::%s(fd=%d) failed, errno: %d = %s\n",
 					 statbuf.GetStatFn(), fd, si_errno, strerror(si_errno) );
 		}
@@ -292,7 +296,7 @@ StatInfo::init( StatWrapper *statbuf )
 
 
 char*
-StatInfo::make_dirpath( const char* dir ) 
+StatInfo::make_dirpath( const char* dir )
 {
 	ASSERT(dir);
 
@@ -313,7 +317,7 @@ StatInfo::make_dirpath( const char* dir )
 
 
 mode_t
-StatInfo::GetMode( void ) 
+StatInfo::GetMode( void )
 {
 	if(!valid) {
 		stat_file( fullpath );
