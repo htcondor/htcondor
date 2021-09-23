@@ -9113,7 +9113,7 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SEC_TOKEN_BLACKLIST_EXPR`
     A ClassAd expression evaluated against tokens during authentication;
     if ``SEC_TOKEN_BLACKLIST_EXPR`` is set and evaluates to true, then the
-    token is blacklisted and the authentication attempt is denied.
+    token is revoked and the authentication attempt is denied.
 
 :macro-def:`SEC_TOKEN_REQUEST_LIMITS`
     If set, this is a comma-separated list of authorization levels that limit

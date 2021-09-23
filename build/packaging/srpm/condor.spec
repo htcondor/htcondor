@@ -1370,7 +1370,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_updates_stats
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
-%_sbindir/condor_gridshell
 %_sbindir/remote_gahp
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
@@ -1665,6 +1664,20 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Sep 23 2021 Tim Theisen <tim@cs.wisc.edu> - 9.2.0-1
+- Add SERVICE node that runs alongside the DAG for the duration of the DAG
+- Fix problem where proxy delegation to older HTCondor versions failed
+- Jobs are now re-run if the execute directory unexpectedly disappears
+- HTCondor counts the number of files transfered at the submit node
+- Fix a bug that caused jobs to fail when using newer Singularity versions
+
+* Thu Sep 23 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.6-1
+- CUDA_VISIBLE_DEVICES can now contain GPU-<uuid> formatted values
+- Fixed a bug that caused jobs to fail when using newer Singularity versions
+- Fixed a bug in the Windows MSI installer for the latest Windows 10 version
+- Fixed bugs relating to the transfer of standard out and error logs
+- MacOS 11.x now reports as 10.16.x (which is better than reporting x.0)
+
 * Thu Aug 19 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.3-1
 - Globus GSI is no longer needed for X.509 proxy delegation
 - Globus GSI authentication is disabled by default
@@ -1687,12 +1700,12 @@ fi
 
 * Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.4-1
 - Fixes for security issues
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
 
 * Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.15-1
 - Fix for security issue
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
 
 * Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.1-1
 - Fixes for security issues
@@ -1701,12 +1714,12 @@ fi
 
 * Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.3-1
 - Fixes for security issues
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
 
 * Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.14-1
 - Fix for security issue
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
 
 * Thu Jul 08 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.2-1
 - HTCondor can be set up to use only FIPS 140-2 approved security functions
@@ -1772,8 +1785,8 @@ fi
 
 * Wed Jan 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.11-1
 - This release of HTCondor fixes security-related bugs described at
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002/
 
 * Tue Nov 24 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.10-1
 - Fix bug where negotiator stopped making matches when group quotas are used
@@ -1847,17 +1860,17 @@ fi
 
 * Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.6-1
 - Fixes addressing CVE-2019-18823
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004/
 
 * Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.8-1
 - Fixes addressing CVE-2019-18823
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004/
 
 * Thu Jan 02 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.5-1
 - Added a new mode that skips jobs whose outputs are newer than their inputs
