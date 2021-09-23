@@ -1,3 +1,13 @@
+condor (9.0.6-1) stable; urgency=medium
+
+  * CUDA_VISIBLE_DEVICES can now contain GPU-<uuid> formatted values
+  * Fixed a bug that caused jobs to fail when using newer Singularity versions
+  * Fixed a bug in the Windows MSI installer for the latest Windows 10 version
+  * Fixed bugs relating to the transfer of standard out and error logs
+  * MacOS 11.x now reports as 10.16.x (which is better than reporting x.0)
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 23 Sep 2021 09:27:08 -0500
+
 condor (9.0.5-1) stable; urgency=medium
 
   * Other authentication methods are tried if mapping fails using SciTokens

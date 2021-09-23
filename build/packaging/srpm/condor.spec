@@ -1674,6 +1674,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Sep 23 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.6-1
+- CUDA_VISIBLE_DEVICES can now contain GPU-<uuid> formatted values
+- Fixed a bug that caused jobs to fail when using newer Singularity versions
+- Fixed a bug in the Windows MSI installer for the latest Windows 10 version
+- Fixed bugs relating to the transfer of standard out and error logs
+- MacOS 11.x now reports as 10.16.x (which is better than reporting x.0)
+
 * Wed Aug 18 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.5-1
 - Other authentication methods are tried if mapping fails using SciTokens
 - Fix rare crashes from successful condor_submit, which caused DAGMan issues
