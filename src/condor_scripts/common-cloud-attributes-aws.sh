@@ -6,7 +6,7 @@ while read common specific; do
     echo ${common}=\"${value}\"
 done << EOF
     Image ami-id
-    Type instance-type
+    VMType instance-type
     Zone placement/availability-zone
     Region placement/region
     InstanceID instance-id

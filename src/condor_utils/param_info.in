@@ -6706,6 +6706,7 @@ default : @end
     else
         use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/common-cloud-attributes-aws.py)
     endif
+    STARTD_CRON_cloud_PREFIX = Cloud
 @end
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

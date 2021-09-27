@@ -29,7 +29,7 @@ def main():
     token = fetch_token()
     aws_by_common_map = {
         "Image":        "ami-id",
-        "Type":         "instance-type",
+        "VMType"        "instance-type",
         "Zone":         "placement/availability-zone",
         "Region":       "placement/region",
         "InstanceID":   "instance-id"
