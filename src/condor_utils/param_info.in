@@ -6706,6 +6706,7 @@ default : @end
 	else
 		use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/common-cloud-attributes-google.py)
 	endif
+    STARTD_CRON_cloud_PREFIX = Cloud
 @end
 
 [$FEATURE.JobsHaveInstanceIDs]

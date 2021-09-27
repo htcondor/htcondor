@@ -126,7 +126,7 @@ def convert_metadata_to_classad(
     # such as "projects/centos-cloud/global/images/centos-7-v20210701". The
     # boolean value use_short_id will shorten to id "centos-7-v20210701".
     ad["Image"] = metadata.instance.image
-    ad["Type"] = metadata.instance.machineType
+    ad["VMType"] = metadata.instance.machineType
     ad["Zone"] = metadata.instance.zone
     ad["Region"] = metadata.instance.zone.rsplit("-", 1)[0]
 
