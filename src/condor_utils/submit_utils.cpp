@@ -57,6 +57,7 @@
 #include "my_popen.h"
 #include "condor_base64.h"
 #include "zkm_base64.h"
+#include "condor_scitokens.h"
 
 #include <algorithm>
 #include <string>
@@ -2652,6 +2653,7 @@ int SubmitHash::SetGSICredentials()
 		//    if neither is defined then generate an error
 		// if use_scitoken = false :: ignore the scitoken_path submit command and also the env
 		// if use_scitoken is undefined and scitoken_path is defined :: include the attribute using the supplied path
+		std::string token_file;
 		auto_free_ptr use_scitokens_cmd(submit_param(SUBMIT_KEY_UseScitokens, SUBMIT_KEY_UseScitokensAlt));
 		auto_free_ptr scitokens_file(submit_param(SUBMIT_KEY_ScitokensFile, ATTR_SCITOKENS_FILE));
 		bool use_scitokens =  ! scitokens_file.empty();
@@ -2660,10 +2662,10 @@ int SubmitHash::SetGSICredentials()
 				if (scitokens_file) {
 					use_scitokens = true; // because scitokens_file keyword was used
 				} else {
-					// if there is a BEARER_TOKEN_FILE environment variable, then set use_scitokens to true
-					// otherwise leave it as false.
-					const char * tmp = getenv("BEARER_TOKEN_FILE");
-					use_scitokens = tmp && tmp[0];
+					// if there is a BEARER_TOKEN_FILE environment variable, or in a well known location
+					// then set use_scitokens to true, otherwise leave it as false.
+					token_file = htcondor::discover_token(true);
+					use_scitokens = ! token_file.empty();
 				}
 			} else if ( ! string_is_boolean_param(use_scitokens_cmd, use_scitokens)) {
 				push_error(stderr, SUBMIT_KEY_UseScitokens " error. Value should be true, false, or auto.\n");
@@ -2674,16 +2676,20 @@ int SubmitHash::SetGSICredentials()
 		// At this point we have decided to include the scitoken file attribute
 		// and should generate an error if we can't.
 		if (use_scitokens) {
-			const char * token_file = scitokens_file;
-			if ( ! token_file) { token_file = getenv("BEARER_TOKEN_FILE"); }
-			if ( ! token_file) {
+			if (scitokens_file) {
+				// promote to full path
+				token_file = full_path(scitokens_file);
+			} else if (token_file.empty()) {
+				// if we have not yet looked in BEARER_TOKEN_FILE or standard token file locations, do that now.
+				token_file = htcondor::discover_token(true);
+			}
+			if (token_file.empty()) {
 				push_error(stderr, "No Scitokens filename specified. Expected either "
 					SUBMIT_KEY_ScitokensFile " command or the BEARER_TOKEN_FILE environment variable to be set.\n");
 				ABORT_AND_RETURN(1);
 			}
-			// promote to fullpath and store in the job ad
-			scitokens_file.set(strdup(full_path(token_file)));
-			AssignJobString(ATTR_SCITOKENS_FILE, scitokens_file);
+			// store the path to the token in the job classad
+			AssignJobString(ATTR_SCITOKENS_FILE, token_file.c_str());
 		}
 	}
 

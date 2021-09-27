@@ -181,21 +181,29 @@ htcondor::init_scitokens()
 }
 
 std::string
-htcondor::discover_token()
+htcondor::discover_token(bool return_file_path /*=false*/)
 {
-	const char *bearer_token = getenv("BEARER_TOKEN");
 	std::string token;
-	if (bearer_token && *bearer_token)
+
+	// when asked to return a file path, we cannot use the BEARER_TOKEN, so ignore it.
+	if ( ! return_file_path)
 	{
-		if (!normalize_token(bearer_token, token)) {return "";}
-		if (!token.empty()) {return token;}
+		const char *bearer_token = getenv("BEARER_TOKEN");
+		if (bearer_token && *bearer_token)
+		{
+			if (!normalize_token(bearer_token, token)) {return "";}
+			if (!token.empty()) {return token;}
+		}
 	}
 
 	const char *bearer_token_file = getenv("BEARER_TOKEN_FILE");
 	if (bearer_token_file)
 	{
 		if (!find_token_in_file(bearer_token_file, token)) {return "";}
-		if (!token.empty()) {return token;}
+		if (!token.empty()) {
+			if (return_file_path) { token = bearer_token_file; }
+			return token;
+		}
 	}
 
 #ifndef WIN32
@@ -204,13 +212,19 @@ htcondor::discover_token()
 	fname += std::to_string(euid);
 
 	const char *xdg_runtime_dir = getenv("XDG_RUNTIME_DIR");
+	std::string token_file;
 	if (xdg_runtime_dir) {
-		std::string xdg_token_file = std::string(xdg_runtime_dir) + fname;
-		if (!find_token_in_file(xdg_token_file, token)) {return "";}
-		if (!token.empty()) {return token;}
+		token_file = std::string(xdg_runtime_dir) + fname;
+		if (!find_token_in_file(token_file, token)) {return "";}
+		if (!token.empty()) {
+			if (return_file_path) { token = token_file; }
+			return token;
+		}
 	}
 
-	if (!find_token_in_file("/tmp" + fname, token)) {return "";}
+	token_file = std::string("/tmp") + fname;
+	if (!find_token_in_file(token_file, token)) {return "";}
+	if (!token.empty() && return_file_path) { token = token_file; }
 	return token;
 #else
 		// WLCG profile doesn't define search paths on Windows;

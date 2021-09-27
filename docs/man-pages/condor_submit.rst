@@ -2093,7 +2093,9 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     defined in on one of these two places, then *condor_submit* will fail with an error message.
     Set this command to ``Auto`` to indicate that the job will use a scitoken if **scitokens_file**
     or the ``BEARER_TOKEN_FILE`` environment variable is set, but it will not be an error if no
-    file is specified.
+    file is specified.  On Linux, when searching for the token filename, the environment variable
+    ``XDG_RUNTIME_DIR`` and the ``/tmp`` directory will also be searched according to WLCG discovery
+    protocol for scitokens.
     :index:`use_scitokens<single: use_scitokens; submit commands>`
 
  scitokens_file = <full-pathname>
