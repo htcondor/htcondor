@@ -1033,6 +1033,16 @@ if (NOT DEFINED DLOPEN_GSI_LIBS)
 	endif()
 endif()
 
+#####################################
+# Do we want to link in the VOMS libraries or dlopen() them at runtime?
+if (NOT DEFINED DLOPEN_VOMS_LIBS)
+    if (HAVE_EXT_VOMS AND LINUX AND NOT WANT_PYTHON_WHEELS)
+        set(DLOPEN_VOMS_LIBS TRUE)
+	else()
+        set(DLOPEN_VOMS_LIBS FALSE)
+	endif()
+endif()
+
 message(STATUS "********* External configuration complete (dropping config.h) *********")
 dprint("CONDOR_EXTERNALS=${CONDOR_EXTERNALS}")
 

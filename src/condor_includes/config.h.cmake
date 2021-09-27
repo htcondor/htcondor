@@ -529,6 +529,9 @@
 /* Define to 1 if the GSI libraries need to dlopen()d */
 #cmakedefine DLOPEN_GSI_LIBS
 
+/* Define to 1 if the VOMS libraries need to dlopen()d */
+#cmakedefine DLOPEN_VOMS_LIBS
+
 /* Define to 1 if the OS has inotify API support */
 #cmakedefine HAVE_INOTIFY
 

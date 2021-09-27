@@ -39,11 +39,8 @@
 
 %define python 1
 
-%if 0%{?osg}
+# Unconditionally turn off globus
 %define globus 0
-%else
-%define globus 1
-%endif
 
 # Temporarily turn parallel_setup off
 %define parallel_setup 0
@@ -164,7 +161,6 @@ BuildRequires: byacc
 BuildRequires: flex
 BuildRequires: patch
 BuildRequires: libtool
-BuildRequires: libtool-ltdl-devel
 BuildRequires: pam-devel
 BuildRequires: nss-devel
 BuildRequires: openssl-devel
@@ -205,11 +201,11 @@ BuildRequires: globus-callout-devel
 BuildRequires: globus-common-devel
 BuildRequires: globus-ftp-client-devel
 BuildRequires: globus-ftp-control-devel
-BuildRequires: voms-devel
+BuildRequires: libtool-ltdl-devel
 %endif
+BuildRequires: voms-devel
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
-BuildRequires: libtool-ltdl-devel
 
 BuildRequires: libcgroup-devel
 Requires: libcgroup
@@ -330,11 +326,11 @@ Requires: globus-gss-assist
 Requires: globus-gssapi-gsi
 Requires: globus-openssl-module
 Requires: globus-xio-gsi-driver
-Requires: voms
+Requires: libtool-ltdl
 %endif
+Requires: voms
 Requires: krb5-libs
 Requires: libcom_err
-Requires: libtool-ltdl
 Requires: munge-libs
 Requires: openssl-libs
 Requires: scitokens-cpp
