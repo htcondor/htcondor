@@ -38,9 +38,9 @@ def main():
         value = fetch_value(token, aws)
         classad[common] = f'"{value}"'
 
-    # Interruptable requires a little more translation.
-    interruptable = fetch_value(token, "instance-life-cycle")
-    classad["Interruptable"] = "True" if interruptable == "spot" else "False"
+    # interruptible requires a little more translation.
+    interruptible = fetch_value(token, "instance-life-cycle")
+    classad["Interruptible"] = "True" if interruptible == "spot" else "False"
 
     for k,v in classad.items():
         print(f"{k}={v}")

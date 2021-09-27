@@ -15,11 +15,11 @@ EOF
 echo 'Provider="AWS"'
 echo 'Platform="EC2"'
 
-interruptable="False"
+interruptible="False"
 ilc=`curl -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/instance-life-cycle`
 if [[ $ilc == "spot" ]]; then
-    interruptable="True"
+    interruptible="True"
 fi
-echo "Interruptable=${interruptable}"
+echo "Interruptible=${interruptible}"
 
 echo "- update:true"
