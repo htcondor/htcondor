@@ -6712,7 +6712,7 @@ default : @end
 [$FEATURE.JobsHaveInstanceIDs]
 description=When a job runs on a machine in the cloud, add that machine's instance ID to the job's ClassAd
 default : @end
-	STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) InstanceID
+	SYSTEM_JOB_MACHINE_ATTRS = $(SYSTEM_JOB_MACHINE_ATTRS) InstanceID
 @end
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^
