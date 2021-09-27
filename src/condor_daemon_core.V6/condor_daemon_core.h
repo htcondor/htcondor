@@ -1752,7 +1752,7 @@ class DaemonCore : public Service
        stats_entry_sum_ema_rate<int> Commands;
 
        StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
-       classy_counted_ptr<stats_ema_config> ema_config;	// Exponential moving average config for this pool.
+	   std::shared_ptr<stats_ema_config> ema_config;	// Exponential moving average config for this pool.
 
 	   time_t InitTime;            // last time we init'ed the structure
 	   time_t RecentStatsTickTime; // time of the latest recent buffer Advance
