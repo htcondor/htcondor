@@ -992,7 +992,7 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 			//
 			// We can't delay this info authentication_finish() because we
 			// need to be able to tell the client that the authN failed.
-			MyString canonical_user;
+			std::string canonical_user;
 			Authentication::load_map_file();
 			auto global_map_file = Authentication::getGlobalMapFile();
 			bool mapFailed = true;

@@ -74,8 +74,8 @@ condor_gethostname(char *name, size_t namelen) {
 				return -1;
 			}
 
-			MyString hostname = convert_ipaddr_to_fake_hostname(addr);
-			if (hostname.length() >= (int) namelen) {
+			std::string hostname = convert_ipaddr_to_fake_hostname(addr);
+			if (hostname.length() >= namelen) {
 				return -1;
 			}
 			strcpy(name, hostname.c_str());
@@ -149,8 +149,8 @@ condor_gethostname(char *name, size_t namelen) {
 			}
 
 			close(s);
-			MyString hostname = convert_ipaddr_to_fake_hostname(addr);
-			if (hostname.length() >= (int) namelen) {
+			std::string hostname = convert_ipaddr_to_fake_hostname(addr);
+			if (hostname.length() >= namelen) {
 				return -1;
 			}
 			strcpy(name, hostname.c_str());
@@ -173,8 +173,8 @@ condor_gethostname(char *name, size_t namelen) {
 				return -1;
 			}
 
-			MyString hostname = convert_ipaddr_to_fake_hostname(addrs.front());
-			if (hostname.length() >= (int) namelen) {
+			std::string hostname = convert_ipaddr_to_fake_hostname(addrs.front());
+			if (hostname.length() >= namelen) {
 				return -1;
 			}
 			strcpy(name, hostname.c_str());
