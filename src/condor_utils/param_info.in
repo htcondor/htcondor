@@ -6716,7 +6716,7 @@ default : @end
 [$FEATURE.JobsHaveInstanceIDs]
 description=When a job runs on a machine in the cloud, add that machine's instance ID to the job's ClassAd
 default : @end
-	SYSTEM_JOB_MACHINE_ATTRS = $(SYSTEM_JOB_MACHINE_ATTRS) InstanceID
+	SYSTEM_JOB_MACHINE_ATTRS = $(SYSTEM_JOB_MACHINE_ATTRS) CloudInstanceID
 @end
 
 [$FEATURE.CommonCloudAttributesAWS]
