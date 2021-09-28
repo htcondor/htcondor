@@ -64,8 +64,10 @@ vmapi_is_allowed_vm_addr(const char *addr)
 		if( !vmmanager->allowed_vm_list || vmmanager->allowed_vm_list->number() == 0 )
 			return FALSE;
 
-		MyString ip;
-		if( ! sinful_to_ipstr(addr, ip) ) { return false; }
+		condor_sockaddr sa;
+		std::string ip;
+		if( ! sa.from_sinful(addr) ) { return false; }
+		ip = sa.to_ip_string();
 
 		char *vm_name;
 		vmmanager->allowed_vm_list->rewind();

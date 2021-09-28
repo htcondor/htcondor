@@ -1279,7 +1279,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		free( sinful_private);
 		sinful_private = NULL;
 
-		MyString private_sinful_string;
+		std::string private_sinful_string;
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
 			int port = ((Sock*)(*sockTable)[initial_command_sock()].iosock)->get_port();
