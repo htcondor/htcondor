@@ -32,17 +32,10 @@
 
 void
 AdNameHashKey::sprint( std::string &s ) const {
-    MyString ms;
-    sprint( ms );
-    s = ms;
-}
-
-void AdNameHashKey::sprint (MyString &s) const
-{
 	if (ip_addr.length() )
-		s.formatstr( "< %s , %s >", name.c_str(), ip_addr.c_str() );
+		formatstr( s, "< %s , %s >", name.c_str(), ip_addr.c_str() );
 	else
-		s.formatstr( "< %s >", name.c_str() );
+		formatstr( s, "< %s >", name.c_str() );
 }
 
 bool operator== (const AdNameHashKey &lhs, const AdNameHashKey &rhs)
@@ -365,46 +358,3 @@ makeGenericAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 	return adLookup( "Generic", ad, ATTR_NAME, NULL, hk.name );
 }
 
-
-// utility function:  parse the string "<aaa.bbb.ccc.ddd:pppp>"
-//  Extracts the ip address portion ("aaa.bbb.ccc.ddd")
-bool 
-parseIpPort (const MyString &ip_port_pair, MyString &ip_addr)
-{
-	ip_addr = "";
-
-	if (ip_port_pair.empty()) {
-        return false;
-	}
-    const char *ip_port = ip_port_pair.c_str();
-	ip_port++;			// Skip the leading "<"
-    while ( *ip_port && *ip_port != ':')
-    {
-		ip_addr += *ip_port;
-        ip_port++;
-    }
-
-	// don't care about port number
-	return true;
-}
-
-// HashString
-HashString::HashString( void )
-{
-}
-
-HashString::HashString( const AdNameHashKey &hk )
-		: MyString( )
-{
-	Build( hk );
-}
-
-void
-HashString::Build( const AdNameHashKey &hk )
-{
-	if ( hk.ip_addr.length() ) {
-		formatstr( "< %s , %s >", hk.name.c_str(), hk.ip_addr.c_str() );
-	} else {
-		formatstr( "< %s >", hk.name.c_str() );
-	}
-}
