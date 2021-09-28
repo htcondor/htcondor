@@ -32,6 +32,11 @@ New Features:
   used to build new plugins.
   :jira:`728`
 
+- Added new attributes to the job classad which records the number of files 
+  transferred between the *condor_shadow* and *condor_starter* only during
+  the last run of the job.
+  :jira:`741`
+
 Bugs Fixed:
 
 - None.
