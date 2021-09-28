@@ -227,13 +227,13 @@ void KeyCacheEntry::delete_storage() {
 
 
 KeyCache::KeyCache() {
-	key_table = new HashTable<MyString, KeyCacheEntry*>(hashFunction);
+	key_table = new HashTable<std::string, KeyCacheEntry*>(hashFunction);
 	m_index = new KeyCacheIndex(hashFunction);
 	dprintf ( D_SECURITY|D_FULLDEBUG, "KEYCACHE: created: %p\n", key_table );
 }
 
 KeyCache::KeyCache(const KeyCache& k) {
-	key_table = new HashTable<MyString, KeyCacheEntry*>(hashFunction);
+	key_table = new HashTable<std::string, KeyCacheEntry*>(hashFunction);
 	m_index = new KeyCacheIndex(hashFunction);
 	copy_storage(k);
 }
@@ -281,7 +281,7 @@ void KeyCache::delete_storage()
 		//dprintf( D_SECURITY|D_FULLDEBUG, "KEYCACHE: deleted: %p\n", key_table );
 	}
 	if( m_index ) {
-		MyString index;
+		std::string index;
 		SimpleList<KeyCacheEntry *> *keylist=NULL;
 
 		m_index->startIterations();
@@ -301,10 +301,7 @@ void KeyCache::clear()
 bool KeyCache::insert(KeyCacheEntry &e) {
 
 	// the key_table member is a HashTable which maps
-	// MyString's to KeyCacheEntry*'s.  (note the '*')
-
-	// the map_table member is a HashTable which maps
-	// MyString's to MyString's.
+	// std::string's to KeyCacheEntry*'s.  (note the '*')
 
 	// create a new entry
 	KeyCacheEntry *new_ent = new KeyCacheEntry(e);
@@ -325,18 +322,19 @@ bool KeyCache::insert(KeyCacheEntry &e) {
 }
 
 void
-KeyCache::makeServerUniqueId(MyString const &parent_id,int server_pid,MyString *result) {
-	ASSERT( result );
+KeyCache::makeServerUniqueId(std::string const &parent_id, int server_pid, std::string& result) {
 	if( parent_id.empty() || server_pid == 0 ) {
 			// If our peer is not a daemon, parent_id will be empty
 			// and there is no point in indexing it, because we
 			// never query by PID alone.
 		return;
 	}
-	result->formatstr("%s.%d",parent_id.c_str(),server_pid);
+	formatstr(result, "%s.%d", parent_id.c_str(), server_pid);
 }
 
 bool KeyCache::lookup(const char *key_id, KeyCacheEntry *&e_ptr) {
+	// A NULL key_id is not valid
+	if (!key_id) return false;
 
 	// use a temp pointer so that e_ptr is not modified
 	// if a match is not found
@@ -360,7 +358,7 @@ KeyCache::addToIndex(KeyCacheEntry *key)
 		// update our index
 	ClassAd *policy = key->policy();
 	std::string parent_id;
-	MyString server_unique_id;
+	std::string server_unique_id;
 	int server_pid=0;
 	std::string server_addr, peer_addr;
 
@@ -373,7 +371,7 @@ KeyCache::addToIndex(KeyCacheEntry *key)
 	addToIndex(m_index,peer_addr,key);
 	addToIndex(m_index,server_addr,key);
 
-	makeServerUniqueId(parent_id,server_pid,&server_unique_id);
+	makeServerUniqueId(parent_id, server_pid, server_unique_id);
 	addToIndex(m_index,server_unique_id,key);
 }
 
@@ -382,7 +380,7 @@ KeyCache::removeFromIndex(KeyCacheEntry *key)
 {
 		//remove references to this key from the index
 	std::string parent_id;
-	MyString server_unique_id;
+	std::string server_unique_id;
 	int server_pid=0;
 	std::string server_addr, peer_addr;
 	ClassAd *policy = key->policy();
@@ -397,12 +395,12 @@ KeyCache::removeFromIndex(KeyCacheEntry *key)
 	removeFromIndex(m_index,peer_addr,key);
 	removeFromIndex(m_index,server_addr,key);
 
-	makeServerUniqueId(parent_id,server_pid,&server_unique_id);
+	makeServerUniqueId(parent_id, server_pid, server_unique_id);
 	removeFromIndex(m_index,server_unique_id,key);
 }
 
 void
-KeyCache::addToIndex(KeyCacheIndex *hash,MyString const &index,KeyCacheEntry *key)
+KeyCache::addToIndex(KeyCacheIndex *hash,std::string const &index,KeyCacheEntry *key)
 {
 	if( index.empty() ) {
 		return;
@@ -421,7 +419,7 @@ KeyCache::addToIndex(KeyCacheIndex *hash,MyString const &index,KeyCacheEntry *ke
 }
 
 void
-KeyCache::removeFromIndex(KeyCacheIndex *hash,MyString const &index,KeyCacheEntry *key)
+KeyCache::removeFromIndex(KeyCacheIndex *hash,std::string const &index,KeyCacheEntry *key)
 {
 	SimpleList<KeyCacheEntry *> *keylist=NULL;
 	if( hash->lookup(index,keylist)!=0 ) {
@@ -438,6 +436,9 @@ KeyCache::removeFromIndex(KeyCacheIndex *hash,MyString const &index,KeyCacheEntr
 }
 
 bool KeyCache::remove(const char *key_id) {
+	// A NULL key_id is not valid
+	if (!key_id) return false;
+
 	// to remove a key:
 	// you first need to do a lookup, so we can get the pointer to delete.
 	KeyCacheEntry *tmp_ptr = NULL;
@@ -480,7 +481,7 @@ StringList * KeyCache::getExpiredKeys() {
 
 	// iterate through all entries from the hash
 	KeyCacheEntry* key_entry;
-    MyString id;
+	std::string id;
 	key_table->startIterations();
 	while (key_table->iterate(id, key_entry)) {
 		// check the freshness date on that key
@@ -528,8 +529,8 @@ KeyCache::getKeysForPeerAddress(char const *addr)
 StringList *
 KeyCache::getKeysForProcess(char const *parent_unique_id,int pid)
 {
-	MyString server_unique_id;
-	makeServerUniqueId(parent_unique_id,pid,&server_unique_id);
+	std::string server_unique_id;
+	makeServerUniqueId(parent_unique_id, pid, server_unique_id);
 
 	SimpleList<KeyCacheEntry*> *keylist=NULL;
 	if( m_index->lookup(server_unique_id,keylist)!=0 ) {
@@ -543,13 +544,13 @@ KeyCache::getKeysForProcess(char const *parent_unique_id,int pid)
 	keylist->Rewind();
 	while( keylist->Next(key) ) {
 		std::string this_parent_id;
-		MyString this_server_unique_id;
+		std::string this_server_unique_id;
 		int this_server_pid=0;
 		ClassAd *policy = key->policy();
 
 		policy->LookupString(ATTR_SEC_PARENT_UNIQUE_ID, this_parent_id);
 		policy->LookupInteger(ATTR_SEC_SERVER_PID, this_server_pid);
-		makeServerUniqueId(this_parent_id,this_server_pid,&this_server_unique_id);
+		makeServerUniqueId(this_parent_id, this_server_pid, this_server_unique_id);
 
 			// If server id of key in index does not match server id
 			// we are looking up, something is horribly wrong with
