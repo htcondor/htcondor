@@ -746,14 +746,6 @@ int DaemonCore::FileDescriptorSafetyLimit()
 
 bool DaemonCore::TooManyRegisteredSockets(int fd,std::string *msg,int num_fds)
 {
-    MyString ms;
-    bool rv = TooManyRegisteredSockets(fd, msg == NULL ? NULL : & ms, num_fds);
-    if( msg != NULL && ! ms.empty() ) { * msg = ms; }
-    return rv;
-}
-
-bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
-{
 	int registered_socket_count = RegisteredSocketCount();
 	int fds_used = registered_socket_count;
 	int safety_limit = FileDescriptorSafetyLimit();
@@ -803,7 +795,7 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 			return false;
 		}
 		if(msg) {
-			msg->formatstr( "file descriptor safety level exceeded: "
+			formatstr( *msg, "file descriptor safety level exceeded: "
 			              " limit %d, "
 			              " registered socket count %d, "
 			              " fd %d",
@@ -1784,7 +1776,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	if( iosock->type() == Stream::reli_sock &&
 	    ((ReliSock *)iosock)->is_connect_pending() )
 	{
-		MyString overload_msg;
+		std::string overload_msg;
 		bool overload_danger =
 			TooManyRegisteredSockets( ((Sock *)iosock)->get_file_desc(),
 			                              &overload_msg);
