@@ -3023,7 +3023,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		bytes = 0;
 
 		numFiles++;
-		if (thisFileStats.TransferProtocol == "cedar") {
+		if (xfer_command == TransferCommand::XferFile && rc == 0) {
 			numCedarFiles++;
 		}
 
