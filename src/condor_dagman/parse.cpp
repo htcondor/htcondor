@@ -383,7 +383,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 
 		// Handle a SERVICE spec
 		else if(strcasecmp(token, "SERVICE") == 0) {
-			MyString nodename;
+			std::string nodename;
 			const char * subfile;
 			pre_parse_node(nodename, subfile);
 			parsed_line_successfully = parse_node( dag, nodename.c_str(), subfile,

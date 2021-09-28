@@ -78,14 +78,14 @@ AddNode( Dag *dag, const char *name,
 		return NULL;
 	}
 	if( done && type == NodeType::FINAL ) {
-		failReason = "Warning: FINAL Job " + std::string(name) +
-			" cannot be set to DONE\n";
+		formatstr( failReason, "Warning: FINAL Job %s cannot be set to DONE\n",
+					name );
         debug_printf( DEBUG_QUIET, "%s", failReason.c_str() );
 		(void)check_warning_strictness( DAG_STRICT_1, false );
 		done = false;
 	}
 	if( done && type == NodeType::SERVICE ) {
-		failReason.formatstr( "Warning: SERVICE node %s cannot be set to DONE\n",
+		formatstr( failReason, "Warning: SERVICE node %s cannot be set to DONE\n",
 					name );
         debug_printf( DEBUG_QUIET, "%s", failReason.c_str() );
 		(void)check_warning_strictness( DAG_STRICT_1, false );
