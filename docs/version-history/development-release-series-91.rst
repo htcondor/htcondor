@@ -37,6 +37,10 @@ New Features:
   and require that the job not be local universe.
   :jira:`680`
 
+_ Added a new generic knob for setting the slot user for all slots.  Configure
+  ''NOBODY_SLOT_USER`` for all slots, instead of configuring a ``SLOT<N>_USER`` for each slot.
+  :jira:`720`
+
 Bugs Fixed:
 
 - None.
