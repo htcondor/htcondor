@@ -32,6 +32,11 @@ New Features:
   used to build new plugins.
   :jira:`728`
 
+- When declining to put a job on hold due to the temporary scratch
+  directory disappearing, verify that the directory is expected to exist
+  and require that the job not be local universe.
+  :jira:`680`
+
 Bugs Fixed:
 
 - None.
