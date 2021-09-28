@@ -15,6 +15,10 @@ Release Notes:
 
 New Features:
 
+- HTCondor will now, if configured, put some common cloud-related attributes
+  in the slot ads.  Check the manual :ref:`for details <CommonCloudAttributesConfiguration>`.
+  :jira:`616`
+
 - Revamped machine ad attribute ``OpSys*`` and configuration parameter
   ``OPSYS*`` values for macOS.
   The OS name is now ``macOS`` and the version number no longer ignores
