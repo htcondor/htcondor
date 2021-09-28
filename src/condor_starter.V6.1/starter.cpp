@@ -28,8 +28,6 @@
 #include "remote_proc.h"
 #include "java_proc.h"
 #include "tool_daemon_proc.h"
-#include "mpi_master_proc.h"
-#include "mpi_comrade_proc.h"
 #include "parallel_proc.h"
 #include "vm_proc.h"
 #include "my_hostname.h"
@@ -2455,17 +2453,7 @@ Starter::SpawnJob( void )
 			job = new ParallelProc( jobAd );
 			break;
 		case CONDOR_UNIVERSE_MPI: {
-			bool is_master = false;
-			if ( ! jobAd->LookupBool( ATTR_MPI_IS_MASTER, is_master )) {
-				is_master = false;
-			}
-			if ( is_master ) {
-				dprintf ( D_FULLDEBUG, "Starting a MPIMasterProc\n" );
-				job = new MPIMasterProc( jobAd );
-			} else {
-				dprintf ( D_FULLDEBUG, "Starting a MPIComradeProc\n" );
-				job = new MPIComradeProc( jobAd );
-			}
+			EXCEPT("MPI Universe is no longer supported\n");
 			break;
 		}
 		case CONDOR_UNIVERSE_VM:
