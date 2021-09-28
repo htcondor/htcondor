@@ -261,8 +261,11 @@ endif ()
 	add_dependencies(classad_unit_test classad_unit_tester)
 	condor_pl_test(classad_cache_unit_test "Run classads parse test with and without classad caching" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/_test_classad_parse")
 	add_dependencies(classad_unit_test _test_classad_parse)
+	if (NOT(${SYSTEM_NAME} MATCHES "amzn2"))
+	# This test will fail until we update patchelf in the AmazonLinux Docker build image
 	condor_pl_test(unit_test_async_fread "Run MyAsyncFileReader Unit Tests" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/async_freader_tests")
 	add_dependencies(unit_test_async_fread async_freader_tests)
+	endif()
 	#need to copy the underlying exe into condor_tests directory before these tests can be run
 	#condor_pl_test(consumption_policy_unit_test "Run Consumption policy unit tests" "quick;ctest")
 	#condor_pl_test(ring_buffer_unit_test "Run ring buffer unit tests" "quick;ctest")
