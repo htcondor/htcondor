@@ -2345,9 +2345,19 @@ using a shared file system`.
     The name of a user for HTCondor to use instead of user nobody, as
     part of a solution that plugs a security hole whereby a lurker
     process can prey on a subsequent job run as user name nobody.
-    ``<N>`` is an integer associated with slots. On Windows,
-    ``SLOT<N>_USER`` will only work if the credential of the specified
+    ``<N>`` is an integer associated with slots. On non Windows platforms
+    you can use ``NOBODY_SLOT_USER`` instead of this configuration variable.
+    On Windows, ``SLOT<N>_USER`` will only work if the credential of the specified
     user is stored on the execute machine using *condor_store_cred*.
+    See :ref:`admin-manual/security:user accounts in htcondor on unix platforms`
+    for more information.
+
+:macro-def:`NOBODY_SLOT_USER`
+    The name of a user for HTCondor to use instead of user nobody when
+    The ``SLOT<N>_USER`` for this slot is not configured.  Configure
+    this to the value ``$(STARTER_SLOT_NAME)`` to use the name of the slot
+    as the user name. This configuration macro is ignored on Windows,
+    where the Starter will automatically create a unique temporary user for each slot as needed.
     See :ref:`admin-manual/security:user accounts in htcondor on unix platforms`
     for more information.
 

@@ -2944,6 +2944,14 @@ password file). If ``SOFT_UID_DOMAIN`` is False, and ``UID_DOMAIN``
 matches, and the user is not in the execute machine's password file,
 then the job execution attempt will be aborted.
 
+Jobs that run as nobody are low priviledge, but can still interfere with each other.
+To avoid this, you can configure ``NOBODY_SLOT_USER`` to the value
+``$(STARTER_SLOT_NAME)`` or configure ``SLOT<N>_USER`` for each slot
+to define a different username to use for each slot instead of the user nobody.
+If ``NOBODY_SLOT_USER`` is configured to be ``$(STARTER_SLOT_NAME)``
+usernames such as ``slot1``, ``slot2`` and ``slot1_2`` will be used instead of
+nobody and each slot will use a different name than every other slot.
+
 Running HTCondor as Non-Root
 ''''''''''''''''''''''''''''
 

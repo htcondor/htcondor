@@ -1290,6 +1290,9 @@ JICShadow::initUserPriv( void )
 		if( nobody_user == NULL ) {
 			snprintf( nobody_param, 20, "%s_USER", slotName.c_str() );
 			nobody_user = param(nobody_param);
+			if (! nobody_user) {
+				nobody_user = param("NOBODY_SLOT_USER");
+			}
 		}
 
         if ( nobody_user != NULL ) {
