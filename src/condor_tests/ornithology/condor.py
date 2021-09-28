@@ -46,13 +46,13 @@ DEFAULT_PARAMS = {
     "UPDATE_INTERVAL": "2",
     "POLLING_INTERVAL": "2",
     "NEGOTIATOR_INTERVAL": "2",
+    "NEGOTIATOR_MIN_INTERVAL": "2",
     "STARTER_UPDATE_INTERVAL": "2",
     "SHADOW_QUEUE_UPDATE_INTERVAL": "2",
     "STARTER_INITIAL_UPDATE_INTERVAL": "2",
     "NEGOTIATOR_CYCLE_DELAY": "2",
     "MachineMaxVacateTime": "2",
     "RUNBENCHMARKS": "0",
-    "JOB_QUEUE_LOG": "$(SPOOL)/job_queue.log",
     "MAX_JOB_QUEUE_LOG_ROTATIONS": "10",
     "STARTER_LIST": "STARTER",  # no standard universe starter
 }

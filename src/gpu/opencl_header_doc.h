@@ -44,6 +44,7 @@ enum {
 	CL_DEVICE_NOT_FOUND                       = -1,
 	CL_DEVICE_NOT_AVAILABLE                   = -2,
 	CL_COMPILER_NOT_AVAILABLE                 = -3,
+	CL_PLATFORM_NOT_FOUND_KHR                 = -1001,
 };
 typedef clReturn (CL_API_CALL* clGetPlatformIDs_t)(unsigned int, cl_platform_id *, unsigned int *);
 enum cl_e_platform_info {

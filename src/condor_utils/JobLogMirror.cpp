@@ -21,9 +21,9 @@
 #include "JobLogMirror.h"
 #include "condor_config.h"
 
-JobLogMirror::JobLogMirror(ClassAdLogConsumer *consumer,char const *_alt_spool_param):
+JobLogMirror::JobLogMirror(ClassAdLogConsumer *consumer,char const *_job_queue_file):
 	job_log_reader(consumer),
-	alt_spool_param(_alt_spool_param ? _alt_spool_param : "")
+	job_queue_file(_job_queue_file)
 {
 	log_reader_polling_timer = -1;
 	log_reader_polling_period = 10;
@@ -48,22 +48,7 @@ JobLogMirror::stop() {
 
 void
 JobLogMirror::config() {
-	char *spool = NULL;
-	if( !alt_spool_param.empty() ) {
-		spool = param(alt_spool_param.c_str());
-	}
-	if( !spool ) {
-		spool = param("SPOOL");
-	}
-	if(!spool) {
-		EXCEPT("No SPOOL defined in config file.");
-	}
-	else {
-		std::string job_log_fname(spool);
-		job_log_fname += "/job_queue.log";
-		job_log_reader.SetClassAdLogFileName(job_log_fname.c_str());
-		free(spool);
-	}	
+	job_log_reader.SetClassAdLogFileName(job_queue_file.c_str());
 
 		// read the polling period and if one is not specified use 
 		// default value of 10 seconds

@@ -201,7 +201,11 @@ static bool test_simple_directory_1() {
 static bool test_simple_directory_2() {
 	emit_test("Does a path with a backslash return the directory base name?");
 	const char *param = "\\foo";
+#ifdef WIN32
 	const char *expected = "foo";
+#else
+	const char *expected = "\\foo";
+#endif
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -252,7 +256,11 @@ static bool test_directory_and_file_2() {
 static bool test_root_directory() {
 	emit_test("Does a path with a backslash in the root directory return the base name?");
 	const char *param = "\\foo\\bar";
+#ifdef WIN32
 	const char *expected = "bar";
+#else
+	const char *expected = "\\foo\\bar";
+#endif
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -320,7 +328,11 @@ static bool test_forward_slash() {
 static bool test_backslash() {
 	emit_test("Does a path with only a backslash return the empty string?");
 	const char *param = "\\";
+#ifdef WIN32
 	const char *expected = "";
+#else
+	const char *expected = "\\";
+#endif
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -354,7 +366,11 @@ static bool test_period_and_forward_slash_1() {
 static bool test_period_and_backslash_1() {
 	emit_test("Does a path with a period and forwardslash return the directory base name?");
 	const char *param = ".\\bar";
+#ifdef WIN32
 	const char *expected = "bar";
+#else
+	const char *expected = ".\\bar";
+#endif
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -388,7 +404,11 @@ static bool test_period_and_forward_slash_2() {
 static bool test_period_and_backslash_2() {
 	emit_test("Does a path with only a period then backslash return the empty string?");
 	const char *param = ".\\";
+#ifdef WIN32
 	const char *expected = "";
+#else
+	const char *expected = ".\\";
+#endif
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -405,7 +425,11 @@ static bool test_period_and_backslash_2() {
 static bool test_backslash_and_period() {
 	emit_test("Does a path with only a backslash then a period return a period?");
 	const char *param = "\\.";
+#ifdef WIN32
 	const char *expected = ".";
+#else
+	const char *expected = "\\.";
+#endif
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -439,7 +463,11 @@ static bool test_forward_slash_and_file_extension() {
 static bool test_backslash_and_file_extension() {
 	emit_test("Does a path with two directories and a file extension using backslashes return the file name and its extension?");
 	const char *param = "foo\\bar\\zap.txt";
+#ifdef WIN32
 	const char *expected = "zap.txt";
+#else
+	const char *expected = "foo\\bar\\zap.txt";
+#endif
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -473,7 +501,11 @@ static bool test_period_and_forward_slash() {
 static bool test_period_and_backslash() {
 	emit_test("Does a path with one directory using a period and another using a backslash return the base name?");
 	const char *param = ".foo\\bar";
+#ifdef WIN32
 	const char *expected = "bar";
+#else
+	const char *expected = ".foo\\bar";
+#endif
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -507,7 +539,11 @@ static bool test_period_and_forward_slash_with_special_file() {
 static bool test_period_and_backslash_with_special_file() {
 	emit_test("Does a path with one directory using a period and another using a backslash return the file name starting with a period and its extension?");
 	const char *param = ".foo\\.bar.txt";
+#ifdef WIN32
 	const char *expected = ".bar.txt";
+#else
+	const char *expected = ".foo\\.bar.txt";
+#endif
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);
@@ -541,7 +577,11 @@ static bool test_double_forward_slash() {
 static bool test_double_backslash() {
 	emit_test("Does a path with one directory using a double backslash and the othere using single backslashes return the file name and its extension?");
 	const char *param = "\\\\foo\\bar\\zap.txt";
+#ifdef WIN32
 	const char *expected = "zap.txt";
+#else
+	const char *expected = "\\\\foo\\bar\\zap.txt";
+#endif
 	emit_input_header();
 	emit_param("STRING", param);
 	const char *path = condor_basename(param);

@@ -118,9 +118,6 @@
 /* Define if HAS_INET_NTOA*/
 #cmakedefine HAS_INET_NTOA 1
 
-/* Define if pthreads are available for DRMAA */
-#cmakedefine HAS_PTHREADS 1
-
 /* Define if pthreads are available (USED)*/
 #cmakedefine HAVE_PTHREADS 1
 
@@ -216,9 +213,6 @@
 
 ///* Do we have the curl external (Imake)*/
 #cmakedefine HAVE_EXT_CURL
-
-///* Do we have the drmaa external (Imake)*/
-#cmakedefine HAVE_EXT_DRMAA
 
 ///* Do we have the glibc external*/
 #cmakedefine HAVE_EXT_GLIBC
@@ -534,6 +528,9 @@
 
 /* Define to 1 if the GSI libraries need to dlopen()d */
 #cmakedefine DLOPEN_GSI_LIBS
+
+/* Define to 1 if the VOMS libraries need to dlopen()d */
+#cmakedefine DLOPEN_VOMS_LIBS
 
 /* Define to 1 if the OS has inotify API support */
 #cmakedefine HAVE_INOTIFY

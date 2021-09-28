@@ -26,7 +26,7 @@
 #include "DelegationInterface.h"
 #include "subsystem_info.h"
 
-#if defined(DLOPEN_GSI_LIBS)
+#if defined(DLOPEN_GSI_LIBS) || defined(DLOPEN_VOMS_LIBS)
 #include <dlfcn.h>
 #endif
 
@@ -95,6 +95,8 @@ OM_uint32 (*globus_gss_assist_init_sec_context_ptr)(
 	OM_uint32 *, int *, int (*)(void *, void **, size_t *), void *,
 	int (*)(void *, void *, size_t), void *) = NULL;
 globus_module_descriptor_t *globus_i_gsi_gss_assist_module_ptr = NULL;
+#endif /* defined(HAVE_EXT_GLOBUS) */
+
 // Symbols from libvomsapi
 #if defined(HAVE_EXT_VOMS)
 void (*VOMS_Destroy_ptr)(
@@ -108,8 +110,6 @@ int (*VOMS_Retrieve_ptr)(
 int (*VOMS_SetVerificationType_ptr)(
 	int, struct vomsdata *, int *) = NULL;
 #endif /* defined(HAVE_EXT_VOMS) */
-
-#endif /* defined(HAVE_EXT_GLOBUS) */
 
 #define NOT_SUPPORTED_MSG "This version of Condor doesn't support GSI security"
 
@@ -334,7 +334,7 @@ initialize_voms()
 		return -1;
 	}
 
-#if defined(DLOPEN_GSI_LIBS)
+#if defined(DLOPEN_VOMS_LIBS)
 	void *dl_hdl;
 
 	if ( (dl_hdl = dlopen(LIBVOMSAPI_SO, RTLD_LAZY)) == NULL ||

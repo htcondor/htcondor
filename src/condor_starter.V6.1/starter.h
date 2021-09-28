@@ -211,6 +211,10 @@ public:
 		}
 		return WorkingDir.c_str();
 	}
+		/* Should the temporary directory under Execute be expected to
+		 * exist?
+		 */
+	bool WorkingDirExists() const { return m_workingDirExists; }
 		/* Set the working dir from the perspective of the job. This may differ from
 		*  the Starter's WorkingDir value when the job is in a container.  For a containerized job
 		*  Working dir will be something like /var/lib/condor/execute/dir_nnnn  or C:\Condor\Execute\dir_nnnn
@@ -401,6 +405,7 @@ private:
 	char *orig_cwd;
 	std::string m_recoveryFile;
 	bool is_gridshell;
+	bool m_workingDirExists;
 #ifdef WIN32
 	bool has_encrypted_working_dir;
 #endif

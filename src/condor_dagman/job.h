@@ -57,7 +57,8 @@ typedef int EdgeID_t;
 enum NodeType {
 	JOB,
 	FINAL,
-	PROVISIONER
+	PROVISIONER,
+	SERVICE
 };
 
 #define EXEC_MASK 0x1

@@ -609,7 +609,11 @@ void testing_$F_expand(bool verbose)
 	REQUIRE( expand("$Fdb(fileCompound)") == "der" );
 	REQUIRE( expand("$Fddb(fileCompound)") == "dur/der" );
 	REQUIRE( expand("$Fp(fileCompound)") == "/dur/der/" );
+#ifdef WIN32
 	REQUIRE( expand("$Fpw(fileCompound)") == "\\dur\\der\\" );
+#else
+	REQUIRE( expand("$Fpw(fileCompound)") == "" );
+#endif
 	REQUIRE( expand("$Ffqaw(fileCompound)") == "'\\dur\\der\\base.ex'" );
 	REQUIRE( expand("$Fn(fileCompound)") == "base" );
 	REQUIRE( expand("$Fx(fileCompound)") == ".ex" );
@@ -640,9 +644,19 @@ void testing_$F_expand(bool verbose)
 
 	REQUIRE( expand("$Fw(fileAbsDeep)") == "\\six\\five\\four\\three\\two\\one\\file.ext" );
 	REQUIRE( expand("$Ffw(fileAbsDeep)") == "\\six\\five\\four\\three\\two\\one\\file.ext" );
+#ifdef WIN32
 	REQUIRE( expand("$Fpw(fileAbsDeep)") == "\\six\\five\\four\\three\\two\\one\\" );
+#else
+	REQUIRE( expand("$Fpw(fileAbsDeep)") == "" );
+#endif
+#ifdef WIN32
 	REQUIRE( expand("$Fddxw(fileAbsDeep)") == "two\\one\\file.ext" );
+#else
+	REQUIRE( expand("$Fddxw(fileAbsDeep)") == ".ext" );
+#endif
+#ifdef WIN32
 	REQUIRE( expand("$Fddnw(fileAbsDeep)") == "two\\one\\file" );
+#endif
 
 	REQUIRE( expand("$Fdnx(urlAbs)") == "two/three.for" );
 	REQUIRE( expand("$Fpnx(urlAbs)") == "file:/one/two/three.for" );

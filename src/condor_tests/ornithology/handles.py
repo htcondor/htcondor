@@ -545,7 +545,7 @@ class ClusterState:
 
     def none_held(self) -> bool:
         """Return ``True`` if **none** of the jobs in the cluster are held."""
-        return self.any_status(jobs.JobStatus.HELD)
+        return self.none_status(jobs.JobStatus.HELD)
 
     def all_terminal(self) -> bool:
         """Return ``True`` if **all** of the jobs in the cluster are completed, held, or removed."""

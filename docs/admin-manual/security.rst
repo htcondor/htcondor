@@ -318,6 +318,12 @@ Integrity
 Quick Configuration of Security
 -------------------------------
 
+**Note:** This method of configuring security is experimental.
+Many tools and daemons that send administrative commands between machines
+(e.g. *condor_off*, *condor_drain*, or *condor_defrag*)
+won't work without further setup.
+We plan to remove this limitation in future releases.
+
 While pool administrators with complex configurations or application developers may need to
 understand the full security model described in this chapter, HTCondor
 strives to make it easy to enable reasonable security settings for new pools.
@@ -1222,15 +1228,20 @@ SSL Authentication
 SSL authentication is similar to GSI authentication, but without GSI's
 delegation (proxy) capabilities. SSL utilizes X.509 certificates.
 
-All SSL authentication is mutual authentication in HTCondor. This means
-that when SSL authentication is used and when one process communicates
-with another, each process must be able to verify the signature on the
-certificate presented by the other process. The process that initiates
-the connection is the client, and the process that receives the
-connection is the server. For example, when a *condor_startd* daemon
-authenticates with a *condor_collector* daemon to provide a machine
-ClassAd, the *condor_startd* daemon initiates the connection and acts
-as the client, and the *condor_collector* daemon acts as the server.
+SSL authentication may be mutual or server-only.
+That is, the server always needs a certificate that can be verified by
+the client, but a certificate for the client may be optional.
+Whether a client certificate is required is controlled by
+configuration variable ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``
+:index:`AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE`, a boolean value
+that defaults to ``False``.
+If the value is ``False``, then the client may present a certificate
+to be verified by the server.
+if the client doesn't have a certificate, then its identity is set to
+``unauthenticated`` by the server.
+If the value is ``True`` and the client doesn't have a certificate, then
+the SSL authentication fails (other authentication methods may then be
+tried).
 
 The names and locations of keys and certificates for clients, servers,
 and the files used to specify trusted certificate authorities (CAs) are
@@ -1611,10 +1622,11 @@ to setup ``IDTOKENS`` authentication, enable it in the list of authentication me
     SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), IDTOKENS
     SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), IDTOKENS
 
-**Blacklisting Token**: If a token is lost, stolen, or accidentally exposed,
-then the system administrator may use the token blacklisting mechanism in order
-to prevent unauthorized use.  Blacklisting can be accomplished by setting the
-``SEC_TOKEN_BLACKLIST_EXPR``; when set, the value of this parameter will be
+**Revoking Token**: If a token is lost, stolen, or accidentally exposed,
+then the system administrator may use the token revocation mechanism in order
+to prevent unauthorized use.  Revocation can be accomplished by setting the
+``SEC_TOKEN_BLACKLIST_EXPR`` configuration parameter;
+when set, the value of this parameter will be
 evaluated as a ClassAd expression against the token's contents.
 
 For example, consider the following token:
@@ -1637,24 +1649,24 @@ When printed using ``condor_token_list``, the human-readable form is as follows
         "sub": "alice@pool.example.com"
     }
 
-If we would like to blacklist this token, we could utilize any of the following
+If we would like to revoke this token, we could utilize any of the following
 values for ``SEC_TOKEN_BLACKLIST_EXPR``, depending on the desired breadth of
-the blacklist:
+the revocation:
 
 .. code-block:: condor-config
 
-    # Blacklists all tokens from the user Alice:
+    # Revokes all tokens from the user Alice:
     SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com"
 
-    # Blacklists all tokens from Alice issued before or after this one:
+    # Revokes all tokens from Alice issued before or after this one:
     SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com" && \
         iat <= 1588474719
 
-    # Blacklists *only* this token:
+    # Revokes *only* this token:
     SEC_TOKEN_BLACKLIST_EXPR = jti =?= "c760c2af193a1fd4e40bc9c53c96ee7c"
 
-The blacklist only works on the daemon where ``SEC_TOKEN_BLACKLIST_EXPR`` is
-set; to blacklist a token across the entire pool, set
+The revocation only works on the daemon where ``SEC_TOKEN_BLACKLIST_EXPR`` is
+set; to revoke a token across the entire pool, set
 ``SEC_TOKEN_BLACKLIST_EXPR`` on every host.
 
 In order to invalidate all tokens issued by a given master password in
@@ -2931,6 +2943,14 @@ submitting user's UID anyway (as defined in the submitting machine's
 password file). If ``SOFT_UID_DOMAIN`` is False, and ``UID_DOMAIN``
 matches, and the user is not in the execute machine's password file,
 then the job execution attempt will be aborted.
+
+Jobs that run as nobody are low priviledge, but can still interfere with each other.
+To avoid this, you can configure ``NOBODY_SLOT_USER`` to the value
+``$(STARTER_SLOT_NAME)`` or configure ``SLOT<N>_USER`` for each slot
+to define a different username to use for each slot instead of the user nobody.
+If ``NOBODY_SLOT_USER`` is configured to be ``$(STARTER_SLOT_NAME)``
+usernames such as ``slot1``, ``slot2`` and ``slot1_2`` will be used instead of
+nobody and each slot will use a different name than every other slot.
 
 Running HTCondor as Non-Root
 ''''''''''''''''''''''''''''

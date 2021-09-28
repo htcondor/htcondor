@@ -571,7 +571,7 @@ public:
 	: m_rate_limit(rate_limit),
 	m_last_update(std::chrono::steady_clock::now())
 	{
-		classy_counted_ptr<stats_ema_config> ema_config(new stats_ema_config);
+		std::shared_ptr<stats_ema_config> ema_config(new stats_ema_config);
 		ema_config->add(10, "10s");
 		m_request_rate.ConfigureEMAHorizons(ema_config);
 		m_request_rate.recent_start_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count();

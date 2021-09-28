@@ -755,3 +755,34 @@ location; if you specify a URL ending a ``/``, it will be treated like a
 directory.
 
 You may also use S3 URLs in ``transfer_output_remaps``.
+
+**Transferring files to and from Google Cloud Storage**
+
+Google Cloud Storage implements an `XML API which is interoperable with S3
+<https://cloud.google.com/storage/docs/interoperability>`_. This requires an
+extra step of `generating HMAC credentials
+<https://console.cloud.google.com/storage/settings;tab=interoperability>`_
+to access Cloud Storage through the XML API. Google Cloud best practices are
+to create a Service Account with read/write permission to the bucket and
+`generate HMAC credentials for the service account
+<https://cloud.google.com/storage/docs/migrating#keys>`_.
+
+After generating HMAC credentials, they can be used within an HTCondor job:
+
+.. code-block:: condor-submit
+
+    gs_access_key_id_file = /home/example/secrets/bucket_access_key_id
+    gs_secret_access_key_file = /home/example/secrets/bucket_secret_access_key
+    transfer_input_files = gs://<bucket-name>/<input-key-name>
+    transfer_output_remaps = "output.dat = gs://<bucket-name>/<output-key-name>"
+
+If `Cloud Storage is configured with Private Service Connect
+<https://cloud.google.com/vpc/docs/private-service-connect>`_, then use the S3 URL
+approach defined above. e.g.
+
+.. code-block:: condor-submit
+
+    gs_access_key_id_file = /home/example/secrets/bucket_access_key_id
+    gs_secret_access_key_file = /home/example/secrets/bucket_secret_access_key
+    transfer_input_files = s3://<cloud-storage-private-endpoint>/<bucket-name>/<input-key-name>
+    transfer_output_remaps = "output.dat = s3://<cloud-storage-private-endpoint>/<bucket-name>/<output-key-name>"

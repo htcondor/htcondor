@@ -204,7 +204,6 @@ my $runresult = SimpleJob::RunCheck(
 
 my $secondappend_condor_config = '
 	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 5
 	ALL_DEBUG = D_FULLDEBUG
 	NUM_CPUS = 1
 	CONDOR_Q_USE_V3_PROTOCOL = false
@@ -281,7 +280,6 @@ $runresult = SimpleJob::RunCheck(
 
 my $thirdappend_condor_config = '
 	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 5
 	ALL_DEBUG = D_FULLDEBUG
 	NUM_CPUS = 1
 	CONDOR_Q_USE_V3_PROTOCOL = true

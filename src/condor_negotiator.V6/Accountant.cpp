@@ -156,13 +156,15 @@ void Accountant::Initialize(GroupEntry* root_group)
 
   MaxAcctLogSize = param_integer("MAX_ACCOUNTANT_DATABASE_SIZE",1000000);
 
-  tmp = param("SPOOL");
-  if(tmp) {
-	  LogFileName=tmp;
-	  LogFileName+="/Accountantnew.log";
-	  free( tmp );
-  } else {
-	  EXCEPT( "SPOOL not defined!" );
+  if ( ! param(LogFileName, "ACCOUNTANT_DATABASE_FILE")) {
+	tmp = param("SPOOL");
+	if (tmp) {
+		LogFileName = tmp;
+		LogFileName += "/Accountantnew.log";
+		free(tmp);
+	} else {
+		EXCEPT("SPOOL not defined!");
+	}
   }
 
   DiscountSuspendedResources = param_boolean(

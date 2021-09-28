@@ -830,236 +830,246 @@ all attributes.
 
 ``HoldReasonCode``
     An integer value that represents the reason that a job was put on
-    hold.
+    hold.  The below table defines all possible values used by 
+    attributes ``HoldReasonCode``, ``NumHoldsByReason``, and ``HoldReasonSubCode``. 
 
-    +--------------+-------------------------------------+--------------------------+
-    | Integer Code | Reason for Hold                     | HoldReasonSubCode        |
-    +==============+=====================================+==========================+
-    | 1            | The user put the job on             |                          |
-    |              | hold with *condor_hold*.            |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 2            | Globus middleware                   | The GRAM error number.   |
-    |              | reported an error.                  |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 3            | The ``PERIODIC_HOLD``               | User Specified           |
-    |              | expression evaluated to             |                          |
-    |              | ``True``. Or,                       |                          |
-    |              | ``ON_EXIT_HOLD`` was                |                          |
-    |              | true                                |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 4            | The credentials for the             |                          |
-    |              | job are invalid.                    |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 5            | A job policy expression             |                          |
-    |              | evaluated to                        |                          |
-    |              | ``Undefined``.                      |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 6            | The *condor_starter*                | The Unix errno number.   |
-    |              | failed to start the                 |                          |
-    |              | executable.                         |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 7            | The standard output file            | The Unix errno number.   |
-    |              | for the job could not be            |                          |
-    |              | opened.                             |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 8            | The standard input file             | The Unix errno number.   |
-    |              | for the job could not be            |                          |
-    |              | opened.                             |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 9            | The standard output                 | The Unix errno number.   |
-    |              | stream for the job could            |                          |
-    |              | not be opened.                      |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 10           | The standard input                  | The Unix errno number.   |
-    |              | stream for the job could            |                          |
-    |              | not be opened.                      |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 11           | An internal HTCondor                |                          |
-    |              | protocol error was                  |                          |
-    |              | encountered when                    |                          |
-    |              | transferring files.                 |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 12           | The *condor_starter* or             | The Unix errno number.   |
-    |              | *condor_shadow* failed              |                          |
-    |              | to receive or write job             |                          |
-    |              | files.                              |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 13           | The *condor_starter* or             | The Unix errno number.   |
-    |              | *condor_shadow* failed              |                          |
-    |              | to read or send job                 |                          |
-    |              | files.                              |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 14           | The initial working                 | The Unix errno number.   |
-    |              | directory of the job                |                          |
-    |              | cannot be accessed.                 |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 15           | The user requested the              |                          |
-    |              | job be submitted on                 |                          |
-    |              | hold.                               |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 16           | Input files are being               |                          |
-    |              | spooled.                            |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 17           | A standard universe job             |                          |
-    |              | is not compatible with              |                          |
-    |              | the *condor_shadow*                 |                          |
-    |              | version available on the            |                          |
-    |              | submitting machine.                 |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 18           | An internal HTCondor                |                          |
-    |              | protocol error was                  |                          |
-    |              | encountered when                    |                          |
-    |              | transferring files.                 |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 19           | ``<Keyword>_HOOK_PREPARE_JOB``      |                          |
-    |              | :index:`<Keyword>_HOOK_PREPARE_JOB` |                          |
-    |              | was defined but could               |                          |
-    |              | not be executed or                  |                          |
-    |              | returned failure.                   |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 20           | The job missed its                  |                          |
-    |              | deferred execution time             |                          |
-    |              | and therefore failed to             |                          |
-    |              | run.                                |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 21           | The job was put on hold             |                          |
-    |              | because ``WANT_HOLD``               |                          |
-    |              | :index:`WANT_HOLD`                  |                          |
-    |              | in the machine policy               |                          |
-    |              | was true.                           |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 22           | Unable to initialize job            |                          |
-    |              | event log.                          |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 23           | Failed to access user               |                          |
-    |              | account.                            |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 24           | No compatible shadow.               |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 25           | Invalid cron settings.              |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 26           | ``SYSTEM_PERIODIC_HOLD``            |                          |
-    |              | :index:`SYSTEM_PERIODIC_HOLD`       |                          |
-    |              | evaluated to true.                  |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 27           | The system periodic job             |                          |
-    |              | policy evaluated to                 |                          |
-    |              | undefined.                          |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 32           | The maximum total input             |                          |
-    |              | file transfer size was              |                          |
-    |              | exceeded. (See                      |                          |
-    |              | ``MAX_TRANSFER_INPUT_MB``           |                          |
-    |              | :index:`MAX_TRANSFER_INPUT_MB`      |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 33           | The maximum total output            |                          |
-    |              | file transfer size was              |                          |
-    |              | exceeded. (See                      |                          |
-    |              | ``MAX_TRANSFER_OUTPUT_MB``          |                          |
-    |              | :index:`MAX_TRANSFER_OUTPUT_MB`     |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 34           | Memory usage exceeds a              |                          |
-    |              | memory limit.                       |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 35           | Specified Docker image              |                          |
-    |              | was invalid.                        |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 36           | Job failed when sent the            |                          |
-    |              | checkpoint signal it                |                          |
-    |              | requested.                          |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 37           | User error in the EC2               |                          |
-    |              | universe:                           |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Public key file not                 | 1                        |
-    |              | defined.                            |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Private key file not                | 2                        |
-    |              | defined.                            |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Grid resource string                | 4                        |
-    |              | missing EC2 service URL.            |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Failed to authenticate.             | 9                        |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Can't use existing SSH              | 10                       |
-    |              | keypair with the given              |                          |
-    |              | server's type.                      |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | You, or somebody like               | 20                       |
-    |              | you, cancelled this                 |                          |
-    |              | request.                            |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 38           | Internal error in the               |                          |
-    |              | EC2 universe:                       |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Grid resource type not              | 3                        |
-    |              | EC2.                                |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Grid resource type not              | 5                        |
-    |              | set.                                |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Grid job ID is not for              | 7                        |
-    |              | EC2.                                |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Unexpected remote job               | 21                       |
-    |              | status.                             |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 39           | Adminstrator error in               |                          |
-    |              | the EC2 universe:                   |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | EC2_GAHP not defined.               | 6                        |
-    +--------------+-------------------------------------+--------------------------+
-    | 40           | Connection problem in               |                          |
-    |              | the EC2 universe                    |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | ...while creating an SSH            | 11                       |
-    |              | keypair.                            |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | ...while starting an                | 12                       |
-    |              | on-demand instance.                 |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | ...while requesting a spot          | 17                       |
-    |              | instance.                           |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 41           | Server error in the EC2             |                          |
-    |              | universe:                           |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Abnormal instance                   | 13                       |
-    |              | termination reason.                 |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Unrecognized instance               | 14                       |
-    |              | termination reason.                 |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Resource was down for               | 22                       |
-    |              | too long.                           |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 42           | Instance potentially                |                          |
-    |              | lost due to an error in             |                          |
-    |              | the EC2 universe:                   |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Connection error while              | 15                       |
-    |              | terminating an instance.            |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Failed to terminate                 | 16                       |
-    |              | instance too many times.            |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Connection error while              | 17                       |
-    |              | terminating a spot                  |                          |
-    |              | request.                            |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Failed to terminated a              | 18                       |
-    |              | spot request too many               |                          |
-    |              | times.                              |                          |
-    +--------------+-------------------------------------+--------------------------+
-    |              | Spot instance request               | 19                       |
-    |              | purged before instance              |                          |
-    |              | ID acquired.                        |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 43           | Pre script failed.                  |                          |
-    +--------------+-------------------------------------+--------------------------+
-    | 44           | Post script failed.                 |                          |
-    +--------------+-------------------------------------+--------------------------+
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | Integer HoldReasonCode         | | Reason for Hold                   | | HoldReasonSubCode      |
+    | | [NumHoldsByReason Label]       |                                     |                          |
+    +==================================+=====================================+==========================+
+    | | 1                              | The user put the job on             |                          |
+    | | [UserRequest]                  | hold with *condor_hold*.            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 2                              | Globus middleware                   | The GRAM error number.   |
+    | | [GlobusGramError]              | reported an error.                  |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 3                              | The ``PERIODIC_HOLD``               | User Specified           |
+    | | [JobPolicy]                    | expression evaluated to             |                          |
+    |                                  | ``True``. Or,                       |                          |
+    |                                  | ``ON_EXIT_HOLD`` was                |                          |
+    |                                  | true                                |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 4                              | The credentials for the             |                          |
+    | | [CorruptedCredential]          | job are invalid.                    |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 5                              | A job policy expression             |                          |
+    | | [JobPolicyUndefined]           | evaluated to                        |                          |
+    |                                  | ``Undefined``.                      |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 6                              | The *condor_starter*                | The Unix errno number.   |
+    | | [FailedToCreateProcess]        | failed to start the                 |                          |
+    |                                  | executable.                         |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 7                              | The standard output file            | The Unix errno number.   |
+    | | [UnableToOpenOutput]           | for the job could not be            |                          |
+    |                                  | opened.                             |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 8                              | The standard input file             | The Unix errno number.   |
+    | | [UnableToOpenInput]            | for the job could not be            |                          |
+    |                                  | opened.                             |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 9                              | The standard output                 | The Unix errno number.   |
+    | | [UnableToOpenOutputStream]     | stream for the job could            |                          |
+    |                                  | not be opened.                      |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 10                             | The standard input                  | The Unix errno number.   |
+    | | [UnableToOpenInputStream]      | stream for the job could            |                          |
+    |                                  | not be opened.                      |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 11                             | An internal HTCondor                |                          |
+    | | [InvalidTransferAck]           | protocol error was                  |                          |
+    |                                  | encountered when                    |                          |
+    |                                  | transferring files.                 |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 12                             | The *condor_starter* or             | The Unix errno number.   |
+    | | [DownloadFileError]            | *condor_shadow* failed              |                          |
+    |                                  | to receive or write job             |                          |
+    |                                  | files.                              |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 13                             | The *condor_starter* or             | The Unix errno number.   |
+    | | [UploadFileError]              | *condor_shadow* failed              |                          |
+    |                                  | to read or send job                 |                          |
+    |                                  | files.                              |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 14                             | The initial working                 | The Unix errno number.   |
+    | | [IwdError]                     | directory of the job                |                          |
+    |                                  | cannot be accessed.                 |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 15                             | The user requested the              |                          |
+    | | [SubmittedOnHold]              | job be submitted on                 |                          |
+    |                                  | hold.                               |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 16                             | Input files are being               |                          |
+    | | [SpoolingInput]                | spooled.                            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 17                             | A standard universe job             |                          |
+    | | [JobShadowMismatch]            | is not compatible with              |                          |
+    |                                  | the *condor_shadow*                 |                          |
+    |                                  | version available on the            |                          |
+    |                                  | submitting machine.                 |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 18                             | An internal HTCondor                |                          |
+    | | [InvalidTransferGoAhead]       | protocol error was                  |                          |
+    |                                  | encountered when                    |                          |
+    |                                  | transferring files.                 |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 19                             | ``<Keyword>_HOOK_PREPARE_JOB``      |                          |
+    | | [HookPrepareJobFailure]        | :index:`<Keyword>_HOOK_PREPARE_JOB` |                          |
+    |                                  | was defined but could               |                          |
+    |                                  | not be executed or                  |                          |
+    |                                  | returned failure.                   |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 20                             | The job missed its                  |                          |
+    | | [MissedDeferredExecutionTime]  | deferred execution time             |                          |
+    |                                  | and therefore failed to             |                          |
+    |                                  | run.                                |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 21                             | The job was put on hold             |                          |
+    | | [StartdHeldJob]                | because ``WANT_HOLD``               |                          |
+    |                                  | :index:`WANT_HOLD`                  |                          |
+    |                                  | in the machine policy               |                          |
+    |                                  | was true.                           |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 22                             | Unable to initialize job            |                          |
+    | | [UnableToInitUserLog]          | event log.                          |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 23                             | Failed to access user               |                          |
+    | | [FailedToAccessUserAccount]    | account.                            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 24                             | No compatible shadow.               |                          |
+    | | [NoCompatibleShadow]           |                                     |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 25                             | Invalid cron settings.              |                          |
+    | | [InvalidCronSettings]          |                                     |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 26                             | ``SYSTEM_PERIODIC_HOLD``            |                          |
+    | | [SystemPolicy]                 | :index:`SYSTEM_PERIODIC_HOLD`       |                          |
+    |                                  | evaluated to true.                  |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 27                             | The system periodic job             |                          |
+    | | [SystemPolicyUndefined]        | policy evaluated to                 |                          |
+    |                                  | undefined.                          |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 32                             | The maximum total input             |                          |
+    | | [MaxTransferInputSizeExceeded] | file transfer size was              |                          |
+    |                                  | exceeded. (See                      |                          |
+    |                                  | ``MAX_TRANSFER_INPUT_MB``           |                          |
+    |                                  | :index:`MAX_TRANSFER_INPUT_MB`      |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 33                             | The maximum total output            |                          |
+    | | [MaxTransferOutputSizeExceeded]| file transfer size was              |                          |
+    |                                  | exceeded. (See                      |                          |
+    |                                  | ``MAX_TRANSFER_OUTPUT_MB``          |                          |
+    |                                  | :index:`MAX_TRANSFER_OUTPUT_MB`     |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 34                             | Memory usage exceeds a              |                          |
+    | | [JobOutOfResources]            | memory limit.                       |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 35                             | Specified Docker image              |                          |
+    | | [InvalidDockerImage]           | was invalid.                        |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 36                             | Job failed when sent the            |                          |
+    | | [FailedToCheckpoint]           | checkpoint signal it                |                          |
+    |                                  | requested.                          |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 37                             | User error in the EC2               |                          |
+    | | [EC2UserError]                 | universe:                           |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Public key file not                 | 1                        |
+    |                                  | defined.                            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Private key file not                | 2                        |
+    |                                  | defined.                            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Grid resource string                | 4                        |
+    |                                  | missing EC2 service URL.            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Failed to authenticate.             | 9                        |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Can't use existing SSH              | 10                       |
+    |                                  | keypair with the given              |                          |
+    |                                  | server's type.                      |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | You, or somebody like               | 20                       |
+    |                                  | you, cancelled this                 |                          |
+    |                                  | request.                            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 38                             | Internal error in the               |                          |
+    | | [EC2InternalError]             | EC2 universe:                       |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Grid resource type not              | 3                        |
+    |                                  | EC2.                                |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Grid resource type not              | 5                        |
+    |                                  | set.                                |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Grid job ID is not for              | 7                        |
+    |                                  | EC2.                                |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Unexpected remote job               | 21                       |
+    |                                  | status.                             |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 39                             | Adminstrator error in               |                          |
+    | | [EC2AdminError]                | the EC2 universe:                   |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | EC2_GAHP not defined.               | 6                        |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 40                             | Connection problem in               |                          |
+    | | [EC2ConnectionProblem]         | the EC2 universe                    |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | ...while creating an SSH            | 11                       |
+    |                                  | keypair.                            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | ...while starting an                | 12                       |
+    |                                  | on-demand instance.                 |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | ...while requesting a spot          | 17                       |
+    |                                  | instance.                           |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 41                             | Server error in the EC2             |                          |
+    | | [EC2ServerError]               | universe:                           |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Abnormal instance                   | 13                       |
+    |                                  | termination reason.                 |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Unrecognized instance               | 14                       |
+    |                                  | termination reason.                 |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Resource was down for               | 22                       |
+    |                                  | too long.                           |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 42                             | Instance potentially                |                          |
+    | | [EC2InstancePotentiallyLost]   | lost due to an error in             |                          |
+    |                                  | the EC2 universe:                   |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Connection error while              | 15                       |
+    |                                  | terminating an instance.            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Failed to terminate                 | 16                       |
+    |                                  | instance too many times.            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Connection error while              | 17                       |
+    |                                  | terminating a spot                  |                          |
+    |                                  | request.                            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Failed to terminated a              | 18                       |
+    |                                  | spot request too many               |                          |
+    |                                  | times.                              |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    |                                  | Spot instance request               | 19                       |
+    |                                  | purged before instance              |                          |
+    |                                  | ID acquired.                        |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 43                             | Pre script failed.                  |                          |
+    | | [PreScriptFailed]              |                                     |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 44                             | Post script failed.                 |                          |
+    | | [PostScriptFailed]             |                                     |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 45                             | Test of singularity runtime failed  |                          |
+    | | [SingularityTestFailed]        | before launching a job              |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
 
 
 :index:`HoldReasonSubCode<single: HoldReasonSubCode; ClassAd job attribute>`
@@ -1069,7 +1079,7 @@ all attributes.
 ``HoldReasonSubCode``
     An integer value that represents further information to go along
     with the ``HoldReasonCode``, for some values of ``HoldReasonCode``.
-    See ``HoldReasonCode`` for the values.
+    See ``HoldReasonCode`` for a table of possible values.
 
 :index:`HookKeyword<single: HookKeyword; ClassAd machine attribute>`
 
@@ -1553,6 +1563,28 @@ all attributes.
 ``NumGlobusSubmits``
     An integer that is incremented each time the *condor_gridmanager*
     receives confirmation of a successful job submission into Globus.
+
+:index:`NumHolds<single: NumHolds; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; NumHolds>`
+
+``NumHolds``
+    An integer value that will increment every time a job is placed on hold.
+    It may be undefined until the job has been held at least once.
+
+:index:`NumHoldsByReason<single: NumHoldsByReason; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; NumHoldsByReason>`
+
+``NumHoldsByReason``
+    The value of this attribute is a (nested) classad containing a count of how many times a job has been placed 
+    on  hold grouped by the reason the job went on hold.  It may be undefined until the job has been held
+    at least once. Each attribute name in this classad is
+    a NumHoldByReason label; see the table above under 
+    the documentation for job attribute ``HoldReasonCode`` for a table of possible values. Each attribute
+    value is an integer stating how many times the job went on hold for that specific reason.  An example:
+
+    .. code-block:: condor-classad
+
+        NumHoldsByReason = [ UserRequest = 2; JobPolicy = 110; UnableToOpenInput = 1 ]
 
 :index:`NumJobCompletions<single: NumJobCompletions; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; NumJobCompletions>`

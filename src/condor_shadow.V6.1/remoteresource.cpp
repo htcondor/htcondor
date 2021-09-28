@@ -99,6 +99,8 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	m_started_attempting_shutdown = 0;
 	m_upload_xfer_status = XFER_STATUS_UNKNOWN;
 	m_download_xfer_status = XFER_STATUS_UNKNOWN;
+	m_upload_xfer_file_count = 0;
+	m_download_xfer_file_count = 0;
 
 	std::string prefix;
 	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
@@ -2012,14 +2014,20 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 {
 	ASSERT(jobAd);
 
-	FileTransfer::FileTransferInfo info = transobject->GetInfo();
+	const FileTransfer::FileTransferInfo& info = transobject->GetInfo();
 	dprintf(D_FULLDEBUG,"RemoteResource::transferStatusUpdateCallback(in_progress=%d)\n",info.in_progress);
 
 	if( info.type == FileTransfer::DownloadFilesType ) {
 		m_download_xfer_status = info.xfer_status;
+		if( ! info.in_progress ) {
+			m_download_xfer_file_count += info.num_files;
+		}
 	}
 	else {
 		m_upload_xfer_status = info.xfer_status;
+		if( ! info.in_progress ) {
+			m_upload_xfer_file_count += info.num_files;
+		}
 	}
 	shadow->updateJobInQueue(U_PERIODIC);
 	return 0;

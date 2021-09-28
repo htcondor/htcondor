@@ -57,27 +57,15 @@ install_config_file() {
 }
 
 is_download() {
-	if [ -z "$DOWNLOAD" ]; then
-		return 1
-	else
-		return 0
-	fi
+	[[ $DOWNLOAD ]]
 }
 
 is_dry_run() {
-	if [ -z "$DRY_RUN" ]; then
-		return 1
-	else
-		return 0
-	fi
+	[[ $DRY_RUN ]]
 }
 
 is_display_dist() {
-	if [ -z "$DIST" ]; then
-		return 1
-	else
-		return 0
-	fi
+	[[ $DIST ]]
 }
 
 is_darwin() {
@@ -95,21 +83,16 @@ check_forked() {
 	# Check for lsb_release command existence, it usually exists in forked distros
 	if command_exists lsb_release; then
 		# Check if the `-u` option is supported
-		set +e
-		lsb_release -a -u > /dev/null 2>&1
-		lsb_release_exit_code=$?
-		set -e
-
-		# Check if the command has exited successfully, it means we're in a forked distro
-		if [ "$lsb_release_exit_code" = "0" ]; then
+		# If the command has exited successfully, it means we're in a forked distro
+		if lsb_release -a -u > /dev/null 2>&1; then
 			# Print info about current distro
 			cat <<-EOF
 			You're using '$lsb_dist' version '$dist_version'.
 			EOF
 
 			# Get the upstream release info
-			lsb_dist=$(lsb_release -a -u 2>&1 | tr '[:upper:]' '[:lower:]' | grep -E 'id' | cut -d ':' -f 2 | tr -d '[:space:]')
-			dist_version=$(lsb_release -a -u 2>&1 | tr '[:upper:]' '[:lower:]' | grep -E 'codename' | cut -d ':' -f 2 | tr -d '[:space:]')
+			lsb_dist=$(lsb_release           --id -u | cut -f2 | tr '[:upper:]' '[:lower:]')
+			dist_version=$(lsb_release --codename -u | cut -f2 | tr '[:upper:]' '[:lower:]')
 
 			# Print info about upstream distro
 			cat <<-EOF
@@ -118,33 +101,34 @@ check_forked() {
 			if is_display_dist; then
 				exit 0
 			fi
-		else
-			if [ -r /etc/debian_version ] && [ "$lsb_dist" != "ubuntu" ] && [ "$lsb_dist" != "raspbian" ]; then
-				if [ "$lsb_dist" = "osmc" ]; then
-					# OSMC runs Raspbian
-					lsb_dist=raspbian
-				else
-					# We're Debian and don't even know it!
-					lsb_dist=debian
-				fi
-				dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
-				case "$dist_version" in
-					10)
-						dist_version_number=10
-						dist_version="buster"
-					;;
-					9)
-						dist_version_number=9
-						dist_version="stretch"
-					;;
-					8|'Kali Linux 2')
-						dist_version_number=8
-						dist_version="jessie"
-					;;
-				esac
+		fi
+	else
+		if [ -r /etc/debian_version ] && [ "$lsb_dist" != "ubuntu" ] && [ "$lsb_dist" != "raspbian" ]; then
+			if [ "$lsb_dist" = "osmc" ]; then
+				# OSMC runs Raspbian
+				lsb_dist="raspbian"
+			else
+				# We're Debian and don't even know it!
+				lsb_dist="debian"
 			fi
+			dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
+			case $dist_version in
+				10)
+					dist_version_number=10
+					dist_version="buster"
+				;;
+				9)
+					dist_version_number=9
+					dist_version="stretch"
+				;;
+				8|'Kali Linux 2')
+					dist_version_number=8
+					dist_version="jessie"
+				;;
+			esac
 		fi
 	fi
+
 	if is_display_dist; then
 		cat <<-EOF
 		You're using '$lsb_dist' version '$dist_version'.
@@ -158,21 +142,21 @@ get_distribution() {
 	lsb_dist=""
 	# Every system that we officially support has /etc/os-release
 	if [ -r /etc/os-release ]; then
-		lsb_dist="$(. /etc/os-release && echo "$ID")"
+		lsb_dist=$(. /etc/os-release && echo "$ID")
 	fi
-	lsb_dist="$(echo "$lsb_dist" | tr '[:upper:]' '[:lower:]')"
+	lsb_dist=$(echo "$lsb_dist" | tr '[:upper:]' '[:lower:]')
 
 	# An empty string for lsb_dist should be alright since the
 	# case statements don't act unless you provide an actual value
 
-	case "$lsb_dist" in
+	case $lsb_dist in
 
 		ubuntu)
 			if command_exists lsb_release; then
-				dist_version="$(lsb_release --codename | cut -f2)"
+				dist_version=$(lsb_release --codename | cut -f2)
 			fi
-			if [ -z "$dist_version" ] && [ -r /etc/lsb-release ]; then
-				dist_version="$(. /etc/lsb-release && echo "$DISTRIB_CODENAME")"
+			if [[ ! $dist_version ]] && [ -r /etc/lsb-release ]; then
+				dist_version=$(. /etc/lsb-release && echo "$DISTRIB_CODENAME")
 			fi
 		;;
 
@@ -180,8 +164,8 @@ get_distribution() {
 			# Echoing VERSION_CODENAME out of /etc/os-release works
 			# better on Devuan and is simpler... is that file missing on
 			# raspbian?
-			dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
-			case "$dist_version" in
+			dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
+			case $dist_version in
 				10)
 					dist_version="buster"
 				;;
@@ -195,18 +179,18 @@ get_distribution() {
 		;;
 
 		centos|rhel)
-			if [ -z "$dist_version" ] && [ -r /etc/os-release ]; then
-				dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
+			if [[ ! $dist_version ]] && [ -r /etc/os-release ]; then
+				dist_version=$(. /etc/os-release && echo "$VERSION_ID")
 			fi
-			dist_version="$(echo "$dist_version" | cut -d. -f1)"
+			dist_version=$(echo "$dist_version" | cut -d. -f1)
 		;;
 
 		*)
 			if command_exists lsb_release; then
-				dist_version="$(lsb_release --release | cut -f2)"
+				dist_version=$(lsb_release --release | cut -f2)
 			fi
-			if [ -z "$dist_version" ] && [ -r /etc/os-release ]; then
-				dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
+			if [[ ! $dist_version ]] && [ -r /etc/os-release ]; then
+				dist_version=$(. /etc/os-release && echo "$VERSION_ID")
 			fi
 		;;
 
@@ -271,7 +255,7 @@ do_install() {
 	# This will set $lsb_dist and $dist_version.
 	get_distribution
 
-	user="$(id -un 2>/dev/null || true)"
+	user=$(id -un 2>/dev/null || true)
 
 	if is_dry_run; then
 		sh_c="echo"
@@ -302,11 +286,11 @@ do_install() {
 
 			You may update the existing install, or remove and then re-install.
 		EOF
-		case "$lsb_dist" in
+		case $lsb_dist in
 		ubuntu|debian)
-			PACKAGE=htcondor
-			if [ -z "${ROLE}" ]; then
-				PACKAGE=minihtcondor
+			PACKAGE="htcondor"
+			if [[ ! $ROLE ]]; then
+				PACKAGE="minihtcondor"
 			fi
 
 			cat >&2 <<-EOF
@@ -315,9 +299,9 @@ do_install() {
 			EOF
 			;;
 		centos|rhel|amzn)
-			PACKAGE=condor
-			if [ -z "${ROLE}" ]; then
-				PACKAGE=minicondor
+			PACKAGE="condor"
+			if [[ ! $ROLE ]]; then
+				PACKAGE="minicondor"
 			fi
 
 			cat >&2 <<-EOF
@@ -333,8 +317,8 @@ do_install() {
 	#
 	# Check for the pool password / default signing key before installing.
 	#
-	if [ -n "${ROLE}" ]; then
-		if [ -z "${PASSWORD}" ]; then
+	if [[ $ROLE ]]; then
+		if [[ ! $PASSWORD ]]; then
 			if ! is_dry_run; then
 				echo -n "Enter a pool password: "
 				read PASSWORD
@@ -344,7 +328,7 @@ do_install() {
 			fi
 		fi
 
-		if [ -z "${PASSWORD}" ]; then
+		if [[ ! $PASSWORD ]]; then
 			echo
 			echo "You must set a password!  Did you replace \$htcondor_password with a password?"
 			echo
@@ -352,14 +336,14 @@ do_install() {
 		fi
 	fi
 
-	if [ -z "${ROLE}" ]; then
+	if [[ ! $ROLE ]]; then
 		echo -e "\n# Installing mini HTCondor for ${lsb_dist^} $dist_version"
 	else
 		echo -e "\n# Installing HTCondor as ${ROLE} for ${lsb_dist^} $dist_version"
 	fi
 
 	# Run install binaries for each distro accordingly
-	case "$lsb_dist" in
+	case $lsb_dist in
 		ubuntu|debian)
 			(
 				if ! is_dry_run; then
@@ -372,6 +356,10 @@ do_install() {
 				$sh_c "apt-get update"
 				$sh_c "apt-get install -y gnupg"
 				$sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/keys/HTCondor-${CHANNEL_DIR}-Key | apt-key add -"
+
+				# Our repository redirects to https even if you try to
+				# avoid it, and Debian 9 doesn't come with this by default.
+				$sh_c "apt-get install apt-transport-https"
 
 				# Add our repository.
 				HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
@@ -393,13 +381,15 @@ do_install() {
 				# apt-get will succeed if these packages are already installed,
 				# but for now let's not risk screwing things up by adding them
 				# on the platforms that don't need them.
-				if [[ $lsb_dist = "ubuntu" && $dist_version = "focal" ]]; then
-					echo -e "\n# Preconfiguring packages for Ubuntu 20.04."
-					$sh_c "DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration console-setup tzdata"
-				fi
+				case $lsb_dist.$dist_version in
+				    ubuntu.focal|ubuntu.bionic)
+    					echo -e "\n# Preconfiguring packages for Ubuntu."
+	    				$sh_c "DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration console-setup tzdata"
+                    ;;
+                esac
 
 				echo -e "\n# Installing HTCondor binaries and dependencies"
-				if [ -z "${ROLE}" ]; then
+				if [[ ! $ROLE ]]; then
 					$sh_c "apt-get install -y minihtcondor"
 				else
 					$sh_c "apt-get install -y htcondor"
@@ -412,54 +402,50 @@ do_install() {
 				set -x
 			fi
 
-			repo_dist=${lsb_dist}
-			if [ "${repo_dist}" = "centos" ]; then
-				repo_dist="rhel"
+			# The Amazon Linux container doesn't include ps by default.
+			if [ "${lsb_dist}" = "amzn" ]; then
+				echo -e "\n# Installing ps"a
+				$sh_c "yum install -y procps"
 			fi
-			if [ "${repo_dist}" = "rhel" ]; then
-				repo_dist="el"
-			fi
+
+			repo_dist=$lsb_dist
+			case $lsb_dist in
+				centos|rhel)
+					repo_dist="el"
+			esac
 			repo_suffix="${repo_dist}${dist_version}"
 			yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL}/htcondor-release-current.${repo_suffix}.noarch.rpm"
 
 			echo -e "\n# Installing EPEL"
-			epel_version="${dist_version}"
-			if [ "${lsb_dist}" = "amzn" ]; then
-				if [ "${dist_version}" -eq 2 ]; then
-					epel_version="7"
-				fi
-			fi
+			epel_version=$dist_version
+			case ${lsb_dist}.${dist_version} in
+				amzn.2 ) epel_version=7 ;;
+			esac
 			$sh_c "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || yum reinstall -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
 
-			if [ "${lsb_dist}" != "amzn" ]; then
-				#
-				# Just to make our lives harder, the packages we need from
-				# EPEL depend on repositories which are disabled by default,
-				# and those repositories and how to enable them between
-				# RHEL and CentOS and between version 7 and 8.
-				#
-				if [ "${lsb_dist}" = "centos" ]; then
-					if [ "${dist_version}" -eq 8 ]; then
-						$sh_c "dnf -y install dnf-plugins-core"
-						$sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
-					fi
-				elif [ "${lsb_dist}" = "rhel" ]; then
-					# subscription-manager only works if you've already
-					# "register"ed and "attach"ed the system.
-					if [ "${dist_version}" -eq 7 ]; then
-						$sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
-					elif [ "${dist_version}" -eq 8 ]; then
-						ARCH=$(/bin/arch)
-						$sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-8-${ARCH}-rpms\""
-					fi
-				fi
-			fi
+			# Just to make our lives harder, the packages we need from
+			# EPEL depend on repositories which are disabled by default,
+			# and those repositories and how to enable them between
+			# RHEL and CentOS and between version 7 and 8.
+			#
+			case ${lsb_dist}.${dist_version} in
+				centos.8 ) $sh_c "dnf -y install dnf-plugins-core"
+				           $sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
+				           ;;
+				# subscription-manager only works if you've already
+				# "register"ed and "attach"ed the system.
+				rhel.7 ) $sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
+				         ;;
+				rhel.8 ) ARCH=$(/bin/arch)
+				         $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-8-${ARCH}-rpms\""
+				         ;;
+			esac
 
 			echo -e "\n# Installing the HTCondor repo"
 			$sh_c "yum install -y ${yum_repo_rpm} || yum reinstall -y ${yum_repo_rpm}"
 
 			echo -e "\n# Installing HTCondor"
-			if [ -z "${ROLE}" ]; then
+			if [[ ! $ROLE ]]; then
 				$sh_c "yum install ${YUM_REPO} -y minicondor"
 			else
 				$sh_c "yum install ${YUM_REPO} -y condor"
@@ -467,7 +453,7 @@ do_install() {
 			)
 			;;
 		*)
-			if [ -z "$lsb_dist" ]; then
+			if [[ ! $lsb_dist ]]; then
 				if is_darwin; then
 					echo
 					echo "Error: Unsupported operating system 'macOS'"
@@ -482,7 +468,7 @@ do_install() {
 			;;
 	esac
 
-	if [ -n "${SHARED_FS_DOMAIN}" ]; then
+	if [[ $SHARED_FS_DOMAIN ]]; then
 		DOMAIN_CONFIG=$(cat <<-EOF
 
 			# HTCondor assumes that any two machines with the same value
@@ -520,7 +506,7 @@ do_install() {
 
 	# Configure the role, if any.
 	echo -e "\n# Configuring role, if any ..."
-	case "${ROLE}" in
+	case $ROLE in
 		"central manager")
 			CONFIG_FILE="/etc/condor/config.d/01-central-manager.config"
 			$sh_c "echo CONDOR_HOST = ${CONDOR_HOST} > ${CONFIG_FILE}"
@@ -536,7 +522,7 @@ do_install() {
 			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_submit' >> ${CONFIG_FILE}"
 			$sh_c "echo 'use role:get_htcondor_submit' >> ${CONFIG_FILE}"
 
-			if [ -n "${SHARED_FS_DOMAIN}" ]; then
+			if [[ ${SHARED_FS_DOMAIN} ]]; then
 				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
 			fi
 
@@ -549,7 +535,7 @@ do_install() {
 			$sh_c "echo '# For details, run condor_config_val use role:get_htcondor_execute' >> ${CONFIG_FILE}"
 			$sh_c "echo 'use role:get_htcondor_execute' >> ${CONFIG_FILE}"
 
-			if [ -n "${SHARED_FS_DOMAIN}" ]; then
+			if [[ "${SHARED_FS_DOMAIN}" ]]; then
 				$sh_c "echo '${DOMAIN_CONFIG}' >> ${CONFIG_FILE}"
 			fi
 
@@ -574,29 +560,29 @@ do_install() {
 do_download() {
 	get_distribution
 
-	TARBALL_BASE_URL=${DOWNLOAD_URL}/tarball
-	TARBALL_DIR_URL=${TARBALL_BASE_URL}/${CHANNEL_DIR}/current
+	TARBALL_BASE_URL="${DOWNLOAD_URL}/tarball"
+	TARBALL_DIR_URL="${TARBALL_BASE_URL}/${CHANNEL_DIR}/current"
 
 	OS_VERSION=$dist_version
-	case "$lsb_dist" in
+	case $lsb_dist in
 		# We don't release HTCondor for Fedora.
 		# fedora)
 		#	;;
 		ubuntu)
-			OS_NAME=Ubuntu
-			dist_version_number="$(. /etc/os-release && echo "$VERSION_ID")"
-			dist_version_number=`echo $dist_version_number | sed -e s'/\.[0-9]*//'`
+			OS_NAME="Ubuntu"
+			dist_version_number=$(. /etc/os-release && echo "$VERSION_ID")
+			dist_version_number=$(echo $dist_version_number | sed -e s'/\.[0-9]*//')
 			OS_VERSION=$dist_version_number
 			;;
 		debian)
-			OS_NAME=Debian
+			OS_NAME="Debian"
 			OS_VERSION=$dist_version_number
 			;;
 		centos|rhel)
-			OS_NAME=CentOS
+			OS_NAME="CentOS"
 			;;
 		amzn)
-			OS_NAME=AmazonLinux
+			OS_NAME="AmazonLinux"
 			;;
 		*)
 			if is_darwin; then
@@ -611,8 +597,8 @@ do_download() {
 			;;
 	esac
 
-	TARBALL_NAME=condor-x86_64_${OS_NAME}${OS_VERSION}-stripped.tar.gz
-	TARBALL_URL=${TARBALL_DIR_URL}/${TARBALL_NAME}
+	TARBALL_NAME="condor-x86_64_${OS_NAME}${OS_VERSION}-stripped.tar.gz"
+	TARBALL_URL="${TARBALL_DIR_URL}/${TARBALL_NAME}"
 
 	echo "Downloading to condor.tar.gz..."
 	curl -fSL ${TARBALL_URL} -o condor.tar.gz
@@ -624,14 +610,14 @@ DOWNLOAD_URL="https://research.cs.wisc.edu/htcondor"
 DRY_RUN=1
 sh_c='sh -c'
 unset DIST
-PASSWORD=${GET_HTCONDOR_PASSWORD}
+PASSWORD=$GET_HTCONDOR_PASSWORD
 
 # Process command-line options
 while [ $# -gt 0 ]; do
-	case "$1" in
+	case $1 in
 		--password)
 			PASSWORD=$2
-			if [ -z "${PASSWORD}" ]; then
+			if [[ ! $PASSWORD ]]; then
 				echo "--password requires an argument"
 				exit 1
 			fi
@@ -639,7 +625,7 @@ while [ $# -gt 0 ]; do
 			;;
 		--shared-filesystem-domain)
 			SHARED_FS_DOMAIN=$2
-			if [ -z "${SHARED_FS_DOMAIN}" ]; then
+			if [[ ! $SHARED_FS_DOMAIN ]]; then
 				echo "--shared-filesystem-domain requires an argument"
 				exit 1
 			fi
@@ -651,7 +637,7 @@ while [ $# -gt 0 ]; do
 		--central-manager)
 			ROLE="central manager"
 			CONDOR_HOST=$2
-			if [ -z "${CONDOR_HOST}" ]; then
+			if [[ ! $CONDOR_HOST ]]; then
 				echo "--central-manager requires its external name as an argument"
 				exit 1
 			fi
@@ -660,7 +646,7 @@ while [ $# -gt 0 ]; do
 		--submit)
 			ROLE="submit"
 			CONDOR_HOST=$2
-			if [ -z "${CONDOR_HOST}" ]; then
+			if [[ ! $CONDOR_HOST ]]; then
 				echo "--submit requires the central manager as an argument"
 				exit 1
 			fi
@@ -669,7 +655,7 @@ while [ $# -gt 0 ]; do
 		--execute)
 			ROLE="execute"
 			CONDOR_HOST=$2
-			if [ -z "${CONDOR_HOST}" ]; then
+			if [[ ! $CONDOR_HOST ]]; then
 				echo "--execute requires the central manager as an argument"
 				exit 1
 			fi
@@ -677,7 +663,7 @@ while [ $# -gt 0 ]; do
 			;;
 		--yum-repo)
 			REPO_SUFFIX=$2
-			if [ -z "${REPO_SUFFIX}" ]; then
+			if [[ ! $REPO_SUFFIX ]]; then
 				echo "--yum-repo requires a repo-suffix as an argument"
 				exit 1
 			fi
@@ -685,7 +671,7 @@ while [ $# -gt 0 ]; do
 			shift
 			;;
 		--channel)
-			case "$2" in
+			case $2 in
 				stable)
 					CHANNEL="stable"
 					;;
@@ -693,7 +679,7 @@ while [ $# -gt 0 ]; do
 					CHANNEL="current"
 					;;
 				*-rc)
-					CHANNEL="$2"
+					CHANNEL=$2
 					;;
 				*)
 					echo "Illegal option $2 for --channel"
@@ -724,7 +710,7 @@ while [ $# -gt 0 ]; do
 			exit 1
 			;;
 	esac
-	shift $(( $# > 0 ? 1 : 0 ))
+	shift
 done
 
 # We have to update this once every stable release; we don't want
@@ -733,7 +719,7 @@ done
 if [ "${CHANNEL}" = "stable" ]; then
 	CHANNEL_DIR=9.0
 else
-	CHANNEL_DIR=${CHANNEL}
+	CHANNEL_DIR=$CHANNEL
 fi
 
 # wrapped up in functions so that we have some protection against only getting

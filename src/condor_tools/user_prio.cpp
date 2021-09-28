@@ -1019,7 +1019,7 @@ main(int argc, const char* argv[])
 
 		if (neg_name) {
 			std::string constraint;
-			formatstr(constraint, ATTR_NEGOTIATOR_NAME " == \"%s\"", ATTR_NEGOTIATOR_NAME, neg_name);
+			formatstr(constraint, ATTR_NEGOTIATOR_NAME " == \"%s\"", neg_name);
 			query.addANDConstraint(constraint.c_str());
 		}
 

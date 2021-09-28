@@ -40,11 +40,15 @@ condor_basename(const char *path)
 
     /* We need to initialize to make sure we return something real
 	   even if the path we're passed in has no directory delimiters. */
-	name = path;	
+	name = path;
 
 	for (s = path; s && *s != '\0'; s++) {
-		if (*s == '\\' || *s == '/') {
-			name = s+1;
+		if (
+#ifdef WIN32
+			*s == '\\' ||
+#endif
+			*s == '/') {
+				name = s+1;
 		}
 	}
 
@@ -85,7 +89,7 @@ condor_dirname(const char *path)
 	if( ! path ) {
 		return strdup( "." );
 	}
-	
+
 	parent = strdup( path );
 	for (s = parent; s && *s != '\0'; s++) {
 		if (*s == '\\' || *s == '/') {
@@ -127,7 +131,7 @@ dirname( const char* path )
 #endif
 
 
-/* 
+/*
    return TRUE if the given path is a full pathname, FALSE if not.  by
    full pathname, we mean it either begins with "/" or "\" or "*:\"
    (something like "c:\..." on windoze).

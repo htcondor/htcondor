@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 
 // This is a mess, but since Windows.h isn't as safe to include as
 // unistd.h and dlfcn.h, we do the song-and-dance routine here, so
@@ -114,9 +115,11 @@ int main() {
 
 	auto cuda_handle = setCUDAFunctionPointers();
 	if(! cuda_handle) { fail(); }
-	if( cuInit(0) != CUDA_SUCCESS ) {
-		fprintf( stderr, "cuInit(0) failed, aborting.\n" );
-		fail();
+	if( cuInit ) {
+		if( cuInit(0) != CUDA_SUCCESS ) {
+			fprintf( stderr, "cuInit(0) failed, aborting.\n" );
+			fail();
+		}
 	}
 
 	auto nvml_handle = setNVMLFunctionPointers();

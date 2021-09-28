@@ -398,8 +398,7 @@ MPI Applications Within HTCondor's Vanilla Universe
 ---------------------------------------------------
 
 The vanilla universe may be preferred over the parallel universe for
-certain parallel applications such as MPI ones. These applications are
-ones in which the allocated cores need to be within a single slot. The
+parallel applications which can run entirely on one machine.  The
 **request_cpus** :index:`request_cpus<single: request_cpus; submit commands>` command
 causes a claimed slot to have the required number of CPUs (cores).
 
@@ -407,12 +406,8 @@ There are two ways to ensure that the MPI job can run on any machine
 that it lands on:
 
 #. Statically build an MPI library and statically compile the MPI code.
-#. Use CDE to create a directory tree that contains all of the libraries
-   needed to execute the MPI code.
-
-For Linux machines, our experience recommends using CDE, as building
-static MPI libraries can be difficult. CDE can be found at
-`http://www.pgbovine.net/cde.html <http://www.pgbovine.net/cde.html>`_.
+#. Bundle all the MPI libraries into a docker container and run MPI in the container 
+  
 
 Here is a submit description file example assuming that MPI is installed
 on all machines on which the MPI job may run, or that the code was built
@@ -432,55 +427,6 @@ using static libraries and a static version of ``mpirun`` is available.
     when_to_transfer_output = on_exit
     transfer_input_files = my_mpi_linked_executable
     queue
-
-If CDE is to be used, then CDE needs to be run first to create the
-directory tree. On the host machine which has the original program, the
-command
-
-.. code-block:: text
-
-    prompt-> cde mpirun -n 2 my_mpi_linked_executable
-
-creates a directory tree that will contain all libraries needed for the
-program. By creating a tarball of this directory, the user can package
-up the executable itself, any files needed for the executable, and all
-necessary libraries. The following example assumes that the user has
-created a tarball called ``cde_my_mpi_linked_executable.tar`` which
-contains the directory tree created by CDE.
-
-.. code-block:: condor-submit
-
-    ############################################################
-    ##   submit description file for
-    ##   MPI under the vanilla universe; CDE used
-    ############################################################
-    universe = vanilla
-    executable = cde_script.sh
-    request_cpus = 2
-    should_transfer_files = yes
-    when_to_transfer_output = on_exit
-    transfer_input_files = cde_my_mpi_linked_executable.tar
-    transfer_output_files = cde-package/cde-root/path/to/original/directory
-    queue
-
-The executable is now a specialized shell script tailored to this job.
-In this example, *cde_script.sh* contains:
-
-.. code-block:: bash
-
-    #!/bin/sh
-    # Untar the CDE package
-    tar xpf cde_my_mpi_linked_executable.tar
-    # cd to the subdirectory where I need to run
-    cd cde-package/cde-root/path/to/original/directory
-    # Run my command
-    ./mpirun.cde -n 2 ./my_mpi_linked_executable
-    # Since HTCondor will transfer the contents of this directory
-    # back upon job completion.
-    # We do not want the .cde command and the executable transferred back.
-    # To prevent the transfer, remove both files.
-    rm -f mpirun.cde
-    rm -f my_mpi_linked_executable
 
 Any additional input files that will be needed for the executable that
 are not already in the tarball should be included in the list in

@@ -873,6 +873,12 @@ default=
 type=string
 tags=accountant
 
+[ACCOUNTANT_DATABASE_FILE]
+default=$(SPOOL)/Accountantnew.log
+win32_default=$(SPOOL)\Accountantnew.log
+type=path
+tags=accountant
+
 [MAX_ACCOUNTANT_DATABASE_SIZE]
 default=1000000
 type=int
@@ -1502,8 +1508,8 @@ tags=gridmanager,gahp-client
 default=20
 type=int
 
-[GLITE_LOCATION]
-default=$(LIBEXEC)/glite
+[BLAHPD_LOCATION]
+default=$(RELEASE_DIR)
 type=string
 tags=gridmanager,gahp-client
 
@@ -1701,8 +1707,7 @@ description=Path to sendmail
 tags=MAIL,
 
 [MAIL]
-# default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
-default=/bin/mail
+default=/usr/bin/mail
 win32_default=$(BIN)\condor_mail.exe
 type=path
 tags=MAIL,
@@ -2527,6 +2532,10 @@ description=Location of the host private key
 type=path
 tags=condor_auth_ssl
 
+[AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE]
+default=false
+type=bool
+
 [TRUST_DOMAIN]
 default=$(COLLECTOR_HOST)
 type=string
@@ -2685,6 +2694,10 @@ tags=negotiator,matchmaker
 default=60
 type=int
 tags=negotiator,matchmaker
+
+[NEGOTIATOR_MIN_INTERVAL]
+default=5
+type=int
 
 [NEGOTIATOR_UPDATE_AFTER_CYCLE]
 default=false
@@ -3122,10 +3135,16 @@ win32_default=$(SBIN)\condor_starter.exe
 type=path
 tags=schedd
 
+[JOB_QUEUE_LOG]
+default=$(SPOOL)/job_queue.log
+win32_default=$(SPOOL)\job_queue.log
+type=path
+tags=schedd
+
 [LOCAL_UNIV_EXECUTE]
 default=$(SPOOL)/local_univ_execute
 win32_default=$(SPOOL)\local_univ_execute
-type=string
+type=path
 tags=schedd
 
 [SCHED_UNIV_RENICE_INCREMENT]
@@ -4250,14 +4269,6 @@ default=4
 tags=schedd
 restart=true
 customization=expert
-
-[ENABLE_VERSIONED_OPSYS]
-default=true
-win32_default=false
-type=bool
-customization=devel
-description=Append OS version to the value of OPSYS
-tags=startd
 
 [WANT_SUSPEND]
 default=False
