@@ -2737,7 +2737,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			// side must then retreive the URL using one of the configured
 			// filetransfer plugins.
 
-			MyString URL;
+			std::string URL;
 			// receive the URL from the wire
 
 			if (!s->code(URL)) {

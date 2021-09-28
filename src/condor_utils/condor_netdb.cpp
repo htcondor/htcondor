@@ -164,7 +164,7 @@ condor_gethostname(char *name, size_t namelen) {
 					 "to determine hostname\n", tmp );
 
 			std::vector<condor_sockaddr> addrs;
-			MyString my_hostname(tmp);
+			std::string my_hostname(tmp);
 			addrs = resolve_hostname_raw(my_hostname);
 			if (addrs.empty()) {
 				dprintf(D_HOSTNAME,
