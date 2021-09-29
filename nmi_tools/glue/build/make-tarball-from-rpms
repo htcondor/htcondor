@@ -70,32 +70,8 @@ mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
 uw_externals="blahp condor-boinc"
 
 common_externals="boost169-python3 \
-    globus-callout \
-    globus-common \
-    globus-ftp-client \
-    globus-ftp-control \
-    globus-gass-transfer \
-    globus-gram-client \
-    globus-gram-protocol \
-    globus-gsi-callback \
-    globus-gsi-cert-utils \
-    globus-gsi-credential \
-    globus-gsi-openssl-error \
-    globus-gsi-proxy-core \
-    globus-gsi-proxy-ssl \
-    globus-gsi-sysconfig \
-    globus-gss-assist \
-    globus-gssapi-error \
-    globus-gssapi-gsi \
-    globus-io \
-    globus-openssl-module \
-    globus-rsl \
-    globus-xio \
-    globus-xio-gsi-driver \
-    globus-xio-popen-driver \
     libcgroup \
     libgomp \
-    libtool-ltdl \
     munge-libs \
     scitokens-cpp \
     voms"

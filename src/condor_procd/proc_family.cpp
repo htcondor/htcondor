@@ -47,24 +47,26 @@ ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
                        birthday_t         root_birthday,
                        pid_t              watcher_pid,
                        int                max_snapshot_interval) :
-	m_monitor(monitor),
-	m_root_pid(root_pid),
-	m_root_birthday(root_birthday),
-	m_watcher_pid(watcher_pid),
-	m_max_snapshot_interval(max_snapshot_interval),
-	m_exited_user_cpu_time(0),
-	m_exited_sys_cpu_time(0),
-	m_max_image_size(0),
-	m_member_list(NULL)
-#if defined(HAVE_EXT_LIBCGROUP)
-	, m_cgroup_string(""),
-	m_cm(CgroupManager::getInstance()),
-	m_initial_user_cpu(0),
-	m_initial_sys_cpu(0),
-	m_last_signal_was_sigstop(false)
-#endif
+	m_monitor(monitor)
+	, m_root_pid(root_pid)
+	, m_root_birthday(root_birthday)
+	, m_watcher_pid(watcher_pid)
+	, m_max_snapshot_interval(max_snapshot_interval)
+	, m_exited_user_cpu_time(0)
+	, m_exited_sys_cpu_time(0)
+	, m_max_image_size(0)
+	, m_member_list(NULL)
 #ifdef LINUX
 	, m_perf_counter(root_pid)
+#endif
+#if defined(HAVE_EXT_LIBCGROUP)
+	, m_cgroup_string("")
+	, m_cm(CgroupManager::getInstance())
+	, m_initial_user_cpu(0)
+	, m_initial_sys_cpu(0)
+#endif
+#if defined(HAVE_EXT_LIBCGROUP)
+	, m_last_signal_was_sigstop(false)
 #endif
 {
 #if !defined(WIN32)

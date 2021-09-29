@@ -20,8 +20,6 @@
 #ifndef _GENERIC_STATS_H
 #define _GENERIC_STATS_H
 
-#include "classy_counted_ptr.h"
-
 // To use generic statistics:
 //   * declare your probes as class (or struct) members
 //     * use stats_entry_abs<T>    for probes that need a value and a max value (i.e. number of shadows processes)
@@ -573,7 +571,7 @@ public:
    static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_abs<T>::Unpublish; };
 };
 
-class stats_ema_config: public ClassyCountedPtr {
+class stats_ema_config {
  public:
 	void add(time_t horizon,char const *horizon_name);
 	bool sameAs( stats_ema_config const *other);
@@ -627,7 +625,7 @@ typedef std::vector<stats_ema> stats_ema_list;
 	// Where each horizon is specified as an integer number of seconds
 	// Fills in ema_horizons, which can be fed to ConfigureEMAHorizons() of one or more
 	// instances of this class to allocate EMA variables.
-bool ParseEMAHorizonConfiguration(char const *ema_conf,classy_counted_ptr<stats_ema_config> &ema_horizons,std::string &error_str);
+bool ParseEMAHorizonConfiguration(char const *ema_conf,std::shared_ptr<stats_ema_config> &ema_horizons,std::string &error_str);
 
 // use stats_entry_sum_ema_rate to compute a running sum and rate of growth.
 // The rate of growth is computed as an exponential moving average over
@@ -644,7 +642,7 @@ public:
 
 	stats_ema_list ema;
 	time_t recent_start_time;
-	classy_counted_ptr<stats_ema_config> ema_config;
+	std::shared_ptr<stats_ema_config> ema_config;
 
 	void Clear() {
 		this->value = 0;
@@ -666,7 +664,7 @@ public:
 		// Can be called to reconfigure or initialize this object.
 		// Args:
 		//   ema_config serves as a template; it can be created with ParseEMAHorizonConfiguration()
-	void ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> config);
+	void ConfigureEMAHorizons(std::shared_ptr<stats_ema_config> config);
 
 		// Return the biggest EMA rate value
 	double BiggestEMAValue() const;

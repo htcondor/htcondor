@@ -1083,7 +1083,7 @@ IOStats::Clear() {
 }
 
 void
-IOStats::ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> config) {
+IOStats::ConfigureEMAHorizons(std::shared_ptr<stats_ema_config> config) {
 	bytes_sent.ConfigureEMAHorizons(config);
 	bytes_received.ConfigureEMAHorizons(config);
 	file_read.ConfigureEMAHorizons(config);

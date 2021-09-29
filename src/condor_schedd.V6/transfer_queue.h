@@ -41,7 +41,7 @@ class IOStats {
 
 	void Add(IOStats &s);
 	void Clear();
-	void ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> config);
+	void ConfigureEMAHorizons(std::shared_ptr<stats_ema_config> config);
 };
 
 // transfer queue server's representation of a client
@@ -174,7 +174,7 @@ class TransferQueueManager: public Service {
 	IOStats m_iostats;
 	int m_update_iostats_interval;
 	int m_update_iostats_timer;
-	classy_counted_ptr<stats_ema_config> ema_config;
+	std::shared_ptr<stats_ema_config> ema_config;
 	StatisticsPool m_stat_pool;
 	int m_publish_flags;
 

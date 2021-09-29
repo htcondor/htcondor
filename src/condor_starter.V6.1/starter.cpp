@@ -80,6 +80,7 @@ Starter::Starter() :
 	Execute(NULL),
 	orig_cwd(NULL),
 	is_gridshell(false),
+	m_workingDirExists(false),
 #ifdef WIN32
 	has_encrypted_working_dir(false),
 #endif
@@ -153,6 +154,7 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 			// scratch directory, we're just going to use whatever
 			// EXECUTE is, or our CWD if that's not defined...
 		WorkingDir = Execute;
+		m_workingDirExists = true;
 	} else {
 		formatstr( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 				 (long)daemonCore->getpid() );
@@ -2006,6 +2008,7 @@ Starter::createTempExecuteDir( void )
 	}
 	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir.c_str() );
 	set_priv( priv );
+	m_workingDirExists = true;
 	return true;
 }
 
@@ -3766,6 +3769,9 @@ Starter::removeTempExecuteDir( void )
 		}
 	}
 
+	if (!has_failed) {
+		m_workingDirExists = false;
+	}
 	return !has_failed;
 }
 

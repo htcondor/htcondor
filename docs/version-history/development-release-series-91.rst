@@ -37,6 +37,15 @@ New Features:
   the last run of the job.
   :jira:`741`
 
+- When declining to put a job on hold due to the temporary scratch
+  directory disappearing, verify that the directory is expected to exist
+  and require that the job not be local universe.
+  :jira:`680`
+
+- Added a new generic knob for setting the slot user for all slots.  Configure
+  ''NOBODY_SLOT_USER`` for all slots, instead of configuring a ``SLOT<N>_USER`` for each slot.
+  :jira:`720`
+
 Bugs Fixed:
 
 - None.
@@ -46,16 +55,9 @@ Version 9.2.0
 
 Release Notes:
 
-.. HTCondor version 9.2.0 released on Month Date, 2021.
-
-- HTCondor version 9.2.0 not yet released.
+- HTCondor version 9.2.0 released on September 23, 2021.
 
 New Features:
-
-- Added new configuration parameter ``NEGOTIATOR_MIN_INTERVAL``, which
-  sets the minimum amount of the time between the start of one
-  negotiation cycle and the next.
-  :jira:`606`
 
 - Added a ``SERVICE`` node type to *condor_dagman*: a special node which runs
   in parallel to a DAG for the duration of its workflow. This can be used to
@@ -63,8 +65,13 @@ New Features:
   impacting it.
   :jira:`437`
 
+- Added new configuration parameter ``NEGOTIATOR_MIN_INTERVAL``, which
+  sets the minimum amount of the time between the start of one
+  negotiation cycle and the next.
+  :jira:`606`
+
 - The *condor_userprio* tool now accepts one or more username arguments and will report
-  priority and useage for only those users
+  priority and usage for only those users
   :jira:`559`
 
 - Added a new ``-yes`` command-line argument to the *condor_annex*, allowing
@@ -78,8 +85,8 @@ Bugs Fixed:
   :jira:`602`
 
 - Changed the default value of configuration parameter ``MAIL`` to
-  */usr/bin/mail* on unix.
-  This location is valid on all of our supported unix platforms, unlike
+  */usr/bin/mail* on Linux.
+  This location is valid on all of our supported Linux platforms, unlike
   the previous default value of */bin/mail*.
   :jira:`581`
 
