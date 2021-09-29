@@ -78,6 +78,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	// ad->Delete(ATTR_USER); // Schedd will set this with the proper UID_DOMAIN.
 	ad->Delete(ATTR_Q_DATE);
 	ad->Delete(ATTR_JOB_REMOTE_WALL_CLOCK);
+	ad->Delete(ATTR_JOB_LAST_REMOTE_WALL_CLOCK);
 	ad->Delete(ATTR_SERVER_TIME);
 	ad->Delete(ATTR_AUTO_CLUSTER_ID);
 	ad->Delete(ATTR_AUTO_CLUSTER_ATTRS);
@@ -319,6 +320,7 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		ATTR_NUM_MATCHES,
 		ATTR_NUM_RESTARTS,
 		ATTR_JOB_REMOTE_WALL_CLOCK,
+		ATTR_JOB_LAST_REMOTE_WALL_CLOCK,
 		ATTR_JOB_CORE_DUMPED,
 		ATTR_EXECUTABLE_SIZE,
 		ATTR_IMAGE_SIZE,
