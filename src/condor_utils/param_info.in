@@ -6702,5 +6702,24 @@ default : @end
 	DAEMON_LIST=$(DAEMON_LIST),ADSTASH
 @end
 
+[$FEATURE.CommonCloudAttributesGoogle]
+description=Enable an execute node to advertise common cloud attributes on Google
+default : @end
+	use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/common-cloud-attributes-google.py, $(0))
+	STARTD_CRON_cloud_PREFIX = Cloud
+@end
+
+[$FEATURE.JobsHaveInstanceIDs]
+description=When a job runs on a machine in the cloud, add that machine's instance ID to the job's ClassAd
+default : @end
+	SYSTEM_JOB_MACHINE_ATTRS = $(SYSTEM_JOB_MACHINE_ATTRS) CloudInstanceID
+@end
+
+[$FEATURE.CommonCloudAttributesAWS]
+description=Enable an execute node to advertise common cloud attributes on AWS
+default : @end
+	use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/common-cloud-attributes-aws.py, $(0))
+	STARTD_CRON_cloud_PREFIX = Cloud
+@end
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

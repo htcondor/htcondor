@@ -1166,6 +1166,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/data_plugin
 %_libexecdir/condor/box_plugin.py
 %_libexecdir/condor/gdrive_plugin.py
+%_libexecdir/condor/common-cloud-attributes-google.py
+%_libexecdir/condor/common-cloud-attributes-aws.py
+%_libexecdir/condor/common-cloud-attributes-aws.sh
 %_libexecdir/condor/onedrive_plugin.py
 # TODO: get rid of these
 # Not sure where these are getting built
