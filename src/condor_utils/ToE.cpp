@@ -120,13 +120,13 @@ Tag::readFromString( const std::string & in ) {
 	const char * endWhoStr = " at ";
 	size_t endWho = in.find( endWhoStr );
 	if( endWho == std::string::npos ) { return false; }
-	this->who = in.substr( startPos, endWho );
+	this->who = in.substr( startPos, endWho-startPos );
 	startPos = endWho + strlen(endWhoStr);
 
 	const char * endWhenStr = " (using method ";
 	size_t endWhen = in.find( endWhenStr, startPos );
 	if( endWhen == std::string::npos ) { return false; }
-	std::string whenStr = in.substr( startPos, endWhen );
+	std::string whenStr = in.substr( startPos, endWhen-startPos );
 	startPos = endWhen + strlen(endWhenStr);
 	// This code gets more complicated if we don't assume UTC i/o.
 	struct tm eventTime;
@@ -136,7 +136,7 @@ Tag::readFromString( const std::string & in ) {
 	const char * endHowCodeStr = ": ";
 	size_t endHowCode = in.find( endHowCodeStr, startPos );
 	if( endHowCode == std::string::npos ) { return false; }
-	std::string howCodeStr = in.substr( startPos, endHowCode );
+	std::string howCodeStr = in.substr( startPos, endHowCode-startPos );
 	startPos = endHowCode + strlen(endHowCodeStr);
 	char * end = NULL;
 	long lhc = strtol( howCodeStr.c_str(), & end, 10 );
@@ -149,7 +149,7 @@ Tag::readFromString( const std::string & in ) {
 	const char * endHowStr = ").";
 	size_t endHow = in.find( endHowStr, startPos );
 	if( endHow == std::string::npos ) { return false; }
-	this->how = in.substr( startPos, endHow );
+	this->how = in.substr( startPos, endHow-startPos );
 	startPos = endHow + strlen(endHowStr);
 	if(startPos < in.length()) { return false; }
 
