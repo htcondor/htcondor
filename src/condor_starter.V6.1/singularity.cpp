@@ -281,14 +281,22 @@ Singularity::setup(ClassAd &machineAd,
 	sing_args.AppendArg("-C");
 
 	std::string args_error;
-	char *tmp = param("SINGULARITY_EXTRA_ARGUMENTS");
-	if(!sing_args.AppendArgsV1RawOrV2Quoted(tmp,args_error)) {
+	std::string sing_extra_args;
+
+	if (!param_eval_string(sing_extra_args, "SINGULARITY_EXTRA_ARGUMENTS", "", &machineAd, &jobAd)) {
+		// SINGULARITY_EXTRA_ARGUMENTS isn't a valid expression.  Try just an unquoted string
+		char *xtra = param("SINGULARITY_EXTRA_ARGUMENTS");
+		if (xtra) {
+			sing_extra_args = xtra;
+			free(xtra);
+		}
+	}
+
+	if(!sing_extra_args.empty() && !sing_args.AppendArgsV1RawOrV2Quoted(sing_extra_args.c_str(),args_error)) {
 		dprintf(D_ALWAYS,"singularity: failed to parse extra arguments: %s\n",
 		args_error.c_str());
-		free(tmp);
 		return Singularity::FAILURE;
 	}
-	if (tmp) free(tmp);
 
 	// if the startd has assigned us a gpu, add --nv to the sing exec
 	// arguments to mount the nvidia devices

@@ -191,13 +191,16 @@ on hold.  This is controlled by the condor knob
 If an administrator wants to pass additional arguments to the
 singularity exec command that HTCondor does not currently support, the
 parameter ``SINGULARITY_EXTRA_ARGUMENTS`` allows arbitraty additional
-parameters to be passed to the singularity exec command. For example, to
+parameters to be passed to the singularity exec command. Note that this
+can be a classad expression, evaluated in the context of the job ad
+and the machine, so the admin could set different options for different
+kinds of jobs.  For example, to
 pass the ``-w`` argument, to make the image writeable, an administrator
 could set
 
 .. code-block:: condor-config
 
-    SINGULARITY_EXTRA_ARGUMENTS = -w
+    SINGULARITY_EXTRA_ARGUMENTS = "-w"
 
 There are some rarely-used settings that some administrators may
 need to set. By default, HTCondor looks for the Singularity runtime
