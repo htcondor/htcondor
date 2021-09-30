@@ -1115,6 +1115,92 @@ userHome_func(const char *                 name,
 }
 
 
+classad::Value
+evaluateInContext( classad::ExprTree * expr,
+				   classad::EvalState & state,
+				   classad::ExprTree * nested_ad_reference ) {
+	classad::Value rv;
+
+	classad::Value cav;
+	if(! nested_ad_reference->Evaluate(state, cav)) {
+		dprintf( D_FULLDEBUG, "evaluateInContext(): failed to evaluate listed element\n" );
+		rv.SetErrorValue();
+		return rv;
+	}
+
+	classad::ClassAd * nested_ad = NULL;
+	if(! cav.IsClassAdValue(nested_ad)) {
+		dprintf( D_FULLDEBUG, "evaluateInContext(): listed element is not a ClassAd\n" );
+		rv.SetErrorValue();
+		return rv;
+	}
+
+	// FIXME: ???
+	state.SetScopes(nested_ad);
+	if(! expr->Evaluate(state, rv)) {
+		dprintf( D_FULLDEBUG, "evalEachInContext(): failed to evaluate expr in context\n" );
+		rv.SetErrorValue();
+	}
+	return rv;
+}
+
+static
+bool evalInEachContext_func( const char * /*name*/,
+							  const classad::ArgumentList &arg_list,
+							  classad::EvalState &state,
+							  classad::Value &result ) {
+	//
+	// evalInEachContext( expr, nested_ad_list )
+	//
+	// Evaluate expr in the context of the current ad and each ad in
+	// nested_ad_list, individually.  Returns the index in nested_ad_list
+	// of the first ad for which expr evaluaes to true.
+	//
+
+	if( arg_list.size() != 2 ) {
+		dprintf( D_FULLDEBUG, "evalEachInContext(): wrong number of arguments\n" );
+		result.SetErrorValue();
+		return true;
+	}
+
+	classad::ExprTree * expr = arg_list[0];
+	classad::ExprTree * nal = arg_list[1];
+
+	if(nal->GetKind() != ExprTree::NodeKind::EXPR_LIST_NODE) {
+		dprintf( D_FULLDEBUG, "evalEachInContext(): second argument not a list\n" );
+		result.SetErrorValue();
+		return true;
+	};
+
+	classad::ExprList * nested_ad_list = dynamic_cast<classad::ExprList *>(nal);
+	if( nested_ad_list == NULL ) {
+		dprintf( D_FULLDEBUG, "evalEachInContext(): failed to convert second argument\n" );
+		result.SetErrorValue();
+		return true;
+	}
+
+	size_t index = 0;
+	for( auto i = nested_ad_list->begin(); i != nested_ad_list->end(); ++i ) {
+		auto nested_ad = *i;
+
+		dprintf( D_FULLDEBUG, "evalEachInContext(): evaluating index %lu\n", index );
+		classad::Value r = evaluateInContext( expr, state, nested_ad );
+		bool matched;
+		if( r.IsBooleanValue(matched) && matched ) {
+			result.SetIntegerValue(index);
+			return true;
+		}
+
+		index++;
+	}
+
+	dprintf( D_FULLDEBUG, "evalEachInContext(): did not find a match\n" );
+	result.SetBooleanValue(false);
+	return true;
+}
+
+
+
 static
 void registerClassadFunctions()
 {
@@ -1171,6 +1257,9 @@ void registerClassadFunctions()
 	classad::FunctionCall::RegisterFunction( name, splitArb_func );
 	//name = "splitsinful";
 	//classad::FunctionCall::RegisterFunction( name, splitSinful_func );
+
+    name = "evalInEachContext";
+    classad::FunctionCall::RegisterFunction( name, evalInEachContext_func);
 }
 
 void
@@ -2705,6 +2794,5 @@ bool InsertLongFormAttrValue(classad::ClassAd & ad, const char * line, bool use_
 	}
 	return ad.Insert(attr, tree);
 }
-
 
 // end functions
