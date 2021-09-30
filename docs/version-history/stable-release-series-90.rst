@@ -27,6 +27,11 @@ Bugs Fixed:
   on older kernels.
   :jira:`745`
 
+- Fixed a bug where *condor_gpu_discovery* could segfault on some older versions
+  of the NVIDIA libraries. This would result in GPUs not being detected.
+  The bug was introduced in HTCondor 9.0.6 and is known to occur with CUDA runtime 10.1.
+  :jira:`760`
+
 Version 9.0.6
 -------------
 
