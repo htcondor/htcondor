@@ -35,8 +35,8 @@
 class AdNameHashKey
 {
   public:
-    MyString name;
-    MyString ip_addr;
+	std::string name;
+	std::string ip_addr;
 
 	void sprint( std::string & ) const;
     friend bool operator== (const AdNameHashKey &, const AdNameHashKey &);
@@ -48,7 +48,7 @@ size_t adNameHashFunction (const AdNameHashKey &);
 
 // type for the hash tables ...
 typedef HashTable <AdNameHashKey, ClassAd *> CollectorHashTable;
-typedef HashTable <MyString, CollectorHashTable *> GenericAdHashTable;
+typedef HashTable <std::string, CollectorHashTable *> GenericAdHashTable;
 
 // functions to make the hashkeys
 bool makeStartdAdHashKey (AdNameHashKey &, const ClassAd *);
