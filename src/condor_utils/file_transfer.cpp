@@ -2758,7 +2758,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 				// Determine which plugin to invoke, and whether it supports multiple
 				// file transfer.
-				MyString pluginPath = DetermineFileTransferPlugin( errstack, URL.c_str(), fullname.c_str() );
+				std::string pluginPath = DetermineFileTransferPlugin( errstack, URL.c_str(), fullname.c_str() );
 				bool thisPluginSupportsMultifile = false;
 				if( plugins_multifile_support.find( pluginPath ) != plugins_multifile_support.end() ) {
 					thisPluginSupportsMultifile = plugins_multifile_support[pluginPath];
@@ -5550,10 +5550,10 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 // Determines the third-party plugin needed for a file transfer.
 // Looks at both source and destination to determine which one contains a URL,
 // then extracts the method (ie. http, ftp) and uses it to lookup plugin.
-MyString FileTransfer::DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest ) {
+std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest ) {
 
 	char *URL = NULL;
-	MyString plugin;
+	std::string plugin;
 
 	// First, check the destination to see if it looks like a URL.
 	// If not, source must be the URL.
@@ -5635,10 +5635,10 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	}
 
 	// look up the method in our hash table
-	MyString plugin;
+	std::string plugin;
 
 	// hashtable returns zero if found.
-	if (plugin_table->lookup(method.c_str(), plugin)) {
+	if (plugin_table->lookup(method, plugin)) {
 		// no plugin for this type!!!
 		e.pushf("FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method.c_str());
 		dprintf (D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str());
@@ -5649,7 +5649,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 /*
 	// TODO: check validity of plugin name.  should always be an absolute path
 	if (absolute_path_check() ) {
-		dprintf(D_ALWAYS, "FILETRANSFER: NOT invoking malformed plugin named \"%s\"\n", plugin.Value());
+		dprintf(D_ALWAYS, "FILETRANSFER: NOT invoking malformed plugin named \"%s\"\n", plugin.c_str());
 		FAIL();
 	}
 */
@@ -5682,7 +5682,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 
 	// prepare args for the plugin
 	ArgList plugin_args;
-	plugin_args.AppendArg(plugin.c_str());
+	plugin_args.AppendArg(plugin);
 	plugin_args.AppendArg(source);
 	plugin_args.AppendArg(dest);
 	dprintf(D_FULLDEBUG, "FileTransfer::InvokeFileTransferPlugin invoking: %s %s %s\n", plugin.c_str(), source, dest);
@@ -6000,8 +6000,8 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 
 	// iterate plugin_table if it existssrc
 	if (plugin_table) {
-		MyString junk;
-		MyString method;
+		std::string junk;
+		std::string method;
 
 		plugin_table->startIterations();
 		while(plugin_table->iterate(method, junk)) {
@@ -6070,13 +6070,13 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
 		const char * equals = strchr(plug, '=');
 		if (equals) {
-			MyString methods; methods.set(plug, equals - plug);
+			std::string methods(plug, equals - plug);
 
 			// use the file basename as the plugin name, so that when we invoke it
 			// we will invoke the copy in the input sandbox
-			MyString plugin_path(equals + 1);
-			plugin_path.trim();
-			MyString plugin(condor_basename(plugin_path.c_str()));
+			std::string plugin_path(equals + 1);
+			trim(plugin_path);
+			std::string plugin(condor_basename(plugin_path.c_str()));
 
 			InsertPluginMappings(methods, plugin);
 			plugins_multifile_support[plugin] = true;
@@ -6123,7 +6123,7 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e) {
 	}
 
 	// If we have an https plug-in, this version of HTCondor also supports S3.
-	MyString method, junk;
+	std::string method, junk;
 	plugin_table->startIterations();
 	while( plugin_table->iterate( method, junk ) ) {
 		if( method == "https" ) {
@@ -6179,7 +6179,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 	// e.pushf("FILETRANSFER", 1, "\"%s -classad\" is not plugin type FileTransfer, ignoring", path );
 
 	// extract the info we care about
-	char* methods = NULL;
+	std::string methods;
 	bool this_plugin_supports_multifile = false;
 	if ( ad->LookupBool( "MultipleFileSupport", this_plugin_supports_multifile ) ) {
 		plugins_multifile_support[path] = this_plugin_supports_multifile;
@@ -6188,11 +6188,8 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 	// Before adding mappings, make sure that if multifile plugins are disabled,
 	// this is not a multifile plugin.
 	if ( multifile_plugins_enabled || !this_plugin_supports_multifile ) {
-		if (ad->LookupString( "SupportedMethods", &methods)) {
-			// free the memory, return a MyString
-			MyString m = methods;
-			free(methods);
-			InsertPluginMappings( m, path );
+		if (ad->LookupString( "SupportedMethods", methods)) {
+			InsertPluginMappings( methods, path );
 		}
 	}
 
@@ -6202,11 +6199,11 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 
 
 void
-FileTransfer::InsertPluginMappings(MyString methods, MyString p)
+FileTransfer::InsertPluginMappings(const std::string& methods, const std::string& p)
 {
 	StringList method_list(methods.c_str());
 
-	char* m;
+	const char* m;
 
 	method_list.rewind();
 	while((m = method_list.next())) {
