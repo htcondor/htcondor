@@ -59,12 +59,7 @@ typedef struct PROC_ID {
 #endif
 } PROC_ID;
 
-
-#if defined(__cplusplus)
 class MyString;
-template <class Item> class ExtArray;
-#endif
-
 /*
 **	Possible notification options
 */
