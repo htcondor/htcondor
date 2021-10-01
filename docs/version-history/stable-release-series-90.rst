@@ -23,6 +23,10 @@ New Features:
 
 Bugs Fixed:
 
+- *condor_watch_q* no longer has a limit on the number of job event log files
+  it can watch.
+  :jira:`658`
+
 - Fix a bug in *condor_watch_q* which would cause it to fail when run
   on older kernels.
   :jira:`745`
