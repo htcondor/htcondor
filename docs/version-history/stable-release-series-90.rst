@@ -36,6 +36,11 @@ Bugs Fixed:
   with p-slot preemption.
   :jira:`737`
 
+- Fixed a bug where the ``NumJobStarts`` and ``JobCurrentStartExecutingDate``
+  job ad attributes weren't updated if the job began executing while the
+  *condor_shadow* and *condor_starter* were disconnected.
+  :jira:`752`
+
 Version 9.0.6
 -------------
 
