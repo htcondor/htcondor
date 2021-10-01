@@ -32,6 +32,10 @@ Bugs Fixed:
   The bug was introduced in HTCondor 9.0.6 and is known to occur with CUDA runtime 10.1.
   :jira:`760`
 
+- Fixed a bug that could crash the *condor_startd* when claiming a slot
+  with p-slot preemption.
+  :jira:`737`
+
 Version 9.0.6
 -------------
 

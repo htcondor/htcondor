@@ -1303,11 +1303,22 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			Resource *parent = dslots[0]->get_parent();
 
 			for ( int i = 0; i < num_preempting; i++ ) {
+				// This is sloppy, but mostly works. We kill all of the
+				// dslot claims, but move the machine resources back to
+				// the pslot immediately instead of waiting for the normal
+				// cleanup process to complete.
+				// The kill_claim() call may result in the immediate
+				// deletion of the dslot's Resource object (and returning
+				// the machine resources for us). If that happens, then we
+				// shouldn't do anything more.
+				// TODO We really should follow the normal preemption
+				//   process, giving the preempted starter and schedd a
+				//   chance to kill the job in an orderly fashion.
 				// TODO Should we call retire_claim() to go through
 				//   vacating_act instead of straight to killing_act?
-				bool is_busy = dslots[i]->activity() != idle_act;
+				std::string dslot_name = dslots[i]->r_name;
 				dslots[i]->kill_claim();
-				if (is_busy) {
+				if (resmgr->get_by_name(dslot_name.c_str()) == dslots[i]) {
 					Resource * pslot = dslots[i]->get_parent();
 					// if they were idle, kill_claim delete'd them
 					//PRAGMA_REMIND("we have to unbind here, because we decrement r_attr, remember the GPUS we unbind so we can be sure to re-bind *those* for the new claim.")
