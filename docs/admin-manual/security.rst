@@ -318,6 +318,12 @@ Integrity
 Quick Configuration of Security
 -------------------------------
 
+**Note:** This method of configuring security is experimental.
+Many tools and daemons that send administrative commands between machines
+(e.g. *condor_off*, *condor_drain*, or *condor_defrag*)
+won't work without further setup.
+We plan to remove this limitation in future releases.
+
 While pool administrators with complex configurations or application developers may need to
 understand the full security model described in this chapter, HTCondor
 strives to make it easy to enable reasonable security settings for new pools.
@@ -1616,10 +1622,11 @@ to setup ``IDTOKENS`` authentication, enable it in the list of authentication me
     SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), IDTOKENS
     SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), IDTOKENS
 
-**Blacklisting Token**: If a token is lost, stolen, or accidentally exposed,
-then the system administrator may use the token blacklisting mechanism in order
-to prevent unauthorized use.  Blacklisting can be accomplished by setting the
-``SEC_TOKEN_BLACKLIST_EXPR``; when set, the value of this parameter will be
+**Revoking Token**: If a token is lost, stolen, or accidentally exposed,
+then the system administrator may use the token revocation mechanism in order
+to prevent unauthorized use.  Revocation can be accomplished by setting the
+``SEC_TOKEN_BLACKLIST_EXPR`` configuration parameter;
+when set, the value of this parameter will be
 evaluated as a ClassAd expression against the token's contents.
 
 For example, consider the following token:
@@ -1642,24 +1649,24 @@ When printed using ``condor_token_list``, the human-readable form is as follows
         "sub": "alice@pool.example.com"
     }
 
-If we would like to blacklist this token, we could utilize any of the following
+If we would like to revoke this token, we could utilize any of the following
 values for ``SEC_TOKEN_BLACKLIST_EXPR``, depending on the desired breadth of
-the blacklist:
+the revocation:
 
 .. code-block:: condor-config
 
-    # Blacklists all tokens from the user Alice:
+    # Revokes all tokens from the user Alice:
     SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com"
 
-    # Blacklists all tokens from Alice issued before or after this one:
+    # Revokes all tokens from Alice issued before or after this one:
     SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com" && \
         iat <= 1588474719
 
-    # Blacklists *only* this token:
+    # Revokes *only* this token:
     SEC_TOKEN_BLACKLIST_EXPR = jti =?= "c760c2af193a1fd4e40bc9c53c96ee7c"
 
-The blacklist only works on the daemon where ``SEC_TOKEN_BLACKLIST_EXPR`` is
-set; to blacklist a token across the entire pool, set
+The revocation only works on the daemon where ``SEC_TOKEN_BLACKLIST_EXPR`` is
+set; to revoke a token across the entire pool, set
 ``SEC_TOKEN_BLACKLIST_EXPR`` on every host.
 
 In order to invalidate all tokens issued by a given master password in
