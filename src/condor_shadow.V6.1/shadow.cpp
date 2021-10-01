@@ -404,7 +404,9 @@ UniShadow::resourceBeganExecution( RemoteResource* rr )
 
 		// We've only got one remote resource, so if it's started
 		// executing, we can safely log our execute event
-	logExecuteEvent();
+	if ( !began_execution ) {
+		logExecuteEvent();
+	}
 
 		// Invoke the base copy of this function to handle shared code.
 	BaseShadow::resourceBeganExecution(rr);
@@ -443,6 +445,21 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 		// We've only got one remote resource, so if it successfully
 		// reconnected, we can safely log our reconnect event
 	logReconnectedEvent();
+
+	// If the shadow started in reconnect mode, check the job ad to see
+	// if we previously heard about the job starting execution, and set
+	// up our state accordingly.
+	// We need to call resourceBeganExecution() to start some timers.
+	if ( attemptingReconnectAtStartup ) {
+		long job_execute_date = 0;
+		long claim_start_date = 0;
+		jobAd->LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, job_execute_date);
+		jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, claim_start_date);
+		if ( job_execute_date >= claim_start_date ) {
+			began_execution = true;
+			resourceBeganExecution(rr);
+		}
+	}
 
 		// Since our reconnect worked, clear attemptingReconnectAtStartup
 		// flag so if we disconnect again and fail, we will exit

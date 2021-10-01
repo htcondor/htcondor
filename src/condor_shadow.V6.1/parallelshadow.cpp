@@ -963,10 +963,12 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 	if( all_executing ) {
 			// All nodes in this computation are now running, so we 
 			// can finally log the execute event.
-		ExecuteEvent event;
-		event.setExecuteHost( "MPI_job" );
-		if ( !uLog.writeEvent( &event, jobAd )) {
-			dprintf ( D_ALWAYS, "Unable to log EXECUTE event.\n" );
+		if( !began_execution ) {
+			ExecuteEvent event;
+			event.setExecuteHost( "MPI_job" );
+			if ( !uLog.writeEvent( &event, jobAd )) {
+				dprintf ( D_ALWAYS, "Unable to log EXECUTE event.\n" );
+			}
 		}
 		
 			// Now that everything is started, we can finally invoke
@@ -977,13 +979,39 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 
 
 void
-ParallelShadow::resourceReconnected( RemoteResource*  /*rr*/ )
+ParallelShadow::resourceReconnected( RemoteResource* rr )
 {
 		// Since our reconnect worked, clear attemptingReconnectAtStartup
 		// flag so if we disconnect again and fail, we will exit
 		// with JOB_SHOULD_REQUEUE instead of JOB_RECONNECT_FAILED.
 		// See gt #4783.
-	attemptingReconnectAtStartup = false;
+
+	// If the shadow started in reconnect mode, check the job ad to see
+	// if we previously heard about the job starting execution, and set
+	// up our state accordingly.
+	// We need to call resourceBeganExecution() to start some timers.
+	// But wait until we've reconnected to all starters.
+	if (attemptingReconnectAtStartup) {
+		bool all_connected = true;
+
+		for( size_t i=0; i<ResourceList.size() && all_connected; i++ ) {
+			if( ResourceList[i]->getResourceState() == RR_RECONNECT ) {
+				all_connected = false;
+			}
+		}
+		if (all_connected) {
+			long job_execute_date = 0;
+			long claim_start_date = 0;
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, job_execute_date);
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, claim_start_date);
+			if ( job_execute_date >= claim_start_date ) {
+				began_execution = true;
+				resourceBeganExecution(rr);
+			}
+
+			attemptingReconnectAtStartup = false;
+		}
+	}
 }
 
 

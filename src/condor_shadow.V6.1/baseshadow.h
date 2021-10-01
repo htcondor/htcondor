@@ -436,6 +436,8 @@ class BaseShadow : public Service
 	float prev_run_bytes_sent;
 	float prev_run_bytes_recvd;
 
+		// Set to true if the job ad and event log have been updated to
+		// to reflect that the job has actually started executing.
 	bool began_execution;
 
 	void emailHoldEvent( const char* reason );
