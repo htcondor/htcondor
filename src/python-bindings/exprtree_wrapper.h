@@ -27,7 +27,8 @@ struct ExprTreeHolder
     boost::python::object Evaluate(
         boost::python::object scope=boost::python::object() ) const;
     ExprTreeHolder simplify(
-        boost::python::object scope=boost::python::object() ) const;
+        boost::python::object scope=boost::python::object(),
+        boost::python::object target=boost::python::object() ) const;
 
     std::string toRepr() const;
 
@@ -76,7 +77,7 @@ struct ExprTreeHolder
     static void init();
 
 private:
-    void eval( boost::python::object scope, classad::Value & v ) const;
+    void eval( boost::python::object scope, classad::Value & v, boost::python::object target = boost::python::object() ) const;
 
     classad::ExprTree *m_expr;
     boost::shared_ptr<classad::ExprTree> m_refcount;
