@@ -4,9 +4,6 @@ import sys
 import classad
 import htcondor
 
-# FIXME: make this a command-line flag
-htcondor.enable_debug()
-
 def makeClassAd(adString):
     try:
         return classad.ClassAd(adString)
@@ -28,19 +25,6 @@ def evaluateAndPrint(argv):
         print("Flags may replace expressions or assignments:")
         print("\t-quiet      \tDon't print the ClassAd context after this flag");
         return -1
-
-    targetAd = None
-    targetAdString = None
-    targetAdFileName = None
-    if argv[1] == "-target-file":
-        argv.pop(1)
-        targetAdFileName = argv.pop(1)
-        targetAdString = open(targetAdFileName).read()
-        try:
-            targetAd = makeClassAd(targetAdString)
-            print(repr(targetAd))
-        except SyntaxError:
-            sys.exit("Unable to turn target file '" + targetAdStringFileName + "' into a ClassAd.")
 
     adString = argv[1]
     adStringFileName = None
@@ -78,7 +62,7 @@ def evaluateAndPrint(argv):
             except SyntaxError:
                 sys.exit("Unable to turn '" + argv[i] + "' into a ClassAd or an expression.")
 
-            result = expr.simplify(ad, targetAd)
+            result = expr.simplify(ad)
             print(repr(result))
 
     return 0

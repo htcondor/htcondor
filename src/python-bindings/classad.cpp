@@ -234,38 +234,19 @@ convert_value_to_python(const classad::Value &value)
     return result;
 }
 
-bool
-EvaluateLooseExpr( classad::ExprTree * expr,
-                   classad::ClassAd * my, classad::ClassAd * target,
-                   classad::Value & value ) {
-    const classad::ClassAd * originalScope = expr->GetParentScope();
-    expr->SetParentScope(my);
-
-    bool rv = false;
-    if( target == my || target == NULL ) {
-        rv = expr->Evaluate( value );
-    } else {
-        classad::MatchClassAd matchAd( my, target );
-        rv = expr->Evaluate( value );
-        matchAd.RemoveLeftAd();
-        matchAd.RemoveRightAd();
-    }
-
-    expr->SetParentScope(originalScope);
-    return rv;
-}
-
 void
-ExprTreeHolder::eval( boost::python::object scope, classad::Value & value, boost::python::object target ) const {
+ExprTreeHolder::eval( boost::python::object scope, classad::Value & value ) const {
     // This MUST be a pointer.  Otherwise, the ClassAd destructor will
     // run -- ClassAdWrapper is-a ClassAd, despite the name -- and cause
     // value to point to garbage, if value was an attribute reference.
     boost::python::extract<ClassAdWrapper *> scopeAd(scope);
-    boost::python::extract<ClassAdWrapper *> targetAd(target);
 
     bool rv = false;
     if( scopeAd.check() && scopeAd() != NULL ) {
-        rv = EvaluateLooseExpr( m_expr, scopeAd(), targetAd(), value );
+        const classad::ClassAd * originalScope = m_expr->GetParentScope();
+        m_expr->SetParentScope(scopeAd());
+        rv = m_expr->Evaluate(value);
+        m_expr->SetParentScope(originalScope);
     } else if( m_expr->GetParentScope() ) {
         rv = m_expr->Evaluate(value);
     } else {
@@ -285,11 +266,11 @@ ExprTreeHolder::Evaluate(boost::python::object scope) const
 }
 
 ExprTreeHolder
-ExprTreeHolder::simplify(boost::python::object scope, boost::python::object target) const
+ExprTreeHolder::simplify(boost::python::object scope) const
 {
     classad::Value * value = NULL;
     classad::Literal * literal = classad::Literal::MakeUndefined(value);
-    eval(scope, *value, target);
+    eval(scope, *value);
     ExprTreeHolder rv(literal, true);
     return rv;
 }
