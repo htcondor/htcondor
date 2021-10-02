@@ -1135,12 +1135,39 @@ evaluateInContext( classad::ExprTree * expr,
 		return rv;
 	}
 
-	// FIXME: ???
-	state.SetScopes(nested_ad);
-	if(! expr->Evaluate(state, rv)) {
+	const classad::MatchClassAd * mca =
+		dynamic_cast<const classad::MatchClassAd *>(state.rootAd);
+	classad::ClassAd * originalAlternateScope = nested_ad->alternateScope;
+	if( mca != NULL ) {
+		//
+		// If we're evaluating this function in the context of two ads,
+		// just switching the scope of the evaluation to the nested ad
+		// doesn't work, because it won't look up unknown attributes
+		// in the MY ad if nested ad came from the TARGET ad.
+		//
+		// This is NOT the expected behavior -- attributes usually _do_
+		// check the "other" ad (that's usually how you specify nested ads
+		// from the TARGET ad in the first place).
+		//
+		// This isn't just counter-intuitive (you must specify TARGET to
+		// find the attributes), but limiting, because all of the nested ads
+		// must come from the same parent, and you need to know which one).
+		//
+		// The problem appears to be that AttributeRefernce::FindExpr()
+		// only checks the alternate scope of the expression, and not
+		// of every parent on the way to the root.
+		//
+		nested_ad->alternateScope = nested_ad->GetParentScope()->alternateScope;
+	}
+
+	classad::EvalState temporary_state;
+	temporary_state.SetScopes(nested_ad);
+	if(! expr->Evaluate(temporary_state, rv)) {
 		dprintf( D_FULLDEBUG, "evalEachInContext(): failed to evaluate expr in context\n" );
 		rv.SetErrorValue();
 	}
+
+	nested_ad->alternateScope = originalAlternateScope;
 	return rv;
 }
 
