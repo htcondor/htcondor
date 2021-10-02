@@ -1135,29 +1135,19 @@ evaluateInContext( classad::ExprTree * expr,
 		return rv;
 	}
 
-	const classad::MatchClassAd * mca =
-		dynamic_cast<const classad::MatchClassAd *>(state.rootAd);
+	// AttributeReference::FindExpr() doesn't recursively check the parent
+	// scope's alternate scope, so set it by hand.  This allows attribute
+	// references to work correctly (if confusingly) if this function is
+	// called (as it is intended to be) during a match.
+	//
+	// The confusing part is that MY and TARGET will be reversed during the
+	// evaluation of attr if, as intended, the nested ad's parent is not the
+	// parent of the expression containing function call.  (We intend for
+	// the former to be the slot ad and the latter the job ad.)
 	classad::ClassAd * originalAlternateScope = nested_ad->alternateScope;
-	if( mca != NULL ) {
-		//
-		// If we're evaluating this function in the context of two ads,
-		// just switching the scope of the evaluation to the nested ad
-		// doesn't work, because it won't look up unknown attributes
-		// in the MY ad if nested ad came from the TARGET ad.
-		//
-		// This is NOT the expected behavior -- attributes usually _do_
-		// check the "other" ad (that's usually how you specify nested ads
-		// from the TARGET ad in the first place).
-		//
-		// This isn't just counter-intuitive (you must specify TARGET to
-		// find the attributes), but limiting, because all of the nested ads
-		// must come from the same parent, and you need to know which one).
-		//
-		// The problem appears to be that AttributeRefernce::FindExpr()
-		// only checks the alternate scope of the expression, and not
-		// of every parent on the way to the root.
-		//
-		nested_ad->alternateScope = nested_ad->GetParentScope()->alternateScope;
+	classad::ClassAd * nested_ad_parent_scope = nested_ad->getParentScope();
+	if( nested_ad_parent_scope ) {
+		nested_ad->alternateScope = nested_ad-parent_ad->alternateScope;
 	}
 
 	classad::EvalState temporary_state;
