@@ -39,7 +39,7 @@ jobs:
             -D CMAKE_INSTALL_PREFIX=release_dir
             -G Ninja
             -D CMAKE_MAKE_PROGRAM=ninja
-            -D WANT_PYTHON2_BINDINGS=OFFF
+            -D WANT_PYTHON2_BINDINGS=OFF
           RESULT_VARIABLE result
         )
         if (NOT result EQUAL 0)
