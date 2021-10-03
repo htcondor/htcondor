@@ -58,19 +58,27 @@ static void classad_debug_dprintf(const char *s);
 
 namespace {
 
-typedef std::unordered_set<std::string, classad::ClassadAttrNameHash, classad::CaseIgnEqStr> classad_hashmap;
-classad_hashmap ClassAdPrivateAttrs = { ATTR_CAPABILITY,
+classad::References DefaultClassAdPrivateAttrs { ATTR_CAPABILITY,
 		ATTR_CHILD_CLAIM_IDS, ATTR_CLAIM_ID, ATTR_CLAIM_ID_LIST,
 		ATTR_CLAIM_IDS, ATTR_PAIRED_CLAIM_ID, ATTR_TRANSFER_KEY };
-
 }
+
+classad::References ClassAdPrivateAttrs;
 
 static bool ClassAd_initConfig = false;
 static bool ClassAd_strictEvaluation = false;
 
 void ClassAdReconfig()
 {
-	//ClassAdPrivateAttrs.rehash(11);
+	ClassAdPrivateAttrs = DefaultClassAdPrivateAttrs;
+
+	classad::References extraAttrs;
+	param_and_insert_attrs("EXTRA_PRIVATE_JOB_ATTRS", extraAttrs);
+
+	std::copy(extraAttrs.begin(),
+			  extraAttrs.end(),
+			  inserter(ClassAdPrivateAttrs, ClassAdPrivateAttrs.begin()));
+
 	ClassAd_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
 	classad::SetOldClassAdSemantics( !ClassAd_strictEvaluation );
 

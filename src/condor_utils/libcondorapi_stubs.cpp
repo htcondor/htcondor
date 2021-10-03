@@ -149,6 +149,11 @@ bool param_boolean( const char *, bool default_value, bool,
 	return default_value;
 }
 
+bool param_and_insert_attrs(const char *, classad::References & )
+{
+	return true;
+}
+
 
 /* stubs for generic query object */
 GenericQuery::GenericQuery(void) { 
