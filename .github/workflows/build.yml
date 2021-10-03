@@ -4,7 +4,6 @@ on: [push, pull_request]
 
 env:
   BUILD_TYPE: Release
-  CCACHE_VERSION: 4.4
 
 jobs:
   build:
@@ -37,10 +36,9 @@ jobs:
             -S .
             -B condor_build
             -D CMAKE_BUILD_TYPE=$ENV{BUILD_TYPE}
+            -D CMAKE_INSTALL_PREFIX release_dir
             -G Ninja
             -D CMAKE_MAKE_PROGRAM=ninja
-            -D CMAKE_C_COMPILER_LAUNCHER=ccache
-            -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
           RESULT_VARIABLE result
         )
         if (NOT result EQUAL 0)
@@ -65,6 +63,9 @@ jobs:
           message(FATAL_ERROR "Build failed")
         endif()
 
+    - name: Install
+      run: cmake --install condor_build
+
     - name: Run tests
       shell: cmake -P {0}
       run: |
@@ -85,7 +86,4 @@ jobs:
           message("::error::${test_results}")
           message(FATAL_ERROR "Running tests failed!")
         endif()
-
-    - name: Install Strip
-      run: cmake --install condor_build --prefix instdir --strip
 
