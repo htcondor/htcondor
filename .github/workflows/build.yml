@@ -36,7 +36,7 @@ jobs:
             -S .
             -B condor_build
             -D CMAKE_BUILD_TYPE=$ENV{BUILD_TYPE}
-            -D CMAKE_INSTALL_PREFIX release_dir
+            -D CMAKE_INSTALL_PREFIX=release_dir
             -G Ninja
             -D CMAKE_MAKE_PROGRAM=ninja
           RESULT_VARIABLE result
