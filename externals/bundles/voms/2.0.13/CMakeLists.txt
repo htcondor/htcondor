@@ -22,7 +22,7 @@
 # Applied patch no_gsoap.patch and ran ./autogen.sh before creating tarball.
 
 if (LINUX OR DARWIN)
-  option( WITH_VOMS "Compiling with support for VOMS" ON )
+  option( WITH_VOMS "Compiling with support for VOMS" OFF )
 endif(LINUX OR DARWIN)
 
 if ( WITH_VOMS )
