@@ -1392,22 +1392,17 @@ BaseShadow::evalPeriodicUserPolicy( void )
  * as soon as the starter sends the CONDOR_begin_execution RSC.  For
  * multi-shadow (parallel, MPI), this is invoked once all of the
  * starters have reported in.
- * If the shadow is born in reconnect mode and the previous shadow already
- * updated the job ad about execution beginning, then began_execution will
- * be set to true, and we should only start the timers.
  */
 void
 BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 {
+		// Set our flag to remember we've really started.
+	began_execution = true;
 		// Start the timer for the periodic user job policy evaluation.
 	shadow_user_policy.startTimer();
 		
 		// Start the timer for updating the job queue for this job.
 	startQueueUpdateTimer();
-
-	if (began_execution) {
-		return;
-	}
 
 		// Update our copy of NumJobStarts, so that the periodic user
 		// policy expressions, etc, all have the correct value.

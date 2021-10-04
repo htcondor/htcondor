@@ -963,12 +963,10 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 	if( all_executing ) {
 			// All nodes in this computation are now running, so we 
 			// can finally log the execute event.
-		if( !began_execution ) {
-			ExecuteEvent event;
-			event.setExecuteHost( "MPI_job" );
-			if ( !uLog.writeEvent( &event, jobAd )) {
-				dprintf ( D_ALWAYS, "Unable to log EXECUTE event.\n" );
-			}
+		ExecuteEvent event;
+		event.setExecuteHost( "MPI_job" );
+		if ( !uLog.writeEvent( &event, jobAd )) {
+			dprintf ( D_ALWAYS, "Unable to log EXECUTE event.\n" );
 		}
 		
 			// Now that everything is started, we can finally invoke
@@ -989,7 +987,6 @@ ParallelShadow::resourceReconnected( RemoteResource* rr )
 	// If the shadow started in reconnect mode, check the job ad to see
 	// if we previously heard about the job starting execution, and set
 	// up our state accordingly.
-	// We need to call resourceBeganExecution() to start some timers.
 	// But wait until we've reconnected to all starters.
 	if (attemptingReconnectAtStartup) {
 		bool all_connected = true;
@@ -1006,11 +1003,20 @@ ParallelShadow::resourceReconnected( RemoteResource* rr )
 			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, claim_start_date);
 			if ( job_execute_date >= claim_start_date ) {
 				began_execution = true;
-				resourceBeganExecution(rr);
 			}
 
 			attemptingReconnectAtStartup = false;
 		}
+	}
+
+		// If we know the job is already executing, ensure the timers
+		// that are supposed to start then are running.
+	if (began_execution) {
+			// Start the timer for the periodic user job policy
+		shadow_user_policy.startTimer();
+
+			// Start the timer for updating the job queue for this job
+		startQueueUpdateTimer();
 	}
 }
 
