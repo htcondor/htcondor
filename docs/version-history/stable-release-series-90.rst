@@ -19,7 +19,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- The configuration paramater ``SEC_TOKEN_BLACKLIST_EXPR`` has been renamed
+  to ``SEC_TOKEN_REVOCATION_EXPR``.
+  The old name is still recognized if the new one isn't set.
+  :jira:`744`
 
 Bugs Fixed:
 
