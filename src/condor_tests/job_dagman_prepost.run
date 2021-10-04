@@ -22,6 +22,7 @@
 use CondorTest;
 use CondorUtils;
 use Cwd;
+use File::Temp;
 
 my $iswindows = CondorUtils::is_windows();
 
@@ -29,15 +30,14 @@ $cmd = 'job_dagman_prepost.dag';
 
 $serversubFile = "job_dagman_prepost-srvr.cmd";
 
-my $pid = $$;
-runcmd("mkdir $pid");
 my $curcwd = getcwd();
+my $dir = File::Temp->newdir(CLEANUP => 0, DIR => $curcwd);
 CondorTest::debug("current directory is $curcwd\n",1);
 CondorTest::LoadExemption("job_dagman_prepost,no,DC_AUTHENTICATE unable to receive auth_info!");
 
 my $socketname = "prepostsock";
-my $newsocketname = $curcwd . "/" . $pid . "/prepostsock";
-my $flowlog = $curcwd . "/" . $pid . "/job_dagman_prepost-srvr-log.log";
+my $newsocketname = $dir->dirname . "/prepostsock";
+my $flowlog = $dir->dirname . "/job_dagman_prepost-srvr-log.log";
 if($iswindows) {
 	$_ = $flowlog;
 	s/\//\\\\/g;
@@ -63,7 +63,7 @@ if(!($iswindows)) {
 @filestoedit = qw/job_dagman_prepost-prehello job_dagman_prepost-posthello/;
 @filestochmod = qw/job_dagman_prepost-prehello.pl job_dagman_prepost-posthello.pl/;
 
-# now make sure each place using socket refers to pid specific directory!
+# now make sure each place using socket refers to temp directory!
 foreach $name (@filestoedit)
 {
 	CondorTest::debug("Correcting socket name in $name\n",1);
