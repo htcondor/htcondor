@@ -1625,7 +1625,7 @@ to setup ``IDTOKENS`` authentication, enable it in the list of authentication me
 **Revoking Token**: If a token is lost, stolen, or accidentally exposed,
 then the system administrator may use the token revocation mechanism in order
 to prevent unauthorized use.  Revocation can be accomplished by setting the
-``SEC_TOKEN_BLACKLIST_EXPR`` configuration parameter;
+``SEC_TOKEN_REVOCATION_EXPR`` configuration parameter;
 when set, the value of this parameter will be
 evaluated as a ClassAd expression against the token's contents.
 
@@ -1650,24 +1650,24 @@ When printed using ``condor_token_list``, the human-readable form is as follows
     }
 
 If we would like to revoke this token, we could utilize any of the following
-values for ``SEC_TOKEN_BLACKLIST_EXPR``, depending on the desired breadth of
+values for ``SEC_TOKEN_REVOCATION_EXPR``, depending on the desired breadth of
 the revocation:
 
 .. code-block:: condor-config
 
     # Revokes all tokens from the user Alice:
-    SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com"
+    SEC_TOKEN_REVOCATION_EXPR = sub =?= "alice@pool.example.com"
 
     # Revokes all tokens from Alice issued before or after this one:
-    SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com" && \
+    SEC_TOKEN_REVOCATION_EXPR = sub =?= "alice@pool.example.com" && \
         iat <= 1588474719
 
     # Revokes *only* this token:
-    SEC_TOKEN_BLACKLIST_EXPR = jti =?= "c760c2af193a1fd4e40bc9c53c96ee7c"
+    SEC_TOKEN_REVOCATION_EXPR = jti =?= "c760c2af193a1fd4e40bc9c53c96ee7c"
 
-The revocation only works on the daemon where ``SEC_TOKEN_BLACKLIST_EXPR`` is
+The revocation only works on the daemon where ``SEC_TOKEN_REVOCATION_EXPR`` is
 set; to revoke a token across the entire pool, set
-``SEC_TOKEN_BLACKLIST_EXPR`` on every host.
+``SEC_TOKEN_REVOCATION_EXPR`` on every host.
 
 In order to invalidate all tokens issued by a given master password in
 ``SEC_PASSWORD_DIRECTORY``, simply remove the file from the directory.
