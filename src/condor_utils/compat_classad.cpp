@@ -1145,9 +1145,9 @@ evaluateInContext( classad::ExprTree * expr,
 	// parent of the expression containing function call.  (We intend for
 	// the former to be the slot ad and the latter the job ad.)
 	classad::ClassAd * originalAlternateScope = nested_ad->alternateScope;
-	classad::ClassAd * nested_ad_parent_scope = nested_ad->getParentScope();
+	const classad::ClassAd * nested_ad_parent_scope = nested_ad->GetParentScope();
 	if( nested_ad_parent_scope ) {
-		nested_ad->alternateScope = nested_ad-parent_ad->alternateScope;
+		nested_ad->alternateScope = nested_ad_parent_scope->alternateScope;
 	}
 
 	classad::EvalState temporary_state;
