@@ -138,6 +138,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( "TransferOutStarted" );
 	common_job_queue_attrs->insert( "TransferOutFinished" );
 
+	common_job_queue_attrs->insert( ATTR_NUM_JOB_STARTS );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_EXECUTING_DATE );
 	common_job_queue_attrs->insert( ATTR_CUMULATIVE_TRANSFER_TIME );
 	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );

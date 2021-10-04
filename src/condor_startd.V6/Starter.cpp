@@ -495,6 +495,10 @@ Starter::reallykill( int signo, int type )
 		// Finally, do the deed.
 	switch( type ) {
 	case 0:
+		if( daemonCore->ProcessExitedButNotReaped(s_pid) ) {
+			ret = 0;
+			break;
+		}
 		if( is_dc() ) {		
 			ret = daemonCore->Send_Signal( (s_pid), signo );
 				// Translate Send_Signal's return code to Unix's kill()
@@ -507,9 +511,7 @@ Starter::reallykill( int signo, int type )
 		} 
 #ifndef WIN32
 		else {
-			if (!daemonCore->ProcessExitedButNotReaped(s_pid)) {
-				ret = ::kill( (s_pid), sig );
-			}
+			ret = ::kill( (s_pid), sig );
 			break;
 		}
 #endif /* ! WIN32 */
