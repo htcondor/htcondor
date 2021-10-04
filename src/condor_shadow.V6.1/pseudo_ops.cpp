@@ -76,7 +76,7 @@ pseudo_register_job_info(ClassAd* ad)
 	// The starter sends an update with provisioned resources but no
 	// JobState atrribute before the job begins execution.
 	// Updates with a JobState attribute occur after the job is running.
-	if (!thisRemoteResource->getResourceState() == RR_STARTUP && ad->Lookup(ATTR_JOB_STATE)) {
+	if (thisRemoteResource->getResourceState() == RR_STARTUP && ad->Lookup(ATTR_JOB_STATE)) {
 		// We missed a begin_execution syscall, probably due to a disconnect.
 		// Do the begin_execution logic now.
 		dprintf(D_FULLDEBUG, "Received a register_job_info syscall without a begin_execution syscall. Doing begin_execution logic.\n");
@@ -182,7 +182,7 @@ void fix_update_ad(ClassAd & update_ad)
 int
 pseudo_job_exit(int status, int reason, ClassAd* ad)
 {
-	if (!thisRemoteResource->getResourceState() == RR_STARTUP) {
+	if (thisRemoteResource->getResourceState() == RR_STARTUP) {
 		// We missed a begin_execution syscall, probably due to a disconnect.
 		// Do the begin_execution logic now.
 		dprintf(D_FULLDEBUG, "Received a job_exit syscall without a begin_execution syscall. Doing begin_execution logic.\n");
@@ -225,7 +225,7 @@ pseudo_job_termination( ClassAd *ad )
 	int exit_code = 0;
 	std::string exit_reason;
 
-	if (!thisRemoteResource->getResourceState() == RR_STARTUP) {
+	if (thisRemoteResource->getResourceState() == RR_STARTUP) {
 		// We missed a begin_execution syscall, probably due to a disconnect.
 		// Do the begin_execution logic now.
 		dprintf(D_FULLDEBUG, "Received a job_termination syscall without a begin_execution syscall. Doing begin_execution logic.\n");

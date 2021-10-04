@@ -2543,8 +2543,8 @@ RemoteResource::requestReconnect( void )
 	// if we previously heard about the job starting execution, and set
 	// up our state accordingly.
 	if ( shadow->attemptingReconnectAtStartup ) {
-		long job_execute_date = 0;
-		long claim_start_date = 0;
+		time_t job_execute_date = 0;
+		time_t claim_start_date = 0;
 		jobAd->LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, job_execute_date);
 		jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, claim_start_date);
 		if ( job_execute_date >= claim_start_date ) {
