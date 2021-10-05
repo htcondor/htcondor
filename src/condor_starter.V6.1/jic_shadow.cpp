@@ -711,7 +711,7 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 
 	dprintf( D_ALWAYS, "Accepted request to reconnect from %s\n",
 			generate_sinful(syscall_sock->peer_ip_str(),
-						syscall_sock->peer_port()).Value());
+						syscall_sock->peer_port()).c_str());
 	dprintf( D_ALWAYS, "Ignoring old shadow %s\n", shadow->addr() );
 	delete shadow;
 	shadow = new DCShadow;
@@ -736,7 +736,7 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 		// switch over to the new syscall_sock
 	dprintf( D_FULLDEBUG, "Closing old syscall sock %s\n",
 			generate_sinful(syscall_sock->peer_ip_str(),
-					syscall_sock->peer_port()).Value());
+					syscall_sock->peer_port()).c_str());
 		// make sure old syscall_sock is no longer registered before we blow it away
 	if (syscall_sock_registered) {
 		daemonCore->Cancel_Socket(syscall_sock);
@@ -747,7 +747,7 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 	syscall_sock->timeout(param_integer( "STARTER_UPLOAD_TIMEOUT", 300));
 	dprintf( D_FULLDEBUG, "Using new syscall sock %s\n",
 			generate_sinful(syscall_sock->peer_ip_str(),
-					syscall_sock->peer_port()).Value());
+					syscall_sock->peer_port()).c_str());
 
 	syscall_sock_reconnect();  // cancels any disconnected timers etc
 

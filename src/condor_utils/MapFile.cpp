@@ -692,8 +692,8 @@ void MapFile::dump(FILE* fp)
 #endif
 
 int
-MapFile::GetCanonicalization(const MyString method,
-							 const MyString principal,
+MapFile::GetCanonicalization(const MyString& method,
+							 const MyString& principal,
 							 MyString & canonicalization)
 {
 	bool match_found = false;

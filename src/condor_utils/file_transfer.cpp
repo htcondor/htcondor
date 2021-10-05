@@ -2098,8 +2098,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	int rc = 0;
 	filesize_t bytes=0;
 	filesize_t peer_max_transfer_bytes=0;
-	MyString filename;;
-	MyString fullname;
+	std::string filename;;
+	std::string fullname;
 	int final_transfer = 0;
 	bool download_success = true;
 	bool try_again = true;
@@ -2322,27 +2322,27 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					} else {
 						// fullname is used in various error messages; keep it
 						// as something reasonabel.
-						fullname.formatstr("%s%c%s",Iwd,DIR_DELIM_CHAR,filename.c_str());
+						formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename.c_str());
 					}
 				// legit remap was found
 				} else if(fullpath(remap_filename.c_str())) {
 					fullname = remap_filename;
 				}
 				else {
-					fullname.formatstr("%s%c%s",Iwd,DIR_DELIM_CHAR,remap_filename.c_str());
+					formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,remap_filename.c_str());
 				}
 				dprintf(D_FULLDEBUG,"Remapped downloaded file from %s to %s\n",filename.c_str(),remap_filename.c_str());
 			}
 			else {
 				// no remap found
-				fullname.formatstr("%s%c%s",Iwd,DIR_DELIM_CHAR,filename.c_str());
+				formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename.c_str());
 			}
 #ifdef WIN32
 			// check for write permission on this file, if we are supposed to check
-			if ( (fullname != NULL_FILE) && perm_obj && (perm_obj->write_access(fullname.Value()) != 1) ) {
+			if ( (fullname != NULL_FILE) && perm_obj && (perm_obj->write_access(fullname.c_str()) != 1) ) {
 				// we do _not_ have permission to write this file!!
 				error_buf.formatstr("Permission denied to write file %s!",
-				                   fullname.Value());
+				                   fullname.c_str());
 				dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.Value());
 				download_success = false;
 				try_again = false;
@@ -2356,7 +2356,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			}
 #endif
 		} else {
-			fullname.formatstr("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename.c_str());
+			formatstr(fullname,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename.c_str());
 		}
 
 		auto iter = std::find_if(reuse_info.begin(), reuse_info.end(),
@@ -2430,7 +2430,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		// time of the file we just wrote backwards in time by a few
 		// minutes!  MLOP!! Since we are doing this, we may as well
 		// not bother to fsync every file.
-//		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.Value());
+//		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.c_str());
 		start = time(NULL);
 
 		// Setup the FileTransferStats object for this file, which we'll use
@@ -2438,7 +2438,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		// statistics gathering which only tracks cumulative totals)
 		FileTransferStats thisFileStats;
 		thisFileStats.TransferFileBytes = 0;
-		thisFileStats.TransferFileName = filename.c_str();
+		thisFileStats.TransferFileName = filename;
 		thisFileStats.TransferProtocol = "cedar";
 		thisFileStats.TransferStartTime = condor_gettimestamp_double();
 		thisFileStats.TransferType = "download";
@@ -2565,8 +2565,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 								dprintf(D_FULLDEBUG, "Failed to evaluate list entry to ClassAd.\n");
 								continue;
 							}
-							std::string filename;
-							if (!file_ad->EvaluateAttrString("FileName", filename)) {
+							std::string fname;
+							if (!file_ad->EvaluateAttrString("FileName", fname)) {
 								dprintf(D_FULLDEBUG, "List entry is missing FileName attr.\n");
 								continue;
 							}
@@ -2585,19 +2585,19 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 								dprintf(D_FULLDEBUG, "List entry is missing Size attr.\n");
 								continue;
 							}
-							std::string dest_fname = std::string(Iwd) + DIR_DELIM_CHAR + filename;
+							std::string dest_fname = std::string(Iwd) + DIR_DELIM_CHAR + fname;
 							CondorError err;
 							if (!m_reuse_dir->RetrieveFile(dest_fname, checksum, checksum_type, tag,
 								err))
 							{
 								dprintf(D_FULLDEBUG, "Failed to retrieve file of size %lld from data"
 									" reuse directory: %s\n", size, err.getFullText().c_str());
-								reuse_info.emplace_back(filename, checksum, checksum_type,
+								reuse_info.emplace_back(fname, checksum, checksum_type,
 									tag, size < 0 ? 0 : size);
 								continue;
 							}
-							dprintf(D_FULLDEBUG, "Successfully retrieved %s from data reuse directory into job sandbox.\n", filename.c_str());
-							retrieved_files.push_back(filename);
+							dprintf(D_FULLDEBUG, "Successfully retrieved %s from data reuse directory into job sandbox.\n", fname.c_str());
+							retrieved_files.push_back(fname);
 						}
 						std::unique_ptr<classad::ExprList> retrieved_list(new classad::ExprList());
 						for (const auto &file : retrieved_files) {
@@ -2737,7 +2737,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			// side must then retreive the URL using one of the configured
 			// filetransfer plugins.
 
-			MyString URL;
+			std::string URL;
 			// receive the URL from the wire
 
 			if (!s->code(URL)) {
@@ -2758,7 +2758,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 				// Determine which plugin to invoke, and whether it supports multiple
 				// file transfer.
-				MyString pluginPath = DetermineFileTransferPlugin( errstack, URL.c_str(), fullname.c_str() );
+				std::string pluginPath = DetermineFileTransferPlugin( errstack, URL.c_str(), fullname.c_str() );
 				bool thisPluginSupportsMultifile = false;
 				if( plugins_multifile_support.find( pluginPath ) != plugins_multifile_support.end() ) {
 					thisPluginSupportsMultifile = plugins_multifile_support[pluginPath];
@@ -2986,14 +2986,14 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				//   starter.
 #if 0
 			struct stat stat_buf;
-			if ( stat( fullname.Value(), &stat_buf ) < 0 ) {
+			if ( stat( fullname.c_str(), &stat_buf ) < 0 ) {
 				dprintf( D_ALWAYS, "Failed to stat executable %s, errno=%d (%s)\n",
-						 fullname.Value(), errno, strerror(errno) );
+						 fullname.c_str(), errno, strerror(errno) );
 			} else if ( ! (stat_buf.st_mode & S_IXUSR) ) {
 				stat_buf.st_mode |= S_IXUSR;
-				if ( chmod( fullname.Value(), stat_buf.st_mode ) < 0 ) {
+				if ( chmod( fullname.c_str(), stat_buf.st_mode ) < 0 ) {
 					dprintf( D_ALWAYS, "Failed to set execute bit on %s, errno=%d (%s)\n",
-							 fullname.Value(), errno, strerror(errno) );
+							 fullname.c_str(), errno, strerror(errno) );
 				}
 			}
 #else
@@ -3761,7 +3761,7 @@ int
 FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 {
 	int rc = 0;
-	MyString fullname;
+	std::string fullname;
 	filesize_t bytes=0;
 	filesize_t peer_max_transfer_bytes = -1; // unlimited
 	bool is_the_executable;
@@ -4181,7 +4181,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			}
 		} else if( !fullpath( filename.c_str() ) ){
 			// looks like a relative path
-			fullname.formatstr("%s%c%s",Iwd,DIR_DELIM_CHAR,filename.c_str());
+			formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename.c_str());
 		} else {
 			// looks like an unix absolute path or a windows path
 			fullname = filename;
@@ -4231,10 +4231,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		// also, don't check URLs
 #ifdef WIN32
 		if( !fileitem.isSrcUrl() && perm_obj && !is_the_executable &&
-			(perm_obj->read_access(fullname.Value()) != 1) ) {
+			(perm_obj->read_access(fullname.c_str()) != 1) ) {
 			// we do _not_ have permission to read this file!!
 			upload_success = false;
-			error_desc.formatstr("error reading from %s: permission denied",fullname.Value());
+			error_desc.formatstr("error reading from %s: permission denied",fullname.c_str());
 			do_upload_ack = true;    // tell receiver that we failed
 			do_download_ack = true;
 			try_again = false; // put job on hold
@@ -5550,10 +5550,10 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 // Determines the third-party plugin needed for a file transfer.
 // Looks at both source and destination to determine which one contains a URL,
 // then extracts the method (ie. http, ftp) and uses it to lookup plugin.
-MyString FileTransfer::DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest ) {
+std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest ) {
 
 	char *URL = NULL;
-	MyString plugin;
+	std::string plugin;
 
 	// First, check the destination to see if it looks like a URL.
 	// If not, source must be the URL.
@@ -5635,10 +5635,10 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	}
 
 	// look up the method in our hash table
-	MyString plugin;
+	std::string plugin;
 
 	// hashtable returns zero if found.
-	if (plugin_table->lookup(method.c_str(), plugin)) {
+	if (plugin_table->lookup(method, plugin)) {
 		// no plugin for this type!!!
 		e.pushf("FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method.c_str());
 		dprintf (D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str());
@@ -5649,7 +5649,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 /*
 	// TODO: check validity of plugin name.  should always be an absolute path
 	if (absolute_path_check() ) {
-		dprintf(D_ALWAYS, "FILETRANSFER: NOT invoking malformed plugin named \"%s\"\n", plugin.Value());
+		dprintf(D_ALWAYS, "FILETRANSFER: NOT invoking malformed plugin named \"%s\"\n", plugin.c_str());
 		FAIL();
 	}
 */
@@ -5682,7 +5682,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 
 	// prepare args for the plugin
 	ArgList plugin_args;
-	plugin_args.AppendArg(plugin.c_str());
+	plugin_args.AppendArg(plugin);
 	plugin_args.AppendArg(source);
 	plugin_args.AppendArg(dest);
 	dprintf(D_FULLDEBUG, "FileTransfer::InvokeFileTransferPlugin invoking: %s %s %s\n", plugin.c_str(), source, dest);
@@ -6000,8 +6000,8 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 
 	// iterate plugin_table if it existssrc
 	if (plugin_table) {
-		MyString junk;
-		MyString method;
+		std::string junk;
+		std::string method;
 
 		plugin_table->startIterations();
 		while(plugin_table->iterate(method, junk)) {
@@ -6070,13 +6070,13 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
 		const char * equals = strchr(plug, '=');
 		if (equals) {
-			MyString methods; methods.set(plug, equals - plug);
+			std::string methods(plug, equals - plug);
 
 			// use the file basename as the plugin name, so that when we invoke it
 			// we will invoke the copy in the input sandbox
-			MyString plugin_path(equals + 1);
-			plugin_path.trim();
-			MyString plugin(condor_basename(plugin_path.c_str()));
+			std::string plugin_path(equals + 1);
+			trim(plugin_path);
+			std::string plugin(condor_basename(plugin_path.c_str()));
 
 			InsertPluginMappings(methods, plugin);
 			plugins_multifile_support[plugin] = true;
@@ -6123,7 +6123,7 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e) {
 	}
 
 	// If we have an https plug-in, this version of HTCondor also supports S3.
-	MyString method, junk;
+	std::string method, junk;
 	plugin_table->startIterations();
 	while( plugin_table->iterate( method, junk ) ) {
 		if( method == "https" ) {
@@ -6179,7 +6179,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 	// e.pushf("FILETRANSFER", 1, "\"%s -classad\" is not plugin type FileTransfer, ignoring", path );
 
 	// extract the info we care about
-	char* methods = NULL;
+	std::string methods;
 	bool this_plugin_supports_multifile = false;
 	if ( ad->LookupBool( "MultipleFileSupport", this_plugin_supports_multifile ) ) {
 		plugins_multifile_support[path] = this_plugin_supports_multifile;
@@ -6188,11 +6188,8 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 	// Before adding mappings, make sure that if multifile plugins are disabled,
 	// this is not a multifile plugin.
 	if ( multifile_plugins_enabled || !this_plugin_supports_multifile ) {
-		if (ad->LookupString( "SupportedMethods", &methods)) {
-			// free the memory, return a MyString
-			MyString m = methods;
-			free(methods);
-			InsertPluginMappings( m, path );
+		if (ad->LookupString( "SupportedMethods", methods)) {
+			InsertPluginMappings( methods, path );
 		}
 	}
 
@@ -6202,11 +6199,11 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 
 
 void
-FileTransfer::InsertPluginMappings(MyString methods, MyString p)
+FileTransfer::InsertPluginMappings(const std::string& methods, const std::string& p)
 {
 	StringList method_list(methods.c_str());
 
-	char* m;
+	const char* m;
 
 	method_list.rewind();
 	while((m = method_list.next())) {

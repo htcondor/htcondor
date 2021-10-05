@@ -386,7 +386,7 @@ bool
 TransferQueueManager::AddRequest( TransferQueueRequest *client ) {
 	ASSERT( client );
 
-	MyString error_desc;
+	std::string error_desc;
 	if( daemonCore->TooManyRegisteredSockets(client->m_sock->get_file_desc(),&error_desc))
 	{
 		dprintf(D_FULLDEBUG,"TransferQueueManager: rejecting %s to avoid overload: %s\n",

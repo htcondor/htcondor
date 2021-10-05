@@ -63,7 +63,7 @@ struct CatalogEntry {
 typedef HashTable <MyString, FileTransfer *> TranskeyHashTable;
 typedef HashTable <int, FileTransfer *> TransThreadHashTable;
 typedef HashTable <MyString, CatalogEntry *> FileCatalogHashTable;
-typedef HashTable <MyString, MyString> PluginHashTable;
+typedef HashTable <std::string, std::string> PluginHashTable;
 
 typedef int		(Service::*FileTransferHandlerCpp)(FileTransfer *);
 typedef int		(*FileTransferHandler)(FileTransfer *);
@@ -313,12 +313,12 @@ class FileTransfer final: public Service {
 
 	void setTransferQueueContactInfo(char const *contact);
 
-	void InsertPluginMappings(MyString methods, MyString p);
+	void InsertPluginMappings(const std::string& methods, const std::string& p);
 	void SetPluginMappings( CondorError &e, const char* path );
 	int InitializeSystemPlugins(CondorError &e);
 	int InitializeJobPlugins(const ClassAd &job, CondorError &e);
 	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles) const;
-	MyString DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
+	std::string DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
 	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload, std::vector<std::unique_ptr<ClassAd>> *);
 	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long &upload_bytes);
@@ -451,7 +451,7 @@ class FileTransfer final: public Service {
 	bool ClientCallbackWantsStatusUpdates{false};
 	FileTransferInfo Info;
 	PluginHashTable* plugin_table{nullptr};
-	std::map<MyString, bool> plugins_multifile_support;
+	std::map<std::string, bool> plugins_multifile_support;
 	std::map<std::string, bool> plugins_from_job;
 	bool I_support_filetransfer_plugins{false};
 	bool I_support_S3{false};
