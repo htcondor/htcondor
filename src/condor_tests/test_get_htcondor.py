@@ -113,6 +113,10 @@ TESTS = {
         "postscript": "condor_version",
         "postscript-lines": [-2, -1],
     },
+    # "distribution": {
+    #     "flag": "--show-distribution",
+    #     "postscript-lines": [-1],
+    # },
 }
 
 PREFICES_BY_IMAGE = {
