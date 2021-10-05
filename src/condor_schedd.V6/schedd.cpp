@@ -7587,7 +7587,7 @@ Scheduler::release_claim(int, Stream *sock)
 
 		DelMrec( mrec );
 	}
-	FREE (claim_id);
+	free(claim_id);
 	dprintf (D_PROTOCOL, "## 7(*)  Completed release_claim\n");
 	return;
 }

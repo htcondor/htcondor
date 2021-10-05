@@ -424,6 +424,10 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart, bool must_load ) 
 
 nvmlReturn_t
 getMIGParentDeviceUUIDs( std::set< std::string > & parentDeviceUUIDs ) {
+	// if this version of the library doesn't have a nvmlDeviceGetMaxMigDeviceCount function
+	// then there can be no MIG parent devices, trivial success
+	if (! nvmlDeviceGetMaxMigDeviceCount) { return NVML_SUCCESS; }
+
 	unsigned int deviceCount = 0;
 	nvmlReturn_t r = nvmlDeviceGetCount(& deviceCount);
 	if( NVML_SUCCESS != r ) { return r; }
@@ -462,7 +466,7 @@ getUUIDToMIGDeviceHandleMap( std::map< std::string, nvmlDevice_t > & map ) {
 	if( NVML_SUCCESS != r ) { return r; }
 
 	// if this version of the library doesn't have a nvmlDeviceGetMaxMigDeviceCount function
-	// then we behave as if the mig device cound was 0, trivial success.
+	// then we behave as if the mig device count was 0, trivial success.
 	if (! nvmlDeviceGetMaxMigDeviceCount) { return NVML_SUCCESS; }
 
 	for( unsigned int i = 0; i < deviceCount; ++i ) {

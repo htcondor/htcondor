@@ -434,7 +434,7 @@ RemoteResource::abortFileTransfer()
 {
 	filetrans.stopServer();
 	if( state == RR_PENDING_TRANSFER ) {
-		state = RR_FINISHED;
+		setResourceState(RR_FINISHED);
 	}
 }
 
@@ -2227,16 +2227,30 @@ RemoteResource::requestReconnect( void )
 		// this stuff about itself. 
 	setStarterInfo( &reply );
 
-	began_execution = true;
-	setResourceState( RR_EXECUTING );
-	reconnect_attempts = 0;
-	hadContact();
-
 	int proxy_expiration = 0;
 	if( jobAd->LookupInteger(ATTR_DELEGATED_PROXY_EXPIRATION,proxy_expiration) ) {
 		setRemoteProxyRenewTime(proxy_expiration);
 	}
-	startCheckingProxy();
+
+	// If the shadow started in reconnect mode, check the job ad to see
+	// if we previously heard about the job starting execution, and set
+	// up our state accordingly.
+	if ( shadow->attemptingReconnectAtStartup ) {
+		time_t job_execute_date = 0;
+		time_t claim_start_date = 0;
+		jobAd->LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, job_execute_date);
+		jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, claim_start_date);
+		if ( job_execute_date >= claim_start_date ) {
+			began_execution = true;
+			setResourceState( RR_EXECUTING );
+			startCheckingProxy();
+		} else {
+			setResourceState( RR_STARTUP );
+		}
+	}
+
+	reconnect_attempts = 0;
+	hadContact();
 
 		// Tell the Shadow object so it can take care of the rest.
 	shadow->resourceReconnected( this );

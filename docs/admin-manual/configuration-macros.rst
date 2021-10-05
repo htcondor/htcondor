@@ -6063,8 +6063,9 @@ These settings affect the *condor_starter*.
     the target, then skip this bind mount.
 
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS`
-    A string value containing a list of extra arguments to be appended
-    to the Singularity command line.
+    A string value or classad expression containing a list of extra arguments to be appended
+    to the Singularity command line. This can be an expression evaluted in the context of the
+    job ad and the machine ad.
 
 condor_submit Configuration File Entries
 -----------------------------------------
@@ -9120,9 +9121,9 @@ macros are described in the :doc:`/admin-manual/security` section.
     For Unix machines, the path to the directory containing tokens for
     user authentication with the token method.  Defaults to ``~/.condor/tokens.d``.
 
-:macro-def:`SEC_TOKEN_BLACKLIST_EXPR`
+:macro-def:`SEC_TOKEN_REVOCATION_EXPR`
     A ClassAd expression evaluated against tokens during authentication;
-    if ``SEC_TOKEN_BLACKLIST_EXPR`` is set and evaluates to true, then the
+    if ``SEC_TOKEN_REVOCATION_EXPR`` is set and evaluates to true, then the
     token is revoked and the authentication attempt is denied.
 
 :macro-def:`SEC_TOKEN_REQUEST_LIMITS`

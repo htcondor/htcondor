@@ -142,6 +142,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_TRANSFER_OUTPUT_FILES_LAST_RUN_COUNT );
 	common_job_queue_attrs->insert( ATTR_TRANSFER_OUTPUT_FILES_TOTAL_COUNT );
 
+	common_job_queue_attrs->insert( ATTR_NUM_JOB_STARTS );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_EXECUTING_DATE );
 	common_job_queue_attrs->insert( ATTR_CUMULATIVE_TRANSFER_TIME );
 	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );

@@ -992,7 +992,7 @@ int Sock::special_connect(char const *host,int /*port*/,bool nonblocking)
 		// TODO: Picking IPv4 arbitrarily.
 		//   We should do a better job of detecting whether sinful
 		//   points to a local interface.
-		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		std::string my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
 		if( sinful.getHost() && strcmp(my_ip.c_str(),sinful.getHost())==0 ) {
 			same_host = true;
 		}

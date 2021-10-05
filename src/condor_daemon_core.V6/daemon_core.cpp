@@ -746,14 +746,6 @@ int DaemonCore::FileDescriptorSafetyLimit()
 
 bool DaemonCore::TooManyRegisteredSockets(int fd,std::string *msg,int num_fds)
 {
-    MyString ms;
-    bool rv = TooManyRegisteredSockets(fd, msg == NULL ? NULL : & ms, num_fds);
-    if( msg != NULL && ! ms.empty() ) { * msg = ms; }
-    return rv;
-}
-
-bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
-{
 	int registered_socket_count = RegisteredSocketCount();
 	int fds_used = registered_socket_count;
 	int safety_limit = FileDescriptorSafetyLimit();
@@ -803,7 +795,7 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 			return false;
 		}
 		if(msg) {
-			msg->formatstr( "file descriptor safety level exceeded: "
+			formatstr( *msg, "file descriptor safety level exceeded: "
 			              " limit %d, "
 			              " registered socket count %d, "
 			              " fd %d",
@@ -1287,7 +1279,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		free( sinful_private);
 		sinful_private = NULL;
 
-		MyString private_sinful_string;
+		std::string private_sinful_string;
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
 			int port = ((Sock*)(*sockTable)[initial_command_sock()].iosock)->get_port();
@@ -1784,7 +1776,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	if( iosock->type() == Stream::reli_sock &&
 	    ((ReliSock *)iosock)->is_connect_pending() )
 	{
-		MyString overload_msg;
+		std::string overload_msg;
 		bool overload_danger =
 			TooManyRegisteredSockets( ((Sock *)iosock)->get_file_desc(),
 			                              &overload_msg);
@@ -7192,7 +7184,7 @@ int DaemonCore::Create_Process(
 		ASSERT( rc && entry && entry->policy() );
 		entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 		IpVerify* ipv = getSecMan()->getIpVerify();
-		MyString id = CONDOR_CHILD_FQU;
+		std::string id = CONDOR_CHILD_FQU;
 		ipv->PunchHole(DAEMON, id);
 		ipv->PunchHole(CLIENT_PERM, id);
 
@@ -9129,8 +9121,7 @@ DaemonCore::Inherit( void )
 			ASSERT( rc && entry && entry->policy() );
 			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 			IpVerify* ipv = getSecMan()->getIpVerify();
-			MyString id;
-			id.formatstr("%s", CONDOR_PARENT_FQU);
+			std::string id = CONDOR_PARENT_FQU;
 			ipv->PunchHole(DAEMON, id);
 			ipv->PunchHole(CLIENT_PERM, id);
 		}

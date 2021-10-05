@@ -543,7 +543,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	ClassAd		*pvtAd;
 	int		insPvt;
 	AdNameHashKey		hk;
-	HashString	hashString;
+	std::string hashString;
 	static int repeatStartdAds = -1;		// for debugging
 	ClassAd		*clientAdToRepeat = NULL;
 #ifdef PROFILE_RECEIVE_UPDATE
@@ -579,7 +579,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			retVal = 0;
 			break;
 		}
-		hashString.Build( hk );
+		hk.sprint(hashString);
 
 #ifdef PROFILE_RECEIVE_UPDATE
 		CollectorEngine_rucc_makeHashKey_runtime.Add(rt.tick(rt_last));
@@ -657,7 +657,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 						 "fake%d-%s",n,oldname);
 				fakeAd->Assign(ATTR_NAME, newname);
 				makeStartdAdHashKey (hk, fakeAd);
-				hashString.Build( hk );
+				hk.sprint(hashString);
 				if (! updateClassAd (StartdAds, "StartdAd     ", "Start",
 							  fakeAd, hk, hashString, insert, from ) )
 				{
@@ -681,7 +681,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			retVal = 0;
 			break;
 		}
-		hashString.Build( hk );
+		hk.sprint(hashString);
 		retVal=mergeClassAd (StartdAds, "StartdAd     ", "Start",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -694,7 +694,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			retVal = 0;
 			break;
 		}
-		hashString.Build( hk );
+		hk.sprint(hashString);
 		retVal=updateClassAd (ScheddAds, "ScheddAd     ", "Schedd",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -711,7 +711,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		}
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
-		hashString.Build( hk );
+		hk.sprint(hashString);
 		retVal=updateClassAd (SubmittorAds, "SubmittorAd  ", "Submittor",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -727,7 +727,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		}
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
-		hashString.Build( hk );
+		hk.sprint(hashString);
 		retVal=updateClassAd (LicenseAds, "LicenseAd  ", "License",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -740,7 +740,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			retVal = 0;
 			break;
 		}
-		hashString.Build( hk );
+		hk.sprint(hashString);
 		retVal=updateClassAd (MasterAds, "MasterAd     ", "Master",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -753,7 +753,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			retVal = 0;
 			break;
 		}
-		hashString.Build( hk );
+		hk.sprint(hashString);
 		retVal=updateClassAd (CkptServerAds, "CkptSrvrAd   ", "CkptSrvr",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -766,7 +766,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			retVal = 0;
 			break;
 		}
-		hashString.Build( hk );
+		hk.sprint(hashString);
 		retVal=updateClassAd (CollectorAds, "CollectorAd  ", "Collector",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -779,7 +779,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			retVal = 0;
 			break;
 		}
-		hashString.Build( hk );
+		hk.sprint(hashString);
 		retVal=updateClassAd (StorageAds, "StorageAd  ", "Storage",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -792,7 +792,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			retVal = 0;
 			break;
 		}
-		hashString.Build( hk );
+		hk.sprint(hashString);
 		retVal=updateClassAd (AccountingAds, "AccountingAd  ", "Accouting",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -805,7 +805,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			retVal = 0;
 			break;
 		}
-		hashString.Build( hk );
+		hk.sprint(hashString);
 		if (m_allowOnlyOneNegotiator) {
 			// first, purge all the existing negotiator ads, since we
 			// want to enforce that *ONLY* 1 negotiator is in the
@@ -824,7 +824,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			retVal = 0;
 			break;
 		}
-		hashString.Build( hk );
+		hk.sprint(hashString);
 		retVal=updateClassAd (HadAds, "HadAd  ", "HAD",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -837,7 +837,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			retVal = 0;
 			break;
 		}
-		hashString.Build( hk );
+		hk.sprint(hashString);
 		retVal=updateClassAd (GridAds, "GridAd  ", "Grid",
 							  clientAd, hk, hashString, insert, from );
           break;
@@ -866,7 +866,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			  retVal = 0;
 			  break;
 		  }
-		  hashString.Build(hk);
+		  hk.sprint(hashString);
 		  retVal = updateClassAd(*cht, type_str, type_str, clientAd,
 					 hk, hashString, insert, from);
 		  break;

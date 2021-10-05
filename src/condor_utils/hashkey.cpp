@@ -32,17 +32,10 @@
 
 void
 AdNameHashKey::sprint( std::string &s ) const {
-    MyString ms;
-    sprint( ms );
-    s = ms;
-}
-
-void AdNameHashKey::sprint (MyString &s) const
-{
 	if (ip_addr.length() )
-		s.formatstr( "< %s , %s >", name.c_str(), ip_addr.c_str() );
+		formatstr( s, "< %s , %s >", name.c_str(), ip_addr.c_str() );
 	else
-		s.formatstr( "< %s >", name.c_str() );
+		formatstr( s, "< %s >", name.c_str() );
 }
 
 bool operator== (const AdNameHashKey &lhs, const AdNameHashKey &rhs)
@@ -110,32 +103,29 @@ adLookup( const char *ad_type,
 		  const ClassAd *ad,
 		  const char *attrname,
 		  const char *attrold,
-		  MyString &string,
+		  std::string &value,
 		  bool log = true )
 {
-	char	buf[256];
 	bool	rval = true;
 
-    if ( !ad->LookupString( attrname, buf, sizeof(buf) ) ) {
+    if ( !ad->LookupString( attrname, value ) ) {
 		if ( log ) {
 			logWarning( ad_type, attrname, attrold );
 		}
 
 		if ( !attrold ) {
-			buf[0] = '\0';
+			value.clear();
 			rval = false;
 		} else {
-			if ( !ad->LookupString( attrold, buf, sizeof(buf) ) ) {
+			if ( !ad->LookupString( attrold, value ) ) {
 				if ( log ) {
 					logError( ad_type, attrname, attrold );
 				}
-				buf[0] = '\0';
+				value.clear();
 				rval = false;
 			}
 		}
 	}
-
-	string = buf;
 
 	return rval;
 }
@@ -146,9 +136,9 @@ getIpAddr( const char *ad_type,
 		   const ClassAd *ad,
 		   const char *attrname,
 		   const char *attrold,
-		   MyString &ip )
+		   std::string &ip )
 {
-	MyString	tmp;
+	std::string tmp;
 
 	// get the IP and port of the startd
 	if ( !adLookup( ad_type, ad, attrname, attrold, tmp, true ) ) {
@@ -219,7 +209,7 @@ makeScheddAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 	// ads will clobber one another if the more than one schedd runs
 	// on the same IP address submitting into the same pool.
 	// -Todd Tannenbaum <tannenba@cs.wisc.edu> 2/2005
-	MyString	tmp;
+	std::string tmp;
 	if ( adLookup( "Schedd", ad, ATTR_SCHEDD_NAME, NULL, tmp, false ) ) {
 		hk.name += tmp;
 	}
@@ -295,7 +285,7 @@ makeAccountingAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 	// Get the name of the negotiator this accounting ad is from.
 	// Older negotiators didn't set ATTR_NEGOTIATOR_NAME, so this is
 	// optional.
-	MyString tmp;
+	std::string tmp;
 	if ( adLookup( "Accounting", ad, ATTR_NEGOTIATOR_NAME, NULL, tmp ) ) {
 		hk.name += tmp;
 	}
@@ -321,7 +311,7 @@ makeHadAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 bool
 makeGridAdHashKey (AdNameHashKey &hk, const ClassAd *ad)
 {
-    MyString tmp;
+    std::string tmp;
     
     // get the hash name of the the resource
     if ( !adLookup( "Grid", ad, ATTR_HASH_NAME, NULL, hk.name ) ) {
@@ -365,46 +355,3 @@ makeGenericAdHashKey (AdNameHashKey &hk, const ClassAd *ad )
 	return adLookup( "Generic", ad, ATTR_NAME, NULL, hk.name );
 }
 
-
-// utility function:  parse the string "<aaa.bbb.ccc.ddd:pppp>"
-//  Extracts the ip address portion ("aaa.bbb.ccc.ddd")
-bool 
-parseIpPort (const MyString &ip_port_pair, MyString &ip_addr)
-{
-	ip_addr = "";
-
-	if (ip_port_pair.empty()) {
-        return false;
-	}
-    const char *ip_port = ip_port_pair.c_str();
-	ip_port++;			// Skip the leading "<"
-    while ( *ip_port && *ip_port != ':')
-    {
-		ip_addr += *ip_port;
-        ip_port++;
-    }
-
-	// don't care about port number
-	return true;
-}
-
-// HashString
-HashString::HashString( void )
-{
-}
-
-HashString::HashString( const AdNameHashKey &hk )
-		: MyString( )
-{
-	Build( hk );
-}
-
-void
-HashString::Build( const AdNameHashKey &hk )
-{
-	if ( hk.ip_addr.length() ) {
-		formatstr( "< %s , %s >", hk.name.c_str(), hk.ip_addr.c_str() );
-	} else {
-		formatstr( "< %s >", hk.name.c_str() );
-	}
-}
