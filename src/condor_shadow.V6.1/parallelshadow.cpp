@@ -990,13 +990,47 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 
 
 void
-ParallelShadow::resourceReconnected( RemoteResource*  /*rr*/ )
+ParallelShadow::resourceReconnected( RemoteResource* rr )
 {
 		// Since our reconnect worked, clear attemptingReconnectAtStartup
 		// flag so if we disconnect again and fail, we will exit
 		// with JOB_SHOULD_REQUEUE instead of JOB_RECONNECT_FAILED.
 		// See gt #4783.
-	attemptingReconnectAtStartup = false;
+
+	// If the shadow started in reconnect mode, check the job ad to see
+	// if we previously heard about the job starting execution, and set
+	// up our state accordingly.
+	// But wait until we've reconnected to all starters.
+	if (attemptingReconnectAtStartup) {
+		bool all_connected = true;
+
+		for( size_t i=0; i<ResourceList.size() && all_connected; i++ ) {
+			if( ResourceList[i]->getResourceState() == RR_RECONNECT ) {
+				all_connected = false;
+			}
+		}
+		if (all_connected) {
+			time_t job_execute_date = 0;
+			time_t claim_start_date = 0;
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, job_execute_date);
+			jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, claim_start_date);
+			if ( job_execute_date >= claim_start_date ) {
+				began_execution = true;
+			}
+
+			attemptingReconnectAtStartup = false;
+		}
+	}
+
+		// If we know the job is already executing, ensure the timers
+		// that are supposed to start then are running.
+	if (began_execution) {
+			// Start the timer for the periodic user job policy
+		shadow_user_policy.startTimer();
+
+			// Start the timer for updating the job queue for this job
+		startQueueUpdateTimer();
+	}
 }
 
 

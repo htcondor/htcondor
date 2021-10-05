@@ -1411,7 +1411,6 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 {
 		// Set our flag to remember we've really started.
 	began_execution = true;
-
 		// Start the timer for the periodic user job policy evaluation.
 	shadow_user_policy.startTimer();
 		
@@ -1439,15 +1438,12 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 		// and since the copy in RAM is already updated, all the
 		// periodic user policy expressions will work right, so the
 		// default is to do it lazy.
-	if (m_lazy_queue_update) {
-			// For lazy update, we just want to make sure the
-			// job_updater object knows about this attribute (which we
-			// already updated our copy of).
-		job_updater->watchAttribute(ATTR_NUM_JOB_STARTS);
-	}
-	else {
-			// They want it now, so do the qmgmt operation directly.
-		updateJobAttr(ATTR_NUM_JOB_STARTS, job_start_cnt);
+		// We want other attributes updated at the same time
+		// (e.g. JobCurrentStartExecutingDate), so do a full update to
+		// the schedd if we're not being lazy.
+	if (!m_lazy_queue_update) {
+			// They want it now, so do an update right here.
+		updateJobInQueue(U_STATUS);
 	}
 }
 
