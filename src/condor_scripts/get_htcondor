@@ -627,7 +627,6 @@ do_download() {
 	TARBALL_NAME="condor-x86_64_${OS_NAME}${OS_VERSION}-stripped.tar.gz"
 	TARBALL_URL="${TARBALL_DIR_URL}/${TARBALL_NAME}"
 
-echo $TARBALL_URL
 	echo "Downloading to condor.tar.gz..."
 	curl -fSL ${TARBALL_URL} -o condor.tar.gz
 }
