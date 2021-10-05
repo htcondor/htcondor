@@ -157,9 +157,7 @@ get_distribution() {
 		#     amzn 2
 		#
 
-		lsb_dist=$(echo $DISTRIBUTION | cut -d' ' -f 1)
-		dist_version=$(echo $DISTRIBUTION | cut -d' ' -f 2)
-		dist_version_number=$(echo $DISTRIBUTION | cut -d' ' -f 3)
+		read lsb_dist dist_version dist_version_number <<< $DISTRIBUTION
 		return
 	fi
 
