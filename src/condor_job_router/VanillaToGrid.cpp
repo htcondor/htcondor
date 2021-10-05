@@ -296,7 +296,7 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 
 	StringList custom_attr_list;
 	char* attr;
-	const char *attrs_to_copy[] = {
+	const char *const attrs_to_copy[] = {
 		ATTR_BYTES_SENT,
 		ATTR_BYTES_RECVD,
 		ATTR_COMPLETION_DATE,
