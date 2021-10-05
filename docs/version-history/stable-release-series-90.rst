@@ -19,7 +19,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- The configuration paramater ``SEC_TOKEN_BLACKLIST_EXPR`` has been renamed
+  to ``SEC_TOKEN_REVOCATION_EXPR``.
+  The old name is still recognized if the new one isn't set.
+  :jira:`744`
 
 Bugs Fixed:
 
@@ -39,6 +42,11 @@ Bugs Fixed:
 - Fixed a bug that could crash the *condor_startd* when claiming a slot
   with p-slot preemption.
   :jira:`737`
+
+- Fixed a bug where the ``NumJobStarts`` and ``JobCurrentStartExecutingDate``
+  job ad attributes weren't updated if the job began executing while the
+  *condor_shadow* and *condor_starter* were disconnected.
+  :jira:`752`
 
 Version 9.0.6
 -------------
