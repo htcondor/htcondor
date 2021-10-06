@@ -144,7 +144,7 @@ AppendHistory(ClassAd* ad)
 	  failed = true;
   } else {
 	  int offset = findHistoryOffset(LogFile);
-	  if (!fPrintAd(LogFile, *ad)) {
+	  if (fputs(ad_string.c_str(), LogFile) == EOF) {
 		  dprintf(D_ALWAYS, 
 				  "ERROR: failed to write job class ad to history file %s\n",
 				  JobHistoryFileName);
