@@ -1115,6 +1115,25 @@ userHome_func(const char *                 name,
 }
 
 
+bool
+is_in_tree( const classad::ClassAd * member,
+            const classad::ClassAd * leaf ) {
+	if( member == leaf ) { return true; }
+	if( leaf == NULL ) { return false; }
+
+	// We can't just walk the parent scope pointers, because the parent
+	// scope pointer for the LEFT and RIGHT ads is temporarily replaced
+	// by the corresponding context ad when the match ad is created.
+
+	const classad::ClassAd * chainedParent = leaf->GetChainedParentAd();
+	if( chainedParent != NULL && is_in_tree(member, chainedParent) ) { return true; }
+
+	const classad::ClassAd * parentScope = leaf->GetParentScope();
+	if( parentScope != NULL && is_in_tree(member, parentScope) ) { return true; }
+
+	return false;
+}
+
 classad::Value
 evaluateInContext( classad::ExprTree * expr,
 				   classad::EvalState & state,
@@ -1140,14 +1159,34 @@ evaluateInContext( classad::ExprTree * expr,
 	// references to work correctly (if confusingly) if this function is
 	// called (as it is intended to be) during a match.
 	//
+	// If the target ad is a chained ad, as it is in the startd, then the
+	// nested ad's parent won't (usually) have an alternate scope pointer
+	// set.  Instead, we need to figure out if the nested ad's parent is
+	// on the RIGHT or LEFT side, and use the corresponding alternate scope
+	// pointer.  (We don't check for the nested ad itself because the
+	// nested ad isn't a chained parent or parent scope of RIGHT or LEFT.)
+	//
 	// The confusing part is that MY and TARGET will be reversed during the
 	// evaluation of attr if, as intended, the nested ad's parent is not the
 	// parent of the expression containing function call.  (We intend for
 	// the former to be the slot ad and the latter the job ad.)
 	classad::ClassAd * originalAlternateScope = nested_ad->alternateScope;
-	const classad::ClassAd * nested_ad_parent_scope = nested_ad->GetParentScope();
-	if( nested_ad_parent_scope ) {
-		nested_ad->alternateScope = nested_ad_parent_scope->alternateScope;
+
+	// This is awful, but I don't want to change the ClassAd API to fix it.
+	classad::MatchClassAd * matchAd =
+		const_cast<classad::MatchClassAd *>(dynamic_cast<const classad::MatchClassAd *>(state.rootAd));
+	if( matchAd != NULL ) {
+		const classad::ClassAd * left = matchAd->GetLeftAd();
+		const classad::ClassAd * right = matchAd->GetRightAd();
+
+		if( is_in_tree( nested_ad->GetParentScope(), left ) ) {
+			nested_ad->alternateScope = left->alternateScope;
+		} else if( is_in_tree( nested_ad->GetParentScope(), right ) ) {
+			nested_ad->alternateScope = right->alternateScope;
+		} else {
+			dprintf( D_FULLDEBUG, "evalEachInContext(): nested ad not in LEFT or RIGHT\n" );
+			rv.SetErrorValue();
+		}
 	}
 
 	classad::EvalState temporary_state;
