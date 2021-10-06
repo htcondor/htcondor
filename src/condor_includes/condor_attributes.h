@@ -398,6 +398,7 @@
 #define ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU  "CumulativeRemoteUserCpu"
 #define ATTR_JOB_DISCONNECTED_DATE  "JobDisconnectedDate"
 #define ATTR_JOB_REMOTE_WALL_CLOCK  "RemoteWallClockTime"
+#define ATTR_JOB_LAST_REMOTE_WALL_CLOCK "LastRemoteWallClockTime"
 #define ATTR_JOB_ROOT_DIR  "RootDir"
 #define ATTR_JOB_RUN_COUNT  "JobRunCount"
 #define ATTR_JOB_MAX_RETRIES "JobMaxRetries"
