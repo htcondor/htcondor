@@ -19,6 +19,10 @@ New Features:
   can depend on the job.
   :jira:`570`
 
+- Added an attribute to the job ClassAd ``LastRemoteWallClockTime``.  It holds the wall clock
+  time of the most recent completed job execution.
+  :jira:`751`
+
 Bugs Fixed:
 
 - None.
