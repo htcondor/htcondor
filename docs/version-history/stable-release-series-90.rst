@@ -19,13 +19,34 @@ Release Notes:
 
 New Features:
 
-- None.
+- The configuration paramater ``SEC_TOKEN_BLACKLIST_EXPR`` has been renamed
+  to ``SEC_TOKEN_REVOCATION_EXPR``.
+  The old name is still recognized if the new one isn't set.
+  :jira:`744`
 
 Bugs Fixed:
+
+- *condor_watch_q* no longer has a limit on the number of job event log files
+  it can watch.
+  :jira:`658`
 
 - Fix a bug in *condor_watch_q* which would cause it to fail when run
   on older kernels.
   :jira:`745`
+
+- Fixed a bug where *condor_gpu_discovery* could segfault on some older versions
+  of the NVIDIA libraries. This would result in GPUs not being detected.
+  The bug was introduced in HTCondor 9.0.6 and is known to occur with CUDA runtime 10.1.
+  :jira:`760`
+
+- Fixed a bug that could crash the *condor_startd* when claiming a slot
+  with p-slot preemption.
+  :jira:`737`
+
+- Fixed a bug where the ``NumJobStarts`` and ``JobCurrentStartExecutingDate``
+  job ad attributes weren't updated if the job began executing while the
+  *condor_shadow* and *condor_starter* were disconnected.
+  :jira:`752`
 
 Version 9.0.6
 -------------

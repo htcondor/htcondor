@@ -23,6 +23,7 @@ use CondorTest;
 use Cwd;
 use CondorUtils;
 #use Time::localtime;
+use File::Temp;
 use strict;
 use warnings;
 
@@ -36,18 +37,16 @@ CONDOR_TESTREQ_CONFIG
 
 my $debuglevel = 2;
 
-my $pid = $$;
-runcmd("rm -rf $pid");
-runcmd("mkdir $pid");
 my $curcwd = getcwd();
+my $dir = File::Temp->newdir(CLEANUP => 0, DIR => $curcwd);
 CondorTest::debug("current directory is $curcwd\n",$debuglevel);
 
 my $socketname = "cmd_wait";
-my $resultfile = $curcwd . "/" . $pid . "/results";
-my $outputfile = $curcwd . "/" . $pid . "/condor_wait.out";
+my $resultfile = $dir->dirname . "/results";
+my $outputfile = $dir->dirname . "/condor_wait.out";
 CondorTest::debug("condor_wait output is in $outputfile\n",$debuglevel);
 
-my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows-partial.log";
+my $flowlog = $dir->dirname . "/cmd_wait_shows-partial.log";
 my $writelog = "./x_write_joblog_events.exe";
 
 CondorTest::debug("Result File is $resultfile\n",$debuglevel);

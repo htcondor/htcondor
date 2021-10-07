@@ -22,6 +22,7 @@
 use CondorTest;
 use CondorUtils;
 use Cwd;
+use File::Temp;
 
 my $iswindows = CondorUtils::is_windows();
 
@@ -30,15 +31,14 @@ $cmd = 'job_dagman_maxpostscripts.dag';
 
 $serversubFile = "job_dagman_maxpostscripts-srvr.cmd";
 
-my $pid = "pdir$$";
-runcmd("mkdir -p $pid");
 my $curcwd = getcwd();
+my $dir = File::Temp->newdir(CLEANUP => 0, DIR => $curcwd);
 CondorTest::debug("current directory is $curcwd\n",1);
 
 my $socketname = "maxpostsock";
 my $appendfile =  "filetoappendto";
-my $newsocketname = $curcwd . "/" . $pid . "/maxpostsock";
-my $flowlog = $curcwd . "/" . $pid . "/job_dagman_maxpostscripts-srvr-log.log";
+my $newsocketname = $dir->dirname . "/maxpostsock";
+my $flowlog = $dir->dirname . "/job_dagman_maxpostscripts-srvr-log.log";
 if($iswindows) {
 	$_ = $flowlog;
 	s/\//\\\\/g;

@@ -2086,6 +2086,17 @@ all attributes.
     the other hand, is just like ``RemoteWallClockTime`` except it does
     get reset to 0 whenever the job is evicted without a checkpoint.
 
+:index:`LastRemoteWallClockTime<single: LastRemoteWallClockTime; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; LastRemoteWallClockTime>`
+
+``LastRemoteWallClockTime``
+    Number of seconds the job was allocated a machine for its most recent completed
+    execution.  This attribute is set after the job exits or is evicted.
+    It will be undefined until the first execution attempt completes or is terminated.
+    When a job has been allocated a machine and is still running, the value will be
+    undefined or will be the value from the previous execution attempt rather than the
+    current one.
+
 :index:`RemoveKillSig<single: RemoveKillSig; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; RemoveKillSig>`
 

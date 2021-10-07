@@ -2466,9 +2466,9 @@ description=Authorization limits for token requests
 type=string
 tags=condor_auth_passwd
 
-[SEC_TOKEN_BLACKLIST_EXPR]
+[SEC_TOKEN_REVOCATION_EXPR]
 default=
-description=Expression describing token blacklist.
+description=Expression describing token revocation.
 type=string
 tags=condor_auth_passwd
 

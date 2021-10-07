@@ -385,34 +385,6 @@ extern const char * debug_hex_dump(char * buf, const char * data, int datalen, b
 	fprintf( stderr, "TRACE at line %d in file \"%s\"\n",  __LINE__, __FILE__ );
 #endif /* TRACE */
 
-#ifdef MALLOC_DEBUG
-#define MALLOC(size) mymalloc(__FILE__,__LINE__,size)
-#define CALLOC(nelem,size) mycalloc(__FILE__,__LINE__,nelem,size)
-#define REALLOC(ptr,size) myrealloc(__FILE__,__LINE__,ptr,size)
-#define FREE(ptr) myfree(__FILE__,__LINE__,ptr)
-char    *mymalloc(), *myrealloc(), *mycalloc();
-#else
-#define MALLOC(size) malloc(size)
-#define CALLOC(nelem,size) calloc(nelem,size)
-#define REALLOC(ptr,size) realloc(ptr,size)
-#define FREE(ptr) free(ptr)
-#endif /* MALLOC_DEBUG */
-
-#define D_RUSAGE( flags, ptr ) { \
-        dprintf( flags, "(ptr)->ru_utime = %d.%06d\n", (ptr)->ru_utime.tv_sec,\
-        (ptr)->ru_utime.tv_usec ); \
-        dprintf( flags, "(ptr)->ru_stime = %d.%06d\n", (ptr)->ru_stime.tv_sec,\
-        (ptr)->ru_stime.tv_usec ); \
-}
-
-#ifndef ABEND
-#define ABEND(cond) \
-	if( !(cond) ) { \
-		dprintf( D_ERROR | D_BACKTRACE, "Failed to assert (%s) at %s, line %d; aborting.\n", #cond, __FILE__, __LINE__ ); \
-		abort(); \
-	}
-#endif /* ABEND */
-
 #ifndef PRAGMA_REMIND
 # ifdef _MSC_VER // for Microsoft C, prefix file and line to the the message
 #  define PRAGMA_QUOTE(x)   #x

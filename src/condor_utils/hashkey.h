@@ -35,10 +35,9 @@
 class AdNameHashKey
 {
   public:
-    MyString name;
-    MyString ip_addr;
+	std::string name;
+	std::string ip_addr;
 
-	void   sprint (MyString &) const;
 	void sprint( std::string & ) const;
     friend bool operator== (const AdNameHashKey &, const AdNameHashKey &);
 
@@ -49,7 +48,7 @@ size_t adNameHashFunction (const AdNameHashKey &);
 
 // type for the hash tables ...
 typedef HashTable <AdNameHashKey, ClassAd *> CollectorHashTable;
-typedef HashTable <MyString, CollectorHashTable *> GenericAdHashTable;
+typedef HashTable <std::string, CollectorHashTable *> GenericAdHashTable;
 
 // functions to make the hashkeys
 bool makeStartdAdHashKey (AdNameHashKey &, const ClassAd *);
@@ -64,18 +63,5 @@ bool makeNegotiatorAdHashKey (AdNameHashKey &, const ClassAd *);
 bool makeHadAdHashKey (AdNameHashKey &, const ClassAd *);
 bool makeGridAdHashKey (AdNameHashKey &, const ClassAd *);
 bool makeGenericAdHashKey (AdNameHashKey &, const ClassAd *);
-
-// utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
-// [OBSOLETE] do not use it. specification of sinful string has been changed
-// over time but this function does not handle correctly.
-//bool parseIpPort( const MyString &ip_port_pair, MyString &ip_addr );
-
-class HashString : public MyString
-{
-  public:
-	HashString( void );
-	HashString( const AdNameHashKey & );
-	void Build( const AdNameHashKey & );
-};
 
 #endif /* __COLLHASH_H__ */
