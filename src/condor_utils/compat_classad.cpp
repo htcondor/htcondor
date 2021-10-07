@@ -1184,7 +1184,7 @@ evaluateInContext( classad::ExprTree * expr,
 		} else if( is_in_tree( nested_ad->GetParentScope(), right ) ) {
 			nested_ad->alternateScope = right->alternateScope;
 		} else {
-			dprintf( D_FULLDEBUG, "evalEachInContext(): nested ad not in LEFT or RIGHT\n" );
+			dprintf( D_FULLDEBUG, "evaluateInContext(): nested ad not in LEFT or RIGHT\n" );
 			rv.SetErrorValue();
 		}
 	}
@@ -1192,7 +1192,7 @@ evaluateInContext( classad::ExprTree * expr,
 	classad::EvalState temporary_state;
 	temporary_state.SetScopes(nested_ad);
 	if(! expr->Evaluate(temporary_state, rv)) {
-		dprintf( D_FULLDEBUG, "evalEachInContext(): failed to evaluate expr in context\n" );
+		dprintf( D_FULLDEBUG, "evaluateInContext(): failed to evaluate expr in context\n" );
 		rv.SetErrorValue();
 	}
 
@@ -1222,11 +1222,42 @@ bool evalInEachContext_func( const char * /*name*/,
 	classad::ExprTree * expr = arg_list[0];
 	classad::ExprTree * nal = arg_list[1];
 
-	if(nal->GetKind() != ExprTree::NodeKind::EXPR_LIST_NODE) {
-		dprintf( D_FULLDEBUG, "evalEachInContext(): second argument not a list\n" );
-		result.SetErrorValue();
-		return true;
-	};
+	// If expr is an attribute reference, look it up before proceeding so
+	// that the lookup happens in the context of the match.  Likewise, if
+	// nal isn't a literal list, evaluate in the context of the match
+	// before proceeding.  Just document expr as either an attribute
+	// reference or literal expression; or maybe just the former?  (Makes
+	// it only marginally hard to use but simplifies things?)
+	if( expr->GetKind() == ExprTree::NodeKind::ATTRREF_NODE ) {
+		classad::AttributeReference * ref =
+			dynamic_cast<classad::AttributeReference *>(expr);
+		if( ref == NULL ) {
+			// This should probably be an EXCEPT().
+			dprintf( D_FULLDEBUG, "evalEachInContext(): FIXME\n" );
+			result.SetErrorValue();
+			return true;
+		}
+
+		classad::ExprTree * attr = NULL;
+		// This is a bug in the ClassAd API: this function returns values
+		// out of an anonymous enum in ExprTree, but that enum is protected.
+		// if(classad::AttributeReference::Deref( *ref, state, attr ) != classad::ExprTree::EVAL_OK) {
+		if(classad::AttributeReference::Deref( *ref, state, attr ) != 1 ) {
+			dprintf( D_FULLDEBUG, "evalEachInContext(): FIXME\n" );
+			result.SetErrorValue();
+			return true;
+		}
+		expr = attr;
+	}
+
+	if( nal->GetKind() != ExprTree::NodeKind::EXPR_LIST_NODE ) {
+		classad::Value cav;
+		nal->Evaluate(state, cav);
+		classad::ExprList * list = NULL;
+		if(cav.IsListValue(list)) {
+			nal = list;
+		}
+	}
 
 	classad::ExprList * nested_ad_list = dynamic_cast<classad::ExprList *>(nal);
 	if( nested_ad_list == NULL ) {
