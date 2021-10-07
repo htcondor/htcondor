@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 
 import sys
+import argparse
+
 import classad
 import htcondor
 
-# FIXME: make this a command-line flag
-htcondor.enable_debug()
 
 def makeClassAd(adString):
     try:
@@ -14,27 +14,61 @@ def makeClassAd(adString):
         modifiedAdString = "[" + adString + "]"
         return classad.ClassAd(modifiedAdString)
 
-def evaluateAndPrint(argv):
-    quiet = False
 
-    if len(argv) < 2:
-        print("Usage: {0} [-file <file>] <expr|assignment>[ <expr|assignment>]*".format(argv[0]))
-        print("Evaluate ClassAd expressions.")
-        print("Assignments modify the ClassAd context.");
-        print("")
-        print("Options:")
-        print("\t-file <file>\tA file containing the initial ClassAd context");
-        print("")
-        print("Flags may replace expressions or assignments:")
-        print("\t-quiet      \tDon't print the ClassAd context after this flag");
-        return -1
+def usage(name):
+    print("Usage: {0} [-target-file <file>] [-file <file>] <expr|assignment>[ <expr|assignment>]*".format(name))
+    print("Evaluate ClassAd expressions.")
+    print("Assignments modify the ClassAd context.");
+    print("")
+    print("Options:")
+    print("\t-target-file <file>\tA file containing the target ClassAd");
+    print("\t-file <file>       \tA file containing the initial ClassAd context");
+    print("\t-debug             \tEnable debug mode");
+    print("")
+    print("Flags may replace expressions or assignments:")
+    print("\t-quiet             \tDon't print the ClassAd context after this flag");
+
+class AppendToConst(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        value = getattr(namespace, self.const)
+        if value is None:
+            value = []
+        value.append(option_string)
+        value.extend(values)
+        setattr(namespace, self.const, value)
+
+def evaluateAndPrint():
+    # Why does this think it's OK to the eat whitespace in my description?
+    # I need to add usage for -quiet, as well...
+    # also, the whole "positional arguments" section in the auto-created
+    # usage should not exist.
+    parser = argparse.ArgumentParser(add_help=False,
+        description="Evaluate ClassAd expressions.\nAssignments modify the ClassAd context.")
+    parser.add_argument("-debug", action='store_true',
+        help="Enable debug mode")
+    parser.add_argument("-file",
+        help="A file containing the initial ClassAd context",
+        metavar="<file>");
+    parser.add_argument("-target-file",
+        help="A file containing the target ClassAd context",
+        metavar="<file>");
+    parser.add_argument("-help", action='help')
+    # As implemented, this can't be the first flag, because something
+    # eats the value of "expression" in the namespace before the return.
+    parser.add_argument("-quiet", nargs='+', metavar='',
+        action=AppendToConst, const="expression")
+    parser.add_argument("expression", nargs='*',
+        metavar="<expr|assignment>")
+    # We'll switch to parse_intermixed_args() once we no longer support
+    # Python 3.6 anywhere.
+    args = parser.parse_args()
+
+    if args.debug:
+        htcondor.enable_debug()
 
     targetAd = None
-    targetAdString = None
-    targetAdFileName = None
-    if argv[1] == "-target-file":
-        argv.pop(1)
-        targetAdFileName = argv.pop(1)
+    if args.target_file:
+        targetAdFileName = args.target_file
         targetAdString = open(targetAdFileName).read()
         try:
             targetAd = makeClassAd(targetAdString)
@@ -42,30 +76,27 @@ def evaluateAndPrint(argv):
         except SyntaxError:
             sys.exit("Unable to turn target file '" + targetAdStringFileName + "' into a ClassAd.")
 
-    adString = argv[1]
-    adStringFileName = None
-    if adString == "-file":
-        argv.pop(1)
-        adStringFileName = argv[1]
+    ad = None
+    if args.file:
+        adStringFileName = args.file
         adString = open(adStringFileName).read()
-
-    try:
-        ad = makeClassAd(adString)
-        argv.pop(1)
-    except SyntaxError:
-        if adStringFileName is not None:
+        try:
+            ad = makeClassAd(adString)
+        except SyntaxError:
             sys.exit("Unable to turn file '" + adStringFileName + "' into a ClassAd.")
-        else:
-            ad = classad.ClassAd()
+    else:
+        ad = classad.ClassAd()
 
+    quiet = False
     updated = True
-    for i in range(1,len(argv)):
-        if argv[i] == "-quiet":
+    expressions = args.expression
+    for i in range(0,len(expressions)):
+        if expressions[i] == "-quiet":
             quiet = True
             continue
 
         try:
-            newAd = makeClassAd(argv[i])
+            newAd = makeClassAd(expressions[i])
             ad.update(newAd)
             updated = True
         except SyntaxError:
@@ -74,9 +105,9 @@ def evaluateAndPrint(argv):
                     updated = False
                     if not quiet:
                         print(repr(ad))
-                expr = classad.ExprTree(argv[i])
+                expr = classad.ExprTree(expressions[i])
             except SyntaxError:
-                sys.exit("Unable to turn '" + argv[i] + "' into a ClassAd or an expression.")
+                sys.exit("Unable to turn '" + expressions[i] + "' into a ClassAd or an expression.")
 
             result = expr.simplify(ad, targetAd)
             print(repr(result))
@@ -85,7 +116,7 @@ def evaluateAndPrint(argv):
 
 
 def main():
-    return evaluateAndPrint(sys.argv)
+    return evaluateAndPrint()
 
 if __name__ == "__main__":
     exit(main())
