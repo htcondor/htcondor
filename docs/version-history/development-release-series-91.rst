@@ -44,23 +44,32 @@ New Features:
   ``OpSysLongName`` is now ``"macOS 10.15"`` instead of ``"MacOSX 15.4"``.
   :jira:`627`
 
-- Improved and simplified how HTCondor locates the blahp software.
-  Configuration parameter ``GLITE_LOCATION`` has been replaced by
-  ``BLAHPD_LOCATION``.
-  :jira:`713`
-
-- Added an example template for a custom file transfer plugin, which can be
-  used to build new plugins.
-  :jira:`728`
-
 - When declining to put a job on hold due to the temporary scratch
   directory disappearing, verify that the directory is expected to exist
   and require that the job not be local universe.
   :jira:`680`
 
+- The `classad_eval` tool now supports evaluating ClassAd expressions in
+  the context of a match.  To specify the target ad, use the new
+  ``-target-file`` command-line option.  You may also specify the
+  context ad with ``-my-file``, a synonym for ``-file``.  The `classad_eval`
+  tool also now supports the ``-debug`` and ``-help`` flags.  All flags
+  and options are now recognized wherever in the command line they may
+  appear, and take effect at that location.
+  :jira:`707`
+
+- Improved and simplified how HTCondor locates the blahp software.
+  Configuration parameter ``GLITE_LOCATION`` has been replaced by
+  ``BLAHPD_LOCATION``.
+  :jira:`713`
+
 _ Added a new generic knob for setting the slot user for all slots.  Configure
   ''NOBODY_SLOT_USER`` for all slots, instead of configuring a ``SLOT<N>_USER`` for each slot.
   :jira:`720`
+
+- Added an example template for a custom file transfer plugin, which can be
+  used to build new plugins.
+  :jira:`728`
 
 Bugs Fixed:
 
