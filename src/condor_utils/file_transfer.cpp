@@ -1344,7 +1344,19 @@ FileTransfer::UploadCheckpointFiles( bool blocking ) {
 	// from "I can operate the protocol".  Until then, just set a member
 	// variable so that DetermineWhichFilesToSend() can know what to do.
 	uploadCheckpointFiles = true;
+	char * originalOutputDestination = OutputDestination;
+
+	std::string checkpointDestination;
+	if( jobAd.LookupString( "CheckpointDestination", checkpointDestination ) ) {
+		OutputDestination = strdup(checkpointDestination.c_str());
+		dprintf( D_FULLDEBUG, "Using %s as checkpoint destination\n", OutputDestination );
+	}
 	int rv = UploadFiles( blocking, false );
+
+	if( OutputDestination != originalOutputDestination ) {
+		free(OutputDestination);
+		OutputDestination = originalOutputDestination;
+	}
 	uploadCheckpointFiles = false;
 	return rv;
 }
@@ -2138,6 +2150,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		// When we are signing URLs, we want to make sure that the requested
 		// prefix is valid.
 	std::vector<std::string> output_url_prefixes;
+	std::string checkpointDestination;
+	if( jobAd.LookupString( "CheckpointDestination", checkpointDestination ) ) {
+		dprintf(D_FULLDEBUG, "DoDownload: Valid output URL prefix: %s\n", checkpointDestination.c_str());
+		output_url_prefixes.emplace_back(checkpointDestination);
+	}
 	if (OutputDestination)
 	{
 		dprintf(D_FULLDEBUG, "DoDownload: Valid output URL prefix: %s\n", OutputDestination);
@@ -3803,7 +3820,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	MyString first_failed_error_desc;
 	int first_failed_line_number = 0;
 
-	bool should_invoke_output_plugins = m_final_transfer_flag;
+	bool should_invoke_output_plugins = m_final_transfer_flag || uploadCheckpointFiles;
 
 	uploadStartTime = condor_gettimestamp_double();
 
