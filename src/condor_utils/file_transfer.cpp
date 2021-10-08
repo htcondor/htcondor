@@ -5578,7 +5578,7 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 		// this function always succeeds (sigh) but we can capture the errors
 		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
 		if(-1 == InitializeSystemPlugins(error)) {
-			return NULL;
+			return "";
 		}
 	}
 
@@ -5587,7 +5587,7 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 		// no plugin for this type!!!
 		error.pushf( "FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method.c_str() );
 		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str() );
-		return NULL;
+		return "";
 	}
 
 	return plugin;
@@ -5994,7 +5994,7 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 	// build plugin table if we haven't done so
 	if (!plugin_table) {
 		if(-1 == InitializeSystemPlugins(e)) {
-			return NULL;
+			return "";
 		}
 	}
 
