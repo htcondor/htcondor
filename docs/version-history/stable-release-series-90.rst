@@ -23,7 +23,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug with the handling of ``MAX_JOBS_PER_OWNER`` in the *condor_schedd*
+  where it was treated as a per-factory limit rather than as a per-owner limit for jobs
+  submitted with the ``max_idle`` or ``max_materialize`` submit keyword.
+  :jira:`755`
 
 Version 9.0.7
 -------------
