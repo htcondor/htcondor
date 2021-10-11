@@ -619,7 +619,7 @@ JobMaterializeTimerCallback()
 	} else {
 
 		int system_limit = MIN(scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission());
-		system_limit = MIN(system_limit, scheduler.getMaxJobsPerOwner());
+		int owner_limit = scheduler.getMaxJobsPerOwner();
 		//system_limit = MIN(system_limit, scheduler.getMaxJobsRunning());
 
 		int total_new_jobs = 0;
@@ -637,6 +637,14 @@ JobMaterializeTimerCallback()
 
 			} else if (cad->factory) {
 
+				int factory_owner_limit = owner_limit;
+				if (cad->ownerinfo) {
+					factory_owner_limit = owner_limit - (cad->ownerinfo->num.JobsCounted + cad->ownerinfo->num.JobsRecentlyAdded);
+				}
+				if (factory_owner_limit < 1) {
+					dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d cannot materialize because of MAX_JOBS_PER_OWNER\n", cluster_id);
+				}
+
 				if (JobFactoryAllowsClusterRemoval(cad)) {
 					dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has completed job factory\n", cluster_id);
 					// if job factory is complete and there are no jobs attached to the cluster, schedule the cluster for removal
@@ -651,10 +659,13 @@ JobMaterializeTimerCallback()
 						proc_limit = INT_MAX;
 					}
 					int effective_limit = MIN(proc_limit, system_limit);
+					effective_limit = MIN(effective_limit, factory_owner_limit);
+					//uncomment this code to poll quickly, but only if ownerinfo->num counters are also updated quickly (currently they are not)
+					//if (factory_owner_limit < 1) { remove_entry = false; }
 
 					dprintf(D_MATERIALIZE | D_VERBOSE, "in JobMaterializeTimerCallback, proc_limit=%d, sys_limit=%d MIN(%d,%d,%d), ClusterSize=%d\n",
 						proc_limit, system_limit,
-						scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission(), scheduler.getMaxJobsPerOwner(),
+						scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission(), factory_owner_limit,
 						cad->ClusterSize());
 
 					TransactionWatcher txn;
@@ -2181,14 +2192,28 @@ int MaterializeJobs(JobQueueCluster * clusterad, TransactionWatcher &txn, int & 
 		proc_limit = INT_MAX;
 	}
 	int system_limit = MIN(scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission());
-	system_limit = MIN(system_limit, scheduler.getMaxJobsPerOwner());
+	// the MAX_JOBS_PER_OWNER limit straddles clusters, so we have to look at the number of jobs in the queue
+	// for this owner to know the actual limit
+	int owner_limit = scheduler.getMaxJobsPerOwner();
+	if (clusterad->ownerinfo) {
+		owner_limit -= (clusterad->ownerinfo->num.JobsCounted + clusterad->ownerinfo->num.JobsRecentlyAdded);
+	}
+	// when the effective owner limit is 0, we can't count on a state change in this factory to trigger new materialization
+	// so we return a retry_delay of 5 to keep this cluster in the 'needs materialization' queue
+	if (owner_limit < 1) {
+		dprintf(D_MATERIALIZE, "in MaterializeJobs cannot materialize jobs for cluster %d because of MAX_JOBS_PER_OWNER\n",
+			clusterad->jid.cluster);
+		//uncomment this line to poll quickly, but only if ownerinfo->num counters are also updated quickly (currently they are not)
+		//retry_delay = 5;
+	}
 	//system_limit = MIN(system_limit, scheduler.getMaxJobsRunning());
 
 	int effective_limit = MIN(proc_limit, system_limit);
+	effective_limit = MIN(effective_limit, owner_limit);
 
 	dprintf(D_MATERIALIZE | D_VERBOSE, "in MaterializeJobs, proc_limit=%d, sys_limit=%d MIN(%d,%d,%d), ClusterSize=%d\n",
 		proc_limit, system_limit,
-		scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission(), scheduler.getMaxJobsPerOwner(),
+		scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission(), owner_limit,
 		clusterad->ClusterSize());
 
 	int num_materialized = 0;
@@ -7953,44 +7978,15 @@ bool InWalkJobQueue() {
 	return in_walk_job_queue != 0;
 }
 
+
+// this function for use only inside the schedd
 void
-WalkJobQueue3(queue_classad_scan_func func, void* pv, schedd_runtime_probe & ftm)
+WalkJobQueueEntries(int with, queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
 {
 	double begin = _condor_debug_get_time_double();
-	ClassAd *ad;
-	int rval = 0;
-
-	if( in_walk_job_queue ) {
-		dprintf(D_ALWAYS,"ERROR: WalkJobQueue called recursively!  Generating stack trace:\n");
-		dprintf_dump_stack();
-	}
-
-	in_walk_job_queue++;
-
-	ad = GetNextJob(1);
-	while (ad != NULL && rval >= 0) {
-		rval = func(ad, pv);
-		if (rval >= 0) {
-			FreeJobAd(ad);
-			ad = GetNextJob(0);
-		}
-	}
-	if (ad != NULL)
-		FreeJobAd(ad);
-
-	double runtime = _condor_debug_get_time_double() - begin;
-	ftm += runtime;
-	WalkJobQ_runtime += runtime;
-
-	in_walk_job_queue--;
-}
-
-
-// this function for use only inside the schedd, external clients will use the one above...
-void
-WalkJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
-{
-	double begin = _condor_debug_get_time_double();
+	const bool with_jobsets = (with & WJQ_WITH_JOBSETS) != 0;
+	const bool with_clusters = (with & WJQ_WITH_CLUSTERS) != 0;
+	const bool with_no_jobs = (with & WJQ_WITH_NO_JOBS) != 0;
 
 	if( in_walk_job_queue ) {
 		dprintf(D_ALWAYS,"ERROR: WalkJobQueue called recursively!  Generating stack trace:\n");
@@ -8004,8 +8000,15 @@ WalkJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
 	JobQueueKey key;
 	JobQueueJob * job;
 	while(JobQueue->Iterate(key, job)) {
-		if (key.cluster <= 0 || key.proc < 0) // avoid cluster and header ads
+		if (key.cluster < 0) // skip header ad
 			continue;
+		if (key.cluster == 0) { // jobset ads have cluster == 0
+			if (! with_jobsets) { continue; }
+		} else if (key.proc < 0) { // cluster ads have cluster > 0 && proc < 0
+			if (! with_clusters) { continue; }
+		} else { // jobads have cluster > 0 && proc >= 0
+			if (with_no_jobs) { continue; }
+		}
 		int rval = func(job, key, pv);
 		if (rval < 0)
 			break;
