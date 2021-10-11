@@ -8,6 +8,23 @@ series.
 
 The details of each version are described below.
 
+Version 9.0.8
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.8 released on Month Date, 2021.
+
+- HTCondor version 9.0.8 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 9.0.7
 -------------
 
