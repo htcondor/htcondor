@@ -1,10 +1,9 @@
-Stable Release Series 9.0
-=========================
+Version 9.0 LTS Releases
+========================
 
-This is the stable release series of HTCondor. As usual, only bug fixes
+These are LTS releases of HTCondor. As usual, only bug fixes
 (and potentially, ports to new platforms) will be provided in future
-9.0.x releases. New features will be added in the 9.1.x development
-series.
+9.0.y releases. New features will be added in the 9.x.y feature releases.
 
 The details of each version are described below.
 
@@ -24,7 +23,7 @@ New Features:
 
 - The stdin passed to *condor_job_router* hooks of type ``_TRANSLATE_JOB`` will
   now be passed information on the route in a format that is the same as what was passed
-  in the 8.8 series.  It will always be a ClassAd, and include the route ``Name`` as
+  in 8.8 LTS releases.  It will always be a ClassAd, and include the route ``Name`` as
   an attribute.
   :jira:`646`
 

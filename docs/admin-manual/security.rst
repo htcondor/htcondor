@@ -20,10 +20,10 @@ scratch" and then migrating over pieces of your old configuration as needed.
 Here are some quick links for getting started if you want to jump right in:
 
 Quick Links:
-   If you are upgrading an existing pool from 8.9.X to 9.0.0, please visit
+   If you are upgrading an existing pool from 8.9.X to 9.0.X, please visit
    https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UpgradingFromEightNineToNineZero
 
-   If you are upgrading an existing pool from 8.8.X to 9.0.0, please visit
+   If you are upgrading an existing pool from 8.8.X to 9.0.X, please visit
    :doc:`/version-history/upgrading-from-88-to-90-series`.
 
    If you are installing a new HTCondor pool from scratch, please read
@@ -1513,8 +1513,8 @@ can be both the pool signing key and the pool password if ``SEC_PASSWORD_FILE``
 and ``SEC_TOKEN_POOL_SIGNING_KEY`` to refer to the same file.  However this is not preferred
 because in order to properly interoperate with older versions of HTCondor the pool password will
 be read as a text file and truncated at the first NULL character.  This differs from
-the pool signing key which is read as binary in HTCondor 9.0.  Some releases in the 8.9 developer
-series used the pool password as the pool signing key for tokens, those versions will not
+the pool signing key which is read as binary in HTCondor 9.0.  Some 8.9 releases
+used the pool password as the pool signing key for tokens, those versions will not
 interoperate with 9.0 if the pool signing key file contains NULL characters.
 
 The pool password in the ``SEC_PASSWORD_FILE`` can be created utilizing ``condor_store_cred``
