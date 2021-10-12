@@ -345,12 +345,12 @@ bool isQueueSuperUser( const char* user );
 // to modify the given job.  In addition to everything UserCheck2()
 // does, this also calls IPVerify to check for WRITE authorization.
 // This call assumes Q_SOCK is set to a valid QmgmtPeer object.
-bool UserCheck( ClassAd *ad, const char *test_owner );
+bool UserCheck( const ClassAd *ad, const char *test_owner );
 
 // Verify that the user issuing a command (test_owner) is authorized
 // to modify the given job.  Either ad or job_owner should be given
 // but not both.  If job_owner is NULL, the owner is looked up in the ad.
-bool UserCheck2( ClassAd *ad, const char *test_owner, char const *job_owner=NULL );
+bool UserCheck2( const ClassAd *ad, const char *test_owner, char const *job_owner=NULL );
 
 bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray();

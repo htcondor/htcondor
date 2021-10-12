@@ -2607,7 +2607,7 @@ QmgmtSetEffectiveOwner(char const *o)
 
 // Test if this owner matches my owner, so they're allowed to update me.
 bool
-UserCheck(ClassAd *ad, const char *test_owner)
+UserCheck(const ClassAd *ad, const char *test_owner)
 {
 	if ( Q_SOCK->getReadOnly() ) {
 		errno = EACCES;
@@ -2633,7 +2633,7 @@ UserCheck(ClassAd *ad, const char *test_owner)
 
 
 bool
-UserCheck2(ClassAd *ad, const char *test_owner, const char *job_owner)
+UserCheck2(const ClassAd *ad, const char *test_owner, const char *job_owner)
 {
 	std::string	owner_buf;
 

@@ -153,7 +153,7 @@ std::string ownerinfo_attr_name;
 const std::string & attr_JobUser = ownerinfo_attr_name;
 bool user_is_the_new_owner = false;
 bool ignore_domain_mismatch_when_setting_owner = false;
-inline const char * EffectiveUser(Sock * sock) {
+inline const char * EffectiveUser(const Sock * sock) {
 	if (!sock) return "";
 	if (user_is_the_new_owner) {
 		return sock->getFullyQualifiedUser();
@@ -14074,24 +14074,6 @@ void Scheduler::reconfig() {
 		// to check here for changes.  
 	int max_saved_rotations = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
 	SetMaxHistoricalLogs(max_saved_rotations);
-
-#if 0 // moved this code to command handlers
-	dprintf(D_ALWAYS,"Checking ExportJobs() params\n");
-	std::string export_list;
-	std::string export_dir;
-	if ( param(export_list, "SCHEDD_EXPORT_LIST") && param(export_dir, "SCHEDD_EXPORT_DIR") ) {
-		dprintf(D_ALWAYS,"Calling ExportJobs()\n");
-		auto_free_ptr ckpt_dir(param("SCHEDD_EXPORT_CKPT_DIR"));
-		ExportJobs(export_list.c_str(), export_dir.c_str(), ckpt_dir);
-	}
-
-	dprintf(D_ALWAYS,"Checking ImportExportedJobResults() params\n");
-	auto_free_ptr import_job_log(param("SCHEDD_IMPORT_JOB_LOG"));
-	if (import_job_log) {
-		dprintf(D_ALWAYS,"Calling ImportExportedJobResults(%s)\n", import_job_log.ptr());
-		ImportExportedJobResults(import_job_log);
-	}
-#endif
 
 }
 
