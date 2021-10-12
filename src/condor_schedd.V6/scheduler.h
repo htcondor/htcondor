@@ -804,9 +804,9 @@ class Scheduler : public Service
 	// Class to manage sets of Job 
 	JobSets *jobSets;
 
-	bool ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const char * new_spool_dir="##");
-	bool ImportExportedJobResults(ClassAd & result, const char * import_dir);
-	bool UnexportJobs(ClassAd & result, std::set<int> & clusters);
+	bool ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const char *user, const char * new_spool_dir="##");
+	bool ImportExportedJobResults(ClassAd & result, const char * import_dir, const char *user);
+	bool UnexportJobs(ClassAd & result, std::set<int> & clusters, const char *user);
 
 private:
 

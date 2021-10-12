@@ -17633,7 +17633,7 @@ Scheduler::token_request_callback(bool success, void *miscdata)
 
 
 bool
-Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const char * new_spool_dir /*="##"*/)
+Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const char *user, const char * new_spool_dir /*="##"*/)
 {
 	dprintf(D_ALWAYS,"ExportJobs(...,'%s','%s')\n",output_dir,new_spool_dir);
 	OwnerInfo * owner = nullptr;
@@ -17663,19 +17663,23 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 		dprintf(D_ALWAYS, "ExportJobs(): No clusters to export\n");
 		return false;
 	}
-	// TODO check that client is authorized to modify this owner's jobs
 
+	JobQueueCluster * jqc = GetClusterAd(*(clusters.begin()));
+
+	// verify the user is authorized to edit these jobs
+	if ( ! UserCheck2(jqc, user) ) {
+		result.Assign(ATTR_ERROR_STRING, "User not authorized to export given jobs");
+		dprintf(D_ALWAYS, "ExportJobs(): User %s not authorized to export jobs owned by %s, aborting\n", user, jqc->ownerinfo->Name());
+		return false;
+	}
 
 	TemporaryPrivSentry tps(true);
-	JobQueueCluster * jqc = GetClusterAd(*(clusters.begin()));
 	if ( ! jqc->ownerinfo || !init_user_ids_from_ad(*jqc) ) {
 		result.Assign(ATTR_ERROR_STRING, "Failed to init user ids");
 		dprintf(D_ALWAYS, "ExportJobs(): Failed to init user ids!\n");
 		return false;
 	}
 	set_user_priv();
-
-	BeginTransaction();
 
 	// TODO make output_dir if it doesn't exist?
 	// TODO: truncate output job_queue.log if it is non-empty?
@@ -17689,6 +17693,8 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 		dprintf(D_ALWAYS, "ExportJobs(): Failed to initialize export job log\n");
 		return false;
 	}
+
+	BeginTransaction();
 
 	// write the a header ad to the job queue
 	JobQueueKey hdr_id(0,0);
@@ -17820,6 +17826,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 int
 Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 {
+	ReliSock *rsock = (ReliSock*)stream;
 	ClassAd reqAd; // classad specifying arguments for the export
 	ClassAd resultAd; // classad returning results of the export
 
@@ -17827,9 +17834,9 @@ Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 	// the default value of ## is intended to be replaced by a script that post-processes the job log.
 	std::string new_spool_dir("##");
 
-	stream->decode();
-	stream->timeout(15);
-	if( !getClassAd(stream, reqAd) || !stream->end_of_message()) {
+	rsock->decode();
+	rsock->timeout(15);
+	if( !getClassAd(rsock, reqAd) || !rsock->end_of_message()) {
 		dprintf( D_ALWAYS, "export_jobs_handler Failed to receive classad in the request\n" );
 		return FALSE;
 	}
@@ -17878,7 +17885,7 @@ Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 				clusters.insert(atoi(id));
 			}
 		}
-		if ( ! ExportJobs(resultAd, clusters, export_dir.c_str(), new_spool_dir.c_str())) {
+		if ( ! ExportJobs(resultAd, clusters, export_dir.c_str(), EffectiveUser(rsock), new_spool_dir.c_str())) {
 			resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
 			resultAd.Assign(ATTR_ERROR_CODE, SCHEDD_ERR_EXPORT_FAILED);
 		} else {
@@ -17887,12 +17894,12 @@ Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 	}
 
 	// send a reply consisting of a result classad
-	stream->encode();
-	if ( ! putClassAd(stream, resultAd)) {
+	rsock->encode();
+	if ( ! putClassAd(rsock, resultAd)) {
 		dprintf( D_ALWAYS, "Error sending export-jobs result to client, aborting.\n" );
 		return FALSE;
 	}
-	if ( ! stream->end_of_message()) {
+	if ( ! rsock->end_of_message()) {
 		dprintf( D_ALWAYS, "Error sending end-of-message to client, aborting.\n" );
 		return FALSE;
 	}
@@ -17902,24 +17909,33 @@ Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 
 
 bool
-Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir)
+Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir, const char * user)
 {
 	dprintf(D_ALWAYS,"ImportExportedJobResults(%s)\n", import_dir);
 
 	std::string import_job_log;
 	formatstr(import_job_log, "%s/job_queue.log", import_dir);
 
+	TemporaryPrivSentry tps(true);
+	if ( ! init_user_ids(user, NULL) ) {
+		result.Assign(ATTR_ERROR_STRING, "Failed to init user ids");
+		dprintf(D_ALWAYS, "ImportExportedJobResults(): Failed to init user ids!\n");
+		return false;
+	}
+	set_user_priv();
+
 	// Load the external job_log
 	GenericClassAdCollection<JobQueueKey, ClassAd*> import_queue(new ConstructClassAdLogTableEntry<ClassAd>());
 	if ( !import_queue.InitLogFile(import_job_log.c_str(), 0) ) {
 		result.Assign(ATTR_ERROR_STRING, "Failed to initialize import job log");
-		dprintf(D_ALWAYS, "ImportJobs(): Failed to initialize import job log\n");
+		dprintf(D_ALWAYS, "ImportExportedJobResults(): Failed to initialize import job log\n");
 		return false;
 	}
 	// close the log file and disable changes
 	import_queue.StopLog();
 
 	std::set<int> clusters_found;
+	std::set<int> clusters_checked;
 
 	BeginTransaction();
 
@@ -17927,7 +17943,7 @@ Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir)
 	std::string tmpstr;
 	ConstraintHolder hold_reason;
 
-	// Note that in the inport_queue at this time, the proc ads are not chained to the cluster ads
+	// Note that in the import_queue at this time, the proc ads are not chained to the cluster ads
 	ClassAd *ad;
 	JobQueueKey jid;
 	import_queue.StartIterateAllClassAds();
@@ -17945,6 +17961,17 @@ Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir)
 				// ignore if this doesn't correspond to a job in the queue.
 				// TODO: handle jobs that were externally materialized
 				continue;
+			}
+
+			// verify the user is authorized to edit this job
+			if ( clusters_checked.find(jid.cluster) == clusters_checked.end() ) {
+				if ( ! UserCheck2(job, user) ) {
+					result.Assign(ATTR_ERROR_STRING, "User not authorized to import given jobs");
+					dprintf(D_ALWAYS, "ImportExportexJobResults(): User %s not authorized to import results for job owned by %s, aborting\n", user, job->ownerinfo->Name());
+					AbortTransaction();
+					return false;
+				}
+				clusters_checked.insert(jid.cluster);
 			}
 
 			// check to see if this corresponds to a job that is externally managed
@@ -18026,12 +18053,13 @@ Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir)
 int
 Scheduler::import_exported_job_results_handler(int /*cmd*/, Stream *stream)
 {
+	ReliSock *rsock = (ReliSock*)stream;
 	ClassAd reqAd; // classad specifying arguments for the export
 	ClassAd resultAd; // classad returning results of the export
 
-	stream->decode();
-	stream->timeout(15);
-	if( !getClassAd(stream, reqAd) || !stream->end_of_message()) {
+	rsock->decode();
+	rsock->timeout(15);
+	if( !getClassAd(rsock, reqAd) || !rsock->end_of_message()) {
 		dprintf( D_ALWAYS, "import_exported_job_results_handler Failed to receive classad in the request\n" );
 		return FALSE;
 	}
@@ -18046,7 +18074,7 @@ Scheduler::import_exported_job_results_handler(int /*cmd*/, Stream *stream)
 	else 
 	{
 		dprintf(D_ALWAYS,"Calling ImportExportedJobResults(%s)\n", import_dir.c_str());
-		if ( ! ImportExportedJobResults(resultAd, import_dir.c_str())) {
+		if ( ! ImportExportedJobResults(resultAd, import_dir.c_str(), EffectiveUser(rsock))) {
 			resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
 			resultAd.Assign(ATTR_ERROR_CODE, 1);
 		} else {
@@ -18055,12 +18083,12 @@ Scheduler::import_exported_job_results_handler(int /*cmd*/, Stream *stream)
 	}
 
 	// send a reply consisting of a result classad
-	stream->encode();
-	if ( ! putClassAd(stream, resultAd)) {
+	rsock->encode();
+	if ( ! putClassAd(rsock, resultAd)) {
 		dprintf( D_ALWAYS, "Error sending export-jobs result to client, aborting.\n" );
 		return FALSE;
 	}
-	if ( ! stream->end_of_message()) {
+	if ( ! rsock->end_of_message()) {
 		dprintf( D_ALWAYS, "Error sending end-of-message to client, aborting.\n" );
 		return FALSE;
 	}
@@ -18070,7 +18098,7 @@ Scheduler::import_exported_job_results_handler(int /*cmd*/, Stream *stream)
 
 
 bool
-Scheduler::UnexportJobs(ClassAd & result, std::set<int> & clusters)
+Scheduler::UnexportJobs(ClassAd & result, std::set<int> & clusters, const char * user)
 {
 	dprintf(D_ALWAYS,"UnexportJobs(...)\n");
 
@@ -18079,7 +18107,6 @@ Scheduler::UnexportJobs(ClassAd & result, std::set<int> & clusters)
 		dprintf(D_ALWAYS, "ExportJobs(): No clusters to unexport\n");
 		return false;
 	}
-	// TODO check that client is authorized to modify this owner's jobs
 
 	BeginTransaction();
 
@@ -18087,6 +18114,14 @@ Scheduler::UnexportJobs(ClassAd & result, std::set<int> & clusters)
 	for (auto cid = clusters.begin(); cid != clusters.end(); ++cid) {
 		JobQueueCluster * jqc = GetClusterAd(*cid);
 		if ( ! jqc) continue;
+
+		// verify the user is authorized to edit this job cluster
+		if ( ! UserCheck2(jqc, user) ) {
+			result.Assign(ATTR_ERROR_STRING, "User not authorized to unexport given jobs");
+			dprintf(D_ALWAYS, "UnexportJobs(): User %s not authorized to unexport job owned by %s, aborting\n", user, jqc->ownerinfo->Name());
+			AbortTransaction();
+			return false;
+		}
 
 		// unexport all jobs in the cluster
 		for (JobQueueJob * job = jqc->FirstJob(); job != NULL; job = jqc->NextJob(job)) {
@@ -18114,12 +18149,13 @@ Scheduler::UnexportJobs(ClassAd & result, std::set<int> & clusters)
 int
 Scheduler::unexport_jobs_handler(int /*cmd*/, Stream *stream)
 {
+	ReliSock *rsock = (ReliSock*)stream;
 	ClassAd reqAd; // classad specifying arguments for the unexport
 	ClassAd resultAd; // classad returning results of the unexport
 
-	stream->decode();
-	stream->timeout(15);
-	if( !getClassAd(stream, reqAd) || !stream->end_of_message()) {
+	rsock->decode();
+	rsock->timeout(15);
+	if( !getClassAd(rsock, reqAd) || !rsock->end_of_message()) {
 		dprintf( D_ALWAYS, "unexport_jobs_handler Failed to receive classad in the request\n" );
 		return FALSE;
 	}
@@ -18165,7 +18201,7 @@ Scheduler::unexport_jobs_handler(int /*cmd*/, Stream *stream)
 				clusters.insert(atoi(id));
 			}
 		}
-		if ( ! UnexportJobs(resultAd, clusters) ) {
+		if ( ! UnexportJobs(resultAd, clusters, EffectiveUser(rsock)) ) {
 			resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
 			resultAd.Assign(ATTR_ERROR_CODE, 1);
 		} else {
@@ -18174,12 +18210,12 @@ Scheduler::unexport_jobs_handler(int /*cmd*/, Stream *stream)
 	}
 
 	// send a reply consisting of a result classad
-	stream->encode();
-	if ( ! putClassAd(stream, resultAd)) {
+	rsock->encode();
+	if ( ! putClassAd(rsock, resultAd)) {
 		dprintf( D_ALWAYS, "Error sending unexport-jobs result to client, aborting.\n" );
 		return FALSE;
 	}
-	if ( ! stream->end_of_message()) {
+	if ( ! rsock->end_of_message()) {
 		dprintf( D_ALWAYS, "Error sending end-of-message to client, aborting.\n" );
 		return FALSE;
 	}
