@@ -509,7 +509,7 @@ if( NOT WINDOWS)
 	# Python also defines HAVE_EPOLL; hence, we use non-standard 'CONDOR_HAVE_EPOLL' here.
 	check_symbol_exists(epoll_create1 "sys/epoll.h" CONDOR_HAVE_EPOLL)
 	check_symbol_exists(poll "sys/poll.h" CONDOR_HAVE_POLL)
-	set(HAVE_FDATASYNC 1) # POSIX 2001
+	check_symbol_exists(fdatasync "unistd.h" HAVE_FDATASYNC) # POSIX 2008 but MacOS as of Big Sur doesn't implement.
 	check_function_exists("clock_gettime" HAVE_CLOCK_GETTIME)
 	check_function_exists("clock_nanosleep" HAVE_CLOCK_NANOSLEEP)
 
