@@ -273,16 +273,10 @@ double _condor_debug_get_time_double()
 	}
 	QueryPerformanceCounter(&li);
 	return li.QuadPart * secs_per_tick;
-#elif defined(HAVE_GETTIMEOFDAY)
+#else
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	return (double)tv.tv_sec + (tv.tv_usec * 1.0e-6);
-#elif defined(HAVE__FTIME)
-	struct _timeb tm;
-	_ftime(&tm);
-	return (double)tm.time + (tm.millitm * 1.0e-3);
-#else
-    return 0.0;
 #endif
 }
 
