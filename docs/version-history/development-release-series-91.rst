@@ -1,7 +1,7 @@
-Development Release Series 9.1
-==============================
+Version 9 Feature Releases
+==========================
 
-This is the development release series of HTCondor. The details of each
+We release new features in these releases of HTCondor. The details of each
 version are described below.
 
 Version 9.2.0
