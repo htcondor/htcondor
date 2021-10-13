@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_classad.h"
-#include "MyString.h"
 #include "condor_attributes.h"
 #include "basename.h"
 #include "directory.h"      // for StatInfo
@@ -130,7 +129,7 @@ AppendHistory(ClassAd* ad)
   // First we serialize the ad. If history file rotation is on,
   // we'll need to know how big the ad is before we write it to the 
   // history file. 
-  MyString ad_string;
+  std::string ad_string;
   int ad_size;
   sPrintAd(ad_string, *ad);
   ad_size = ad_string.length();
@@ -230,16 +229,16 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 		        "not writing per-job history file: no proc id in ad\n");
 		return;
 	}
-	MyString file_name;
-	MyString temp_file_name;
+	std::string file_name;
+	std::string temp_file_name;
 	if (useGjid) {
 		std::string gjid;
 		ad->LookupString(ATTR_GLOBAL_JOB_ID, gjid);
-		file_name.formatstr("%s/history.%s", PerJobHistoryDir, gjid.c_str());
-		temp_file_name.formatstr("%s/.history.%s.tmp", PerJobHistoryDir, gjid.c_str());
+		formatstr(file_name, "%s/history.%s", PerJobHistoryDir, gjid.c_str());
+		formatstr(temp_file_name, "%s/.history.%s.tmp", PerJobHistoryDir, gjid.c_str());
 	} else {
-		file_name.formatstr("%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
-		temp_file_name.formatstr("%s/.history.%d.%d.tmp", PerJobHistoryDir, cluster, proc);
+		formatstr(file_name, "%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
+		formatstr(temp_file_name, "%s/.history.%d.%d.tmp", PerJobHistoryDir, cluster, proc);
 	}
 
 	// Now write out the file.  We write it first to temp_file_name, and then
@@ -560,7 +559,7 @@ RotateHistory(void)
                                ISO8601_DateAndTime, false);
 
     // First, select a name for the rotated history file
-    MyString   rotated_history_name(JobHistoryFileName);
+	std::string  rotated_history_name(JobHistoryFileName);
     rotated_history_name += '.';
     rotated_history_name += iso_time;
 
