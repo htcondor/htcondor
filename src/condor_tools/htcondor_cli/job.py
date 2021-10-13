@@ -93,23 +93,25 @@ class Submit(Verb):
             if options["runtime"] is None:
                 raise TypeError("Slurm resources must specify a runtime argument")
 
-            # Verify that we have Slurm access; if not, run bosco_clutser to create it
+            # Check if we have Slurm access
+            is_slurm_setup = False
             try:
-                bosco_cmd = "bosco_cluster --status hpclogin1.chtc.wisc.edu"
-                logger.debug(f"Attempting to run: {bosco_cmd}")
-                subprocess.check_output(shlex.split(bosco_cmd))
+                check_bosco_cmd = "bosco_cluster --status hpclogin1.chtc.wisc.edu"
+                logger.debug(f"Attempting to run: {check_bosco_cmd}")
+                subprocess.check_output(shlex.split(check_bosco_cmd))
+                is_slurm_setup = True
             except (FileNotFoundError, subprocess.CalledProcessError):
-                install_bosco = (
-"""
-You need to install support software to access the Slurm cluster.
-Please run the following command in your terminal:
-
-bosco_cluster --add hpclogin1.chtc.wisc.edu slurm
-"""
-                ).strip()
-                raise RuntimeError(install_bosco)
+                logger.debug(f"Your Slurm cluster needs to be setup")
             except Exception as e:
                 raise RuntimeError(f"Could not execute {bosco_cmd}:\n{str(e)}")
+
+            if is_slurm_setup is False:
+                try:
+                    setup_bosco_cmd = "bosco_cluster --add hpclogin1.chtc.wisc.edu slurm"
+                    logger.debug(f"Attempting to run: {setup_bosco_cmd}")
+                    subprocess.check_output(shlex.split(setup_bosco_cmd), timeout=60)
+                except Exception as e:
+                    raise RuntimeError(f"Unable to setup Slurm execution environment")
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
             DAGMan.write_slurm_dag(submit_file, options["runtime"], options["email"])
