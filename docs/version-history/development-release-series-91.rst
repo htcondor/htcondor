@@ -30,6 +30,11 @@ New Features:
   the wall clock time of the most recent completed job execution.
   :jira:`751`
 
+- Added option ``--rgahp-nologin`` to **remote_gahp**, which removes the
+  ``-l`` option normally given to ``bash`` when starting a remote **blahpd**
+  or **condor_ft-gahp**.
+  :jira:`734`
+
 Bugs Fixed:
 
 - None.
