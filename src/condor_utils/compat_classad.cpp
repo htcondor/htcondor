@@ -42,8 +42,6 @@ extern bool user_map_do_mapping(const char * mapname, const char * input, MyStri
 #include <dlfcn.h>
 #endif
 
-using namespace std;
-
 // Utility to clarify a couple of evaluations
 static inline bool
 IsStringEnd(const char *str, unsigned off)
@@ -2019,7 +2017,7 @@ _sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, S
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
-	string value;
+	std::string value;
 
 	const classad::ClassAd *parent = ad.GetChainedParentAd();
 
@@ -2217,7 +2215,7 @@ sPrintExpr(const classad::ClassAd &ad, const char* name)
 	char *buffer = NULL;
 	size_t buffersize = 0;
 	classad::ClassAdUnParser unp;
-    string parsedString;
+	std::string parsedString;
 	classad::ExprTree* expr;
 
 	unp.SetOldClassAd( true, true );
@@ -2250,7 +2248,7 @@ void
 SetMyTypeName( classad::ClassAd &ad, const char *myType )
 {
 	if( myType ) {
-		ad.InsertAttr( ATTR_MY_TYPE, string( myType ) );
+		ad.InsertAttr( ATTR_MY_TYPE, std::string( myType ) );
 	}
 
 	return;
@@ -2259,7 +2257,7 @@ SetMyTypeName( classad::ClassAd &ad, const char *myType )
 const char*
 GetMyTypeName( const classad::ClassAd &ad )
 {
-	static string myTypeStr;
+	static std::string myTypeStr;
 	if( !ad.EvaluateAttrString( ATTR_MY_TYPE, myTypeStr ) ) {
 		return "";
 	}
@@ -2270,7 +2268,7 @@ void
 SetTargetTypeName( classad::ClassAd &ad, const char *targetType )
 {
 	if( targetType ) {
-		ad.InsertAttr( ATTR_TARGET_TYPE, string( targetType ) );
+		ad.InsertAttr( ATTR_TARGET_TYPE, std::string( targetType ) );
 	}
 
 	return;
@@ -2279,7 +2277,7 @@ SetTargetTypeName( classad::ClassAd &ad, const char *targetType )
 const char*
 GetTargetTypeName( const classad::ClassAd &ad )
 {
-	static string targetTypeStr;
+	static std::string targetTypeStr;
 	if( !ad.EvaluateAttrString( ATTR_TARGET_TYPE, targetTypeStr ) ) {
 		return "";
 	}
