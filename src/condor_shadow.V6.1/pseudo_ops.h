@@ -33,19 +33,19 @@ int pseudo_begin_execution( void );
 int pseudo_get_file_info_new( const char *path, char *&url );
 int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_bytes_out );
 int pseudo_ulog( ClassAd *ad );
-int pseudo_phase( char *phase );
+int pseudo_phase( const std::string &phase );
 int pseudo_get_job_ad( ClassAd* &ad );
-int pseudo_get_job_attr( const char *name, MyString &expr );
+int pseudo_get_job_attr( const char *name, std::string &expr );
 int pseudo_set_job_attr( const char *name, const char *expr, bool log=false);
 int pseudo_constrain( const char *expr );
 int pseudo_get_sec_session_info(
 	char const *starter_reconnect_session_info,
-	MyString &reconnect_session_id,
-	MyString &reconnect_session_info,
-	MyString &reconnect_session_key,
+	std::string &reconnect_session_id,
+	std::string &reconnect_session_info,
+	std::string &reconnect_session_key,
 	char const *starter_filetrans_session_info,
-	MyString &filetrans_session_id,
-	MyString &filetrans_session_info,
-	MyString &filetrans_session_key);
+	std::string &filetrans_session_id,
+	std::string &filetrans_session_info,
+	std::string &filetrans_session_key);
 
 #endif

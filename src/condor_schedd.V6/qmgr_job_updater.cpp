@@ -130,14 +130,19 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE );
-
+	
 	common_job_queue_attrs->insert( "TransferInQueued" );
 	common_job_queue_attrs->insert( "TransferInStarted" );
 	common_job_queue_attrs->insert( "TransferInFinished" );
 	common_job_queue_attrs->insert( "TransferOutQueued" );
 	common_job_queue_attrs->insert( "TransferOutStarted" );
 	common_job_queue_attrs->insert( "TransferOutFinished" );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_INPUT_FILES_LAST_RUN_COUNT );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_INPUT_FILES_TOTAL_COUNT );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_OUTPUT_FILES_LAST_RUN_COUNT );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_OUTPUT_FILES_TOTAL_COUNT );
 
+	common_job_queue_attrs->insert( ATTR_NUM_JOB_STARTS );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_EXECUTING_DATE );
 	common_job_queue_attrs->insert( ATTR_CUMULATIVE_TRANSFER_TIME );
 	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
@@ -152,6 +157,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_BLOCK_READS );
 	common_job_queue_attrs->insert( ATTR_NETWORK_IN );
 	common_job_queue_attrs->insert( ATTR_NETWORK_OUT );
+	common_job_queue_attrs->insert( ATTR_JOB_CPU_INSTRUCTIONS );
     common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_KBYTES );
     common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITE_KBYTES );
     common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_BYTES );
@@ -284,7 +290,7 @@ bool
 QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaster, bool log )
 {
 	bool result;
-	MyString err_msg;
+	std::string err_msg;
 	SetAttributeFlags_t flags=0;
 
 	dprintf( D_FULLDEBUG, "QmgrJobUpdater::updateAttr: %s = %s\n",
@@ -317,7 +323,7 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 
 	if( result == FALSE ) {
 		dprintf( D_ALWAYS, "QmgrJobUpdater::updateAttr: failed to "
-				 "update (%s = %s): %s\n", name, expr, err_msg.Value() );
+				 "update (%s = %s): %s\n", name, expr, err_msg.c_str() );
 	}
 	return result;
 }
@@ -326,9 +332,9 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 bool
 QmgrJobUpdater::updateAttr( const char *name, int value, bool updateMaster, bool log )
 {
-	MyString buf;
-    buf.formatstr("%d", value);
-	return updateAttr(name, buf.Value(), updateMaster, log);
+	std::string buf;
+	formatstr(buf, "%d", value);
+	return updateAttr(name, buf.c_str(), updateMaster, log);
 }
 
 
@@ -454,7 +460,6 @@ QmgrJobUpdater::retrieveJobUpdates( void )
 	CondorError errstack;
 	StringList job_ids;
 	char id_str[PROC_ID_STR_BUFLEN];
-	MyString error;
 
 	ProcIdToStr(cluster, proc, id_str);
 	job_ids.insert(id_str);

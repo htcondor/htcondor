@@ -43,7 +43,7 @@ bool cp_supports_policy(ClassAd& resource, bool strict) {
     }
 
     // must support MachineResources attribute
-    string mrv;
+	std::string mrv;
     if (!resource.LookupString(ATTR_MACHINE_RESOURCES, mrv)) return false;
 
     // must define ConsumptionXxx for all resources Xxx (including extensible resources)
@@ -51,7 +51,7 @@ bool cp_supports_policy(ClassAd& resource, bool strict) {
     alist.rewind();
     while (char* asset = alist.next()) {
         if (MATCH == strcasecmp(asset, "swap")) continue;
-        string ca;
+		std::string ca;
         formatstr(ca, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
         if (! resource.Lookup(ca)) return false;
     }
@@ -63,7 +63,7 @@ bool cp_supports_policy(ClassAd& resource, bool strict) {
 void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& consumption) {
     consumption.clear();
 
-    string mrv;
+	std::string mrv;
     if (!resource.LookupString(ATTR_MACHINE_RESOURCES, mrv)) {
         EXCEPT("Resource ad missing %s attribute", ATTR_MACHINE_RESOURCES);
     }
@@ -73,8 +73,8 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
     while (char* asset = alist.next()) {
         if (MATCH == strcasecmp(asset, "swap")) continue;
 
-        string ra;
-        string coa;
+		std::string ra;
+		std::string coa;
         formatstr(ra, "%s%s", ATTR_REQUEST_PREFIX, asset);
         formatstr(coa, "_condor_%s", ra.c_str());
         bool override = false;
@@ -84,7 +84,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
             // this case is intended to be operative when a scheduler has set 
             // such values and sent them on to the startd that owns this resource
             // (e.g. I'd not expect this case to arise elsewhere, like the negotiator)
-            string ta;
+			std::string ta;
             formatstr(ta, "_cp_temp_%s", ra.c_str());
             CopyAttribute(ta, job, ra);
             job.Assign(ra, ov);
@@ -100,11 +100,11 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
         }
 
         // compute the consumed value for the asset
-        string ca;
+		std::string ca;
         formatstr(ca, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
         double cv = 0;
         if (!EvalFloat(ca.c_str(), &resource, &job, cv) || (cv < 0)) {
-            string name;
+			std::string name;
             resource.LookupString(ATTR_NAME, name);
             dprintf(D_ALWAYS, "WARNING: consumption policy for %s on resource %s failed to evaluate to a non-negative numeric value\n", ca.c_str(), name.c_str());
             // flag this failure with a negative value, for the benefit of cp_sufficient_assets()
@@ -115,7 +115,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
 
         if (override) {
             // restore saved value for RequestedXXX if it was overridden by _condor_RequestedXXX
-            string ta;
+			std::string ta;
             formatstr(ta, "_cp_temp_%s", ra.c_str());
             CopyAttribute(ra, job, ta);
             job.Delete(ta.c_str());
@@ -147,7 +147,7 @@ bool cp_sufficient_assets(ClassAd& resource, const consumption_map_t& consumptio
             return false;
         }
         if (j->second < 0) {
-            string name;
+			std::string name;
             resource.LookupString(ATTR_NAME, name);
             dprintf(D_ALWAYS, "WARNING: Consumption for asset %s on resource %s was negative: %g\n", asset, name.c_str(), j->second);
             return false;
@@ -156,7 +156,7 @@ bool cp_sufficient_assets(ClassAd& resource, const consumption_map_t& consumptio
     }
 
     if (npos <= 0) {
-        string name;
+		std::string name;
         resource.LookupString(ATTR_NAME, name);
         dprintf(D_ALWAYS, "WARNING: Consumption for all assets on resource %s was zero\n", name.c_str());
         return false;
@@ -216,13 +216,13 @@ void cp_override_requested(ClassAd& job, ClassAd& resource, consumption_map_t& c
     for (consumption_map_t::iterator j(consumption.begin());  j != consumption.end();  ++j) {
         const char* asset = j->first.c_str();
 
-        string ra;
+		std::string ra;
         formatstr(ra, "%s%s", ATTR_REQUEST_PREFIX, asset);
 
         // If there was no RequestXXX to begin with, don't screw things up by creating one
         if (!job.Lookup(ra)) continue;
 
-        string oa;
+		std::string oa;
         formatstr(oa, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, asset);
         CopyAttribute(oa, job, ra);
         assign_preserve_integers(job, ra.c_str(), j->second);
@@ -233,8 +233,8 @@ void cp_override_requested(ClassAd& job, ClassAd& resource, consumption_map_t& c
 void cp_restore_requested(ClassAd& job, const consumption_map_t& consumption) {
     for (consumption_map_t::const_iterator j(consumption.begin());  j != consumption.end();  ++j) {
         const char* asset = j->first.c_str();
-        string ra;
-        string oa;
+		std::string ra;
+		std::string oa;
         formatstr(ra, "%s%s", ATTR_REQUEST_PREFIX, asset);
         formatstr(oa, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, asset);
         CopyAttribute(ra, job, oa);

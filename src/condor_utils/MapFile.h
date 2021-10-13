@@ -62,11 +62,11 @@ class MapFile
 	ParseUsermap(MyStringSource & src, const char * srcname, bool assume_hash=true);
 
 	int
-	GetCanonicalization(const std::string method, const std::string principal,
+	GetCanonicalization(const std::string& method, const std::string& principal,
 						std::string &canonicalization)
 	{
 		MyString internal_canon;
-		auto retval = GetCanonicalization(method, principal, internal_canon);
+		auto retval = GetCanonicalization(MyString(method), MyString(principal), internal_canon);
 		if (!retval) {
 			canonicalization = internal_canon;
 		}
@@ -74,8 +74,8 @@ class MapFile
 	}
 
 	int
-	GetCanonicalization(const MyString method,
-						const MyString principal,
+	GetCanonicalization(const MyString& method,
+						const MyString& principal,
 						MyString & canonicalization);
 
 	int
@@ -145,8 +145,8 @@ class MapFile
 						MyString & output);
 #endif
 
-	int
-	ParseField(MyString & line, int offset, MyString & field, int * popts = NULL);
+	size_t
+	ParseField(const std::string & line, size_t offset, std::string & field, int * popts = NULL);
 };
 
 #endif

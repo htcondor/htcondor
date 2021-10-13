@@ -1,3 +1,13 @@
+condor (9.2.0-1) stable; urgency=medium
+
+  * Add SERVICE node that runs alongside the DAG for the duration of the DAG
+  * Fix problem where proxy delegation to older HTCondor versions failed
+  * Jobs are now re-run if the execute directory unexpectedly disappears
+  * HTCondor counts the number of files transfered at the submit node
+  * Fix a bug that caused jobs to fail when using newer Singularity versions
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 23 Sep 2021 16:19:34 -0500
+
 condor (9.0.6-1) stable; urgency=medium
 
   * CUDA_VISIBLE_DEVICES can now contain GPU-<uuid> formatted values
@@ -7,6 +17,15 @@ condor (9.0.6-1) stable; urgency=medium
   * MacOS 11.x now reports as 10.16.x (which is better than reporting x.0)
 
  -- Tim Theisen <tim@cs.wisc.edu>  Thu, 23 Sep 2021 09:27:08 -0500
+
+condor (9.1.3-1) stable; urgency=medium
+
+  * Globus GSI is no longer needed for X.509 proxy delegation
+  * Globus GSI authentication is disabled by default
+  * The job ad now contains a history of job holds and hold reasons
+  * If a user job policy expression evaluates to undefined, it is ignored
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 19 Aug 2021 13:52:24 -0500
 
 condor (9.0.5-1) stable; urgency=medium
 
@@ -19,6 +38,14 @@ condor (9.0.5-1) stable; urgency=medium
   * The transfer_checkpoint_file list may now include input files
 
  -- Tim Theisen <tim@cs.wisc.edu>  Wed, 18 Aug 2021 10:07:10 -0500
+
+condor (9.1.2-1) stable; urgency=high
+
+  * Fixes for security issues
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 Jul 2021 10:35:12 -0500
 
 condor (9.0.4-1) stable; urgency=high
 
@@ -34,6 +61,14 @@ condor (8.8.15-1) stable; urgency=high
     https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
 
  -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 Jul 2021 10:35:12 -0500
+
+condor (9.1.1-1) stable; urgency=high
+
+  * Fixes for security issues
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 13 Jul 2021 09:11:38 -0500
 
 condor (9.0.3-1) stable; urgency=high
 
@@ -61,6 +96,16 @@ condor (9.0.2-1) stable; urgency=medium
   * Fixed Windows installer to work when the install location isn't C:\Condor
 
  -- Tim Theisen <tim@cs.wisc.edu>  Thu, 08 Jul 2021 06:35:49 -0500
+
+condor (9.1.0-1) stable; urgency=medium
+
+  * Support for submitting to ARC-CE via the REST interface
+  * DAGMan can put failed jobs on hold (user can correct problems and release)
+  * Can run gdb and ptrace within Docker containers
+  * A small Docker test job is run on the execute node to verify functionality
+  * The number of instructions executed is reported in the job Ad on Linux
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 20 May 2021 09:35:16 -0500
 
 condor (9.0.1-1) stable; urgency=medium
 

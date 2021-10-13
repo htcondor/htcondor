@@ -355,9 +355,9 @@ HTCondorPeek::get_transfer_queue_slot()
 	dprintf(D_ALWAYS,"Requesting GoAhead from the transfer queue manager.\n");
 
 	int timeout = 60;
-	MyString error_msg;
+	std::string error_msg;
 	if( !m_xfer_q->RequestTransferQueueSlot(true,0,fname,jobid,queue_user.c_str(),timeout,error_msg) ) {
-		std::cerr << error_msg.Value() << std::endl;
+		std::cerr << error_msg.c_str() << std::endl;
 		return false;
 	}
 
@@ -365,7 +365,7 @@ HTCondorPeek::get_transfer_queue_slot()
 		bool pending = true;
 
 		if( !m_xfer_q->PollForTransferQueueSlot(timeout,pending,error_msg) && !pending ) {
-			std::cerr << error_msg.Value() << std::endl;
+			std::cerr << error_msg.c_str() << std::endl;
 			return false;
 		}
 

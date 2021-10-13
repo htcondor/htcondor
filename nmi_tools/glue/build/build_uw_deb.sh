@@ -45,13 +45,10 @@ cd condor-${condor_version}
 # copy srpm files from condor sources into the SOURCES directory
 cp -pr build/packaging/new-debian debian
 
-if $(grep -qi stretch /etc/os-release); then
+if $(grep -qi buster /etc/os-release); then
     suffix=''
-    mv debian/control.stretch debian/control
-elif $(grep -qi buster /etc/os-release); then
-    suffix='n1'
 elif $(grep -qi bullseye /etc/os-release); then
-    suffix='n2'
+    suffix='n1'
     mv debian/control.focal debian/control
     mv debian/htcondor.install.focal debian/htcondor.install
     mv debian/rules.focal debian/rules

@@ -24,7 +24,6 @@
  * Headers
  ***************************************************************/
 
-#include "MyString.h"
 #include "hibernator.h"
 #include "network_adapter.h"
 
@@ -83,7 +82,7 @@ public:
         @see setTargetState()
 	*/
 	bool getSupportedStates( unsigned & mask ) const;
-	bool getSupportedStates( MyString &states ) const;
+	bool getSupportedStates( std::string &states ) const;
 	bool getSupportedStates(
 		std::vector<HibernatorBase::SLEEP_STATE> &states ) const;
 

@@ -407,7 +407,7 @@ struct Param
 
     object getitem_impl(const std::string &attr, object default_val, bool throw_exception)
     {
-        MyString name_used;
+        std::string name_used;
         const char *pdef_value;
         const MACRO_META *pmeta;
         const char * result_str = param_get_info(attr.c_str(), NULL, NULL, name_used, &pdef_value, &pmeta);

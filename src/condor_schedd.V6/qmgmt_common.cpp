@@ -26,7 +26,6 @@
 #include "dedicated_scheduler.h"
 #include "scheduler.h"
 #include "condor_qmgr.h"
-#include "MyString.h"
 #include "param_info.h" // for BinaryLookup
 
 extern Scheduler scheduler;

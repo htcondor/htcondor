@@ -35,6 +35,9 @@ int formatstr(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int formatstr(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int vformatstr(std::string& s, const char* format, va_list pargs);
 
+// Returns number of replacements actually performed, or -1 if from is empty.
+int replace_str( std::string & str, const std::string & from, const std::string & to, size_t start = 0 );
+
 // Appending versions of above.
 // These return number of new chars appended.
 int formatstr_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
@@ -57,6 +60,7 @@ bool operator>=(const std::string& L, const MyString& R);
 
 // to replace MyString with std::string we need a compatible read-line function
 bool readLine(std::string& dst, FILE *fp, bool append = false);
+bool readLine(std::string& dst, MyStringSource& src, bool append = false);
 
 //Return true iff the given string is a blank line.
 int blankline ( const char *str );
@@ -73,6 +77,8 @@ void trim(std::string &str);
 void lower_case(std::string &str);
 void upper_case(std::string &str);
 void title_case(std::string &str); // capitalize each word
+
+const char * empty_if_null(const char * c_str);
 
 // Return a string based on string src, but for each character in Q that
 // occurs in src, insert the character escape before it.

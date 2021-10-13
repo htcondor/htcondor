@@ -80,7 +80,14 @@ AddNode( Dag *dag, const char *name,
 	if( done && type == NodeType::FINAL ) {
 		failReason.formatstr( "Warning: FINAL Job %s cannot be set to DONE\n",
 					name );
-        debug_printf( DEBUG_QUIET, "%s", failReason.Value() );
+        debug_printf( DEBUG_QUIET, "%s", failReason.c_str() );
+		(void)check_warning_strictness( DAG_STRICT_1, false );
+		done = false;
+	}
+	if( done && type == NodeType::SERVICE ) {
+		failReason.formatstr( "Warning: SERVICE node %s cannot be set to DONE\n",
+					name );
+        debug_printf( DEBUG_QUIET, "%s", failReason.c_str() );
 		(void)check_warning_strictness( DAG_STRICT_1, false );
 		done = false;
 	}
@@ -111,6 +118,7 @@ AddNode( Dag *dag, const char *name,
 	if( !dag->Add( *node ) ) {
 		failReason = "unknown failure adding ";
 		failReason += ( node->GetType() == NodeType::FINAL )? "Final " : "";
+		failReason += ( node->GetType() == NodeType::SERVICE )? "SERVICE " : "";
 		failReason += "node to DAG";
 		delete node;
 		return NULL;

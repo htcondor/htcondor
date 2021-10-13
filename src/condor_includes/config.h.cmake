@@ -160,9 +160,6 @@
 /* dlopen function is available  (used) */
 #cmakedefine HAVE_DLOPEN 1
 
-/* Define to 1 if you have the 'execl' function. (used)*/
-#cmakedefine HAVE_EXECL 1
-
 /* Define to 1 if you have the 'readdir64' function. (used)*/
 #cmakedefine HAVE_READDIR64 1
 
@@ -205,17 +202,11 @@
 /* Do we have the scitokens external (USED)*/
 #cmakedefine HAVE_EXT_SCITOKENS 1
 
-/* Do we have the unicoregahp external (USED)*/
-#cmakedefine HAVE_EXT_UNICOREGAHP 1
-
 /* Do we have the voms external (USED)*/
 #cmakedefine HAVE_EXT_VOMS 1
 
 /* Do we have the libvirt external (USED)*/
 #cmakedefine HAVE_EXT_LIBVIRT 1
-
-///* Do we have the cream external (Imake?)*/
-#cmakedefine HAVE_EXT_CREAM
 
 ///* Do we have the curl external (Imake)*/
 #cmakedefine HAVE_EXT_CURL
@@ -346,20 +337,8 @@
 /* does sched_setaffinity take two args (USED)*/
 #cmakedefine HAVE_SCHED_SETAFFINITY_2ARG 1
 
-/* Define to 1 if you have the 'setegid' function. (USED)*/
-#cmakedefine HAVE_SETEGID 1
-
-/* Define to 1 if you have the 'setenv' function. (USED)*/
-#cmakedefine HAVE_SETENV 1
-
-/* Define to 1 if you have the 'seteuid' function. (USED)*/
-#cmakedefine HAVE_SETEUID 1
-
 /* Define to 1 if you have the 'setlinebuf' function. (USED)*/
 #cmakedefine HAVE_SETLINEBUF 1
-
-/* Define to 1 if you have the 'snprintf' function. (USED)*/
-#cmakedefine HAVE_SNPRINTF 1
 
 /* Define to 1 if you have the 'eventfd' function. (USED)*/
 #cmakedefine HAVE_EVENTFD 1
@@ -375,9 +354,6 @@
 
 /* Define to 1 if you have the 'statfs' function. (USED)*/
 #cmakedefine HAVE_STATFS 1
-
-/* Define to 1 if you have the 'statvfs' function. (USED)*/
-#cmakedefine HAVE_STATVFS 1
 
 /* Define to 1 if you have the <stdint.h> header file. (USED)*/
 #cmakedefine HAVE_STDINT_H 1
@@ -409,9 +385,6 @@
 /* Define to 1 if 'f_type' is member of 'struct statfs'. (USED)*/
 #cmakedefine HAVE_STRUCT_STATFS_F_TYPE 1
 
-/* Define to 1 if 'f_basetype' is member of 'struct statvfs'. (USED)*/
-#cmakedefine HAVE_STRUCT_STATVFS_F_BASETYPE 1
-
 /* Define to 1 if you have the <sys/mount.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_MOUNT_H 1
 
@@ -427,17 +400,8 @@
 /* Define to 1 if you have the <sys/statfs.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_STATFS_H 1
 
-/* Define to 1 if you have the <sys/statvfs.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_STATVFS_H 1
-
 /* Define to 1 if you have the <sys/types.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_TYPES_H 1
-
-/* Define to 1 if you have the <sys/vfs.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_VFS_H 1
-
-/* Define to 1 if you have the <ustat.h> header file. (USED)*/
-#cmakedefine HAVE_USTAT_H 1
 
 /* Define to 1 if you have the <valgrind.h> header file. (USED)*/
 #cmakedefine HAVE_VALGRIND_H 1
@@ -453,9 +417,6 @@
 
 /* Define if vmware is available (USED)*/
 #cmakedefine HAVE_VMWARE 1
-
-/* "use system (v)snprintf instead of our replacement" (USED)*/
-#cmakedefine HAVE_WORKING_SNPRINTF 1
 
 /* Define to 1 if you have the '_fstati64' function. (USED)*/
 #cmakedefine HAVE__FSTATI64 1
@@ -534,6 +495,9 @@
 
 /* Define to 1 if the GSI libraries need to dlopen()d */
 #cmakedefine DLOPEN_GSI_LIBS
+
+/* Define to 1 if the VOMS libraries need to dlopen()d */
+#cmakedefine DLOPEN_VOMS_LIBS
 
 /* Define to 1 if the OS has inotify API support */
 #cmakedefine HAVE_INOTIFY

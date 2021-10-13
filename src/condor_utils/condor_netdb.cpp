@@ -74,11 +74,11 @@ condor_gethostname(char *name, size_t namelen) {
 				return -1;
 			}
 
-			MyString hostname = convert_ipaddr_to_fake_hostname(addr);
-			if (hostname.Length() >= (int) namelen) {
+			std::string hostname = convert_ipaddr_to_fake_hostname(addr);
+			if (hostname.length() >= namelen) {
 				return -1;
 			}
-			strcpy(name, hostname.Value());
+			strcpy(name, hostname.c_str());
 			return 0;
 		}
 
@@ -149,11 +149,11 @@ condor_gethostname(char *name, size_t namelen) {
 			}
 
 			close(s);
-			MyString hostname = convert_ipaddr_to_fake_hostname(addr);
-			if (hostname.Length() >= (int) namelen) {
+			std::string hostname = convert_ipaddr_to_fake_hostname(addr);
+			if (hostname.length() >= namelen) {
 				return -1;
 			}
-			strcpy(name, hostname.Value());
+			strcpy(name, hostname.c_str());
 			return 0;
 		}
 
@@ -164,7 +164,7 @@ condor_gethostname(char *name, size_t namelen) {
 					 "to determine hostname\n", tmp );
 
 			std::vector<condor_sockaddr> addrs;
-			MyString my_hostname(tmp);
+			std::string my_hostname(tmp);
 			addrs = resolve_hostname_raw(my_hostname);
 			if (addrs.empty()) {
 				dprintf(D_HOSTNAME,
@@ -173,11 +173,11 @@ condor_gethostname(char *name, size_t namelen) {
 				return -1;
 			}
 
-			MyString hostname = convert_ipaddr_to_fake_hostname(addrs.front());
-			if (hostname.Length() >= (int) namelen) {
+			std::string hostname = convert_ipaddr_to_fake_hostname(addrs.front());
+			if (hostname.length() >= namelen) {
 				return -1;
 			}
-			strcpy(name, hostname.Value());
+			strcpy(name, hostname.c_str());
 			return 0;
 		}
 

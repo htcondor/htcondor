@@ -71,9 +71,9 @@ void printNewMessages( ClassAd* result_ad, StringList* ids );
 bool mayUserForceRm( );
 
 CONSTRAINT_TYPE has_constraint = CT_NONE;
-MyString global_constraint;
+std::string global_constraint;
 CONSTRAINT_TYPE has_usercluster = CT_NONE;
-MyString usercluster_constraint;
+std::string usercluster_constraint;
 
 const char* 
 actionWord( JobAction action, bool past )
@@ -686,10 +686,10 @@ void
 addClusterConstraint(int clust)
 {
 	if ( ! has_usercluster) {
-		usercluster_constraint.formatstr(ATTR_CLUSTER_ID " == %d", clust);
+		formatstr(usercluster_constraint,ATTR_CLUSTER_ID " == %d", clust);
 		has_usercluster = CT_CLUSTER;
 	} else {
-		usercluster_constraint.formatstr_cat(" || " ATTR_CLUSTER_ID " == %d", clust);
+		formatstr_cat(usercluster_constraint," || " ATTR_CLUSTER_ID " == %d", clust);
 		has_usercluster = CT_COMPLEX;
 	}
 }
@@ -698,10 +698,10 @@ void
 addUserConstraint(const char * user)
 {
 	if ( ! has_usercluster) {
-		usercluster_constraint.formatstr(ATTR_OWNER " == \"%s\"", user);
+		formatstr(usercluster_constraint,ATTR_OWNER " == \"%s\"", user);
 		has_usercluster = CT_USER;
 	} else {
-		usercluster_constraint.formatstr_cat(" || " ATTR_OWNER " == \"%s\"", user);
+		formatstr_cat(usercluster_constraint," || " ATTR_OWNER " == \"%s\"", user);
 		has_usercluster = CT_COMPLEX;
 	}
 }
@@ -713,13 +713,13 @@ addConstraint(const char *constraint, CONSTRAINT_TYPE ct_type)
 		global_constraint = constraint;
 		has_constraint = ct_type;
 	} else if (CT_COMPLEX == has_constraint) {
-		global_constraint.formatstr_cat(" && (%s)", constraint);
+		formatstr_cat(global_constraint," && (%s)", constraint);
 	} else {
 		// if we get here, has_constraint is CT_CLUSTER, CT_USER or CT_SIMPLE,
 		// wrap current (single) constraint with (), and && with new constraint.
 		// and promote constraint type to complex.
-		MyString one = global_constraint.Value();
-		global_constraint.formatstr("(%s) && (%s)", one.Value(), constraint);
+		std::string one = global_constraint;
+		formatstr(global_constraint,"(%s) && (%s)", one.c_str(), constraint);
 		has_constraint = CT_COMPLEX;
 	}
 }
@@ -760,36 +760,36 @@ void
 handleConstraints( void )
 {
 	if (has_usercluster) {
-		addConstraint(usercluster_constraint.Value(), has_usercluster);
+		addConstraint(usercluster_constraint.c_str(), has_usercluster);
 	}
 	if ( ! has_constraint) {
 		return;
 	}
 
-	const char* tmp = global_constraint.Value();
-	MyString cmsg;
+	const char* tmp = global_constraint.c_str();
+	std::string cmsg;
 	switch(has_constraint) {
 		case CT_USER:
-			cmsg.formatstr(" of user %s", strstr(tmp, " == ")+4);
+			formatstr(cmsg," of user %s", strstr(tmp, " == ")+4);
 			break;
 		case CT_CLUSTER:
-			cmsg.formatstr(" in cluster %s", strstr(tmp, " == ")+4);
+			formatstr(cmsg," in cluster %s", strstr(tmp, " == ")+4);
 			break;
 		case CT_ALL:
 			cmsg = "";
 			break;
 		default:
-			cmsg.formatstr(" matching constraint (%s)", tmp);
+			formatstr(cmsg," matching constraint (%s)", tmp);
 			break;
 	}
 
 	CondorError errstack;
 	if( doWorkByConstraint(tmp, &errstack) ) {
-		fprintf(stdout, "All jobs%s have been %s\n", cmsg.Value(), actionWord(mode,true));
+		fprintf(stdout, "All jobs%s have been %s\n", cmsg.c_str(), actionWord(mode,true));
 	} else {
 		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 		if (had_error) {
-			fprintf(stderr, "Couldn't find/%s all jobs%s\n", actionWord(mode,false), cmsg.Value());
+			fprintf(stderr, "Couldn't find/%s all jobs%s\n", actionWord(mode,false), cmsg.c_str());
 		}
 	}
 }

@@ -3759,9 +3759,6 @@ sub LoadExemption
 	my $line = shift;
 	TestDebug("LoadExemption: $line\n",2);
 	my ($testname, $required, $message) = split /,/, $line;
-	if ($testname ne $handle) {
-		print STDERR "LoadExemption:UNEXPECTED: testname $testname does not equal handle $handle\n";
-	}
     my $save = $required . "," . $message;
     if( ! exists $exemptions{CURRENT}) {
         $exemptions{CURRENT} = ();

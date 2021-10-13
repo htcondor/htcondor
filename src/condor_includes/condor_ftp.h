@@ -20,7 +20,7 @@
 #ifndef _CONDOR_FTP_
 #define _CONDOR_FTP_
 
-#include "MyString.h"
+#include <string>
 
 /* This file describes the enumeration to specify the file transfer
 protocol used between a submitting client and the schedd/transferd. Please keep
@@ -59,8 +59,8 @@ enum SandboxTransferMethod
 };
 
 // functions used to convert a SandboxTransferMethod enum back and forth to
-// a MyString
-void stm_to_string(SandboxTransferMethod stm, MyString &str);
-void string_to_stm(const MyString &str, SandboxTransferMethod &stm);
+// a std::string
+void stm_to_string(SandboxTransferMethod stm, std::string &str);
+void string_to_stm(const std::string &str, SandboxTransferMethod &stm);
 
 #endif 

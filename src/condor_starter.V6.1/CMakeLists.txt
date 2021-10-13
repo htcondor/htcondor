@@ -36,8 +36,6 @@ jic_local_schedd.cpp
 jic_shadow.cpp
 job_info_communicator.cpp
 local_user_log.cpp
-mpi_comrade_proc.cpp
-mpi_master_proc.cpp
 NTsenders.cpp
 os_proc.cpp
 parallel_proc.cpp
@@ -97,3 +95,13 @@ if (DOCKER_ALLOW_RUN_AS_ROOT)
 	set_source_files_properties(docker_proc.cpp PROPERTIES COMPILE_DEFINITIONS DOCKER_ALLOW_RUN_AS_ROOT=1)
 endif()
 
+# We can't assume that docker is installed or runnable at build time.  So, we check in
+# a docker test image.  It can be built as follows
+
+# gcc -static -o exit_37 exit_37.c
+# docker build -t htcondor_docker_test .
+# docker save htcondor_docker_test > htcondor_docker_test
+
+if (LINUX)
+	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/htcondor_docker_test DESTINATION ${C_LIBEXEC} )
+endif()

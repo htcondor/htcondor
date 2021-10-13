@@ -94,7 +94,7 @@ int PrettyPrinter::setPPstyle( ppOption pps, int arg_index, const char * argv )
 	// If setting a 'normal' output, check to see if there is a user-defined normal output
 	if ( ! disable_user_print_files && ! explicit_format
 		&& !PP_IS_LONGish(pps) && pps != PP_CUSTOM && pps != ppStyle) {
-		MyString param_name("STATUS_DEFAULT_"); param_name += AdTypeToString(setby.adType); param_name += "_PRINT_FORMAT_FILE";
+		std::string param_name("STATUS_DEFAULT_"); param_name += AdTypeToString(setby.adType); param_name += "_PRINT_FORMAT_FILE";
 		auto_free_ptr pf_file(param(param_name.c_str()));
 		if (pf_file) {
 			struct stat stat_buff;

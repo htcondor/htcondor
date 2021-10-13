@@ -331,7 +331,7 @@ class match_rec: public ClaimIdParser
 		// if we created a dynamic hole in the DAEMON auth level
 		// to support flocking, this will be set to the id of the
 		// punched hole
-	MyString*		auth_hole_id;
+	std::string*	auth_hole_id;
 
 	match_rec *m_paired_mrec;
 	bool m_can_start_jobs;
@@ -383,17 +383,17 @@ class UserIdentity {
 				m_domain == rhs.m_domain && 
 				m_auxid == rhs.m_auxid;
 		}
-		MyString username() const { return m_username; }
-		MyString domain() const { return m_domain; }
-		MyString auxid() const { return m_auxid; }
+		std::string username() const { return m_username; }
+		std::string domain() const { return m_domain; }
+		std::string auxid() const { return m_auxid; }
 
 			// For use in HashTables
 		static size_t HashFcn(const UserIdentity & index);
 	
 	private:
-		MyString m_username;
-		MyString m_domain;
-		MyString m_auxid;
+		std::string m_username;
+		std::string m_domain;
+		std::string m_auxid;
 };
 
 
@@ -959,7 +959,6 @@ private:
 
 	// useful names
 	char*			CondorAdministrator;
-	char*			Mail;
 	char*			AccountantName;
     char*			UidDomain;
 	std::string		AccountingDomain;
@@ -1086,9 +1085,6 @@ private:
 	int				aliveid;	// timer id for sending keepalives to startd
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
 
-		// put state into ClassAd return it.  Used for condor_squawk
-	int	dumpState(int, Stream *);
-
 		// get connection info for creating sec session to a running job
 		// (e.g. condor_ssh_to_job)
 	int get_job_connect_info_handler(int, Stream* s);
@@ -1160,6 +1156,7 @@ extern bool moveIntAttr( PROC_ID job_id, const char* old_attr,
 						 const char* new_attr, bool verbose );
 extern bool abortJob( int cluster, int proc, const char *reason, bool use_transaction );
 extern bool abortJobsByConstraint( const char *constraint, const char *reason, bool use_transaction );
+extern void incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nestedAdAttrName = nullptr);
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 int reason_code=0, int reason_subcode=0,
 					 bool use_transaction = false, 

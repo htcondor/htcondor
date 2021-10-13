@@ -134,7 +134,6 @@ perl -p -i -e "s|/etc/sysconfig/condor|/etc/default/condor|g;" etc/examples/cond
 
 #Fix permission
 chmod 644 etc/examples/condor.boot
-chmod 644 etc/examples/lamscript
 chmod 644 etc/examples/mp1script
 chmod 755 src/drmaa/configure
 

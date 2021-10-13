@@ -77,7 +77,7 @@ JobRouterHookMgr::~JobRouterHookMgr()
 void
 JobRouterHookMgr::clearHookPaths()
 {
-	MyString key;
+	std::string key;
 	char** paths;
 	if (0 < m_hook_paths.getNumElements())
 	{
@@ -145,8 +145,7 @@ JobRouterHookMgr::getHookPath(HookType hook_type, const classad::ClassAd &ad)
 		return NULL;
 	}
 
-	MyString key(keyword.c_str());
-	if (0 > m_hook_paths.lookup(key, paths))
+	if (0 > m_hook_paths.lookup(keyword, paths))
 	{
 		// Initialize the hook paths for this keyword
 		paths = new char*[NUM_HOOKS];
@@ -154,18 +153,18 @@ JobRouterHookMgr::getHookPath(HookType hook_type, const classad::ClassAd &ad)
 		{
 			paths[i] = NULL;
 		}
-		m_hook_paths.insert(key, paths);
+		m_hook_paths.insert(keyword, paths);
 	}
 
 	hook_path = paths[m_hook_maps[hook_type]-1];
 	if (NULL == hook_path)
 	{
-		MyString _param;
-		_param.formatstr("%s_HOOK_%s", keyword.c_str(), getHookTypeString(hook_type));
+		std::string _param;
+		formatstr(_param, "%s_HOOK_%s", keyword.c_str(), getHookTypeString(hook_type));
         // Here the distinction between undefined hook and a hook path error 
         // is being collapsed
-		validateHookPath(_param.Value(), hook_path);
-		dprintf(D_FULLDEBUG, "Hook %s: %s\n", _param.Value(),
+		validateHookPath(_param.c_str(), hook_path);
+		dprintf(D_FULLDEBUG, "Hook %s: %s\n", _param.c_str(),
 			hook_path ? hook_path : "UNDEFINED");
 	}
 	else if (UNDEFINED == hook_path)
@@ -220,7 +219,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 
 	temp_ad = r_job->src_ad;
 
-	MyString hook_stdin;
+	std::string hook_stdin;
 	hook_stdin = route_info.c_str();
 	hook_stdin += "\n------\n";
 	sPrintAd(hook_stdin, temp_ad);
@@ -239,7 +238,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 		delete translate_client;
 		return -1;
 	}
-	if (0 == spawn(translate_client, NULL, &hook_stdin, PRIV_USER_FINAL))
+	if (0 == spawn(translate_client, NULL, hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookTranslateJob: "
@@ -292,7 +291,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 
 	temp_ad = r_job->dest_ad;
 
-	MyString hook_stdin;
+	std::string hook_stdin;
 	sPrintAd(hook_stdin, temp_ad);
 
 	StatusClient* status_client = new StatusClient(hook_update_job_info, r_job);
@@ -309,7 +308,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 		delete status_client;
 		return -1;
 	}
-	if (0 == spawn(status_client, NULL, &hook_stdin, PRIV_USER_FINAL))
+	if (0 == spawn(status_client, NULL, hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookUpdateJobInfo: "
@@ -367,7 +366,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 
 	temp_ad = r_job->src_ad;
 
-	MyString hook_stdin;
+	std::string hook_stdin;
 	sPrintAd(hook_stdin, temp_ad);
 	hook_stdin += "\n------\n";
 
@@ -388,7 +387,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 		delete exit_client;
 		return -1;
 	}
-	if (0 == spawn(exit_client, NULL, &hook_stdin, PRIV_USER_FINAL))
+	if (0 == spawn(exit_client, NULL, hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::hookJobExit: "
@@ -446,7 +445,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 
 	temp_ad = r_job->dest_ad;
 
-	MyString hook_stdin;
+	std::string hook_stdin;
 	sPrintAd(hook_stdin, temp_ad);
 
 	CleanupClient* cleanup_client = new CleanupClient(hook_cleanup, r_job);
@@ -463,7 +462,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 		delete cleanup_client;
 		return -1;
 	}
-	if (0 == spawn(cleanup_client, NULL, &hook_stdin, PRIV_USER_FINAL))
+	if (0 == spawn(cleanup_client, NULL, hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in JobRouterHookMgr::JobCleanup: "
@@ -596,20 +595,20 @@ TranslateClient::hookExited(int exit_status)
 
 	HookClient::hookExited(exit_status);
 
-	if (m_std_err.Length())
+	if (m_std_err.length())
 	{
 		dprintf(D_ALWAYS, "TranslateClient::hookExited (%s): "
 				"Warning, hook %s (pid %d) printed to stderr: "
 				"%s\n", m_routed_job->JobDesc().c_str(), 
-				m_hook_path, (int)m_pid, m_std_err.Value());
+				m_hook_path, (int)m_pid, m_std_err.c_str());
 	}
-	if (m_std_out.Length() && 0 == WEXITSTATUS(exit_status))
+	if (m_std_out.length() && 0 == WEXITSTATUS(exit_status))
 	{
 		ClassAd job_ad;
 		const char* hook_line = NULL;
 
 		MyStringTokener tok;
-		tok.Tokenize(m_std_out.Value());
+		tok.Tokenize(m_std_out.c_str());
 		while ((hook_line = tok.GetNextToken("\n", true)))
 		{
 			if (!job_ad.Insert(hook_line))
@@ -680,14 +679,14 @@ StatusClient::hookExited(int exit_status)
 
 	HookClient::hookExited(exit_status);
 
-	if (m_std_err.Length())
+	if (m_std_err.length())
 	{
 		dprintf(D_ALWAYS, "StatusClient::hookExited (%s): Warning, "
 				"hook %s (pid %d) printed to stderr: %s\n",
 				m_routed_job->JobDesc().c_str(), m_hook_path,
-				(int)m_pid, m_std_err.Value());
+				(int)m_pid, m_std_err.c_str());
 	}
-	if (m_std_out.Length() && 0 == WEXITSTATUS(exit_status))
+	if (m_std_out.length() && 0 == WEXITSTATUS(exit_status))
 	{
 		ClassAd job_ad;
 		const char* hook_line = NULL;
@@ -697,7 +696,7 @@ StatusClient::hookExited(int exit_status)
 			NULL };
 
 		MyStringTokener tok;
-		tok.Tokenize(m_std_out.Value());
+		tok.Tokenize(m_std_out.c_str());
 		while ((hook_line = tok.GetNextToken("\n", true)))
 		{
 			if (!job_ad.Insert(hook_line))
@@ -768,14 +767,14 @@ ExitClient::hookExited(int exit_status) {
 
 	HookClient::hookExited(exit_status);
 
-	if (m_std_err.Length())
+	if (m_std_err.length())
 	{
 		dprintf(D_ALWAYS, "ExitClient::hookExited (%s): Warning, hook "
 				"%s (pid %d) printed to stderr: %s\n",
 				m_routed_job->JobDesc().c_str(), m_hook_path,
-				(int)m_pid, m_std_err.Value());
+				(int)m_pid, m_std_err.c_str());
 	}
-	if (m_std_out.Length())
+	if (m_std_out.length())
 	{
 		if (0 == WEXITSTATUS(exit_status))
 		{
@@ -785,7 +784,7 @@ ExitClient::hookExited(int exit_status) {
 			classad::ClassAd *orig_ad = ad_collection->GetClassAd(m_routed_job->src_key);
 
 			MyStringTokener tok;
-			tok.Tokenize(m_std_out.Value());
+			tok.Tokenize(m_std_out.c_str());
 			while ((hook_line = tok.GetNextToken("\n", true)))
 			{
 				if (!job_ad.Insert(hook_line))
@@ -876,13 +875,13 @@ CleanupClient::hookExited(int exit_status)
 	}
 
 	HookClient::hookExited(exit_status);
-	if (m_std_err.Length())
+	if (m_std_err.length())
 	{
 		dprintf(D_ALWAYS,
 				"CleanupClient::hookExited (%s): Warning, hook "
 				"%s (pid %d) printed to stderr: %s\n",
 				m_routed_job->JobDesc().c_str(), m_hook_path,
-				(int)m_pid, m_std_err.Value());
+				(int)m_pid, m_std_err.c_str());
 	}
 
 	// Only tell the job router to finish the cleanup of the job if the

@@ -935,30 +935,30 @@ update_report_result:
 		if( error == FALSE) {
 			CondorVersionInfo version_info(dc_schedd.version());
 			ArgList arglist;
-			MyString arg_error_msg;
+			std::string arg_error_msg;
 			Env env_obj;
-			MyString env_error_msg;
+			std::string env_error_msg;
 
-			if(!arglist.AppendArgsFromClassAd(current_command->classad,&arg_error_msg) ||
-		   !	arglist.InsertArgsIntoClassAd(current_command->classad,&version_info,&arg_error_msg))
+			if(!arglist.AppendArgsFromClassAd(current_command->classad, arg_error_msg) ||
+			   !arglist.InsertArgsIntoClassAd(current_command->classad,&version_info, arg_error_msg))
 			{
 				formatstr( error_msg,
 						"ERROR: ClassAd problem in converting arguments to syntax "
 						"for schedd (version=%s): %s\n",
 						dc_schedd.version() ? dc_schedd.version() : "NULL",
-						arg_error_msg.Value());
+						arg_error_msg.c_str());
 				dprintf( D_ALWAYS,"%s\n", error_msg.c_str() );
 				error = TRUE;
-			}	
+			}
 
-			if(!env_obj.MergeFrom(current_command->classad,&env_error_msg) ||
-			   !env_obj.InsertEnvIntoClassAd(current_command->classad,&env_error_msg,NULL,&version_info))
+			if(!env_obj.MergeFrom(current_command->classad, env_error_msg) ||
+			   !env_obj.InsertEnvIntoClassAd(current_command->classad, env_error_msg,NULL,&version_info))
 			{
 				formatstr( error_msg,
 						"ERROR: Failed to convert environment to target syntax"
 						" for schedd (version %s): %s\n",
 						dc_schedd.version() ? dc_schedd.version() : "NULL",
-						env_error_msg.Value());
+						env_error_msg.c_str());
 				dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 				error = TRUE;
 			}
@@ -967,9 +967,9 @@ update_report_result:
 		if( error == FALSE ) {
 				// See the comment in the function body of ExpandInputFileList
 				// for an explanation of what is going on here.
-			MyString transfer_input_error_msg;
+			std::string transfer_input_error_msg;
 			if( !FileTransfer::ExpandInputFileList( current_command->classad, transfer_input_error_msg ) ) {
-				dprintf( D_ALWAYS, "%s\n", transfer_input_error_msg.Value() );
+				dprintf( D_ALWAYS, "%s\n", transfer_input_error_msg.c_str() );
 				error = TRUE;
 			}
 		}

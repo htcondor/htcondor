@@ -239,7 +239,7 @@ public:
 
 	bool globalRotationStarting( unsigned long size );
 	void globalRotationEvents( int events );
-	void globalRotationComplete( int, int, const MyString &  );
+	void globalRotationComplete( int, int, const std::string &  );
 
 	bool WriteEvents( int &num, int &sequence );
 	long getUserLogSize( void );
@@ -602,7 +602,7 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 		else if ( arg.Match('w', "worker") ) {	
 			opts = new WorkerOptions( m_shared, *opts );
 			m_workerOptions.push_back( opts );
-			printf( "Created worker option: %ld\n", m_workerOptions.size() );
+			printf( "Created worker option: %zu\n", m_workerOptions.size() );
 		}
 # endif
 		else if ( arg.Match('j', "jobid") ) {
@@ -1108,7 +1108,7 @@ TestLogWriter::globalRotationEvents( int events )
 void
 TestLogWriter::globalRotationComplete( int num_rotations,
 									 int sequence,
-									 const MyString & /*id*/ )
+									   const std::string & /*id*/ )
 {
 	if ( m_options.Verbose(VERB_INFO) ) {
 		printf( "rotation complete: %d %d\n",

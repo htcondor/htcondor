@@ -1,0 +1,1014 @@
+
+
+
+
+                           GRID ASCII HELPER PROTOCOL
+                           for ARC CE REST Interface
+                                 VERSION 0.1
+
+
+                                 Jaime Frey
+                             [jfrey@cs.wisc.edu]
+
+                                 Febuary 2021
+
+                               HTCondor Project
+                    [http://research.cs.wisc.edu/htcondor]
+
+                       Department of Computer Sciences
+                       University of Wisconsin-Madison
+                            1210 W. Dayton Street
+                             Madison, WI  53706
+                          [http://www.cs.wisc.edu]
+
+
+
+
+
+1.    INTRODUCTION
+
+    The object of the Grid ASCII Helper Protocol (GAHP) is to allow the
+    use of the client library or package of a grid or cloud service via
+    a simple ASCII-based protocol. A process which implements GAHP is
+    referred to as a GAHP server. GAHP is designed to handle both
+    synchronous (blocking) and asynchronous (non-blocking) calls.
+
+    The first GAHP specification focused on the GRAM and GASS grid
+    services of the Globus Toolkit. This GAHP specification focuses on
+    the ARC Compute Element (CE) grid job service.
+
+1.1   WHY A GAHP?
+
+    Although most grid and cloud services provide client libraries or
+    modules in various languages that can be incorporated directly into
+    applications that wish to use those services, there are several
+    distinct advantages to using an independent GAHP server process
+    instead. For instance, parts of the native API may provide only
+    synchronous/blocking calls. Users who require a
+    non-blocking/asynchronous interface must make use of multiple
+    threads. Even if the native module is thread-safe, thread safety
+    requires that _all_ modules linked into the process be both
+    re-entrant and in agreement upon a threading model.
+    This may be a significant barrier when trying to integrate the
+    service client module into legacy non-thread-safe code, or when
+    attempting to link with commercial libraries which either have no
+    support for threads or define their own threading model. But because
+    the GAHP server runs as a separate process, it can be easily
+    implemented as a multi-threaded server, and still present an
+    asynchronous non-blocking protocol. Worse yet, there may not be a
+    client module available in the language of the application wishing
+    to use the service. With a GAHP server, langauage choice is
+    immaterial.
+
+    GAHP facilitates the construction of multi-tier systems.  A first
+    tier client can easily send ASCII commands via a socket (perhaps
+    securely via an SSH or SSL tunnel) to a second tier running a GAHP
+    server, allowing grid or cloud services to be consolidated at the
+    second or third tier with minimal effort.
+
+    Furthermore, GAHP, like many other simple ASCII-based protocols,
+    supports the concept of component-based development independent of
+    the software language used with minimal complexity. When a grid
+    service has client modules available in multiple languages, those
+    interfaces can look very different from each other. By using GAHP, a
+    body of software could be written once with one interface and then
+    subsequently utilize a GAHP server written in C, Java, or Perl --
+    and said GAHP server could be running locally or as a daemon on a
+    remote host.
+
+1.2   AVAILABLE ARC CE GAHP SERVERS
+
+    The HTCondor Project at the University of Wisconsin-Madison has
+    developed an ARC CE GAHP server, written in C++, which uses pthreads 
+    and libcurl to support portions of the ARC CE REST protocol.  Many 
+    Unix platforms are supported.
+
+    This GAHP is available as part of the HTCondor software distribution,
+    version 9.1.0 or later.
+
+2.0   GAHP SERVER IMPLEMENTATION
+
+    GAHP itself, as a protocol, is independent of the underlying transport
+    protocol and requires only a reliable ordered bi-directional data
+    stream channel.
+
+    A GAHP server, however, is assumed to read and respond to GAHP commands
+    solely via stdin and stdout.  Should stdin to a GAHP server be closed,
+    the GAHP server should immediately shutdown in a manner similar to the
+    receipt of a QUIT command.  Therefore, a GAHP server can be easily
+    invoked and managed via SSHD, inted, or rshd.  Software can spawn a
+    local GAHP server via an interface such as POSIX.2 popen().
+
+    Under no circumstances should a GAHP server block when issued any
+    command.  All commands require a response nearly instantaneously.
+    Therefore, most GAHP servers will be implemented as a multi-threaded
+    process. Use of child processes or avoidance of blocking calls
+    within the GAHP server are also options.
+
+3.0   GAHP COMMANDS
+
+    The following commands must be implemented by all GAHP servers:
+
+        COMMANDS
+        QUIT
+        RESULTS
+        VERSION
+
+    The following commands may be implemented by any GAHP server:
+
+        ASYNC_MODE_ON
+        ASYNC_MODE_OFF
+        RESPONSE_PREFIX
+
+    The following commands are specific to X.509 proxy certificates,
+    used for authentication with some services, including ARC CE.
+    They must be implemented by an ARC CE REST GAHP server:
+
+        INITIALIZE_FROM_FILE
+        REFRESH_PROXY_FROM_FILE
+        CACHE_PROXY_FROM_FILE
+        USE_CACHED_PROXY
+        UNCACHE_PROXY
+
+    The following commands are specific to ARC CE and must be 
+    implemented by an ARC CE REST GAHP server:
+
+        ARC_PING
+        ARC_JOB_NEW
+        ARC_JOB_STATUS
+        ARC_JOB_INFO
+        ARC_JOB_STAGE_IN
+        ARC_JOB_STAGE_OUT
+        ARC_JOB_CLEAN
+        ARC_DELEGATION_NEW
+        ARC_DELEGATION_RENEW
+
+3.1   CONVENTIONS AND TERMS USED IN SECTION 3.2
+
+    The following definitions are common to all GAHP protocol documents.
+
+    <CRLF>
+
+        The characters carriage return and line feed (in that
+        order), _or_ solely the line feed character.
+
+    <SP>
+
+        The space character.
+
+    line
+
+        A sequence of ASCII characters ending with a <CRLF>.
+
+    [ ... ]*
+
+        A sequence of characters (those between the square brackets) 
+        that may repeat zero or more times witin a line.
+
+    Request Line
+
+        A request for action on the part of the GAHP server.
+
+    Return Line
+
+        A line immediately returned by the GAHP server upon
+        receiving a Request Line.
+
+    Result Line
+
+        A line sent by the GAHP server in response to a RESULTS
+        request, which communicates the results of a previous
+        asynchronous command Request.
+
+    S: and R:
+
+        In the Example sections for the commands below, the prefix
+        "S: " is used to signify what the client sends to the GAHP
+        server.   The prefix "R: " is used to signify what the
+        client receives from the GAHP server.  Note that the "S: "
+        or "R: " should not actually be sent or received.
+
+3.2   GAHP COMMAND STRUCTURE
+
+    GAHP commands consist of three parts:
+
+        * Request Line
+        * Return Line
+        * Result Line
+
+    Each of these "Lines" consists of a variable length character
+    string ending with the character sequence <CRLF>.
+
+    A Request Line is a request from the client for action on the part of
+    the GAHP server.  Each Request Line consists of a command code
+    followed by argument field(s).  Command codes are a string of
+    alphanumeric and underscore characters.  Upper and lower case
+    alphabetic characters are to be treated identically with respect to
+    command codes.  Thus, any of the following may represent the
+    ASYNC_MODE_ON command:
+        async_mode_on
+        Async_Mode_On
+        asYNc_MOde_oN
+        ASYNC_MODE_ON
+    In contrast, the argument fields of a Request Line are _case
+    sensitive_.
+
+    The Return Line is always generated by the server as an immediate
+    response to a Request Line.  The first character of a Return Line will
+    contain one of the following characters:
+        S - for Success
+        F - for Failure
+        E - for a syntax or parse Error
+    Any Request Line which contains an unrecognized or unsupported command,
+    or a command with an insufficient number of arguments, will generate an
+    "E" response.
+
+    The Result Line is used to support commands that would otherwise
+    block.  Any GAHP command which may require the implementation to block
+    on network communication require a "request id" as part of the Request
+    Line.  For such commands, the Result Line just communicates if the
+    request has been successfully parsed and queued for service by the
+    GAHP server.  At this point, the GAHP server would typically dispatch
+    a new thread to actually service the request.  Once the request has
+    completed, the dispatched thread should create a Result Line and
+    enqueue it until the client issues a RESULT command.
+
+3.3   TRANSPARENCY
+
+    Arguments on a particular Line (be it Request, Return, or Result) are
+    typically separated by a <SP>.  In the event that a string argument
+    needs to contain a <SP> within the string itself, it must be escaped
+    by placing a backslash ("\") in front of the <SP> character.  Thus,
+    the character sequence "\ " (no quotes) must not be treated as a
+    separator between arguments, but instead as a space character within a
+    string argument. If a string argument contains a backslash
+    character, it must be escaped by preceding it with another backslash
+    character.
+
+3.4   SEQUENCE OF EVENTS
+
+    Upon startup, the GAHP server should output to stdout a banner string
+    which is identical to the output from the VERSION command without the
+    beginning "S " sequence (see example below).  Next, the GAHP server
+    should wait for a complete Request Line from the client (from stdin).
+    The server is to take no action until a Request Line sequence is
+    received.
+
+    There are no sequencing restrictions on the ordering of Requests in
+    the GAHP API, even though some sequences may be semantically
+    invalid for the underlying service. For example, attempting to
+    delete a new instance before creating it. The server shall not
+    produce an "E" or "F" Return Line in the event of such sequences,
+    but may produce a Result Line reflecting an error from the
+    underlying service.
+
+3.5   COMMAND SYNTAX
+
+    This section contains the syntax for the Request, Return, and Result
+    line for each command. The commands common to all GAHPs are defined
+    first, followed by commands specific to the GCE GAHP procotol.
+
+3.5.1 COMMON GAHP COMMANDS
+
+    These commands are common to all GAHP types.
+
+    -----------------------------------------------
+
+    COMMANDS
+
+    List all the commands from this protocol specification which are
+    implemented by this GAHP server.
+
+    + Request Line:
+
+        COMMANDS <CRLF>
+
+    + Return Line:
+
+        S <SP> <command 1> <SP> <command 2> <SP> ... <command X> <CRLF>
+
+    + Result Line:
+
+        None.
+
+    -----------------------------------------------
+
+    VERSION
+
+    Return the version string for this GAHP.  The version string follows
+    a specified format (see below).  Ideally, the version entire version
+    string, including the starting and ending dollar sign ($)
+    delimiters, should be a literal string in the text of the GAHP
+    server executable.  This way, the Unix/RCS "ident" command can
+    produce the version string.
+
+    The version returned should correspond to the version of the
+    protocol supported.
+
+    + Request Line:
+
+        VERSION <CRLF>
+
+    + Return Line:
+
+        S <SP> $GahpVesion: <SP> <major>.<minor>.<subminor> <SP>
+            <build-month> <SP> <build-day-of-month> <SP>
+            <build-year> <SP> <general-descrip> <SP>$ <CRLF>
+
+        * major.minor.subminor = for this version of the
+            protocol, use version x.y.z.
+
+        * build-month = string with the month abbreviation when
+            this GAHP server was built or released.  Permitted
+            values are: "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", and "Dec".
+
+        * build-day-of-month = day of the month when GAHP server
+            was built or released; an integer between 1 and 31
+            inclusive.
+
+        * build-year = four digit integer specifying the year in
+            which the GAHP server was built or released.
+
+        * general-descrip = a string identifying a particular
+            GAHP server implementation.
+
+    + Result Line:
+
+        None.
+
+    + Example:
+
+        S: VERSION
+        R: S $GahpVersion: 1.0.0 Nov 26 2001 NCSA\ CoG\ Gahpd $
+
+    -----------------------------------------------
+
+    QUIT
+
+    Free any/all system resources (close all sockets, etc) and terminate
+    as quickly as possible.
+
+    + Request Line:
+
+        QUIT <CRLF>
+
+    + Return Line:
+
+        S <CRLF>
+
+        Immediately afterwards, the command pipe should be closed
+        and the GAHP server should terminate.
+
+    + Result Line:
+
+        None.
+
+    -----------------------------------------------
+
+    RESULTS
+
+    Display all of the Result Lines which have been queued since the
+    last RESULTS command was issued.  Upon success, the first return
+    line specifies the number of subsequent Result Lines which will be
+    displayed.  Then each result line appears (one per line) -- each
+    starts with the request ID which corresponds to the request ID
+    supplied when the corresponding command was submitted.  The exact
+    format of the Result Line varies based upon which corresponding
+    Request command was issued.
+
+    IMPORTANT: Result Lines must be displayed in the _exact order_ in
+    which they were queued!!!  In other words, the Result Lines
+    displayed must be sorted in the order by which they were placed into
+    the GAHP's result line queue, from earliest to most recent.
+
+    + Request Line:
+
+        RESULTS <CRLF>
+
+    + Return Line(s):
+
+        S <SP> <num-of-subsequent-result-lines> <CRLF>
+        <reqid> <SP> ... <CRLF>
+        <reqid> <SP> ... <CRLF>
+        ...
+
+        * reqid = integer Request ID, set to the value specified in
+            the corresponding Request Line.
+
+    + Result Line:
+
+        None.
+
+    + Example:
+
+        S: RESULTS
+        R: S 1
+        R: 100 0
+
+    -----------------------------------------------
+
+    ASYNC_MODE_ON
+
+    Enable Asynchronous notification when the GAHP server has results
+    pending for a client. This is most useful for clients that do not
+    want to periodically poll the GAHP server with a RESULTS command.
+    When asynchronous notification mode is active, the GAHP server will
+    print out an 'R' (without the quotes) on column one when the
+    'RESULTS' command would return one or more lines. The 'R' is printed
+    only once between successive 'RESULTS' commands.    The 'R' is
+    also guaranteed to only appear in between atomic return lines; the
+    'R" will not interrupt another command's output.
+
+    If there are already pending results when the asynchronous results
+    available mode is activated, no indication of the presence of those
+    results will be given. A GAHP server is permitted to only consider
+    changes to it's result queue for additions after the ASYNC_MODE_ON
+    command has successfully completed. GAHP clients should issue a
+    'RESULTS' command immediately after enabling asynchronous
+    notification, to ensure that any results that may have been added to
+    the queue during the processing of the ASYNC_MODE_ON command are
+    accounted for.
+
+    + Request Line:
+
+        ASYNC_MODE_ON <CRLF>
+
+    + Return Line:
+
+        S <CRLF>
+
+        Immediately afterwards, the client should be prepared to
+        handle an R <CRLF> appearing in the output of the GAHP
+        server.
+
+    + Result Line:
+
+        None.
+
+    + Example:
+
+        S: ASYNC_MODE_ON
+        R: S
+        S: GRAM_PING 00001 beak.cs.wisc.edu/jobmanager
+        R: S
+        S: GRAM_PING 00002 nostos.cs.wisc.edu/jobmanager
+        R: S
+        R: R
+        S: RESULTS
+        R: S 2
+        R: 00001 0
+        R: 00002 0
+
+    Note that you are NOT guaranteed that the 'R' will not appear
+    between the dispatching of a command and the return line(s) of that
+    command; the GAHP server only guarantees that the 'R' will not
+    interrupt an in-progress return. The following is also a legal
+    example:
+        S: ASYNC_MODE_ON
+        R: S
+        S: GRAM_PING 00001 beak.cs.wisc.edu/jobmanager
+        R: S
+        S: GRAM_PING 00002 nostos.cs.wisc.edu/jobmanager
+        R: R
+        R: S
+        S: RESULTS
+        R: S 2
+        R: 00001 0
+        R: 00002 0
+
+        (Note the reversal of the R and the S after GRAM_PING 00002)
+
+    -----------------------------------------------
+
+    ASYNC_MODE_OFF
+
+    Disable asynchronous results-available notification. In this mode,
+    the only way to discover available results is to poll with the
+    RESULTS command.  This mode is the default. Asynchronous mode can be
+    enable with the ASYNC_MODE_ON command.
+
+    + Request Line:
+
+        ASYNC_MODE_OFF <CRLF>
+
+    + Return Line:
+
+        S <CRLF>
+
+    + Result Line:
+
+        None
+
+    + Example:
+
+        S: ASYNC_MODE_OFF
+        R: S
+
+    -----------------------------------------------
+
+    RESPONSE_PREFIX
+
+    Specify a prefix that the GAHP server should use to prepend every
+    subsequent line of output. This may simplify parsing the output of
+    the GAHP server by the client program, especially in cases where the
+    responses of more one GAHP server are "collated" together.
+
+    This affects the output of both return lines and result lines for all
+    subsequent commands (NOT including this one).
+
+    + Request Line:
+
+        RESPONSE_PREFIX <SP> <prefix> <CRLF>
+
+        <prefix> = an arbitrary string of characters which you want to
+        prefix every subsequent line printed by the GAHP server.
+
+    + Return Line:
+
+        S <CRLF>
+
+    + Result Line:
+
+        None.
+
+    + Example:
+
+        S: RESPONSE_PREFIX GAHP:
+        R: S
+        S: RESULTS
+        R: GAHP:S 0
+        S: RESPONSE_PREFIX NEW_PREFIX_
+        R: GAHP:S
+        S: RESULTS
+        R: NEW_PREFIX_S 0
+
+    -----------------------------------------------
+
+3.5.2 GAHP COMMANDS SPECIFIC TO X.509 PROXIES
+
+    These commands are specific to GAHP servers that need to use X.509 
+    proxy certificates to authenticate with the service. ARC CE is one 
+    such service.
+
+    -----------------------------------------------
+
+    INITIALIZE_FROM_FILE
+
+    Initialize the GAHP server and provide it with an X.509 proxy 
+    certificate which will be used by the GAHP server for all subsequent 
+    authentication with requires such a credential.
+
+    + Request Line:
+
+        INITIALIZE_FROM_FILE <SP> <path-to-local-proxy-file> <CRLF>
+
+        <path-to-local-proxy-file> = a fully-qualified pathname to a
+        file local to the GAHP server which contains a valid X.509
+        proxy certificate.
+
+    + Return Line:
+
+        One of the following:
+
+        S <CRLF>
+        F <SP> <error-string> <CRLF>
+
+        Upon success, use the "S" version; if not recognized, use the
+        "F" version.
+
+        * error_string = brief string description of the error,
+            appropriate for reporting to a human end-user.
+
+    + Result Line:
+
+        None.
+
+    -----------------------------------------------
+
+    REFRESH_PROXY_FROM_FILE
+
+    Reset the X.509 proxy certificate cached by the GAHP server, which 
+    is used by the GAHP server for all subsequent authentication. This 
+    command can be used to tell the GAHP server to use a different 
+    credential than the one initially specified via the 
+    INITIALIZE_FROM_FILE command. The intention is this command will be 
+    used to refresh an about-to-expire credential used by the GAHP 
+    server.
+
+    + Request Line:
+
+        REFRESH_PROXY_FROM_FILE <SP> <path-to-local-proxy-file> <CRLF>
+
+        <path-to-local-proxy-file> = a fully-qualified pathname to a
+        file local to the GAHP server which contains a valid X.509
+        proxy certificate.
+
+    + Return Line:
+
+        One of the following:
+
+        S <CRLF>
+        F <SP> <error-string> <CRLF>
+
+        Upon success, use the "S" version; if not recognized, use the
+        "F" version.
+
+        * error_string = brief string description of the error,
+            appropriate for reporting to a human end-user.
+
+    + Result Line:
+
+        None.
+
+    -----------------------------------------------
+
+    CACHE_PROXY_FROM_FILE
+
+    Read an X.509 proxy from a specified file, and store it under the 
+    specified symbolic name.
+
+    The proxy is read from the file by the specified name. Its contents
+    of the proxy are persisted in memory. Subsequent changes to the file
+    will not affect the stored proxy. The proxy is not persisted when 
+    the GAHP server ternminates.
+
+    The intent of this command is to allow the GAHP server to capture
+    several X.509 proxies and use different proxies for different jobs.
+
+    Other commannds (e.g. by USE_CACHED_PROXY) may later be reference
+    the given cached proxy by its symbolic name.
+
+    + Request Line:
+
+        CACHE_PROXY_FROM_FILE <SP> <id> <SP>
+            <path-to-local-proxy-file> <CRLF>
+
+        <path-to-local-proxy-file> = a fully-qualified pathname to a
+        file local to the GAHP server which contains a valid X.509
+        proxy certificate.
+
+    + Return Line:
+
+        One of the following:
+
+        S <CRLF>
+        F <SP> <error-string> <CRLF>
+
+        Upon success, use the "S" version; if not recognized, use the
+        "F" version.
+
+        * error_string = brief string description of the error,
+            appropriate for reporting to a human end-user.
+
+    + Result Line:
+
+        None.
+
+    -----------------------------------------------
+
+    USE_CACHED_PROXY
+
+    Sets the proxy previously cached under the specified name, as the
+    "active" proxy. The active proxy will be used for all subsequent 
+    actions that require authentication. It will remain active until 
+    it is changed via the next invocation of USE_CACHED_PROXY.
+
+    The proxy must have been previously cached (under the specified 
+    name) using CACHE_PROXY_FROM_FILE command.
+
+    This command allows the GAHP server to simultaneously act on behalf 
+    of two or more jobs that require seperate credentials.
+
+    + Request Line:
+
+        USE_CACHED_PROXY <SP> <id> <CRLF>
+
+        <id> = the symbolic name of the proxy to use
+
+    + Return Line:
+
+        One of the following:
+
+        S <CRLF>
+        F <SP> <error-string> <CRLF>
+
+        Upon success, use the "S" version; if not recognized, use the
+        "F" version.
+
+        * error_string = brief string description of the error,
+            appropriate for reporting to a human end-user.
+
+    + Result Line:
+
+        None.
+
+    -----------------------------------------------
+
+    UNCACHE_PROXY
+
+    Removes the proxy (by the specified symbolic name) from the list of 
+    proxies cached by the GAHP server. 
+
+    The proxy must have been previously cached (under the specified 
+    name) using CACHE_PROXY_FROM_FILE command.
+
+    + Request Line:
+
+        UNCACHE_PROXY <SP> <id> <CRLF>
+
+        <id> = the symbolic name of the proxy to remove
+
+    + Return Line:
+
+        One of the following:
+
+        S <CRLF>
+        F <SP> <error-string> <CRLF>
+
+        Upon success, use the "S" version; if not recognized, use the
+        "F" version.
+
+        * error_string = brief string description of the error,
+            appropriate for reporting to a human end-user.
+
+    + Result Line:
+
+        None.
+
+    -----------------------------------------------
+
+3.5.3 GAHP COMMANDS SPECIFIC TO ARC CE
+
+    The following commands are specific to the ARC CE GAHP. The Request 
+    Line for all commands will include the following arguments:
+
+    * request-ID    = a non-zero Request ID
+
+    * service-URL   = the URL used to access the ARC CE service's 
+                      REST API
+
+    A full service URL will typically be 
+    "https://arc.example.org:443/arex" (without the quotes). Only the 
+    hostname is required. The GAHP server will fill in any other 
+    components that are omitted.
+
+    The following is the Return Line for all ARC CE GAHP commands unless
+    otherwise specified:
+
+    + Return Line:
+
+        <result> <CRLF>
+
+        * result             = the character "S" (without the quotes) for
+                               the successful submission of the request
+                               (meaning the request is now pending), or an
+                               "E" (without the quotes) for an error
+                               parsing the request or its arguments (e.g.
+                               an unrecognized or unsupported command, or
+                               missing or malformed arguments)
+
+    The following is the Result Line for all commands in this section 
+    unless otherwise specified.
+    This is the format for all commands that experience a failure 
+    (status code does not start with a '2').
+    In case of success, some commands will include additional 
+    information in their Result Line.
+
+    + Result Line:
+
+        <request-ID> <SP> <status-code> <SP> <status-msg> <CRLF>
+
+        * request-ID    = the value specified in the corresponding 
+                          Request Line
+
+        * status-code   = three-digit status code
+
+        * status-msg    = human-readable message related to the status 
+                          code
+
+    The status-code is the HTTP status code given by the server for this 
+    command. Depending on the command, this code may be taken from the 
+    HTTP response header or from inside the body of the response.
+    In particular, multiple commands can sometimes be sent as a single 
+    HTTP request. In this case, the status of each command is given 
+    separately in the HTTP response body.
+    Some of these commands require multiple HTTP requests. In this case,
+    if an HTTP request fails, no further HTTP requests for the command
+    should be issued and the status code of the failed request (non-2xx
+    number) should be returned.
+    If all requests succeed, then the status code of the last request 
+    should be returned.
+    In the case of a purely-local error, the status code 499 can be 
+    used.
+
+    -----------------------------------------------
+
+    ARC_PING
+
+    Send a simple request to the ARC CE server in order to determine if 
+    it is alive, reachable, responds to queries, and accepts the 
+    provided credentials.
+
+    + Request Line:
+
+        ARC_PING <SP> <request-ID> <SP> <service-URL> <CRLF>
+
+    -----------------------------------------------
+
+    ARC_JOB_NEW
+
+    Create a new job with the given ALD or RSL description.
+
+    + Request Line:
+
+        ARC_JOB_NEW <SP> <request-ID> <SP> <service-URL>
+            <SP> <job-desc> <CRLF>
+
+        * job-desc = valid ADL or RSL string describing the job
+
+    + Result Line:
+
+        <request-ID> <SP> <status-code> <SP> <status-msg> <SP>
+            <job-id> <SP> <job-status> <CRLF>
+
+        * job-id = unique identifier for this job assigned by the server
+        * job-status = ARC status of the job
+
+    -----------------------------------------------
+
+    ARC_JOB_STATUS
+
+    Query the status of a previously-submitted job.
+
+    + Request Line:
+
+        ARC_JOB_STATUS <SP> <request-ID> <SP> <service-URL>
+            <SP> <job-id> <CRLF>
+
+        * job-id = job id (as returned by ARC_JOB_NEW) of the job whose 
+                   status is desired
+
+    + Result Line:
+
+        <request-ID> <SP> <status-code> <SP> <status-msg> <SP>
+            <job-state> <CRLF>
+
+        * job-state = ARC state of the job
+
+    -----------------------------------------------
+
+    ARC_JOB_STATUS_ALL
+
+    Query the state of all jobs, optionally restricted to those in the
+    given set of states.
+
+    + Request Line:
+
+        ARC_JOB_STATUS <SP> <request-ID> <SP> <service-URL>
+            <SP> <states> <CRLF>
+
+        * states = comma-separated list of ARC job states to filter the
+                   set of job ids (done by the server).
+                   An empty value or 'NULL' means no filtering.
+
+    + Result Line:
+
+        <request-ID> <SP> <status-code> <SP> <status-msg> <SP>
+            <count> [<SP> <job-id> <SP> <job-state>]* <CRLF>
+
+        * count = the number of job-id/state pairs that will follow
+
+        * job-id = ARC job id
+        * job-state = ARC state of the job
+
+    -----------------------------------------------
+
+    ARC_JOB_INFO
+
+    Query detailed information about a previously-submitted job.
+
+    + Request Line:
+
+        ARC_JOB_INFO <SP> <request-ID> <SP> <service-URL>
+            <SP> <job-id> <CRLF>
+
+        * job-id = job id (as returned by ARC_JOB_NEW) of the job whose 
+                   status is desired
+
+    + Result Line:
+
+        <request-ID> <SP> <status-code> <SP> <status-msg> <SP>
+            <info> <CRLF>
+
+        * info = the ComputingActivity element of the job info response,
+                 represented in JSON
+
+    -----------------------------------------------
+
+    ARC_JOB_STAGE_IN
+
+    Transfer multiple input files into a job's sandbox on the server.
+    The number of filename arguments must match the count argument.
+    The name of each file on the server should be the basename of the 
+    local file.
+
+    + Request Line:
+
+        ARC_JOB_STAGE_IN <SP> <request-ID> <SP> <service-URL>
+            <SP> <job-id> <SP> <count> 
+            [<SP> <filename>]* <CRLF>
+
+        * job-id   = job id (as returned by ARC_JOB_NEW) of the job 
+                     whose status is desired
+
+        * count    = the number of filenames that will follow
+
+        * filename = the full path of a local file to be transferred
+
+    -----------------------------------------------
+
+    ARC_JOB_STAGE_OUT
+
+    Transfer multiple output files from a job's sandbox on the server
+    to the local filesystem.
+    The number of filename argument pairs must match the count argument.
+
+    + Request Line:
+
+        ARC_JOB_STAGE_OUT <SP> <request-ID> <SP> <service-URL>
+            <SP> <job-id> <SP> <count> 
+            [<SP> <src-filename> <SP> <dst-filename>]* <CRLF>
+
+        * job-id   = job id (as returned by ARC_JOB_NEW) of the job 
+                     whose status is desired
+
+        * count    = the number of filenames that will follow
+
+        * src-filename = the name of a file in the job sandbox
+
+        * dst-filename = the location on the local system to write the
+                         preceeding src-filename's contents
+
+    -----------------------------------------------
+
+    ARC_JOB_KILL
+
+    Direct the server to kill the job.
+
+    + Request Line:
+
+        ARC_JOB_KILL <SP> <request-ID> <SP> <service-URL>
+            <SP> <job-id> <CRLF>
+
+        * job-id = job id (as returned by ARC_JOB_NEW) of the job to 
+                   kill
+
+    -----------------------------------------------
+
+    ARC_JOB_CLEAN
+
+    Direct the server to clean up files related to a completed or failed 
+    job.
+
+    + Request Line:
+
+        ARC_JOB_CLEAN <SP> <request-ID> <SP> <service-URL>
+            <SP> <job-id> <CRLF>
+
+        * job-id = job id (as returned by ARC_JOB_NEW) of the job to 
+                   clean
+
+    -----------------------------------------------
+
+    ARC_DELEGATION_NEW
+
+    Delegate the currently-active X.509 proxy credential to the server.
+
+    + Request Line:
+
+        ARC_DELEGATION_NEW <SP> <request-ID> <SP> <service-URL> <CRLF>
+
+    + Result Line:
+
+        <request-ID> <SP> <status-code> <SP> <status-msg> <SP>
+            <deleg-id> <CRLF>
+
+        * deleg-id = id of the delegated proxy on the server
+
+    -----------------------------------------------
+
+    ARC_DELEGATION_RENEW
+
+    Delegate the currently-active X.509 proxy credential to the server,
+    replacing the credential with the given id.
+
+    + Request Line:
+
+        ARC_DELEGATION_RENEW <SP> <request-ID> <SP> <service-URL>
+            <SP> <deleg-id> <CRLF>
+
+        * deleg-id = delegation id (as returned by ARC_DELEGATION_NEW) 
+                     of the credential to replace
+
+    -----------------------------------------------

@@ -78,7 +78,7 @@ public:
 			@param credential The result of fetching the credential
 			@return true on success, false on failure
 		*/
-	bool getUserPassword( const char* user, const char* domain, MyString& passwd);
+	bool getUserPassword( const char* user, const char* domain, std::string & passwd);
 
 	/** Get the credential from the shadow that will be needed to run the job.
 

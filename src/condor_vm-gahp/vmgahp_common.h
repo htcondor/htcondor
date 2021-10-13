@@ -53,7 +53,6 @@ bool write_local_settings_from_file(FILE* out_fp,
                                     const char* start_mark = NULL,
                                     const char* end_mark = NULL);
 
-MyString parse_result_string( const char *result_string, int field_num);
 bool verify_digit_arg(const char *s);
 bool verify_number_args(const int is, const int should_be);
 bool validate_vmgahp_result_string(const char *result_string);
@@ -66,7 +65,7 @@ void write_to_daemoncore_pipe(const char* fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void write_stderr_to_pipe();
 int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out = NULL, StringList * cmd_in = NULL,
 		   StringList * cmd_err = NULL, bool merge_stderr_with_stdout = true);
-MyString makeErrorMessage(const char* err_string);
+std::string makeErrorMessage(const char* err_string);
 
 void initialize_uids(void);
 uid_t get_caller_uid(void);

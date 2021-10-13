@@ -81,7 +81,7 @@ email_custom_attributes( FILE* mailer, ClassAd* job_ad )
     MyString attributes;
 
     construct_custom_attributes( attributes, job_ad );
-    fprintf( mailer, "%s", attributes.Value( ) );
+    fprintf( mailer, "%s", attributes.c_str( ) );
     return;
 }
 
@@ -160,7 +160,7 @@ email_check_domain( const char* addr, ClassAd* job_ad )
 		// we've got to free() it now so we don't leak memory.
 	free( domain );
 
-	return strdup( full_addr.Value() );
+	return strdup( full_addr.c_str() );
 }
 
 
@@ -279,9 +279,9 @@ Email::open_stream( ClassAd* ad, int exit_reason, const char* subject )
 		full_subject += subject;
 	}
 	if(email_admin) {
-		fp = email_admin_open( full_subject.Value() );
+		fp = email_admin_open( full_subject.c_str() );
 	} else {
-		fp = email_user_open_id( ad, cluster, proc, full_subject.Value() );
+		fp = email_user_open_id( ad, cluster, proc, full_subject.c_str() );
 	}
 	return fp;
 }
@@ -313,8 +313,8 @@ Email::writeJobId( ClassAd* ad )
 		fprintf( fp, "\t%s", cmd );
 		free( cmd );
 		cmd = NULL;
-		if( !args.IsEmpty() ) {
-			fprintf( fp, " %s\n", args.Value() );
+		if( !args.empty() ) {
+			fprintf( fp, " %s\n", args.c_str() );
 		} else {
 			fprintf( fp, "\n" );
 		}
@@ -463,7 +463,7 @@ Email::writeCustom( ClassAd *ad )
     MyString attributes;
 
     construct_custom_attributes( attributes, ad );
-    fprintf( fp, "%s", attributes.Value() );
+    fprintf( fp, "%s", attributes.c_str() );
 
     return;
 }
@@ -552,9 +552,9 @@ Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
 			ad->LookupInteger( ATTR_JOB_STATUS, status );
 			ad->LookupInteger( ATTR_HOLD_REASON_CODE, code );
 			if( (status == HELD || exit_reason == JOB_SHOULD_HOLD) &&
-				code != CONDOR_HOLD_CODE_UserRequest &&
-				code != CONDOR_HOLD_CODE_JobPolicy &&
-				code != CONDOR_HOLD_CODE_SubmittedOnHold )
+				code != CONDOR_HOLD_CODE::UserRequest &&
+				code != CONDOR_HOLD_CODE::JobPolicy &&
+				code != CONDOR_HOLD_CODE::SubmittedOnHold )
 			{
 				return true;
 			}

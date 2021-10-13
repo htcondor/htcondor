@@ -86,12 +86,8 @@ void AzureJobReconfig()
 	AzureJob::setConnectFailureRetry( cfrc );
 
 	// Tell all the resource objects to deal with their new config values
-	AzureResource *next_resource;
-
-	AzureResource::ResourcesByName.startIterations();
-
-	while ( AzureResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		next_resource->Reconfig();
+	for (auto &elem : AzureResource::ResourcesByName) {
+		elem.second->Reconfig();
 	}
 }
 

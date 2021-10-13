@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -25,9 +24,16 @@ use CondorTest;
 use CondorUtils;
 use Data::Dumper;
 
-$cmd = 'job_negotiator_restart.dag';
 $testdesc =  'Test negotiator state across HTCondor restart';
 $testname = "job_negotiator_restart";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	NEGOTIATOR_DEBUG = $(NEGOTIATOR_DEBUG) D_COMMAND:1 D_FULLDEBUG
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+$cmd = 'job_negotiator_restart.dag';
 $dagman_args = "-verbose";
 
 @logfiles = ("job_negotiator_restart.dag.dagman.out");

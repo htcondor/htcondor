@@ -21,7 +21,6 @@
 #include "generic_query.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
-#include "MyString.h"
 
 static char *new_strdup (const char *);
 
@@ -260,7 +259,7 @@ setFloatKwList (char **value)
 
 // make query
 int GenericQuery::
-makeQuery (MyString &req)
+makeQuery (std::string &req)
 {
 	int		i, value;
 	char	*item;
@@ -281,7 +280,7 @@ makeQuery (MyString &req)
 			req += firstCategory ? "(" : " && (";
 			while ((item = stringConstraints [i].Next ()))
 			{
-				req.formatstr_cat ("%s(%s == \"%s\")", 
+				formatstr_cat (req, "%s(%s == \"%s\")", 
 						 firstTime ? " " : " || ", 
 						 stringKeywordList [i], item);
 				firstTime = false;
@@ -301,7 +300,7 @@ makeQuery (MyString &req)
 			req += firstCategory ? "(" : " && (";
 			while (integerConstraints [i].Next (value))
 			{
-				req.formatstr_cat ("%s(%s == %d)", 
+				formatstr_cat (req, "%s(%s == %d)", 
 						 firstTime ? " " : " || ",
 						 integerKeywordList [i], value);
 				firstTime = false;
@@ -321,7 +320,7 @@ makeQuery (MyString &req)
 			req += firstCategory ? "(" : " && (";
 			while (floatConstraints [i].Next (fvalue))
 			{
-				req.formatstr_cat ("%s(%s == %f)", 
+				formatstr_cat (req, "%s(%s == %f)", 
 						 firstTime ? " " : " || ",
 						 floatKeywordList [i], fvalue);
 				firstTime = false;
@@ -339,7 +338,7 @@ makeQuery (MyString &req)
 		req += firstCategory ? "(" : " && (";
 		while ((item = customANDConstraints.Next ()))
 		{
-			req.formatstr_cat ("%s(%s)", firstTime ? " " : " && ", item);
+			formatstr_cat (req, "%s(%s)", firstTime ? " " : " && ", item);
 			firstTime = false;
 			firstCategory = false;
 		}
@@ -354,7 +353,7 @@ makeQuery (MyString &req)
 		req += firstCategory ? "(" : " && (";
 		while ((item = customORConstraints.Next ()))
 		{
-			req.formatstr_cat ("%s(%s)", firstTime ? " " : " || ", item);
+			formatstr_cat (req, "%s(%s)", firstTime ? " " : " || ", item);
 			firstTime = false;
 			firstCategory = false;
 		}
@@ -367,7 +366,7 @@ makeQuery (MyString &req)
 int GenericQuery::
 makeQuery (ExprTree *&tree)
 {
-	MyString req;
+	std::string req;
 	int status = makeQuery(req);
 	if (status != Q_OK) return status;
 
@@ -375,7 +374,7 @@ makeQuery (ExprTree *&tree)
 	if (req.empty()) req = "TRUE";
 
 	// parse constraints and insert into query ad
-	if (ParseClassAdRvalExpr (req.Value(), tree) > 0) return Q_PARSE_ERROR;
+	if (ParseClassAdRvalExpr (req.c_str(), tree) > 0) return Q_PARSE_ERROR;
 
 	return Q_OK;
 }

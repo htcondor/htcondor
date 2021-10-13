@@ -41,9 +41,12 @@ DEFAULT_PARAMS = {
     "MASTER_ADDRESS_FILE": "$(LOG)/.master_address",
     "COLLECTOR_ADDRESS_FILE": "$(LOG)/.collector_address",
     "SCHEDD_ADDRESS_FILE": "$(LOG)/.schedd_address",
+    "MAIL": "/bin/true",
+    "SENDMAIL": "/bin/true",
     "UPDATE_INTERVAL": "2",
     "POLLING_INTERVAL": "2",
     "NEGOTIATOR_INTERVAL": "2",
+    "NEGOTIATOR_MIN_INTERVAL": "2",
     "STARTER_UPDATE_INTERVAL": "2",
     "SHADOW_QUEUE_UPDATE_INTERVAL": "2",
     "STARTER_INITIAL_UPDATE_INTERVAL": "2",
@@ -189,7 +192,7 @@ class Condor:
             self.passwords_dir,
             self.tokens_dir,
         ):
-            dir.mkdir(parents=True, exist_ok=False)
+            dir.mkdir(parents=True, exist_ok=not self.clean_local_dir_before)
             # logger.debug("Created dir {}".format(dir))
 
     def _write_config(self):
@@ -290,11 +293,12 @@ class Condor:
                 time.sleep(1)
                 continue
 
-            # TODO: what if we aren't starting up a startd?
+            if "STARTD" in daemons:
+                who_command = "condor_who -wait:10 'IsReady && STARTD_State =?= \"Ready\"'"
+            else:
+                who_command = "condor_who -wait:10 'IsReady'"
             who = self.run_command(
-                shlex.split(
-                    "condor_who -wait:10 'IsReady && STARTD_State =?= \"Ready\"'"
-                ),
+                shlex.split(who_command),
                 echo=False,
                 suppress=True,
             )
@@ -309,10 +313,9 @@ class Condor:
 
             who_ad = dict(kv.split(" = ") for kv in who.stdout.splitlines())
 
-            # TODO: same as above - what if we aren't starting up a startd?
             if (
                 who_ad.get("IsReady") == "true"
-                and who_ad.get("STARTD_State") == '"Ready"'
+                and ("STARTD" not in daemons or who_ad.get("STARTD_State") == '"Ready"')
                 and all(who_ad.get(d) == '"Alive"' for d in daemons)
             ):
                 self.condor_is_ready = True

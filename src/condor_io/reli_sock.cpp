@@ -1450,7 +1450,7 @@ ReliSock::serialize() const
 	char * msg = serializeMsgInfo();
 	char * md = serializeMdInfo();
 
-	formatstr( state, "%s%d*%s*%s*%s*%s*", parent_state, _special_state, _who.to_sinful().Value(), crypto, msg, md );
+	formatstr( state, "%s%d*%s*%s*%s*%s*", parent_state, _special_state, _who.to_sinful().c_str(), crypto, msg, md );
 
 	delete[] parent_state;
 	delete[] crypto;
@@ -1497,8 +1497,7 @@ ReliSock::serialize(const char *buf)
 
         citems = sscanf(ptmp, "%d*", &len);
 
-        if (1 == citems && len > 0) {
-            ptmp = strchr(ptmp, '*');
+        if (1 == citems && len > 0 && (ptmp = strchr(ptmp, '*'))) {
             ptmp++;
             memcpy(fqu, ptmp, len);
             if ((fqu[0] != ' ') && (fqu[0] != '\0')) {

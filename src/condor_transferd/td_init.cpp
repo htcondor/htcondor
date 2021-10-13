@@ -25,7 +25,6 @@
 #include "condor_classad.h"
 #include "daemon.h"
 #include "dc_schedd.h"
-#include "MyString.h"
 #include "condor_ftp.h"
 #include "condor_attributes.h"
 
@@ -165,7 +164,7 @@ TransferD::init(int argc, char *argv[])
 int
 TransferD::accept_transfer_request(FILE *fin)
 {
-	MyString encapsulation_method_line;
+	std::string encapsulation_method_line;
 	EncapMethod em;
 	int rval = 0;
 
@@ -174,10 +173,10 @@ TransferD::accept_transfer_request(FILE *fin)
 		In the future, there might be new classads which have a different
 		format, or something entirely different */
 
-	if (encapsulation_method_line.readLine(fin) == FALSE) {
+	if (readLine(encapsulation_method_line, fin) == FALSE) {
 		EXCEPT("Failed to read encapsulation method line!");
 	}
-	encapsulation_method_line.trim();
+	trim(encapsulation_method_line);
 
 	em = encap_method(encapsulation_method_line);
 
@@ -187,7 +186,7 @@ TransferD::accept_transfer_request(FILE *fin)
 
 		case ENCAP_METHOD_UNKNOWN:
 			EXCEPT("I don't understand the encapsulation method of the "
-					"protocol: %s\n", encapsulation_method_line.Value());
+					"protocol: %s\n", encapsulation_method_line.c_str());
 			break;
 
 		case ENCAP_METHOD_OLD_CLASSADS:
@@ -267,7 +266,7 @@ int
 TransferD::setup_transfer_request_handler(int  /*cmd*/, Stream *sock)
 {
 	ReliSock *rsock = (ReliSock*)sock;
-	MyString sock_id;
+	std::string sock_id;
 
 	dprintf(D_ALWAYS, "Got TRANSFER_CONTROL_CHANNEL!\n");
 
@@ -302,7 +301,7 @@ TransferD::setup_transfer_request_handler(int  /*cmd*/, Stream *sock)
 
 	sock_id += "<TreqChannel-Socket>";
 
-	char* _sock_id = strdup( sock_id.Value() );		//de-const
+	char* _sock_id = strdup( sock_id.c_str() );		//de-const
 
 	// register the handler for any future transfer requests on this socket.
 	int retval = daemonCore->Register_Socket((Sock*)rsock, _sock_id,
@@ -326,7 +325,7 @@ TransferD::setup_transfer_request_handler(int  /*cmd*/, Stream *sock)
 int
 TransferD::accept_transfer_request_handler(Stream *sock)
 {
-	MyString encapsulation_method_line;
+	std::string encapsulation_method_line;
 	EncapMethod em;
 
 	dprintf(D_ALWAYS, 
@@ -345,10 +344,10 @@ TransferD::accept_transfer_request_handler(Stream *sock)
 	}
 	sock->end_of_message();
 
-	encapsulation_method_line.trim();
+	trim(encapsulation_method_line);
 
 	dprintf(D_ALWAYS, "Read encap line: %s\n", 
-		encapsulation_method_line.Value());
+		encapsulation_method_line.c_str());
 
 	em = encap_method(encapsulation_method_line);
 
@@ -358,7 +357,7 @@ TransferD::accept_transfer_request_handler(Stream *sock)
 
 		case ENCAP_METHOD_UNKNOWN:
 			EXCEPT("I don't understand the encapsulation method of the "
-					"protocol: %s\n", encapsulation_method_line.Value());
+					"protocol: %s\n", encapsulation_method_line.c_str());
 			break;
 
 		case ENCAP_METHOD_OLD_CLASSADS:
@@ -517,9 +516,9 @@ RegisterResult
 TransferD::register_to_schedd(ReliSock **regsock_ptr)
 {
 	CondorError errstack;
-	MyString sname;
-	MyString id;
-	MyString sinful;
+	std::string sname;
+	std::string id;
+	const char *sinful;
 	bool rval;
 	
 	if (*regsock_ptr != NULL) {
@@ -537,12 +536,13 @@ TransferD::register_to_schedd(ReliSock **regsock_ptr)
 	
 	// what is my sinful string?
 	sinful = daemonCore->InfoCommandSinfulString(-1);
+	ASSERT(sinful);
 
 	dprintf(D_FULLDEBUG, "Registering myself(%s) to schedd(%s)\n",
-		sinful.Value(), sname.Value());
+		sinful, sname.c_str());
 
 	// hook up to the schedd.
-	DCSchedd schedd(sname.Value(), NULL);
+	DCSchedd schedd(sname.c_str(), NULL);
 
 	// register myself, give myself 1 minute to connect.
 	rval = schedd.register_transferd(sinful, id, 20*3, regsock_ptr, &errstack);

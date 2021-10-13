@@ -22,7 +22,7 @@ use CondorTest;
 use CondorUtils;
 
 use Cwd;
-
+use File::Temp;
 
 my $topleveldir = getcwd();
 
@@ -50,9 +50,9 @@ print scalar localtime() . "\n";
 $pid = $$;
 $mypid = $pid;
 
-$pidleveldir = $topleveldir . "/" . $mypid;
-system("mkdir -p $pidleveldir");
-chdir("$pidleveldir");
+my $dir = File::Temp->newdir(CLEANUP => 0, DIR => $topleveldir);
+$uniquedir = $dir->dirname;
+chdir("$uniquedir");
 system("tar -zxvf ../$mygsicerts");
 system("pwd;ls");
 # while here edit user into the mapfile
@@ -137,27 +137,27 @@ while(<CONFIGTPLATE>)
 	CondorUtils::fullchomp($_);
 	$line = $_;
 	if($line =~ /^GSI_DAEMON_CERT\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
+		$tmp = $uniquedir . $1;
 		print CONFIG "GSI_DAEMON_CERT = $tmp\n";
 	} elsif($line =~ /^GSI_DAEMON_KEY\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
+		$tmp = $uniquedir . $1;
 		print CONFIG "GSI_DAEMON_KEY = $tmp\n";
 	} elsif($line =~ /^GSI_DAEMON_TRUSTED_CA_DIR\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
+		$tmp = $uniquedir . $1;
 		print CONFIG "GSI_DAEMON_TRUSTED_CA_DIR = $tmp\n";
 	} elsif($line =~ /^GSI_DAEMON_DIRECTORY\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
+		$tmp = $uniquedir . $1;
 		print CONFIG "GSI_DAEMON_DIRECTORY = $tmp\n";
 	} elsif($line =~ /^GRIDMAP\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
+		$tmp = $uniquedir . $1;
 		print CONFIG "GRIDMAP = $tmp\n";
 	} elsif($line =~ /^X509_CERT_DIR\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
+		$tmp = $uniquedir . $1;
 		print CONFIG "X509_CERT_DIR = $tmp\n";
 		$ENV{X509_CERT_DIR} = $tmp;
 		CondorTest::debug("Set $ENV{X509_CERT_DIR} into the environment\n",1);
 	} elsif($line =~ /^X509_USER_PROXY\s*=\s*XXXXX(\/.*)$/) {
-		$tmp = $pidleveldir . $1;
+		$tmp = $uniquedir . $1;
 		print CONFIG "X509_USER_PROXY = $tmp\n";
 		$ENV{X509_USER_PROXY} = $tmp;
 		CondorTest::debug("Set $ENV{X509_USER_PROXY} into the environment\n",1);

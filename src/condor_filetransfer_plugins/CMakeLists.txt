@@ -16,7 +16,6 @@
  # 
  ############################################################### 
 
-
 #  Curl isn't linking properly on windows, turn it as a short term hackaround
 if (CURL_FOUND)
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../openstack_gahp/rapidjson.src/include")

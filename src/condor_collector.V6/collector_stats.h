@@ -107,12 +107,11 @@ class CollectorClassStatsList
 class StatsHashKey
 {
   public:
-	MyString type;
-    MyString name;
-    MyString ip_addr;
+    std::string type;
+    std::string name;
+    std::string ip_addr;
     friend bool operator== (const StatsHashKey &, const StatsHashKey &);
-	void getstr( MyString & ) const;
-  private:
+    void getstr( std::string & ) const;
 };
 
 // Type for the hash tables ...
@@ -180,7 +179,7 @@ struct UpdatesStats {
 	stats_entry_recent<long> ForkQueriesFrom[SUBSYSTEM_ID_COUNT]; // Track subsystems < the AUTO subsys.
 #endif
 
-	// per-ad-type counters 
+	// per-ad-type counters
 	std::map<std::string, UpdatesCounters> PerClass;
 
 	// these are used by generic tick
@@ -194,7 +193,7 @@ struct UpdatesStats {
 	// non-published values
 	time_t InitTime;            // last time we init'ed the structure
 	int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
-	int    RecentWindowQuantum;
+	int    RecentWindowQuantum {0};
 	int    PublishFlags;
 	int    AdvanceAtLastTick;
 

@@ -113,7 +113,7 @@ int condor_getnameinfo (const condor_sockaddr& addr,
 	ret = getnameinfo( sa, len, __host, __hostlen, __serv, __servlen, __flags);
 	double timediff = _condor_debug_get_time_double() - begin;
 	if (timediff > getnameinfo_slow_limit) {
-		dprintf(D_ALWAYS, "WARNING: Saw slow DNS query, which may impact entire system: getnameinfo(%s) took %f seconds.\n", addr.to_ip_string().Value(), timediff);
+		dprintf(D_ALWAYS, "WARNING: Saw slow DNS query, which may impact entire system: getnameinfo(%s) took %f seconds.\n", addr.to_ip_string().c_str(), timediff);
 	}
 	return ret;
 }

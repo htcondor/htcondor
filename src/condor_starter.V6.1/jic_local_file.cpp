@@ -130,12 +130,12 @@ JICLocalFile::readClassAdFromFile( char* filename, ClassAd* ad )
 		needs_close = false;
 	}
 
-	MyString line;
-	while( line.readLine(fp) ) {
+	std::string line;
+	while( readLine(line, fp) ) {
         read_something = true;
-		line.chomp();
+		chomp(line);
 		if( line[0] == '#' ) {
-			dprintf( D_JOB, "IGNORING COMMENT: %s\n", line.Value() );
+			dprintf( D_JOB, "IGNORING COMMENT: %s\n", line.c_str() );
 			continue;
 		}
 		if( ! line[0] ) {
@@ -143,11 +143,11 @@ JICLocalFile::readClassAdFromFile( char* filename, ClassAd* ad )
 			continue;
 		}
 		if( IsDebugLevel( D_JOB ) ) {
-			dprintf( D_JOB, "FILE: %s\n", line.Value() );
+			dprintf( D_JOB, "FILE: %s\n", line.c_str() );
 		} 
-        if( ! ad->Insert(line.Value()) ) {
+        if( ! ad->Insert(line) ) {
             dprintf( D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
-                     "ignoring this line\n", line.Value() );
+                     "ignoring this line\n", line.c_str() );
         }
     }
 	

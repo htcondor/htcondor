@@ -153,7 +153,7 @@ struct SubmitDagDeepOptions
     bool bVerbose;
     bool bForce;
     MyString strNotification;
-    MyString strDagmanPath; // path to dagman binary
+	std::string strDagmanPath; // path to dagman binary
     bool useDagDir;
     MyString strOutfileDir;
     MyString batchName; // optional value from -batch-name argument, will be double quoted if it exists.

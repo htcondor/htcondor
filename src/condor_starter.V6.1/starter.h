@@ -209,8 +209,12 @@ public:
 		if (inner && ! InnerWorkingDir.empty()) {
 			return InnerWorkingDir.c_str();
 		}
-		return WorkingDir.Value();
+		return WorkingDir.c_str();
 	}
+		/* Should the temporary directory under Execute be expected to
+		 * exist?
+		 */
+	bool WorkingDirExists() const { return m_workingDirExists; }
 		/* Set the working dir from the perspective of the job. This may differ from
 		*  the Starter's WorkingDir value when the job is in a container.  For a containerized job
 		*  Working dir will be something like /var/lib/condor/execute/dir_nnnn  or C:\Condor\Execute\dir_nnnn
@@ -255,8 +259,8 @@ public:
 		/** Set up the complete environment for the job.  This includes
 			STARTER_JOB_ENVIRONMENT, the job ClassAd, and PublishToEnv()
 		*/
-	bool GetJobEnv( ClassAd *jobad, Env *job_env, MyString *env_errors );
-	
+	bool GetJobEnv( ClassAd *jobad, Env *job_env, std::string & env_errors );
+
 		/** Pointer to our JobInfoCommuniator object, which abstracts
 			away any details about our communications with whatever
 			entity is controlling our job.  This way, the starter can
@@ -271,7 +275,7 @@ public:
 			running on a slot at all.
 		*/
 	int getMySlotNumber( void );
-	MyString getMySlotName( void );
+	std::string getMySlotName( void );
 
 		/** Returns the number of jobs currently running under
 		 * this multi-starter.
@@ -396,11 +400,12 @@ private:
 	char *Execute;
 		// The temporary directory created under Execute for this job.
 		// If file transfer is used, this will also be the IWD of the job.
-	MyString WorkingDir;
-	MyString InnerWorkingDir; // if non-empty, this is the jobs view if the working dir
+	std::string WorkingDir;
+	std::string InnerWorkingDir; // if non-empty, this is the jobs view if the working dir
 	char *orig_cwd;
-	MyString m_recoveryFile;
+	std::string m_recoveryFile;
 	bool is_gridshell;
+	bool m_workingDirExists;
 #ifdef WIN32
 	bool has_encrypted_working_dir;
 #endif

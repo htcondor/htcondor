@@ -23,6 +23,7 @@
 %endif
 
 %if %uw_build
+%define devtoolset 0
 %define debug 1
 %endif
 
@@ -38,11 +39,8 @@
 
 %define python 1
 
-%if 0%{?osg}
+# Unconditionally turn off globus
 %define globus 0
-%else
-%define globus 1
-%endif
 
 # Temporarily turn parallel_setup off
 %define parallel_setup 0
@@ -163,7 +161,6 @@ BuildRequires: byacc
 BuildRequires: flex
 BuildRequires: patch
 BuildRequires: libtool
-BuildRequires: libtool-ltdl-devel
 BuildRequires: pam-devel
 BuildRequires: nss-devel
 BuildRequires: openssl-devel
@@ -204,11 +201,11 @@ BuildRequires: globus-callout-devel
 BuildRequires: globus-common-devel
 BuildRequires: globus-ftp-client-devel
 BuildRequires: globus-ftp-control-devel
-BuildRequires: voms-devel
+BuildRequires: libtool-ltdl-devel
 %endif
+BuildRequires: voms-devel
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
-BuildRequires: libtool-ltdl-devel
 
 BuildRequires: libcgroup-devel
 Requires: libcgroup
@@ -329,11 +326,11 @@ Requires: globus-gss-assist
 Requires: globus-gssapi-gsi
 Requires: globus-openssl-module
 Requires: globus-xio-gsi-driver
-Requires: voms
+Requires: libtool-ltdl
 %endif
+Requires: voms
 Requires: krb5-libs
 Requires: libcom_err
-Requires: libtool-ltdl
 Requires: munge-libs
 Requires: openssl-libs
 Requires: scitokens-cpp
@@ -726,6 +723,7 @@ export CMAKE_PREFIX_PATH=/usr
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
+       -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -D_VERBOSE:BOOL=TRUE \
@@ -738,7 +736,6 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
-       -DWITH_CREAM:BOOL=FALSE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
        -DCMAKE_INSTALL_PREFIX:PATH=/usr \
@@ -766,6 +763,7 @@ export CMAKE_PREFIX_PATH=/usr
 %endif
        -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
+       -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
@@ -786,7 +784,6 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
-       -DWITH_CREAM:BOOL=FALSE \
 %if %globus
        -DWITH_GLOBUS:BOOL=TRUE \
 %else
@@ -1153,23 +1150,10 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_job_router
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
+%_libexecdir/condor/htcondor_docker_test
 %if %globus
 %_sbindir/condor_gridshell
-%_sbindir/grid_monitor
 %_sbindir/nordugrid_gahp
-%endif
-%if %blahp
-%dir %_libexecdir/condor/glite/bin
-%_libexecdir/condor/glite/bin/kubernetes_cancel.sh
-%_libexecdir/condor/glite/bin/kubernetes_hold.sh
-%_libexecdir/condor/glite/bin/kubernetes_resume.sh
-%_libexecdir/condor/glite/bin/kubernetes_status.sh
-%_libexecdir/condor/glite/bin/kubernetes_submit.sh
-%_libexecdir/condor/glite/bin/nqs_cancel.sh
-%_libexecdir/condor/glite/bin/nqs_hold.sh
-%_libexecdir/condor/glite/bin/nqs_resume.sh
-%_libexecdir/condor/glite/bin/nqs_status.sh
-%_libexecdir/condor/glite/bin/nqs_submit.sh
 %endif
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster
@@ -1182,6 +1166,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/data_plugin
 %_libexecdir/condor/box_plugin.py
 %_libexecdir/condor/gdrive_plugin.py
+%_libexecdir/condor/common-cloud-attributes-google.py
+%_libexecdir/condor/common-cloud-attributes-aws.py
+%_libexecdir/condor/common-cloud-attributes-aws.sh
 %_libexecdir/condor/onedrive_plugin.py
 # TODO: get rid of these
 # Not sure where these are getting built
@@ -1216,7 +1203,6 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_config_val.1.gz
-%_mandir/man1/condor_convert_history.1.gz
 %_mandir/man1/condor_dagman.1.gz
 %_mandir/man1/condor_fetchlog.1.gz
 %_mandir/man1/condor_findhost.1.gz
@@ -1285,6 +1271,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_evicted_files.1.gz
 %_mandir/man1/condor_watch_q.1.gz
 %_mandir/man1/get_htcondor.1.gz
+%_mandir/man1/htcondor.1.gz
 # bin/condor is a link for checkpoint, reschedule, vacate
 %_bindir/condor_submit_dag
 %_bindir/condor_who
@@ -1354,7 +1341,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
-%_sbindir/condor_convert_history
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
 %_sbindir/condor_had
@@ -1386,6 +1372,7 @@ rm -rf %{buildroot}
 %_sbindir/remote_gahp
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
+%_sbindir/arc_gahp
 %_libexecdir/condor/condor_gpu_discovery
 %_libexecdir/condor/condor_gpu_utilization
 %_sbindir/condor_vm-gahp-vmware
@@ -1544,6 +1531,7 @@ rm -rf %{buildroot}
 %_bindir/condor_top
 %_bindir/classad_eval
 %_bindir/condor_watch_q
+%_bindir/htcondor
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
 %_libexecdir/condor/libclassad_python3_user.so
@@ -1552,6 +1540,7 @@ rm -rf %{buildroot}
 /usr/lib64/python%{python3_version}/site-packages/classad/
 /usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
+/usr/lib64/python%{python3_version}/site-packages/htcondor_cli/
 %endif
 %endif
 %endif
@@ -1674,12 +1663,25 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Sep 23 2021 Tim Theisen <tim@cs.wisc.edu> - 9.2.0-1
+- Add SERVICE node that runs alongside the DAG for the duration of the DAG
+- Fix problem where proxy delegation to older HTCondor versions failed
+- Jobs are now re-run if the execute directory unexpectedly disappears
+- HTCondor counts the number of files transfered at the submit node
+- Fix a bug that caused jobs to fail when using newer Singularity versions
+
 * Thu Sep 23 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.6-1
 - CUDA_VISIBLE_DEVICES can now contain GPU-<uuid> formatted values
 - Fixed a bug that caused jobs to fail when using newer Singularity versions
 - Fixed a bug in the Windows MSI installer for the latest Windows 10 version
 - Fixed bugs relating to the transfer of standard out and error logs
 - MacOS 11.x now reports as 10.16.x (which is better than reporting x.0)
+
+* Thu Aug 19 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.3-1
+- Globus GSI is no longer needed for X.509 proxy delegation
+- Globus GSI authentication is disabled by default
+- The job ad now contains a history of job holds and hold reasons
+- If a user job policy expression evaluates to undefined, it is ignored
 
 * Wed Aug 18 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.5-1
 - Other authentication methods are tried if mapping fails using SciTokens
@@ -1690,6 +1692,11 @@ fi
 - Fix bug where misconfigured MIG devices confused condor_gpu_discovery
 - The transfer_checkpoint_file list may now include input files
 
+* Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.2-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
 * Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.4-1
 - Fixes for security issues
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
@@ -1698,6 +1705,11 @@ fi
 * Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.15-1
 - Fix for security issue
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+
+* Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.1-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
 
 * Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.3-1
 - Fixes for security issues
@@ -1716,6 +1728,13 @@ fi
 - Added first class submit keywords for SciTokens
 - Fixed MUNGE authentication
 - Fixed Windows installer to work when the install location isn't C:\Condor
+
+* Thu May 20 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.0-1
+- Support for submitting to ARC-CE via the REST interface
+- DAGMan can put failed jobs on hold (user can correct problems and release)
+- Can run gdb and ptrace within Docker containers
+- A small Docker test job is run on the execute node to verify functionality
+- The number of instructions executed is reported in the job Ad on Linux
 
 * Mon May 17 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.1-1
 - Fix problem where X.509 proxy refresh kills job when using AES encryption

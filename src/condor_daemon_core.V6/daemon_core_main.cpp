@@ -269,7 +269,7 @@ public:
 		}
 
 		auto peer_location = token_request.getPeerLocation();
-		dprintf(D_FULLDEBUG|D_SECURITY, "Evaluating request against %lu rules.\n", m_approval_rules.size());
+		dprintf(D_FULLDEBUG|D_SECURITY, "Evaluating request against %zu rules.\n", m_approval_rules.size());
 		for (auto &rule : m_approval_rules) {
 			if (!rule.m_approval_netblock->find_matches_withnetwork(
 					peer_location.c_str(), nullptr)) {
@@ -415,7 +415,7 @@ private:
 	static void
 	tryTokenRequests() {
 		bool should_reschedule = false;
-		dprintf(D_SECURITY|D_FULLDEBUG, "There are %lu token requests remaining.\n",
+		dprintf(D_SECURITY|D_FULLDEBUG, "There are %zu token requests remaining.\n",
 		m_token_requests.size());
 		for (auto & request : m_token_requests)
 		{
@@ -571,7 +571,7 @@ public:
 	: m_rate_limit(rate_limit),
 	m_last_update(std::chrono::steady_clock::now())
 	{
-		classy_counted_ptr<stats_ema_config> ema_config(new stats_ema_config);
+		std::shared_ptr<stats_ema_config> ema_config(new stats_ema_config);
 		ema_config->add(10, "10s");
 		m_request_rate.ConfigureEMAHorizons(ema_config);
 		m_request_rate.recent_start_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -861,7 +861,7 @@ DC_Exit( int status, const char *shutdown_program )
 		  cleared out our config hashtable, too.  Derek 2004-11-23
 		*/
 	if ( shutdown_program ) {
-#     if (HAVE_EXECL)
+#     if !defined(WIN32)
 		dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING BY EXECING %s\n",
 				 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
 				 shutdown_program );
@@ -870,7 +870,7 @@ DC_Exit( int status, const char *shutdown_program )
 		set_priv( p );
 		dprintf( D_ALWAYS, "**** execl() FAILED %d %d %s\n",
 				 exec_status, errno, strerror(errno) );
-#     elif defined(WIN32)
+#     else
 		dprintf( D_ALWAYS,
 				 "**** %s (%s_%s) pid %lu EXECING SHUTDOWN PROGRAM %s\n",
 				 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
@@ -882,8 +882,6 @@ DC_Exit( int status, const char *shutdown_program )
 			dprintf( D_ALWAYS, "**** _execl() FAILED %d %d %s\n",
 					 exec_status, errno, strerror(errno) );
 		}
-#     else
-		dprintf( D_ALWAYS, "**** execl() not available on this system\n" );
 #     endif
 	}
 	dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING WITH STATUS %d\n",
@@ -912,7 +910,7 @@ kill_daemon_ad_file()
 {
 	MyString param_name;
 	param_name.formatstr( "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
-	char *ad_file = param(param_name.Value());
+	char *ad_file = param(param_name.c_str());
 	if( !ad_file ) {
 		return;
 	}
@@ -938,7 +936,7 @@ drop_addr_file()
 	prefix += get_mySubSystem()->getName();
 
 	// Fill in addrFile[0] and addr[0] with info about regular command port
-	sprintf( addr_file, "%s_ADDRESS_FILE", prefix.Value() );
+	sprintf( addr_file, "%s_ADDRESS_FILE", prefix.c_str() );
 	if( addrFile[0] ) {
 		free( addrFile[0] );
 	}
@@ -951,7 +949,7 @@ drop_addr_file()
 	}
 
 	// Fill in addrFile[1] and addr[1] with info about superuser command port
-	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", prefix.Value() );
+	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", prefix.c_str() );
 	if( addrFile[1] ) {
 		free( addrFile[1] );
 	}
@@ -962,21 +960,21 @@ drop_addr_file()
 		if( addrFile[i] ) {
 			MyString newAddrFile;
 			newAddrFile.formatstr("%s.new",addrFile[i]);
-			if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
+			if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.c_str(), "w")) ) {
 				fprintf( ADDR_FILE, "%s\n", addr[i] );
 				fprintf( ADDR_FILE, "%s\n", CondorVersion() );
 				fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
 				fclose( ADDR_FILE );
-				if( rotate_file(newAddrFile.Value(),addrFile[i])!=0 ) {
+				if( rotate_file(newAddrFile.c_str(),addrFile[i])!=0 ) {
 					dprintf( D_ALWAYS,
 							 "DaemonCore: ERROR: failed to rotate %s to %s\n",
-							 newAddrFile.Value(),
+							 newAddrFile.c_str(),
 							 addrFile[i]);
 				}
 			} else {
 				dprintf( D_ALWAYS,
 						 "DaemonCore: ERROR: Can't open address file %s\n",
-						 newAddrFile.Value() );
+						 newAddrFile.c_str() );
 			}
 		}
 	}	// end of for loop
@@ -1192,11 +1190,11 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 	
 		// Next, try to create the given directory, if it doesn't
 		// already exist.
-	make_dir( newdir.Value() );
+	make_dir( newdir.c_str() );
 
 		// Now, set our own config hashtable entry so we start using
 		// this new directory.
-	config_insert( param_name, newdir.Value() );
+	config_insert( param_name, newdir.c_str() );
 
 	// Finally, insert the _condor_<param_name> environment
 	// variable, so our children get the right configuration.
@@ -1206,7 +1204,7 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 	env_str += param_name;
 	env_str += "=";
 	env_str += newdir;
-	char *env_cstr = strdup( env_str.Value() );
+	char *env_cstr = strdup( env_str.c_str() );
 	if( SetEnv(env_cstr) != TRUE ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
 				 env_cstr );
@@ -1238,7 +1236,7 @@ handle_dynamic_dirs()
 	int mypid = daemonCore->getpid();
 	char buf[256];
 	// TODO: Picking IPv4 arbitrarily.
-	sprintf( buf, "%s-%d", get_local_ipaddr(CP_IPV4).to_ip_string().Value(), mypid );
+	sprintf( buf, "%s-%d", get_local_ipaddr(CP_IPV4).to_ip_string().c_str(), mypid );
 
 	dprintf(D_DAEMONCORE | D_VERBOSE, "Using dynamic directories with suffix: %s\n", buf);
 	set_dynamic_dir( "LOG", buf );
@@ -1696,15 +1694,15 @@ handle_fetch_log(int cmd, Stream *s )
 		full_filename += ext;
 
 		if( strchr(ext,DIR_DELIM_CHAR) ) {
-			dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: invalid file extension specified by user: ext=%s, filename=%s\n",ext,full_filename.Value() );
+			dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: invalid file extension specified by user: ext=%s, filename=%s\n",ext,full_filename.c_str() );
 			free(pname);
 			return FALSE;
 		}
 	}
 
-	int fd = safe_open_wrapper_follow(full_filename.Value(),O_RDONLY);
+	int fd = safe_open_wrapper_follow(full_filename.c_str(),O_RDONLY);
 	if(fd<0) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",full_filename.Value());
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",full_filename.c_str());
 		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
 		if (!stream->code(result)) {
 				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
@@ -1808,7 +1806,7 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 		MyString fullPath(dirName);
 		fullPath += "/";
 		fullPath += filename;
-		int fd = safe_open_wrapper_follow(fullPath.Value(),O_RDONLY);
+		int fd = safe_open_wrapper_follow(fullPath.c_str(),O_RDONLY);
 		if (fd >= 0) {
 			filesize_t size;
 			stream->put_file(&size, fd);
@@ -2455,7 +2453,7 @@ handle_dc_auto_approve_token_request(int, Stream* stream )
 		time_t now = time(NULL);
 		// We otherwise only evaluate each request as it comes in, so we have to
 		// check all of them now if we want to approve ones that came in recently.
-		dprintf(D_SECURITY|D_FULLDEBUG, "Evaluating %lu existing requests for "
+		dprintf(D_SECURITY|D_FULLDEBUG, "Evaluating %zu existing requests for "
 			"auto-approval.\n", g_request_map.size());
 		for (auto &iter : g_request_map) {
 			if (error_code) {break;}
@@ -2887,7 +2885,8 @@ handle_config_val(int idCmd, Stream* stream )
 	if (idCmd == DC_CONFIG_VAL) {
 		int retval = TRUE; // assume success
 
-		MyString name_used, value;
+		std::string name_used;
+		MyString value;
 		const char * def_val = NULL;
 		const MACRO_META * pmet = NULL;
 		const char * subsys = get_mySubSystem()->getName();
@@ -2904,7 +2903,7 @@ handle_config_val(int idCmd, Stream* stream )
 			}
 		} else {
 
-			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
+			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.c_str(), def_val ? def_val : "NULL");
 
 			if (val) { tmp = expand_param(val, local_name, subsys, 0); } else { tmp = NULL; }
 			if( ! stream->code_nullstr(tmp) ) {
@@ -2913,7 +2912,7 @@ handle_config_val(int idCmd, Stream* stream )
 			}
 			if (tmp) {free(tmp);} tmp = NULL;
 
-			name_used.upper_case();
+			upper_case(name_used);
 			name_used += " = ";
 			if (val) name_used += val;
 			if ( ! stream->code(name_used)) {
@@ -3520,6 +3519,7 @@ int dc_main( int argc, char** argv )
 				if ( ptmp1 ) {
 					sprintf(ptmp1,"%s_CONFIG=%s", myDistro->GetUc(), ptmp);
 					SetEnv(ptmp1);
+					free(ptmp1);
 				}
 			} else {
 				fprintf( stderr, 
@@ -3863,11 +3863,11 @@ int dc_main( int argc, char** argv )
 	// See if the config tells us to wait on startup for a debugger to attach.
 	MyString debug_wait_param;
 	debug_wait_param.formatstr("%s_DEBUG_WAIT", get_mySubSystem()->getName() );
-	if (param_boolean(debug_wait_param.Value(), false, false)) {
+	if (param_boolean(debug_wait_param.c_str(), false, false)) {
 		volatile int debug_wait = 1;
 		dprintf(D_ALWAYS,
 				"%s is TRUE, waiting for debugger to attach to pid %d.\n", 
-				debug_wait_param.Value(), (int)::getpid());
+				debug_wait_param.c_str(), (int)::getpid());
 		#ifndef WIN32
 			// since we are about to delay for an arbitrary amount of time, write to the background pipe
 			// so that our forked parent can exit.
@@ -3964,7 +3964,7 @@ int dc_main( int argc, char** argv )
 
 	if (global_config_source != "") {
 		dprintf(D_ALWAYS, "Using config source: %s\n", 
-				global_config_source.Value());
+				global_config_source.c_str());
 	} else {
 		const char* env_name = EnvGetName( ENV_CONFIG );
 		char* env = getenv( env_name );
@@ -4359,7 +4359,7 @@ int dc_main( int argc, char** argv )
 	// send it to the SecMan object so it can include it in any
 	// classads it sends.  if this is NULL, it will not include
 	// the attribute.
-	daemonCore->sec_man->set_parent_unique_id(parent_id.Value());
+	daemonCore->sec_man->set_parent_unique_id(parent_id.c_str());
 
 	// now re-set the identity so that any children we spawn will have it
 	// in their environment

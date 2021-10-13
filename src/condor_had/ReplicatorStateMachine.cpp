@@ -84,7 +84,7 @@ void
 ReplicatorStateMachine::finalizeDelta( )
 {
     ClassAd invalidate_ad;
-    MyString line;
+    std::string line;
 
     dprintf( D_ALWAYS, "ReplicatorStateMachine::finalizeDelta started\n" );
     utilCancelTimer(m_replicationTimerId);
@@ -105,8 +105,8 @@ ReplicatorStateMachine::finalizeDelta( )
 
     SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
     SetTargetTypeName( invalidate_ad, "Replication" );
-    line.formatstr( "%s == \"%s\"", ATTR_NAME, m_name.c_str( ) );
-    invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
+    formatstr( line, "%s == \"%s\"", ATTR_NAME, m_name.c_str( ) );
+    invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.c_str( ) );
 	invalidate_ad.Assign( ATTR_NAME, m_name );
     daemonCore->sendUpdates( INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false );
 }
@@ -171,7 +171,7 @@ ReplicatorStateMachine::reinitialize()
         dprintf( D_FULLDEBUG, "ReplicatorStateMachine::reinitialize %s=%d\n",
                 "HAD_LIST", m_hadAliveTolerance );
     } else {
-        utilCrucialError( utilNoParameterError( "HAD_LIST", "HAD" ).Value( ));
+        utilCrucialError( utilNoParameterError( "HAD_LIST", "HAD" ).c_str( ));
     }
 
     initializeClassAd();
@@ -225,7 +225,7 @@ ReplicatorStateMachine::initializeClassAd()
     SetMyTypeName(*m_classAd, "Replication");
     SetTargetTypeName(*m_classAd, "");
 
-    formatstr( m_name, "replication@%s -p %d", get_local_fqdn().Value(),
+    formatstr( m_name, "replication@%s -p %d", get_local_fqdn().c_str(),
 				  daemonCore->InfoCommandPort( ) );
     m_classAd->Assign( ATTR_NAME, m_name );
     m_classAd->Assign( ATTR_MY_ADDRESS,
@@ -342,7 +342,7 @@ ReplicatorStateMachine::inLeaderStateHandler( )
             "is set to %s", ctime( &m_lastHadAliveTime ) );
     //if( downloadTransferersNumber( ) == 0 && 
 	// 	  replicaSelectionHandler( newVersion ) ) {
-    //    download( newVersion.getSinfulString( ).Value( ) );
+    //    download( newVersion.getSinfulString( ).c_str( ) );
     //}
 }
 
@@ -352,7 +352,7 @@ ReplicatorStateMachine::replicaSelectionHandler( Version& newVersion )
     REPLICATION_ASSERT( m_state == VERSION_DOWNLOADING || m_state == BACKUP );
     dprintf( D_ALWAYS, "ReplicatorStateMachine::replicaSelectionHandler "
 			"started with my version = %s, #versions = %d\n",
-             m_myVersion.toString( ).Value( ), m_versionsList.Number( ) );
+             m_myVersion.toString( ).c_str( ), m_versionsList.Number( ) );
     List<Version> actualVersionsList;
     Version myVersionCopy = m_myVersion;
     
@@ -382,11 +382,11 @@ ReplicatorStateMachine::replicaSelectionHandler( Version& newVersion )
     // taking the first actual version as the best version in the meantime
     actualVersionsList.Next( bestVersion );
     dprintf( D_ALWAYS, "ReplicatorStateMachine::replicaSelectionHandler best "
-			"version = %s\n", bestVersion.toString( ).Value( ) );
+			"version = %s\n", bestVersion.toString( ).c_str( ) );
     
     while( actualVersionsList.Next( version ) ) {
         dprintf( D_ALWAYS, "ReplicatorStateMachine::replicaSelectionHandler "
-				"actual version = %s\n", version.toString( ).Value( ) );
+				"actual version = %s\n", version.toString( ).c_str( ) );
         if( version.isComparable( bestVersion ) && version > bestVersion ) {
             bestVersion = version;
         }
@@ -405,7 +405,7 @@ ReplicatorStateMachine::replicaSelectionHandler( Version& newVersion )
     }
     newVersion = bestVersion;
     dprintf( D_ALWAYS, "ReplicatorStateMachine::replicaSelectionHandler "
-			"best version selected: %s\n", newVersion.toString().Value()); 
+			"best version selected: %s\n", newVersion.toString().c_str()); 
     return true;
 }
 // until the state files merging utility is ready, the function is not really
@@ -519,11 +519,11 @@ ReplicatorStateMachine::onLeaderVersion( Stream* stream )
     if( downloadTransferersNumber( ) == 0 && newVersion && downloadNeeded ) {
         dprintf( D_FULLDEBUG, "ReplicatorStateMachine::onLeaderVersion "
 				"downloading from %s\n", 
-				newVersion->getSinfulString( ).Value( ) );
+				newVersion->getSinfulString( ).c_str( ) );
 		if ( newVersion->knowsNewTransferProtocol() ) {
-			downloadNew( newVersion->getSinfulString( ).Value( ) );
+			downloadNew( newVersion->getSinfulString( ).c_str( ) );
 		} else {
-			download( newVersion->getSinfulString( ).Value( ) );
+			download( newVersion->getSinfulString( ).c_str( ) );
 		}
     }
     // replication leader must not send a version which hasn't been updated
@@ -761,16 +761,16 @@ ReplicatorStateMachine::killStuckDownloadingTransferer( time_t currentTime )
 		// when the process is killed, it could have not yet erased its
 		// temporary files, this is why we ensure it by erasing it in killer
 		// function
-		MyString extension;
+		std::string extension;
         // the .down ending is needed in order not to confuse between upload and
         // download processes temporary files
 		formatstr( extension, "%d.%s", m_downloadTransfererMetadata.m_pid,
 		           DOWNLOADING_TEMPORARY_FILES_EXTENSION );
 
-        FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
-                                         extension.Value( ) );
-        FilesOperations::safeUnlinkFile( m_stateFilePath.Value( ),
-                                         extension.Value( ) );
+        FilesOperations::safeUnlinkFile( m_versionFilePath.c_str( ),
+                                         extension.c_str( ) );
+        FilesOperations::safeUnlinkFile( m_stateFilePath.c_str( ),
+                                         extension.c_str( ) );
 		m_downloadTransfererMetadata.set( );
 	}
 }
@@ -806,16 +806,16 @@ ReplicatorStateMachine::killStuckUploadingTransferers( time_t currentTime )
 			// when the process is killed, it could have not yet erased its
         	// temporary files, this is why we ensure it by erasing it in killer
         	// function	
-			MyString extension;
+			std::string extension;
             // the .up ending is needed in order not to confuse between
             // upload and download processes temporary files
 			formatstr( extension, "%d.%s", uploadTransfererMetadata->m_pid,
 			           UPLOADING_TEMPORARY_FILES_EXTENSION );
 
-            FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
-                                             extension.Value( ) );
-            FilesOperations::safeUnlinkFile( m_stateFilePath.Value( ),
-                                             extension.Value( ) );
+            FilesOperations::safeUnlinkFile( m_versionFilePath.c_str( ),
+                                             extension.c_str( ) );
+            FilesOperations::safeUnlinkFile( m_stateFilePath.c_str( ),
+                                             extension.c_str( ) );
 			delete uploadTransfererMetadata;
 			m_uploadTransfererMetadataList.DeleteCurrent( );
 		}
@@ -904,9 +904,9 @@ ReplicatorStateMachine::versionRequestingTimer( )
 
     if( replicaSelectionHandler( updatedVersion ) ) {
 		if ( updatedVersion.knowsNewTransferProtocol() ) {
-			downloadNew( updatedVersion.getSinfulString( ).Value( ) );
+			downloadNew( updatedVersion.getSinfulString( ).c_str( ) );
 		} else {
-			download( updatedVersion.getSinfulString( ).Value( ) );
+			download( updatedVersion.getSinfulString( ).c_str( ) );
 		}
         dprintf( D_FULLDEBUG, "ReplicatorStateMachine::versionRequestingTimer "
 				"registering version downloading timer\n" );

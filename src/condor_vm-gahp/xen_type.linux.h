@@ -22,7 +22,6 @@
 #define XEN_TYPE_H
 
 #include "condor_classad.h"
-#include "MyString.h"
 #include "simplelist.h"
 #include "gahp_common.h"
 #include "vmgahp.h"
@@ -31,10 +30,10 @@
 
 class XenDisk {
 	public:
-		MyString filename;
-		MyString device;
-		MyString permission;
-        MyString format;
+		std::string filename;
+		std::string device;
+		std::string permission;
+		std::string format;
 };
 
 class VirshType : public VMType
@@ -66,16 +65,16 @@ public:
 
 	virtual bool killVM();
 protected:
-	MyString makeVirshDiskString(void);
+	std::string makeVirshDiskString(void);
 	bool createISO();
 
 	void Connect();
 	bool parseXenDiskParam(const char *format);
 	bool writableXenDisk(const char* file);
 	void updateLocalWriteDiskTimestamp(time_t timestamp);
-	void makeNameofSuspendfile(MyString& name);
+	void makeNameofSuspendfile(std::string& name);
 	bool createCkptFiles(void);
-	bool findCkptConfigAndSuspendFile(MyString &config, MyString &suspendfile);
+	bool findCkptConfigAndSuspendFile(std::string &config, std::string &suspendfile);
 	bool checkCkptSuspendFile(const char* file);
 	bool ResumeFromSoftSuspend(void);
 	bool CreateXenVMConfigFile(const char* filename);
@@ -86,16 +85,16 @@ protected:
 
 	SimpleList<XenDisk*> m_disk_list;
 
-	MyString m_xen_cdrom_device;
-	MyString m_suspendfile;
+	std::string m_xen_cdrom_device;
+	std::string m_suspendfile;
 	float m_cputime_before_suspend;
 
 	std::string m_xen_kernel_submit_param;
-	MyString m_xen_kernel_file;
+	std::string m_xen_kernel_file;
 	std::string m_xen_initrd_file;
 	std::string m_xen_root;
 	std::string m_xen_kernel_params;
-	MyString m_xen_bootloader;
+	std::string m_xen_bootloader;
 	std::string m_vm_bridge_interface;
 
 	bool m_xen_hw_vt;
@@ -103,7 +102,7 @@ protected:
 	bool m_restart_with_ckpt;
 	bool m_has_transferred_disk_file;
 
-	MyString m_xml;
+	std::string m_xml;
 	std::string m_sessionID; ///< required for connect filled on constructor
 	virConnectPtr m_libvirt_connection;
 };

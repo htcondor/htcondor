@@ -45,7 +45,7 @@ class CCBClient: public Service, public ClassyCountedPtr {
 	void CancelReverseConnect();
 
  private:
-	MyString m_ccb_contact;
+	std::string m_ccb_contact;
 	std::string m_cur_ccb_address;
 	StringList m_ccb_contacts;
 	ReliSock *m_target_sock; // socket to receive the reversed connection

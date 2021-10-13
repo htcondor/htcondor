@@ -1535,7 +1535,8 @@ compareStrings (OpKind op, Value &v1, Value &v2, Value &result)
 void Operation::
 compareAbsoluteTimes( OpKind op, Value &v1, Value &v2, Value &result )
 {
-	abstime_t asecs1, asecs2;
+	abstime_t asecs1 = { 0, 0 };
+	abstime_t asecs2 = { 0, 0 };;
 	bool compResult;
 
 	v1.IsAbsoluteTimeValue( asecs1 );
@@ -1608,7 +1609,7 @@ compareRelativeTimes( OpKind op, Value &v1, Value &v2, Value &result )
 void Operation::
 compareBools( OpKind op, Value &v1, Value &v2, Value &result )
 {
-	bool b1, b2, compResult;
+	bool b1 = false, b2 = false, compResult;
 
 	v1.IsBooleanValue( b1 );
 	v2.IsBooleanValue( b2 );

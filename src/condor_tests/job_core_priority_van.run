@@ -22,17 +22,17 @@ use CondorTest;
 use CondorUtils;
 
 use Cwd;
+use File::Temp;
 
 $flowlog = "job_core_priority_van.data";
 $cmd = "job_core_priority_van.cmd";
 
-my $pid = $$;
-system("mkdir $pid");
 my $curcwd = getcwd();
+my $dir = File::Temp->newdir(CLEANUP => 0, DIR => $curcwd);
 CondorTest::debug("current directory is $curcwd\n",1);
 
 my $socketname = "priority";
-my $newsocketname = $curcwd . "/" . $pid . "/priority";
+my $newsocketname = $dir->dirname . "/priority";
 CondorTest::debug("current directory is $newsocketname\n",1);
 
 # start a server for this test
@@ -52,7 +52,7 @@ sleep(60);
 @filestoedit = qw/job_core_priority2/;
 @filestochmod = qw/job_core_priority2.pl/;
 
-# now make sure each place using socket refers to pid specific directory!
+# now make sure each place using socket refers to temporary directory!
 foreach $name (@filestoedit)
 {
 	CondorTest::debug("Correcting socket name in $name\n",1);

@@ -26,33 +26,6 @@
 #include "FilesOperations.h"
 #include "Utils.h"
 
-/*
-static int
-getFileSize( const MyString& filePath )
-{
-	int begin, end;
-	
-	ifstream file ( filePath.Value( ) );
-
-	begin = file.tellg( );
-	file.seekg( 0, ios::end );
-	end = file.tellg( );
-	file.close( );
-
-	return end - begin;
-}*/
-
-/*static void
-safeUnlinkStateAndVersionFiles( const MyString& stateFilePath,
-							    const MyString& versionFilePath,
-							    const MyString& extension )
-{
-	FilesOperations::safeUnlinkFile( versionFilePath.Value( ),
-                                     extension.Value( ) );
-    FilesOperations::safeUnlinkFile( stateFilePath.Value( ),
-                                     extension.Value( ) );
-}*/
-
 int
 UploadReplicaTransferer::initialize( )
 {
@@ -91,10 +64,10 @@ UploadReplicaTransferer::initialize( )
 		// no retries after 'm_connectionTimeout' seconds of unsuccessful connection
 		m_socket->doNotEnforceMinimalCONNECT_TIMEOUT( );
 
-		if( ! m_socket->connect( m_daemonSinfulString.Value( ), 0, false ) ) {
+		if( ! m_socket->connect( m_daemonSinfulString.c_str( ), 0, false ) ) {
 			dprintf( D_ALWAYS,
 				"UploadReplicaTransferer::initialize cannot connect to %s\n",
-				m_daemonSinfulString.Value( ) );
+				m_daemonSinfulString.c_str( ) );
 			return TRANSFERER_FALSE;
 		}
 	}
@@ -112,41 +85,18 @@ int
 UploadReplicaTransferer::upload( )
 {
     dprintf( D_ALWAYS, "UploadReplicaTransferer::upload started\n" );
-// stress testing
-// 	dprintf( D_FULLDEBUG, "UploadReplicaTransferer::upload stalling "
-//                       	  "uploading process\n" );
-//	sleep(300);
-//	int bytesTotal = getFileSize( m_stateFilePath );
-	// setting the timeout depending on the file size and aknowledging the 
-	// receiving side about that in order to copy the file to the temporary one
-	// and not to get the socket closed at the end of copy operation
-//	int newTimeout = std::max( int( bytesTotal * TRANSFER_SAFETY_COEFFICIENT / 
-//												 DISK_WRITE_RATIO + 0.5 ),
-//                               10 );
-//	int oldTimeout = m_socket->timeout( newTimeout );
-//	dprintf( D_ALWAYS, "UploadReplicaTransferer::upload set new timeout %d, "
-//					   "old timeout %d, file size %d\n",
-//			 newTimeout, oldTimeout, bytesTotal );
-//	m_socket->encode( );
-//	if( ! m_socket->code( bytesTotal ) || 
-//		! m_socket->end_of_message( ) ) {
-//		 dprintf( D_ALWAYS, "UploadReplicaTransferer::upload unable to send "
-//							"the state file size (%d) or to code the end of "
-//							"message\n", bytesTotal );
-//		return TRANSFERER_FALSE;
-//	}
-    MyString extension;
+    std::string extension;
 	// the .up ending is needed in order not to confuse between upload and
     // download processes temporary files
 	formatstr( extension, "%d.%s", daemonCore->getpid( ),
 	           UPLOADING_TEMPORARY_FILES_EXTENSION );
 
-    if( ! FilesOperations::safeCopyFile( m_versionFilePath.Value(),
-										 extension.Value() ) ) {
+    if( ! FilesOperations::safeCopyFile( m_versionFilePath.c_str(),
+										 extension.c_str() ) ) {
 		dprintf( D_ALWAYS, "UploadReplicaTransferer::upload unable to copy "
-				 "version file %s\n", m_versionFilePath.Value() );
-		FilesOperations::safeUnlinkFile( m_versionFilePath.Value(),
-										 extension.Value() );
+				 "version file %s\n", m_versionFilePath.c_str() );
+		FilesOperations::safeUnlinkFile( m_versionFilePath.c_str(),
+										 extension.c_str() );
 		return TRANSFERER_FALSE;
 	}
 	char* stateFilePath = NULL;
@@ -155,7 +105,7 @@ UploadReplicaTransferer::upload( )
 
 	while( ( stateFilePath = m_stateFilePathsList.next( ) ) ) {
 		if( ! FilesOperations::safeCopyFile( stateFilePath,
-		                                     extension.Value() ) ) {
+		                                     extension.c_str() ) ) {
 			dprintf( D_ALWAYS, "UploadReplicaTransferer::upload unable to copy "
 							   "state file %s\n", stateFilePath );
 			// we return anyway, so that we should not worry that we operate
@@ -168,21 +118,10 @@ UploadReplicaTransferer::upload( )
 	}
 	m_stateFilePathsList.rewind( );
 	
-	/*if( ! FilesOperations::safeCopyFile( m_stateFilePath.Value(),
-                                         extension.Value() ) ) {
-        dprintf( D_ALWAYS, "UploadReplicaTransferer::upload unable to copy "
-                           "state file %s\n", m_stateFilePath.Value() );
-		safeUnlinkStateAndVersionFiles( m_stateFilePath.Value(),
-                                        m_versionFilePath.Value(),
-									    extension.Value() );
-        return TRANSFERER_FALSE;
-    }*/
     // upload version file
     if( uploadFile( m_versionFilePath, extension ) == TRANSFERER_FALSE){
 		dprintf( D_ALWAYS, "UploadReplicaTransferer::upload unable to upload "
-				 "version file %s\n", m_versionFilePath.Value() );
-		//FilesOperations::safeUnlinkFile( m_stateFilePath.Value(),
-		//								 extension.Value() );
+				 "version file %s\n", m_versionFilePath.c_str() );
 		safeUnlinkStateAndVersionFiles( m_stateFilePathsList,
 		                                m_versionFilePath,
 									    extension);
@@ -191,12 +130,12 @@ UploadReplicaTransferer::upload( )
 	// trying to unlink the temporary files; upon failure we still return the
     // status of uploading the files, since the most important thing here is
     // that the files were uploaded successfully
-	//FilesOperations::safeUnlinkFile( m_versionFilePath.Value(),
-	//								 extension.Value() );
+	//FilesOperations::safeUnlinkFile( m_versionFilePath.c_str(),
+	//								 extension.c_str() );
     m_stateFilePathsList.rewind( );
 	
 	while( ( stateFilePath = m_stateFilePathsList.next( ) ) ) {
-		MyString stateFilePathString = stateFilePath;
+		std::string stateFilePathString = stateFilePath;
 
 		if( uploadFile( stateFilePathString , extension ) ==
 				TRANSFERER_FALSE ) {
@@ -212,11 +151,6 @@ UploadReplicaTransferer::upload( )
 									extension );
 	// if the uploading failed, the temporary file is deleted, so there is no
 	// need to delete it in the caller
-	/*if( uploadFile( m_stateFilePath, extension ) == TRANSFERER_FALSE ){
-		return TRANSFERER_FALSE;
-	}*/
-	//FilesOperations::safeUnlinkFile( m_stateFilePath.Value(),
-	//								 extension.Value() );
 	return TRANSFERER_TRUE;
 }
 
@@ -229,19 +163,19 @@ UploadReplicaTransferer::upload( )
  *               the transferer socket
  */
 int
-UploadReplicaTransferer::uploadFile( MyString& filePath, MyString& extension )
+UploadReplicaTransferer::uploadFile( const std::string& filePath, const std::string& extension )
 {
     dprintf( D_ALWAYS, "UploadReplicaTransferer::uploadFile %s.%s started\n", 
-			 filePath.Value( ), extension.Value( ) );
+			 filePath.c_str( ), extension.c_str( ) );
 
 	int fips_mode = param_integer("HAD_FIPS_MODE", 0);
 
     // sending the temporary file through the opened socket
 	if( ! utilSafePutFile( *m_socket, filePath + "." + extension, fips_mode ) ){
 		dprintf( D_ALWAYS, "UploadReplicaTransferer::uploadFile failed, "
-                "unlinking %s.%s\n", filePath.Value(), extension.Value());
-		FilesOperations::safeUnlinkFile( filePath.Value( ), 
-										 extension.Value( ) );
+                "unlinking %s.%s\n", filePath.c_str(), extension.c_str());
+		FilesOperations::safeUnlinkFile( filePath.c_str( ), 
+										 extension.c_str( ) );
 		return TRANSFERER_FALSE;
 	}
 	return TRANSFERER_TRUE;

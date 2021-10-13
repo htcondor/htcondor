@@ -47,12 +47,12 @@ class CCBListener: public Service, public ClassyCountedPtr {
 		// unique ID of this CCBListener in namespace of the CCB server
 	char const *getCCBID() const { return m_ccbid.c_str(); }
 
-	char const *getAddress() const { return m_ccb_address.Value(); }
+	char const *getAddress() const { return m_ccb_address.c_str(); }
 
 	bool operator ==(CCBListener const &other);
 
  private:
-	MyString m_ccb_address;
+	std::string m_ccb_address;
 	std::string m_ccbid;
 	std::string m_reconnect_cookie;
 	Sock *m_sock;
@@ -95,14 +95,14 @@ class CCBListeners {
 
 		// returns string representation of list of CCB id(s)
 		// example: "<ccb server>#<ccbid> <ccb server2>#<ccbid2> ..."
-	void GetCCBContactString(MyString &result);
+	void GetCCBContactString(std::string &result);
 
 	bool RegisterWithCCBServer(bool blocking=false);
 
  private:
 	typedef std::list< classy_counted_ptr<CCBListener> > CCBListenerList;
 	CCBListenerList m_ccb_listeners;
-	MyString m_ccb_contact;
+	std::string m_ccb_contact;
 };
 
 #endif

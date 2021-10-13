@@ -292,7 +292,7 @@ char const *DCMessenger::peerDescription()
 
 void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 {
-	MyString error;
+	std::string error;
 	msg->setMessenger( this );
 
 	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED ) {
@@ -319,7 +319,7 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 			// timer for each case.  Then it would be possible to control
 			// priority of different messages etc.
 		dprintf(D_FULLDEBUG, "Delaying delivery of %s to %s, because %s\n",
-				msg->name(),peerDescription(),error.Value());
+				msg->name(),peerDescription(),error.c_str());
 		startCommandAfterDelay( 1, msg );
 		return;
 	}

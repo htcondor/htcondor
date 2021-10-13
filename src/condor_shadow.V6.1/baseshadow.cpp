@@ -76,6 +76,8 @@ BaseShadow::BaseShadow() {
 	attemptingReconnectAtStartup = false;
 	m_force_fast_starter_shutdown = false;
 	m_committed_time_finalized = false;
+	m_prev_run_upload_file_cnt = 0;
+	m_prev_run_download_file_cnt = 0;
 }
 
 BaseShadow::~BaseShadow() {
@@ -103,7 +105,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 	scheddAddr = sendUpdatesToSchedd ? strdup( schedd_addr ) : strdup("noschedd");
 
-	m_xfer_queue_contact_info = xfer_queue_contact_info;
+	m_xfer_queue_contact_info = xfer_queue_contact_info ? xfer_queue_contact_info : "";
 
 	if ( !jobAd->LookupString(ATTR_OWNER, owner)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_OWNER);
@@ -136,10 +138,13 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		prev_run_bytes_recvd = 0;
 	}
 
+	jobAd->LookupInteger(ATTR_TRANSFER_INPUT_FILES_LAST_RUN_COUNT, m_prev_run_upload_file_cnt);
+	jobAd->LookupInteger(ATTR_TRANSFER_OUTPUT_FILES_LAST_RUN_COUNT, m_prev_run_download_file_cnt);
+
 		// construct the core file name we'd get if we had one.
-	MyString tmp_name = iwd;
+	std::string tmp_name = iwd;
 	formatstr_cat( tmp_name, "%ccore.%d.%d", DIR_DELIM_CHAR, cluster, proc );
-	core_file_name = strdup( tmp_name.Value() );
+	core_file_name = strdup( tmp_name.c_str() );
 
         // put the shadow's sinful string into the jobAd.  Helpful for
         // the mpi shadow, at least...and a good idea in general.
@@ -315,11 +320,11 @@ int BaseShadow::cdToIwd() {
 		dprintf(D_ALWAYS, "\n\nPath does not exist.\n"
 				"He who travels without bounds\n"
 				"Can't locate data.\n\n" );
-		MyString hold_reason;
-		hold_reason.formatstr("Cannot access initial working directory %s: %s",
+		std::string hold_reason;
+		formatstr(hold_reason, "Cannot access initial working directory %s: %s",
 		                    iwd.c_str(), strerror(chdir_errno));
-		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-		holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
+		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
+		holdJobAndExit(hold_reason.c_str(),CONDOR_HOLD_CODE::IwdError,chdir_errno);
 		iRet = -1;
 	}
 	
@@ -726,8 +731,8 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 void
 BaseShadow::evictJob( int reason )
 {
-	MyString from_where;
-	MyString machine;
+	std::string from_where;
+	std::string machine;
 
 	// If we previously delayed exiting to let the starter wrap up, then
 	// immediately try exiting now. None of the cleanup below here is
@@ -738,10 +743,10 @@ BaseShadow::evictJob( int reason )
 	}
 
 	if( getMachineName(machine) ) {
-		from_where.formatstr(" from %s",machine.Value());
+		formatstr(from_where, " from %s" ,machine.c_str());
 	}
 	dprintf( D_ALWAYS, "Job %d.%d is being evicted%s\n",
-			 getCluster(), getProc(), from_where.Value() );
+			 getCluster(), getProc(), from_where.c_str() );
 
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In evictJob() w/ NULL JobAd!\n" );
@@ -829,7 +834,7 @@ void BaseShadow::initUserLog()
 		formatstr(hold_reason,"Failed to initialize user log");
 		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
 		holdJobAndExit(hold_reason.c_str(),
-				CONDOR_HOLD_CODE_UnableToInitUserLog,0);
+				CONDOR_HOLD_CODE::UnableToInitUserLog,0);
 			// holdJobAndExit() should not return, but just in case it does
 			// EXCEPT
 		EXCEPT("Failed to initialize user log: %s",hold_reason.c_str());
@@ -1321,6 +1326,14 @@ BaseShadow::updateJobInQueue( update_t type )
 
 	ftAd.Assign(ATTR_BYTES_RECVD, (prev_run_bytes_recvd + bytesSent()) );
 
+	int upload_file_cnt = 0;
+	int download_file_cnt = 0;
+	getFileTransferStats(upload_file_cnt, download_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_INPUT_FILES_LAST_RUN_COUNT, upload_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_INPUT_FILES_TOTAL_COUNT, m_prev_run_upload_file_cnt + upload_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_OUTPUT_FILES_LAST_RUN_COUNT, download_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_OUTPUT_FILES_TOTAL_COUNT, m_prev_run_download_file_cnt + download_file_cnt);
+
 	FileTransferStatus upload_status = XFER_STATUS_UNKNOWN;
 	FileTransferStatus download_status = XFER_STATUS_UNKNOWN;
 	getFileTransferStatus(upload_status,download_status);
@@ -1398,7 +1411,6 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 {
 		// Set our flag to remember we've really started.
 	began_execution = true;
-
 		// Start the timer for the periodic user job policy evaluation.
 	shadow_user_policy.startTimer();
 		
@@ -1426,15 +1438,12 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 		// and since the copy in RAM is already updated, all the
 		// periodic user policy expressions will work right, so the
 		// default is to do it lazy.
-	if (m_lazy_queue_update) {
-			// For lazy update, we just want to make sure the
-			// job_updater object knows about this attribute (which we
-			// already updated our copy of).
-		job_updater->watchAttribute(ATTR_NUM_JOB_STARTS);
-	}
-	else {
-			// They want it now, so do the qmgmt operation directly.
-		updateJobAttr(ATTR_NUM_JOB_STARTS, job_start_cnt);
+		// We want other attributes updated at the same time
+		// (e.g. JobCurrentStartExecutingDate), so do a full update to
+		// the schedd if we're not being lazy.
+	if (!m_lazy_queue_update) {
+			// They want it now, so do an update right here.
+		updateJobInQueue(U_STATUS);
 	}
 }
 
@@ -1522,7 +1531,7 @@ display_dprintf_header(char **buf,int *bufpos,int *buflen)
 }
 
 bool
-BaseShadow::getMachineName( MyString & /*machineName*/ )
+BaseShadow::getMachineName( std::string & /*machineName*/ )
 {
 	return false;
 }

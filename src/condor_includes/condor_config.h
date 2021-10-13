@@ -242,12 +242,14 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	bool param_false( const char * name );
 
 	const char * param_append_location(const MACRO_META * pmet, MyString & value);
+	const char * param_append_location(const MACRO_META * pmet, std::string & value);
 	const char * param_get_location(const MACRO_META * pmet, MyString & value);
+	const char * param_get_location(const MACRO_META * pmet, std::string & value);
 
 	const char * param_get_info(const char * name,
 								const char * subsys,
 								const char * local,
-								MyString &name_used,
+								std::string & name_used,
 								const char ** pdef_value,
 								const MACRO_META **ppmet);
 
@@ -272,10 +274,16 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// find an item in the macro_set, but do not look in the defaults table.
 	// if prefix is not NULL, then "prefix.name" is looked up and "name" is NOT
 	// this function does not look in the defaults (param) table.
-	const char * lookup_macro_exact_no_default (const char *name, const char *prefix, MACRO_SET& set, int use=3);
-	const char * lookup_macro_exact_no_default (const char *name, MACRO_SET& set, int use=3);
 
-	// Expand parameter references of the form "left$(middle)right".  
+	// If you don't care about the difference between unset and empty.
+	std::string lookup_macro_exact_no_default( const std::string & name,
+		MACRO_SET & set, int use = 3 );
+
+	// Returns false if the macro is unset.
+	bool exists_macro_exact_no_default( const std::string & name,
+		MACRO_SET & set, int use = 3 );
+
+	// Expand parameter references of the form "left$(middle)right".
 	// handle multiple and or nested references.
 	// Also expand references of the form "left$ENV(middle)right",
 	// replacing $ENV(middle) with getenv(middle).
@@ -390,7 +398,7 @@ extern "C" {
 		// Find a file associated with a user; by default, this fails if called in a context
 		// where can_switch_ids() is true; set daemon_ok = false if calling this from a root-level
 		// condor.
-	bool find_user_file(MyString & filename, const char * basename, bool check_access, bool daemon_ok);
+	bool find_user_file(std::string & filename, const char * basename, bool check_access, bool daemon_ok);
 } // end extern "C"
 
 

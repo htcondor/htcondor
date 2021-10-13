@@ -196,6 +196,10 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     Do not stage other files in this directory; any files not created by
     HTCondor in this directory are subject to removal.
 
+    Ideally, this directory should not be placed under /tmp or /var/tmp, if
+    it is, HTCondor loses the ability to make private instances of /tmp and /var/tmp
+    for jobs.
+
 :macro-def:`TMP_DIR`
     A directory path to a directory where temporary files are placed by
     various portions of the HTCondor system. The daemons and tools that
@@ -901,7 +905,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 :macro-def:`IGNORE_TARGET_PROTOCOL_PREFERENCE`
     A string (treated as a boolean). If
     ``IGNORE_TARGET_PROTOCOL_PREFERENCE`` evaluates to ``True``, the
-    target's listed protocol preferences will be ignored; othwerwise
+    target's listed protocol preferences will be ignored; otherwise
     they will not. Defaults to ``$(PREFER_IPV4)``.
 
 :macro-def:`IGNORE_DNS_PROTOCOL_PREFERENCE`
@@ -1536,7 +1540,7 @@ a file that receives job events, but across all users and user's jobs.
     ``LEGACY``
         Set all time formatting flags to be compatible with older versions of HTCondor.
 
-    All of the above options are case-insensitive, and can be preceeded by a ! to invert their meaning,
+    All of the above options are case-insensitive, and can be preceded by a ! to invert their meaning,
     so configuring ``!UTC, !ISO_DATE, !SUB_SECOND`` gives the same result as configuring ``LEGACY``.
 
 :macro-def:`EVENT_LOG_USE_XML`
@@ -1678,9 +1682,8 @@ that DaemonCore uses which affect all HTCondor daemons.
     ClassAd describing itself to the *condor_collector*, it will also
     place a copy of the ClassAd in this file. Currently, this setting
     only works for the *condor_schedd*. :index:`<SUBSYS>_ATTRS`
-    :index:`<SUBSYS>_EXPRS`
 
-:macro-def:`<SUBSYS>_ATTRS` or :macro-def:`<SUBSYS>_EXPRS`
+:macro-def:`<SUBSYS>_ATTRS`
     Allows any DaemonCore daemon to advertise arbitrary expressions from
     the configuration file in its ClassAd. Give the comma-separated list
     of entries from the configuration file you want in the given
@@ -1691,10 +1694,6 @@ that DaemonCore uses which affect all HTCondor daemons.
     The macro is named by substituting ``<SUBSYS>`` with the appropriate
     subsystem string as defined in
     :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
-
-    ``<SUBSYS>_EXPRS`` is a historic setting that functions identically
-    to ``<SUBSYS>_ATTRS``. It may be removed in the future, so use
-    ``<SUBSYS>_ATTRS``.
 
     .. note::
 
@@ -2327,7 +2326,7 @@ using a shared file system`.
     when the *condor_starter* and *condor_shadow* are on the same
     machine. If this parameter is set to ``True``, then the
     *condor_shadow* 's ``UID_DOMAIN`` doesn't have to be a substring
-    its hostname. If this paramater is set to ``False``, then
+    its hostname. If this parameter is set to ``False``, then
     ``UID_DOMAIN`` controls whether this substring requirement is
     enforced by the *condor_starter*. The default is ``True``.
 
@@ -2346,9 +2345,19 @@ using a shared file system`.
     The name of a user for HTCondor to use instead of user nobody, as
     part of a solution that plugs a security hole whereby a lurker
     process can prey on a subsequent job run as user name nobody.
-    ``<N>`` is an integer associated with slots. On Windows,
-    ``SLOT<N>_USER`` will only work if the credential of the specified
+    ``<N>`` is an integer associated with slots. On non Windows platforms
+    you can use ``NOBODY_SLOT_USER`` instead of this configuration variable.
+    On Windows, ``SLOT<N>_USER`` will only work if the credential of the specified
     user is stored on the execute machine using *condor_store_cred*.
+    See :ref:`admin-manual/security:user accounts in htcondor on unix platforms`
+    for more information.
+
+:macro-def:`NOBODY_SLOT_USER`
+    The name of a user for HTCondor to use instead of user nobody when
+    The ``SLOT<N>_USER`` for this slot is not configured.  Configure
+    this to the value ``$(STARTER_SLOT_NAME)`` to use the name of the slot
+    as the user name. This configuration macro is ignored on Windows,
+    where the Starter will automatically create a unique temporary user for each slot as needed.
     See :ref:`admin-manual/security:user accounts in htcondor on unix platforms`
     for more information.
 
@@ -2947,7 +2956,7 @@ section.
 :macro-def:`DEFAULT_DRAINING_START_EXPR`
     An alternate ``START`` expression to use while draining when the
     drain command is sent without a ``-start`` argument.  When this
-    confiuration parameter is not set and the drain command does not specify
+    configuration parameter is not set and the drain command does not specify
     a ``-start`` argument, ``START`` will have the value ``undefined``
     and ``Requirements`` will be ``false`` while draining. This will prevent new
     jobs from matching.  To allow evictable jobs to match while draining,
@@ -3071,16 +3080,6 @@ section.
     amount of time given depends on ``MachineMaxVacateTime``
     :index:`MachineMaxVacateTime` and ``KILL``
     :index:`KILL`. The default value is ``True``.
-
-:macro-def:`ENABLE_VERSIONED_OPSYS`
-    A boolean expression that determines whether pre-7.7.2 strings used
-    for the machine ClassAd attribute ``OpSys`` are used or not.
-    Defaults to ``False`` on Windows platforms, meaning that the newer
-    behavior of setting ``OpSys = "WINDOWS"`` and ``OpSysVer = 601``
-    (for example), while ``OpSysAndVer = "WINNT61"``. On platforms other
-    than Windows, the default value is ``True``, meaning that the values
-    for ``OpSys`` and ``OpSysAndVer`` are the same, implementing the
-    pre-7.7.2 behavior.
 
 :macro-def:`IS_OWNER`
     A boolean expression that determines when a machine ad should enter
@@ -3286,9 +3285,7 @@ section.
         Since these are already ClassAd expressions, do not do anything
         unusual with strings. By default, the job ClassAd attributes
         JobUniverse, NiceUser, ExecutableSize and ImageSize are advertised
-        into the machine ClassAd. This setting was formerly called
-        ``STARTD_JOB_EXPRS``. The older name is still supported, but support
-        for the older name may be removed in a future version of HTCondor.
+        into the machine ClassAd.
 
 :macro-def:`STARTD_ATTRS`
     This macro is described in :macro:`<SUBSYS>_ATTRS`.
@@ -3533,8 +3530,8 @@ section.
     For Docker Universe jobs, any directories that are mounted under
     scratch are also volume mounted on the same paths inside the
     container. That is, any reads or writes to files in those
-    directories goes to the host filesytem under the scratch directory.
-    This is useful if a container has limited space to grow a filesytem.
+    directories goes to the host filesystem under the scratch directory.
+    This is useful if a container has limited space to grow a filesystem.
 
 :macro-def:`MOUNT_PRIVATE_DEV_SHM`
     This boolean value, which defaults to ``True`` tells the *condor_starter*
@@ -3639,9 +3636,7 @@ section for details.
 :macro-def:`STARTD_SLOT_ATTRS`
     The list of ClassAd attribute names that should be shared across all
     slots on the same machine. This setting was formerly know as
-    ``STARTD_VM_ATTRS`` :index:`STARTD_VM_ATTRS` or
-    ``STARTD_VM_EXPRS`` :index:`STARTD_VM_EXPRS` (before version
-    6.9.3). For each attribute in the list, the attribute's value is
+    ``STARTD_VM_ATTRS`` :index:`STARTD_VM_ATTRS` For each attribute in the list, the attribute's value is
     taken from each slot's machine ClassAd and placed into the machine
     ClassAd of all the other slots within the machine. For example, if
     the configuration file for a 2-slot machine contains
@@ -4176,9 +4171,18 @@ details.
     context of the job ad and the machine ad, when true, runs the docker
     container with the command line option -drop-all-capabilities.
     Admins should be very careful with this setting, and only allow
-    trusted users to run with full linux capabilities within the
+    trusted users to run with full Linux capabilities within the
     container.
 
+:macro-def:`DOCKER_PERFORM_TEST`
+    When the *condor_startd* starts up, it runs a simple docker
+    container to verify that docker completely works.  If 
+    DOCKER_PERFORM_TEST is false, this test is skipped.
+
+:macro-def:`DOCKER_RUN_UNDER_INIT`
+    A boolean value which defaults to true, which tells the worker
+    node to run docker universe jobs with the --init option.
+    
 :macro-def:`DOCKER_EXTRA_ARGUMENTS`
     Any additional command line options the administrator wants to be
     added to the docker container create command line can be set with
@@ -5448,7 +5452,7 @@ These macros control the *condor_schedd*.
     to their account.
     Most often, this should be set to name of the OAuth2 service
     (e.g. ``box``, ``gdrive``, ``onedrive``, etc.).
-    The dervied return URL is passed on to the *condor_credmon_oauth*
+    The derived return URL is passed on to the *condor_credmon_oauth*
     when a job requests OAuth2 credentials
     for a configured OAuth2 service.
 
@@ -5608,7 +5612,7 @@ These settings affect the *condor_starter*.
 :macro-def:`DISABLE_SETUID`
     HTCondor can prevent jobs from running setuid executables
     on Linux by setting the no-new-privileges flag.  This can be
-    enabled (i.e. to disallow setuid binaries) by setting ``DISABLE_SETIUD``
+    enabled (i.e. to disallow setuid binaries) by setting ``DISABLE_SETUID``
     to true.
 
 :macro-def:`EXEC_TRANSFER_ATTEMPTS`
@@ -6059,8 +6063,9 @@ These settings affect the *condor_starter*.
     the target, then skip this bind mount.
 
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS`
-    A string value containing a list of extra arguments to be appended
-    to the Singularity command line.
+    A string value or classad expression containing a list of extra arguments to be appended
+    to the Singularity command line. This can be an expression evaluted in the context of the
+    job ad and the machine ad.
 
 condor_submit Configuration File Entries
 -----------------------------------------
@@ -6246,9 +6251,7 @@ do not specify their own with:
     forgotten in a job's submit description file. The command in the
     submit description file results in actions by *condor_submit*,
     while the use of ``SUBMIT_ATTRS`` adds a job ClassAd attribute at a
-    later point in time. ``SUBMIT_EXPRS`` is a historic setting that
-    functions identically to ``SUBMIT_ATTRS``. It may be removed in the
-    future, so use ``SUBMIT_ATTRS``.
+    later point in time.
 
 :macro-def:`SUBMIT_ALLOW_GETENV`
     A boolean attribute which defaults to true. If set to false, the
@@ -6661,7 +6664,7 @@ These macros affect the *condor_collector*.
     The default value is ``$(NEGOTIATOR_CONSIDER_PREEMPTION)``.
 
 :macro-def:`COLLECTOR_FORWARD_PROJECTION`
-    An expresion that evaluates to a string in the context of an update. The string is treated as a list
+    An expression that evaluates to a string in the context of an update. The string is treated as a list
     of attributes to forward.  If the string has no attributes, it is ignored. The intended use is to
     restrict the list of attributes forwarded for claimed Machine ads.
     When ``$(NEGOTIATOR_CONSIDER_PREEMPTION)`` is false, the negotiator needs only a few attributes from
@@ -6736,8 +6739,16 @@ These macros affect the *condor_negotiator*.
     for defaults and composition of valid HTCondor daemon names.
 
 :macro-def:`NEGOTIATOR_INTERVAL`
-    Sets how often the *condor_negotiator* starts a negotiation cycle.
+    Sets the maximum time the *condor_negotiator* will wait before
+    starting a new negotiation cycle, counting from the start of the
+    previous cycle.
     It is defined in seconds and defaults to 60 (1 minute).
+
+:macro-def:`NEGOTIATOR_MIN_INTERVAL`
+    Sets the minimum time the *condor_negotiator* will wait before
+    starting a new negotiation cycle, counting from the start of the
+    previous cycle.
+    It is defined in seconds and defaults to 5.
 
 :macro-def:`NEGOTIATOR_UPDATE_INTERVAL`
     This macro determines how often the *condor_negotiator* daemon
@@ -6896,8 +6907,8 @@ These macros affect the *condor_negotiator*.
     the ClassAd of the idle (candidate) job. There is no direct access
     to the currently running job, but attributes of the currently
     running job that need to be accessed in ``PREEMPTION_REQUIREMENTS``
-    can be placed in the machine ClassAd using ``STARTD_JOB_EXPRS``
-    :index:`STARTD_JOB_EXPRS`. If not explicitly set in the
+    can be placed in the machine ClassAd using ``STARTD_JOB_ATTRS``
+    :index:`STARTD_JOB_ATTRS`. If not explicitly set in the
     HTCondor configuration file, the default value for this expression
     is ``False``. ``PREEMPTION_REQUIREMENTS`` should include the term
     ``(SubmitterGroup =?= RemoteGroup)``, if a preemption policy that
@@ -7657,11 +7668,10 @@ These macros affect the *condor_gridmanager*.
     higher-priority) commands are read and performed.
     The default value is 10.
 
-:macro-def:`GLITE_LOCATION`
-    The complete path to the directory containing the Glite software.
-    The default value is ``$(LIBEXEC)``/glite. The necessary Glite
-    software is included with HTCondor, and is required for grid-type
-    batch jobs.
+:macro-def:`BLAHPD_LOCATION`
+    The complete path to the directory containing the *blahp* software,
+    which is required for grid-type batch jobs.
+    The default value is ``$(RELEASE_DIR)``.
 
 :macro-def:`GAHP_SSL_CADIR`
     The path to a directory that may contain the certificates (each in
@@ -7683,13 +7693,16 @@ These macros affect the *condor_gridmanager*.
 
 :macro-def:`BATCH_GAHP`
     The complete path and file name of the batch GAHP executable, to be
-    used for PBS, LSF, SGE, and similar batch systems. The default
+    used for Slurm, PBS, LSF, SGE, and similar batch systems. The default
     location is ``$(BIN)``/blahpd.
 
 :macro-def:`NORDUGRID_GAHP`
-    The complete path and file name of the wrapper script that invokes
-    the NorduGrid GAHP executable. The default value is
-    ``$(SBIN)``/nordugrid_gahp.
+    The complete path and file name of the NorduGrid GAHP executable.
+    The default value is ``$(SBIN)``/nordugrid_gahp.
+
+:macro-def:`ARC_GAHP`
+    The complete path and file name of the ARC GAHP executable.
+    The default value is ``$(SBIN)``/arc_gahp.
 
 :macro-def:`GCE_GAHP`
     The complete path and file name of the GCE GAHP executable. The
@@ -7720,7 +7733,7 @@ These macros affect the *condor_job_router* daemon.
     Routes will be matched to jobs in the order their names are declared in this list.  Routes not
     declared in this list will be disabled.  
 
-    If routes are specifed in the deprecated `JOB_ROUTER_ENTRIES`, `JOB_ROUTER_ENTRIES_FILE`
+    If routes are specified in the deprecated `JOB_ROUTER_ENTRIES`, `JOB_ROUTER_ENTRIES_FILE`
     and `JOB_ROUTER_ENTRIES_CMD` configuration variables, then ``JOB_ROUTER_ROUTE_NAMES`` is optional.
     if it is empty, the order in which routes are considered will be the order in
     which their names hash.
@@ -7829,12 +7842,12 @@ These macros affect the *condor_job_router* daemon.
     an unlimited number of jobs may be routed.
 
 :macro-def:`JOB_ROUTER_DEFAULT_MAX_JOBS_PER_ROUTE`
-    An iteger value representing the maximum number of jobs that may be
+    An integer value representing the maximum number of jobs that may be
     routed to a single route when the route does not specify a ``MaxJobs``
     value. The default value is 100.
 
 :macro-def:`JOB_ROUTER_DEFAULT_MAX_IDLE_JOBS_PER_ROUTE`
-    An iteger value representing the maximum number of jobs in a single
+    An integer value representing the maximum number of jobs in a single
     route that may be in the idle state.  When the number of jobs routed
     to that site exceeds this number, no more jobs will be routed to it. 
     A route may specify ``MaxIdleJobs`` to override this number.
@@ -7950,7 +7963,7 @@ These macros affect the *condor_job_router* daemon.
 :macro-def:`JOB_ROUTER_ROUND_ROBIN_SELECTION`
     A boolean value that controls which route is chosen for a candidate
     job that matches multiple routes. When set to ``False``, the
-    default, the first matching route is awlays selected. When set to
+    default, the first matching route is always selected. When set to
     ``True``, the Job Router attempts to distribute jobs across all
     matching routes, round robin style.
 
@@ -8119,10 +8132,10 @@ General
     files. (Introduced in version 8.6.1.)
 
 :macro-def:`DAGMAN_USE_CONDOR_SUBMIT`
-    A boolan value that controls wither *condor_dagman* submits jobs using
+    A boolean value that controls whether *condor_dagman* submits jobs using
     *condor_submit* or by opening a direct connection to the *condor_schedd*.
     ``DAGMAN_USE_CONDOR_SUBMIT`` defaults to ``True``.  When set to ``False``
-    *condor_dagman* will submit jobs to the local Schedd by connnecting to it
+    *condor_dagman* will submit jobs to the local Schedd by connecting to it
     directly.  This is faster than using *condor_submit*, especially for very
     large DAGs; But this method will ignore some submit file features such as
     ``max_materialize`` and more than one ``QUEUE`` statement.
@@ -8134,6 +8147,14 @@ General
     optimizes the graph structure by reducing the number of dependencies, 
     resulting in a significant improvement to the *condor_dagman* memory 
     footprint, parse time, and submit speed.
+
+:macro-def:`DAGMAN_PUT_FAILED_JOBS_ON_HOLD`
+    A boolean value that controls what happens when a job in a DAG fails.
+    When set to ``True``, *condor_dagman* will keep the job in the queue and
+    put it on hold. If the failure was due to a transient error (i.e. a
+    temporary network outage), this gives users an opportunity to fix the
+    problem, release the job and continue their DAG execution. Defaults 
+    to ``False``.
 
 Throttling
 ''''''''''
@@ -8315,7 +8336,7 @@ Node job submission/removal
     node jobs itself when it is removed (in addition to the
     *condor_schedd* removing them). Note that setting
     ``DAGMAN_REMOVE_NODE_JOBS`` to ``True`` is the safer option (setting
-    it to ``False`` means that there is some chance of endig up with
+    it to ``False`` means that there is some chance of ending up with
     "orphan" node jobs). Setting ``DAGMAN_REMOVE_NODE_JOBS`` to
     ``False`` is a performance optimization (decreasing the load on the
     *condor_schedd* when a *condor_dagman* job is removed). Note that
@@ -8757,7 +8778,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     See the :doc:`/admin-manual/security` section for a discussion of the
     relative merits of each method; some, such as ``CLAIMTOBE`` provide effectively
     no security at all.  The default authentication methods are
-    ``NTSSPI,FS,IDTOKENS,KERBEROS,GSI,SSL``.
+    ``NTSSPI,FS,IDTOKENS,KERBEROS,SSL``.
 
     These methods are tried in order until one succeeds or they all fail; for
     this reason, we do not recommend changing the default method list.
@@ -8771,6 +8792,23 @@ macros are described in the :doc:`/admin-manual/security` section.
     values are ``3DES`` or ``BLOWFISH``.  There is little benefit in varying
     the setting per authorization level; it is recommended to leave these
     settings untouched.
+
+:macro-def:`WARN_ON_GSI_CONFIGURATION"`
+    A boolean variables that controls whether a warning is printed
+    whenever GSI seen in a configured list of authentication methods.
+    Daemons will print the warning to their log (no more frequently than
+    once every 12 hours).
+    Tools will print the warning to their stderr.
+    The default value is ``True``.
+
+:macro-def:`WARN_ON_GSI_USAGE`
+    A boolean variables that controls whether a warning is printed
+    whenever GSI is used for authentication over a network connection with
+    an HTCondor daemon.
+    Daemons will print the warning to their log (no more frequently than
+    once every 12 hours).
+    Tools will print the warning to their stderr.
+    The default value is ``True``.
 
 :macro-def:`GSI_DAEMON_NAME`
     This configuration variable is retired. Instead use ``ALLOW_CLIENT``
@@ -9083,14 +9121,14 @@ macros are described in the :doc:`/admin-manual/security` section.
     For Unix machines, the path to the directory containing tokens for
     user authentication with the token method.  Defaults to ``~/.condor/tokens.d``.
 
-:macro-def:`SEC_TOKEN_BLACKLIST_EXPR`
+:macro-def:`SEC_TOKEN_REVOCATION_EXPR`
     A ClassAd expression evaluated against tokens during authentication;
-    if ``SEC_TOKEN_BLACKLIST_EXPR`` is set and evaluates to true, then the
+    if ``SEC_TOKEN_REVOCATION_EXPR`` is set and evaluates to true, then the
     token is revoked and the authentication attempt is denied.
 
 :macro-def:`SEC_TOKEN_REQUEST_LIMITS`
     If set, this is a comma-separated list of authorization levels that limit
-    the authorizations a token request can recieve.  For example, if
+    the authorizations a token request can receive.  For example, if
     ``SEC_TOKEN_REQUEST_LIMITS`` is set to ``READ, WRITE``, then a token
     cannot be issued with the authorization ``DAEMON`` even if this would
     otherwise be permissible.
@@ -9267,7 +9305,7 @@ macros are described in the :doc:`/admin-manual/security` section.
 
 :macro-def:`SEC_CREDENTIAL_PRODUCER`
     A script for *condor_submit* to execute to produce credentials while
-    using the kerberos type of credentials.  No parameters are passed,
+    using the Kerberos type of credentials.  No parameters are passed,
     and credentials most be sent to stdout.
 
 :macro-def:`SEC_CREDENTIAL_STORER`
@@ -9675,12 +9713,12 @@ These macros affect the high availability operation of HTCondor.
 :macro-def:`HAD_FIPS_MODE`
     Controls what type of checksum will be sent along with files that are replicated.
     Set it to 0 for MD5 checksums and to 1 for SHA-2 checksums. Default value is 0.
-    Prior to verions 8.8.13 and 8.9.12 only MD5 checksums are supported. In the 9.0 and
+    Prior to versions 8.8.13 and 8.9.12 only MD5 checksums are supported. In the 9.0 and
     later release of HTCondor, MD5 support will be removed and only SHA-2 will be
     supported.  This configuration variable is intended to provide a transition
     between the 8.8 and 9.0 releases.  As soon as all of machines involved in replication
     are running HTCondor 8.8.13 or 8.9.12 or later you should set this configuration variable
-    to 1 to prepare for the transiation to 9.0
+    to 1 to prepare for the transition to 9.0
 
 :macro-def:`REPLICATION_LIST`
     A comma-separated list of all *condor_replication* daemons in the
@@ -10590,7 +10628,7 @@ general discussion of *condor_defrag* may be found in
 :macro-def:`DEFRAG_DRAINING_START_EXPR`
     A ClassAd expression that replaces the machine's ``START``
     :index:`START` expression while it's draining. Slots which
-    accepted a job after the machine begain draining set the machine ad
+    accepted a job after the machine began draining set the machine ad
     attribute ``AcceptedWhileDraining`` to ``true``. When the last job
     which was not accepted while draining exits, all other jobs are
     immediately evicted with a ``MaxJobRetirementTime`` of 0; job vacate

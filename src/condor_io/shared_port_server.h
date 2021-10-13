@@ -42,7 +42,7 @@ class SharedPortServer: Service {
 
  private:
 	bool m_registered_handlers;
-	MyString m_shared_port_server_ad_file;
+	std::string m_shared_port_server_ad_file;
 	int m_publish_addr_timer;
 	SharedPortClient m_shared_port_client;
 	std::string m_default_id;

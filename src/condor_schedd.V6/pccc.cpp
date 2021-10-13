@@ -500,7 +500,7 @@ pcccStopCallback::dcMessageCallback( DCMsgCallback * cb ) {
 			// claim request. The authorization holes punched for the
 			// old matches are already filled in.
 			if( coalescedMatch->auth_hole_id == NULL ) {
-				coalescedMatch->auth_hole_id = new MyString;
+				coalescedMatch->auth_hole_id = new std::string;
 				ASSERT(coalescedMatch->auth_hole_id != NULL);
 				if (!msg->getPeerFqu().empty()) {
 					formatstr(*coalescedMatch->auth_hole_id, "%s/%s",

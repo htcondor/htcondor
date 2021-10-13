@@ -30,7 +30,6 @@
 #include "condor_attributes.h"
 #include "match_prefix.h"
 #include "get_daemon_name.h"
-#include "MyString.h"
 #include "ad_printmask.h"
 #include "internet.h"
 #include "sig_install.h"
@@ -39,7 +38,6 @@
 #include "dc_collector.h"
 #include "basename.h"
 #include "metric_units.h"
-#include "globus_utils.h"
 #include "error_utils.h"
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
@@ -266,7 +264,6 @@ static 	printmask_headerfooter_t customHeadFoot = STD_HEADFOOT;
 static std::vector<GroupByKeyInfo> group_by_keys;
 static  bool		cputime = false;
 static	bool		current_run = false;
-static 	bool		dash_globus = false;
 static	bool		dash_grid = false;
 static	bool		dash_run = false;
 static	bool		dash_idle = false;
@@ -466,13 +463,13 @@ int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::Cla
 
 int GetQueueConstraint(CondorQ & q, ConstraintHolder & constr) {
 	int err = 0;
-	MyString query;
+	std::string query;
 	q.useDefaultingOperator(true);
 	q.rawQuery(query);
 	if (query.empty()) {
 		constr.clear();
 	} else {
-		constr.set(query.StrDup());
+		constr.set(strdup(query.c_str()));
 	}
 	constr.Expr(&err);
 	return err;
@@ -781,7 +778,6 @@ enum {
 	QDO_JobRuntime,
 	QDO_JobIdle,
 	QDO_JobGoodput,
-	QDO_JobGlobusInfo,
 	QDO_JobGridInfo,
 	QDO_JobGridEC2Info,
 	QDO_JobHold,
@@ -1300,7 +1296,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			while (i+1 < argc && *(argv[i+1]) != '-') {
 				++i;
 				GetAllReferencesFromClassAdExpr(argv[i], attrs);
-				MyString lbl = "";
+				std::string lbl = "";
 				int wid = 0;
 				int opts = FormatOptionNoTruncate;
 				if (fheadings || prmask.has_headings()) {
@@ -1309,9 +1305,9 @@ processCommandLineArguments (int argc, const char *argv[])
 					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
 					prmask.set_heading(hd);
 				}
-				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
+				else if (flabel) { formatstr(lbl, "%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
-				prmask.registerFormat(lbl.Value(), wid, opts, argv[i]);
+				prmask.registerFormat(lbl.c_str(), wid, opts, argv[i]);
 			}
 			prmask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
 			//summarize = 0;
@@ -1526,25 +1522,12 @@ processCommandLineArguments (int argc, const char *argv[])
 		}
 		else
 		if (is_dash_arg_colon_prefix(dash_arg, "grid", &pcolon, 2 )) {
-			// grid is a superset of globus, so we can't do grid if globus has been specifed
-			if ( ! dash_globus) {
-				dash_grid = true;
-				qdo_mode = QDO_JobGridInfo;
-				Q.addAND( "JobUniverse == 9" );
+			dash_grid = true;
+			qdo_mode = QDO_JobGridInfo;
+			Q.addAND( "JobUniverse == 9" );
 
-				if( pcolon && strcmp( ++pcolon, "ec2" ) == 0 ) {
-					qdo_mode = QDO_JobGridEC2Info;
-				}
-			}
-		}
-		else
-		if (is_dash_arg_prefix(dash_arg, "globus", 5 )) {
-			Q.addAND( "GlobusStatus =!= UNDEFINED" );
-			dash_globus = true;
-			if (dash_grid) {
-				dash_grid = false;
-			} else {
-				qdo_mode = QDO_JobGlobusInfo;
+			if( pcolon && strcmp( ++pcolon, "ec2" ) == 0 ) {
+				qdo_mode = QDO_JobGridEC2Info;
 			}
 		}
 		else
@@ -1769,7 +1752,7 @@ processCommandLineArguments (int argc, const char *argv[])
 	}
 
 	if (dash_dry_run) {
-		const char * const amo[] = { "", "normal", "run", "goodput", "globus", "grid", "grid:ec2", "hold", "io", "factory", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
+		const char * const amo[] = { "", "normal", "run", "goodput", "grid", "grid:ec2", "hold", "io", "factory", "dag", "totals", "batch", "autocluster", "custom", "analyze" };
 		fprintf(stderr, "\ncondor_q %s %s\n", amo[qdo_mode & QDO_BaseMask], dash_long ? "-long" : "");
 	}
 	if ( ! dash_long && ! (qdo_mode & QDO_Format) && (qdo_mode & QDO_BaseMask) < QDO_Custom) {
@@ -1991,11 +1974,11 @@ render_job_description(std::string & out, ClassAd *ad, Formatter &)
 	if ( ! description.empty()) {
 		formatstr(out, "(%s)", description.c_str());
 	} else {
-		MyString put_result = condor_basename(out.c_str());
-		MyString args_string;
-		ArgList::GetArgsStringForDisplay(ad,&args_string);
-		if ( ! args_string.IsEmpty()) {
-			put_result.formatstr_cat(" %s", args_string.Value());
+		std::string put_result = condor_basename(out.c_str());
+		std::string args_string;
+		ArgList::GetArgsStringForDisplay(ad,args_string);
+		if ( ! args_string.empty()) {
+			formatstr_cat(put_result, " %s", args_string.c_str());
 		}
 		out = put_result;
 	}
@@ -2265,144 +2248,11 @@ render_batch_name (std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 
 
 static bool
-render_globusStatus(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
-{
-	int globusStatus;
-	if ( ! ad->LookupInteger(ATTR_GLOBUS_STATUS, globusStatus))
-		return false;
-#if defined(HAVE_EXT_GLOBUS)
-	char result_str[64];
-	sprintf(result_str, " %7.7s", GlobusJobStatusName( globusStatus ) );
-	result = result_str;
-#else
-	static const struct {
-		int status;
-		const char * psz;
-	} gram_states[] = {
-		{ 1, "PENDING" },	 //GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING = 1,
-		{ 2, "ACTIVE" },	 //GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE = 2,
-		{ 4, "FAILED" },	 //GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED = 4,
-		{ 8, "DONE" },	 //GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE = 8,
-		{16, "SUSPEND" },	 //GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED = 16,
-		{32, "UNSUBMIT" },	 //GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED = 32,
-		{64, "STAGE_IN" },	 //GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN = 64,
-		{128,"STAGE_OUT" },	 //GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT = 128,
-	};
-	for (size_t ii = 0; ii < COUNTOF(gram_states); ++ii) {
-		if (globusStatus == gram_states[ii].status) {
-			result = gram_states[ii].psz;
-			return true;
-		}
-	}
-	formatstr(result, "%d", globusStatus);
-#endif
-	return true;
-}
-
-// The remote hostname may be in GlobusResource or GridResource.
-// We want this function to be called if at least one is defined,
-// but it will only be called if the one attribute it's registered
-// with is defined. So we register it with an attribute we know will
-// always be present and be a string. We then ignore that attribute
-// and examine GlobusResource and GridResource.
-static bool
-render_globusHostAndJM(std::string & result, ClassAd *ad, Formatter & /*fmt*/ )
-{
-	//static char result_format[64];
-	char	host[80] = "[?????]";
-	char	jm[80] = "fork";
-	char	*tmp;
-	size_t	ix;
-	char *attr_value = NULL;
-	char *resource_name = NULL;
-	char *grid_type = NULL;
-
-	result.clear();
-
-	if ( ! ad->LookupString( ATTR_GRID_RESOURCE, &attr_value ))
-		return false;
-
-	// ATTR_GRID_RESOURCE exists, skip past the initial
-	// '<job type> '.
-	resource_name = strchr( attr_value, ' ' );
-	if ( resource_name ) {
-		*resource_name = '\0';
-		grid_type = strdup( attr_value );
-		resource_name++;
-	}
-
-	if ( resource_name != NULL ) {
-
-		if ( grid_type == NULL || !strcasecmp( grid_type, "gt2" ) ||
-			 !strcasecmp( grid_type, "gt5" ) ||
-			 !strcasecmp( grid_type, "globus" ) ) {
-
-			// copy the hostname
-			ix = strcspn( resource_name, ":/" );
-			if (ix >= (int) sizeof(host) )
-				ix = sizeof(host) - 1;
-			strncpy( host, resource_name, ix);
-			host[ix] = '\0';
-
-			if ( ( tmp = strstr( resource_name, "jobmanager-" ) ) != NULL ) {
-				tmp += 11; // 11==strlen("jobmanager-")
-
-				// copy the jobmanager name
-				ix = strcspn( tmp, ":" );
-				if (ix >= (int) sizeof(jm) )
-					ix = sizeof(jm) - 1;
-				strncpy( jm, tmp, ix);
-				jm[ix] = '\0';
-			}
-
-		} else if ( !strcasecmp( grid_type, "gt4" ) ) {
-
-			strcpy( jm, "Fork" );
-
-				// GridResource is of the form '<service url> <jm type>'
-				// Find the space, zero it out, and grab the jm type from
-				// the end (if it's non-empty).
-			tmp = strchr( resource_name, ' ' );
-			if ( tmp ) {
-				*tmp = '\0';
-				if ( tmp[1] != '\0' ) {
-					strncpy( jm, &tmp[1], sizeof(jm));
-					jm[sizeof(jm) - 1] = '\0';
-				}
-			}
-
-				// Pick the hostname out of the URL
-			if ( strncmp( "https://", resource_name, 8 ) == 0 ) {
-				strncpy( host, &resource_name[8], sizeof(host) );
-				host[sizeof(host)-1] = '\0';
-			} else {
-				strncpy( host, resource_name, sizeof(host) );
-				host[sizeof(host)-1] = '\0';
-			}
-			ix = strcspn( host, ":/" );
-			host[ix] = '\0';
-		}
-	}
-
-	if ( grid_type ) {
-		free( grid_type );
-	}
-
-	free( attr_value );
-
-	// done --- pack components into the result string and return
-	formatstr( result, " %-8.8s %-18.18s  ", jm, host );
-	return true;
-}
-
-static bool
 render_gridStatus( std::string & result, ClassAd * ad, Formatter & fmt )
 {
 	if (ad->LookupString(ATTR_GRID_JOB_STATUS, result)) {
 		return true;
 	} 
-	if (render_globusStatus(result, ad, fmt))
-		return true;
 
 	int jobStatus;
 	if ( ! ad->LookupInteger(ATTR_GRID_JOB_STATUS, jobStatus))
@@ -2493,9 +2343,7 @@ render_gridResource(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
 	if (ix4 > ix2) ix4 = ix2;
 	host = str.substr(ix3, ix4-ix3);
 
-	MyString mystr = mgr.c_str();
-	mystr.replaceString(" ", "/");
-	mgr = mystr.Value();
+	replace_str(mgr, " ", "/");
 
     static char result_str[1024];
     if( MATCH == grid_type.compare( "ec2" ) ) {
@@ -2633,7 +2481,7 @@ usage (const char *myName, int other)
 		"\t-debug\t\t\t Display debugging info to console\n"
 		"\t-dag\t\t\t Sort DAG jobs under their DAGMan\n"
 		"\t-expert\t\t\t Display shorter error messages\n"
-		"\t-grid\t\t\t Get information about grid jobs (includes globus)\n"
+		"\t-grid\t\t\t Get information about grid jobs\n"
 		"\t-goodput\t\t Display job goodput statistics\n"
 		"\t-help [Universe|State]\t Display this screen, JobUniverses, JobStates\n"
 		"\t-hold\t\t\t Get information about jobs on hold\n"
@@ -2841,7 +2689,6 @@ extern const char * const jobDefault_PrintFormat;
 extern const char * const jobRuntime_PrintFormat;
 extern const char * const jobIdle_PrintFormat;
 extern const char * const jobGoodput_PrintFormat;
-extern const char * const jobGlobus_PrintFormat;
 extern const char * const jobGrid_PrintFormat;
 extern const char * const jobGridEC2_PrintFormat;
 extern const char * const jobHold_PrintFormat;
@@ -2860,7 +2707,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 #if 1
 	//PRAGMA_REMIND("tj: do I need to do anything to adjust the summarize mask here?")
 #else
-	if ( dash_run || dash_goodput || dash_globus || dash_grid ) 
+	if ( dash_run || dash_goodput || dash_grid ) 
 		summarize = false;
 	else if ((customHeadFoot&HF_NOSUMMARY) && ! show_held)
 		summarize = false;
@@ -2902,7 +2749,6 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 		{ QDO_JobRuntime,     "RUN",      jobRuntime_PrintFormat },
 		{ QDO_JobIdle,        "IDLE",     jobIdle_PrintFormat },
 		{ QDO_JobGoodput,     "GOODPUT",  jobGoodput_PrintFormat },
-		{ QDO_JobGlobusInfo,  "GLOBUS",   jobGlobus_PrintFormat },
 		{ QDO_JobGridInfo,    "GRID",     jobGrid_PrintFormat },
 		{ QDO_JobGridEC2Info, "GRID_EC2", jobGridEC2_PrintFormat },
 		{ QDO_JobHold,        "HOLD",     jobHold_PrintFormat },
@@ -2929,7 +2775,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 
 	// if there is a user-override output mask, then use that instead of the code below
 	if ( ! disable_user_print_files) {
-		MyString param_name("Q_DEFAULT_");
+		std::string param_name("Q_DEFAULT_");
 		if (tag[0]) {
 			param_name += tag;
 			param_name += "_";
@@ -3947,7 +3793,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		jr.getString(ixOwnerCol, name_width);
 		wids.owner_width = MAX(wids.owner_width, name_width);
 
-		MyString tmp;
+		std::string tmp;
 		union _jobid jid; jid.id = jr.id;
 		if (jr.flags & JROD_SCHEDUNIV) {
 			if (fold_dagman_sibs && jr.batch_uid && jr.next_sib && jr.getString(ixBatchNameCol, name_width)) {
@@ -3957,7 +3803,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 				jr.getString(ixBatchNameCol, name_width);
 				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
 			#else
-				tmp.formatstr("DAG %d", jid.cluster);
+				formatstr(tmp, "DAG %d", jid.cluster);
 				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
 				jr.rov.set_col_valid(ixBatchNameCol, true);
 				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
@@ -3967,7 +3813,7 @@ reduce_results(ROD_MAP_BY_ID & results) {
 			if (jr.getString(ixBatchNameCol, name_width)) {
 				wids.batch_name_width = MAX(wids.batch_name_width, name_width);
 			} else {
-				tmp.formatstr("ID: %d", jid.cluster);
+				formatstr(tmp, "ID: %d", jid.cluster);
 				jr.rov.Column(ixBatchNameCol)->SetStringValue(tmp.c_str());
 				jr.rov.set_col_valid(ixBatchNameCol, true);
 				wids.batch_name_width = MAX(wids.batch_name_width, (int)tmp.length());
@@ -3977,12 +3823,12 @@ reduce_results(ROD_MAP_BY_ID & results) {
 		union _jobid jmin, jmax; jmin.id = prog.min_jobid; jmax.id = prog.max_jobid;
 		if (jmin.id != jmax.id) {
 			if (jmin.cluster == jmax.cluster) {
-				tmp.formatstr("%d.%d-%d", jmin.cluster, jmin.proc, jmax.proc);
+				formatstr(tmp, "%d.%d-%d", jmin.cluster, jmin.proc, jmax.proc);
 			} else {
-				tmp.formatstr("%d.%d ... %d.%d", jmin.cluster, jmin.proc, jmax.cluster, jmax.proc);
+				formatstr(tmp, "%d.%d ... %d.%d", jmin.cluster, jmin.proc, jmax.cluster, jmax.proc);
 			}
 		} else {
-			tmp.formatstr("%d.%d", jmin.cluster, jmin.proc);
+			formatstr(tmp, "%d.%d", jmin.cluster, jmin.proc);
 		}
 		jr.rov.Column(ixJobIdsCol)->SetStringValue(tmp.c_str());
 		jr.rov.set_col_valid(ixJobIdsCol, true);
@@ -4077,9 +3923,9 @@ bool print_jobs_analysis (
 
 	// if there is a schedd ad, and we are not summarizing, check and report the schedd's global limits
 	if (pschedd_daemon && (analysis_mode > anaModeBetter) && ! reverse_analyze) {
-		MyString buf;
+		std::string buf;
 		if (warnScheddGlobalLimits(pschedd_daemon, buf)) {
-			fputs(buf.Value(), stdout);
+			fputs(buf.c_str(), stdout);
 		}
 	}
 
@@ -4748,7 +4594,7 @@ const char * const jobFactory_PrintFormat = "SELECT\n"
    "JobsIdle      AS '  IDLE' WIDTH 6 PRINTF %6d\n"
    "JobsHeld      AS '  HOLD' WIDTH 6 PRINTF %6d\n"
     ATTR_JOB_MATERIALIZE_NEXT_PROC_ID " AS 'NEXTID' WIDTH 6 PRINTF %6d\n"
-    ATTR_JOB_MATERIALIZE_PAUSED       " AS MODE PRINTAS JOB_FACTORY_MODE OR _\n"
+    ATTR_JOB_MATERIALIZE_PAUSED "?:JobFactoryPaused AS MODE PRINTAS JOB_FACTORY_MODE OR _\n"
     ATTR_JOB_MATERIALIZE_DIGEST_FILE  " AS DIGEST\n"
 "WHERE (ProcId is undefined) && (" ATTR_JOB_MATERIALIZE_DIGEST_FILE " isnt undefined)\n"
 "SUMMARY NONE\n";
@@ -4814,15 +4660,6 @@ const char * const jobGridEC2_PrintFormat = "SELECT\n"
 "   Cmd           AS CMD             WIDTH AUTO PRINTF  '%s'\n"
 "SUMMARY NONE\n";
 
-const char * const jobGlobus_PrintFormat = "SELECT\n"
-"   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
-"   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
-"   Owner         AS  OWNER WIDTH -14 PRINTAS OWNER OR ??\n"
-"   GlobusStatus  AS STATUS WIDTH -8 PRINTAS GLOBUS_STATUS OR ??\n"
-"   Cmd           AS 'MANAGER    HOST' WIDTH 30 PRINTAS GLOBUS_HOST ALWAYS\n"
-"   Cmd           AS EXECUTABLE     WIDTH 0\n"
-"SUMMARY NONE\n";
-
 const char * const jobHold_PrintFormat = "SELECT\n"
 "   ClusterId     AS ' ID'  NOSUFFIX WIDTH 5 PRINTF '%4d.'\n"
 "   ProcId        AS ' '    NOPREFIX WIDTH 3 PRINTF '%-3d'\n"
@@ -4864,8 +4701,6 @@ static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, "%T", render_cpu_time, ATTR_JOB_STATUS "\0" ATTR_SERVER_TIME "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_JOB_REMOTE_WALL_CLOCK "\0" },
 	{ "CPU_UTIL",        ATTR_JOB_REMOTE_USER_CPU, "%.1f", render_cpu_util, ATTR_JOB_COMMITTED_TIME "\0" },
 	{ "DAG_OWNER",       ATTR_OWNER, 0, render_dag_owner, ATTR_NICE_USER_deprecated "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0"  },
-	{ "GLOBUS_HOST",     ATTR_GRID_RESOURCE, 0, render_globusHostAndJM, NULL },
-	{ "GLOBUS_STATUS",   ATTR_GLOBUS_STATUS, 0, render_globusStatus, NULL },
 	{ "GRID_JOB_ID",     ATTR_GRID_JOB_ID, 0, render_gridJobId, ATTR_GRID_RESOURCE "\0" },
 	{ "GRID_RESOURCE",   ATTR_GRID_RESOURCE, 0, render_gridResource, ATTR_EC2_REMOTE_VM_NAME "\0" },
 	{ "GRID_STATUS",     ATTR_GRID_JOB_STATUS, 0, render_gridStatus, ATTR_GLOBUS_STATUS "\0" },
@@ -5058,11 +4893,11 @@ static void init_standard_summary_mask(ClassAd * summary_ad)
 	std::string messages;
 	PrintMaskMakeSettings dummySettings;
 	std::vector<GroupByKeyInfo> dummyGrpBy;
-	MyString sumyformat(standard_summary2);
+	std::string sumyformat(standard_summary2);
 	std::string myname;
 	if (summary_ad->LookupString("MyName", myname)) { 
 		sumyformat = standard_summary3;
-		sumyformat.replaceString("$(ME)", myname.c_str());
+		replace_str(sumyformat, "$(ME)", myname);
 	}
 	if (use_legacy_standard_summary) {
 		sumyformat = standard_summary_legacy;

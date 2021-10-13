@@ -58,7 +58,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	ReliSock* rsock = (ReliSock*)s;
 	TransferDaemon *td = NULL;
 	std::string rand_id;
-	MyString fquser;
+	std::string fquser;
 	ClassAd reqad, respad;
 	std::string jids, jids_allow, jids_deny;
 	std::vector<PROC_ID> *jobs = NULL;
@@ -70,7 +70,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	std::string peer_version;
 	bool has_constraint;
 	int direction;
-	MyString desc;
+	std::string desc;
 
 	(void)mode; // quiet the compiler
 
@@ -139,7 +139,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 
 	if (reqad.LookupBool(ATTR_TREQ_HAS_CONSTRAINT, has_constraint) == 0) {
 		dprintf(D_ALWAYS, "requestSandBoxLocation(): Client reqad from %s "
-			"must have %s as an attribute.\n", fquser.Value(), 
+			"must have %s as an attribute.\n", fquser.c_str(), 
 			ATTR_TREQ_HAS_CONSTRAINT);
 
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
@@ -176,7 +176,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		if (reqad.LookupString(ATTR_TREQ_JOBID_LIST, jids) == 0) {
 			dprintf(D_ALWAYS, "requestSandBoxLocation(): Submitter "
 				"%s's reqad must have %s as an attribute.\n", 
-				fquser.Value(), ATTR_TREQ_JOBID_LIST);
+				fquser.c_str(), ATTR_TREQ_JOBID_LIST);
 
 			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 			respad.Assign(ATTR_TREQ_INVALID_REASON, "Missing jobid list.");
@@ -198,7 +198,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			// can't have no constraint and no jobids, bail.
 			dprintf(D_ALWAYS, "Submitter %s sent inconsistant ad with no "
 				"constraint and also no jobids on which to perform sandbox "
-				"manipulations.\n", fquser.Value());
+				"manipulations.\n", fquser.c_str());
 
 			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 			respad.Assign(ATTR_TREQ_INVALID_REASON, 
@@ -217,7 +217,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		// authorized to.
 		//////////////////////
 		for (size_t i = 0; i < jobs->size(); i++) {
-			MyString job_owner = "";
+			std::string job_owner = "";
 			GetAttributeString((*jobs)[i].cluster, (*jobs)[i].proc, attr_JobUser.c_str(), job_owner);
 			if (UserCheck2(NULL, EffectiveUser(rsock), job_owner.c_str())) {
 				// only allow the user to manipulate jobs it is entitled to.
@@ -230,7 +230,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 					"WARNING: Submitter %s tried to request a sandbox "
 					"location for jobid %d.%d which is not owned by the "
 					"submitter. Denied modification to specified job.\n",
-					fquser.Value(), (*jobs)[i].cluster, (*jobs)[i].proc);
+					fquser.c_str(), (*jobs)[i].cluster, (*jobs)[i].proc);
 
 				// structure copy...
 				modify_deny_jobs->push_back((*jobs)[i]);
@@ -279,7 +279,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		{
 			dprintf(D_ALWAYS, "Submitter %s sent inconsistant ad with "
 				"no constraint to find any jobids\n",
-				fquser.Value());
+				fquser.c_str());
 		}
 
 		// By definition we'll only save the jobids the user may modify
@@ -320,7 +320,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	if (reqad.LookupInteger(ATTR_TREQ_FTP, protocol) == 0) {
 		dprintf(D_ALWAYS, "requestSandBoxLocation(): Submitter "
 			"%s's reqad must have %s as an attribute.\n", 
-			fquser.Value(), ATTR_TREQ_FTP);
+			fquser.c_str(), ATTR_TREQ_FTP);
 
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
@@ -341,7 +341,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	if (reqad.LookupString(ATTR_TREQ_PEER_VERSION, peer_version) == 0) {
 		dprintf(D_ALWAYS, "requestSandBoxLocation(): Submitter "
 			"%s's reqad must have %s as an attribute.\n", 
-			fquser.Value(), ATTR_TREQ_PEER_VERSION);
+			fquser.c_str(), ATTR_TREQ_PEER_VERSION);
 
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
@@ -360,7 +360,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	if (reqad.LookupInteger(ATTR_TREQ_DIRECTION, direction) == 0) {
 		dprintf(D_ALWAYS, "requestSandBoxLocation(): Submitter "
 			"%s's reqad must have %s as an attribute.\n", 
-			fquser.Value(), ATTR_TREQ_DIRECTION);
+			fquser.c_str(), ATTR_TREQ_DIRECTION);
 
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
@@ -512,7 +512,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.Assign(ATTR_TREQ_WILL_BLOCK, 1);
 		if (putClassAd(rsock, respad) == 0) {
 			dprintf(D_ALWAYS, "Submittor %s closed connection. Aborting "
-				"getting sandbox info for user.\n", fquser.Value());
+				"getting sandbox info for user.\n", fquser.c_str());
 			delete treq;
 			return FALSE;
 		}
@@ -571,7 +571,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	respad.Assign(ATTR_TREQ_WILL_BLOCK, 0);
 	if (putClassAd(rsock, respad) == 0) {
 		dprintf(D_ALWAYS, "Submittor %s closed connection. Aborting "
-			"getting sandbox info for user.\n", fquser.Value());
+			"getting sandbox info for user.\n", fquser.c_str());
 		delete treq;
 		return FALSE;
 	}
@@ -874,15 +874,15 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 			char *old_path_buf;
 			bool changed = false;
 			const char *base = NULL;
-			MyString new_path_buf;
+			std::string new_path_buf;
 			while ( (old_path_buf=old_paths.next()) ) {
 				base = condor_basename(old_path_buf);
 				if ((strcmp(AttrsToModify[index], ATTR_TRANSFER_INPUT_FILES)==0) && IsUrl(old_path_buf)) {
 					base = old_path_buf;
 				} else if ( strcmp(base,old_path_buf)!=0 ) {
-					new_path_buf.formatstr(
+					formatstr(new_path_buf,
 						"%s%c%s",SpoolSpace.c_str(),DIR_DELIM_CHAR,base);
-					base = new_path_buf.Value();
+					base = new_path_buf.c_str();
 					changed = true;
 				}
 				new_paths.append(base);
@@ -1441,13 +1441,13 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			char *old_path_buf;
 			bool changed = false;
 			const char *base = NULL;
-			MyString new_path_buf;
+			std::string new_path_buf;
 			while ( (old_path_buf=old_paths.next()) ) {
 				base = condor_basename(old_path_buf);
 				if ( strcmp(base,old_path_buf)!=0 ) {
-					new_path_buf.sprintf(
+					sprintf(new_path_buf,
 						"%s%c%s",SpoolSpace.c_str(),DIR_DELIM_CHAR,base);
-					base = new_path_buf.Value();
+					base = new_path_buf.c_str();
 					changed = true;
 				}
 				new_paths.append(base);

@@ -698,7 +698,7 @@ FileLock::updateLockTimestamp(void)
 
 // create a temporary lock path name into supplied buffer.
 const char *
-FileLock::getTempPath(MyString & pathbuf)
+FileLock::getTempPath(std::string & pathbuf)
 {
 	const char *suffix = "";
 	const char *result = NULL;
@@ -716,7 +716,7 @@ FileLock::getTempPath(MyString & pathbuf)
 char *
 FileLock::CreateHashName(const char *orig, bool useDefault)
 {
-	MyString pathbuf;
+	std::string pathbuf;
 	const char *path = getTempPath(pathbuf);
 	unsigned long hash = 0;
 	char *temp_filename;

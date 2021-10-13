@@ -481,7 +481,7 @@ bool
 Directory::rmdirAttempt( const char* path, priv_state priv )
 {
 
-	MyString rm_buf;
+	std::string rm_buf;
 	const char* log_msg=0;
 	priv_state saved_priv=PRIV_UNKNOWN;
 	int rval;
@@ -556,9 +556,9 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
         } else {
            // figure out if they are specifying condor_rmdir.exe, so we can default
            // the options
-           MyString exe(rmdir_exe_p);
-           exe.lower_case();
-           fCondorRmdir = (exe.find("condor_rmdir.exe",0) >= 0);
+           std::string exe(rmdir_exe_p);
+           lower_case(exe);
+           fCondorRmdir = (exe.find("condor_rmdir.exe",0) != std::string::npos);
         }
 
         if (fNativeRmdir) {
@@ -582,9 +582,9 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
         }
 
 #ifdef _DEBUG
-        dprintf( D_ALWAYS, "rmdirAttempt using command: %s\n", rm_buf.Value());
+        dprintf( D_ALWAYS, "rmdirAttempt using command: %s\n", rm_buf.c_str());
 #else
-        dprintf( D_FULLDEBUG, "rmdirAttempt using command: %s\n", rm_buf.Value());
+        dprintf( D_FULLDEBUG, "rmdirAttempt using command: %s\n", rm_buf.c_str());
 #endif
         if (rmdir_exe_p) free (rmdir_exe_p);
         if (rmdir_opts_p) free (rmdir_opts_p);
@@ -596,10 +596,10 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 		// Finally, do the work
 #if DEBUG_DIRECTORY_CLASS
 	dprintf( D_ALWAYS, "Directory: about to call \"%s\" as %s\n",
-			 rm_buf.Value(), log_msg );
+			 rm_buf.c_str(), log_msg );
 #elif defined( WIN32 )
 		// we use system here instead of my_system since rmdir is a shell command
-		rval = my_system(rm_buf.Value());
+		rval = my_system(rm_buf.c_str());
 #else
 		rval = my_spawnl( "/bin/rm", "/bin/rm", "-rf", path, NULL );
 #endif
@@ -812,7 +812,7 @@ Directory::Rewind()
 const char *
 Directory::Next()
 {
-	MyString path;
+	std::string path;
 	bool done = false;
 	Set_Access_Priv();
 	if( curr ) {
@@ -835,11 +835,11 @@ Directory::Next()
 		}
 		{
 			path = curr_dir;
-			if(path.Length() == 0 || path[path.Length()-1] != DIR_DELIM_CHAR) {
+			if(path.length() == 0 || path[path.length()-1] != DIR_DELIM_CHAR) {
 				path += DIR_DELIM_CHAR;
 			}
 			path += dirent->d_name;
-			curr = new StatInfo( path.Value() );
+			curr = new StatInfo( path.c_str() );
 			switch( curr->Error() ) {
 			case SINoFile:
 					// This file was deleted, continue with the next file. 
@@ -850,7 +850,7 @@ Directory::Next()
 					// do_stat failed with an error!
 				dprintf( D_FULLDEBUG,
 					 "Directory::stat() failed for \"%s\", errno: %d (%s)\n",
-					 path.Value(), curr->Errno(), strerror(curr->Errno()) );
+					 path.c_str(), curr->Errno(), strerror(curr->Errno()) );
 				delete curr;
 				curr = NULL;
 				break;
@@ -872,9 +872,9 @@ Directory::Next()
 	do {
 		if ( dirp == -1 ) {
 #ifdef _M_X64
-			dirp = _findfirst64(path.Value(),&filedata);
+			dirp = _findfirst64(path.c_str(),&filedata);
 #else
-			dirp = _findfirst(path.Value(),&filedata);
+			dirp = _findfirst(path.c_str(),&filedata);
 #endif
 			result = dirp;
 		} else {

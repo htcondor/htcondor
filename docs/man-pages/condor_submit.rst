@@ -1195,20 +1195,35 @@ FILE TRANSFER COMMANDS
         # If necessary
         aws_region = <region>
 
+    You may specify the corresponding access key ID and secret access key
+    with ``s3_access_key_id_file`` and ``s3_secret_access_key_file`` if
+    you prefer (which may reduce confusion, if you're not using AWS).
+
     If you must access S3 using temporary credentials, you may specify the
     temporary credentials using ``aws_access_key_id_file`` and
     ``aws_secret_access_key_file`` for the files containing the corresponding
     temporary token, and ``+EC2SessionToken`` for the file containing the
     session token.
 
-    HTCondor does not presently support transferring entire buckets or
-    directories from S3.
-
     Temporary credentials have a limited lifetime.  If you are using S3 only
     to download input files, the job must start before the credentials
     expire.  If you are using S3 to upload output files, the job must finish
     before the credentials expire.  HTCondor does not know when the credentials
     will expire; if they do so before they are needed, file transfer will fail.
+
+    HTCondor does not presently support transferring entire buckets or
+    directories from S3.
+
+    HTCondor supports Google Cloud Storage URLs -- ``gs://`` -- via Google's
+    "interoperability" API.  You may specify ``gs://`` URLs as if they were
+    ``s3://`` URLs, and they work the same way.
+    You may specify the corresponding access key ID and secret access key
+    with ``gs_access_key_id_file`` and ``gs_secret_access_key_file`` if
+    you prefer (which may reduce confusion).
+
+    Note that (at present), you may not provide more than one set of
+    credentials for ``s3://`` or ``gs://`` file transfer; this implies
+    that all such URLs download from or upload to the same service.
 
     :index:`transfer_output_files<single: transfer_output_files; submit commands>`
 
@@ -1355,20 +1370,37 @@ FILE TRANSFER COMMANDS
 
     In all three cases, the job will go on hold if ``transfer_output_files``
     specifies a file which does not exist at transfer time.
+    :index:`aws_access_key_id_file<single: aws_access_key_id_file; submit commands>`
+    :index:`s3_access_key_id_file<single: s3_access_key_id_file; submit commands>`
 
- aws_access_key_id_file
-    Required if you specify an S3 URL, this command specifies the file containing
-    the access key ID (and only the access key ID) used to pre-sign the
-    S3 URLs.  Required.
+ aws_access_key_id_file, s3_access_key_id_file
+    One of these commands is required if you specify an ``s3://`` URL; they
+    specify the file containing the access key ID (and only the access key
+    ID) used to pre-sign the URLs.  Use only one.
+    :index:`aws_secret_access_key_file<single: aws_secret_access_key_file; submit commands>`
+    :index:`s3_secret_access_key_file<single: s3_secret_access_key_file; submit commands>`
 
- aws_secret_access_key_file
-    Required if you specify an S3 URL, this command specifies the file containing
-    the secret access key (and only the secret access key) used to
-    pre-sign the S3 URLs.
+ aws_secret_access_key_file, s3_secret_access_key_file
+    One of these commands is required if you specify an ``s3://`` URL; they
+    specify the file containing the secret access key (and only the secret
+    access key) used to pre-sign the URLs.  Use only one.
+    :index:`aws_region<single: aws_region; submit commands>`
 
  aws_region
     Optional if you specify an S3 URL (and ignored otherwise), this command
     specifies the region to use if one is not specified in the URL.
+    :index:`gs_access_key_id_file<single: gs_access_key_id_file; submit commands>`
+
+ gs_access_key_id_file
+    Required if you specify a ``gs://`` URLs, ths command
+    specifies the file containing the access key ID (and only the access key
+    ID) used to pre-sign the URLs.
+    :index:`gs_secret_access_key_file<single: gs_secret_access_key_file; submit commands>`
+
+ gs_secret_access_key_file
+    Required if you specify a ``gs://`` URLs, this command
+    specifies the file containing the secret access key (and only the secret
+    access key) used to pre-sign the URLs.
 
 POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 
@@ -1660,8 +1692,21 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
     configuration macros.
 
-COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit commands>`
+COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit commands>`
 
+ arc_resources = <XML-string>
+    For grid universe jobs of type **arc**, provides additional XML
+    attributes under the ``<Resources>`` section of the ARC ADL job
+    description which are not covered by regular submit description file
+    parameters.
+    :index:`arc_rte<single: arc_rte; submit commands>`
+ arc_rte = < rte1 option,rte2 >
+    For grid universe jobs of type **arc**, provides a list of Runtime
+    Environment names that the job requires on the ARC system.
+    The list is comma-delimited. If a Runtime Environment name supports
+    options, those can be provided after the name, separated by spaces.
+    Runtime Environment names are defined by the ARC server.
+    :index:`azure_admin_key<single: azure_admin_key; submit commands>`
  azure_admin_key = <pathname>
     For grid type **azure** jobs, specifies the path and file name of a
     file that contains an SSH public key. This key can be used to log
@@ -1690,6 +1735,11 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
  azure_size = <machine type>
     For grid type **azure** jobs, the hardware configuration that the
     virtual machine instance is to run on.
+    :index:`batch_extra_submit_args<single: batch_extra_submit_args; submit commands>`
+ batch_extra_submit_args = <command-line arguments>
+    Used for **batch** grid universe jobs.
+    Specifies additional command-line arguments to be given to the target
+    batch system's job submission command.
     :index:`batch_project<single: batch_project; submit commands>`
  batch_project = <projectname>
     Used for **batch** grid universe jobs.
@@ -1947,14 +1997,14 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     For each **grid-type-string** value, there are further type-specific
     values that must specified. This submit description file command
     allows each to be given in a space-separated list. Allowable
-    **grid-type-string** values are **azure**, **batch**, **boinc**,
+    **grid-type-string** values are **arc**, **azure**, **batch**, **boinc**,
     **condor**, **ec2**, **gce**, and **nordugrid**.
     The HTCondor manual chapter on Grid Computing
     details the variety of grid types.
 
     For a **grid-type-string** of **batch**, the single parameter is the
     name of the local batch system, and will be one of ``pbs``, ``lsf``,
-    ``sge``, or ``slurm``.
+    ``slurm``, or ``sge``.
 
     For a **grid-type-string** of **condor**, the first parameter is the
     name of the remote *condor_schedd* daemon. The second parameter is
@@ -1964,8 +2014,8 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     For a **grid-type-string** of **ec2**, one additional parameter
     specifies the EC2 URL.
 
-    For a **grid-type-string** of **nordugrid**, the single parameter is
-    the name of the NorduGrid resource to be used.
+    For a **grid-type-string** of **nordugrid** or **arc**, the single
+    parameter is the name of the ARC resource to be used.
 
     :index:`MyProxyCredentialName<single: MyProxyCredentialName; submit commands>`
  MyProxyCredentialName = <symbolic name>
@@ -2054,7 +2104,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     X.509 user proxy. If **x509userproxy** is set, then that file is
     used for the proxy. Otherwise, the proxy is looked for in the
     standard locations. If **x509userproxy** is set or if the job is a
-    grid universe job of grid type 
+    grid universe job of grid type **arc** or
     **nordugrid**, then the value of **use_x509userproxy** is forced to
     ``True``. Defaults to ``False``.
     :index:`x509userproxy<single: x509userproxy; submit commands>`
@@ -2079,7 +2129,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` is
     relevant when the **universe** is **vanilla**, or when the
     **universe** is **grid** and the type of grid system is one of
-    **condor**, or **nordugrid**. Defining
+    **condor**, **arc**, or **nordugrid**. Defining
     a value causes the proxy to be delegated to the execute machine.
     Further, VOMS attributes defined in the proxy will appear in the job
     ClassAd.

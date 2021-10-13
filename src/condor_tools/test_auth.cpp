@@ -117,15 +117,15 @@ main( int argc, char* argv[] )
 	int failures = 0;
 	IpVerify ipverify;
 
-	MyString line;
-	while( line.readLine(input_fp) ) {
-		line.chomp();
-		if( line.IsEmpty() || line[0] == '#' ) {
-			printf("%s\n",line.Value());
+	std::string line;
+	while( readLine(line, input_fp) ) {
+		chomp(line);
+		if( line.empty() || line[0] == '#' ) {
+			printf("%s\n",line.c_str());
 			continue;
 		}
 
-		StringList fields(line.Value()," ");
+		StringList fields(line.c_str()," ");
 		fields.rewind();
 
 		char const *perm_str = fields.next();
@@ -133,7 +133,7 @@ main( int argc, char* argv[] )
 		char const *ip = fields.next();
 		char const *expected = fields.next();
 
-		MyString sin_str = generate_sinful(ip, 0);
+		std::string sin_str = generate_sinful(ip, 0);
 
 		condor_sockaddr addr;
 		if( !addr.from_sinful(sin_str) ) {
@@ -154,8 +154,8 @@ main( int argc, char* argv[] )
 		}
 
 		char const *result;
-		MyString reason;
-		if( ipverify.Verify(perm,addr,fqu,&reason,&reason) != USER_AUTH_SUCCESS ) {
+		std::string reason;
+		if( ipverify.Verify(perm,addr,fqu, reason, reason) != USER_AUTH_SUCCESS ) {
 			result = "DENIED";
 		}
 		else {
@@ -164,15 +164,15 @@ main( int argc, char* argv[] )
 
 		if( expected && strcasecmp(expected,result) != 0 ) {
 			printf("Got wrong result '%s' for '%s': reason: %s!\n",
-				   result,line.Value(),reason.Value());
+				   result,line.c_str(),reason.c_str());
 			failures++;
 			continue;
 		}
 		if( expected ) {
-			printf("%s\n",line.Value());
+			printf("%s\n",line.c_str());
 		}
 		else {
-			printf("%s %s\n",line.Value(),result);
+			printf("%s %s\n",line.c_str(),result);
 		}
 	}
 

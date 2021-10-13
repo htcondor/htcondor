@@ -71,19 +71,19 @@ cache_credd_locally (
 	const char * pw)
 {
 	bool fAdded = false;
-	MyString my_full_name;
-	my_full_name.formatstr("%s@%s",username,domain);
-	if ( do_store_cred(my_full_name.Value(),pw,ADD_PWD_MODE) == SUCCESS ) {
+	std::string my_full_name;
+	formatstr(my_full_name, "%s@%s",username,domain);
+	if ( do_store_cred(my_full_name.c_str(),pw,ADD_PWD_MODE) == SUCCESS ) {
 		dprintf(D_FULLDEBUG,
 			"init_user_ids: "
 			"Successfully stashed credential in registry for user %s\n",
-			my_full_name.Value());
+			my_full_name.c_str());
         fAdded = true;
 	} else {
 		dprintf(D_FULLDEBUG,
 			"init_user_ids: "
 			"Failed to stash credential in registry for user %s\n",
-			my_full_name.Value());
+			my_full_name.c_str());
 	}
     return fAdded;
 }

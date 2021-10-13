@@ -122,7 +122,7 @@ int do_check_oauth_creds(const classad::ClassAd* request_ads[], int num_ads, std
 // store a password into a file on unix and into the registry on Windows
 int store_cred_password(const char *user, const char *pass, int mode);
 // store a binary blob, (kerberos ticket or OAuth token), on successful ADD ccfile will be set to a filename to watch for if a credmon needs to process the blob
-long long store_cred_blob(const char *user, int mode, const unsigned char * cred, int credlen, const classad::ClassAd* ad, MyString & ccfile);
+long long store_cred_blob(const char *user, int mode, const unsigned char * cred, int credlen, const classad::ClassAd* ad, std::string & ccfile);
 // command handler for STORE_CRED in Credd, Master and Schedd
 int store_cred_handler(int i, Stream *s);
 // command handler for CREDD_GET_PASSWD in Credd and Shadow
@@ -130,7 +130,7 @@ int cred_get_password_handler(int i, Stream *s);
 // command handler for CREDD_GET_CRED in Shadow
 int cred_get_cred_handler(int i, Stream *s);
 // check whether credfile has matching scopes and audience to those in requestAd
-int cred_matches(MyString & credfile, const classad::ClassAd * requestAd);
+int cred_matches(const std::string & credfile, const classad::ClassAd * requestAd);
 
 bool read_from_keyboard(char* buf, int maxlength, bool echo = true);
 char* get_password(void);	// get password from user w/o echo on the screen

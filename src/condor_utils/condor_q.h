@@ -125,7 +125,7 @@ class CondorQ
 	// return the effective query constraint directly to the user.
 	// the caller is responsible for deleting the returned ExprTree.
 	int  rawQuery(ExprTree * &tree) { return query.makeQuery(tree); }
-	int  rawQuery(MyString & str) { return query.makeQuery(str); }
+	int  rawQuery(std::string & str) { return query.makeQuery(str); }
 
   private:
 	GenericQuery query;

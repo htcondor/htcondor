@@ -24,11 +24,11 @@ for x86-64.
 
 Repository packages are available for each platform:
 
-* `RedHat 7 <https://research.cs.wisc.edu/htcondor/repo/9.0/htcondor-release-current.el7.noarch.rpm>`_
-* `RedHat 8 <https://research.cs.wisc.edu/htcondor/repo/9.0/htcondor-release-current.el8.noarch.rpm>`_
-* `CentOS 7 <https://research.cs.wisc.edu/htcondor/repo/9.0/htcondor-release-current.el7.noarch.rpm>`_
-* `CentOS 8 <https://research.cs.wisc.edu/htcondor/repo/9.0/htcondor-release-current.el8.noarch.rpm>`_
-* `Amazon Linux 2 <https://research.cs.wisc.edu/htcondor/repo/9.0/htcondor-release-current.amzn2.noarch.rpm>`_
+* `RedHat 7 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el7.noarch.rpm>`_
+* `RedHat 8 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el8.noarch.rpm>`_
+* `CentOS 7 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el7.noarch.rpm>`_
+* `CentOS 8 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el8.noarch.rpm>`_
+* `Amazon Linux 2 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.amzn2.noarch.rpm>`_
 
 The HTCondor packages on these platforms depend on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
@@ -50,17 +50,17 @@ also include the source packages.
 Debian 9 and 10
 ###############
 
-Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-9.0-Key>`_
+Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-current-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Debian 9: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/9.0 stretch main``
-* Debian 10: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/9.0 buster main``
+* Debian 9: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/current stretch main``
+* Debian 10: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/current buster main``
 
 Ubuntu 18.04 and 20.04
 ######################
 
-Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-9.0-Key>`_
+Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-current-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Ubuntu 18.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/9.0 bionic main``
-* Ubuntu 20.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/9.0 focal main``
+* Ubuntu 18.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/current bionic main``
+* Ubuntu 20.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/current focal main``

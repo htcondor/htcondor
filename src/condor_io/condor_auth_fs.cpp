@@ -158,7 +158,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 	        mypid = ::getpid();
 #endif
 
-			MyString filename;
+			std::string filename;
 			char * rendezvous_dir = param("FS_REMOTE_DIR");
 			if (rendezvous_dir) {
 				filename = rendezvous_dir;
@@ -169,11 +169,11 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				filename = "/tmp";
 			}
 			formatstr_cat( filename, "/FS_REMOTE_%s_%d_XXXXXXXXX",
-			               get_local_hostname().Value(), mypid );
+			               get_local_hostname().c_str(), mypid );
 			dprintf( D_SECURITY, "FS_REMOTE: client template is %s\n", filename.c_str() );
 
 			int sync_fd;
-			char *new_dir = strdup(filename.Value());
+			char *new_dir = strdup(filename.c_str());
 			sync_fd = condor_mkstemp(new_dir);
 			m_new_dir = new_dir;
 			free(new_dir);
@@ -188,7 +188,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				int en = errno;  // strerror could replace errno!
 				errstack->pushf("FS_REMOTE", 1002,
 						"condor_mkstemp(%s) failed: %s (%i)",
-						filename.Value(), strerror(en), en);
+						filename.c_str(), strerror(en), en);
 				m_new_dir = "";			//the other process will expect an
 										//empty string on failure
 			} else {
@@ -197,7 +197,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				dprintf( D_SECURITY, "FS_REMOTE: client filename is %s\n", m_new_dir.c_str() );
 			}
 		} else {
-			MyString filename;
+			std::string filename;
 			char * rendezvous_dir = param("FS_LOCAL_DIR");
 			if (rendezvous_dir) {
 				filename = rendezvous_dir;
@@ -209,7 +209,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 			dprintf( D_SECURITY, "FS: client template is %s\n", filename.c_str() );
 
 			int sync_fd;
-			char * new_dir = strdup(filename.Value());
+			char * new_dir = strdup(filename.c_str());
 			sync_fd = condor_mkstemp(new_dir);
 			m_new_dir = new_dir;
 			free(new_dir);
@@ -224,7 +224,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				int en = errno;  // strerror could replace errno!
 				errstack->pushf("FS", 1002,
 						"condor_mkstemp(%s) failed: %s (%i)",
-						filename.Value(), strerror(en), en);
+						filename.c_str(), strerror(en), en);
 				m_new_dir = "";			//the other process will expect an
 										//empty string on failure
 			} else {
@@ -281,7 +281,7 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 			// NFS client to sync to the NFS server.  fsync() does not do this.
 			// in practice, creating a file or directory should force the NFS
 			// client to sync in order to avoid race conditions.
-			MyString filename_template = "/tmp";
+			std::string filename_template = "/tmp";
 
 			char * rendezvous_dir = param("FS_REMOTE_DIR");
 			if (rendezvous_dir) {
@@ -300,8 +300,8 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 			// in so we create a dup of it just in case MyString does
 			// anything funny or uses string spaces, etc.
 			formatstr_cat( filename_template, "/FS_REMOTE_%s_%d_XXXXXX",
-			               get_local_hostname().Value(), mypid );
-			char* filename_inout = strdup(filename_template.Value());
+			               get_local_hostname().c_str(), mypid );
+			char* filename_inout = strdup(filename_template.c_str());
 
 			dprintf( D_SECURITY, "FS_REMOTE: sync filename is %s\n", filename_inout );
 

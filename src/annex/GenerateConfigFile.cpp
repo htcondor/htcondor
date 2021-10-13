@@ -28,7 +28,7 @@ GenerateConfigFile::operator() () {
 
 	// Consider using createUserConfigDir() from user-config-dir.h.
 	std::string userConfigName;
-	MyString userConfigSource;
+	std::string userConfigSource;
 	param( userConfigName, "USER_CONFIG_FILE" );
 	if(! userConfigName.empty()) {
 		find_user_file( userConfigSource, userConfigName.c_str(), false, false );

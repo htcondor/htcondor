@@ -71,6 +71,7 @@ LogReader::wait_internal(int timeout_ms)
         fd.fd = watch();
         fd.events = POLLIN;
         if (time_remaining > -1 && time_remaining < 1000) {step = time_remaining;}
+        int r = 0;
         Py_BEGIN_ALLOW_THREADS
         if (fd.fd == -1)
         {
@@ -78,10 +79,10 @@ LogReader::wait_internal(int timeout_ms)
         }
         else
         {
-            ::poll(&fd, 1, step);
+            r = ::poll(&fd, 1, step);
         }
         Py_END_ALLOW_THREADS
-        if (PyErr_CheckSignals() == -1)
+        if ((PyErr_CheckSignals() == -1) || (r < 0))
         {
             boost::python::throw_error_already_set();
         }

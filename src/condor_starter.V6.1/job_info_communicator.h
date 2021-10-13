@@ -518,7 +518,7 @@ protected:
 
 	bool user_priv_is_initialized;
 
-	MyString m_dedicated_execute_account_buf;
+	std::string m_dedicated_execute_account_buf;
 	char const *m_dedicated_execute_account;
 
 #if HAVE_JOB_HOOKS

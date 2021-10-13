@@ -249,9 +249,9 @@ my_popen(const ArgList &args, const char *mode, int want_stderr, const Env *zkmE
 	/* drop_privs HAS NO EFFECT ON WINDOWS */
 	/* write_data IS NOT YET IMPLEMENTED ON WINDOWS - we can do so when we need it */
 
-	MyString cmdline, err;
-	if (!args.GetArgsStringWin32(&cmdline, 0, &err)) {
-		dprintf(D_ALWAYS, "my_popen: error making command line: %s\n", err.Value());
+	MyString cmdline;
+	if (!args.GetArgsStringWin32(&cmdline, 0)) {
+		dprintf(D_ALWAYS, "my_popen: error making command line\n");
 		return NULL;
 	}
 	if (write_data && write_data[0]) {
@@ -539,14 +539,14 @@ my_popenv_impl( const char *const args[],
 		if (env_ptr) {
 			char **m_unix_env = NULL;
 			m_unix_env = env_ptr->getStringArray();
-			execve(cmd.Value(), const_cast<char *const*>(args), m_unix_env );
+			execve(cmd.c_str(), const_cast<char *const*>(args), m_unix_env );
 
 				// delete the memory even though we're on our way out
 				// if exec failed.
 			deleteStringArray(m_unix_env);
 
 		} else {
-			execvp(cmd.Value(), const_cast<char *const*>(args) );
+			execvp(cmd.c_str(), const_cast<char *const*>(args) );
 		}
 
 			/* If we get here, inform the parent of our errno */

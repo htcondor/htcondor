@@ -727,7 +727,6 @@ SCHEDD				= $(SBIN)/condor_schedd
 KBDD				= $(SBIN)/condor_kbdd
 NEGOTIATOR			= $(SBIN)/condor_negotiator
 COLLECTOR			= $(SBIN)/condor_collector
-GRID_MONITOR			= $(SBIN)/grid_monitor
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -1117,13 +1116,13 @@ QUEUE_SUPER_USERS	= root, condor
 
 ##  If you want condor_submit to automatically append expressions to
 ##  the job ClassAds it creates, you can uncomment and define the
-##  SUBMIT_EXPRS setting.  It works just like the STARTD_EXPRS
+##  SUBMIT_ATTRS setting.  It works just like the STARTD_ATTRS
 ##  described above with respect to ClassAd vs. config file syntax,
 ##  strings, etc.  One common use would be to have the full hostname
 ##  of the machine where a job was submitted placed in the job
 ##  ClassAd.  You would do this by uncommenting the following lines: 
 #MACHINE = "$(FULL_HOSTNAME)"
-#SUBMIT_EXPRS = MACHINE
+#SUBMIT_ATTRS = MACHINE
 
 ## Condor keeps a buffer of recently-used data for each file an
 ## application opens.  This macro specifies the default maximum number

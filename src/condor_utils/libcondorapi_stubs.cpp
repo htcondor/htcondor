@@ -218,6 +218,7 @@ CondorQuery::~CondorQuery() {}
 
 Regex::Regex() {not_impl();}
 Regex::~Regex() {}
+bool Regex::compile(const char *, char const** , int* , int ) {not_impl();return false;}
 bool Regex::compile(MyString const& , char const** , int* , int ) {not_impl();return false;}
 bool Regex::match(MyString const& , ExtArray<MyString>* ) {not_impl();return false;}
 

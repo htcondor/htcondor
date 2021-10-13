@@ -27,6 +27,7 @@ my $append_condor_config_C = '
 	# reduce latency in test
 	NEGOTIATOR_CYCLE_DELAY = 5
 	NEGOTIATOR_INTERVAL = 5
+	NEGOTIATOR_MIN_INTERVAL = 5
 ';
 
 # This is the "remote" pool where the job will run.

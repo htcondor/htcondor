@@ -25,10 +25,10 @@
 #include "infnbatchresource.h"
 #include "gridmanager.h"
 
-HashTable <std::string, INFNBatchResource *>
-    INFNBatchResource::ResourcesByName( hashFunction );
+std::map <std::string, INFNBatchResource *>
+    INFNBatchResource::ResourcesByName;
 
-const char * INFNBatchResource::HashName( const char * batch_type,
+std::string & INFNBatchResource::HashName( const char * batch_type,
 		const char * gahp_args )
 {
 	static std::string hash_name;
@@ -36,7 +36,7 @@ const char * INFNBatchResource::HashName( const char * batch_type,
 	if ( gahp_args && gahp_args[0] ) {
 		formatstr_cat( hash_name, " %s", gahp_args );
 	}
-	return hash_name.c_str();
+	return hash_name;
 }
 
 
@@ -44,7 +44,6 @@ INFNBatchResource* INFNBatchResource::FindOrCreateResource(const char * batch_ty
 	const char * resource_name,
 	const char * gahp_args )
 {
-	int rc;
 	INFNBatchResource *resource = NULL;
 
 	if ( resource_name == NULL ) {
@@ -54,13 +53,15 @@ INFNBatchResource* INFNBatchResource::FindOrCreateResource(const char * batch_ty
 		gahp_args = "";
     }
 
-	rc = ResourcesByName.lookup( HashName( batch_type, gahp_args ), resource );
-	if ( rc != 0 ) {
+	std::string &key = HashName( batch_type, gahp_args );
+	auto itr = ResourcesByName.find( key );
+	if ( itr == ResourcesByName.end() ) {
 		resource = new INFNBatchResource( batch_type, resource_name, gahp_args );
 		ASSERT(resource);
 		resource->Reconfig();
-		ResourcesByName.insert( HashName( batch_type, gahp_args ), resource );
+		ResourcesByName[key] = resource;
 	} else {
+		resource = itr->second;
 		ASSERT(resource);
 	}
 
@@ -113,7 +114,7 @@ INFNBatchResource::INFNBatchResource( const char *batch_type,
 
 INFNBatchResource::~INFNBatchResource()
 {
-	ResourcesByName.remove( HashName( m_batchType.c_str(), m_gahpArgs.c_str() ) );
+	ResourcesByName.erase( HashName( m_batchType.c_str(), m_gahpArgs.c_str() ) );
 	if ( gahp ) delete gahp;
 	delete m_xfer_gahp;
 }
@@ -132,7 +133,7 @@ const char *INFNBatchResource::ResourceType()
 
 const char *INFNBatchResource::GetHashName()
 {
-	return HashName( m_batchType.c_str(), m_gahpArgs.c_str() );
+	return HashName( m_batchType.c_str(), m_gahpArgs.c_str() ).c_str();
 }
 
 void INFNBatchResource::PublishResourceAd( ClassAd *resource_ad )

@@ -190,11 +190,19 @@ endif ()
 		condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_personal")
 
 		# ClassAds test suite
-		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "quick;ctest")
+		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+		if (LINUX)
+			# test_classad_eval doesn't actually depend on ornithology at all,
+			# but run_test.pl doesn't know that, and always runs pytest with an
+			# ornithology-specific command-line flag
+			condor_pl_test(test_classad_eval "Test classad_eval" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems; some tests not yet reliable
 		if(LINUX)
 			condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_num_holds "Test Hold Aggregates" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_late_materialization "Test that late materialization options work correctly with each other" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -205,11 +213,16 @@ endif ()
 			condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_python_bindings_collector "Test that the Python htcondor.Collector bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_dagman "Test DAGMan submission from the Python bindings" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_jobeventlog "tests the JobEvent class" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog.exe")
 			add_dependencies_suffix_hack(test_python_bindings_jobeventlog x_write_joblog.exe)
 
 			condor_pl_test(test_manifest "Test manifest functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_auth_protocol_token "Test TOKEN authentication" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_htcondor_cli "Test the htcondor CLI tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_toe_exit_info "Test ToE exit info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -222,9 +235,7 @@ endif ()
 	endif()
 
 	if(WITH_GANGLIA)
-		# Disable CTEST run for now; this test has many assumptions about being run inside the
-		# source directory (looks for ../ganglia, for example).
-		condor_pl_test(gangliad "Basic test of condor_gangliad." "quick;ctest")
+		condor_pl_test(gangliad "Basic test of condor_gangliad." "quick;ctest" CTEST DEPENDS "src/gangliad/ganglia_default_metrics")
 	endif()
 
 	condor_pl_test(lib_procapi_pidtracking-snapshot "Fast Termination Child Cleanup Test" "quick;ctest" CTEST DEPENDS "src/condor_tests/lib_procapi_pidtracking-snapshot.cmd;src/condor_tests/x_pid_tracking.pl")
@@ -257,8 +268,11 @@ endif ()
 	add_dependencies(classad_unit_test classad_unit_tester)
 	condor_pl_test(classad_cache_unit_test "Run classads parse test with and without classad caching" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/_test_classad_parse")
 	add_dependencies(classad_unit_test _test_classad_parse)
+	if (NOT(${SYSTEM_NAME} MATCHES "amzn2"))
+	# This test will fail until we update patchelf in the AmazonLinux Docker build image
 	condor_pl_test(unit_test_async_fread "Run MyAsyncFileReader Unit Tests" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/async_freader_tests")
 	add_dependencies(unit_test_async_fread async_freader_tests)
+	endif()
 	#need to copy the underlying exe into condor_tests directory before these tests can be run
 	#condor_pl_test(consumption_policy_unit_test "Run Consumption policy unit tests" "quick;ctest")
 	#condor_pl_test(ring_buffer_unit_test "Run ring buffer unit tests" "quick;ctest")
@@ -404,9 +418,10 @@ endif ()
 	condor_pl_test(cmd_drain_scavenging_vacation "condor_drain -start with lazy job" "quick;ctest" CTEST DEPENDS "src/condor_tests/CustomMachineResource.pm;src/condor_scripts/CondorTest.pm;src/condor_scripts/Condor.pm;src/condor_scripts/CondorUtils.pm;src/condor_scripts/CondorPersonal.pm")
 
 	##### lib log tests
-	condor_pl_test(lib_userlog "Exercise the userlog interface write and read all events" "lib;quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe;${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog.exe;src/condor_tests/lib_userlog.cmd")
-	add_dependencies_suffix_hack(lib_userlog "x_read_joblog.exe;x_write_joblog.exe")
-	condor_pl_test(lib_eventlog "Basic Event Log Test" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe")
+	condor_pl_test(lib_userlog "Exercise the userlog interface write and read all events" "lib;quick;full;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe;${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog.exe;src/condor_tests/lib_userlog.cmd")
+	add_dependencies_suffix_hack(lib_userlog x_read_joblog.exe)
+	add_dependencies_suffix_hack(lib_userlog x_write_joblog.exe)
+	condor_pl_test(lib_eventlog "Basic Event Log Test" "core;quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe")
 	add_dependencies_suffix_hack(lib_eventlog x_read_joblog.exe)
 	condor_pl_test(lib_eventlog-xml "Basic XML Event Log Test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl;${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe;src/condor_tests/x_lib_eventlog.expected")
 	add_dependencies_suffix_hack(lib_eventlog-xml x_read_joblog.exe)
@@ -608,29 +623,34 @@ endif ()
         add_dependencies_suffix_hack(cmd_wait_shows-partial x_write_joblog_events.exe)
 	condor_pl_test(cmd_wait_shows-timeout "" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog_events.exe")
         add_dependencies_suffix_hack(cmd_wait_shows-timeout x_write_joblog_events.exe)
-	condor_pl_test(job_dagman_fullremove "Ensure a removed dag is completely removed" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_basic "Basic one node dag" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_local "Test local universe under DAGMan" "dagman;quick;ctest")
+		condor_pl_test(job_dagman_fullremove "Ensure a removed dag is completely removed" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_fullremove.dag;src/condor_tests/job_dagman_fullremove.cmd;src/condor_tests/job_dagman_fullremove.pl;src/condor_tests/job_dagman_monitor.pl;${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe")
+	condor_pl_test(job_dagman_basic "Basic one node dag" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_basic.dag;src/condor_tests/job_dagman_basic-node.cmd;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/x_dagman_premonitor.pl;src/condor_tests/job_dagman_monitor.pl")
+	condor_pl_test(job_dagman_local "Test local universe under DAGMan" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_local.dag;src/condor_tests/job_dagman_local.cmd;src/condor_tests/job_dagman_local2.cmd")
 	#condor_pl_test(job_dagman_dont_use_default_node_log "Test for DAGMAN_ALWAYS_USE_NODE_LOG" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_maxpostscripts "Check that throttling by post scripts works" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_maxprescripts "Check that throttling by pre scripts works" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_prepost "Run a dag and verify each nodes pre and post scripts ran" "dagman;quick;ctest")
+	condor_pl_test(job_dagman_maxpostscripts "Check that throttling by post scripts works" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_maxpostscripts.dag;src/condor_tests/job_dagman_maxpostscripts.cmd;src/condor_tests/job_dagman_maxpostscripts-checkin.template;src/condor_tests/x_dagman_boring_prescript.pl;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_dagman_readflowlog.pl")
+	condor_pl_test(job_dagman_maxprescripts "Check that throttling by pre scripts works" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_maxprescripts.dag;src/condor_tests/job_dagman_maxprescripts.cmd;src/condor_tests/job_dagman_maxprescripts-node.cmd;src/condor_tests/job_dagman_maxprescripts-checkin.template;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/job_dagman_monitor.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_dagman_readflowlog.pl")
+
+	condor_pl_test(job_dagman_prepost "Run a dag and verify each nodes pre and post scripts ran" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_prepost.dag;src/condor_tests/job_dagman_prepost-node.cmd;src/condor_tests/job_dagman_prepost-prehello.template;src/condor_tests/job_dagman_prepost-posthello.template;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/job_dagman_monitor.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_dagman_readflowlog.pl;src/condor_tests/x_dagman_readprepostlog.pl;${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe")
+
 	condor_pl_test(job_dagman_retry "Make sure a retry dag runs correctly." "dagman;quick;ctest")
 	condor_pl_test(job_dagman_throttle "Test Dagman throttling ability" "dagman;long")
-	condor_pl_test(job_dagman_unlessexit "Test that the retries can be stopped with particular exit values from node." "dagman;quick;ctest")
-	condor_pl_test(job_dagman_abort-A "Test ABORT-DAG-ON" "dagman")
-	condor_pl_test(job_dagman_parallel-A "Test DAGMan handling nodes w/ multiple jobs" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_subdag-A "Test condor_submit_dag recursion on nested DAGs, SUBDAG EXTERNAL keyword" "dagman;quick;ctest")
+
+	condor_pl_test(job_dagman_unlessexit "Test that the retries can be stopped with particular exit values from node." "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_unlessexit.cmd;src/condor_tests/job_dagman_unlessexit.dag;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/x_dagman_retry-monitor.pl")
+	condor_pl_test(job_dagman_abort-A "Test ABORT-DAG-ON" "dagman" )# not in "quick" CTEST DEPENDS "src/condor_tests/job_dagman_abort-A.dag;src/condor_tests/job_dagman_abort-A-node-fail.cmd;src/condor_tests/job_dagman_abort-A-node-succeed.cmd;src/condor_tests/x_dagman_retry-monitor.pl")
+	condor_pl_test(job_dagman_parallel-A "Test DAGMan handling nodes w/ multiple jobs" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_parallel-A.dag;src/condor_tests/job_dagman_parallel-A-node.cmd")
+	condor_pl_test(job_dagman_subdag-A "Test condor_submit_dag recursion on nested DAGs, SUBDAG EXTERNAL keyword" "dagman;quick;ctest" CTEST DEPENDS
+"src/condor_tests/job_dagman_subdag-A-lower1.dag;src/condor_tests/job_dagman_subdag-A-lower1-node.cmd;src/condor_tests/job_dagman_subdag-A-lower2.dag;src/condor_tests/job_dagman_subdag-A-lower2-node.cmd;src/condor_tests/job_dagman_subdag-A-lowerlower1.dag;src/condor_tests/job_dagman_subdag-A-lowerlower1-node.cmd;src/condor_tests/job_dagman_subdag-A-lower-nodeA-post.pl;src/condor_tests/job_dagman_subdag-A-lower-nodeA-pre.pl;src/condor_tests/job_dagman_subdag-A-upper.dag;src/condor_tests/job_dagman_subdag-A-upper-node.cmd")
 #   GGT  debug this one later in new batlab
 #	condor_pl_test(job_dagman_subdag-AE "Test condor_submit_dag recursion on nested DAGs, SUBDAG EXTERNAL keyword, eager .condor.sub generation" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_subdag_in_splice-A "Test a sub-DAG inside a splice -- only works with lazy submit file generation" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_pre_subdag-A "Test sub-DAG generated by PRE script" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_splice-cat "Test DAG splice/node category" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_node_prio "Test DAG node priorities" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_depth_first "Make sure DAGMan depth-first traversal works" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_log_path "Test DAG tricky log file paths" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_retry_recovery "Test DAG recovery w/ retried node" "dagman;quick;ctest")
-	condor_pl_test(job_dagman_submit_fails_post "Test submit failure on node w/ POST" "dagman;quick;ctest")
+condor_pl_test(job_dagman_subdag_in_splice-A "Test a sub-DAG inside a splice -- only works with lazy submit file generation" "dagman;quick;ctest" CTEST DEPENDS 
+	"src/condor_tests/job_dagman_subdag_in_splice-A-lower.dag;src/condor_tests/job_dagman_subdag_in_splice-A-lowerlower.dag;src/condor_tests/job_dagman_subdag_in_splice-A-lowerlower-node.cmd;src/condor_tests/job_dagman_subdag_in_splice-A-lower-nodeA-post.pl;src/condor_tests/job_dagman_subdag_in_splice-A-lower-nodeA-pre.pl;src/condor_tests/job_dagman_subdag_in_splice-A-lower-node.cmd;src/condor_tests/job_dagman_subdag_in_splice-A-upper.dag;src/condor_tests/job_dagman_subdag_in_splice-A-upper-node.cmd")
+	condor_pl_test(job_dagman_pre_subdag-A "Test sub-DAG generated by PRE script" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_pre_subdag-A-node.cmd;src/condor_tests/job_dagman_pre_subdag-A-pre.pl;src/condor_tests/job_dagman_pre_subdag-A-upper.dag")
+	condor_pl_test(job_dagman_splice-cat "Test DAG splice/node category" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_splice-cat.cmd;src/condor_tests/job_dagman_splice-cat.dag;src/condor_tests/job_dagman_splice-cat-splice1.dag;src/condor_tests/job_dagman_splice-cat-splice2.dag")
+	condor_pl_test(job_dagman_node_prio "Test DAG node priorities" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_node_prio.cmd;src/condor_tests/job_dagman_node_prio.config;src/condor_tests/job_dagman_node_prio.dag;src/condor_tests/job_dagman_node_prio-nodeA.cmd;src/condor_tests/job_dagman_node_prio-nodeA.pl;src/condor_tests/job_dagman_node_prio.pl")
+	condor_pl_test(job_dagman_depth_first "Make sure DAGMan depth-first traversal works" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_depth_first.config;src/condor_tests/job_dagman_depth_first.dag;src/condor_tests/job_dagman_depth_first-nodeA.cmd;src/condor_tests/job_dagman_depth_first-nodeA.pl;src/condor_tests/job_dagman_depth_first-nodeB.cmd;src/condor_tests/job_dagman_depth_first-nodeB.pl;src/condor_tests/job_dagman_depth_first-nodeC.cmd")
+	condor_pl_test(job_dagman_log_path "Test DAG tricky log file paths" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_log_path.dag;src/condor_tests/job_dagman_log_path-nodeA.cmd;src/condor_tests/job_dagman_log_path-nodeB.cmd;src/condor_tests/job_dagman_log_path-nodeC.cmd;src/condor_tests/job_dagman_log_path-nodeD.cmd;src/condor_tests/job_dagman_log_path-node.pl")
+	condor_pl_test(job_dagman_retry_recovery "Test DAG recovery w/ retried node" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_retry_recovery.config;src/condor_tests/job_dagman_retry_recovery.dag;src/condor_tests/job_dagman_retry_recovery-nodeA.cmd;src/condor_tests/job_dagman_retry_recovery-nodeA.pl;src/condor_tests/job_dagman_retry_recovery-nodeB2.cmd;src/condor_tests/job_dagman_retry_recovery-nodeB2.pl;src/condor_tests/job_dagman_retry_recovery-nodeB2-post.pl;src/condor_tests/job_dagman_retry_recovery-nodeB2-pre.pl;src/condor_tests/job_dagman_retry_recovery-nodeB.cmd;src/condor_tests/job_dagman_retry_recovery-nodeB.pl;src/condor_tests/job_dagman_retry_recovery-nodeC.cmd;src/condor_tests/job_dagman_retry_recovery-nodeC.pl")
+	condor_pl_test(job_dagman_submit_fails_post "Test submit failure on node w/ POST" "dagman;quick;ctest" CTEST DEPENDS src/condor_tests/job_dagman_submit_fails_post.config;src/condor_tests/job_dagman_submit_fails_post.dag;src/condor_tests/job_dagman_submit_fails_post-nodeA.cmd;src/condor_tests/job_dagman_submit_fails_post-nodeA-post.pl)
 	condor_pl_test(job_dagman_usedagdir "Test DAG with -usedagdir flag" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_usedagdir-subdir")
 	condor_pl_test(job_dagman_node_dir "Test DAG with nodes in subdirectories" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_node_dir.dag;src/condor_tests/job_dagman_node_dir-node.cmd;src/condor_tests/job_dagman_node_dir-node.pl;src/condor_tests/job_dagman_node_dir-post.pl;src/condor_tests/job_dagman_node_dir-pre.pl;src/condor_tests/job_dagman_node_dir-subdir")
 	condor_pl_test(job_dagman_default_log "Test DAG with default node log file" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_default_log.config;src/condor_tests/job_dagman_default_log-nodeB1.cmd;src/condor_tests/job_dagman_default_log-nodeB.pl;src/condor_tests/job_dagman_default_log-nodeB-pre.pl;src/condor_tests/job_dagman_default_log-nodeC.pl;src/condor_tests/job_dagman_default_log-subdir;src/condor_tests/job_dagman_default_log.dag;src/condor_tests/job_dagman_default_log-nodeB2.cmd;src/condor_tests/job_dagman_default_log-nodeB-post.pl;src/condor_tests/job_dagman_default_log-nodeC.cmd")

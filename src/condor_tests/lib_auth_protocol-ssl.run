@@ -76,7 +76,6 @@ chdir("$topleveldir");
 my $firstappend_condor_config = '
     DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
     WANT_SUSPEND = FALSE
-    NEGOTIATION_INTERVAL = 5
     ALL_DEBUG = D_ALWAYS
 	TOOL_DEBUG = D_ALL
 	ALL_DEBUG = D_ALL

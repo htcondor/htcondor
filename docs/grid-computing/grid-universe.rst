@@ -242,7 +242,12 @@ Advanced Resource Connector (ARC). See the NorduGrid web page
 (`http://www.nordugrid.org <http://www.nordugrid.org>`_) for more
 information about NorduGrid software.
 
-HTCondor jobs may be submitted to NorduGrid resources using the **grid**
+NorduGrid ARC supports multiple job submission interfaces.
+The **nordugrid** grid type uses their older gridftp-based interface,
+which is due to be retired. We recommend using the new REST-based
+interface, available via the grid type **arc**, documented below.
+
+HTCondor jobs may be submitted to NorduGrid ARC resources using the **grid**
 universe. The
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
 command specifies the name of the NorduGrid resource as follows:
@@ -273,6 +278,79 @@ format this submit description file command is
 
     nordugrid_rsl = (name=value)(name=value)
 
+The arc Grid Type
+-----------------------
+
+:index:`ARC CE`
+:index:`submitting jobs to ARC CE<single: submitting jobs to ARC CE; grid computing>`
+
+NorduGrid is a project to develop free grid middleware named the
+Advanced Resource Connector (ARC). See the NorduGrid web page
+(`http://www.nordugrid.org <http://www.nordugrid.org>`_) for more
+information about NorduGrid software.
+
+NorduGrid ARC supports multiple job submission interfaces.
+The **arc** grid type uses their new REST interface.
+
+HTCondor jobs may be submitted to ARC CE resources using the **grid**
+universe. The
+**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
+command specifies the name of the ARC CE service as follows:
+
+.. code-block:: text
+
+    grid_resource = arc https://arc.example.com:443/arex/rest/1.0
+
+Only the hostname portion of the URL is required.
+Appropriate defaults will be used for the other components.
+
+ARC uses X.509 credentials for authentication, usually in the form
+a proxy certificate. *condor_submit* looks in default locations for the
+proxy. The submit description file command
+**x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` may be
+used to give the full path name to the directory containing the proxy,
+when the proxy is not in a default location. If this optional command is
+not present in the submit description file, then the value of the
+environment variable ``X509_USER_PROXY`` is checked for the location of
+the proxy. If this environment variable is not present, then the proxy
+in the file ``/tmp/x509up_uXXXX`` is used, where the characters XXXX in
+this file name are replaced with the Unix user id.
+
+ARC CE allows sites to define Runtime Environment (RTE) labels that alter
+the environment in which a job runs.
+Jobs can request one or move of these labels.
+For example, the ``ENV/PROXY`` label makes the user's X.509 proxy
+available to the job when it executes.
+Some of these labels have optional parameters for customization.
+The submit description file command
+**arc_rte** :index:`arc_rte<single: arc_resources; submit commands>`
+can be used to request one of more of these labels.
+It is a comma-delimited list. If a label supports optional parameters, they
+can be provided after the label spearated by spaces.
+Here is an example showing use of two standard RTE labels, one with
+an optional parameter:
+
+.. code-block:: text
+
+    arc_rte = ENV/RTE,ENV/PROXY USE_DELEGATION_DB
+
+ARC CE uses ADL (Activity Description Language) syntax to describe jobs.
+The specification of the language can be found
+`here <https://www.nordugrid.org/documents/EMI-ES-Specification_v1.16.pdf>`_.
+HTCondor constructs an ADL description of the job based on attributes in
+the job ClassAd, but some ADL elements don't have an equivalent job ClassAd
+attribute.
+The submit description file command
+**arc_resources** :index:`arc_resoruces<single: arc_resources; submit commands>`
+can be used to specify these elements if they fall under the ``<Resources>``
+element of the ADL.
+The value should be a chunk of XML text that could be inserted inside the
+``<Resources>`` element. For example:
+
+.. code-block:: text
+
+    arc_resources = <NetworkInfo>gigabitethernet</NetworkInfo>
+
 The batch Grid Type (for PBS, LSF, SGE, and SLURM)
 --------------------------------------------------
 
@@ -291,32 +369,12 @@ description file.
 The second argument on the right hand side will be one of ``pbs``,
 ``lsf``, ``sge``, or ``slurm``.
 
-Any of these batch grid types requires two variables to be set in the
-HTCondor configuration file. ``BATCH_GAHP`` :index:`BATCH_GAHP` is
-the path to the GAHP server binary that is to be used to submit one of
-these batch jobs. ``GLITE_LOCATION`` :index:`GLITE_LOCATION` is
-the path to the directory containing the GAHP's configuration file and
-auxiliary binaries. In the HTCondor distribution, these files are
-located in ``$(LIBEXEC)``/glite. The batch GAHP's configuration file is
-in ``$(GLITE_LOCATION)``/etc/blah.config. The batch GAHP's
-auxiliary binaries are to be in the directory ``$(GLITE_LOCATION)``/bin.
-The HTCondor configuration file appears
-
-.. code-block:: text
-
-    GLITE_LOCATION = $(LIBEXEC)/glite
-    BATCH_GAHP     = $(BIN)/blahpd
-
-The batch GAHP's configuration file has variables that must be modified
-to tell it where to find
-
- PBS
-    on the local system. ``pbs_binpath`` is the directory that contains
-    the PBS binaries. ``pbs_spoolpath`` is the PBS spool directory.
- LSF
-    on the local system. ``lsf_binpath`` is the directory that contains
-    the LSF binaries. ``lsf_confpath`` is the location of the LSF
-    configuration file.
+The batch GAHP server is a piece of software called the blahp.
+The configuration parameters ``BATCH_GAHP`` and ``BLAHPD_LOCATION``
+specify the locations of the main blahp binary and its dependent
+files, respectively.
+The blahp has its own configuration file, located at /etc/blah.config
+(``$(RELEASE_DIR)``/etc/blah.config for a tarball release).
 
 The batch GAHP supports translating certain job classad attributes into the corresponding batch system submission parameters. However, note that not all parameters are supported.
 

@@ -94,27 +94,13 @@ fi
 ln -s blahpd usr/bin/batch_gahp
 ln -s blahpd_daemon usr/sbin/batch_gahp_daemon
 # Construct a glite directory for Bosco
-if [ -d usr/libexec/condor/glite ]; then
+if [ -d usr/libexec/condor ]; then
     # RPM based systems
-    mkdir -p usr/libexec/condor/glite/etc
-    (cd usr/libexec/condor/glite/etc; ln -s ../../../../../etc/bl* .)
-    mkdir -p usr/libexec/condor/glite/bin
-    (cd usr/libexec/condor/glite/bin; ln -s ../../../../bin/bl* .)
-    (cd usr/libexec/condor/glite/bin; ln -s ../../../../sbin/bl* .)
-    (cd usr/libexec/condor/glite/bin; ln -s ../../../blahp/* .)
-    ln -s ../../../lib64 usr/libexec/condor/glite
-    ln -s bin usr/libexec/condor/glite/libexec
+    ln -s ../blahp usr/libexec/condor/blahp
 fi
-if [ -d usr/lib/condor/libexec/glite ]; then
+if [ -d usr/lib/condor/libexec ]; then
     # Debian based systems
-    mkdir -p usr/lib/condor/libexec/glite/etc
-    (cd usr/lib/condor/libexec/glite/etc; ln -s ../../../../../../etc/bl* .)
-    mkdir -p usr/lib/condor/libexec/glite/bin
-    (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../bin/bl* .)
-    (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../sbin/bl* .)
-    (cd usr/lib/condor/libexec/glite/bin; ln -s ../../../../../libexec/blahp/* .)
-    ln -s ../../.. usr/lib/condor/libexec/glite/lib
-    ln -s bin usr/lib/condor/libexec/glite/libexec
+    ln -s ../../../libexec/blahp usr/lib/condor/libexec/blahp
 fi
 # Comment out default blahp location
 sed -i -e s/blah_libexec_directory/#blah_libexec_directory/ etc/blah.config

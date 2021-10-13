@@ -74,7 +74,7 @@ bool goAheadAnyways();
 
 int main(int argc, const char *argv[]) {
 	
-	MyString my_full_name;
+	std::string my_full_name;
 	const char *full_name;
 	struct StoreCredOptions options;
 	int result = FAILURE_ABORTED;
@@ -142,7 +142,7 @@ int main(int argc, const char *argv[]) {
 			// default to current user and domain
 			auto_free_ptr my_name(my_username());
 			auto_free_ptr my_domain(my_domainname());
-			my_full_name.formatstr("%s@%s", my_name.ptr(), my_domain.ptr());
+			formatstr(my_full_name, "%s@%s", my_name.ptr(), my_domain.ptr());
 		}
 	} else if (strcmp(options.username, POOL_PASSWORD_USERNAME) == 0) {
 #if !defined(WIN32)
@@ -164,7 +164,7 @@ int main(int argc, const char *argv[]) {
 				goto cleanup;
 			}
 		}
-		my_full_name.formatstr(POOL_PASSWORD_USERNAME "@%s", domain);
+		formatstr(my_full_name, POOL_PASSWORD_USERNAME "@%s", domain);
 		free(domain);
 	} else {
 			// username was specified on the command line
@@ -172,7 +172,7 @@ int main(int argc, const char *argv[]) {
 	}
 	// print the account, if we haven't looked up the account because we want the credd
 	// to figure it out print the name of the current user just as a double check
-	full_name = my_full_name.Value();
+	full_name = my_full_name.c_str();
 	if (my_full_name.empty()) {
 		auto_free_ptr user(my_username());
 		printf("Account: <current> (%s)\n", user.ptr());

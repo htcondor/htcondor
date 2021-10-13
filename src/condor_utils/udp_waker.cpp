@@ -54,13 +54,13 @@ UdpWakeOnLanWaker::UdpWakeOnLanWaker (
 	m_port ( port )
 {
 	// TODO: Picking IPv4 arbitrarily.
-	MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+	std::string my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
 
     strncpy ( m_mac, mac, STRING_MAC_ADDRESS_LENGTH-1 );
 	m_mac[STRING_MAC_ADDRESS_LENGTH-1] = '\0';
     strncpy ( m_subnet, subnet, MAX_IP_ADDRESS_LENGTH-1 );
 	m_subnet[MAX_IP_ADDRESS_LENGTH-1] = '\0';
-    strncpy ( m_public_ip, my_ip.Value(), MAX_IP_ADDRESS_LENGTH-1 );
+    strncpy ( m_public_ip, my_ip.c_str(), MAX_IP_ADDRESS_LENGTH-1 );
 	m_public_ip[MAX_IP_ADDRESS_LENGTH-1] = '\0';
     m_can_wake = initialize ();	
 

@@ -499,7 +499,7 @@ bool ULogEvent::read_optional_line(MyString & str, FILE* file, bool & got_sync_l
 	if ( ! str.readLine(file, false)) {
 		return false;
 	}
-	if (is_sync_line(str.Value())) {
+	if (is_sync_line(str.c_str())) {
 		got_sync_line = true;
 		return false;
 	}
@@ -514,13 +514,13 @@ bool ULogEvent::read_line_value(const char * prefix, MyString & val, FILE* file,
 	if ( ! str.readLine(file, false)) {
 		return false;
 	}
-	if (is_sync_line(str.Value())) {
+	if (is_sync_line(str.c_str())) {
 		got_sync_line = true;
 		return false;
 	}
 	if (chomp) { str.chomp(); }
 	if (starts_with(str.c_str(), prefix)) {
-		val = str.substr((int)strlen(prefix), str.Length());
+		val = str.substr((int)strlen(prefix), str.length());
 		return true;
 	}
 	return false;
@@ -867,7 +867,7 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 	MyString fString;
 	fString.formatstr( "\tPartitionable Resources : %%%ds %%%ds %%%ds %%s\n",
 		cchUse, cchReq, MAX(cchAlloc, 9) );
-	formatstr_cat( out, fString.Value(), "Usage", "Request",
+	formatstr_cat( out, fString.c_str(), "Usage", "Request",
 		 cchAlloc ? "Allocated" : "", cchAssigned ? "Assigned" : "" );
 
 	// Print table.
@@ -884,7 +884,7 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 		else if( label == "Gpus" ) { label += " (Average)"; }
 		else if( label == "GpusMemory" ) { label += " (MB)"; }
 		const SlotResTermSumy & psumy = i.second;
-		formatstr_cat( out, fString.Value(), label.c_str(), psumy.use.c_str(),
+		formatstr_cat( out, fString.c_str(), label.c_str(), psumy.use.c_str(),
 			psumy.req.c_str(), psumy.alloc.c_str(), psumy.assigned.c_str() );
 	}
 }
@@ -1173,9 +1173,8 @@ FutureEvent::initFromClassAd(ClassAd* ad)
 
 void FutureEvent::setHead(const char * head_text)
 {
-	MyString line(head_text);
-	line.chomp();
-	head = line;
+	head = head_text;
+	chomp(head);
 }
 
 void FutureEvent::setPayload(const char * payload_text)
@@ -1507,7 +1506,7 @@ int GlobusSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 	if ( ! read_line_value("    Can-Restart-JM: ", tmp, file, got_sync_line)) {
 		return 0;
 	}
-	if ( ! YourStringDeserializer(tmp.Value()).deserialize_int(&newjm)) {
+	if ( ! YourStringDeserializer(tmp.c_str()).deserialize_int(&newjm)) {
 		return 0;
 	}
 #else
@@ -1942,7 +1941,7 @@ GenericEvent::readEvent(FILE *file, bool & got_sync_line)
 {
 #ifdef DONT_EVER_SEEK
 	MyString str;
-	if ( ! read_optional_line(str, file, got_sync_line) || str.Length() >= (int)sizeof(info)) {
+	if ( ! read_optional_line(str, file, got_sync_line) || str.length() >= (int)sizeof(info)) {
 		return 0;
 	}
 	strncpy(info, str.c_str(), sizeof(info)-1);
@@ -2082,11 +2081,11 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 	if (ix > 0) {
 		MyString et = line.substr(0, ix);
 		et.trim();
-		strncpy(error_type, et.Value(), sizeof(error_type));
+		strncpy(error_type, et.c_str(), sizeof(error_type) - 1);
 		line = line.substr(ix + 6, line.length());
 		line.trim();
 	} else {
-		strncpy(error_type, "Error", sizeof(error_type));
+		strncpy(error_type, "Error", sizeof(error_type) - 1);
 		retval = -1;
 	}
 
@@ -2096,7 +2095,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 	} else {
 		MyString dn = line.substr(0, ix);
 		dn.trim();
-		strncpy(daemon_name, dn.Value(), sizeof(daemon_name));
+		strncpy(daemon_name, dn.c_str(), sizeof(daemon_name) - 1);
 		line = line.substr(ix + 4, line.length());
 		line.trim();
 	}
@@ -2105,7 +2104,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 	ix = line.length();
 	if (ix > 0 && line[ix-1] == ':') { line.truncate(ix - 1); }
 
-	strncpy(execute_host, line.Value(), sizeof(execute_host));
+	strncpy(execute_host, line.c_str(), sizeof(execute_host) - 1);
 #else
     int retval = fscanf(
 	  file,
@@ -2138,7 +2137,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 			break;
 		}
 		line.chomp();
-		const char *l = line.Value();
+		const char *l = line.c_str();
 #else
 		char line[8192];
 		fpos_t filep;
@@ -2162,11 +2161,11 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 			continue;
 		}
 
-		if(lines.Length()) lines += "\n";
+		if(lines.length()) lines += "\n";
 		lines += l;
 	}
 
-	setErrorText(lines.Value());
+	setErrorText(lines.c_str());
 	return 1;
 }
 
@@ -2236,7 +2235,7 @@ void
 RemoteErrorEvent::setDaemonName(char const *str)
 {
 	if(!str) str = "";
-	strncpy(daemon_name,str,sizeof(daemon_name));
+	strncpy(daemon_name,str,sizeof(daemon_name) - 1);
 	daemon_name[sizeof(daemon_name)-1] = '\0';
 }
 
@@ -2244,7 +2243,7 @@ void
 RemoteErrorEvent::setExecuteHost(char const *str)
 {
 	if(!str) str = "";
-	strncpy(execute_host,str,sizeof(execute_host));
+	strncpy(execute_host,str,sizeof(execute_host) - 1);
 	execute_host[sizeof(execute_host)-1] = '\0';
 }
 
@@ -2428,7 +2427,7 @@ ExecutableErrorEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 	// get the error type number
-	YourStringDeserializer ser(line.Value());
+	YourStringDeserializer ser(line.c_str());
 	if ( ! ser.deserialize_int((int*)&errType) || ! ser.deserialize_sep(")")) {
 		return 0;
 	}
@@ -2547,7 +2546,7 @@ CheckpointedEvent::readEvent (FILE *file, bool & got_sync_line)
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 1;		//backwards compatibility
 	}
-	sscanf(line.Value(), "\t%f  -  Run Bytes Sent By Job For Checkpoint", &sent_bytes);
+	sscanf(line.c_str(), "\t%f  -  Run Bytes Sent By Job For Checkpoint", &sent_bytes);
 #else
     if( !fscanf(file, "\t%f  -  Run Bytes Sent By Job For Checkpoint\n",
                 &sent_bytes)) {
@@ -2696,7 +2695,7 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 		 ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
 	}
-	if (2 != sscanf(line.Value(), "\t(%d) %127[a-zA-z ]", &ckpt, buffer)) {
+	if (2 != sscanf(line.c_str(), "\t(%d) %127[a-zA-z ]", &ckpt, buffer)) {
 		return 0;
 	}
 	checkpointed = (bool) ckpt;
@@ -2732,9 +2731,9 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 
 #ifdef DONT_EVER_SEEK
 	if ( ! read_optional_line(line, file, got_sync_line) ||
-		(1 != sscanf(line.Value(), "\t%f  -  Run Bytes Sent By Job", &sent_bytes)) ||
+		(1 != sscanf(line.c_str(), "\t%f  -  Run Bytes Sent By Job", &sent_bytes)) ||
 		 ! read_optional_line(line, file, got_sync_line) ||
-		(1 != sscanf(line.Value(), "\t%f  -  Run Bytes Received By Job", &recvd_bytes)))
+		(1 != sscanf(line.c_str(), "\t%f  -  Run Bytes Received By Job", &recvd_bytes)))
 #else
 	if( !fscanf(file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) ||
 		!fscanf(file, "\t%f  -  Run Bytes Received By Job\n",
@@ -2761,7 +2760,7 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 	//  \t(0) No core file
 	//  \t(1) Corefile in: %s
 	if ( ! read_optional_line(line, file, got_sync_line) ||
-		(2 != sscanf(line.Value(), "\t(%d) %127[^\r\n]", &normal_term, buffer)))
+		(2 != sscanf(line.c_str(), "\t(%d) %127[^\r\n]", &normal_term, buffer)))
 	{
 		return 0;
 	}
@@ -2781,9 +2780,9 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 		}
 		line.trim();
 		const char cpre[] = "(1) Corefile in: ";
-		if (starts_with(line.Value(), cpre)) {
-			setCoreFile( line.Value() + strlen(cpre) );
-		} else if ( ! starts_with(line.Value(), "(0)")) {
+		if (starts_with(line.c_str(), cpre)) {
+			setCoreFile( line.c_str() + strlen(cpre) );
+		} else if ( ! starts_with(line.c_str(), "(0)")) {
 			return 0; // not a valid value
 		}
 	}
@@ -3345,7 +3344,7 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 
 	MyString line;
 	if ( ! read_optional_line(line, file, got_sync_line) ||
-		(2 != sscanf(line.Value(), "\t(%d) %127[^\r\n]", &normalTerm, buffer))) {
+		(2 != sscanf(line.c_str(), "\t(%d) %127[^\r\n]", &normalTerm, buffer))) {
 		return 0;
 	}
 
@@ -3364,9 +3363,9 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 		}
 		line.trim();
 		const char cpre[] = "(1) Corefile in: ";
-		if (starts_with(line.Value(), cpre)) {
-			setCoreFile( line.Value() + strlen(cpre) );
-		} else if ( ! starts_with(line.Value(), "(0)")) {
+		if (starts_with(line.c_str(), cpre)) {
+			setCoreFile( line.c_str() + strlen(cpre) );
+		} else if ( ! starts_with(line.c_str(), "(0)")) {
 			return 0; // not a valid value
 		}
 	}
@@ -3428,7 +3427,7 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 		if ( ! read_optional_line(line, file, got_sync_line)) {
 			break;
 		}
-		const char * sz = line.Value();
+		const char * sz = line.c_str();
 		if (in_usage_ad) {
 			// lines for reading the usageAd must be of the form "\tlabel : value value value value\n"
 			// where the first word of label is the resource type and the values are the resource values
@@ -3606,8 +3605,18 @@ JobTerminatedEvent::formatBody( std::string &out )
 		ToE::Tag tag;
 		if( ToE::decode( toeTag, tag ) ) {
 			if( tag.howCode == 0 ) {
-				if( formatstr_cat( out, "\n\tJob terminated of its own accord at %s.\n", tag.when.c_str() ) < 0 ) {
-					return false;
+				// There is no signal 0, so this combination means we read
+				// an old tag with no exit information.
+				if( tag.exitBySignal && tag.signalOrExitCode == 0 ) {
+					if( formatstr_cat( out, "\n\tJob terminated of its own accord at %s.\n", tag.when.c_str() ) < 0 ) {
+						return false;
+					}
+				} else {
+					// Both 'signal' and 'exit-code' must not contain spaces
+					// because of the way that sscanf() works.
+					if( formatstr_cat( out, "\n\tJob terminated of its own accord at %s with %s %d.\n", tag.when.c_str(), tag.exitBySignal ? "signal" : "exit-code", tag.signalOrExitCode ) < 0 ) {
+						return false;
+					}
 				}
 			} else {
 				rv = tag.writeToString( out );
@@ -3654,8 +3663,23 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 
 			// This code gets more complicated if we don't assume UTC i/o.
 			struct tm eventTime;
-			iso8601_to_time( line.Value(), & eventTime, NULL, NULL );
+			iso8601_to_time( line.c_str(), & eventTime, NULL, NULL );
 			toeTag->InsertAttr( "When", timegm(&eventTime) );
+
+			char type[16];
+			int signalOrExitCode;
+			size_t offset = line.find(" with ");
+			if( offset != std::string::npos ) {
+				if( 2 == sscanf( line.c_str() + offset, " with %15s %d", type, & signalOrExitCode )) {
+					if( strcmp( type, "signal" ) == 0 ) {
+						toeTag->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, true );
+						toeTag->InsertAttr( ATTR_ON_EXIT_SIGNAL, signalOrExitCode );
+					} else if( strcmp( type, "exit-code" ) == 0 ) {
+						toeTag->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, false );
+						toeTag->InsertAttr( ATTR_ON_EXIT_CODE, signalOrExitCode );
+					}
+				}
+			}
 		} else if( line.remove_prefix( "\tJob terminated by " ) ) {
 			ToE::Tag tag;
 			if(! tag.readFromString( line )) {
@@ -3865,7 +3889,7 @@ JobImageSizeEvent::readEvent (FILE *file, bool & got_sync_line)
 #ifdef DONT_EVER_SEEK
 	MyString str;
 	if ( ! read_line_value("Image size of job updated: ", str, file, got_sync_line) || 
-		! YourStringDeserializer(str.Value()).deserialize_int(&image_size_kb))
+		! YourStringDeserializer(str.c_str()).deserialize_int(&image_size_kb))
 	{
 		return 0;
 	}
@@ -4013,9 +4037,9 @@ ShadowExceptionEvent::readEvent (FILE *file, bool & got_sync_line)
 
 	// read transfer info
 	if ( ! read_optional_line(line, file, got_sync_line) ||
-		(1 != sscanf (line.Value(), "\t%f  -  Run Bytes Sent By Job", &sent_bytes)) ||
+		(1 != sscanf (line.c_str(), "\t%f  -  Run Bytes Sent By Job", &sent_bytes)) ||
 		! read_optional_line(line, file, got_sync_line) ||
-		(1 != sscanf (line.Value(), "\t%f  -  Run Bytes Received By Job", &recvd_bytes)))
+		(1 != sscanf (line.c_str(), "\t%f  -  Run Bytes Received By Job", &recvd_bytes)))
 	{
 		return 1;				// backwards compatibility
 	}
@@ -4110,7 +4134,7 @@ JobSuspendedEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 	if ( ! read_optional_line(line, file, got_sync_line) ||
-		(1 != sscanf (line.Value(), "\tNumber of processes actually suspended: %d", &num_pids)))
+		(1 != sscanf (line.c_str(), "\tNumber of processes actually suspended: %d", &num_pids)))
 	{
 		return 0;
 	}
@@ -4292,7 +4316,7 @@ JobHeldEvent::readEvent( FILE *file, bool & got_sync_line )
 	int incode = 0;
 	int insubcode = 0;
 	if ( ! read_optional_line(line, file, got_sync_line) ||
-		(2 != sscanf(line.Value(), "\tCode %d Subcode %d", &incode,&insubcode)))
+		(2 != sscanf(line.c_str(), "\tCode %d Subcode %d", &incode,&insubcode)))
 	{
 		return 1;	// backwards compatibility
 	}
@@ -4708,8 +4732,8 @@ NodeExecuteEvent::readEvent (FILE *file, bool & /*got_sync_line*/)
 		return 0; // EOF or error
 	}
 	line.chomp();
-	setExecuteHost(line.Value()); // allocate memory
-	int retval = sscanf(line.Value(), "Node %d executing on host: %s",
+	setExecuteHost(line.c_str()); // allocate memory
+	int retval = sscanf(line.c_str(), "Node %d executing on host: %s",
 						&node, executeHost);
 	return retval == 2;
 }
@@ -4779,7 +4803,7 @@ NodeTerminatedEvent::readEvent( FILE *file, bool & got_sync_line )
 #ifdef DONT_EVER_SEEK
 	MyString str;
 	if ( ! read_optional_line(str, file, got_sync_line) || 
-		(1 != sscanf(str.Value(), "Node %d terminated.", &node)))
+		(1 != sscanf(str.c_str(), "Node %d terminated.", &node)))
 	{
 		return 0;
 	}
@@ -4997,7 +5021,7 @@ PostScriptTerminatedEvent::readEvent( FILE* file, bool & got_sync_line )
 	char buf[128];
 	int tmp;
 	if ( ! read_optional_line(line, file, got_sync_line) ||
-		(2 != sscanf(line.Value(), "\t(%d) %127[^\r\n]", &tmp, buf)))
+		(2 != sscanf(line.c_str(), "\t(%d) %127[^\r\n]", &tmp, buf)))
 	{
 		return 0;
 	}
@@ -5023,9 +5047,9 @@ PostScriptTerminatedEvent::readEvent( FILE* file, bool & got_sync_line )
 		return 1;
 	}
 	line.trim();
-	if (starts_with(line.Value(), dagNodeNameLabel)) {
+	if (starts_with(line.c_str(), dagNodeNameLabel)) {
 		size_t label_len = strlen( dagNodeNameLabel );
-		dagNodeName = strnewp( line.Value() + label_len );
+		dagNodeName = strnewp( line.c_str() + label_len );
 	}
 
 #else
@@ -5297,7 +5321,7 @@ JobDisconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 		&& line[2] == ' ' && line[3] == ' ' && line[4] )
 	{
 		line.chomp();
-		setDisconnectReason( line.Value()+4 );
+		setDisconnectReason( line.c_str()+4 );
 	} else {
 		return 0;
 	}
@@ -5309,9 +5333,9 @@ JobDisconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 	if( line.replaceString("    Trying to reconnect to ", "") ) {
 		int i = line.FindChar( ' ' );
 		if( i > 0 ) {
-			setStartdAddr( line.Value()+(i+1) );
+			setStartdAddr( line.c_str()+(i+1) );
 			line.truncate( i );
-			setStartdName( line.Value() );
+			setStartdName( line.c_str() );
 		} else {
 			return 0;
 		}
@@ -5321,9 +5345,9 @@ JobDisconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 		}
 		int i = line.FindChar( ' ' );
 		if( i > 0 ) {
-			setStartdAddr( line.Value()+(i+1) );
+			setStartdAddr( line.c_str()+(i+1) );
 			line.truncate( i );
-			setStartdName( line.Value() );
+			setStartdName( line.c_str() );
 		} else {
 			return 0;
 		}
@@ -5331,7 +5355,7 @@ JobDisconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 			&& line[2] == ' ' && line[3] == ' ' && line[4] )
 		{
 			line.chomp();
-			setNoReconnectReason( line.Value()+4 );
+			setNoReconnectReason( line.c_str()+4 );
 		} else {
 			return 0;
 		}
@@ -5388,7 +5412,7 @@ JobDisconnectedEvent::toClassAd(bool event_time_utc)
 	} else {
 		line += "can not reconnect, rescheduling job";
 	}
-	if( !myad->InsertAttr("EventDescription", line.Value()) ) {
+	if( !myad->InsertAttr("EventDescription", line.c_str()) ) {
 		delete myad;
 		return NULL;
 	}
@@ -5555,7 +5579,7 @@ JobReconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 		line.replaceString("Job reconnected to ", "") )
 	{
 		line.chomp();
-		setStartdName( line.Value() );
+		setStartdName( line.c_str() );
 	} else {
 		return 0;
 	}
@@ -5564,7 +5588,7 @@ JobReconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 		line.replaceString( "    startd address: ", "" ) )
 	{
 		line.chomp();
-		setStartdAddr( line.Value() );
+		setStartdAddr( line.c_str() );
 	} else {
 		return 0;
 	}
@@ -5573,7 +5597,7 @@ JobReconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 		line.replaceString( "    starter address: ", "" ) )
 	{
 		line.chomp();
-		setStarterAddr( line.Value() );
+		setStarterAddr( line.c_str() );
 	} else {
 		return 0;
 	}
@@ -5761,7 +5785,7 @@ JobReconnectFailedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 		&& line[2] == ' ' && line[3] == ' ' && line[4] )
 	{
 		line.chomp();
-		setReason( line.Value()+4 );
+		setReason( line.c_str()+4 );
 	} else {
 		return 0;
 	}
@@ -5774,7 +5798,7 @@ JobReconnectFailedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 		int i = line.FindChar( ',' );
 		if( i > 0 ) {
 			line.truncate( i );
-			setStartdName( line.Value() );
+			setStartdName( line.c_str() );
 		} else {
 			return 0;
 		}
@@ -6236,7 +6260,7 @@ JobAdInformationEvent::readEvent(FILE *file, bool & got_sync_line)
 
 	int num_attrs = 0;
 	while (read_optional_line(line, file, got_sync_line)) {
-		if ( ! jobad->Insert(line.Value())) {
+		if ( ! jobad->Insert(line.c_str())) {
 			// dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n", line.Value());
 			return 0;
 		}
@@ -6641,10 +6665,10 @@ AttributeUpdate::readEvent(FILE *file, bool & got_sync_line)
 		return 0;
 	}
 
-	int retval = sscanf(line.Value(), "Changing job attribute %s from %s to %s", buf1, buf2, buf3);
+	int retval = sscanf(line.c_str(), "Changing job attribute %s from %s to %s", buf1, buf2, buf3);
 	if (retval < 0)
 	{
-		retval = sscanf(line.Value(), "Setting job attribute %s to %s", buf1, buf3);
+		retval = sscanf(line.c_str(), "Setting job attribute %s to %s", buf1, buf3);
 		if (retval < 0)
 		{
 			return 0;
@@ -7560,7 +7584,7 @@ FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 	// Did we record the queueing delay?
 	MyString prefix = "\tSeconds spent in queue: ";
 	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
-		MyString value = optionalLine.substr( prefix.Length(), optionalLine.Length() );
+		MyString value = optionalLine.substr( prefix.length(), optionalLine.length() );
 
 		char * endptr = NULL;
 		queueingDelay = strtol( value.c_str(), & endptr, 10 );
@@ -7579,7 +7603,7 @@ FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 	// Did we record the starter host?
 	prefix = "\tTransferring to host: ";
 	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
-		host = optionalLine.substr( prefix.Length(), optionalLine.Length() );
+		host = optionalLine.substr( prefix.length(), optionalLine.length() );
 
 /*
 		// If we read an optional line, check for the next one.
@@ -7690,7 +7714,7 @@ bool
 ReserveSpaceEvent::formatBody(std::string &out)
 {
 	if (m_reserved_space &&
-		formatstr_cat(out, "\n\tBytes reserved: %lu\n",
+		formatstr_cat(out, "\n\tBytes reserved: %zu\n",
 		m_reserved_space) < 0)
 	{
 		return false;
@@ -7723,7 +7747,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	optionalLine.chomp();
 	std::string prefix = "Bytes reserved:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.length());
 		long long bytes_long;
 		try {
 			bytes_long = stoll(bytes_str);
@@ -7746,7 +7770,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	optionalLine.chomp();
 	prefix = "\tReservation Expiration:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string expiry_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		std::string expiry_str = optionalLine.substr(prefix.size(), optionalLine.length());
 		long long expiry_long;
 		try {
 			expiry_long = stoll(expiry_str);
@@ -7768,7 +7792,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tReservation UUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_uuid = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_uuid = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation UUID line missing.\n");
 		return false;
@@ -7780,7 +7804,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_tag = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation tag line missing.\n");
 		return false;
@@ -7854,7 +7878,7 @@ ReleaseSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	std::string prefix = "Reservation UUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_uuid= optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_uuid= optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation UUID line missing.\n");
 		return false;
@@ -7918,7 +7942,7 @@ FileCompleteEvent::toClassAd(bool event_time_utc) {
 bool
 FileCompleteEvent::formatBody(std::string &out)
 {
-	if (formatstr_cat(out, "\n\tBytes: %lu\n", m_size) < 0)
+	if (formatstr_cat(out, "\n\tBytes: %zu\n", m_size) < 0)
 	{
 		return false;
 	}
@@ -7950,7 +7974,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	optionalLine.chomp();
 	std::string prefix = "Bytes:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.length());
 		long long bytes_long;
 		try {
 			bytes_long = stoll(bytes_str);
@@ -7972,7 +7996,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_checksum = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
 		return false;
@@ -7984,7 +8008,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
 		return false;
@@ -7996,7 +8020,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tUUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_uuid = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_uuid = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "File UUID line missing.\n");
 		return false;
@@ -8078,7 +8102,7 @@ FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	optionalLine.chomp();
 	std::string prefix = "Checksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_checksum = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
 		return false;
@@ -8090,7 +8114,7 @@ FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
 		return false;
@@ -8102,7 +8126,7 @@ FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_tag = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation tag line missing.\n");
 		return false;
@@ -8167,7 +8191,7 @@ FileRemovedEvent::toClassAd(bool event_time_utc) {
 bool
 FileRemovedEvent::formatBody(std::string &out)
 {
-	if (formatstr_cat(out, "\n\tBytes: %lu\n", m_size) < 0)
+	if (formatstr_cat(out, "\n\tBytes: %zu\n", m_size) < 0)
 	{
 		return false;
 	}
@@ -8199,7 +8223,7 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	optionalLine.chomp();
 	std::string prefix = "Bytes:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.Length());
+		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.length());
 		long long bytes_long;
 		try {
 			bytes_long = stoll(bytes_str);
@@ -8222,7 +8246,7 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	optionalLine.chomp();
 	prefix = "\tChecksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_checksum = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
 		return false;
@@ -8234,7 +8258,7 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
 		return false;
@@ -8246,7 +8270,7 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_tag = optionalLine.substr(prefix.size(), optionalLine.Length());
+		m_tag = optionalLine.substr(prefix.size(), optionalLine.length());
 	} else {
 		dprintf(D_FULLDEBUG, "File tag line missing.\n");
 		return false;

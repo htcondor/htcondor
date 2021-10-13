@@ -54,7 +54,7 @@ class StartdHibernator : public HibernatorBase
 
 	// Private data
   private:
-	MyString	 m_plugin_path;
+	std::string	 m_plugin_path;
 	StringList	*m_plugin_args;
 	ClassAd		 m_ad;
 	

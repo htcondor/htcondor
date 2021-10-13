@@ -17,7 +17,6 @@ my $conf = 'URLTEST = 123456 '; #The local config file
 my $firstappend_condor_config = '
     DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
     WANT_SUSPEND = FALSE
-    NEGOTIATION_INTERVAL = 5
     NUM_CPUS = 6
     USE_SHARED_PORT=FALSE
 ';

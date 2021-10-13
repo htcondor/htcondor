@@ -60,14 +60,14 @@ struct GeneralRecord {
 
 //---------------------------------------------------
 
-typedef HashTable<MyString, GeneralRecord*> AccHash;
+typedef HashTable<std::string, GeneralRecord*> AccHash;
 typedef ExtArray< int > ExtIntArray;
 typedef ExtArray< fpos_t* > ExtOffArray;
 
 //---------------------------------------------------
 
 struct DataSetInfo {
-	MyString OldFileName, NewFileName;
+	std::string OldFileName, NewFileName;
 	int OldStartTime, NewStartTime;
 	int NumSamples, MaxSamples;
 	AccHash* AccData;
@@ -88,9 +88,9 @@ public:
 	void Shutdown();         // main_shutdown_graceful
 
 	static int ReceiveHistoryQuery(int, Stream*);
-	static int HandleQuery(Stream*, int cmd, int FromDate, int ToDate, int Options, MyString Arg);
-	static int SendListReply(Stream*,const MyString& FileName, int FromDate, int ToDatei, std::set<std::string>& Names);
-	static int SendDataReply(Stream*,const MyString& FileName, int FromDate, int ToDate, int Options, const MyString& Arg);
+	static int HandleQuery(Stream*, int cmd, int FromDate, int ToDate, int Options, std::string Arg);
+	static int SendListReply(Stream*,const std::string& FileName, int FromDate, int ToDatei, std::set<std::string>& Names);
+	static int SendDataReply(Stream*,const std::string& FileName, int FromDate, int ToDate, int Options, const std::string& Arg);
 
 	static void WriteHistory();
 	static int SubmittorScanFunc(ClassAd* ad);
@@ -114,18 +114,18 @@ private:
 	// State variables - data set information
 
 	static DataSetInfo DataSet[DataSetCount][HistoryLevels];
-	static MyString DataFormat[DataSetCount];
+	static std::string DataFormat[DataSetCount];
 	
 	// Variables used during iteration
 
 	static int TimeStamp;
 	static AccHash* GroupHash;
 
-	static GeneralRecord* GetAccData(AccHash* AccData,const MyString& Key);
+	static GeneralRecord* GetAccData(AccHash* AccData,const std::string& Key);
 
 	// Variables used for quick searches by condor_stats
 
-	static HashTable< MyString, int >* FileHash;
+	static HashTable< std::string, int >* FileHash;
 	static ExtArray< ExtIntArray* >* TimesArray;
 	static ExtArray< ExtOffArray* >* OffsetsArray;
 
@@ -142,8 +142,8 @@ private:
 						ExtIntArray* times_array, ExtOffArray* offsets);
 
 	static int ReadTime(char* Line);
-	static int ReadTimeAndName(char* Line, MyString& Name);
-	static int ReadTimeChkName(char* Line, const MyString& Name);
+	static int ReadTimeAndName(char* Line, std::string& Name);
+	static int ReadTimeChkName(char* Line, const std::string& Name);
 	static int FindFileStartTime(const char *Name);
 };
 

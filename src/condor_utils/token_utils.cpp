@@ -53,7 +53,7 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
 
 	std::string dirpath;
 	if (!owner.empty() || !param(dirpath, "SEC_TOKEN_DIRECTORY")) {
-		MyString file_location;
+		std::string file_location;
 		if (!find_user_file(file_location, "tokens.d", false, !owner.empty())) {
 			if (!owner.empty()) {
 				dprintf(D_FULLDEBUG, "write_out_token(%s): Unable to find token file for owner.\n",

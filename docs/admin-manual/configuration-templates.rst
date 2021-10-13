@@ -235,6 +235,20 @@ incorporates.
        ``POLICY : UWCS_Desktop`` uses the
        ``FEATURE : UWCS_Desktop_Policy_Values`` template.)
 
+.. _CommonCloudAttributesConfiguration:
+
+    - ``CommonCloudAttributesAWS``
+    - ``CommonCloudAttributesGoogle``
+
+       Sets configuration that will put some common cloud-related attributes
+       in the slot ads.  Use the version which specifies the cloud you're
+       using.  See :ref:`CommonCloudAttributes` for details.
+
+    - ``JobsHaveInstanceIDs``
+
+       Sets configuration that will cause job ads to track the instance IDs
+       of slots that they ran on (if available).
+
 ``POLICY category``
     Describes configuration for the circumstances under which machines
     choose to run jobs.

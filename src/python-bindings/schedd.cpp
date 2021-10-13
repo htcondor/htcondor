@@ -149,7 +149,7 @@ make_spool(classad::ClassAd& ad)
         THROW_EX(HTCondorInternalError, "Unable to set job to hold.");
     if (!ad.InsertAttr(ATTR_HOLD_REASON, "Spooling input data files"))
         THROW_EX(HTCondorInternalError, "Unable to set job hold reason.")
-    if (!ad.InsertAttr(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput))
+    if (!ad.InsertAttr(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::SpoolingInput))
         THROW_EX(HTCondorInternalError, "Unable to set job hold code.")
     std::stringstream ss;
     ss << ATTR_JOB_STATUS << " == " << COMPLETED << " && ( ";
@@ -1539,10 +1539,10 @@ struct Schedd {
     bool
     owner_from_sock(std::string &result) const
     {
-        MyString cmd_map_ent;
-        cmd_map_ent.formatstr ("{%s,<%i>}", m_addr.c_str(), QMGMT_WRITE_CMD);
+        std::string cmd_map_ent;
+        formatstr(cmd_map_ent, "{%s,<%i>}", m_addr.c_str(), QMGMT_WRITE_CMD);
 
-        MyString session_id;
+        std::string session_id;
         KeyCacheEntry *k = NULL;
         int ret = 0;
 
@@ -1554,7 +1554,7 @@ struct Schedd {
         }
 
         // IMPORTANT: this hashtable returns 1 on success!
-        ret = (SecMan::session_cache)->lookup(session_id.Value(), k);
+        ret = (SecMan::session_cache)->lookup(session_id.c_str(), k);
         if (!ret)
         {
             return false;
@@ -1999,11 +1999,10 @@ struct Schedd {
             }
             // Note: x509_error_string() is not thread-safe; hence, we are not using the HTCondor-generated
             // error handling.
-            int result = x509_proxy_seconds_until_expire(proxy_filename.c_str());
-            if (result < 0) {
+            result_expiration = x509_proxy_expiration_time(proxy_filename.c_str());
+            if (result_expiration < 0) {
                 THROW_EX(HTCondorValueError, "Unable to determine proxy expiration time");
             }
-            return result;
         }
         return result_expiration - now;
     }
@@ -3311,7 +3310,7 @@ public:
 			// send over the itemdata
 			int row_count = 1;
 			if (ssi.has_items()) {
-				MyString items_filename;
+				std::string items_filename;
 				if (SendMaterializeData(cluster, 0, ssi.send_row, &ssi, items_filename, &row_count) < 0 || row_count <= 0) {
 					THROW_EX(HTCondorIOError, "Failed to to send materialize itemdata");
 				}

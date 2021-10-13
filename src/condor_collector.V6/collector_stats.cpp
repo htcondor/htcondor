@@ -36,13 +36,13 @@ static size_t hashFunction (const StatsHashKey &key)
     size_t result = 0;
 	const char *p;
 
-    for (p = key.type.Value(); p && *p;
+    for (p = key.type.c_str(); p && *p;
 	     result = (result<<5) + result + (size_t)(*(p++))) { }
 
-    for (p = key.name.Value(); p && *p;
+    for (p = key.name.c_str(); p && *p;
 	     result = (result<<5) + result + (size_t)(*(p++))) { }
 
-    for (p = key.ip_addr.Value(); p && *p;
+    for (p = key.ip_addr.c_str(); p && *p;
 	     result = (result<<5) + result + (size_t)(*(p++))) { }
 
     return result;
@@ -650,10 +650,10 @@ CollectorDaemonStatsList::updateStats( const char *class_name,
 		hashTable->insert( key, daemon );
 
 		if (IsFulldebug(D_FULLDEBUG)) {
-			MyString	string;
+			std::string string;
 			key.getstr( string );
 			dprintf( D_FULLDEBUG,
-				 "stats: Inserting new hashent for %s\n", string.Value() );
+				 "stats: Inserting new hashent for %s\n", string.c_str() );
 		}
 	}
 
@@ -739,10 +739,10 @@ CollectorDaemonStatsList::enable( bool nable )
 
 // Get string of the hash key (for debugging)
 void
-StatsHashKey::getstr( MyString &buf ) const
+StatsHashKey::getstr( std::string &buf ) const
 {
-	buf.formatstr( "'%s':'%s':'%s'",
-				 type.Value(), name.Value(), ip_addr.Value()  );
+	formatstr( buf, "'%s':'%s':'%s'",
+				 type.c_str(), name.c_str(), ip_addr.c_str()  );
 }
 
 // Generate a hash key
@@ -757,7 +757,7 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 
 	// The 'name'
 	char	buf[256]   = "";
-	MyString slot_buf = "";
+	std::string slot_buf = "";
 	if ( !ad->LookupString( ATTR_NAME, buf, sizeof(buf))  ) {
 
 		// No "Name" found; fall back to Machine
@@ -772,16 +772,16 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 		// If there is a slot ID, append it to Machine
 		int	slot;
 		if (ad->LookupInteger( ATTR_SLOT_ID, slot)) {
-			slot_buf.formatstr(":%d", slot);
+			formatstr(slot_buf, ":%d", slot);
 		}
 	}
 	key.name = buf;
-	key.name += slot_buf.Value();
+	key.name += slot_buf.c_str();
 
 	// get the IP and port of the daemon
 	if ( ad->LookupString (ATTR_MY_ADDRESS, buf, sizeof(buf) ) ) {
-		MyString	myString( buf );
-		char* host = getHostFromAddr(myString.Value());
+		std::string wtf( buf );
+		char* host = getHostFromAddr(wtf.c_str());
 		key.ip_addr = host;
 		free(host);
 	} else {
@@ -923,10 +923,10 @@ CollectorDaemonStatsList::collectGarbage()
 		else {
 				// This record has not been updated since the last call
 				// to this function.  It is garbage.
-			MyString desc;
+			std::string desc;
 			key.getstr( desc );
 			dprintf( D_FULLDEBUG, "Removing stale collector stats for %s\n",
-					 desc.Value() );
+					 desc.c_str() );
 
 			hashTable->remove( key );
 			delete value;

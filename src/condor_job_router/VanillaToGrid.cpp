@@ -19,7 +19,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "MyString.h"
 #include "proc.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
@@ -79,6 +78,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	// ad->Delete(ATTR_USER); // Schedd will set this with the proper UID_DOMAIN.
 	ad->Delete(ATTR_Q_DATE);
 	ad->Delete(ATTR_JOB_REMOTE_WALL_CLOCK);
+	ad->Delete(ATTR_JOB_LAST_REMOTE_WALL_CLOCK);
 	ad->Delete(ATTR_SERVER_TIME);
 	ad->Delete(ATTR_AUTO_CLUSTER_ID);
 	ad->Delete(ATTR_AUTO_CLUSTER_ATTRS);
@@ -154,7 +154,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 		std::string remaps;
 		ad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_REMAPS,remaps);
 		if( !is_sandboxed && remaps.size() ) {
-			MyString remap_filename;
+			std::string remap_filename;
 			std::string filename,filenames;
 
 				// Don't need the remaps in the grid copy of the ad.
@@ -162,13 +162,13 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 
 			if( ad->EvaluateAttrString(ATTR_JOB_OUTPUT,filename) ) {
 				if( filename_remap_find(remaps.c_str(),filename.c_str(),remap_filename) ) {
-					ad->InsertAttr(ATTR_JOB_OUTPUT,remap_filename.Value());
+					ad->InsertAttr(ATTR_JOB_OUTPUT,remap_filename.c_str());
 				}
 			}
 
 			if( ad->EvaluateAttrString(ATTR_JOB_ERROR,filename) ) {
 				if( filename_remap_find(remaps.c_str(),filename.c_str(),remap_filename) ) {
-					ad->InsertAttr(ATTR_JOB_ERROR,remap_filename.Value());
+					ad->InsertAttr(ATTR_JOB_ERROR,remap_filename.c_str());
 				}
 			}
 
@@ -185,7 +185,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 				while( (fname=output_files.next()) ) {
 					if( filename_remap_find(remaps.c_str(),fname,remap_filename) )
 						{
-							new_list.append(remap_filename.Value());
+							new_list.append(remap_filename.c_str());
 						}
 					else {
 						new_list.append(fname);
@@ -296,7 +296,7 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 
 	StringList custom_attr_list;
 	char* attr;
-	const char *attrs_to_copy[] = {
+	const char *const attrs_to_copy[] = {
 		ATTR_BYTES_SENT,
 		ATTR_BYTES_RECVD,
 		ATTR_COMPLETION_DATE,
@@ -313,7 +313,6 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		ATTR_JOB_REMOTE_SYS_CPU,
 		ATTR_JOB_REMOTE_USER_CPU,
 		ATTR_NUM_CKPTS,
-		ATTR_NUM_GLOBUS_SUBMITS,
 		ATTR_NUM_JOB_STARTS,
 		ATTR_NUM_JOB_RECONNECTS,
 		ATTR_NUM_SHADOW_EXCEPTIONS,
@@ -321,6 +320,7 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		ATTR_NUM_MATCHES,
 		ATTR_NUM_RESTARTS,
 		ATTR_JOB_REMOTE_WALL_CLOCK,
+		ATTR_JOB_LAST_REMOTE_WALL_CLOCK,
 		ATTR_JOB_CORE_DUMPED,
 		ATTR_EXECUTABLE_SIZE,
 		ATTR_IMAGE_SIZE,

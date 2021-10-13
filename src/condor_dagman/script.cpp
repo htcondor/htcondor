@@ -64,11 +64,11 @@ int
 Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 {
 	TmpDir		tmpDir;
-	MyString	errMsg;
+	std::string	errMsg;
 	if ( !tmpDir.Cd2TmpDir( _node->GetDirectory(), errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
 				"Could not change to node directory %s: %s\n",
-				_node->GetDirectory(), errMsg.Value() );
+				_node->GetDirectory(), errMsg.c_str() );
 
 		return 0;
 	}
@@ -153,7 +153,7 @@ Script::BackgroundRun( int reaperId, int dagStatus, int failedCount )
 	if ( !tmpDir.Cd2MainDir( errMsg ) ) {
 		debug_printf( DEBUG_QUIET,
 				"Could not change to original directory: %s\n",
-				errMsg.Value() );
+				errMsg.c_str() );
 		return 0;
 	}
 

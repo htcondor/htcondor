@@ -44,9 +44,6 @@ elseif(${OS_NAME} MATCHES "WIN")
 	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
 	#set(CMAKE_SUPPRESS_REGENERATION TRUE)
 
-	set (HAVE_SNPRINTF 1)
-	set (HAVE_WORKING_SNPRINTF 1)
-
 	if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
 		dprint("**** IN SOURCE BUILDING ON WINDOWS IS NOT ADVISED ****")
 	else()
@@ -80,6 +77,9 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 
 # To find python in Windows we will use alternate technique
 option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
+option(WANT_PYTHON2_BINDINGS "Build python bindings for python2" ON)
+option(WANT_PYTHON3_BINDINGS "Build python bindings for python3" ON)
+
 if(NOT WINDOWS)
     if(WANT_PYTHON_WHEELS)
         include (FindPythonInterp)
@@ -106,7 +106,7 @@ if(NOT WINDOWS)
         endif()
 
 message(STATUS "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}")
-        if (PYTHON_EXECUTABLE)
+        if (WANT_PYTHON2_BINDINGS AND PYTHON_EXECUTABLE)
             set(PYTHONINTERP_FOUND TRUE)
             set(PYTHON_QUERY_PART_01 "from distutils import sysconfig;")
             set(PYTHON_QUERY_PART_02 "import sys;")
@@ -170,7 +170,7 @@ message(STATUS "PYTHON_LIB = ${PYTHON_LIB}")
             message(STATUS "PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
         endif()
         find_program(PYTHON3_EXECUTABLE python3)
-        if (PYTHON3_EXECUTABLE)
+        if (WANT_PYTHON3_BINDINGS AND PYTHON3_EXECUTABLE)
             set(PYTHON3INTERP_FOUND TRUE)
             set(PYTHON_QUERY_PART_01 "from distutils import sysconfig;")
             set(PYTHON_QUERY_PART_02 "import sys;")
@@ -512,32 +512,26 @@ if( NOT WINDOWS)
 	# Python also defines HAVE_EPOLL; hence, we use non-standard 'CONDOR_HAVE_EPOLL' here.
 	check_symbol_exists(epoll_create1 "sys/epoll.h" CONDOR_HAVE_EPOLL)
 	check_symbol_exists(poll "sys/poll.h" CONDOR_HAVE_POLL)
-	check_symbol_exists(fdatasync "unistd.h" HAVE_FDATASYNC)
+	check_symbol_exists(fdatasync "unistd.h" HAVE_FDATASYNC) # POSIX 2008 but MacOS as of Big Sur doesn't implement.
 	check_function_exists("clock_gettime" HAVE_CLOCK_GETTIME)
 	check_function_exists("clock_nanosleep" HAVE_CLOCK_NANOSLEEP)
 
-	check_function_exists("access" HAVE_ACCESS)
+	set(HAVE_ACCESS 1) # POSIX 2001
 	check_function_exists("clone" HAVE_CLONE)
 	check_function_exists("dirfd" HAVE_DIRFD)
 	check_function_exists("euidaccess" HAVE_EUIDACCESS)
-	check_function_exists("execl" HAVE_EXECL)
 	check_function_exists("fstat64" HAVE_FSTAT64)
 	check_function_exists("_fstati64" HAVE__FSTATI64)
 	check_function_exists("getdtablesize" HAVE_GETDTABLESIZE)
 	check_function_exists("getpagesize" HAVE_GETPAGESIZE)
-	check_function_exists("gettimeofday" HAVE_GETTIMEOFDAY)
+	set(HAVE_GETTIMEOFDAY 1) # POSIX 2001
 	check_function_exists("inet_ntoa" HAS_INET_NTOA)
 	check_function_exists("lchown" HAVE_LCHOWN)
 	check_function_exists("lstat" HAVE_LSTAT)
 	check_function_exists("lstat64" HAVE_LSTAT64)
 	check_function_exists("_lstati64" HAVE__LSTATI64)
-	check_function_exists("mkstemp" HAVE_MKSTEMP)
-	check_function_exists("setegid" HAVE_SETEGID)
-	check_function_exists("setenv" HAVE_SETENV)
-	check_function_exists("seteuid" HAVE_SETEUID)
+	set(HAVE_MKSTEMP 1) # POSIX 2001
 	check_function_exists("setlinebuf" HAVE_SETLINEBUF)
-	check_function_exists("snprintf" HAVE_SNPRINTF)
-	check_function_exists("snprintf" HAVE_WORKING_SNPRINTF)
 	check_include_files("sys/eventfd.h" HAVE_EVENTFD)
         check_function_exists("innetgr" HAVE_INNETGR)
         check_function_exists("getgrnam" HAVE_GETGRNAM)
@@ -545,7 +539,6 @@ if( NOT WINDOWS)
 	check_function_exists("stat64" HAVE_STAT64)
 	check_function_exists("_stati64" HAVE__STATI64)
 	check_function_exists("statfs" HAVE_STATFS)
-	check_function_exists("statvfs" HAVE_STATVFS)
 	check_function_exists("res_init" HAVE_DECL_RES_INIT)
 	check_function_exists("strcasestr" HAVE_STRCASESTR)
 	check_function_exists("strsignal" HAVE_STRSIGNAL)
@@ -572,11 +565,8 @@ if( NOT WINDOWS)
 	check_include_files("sys/personality.h" HAVE_SYS_PERSONALITY_H)
 	check_include_files("sys/syscall.h" HAVE_SYS_SYSCALL_H)
 	check_include_files("sys/statfs.h" HAVE_SYS_STATFS_H)
-	check_include_files("sys/statvfs.h" HAVE_SYS_STATVFS_H)
 	check_include_files("sys/types.h" HAVE_SYS_TYPES_H)
-	check_include_files("sys/vfs.h" HAVE_SYS_VFS_H)
 	check_include_files("stdint.h" HAVE_STDINT_H)
-	check_include_files("ustat.h" HAVE_USTAT_H)
 	check_include_files("valgrind.h" HAVE_VALGRIND_H)
 	check_include_files("procfs.h" HAVE_PROCFS_H)
 	check_include_files("sys/procfs.h" HAVE_SYS_PROCFS_H)
@@ -597,74 +587,19 @@ if( NOT WINDOWS)
 	  endif()
 	endif()
 	check_struct_has_member("struct statfs" f_type "sys/statfs.h" HAVE_STRUCT_STATFS_F_TYPE)
-	check_struct_has_member("struct statvfs" f_basetype "sys/types.h;sys/statvfs.h" HAVE_STRUCT_STATVFS_F_BASETYPE)
 
 	# the follow arg checks should be a posix check.
 	# previously they were ~=check_cxx_source_compiles
 	set(STATFS_ARGS "2")
 	set(SIGWAIT_ARGS "2")
 
-	check_cxx_source_compiles("
-		#include <sched.h>
-		int main() {
-			cpu_set_t s;
-			sched_setaffinity(0, 1024, &s);
-			return 0;
-		}
-		" HAVE_SCHED_SETAFFINITY )
+	check_function_exists("sched_setaffinity" HAVE_SCHED_SETAFFINITY)
 
-	check_cxx_source_compiles("
-		#include <sched.h>
-		int main() {
-			cpu_set_t s;
-			sched_setaffinity(0, &s);
-			return 0;
-		}
-		" HAVE_SCHED_SETAFFINITY_2ARG )
-
-	if(HAVE_SCHED_SETAFFINITY_2ARG)
-		set(HAVE_SCHED_SETAFFINITY ON)
+	# Some versions of Clang require an additional C++11 flag, as the default stdlib
+	# is from an old GCC version.
+	if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 	endif()
-
-	check_cxx_compiler_flag(-std=c++11 cxx_11)
-	check_cxx_compiler_flag(-std=c++0x cxx_0x)
-	if (cxx_11)
-
-		# Some versions of Clang require an additional C++11 flag, as the default stdlib
-		# is from an old GCC version.
-		if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-		endif()
-
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-
-		check_cxx_source_compiles("
-		#include <unordered_map>
-		#include <memory>
-		int main() {
-			std::unordered_map<int, int> ci;
-			std::shared_ptr<int> foo;
-			return 0;
-		}
-		" PREFER_CPP11 )
-	elseif(cxx_0x)
-		# older g++s support some of c++11 with the c++0x flag
-		# which we should try to enable, if they do not have
-		# the c++11 flag.  This at least gets us std::unique_ptr
-
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-	endif()
-
-
-	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
-	exec_program (${CMAKE_CXX_COMPILER}
-    		ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
-    		OUTPUT_VARIABLE CMAKE_CXX_COMPILER_VERSION )
-
-	exec_program (${CMAKE_C_COMPILER}
-    		ARGS ${CMAKE_C_COMPILER_ARG1} -dumpversion
-    		OUTPUT_VARIABLE CMAKE_C_COMPILER_VERSION )
-
 endif()
 
 find_program(HAVE_VMWARE vmware)
@@ -908,8 +843,7 @@ endif()
 # above the addition of the .../src/classads subdir:
 if (LINUX
     AND PROPER
-    AND (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-    AND NOT (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 4.4.6))
+    AND (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU"))
 
     # I wrote a nice macro for testing linker flags, but it is useless
     # because at least some older versions of linker ignore all '-z'
@@ -1012,7 +946,6 @@ else ()
   endif()
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.41)
@@ -1037,7 +970,6 @@ else ()
 	else()
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.5)
 	endif()
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.5.1)
 	# voms held back for MacOS (config issues) (2.1.0 needed for OpenSSL 1.1)
 	# old voms also builds on manylinux1 (centos5 docker image)
     if (LINUX AND NOT ${SYSTEM_NAME} MATCHES "centos5.11")
@@ -1045,7 +977,6 @@ else ()
     else()
         add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.13)
     endif()
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.15.4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/7.14.1)
 
         if (LINUX)
@@ -1088,6 +1019,16 @@ if (NOT DEFINED DLOPEN_GSI_LIBS)
 		set(DLOPEN_GSI_LIBS TRUE)
 	else()
 		set(DLOPEN_GSI_LIBS FALSE)
+	endif()
+endif()
+
+#####################################
+# Do we want to link in the VOMS libraries or dlopen() them at runtime?
+if (NOT DEFINED DLOPEN_VOMS_LIBS)
+    if (HAVE_EXT_VOMS AND LINUX AND NOT WANT_PYTHON_WHEELS)
+        set(DLOPEN_VOMS_LIBS TRUE)
+	else()
+        set(DLOPEN_VOMS_LIBS FALSE)
 	endif()
 endif()
 
@@ -1287,14 +1228,12 @@ else(MSVC)
 	endif(c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
 
 	# check compiler flag not working for this flag.
-	if (NOT CMAKE_C_COMPILER_VERSION VERSION_LESS "4.8")
 	check_c_compiler_flag(-Wdeprecated-declarations c_Wdeprecated_declarations)
 	if (c_Wdeprecated_declarations)
 		# we use deprecated declarations ourselves during refactoring,
 		# so we always want them treated as warnings and not errors
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wdeprecated-declarations -Wno-error=deprecated-declarations")
 	endif(c_Wdeprecated_declarations)
-	endif()
 
 	check_c_compiler_flag(-Wnonnull-compare c_Wnonnull_compare)
 	if (c_Wnonnull_compare)
@@ -1540,14 +1479,8 @@ dprint ( "BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}" )
 # the compiler used for C files
 dprint ( "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}" )
 
-# version information about the compiler
-dprint ( "CMAKE_C_COMPILER_VERSION: ${CMAKE_C_COMPILER_VERSION}" )
-
 # the compiler used for C++ files
 dprint ( "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}" )
-
-# version information about the compiler
-dprint ( "CMAKE_CXX_COMPILER_VERSION: ${CMAKE_CXX_COMPILER_VERSION}" )
 
 # if the compiler is a variant of gcc, this should be set to 1
 dprint ( "CMAKE_COMPILER_IS_GNUCC: ${CMAKE_COMPILER_IS_GNUCC}" )

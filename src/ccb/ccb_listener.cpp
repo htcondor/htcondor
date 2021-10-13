@@ -111,14 +111,14 @@ bool
 CCBListener::SendMsgToCCB(ClassAd &msg,bool blocking)
 {
 	if( !m_sock ) {
-		Daemon ccb(DT_COLLECTOR,m_ccb_address.Value());
+		Daemon ccb(DT_COLLECTOR,m_ccb_address.c_str());
 
 		int cmd = -1;
 		msg.LookupInteger( ATTR_COMMAND, cmd );
 		if( cmd != CCB_REGISTER ) {
 			dprintf(D_ALWAYS,"CCBListener: no connection to CCB server %s"
 					" when trying to send command %d\n",
-					m_ccb_address.Value(), cmd );
+					m_ccb_address.c_str(), cmd );
 			return false;
 		}
 
@@ -254,7 +254,7 @@ CCBListener::Disconnected()
 	dprintf(D_ALWAYS,
 			"CCBListener: connection to CCB server %s failed; "
 			"will try to reconnect in %d seconds.\n",
-			m_ccb_address.Value(), reconnect_time);
+			m_ccb_address.c_str(), reconnect_time);
 
 	m_reconnect_timer = daemonCore->Register_Timer(
 		reconnect_time,
@@ -361,7 +361,7 @@ CCBListener::ReadMsgFromCCB()
 	if( !getClassAd( m_sock, msg ) || !m_sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"CCBListener: failed to receive message from CCB server %s\n",
-				m_ccb_address.Value());
+				m_ccb_address.c_str());
 		Disconnected();
 		return false;
 	}
@@ -381,12 +381,12 @@ CCBListener::ReadMsgFromCCB()
 		return true;
 	}
 
-	MyString msg_str;
+	std::string msg_str;
 	sPrintAd(msg_str, msg);
 	dprintf( D_ALWAYS,
 			 "CCBListener: Unexpected message received from CCB "
 			 "server: %s\n",
-			 msg_str.Value() );
+			 msg_str.c_str() );
 	return false;
 }
 
@@ -394,15 +394,15 @@ bool
 CCBListener::HandleCCBRegistrationReply( ClassAd &msg )
 {
 	if( !msg.LookupString(ATTR_CCBID,m_ccbid) ) {
-		MyString msg_str;
+		std::string msg_str;
 		sPrintAd(msg_str, msg);
 		EXCEPT("CCBListener: no ccbid in registration reply: %s",
-			   msg_str.Value() );
+			   msg_str.c_str() );
 	}
 	msg.LookupString(ATTR_CLAIM_ID,m_reconnect_cookie);
 	dprintf(D_ALWAYS,
 			"CCBListener: registered with CCB server %s as ccbid %s\n",
-			m_ccb_address.Value(),
+			m_ccb_address.c_str(),
 			m_ccbid.c_str() );
 
 	m_waiting_for_registration = false;
@@ -424,11 +424,11 @@ CCBListener::HandleCCBRequest( ClassAd &msg )
 		!msg.LookupString( ATTR_CLAIM_ID, connect_id) ||
 		!msg.LookupString( ATTR_REQUEST_ID, request_id) )
 	{
-		MyString msg_str;
+		std::string msg_str;
 		sPrintAd(msg_str, msg);
 		EXCEPT("CCBListener: invalid CCB request from %s: %s\n",
 			   m_ccb_address.c_str(),
-			   msg_str.Value() );
+			   msg_str.c_str() );
 	}
 
 	msg.LookupString( ATTR_NAME, name );
@@ -469,9 +469,9 @@ CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, 
 	if( peer_description ) {
 		char const *peer_ip = sock->peer_ip_str();
 		if( peer_ip && !strstr(peer_description,peer_ip)) {
-			MyString desc;
-			desc.formatstr("%s at %s",peer_description,sock->get_sinful_peer());
-			sock->set_peer_description(desc.Value());
+			std::string desc;
+			formatstr(desc, "%s at %s",peer_description,sock->get_sinful_peer());
+			sock->set_peer_description(desc.c_str());
 		}
 		else {
 			sock->set_peer_description(peer_description);
@@ -480,7 +480,6 @@ CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, 
 
 	incRefCount();      // do not delete self until called back
 
-	MyString sock_desc;
 	int rc = daemonCore->Register_Socket(
 		sock,
 		sock->peer_description(),
@@ -585,10 +584,10 @@ bool
 CCBListener::operator ==(CCBListener const &other)
 {
 	char const *other_addr = other.getAddress();
-	if( m_ccb_address.Value() == other_addr ) {
+	if( m_ccb_address.c_str() == other_addr ) {
 		return true;
 	}
-	return other_addr && !strcmp(m_ccb_address.Value(),other_addr);
+	return other_addr && !strcmp(m_ccb_address.c_str(),other_addr);
 }
 
 
@@ -614,7 +613,7 @@ CCBListeners::GetCCBListener(char const *address)
 }
 
 void
-CCBListeners::GetCCBContactString(MyString &result)
+CCBListeners::GetCCBContactString(std::string &result)
 {
 	classy_counted_ptr<CCBListener> ccb_listener;
 
@@ -625,7 +624,7 @@ CCBListeners::GetCCBContactString(MyString &result)
 		ccb_listener = (*itr);
 		char const *ccbid = ccb_listener->getCCBID();
 		if( ccbid && *ccbid ) {
-			if( !result.IsEmpty() ) {
+			if( !result.empty() ) {
 				result += " ";
 			}
 			result += ccbid;

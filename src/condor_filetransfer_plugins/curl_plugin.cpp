@@ -37,7 +37,7 @@ main( int argc, char **argv ) {
     int retry_count = 0;
     int rval = -1;
     int diagnostic = 0;
-    MyString stats_string;
+    std::string stats_string;
 
     // Point the global curl_stats pointer to our local object
     ft_stats = &stats;

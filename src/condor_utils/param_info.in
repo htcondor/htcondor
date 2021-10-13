@@ -804,6 +804,13 @@ customization=normal
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_PUT_FAILED_JOBS_ON_HOLD]
+default=false
+type=bool
+customization=normal
+tags=dagman,dagman_main
+restart=never
+
 [LIBEXEC]
 default=$(RELEASE_DIR)/libexec
 win32_default=$(BIN)
@@ -1497,26 +1504,12 @@ default=50
 type=int
 tags=gridmanager,gahp-client
 
-[CREAM_GAHP_WORKER_THREADS]
-default=$(GRIDMANAGER_MAX_PENDING_REQUESTS)
-type=int
-
 [GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_EC2]
 default=20
 type=int
 
-[GAHP]
-default=
-type=string
-tags=gridmanager,gahp-client
-
-[GAHP_ARGS]
-default=
-type=string
-tags=gridmanager,gahp-client
-
-[GLITE_LOCATION]
-default=$(LIBEXEC)/glite
+[BLAHPD_LOCATION]
+default=$(RELEASE_DIR)
 type=string
 tags=gridmanager,gahp-client
 
@@ -1588,28 +1581,8 @@ default=0.01
 type=double
 range=0.0,1.0
 
-[ENABLE_GRID_MONITOR]
-default=true
-type=bool
-tags=gridmanager,globusjob
-
-[GRIDMANAGER_JM_EXIT_LIMIT]
-default=30
-type=int
-tags=gridmanager,globusjob
-
 [GRIDMANAGER_CONNECT_FAILURE_RETRY_INTERVAL]
 default=5
-type=int
-tags=gridmanager,globusjob
-
-[GRIDSHELL]
-default=
-type=string
-tags=gridmanager,globusjob
-
-[GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT]
-default=600
 type=int
 tags=gridmanager,globusjob
 
@@ -1643,11 +1616,6 @@ default=
 type=string
 tags=gridmanager,condorjob
 
-[CREAM_GAHP]
-default=$(SBIN)/cream_gahp
-type=string
-tags=gridmanager,creamjob
-
 [COLLECTOR_HOST]
 default=$(CONDOR_HOST)
 type=string
@@ -1665,33 +1633,6 @@ default="$(COLLECTOR_HOST)"
 default=COLLECTOR_HOST_STRING DedicatedScheduler
 description=Configuration attibutes that HTCondor needs to insert into STARTD ads
 customization=devel
-
-[UNICORE_GAHP]
-default=$(SBIN)/unicore_gahp
-win32_default=$(SBIN)\unicore_gahp.exe
-type=path
-tags=gridmanager,unicorejob
-
-[GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE]
-default=10
-type=int
-tags=gridmanager,globusresource
-
-[GRID_MONITOR_HEARTBEAT_TIMEOUT]
-default=300
-type=int
-tags=gridmanager,globusresource
-
-[GRID_MONITOR_RETRY_DURATION]
-default=900
-type=int
-tags=gridmanager,globusresource
-
-[GRID_MONITOR]
-default=$(SBIN)/grid_monitor
-win32_default=$(SBIN)\grid_monitor.exe
-type=path
-tags=gridmanager,globusresource
 
 [NO_DNS]
 default=false
@@ -1766,8 +1707,7 @@ description=Path to sendmail
 tags=MAIL,
 
 [MAIL]
-# default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
-default=/bin/mail
+default=/usr/bin/mail
 win32_default=$(BIN)\condor_mail.exe
 type=path
 tags=MAIL,
@@ -1965,12 +1905,6 @@ default=
 type=string
 customization=devel
 description=Startd Slot Attrs needed by HTCondor
-tags=startd,startd_main
-
-[STARTD_SLOT_EXPRS]
-default=
-type=string
-description=Obsolete name for startd Slot Attrs
 tags=startd,startd_main
 
 [KEYBOARD_CPUS]
@@ -2178,12 +2112,6 @@ tags=submit
 default=
 type=string
 description=Names of config attributes that should be automatically inserted into jobs by condor_submit
-tags=submit
-
-[SUBMIT_EXPRS]
-default=
-type=string
-description=Obsolete name for SUBMIT_ATTRS
 tags=submit
 
 [APPEND_REQ_VANILLA]
@@ -2538,9 +2466,9 @@ description=Authorization limits for token requests
 type=string
 tags=condor_auth_passwd
 
-[SEC_TOKEN_BLACKLIST_EXPR]
+[SEC_TOKEN_REVOCATION_EXPR]
 default=
-description=Expression describing token blacklist.
+description=Expression describing token revocation.
 type=string
 tags=condor_auth_passwd
 
@@ -2766,6 +2694,10 @@ tags=negotiator,matchmaker
 default=60
 type=int
 tags=negotiator,matchmaker
+
+[NEGOTIATOR_MIN_INTERVAL]
+default=5
+type=int
 
 [NEGOTIATOR_UPDATE_AFTER_CYCLE]
 default=false
@@ -4193,12 +4125,6 @@ range=0,
 type=int
 tags=schedd
 
-[GRAM_VERSION_DETECTION]
-default=true
-type=bool
-usage=true if gridmanager should automatically detect the version of GRAM servers, false otherwise
-tags=gridmanager
-
 [CREATE_LOCKS_ON_LOCAL_DISK]
 default=true
 type=bool
@@ -4343,14 +4269,6 @@ default=4
 tags=schedd
 restart=true
 customization=expert
-
-[ENABLE_VERSIONED_OPSYS]
-default=true
-win32_default=false
-type=bool
-customization=devel
-description=Append OS version to the value of OPSYS
-tags=startd
 
 [WANT_SUSPEND]
 default=False
@@ -5180,6 +5098,22 @@ tags=starter
 default=true
 type=bool
 
+[DOCKER_PERFORM_TEST]
+default=true
+type=bool
+
+[DOCKER_RUN_UNDER_INIT]
+default=true
+type=bool
+
+[DOCKER_TEST_IMAGE_PATH]
+default=$(LIBEXEC)/htcondor_docker_test
+type=string
+
+[DOCKER_TEST_IMAGE_NAME]
+default=htcondor_docker_test
+type=string
+
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
 type=string
@@ -5467,9 +5401,6 @@ win32_default=NUL
 default=D_PID
 description=Debug logging options for the ec2_gahp
 
-[GT2_GAHP]
-default=$(SBIN)/gahp_server
-
 [EC2_GAHP]
 default=$(SBIN)/ec2_gahp
 
@@ -5492,6 +5423,12 @@ type=path
 default=$(SBIN)/AzureGAHPServer
 win32_default=$(SBIN)\AzureGAHPServer.py
 type=path
+
+[ARC_GAHP]
+default=$(SBIN)/arc_gahp
+
+[ARC_GAHP_LOG]
+default=/tmp/ArcGahpLog.$(USERNAME)
 
 [GAHP_SSL_CAFILE]
 default=
@@ -6666,10 +6603,7 @@ default : @end
 description=Platform specific file knobs that should be ignored on upgrade
 default=
 win32_default : @end
-	GT2_GAHP
-	UNICORE_GAHP
 	NORDUGRID_GAHP
-	CREAM_GAHP
 	LIBVIRT_XML_SCRIPT
 @end
 
@@ -6768,5 +6702,24 @@ default : @end
 	DAEMON_LIST=$(DAEMON_LIST),ADSTASH
 @end
 
+[$FEATURE.CommonCloudAttributesGoogle]
+description=Enable an execute node to advertise common cloud attributes on Google
+default : @end
+	use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/common-cloud-attributes-google.py, $(0))
+	STARTD_CRON_cloud_PREFIX = Cloud
+@end
+
+[$FEATURE.JobsHaveInstanceIDs]
+description=When a job runs on a machine in the cloud, add that machine's instance ID to the job's ClassAd
+default : @end
+	SYSTEM_JOB_MACHINE_ATTRS = $(SYSTEM_JOB_MACHINE_ATTRS) CloudInstanceID
+@end
+
+[$FEATURE.CommonCloudAttributesAWS]
+description=Enable an execute node to advertise common cloud attributes on AWS
+default : @end
+	use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/common-cloud-attributes-aws.py, $(0))
+	STARTD_CRON_cloud_PREFIX = Cloud
+@end
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

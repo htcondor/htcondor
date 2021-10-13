@@ -642,14 +642,14 @@ JobInfoCommunicator::checkDedicatedExecuteAccounts( char const *name )
 	}
 
 		// force the matching of the whole string
-	MyString full_pattern;
-	full_pattern.formatstr("^%s$",pattern_string);
+	std::string full_pattern;
+	formatstr(full_pattern, "^%s$", pattern_string);
 
 	Regex re;
 	char const *errstr = NULL;
 	int erroffset = 0;
 
-	if( !re.compile( full_pattern.Value(), &errstr, &erroffset, 0 ) ) {
+	if( !re.compile( full_pattern.c_str(), &errstr, &erroffset, 0 ) ) {
 		EXCEPT("Invalid regular expression for %s (%s): %s",
 			   DEDICATED_EXECUTE_ACCOUNT_REGEXP,
 			   pattern_string,
@@ -672,7 +672,7 @@ JobInfoCommunicator::setExecuteAccountIsDedicated( char const *name )
 	}
 	else {
 		m_dedicated_execute_account_buf = name;
-		m_dedicated_execute_account = m_dedicated_execute_account_buf.Value();
+		m_dedicated_execute_account = m_dedicated_execute_account_buf.c_str();
 	}
 }
 
@@ -741,10 +741,10 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	}
 
 	if ( !name ) {
-		MyString slotName = Starter->getMySlotName();
-		slotName.upper_case();
+		std::string slotName = Starter->getMySlotName();
+		upper_case(slotName);
 		slotName += "_USER";
-		char *run_jobs_as = param(slotName.Value());
+		char *run_jobs_as = param(slotName.c_str());
 		if (run_jobs_as) {		
 			getDomainAndName(run_jobs_as, domain, name);
 				/* 
@@ -772,10 +772,10 @@ JobInfoCommunicator::initUserPrivWindows( void )
 			init_priv_succeeded = false;			
 		} 
 		else {
-			MyString login_name;
+			std::string login_name;
 			joinDomainAndName(name, domain, login_name);
-			if( checkDedicatedExecuteAccounts( login_name.Value() ) ) {
-				setExecuteAccountIsDedicated( login_name.Value() );
+			if( checkDedicatedExecuteAccounts( login_name.c_str() ) ) {
+				setExecuteAccountIsDedicated( login_name.c_str() );
 			}
 		}
 
@@ -875,7 +875,7 @@ JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
 		return;
 	}
 	priv_state priv = set_user_priv();
-	MyString filename;
+	std::string filename;
 	bool ok = classad_visa_write(&visa_ad,
 	                             get_mySubSystem()->getName(),
 	                             daemonCore->InfoCommandSinfulString(),
@@ -883,7 +883,7 @@ JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
 	                             &filename);
 	set_priv(priv);
 	if (ok) {
-		addToOutputFiles(filename.Value());
+		addToOutputFiles(filename.c_str());
 	}
 }
 

@@ -346,13 +346,13 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 		setRemoteDomain(dom);
 
 		// set authenticated name used for mapping
-		MyString auth_name;
+		std::string auth_name;
 		auth_name = buf;
 		if(dom) {
 			auth_name += "@";
 			auth_name += dom;
 		}
-		setAuthenticatedName(auth_name.Value());
+		setAuthenticatedName(auth_name.c_str());
 
 		dprintf( D_FULLDEBUG, "sspi_server_auth(): user name is: \"%s\"\n", buf );
 		if (dom) {

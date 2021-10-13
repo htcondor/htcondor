@@ -327,11 +327,11 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 	if (HStats.lookup(ip_addr, hs) < 0) {
 		condor_sockaddr addr;
 		const char* hostname = NULL;
-		MyString hostname_str;
+		std::string hostname_str;
 		addr.from_sinful(host);
 		if (!avoid_dns) {
 			hostname_str = get_hostname(addr);
-			hostname = hostname_str.Value();
+			hostname = hostname_str.c_str();
 		}
 		if (hostname == NULL) {
 			hostname = ip_addr;

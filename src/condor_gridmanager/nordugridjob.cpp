@@ -32,7 +32,6 @@
 #include "gridmanager.h"
 #include "nordugridjob.h"
 #include "condor_config.h"
-#include "globusjob.h" // for rsl_stringify()
 
 
 // GridManager job states
@@ -127,12 +126,8 @@ void NordugridJobReconfig()
 	NordugridJob::setGahpCallTimeout( tmp_int );
 
 	// Tell all the resource objects to deal with their new config values
-	NordugridResource *next_resource;
-
-	NordugridResource::ResourcesByName.startIterations();
-
-	while ( NordugridResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		next_resource->Reconfig();
+	for (auto &elem : NordugridResource::ResourcesByName) {
+		elem.second->Reconfig();
 	}
 }
 
@@ -929,6 +924,73 @@ void NordugridJob::SetRemoteJobId( const char *job_id )
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
+const char *rsl_stringify( const std::string& src )
+{
+	size_t src_len = src.length();
+	size_t src_pos = 0;
+	size_t var_pos1;
+	size_t var_pos2;
+	size_t quote_pos;
+	static std::string dst;
+
+	if ( src_len == 0 ) {
+		dst = "''";
+	} else {
+		dst = "";
+	}
+
+	while ( src_pos < src_len ) {
+		var_pos1 = src.find( "$(", src_pos );
+		var_pos2 = var_pos1 == std::string::npos ? var_pos1 : src.find( ")", var_pos1 );
+		quote_pos = src.find( "'", src_pos );
+		if ( var_pos2 == std::string::npos && quote_pos == std::string::npos ) {
+			dst += "'";
+			dst += src.substr( src_pos, src.npos );
+			dst += "'";
+			src_pos = src.length();
+		} else if ( var_pos2 == std::string::npos ||
+					(quote_pos != std::string::npos && quote_pos < var_pos1 ) ) {
+			if ( src_pos < quote_pos ) {
+				dst += "'";
+				dst += src.substr( src_pos, quote_pos - src_pos );
+				dst += "'#";
+			}
+			dst += '"';
+			while ( src[quote_pos] == '\'' ) {
+				dst += "'";
+				quote_pos++;
+			}
+			dst += '"';
+			if ( quote_pos < src_len ) {
+				dst += '#';
+			}
+			src_pos = quote_pos;
+		} else {
+			if ( src_pos < var_pos1 ) {
+				dst += "'";
+				dst += src.substr( src_pos, var_pos1 - src_pos );
+				dst += "'#";
+			}
+			dst += src.substr( var_pos1, (var_pos2 - var_pos1) + 1 );
+			if ( var_pos2 + 1 < src_len ) {
+				dst += '#';
+			}
+			src_pos = var_pos2 + 1;
+		}
+	}
+
+	return dst.c_str();
+}
+
+const char *rsl_stringify( const char *string )
+{
+	static std::string src;
+	if ( string ) {
+		src = string;
+	}
+	return rsl_stringify( src );
+}
+
 std::string *NordugridJob::buildSubmitRSL()
 {
 	bool transfer_exec = true;
@@ -977,25 +1039,25 @@ std::string *NordugridJob::buildSubmitRSL()
 
 	{
 		ArgList args;
-		MyString arg_errors;
-		MyString rsl_args;
-		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
+		std::string arg_errors;
+		std::string rsl_args;
+		if(!args.AppendArgsFromClassAd(jobAd, arg_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
-					procID.cluster, procID.proc, arg_errors.Value());
+					procID.cluster, procID.proc, arg_errors.c_str());
 			formatstr(errorString,"Failed to read job arguments: %s\n",
-					arg_errors.Value());
+					arg_errors.c_str());
 			delete rsl;
 			return NULL;
 		}
 		if(args.Count() != 0) {
 			if(args.InputWasV1()) {
 					// In V1 syntax, the user's input _is_ RSL
-				if(!args.GetArgsStringV1Raw(&rsl_args,&arg_errors)) {
+				if(!args.GetArgsStringV1Raw(rsl_args, arg_errors)) {
 					dprintf(D_ALWAYS,
 							"(%d.%d) Failed to get job arguments: %s\n",
-							procID.cluster,procID.proc,arg_errors.Value());
+							procID.cluster,procID.proc,arg_errors.c_str());
 					formatstr(errorString,"Failed to get job arguments: %s\n",
-							arg_errors.Value());
+							arg_errors.c_str());
 					delete rsl;
 					return NULL;
 				}
@@ -1206,7 +1268,7 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list,
 {
 	StringList *stage_local_list;
 	char *remaps = NULL;
-	MyString local_name;
+	std::string local_name;
 	char *remote_name;
 	std::string stdout_name = "";
 	std::string stderr_name = "";
@@ -1245,11 +1307,11 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list,
 			local_name = condor_basename( remote_name );
 		}
 
-		if ( (local_name.Length() && local_name[0] == '/')
-			 || IsUrl( local_name.Value() ) ) {
+		if ( (local_name.length() && local_name[0] == '/')
+			 || IsUrl( local_name.c_str() ) ) {
 			buff = local_name;
 		} else {
-			formatstr( buff, "%s%s", iwd.c_str(), local_name.Value() );
+			formatstr( buff, "%s%s", iwd.c_str(), local_name.c_str() );
 		}
 		stage_local_list->append( buff.c_str() );
 	}

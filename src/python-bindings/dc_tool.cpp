@@ -436,7 +436,9 @@ export_dc_tool()
         .value("SubSecond", DSUBSECOND)
         .value("Timestamp", DTIMESTAMP)
         .value("PID", DPID)
+#ifndef __arm__
         .value("NoHeader", DNOHEADER)
+#endif
         ;
 
     def("send_command", send_command, send_command_overloads(

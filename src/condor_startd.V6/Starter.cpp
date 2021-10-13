@@ -495,6 +495,10 @@ Starter::reallykill( int signo, int type )
 		// Finally, do the deed.
 	switch( type ) {
 	case 0:
+		if( daemonCore->ProcessExitedButNotReaped(s_pid) ) {
+			ret = 0;
+			break;
+		}
 		if( is_dc() ) {		
 			ret = daemonCore->Send_Signal( (s_pid), signo );
 				// Translate Send_Signal's return code to Unix's kill()
@@ -507,9 +511,7 @@ Starter::reallykill( int signo, int type )
 		} 
 #ifndef WIN32
 		else {
-			if (!daemonCore->ProcessExitedButNotReaped(s_pid)) {
-				ret = ::kill( (s_pid), sig );
-			}
+			ret = ::kill( (s_pid), sig );
 			break;
 		}
 #endif /* ! WIN32 */
@@ -662,7 +664,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		dummyAd.Assign(ATTR_IMAGE_SIZE, 0);
 		dummyAd.Assign(ATTR_JOB_CMD, "boinc");
 		std::string gjid;
-		formatstr(gjid,"%s#%d#%d#%d", get_local_hostname().Value(), now, 1, now);
+		formatstr(gjid,"%s#%d#%d#%d", get_local_hostname().c_str(), now, 1, now);
 		dummyAd.Assign(ATTR_GLOBAL_JOB_ID, gjid);
 		jobAd = &dummyAd;
 	}
@@ -815,7 +817,7 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 	bool slot_arg = false;
 	enum { APPEND_NOTHING, APPEND_SLOT, APPEND_CLUSTER, APPEND_JOBID } append = APPEND_SLOT;
 
-	MyString ext;
+	std::string ext;
 	if (param(ext, "STARTER_LOG_NAME_APPEND")) {
 		slot_arg = true;
 		if (MATCH == strcasecmp(ext.c_str(), "Slot")) {
@@ -1126,10 +1128,10 @@ int Starter::execDCStarter(
 	}
 
 	if(IsFulldebug(D_FULLDEBUG)) {
-		MyString args_string;
-		final_args->GetArgsStringForDisplay(&args_string);
+		std::string args_string;
+		final_args->GetArgsStringForDisplay(args_string);
 		dprintf( D_FULLDEBUG, "About to Create_Process \"%s\"\n",
-				 args_string.Value() );
+				 args_string.c_str() );
 	}
 
 	FamilyInfo fi;
@@ -1137,7 +1139,7 @@ int Starter::execDCStarter(
 
 	std::string sockBaseName( "starter" );
 	if( claim ) { sockBaseName = claim->rip()->r_id_str; }
-	MyString daemon_sock = SharedPortEndpoint::GenerateEndpointName( sockBaseName.c_str() );
+	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName( sockBaseName.c_str() );
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
 		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds,

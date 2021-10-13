@@ -641,7 +641,7 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 {
     Value     		arg0, arg1, cArg;
     const ExprTree 	*tree;
-	const ExprList	*el;
+	const ExprList	*el = NULL;
 	bool			b;
 	bool			useIS = ( strcasecmp( "identicalmember", name ) == 0 );
 
@@ -2330,7 +2330,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 
 		case Value::ABSOLUTE_TIME_VALUE:
 			{
-				abstime_t secs;
+				abstime_t secs = { 0, 0 };
 				arg.IsAbsoluteTimeValue( secs );
 				if( relative ) {
 					result.SetRelativeTimeValue( secs.secs );
@@ -2455,7 +2455,7 @@ doMath2( const char* name,const ArgumentList &argList,EvalState &state,
 			val.IsRealValue(rval);
 
 			if (arg2.IsListValue()) {
-				const ExprList *list;
+				const ExprList *list = NULL;
 				arg2.IsListValue(list);
 				base.SetRealValue(0.0), rbase = 0.0; // treat an empty list as 'don't quantize'
 				for (ExprListIterator itr(list); !itr.IsAfterLast(); itr.NextExpr()) {

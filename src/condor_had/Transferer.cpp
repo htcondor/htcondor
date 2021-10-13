@@ -32,53 +32,6 @@ extern char* myName;
 // single 'condor_transferer' object
 BaseReplicaTransferer* replicaTransferer = NULL; 
 
-#if 0
-int
-uploadTerminateSignalHandler(Service* service, int signalNumber)
-{
-    dprintf( D_ALWAYS, "uploadTerminateSignalHandler started\n" );
-    REPLICATION_ASSERT(signalNumber == 100);
-
-    MyString extension( daemonCore->getpid( ) );
-    // the .up ending is needed in order not to confuse between upload and
-    // download processes temporary files
-    extension += ".";
-    extension += UPLOADING_TEMPORARY_FILES_EXTENSION;
-
-	FilesOperations::safeUnlinkFile(
-        replicaTransferer->getVersionFilePath( ).Value( ),
-        extension.Value( ) );
-    FilesOperations::safeUnlinkFile(
-        replicaTransferer->getStateFilePath( ).Value( ),
-        extension.Value( ) );
-    exit(1);
-	return 0;
-}
-
-int
-downloadTerminateSignalHandler(Service* service, int signalNumber)
-{
-    dprintf( D_ALWAYS, "downloadTerminateSignalHandler started\n" );
-    REPLICATION_ASSERT(signalNumber == 100);
-
-    MyString extension( daemonCore->getpid( ) );
-    // the .up ending is needed in order not to confuse between upload and
-    // download processes temporary files
-    extension += ".";
-    extension += DOWNLOADING_TEMPORARY_FILES_EXTENSION;
-
-	FilesOperations::safeUnlinkFile(
-        replicaTransferer->getVersionFilePath( ).Value( ),
-        extension.Value( ) );
-    FilesOperations::safeUnlinkFile(
-        replicaTransferer->getStateFilePath( ).Value( ),
-        extension.Value( ) );
-    exit(1);
-
-	return 0;
-}
-#endif
-
 /* Function   : cleanTemporaryFiles 
  * Description: cleans all temporary files of the transferer: be it the
  * 				uploading one or the downloading one
@@ -88,8 +41,8 @@ cleanTemporaryFiles()
 {
 	dprintf( D_ALWAYS, "cleanTemporaryFiles started\n" );
 
-	MyString downloadingExtension;
-	MyString uploadingExtension;
+	std::string downloadingExtension;
+	std::string uploadingExtension;
 	char*    stateFilePath = NULL;	
 
 	formatstr( downloadingExtension, "%d.%s", daemonCore->getpid( ),
@@ -99,11 +52,11 @@ cleanTemporaryFiles()
 
 	// we first delete the possible temporary version files
 	FilesOperations::safeUnlinkFile(
-        replicaTransferer->getVersionFilePath( ).Value( ),
-        downloadingExtension.Value( ) );
+        replicaTransferer->getVersionFilePath( ).c_str( ),
+        downloadingExtension.c_str( ) );
     FilesOperations::safeUnlinkFile(
-        replicaTransferer->getVersionFilePath( ).Value( ),
-        uploadingExtension.Value( ) );
+        replicaTransferer->getVersionFilePath( ).c_str( ),
+        uploadingExtension.c_str( ) );
 
 	// then the possible temporary state files
     StringList& stateFilePathsList = replicaTransferer->getStateFilePathsList( );
@@ -112,13 +65,13 @@ cleanTemporaryFiles()
 
     while( ( stateFilePath = stateFilePathsList.next( ) ) ) {
 		if( ! FilesOperations::safeUnlinkFile( stateFilePath, 
-										downloadingExtension.Value( ) ) ) {
+										downloadingExtension.c_str( ) ) ) {
             dprintf( D_ALWAYS, "cleanTemporaryFiles unable to unlink "
                                "state file %s with .down extension\n", 
 					 stateFilePath );
         }
 		if( ! FilesOperations::safeUnlinkFile( stateFilePath,
-										uploadingExtension.Value( ) ) ) {
+										uploadingExtension.c_str( ) ) ) {
 			dprintf( D_ALWAYS, "cleanTemporaryFiles unable to unlink "
                                "state file %s with .up extension\n",
 					 stateFilePath );
@@ -173,14 +126,12 @@ main_init( int argc, char *argv[] )
 								argv[1],
 								argv[2], 
 								argv[3], 
-								//argv[4] );
 								stateFilePathsList );
 	} else if( ! strncmp( argv[1], "up", strlen( "up" ) ) ) {
         replicaTransferer = new UploadReplicaTransferer( 
 								argv[1],
 								argv[2], 
 								argv[3], 
-								//argv[4] );
 								stateFilePathsList );
     } else {
         dprintf( D_ALWAYS, "Transfer error: first parameter must be "
