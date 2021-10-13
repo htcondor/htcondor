@@ -38,7 +38,7 @@ class MapFile;
 extern int reconfig_user_maps();
 extern bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
 
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 #include <dlfcn.h>
 #endif
 
@@ -108,7 +108,7 @@ void ClassAdReconfig()
 			if (classad::FunctionCall::RegisterSharedLibraryFunctions(loc.c_str()))
 			{
 				ClassAdUserLibs.append(loc.c_str());
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 				void *dl_hdl = dlopen(loc.c_str(), RTLD_LAZY);
 				if (dl_hdl) // Not warning on failure as the RegisterSharedLibraryFunctions should have done that.
 				{

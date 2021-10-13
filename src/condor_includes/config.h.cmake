@@ -154,12 +154,6 @@
 /* Define to 1 if you have the 'dirfd' function. (USED)*/
 #cmakedefine HAVE_DIRFD 1
 
-/* Define to 1 if you have the <dlfcn.h> header file. (USED)*/
-#cmakedefine HAVE_DLFCN_H 1
-
-/* dlopen function is available  (used) */
-#cmakedefine HAVE_DLOPEN 1
-
 /* Define to 1 if you have the 'readdir64' function. (used)*/
 #cmakedefine HAVE_READDIR64 1
 

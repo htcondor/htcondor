@@ -43,9 +43,7 @@
 #include "systemd_manager.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "MasterPlugin.h"
-#endif
 #endif
 
 #ifdef WIN32
@@ -3342,9 +3340,7 @@ Daemons::UpdateCollector()
 		DCTokenRequester::default_identity, "ADVERTISE_MASTER");
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 	MasterPluginManager::Update(ad);
-#endif
 #endif
 
 		// Reset the timer so we don't do another period update until

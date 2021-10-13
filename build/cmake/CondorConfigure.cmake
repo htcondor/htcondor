@@ -484,7 +484,6 @@ if( NOT WINDOWS)
 	check_include_files("sqlite3.h" HAVE_SQLITE3_H)
 	find_library( SQLITE3_LIB "sqlite3" )
 
-	check_library_exists(dl dlopen "" HAVE_DLOPEN)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)
 	check_symbol_exists(TCP_KEEPIDLE "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPIDLE)
 	check_symbol_exists(TCP_KEEPALIVE "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPALIVE)
@@ -537,7 +536,6 @@ if( NOT WINDOWS)
 	check_function_exists("unshare" HAVE_UNSHARE)
 
 	# we can likely put many of the checks below in here.
-	check_include_files("dlfcn.h" HAVE_DLFCN_H)
 	check_include_files("inttypes.h" HAVE_INTTYPES_H)
 	check_include_files("ldap.h" HAVE_LDAP_H)
 	if (${OS_NAME} STREQUAL "DARWIN")

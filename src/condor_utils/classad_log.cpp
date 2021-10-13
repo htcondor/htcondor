@@ -31,7 +31,7 @@
 #include "condor_fsync.h"
 #include "condor_attributes.h"
 
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 #include "ClassAdLogPlugin.h"
 #endif
 
@@ -682,7 +682,7 @@ LogNewClassAd::Play(void *data_structure)
 		ctor.Delete(ad);
 	}
 
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 	ClassAdLogPluginManager::NewClassAd(key);
 #endif
 
@@ -773,7 +773,7 @@ LogDestroyClassAd::Play(void *data_structure)
 		return -1;
 	}
 
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 	ClassAdLogPluginManager::DestroyClassAd(key);
 #endif
 
@@ -837,7 +837,7 @@ LogSetAttribute::Play(void *data_structure)
 		ad->MarkAttributeClean(name);
 	}
 
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 	ClassAdLogPluginManager::SetAttribute(key, name, value);
 #endif
 
@@ -946,7 +946,7 @@ LogDeleteAttribute::Play(void *data_structure)
 	if ( ! table->lookup(key, ad))
 		return -1;
 
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 	ClassAdLogPluginManager::DeleteAttribute(key, name);
 #endif
 
@@ -978,7 +978,7 @@ LogDeleteAttribute::WriteBody(FILE* fp)
 
 int
 LogBeginTransaction::Play(void *){
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 	ClassAdLogPluginManager::BeginTransaction();
 #endif
 
@@ -998,7 +998,7 @@ LogBeginTransaction::ReadBody(FILE* fp)
 
 int
 LogEndTransaction::Play(void *) {
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 	ClassAdLogPluginManager::EndTransaction();
 #endif
 
