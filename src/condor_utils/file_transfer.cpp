@@ -1659,6 +1659,7 @@ FileTransfer::HandleCommands(int command, Stream *s)
 					}
 				}
 			}
+
 			// Similarly, we want to look through any data reuse file and treat them as input
 			// files.  We must handle the manifest here in order to ensure the manifest files
 			// are treated in the same manner as anything else that appeared on transfer_input_files
@@ -1668,6 +1669,56 @@ FileTransfer::HandleCommands(int command, Stream *s)
 			for (const auto &info : transobject->m_reuse_info) {
 				if (!transobject->InputFiles->file_contains(info.filename().c_str()))
 					transobject->InputFiles->append(info.filename().c_str());
+			}
+
+			//
+			// It might be better to be more explicit about this, since it's
+			// possible that the job specifies ON_EXIT_OR_EVICT and that the
+			// job was evicted before uploading its first checkpoint, but for
+			// now let's just say that we don't support that.
+			//
+			bool alreadyUploadedCheckpoint = false;
+			int transferOutFinished;
+			if( transobject->jobAd.LookupInteger( "TransferOutFinished", transferOutFinished ) ) {
+				alreadyUploadedCheckpoint = true;
+			}
+
+			//
+			// Finally, if we have a checkpoint destination set, ask the
+			// starter to download from there, as well.
+			//
+			// This implementation is probably wrong, but it will work for
+			// transfer_checkpoint_files lists which don't include directories.
+			//
+			std::string checkpointDestination;
+			if(alreadyUploadedCheckpoint && transobject->jobAd.LookupString( "CheckpointDestination", checkpointDestination )) {
+				transobject->uploadCheckpointFiles = true;
+				transobject->DetermineWhichFilesToSend();
+				transobject->uploadCheckpointFiles = false;
+
+				const char * path = NULL;
+				std::string destination_path;
+				transobject->CheckpointFiles->rewind();
+				while( (path = transobject->CheckpointFiles->next()) != NULL ) {
+
+					//
+					// If ATTRS_JOB_OUTPUT or ATTR_JOB_ERROR are set to real
+					// files, the shadow (in jic_shadow.cpp) resets them to
+					// Std[out|err[RemapName, and the shadow inserts a remap
+					// to the real file names for the final transfer.  Since
+					// this isn't the final transfer, the remaps aren't set,
+					// and we have to do this by hand.
+					//
+					if( strcmp(path, transobject->JobStdoutFile.c_str()) == 0 ) {
+						path = StdoutRemapName;
+					} else if( strcmp(path, transobject->JobStderrFile.c_str()) == 0 ) {
+						path = StderrRemapName;
+					}
+
+					formatstr( destination_path, "%s/%s", checkpointDestination.c_str(), path );
+					dprintf( D_FULLDEBUG, "Adding %s as checkpoint file\n", destination_path.c_str() );
+					transobject->InputFiles->append( destination_path.c_str() );
+				}
 			}
 
 			transobject->FilesToSend = transobject->InputFiles;
