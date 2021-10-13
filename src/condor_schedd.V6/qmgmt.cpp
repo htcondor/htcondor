@@ -61,7 +61,7 @@
 #include "ScheddPlugin.h"
 #endif
 
-#if defined(HAVE_GETGRNAM)
+#ifdef UNIX
 #include <sys/types.h>
 #include <grp.h>
 #endif
@@ -2510,7 +2510,7 @@ isQueueSuperUser( const char* user )
 		return false;
 	}
 	for (const auto &superuser : super_users) {
-#if defined(HAVE_GETGRNAM)
+#ifdef UNIX
         if (superuser[0] == '%') {
             // this is a user group, so check user against the group membership
             struct group* gr = getgrnam(&superuser[1]);
