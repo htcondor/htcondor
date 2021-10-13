@@ -1609,15 +1609,15 @@ CondorClassAdFileParseHelper::ParseType CondorClassAdListWriter::autoSetFormat(C
 //    < 0 failure,
 //    0   nothing written
 //    1   non-empty ad appended
-int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, StringList * whitelist, bool hash_order)
+int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, StringList * includelist, bool hash_order)
 {
 	if (ad.size() == 0) return 0;
 	size_t cchBegin = output.size();
 
 	classad::References attrs;
 	classad::References *print_order = NULL;
-	if ( ! hash_order || whitelist) {
-		sGetAdAttrs(attrs, ad, true, whitelist);
+	if ( ! hash_order || includelist) {
+		sGetAdAttrs(attrs, ad, true, includelist);
 		print_order = &attrs;
 	}
 
@@ -1739,12 +1739,12 @@ int CondorClassAdListWriter::appendFooter(std::string & buf, bool xml_always_wri
 //    0   nothing written
 //    1   non-empty ad written
 static const int cchReserveForPrintingAds = 16384;
-int CondorClassAdListWriter::writeAd(const ClassAd & ad, FILE * out, StringList * whitelist, bool hash_order)
+int CondorClassAdListWriter::writeAd(const ClassAd & ad, FILE * out, StringList * includelist, bool hash_order)
 {
 	buffer.clear();
 	if ( ! cNonEmptyOutputAds) buffer.reserve(cchReserveForPrintingAds);
 
-	int rval = appendAd(ad, buffer, whitelist, hash_order);
+	int rval = appendAd(ad, buffer, includelist, hash_order);
 	if (rval < 0) return rval;
 
 	if ( ! buffer.empty()) {
@@ -1978,14 +1978,14 @@ initAdFromString( char const *str, classad::ClassAd &ad )
 
 		// output functions
 int
-fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list )
 {
 	MyString buffer;
 
 	if( exclude_private ) {
-		sPrintAd( buffer, ad, attr_white_list );
+		sPrintAd( buffer, ad, attr_include_list );
 	} else {
-		sPrintAdWithSecrets( buffer, ad, attr_white_list );
+		sPrintAdWithSecrets( buffer, ad, attr_include_list );
 	}
 
 	if ( fprintf(file, "%s", buffer.c_str()) < 0 ) {
@@ -2013,7 +2013,7 @@ dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private )
 
 
 int
-_sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+_sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list )
 {
 	classad::ClassAd::const_iterator itr;
 
@@ -2026,7 +2026,7 @@ _sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, S
 	std::map< std::string, std::string > attributes;
 	if ( parent ) {
 		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
-			if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+			if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
 				continue; // not in white-list
 			}
 			if ( ad.LookupIgnoreChain(itr->first) ) {
@@ -2043,7 +2043,7 @@ _sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, S
 	}
 
 	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
-		if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+		if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
@@ -2068,46 +2068,46 @@ _sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, S
 }
 
 int
-sPrintAd( MyString &output, const classad::ClassAd &ad, StringList *attr_white_list ) {
-	return _sPrintAd( output, ad, true, attr_white_list );
+sPrintAd( MyString &output, const classad::ClassAd &ad, StringList *attr_include_list ) {
+	return _sPrintAd( output, ad, true, attr_include_list );
 }
 
 int
-sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringList *attr_white_list ) {
-	return _sPrintAd( output, ad, false, attr_white_list );
+sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringList *attr_include_list ) {
+	return _sPrintAd( output, ad, false, attr_include_list );
 }
 
 
 int
-sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list )
+sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list )
 {
 	MyString myout;
-	int rc = sPrintAd( myout, ad, attr_white_list );
+	int rc = sPrintAd( myout, ad, attr_include_list );
 	output += myout;
 	return rc;
 }
 
 int
-sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list )
+sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list )
 {
 	MyString myout;
-	int rc = sPrintAdWithSecrets( myout, ad, attr_white_list );
+	int rc = sPrintAdWithSecrets( myout, ad, attr_include_list );
 	output += myout;
 	return rc;
 }
 
-/** Get a sorted list of attributes that are in the given ad, and also match the given whitelist (if any)
+/** Get a sorted list of attributes that are in the given ad, and also match the given includelist (if any)
 	and privacy criteria.
 	@param attrs the set of attrs to insert into. This is set is NOT cleared first.
 	@return TRUE
 */
 int
-sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list, bool ignore_parent )
+sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, bool ignore_parent )
 {
 	classad::ClassAd::const_iterator itr;
 
 	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
-		if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+		if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
@@ -2122,7 +2122,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 			if ( attrs.find(itr->first) != attrs.end() ) {
 				continue; // we already inserted this into the attrs list.
 			}
-			if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+			if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
 				continue; // not in white-list
 			}
 			if ( !exclude_private ||
@@ -2196,10 +2196,10 @@ sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::R
 	@param output The std::string to write into
 	@return std::string.c_str()
 */
-const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent /*= "\t"*/, StringList *attr_white_list /*= NULL*/, bool exclude_private /*= false*/)
+const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent /*= "\t"*/, StringList *attr_include_list /*= NULL*/, bool exclude_private /*= false*/)
 {
 	classad::References attrs;
-	sGetAdAttrs(attrs, ad, exclude_private, attr_white_list);
+	sGetAdAttrs(attrs, ad, exclude_private, attr_include_list);
 	sPrintAdAttrs(buffer, ad, attrs, indent);
 	if (buffer.empty() || (buffer[buffer.size()-1] != '\n')) { buffer += "\n"; }
 	return buffer.c_str();
@@ -2370,7 +2370,7 @@ CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const
 //////////////XML functions///////////
 
 int
-fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list)
+fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_list)
 {
     if(!fp)
     {
@@ -2378,24 +2378,24 @@ fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list)
     }
 
     std::string out;
-    sPrintAdAsXML(out,ad,attr_white_list);
+    sPrintAdAsXML(out,ad,attr_include_list);
     fprintf(fp, "%s", out.c_str());
     return TRUE;
 }
 
 int
-sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list)
+sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_include_list)
 {
 	classad::ClassAdXMLUnParser unparser;
 	std::string xml;
 
 	unparser.SetCompactSpacing(false);
-	if ( attr_white_list ) {
+	if ( attr_include_list ) {
 		classad::ClassAd tmp_ad;
 		classad::ExprTree *expr;
 		const char *attr;
-		attr_white_list->rewind();
-		while( (attr = attr_white_list->next()) ) {
+		attr_include_list->rewind();
+		while( (attr = attr_include_list->next()) ) {
 			if ( (expr = ad.Lookup( attr )) ) {
 				classad::ExprTree *new_expr = expr->Copy();
 				tmp_ad.Insert( attr, new_expr );
@@ -2411,7 +2411,7 @@ sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_
 ///////////// end XML functions /////////
 
 int
-fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list, bool oneline)
+fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_list, bool oneline)
 {
     if(!fp)
     {
@@ -2419,22 +2419,22 @@ fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list
     }
 
     std::string out;
-    sPrintAdAsJson(out,ad,attr_white_list,oneline);
+    sPrintAdAsJson(out,ad,attr_include_list,oneline);
     fprintf(fp, "%s", out.c_str());
     return TRUE;
 }
 
 int
-sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list, bool oneline)
+sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, bool oneline)
 {
 	classad::ClassAdJsonUnParser unparser(oneline);
 
-	if ( attr_white_list ) {
+	if ( attr_include_list ) {
 		classad::ClassAd tmp_ad;
 		classad::ExprTree *expr;
 		const char *attr;
-		attr_white_list->rewind();
-		while( (attr = attr_white_list->next()) ) {
+		attr_include_list->rewind();
+		while( (attr = attr_include_list->next()) ) {
 			if ( (expr = ad.Lookup( attr )) ) {
 				classad::ExprTree *new_expr = expr->Copy();
 				tmp_ad.Insert( attr, new_expr );
