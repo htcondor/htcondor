@@ -78,7 +78,7 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
 			token_file.c_str(), strerror(errno), errno);
 		return 1;
 	}
-	auto result = _condor_full_write(fd, token.c_str(), token.size());
+	auto result = full_write(fd, token.c_str(), token.size());
 	if (result != static_cast<ssize_t>(token.size())) {
 		fprintf(stderr, "Failed to write token to %s: %s (errno=%d)\n",
 			token_file.c_str(), strerror(errno), errno);
@@ -86,7 +86,7 @@ htcondor::write_out_token(const std::string &token_name, const std::string &toke
 		return 1;
 	}
 	std::string newline = "\n";
-	_condor_full_write(fd, newline.c_str(), 1);
+	full_write(fd, newline.c_str(), 1);
 	close(fd);
 	return 0;
 }
