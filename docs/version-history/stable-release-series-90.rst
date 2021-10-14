@@ -32,6 +32,10 @@ Bugs Fixed:
   submitted with the ``max_idle`` or ``max_materialize`` submit keyword.
   :jira:`755`
 
+- Fixed a bug where bytes were trying to be written via an ASCII file
+  handler in *condor_credmon_oauth* when using Python 3.
+  :jira:`633`
+
 Version 9.0.7
 -------------
 
