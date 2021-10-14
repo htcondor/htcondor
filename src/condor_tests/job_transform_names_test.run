@@ -63,7 +63,7 @@ JOB_TRANSFORM_BAD \@=end
 JOB_TRANSFORM_ILLEGAL \@=end
 [
   requirements = illegal =?= true;
-  set_ProcId = 999;
+  set_ClusterId = -999;
 ]
 \@end
 JOB_TRANSFORM_ALWAYS \@=end

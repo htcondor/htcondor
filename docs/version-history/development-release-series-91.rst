@@ -30,6 +30,10 @@ New Features:
   the wall clock time of the most recent completed job execution.
   :jira:`751`
 
+- ``JOB_TRANSFORM_*`` and ``SUBMIT_REQUIREMENT_*`` operations in the *condor_schedd*
+  are now applied to late materialization job factories at submit time.
+  :jira:`756`
+
 Bugs Fixed:
 
 - None.

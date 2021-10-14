@@ -148,12 +148,16 @@ JobTransforms::initAndReconfig()
 }
 
 int
-JobTransforms::transformJob(ClassAd *ad, CondorError * /* errorStack */ )
+JobTransforms::transformJob(
+	ClassAd *ad,
+	const PROC_ID & jid,
+	classad::References * xform_attrs,
+	CondorError * /* errorStack */ )
 {
 	int transforms_applied = 0;
 	int transforms_considered = 0;
 	StringList attrs_changed;
-	int rval, cluster, proc;
+	int rval, cluster, procid;
 	std::string errmsg;
 	std::string applied_names;
 
@@ -166,14 +170,19 @@ JobTransforms::transformJob(ClassAd *ad, CondorError * /* errorStack */ )
 		dprintf(D_ALWAYS, "transformJob: job lacks a cluster\n");
 		return -1;
 	}
+	if (cluster != jid.cluster) {
+		dprintf(D_ALWAYS, "transformJob: destination cluster does not match source cluster\n");
+		return -1;
+	}
 
-	if( ! ad->EvaluateAttrInt(ATTR_PROC_ID, proc) ) {
+	if( ! ad->EvaluateAttrInt(ATTR_PROC_ID, procid) ) {
 		dprintf(D_ALWAYS, "transformJob: job lacks a proc\n");
 		return -2;
 	}
 
 	// Revert variables hashtable so it doesn't grow idefinitely
 	mset.rewind_to_state(mset_ckpt, false);
+	mset.set_iterate_step(jid.proc, procid); // make ids visible to transform as temp variables
 
 	// Enable dirty tracking of ad attributes and mark them as clean,
 	// since after the transform we need to discover which attributes changed.
@@ -201,7 +210,7 @@ JobTransforms::transformJob(ClassAd *ad, CondorError * /* errorStack */ )
 			// TODO errorStack ?
 			dprintf(D_ALWAYS,
 				"(%d.%d) job_transforms: ERROR applying transform %s (err=-3,rval=%d,msg=%s)\n",
-				cluster, proc, xfm->getName(), rval, errmsg.c_str() ? errmsg.c_str() : "<none>");
+				jid.cluster, jid.proc, xfm->getName(), rval, errmsg.c_str() ? errmsg.c_str() : "<none>");
 			return -3;
 		} 
 
@@ -219,30 +228,35 @@ JobTransforms::transformJob(ClassAd *ad, CondorError * /* errorStack */ )
 	// changes to the ad into the transaction by calling SetAttribute() on each
 	// dirty attribute.
 	if (transforms_applied > 0) {
-		rval = set_dirty_attributes(ad, cluster, proc);
+		rval = set_dirty_attributes(ad, jid.cluster, jid.proc, xform_attrs);
 		if ( rval < 0 ) {
 			// TODO errorStack?
 			dprintf(D_ALWAYS,
 				"(%d.%d) job_transforms: ERROR applying transforms (err=-4,rval=%d)\n",
-				cluster, proc, rval);
+				jid.cluster, jid.proc, rval);
 			return -4;
 		}
 	}
 
 	dprintf( D_ALWAYS, 
 		"job_transforms for %d.%d: %d considered, %d applied (%s)\n",
-		cluster,proc,transforms_considered,transforms_applied,
+		jid.cluster,jid.proc,transforms_considered,transforms_applied,
 		transforms_applied > 0 ? applied_names.c_str() : "<none>" );
 
 	return 0;
 }
 
 int
-JobTransforms::set_dirty_attributes(ClassAd *ad, int cluster, int proc)
+JobTransforms::set_dirty_attributes(ClassAd *ad, int cluster, int proc, classad::References * attrs /*=nullptr*/)
 {
 	int num_attrs_set = 0;
 	const char *rhstr = 0;
 	ExprTree * tree;
+
+	// make sure we don't write the ProdId attribute here
+	// If we are setting dirty attributes into a cluster ad it would be a fatal
+	// and for a proc ad, it is unnecessary
+	ad->MarkAttributeClean(ATTR_PROC_ID);
 
 	for ( classad::ClassAd::dirtyIterator it = ad->dirtyBegin();
 		  it != ad->dirtyEnd(); ++it ) 
@@ -272,6 +286,7 @@ JobTransforms::set_dirty_attributes(ClassAd *ad, int cluster, int proc)
 				cluster, proc, it->c_str(), rhstr);
 			return -2;
 		}
+		if (attrs) { attrs->insert(*it); }
 		num_attrs_set++;
 	}
 
