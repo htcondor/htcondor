@@ -1978,7 +1978,7 @@ initAdFromString( char const *str, classad::ClassAd &ad )
 int
 fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list )
 {
-	MyString buffer;
+	std::string buffer;
 
 	if( exclude_private ) {
 		sPrintAd( buffer, ad, attr_include_list );
@@ -2009,7 +2009,61 @@ dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private )
 	}
 }
 
+int sortByFirst(const std::pair<std::string, ExprTree *> & lhs,
+				const std::pair<std::string, ExprTree *> & rhs) {
+	return lhs.first < rhs.first;
+}
 
+int
+_sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list )
+{
+	classad::ClassAd::const_iterator itr;
+
+	classad::ClassAdUnParser unp;
+	unp.SetOldClassAd( true, true );
+	const classad::ClassAd *parent = ad.GetChainedParentAd();
+
+	// Not sure why we need to sort the output. Do we?
+	std::vector<std::pair<std::string, ExprTree *>> attributes;
+
+	attributes.reserve(ad.size() + ( parent ? parent->size() : 0));
+	if ( parent ) {
+		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
+			if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
+				continue; // not in include-list
+			}
+			if ( ad.LookupIgnoreChain(itr->first) ) {
+				continue; // attribute exists in child ad; we will print it below
+			}
+			if ( !exclude_private ||
+				 !ClassAdAttributeIsPrivate( itr->first ) ) {
+				attributes.emplace_back(itr->first,itr->second);
+			}
+		}
+	}
+
+	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
+		if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
+			continue; // not in include-list
+		}
+		if ( !exclude_private ||
+			 !ClassAdAttributeIsPrivate( itr->first ) ) {
+			attributes.emplace_back(itr->first,itr->second);
+		}
+	}
+
+	std::sort(attributes.begin(), attributes.end(), sortByFirst);
+
+	for( const auto &i : attributes) {
+		output += i.first;
+		output += " = ";
+		unp.Unparse( output, i.second );
+		output += '\n';
+	}
+
+	return true;
+}
+	
 int
 _sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list )
 {
@@ -2079,19 +2133,13 @@ sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringList *a
 int
 sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list )
 {
-	MyString myout;
-	int rc = sPrintAd( myout, ad, attr_include_list );
-	output += myout;
-	return rc;
+	return _sPrintAd( output, ad, true, attr_include_list );
 }
 
 int
 sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list )
 {
-	MyString myout;
-	int rc = sPrintAdWithSecrets( myout, ad, attr_include_list );
-	output += myout;
-	return rc;
+	return _sPrintAd( output, ad, false, attr_include_list );
 }
 
 /** Get a sorted list of attributes that are in the given ad, and also match the given includelist (if any)
