@@ -55,8 +55,6 @@ typedef enum {
 // convenience macro for iterating through DCpermission values
 #define NEXT_PERM(perm) ( (DCpermission) (((int)perm)+1) )
 
-BEGIN_C_DECLS
-	
 	/** PermString() converts the given DCpermission into the
 		human-readable string version of the name.
 		@param perm The permission you want to convert
@@ -65,8 +63,6 @@ BEGIN_C_DECLS
 const char* PermString( DCpermission perm );
 
 DCpermission getPermissionFromString( const char * permstring );
-
-END_C_DECLS
 
 class DCpermissionHierarchy {
 

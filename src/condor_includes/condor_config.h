@@ -422,14 +422,13 @@ void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASH
 expand_param(), expand config variables $() against the current config table and return an strdup'd string with the result
 the char* return value should be freed using free()
 */
-BEGIN_C_DECLS
 char * expand_param (const char *str); // same as below but defaults subsys and use flags
-END_C_DECLS
 char * expand_param (const char *str, const char * localname, const char *subsys, int use);
 inline bool expand_param (const char *str, std::string & expanded) {
 	char * p = expand_param(str);
 	if (!p) return false;
 	expanded = p;
+	free(p);
 	return true;
 }
 

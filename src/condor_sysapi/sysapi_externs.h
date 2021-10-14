@@ -25,15 +25,7 @@
 #include <sys/utsname.h>
 #endif
 
-/* this header file can be included by C and C++ files, so make sure it
-   understands that fact.
-
-   so use the defined(_cplusplus) directive to ensure that works 
-*/
-
-#if defined(__cplusplus)
 #include "string_list.h"
-#endif
 
 /* the extern declarations are placed here instead of sysapi.h because I want
    them to be completely internal to the sysapi. Everything inside the
@@ -44,21 +36,8 @@
 */
 
 /* needed by idle_time.C and last_x_event.c */
-#if defined(__cplusplus)
 extern StringList *_sysapi_console_devices;
-#endif
 
-#ifndef EXTERN_C_BEGIN
-#ifdef __cplusplus
-#define EXTERN_C_BEGIN extern "C" {
-#define EXTERN_C_END }
-#else
-#define EXTERN_C_BEGIN
-#define EXTERN_C_END
-#endif
-#endif
-
-EXTERN_C_BEGIN
 extern time_t _sysapi_last_x_event;
 
 /* needed by free_fs_blocks.c */
@@ -91,7 +70,5 @@ extern bool _sysapi_getload;
 #if defined LINUX || defined WIN32
 extern bool _sysapi_count_hyperthread_cpus;
 #endif
-
-EXTERN_C_END
 
 #endif /* SYSAPI_EXTERNS_H */

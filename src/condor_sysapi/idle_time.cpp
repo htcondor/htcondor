@@ -821,12 +821,6 @@ extract_idle_time(
 
 #endif  /* the end of the Mac OS X code, and the  */
 
-/* ok, the purpose of this code is to create an interface that is a C linkage
- out of this file. This will get a little ugly. The sysapi entry points
- are C linkage */
-
-extern "C" {
-
 void sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
 {
 
@@ -851,6 +845,4 @@ void sysapi_idle_time(time_t *m_idle, time_t *m_console_idle)
 	sysapi_internal_reconfig();
 
 	sysapi_idle_time_raw(m_idle, m_console_idle);
-}
-
 }

@@ -95,7 +95,7 @@ const double	VIRTMEM_MAX_FAIL_OK			= 0.05;		// Ratio: Max failures to allow
    can be called seperately if need be to test stuff */
 
 /* this function will dump the state of the cached variables in reconfig.C */
-extern "C" void
+void
 sysapi_test_dump_internal_vars(void)
 {
 	dprintf(D_ALWAYS, "SysAPI: Dumping %s internal variables\n",
@@ -118,7 +118,7 @@ sysapi_test_dump_internal_vars(void)
 
 /* this function calls every function in sysapi that makes sense to call and
    prints out its value */
-extern "C" void
+void
 sysapi_test_dump_functions(void)
 {
 	int foo = 0;
@@ -180,7 +180,7 @@ sysapi_test_dump_functions(void)
 }
 
 /* the main entry function, this will do all the magic */
-extern "C" int
+int
 sysapi_test_dump_all(int argc, char** argv)
 {
 	int foo;

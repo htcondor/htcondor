@@ -21,8 +21,6 @@
 #ifndef __CONDOR_SYSAPI_H__
 #define __CONDOR_SYSAPI_H__
 
-BEGIN_C_DECLS
-
 /* For debugging */
 #if defined(LINUX)
 typedef struct {
@@ -165,7 +163,6 @@ const struct sysapi_cpuinfo *sysapi_processor_flags( void );
 int sysapi_partition_id_raw(char const *path,char **result);
 int sysapi_partition_id(char const *path,char **result);
 
-END_C_DECLS
 
 #include <string>
 #include <vector>

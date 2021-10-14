@@ -114,7 +114,7 @@ static const char* find_global(int options, MyString & config_file);
 static const char* find_file(const char*, const char*, int config_options, MyString & config_file);
 
 // pull from config.cpp
-extern "C++" void param_default_set_use(const char * name, int use, MACRO_SET & set);
+void param_default_set_use(const char * name, int use, MACRO_SET & set);
 
 
 // Global variables

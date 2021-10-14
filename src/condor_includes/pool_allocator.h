@@ -99,16 +99,4 @@ typedef struct _allocation_pool {
 } ALLOCATION_POOL;
 
 
-// c callable public interface begins here.
-BEGIN_C_DECLS
-
-/*
-void CreateAllocationPool(ALLOC_POOL * apool);
-const char * AllocInPool(ALLOC_POOL * apool, const char * psz);
-void ClearAllocationPool(ALLOC_POOL * apool);
-*/
-
-END_C_DECLS
-
-
 #endif /* _POOL_ALLOCATOR */

@@ -244,10 +244,10 @@ int pthread_sigmask(int how, const sigset_t *newmask, sigset_t *oldmask)
 }
 #endif
 
+END_C_DECLS
+
 int my_spawnl( const char*, ... )
 { return not_impl(); }
-
-END_C_DECLS
 
 void statusString( int, std::string & )
 { not_impl(); }

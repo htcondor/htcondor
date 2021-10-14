@@ -29,7 +29,7 @@ FILE* debug_fp = NULL;
 char *debug_fn = NULL;
 int log_size = -1;
 
-extern "C" void preserve_log_file();
+void preserve_log_file();
 
 static char *formatTimeHeader(struct tm *tm) {
 	static char timebuf[80];
@@ -109,7 +109,7 @@ _EXCEPT_(const char* format, ...)
 }
 
 
-extern "C" FILE *
+FILE *
 open_debug_file(const char flags[])
 {
 	FILE		*fp;
@@ -134,7 +134,7 @@ open_debug_file(const char flags[])
 	return fp;
 }
 
-extern "C" void
+void
 preserve_log_file()
 {
 	char		old[MAXPATHLEN + 4];

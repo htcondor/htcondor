@@ -85,9 +85,6 @@ bool _sysapi_net_devices_cached = false;
 const char * _sysapi_processor_flags_raw = NULL;
 const char * _sysapi_processor_flags = NULL;
 
-extern "C"
-{
-
 /*
    The function that configures the above variables each time it is called.
    This function is meant to be called outside of the library to configure it
@@ -181,6 +178,4 @@ sysapi_internal_reconfig(void)
 	if (_sysapi_config == FALSE) {
 		sysapi_reconfig();
 	}
-}
-
 }

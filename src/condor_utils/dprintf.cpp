@@ -2559,7 +2559,6 @@ void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, DebugHeaderInfo & in
 }
 #endif
 
-#ifdef __cplusplus
 dprintf_on_function_exit::dprintf_on_function_exit(bool on_entry, int _flags, const char * fmt, ...)
 	: msg("\n"), flags(_flags), print_on_exit(true)
 {
@@ -2573,7 +2572,6 @@ dprintf_on_function_exit::~dprintf_on_function_exit()
 {
 	if (print_on_exit) dprintf(flags, "leaving  %s", msg.c_str());
 }
-#endif
 
 // get pointers to the two dprintf entry points, because we can't refer to their addresses any other way.
 #ifdef __cplusplus

@@ -21,7 +21,6 @@
 #ifndef __MY_POPEN__
 #define __MY_POPEN__
 
-BEGIN_C_DECLS
 
 FILE *my_popenv( const char *const argv [],
                  const char * mode,
@@ -47,8 +46,6 @@ int my_spawnv( const char* cmd, const char *const argv[] );
 FILE *my_popen( const char *cmd, const char *mode, int options );
 int my_system( const char *cmd );
 #endif
-
-END_C_DECLS
 
 // ArgList and Env versions only available from C++
 #include "condor_arglist.h"
