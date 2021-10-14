@@ -211,10 +211,6 @@ getline_implementation( T & src, int requested_bufsize, int options, int & line_
 }
 #endif
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 #ifdef GETLINE_IMPL_IS_TEMPLATE
 // changed to a template and moved out of extern "C" block.
 #else
@@ -2539,8 +2535,6 @@ getline_implementation( FILE *fp, int requested_bufsize, int options, int & line
 	}
 }
 #endif
-
-} // end of extern "C"
 
 /* 
 ** Utility function to get an integer from a string.

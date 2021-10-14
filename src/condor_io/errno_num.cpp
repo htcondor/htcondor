@@ -21,8 +21,6 @@
 #include "condor_common.h"
 #include "utilfns.h"
 
-extern "C" {
-
 int
 errno_num_encode( int errno_num )
 {
@@ -273,5 +271,3 @@ errno_num_decode( int errno_num )
 	}
 }
 
-
-}  /* end of extern "C" */

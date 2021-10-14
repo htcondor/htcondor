@@ -62,11 +62,11 @@ EXTERN_C_BEGIN
 extern time_t _sysapi_last_x_event;
 
 /* needed by free_fs_blocks.c */
-extern long long _sysapi_reserve_afs_cache;
+extern bool _sysapi_reserve_afs_cache;
 extern long long _sysapi_reserve_disk;
 
 /* needed by idle_time.C */
-extern int _sysapi_startd_has_bad_utmp;
+extern bool _sysapi_startd_has_bad_utmp;
 
 /* needed by test.C */
 extern int _sysapi_config;
@@ -86,7 +86,7 @@ extern int _sysapi_memory;
 extern int _sysapi_reserve_memory;
 
 /* needed by load_avg.c */
-extern int _sysapi_getload;
+extern bool _sysapi_getload;
 
 #if defined LINUX || defined WIN32
 extern bool _sysapi_count_hyperthread_cpus;

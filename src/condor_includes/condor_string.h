@@ -43,7 +43,6 @@ char * chomp( char *buffer );
 END_C_DECLS
 
 
-#ifdef __cplusplus
 /* like strdup() but uses new[] */
 char *strnewp( const char * );
 
@@ -59,7 +58,6 @@ char *strnewp( const char * );
 extern "C++" char * getline_trim ( FILE *fp, int & lineno, int mode=0 );
 
 #include "condor_arglist.h"
-#endif
 
 #include "basename.h"
 

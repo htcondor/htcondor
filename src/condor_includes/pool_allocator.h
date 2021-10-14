@@ -57,10 +57,8 @@ typedef struct _allocation_hunk {
 	int ixFree;   // index of first free byte in pb
 	int cbAlloc;  // allocation size of pb
 	char * pb;
-#ifdef __cplusplus
 	_allocation_hunk() : ixFree(0), cbAlloc(0), pb(NULL) {};
 	void reserve(int cb);
-#endif
 } ALLOC_HUNK;
 
 typedef struct _allocation_pool {
@@ -68,7 +66,6 @@ typedef struct _allocation_pool {
 	int cMaxHunks; // number of hunks allocated
 	ALLOC_HUNK * phunks; // this can vary in size.
 
-#ifdef __cplusplus
 	_allocation_pool(int cMax=0) : nHunk(0), cMaxHunks(cMax), phunks(NULL) {
 		if (cMaxHunks) {
 			phunks = new ALLOC_HUNK[cMax];
@@ -98,15 +95,9 @@ typedef struct _allocation_pool {
 	void swap(struct _allocation_pool & other);
 	// get total used size, total number of system allocations and amount of free space in the pool.
 	int  usage(int & cHunks, int & cbFree);
-#endif
 
 } ALLOCATION_POOL;
 
-
-// c++ implementation and interface here.
-#ifdef __cplusplus
-
-#endif
 
 // c callable public interface begins here.
 BEGIN_C_DECLS
