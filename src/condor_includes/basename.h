@@ -21,10 +21,6 @@
 #if !defined( _CONDOR_BASENAME_H )
 #define _CONDOR_BASENAME_H
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 /*
   NOTE: The semantics of condor_basename() and condor_dirname()
   are slightly different tha the semantics of the default basename()
@@ -92,9 +88,5 @@ char* dirname( const char* path );
 */
 int fullpath( const char* path );
 
-
-#if defined(__cplusplus)
-}
-#endif
 
 #endif /* _CONDOR_BASENAME_H */

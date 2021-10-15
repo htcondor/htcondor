@@ -827,7 +827,6 @@ main( int argc, char **argv )
 }
 
 
-//extern "C" 
 int
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
