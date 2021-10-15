@@ -1965,7 +1965,7 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     values that must specified. This submit description file command
     allows each to be given in a space-separated list. Allowable
     **grid-type-string** values are **arc**, **azure**, **batch**, **boinc**,
-    **condor**, **ec2**, **gce**, and **nordugrid**.
+    **condor**, **ec2**, and **gce**.
     The HTCondor manual chapter on Grid Computing
     details the variety of grid types.
 
@@ -1981,7 +1981,7 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     For a **grid-type-string** of **ec2**, one additional parameter
     specifies the EC2 URL.
 
-    For a **grid-type-string** of **nordugrid** or **arc**, the single
+    For a **grid-type-string** of **arc**, the single
     parameter is the name of the ARC resource to be used.
 
     :index:`MyProxyCredentialName<single: MyProxyCredentialName; submit commands>`
@@ -2019,12 +2019,7 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     specified when the *MyProxy* server DN does not follow the
     conventional naming scheme of a host credential. This occurs, for
     example, when the *MyProxy* server DN begins with a user credential.
-    :index:`nordugrid_rsl<single: nordugrid_rsl; submit commands>`
- nordugrid_rsl = <RSL-string>
-    Used to provide any additional RSL string attributes which are not
-    covered by regular submit description file parameters. Used when the
-    **universe** is **grid**, and the type of grid system is
-    **nordugrid**. :index:`transfer_error<single: transfer_error; submit commands>`
+    :index:`transfer_error<single: transfer_error; submit commands>`
  transfer_error = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
     error output (from ``stderr``) from the job is transferred from the
@@ -2071,8 +2066,8 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     X.509 user proxy. If **x509userproxy** is set, then that file is
     used for the proxy. Otherwise, the proxy is looked for in the
     standard locations. If **x509userproxy** is set or if the job is a
-    grid universe job of grid type **arc** or
-    **nordugrid**, then the value of **use_x509userproxy** is forced to
+    grid universe job of grid type **arc**,
+    then the value of **use_x509userproxy** is forced to
     ``True``. Defaults to ``False``.
     :index:`x509userproxy<single: x509userproxy; submit commands>`
  x509userproxy = <full-pathname>
@@ -2096,7 +2091,7 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` is
     relevant when the **universe** is **vanilla**, or when the
     **universe** is **grid** and the type of grid system is one of
-    **condor**, **arc**, or **nordugrid**. Defining
+    **condor**, or **arc**. Defining
     a value causes the proxy to be delegated to the execute machine.
     Further, VOMS attributes defined in the proxy will appear in the job
     ClassAd.
