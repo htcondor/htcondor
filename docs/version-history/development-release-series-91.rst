@@ -15,7 +15,7 @@ Release Notes:
 
 - As we transition from identity based authentication and authorization
   (X.509 certificates) to capability based authorization (bearer tokens),
-  we have removed Globus GSI support from the release.
+  we have removed Globus GSI support from this release.
   :jira:`697`
 
 New Features:
