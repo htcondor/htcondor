@@ -7490,7 +7490,8 @@ These macros affect the *condor_gridmanager*.
     credential. The default is 10 minutes (600 seconds).
 
 :macro-def:`GRIDMANAGER_PROXY_REFRESH_TIME`
-    For GRAM jobs, the *condor_gridmanager* will not forward a
+    For remote schedulers that allow for X.509 proxy refresh,
+    the *condor_gridmanager* will not forward a
     refreshed proxy until the lifetime left for the proxy on the remote
     machine falls below this value. The value is in seconds and the
     default is 21600 (6 hours).
