@@ -35,9 +35,7 @@
 #include "consumption_policy.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "StartdPlugin.h"
-#endif
 #endif
 
 #include "stat_info.h"
@@ -1544,9 +1542,7 @@ Resource::do_update( void )
 	publish_private(&private_ad);
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Update(&public_ad, &private_ad);
-#endif
 #endif
 
 		// Send class ads to collector(s)
@@ -1633,9 +1629,7 @@ Resource::final_update( void )
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Invalidate(&invalidate_ad);
-#endif
 #endif
 
 	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );

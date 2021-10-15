@@ -258,7 +258,7 @@ int InDBX = 0;
 // or it might be uptime depending on which system clock is used.
 double _condor_debug_get_time_double()
 {
-#if defined(HAVE_CLOCK_GETTIME)
+#ifdef UNIX
 	struct timespec tm;
 	clock_gettime(CLOCK_MONOTONIC, &tm);
 	return (double)tm.tv_sec + (tm.tv_nsec * 1.0e-9);
@@ -273,10 +273,6 @@ double _condor_debug_get_time_double()
 	}
 	QueryPerformanceCounter(&li);
 	return li.QuadPart * secs_per_tick;
-#else
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return (double)tv.tv_sec + (tv.tv_usec * 1.0e-6);
 #endif
 }
 
