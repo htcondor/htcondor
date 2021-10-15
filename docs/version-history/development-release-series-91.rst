@@ -16,11 +16,15 @@ Release Notes:
 New Features:
 
 - SINGULARITY_EXTRA_ARGUMENTS can now be a classad expression, so that the extra arguments
-  can depend on the job. HTCONDOR-570
+  can depend on the job.
+  :jira:`570`
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug that prevented the *condor_procd* (and thus all of condor) from starting
+  when running under QEMU emulation.  Condor can now build and run under QEMU ARM
+  emulation with this fix.
+  :jira:`761`
 
 Version 9.3.0
 -------------
