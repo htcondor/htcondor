@@ -27,10 +27,6 @@ if (WITH_LIBCGROUP)
 
 	if ( NOT PROPER )
 
-		if (NOT HAVE_LIBPAM)
-			message(FATAL_ERROR "Can't find libpam, needed to build libcgroup external!")
-		endif()
-
 		condor_pre_external( LIBCGROUP libcgroup-0.41 "lib;include" "lib/libcgroup.a")
 
 		ExternalProject_Add( libcgroup
