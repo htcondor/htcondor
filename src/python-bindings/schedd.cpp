@@ -4063,14 +4063,25 @@ void export_schedd()
 
             :param constraint: A query constraint.
                 Only jobs matching this constraint will be returned.
-                Defaults to ``'true'``, which means all jobs will be returned.
+                ``None`` will return all jobs.
             :type constraint: str or :class:`~classad.ExprTree`
-            :param projection: Attributes that will be returned for each job in the query.
-                At least the attributes in this list will be returned, but additional ones may be returned as well.
-                An empty list (the default) returns all attributes.
+            :param projection: Attributes that will be returned for each job
+                in the query.  At least the attributes in this list will be
+                returned, but additional ones may be returned as well.
+                An empty list returns all attributes.
             :type projection: list[str]
-            :param int match: An limit on the number of jobs to include; the default (``-1``)
-                indicates to return all matching jobs.
+            :param int match: A limit on the number of jobs to include; the
+                default (``-1``) indicates to return all matching jobs.
+                The schedd may return fewer than ``match`` jobs because of its
+                setting of ``HISTORY_HELPER_MAX_HISTORY`` (default 10,000).
+            :param since: A cluster ID or expression.  If a cluster ID, only
+                jobs recorded in the history file after (and not including)
+                the cluster ID will be returned.  If an expression, jobs will
+                be returned, most-recently-recorded first, until the
+                expression becomes true; the job making the expression become
+                true will not be returned.  Thus, ``1038`` and
+                ``clusterID == 1038`` return the same jobs.
+            :type since: int or :class:`~classad.ExprTree`
             :return: All matching ads in the Schedd history, with attributes according to the
                 ``projection`` keyword.
             :rtype: :class:`HistoryIterator`
