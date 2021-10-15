@@ -7546,7 +7546,7 @@ These macros affect the *condor_gridmanager*.
 
     .. code-block:: condor-config
 
-          GRIDMANAGER_JOB_PROBE_INTERVAL_NORDUGRID = 300
+          GRIDMANAGER_JOB_PROBE_INTERVAL_ARC = 300
 
 
 :macro-def:`GRIDMANAGER_JOB_PROBE_RATE`
@@ -7561,7 +7561,7 @@ These macros affect the *condor_gridmanager*.
 
     .. code-block:: condor-config
 
-          GRIDMANAGER_JOB_PROBE_RATE_NORDUGRID = 15
+          GRIDMANAGER_JOB_PROBE_RATE_ARC = 15
 
 
 :macro-def:`GRIDMANAGER_RESOURCE_PROBE_INTERVAL`
@@ -7691,10 +7691,6 @@ These macros affect the *condor_gridmanager*.
     The complete path and file name of the batch GAHP executable, to be
     used for Slurm, PBS, LSF, SGE, and similar batch systems. The default
     location is ``$(BIN)``/blahpd.
-
-:macro-def:`NORDUGRID_GAHP`
-    The complete path and file name of the NorduGrid GAHP executable.
-    The default value is ``$(SBIN)``/nordugrid_gahp.
 
 :macro-def:`ARC_GAHP`
     The complete path and file name of the ARC GAHP executable.

@@ -229,53 +229,6 @@ description file defines the Windows domain of the remote machine with
 A Windows machine not part of a domain defines the Windows domain as the
 machine name. :index:`HTCondor-C`
 
-The nordugrid Grid Type
------------------------
-
-:index:`NorduGrid`
-:index:`submitting jobs to NorduGrid<single: submitting jobs to NorduGrid; grid computing>`
-
-NorduGrid is a project to develop free grid middleware named the
-Advanced Resource Connector (ARC). See the NorduGrid web page
-(`http://www.nordugrid.org <http://www.nordugrid.org>`_) for more
-information about NorduGrid software.
-
-NorduGrid ARC supports multiple job submission interfaces.
-The **nordugrid** grid type uses their older gridftp-based interface,
-which is due to be retired. We recommend using the new REST-based
-interface, available via the grid type **arc**, documented below.
-
-HTCondor jobs may be submitted to NorduGrid ARC resources using the **grid**
-universe. The
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
-command specifies the name of the NorduGrid resource as follows:
-
-.. code-block:: text
-
-    grid_resource = nordugrid ng.example.com
-
-NorduGrid uses X.509 credentials for authentication, usually in the form
-a proxy certificate. *condor_submit* looks in default locations for the
-proxy. The submit description file command
-**x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` may be
-used to give the full path name to the directory containing the proxy,
-when the proxy is not in a default location. If this optional command is
-not present in the submit description file, then the value of the
-environment variable ``X509_USER_PROXY`` is checked for the location of
-the proxy. If this environment variable is not present, then the proxy
-in the file ``/tmp/x509up_uXXXX`` is used, where the characters XXXX in
-this file name are replaced with the Unix user id.
-
-NorduGrid uses RSL syntax to describe jobs. The submit description file
-command
-**nordugrid_rsl** :index:`nordugrid_rsl<single: nordugrid_rsl; submit commands>` adds
-additional attributes to the job RSL that HTCondor constructs. The
-format this submit description file command is
-
-.. code-block:: text
-
-    nordugrid_rsl = (name=value)(name=value)
-
 The arc Grid Type
 -----------------------
 
