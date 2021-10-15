@@ -2580,7 +2580,7 @@ These macros control the *condor_master*.
     we specified some account other than the condor user, as set by the
     (``CONDOR_IDS``) configuration variable, then we would need to
     configure the log files for these daemons to be in a directory that
-    they can write to. When using GSI security or any other security
+    they can write to. When using a security
     method in which the daemon credential is owned by root, it is also
     necessary to make a copy of the credential, make it be owned by the
     account the daemons are using, and configure the daemons to use that
@@ -5571,10 +5571,7 @@ These settings affect the *condor_shadow*.
     updated or should be refreshed. The default is 600 seconds (10
     minutes). This variable's value should be small in comparison to the
     refresh interval required to keep delegated credentials from
-    expiring (configured via ``DELEGATE_JOB_GSI_CREDENTIALS_REFRESH``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS_REFRESH` and
-    ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`). If this
+    expiring. If this
     variable's value is too small, proxy updates could happen very
     frequently, potentially creating a lot of load on the submit
     machine.
@@ -8770,7 +8767,7 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SEC_*_AUTHENTICATION_METHODS`
     An ordered list of allowed authentication methods for a given authorization
     level.  This set of configuration variables controls both the ordering and
-    the allowed methods.  Currently allowed values are ``GSI`` (non-Windows),
+    the allowed methods.  Currently allowed values are
     ``SSL``, ``KERBEROS``, ``PASSWORD``, ``FS`` (non-Windows), ``FS_REMOTE``
     (non-Windows), ``NTSSPI``, ``MUNGE``, ``CLAIMTOBE``, ``IDTOKENS``,
     ``SCITOKENS``,  and ``ANONYMOUS``.
@@ -8792,190 +8789,13 @@ macros are described in the :doc:`/admin-manual/security` section.
     the setting per authorization level; it is recommended to leave these
     settings untouched.
 
-:macro-def:`WARN_ON_GSI_CONFIGURATION"`
-    A boolean variables that controls whether a warning is printed
-    whenever GSI seen in a configured list of authentication methods.
-    Daemons will print the warning to their log (no more frequently than
-    once every 12 hours).
-    Tools will print the warning to their stderr.
-    The default value is ``True``.
-
-:macro-def:`WARN_ON_GSI_USAGE`
-    A boolean variables that controls whether a warning is printed
-    whenever GSI is used for authentication over a network connection with
-    an HTCondor daemon.
-    Daemons will print the warning to their log (no more frequently than
-    once every 12 hours).
-    Tools will print the warning to their stderr.
-    The default value is ``True``.
-
-:macro-def:`GSI_DAEMON_NAME`
-    This configuration variable is retired. Instead use ``ALLOW_CLIENT``
-    :index:`ALLOW_CLIENT` or ``DENY_CLIENT``
-    :index:`DENY_CLIENT` as appropriate. When used, this variable
-    defined a comma separated list of the subject name(s) of the
-    certificate(s) used by Condor daemons to which this configuration of
-    Condor will connect. The \* character may be used as a wild card
-    character. When ``GSI_DAEMON_NAME`` is defined, only certificates
-    matching ``GSI_DAEMON_NAME`` pass the authentication step, and no
-    check is performed to require that the host name of the daemon
-    matches the host name in the daemon's certificate. When
-    ``GSI_DAEMON_NAME`` is not defined, the host name of the daemon and
-    certificate must match unless exempted by the use of
-    ``GSI_SKIP_HOST_CHECK`` and/or ``GSI_SKIP_HOST_CHECK_CERT_REGEX``.
-
-:macro-def:`GSI_SKIP_HOST_CHECK`
-    A boolean variable that controls whether a check is performed during
-    GSI authentication of a Condor daemon. When the default value of
-    ``False``, the check is not skipped, so the daemon host name must
-    match the host name in the daemon's certificate, unless otherwise
-    exempted by the use of ``GSI_DAEMON_NAME``
-    :index:`GSI_DAEMON_NAME` or
-    ``GSI_SKIP_HOST_CHECK_CERT_REGEX``. When ``True``, this check is
-    skipped, and hosts will not be rejected due to a mismatch of
-    certificate and host name.
-
-:macro-def:`GSI_SKIP_HOST_CHECK_CERT_REGEX`
-    This may be set to a regular expression. GSI certificates of Condor
-    daemons with a subject name that are matched in full by this regular
-    expression are not required to have a matching daemon host name and
-    certificate host name. The default is an empty regular expression,
-    which will not match any certificates, even if they have an empty
-    subject name.
-
 :macro-def:`HOST_ALIAS`
     Specifies the fully qualified host name that clients authenticating
-    this daemon with GSI should expect the daemon's certificate to
+    this daemon with SSL should expect the daemon's certificate to
     match. The alias is advertised to the *condor_collector* as part of
     the address of the daemon. When this is not set, clients validate
     the daemon's certificate host name by matching it against DNS A
-    records for the host they are connected to. See
-    ``GSI_SKIP_HOST_CHECK`` :index:`GSI_SKIP_HOST_CHECK` for ways
-    to disable this validation step.
-
-:macro-def:`GSI_DAEMON_DIRECTORY`
-    A directory name used in the construction of complete paths for the
-    configuration variables ``GSI_DAEMON_CERT``, ``GSI_DAEMON_KEY``, and
-    ``GSI_DAEMON_TRUSTED_CA_DIR``, for any of these configuration
-    variables are not explicitly set. The value is unset by default.
-
-:macro-def:`GSI_DAEMON_CERT`
-    A complete path and file name to the X.509 certificate to be used in
-    GSI authentication. If this configuration variable is not defined,
-    and ``GSI_DAEMON_DIRECTORY`` is defined, then HTCondor uses
-    ``GSI_DAEMON_DIRECTORY`` to construct the path and file name as
-
-    .. code-block:: condor-config
-
-          GSI_DAEMON_CERT  = $(GSI_DAEMON_DIRECTORY)/hostcert.pem
-
-
-:macro-def:`GSI_DAEMON_KEY`
-    A complete path and file name to the X.509 private key to be used in
-    GSI authentication. If this configuration variable is not defined,
-    and ``GSI_DAEMON_DIRECTORY`` is defined, then HTCondor uses
-    ``GSI_DAEMON_DIRECTORY`` to construct the path and file name as
-
-    .. code-block:: condor-config
-
-          GSI_DAEMON_KEY  = $(GSI_DAEMON_DIRECTORY)/hostkey.pem
-
-
-:macro-def:`GSI_DAEMON_TRUSTED_CA_DIR`
-    The directory that contains the list of trusted certification
-    authorities to be used in GSI authentication. The files in this
-    directory are the public keys and signing policies of the trusted
-    certification authorities. If this configuration variable is not
-    defined, and ``GSI_DAEMON_DIRECTORY`` is defined, then HTCondor uses
-    ``GSI_DAEMON_DIRECTORY`` to construct the directory path as
-
-    .. code-block:: condor-config
-
-          GSI_DAEMON_TRUSTED_CA_DIR  = $(GSI_DAEMON_DIRECTORY)/certificates
-
-    The EC2 GAHP may use this directory in the specification a trusted
-    CA.
-
-:macro-def:`GSI_DAEMON_PROXY`
-    A complete path and file name to the X.509 proxy to be used in GSI
-    authentication. When this configuration variable is defined, use of
-    this proxy takes precedence over use of a certificate and key.
-
-:macro-def:`GSI_AUTHZ_CONF`
-    A complete path and file name of the Globus mapping library that
-    looks for the mapping call out configuration. There is no default
-    value; as such, HTCondor uses the environment variable
-    ``GSI_AUTHZ_CONF`` when this variable is not defined. Setting this
-    variable to ``/dev/null`` disables callouts.
-
-:macro-def:`GSS_ASSIST_GRIDMAP_CACHE_EXPIRATION`
-    The length of time, in seconds, to cache the result of the Globus
-    mapping lookup result when using Globus to map certificates to
-    HTCondor user names. The lookup only occurs when the canonical name
-    ``GSS_ASSIST_GRIDMAP`` is present in the HTCondor map file. The
-    default value is 0 seconds, which is a special value that disables
-    caching. The cache uses the DN and VOMS FQAN as a key; very rare
-    Globus configurations that utilize other certificate attributes for
-    the mapping may cause the cache to return a different user than
-    Globus.
-
-:macro-def:`DELEGATE_JOB_GSI_CREDENTIALS`
-    A boolean value that defaults to ``True`` for HTCondor version
-    6.7.19 and more recent versions. When ``True``, a job's GSI X.509
-    credentials are delegated, instead of being copied. This results in
-    a more secure communication when not encrypted.
-
-:macro-def:`DELEGATE_FULL_JOB_GSI_CREDENTIALS`
-    A boolean value that controls whether HTCondor will delegate a full
-    or limited GSI X.509 proxy. The default value of ``False`` indicates
-    the limited GSI X.509 proxy.
-
-:macro-def:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`
-    An integer value that specifies the maximum number of seconds for
-    which delegated proxies should be valid. The default value is one
-    day. A value of 0 indicates that the delegated proxy should be valid
-    for as long as allowed by the credential used to create the proxy.
-    The job may override this configuration setting by using the
-    **delegate_job_GSI_credentials_lifetime** :index:`delegate_job_GSI_credentials_lifetime<single: delegate_job_GSI_credentials_lifetime; submit commands>`
-    submit file command. This configuration variable currently only
-    applies to proxies delegated for non-grid jobs and HTCondor-C jobs.
-    It does not currently apply to globus grid jobs, which always behave
-    as though the value is 0. This variable has no effect if
-    ``DELEGATE_JOB_GSI_CREDENTIALS``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS` is ``False``.
-
-:macro-def:`DELEGATE_JOB_GSI_CREDENTIALS_REFRESH`
-    A floating point number between 0 and 1 that indicates the fraction
-    of a proxy's lifetime at which point delegated credentials with a
-    limited lifetime should be renewed. The renewal is attempted
-    periodically at or near the specified fraction of the lifetime of
-    the delegated credential. The default value is 0.25. This setting
-    has no effect if ``DELEGATE_JOB_GSI_CREDENTIALS``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS` is ``False`` or if
-    ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME` is 0. For
-    non-grid jobs, the precise timing of the proxy refresh depends on
-    ``SHADOW_CHECKPROXY_INTERVAL``
-    :index:`SHADOW_CHECKPROXY_INTERVAL`. To ensure that the
-    delegated proxy remains valid, the interval for checking the proxy
-    should be, at most, half of the interval for refreshing it.
-
-:macro-def:`GSI_DELEGATION_KEYBITS`
-    The integer number of bits in the GSI key. If set to 0, the number
-    of bits will be that preferred by the GSI library. If set to less
-    than 1024, the value will be ignored, and the key size will be the
-    default size of 1024 bits. Setting the value greater than 4096 is
-    likely to cause long compute times.
-
-:macro-def:`GSI_DELEGATION_CLOCK_SKEW_ALLOWABLE`
-    The number of seconds of clock skew permitted for delegated proxies.
-    The default value is 300 (5 minutes). This default value is also
-    used if this variable is set to 0.
-
-:macro-def:`GRIDMAP`
-    The complete path and file name of the Globus Gridmap file. The
-    Gridmap file is used to map X.509 distinguished names to HTCondor
-    user ids. :index:`SEC_DEFAULT_SESSION_DURATION`
+    records for the host they are connected to.
 
 :macro-def:`SEC_<access-level>_SESSION_DURATION`
     The amount of time in seconds before a communication session
@@ -9226,7 +9046,7 @@ macros are described in the :doc:`/admin-manual/security` section.
 
     Important: for this mechanism to be secure, integrity
     and encryption, should be enabled in the startd configuration. Also,
-    some form of strong mutual authentication (e.g. GSI) should be
+    some form of strong mutual authentication (e.g. SSL) should be
     enabled between all daemons and the central manager.  Otherwise, the shared
     secret which is exchanged in matchmaking cannot be safely encrypted
     when transmitted over the network.
@@ -9815,7 +9635,7 @@ These macros affect the high availability operation of HTCondor.
 MyProxy Configuration File Macros
 ---------------------------------
 
-In some cases, HTCondor can autonomously refresh GSI certificate proxies
+In some cases, HTCondor can autonomously refresh certificate proxies
 via *MyProxy*, available from
 `http://myproxy.ncsa.uiuc.edu/ <http://myproxy.ncsa.uiuc.edu/>`_.
 

@@ -42,7 +42,6 @@ Interacting with Schedulers
    .. automethod:: submitMany
    .. automethod:: spool
    .. automethod:: retrieve
-   .. automethod:: refreshGSIProxy
    .. automethod:: reschedule
 
 .. autoclass:: JobAction
@@ -153,7 +152,6 @@ Security Management
    .. automethod:: ping
    .. automethod:: getCommandString
    .. automethod:: setConfig
-   .. automethod:: setGSICredential
    .. automethod:: setPoolPassword
    .. automethod:: setTag
    .. automethod:: setToken

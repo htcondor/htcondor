@@ -363,34 +363,11 @@ all attributes.
     -  ``Job held``, event code is 12
     -  ``Job released``, event code is 13
     -  ``Post script terminated``, event code is 16
-    -  ``Globus submit``, event code is 17
     -  ``Grid submit``, event code is 27
 
     If ``DAGManNodesLog`` is not defined, it has no effect. The value of
     ``DAGManNodesMask`` does not affect events recorded in the job event
     log file referred to by ``UserLog``.
-
-:index:`DelegateJobGSICredentialsLifetime<single: DelegateJobGSICredentialsLifetime; ClassAd job attribute>`
-:index:`job ClassAd attribute<single: job ClassAd attribute; DelegateJobGSICredentialsLifetime>`
-
-
-``DelegateJobGSICredentialsLifetime``
-    An integer that specifies the maximum number of seconds for which
-    delegated proxies should be valid. The default behavior is
-    determined by the configuration setting
-    ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``
-
-:index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`
-    which defaults
-    to one day. A value of 0 indicates that the delegated proxy should
-    be valid for as long as allowed by the credential used to create the
-    proxy. This setting currently only applies to proxies delegated for
-    non-grid jobs and HTCondor-C jobs. It does not currently apply to
-    globus grid jobs, which always behave as though this setting were 0.
-    This setting has no effect if the configuration setting
-    ``DELEGATE_JOB_GSI_CREDENTIALS``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS` is false, because in
-    that case the job proxy is copied rather than delegated.
 
 :index:`DiskUsage<single: DiskUsage; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; DiskUsage>`
@@ -839,9 +816,6 @@ all attributes.
     +==================================+=====================================+==========================+
     | | 1                              | The user put the job on             |                          |
     | | [UserRequest]                  | hold with *condor_hold*.            |                          |
-    +----------------------------------+-------------------------------------+--------------------------+
-    | | 2                              | Globus middleware                   | The GRAM error number.   |
-    | | [GlobusGramError]              | reported an error.                  |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 3                              | The ``PERIODIC_HOLD``               | User Specified           |
     | | [JobPolicy]                    | expression evaluated to             |                          |
@@ -1556,14 +1530,8 @@ all attributes.
 
 ``NumCkpts``
     A count of the number of checkpoints written by this job during its
-    lifetime. :index:`NumGlobusSubmits<single: NumGlobusSubmits; ClassAd job attribute>`
-
-:index:`job ClassAd attribute<single: job ClassAd attribute; NumGlobusSubmits>`
-
-``NumGlobusSubmits``
-    An integer that is incremented each time the *condor_gridmanager*
-    receives confirmation of a successful job submission into Globus.
-
+    lifetime.
+    
 :index:`NumHolds<single: NumHolds; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; NumHolds>`
 
