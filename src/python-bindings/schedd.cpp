@@ -4074,9 +4074,9 @@ void export_schedd()
                 default (``-1``) indicates to return all matching jobs.
                 The schedd may return fewer than ``match`` jobs because of its
                 setting of ``HISTORY_HELPER_MAX_HISTORY`` (default 10,000).
-            :param since: A cluster ID, job ID, or expression.  If a cluster ID 
-                (passed as an `int`) or job ID (passed a `str` in the format 
-                `"{clusterID}.{procID}"`), only jobs recorded in the history
+            :param since: A cluster ID, job ID, or expression.  If a cluster ID
+                (passed as an `int`) or job ID (passed a `str` in the format
+                ``{clusterID}.{procID}``), only jobs recorded in the history
                 file after (and not including) the matching ID will be
                 returned.  If an expression (passed as a `str` or
                 :class:`~classad.ExprTree`), jobs will be returned,
