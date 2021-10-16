@@ -243,7 +243,7 @@ public:
             if (crypto_state_->m_keyInfo.getProtocol() != CONDOR_AESGCM) return plaintext_size;
 
             int cs = ((Condor_Crypt_AESGCM*)crypto_)->ciphertext_size_with_cs(plaintext_size, &(crypto_state_->m_stream_crypto_state));
-            dprintf(D_NETWORK, "Sock::ciphertext_size: went from plaintext_size %i to ciphertext_size %i.\n", plaintext_size, cs);
+            dprintf(D_NETWORK|D_FULLDEBUG, "Sock::ciphertext_size: went from plaintext_size %i to ciphertext_size %i.\n", plaintext_size, cs);
             return cs;
         }
 

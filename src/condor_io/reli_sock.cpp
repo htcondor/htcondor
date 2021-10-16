@@ -1014,7 +1014,7 @@ read_packet:
 			}
 			memcpy(aad_data + 2*md_size, hdr, header_size);
 			char hex[3*(32*2 + 5) + 1];
-			dprintf(D_NETWORK, "Expecting AAD with handshake digest %s\n",
+			dprintf(D_NETWORK|D_FULLDEBUG, "Expecting AAD with handshake digest %s\n",
 				debug_hex_dump(hex, reinterpret_cast<char*>(aad_data), 32*2 + 5));
 		}
 
@@ -1170,14 +1170,14 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 			return false;
 		}
 		char hex[3*5 + 1];
-		dprintf(D_NETWORK, "Send Header contents: %s\n",
+		dprintf(D_NETWORK|D_FULLDEBUG, "Send Header contents: %s\n",
 			debug_hex_dump(hex, reinterpret_cast<char*>(hdr), header_size));
 
 		if (1 != EVP_DigestUpdate(p_sock->m_send_md_ctx.get(), buf.get_ptr(), buf.num_untouched())) {
 			dprintf(D_NETWORK, "IO: Failed to update the message digest.\n");
 			return false;
 		}
-		dprintf(D_NETWORK, "AESGCM: Send digest added %u + %d bytes \n", header_size, buf.num_untouched());
+		dprintf(D_NETWORK|D_FULLDEBUG, "AESGCM: Send digest added %u + %d bytes \n", header_size, buf.num_untouched());
 	}
 
 		// AES-GCM mode encrypts the whole message at send() time; do this now and
@@ -1244,7 +1244,7 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 			}
 			memcpy(aad_data + 2*md_size, hdr, header_size);
 			char hex[3*(32*2 + 5) + 1];
-			dprintf(D_NETWORK, "Sending AAD with handshake digest %s\n",
+			dprintf(D_NETWORK|D_FULLDEBUG, "Sending AAD with handshake digest %s\n",
 				debug_hex_dump(hex, reinterpret_cast<char*>(aad_data), 32*2 + 5));
 		}
 
