@@ -10330,30 +10330,29 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     and on reconfig.  The *condor_schedd* reads this variable and other 
     ``SCHEDD_CRON_*`` variables only on startup.
 
-:macro-def:`STARTD_CRON_<JobName>_PREFIX`  and :macro-def:`SCHEDD_CRON_<JobName>_PREFIX`  and :macro-def:`BENCHMARKS_<JobName>_PREFIX`
-    Specifies a string which is prepended by HTCondor to all attribute
-    names that the job generates. The use of prefixes avoids the
-    conflicts that would be caused by attributes of the same name
-    generated and utilized by different jobs. For example, if a module
-    prefix is ``xyz_``, and an individual attribute is named ``abc``, then the
-    resulting attribute name will be ``xyz_abc``. Due to restrictions on
-    ClassAd names, a prefix is only permitted to contain alpha-numeric
-    characters and the underscore character.
+:macro-def:`STARTD_CRON_<JobName>_ARGS`  and :macro-def:`SCHEDD_CRON_<JobName>_ARGS`  and :macro-def:`BENCHMARKS_<JobName>_ARGS`
+    The command line arguments to pass to the job as it is invoked. The
+    first argument will be ``<JobName>``.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_SLOTS`  and :macro-def:`BENCHMARKS_<JobName>_SLOTS`
-    Only the slots specified in this comma-separated list may
-    incorporate the output of the job specified by ``<JobName>``. If the
-    list is not specified, any slot may. Whether or not a specific slot
-    actually incorporates the output depends on the output; see
-    :ref:`misc-concepts/hooks:daemon classad hooks`.
+:macro-def:`STARTD_CRON_<JobName>_CWD`  and :macro-def:`SCHEDD_CRON_<JobName>_CWD`  and :macro-def:`BENCHMARKS_<JobName>_CWD`
+    The working directory in which to start the job.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
-    configuration variable ``STARTD_CRON_JOBLIST`` or
-    ``BENCHMARKS_JOBLIST``.
+    configuration variable ``STARTD_CRON_JOBLIST``,
+    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
+
+:macro-def:`STARTD_CRON_<JobName>_ENV`  and :macro-def:`SCHEDD_CRON_<JobName>_ENV`  and :macro-def:`BENCHMARKS_<JobName>_ENV`
+    The environment string to pass to the job. The syntax is the same as
+    that of ``<DaemonName>_ENVIRONMENT`` as defined at
+    :ref:`admin-manual/configuration-macros:condor_master configuration file macros`.
+
+    ``<JobName>`` is the logical name assigned for a job as defined by
+    configuration variable ``STARTD_CRON_JOBLIST``,
+    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
 :macro-def:`STARTD_CRON_<JobName>_EXECUTABLE`  and :macro-def:`SCHEDD_CRON_<JobName>_EXECUTABLE`  and :macro-def:`BENCHMARKS_<JobName>_EXECUTABLE`
     The full path and executable to run for this job. Note that multiple
@@ -10364,18 +10363,29 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_PERIOD`  and :macro-def:`SCHEDD_CRON_<JobName>_PERIOD`  and :macro-def:`BENCHMARKS_<JobName>_PERIOD`
-    The period specifies time intervals at which the job should be run.
-    For periodic jobs, this is the time interval that passes between
-    starting the execution of the job. The value may be specified in
-    seconds, minutes, or hours. Specify this time by appending the
-    character ``s``, ``m``, or ``h`` to the value. As an example, 5m
-    starts the execution of the job every five minutes. If no character
-    is appended to the value, seconds are used as a default. In
-    ``WaitForExit`` mode, the value has a different meaning: the period
-    specifies the length of time after the job ceases execution and
-    before it is restarted. The minimum valid value of the period is 1
-    second.
+:macro-def:`STARTD_CRON_<JobName>_JOB_LOAD`  and :macro-def:`SCHEDD_CRON_<JobName>_JOB_LOAD`  and :macro-def:`BENCHMARKS_<JobName>_JOB_LOAD`
+    A floating point value that represents the assumed and therefore
+    expected CPU load that a job induces on the system. This job load is
+    then used to limit the total number of jobs that run concurrently,
+    by not starting new jobs if the assumed total load from all jobs is
+    over a set threshold. The default value for each individual
+    ``STARTD_CRON`` or a ``SCHEDD_CRON`` job is 0.01. The default value
+    for each individual ``BENCHMARKS`` job is 1.0.
+
+    ``<JobName>`` is the logical name assigned for a job as defined by
+    configuration variable ``STARTD_CRON_JOBLIST``,
+    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
+
+:macro-def:`STARTD_CRON_<JobName>_KILL`  and :macro-def:`SCHEDD_CRON_<JobName>_KILL`  and :macro-def:`BENCHMARKS_<JobName>_KILL`
+    A boolean value applicable only for jobs with a ``MODE`` of anything
+    other than ``WaitForExit``. The default value is ``False``.
+
+    This variable controls the behavior of the daemon hook manager when
+    it detects that an instance of the job's executable is still running
+    as it is time to invoke the job again. If ``True``, the daemon hook
+    manager will kill the currently running job and then invoke an new
+    instance of the job. If ``False``, the existing job invocation is
+    allowed to continue running.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
     configuration variable ``STARTD_CRON_JOBLIST``,
@@ -10488,6 +10498,37 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     specified as ``OnDemand`` will never run. Additional future features
     may allow for other ``OnDemand`` job uses.
 
+:macro-def:`STARTD_CRON_<JobName>_PERIOD`  and :macro-def:`SCHEDD_CRON_<JobName>_PERIOD`  and :macro-def:`BENCHMARKS_<JobName>_PERIOD`
+    The period specifies time intervals at which the job should be run.
+    For periodic jobs, this is the time interval that passes between
+    starting the execution of the job. The value may be specified in
+    seconds, minutes, or hours. Specify this time by appending the
+    character ``s``, ``m``, or ``h`` to the value. As an example, 5m
+    starts the execution of the job every five minutes. If no character
+    is appended to the value, seconds are used as a default. In
+    ``WaitForExit`` mode, the value has a different meaning: the period
+    specifies the length of time after the job ceases execution and
+    before it is restarted. The minimum valid value of the period is 1
+    second.
+
+    ``<JobName>`` is the logical name assigned for a job as defined by
+    configuration variable ``STARTD_CRON_JOBLIST``,
+    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
+
+:macro-def:`STARTD_CRON_<JobName>_PREFIX`  and :macro-def:`SCHEDD_CRON_<JobName>_PREFIX`  and :macro-def:`BENCHMARKS_<JobName>_PREFIX`
+    Specifies a string which is prepended by HTCondor to all attribute
+    names that the job generates. The use of prefixes avoids the
+    conflicts that would be caused by attributes of the same name
+    generated and utilized by different jobs. For example, if a module
+    prefix is ``xyz_``, and an individual attribute is named ``abc``, then the
+    resulting attribute name will be ``xyz_abc``. Due to restrictions on
+    ClassAd names, a prefix is only permitted to contain alpha-numeric
+    characters and the underscore character.
+
+    ``<JobName>`` is the logical name assigned for a job as defined by
+    configuration variable ``STARTD_CRON_JOBLIST``,
+    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
+
 :macro-def:`STARTD_CRON_<JobName>_RECONFIG`  and :macro-def:`SCHEDD_CRON_<JobName>_RECONFIG`
     A boolean value that when ``True``, causes the daemon to send an HUP
     signal to the job when the daemon is reconfigured. The job is
@@ -10506,18 +10547,16 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     configuration variable ``STARTD_CRON_JOBLIST`` or
     ``SCHEDD_CRON_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_JOB_LOAD`  and :macro-def:`SCHEDD_CRON_<JobName>_JOB_LOAD`  and :macro-def:`BENCHMARKS_<JobName>_JOB_LOAD`
-    A floating point value that represents the assumed and therefore
-    expected CPU load that a job induces on the system. This job load is
-    then used to limit the total number of jobs that run concurrently,
-    by not starting new jobs if the assumed total load from all jobs is
-    over a set threshold. The default value for each individual
-    ``STARTD_CRON`` or a ``SCHEDD_CRON`` job is 0.01. The default value
-    for each individual ``BENCHMARKS`` job is 1.0.
+:macro-def:`STARTD_CRON_<JobName>_SLOTS`  and :macro-def:`BENCHMARKS_<JobName>_SLOTS`
+    Only the slots specified in this comma-separated list may
+    incorporate the output of the job specified by ``<JobName>``. If the
+    list is not specified, any slot may. Whether or not a specific slot
+    actually incorporates the output depends on the output; see
+    :ref:`misc-concepts/hooks:daemon classad hooks`.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
-    configuration variable ``STARTD_CRON_JOBLIST``,
-    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
+    configuration variable ``STARTD_CRON_JOBLIST`` or
+    ``BENCHMARKS_JOBLIST``.
 
 :macro-def:`STARTD_CRON_MAX_JOB_LOAD`  and :macro-def:`SCHEDD_CRON_MAX_JOB_LOAD`  and :macro-def:`BENCHMARKS_MAX_JOB_LOAD`
     A floating point value representing a threshold for CPU load, such
@@ -10530,44 +10569,6 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     implies that only 1 ``BENCHMARKS`` job (at the default, assumed
     load) may be running.
 
-:macro-def:`STARTD_CRON_<JobName>_KILL`  and :macro-def:`SCHEDD_CRON_<JobName>_KILL`  and :macro-def:`BENCHMARKS_<JobName>_KILL`
-    A boolean value applicable only for jobs with a ``MODE`` of anything
-    other than ``WaitForExit``. The default value is ``False``.
-
-    This variable controls the behavior of the daemon hook manager when
-    it detects that an instance of the job's executable is still running
-    as it is time to invoke the job again. If ``True``, the daemon hook
-    manager will kill the currently running job and then invoke an new
-    instance of the job. If ``False``, the existing job invocation is
-    allowed to continue running.
-
-    ``<JobName>`` is the logical name assigned for a job as defined by
-    configuration variable ``STARTD_CRON_JOBLIST``,
-    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
-
-:macro-def:`STARTD_CRON_<JobName>_ARGS`  and :macro-def:`SCHEDD_CRON_<JobName>_ARGS`  and :macro-def:`BENCHMARKS_<JobName>_ARGS`
-    The command line arguments to pass to the job as it is invoked. The
-    first argument will be ``<JobName>``.
-
-    ``<JobName>`` is the logical name assigned for a job as defined by
-    configuration variable ``STARTD_CRON_JOBLIST``,
-    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
-
-:macro-def:`STARTD_CRON_<JobName>_ENV`  and :macro-def:`SCHEDD_CRON_<JobName>_ENV`  and :macro-def:`BENCHMARKS_<JobName>_ENV`
-    The environment string to pass to the job. The syntax is the same as
-    that of ``<DaemonName>_ENVIRONMENT`` as defined at
-    :ref:`admin-manual/configuration-macros:condor_master configuration file macros`.
-
-    ``<JobName>`` is the logical name assigned for a job as defined by
-    configuration variable ``STARTD_CRON_JOBLIST``,
-    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
-
-:macro-def:`STARTD_CRON_<JobName>_CWD`  and :macro-def:`SCHEDD_CRON_<JobName>_CWD`  and :macro-def:`BENCHMARKS_<JobName>_CWD`
-    The working directory in which to start the job.
-
-    ``<JobName>`` is the logical name assigned for a job as defined by
-    configuration variable ``STARTD_CRON_JOBLIST``,
-    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
 Configuration File Entries Only for Windows Platforms
 -----------------------------------------------------
