@@ -170,6 +170,14 @@ public:
 	int get_file_with_permissions(filesize_t *size, const char *desination,
 								  bool flush_buffers=false, filesize_t max_bytes=-1,
 								  class DCTransferQueue *xfer_q=NULL);
+
+	int put_archive_file(const std::string &filename, filesize_t max_bytes,
+		DCTransferQueue &xfer_q, filesize_t &total_sent, CondorError &err);
+
+	int get_archive(const std::string &destination,
+	                filesize_t max_bytes, class DCTransferQueue &xfer_q,
+	                filesize_t &size, CondorError &err);
+
     /// returns <0 on failure, 0 for ok
 	//  failure codes: GET_FILE_OPEN_FAILED  (errno contains specific error)
 	//                 -1                    (all other errors)

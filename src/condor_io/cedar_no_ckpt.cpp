@@ -51,6 +51,11 @@
 #include <mswsock.h>	// For TransmitFile()
 #endif
 
+#ifdef HAVE_LIBARCHIVE
+#include <archive.h>
+#include <archive_entry.h>
+#endif
+
 const unsigned int PUT_FILE_EOM_NUM = 666;
 
 // This special file descriptor number must not be a valid fd number.
@@ -137,6 +142,372 @@ ReliSock::get_file( filesize_t *size, const char *destination,
 	
 	return result;
 }
+
+
+namespace {
+
+struct ArchiveReadState {
+	ArchiveReadState(ReliSock &sock, filesize_t bytes_to_receive, size_t buf_sz, DCTransferQueue &xfer_q,
+		CondorError &err)
+	:
+		m_sock(sock),
+		m_bytes_to_receive(bytes_to_receive),
+		m_buf_sz(buf_sz),
+		m_xfer_q(xfer_q),
+		m_err(err),
+		m_buf(new char[buf_sz])
+	{}
+
+	ReliSock &m_sock;
+	const filesize_t m_bytes_to_receive;
+	filesize_t m_bytes_read{0};
+	size_t m_buf_sz;
+	DCTransferQueue &m_xfer_q;
+	CondorError &m_err;
+	std::unique_ptr<char[]> m_buf;
+};
+
+ssize_t
+archive_read(struct archive * /*ar*/, void *client_data, const void **buff) {
+	auto state = static_cast<ArchiveReadState*>(client_data);
+
+	if (state->m_bytes_read == state->m_bytes_to_receive) {
+		return 0;
+	}
+
+	ssize_t iosize = std::min(state->m_buf_sz, static_cast<size_t>(state->m_bytes_to_receive - state->m_bytes_read));
+
+	struct timeval t1, t2;
+	condor_gettimestamp(t1);
+
+	int nbytes;
+
+	dprintf(D_FULLDEBUG, "archive_read will try to read %ld bytes.\n", iosize);
+	nbytes = state->m_sock.get_bytes(state->m_buf.get(), iosize);
+	if (nbytes > 0 && (nbytes + state->m_bytes_read != state->m_bytes_to_receive) && !state->m_sock.end_of_message()) {
+		dprintf(D_FULLDEBUG, "archive_read failed to get EOM.\n");
+		nbytes = 0;
+	}
+	state->m_bytes_read += nbytes;
+
+	condor_gettimestamp(t2);
+	state->m_xfer_q.AddUsecNetRead(timersub_usec(t2, t1));
+
+	if (nbytes <= 0) {
+		state->m_err.pushf("READ", 1, "Failed read of %ld bytes from remote side (retval=%d)",
+			iosize, nbytes);
+		return -1;
+	}
+
+	*buff = state->m_buf.get();
+
+	return nbytes;
+}
+
+}
+
+
+int
+ReliSock::put_archive_file(const std::string &filename, filesize_t max_bytes, DCTransferQueue &xfer_q,
+	filesize_t &total_sent, CondorError &err)
+{
+	filesize_t filesize;
+	const size_t buf_sz = AES_FILE_BUF_SZ;
+
+	int rc = 0;
+	int fd = -1;
+
+	StatInfo filestat(filename.c_str());
+	if (filestat.Error()) {
+		auto staterr = filestat.Errno( );
+		dprintf(D_ALWAYS, "ReliSock: put_archive_file: stat of %s failed: %s (errno=%d)\n",
+			filename.c_str(), strerror(staterr), staterr);
+		err.pushf("XFER", 1, "Failed to get status of %s: %s (errno=%d)",
+			filename.c_str(), strerror(staterr), staterr);
+		rc = -1;
+	} else if (filestat.IsDomainSocket() || filestat.IsDirectory()) {
+		dprintf(D_ALWAYS, "ReliSock: put_archive_file: Failed because only files are supported.\n" );
+		err.pushf("XFER", 2, "%s is not a file; cannot send.", filename.c_str());
+		rc = -1;
+	} else if (((filesize = filestat.GetFileSize()) > max_bytes) && max_bytes >= 0) {
+		dprintf(D_ALWAYS, "ReliSock: put_archive_file: File %s is too large "
+			"(max size " FILESIZE_T_FORMAT "; actual size " FILESIZE_T_FORMAT ")\n",
+			filename.c_str(), max_bytes, filesize);
+		err.pushf("XFER", 3, "File %s is too large (max size " FILESIZE_T_FORMAT
+			"; actual size " FILESIZE_T_FORMAT ")\n",
+			filename.c_str(), max_bytes, filesize);
+		rc = -1;
+	} else if ((fd = open(filename.c_str(), O_RDONLY)) < 0) {
+		dprintf(D_ALWAYS, "ReliSock: put_archive_file: Unable to open %s for reading: %s (errno=%d).\n",
+			filename.c_str(), strerror(errno), errno);
+		err.pushf("XFER", 5, "Unable to open %s for reading: %s (errno=%d).",
+			filename.c_str(), strerror(errno), errno);
+		rc = -1;
+	}
+	if (rc) {
+		if (!put(-1)) {
+			dprintf(D_ALWAYS, "ReliSock: put_archive_file: Failed to send error.\n");
+			err.push("XFER", 4, "Failed to send error condition.");
+		}
+		return -1;
+	}
+	std::unique_ptr<FILE, decltype(&fclose)> fp(fdopen(fd, "r"), &fclose);
+
+	if (filesize == 0) {
+		if (!put(filesize)) {
+			err.push("XFER", 16, "Failed to send zero-sized file.");
+			return -1;
+		}
+		return 0;
+	}
+
+	if ( !put(filesize) || !end_of_message() ) {
+		dprintf(D_ALWAYS, "ReliSock: put_archive_file: Failed to send filesize.\n");
+		err.push("XFER", 4, "Failed to send file size.");
+		return -1;
+	}
+
+	dprintf(D_FULLDEBUG, "put_archive_file: sending " FILESIZE_T_FORMAT " bytes\n", filesize);
+
+	std::unique_ptr<char[]> buf(new char[buf_sz]);
+
+	auto bytes_to_send = filesize;
+	size_t bytes_sent = 0;
+	ssize_t nrd = 0, nwr = 0;
+	int saved_errno = 0;
+	while (bytes_to_send - bytes_sent > 0)
+	{
+		size_t iosize = std::min(buf_sz, bytes_to_send - bytes_sent);
+
+		struct timeval t1, t2;
+		condor_gettimestamp(t1);
+		nrd = full_read(fd, buf.get(), iosize);
+		saved_errno = errno;
+		condor_gettimestamp(t2);
+
+		xfer_q.AddUsecFileRead(timersub_usec(t2, t1));
+
+		if (nrd < 0) {
+			saved_errno = errno;
+			break;
+		}
+
+		auto nwr = put_bytes(buf.get(), nrd);
+		if (nwr > 0 && (static_cast<filesize_t>(nwr + bytes_sent) != bytes_to_send) && !end_of_message()) {
+			nwr = -1;
+
+			saved_errno = EIO;
+			break;
+		} else if (nwr < 0) {
+			saved_errno = errno;
+			break;
+		}
+
+		condor_gettimestamp(t1);
+		xfer_q.AddUsecNetWrite(timersub_usec(t1, t2));
+		xfer_q.AddBytesSent(nwr);
+		xfer_q.ConsiderSendingReport(t1.tv_sec);
+		bytes_sent += nwr;
+	}
+
+	dprintf(D_FULLDEBUG,
+			"ReliSock: put_archive_file: sent " FILESIZE_T_FORMAT " bytes\n", bytes_sent);
+
+	if (nrd < 0) {
+		dprintf(D_ALWAYS, "ReliSock: put_archive_file: error when reading %s: %s (errno=%d)\n",
+			filename.c_str(), strerror(saved_errno), saved_errno);
+		err.pushf("XFER", saved_errno, "Error when reading %s: %s",
+			filename.c_str(), strerror(saved_errno));
+		return -1;
+	} else if (nwr < 0) {
+		dprintf(D_ALWAYS, "ReliSock: put_archive_file: error when writing to socket: %s (errno=%d)",
+			strerror(saved_errno), saved_errno);
+		err.pushf("XFER", saved_errno, "Error when sending %s: %s",
+			filename.c_str(), strerror(saved_errno));
+	}
+
+	total_sent = filesize;
+	return 0;
+}
+
+
+int
+ReliSock::get_archive(const std::string &filename, filesize_t max_bytes, DCTransferQueue &xfer_q, filesize_t &bytes, CondorError &err)
+{
+	filesize_t filesize, bytes_to_receive;
+	size_t buf_sz = AES_FILE_BUF_SZ;
+
+	if (!get(filesize) || !end_of_message()) {
+		dprintf(D_ALWAYS, "Failed to receive filesize in ReliSock::get_archive\n");
+		err.push("XFER", 1, "Failed to receive filesize of archive.");
+		return -1;
+	} else if (filesize < 0) {
+		dprintf(D_ALWAYS, "Remote size indicated failure to start archive %s transfer.\n",
+			filename.c_str());
+		err.push("XFER", 16, "Remote size indicated failure to start archive transfer.");
+		return -1;
+	}
+	bytes_to_receive = filesize;
+	if (max_bytes > 0 && bytes_to_receive > max_bytes) {
+		err.pushf("XFER", 2, "Expecting archive of size " FILESIZE_T_FORMAT ", which is"
+		         " greater than max file size of " FILESIZE_T_FORMAT " bytes",
+		         bytes_to_receive, max_bytes);
+		return -1;
+	}
+
+	std::unique_ptr<char[]> buf(new char[buf_sz]);
+
+	// Log what's going on
+	dprintf(D_FULLDEBUG,
+		"get_archive: Receiving archive of " FILESIZE_T_FORMAT " bytes\n",
+		 bytes_to_receive);
+
+	// Now we hand over to libarchive
+#ifdef HAVE_LIBARCHIVE
+	ArchiveReadState state(*this, bytes_to_receive, buf_sz, xfer_q, err);
+	size_t last_bytes_received_report = 0;
+	struct archive *ar = archive_read_new();
+	std::unique_ptr<struct archive, decltype(&archive_read_free)> ar_helper(ar, &archive_read_free);
+	archive_read_support_filter_all(ar);
+	archive_read_support_format_all(ar);
+	if (ARCHIVE_OK != archive_read_open(ar, reinterpret_cast<void*>(&state), nullptr, archive_read, nullptr)) {
+		return -1;
+	}
+	int rc = 0;
+	struct archive_entry *entry;
+	while (true) {
+		rc = archive_read_next_header(ar, &entry);
+		if (rc == ARCHIVE_RETRY) {continue;}
+		else if (rc == ARCHIVE_FATAL || rc == ARCHIVE_EOF) {break;}
+
+		auto name = archive_entry_pathname(entry);
+		if (!name) {
+			err.pushf("XFER", 3, "Received archive entry with no valid pathname in %s", filename.c_str());
+			return -1;
+		}
+		while (*name && *name == '/') {name++;}
+		if (!*name) {
+			err.pushf("XFER", 4, "Received an archive with an empty filename in %s", filename.c_str());
+			return -1;
+		}
+
+		int mode = archive_entry_mode(entry);
+
+		int filetype = archive_entry_filetype(entry);
+		if (filetype == AE_IFREG) {
+			dprintf(D_FULLDEBUG, "Unpacking regular file %s from archive %s.\n", name, filename.c_str());
+
+			auto filesize = archive_entry_size(entry);
+			if (filesize < 0) {
+				err.pushf("XFER", 6, "File %s in archive %s has invalid size (%ld)",
+					name, filename.c_str(), filesize);
+				return -1;
+			}
+
+			if (!make_parents_if_needed(name, 0755)) {
+				err.pushf("XFER", 14, "Failed to create parent directory of %s"
+					" from archive %s: %s (errno=%d)",
+					name, filename.c_str(), strerror(errno), errno);
+				return -1;
+			}
+
+			auto fd = open(name, O_CREAT|O_TRUNC|O_WRONLY, mode);
+			if (fd == -1) {
+				err.pushf("XFER", 5, "Failed to open file %s from archive %s for writing: %s (errno=%d)",
+					name, filename.c_str(), strerror(errno), errno);
+				return -1;
+			}
+			std::unique_ptr<FILE, decltype(&fclose)> fp(fdopen(fd, "w"), &fclose);
+
+			ssize_t bytes_read = 0;
+			while (filesize - bytes_read > 0) {
+				ssize_t bytes = archive_read_data(ar, buf.get(), buf_sz);
+				if (bytes < 0) {
+					err.pushf("XFER", 7, "File %s from archive %s data read failure.\n",
+						name, filename.c_str());
+					return -1;
+				}
+				struct timeval t1, t2;
+				condor_gettimestamp(t1);
+				auto bytes_written = full_write(fd, buf.get(), bytes);
+				condor_gettimestamp(t2);
+				xfer_q.AddUsecFileWrite(timersub_usec(t1, t2));
+
+				if (bytes_written < 0) {
+					err.pushf("XFER", 8, "File %s from archive %s data write error: %s (errno=%d)",
+						name, filename.c_str(), strerror(errno), errno);
+					return -1;
+				}
+				xfer_q.AddBytesReceived(state.m_bytes_read - last_bytes_received_report);
+				last_bytes_received_report = state.m_bytes_read;
+				xfer_q.ConsiderSendingReport(t2.tv_sec);
+				bytes_read += bytes;
+			}
+
+		} else if (filetype == AE_IFLNK) {
+			dprintf(D_FULLDEBUG, "Unpacking soft link %s.\n", name);
+
+			if (!make_parents_if_needed(name, 0755)) {
+				err.pushf("XFER", 14, "Failed to create parent directory of symlink %s"
+					" from archive %s: %s (errno=%d)",
+					name, filename.c_str(), strerror(errno), errno);
+				return -1;
+			}
+
+			auto link_value =  archive_entry_symlink(entry);
+			if (!link_value) {
+				err.pushf("XFER", 13, "Symlink %s from archive %s has no target",
+					name, filename.c_str());
+				return -1;
+			}
+			if (-1 == symlink(link_value, name)) {
+				err.pushf("XFER", 16, "Failed to set symlink %s->%s from archive"
+					" %s: %s (errno=%d)", link_value, name, filename.c_str(),
+					strerror(errno), errno);
+				return -1;
+			}
+
+		} else if (filetype == AE_IFDIR) {
+			dprintf(D_FULLDEBUG, "Unpacking directory %s.\n", name);
+			if (!mkdir_and_parents_if_needed(name, mode)) {
+				err.pushf("XFER", 15, "Failed to create directory %s from archive %s:"
+					" %s (errno=%d)", name, filename.c_str(), strerror(errno),
+					errno);
+				return -1;
+			}
+		} else if (filetype == AE_IFSOCK) {
+			dprintf(D_FULLDEBUG, "Unsupported file type 'socket' for %s.\n", name);
+		} else if (filetype == AE_IFCHR) {
+			dprintf(D_FULLDEBUG, "Unsupported file type 'character device' for %s.\n", name);
+		} else if (filetype == AE_IFBLK) {
+			dprintf(D_FULLDEBUG, "Unsupported file type 'block device' for %s.\n", name);
+		} else if (filetype == AE_IFIFO) {
+			dprintf(D_FULLDEBUG, "Unsupported file type 'fifo' for %s.\n", name);
+		} else {
+			dprintf(D_FULLDEBUG, "Unknown file type %d for %s.\n", filetype, name);
+		}
+	}
+
+	xfer_q.AddBytesReceived(state.m_bytes_read - last_bytes_received_report);
+	struct timeval t2;
+	condor_gettimestamp(t2);
+	xfer_q.ConsiderSendingReport(t2.tv_sec);
+
+	if (rc == ARCHIVE_FATAL) {
+		err.pushf("XFER", 12, "Fatal error when receiving archive %s: %s",
+			filename.c_str(), archive_error_string(ar));
+		return -1;
+	}
+
+	bytes = state.m_bytes_read;
+	return 0;
+#else
+	dprintf(D_ALWAYS, "get_archive: archives are not supported\n");
+	err.pushf("XFER", 100, "Remote side tried to send an archive (%s) file but this is not supported", filename.c_str());
+	return -1;
+#endif
+}
+
 
 MSC_DISABLE_WARNING(6262) // function uses 64k of stack
 int

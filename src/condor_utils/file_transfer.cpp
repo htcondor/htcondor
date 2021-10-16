@@ -98,7 +98,8 @@ enum class TransferSubCommand {
 	Unknown = -1,
 	UploadUrl = 7,
 	ReuseInfo = 8,
-	SignUrls = 9
+	SignUrls = 9,
+	UnpackArchive = 10
 };
 
 #define COMMIT_FILENAME ".ccommit.con"
@@ -179,8 +180,8 @@ public:
 		// - Source URLs last.
 		//
 
-		auto is_dest_url = !m_dest_scheme.empty();
-		auto other_is_dest_url = !other.m_dest_scheme.empty();
+		auto is_dest_url = !m_dest_scheme.empty() && m_dest_scheme != "tar";
+		auto other_is_dest_url = !other.m_dest_scheme.empty() && m_dest_scheme != "tar";
 		if (is_dest_url && !other_is_dest_url) {
 			return true;
 		}
@@ -195,8 +196,8 @@ public:
 			}
 		}
 
-		auto is_src_url = !m_src_scheme.empty();
-		auto other_is_src_url = !other.m_src_scheme.empty();
+		auto is_src_url = !m_src_scheme.empty() && m_src_scheme != "tar";
+		auto other_is_src_url = !other.m_src_scheme.empty() && other.m_src_scheme != "tar";
 		if (is_src_url && !other_is_src_url) {
 			return false;
 		}
@@ -2723,6 +2724,16 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				}
 				s->decode();
 				continue;
+			} else if (subcommand == TransferSubCommand::UnpackArchive) {
+				rc = s->get_archive(filename, this_file_max_bytes, xfer_queue, bytes, errstack);
+				if (rc < 0) {
+					rc = GET_FILE_PLUGIN_FAILED;
+					dprintf(D_ALWAYS, "FILETRANSFER: Archive unpack failed: %s.\n",
+						errstack.getFullText().c_str());
+				} else {
+					dprintf(D_FULLDEBUG, "FILETRANSFER: Successfully received archive %s.\n",
+						filename.c_str());
+				}
 			} else {
 				// unrecongized subcommand
 				dprintf(D_ALWAYS, "FILETRANSFER: unrecognized subcommand %i! skipping!\n", static_cast<int>(subcommand));
@@ -2921,7 +2932,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			                  get_mySubSystem()->getName(),
 							  s->my_ip_str(),fullname.c_str());
 			download_success = false;
-			if(rc == GET_FILE_OPEN_FAILED || rc == GET_FILE_WRITE_FAILED ||
+			if (rc == GET_FILE_OPEN_FAILED || rc == GET_FILE_WRITE_FAILED ||
 					rc == GET_FILE_PLUGIN_FAILED) {
 				// errno is well defined in this case, and transferred data
 				// has been consumed so that the wire protocol is in a well
@@ -3015,6 +3026,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 
 		if( !s->end_of_message() ) {
+			dprintf(D_ALWAYS, "FILETRANSFER: Post-transfer EOM failed.\n");
 			return_and_resetpriv( -1 );
 		}
 		*total_bytes_ptr += bytes;
@@ -4166,7 +4178,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			dprintf(D_FULLDEBUG,"DoUpload: sending file %s\n", filename.c_str());
 		}
 
-		if( fileitem.isSrcUrl() ) {
+		
+
+		if( fileitem.isSrcUrl() && fileitem.srcScheme() != "tar" ) {
 			if( param_boolean("ENABLE_URL_TRANSFERS", true) ) {
 				// looks like a URL
 				fullname = filename;
@@ -4179,12 +4193,15 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 					"but this transfer requires URL transfers to function; failing");
 				return_and_resetpriv( -1 );
 			}
-		} else if( !fullpath( filename.c_str() ) ){
-			// looks like a relative path
-			formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename.c_str());
 		} else {
-			// looks like an unix absolute path or a windows path
-			fullname = filename;
+			auto filename_xform = (filename.substr(0, 6) == "tar://") ? filename.substr(6) : filename;
+			if( !fullpath( filename_xform.c_str() ) ){
+				// looks like a relative path
+				formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename_xform.c_str());
+			} else {
+				// looks like an unix absolute path or a windows path
+				fullname = filename_xform;
+			}
 		}
 
 		MyString dest_filename;
@@ -4209,7 +4226,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			// we don't want to write the URL to a file with the whole
 			// URL as its name).
 			//
-			if( IsUrl( filename.c_str() ) ) {
+			if( fileitem.isSrcUrl() ) {
 				// If we signed the URL, we added a bunch of garbage to the
 				// query string.  Strip it out to get better base name.
 				auto idx = filename.find("?");
@@ -4230,7 +4247,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		//
 		// also, don't check URLs
 #ifdef WIN32
-		if( !fileitem.isSrcUrl() && perm_obj && !is_the_executable &&
+		if( (!fileitem.isSrcUrl() || fileitem.srcScheme() == "tar") && perm_obj && !is_the_executable &&
 			(perm_obj->read_access(fullname.c_str()) != 1) ) {
 			// we do _not_ have permission to read this file!!
 			upload_success = false;
@@ -4285,6 +4302,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 
 		if ( fileitem.isSrcUrl() ) {
 			file_command = TransferCommand::DownloadUrl;
+			if (fileitem.srcScheme() == "tar") {
+				file_command = TransferCommand::Other;
+				file_subcommand = TransferSubCommand::UnpackArchive;
+			}
 		}
 
 		std::string multifilePluginPath;
@@ -4306,11 +4327,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 					multifilePluginPath = pluginPath;
 				}
 			}
-		}
-		if (multifilePluginPath.empty()) {
-			dprintf(D_FULLDEBUG, "Will upload output URL using single-file plugin.\n");
-		} else {
-			dprintf(D_FULLDEBUG, "Will upload output URL using multi-file plugin.\n");
+			if (multifilePluginPath.empty()) {
+				dprintf(D_FULLDEBUG, "Will upload output URL using single-file plugin.\n");
+			} else {
+				dprintf(D_FULLDEBUG, "Will upload output URL using multi-file plugin.\n");
+			}
 		}
 
 		// Flush out any transfers if we can no longer defer the prior work we had built up.
@@ -4550,7 +4571,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 					// Always encrypt the URL as it might contain an authorization.
 					const classad::References encrypted_attrs{"OutputDestination"};
 					if(!putClassAd(s, file_info, 0, NULL, &encrypted_attrs)) {
-						dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
+						dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 						return_and_resetpriv( -1 );
 					}
 
@@ -4565,6 +4586,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 					sPrintAd(junkbuf, file_info);
 					bytes = junkbuf.length();
 				}
+			} else if (file_subcommand == TransferSubCommand::UnpackArchive) {
+				if (!putClassAd(s, file_info)) {
+					dprintf(D_FULLDEBUG, "DoUpload: failed to put unpack archive ClassAd");
+					return_and_resetpriv(-1);
+				}
+
+				rc = s->put_archive_file(fullname, this_file_max_bytes, xfer_queue, bytes, errstack);
+				if (rc < 0) {rc = PUT_FILE_PLUGIN_FAILED;}
 			} else {
 				dprintf( D_ALWAYS, "DoUpload: invalid subcommand %i, skipping %s.",
 						static_cast<int>(file_subcommand), filename.c_str());
@@ -5989,12 +6018,16 @@ void FileTransfer::DoPluginConfiguration() {
 std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 	std::string method_list;
 
+#ifdef HAVE_LIBARCHIVE
+	method_list = "tar";
+#endif
+
 	DoPluginConfiguration();
 
 	// build plugin table if we haven't done so
 	if (!plugin_table) {
 		if(-1 == InitializeSystemPlugins(e)) {
-			return "";
+			return method_list;
 		}
 	}
 
