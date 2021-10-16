@@ -190,6 +190,9 @@
 /* Do we have the globus external (USED)*/
 #cmakedefine HAVE_EXT_GLOBUS 1
 
+/* Do we have archive */
+#cmakedefine HAVE_LIBARCHIVE 1
+
 /* Do we have the krb5 external (USED)*/
 #cmakedefine HAVE_EXT_KRB5 1
 

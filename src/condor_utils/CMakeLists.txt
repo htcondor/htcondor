@@ -595,6 +595,9 @@ condor_shared_lib(condor_utils
 	$<TARGET_OBJECTS:condor_utils_objects>
 	$<TARGET_OBJECTS:condor_extra_objects>
 )
+if (HAVE_LIBARCHIVE)
+	target_link_libraries(condor_utils ${ARCHIVE_FOUND})
+endif()
 
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	set( UTILS_LIB_NAME "condor_utils_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
@@ -617,6 +620,9 @@ if (LINUX OR DARWIN)
    set_target_properties( condor_utils_s PROPERTIES OUTPUT_NAME "${UTILS_LIB_NAME}" )
    if (HAVE_GNU_LD)
 	target_link_libraries( condor_utils_s -Wl,--wrap,exit )
+   endif()
+   if (HAVE_LIBARCHIVE)
+      target_link_libraries(condor_utils_s  ${ARCHIVE_FOUND})
    endif()
 endif(LINUX OR DARWIN)
 

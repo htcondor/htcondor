@@ -468,6 +468,11 @@ if( NOT WINDOWS)
 		endif()
 	endif()
 
+	find_multiple( "archive" ARCHIVE_FOUND )
+	if ( ARCHIVE_FOUND )
+		set( HAVE_LIBARCHIVE TRUE )
+	endif()
+
     find_multiple( "z" ZLIB_FOUND)
 	find_multiple( "expat" EXPAT_FOUND )
 	find_multiple( "uuid" LIBUUID_FOUND )
