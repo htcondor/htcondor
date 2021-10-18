@@ -2015,7 +2015,7 @@ int sortByFirst(const std::pair<std::string, ExprTree *> & lhs,
 }
 
 int
-_sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list )
+_sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, const classad::References *excludeAttrs /* = nullptr */)
 {
 	classad::ClassAd::const_iterator itr;
 
@@ -2032,6 +2032,11 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 			if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
 				continue; // not in include-list
 			}
+
+			if (excludeAttrs && (excludeAttrs->find(itr->first) != excludeAttrs->end())) {
+				continue;
+			}
+
 			if ( ad.LookupIgnoreChain(itr->first) ) {
 				continue; // attribute exists in child ad; we will print it below
 			}
@@ -2046,6 +2051,11 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 		if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
 			continue; // not in include-list
 		}
+
+		if (excludeAttrs && (excludeAttrs->find(itr->first) != excludeAttrs->end())) {
+			continue;
+		}
+
 		if ( !exclude_private ||
 			 !ClassAdAttributeIsPrivate( itr->first ) ) {
 			attributes.emplace_back(itr->first,itr->second);
@@ -2131,15 +2141,15 @@ sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringList *a
 
 
 int
-sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list )
+sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, const classad::References *excludeAttrs )
 {
-	return _sPrintAd( output, ad, true, attr_include_list );
+	return _sPrintAd( output, ad, true, attr_include_list, excludeAttrs );
 }
 
 int
 sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list )
 {
-	return _sPrintAd( output, ad, false, attr_include_list );
+	return _sPrintAd( output, ad, false, attr_include_list, nullptr );
 }
 
 /** Get a sorted list of attributes that are in the given ad, and also match the given includelist (if any)

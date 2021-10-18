@@ -18,6 +18,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
@@ -126,12 +127,20 @@ AppendHistory(ClassAd* ad)
   if (!JobHistoryFileName) return;
   dprintf(D_FULLDEBUG, "Saving classad to history file\n");
 
+  classad::References excludeAttrs;
+  bool include_env = param_boolean("HISTORY_CONTAINS_JOB_ENVIRONMENT", true);
+
+  // Remove Env before serializing, if asked to
+  if (!include_env) {
+	excludeAttrs.emplace(ATTR_JOB_ENVIRONMENT2);
+  }
   // First we serialize the ad. If history file rotation is on,
   // we'll need to know how big the ad is before we write it to the 
   // history file. 
+
   std::string ad_string;
   int ad_size;
-  sPrintAd(ad_string, *ad);
+  sPrintAd(ad_string, *ad, nullptr, include_env ? nullptr : &excludeAttrs);
   ad_size = ad_string.length();
 
   MaybeRotateHistory(ad_size);

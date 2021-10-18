@@ -71,7 +71,7 @@ int sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringLis
 		@param output The std::string to write into
 		@return TRUE
 	*/
-int sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list = NULL );
+int sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list = nullptr, const classad::References *excludeAttrs = nullptr);
 int sPrintAdWithSecrets( std::string &output, const classad::ClassAd & ad, StringList *attr_white_list = NULL );
 
 	/** Format the ClassAd as an old ClassAd into the std::string, and return the c_str() of the result
