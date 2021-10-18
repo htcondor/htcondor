@@ -42,6 +42,14 @@ all attributes.
     is only present if an accounting group was requested by the
     submission. :index:`AllRemoteHosts<single: AllRemoteHosts; ClassAd job attribute>`
 
+:index:`AllowedJobDuration<single: AllowedJobDuration; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; AllowedJobDuration>`
+
+``AllowedJobDuration``
+    The number of seconds for which a job may run after activating a claim.
+    Jobs which exceed this duration will be put on hold.
+
+:index:`AllRemoteHosts<single: AllRemoteHosts; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; AllRemoteHosts>`
 
 ``AllRemoteHosts``
@@ -67,35 +75,35 @@ all attributes.
     the :doc:`/man-pages/condor_submit` section.
 
 :index:`AuthTokenSubject<single: AuthTokenSubject; ClassAd job attributes>`
-:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenSubject>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; AuthTokenSubject>`
 
 ``AuthTokenSubject``
     A string recording the subject in the authentication token (IDTOKENS or
     SCITOKENS) used to submit the job.
 
 :index:`AuthTokenIssuer<single: AuthTokenIssuer; ClassAd job attributes>`
-:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenIssuer>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; AuthTokenIssuer>`
 
 ``AuthTokenIssuer``
     A string recording the issuer in the authentication token (IDTOKENS or
     SCITOKENS) used to submit the job.
 
 :index:`AuthTokenGroups<single: AuthTokenGroups; ClassAd job attributes>`
-:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenGroups>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; AuthTokenGroups>`
 
 ``AuthTokenGroups``
     A string recording the groups in the authentication token (IDTOKENS or
     SCITOKENS) used to submit the job.
 
 :index:`AuthTokenScopes<single: AuthTokenScopes; ClassAd job attributes>`
-:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenScopes>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; AuthTokenScopes>`
 
 ``AuthTokenScopes``
     A string recording the scopes in the authentication token (IDTOKENS or
     SCITOKENS) used to submit the job.
 
 :index:`AuthTokenId<single: AuthTokenId; ClassAd job attributes>`
-:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenId>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; AuthTokenId>`
 
 ``AuthTokenId``
     A string recording the unique identifier of the authentication token (IDTOKENS or
@@ -1064,6 +1072,9 @@ all attributes.
     +----------------------------------+-------------------------------------+--------------------------+
     | | 45                             | Test of singularity runtime failed  |                          |
     | | [SingularityTestFailed]        | before launching a job              |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 46                             | The job's allowed duration was      |                          |
+    | | [JobDurationExceeded]          | exceeded.                           |                          |
     +----------------------------------+-------------------------------------+--------------------------+
 
 
