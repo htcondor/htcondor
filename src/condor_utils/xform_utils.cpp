@@ -1260,7 +1260,7 @@ static int DoRenameAttr(ClassAd * ad, const std::string & attr, const char * att
 // returns 1  if the copy happened.
 static int DoCopyAttr(ClassAd * ad, const std::string & attr, const char * attrNew, struct _parse_rules_args *pra)
 {
-	bool log_errs  = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_ERRORS));
+	// bool log_errs  = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_ERRORS));
 	bool log_steps = (pra && pra->fnlog && (pra->options & XFORM_UTILS_LOG_STEPS));
 	if (log_steps) pra->fnlog(*pra, false, "COPY %s to %s\n", attr.c_str(), attrNew);
 	if ( ! IsValidAttrName(attrNew)) {
@@ -1685,7 +1685,7 @@ static void ParseRulesStdLog(struct _parse_rules_args & ra, bool is_error, const
 	va_end(args);
 }
 
-static void ParseRuleDprintLog(struct _parse_rules_args & ra, bool is_error, const char * fmt, ...)
+static void ParseRuleDprintLog(struct _parse_rules_args & /* ra */, bool /* is_error */, const char * fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
