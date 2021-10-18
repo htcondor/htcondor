@@ -1,7 +1,7 @@
 name: Publish Release To Website
 on:
   release:
-    types: [published, edited]
+    types: [deleted]
 
 jobs:
   Publish-Release-To-Website:
@@ -12,29 +12,20 @@ jobs:
       publish_repo_ssh: git@github.com:htcondor/htcondor-web.git
     steps:
 
-      - name: Build the release page a put it in current directory
-        uses: CannonLock/build_release_page@master
-        with:
-          repository: ${{ github.repository }}
-          tag_name: ${{ github.event.release.tag_name }}
-
       - name: Setup SSH Keys and known_hosts
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.HTCONDOR_WEB_DEPLOY_KEY }}
 
       - run: |
-          mkdir website
-          git clone ${{ env.publish_repo_ssh }} ./website
-          cd website
+          git clone ${{ env.publish_repo_ssh }} ./
           git fetch --all
           git checkout -b ${{ env.publish_branch }} origin/${{ env.publish_branch }}
 
-          mv ../*.md ./${{ env.publish_path }} # Move markdown created by the build_release_page action to branch
+          git rm -f ./${{ env.publish_path }}/${{ github.event.release.tag_name }}.md
 
-          # Publish the article
           git add .
           git config user.name "Automatic Release Publish"
           git config user.email ""
-          git commit -am "GHA: Publish Release https://github.com/${{ github.repository }}/releases/tag/${{ github.event.release.tag_name }}"
+          git commit -am "GHA: Delete Release"
           git push
