@@ -77,7 +77,7 @@ class BaseUserPolicy : public Service
 			This method is registered as a periodic timer handler
 			while the job is executing.
 		*/
-	void checkPeriodic( void );
+	virtual void checkPeriodic( void );
 
  protected:
 
