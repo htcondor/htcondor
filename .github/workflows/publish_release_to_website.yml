@@ -1,0 +1,13 @@
+name: Deploy Web Previews
+on:
+  release:
+    types: [published, edited, released]
+
+jobs:
+  Build-And-Deploy-Preview:
+    runs-on: ubuntu-18.04
+    steps:
+
+      - name: Set env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
