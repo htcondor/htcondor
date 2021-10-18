@@ -167,7 +167,9 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	PostScriptFailed = 44,
 
 	// Running singularity test before a sinularity job returned non-zero
-	SingularityTestFailed = 45
+	SingularityTestFailed = 45,
+
+	JobDurationExceeded = 46
 
 	// NOTE!!! If you add a new hold code here, don't forget to add a commas after all entries but the last!
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
