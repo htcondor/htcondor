@@ -2913,7 +2913,7 @@ default=$(LOG)/startd_history
 type=string
 
 [HISTORY_CONTAINS_JOB_ENVIRONMENT]
-default = false
+default = true
 
 [PREEN_ADMIN]
 default=
