@@ -38,8 +38,8 @@ ideas from `Semantic Versioning <https://semver.org/>`_.
 Types of Releases
 ^^^^^^^^^^^^^^^^^
 
--   A **major** release is numbered **X.0.0**, and is a new long-term support
-    (LTS) release.  The previous LTS
+-   An **LTS** release is numbered **X.0.0**, and is a new long-term support
+    release.  The previous LTS
     release is supported for six months after a new LTS version is released.
     The final feature release undergoes a stabilization effort where the
     software is run through multiple code quality tools (such as Valgrind)
