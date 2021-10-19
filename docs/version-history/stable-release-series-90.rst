@@ -1,7 +1,7 @@
 Version 9.0 LTS Releases
 ========================
 
-These are LTS releases of HTCondor. As usual, only bug fixes
+These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 (and potentially, ports to new platforms) will be provided in future
 9.0.y releases. New features will be added in the 9.x.y feature releases.
 

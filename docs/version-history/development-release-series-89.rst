@@ -1979,7 +1979,7 @@ Release Notes:
 Known Issues:
 
 This release may require configuration changes to work as before. During
-the 8.9 development, we are making changes to make it easier to deploy
+the 8.9 development series, we are making changes to make it easier to deploy
 secure pools. This release contains two security related configuration
 changes.
 
