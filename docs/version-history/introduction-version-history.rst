@@ -19,8 +19,8 @@ ideas from `Semantic Versioning <https://semver.org/>`_.
 
 -   The MAJOR number increments for each new Long Term Support (LTS) release.
     A new LTS release may have backward-incompatible changes and may require
-    updates to configuration files.  If the current LTS release is 9.0.6.
-    The next one will be 10.0.0.  A new LTS release is expected every twelve
+    updates to configuration files.  If the current LTS release is 9.0.6,
+    the next one will be 10.0.0.  A new LTS release is expected every twelve
     to eighteen months.
 
 -   The MINOR number increments during the development of new features. This
