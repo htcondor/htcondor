@@ -469,7 +469,8 @@ if( NOT WINDOWS)
 	endif()
 
 	find_multiple( "archive" ARCHIVE_FOUND )
-	if ( ARCHIVE_FOUND )
+	check_include_files("archive.h"  HAVE_ARCHIVE_H )
+	if ( ARCHIVE_FOUND AND HAVE_ARCHIVE_H )
 		set( HAVE_LIBARCHIVE TRUE )
 	endif()
 
