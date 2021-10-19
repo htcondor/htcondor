@@ -2701,16 +2701,18 @@ Vanilla jobs to Docker jobs.
 
     JOB_TRANSFORM_NAMES = AssignGroup, SL6ToDocker
 
-    JOB_TRANSFORM_AssignGroup = [ eval_set_AccountingGroup = userMap("Groups",Owner,AccountingGroup); ]
+    JOB_TRANSFORM_AssignGroup @=end
+       # map Owner to group using the existing accounting group attribute as requested group
+       EVALSET AcctGroup = userMap("Groups",Owner,AcctGroup)
+       EVALSET AccountingGroup = join(".",AcctGroup,Owner)
+    @end
 
     JOB_TRANSFORM_SL6ToDocker @=end
-    [
-       Requirements = JobUniverse==5 && WantSL6 && DockerImage =?= undefined;
-       set_WantDocker = true;
-       set_DockerImage = "SL6";
-       copy_Requirements = "VanillaRequrements";
-       set_Requirements = TARGET.HasDocker && VanillaRequirements
-    ]
+       # match only vanilla jobs that have WantSL6 and do not already have a DockerImage
+       REQUIREMENTS JobUniverse==5 && WantSL6 && DockerImage =?= undefined
+       SET  WantDocker = true
+       SET  DockerImage = "SL6"
+       SET  Requirements = TARGET.HasDocker && $(MY.Requirements)
     @end
 
 The AssignGroup transform above assumes that a mapfile that can map an
@@ -2718,8 +2720,7 @@ owner to one or more accounting groups has been configured via
 ``SCHEDD_CLASSAD_USER_MAP_NAMES``, and given the name "Groups".
 
 The SL6ToDocker transform above is most likely incomplete, as it assumes
-some custom attributes (``WantSL6`` and ``WantDocker`` and
-``HasDocker``) that your pool may or may not use.
+a custom attribute (``WantSL6``) that your pool may or may not use.
 
 Submit Requirements
 '''''''''''''''''''

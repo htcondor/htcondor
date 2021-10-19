@@ -41,7 +41,7 @@ int CondorThreads_pool_size(void);
 int CondorThreads_gettid(void);
 
 END_C_DECLS
-#ifdef __cplusplus
+
 #include <memory>
 
 class ThreadImplementation;	// forward declaration
@@ -132,7 +132,5 @@ private:
 	bool oldflag;
 
 };
-
-#endif // __cplusplus
 
 #endif // _CONDOR_THREADS_H

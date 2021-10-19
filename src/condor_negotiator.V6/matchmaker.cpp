@@ -50,10 +50,8 @@
 #include <sstream>
 #include <deque>
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
 #include "NegotiatorPlugin.h"
-#endif
 #endif
 
 // the comparison function must be declared before the declaration of the
@@ -581,11 +579,9 @@ initialize (const char *neg_name)
 			"Update Collector", this );
 
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
 	NegotiatorPluginManager::Load();
 	NegotiatorPluginManager::Initialize();
-#endif
 #endif
 }
 
@@ -5915,10 +5911,8 @@ Matchmaker::updateCollector() {
         daemonCore->dc_stats.Publish(*publicAd);
 		daemonCore->monitor_data.ExportData(publicAd);
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
 		NegotiatorPluginManager::Update(*publicAd);
-#endif
 #endif
 		daemonCore->sendUpdates(UPDATE_NEGOTIATOR_AD, publicAd, NULL, true);
 	}

@@ -51,7 +51,6 @@
 
 #include "list.h"
 #include "submit_utils.h"
-//#include "binary_search.h"
 
 #ifdef WIN32
 

@@ -58,11 +58,7 @@ struct printf_fmt_info {
 };
 
 
-BEGIN_C_DECLS
-
 int parsePrintfFormat(const char **fmt_p, struct printf_fmt_info *info);
-
-END_C_DECLS
 
 
 #endif /* _CONDOR_PRINTF_FORMAT_H */

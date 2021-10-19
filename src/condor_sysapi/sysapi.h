@@ -21,8 +21,6 @@
 #ifndef __CONDOR_SYSAPI_H__
 #define __CONDOR_SYSAPI_H__
 
-BEGIN_C_DECLS
-
 /* For debugging */
 #if defined(LINUX)
 typedef struct {
@@ -145,10 +143,8 @@ const char* sysapi_kernel_version( void );
 /* Would like to just use a classad here, but were in a 
  * classad-free layer */
 struct sysapi_cpuinfo {
-#ifdef _cplusplus
 	sysapi_cpuinfo() :
 		processor_flags(0), model_no(-1), family(-1), cache(-1) {}
-#endif
 	const char *processor_flags;
 	int model_no;
 	int family;
@@ -167,9 +163,6 @@ const struct sysapi_cpuinfo *sysapi_processor_flags( void );
 int sysapi_partition_id_raw(char const *path,char **result);
 int sysapi_partition_id(char const *path,char **result);
 
-END_C_DECLS
-
-#if defined(__cplusplus)
 
 #include <string>
 #include <vector>
@@ -206,8 +199,6 @@ void sysapi_clear_network_device_info_cache();
 
 /* determine if a linux version is version X or newer */
 bool sysapi_is_linux_version_atleast(const char *version_to_check);
-
-#endif // __cplusplus
 
 #endif
 

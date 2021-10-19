@@ -596,11 +596,11 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	std::unique_ptr<void, decltype(&free)> memory_buffer(malloc(membufsiz), free);
 	ssize_t bytes;
 	while (true) {
-		bytes = _condor_full_read(source_fd, memory_buffer.get(), membufsiz);
+		bytes = full_read(source_fd, memory_buffer.get(), membufsiz);
 		if (bytes <= 0) {
 			break;
 		}
-		auto write_bytes = _condor_full_write(dest_fd, memory_buffer.get(), bytes);
+		auto write_bytes = full_write(dest_fd, memory_buffer.get(), bytes);
 		if (write_bytes != bytes) {
 			bytes = -1;
 			break;
@@ -806,11 +806,11 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 	std::unique_ptr<void, decltype(&free)> memory_buffer(malloc(membufsiz), free);
 	ssize_t bytes;
 	while (true) {
-		bytes = _condor_full_read(source_fd, memory_buffer.get(), membufsiz);
+		bytes = full_read(source_fd, memory_buffer.get(), membufsiz);
 		if (bytes <= 0) {
 			break;
 		}
-		auto write_bytes = _condor_full_write(dest_fd, memory_buffer.get(), bytes);
+		auto write_bytes = full_write(dest_fd, memory_buffer.get(), bytes);
 		if (write_bytes != bytes) {
 			bytes = -1;
 			break;

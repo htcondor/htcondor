@@ -34,9 +34,22 @@ New Features:
   are now applied to late materialization job factories at submit time.
   :jira:`756`
 
+- Added option ``--rgahp-nologin`` to **remote_gahp**, which removes the
+  ``-l`` option normally given to ``bash`` when starting a remote **blahpd**
+  or **condor_ft-gahp**.
+  :jira:`734`
+
+- SINGULARITY_EXTRA_ARGUMENTS can now be a classad expression, so that the extra arguments
+  can depend on the job.
+  :jira:`570`
+
+
 Bugs Fixed:
 
-- None.
+- Fixed a bug that prevented the *condor_procd* (and thus all of condor) from starting
+  when running under QEMU emulation.  Condor can now build and run under QEMU ARM
+  emulation with this fix.
+  :jira:`761`
 
 Version 9.3.0
 -------------

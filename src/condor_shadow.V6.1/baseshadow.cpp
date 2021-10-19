@@ -42,7 +42,6 @@ BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
 
 // this appears at the bottom of this file:
-//extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 extern bool sendUpdatesToSchedd;
 
@@ -1503,9 +1502,7 @@ extern BaseShadow *Shadow;
 
 // This function is called by dprintf - always display our job, proc,
 // and pid in our log entries. 
-//extern "C" 
 int
-//display_dprintf_header(char **buf,int *bufpos,int *buflen)
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	static pid_t mypid = 0;
