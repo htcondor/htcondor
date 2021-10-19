@@ -26,6 +26,12 @@ New Features:
   tool also now supports the ``-debug`` and ``-help`` flags.
   :jira:`707`
 
+- Added a config parameter HISTORY_CONTAINS_JOB_ENVIRONMENT which defaults to true.
+  When false, the job's environment attribute is not saved in the history file.  For
+  some sites, this can substantially reduce the size of the history file, and allow
+  the history to contain many more jobs before rotation.
+  :jira:`497`
+
 - Added an attribute to the job ClassAd ``LastRemoteWallClockTime``.  It holds
   the wall clock time of the most recent completed job execution.
   :jira:`751`

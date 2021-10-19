@@ -2912,6 +2912,9 @@ tags=tools,preen
 default=$(LOG)/startd_history
 type=string
 
+[HISTORY_CONTAINS_JOB_ENVIRONMENT]
+default = false
+
 [PREEN_ADMIN]
 default=
 type=string
