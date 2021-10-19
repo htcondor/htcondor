@@ -1,5 +1,5 @@
-Upgrading from the 8.8 series to the 9.0 series of HTCondor
-===========================================================
+Upgrading from an 8.8 LTS release to a 9.0 LTS release of HTCondor
+==================================================================
 
 :index:`items to be aware of<single: items to be aware of; upgrading>`
 
@@ -130,12 +130,11 @@ its entry.
 New Features
 ------------
 
-Upgrading from the 8.8 series of HTCondor to the 9.0 series will bring
-new features introduced in the 8.9 series of HTCondor. These new
+Upgrading from an 8.8 LTS release of HTCondor to a 9.0 LTS release will bring
+new features introduced in the 8.9 releases of HTCondor. These new
 features include the following (note that this list contains only the
 most significant changes; a full list of changes can be found in the
-version history: \ `Development Release Series
-8.9 <../version-history/development-release-series-89.html>`_):
+version history: \ `Development Release Series 8.9 <../version-history/development-release-series-89.html>`_):
 
 - Absent any configuration, a new HTCondor installation denies authorization to all users
 
