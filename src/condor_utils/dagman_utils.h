@@ -97,7 +97,7 @@ struct SubmitDagShallowOptions
     int iMaxPost;
     MyString appendFile; // append to .condor.sub file before queue
     std::list<std::string> appendLines; // append to .condor.sub file before queue
-    MyString strConfigFile;
+    std::string strConfigFile;
     bool dumpRescueDag;
     bool runValgrind;
     MyString primaryDagFile;
@@ -206,9 +206,9 @@ public:
         std::list<std::string> &dagFileAttrLines );
 
     bool GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bool useDagDir, 
-        MyString &configFile, std::list<std::string> &attrLines, MyString &errMsg );
+        std::string &configFile, std::list<std::string> &attrLines, MyString &errMsg );
 
-    bool MakePathAbsolute(MyString &filePath, MyString &errMsg);
+    bool MakePathAbsolute(std::string &filePath, std::string &errMsg);
 
     int FindLastRescueDagNum(const char *primaryDagFile,
         bool multiDags, int maxRescueDagNum);

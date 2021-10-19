@@ -96,13 +96,15 @@ public:
 				@return: "" on success; error message on failure
 			 */
 		MyString Open( const MyString &filename );
+		std::string Open( const std::string &filename );
 
 			/** Real the next "logical" line from the file.  (This means
 				lines are combined if they end with a continuation character.)
-				@param line: a MyString to receive the line string
+				@param line: a string to receive the line string
 				@return: true iff we got any data
 			 */
 		bool NextLogicalLine( MyString &line );
+		bool NextLogicalLine( std::string &line );
 
 			/** Close the file.
 			 */
