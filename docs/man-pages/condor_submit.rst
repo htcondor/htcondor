@@ -1404,6 +1404,12 @@ FILE TRANSFER COMMANDS
 
 POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 
+ allowed_job_duration = <integer>
+    The number of seconds for which this job may run after activating a
+    claim.  (This is the duration that HTCondor uses to determine user
+    priorities.)  Jobs which exceed their allowed duration will be put
+    on hold.
+
  max_retries = <integer>
     The maximum number of retries allowed for this job (must be
     non-negative). If the job fails (does not exit with the
