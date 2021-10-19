@@ -1976,20 +1976,20 @@ initAdFromString( char const *str, classad::ClassAd &ad )
 
 		// output functions
 int
-fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list )
+fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, const classad::References *excludeAttrs )
 {
 	std::string buffer;
 
 	if( exclude_private ) {
-		sPrintAd( buffer, ad, attr_include_list );
+		sPrintAd( buffer, ad, attr_include_list, excludeAttrs);
 	} else {
-		sPrintAdWithSecrets( buffer, ad, attr_include_list );
+		sPrintAdWithSecrets( buffer, ad, attr_include_list, excludeAttrs);
 	}
 
-	if ( fprintf(file, "%s", buffer.c_str()) < 0 ) {
-		return FALSE;
+	if (fputs(buffer.c_str(), file) < 0 ) {
+		return false;
 	} else {
-		return TRUE;
+		return true;
 	}
 }
 
@@ -1997,7 +1997,7 @@ void
 dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private )
 {
 	if ( IsDebugCatAndVerbosity( level ) ) {
-		MyString buffer;
+		std::string buffer;
 
 		if( exclude_private ) {
 			sPrintAd( buffer, ad );
@@ -2147,9 +2147,9 @@ sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_incl
 }
 
 int
-sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list )
+sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, const classad::References *excludeAttrs )
 {
-	return _sPrintAd( output, ad, false, attr_include_list, nullptr );
+	return _sPrintAd( output, ad, false, attr_include_list, excludeAttrs );
 }
 
 /** Get a sorted list of attributes that are in the given ad, and also match the given includelist (if any)

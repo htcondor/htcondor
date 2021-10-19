@@ -272,7 +272,13 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 		unlink(temp_file_name.c_str());
 		return;
 	}
-	if (!fPrintAd(fp, *ad)) {
+	bool include_env = param_boolean("HISTORY_CONTAINS_JOB_ENVIRONMENT", true);
+	classad::References env;
+	if (!include_env) {
+			env.emplace(ATTR_JOB_ENVIRONMENT2);
+	}
+
+	if (!fPrintAd(fp, *ad, true, nullptr, include_env ? nullptr : &env)) {
 		dprintf(D_ALWAYS | D_FAILURE,
 		        "error writing per-job history file for job %d.%d\n",
 		        cluster, proc);
