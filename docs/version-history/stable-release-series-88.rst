@@ -1,9 +1,9 @@
 Version 8.8 LTS Releases
 ========================
 
-These are LTS releases of HTCondor. As usual, only bug fixes
+These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 (and potentially, ports to new platforms) will be provided in future
-8.9.y releases. New features will be added in the 8.9.y feature releases.
+8.8.x releases. New features will be added in the 8.9.y feature releases.
 
 The details of each version are described below.
 
