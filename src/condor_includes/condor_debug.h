@@ -116,11 +116,8 @@ enum {
 //#define IsDebugLevel(cat)    (DebugLevels & (3<<((cat)*2))) != 0)
 
 
-#ifdef __cplusplus
 #include <string>
 #include <map>
-extern "C" {
-#endif
 
 #if _MSC_VER >= 1400 /* VC++ 2005 version */
 #define PREFAST_NORETURN __declspec(noreturn)
@@ -151,10 +148,7 @@ extern int (*DebugId)(char **buf,int *bufpos,int *buflen);
 
 typedef unsigned long long DPF_IDENT;
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
-#ifdef __cplusplus
-}
 void dprintf ( int flags, DPF_IDENT ident, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
-extern "C" {
 // parse config files and use them to fill out the array of dprintf_output_settings
 // one for each output log file. returns the number of entries needed in p_info, (may be larger than c_info!)
 // if p_info is NULL, then dprintf_set_outputs is called with the dprintf_output_settings array.  if != NULL, then
@@ -191,7 +185,6 @@ void _condor_parse_merge_debug_flags(
 
 bool dprintf_to_term_check();
 
-#endif
 void _condor_dprintf_va ( int flags, DPF_IDENT ident, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
@@ -301,12 +294,6 @@ extern int (*_EXCEPT_Cleanup)(int,int,const char*);	/* Function to call to clean
 extern void (*_EXCEPT_Reporter)(const char * msg, int line, const char * file); /* called instead of dprintf if non-NULL */
 extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
 
-#if defined(__cplusplus)
-}
-#endif
-
-#if defined(__cplusplus)
-
 class dprintf_on_function_exit {
 public:
 	dprintf_on_function_exit(bool on_entry, int _flags, const char * fmt, ...);
@@ -369,8 +356,6 @@ public:
 // this is intended to provide a way to add small hex dumps to dprintf logging
 extern const char * debug_hex_dump(char * buf, const char * data, int datalen, bool compact = false);
 
-#endif // defined(__cplusplus)
-
 #ifndef CONDOR_ASSERT
 #define CONDOR_ASSERT(cond) \
 	if( !(cond) ) { EXCEPT("Assertion ERROR on (%s)",#cond); }
@@ -384,34 +369,6 @@ extern const char * debug_hex_dump(char * buf, const char * data, int datalen, b
 #define TRACE \
 	fprintf( stderr, "TRACE at line %d in file \"%s\"\n",  __LINE__, __FILE__ );
 #endif /* TRACE */
-
-#ifdef MALLOC_DEBUG
-#define MALLOC(size) mymalloc(__FILE__,__LINE__,size)
-#define CALLOC(nelem,size) mycalloc(__FILE__,__LINE__,nelem,size)
-#define REALLOC(ptr,size) myrealloc(__FILE__,__LINE__,ptr,size)
-#define FREE(ptr) myfree(__FILE__,__LINE__,ptr)
-char    *mymalloc(), *myrealloc(), *mycalloc();
-#else
-#define MALLOC(size) malloc(size)
-#define CALLOC(nelem,size) calloc(nelem,size)
-#define REALLOC(ptr,size) realloc(ptr,size)
-#define FREE(ptr) free(ptr)
-#endif /* MALLOC_DEBUG */
-
-#define D_RUSAGE( flags, ptr ) { \
-        dprintf( flags, "(ptr)->ru_utime = %d.%06d\n", (ptr)->ru_utime.tv_sec,\
-        (ptr)->ru_utime.tv_usec ); \
-        dprintf( flags, "(ptr)->ru_stime = %d.%06d\n", (ptr)->ru_stime.tv_sec,\
-        (ptr)->ru_stime.tv_usec ); \
-}
-
-#ifndef ABEND
-#define ABEND(cond) \
-	if( !(cond) ) { \
-		dprintf( D_ERROR | D_BACKTRACE, "Failed to assert (%s) at %s, line %d; aborting.\n", #cond, __FILE__, __LINE__ ); \
-		abort(); \
-	}
-#endif /* ABEND */
 
 #ifndef PRAGMA_REMIND
 # ifdef _MSC_VER // for Microsoft C, prefix file and line to the the message

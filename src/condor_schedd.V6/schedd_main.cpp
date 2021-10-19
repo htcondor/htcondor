@@ -44,7 +44,7 @@
 #include "credmon_interface.h"
 #include "directory_util.h"
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
 #endif
@@ -105,7 +105,7 @@ main_init(int argc, char* argv[])
 		// each creating their own
 	daemonCore->Proc_Family_Init();
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	ClassAdLogPluginManager::Load();
 	ScheddPluginManager::Load();
 
@@ -169,7 +169,7 @@ main_init(int argc, char* argv[])
 		// Do a timeout now at startup to get the ball rolling...
 	scheduler.timeout();
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	ScheddPluginManager::Initialize();
 	ClassAdLogPluginManager::Initialize();
 #endif

@@ -46,7 +46,6 @@
  #pragma pop_macro("PLATFORM")
  // remove defines set by python headers that conflict in detail
  // but not in substance with the condor_common defines.
- #undef HAVE_SNPRINTF
  #undef snprintf
  #undef vsnprintf
  #undef S_ISDIR

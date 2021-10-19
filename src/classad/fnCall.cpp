@@ -52,7 +52,7 @@
   #endif
 #endif
 
-#if defined(HAVE_DLFCN_H)
+#ifdef UNIX
 #include <dlfcn.h>
 #endif
 
@@ -351,7 +351,7 @@ void FunctionCall::RegisterFunctions(
 bool FunctionCall::RegisterSharedLibraryFunctions(
 	const char *shared_library_path)
 {
-#ifdef HAVE_DLOPEN
+#ifdef UNIX
 	bool success;
 	void *dynamic_library_handle;
 		
@@ -416,11 +416,11 @@ bool FunctionCall::RegisterSharedLibraryFunctions(
 	}
 
 	return success;
-#else /* end HAVE_DLOPEN */
+#else /* end UNIX */
     CondorErrno = ERR_CANT_LOAD_DYNAMIC_LIBRARY;
     CondorErrMsg = "Shared library support not available.";
     return false;
-#endif /* end !HAVE_DLOPEN */
+#endif /* end !UNIX */
 }
 
 void FunctionCall::

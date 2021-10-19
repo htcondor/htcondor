@@ -217,13 +217,11 @@ condor_blkng_full_disk_io.cpp
 condor_claimid_parser.h
 condor_common.cpp
 condor_config.cpp
-condor_create_id.cpp
 condor_crontab.cpp
 condor_crontab.h
 condor_fsync.cpp
 condor_fsync.h
 condor_ftp.cpp
-condor_full_io.cpp
 condor_getcwd.cpp
 condor_getcwd.h
 condor_holdcodes.h

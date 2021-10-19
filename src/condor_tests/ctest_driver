@@ -164,7 +164,7 @@ def main():
     os.environ["CONDOR_CONFIG"] = os.path.abspath("base_config")
 
     os.execv(
-        "/usr/bin/perl", ["run_test.pl", os.path.join("..", "run_test.pl"), args.test]
+        "/usr/bin/perl", ["perl", os.path.join("..", "run_test.pl"), args.test]
     )
 
 

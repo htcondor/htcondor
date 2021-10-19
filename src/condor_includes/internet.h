@@ -36,10 +36,7 @@
 /* maximum length of a machine name */
 #define  MAXHOSTLEN     1024
 
-#if defined(__cplusplus)
 #include "MyString.h"
-extern "C" {
-#endif
 
 /* Extract the port from a string of the form "<xx.xx.xx.xx:pppp>" */
 int string_to_port( const char* addr );
@@ -70,20 +67,6 @@ int getPortFromAddr( const char* addr );
    allocated string which must be de-allocated with free(). */
 char* getHostFromAddr( const char* addr );
 
-// generates sinful string.
-// it detects whether given ip address is IPv4 or IPv6.
-int generate_sinful(char* buf, int len, const char* ip, int port);
-
-#if defined(__cplusplus)
-}
-// MyString version is C++ only
-MyString generate_sinful(const char* ip, int port);
-
-/* Extract the IP address from a sinful string ("<xx.xx.xx.xx:pppp>")
-   and return it in ipout as an ASCII string ("xx.xx.xx.xx") and returns
-   true.  If the IP address is invalid, returns false and ipout is
-   left unchanged. */
-bool sinful_to_ipstr(const char * addr, MyString & ipout);
-#endif
+std::string generate_sinful(const char* ip, int port);
 
 #endif /* INTERNET_H */

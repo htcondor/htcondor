@@ -134,11 +134,8 @@
 #define STARTER_EXIT_GENERAL_FAILURE 1
 #define STARTER_EXIT_LOST_SHADOW_CONNECTION 2
 
-BEGIN_C_DECLS
 int generate_exit_code( int input_code );
 
 int generate_exit_signal( int input_signal );
-
-END_C_DECLS
 
 #endif /*CONDOR_EXIT_UTILS*/

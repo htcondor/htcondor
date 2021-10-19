@@ -95,49 +95,49 @@ spec:
       labels:
         app: workers
     spec:
-            containers:
-             - name: execute
-               image: htcondor/execute:8.9.11-el7
-               imagePullPolicy: Always
-               resources:
-                 limits:
-                   cpu: "1"
-                   memory: "10G"
-                   ephemeral-storage: "10G"
-                 requests:
-                   cpu: "1"
-                   memory: "10G"
-                   ephemeral-storage: "10G"
-               volumeMounts:
-                 - name: htcondor-pool-password
-                   mountPath: /root/secrets
-                   readOnly: true
-                 - name: docker-shared
-                   mountPath: /shared
-               env:
-                 - name: DOCKER_HOST
-                   value: unix:///shared/docker.sock
-             - name: dind-daemon
-               image: docker:dind
-               # 64 is the condor group
-               args: ["-G", "64"]
-               resources:
-                 limits:
-                   memory: "4G"
-               securityContext:
-                 privileged: true
-               env:
-                 - name: DOCKER_HOST
-                   value: unix:///shared/docker.sock
-               volumeMounts:
-                 - name: docker-shared
-                   mountPath: /shared
-            volumes:
-             - name: docker-shared
-               emptyDir: {}
-             - name: htcondor-pool-password
-               secret:
-                 secretName: htcondor-pool-password
-                 items:
-                 - key: htcondor-pool-password
-                   path: pool_password
+      containers:
+        - name: execute
+          image: htcondor/execute:8.9.11-el7
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: "1"
+              memory: "10G"
+              ephemeral-storage: "10G"
+            requests:
+              cpu: "1"
+              memory: "10G"
+              ephemeral-storage: "10G"
+          volumeMounts:
+            - name: htcondor-pool-password
+              mountPath: /root/secrets
+              readOnly: true
+            - name: docker-shared
+              mountPath: /shared
+          env:
+            - name: DOCKER_HOST
+              value: unix:///shared/docker.sock
+        - name: dind-daemon
+          image: docker:dind
+          # 64 is the condor group
+          args: ["-G", "64"]
+          resources:
+            limits:
+              memory: "4G"
+          securityContext:
+            privileged: true
+          env:
+            - name: DOCKER_HOST
+              value: unix:///shared/docker.sock
+          volumeMounts:
+            - name: docker-shared
+              mountPath: /shared
+      volumes:
+        - name: docker-shared
+          emptyDir: {}
+        - name: htcondor-pool-password
+          secret:
+            secretName: htcondor-pool-password
+            items:
+            - key: htcondor-pool-password
+              path: pool_password

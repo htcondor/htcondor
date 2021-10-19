@@ -66,6 +66,7 @@ IMAGES_BY_CHANNEL = {
         "centos:7",
         "centos:8",
         "amazonlinux:2",
+        "scientificlinux/sl:7",
     ],
     "current": [
         "ubuntu:18.04",
@@ -74,6 +75,7 @@ IMAGES_BY_CHANNEL = {
         "centos:7",
         "centos:8",
         "amazonlinux:2",
+        "scientificlinux/sl:7",
     ],
 }
 
@@ -111,6 +113,10 @@ TESTS = {
         "postscript": "condor_version",
         "postscript-lines": [-2, -1],
     },
+    # "distribution": {
+    #     "flag": "--show-distribution",
+    #     "postscript-lines": [-1],
+    # },
 }
 
 PREFICES_BY_IMAGE = {

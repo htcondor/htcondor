@@ -337,18 +337,6 @@ get_parent_info(pid_t& parent_pid, birthday_t& parent_birthday)
 		exit(1);
 	}
 
-	if (parent_pi->birthday > own_pi->birthday) {
-		fprintf(stderr,
-		        "error: parent process's birthday ("
-		            PROCAPI_BIRTHDAY_FORMAT
-		            ") is later than our own ("
-		            PROCAPI_BIRTHDAY_FORMAT
-		            ")\n",
-		       parent_pi->birthday,
-		       own_pi->birthday);
-		exit(1);
-	}
-
 	parent_pid = parent_pi->pid;
 	parent_birthday = parent_pi->birthday;
 

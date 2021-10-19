@@ -217,7 +217,7 @@ int		(*DebugId)(char **buf,int *bufpos,int *buflen);
 
 int		LockFd = -1;
 
-int		log_keep_open = 0;
+bool	log_keep_open = false;
 
 static bool DebugRotateLog = true;
 
@@ -258,7 +258,7 @@ int InDBX = 0;
 // or it might be uptime depending on which system clock is used.
 double _condor_debug_get_time_double()
 {
-#if defined(HAVE_CLOCK_GETTIME)
+#ifdef UNIX
 	struct timespec tm;
 	clock_gettime(CLOCK_MONOTONIC, &tm);
 	return (double)tm.tv_sec + (tm.tv_nsec * 1.0e-9);
@@ -273,16 +273,6 @@ double _condor_debug_get_time_double()
 	}
 	QueryPerformanceCounter(&li);
 	return li.QuadPart * secs_per_tick;
-#elif defined(HAVE_GETTIMEOFDAY)
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return (double)tv.tv_sec + (tv.tv_usec * 1.0e-6);
-#elif defined(HAVE__FTIME)
-	struct _timeb tm;
-	_ftime(&tm);
-	return (double)tm.time + (tm.millitm * 1.0e-3);
-#else
-    return 0.0;
 #endif
 }
 
@@ -1137,15 +1127,15 @@ debug_open_lock(void)
 	if ( DebugLockIsMutex == -1 ) {
 #ifdef WIN32
 		// Use a mutex by default on Win32
-		//DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+		//DebugLockIsMutex = (int)dprintf_param_funcs->param_boolean("FILE_LOCK_VIA_MUTEX", true);
 //PRAGMA_REMIND("Figure out better way of doing this without relying on param!!!!")
 		DebugLockIsMutex = TRUE;
 #else
 		// Use file locking by default on Unix.  We should 
-		// call param_boolean_int here, but since locking via
+		// call param_boolean here, but since locking via
 		// a mutex is not yet implemented on Unix, we will force it
 		// to always be FALSE no matter what the config file says.
-		// DebugLockIsMutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", FALSE);
+		// DebugLockIsMutex = (int)param_boolean("FILE_LOCK_VIA_MUTEX", false);
 		DebugLockIsMutex = FALSE;
 #endif
 	}
@@ -2453,7 +2443,7 @@ dprintf_init_fork_child( bool cloned ) {
 	// file.
 	DebugRotateLog = false;
 	if ( !cloned ) {
-		log_keep_open = 0;
+		log_keep_open = false;
 		std::vector<DebugFileInfo>::iterator it;
 		for ( it = DebugLogs->begin(); it < DebugLogs->end(); it++ ) {
 			if ( it->outputTarget == FILE_OUT ) {
@@ -2565,7 +2555,6 @@ void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, DebugHeaderInfo & in
 }
 #endif
 
-#ifdef __cplusplus
 dprintf_on_function_exit::dprintf_on_function_exit(bool on_entry, int _flags, const char * fmt, ...)
 	: msg("\n"), flags(_flags), print_on_exit(true)
 {
@@ -2579,7 +2568,6 @@ dprintf_on_function_exit::~dprintf_on_function_exit()
 {
 	if (print_on_exit) dprintf(flags, "leaving  %s", msg.c_str());
 }
-#endif
 
 // get pointers to the two dprintf entry points, because we can't refer to their addresses any other way.
 #ifdef __cplusplus

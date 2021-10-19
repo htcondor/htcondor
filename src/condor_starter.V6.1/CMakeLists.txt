@@ -36,8 +36,6 @@ jic_local_schedd.cpp
 jic_shadow.cpp
 job_info_communicator.cpp
 local_user_log.cpp
-mpi_comrade_proc.cpp
-mpi_master_proc.cpp
 NTsenders.cpp
 os_proc.cpp
 parallel_proc.cpp

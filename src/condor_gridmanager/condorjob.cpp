@@ -1269,7 +1269,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 	ExprTree *new_expr, *old_expr;
 
 	int index;
-	const char *default_attrs_to_copy[] = {
+	const char * const default_attrs_to_copy[] = {
 		ATTR_BYTES_SENT,
 		ATTR_BYTES_RECVD,
 		ATTR_COMPLETION_DATE,
@@ -1293,6 +1293,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_NUM_MATCHES,
 		ATTR_NUM_RESTARTS,
 		ATTR_JOB_REMOTE_WALL_CLOCK,
+		ATTR_JOB_LAST_REMOTE_WALL_CLOCK,
 		ATTR_JOB_CORE_DUMPED,
 		ATTR_EXECUTABLE_SIZE,
 		ATTR_IMAGE_SIZE,

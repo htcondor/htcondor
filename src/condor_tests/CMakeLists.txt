@@ -187,10 +187,19 @@ endif ()
 		condor_pl_test (test_htcondor_dags "htcondor-dags test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_dags")
 
 		# htcondor.personal test suite
-		condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_personal")
+		if (NOT WINDOWS)
+			condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_personal")
+		endif()
 
 		# ClassAds test suite
 		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+		if (LINUX)
+			# test_classad_eval doesn't actually depend on ornithology at all,
+			# but run_test.pl doesn't know that, and always runs pytest with an
+			# ornithology-specific command-line flag
+			condor_pl_test(test_classad_eval "Test classad_eval" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems; some tests not yet reliable
 		if(LINUX)
@@ -261,8 +270,11 @@ endif ()
 	add_dependencies(classad_unit_test classad_unit_tester)
 	condor_pl_test(classad_cache_unit_test "Run classads parse test with and without classad caching" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/_test_classad_parse")
 	add_dependencies(classad_unit_test _test_classad_parse)
+	if (NOT(${SYSTEM_NAME} MATCHES "amzn2"))
+	# This test will fail until we update patchelf in the AmazonLinux Docker build image
 	condor_pl_test(unit_test_async_fread "Run MyAsyncFileReader Unit Tests" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/async_freader_tests")
 	add_dependencies(unit_test_async_fread async_freader_tests)
+	endif()
 	#need to copy the underlying exe into condor_tests directory before these tests can be run
 	#condor_pl_test(consumption_policy_unit_test "Run Consumption policy unit tests" "quick;ctest")
 	#condor_pl_test(ring_buffer_unit_test "Run ring buffer unit tests" "quick;ctest")

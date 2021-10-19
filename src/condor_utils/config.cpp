@@ -211,10 +211,6 @@ getline_implementation( T & src, int requested_bufsize, int options, int & line_
 }
 #endif
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 #ifdef GETLINE_IMPL_IS_TEMPLATE
 // changed to a template and moved out of extern "C" block.
 #else
@@ -1200,10 +1196,10 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 			}
 
 			insert_macro(name, value, macro_set, source, ctx);
-			FREE(value);
+			free(value);
 		}
 
-		// FREE(expanded_name);
+		// free(expanded_name);
 	}
 	source.meta_off = -2;
 	return 0;
@@ -1497,8 +1493,8 @@ Parse_macros(
 				}
 				insert_macro(hereName.c_str(), value, macro_set, FileSource, *pctx);
 
-				FREE(rhs); rhs = NULL;
-				FREE(value); value = NULL;
+				free(rhs); rhs = NULL;
+				free(value); value = NULL;
 				hereName.clear();
 				hereTag.clear();
 				hereList.clearAll();
@@ -1854,7 +1850,7 @@ Parse_macros(
 				hereName = name;
 				hereTag = rhs;
 				hereList.clearAll();
-				FREE(name); name = NULL;
+				free(name); name = NULL;
 				continue;
 			}
 
@@ -1890,9 +1886,9 @@ Parse_macros(
 			}
 		}
 
-		FREE( name );
+		free( name );
 		name = NULL;
-		FREE( value );
+		free( value );
 		value = NULL;
 	}
 
@@ -1905,8 +1901,8 @@ Parse_macros(
 	}
 
  cleanup:
-	if(name) { FREE( name ); }
-	if(value) { FREE( value ); }
+	if(name) { free( name ); }
+	if(value) { free( value ); }
 	return retval;
 }
 
@@ -2372,20 +2368,20 @@ int get_macro_ref_count (const char *name, MACRO_SET & set)
 
 
 // These provide external linkage to the getline_implementation function for use by non-config code
-extern "C" char * getline_trim( FILE *fp ) {
+char * getline_trim( FILE *fp ) {
 	int lineno=0;
 	const int options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	FileStarLineSource ls(fp);
 	return getline_implementation(ls, _POSIX_ARG_MAX, options, lineno);
 }
-extern "C++" char * getline_trim( FILE *fp, int & lineno, int mode ) {
+char * getline_trim( FILE *fp, int & lineno, int mode ) {
 	const int default_options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	const int simple_options = 0;
 	int options = (mode & GETLINE_TRIM_SIMPLE_CONTINUATION) ? simple_options : default_options;
 	FileStarLineSource ls(fp);
 	return getline_implementation(ls,_POSIX_ARG_MAX, options, lineno);
 }
-extern "C++" char * getline_trim( MacroStream & ms, int mode ) {
+char * getline_trim( MacroStream & ms, int mode ) {
 	const int default_options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	const int simple_options = 0;
 	int options = (mode & GETLINE_TRIM_SIMPLE_CONTINUATION) ? simple_options : default_options;
@@ -2396,12 +2392,12 @@ extern "C++" char * getline_trim( MacroStream & ms, int mode ) {
 #else
 
 // These provide external linkage to the getline_implementation function for use by non-config code
-extern "C" char * getline_trim( FILE *fp ) {
+char * getline_trim( FILE *fp ) {
 	int lineno=0;
 	const int options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	return getline_implementation(fp, _POSIX_ARG_MAX, options, lineno);
 }
-extern "C++" char * getline_trim( FILE *fp, int & lineno, int mode ) {
+char * getline_trim( FILE *fp, int & lineno, int mode ) {
 	const int default_options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	const int simple_options = 0;
 	int options = (mode & GETLINE_TRIM_SIMPLE_CONTINUATION) ? simple_options : default_options;
@@ -2539,8 +2535,6 @@ getline_implementation( FILE *fp, int requested_bufsize, int options, int & line
 	}
 }
 #endif
-
-} // end of extern "C"
 
 /* 
 ** Utility function to get an integer from a string.
@@ -3008,11 +3002,11 @@ char * expand_meta_args(const char *value, std::string & argstr)
 				tvalue = *tvalue ? "1" : "0";
 			}
 
-			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			rval = (char *)malloc( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
 			ASSERT(rval);
 
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
-			FREE( tmp );
+			free( tmp );
 			tmp = rval;
 		}
 	}
@@ -3760,11 +3754,11 @@ expand_macro(const char *value,
 			auto_free_ptr tbuf; // malloc or strdup'd buffer (if needed)
 			tvalue = evaluate_macro_func(func, special_id, name, tbuf, macro_set, ctx);
 
-			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			rval = (char *)malloc( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
 			ASSERT(rval);
 
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
-			FREE( tmp );
+			free( tmp );
 			tmp = rval;
 		}
 	}
@@ -3772,11 +3766,11 @@ expand_macro(const char *value,
 	// Now, deal with the special $(DOLLAR) macro.
 	DollarOnlyBody dollar_only; // matches only $(DOLLAR)
 	while( next_config_macro(is_config_macro, dollar_only, tmp, 0, &left, &name, &right, &func) ) {
-		rval = (char *)MALLOC( (unsigned)(strlen(left) + 1 +
+		rval = (char *)malloc( (unsigned)(strlen(left) + 1 +
 										  strlen(right) + 1));
 		ASSERT( rval != NULL );
 		(void)sprintf( rval, "%s$%s", left, right );
-		FREE( tmp );
+		free( tmp );
 		tmp = rval;
 	}
 
@@ -4866,11 +4860,11 @@ expand_self_macro(const char *value,
 			auto_free_ptr tbuf; // malloc or strdup'd buffer (if needed)
 			tvalue = evaluate_macro_func(func, func_id, body, tbuf, macro_set, ctx);
 
-			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			rval = (char *)malloc( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
 			ASSERT(rval);
 
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
-			FREE( tmp );
+			free( tmp );
 			tmp = rval;
 		}
 	}

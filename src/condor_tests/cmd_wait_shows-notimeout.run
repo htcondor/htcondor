@@ -23,21 +23,20 @@ use CondorTest;
 use Cwd;
 use CondorUtils;
 #use Time::localtime;
+use File::Temp;
 use strict;
 use warnings;
 
 my $cmd = "cmd_wait_shows.cmd";
 my $debuglevel = 2;
 
-my $pid = $$;
-runcmd("rm -rf $pid");
-runcmd("mkdir $pid");
 my $curcwd = getcwd();
+my $dir = File::Temp->newdir(CLEANUP => 0, DIR => $curcwd);
 CondorTest::debug("current directory is $curcwd\n",$debuglevel);
 
 my $socketname = "cmd_wait";
-my $resultfile = $curcwd . "/" . $pid . "/results";
-my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows-notimeout.log";
+my $resultfile = $dir->dirname . "/results";
+my $flowlog = $dir->dirname . "/cmd_wait_shows-notimeout.log";
 my $writelog = "./x_write_joblog_events.exe";
 
 CondorTest::debug("Result File is $resultfile\n",$debuglevel);
@@ -59,7 +58,7 @@ while(!(-f $flowlog)) {
 	CondorTest::debug("<<$flowlog>> should have been here by now....\n",$debuglevel);
 	$count += 1;
 	if($count > 20) {
-		runcmd("ls -lR $pid");
+		runcmd("ls -lR " . $dir->dirname);
 		print "bad\n";
 		die "Flowlog should have existed by now\n";
 	}

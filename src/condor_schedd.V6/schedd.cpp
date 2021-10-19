@@ -84,7 +84,7 @@
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
 #include "globus_utils.h"
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
 #endif
@@ -1416,7 +1416,9 @@ Scheduler::count_jobs()
 
 		// inserts/finds an entry in Owners for each job
 		// updates SubmitterCounters: Hits, JobsIdle, WeightedJobsIdle & JobsHeld
-	WalkJobQueue(count_a_job);
+		// 10/8/2021 TJ - count_a_job now also sees cluster ads so it will update Owner records
+		//    for job factories that have no materialized jobs and potentially trigger new materialization
+	WalkJobQueueWith(WJQ_WITH_CLUSTERS, count_a_job, nullptr);
 
 	if( dedicated_scheduler.hasDedicatedClusters() ) {
 			// We found some dedicated clusters to service.  Wake up
@@ -1642,7 +1644,7 @@ Scheduler::count_jobs()
 
 	daemonCore->UpdateLocalAd(cad);
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, cad);
 #endif
 
@@ -1719,7 +1721,7 @@ Scheduler::count_jobs()
 		}
 		if ( !fill_submitter_ad(pAd, SubDat, "", -1) ) continue;
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
 #endif
 
@@ -1907,7 +1909,7 @@ Scheduler::count_jobs()
 
 		pAd.Assign(ATTR_NAME, submitter_name);
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	// update plugins
 	dprintf(D_FULLDEBUG,"Sent owner (0 jobs) ad to schedd plugins\n");
 	ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
@@ -2888,6 +2890,34 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 		// removed via condor_rm -f when some function didn't expect it.
 		// So check for it here before continuing onward...
 	if ( job == NULL ) {  
+		return 0;
+	}
+
+	// cluster ads get different treatment
+	if (job->IsCluster()) {
+		// set job->ownerdata pointer if it is not yet set. we do this in case the accounting group
+		// or niceness has been queue-edited or otherwise changed. and to insure that the owner
+		// map is aware of the reference
+		SubmitterData * SubData = NULL;
+		OwnerInfo * OwnInfo = scheduler.get_submitter_and_owner(job, SubData);
+		if ( ! OwnInfo) {
+			dprintf(D_ALWAYS, "Cluster %d has no " ATTR_OWNER " attribute.  Ignoring...\n", job->jid.cluster);
+			return 0;
+		}
+		// Keep track of unique owners per submitter.
+		SubData->owners.insert(OwnInfo->name);
+
+		// clusters that have no materialized jobs need to be kickstarted to materialize.
+		// since materialization is normally triggered by job state changes.
+		// We can end up in this stituation we hit the MAX_JOBS_PER_OWNER limit
+		// So when we see a factory that has no jobs, we schedule a materialize attempt here
+		bool allow_materialize = scheduler.getAllowLateMaterialize();
+		if (allow_materialize) {
+			JobQueueCluster * clusterad = static_cast<JobQueueCluster*>(job);
+			if ( ! clusterad->HasAttachedJobs() && JobFactoryIsRunning(clusterad)) {
+				ScheduleClusterForJobMaterializeNow(clusterad->jid.cluster);
+			}
+		}
 		return 0;
 	}
 
@@ -7587,7 +7617,7 @@ Scheduler::release_claim(int, Stream *sock)
 
 		DelMrec( mrec );
 	}
-	FREE (claim_id);
+	free(claim_id);
 	dprintf (D_PROTOCOL, "## 7(*)  Completed release_claim\n");
 	return;
 }
@@ -11149,6 +11179,7 @@ update_remote_wall_clock(int cluster, int proc)
 		GetAttributeFloat(cluster, proc,
 						  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
 		float delta = (float)(time(NULL) - bday);
+		SetAttributeFloat(cluster, proc, ATTR_JOB_LAST_REMOTE_WALL_CLOCK, delta);
 		accum_time += delta;
 			// We want to update our wall clock time and delete
 			// our wall clock checkpoint inside a transaction, so
@@ -14168,7 +14199,7 @@ Scheduler::shutdown_fast()
 		// still invalidate our classads, even on a fast shutdown.
 	invalidate_ads();
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
 #endif
@@ -14201,7 +14232,7 @@ Scheduler::schedd_exit()
 		// gone.  
 	invalidate_ads();
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
 #endif

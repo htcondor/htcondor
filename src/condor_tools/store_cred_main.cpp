@@ -237,7 +237,7 @@ int main(int argc, const char *argv[]) {
 					// disable CR+LF munging of the stdin stream, we want to treat it as binary data
 					_setmode(_fileno(stdin), _O_BINARY);
 					#endif
-					credlen = _condor_full_read(fileno(stdin), cred.ptr(), max_len);
+					credlen = full_read(fileno(stdin), cred.ptr(), max_len);
 					if (((ssize_t)credlen) < 0) {
 						fprintf(stderr, "ERROR: could read from stdin: %s\n", strerror(errno));
 						goto cleanup;
