@@ -22,7 +22,7 @@
 #include "view_server.h"
 #include "subsystem_info.h"
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
 #include "CollectorPlugin.h"
 #endif
 
@@ -52,7 +52,7 @@ void main_init(int argc, char *argv[])
 	Daemon=new ViewServer();
 	Daemon->Init();
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
 	CollectorPluginManager::Load();
 
 	CollectorPluginManager::Initialize();
@@ -71,7 +71,7 @@ void main_config()
 void main_shutdown_fast()
 {
 	Daemon->Exit();
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
 	CollectorPluginManager::Shutdown();
 #endif
 	delete Daemon;
@@ -83,7 +83,7 @@ void main_shutdown_fast()
 void main_shutdown_graceful()
 {
 	Daemon->Shutdown();
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
 	CollectorPluginManager::Shutdown();
 #endif
 	delete Daemon;

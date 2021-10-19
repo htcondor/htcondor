@@ -23,8 +23,6 @@
 
 #include "condor_common.h"
 
-BEGIN_C_DECLS
-
 /**
 Take any pathname -- simple, relative, or complete -- and split it
 into a directory and a file name.   Always succeeds, but return
@@ -43,10 +41,6 @@ void canonicalize_dir_delimiters( char *path );
 
 char *alternate_exec_pathname( const char *path );
 
-END_C_DECLS
-
-// Put C++ definitions here
-#if defined(__cplusplus)
 #include <string>
 class MyString;
 
@@ -72,6 +66,5 @@ int filename_remap_find( const char *input, const char *filename, MyString &outp
 int filename_remap_find( const char *input, const char *filename, std::string &output, int cur_nesting_level = 0);
 
 void canonicalize_dir_delimiters( std::string &path );
-#endif
 
 #endif

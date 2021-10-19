@@ -23,15 +23,7 @@
 #ifndef _FDPASS_H
 #define _FDPASS_H
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 int fdpass_send(int uds_fd, int fd);
 int fdpass_recv(int uds_fd);
-
-#if defined(__cplusplus)
-}
-#endif
 
 #endif

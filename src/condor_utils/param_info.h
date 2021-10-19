@@ -114,62 +114,54 @@ typedef union param_info_storage_u {
 } param_info_storage_t;
 
 
-#ifdef  __cplusplus
-extern "C" {
-#endif
+namespace condor_params {
+	typedef struct key_value_pair key_value_pair;
+	typedef struct key_table_pair key_table_pair;
+}
+typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
+typedef const struct condor_params::key_table_pair MACRO_TABLE_PAIR;
 
-	namespace condor_params {
-		typedef struct key_value_pair key_value_pair;
-		typedef struct key_table_pair key_table_pair;
-	}
-	typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
-	typedef const struct condor_params::key_table_pair MACRO_TABLE_PAIR;
+int param_info_init(const void ** pvdefaults);
 
-	int param_info_init(const void ** pvdefaults);
+int param_default_integer(const char* param, const char * subsys, int* valid, int* is_long, int* truncated);
+int param_default_boolean(const char* param, const char * subsys, int* valid);
+double param_default_double(const char* param, const char * subsys, int* valid);
+long long param_default_long(const char* param, const char * subsys, int* valid);
+//returns pointer to internal object (or null), do not free
+const char* param_default_string(const char* param, const char * subsys);
+// param may be param or subsys.param, will return non-null only on exact name match
+const char* param_exact_default_string(const char* param);
+int param_default_get_id(const char*param, const char* * pdot);
+const char* param_default_name_by_id(int ix);
+const char* param_default_rawval_by_id(int ix);
+// sets on of imin, dmin, or lmin to point to the min value of the range and returns the type of the param
+param_info_t_type_t param_default_range_by_id(int ix, const int *&imin, const double*&dmin, const long long*&lmin);
+// this is in param_info_help.cpp to avoid pulling the help tables in unless this function is used.
+int param_default_help_by_id(int ix, const char * & descrip, const char * & tags, const char * & used_for);
+param_info_t_type_t param_default_type_by_id(int ix);
+bool param_default_ispath_by_id(int ix);
+MACRO_DEF_ITEM *param_subsys_default_lookup(const char *subsys, const char *name);
+MACRO_DEF_ITEM *param_default_lookup(const char *name);
+int param_get_subsys_table(const void* pvdefaults, const char* subsys, MACRO_DEF_ITEM** ppTable);
 
-	int param_default_integer(const char* param, const char * subsys, int* valid, int* is_long, int* truncated);
-	int param_default_boolean(const char* param, const char * subsys, int* valid);
-	double param_default_double(const char* param, const char * subsys, int* valid);
-	long long param_default_long(const char* param, const char * subsys, int* valid);
-	//returns pointer to internal object (or null), do not free
-	const char* param_default_string(const char* param, const char * subsys);
-	// param may be param or subsys.param, will return non-null only on exact name match
-	const char* param_exact_default_string(const char* param);
-	int param_default_get_id(const char*param, const char* * pdot);
-	const char* param_default_name_by_id(int ix);
-	const char* param_default_rawval_by_id(int ix);
-	// sets on of imin, dmin, or lmin to point to the min value of the range and returns the type of the param
-	param_info_t_type_t param_default_range_by_id(int ix, const int *&imin, const double*&dmin, const long long*&lmin);
-	// this is in param_info_help.cpp to avoid pulling the help tables in unless this function is used.
-	int param_default_help_by_id(int ix, const char * & descrip, const char * & tags, const char * & used_for);
-	param_info_t_type_t param_default_type_by_id(int ix);
-	bool param_default_ispath_by_id(int ix);
-	MACRO_DEF_ITEM *param_subsys_default_lookup(const char *subsys, const char *name);
-	MACRO_DEF_ITEM *param_default_lookup(const char *name);
-	int param_get_subsys_table(const void* pvdefaults, const char* subsys, MACRO_DEF_ITEM** ppTable);
-
-	MACRO_TABLE_PAIR * param_meta_table(const char * meta);
-	MACRO_DEF_ITEM * param_meta_table_lookup(MACRO_TABLE_PAIR *, const char * param);
-	const char * param_meta_table_string(MACRO_TABLE_PAIR *, const char * param);
-	int param_default_get_source_meta_id(const char * meta, const char * param);
-	MACRO_DEF_ITEM * param_meta_source_by_id(int meta_id);
+MACRO_TABLE_PAIR * param_meta_table(const char * meta);
+MACRO_DEF_ITEM * param_meta_table_lookup(MACRO_TABLE_PAIR *, const char * param);
+const char * param_meta_table_string(MACRO_TABLE_PAIR *, const char * param);
+int param_default_get_source_meta_id(const char * meta, const char * param);
+MACRO_DEF_ITEM * param_meta_source_by_id(int meta_id);
 
 
-	// Returns -1 if param is not of the specified type.
-	// Otherwise, returns 0 and sets min and max to the minimum and maximum
-	// possible values.
-	int param_range_integer(const char* param, int* min, int* max);
-	int param_range_long(const char* param, long long* min, long long* max);
-	int param_range_double(const char* param, double* min, double* max);
+// Returns -1 if param is not of the specified type.
+// Otherwise, returns 0 and sets min and max to the minimum and maximum
+// possible values.
+int param_range_integer(const char* param, int* min, int* max);
+int param_range_long(const char* param, long long* min, long long* max);
+int param_range_double(const char* param, double* min, double* max);
 	
-	// Iterate the list of parameter information.
-	// See param_info_hash_iterate below.
-	void iterate_params(int (*callPerElement)
-			(const param_info_t* /*value*/, void* /*user data*/), void* user_data);
-
-#ifdef  __cplusplus
-} // extern "C"
-#endif
+// Iterate the list of parameter information.
+// See param_info_hash_iterate below.
+void iterate_params(int (*callPerElement)
+		(const param_info_t* /*value*/, void* /*user data*/), void* user_data);
 
 ///////////////////
 // hash table stuff

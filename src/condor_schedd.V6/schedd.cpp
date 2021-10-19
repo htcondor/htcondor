@@ -84,7 +84,7 @@
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
 #include "globus_utils.h"
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
 #endif
@@ -1644,7 +1644,7 @@ Scheduler::count_jobs()
 
 	daemonCore->UpdateLocalAd(cad);
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, cad);
 #endif
 
@@ -1721,7 +1721,7 @@ Scheduler::count_jobs()
 		}
 		if ( !fill_submitter_ad(pAd, SubDat, "", -1) ) continue;
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
 #endif
 
@@ -1909,7 +1909,7 @@ Scheduler::count_jobs()
 
 		pAd.Assign(ATTR_NAME, submitter_name);
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	// update plugins
 	dprintf(D_FULLDEBUG,"Sent owner (0 jobs) ad to schedd plugins\n");
 	ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
@@ -14199,7 +14199,7 @@ Scheduler::shutdown_fast()
 		// still invalidate our classads, even on a fast shutdown.
 	invalidate_ads();
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
 #endif
@@ -14232,7 +14232,7 @@ Scheduler::schedd_exit()
 		// gone.  
 	invalidate_ads();
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
 #endif

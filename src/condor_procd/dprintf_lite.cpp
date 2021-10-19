@@ -29,7 +29,7 @@ FILE* debug_fp = NULL;
 char *debug_fn = NULL;
 int log_size = -1;
 
-extern "C" void preserve_log_file();
+void preserve_log_file();
 
 static char *formatTimeHeader(struct tm *tm) {
 	static char timebuf[80];
@@ -46,7 +46,7 @@ static char *formatTimeHeader(struct tm *tm) {
 }
 
 
-extern "C" void
+void
 dprintf(int, const char* format, ...)
 {
 	if (debug_fn && !strcmp(debug_fn, "SYSLOG")) {
@@ -77,7 +77,7 @@ int	_EXCEPT_Line;
 const char*	_EXCEPT_File;
 int	_EXCEPT_Errno;
 
-extern "C" void
+void
 _EXCEPT_(const char* format, ...)
 {
 	if (debug_fn && !strcmp(debug_fn, "SYSLOG")) {
@@ -109,7 +109,7 @@ _EXCEPT_(const char* format, ...)
 }
 
 
-extern "C" FILE *
+FILE *
 open_debug_file(const char flags[])
 {
 	FILE		*fp;
@@ -134,7 +134,7 @@ open_debug_file(const char flags[])
 	return fp;
 }
 
-extern "C" void
+void
 preserve_log_file()
 {
 	char		old[MAXPATHLEN + 4];

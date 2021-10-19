@@ -154,12 +154,6 @@
 /* Define to 1 if you have the 'dirfd' function. (USED)*/
 #cmakedefine HAVE_DIRFD 1
 
-/* Define to 1 if you have the <dlfcn.h> header file. (USED)*/
-#cmakedefine HAVE_DLFCN_H 1
-
-/* dlopen function is available  (used) */
-#cmakedefine HAVE_DLOPEN 1
-
 /* Define to 1 if you have the 'readdir64' function. (used)*/
 #cmakedefine HAVE_READDIR64 1
 
@@ -235,14 +229,8 @@
 /* Define to 1 if you have the 'getdtablesize' function. (USED)*/
 #cmakedefine HAVE_GETDTABLESIZE 1
 
-/* Define to 1 if you have the 'getpagesize' function. (USED)*/
-#cmakedefine HAVE_GETPAGESIZE 1
-
 /* Define to 1 if you have the 'gettimeofday' function. (USED)*/
 #cmakedefine HAVE_GETTIMEOFDAY 1
-
-/* Define to 1 if you have the 'clock_gettime' function. (USED)*/
-#cmakedefine HAVE_CLOCK_GETTIME 1
 
 /* Define to 1 if you have the 'clock_nanosleep' function. (USED)*/
 #cmakedefine HAVE_CLOCK_NANOSLEEP 1
@@ -258,9 +246,6 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. (USED)*/
 #cmakedefine HAVE_INTTYPES_H 1
-
-/* Define to 1 if you have the 'lchown' function. (USED)*/
-#cmakedefine HAVE_LCHOWN 1
 
 /* Define to 1 if you have the <ldap.h> header file. (USED)*/
 #cmakedefine HAVE_LDAP_H 1
@@ -346,17 +331,11 @@
 /* Define to 1 if we have the netgroup innetgr() function */
 #cmakedefine HAVE_INNETGR 1
 
-/* Define to 1 if we have the netgroup getgrnam() function */
-#cmakedefine HAVE_GETGRNAM 1
-
 /* Define to 1 if you have the 'stat64' function. (USED)*/
 #cmakedefine HAVE_STAT64 1
 
 /* Define to 1 if you have the 'statfs' function. (USED)*/
 #cmakedefine HAVE_STATFS 1
-
-/* Define to 1 if you have the <stdint.h> header file. (USED)*/
-#cmakedefine HAVE_STDINT_H 1
 
 /* Define to 1 if you have the 'strcasestr' function. (USED)*/
 #cmakedefine HAVE_STRCASESTR 1
@@ -376,17 +355,8 @@
 /* Define to 1 if struct sockaddr_in has sin_len member. (USED)*/
 #cmakedefine HAVE_STRUCT_SOCKADDR_IN_SIN_LEN 1
 
-/* Define to 1 if 'f_fstyp' is member of 'struct statfs'. (USED)*/
-#cmakedefine HAVE_STRUCT_STATFS_F_FSTYP 1
-
 /* Define to 1 if 'f_fstypename' is member of 'struct statfs'. (USED)*/
 #cmakedefine HAVE_STRUCT_STATFS_F_FSTYPENAME 1
-
-/* Define to 1 if 'f_type' is member of 'struct statfs'. (USED)*/
-#cmakedefine HAVE_STRUCT_STATFS_F_TYPE 1
-
-/* Define to 1 if you have the <sys/mount.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_MOUNT_H 1
 
 /* Define to 1 if you have the <sys/param.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_PARAM_H 1
@@ -396,9 +366,6 @@
 
 /* Define to 1 if you have the <sys/syscall.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_SYSCALL_H 1
-
-/* Define to 1 if you have the <sys/statfs.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_STATFS_H 1
 
 /* Define to 1 if you have the <sys/types.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_TYPES_H 1

@@ -57,11 +57,9 @@
 #include "jobsets.h"
 #include <param_info.h>
 
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "ScheddPlugin.h"
-#endif
 
-#if defined(HAVE_GETGRNAM)
+#ifdef UNIX
 #include <sys/types.h>
 #include <grp.h>
 #endif
@@ -2510,7 +2508,7 @@ isQueueSuperUser( const char* user )
 		return false;
 	}
 	for (const auto &superuser : super_users) {
-#if defined(HAVE_GETGRNAM)
+#ifdef UNIX
         if (superuser[0] == '%') {
             // this is a user group, so check user against the group membership
             struct group* gr = getgrnam(&superuser[1]);
@@ -3506,9 +3504,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
 	WritePerJobHistoryFile(ad, false);
 
-#if defined(HAVE_DLOPEN) || defined(WIN32)
   ScheddPluginManager::Archive(ad);
-#endif
 
   // save job ad to the log
 	bool already_in_transaction = InTransaction();
@@ -3682,9 +3678,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 				// Apend to history file
 				AppendHistory(ad);
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 				ScheddPluginManager::Archive(ad);
-#endif
 
   // save job ad to the log
 
@@ -4741,15 +4735,15 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				scheduler.WriteAttrChangeToUserLog(key.c_str(), raw_attribute.c_str(), attr_value, old_val);
 			}
 
-			int ivalue;
+			int64_t lvalue;
 			double fvalue;
 
 			if ( attr_type == classad::Value::INTEGER_VALUE ) {
-				val.IsIntegerValue( ivalue );
-				fvalue = ivalue;
+				val.IsIntegerValue( lvalue );
+				fvalue = lvalue;
 			} else {
 				val.IsRealValue( fvalue );
-				ivalue = (int) fvalue;	// truncation conversion
+				lvalue = (int64_t) fvalue;	// truncation conversion
 			}
 
 			if( strstr(round_param,"%") ) {
@@ -4773,7 +4767,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					fvalue = ceil( fvalue/roundto )*roundto;
 
 					if( attr_type == classad::Value::INTEGER_VALUE ) {
-						new_value = std::to_string((int)fvalue);
+						new_value = std::to_string((int64_t)fvalue);
 					}
 					else {
 						new_value = std::to_string(fvalue);
@@ -4790,12 +4784,12 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				for (base=1 ; exp > 0; exp--, base *= 10) { }
 
 					// round it.  note we always round UP!!  
-				ivalue = ((ivalue + base - 1) / base) * base;
+				lvalue = ((lvalue + base - 1) / base) * base;
 
-					// make it a string, courtesty MyString conversion.
-				new_value = std::to_string( ivalue );
+					// make it a string
+				new_value = std::to_string( lvalue );
 
-					// if it was a float, append ".0" to keep it a float
+					// if it was a float, append ".0" to keep it real
 				if ( attr_type == classad::Value::REAL_VALUE ) {
 					new_value += ".0";
 				}
