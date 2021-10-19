@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-18.04
     env:
       publish_path: _news
-      publish_branch: preview-release
+      publish_branch: master
       publish_repo_ssh: git@github.com:htcondor/htcondor-web.git
     steps:
 
@@ -28,7 +28,7 @@ jobs:
           git clone ${{ env.publish_repo_ssh }} ./website
           cd website
           git fetch --all
-          git checkout -b ${{ env.publish_branch }} origin/${{ env.publish_branch }}
+          git checkout -b build-release-page origin/${{ env.publish_branch }}
 
           mv ../*.md ./${{ env.publish_path }} # Move markdown created by the build_release_page action to branch
 
@@ -37,4 +37,4 @@ jobs:
           git config user.name "Automatic Release Publish"
           git config user.email ""
           git commit -am "GHA: Publish Release https://github.com/${{ github.repository }}/releases/tag/${{ github.event.release.tag_name }}"
-          git push
+          git push origin build-release-page:${{ env.publish_branch }}

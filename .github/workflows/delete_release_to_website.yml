@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-18.04
     env:
       publish_path: _news
-      publish_branch: preview-release
+      publish_branch: master
       publish_repo_ssh: git@github.com:htcondor/htcondor-web.git
     steps:
 
@@ -20,7 +20,7 @@ jobs:
       - run: |
           git clone ${{ env.publish_repo_ssh }} ./
           git fetch --all
-          git checkout -b ${{ env.publish_branch }} origin/${{ env.publish_branch }}
+          git checkout -b build-release-page origin/${{ env.publish_branch }}
 
           git rm -f ./${{ env.publish_path }}/${{ github.event.release.tag_name }}.md
 
@@ -28,4 +28,4 @@ jobs:
           git config user.name "Automatic Release Publish"
           git config user.email ""
           git commit -am "GHA: Delete Release"
-          git push
+          git push origin build-release-page:${{ env.publish_branch }}
