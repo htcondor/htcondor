@@ -30,6 +30,10 @@ New Features:
   the wall clock time of the most recent completed job execution.
   :jira:`751`
 
+- ``JOB_TRANSFORM_*`` and ``SUBMIT_REQUIREMENT_*`` operations in the *condor_schedd*
+  are now applied to late materialization job factories at submit time.
+  :jira:`756`
+
 - Added option ``--rgahp-nologin`` to **remote_gahp**, which removes the
   ``-l`` option normally given to ``bash`` when starting a remote **blahpd**
   or **condor_ft-gahp**.
@@ -38,6 +42,7 @@ New Features:
 - SINGULARITY_EXTRA_ARGUMENTS can now be a classad expression, so that the extra arguments
   can depend on the job.
   :jira:`570`
+
 
 Bugs Fixed:
 
