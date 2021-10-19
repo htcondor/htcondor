@@ -150,14 +150,14 @@ JobTransforms::initAndReconfig()
 int
 JobTransforms::transformJob(
 	ClassAd *ad,
-	const PROC_ID & jid,
+	const PROC_ID & jid, // the ad transforms will be written to. (may differ from the ad being transformed)
 	classad::References * xform_attrs,
 	CondorError * /* errorStack */ )
 {
 	int transforms_applied = 0;
 	int transforms_considered = 0;
 	StringList attrs_changed;
-	int rval, cluster, procid;
+	int rval;
 	std::string errmsg;
 	std::string applied_names;
 
@@ -166,23 +166,9 @@ JobTransforms::transformJob(
 		return 0;
 	}
 
-	if( ! ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster) ) {
-		dprintf(D_ALWAYS, "transformJob: job lacks a cluster\n");
-		return -1;
-	}
-	if (cluster != jid.cluster) {
-		dprintf(D_ALWAYS, "transformJob: destination cluster does not match source cluster\n");
-		return -1;
-	}
-
-	if( ! ad->EvaluateAttrInt(ATTR_PROC_ID, procid) ) {
-		dprintf(D_ALWAYS, "transformJob: job lacks a proc\n");
-		return -2;
-	}
-
 	// Revert variables hashtable so it doesn't grow idefinitely
 	mset.rewind_to_state(mset_ckpt, false);
-	mset.set_iterate_step(jid.proc, procid); // make ids visible to transform as temp variables
+	mset.set_iterate_step(jid.proc, jid.cluster); // make ids visible to transform as temp variables
 
 	// Enable dirty tracking of ad attributes and mark them as clean,
 	// since after the transform we need to discover which attributes changed.
