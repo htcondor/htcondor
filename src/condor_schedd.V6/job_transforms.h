@@ -30,7 +30,11 @@ class JobTransforms {
 
 	void initAndReconfig();
 
-	int transformJob(ClassAd *ad, CondorError *errorStack );
+	int transformJob(
+		ClassAd *ad,
+		const PROC_ID & jid,
+		classad::References * xform_attrs,
+		CondorError *errorStack);
 
 	bool shouldTransform() { return !transforms_list.IsEmpty(); }
 
@@ -39,7 +43,7 @@ class JobTransforms {
 	XFormHash mset;
 	MACRO_SET_CHECKPOINT_HDR * mset_ckpt;
 
-	int set_dirty_attributes(ClassAd *ad, int cluster, int proc);
+	int set_dirty_attributes(ClassAd *ad, int cluster, int proc, classad::References * attrs=nullptr);
 	void clear_transforms_list();
 };
 
