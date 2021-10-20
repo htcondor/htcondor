@@ -114,13 +114,6 @@ pygments_style = 'colorful'
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('man-pages/bosco_cluster', 'bosco_cluster', u'HTCondor Manual', [u'HTCondor Team'], 1),
-    ('man-pages/bosco_findplatform', 'bosco_findplatform', u'HTCondor Manual', [u'HTCondor Team'], 1),
-    ('man-pages/bosco_install', 'bosco_install', u'HTCondor Manual', [u'HTCondor Team'], 1),
-    ('man-pages/bosco_ssh_start', 'bosco_ssh_start', u'HTCondor Manual', [u'HTCondor Team'], 1),
-    ('man-pages/bosco_start', 'bosco_start', u'HTCondor Manual', [u'HTCondor Team'], 1),
-    ('man-pages/bosco_stop', 'bosco_stop', u'HTCondor Manual', [u'HTCondor Team'], 1),
-    ('man-pages/bosco_uninstall', 'bosco_uninstall', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/classad_eval', 'classad_eval', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/classads', 'classads', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_adstash', 'condor_adstash', u'HTCondor Manual', [u'HTCondor Team'], 1),
@@ -158,6 +151,7 @@ man_pages = [
     ('man-pages/condor_qsub', 'condor_qsub', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_reconfig', 'condor_reconfig', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_release', 'condor_release', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/condor_remote_cluster', 'condor_remote_cluster', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_reschedule', 'condor_reschedule', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_restart', 'condor_restart', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_rm', 'condor_rm', u'HTCondor Manual', [u'HTCondor Team'], 1),
@@ -168,6 +162,7 @@ man_pages = [
     ('man-pages/condor_run', 'condor_run', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_set_shutdown', 'condor_set_shutdown', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_sos', 'condor_sos', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/condor_ssh_start', 'condor_ssh_start', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_ssh_to_job', 'condor_ssh_to_job', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_stats', 'condor_stats', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_status', 'condor_status', u'HTCondor Manual', [u'HTCondor Team'], 1),

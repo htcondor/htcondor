@@ -335,6 +335,7 @@ Requires: munge-libs
 Requires: openssl-libs
 Requires: scitokens-cpp
 Requires: systemd-libs
+Requires: rsync
 
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
@@ -1221,11 +1222,13 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_qedit.1.gz
 %_mandir/man1/condor_reconfig.1.gz
 %_mandir/man1/condor_release.1.gz
+%_mandir/man1/condor_remote_cluster.1.gz
 %_mandir/man1/condor_reschedule.1.gz
 %_mandir/man1/condor_restart.1.gz
 %_mandir/man1/condor_rm.1.gz
 %_mandir/man1/condor_run.1.gz
 %_mandir/man1/condor_set_shutdown.1.gz
+%_mandir/man1/condor_ssh_start.1.gz
 %_mandir/man1/condor_sos.1.gz
 %_mandir/man1/condor_stats.1.gz
 %_mandir/man1/condor_status.1.gz
@@ -1333,6 +1336,9 @@ rm -rf %{buildroot}
 %_bindir/condor_nsenter
 %_bindir/condor_evicted_files
 %_bindir/condor_adstash
+%_bindir/condor_remote_cluster
+%_bindir/bosco_cluster
+%_bindir/condor_ssh_start
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1343,6 +1349,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_collector
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
+%_sbindir/condor_ft-gahp
 %_sbindir/condor_had
 %_sbindir/condor_master
 %_sbindir/condor_negotiator
@@ -1583,20 +1590,9 @@ rm -rf %{buildroot}
 %if 0%{?osg} || 0%{?hcc}
 %config(noreplace) %_sysconfdir/condor/campus_factory.conf
 %endif
-%_libexecdir/condor/shellselector
 %_libexecdir/condor/campus_factory
-%_sbindir/bosco_install
 %_sbindir/campus_factory
-%_sbindir/condor_ft-gahp
 %_sbindir/runfactory
-%_bindir/bosco_cluster
-%_bindir/bosco_ssh_start
-%_bindir/bosco_start
-%_bindir/bosco_stop
-%_bindir/bosco_findplatform
-%_bindir/bosco_uninstall
-%_bindir/bosco_quickstart
-%_bindir/htsub
 %_sbindir/glidein_creation
 %_datadir/condor/campus_factory
 %if 0%{?rhel} >= 8
@@ -1606,13 +1602,6 @@ rm -rf %{buildroot}
 %{python_sitelib}/GlideinWMS
 %{python_sitelib}/campus_factory
 %endif
-%_mandir/man1/bosco_cluster.1.gz
-%_mandir/man1/bosco_findplatform.1.gz
-%_mandir/man1/bosco_install.1.gz
-%_mandir/man1/bosco_ssh_start.1.gz
-%_mandir/man1/bosco_start.1.gz
-%_mandir/man1/bosco_stop.1.gz
-%_mandir/man1/bosco_uninstall.1.gz
 
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor

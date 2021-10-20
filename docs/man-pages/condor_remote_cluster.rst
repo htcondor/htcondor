@@ -1,29 +1,30 @@
-*bosco_cluster*
+*condor_remote_cluster*
 ================
 
 Manage and configure the clusters to be accessed.
-:index:`bosco_cluster<single: bosco_cluster; Bosco commands>`
-:index:`bosco_cluster command`
+:index:`condor_remote_cluster<single: condor_remote_cluster; HTCondor commands>`
+:index:`condor_remote_cluster command`
 
 Synopsis
 --------
 
-**bosco_cluster** [-**h** || --**help**]
+**condor_remote_cluster** [-**h** || --**help**]
 
-**bosco_cluster** [-**l** || --**list**] [-**a** || --**add <host>
+**condor_remote_cluster** [-**l** || --**list**] [-**a** || --**add <host>
 [schedd]**] [-**r** || --**remove <host>**] [-**s** || --**status
 <host>**] [-**t** || --**test <host>**]
 
 Description
 -----------
 
-*bosco_cluster* is part of the Bosco system for accessing high
-throughput computing resources from a local desktop. For detailed
-information, please see the Bosco web site:
-`https://osg-bosco.github.io/docs/ <https://osg-bosco.github.io/docs/>`_
+*condor_remote_cluster* is part of a feature for accessing high
+throughput computing resources from a local desktop using only an SSH
+connection.
 
-*bosco_cluster* enables management and configuration of the computing
-resources the Bosco tools access; these are called clusters.
+*condor_remote_cluster* enables management and configuration of the
+access point of the remote computing resource.
+After initial setup, jobs can be submitted to the local job queue,
+which are then forwarded to the remote system.
 
 A **<host>** is of the form ``user@fqdn.example.com``.
 

@@ -93,9 +93,9 @@ class Submit(Verb):
             if options["runtime"] is None:
                 raise TypeError("Slurm resources must specify a runtime argument")
 
-            # Verify that we have Slurm access; if not, run bosco_clutser to create it
+            # Verify that we have Slurm access; if not, run condor_remote_clutser to create it
             try:
-                bosco_cmd = "bosco_cluster --status hpclogin1.chtc.wisc.edu"
+                bosco_cmd = "condor_remote_cluster --status hpclogin1.chtc.wisc.edu"
                 logger.debug(f"Attempting to run: {bosco_cmd}")
                 subprocess.check_output(shlex.split(bosco_cmd))
             except (FileNotFoundError, subprocess.CalledProcessError):
@@ -104,7 +104,7 @@ class Submit(Verb):
 You need to install support software to access the Slurm cluster.
 Please run the following command in your terminal:
 
-bosco_cluster --add hpclogin1.chtc.wisc.edu slurm
+condor_remote_cluster --add hpclogin1.chtc.wisc.edu slurm
 """
                 ).strip()
                 raise RuntimeError(install_bosco)
