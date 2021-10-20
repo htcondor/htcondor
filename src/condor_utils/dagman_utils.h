@@ -156,7 +156,7 @@ struct SubmitDagDeepOptions
 	std::string strDagmanPath; // path to dagman binary
     bool useDagDir;
     MyString strOutfileDir;
-    MyString batchName; // optional value from -batch-name argument, will be double quoted if it exists.
+    std::string batchName; // optional value from -batch-name argument, will be double quoted if it exists.
     std::string batchId;
     bool autoRescue;
     int doRescueFrom;
@@ -166,8 +166,8 @@ struct SubmitDagDeepOptions
     bool importEnv; // explicitly import environment into .condor.sub file
 
     bool suppress_notification;
-    MyString acctGroup;
-    MyString acctGroupUser;
+    std::string acctGroup;
+    std::string acctGroupUser;
 
     SubmitDagDeepOptions() 
     { 

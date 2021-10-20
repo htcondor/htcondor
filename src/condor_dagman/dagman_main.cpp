@@ -1510,8 +1510,8 @@ Dagman::ResolveDefaultLog()
 	char *dagDir = condor_dirname( primaryDagFile.c_str() );
 	const char *dagFile = condor_basename( primaryDagFile.c_str() );
 
-	MyString owner;
-	MyString nodeName;
+	std::string owner;
+	std::string nodeName;
 	dagman._dagmanClassad->GetInfo( owner, nodeName );
 
 	_defaultNodeLog.replaceString( "@(DAG_DIR)", dagDir );

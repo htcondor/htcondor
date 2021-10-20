@@ -121,7 +121,7 @@ class Dagman {
 		// is written to the right file.  It can't be a char * because
 		// that will get goofed up when the dagFiles list is cleared.
 		// wenger 2008-02-27
-	MyString primaryDagFile;
+	std::string primaryDagFile;
 
 		// Working directory where condor_dagman is invoked from.
 		// We want to keep a record of this in case the working directory
@@ -254,7 +254,7 @@ class Dagman {
 	bool _suppressJobLogs;
 
 		// Batch-name for this workflow.
-	MyString _batchName;
+	std::string _batchName;
 
 		// Batch ID for this workflow
 	std::string _batchId;

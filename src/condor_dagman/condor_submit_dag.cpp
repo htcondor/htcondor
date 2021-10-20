@@ -587,7 +587,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					printUsage();
 				}
 				deepOpts.batchName = argv[++iArg];
-				deepOpts.batchName.trim_quotes("\""); // trim "" if any
+				trim_quotes(deepOpts.batchName, "\""); // trim "" if any
 			}
 			else if (strArg.find("-insert") != std::string::npos) // -insert_sub_file
 			{
