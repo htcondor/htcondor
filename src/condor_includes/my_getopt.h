@@ -26,10 +26,6 @@
 #ifndef MY_GETOPT_H_INCLUDED
 #define MY_GETOPT_H_INCLUDED
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* UNIX-style short-argument parser */
 extern int my_getopt(int argc, char * argv[], const char *opts);
 
@@ -61,9 +57,5 @@ extern int my_getopt_long_only(int argc, char * argv[], const char *shortopts,
 extern int _my_getopt_internal(int argc, char * argv[], const char *shortopts,
                             const struct option *longopts, int *longind,
                             int long_only);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* MY_GETOPT_H_INCLUDED */

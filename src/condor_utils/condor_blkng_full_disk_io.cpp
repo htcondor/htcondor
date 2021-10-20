@@ -25,14 +25,10 @@
 	many bytes you actually specified. However, if there is an error,
 	it is undefined how many bytes were actually read of written
 	and where the file offset is. These functions soak EINTR.
-
-	These functions are name mangled because they can be used in the
-	checkpointing and remote i/o libraries. Use the nicely named functions
-	if you are authoring code not in the above libraries.
 */
 
 ssize_t
-_condor_full_read(int fd, void *ptr, size_t nbytes)
+full_read(int fd, void *ptr, size_t nbytes)
 {
 	ssize_t nleft, nread;
 
@@ -71,7 +67,7 @@ _condor_full_read(int fd, void *ptr, size_t nbytes)
 }
 
 ssize_t
-_condor_full_write(int fd, const void *ptr, size_t nbytes)
+full_write(int fd, const void *ptr, size_t nbytes)
 {
 	ssize_t nleft, nwritten;
 

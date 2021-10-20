@@ -106,17 +106,12 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 void AddClassAdXMLFileHeader(std::string &buffer);
 void AddClassAdXMLFileFooter(std::string &buffer);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-	void clear_user_maps(StringList * keep_list);
-	int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NULL*/);
-	int add_user_mapping(const char * mapname, char * mapdata);
-	// these functions are in classad_usermap.cpp (and also libcondorapi_stubs.cpp)
-	int reconfig_user_maps();
-	bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
-#ifdef __cplusplus
-} // end extern "C"
+void clear_user_maps(StringList * keep_list);
+int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NULL*/);
+int add_user_mapping(const char * mapname, char * mapdata);
+// these functions are in classad_usermap.cpp (and also libcondorapi_stubs.cpp)
+int reconfig_user_maps();
+bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
 
 // a class to hold (and delete) a constraint ExprTree
 // it can be initialized with either a string for a tree
@@ -185,7 +180,5 @@ protected:
 
 typedef CondorClassAdFileParseHelper ClassAdFileParseType;
 ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFileParseType::ParseType def_parse_type);
-
-#endif // __cplusplus
 
 #endif

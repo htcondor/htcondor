@@ -487,6 +487,12 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     rotated, and this rotation would cause the number of backups to be
     too large, the oldest file is removed.
 
+:macro-def:`HISTORY_CONTAINS_JOB_ENVIRONMENT`
+    This parameter defaults to true.  When set to false, the job's
+    environment attribute (which can be very large) is not written to
+    the history file.  This may allow many more jobs to be kept in the
+    history before rotation.
+
 :macro-def:`HISTORY_HELPER_MAX_CONCURRENCY`
     Specifies the maximum number of concurrent remote *condor_history*
     queries allowed at a time; defaults to 50. When this maximum is
@@ -5347,11 +5353,15 @@ These macros control the *condor_schedd*.
     not case-sensitive. There is no default value.
 
 :macro-def:`JOB_TRANSFORM_<Name>`
-    A single job transform specified as a set of transform rules in new
-    classad syntax. The transform rules are applied to jobs that match
-    the transform's ``Requirements`` expression as they are submitted.
+    A single job transform specified as a set of transform rules.
+    The syntax for these rules is specified in :ref:`misc-concepts/transforms:ClassAd Transforms`
+    The transform rules are applied to jobs that match
+    the transform's ``REQUIREMENTS`` expression as they are submitted.
     ``<Name>`` corresponds to a name listed in ``JOB_TRANSFORM_NAMES``.
     Names are not case-sensitive. There is no default value.
+    For jobs submitted as late materialization factories, the factory Cluster ad is transformed
+    at submit time.  When job ads are later materialized, attribute values set by the transform
+    will override values set by the job factory for those attributes.
 
 :macro-def:`SUBMIT_REQUIREMENT_NAMES`
     A comma and/or space separated list of unique names, where each is

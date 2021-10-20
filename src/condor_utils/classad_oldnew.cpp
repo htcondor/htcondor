@@ -25,8 +25,6 @@
 #include "my_hostname.h"
 #include "string_list.h"
 
-using namespace std;
-
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
 #include "compat_classad.h"
@@ -424,7 +422,7 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 {
 	classad::ClassAdParser	parser;
 	int 					numExprs = 0; // Initialization clears Coverity warning
-	string					buffer;
+	std::string					buffer;
 	classad::ClassAd		*upd=NULL;
 	MyString				inputLine;
 
@@ -457,7 +455,7 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 		if ( strncmp( inputLine.c_str(), "ConcurrencyLimit.", 17 ) == 0 ) {
 			inputLine.setAt( 16, '_' );
 		}
-		buffer += string(inputLine.c_str()) + ";";
+		buffer += std::string(inputLine.c_str()) + ";";
 	}
 	buffer += "]";
 
