@@ -160,16 +160,14 @@ CronJobParams::Initialize( void )
 
 	// Parse the condition.
 	if(! param_condition.empty()) {
-		classad::ClassAdParser cap;
-		ExprTree * condition = NULL;
-		if(! cap.ParseExpression( param_condition, condition, true )) {
+		m_condition.set(strdup(param_condition.c_str()));
+		if(! m_condition.Expr()) {
 			dprintf( D_ALWAYS,
-				 "CronJobParams: Failed to initialize condition for job %s\n",
-				 GetName() );
+				 "CronJobParams: Failed to initialize condition '%s' for job %s\n",
+				 param_condition.c_str(), GetName() );
 			return false;
 		}
 		dprintf( D_FULLDEBUG, "CronJobParams(%s): CONDITION is (%s)\n", GetName(), param_condition.c_str() );
-		m_condition.set(condition);
 	}
 
 	return true;

@@ -169,7 +169,7 @@ StartdCronJobMgr::ShouldStartJob( const CronJob &job ) const
 	// Don't run a job if it has a condition and that condition does not
 	// evaluate to TRUE in the context of the machine ad.
 	const ConstraintHolder & condition = job.Params().GetCondition();
-	if(! condition.empty()) {
+	if(condition.Expr() != NULL) {
 
 		ClassAd context;
 		daemonCore->publish(& context);
@@ -182,11 +182,9 @@ StartdCronJobMgr::ShouldStartJob( const CronJob &job ) const
 		dPrintAd( D_FULLDEBUG, context );
 
 		classad::Value v;
-		classad::EvalState evalState;
-		evalState.SetScopes(& context);
-		if( condition.Expr()->Evaluate( evalState, v ) ) {
+		if( context.EvaluateExpr( condition.Expr(), v ) ) {
 			bool rv;
-			if( v.IsBooleanValue(rv) ) {
+			if( v.IsBooleanValueEquiv(rv) ) {
 				if(! rv) { return false; }
 			}
 		}
