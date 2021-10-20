@@ -181,7 +181,7 @@ class Status(Verb):
         try:
             job = schedd.query(
                 constraint=f"ClusterId == {job_id}",
-                projection=["JobStartDate", "JobStatus", "LastVacateTime", "ResourceType"]
+                projection=["JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "ResourceType"]
             )
         except IndexError:
             raise RuntimeError(f"No job found for ID {job_id}.")
@@ -199,8 +199,8 @@ class Status(Verb):
                 job_running_time = datetime.now() - datetime.fromtimestamp(job[0]["JobStartDate"])
                 logger.info(f"Job is running since {round(job_running_time.seconds/3600)}h{round(job_running_time.seconds/60)}m{(job_running_time.seconds%60)}s")
             elif JobStatus[job[0]['JobStatus']] == "HELD":
-                job_held_time = datetime.now() - datetime.fromtimestamp(job[0]["LastVacateTime"])
-                logger.info(f"Job is held since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s")
+                job_held_time = datetime.now() - datetime.fromtimestamp(job[0]["EnteredCurrentStatus"])
+                logger.info(f"Job is held since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s\nHold Reason: {job[0]['HoldReason']}")
             elif JobStatus[job[0]['JobStatus']] == "COMPLETED":
                 logger.info("Job has completed")
             else:
