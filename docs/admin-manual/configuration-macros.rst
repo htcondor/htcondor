@@ -487,6 +487,12 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     rotated, and this rotation would cause the number of backups to be
     too large, the oldest file is removed.
 
+:macro-def:`HISTORY_CONTAINS_JOB_ENVIRONMENT`
+    This parameter defaults to true.  When set to false, the job's
+    environment attribute (which can be very large) is not written to
+    the history file.  This may allow many more jobs to be kept in the
+    history before rotation.
+
 :macro-def:`HISTORY_HELPER_MAX_CONCURRENCY`
     Specifies the maximum number of concurrent remote *condor_history*
     queries allowed at a time; defaults to 50. When this maximum is
