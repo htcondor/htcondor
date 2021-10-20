@@ -153,9 +153,9 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 
 //---------------------------------------------------------------------------
 void
-Job::PrefixDirectory(MyString &prefix)
+Job::PrefixDirectory(std::string &prefix)
 {
-	MyString newdir;
+	std::string newdir;
 
 	// don't add an unnecessary prefix
 	if (prefix == ".") {
@@ -787,7 +787,7 @@ Job::TerminateFailure()
 } 
 
 bool
-Job::AddScript( ScriptType script_type, const char *cmd, int defer_status, time_t defer_time, MyString &whynot )
+Job::AddScript( ScriptType script_type, const char *cmd, int defer_status, time_t defer_time, std::string &whynot )
 {
 	if( !cmd || strcmp( cmd, "" ) == 0 ) {
 		whynot = "missing script name";
@@ -839,10 +839,10 @@ Job::AddScript( ScriptType script_type, const char *cmd, int defer_status, time_
 }
 
 bool
-Job::AddPreSkip( int exitCode, MyString &whynot )
+Job::AddPreSkip( int exitCode, std::string &whynot )
 {
 	if ( exitCode < PRE_SKIP_MIN || exitCode > PRE_SKIP_MAX ) {
-		whynot.formatstr( "PRE_SKIP exit code must be between %d and %d\n",
+		formatstr( whynot, "PRE_SKIP exit code must be between %d and %d\n",
 			PRE_SKIP_MIN, PRE_SKIP_MAX );
 		return false;
 	}

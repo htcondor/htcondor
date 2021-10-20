@@ -4291,7 +4291,7 @@ Dag::UpdateJobCounts( Job *node, int change )
 
 //---------------------------------------------------------------------------
 void
-Dag::SetDirectory(MyString &dir)
+Dag::SetDirectory(std::string &dir)
 {
 	m_directory = dir;
 }

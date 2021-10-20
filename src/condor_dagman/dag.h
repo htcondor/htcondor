@@ -744,7 +744,7 @@ class Dag {
 	// When parsing a splice (which is itself a dag), there must always be a
 	// DIR concept associated with it. If DIR is left off, then it is ".",
 	// otherwise it is whatever specified.
-	void SetDirectory(MyString &dir);
+	void SetDirectory(std::string &dir);
 	void SetDirectory(char *dir);
 
 	// After the nodes in the dag have been made, we take our DIR setting,
@@ -839,7 +839,7 @@ class Dag {
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
 	// defaults to ".".
- 	MyString m_directory;
+ 	std::string m_directory;
 
 	// move the nodes from the splice into the parent
 	void LiftSplice(Dag *parent, Dag *splice);

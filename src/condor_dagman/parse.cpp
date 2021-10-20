@@ -969,7 +969,7 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 	}
 
 	// check to see if this node name is also a splice name for this dag.
-	if (dag->LookupSplice(MyString(nodeName))) {
+	if (dag->LookupSplice(nodeName)) {
 		debug_printf( DEBUG_QUIET, 
 			  "ERROR: %s (line %d): "
 			  "Node name '%s' must not also be a splice name.\n",
@@ -1203,7 +1203,7 @@ parse_script(
 				filename, lineNumber ) ) ) {
 		jobName = NULL;
 
-		MyString whynot;
+		std::string whynot;
 			// This fails if the node already has a script.
 		if( !job->AddScript( scriptType, rest, defer_status, defer_time, whynot ) ) {
 			debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
@@ -2045,7 +2045,7 @@ parse_splice(
 	//
 	// Next token is the splice file name
 	// 
-	MyString spliceFile = strtok( NULL, DELIMITERS );
+	std::string spliceFile = strtok( NULL, DELIMITERS );
 	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
 	if ( spliceFile == "" ) {
 		debug_printf( DEBUG_QUIET, 
@@ -2059,11 +2059,11 @@ parse_splice(
 	// next token (if any) is "DIR"
 	//
 	TmpDir spliceDir;
-	MyString dirTok = strtok( NULL, DELIMITERS );
-	MyString directory = ".";
+	std::string dirTok = strtok( NULL, DELIMITERS );
+	std::string directory = ".";
 
-	MyString dirTokOrig = dirTok;
-	dirTok.upper_case();
+	std::string dirTokOrig = dirTok;
+	upper_case(dirTok);
 	// Note: this if is okay even if strtok() returns NULL. wenger 2014-10-07
 	if ( dirTok == "DIR" ) {
 		// parse the directory name
@@ -2087,7 +2087,7 @@ parse_splice(
 	// 
 	// anything else is garbage
 	//
-	MyString garbage = strtok( 0, DELIMITERS );
+	std::string garbage = strtok( 0, DELIMITERS );
 	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
 	if( garbage != "" ) {
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
@@ -2365,8 +2365,8 @@ parse_reject(
 		return false;
 	}
 
-	MyString location;
-	location.formatstr( "%s (line %d)", filename, lineNumber );
+	std::string location;
+	formatstr( location, "%s (line %d)", filename, lineNumber );
 	debug_printf( DEBUG_QUIET, "REJECT specification at %s "
 				"will cause this DAG to fail\n", location.c_str() );
 
@@ -2427,7 +2427,7 @@ parse_pre_skip( Dag  *dag,
 	int  lineNumber)
 {
 	const char * example = "PRE_SKIP JobName Exitcode";
-	MyString whynot;
+	std::string whynot;
 
 		//
 		// second token is the JobName
@@ -2483,7 +2483,7 @@ parse_pre_skip( Dag  *dag,
 				filename, lineNumber ) ) ) {
 		jobName = NULL;
 
-		MyString whynot;
+		std::string whynot;
 		if( !job->AddPreSkip( exitCode, whynot ) ) {
 			debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
 					  	"failed to add PRE_SKIP to node %s: %s\n",
@@ -2753,7 +2753,7 @@ parse_include(
 
 		// Note:  we save the filename here because otherwise it gets
 		// goofed up by the tokenizing in parse().
-	MyString tmpFilename( includeFile );
+	std::string tmpFilename( includeFile );
 		// Note:  false here for useDagDir argument means that the
 		// include file path is always relative to the submit directory,
 		// *not* relative to the DAG file's directory, even if
@@ -2902,8 +2902,8 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 	str++;
 
 		// Check for illegal variable name.
-	MyString tmpName( varName );
-	tmpName.lower_case();
+	std::string tmpName( varName );
+	lower_case( tmpName );
 	if ( tmpName.find( "queue" ) == 0 ) {
 		debug_printf( DEBUG_QUIET, "ERROR: Illegal variable name: %s; variable "
 					"names cannot begin with \"queue\"\n", varName.c_str() );

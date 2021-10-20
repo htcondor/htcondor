@@ -177,8 +177,8 @@ class Job {
 	static const char* JobTypeString() { return "HTCondor"; }
 
 	bool AddScript( ScriptType script_type, const char *cmd, int defer_status,
-				time_t defer_time, MyString &whynot );
-	bool AddPreSkip( int exitCode, MyString &whynot );
+				time_t defer_time, std::string &whynot );
+	bool AddPreSkip( int exitCode, std::string &whynot );
 
 	void SetType( NodeType type ) { _type = type; }
 	NodeType GetType() const { return _type; }
@@ -330,7 +330,7 @@ class Job {
 		@param prefix: the prefix to be joined to the directory using "/"
 		@return void
 	*/
-	void PrefixDirectory( MyString &prefix );
+	void PrefixDirectory( std::string &prefix );
 
 	/** Set the DAG file (if any) for this node.  (This is set for nested
 			DAGs defined with the "SUBDAG" keyword.)
