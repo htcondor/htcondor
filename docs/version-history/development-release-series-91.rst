@@ -49,6 +49,11 @@ New Features:
   can depend on the job.
   :jira:`570`
 
+- Herefile support was added to configuration templates, and the template
+  ``use FEATURE : AssignAccountingGroup`` was converted to from the old
+  transform  syntax to the the native transform syntax which requires that support.
+  :jira:`796`
+
 
 Bugs Fixed:
 

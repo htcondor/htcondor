@@ -1048,6 +1048,9 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 	source.meta_off = -1;
 
 	ConfigIfStack ifstack;
+	StringList hereList;
+	std::string hereName;
+	std::string hereTag;
 
 	StringList lines(config, "\n");
 	lines.rewind();
@@ -1061,6 +1064,28 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		++source.meta_off;
 		if( line[0] == '#' || blankline(line) )
 			continue;
+
+		// if we are processing a here @= knob, just accumulate lines until we see the closing @
+		// when we see the closing @, expand the value and stuff it into the given name.
+		if ( ! hereName.empty()) {
+			const char * name = line;
+			if (name[0] == '@' && hereTag == name+1) {
+				/* expand self references only */
+				auto_free_ptr rhs(hereList.print_to_delimed_string("\n"));
+				auto_free_ptr value(expand_self_macro(rhs, hereName.c_str(), macro_set, ctx));
+				if (value.ptr() == NULL) {
+					return -1;
+				}
+				insert_macro(hereName.c_str(), value, macro_set, source, ctx);
+
+				hereName.clear();
+				hereTag.clear();
+				hereList.clearAll();
+				continue;
+			}
+			hereList.append(line);
+			continue;
+		}
 
 		std::string errmsg;
 		if (ifstack.line_is_if(line, errmsg, macro_set, ctx)) {
@@ -1101,7 +1126,15 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		}
 		// parse to the start of the value, it's ok to not have any value
 		while (*ptr) {
-			if (ISOP(*ptr)) {
+			if (*ptr == '@') {
+				if (ptr[1] != '=') {
+					op = 0; // @ must be followed by =
+					break;
+				}
+				pop = ptr;
+				op = *ptr;
+				++ptr; // extra skip because @=
+			} else if (ISOP(*ptr)) {
 				if (ISOP(op)) {
 					op = 0; // more than one op is not allowed, so trigger a failure
 					break;
@@ -1187,6 +1220,13 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 			   alphanumeric characters and _ allowed*/
 			if ( ! is_valid_param_name(name) ) {
 				return -1111;
+			}
+
+			if (op == '@') {
+				hereName = name;
+				hereTag = rhs;
+				hereList.clearAll();
+				continue;
 			}
 
 			/* expand self references only */
