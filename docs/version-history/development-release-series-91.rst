@@ -57,6 +57,10 @@ Bugs Fixed:
   emulation with this fix.
   :jira:`761`
 
+- Fixed a bug when computing the identity of a job's X.509 credential that
+  isn't a proxy.
+  :jira:`800`
+
 Version 9.3.0
 -------------
 
