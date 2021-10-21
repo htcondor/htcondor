@@ -5393,6 +5393,7 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 
 	int triggers = JobQueue->GetTransactionTriggers();
 	bool has_spooling_hold = (triggers & catSpoolingHold) != 0;
+	bool has_job_factory = (triggers & catNewMaterialize) != 0;
 
 	// If we don't need to perform any submit_requirement checks
 	// and we don't need to perform any job transforms, then we should
@@ -5405,36 +5406,77 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 	}
 
 	for( std::list<std::string>::const_iterator it = newAdKeys.begin(); it != newAdKeys.end(); ++it ) {
-		JobQueueKey job( it->c_str() );
-		if( job.proc == -1 ) { continue; }
-		JobQueueKeyBuf cluster( job.cluster, -1 );
+		bool do_transforms = true;
+		ClassAd tmpAd, tmpAd2;
+		ClassAd * procAd = &tmpAd;
+		classad::References tmpAttrs, *xform_attrs = nullptr;
+		JobQueueKey jid( it->c_str() );
+		if (jid.proc == -1) { // is this is a cluster ad?
+			// we don't transform non-factory cluster ads (for now)
+			if (! has_job_factory)
+				continue;
+			JobQueue->AddAttrsFromTransaction( jid, tmpAd2 );
+			// build a fake temporary proc ad for transforms and requirements
+			// stuff the factory id into that ad so that it is possible
+			// to write a transform or requirement that only applies to factories
+			tmpAd.Assign(ATTR_PROC_ID, 0);
+			tmpAd.Assign("JobFactoryId", jid.cluster);
+			if (!tmpAd2.Lookup(ATTR_JOB_STATUS)) {
+				tmpAd.Assign(ATTR_JOB_STATUS, IDLE);
+				tmpAd.ChainToAd(&tmpAd2);
+			}
+			xform_attrs = &tmpAttrs; // we want to get back the set of transformed attributes
+		} else {
+			JobQueueKeyBuf clusterJid( jid.cluster, -1 );
+			JobQueue->AddAttrsFromTransaction( clusterJid, tmpAd );
+			JobQueue->AddAttrsFromTransaction( jid, tmpAd );
 
-		ClassAd procAd;
-		JobQueue->AddAttrsFromTransaction( cluster, procAd );
-		JobQueue->AddAttrsFromTransaction( job, procAd );
-
-		JobQueueJob *clusterAd = NULL;
-		if (JobQueue->Lookup(cluster, clusterAd)) {
-			// If there is a cluster ad in the job queue, chain to that before we evaluate anything.
-			// we don't need to unchain - it's a stack object and won't live longer than this function.
-			procAd.ChainToAd(clusterAd);
+			JobQueueJob *clusterAd = NULL;
+			if (JobQueue->Lookup(clusterJid, clusterAd)) {
+				// If there is a cluster ad in the job queue, chain to that before we evaluate anything.
+				// we don't need to unchain - it's a stack object and won't live longer than this function.
+				tmpAd.ChainToAd(clusterAd);
+				if (static_cast<JobQueueCluster*>(clusterAd)->factory) {
+					// late materialize jobs have already been transformed
+					do_transforms = false;
+				}
+			}
 		}
 
 		// Now that we created a procAd out of the transaction queue,
 		// apply job transforms to the procAd.
 		// If the transforms fail, bail on the transaction.
-		rval = scheduler.jobTransforms.transformJob(&procAd,errorStack);
-		if  (rval < 0) {
-			if ( errorStack ) {
-				errorStack->push( "QMGMT", 30, "Failed to apply a required job transform.\n");
+		if (do_transforms) {
+			rval = scheduler.jobTransforms.transformJob(procAd, jid, xform_attrs, errorStack);
+			if  (rval < 0) {
+				if ( errorStack ) {
+					errorStack->push( "QMGMT", 30, "Failed to apply a required job transform.\n");
+				}
+				errno = EINVAL;
+				return rval;
 			}
-			errno = EINVAL;
-			return rval;
+
+			// when transforming a cluster ad, we need to add transformed attributes into the
+			// EditedClustrAttrs attribute to prevent job materialization from changing them.
+			if (jid.proc == -1 && xform_attrs && !xform_attrs->empty()) {
+				std::string cur_list, new_list;
+				if (tmpAd2.LookupString(ATTR_EDITED_CLUSTER_ATTRS, cur_list)) {
+					add_attrs_from_string_tokens(*xform_attrs, cur_list);
+				}
+				// store the new value if it changed
+				print_attrs(new_list, false, *xform_attrs, ",");
+				if (new_list != cur_list) {
+					// wrap quotes around the attribute list
+					new_list.insert(0, "\"");
+					new_list += "\"";
+					SetAttribute(jid.cluster, jid.proc, ATTR_EDITED_CLUSTER_ATTRS, new_list.c_str(), SetAttribute_SubmitTransform);
+				}
+			}
 		}
 
 		// Now check that submit_requirements still hold on our (possibly transformed)
 		// job ad.
-		rval = scheduler.checkSubmitRequirements( & procAd, errorStack );
+		rval = scheduler.checkSubmitRequirements( procAd, errorStack );
 		if( rval < 0 ) {
 			errno = EINVAL;
 			return rval;
@@ -5447,7 +5489,7 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 			// This might be more correct to do be fore before checkSubmitRequirements,
 			// but before 8.7.2 it happened after the submit transaction had been committed
 			// so the conservative changes puts it here.
-			rewriteSpooledJobAd(&procAd, job.cluster, job.proc, false);
+			rewriteSpooledJobAd(procAd, jid.cluster, jid.proc, false);
 		}
 	}
 

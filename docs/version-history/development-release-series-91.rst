@@ -26,9 +26,19 @@ New Features:
   tool also now supports the ``-debug`` and ``-help`` flags.
   :jira:`707`
 
+- Added a config parameter HISTORY_CONTAINS_JOB_ENVIRONMENT which defaults to true.
+  When false, the job's environment attribute is not saved in the history file.  For
+  some sites, this can substantially reduce the size of the history file, and allow
+  the history to contain many more jobs before rotation.
+  :jira:`497`
+
 - Added an attribute to the job ClassAd ``LastRemoteWallClockTime``.  It holds
   the wall clock time of the most recent completed job execution.
   :jira:`751`
+
+- ``JOB_TRANSFORM_*`` and ``SUBMIT_REQUIREMENT_*`` operations in the *condor_schedd*
+  are now applied to late materialization job factories at submit time.
+  :jira:`756`
 
 - Added option ``--rgahp-nologin`` to **remote_gahp**, which removes the
   ``-l`` option normally given to ``bash`` when starting a remote **blahpd**
@@ -43,6 +53,7 @@ New Features:
   ``use FEATURE : AssignAccountingGroup`` was converted to from the old
   transform  syntax to the the native transform syntax which requires that support.
   :jira:`796`
+
 
 Bugs Fixed:
 
