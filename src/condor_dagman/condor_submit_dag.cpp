@@ -372,7 +372,7 @@ getOldSubmitFlags(SubmitDagShallowOptions &shallowOpts)
 		while ( reader.NextLogicalLine( subLine ) ) {
 			// Initialize list of tokens from subLine
 			std::list<std::string> tokens;
-			trim(subLine);
+			trim( subLine );
 			Tokenize( subLine );
 			while( const char* token = GetNextToken( " \t", true ) ) {
 				tokens.emplace_back( token );

@@ -26,7 +26,6 @@
 // #3532).
 
 #include "condor_common.h"
-#include "MyString.h"
 #include "dag.h"
 
 #include <unordered_map>
@@ -114,7 +113,7 @@ private:
 			"8.1.0").
 			@return The main part of the HTCondor version.
 		*/
-	static MyString GetVersion();
+	static std::string GetVersion();
 
 		// The time at which this DAGMan run started, in seconds since
 		// the epoch.
@@ -136,13 +135,13 @@ private:
 	int _rescueDagNum;
 
 		// The name of the metrics file we're going to write.
-	MyString _metricsFile;
+	std::string _metricsFile;
 
 		// Pegasus information.
-	MyString _workflowId;
-	MyString _rootWorkflowId;
-	MyString _plannerName;
-	MyString _plannerVersion;
+	std::string _workflowId;
+	std::string _rootWorkflowId;
+	std::string _plannerName;
+	std::string _plannerVersion;
 
 		// Node counts.
 	int _simpleNodes;

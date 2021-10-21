@@ -937,7 +937,7 @@ const char *
 Job::GetJobstateJobTag()
 {
 	if ( !_jobTag ) {
-		MyString jobTagName = MultiLogFiles::loadValueFromSubFile(
+		std::string jobTagName = MultiLogFiles::loadValueFromSubFile(
 					_cmdFile, _directory, JOB_TAG_NAME );
 		if ( jobTagName == "" ) {
 			jobTagName = PEGASUS_SITE;
@@ -949,7 +949,7 @@ Job::GetJobstateJobTag()
 			jobTagName = jobTagName.substr( begin, 1 + end - begin );
 		}
 
-		MyString tmpJobTag = MultiLogFiles::loadValueFromSubFile(
+		std::string tmpJobTag = MultiLogFiles::loadValueFromSubFile(
 					_cmdFile, _directory, jobTagName.c_str() );
 		if ( tmpJobTag == "" ) {
 			tmpJobTag = "-";

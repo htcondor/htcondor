@@ -145,24 +145,24 @@ private:
 		@param The time at which this event occurred (or NULL)
 		@param The string we want to write to the file.
 	*/
-	void Write( const time_t *eventTimeP, const MyString &info );
+	void Write( const time_t *eventTimeP, const std::string &info );
 
 	/** Convert a CondorID to a string.
 		@param The cluster part of the CondorID.
 		@param The proc part of the CondorID.
-		@param A MyString to receive the resulting string.
+		@param A string to receive the resulting string.
 	*/
-	void CondorID2Str( int cluster, int proc, MyString &idStr );
+	void CondorID2Str( int cluster, int proc, std::string &idStr );
 
 	/** Parse (partially) a line of the jobstate.log file.
 		@param The line (altered by this method)
 		@param The time_t reference to receive the timestamp of the event.
-		@param A MyString to receive the node name.
+		@param A string to receive the node name.
 		@param An int reference to receive the sequence number.
 		@return true if parsing succeeded, false otherwise.
 	*/
-	static bool ParseLine( MyString &line, time_t &timestamp,
-				MyString &nodeName, int &seqNum );
+	static bool ParseLine( std::string &line, time_t &timestamp,
+				std::string &nodeName, int &seqNum );
 
 		// The jobstate.log file we're writing to.
 	char *_jobstateLogFile;
@@ -177,7 +177,7 @@ private:
 		// A list of the line(s) in the jobstate.log file that have the
 		// timestamp _lastTimestampWritten (used to avoid re-writing
 		// events).
-	std::set<MyString> _lastTimestampLines;
+	std::set<std::string> _lastTimestampLines;
 };
 
 #endif	// _JOBSTATE_LOG_H

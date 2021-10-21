@@ -694,7 +694,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			// from another job proc in this job cluster
 		if ( job->GetStatus() != Job::STATUS_ERROR ) {
 			job->TerminateFailure();
-			job->error_text.formatstr (
+			formatstr ( job->error_text,
 				  "HTCondor reported %s event for job proc (%d.%d.%d)",
 				  event->eventName(),
 				  event->cluster, event->proc, event->subproc );
@@ -752,7 +752,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 				// if we haven't already gotten an error on this node.
 			if ( job->GetStatus() != Job::STATUS_ERROR ) {
 				if( termEvent->normal ) {
-					job->error_text.formatstr(
+					formatstr( job->error_text,
 							"Job proc (%d.%d.%d) failed with status %d",
 							termEvent->cluster, termEvent->proc,
 							termEvent->subproc, termEvent->returnValue );
@@ -762,7 +762,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 						job->_scriptPost->_retValJob = job->retval;
 					}
 				} else {
-					job->error_text.formatstr(
+					formatstr( job->error_text,
 							"Job proc (%d.%d.%d) failed with signal %d",
 							termEvent->cluster, termEvent->proc,
 							termEvent->subproc, termEvent->signalNumber );
@@ -889,7 +889,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 				// no more retries -- job failed
 			if( job->GetRetryMax() > 0 ) {
 					// add # of retries to error_text
-				job->error_text.formatstr_cat( " (after %d node retries)",
+				formatstr_cat( job->error_text, " (after %d node retries)",
 						job->GetRetries() );
 			}
 			if ( job->_queuedNodeJobProcs == 0 ) {
@@ -983,7 +983,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				job->retval = (0 - termEvent->signalNumber);
 			}
 
-			job->error_text.formatstr(
+			formatstr( job->error_text,
 						"POST script %s", errStr.c_str() );
 
 				// Log post script success or failure if necessary.
@@ -1003,30 +1003,30 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				}
 
 				if( mainJobRetval > 0 ) {
-					job->error_text.formatstr( "Job exited with status %d and ",
+					formatstr( job->error_text, "Job exited with status %d and ",
 								mainJobRetval );
 				}
 				else if( mainJobRetval < 0  &&
 							mainJobRetval >= -MAX_SIGNAL ) {
-					job->error_text.formatstr( "Job died on signal %d and ",
+					formatstr( job->error_text, "Job died on signal %d and ",
 								0 - mainJobRetval );
 				}
 				else {
-					job->error_text.formatstr( "Job failed due to DAGMAN error %d and ",
+					formatstr( job->error_text, "Job failed due to DAGMAN error %d and ",
 								mainJobRetval );
 				}
 
 				if ( termEvent->normal ) {
-					job->error_text.formatstr_cat( "POST Script failed with status %d",
+					formatstr_cat( job->error_text, "POST Script failed with status %d",
 								termEvent->returnValue );
 				} else {
-					job->error_text.formatstr_cat( "POST Script died on signal %d",
+					formatstr_cat( job->error_text, "POST Script died on signal %d",
 								termEvent->signalNumber );
 				}
 
 				if ( job->GetRetryMax() > 0 ) {
 						// add # of retries to error_text
-					job->error_text.formatstr_cat( " (after %d node retries)",
+					formatstr_cat( job->error_text, " (after %d node retries)",
 							job->GetRetries() );
 				}
 			}
@@ -1827,7 +1827,7 @@ Dag::PreScriptReaper( Job *job, int status )
 		debug_printf( DEBUG_QUIET, "PRE Script of node %s died on %s\n",
 					  job->GetJobName(),
 					  daemonCore->GetExceptionString(status) );
-		job->error_text.formatstr(
+		formatstr( job->error_text,
 				"PRE Script died on %s",
 				daemonCore->GetExceptionString(status) );
 		job->retval = ( 0 - WTERMSIG(status ) );
@@ -1837,7 +1837,7 @@ Dag::PreScriptReaper( Job *job, int status )
 		debug_printf( DEBUG_QUIET,
 					  "PRE Script of Job %s failed with status %d\n",
 					  job->GetJobName(), WEXITSTATUS(status) );
-		job->error_text.formatstr(
+		formatstr( job->error_text,
 				"PRE Script failed with status %d",
 				WEXITSTATUS(status) );
 		job->retval = WEXITSTATUS( status );
@@ -1904,7 +1904,7 @@ Dag::PreScriptReaper( Job *job, int status )
 			}
 			if ( job->GetRetryMax() > 0 ) {
 					// add # of retries to error_text
-				job->error_text.formatstr_cat( " (after %d node retries)",
+				formatstr_cat( job->error_text, " (after %d node retries)",
 						job->GetRetries() );
 			}
 		}
@@ -4222,7 +4222,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 		debug_printf( DEBUG_QUIET, "Job submit failed after %d tr%s.\n",
 				node->_submitTries, node->_submitTries == 1 ? "y" : "ies" );
 
-		node->error_text.formatstr( "Job submit failed" );
+		formatstr( node->error_text, "Job submit failed" );
 
 			// NOTE: this failure short-circuits the "retry" feature
 			// because it's already exhausted a number of retries

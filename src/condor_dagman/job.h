@@ -24,7 +24,6 @@
 #include "condor_common.h"      /* for <stdio.h> */
 #include "condor_constants.h"   /* from condor_includes/ directory */
 #include "simplelist.h"         /* from condor_utils/ directory */
-#include "MyString.h"
 #include "condor_id.h"
 #include "throttle_by_category.h"
 #include "read_multiple_logs.h"
@@ -136,7 +135,7 @@ class Job {
 	static const char * status_t_names[];
 
 	// explanation text for errors
-	MyString error_text;
+	std::string error_text;
 
 	static int NOOP_NODE_PROCID;
   

@@ -22,7 +22,6 @@
 
 #include "debug.h"
 #include "condor_daemon_core.h"
-#include "MyString.h"
 #include "dagman_main.h"
 #include "../condor_utils/dagman_utils.h"
 
@@ -34,7 +33,7 @@ const char *        debug_progname = NULL;
 // and NFS server.
 static bool cache_enabled = false;		// do I honor start/stop requests?
 static bool cache_is_caching = false;	// have I started caching or stopped it?
-static MyString cache;
+static std::string cache;
 
 // NOTE: if this isn't changed via a config file or something, then all lines
 // are immediately written as they enter the cache.
@@ -173,7 +172,7 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 {
 	time_t clock_now;
 
-	MyString tstamp, fds, line, pid, cid;
+	std::string tstamp, fds, line, pid, cid;
 	pid_t my_pid;
 
 #ifdef D_CATEGORY_MASK
@@ -194,7 +193,7 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 				// access to the dprintf FP.  For now we're just going
 				// to skip figuring out the FD *while caching*.
 				// wenger 2011-05-18
-			fds.formatstr("(fd:?) " );
+			formatstr(fds, "(fd:?) " );
 		}
 
 		if (HdrFlags & D_PID) {
@@ -203,7 +202,7 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 #else
 			my_pid = (int) getpid();
 #endif
-			pid.formatstr("(pid:%d) ", my_pid );
+			formatstr(pid, "(pid:%d) ", my_pid );
 
 		}
 
@@ -213,7 +212,7 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 	}
 
 	// figure out the line the user needs to emit.
-	line.vformatstr(fmt, args);
+	vformatstr(line, fmt, args);
 
 	// build the cached line and add it to the cache
 	cache += (tstamp + fds + line + cid);
@@ -271,31 +270,6 @@ bool check_warning_strictness( strict_level_t strictness, bool quit_if_error )
 	return false;
 }
 
-/*--------------------------------------------------------------------------*/
-
-void
-time_to_str( time_t timestamp, MyString &tstr )
-{
-#ifdef D_CATEGORY_MASK
-	bool UseTimestamps = (DebugHeaderOptions & D_TIMESTAMP) != 0;
-#else
-	int UseTimestamps = DebugUseTimestamps;
-#endif
-
-	// HACK
-	// Note: This nasty bit of code is copied in spirit from dprintf.c
-	// It needs abstracting out a little bit from there into its own
-	// function, but this is a quick hack for LIGO. I'll come back to it
-	// and do it better later when I have time.
-	if ( UseTimestamps ) {
-		tstr.formatstr( "(%d) ", (int)timestamp );
-	} else {
-		struct tm *tm = NULL;
-		tm = localtime( &timestamp );
-		time_to_str( tm, tstr );
-	}
-}
-
 void
 time_to_str( time_t timestamp, std::string &tstr )
 {
@@ -317,15 +291,6 @@ time_to_str( time_t timestamp, std::string &tstr )
 		tm = localtime( &timestamp );
 		time_to_str( tm, tstr );
 	}
-}
-
-/*--------------------------------------------------------------------------*/
-void
-time_to_str( const struct tm *tm, MyString &tstr )
-{
-	tstr.formatstr( "%02d/%02d/%02d %02d:%02d:%02d ",
-		tm->tm_mon + 1, tm->tm_mday, tm->tm_year - 100,
-		tm->tm_hour, tm->tm_min, tm->tm_sec );
 }
 
 /*--------------------------------------------------------------------------*/
