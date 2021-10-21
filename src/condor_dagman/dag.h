@@ -31,7 +31,6 @@
 #include "condor_id.h"
 #include "prioritysimplelist.h"
 #include "throttle_by_category.h"
-#include "MyString.h"
 #include "../condor_utils/dagman_utils.h"
 #include "jobstate_log.h"
 #include "dagman_classad.h"
@@ -45,7 +44,6 @@ enum SpliceLayer {
 };
 
 class Dagman;
-class MyString;
 class DagmanMetrics;
 class CondorID;
 
@@ -61,7 +59,7 @@ class OwnedMaterials
 		// this structure owns the containers passed to it, but not the memory 
 		// contained in the containers...
 		OwnedMaterials(std::vector<Job*> *a, ThrottleByCategory *tr,
-				bool reject, MyString firstRejectLoc ) :
+				bool reject, std::string firstRejectLoc ) :
 				nodes (a), throttles (tr), _reject(reject),
 				_firstRejectLoc(firstRejectLoc) {};
 		~OwnedMaterials() 
@@ -72,7 +70,7 @@ class OwnedMaterials
 	std::vector<Job*> *nodes;
 	ThrottleByCategory *throttles;
 	bool _reject;
-	MyString _firstRejectLoc;
+	std::string _firstRejectLoc;
 };
 
 //------------------------------------------------------------------------
@@ -326,7 +324,7 @@ class Dag {
     bool NodeExists( const char *nodeName ) const;
 
 	/** Prefix all of the nodenames with a specified label.
-		@param prefix a MyString of the prefix for all nodes.
+		@param prefix a string of the prefix for all nodes.
 	*/
 	void PrefixAllNodeNames(const std::string &prefix);
 
@@ -589,7 +587,7 @@ class Dag {
 			directive.
 			@param location: the file and line # of the REJECT keyword
 		*/
-	void SetReject( const MyString &location );
+	void SetReject( const std::string &location );
 
 		/** Get the reject setting of this DAG (true means we shouldn't
 			actually run the DAG).
@@ -597,7 +595,7 @@ class Dag {
 				directive we encountered in parsing the DAG (including
 				splices)
 		*/
-	bool GetReject( MyString &firstLocation );
+	bool GetReject( std::string &firstLocation );
 
 	void SetJobstateLogFileName( const char *logFileName );
 
@@ -707,10 +705,10 @@ class Dag {
 	}
 
 	// return same thing as std::map::insert()
-	bool InsertSplice(MyString spliceName, Dag *splice_dag);
+	bool InsertSplice(std::string spliceName, Dag *splice_dag);
 
 	// return same thing as std::map::find()
-	Dag* LookupSplice(MyString name);
+	Dag* LookupSplice(std::string name);
 
 	// return an array of job pointers to all of the nodes with no
 	// parents in this dag.
@@ -738,7 +736,7 @@ class Dag {
 	OwnedMaterials* RelinquishNodeOwnership(void);
 
 	// Take an array from RelinquishNodeOwnership) and store it in my self.
-	void AssumeOwnershipofNodes(const MyString &spliceName,
+	void AssumeOwnershipofNodes(const std::string &spliceName,
 				OwnedMaterials *om);
 
 	// When parsing a splice (which is itself a dag), there must always be a
@@ -853,7 +851,7 @@ class Dag {
 
   	// A hash table with key of a splice name and value of the dag parse 
 	// associated with the splice.
-	std::map<MyString, Dag*> _splices;
+	std::map<std::string, Dag*> _splices;
 
 	// A reference to something the dagman passes into the constructor
 	std::list<std::string>& _dagFiles;
@@ -1069,7 +1067,7 @@ private:
 
 	std::list<Job*> _service_nodes{};
 
-	std::map<MyString, Job *>		_nodeNameHash;
+	std::map<std::string, Job *>	_nodeNameHash;
 
 	std::map<JobID_t, Job *>		_nodeIDHash;
 
@@ -1160,7 +1158,7 @@ private:
 	void IncludeExtraDotCommands(FILE *dot_file);
 	void DumpDotFileNodes(FILE *temp_dot_file);
 	void DumpDotFileArcs(FILE *temp_dot_file);
-	void ChooseDotFileName(MyString &dot_file_name);
+	void ChooseDotFileName(std::string &dot_file_name);
 
 		// Name of node status file.
 	char *_statusFileName;
@@ -1260,7 +1258,7 @@ private:
 		// The splice "scope" for this DAG (e.g., "A+B+", or "root").
 		// This is currently just used for diagnostic messages
 		// (wenger 2010-06-07)
-	MyString _spliceScope;
+	std::string _spliceScope;
 
 		// The maximum fake subprocID we see in recovery mode (needed to
 		// initialize the ID for subsequent fake events so IDs don't
@@ -1278,7 +1276,7 @@ private:
 
 		// The file and line number where we first found a REJECT
 		// specification, if any.
-	MyString _firstRejectLoc;
+	std::string _firstRejectLoc;
 
 		// The object for logging to the jobstate.log file (for Pegasus).
 	JobstateLog _jobstateLog;
@@ -1304,7 +1302,7 @@ private:
 	bool _dagIsAborted;
 
 		// The name of the halt file (we halt the DAG if that file exists).
-	MyString _haltFile;
+	std::string _haltFile;
 	
 		// Object to deal with reporting DAGMan metrics (to Pegasus).
 	DagmanMetrics *_metrics;

@@ -1357,7 +1357,7 @@ void main_init (int argc, char ** const argv) {
 	debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
 				  dagman.dag->NumNodes( true ) );
 
-	MyString firstLocation;
+	std::string firstLocation;
 	if ( dagman.dag->GetReject( firstLocation ) ) {
 		debug_printf( DEBUG_QUIET, "Exiting because of REJECT "
 					"specification in %s.  This most likely means "

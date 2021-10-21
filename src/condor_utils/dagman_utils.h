@@ -218,7 +218,7 @@ public:
     bool ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
         SubmitDagShallowOptions &shallowOpts);
 
-    MyString RescueDagName(const char *primaryDagFile,
+    std::string RescueDagName(const char *primaryDagFile,
         bool multiDags, int rescueDagNum);
 
     void RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags, 

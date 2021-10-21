@@ -789,7 +789,7 @@ DagmanUtils::FindLastRescueDagNum( const char *primaryDagFile, bool multiDags,
 	@param rescueDagNum The rescue DAG number
 	@return The full name of the rescue DAG
 */
-MyString
+std::string
 DagmanUtils::RescueDagName(const char *primaryDagFile, bool multiDags,
 			int rescueDagNum)
 {

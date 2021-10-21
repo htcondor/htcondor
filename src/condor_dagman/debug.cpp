@@ -296,11 +296,43 @@ time_to_str( time_t timestamp, MyString &tstr )
 	}
 }
 
+void
+time_to_str( time_t timestamp, std::string &tstr )
+{
+#ifdef D_CATEGORY_MASK
+	bool UseTimestamps = (DebugHeaderOptions & D_TIMESTAMP) != 0;
+#else
+	int UseTimestamps = DebugUseTimestamps;
+#endif
+
+	// HACK
+	// Note: This nasty bit of code is copied in spirit from dprintf.c
+	// It needs abstracting out a little bit from there into its own
+	// function, but this is a quick hack for LIGO. I'll come back to it
+	// and do it better later when I have time.
+	if ( UseTimestamps ) {
+		formatstr( tstr, "(%d) ", (int)timestamp );
+	} else {
+		struct tm *tm = NULL;
+		tm = localtime( &timestamp );
+		time_to_str( tm, tstr );
+	}
+}
+
 /*--------------------------------------------------------------------------*/
 void
 time_to_str( const struct tm *tm, MyString &tstr )
 {
 	tstr.formatstr( "%02d/%02d/%02d %02d:%02d:%02d ",
+		tm->tm_mon + 1, tm->tm_mday, tm->tm_year - 100,
+		tm->tm_hour, tm->tm_min, tm->tm_sec );
+}
+
+/*--------------------------------------------------------------------------*/
+void
+time_to_str( const struct tm *tm, std::string &tstr )
+{
+	formatstr( tstr, "%02d/%02d/%02d %02d:%02d:%02d ",
 		tm->tm_mon + 1, tm->tm_mday, tm->tm_year - 100,
 		tm->tm_hour, tm->tm_min, tm->tm_sec );
 }

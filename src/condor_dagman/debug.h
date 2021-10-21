@@ -175,16 +175,18 @@ bool check_warning_strictness( strict_level_t strictness,
 /** Convert a timestamp into a string, formatted in the same way
     as HTCondor dprintf strings.
 	@param timestamp:  The timestamp to convert.
-	@param tstr:  A MyString to hold the resulting string.
+	@param tstr:  The resulting string.
 */
 void time_to_str( time_t timestamp, MyString &tstr );
+void time_to_str( time_t timestamp, std::string &tstr );
 
 /** Convert a timestamp into a string, formatted in the same way
     as HTCondor dprintf strings.
 	@param tm:  The tm to convert.
-	@param tstr:  A MyString to hold the resulting string.
+	@param tstr:  The resulting string.
 */
 void time_to_str( const struct tm *tm, MyString &tstr );
+void time_to_str( const struct tm *tm, std::string &tstr );
 
 #endif /* ifndef DAGMAN_DEBUG_H */
 
