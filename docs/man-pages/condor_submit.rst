@@ -1957,40 +1957,7 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
  gce_preemptible = <True | False>
     For grid type **gce** jobs, specifies whether the virtual machine
     instance should be preemptible. The default is for the instance to
-    not be preemptible. :index:`globus_rematch<single: globus_rematch; submit commands>`
- globus_rematch = <ClassAd Boolean Expression>
-    This expression is evaluated by the *condor_gridmanager* whenever:
-
-    #. the
-       **globus_resubmit** :index:`globus_resubmit<single: globus_resubmit; submit commands>`
-       expression evaluates to ``True``
-    #. the *condor_gridmanager* decides it needs to retry a submission
-       (as when a previous submission failed to commit)
-
-    If
-    **globus_rematch** :index:`globus_rematch<single: globus_rematch; submit commands>`
-    evaluates to ``True``, then before the job is submitted again to
-    globus, the *condor_gridmanager* will request that the
-    *condor_schedd* daemon renegotiate with the matchmaker (the
-    *condor_negotiator*). The result is this job will be matched again.
-    :index:`globus_resubmit<single: globus_resubmit; submit commands>`
-
- globus_resubmit = <ClassAd Boolean Expression>
-    The expression is evaluated by the *condor_gridmanager* each time
-    the *condor_gridmanager* gets a job ad to manage. Therefore, the
-    expression is evaluated:
-
-    #. when a grid universe job is first submitted to HTCondor-G
-    #. when a grid universe job is released from the hold state
-    #. when HTCondor-G is restarted (specifically, whenever the
-       *condor_gridmanager* is restarted)
-
-    If the expression evaluates to ``True``, then any previous
-    submission to the grid universe will be forgotten and this job will
-    be submitted again as a fresh submission to the grid universe. This
-    may be useful if there is a desire to give up on a previous
-    submission and try again. Note that this may result in the same job
-    running more than once. Do not treat this operation lightly.
+    not be preemptible.
 
     :index:`grid_resource<single: grid_resource; submit commands>`
  grid_resource = <grid-type-string> <grid-specific-parameter-list>

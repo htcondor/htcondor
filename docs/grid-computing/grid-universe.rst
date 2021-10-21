@@ -86,7 +86,7 @@ trusts the identity claimed by a host or IP address.
     SEC_DEFAULT_NEGOTIATION = OPTIONAL
     SEC_DEFAULT_AUTHENTICATION_METHODS = CLAIMTOBE
 
-Other working authentication methods are GSI, SSL, KERBEROS, and FS.
+Other working authentication methods are SSL, KERBEROS, and FS.
 
 HTCondor-C Job Submission
 '''''''''''''''''''''''''
@@ -144,10 +144,8 @@ This must appear in the HTCondor-C job submit description file as
 
     +remote_WhenToTransferOutput = "ON_EXIT"
 
-For convenience, the specific entries of **universe**,
-**remote_grid_resource**,
-**globus_rsl** :index:`globus_rsl<single: globus_rsl; submit commands>`, and
-**globus_xml** :index:`globus_xml<single: globus_xml; submit commands>` may be
+For convenience, the specific entries of **universe** and
+**remote_grid_resource** may be
 specified as **remote_** commands without the leading '+'. Instead of
 
 .. code-block:: condor-submit
@@ -776,8 +774,6 @@ The EC2 GAHP supplies no default value, if it does not find a CA file.
 The EC2 GAHP will set the CA directory given whichever of these
 variables it finds first, checking in the following order:
 
-#. The HTCondor configuration variable ``GSI_DAEMON_TRUSTED_CA_DIR``
-   :index:`GSI_DAEMON_TRUSTED_CA_DIR`.
 #. The environment variable ``X509_CERT_DIR``, set when the
    *condor_master* starts up.
 #. The HTCondor configuration variable ``GAHP_SSL_CADIR``
@@ -1373,20 +1369,13 @@ allows you to specify a numerical ranking for different matches. When
 combined with **match_list_length**, you can prefer to avoid sites
 that you have already run at.
 
-In addition, *condor_submit* has two options to help control grid
-universe job resubmissions and rematching. See the definitions of the
-submit description file commands **globus_resubmit** and
-**globus_rematch** on the :doc:`/man-pages/condor_submit` manual page. These
-options are independent of **match_list_length**.
-
 There are some new attributes that will be added to the Job ClassAd, and
-may be useful to you when you write your rank, requirements,
-globus_resubmit or globus_rematch option. Please refer to the 
+may be useful to you when you write your rank of requirements option.
+Please refer to the 
 :doc:`/classad-attributes/job-classad-attributes` section to see a
 list containing the following attributes:
 
 -  NumJobMatches
--  NumGlobusSubmits
 -  NumSystemHolds
 -  HoldReason
 -  ReleaseReason

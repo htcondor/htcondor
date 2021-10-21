@@ -246,11 +246,6 @@ The available output data are as follows:
         The job has been suspended. Resources which were allocated for
         this job may have been released due to a scheduler-specific
         reason.
-     UNSUBMITTED
-        The job has not been submitted to the scheduler yet, pending the
-        reception of the
-        GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST signal from
-        a client.
      STAGE_IN
         The job manager is staging in files, in order to run the job.
      STAGE_OUT
@@ -260,7 +255,7 @@ The available output data are as follows:
 
  GRID->MANAGER
     (**-grid** only) A guess at what remote batch system is running the
-    job. It is a guess, because HTCondor looks at the Globus jobmanager
+    job. It is a guess, because HTCondor looks at the jobmanager
     contact string to attempt identification. If the value is fork, the
     job is running on the remote host without a jobmanager. Values may
     also be condor, lsf, or pbs.

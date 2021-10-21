@@ -210,7 +210,7 @@ These configuration settings belong in the local configuration file of
 the machine where jobs are submitted. Check that the machine can
 successfully submit grid jobs before setting up and using the Job
 Router. Typically, the single required element that needs to be added
-for GSI authentication is an X.509 trusted certification authority
+for SSL authentication is an X.509 trusted certification authority
 directory, in a place recognized by HTCondor (for example,
 ``/etc/grid-security/certificates``). The VDT
 (`http://vdt.cs.wisc.edu <http://vdt.cs.wisc.edu>`_) project provides a
