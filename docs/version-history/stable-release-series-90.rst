@@ -32,6 +32,13 @@ Bugs Fixed:
   submitted with the ``max_idle`` or ``max_materialize`` submit keyword.
   :jira:`755`
 
+- Fixed a bug in how the **condor_schedd** selects a new job to run on a
+  dynamic slot after the previous job completes.
+  The **condor_schedd** could choose a job that requested more disk space
+  than the slot provided, resulting in the **condor_startd** refusing to
+  start the job.
+  :jira:`798`
+
 Version 9.0.7
 -------------
 
