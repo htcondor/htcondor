@@ -2476,7 +2476,7 @@ int SubmitHash::SetGSICredentials()
 		std::string full_proxy_file = full_path( proxy_file );
 		free(proxy_file);
 		proxy_file = NULL;
-#if defined(HAVE_EXT_GLOBUS)
+#if !defined(WIN32)
 // this code should get torn out at some point (8.7.0) since the SchedD now
 // manages these attributes securely and the values provided by submit should
 // not be trusted.  in the meantime, though, we try to provide some cross
