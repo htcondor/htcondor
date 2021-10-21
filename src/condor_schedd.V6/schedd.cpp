@@ -284,7 +284,7 @@ void AuditLogJobProxy( const Sock &sock, PROC_ID job_id, const char *proxy_file 
 			 job_id.cluster, job_id.proc );
 	dprintf( D_AUDIT, sock, "proxy path: %s\n", proxy_file );
 
-#if defined(HAVE_EXT_GLOBUS)
+#if !defined(WIN32)
 	X509Credential* proxy_handle = x509_proxy_read( proxy_file );
 
 	if ( proxy_handle == NULL ) {
