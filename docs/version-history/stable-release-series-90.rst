@@ -47,6 +47,10 @@ Bugs Fixed:
   *condor_shadow* and *condor_starter* were disconnected.
   :jira:`752`
 
+- Ensure the HTCondor uses version 0.6.2 or later SciTokens library so that
+  WLCG tokens can be read.
+  :jira:`801`
+
 Version 9.0.6
 -------------
 
