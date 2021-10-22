@@ -13,6 +13,17 @@ Release Notes:
 
 - HTCondor version 9.3.0 not yet released.
 
+- As we transition from identity based authentication and authorization
+  (X.509 certificates) to capability based authorization (bearer tokens),
+  we have removed Globus GSI support from this release.
+  :jira:`697`
+
+- Submission to ARC CE via the gridftp interface (grid universe type
+  **nordugrid**) is no longer supported.
+  Submission to ARC CE's REST interface can be done using the **arc**
+  type in the grid universe.
+  :jira:`697`
+
 New Features:
 
 - Revamped machine ad attribute ``OpSys*`` and configuration parameter

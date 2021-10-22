@@ -30,7 +30,7 @@ file adds the line
 
 which configures user-based security and requires encryption, authentication,
 and integrity.  If you have already configured another daemon authentication
-method (e.g. pool ``PASSWORD``, ``SSL``, ``GSI``, ``KERBEROS``, etc) at some
+method (e.g. pool ``PASSWORD``, ``SSL``, ``KERBEROS``, etc) at some
 point in the past, you can comment out the above line in the file
 ``00-htcondor-9.0.config`` and skip to `Step 2`_ below.
 
