@@ -336,7 +336,7 @@ Requires: libcom_err
 Requires: libtool-ltdl
 Requires: munge-libs
 Requires: openssl-libs
-Requires: scitokens-cpp
+Requires: scitokens-cpp >= 0.6.2
 Requires: systemd-libs
 
 #Provides: user(condor) = 43
