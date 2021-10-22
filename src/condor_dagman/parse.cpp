@@ -2087,12 +2087,12 @@ parse_splice(
 	// 
 	// anything else is garbage
 	//
-	std::string garbage = strtok( 0, DELIMITERS );
+	char* garbage = strtok( 0, DELIMITERS );
 	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
-	if( garbage != "" ) {
+	if( garbage ) {
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
 						  "parameter \"%s\"\n", filename, lineNumber, 
-						  garbage.c_str() );
+						  garbage );
 			exampleSyntax( example );
 			return false;
 	}
