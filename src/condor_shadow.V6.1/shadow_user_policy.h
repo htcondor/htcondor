@@ -46,8 +46,6 @@ class ShadowUserPolicy : public BaseUserPolicy
 		 */
 	void init( ClassAd* job_ad_ptr, BaseShadow* shadow_ptr );
 
-    virtual void checkPeriodic( void );
-
  protected:
 
 		/** This function is called whenever the UserPolicy code has

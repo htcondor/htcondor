@@ -990,7 +990,7 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 
 
 void
-ParallelShadow::resourceReconnected( RemoteResource* rr )
+ParallelShadow::resourceReconnected( RemoteResource* /* rr */ )
 {
 		// Since our reconnect worked, clear attemptingReconnectAtStartup
 		// flag so if we disconnect again and fail, we will exit
