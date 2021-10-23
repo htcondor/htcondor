@@ -95,9 +95,15 @@ class TestAllowedJobDuration:
 
 
     # This test is kind of awful, but we don't have timestamps in the
-    # job queue log, apparently.  Also, we don't actually record the
-    # extents of the interval the shadow is actually checking explicitly,
-    # but this should be close enough, given the slop involved.
+    # job queue log.  We also deliberately remove ShadowBday from the job
+    # when it completes, so we can't check that, either.
+    #
+    # Instead, we assert that the job's binary was not running longer than
+    # the longest possible time it could have been (assuming the shadow
+    # claimed the startd in zero time, and that the periodic expression
+    # interval was pessimally aligned), and that the job ran for strictly
+    # more than one peridic expression interval.  We'd like a tighter lower
+    # bound, but that test at least eliminates one class of errors.
     def test_allowed_job_duration_timing(self, test_job_log_events):
         for event in test_job_log_events:
             if event.type == htcondor.JobEventType.EXECUTE:
@@ -107,9 +113,4 @@ class TestAllowedJobDuration:
 
         test_job_duration = test_job_held - test_job_started
         assert test_job_duration <= ALLOWED_JOB_DURATION + PERIODIC_EXPR_INTERVAL
-
-        # This asserts that the shadow took less than five second to activate
-        # the claim.  If this proves unreliable, we can look into grovelling
-        # the shadow log to determine the duration from claim activation to
-        # the job going on hold, which should match ALLOWED_JOB_DURATION.
-        assert test_job_duration > ALLOWED_JOB_DURATION - 5
+        assert test_job_duration > PERIODIC_EXPR_INTERVAL
