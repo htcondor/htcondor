@@ -1412,7 +1412,18 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 	began_execution = true;
 		// Start the timer for the periodic user job policy evaluation.
 	shadow_user_policy.startTimer();
-		
+
+	int allowed_job_duration;
+	if( jobAd->LookupInteger( ATTR_JOB_ALLOWED_JOB_DURATION, allowed_job_duration ) ) {
+		int tid = daemonCore->Register_Timer( allowed_job_duration + 1, 0,
+			(TimerHandlercpp)&BaseUserPolicy::checkPeriodic,
+			"check_for_allowed_job_duration",
+			& shadow_user_policy );
+		if( tid < 0 ) {
+			dprintf( D_ALWAYS, "Failed to register timer to check for allowed job duration, jobs may run a little long.\n" );
+		}
+	}
+
 		// Start the timer for updating the job queue for this job.
 	startQueueUpdateTimer();
 
