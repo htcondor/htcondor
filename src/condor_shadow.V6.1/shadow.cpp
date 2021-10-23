@@ -146,7 +146,6 @@ UniShadow::spawn( void )
 			// we're screwed, give up:
 		shutDown( JOB_NOT_STARTED );
 	}
-    getJobAd()->InsertAttr( "ClaimActivationDate", time(NULL) );
 }
 
 

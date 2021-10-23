@@ -46,7 +46,7 @@ all attributes.
 :index:`job ClassAd attribute<single: job ClassAd attribute; AllowedJobDuration>`
 
 ``AllowedJobDuration``
-    The number of seconds for which a job may run after activating a claim.
+    The number of seconds for which a job may run per execution attempt.
     Jobs which exceed this duration will be put on hold.
 
 :index:`AllRemoteHosts<single: AllRemoteHosts; ClassAd job attribute>`

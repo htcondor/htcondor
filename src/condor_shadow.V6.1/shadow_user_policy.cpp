@@ -107,13 +107,11 @@ ShadowUserPolicy::checkPeriodic( void ) {
 
 	int allowedJobDuration;
 	if( this->job_ad->LookupInteger( ATTR_JOB_ALLOWED_JOB_DURATION, allowedJobDuration ) ) {
-		int claimActivationDate;
-		if( this->job_ad->LookupInteger( "ClaimActivationDate", claimActivationDate ) ) {
-			if( time(NULL) - claimActivationDate >= allowedJobDuration ) {
-				std::string holdReason = "job exceeded allowed job duration";
-				dprintf( D_ALWAYS, "ShadowUserPolicy::checkPeriodic(): %s, holding\n", holdReason.c_str() );
-				shadow->holdJob( holdReason.c_str(), CONDOR_HOLD_CODE::JobDurationExceeded, 0 );
-			}
+		int birthday = this->getJobBirthday();
+		if( time(NULL) - birthday >= allowedJobDuration ) {
+			std::string holdReason = "job exceeded allowed job duration";
+			dprintf( D_ALWAYS, "ShadowUserPolicy::checkPeriodic(): %s, holding\n", holdReason.c_str() );
+			shadow->holdJob( holdReason.c_str(), CONDOR_HOLD_CODE::JobDurationExceeded, 0 );
 		}
 	}
 
