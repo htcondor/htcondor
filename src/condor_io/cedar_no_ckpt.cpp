@@ -578,11 +578,11 @@ ReliSock::put_archive_file(const std::string &filename, filesize_t max_bytes, DC
 			filename.c_str(), strerror(staterr), staterr);
 		err.pushf("XFER", 1, "Failed to get status of %s: %s (errno=%d)",
 			filename.c_str(), strerror(staterr), staterr);
-		rc = -1;
+		rc = PUT_FILE_OPEN_FAILED;
 	} else if (filestat.IsDomainSocket() || filestat.IsDirectory()) {
 		dprintf(D_ALWAYS, "ReliSock: put_archive_file: Failed because only files are supported.\n" );
 		err.pushf("XFER", 2, "%s is not a file; cannot send.", filename.c_str());
-		rc = -1;
+		rc = PUT_FILE_OPEN_FAILED;
 	} else if (((filesize = filestat.GetFileSize()) > max_bytes) && max_bytes >= 0) {
 		dprintf(D_ALWAYS, "ReliSock: put_archive_file: File %s is too large "
 			"(max size " FILESIZE_T_FORMAT "; actual size " FILESIZE_T_FORMAT ")\n",
@@ -590,13 +590,13 @@ ReliSock::put_archive_file(const std::string &filename, filesize_t max_bytes, DC
 		err.pushf("XFER", 3, "File %s is too large (max size " FILESIZE_T_FORMAT
 			"; actual size " FILESIZE_T_FORMAT ")\n",
 			filename.c_str(), max_bytes, filesize);
-		rc = -1;
+		rc = PUT_FILE_MAX_BYTES_EXCEEDED;
 	} else if ((fd = open(filename.c_str(), O_RDONLY)) < 0) {
 		dprintf(D_ALWAYS, "ReliSock: put_archive_file: Unable to open %s for reading: %s (errno=%d).\n",
 			filename.c_str(), strerror(errno), errno);
 		err.pushf("XFER", 5, "Unable to open %s for reading: %s (errno=%d).",
 			filename.c_str(), strerror(errno), errno);
-		rc = -1;
+		rc = PUT_FILE_OPEN_FAILED;
 	}
 	if (rc) {
 		if (!put(-1)) {
@@ -747,6 +747,10 @@ ReliSock::get_archive(const std::string &filename, filesize_t max_bytes, DCTrans
 
 		int mode = archive_entry_mode(entry);
 
+		struct utimbuf times;
+		times.actime = archive_entry_atime(entry);
+		times.modtime = archive_entry_mtime(entry);
+
 		int filetype = archive_entry_filetype(entry);
 		if (filetype == AE_IFREG) {
 			dprintf(D_FULLDEBUG, "Unpacking regular file %s from archive %s.\n", name, filename.c_str());
@@ -831,15 +835,22 @@ ReliSock::get_archive(const std::string &filename, filesize_t max_bytes, DCTrans
 			}
 		} else if (filetype == AE_IFSOCK) {
 			dprintf(D_FULLDEBUG, "Unsupported file type 'socket' for %s.\n", name);
+			continue;
 		} else if (filetype == AE_IFCHR) {
 			dprintf(D_FULLDEBUG, "Unsupported file type 'character device' for %s.\n", name);
+			continue;
 		} else if (filetype == AE_IFBLK) {
 			dprintf(D_FULLDEBUG, "Unsupported file type 'block device' for %s.\n", name);
+			continue;
 		} else if (filetype == AE_IFIFO) {
 			dprintf(D_FULLDEBUG, "Unsupported file type 'fifo' for %s.\n", name);
+			continue;
 		} else {
 			dprintf(D_FULLDEBUG, "Unknown file type %d for %s.\n", filetype, name);
+			continue;
 		}
+
+		utime(name, &times);
 	}
 
 	xfer_q.AddBytesReceived(state.m_bytes_read - last_bytes_received_report);
