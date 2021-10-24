@@ -40,7 +40,7 @@ all attributes.
 ``AcctGroupUser``
     The user name associated with the accounting group. This attribute
     is only present if an accounting group was requested by the
-    submission. :index:`AllRemoteHosts<single: AllRemoteHosts; ClassAd job attribute>`
+    submission.
 
 :index:`AllowedJobDuration<single: AllowedJobDuration; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; AllowedJobDuration>`
