@@ -180,6 +180,11 @@ public:
 	*/
 	bool IsDomainSocket() const { return m_isDomainSocket; }
 
+	/** Determine iff the file is a regular file
+	 *  @return true if it is a regular file, false otherwise
+	 */
+	bool IsRegularFile() const {return m_isRegularFile;}
+
 #ifndef WIN32
 	/** Get the owner of the entry.
 		@return the uid of the entry's owner
@@ -199,6 +204,7 @@ private:
 	bool m_isExecutable;
 	bool m_isSymlink; //m_isDirectory may also be set if this points to a dir
 	bool m_isDomainSocket;
+	bool m_isRegularFile{false};
 	time_t access_time;
 	time_t modify_time;
 	time_t create_time;

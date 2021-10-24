@@ -141,8 +141,8 @@ public:
 		@return file pathname of the file */
 	const char* GetFullPath() { return curr ? curr->FullPath() : NULL; };
 
-	/** Determine if the current file is the name of a subdirectory,
-		or just a file.  If there is no current file, return false.
+	/** Determine if the current file is the name of a subdirectory.
+		If there is no current file, return false.
 		(A Symbolic link that points to a directory will return true.)
 		@return true if current file is a subdirectory name, false if not
 	*/
@@ -152,6 +152,11 @@ public:
 		@return true if current file is a symbolic link, false if not
 	*/
 	bool IsSymlink() {return curr ? curr->IsSymlink() : false; }
+
+	/** Determine if the current file is a regular file.
+		@return true if current file is a symbolic link, false if not
+	*/
+	bool IsRegularFile() {return curr ? curr->IsRegularFile() : false; }
 
 	/** Remove the current file.  If the current file is a subdirectory,
 	    then the subdirectory (and all files beneath it) are removed.

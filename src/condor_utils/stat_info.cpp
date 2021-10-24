@@ -203,6 +203,7 @@ StatInfo::stat_file( const char *path )
 	init( &statbuf );
 
 	m_isSymlink = saw_symlink;
+	m_isRegularFile &= !saw_symlink;
 }
 void
 StatInfo::stat_file( int fd )
@@ -263,6 +264,7 @@ StatInfo::init( StatWrapper *statbuf )
 		m_isExecutable = false;
 		m_isSymlink = false;
 		m_isDomainSocket = false;
+		m_isRegularFile = false;
 		valid = false;
 	}
 	else
@@ -285,10 +287,12 @@ StatInfo::init( StatWrapper *statbuf )
 		m_isExecutable = ((sb->st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) != 0 );
 		m_isSymlink = S_ISLNK(sb->st_mode);
 		m_isDomainSocket = (S_ISSOCK( sb->st_mode ) == 1);
+		m_isRegularFile = S_ISREG( sb->st_mode );
 		owner = sb->st_uid;
 		group = sb->st_gid;
 # else
 		m_isDirectory = ((_S_IFDIR & sb->st_mode) != 0);
+		m_isRegularFile = _S_IFREG & sb->st_mode;
 		m_isExecutable = ((_S_IEXEC & sb->st_mode) != 0);
 # endif
 	}
