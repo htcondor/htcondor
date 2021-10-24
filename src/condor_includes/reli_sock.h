@@ -171,12 +171,19 @@ public:
 								  bool flush_buffers=false, filesize_t max_bytes=-1,
 								  class DCTransferQueue *xfer_q=NULL);
 
+	int get_archive_file(const std::string &filename, filesize_t max_bytes, DCTransferQueue &xfer_q,
+		filesize_t &total_sent, CondorError &err);
+
 	int put_archive_file(const std::string &filename, filesize_t max_bytes,
 		DCTransferQueue &xfer_q, filesize_t &total_sent, CondorError &err);
 
 	int get_archive(const std::string &destination,
 	                filesize_t max_bytes, class DCTransferQueue &xfer_q,
 	                filesize_t &size, CondorError &err);
+
+	int put_archive(const std::string &filename,
+			filesize_t max_bytes, DCTransferQueue &xfer_q,
+			filesize_t &bytes, CondorError &err);
 
     /// returns <0 on failure, 0 for ok
 	//  failure codes: GET_FILE_OPEN_FAILED  (errno contains specific error)

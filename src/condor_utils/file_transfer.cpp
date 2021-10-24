@@ -99,7 +99,8 @@ enum class TransferSubCommand {
 	UploadUrl = 7,
 	ReuseInfo = 8,
 	SignUrls = 9,
-	UnpackArchive = 10
+	UnpackArchive = 10,
+	UploadArchive = 11
 };
 
 #define COMMIT_FILENAME ".ccommit.con"
@@ -141,6 +142,7 @@ public:
 	const std::string &destDir() const { return m_dest_dir; }
 	const std::string &destUrl() const { return m_dest_url; }
 	const std::string &srcScheme() const { return m_src_scheme; }
+	const std::string &destScheme() const { return m_dest_scheme; }
 	filesize_t fileSize() const { return m_file_size; }
 	void setDestDir(const std::string &dest) { m_dest_dir = dest; }
 	void setFileSize(filesize_t new_size) { m_file_size = new_size; }
@@ -2311,6 +2313,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// If we are a client downloading the output sandbox, it makes no sense for
 					// us to "download" _to_ a URL; the server sent us this in a logic error
 					// unless it was simply a status report (reply == 999)
+				if (remap_filename.substr(0, 6) == "tar://") {
+					remap_filename = remap_filename.substr(6, remap_filename.size());
+				}
 				if (IsUrl(remap_filename.c_str())) {
 					if (xfer_command != TransferCommand::Other) {
 						error_buf.formatstr("Remap of output file resulted in a URL: %s", remap_filename.c_str());
@@ -2727,8 +2732,18 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			} else if (subcommand == TransferSubCommand::UnpackArchive) {
 				rc = s->get_archive(filename, this_file_max_bytes, xfer_queue, bytes, errstack);
 				if (rc < 0) {
-					rc = GET_FILE_PLUGIN_FAILED;
+					if (rc == -1) {rc = GET_FILE_PLUGIN_FAILED;}
 					dprintf(D_ALWAYS, "FILETRANSFER: Archive unpack failed: %s.\n",
+						errstack.getFullText().c_str());
+				} else {
+					dprintf(D_FULLDEBUG, "FILETRANSFER: Successfully received and unpacked archive %s.\n",
+						filename.c_str());
+				}
+			} else if (subcommand == TransferSubCommand::UploadArchive) {
+				rc = s->get_archive_file(fullname, this_file_max_bytes, xfer_queue, bytes, errstack);
+				if (rc < 0) {
+					if (rc == -1) {rc = GET_FILE_PLUGIN_FAILED;}
+					dprintf(D_ALWAYS, "FILETRANSFER: Archive upload failed: %s.\n",
 						errstack.getFullText().c_str());
 				} else {
 					dprintf(D_FULLDEBUG, "FILETRANSFER: Successfully received archive %s.\n",
@@ -3929,6 +3944,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				MyString remap_filename;
 				if ((1 == filename_remap_find(download_filename_remaps.c_str(), fileitem.srcName().c_str(), remap_filename, 0)) && IsUrl(remap_filename.c_str())) {
 					local_output_url = remap_filename.c_str();
+					dprintf(D_FULLDEBUG, "Remapped filename: %s.\n", local_output_url.c_str());
 				}
 			}
 			if (sign_s3_urls &&
@@ -4309,7 +4325,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 
 		std::string multifilePluginPath;
-		if ( fileitem.isDestUrl() ) {
+		if ( fileitem.isDestUrl() && fileitem.destScheme() != "tar" ) {
 			dprintf(D_FULLDEBUG, "FILETRANSFER: Using command 999:7 for output URL destination: %s\n",
 				fileitem.destUrl().c_str());
 
@@ -4332,6 +4348,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			} else {
 				dprintf(D_FULLDEBUG, "Will upload output URL using multi-file plugin.\n");
 			}
+		} else if (fileitem.destScheme() == "tar") {
+			dprintf(D_FULLDEBUG, "FILETRANSFER: Using command 999:11 to upload a tarball: %s\n",
+				fileitem.destUrl().c_str());
+			file_command = TransferCommand::Other;
+			file_subcommand = TransferSubCommand::UploadArchive;
 		}
 
 		// Flush out any transfers if we can no longer defer the prior work we had built up.
@@ -4360,7 +4381,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 
 		bool fail_because_mkdir_not_supported = false;
 		bool fail_because_symlink_not_supported = false;
-		if( fileitem.isDirectory() ) {
+		if( fileitem.isDirectory() && fileitem.destScheme() != "tar" ) {
 			if( fileitem.isSymlink() ) {
 				fail_because_symlink_not_supported = true;
 				dprintf(D_ALWAYS,"DoUpload: attempting to transfer symlink %s which points to a directory.  This is not supported.\n", filename.c_str());
@@ -4588,12 +4609,20 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				}
 			} else if (file_subcommand == TransferSubCommand::UnpackArchive) {
 				if (!putClassAd(s, file_info)) {
-					dprintf(D_FULLDEBUG, "DoUpload: failed to put unpack archive ClassAd");
+					dprintf(D_FULLDEBUG, "DoUpload: failed to put unpack archive ClassAd.\n");
 					return_and_resetpriv(-1);
 				}
 
 				rc = s->put_archive_file(fullname, this_file_max_bytes, xfer_queue, bytes, errstack);
-				if (rc < 0) {rc = PUT_FILE_PLUGIN_FAILED;}
+				if (rc == -1) {rc = PUT_FILE_PLUGIN_FAILED;}
+			} else if (file_subcommand == TransferSubCommand::UploadArchive) {
+				if (!putClassAd(s, file_info)) {
+					dprintf(D_FULLDEBUG, "DoUpload: failed to put upload archive ClassAd.\n");
+					return_and_resetpriv(-1);
+				}
+
+				rc = s->put_archive(fullname, this_file_max_bytes, xfer_queue, bytes, errstack);
+				if (rc == -1) {rc = PUT_FILE_PLUGIN_FAILED;}
 			} else {
 				dprintf( D_ALWAYS, "DoUpload: invalid subcommand %i, skipping %s.",
 						static_cast<int>(file_subcommand), filename.c_str());
@@ -6258,7 +6287,7 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 
 	// if this exists and is in the list do it first
 	if (X509UserProxy && input_list->contains(X509UserProxy)) {
-		if( !ExpandFileTransferList( X509UserProxy, "", Iwd, -1, expanded_list, preserveRelativePaths ) ) {
+		if( !ExpandFileTransferList( X509UserProxy, "", Iwd, -1, expanded_list, preserveRelativePaths, download_filename_remaps.c_str() ) ) {
 			rc = false;
 		}
 	}
@@ -6271,7 +6300,7 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 		// everything else gets expanded.  this if would short-circuit
 		// true if X509UserProxy is not defined, but i made it explicit.
 		if(!X509UserProxy || (X509UserProxy && strcmp(path, X509UserProxy) != 0)) {
-			if( !ExpandFileTransferList( path, "", Iwd, -1, expanded_list, preserveRelativePaths ) ) {
+			if( !ExpandFileTransferList( path, "", Iwd, -1, expanded_list, preserveRelativePaths, download_filename_remaps.c_str() ) ) {
 				rc = false;
 			}
 		}
@@ -6326,7 +6355,7 @@ FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, 
 			partialPath += DIR_DELIM_CHAR;
 		}
 		partialPath += splitPath.back(); splitPath.pop_back();
-		if(! ExpandFileTransferList( partialPath.c_str(), parent.c_str(), iwd, 0, expanded_list, false )) {
+		if(! ExpandFileTransferList( partialPath.c_str(), parent.c_str(), iwd, 0, expanded_list, false, nullptr )) {
 			return false;
 		}
 		parent = partialPath;
@@ -6336,7 +6365,8 @@ FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, 
 }
 
 bool
-FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths )
+FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth,
+	FileTransferList &expanded_list, bool preserveRelativePaths, const char *download_file_remaps )
 {
 	ASSERT( src_path );
 	ASSERT( dest_dir );
@@ -6483,6 +6513,19 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	//
 	// dprintf( D_ALWAYS, ">>> transferring directory contents to %s\n", destination.c_str() );
 
+
+		// Special case: if a directory is mapped to a tarball, then we don't iterate inside -
+		// rather the archive-making process will do that for us.
+	if (download_file_remaps) {
+		MyString remap_filename;
+		dprintf(D_FULLDEBUG, ">>> Mapping location of %s.\n", src_path);
+		if ((1 == filename_remap_find(download_file_remaps, src_path, remap_filename, 0)) && (remap_filename.substr(0, 6) == "tar://")) {
+			dprintf(D_FULLDEBUG, "Remapped tar filename: %s.\n", remap_filename.c_str());
+			return true;
+		}
+	}
+
+
 	Directory dir( &st );
 	dir.Rewind();
 
@@ -6497,7 +6540,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		}
 		file_full_path += file_in_dir;
 
-		if( !ExpandFileTransferList( file_full_path.c_str(), destination.c_str(), iwd, max_depth, expanded_list, preserveRelativePaths ) ) {
+		if( !ExpandFileTransferList( file_full_path.c_str(), destination.c_str(), iwd, max_depth, expanded_list, preserveRelativePaths, download_file_remaps ) ) {
 			rc = false;
 		}
 	}
@@ -6531,7 +6574,7 @@ FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, MySt
 			FileTransferList filelist;
 			// N.B.: It's only safe to flatten relative paths here because
 			// this code never calls destDir().
-			if( !ExpandFileTransferList( path, "", iwd, 1, filelist, false ) ) {
+			if( !ExpandFileTransferList( path, "", iwd, 1, filelist, false, nullptr ) ) {
 				formatstr_cat(error_msg, "Failed to expand '%s' in transfer input file list. ",path);
 				result = false;
 			}
