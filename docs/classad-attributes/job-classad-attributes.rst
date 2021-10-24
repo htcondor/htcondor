@@ -46,8 +46,15 @@ all attributes.
 :index:`job ClassAd attribute<single: job ClassAd attribute; AllowedJobDuration>`
 
 ``AllowedJobDuration``
-    The number of seconds for which a job may run per execution attempt.
-    Jobs which exceed this duration will be put on hold.
+    The longest time for which a job may continuously be in the running state.
+    Jobs which exceed this duration will go on hold.  Exiting the running
+    state resets the job duration measured by this attribute.
+
+    This attribute is intended to help minimize the time wasted by jobs
+    which may erroneously run forever.
+
+    This attribute currently only functions for the vanilla, docker,
+    scheduler, local, and grid universes.
 
 :index:`AllRemoteHosts<single: AllRemoteHosts; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; AllRemoteHosts>`

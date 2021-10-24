@@ -1405,8 +1405,15 @@ FILE TRANSFER COMMANDS
 POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 
  allowed_job_duration = <integer>
-    The number of seconds for which this job may run per execution attempt.
-    Jobs which exceed their allowed duration will be put on hold.
+    The longest time for which a job may continuously be in the running state.
+    Jobs which exceed this duration will go on hold.  Exiting the running
+    state resets the job duration used by this command.
+
+    This command is intended to help minimize the time wasted by jobs
+    which may erroneously run forever.
+
+    This command currently only functions for the vanilla, docker,
+    scheduler, local, and grid universes.
 
  max_retries = <integer>
     The maximum number of retries allowed for this job (must be
