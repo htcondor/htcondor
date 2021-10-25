@@ -5,6 +5,7 @@ import htcondor
 from ornithology import (
     standup,
     Condor,
+    config,
     action,
     in_order,
     ClusterState,
@@ -30,15 +31,28 @@ def condor(test_dir):
         yield condor
 
 
+@config(params={
+    "vanilla": "vanilla",
+    # Currently the same as vanilla, will become 'container' at some point.
+    # "docker": "docker",
+    "scheduler": "scheduler",
+    "local": "local",
+    # Can't be tested the usual personal condor.
+    # "grid": "grid",
+    }
+)
+def test_universe(request):
+    return request.param
+
 @action
-def test_job_handle(condor, path_to_sleep, test_dir):
+def test_job_handle(condor, path_to_sleep, test_dir, test_universe):
     handle = condor.submit(
         description={
             "executable": path_to_sleep,
             "arguments": 2 * (ALLOWED_JOB_DURATION + PERIODIC_EXPR_INTERVAL + 1),
             "transfer_executable": False,
             "should_transfer_files": True,
-            "universe": "vanilla",
+            "universe": test_universe,
             "log": test_dir / "test_job.log",
             "on_exit_remove": False,
             "allowed_job_duration": ALLOWED_JOB_DURATION,
