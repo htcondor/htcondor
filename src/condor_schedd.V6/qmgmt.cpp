@@ -6732,6 +6732,12 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					// If it is not there, use the fallback.
 					// If no fallback value, then fail.
 
+					// Treat CONDOR_SCRATCH_DIR specially, so the starer can expand it
+					if (strcasecmp(name, "CONDOR_SCRATCH_DIR") == 0) {
+						// ignore $$(CONDOR_SCRATCH_DIR) and pass through literaly
+						value = strdup("CONDOR_SCRATCH_DIR = \"$$(CONDOR_SCRATCH_DIR)\"");
+						value_came_from_jobad = true;
+					} else 
 					if( strcasecmp(name,"DOLLARDOLLAR") == 0 ) {
 							// replace $$(DOLLARDOLLAR) with literal $$
 						value = strdup("DOLLARDOLLAR = \"$$\"");
