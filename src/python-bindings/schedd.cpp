@@ -1709,6 +1709,141 @@ struct Schedd {
         return actOnJobs(action, job_spec, object("Python-initiated action."));
     }
 
+	object exportJobs(object job_spec, std::string export_dir, std::string new_spool_dir)
+	{
+		std::string constraint;
+		StringList ids;
+		boost::python::extract<std::string> str_obj(job_spec);
+		bool use_ids = false;
+		if (PyList_Check(job_spec.ptr()) && !str_obj.check()) {
+			int id_len = py_len(job_spec);
+			for (int i = 0; i < id_len; i++)
+			{
+				std::string str = extract<std::string>(job_spec[i]);
+				ids.append(str.c_str());
+			}
+			use_ids = true;
+		} else {
+			bool is_number = false;
+			if (! convert_python_to_constraint(job_spec, constraint, true, &is_number)) {
+				THROW_EX(HTCondorValueError, "job_spec is not a valid constraint expression.")
+			}
+			// export does not allow empty or null constraint argument, so use "true" instead
+			if (constraint.empty()) { constraint = "true"; } else if (is_number) { // if the "constraint" string is really a number, treat it like a job id
+				extract<std::string> string_extract(job_spec);
+				if (string_extract.check()) {
+					constraint = string_extract();
+					JOB_ID_KEY jid;
+					if (jid.set(constraint.c_str())) {
+						ids.append(constraint.c_str());
+						use_ids = true;
+					}
+				}
+			}
+		}
+
+		DCSchedd schedd(m_addr.c_str());
+		ClassAd *result = NULL;
+		CondorError errstack;
+		const char * spool = new_spool_dir.empty() ? nullptr : new_spool_dir.c_str();
+		if (use_ids)
+		{
+			condor::ModuleLock ml;
+			result = schedd.exportJobs(&ids, export_dir.c_str(), spool, &errstack);
+		} else {
+			condor::ModuleLock ml;
+			result = schedd.exportJobs(constraint.c_str(), export_dir.c_str(), spool, &errstack);
+		}
+
+		if (errstack.code() > 0) {
+			THROW_EX(HTCondorIOError, errstack.getFullText(true).c_str());
+		} else if ( ! result) {
+			THROW_EX(HTCondorIOError, "No result ad");
+		}
+
+		boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+		if (result) { result_ptr->CopyFrom(*result); }
+		object result_obj(result_ptr);
+
+		return result_obj;
+	}
+
+	object importExportedJobResults(std::string import_dir)
+	{
+		DCSchedd schedd(m_addr.c_str());
+		ClassAd *result = NULL;
+		CondorError errstack;
+		{
+			condor::ModuleLock ml;
+			result = schedd.importExportedJobResults(import_dir.c_str(), &errstack);
+		}
+		// TODO: throw if export fails (as indicated by no result ad or "Error" in the result ad)
+
+		boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+		if (result) { result_ptr->CopyFrom(*result); }
+		object result_obj(result_ptr);
+
+		return result_obj;
+	}
+
+	object unexportJobs(object job_spec)
+	{
+		std::string constraint;
+		StringList ids;
+		boost::python::extract<std::string> str_obj(job_spec);
+		bool use_ids = false;
+		if (PyList_Check(job_spec.ptr()) && !str_obj.check()) {
+			int id_len = py_len(job_spec);
+			for (int i = 0; i < id_len; i++)
+			{
+				std::string str = extract<std::string>(job_spec[i]);
+				ids.append(str.c_str());
+			}
+			use_ids = true;
+		} else {
+			bool is_number = false;
+			if (! convert_python_to_constraint(job_spec, constraint, true, &is_number)) {
+				THROW_EX(HTCondorValueError, "job_spec is not a valid constraint expression.")
+			}
+			// unexport does not allow empty or null constraint argument, so use "true" instead
+			if (constraint.empty()) { constraint = "true"; } else if (is_number) { // if the "constraint" string is really a number, treat it like a job id
+				extract<std::string> string_extract(job_spec);
+				if (string_extract.check()) {
+					constraint = string_extract();
+					JOB_ID_KEY jid;
+					if (jid.set(constraint.c_str())) {
+						ids.append(constraint.c_str());
+						use_ids = true;
+					}
+				}
+			}
+		}
+
+		DCSchedd schedd(m_addr.c_str());
+		ClassAd *result = NULL;
+		CondorError errstack;
+		if (use_ids)
+		{
+			condor::ModuleLock ml;
+			result = schedd.unexportJobs(&ids, &errstack);
+		} else {
+			condor::ModuleLock ml;
+			result = schedd.unexportJobs(constraint.c_str(), &errstack);
+		}
+
+		if (errstack.code() > 0) {
+			THROW_EX(HTCondorIOError, errstack.getFullText(true).c_str());
+		} else if ( ! result) {
+			THROW_EX(HTCondorIOError, "No result ad");
+		}
+
+		boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+		if (result) { result_ptr->CopyFrom(*result); }
+		object result_obj(result_ptr);
+
+		return result_obj;
+	}
+
     int submitMany(const ClassAdWrapper &wrapper, boost::python::object proc_ads, bool spool, boost::python::object ad_results=object())
     {
         PyObject *py_iter = PyObject_GetIter(proc_ads.ptr());
@@ -4276,6 +4411,39 @@ void export_schedd()
             :rtype: :class:`EditResult`
             )C0ND0R",
             boost::python::args("self", "edits"))
+        .def("export_jobs", &Schedd::exportJobs,
+            R"C0ND0R(
+            Export one or more job clusters from the queue to put those jobs into the externally managed state.
+
+            :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
+                Only jobs matching this description will be acted upon.
+            :type job_spec: list[str] or str or ExprTree
+            :param str export_dir: The path to the directory that exported jobs will be written into.
+            :param str new_spool_dir: The path to the base directory that exported jobs will use as IWD while they are exported
+            :return: A ClassAd containing information about the export operation.
+            :rtype: :class:`~classad.ClassAd`
+            )C0ND0R",
+            boost::python::args("self", "job_spec", "export_dir", "new_spool_dir"))
+        .def("import_exported_job_results", &Schedd::importExportedJobResults,
+            R"C0ND0R(
+            Import results from previously exported jobs, and take those jobs back out of the externally managed state.
+
+            :param str import_dir: The path to the modified form of a previously-exported direcory.
+            :return: A ClassAd containing information about the import operation.
+            :rtype: :class:`~classad.ClassAd`
+            )C0ND0R",
+            boost::python::args("self", "import_dir"))
+        .def("unexport_jobs", &Schedd::unexportJobs,
+            R"C0ND0R(
+            Unexport one or more job clusters that were previously exported from the queue.
+
+            :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
+                Only jobs matching this description will be acted upon.
+            :type job_spec: list[str] or str or ExprTree
+            :return: A ClassAd containing information about the unexport operation.
+            :rtype: :class:`~classad.ClassAd`
+            )C0ND0R",
+            boost::python::args("self", "job_spec"))
         .def("reschedule", &Schedd::reschedule,
             R"C0ND0R(
             Send reschedule command to the schedd.

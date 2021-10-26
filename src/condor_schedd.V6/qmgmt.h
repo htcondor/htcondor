@@ -272,6 +272,8 @@ public:
 	void AttachJob(JobQueueJob * job);
 	void DetachJob(JobQueueJob * job);
 	void DetachAllJobs(); // When you absolutely positively need to free this class...
+	JobQueueJob * FirstJob();
+	JobQueueJob * NextJob(JobQueueJob * job);
 	void JobStatusChanged(int old_status, int new_status);  // update cluster counters by job status.
 
 	void PopulateInfoAd(ClassAd & iad, int num_pending, bool include_factory_info); // fill out an info ad from fields in this structure and from the factory
@@ -344,12 +346,12 @@ bool isQueueSuperUser( const char* user );
 // to modify the given job.  In addition to everything UserCheck2()
 // does, this also calls IPVerify to check for WRITE authorization.
 // This call assumes Q_SOCK is set to a valid QmgmtPeer object.
-bool UserCheck( ClassAd *ad, const char *test_owner );
+bool UserCheck( const ClassAd *ad, const char *test_owner );
 
 // Verify that the user issuing a command (test_owner) is authorized
 // to modify the given job.  Either ad or job_owner should be given
 // but not both.  If job_owner is NULL, the owner is looked up in the ad.
-bool UserCheck2( ClassAd *ad, const char *test_owner, char const *job_owner=NULL );
+bool UserCheck2( const ClassAd *ad, const char *test_owner, char const *job_owner=NULL );
 
 bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray();
@@ -554,7 +556,7 @@ typedef int (*queue_job_scan_func)(JobQueueJob *ad, const JobQueueKey& key, void
 void WalkJobQueueEntries(int with, queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm);
 #define WalkJobQueue(fn) WalkJobQueueEntries(0, (fn), NULL, WalkJobQ_ ## fn ## _runtime )
 #define WalkJobQueue2(fn,pv) WalkJobQueueEntries(0, (fn), (pv), WalkJobQ_ ## fn ## _runtime )
-#define WalkJobQueueWith(with,fn,pv) WalkJobQueueEntries(with, (fn), NULL, WalkJobQ_ ## fn ## _runtime )
+#define WalkJobQueueWith(with,fn,pv) WalkJobQueueEntries(with, (fn), pv, WalkJobQ_ ## fn ## _runtime )
 
 bool InWalkJobQueue();
 

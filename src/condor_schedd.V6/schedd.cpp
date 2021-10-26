@@ -95,6 +95,7 @@
 #include "condor_secman.h"
 #include "token_utils.h"
 #include "jobsets.h"
+#include "classad_collection.h"
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -152,7 +153,7 @@ std::string ownerinfo_attr_name;
 const std::string & attr_JobUser = ownerinfo_attr_name;
 bool user_is_the_new_owner = false;
 bool ignore_domain_mismatch_when_setting_owner = false;
-inline const char * EffectiveUser(Sock * sock) {
+inline const char * EffectiveUser(const Sock * sock) {
 	if (!sock) return "";
 	if (user_is_the_new_owner) {
 		return sock->getFullyQualifiedUser();
@@ -13859,6 +13860,18 @@ Scheduler::Register()
 								  (CommandHandlercpp)&Scheduler::clear_dirty_job_attrs_handler,
 								  "clear_dirty_job_attrs_handler", this, WRITE );
 
+	daemonCore->Register_CommandWithPayload( EXPORT_JOBS, "EXPORT_JOBS",
+								  (CommandHandlercpp)&Scheduler::export_jobs_handler,
+								  "export_jobs_handler", this, WRITE,
+								  D_COMMAND, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload( IMPORT_EXPORTED_JOB_RESULTS, "IMPORT_EXPORTED_JOB_RESULTS",
+								  (CommandHandlercpp)&Scheduler::import_exported_job_results_handler,
+								  "import_exported_job_results_handler", this, WRITE,
+								  D_COMMAND, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload( UNEXPORT_JOBS, "UNEXPORT_JOBS",
+								  (CommandHandlercpp)&Scheduler::unexport_jobs_handler,
+								  "unexport_jobs_handler", this, WRITE,
+								  D_COMMAND, true /*force authentication*/);
 
 	 // These commands are for a startd reporting directly to the schedd sans negotiation
 	daemonCore->Register_CommandWithPayload(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
@@ -14101,6 +14114,7 @@ void Scheduler::reconfig() {
 		// to check here for changes.  
 	int max_saved_rotations = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
 	SetMaxHistoricalLogs(max_saved_rotations);
+
 }
 
 // NOTE: this is likely unreachable now, and may be removed
@@ -17709,3 +17723,552 @@ Scheduler::token_request_callback(bool success, void *miscdata)
 		daemonCore->Reset_Timer(self->timeoutid,0,1);
 	}
 }
+
+
+bool
+Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const char *user, const char * new_spool_dir /*="##"*/)
+{
+	dprintf(D_ALWAYS,"ExportJobs(...,'%s','%s')\n",output_dir,new_spool_dir);
+	OwnerInfo * owner = nullptr;
+
+	// verify that all of the jobs have the same owner and get the owner
+	//
+	for (auto it = clusters.begin(); it != clusters.end(); ++it) {
+		const int next_cluster = *it;
+		JobQueueCluster * jqc = GetClusterAd(next_cluster);
+		if ( ! jqc) {
+			dprintf(D_ALWAYS, "ExportJobs(): Ignoring missing cluster id %d\n", next_cluster);
+			continue;
+		}
+		if ( ! owner) {
+			owner = jqc->ownerinfo;
+		} else if ( owner != jqc->ownerinfo ) {
+			result.Assign(ATTR_ERROR_STRING, "Cannot export for more than one user");
+			dprintf(D_ALWAYS, "ExportJobs(): Multiple owners %s and %s, aborting\n", owner->Name(), jqc->ownerinfo->Name());
+			return false;
+		}
+		// TODO check for late materialization
+		// TODO check for spooled
+		// TODO check for active jobs (running, externally managed)
+	}
+	if ( clusters.empty() ) {
+		result.Assign(ATTR_ERROR_STRING, "No clusters to export");
+		dprintf(D_ALWAYS, "ExportJobs(): No clusters to export\n");
+		return false;
+	}
+
+	JobQueueCluster * jqc = GetClusterAd(*(clusters.begin()));
+
+	// verify the user is authorized to edit these jobs
+	if ( ! UserCheck2(jqc, user) ) {
+		result.Assign(ATTR_ERROR_STRING, "User not authorized to export given jobs");
+		dprintf(D_ALWAYS, "ExportJobs(): User %s not authorized to export jobs owned by %s, aborting\n", user, jqc->ownerinfo->Name());
+		return false;
+	}
+
+	TemporaryPrivSentry tps(true);
+	if ( ! jqc->ownerinfo || !init_user_ids_from_ad(*jqc) ) {
+		result.Assign(ATTR_ERROR_STRING, "Failed to init user ids");
+		dprintf(D_ALWAYS, "ExportJobs(): Failed to init user ids!\n");
+		return false;
+	}
+	set_user_priv();
+
+	// TODO make output_dir if it doesn't exist?
+	// TODO: truncate output job_queue.log if it is non-empty?
+
+	std::string queue_fname = output_dir;
+	dircat(output_dir, "job_queue.log", queue_fname);
+	GenericClassAdCollection<JobQueueKey, ClassAd*> export_queue(new ConstructClassAdLogTableEntry<ClassAd>());
+
+	if ( !export_queue.InitLogFile(queue_fname.c_str(), 0) ) {
+		result.Assign(ATTR_ERROR_STRING, "Failed to initialize export job log");
+		dprintf(D_ALWAYS, "ExportJobs(): Failed to initialize export job log %s\n", queue_fname.c_str());
+		return false;
+	}
+
+	BeginTransaction();
+
+	// write the a header ad to the job queue
+	JobQueueKey hdr_id(0,0);
+	int tmp_int = 0;
+	export_queue.NewClassAd(hdr_id, JOB_ADTYPE, STARTD_ADTYPE);
+	if ( GetAttributeInt(0, 0, ATTR_NEXT_CLUSTER_NUM, &tmp_int) >= 0 ) {
+		std::string int_str = std::to_string(tmp_int);
+		export_queue.SetAttribute(hdr_id, ATTR_NEXT_CLUSTER_NUM, int_str.c_str());
+	}
+	if ( GetAttributeInt(0, 0, ATTR_NEXT_JOBSET_NUM, &tmp_int) >= 0 ) {
+		std::string int_str = std::to_string(tmp_int);
+		export_queue.SetAttribute(hdr_id, ATTR_NEXT_JOBSET_NUM, int_str.c_str());
+	}
+
+	int num_jobs = 0;
+	for (auto cid = clusters.begin(); cid != clusters.end(); ++cid) {
+		JobQueueCluster * jqc = GetClusterAd(*cid);
+		if ( ! jqc) continue;
+
+		// export the cluster classad, marking all of the jobs in the cluster as leave-in-queue
+		export_queue.NewClassAd(jqc->jid, JOB_ADTYPE, STARTD_ADTYPE);
+		for ( auto attr_itr = jqc->begin(); attr_itr != jqc->end(); attr_itr++ ) {
+			if (YourStringNoCase(ATTR_JOB_LEAVE_IN_QUEUE) == attr_itr->first.c_str()) {
+				// nothing
+			} else {
+				const char *val = ExprTreeToString(attr_itr->second);
+				export_queue.SetAttribute(jqc->jid, attr_itr->first.c_str(), val);
+			}
+		}
+		export_queue.SetAttribute(jqc->jid, ATTR_JOB_LEAVE_IN_QUEUE, "true");
+
+		if (jqc->factory) {
+			// TODO: move the submit digest and itemdata files
+			// and rewrite the path to the digest
+		}
+
+		// export all jobs in the cluster
+		for (JobQueueJob * job = jqc->FirstJob(); job != NULL; job = jqc->NextJob(job)) {
+			// skip jobs that are already externally managed.
+			if (jobExternallyManaged(job)) continue;
+
+			// TODO: skip jobs that aren't idle?
+
+			// add the job to the external queue
+			export_queue.NewClassAd(job->jid, JOB_ADTYPE, STARTD_ADTYPE);
+
+			// copy the job attributes to the external queue
+			for ( auto attr_itr = job->begin(); attr_itr != job->end(); attr_itr++ ) {
+				if (YourStringNoCase(ATTR_JOB_LEAVE_IN_QUEUE) == attr_itr->first.c_str()) {
+					// nothing
+				} else if (YourStringNoCase(ATTR_JOB_IWD) == attr_itr->first.c_str()) {
+					char *dir = gen_ckpt_name(new_spool_dir, job->jid.cluster, job->jid.proc, 0);
+					std::string val;
+					val = '"';
+					val += dir;
+					val += '"';
+					free(dir);
+					export_queue.SetAttribute(job->jid, ATTR_JOB_IWD, val.c_str());
+				} else {
+					const char *val = ExprTreeToString(attr_itr->second);
+					export_queue.SetAttribute(job->jid, attr_itr->first.c_str(), val);
+				}
+			}
+
+			// mark the job as externally managed in the local job queue
+			SetAttributeString(job->jid.cluster, job->jid.proc, ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+			SetAttributeString(job->jid.cluster, job->jid.proc, ATTR_JOB_MANAGED_MANAGER, "Lumberjack");
+			++num_jobs;
+		}
+	}
+
+	CommitTransactionOrDieTrying();
+
+	// flush changes, then close the log file
+	export_queue.FlushLog();
+	export_queue.StopLog();
+
+	result.Assign("Log", queue_fname);
+	result.Assign("User", jqc->ownerinfo->Name());
+	result.Assign(ATTR_TOTAL_JOB_ADS, num_jobs);
+	result.Assign(ATTR_TOTAL_CLUSTER_ADS, (long)clusters.size());
+
+	dprintf(D_ALWAYS,"ExportJobs() returning true\n");
+	return true;
+}
+
+int
+Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
+{
+	ReliSock *rsock = (ReliSock*)stream;
+	ClassAd reqAd; // classad specifying arguments for the export
+	ClassAd resultAd; // classad returning results of the export
+
+	// IWD of exported jobs will be re-written to use this directory as a base 
+	// the default value of ## is intended to be replaced by a script that post-processes the job log.
+	std::string new_spool_dir("##");
+
+	rsock->decode();
+	rsock->timeout(15);
+	if( !getClassAd(rsock, reqAd) || !rsock->end_of_message()) {
+		dprintf( D_ALWAYS, "export_jobs_handler Failed to receive classad in the request\n" );
+		return FALSE;
+	}
+
+	std::string export_list;    // list of cluster ids to export
+	std::string export_dir;     // where to write the exported job queue and other files
+	ExprTree * constr_expr = reqAd.Lookup(ATTR_ACTION_CONSTRAINT);
+	if ( ! reqAd.LookupString("ExportDir", export_dir) ||
+		( ! constr_expr && ! reqAd.LookupString(ATTR_ACTION_IDS, export_list)))
+	{
+		resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
+		resultAd.Assign(ATTR_ERROR_STRING, "Invalid arguments");
+		resultAd.Assign(ATTR_ERROR_CODE, SCHEDD_ERR_MISSING_ARGUMENT);
+	}
+	else 
+	{
+		reqAd.LookupString("NewSpoolDir", new_spool_dir); // the reqest ad *may* contain an override for the checkpoint directory
+		std::set<int> clusters;
+		// we have a constrain expression, so we have to turn that into a set of cluster ids
+		if (constr_expr) {
+			schedd_runtime_probe runtime;
+			struct _cluster_ids_args {
+				std::set<int> * pids;
+				ExprTree * constraint;
+			} args = { &clusters, constr_expr };
+
+			// build up a set of cluster ids that match the constraint expression
+			WalkJobQueueEntries(
+				(WJQ_WITH_CLUSTERS | WJQ_WITH_NO_JOBS),
+				[](JobQueueJob *job, const JOB_ID_KEY & cid, void * pv) -> int {
+					struct _cluster_ids_args & args = *(struct _cluster_ids_args*)pv;
+					if ( ! args.constraint || EvalExprBool(job, args.constraint)) {
+						args.pids->insert(cid.cluster);
+					}
+					return 0;
+				},
+				&args,
+				runtime);
+
+		} else {
+			// we have a string list of cluster ids
+			// build a set of cluster ids from the string of ids that was passed
+			StringTokenIterator sit(export_list);
+			for (const char * id = sit.first(); id != NULL; id = sit.next()) {
+				clusters.insert(atoi(id));
+			}
+		}
+		if ( ! ExportJobs(resultAd, clusters, export_dir.c_str(), EffectiveUser(rsock), new_spool_dir.c_str())) {
+			resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
+			resultAd.Assign(ATTR_ERROR_CODE, SCHEDD_ERR_EXPORT_FAILED);
+		} else {
+			resultAd.Assign(ATTR_ACTION_RESULT, OK);
+		}
+	}
+
+	// send a reply consisting of a result classad
+	rsock->encode();
+	if ( ! putClassAd(rsock, resultAd)) {
+		dprintf( D_ALWAYS, "Error sending export-jobs result to client, aborting.\n" );
+		return FALSE;
+	}
+	if ( ! rsock->end_of_message()) {
+		dprintf( D_ALWAYS, "Error sending end-of-message to client, aborting.\n" );
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+bool
+Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir, const char * user)
+{
+	dprintf(D_ALWAYS,"ImportExportedJobResults(%s)\n", import_dir);
+
+	std::string import_job_log;
+	formatstr(import_job_log, "%s/job_queue.log", import_dir);
+
+	TemporaryPrivSentry tps(true);
+	if ( ! init_user_ids(user, NULL) ) {
+		result.Assign(ATTR_ERROR_STRING, "Failed to init user ids");
+		dprintf(D_ALWAYS, "ImportExportedJobResults(): Failed to init user ids!\n");
+		return false;
+	}
+	set_user_priv();
+
+	// Load the external job_log
+	GenericClassAdCollection<JobQueueKey, ClassAd*> import_queue(new ConstructClassAdLogTableEntry<ClassAd>());
+	if ( !import_queue.InitLogFile(import_job_log.c_str(), 0) ) {
+		result.Assign(ATTR_ERROR_STRING, "Failed to initialize import job log");
+		dprintf(D_ALWAYS, "ImportExportedJobResults(): Failed to initialize import job log\n");
+		return false;
+	}
+	// close the log file and disable changes
+	import_queue.StopLog();
+
+	std::set<int> clusters_found;
+	std::set<int> clusters_checked;
+
+	BeginTransaction();
+
+	int num_jobs = 0;
+	std::string tmpstr;
+	ConstraintHolder hold_reason;
+
+	// Note that in the import_queue at this time, the proc ads are not chained to the cluster ads
+	ClassAd *ad;
+	JobQueueKey jid;
+	import_queue.StartIterateAllClassAds();
+	while(import_queue.Iterate(jid,ad)) {
+		if (jid.cluster <= 0) continue; // ignore the header ad and set ads
+		if (jid.proc < 0) {
+			// this is a cluster ad, we only care about factory ads
+			// TODO: handle late materialization factories
+			clusters_found.insert(jid.cluster);
+		} else {
+			// this is a proc ad, check to see if it corresponds to a job that we have
+
+			JobQueueJob * job = GetJobAd(jid);
+			if ( ! job) {
+				// ignore if this doesn't correspond to a job in the queue.
+				// TODO: handle jobs that were externally materialized
+				continue;
+			}
+
+			// verify the user is authorized to edit this job
+			if ( clusters_checked.find(jid.cluster) == clusters_checked.end() ) {
+				if ( ! UserCheck2(job, user) ) {
+					result.Assign(ATTR_ERROR_STRING, "User not authorized to import given jobs");
+					dprintf(D_ALWAYS, "ImportExportexJobResults(): User %s not authorized to import results for job owned by %s, aborting\n", user, job->ownerinfo->Name());
+					AbortTransaction();
+					return false;
+				}
+				clusters_checked.insert(jid.cluster);
+			}
+
+			// check to see if this corresponds to a job that is externally managed
+			// and not HELD or REMOVED, we skip external jobs for which this is not true.
+			if (job->Status() == HELD || job->Status() == REMOVED) {
+				continue;
+			}
+			if ( ! job->LookupString(ATTR_JOB_MANAGED, tmpstr) || tmpstr != MANAGED_EXTERNAL) {
+				continue;
+			}
+			if ( ! job->LookupString(ATTR_JOB_MANAGED_MANAGER, tmpstr) || tmpstr != "Lumberjack") {
+				continue;
+			}
+
+			++num_jobs;
+
+		#ifdef SMART_MERGE_BACK_OF_JOB_STATUS // smarter merge-back of job state
+			// grab the state from the external ad
+			int external_status = -1;
+			int hold_code=-1, hold_subcode=-1;
+			ad->LookupInteger(ATTR_JOB_STATUS, external_status);
+			if (external_status == HELD) {
+				// If external statis held, grab hold info and remove it from the ad
+				// so it doesn't get merged back.
+				ad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
+				ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE, hold_subcode);
+				ad->Delete(ATTR_HOLD_REASON_CODE);
+				ad->Delete(ATTR_HOLD_REASON_SUBCODE);
+				hold_reason.set(ad->Remove(ATTR_HOLD_REASON));
+			}
+			ad->Delete(ATTR_JOB_STATUS);
+		#endif
+
+			// delete the attributes from the external ad we don't want to merge back
+			ad->Delete(ATTR_JOB_LEAVE_IN_QUEUE);
+			ad->Delete(ATTR_JOB_IWD);
+			// delete immutable attributes that we couldn't merge back even if we wanted to
+			ad->Delete(ATTR_OWNER);
+			ad->Delete(ATTR_USER);
+			ad->Delete(ATTR_MY_TYPE);
+			ad->Delete(ATTR_TARGET_TYPE);
+			//ad->Delete(ATTR_PROC_ID);
+
+			// merge back attributes that have changed
+			for (auto it = ad->begin(); it != ad->end(); ++it) {
+				ExprTree * expr = job->Lookup(it->first);
+				if ( ! expr || ! (*expr == *(it->second))) {
+					const char *val = ExprTreeToString(it->second);
+					SetAttribute(jid.cluster, jid.proc, it->first.c_str(), val);
+				}
+			}
+
+		#ifdef SMART_MERGE_BACK_OF_JOB_STATUS // smarter merge-back of job state
+			if (job->Status() != external_status) {
+				// update state counters
+				SetAttributeInt(jid.cluster, jid.proc, ATTR_JOB_STATE, external_status);
+				if (external_status == HELD) {
+					SetAttribute(jid.cluster, jid.proc, ATTR_HOLD_REASON_CODE, hold_code);
+					SetAttribute(jid.cluster, jid.proc, ATTR_HOLD_REASON_SUBCODE, hold_subcode);
+					SetAttribute(jid.cluster, jid.proc, ATTR_HOLD_REASON, hold_reason.c_str());
+				}
+			}
+		#endif
+
+			// take the job out of the managed state
+			DeleteAttribute(jid.cluster, jid.proc, ATTR_JOB_MANAGED);
+			DeleteAttribute(jid.cluster, jid.proc, ATTR_JOB_MANAGED_MANAGER);
+		}
+	}
+
+	CommitTransactionOrDieTrying();
+
+	result.Assign(ATTR_TOTAL_JOB_ADS, num_jobs);
+
+	dprintf(D_ALWAYS,"ImportExportedJobResults() returning true\n");
+	return true;
+}
+
+int
+Scheduler::import_exported_job_results_handler(int /*cmd*/, Stream *stream)
+{
+	ReliSock *rsock = (ReliSock*)stream;
+	ClassAd reqAd; // classad specifying arguments for the export
+	ClassAd resultAd; // classad returning results of the export
+
+	rsock->decode();
+	rsock->timeout(15);
+	if( !getClassAd(rsock, reqAd) || !rsock->end_of_message()) {
+		dprintf( D_ALWAYS, "import_exported_job_results_handler Failed to receive classad in the request\n" );
+		return FALSE;
+	}
+
+	std::string import_dir;     // directory containing the modified job queue and other files from previous export
+	if ( ! reqAd.LookupString("ExportDir", import_dir) || import_dir.empty())
+	{
+		resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
+		resultAd.Assign(ATTR_ERROR_STRING, "Invalid arguments");
+		resultAd.Assign(ATTR_ERROR_CODE,SCHEDD_ERR_MISSING_ARGUMENT );
+	}
+	else 
+	{
+		dprintf(D_ALWAYS,"Calling ImportExportedJobResults(%s)\n", import_dir.c_str());
+		if ( ! ImportExportedJobResults(resultAd, import_dir.c_str(), EffectiveUser(rsock))) {
+			resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
+			resultAd.Assign(ATTR_ERROR_CODE, 1);
+		} else {
+			resultAd.Assign(ATTR_ACTION_RESULT, OK);
+		}
+	}
+
+	// send a reply consisting of a result classad
+	rsock->encode();
+	if ( ! putClassAd(rsock, resultAd)) {
+		dprintf( D_ALWAYS, "Error sending export-jobs result to client, aborting.\n" );
+		return FALSE;
+	}
+	if ( ! rsock->end_of_message()) {
+		dprintf( D_ALWAYS, "Error sending end-of-message to client, aborting.\n" );
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+bool
+Scheduler::UnexportJobs(ClassAd & result, std::set<int> & clusters, const char * user)
+{
+	dprintf(D_ALWAYS,"UnexportJobs(...)\n");
+
+	if ( clusters.empty() ) {
+		result.Assign(ATTR_ERROR_STRING, "No clusters to unexport");
+		dprintf(D_ALWAYS, "ExportJobs(): No clusters to unexport\n");
+		return false;
+	}
+
+	BeginTransaction();
+
+	int num_jobs = 0;
+	for (auto cid = clusters.begin(); cid != clusters.end(); ++cid) {
+		JobQueueCluster * jqc = GetClusterAd(*cid);
+		if ( ! jqc) continue;
+
+		// verify the user is authorized to edit this job cluster
+		if ( ! UserCheck2(jqc, user) ) {
+			result.Assign(ATTR_ERROR_STRING, "User not authorized to unexport given jobs");
+			dprintf(D_ALWAYS, "UnexportJobs(): User %s not authorized to unexport job owned by %s, aborting\n", user, jqc->ownerinfo->Name());
+			AbortTransaction();
+			return false;
+		}
+
+		// unexport all jobs in the cluster
+		for (JobQueueJob * job = jqc->FirstJob(); job != NULL; job = jqc->NextJob(job)) {
+			// skip jobs that are not externally managed.
+			if (!jobExternallyManaged(job)) continue;
+
+			// TODO: verify external manager is "Lumberjack"?
+
+			// take the job out of the managed state
+			DeleteAttribute(job->jid.cluster, job->jid.proc, ATTR_JOB_MANAGED);
+			DeleteAttribute(job->jid.cluster, job->jid.proc, ATTR_JOB_MANAGED_MANAGER);
+			++num_jobs;
+		}
+	}
+
+	CommitTransactionOrDieTrying();
+
+	result.Assign(ATTR_TOTAL_JOB_ADS, num_jobs);
+	result.Assign(ATTR_TOTAL_CLUSTER_ADS, (long)clusters.size());
+
+	dprintf(D_ALWAYS,"UnexportJobs() returning true\n");
+	return true;
+}
+
+int
+Scheduler::unexport_jobs_handler(int /*cmd*/, Stream *stream)
+{
+	ReliSock *rsock = (ReliSock*)stream;
+	ClassAd reqAd; // classad specifying arguments for the unexport
+	ClassAd resultAd; // classad returning results of the unexport
+
+	rsock->decode();
+	rsock->timeout(15);
+	if( !getClassAd(rsock, reqAd) || !rsock->end_of_message()) {
+		dprintf( D_ALWAYS, "unexport_jobs_handler Failed to receive classad in the request\n" );
+		return FALSE;
+	}
+
+	std::string unexport_list;    // list of cluster ids to unexport
+	ExprTree * constr_expr = reqAd.Lookup(ATTR_ACTION_CONSTRAINT);
+	if ( ! constr_expr && ! reqAd.LookupString(ATTR_ACTION_IDS, unexport_list) )
+	{
+		resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
+		resultAd.Assign(ATTR_ERROR_STRING, "Invalid arguments");
+		resultAd.Assign(ATTR_ERROR_CODE, SCHEDD_ERR_MISSING_ARGUMENT);
+	}
+	else
+	{
+		std::set<int> clusters;
+		// we have a constrain expression, so we have to turn that into a set of cluster ids
+		if (constr_expr) {
+			schedd_runtime_probe runtime;
+			struct _cluster_ids_args {
+				std::set<int> * pids;
+				ExprTree * constraint;
+			} args = { &clusters, constr_expr };
+
+			// build up a set of cluster ids that match the constraint expression
+			WalkJobQueueEntries(
+				(WJQ_WITH_CLUSTERS | WJQ_WITH_NO_JOBS),
+				[](JobQueueJob *job, const JOB_ID_KEY & cid, void * pv) -> int {
+					struct _cluster_ids_args & args = *(struct _cluster_ids_args*)pv;
+					if ( ! args.constraint || EvalExprBool(job, args.constraint)) {
+						args.pids->insert(cid.cluster);
+					}
+					return 0;
+				},
+				&args,
+				runtime);
+
+		} else {
+			// we have a string list of cluster ids
+			// build a set of cluster ids from the string of ids that was passed
+			StringTokenIterator sit(unexport_list);
+			for (const char * id = sit.first(); id != NULL; id = sit.next()) {
+				clusters.insert(atoi(id));
+			}
+		}
+		if ( ! UnexportJobs(resultAd, clusters, EffectiveUser(rsock)) ) {
+			resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
+			resultAd.Assign(ATTR_ERROR_CODE, 1);
+		} else {
+			resultAd.Assign(ATTR_ACTION_RESULT, OK);
+		}
+	}
+
+	// send a reply consisting of a result classad
+	rsock->encode();
+	if ( ! putClassAd(rsock, resultAd)) {
+		dprintf( D_ALWAYS, "Error sending unexport-jobs result to client, aborting.\n" );
+		return FALSE;
+	}
+	if ( ! rsock->end_of_message()) {
+		dprintf( D_ALWAYS, "Error sending end-of-message to client, aborting.\n" );
+		return FALSE;
+	}
+
+	return TRUE;
+}
+

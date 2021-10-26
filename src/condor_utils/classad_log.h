@@ -84,8 +84,9 @@ class ClassAdLog {
 public:
 
 	ClassAdLog(const ConstructLogEntry* pc=NULL);
-	ClassAdLog(const char *filename,int max_historical_logs=0,const ConstructLogEntry* pc=NULL);
 	~ClassAdLog();
+
+	bool InitLogFile(const char *filename,int max_historical_logs=0);
 
 	// define an stl type iterator, but one that can filter based on a requirements expression
 	class filter_iterator : std::iterator<std::input_iterator_tag, AD> {
@@ -132,6 +133,9 @@ public:
 
 	void AppendLog(LogRecord *log);	// perform a log operation
 	bool TruncLog();				// clean log file on disk
+
+	// close the log file and discard any unwritten transactions, disable future changes
+	void StopLog();
 
 	void BeginTransaction();
 	bool AbortTransaction();
@@ -497,13 +501,10 @@ LogRecord* InstantiateLogEntry(
 //
 
 template <typename K, typename AD>
-ClassAdLog<K,AD>::ClassAdLog(const char *filename,int max_historical_logs_arg,const ConstructLogEntry* maker)
-	: table(hashFunction)
-	, make_table_entry(maker)
+bool
+ClassAdLog<K,AD>::InitLogFile(const char *filename,int max_historical_logs_arg)
 {
 	log_filename_buf = filename;
-	active_transaction = NULL;
-	m_nondurable_level = 0;
 
 	bool open_read_only = max_historical_logs_arg < 0;
 	if (open_read_only) { max_historical_logs_arg = -max_historical_logs_arg; }
@@ -521,36 +522,43 @@ ClassAdLog<K,AD>::ClassAdLog(const char *filename,int max_historical_logs_arg,co
 		is_clean, requires_successful_cleaning, errmsg);
 
 	if ( ! log_fp) {
-		EXCEPT("%s", errmsg.c_str());
+		dprintf(D_ALWAYS, "%s", errmsg.c_str());
+		return false;
 	} else if ( ! errmsg.empty()) {
 		dprintf(D_ALWAYS, "ClassAdLog %s has the following issues: %s\n", filename, errmsg.c_str());
 	}
 	if( !is_clean || requires_successful_cleaning ) {
 		if (open_read_only && requires_successful_cleaning) {
-			EXCEPT("Log %s is corrupt and needs to be cleaned before restarting HTCondor", filename);
+			StopLog();
+			dprintf(D_ALWAYS, "Log %s is corrupt and needs to be cleaned before restarting HTCondor", filename);
+			return false;
 		}
 		else if( !TruncLog() && requires_successful_cleaning ) {
-			EXCEPT("Failed to rotate ClassAd log %s.", filename);
+			StopLog();
+			dprintf(D_ALWAYS, "Failed to rotate ClassAd log %s.", filename);
+			return false;
 		}
 	}
+	return true;
 }
 
 template <typename K, typename AD>
 ClassAdLog<K,AD>::ClassAdLog(const ConstructLogEntry* maker)
 	: table(hashFunction)
 	, make_table_entry(maker)
+	, log_fp(nullptr)
+	, active_transaction(nullptr)
+	, max_historical_logs(0)
+	, historical_sequence_number(0)
+	, m_original_log_birthdate(0)
+	, m_nondurable_level(0)
 {
-	active_transaction = NULL;
-	log_fp = NULL;
-	m_nondurable_level = 0;
-	max_historical_logs = 0;
-	historical_sequence_number = 0;
 }
 
 template <typename K, typename AD>
 ClassAdLog<K,AD>::~ClassAdLog()
 {
-	if (active_transaction) delete active_transaction;
+	StopLog();
 
 	// cache the effective table entry maker for use in the loop.
 	const ConstructLogEntry & dtor = this->GetTableEntryMaker();
@@ -652,6 +660,17 @@ ClassAdLog<K,AD>::TruncLog()
 	}
 
 	return rotated;
+}
+
+template <typename K, typename AD>
+void
+ClassAdLog<K,AD>::StopLog()
+{
+	AbortTransaction();
+	if (log_fp) {
+		fclose(log_fp);
+		log_fp = NULL;
+	}
 }
 
 template <typename K, typename AD>

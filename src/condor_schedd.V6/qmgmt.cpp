@@ -447,6 +447,25 @@ void JobQueueCluster::DetachAllJobs() {
 	}
 }
 
+JobQueueJob * JobQueueCluster::FirstJob() {
+	if (qe.empty()) return nullptr;
+	return qe.next()->as<JobQueueJob>();
+}
+
+JobQueueJob * JobQueueCluster::NextJob(JobQueueJob * job)
+{
+	if (! job || job->qe.empty()) return nullptr;
+	if (job->Cluster() != this) {
+		// TODO: assert here?
+		return nullptr;
+	}
+	job = job->qe.next()->as<JobQueueJob>();
+	// when we get to the end of the linked list, we hit the JobQueueCluster record again
+	if (job && job->IsCluster()) job = nullptr;
+	return job;
+}
+
+
 // This is where we can clean up any data structures that refer to the job object
 void
 ConstructClassAdLogTableEntry<JobQueueJob*>::Delete(ClassAd* &ad) const
@@ -1643,7 +1662,10 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	int spool_cur_version = 0;
 	CheckSpoolVersion(spool.c_str(),SPOOL_MIN_VERSION_SCHEDD_SUPPORTS,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS,spool_min_version,spool_cur_version);
 
-	JobQueue = new JobQueueType(new ConstructClassAdLogTableEntry<JobQueuePayload>(),job_queue_name,max_historical_logs);
+	JobQueue = new JobQueueType(new ConstructClassAdLogTableEntry<JobQueuePayload>());
+	if( !JobQueue->InitLogFile(job_queue_name,max_historical_logs) ) {
+		EXCEPT("Failed to initialize job queue log!");
+	}
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(hashFuncInt);
 	TotalJobsCount = 0;
 	jobs_added_this_transaction = 0;
@@ -2688,7 +2710,7 @@ QmgmtSetEffectiveOwner(char const *o)
 
 // Test if this owner matches my owner, so they're allowed to update me.
 bool
-UserCheck(ClassAd *ad, const char *test_owner)
+UserCheck(const ClassAd *ad, const char *test_owner)
 {
 	if ( Q_SOCK->getReadOnly() ) {
 		errno = EACCES;
@@ -2714,7 +2736,7 @@ UserCheck(ClassAd *ad, const char *test_owner)
 
 
 bool
-UserCheck2(ClassAd *ad, const char *test_owner, const char *job_owner)
+UserCheck2(const ClassAd *ad, const char *test_owner, const char *job_owner)
 {
 	std::string	owner_buf;
 
@@ -6342,7 +6364,6 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 {
 	ClassAd	*ad = NULL;
 	char	*attr_val;
-	std::string tmp;
 
 	JobQueueKeyBuf key;
 	IdToKey(cluster_id,proc_id,key);
@@ -6351,8 +6372,7 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 		ClassAd tmp_ad;
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
-		if( tmp_ad.LookupString(attr_name, tmp) == 1) {
-			val = tmp;
+		if( tmp_ad.LookupString(attr_name, val) == 1) {
 			return 1;
 		}
 		val = "";
@@ -6366,8 +6386,7 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 		return -1;
 	}
 
-	if (ad->LookupString(attr_name, tmp) == 1) {
-		val = tmp;
+	if (ad->LookupString(attr_name, val) == 1) {
 		return 0;
 	}
 	val = "";
@@ -8056,6 +8075,7 @@ WalkJobQueueEntries(int with, queue_job_scan_func func, void* pv, schedd_runtime
 
 	in_walk_job_queue--;
 }
+
 
 
 int dump_job_q_stats(int cat)
