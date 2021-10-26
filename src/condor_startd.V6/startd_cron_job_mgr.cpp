@@ -186,11 +186,12 @@ StartdCronJobMgr::ShouldStartJob( const CronJob &job ) const
 
 		classad::Value v;
 		if( context.EvaluateExpr( condition.Expr(), v ) ) {
-			bool rv;
-			if( v.IsBooleanValueEquiv(rv) ) {
-				if(! rv) { return false; }
+			bool rv = false;
+			if( v.IsBooleanValueEquiv(rv) && rv ) {
+				return true;
 			}
 		}
+		return false;
 	}
 
 	return true;
