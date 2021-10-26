@@ -1521,7 +1521,7 @@ main_init( int argc, char ** argv ) {
 	main_config();
 
 	commandState = new ClassAdCollection( NULL );
-	if( !commandState->InirLogFile(commandStateFile.c_str()) ) {
+	if( !commandState->InitLogFile(commandStateFile.c_str()) ) {
 		DC_Exit( 1 );
 	}
 
