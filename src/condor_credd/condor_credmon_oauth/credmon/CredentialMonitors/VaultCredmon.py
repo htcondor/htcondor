@@ -130,6 +130,7 @@ class VaultCredmon(AbstractCredentialMonitor):
                 params['audience'] = top_data['audience']
 
             url = top_data['vault_url'] + '?' + urllib_parse.urlencode(params)
+            request = urllib_request.Request(url=url, headers=headers)
 
             try:
                 handle = urllib_request.urlopen(request, capath=capath)

@@ -55,13 +55,15 @@ my %skipad = (
 	"ServerTime" => 1,
 	"ShadowBday" => 1,
 	"EnteredCurrentStatus" => 1,
+	"AutoClusterId" => 1,
+	"RemoteSlotID" => 1,
 );
 
 my $firstappend_condor_config = '
 	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 5
+	NEGOTIATOR_INTERVAL = 1
 	ALL_DEBUG = D_FULLDEBUG D_NETWORK
-	NUM_CPUS = 6
+	NUM_CPUS = 1
 	CONDOR_Q_USE_V3_PROTOCOL = true
 	#use role: personal
 ';
@@ -93,7 +95,7 @@ my $personal_counter = 0;
 my $GetClusterId = sub {
 	my $cid = shift;
 	$ClusterId = $cid;
-	print "Resquestd Cluster Got $ClusterId\n";
+	print "Requested Cluster Got $ClusterId\n";
 	##########################
 	#
 	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
@@ -202,9 +204,8 @@ my $runresult = SimpleJob::RunCheck(
 
 my $secondappend_condor_config = '
 	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 5
 	ALL_DEBUG = D_FULLDEBUG
-	NUM_CPUS = 6
+	NUM_CPUS = 1
 	CONDOR_Q_USE_V3_PROTOCOL = false
 	#use role: personal
 ';
@@ -279,9 +280,8 @@ $runresult = SimpleJob::RunCheck(
 
 my $thirdappend_condor_config = '
 	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 5
 	ALL_DEBUG = D_FULLDEBUG
-	NUM_CPUS = 6
+	NUM_CPUS = 1
 	CONDOR_Q_USE_V3_PROTOCOL = true
 	#use role: personal
 ';

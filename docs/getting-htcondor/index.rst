@@ -12,6 +12,7 @@ Getting HTCondor
     from-our-repositories
 
     install-linux-as-user
+    install-macos-as-root
 
     for-docker
 
@@ -43,8 +44,9 @@ instructions corresponding to your operating system:
 
 * :doc:`Windows <install-windows-as-administrator>`.
 * :doc:`Linux <install-linux-as-root>`.  HTCondor supports Enterprise Linux 7
-  and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
+  and 8, including RedHat and CentOS; Amazon Linux 2; Debian 10; and
   Ubuntu 18.04 and 20.04.
+* :doc:`macOS <install-macos-as-root>`.  HTCondor supports macOS 10.15 and later.
 
 .. _hand_install_with_user_privileges:
 
@@ -59,6 +61,8 @@ misbehaving jobs.
 * :doc:`Linux <install-linux-as-user>`.  HTCondor supports Enterprise Linux 7
   and 8, including RedHat and CentOS; Amazon Linux 2; Debian 9 and 10; and
   Ubuntu 18.04 and 20.04.
+
+* :doc:`macOS <install-linux-as-user>`.  HTCondor supports macOS 10.15 and later.
 
 .. _docker:
 

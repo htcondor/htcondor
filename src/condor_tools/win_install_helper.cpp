@@ -133,6 +133,29 @@ void print_usage(FILE * fp, int exit_code)
 	exit(exit_code);
 }
 
+bool echo_file(FILE *fp, const char *root_config, const char * pre="")
+{
+	MacroStreamFile rcf;
+	MACRO_SET ms;
+	std::string errmsg;
+	if (rcf.open(root_config, false, ms, errmsg)) {
+		const char * line = nullptr;
+		do {
+			line = rcf.getline(0);
+			if (line) {
+				fprintf_s(fp, "%s%s\n", pre, line);
+			} else {
+				rcf.close(ms, 0);
+				return true;
+			}
+		} while (line);
+	} else {
+		fprintf_s(fp, "Could not not open %s : %s", root_config, errmsg.c_str());
+	}
+	return false;
+}
+
+
 void arg_needed(const char * arg)
 {
 	fprintf(stderr, "%s needs an argument\n", arg);
@@ -149,6 +172,7 @@ int __cdecl main(int argc, const char * argv[])
 	const char * root_config = nullptr;
 	const char * token_file;
 	bool close_log_file = true;
+	bool log_only = false;	 // when true, we don't want to return non-zero exit when token create fails (because we want to see the log)
 	std::string identity;
 
 	for (int ix = 1; ix < argc; ++ix) {
@@ -171,6 +195,7 @@ int __cdecl main(int argc, const char * argv[])
 				arg_needed("sid");
 			} else {
 				ssid = argv[++ix];
+				log_only = true;
 			}
 		} else if (is_dash_arg_prefix(argv[ix], "identity")) {
 			if (! argv[ix + 1]) {
@@ -207,9 +232,11 @@ int __cdecl main(int argc, const char * argv[])
 	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	if (root_config) {
-		config_ex(CONFIG_OPT_NO_EXIT);
-	} else {
+		fprintf_s(fp, "\nUsing this root config: %s\n", root_config);
+		echo_file(fp, root_config, "  ");
 		config_host(NULL, CONFIG_OPT_NO_EXIT | CONFIG_OPT_USE_THIS_ROOT_CONFIG, root_config);
+	} else {
+		config_ex(CONFIG_OPT_NO_EXIT);
 	}
 
 	auto_free_ptr key_path;
@@ -264,6 +291,8 @@ int __cdecl main(int argc, const char * argv[])
 
 	std::vector<std::string> authz;
 	authz.push_back("ADMINISTRATOR");
+	authz.push_back("CONFIG");
+	authz.push_back("READ");
 
 	// Token generation uses $(TRUST_DOMAIN) as the Issuer
 	// the default for TRUST_DOMAIN is $(COLLECTOR_HOST) which is wrong for
@@ -276,7 +305,7 @@ int __cdecl main(int argc, const char * argv[])
 		if (!Condor_Auth_Passwd::generate_token(identity, key_id, authz, -1, token, 0, &err)) {
 			fprintf_s(fp, "Failed to generate a token.\n");
 			fprintf_s(fp, "%s\n", err.getFullText(true).c_str());
-			exit(2);
+			if ( ! log_only) { exit(2); }
 		} else {
 			//fprintf_s(fp, "AdminToken: {%s}\n", token.c_str());
 			if (token_file) {

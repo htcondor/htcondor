@@ -22,7 +22,8 @@ use CondorTest;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my $append_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
   USE_SHARED_PORT = True
   DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 
@@ -31,11 +32,8 @@ my $append_condor_config = '
   # named sockets cannot have very long paths (~100 chars), so put them
   # in /tmp to avoid problems
   DAEMON_SOCKET_DIR = /tmp/$(USERNAME)-condor-test-sock'.$$.'
-';
-
-CondorTest::StartCondorWithParams(
-    append_condor_config => $append_condor_config
-);
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 # verify that a job runs
 SimpleJob::RunCheck();

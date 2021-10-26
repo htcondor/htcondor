@@ -23,10 +23,6 @@
 #include "condor_debug.h"
 
 
-#ifdef __cplusplus 
-extern "C" {
-#endif
-
 void
 install_sig_handler( int sig, SIG_HANDLER handler )
 {
@@ -95,6 +91,3 @@ block_signal( int sig)
     }
 }	
 
-#ifdef __cplusplus 
-}
-#endif

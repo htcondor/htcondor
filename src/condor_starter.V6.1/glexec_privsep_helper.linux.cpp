@@ -200,7 +200,7 @@ GLExecPrivSepHelper::chown_sandbox_to_user(PrivSepError &err)
 	MyString error_desc = "error changing sandbox ownership to the user: ";
 	int rc = run_script(args,error_desc);
 	if( rc != 0) {
-		int hold_code = CONDOR_HOLD_CODE_GlexecChownSandboxToUser;
+		int hold_code = CONDOR_HOLD_CODE::GlexecChownSandboxToUser;
 		if( rc != INVALID_PROXY_RC && !param_boolean("GLEXEC_HOLD_ON_INITIAL_FAILURE",true) ) {
 			// Do not put the job on hold due to glexec failure.
 			// It will simply return to idle status and try again.
@@ -240,7 +240,7 @@ GLExecPrivSepHelper::chown_sandbox_to_condor(PrivSepError &err)
 	int rc = run_script(args,error_desc);
 	if( rc != 0) {
 		err.setHoldInfo(
-			CONDOR_HOLD_CODE_GlexecChownSandboxToCondor, rc,
+			CONDOR_HOLD_CODE::GlexecChownSandboxToCondor, rc,
 			error_desc.c_str());
 		return false;
 	}

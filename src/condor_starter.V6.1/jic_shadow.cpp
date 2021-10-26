@@ -711,7 +711,7 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 
 	dprintf( D_ALWAYS, "Accepted request to reconnect from %s\n",
 			generate_sinful(syscall_sock->peer_ip_str(),
-						syscall_sock->peer_port()).Value());
+						syscall_sock->peer_port()).c_str());
 	dprintf( D_ALWAYS, "Ignoring old shadow %s\n", shadow->addr() );
 	delete shadow;
 	shadow = new DCShadow;
@@ -736,7 +736,7 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 		// switch over to the new syscall_sock
 	dprintf( D_FULLDEBUG, "Closing old syscall sock %s\n",
 			generate_sinful(syscall_sock->peer_ip_str(),
-					syscall_sock->peer_port()).Value());
+					syscall_sock->peer_port()).c_str());
 		// make sure old syscall_sock is no longer registered before we blow it away
 	if (syscall_sock_registered) {
 		daemonCore->Cancel_Socket(syscall_sock);
@@ -747,7 +747,7 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 	syscall_sock->timeout(param_integer( "STARTER_UPLOAD_TIMEOUT", 300));
 	dprintf( D_FULLDEBUG, "Using new syscall sock %s\n",
 			generate_sinful(syscall_sock->peer_ip_str(),
-					syscall_sock->peer_port()).Value());
+					syscall_sock->peer_port()).c_str());
 
 	syscall_sock_reconnect();  // cancels any disconnected timers etc
 
@@ -927,6 +927,21 @@ bool
 JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode )
 {
 	u_log->logStarterError( err_msg, critical );
+
+	// If the scratch working directory has disappeared when it should exist,
+	// that is likely connected to the error. Don't tell the shadow to put
+	// the job on hold, as it's likely not the fault of the job.
+	// Make an exception for local universe jobs
+	// (SCHEDD_USES_STARTD_FOR_LOCAL_UNIVERSE=True), as they have nowhere
+	// else to go if this is a recurring problem.
+	if( Starter->WorkingDirExists() && job_universe != CONDOR_UNIVERSE_LOCAL ) {
+		StatInfo si(Starter->GetWorkingDir(false));
+		if( si.Error() == SINoFile ) {
+			dprintf(D_ALWAYS, "Scratch execute directory disappeared unexpectedly, declining to put job on hold.\n");
+			hold_reason_code = 0;
+			hold_reason_subcode = 0;
+		}
+	}
 
 	if( critical ) {
 		if( REMOTE_CONDOR_ulog_error(hold_reason_code, hold_reason_subcode, err_msg) < 0 ) {
@@ -1275,6 +1290,9 @@ JICShadow::initUserPriv( void )
 		if( nobody_user == NULL ) {
 			snprintf( nobody_param, 20, "%s_USER", slotName.c_str() );
 			nobody_user = param(nobody_param);
+			if (! nobody_user) {
+				nobody_user = param("NOBODY_SLOT_USER");
+			}
 		}
 
         if ( nobody_user != NULL ) {
@@ -1856,7 +1874,7 @@ JICShadow::proxyExpiring()
 {
 	// we log the return value, but even if it failed we still try to clean up
 	// because we are about to lose control of the job otherwise.
-	holdJob("Proxy about to expire", CONDOR_HOLD_CODE_CorruptedCredential, 0);
+	holdJob("Proxy about to expire", CONDOR_HOLD_CODE::CorruptedCredential, 0);
 
 	// this will actually clean up the job
 	if ( Starter->Hold( ) ) {

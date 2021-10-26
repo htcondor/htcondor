@@ -32,7 +32,6 @@
 #include "gridmanager.h"
 #include "nordugridjob.h"
 #include "condor_config.h"
-#include "globusjob.h" // for rsl_stringify()
 
 
 // GridManager job states
@@ -740,7 +739,7 @@ void NordugridJob::doEvaluateState()
 				gmState = GM_DELETE;
 			} else {
 				SetRemoteJobId( NULL );
-				gmState = GM_CLEAR_REQUEST;
+				gmState = GM_HOLD;
 			}
 			} break;
 		case GM_DELETE: {
@@ -923,6 +922,73 @@ void NordugridJob::SetRemoteJobId( const char *job_id )
 							 job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
+}
+
+const char *rsl_stringify( const std::string& src )
+{
+	size_t src_len = src.length();
+	size_t src_pos = 0;
+	size_t var_pos1;
+	size_t var_pos2;
+	size_t quote_pos;
+	static std::string dst;
+
+	if ( src_len == 0 ) {
+		dst = "''";
+	} else {
+		dst = "";
+	}
+
+	while ( src_pos < src_len ) {
+		var_pos1 = src.find( "$(", src_pos );
+		var_pos2 = var_pos1 == std::string::npos ? var_pos1 : src.find( ")", var_pos1 );
+		quote_pos = src.find( "'", src_pos );
+		if ( var_pos2 == std::string::npos && quote_pos == std::string::npos ) {
+			dst += "'";
+			dst += src.substr( src_pos, src.npos );
+			dst += "'";
+			src_pos = src.length();
+		} else if ( var_pos2 == std::string::npos ||
+					(quote_pos != std::string::npos && quote_pos < var_pos1 ) ) {
+			if ( src_pos < quote_pos ) {
+				dst += "'";
+				dst += src.substr( src_pos, quote_pos - src_pos );
+				dst += "'#";
+			}
+			dst += '"';
+			while ( src[quote_pos] == '\'' ) {
+				dst += "'";
+				quote_pos++;
+			}
+			dst += '"';
+			if ( quote_pos < src_len ) {
+				dst += '#';
+			}
+			src_pos = quote_pos;
+		} else {
+			if ( src_pos < var_pos1 ) {
+				dst += "'";
+				dst += src.substr( src_pos, var_pos1 - src_pos );
+				dst += "'#";
+			}
+			dst += src.substr( var_pos1, (var_pos2 - var_pos1) + 1 );
+			if ( var_pos2 + 1 < src_len ) {
+				dst += '#';
+			}
+			src_pos = var_pos2 + 1;
+		}
+	}
+
+	return dst.c_str();
+}
+
+const char *rsl_stringify( const char *string )
+{
+	static std::string src;
+	if ( string ) {
+		src = string;
+	}
+	return rsl_stringify( src );
 }
 
 std::string *NordugridJob::buildSubmitRSL()

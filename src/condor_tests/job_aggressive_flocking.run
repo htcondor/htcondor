@@ -23,35 +23,26 @@ use CondorUtils;
 use Condor;
 use Check::SimpleJob;
 
-use Check::SimpleJob;
+my $testname = "JobAggressiveFlocking";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+    WANT_SUSPEND = FALSE
+    KILLING_TIMEOUT = 1
+    MachineMaxVacateTime = 5
+    UPDATE_INTERVAL = 5
+    KILL = FALSE
+    START = TRUE
+    NUM_CPUS = 32
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 Condor::DebugOn;
 Condor::DebugLevel(1);
 
 select STDERR; $|=1;
 select STDOUT; $|=1;
-
-my $firstappend_condor_config = '
-    WANT_SUSPEND = FALSE
-    KILLING_TIMEOUT = 1
-    MachineMaxVacateTime = 5
-    NEGOTIATION_INTERVAL = 5
-    UPDATE_INTERVAL = 5
-    KILL = FALSE
-    START = TRUE
-    NUM_CPUS = 32
-    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-';
-
-my $testname = "JobAggressiveFlocking";
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"aggressiveflocking");
-
-CondorTest::StartCondorWithParams(
-    condor_name => "aggressiveflocking",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
 
 my $spooldir = `condor_config_val SPOOL`;
 chomp $spooldir;

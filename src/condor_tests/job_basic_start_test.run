@@ -24,12 +24,10 @@ use Check::SimpleJob;
 #use Check::CondorLog;
 use Check::ProcInfo;
 
-my $configfile = "";
-my $ClusterId = 0;
 my $testname =  "job_basic_start_test";
 
-
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	NUM_CPUS = 5
 	SLOT1_CPU_AFFINITY = 0
@@ -38,22 +36,11 @@ my $firstappend_condor_config = '
 	SLOT4_CPU_AFFINITY = 3
 	SLOT5_CPU_AFFINITY = 4
 	SLOT5_IsGeneralPurposeSlot = False
-	#START = ($(START)) \
-		#&& ((TARGET.RequiresTypeB =?= TRUE && MY.SlotID == 5) \
 	START =  ((TARGET.RequiresTypeB =?= TRUE && MY.SlotID == 5) \
 		  || (TARGET.RequiresTypeB =!= TRUE && MY.SlotID != 5))
 	ALL_DEBUG = 
-';
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"name1");
-
-my $condorinfo =CondorTest::StartCondorWithParams(
-	condor_name => "name1",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
-print "We know this about the just started personal condor <$condorinfo>\n";
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 my $sleepforever = '
 	universe = vanilla
@@ -64,13 +51,11 @@ my $sleepforever = '
 	queue
 ';
 
-print "First test basic job\n";
+TLOG "First test basic job\n";
 SimpleJob::RunCheck();
 
-print "Config file follows\n";
-system("cat $configfile");
 
-print "Starting sleep forever job\n";
+TLOG "Starting sleep forever job\n";
 
 my $sleepf1 = $$ . "sf1";
 open(SF1,">$sleepf1") or die "Can not create <$sleepf1>\n";

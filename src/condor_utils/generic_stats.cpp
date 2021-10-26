@@ -1357,8 +1357,8 @@ stats_ema_config::sameAs( stats_ema_config const *other )
 }
 
 template <class T>
-void stats_entry_ema_base<T>::ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> new_config) {
-	classy_counted_ptr<stats_ema_config> old_config(ema_config);
+void stats_entry_ema_base<T>::ConfigureEMAHorizons(std::shared_ptr<stats_ema_config> new_config) {
+	std::shared_ptr<stats_ema_config> old_config(ema_config);
 	ema_config = new_config;
 
 	if( new_config->sameAs(old_config.get()) ) {
@@ -1387,13 +1387,13 @@ stats_ema_config::add(time_t horizon,char const *horizon_name)
 	horizons.push_back( horizon_config(horizon,horizon_name) );
 }
 
-bool ParseEMAHorizonConfiguration(char const *ema_conf,classy_counted_ptr<stats_ema_config> &ema_horizons,std::string &error_str) {
+bool ParseEMAHorizonConfiguration(char const *ema_conf,std::shared_ptr<stats_ema_config> &ema_horizons,std::string &error_str) {
 		// expected format of ema_conf:
 		// "name1:horizon1 name2:horizon2 ..."
 		// Example: "1m:60 1h:3600 1d:86400"
 
 	ASSERT( ema_conf );
-	ema_horizons = new stats_ema_config;
+	ema_horizons = std::make_shared<stats_ema_config>();
 
 	while( *ema_conf ) {
 		while( is_space(*ema_conf) || *ema_conf == ',' ) ema_conf++;

@@ -958,9 +958,7 @@ class DaemonCore : public Service
 					  establishing the security session).
 	   @return true of in danger of running out of file descriptors
 	 */
-	bool TooManyRegisteredSockets(int fd=-1,MyString *msg=NULL,int num_fds=1);
-    // Set default fd=-1 and msg=NULL when the MyString variant vanishes.
-	bool TooManyRegisteredSockets(int fd,std::string *msg,int num_fds=1);
+	bool TooManyRegisteredSockets(int fd=-1,std::string *msg=NULL,int num_fds=1);
 
 	/**
 	   @return Maximum number of persistent file descriptors that
@@ -1752,7 +1750,7 @@ class DaemonCore : public Service
        stats_entry_sum_ema_rate<int> Commands;
 
        StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
-       classy_counted_ptr<stats_ema_config> ema_config;	// Exponential moving average config for this pool.
+	   std::shared_ptr<stats_ema_config> ema_config;	// Exponential moving average config for this pool.
 
 	   time_t InitTime;            // last time we init'ed the structure
 	   time_t RecentStatsTickTime; // time of the latest recent buffer Advance

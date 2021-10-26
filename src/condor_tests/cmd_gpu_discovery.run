@@ -30,16 +30,13 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my @submitfiles =	();
-
-my $pid = $$;
-my $ClusterId = 0;
+my $testname = "cmd_gpu_discovery";
 
 my $totalcpus = 6;
 my $totalgpus = 4;
 
-my $firstappend_condor_config = '
-
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	# These are for GPU configuration
 	MACHINE_RESOURCE_INVENTORY_GPUs = $(LIBEXEC)/condor_gpu_discovery -simulate:0,4 -properties
 	ENVIRONMENT_FOR_AssignedGPUs = CUDA_VISIBLE_DEVICES
@@ -52,31 +49,12 @@ my $firstappend_condor_config = '
 
 	# General settings 
 	NUM_CPUS = 6
-	NEGOTIATION_INTERVAL = 5
 	ALL_DEBUG = D_FULLDEBUG
 	MASTER_DEBUG = D_SECURITY:1 D_COMMAND:1
-';
-# don't forget PERSISTENT_CONFIG settings
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 # -simulate:0,4 gives DetectedGPUs="GPU-a0223334, GPU-b1223334, GPU-c2223334, GPU-d3223334"
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"cmdgpudiscovery");
-
-my $testname = "cmd_gpu_discovery";
-
-# First order up the config but do not start it. If the condor_config_val fails
-# there is no reason to go on
-
-CondorTest::StartCondorWithParams(
-	condor_name => "cmdgpudiscovery",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
-#print "************************** CONDOR_CONFIG now set to:$ENV{CONDOR_CONFIG} ******************\n";
-
-
-# now start the personal condor to ensure it comes up
 
 #Do a job before setting tesing exit codes
 print "First test basic job\n";

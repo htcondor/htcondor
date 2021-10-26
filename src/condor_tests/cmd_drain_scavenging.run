@@ -501,8 +501,8 @@ sub checkTiming {
 
 		if( $state == 4 && $line =~ /^${secondsMatch} slot1_1${jidm}: max vacate time expired.  Escalating to a fast shutdown of the job.$/ ) {
 			# Especially with sub-second reporting, allow the startd some time to work.
-			if( (($finalDrainStartTime + 5) % 60) != $1 && (($finalDrainStartTime + 6) % 60) != $1 ) {
-				die( "MaxMachineVacateTime was not 5.\n" );
+			if( (($finalDrainStartTime + 4) % 60) != $1 && (($finalDrainStartTime + 5) % 60) != $1 && (($finalDrainStartTime + 6) % 60) != $1 ) {
+				die( "MaxMachineVacateTime was not 5: finalDrainStartTime is $finalDrainStartTime, one is $1, \n" );
 			} else {
 				$state = 5;
 				next;

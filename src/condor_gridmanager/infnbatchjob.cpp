@@ -616,7 +616,7 @@ void INFNBatchJob::doEvaluateState()
 			if ( !myResource->GahpIsRemote() ) {
 				numSubmitAttempts++;
 			}
-			if ( rc == GLOBUS_SUCCESS ) {
+			if ( rc == GAHP_SUCCESS ) {
 				SetRemoteJobId( job_id_string );
 				if(jobProxy) {
 					remoteProxyExpireTime = jobProxy->expiration_time;
@@ -696,7 +696,7 @@ void INFNBatchJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc != GLOBUS_SUCCESS ) {
+			if ( rc != GAHP_SUCCESS ) {
 				// unhandled error
 				numStatusCheckAttempts++;
 				if (numStatusCheckAttempts < param_integer("BATCH_GAHP_CHECK_STATUS_ATTEMPTS", 5)) {
@@ -780,7 +780,7 @@ void INFNBatchJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 					dprintf( D_ALWAYS,
 							 "(%d.%d) blah_download_proxy() failed: %s\n",
@@ -814,7 +814,7 @@ void INFNBatchJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 					dprintf( D_ALWAYS,
 							 "(%d.%d) blah_job_refresh_proxy() failed: %s\n",
@@ -950,7 +950,7 @@ void INFNBatchJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
 					dprintf( D_ALWAYS,
 							 "(%d.%d) blah_job_cancel() failed: %s\n",
@@ -1094,6 +1094,7 @@ void INFNBatchJob::doEvaluateState()
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
+				SetRemoteIds( NULL, NULL );
 				gmState = GM_CLEAR_REQUEST;
 			}
 		} break;
@@ -1373,7 +1374,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		"SMPGranularity",
 		"WholeNodes",
 		"HostSMPSize",
-		"BatchExtraSubmitArgs",
+		ATTR_BATCH_EXTRA_SUBMIT_ARGS,
 		"StageCmd",
 		ATTR_BATCH_PROJECT,
 		ATTR_BATCH_RUNTIME,
@@ -1385,11 +1386,16 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	submit_ad = new ClassAd;
 
+	classad::EvalState state;
+	state.SetScopes(jobAd);
 	index = -1;
 	while ( attrs_to_copy[++index] != NULL ) {
 		classad::Value val;
 		classad::Literal *new_literal;
-		if ( jobAd->EvaluateAttr(attrs_to_copy[index], val) && (new_literal = classad::Literal::MakeLiteral(val)) ) {
+		if ( (next_expr = jobAd->LookupExpr(attrs_to_copy[index])) &&
+		     next_expr->Evaluate(state, val) &&
+		     (new_literal = classad::Literal::MakeLiteral(val)) )
+		{
 			submit_ad->Insert(attrs_to_copy[index], new_literal);
 		}
 	}

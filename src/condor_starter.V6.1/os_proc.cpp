@@ -527,10 +527,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 				job_not_started = true;
 				std::string starterErrorMessage = "Singularity test failed:";
 				starterErrorMessage += singErrorMessage;
-				Starter->jic->notifyStarterError( starterErrorMessage.c_str(),
-			    	                              	true,
-			        	                          CONDOR_HOLD_CODE_SingularityTestFailed,
-			            	                      0);
+				EXCEPT("%s", starterErrorMessage.c_str());
 				return 0;
 			}
 		}
@@ -744,7 +741,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			if( !ThisProcRunsAlongsideMainProc() ) {
 				Starter->jic->notifyStarterError( err_msg.c_str(),
 			    	                              true,
-			        	                          CONDOR_HOLD_CODE_FailedToCreateProcess,
+			        	                          CONDOR_HOLD_CODE::FailedToCreateProcess,
 			            	                      create_process_errno );
 			}
 		}
@@ -1267,6 +1264,25 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	sprintf(buf,"%d", pid);
 	args.AppendArg(buf); // pid of running job
 
+	// get_user_[ug]id only works if uids has been initted
+	// which isn't the case in a personal condor (and can't be)
+	// If we get an error from those, assume personal condor
+	// and pass in our uid/gid
+
+	int uid = (int) get_user_uid();
+	if (uid < 0) uid = getuid();
+
+	args.AppendArg("-S");
+	sprintf(buf, "%d", uid);
+	args.AppendArg(buf);
+
+	int gid = (int) get_user_gid();
+	if (gid < 0) gid = getgid();
+
+	args.AppendArg("-G");
+	sprintf(buf, "%d", gid);
+	args.AppendArg(buf);
+
 	bool setuid = param_boolean("SINGULARITY_IS_SETUID", true);
 	if (setuid) {
 		// The default case where singularity is using a setuid wrapper
@@ -1276,18 +1292,10 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 		args.AppendArg("-r"); // root directory
 		args.AppendArg("-w"); // cwd is container's
 
-		args.AppendArg("-S");
-		sprintf(buf, "%d", get_user_uid());
-		args.AppendArg(buf);
-	
-		args.AppendArg("-G");
-		sprintf(buf, "%d", get_user_gid());
-		args.AppendArg(buf);
 	} else {
 		args.AppendArg("-U"); // enter only the User namespace
 		args.AppendArg("-r"); // chroot
 		args.AppendArg("-preserve-credentials");
-	
 	}
 
 	Env env;

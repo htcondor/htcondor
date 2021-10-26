@@ -137,11 +137,14 @@ MaxJobRetirementTime	= 60
 
 log						= cmd_drain_scavenging_vacation.log
 
+Requirements			= (NumJobStarts?:0) < 1
 queue 3
 
 arguments				= ${killFile}.\$(CLUSTER).\$(PROCESS) 60
 +IsInterruptible		= true
 MaxJobRetirementTime	= 3600
+# prevent job from restarting after eviction before we can kill it
+Requirements			= (NumJobStarts?:0) < 1
 
 queue 1
 
@@ -164,6 +167,7 @@ CondorUtils::fullchomp( $hostName );
 
 my $testingPhase = 0;
 my $longJobsRunningCount = 0;
+
 my $execute = sub {
 	my %info = @_;
 	my $ID = $info{ 'cluster' } . "." . $info{ 'job' };
@@ -390,6 +394,7 @@ my $evicted = sub {
 		runCommandCarefully( undef, "condor_drain -cancel ${hostName}" );
 
 		print( "Removing evicted job ${ID}...\n" );
+
 		runCommandCarefully( undef, 'condor_rm', $ID );
 
 		print( "Calling condor_reschedule...\n" );

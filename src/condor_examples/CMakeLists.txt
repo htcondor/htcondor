@@ -47,6 +47,7 @@ install (FILES
 		condor.boot.rpm
 		condor_config.local.ha_condor_had
 		condor_config.generic
+		condor_config.tarball
 		condor_config.local.dedicated.resource
 		condor_config.local.view_server
 		#condor_config.generic.debian.patch
@@ -116,6 +117,12 @@ elseif ( DEB_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 	install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched
 						DESTINATION	"${C_ETC}"
 						RENAME	condor_config)
+
+elseif( DARWIN )
+
+	install(FILES         condor_config.tarball
+	        DESTINATION   "${C_ETC}"
+	        RENAME        condor_config)
 
 else()
 	#Other Platform

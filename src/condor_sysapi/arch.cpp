@@ -384,14 +384,16 @@ init_arch(void)
 
 #if defined( Darwin )
 
-	opsys = strdup( "OSX" );
-	opsys_legacy = strdup( opsys );
-	opsys_short_name = strdup( "MacOSX" );
-	opsys_long_name = sysapi_get_darwin_info();  
-	opsys_major_version = sysapi_find_darwin_major_version( opsys_long_name );
+	opsys = strdup( "macOS" );
+	opsys_legacy = strdup( "OSX" );
+	opsys_short_name = strdup( "macOS" );
+	// This sets the following:
+	//   opsys_long_name
+	//   opsys_major_version
+	//   opsys_name
+	sysapi_get_darwin_info();
 	opsys_version = sysapi_translate_opsys_version( opsys_long_name );
 	opsys_versioned = sysapi_find_opsys_versioned( opsys_short_name, opsys_major_version );
-	opsys_name = sysapi_find_darwin_opsys_name( opsys_major_version );
 	
 #elif defined( CONDOR_FREEBSD )
 
@@ -424,7 +426,7 @@ init_arch(void)
 		//    opsys           is "SOLARIS"
 		//    opsys_short_name is "Solaris"
 		//    opsys_versioned  is "Solaris11"
-		opsys_long_name = sysapi_get_unix_info( buf.sysname, buf.release, buf.version, _sysapi_opsys_is_versioned );
+		opsys_long_name = sysapi_get_unix_info( buf.sysname, buf.release, buf.version );
 		char * p = strdup( opsys_long_name );
 		opsys_name = p; p = strchr(p, ' '); if (p) *p = 0;
 		opsys_legacy = p = strdup( opsys_name ); for (; *p; ++p) { *p = toupper(*p); }
@@ -480,7 +482,7 @@ void sysapi_opsys_dump(int category)
 
 // Darwin (MacOS) methods
 #if defined( Darwin )
-const char * 
+void
 sysapi_get_darwin_info(void)
 {
     char ver_str[255];
@@ -489,7 +491,7 @@ sysapi_get_darwin_info(void)
 
     char tmp_info[262];
     char *info_str;
-    const char *os_name = "MacOSX ";
+    const char *os_name = "macOS ";
  
     if ((output_fp = my_popenv(args, "r", FALSE)) != NULL) {
 	fgets(ver_str, 255, output_fp);
@@ -499,70 +501,39 @@ sysapi_get_darwin_info(void)
 	info_str = strdup( "Unknown" );
     }
 
-    int ten = 0, major = 0, minor = 0;
-    int fields = sscanf(ver_str, "%d.%d.%d", &ten, &major, &minor);
-    if ((fields != 3) || ten != 10) {
-        dprintf(D_FULLDEBUG, "UNEXPECTED MacOS version string %s", ver_str);
-    }
-
-    sprintf( tmp_info, "%s%d.%d", os_name, major, minor);
-    info_str = strdup( tmp_info );
-
-    if( !info_str ) {
-    	EXCEPT( "Out of memory!" );
-    }
-
-    return info_str;
-}
-
-int
-sysapi_find_darwin_major_version( const char *tmp_opsys_long_name )
-{
-    	const char * ver_str = tmp_opsys_long_name;
-
-	// In the case where something fails above and verstr = Unknown, return 0
-	if ( !strcmp(ver_str, "Unknown") ){
-		return 0;
-	}
-
-    	// skip any leading non-digits.
-   	while (ver_str[0] && (ver_str[0] < '0' || ver_str[0] > '9')) { 
-       		++ver_str;
-  	}
-
-	// we remove the 10 in the sysapi_get_darwin_info call
-	int major = 0, minor = 0;
-	int fields = sscanf(ver_str, "%d.%d", &major, &minor);
-	if ((fields != 2) ) {
+	int major = 0, minor = 0, patch = 0;
+	int fields = sscanf(ver_str, "%d.%d.%d", &major, &minor, &patch);
+	if (major < 10 || major > 12 || fields < 2 || (major == 10 && fields != 3)) {
 		dprintf(D_FULLDEBUG, "UNEXPECTED MacOS version string %s", ver_str);
 	}
 
-	return major;
-}
+    sprintf( tmp_info, "%s%d.%d", os_name, major, minor);
+    opsys_long_name = strdup( tmp_info );
 
-const char *
-sysapi_find_darwin_opsys_name( int tmp_opsys_major_version )
-{
-	int vers = tmp_opsys_major_version;
-        const char *osname = NULL;
+    if( !opsys_long_name ) {
+    	EXCEPT( "Out of memory!" );
+    }
 
-	const char * versions[] = {
-		"Leopard",             // 5
-		"SnowLeopard",         // 6	
-		"Lion",                // 7
-		"MountainLion",        // 8 
-	};
+	opsys_major_version = major;
 
-        if (vers >= 5 && (vers-5) < (int)COUNTOF(versions)) {
-		osname = strdup(versions[vers-5]);
-        } else {
-		osname = strdup("Unknown");
-	}
-        if ( !osname) {  
-		EXCEPT( "Out of memory!" );
+	const char *osname = "Unknown";
+	if ( major == 12 ) {
+		osname = "Monterey";
+	} else if ( major == 11 ) {
+		osname = "BigSur";
+	} else if ( major == 10 && minor == 15 ) {
+		osname = "Catalina";
+	} else if ( major == 10 && minor == 14 ) {
+		osname = "Mojave";
+	} else if ( major == 10 && minor == 13 ) {
+		osname = "HighSierra";
 	}
 
-	return osname;
+	opsys_name = strdup(osname);
+
+	if (!opsys_name) {
+		EXCEPT("Out of memory!");
+	}
 }
 
 #elif defined( CONDOR_FREEBSD )
@@ -700,6 +671,10 @@ sysapi_find_linux_name( const char *info_str )
         {
                 distro = strdup("CentOS");
         }  
+        else if ( strstr(distro_name_lc, "rocky") )
+        {
+                distro = strdup("Rocky");
+        }
         else if ( strstr(distro_name_lc, "amazon linux") )
         {
                 distro = strdup("AmazonLinux");
@@ -727,8 +702,7 @@ sysapi_find_linux_name( const char *info_str )
 const char *
 sysapi_get_unix_info( const char *sysname,
 			const char *release,
-			const char *version,
-                        int         append_version)
+			const char *version)
 {
 	char tmp[64];
 	const char * pver="";
@@ -789,7 +763,7 @@ sysapi_get_unix_info( const char *sysname,
 		sprintf( tmp, "%s", sysname);
         pver = release;
 	}
-        if (append_version && pver) {
+        if (pver) {
             strcat( tmp, pver );
         }
 

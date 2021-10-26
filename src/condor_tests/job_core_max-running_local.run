@@ -21,49 +21,28 @@
 use CondorTest;
 use CondorUtils;
 use Cwd;
-
 use Check::SimpleJob;
-
-$topdir = getcwd();
 
 $testname = "job_core_max-running_local";
 
-# where am I running
-$currenthost = CondorTest::getFqdnHost();
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+    DAEMON_LIST = MASTER,SCHEDD
+    SHARED_PORT_PORT = 0
+    WANT_SUSPEND = FALSE
+    START_LOCAL_UNIVERSE = TotalLocalJobsRunning < 1
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-print scalar localtime() . "\n";
-
-$mypid = $$;
-
-if($mypid == 0) {
-	die "Saveme setup for test failed\n";
-}
+my $mypid = $$;
+TLOG "Test $testname started pid=$mypid\n";
 
 my $testoutput = "max-running$mypid";
 my $testjobs = 4;
 my $jobscompleted = 0;
 
-print "Master PID is $mypid\n";
+print "My PID is $mypid\n";
 
-my $firstappend_condor_config = '
-    DAEMON_LIST = MASTER,SCHEDD
-    SHARED_PORT_PORT = 0
-    WANT_SUSPEND = FALSE
-    NEGOTIATION_INTERVAL = 5
-    START_LOCAL_UNIVERSE = TotalLocalJobsRunning < 1
-';
-
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobcoremaxrunninglocal");
-
-# First order up the config but do not start it. If the condor_config_val fails
-# there is no reason to go on
-
-CondorTest::StartCondorWithParams(
-    condor_name => "jobcoremaxrunninglocal",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
 
 ##
 ## Sleep time 

@@ -229,7 +229,9 @@ struct Claim
         std::string proxy_file;
         if (fname.ptr() == Py_None)
         {
-            proxy_file = get_x509_proxy_filename();
+            char *tmp = get_x509_proxy_filename();
+            proxy_file = tmp ? tmp : "";
+            free(tmp);
         }
         else
         {

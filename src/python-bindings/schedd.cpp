@@ -149,7 +149,7 @@ make_spool(classad::ClassAd& ad)
         THROW_EX(HTCondorInternalError, "Unable to set job to hold.");
     if (!ad.InsertAttr(ATTR_HOLD_REASON, "Spooling input data files"))
         THROW_EX(HTCondorInternalError, "Unable to set job hold reason.")
-    if (!ad.InsertAttr(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput))
+    if (!ad.InsertAttr(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::SpoolingInput))
         THROW_EX(HTCondorInternalError, "Unable to set job hold code.")
     std::stringstream ss;
     ss << ATTR_JOB_STATUS << " == " << COMPLETED << " && ( ";
@@ -2134,11 +2134,10 @@ struct Schedd {
             }
             // Note: x509_error_string() is not thread-safe; hence, we are not using the HTCondor-generated
             // error handling.
-            int result = x509_proxy_seconds_until_expire(proxy_filename.c_str());
-            if (result < 0) {
+            result_expiration = x509_proxy_expiration_time(proxy_filename.c_str());
+            if (result_expiration < 0) {
                 THROW_EX(HTCondorValueError, "Unable to determine proxy expiration time");
             }
-            return result;
         }
         return result_expiration - now;
     }
@@ -4198,14 +4197,28 @@ void export_schedd()
 
             :param constraint: A query constraint.
                 Only jobs matching this constraint will be returned.
-                Defaults to ``'true'``, which means all jobs will be returned.
+                ``None`` will return all jobs.
             :type constraint: str or :class:`~classad.ExprTree`
-            :param projection: Attributes that will be returned for each job in the query.
-                At least the attributes in this list will be returned, but additional ones may be returned as well.
-                An empty list (the default) returns all attributes.
+            :param projection: Attributes that will be returned for each job
+                in the query.  At least the attributes in this list will be
+                returned, but additional ones may be returned as well.
+                An empty list returns all attributes.
             :type projection: list[str]
-            :param int match: An limit on the number of jobs to include; the default (``-1``)
-                indicates to return all matching jobs.
+            :param int match: A limit on the number of jobs to include; the
+                default (``-1``) indicates to return all matching jobs.
+                The schedd may return fewer than ``match`` jobs because of its
+                setting of ``HISTORY_HELPER_MAX_HISTORY`` (default 10,000).
+            :param since: A cluster ID, job ID, or expression.  If a cluster ID
+                (passed as an `int`) or job ID (passed a `str` in the format
+                ``{clusterID}.{procID}``), only jobs recorded in the history
+                file after (and not including) the matching ID will be
+                returned.  If an expression (passed as a `str` or
+                :class:`~classad.ExprTree`), jobs will be returned,
+                most-recently-recorded first, until the expression becomes
+                true; the job making the expression become true will not be
+                returned.  Thus, ``1038`` and ``clusterID == 1038`` return the
+                same set of jobs.
+            :type since: int, str, or :class:`~classad.ExprTree`
             :return: All matching ads in the Schedd history, with attributes according to the
                 ``projection`` keyword.
             :rtype: :class:`HistoryIterator`

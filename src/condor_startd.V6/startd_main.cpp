@@ -35,9 +35,7 @@
 #include "history_queue.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "StartdPlugin.h"
-#endif
 #if defined(WIN32)
 extern int load_startd_mgmt(void);
 #endif
@@ -439,7 +437,7 @@ main_init( int, char* argv[] )
 	//resmgr->update_all();
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
    StartdPluginManager::Load();
 #elif defined(WIN32)
 	load_startd_mgmt();
@@ -803,9 +801,7 @@ startd_exit()
 #endif
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Shutdown();
-#endif
 #endif
 
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );

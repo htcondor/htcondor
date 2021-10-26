@@ -1205,9 +1205,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.c_str() );
 			if (fqdn.length() > 0)
 				New_full_hostname(strdup(fqdn.c_str()));
-			if( host ) {
-				New_alias( strdup(host) );
-			}
+			New_alias( strdup(host) );
 			New_addr( strdup(buf.c_str()) );
 		}
 

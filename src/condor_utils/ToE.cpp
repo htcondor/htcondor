@@ -115,30 +115,29 @@ Tag::writeToString( std::string & out ) const {
 
 bool
 Tag::readFromString( const std::string & in ) {
-    std::string line = in;
+	size_t startPos = 0;
 
 	const char * endWhoStr = " at ";
-	size_t endWho = line.find( endWhoStr );
+	size_t endWho = in.find( endWhoStr );
 	if( endWho == std::string::npos ) { return false; }
-	std::string whoStr = line.substr( 0, endWho );
-	this->who = whoStr.c_str();
-	line = line.substr( endWho + strlen(endWhoStr), INT_MAX );
+	this->who = in.substr( startPos, endWho-startPos );
+	startPos = endWho + strlen(endWhoStr);
 
 	const char * endWhenStr = " (using method ";
-	size_t endWhen = line.find( endWhenStr );
+	size_t endWhen = in.find( endWhenStr, startPos );
 	if( endWhen == std::string::npos ) { return false; }
-	std::string whenStr = line.substr( 0, endWhen );
-	line = line.substr( endWhen + strlen(endWhenStr), INT_MAX );
+	std::string whenStr = in.substr( startPos, endWhen-startPos );
+	startPos = endWhen + strlen(endWhenStr);
 	// This code gets more complicated if we don't assume UTC i/o.
 	struct tm eventTime;
 	iso8601_to_time( whenStr.c_str(), & eventTime, NULL, NULL );
 	formatstr( when, "%ld", timegm(&eventTime) );
 
 	const char * endHowCodeStr = ": ";
-	size_t endHowCode = line.find( endHowCodeStr );
+	size_t endHowCode = in.find( endHowCodeStr, startPos );
 	if( endHowCode == std::string::npos ) { return false; }
-	std::string howCodeStr = line.substr( 0, endHowCode );
-	line = line.substr( endHowCode + strlen(endHowCodeStr), INT_MAX );
+	std::string howCodeStr = in.substr( startPos, endHowCode-startPos );
+	startPos = endHowCode + strlen(endHowCodeStr);
 	char * end = NULL;
 	long lhc = strtol( howCodeStr.c_str(), & end, 10 );
 	if( end && *end == '\0' ) {
@@ -148,12 +147,11 @@ Tag::readFromString( const std::string & in ) {
 	}
 
 	const char * endHowStr = ").";
-	size_t endHow = line.find( endHowStr );
+	size_t endHow = in.find( endHowStr, startPos );
 	if( endHow == std::string::npos ) { return false; }
-	std::string how = line.substr( 0, endHow );
-	line = line.substr( endHow + strlen(endHowStr), INT_MAX );
-	if(! line.empty()) { return false; }
-	this->how = how.c_str();
+	this->how = in.substr( startPos, endHow-startPos );
+	startPos = endHow + strlen(endHowStr);
+	if(startPos < in.length()) { return false; }
 
     return true;
 }

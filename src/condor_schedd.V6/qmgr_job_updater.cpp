@@ -130,14 +130,19 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE );
-
+	
 	common_job_queue_attrs->insert( "TransferInQueued" );
 	common_job_queue_attrs->insert( "TransferInStarted" );
 	common_job_queue_attrs->insert( "TransferInFinished" );
 	common_job_queue_attrs->insert( "TransferOutQueued" );
 	common_job_queue_attrs->insert( "TransferOutStarted" );
 	common_job_queue_attrs->insert( "TransferOutFinished" );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_INPUT_FILES_LAST_RUN_COUNT );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_INPUT_FILES_TOTAL_COUNT );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_OUTPUT_FILES_LAST_RUN_COUNT );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_OUTPUT_FILES_TOTAL_COUNT );
 
+	common_job_queue_attrs->insert( ATTR_NUM_JOB_STARTS );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_EXECUTING_DATE );
 	common_job_queue_attrs->insert( ATTR_CUMULATIVE_TRANSFER_TIME );
 	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
@@ -367,6 +372,10 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		job_queue_attrs = x509_job_queue_attrs;
 		break;
 	case U_STATUS:
+		// This fixes a problem where OnExitHold evaluating to true
+		// prevented ExitCode from being set; see HTCONDOR-599.
+		job_queue_attrs = terminate_job_queue_attrs;
+		break;
 	case U_PERIODIC:
 			// No special attributes needed...
 		break;

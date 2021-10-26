@@ -62,9 +62,9 @@ Licensed under the Apache License, Version 2.0.'
 # built documents.
 #
 # The short X.Y version.
-version = '9.1'
+version = '9.4'
 # The full version, including alpha/beta/rc tags.
-release = '9.1.1'
+release = '9.4.0'
 
 rst_epilog = """
 .. |release_date| replace:: Month Day, 2021
@@ -126,6 +126,7 @@ man_pages = [
     ('man-pages/condor_adstash', 'condor_adstash', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_advertise', 'condor_advertise', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_annex', 'condor_annex', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/condor_check_password', 'condor_check_password', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_check_userlogs', 'condor_check_userlogs', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_chirp', 'condor_chirp', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_configure', 'condor_configure', u'HTCondor Manual', [u'HTCondor Team'], 1),
@@ -198,6 +199,7 @@ man_pages = [
     ('man-pages/condor_who', 'condor_who', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/get_htcondor', 'get_htcondor', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/gidd_alloc', 'gidd_alloc', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/htcondor', 'htcondor', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/procd_ctl', 'procd_ctl', u'HTCondor Manual', [u'HTCondor Team'], 1)
 ]
 

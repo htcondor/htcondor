@@ -35,9 +35,7 @@
 #include "consumption_policy.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "StartdPlugin.h"
-#endif
 #endif
 
 #include "stat_info.h"
@@ -1371,22 +1369,35 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 	// It looks like attributes you add during an iteration may also be
 	// seen during that iteration.  This could cause problems later, but
 	// doesn't seem like it's worth fixing now.
+	//
+	// Actually, adding attributes during an iteration can force a rehash,
+	// which invalidates the iterator.  Let's just cache the keys before we
+	// actually do anything with them.
+
+	std::vector<std::string> attrNames;
+	for( const auto & ad : public_ad ) {
+		attrNames.push_back(ad.first);
+	}
+
+	// This isn't necessary to work around the iterators any more, but
+	// not deleting attributes is handy when taking snapshots.
 	std::vector< std::string > deleteList;
-	for( auto i = public_ad.begin(); i != public_ad.end(); ++i ) {
-		const std::string & name = i->first;
+	for( const auto & name : attrNames ) {
+		ExprTree * value = public_ad.Lookup(name);
+		if(value == NULL) { continue; }
 
 		// if this attribute has an expression with the SlotEval function
 		// flatten that function and write the flattened expression into the ad
 		//
-		if (ExprHasSlotEval(i->second)) {
+		if (ExprHasSlotEval(value)) {
 			unparse_buffer.clear();
-			if (ExprTreeIsSlotEval(i->second)) {
+			if (ExprTreeIsSlotEval(value)) {
 				// if the entire expression is a single SlotEval call, just flatten it
 				//    Foo = SlotEval("slot1",expr)
 				// becomes
 				//    Foo = <value of expr evaluated against slot1>
 				unparser.setIndirectThroughAttr(false);
-				unparser.Unparse(unparse_buffer, i->second);
+				unparser.Unparse(unparse_buffer, value);
 			} else {
 				// if the expression *contains* a SlotEval, the unparser will
 				// create an intermediate attribute to contain the value.
@@ -1398,9 +1409,9 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 				// slot1_Activity is stored in the unparser, we will insert it into the ad
 				// after this loop exits
 				unparser.setIndirectThroughAttr(true);
-				unparser.Unparse(unparse_buffer, i->second);
+				unparser.Unparse(unparse_buffer, value);
 			}
-			public_ad.AssignExpr(i->first, unparse_buffer.c_str());
+			public_ad.AssignExpr(name, unparse_buffer.c_str());
 		}
 
 		//
@@ -1428,13 +1439,12 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			if(! StartdCronJobParams::attributeIsSumMetric( name ) ) { continue; }
 			if(! StartdCronJobParams::getResourceNameFromAttributeName( name, resourceName )) { continue; }
 			if(! param_boolean( "ADVERTISE_CMR_UPTIME_SECONDS", false )) {
-			    deleteList.push_back( name );
+				deleteList.push_back( name );
 			}
 
 			classad::Value v;
 			double uptimeValue;
-			ExprTree * expr = i->second;
-			expr->Evaluate( v );
+			value->Evaluate( v );
 			if(! v.IsNumber( uptimeValue )) {
 				dprintf( D_ALWAYS, "Metric %s is not a number, ignoring.\n", name.c_str() );
 				continue;
@@ -1488,12 +1498,13 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			deleteList.push_back(firstUpdateName);
 
 		} else if( name.find( "StartOfJobUptime" ) == 0
-			|| (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
-			|| name.find( "FirstUpdate" ) == 0 ) {
-		deleteList.push_back( name );
+		  || (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
+		  || name.find( "FirstUpdate" ) == 0 ) {
+			deleteList.push_back( name );
 		}
 
 	}
+
 	if ( ! snapshot) {
 		for (auto i = deleteList.begin(); i != deleteList.end(); ++i) {
 			public_ad.Delete(* i);
@@ -1531,9 +1542,7 @@ Resource::do_update( void )
 	publish_private(&private_ad);
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Update(&public_ad, &private_ad);
-#endif
 #endif
 
 		// Send class ads to collector(s)
@@ -1620,9 +1629,7 @@ Resource::final_update( void )
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Invalidate(&invalidate_ad);
-#endif
 #endif
 
 	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
@@ -1762,7 +1769,7 @@ Resource::hold_job( bool soft )
 
 	EvalInteger("WANT_HOLD_SUBCODE", r_classad, r_cur->ad(), hold_subcode);
 
-	r_cur->starterHoldJob(hold_reason.c_str(),CONDOR_HOLD_CODE_StartdHeldJob,hold_subcode,soft);
+	r_cur->starterHoldJob(hold_reason.c_str(),CONDOR_HOLD_CODE::StartdHeldJob,hold_subcode,soft);
 }
 
 int

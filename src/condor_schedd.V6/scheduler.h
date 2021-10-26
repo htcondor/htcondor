@@ -1165,6 +1165,7 @@ extern bool moveIntAttr( PROC_ID job_id, const char* old_attr,
 						 const char* new_attr, bool verbose );
 extern bool abortJob( int cluster, int proc, const char *reason, bool use_transaction );
 extern bool abortJobsByConstraint( const char *constraint, const char *reason, bool use_transaction );
+extern void incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nestedAdAttrName = nullptr);
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 int reason_code=0, int reason_subcode=0,
 					 bool use_transaction = false, 

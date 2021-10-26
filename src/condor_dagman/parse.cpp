@@ -30,7 +30,6 @@
 
 #include "job.h"
 #include "parse.h"
-#include "util.h"
 #include "debug.h"
 #include "util_lib_proto.h"
 #include "dagman_commands.h"
@@ -114,11 +113,8 @@ bool
 isReservedWord( const char *token )
 {
     static const char * keywords[] = { "PARENT", "CHILD", Dag::ALL_NODES };
-    static const unsigned int numKeyWords = sizeof(keywords) / 
-		                                    sizeof(const char *);
-
-    for (unsigned int i = 0 ; i < numKeyWords ; i++) {
-        if (!strcasecmp (token, keywords[i])) {
+    for (auto & keyword : keywords) {
+        if (!strcasecmp (token, keyword)) {
     		debug_printf( DEBUG_QUIET,
 						"ERROR: token (%s) is a reserved word\n", token );
 			return true;
@@ -288,9 +284,9 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					// Check for duplicate keys in dag->SubmitDescriptions
 					// If a duplicate exists, std::map.insert() will not throw any
 					// errors but it also won't overwrite the existing value.
-					// In this case, throw an error and proceed as normal.
-					if(dag->SubmitDescriptions.find(std::string(nodename.c_str())) != dag->SubmitDescriptions.end()) {
-						debug_printf(DEBUG_NORMAL, "Error: a submit description "
+					// In this case, throw a warning and proceed as normal.
+					if(dag->SubmitDescriptions.find(std::string(nodename.Value())) != dag->SubmitDescriptions.end()) {
+						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
 							"already exists with name %s, will not be overwritten."
 							"\n", nodename.c_str());
 					}
@@ -348,9 +344,9 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					// Check for duplicate keys in dag->SubmitDescriptions
 					// If a duplicate exists, std::map.insert() will not throw any
 					// errors but it also won't overwrite the existing value.
-					// In this case, throw an error and proceed as normal.
-					if(dag->SubmitDescriptions.find(std::string(nodename.c_str())) != dag->SubmitDescriptions.end()) {
-						debug_printf(DEBUG_NORMAL, "Error: a submit description "
+					// In this case, throw a warning and proceed as normal.
+					if(dag->SubmitDescriptions.find(std::string(nodename.Value())) != dag->SubmitDescriptions.end()) {
+						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
 							"already exists with name %s, will not be overwritten."
 							"\n", nodename.c_str());
 					}
@@ -390,6 +386,17 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					   "submitfile" );
 		}
 
+		// Handle a SERVICE spec
+		else if(strcasecmp(token, "SERVICE") == 0) {
+			MyString nodename;
+			const char * subfile;
+			pre_parse_node(nodename, subfile);
+			parsed_line_successfully = parse_node( dag, nodename.c_str(), subfile,
+					   token,
+					   filename, lineNumber, tmpDirectory.c_str(), "",
+					   "submitfile" );
+		}
+
 		// Handle a Splice spec
 		else if(strcasecmp(token, "SPLICE") == 0) {
 			parsed_line_successfully = parse_splice(dag, filename,
@@ -414,9 +421,9 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					// Check for duplicate keys in dag->SubmitDescriptions
 					// If a duplicate exists, std::map.insert() will not throw any
 					// errors but it also won't overwrite the existing value.
-					// In this case, throw an error and proceed as normal.
-					if(dag->SubmitDescriptions.find(std::string(descName.c_str())) == dag->SubmitDescriptions.end()) {
-						debug_printf(DEBUG_NORMAL, "Error: a submit description "
+					// In this case, throw a warning and proceed as normal.
+					if(dag->SubmitDescriptions.find(std::string(descName.Value())) != dag->SubmitDescriptions.end()) {
+						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
 							"already exists with name %s, will not be overwritten."
 							"\n", descName.c_str());
 					}
@@ -531,6 +538,12 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 
 		// Handle a PROVISIONER spec
 		else if(strcasecmp(token, "PROVISIONER") == 0) {
+				// Parsed in first pass.
+			parsed_line_successfully = true;
+		}
+
+		// Handle a SERVICE spec
+		else if(strcasecmp(token, "SERVICE") == 0) {
 				// Parsed in first pass.
 			parsed_line_successfully = true;
 		}
@@ -734,7 +747,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
 				"ERROR: expected JOB, DATA, SUBDAG, FINAL, SCRIPT, PARENT, "
 				"RETRY, ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, "
-				"MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, PROVISIONER, "
+				"MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, PROVISIONER, SERVICE, "
 				"NODE_STATUS_FILE, REJECT, JOBSTATE_LOG, PRE_SKIP, DONE, "
 				"CONNECT, PIN_IN, PIN_OUT, INCLUDE or SUBMIT-DESCRIPTION token "
 				"(found %s)\n",
@@ -849,6 +862,7 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 	NodeType type = NodeType::JOB;
 	if ( strcasecmp ( nodeTypeKeyword, "FINAL" ) == 0 ) type = NodeType::FINAL;
 	if ( strcasecmp ( nodeTypeKeyword, "PROVISIONER" ) == 0 ) type = NodeType::PROVISIONER;
+	if ( strcasecmp ( nodeTypeKeyword, "SERVICE" ) == 0 ) type = NodeType::SERVICE;
 
 		// NOTE: fear not -- any missing tokens resulting in NULL
 		// strings will be error-handled correctly by AddNode()
@@ -1256,9 +1270,8 @@ parse_parent(
 			splice_final = splice_dag->FinalRecordedNodes();
 
 			// now add each final node as a parent
-			for (unsigned int i = 0; i < splice_final->size(); i++) {
-				Job *job = (*splice_final)[i];
-				last_parent = parents.insert_after(last_parent, job);
+			for (auto job : *splice_final) {
+					last_parent = parents.insert_after(last_parent, job);
 			}
 
 		} else {
@@ -1323,10 +1336,8 @@ parse_parent(
 				splice_initial->size());
 
 			// now add each initial node as a child
-			for (unsigned int i = 0; i < splice_initial->size(); i++) {
-				Job *job = (*splice_initial)[i];
-
-				last_child = children.insert_after(last_child, job);
+			for (auto job : *splice_initial) {
+					last_child = children.insert_after(last_child, job);
 			}
 
 		} else {
@@ -1378,14 +1389,9 @@ parse_parent(
 				" add join node\n", failReason.c_str(), lineNumber);
 		}
 		// Now connect all parents and children to the join node
-		for (auto it = parents.begin(); it != parents.end(); ++it) {
-			Job *parent = *it;
-#ifdef DEAD_CODE
-			if (!dag->AddDependency(parent, joinNode)) {
-#else
-			std::forward_list<Job*> lst = { joinNode };
+		for (auto parent : parents) {
+				std::forward_list<Job*> lst = { joinNode };
 			if (!parent->AddChildren(lst, failReason)) {
-#endif
 				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
 					" to add dependency between parent"
 					" node \"%s\" and join node \"%s\"\n",
@@ -1400,32 +1406,14 @@ parse_parent(
 		parent_type = "join";
 	}
 
-	for (auto it = parents.begin(); it != parents.end(); ++it) {
-		Job *parent = *it;
-#ifdef DEAD_CODE
-		children.Rewind();
-		while ((child = children.Next()) != NULL) {
-			if (!dag->AddDependency (parent, child)) {
-				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
-						" to add dependency between %s"
-						" node \"%s\" and child node \"%s\"\n",
-							filename, lineNumber, parent_type,
-							parent->GetJobName(), child->GetJobName() );
-				return false;
-			}
-			debug_printf( DEBUG_DEBUG_3,
-						"Added Dependency PARENT: %s  CHILD: %s\n",
-						parent->GetJobName(), child->GetJobName() );
-		}
-#else
-		if ( ! parent->AddChildren(children, failReason)) {
+	for (auto parent : parents) {
+			if ( ! parent->AddChildren(children, failReason)) {
 			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d) failed"
 				" to add dependencies between %s"
 				" node \"%s\" and child nodes : %s\n",
 				filename, lineNumber, parent_type,
 				parent->GetJobName(), failReason.c_str());
 		}
-#endif
 	}
 	return true;
 }
@@ -1524,8 +1512,14 @@ parse_retry(
 
 		if ( job->GetType() == NodeType::FINAL ) {
 			debug_printf( DEBUG_QUIET, 
-			  			"ERROR: %s (line %d): Final job %s cannot have RETRY specification\n",
-			  			filename, lineNumber, job->GetJobName() );
+						"ERROR: %s (line %d): Final job %s cannot have RETRY specification\n",
+						filename, lineNumber, job->GetJobName() );
+			return false;
+		}
+		if ( job->GetType() == NodeType::SERVICE ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: %s (line %d): SERVICE node %s cannot have RETRY specification\n",
+						filename, lineNumber, job->GetJobName() );
 			return false;
 		}
 
@@ -1750,40 +1744,6 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 	MyString varValue;
 
 	char *varsStr = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
-#if 0 
-	char *str = varsStr;
-
-	// build a temporary vector of vars in case we are doing ALL_NODES
-	std::vector<Job::NodeVar> vars;
-
-	int numPairs;
-	for (numPairs = 0; ; numPairs++) {  // for each name="value" pair
-		if (str == NULL) { // this happens when the above strtok returns NULL
-			break;
-		}
-
-		varName.clear();
-		varValue.clear();
-
-		if (!get_next_var(filename, lineNumber, str, varName, varValue)) {
-			return false;
-		}
-		if (varName.empty()) {
-			break;
-		}
-
-		const char * name = Job::dedup_str(varName.c_str());
-		const char * value = Job::dedup_str(varValue.c_str());
-		vars.push_back(Job::NodeVar(name, value));
-	}
-
-	if (numPairs == 0) {
-		debug_printf(DEBUG_QUIET,
-			"ERROR: %s (line %d): No valid name-value pairs\n",
-			filename, lineNumber);
-		return false;
-	}
-#endif
 
 	Job *job;
 	while ( ( job = dag->FindAllNodesByName( jobName,
@@ -1815,33 +1775,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 				break;
 			}
 
-#ifdef DEAD_CODE
-			// This will be inefficient for jobs with lots of variables
-			// As in O(N^2)
-			job->varsFromDag->Rewind();
-			while(Job::NodeVar *var = job->varsFromDag->Next()){
-				if ( varName == var->_name ) {
-					debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
-						"is already defined in job \"%s\" "
-						"(Discovered at file \"%s\", line %d)\n",
-						varName.Value(), job->GetJobName(), filename,
-						lineNumber);
-					check_warning_strictness( DAG_STRICT_3 );
-					debug_printf(DEBUG_NORMAL,"Warning: Setting VAR \"%s\" "
-						"= \"%s\"\n", varName.Value(), varValue.Value());
-					delete var;
-					job->varsFromDag->DeleteCurrent();
-				}
-			}
-			Job::NodeVar *var = new Job::NodeVar();
-			var->_name = varName;
-			var->_value = varValue;
-			bool appendResult;
-			appendResult = job->varsFromDag->Append( var );
-			ASSERT( appendResult );
-#else
 			job->AddVar(varName.c_str(), varValue.c_str(), filename, lineNumber);
-#endif
 			debug_printf(DEBUG_DEBUG_1,
 				"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
 				varName.c_str(), varValue.c_str());
@@ -1949,6 +1883,12 @@ parse_priority(
 			  			filename, lineNumber, job->GetJobName() );
 			return false;
 		}
+		if ( job->GetType() == NodeType::SERVICE ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: %s (line %d): SERVICE node %s cannot have PRIORITY specification\n",
+						filename, lineNumber, job->GetJobName() );
+			return false;
+		}
 
 		if ( ( job->_explicitPriority != 0 )
 					&& ( job->_explicitPriority != priorityVal ) ) {
@@ -2043,6 +1983,12 @@ parse_category(
 			debug_printf( DEBUG_QUIET, 
 			  			"ERROR: %s (line %d): Final job %s cannot have CATEGORY specification\n",
 			  			filename, lineNumber, job->GetJobName() );
+			return false;
+		}
+		if ( job->GetType() == NodeType::SERVICE ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: %s (line %d): SERVICE node %s cannot have CATEGORY specification\n",
+						filename, lineNumber, job->GetJobName() );
 			return false;
 		}
 
@@ -2615,8 +2561,14 @@ parse_done(
 
 	if ( job->GetType() == NodeType::FINAL ) {
 		debug_printf( DEBUG_QUIET, 
-					  "Warning: %s (line %d): FINAL Job %s cannot be set to DONE\n",
-					  filename, lineNumber, jobNameOrig );
+					"Warning: %s (line %d): FINAL Job %s cannot be set to DONE\n",
+					filename, lineNumber, jobNameOrig );
+		return !check_warning_strictness( DAG_STRICT_1, false );
+	}
+	if ( job->GetType() == NodeType::SERVICE ) {
+		debug_printf( DEBUG_QUIET,
+					"Warning: %s (line %d): SERVICE node %s cannot be set to DONE\n",
+					filename, lineNumber, jobNameOrig );
 		return !check_warning_strictness( DAG_STRICT_1, false );
 	}
 

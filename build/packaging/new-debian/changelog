@@ -1,3 +1,102 @@
+condor (9.2.0-1) stable; urgency=medium
+
+  * Add SERVICE node that runs alongside the DAG for the duration of the DAG
+  * Fix problem where proxy delegation to older HTCondor versions failed
+  * Jobs are now re-run if the execute directory unexpectedly disappears
+  * HTCondor counts the number of files transfered at the submit node
+  * Fix a bug that caused jobs to fail when using newer Singularity versions
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 23 Sep 2021 16:19:34 -0500
+
+condor (9.0.6-1) stable; urgency=medium
+
+  * CUDA_VISIBLE_DEVICES can now contain GPU-<uuid> formatted values
+  * Fixed a bug that caused jobs to fail when using newer Singularity versions
+  * Fixed a bug in the Windows MSI installer for the latest Windows 10 version
+  * Fixed bugs relating to the transfer of standard out and error logs
+  * MacOS 11.x now reports as 10.16.x (which is better than reporting x.0)
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 23 Sep 2021 09:27:08 -0500
+
+condor (9.1.3-1) stable; urgency=medium
+
+  * Globus GSI is no longer needed for X.509 proxy delegation
+  * Globus GSI authentication is disabled by default
+  * The job ad now contains a history of job holds and hold reasons
+  * If a user job policy expression evaluates to undefined, it is ignored
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 19 Aug 2021 13:52:24 -0500
+
+condor (9.0.5-1) stable; urgency=medium
+
+  * Other authentication methods are tried if mapping fails using SciTokens
+  * Fix rare crashes from successful condor_submit, which caused DAGMan issues
+  * Fix bug where ExitCode attribute would be suppressed when OnExitHold fired
+  * condor_who now suppresses spurious warnings coming from netstat
+  * The online manual now has detailed instructions for installing on MacOS
+  * Fix bug where misconfigured MIG devices confused condor_gpu_discovery
+  * The transfer_checkpoint_file list may now include input files
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 18 Aug 2021 10:07:10 -0500
+
+condor (9.1.2-1) stable; urgency=high
+
+  * Fixes for security issues
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 Jul 2021 10:35:12 -0500
+
+condor (9.0.4-1) stable; urgency=high
+
+  * Fixes for security issues
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 Jul 2021 10:35:12 -0500
+
+condor (8.8.15-1) stable; urgency=high
+
+  * Fix for security issue
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 Jul 2021 10:35:12 -0500
+
+condor (9.1.1-1) stable; urgency=high
+
+  * Fixes for security issues
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 13 Jul 2021 09:11:38 -0500
+
+condor (9.0.3-1) stable; urgency=high
+
+  * Fixes for security issues
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 13 Jul 2021 09:11:38 -0500
+
+condor (8.8.14-1) stable; urgency=high
+
+  * Fix for security issue
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 13 Jul 2021 09:11:38 -0500
+
+condor (9.0.2-1) stable; urgency=medium
+
+  * HTCondor can be set up to use only FIPS 140-2 approved security functions
+  * If the Singularity test fails, the job goes idle rather than getting held
+  * Can divide GPU memory, when making multiple GPU entries for a single GPU
+  * Startd and Schedd cron job maximum line length increased to 64k bytes
+  * Added first class submit keywords for SciTokens
+  * Fixed MUNGE authentication
+  * Fixed Windows installer to work when the install location isn't C:\Condor
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 08 Jul 2021 06:35:49 -0500
+
 condor (9.1.0-1) stable; urgency=medium
 
   * Support for submitting to ARC-CE via the REST interface
@@ -72,8 +171,8 @@ condor (8.8.13-1) stable; urgency=medium
 condor (8.9.11-1) stable; urgency=high
 
   * This release of HTCondor fixes security-related bugs described at
-  * https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001.html
-  * https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002.html
+  * https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001/
+  * https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002/
 
  -- Tim Theisen <tim@cs.wisc.edu>  Mon, 28 Dec 2020 09:55:44 -0600
 
@@ -174,20 +273,20 @@ condor (8.8.9-1) stable; urgency=medium
 condor (8.9.6-1) unstable; urgency=high
 
   * Fixes addressing CVE-2019-18823
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004/
 
  -- Tim Theisen <tim@cs.wisc.edu>  Wed, 18 Mar 2020 15:40:28 -0500
 
 condor (8.8.8-1) stable; urgency=high
 
   * Fixes addressing CVE-2019-18823
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004/
 
  -- Tim Theisen <tim@cs.wisc.edu>  Tue, 17 Mar 2020 11:05:03 -0500
 

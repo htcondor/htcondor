@@ -28,8 +28,6 @@
 #include "remote_proc.h"
 #include "java_proc.h"
 #include "tool_daemon_proc.h"
-#include "mpi_master_proc.h"
-#include "mpi_comrade_proc.h"
 #include "parallel_proc.h"
 #include "vm_proc.h"
 #include "my_hostname.h"
@@ -80,6 +78,7 @@ Starter::Starter() :
 	Execute(NULL),
 	orig_cwd(NULL),
 	is_gridshell(false),
+	m_workingDirExists(false),
 #ifdef WIN32
 	has_encrypted_working_dir(false),
 #endif
@@ -153,6 +152,7 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 			// scratch directory, we're just going to use whatever
 			// EXECUTE is, or our CWD if that's not defined...
 		WorkingDir = Execute;
+		m_workingDirExists = true;
 	} else {
 		formatstr( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 				 (long)daemonCore->getpid() );
@@ -2006,6 +2006,7 @@ Starter::createTempExecuteDir( void )
 	}
 	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir.c_str() );
 	set_priv( priv );
+	m_workingDirExists = true;
 	return true;
 }
 
@@ -2452,17 +2453,7 @@ Starter::SpawnJob( void )
 			job = new ParallelProc( jobAd );
 			break;
 		case CONDOR_UNIVERSE_MPI: {
-			bool is_master = false;
-			if ( ! jobAd->LookupBool( ATTR_MPI_IS_MASTER, is_master )) {
-				is_master = false;
-			}
-			if ( is_master ) {
-				dprintf ( D_FULLDEBUG, "Starting a MPIMasterProc\n" );
-				job = new MPIMasterProc( jobAd );
-			} else {
-				dprintf ( D_FULLDEBUG, "Starting a MPIComradeProc\n" );
-				job = new MPIComradeProc( jobAd );
-			}
+			EXCEPT("MPI Universe is no longer supported\n");
 			break;
 		}
 		case CONDOR_UNIVERSE_VM:
@@ -2814,7 +2805,7 @@ Starter::Reaper(int pid, int exit_status)
 			// This kills the shadow, which should cause us to catch a
 			// SIGQUIT from the startd in short order...
 			jic->holdJob( "Pre script failed.",
-				CONDOR_HOLD_CODE_PreScriptFailed,
+				CONDOR_HOLD_CODE::PreScriptFailed,
 				0 );
 
 			// ... but we might as well do what the SIGQUIT handler does
@@ -2852,7 +2843,7 @@ Starter::Reaper(int pid, int exit_status)
 			// This kills the shadow, which should cause us to catch a
 			// SIGQUIT from the startd in short order...
 			jic->holdJob( "Post script failed.",
-				CONDOR_HOLD_CODE_PostScriptFailed,
+				CONDOR_HOLD_CODE::PostScriptFailed,
 				0 );
 
 			// ... but we might as well do what the SIGQUIT handler does
@@ -3766,6 +3757,9 @@ Starter::removeTempExecuteDir( void )
 		}
 	}
 
+	if (!has_failed) {
+		m_workingDirExists = false;
+	}
 	return !has_failed;
 }
 

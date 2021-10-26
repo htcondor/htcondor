@@ -327,6 +327,7 @@ bool GetJobFactoryMaterializeMode(JobQueueCluster * cluster, int & pause_code);
 void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
 void ScheduleClusterForDeferredCleanup(int cluster_id);
+void ScheduleClusterForJobMaterializeNow(int cluster_id);
 
 // called by qmgmt_recievers to handle the SetJobFactory RPC call
 int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * digest_text);
@@ -548,13 +549,14 @@ JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
 
 
 class schedd_runtime_probe;
-typedef int (*queue_classad_scan_func)(ClassAd *ad, void* user);
-void WalkJobQueue3(queue_classad_scan_func fn, void* pv, schedd_runtime_probe & ftm);
+#define WJQ_WITH_CLUSTERS 1  // include cluster ads when walking the job queue
+#define WJQ_WITH_JOBSETS  2  // include jobset ads when walking the job queue
+#define WJQ_WITH_NO_JOBS  4  // do not include job (proc) ads when walking the job queue
 typedef int (*queue_job_scan_func)(JobQueueJob *ad, const JobQueueKey& key, void* user);
-void WalkJobQueue3(queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm);
-#define WalkJobQueue(fn) WalkJobQueue3( (fn), NULL, WalkJobQ_ ## fn ## _runtime )
-#define WalkJobQueue2(fn,pv) WalkJobQueue3( (fn), (pv), WalkJobQ_ ## fn ## _runtime )
-void WalkNonJobQueue3(queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm); // walk ads other than proc ads
+void WalkJobQueueEntries(int with, queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm);
+#define WalkJobQueue(fn) WalkJobQueueEntries(0, (fn), NULL, WalkJobQ_ ## fn ## _runtime )
+#define WalkJobQueue2(fn,pv) WalkJobQueueEntries(0, (fn), (pv), WalkJobQ_ ## fn ## _runtime )
+#define WalkJobQueueWith(with,fn,pv) WalkJobQueueEntries(with, (fn), pv, WalkJobQ_ ## fn ## _runtime )
 
 bool InWalkJobQueue();
 
@@ -591,5 +593,9 @@ extern int Runnable(PROC_ID*);
 extern int Runnable(JobQueueJob *job, const char *& reason);
 
 extern class ForkWork schedd_forker;
+
+int SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value);
+int GetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, std::string &attr_value);
+int DeletePrivateAttribute(int cluster_id, int proc_id, const char *attr_name);
 
 #endif /* _QMGMT_H */

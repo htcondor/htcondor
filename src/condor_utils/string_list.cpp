@@ -663,7 +663,7 @@ StringList::print_to_delimed_string(const char *delim) const
 void
 StringList::deleteCurrent() {
 	if( m_strings.Current() ) {
-		FREE( m_strings.Current() );
+		free( m_strings.Current() );
 	}
 	m_strings.DeleteCurrent();
 }

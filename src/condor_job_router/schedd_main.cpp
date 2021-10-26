@@ -33,11 +33,33 @@
 JobRouter *job_router;
 
 //-------------------------------------------------------------
-Scheduler::Scheduler(char const *_alt_spool_param /*=NULL*/, int id /*=0*/)
-	: m_id(id)
+Scheduler::Scheduler(int id)
+	: m_consumer(nullptr)
+	, m_mirror(nullptr)
+	, m_id(id)
 {
-	m_consumer = new NewClassAdJobLogConsumer();
-	m_mirror = new JobLogMirror(m_consumer, _alt_spool_param);
+	// lookup knobs corresponding to our id.  id==0 is special case where
+	// we look at both JOB_QUEUE_SCHEDD1 knobs, and also the default JOB_QUEUE_LOG knob
+	std::string knob, job_queue;
+	formatstr(knob, "JOB_ROUTER_SCHEDD%d_JOB_QUEUE_LOG", id ? id : 1);
+	if ( ! param(job_queue, knob.c_str())) {
+		// no knob for the log, look for the (deprecated) spool knob
+		formatstr(knob, "$(JOB_ROUTER_SCHEDD%d_SPOOL:,)/job_queue.log", id ? id : 1);
+		expand_param(knob.c_str(), job_queue);
+		if (job_queue.empty() || job_queue[0] == ',') { // JOB_ROUTER_SCHEDD<id>_SPOOL knob not defined
+			job_queue.clear();
+			if (0 == id) {
+				// only if we are id 0, do we look for the default job_queue.log file.
+				param(job_queue, "JOB_QUEUE_LOG");
+			}
+		}
+	}
+	// if we found a log to follow, then create consumer and mirror classes
+	if ( ! job_queue.empty()) {
+		m_follow_log = job_queue;
+		m_consumer = new NewClassAdJobLogConsumer();
+		m_mirror = new JobLogMirror(m_consumer, m_follow_log.c_str());
+	}
 }
 
 Scheduler::~Scheduler()
@@ -56,7 +78,6 @@ void Scheduler::init() { m_mirror->init(); }
 void Scheduler::config() { m_mirror->config(); }
 void Scheduler::stop()  { m_mirror->stop(); }
 void Scheduler::poll()  { m_mirror->poll(); }
-int  Scheduler::id() const { return m_id; }
 
 
 //-------------------------------------------------------------

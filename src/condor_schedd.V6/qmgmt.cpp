@@ -57,11 +57,9 @@
 #include "jobsets.h"
 #include <param_info.h>
 
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "ScheddPlugin.h"
-#endif
 
-#if defined(HAVE_GETGRNAM)
+#ifdef UNIX
 #include <sys/types.h>
 #include <grp.h>
 #endif
@@ -248,6 +246,56 @@ static const char *default_super_user =
 #else
 	"root";
 #endif
+
+std::map<JobQueueKey, std::map<std::string, std::string>> PrivateAttrs;
+
+int
+SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value)
+{
+	if (attr_name == NULL || attr_value == NULL) {return -1;}
+
+	ClassAd *job_ad = GetJobAd(cluster_id, proc_id);
+	if (job_ad == NULL) {return -1;}
+
+	Transaction *xact = JobQueue->getActiveTransaction();
+	std::string quoted_value;
+	QuoteAdStringValue(attr_value, quoted_value);
+	JobQueueKey job_id(cluster_id, proc_id);
+	JobQueue->SetAttribute(job_id, attr_name, quoted_value.c_str(), SETDIRTY);
+	job_ad->Delete(attr_name);
+	PrivateAttrs[job_id][attr_name] = attr_value;
+	JobQueue->setActiveTransaction(xact);
+	return 0;
+}
+
+int
+GetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, std::string &attr_value)
+{
+	if (attr_name == NULL) {return -1;}
+	JobQueueKey job_id(cluster_id, proc_id);
+	auto job_itr = PrivateAttrs.find(job_id);
+	if (job_itr == PrivateAttrs.end()) {return -1;}
+	auto attr_itr = job_itr->second.find(attr_name);
+	if (attr_itr == job_itr->second.end()) {return -1;}
+	attr_value = attr_itr->second;
+	return 0;
+}
+
+int
+DeletePrivateAttribute(int cluster_id, int proc_id, const char *attr_name)
+{
+	if (attr_name == NULL) {return -1;}
+	ClassAd *job_ad = GetJobAd(cluster_id, proc_id);
+	if (job_ad == NULL) {return -1;}
+	job_ad->InsertAttr(attr_name, "");
+	DeleteAttribute(cluster_id, proc_id, attr_name);
+	JobQueueKey job_id(cluster_id, proc_id);
+	PrivateAttrs[job_id].erase(attr_name);
+	if (PrivateAttrs[job_id].empty()) {
+		PrivateAttrs.erase(job_id);
+	}
+	return 0;
+}
 
 // in schedd.cpp
 void IncrementLiveJobCounter(LiveJobCounters & num, int universe, int status, int increment /*, JobQueueJob * job*/);
@@ -588,7 +636,7 @@ JobMaterializeTimerCallback()
 	} else {
 
 		int system_limit = MIN(scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission());
-		system_limit = MIN(system_limit, scheduler.getMaxJobsPerOwner());
+		int owner_limit = scheduler.getMaxJobsPerOwner();
 		//system_limit = MIN(system_limit, scheduler.getMaxJobsRunning());
 
 		int total_new_jobs = 0;
@@ -606,6 +654,14 @@ JobMaterializeTimerCallback()
 
 			} else if (cad->factory) {
 
+				int factory_owner_limit = owner_limit;
+				if (cad->ownerinfo) {
+					factory_owner_limit = owner_limit - (cad->ownerinfo->num.JobsCounted + cad->ownerinfo->num.JobsRecentlyAdded);
+				}
+				if (factory_owner_limit < 1) {
+					dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d cannot materialize because of MAX_JOBS_PER_OWNER\n", cluster_id);
+				}
+
 				if (JobFactoryAllowsClusterRemoval(cad)) {
 					dprintf(D_MATERIALIZE | D_VERBOSE, "\tcluster %d has completed job factory\n", cluster_id);
 					// if job factory is complete and there are no jobs attached to the cluster, schedule the cluster for removal
@@ -620,10 +676,13 @@ JobMaterializeTimerCallback()
 						proc_limit = INT_MAX;
 					}
 					int effective_limit = MIN(proc_limit, system_limit);
+					effective_limit = MIN(effective_limit, factory_owner_limit);
+					//uncomment this code to poll quickly, but only if ownerinfo->num counters are also updated quickly (currently they are not)
+					//if (factory_owner_limit < 1) { remove_entry = false; }
 
 					dprintf(D_MATERIALIZE | D_VERBOSE, "in JobMaterializeTimerCallback, proc_limit=%d, sys_limit=%d MIN(%d,%d,%d), ClusterSize=%d\n",
 						proc_limit, system_limit,
-						scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission(), scheduler.getMaxJobsPerOwner(),
+						scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission(), factory_owner_limit,
 						cad->ClusterSize());
 
 					TransactionWatcher txn;
@@ -947,7 +1006,7 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		job_ad->LookupString( ATTR_HOLD_REASON, hold_reason );
 		if ( hold_reason == "Spooling input data files" ) {
 			job_ad->Assign( ATTR_HOLD_REASON_CODE,
-							CONDOR_HOLD_CODE_SpoolingInput );
+							CONDOR_HOLD_CODE::SpoolingInput );
 		}
 	}
 
@@ -1928,7 +1987,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				// we need to redo the rewriting here.
 			int hold_code = -1;
 			ad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
-			if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE_SpoolingInput ) {
+			if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE::SpoolingInput ) {
 				if ( rewriteSpooledJobAd( ad, cluster, proc, true ) ) {
 					JobQueueDirty = true;
 				}
@@ -1983,6 +2042,18 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			if( ad->LookupInteger(ATTR_JOB_TRANSFERRING_OUTPUT_TIME,transferring_output) ) {
 				ad->Delete(ATTR_JOB_TRANSFERRING_OUTPUT_TIME);
 				JobQueueDirty = true;
+			}
+			if( ad->LookupString(ATTR_CLAIM_ID, buffer) ) {
+				ad->Delete(ATTR_CLAIM_ID);
+				PrivateAttrs[key][ATTR_CLAIM_ID] = buffer;
+			}
+			if( ad->LookupString(ATTR_CLAIM_IDS, buffer) ) {
+				ad->Delete(ATTR_CLAIM_IDS);
+				PrivateAttrs[key][ATTR_CLAIM_IDS] = buffer;
+			}
+			if( ad->LookupString(ATTR_PAIRED_CLAIM_ID, buffer) ) {
+				ad->Delete(ATTR_PAIRED_CLAIM_ID);
+				PrivateAttrs[key][ATTR_PAIRED_CLAIM_ID] = buffer;
 			}
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
@@ -2051,12 +2122,14 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// The spool renaming also needs to be saved here.  This is not
 		// optional, so we cannot just call CleanJobQueue() here, because
 		// that does not abort on failure.
+#if 0
 	if( JobQueueDirty ) {
 		if( !JobQueue->TruncLog() ) {
 			EXCEPT("Failed to write the modified job queue log to disk, so cannot continue.");
 		}
 		JobQueueDirty = false;
 	}
+#endif
 
 	if( spool_cur_version < 1 ) {
 		SpoolHierarchyChangePass2(spool.c_str(),spool_rename_list);
@@ -2074,6 +2147,22 @@ CleanJobQueue()
 	if (JobQueueDirty) {
 		dprintf(D_ALWAYS, "Cleaning job queue...\n");
 		JobQueue->TruncLog();
+
+		auto job_itr = PrivateAttrs.begin();
+		while (job_itr != PrivateAttrs.end()) {
+			ClassAd *job_ad = GetJobAd(job_itr->first);
+			if (job_ad == NULL) {
+				job_itr = PrivateAttrs.erase(job_itr);
+			} else {
+				for (auto &attr : job_itr->second) {
+					if (SetAttributeString(job_itr->first.cluster, job_itr->first.proc, attr.first.c_str(), attr.second.c_str()) == 0) {
+						job_ad->Delete(attr.first.c_str());
+					}
+				}
+				job_itr++;
+			}
+		}
+
 		JobQueueDirty = false;
 	}
 }
@@ -2123,14 +2212,28 @@ int MaterializeJobs(JobQueueCluster * clusterad, TransactionWatcher &txn, int & 
 		proc_limit = INT_MAX;
 	}
 	int system_limit = MIN(scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission());
-	system_limit = MIN(system_limit, scheduler.getMaxJobsPerOwner());
+	// the MAX_JOBS_PER_OWNER limit straddles clusters, so we have to look at the number of jobs in the queue
+	// for this owner to know the actual limit
+	int owner_limit = scheduler.getMaxJobsPerOwner();
+	if (clusterad->ownerinfo) {
+		owner_limit -= (clusterad->ownerinfo->num.JobsCounted + clusterad->ownerinfo->num.JobsRecentlyAdded);
+	}
+	// when the effective owner limit is 0, we can't count on a state change in this factory to trigger new materialization
+	// so we return a retry_delay of 5 to keep this cluster in the 'needs materialization' queue
+	if (owner_limit < 1) {
+		dprintf(D_MATERIALIZE, "in MaterializeJobs cannot materialize jobs for cluster %d because of MAX_JOBS_PER_OWNER\n",
+			clusterad->jid.cluster);
+		//uncomment this line to poll quickly, but only if ownerinfo->num counters are also updated quickly (currently they are not)
+		//retry_delay = 5;
+	}
 	//system_limit = MIN(system_limit, scheduler.getMaxJobsRunning());
 
 	int effective_limit = MIN(proc_limit, system_limit);
+	effective_limit = MIN(effective_limit, owner_limit);
 
 	dprintf(D_MATERIALIZE | D_VERBOSE, "in MaterializeJobs, proc_limit=%d, sys_limit=%d MIN(%d,%d,%d), ClusterSize=%d\n",
 		proc_limit, system_limit,
-		scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission(), scheduler.getMaxJobsPerOwner(),
+		scheduler.getMaxMaterializedJobsPerCluster(), scheduler.getMaxJobsPerSubmission(), owner_limit,
 		clusterad->ClusterSize());
 
 	int num_materialized = 0;
@@ -2427,7 +2530,7 @@ isQueueSuperUser( const char* user )
 		return false;
 	}
 	for (const auto &superuser : super_users) {
-#if defined(HAVE_GETGRNAM)
+#ifdef UNIX
         if (superuser[0] == '%') {
             // this is a user group, so check user against the group membership
             struct group* gr = getgrnam(&superuser[1]);
@@ -3423,9 +3526,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
 	WritePerJobHistoryFile(ad, false);
 
-#if defined(HAVE_DLOPEN) || defined(WIN32)
   ScheddPluginManager::Archive(ad);
-#endif
 
   // save job ad to the log
 	bool already_in_transaction = InTransaction();
@@ -3599,9 +3700,7 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 				// Apend to history file
 				AppendHistory(ad);
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 				ScheddPluginManager::Archive(ad);
-#endif
 
   // save job ad to the log
 
@@ -3808,7 +3907,7 @@ enum {
 	catSubmitterIdent = 0x0040,
 	catNewMaterialize = 0x0080,  // attributes that control the job factory
 	catMaterializeState = 0x0100, // change in state of job factory
-	catSpoolingHold = 0x0200,    // hold reason was set to CONDOR_HOLD_CODE_SpoolingInput
+	catSpoolingHold = 0x0200,    // hold reason was set to CONDOR_HOLD_CODE::SpoolingInput
 	catPostSubmitClusterChange = 0x400, // a cluster ad was changed after submit time which calls for special processing in commit transaction
 	catCallbackTrigger = 0x1000, // indicates that a callback should happen on commit of this attribute
 	catCallbackNow = 0x20000,    // indicates that a callback should happen when setAttribute is called
@@ -4568,10 +4667,26 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		// if the hold reason is set to one of the magic values that indicate a hold for spooling
 		// data, we want to attach a trigger to the transaction so we know to do filepath fixups
 		// after the transaction is committed.
+		// if the hold reason code is NOT spooling for data, then we want to update aggregates
+		// on the number of holds and number of holds per reason.
 		bool is_spooling_hold = false;
 		if (attr_id == idATTR_HOLD_REASON_CODE) {
 			int hold_reason = (int)strtol( attr_value, NULL, 10 );
-			is_spooling_hold = (CONDOR_HOLD_CODE_SpoolingInput == hold_reason);
+			is_spooling_hold = (CONDOR_HOLD_CODE::SpoolingInput == hold_reason);
+			if (!is_spooling_hold) {
+				// Update count in job ad of how many times job was put on hold
+				incrementJobAdAttr(cluster_id, proc_id, ATTR_NUM_HOLDS);
+
+				// Update count per hold reason in the job ad.
+				// If the reason_code int is not a valid CONDOR_HOLD_CODE enum, an exception will be thrown.
+				try {
+					incrementJobAdAttr(cluster_id, proc_id, (CONDOR_HOLD_CODE::_from_integral(hold_reason))._to_string(), ATTR_NUM_HOLDS_BY_REASON);
+				}
+				catch (std::runtime_error const&) {
+					// Somehow reason_code is not a valid hold reason, so consider it as Unspecified here.
+					incrementJobAdAttr(cluster_id, proc_id, (+CONDOR_HOLD_CODE::Unspecified)._to_string(), ATTR_NUM_HOLDS_BY_REASON);
+				}
+			}
 		} else if (attr_id == idATTR_HOLD_REASON) {
 			is_spooling_hold = YourString("Spooling input data files") == attr_value;
 		}
@@ -4642,15 +4757,15 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				scheduler.WriteAttrChangeToUserLog(key.c_str(), raw_attribute.c_str(), attr_value, old_val);
 			}
 
-			int ivalue;
+			int64_t lvalue;
 			double fvalue;
 
 			if ( attr_type == classad::Value::INTEGER_VALUE ) {
-				val.IsIntegerValue( ivalue );
-				fvalue = ivalue;
+				val.IsIntegerValue( lvalue );
+				fvalue = lvalue;
 			} else {
 				val.IsRealValue( fvalue );
-				ivalue = (int) fvalue;	// truncation conversion
+				lvalue = (int64_t) fvalue;	// truncation conversion
 			}
 
 			if( strstr(round_param,"%") ) {
@@ -4674,7 +4789,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 					fvalue = ceil( fvalue/roundto )*roundto;
 
 					if( attr_type == classad::Value::INTEGER_VALUE ) {
-						new_value = std::to_string((int)fvalue);
+						new_value = std::to_string((int64_t)fvalue);
 					}
 					else {
 						new_value = std::to_string(fvalue);
@@ -4691,12 +4806,12 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				for (base=1 ; exp > 0; exp--, base *= 10) { }
 
 					// round it.  note we always round UP!!  
-				ivalue = ((ivalue + base - 1) / base) * base;
+				lvalue = ((lvalue + base - 1) / base) * base;
 
-					// make it a string, courtesty MyString conversion.
-				new_value = std::to_string( ivalue );
+					// make it a string
+				new_value = std::to_string( lvalue );
 
-					// if it was a float, append ".0" to keep it a float
+					// if it was a float, append ".0" to keep it real
 				if ( attr_type == classad::Value::REAL_VALUE ) {
 					new_value += ".0";
 				}
@@ -5300,6 +5415,7 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 
 	int triggers = JobQueue->GetTransactionTriggers();
 	bool has_spooling_hold = (triggers & catSpoolingHold) != 0;
+	bool has_job_factory = (triggers & catNewMaterialize) != 0;
 
 	// If we don't need to perform any submit_requirement checks
 	// and we don't need to perform any job transforms, then we should
@@ -5312,36 +5428,77 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 	}
 
 	for( std::list<std::string>::const_iterator it = newAdKeys.begin(); it != newAdKeys.end(); ++it ) {
-		JobQueueKey job( it->c_str() );
-		if( job.proc == -1 ) { continue; }
-		JobQueueKeyBuf cluster( job.cluster, -1 );
+		bool do_transforms = true;
+		ClassAd tmpAd, tmpAd2;
+		ClassAd * procAd = &tmpAd;
+		classad::References tmpAttrs, *xform_attrs = nullptr;
+		JobQueueKey jid( it->c_str() );
+		if (jid.proc == -1) { // is this is a cluster ad?
+			// we don't transform non-factory cluster ads (for now)
+			if (! has_job_factory)
+				continue;
+			JobQueue->AddAttrsFromTransaction( jid, tmpAd2 );
+			// build a fake temporary proc ad for transforms and requirements
+			// stuff the factory id into that ad so that it is possible
+			// to write a transform or requirement that only applies to factories
+			tmpAd.Assign(ATTR_PROC_ID, 0);
+			tmpAd.Assign("JobFactoryId", jid.cluster);
+			if (!tmpAd2.Lookup(ATTR_JOB_STATUS)) {
+				tmpAd.Assign(ATTR_JOB_STATUS, IDLE);
+				tmpAd.ChainToAd(&tmpAd2);
+			}
+			xform_attrs = &tmpAttrs; // we want to get back the set of transformed attributes
+		} else {
+			JobQueueKeyBuf clusterJid( jid.cluster, -1 );
+			JobQueue->AddAttrsFromTransaction( clusterJid, tmpAd );
+			JobQueue->AddAttrsFromTransaction( jid, tmpAd );
 
-		ClassAd procAd;
-		JobQueue->AddAttrsFromTransaction( cluster, procAd );
-		JobQueue->AddAttrsFromTransaction( job, procAd );
-
-		JobQueueJob *clusterAd = NULL;
-		if (JobQueue->Lookup(cluster, clusterAd)) {
-			// If there is a cluster ad in the job queue, chain to that before we evaluate anything.
-			// we don't need to unchain - it's a stack object and won't live longer than this function.
-			procAd.ChainToAd(clusterAd);
+			JobQueueJob *clusterAd = NULL;
+			if (JobQueue->Lookup(clusterJid, clusterAd)) {
+				// If there is a cluster ad in the job queue, chain to that before we evaluate anything.
+				// we don't need to unchain - it's a stack object and won't live longer than this function.
+				tmpAd.ChainToAd(clusterAd);
+				if (static_cast<JobQueueCluster*>(clusterAd)->factory) {
+					// late materialize jobs have already been transformed
+					do_transforms = false;
+				}
+			}
 		}
 
 		// Now that we created a procAd out of the transaction queue,
 		// apply job transforms to the procAd.
 		// If the transforms fail, bail on the transaction.
-		rval = scheduler.jobTransforms.transformJob(&procAd,errorStack);
-		if  (rval < 0) {
-			if ( errorStack ) {
-				errorStack->push( "QMGMT", 30, "Failed to apply a required job transform.\n");
+		if (do_transforms) {
+			rval = scheduler.jobTransforms.transformJob(procAd, jid, xform_attrs, errorStack);
+			if  (rval < 0) {
+				if ( errorStack ) {
+					errorStack->push( "QMGMT", 30, "Failed to apply a required job transform.\n");
+				}
+				errno = EINVAL;
+				return rval;
 			}
-			errno = EINVAL;
-			return rval;
+
+			// when transforming a cluster ad, we need to add transformed attributes into the
+			// EditedClustrAttrs attribute to prevent job materialization from changing them.
+			if (jid.proc == -1 && xform_attrs && !xform_attrs->empty()) {
+				std::string cur_list, new_list;
+				if (tmpAd2.LookupString(ATTR_EDITED_CLUSTER_ATTRS, cur_list)) {
+					add_attrs_from_string_tokens(*xform_attrs, cur_list);
+				}
+				// store the new value if it changed
+				print_attrs(new_list, false, *xform_attrs, ",");
+				if (new_list != cur_list) {
+					// wrap quotes around the attribute list
+					new_list.insert(0, "\"");
+					new_list += "\"";
+					SetAttribute(jid.cluster, jid.proc, ATTR_EDITED_CLUSTER_ATTRS, new_list.c_str(), SetAttribute_SubmitTransform);
+				}
+			}
 		}
 
 		// Now check that submit_requirements still hold on our (possibly transformed)
 		// job ad.
-		rval = scheduler.checkSubmitRequirements( & procAd, errorStack );
+		rval = scheduler.checkSubmitRequirements( procAd, errorStack );
 		if( rval < 0 ) {
 			errno = EINVAL;
 			return rval;
@@ -5354,7 +5511,7 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 			// This might be more correct to do be fore before checkSubmitRequirements,
 			// but before 8.7.2 it happened after the submit transaction had been committed
 			// so the conservative changes puts it here.
-			rewriteSpooledJobAd(&procAd, job.cluster, job.proc, false);
+			rewriteSpooledJobAd(procAd, jid.cluster, jid.proc, false);
 		}
 	}
 
@@ -5483,7 +5640,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 		return false;
 	}
 
-	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( file );
+	X509Credential* proxy_handle = x509_proxy_read( file );
 
 	if ( proxy_handle == NULL ) {
 		dprintf( D_FAILURE, "Failed to read job proxy: %s\n",
@@ -5499,7 +5656,7 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 	char *fullfqan = NULL;
 	extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &fullfqan );
 
-	x509_proxy_free( proxy_handle );
+	delete proxy_handle;
 
 	x509_attrs.Assign( ATTR_X509_USER_PROXY_EXPIRATION, expire_time );
 	x509_attrs.Assign( ATTR_X509_USER_PROXY_SUBJECT, proxy_identity );
@@ -5925,7 +6082,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 				int hold_code = -1;
 				procad->LookupInteger(ATTR_JOB_STATUS, job_status);
 				procad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
-				if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE_SpoolingInput ) {
+				if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE::SpoolingInput ) {
 					SpooledJobFiles::createJobSpoolDirectory(procad,PRIV_UNKNOWN);
 				}
 
@@ -5970,7 +6127,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 								  ATTR_TRANSFER_INPUT_SIZE_MB, (int)xfer_input_size_mb,
 								  "MAX_TRANSFER_INPUT_MB", (int)max_xfer_input_mb);
 						holdJob(job_id.cluster, job_id.proc, hold_reason.c_str(),
-								CONDOR_HOLD_CODE_MaxTransferInputSizeExceeded, 0);
+								CONDOR_HOLD_CODE::MaxTransferInputSizeExceeded, 0);
 					}
 				}
 			}
@@ -7876,12 +8033,15 @@ bool InWalkJobQueue() {
 	return in_walk_job_queue != 0;
 }
 
+
+// this function for use only inside the schedd
 void
-WalkJobQueue3(queue_classad_scan_func func, void* pv, schedd_runtime_probe & ftm)
+WalkJobQueueEntries(int with, queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
 {
 	double begin = _condor_debug_get_time_double();
-	ClassAd *ad;
-	int rval = 0;
+	const bool with_jobsets = (with & WJQ_WITH_JOBSETS) != 0;
+	const bool with_clusters = (with & WJQ_WITH_CLUSTERS) != 0;
+	const bool with_no_jobs = (with & WJQ_WITH_NO_JOBS) != 0;
 
 	if( in_walk_job_queue ) {
 		dprintf(D_ALWAYS,"ERROR: WalkJobQueue called recursively!  Generating stack trace:\n");
@@ -7890,76 +8050,20 @@ WalkJobQueue3(queue_classad_scan_func func, void* pv, schedd_runtime_probe & ftm
 
 	in_walk_job_queue++;
 
-	ad = GetNextJob(1);
-	while (ad != NULL && rval >= 0) {
-		rval = func(ad, pv);
-		if (rval >= 0) {
-			FreeJobAd(ad);
-			ad = GetNextJob(0);
+	JobQueue->StartIterateAllClassAds();
+
+	JobQueueKey key;
+	JobQueueJob * job;
+	while(JobQueue->Iterate(key, job)) {
+		if (key.cluster < 0) // skip header ad
+			continue;
+		if (key.cluster == 0) { // jobset ads have cluster == 0
+			if (! with_jobsets) { continue; }
+		} else if (key.proc < 0) { // cluster ads have cluster > 0 && proc < 0
+			if (! with_clusters) { continue; }
+		} else { // jobads have cluster > 0 && proc >= 0
+			if (with_no_jobs) { continue; }
 		}
-	}
-	if (ad != NULL)
-		FreeJobAd(ad);
-
-	double runtime = _condor_debug_get_time_double() - begin;
-	ftm += runtime;
-	WalkJobQ_runtime += runtime;
-
-	in_walk_job_queue--;
-}
-
-
-// this function for use only inside the schedd, external clients will use the one above...
-void
-WalkJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
-{
-	double begin = _condor_debug_get_time_double();
-
-	if( in_walk_job_queue ) {
-		dprintf(D_ALWAYS,"ERROR: WalkJobQueue called recursively!  Generating stack trace:\n");
-		dprintf_dump_stack();
-	}
-
-	in_walk_job_queue++;
-
-	JobQueue->StartIterateAllClassAds();
-
-	JobQueueKey key;
-	JobQueueJob * job;
-	while(JobQueue->Iterate(key, job)) {
-		if (key.cluster <= 0 || key.proc < 0) // avoid cluster and header ads
-			continue;
-		int rval = func(job, key, pv);
-		if (rval < 0)
-			break;
-	}
-
-	double runtime = _condor_debug_get_time_double() - begin;
-	ftm += runtime;
-	WalkJobQ_runtime += runtime;
-
-	in_walk_job_queue--;
-}
-
-// this function walks the job queue, but only looks at cluster & set records
-void WalkNonJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
-{
-	double begin = _condor_debug_get_time_double();
-
-	if( in_walk_job_queue ) {
-		dprintf(D_ALWAYS,"ERROR: WalkJobQueue called recursively!  Generating stack trace:\n");
-		dprintf_dump_stack();
-	}
-
-	in_walk_job_queue++;
-
-	JobQueue->StartIterateAllClassAds();
-
-	JobQueueKey key;
-	JobQueueJob * job;
-	while(JobQueue->Iterate(key, job)) {
-		if (key.cluster > 0 && key.proc >= 0) // ignore proc ads
-			continue;
 		int rval = func(job, key, pv);
 		if (rval < 0)
 			break;

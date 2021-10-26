@@ -873,6 +873,12 @@ default=
 type=string
 tags=accountant
 
+[ACCOUNTANT_DATABASE_FILE]
+default=$(SPOOL)/Accountantnew.log
+win32_default=$(SPOOL)\Accountantnew.log
+type=path
+tags=accountant
+
 [MAX_ACCOUNTANT_DATABASE_SIZE]
 default=1000000
 type=int
@@ -1498,26 +1504,12 @@ default=50
 type=int
 tags=gridmanager,gahp-client
 
-[CREAM_GAHP_WORKER_THREADS]
-default=$(GRIDMANAGER_MAX_PENDING_REQUESTS)
-type=int
-
 [GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_EC2]
 default=20
 type=int
 
-[GAHP]
-default=
-type=string
-tags=gridmanager,gahp-client
-
-[GAHP_ARGS]
-default=
-type=string
-tags=gridmanager,gahp-client
-
-[GLITE_LOCATION]
-default=$(LIBEXEC)/glite
+[BLAHPD_LOCATION]
+default=$(RELEASE_DIR)
 type=string
 tags=gridmanager,gahp-client
 
@@ -1589,28 +1581,8 @@ default=0.01
 type=double
 range=0.0,1.0
 
-[ENABLE_GRID_MONITOR]
-default=true
-type=bool
-tags=gridmanager,globusjob
-
-[GRIDMANAGER_JM_EXIT_LIMIT]
-default=30
-type=int
-tags=gridmanager,globusjob
-
 [GRIDMANAGER_CONNECT_FAILURE_RETRY_INTERVAL]
 default=5
-type=int
-tags=gridmanager,globusjob
-
-[GRIDSHELL]
-default=
-type=string
-tags=gridmanager,globusjob
-
-[GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT]
-default=600
 type=int
 tags=gridmanager,globusjob
 
@@ -1644,11 +1616,6 @@ default=
 type=string
 tags=gridmanager,condorjob
 
-[CREAM_GAHP]
-default=$(SBIN)/cream_gahp
-type=string
-tags=gridmanager,creamjob
-
 [COLLECTOR_HOST]
 default=$(CONDOR_HOST)
 type=string
@@ -1666,33 +1633,6 @@ default="$(COLLECTOR_HOST)"
 default=COLLECTOR_HOST_STRING DedicatedScheduler
 description=Configuration attibutes that HTCondor needs to insert into STARTD ads
 customization=devel
-
-[UNICORE_GAHP]
-default=$(SBIN)/unicore_gahp
-win32_default=$(SBIN)\unicore_gahp.exe
-type=path
-tags=gridmanager,unicorejob
-
-[GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE]
-default=10
-type=int
-tags=gridmanager,globusresource
-
-[GRID_MONITOR_HEARTBEAT_TIMEOUT]
-default=300
-type=int
-tags=gridmanager,globusresource
-
-[GRID_MONITOR_RETRY_DURATION]
-default=900
-type=int
-tags=gridmanager,globusresource
-
-[GRID_MONITOR]
-default=$(SBIN)/grid_monitor
-win32_default=$(SBIN)\grid_monitor.exe
-type=path
-tags=gridmanager,globusresource
 
 [NO_DNS]
 default=false
@@ -1767,8 +1707,7 @@ description=Path to sendmail
 tags=MAIL,
 
 [MAIL]
-# default location for mail on RHEL is /bin/mail, default on debian is /usr/bin/mail
-default=/bin/mail
+default=/usr/bin/mail
 win32_default=$(BIN)\condor_mail.exe
 type=path
 tags=MAIL,
@@ -2091,7 +2030,7 @@ type=string
 tags=submit
 
 [SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS]
-description=Submit should generate requirements clauses for job attribues that begin with Request
+description=Submit should generate requirements clauses for job attributes that begin with Request
 default=true
 type=bool
 tags=submit
@@ -2527,9 +2466,9 @@ description=Authorization limits for token requests
 type=string
 tags=condor_auth_passwd
 
-[SEC_TOKEN_BLACKLIST_EXPR]
+[SEC_TOKEN_REVOCATION_EXPR]
 default=
-description=Expression describing token blacklist.
+description=Expression describing token revocation.
 type=string
 tags=condor_auth_passwd
 
@@ -2592,6 +2531,10 @@ win32_default=
 description=Location of the host private key
 type=path
 tags=condor_auth_ssl
+
+[AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE]
+default=false
+type=bool
 
 [TRUST_DOMAIN]
 default=$(COLLECTOR_HOST)
@@ -2751,6 +2694,10 @@ tags=negotiator,matchmaker
 default=60
 type=int
 tags=negotiator,matchmaker
+
+[NEGOTIATOR_MIN_INTERVAL]
+default=5
+type=int
 
 [NEGOTIATOR_UPDATE_AFTER_CYCLE]
 default=false
@@ -2964,6 +2911,9 @@ tags=tools,preen
 [STARTD_HISTORY]
 default=$(LOG)/startd_history
 type=string
+
+[HISTORY_CONTAINS_JOB_ENVIRONMENT]
+default = true
 
 [PREEN_ADMIN]
 default=
@@ -3188,10 +3138,16 @@ win32_default=$(SBIN)\condor_starter.exe
 type=path
 tags=schedd
 
+[JOB_QUEUE_LOG]
+default=$(SPOOL)/job_queue.log
+win32_default=$(SPOOL)\job_queue.log
+type=path
+tags=schedd
+
 [LOCAL_UNIV_EXECUTE]
 default=$(SPOOL)/local_univ_execute
 win32_default=$(SPOOL)\local_univ_execute
-type=string
+type=path
 tags=schedd
 
 [SCHED_UNIV_RENICE_INCREMENT]
@@ -4172,12 +4128,6 @@ range=0,
 type=int
 tags=schedd
 
-[GRAM_VERSION_DETECTION]
-default=true
-type=bool
-usage=true if gridmanager should automatically detect the version of GRAM servers, false otherwise
-tags=gridmanager
-
 [CREATE_LOCKS_ON_LOCAL_DISK]
 default=true
 type=bool
@@ -4322,14 +4272,6 @@ default=4
 tags=schedd
 restart=true
 customization=expert
-
-[ENABLE_VERSIONED_OPSYS]
-default=true
-win32_default=false
-type=bool
-customization=devel
-description=Append OS version to the value of OPSYS
-tags=startd
 
 [WANT_SUSPEND]
 default=False
@@ -5462,9 +5404,6 @@ win32_default=NUL
 default=D_PID
 description=Debug logging options for the ec2_gahp
 
-[GT2_GAHP]
-default=$(SBIN)/gahp_server
-
 [EC2_GAHP]
 default=$(SBIN)/ec2_gahp
 
@@ -6233,7 +6172,12 @@ default : @fin
 	endif
 	use FEATURE : ScheddUsermapFile(AssignAccountingGroup, $(1))
 	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AssignAccountingGroup
-	JOB_TRANSFORM_AssignAccountingGroup = [ copy_Owner="AcctGroupUser"; copy_AcctGroup="RequestedAcctGroup"; eval_set_AcctGroup=usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup); eval_set_AccountingGroup=join(".",usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup),AcctGroupUser); ]
+	JOB_TRANSFORM_AssignAccountingGroup @=end
+		COPY Owner = AcctGroupUser
+		COPY AcctGroup = RequestedAcctGroup
+		EVALSET AcctGroup = usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup)
+		EVALSET AccountingGroup = join(".",AcctGroup,AcctGroupUser)
+	@end
 	# make sure that the user can't qedit these attributes once they have been set.
 	IMMUTABLE_JOB_ATTRS = $(IMMUTABLE_JOB_ATTRS) AcctGroup AcctGroupUser AccountingGroup
 	# optionally check that the user requested a valid group
@@ -6564,6 +6508,16 @@ ALLOW_READ = *
 @end
 
 ##
+## FIPS mode settings
+##
+[$SECURITY.FIPS]
+default: @end
+FIPS = True
+use security:strong
+SEC_DEFAULT_CRYPTO_METHODS = AES,3DES
+@end
+
+##
 ## Experimental meta knobs
 ##
 
@@ -6657,10 +6611,7 @@ default : @end
 description=Platform specific file knobs that should be ignored on upgrade
 default=
 win32_default : @end
-	GT2_GAHP
-	UNICORE_GAHP
 	NORDUGRID_GAHP
-	CREAM_GAHP
 	LIBVIRT_XML_SCRIPT
 @end
 
@@ -6759,5 +6710,24 @@ default : @end
 	DAEMON_LIST=$(DAEMON_LIST),ADSTASH
 @end
 
+[$FEATURE.CommonCloudAttributesGoogle]
+description=Enable an execute node to advertise common cloud attributes on Google
+default : @end
+	use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/common-cloud-attributes-google.py, $(0))
+	STARTD_CRON_cloud_PREFIX = Cloud
+@end
+
+[$FEATURE.JobsHaveInstanceIDs]
+description=When a job runs on a machine in the cloud, add that machine's instance ID to the job's ClassAd
+default : @end
+	SYSTEM_JOB_MACHINE_ATTRS = $(SYSTEM_JOB_MACHINE_ATTRS) CloudInstanceID
+@end
+
+[$FEATURE.CommonCloudAttributesAWS]
+description=Enable an execute node to advertise common cloud attributes on AWS
+default : @end
+	use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/common-cloud-attributes-aws.py, $(0))
+	STARTD_CRON_cloud_PREFIX = Cloud
+@end
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

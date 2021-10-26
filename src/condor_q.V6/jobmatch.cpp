@@ -1493,7 +1493,7 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 
 		std::string subexpr_detail;
 		AnalyzeRequirementsForEachTarget(slot, ATTR_REQUIREMENTS, inline_attrs, jobs, subexpr_detail, fmt);
-		strcat(return_buff, subexpr_detail.c_str());
+		strncat(return_buff, subexpr_detail.c_str(), sizeof(return_buff) - strlen(return_buff) - 1);
 
 		//formatstr(subexpr_detail, "%-5.5s %8d\n", "[ALL]", cOffConstraint);
 		//strcat(return_buff, subexpr_detail.c_str());

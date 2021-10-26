@@ -41,10 +41,6 @@
 #ifndef _UID_H
 #define _UID_H
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 /*
   Our code depends on _priv_state_threshold being last, so if you add
   another priv state here, put it *BEFORE* _priv_state_threshold!!!!
@@ -140,11 +136,6 @@ typedef enum {
    } CompareUsersOpt;
 bool is_same_user(const char user1[], const char user2[], CompareUsersOpt opt);
 
-#if defined(__cplusplus)
-}
-#endif
-
-#if defined(__cplusplus)
 
 #if ! defined WIN32
 #include "passwd_cache.unix.h"
@@ -187,7 +178,5 @@ private:
 	priv_state m_orig_state;
 	bool m_clear_user_ids;
 };
-
-#endif // __cplusplus
 
 #endif /* _UID_H */

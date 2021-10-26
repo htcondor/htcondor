@@ -101,9 +101,7 @@ Files: src/safefile/*
 Copyright: 2007-2008, 2011 James A. Kupsch
 License: Apache-2.0
 
-Files: src/nordugrid_gahp/globus*
-       src/condor_includes/condor_gssapi_openssl.h
-       src/gt2_gahp/my_ez.cpp
+Files: src/condor_includes/condor_gssapi_openssl.h
 Copyright: 1999-2006, University of Chicago
 License: Apache-2.0
 

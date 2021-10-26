@@ -21,8 +21,6 @@
 #ifndef __CONDOR_SYSAPI_H__
 #define __CONDOR_SYSAPI_H__
 
-BEGIN_C_DECLS
-
 /* For debugging */
 #if defined(LINUX)
 typedef struct {
@@ -127,13 +125,11 @@ int sysapi_translate_opsys_version( const char *opsys_long_name );
 int sysapi_find_major_version( const char *opsys_long_name );
 
 /* OS-specific methods for opsys params */
-const char * sysapi_get_darwin_info(void);  
-int sysapi_find_darwin_major_version( const char *opsys_long_name );
-const char * sysapi_find_darwin_opsys_name( int opsys_major_version );
+void sysapi_get_darwin_info(void);
 const char * sysapi_get_bsd_info(const char *opsys_short_name, const char *release); 
 const char * sysapi_get_linux_info(void);
 const char * sysapi_find_linux_name( const char *opsys_long_name );
-const char * sysapi_get_unix_info( const char *sysname, const char *release, const char *version, int append_version );
+const char * sysapi_get_unix_info( const char *sysname, const char *release, const char *version );
 void sysapi_get_windows_info( void );
 
 /* set appropriate resource limits on each platform */
@@ -147,10 +143,8 @@ const char* sysapi_kernel_version( void );
 /* Would like to just use a classad here, but were in a 
  * classad-free layer */
 struct sysapi_cpuinfo {
-#ifdef _cplusplus
 	sysapi_cpuinfo() :
 		processor_flags(0), model_no(-1), family(-1), cache(-1) {}
-#endif
 	const char *processor_flags;
 	int model_no;
 	int family;
@@ -169,9 +163,6 @@ const struct sysapi_cpuinfo *sysapi_processor_flags( void );
 int sysapi_partition_id_raw(char const *path,char **result);
 int sysapi_partition_id(char const *path,char **result);
 
-END_C_DECLS
-
-#if defined(__cplusplus)
 
 #include <string>
 #include <vector>
@@ -208,8 +199,6 @@ void sysapi_clear_network_device_info_cache();
 
 /* determine if a linux version is version X or newer */
 bool sysapi_is_linux_version_atleast(const char *version_to_check);
-
-#endif // __cplusplus
 
 #endif
 

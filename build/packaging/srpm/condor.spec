@@ -9,7 +9,6 @@
 # % define fedora   16
 # % define osg      0
 # % define uw_build 1
-# % define vaultcred 1
 # % define devtoolset 0
 
 %define python 0
@@ -38,14 +37,10 @@
 %define blahp 0
 %endif
 
-# enable vaultcred by default for osg
-%if %undefined vaultcred
-%if 0%{?osg}
-%define vaultcred 1
-%endif
-%endif
-
 %define python 1
+
+# Unconditionally turn off globus
+%define globus 0
 
 # Temporarily turn parallel_setup off
 %define parallel_setup 0
@@ -70,7 +65,7 @@ Version: %{tarball_version}
 %else
         %define condor_release %condor_base_release
 %endif
-Release: %condor_release%{?dist}
+Release: %{condor_release}%{?dist}
 
 License: ASL 2.0
 Group: Applications/System
@@ -166,7 +161,6 @@ BuildRequires: byacc
 BuildRequires: flex
 BuildRequires: patch
 BuildRequires: libtool
-BuildRequires: libtool-ltdl-devel
 BuildRequires: pam-devel
 BuildRequires: nss-devel
 BuildRequires: openssl-devel
@@ -184,6 +178,7 @@ BuildRequires: libcurl-devel
 %endif
 
 # Globus GSI build requirements
+%if %globus
 BuildRequires: globus-gssapi-gsi-devel
 BuildRequires: globus-gass-server-ez-devel
 BuildRequires: globus-gass-transfer-devel
@@ -206,10 +201,11 @@ BuildRequires: globus-callout-devel
 BuildRequires: globus-common-devel
 BuildRequires: globus-ftp-client-devel
 BuildRequires: globus-ftp-control-devel
+BuildRequires: libtool-ltdl-devel
+%endif
+BuildRequires: voms-devel
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
-BuildRequires: voms-devel
-BuildRequires: libtool-ltdl-devel
 
 BuildRequires: libcgroup-devel
 Requires: libcgroup
@@ -264,17 +260,19 @@ BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 # openssh-server needed for condor_ssh_to_job
 Requires: openssh-server
 
+# net-tools needed to provide netstat for condor_who
+Requires: net-tools
+
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
 %if %uw_build
 Requires: %name-externals = %version-%release
-Requires: condor-boinc
 %endif
 
 %if %blahp
-Requires: blahp >= 2.0.1
+Requires: blahp >= 2.1.1
 %endif
 
 # Useful tools are using the Python bindings
@@ -314,6 +312,7 @@ Requires(post): selinux-policy-targeted
 
 # Require libraries that we dlopen
 # Ganglia is optional as well as nVidia and cuda libraries
+%if %globus
 Requires: globus-callout
 Requires: globus-common
 Requires: globus-gsi-callback
@@ -327,14 +326,15 @@ Requires: globus-gss-assist
 Requires: globus-gssapi-gsi
 Requires: globus-openssl-module
 Requires: globus-xio-gsi-driver
+Requires: libtool-ltdl
+%endif
+Requires: voms
 Requires: krb5-libs
 Requires: libcom_err
-Requires: libtool-ltdl
 Requires: munge-libs
 Requires: openssl-libs
 Requires: scitokens-cpp
 Requires: systemd-libs
-Requires: voms
 
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
@@ -555,7 +555,6 @@ OAuth2 endpoints and to use those credentials securely inside running jobs.
 %endif
 
 
-%if 0%{?vaultcred}
 #######################
 %package credmon-vault
 Summary: Vault credmon for HTCondor.
@@ -574,7 +573,6 @@ Conflicts: %name-credmon-oauth
 %description credmon-vault
 The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
-%endif
 
 #######################
 %package bosco
@@ -725,6 +723,7 @@ export CMAKE_PREFIX_PATH=/usr
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
+       -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -D_VERBOSE:BOOL=TRUE \
@@ -737,8 +736,6 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
-       -DWITH_CREAM:BOOL=FALSE \
-       -DWITH_DRMAA:BOOL=FALSE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
        -DCMAKE_INSTALL_PREFIX:PATH=/usr \
@@ -766,6 +763,7 @@ export CMAKE_PREFIX_PATH=/usr
 %endif
        -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
+       -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
@@ -786,8 +784,11 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_BLAHP:BOOL=FALSE \
 %endif
-       -DWITH_CREAM:BOOL=FALSE \
+%if %globus
        -DWITH_GLOBUS:BOOL=TRUE \
+%else
+       -DWITH_GLOBUS:BOOL=FALSE \
+%endif
        -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
        -DWITH_LIBCGROUP:BOOL=TRUE \
        -DLIBCGROUP_FOUND_SEARCH_cgroup=/%{_lib}/libcgroup.so.1
@@ -917,24 +918,14 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/co
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
 %endif
 
-%if 0%{?vaultcred}
 # Move vault credmon config file out of examples and into config.d
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-vault-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-vault-credmon.conf
-%else
-# Otherwise remove installed vault credmon files from the buildroot
-rm -f %{buildroot}/%{_sbindir}/condor_credmon_vault
-rm -f %{buildroot}/%{_bindir}/condor_vault_storer
-%endif
 
 # For non-EL7, remove oauth credmon from the buildroot
 %if 0%{?rhel} > 7 || 0%{?fedora}
 rm -f %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi
 rm -f %{buildroot}/%{_sbindir}/condor_credmon_oauth
 rm -f %{buildroot}/%{_sbindir}/scitokens_credential_producer
-%if ! 0%{?vaultcred}
-rm -rf %{buildroot}/%{_libexecdir}/condor/credmon
-rm -rf %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth
-%endif
 %endif
 
 ###
@@ -1160,18 +1151,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
 %_libexecdir/condor/htcondor_docker_test
-%if %blahp
-%dir %_libexecdir/condor/glite/bin
-%_libexecdir/condor/glite/bin/kubernetes_cancel.sh
-%_libexecdir/condor/glite/bin/kubernetes_hold.sh
-%_libexecdir/condor/glite/bin/kubernetes_resume.sh
-%_libexecdir/condor/glite/bin/kubernetes_status.sh
-%_libexecdir/condor/glite/bin/kubernetes_submit.sh
-%_libexecdir/condor/glite/bin/nqs_cancel.sh
-%_libexecdir/condor/glite/bin/nqs_hold.sh
-%_libexecdir/condor/glite/bin/nqs_resume.sh
-%_libexecdir/condor/glite/bin/nqs_status.sh
-%_libexecdir/condor/glite/bin/nqs_submit.sh
+%if %globus
+%_sbindir/condor_gridshell
+%_sbindir/nordugrid_gahp
 %endif
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster
@@ -1184,6 +1166,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/data_plugin
 %_libexecdir/condor/box_plugin.py
 %_libexecdir/condor/gdrive_plugin.py
+%_libexecdir/condor/common-cloud-attributes-google.py
+%_libexecdir/condor/common-cloud-attributes-aws.py
+%_libexecdir/condor/common-cloud-attributes-aws.sh
 %_libexecdir/condor/onedrive_plugin.py
 # TODO: get rid of these
 # Not sure where these are getting built
@@ -1214,6 +1199,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/utils.py
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
+%_mandir/man1/condor_check_password.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
 %_mandir/man1/condor_config_val.1.gz
@@ -1285,6 +1271,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_evicted_files.1.gz
 %_mandir/man1/condor_watch_q.1.gz
 %_mandir/man1/get_htcondor.1.gz
+%_mandir/man1/htcondor.1.gz
 # bin/condor is a link for checkpoint, reschedule, vacate
 %_bindir/condor_submit_dag
 %_bindir/condor_who
@@ -1382,11 +1369,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_updates_stats
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
-%_sbindir/condor_gridshell
-%_sbindir/gahp_server
-%_sbindir/grid_monitor
 %_sbindir/remote_gahp
-%_sbindir/nordugrid_gahp
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
 %_sbindir/arc_gahp
@@ -1548,6 +1531,7 @@ rm -rf %{buildroot}
 %_bindir/condor_top
 %_bindir/classad_eval
 %_bindir/condor_watch_q
+%_bindir/htcondor
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
 %_libexecdir/condor/libclassad_python3_user.so
@@ -1556,6 +1540,7 @@ rm -rf %{buildroot}
 /usr/lib64/python%{python3_version}/site-packages/classad/
 /usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
+/usr/lib64/python%{python3_version}/site-packages/htcondor_cli/
 %endif
 %endif
 %endif
@@ -1581,7 +1566,6 @@ rm -rf %{buildroot}
 ###
 %endif
 
-%if 0%{?vaultcred}
 %files credmon-vault
 %doc examples/condor_credmon_oauth
 %_sbindir/condor_credmon_vault
@@ -1590,7 +1574,6 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/40-vault-credmon.conf
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
-%endif
 
 %files bosco
 %defattr(-,root,root,-)
@@ -1680,6 +1663,72 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Sep 23 2021 Tim Theisen <tim@cs.wisc.edu> - 9.2.0-1
+- Add SERVICE node that runs alongside the DAG for the duration of the DAG
+- Fix problem where proxy delegation to older HTCondor versions failed
+- Jobs are now re-run if the execute directory unexpectedly disappears
+- HTCondor counts the number of files transfered at the submit node
+- Fix a bug that caused jobs to fail when using newer Singularity versions
+
+* Thu Sep 23 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.6-1
+- CUDA_VISIBLE_DEVICES can now contain GPU-<uuid> formatted values
+- Fixed a bug that caused jobs to fail when using newer Singularity versions
+- Fixed a bug in the Windows MSI installer for the latest Windows 10 version
+- Fixed bugs relating to the transfer of standard out and error logs
+- MacOS 11.x now reports as 10.16.x (which is better than reporting x.0)
+
+* Thu Aug 19 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.3-1
+- Globus GSI is no longer needed for X.509 proxy delegation
+- Globus GSI authentication is disabled by default
+- The job ad now contains a history of job holds and hold reasons
+- If a user job policy expression evaluates to undefined, it is ignored
+
+* Wed Aug 18 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.5-1
+- Other authentication methods are tried if mapping fails using SciTokens
+- Fix rare crashes from successful condor_submit, which caused DAGMan issues
+- Fix bug where ExitCode attribute would be suppressed when OnExitHold fired
+- condor_who now suppresses spurious warnings coming from netstat
+- The online manual now has detailed instructions for installing on MacOS
+- Fix bug where misconfigured MIG devices confused condor_gpu_discovery
+- The transfer_checkpoint_file list may now include input files
+
+* Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.2-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+* Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.4-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
+
+* Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.15-1
+- Fix for security issue
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+
+* Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.1-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004.html
+
+* Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.3-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
+
+* Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.14-1
+- Fix for security issue
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+
+* Thu Jul 08 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.2-1
+- HTCondor can be set up to use only FIPS 140-2 approved security functions
+- If the Singularity test fails, the job goes idle rather than getting held
+- Can divide GPU memory, when making multiple GPU entries for a single GPU
+- Startd and Schedd cron job maximum line length increased to 64k bytes
+- Added first class submit keywords for SciTokens
+- Fixed MUNGE authentication
+- Fixed Windows installer to work when the install location isn't C:\Condor
+
 * Thu May 20 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.0-1
 - Support for submitting to ARC-CE via the REST interface
 - DAGMan can put failed jobs on hold (user can correct problems and release)
@@ -1735,8 +1784,8 @@ fi
 
 * Wed Jan 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.11-1
 - This release of HTCondor fixes security-related bugs described at
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002/
 
 * Tue Nov 24 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.10-1
 - Fix bug where negotiator stopped making matches when group quotas are used
@@ -1810,17 +1859,17 @@ fi
 
 * Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.6-1
 - Fixes addressing CVE-2019-18823
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004/
 
 * Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.8-1
 - Fixes addressing CVE-2019-18823
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003.html
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004/
 
 * Thu Jan 02 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.5-1
 - Added a new mode that skips jobs whose outputs are newer than their inputs

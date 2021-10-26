@@ -599,6 +599,21 @@ Env::SetEnv( const MyString & var, const MyString & val )
 }
 
 bool
+Env::SetEnv( const std::string & var, const std::string & val )
+{
+	if( var.length() == 0 ) {
+		return false;
+	}
+	bool ret = (_envTable->insert( var, val, true ) == 0);
+	ASSERT( ret );
+#if defined(WIN32)
+	m_sorted_varnames.erase(var.c_str());
+	m_sorted_varnames.insert(var.c_str());
+#endif
+	return true;
+}
+
+bool
 Env::DeleteEnv(const std::string & name)
 {
 	if (!name.size()) { return false; }

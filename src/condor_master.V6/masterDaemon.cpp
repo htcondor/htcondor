@@ -43,9 +43,7 @@
 #include "systemd_manager.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "MasterPlugin.h"
-#endif
 #endif
 
 #ifdef WIN32
@@ -655,8 +653,8 @@ int daemon::RealStart( )
 					"Matching '%s:%d'\n", 
 					my_daemon->fullHostname (),
 					my_daemon->port () );
-				
-				std::string cm_sinful = my_daemon->addr();
+
+				std::string cm_sinful = empty_if_null(my_daemon->addr());
 				condor_sockaddr cm_sockaddr;
 				cm_sockaddr.from_sinful(cm_sinful);
 				std::string cm_hostname;
@@ -3324,6 +3322,14 @@ Daemons::Update( ClassAd* ca )
 void
 Daemons::UpdateCollector()
 {
+	// If we are shutting down, we've already send our invalidation
+	// and we shouldn't further update and un-invalidate or worse,
+	// try to update a collector in a personal condor we just killed.
+
+	if (MasterShuttingDown) {
+		return;
+	}
+
 	dprintf(D_FULLDEBUG, "enter Daemons::UpdateCollector\n");
 
 	Update(ad);
@@ -3334,9 +3340,7 @@ Daemons::UpdateCollector()
 		DCTokenRequester::default_identity, "ADVERTISE_MASTER");
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 	MasterPluginManager::Update(ad);
-#endif
 #endif
 
 		// Reset the timer so we don't do another period update until

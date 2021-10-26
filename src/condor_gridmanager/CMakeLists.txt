@@ -28,8 +28,6 @@ boincjob.cpp
 boincresource.cpp
 condorjob.cpp
 condorresource.cpp
-creamjob.cpp
-creamresource.cpp
 ec2-gahp-client.cpp
 ec2job.cpp
 ec2resource.cpp
@@ -37,8 +35,6 @@ gahp-client.cpp
 gcejob.cpp
 gceresource.cpp
 generic-gahp-client.cpp
-globusjob.cpp
-globusresource.cpp
 gridmanager.cpp
 gridmanager_main.cpp
 infnbatchjob.cpp
@@ -46,8 +42,6 @@ infnbatchresource.cpp
 nordugridjob.cpp
 nordugridresource.cpp
 proxymanager.cpp
-transferrequest.cpp
-unicorejob.cpp
 )
 
 if ( LINUX )
@@ -64,34 +58,6 @@ else()
  endif()
 
 if (NOT WINDOWS)
-   if (HAVE_EXT_GLOBUS)
-     add_custom_target( grid_monitor
-       ALL cat ${CMAKE_CURRENT_SOURCE_DIR}/grid_monitor_wrapper ${CMAKE_CURRENT_SOURCE_DIR}/grid_manager_monitor_agent > "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor" && chmod 755 "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor"
-       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/grid_monitor_wrapper ${CMAKE_CURRENT_SOURCE_DIR}/grid_manager_monitor_agent
-       )
-     install (FILES "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor" DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-   endif()
-
-   if (HAVE_EXT_UNICOREGAHP)
-     condor_exe( unicore_gahp "unicore_gahp_wrapper.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF )
-   endif()
-
-   if (HAVE_EXT_BLAHP)
-     install (FILES
-       kubernetes_cancel.sh
-       kubernetes_hold.sh
-       kubernetes_resume.sh
-       kubernetes_status.sh
-       kubernetes_submit.sh
-       nqs_cancel.sh
-       nqs_hold.sh
-       nqs_resume.sh
-       nqs_status.sh
-       nqs_submit.sh
-       DESTINATION ${C_LIBEXEC}/glite/bin
-       PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-   endif()
-
    install (FILES remote_gahp DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 endif()

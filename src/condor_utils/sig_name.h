@@ -20,10 +20,6 @@
  
 #include "condor_header_features.h"
 
-BEGIN_C_DECLS
-
 int signalNumber( const char* signame );
 const char* signalName( int sig );
-
-END_C_DECLS
 

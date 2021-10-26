@@ -311,7 +311,7 @@ Optional parameters are given within square brackets.
        # Apply this transform only when the job requirements does not reference OpSysAndver or OpSysName
        REQUIREMENTS ! unresolved(Requirements, "OpSys.+")
        # Add a clause to the job requirements to match only CentOs7 machines
-       SET Requirements $(Requirements) && OpSysAndVer == "CentOS7"
+       SET Requirements $(MY.Requirements) && OpSysAndVer == "CentOS7"
     @end
 
 :index:`ifThenElse()<single: ifThenElse(); ClassAd functions>`

@@ -59,18 +59,22 @@
             <Component Id="CondorConfigBase" Guid=""> <!-- empty guid prevents removal on uninstall/upgrade -->
               <File Id="condor_config" Name="condor_config" Source="$(var.Source)\etc\condor_config.base" Checksum="no" >
                 <Permission User="Administrators" GenericAll="yes" />
+                <Permission User="[LogonUser]" GenericAll="yes"/>
+                <Permission User="Users" Read="yes" ReadPermission="yes"/>
               </File>
               <Condition>Not UPGRADEFOUND Or HOSTBASEDFOUND</Condition>
             </Component>
             <Component Id="LocalConfigFile" Guid=""> <!-- empty guid prevents removal on uninstall/upgrade -->
               <File Id="condor_config.local" Name="condor_config.local" Source="$(var.Source)\etc\condor_config.local.blank" Checksum="no" >
                 <Permission User="Administrators" GenericAll="yes" />
+                <Permission User="[LogonUser]" GenericAll="yes"/>
+                <Permission User="Users" Read="yes" ReadPermission="yes"/>
               </File>
               <Condition>Not UPGRADEFOUND</Condition>
             </Component>
             <Component Id="CondorConfigIni" Guid="5AD8ADAA-A724-4D98-A64E-58C30F7AF4B5">
               <CreateFolder/> <!-- suppress warning about directory not being created -->
-              <IniFile Id="configIniPath" Directory="INSTALLDIR" Name="condor_config" Section="HTCONDOR" Action="addLine" Key="RELEASE_DIR" Value="[INSTALLDIR]." />
+              <IniFile Id="configIniPath" Directory="INSTALLDIR" Name="condor_config" Section="HTCONDOR" Action="addLine" Key="RELEASE_DIR" Value="$$Fpb([INSTALLDIR])" />
               <Condition>Not UPGRADEFOUND Or HOSTBASEDFOUND</Condition>
               <!-- <RemoveFile Id="local_config" On="uninstall" Name="condor_config.local" /> -->
             </Component>
@@ -293,7 +297,7 @@
         <CustomAction Id="MakeAdminToken"
             Impersonate="no" Execute="deferred" Return="check"
             Property="InstallHelper"
-            ExeCommand="-config [INSTALLDIR]condor_config -sid [UserSID] -key LOCAL -token [INSTALLDIR]tokens.d\admin"
+            ExeCommand="-config [INSTALLDIR]condor_config -log [INSTALLDIR]admintoken.log -sid [UserSID] -key LOCAL -token [INSTALLDIR]tokens.d\admin"
          />
 
          <CustomAction Id="EditCondorConfig" Script="vbscript">
@@ -329,7 +333,7 @@
           <Custom Action="AdminUserProp" After="AppSearch" >Not UPGRADEFOUND</Custom>
           <Custom Action="SetInstallHelper" After="InstallFiles">Not Installed</Custom>
           <Custom Action="SetInstallProbe" After="InstallFiles">Not Installed</Custom>
-          <Custom Action="MakeAdminToken" After="SetInstallHelper">Not Installed</Custom>
+          <Custom Action="MakeAdminToken" After="InstallServices">Not Installed</Custom>
           <Custom Action="EditCondorConfig" After="InstallFinalize">Not Installed</Custom>
           <!-- <Custom Action="ProbeInstall" After="SetInstallProbe">Not Installed</Custom> -->
           <!-- <ScheduleReboot After="InstallFinalize" /> -->

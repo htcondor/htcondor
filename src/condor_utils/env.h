@@ -194,6 +194,11 @@ class Env {
 		// ASSERTS if it runs out of memory.
 	bool SetEnv( const MyString &, const MyString & );
 
+		// Add (or overwrite) specified environment variable.
+		// Returns false if not a valid var=value (i.e. if empty var).
+		// ASSERTS if it runs out of memory.
+	bool SetEnv( const std::string &, const std::string & );
+
 		// Removes an environment variable; returns true if the variable
 		// was previously in the environment.
 	bool DeleteEnv( const std::string & );

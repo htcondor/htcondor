@@ -12,7 +12,12 @@ ClassAd attributes, and prints the result in ClassAd format.
 Synopsis
 --------
 
-**classad_eval** [**-file** <*name*>] <*ad* | *assignment* | *expression*>\+
+**classad_eval** **-help**
+
+**classad_eval**
+[**-[ad]-file** <*file-name*>]
+[**-target-file** <*file-name*>]
+<*ad* | *assignment* | *expression* | **-quiet**>\+
 
 Description
 -----------
@@ -32,6 +37,15 @@ Attributes specified on the command line, including those specified as part
 of a complete ad, replace attributes in the context ad, which starts empty.
 You can't remove attributes from the context ad, but you can set them to
 ``undefined``.
+
+Options, flags, and arguments may be freely intermixed, and take effect
+in order.
+
+Note that **classad_eval** uses the ``new`` ClassAd syntax: ClassAds
+specified in a file must be surrounded by square brackets and
+attribute-value pairs must be separated by semicolons.  For compability
+with ``condor_q -long:new`` and ``condor_status -long:new``, `classad_eval`
+will use only the first ClassAd if passed a ClassAd list of them.
 
 Examples
 --------
@@ -64,34 +78,43 @@ store the job ad in a file:
 
 .. code-block:: console
 
-    $ condor_q -l 1777.2 > 1227.2.ad
-    $ classad_eval -file 1277.2.ad 'JobUniverse'
+    $ condor_q -l:new 1227.2 > job.ad
+    $ classad_eval -quiet -file job.ad 'JobUniverse'
 
 You can extract a machine ad in a similar way:
 
 .. code-block:: console
 
-    $ condor_status -l exec-17 > exec-17.ad
-    $ classad_eval -file exec-17.ad 'Rank'
+    $ condor_status -l:new slot1@exec-17 > machine.ad
+    $ classad_eval -quiet -file machine.ad 'Rank'
 
-You can not supply more than one ad to **classad_eval**.  Assignments
-(including whole ClassAds) are all merged into the context ad:
+You may evaluate an expression in order to check a match by using the
+``-target-file`` option:
 
 .. code-block:: console
 
-    $ classad_eval 'x = y' 'x' 'y = 7' 'x' 'x=6' 'x'
+    $ condor_q -l:new 1227.2 > job.ad
+    $ condor_status -l:new exec-17 > machine.ad
+    $ classad_eval -quiet -my-file job.ad -target-ad machine.ad 'MY.requirements' 'TARGET.requirements'
+
+Assignments (including whole ClassAds) are all merged into the context ad:
+
+.. code-block:: console
+
+    $ classad_eval 'x = y' 'x' 'y = 7' 'x' '[ x = 6; z = "foo"; ]' 'x'
     [ x = y ]
     undefined
     [ y = 7; x = y ]
     7
-    [ y = 7; x = 6 ]
+    [ z = "foo"; x = 6; y = 7 ]
     6
+
 
 You can suppress printing the context ad partway through:
 
 .. code-block:: console
 
-    $ classad_eval -file example 'x' -quiet 'y = 7' 'x' 'x=6' 'x'
+    $ classad_eval 'x = y' 'x' -quiet 'y = 7' 'x' '[ x = 6; z = "foo"; ]' 'x'
     [ x = y ]
     undefined
     7

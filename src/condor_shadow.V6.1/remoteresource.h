@@ -264,6 +264,8 @@ class RemoteResource : public Service {
 	FileTransfer filetrans;
 	FileTransferStatus m_upload_xfer_status;
 	FileTransferStatus m_download_xfer_status;
+	int m_upload_xfer_file_count;
+	int m_download_xfer_file_count;
 
 	void initFileTransfer();
 

@@ -31,14 +31,6 @@ else()
 	add_definitions(-DUSE_POSIX_REGEX) 
 endif(PCRE_FOUND)
 
-if (HAVE_DLOPEN)
-	add_definitions(-DHAVE_DLOPEN)
-endif()
-
-if (HAVE_DLFCN_H)
-	add_definitions(-DHAVE_DLFCN_H)
-endif()
-
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	add_definitions( -DCLASSAD_VERSION="${PACKAGE_VERSION}"
 		-DCLASSAD_VERSION_MAJOR=${CMAKE_MATCH_1}

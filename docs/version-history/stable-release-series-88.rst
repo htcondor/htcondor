@@ -8,6 +8,43 @@ series.
 
 The details of each version are described below.
 
+Version 8.8.15
+--------------
+
+Release Notes:
+
+-  HTCondor version 8.8.15 released on July 29, 2021.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes a security-related bug
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003/>`_.
+
+   :jira:`587`
+
+
+Version 8.8.14
+--------------
+
+Release Notes:
+
+-  HTCondor version 8.8.14 released on July 27, 2021 and pulled two days later when an issue was found with the patch.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  None.
+
+
 Version 8.8.13
 --------------
 
@@ -486,10 +523,10 @@ Bugs Fixed:
 -  *Security Item*: This release of HTCondor fixes security-related bugs
    described at
 
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004/>`_.
 
    :ticket:`7356`
    :ticket:`7427`

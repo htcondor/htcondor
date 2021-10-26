@@ -23,8 +23,6 @@
 
 #include "condor_common.h"
 
-BEGIN_C_DECLS
-
 /**
 Take any pathname -- simple, relative, or complete -- and split it
 into a directory and a file name.   Always succeeds, but return
@@ -38,24 +36,11 @@ by this function.
 
 int filename_split( const char *path, char *dir, char *file );
 
-/**
-Take an input string in URL form, and split it into its components.
-URLs are of the form "method://server:port/filename".  Any component
-that is missing will be recorded as the string with one null character.
-If the port is not specified, it is recorded as -1.
-The caller should free the resulting strings in method, server, and path.
-*/
-
-void filename_url_parse_malloc( char const *input, char **method, char **server, int *port, char **path );
 
 void canonicalize_dir_delimiters( char *path );
 
 char *alternate_exec_pathname( const char *path );
 
-END_C_DECLS
-
-// Put C++ definitions here
-#if defined(__cplusplus)
 #include <string>
 class MyString;
 
@@ -68,8 +53,7 @@ int is_relative_to_cwd( std::string &path );
 Take an input string which looks like this:
 "filename = url ; filename = url ; ..."
 Search for a filename matching the input string, and copy the 
-corresponding url into output.  The url can then be parsed by
-filename_url_parse().
+corresponding url into output.
 <p>
 The delimiting characters = and ; may be escaped with a backslash.
 <p>
@@ -82,8 +66,5 @@ int filename_remap_find( const char *input, const char *filename, MyString &outp
 int filename_remap_find( const char *input, const char *filename, std::string &output, int cur_nesting_level = 0);
 
 void canonicalize_dir_delimiters( std::string &path );
-void filename_url_parse( char *input, MyString &method, MyString &server, int *port, MyString &path );
-void filename_url_parse( char *input, std::string & method, std::string & server, int * port, std::string & path );
-#endif
 
 #endif

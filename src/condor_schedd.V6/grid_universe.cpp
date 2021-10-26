@@ -410,6 +410,11 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		attr_name = NULL;
 	}
 
+	if ( !owner ) {
+		dprintf(D_ALWAYS,"ERROR - missing owner field\n");
+		return NULL;
+	}
+
 	if ( (gman_node=lookupGmanByOwner(owner, attr_value, cluster, proc)) ) {
 		// found it
 		return gman_node;
@@ -470,12 +475,6 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	}
 	free(gman_args);
 
-	// build a constraint
-	if ( !owner ) {
-		dprintf(D_ALWAYS,"ERROR - missing owner field\n");
-		free(gman_binary);
-		return NULL;
-	}
 	std::string constraint;
 	if ( !attr_name  ) {
 		formatstr(constraint, "(%s=?=\"%s\"&&%s==%d)",

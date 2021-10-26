@@ -193,6 +193,7 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
 		}
         
 		if ( mySock_->isClient() ) {
+			warn_on_gsi_usage();
 			status = authenticate_client_gss(errstack);
 		} else {
 			CondorAuthX509Retval rc = authenticate_server_gss(errstack, non_blocking);
@@ -902,16 +903,25 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
 
 			// get the voms attributes from the peer
-			globus_gsi_cred_handle_t peer_cred = context_handle->peer_cred_handle->cred_handle;
+			globus_gsi_cred_handle_t peer_cred_handle = context_handle->peer_cred_handle->cred_handle;
+			X509* peer_cert = NULL;
+			STACK_OF(X509)* peer_chain = NULL;
+			(*globus_gsi_cred_get_cert_ptr)(peer_cred_handle, &peer_cert);
+			(*globus_gsi_cred_get_cert_chain_ptr)(peer_cred_handle, &peer_chain);
+			ASSERT(peer_cert);
 
 			char * voms_fqan = NULL;
-			int voms_err = extract_VOMS_info(peer_cred, 1, NULL, NULL, &voms_fqan);
+			int voms_err = extract_VOMS_info(peer_cert, peer_chain, 1, NULL, NULL, &voms_fqan);
 			if (!voms_err) {
 				setFQAN(voms_fqan);
 				free(voms_fqan);
 			} else {
 				// complain!
 				dprintf(D_SECURITY, "VOMS: VOMS FQAN not present (error %i), ignoring.\n", voms_err);
+			}
+			X509_free(peer_cert);
+			if (peer_chain) {
+				sk_X509_pop_free(peer_chain, X509_free);
 			}
 		}
 
@@ -1136,6 +1146,7 @@ Condor_Auth_X509::authenticate_server_pre(CondorError* errstack, bool non_blocki
 			"side was not able to acquire its credentials.");
 			return Fail;  // The other side failed, abort
 	}
+	warn_on_gsi_usage();
 	m_state = GSSAuth;
 	return Continue;
 }
@@ -1296,14 +1307,19 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 		setRemoteDomain( UNMAPPED_DOMAIN );
 
 		// get handle to cred so we can extract other attributes
-		globus_gsi_cred_handle_t peer_cred = context_handle->peer_cred_handle->cred_handle;
+		globus_gsi_cred_handle_t peer_cred_handle = context_handle->peer_cred_handle->cred_handle;
+		X509* peer_cert = NULL;
+		STACK_OF(X509)* peer_chain = NULL;
+		(*globus_gsi_cred_get_cert_ptr)(peer_cred_handle, &peer_cert);
+		(*globus_gsi_cred_get_cert_chain_ptr)(peer_cred_handle, &peer_chain);
+		ASSERT(peer_cert);
 
-		time_t expiration = x509_proxy_expiration_time(peer_cred);
+		time_t expiration = x509_proxy_expiration_time(peer_cert, peer_chain);
 		if (expiration != -1) {
 			ad.InsertAttr(ATTR_X509_USER_PROXY_EXPIRATION, expiration);
 		}
 
-		char *email_name = x509_proxy_email(peer_cred);
+		char *email_name = x509_proxy_email(peer_cert, peer_chain);
 		if (email_name)
 		{
 			ad.InsertAttr(ATTR_X509_USER_PROXY_EMAIL, email_name);
@@ -1317,7 +1333,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 			char * voname = NULL;
 			char * firstfqan = NULL;
 			char * voms_fqan = NULL;
-			int voms_err = extract_VOMS_info(peer_cred, 1, &voname, &firstfqan, &voms_fqan);
+			int voms_err = extract_VOMS_info(peer_cert, peer_chain, 1, &voname, &firstfqan, &voms_fqan);
 			if (!voms_err) {
 				setFQAN(voms_fqan);
 				if (voms_fqan) {ad.InsertAttr(ATTR_X509_USER_PROXY_FQAN, voms_fqan);}
@@ -1332,6 +1348,11 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 			}
 		}
 		mySock_->setPolicyAd(ad);
+
+		X509_free(peer_cert);
+		if (peer_chain) {
+			sk_X509_pop_free(peer_chain, X509_free);
+		}
 
 		// XXX FIXME ZKM
 		// i am making failure to be mapped a non-fatal error at this point.

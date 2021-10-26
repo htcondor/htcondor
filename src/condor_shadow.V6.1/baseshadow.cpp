@@ -42,7 +42,6 @@ BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
 
 // this appears at the bottom of this file:
-//extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 extern bool sendUpdatesToSchedd;
 
@@ -76,6 +75,8 @@ BaseShadow::BaseShadow() {
 	attemptingReconnectAtStartup = false;
 	m_force_fast_starter_shutdown = false;
 	m_committed_time_finalized = false;
+	m_prev_run_upload_file_cnt = 0;
+	m_prev_run_download_file_cnt = 0;
 }
 
 BaseShadow::~BaseShadow() {
@@ -135,6 +136,9 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	if( !jobAd->LookupFloat(ATTR_BYTES_RECVD, prev_run_bytes_recvd) ) {
 		prev_run_bytes_recvd = 0;
 	}
+
+	jobAd->LookupInteger(ATTR_TRANSFER_INPUT_FILES_LAST_RUN_COUNT, m_prev_run_upload_file_cnt);
+	jobAd->LookupInteger(ATTR_TRANSFER_OUTPUT_FILES_LAST_RUN_COUNT, m_prev_run_download_file_cnt);
 
 		// construct the core file name we'd get if we had one.
 	std::string tmp_name = iwd;
@@ -319,7 +323,7 @@ int BaseShadow::cdToIwd() {
 		formatstr(hold_reason, "Cannot access initial working directory %s: %s",
 		                    iwd.c_str(), strerror(chdir_errno));
 		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
-		holdJobAndExit(hold_reason.c_str(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
+		holdJobAndExit(hold_reason.c_str(),CONDOR_HOLD_CODE::IwdError,chdir_errno);
 		iRet = -1;
 	}
 	
@@ -829,7 +833,7 @@ void BaseShadow::initUserLog()
 		formatstr(hold_reason,"Failed to initialize user log");
 		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
 		holdJobAndExit(hold_reason.c_str(),
-				CONDOR_HOLD_CODE_UnableToInitUserLog,0);
+				CONDOR_HOLD_CODE::UnableToInitUserLog,0);
 			// holdJobAndExit() should not return, but just in case it does
 			// EXCEPT
 		EXCEPT("Failed to initialize user log: %s",hold_reason.c_str());
@@ -1321,6 +1325,14 @@ BaseShadow::updateJobInQueue( update_t type )
 
 	ftAd.Assign(ATTR_BYTES_RECVD, (prev_run_bytes_recvd + bytesSent()) );
 
+	int upload_file_cnt = 0;
+	int download_file_cnt = 0;
+	getFileTransferStats(upload_file_cnt, download_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_INPUT_FILES_LAST_RUN_COUNT, upload_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_INPUT_FILES_TOTAL_COUNT, m_prev_run_upload_file_cnt + upload_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_OUTPUT_FILES_LAST_RUN_COUNT, download_file_cnt);
+	ftAd.Assign(ATTR_TRANSFER_OUTPUT_FILES_TOTAL_COUNT, m_prev_run_download_file_cnt + download_file_cnt);
+
 	FileTransferStatus upload_status = XFER_STATUS_UNKNOWN;
 	FileTransferStatus download_status = XFER_STATUS_UNKNOWN;
 	getFileTransferStatus(upload_status,download_status);
@@ -1398,7 +1410,6 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 {
 		// Set our flag to remember we've really started.
 	began_execution = true;
-
 		// Start the timer for the periodic user job policy evaluation.
 	shadow_user_policy.startTimer();
 		
@@ -1426,15 +1437,12 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 		// and since the copy in RAM is already updated, all the
 		// periodic user policy expressions will work right, so the
 		// default is to do it lazy.
-	if (m_lazy_queue_update) {
-			// For lazy update, we just want to make sure the
-			// job_updater object knows about this attribute (which we
-			// already updated our copy of).
-		job_updater->watchAttribute(ATTR_NUM_JOB_STARTS);
-	}
-	else {
-			// They want it now, so do the qmgmt operation directly.
-		updateJobAttr(ATTR_NUM_JOB_STARTS, job_start_cnt);
+		// We want other attributes updated at the same time
+		// (e.g. JobCurrentStartExecutingDate), so do a full update to
+		// the schedd if we're not being lazy.
+	if (!m_lazy_queue_update) {
+			// They want it now, so do an update right here.
+		updateJobInQueue(U_STATUS);
 	}
 }
 
@@ -1494,9 +1502,7 @@ extern BaseShadow *Shadow;
 
 // This function is called by dprintf - always display our job, proc,
 // and pid in our log entries. 
-//extern "C" 
 int
-//display_dprintf_header(char **buf,int *bufpos,int *buflen)
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	static pid_t mypid = 0;

@@ -494,7 +494,7 @@ int Authentication::authenticate_finish(CondorError *errstack)
 					authenticator_->getRemoteUser()?authenticator_->getRemoteUser():"(null)");
 			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: pre-map: current domain is '%s'\n",
 					authenticator_->getRemoteDomain()?authenticator_->getRemoteDomain():"(null)");
-			map_authentication_name_to_canonical_name(auth_status, method_used, name_to_map);
+			map_authentication_name_to_canonical_name(auth_status, method_used ? method_used : "(null)", name_to_map);
 		} else {
 			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: name to map is null, not mapping.\n");
 		}
@@ -555,8 +555,7 @@ void Authentication::reconfigMapFile()
 // takes the type (as defined in handshake bitmask, CAUTH_*) and result of authentication,
 // and maps it to the cannonical condor name.
 //
-void Authentication::map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name) {
-
+void Authentication::load_map_file() {
 	// make sure the mapfile is loaded.  it's a static global variable.
 	if (global_map_file_load_attempted == false) {
 		if (global_map_file) {
@@ -588,6 +587,10 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	} else {
 		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: map file already loaded.\n");
 	}
+}
+
+void Authentication::map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name) {
+    load_map_file();
 
 	dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: attempting to map '%s'\n", authentication_name);
 

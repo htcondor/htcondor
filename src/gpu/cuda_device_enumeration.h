@@ -67,7 +67,7 @@ GPUFP nvml_get_attrs    nvmlDeviceGetAttributes;
 GPUFP nvml_get_eccm     nvmlDeviceGetEccMode;
 
 dlopen_return_t setNVMLFunctionPointers();
-void setSimulatedNVMLFunctionPointers();
+bool setSimulatedNVMLFunctionPointers();
 
 typedef nvmlReturn_t (* fndh)(const std::string & uuid, nvmlDevice_t * device);
 GPUFP fndh findNVMLDeviceHandle;
@@ -110,7 +110,7 @@ GPUFP cuda_pciid_t              cuDeviceGetPCIBusId;
 GPUFP cuda_ga_t                 cuDeviceGetAttribute;
 GPUFP cuda_cc_t                 cuDeviceComputeCapability;
 
-dlopen_return_t setCUDAFunctionPointers( bool force_nvcuda = false, bool force_cudart = false );
+dlopen_return_t setCUDAFunctionPointers( bool force_nvcuda = false, bool force_cudart = false, bool must_load = true );
 void setSimulatedCUDAFunctionPointers();
 
 #undef GPUFP
@@ -143,6 +143,7 @@ class BasicProps {
 
 bool enumerateCUDADevices( std::vector< BasicProps > & devices );
 nvmlReturn_t enumerateNVMLDevices( std::vector< BasicProps > & devices );
+nvmlReturn_t getMIGParentDeviceUUIDs( std::set< std::string > & parentDeviceUUIDs );
 
 std::string gpuIDFromUUID( const std::string & uuid, int opt_short_uuid );
 

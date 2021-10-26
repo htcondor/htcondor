@@ -936,7 +936,7 @@ VanillaProc::JobReaper(int pid, int status)
 				checkpointExitBySignal ? checkpointExitSignal : checkpointExitCode,
 				WIFSIGNALED( exit_status ) ? "on signal" : "with exit code",
 				WIFSIGNALED( exit_status ) ? WTERMSIG( exit_status ) : WEXITSTATUS( exit_status ) );
-			Starter->jic->holdJob( holdMessage.c_str(), CONDOR_HOLD_CODE_FailedToCheckpoint, exit_status );
+			Starter->jic->holdJob( holdMessage.c_str(), CONDOR_HOLD_CODE::FailedToCheckpoint, exit_status );
 			Starter->Hold();
 			return true;
 		}
@@ -1151,7 +1151,7 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 	cleanupOOM();
 
 	// This ulogs the hold event and KILLS the shadow
-	Starter->jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
+	Starter->jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
 
 	return 0;
 }

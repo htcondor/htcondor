@@ -37,7 +37,7 @@
 FileModifiedTrigger::FileModifiedTrigger( const std::string & f ) :
 	filename( f ), initialized( false ),
 #ifdef LINUX
-	inotify_fd(-1),
+	inotify_fd(-1), inotify_initialized( false ),
 #endif
 	statfd( -1 ), lastSize( 0 )
 {
@@ -46,26 +46,6 @@ FileModifiedTrigger::FileModifiedTrigger( const std::string & f ) :
 		dprintf( D_ALWAYS, "FileModifiedTrigger( %s ): open() failed: %s (%d).\n", filename.c_str(), strerror(errno), errno );
 		return;
 	}
-
-#if defined( LINUX )
-#if defined( IN_NONBLOCK )
-	inotify_fd = inotify_init1( IN_NONBLOCK );
-#else
-	inotify_fd = inotify_init();
-	int flags = fcntl(inotify_fd, F_GETFL, 0);
-	fcntl(inotify_fd, F_SETFL, flags | O_NONBLOCK);
-#endif /* defined( IN_NONBLOCK ) */
-	if( inotify_fd == -1 ) {
-		dprintf( D_ALWAYS, "FileModifiedTrigger( %s ): inotify_init() failed: %s (%d).\n", filename.c_str(), strerror(errno), errno );
-		return;
-	}
-
-	int wd = inotify_add_watch( inotify_fd, filename.c_str(), IN_MODIFY );
-	if( wd == -1 ) {
-		dprintf( D_ALWAYS, "FileModifiedTrigger( %s ): inotify_add_watch() failed: %s (%d).\n", filename.c_str(), strerror( errno ), errno );
-		return;
-	}
-#endif /* defined( LINUX ) */
 
 	initialized = true;
 }
@@ -76,18 +56,18 @@ FileModifiedTrigger::~FileModifiedTrigger() {
 
 void
 FileModifiedTrigger::releaseResources() {
+#if defined( LINUX )
+	if( inotify_initialized && inotify_fd != -1 ) {
+		close( inotify_fd );
+		inotify_fd = -1;
+	}
+	inotify_initialized = false;
+#endif /* defined( LINUX ) */
+
 	if( initialized && statfd != -1 ) {
 		close( statfd );
 		statfd = -1;
 	}
-
-#if defined( LINUX )
-	if( initialized && inotify_fd != -1 ) {
-		close( inotify_fd );
-		inotify_fd = -1;
-	}
-#endif /* defined( LINUX ) */
-
 	initialized = false;
 }
 
@@ -146,6 +126,29 @@ FileModifiedTrigger::read_inotify_events( void ) {
 
 int
 FileModifiedTrigger::notify_or_sleep( int timeout_in_ms ) {
+	if(! inotify_initialized) {
+#if defined( IN_NONBLOCK )
+		inotify_fd = inotify_init1( IN_NONBLOCK );
+#else
+		inotify_fd = inotify_init();
+		int flags = fcntl(inotify_fd, F_GETFL, 0);
+		fcntl(inotify_fd, F_SETFL, flags | O_NONBLOCK);
+#endif /* defined( IN_NONBLOCK ) */
+		if( inotify_fd == -1 ) {
+			dprintf( D_ALWAYS, "FileModifiedTrigger( %s ): inotify_init() failed: %s (%d).\n", filename.c_str(), strerror(errno), errno );
+			return -1;
+		}
+
+		int wd = inotify_add_watch( inotify_fd, filename.c_str(), IN_MODIFY );
+		if( wd == -1 ) {
+			dprintf( D_ALWAYS, "FileModifiedTrigger( %s ): inotify_add_watch() failed: %s (%d).\n", filename.c_str(), strerror( errno ), errno );
+			close(inotify_fd);
+			return -1;
+		}
+
+		inotify_initialized = true;
+	}
+
 	struct pollfd pollfds[1];
 	pollfds[0].fd = inotify_fd;
 	pollfds[0].events = POLLIN;

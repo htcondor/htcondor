@@ -571,7 +571,7 @@ public:
 	: m_rate_limit(rate_limit),
 	m_last_update(std::chrono::steady_clock::now())
 	{
-		classy_counted_ptr<stats_ema_config> ema_config(new stats_ema_config);
+		std::shared_ptr<stats_ema_config> ema_config(new stats_ema_config);
 		ema_config->add(10, "10s");
 		m_request_rate.ConfigureEMAHorizons(ema_config);
 		m_request_rate.recent_start_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -861,7 +861,7 @@ DC_Exit( int status, const char *shutdown_program )
 		  cleared out our config hashtable, too.  Derek 2004-11-23
 		*/
 	if ( shutdown_program ) {
-#     if (HAVE_EXECL)
+#     if !defined(WIN32)
 		dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING BY EXECING %s\n",
 				 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
 				 shutdown_program );
@@ -870,7 +870,7 @@ DC_Exit( int status, const char *shutdown_program )
 		set_priv( p );
 		dprintf( D_ALWAYS, "**** execl() FAILED %d %d %s\n",
 				 exec_status, errno, strerror(errno) );
-#     elif defined(WIN32)
+#     else
 		dprintf( D_ALWAYS,
 				 "**** %s (%s_%s) pid %lu EXECING SHUTDOWN PROGRAM %s\n",
 				 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
@@ -882,8 +882,6 @@ DC_Exit( int status, const char *shutdown_program )
 			dprintf( D_ALWAYS, "**** _execl() FAILED %d %d %s\n",
 					 exec_status, errno, strerror(errno) );
 		}
-#     else
-		dprintf( D_ALWAYS, "**** execl() not available on this system\n" );
 #     endif
 	}
 	dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING WITH STATUS %d\n",

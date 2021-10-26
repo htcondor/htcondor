@@ -41,7 +41,7 @@
 
 #include "collector.h"
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
 #include "CollectorPlugin.h"
 #endif
 
@@ -78,6 +78,7 @@ int CollectorDaemon::__failed__;
 List<ClassAd>* CollectorDaemon::__ClassAdResultList__;
 std::string CollectorDaemon::__adType__;
 ExprTree *CollectorDaemon::__filter__;
+bool CollectorDaemon::__hidePvtAttrs__;
 
 TrackTotals* CollectorDaemon::normalTotals = NULL;
 int CollectorDaemon::submittorRunningJobs;
@@ -1198,7 +1199,7 @@ int CollectorDaemon::receive_invalidation(int command,
     /* let the off-line plug-in invalidate the given ad */
     offline_plugin_.invalidate ( command, cad );
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
 	CollectorPluginManager::Invalidate(command, cad);
 #endif
 
@@ -1285,7 +1286,7 @@ int CollectorDaemon::receive_update(int command, Stream* sock)
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *cad );
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
 	CollectorPluginManager::Update(command, *cad);
 #endif
 
@@ -1425,7 +1426,7 @@ int CollectorDaemon::receive_update_expect_ack(int command,
 	if(cad)
     offline_plugin_.update ( command, *cad );
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
     CollectorPluginManager::Update ( command, *cad );
 #endif
 
@@ -1484,6 +1485,11 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
 		}
 	}
 
+	int rc = 1;
+	ExprTree *cap_expr = NULL;
+	if ( __hidePvtAttrs__ ) {
+		cap_expr = cad->Remove(ATTR_CAPABILITY);
+	}
 	classad::Value result;
 	bool val;
 	if ( EvalExprTree( __filter__, cad, NULL, result ) &&
@@ -1492,13 +1498,16 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
         __numAds__++;
 		__ClassAdResultList__->Append(cad);
 		if (__numAds__ >= __resultLimit__) {
-			return 0; // tell it to stop iterating, we have all the results we want
+			rc = 0; // tell it to stop iterating, we have all the results we want
 		}
     } else {
 		__failed__++;
 	}
 
-    return 1;
+	if ( cap_expr ) {
+		cad->Insert(ATTR_CAPABILITY, cap_expr);
+	}
+    return rc;
 }
 
 
@@ -1531,6 +1540,11 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	__resultLimit__ = INT_MAX; // no limit
 	if ( ! query->LookupInteger(ATTR_LIMIT_RESULTS, __resultLimit__) || __resultLimit__ <= 0) {
 		__resultLimit__ = INT_MAX; // no limit
+	}
+
+	__hidePvtAttrs__ = false;
+	if ( whichAds == SUBMITTOR_AD || whichAds == SCHEDD_AD || whichAds == GENERIC_AD || whichAds == ANY_AD ) {
+		__hidePvtAttrs__ = true;
 	}
 
 	// See if we should exclude Collector Ads from generic queries.  Still

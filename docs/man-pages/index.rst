@@ -17,6 +17,7 @@ Command Reference Manual (man pages)
    condor_adstash
    condor_advertise
    condor_annex
+   condor_check_password
    condor_check_userlogs
    condor_chirp
    condor_configure
@@ -89,4 +90,5 @@ Command Reference Manual (man pages)
    condor_who
    get_htcondor
    gidd_alloc
+   htcondor
    procd_ctl

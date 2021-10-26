@@ -1535,7 +1535,6 @@ configured name given to the resource.
 For machines with custom resource specifications that include GPUs, the
 following attributes may be in the ClassAd for each slot, depending on
 the value of configuration variable ``MACHINE_RESOURCE_INVENTORY_GPUs``
-
 :index:`MACHINE_RESOURCE_INVENTORY_GPUs` and what GPUs are
 detected. In the name of the attribute, ``<name>`` is substituted with
 the *prefix string* assigned for the GPU.
@@ -1708,11 +1707,43 @@ partitionable slot preemption is enabled.
     *condor_negotiator* knows when partitionable slot preemption is
     possible and can directly preempt a dynamic slot when appropriate.
 
-Finally, the single attribute, ``CurrentTime``, is defined by the
+The single attribute, ``CurrentTime``, is defined by the
 ClassAd environment. :index:`CurrentTime<single: CurrentTime; ClassAd attribute>`
 
 ``CurrentTime``
     Evaluates to the the number of integer seconds since the Unix epoch
     (00:00:00 UTC, Jan 1, 1970).
+
+.. _CommonCloudAttributes:
+
+.. rubric:: Common Cloud Attributes
+
+The following attributes are advertised when
+``use feature:CommonCloudAttributesGoogle`` or
+``use feature:CommonCloudAttributesAWS`` is enabled.  All values are strings.
+
+``CloudImage``
+    Identifies the VM image.  ("image" or "AMI ID")
+
+``CloudVMType``
+    Identifies the type of resource allocated.  ("machine type" or "instance type")
+
+``CloudRegion``
+    Identifies the geographic area in which the instance is running.
+
+``CloudZone``
+    Identifies a specific ("availability") zone within the region.
+
+``CloudProvider``
+    Presently, either ``"Google"`` or ``"AWS"``.
+
+``CloudPlatform``
+    Presently, either ``"GCE"`` or ``"EC2"``.
+
+``CloudInstanceID``
+    The instance's identifier with its provider (on its platform).
+
+``CloudInterruptible``
+    ``"True"`` if the instance, and ``"False"`` otherwise.
 
 

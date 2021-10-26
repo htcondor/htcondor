@@ -702,7 +702,7 @@ HADStateMachine::setReplicationDaemonSinfulString( void )
 		// daemon's socket name in the replication daemon list).
         if( replicationDaemonIndex == m_selfId ) {
             Sinful s( sinfulAddress );
-            mySinful.setPort( s.getPort() );
+            mySinful.setPort( s.getPort(), true );
             s.setSharedPortID( mySinful.getSharedPortID() );
             if( s.valid() && mySinful.addressPointsToMe( s ) ) {
             	if( s.getSharedPortID() ) {

@@ -1173,9 +1173,8 @@ FutureEvent::initFromClassAd(ClassAd* ad)
 
 void FutureEvent::setHead(const char * head_text)
 {
-	MyString line(head_text);
-	line.chomp();
-	head = line;
+	head = head_text;
+	chomp(head);
 }
 
 void FutureEvent::setPayload(const char * payload_text)

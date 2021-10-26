@@ -192,25 +192,26 @@ The words ``UNDEFINED``, ``ERROR``, ``IS``, ``ISNT``, ``TRUE``, ``FALSE``,
 Testing ClassAd Expressions
 ---------------------------
 
-If your pool has machines in it, you can use ``condor_status`` to evaluate
-a ClassAd expression on the command-line.  For instance, if you can't remember
-which kind of regular expressions the ``regexp()`` function uses,
-you could check in the following way (on Linux):
+Use `classad_eval` to test ClassAd expressions.  For
+instance, if you want to test to see if a regular expression matches
+some fixed string, you could check in the following way (on Linux or Mac;
+the quoting rules are different on Windows):
 
 .. code-block:: console
 
-    $ condor_status -limit 1 -af 'regexp( "*tr*", "string" )'
-    $ condor_status -limit 1 -af 'regexp( ".*tr.*", "string" )'
+    $ classad_eval 'regexp( ".*tr.*", "string" )'
+    [ ]
+    true
 
-This will print out ``false`` and then ``true``; if you have no machines
-in your pool, it will print nothing.  (For each ad ``condor_status``
-fetches, it evaluates the expression(s) passed to ``-af`` and prints
-the result; the ``-limit 1`` ensures that this is at most 1 ad.)
+This prints out the ClassAd used as context in the evaluation (in this case,
+there wasn't one, so it's the empty ad) and the result.
+
+
 
 Examples
 --------
 
-These examples assume a Linux shell environment.
+These examples assume a Linux shell environment and a working HTCondor pool.
 
 Selecting a Slot based on Job ID
 ''''''''''''''''''''''''''''''''
@@ -221,15 +222,14 @@ If job 288.7 is running:
 
     $ condor_status -const 'JobId == "288.7"'
 
-Only Run on a Particular Machine
-''''''''''''''''''''''''''''''''
+Selecting Jobs based on Execute Machine
+'''''''''''''''''''''''''''''''''''''''
 
-If you want your job to run only on a particular machine named 'special',
-add the following to your submit file's ``requirements`` line:
+If jobs are running on the machine ``example-execute-node``:
 
-.. code-block:: condor-classad-expr
+.. code-block:: console
 
-    Machine == "special"
+    $ condor_q -all -const 'regexp( "@example-execute-node$", RemoteHost )'
 
 String Manipulation
 '''''''''''''''''''
@@ -278,10 +278,10 @@ this case, it's just to make the output prettier.
 Specification
 -------------
 
-For use in HTCondor, see
+For use in HTCondor, including a complete list of functions, see
 https://htcondor.readthedocs.io/en/latest/misc-concepts/classad-mechanism.html.
 
-For a complete language specification,
+For the language specification,
 see https://research.cs.wisc.edu/htcondor/classad/refman/.
 
 Author

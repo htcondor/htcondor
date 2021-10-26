@@ -386,7 +386,7 @@ bool
 TransferQueueManager::AddRequest( TransferQueueRequest *client ) {
 	ASSERT( client );
 
-	MyString error_desc;
+	std::string error_desc;
 	if( daemonCore->TooManyRegisteredSockets(client->m_sock->get_file_desc(),&error_desc))
 	{
 		dprintf(D_FULLDEBUG,"TransferQueueManager: rejecting %s to avoid overload: %s\n",
@@ -1083,7 +1083,7 @@ IOStats::Clear() {
 }
 
 void
-IOStats::ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> config) {
+IOStats::ConfigureEMAHorizons(std::shared_ptr<stats_ema_config> config) {
 	bytes_sent.ConfigureEMAHorizons(config);
 	bytes_received.ConfigureEMAHorizons(config);
 	file_read.ConfigureEMAHorizons(config);

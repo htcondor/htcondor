@@ -146,14 +146,10 @@ endif(WINDOWS)
 
 if(NOT WINDOWS)
 	list(APPEND CONDOR_API_AND_UTILS_SRC
-		credential.unix.cpp
-		credential.unix.h
 		lock_file.unix.cpp
 		passwd_cache.unix.cpp
 		passwd_cache.unix.h
 		sig_install.unix.cpp
-		X509credential.unix.cpp
-		X509credential.unix.h
 	)
 endif(NOT WINDOWS)
 
@@ -221,13 +217,11 @@ condor_blkng_full_disk_io.cpp
 condor_claimid_parser.h
 condor_common.cpp
 condor_config.cpp
-condor_create_id.cpp
 condor_crontab.cpp
 condor_crontab.h
 condor_fsync.cpp
 condor_fsync.h
 condor_ftp.cpp
-condor_full_io.cpp
 condor_getcwd.cpp
 condor_getcwd.h
 condor_holdcodes.h
@@ -282,6 +276,8 @@ date_util.cpp
 date_util.h
 dc_service.cpp
 dc_service.h
+DelegationInterface.cpp
+DelegationInterface.h
 d_format_time.cpp
 docker-api.cpp
 docker-api.h
@@ -642,7 +638,7 @@ if ( LINUX )
   set_target_properties( condor_utils PROPERTIES LINK_FLAGS "-Wl,--wrap=dprintf" )
 endif()
 
-if (DLOPEN_GSI_LIBS)
+if (DLOPEN_GSI_LIBS OR DLOPEN_VOMS_LIBS)
 	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${SCITOKENS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
 else()
 	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${SCITOKENS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )

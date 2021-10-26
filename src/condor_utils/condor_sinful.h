@@ -135,8 +135,8 @@ class Sinful {
 	int getPortNum() const;
 
 	void setHost(char const *host);
-	void setPort(char const *port);
-	void setPort(int port);
+	void setPort(char const *port, bool update_all=false);
+	void setPort(int port, bool update_all=false);
 
 	// specific params
 

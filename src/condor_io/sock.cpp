@@ -57,6 +57,14 @@
 #define closesocket close
 #endif
 
+#ifndef ABEND
+#define ABEND(cond) \
+	if( !(cond) ) { \
+		dprintf( D_ERROR | D_BACKTRACE, "Failed to assert (%s) at %s, line %d; aborting.\n", #cond, __FILE__, __LINE__ ); \
+		abort(); \
+	}
+#endif /* ABEND */
+
 void dprintf ( int flags, const Sock & sock, const char *fmt, ... )
 {
     va_list args;

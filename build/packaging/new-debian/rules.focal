@@ -10,6 +10,11 @@ upstreamver = $(shell echo $(debver) | cut -d '-' -f 1,1 )
 # master or whatever other source branch.
 gitver = $(shell [ -x /usr/bin/git ] && git describe --tags --match 'V[0-9]_[0-9]_*[0-9]' $$(git merge-base -a HEAD upstream) | sed -e 's/^V//' -e 's/_/./g' -e 's/-/+git/')~dfsg.1
 
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+    NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+    MAKEFLAGS += -j$(NUMJOBS)
+endif
+
 # one ring to rule them all ...
 %:
 	dh $@ --with autotools_dev --with python3
@@ -32,7 +37,7 @@ override_dh_auto_configure:
 		-DHAVE_EXT_CURL:BOOL=ON \
 		-DHAVE_EXT_OPENSSL:BOOL=ON \
 		-DHAVE_EXT_BOOST:BOOL=ON \
-		-DHAVE_EXT_GLOBUS:BOOL=ON \
+		-DHAVE_EXT_GLOBUS:BOOL=OFF \
 		-DHAVE_EXT_KRB5:BOOL=ON \
 		-DHAVE_EXT_LIBVIRT:BOOL=ON \
 		-DHAVE_EXT_LIBXML2:BOOL=ON \
@@ -50,7 +55,7 @@ override_dh_auto_configure:
 
 
 override_dh_auto_build: doc/build
-	dh_auto_build -- VERBOSE=1
+	dh_auto_build --parallel -- VERBOSE=1
 	# The tests don't get built eventhough was asked for them
 	(cd obj-*; make tests)
 	# post-fixing things that have to be done due to changes introduced by

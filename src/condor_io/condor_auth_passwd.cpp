@@ -230,7 +230,7 @@ findTokens(const std::string &issuer,
 		return false;
 	}
 	Regex excludeFilesRegex;
-	if (!excludeFilesRegex.compile(MyString(excludeRegex), &_errstr, &_erroffset)) {
+	if (!excludeFilesRegex.compile(excludeRegex, &_errstr, &_erroffset)) {
 		dprintf(D_FULLDEBUG, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
 			"config parameter is not a valid "
 			"regular expression.  Value: %s,  Error: %s",
@@ -408,12 +408,15 @@ Condor_Auth_Passwd :: Condor_Auth_Passwd(ReliSock * sock, int version)
 	m_state(ServerRec1)
 {
 	if (m_version == 2) {
-		std::string blacklist_param;
+		std::string revocation_param;
 		classad::ExprTree *expr = nullptr;
-		if (param(blacklist_param, "SEC_TOKEN_BLACKLIST_EXPR") &&
-			!ParseClassAdRvalExpr(blacklist_param.c_str(), expr))
+		if (!param(revocation_param, "SEC_TOKEN_REVOCATION_EXPR")) {
+			param(revocation_param, "SEC_TOKEN_BLACKLIST_EXPR");
+		}
+		if (!revocation_param.empty() &&
+			!ParseClassAdRvalExpr(revocation_param.c_str(), expr))
 		{
-			m_token_blacklist_expr.reset(expr);
+			m_token_revocation_expr.reset(expr);
 		}
 	}
 }
@@ -885,8 +888,8 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 			dprintf(D_AUDIT, mySock_->getUniqueId(),
 				"Remote entity presented valid token with payload %s.\n", jwt.get_payload().c_str());
 
-			if (isTokenBlacklisted(jwt)) {
-				dprintf(D_SECURITY, "User token with payload %s has been blacklisted.\n", jwt.get_payload().c_str());
+			if (isTokenRevoked(jwt)) {
+				dprintf(D_SECURITY, "User token with payload %s has been revoked.\n", jwt.get_payload().c_str());
 				free(ka);
 				free(kb);
 				free(seed_ka);
@@ -941,9 +944,9 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 
 
 bool
-Condor_Auth_Passwd::isTokenBlacklisted(const jwt::decoded_jwt &jwt)
+Condor_Auth_Passwd::isTokenRevoked(const jwt::decoded_jwt &jwt)
 {
-	if (!m_token_blacklist_expr) {
+	if (!m_token_revocation_expr) {
 		return false;
 	}
 	classad::ClassAd ad;
@@ -975,7 +978,7 @@ Condor_Auth_Passwd::isTokenBlacklisted(const jwt::decoded_jwt &jwt)
 		}
 
 			// If, somehow, we can't build the ad, be paranoid,
-			// and assume blacklisted. "abundance of caution"
+			// and assume revoked. "abundance of caution"
 		if (!inserted) {
 			return true;
 		}
@@ -984,15 +987,15 @@ Condor_Auth_Passwd::isTokenBlacklisted(const jwt::decoded_jwt &jwt)
 	classad::EvalState state;
 	state.SetScopes(&ad);
 	classad::Value val;
-	bool blacklisted = true;
+	bool revoked = true;
 		// Out of an abundance of caution, if we fail to evaluate the
 		// expression or it doesn't evaluate to something boolean-like,
 		// we consider the token potentially suspect.
-	if (!m_token_blacklist_expr->Evaluate(state, val) ||
-		!val.IsBooleanValueEquiv(blacklisted)) {
+	if (!m_token_revocation_expr->Evaluate(state, val) ||
+		!val.IsBooleanValueEquiv(revoked)) {
 		return true;
 	}
-	return blacklisted;
+	return revoked;
 }
 
 

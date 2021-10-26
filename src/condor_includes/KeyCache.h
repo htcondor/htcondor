@@ -24,7 +24,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "CryptKey.h"
-#include "MyString.h"
 #include "HashTable.h"
 #include "string_list.h"
 #include "simplelist.h"
@@ -109,16 +108,16 @@ private:
 	void copy_storage(const KeyCache &kc);
 	void delete_storage();
 
-	typedef HashTable<MyString, SimpleList<KeyCacheEntry *>* > KeyCacheIndex;
+	typedef HashTable<std::string, SimpleList<KeyCacheEntry *>* > KeyCacheIndex;
 
-	HashTable<MyString, KeyCacheEntry*> *key_table;
+	HashTable<std::string, KeyCacheEntry*> *key_table;
 	KeyCacheIndex *m_index;
 
 	void addToIndex(KeyCacheEntry *);
 	void removeFromIndex(KeyCacheEntry *);
-	void addToIndex(KeyCacheIndex *,MyString const &index,KeyCacheEntry *);
-	void removeFromIndex(KeyCacheIndex *,MyString const &index,KeyCacheEntry *);
-	void makeServerUniqueId(MyString const &parent_id,int server_pid,MyString *result);
+	void addToIndex(KeyCacheIndex *,std::string const &index,KeyCacheEntry *);
+	void removeFromIndex(KeyCacheIndex *,std::string const &index,KeyCacheEntry *);
+	void makeServerUniqueId(std::string const &parent_id,int server_pid,std::string& result);
 };
 
 

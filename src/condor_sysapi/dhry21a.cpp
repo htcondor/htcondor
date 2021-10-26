@@ -91,7 +91,7 @@ double          Microseconds,
 
 /* end of variables for time measurement */
 
-extern "C" void sysapi_internal_reconfig(void);
+void sysapi_internal_reconfig(void);
 void Proc_1 (REG Rec_Pointer Ptr_Val_Par);
 void Proc_2 (One_Fifty *Int_Par_Ref);
 void Proc_3 (Rec_Pointer * Ptr_Ref_Par);
@@ -575,7 +575,6 @@ mips_raw( void )
 }
 
 /* here is the entry point into this file for the sysapi library */
-extern "C" {
 int
 sysapi_mips_raw(void)
 {
@@ -587,6 +586,4 @@ sysapi_mips(void)
 {
 	sysapi_internal_reconfig();
 	return sysapi_mips_raw();
-}
-
 }
