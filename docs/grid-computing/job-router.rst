@@ -199,8 +199,8 @@ The following sample configuration sets up potential job routing to
 three routes (grid sites). Definitions of the configuration variables
 specific to the Job Router are in the 
 :ref:`admin-manual/configuration-macros:condor_job_router configuration file
-entries` section. One route is an HTCondor site accessed via the Globus gt2
-protocol. A second route is a PBS site, also accessed via Globus gt2. The third
+entries` section. One route a local SLURM cluster.
+A second route is cluster accessed via ARC CE. The third
 site is an HTCondor site accessed by HTCondor-C. The *condor_job_router* daemon
 does not know which site will be best for a given job. The policy implemented in
 this sample configuration stops sending more jobs to a site, if ten jobs
@@ -210,11 +210,9 @@ These configuration settings belong in the local configuration file of
 the machine where jobs are submitted. Check that the machine can
 successfully submit grid jobs before setting up and using the Job
 Router. Typically, the single required element that needs to be added
-for GSI authentication is an X.509 trusted certification authority
+for SSL authentication is an X.509 trusted certification authority
 directory, in a place recognized by HTCondor (for example,
-``/etc/grid-security/certificates``). The VDT
-(`http://vdt.cs.wisc.edu <http://vdt.cs.wisc.edu>`_) project provides a
-convenient way to set up and install a trusted CA, if needed.
+``/etc/grid-security/certificates``).
 
 Note that, as of version 8.5.6, the configuration language supports
 multi-line values, as shown in the example below (see the
@@ -241,17 +239,17 @@ will be considered in the order given by this configuration variable.
     JOB_ROUTER_ROUTE_NAMES = Site1 Site2 CondorSite
 
     JOB_ROUTER_ROUTE_Site1 @=rt
-      GridResource = "gt2 site1.edu/jobmanager-condor"
+      GridResource = "batch slurm"
     @rt
 
     JOB_ROUTER_ROUTE_Site2 @=rt
-      GridResource = "gt2 site2.edu/jobmanager-condor"
-      SET GlobusRSL = "(maxwalltime=$(ROUTED_JOB_MAX_TIME))(jobType=single)"
+      GridResource = "arc site2.edu"
+      SET ArcRte = "ENV/PROXY"
     @rt
 
     JOB_ROUTER_ROUTE_CondorSite @=rt
       MaxIdleJobs = 20
-      GridResource = "condor submit.site3.edu condor.site3.edu"
+      GridResource = "condor submit.site3.edu cm.site3.edu"
       SET remote_jobuniverse = 5
     @rt
 
@@ -488,58 +486,6 @@ may appear in a Routing Table entry.
     Deletes all attributes that match the regular expression ``<regex>`` from the routed copy of the job.
 
 
-Example: constructing the routing table from ReSS
--------------------------------------------------
-
-The Open Science Grid has a service called ReSS (Resource Selection
-Service). It presents grid sites as ClassAds in an HTCondor collector.
-This example builds a routing table from the site ClassAds in the ReSS
-collector.
-
-Using ``JOB_ROUTER_ENTRIES_CMD`` :index:`JOB_ROUTER_ENTRIES_CMD`,
-we tell the *condor_job_router* daemon to call a simple script which
-queries the collector and outputs a routing table. The script, called
-osg_ress_routing_table.sh, is just this:
-
-.. code-block:: bash
-
-    #!/bin/sh
-
-    # you _MUST_ change this:
-    export condor_status=/path/to/condor_status
-    # if no command line arguments specify -pool, use this:
-    export _CONDOR_COLLECTOR_HOST=osg-ress-1.fnal.gov
-
-    condor_status -format '[ ' BeginAd \
-                  -format 'GridResource = "gt2 %s"; ' GlueCEInfoContactString \
-                  -format ']\n' EndAd "$@" | uniq
-
-Save this script to a file and make sure the permissions on the file
-mark it as executable. Test this script by calling it by hand before
-trying to use it with the *condor_job_router* daemon. You may supply
-additional arguments such as **-constraint** to limit the sites which
-are returned.
-
-Once you are satisfied that the routing table constructed by the script
-is what you want, configure the *condor_job_router* daemon to use it:
-
-.. code-block:: condor-config
-
-    # command to build the routing table
-    JOB_ROUTER_ENTRIES_CMD = /path/to/osg_ress_routing_table.sh <extra arguments>
-
-    # how often to rebuild the routing table:
-    JOB_ROUTER_ENTRIES_REFRESH = 3600
-
-Using the example configuration, use the above settings to replace
-``JOB_ROUTER_ENTRIES`` :index:`JOB_ROUTER_ENTRIES`. Or, leave
-``JOB_ROUTER_ENTRIES`` :index:`JOB_ROUTER_ENTRIES` there and have
-a routing table containing entries from both sources. When you restart
-or reconfigure the *condor_job_router* daemon, you should see messages
-in the Job Router's log indicating that it is adding more routes to the
-table.
-
-
 Deprecated router configuration
 ---------------------------------------
 
@@ -600,14 +546,14 @@ so routes were normally given mutually exclusive requirements.
 
     # Now we define each of the routes to send jobs on
     JOB_ROUTER_ENTRIES @=jre
-      [ GridResource = "gt2 site1.edu/jobmanager-condor";
+      [ GridResource = "batch slurm";
         name = "Site_1";
       ]
-      [ GridResource = "gt2 site2.edu/jobmanager-pbs";
+      [ GridResource = "arc site2.edu";
         name = "Site_2";
-        set_GlobusRSL = "(maxwalltime=$(ROUTED_JOB_MAX_TIME))(jobType=single)";
+        set_ArcRte = "ENV/PROXY";
       ]
-      [ GridResource = "condor submit.site3.edu condor.site3.edu";
+      [ GridResource = "condor submit.site3.edu cm.site3.edu";
         name = "Site_3";
         set_remote_jobuniverse = 5;
       ]

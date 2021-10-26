@@ -1,7 +1,7 @@
-Development Release Series 9.1
-==============================
+Version 9 Feature Releases
+==========================
 
-This is the development release series of HTCondor. The details of each
+We release new features in these releases of HTCondor. The details of each
 version are described below.
 
 Version 9.4.0
@@ -74,6 +74,17 @@ Release Notes:
 .. HTCondor version 9.3.0 released on Month Date, 2021.
 
 - HTCondor version 9.3.0 not yet released.
+
+- As we transition from identity based authentication and authorization
+  (X.509 certificates) to capability based authorization (bearer tokens),
+  we have removed Globus GSI support from this release.
+  :jira:`697`
+
+- Submission to ARC CE via the gridftp interface (grid universe type
+  **nordugrid**) is no longer supported.
+  Submission to ARC CE's REST interface can be done using the **arc**
+  type in the grid universe.
+  :jira:`697`
 
 New Features:
 
