@@ -166,6 +166,9 @@ StartdCronJobMgr::ShouldStartJob( const CronJob &job ) const
 		return false;
 	}
 
+	bool shouldStartJob = CronJobMgr::ShouldStartJob( job );
+	if(! shouldStartJob) { return false; }
+
 	// Don't run a job if it has a condition and that condition does not
 	// evaluate to TRUE in the context of the machine ad.
 	const ConstraintHolder & condition = job.Params().GetCondition();
@@ -190,7 +193,7 @@ StartdCronJobMgr::ShouldStartJob( const CronJob &job ) const
 		}
 	}
 
-	return CronJobMgr::ShouldStartJob( job );
+	return true;
 }
 
 // Should we allow a benchmark to run?
