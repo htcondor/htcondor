@@ -62,6 +62,9 @@ class Submit(Verb):
                     except Exception:
                         pass
 
+                # Then exit early
+                return
+
         logger.info(f"Submitted job set {self.name} containing {len(self.jobs)} jobs.")
 
 
