@@ -19,6 +19,13 @@ New Features:
   extra arguments can depend on the job.
   :jira:`570`
 
+- The Environment command in a condor submit file can now contain the string
+  $$(CONDOR_SCRATCH_DIR), which will get expanded to the value of the scratch
+  directory on the execute node.  This is useful, for example, when transferring
+  software packages to the job's scratch dir, when those packages need an environment
+  variable pointing to the root of their install.
+  :jira:`805`
+
 - The :ref:`classad_eval` tool now supports evaluating ClassAd expressions in
   the context of a match.  To specify the target ad, use the new
   ``-target-file`` command-line option.  You may also specify the
