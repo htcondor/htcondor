@@ -45,15 +45,15 @@ New Features:
   or **condor_ft-gahp**.
   :jira:`734`
 
-- SINGULARITY_EXTRA_ARGUMENTS can now be a classad expression, so that the extra arguments
-  can depend on the job.
-  :jira:`570`
-
 - Herefile support was added to configuration templates, and the template
   ``use FEATURE : AssignAccountingGroup`` was converted to from the old
   transform  syntax to the the native transform syntax which requires that support.
   :jira:`796`
 
+- The GPU monitor will no longer run if ``use feature:GPUs`` is enabled
+  but GPU discovery did not detect any GPUs.  This mechanism is available
+  for other startd cron jobs; see :macro:`STARTD_CRON_<JobName>_CONDITION`.
+  :jira:`667`
 
 Bugs Fixed:
 
