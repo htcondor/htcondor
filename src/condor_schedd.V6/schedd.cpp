@@ -17783,7 +17783,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 
 	if ( !export_queue.InitLogFile(queue_fname.c_str(), 0) ) {
 		result.Assign(ATTR_ERROR_STRING, "Failed to initialize export job log");
-		dprintf(D_ALWAYS, "ExportJobs(): Failed to initialize export job log\n");
+		dprintf(D_ALWAYS, "ExportJobs(): Failed to initialize export job log %s\n", queue_fname.c_str());
 		return false;
 	}
 
@@ -17802,7 +17802,6 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 		export_queue.SetAttribute(hdr_id, ATTR_NEXT_JOBSET_NUM, int_str.c_str());
 	}
 
-#if 1 // alternate processing loop that will export jobs in cluster id order
 	int num_jobs = 0;
 	for (auto cid = clusters.begin(); cid != clusters.end(); ++cid) {
 		JobQueueCluster * jqc = GetClusterAd(*cid);
@@ -17859,47 +17858,6 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 			++num_jobs;
 		}
 	}
-#else
-	JobQueueJob *src_ad = NULL;
-
-	int num_jobs = 0;
-	int init_scan = 1;
-	while ( (src_ad = GetNextJobOrClusterByConstraint(NULL, init_scan)) ) {
-		init_scan = 0;
-		JobQueueKey job_id = src_ad->jid;
-		if ( clusters.find(job_id.cluster) == clusters.end() ) {
-			continue;
-		}
-
-		if (src_ad->IsJob()) { ++num_jobs; }
-		export_queue.NewClassAd(job_id, JOB_ADTYPE, STARTD_ADTYPE);
-
-		for ( auto attr_itr = src_ad->begin(); attr_itr != src_ad->end(); attr_itr++ ) {
-			if ( !strcasecmp(attr_itr->first.c_str(), ATTR_JOB_IWD) && src_ad->IsJob() ) {
-				char *dir = gen_ckpt_name(new_spool_dir, job_id.cluster, job_id.proc, 0);
-				std::string val;
-				val = '"';
-				val += dir;
-				val += '"';
-				free(dir);
-				export_queue.SetAttribute(job_id, ATTR_JOB_IWD, val.c_str());
-			} else if ( !strcasecmp(attr_itr->first.c_str(), ATTR_JOB_LEAVE_IN_QUEUE) ) {
-				// nothing
-			} else {
-				const char *val = ExprTreeToString(attr_itr->second);
-				export_queue.SetAttribute(job_id, attr_itr->first.c_str(), val);
-			}
-		}
-		if (src_ad->IsCluster()) {
-			export_queue.SetAttribute(job_id, ATTR_JOB_LEAVE_IN_QUEUE, "true");
-		}
-
-		if ( src_ad->IsJob() ) {
-			SetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
-			SetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_MANAGED_MANAGER, "Lumberjack");
-		}
-	}
-#endif
 
 	CommitTransactionOrDieTrying();
 
