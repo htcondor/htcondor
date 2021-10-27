@@ -93,24 +93,28 @@ class Submit(Verb):
             if options["runtime"] is None:
                 raise TypeError("Slurm resources must specify a runtime argument")
 
-            # Check if we have Slurm access
-            is_slurm_setup = False
+            # Check if bosco is setup to provide Slurm access
+            is_bosco_setup = False
             try:
                 check_bosco_cmd = "bosco_cluster --status hpclogin1.chtc.wisc.edu"
                 logger.debug(f"Attempting to run: {check_bosco_cmd}")
                 subprocess.check_output(shlex.split(check_bosco_cmd))
-                is_slurm_setup = True
+                is_bosco_setup = True
             except (FileNotFoundError, subprocess.CalledProcessError):
-                logger.debug(f"Your Slurm cluster needs to be setup")
+                logger.info(f"Your CHTC Slurm account needs to be configured before you can run jobs on it.")
             except Exception as e:
-                raise RuntimeError(f"Could not execute {bosco_cmd}:\n{str(e)}")
+                raise RuntimeError(f"Could not execute {check_bosco_cmd}:\n{str(e)}")
 
-            if is_slurm_setup is False:
+            if is_bosco_setup is False:
                 try:
+                    logger.info(f"Please enter your Slurm account password when prompted.")
                     setup_bosco_cmd = "bosco_cluster --add hpclogin1.chtc.wisc.edu slurm"
-                    logger.debug(f"Attempting to run: {setup_bosco_cmd}")
                     subprocess.check_output(shlex.split(setup_bosco_cmd), timeout=60)
                 except Exception as e:
+                    logger.info(f"Failed to configure Slurm account access.")
+                    logger.info(f"If you do not already have a CHTC Slurm account, please request this at htcondor-inf@cs.wisc.edu")
+                    logger.info(f"\nYou can also try to configure your account manually using the following command:")
+                    logger.info(f"\nbosco_cluster --add hpclogin1.chtc.wisc.edu slurm\n")
                     raise RuntimeError(f"Unable to setup Slurm execution environment")
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
@@ -219,7 +223,7 @@ class Status(Verb):
             slurm_nodes_requested = None
             slurm_runtime = None
 
-            dagman_dag, dagman_out, dagman_log = DAGMan.get_files(id)
+            dagman_dag, dagman_out, dagman_log = DAGMan.get_files(job_id)
 
             if dagman_dag is None:
                 raise RuntimeError(f"No {resource_type} job found for ID {job_id}.")
