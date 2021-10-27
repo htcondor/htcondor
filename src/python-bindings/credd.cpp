@@ -12,15 +12,15 @@
 #include <boost/python/overloads.hpp>
 
 #include "condor_attributes.h"
-#include "dc_credd.h"
 
 #include "htcondor.h"
 
+#include "condor_classad.h"
+#include "daemon.h"
 #include "old_boost.h"
 #include "module_lock.h"
 #include "daemon_location.h"
 #include "classad_wrapper.h"
-#include "dc_credd.h"
 #include "store_cred.h"
 #include "condor_config.h"
 #include "my_username.h"
