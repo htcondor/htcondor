@@ -7098,12 +7098,6 @@ These macros affect the *condor_negotiator*.
     similar job, the *condor_negotiator* will reuse the previous list
     of machines, instead of recreating the list from scratch.
 
-    If matching grid resources, and the desire is for a given resource
-    to potentially match multiple times per *condor_negotiator* pass,
-    ``NEGOTIATOR_MATCHLIST_CACHING`` should be ``False``. See
-    :ref:`grid-computing/grid-universe:matchmaking in the grid universe` in the
-    subsection on Advertising Grid Resources to HTCondor for an example.
-
 :macro-def:`NEGOTIATOR_CONSIDER_PREEMPTION`
     For expert users only. A boolean value that defaults to ``True``.
     When ``False``, it can cause the *condor_negotiator* to run faster
