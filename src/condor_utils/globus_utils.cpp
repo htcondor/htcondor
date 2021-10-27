@@ -30,6 +30,8 @@
 
 #include "globus_utils.h"
 
+#include <openssl/x509v3.h>
+
 #if defined(HAVE_EXT_GLOBUS)
 // Note: this is from OpenSSL, but should be present if Globus is.
 // Only used if HAVE_EXT_GLOBUS.
@@ -419,8 +421,20 @@ activate_globus_gsi( void )
 char *
 get_x509_proxy_filename( void )
 {
+#if !defined(HAVE_EXT_GLOBUS)
+	char *proxy_file = getenv("X509_USER_PROXY");
+	if ( proxy_file == nullptr ) {
+#if !defined(WIN32)
+		std::string tmp_file;
+		formatstr(tmp_file, "/tmp/x509up_u%d", geteuid());
+		proxy_file = strdup(tmp_file.c_str());
+#endif
+	} else {
+		proxy_file = strdup(proxy_file);
+	}
+	return proxy_file;
+#else
 	char *proxy_file = NULL;
-#if defined(HAVE_EXT_GLOBUS)
 	globus_gsi_proxy_file_type_t     file_type    = GLOBUS_PROXY_FILE_INPUT;
 
 	if ( activate_globus_gsi() != 0 ) {
@@ -431,8 +445,8 @@ get_x509_proxy_filename( void )
 		 GLOBUS_SUCCESS ) {
 		set_error_string( "unable to locate proxy file" );
 	}
-#endif
 	return proxy_file;
+#endif
 }
 
 
