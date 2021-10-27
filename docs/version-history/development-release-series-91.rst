@@ -15,6 +15,10 @@ Release Notes:
 
 New Features:
 
+- A new configuration variable ``EXTENDED_SUBMIT_COMMANDS`` can now be used to
+  extend the submit language by configuration in the *condor_schedd*.
+  :jira:`802`
+
 - SINGULARITY_EXTRA_ARGUMENTS can now be a classad expression, so that the
   extra arguments can depend on the job.
   :jira:`570`

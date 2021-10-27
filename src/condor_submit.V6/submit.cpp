@@ -1881,6 +1881,11 @@ int submit_jobs (
 		// At this point we really expect to  have a working queue connection (possibly simulated)
 		if ( ! MyQ) { rval = -1; break; }
 
+		ClassAd extended_submit_commands;
+		if (MyQ->has_extended_submit_commands(extended_submit_commands)) {
+			submit_hash.addExtendedCommands(extended_submit_commands);
+		}
+
 		// allocate a cluster object if this is the first time through the loop, or if the executable changed.
 		if (NewExecutable || (ClusterId < 0)) {
 			rval = allocate_a_cluster();
