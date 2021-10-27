@@ -107,29 +107,31 @@ class Submit(Verb):
                     if iterator_type not in iterator_types:
                         raise ValueError(f"""Unknown iterator type "{iterator_type}" in {job_set_file} at line {lineno}.""")
 
-                    # Get the column names
-                    iterator_names = value.replace(",", " ").split()[1:-1]
-                    iterator_names = [x.strip() for x in iterator_names]
+                    if iterator_type == "table":
 
-                    # Read the iterator values into a itemdata list of dicts
-                    iterator_source = value[-1]
-                    if iterator_source == "{":
-                        inline = "{"
-                        inlineno = 0
-                        inline_data = ""
-                        while inline != "":
-                            inline = f.readline()
-                            inlineno += 1
-                            if inline.split("#")[0].strip() == "}":
-                                break
-                            inline_data += inline
+                        # Get the column names
+                        iterator_names = value.replace(",", " ").split()[1:-1]
+                        iterator_names = [x.strip() for x in iterator_names]
+
+                        # Read the iterator values into a itemdata list of dicts
+                        iterator_source = value[-1]
+                        if iterator_source == "{":
+                            inline = "{"
+                            inlineno = 0
+                            inline_data = ""
+                            while inline != "":
+                                inline = f.readline()
+                                inlineno += 1
+                                if inline.split("#")[0].strip() == "}":
+                                    break
+                                inline_data += inline
+                            else:
+                                raise ValueError(f"""Unclosed bracket in {job_set_file} starting at line {lineno}.""")
+                            lineno += inlineno
+                            self.itemdata = self.parse_columnar_itemdata(iterator_names, inline_data, lineno=lineno, fname=job_set_file)
                         else:
-                            raise ValueError(f"""Unclosed bracket in {job_set_file} starting at line {lineno}.""")
-                        lineno += inlineno
-                        self.itemdata = self.parse_columnar_itemdata(iterator_names, inline_data, lineno=lineno, fname=job_set_file)
-                    else:
-                        with open(iterator_source, "rt") as f_iter:
-                            self.itemdata = self.parse_columnar_itemdata(iterator_names, f_iter.read(), fname=iterator_source)
+                            with open(iterator_source, "rt") as f_iter:
+                                self.itemdata = self.parse_columnar_itemdata(iterator_names, f_iter.read(), fname=iterator_source)
 
                 elif command == "job":
                     value = " ".join(line.split("#")[0].strip().split()[1:])
