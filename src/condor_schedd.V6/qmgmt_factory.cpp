@@ -41,7 +41,7 @@
 class JobFactory : public SubmitHash {
 
 public:
-	JobFactory(const char * name, int id);
+	JobFactory(const char * name, int id, const classad::ClassAd* extended_cmds);
 	~JobFactory();
 
 	//enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
@@ -134,7 +134,12 @@ protected:
 	friend int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::string & remainder);
 	friend bool TakeJobFactoryItemdata(JobFactory *factory, void * itemdata, int itemdata_size);
 	friend int JobFactoryRowCount(JobFactory * factory);
-	friend JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_filename, bool spooled_submit_file, std::string & errmsg);
+	friend JobFactory * MakeJobFactory(
+		JobQueueCluster* job,
+		const classad::ClassAd * extended_cmds,
+		const char * submit_digest_filename,
+		bool spooled_submit_file,
+		std::string & errmsg);
 	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 	friend bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
 
@@ -145,7 +150,7 @@ protected:
 		std::string & errmsg);           // OUT: error message if return value is not 0
 };
 
-JobFactory::JobFactory(const char * _name, int id)
+JobFactory::JobFactory(const char * _name, int id, const classad::ClassAd * extended_cmds)
 	: name(NULL)
 #ifdef HOLDS_DIGEST_FILE_OPEN
 	, fp_digestX(NULL)
@@ -159,6 +164,7 @@ JobFactory::JobFactory(const char * _name, int id)
 	memset(&source, 0, sizeof(source));
 	this->init();
 	setScheddVersion(CondorVersion());
+	if (extended_cmds) { this->addExtendedCommands(*extended_cmds); }
 	// add digestfile into string pool, and store that pointer in the class
 	insert_source(_name, source);
 	name = macro_source_filename(source, SubmitMacroSet);
@@ -198,9 +204,9 @@ bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster)
 	return false;
 }
 
-class JobFactory * NewJobFactory(int cluster_id)
+class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds)
 {
-	return new JobFactory(NULL, cluster_id);
+	return new JobFactory(NULL, cluster_id, extended_cmds);
 }
 
 // Make a job factory for a job object that has been submitted, but not yet committed.
@@ -255,10 +261,15 @@ int JobFactoryRowCount(JobFactory * factory)
 // Make a job factory for a Job object that exists, this entry point is used when
 // the submit digest is a file on disk - either because condor_submit put it there, or
 // because we are restarting. 
-JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_file, bool spooled_submit_file, std::string & errmsg)
+JobFactory * MakeJobFactory(
+	JobQueueCluster* job,
+	const classad::ClassAd * extended_cmds,
+	const char * submit_digest_file,
+	bool spooled_submit_file,
+	std::string & errmsg)
 {
 
-	JobFactory * factory = new JobFactory(submit_digest_file, job->jid.cluster);
+	JobFactory * factory = new JobFactory(submit_digest_file, job->jid.cluster, extended_cmds);
 
 	// Starting the 8.7.3 The digest file may be in the spool directory and owned by condor
 	// or in the user directory and owned by the user (the 8.7.1 model).

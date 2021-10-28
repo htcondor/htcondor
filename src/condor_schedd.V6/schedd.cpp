@@ -13114,6 +13114,13 @@ Scheduler::Init()
 	MaxMaterializedJobsPerCluster = param_integer("MAX_MATERIALIZED_JOBS_PER_CLUSTER", MaxMaterializedJobsPerCluster);
 	NonDurableLateMaterialize = param_boolean("SCHEDD_NON_DURABLE_LATE_MATERIALIZE", true);
 
+	m_extendedSubmitCommands.Clear();
+	auto_free_ptr extended_cmds(param("EXTENDED_SUBMIT_COMMANDS"));
+	if (extended_cmds) {
+		initAdFromString(extended_cmds, m_extendedSubmitCommands);
+		extended_cmds.clear();
+	}
+
 	EnableJobQueueTimestamps = param_boolean("SCHEDD_JOB_QUEUE_TIMESTAMPS", false);
 
 		// Limit number of simultaenous connection attempts to startds.
