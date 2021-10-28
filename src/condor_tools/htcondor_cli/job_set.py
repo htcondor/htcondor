@@ -412,7 +412,7 @@ class List(Verb):
         )
 
        if len(job_set_ads) == 0:
-           logger.error(f"""No activate job sets found.""")
+           logger.error(f"""No active job sets found.""")
            return
 
        owner_sets = set()
