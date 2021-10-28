@@ -5360,7 +5360,7 @@ These macros control the *condor_schedd*.
     -  *string* - a quoted string that does not match the above special rules. e.g. ``"string"``. *string* values
        can be provided quoted or unquoted in the submit file.  Unquoted values will have leading and trailing
        whitespace removed.
-    -  *unsigned-integer* - any positive integer e.g. ``0``. *unsigned-integer* values are evaluated as expressions
+    -  *unsigned-integer* - any non-negative integer e.g. ``0``. *unsigned-integer* values are evaluated as expressions
        and submit will fail if the result does not convert to an unsigned integer.  A simple integer value
        will be stored in the job.
     -  *integer* - any negative integer e.g. ``-1``.  *integer* values are evaluated as expressions and submit
