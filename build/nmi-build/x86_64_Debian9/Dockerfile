@@ -56,7 +56,6 @@ RUN apt update && apt install -y \
 # Add HTCondor repository
 RUN wget -qO - https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-9.0-Key | apt-key add -
 RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/9.0 stretch main" > /etc/apt/sources.list.d/htcondor.list
-# RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/8.9-externals stretch main" > /etc/apt/sources.list.d/htcondor-externals.list
 
 # Need HTCondor to build HTCondor (BatLab style)
 RUN apt update && apt install -y \
@@ -78,6 +77,7 @@ RUN apt update && apt install -y \
     less \
     nano \
     net-tools \
+    strace \
     sudo \
     vim \
     && apt clean
@@ -150,5 +150,5 @@ RUN pip3 install pytest pytest-httpserver
 
 # Add daily HTCondor repository for the latest externals for tarballs
 RUN wget -qO - https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-9.0-Daily-Key | apt-key add -
-RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/9.0-daily buster main" > /etc/apt/sources.list.d/htcondor-daily.list
+RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/9.0-daily stretch main" > /etc/apt/sources.list.d/htcondor-daily.list
 RUN apt update
