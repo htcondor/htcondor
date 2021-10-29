@@ -54,6 +54,13 @@ New Features:
   transform  syntax to the the native transform syntax which requires that support.
   :jira:`796`
 
+- Added a new feature where a uesr can export some of their jobs from the
+  *condor_schedd* in the form of a job-queue file intended to be used by
+  a new temporary *condor_schedd*.
+  After the temporary *condor_schedd* runs the jobs, the results can be
+  imported back to the original *condor_schedd*.
+  This is experimental code that is not suitable for production use.
+  :jira:`179`
 
 Bugs Fixed:
 
