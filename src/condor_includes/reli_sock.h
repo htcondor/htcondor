@@ -181,7 +181,7 @@ public:
 	                filesize_t max_bytes, class DCTransferQueue &xfer_q,
 	                filesize_t &size, CondorError &err);
 
-	int put_archive(const std::string &filename,
+	int put_archive(const std::vector<std::string> &input_filenames,
 			filesize_t max_bytes, DCTransferQueue &xfer_q,
 			filesize_t &bytes, CondorError &err);
 

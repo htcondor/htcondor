@@ -143,6 +143,7 @@ public:
 	const std::string &destUrl() const { return m_dest_url; }
 	const std::string &srcScheme() const { return m_src_scheme; }
 	const std::string &destScheme() const { return m_dest_scheme; }
+	const std::vector<std::string> &secondaryItems() const { return m_secondary_items; }
 	filesize_t fileSize() const { return m_file_size; }
 	void setDestDir(const std::string &dest) { m_dest_dir = dest; }
 	void setFileSize(filesize_t new_size) { m_file_size = new_size; }
@@ -171,6 +172,10 @@ public:
 		if (scheme_end) {
 			m_dest_scheme = std::string(dest_url.c_str(), scheme_end - dest_url.c_str());
 		}
+	}
+
+	void addSecondaryItem(const std::string &filename) {
+		m_secondary_items.emplace_back(filename);
 	}
 
 	bool operator<(const FileTransferItem &other) const {
@@ -222,6 +227,7 @@ private:
 	std::string m_src_name;
 	std::string m_dest_dir;
 	std::string m_dest_url;
+	std::vector<std::string> m_secondary_items;
 	bool is_domainsocket{false};
 	bool is_directory{false};
 	bool is_symlink{false};
@@ -3783,6 +3789,40 @@ FileTransfer::ParseDataManifest()
 	return true;
 }
 
+namespace {
+
+std::string calculate_full_path(const std::string &Iwd, const FileTransferItem &fileitem, const std::string &filename)
+{
+	if (fileitem.isSrcUrl() && fileitem.srcScheme() != "tar") {
+		if ( param_boolean("ENABLE_URL_TRANSFERS", true)) {
+			// looks like a URL
+			dprintf(D_FULLDEBUG, "DoUpload: sending %s as URL.\n", filename.c_str());
+			return filename;
+		} else {
+			// A URL was requested but the sysadmin has disabled URL transfers; this
+			// should have been prevented by matchmaking, so we fail this instead of
+			// treating the URL as a filename.
+			dprintf(D_ALWAYS, "DoUpload: WARNING - URL transfers were disabled by the sysadmin, "
+				"but this transfer requires URL transfers to function; failing");
+			return "";
+		}
+	} else {
+		auto filename_xform = (filename.substr(0, 6) == "tar://") ? filename.substr(6) : filename;
+		if (!fullpath(filename_xform.c_str())){
+			// looks like a relative path
+			std::string fullname;
+			formatstr(fullname, "%s%c%s", Iwd.c_str(), DIR_DELIM_CHAR, filename_xform.c_str());
+			return fullname;
+		} else {
+			// looks like an unix absolute path or a windows path
+			return filename_xform;
+		}
+	}
+}
+
+
+}
+
 
 int
 FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
@@ -4169,6 +4209,33 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 	}
 
+		// Look for items that will become the same tarfile destination.
+		// Remove the duplicates; record the originals as a "secondary item".
+	std::unordered_map<std::string, std::pair<std::string, FileTransferItem*>> duplicate_tarfiles;
+	for (auto &fileitem : filelist) {
+		if (fileitem.destScheme() != "tar") {continue;}
+		auto dup_iter = duplicate_tarfiles.find(fileitem.destUrl());
+		if (dup_iter == duplicate_tarfiles.end()) {
+			auto dup_entry = std::make_pair(fileitem.srcName(), &fileitem);
+			duplicate_tarfiles[fileitem.destUrl()] = dup_entry;
+		} else {
+			dup_iter->second.second->addSecondaryItem(fileitem.srcName());
+		}
+	}
+	if (!duplicate_tarfiles.empty()) {
+		auto enditer =
+			std::remove_if(
+				filelist.begin(),
+				filelist.end(),
+				[&](FileTransferItem &fti)
+				{
+					if (fti.destScheme() != "tar") return false;
+					auto dup_iter = duplicate_tarfiles.find(fti.destUrl());
+					return (dup_iter != duplicate_tarfiles.end()) && (dup_iter->second.first != fti.srcName());
+				});
+		filelist.erase(enditer, filelist.end());
+	}
+
 	std::sort(filelist.begin(), filelist.end());
 	for (auto &fileitem : filelist)
 	{
@@ -4195,29 +4262,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 
 		
-
-		if( fileitem.isSrcUrl() && fileitem.srcScheme() != "tar" ) {
-			if( param_boolean("ENABLE_URL_TRANSFERS", true) ) {
-				// looks like a URL
-				fullname = filename;
-				dprintf(D_FULLDEBUG, "DoUpload: sending %s as URL.\n", filename.c_str());
-			} else {
-				// A URL was requested but the sysadmin has disabled URL transfers; this
-				// should have been prevented by matchmaking, so we fail this instead of
-				// treating the URL as a filename.
-				dprintf(D_ALWAYS, "DoUpload: WARNING - URL transfers were disabled by the sysadmin, "
-					"but this transfer requires URL transfers to function; failing");
-				return_and_resetpriv( -1 );
-			}
-		} else {
-			auto filename_xform = (filename.substr(0, 6) == "tar://") ? filename.substr(6) : filename;
-			if( !fullpath( filename_xform.c_str() ) ){
-				// looks like a relative path
-				formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename_xform.c_str());
-			} else {
-				// looks like an unix absolute path or a windows path
-				fullname = filename_xform;
-			}
+		fullname = calculate_full_path(Iwd, fileitem, filename);
+		if (fullname.empty()) {
+			return_and_resetpriv(-1);
 		}
 
 		MyString dest_filename;
@@ -4621,7 +4668,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 					return_and_resetpriv(-1);
 				}
 
-				rc = s->put_archive(fullname, this_file_max_bytes, xfer_queue, bytes, errstack);
+				std::vector<std::string> input_filenames;
+				input_filenames.reserve(1 + fileitem.secondaryItems().size());
+				input_filenames.push_back(fullname);
+				for (const auto &filename : fileitem.secondaryItems()) {
+					input_filenames.emplace_back(calculate_full_path(Iwd, fileitem, filename));
+				}
+
+				rc = s->put_archive(input_filenames, this_file_max_bytes, xfer_queue, bytes, errstack);
 				if (rc == -1) {rc = PUT_FILE_PLUGIN_FAILED;}
 			} else {
 				dprintf( D_ALWAYS, "DoUpload: invalid subcommand %i, skipping %s.",

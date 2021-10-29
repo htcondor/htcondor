@@ -368,115 +368,128 @@ write_archive_header(struct archive &ar, struct archive_entry &entry, const std:
 	return true;
 }
 
-
 bool
-add_directory_to_archive(struct archive &ar, const std::string &dir_path, const std::string &prefix_path, DCTransferQueue &xfer_q, CondorError &err)
+add_item_to_archive(struct archive &ar, const StatInfo *curr, const std::string &full_archive_filename, const std::string &full_filesystem_path,
+	DCTransferQueue &xfer_q, CondorError &err)
 {
-	Directory contents_iterator(dir_path.c_str());
-	const char * f = NULL;
+	std::unique_ptr<StatInfo> curr_mgr;
+	if (curr == nullptr) {
+		auto new_curr = new StatInfo(full_filesystem_path.c_str());
+		curr_mgr.reset(new_curr);
+		curr = new_curr;
+		if (curr->Error()) {
+			err.pushf("MAKE_ARCHIVE", curr->Errno(), "Failed to open file %s for archive: %s",
+				full_archive_filename.c_str(), strerror(curr->Errno()));
+			return false;
+		}
+	}
 	std::vector<char> working_buffer;
-	while( (f = contents_iterator.Next()) ) {
-		auto full_archive_filename = prefix_path + DIR_DELIM_CHAR + f;
-		auto full_filesystem_path = dir_path + DIR_DELIM_CHAR + f;
-		std::unique_ptr<struct archive_entry, decltype(&archive_entry_free)> entry(archive_entry_new(), &archive_entry_free);
-		archive_entry_set_pathname(entry.get(), full_archive_filename.c_str());
-		archive_entry_set_size(entry.get(), contents_iterator.GetFileSize());
-		archive_entry_set_perm(entry.get(), contents_iterator.GetMode());
-		if (contents_iterator.GetAccessTime()) {
-			archive_entry_set_atime(entry.get(), contents_iterator.GetAccessTime(), 0);
-		}
-		if (contents_iterator.GetModifyTime()) {
-			archive_entry_set_mtime(entry.get(), contents_iterator.GetModifyTime(), 0);
-		}
-		if (contents_iterator.GetCreateTime()) {
-			archive_entry_set_ctime(entry.get(), contents_iterator.GetCreateTime(), 0);
+
+	std::unique_ptr<struct archive_entry, decltype(&archive_entry_free)> entry(archive_entry_new(), &archive_entry_free);
+	archive_entry_set_pathname(entry.get(), full_archive_filename.c_str());
+	archive_entry_set_size(entry.get(), curr->GetFileSize());
+	archive_entry_set_perm(entry.get(), curr->GetMode());
+	if (curr->GetAccessTime()) {
+		archive_entry_set_atime(entry.get(), curr->GetAccessTime(), 0);
+	}
+	if (curr->GetModifyTime()) {
+		archive_entry_set_mtime(entry.get(), curr->GetModifyTime(), 0);
+	}
+	if (curr->GetCreateTime()) {
+		archive_entry_set_ctime(entry.get(), curr->GetCreateTime(), 0);
+	}
+
+	if (curr->IsRegularFile()) {
+		archive_entry_set_filetype(entry.get(), AE_IFREG);
+		if (!write_archive_header(ar, *entry.get(), full_archive_filename, err)) {return false;}
+		dprintf(D_FULLDEBUG, "Adding regular file %s of size %ld to archive.\n", full_archive_filename.c_str(), curr->GetFileSize());
+
+		std::unique_ptr<FILE, decltype(&fclose)> fp(safe_fopen_no_create(full_filesystem_path.c_str(), "r"), &fclose);
+		if (!fp.get()) {
+			dprintf(D_ALWAYS, "Failed to open file %s for archive: %s (errno=%d)\n",
+				full_filesystem_path.c_str(), strerror(errno), errno);
+			err.pushf("MAKE_ARCHIVE", errno, "Failed to open file %s for archive: %s",
+				full_archive_filename.c_str(), strerror(errno));
+			return false;
 		}
 
-		if (contents_iterator.IsRegularFile()) {
-			archive_entry_set_filetype(entry.get(), AE_IFREG);
-			if (!write_archive_header(ar, *entry.get(), full_archive_filename, err)) {return false;}
-			dprintf(D_FULLDEBUG, "Adding regular file %s of size %ld to archive.\n", full_archive_filename.c_str(), contents_iterator.GetFileSize());
+		working_buffer.resize(AES_FILE_BUF_SZ);
+		while (true) {
+			struct timeval t1,t2;
+			condor_gettimestamp(t1);
+			ssize_t bytes_read = full_read(fileno(fp.get()), working_buffer.data(), AES_FILE_BUF_SZ);
+			condor_gettimestamp(t2);
+			xfer_q.AddUsecFileRead(timersub_usec(t2, t1));
 
-			std::unique_ptr<FILE, decltype(&fclose)> fp(safe_fopen_no_create(full_filesystem_path.c_str(), "r"), &fclose);
-			if (!fp.get()) {
-				dprintf(D_ALWAYS, "Failed to open file %s for archive: %s (errno=%d)\n",
+			if (bytes_read < 0) {
+				dprintf(D_ALWAYS, "Failed to read file %s for archive: %s (errno=%d)\n",
 					full_filesystem_path.c_str(), strerror(errno), errno);
-				err.pushf("MAKE_ARCHIVE", errno, "Failed to open file %s for archive: %s",
+				err.pushf("MAKE_ARCHIVE", errno, "Failed to read file %s for archive: %s",
 					full_archive_filename.c_str(), strerror(errno));
 				return false;
-			}
-
-			working_buffer.resize(AES_FILE_BUF_SZ);
-			while (true) {
-				struct timeval t1,t2;
-				condor_gettimestamp(t1);
-				ssize_t bytes_read = full_read(fileno(fp.get()), working_buffer.data(), AES_FILE_BUF_SZ);
-				condor_gettimestamp(t2);
-				xfer_q.AddUsecFileRead(timersub_usec(t2, t1));
-
-				if (bytes_read < 0) {
-					dprintf(D_ALWAYS, "Failed to read file %s for archive: %s (errno=%d)\n",
-						full_filesystem_path.c_str(), strerror(errno), errno);
-					err.pushf("MAKE_ARCHIVE", errno, "Failed to read file %s for archive: %s",
-						full_archive_filename.c_str(), strerror(errno));
-					return false;
-				} else if (bytes_read) {
-					//dprintf(D_FULLDEBUG, "Writing %ld bytes to archive.\n", bytes_read);
-					if (bytes_read != archive_write_data(&ar, working_buffer.data(), bytes_read)) {
-						dprintf(D_ALWAYS, "Failed to write contents of archive file %s: %s (errno=%d)\n",
-							full_archive_filename.c_str(), archive_error_string(&ar), archive_errno(&ar));
-						if (archive_errno(&ar)) {
-							err.pushf("MAKE_ARCHIVE", archive_errno(&ar), "Failed to write contents of archive file %s: %s",
-								full_archive_filename.c_str(), archive_error_string(&ar));
-						} else if (err.empty()) {
-							err.pushf("MAKE_ARCHIVE", 1, "Failed to write contents of archive file %s (unknown error)",
-								full_archive_filename.c_str());
-						}
-						return false;
+			} else if (bytes_read) {
+				//dprintf(D_FULLDEBUG, "Writing %ld bytes to archive.\n", bytes_read);
+				if (bytes_read != archive_write_data(&ar, working_buffer.data(), bytes_read)) {
+					dprintf(D_ALWAYS, "Failed to write contents of archive file %s: %s (errno=%d)\n",
+						full_archive_filename.c_str(), archive_error_string(&ar), archive_errno(&ar));
+					if (archive_errno(&ar)) {
+						err.pushf("MAKE_ARCHIVE", archive_errno(&ar), "Failed to write contents of archive file %s: %s",
+							full_archive_filename.c_str(), archive_error_string(&ar));
+					} else if (err.empty()) {
+						err.pushf("MAKE_ARCHIVE", 1, "Failed to write contents of archive file %s (unknown error)",
+							full_archive_filename.c_str());
 					}
-				} else {
-					break;
+					return false;
 				}
+			} else {
+				break;
 			}
+		}
 
-		} else if (contents_iterator.IsSymlink()) {
-			archive_entry_set_filetype(entry.get(), AE_IFLNK);
-			ssize_t link_bytes;
-			struct stat statbuf;
-				// contents_iterator.GetFileSize() returns the size of the target, not of the link.
-			if (-1 == lstat(full_filesystem_path.c_str(), &statbuf)) {
-				dprintf(D_ALWAYS, "Failed to stat symlink %s for archive: %s (errno=%d)\n",
-					full_filesystem_path.c_str(), strerror(errno), errno);
-				err.pushf("MAKE_ARCHIVE", errno, "Failed to stat symlink %s for archive: %s",
+	} else if (curr->IsSymlink()) {
+		archive_entry_set_filetype(entry.get(), AE_IFLNK);
+		ssize_t link_bytes;
+		struct stat statbuf;
+			// curr->GetFileSize() returns the size of the target, not of the link.
+		if (-1 == lstat(full_filesystem_path.c_str(), &statbuf)) {
+			dprintf(D_ALWAYS, "Failed to stat symlink %s for archive: %s (errno=%d)\n",
+				full_filesystem_path.c_str(), strerror(errno), errno);
+			err.pushf("MAKE_ARCHIVE", errno, "Failed to stat symlink %s for archive: %s",
+				full_archive_filename.c_str(), strerror(errno));
+			return false;
+		}
+		working_buffer.resize(statbuf.st_size + 1);
+		if ((link_bytes = readlink(full_filesystem_path.c_str(), working_buffer.data(), statbuf.st_size + 1) != statbuf.st_size)) {
+			if (link_bytes == -1) {
+				dprintf(D_ALWAYS, "Failed to read link for archive file %s: %s (errno=%d)\n",
+					full_archive_filename.c_str(), strerror(errno), errno);
+				err.pushf("MAKE_ARCHIVE", errno, "Failed to read link for archive file %s: %s",
 					full_archive_filename.c_str(), strerror(errno));
 				return false;
 			}
-			working_buffer.resize(statbuf.st_size + 1);
-			if ((link_bytes = readlink(full_filesystem_path.c_str(), working_buffer.data(), statbuf.st_size + 1) != statbuf.st_size)) {
-				if (link_bytes == -1) {
-					dprintf(D_ALWAYS, "Failed to read link for archive file %s: %s (errno=%d)\n",
-						full_archive_filename.c_str(), strerror(errno), errno);
-					err.pushf("MAKE_ARCHIVE", errno, "Failed to read link for archive file %s: %s",
-						full_archive_filename.c_str(), strerror(errno));
-					return false;
-				}
-				dprintf(D_ALWAYS, "Size of link %s changed while creating archive.\n",
-					full_archive_filename.c_str());
-				err.pushf("MAKE_ARCHIVE", 1, "Size of link %s changed while creating archive.",
+			dprintf(D_ALWAYS, "Size of link %s changed while creating archive.\n",
+				full_archive_filename.c_str());
+			err.pushf("MAKE_ARCHIVE", 1, "Size of link %s changed while creating archive.",
 					full_archive_filename.c_str());
 				return false;
-			}
-			working_buffer[statbuf.st_size] = '\0';
-			dprintf(D_FULLDEBUG, "Adding symlink %s->%s of size %ld to archive.\n", full_archive_filename.c_str(), working_buffer.data(), statbuf.st_size);
-			archive_entry_set_symlink(entry.get(), working_buffer.data());
+		}
+		working_buffer[statbuf.st_size] = '\0';
+		dprintf(D_FULLDEBUG, "Adding symlink %s->%s of size %ld to archive.\n", full_archive_filename.c_str(), working_buffer.data(), statbuf.st_size);
+		archive_entry_set_symlink(entry.get(), working_buffer.data());
 
-			if (!write_archive_header(ar, *entry.get(), full_archive_filename, err)) {return false;}
-		} else if (contents_iterator.IsDirectory()) {
-			archive_entry_set_filetype(entry.get(), AE_IFDIR);
-			dprintf(D_FULLDEBUG, "Adding directory %s to archive.\n", full_archive_filename.c_str());
-			if (!write_archive_header(ar, *entry.get(), full_archive_filename, err)) {return false;}
+		if (!write_archive_header(ar, *entry.get(), full_archive_filename, err)) {return false;}
+	} else if (curr->IsDirectory()) {
+		archive_entry_set_filetype(entry.get(), AE_IFDIR);
+		dprintf(D_FULLDEBUG, "Adding directory %s to archive.\n", full_archive_filename.c_str());
+		if (!write_archive_header(ar, *entry.get(), full_archive_filename, err)) {return false;}
 
-			if (!add_directory_to_archive(ar, full_filesystem_path, full_archive_filename, xfer_q, err)) {
+		Directory contents_iterator(full_filesystem_path.c_str());
+		const char * f = NULL;
+		std::vector<char> working_buffer;
+		while( (f = contents_iterator.Next()) ) {
+			auto new_full_archive_filename = full_archive_filename + DIR_DELIM_CHAR + f;
+			auto new_full_filesystem_path = full_filesystem_path + DIR_DELIM_CHAR + f;
+			if (!add_item_to_archive(ar, contents_iterator.CurrentStatInfo(), new_full_archive_filename, new_full_filesystem_path, xfer_q, err)) {
 				return false;
 			}
 		}
@@ -889,14 +902,11 @@ ReliSock::get_archive(const std::string &filename, filesize_t max_bytes, DCTrans
 
 
 int
-ReliSock::put_archive(const std::string &filename, filesize_t max_bytes, DCTransferQueue &xfer_q, filesize_t &bytes, CondorError &err)
+ReliSock::put_archive(const std::vector<std::string> &input_filenames, filesize_t max_bytes, DCTransferQueue &xfer_q, filesize_t &bytes, CondorError &err)
 {
 	size_t buf_sz = AES_FILE_BUF_SZ;
 
 	std::unique_ptr<char[]> buf(new char[buf_sz]);
-
-	// Log what's going on
-	dprintf(D_FULLDEBUG, "put_archive: Streaming archive from %s\n", filename.c_str());
 
 	// Now we hand over to libarchive
 #ifdef HAVE_LIBARCHIVE
@@ -909,12 +919,18 @@ ReliSock::put_archive(const std::string &filename, filesize_t max_bytes, DCTrans
 		return -1;
 	}
 
-	int rc = add_directory_to_archive(*ar, filename, condor_basename(filename.c_str()), xfer_q, err) ? 0 : -1;
-	if (rc == 0) {
-		bytes = state.m_bytes_written;
+	for (const auto &filename : input_filenames) {
+			// Log what's going on
+		dprintf(D_FULLDEBUG, "put_archive: Adding %s to archive\n", filename.c_str());
+		int rc = add_item_to_archive(*ar, nullptr, condor_basename(filename.c_str()), filename, xfer_q, err) ? 0 : -1;
+		if (rc == 0) {
+			bytes += state.m_bytes_written;
+		} else {
+			return -1;
+		}
 	}
 
-	return rc;
+	return 0;
 #else
 	dprintf(D_ALWAYS, "put_archive: archives are not supported\n");
 	err.pushf("XFER", 101, "Remote side tried to send an archive (%s) file but this is not supported", filename.c_str());
