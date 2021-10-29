@@ -15,6 +15,10 @@ Release Notes:
 
 New Features:
 
+- Submission and basic management (list, status, and removal) of :ref:`job_sets` added
+  to the :ref:`htcondor_command` CLI tool.
+  :jira:`793`
+
 - A new configuration variable ``EXTENDED_SUBMIT_COMMANDS`` can now be used to
   extend the submit language by configuration in the *condor_schedd*.
   :jira:`802`
