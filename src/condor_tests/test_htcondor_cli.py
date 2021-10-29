@@ -45,13 +45,8 @@ def resource_missing_args(default_condor, test_dir, submit_success):
     p = default_condor.run_command(["htcondor", "job", "submit", test_dir / "helloworld.sub", "--resource", "ec2"])
     return p
 
-@action
-def slurm_not_setup(default_condor, test_dir):
-    p = default_condor.run_command(["htcondor", "job", "submit", test_dir / "helloworld.sub", "--resource", "slurm", "--runtime", "1"])
-    return p
 
-
-class TestCurlPlugin:
+class TestHtcondorCli:
     def test_invoke_no_args(self, invoke_no_args):
         assert "A tool for managing HTCondor jobs and resources." in invoke_no_args.stderr
         assert "Traceback (most recent call last)" not in invoke_no_args.stdout
@@ -71,6 +66,3 @@ class TestCurlPlugin:
 
     def test_resource_missing_args(self, test_dir, resource_missing_args):
         assert resource_missing_args.stderr == "Error while trying to run job submit:\nError: EC2 resources must specify a --runtime argument"
-
-    def test_slurm_not_setup(self, test_dir, slurm_not_setup):
-        assert slurm_not_setup.stderr[0:103] == "Error while trying to run job submit:\nYou need to install support software to access the Slurm cluster."
