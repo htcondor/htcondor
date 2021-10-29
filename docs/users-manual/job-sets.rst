@@ -169,14 +169,15 @@ an entire example job set might look like:
     }
 
 Based on this job set description,
-with (4 sets of data) x (2 job descriptions) = 8 total jobs,
+with two job descriptions
+(which become two job clusters),
 you would expect the following output
 when submitting this job set:
 
 .. code-block:: console
 
       $ htcondor jobset submit my-jobs.set
-      Submitted job set MyJobSet containing 8 jobs.
+      Submitted job set MyJobSet containing 2 job clusters.
 
 
 Listing job sets

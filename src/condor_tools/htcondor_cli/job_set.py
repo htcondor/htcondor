@@ -65,7 +65,7 @@ class Submit(Verb):
                 # Then exit early
                 return
 
-        logger.info(f"Submitted job set {self.name} containing {len(self.jobs)} jobs.")
+        logger.info(f"Submitted job set {self.name} containing {len(self.jobs)} job clusters.")
 
 
     def parse_job_set_file(self, job_set_file):
@@ -84,21 +84,34 @@ class Submit(Verb):
                 if line == "" or line.startswith("#"):
                     continue
 
-                command = line.split()[0].split("=")[0].casefold()
+                try:
+                    command = line.split()[0].split("=")[0].casefold()
+                except IndexError:
+                    raise IndexError(f"""Malformed command in {job_set_file} at line {lineno}.""")
+
                 if command not in commands:
                     raise ValueError(f"""Unrecognized command "{command}" in {job_set_file} at line {lineno}.""")
 
                 if command == "name":
                     if self.name is not None:
                         raise ValueError(f"""Job set name can only be set once, second name found in {job_set_file} at line {lineno}.""")
-                    value = line.split("#")[0].split("=")[1].strip()
+                    try:
+                        value = line.split("#")[0].split("=")[1].strip()
+                    except IndexError:
+                        raise IndexError(f"""Malformed {command} command in {job_set_file} at line {lineno}.""")
+                    if value.strip() == "":
+                        raise ValueError(f"""Blank job set name found in {job_set_file} at line {lineno}.""")
 
                     self.name = value
 
                 elif command == "iterator":
                     if self.itemdata is not None:
                         raise ValueError(f"""Job set iterator can only be set once, second iterator found in {job_set_file} at line {lineno}.""")
-                    value = line.split("#")[0].split("=")[1].strip()
+
+                    try:
+                        value = line.split("#")[0].split("=")[1].strip()
+                    except IndexError:
+                        raise IndexError(f"""Malformed {command} command in {job_set_file} at line {lineno}.""")
 
                     if len(value.split()) < 3:
                         raise ValueError(f"""Unparseable iterator "{value}" in {job_set_file} at line {lineno}.""")
@@ -114,7 +127,7 @@ class Submit(Verb):
                         iterator_names = [x.strip() for x in iterator_names]
 
                         # Read the iterator values into a itemdata list of dicts
-                        iterator_source = value[-1]
+                        iterator_source = value.split()[-1]
                         if iterator_source == "{":
                             inline = "{"
                             inlineno = 0
@@ -122,29 +135,55 @@ class Submit(Verb):
                             while inline != "":
                                 inline = f.readline()
                                 inlineno += 1
+
+                                if inline.strip() == "":
+                                    continue
+
                                 if inline.split("#")[0].strip() == "}":
                                     break
+
+                                # Assume that a newly opened bracket without
+                                # a closing bracket means that there was an error.
+                                try:
+                                    if inline.split("#")[0].split()[-1].strip() == "{":
+                                        raise ValueError(f"""Unclosed bracket in {job_set_file} starting at line {lineno}.""")
+                                except IndexError:
+                                    pass  # Let the parser handle this situation
+
                                 inline_data += inline
                             else:
                                 raise ValueError(f"""Unclosed bracket in {job_set_file} starting at line {lineno}.""")
-                            lineno += inlineno
                             self.itemdata = self.parse_columnar_itemdata(iterator_names, inline_data, lineno=lineno, fname=job_set_file)
+                            lineno += inlineno
                         else:
-                            with open(iterator_source, "rt") as f_iter:
-                                self.itemdata = self.parse_columnar_itemdata(iterator_names, f_iter.read(), fname=iterator_source)
+                            try:
+                                with open(iterator_source, "rt") as f_iter:
+                                    self.itemdata = self.parse_columnar_itemdata(iterator_names, f_iter.read(), fname=iterator_source)
+                            except IOError as e:
+                                raise IOError(f"Error opening table file {iterator_source} in {job_set_file} at line {lineno}:\n{str(e)}")
 
                 elif command == "job":
-                    value = " ".join(line.split("#")[0].strip().split()[1:])
+                    try:
+                        value = " ".join(line.split("#")[0].strip().split()[1:])
+                    except IndexError:
+                        raise IndexError(f"""Malformed {command} command in {job_set_file} at line {lineno}.""")
 
                     # Get the variable name mappings
-                    mapping_strs = value.split()[:-1]
                     mappings = []
-                    for mapping_str in mapping_strs:
-                        mappings.append(tuple(x.strip() for x in mapping_str.split("=")))
+                    if len(value.split()) > 1:
+                        mapping_strs = ",".join(value.split()[:-1])
+                        if "=" in mapping_strs:
+                            for mapping_str in mapping_strs.split(","):
+                                mapping = tuple(x.strip() for x in mapping_str.split("="))
+                                if len(mapping) != 2:
+                                    raise ValueError(f"""Unsupported mapping "{mapping_str}" in {job_set_file} at line {lineno}.""")
+                                mappings.append(mapping)
+                        else:
+                            raise ValueError(f"""Unsupported mapping "{' '.join(value.split()[:-1])}" in {job_set_file} at line {lineno}.""")
                     mappings = dict(mappings)
 
                     # Read the job submit description into a Submit object
-                    job_source = value[-1]
+                    job_source = value.split()[-1]
                     if job_source == "{":
                         inline = "{"
                         inlineno = 0
@@ -152,16 +191,32 @@ class Submit(Verb):
                         while inline != "":
                             inline = f.readline()
                             inlineno += 1
+
+                            if inline.strip() == "":
+                                continue
+
                             if inline.split("#")[0].strip() == "}":
                                 break
+
+                            # Assume that a newly opened bracket without
+                            # a closing bracket means that there was an error.
+                            try:
+                                 if inline.split("#")[0].split()[-1].strip() == "{":
+                                     raise ValueError(f"""Unclosed bracket in {job_set_file} starting at line {lineno}.""")
+                            except IndexError:
+                                pass  # Let the parser handle this situation
+
                             inline_data += inline.lstrip()
                         else:
                             raise ValueError(f"""Unclosed bracket in {job_set_file} starting at line {lineno}.""")
                         lineno += inlineno
                         submit_obj = htcondor.Submit(inline_data)
                     else:
-                        with open(job_source, "rt") as f_sub:
-                            submit_obj = htcondor.Submit(f_sub.read())
+                        try:
+                            with open(job_source, "rt") as f_sub:
+                                submit_obj = htcondor.Submit(f_sub.read())
+                        except IOError as e:
+                            raise IOError(f"Error opening submit description file {job_source} in {job_set_file} at line {lineno}:\n{str(e)}")
 
                     # Remap variables in the Submit object
                     submit_obj = self.remap_submit_variables(mappings, submit_obj)
@@ -184,7 +239,7 @@ class Submit(Verb):
 
             column_values = [x.strip() for x in line.split(",")]
             if len(column_values) != len(column_names):
-                raise ValueError(f"""Mismatch between number of iterator names ({len(column_names)}) and values ({len(column_values)}) in {fname} at line {lineno+i}.""")
+                raise ValueError(f"""Mismatch between number of iterator names ({len(column_names)}) and values ({len(column_values)}) in {fname} at line {lineno+i+1}.""")
 
             itemdata.append(dict(zip(column_names, column_values)))
         return itemdata
