@@ -933,7 +933,7 @@ ReliSock::put_archive(const std::vector<std::string> &input_filenames, filesize_
 	return 0;
 #else
 	dprintf(D_ALWAYS, "put_archive: archives are not supported\n");
-	err.pushf("XFER", 101, "Remote side tried to send an archive (%s) file but this is not supported", filename.c_str());
+	err.push("XFER", 101, "Remote side tried to send an archive file but this is not supported");
 	return -1;
 #endif
 }
