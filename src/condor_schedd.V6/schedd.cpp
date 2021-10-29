@@ -285,7 +285,7 @@ void AuditLogJobProxy( const Sock &sock, PROC_ID job_id, const char *proxy_file 
 			 job_id.cluster, job_id.proc );
 	dprintf( D_AUDIT, sock, "proxy path: %s\n", proxy_file );
 
-#if defined(HAVE_EXT_GLOBUS)
+#if !defined(WIN32)
 	X509Credential* proxy_handle = x509_proxy_read( proxy_file );
 
 	if ( proxy_handle == NULL ) {
@@ -13113,6 +13113,13 @@ Scheduler::Init()
 	AllowLateMaterialize = param_boolean("SCHEDD_ALLOW_LATE_MATERIALIZE", false);
 	MaxMaterializedJobsPerCluster = param_integer("MAX_MATERIALIZED_JOBS_PER_CLUSTER", MaxMaterializedJobsPerCluster);
 	NonDurableLateMaterialize = param_boolean("SCHEDD_NON_DURABLE_LATE_MATERIALIZE", true);
+
+	m_extendedSubmitCommands.Clear();
+	auto_free_ptr extended_cmds(param("EXTENDED_SUBMIT_COMMANDS"));
+	if (extended_cmds) {
+		initAdFromString(extended_cmds, m_extendedSubmitCommands);
+		extended_cmds.clear();
+	}
 
 	EnableJobQueueTimestamps = param_boolean("SCHEDD_JOB_QUEUE_TIMESTAMPS", false);
 

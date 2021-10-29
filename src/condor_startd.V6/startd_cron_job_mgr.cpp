@@ -166,7 +166,35 @@ StartdCronJobMgr::ShouldStartJob( const CronJob &job ) const
 		return false;
 	}
 
-	return CronJobMgr::ShouldStartJob( job );
+	bool shouldStartJob = CronJobMgr::ShouldStartJob( job );
+	if(! shouldStartJob) { return false; }
+
+	// Don't run a job if it has a condition and that condition does not
+	// evaluate to TRUE in the context of the machine ad.
+	const ConstraintHolder & condition = job.Params().GetCondition();
+	if(condition.Expr() != NULL) {
+
+		ClassAd context;
+		daemonCore->publish(& context);
+		resmgr->m_attr->compute_for_policy();
+		resmgr->m_attr->publish_static(& context);
+		resmgr->m_attr->publish_dynamic(& context);
+		resmgr->publish_static(& context);
+		resmgr->publish_dynamic(& context);
+		dprintf( D_FULLDEBUG, "StartdCronJobMgr::ShouldStartJob(%s): evaluating condition in the following context:\n", job.GetName() );
+		dPrintAd( D_FULLDEBUG, context );
+
+		classad::Value v;
+		if( context.EvaluateExpr( condition.Expr(), v ) ) {
+			bool rv = false;
+			if( v.IsBooleanValueEquiv(rv) && rv ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	return true;
 }
 
 // Should we allow a benchmark to run?

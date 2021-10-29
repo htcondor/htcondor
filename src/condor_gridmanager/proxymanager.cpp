@@ -231,7 +231,6 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		email = x509_proxy_email( proxy_path.c_str() );
 
 		fqan = NULL;
-#if defined(HAVE_EXT_GLOBUS)
 		int rc = extract_VOMS_info_from_file( proxy_path.c_str(), 0, NULL,
 											  &first_fqan, &fqan );
 		if ( rc != 0 && rc != 1 ) {
@@ -242,7 +241,6 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			free( email );
 			return NULL;
 		}
-#endif
 		if ( fqan ) {
 			has_voms_attrs = true;
 		} else {

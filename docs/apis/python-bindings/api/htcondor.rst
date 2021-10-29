@@ -156,7 +156,6 @@ Security Management
    .. automethod:: ping
    .. automethod:: getCommandString
    .. automethod:: setConfig
-   .. automethod:: setGSICredential
    .. automethod:: setPoolPassword
    .. automethod:: setTag
    .. automethod:: setToken

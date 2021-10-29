@@ -66,6 +66,7 @@ public:
 	virtual int  get_type() { return AbstractQ_TYPE_SIM; }
 	virtual bool has_late_materialize(int &ver) { ver = 2; return true; }
 	virtual bool allows_late_materialize() { return true; }
+	virtual bool has_extended_submit_commands(ClassAd &cmds);
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
 	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
 

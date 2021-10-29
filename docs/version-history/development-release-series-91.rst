@@ -1,7 +1,7 @@
-Development Release Series 9.1
-==============================
+Version 9 Feature Releases
+==========================
 
-This is the development release series of HTCondor. The details of each
+We release new features in these releases of HTCondor. The details of each
 version are described below.
 
 Version 9.4.0
@@ -14,6 +14,10 @@ Release Notes:
 - HTCondor version 9.4.0 not yet released.
 
 New Features:
+
+- A new configuration variable ``EXTENDED_SUBMIT_COMMANDS`` can now be used to
+  extend the submit language by configuration in the *condor_schedd*.
+  :jira:`802`
 
 - SINGULARITY_EXTRA_ARGUMENTS can now be a classad expression, so that the
   extra arguments can depend on the job.
@@ -45,14 +49,15 @@ New Features:
   or **condor_ft-gahp**.
   :jira:`734`
 
-- SINGULARITY_EXTRA_ARGUMENTS can now be a classad expression, so that the extra arguments
-  can depend on the job.
-  :jira:`570`
-
 - Herefile support was added to configuration templates, and the template
   ``use FEATURE : AssignAccountingGroup`` was converted to from the old
   transform  syntax to the the native transform syntax which requires that support.
   :jira:`796`
+
+- The GPU monitor will no longer run if ``use feature:GPUs`` is enabled
+  but GPU discovery did not detect any GPUs.  This mechanism is available
+  for other startd cron jobs; see :macro:`STARTD_CRON_<JobName>_CONDITION`.
+  :jira:`667`
 
 - Added a new feature where a uesr can export some of their jobs from the
   *condor_schedd* in the form of a job-queue file intended to be used by
@@ -81,6 +86,17 @@ Release Notes:
 .. HTCondor version 9.3.0 released on Month Date, 2021.
 
 - HTCondor version 9.3.0 not yet released.
+
+- As we transition from identity based authentication and authorization
+  (X.509 certificates) to capability based authorization (bearer tokens),
+  we have removed Globus GSI support from this release.
+  :jira:`697`
+
+- Submission to ARC CE via the gridftp interface (grid universe type
+  **nordugrid**) is no longer supported.
+  Submission to ARC CE's REST interface can be done using the **arc**
+  type in the grid universe.
+  :jira:`697`
 
 New Features:
 
