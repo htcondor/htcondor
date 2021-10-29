@@ -111,7 +111,7 @@ FILE* LoadClassAdLog(
 		case CondorLogOp_Error:
 			// this is defensive, ought to be caught in InstantiateLogEntry()
 			errmsg.formatstr("ERROR: in log %s transaction record %lu was bad (byte offset %lld)\n", filename, count, curr_log_entry_pos);
-			fclose(log_fp);
+			fclose(log_fp); log_fp = NULL;
 
 			delete active_transaction;
 			return NULL;
@@ -181,9 +181,7 @@ FILE* LoadClassAdLog(
 		log_rec = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
 		if (log_rec->Write(log_fp) < 0) {
 			errmsg.formatstr("write to %s failed, errno = %d\n", filename, errno);
-			fclose(log_fp);
-			delete log_rec;
-			return NULL;
+			fclose(log_fp); log_fp = NULL;
 		}
 		delete log_rec;
 	}

@@ -5343,6 +5343,51 @@ These macros control the *condor_schedd*.
     *condor_schedd* does use configuration variable ``SLOT_WEIGHT`` to
     weight running and idle job counts in the submitter ClassAd.
 
+:macro-def:`EXTENDED_SUBMIT_COMMANDS`
+    A long form ClassAd that defines extended submit commands and their associated
+    job ad attributes for a specific Schedd.  *condor_submit* will query the
+    destination schedd for this ClassAd and use it to modify the internal
+    table of submit commands before interpreting the submit file.
+
+    Each entry in this ClassAd will define a new submit command, the value will
+    indicate the required data type to the submit file parser with the data type
+    given by example from the value according to this list of types
+
+    -  *string-list* - a quoted string containing a comma. e.g. ``"a,b"``. *string-list* values
+       are converted to canonical form.
+    -  *filename* - a quoted string beginning with the word file.  e.g. ``"filename"``. *filename* values
+       are converted to fully qualified file paths using the same rules as other submit filenames.
+    -  *string* - a quoted string that does not match the above special rules. e.g. ``"string"``. *string* values
+       can be provided quoted or unquoted in the submit file.  Unquoted values will have leading and trailing
+       whitespace removed.
+    -  *unsigned-integer* - any non-negative integer e.g. ``0``. *unsigned-integer* values are evaluated as expressions
+       and submit will fail if the result does not convert to an unsigned integer.  A simple integer value
+       will be stored in the job.
+    -  *integer* - any negative integer e.g. ``-1``.  *integer* values are evaluated as expressions and submit
+       will fail if the result does not convert to an integer.  A simple integer value will be stored in the job.
+    -  *boolean* - any boolean value e.g. ``true``. *boolean* values are evaluated as expressions and submit will
+       fail if the result does not convert to ``true`` or ``false``.
+    -  *expression* - any expression or floating point number that is not one of the above. e.g. ``a+b``. *expression*
+       values will be parsed as a classad expression and stored in the job.
+    -  *error* - the literal ``error`` will tell submit to generate an error when the command is used. 
+       this provides a way for admins to disable existing submit commands.
+    -  *undefined* - the literal ``undefined`` will be treated by *condor_submit* as if that
+       attribute is not in this ad. This is intended to aid composability of this ad across multiple
+       configuration files.
+
+    The following example will add four new submit commands and disable the use of the
+    the ``accounting_group_user`` submit command.
+
+    .. code-block:: condor-config
+
+          EXTENDED_SUBMIT_COMMANDS @=end
+             LongJob = true
+             Project = "string"
+             FavoriteFruit = "a,b"
+             SomeFile = "filename"
+             acounting_group_user = error
+          @end
+
 :macro-def:`JOB_TRANSFORM_NAMES`
     A comma and/or space separated list of unique names, where each is
     used in the formation of a configuration variable name that will
