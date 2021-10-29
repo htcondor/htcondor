@@ -70,6 +70,10 @@ Bugs Fixed:
   isn't a proxy.
   :jira:`800`
 
+- Fixed some bugs which could cause the counts of transferred files
+  reported in the job ad to be inaccurate.
+  :jira:`813`
+
 Version 9.3.0
 -------------
 
