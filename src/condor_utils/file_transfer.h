@@ -541,10 +541,10 @@ class FileTransfer final: public Service {
 		// iwd       - relative paths are relative to this path
 		// max_depth - how deep to recurse (-1 for infinite)
 		// expanded_list - the list of files to transfer
-	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths );
+	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace );
 
         // Function internal to ExpandFileTransferList() -- called twice there.
-    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list );
+    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list, const char *SpoolSpace );
 
 		// Returns true if path is a legal path for our peer to tell us it
 		// wants us to write to.  It must be a relative path, containing
