@@ -158,6 +158,10 @@ public:
 	*/
 	bool IsRegularFile() {return curr ? curr->IsRegularFile() : false; }
 
+	/** Return the current StatInfo object for the directory iteration.
+	 */
+	const StatInfo *CurrentStatInfo() const {return curr;}
+
 	/** Remove the current file.  If the current file is a subdirectory,
 	    then the subdirectory (and all files beneath it) are removed.
 		@return true on successful removal, otherwise false

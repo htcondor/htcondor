@@ -321,10 +321,10 @@ StatInfo::make_dirpath( const char* dir )
 
 
 mode_t
-StatInfo::GetMode( void )
+StatInfo::GetMode( void ) const
 {
 	if(!valid) {
-		stat_file( fullpath );
+		const_cast<StatInfo*>(this)->stat_file( fullpath );
 	}
 	if(!valid) {
 		EXCEPT("Avoiding a use of an undefined mode");

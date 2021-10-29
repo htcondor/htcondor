@@ -102,7 +102,7 @@ public:
 		non-zero. 
 		@return An enum describing the error condition of this StatInfo object.
 	*/
-	si_error_t Error() { return si_error; };
+	si_error_t Error() const { return si_error; };
 
 	/** This function returns the errno as set from the attempt to get
 	    information about this file.  If there was no error, this will
@@ -155,7 +155,7 @@ public:
 	filesize_t GetFileSize() const { return file_size; }
 
 		/// Return the file's permission mode
-	mode_t GetMode();
+	mode_t GetMode() const;
 
 	/** Determine if the file is the name of a subdirectory,
 		or just a file.  This also returns true for symlinks
