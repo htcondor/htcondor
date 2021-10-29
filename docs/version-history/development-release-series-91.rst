@@ -63,6 +63,11 @@ New Features:
   for other startd cron jobs; see :macro:`STARTD_CRON_<JobName>_CONDITION`.
   :jira:`667`
 
+- The :doc:`htcondor <../man-pages/htcondor>` CLI tool now automates the
+  setup of our CHTC Slurm cluster when requesting to run jobs on these
+  resources.
+  :jira:`783`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_procd* (and thus all of condor) from starting
@@ -73,6 +78,10 @@ Bugs Fixed:
 - Fixed a bug when computing the identity of a job's X.509 credential that
   isn't a proxy.
   :jira:`800`
+
+- Fixed some bugs which could cause the counts of transferred files
+  reported in the job ad to be inaccurate.
+  :jira:`813`
 
 Version 9.3.0
 -------------
