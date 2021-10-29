@@ -405,14 +405,14 @@ class List(Verb):
 
        constraint = "(InJobSet == True)"
        if not options["allusers"]:
-           constraint += f"&& (Owner == {classad.quote(getpass.getuser())})"
+           constraint += f" && (Owner == {classad.quote(getpass.getuser())})"
        job_set_ads = schedd.query(
             constraint = constraint,
             projection = ["Owner", "JobSetName"]
         )
 
        if len(job_set_ads) == 0:
-           logger.error(f"""No activate job sets found.""")
+           logger.error(f"""No active job sets found.""")
            return
 
        owner_sets = set()
