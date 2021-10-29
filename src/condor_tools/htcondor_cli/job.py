@@ -93,23 +93,29 @@ class Submit(Verb):
             if options["runtime"] is None:
                 raise TypeError("Slurm resources must specify a runtime argument")
 
-            # Verify that we have Slurm access; if not, run bosco_clutser to create it
+            # Check if bosco is setup to provide Slurm access
+            is_bosco_setup = False
             try:
-                bosco_cmd = "bosco_cluster --status hpclogin1.chtc.wisc.edu"
-                logger.debug(f"Attempting to run: {bosco_cmd}")
-                subprocess.check_output(shlex.split(bosco_cmd))
+                check_bosco_cmd = "bosco_cluster --status hpclogin1.chtc.wisc.edu"
+                logger.debug(f"Attempting to run: {check_bosco_cmd}")
+                subprocess.check_output(shlex.split(check_bosco_cmd))
+                is_bosco_setup = True
             except (FileNotFoundError, subprocess.CalledProcessError):
-                install_bosco = (
-"""
-You need to install support software to access the Slurm cluster.
-Please run the following command in your terminal:
-
-bosco_cluster --add hpclogin1.chtc.wisc.edu slurm
-"""
-                ).strip()
-                raise RuntimeError(install_bosco)
+                logger.info(f"Your CHTC Slurm account needs to be configured before you can run jobs on it.")
             except Exception as e:
-                raise RuntimeError(f"Could not execute {bosco_cmd}:\n{str(e)}")
+                raise RuntimeError(f"Could not execute {check_bosco_cmd}:\n{str(e)}")
+
+            if is_bosco_setup is False:
+                try:
+                    logger.info(f"Please enter your Slurm account password when prompted.")
+                    setup_bosco_cmd = "bosco_cluster --add hpclogin1.chtc.wisc.edu slurm"
+                    subprocess.check_output(shlex.split(setup_bosco_cmd), timeout=60)
+                except Exception as e:
+                    logger.info(f"Failed to configure Slurm account access.")
+                    logger.info(f"If you do not already have a CHTC Slurm account, please request this at htcondor-inf@cs.wisc.edu")
+                    logger.info(f"\nYou can also try to configure your account manually using the following command:")
+                    logger.info(f"\nbosco_cluster --add hpclogin1.chtc.wisc.edu slurm\n")
+                    raise RuntimeError(f"Unable to setup Slurm execution environment")
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
             DAGMan.write_slurm_dag(submit_file, options["runtime"], options["email"])
@@ -179,7 +185,7 @@ class Status(Verb):
         try:
             job = schedd.query(
                 constraint=f"ClusterId == {job_id}",
-                projection=["JobStartDate", "JobStatus", "LastVacateTime", "ResourceType"]
+                projection=["JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "ResourceType"]
             )
         except IndexError:
             raise RuntimeError(f"No job found for ID {job_id}.")
@@ -197,8 +203,8 @@ class Status(Verb):
                 job_running_time = datetime.now() - datetime.fromtimestamp(job[0]["JobStartDate"])
                 logger.info(f"Job is running since {round(job_running_time.seconds/3600)}h{round(job_running_time.seconds/60)}m{(job_running_time.seconds%60)}s")
             elif JobStatus[job[0]['JobStatus']] == "HELD":
-                job_held_time = datetime.now() - datetime.fromtimestamp(job[0]["LastVacateTime"])
-                logger.info(f"Job is held since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s")
+                job_held_time = datetime.now() - datetime.fromtimestamp(job[0]["EnteredCurrentStatus"])
+                logger.info(f"Job is held since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s\nHold Reason: {job[0]['HoldReason']}")
             elif JobStatus[job[0]['JobStatus']] == "COMPLETED":
                 logger.info("Job has completed")
             else:
@@ -217,7 +223,7 @@ class Status(Verb):
             slurm_nodes_requested = None
             slurm_runtime = None
 
-            dagman_dag, dagman_out, dagman_log = DAGMan.get_files(id)
+            dagman_dag, dagman_out, dagman_log = DAGMan.get_files(job_id)
 
             if dagman_dag is None:
                 raise RuntimeError(f"No {resource_type} job found for ID {job_id}.")
