@@ -147,6 +147,8 @@ ReliSock::get_file( filesize_t *size, const char *destination,
 
 namespace {
 
+#ifdef HAVE_LIBARCHIVE
+
 struct ArchiveReadState {
 	ArchiveReadState(ReliSock &sock, filesize_t bytes_to_receive, size_t buf_sz, DCTransferQueue &xfer_q,
 		CondorError &err)
@@ -284,7 +286,7 @@ archive_write(struct archive * /*ar*/, void *client_data, const void *buf_void, 
 		}
 		else
 		{
-			auto bytes_to_copy = std::min(length, remaining);
+			auto bytes_to_copy = std::min(length, static_cast<size_t>(remaining));
 			//dprintf(D_FULLDEBUG, "Adding %ld bytes into internal buffer\n", bytes_to_copy);
 			memcpy(state->m_buf.get() + buffer_offset, buf, bytes_to_copy);
 			buf += bytes_to_copy;
@@ -482,6 +484,8 @@ add_directory_to_archive(struct archive &ar, const std::string &dir_path, const 
 	return true;
 }
 
+#endif // HAVE_LIBARCHIVE
+
 }
 
 
@@ -615,6 +619,7 @@ ReliSock::put_archive_file(const std::string &filename, filesize_t max_bytes, DC
 		return 0;
 	}
 
+#ifdef HAVE_LIBARCHIVE
 	if ( !put(filesize) || !end_of_message() ) {
 		dprintf(D_ALWAYS, "ReliSock: put_archive_file: Failed to send filesize.\n");
 		err.push("XFER", 4, "Failed to send file size.");
@@ -682,6 +687,15 @@ ReliSock::put_archive_file(const std::string &filename, filesize_t max_bytes, DC
 
 	total_sent = filesize;
 	return 0;
+#else  // HAVE_LIBARCHIVE
+	if (!put(-1)) {
+		err.push("XFER", 26, "Failed to send error indicator that archives are unsupported.");
+		return -1;
+	}
+        dprintf(D_ALWAYS, "put_archive: archives are not supported\n");
+        err.pushf("XFER", 100, "Remote side tried to send an archive (%s) file but this is not supported", filename.c_str());
+        return -1;
+#endif  // HAVE_LIBARCHIVE
 }
 
 
