@@ -10,7 +10,7 @@ Synopsis
 **htcondor** [**-help**]
 
 **htcondor** **job** [ *submit* | *status* | *resources* ] [**--resource** *resource-type*] 
-[**--node_count** *count*] [**--runtime** *time-seconds*]
+[**--runtime** *time-seconds*]
 [**--email** *email-address*]
 
 Description
@@ -22,7 +22,7 @@ At present it only supports simple job submission and monitoring.
 
 The **--resource** option allows you to run jobs on resources other than your
 local HTCondor pool. By specifying either ``EC2`` or ``Slurm`` here, the tool
-provisions resources described by the **--runtime** and **--node_count** options
+provisions resources for the time described by the **--runtime** option (in seconds) 
 and sends your HTCondor job to run on them. It assumes you have already 
 completed the necessary setup tasks, such as creating an account for Slurm
 submissions or making your AWS access keys available for EC2 submissions. 
@@ -35,9 +35,6 @@ Options
     Assumes the necessary setup is complete and security tokens available.
  **--runtime**
     Amount of time in seconds to allocate resources.
-    Used in conjunction with the *--resource* flag.
- **--node_count**
-    Number of execution resources to allocate.
     Used in conjunction with the *--resource* flag.
  **--email**
     Email address to receive notification messages.
