@@ -338,7 +338,7 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 
 			// Don't parse a private attr; instead, we encrypt it and leave
 			// the parsing as an exercise to the caller.
-		if (g_encryptPrivateAttrs && ClassAdAttributeIsPrivateV2(attr)) {
+		if (g_encryptPrivateAttrs && ClassAdAttributeIsPrivateAny(attr)) {
 			std::string encrypted_expr;
 			if (!htcondor::memory_seal(rhs, encrypted_expr)) {
 				dprintf(D_ALWAYS, "getClassAdEx failed to encrypt private attribute %s.\n", attr.c_str());

@@ -1778,12 +1778,12 @@ ClassAdAttributeIsPrivateV1( const std::string &name )
 bool
 ClassAdAttributeIsPrivateV2( const std::string &name )
 {
-	return (strncasecmp(name.c_str(), "_condor_priv", 12) == 0) || (ClassAdPrivateAttrs.find(name) != ClassAdPrivateAttrs.end());
+	return strncasecmp(name.c_str(), "_condor_priv", 12) == 0;
 }
 
 
 bool
-ClassAdAttributeIsPrivateAny( const std::string &name ) {return ClassAdAttributeIsPrivateV1(name) || ClassAdAttributeIsPrivateV2(name);}
+ClassAdAttributeIsPrivateAny( const std::string &name ) {return ClassAdAttributeIsPrivateV2(name) || ClassAdAttributeIsPrivateV1(name);}
 
 
 int
@@ -2053,7 +2053,7 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 				continue; // attribute exists in child ad; we will print it below
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first ) ) {
+				 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 				attributes.emplace_back(itr->first,itr->second);
 			}
 		}
@@ -2069,7 +2069,7 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 		}
 
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first ) ) {
+			 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 			attributes.emplace_back(itr->first,itr->second);
 		}
 	}
