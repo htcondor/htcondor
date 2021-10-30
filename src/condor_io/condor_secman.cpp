@@ -3142,16 +3142,8 @@ SecMan::IsAuthenticationSufficient(DCpermission perm, const Sock &sock, CondorEr
 	}
 
 	auto methods = getAuthenticationMethods(perm);
-	StringList meth_iter(methods.c_str());
-	meth_iter.rewind();
-	const char *potential_method = nullptr;
-	bool allowed_method = false;
-	while ( (potential_method = meth_iter.next()) ) {
-		if (!strcasecmp(sock.getAuthenticationMethodUsed(), potential_method)) {
-			allowed_method = true;
-			break;
-		}
-	}
+	bool allowed_method = getAuthBitmask(methods.c_str()) & sec_char_to_auth_method(sock.getAuthenticationMethodUsed());
+
 	if (!allowed_method) {
 		err.pushf("SECMAN", 80, "Used authentication method %s is not valid for permission level %s",
 			sock.getAuthenticationMethodUsed(), PermString(perm));
