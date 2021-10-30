@@ -856,7 +856,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	{
 		filter_private_ads = false;
 	}
-	if (verinfo && verinfo->built_since_version(9, 1, 1) &&
+	if (verinfo && verinfo->built_since_version(9, 4, 0) &&
 		(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", ADMINISTRATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
 	{
 		dprintf(D_SECURITY|D_FULLDEBUG, "Administrator query - will not filter private ads.\n");

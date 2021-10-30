@@ -11358,26 +11358,6 @@ bool DaemonCore::SockPair::has_safesock(bool b) {
 	return true;
 }
 
-#include "condor_daemon_client.h"
-#include "dc_collector.h"
-
-bool DaemonCore::getStartTime( int & startTime ) {
-	if(! m_collector_list) { return false; }
-	m_collector_list->rewind();
-
-	Daemon * d = NULL;
-	m_collector_list->next(d);
-	if(! d) { return false; }
-
-	DCCollector * dcc = dynamic_cast<DCCollector *>(d);
-	if(! dcc) { return false; }
-
-	startTime = dcc->getStartTime();
-	return true;
-}
-
-
-
 int DaemonCore::CreateProcessNew(
   const std::string & name,
   const std::vector< std::string > args,
@@ -11426,7 +11406,7 @@ DaemonCore::SetupAdministratorSession(unsigned duration, std::string &capability
 	m_remote_admin_seq++;
 
 	std::string id;
-	formatstr( id, "%s#%ld#%lu", daemonCore->publicNetworkIpAddr(),
+	formatstr( id, "admin_%s#%ld#%lu", daemonCore->publicNetworkIpAddr(),
 		m_startup_time, (long unsigned)m_remote_admin_seq);
 
 		// A keylength of 32 bytes = 256 bits.
@@ -11487,9 +11467,11 @@ DaemonCore::SetupAdministratorSession(unsigned duration, std::string &capability
 		true
 	);
 	if (retval) {
-		capability = id + "#" + session_info + keybuf.get();
+		ClaimIdParser cidp(id.c_str(), session_info, keybuf.get());
+		capability = cidp.claimId();
+		m_remote_admin_last = capability;
+		m_remote_admin_last_time = time(NULL);
 	}
-	m_remote_admin_last = retval;
 	return retval;
 }
 

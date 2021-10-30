@@ -1661,7 +1661,7 @@ class DaemonCore : public Service
 
 	DCCollectorAdSequences & getUpdateAdSeq() { return m_collector_list->getAdSeq(); }
 
-	bool getStartTime(int & startTime);
+	time_t getStartTime() const {return m_startup_time;}
 
 		/**
 		   Indicates if this daemon wants to be restarted by its

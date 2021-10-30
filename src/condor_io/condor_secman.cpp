@@ -3147,7 +3147,7 @@ SecMan::IsAuthenticationSufficient(DCpermission perm, const Sock &sock, CondorEr
 	const char *potential_method = nullptr;
 	bool allowed_method = false;
 	while ( (potential_method = meth_iter.next()) ) {
-		if (!strcmp(sock.getAuthenticationMethodUsed(), potential_method)) {
+		if (!strcasecmp(sock.getAuthenticationMethodUsed(), potential_method)) {
 			allowed_method = true;
 			break;
 		}
