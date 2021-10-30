@@ -1394,6 +1394,7 @@ int verify_callback(int ok, X509_STORE_CTX *store)
         X509_NAME_oneline( X509_get_issuer_name( cert ), data, 256 );
         dprintf( D_SECURITY, "  issuer   = %s\n", data );
         X509_NAME_oneline( X509_get_subject_name( cert ), data, 256 );
+	std::string dn(data);
         dprintf( D_SECURITY, "  subject  = %s\n", data );
         dprintf( D_SECURITY, "  err %i:%s\n", err, X509_verify_cert_error_string( err ) );
 
@@ -1409,6 +1410,8 @@ int verify_callback(int ok, X509_STORE_CTX *store)
 			bool is_permitted;
 			std::string method, method_info;
 			auto encoded_cert = get_x509_encoded(cert);
+			bool is_ca_cert = (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY) || (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT) ||
+				(err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN);
 
 			unsigned char         md[EVP_MAX_MD_SIZE];
 			auto digest = EVP_get_digestbyname("sha256");
@@ -1454,7 +1457,7 @@ int verify_callback(int ok, X509_STORE_CTX *store)
 				if (!permitted && (get_mySubSystem()->isType(SUBSYSTEM_TYPE_TOOL) ||
 					get_mySubSystem()->isType(SUBSYSTEM_TYPE_SUBMIT)) && isatty(0))
 				{
-					permitted = htcondor::ask_cert_confirmation(host_alias, fingerprint);
+					permitted = htcondor::ask_cert_confirmation(host_alias, fingerprint, dn, is_ca_cert);
 				}
 				htcondor::add_known_hosts(host_alias, permitted, "SSL", encoded_cert);
 				std::string method;

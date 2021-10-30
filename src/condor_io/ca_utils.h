@@ -32,5 +32,5 @@ bool get_known_hosts_first_match(const std::string &hostname, bool &permitted, s
 bool add_known_hosts(const std::string &hostname, bool permitted, const std::string &method, const std::string &method_info);
 
 // Ask the terminal user if a given certificate is acceptable.
-bool ask_cert_confirmation(const std::string &host_alias, const std::string &fingerprint);
+bool ask_cert_confirmation(const std::string &host_alias, const std::string &fingerprint, const std::string &dn, bool is_ca_cert);
 }

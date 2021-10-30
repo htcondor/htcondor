@@ -549,11 +549,13 @@ bool htcondor::add_known_hosts(const std::string &hostname, bool permitted, cons
 }
 
 
-bool htcondor::ask_cert_confirmation(const std::string &host_alias, const std::string &fingerprint)
+bool htcondor::ask_cert_confirmation(const std::string &host_alias, const std::string &fingerprint, const std::string &dn, bool is_ca_cert)
 {
-	printf("The remote host %s presented an untrusted certificate with the following fingerprint:\n",
-		host_alias.c_str());
+	printf("The remote host %s presented an untrusted %scertificate with the following fingerprint:\n",
+		host_alias.c_str(),
+		is_ca_cert ? "CA " : "");
 	printf("SHA-256: %s\n", fingerprint.c_str());
+	printf("Subject: %s\n", dn.c_str());
 	printf("Would you like to trust this server for current and future communications?\n");
 
 	std::string response;
