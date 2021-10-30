@@ -2113,6 +2113,14 @@ void CollectorDaemon::sendCollectorAd()
 	//
 	int error = 0;
 	ClassAd * selfAd = new ClassAd(*ad);
+
+		// Administrative security sessions are added directly in the daemon core code; since we
+		// are bypassing DC and invoking collector.collect on the selfAd, invoke it here as well.
+	std::string capability;
+	if (daemonCore->SetupAdministratorSession(1800, capability)) {
+		selfAd->InsertAttr(ATTR_REMOTE_ADMIN_CAP, capability);
+	}
+
 	if( ! collector.collect( UPDATE_COLLECTOR_AD, selfAd, condor_sockaddr::null, error ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to add my own ad to myself (%d).\n", error );
 	}

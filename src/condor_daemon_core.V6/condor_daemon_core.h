@@ -1797,6 +1797,16 @@ class DaemonCore : public Service
 	} dc_stats;
 
 	bool wants_dc_udp_self() const { return m_wants_dc_udp_self;}
+
+		// Create a session that permits a remote entity to be an administrator
+		// of this daemon.
+		// - duration: Lifetime of the session.
+		// - capability (output): Resulting serialized session string.
+		// - Return: true on success.
+		// This is public so the collector process can invoke this directly for
+		// its selfAd.
+	bool SetupAdministratorSession(unsigned duration, std::string &capability);
+
   private:      
 
 		// do and our parents/children want/have a udp comment socket?
@@ -2359,13 +2369,6 @@ class DaemonCore : public Service
 	void InitSharedPort(bool in_init_dc_command_socket=false);
 
 	std::string m_inherit_parent_sinful;
-
-		// Create a session that permits a remote entity to be an administrator
-		// of this daemon.
-		// - duration: Lifetime of the session.
-		// - capability (output): Resulting serialized session string.
-		// - Return: true on success.
-	bool SetupAdministratorSession(unsigned duration, std::string &capability);
 
 		// Enable remote administration for this daemon.
 	void SetRemoteAdmin(bool remote_admin);
