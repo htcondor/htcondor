@@ -125,7 +125,7 @@ int launch_vpn_client(int argc, char *argv[], DCVPN &vpn, std::string lease, uns
 		fprintf(stderr, "Failed to parse network address: %s\n", netmask_str.c_str());
 		return 1;
 	}
-	printf("VPN client will use netmask %s.\n", netmask_str.c_str());
+	//printf("VPN client will use netmask %s.\n", netmask_str.c_str());
 	in_addr_t gw = htonl(inet_network(gwaddr_str.c_str()));
 	if (!gw) {
 		fprintf(stderr, "Failed to parse gateway IP address: %s\n", gwaddr_str.c_str());
@@ -254,7 +254,7 @@ int launch_vpn_client(int argc, char *argv[], DCVPN &vpn, std::string lease, uns
 //-------------------------------------------------------------
 void print_usage(const char *argv0)
 {
-	fprintf(stderr, "Usage: %s [-name NAME] [-pool POOL] -- <COMMAND>"
+	fprintf(stderr, "Usage: %s [-name NAME] [-pool POOL] -- <COMMAND>\n"
 		"Launches COMMAND inside a VPN hosted by the specified VPN server.\n"
 		"Options:\n"
 		"    -name    <NAME>     Find a VPN daemon with this name\n"
