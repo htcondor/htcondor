@@ -735,9 +735,20 @@ bool setup_ipam()
 
 
 //-------------------------------------------------------------
-void main_init(int /* argc */, char * /* argv */ [])
+void main_init(int /* argc */, char * argv [])
 {
 	dprintf(D_FULLDEBUG, "main_init() called\n");
+
+		// The access to the setgroups file is problematic if the process
+		// was spawned as root; if we can effectively change UID to root,
+		// then re-exec as condor.
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		if (!geteuid()) {
+			set_priv(PRIV_CONDOR_FINAL);
+			execv("/proc/self/exe", argv);
+		}
+	}
 
 	g_child_reaper = daemonCore->Register_Reaper("Child namespace reaper",
 		&reap_child,
