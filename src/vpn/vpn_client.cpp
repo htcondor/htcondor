@@ -257,8 +257,9 @@ void print_usage(const char *argv0)
 	fprintf(stderr, "Usage: %s [-name NAME] [-pool POOL] -- <COMMAND>\n"
 		"Launches COMMAND inside a VPN hosted by the specified VPN server.\n"
 		"Options:\n"
-		"    -name    <NAME>     Find a VPN daemon with this name\n"
-		"    -pool    <POOL>     Query this collector\n",
+		"    -name       <NAME>     Find a VPN daemon with this name\n"
+		"    -constraint <CONST>    Query constraint for finding a VPN daemon\n"
+		"    -pool       <POOL>     Query this collector\n",
 		argv0);
 }
 
@@ -273,6 +274,7 @@ int main(int argc, char *argv[]) {
 
 	std::string pool;
 	std::string name;
+	std::string constraint;
 
 	int command_index = -1;
 	for (int i = 1; i < argc; i++) {
@@ -292,7 +294,14 @@ int main(int argc, char *argv[]) {
 			}
 			name = argv[i];
 		}
-		else if (is_dash_arg_prefix(argv[i], "debug", 1)) {
+		else if (is_dash_arg_prefix(argv[i], "constraint", 1)) {
+			i++;
+			if (!argv[i]) {
+				fprintf(stderr, "%s: -constraint requires an argument.\n", argv[0]);
+				exit(1);
+			}
+			constraint = argv[i];
+		} else if (is_dash_arg_prefix(argv[i], "debug", 1)) {
 			dprintf_set_tool_debug("TOOL", 0);
 		}
 		else if (is_dash_arg_prefix(argv[i], "help", 1)) {
@@ -314,8 +323,39 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
-	DCVPN vpn(name.empty() ? nullptr : name.c_str(),
-		pool.empty() ? nullptr : pool.c_str());
+	std::string addr;
+	if (!constraint.empty()) {
+		if (!name.empty()) {
+			fprintf(stderr, "Error! -constraint and -name option are incompatible.\n");
+			exit(1);
+		}
+		CondorQuery query(VPN_AD);
+		query.addANDConstraint("MyType == \"VPN\"");
+		query.addANDConstraint(constraint.c_str());
+		query.setLocationLookup("foo");
+
+		std::unique_ptr<CollectorList> collectors(CollectorList::create(pool.empty() ? nullptr : pool.c_str()));
+		CondorError errstack;
+		ClassAdList ads;
+		if (collectors->query(query, ads) != Q_OK) {
+			fprintf(stderr, "Failed to query for VPN servers.\n");
+			exit(1);
+		}
+		ads.Open();
+		ClassAd *scan;
+		std::vector<std::string> vpn_ads;
+		while ((scan = ads.Next())) {
+			std::string addr;
+			if (!scan->EvaluateAttrString(ATTR_MY_ADDRESS, addr)) {
+				continue;
+			}
+			vpn_ads.emplace_back(addr);
+		}
+		addr = vpn_ads[get_random_int_insecure() % vpn_ads.size()];
+	}
+
+	DCVPN vpn(addr.empty() ? (name.empty() ? nullptr : name.c_str()) : addr.c_str(),
+		addr.empty() ? (pool.empty() ? nullptr : pool.c_str()) : "");
 
 	if (!vpn.locate(Daemon::LOCATE_FOR_LOOKUP)) {
 		fprintf(stderr, "Couldn't locate VPN (pool=%s, name=%s)\n",
