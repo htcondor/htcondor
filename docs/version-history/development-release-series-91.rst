@@ -63,6 +63,14 @@ New Features:
   for other startd cron jobs; see :macro:`STARTD_CRON_<JobName>_CONDITION`.
   :jira:`667`
 
+- Added a new feature where a uesr can export some of their jobs from the
+  *condor_schedd* in the form of a job-queue file intended to be used by
+  a new temporary *condor_schedd*.
+  After the temporary *condor_schedd* runs the jobs, the results can be
+  imported back to the original *condor_schedd*.
+  This is experimental code that is not suitable for production use.
+  :jira:`179`
+
 - The :ref:`htcondor_command` CLI tool now automates the
   setup of our CHTC Slurm cluster when requesting to run jobs on these
   resources.
