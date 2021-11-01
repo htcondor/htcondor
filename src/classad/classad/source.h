@@ -125,6 +125,7 @@ class ClassAdParser
 		// lexical analyser for parser
 		Lexer	lexer;
 
+		int  depth; // nesting depth of recursive descent parser
 		bool oldClassAd;
 
 		// mutually recursive parsing functions
