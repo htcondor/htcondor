@@ -46,7 +46,9 @@
 #include "credmon_interface.h"
 #include "ipv6_hostname.h"
 #include "dc_vpn.h"
+#ifdef LINUX
 #include "vpn_common.h"
+#endif // LINUX
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "MasterPlugin.h"
