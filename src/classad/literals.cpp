@@ -90,14 +90,14 @@ MakeAbsTime(string timeStr )
 	int len = timeStr.length();
 	int i=len-1; 
 	prevNonSpaceChar(timeStr,i);
-	if((timeStr[i] == 'z') || (timeStr[i] == 'Z')) { // z|Z corresponds to a timezone offset of 0
+	if ((i > 0) && ((timeStr[i] == 'z') || (timeStr[i] == 'Z'))) { // z|Z corresponds to a timezone offset of 0
 		offset = true;
 		timeStr.erase(i,1); // remove the offset section from the string
 		tzhr = 0;
 		tzmin = 0;
-    } else if (timeStr[len-5] == '+' || timeStr[len-5] == '-') {
+    } else if ((len > 5) && (timeStr[len-5] == '+' || timeStr[len-5] == '-')) {
         offset = extractTimeZone(timeStr, tzhr, tzmin);
-    } else if ((timeStr[len-6] == '+' || timeStr[len-6] == '-') && timeStr[len-3] == ':') {
+    } else if ((len > 6) && ((timeStr[len-6] == '+' || timeStr[len-6] == '-') && timeStr[len-3] == ':')) {
         timeStr.erase(len-3, 1);
         offset = extractTimeZone(timeStr, tzhr, tzmin);
     }
