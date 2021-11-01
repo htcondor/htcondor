@@ -151,4 +151,4 @@ RUN pip3 install pytest pytest-httpserver
 # Add daily HTCondor repository for the latest externals for tarballs
 RUN wget -qO - https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-9.1-Daily-Key | apt-key add -
 RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/9.1-daily buster main" > /etc/apt/sources.list.d/htcondor-daily.list
-RUN apt update
+RUN apt update && apt clean

@@ -14,7 +14,9 @@ if [ ! -d $tarball ]; then
 fi
 
 cd $tarball
-for file in $(file $(find -type f)|grep  ' ELF '|sed -e s/:.*//); do
-    echo Setting RPATH to $rpath in $file
-    patchelf --set-rpath $rpath $file
+for file in $(file $(find -type f)|grep  ' ELF '|sed -e s/:.*//|grep -v '\.o$'); do
+    echo Set RPATH to $rpath in $file
+    if ! $(patchelf --set-rpath $rpath $file); then
+        exit 1
+    fi
 done

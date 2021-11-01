@@ -61,6 +61,10 @@ mv condor_tests-* condor_tests-$version-$release-$arch_dist
 (cd condor_tests-$version-$release-$arch_dist; chmod a+x $(file $(find -type f)|grep 'executable'|sed -e s/:.*//))
 (cd condor_tests-$version-$release-$arch_dist; chmod a+x $(find -type f -name script\*))
 $cmd_dir/set-tarball-rpath condor_tests-$version-$release-$arch_dist '$ORIGIN/../lib64'
+if [ $? -ne 0 ];then
+    echo 'ERROR: set rpath script failed'
+    exit 1
+fi
 tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$release-$arch_dist
 rm -r condor_tests-$version-$release-$arch_dist
 
@@ -121,6 +125,10 @@ if [ $? -ne 0 ];then
     exit 1
 fi
 $cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64'
+if [ $? -ne 0 ];then
+    echo 'ERROR: set rpath script failed'
+    exit 1
+fi
 
 # Fixup directory permissions for the tarball
 chmod 755 tarball/etc/condor/passwords.d
