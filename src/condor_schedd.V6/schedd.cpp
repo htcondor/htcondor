@@ -7793,6 +7793,13 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	match->claim_requester = NULL;
 
 	if( !msg->claimed_startd_success() ) {
+		// Re-enable the job for matching in the PrioRec array
+		for (int i = 0; i < N_PrioRecs; i++) {
+			if (PrioRec[i].id.cluster == match->cluster && PrioRec[i].id.proc == match->proc) {
+				PrioRec[i].matched = false;
+				break;
+			}
+		}
 		scheduler.DelMrec(match);
 		return;
 	}
