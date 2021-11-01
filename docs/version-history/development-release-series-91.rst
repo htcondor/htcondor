@@ -15,6 +15,10 @@ Release Notes:
 
 New Features:
 
+- Submission and basic management (list, status, and removal) of :ref:`job_sets` added
+  to the :ref:`htcondor_command` CLI tool.
+  :jira:`793`
+
 - A new configuration variable ``EXTENDED_SUBMIT_COMMANDS`` can now be used to
   extend the submit language by configuration in the *condor_schedd*.
   :jira:`802`
@@ -67,6 +71,11 @@ New Features:
   This is experimental code that is not suitable for production use.
   :jira:`179`
 
+- The :ref:`htcondor_command` CLI tool now automates the
+  setup of our CHTC Slurm cluster when requesting to run jobs on these
+  resources.
+  :jira:`783`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_procd* (and thus all of condor) from starting
@@ -77,6 +86,10 @@ Bugs Fixed:
 - Fixed a bug when computing the identity of a job's X.509 credential that
   isn't a proxy.
   :jira:`800`
+
+- Fixed some bugs which could cause the counts of transferred files
+  reported in the job ad to be inaccurate.
+  :jira:`813`
 
 Version 9.3.0
 -------------
