@@ -284,8 +284,12 @@ void AuditLogJobProxy( const Sock &sock, PROC_ID job_id, const char *proxy_file 
 			 job_id.cluster, job_id.proc );
 	dprintf( D_AUDIT, sock, "proxy path: %s\n", proxy_file );
 
+#if !defined(WIN32)
 #if defined(HAVE_EXT_GLOBUS)
-	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( proxy_file );
+	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read_gsi( proxy_file );
+#else
+	X509Credential *proxy_handle = x509_proxy_read( proxy_file );
+#endif
 
 	if ( proxy_handle == NULL ) {
 		dprintf( D_AUDIT|D_FAILURE, sock, "Failed to read job proxy: %s\n",

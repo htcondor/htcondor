@@ -5544,7 +5544,7 @@ void AddClusterEditedAttributes(std::set<std::string> & ad_keys)
 bool
 ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 {
-#if !defined(HAVE_EXT_GLOBUS)
+#if defined(WIN32)
 	(void)file;
 	(void)owner;
 	(void)x509_attrs;
@@ -5567,7 +5567,11 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 		return false;
 	}
 
-	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( file );
+#if defined(HAVE_EXT_GLOBUS)
+	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read_gsi( file );
+#else
+	X509Credential *proxy_handle = x509_proxy_read( file );
+#endif
 
 	if ( proxy_handle == NULL ) {
 		dprintf( D_FAILURE, "Failed to read job proxy: %s\n",
