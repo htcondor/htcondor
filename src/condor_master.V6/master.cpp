@@ -1741,7 +1741,9 @@ void
 main_shutdown_fast()
 {
 	invalidate_ads();
+#ifdef LINUX
 	invalidate_vpn();
+#endif // LINUX
 
 	MasterShuttingDown = TRUE;
 	daemons.SetAllGoneAction( MASTER_EXIT );
@@ -1789,8 +1791,10 @@ void
 main_shutdown_graceful()
 {
 	invalidate_ads();
+#ifdef LINUX
 	invalidate_vpn();
-	
+#endif // LINUX
+
 	MasterShuttingDown = TRUE;
 	daemons.SetAllGoneAction( MASTER_EXIT );
 
