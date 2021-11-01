@@ -89,14 +89,14 @@ class Literal : public ExprTree
 		 *parsing it as [[[days+]hh:]mm:]ss
 		 * Ex - 1+00:02:00
 		*/		
-		static Literal* MakeRelTime(std::string str);
+		static Literal* MakeRelTime(const std::string &str);
 
 		/** Create a real literal from the given string.
 		 * Use of a scaling factor in the string is not supported.
 		 * @param realstr String representation of a floating-point value.
 		 * @return The literal expression.
 		 */
-		static Literal* MakeReal(std::string realstr);
+		static Literal* MakeReal(const std::string &realstr);
 
 		/// optimized literal makers for common cases.
 		// these skip the error setting reporting on purpose - leaving that to the caller if it is desired.
