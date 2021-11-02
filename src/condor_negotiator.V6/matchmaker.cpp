@@ -1907,7 +1907,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 				// will be zero.  Don't include those submitters.
 
 				if (updateAd.LookupInteger("ResourcesUsed", resUsed)) {
-					cl->sendUpdates(UPDATE_ACCOUNTING_AD, &updateAd, NULL, false);
+					daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &updateAd, NULL, false);
 				}
 			}
 		}
