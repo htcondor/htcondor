@@ -272,7 +272,11 @@ Requires: %name-externals = %version-%release
 %endif
 
 %if %blahp
+%if %globus
 Requires: blahp >= 2.1.1
+%else
+Requires: blahp >= 2.2.0
+%endif
 %endif
 
 # Useful tools are using the Python bindings
