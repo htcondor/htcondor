@@ -2000,7 +2000,7 @@ struct Schedd {
             // Note: x509_error_string() is not thread-safe; hence, we are not using the HTCondor-generated
             // error handling.
             result_expiration = x509_proxy_expiration_time(proxy_filename.c_str());
-            if (result < 0) {
+            if (result_expiration < 0) {
                 THROW_EX(HTCondorValueError, "Unable to determine proxy expiration time");
             }
         }

@@ -32,12 +32,6 @@
 
 #include <openssl/x509v3.h>
 
-#if defined(HAVE_EXT_GLOBUS)
-// Note: this is from OpenSSL, but should be present if Globus is.
-// Only used if HAVE_EXT_GLOBUS.
-#     include "openssl/x509v3.h"
-#endif
-
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
 
 static std::string _globus_error_message;
