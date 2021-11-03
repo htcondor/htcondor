@@ -76,6 +76,11 @@ New Features:
   resources.
   :jira:`783`
 
+- When running *remote_gahp* interactively to start a remote
+  *condor_ftp-gahp* instance, the user no longer has to set a fake
+  ``CONDOR_INHERIT`` environment variable.
+  :jira:`819`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented the *condor_procd* (and thus all of condor) from starting
