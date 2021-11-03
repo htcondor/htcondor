@@ -4095,7 +4095,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			// we've rolled over to a new job with procid 0
 			// create the allocation for what we've built up.
 		if (! firstTime && id.proc == 0) {
-			dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.%d)\n", id.cluster, id.proc);
+			dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.*)\n", last_id.cluster);
 
 			// We're going to try to start this reconnect job, so remove it
 			// from the reconnectLater list
@@ -4239,7 +4239,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 
 		// Last time through, create the last bit of allocations, if there are any
 	if (machinesToAllocate.Number() > 0) {
-		dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.%d)\n", id.cluster, id.proc);
+		dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.*)\n", id.cluster);
 		// We're going to try to start this reconnect job, so remove it
 		// from the reconnectLater list
 		removeFromList(&jobsToReconnectLater, &jobsToAllocate);
