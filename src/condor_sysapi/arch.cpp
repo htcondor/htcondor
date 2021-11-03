@@ -671,6 +671,10 @@ sysapi_find_linux_name( const char *info_str )
         {
                 distro = strdup("CentOS");
         }  
+        else if ( strstr(distro_name_lc, "rocky") )
+        {
+                distro = strdup("Rocky");
+        }
         else if ( strstr(distro_name_lc, "amazon linux") )
         {
                 distro = strdup("AmazonLinux");

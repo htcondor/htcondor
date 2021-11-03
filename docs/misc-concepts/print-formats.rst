@@ -253,15 +253,6 @@ value of certain attributes, often multiple attributes. The list for *condor_q* 
    not passed to *condor_q*.  When the ``-dag`` option is passed,
    it returns the value of  ``DAGNodeName`` for jobs that have a ``DAGManJobId`` defined, and ``Owner`` for all other jobs.
 
-``GLOBUS_HOST``
-   Used for the ``MANAGER HOST`` column of the ``-globus`` output of *condor_q*.
-   This function extracts and returns the jobmanager and host portions of the ``GridResource`` job attribute.
-   The manager is truncated to 8 characters and host to 18 characters.  If ``GridResource`` is undefined, the result is empty.
-
-``GLOBUS_STATUS``
-   Used for the ``STATUS`` column of the ``-globus`` ouptut of *condor_q*.
-   The function returns the value of ``GlobusStatus`` as a string.
-
 ``GRID_JOB_ID``
    Used for the ``GRID_JOB_ID`` column of the ``-grid`` output of *condor_q*.
    This function extracts and returns the job id from the ``GridJobId`` attribute.
@@ -274,8 +265,8 @@ value of certain attributes, often multiple attributes. The list for *condor_q* 
 ``GRID_STATUS``
    Used for the ``STATUS`` column of the ``-grid`` output of *condor_q*.
    This function renders the status of grid jobs from the ``GridJobStatus`` attribute.
-   If the attribute has a string value it is reported unmodified, Otherwise if the job has a ``GlobusStatus`` attribute
-   that is converted to a string.  Otherwise if ``GridJobStatus`` is an integer, it is presumed to be a condor job status
+   If the attribute has a string value it is reported unmodified.
+   Otherwise, if ``GridJobStatus`` is an integer, it is presumed to be a condor job status
    and converted to a string.
 
 ``JOB_DESCRIPTION``

@@ -16,7 +16,7 @@
 #endif
 #endif /* LINUX */
 
-#ifdef HAVE_DLOPEN
+#ifdef UNIX
 #include <dlfcn.h>
 #endif
 
@@ -33,7 +33,7 @@ SystemdManager::~SystemdManager()
 {
 	if (m_handle)
 	{
-#ifdef HAVE_DLOPEN
+#ifdef UNIX
 		dlclose(m_handle);
 #endif
 	}
@@ -60,7 +60,7 @@ SystemdManager::SystemdManager()
 		}
 	}
 
-#ifdef HAVE_DLOPEN
+#ifdef UNIX
 	dlerror();
 #ifdef LIBSYSTEMD_DAEMON_SO
 	m_handle = dlopen(LIBSYSTEMD_DAEMON_SO, RTLD_NOW|RTLD_LOCAL);
@@ -144,7 +144,7 @@ SystemdManager::PrepareForExec() const
 void *
 SystemdManager::GetHandle(const std::string &name)
 {
-#ifdef HAVE_DLOPEN
+#ifdef UNIX
 	if (!m_handle) {return NULL;}
 	void *handle = NULL;
 	dlerror();

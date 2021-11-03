@@ -92,7 +92,7 @@ Wild cards may be used when setting the ``FLOCK_FROM`` configuration
 variable. For example, \*.cs.wisc.edu specifies all hosts from the
 cs.wisc.edu domain.
 
-Further, if using Kerberos or GSI authentication, then the setting
+Further, if using Kerberos or SSL authentication, then the setting
 becomes:
 
 .. code-block:: condor-config

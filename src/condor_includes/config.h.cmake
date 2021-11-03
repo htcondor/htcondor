@@ -154,15 +154,6 @@
 /* Define to 1 if you have the 'dirfd' function. (USED)*/
 #cmakedefine HAVE_DIRFD 1
 
-/* Define to 1 if you have the <dlfcn.h> header file. (USED)*/
-#cmakedefine HAVE_DLFCN_H 1
-
-/* dlopen function is available  (used) */
-#cmakedefine HAVE_DLOPEN 1
-
-/* Define to 1 if you have the 'execl' function. (used)*/
-#cmakedefine HAVE_EXECL 1
-
 /* Define to 1 if you have the 'readdir64' function. (used)*/
 #cmakedefine HAVE_READDIR64 1
 
@@ -238,14 +229,8 @@
 /* Define to 1 if you have the 'getdtablesize' function. (USED)*/
 #cmakedefine HAVE_GETDTABLESIZE 1
 
-/* Define to 1 if you have the 'getpagesize' function. (USED)*/
-#cmakedefine HAVE_GETPAGESIZE 1
-
 /* Define to 1 if you have the 'gettimeofday' function. (USED)*/
 #cmakedefine HAVE_GETTIMEOFDAY 1
-
-/* Define to 1 if you have the 'clock_gettime' function. (USED)*/
-#cmakedefine HAVE_CLOCK_GETTIME 1
 
 /* Define to 1 if you have the 'clock_nanosleep' function. (USED)*/
 #cmakedefine HAVE_CLOCK_NANOSLEEP 1
@@ -261,9 +246,6 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. (USED)*/
 #cmakedefine HAVE_INTTYPES_H 1
-
-/* Define to 1 if you have the 'lchown' function. (USED)*/
-#cmakedefine HAVE_LCHOWN 1
 
 /* Define to 1 if you have the <ldap.h> header file. (USED)*/
 #cmakedefine HAVE_LDAP_H 1
@@ -340,20 +322,8 @@
 /* does sched_setaffinity take two args (USED)*/
 #cmakedefine HAVE_SCHED_SETAFFINITY_2ARG 1
 
-/* Define to 1 if you have the 'setegid' function. (USED)*/
-#cmakedefine HAVE_SETEGID 1
-
-/* Define to 1 if you have the 'setenv' function. (USED)*/
-#cmakedefine HAVE_SETENV 1
-
-/* Define to 1 if you have the 'seteuid' function. (USED)*/
-#cmakedefine HAVE_SETEUID 1
-
 /* Define to 1 if you have the 'setlinebuf' function. (USED)*/
 #cmakedefine HAVE_SETLINEBUF 1
-
-/* Define to 1 if you have the 'snprintf' function. (USED)*/
-#cmakedefine HAVE_SNPRINTF 1
 
 /* Define to 1 if you have the 'eventfd' function. (USED)*/
 #cmakedefine HAVE_EVENTFD 1
@@ -361,20 +331,11 @@
 /* Define to 1 if we have the netgroup innetgr() function */
 #cmakedefine HAVE_INNETGR 1
 
-/* Define to 1 if we have the netgroup getgrnam() function */
-#cmakedefine HAVE_GETGRNAM 1
-
 /* Define to 1 if you have the 'stat64' function. (USED)*/
 #cmakedefine HAVE_STAT64 1
 
 /* Define to 1 if you have the 'statfs' function. (USED)*/
 #cmakedefine HAVE_STATFS 1
-
-/* Define to 1 if you have the 'statvfs' function. (USED)*/
-#cmakedefine HAVE_STATVFS 1
-
-/* Define to 1 if you have the <stdint.h> header file. (USED)*/
-#cmakedefine HAVE_STDINT_H 1
 
 /* Define to 1 if you have the 'strcasestr' function. (USED)*/
 #cmakedefine HAVE_STRCASESTR 1
@@ -394,20 +355,8 @@
 /* Define to 1 if struct sockaddr_in has sin_len member. (USED)*/
 #cmakedefine HAVE_STRUCT_SOCKADDR_IN_SIN_LEN 1
 
-/* Define to 1 if 'f_fstyp' is member of 'struct statfs'. (USED)*/
-#cmakedefine HAVE_STRUCT_STATFS_F_FSTYP 1
-
 /* Define to 1 if 'f_fstypename' is member of 'struct statfs'. (USED)*/
 #cmakedefine HAVE_STRUCT_STATFS_F_FSTYPENAME 1
-
-/* Define to 1 if 'f_type' is member of 'struct statfs'. (USED)*/
-#cmakedefine HAVE_STRUCT_STATFS_F_TYPE 1
-
-/* Define to 1 if 'f_basetype' is member of 'struct statvfs'. (USED)*/
-#cmakedefine HAVE_STRUCT_STATVFS_F_BASETYPE 1
-
-/* Define to 1 if you have the <sys/mount.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_MOUNT_H 1
 
 /* Define to 1 if you have the <sys/param.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_PARAM_H 1
@@ -418,20 +367,8 @@
 /* Define to 1 if you have the <sys/syscall.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_SYSCALL_H 1
 
-/* Define to 1 if you have the <sys/statfs.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_STATFS_H 1
-
-/* Define to 1 if you have the <sys/statvfs.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_STATVFS_H 1
-
 /* Define to 1 if you have the <sys/types.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_TYPES_H 1
-
-/* Define to 1 if you have the <sys/vfs.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_VFS_H 1
-
-/* Define to 1 if you have the <ustat.h> header file. (USED)*/
-#cmakedefine HAVE_USTAT_H 1
 
 /* Define to 1 if you have the <valgrind.h> header file. (USED)*/
 #cmakedefine HAVE_VALGRIND_H 1
@@ -447,9 +384,6 @@
 
 /* Define if vmware is available (USED)*/
 #cmakedefine HAVE_VMWARE 1
-
-/* "use system (v)snprintf instead of our replacement" (USED)*/
-#cmakedefine HAVE_WORKING_SNPRINTF 1
 
 /* Define to 1 if you have the '_fstati64' function. (USED)*/
 #cmakedefine HAVE__FSTATI64 1

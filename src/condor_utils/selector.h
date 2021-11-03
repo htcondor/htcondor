@@ -23,11 +23,8 @@
 
 #include "condor_common.h"
 
-#ifdef CONDOR_HAVE_POLL
-#define SELECTOR_USE_POLL 1
-#endif
-
-#ifdef SELECTOR_USE_POLL
+#ifdef UNIX
+#define SELECTOR_USE_POLL
 #include <poll.h>
 #else
 // We define stubs for pollfd so we don't have to sprinkle our

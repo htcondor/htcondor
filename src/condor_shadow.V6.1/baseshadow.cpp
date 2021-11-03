@@ -42,7 +42,6 @@ BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
 
 // this appears at the bottom of this file:
-//extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 extern bool sendUpdatesToSchedd;
 
@@ -138,8 +137,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		prev_run_bytes_recvd = 0;
 	}
 
-	jobAd->LookupInteger(ATTR_TRANSFER_INPUT_FILES_LAST_RUN_COUNT, m_prev_run_upload_file_cnt);
-	jobAd->LookupInteger(ATTR_TRANSFER_OUTPUT_FILES_LAST_RUN_COUNT, m_prev_run_download_file_cnt);
+	jobAd->LookupInteger(ATTR_TRANSFER_INPUT_FILES_TOTAL_COUNT, m_prev_run_upload_file_cnt);
+	jobAd->LookupInteger(ATTR_TRANSFER_OUTPUT_FILES_TOTAL_COUNT, m_prev_run_download_file_cnt);
 
 		// construct the core file name we'd get if we had one.
 	std::string tmp_name = iwd;
@@ -1503,9 +1502,7 @@ extern BaseShadow *Shadow;
 
 // This function is called by dprintf - always display our job, proc,
 // and pid in our log entries. 
-//extern "C" 
 int
-//display_dprintf_header(char **buf,int *bufpos,int *buflen)
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	static pid_t mypid = 0;

@@ -26,10 +26,10 @@ using namespace std;
 
 namespace classad {
 
-static inline void nextDigitChar(string Str, int &index);
-static inline void prevNonSpaceChar(string Str, int &index);
-static int revInt(string revNumStr);
-static double revDouble(string revNumStr);
+static inline void nextDigitChar(const string &Str, int &index);
+static inline void prevNonSpaceChar(const string &Str, int &index);
+static int revInt(const string &revNumStr);
+static double revDouble(const string &revNumStr);
 static bool extractTimeZone(string &timeStr, int &tzhr, int &tzmin);
 
 
@@ -41,7 +41,7 @@ void Literal::setError(int err, const char *msg /*=NULL*/)
 
 
 Literal* Literal::
-MakeReal(string number_string) 
+MakeReal(const string &number_string) 
 {
 	char   *end;
 	double real = strtod(number_string.c_str(), &end);
@@ -90,14 +90,14 @@ MakeAbsTime(string timeStr )
 	int len = timeStr.length();
 	int i=len-1; 
 	prevNonSpaceChar(timeStr,i);
-	if((timeStr[i] == 'z') || (timeStr[i] == 'Z')) { // z|Z corresponds to a timezone offset of 0
+	if ((i > 0) && ((timeStr[i] == 'z') || (timeStr[i] == 'Z'))) { // z|Z corresponds to a timezone offset of 0
 		offset = true;
 		timeStr.erase(i,1); // remove the offset section from the string
 		tzhr = 0;
 		tzmin = 0;
-    } else if (timeStr[len-5] == '+' || timeStr[len-5] == '-') {
+    } else if ((len > 5) && (timeStr[len-5] == '+' || timeStr[len-5] == '-')) {
         offset = extractTimeZone(timeStr, tzhr, tzmin);
-    } else if ((timeStr[len-6] == '+' || timeStr[len-6] == '-') && timeStr[len-3] == ':') {
+    } else if ((len > 6) && ((timeStr[len-6] == '+' || timeStr[len-6] == '-') && timeStr[len-3] == ':')) {
         timeStr.erase(len-3, 1);
         offset = extractTimeZone(timeStr, tzhr, tzmin);
     }
@@ -220,7 +220,7 @@ MakeRelTime( time_t secs )
  * Ex - 1+00:02:00
  */
 Literal* Literal::
-MakeRelTime(string timeStr)
+MakeRelTime(const string &timeStr)
 {
 	Value val;  
 	double rsecs;
@@ -312,7 +312,7 @@ MakeRelTime(string timeStr)
 /* Function which iterates through the string Str from the location 'index', 
  *returning the index of the next digit-char 
  */
-static inline void nextDigitChar(string Str, int &index) 
+static inline void nextDigitChar(const string &Str, int &index) 
 {
 	int len = Str.length();
     while((index<len) &&(!isdigit(Str[index]))) {
@@ -324,7 +324,7 @@ static inline void nextDigitChar(string Str, int &index)
 /* Function which iterates through the string Str backwards from the location 'index'
  *returning the index of the first occuring non-space character
  */
-static inline void prevNonSpaceChar(string Str, int &index) 
+static inline void prevNonSpaceChar(const string &Str, int &index) 
 {
     while((index>=0) &&(isspace(Str[index]))) {
 		index--;
@@ -336,7 +336,7 @@ static inline void prevNonSpaceChar(string Str, int &index)
  * order of the digits & returns the corresponding number as an
  * integer.
  */
-static int revInt(string revNumStr) 
+static int revInt(const string &revNumStr) 
 {
 	string numStr = "";
     int number;
@@ -353,7 +353,7 @@ static int revInt(string revNumStr)
 /* Function which takes a number in string format, and reverses the
  * order of the digits & returns the corresponding number as a double.
  */
-static double revDouble(string revNumStr) 
+static double revDouble(const string &revNumStr) 
 {
 	string numStr = "";
     double number;

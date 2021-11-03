@@ -32,8 +32,6 @@
 #include "condor_uid.h"
 #include "ipv6_hostname.h"
 
-extern "C" {
-
 // Return the host portion of a daemon name string.  Either the name
 // includes an "@" sign, in which case we return whatever is after it,
 // or it doesn't, in which case we just return what we got passed.
@@ -187,5 +185,3 @@ default_daemon_name( void )
 	return ans;
 }
 
-
-} /* extern "C" */

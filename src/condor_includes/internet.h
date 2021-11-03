@@ -36,10 +36,7 @@
 /* maximum length of a machine name */
 #define  MAXHOSTLEN     1024
 
-#if defined(__cplusplus)
 #include "MyString.h"
-extern "C" {
-#endif
 
 /* Extract the port from a string of the form "<xx.xx.xx.xx:pppp>" */
 int string_to_port( const char* addr );
@@ -70,11 +67,6 @@ int getPortFromAddr( const char* addr );
    allocated string which must be de-allocated with free(). */
 char* getHostFromAddr( const char* addr );
 
-#if defined(__cplusplus)
-}
-
 std::string generate_sinful(const char* ip, int port);
-
-#endif
 
 #endif /* INTERNET_H */

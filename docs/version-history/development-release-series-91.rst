@@ -1,7 +1,7 @@
-Development Release Series 9.1
-==============================
+Version 9 Feature Releases
+==========================
 
-This is the development release series of HTCondor. The details of each
+We release new features in these releases of HTCondor. The details of each
 version are described below.
 
 Version 9.4.0
@@ -15,6 +15,14 @@ Release Notes:
 
 New Features:
 
+- Submission and basic management (list, status, and removal) of :ref:`job_sets` added
+  to the :ref:`htcondor_command` CLI tool.
+  :jira:`793`
+
+- A new configuration variable ``EXTENDED_SUBMIT_COMMANDS`` can now be used to
+  extend the submit language by configuration in the *condor_schedd*.
+  :jira:`802`
+
 - SINGULARITY_EXTRA_ARGUMENTS can now be a classad expression, so that the
   extra arguments can depend on the job.
   :jira:`570`
@@ -26,13 +34,65 @@ New Features:
   tool also now supports the ``-debug`` and ``-help`` flags.
   :jira:`707`
 
+- Added a config parameter HISTORY_CONTAINS_JOB_ENVIRONMENT which defaults to true.
+  When false, the job's environment attribute is not saved in the history file.  For
+  some sites, this can substantially reduce the size of the history file, and allow
+  the history to contain many more jobs before rotation.
+  :jira:`497`
+
 - Added an attribute to the job ClassAd ``LastRemoteWallClockTime``.  It holds
   the wall clock time of the most recent completed job execution.
   :jira:`751`
 
+- ``JOB_TRANSFORM_*`` and ``SUBMIT_REQUIREMENT_*`` operations in the *condor_schedd*
+  are now applied to late materialization job factories at submit time.
+  :jira:`756`
+
+- Added option ``--rgahp-nologin`` to **remote_gahp**, which removes the
+  ``-l`` option normally given to ``bash`` when starting a remote **blahpd**
+  or **condor_ft-gahp**.
+  :jira:`734`
+
+- Herefile support was added to configuration templates, and the template
+  ``use FEATURE : AssignAccountingGroup`` was converted to from the old
+  transform  syntax to the the native transform syntax which requires that support.
+  :jira:`796`
+
+- The GPU monitor will no longer run if ``use feature:GPUs`` is enabled
+  but GPU discovery did not detect any GPUs.  This mechanism is available
+  for other startd cron jobs; see :macro:`STARTD_CRON_<JobName>_CONDITION`.
+  :jira:`667`
+
+- Added a new feature where a uesr can export some of their jobs from the
+  *condor_schedd* in the form of a job-queue file intended to be used by
+  a new temporary *condor_schedd*.
+  After the temporary *condor_schedd* runs the jobs, the results can be
+  imported back to the original *condor_schedd*.
+  This is experimental code that is not suitable for production use.
+  :jira:`179`
+
+- The :ref:`htcondor_command` CLI tool now automates the
+  setup of our CHTC Slurm cluster when requesting to run jobs on these
+  resources.
+  :jira:`783`
+
 Bugs Fixed:
 
-- None.
+- Fixed a bug that prevented the *condor_procd* (and thus all of condor) from starting
+  when running under QEMU emulation.  Condor can now build and run under QEMU ARM
+  emulation with this fix.
+  :jira:`761`
+
+- Fixed several unlikely bugs when parsing the time strings in classads
+  :jira:`814`
+
+- Fixed a bug when computing the identity of a job's X.509 credential that
+  isn't a proxy.
+  :jira:`800`
+
+- Fixed some bugs which could cause the counts of transferred files
+  reported in the job ad to be inaccurate.
+  :jira:`813`
 
 Version 9.3.0
 -------------
@@ -42,6 +102,17 @@ Release Notes:
 .. HTCondor version 9.3.0 released on Month Date, 2021.
 
 - HTCondor version 9.3.0 not yet released.
+
+- As we transition from identity based authentication and authorization
+  (X.509 certificates) to capability based authorization (bearer tokens),
+  we have removed Globus GSI support from this release.
+  :jira:`697`
+
+- Submission to ARC CE via the gridftp interface (grid universe type
+  **nordugrid**) is no longer supported.
+  Submission to ARC CE's REST interface can be done using the **arc**
+  type in the grid universe.
+  :jira:`697`
 
 New Features:
 

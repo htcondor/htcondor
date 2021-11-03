@@ -41,7 +41,7 @@
 
 #include "collector.h"
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
 #include "CollectorPlugin.h"
 #endif
 
@@ -1199,7 +1199,7 @@ int CollectorDaemon::receive_invalidation(int command,
     /* let the off-line plug-in invalidate the given ad */
     offline_plugin_.invalidate ( command, cad );
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
 	CollectorPluginManager::Invalidate(command, cad);
 #endif
 
@@ -1286,7 +1286,7 @@ int CollectorDaemon::receive_update(int command, Stream* sock)
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *cad );
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
 	CollectorPluginManager::Update(command, *cad);
 #endif
 
@@ -1426,7 +1426,7 @@ int CollectorDaemon::receive_update_expect_ack(int command,
 	if(cad)
     offline_plugin_.update ( command, *cad );
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
     CollectorPluginManager::Update ( command, *cad );
 #endif
 

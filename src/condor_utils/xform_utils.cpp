@@ -95,7 +95,7 @@ static MACRO_DEF_ITEM XFormMacroDefaults[] = {
 
 
 // setup XFormParamInfoDefaults using the global param table
-extern "C" { int param_info_init(const void ** pvdefaults); }
+int param_info_init(const void ** pvdefaults);
 static MACRO_DEFAULTS XFormParamInfoDefaults = { 0, NULL, NULL };
 
 // these are used to keep track of the source of various macros in the table.

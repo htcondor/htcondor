@@ -27,6 +27,8 @@
 #include "condor_cron_job_mode.h"
 #include "condor_cron_job_params.h"
 
+#include "classad/classad.h"
+
 CronJobParams::CronJobParams( const char		*job_name,
 							  const CronJobMgr	&mgr )
 		: CronParamBase( *(mgr.GetParamBase()) ),
@@ -84,6 +86,7 @@ CronJobParams::Initialize( void )
 	MyString param_env;
 	MyString param_cwd;
 	double   param_job_load;
+	MyString param_condition;
 
 	Lookup( "PREFIX", param_prefix );
 	Lookup( "EXECUTABLE", param_executable );
@@ -96,6 +99,7 @@ CronJobParams::Initialize( void )
 	Lookup( "ENV", param_env );
 	Lookup( "CWD", param_cwd );
 	Lookup( "JOB_LOAD", param_job_load, 0.01, 0, 100.0 );
+	Lookup( "CONDITION", param_condition );
 
 	// Some quick sanity checks
 	if ( param_executable.empty() ) {
@@ -128,7 +132,7 @@ CronJobParams::Initialize( void )
 				 GetName() );
 		return false;
 	}
-	
+
 	// Are there arguments for it?
 	if ( !InitArgs( param_args ) ) {
 		dprintf( D_ALWAYS,
@@ -153,6 +157,18 @@ CronJobParams::Initialize( void )
 	m_optKill = param_kill_mode;
 	m_optReconfig = param_reconfig;
 	m_optReconfigRerun = param_reconfig_rerun;
+
+	// Parse the condition.
+	if(! param_condition.empty()) {
+		m_condition.set(strdup(param_condition.c_str()));
+		if(! m_condition.Expr()) {
+			dprintf( D_ALWAYS,
+				 "CronJobParams: Failed to initialize condition '%s' for job %s\n",
+				 param_condition.c_str(), GetName() );
+			return false;
+		}
+		dprintf( D_FULLDEBUG, "CronJobParams(%s): CONDITION is (%s)\n", GetName(), param_condition.c_str() );
+	}
 
 	return true;
 }
