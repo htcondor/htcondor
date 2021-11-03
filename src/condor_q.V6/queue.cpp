@@ -2248,7 +2248,7 @@ render_batch_name (std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 
 
 static bool
-render_gridStatus( std::string & result, ClassAd * ad, Formatter & /* fmt */ )
+render_gridStatus( std::string & result, ClassAd * ad, Formatter & fmt )
 {
 	if (ad->LookupString(ATTR_GRID_JOB_STATUS, result)) {
 		return true;
