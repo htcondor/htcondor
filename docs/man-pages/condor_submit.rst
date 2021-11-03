@@ -1412,9 +1412,6 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     This command is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
 
-    This command currently only functions for the vanilla, docker,
-    scheduler, local, and grid universes.
-
  max_retries = <integer>
     The maximum number of retries allowed for this job (must be
     non-negative). If the job fails (does not exit with the
