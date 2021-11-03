@@ -18,7 +18,7 @@ Release Notes:
   we have removed Globus GSI support from this release.
   :jira:`697`
 
-- Submission to ARC CE via the gridftp interface (grid universe type
+- Submission to ARC CE via the GridFTP interface (grid universe type
   **nordugrid**) is no longer supported.
   Submission to ARC CE's REST interface can be done using the **arc**
   type in the grid universe.
@@ -34,16 +34,20 @@ New Features:
   ``OpSysLongName`` is now ``"macOS 10.15"`` instead of ``"MacOSX 15.4"``.
   :jira:`627`
 
+- Added an example template for a custom file transfer plugin, which can be
+  used to build new plugins.
+  :jira:`728`
+
+- Added a new generic knob for setting the slot user for all slots.  Configure
+  ''NOBODY_SLOT_USER`` for all slots, instead of configuring a ``SLOT<N>_USER`` for each slot.
+  :jira:`720`
+
 - Improved and simplified how HTCondor locates the blahp software.
   Configuration parameter ``GLITE_LOCATION`` has been replaced by
   ``BLAHPD_LOCATION``.
   :jira:`713`
 
-- Added an example template for a custom file transfer plugin, which can be
-  used to build new plugins.
-  :jira:`728`
-
-- Added new attributes to the job classad which records the number of files 
+- Added new attributes to the job ClassAd which records the number of files 
   transferred between the *condor_shadow* and *condor_starter* only during
   the last run of the job.
   :jira:`741`
@@ -52,10 +56,6 @@ New Features:
   directory disappearing, verify that the directory is expected to exist
   and require that the job not be local universe.
   :jira:`680`
-
-- Added a new generic knob for setting the slot user for all slots.  Configure
-  ''NOBODY_SLOT_USER`` for all slots, instead of configuring a ``SLOT<N>_USER`` for each slot.
-  :jira:`720`
 
 Bugs Fixed:
 
