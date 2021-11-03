@@ -6488,7 +6488,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 				//
 
 				ASSERT( SpoolSpace == NULL || fullpath(SpoolSpace) );
-				if( SpoolSpace != NULL && starts_with(src_path, SpoolSpace) ) {
+				if( SpoolSpace != nullptr && starts_with(src_path, SpoolSpace) ) {
 					const char * relative_path = &src_path[strlen(SpoolSpace)];
 					if( IS_ANY_DIR_DELIM_CHAR(relative_path[0]) ) { ++relative_path; }
 					// dprintf( D_ALWAYS, ">>> preserving relative path of directory (%s) in SPOOL (as %s)\n", src_path, relative_path );
