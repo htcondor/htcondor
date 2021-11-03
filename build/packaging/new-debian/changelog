@@ -1,3 +1,13 @@
+condor (9.0.7-1) stable; urgency=medium
+
+  * Fix bug where condor_gpu_discovery could crash with older CUDA libraries
+  * Fix bug where condor_watch_q would fail on machines with older kernels
+  * condor_watch_q no longer has a limit on the number of job event log files
+  * Fix bug where a startd could crash claiming a slot with p-slot preemption
+  * Fix bug where a job start would not be recorded when a shadow reconnects
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 02 Nov 2021 14:54:00 -0500
+
 condor (9.2.0-1) stable; urgency=medium
 
   * Add SERVICE node that runs alongside the DAG for the duration of the DAG
