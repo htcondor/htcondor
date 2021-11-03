@@ -9,9 +9,9 @@ Version 9.3.0
 
 Release Notes:
 
-.. HTCondor version 9.3.0 released on Month Date, 2021.
+- HTCondor version 9.3.0 released on Month Date, 2021.
 
-- HTCondor version 9.3.0 not yet released.
+- This version includes all the updates from :ref:`lts-version-history-907`.
 
 - As we transition from identity based authentication and authorization
   (X.509 certificates) to capability based authorization (bearer tokens),
