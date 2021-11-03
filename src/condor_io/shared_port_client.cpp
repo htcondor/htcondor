@@ -624,7 +624,7 @@ SharedPortState::HandleUnbound(Stream *&s)
 				m_sock_name.c_str(),
 				m_requested_by.c_str(),
 #ifdef USE_ABSTRACT_DOMAIN_SOCKET
-				"<cookie>/", m_sock_name.c_str();
+				"<cookie>/", m_sock_name.c_str(),
 #else
 				"", sock_name.c_str(),
 #endif
