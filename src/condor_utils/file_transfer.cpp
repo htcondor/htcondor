@@ -3841,7 +3841,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 
 	// Remove any files from the catalog that are in the ExceptionList
 	if (ExceptionFiles) {
-		auto enditer =
+		auto enditer = 
 			std::remove_if(
 					filelist.begin(),
 					filelist.end(),
