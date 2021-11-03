@@ -438,7 +438,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 		if( ad.LookupInteger( ATTR_SHADOW_BIRTHDATE, birthday ) ) {
 			if( time(NULL) - birthday >= allowedJobDuration ) {
 				m_fire_expr = ATTR_JOB_ALLOWED_JOB_DURATION;
-				m_fire_reason = "job exceeded allowed job duration";
+				formatstr(m_fire_reason, "The job exceeded allowed job duration of %d", allowedJobDuration);
 				return HOLD_IN_QUEUE;
 			}
 		}
