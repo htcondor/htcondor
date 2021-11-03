@@ -38,6 +38,10 @@ Bugs Fixed:
   start the job.
   :jira:`798`
 
+- Fixed daemon log message that could allow unintended processes to use
+  the **condor_shared_port** service.
+  :jira:`725`
+
 Version 9.0.7
 -------------
 
