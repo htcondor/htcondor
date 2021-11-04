@@ -1,3 +1,5 @@
+<Insert PR description here, and leave checklist below for code review.>
+
 # HTCondor Pull Request Checklist for internal reviewers
 
 - [ ] Verify that (GitHub thinks) the merge is clean. If it isn't, and you're confident you can resolve the conflicts, do so. Otherwise, send it back to the original developer.
