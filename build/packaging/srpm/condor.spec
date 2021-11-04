@@ -1674,6 +1674,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Nov 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.7-1
+- Fix bug where condor_gpu_discovery could crash with older CUDA libraries
+- Fix bug where condor_watch_q would fail on machines with older kernels
+- condor_watch_q no longer has a limit on the number of job event log files
+- Fix bug where a startd could crash claiming a slot with p-slot preemption
+- Fix bug where a job start would not be recorded when a shadow reconnects
+
 * Thu Sep 23 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.6-1
 - CUDA_VISIBLE_DEVICES can now contain GPU-<uuid> formatted values
 - Fixed a bug that caused jobs to fail when using newer Singularity versions
