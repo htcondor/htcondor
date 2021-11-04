@@ -5389,6 +5389,9 @@ int SubmitHash::SetExtendedJobExprs()
 				if (strchr(str.c_str(), ',')) { cmd[0].opts |= SimpleSubmitKeyword::f_as_list; }
 				else if (starts_with_ignore_case(str, "file")) { cmd[0].opts |= SimpleSubmitKeyword::f_genfile; }
 				} break;
+			default:
+				// SimpleSubmitKeyword::f_as_expr
+				break;
 			}
 		}
 		// apply the command
