@@ -4163,7 +4163,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	}
 	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after duplicate removal: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 
-	std::sort(filelist.begin(), filelist.end());
+	std::stable_sort(filelist.begin(), filelist.end());
 	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after sorting: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 	for (auto &fileitem : filelist)
 	{
