@@ -1664,6 +1664,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Nov 03 2021 Tim Theisen <tim@cs.wisc.edu> - 9.3.0-1
+- Discontinue support for Globus GSI
+- Discontinue support for grid type 'nordugrid', use 'arc' instead
+- MacOS version strings now include the major version number (10 or 11)
+- File transfer plugin sample code to aid in developing new plugins
+- Add generic knob to set the slot user for all slots
+
 * Tue Nov 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.7-1
 - Fix bug where condor_gpu_discovery could crash with older CUDA libraries
 - Fix bug where condor_watch_q would fail on machines with older kernels
