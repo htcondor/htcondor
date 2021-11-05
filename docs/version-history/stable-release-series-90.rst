@@ -42,6 +42,10 @@ Bugs Fixed:
   the **condor_shared_port** service.
   :jira:`725`
 
+- Fixed a bug in the ClassAds function ``substr()`` that could cause a
+  crash if the ``offset`` argument was out of range.
+  :jira:`823`
+
 Version 9.0.7
 -------------
 
