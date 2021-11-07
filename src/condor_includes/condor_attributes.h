@@ -309,6 +309,7 @@
 #define ATTR_JAVA_VERSION  "JavaVersion"
 #define ATTR_JOB_ACTION  "JobAction"
 #define ATTR_JOB_ALLOWED_JOB_DURATION  "AllowedJobDuration"
+#define ATTR_JOB_ALLOWED_EXECUTE_DURATION "AllowedExecuteDuration"
 #define ATTR_JOB_MATERIALIZE_DIGEST_FILE  "JobMaterializeDigestFile"
 #define ATTR_JOB_MATERIALIZE_ITEMS_FILE   "JobMaterializeItemsFile"
 #define ATTR_JOB_MATERIALIZE_LIMIT        "JobMaterializeLimit"
