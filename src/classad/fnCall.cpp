@@ -1790,6 +1790,9 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 	alen = (int)buf.size( );
 	if( offset < 0 ) { 
 		offset = alen + offset; 
+		if( offset < 0 ) {
+			offset = 0;
+		}
 	} else if( offset >= alen ) {
 		offset = alen;
 	}

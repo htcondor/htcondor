@@ -229,7 +229,10 @@ static bool test_substr_end(void);
 static bool test_substr_middle(void);
 static bool test_substr_negative_index(void);
 static bool test_substr_negative_length(void);
-static bool test_substr_out_of_bounds(void);
+static bool test_substr_out_of_bounds_index(void);
+static bool test_substr_out_of_bounds_index_negative(void);
+static bool test_substr_out_of_bounds_length(void);
+static bool test_substr_out_of_bounds_length_negative(void);
 static bool test_substr_error_index(void);
 static bool test_substr_error_string(void);
 static bool test_formattime_empty(void);
@@ -504,7 +507,10 @@ bool OTEST_Old_Classads(void) {
 	driver.register_function(test_substr_middle);
 	driver.register_function(test_substr_negative_index);
 	driver.register_function(test_substr_negative_length);
-	driver.register_function(test_substr_out_of_bounds);
+	driver.register_function(test_substr_out_of_bounds_index);
+	driver.register_function(test_substr_out_of_bounds_index_negative);
+	driver.register_function(test_substr_out_of_bounds_length);
+	driver.register_function(test_substr_out_of_bounds_length_negative);
 	driver.register_function(test_substr_error_index);
 	driver.register_function(test_substr_error_string);
 	driver.register_function(test_formattime_empty);
@@ -5883,9 +5889,84 @@ static bool test_substr_negative_length() {
 	PASS;
 }
 
-static bool test_substr_out_of_bounds() {
+static bool test_substr_out_of_bounds_index() {
 	emit_test("Test that LookupString() returns 1 and sets the correct actual "
-		"for an attribute using substr() with an out of bounds length.");
+		"for an attribute using substr() with an out of bounds positive index.");
+	const char* classad_string = "\tA1=substr(\"abcdefg\", 9, 3)";
+	ClassAd classad;
+	initAdFromString(classad_string, classad);
+	std::string actual;
+	const char* expect = "";
+	int retVal = classad.LookupString("A1", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
+		FAIL;	}
+	PASS;
+}
+
+static bool test_substr_out_of_bounds_index_negative() {
+	emit_test("Test that LookupString() returns 1 and sets the correct actual "
+		"for an attribute using substr() with an out of bounds negative index.");
+	const char* classad_string = "\tA1=substr(\"abcdefg\", -9, 3)";
+	ClassAd classad;
+	initAdFromString(classad_string, classad);
+	std::string actual;
+	const char* expect = "abc";
+	int retVal = classad.LookupString("A1", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
+		FAIL;	}
+	PASS;
+}
+
+static bool test_substr_out_of_bounds_length() {
+	emit_test("Test that LookupString() returns 1 and sets the correct actual "
+		"for an attribute using substr() with an out of bounds positive length.");
+	const char* classad_string = "\tA1=substr(\"abcdefg\", 3, 9)";
+	ClassAd classad;
+	initAdFromString(classad_string, classad);
+	std::string actual;
+	const char* expect = "defg";
+	int retVal = classad.LookupString("A1", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute", "A1");
+	emit_param("Target", "NULL");
+	emit_param("STRING", "");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("STRING Value", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("STRING Value", "%s", actual.c_str());
+	if(retVal != 1 || strcmp(actual.c_str(), expect) != MATCH) {
+		FAIL;	}
+	PASS;
+}
+
+static bool test_substr_out_of_bounds_length_negative() {
+	emit_test("Test that LookupString() returns 1 and sets the correct actual "
+		"for an attribute using substr() with an out of bounds negative length.");
 	const char* classad_string = "\tA1=substr(\"abcdefg\", 3, -9)";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
