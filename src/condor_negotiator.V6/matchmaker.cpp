@@ -1861,10 +1861,8 @@ void
 Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 		std::set<std::string>::iterator it;
 		
-		//DCCollector collector;
-		CollectorList *cl = daemonCore->getCollectorList();
-		if (cl == NULL) {
-			dprintf(D_ALWAYS, "Not updating collector with accounting information, as no collector are found\n");
+		if (nullptr == daemonCore->getCollectorList()) {
+			dprintf(D_ALWAYS, "Not updating collector with accounting information, as no collectors are found\n");
 			return;
 		}
 	
@@ -1911,12 +1909,12 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 				}
 			}
 		}
-		forwardGroupAccounting(cl, hgq_root_group);
+		forwardGroupAccounting(hgq_root_group);
 		dprintf(D_FULLDEBUG, "Done Updating collector with accounting information\n");
 }
 
 void
-Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
+Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 
 	ClassAd accountingAd;
 	accountingAd.Assign("MyType", "Accounting");
@@ -2004,11 +2002,11 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
 
 	// And send the ad to the collector
 	DCCollectorAdSequences seq; // Don't need them, interface requires them
-	cl->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
+	daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
 
     // Populate group's children recursively, if it has any
     for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-        forwardGroupAccounting(cl, *j);
+        forwardGroupAccounting(*j);
     }
 }
 
