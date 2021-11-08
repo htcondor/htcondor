@@ -23,6 +23,11 @@ New Features:
   extend the submit language by configuration in the *condor_schedd*.
   :jira:`802`
 
+- In a HAD configuration, the negotiator is now more robust when trying
+  to update to collectors that may have failed.  It will no longer block
+  and timeout for an extended period of time should this happen.
+  :jira:`816`
+
 - SINGULARITY_EXTRA_ARGUMENTS can now be a classad expression, so that the
   extra arguments can depend on the job.
   :jira:`570`
