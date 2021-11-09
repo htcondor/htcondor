@@ -110,13 +110,14 @@ Version 9.3.1
 
 Release Notes:
 
-.. HTCondor version 9.3.1 released on Month Date, 2021.
-
-- HTCondor version 9.3.1 not yet released.
+- HTCondor version 9.3.1 released on November 9, 2021.
 
 New Features:
 
-- None.
+- Added new submit command ``allowed_job_duration``, which limits how long
+  a job can run, expressed in seconds.
+  If a job exceeds this limit, it is placed on hold.
+  :jira:`794`
 
 Bugs Fixed:
 
