@@ -40,6 +40,11 @@ New Features:
   extend the submit language by configuration in the *condor_schedd*.
   :jira:`802`
 
+- In a HAD configuration, the negotiator is now more robust when trying
+  to update to collectors that may have failed.  It will no longer block
+  and timeout for an extended period of time should this happen.
+  :jira:`816`
+
 - SINGULARITY_EXTRA_ARGUMENTS can now be a classad expression, so that the
   extra arguments can depend on the job.
   :jira:`570`
@@ -122,13 +127,14 @@ Version 9.3.1
 
 Release Notes:
 
-.. HTCondor version 9.3.1 released on Month Date, 2021.
-
-- HTCondor version 9.3.1 not yet released.
+- HTCondor version 9.3.1 released on November 9, 2021.
 
 New Features:
 
-- None.
+- Added new submit command ``allowed_job_duration``, which limits how long
+  a job can run, expressed in seconds.
+  If a job exceeds this limit, it is placed on hold.
+  :jira:`794`
 
 Bugs Fixed:
 
