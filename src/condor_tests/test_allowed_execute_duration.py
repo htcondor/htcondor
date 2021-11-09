@@ -36,6 +36,13 @@ logger.setLevel(logging.DEBUG)
 #
 
 #
+# 6) Does a non-self-checkpointing job that should complete do so when
+#    allowed_execute_duration is set?
+# 7) Does a non-self-checkpointing job that should be held when
+#    allowed_execute_duration is set become so?
+#
+
+#
 # Please don't try to edit the constants to speed this test up.
 #
 # If you must, make sure, among other things, that this job takes
@@ -114,7 +121,7 @@ def the_job_description(path_to_the_job_script):
 
 
 #
-# We submit the jobs for tests #1, #3, and #4, at the same time,
+# We submit the jobs for tests #1, #3, #4, #6, and #7 at the same time,
 # because we don't need to interact with them while they're running, just
 # check their log when they're done.
 #
@@ -149,7 +156,7 @@ def the_job_description(path_to_the_job_script):
 #
 
 @action
-def all_job_handles(job_one_handle, job_three_handle, job_four_handle):
+def all_job_handles(job_one_handle, job_three_handle, job_four_handle, job_six_handle, job_seven_handle):
     pass
 
 
@@ -448,6 +455,101 @@ def job_five_events(final_job_five_handle):
     return final_job_five_handle.event_log.events
 
 
+@action
+def sleep_job_description(path_to_sleep):
+    return {
+        # Setting this means that all terminal job states leave the job
+        # in the queue until it's removed, which is convenient.
+        "LeaveJobInQueue":              "true",
+
+        "executable":                   path_to_sleep,
+        "transfer_executable":          "false",
+        "should_transfer_files":        "true",
+        "when_to_transfer_output":      "ON_EXIT",
+
+        "allowed_execute_duration":       "30",
+    }
+
+
+@action
+def job_six_handle(default_condor, test_dir, sleep_job_description):
+    job_six_description = {
+        ** sleep_job_description,
+        ** {
+            "arguments":    "15",
+            "log":          test_dir / "job_six.log",
+            "output":       test_dir / "job_six.out",
+            "error":        test_dir / "job_six.err",
+        }
+    }
+
+    job_six_handle = default_condor.submit(
+        description = job_six_description,
+        count = 1,
+    )
+
+    yield job_six_handle
+
+    job_six_handle.remove()
+
+
+@action
+def final_job_six_handle(default_condor, job_six_handle, all_job_handles):
+    job_six_handle.wait(
+        verbose = True,
+        timeout = 180,
+        condition = ClusterState.all_complete,
+        fail_condition = ClusterState.any_held,
+    )
+
+    return job_six_handle
+
+
+@action
+def job_six_events(final_job_six_handle):
+    return final_job_six_handle.event_log.events
+
+
+@action
+def job_seven_handle(default_condor, test_dir, sleep_job_description):
+    job_seven_description = {
+        ** sleep_job_description,
+        ** {
+            "arguments":    "45",
+            "log":          test_dir / "job_seven.log",
+            "output":       test_dir / "job_seven.out",
+            "error":        test_dir / "job_seven.err",
+        }
+    }
+
+    job_seven_handle = default_condor.submit(
+        description = job_seven_description,
+        count = 1,
+    )
+
+    yield job_seven_handle
+
+    job_seven_handle.remove()
+
+
+@action
+def final_job_seven_handle(default_condor, job_seven_handle, all_job_handles):
+    job_seven_handle.wait(
+        verbose = True,
+        timeout = 180,
+        condition = ClusterState.any_held,
+        fail_condition = ClusterState.all_complete,
+    )
+
+    return job_seven_handle
+
+
+@action
+def job_seven_events(final_job_seven_handle):
+    return final_job_seven_handle.event_log.events
+
+
+
 #
 # Utility functions for the tests.
 #
@@ -550,4 +652,34 @@ class TestAllowedExecuteDuration:
                 JobEventType.JOB_HELD,
             ],
             job_five_events
+        )
+
+
+    def test_job_six_completed(self, job_six_events):
+        assert not types_in_events(
+            [JobEventType.JOB_HELD], job_six_events
+        )
+
+        assert event_types_in_order(
+            [
+                JobEventType.SUBMIT,
+                JobEventType.EXECUTE,
+                JobEventType.JOB_TERMINATED,
+            ],
+            job_six_events
+        )
+
+
+    def test_job_seven_held(self, job_seven_events):
+        assert not types_in_events(
+            [JobEventType.JOB_TERMINATED], job_seven_events
+        )
+
+        assert event_types_in_order(
+            [
+                JobEventType.SUBMIT,
+                JobEventType.EXECUTE,
+                JobEventType.JOB_HELD,
+            ],
+            job_seven_events
         )
