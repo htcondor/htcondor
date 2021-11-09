@@ -6468,6 +6468,10 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 				// else should be transferred as usual.
 				//
 
+                // SpoolSpace is not under user control; if the admin screws
+                // up this setting, it's OK to assert and die.  (Setting
+                // SPOOL to a relative path should have already caused
+                // failures before getting here.)
 				ASSERT( SpoolSpace == NULL || fullpath(SpoolSpace) );
 				if( SpoolSpace != nullptr && starts_with(src_path, SpoolSpace) ) {
 					const char * relative_path = &src_path[strlen(SpoolSpace)];
