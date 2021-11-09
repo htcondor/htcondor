@@ -1,3 +1,9 @@
+condor (9.3.1-1) stable; urgency=medium
+
+  * Add allowed_job_duration condor_submit command to cap job run time
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 08 Nov 2021 23:08:00 -0600
+
 condor (9.3.0-1) stable; urgency=medium
 
   * Discontinue support for Globus GSI
