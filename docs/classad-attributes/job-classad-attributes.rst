@@ -65,9 +65,6 @@ all attributes.
     This attribute is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
 
-    This attribute currently only functions for the vanilla, docker,
-    scheduler, local, and grid universes.
-
 :index:`AllRemoteHosts<single: AllRemoteHosts; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; AllRemoteHosts>`
 

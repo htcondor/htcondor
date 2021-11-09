@@ -4,6 +4,23 @@ Version 9 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 9.5.0
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.5.0 released on Month Date, 2021.
+
+- HTCondor version 9.5.0 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 9.4.0
 -------------
 
@@ -22,6 +39,11 @@ New Features:
 - A new configuration variable ``EXTENDED_SUBMIT_COMMANDS`` can now be used to
   extend the submit language by configuration in the *condor_schedd*.
   :jira:`802`
+
+- In a HAD configuration, the negotiator is now more robust when trying
+  to update to collectors that may have failed.  It will no longer block
+  and timeout for an extended period of time should this happen.
+  :jira:`816`
 
 - SINGULARITY_EXTRA_ARGUMENTS can now be a classad expression, so that the
   extra arguments can depend on the job.
@@ -98,6 +120,26 @@ Bugs Fixed:
 - Fixed some bugs which could cause the counts of transferred files
   reported in the job ad to be inaccurate.
   :jira:`813`
+
+
+Version 9.3.1
+-------------
+
+Release Notes:
+
+- HTCondor version 9.3.1 released on November 9, 2021.
+
+New Features:
+
+- Added new submit command ``allowed_job_duration``, which limits how long
+  a job can run, expressed in seconds.
+  If a job exceeds this limit, it is placed on hold.
+  :jira:`794`
+
+Bugs Fixed:
+
+- None.
+
 
 Version 9.3.0
 -------------
