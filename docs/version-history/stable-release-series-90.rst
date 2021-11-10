@@ -30,6 +30,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where if the submit file set checkpoint_exit_code, and the administrator
+  enabled singularity support on the execute node, the job would go on hold at checkpoint time.
+  :jira:`837`
+
 - Fixed a bug where the *condor_gridmanager* would delete the job's
   X.509 proxy file when it meant to delete a temporary copy of the
   proxy file.
