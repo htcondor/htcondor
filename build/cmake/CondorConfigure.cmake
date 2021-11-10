@@ -18,10 +18,7 @@
 
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
-	# All recent versions of Mac OS X are 64-bit, but 'uname -p'
-	# (the source for SYS_ARCH) reports 'i386'.
-	# Override that to set the actual architecture.
-	set (SYS_ARCH "X86_64")
+	#this needs to be evaluated in order due to WIN collision.
 elseif(${OS_NAME} MATCHES "WIN")
 	set(WINDOWS ON)
 
