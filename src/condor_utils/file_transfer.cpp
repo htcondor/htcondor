@@ -170,6 +170,35 @@ public:
 		}
 	}
 
+    //
+    // This function is used by std::stable_sort() in FileTransfer::DoUpload()
+    // to group transfers.  This function used to also sort all transfers,
+    // but it no longer does; now it only sorts URLs.  (It should probably stop
+    // doing that, too, but that's another ticket.)  This is because
+    // ExpandeFileTransferList() -- which converts a list of source names
+    // into a std::vector<FileTransferItem> -- creates new non-URL
+    // FileTransferItems when it "expands" the name of a directory into
+    // the FileTransferItem which creates the directory and the
+    // FileTransferItems which populate the directory.  Obviously, creating
+    // the directory must come before populating it.
+    //
+    // Before, this almost always happened because the "source" of a directory
+    // would always sort before the source of any of the files in the
+    // directory.  However, after HTCONDOR-583 fixed a problem where file
+    // transfer would ignore directories in SPOOL, it became very easy to
+    // write job submit files which would have two different "sources" (the
+    // SPOOL and the input directory) for the same directory.  When
+    // ExpandFileTransferList() removes duplicate directories, it removes
+    // the directories which appear later in the list, because the directory
+    // needs to be created before any files in it (and the input directory,
+    // for example, could have a file in it that's not in SPOOL).  Sorting
+    // the list of non-URL FileTransferItems may undo this ordering (for
+    // instance, if SPOOL sorts before the IWD, a file from SPOOL would be
+    // transferred before the directory "sourced" in IWD would be created,
+    // because transfers from IWD are listed first (to make sure that files
+    // in SPOOL win)).
+    //
+
 	bool operator<(const FileTransferItem &other) const {
 		// Ordering of transfers:
 		// - Destination URLs first (allows these plugins to alter CEDAR transfers on
