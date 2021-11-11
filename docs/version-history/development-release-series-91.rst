@@ -15,11 +15,15 @@ Release Notes:
 
 New Features:
 
-- None.
+- Docker universe jobs can now be user-level checkpointed by setting
+  checkpoint_exit_code in submit files.
+  :jira:`841`
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where if the submit file set checkpoint_exit_code, and the administrator
+  enabled singularity support on the execute node, the job would go on hold at checkpoint time.
+  :jira:`837`
 
 Version 9.4.0
 -------------
