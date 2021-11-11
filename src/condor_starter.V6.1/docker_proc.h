@@ -38,6 +38,8 @@ class DockerProc : public VanillaProc {
 		static bool Detect();
 		static bool Version( std::string & version );
 
+	protected:
+		virtual void restartCheckpointedJob();
 	private:
 
 		ReliSock listener;

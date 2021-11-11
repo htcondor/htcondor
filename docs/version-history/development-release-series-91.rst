@@ -15,7 +15,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Docker universe jobs can now be user-level checkpointed by setting
+  checkpoint_exit_code in submit files.
+  :jira:`841`
 
 Bugs Fixed:
 
