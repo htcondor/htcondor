@@ -927,7 +927,8 @@ DockerProc::restartCheckpointedJob() {
 	CondorError error;
 	int rv = DockerAPI::rm( containerName, error );
 	if( rv < 0 ) {
-		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container after checkpoint exit '%s'.\n", containerName.c_str() );
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container '%s' after checkpoint exit.\n", containerName.c_str() );
+		// Will fail later when we try to restart if it still exists.  If it doesn't :shrug: all good!
 	}
 
 	VanillaProc::restartCheckpointedJob();
