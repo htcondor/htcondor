@@ -37,7 +37,8 @@ logger.setLevel(logging.DEBUG)
 
 #
 # 6) Does a non-self-checkpointing job that should complete do so when
-#    allowed_execute_duration is set?
+#    allowed_execute_duration is set (even if its transfer time exceeds
+#    its allowed execute duration)?
 # 7) Does a non-self-checkpointing job that should be held when
 #    allowed_execute_duration is set become so?
 #
@@ -472,14 +473,224 @@ def sleep_job_description(path_to_sleep):
 
 
 @action
-def job_six_handle(default_condor, test_dir, sleep_job_description):
+def path_to_sleep_transfer_plugin(test_dir):
+    script="""
+    #!/usr/bin/env python3
+
+    import classad
+    import json
+    import os
+    import posixpath
+    import requests
+    import shutil
+    import socket
+    import sys
+    import time
+
+    PLUGIN_VERSION = '1.0.0'
+
+    def print_help(stream = sys.stderr):
+        help_msg = '''Usage: {0} -infile <input-filename> -outfile <output-filename>
+           {0} -classad
+
+    Options:
+      -classad                    Print a ClassAd containing the capablities of this
+                                  file transfer plugin.
+      -infile <input-filename>    Input ClassAd file
+      -outfile <output-filename>  Output ClassAd file
+      -upload                     Indicates this transfer is an upload (default is
+                                  download)
+    '''
+        stream.write(help_msg.format(sys.argv[0]))
+
+    def print_capabilities():
+        capabilities = {
+             'MultipleFileSupport': True,
+             'PluginType': 'FileTransfer',
+             'SupportedMethods': 'sleep',
+             'Version': PLUGIN_VERSION,
+        }
+        sys.stdout.write(classad.ClassAd(capabilities).printOld())
+
+    def parse_args():
+
+        # The only argument lists that are acceptable are
+        # <this> -classad
+        # <this> -infile <input-filename> -outfile <output-filename>
+        # <this> -outfile <output-filename> -infile <input-filename>
+        if not len(sys.argv) in [2, 5, 6]:
+            print_help()
+            sys.exit(1)
+
+        # If -classad, print the capabilities of the plugin and exit early
+        if (len(sys.argv) == 2) and (sys.argv[1] == '-classad'):
+            print_capabilities()
+            sys.exit(0)
+
+        # If -upload, set is_upload to True and remove it from the args list
+        is_upload = False
+        if '-upload' in sys.argv[1:]:
+            is_upload = True
+            sys.argv.remove('-upload')
+
+        # -infile and -outfile must be in the first and third position
+        if not (
+                ('-infile' in sys.argv[1:]) and
+                ('-outfile' in sys.argv[1:]) and
+                (sys.argv[1] in ['-infile', '-outfile']) and
+                (sys.argv[3] in ['-infile', '-outfile']) and
+                (len(sys.argv) == 5)):
+            print_help()
+            sys.exit(1)
+        infile = None
+        outfile = None
+        try:
+            for i, arg in enumerate(sys.argv):
+                if i == 0:
+                    continue
+                elif arg == '-infile':
+                    infile = sys.argv[i+1]
+                elif arg == '-outfile':
+                    outfile = sys.argv[i+1]
+        except IndexError:
+            print_help()
+            sys.exit(1)
+
+        return {'infile': infile, 'outfile': outfile, 'upload': is_upload}
+
+    def format_error(error):
+        return '{0}: {1}'.format(type(error).__name__, str(error))
+
+    def get_error_dict(error, url = ''):
+        error_string = format_error(error)
+        error_dict = {
+            'TransferSuccess': False,
+            'TransferError': error_string,
+            'TransferUrl': url,
+        }
+
+        return error_dict
+
+    class SleepPlugin:
+
+        def parse_url(self, url):
+            duration = url[(url.find("://") + 3):]
+            return int(duration)
+
+        def download_file(self, url, local_file_path):
+
+            start_time = time.time()
+
+            duration = self.parse_url(url)
+            time.sleep(duration)
+
+            end_time = time.time()
+
+            # Get transfer statistics
+            transfer_stats = {
+                'TransferSuccess': True,
+                'TransferProtocol': 'sleep',
+                'TransferType': 'upload',
+                'TransferFileName': local_file_path,
+                'TransferFileBytes': 0,
+                'TransferTotalBytes': 0,
+                'TransferStartTime': int(start_time),
+                'TransferEndTime': int(end_time),
+                'ConnectionTimeSeconds': end_time - start_time,
+                'TransferUrl': url,
+            }
+
+            return transfer_stats
+
+        def upload_file(self, url, local_file_path):
+
+            start_time = time.time()
+
+            duration = self.parse_url(url)
+            time.sleep(duration)
+
+            end_time = time.time()
+
+            # Get transfer statistics
+            transfer_stats = {
+                'TransferSuccess': True,
+                'TransferProtocol': 'sleep',
+                'TransferType': 'upload',
+                'TransferFileName': local_file_path,
+                'TransferFileBytes': 0,
+                'TransferTotalBytes': 0,
+                'TransferStartTime': int(start_time),
+                'TransferEndTime': int(end_time),
+                'ConnectionTimeSeconds': end_time - start_time,
+                'TransferUrl': url,
+            }
+
+            return transfer_stats
+
+
+    if __name__ == '__main__':
+
+        # Start by parsing input arguments
+        try:
+            args = parse_args()
+        except Exception:
+            sys.exit(1)
+
+        sleep_plugin = SleepPlugin()
+
+        # Parse in the classads stored in the input file.
+        # Each ad represents a single file to be transferred.
+        try:
+            infile_ads = classad.parseAds(open(args['infile'], 'r'))
+        except Exception as err:
+            try:
+                with open(args['outfile'], 'w') as outfile:
+                    outfile_dict = get_error_dict(err)
+                    outfile.write(str(classad.ClassAd(outfile_dict)))
+            except Exception:
+                pass
+            sys.exit(1)
+
+        # Now iterate over the list of classads and perform the transfers.
+        try:
+            with open(args['outfile'], 'w') as outfile:
+                for ad in infile_ads:
+                    try:
+                        if not args['upload']:
+                            outfile_dict = sleep_plugin.download_file(ad['Url'], ad['LocalFileName'])
+                        else:
+                            outfile_dict = sleep_plugin.upload_file(ad['Url'], ad['LocalFileName'])
+
+                        outfile.write(str(classad.ClassAd(outfile_dict)))
+
+                    except Exception as err:
+                        try:
+                            outfile_dict = get_error_dict(err, url = ad['Url'])
+                            outfile.write(str(classad.ClassAd(outfile_dict)))
+                        except Exception:
+                            pass
+                        sys.exit(1)
+
+        except Exception:
+            sys.exit(1)
+    """
+
+    path = test_dir / "sleep-transfer.py"
+    write_file(path, format_script(script))
+
+    return path
+
+@action
+def job_six_handle(default_condor, test_dir, sleep_job_description, path_to_sleep_transfer_plugin):
     job_six_description = {
         ** sleep_job_description,
         ** {
-            "arguments":    "15",
-            "log":          test_dir / "job_six.log",
-            "output":       test_dir / "job_six.out",
-            "error":        test_dir / "job_six.err",
+            "arguments":        "15",
+            "log":              test_dir / "job_six.log",
+            "output":           test_dir / "job_six.out",
+            "error":            test_dir / "job_six.err",
+            "transfer_plugins": f"sleep={path_to_sleep_transfer_plugin.as_posix()}",
+            "transfer_input_files": "sleep://30",
         }
     }
 
