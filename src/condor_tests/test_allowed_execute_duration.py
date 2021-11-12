@@ -487,12 +487,6 @@ def path_to_sleep_transfer_plugin(test_dir):
     #!/usr/bin/env python3
 
     import classad
-    import json
-    import os
-    import posixpath
-    import requests
-    import shutil
-    import socket
     import sys
     import time
 
