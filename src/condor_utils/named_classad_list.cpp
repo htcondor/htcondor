@@ -62,7 +62,7 @@ NamedClassAdList::Register( const char *name )
 	}
 
 	// No match found; insert it into the list
-	dprintf( D_JOB, "Adding '%s' to the Supplimental ClassAd list\n", name );
+	dprintf( D_JOB, "Adding '%s' to the Supplemental ClassAd list\n", name );
 	m_ads.push_back( new NamedClassAd(name, NULL) );
 	return true;
 }
@@ -75,7 +75,7 @@ NamedClassAdList::Register( NamedClassAd *ad )
 	}
 
 	// No match found; insert it into the list
-	dprintf( D_JOB, "Adding '%s' to the Supplimental ClassAd list\n",
+	dprintf( D_JOB, "Adding '%s' to the Supplemental ClassAd list\n",
 			 ad->GetName() );
 	m_ads.push_back( ad );
 	return true;
