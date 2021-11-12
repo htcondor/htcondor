@@ -251,14 +251,14 @@ def final_job_two_handle(default_condor, job_two_handle):
 
             if not checkpoint_started:
                 if event.type == JobEventType.FILE_TRANSFER:
-                    logger.debug("Found first TILE_TRANSFER event")
+                    logger.debug("Found first FILE_TRANSFER event")
                     checkpoint_started = True
             else:
                 if event.type == JobEventType.IMAGE_SIZE:
                     logger.debug("Found IMAGE_SIZE event")
                     continue
                 assert event.type == JobEventType.FILE_TRANSFER
-                logger.debug("Found second TILE_TRANSFER event")
+                logger.debug("Found second FILE_TRANSFER event")
                 checkpoint_completed = True
                 break
         if checkpoint_completed:
@@ -269,6 +269,14 @@ def final_job_two_handle(default_condor, job_two_handle):
     default_condor.run_command(
         ['condor_vacate_job', str(job_two_handle.job_ids[0])],
         timeout=5, echo=True)
+    # In the wild, running condor_reschedule immediately after running
+    # condor_vacate_job will sometimes not result in the job being
+    # considered by the negotiator in its next cycle.  The basic problem --
+    # whyever the schedd needs to be prompted -- is kind of dumb, so
+    # if this sleep ever becomes a problem, I'd rather fix that problem
+    # than see if there's anything I can poll to determine when it's safe
+    # to call condor_reschedule.
+    time.sleep(1)
     # This is amazingly stupid but nonetheless necessary for some reason.
     default_condor.run_command(
         ['condor_reschedule'],
@@ -415,14 +423,14 @@ def final_job_five_handle(default_condor, job_five_handle):
 
             if not checkpoint_started:
                 if event.type == JobEventType.FILE_TRANSFER:
-                    logger.debug("Found first TILE_TRANSFER event")
+                    logger.debug("Found first FILE_TRANSFER event")
                     checkpoint_started = True
             else:
                 if event.type == JobEventType.IMAGE_SIZE:
                     logger.debug("Found IMAGE_SIZE event")
                     continue
                 assert event.type == JobEventType.FILE_TRANSFER
-                logger.debug("Found second TILE_TRANSFER event")
+                logger.debug("Found second FILE_TRANSFER event")
                 checkpoint_completed = True
                 break
         if checkpoint_completed:
@@ -433,7 +441,8 @@ def final_job_five_handle(default_condor, job_five_handle):
     default_condor.run_command(
         ['condor_vacate_job', str(job_five_handle.job_ids[0])],
         timeout=5, echo=True)
-    # This is amazingly stupid but nonetheless necessary for some reason.
+    # See previous comment.
+    time.sleep(1)
     default_condor.run_command(
         ['condor_reschedule'],
         timeout=5, echo=True)
