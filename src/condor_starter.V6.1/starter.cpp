@@ -3153,7 +3153,7 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 
 bool expandScratchDirInEnv(void * void_scratch_dir, const MyString & /*lhs */, MyString &rhs) {
 	const char *scratch_dir = (const char *) void_scratch_dir;
-	rhs.replaceString("$$(CONDOR_SCRATCH_DIR)", scratch_dir);
+	rhs.replaceString("#CoNdOrScRaTcHdIr#", scratch_dir);
 	return true;
 }
 

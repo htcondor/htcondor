@@ -20,7 +20,7 @@ New Features:
   :jira:`570`
 
 - The Environment command in a condor submit file can now contain the string
-  $$(CONDOR_SCRATCH_DIR), which will get expanded to the value of the scratch
+  $$(CondorScratchDir), which will get expanded to the value of the scratch
   directory on the execute node.  This is useful, for example, when transferring
   software packages to the job's scratch dir, when those packages need an environment
   variable pointing to the root of their install.

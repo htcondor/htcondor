@@ -3,7 +3,7 @@
 
 # Test that we can set environment variables in the submit
 # file, and they make it to the job, along with the magic
-# $$(CONDOR_SCRATCH_DIR) token expanded properly
+# $$(CondorScratchDir) token expanded properly
 
 import logging
 import htcondor
@@ -45,7 +45,7 @@ def test_job_hash(test_dir, path_to_python, test_script):
     return {
             "executable": path_to_python,
             "arguments": test_script,
-            "environment": "VAR_FROM_SUBMIT=$$(CONDOR_SCRATCH_DIR)/foo",
+            "environment": "VAR_FROM_SUBMIT=$$(CondorScratchDir)/foo",
             "universe": "vanilla",
             "output": "output",
             "error": "error",
@@ -69,7 +69,7 @@ class TestJobEnv:
     def test_job_env(self, completed_test_job):
 
         with open("output","r") as f:
-            # First line is the env from the job submit file "environment = VAR_FROM_SUBMIT=$$(CONDOR_SCRATCH)"
+            # First line is the env from the job submit file "environment = VAR_FROM_SUBMIT=$$(CondorScratchDir)"
             scratchDirFromJob = f.readline()
             # Next line is the expanded $_CONDOR_SCRATCH_DIR from the running job + /foo, should be same as above
             scratchDirFromEnv = f.readline()

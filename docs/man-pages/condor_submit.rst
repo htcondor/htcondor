@@ -2955,7 +2955,7 @@ and comments.
     then the path ``/usr/foo`` is used instead.
 
     As a special case that only works within the submit file *environement*
-    command, the string $$(CONDOR_SCRATCH_DIR) is expanded to the value
+    command, the string $$(CondorScratchDir) is expanded to the value
     of the job's scratch directory.  This does not work for scheduler universe
     or grid universe jobs.
     
@@ -2964,7 +2964,7 @@ and comments.
 
     .. code-block:: text
 
-        environment = PYTHONPATH=$$(CONDOR_SCRATCH_DIR)/some/directory
+        environment = PYTHONPATH=$$(CondorScratchDir)/some/directory
 
     A further extension to the syntax of the substitution macro allows
     the evaluation of a ClassAd expression to define the value. In this
