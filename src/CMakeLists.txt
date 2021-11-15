@@ -130,11 +130,9 @@ if (BUILD_TESTING)
 	dprint("CONDOR_TESTS=${CONDOR_TESTS}")
 endif()
 
-if (WANT_FULL_DEPLOYMENT)
-	install ( FILES condor_includes/condor_classad.h
-			  condor_includes/condor_constants.h
-			  condor_includes/condor_header_features.h
-			  condor_includes/file_lock.h
-			  condor_utils/iso_dates.h
-			DESTINATION ${C_INCLUDE})
-endif(WANT_FULL_DEPLOYMENT)
+install ( FILES condor_includes/condor_classad.h
+		  condor_includes/condor_constants.h
+		  condor_includes/condor_header_features.h
+		  condor_includes/file_lock.h
+		  condor_utils/iso_dates.h
+		DESTINATION ${C_INCLUDE})
