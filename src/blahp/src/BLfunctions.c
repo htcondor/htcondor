@@ -27,6 +27,23 @@
 int dmn=0;
 int debug=0;
 
+char *argv0;
+
+int rptr[RDXHASHSIZE];
+int reccnt[RDXHASHSIZE];
+
+char *j2js[RDXHASHSIZE];
+char *j2wn[RDXHASHSIZE];
+char *j2ec[RDXHASHSIZE];
+char *j2st[RDXHASHSIZE];
+char *j2rt[RDXHASHSIZE];
+char *j2ct[RDXHASHSIZE];
+
+char *j2bl[RDXHASHSIZE];
+
+int   nti[CRMHASHSIZE];
+char *ntf[CRMHASHSIZE];
+
 ssize_t
 Readline(int sockd, void *vptr, size_t maxlen)
 {

@@ -25,4 +25,4 @@
 #include "Bfunctions.h"
 #include "config.h"
 
-char *argv0;
+extern char *argv0;

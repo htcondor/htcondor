@@ -72,22 +72,22 @@ extern pthread_mutex_t writeline_mutex;
 extern int debug;
 extern int dmn;
 
-char *argv0;
+extern char *argv0;
 
-int rptr[RDXHASHSIZE];
-int reccnt[RDXHASHSIZE];
+extern int rptr[RDXHASHSIZE];
+extern int reccnt[RDXHASHSIZE];
 
-char *j2js[RDXHASHSIZE];
-char *j2wn[RDXHASHSIZE];
-char *j2ec[RDXHASHSIZE];
-char *j2st[RDXHASHSIZE];
-char *j2rt[RDXHASHSIZE];
-char *j2ct[RDXHASHSIZE];
+extern char *j2js[RDXHASHSIZE];
+extern char *j2wn[RDXHASHSIZE];
+extern char *j2ec[RDXHASHSIZE];
+extern char *j2st[RDXHASHSIZE];
+extern char *j2rt[RDXHASHSIZE];
+extern char *j2ct[RDXHASHSIZE];
 
-char *j2bl[RDXHASHSIZE];
+extern char *j2bl[RDXHASHSIZE];
 
-int   nti[CRMHASHSIZE];
-char *ntf[CRMHASHSIZE];
+extern int   nti[CRMHASHSIZE];
+extern char *ntf[CRMHASHSIZE];
 
 
 /*  Function declarations  */

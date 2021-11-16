@@ -517,7 +517,7 @@ main(int argc, char *argv[])
           if (nfmts > 1) { continue; } /* Deal with one conversion at a time */
           if ((ifr+1) >= argc)
            {
-            printf(argv[ifr]);
+            printf("%s", argv[ifr]);
            }
           else
            {

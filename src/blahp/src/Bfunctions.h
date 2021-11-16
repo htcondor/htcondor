@@ -73,7 +73,7 @@ char *chopfmt(char *fmt);
 void syserror(char *fmt, ...);
 void sysfatal(char *fmt, ...);
 
-char *argv0;
+extern char *argv0;
 
 #define BUPDATER_ACTIVE_JOBS_FAILURE -1
 #define BUPDATER_ACTIVE_JOBS_SUCCESS 0

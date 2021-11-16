@@ -27,6 +27,8 @@
 pthread_mutex_t writeline_mutex = PTHREAD_MUTEX_INITIALIZER;
 int bfunctions_poll_timeout = 600000; /* Default 10 minutes */
 
+char *argv0;
+
 ssize_t
 Readline(int sockd, void *vptr, size_t maxlen)
 {
