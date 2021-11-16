@@ -129,6 +129,11 @@ isDelimiter( char c ) {
 	return tmp ? true : false;
 }
 
+std::string
+makeString(char *s) { 
+	return std::string(s ? s : "");
+}
+
 //-----------------------------------------------------------------------------
 void parseSetDoNameMunge(bool doit)
 {
@@ -2018,7 +2023,7 @@ parse_splice(
 	// 
 	std::string spliceName = strtok( NULL, DELIMITERS );
 	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
-	if ( spliceName == "" ) {
+	if ( spliceName.empty() ) {
 		debug_printf( DEBUG_QUIET, 
 					  "ERROR: %s (line %d): Missing SPLICE name\n",
 					  filename, lineNumber );
@@ -2043,11 +2048,11 @@ parse_splice(
 	_spliceScope.push_back(strdup(munge_job_name(spliceName.c_str()).c_str()));
 
 	//
-	// Next token is the splice file name
+	// Next token is the splice file nameMyStrstding
 	// 
-	std::string spliceFile = strtok( NULL, DELIMITERS );
+	std::string spliceFile = makeString(strtok( NULL, DELIMITERS ));
 	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
-	if ( spliceFile == "" ) {
+	if ( spliceFile.empty() ) {
 		debug_printf( DEBUG_QUIET, 
 					  "ERROR: %s (line %d): Missing SPLICE file name\n",
 					  filename, lineNumber );
@@ -2059,13 +2064,14 @@ parse_splice(
 	// next token (if any) is "DIR"
 	//
 	TmpDir spliceDir;
-	std::string dirTok = strtok( NULL, DELIMITERS );
+	std::string dirTok = makeString( strtok( NULL, DELIMITERS ) );
 	std::string directory = ".";
 
-	std::string dirTokOrig = dirTok;
-	upper_case(dirTok);
+	std::string dirTokUpper = dirTok;
+	upper_case(dirTokUpper);
+
 	// Note: this if is okay even if strtok() returns NULL. wenger 2014-10-07
-	if ( dirTok == "DIR" ) {
+	if ( dirTokUpper == "DIR" ) {
 		// parse the directory name
 		directory = strtok( NULL, DELIMITERS );
 		// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
@@ -2079,7 +2085,7 @@ parse_splice(
 	} else if ( dirTok != "" ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: %s (line %d): illegal token (%s) on SPLICE line\n",
-					filename, lineNumber, dirTokOrig.c_str() );
+					filename, lineNumber, dirTok.c_str() );
 		exampleSyntax( example );
 		return false;
 	}
@@ -2087,12 +2093,12 @@ parse_splice(
 	// 
 	// anything else is garbage
 	//
-	char* garbage = strtok( 0, DELIMITERS );
+	std::string garbage = makeString( strtok( 0, DELIMITERS ) );
 	// Note: this if is true if strtok() returns NULL. wenger 2014-10-07
-	if( garbage ) {
+	if (garbage != "") {
 			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
 						  "parameter \"%s\"\n", filename, lineNumber, 
-						  garbage );
+						  garbage.c_str() );
 			exampleSyntax( example );
 			return false;
 	}
@@ -2162,7 +2168,7 @@ parse_splice(
 	}
 
 	// munge the splice name
-	spliceName = munge_job_name(spliceName.c_str());
+	spliceName = munge_job_name(spliceName.c_str()).c_str();
 
 	// XXX I'm not sure this goes here quite yet....
 	debug_printf(DEBUG_DEBUG_1, "Splice scope is: %s\n", 

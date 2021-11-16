@@ -56,6 +56,7 @@ public:
 			@return true if successful, false if failed
 		 */
 	static bool makePathAbsolute(MyString &filename, CondorError &errstack);
+	static bool makePathAbsolute(std::string &filename, CondorError &errstack);
 
 		/** Initializes the given file -- creates it if it doesn't exist,
 			possibly truncates it if it does.

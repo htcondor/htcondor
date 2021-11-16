@@ -520,6 +520,28 @@ MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+bool
+MultiLogFiles::makePathAbsolute(std::string &filename, CondorError &errstack)
+{
+	if ( !fullpath(filename.c_str()) ) {
+			// I'd like to use realpath() here, but I'm not sure
+			// if that's portable across all platforms.  wenger 2009-01-09.
+		std::string currentDir;
+		if ( !condor_getcwd(currentDir) ) {
+			errstack.pushf( "MultiLogFiles", UTIL_ERR_GET_CWD,
+						"ERROR: condor_getcwd() failed with errno %d (%s) at %s:%d",
+						errno, strerror(errno), __FILE__, __LINE__);
+			return false;
+		}
+
+		filename = currentDir + DIR_DELIM_STRING + filename;
+	}
+
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 MyString
 MultiLogFiles::getParamFromSubmitLine(MyString &submitLineIn,
 		const char *paramName)
