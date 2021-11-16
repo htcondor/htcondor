@@ -13,50 +13,58 @@
 #
 # 5-Nov-2012  Created 
 
-cmake_minimum_required(VERSION 2.6)
+if (NOT CONDOR_PACKAGE_NAME)
 
-#project(glite-ce-blahp)
-project(BLAH)
+    cmake_minimum_required(VERSION 2.6)
 
-# CPack info
+    project(glite-ce-blahp)
+    project(BLAH)
 
-set(CPACK_RPM_PACKAGE_RELEASE "0")
+    # CPack info
 
-if (UNIX AND NOT APPLE)
-set(CPACK_GENERATOR "STGZ;DEB;RPM")
-execute_process(COMMAND uname -i 
-    OUTPUT_VARIABLE local_arch OUTPUT_STRIP_TRAILING_WHITESPACE)
-set(CPACK_SYSTEM_NAME "${CPACK_RPM_PACKAGE_RELEASE}.${local_arch}")
-endif (UNIX AND NOT APPLE)
+    set(CPACK_RPM_PACKAGE_RELEASE "0")
 
-set(CMAKE_INSTALL_PREFIX "/usr")
+    if (UNIX AND NOT APPLE)
+    set(CPACK_GENERATOR "STGZ;DEB;RPM")
+    execute_process(COMMAND uname -i 
+        OUTPUT_VARIABLE local_arch OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(CPACK_SYSTEM_NAME "${CPACK_RPM_PACKAGE_RELEASE}.${local_arch}")
+    endif (UNIX AND NOT APPLE)
 
-set(CPACK_PACKAGE_VENDOR "EMI")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Batch Local ASCII Helper Protocol suite")
-set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/blah_description.txt")
-set(CPACK_PACKAGE_VERSION_MAJOR "1")
-set(CPACK_PACKAGE_VERSION_MINOR "18")
-set(CPACK_PACKAGE_VERSION_PATCH "1")
-set(CPACK_PACKAGE_VERSION 
-   "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
+    set(CMAKE_INSTALL_PREFIX "/usr")
 
-# For the following setting, see CMAKE manual, page 155
-# or http://public.kitware.com/Bug/view.php?id=7000
-set(CPACK_SET_DESTDIR ON)
-set(CPACK_PACKAGE_RELOCATABLE "false")
+    set(CPACK_PACKAGE_NAME "BLAH")
+    set(CPACK_PACKAGE_VENDOR "EMI")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Batch Local ASCII Helper Protocol suite")
+    set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/blah_description.txt")
+    set(CPACK_PACKAGE_VERSION_MAJOR "2")
+    set(CPACK_PACKAGE_VERSION_MINOR "2")
+    set(CPACK_PACKAGE_VERSION_PATCH "0")
+    set(CPACK_PACKAGE_VERSION 
+       "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
 
-set(CPACK_PACKAGE_CONTACT "blah@mi.infn.it")
-set(CPACK_RPM_PACKAGE_LICENSE "Apache Software License")
-set(CPACK_RPM_PACKAGE_GROUP "Applications/Internet")
+    # For the following setting, see CMAKE manual, page 155
+    # or http://public.kitware.com/Bug/view.php?id=7000
+    set(CPACK_SET_DESTDIR ON)
+    set(CPACK_PACKAGE_RELOCATABLE "false")
 
-set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE 
-    ${CMAKE_CURRENT_SOURCE_DIR}/project/glite-ce-blahp.post)
-set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE 
-    ${CMAKE_CURRENT_SOURCE_DIR}/project/glite-ce-blahp.preun)
+    set(CPACK_PACKAGE_CONTACT "blah@mi.infn.it")
+    set(CPACK_RPM_PACKAGE_LICENSE "Apache Software License")
+    set(CPACK_RPM_PACKAGE_GROUP "Applications/Internet")
 
-add_subdirectory(src build)
-add_subdirectory(config)
-add_subdirectory(doc)
+    set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE 
+        ${CMAKE_CURRENT_SOURCE_DIR}/project/glite-ce-blahp.post)
+    set(CPACK_RPM_PRE_UNINSTALL_SCRIPT_FILE 
+        ${CMAKE_CURRENT_SOURCE_DIR}/project/glite-ce-blahp.preun)
 
-install(FILES LICENSE 
-    DESTINATION share/doc/${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION})
+    install(FILES LICENSE 
+        DESTINATION share/doc/BLAH-2.2.0)
+
+endif(NOT CONDOR_PACKAGE_NAME)
+
+if (NOT CONDOR_PACKAGE_NAME OR WITH_BLAHP)
+    add_subdirectory(src build)
+    add_subdirectory(config)
+    add_subdirectory(doc)
+endif(NOT CONDOR_PACKAGE_NAME OR WITH_BLAHP)
+

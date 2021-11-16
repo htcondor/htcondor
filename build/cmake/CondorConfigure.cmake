@@ -649,6 +649,7 @@ if(${OS_NAME} STREQUAL "LINUX")
 	set(HAVE_GNU_LD ON)
     option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
+    option(WITH_BLAHP "Compiling the blahp" ON)
 elseif(${OS_NAME} STREQUAL "DARWIN")
 	add_definitions(-DDarwin)
 	set(DARWIN ON)
