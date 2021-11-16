@@ -71,7 +71,7 @@ rm -r condor_tests-$version-$release-$arch_dist
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
 
-uw_externals="blahp condor-boinc"
+uw_externals="condor-boinc"
 
 common_externals="boost169-python3 \
     libcgroup \
