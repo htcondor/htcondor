@@ -4193,9 +4193,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		if( item.isDestUrl() ) { continue; }
 
 		std::string rd_path = item.destDir() + DIR_DELIM_CHAR + condor_basename(item.srcName().c_str());
-		if( names.find(rd_path) == names.end() ) {
-			names.insert(rd_path);
-		} else {
+		if( names.insert(rd_path).second == false ) {
 			// This incancation converts a reverse to a forward iterator.
 			filelist.erase( (iter + 1).base() );
 		}
