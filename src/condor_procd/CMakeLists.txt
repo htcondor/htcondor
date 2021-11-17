@@ -75,14 +75,14 @@ endif(WINDOWS)
 condor_static_lib( procdutils "${ProcdUtilsSrcs}" )
 condor_daemon(EXE condor_procd SOURCES "${ProcdElements};${ProcClientElements}" LIBRARIES "procdutils;${PROCD_WIN_LINK_LIBS};${LIBCGROUP_FOUND}" INSTALL "${C_SBIN}")
 
-if (LINUX AND WANT_FULL_DEPLOYMENT)
+if (LINUX)
 	condor_exe( procd_ctl "procd_ctl.cpp;${ProcClientElements};${SAFE_OPEN_SRC};../condor_utils/distribution.cpp;../condor_utils/my_distribution.cpp;../condor_utils/condor_pidenvid.cpp;dprintf_lite.cpp" ${C_SBIN} "procdutils" OFF)
 
 	condor_exe( gidd_alloc "gidd_alloc.cpp" ${C_SBIN} "" OFF)
-endif(LINUX AND WANT_FULL_DEPLOYMENT)
+endif(LINUX)
 
-if (WINDOWS AND WANT_FULL_DEPLOYMENT)
+if (WINDOWS)
 	condor_exe( procd_ctl "procd_ctl.cpp;${ProcClientElements};${SAFE_OPEN_SRC};../condor_utils/distribution.cpp;../condor_utils/my_distribution.cpp;../condor_utils/condor_pidenvid.cpp" ${C_SBIN} "procdutils;condor_utils" OFF)
-endif(WINDOWS AND WANT_FULL_DEPLOYMENT)
+endif(WINDOWS)
 
 set( PROCD_CLIENT_UTIL_SRCS "${ProcClientElements}" PARENT_SCOPE )

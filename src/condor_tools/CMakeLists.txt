@@ -70,9 +70,7 @@ condor_exe(condor_vacate "tool.cpp" "${C_BIN}" "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_on "tool.cpp" "${C_SBIN}" "${CONDOR_TOOL_LIBS}" OFF)
 
 clone_install(condor_on "${C_SBIN}" "condor_off;condor_restart;condor_reconfig;condor_set_shutdown" "${C_SBIN}")
-if (WANT_FULL_DEPLOYMENT)
-    clone_install(condor_on "${C_SBIN}" "condor_set_shutdown" "${C_SBIN}")
-endif(WANT_FULL_DEPLOYMENT)
+clone_install(condor_on "${C_SBIN}" "condor_set_shutdown" "${C_SBIN}")
 clone_install(condor_vacate "${C_BIN}" "condor_reschedule" "${C_BIN}")
 
 condor_exe(condor_stats "stats.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
