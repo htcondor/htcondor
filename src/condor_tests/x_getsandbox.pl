@@ -21,7 +21,7 @@
 if(is_windows()){
 	system("dir");
 } else {
-	system("ls");
+	system("ls -al");
 }
 
 my $request = $ARGV[0];

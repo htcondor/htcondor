@@ -126,7 +126,9 @@ int main(int argc, const char ** argv)
 
 static int validate_queue(const char * filename, int max_logs, bool verbose)
 {
-	ClassAdCollection * JobQueue = new ClassAdCollection(NULL, filename, max_logs);
+	ClassAdCollection * JobQueue = new ClassAdCollection(NULL);
+	bool init = JobQueue->InitLogFile(filename, max_logs);
+	ASSERT(init);
 
 	ClassAd * ad;
 	if ( ! JobQueue->LookupClassAd("0.0", ad)) {

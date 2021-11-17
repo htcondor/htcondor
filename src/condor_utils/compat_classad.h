@@ -53,7 +53,7 @@ typedef std::set<std::string, classad::CaseIgnLTStr> AttrNameSet;
 		@param file The file handle to print to.
 		@return TRUE
 	*/
-int	fPrintAd(FILE *file, const classad::ClassAd &ad, bool exclude_private = true, StringList *attr_white_list = NULL);
+int	fPrintAd(FILE *file, const classad::ClassAd &ad, bool exclude_private = true, StringList *attr_white_list = nullptr, const classad::References *excludeList = nullptr);
 
 	/** Print the ClassAd as an old ClasAd with dprintf
 		@param level The dprintf level.
@@ -71,8 +71,8 @@ int sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringLis
 		@param output The std::string to write into
 		@return TRUE
 	*/
-int sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list = NULL );
-int sPrintAdWithSecrets( std::string &output, const classad::ClassAd & ad, StringList *attr_white_list = NULL );
+int sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list = nullptr, const classad::References *excludeAttrs = nullptr);
+int sPrintAdWithSecrets( std::string &output, const classad::ClassAd & ad, StringList *attr_white_list = nullptr, const classad::References *excludeAttrs = nullptr );
 
 	/** Format the ClassAd as an old ClassAd into the std::string, and return the c_str() of the result
 		This version if the classad function prints the attributes in sorted order and allows for an optional

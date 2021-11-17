@@ -1409,14 +1409,6 @@ The following limitations apply:
   time to produce the Cluster ad, but these macro functions will not be included in
   the *submit digest* and so will have the same value for all jobs.
 - Spooling of input files does not work with late materialization.
-- :macro:`SUBMIT_REQUIREMENT_*` and :macro:`JOB_TRANSFORM_*` configuration parameters in
-  the *condor_schedd* are applied to jobs as they are materialized,
-  but not to the Cluster ad as it is submitted.  So a :macro:`SUBMIT_REQUIREMENT` might not fail
-  at submit time, causing the user to think that they had met the submit requirements when in 
-  fact the jobs would fail to materialize at some time in the future.  This can be 
-  confusing because a factory that has no materialized jobs is not visible in the normal
-  *condor_q* output. The only way to see late materialization job factories is to use the
-  ``-factory`` option with *condor_q*
 
 Displaying the Factory
 ''''''''''''''''''''''

@@ -41,7 +41,9 @@ def job(condor, path_to_sleep):
     assert handle.wait(condition=ClusterState.any_held,timeout=60)
     # ...and then release it....
     handle.release()
-    # and now wait for job to be held a second time... this way we can confirm hold counters 
+    # ...and now wait for the job to be released in the event log....
+    handle.wait(condition=ClusterState.none_held,timeout=60)
+    # and finally wait for job to be held a second time... this way we can confirm hold counters
     # are incrementing as they should.
     assert handle.wait(condition=ClusterState.any_held,timeout=60)
 

@@ -417,6 +417,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 	/*	The user_policy is checked in this
 			order. The first one to succeed is the winner:
 
+			ATTR_ALLOWED_JOB_DURATION
 			ATTR_TIMER_REMOVE_CHECK
 			ATTR_PERIODIC_HOLD_CHECK
 			ATTR_PERIODIC_RELEASE_CHECK
@@ -424,6 +425,25 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 			ATTR_ON_EXIT_HOLD_CHECK
 			ATTR_ON_EXIT_REMOVE_CHECK
 	*/
+
+	/* Should I perform a hold based on the "running" time of the job? */
+	int allowedJobDuration;
+	if( ad.LookupInteger( ATTR_JOB_ALLOWED_JOB_DURATION, allowedJobDuration ) ) {
+		// Arguably, we should be calling BaseUserPolicy::getJobBirthday()
+		// here, but we don't have access to that here.  This will probably
+		// cause some confusion in the local universe, because it otherwise
+		// uses ATTR_JOB_START_DATE to determine duration, but using
+		// ATTR_SHADOW_BIRTHDATE was the assignment and is simpler.
+		int birthday;
+		if( ad.LookupInteger( ATTR_SHADOW_BIRTHDATE, birthday ) ) {
+			if( time(NULL) - birthday >= allowedJobDuration ) {
+				m_fire_expr = ATTR_JOB_ALLOWED_JOB_DURATION;
+				formatstr(m_fire_reason, "The job exceeded allowed job duration of %d", allowedJobDuration);
+				return HOLD_IN_QUEUE;
+			}
+		}
+	}
+
 
 	/* Should I perform a remove based on the epoch time? */
 	m_fire_expr = ATTR_TIMER_REMOVE_CHECK;
@@ -654,6 +674,13 @@ bool UserPolicy::FiringReason(std::string &reason,int &reason_code,int &reason_s
 
 	if ( m_fire_expr == NULL ) {
 		return false;
+	}
+
+	if( strcmp(m_fire_expr, ATTR_JOB_ALLOWED_JOB_DURATION) == 0 ) {
+		reason = m_fire_reason;
+		reason_code = CONDOR_HOLD_CODE::JobDurationExceeded;
+		reason_subcode = 0;
+		return true;
 	}
 
 	reason = "";

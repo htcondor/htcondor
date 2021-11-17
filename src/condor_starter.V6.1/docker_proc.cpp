@@ -541,6 +541,13 @@ bool DockerProc::JobReaper( int pid, int status ) {
 void
 DockerProc::SetupDockerSsh() {
 #ifdef LINUX
+	static bool first_time = true;
+	if (first_time) {
+		first_time = false;
+	} else {
+		return;
+	}
+
 	// First, create a unix domain socket that we can listen on
 	int uds = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (uds < 0) {
@@ -913,6 +920,18 @@ bool DockerProc::Version( std::string & version ) {
 	}
 
 	return foundVersion;
+}
+void 
+DockerProc::restartCheckpointedJob() {
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	CondorError error;
+	int rv = DockerAPI::rm( containerName, error );
+	if( rv < 0 ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container '%s' after checkpoint exit.\n", containerName.c_str() );
+		// Will fail later when we try to restart if it still exists.  If it doesn't :shrug: all good!
+	}
+
+	VanillaProc::restartCheckpointedJob();
 }
 
 // Generate a list of strings that are suitable arguments to

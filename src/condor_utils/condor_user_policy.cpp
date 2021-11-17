@@ -143,7 +143,7 @@ BaseUserPolicy::checkPeriodic( void )
 			// special to do, we'll just return now.
 		return;
 	}
-	
+
 		// if we're supposed to do anything else with the job, we
 		// need to perform some actions now, so call our helper:
 	this->doAction( action, true );

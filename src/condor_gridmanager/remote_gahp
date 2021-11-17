@@ -173,7 +173,12 @@ elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
     # several random ports in case we get unlucky on the first attempt.
     # We extract the IP and port on which the gridmanager can be
     # contacted from $CONDOR_INHERIT.
-    GRIDMANAGER_ADDRESS=`echo "$CONDOR_INHERIT" | sed 's/[^<]*<\([^?>]*\).*/\1/'`
+    if [ "$CONDOR_INHERIT" != "" ] ; then
+        GRIDMANAGER_ADDRESS=`echo "$CONDOR_INHERIT" | sed 's/[^<]*<\([^?>]*\).*/\1/'`
+    else
+        GRIDMANAGER_ADDRESS="127.0.0.1:12345"
+        echo "CONDOR_INHERIT not defined, using bogus value $GRIDMANAGER_ADDRESS for gridmanager address" 1>&2
+    fi
     SSH_STATUS=255
     if [[ `ssh -V 2>&1` =~ ^OpenSSH_[5-9].* ]] ; then
         SSH_ARGS+=(-o ExitOnForwardFailure=yes)

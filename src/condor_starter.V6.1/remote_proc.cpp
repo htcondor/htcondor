@@ -306,7 +306,7 @@ bool RemoteProc::PublishUpdateAd( ClassAd * ad ) {
 	if ( status_fp != NULL ) {
 		bool is_eof = false;
 		int error = 0;
-		int rc = InsertFromFile(status_fp, *ad, is_eof, error);
+		std::ignore = InsertFromFile(status_fp, *ad, is_eof, error);
 	} else {
 		dprintf( D_FULLDEBUG, "RemoteProc: failed to open status file\n" );
 	}

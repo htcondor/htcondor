@@ -350,6 +350,7 @@
 #define SUBMIT_KEY_NextJobStartDelay "next_job_start_delay"
 #define SUBMIT_KEY_WantGracefulRemoval "want_graceful_removal"
 #define SUBMIT_KEY_JobMaxVacateTime "job_max_vacate_time"
+#define SUBMIT_KEY_AllowedJobDuration "allowed_job_duration"
 
 #define SUBMIT_KEY_JobMaterializeLimit "max_materialize"
 #define SUBMIT_KEY_JobMaterializeMaxIdle "max_idle"
@@ -489,6 +490,8 @@ public:
 	void setMyProxyPassword(const char * pass) { MyProxyPassword = pass; }
 	bool setDisableFileChecks(bool value) { bool old = DisableFileChecks; DisableFileChecks = value; return old; }
 	bool setFakeFileCreationChecks(bool value) { bool old = FakeFileCreationChecks; FakeFileCreationChecks = value; return old; }
+	bool addExtendedCommands(const classad::ClassAd & cmds) { return extendedCmds.Update(cmds); }
+	void clearExtendedCommands() { extendedCmds.Clear(); }
 
 	char * submit_param( const char* name, const char* alt_name ) const;
 	char * submit_param( const char* name ) const; // call param with NULL as the alt
@@ -671,6 +674,7 @@ protected:
 	JOB_ID_KEY jid; // id of the current job being built
 	time_t     submit_time;
 	std::string   submit_username; // username specified to init_cluster_ad
+	ClassAd extendedCmds; // extended submit keywords, from config
 
 	// these are used with the internal ABORT_AND_RETURN() and RETURN_IF_ABORT() methods
 	mutable int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
@@ -780,6 +784,7 @@ protected:
 	int SetOAuth(); /* 1 attr, prunable, factory:ok */
 
 	int SetSimpleJobExprs(); /* run always */
+	int SetExtendedJobExprs(); /* run always */
 	int SetAutoAttributes(); /* run always */
 	int ReportCommonMistakes(); /* run always */
 
@@ -814,6 +819,7 @@ protected:
 		bool & stream_it);  // in,out: whether we expect to stream it or not
 
 	// private helper functions
+	int do_simple_commands(const struct SimpleSubmitKeyword * cmdtable);
 	int build_oauth_service_ads(classad::References & services, ClassAdList & ads, std::string & error) const;
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
 	int query_universe(MyString & sub_type, bool & is_docker); // figure out universe, but DON'T modify the cached members

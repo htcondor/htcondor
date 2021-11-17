@@ -743,7 +743,7 @@ char* x509_proxy_identity_name(X509 *cert, STACK_OF(X509)* cert_chain)
 		}
 	}
 
-	if (tmp_cert) {
+	if (target_cert) {
 		return x509_proxy_subject_name(target_cert);
 	}
 

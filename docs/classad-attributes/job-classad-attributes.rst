@@ -40,8 +40,20 @@ all attributes.
 ``AcctGroupUser``
     The user name associated with the accounting group. This attribute
     is only present if an accounting group was requested by the
-    submission. :index:`AllRemoteHosts<single: AllRemoteHosts; ClassAd job attribute>`
+    submission.
 
+:index:`AllowedJobDuration<single: AllowedJobDuration; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; AllowedJobDuration>`
+
+``AllowedJobDuration``
+    The longest time for which a job may continuously be in the running state.
+    Jobs which exceed this duration will go on hold.  Exiting the running
+    state resets the job duration measured by this attribute.
+
+    This attribute is intended to help minimize the time wasted by jobs
+    which may erroneously run forever.
+
+:index:`AllRemoteHosts<single: AllRemoteHosts; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; AllRemoteHosts>`
 
 ``AllRemoteHosts``
@@ -67,35 +79,35 @@ all attributes.
     the :doc:`/man-pages/condor_submit` section.
 
 :index:`AuthTokenSubject<single: AuthTokenSubject; ClassAd job attributes>`
-:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenSubject>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; AuthTokenSubject>`
 
 ``AuthTokenSubject``
     A string recording the subject in the authentication token (IDTOKENS or
     SCITOKENS) used to submit the job.
 
 :index:`AuthTokenIssuer<single: AuthTokenIssuer; ClassAd job attributes>`
-:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenIssuer>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; AuthTokenIssuer>`
 
 ``AuthTokenIssuer``
     A string recording the issuer in the authentication token (IDTOKENS or
     SCITOKENS) used to submit the job.
 
 :index:`AuthTokenGroups<single: AuthTokenGroups; ClassAd job attributes>`
-:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenGroups>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; AuthTokenGroups>`
 
 ``AuthTokenGroups``
     A string recording the groups in the authentication token (IDTOKENS or
     SCITOKENS) used to submit the job.
 
 :index:`AuthTokenScopes<single: AuthTokenScopes; ClassAd job attributes>`
-:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenScopes>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; AuthTokenScopes>`
 
 ``AuthTokenScopes``
     A string recording the scopes in the authentication token (IDTOKENS or
     SCITOKENS) used to submit the job.
 
 :index:`AuthTokenId<single: AuthTokenId; ClassAd job attributes>`
-:index:`job ClassAd attribute<single: job ClassAd attribubte; AuthTokenId>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; AuthTokenId>`
 
 ``AuthTokenId``
     A string recording the unique identifier of the authentication token (IDTOKENS or
@@ -363,7 +375,6 @@ all attributes.
     -  ``Job held``, event code is 12
     -  ``Job released``, event code is 13
     -  ``Post script terminated``, event code is 16
-    -  ``Globus submit``, event code is 17
     -  ``Grid submit``, event code is 27
 
     If ``DAGManNodesLog`` is not defined, it has no effect. The value of
@@ -385,8 +396,7 @@ all attributes.
     to one day. A value of 0 indicates that the delegated proxy should
     be valid for as long as allowed by the credential used to create the
     proxy. This setting currently only applies to proxies delegated for
-    non-grid jobs and HTCondor-C jobs. It does not currently apply to
-    globus grid jobs, which always behave as though this setting were 0.
+    non-grid jobs and HTCondor-C jobs.
     This setting has no effect if the configuration setting
     ``DELEGATE_JOB_GSI_CREDENTIALS``
     :index:`DELEGATE_JOB_GSI_CREDENTIALS` is false, because in
@@ -840,9 +850,6 @@ all attributes.
     | | 1                              | The user put the job on             |                          |
     | | [UserRequest]                  | hold with *condor_hold*.            |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 2                              | Globus middleware                   | The GRAM error number.   |
-    | | [GlobusGramError]              | reported an error.                  |                          |
-    +----------------------------------+-------------------------------------+--------------------------+
     | | 3                              | The ``PERIODIC_HOLD``               | User Specified           |
     | | [JobPolicy]                    | expression evaluated to             |                          |
     |                                  | ``True``. Or,                       |                          |
@@ -1069,6 +1076,9 @@ all attributes.
     +----------------------------------+-------------------------------------+--------------------------+
     | | 45                             | Test of singularity runtime failed  |                          |
     | | [SingularityTestFailed]        | before launching a job              |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 46                             | The job's allowed duration was      |                          |
+    | | [JobDurationExceeded]          | exceeded.                           |                          |
     +----------------------------------+-------------------------------------+--------------------------+
 
 
@@ -1556,14 +1566,8 @@ all attributes.
 
 ``NumCkpts``
     A count of the number of checkpoints written by this job during its
-    lifetime. :index:`NumGlobusSubmits<single: NumGlobusSubmits; ClassAd job attribute>`
-
-:index:`job ClassAd attribute<single: job ClassAd attribute; NumGlobusSubmits>`
-
-``NumGlobusSubmits``
-    An integer that is incremented each time the *condor_gridmanager*
-    receives confirmation of a successful job submission into Globus.
-
+    lifetime.
+    
 :index:`NumHolds<single: NumHolds; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; NumHolds>`
 
