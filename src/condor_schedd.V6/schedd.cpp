@@ -3425,7 +3425,13 @@ Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitte
 	if ( ! job->LookupString(attr_JobUser,real_owner) ) {
 		return NULL;
 	}
-	if (strcmp(UidDomain, AccountingDomain.c_str())) {
+		// If USER_IS_THE_NEW_OWNER, we always put the user in the
+		// accounting domain.  This code must match the logic in
+		// `get_job_prio` otherwise we have submitter ads named differently
+		// than the name used in the  prio rec array.
+	if (strcmp(UidDomain, AccountingDomain.c_str()) ||
+		user_is_the_new_owner)
+	{
 		auto last_at = real_owner.find_last_of('@');
 		if (last_at != std::string::npos) {
 			real_owner = real_owner.substr(0, last_at) + "@" + AccountingDomain;
