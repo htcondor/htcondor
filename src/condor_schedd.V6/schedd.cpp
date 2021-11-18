@@ -12912,7 +12912,8 @@ Scheduler::Init()
     stats.Reconfig();
 
 	if (first_time_in_init) {
-		if (param_boolean("USE_JOBSETS", false)) {
+		static bool allow_jobsets = false; // disable jobsets entirely in 9.0.x
+		if (allow_jobsets && param_boolean("USE_JOBSETS", false)) {
 			ASSERT(jobSets == nullptr);
 			jobSets = new JobSets();
 			ASSERT(jobSets);
