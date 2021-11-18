@@ -121,10 +121,29 @@ Bugs Fixed:
   isn't a proxy.
   :jira:`800`
 
+- Fixed a bug that prevented file transfer from working properly on Unix systems
+  when the job created a file to be transfered back to the submit machine containing
+  a backslash in it.
+  :jira:`747`
+
 - Fixed some bugs which could cause the counts of transferred files
   reported in the job ad to be inaccurate.
   :jira:`813`
 
+Version 9.3.2
+-------------
+
+.. HTCondor version 9.3.2 released on Month Date, 2021.
+
+- HTCondor version 9.3.2 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
 
 Version 9.3.1
 -------------
