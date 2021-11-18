@@ -5716,9 +5716,10 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 		GetAttributeString(job.cluster, job.proc, ATTR_X509_USER_PROXY, x509up);
 		GetAttributeString(job.cluster, job.proc, ATTR_JOB_IWD, iwd);
 
-#if 0 // tj: pretty sure this unnecessary, it certainly doesn't belong here...
+		// While we're populating attributes with information from the security session,
+		// we need to ensure that ATTR_USER is set for this job; in `user_is_the_new_owner`
+		// mode, this is a mandatory attribute.
 		if (user_is_the_new_owner && job.proc == -1) {
-			// Ensure that the user is set for all clusters
 			std::string user;
 			GetAttributeString(job.cluster, job.proc, ATTR_USER, user);
 			if (user.empty()) {
@@ -5728,7 +5729,6 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 				SetAttribute(job.cluster, job.proc, ATTR_USER, "UNDEFINED");
 			}
 		}
-#endif
 
 		if (job.proc != -1 && x509up.empty()) {
 			if (iwd.empty()) {
