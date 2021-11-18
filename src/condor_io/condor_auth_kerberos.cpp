@@ -1167,6 +1167,19 @@ int Condor_Auth_Kerberos :: init_kerberos_context()
         goto error;
     }
 
+#if !defined(DARWIN)
+    // Passing nullptr causes a crash on macOS, though the docs say it's
+    // allowed. This call should be a noop, but just in case it can fail
+    // and that's a useful indicator of problems on other platforms, leave
+    // it in place for them.
+    if ((code = (*krb5_auth_con_getaddrs_ptr)(krb_context_,
+                                      auth_context_,
+                                      nullptr,
+                                      nullptr))) {
+        goto error;
+    }
+#endif
+
     // stash location
     defaultStash_ = param(STR_CONDOR_CACHE_DIR);
 
