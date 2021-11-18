@@ -15,7 +15,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added new submit command ``allowed_execute_duration``, which limits how long
+  a job can run -- not including file transfer -- expressed in seconds.
+  If a job exceeds this limit, it is placed on hold.
+  :jira:`820`
 
 Bugs Fixed:
 

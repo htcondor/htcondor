@@ -351,6 +351,7 @@
 #define SUBMIT_KEY_WantGracefulRemoval "want_graceful_removal"
 #define SUBMIT_KEY_JobMaxVacateTime "job_max_vacate_time"
 #define SUBMIT_KEY_AllowedJobDuration "allowed_job_duration"
+#define SUBMIT_KEY_AllowedExecuteDuration "allowed_execute_duration"
 
 #define SUBMIT_KEY_JobMaterializeLimit "max_materialize"
 #define SUBMIT_KEY_JobMaterializeMaxIdle "max_idle"
