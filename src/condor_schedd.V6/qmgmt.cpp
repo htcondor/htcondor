@@ -4346,9 +4346,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			YourStringNoCase sock_domain(Q_SOCK->getDomain());
 
 			if (uid_domain != sock_domain &&
-				!strcmp("family", Q_SOCK->getDomain()) &&
-				!strcmp("parent", Q_SOCK->getDomain()) &&
-				!strcmp("child", Q_SOCK->getDomain()))
+				strcmp("family", Q_SOCK->getDomain()) &&
+				strcmp("parent", Q_SOCK->getDomain()) &&
+				strcmp("child", Q_SOCK->getDomain()))
 			{
 				new_value.clear();
 				attr_value = "\"nobody\"";
