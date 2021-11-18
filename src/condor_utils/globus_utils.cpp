@@ -743,7 +743,7 @@ char* x509_proxy_identity_name(X509 *cert, STACK_OF(X509)* cert_chain)
 		}
 	}
 
-	if (tmp_cert) {
+	if (target_cert) {
 		return x509_proxy_subject_name(target_cert);
 	}
 
@@ -787,7 +787,7 @@ extract_VOMS_info( X509 *cert, STACK_OF(X509) *chain, int verify_type, char **vo
 	// calling this function on something that doesn't have VOMS attributes
 	// should return error 1.  when the config knob disables VOMS, behave the
 	// same way.
-	if (!param_boolean_int("USE_VOMS_ATTRIBUTES", 1)) {
+	if (!param_boolean("USE_VOMS_ATTRIBUTES", true)) {
 		return 1;
 	}
 

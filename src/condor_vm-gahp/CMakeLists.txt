@@ -32,7 +32,7 @@ condor_exe( condor_vm-gahp "${SourceFiles}" ${C_SBIN}
   "${CONDOR_LIBS};${LIBVIRT_FOUND}"
   OFF )
 
-if (LINUX AND WANT_FULL_DEPLOYMENT)
+if (LINUX)
    condor_exe( condor_vm-gahp-vmware "${SourceFiles}" ${C_SBIN} "${CONDOR_LIBS}" OFF )
    set_property( TARGET condor_vm-gahp-vmware APPEND PROPERTY COMPILE_DEFINITIONS VMWARE_ONLY)
    install ( FILES condor_vm_vmware DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

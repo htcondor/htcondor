@@ -129,8 +129,9 @@ OfflineCollectorPlugin::configure ()
 			_ads = NULL;
 		}
 
-		_ads = new ClassAdCollection (NULL, _persistent_store, 2 );
-		ASSERT ( _ads );
+		_ads = new ClassAdCollection (NULL);
+		bool init = _ads->InitLogFile(_persistent_store, 2);
+		ASSERT ( init );
 
 	} else {
 

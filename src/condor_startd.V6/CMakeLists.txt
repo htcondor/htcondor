@@ -17,10 +17,6 @@
  ############################################################### 
 
 
-if (DARWIN)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework IOKit -framework Carbon")
-endif()
-
 set(startdElements
 backfill_mgr.cpp
 claim.cpp

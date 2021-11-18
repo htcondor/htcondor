@@ -308,6 +308,7 @@
 #define ATTR_JAVA_VENDOR  "JavaVendor"
 #define ATTR_JAVA_VERSION  "JavaVersion"
 #define ATTR_JOB_ACTION  "JobAction"
+#define ATTR_JOB_ALLOWED_JOB_DURATION  "AllowedJobDuration"
 #define ATTR_JOB_MATERIALIZE_DIGEST_FILE  "JobMaterializeDigestFile"
 #define ATTR_JOB_MATERIALIZE_ITEMS_FILE   "JobMaterializeItemsFile"
 #define ATTR_JOB_MATERIALIZE_LIMIT        "JobMaterializeLimit"
@@ -681,6 +682,7 @@
 #define ATTR_TOOL_DAEMON_OUTPUT  "ToolDaemonOutput"
 #define ATTR_TOTAL_CLAIM_RUN_TIME  "TotalClaimRunTime"
 #define ATTR_TOTAL_CLAIM_SUSPEND_TIME  "TotalClaimSuspendTime"
+#define ATTR_TOTAL_CLUSTER_ADS  "TotalClusterAds"
 #define ATTR_TOTAL_CONDOR_LOAD_AVG			AttrGetName( ATTRE_TOTAL_LOAD )
 #define ATTR_TOTAL_CPUS  "TotalCpus"
 #define ATTR_TOTAL_SLOT_CPUS  "TotalSlotCpus"

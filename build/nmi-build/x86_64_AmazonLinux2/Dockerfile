@@ -172,5 +172,4 @@ RUN yum install -y \
 RUN pip3 install pytest pytest-httpserver
 
 # Enable daily repo to get latest packages for tarballs
-RUN yum-config-manager --enable htcondor-daily
-RUN yum list -y blahp
+RUN yum-config-manager --enable htcondor-daily && yum list -y blahp && yum clean all

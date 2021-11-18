@@ -43,7 +43,7 @@ int main(int, char **)
 
     /* ----- Shared library function support ----- */
     cout << "  Shared library function support: ";
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
     cout << "yes\n";
 #else
     cout << "no\n";

@@ -272,7 +272,11 @@ Requires: %name-externals = %version-%release
 %endif
 
 %if %blahp
+%if %globus
 Requires: blahp >= 2.1.1
+%else
+Requires: blahp >= 2.2.0
+%endif
 %endif
 
 # Useful tools are using the Python bindings
@@ -333,7 +337,7 @@ Requires: krb5-libs
 Requires: libcom_err
 Requires: munge-libs
 Requires: openssl-libs
-Requires: scitokens-cpp
+Requires: scitokens-cpp >= 0.6.2
 Requires: systemd-libs
 
 #Provides: user(condor) = 43
@@ -721,14 +725,12 @@ export CMAKE_PREFIX_PATH=/usr
 %cmake3 \
        -DBUILDID:STRING=%condor_build_id \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
-       -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=TRUE \
-       -DHAVE_BACKFILL:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
 %if %blahp
        -DWITH_BLAHP:BOOL=TRUE \
@@ -738,7 +740,7 @@ export CMAKE_PREFIX_PATH=/usr
 %endif
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
-       -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+       -DCMAKE_INSTALL_PREFIX:PATH=/ \
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
        -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
@@ -761,29 +763,14 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -D_VERBOSE:BOOL=FALSE \
 %endif
-       -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
-       -DHAVE_BACKFILL:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
-       -DHAVE_KBDD:BOOL=TRUE \
-       -DHAVE_HIBERNATION:BOOL=TRUE \
-       -DWANT_HDFS:BOOL=FALSE \
-       -DWANT_CONTRIB:BOOL=FALSE \
-       -DWITH_PIGEON:BOOL=FALSE \
-       -DWANT_FULL_DEPLOYMENT:BOOL=TRUE \
-       -DWITH_TRIGGERD:BOOL=FALSE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
        -DWITH_QPID:BOOL=FALSE \
-%if %blahp
-       -DBLAHP_FOUND=/usr/libexec/blahp/BLClient \
-       -DWITH_BLAHP:BOOL=TRUE \
-%else
-       -DWITH_BLAHP:BOOL=FALSE \
-%endif
 %if %globus
        -DWITH_GLOBUS:BOOL=TRUE \
 %else
@@ -1663,6 +1650,23 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Nov 09 2021 Tim Theisen <tim@cs.wisc.edu> - 9.3.1-1
+- Add allowed_job_duration condor_submit command to cap job run time
+
+* Wed Nov 03 2021 Tim Theisen <tim@cs.wisc.edu> - 9.3.0-1
+- Discontinue support for Globus GSI
+- Discontinue support for grid type 'nordugrid', use 'arc' instead
+- MacOS version strings now include the major version number (10 or 11)
+- File transfer plugin sample code to aid in developing new plugins
+- Add generic knob to set the slot user for all slots
+
+* Tue Nov 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.7-1
+- Fix bug where condor_gpu_discovery could crash with older CUDA libraries
+- Fix bug where condor_watch_q would fail on machines with older kernels
+- condor_watch_q no longer has a limit on the number of job event log files
+- Fix bug where a startd could crash claiming a slot with p-slot preemption
+- Fix bug where a job start would not be recorded when a shadow reconnects
+
 * Thu Sep 23 2021 Tim Theisen <tim@cs.wisc.edu> - 9.2.0-1
 - Add SERVICE node that runs alongside the DAG for the duration of the DAG
 - Fix problem where proxy delegation to older HTCondor versions failed

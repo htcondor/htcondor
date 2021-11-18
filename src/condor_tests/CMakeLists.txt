@@ -187,7 +187,9 @@ endif ()
 		condor_pl_test (test_htcondor_dags "htcondor-dags test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_dags")
 
 		# htcondor.personal test suite
-		condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_personal")
+		if (NOT WINDOWS)
+			condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_personal")
+		endif()
 
 		# ClassAds test suite
 		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -223,6 +225,7 @@ endif ()
 			condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_htcondor_cli "Test the htcondor CLI tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_toe_exit_info "Test ToE exit info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_allowed_job_duration "test allowed_job_duration" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -596,6 +599,7 @@ endif ()
 	condor_pl_test(job_core_queue_sched "Scheduler: Verify the  queue command" "quick;ctest" CTEST DEPENDS "src/condor_tests/job_core_queue_sched.cmd;src/condor_tests/job_core_queue.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_readqueuelog.pl")
 	condor_pl_test(job_core_max-running_local "Local: Max job running limit" "quick;ctest;local" CTEST)
 	condor_pl_test(job_late_materialize "Late materialization of jobs" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	condor_pl_test(extended_submit_cmds "Extended submit commands" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_cat.pl")
 	condor_pl_test(job_schedd_restart-holdjobs-ok "Held queue ok after schedd restart" "quick;ctest" CTEST)
 	condor_pl_test(job_schedd_restart-runningjobs-ok "Running queue ok after schedd restart" "quick;ctest" CTEST)
 	condor_pl_test(job_schedd_restart-basic "schedd restarts" "quick;ctest" CTEST)

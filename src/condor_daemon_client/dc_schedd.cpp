@@ -304,6 +304,296 @@ DCSchedd::clearDirtyAttrs( StringList* ids, CondorError * errstack,
 					  NULL, NULL, result_type, errstack );
 }
 
+ClassAd* 
+DCSchedd::exportJobsWorker(
+	StringList* ids_list,
+	const char * constraint_str,
+	const char * export_dir,
+	const char * new_spool_dir,
+	CondorError * errstack)
+{
+	if ( ! export_dir || ( ! ids_list && ! constraint_str)) {
+		dprintf( D_ALWAYS, "DCSchedd::exportJobs: job selection or export dir is NULL, aborting\n" );
+		if (errstack) {
+			errstack->push("DCSchedd::exportJobs", SCHEDD_ERR_MISSING_ARGUMENT,
+			              "job selection export dir argument is missing");
+		}
+		return NULL;
+	}
+
+	ReliSock rsock;
+
+	ClassAd cmd_ad;
+	if (ids_list) {
+		auto_free_ptr ids(ids_list->print_to_string());
+		cmd_ad.Assign(ATTR_ACTION_IDS, (const char *)ids);
+	} else {
+		if ( ! cmd_ad.AssignExpr(ATTR_ACTION_CONSTRAINT, constraint_str)) {
+			dprintf(D_ALWAYS, "DCSchedd::exportJobs invalid constraint : %s\n", constraint_str);
+			if (errstack) {
+				errstack->push("DCSchedd::exportJobs", SCHEDD_ERR_MISSING_ARGUMENT,
+							  "job selection constraint is invalid");
+			}
+		}
+	}
+	cmd_ad.Assign("ExportDir", export_dir);
+	if (new_spool_dir) { cmd_ad.Assign("NewSpoolDir", new_spool_dir); }
+
+	rsock.timeout(20);   // years of research... :)
+	if ( ! rsock.connect(_addr)) {
+		dprintf(D_ALWAYS, "DCSchedd::exportJobs: Failed to connect to schedd (%s)\n", _addr);
+		if (errstack) {
+			errstack->push("DCSchedd::exportJobs", CEDAR_ERR_CONNECT_FAILED,
+			               "Failed to connect to schedd");
+		}
+		return NULL;
+	}
+	if ( ! startCommand(EXPORT_JOBS, (Sock*)&rsock, 0, errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd::exportJobs: Failed to send command (EXPORT_JOBS) to the schedd\n" );
+		return NULL;
+	}
+
+	if ( ! putClassAd(&rsock, cmd_ad) || ! rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "DCSchedd:exportJobs: Can't send classad, probably an authorization failure\n" );
+		if (errstack) {
+			errstack->push("DCSchedd::exportJobs", CEDAR_ERR_PUT_FAILED,
+			              "Can't send classad, probably an authorization failure");
+		}
+		return NULL;
+	}
+
+		// Next, we need to read the reply from the schedd if things
+		// are ok and it's going to go forward.  If the schedd can't
+		// read our reply to this ClassAd, it assumes we got killed
+		// and it should abort its transaction
+	rsock.decode();
+	ClassAd* result_ad = new ClassAd();
+	if ( ! getClassAd(&rsock, *result_ad) || ! rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "DCSchedd:exportJobs: Can't read response ad from %s\n", _addr );
+		if (errstack) {
+			errstack->push("DCSchedd::exportJobs", CEDAR_ERR_GET_FAILED,
+							"Can't read response ad" );
+		}
+		delete result_ad; 
+		return NULL;
+	}
+
+		// If the action totally failed, the schedd will already have
+		// aborted the transaction and closed up shop, so there's no
+		// reason trying to continue.  However, we still want to
+		// return the result ad we got back so that our caller can
+		// figure out what went wrong.
+	int result_code = NOT_OK;
+	result_ad->LookupInteger(ATTR_ACTION_RESULT, result_code);
+	if (result_code != OK) {
+		int err_code = 0;
+		std::string reason("Unknown reason");
+		result_ad->LookupInteger(ATTR_ERROR_CODE, err_code);
+		result_ad->LookupString(ATTR_ERROR_STRING, reason);
+		dprintf( D_ALWAYS, "DCSchedd:exportJobs: Export failed - %s\n", reason.c_str());
+		if (errstack) {
+			errstack->push("DCSchedd::exportJobs", err_code, reason.c_str());
+		}
+	}
+
+	return result_ad;
+}
+
+ClassAd*
+DCSchedd::exportJobs(StringList* ids_list, const char * export_dir, const char * new_spool_dir, CondorError * errstack)
+{
+	return exportJobsWorker(ids_list, nullptr, export_dir, new_spool_dir, errstack);
+}
+
+ClassAd*
+DCSchedd::exportJobs(const char * constraint_str, const char * export_dir, const char * new_spool_dir, CondorError * errstack)
+{
+	return exportJobsWorker(nullptr, constraint_str, export_dir, new_spool_dir, errstack);
+}
+
+	/** import the results from a previously exported job_queue.log managed by Lumberjack
+			@param import_dir directory containing the exported job_queue.log and job files to be imported
+	*/
+ClassAd* 
+DCSchedd::importExportedJobResults(const char * import_dir, CondorError * errstack)
+{
+	if( ! import_dir) {
+		dprintf( D_ALWAYS, "DCSchedd::importExportedJobResults: exported directory path is NULL, aborting\n" );
+		if (errstack) {
+			errstack->push("DCSchedd::importExportedJobResults", SCHEDD_ERR_MISSING_ARGUMENT,
+			              " exported directory path is missing");
+		}
+		return NULL;
+	}
+
+	ReliSock rsock;
+
+	ClassAd cmd_ad;
+	cmd_ad.Assign("ExportDir", import_dir);
+
+	rsock.timeout(20);   // years of research... :)
+	if ( ! rsock.connect(_addr)) {
+		dprintf(D_ALWAYS, "DCSchedd::importExportedJobResults: Failed to connect to schedd (%s)\n", _addr);
+		if (errstack) {
+			errstack->push("DCSchedd::importExportedJobResults", CEDAR_ERR_CONNECT_FAILED,
+			               "Failed to connect to schedd");
+		}
+		return NULL;
+	}
+	if ( ! startCommand(IMPORT_EXPORTED_JOB_RESULTS, (Sock*)&rsock, 0, errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd::importExportedJobResults: Failed to send command (IMPORT_EXPORTED_JOB_RESULTS) to the schedd\n" );
+		return NULL;
+	}
+
+	if ( ! putClassAd(&rsock, cmd_ad) || ! rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "DCSchedd:importExportedJobResults: Can't send classad, probably an authorization failure\n" );
+		if (errstack) {
+			errstack->push("DCSchedd::importExportedJobResults", CEDAR_ERR_PUT_FAILED,
+			              "Can't send classad, probably an authorization failure");
+		}
+		return NULL;
+	}
+
+		// Next, we need to read the reply from the schedd if things
+		// are ok and it's going to go forward.  If the schedd can't
+		// read our reply to this ClassAd, it assumes we got killed
+		// and it should abort its transaction
+	rsock.decode();
+	ClassAd* result_ad = new ClassAd();
+	if ( ! getClassAd(&rsock, *result_ad) || ! rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "DCSchedd:importExportedJobResults: Can't read response ad from %s\n", _addr );
+		if (errstack) {
+			errstack->push("DCSchedd::importExportedJobResults", CEDAR_ERR_GET_FAILED,
+							"Can't read response ad" );
+		}
+		delete result_ad; 
+		return NULL;
+	}
+
+		// If the action totally failed, the schedd will already have
+		// aborted the transaction and closed up shop, so there's no
+		// reason trying to continue.  However, we still want to
+		// return the result ad we got back so that our caller can
+		// figure out what went wrong.
+	int result_code = NOT_OK;
+	result_ad->LookupInteger(ATTR_ACTION_RESULT, result_code);
+	if (result_code != OK) {
+		int err_code = 0;
+		std::string reason("Unknown reason");
+		result_ad->LookupInteger(ATTR_ERROR_CODE, err_code);
+		result_ad->LookupString(ATTR_ERROR_STRING, reason);
+		dprintf( D_ALWAYS, "DCSchedd:importExportedJobResults: Import failed - %s\n", reason.c_str());
+		if (errstack) {
+			errstack->push("DCSchedd::importExportedJobResults", err_code, reason.c_str());
+		}
+	}
+
+	return result_ad;
+}
+
+ClassAd*
+DCSchedd::unexportJobsWorker(
+	StringList* ids_list,
+	const char * constraint_str,
+	CondorError * errstack)
+{
+	if ( ! ids_list && ! constraint_str ) {
+		dprintf( D_ALWAYS, "DCSchedd::unexportJobs: job selection is NULL, aborting\n" );
+		if (errstack) {
+			errstack->push("DCSchedd::unexportJobs", SCHEDD_ERR_MISSING_ARGUMENT,
+			              "job selection argument is missing");
+		}
+		return nullptr;
+	}
+
+	ReliSock rsock;
+
+	ClassAd cmd_ad;
+	if (ids_list) {
+		auto_free_ptr ids(ids_list->print_to_string());
+		cmd_ad.Assign(ATTR_ACTION_IDS, (const char *)ids);
+	} else {
+		if ( ! cmd_ad.AssignExpr(ATTR_ACTION_CONSTRAINT, constraint_str)) {
+			dprintf(D_ALWAYS, "DCSchedd::unexportJobs invalid constraint : %s\n", constraint_str);
+			if (errstack) {
+				errstack->push("DCSchedd::unexportJobs", SCHEDD_ERR_MISSING_ARGUMENT,
+							  "job selection constraint is invalid");
+			}
+		}
+	}
+
+	rsock.timeout(20);   // years of research... :)
+	if ( ! rsock.connect(_addr)) {
+		dprintf(D_ALWAYS, "DCSchedd::unexportJobs: Failed to connect to schedd (%s)\n", _addr);
+		if (errstack) {
+			errstack->push("DCSchedd::unexportJobs", CEDAR_ERR_CONNECT_FAILED,
+			               "Failed to connect to schedd");
+		}
+		return nullptr;
+	}
+	if ( ! startCommand(UNEXPORT_JOBS, (Sock*)&rsock, 0, errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd::unexportJobs: Failed to send command (UNEXPORT_JOBS) to the schedd\n" );
+		return nullptr;
+	}
+
+	if ( ! putClassAd(&rsock, cmd_ad) || ! rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "DCSchedd:unexportJobs: Can't send classad, probably an authorization failure\n" );
+		if (errstack) {
+			errstack->push("DCSchedd::unexportJobs", CEDAR_ERR_PUT_FAILED,
+			              "Can't send classad, probably an authorization failure");
+		}
+		return nullptr;
+	}
+
+		// Next, we need to read the reply from the schedd if things
+		// are ok and it's going to go forward.  If the schedd can't
+		// read our reply to this ClassAd, it assumes we got killed
+		// and it should abort its transaction
+	rsock.decode();
+	ClassAd* result_ad = new ClassAd();
+	if ( ! getClassAd(&rsock, *result_ad) || ! rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "DCSchedd:unexportJobs: Can't read response ad from %s\n", _addr );
+		if (errstack) {
+			errstack->push("DCSchedd::unexportJobs", CEDAR_ERR_GET_FAILED,
+							"Can't read response ad" );
+		}
+		delete result_ad;
+		return nullptr;
+	}
+
+		// If the action totally failed, the schedd will already have
+		// aborted the transaction and closed up shop, so there's no
+		// reason trying to continue.  However, we still want to
+		// return the result ad we got back so that our caller can
+		// figure out what went wrong.
+	int result_code = NOT_OK;
+	result_ad->LookupInteger(ATTR_ACTION_RESULT, result_code);
+	if (result_code != OK) {
+		int err_code = 0;
+		std::string reason("Unknown reason");
+		result_ad->LookupInteger(ATTR_ERROR_CODE, err_code);
+		result_ad->LookupString(ATTR_ERROR_STRING, reason);
+		dprintf( D_ALWAYS, "DCSchedd:unexportJobs: Export failed - %s\n", reason.c_str());
+		if (errstack) {
+			errstack->push("DCSchedd::unexportJobs", err_code, reason.c_str());
+		}
+	}
+
+	return result_ad;
+}
+
+ClassAd*
+DCSchedd::unexportJobs(StringList* ids_list, CondorError * errstack)
+{
+	return unexportJobsWorker(ids_list, nullptr, errstack);
+}
+
+ClassAd*
+DCSchedd::unexportJobs(const char * constraint_str, CondorError * errstack)
+{
+	return unexportJobsWorker(nullptr, constraint_str, errstack);
+}
+
 
 bool
 DCSchedd::reschedule()

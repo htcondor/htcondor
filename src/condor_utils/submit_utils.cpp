@@ -581,6 +581,7 @@ struct SimpleSubmitKeyword {
 		f_as_list     = 0x10,  // canonicalize the item as a list, removing extra spaces and using , as separator
 		f_strip_quotes = 0x20, // if value has quotes already, remove them before inserting into the ad
 
+		f_error       = 0x040, // use of this command has been disabled in submit
 		f_alt_name    = 0x080, // this is an alternate name, don't set if the previous keyword existed
 		f_alt_err     = 0x0c0, // this is an alternate name, and it is an error to use both
 
@@ -2476,7 +2477,7 @@ int SubmitHash::SetGSICredentials()
 		std::string full_proxy_file = full_path( proxy_file );
 		free(proxy_file);
 		proxy_file = NULL;
-#if defined(HAVE_EXT_GLOBUS)
+#if !defined(WIN32)
 // this code should get torn out at some point (8.7.0) since the SchedD now
 // manages these attributes securely and the values provided by submit should
 // not be trusted.  in the meantime, though, we try to provide some cross
@@ -5010,6 +5011,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// Dataflow jobs
 	{SUBMIT_KEY_SkipIfDataflow, ATTR_SKIP_IF_DATAFLOW, SimpleSubmitKeyword::f_as_bool },
 
+	{SUBMIT_KEY_AllowedJobDuration, ATTR_JOB_ALLOWED_JOB_DURATION, SimpleSubmitKeyword::f_as_expr},
+
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
 	// items declared below this banner are inserted by the various SetXXX methods
@@ -5250,11 +5253,16 @@ const SORTED_PRUNABLE_KEYWORD * is_prunable_keyword(const char * key) {
 
 int SubmitHash::SetSimpleJobExprs()
 {
+	return do_simple_commands(prunable_keywords);
+}
+
+int SubmitHash::do_simple_commands(const SimpleSubmitKeyword * cmdtable)
+{
 	RETURN_IF_ABORT();
 
-	const SimpleSubmitKeyword *i = prunable_keywords;
+	const SimpleSubmitKeyword *i = cmdtable;
 	bool last_one_existed = false;
-	for (i = prunable_keywords; i->key; i++) {
+	for (i = cmdtable; i->key; i++) {
 
 		// stop when we get to the specials. these are handled by the SetXXX methods
 		if (i->opts & SimpleSubmitKeyword::f_special)
@@ -5312,6 +5320,9 @@ int SubmitHash::SetSimpleJobExprs()
 				}
 			}
 			AssignJobString(i->attr, str);
+		} else if ((i->opts & SimpleSubmitKeyword::f_alt_err) == SimpleSubmitKeyword::f_error) {
+			push_error(stderr, "%s=%s has been disabled by the administrator.\n", i->key, expr.ptr());
+			ABORT_AND_RETURN(1);
 		} else if (i->opts & SimpleSubmitKeyword::f_as_bool) {
 			bool val = false;
 			if (! string_is_boolean_param(expr, val)) {
@@ -5333,6 +5344,58 @@ int SubmitHash::SetSimpleJobExprs()
 			AssignJobExpr(i->attr, expr);
 		}
 
+		RETURN_IF_ABORT();
+	}
+	return 0;
+}
+
+
+int SubmitHash::SetExtendedJobExprs()
+{
+	RETURN_IF_ABORT();
+
+	SimpleSubmitKeyword cmd[2] = {
+		{nullptr, nullptr, SimpleSubmitKeyword::f_as_expr },
+		{nullptr, nullptr, SimpleSubmitKeyword::f_special_mask } // this terminates
+	};
+	for (auto it = extendedCmds.begin(); it != extendedCmds.end(); ++it) {
+		cmd[0].key = it->first.c_str();
+		cmd[0].attr = it->first.c_str();
+		cmd[0].opts = SimpleSubmitKeyword::f_as_expr;
+		classad::Value val;
+		if (ExprTreeIsLiteral(it->second, val)) {
+			switch (val.GetType()) {
+			case classad::Value::UNDEFINED_VALUE:
+				// just ignore this attribute, we do this so that config can compose
+				// and set attr=undefine to disable an extended set by a previous config step
+				cmd[0].opts = SimpleSubmitKeyword::f_special_mask;
+				break;
+			case classad::Value::ERROR_VALUE:
+				cmd[0].opts = SimpleSubmitKeyword::f_error;
+				break;
+			case classad::Value::BOOLEAN_VALUE:
+				cmd[0].opts = SimpleSubmitKeyword::f_as_bool;
+				break;
+			case classad::Value::INTEGER_VALUE: {
+				long long ll;
+				val.IsIntegerValue(ll);
+				cmd[0].opts = (ll < 0) ? SimpleSubmitKeyword::f_as_int : SimpleSubmitKeyword::f_as_uint;
+				} break;
+			case classad::Value::STRING_VALUE: {
+				std::string str;
+				val.IsStringValue(str);
+				cmd[0].opts = SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes;
+				// if the value has commas, then it indicates a list, if it begins with the word file it's a filename
+				if (strchr(str.c_str(), ',')) { cmd[0].opts |= SimpleSubmitKeyword::f_as_list; }
+				else if (starts_with_ignore_case(str, "file")) { cmd[0].opts |= SimpleSubmitKeyword::f_genfile; }
+				} break;
+			default:
+				// SimpleSubmitKeyword::f_as_expr
+				break;
+			}
+		}
+		// apply the command
+		do_simple_commands(cmd);
 		RETURN_IF_ABORT();
 	}
 	return 0;
@@ -8213,6 +8276,7 @@ ClassAd* SubmitHash::make_job_ad (
 	SetOAuth(); /* 1 attr, prunable, factory:ok */
 
 	SetSimpleJobExprs();
+	SetExtendedJobExprs();
 
 	SetJobDeferral(); /* 4 attrs, prunable */
 

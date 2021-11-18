@@ -1404,6 +1404,14 @@ FILE TRANSFER COMMANDS
 
 POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 
+ allowed_job_duration = <integer>
+    The longest time for which a job may continuously be in the running state.
+    Jobs which exceed this duration will go on hold.  Exiting the running
+    state resets the job duration used by this command.
+
+    This command is intended to help minimize the time wasted by jobs
+    which may erroneously run forever.
+
  max_retries = <integer>
     The maximum number of retries allowed for this job (must be
     non-negative). If the job fails (does not exit with the
@@ -1957,40 +1965,7 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
  gce_preemptible = <True | False>
     For grid type **gce** jobs, specifies whether the virtual machine
     instance should be preemptible. The default is for the instance to
-    not be preemptible. :index:`globus_rematch<single: globus_rematch; submit commands>`
- globus_rematch = <ClassAd Boolean Expression>
-    This expression is evaluated by the *condor_gridmanager* whenever:
-
-    #. the
-       **globus_resubmit** :index:`globus_resubmit<single: globus_resubmit; submit commands>`
-       expression evaluates to ``True``
-    #. the *condor_gridmanager* decides it needs to retry a submission
-       (as when a previous submission failed to commit)
-
-    If
-    **globus_rematch** :index:`globus_rematch<single: globus_rematch; submit commands>`
-    evaluates to ``True``, then before the job is submitted again to
-    globus, the *condor_gridmanager* will request that the
-    *condor_schedd* daemon renegotiate with the matchmaker (the
-    *condor_negotiator*). The result is this job will be matched again.
-    :index:`globus_resubmit<single: globus_resubmit; submit commands>`
-
- globus_resubmit = <ClassAd Boolean Expression>
-    The expression is evaluated by the *condor_gridmanager* each time
-    the *condor_gridmanager* gets a job ad to manage. Therefore, the
-    expression is evaluated:
-
-    #. when a grid universe job is first submitted to HTCondor-G
-    #. when a grid universe job is released from the hold state
-    #. when HTCondor-G is restarted (specifically, whenever the
-       *condor_gridmanager* is restarted)
-
-    If the expression evaluates to ``True``, then any previous
-    submission to the grid universe will be forgotten and this job will
-    be submitted again as a fresh submission to the grid universe. This
-    may be useful if there is a desire to give up on a previous
-    submission and try again. Note that this may result in the same job
-    running more than once. Do not treat this operation lightly.
+    not be preemptible.
 
     :index:`grid_resource<single: grid_resource; submit commands>`
  grid_resource = <grid-type-string> <grid-specific-parameter-list>
@@ -1998,7 +1973,7 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     values that must specified. This submit description file command
     allows each to be given in a space-separated list. Allowable
     **grid-type-string** values are **arc**, **azure**, **batch**, **boinc**,
-    **condor**, **ec2**, **gce**, and **nordugrid**.
+    **condor**, **ec2**, and **gce**.
     The HTCondor manual chapter on Grid Computing
     details the variety of grid types.
 
@@ -2014,7 +1989,7 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     For a **grid-type-string** of **ec2**, one additional parameter
     specifies the EC2 URL.
 
-    For a **grid-type-string** of **nordugrid** or **arc**, the single
+    For a **grid-type-string** of **arc**, the single
     parameter is the name of the ARC resource to be used.
 
     :index:`MyProxyCredentialName<single: MyProxyCredentialName; submit commands>`
@@ -2052,12 +2027,7 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     specified when the *MyProxy* server DN does not follow the
     conventional naming scheme of a host credential. This occurs, for
     example, when the *MyProxy* server DN begins with a user credential.
-    :index:`nordugrid_rsl<single: nordugrid_rsl; submit commands>`
- nordugrid_rsl = <RSL-string>
-    Used to provide any additional RSL string attributes which are not
-    covered by regular submit description file parameters. Used when the
-    **universe** is **grid**, and the type of grid system is
-    **nordugrid**. :index:`transfer_error<single: transfer_error; submit commands>`
+    :index:`transfer_error<single: transfer_error; submit commands>`
  transfer_error = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
     error output (from ``stderr``) from the job is transferred from the
@@ -2104,8 +2074,8 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     X.509 user proxy. If **x509userproxy** is set, then that file is
     used for the proxy. Otherwise, the proxy is looked for in the
     standard locations. If **x509userproxy** is set or if the job is a
-    grid universe job of grid type **arc** or
-    **nordugrid**, then the value of **use_x509userproxy** is forced to
+    grid universe job of grid type **arc**,
+    then the value of **use_x509userproxy** is forced to
     ``True``. Defaults to ``False``.
     :index:`x509userproxy<single: x509userproxy; submit commands>`
  x509userproxy = <full-pathname>
@@ -2129,7 +2099,7 @@ COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit comman
     **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` is
     relevant when the **universe** is **vanilla**, or when the
     **universe** is **grid** and the type of grid system is one of
-    **condor**, **arc**, or **nordugrid**. Defining
+    **condor**, or **arc**. Defining
     a value causes the proxy to be delegated to the execute machine.
     Further, VOMS attributes defined in the proxy will appear in the job
     ClassAd.

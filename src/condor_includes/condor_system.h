@@ -145,9 +145,7 @@
 #if defined( HAVE_SYS_TYPES_H )
 #  include <sys/types.h>
 #endif
-#if defined( HAVE_STDINT_H )
-#  include <stdint.h>
-#endif
+#include <cstdint>
 
 /* Define _O_BINARY, etc. if they're not defined as zero */
 #ifndef _O_BINARY

@@ -51,22 +51,15 @@
 #endif
 
 #ifdef USE_STATFS
-# ifdef HAVE_SYS_MOUNT_H
-#  include <sys/mount.h>
-# endif
-# ifdef HAVE_SYS_STATFS_H
-#  include <sys/statfs.h>
-# endif
-# ifdef HAVE_LINUX_MAGIC_H
-#  include <linux/magic.h>
-# elif defined(HAVE_LINUX_NFS_FS_H)
-#  include <linux/nfs_fs.h>
-# elif defined(HAVE_LINUX_NFSD_CONST_H)
-#  include <linux/nfsd/const.h>
-# endif
-# ifndef NFS_SUPER_MAGIC
-#  define NFS_SUPER_MAGIC 0x6969	// From the man pages of statfs()
-# endif
+#ifdef LINUX
+#include <sys/statfs.h>
+#include <linux/magic.h>
+#else
+// statfs isn't POSIX; MacOS has the same function but in a different
+// header file compared to Linux.
+#include <sys/mount.h>
+#define NFS_SUPER_MAGIC 0x6969	// From the man pages of statfs()
+#endif
 #endif
 
 #include <string.h>
@@ -129,7 +122,7 @@ detect_nfs_statfs( const char *path, bool *is_nfs )
 #  endif
 
 	// #2: Look at the f_type value
-# elif defined HAVE_STRUCT_STATFS_F_TYPE
+# elif defined(UNIX)
 	if ( buf.f_type == NFS_SUPER_MAGIC ) {
 		*is_nfs = true;
 	} else {
@@ -139,10 +132,6 @@ detect_nfs_statfs( const char *path, bool *is_nfs )
 	printf( "detect_nfs_statfs: f_type = %x -> %s\n",
 			buf.f_type, *is_nfs ? "true" : "false" );
 #  endif
-
-	// #3: This is untested: look at fstype
-# elif defined HAVE_STRUCT_STATFS_F_FSTYP
-#   error "Don't know how to evaluate f_fstyp yet"
 
 	// #3: Completely unknown
 # else

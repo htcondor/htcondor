@@ -600,7 +600,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 
 			/* to be safe, we want to switch our real uid/gid to our
 			   effective uid/gid (shedding any privledges we've got).
-			   we also want to drop any supplimental groups we're in.
+			   we also want to drop any supplemental groups we're in.
 			   we want to run this popen()'ed thing as our effective
 			   uid/gid, dropping the real uid/gid.  all of these calls
 			   will fail if we don't have a ruid of 0 (root), but
