@@ -109,6 +109,20 @@ Bugs Fixed:
   reported in the job ad to be inaccurate.
   :jira:`813`
 
+Version 9.3.2
+-------------
+
+.. HTCondor version 9.3.2 released on Month Date, 2021.
+
+- HTCondor version 9.3.2 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
 
 Version 9.3.1
 -------------
