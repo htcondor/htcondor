@@ -2553,7 +2553,7 @@ random( const char*,const ArgumentList &argList,EvalState &state,
 	}
 
     if (arg.IsIntegerValue(int_max)) {
-		if (int_max == 0) {
+		if (int_max <= 0) {
 			result.SetErrorValue( );
 			return( false );
 		}
