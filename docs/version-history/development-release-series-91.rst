@@ -118,11 +118,20 @@ Version 9.3.2
 
 New Features:
 
-- None.
+- Added new submit command ``allowed_execute_duration``, which limits how long
+  a job can run -- not including file transfer -- expressed in seconds.
+  If a job exceeds this limit, it is placed on hold.
+  :jira:`820`
 
 Bugs Fixed:
 
-- None.
+- A problem where HTCondor would not create a directory on the execute
+  node before trying to transfer a file into it should no longer occur.  (This
+  would cause the job which triggered this problem to go on hold.)  One
+  way to trigger this problem was by setting ``preserve_relative_paths``
+  and specifying the same directory in both ``transfer_input_files`` and
+  ``transfer_checkpoint_files``.
+  :jira:`809`
 
 Version 9.3.1
 -------------
