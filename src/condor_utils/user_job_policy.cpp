@@ -444,6 +444,32 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 		}
 	}
 
+	/* Should I perform a hold based on the "execute" time of the job? */
+	int allowedExecuteDuration;
+	if( ad.LookupInteger( ATTR_JOB_ALLOWED_EXECUTE_DURATION, allowedExecuteDuration ) ) {
+		int JobStatus, JobCurrentStartExecutingDate;
+		if(  ad.LookupInteger( ATTR_JOB_STATUS, JobStatus )
+		  && ad.LookupInteger( ATTR_JOB_CURRENT_START_EXECUTING_DATE, JobCurrentStartExecutingDate ) ) {
+			bool isRunning = JobStatus == 2;
+			int beganExecuting = JobCurrentStartExecutingDate;
+
+			// We use TransferOutFinished because the shadow only sets
+			// ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE at job exit.
+			int TransferOutFinished;
+			bool tof = ad.LookupInteger( "TransferOutFinished", TransferOutFinished );
+			bool checkpointed = tof && TransferOutFinished > JobCurrentStartExecutingDate;
+			if( checkpointed ) {
+				beganExecuting = TransferOutFinished;
+			}
+
+			int currentTime = time(NULL);
+			if( isRunning && (currentTime - beganExecuting) > allowedExecuteDuration ) {
+				m_fire_expr = ATTR_JOB_ALLOWED_EXECUTE_DURATION;
+				formatstr(m_fire_reason, "The job exceeded allowed execute duration of %d", allowedExecuteDuration);
+				return HOLD_IN_QUEUE;
+			}
+		}
+	}
 
 	/* Should I perform a remove based on the epoch time? */
 	m_fire_expr = ATTR_TIMER_REMOVE_CHECK;
@@ -679,6 +705,13 @@ bool UserPolicy::FiringReason(std::string &reason,int &reason_code,int &reason_s
 	if( strcmp(m_fire_expr, ATTR_JOB_ALLOWED_JOB_DURATION) == 0 ) {
 		reason = m_fire_reason;
 		reason_code = CONDOR_HOLD_CODE::JobDurationExceeded;
+		reason_subcode = 0;
+		return true;
+	}
+
+	if( strcmp(m_fire_expr, ATTR_JOB_ALLOWED_EXECUTE_DURATION) == 0 ) {
+		reason = m_fire_reason;
+		reason_code = CONDOR_HOLD_CODE::JobExecuteExceeded;
 		reason_subcode = 0;
 		return true;
 	}
