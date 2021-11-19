@@ -1,3 +1,4 @@
+#include "classad/classad.h"
 #include "classad/classad_distribution.h"
 
 #include <string>
@@ -22,7 +23,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *input, size_t len) {
 	std::string s(input, input + len);
 
 	tree = parser.ParseExpression(s);
-	delete tree;
+	if (tree) {
+		classad::ClassAd ad;
+		classad::Value val;
+		ad.Insert("ExpressionToEvaluate", tree);
+		ad.EvaluateAttr("ExpressionToEvaluate", val);
+	}
 
 	return 0;
 }
