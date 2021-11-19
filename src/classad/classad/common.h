@@ -72,6 +72,10 @@
 #ifndef DLL_IMPORT_MAGIC
 #define DLL_IMPORT_MAGIC __declspec(dllimport)
 #endif
+
+// must be defined before windows.h
+#define NOMINMAX
+
 #include <windows.h>
 #include <float.h>
 #include <io.h>
