@@ -24,6 +24,7 @@
 
 using namespace std;
 
+#include <algorithm>
 namespace classad {
 
 Operation::
@@ -1307,9 +1308,8 @@ doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 				break;
 			} else {
 				// sign bit is on; >> *may* not set the sign
-				// TODO Cap i2 to 0..64
 				val = i1;
-				for (long long i = 0; i < i2; i++)
+				for (long long i = 0; i < std::min(64ll,i2); i++)
 					val = (val >> 1) | signMask;	// make sure that it does
 				result.SetIntegerValue (val);
 				break;
