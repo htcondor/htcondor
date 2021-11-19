@@ -2560,6 +2560,10 @@ random( const char*,const ArgumentList &argList,EvalState &state,
         random_int = get_random_integer() % int_max;
         result.SetIntegerValue(random_int);
     } else if (arg.IsRealValue(double_max)) {
+		if (double_max <= 0) {
+			result.SetErrorValue( );
+			return( false );
+		}
         random_double = double_max * get_random_real();
         result.SetRealValue(random_double);
     } else {
