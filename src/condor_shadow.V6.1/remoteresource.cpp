@@ -1745,28 +1745,35 @@ RemoteResource::startCheckingProxy()
 		proxy_check_tid = daemonCore->Register_Timer( 0, PROXY_CHECK_INTERVAL,
 							(TimerHandlercpp)&RemoteResource::checkX509Proxy,
 							"RemoteResource::checkX509Proxy()", this );
-    }
+	}
 }
 
-void 
+void
 RemoteResource::beginExecution( void )
 {
+	//
+	// Self-checkpointing jobs may begin execution more than once per
+	// activation.  Record that information for use by the activation
+	// metrics (HTCONDOR-861).
+	//
+	time_t now = time(NULL);
+	activation.StartExecutionTime = now;
+	dprintf( D_ALWAYS, "RemoteResource::beginExecution(): %ld\n", now );
+
 	if( began_execution ) {
-			// Only call this function once per remote resource
 		return;
 	}
 
 	began_execution = true;
 	setResourceState( RR_EXECUTING );
 
-	// add the execution start time into the job ad. 
-	int now = (int)time(NULL);
-	jobAd->Assign( ATTR_JOB_CURRENT_START_EXECUTING_DATE , now);
+	// add the execution start time into the job ad.
+	jobAd->Assign( ATTR_JOB_CURRENT_START_EXECUTING_DATE, now);
 
 	startCheckingProxy();
-	
-		// Let our shadow know so it can make global decisions (for
-		// example, should it log a JOB_EXECUTE event)
+
+	// Let our shadow know so it can make global decisions (for
+	// example, should it log a JOB_EXECUTE event)
 	shadow->resourceBeganExecution( this );
 }
 

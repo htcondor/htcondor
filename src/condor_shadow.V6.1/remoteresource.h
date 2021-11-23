@@ -471,6 +471,16 @@ class RemoteResource : public Service {
 	int m_attempt_shutdown_tid;
 	time_t m_started_attempting_shutdown;
 
+    //
+    // Values for computing activation-related metrics.  (HTCONDOR-861)
+    //
+    struct {
+        time_t StartTime;
+        time_t StartExecutionTime;
+        time_t ExitExecutionTime;
+        time_t TerminationTime;
+    } activation;
+
 private:
 
 		/// Private helper methods for trying to reconnect
