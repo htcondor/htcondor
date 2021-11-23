@@ -8383,7 +8383,8 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 			if (scheduler.AlreadyMatched(&PrioRec[i].id)) {
 				PrioRec[i].matched = true;
-			} else if (!Runnable(&PrioRec[i].id)) {
+			}
+			if (!Runnable(&PrioRec[i].id)) {
 				PrioRec[i].not_runnable = true;
 			}
 			if (PrioRec[i].matched || PrioRec[i].not_runnable) {
