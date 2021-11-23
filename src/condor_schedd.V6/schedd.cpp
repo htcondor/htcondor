@@ -2905,8 +2905,9 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			dprintf(D_ALWAYS, "Cluster %d has no " ATTR_OWNER " attribute.  Ignoring...\n", job->jid.cluster);
 			return 0;
 		}
-		// Keep track of unique owners per submitter.
-		SubData->owners.insert(OwnInfo->name);
+		OwnInfo->num.Hits += 1;
+		if (SubData) { SubData->num.Hits += 1; }
+		// don't count clusters when tracking unique owners per submitter // SubData->owners.insert(OwnInfo->name);
 
 		// clusters that have no materialized jobs need to be kickstarted to materialize.
 		// since materialization is normally triggered by job state changes.

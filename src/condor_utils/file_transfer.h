@@ -528,6 +528,15 @@ class FileTransfer final: public Service {
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
 	ClassAd jobAd;
 
+	//
+	// As of this writing, this function should only ever be called from
+	// DoUpload().  It converts from a StringList of entries to a
+	// a FileTransferList, a std::vector of FileTransferItems.  The
+	// FileTransferList is a sequence of commands, and should not be
+	// reordered except by operator < (and probably not even then),
+	// because -- for example -- directories must be created before the
+	// file that live in them.
+	//
 	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list, bool preserveRelativePaths );
 
 		// This function generates a list of files to transfer, including
@@ -538,10 +547,23 @@ class FileTransfer final: public Service {
 		// iwd       - relative paths are relative to this path
 		// max_depth - how deep to recurse (-1 for infinite)
 		// expanded_list - the list of files to transfer
-	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths );
+		// preserve_relative_paths - if false, use the old behavior and
+		//      transfer src_path to its basename. if true, and
+		//      src_path is a relative path, transfer it to the same
+		//      relative path
+		// SpoolSpace - if preserve_relative_paths is set, then a
+		//      src_path which begins with this path is treated as a
+		//      relative path.  This allows us to preserve the relative
+		//      paths of files stored in SPOOL, whether from
+		//      self-checkpointing, ON_EXIT_OR_EVICT, or remote input
+		//      file spooling.
+	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace );
 
         // Function internal to ExpandFileTransferList() -- called twice there.
-    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list );
+        // The SpoolSpace argument is only necessary because this function
+        // calls back into  ExpandFileTransferList(); see that function
+        // for details.
+    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list, const char *SpoolSpace );
 
 		// Returns true if path is a legal path for our peer to tell us it
 		// wants us to write to.  It must be a relative path, containing

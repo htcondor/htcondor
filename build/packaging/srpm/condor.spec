@@ -725,14 +725,12 @@ export CMAKE_PREFIX_PATH=/usr
 %cmake3 \
        -DBUILDID:STRING=%condor_build_id \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
-       -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=TRUE \
-       -DHAVE_BACKFILL:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
 %if %blahp
        -DWITH_BLAHP:BOOL=TRUE \
@@ -742,7 +740,7 @@ export CMAKE_PREFIX_PATH=/usr
 %endif
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
-       -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+       -DCMAKE_INSTALL_PREFIX:PATH=/ \
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
        -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
@@ -765,29 +763,14 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -D_VERBOSE:BOOL=FALSE \
 %endif
-       -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
-       -DHAVE_BACKFILL:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
-       -DHAVE_KBDD:BOOL=TRUE \
-       -DHAVE_HIBERNATION:BOOL=TRUE \
-       -DWANT_HDFS:BOOL=FALSE \
-       -DWANT_CONTRIB:BOOL=FALSE \
-       -DWITH_PIGEON:BOOL=FALSE \
-       -DWANT_FULL_DEPLOYMENT:BOOL=TRUE \
-       -DWITH_TRIGGERD:BOOL=FALSE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
        -DWITH_QPID:BOOL=FALSE \
-%if %blahp
-       -DBLAHP_FOUND=/usr/libexec/blahp/BLClient \
-       -DWITH_BLAHP:BOOL=TRUE \
-%else
-       -DWITH_BLAHP:BOOL=FALSE \
-%endif
 %if %globus
        -DWITH_GLOBUS:BOOL=TRUE \
 %else
