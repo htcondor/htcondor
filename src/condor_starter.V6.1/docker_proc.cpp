@@ -131,7 +131,7 @@ int DockerProc::StartJob() {
 	#endif
 #else
 	// TODO: make this work on Linux also
-	std::string innerdir = Starter->GetWorkingDir(true);
+	std::string innerdir = Starter->jic->jobRemoteIWD();
 #endif
 
 	//
@@ -210,9 +210,14 @@ int DockerProc::StartJob() {
 
 	std::list<std::string> extras;
 	std::string scratchDir = Starter->GetWorkingDir(0);
-		// if file xfer is off, need to also mount SCRATCH_DIR (= cwd)
-	if (scratchDir != sandboxPath) {
-		extras.push_back(scratchDir + ":" + scratchDir);
+
+	// map the scratch dir inside the container
+	extras.push_back(scratchDir + ":" + scratchDir);
+
+	// if file xfer is off, also map the iwd
+	std::string iwd = Starter->jic->jobRemoteIWD();
+	if (iwd != scratchDir) {
+		extras.push_back(iwd + ":" + iwd);
 	}
 
 	buildExtraVolumes(extras, *machineAd, *JobAd);
