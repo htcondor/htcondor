@@ -453,8 +453,6 @@ if( NOT WINDOWS)
 
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
-	find_path(HAVE_OPENSSL_SSL_H "openssl/ssl.h")
-
 	if ( ${OS_NAME} STREQUAL "DARWIN" )
 		# Mac OS X includes the pcre library but not the header
 		# file. Supply a copy ourselves.
@@ -508,18 +506,15 @@ if( NOT WINDOWS)
 
 	set(HAVE_ACCESS 1) # POSIX 2001
 	check_function_exists("clone" HAVE_CLONE)
-	check_function_exists("dirfd" HAVE_DIRFD)
 	check_function_exists("euidaccess" HAVE_EUIDACCESS)
 	check_function_exists("fstat64" HAVE_FSTAT64)
 	check_function_exists("_fstati64" HAVE__FSTATI64)
 	check_function_exists("getdtablesize" HAVE_GETDTABLESIZE)
 	set(HAVE_GETTIMEOFDAY 1) # POSIX 2001
-	check_function_exists("inet_ntoa" HAS_INET_NTOA)
 	check_function_exists("lstat" HAVE_LSTAT)
 	check_function_exists("lstat64" HAVE_LSTAT64)
 	check_function_exists("_lstati64" HAVE__LSTATI64)
 	set(HAVE_MKSTEMP 1) # POSIX 2001
-	check_function_exists("setlinebuf" HAVE_SETLINEBUF)
 	check_include_files("sys/eventfd.h" HAVE_EVENTFD)
         check_function_exists("innetgr" HAVE_INNETGR)
 
@@ -547,10 +542,7 @@ if( NOT WINDOWS)
 	check_include_files("os_types.h" HAVE_OS_TYPES_H)
 	check_include_files("resolv.h" HAVE_RESOLV_H)
 	check_include_files("sys/param.h" HAVE_SYS_PARAM_H)
-	check_include_files("sys/personality.h" HAVE_SYS_PERSONALITY_H)
-	check_include_files("sys/syscall.h" HAVE_SYS_SYSCALL_H)
 	check_include_files("sys/types.h" HAVE_SYS_TYPES_H)
-	check_include_files("valgrind.h" HAVE_VALGRIND_H)
 	check_include_files("procfs.h" HAVE_PROCFS_H)
 	check_include_files("sys/procfs.h" HAVE_SYS_PROCFS_H)
 
@@ -587,16 +579,12 @@ find_program(SPHINXBUILD NAMES sphinx-build sphinx-1.0-build)
 check_type_size("id_t" ID_T)
 check_type_size("__int64" __INT64)
 check_type_size("int64_t" INT64_T)
-check_type_size("int" INTEGER)
-set(SIZEOF_INT "${INTEGER}")
 check_type_size("long" LONG_INTEGER)
 set(SIZEOF_LONG "${LONG_INTEGER}")
 check_type_size("long long" LONG_LONG)
 if(HAVE_LONG_LONG)
   set(SIZEOF_LONG_LONG "${LONG_LONG}")
 endif()
-check_type_size("void *" VOIDPTR)
-set(SIZEOF_VOIDPTR "${VOIDPTR}")
 
 
 ##################################################
@@ -613,7 +601,6 @@ if(${OS_NAME} STREQUAL "LINUX")
 	check_symbol_exists(SIOCGIFCONF "linux/sockios.h" HAVE_DECL_SIOCGIFCONF)
 	check_include_files("linux/types.h" HAVE_LINUX_TYPES_H)
 	check_include_files("linux/types.h;linux/ethtool.h" HAVE_LINUX_ETHTOOL_H)
-	check_include_files("linux/personality.h" HAVE_LINUX_PERSONALITY_H)
 	check_include_files("linux/sockios.h" HAVE_LINUX_SOCKIOS_H)
 	check_include_files("X11/Xlib.h" HAVE_XLIB_H)
 	check_include_files("X11/extensions/scrnsaver.h" HAVE_XSS_H)
@@ -687,7 +674,6 @@ option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
 option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(WANT_CONTRIB "Enable building of contrib modules" OFF)
-option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
 option(WANT_GLEXEC "Build and install condor glexec functionality" OFF)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)

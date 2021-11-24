@@ -46,6 +46,10 @@ Bugs Fixed:
   crash if the ``offset`` argument was out of range.
   :jira:`823`
 
+- Fixed bugs in the Kerberos authentication code that cause a crash on
+  macOS and can leak memory.
+  :jira:`200`
+
 .. _lts-version-history-907:
 
 Version 9.0.7

@@ -121,10 +121,38 @@ Bugs Fixed:
   isn't a proxy.
   :jira:`800`
 
+- Fixed a bug that prevented file transfer from working properly on Unix systems
+  when the job created a file to be transfered back to the submit machine containing
+  a backslash in it.
+  :jira:`747`
+
 - Fixed some bugs which could cause the counts of transferred files
   reported in the job ad to be inaccurate.
   :jira:`813`
 
+Version 9.3.2
+-------------
+
+.. HTCondor version 9.3.2 released on Month Date, 2021.
+
+- HTCondor version 9.3.2 not yet released.
+
+New Features:
+
+- Added new submit command ``allowed_execute_duration``, which limits how long
+  a job can run -- not including file transfer -- expressed in seconds.
+  If a job exceeds this limit, it is placed on hold.
+  :jira:`820`
+
+Bugs Fixed:
+
+- A problem where HTCondor would not create a directory on the execute
+  node before trying to transfer a file into it should no longer occur.  (This
+  would cause the job which triggered this problem to go on hold.)  One
+  way to trigger this problem was by setting ``preserve_relative_paths``
+  and specifying the same directory in both ``transfer_input_files`` and
+  ``transfer_checkpoint_files``.
+  :jira:`809`
 
 Version 9.3.1
 -------------
