@@ -38,6 +38,11 @@ Bugs Fixed:
   start the job.
   :jira:`798`
 
+- Fixed a bug where if **condor_schedd** fails to claim a **condor_startd**,
+  the job matched to that **condor_startd** won't be rematched for up to
+  20 minutes.
+  :jira:`769`
+
 Version 9.0.7
 -------------
 
