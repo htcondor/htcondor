@@ -38,6 +38,8 @@ extern "C"
 }
 #endif
 
+#include "DelegationInterface.h"
+
 #define NULL_JOB_CONTACT	"X"
 
 // Keep these in synch with the values defined in the Globus header files.
@@ -306,7 +308,7 @@ char* x509_proxy_subject_name( const char *proxy_file);
 
 char* x509_proxy_identity_name( const char *proxy_file);
 
-int x509_proxy_seconds_until_expire( const char *proxy_file );
+int extract_VOMS_info_from_file( const char* proxy_file, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
 
 const char* x509_error_string( void );
 
@@ -365,7 +367,7 @@ int is_globus_friendly_url(const char * path);
 
 #if defined(HAVE_EXT_GLOBUS)
 
-globus_gsi_cred_handle_t x509_proxy_read( const char *proxy_file );
+globus_gsi_cred_handle_t x509_proxy_read_gsi( const char *proxy_file );
 
 void x509_proxy_free( globus_gsi_cred_handle_t handle );
 
@@ -377,12 +379,29 @@ char* x509_proxy_subject_name( globus_gsi_cred_handle_t handle );
 
 char* x509_proxy_identity_name( globus_gsi_cred_handle_t handle );
 
-int x509_proxy_seconds_until_expire( globus_gsi_cred_handle_t handle );
-
 /* functions for extracting voms attributes */
 int extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
-int extract_VOMS_info_from_file( const char* proxy_file, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
 #endif
+
+/* These functions were back-ported from HTCondor 9.3 */
+X509Credential* x509_proxy_read( const char *proxy_file );
+void x509_proxy_free( X509Credential* cred );
+
+time_t x509_proxy_expiration_time( X509 *cert, STACK_OF(X509)* chain );
+time_t x509_proxy_expiration_time( X509Credential* cred );
+
+char* x509_proxy_email( X509 *cert, STACK_OF(X509)* chain );
+char* x509_proxy_email( X509Credential* cred );
+
+char* x509_proxy_subject_name( X509* cert );
+char* x509_proxy_subject_name( X509Credential* cred );
+
+char* x509_proxy_identity_name( X509 *cert, STACK_OF(X509)* chain );
+char* x509_proxy_identity_name( X509Credential* cred );
+
+/* functions for extracting voms attributes */
+int extract_VOMS_info( X509* cert, STACK_OF(X509)* chain, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
+int extract_VOMS_info( X509Credential* cred, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
 
 #endif
 
