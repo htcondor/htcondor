@@ -1771,10 +1771,10 @@ RemoteResource::beginExecution( void )
 	//
 	time_t now = time(NULL);
 	activation.StartExecutionTime = now;
-dprintf( D_ALWAYS, "[Activation]StartExecutionTime: %ld\n", now );
-    time_t ActivationSetUpDuration = activation.StartExecutionTime - activation.StartTime;
-    jobAd->InsertAttr( ATTR_JOB_ACTIVATION_SETUP_DURATION, ActivationSetUpDuration );
-    shadow->updateJobInQueue(U_STATUS);
+	time_t ActivationSetUpDuration = activation.StartExecutionTime - activation.StartTime;
+    // Where would this attribute get rotated?  Here?
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_SETUP_DURATION, ActivationSetUpDuration );
+	shadow->updateJobInQueue(U_STATUS);
 
 	if( began_execution ) {
 		return;
@@ -2505,6 +2505,7 @@ RemoteResource::recordActivationExitExecutionTime(time_t when) {
     activation.ExitExecutionTime = when;
     time_t ActivationExecutionDuration = activation.ExitExecutionTime - activation.StartExecutionTime;
 
+    // Where would this attribute get rotated?  Here?
     jobAd->InsertAttr( ATTR_JOB_ACTIVATION_EXECUTION_DURATION, ActivationExecutionDuration );
     shadow->updateJobInQueue( U_STATUS );
 }
