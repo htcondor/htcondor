@@ -2419,14 +2419,14 @@ all attributes.
     input file transfer is enabled.
 
 ``TransferInFinished``
-    : When the job finished the most recent recent transfer of its input
+    When the job finished the most recent recent transfer of its input
     sandbox, measured in seconds from the epoch. (00:00:00 UTC Jan 1,
     1970). :index:`TransferInQueued<single: TransferInQueued; ClassAd job attribute>`
 
 :index:`job ClassAd attribute<single: job ClassAd attribute; TransferInQueued>`
 
 ``TransferInQueued``
-    : If the job's most recent transfer of its input sandbox was queued,
+    If the job's most recent transfer of its input sandbox was queued,
     this attribute says when, measured in seconds from the epoch
     (00:00:00 UTC Jan 1, 1970).
 
