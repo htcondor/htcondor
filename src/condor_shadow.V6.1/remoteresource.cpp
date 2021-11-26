@@ -224,17 +224,19 @@ RemoteResource::activateClaim( int starterVersion )
 										  &claim_sock );
 		switch( reply ) {
 		case OK:
-			shadow->dprintf( D_ALWAYS, 
+			shadow->dprintf( D_ALWAYS,
 							 "Request to run on %s %s was ACCEPTED\n",
 							 machineName ? machineName:"", dc_startd->addr() );
-				// first, set a timeout on the socket 
+			// Record the activation start time (HTCONDOR-861).
+			activation.StartTime = time(NULL);
+				// first, set a timeout on the socket
 			claim_sock->timeout( 300 );
 				// Now, register it for remote system calls.
 				// It's a bit funky, but works.
-			daemonCore->Register_Socket( claim_sock, "RSC Socket", 
-				   (SocketHandlercpp)&RemoteResource::handleSysCalls, 
+			daemonCore->Register_Socket( claim_sock, "RSC Socket",
+				   (SocketHandlercpp)&RemoteResource::handleSysCalls,
 				   "HandleSyscalls", this );
-			setResourceState( RR_STARTUP );		
+			setResourceState( RR_STARTUP );
 			hadContact();
 
 				// This expiration time we calculate here may be
@@ -310,6 +312,17 @@ RemoteResource::killStarter( bool graceful )
 			// stop any lingering file transfers, if any
 		abortFileTransfer();
 	}
+
+	// Record the activation stop time (HTCONDOR-861) and set the
+	// corresponding duration attributes.
+	activation.TerminationTime = time(NULL);
+	time_t ActivationDuration = activation.TerminationTime - activation.StartTime;
+	time_t ActivationTeardownDuration = activation.TerminationTime - activation.ExitExecutionTime;
+
+	// Where would these attributes get rotated?  Here?
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_DURATION, ActivationDuration );
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION, ActivationTeardownDuration );
+	shadow->updateJobInQueue( U_STATUS );
 
 	if( ! dc_startd->deactivateClaim(graceful,&claim_is_closing) ) {
 		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
@@ -1758,7 +1771,10 @@ RemoteResource::beginExecution( void )
 	//
 	time_t now = time(NULL);
 	activation.StartExecutionTime = now;
-	dprintf( D_ALWAYS, "RemoteResource::beginExecution(): %ld\n", now );
+dprintf( D_ALWAYS, "[Activation]StartExecutionTime: %ld\n", now );
+    time_t ActivationSetUpDuration = activation.StartExecutionTime - activation.StartTime;
+    jobAd->InsertAttr( ATTR_JOB_ACTIVATION_SETUP_DURATION, ActivationSetUpDuration );
+    shadow->updateJobInQueue(U_STATUS);
 
 	if( began_execution ) {
 		return;
@@ -2482,4 +2498,13 @@ RemoteResource::logRemoteAccessCheck(bool allow,char const *op,char const *name)
 			allow ? "ALLOWING" : "DENYING",
 			op,
 			name);
+}
+
+void
+RemoteResource::recordActivationExitExecutionTime(time_t when) {
+    activation.ExitExecutionTime = when;
+    time_t ActivationExecutionDuration = activation.ExitExecutionTime - activation.StartExecutionTime;
+
+    jobAd->InsertAttr( ATTR_JOB_ACTIVATION_EXECUTION_DURATION, ActivationExecutionDuration );
+    shadow->updateJobInQueue( U_STATUS );
 }

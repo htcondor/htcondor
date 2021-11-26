@@ -162,6 +162,8 @@ public:
 		 */
 	void notifyJobPreSpawn( void );
 
+	void notifyExecutionExit( void );
+
 		/** Notify the shadow that the job exited. This will not only
 			update the job ad with the termination information of the job,
 			but also write terminate events into the job log, and do the
@@ -174,13 +176,13 @@ public:
 		*/
 	bool notifyJobExit( int exit_status, int reason,
 						UserProc* user_proc );
-	
+
 		/** The sutble distinction between notifyJobTermination() and
 			notifyJobExit() is that notifyJobTermination() will only update the
 			U_TERMINATE attributes in the job ad on the submit machine based
 			upon the exit_status and reason and do nothing else! An example
-			use is when a job coredumps and due to this causes the 
-			file transfer to fail since some files might not exist if 
+			use is when a job coredumps and due to this causes the
+			file transfer to fail since some files might not exist if
 			directly specified in transfer_output_files. This allows the
 			job ad to contain the exit status of the job while it is on hold.
 			Basically this is used to preserve the termination of the job in

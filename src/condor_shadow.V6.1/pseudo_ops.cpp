@@ -752,3 +752,24 @@ int pseudo_get_sec_session_info(
 	}
 	return 1;
 }
+
+//
+// This syscall MUST ignore information it doesn't know how to deal with.
+//
+
+int
+pseudo_event_notification( const ClassAd & ad ) {
+	std::string eventType;
+	if(! ad.LookupString( "EventType", eventType )) {
+		return 0;
+	}
+
+	ClassAd * jobAd = Shadow->getJobAd();
+	ASSERT(jobAd);
+
+	if( eventType == "ActivationExecutionExit" ) {
+		thisRemoteResource->recordActivationExitExecutionTime(time(NULL));
+	}
+
+	return 0;
+}
