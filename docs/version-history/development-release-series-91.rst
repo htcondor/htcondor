@@ -19,6 +19,9 @@ New Features:
   checkpoint_exit_code in submit files.
   :jira:`841`
 
+- Docker universe jobs now work on jobs without file transfer
+  :jira:`867`
+
 Bugs Fixed:
 
 - Fixed a bug where if the submit file set checkpoint_exit_code, and the administrator
