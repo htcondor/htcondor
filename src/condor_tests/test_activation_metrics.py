@@ -1,5 +1,12 @@
 #!/usr/bin/env pytest
 
+#
+# To get information about the actual durations being reported by the tests,
+# run with the INFO debug level:
+#
+#  pytest test_activation_metrics.py --log-cli-level INFO
+#
+
 import time
 import logging
 
@@ -154,23 +161,39 @@ def job_two_execution_durations(default_condor, job_two_handle):
         timeout=20
     )
 
-    # FIXME: add sixty-second over-all time-out here
-    durations = set()
-    while not job_two_handle.wait(
-            condition=ClusterState.all_terminal,
-            verbose=True,
-            timeout=3,
-        ):
+    # Because we don't report [Activation]StartExecutionTime, we have to
+    # assume/ensure that the job's execution durations are dissimilar.
+    start = time.time()
+    durations = []
+    current_duration = None
+    while time.time() - start < 60:
+        time.sleep(3)
 
         ad = list(job_two_handle.query())[0]
         try:
             aed = ad["ActivationExecutionDuration"]
-            durations.add(aed)
+            if current_duration is None:
+                current_duration = aed
+                durations.append(current_duration)
+            elif aed != current_duration:
+                current_duration = aed
+                durations.append(current_duration)
         except KeyError:
             pass
 
+        job_two_handle.state.read_events()
+        if job_two_handle.state.all_terminal():
+            break
+
+    job_two_handle.state.read_events()
     assert job_two_handle.state.all_complete()
     return durations
+
+
+@action
+def job_two_ad(job_two_handle, job_two_execution_durations):
+    for ad in job_two_handle.query():
+        return ad
 
 
 class TestActivationMetrics:
@@ -181,6 +204,10 @@ class TestActivationMetrics:
         atd  = job_one_ad["ActivationTeardownDuration"]
         assert None not in [ad, asud, aed, atd]
 
+        logger.info(f"ActivationDuration = {ad}")
+        logger.info(f"ActivationSetUpDuration = {asud}")
+        logger.info(f"ActivationExecutionDuration = {aed}")
+        logger.info(f"ActivationTeardownDuration = {atd}")
         assert ad >= asud + aed + atd
 
     def test_external_consistency(self, job_one_ad):
@@ -189,10 +216,18 @@ class TestActivationMetrics:
         cd  = job_one_ad["CompletionDate"]
         assert None not in [ad, jsd, cd]
 
+        logger.info(f"ActivationDuration = {ad}")
+        logger.info(f"JobStartDate = {jsd}")
+        logger.info(f"CompletionDate = {cd}")
         assert ad <= cd - jsd
 
-    def test_job_two(self, job_two_execution_durations):
+    def test_self_checkpointing_job(self, job_two_execution_durations, job_two_ad):
         assert len(job_two_execution_durations) >= 2
-        # FIXME...
-        # job_two_duration =job_two_ad["ActivationDuration"]
-        # assert( job_two_execution_durations[0] + job_two_execution_durations[1] ) <= job_two_duration
+
+        job_two_duration = job_two_ad["ActivationDuration"]
+        assert job_two_duration is not None
+
+        logger.info(f"job_two_duration = {job_two_duration}")
+        logger.info(f"first execution duration = {job_two_execution_durations[0]}")
+        logger.info(f"second execution duration = {job_two_execution_durations[1]}")
+        assert( job_two_execution_durations[0] + job_two_execution_durations[1] ) <= job_two_duration
