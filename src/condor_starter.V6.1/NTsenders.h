@@ -97,7 +97,7 @@ extern "C" {
 		std::string &filetrans_session_info,
 		std::string &filetrans_session_key);
 
-	// Why are this all C-linkage?
+	// Why are these all C-linkage?
 	int REMOTE_CONDOR_event_notification(ClassAd * event);
 }
 
