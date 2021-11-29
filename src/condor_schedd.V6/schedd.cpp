@@ -7528,6 +7528,13 @@ Scheduler::negotiate(int command, Stream* s)
 	for(job_index = 0; job_index < N_PrioRecs && !skip_negotiation; job_index++) {
 		prio_rec *prec = &PrioRec[job_index];
 
+		// make sure job isn't flagged as not needing matching
+		if (prec->not_runnable || prec->matched)
+		{
+			jobs--;
+			continue;
+		}
+
 		// make sure owner matches what negotiator wants
 		if (strcmp(owner, prec->submitter) != 0)
 		{
@@ -7788,6 +7795,13 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	match->claim_requester = NULL;
 
 	if( !msg->claimed_startd_success() ) {
+		// Re-enable the job for matching in the PrioRec array
+		for (int i = 0; i < N_PrioRecs; i++) {
+			if (PrioRec[i].id.cluster == match->cluster && PrioRec[i].id.proc == match->proc) {
+				PrioRec[i].matched = false;
+				break;
+			}
+		}
 		scheduler.DelMrec(match);
 		return;
 	}
