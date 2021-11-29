@@ -7,6 +7,23 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+Version 9.0.9
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.9 released on Month Date, 2021.
+
+- HTCondor version 9.0.9 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 9.0.8
 -------------
 
