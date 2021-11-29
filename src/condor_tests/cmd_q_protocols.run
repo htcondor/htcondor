@@ -57,6 +57,8 @@ my %skipad = (
 	"EnteredCurrentStatus" => 1,
 	"AutoClusterId" => 1,
 	"RemoteSlotID" => 1,
+	"DiskProvisioned" => 1,
+	"ActivationSetupDuration" => 1,
 );
 
 my $firstappend_condor_config = '
@@ -65,6 +67,7 @@ my $firstappend_condor_config = '
 	ALL_DEBUG = D_FULLDEBUG D_NETWORK
 	NUM_CPUS = 1
 	CONDOR_Q_USE_V3_PROTOCOL = true
+	# SHADOW_LAZY_QUEUE_UPDATE = false
 	#use role: personal
 ';
 
@@ -207,6 +210,7 @@ my $secondappend_condor_config = '
 	ALL_DEBUG = D_FULLDEBUG
 	NUM_CPUS = 1
 	CONDOR_Q_USE_V3_PROTOCOL = false
+	# SHADOW_LAZY_QUEUE_UPDATE = false
 	#use role: personal
 ';
 
