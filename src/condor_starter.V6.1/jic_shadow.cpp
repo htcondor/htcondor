@@ -824,7 +824,7 @@ JICShadow::notifyExecutionExit( void ) {
 	// We don't send the time because all of the other Activation* times
 	// are shadow-side times.  It's not hard to get UTC, but it's easier
 	// to ignore clock synchronization entirely.
-	if( shadow_version && shadow_version->built_since_version(9, 5, 0) ) {
+	if( shadow_version && shadow_version->built_since_version(9, 4, 1) ) {
 		ClassAd ad;
 		ad.InsertAttr( "EventType", "ActivationExecutionExit" );
 		REMOTE_CONDOR_event_notification( & ad );
