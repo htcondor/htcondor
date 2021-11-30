@@ -718,35 +718,22 @@ and to upload ``output.txt`` to ``my_private_files/output.txt`` on a second acco
     transfer_input_files = public+gdrive://public_files/input.txt
     transfer_output_remaps = "output.txt = private+gdrive://my_private_files/output.txt"
 
-**Transferring files to and from S3**
+Transferring files using the S3 protocol
+""""""""""""""""""""""""""""""""""""""""
 
-HTCondor supports downloading files from and uploading files to Amazon's Simple
-Storage Service (S3) using ``s3://`` URLs.  Downloading or uploading requires
+HTCondor supports downloading files from and uploading files to
+storage servers using the S3 protocol via ``s3:// URLs``.  Downloading or
+uploading requires
 a two-part credential: the "access key ID" and the "secret key ID".  HTCondor
 does not transfer these credentials off the submit node; instead, it uses
 them to construct "pre-signed" ``https://`` URLs that temporarily allow
 the bearer access.  (Thus, an execute node needs to support ``https://``
 URLs for S3 URLs to work.)
 
-To make use of this feature, specify a file containing
+To make use of this feature, you'll need to specify a file containing
 your access key ID (and nothing else), a file containing your secret access
-key (and nothing else), and one or more S3 URLs in one of three forms:
-
-.. code-block:: condor-submit
-
-    aws_access_key_id_file = /home/example/secrets/accessKeyID
-    aws_secret_access_key_file = /home/example/secrets/secretAccessKey
-    # For old, non-region-specific buckets.
-    transfer_input_files = s3://<bucket-name>/<key-name>,
-    # or, for new, region-specific buckets:
-    transfer_input_files = s3://<bucket-name>.s3.<region>.amazonaws.com/<key>
-    # or, for non-AWS services with an S3 API; <host> must contain a dot:
-    transfer_input_files = s3://<host>/<key>
-    # Optionally, specify a region for S3 URLs which don't include one:
-    aws_region = <region>
-
-The ``aws_region`` command may also be used to specify a region for S3 URLs
-which don't include one (even for non-AWS services).
+key (and nothing else), and one or more S3 URLs.  See the subsections below
+for specific examples.
 
 HTCondor does not currently support transferring entire buckets or directories
 from S3.  However, if you specify an ``s3://`` URL as the
@@ -755,6 +742,29 @@ location; if you specify a URL ending a ``/``, it will be treated like a
 directory.
 
 You may also use S3 URLs in ``transfer_output_remaps``.
+
+**Transferring files to and from Amazon S3**
+
+Specify your credential files using ``aws_access_key_id_file`` and
+``aws_secret_access_key_file``.  Amazon S3 switched from global buckets
+to region-specific buckets; use the first URL form for the older buckets
+and the second for newer buckets.
+
+.. code-block:: condor-submit
+
+    aws_access_key_id_file = /home/example/secrets/accessKeyID
+    aws_secret_access_key_file = /home/example/secrets/secretAccessKey
+
+    # For old, non-region-specific buckets.
+    # transfer_input_files = s3://<bucket-name>/<key-name>,
+    # transfer_output_remaps = "output.dat = s3://<bucket-name>/<output-key-name>"
+
+    # or, for new, region-specific buckets:
+    transfer_input_files = s3://<bucket-name>.s3.<region>.amazonaws.com/<key>
+    transfer_output_remaps = "output.dat = s3://<bucket-name>.s3.<region>.amazonaws.com/<output-key-name>"
+
+    # Optionally, specify a region for S3 URLs which don't include one:
+    # aws_region = <region>
 
 **Transferring files to and from Google Cloud Storage**
 
@@ -786,3 +796,19 @@ approach defined above. e.g.
     gs_secret_access_key_file = /home/example/secrets/bucket_secret_access_key
     transfer_input_files = s3://<cloud-storage-private-endpoint>/<bucket-name>/<input-key-name>
     transfer_output_remaps = "output.dat = s3://<cloud-storage-private-endpoint>/<bucket-name>/<output-key-name>"
+
+**Transferring files to and from another provider**
+
+Many other companies and institutions offer a service compatible with the
+S3 protocol.  You can access these services using ``s3://`` URLs and the
+key files described above.
+
+.. code-block:: condor-submit
+
+    s3_access_key_id_file = /home/example/secrets/accessKeyID
+    s3_secret_access_key_file = /home/example/secrets/secretAccessKey
+    transfer_input_files = s3://some.other-s3-provider.org/my-bucket/large-input.file
+    transfer_output_remaps = "large-output.file = s3://some.other-s3-provider.org/my-bucket/large-output.file"
+
+    # If you need to specify a region, you can do so.
+    # aws_region = <region>
