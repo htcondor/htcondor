@@ -743,6 +743,9 @@ directory.
 
 You may also use S3 URLs in ``transfer_output_remaps``.
 
+S3 Transfer Recipes
+!!!!!!!!!!!!!!!!!!!
+
 **Transferring files to and from Amazon S3**
 
 Specify your credential files in the submit file using the attributes ``aws_access_key_id_file`` and
