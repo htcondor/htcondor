@@ -745,7 +745,7 @@ You may also use S3 URLs in ``transfer_output_remaps``.
 
 **Transferring files to and from Amazon S3**
 
-Specify your credential files using ``aws_access_key_id_file`` and
+Specify your credential files in the submit file using the attributes ``aws_access_key_id_file`` and
 ``aws_secret_access_key_file``.  Amazon S3 switched from global buckets
 to region-specific buckets; use the first URL form for the older buckets
 and the second for newer buckets.
