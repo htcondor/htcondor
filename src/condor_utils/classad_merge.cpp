@@ -22,7 +22,7 @@
 #include "condor_classad.h"
 #include "classad_merge.h"
 
-void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from, 
+void MergeClassAds(ClassAd *merge_into, const ClassAd *merge_from, 
 				   bool merge_conflicts, bool mark_dirty,
 				   bool keep_clean_when_possible)
 {
@@ -70,13 +70,13 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 	return;
 }
 
-void MergeClassAdsCleanly(ClassAd *merge_into, ClassAd *merge_from)
+void MergeClassAdsCleanly(ClassAd *merge_into, const ClassAd *merge_from)
 {
 	return MergeClassAds(merge_into,merge_from,true,true,true);
 }
 
 
-int MergeClassAdsIgnoring(ClassAd *merge_into, ClassAd *merge_from, const AttrNameSet & ignore, bool mark_dirty /*=true*/)
+int MergeClassAdsIgnoring(ClassAd *merge_into, const ClassAd *merge_from, const AttrNameSet & ignore, bool mark_dirty /*=true*/)
 {
 	if (!merge_into || !merge_from) {
 		return 0;
