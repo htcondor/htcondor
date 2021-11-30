@@ -722,7 +722,7 @@ Transferring files using the S3 protocol
 """"""""""""""""""""""""""""""""""""""""
 
 HTCondor supports downloading files from and uploading files to
-storage servers using the S3 protocol via ``s3:// URLs``.  Downloading or
+storage servers using the S3 protocol via ``s3://`` URLs.  Downloading or
 uploading requires
 a two-part credential: the "access key ID" and the "secret key ID".  HTCondor
 does not transfer these credentials off the submit node; instead, it uses
