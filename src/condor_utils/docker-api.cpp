@@ -82,7 +82,7 @@ int DockerAPI::createContainer(
 	const std::string & command,
 	const ArgList & args,
 	const Env & env,
-	const std::string & outside_sandboxPath,
+	const std::string & /*outside_sandboxPath*/,
 	const std::string & inside_directory,
 	const std::list<std::string> extraVolumes,
 	int & pid,
@@ -179,15 +179,6 @@ int DockerAPI::createContainer(
 		dprintf( D_ALWAYS, "Failed to pass enviroment to docker.\n" );
 		return -8;
 	}
-
-	// Map the external sandbox to the internal sandbox.
-	runArgs.AppendArg("--volume");
-#ifdef USE_NAMED_VOLUMES // bind mount with volumeName:/inner/path
-	std::string volumeName(condor_basename(outside_sandboxPath.c_str()));
-	runArgs.AppendArg(volumeName + ":" + inside_directory);
-#else // bind mount with c:/outer/path:/inner/path
-	runArgs.AppendArg(outside_sandboxPath + ":" + inside_directory);
-#endif
 
 #ifdef WIN32
 	// TODO: extra volumes is used for /home/ when not doing file transfer, we can't support this on Windows

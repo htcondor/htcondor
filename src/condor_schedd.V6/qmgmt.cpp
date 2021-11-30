@@ -7886,6 +7886,8 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     PrioRec[N_PrioRecs].post_job_prio2 = post_job_prio2;
     PrioRec[N_PrioRecs].status         = job_status;
     PrioRec[N_PrioRecs].qdate          = q_date;
+    PrioRec[N_PrioRecs].not_runnable   = false;
+    PrioRec[N_PrioRecs].matched        = false;
 	if ( auto_id == -1 ) {
 		PrioRec[N_PrioRecs].auto_cluster_id = jid.cluster;
 	} else {
@@ -8431,9 +8433,9 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	do {
 		for (i=0; i < N_PrioRecs; i++) {
 
-			if ( PrioRec[i].submitter[0] == '\0' ) {
+			if ( PrioRec[i].not_runnable || PrioRec[i].matched ) {
 					// This record has been disabled, because it is no longer
-					// runnable.
+					// runnable or already matched.
 				continue;
 			}
 
@@ -8456,17 +8458,21 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				continue;
 			}
 
-			int isRunnable = Runnable(&PrioRec[i].id);
-			int isMatched = scheduler.AlreadyMatched(&PrioRec[i].id);
-			if( !isRunnable || isMatched ) {
+			if (scheduler.AlreadyMatched(&PrioRec[i].id)) {
+				PrioRec[i].matched = true;
+			}
+			if (!Runnable(&PrioRec[i].id)) {
+				PrioRec[i].not_runnable = true;
+			}
+			if (PrioRec[i].matched || PrioRec[i].not_runnable) {
 					// This job's status must have changed since the
 					// time it was added to the runnable job list.
-					// Prevent this job from being considered in any
+					// The not_runnable and matched flags will prevent
+					// this job from being considered in any
 					// future iterations through the list.
-				PrioRec[i].submitter[0] = '\0';
 				dprintf(D_FULLDEBUG,
 						"record for job %d.%d skipped until PrioRec rebuild (%s)\n",
-						PrioRec[i].id.cluster, PrioRec[i].id.proc, isRunnable ? "already matched" : "no longer runnable");
+						PrioRec[i].id.cluster, PrioRec[i].id.proc, PrioRec[i].matched ? "already matched" : "no longer runnable");
 
 					// Move along to the next job in the prio rec array
 				continue;
