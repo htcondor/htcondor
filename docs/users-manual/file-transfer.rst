@@ -736,7 +736,7 @@ key (and nothing else), and one or more S3 URLs.  See the subsections below
 for specific examples.
 
 HTCondor does not currently support transferring entire buckets or directories
-from S3.  However, if you specify an ``s3://`` URL as the
+as input using the S3 protocol.  However, if you specify an ``s3://`` URL as the
 ``output_destination``, that URL will be used a prefix for each output file's
 location; if you specify a URL ending a ``/``, it will be treated like a
 directory.
