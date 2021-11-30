@@ -1140,8 +1140,6 @@ int Condor_Auth_Kerberos :: client_mutual_authenticate()
 int Condor_Auth_Kerberos :: init_kerberos_context()
 {
     krb5_error_code code = 0;
-    krb5_address  ** localAddr  = NULL;
-    krb5_address  ** remoteAddr = NULL;
 
     // kerberos context_
     if (krb_context_ == NULL) {
@@ -1169,12 +1167,18 @@ int Condor_Auth_Kerberos :: init_kerberos_context()
         goto error;
     }
 
-    if ((code = (*krb5_auth_con_getaddrs_ptr)(krb_context_, 
+#if !defined(DARWIN)
+    // Passing nullptr causes a crash on macOS, though the docs say it's
+    // allowed. This call should be a noop, but just in case it can fail
+    // and that's a useful indicator of problems on other platforms, leave
+    // it in place for them.
+    if ((code = (*krb5_auth_con_getaddrs_ptr)(krb_context_,
                                       auth_context_,
-                                      localAddr, 
-                                      remoteAddr))) {
+                                      nullptr,
+                                      nullptr))) {
         goto error;
     }
+#endif
 
     // stash location
     defaultStash_ = param(STR_CONDOR_CACHE_DIR);
@@ -1521,16 +1525,24 @@ void Condor_Auth_Kerberos :: setRemoteAddress()
     //
     // it (somewhat surprisingly) also calls free on the array itself, so
     // allocate it with malloc() and not on the stack!
-    krb5_address**  remoteAddrs;
-    remoteAddrs = (krb5_address**)malloc(2*sizeof(krb5_address*));
-    remoteAddrs[0] = NULL;  // this one we will use
-    remoteAddrs[1] = NULL;  // keep this entry NULL so we can free everything later
+    //
+    // Some kerberos docs reference krb5_free_address(), which frees a
+    // single krb5_address, but that doesn't appear to be available for us
+    // to call.
+    // macOS appears to require non-NULL values for both the local_addr and
+    // remote_addr parameters of krb5_auth_con_getaddrs().
+    //
+    // Since krb5_free_addresses() expects a NULL-terminated array of
+    // krb5_address*, allocate arrays of size 2, one for our single
+    // krb5_address and one for terminating the array.
+    krb5_address** localAddrs = (krb5_address**)calloc(2, sizeof(krb5_address*));
+    krb5_address** remoteAddrs = (krb5_address**)calloc(2, sizeof(krb5_address*));
 
     // Get remote host's address first
     if ((code = (*krb5_auth_con_getaddrs_ptr)(krb_context_, 
                                       auth_context_, 
-                                      NULL, 
-                                      &(remoteAddrs[0])))) {
+                                      localAddrs,
+                                      remoteAddrs))) {
         goto error;
     }
     dprintf(D_SECURITY | D_VERBOSE, "KERBEROS: remoteAddrs[] is {%p, %p}\n", remoteAddrs[0], remoteAddrs[1]);
@@ -1539,14 +1551,18 @@ void Condor_Auth_Kerberos :: setRemoteAddress()
         struct in_addr in;
         memcpy(&(in.s_addr), (remoteAddrs[0])[0].contents, sizeof(in_addr));
         setRemoteHost(inet_ntoa(in));
-        (*krb5_free_addresses_ptr)(krb_context_, remoteAddrs);
     }
+    (*krb5_free_addresses_ptr)(krb_context_, localAddrs);
+    (*krb5_free_addresses_ptr)(krb_context_, remoteAddrs);
     
     dprintf(D_SECURITY, "Remote host is %s\n", getRemoteHost());
 
     return;
 
  error:
+    (*krb5_free_addresses_ptr)(krb_context_, localAddrs);
+    (*krb5_free_addresses_ptr)(krb_context_, remoteAddrs);
+
     dprintf( D_ALWAYS, "KERBEROS: Unable to obtain remote address: %s\n",
 			 (*error_message_ptr)(code) );
 }

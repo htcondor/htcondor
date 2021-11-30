@@ -1,25 +1,89 @@
-Stable Release Series 9.0
-=========================
+Version 9.0 LTS Releases
+========================
 
-This is the stable release series of HTCondor. As usual, only bug fixes
+These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 (and potentially, ports to new platforms) will be provided in future
-9.0.x releases. New features will be added in the 9.1.x development
-series.
+9.0.y releases. New features will be added in the 9.x.y feature releases.
 
 The details of each version are described below.
+
+Version 9.0.9
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.9 released on Month Date, 2021.
+
+- HTCondor version 9.0.9 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
+Version 9.0.8
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.8 released on Month Date, 2021.
+
+- HTCondor version 9.0.8 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where very large values of ImageSize and other job attributes
+  that have _RAW equivalents would get rounded incorrectly, and end up negative.
+  :jira:`780`
+
+- Fixed a bug with the handling of ``MAX_JOBS_PER_OWNER`` in the *condor_schedd*
+  where it was treated as a per-factory limit rather than as a per-owner limit for jobs
+  submitted with the ``max_idle`` or ``max_materialize`` submit keyword.
+  :jira:`755`
+
+- Fixed a bug in how the **condor_schedd** selects a new job to run on a
+  dynamic slot after the previous job completes.
+  The **condor_schedd** could choose a job that requested more disk space
+  than the slot provided, resulting in the **condor_startd** refusing to
+  start the job.
+  :jira:`798`
+
+- Fixed daemon log message that could allow unintended processes to use
+  the **condor_shared_port** service.
+  :jira:`725`
+
+- Fixed a bug in the ClassAds function ``substr()`` that could cause a
+  crash if the ``offset`` argument was out of range.
+  :jira:`823`
+
+- Fixed bugs in the Kerberos authentication code that cause a crash on
+  macOS and can leak memory.
+  :jira:`200`
+
+- Fixed a bug where if **condor_schedd** fails to claim a **condor_startd**,
+  the job matched to that **condor_startd** won't be rematched for up to
+  20 minutes.
+  :jira:`769`
+
+.. _lts-version-history-907:
 
 Version 9.0.7
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.0.7 released on Month Date, 2021.
-
-- HTCondor version 9.0.7 not yet released.
+- HTCondor version 9.0.7 released on November 2, 2021.
 
 New Features:
 
-- The configuration paramater ``SEC_TOKEN_BLACKLIST_EXPR`` has been renamed
+- The configuration parameter ``SEC_TOKEN_BLACKLIST_EXPR`` has been renamed
   to ``SEC_TOKEN_REVOCATION_EXPR``.
   The old name is still recognized if the new one isn't set.
   :jira:`744`
@@ -35,8 +99,8 @@ Bugs Fixed:
   :jira:`745`
 
 - Fixed a bug where *condor_gpu_discovery* could segfault on some older versions
-  of the NVIDIA libraries. This would result in GPUs not being detected.
-  The bug was introduced in HTCondor 9.0.6 and is known to occur with CUDA runtime 10.1.
+  of the nVidia libraries. This would result in GPUs not being detected.
+  The bug was introduced in HTCondor 9.0.6 and is known to occur with CUDA run time 10.1.
   :jira:`760`
 
 - Fixed a bug that could crash the *condor_startd* when claiming a slot
@@ -47,6 +111,10 @@ Bugs Fixed:
   job ad attributes weren't updated if the job began executing while the
   *condor_shadow* and *condor_starter* were disconnected.
   :jira:`752`
+
+- Ensure the HTCondor uses version 0.6.2 or later SciTokens library so that
+  WLCG tokens can be read.
+  :jira:`801`
 
 Version 9.0.6
 -------------
@@ -64,7 +132,7 @@ New Features:
 
 - The stdin passed to *condor_job_router* hooks of type ``_TRANSLATE_JOB`` will
   now be passed information on the route in a format that is the same as what was passed
-  in the 8.8 series.  It will always be a ClassAd, and include the route ``Name`` as
+  in 8.8 LTS releases.  It will always be a ClassAd, and include the route ``Name`` as
   an attribute.
   :jira:`646`
 

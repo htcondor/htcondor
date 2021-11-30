@@ -289,8 +289,8 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 	if (EvalInteger(ATTR_REQUEST_DISK, job_ad, match_ad, disk)) {
 		float total_disk = disk;
 		match_ad->LookupFloat(ATTR_TOTAL_DISK, total_disk);
-		disk = (MAX((int64_t) ceil((disk / total_disk) * 100), 1)) *
-			int64_t(total_disk/100.0);
+		disk = (MAX((int64_t) ceil((disk / total_disk) * 1000), 1)) *
+			int64_t(total_disk/1000.0);
 		match_ad->Assign(ATTR_DISK, disk);
 	} else {
 		dprintf(D_ALWAYS, "No disk request in job %d.%d, skipping match to partitionable slot %s\n", job_id.cluster, job_id.proc, slot_name);

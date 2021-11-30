@@ -616,12 +616,18 @@ SharedPortState::HandleUnbound(Stream *&s)
 		}
 
 		if( has_socket && has_alt_socket ) {
+			// If using an abstract domain socket, don't print the
+			// secret cookie portion of the name.
 			dprintf( D_ALWAYS, "SharedPortServer:%s failed to connect %s%s: "
-				"primary (%s): %s (%d); alt (%s): %s (%d)\n",
+				"primary (%s%s): %s (%d); alt (%s): %s (%d)\n",
 				server_busy ? " server was busy," : "",
 				m_sock_name.c_str(),
 				m_requested_by.c_str(),
-				sock_name.c_str(),
+#ifdef USE_ABSTRACT_DOMAIN_SOCKET
+				"<cookie>/", m_sock_name.c_str(),
+#else
+				"", sock_name.c_str(),
+#endif
 				strerror( p_errno ), p_errno,
 				alt_sock_name.c_str(),
 				strerror( connect_errno ), connect_errno
@@ -769,7 +775,7 @@ SharedPortState::HandleFD(Stream *&s)
 			int pclFD = safe_open_no_create( procCmdLinePath.c_str(), O_RDONLY );
 			ssize_t procCmdLineLength = -1;
 			if( pclFD >= 0 ) {
-				procCmdLineLength = _condor_full_read( pclFD, & procCmdLine, 1024 );
+				procCmdLineLength = full_read( pclFD, & procCmdLine, 1024 );
 				close( pclFD );
 			}
 			if( procCmdLineLength == -1 ) {

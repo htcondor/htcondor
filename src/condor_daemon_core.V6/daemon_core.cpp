@@ -243,6 +243,21 @@ static size_t compute_pid_hash(const pid_t &key)
 bool abort_pid_watcher_threads = false;
 #endif
 
+static unsigned int
+get_tracking_id()
+{
+	static bool s_initialized = false;
+	static unsigned int s_mii= 0;
+
+	if (! s_initialized) {
+		s_mii = get_random_uint_insecure();
+		s_initialized = true;
+	}
+
+	/* when s_mii is UINT_MAX, then this wraps to zero */
+	return s_mii++;
+}
+
 DaemonCore::DaemonCore(int ComSize,int SigSize,
 				int SocSize,int ReapSize,int PipeSize)
 	: m_use_udp_for_dc_signals(false),
@@ -5056,7 +5071,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 			// we just need to write something to ensure that the
 			// select() in Driver() does not block.
 			if ( async_sigs_unblocked == TRUE ) {
-				_condor_full_write(async_pipe[1],"!",1);
+				full_write(async_pipe[1],"!",1);
 			}
 #endif
 			msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
@@ -7234,7 +7249,8 @@ int DaemonCore::Create_Process(
 
 	/* this stuff ends up in the child's environment to help processes
 		identify children/grandchildren/great-grandchildren/etc. */
-	create_id(&time_of_fork, &mii);
+	time_of_fork = time(NULL);
+	mii = get_tracking_id();
 
 		// Before we get into the platform-specific stuff, see if any
 		// of the std fds are requesting a DC-managed pipe.  If so, we

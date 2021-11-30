@@ -69,14 +69,14 @@ public:
   {
   }
 
-  /** Constructor (initialization). It reads the log file and initializes
+  /** Open and read the log file, initializing
       the class-ads (that are read from the log file) in memory.
     @param filename the name of the log file.
     @return nothing
   */
-  GenericClassAdCollection(const ConstructLogEntry * pctor,const char* filename,int max_historical_logs=0)
-	: ClassAdLog<K,AD>(filename,max_historical_logs,pctor)
+  bool InitLogFile(const char* filename,int max_historical_logs=0)
   {
+	  return ClassAdLog<K,AD>::InitLogFile(filename, max_historical_logs);
   }
 
   /** Destructor - frees the memory used by the collections
@@ -169,6 +169,12 @@ public:
 	case we are continuing to use the old log file)
   */
   bool TruncLog() { return ClassAdLog<K,AD>::TruncLog(); }
+
+  /** Close the log file, discarding any changes that have not yet been written.
+      On return from this function, the transaction log will be closed and
+      changes to the ad collection will no longer be allowed
+  */
+  void StopLog() { return ClassAdLog<K,AD>::StopLog(); }
 
   void SetMaxHistoricalLogs(int max) { ClassAdLog<K,AD>::SetMaxHistoricalLogs(max); }
   int GetMaxHistoricalLogs() { return ClassAdLog<K,AD>::GetMaxHistoricalLogs(); }

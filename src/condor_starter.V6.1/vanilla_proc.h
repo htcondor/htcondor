@@ -114,6 +114,7 @@ protected:
 	virtual int outputOpenFlags();
 	virtual int streamingOpenFlags( bool isOutput );
 
+	virtual void restartCheckpointedJob();
 private:
 		// Final usage stats for this proc and all its children.
 	ProcFamilyUsage m_final_usage;
@@ -148,7 +149,6 @@ private:
 	void killFamilyIfWarranted();
 	void notifySuccessfulEvictionCheckpoint();
 	void notifySuccessfulPeriodicCheckpoint();
-	void restartCheckpointedJob();
 
 	bool isCheckpointing;
 	bool isSoftKilling;

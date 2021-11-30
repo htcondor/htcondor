@@ -217,13 +217,11 @@ condor_blkng_full_disk_io.cpp
 condor_claimid_parser.h
 condor_common.cpp
 condor_config.cpp
-condor_create_id.cpp
 condor_crontab.cpp
 condor_crontab.h
 condor_fsync.cpp
 condor_fsync.h
 condor_ftp.cpp
-condor_full_io.cpp
 condor_getcwd.cpp
 condor_getcwd.h
 condor_holdcodes.h
@@ -695,25 +693,23 @@ if (LINUX OR DARWIN)
 	set_target_properties( condorapi_shared PROPERTIES OUTPUT_NAME condorapi )
 endif()
 
-if (WANT_FULL_DEPLOYMENT)
-	install (FILES MyString.h
-			 condor_event.h
-			 condor_holdcodes.h
-			 read_user_log.h
-			 user_log.c++.h
-			 user_log.README
-			 write_user_log.h
-			 compat_classad.h
-			 compat_classad_list.h
-			 compat_classad_util.h
-			 stl_string_utils.h
-			DESTINATION ${C_INCLUDE})
+install (FILES MyString.h
+		 condor_event.h
+		 condor_holdcodes.h
+		 read_user_log.h
+		 user_log.c++.h
+		 user_log.README
+		 write_user_log.h
+		 compat_classad.h
+		 compat_classad_list.h
+		 compat_classad_util.h
+		 stl_string_utils.h
+		DESTINATION ${C_INCLUDE})
 
-    install ( TARGETS condorapi DESTINATION ${C_LIB} )
-    if (LINUX OR DARWIN)
-        install ( TARGETS condorapi_shared DESTINATION ${C_LIB} )
-    endif()
-endif(WANT_FULL_DEPLOYMENT)
+install ( TARGETS condorapi DESTINATION ${C_LIB} )
+if (LINUX OR DARWIN)
+    install ( TARGETS condorapi_shared DESTINATION ${C_LIB} )
+endif()
 
 set_source_files_properties(test_log_reader.cpp PROPERTIES DEFINITIONS ENABLE_STATE_DUMP)
 

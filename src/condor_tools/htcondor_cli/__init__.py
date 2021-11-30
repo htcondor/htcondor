@@ -34,5 +34,8 @@ GLOBAL_OPTIONS = {
 # command line to the name of the class containing the noun's verbs.
 from collections import OrderedDict as _OrderedDict
 from htcondor_cli.job import Job
+from htcondor_cli.job_set import JobSet
 NOUNS = _OrderedDict()
 NOUNS["job"] = Job
+NOUNS["jobset"] = JobSet
+

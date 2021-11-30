@@ -15,6 +15,7 @@ Users' Manual
    services-for-jobs
    priorities-and-preemption
    dagman-workflows
+   job-sets
    matchmaking-with-classads
    choosing-an-htcondor-universe
    java-applications

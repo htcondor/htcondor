@@ -20,10 +20,8 @@
 #include "condor_common.h"
 #include "sysapi.h"
 
-extern "C" {
-	int sysapi_kflops_raw(void);
-	int sysapi_kflops(void);
-}
+int sysapi_kflops_raw(void);
+int sysapi_kflops(void);
 
 int
 main( int /*argc*/, const char * /*argv*/[] )
@@ -34,8 +32,5 @@ main( int /*argc*/, const char * /*argv*/[] )
 	return 0;
 }
 
-extern "C"
-{
-	void sysapi_internal_reconfig()
-	{}
-}
+void sysapi_internal_reconfig()
+{}

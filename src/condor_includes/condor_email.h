@@ -35,7 +35,6 @@ void email_asciifile_tail( FILE* mailer, const char* filename,
 
 void email_corefile_tail( FILE* mailer, const char* subsystem_name );
 
-
 void email_custom_attributes( FILE* mailer, ClassAd* job_ad );
 
 char* email_check_domain( const char* addr, ClassAd* job_ad );

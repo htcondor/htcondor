@@ -41,10 +41,6 @@
 #include "ipv6_hostname.h"
 #include "condor_sockfunc.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 
 const char *
 sock_to_string(SOCKET sockd)
@@ -428,9 +424,6 @@ getHostFromAddr( const char* addr )
 }
 
 
-#if defined(__cplusplus)
-}
-
 std::string generate_sinful(const char* ip, int port) {
 	std::string buf;
 	if (strchr(ip, ':')) {
@@ -440,5 +433,3 @@ std::string generate_sinful(const char* ip, int port) {
 	}
 	return buf;
 }
-
-#endif

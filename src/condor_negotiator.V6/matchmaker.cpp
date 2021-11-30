@@ -50,10 +50,8 @@
 #include <sstream>
 #include <deque>
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
 #include "NegotiatorPlugin.h"
-#endif
 #endif
 
 // the comparison function must be declared before the declaration of the
@@ -581,11 +579,9 @@ initialize (const char *neg_name)
 			"Update Collector", this );
 
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
 	NegotiatorPluginManager::Load();
 	NegotiatorPluginManager::Initialize();
-#endif
 #endif
 }
 
@@ -1865,10 +1861,8 @@ void
 Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 		std::set<std::string>::iterator it;
 		
-		//DCCollector collector;
-		CollectorList *cl = daemonCore->getCollectorList();
-		if (cl == NULL) {
-			dprintf(D_ALWAYS, "Not updating collector with accounting information, as no collector are found\n");
+		if (nullptr == daemonCore->getCollectorList()) {
+			dprintf(D_ALWAYS, "Not updating collector with accounting information, as no collectors are found\n");
 			return;
 		}
 	
@@ -1911,16 +1905,16 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 				// will be zero.  Don't include those submitters.
 
 				if (updateAd.LookupInteger("ResourcesUsed", resUsed)) {
-					cl->sendUpdates(UPDATE_ACCOUNTING_AD, &updateAd, NULL, false);
+					daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &updateAd, NULL, false);
 				}
 			}
 		}
-		forwardGroupAccounting(cl, hgq_root_group);
+		forwardGroupAccounting(hgq_root_group);
 		dprintf(D_FULLDEBUG, "Done Updating collector with accounting information\n");
 }
 
 void
-Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
+Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 
 	ClassAd accountingAd;
 	accountingAd.Assign("MyType", "Accounting");
@@ -2008,11 +2002,11 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
 
 	// And send the ad to the collector
 	DCCollectorAdSequences seq; // Don't need them, interface requires them
-	cl->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
+	daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
 
     // Populate group's children recursively, if it has any
     for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-        forwardGroupAccounting(cl, *j);
+        forwardGroupAccounting(*j);
     }
 }
 
@@ -5915,10 +5909,8 @@ Matchmaker::updateCollector() {
         daemonCore->dc_stats.Publish(*publicAd);
 		daemonCore->monitor_data.ExportData(publicAd);
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
 		NegotiatorPluginManager::Update(*publicAd);
-#endif
 #endif
 		daemonCore->sendUpdates(UPDATE_NEGOTIATOR_AD, publicAd, NULL, true);
 	}

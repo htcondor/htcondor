@@ -279,6 +279,25 @@ public:
 	ClassAd* clearDirtyAttrs( StringList* ids, CondorError * errstack,
 						action_result_type_t result_type = AR_TOTALS );
 
+	/** export jobs to an external job_queue and put mark them as MANAGED by Lumberjack
+	    @param ids or constraint What jobs to act on
+	    @param export_dir what directory to export the jobs to. <export_dir>/job_queue.log will be the exported log
+	    @param new_spool_dir what value to use when rewriting paths into the SPOOL directory
+	*/
+	ClassAd* exportJobs( StringList* ids, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
+	ClassAd* exportJobs( const char * constraint, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
+
+	/** import the results from a previously exported job_queue.log managed by Lumberjack
+	    @param import_dir directory containing the exported job_queue.log and job files to be imported
+	*/
+	ClassAd* importExportedJobResults(const char * import_dir, CondorError * errstack);
+
+	/** unexport jobs that were previously exported via exportJobs().
+	    @param ids or constraint What jobs to act on
+	*/
+	ClassAd* unexportJobs( StringList* ids, CondorError * errstack);
+	ClassAd* unexportJobs( const char * constraint, CondorError * errstack);
+
 	/** Vacate the victim and schedule the beneficiary on its slot.  Hard-
 		kills the job.  The caller must authenticate as a queue user or
 		the owner of both jobs; the victim must be running and the beneficiary
@@ -410,6 +429,10 @@ private:
 		const std::string &trust_domain, bool should_try_token_request, void *misc_data);
 
 	int requestImpersonationTokenFinish(Stream *stream);
+
+	ClassAd* exportJobsWorker( StringList* ids, const char * constraint, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
+
+	ClassAd* unexportJobsWorker( StringList* ids, const char * constraint, CondorError * errstack);
 
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );

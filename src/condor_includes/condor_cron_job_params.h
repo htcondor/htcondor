@@ -56,6 +56,7 @@ class CronJobParams : public CronParamBase
 	const char *GetCwd( void ) const { return m_cwd.c_str(); };
 	unsigned GetPeriod( void ) const { return m_period; };
 	double GetJobLoad( void ) const { return m_jobLoad; };
+	const ConstraintHolder & GetCondition( void ) const { return m_condition; };
 
 	// Options
 	bool OptKill( void ) const { return m_optKill; };
@@ -108,6 +109,7 @@ class CronJobParams : public CronParamBase
 	MyString		 m_cwd;				// Process's initial CWD
 	unsigned		 m_period;			// The configured period
 	double			 m_jobLoad;			// Job's assigned load
+	ConstraintHolder	 m_condition;			// should the job run?
 
 	// Options
 	bool			 m_optKill;			// Kill the job if before next run?

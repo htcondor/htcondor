@@ -20,10 +20,6 @@
 #ifndef _MISC_UTILS_H
 #define _MISC_UTILS_H
 
-#if defined( __cplusplus )
-extern "C" {
-#endif
-
 
 /* Converts an int to a string w/ "st", "nd", "rd, or "th" added on. */
 const char*	num_string( int );  
@@ -39,9 +35,5 @@ char* startdClaimIdFile( int slot_id );
 
 /* return the timezone on the local host */
 const char* my_timezone(int isdst);
-
-#if defined( __cplusplus )
-}
-#endif
 
 #endif /* _MISC_UTILS_H */

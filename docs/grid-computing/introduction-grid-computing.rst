@@ -57,17 +57,7 @@ a remote cluster.  It can also be configured so that if this grid job is
 idle for too long, it can undo the transformation, so that the job isn't
 stuck forever in a remote queue.
 
-When other middleware is running on the remote resource, such as Globus,
-HTCondor can still submit and manage jobs to be executed on remote
-resources. A **grid** **universe** job, with a **grid_type** of **gt2**
-or **gt5** calls on Globus software to execute the job on a remote
-resource. Like HTCondor-C jobs, a network partition does not affect the
-execution of the job. The remote resource must have Globus software
-running. :index:`glidein` :index:`glidein<single: glidein; grid computing>`
-
-Starting with HTCondor Version 6.7.0, the **grid** universe replaces the
-**globus** universe. Further specification of a **grid** universe job is
-done within the
+Further specification of a **grid** universe job is done within the
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
 command in a submit description file.
 

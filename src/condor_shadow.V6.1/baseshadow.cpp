@@ -42,7 +42,6 @@ BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
 
 // this appears at the bottom of this file:
-//extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 extern bool sendUpdatesToSchedd;
 
@@ -138,8 +137,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		prev_run_bytes_recvd = 0;
 	}
 
-	jobAd->LookupInteger(ATTR_TRANSFER_INPUT_FILES_LAST_RUN_COUNT, m_prev_run_upload_file_cnt);
-	jobAd->LookupInteger(ATTR_TRANSFER_OUTPUT_FILES_LAST_RUN_COUNT, m_prev_run_download_file_cnt);
+	jobAd->LookupInteger(ATTR_TRANSFER_INPUT_FILES_TOTAL_COUNT, m_prev_run_upload_file_cnt);
+	jobAd->LookupInteger(ATTR_TRANSFER_OUTPUT_FILES_TOTAL_COUNT, m_prev_run_download_file_cnt);
 
 		// construct the core file name we'd get if we had one.
 	std::string tmp_name = iwd;
@@ -1413,7 +1412,18 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 	began_execution = true;
 		// Start the timer for the periodic user job policy evaluation.
 	shadow_user_policy.startTimer();
-		
+
+	int allowed_job_duration;
+	if( jobAd->LookupInteger( ATTR_JOB_ALLOWED_JOB_DURATION, allowed_job_duration ) ) {
+		int tid = daemonCore->Register_Timer( allowed_job_duration + 1, 0,
+			(TimerHandlercpp)&BaseUserPolicy::checkPeriodic,
+			"check_for_allowed_job_duration",
+			& shadow_user_policy );
+		if( tid < 0 ) {
+			dprintf( D_ALWAYS, "Failed to register timer to check for allowed job duration, jobs may run a little long.\n" );
+		}
+	}
+
 		// Start the timer for updating the job queue for this job.
 	startQueueUpdateTimer();
 
@@ -1503,9 +1513,7 @@ extern BaseShadow *Shadow;
 
 // This function is called by dprintf - always display our job, proc,
 // and pid in our log entries. 
-//extern "C" 
 int
-//display_dprintf_header(char **buf,int *bufpos,int *buflen)
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	static pid_t mypid = 0;

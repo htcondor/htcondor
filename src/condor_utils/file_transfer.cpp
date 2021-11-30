@@ -170,6 +170,35 @@ public:
 		}
 	}
 
+    //
+    // This function is used by std::stable_sort() in FileTransfer::DoUpload()
+    // to group transfers.  This function used to also sort all transfers,
+    // but it no longer does; now it only sorts URLs.  (It should probably stop
+    // doing that, too, but that's another ticket.)  This is because
+    // ExpandeFileTransferList() -- which converts a list of source names
+    // into a std::vector<FileTransferItem> -- creates new non-URL
+    // FileTransferItems when it "expands" the name of a directory into
+    // the FileTransferItem which creates the directory and the
+    // FileTransferItems which populate the directory.  Obviously, creating
+    // the directory must come before populating it.
+    //
+    // Before, this almost always happened because the "source" of a directory
+    // would always sort before the source of any of the files in the
+    // directory.  However, after HTCONDOR-583 fixed a problem where file
+    // transfer would ignore directories in SPOOL, it became very easy to
+    // write job submit files which would have two different "sources" (the
+    // SPOOL and the input directory) for the same directory.  When
+    // ExpandFileTransferList() removes duplicate directories, it removes
+    // the directories which appear later in the list, because the directory
+    // needs to be created before any files in it (and the input directory,
+    // for example, could have a file in it that's not in SPOOL).  Sorting
+    // the list of non-URL FileTransferItems may undo this ordering (for
+    // instance, if SPOOL sorts before the IWD, a file from SPOOL would be
+    // transferred before the directory "sourced" in IWD would be created,
+    // because transfers from IWD are listed first (to make sure that files
+    // in SPOOL win)).
+    //
+
 	bool operator<(const FileTransferItem &other) const {
 		// Ordering of transfers:
 		// - Destination URLs first (allows these plugins to alter CEDAR transfers on
@@ -189,7 +218,7 @@ public:
 		}
 		if (is_dest_url) {
 			if (m_dest_scheme == other.m_dest_scheme) {
-				return m_dest_url < other.m_dest_url;
+				return false;
 			} else {
 				return m_dest_scheme < other.m_dest_scheme;
 			}
@@ -205,12 +234,12 @@ public:
 		}
 		if (is_src_url) { // Both are URLs
 			if (m_src_scheme == other.m_src_scheme) {
-				return m_src_name < other.m_src_name;
+				return false;
 			} else {
 				return m_src_scheme < other.m_src_scheme;
 			}
 		}
-		return m_src_name < other.m_src_name;
+		return false;
 	}
 
 private:
@@ -1658,6 +1687,7 @@ FileTransfer::HandleCommands(int command, Stream *s)
 					transobject->InputFiles->append(info.filename().c_str());
 			}
 
+			// dprintf( D_ALWAYS, "HandleCommands(): InputFiles = %s\n", transobject->InputFiles->to_string().c_str() );
 			transobject->FilesToSend = transobject->InputFiles;
 			transobject->EncryptFiles = transobject->EncryptInputFiles;
 			transobject->DontEncryptFiles = transobject->DontEncryptInputFiles;
@@ -1847,7 +1877,7 @@ FileTransfer::ReadTransferPipeMsg()
 		if(n != sizeof( int )) goto read_failed;
 
 		n = daemonCore->Read_Pipe( TransferPipe[0],
-								   (char *)&Info.num_files,
+								   (char *)&Info.num_cedar_files,
 								   sizeof( int ) );
 		if(n != sizeof( int )) goto read_failed;
 
@@ -1868,7 +1898,7 @@ FileTransfer::ReadTransferPipeMsg()
 				delete [] error_buf;
 				goto read_failed;
 			}
-			
+
 			// The client should have null terminated this, but
 			// let's write the null just in case it didn't
 			error_buf[error_len - 1] = '\0';
@@ -1980,6 +2010,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 	Info.success = true;
 	Info.in_progress = true;
 	Info.xfer_status = XFER_STATUS_UNKNOWN;
+	Info.num_cedar_files = 0;
 	TransferStart = time(NULL);
 
 	if (blocking) {
@@ -2109,7 +2140,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	int delegation_method = 0; /* 0 means this transfer is not a delegation. 1 means it is.*/
 	time_t start, elapsed;
 	int numFiles = 0;
-	int numCedarFiles = 0; // number of files transferred directly from access point (via cedar)
 	ClassAd pluginStatsAd;
 
 	// Variable for deferred transfers, used to transfer multiple files at once
@@ -2970,7 +3000,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// The wire protocol is not in a well defined state
 					// at this point.  Try sending the ack message indicating
 					// what went wrong, for what it is worth.
-				SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,error_buf.c_str(),numCedarFiles);
+				SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,error_buf.c_str());
 
 				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
@@ -3024,7 +3054,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 		numFiles++;
 		if (xfer_command == TransferCommand::XferFile && rc == 0) {
-			numCedarFiles++;
+			Info.num_cedar_files++;
 		}
 
 		// Gather a few more statistics
@@ -3108,7 +3138,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 		download_success = false;
 		SendTransferAck(s,download_success,upload_try_again,upload_hold_code,
-						upload_hold_subcode,download_error_buf.c_str(),numCedarFiles);
+						upload_hold_subcode,download_error_buf.c_str());
 
 			// store full-duplex error description, because only our side
 			// of the story was stored in above call to SendTransferAck
@@ -3120,7 +3150,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 	if( !download_success ) {
 		SendTransferAck(s,download_success,try_again,hold_code,
-						hold_subcode,error_buf.c_str(),numCedarFiles);
+						hold_subcode,error_buf.c_str());
 
 		dprintf( D_FULLDEBUG, "DoDownload: exiting with download errors\n" );
 		return_and_resetpriv( -1 );
@@ -3156,7 +3186,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	downloadEndTime = condor_gettimestamp_double();
 
 	download_success = true;
-	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL,numCedarFiles);
+	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
 
 		// Log some tcp statistics about this transfer
 	if (*total_bytes_ptr > 0) {
@@ -3238,23 +3268,22 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 }
 
 void
-FileTransfer::SaveTransferInfo(bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason,int num_files)
+FileTransfer::SaveTransferInfo(bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason)
 {
 	Info.success = success;
 	Info.try_again = try_again;
 	Info.hold_code = hold_code;
 	Info.hold_subcode = hold_subcode;
-	Info.num_files = num_files;
 	if( hold_reason ) {
 		Info.error_desc = hold_reason;
 	}
 }
 
 void
-FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason,int num_files)
+FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason)
 {
 	// Save failure information.
-	SaveTransferInfo(success,try_again,hold_code,hold_subcode,hold_reason,num_files);
+	SaveTransferInfo(success,try_again,hold_code,hold_subcode,hold_reason);
 
 	if(!PeerDoesTransferAck) {
 		dprintf(D_FULLDEBUG,"SendTransferAck: skipping transfer ack, because peer does not support it.\n");
@@ -3390,6 +3419,7 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	Info.success = true;
 	Info.in_progress = true;
 	Info.xfer_status = XFER_STATUS_UNKNOWN;
+	Info.num_cedar_files = 0;
 	TransferStart = time(NULL);
 
 	if (blocking) {
@@ -3487,7 +3517,7 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 	}
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
-				   (char *)&Info.num_files,
+				   (char *)&Info.num_cedar_files,
 				   sizeof(int) );
 		if(n != sizeof(int)) write_failed = true;
 	}
@@ -3772,7 +3802,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	int hold_code = 0;
 	int hold_subcode = 0;
 	int numFiles = 0;
-	int numCedarFiles = 0;  // number of files transferred directly to access point (via cedar)
 	MyString error_desc;
 	bool I_go_ahead_always = false;
 	bool peer_goes_ahead_always = false;
@@ -3840,7 +3869,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	jobAd.LookupBool( ATTR_PRESERVE_RELATIVE_PATHS, preserveRelativePaths );
 
 	FileTransferList filelist;
+	// dprintf( D_ALWAYS, ">>> DoUpload(), before ExpandFileTransferList(): InputFiles = %s\n", FilesToSend->to_string().c_str() );
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
+	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after ExpandFileTransferList(): %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 
 	// Remove any files from the catalog that are in the ExceptionList
 	if (ExceptionFiles) {
@@ -3848,7 +3879,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			std::remove_if(
 					filelist.begin(),
 					filelist.end(),
-					[&](FileTransferItem &fti) 
+					[&](FileTransferItem &fti)
 					{return ExceptionFiles->contains(condor_basename(fti.srcName().c_str()));});
 
 		filelist.erase(enditer, filelist.end());
@@ -3944,7 +3975,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				filesize_t logTCPStats = 0;
 				return ExitDoUpload( & logTCPStats,
 					/* num files */ 0,
-					/* num cedar files */ 0,
 					s, saved_priv, socket_default_crypto,
 					/* upload success */ false,
 					/* do upload ACK (required to put job on hold) */ true,
@@ -4105,7 +4135,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			filesize_t logTCPStats = 0;
 			return ExitDoUpload( & logTCPStats,
 				/* num files */ 0,
-				/* num cedar files */ 0,
 				s, saved_priv, socket_default_crypto,
 				/* upload success */ false,
 				/* do upload ACK (required to avoid hanging the shadow and starter */ true,
@@ -4141,7 +4170,35 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 	}
 
-	std::sort(filelist.begin(), filelist.end());
+
+	//
+	// Remove file entries which result in duplicates at the destination.
+	// This is no longer necessary for correctness (because I changed
+	// FileTransferItem::operator < to group rather than sort), but it's
+	// still more efficient.  Some of these duplicates will have been
+	// generated internally, but not all.  It's more efficient to remove
+	// them all here (especially when the duplicate would only have been
+	// generated by expanding a directory).  We remove duplicate directory
+	// creation entries when we create the extra entries because for those,
+	// we want to preserve the earlier one, rather than the later one.
+	//
+	std::set<std::string> names;
+	for( auto iter = filelist.rbegin(); iter != filelist.rend(); ++iter ) {
+		auto & item = * iter;
+
+		if( item.isSrcUrl() ) { continue; }
+		if( item.isDestUrl() ) { continue; }
+
+		std::string rd_path = item.destDir() + DIR_DELIM_CHAR + condor_basename(item.srcName().c_str());
+		if( names.insert(rd_path).second == false ) {
+			// This incancation converts a reverse to a forward iterator.
+			filelist.erase( (iter + 1).base() );
+		}
+	}
+	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after duplicate removal: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+
+	std::stable_sort(filelist.begin(), filelist.end());
+	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after sorting: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 	for (auto &fileitem : filelist)
 	{
 			// If there's a signed URL to work with, we should use that instead.
@@ -4240,7 +4297,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			try_again = false; // put job on hold
 			hold_code = CONDOR_HOLD_CODE::UploadFileError;
 			hold_subcode = EPERM;
-			return ExitDoUpload(total_bytes_ptr,numFiles, numCedarFiles, s,saved_priv,socket_default_crypto,
+			return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,socket_default_crypto,
 			                    upload_success,do_upload_ack,do_download_ack,
 								try_again,hold_code,hold_subcode,
 								error_desc.Value(),__LINE__);
@@ -4701,7 +4758,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 
 				// for the more interesting reasons why the transfer failed,
 				// we can try again and see what happens.
-				return ExitDoUpload(total_bytes_ptr,numFiles, numCedarFiles, s,saved_priv,
+				return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,
 								socket_default_crypto,upload_success,
 								do_upload_ack,do_download_ack,
 			                    try_again,hold_code,hold_subcode,
@@ -4718,7 +4775,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		numFiles++;
 
 		if (!fileitem.isSrcUrl() && !fileitem.isDestUrl()) {
-			numCedarFiles++;
+			Info.num_cedar_files++;
 		}
 
 			// The spooled files list is used to generate
@@ -4784,7 +4841,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	do_upload_ack = true;
 
 	if (first_failed_file_transfer_happened == true) {
-		return ExitDoUpload(total_bytes_ptr,numFiles, numCedarFiles, s,saved_priv,socket_default_crypto,
+		return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,socket_default_crypto,
 			first_failed_upload_success,do_upload_ack,do_download_ack,
 			first_failed_try_again,first_failed_hold_code,
 			first_failed_hold_subcode,first_failed_error_desc.c_str(),
@@ -4794,7 +4851,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	uploadEndTime = condor_gettimestamp_double();
 
 	upload_success = true;
-	return ExitDoUpload(total_bytes_ptr,numFiles, numCedarFiles, s,saved_priv,socket_default_crypto,
+	return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,socket_default_crypto,
 	                    upload_success,do_upload_ack,do_download_ack,
 	                    try_again,hold_code,hold_subcode,NULL,__LINE__);
 }
@@ -5117,7 +5174,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 }
 
 int
-FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, int num_cedar_files, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line)
+FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line)
 {
 	int rc = upload_success ? 0 : -1;
 	bool download_success = false;
@@ -5158,7 +5215,7 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, int 
 				}
 			}
 			SendTransferAck(s,upload_success,try_again,hold_code,hold_subcode,
-			                error_desc_to_send.c_str(),num_cedar_files);
+			                error_desc_to_send.c_str());
 		}
 	} else {
 		// go back to the state we were in before file transfer
@@ -5578,7 +5635,7 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 		// this function always succeeds (sigh) but we can capture the errors
 		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
 		if(-1 == InitializeSystemPlugins(error)) {
-			return NULL;
+			return "";
 		}
 	}
 
@@ -5587,7 +5644,7 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 		// no plugin for this type!!!
 		error.pushf( "FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method.c_str() );
 		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str() );
-		return NULL;
+		return "";
 	}
 
 	return plugin;
@@ -5994,7 +6051,7 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 	// build plugin table if we haven't done so
 	if (!plugin_table) {
 		if(-1 == InitializeSystemPlugins(e)) {
-			return NULL;
+			return "";
 		}
 	}
 
@@ -6225,7 +6282,7 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 
 	// if this exists and is in the list do it first
 	if (X509UserProxy && input_list->contains(X509UserProxy)) {
-		if( !ExpandFileTransferList( X509UserProxy, "", Iwd, -1, expanded_list, preserveRelativePaths ) ) {
+		if( !ExpandFileTransferList( X509UserProxy, "", Iwd, -1, expanded_list, preserveRelativePaths, SpoolSpace ) ) {
 			rc = false;
 		}
 	}
@@ -6238,7 +6295,7 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 		// everything else gets expanded.  this if would short-circuit
 		// true if X509UserProxy is not defined, but i made it explicit.
 		if(!X509UserProxy || (X509UserProxy && strcmp(path, X509UserProxy) != 0)) {
-			if( !ExpandFileTransferList( path, "", Iwd, -1, expanded_list, preserveRelativePaths ) ) {
+			if( !ExpandFileTransferList( path, "", Iwd, -1, expanded_list, preserveRelativePaths, SpoolSpace ) ) {
 				rc = false;
 			}
 		}
@@ -6266,7 +6323,7 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 }
 
 bool
-FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, FileTransferList &expanded_list ) {
+FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, FileTransferList &expanded_list, const char * SpoolSpace ) {
 	// dprintf( D_ALWAYS, ">>> ExpandParentDirectories( %s, %s, ...)\n", src_path, iwd );
 
 	// Fill a stack with path components from right to left.
@@ -6293,7 +6350,7 @@ FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, 
 			partialPath += DIR_DELIM_CHAR;
 		}
 		partialPath += splitPath.back(); splitPath.pop_back();
-		if(! ExpandFileTransferList( partialPath.c_str(), parent.c_str(), iwd, 0, expanded_list, false )) {
+		if(! ExpandFileTransferList( partialPath.c_str(), parent.c_str(), iwd, 0, expanded_list, false, SpoolSpace )) {
 			return false;
 		}
 		parent = partialPath;
@@ -6303,7 +6360,7 @@ FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, 
 }
 
 bool
-FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths )
+FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace )
 {
 	ASSERT( src_path );
 	ASSERT( dest_dir );
@@ -6380,7 +6437,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 				// ExpandParentDirectories() calls ExpandFileTransferList()
 				// with preserveRelativePaths turned off -- the whole point
 				// of it being to generate paths one level at a time.
-				if(! ExpandParentDirectories( src_path, iwd, expanded_list )) {
+				if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace )) {
 					return false;
 				}
 			}
@@ -6432,15 +6489,72 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 			// dprintf( D_ALWAYS, ">>> not preserving relative path.\n" );
 			destination += condor_basename(src_path);
 		} else {
-			// dprintf( D_ALWAYS, ">>> preserving relative path.\n" );
-			destination += src_path;
+			if(! fullpath(src_path)) {
+				// dprintf( D_ALWAYS, ">>> preserving relative path of relative path %s\n", src_path );
 
-			// ExpandParentDirectories() adds this back in the correct place.
-			expanded_list.pop_back();
+				if( destination.length() > 0 ) { destination += DIR_DELIM_CHAR; }
+				destination += src_path;
 
-			// dprintf( D_ALWAYS, ">>> expanding parent directories of named directory %s\n", src_path );
-			if(! ExpandParentDirectories( src_path, iwd, expanded_list )) {
-				return false;
+				// ExpandParentDirectories() adds this back in the correct place.
+				expanded_list.pop_back();
+
+				if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace )) {
+					return false;
+				}
+			} else {
+				//
+				// The only absolute paths we want to treat as relative paths
+				// are absolute paths into the SPOOL directory.  Everything
+				// else should be transferred as usual.
+				//
+
+                // SpoolSpace is not under user control; if the admin screws
+                // up this setting, it's OK to assert and die.  (Setting
+                // SPOOL to a relative path should have already caused
+                // failures before getting here.)
+				ASSERT( SpoolSpace == NULL || fullpath(SpoolSpace) );
+				if( SpoolSpace != nullptr && starts_with(src_path, SpoolSpace) ) {
+					const char * relative_path = &src_path[strlen(SpoolSpace)];
+					if( IS_ANY_DIR_DELIM_CHAR(relative_path[0]) ) { ++relative_path; }
+					// dprintf( D_ALWAYS, ">>> preserving relative path of directory (%s) in SPOOL (as %s)\n", src_path, relative_path );
+
+					//
+					// relative_path is relative to SpoolSpace, not the
+					// destination, which means we can't use it to set
+					// destination.  Instead, see if destination is a prefix
+					// to relative_path, and correct if it is.
+					//
+					ASSERT(! fullpath(destination.c_str()));
+
+					std::string parent(SpoolSpace);
+					if( starts_with( relative_path, destination ) ) {
+						relative_path = &relative_path[destination.length()];
+						if( IS_ANY_DIR_DELIM_CHAR(relative_path[0]) ) { ++relative_path; }
+
+						if(! IS_ANY_DIR_DELIM_CHAR(parent[parent.length() - 1])) {
+							parent += DIR_DELIM_CHAR;
+						}
+						parent += destination;
+					}
+
+					if(  (! destination.empty())
+					  && (! IS_ANY_DIR_DELIM_CHAR(destination[destination.length() - 1]))
+					  ) {
+						destination += DIR_DELIM_CHAR;
+					}
+					destination += relative_path;
+
+					// ExpandParentDirectories() adds this back in the correct place.
+					expanded_list.pop_back();
+
+					// dprintf( D_ALWAYS, ">>> ExpandParentDirectories( %s, %s, ..., ... )\n", relative_path, parent.c_str() );
+					if(! ExpandParentDirectories( relative_path, parent.c_str(), expanded_list, SpoolSpace )) {
+						return false;
+					}
+				} else {
+					destination += condor_basename(src_path);
+				}
+
 			}
 		}
 	}
@@ -6464,7 +6578,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		}
 		file_full_path += file_in_dir;
 
-		if( !ExpandFileTransferList( file_full_path.c_str(), destination.c_str(), iwd, max_depth, expanded_list, preserveRelativePaths ) ) {
+		if( !ExpandFileTransferList( file_full_path.c_str(), destination.c_str(), iwd, max_depth, expanded_list, preserveRelativePaths, SpoolSpace ) ) {
 			rc = false;
 		}
 	}
@@ -6498,7 +6612,9 @@ FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, MySt
 			FileTransferList filelist;
 			// N.B.: It's only safe to flatten relative paths here because
 			// this code never calls destDir().
-			if( !ExpandFileTransferList( path, "", iwd, 1, filelist, false ) ) {
+			//
+			// This implicitly assumes that nothing in the input file list is in SPOOL.
+			if( !ExpandFileTransferList( path, "", iwd, 1, filelist, false, "" ) ) {
 				formatstr_cat(error_msg, "Failed to expand '%s' in transfer input file list. ",path);
 				result = false;
 			}

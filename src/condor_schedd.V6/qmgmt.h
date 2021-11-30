@@ -272,6 +272,8 @@ public:
 	void AttachJob(JobQueueJob * job);
 	void DetachJob(JobQueueJob * job);
 	void DetachAllJobs(); // When you absolutely positively need to free this class...
+	JobQueueJob * FirstJob();
+	JobQueueJob * NextJob(JobQueueJob * job);
 	void JobStatusChanged(int old_status, int new_status);  // update cluster counters by job status.
 
 	void PopulateInfoAd(ClassAd & iad, int num_pending, bool include_factory_info); // fill out an info ad from fields in this structure and from the factory
@@ -282,7 +284,7 @@ class TransactionWatcher;
 
 // from qmgmt_factory.cpp
 // make an empty job factory
-class JobFactory * NewJobFactory(int cluster_id);
+class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds);
 // make a job factory from submit digest text, used on submit, optional user_ident is who to inpersonate when reading item data file (if any)
 bool LoadJobFactoryDigest(JobFactory *factory, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
 // attach submitted itemdata to a job factory that is pending submit.
@@ -290,7 +292,12 @@ bool LoadJobFactoryDigest(JobFactory *factory, const char * submit_digest_text, 
 int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::string & remainder);
 int JobFactoryRowCount(JobFactory * factory);
 // make a job factory from an on-disk submit digest - used on schedd restart
-class JobFactory * MakeJobFactory(JobQueueCluster * job, const char * submit_file, bool spooled_submit_file, std::string & errmsg);
+class JobFactory * MakeJobFactory(
+	JobQueueCluster * job,
+	const classad::ClassAd * extended_cmds,
+	const char * submit_file,
+	bool spooled_submit_file,
+	std::string & errmsg);
 void DestroyJobFactory(JobFactory * factory);
 
 void AttachJobFactoryToCluster(JobFactory * factory, JobQueueCluster * cluster);
@@ -325,6 +332,7 @@ bool GetJobFactoryMaterializeMode(JobQueueCluster * cluster, int & pause_code);
 void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
 void ScheduleClusterForDeferredCleanup(int cluster_id);
+void ScheduleClusterForJobMaterializeNow(int cluster_id);
 
 // called by qmgmt_recievers to handle the SetJobFactory RPC call
 int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * digest_text);
@@ -343,12 +351,12 @@ bool isQueueSuperUser( const char* user );
 // to modify the given job.  In addition to everything UserCheck2()
 // does, this also calls IPVerify to check for WRITE authorization.
 // This call assumes Q_SOCK is set to a valid QmgmtPeer object.
-bool UserCheck( ClassAd *ad, const char *test_owner );
+bool UserCheck( const ClassAd *ad, const char *test_owner );
 
 // Verify that the user issuing a command (test_owner) is authorized
 // to modify the given job.  Either ad or job_owner should be given
 // but not both.  If job_owner is NULL, the owner is looked up in the ad.
-bool UserCheck2( ClassAd *ad, const char *test_owner, char const *job_owner=NULL );
+bool UserCheck2( const ClassAd *ad, const char *test_owner, char const *job_owner=NULL );
 
 bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray();
@@ -546,12 +554,14 @@ JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
 
 
 class schedd_runtime_probe;
-typedef int (*queue_classad_scan_func)(ClassAd *ad, void* user);
-void WalkJobQueue3(queue_classad_scan_func fn, void* pv, schedd_runtime_probe & ftm);
+#define WJQ_WITH_CLUSTERS 1  // include cluster ads when walking the job queue
+#define WJQ_WITH_JOBSETS  2  // include jobset ads when walking the job queue
+#define WJQ_WITH_NO_JOBS  4  // do not include job (proc) ads when walking the job queue
 typedef int (*queue_job_scan_func)(JobQueueJob *ad, const JobQueueKey& key, void* user);
-void WalkJobQueue3(queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm);
-#define WalkJobQueue(fn) WalkJobQueue3( (fn), NULL, WalkJobQ_ ## fn ## _runtime )
-#define WalkJobQueue2(fn,pv) WalkJobQueue3( (fn), (pv), WalkJobQ_ ## fn ## _runtime )
+void WalkJobQueueEntries(int with, queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm);
+#define WalkJobQueue(fn) WalkJobQueueEntries(0, (fn), NULL, WalkJobQ_ ## fn ## _runtime )
+#define WalkJobQueue2(fn,pv) WalkJobQueueEntries(0, (fn), (pv), WalkJobQ_ ## fn ## _runtime )
+#define WalkJobQueueWith(with,fn,pv) WalkJobQueueEntries(with, (fn), pv, WalkJobQ_ ## fn ## _runtime )
 
 bool InWalkJobQueue();
 

@@ -2680,11 +2680,17 @@ variable ``JOB_TRANSFORM_NAMES`` :index:`JOB_TRANSFORM_NAMES`.
 For each entry in this list there must be a corresponding
 ``JOB_TRANSFORM_<name>`` :index:`JOB_TRANSFORM_<name>`
 configuration variable that specifies the transform rules. Transforms
-use the same syntax as *condor_job_router* transforms; although unlike
+can use the same syntax as *condor_job_router* transforms; although unlike
 the *condor_job_router* there is no default transform, and all
 matching transforms are applied - not just the first one. (See the
 :doc:`/grid-computing/job-router` section for information on the
 *condor_job_router*.)
+
+Beginning with HTCondor 9.4.0, when a submission is a late materialization job factory,
+transforms that would match the first factory job will be applied to the Cluster ad at submit time.
+When job ads are later materialized, attribute values set by the transform
+will override values set by the job factory for those attributes.  Prior to this version
+transforms were applied to late materialization jobs only after submit time.
 
 The following example shows a set of two transforms: one that
 automatically assigns an accounting group to jobs based on the
@@ -2695,16 +2701,18 @@ Vanilla jobs to Docker jobs.
 
     JOB_TRANSFORM_NAMES = AssignGroup, SL6ToDocker
 
-    JOB_TRANSFORM_AssignGroup = [ eval_set_AccountingGroup = userMap("Groups",Owner,AccountingGroup); ]
+    JOB_TRANSFORM_AssignGroup @=end
+       # map Owner to group using the existing accounting group attribute as requested group
+       EVALSET AcctGroup = userMap("Groups",Owner,AcctGroup)
+       EVALSET AccountingGroup = join(".",AcctGroup,Owner)
+    @end
 
     JOB_TRANSFORM_SL6ToDocker @=end
-    [
-       Requirements = JobUniverse==5 && WantSL6 && DockerImage =?= undefined;
-       set_WantDocker = true;
-       set_DockerImage = "SL6";
-       copy_Requirements = "VanillaRequrements";
-       set_Requirements = TARGET.HasDocker && VanillaRequirements
-    ]
+       # match only vanilla jobs that have WantSL6 and do not already have a DockerImage
+       REQUIREMENTS JobUniverse==5 && WantSL6 && DockerImage =?= undefined
+       SET  WantDocker = true
+       SET  DockerImage = "SL6"
+       SET  Requirements = TARGET.HasDocker && $(MY.Requirements)
     @end
 
 The AssignGroup transform above assumes that a mapfile that can map an
@@ -2712,8 +2720,7 @@ owner to one or more accounting groups has been configured via
 ``SCHEDD_CLASSAD_USER_MAP_NAMES``, and given the name "Groups".
 
 The SL6ToDocker transform above is most likely incomplete, as it assumes
-some custom attributes (``WantSL6`` and ``WantDocker`` and
-``HasDocker``) that your pool may or may not use.
+a custom attribute (``WantSL6``) that your pool may or may not use.
 
 Submit Requirements
 '''''''''''''''''''

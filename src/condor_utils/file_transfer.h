@@ -214,7 +214,7 @@ class FileTransfer final: public Service {
 	struct FileTransferInfo {
 		FileTransferInfo() : bytes(0), duration(0), type(NoType),
 		    success(true), in_progress(false), xfer_status(XFER_STATUS_UNKNOWN),
-			try_again(true), hold_code(0), hold_subcode(0), num_files(0) {}
+			try_again(true), hold_code(0), hold_subcode(0), num_cedar_files(0) {}
 
 		void addSpooledFile(char const *name_in_spool);
 
@@ -227,7 +227,7 @@ class FileTransfer final: public Service {
 		bool try_again;
 		int hold_code;
 		int hold_subcode;
-		int num_files;
+		int num_cedar_files;
 		MyString error_desc;
 			// List of files we created in remote spool.
 			// This is intended to become SpooledOutputFiles.
@@ -496,17 +496,17 @@ class FileTransfer final: public Service {
 	bool LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize);
 
 	// Called internally by DoUpload() in order to handle common wrapup tasks.
-	int ExitDoUpload(const filesize_t *total_bytes, int numFiles, int numCedarFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line);
+	int ExitDoUpload(const filesize_t *total_bytes, int numFiles, ReliSock *s, priv_state saved_priv, bool socket_default_crypto, bool upload_success, bool do_upload_ack, bool do_download_ack, bool try_again, int hold_code, int hold_subcode, char const *upload_error_desc,int DoUpload_exit_line);
 
 	// Send acknowledgment of success/failure after downloading files.
-	void SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason,int num_files=-1);
+	void SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
 
 	// Receive acknowledgment of success/failure after downloading files.
 	void GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc) const;
 
 	// Stash transfer success/failure info that will be propagated back to
 	// caller of file transfer operation, using GetInfo().
-	void SaveTransferInfo(bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason,int num_files=-1);
+	void SaveTransferInfo(bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
 
 	// Receive message indicating that the peer is ready to receive the file
 	// and save failure information with SaveTransferInfo().
@@ -528,6 +528,15 @@ class FileTransfer final: public Service {
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
 	ClassAd jobAd;
 
+	//
+	// As of this writing, this function should only ever be called from
+	// DoUpload().  It converts from a StringList of entries to a
+	// a FileTransferList, a std::vector of FileTransferItems.  The
+	// FileTransferList is a sequence of commands, and should not be
+	// reordered except by operator < (and probably not even then),
+	// because -- for example -- directories must be created before the
+	// file that live in them.
+	//
 	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list, bool preserveRelativePaths );
 
 		// This function generates a list of files to transfer, including
@@ -538,10 +547,23 @@ class FileTransfer final: public Service {
 		// iwd       - relative paths are relative to this path
 		// max_depth - how deep to recurse (-1 for infinite)
 		// expanded_list - the list of files to transfer
-	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths );
+		// preserve_relative_paths - if false, use the old behavior and
+		//      transfer src_path to its basename. if true, and
+		//      src_path is a relative path, transfer it to the same
+		//      relative path
+		// SpoolSpace - if preserve_relative_paths is set, then a
+		//      src_path which begins with this path is treated as a
+		//      relative path.  This allows us to preserve the relative
+		//      paths of files stored in SPOOL, whether from
+		//      self-checkpointing, ON_EXIT_OR_EVICT, or remote input
+		//      file spooling.
+	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace );
 
         // Function internal to ExpandFileTransferList() -- called twice there.
-    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list );
+        // The SpoolSpace argument is only necessary because this function
+        // calls back into  ExpandFileTransferList(); see that function
+        // for details.
+    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list, const char *SpoolSpace );
 
 		// Returns true if path is a legal path for our peer to tell us it
 		// wants us to write to.  It must be a relative path, containing

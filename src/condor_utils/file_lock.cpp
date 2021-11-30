@@ -548,7 +548,7 @@ FileLock::obtain( LOCK_TYPE t )
 	int saved_errno = -1;
 
 	if ( m_use_kernel_mutex == -1 ) {
-		m_use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+		m_use_kernel_mutex = (int)param_boolean("FILE_LOCK_VIA_MUTEX", true);
 	}
 
 		// If we have the path, we can try to lock via a mutex.  

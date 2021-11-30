@@ -2248,7 +2248,7 @@ render_batch_name (std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 
 
 static bool
-render_gridStatus( std::string & result, ClassAd * ad, Formatter & fmt )
+render_gridStatus( std::string & result, ClassAd * ad, Formatter & /* fmt */ )
 {
 	if (ad->LookupString(ATTR_GRID_JOB_STATUS, result)) {
 		return true;
@@ -4594,7 +4594,7 @@ const char * const jobFactory_PrintFormat = "SELECT\n"
    "JobsIdle      AS '  IDLE' WIDTH 6 PRINTF %6d\n"
    "JobsHeld      AS '  HOLD' WIDTH 6 PRINTF %6d\n"
     ATTR_JOB_MATERIALIZE_NEXT_PROC_ID " AS 'NEXTID' WIDTH 6 PRINTF %6d\n"
-    ATTR_JOB_MATERIALIZE_PAUSED       " AS MODE PRINTAS JOB_FACTORY_MODE OR _\n"
+    ATTR_JOB_MATERIALIZE_PAUSED "?:JobFactoryPaused AS MODE PRINTAS JOB_FACTORY_MODE OR _\n"
     ATTR_JOB_MATERIALIZE_DIGEST_FILE  " AS DIGEST\n"
 "WHERE (ProcId is undefined) && (" ATTR_JOB_MATERIALIZE_DIGEST_FILE " isnt undefined)\n"
 "SUMMARY NONE\n";

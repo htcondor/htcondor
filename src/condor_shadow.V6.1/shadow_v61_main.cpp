@@ -57,13 +57,11 @@ usage( int argc, char* argv[] )
 }
 
 
-extern "C" {
 int
 ExceptCleanup(int, int, const char *buf)
 {
   BaseShadow::log_except(buf);
   return 0;
-}
 }
 
 int

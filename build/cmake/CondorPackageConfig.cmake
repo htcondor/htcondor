@@ -321,8 +321,8 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	# below are options an overrides to enable packge generation for rpm & deb
 elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
-	execute_process( COMMAND python2 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1))" OUTPUT_VARIABLE C_PYTHONARCHLIB)
-	execute_process( COMMAND python3 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1))" OUTPUT_VARIABLE C_PYTHON3ARCHLIB)
+	execute_process( COMMAND python2 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1)[1:])" OUTPUT_VARIABLE C_PYTHONARCHLIB)
+	execute_process( COMMAND python3 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1)[1:])" OUTPUT_VARIABLE C_PYTHON3ARCHLIB)
 
 	# it's a smaller subset easier to differentiate.
 	# check the operating system name
@@ -387,11 +387,6 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( C_DOC			usr/share/doc/condor )
 		set( C_LIBEXEC		usr/lib/condor/libexec )
 		set( C_SYSCONFIG	etc/default )
-
-		#Because CPACK_PACKAGE_DEFAULT_LOCATION is set to "/" somewhere, so we have to set prefix like this
-		#This might break as we move to newer version of CMake
-		set( CMAKE_INSTALL_PREFIX "")
-		set( CPACK_SET_DESTDIR "ON")
 
 	elseif ( RPM_SYSTEM_NAME )
 		# This variable will be defined if the platfrom support RPM
@@ -460,13 +455,6 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( C_ETC_EXAMPLES	usr/share/doc/${CONDOR_VERSION}/etc/examples )
 		set( C_SHARE_EXAMPLES usr/share/doc/${CONDOR_VERSION})
 		set( C_DOC			usr/share/doc/${CONDOR_VERSION} )
-
-		#Because CPACK_PACKAGE_DEFAULT_LOCATION is set to "/" somewhere, so we have to set prefix like this
-		#This might break as we move to newer version of CMake
-		set(CMAKE_INSTALL_PREFIX "")
-		set(CPACK_SET_DESTDIR "ON")
-
-		set(CPACK_PACKAGE_RELOCATABLE "OFF")
 
 	endif()
 

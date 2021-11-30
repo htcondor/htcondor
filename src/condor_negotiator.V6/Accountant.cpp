@@ -182,7 +182,10 @@ void Accountant::Initialize(GroupEntry* root_group)
 		   MaxAcctLogSize );
 
   if (!AcctLog) {
-    AcctLog=new ClassAdLog<std::string,ClassAd*>(LogFileName.c_str());
+    AcctLog=new ClassAdLog<std::string,ClassAd*>();
+    if (!AcctLog->InitLogFile(LogFileName.c_str())) {
+      EXCEPT("Failed to initialize Accountant log!");
+    }
     dprintf(D_ACCOUNTANT,"Accountant::Initialize - LogFileName=%s\n",
 					LogFileName.c_str());
   }

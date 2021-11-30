@@ -2912,6 +2912,9 @@ tags=tools,preen
 default=$(LOG)/startd_history
 type=string
 
+[HISTORY_CONTAINS_JOB_ENVIRONMENT]
+default = true
+
 [PREEN_ADMIN]
 default=
 type=string
@@ -6169,7 +6172,12 @@ default : @fin
 	endif
 	use FEATURE : ScheddUsermapFile(AssignAccountingGroup, $(1))
 	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AssignAccountingGroup
-	JOB_TRANSFORM_AssignAccountingGroup = [ copy_Owner="AcctGroupUser"; copy_AcctGroup="RequestedAcctGroup"; eval_set_AcctGroup=usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup); eval_set_AccountingGroup=join(".",usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup),AcctGroupUser); ]
+	JOB_TRANSFORM_AssignAccountingGroup @=end
+		COPY Owner = AcctGroupUser
+		COPY AcctGroup = RequestedAcctGroup
+		EVALSET AcctGroup = usermap("AssignAccountingGroup",AcctGroupUser,AcctGroup)
+		EVALSET AccountingGroup = join(".",AcctGroup,AcctGroupUser)
+	@end
 	# make sure that the user can't qedit these attributes once they have been set.
 	IMMUTABLE_JOB_ATTRS = $(IMMUTABLE_JOB_ATTRS) AcctGroup AcctGroupUser AccountingGroup
 	# optionally check that the user requested a valid group
@@ -6278,9 +6286,10 @@ win32_default=$(LIBEXEC)\condor_gpu_utilization.exe
 [$FEATURE.GPUsMonitor]
 description=Settings to monitor GPU usage
 default : @end
-	use feature : Monitor( GPUs, WaitForExit, 1, $(GPU_MONITOR), SUM:GPUs, PEAK:GPUsMemory )
+	use feature : Monitor( GPUs, WaitForExit, 300, $(GPU_MONITOR), SUM:GPUs, PEAK:GPUsMemory )
+	STARTD_CRON_GPUs_MONITOR_CONDITION = TotalGPUs > 0
 
-    STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) GPUsUsage GPUsMemoryUsage
+	STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) GPUsUsage GPUsMemoryUsage
 @end
 
 [$FEATURE.PartitionableSlot]

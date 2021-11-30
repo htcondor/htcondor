@@ -22,9 +22,7 @@
 #include "matchmaker.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "NegotiatorPlugin.h"
-#endif
 #endif
 
 // the matchmaker object
@@ -69,9 +67,7 @@ void main_shutdown_graceful()
 {
 	matchMaker.invalidateNegotiatorAd();
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 	NegotiatorPluginManager::Shutdown();
-#endif
 #endif
 	DC_Exit(0);
 }
@@ -81,9 +77,7 @@ void main_shutdown_fast()
 {
 	matchMaker.invalidateNegotiatorAd();
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 	NegotiatorPluginManager::Shutdown();
-#endif
 #endif
 	DC_Exit(0);
 }

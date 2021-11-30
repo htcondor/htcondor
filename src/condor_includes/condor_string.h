@@ -30,6 +30,8 @@ DLL_IMPORT_MAGIC char* strupr( char *str );
 DLL_IMPORT_MAGIC char* strlwr( char *str );
 MSC_RESTORE_WARNING(28251)
 
+END_C_DECLS
+
 // Get an effective line, after removing line continuation characters and
 // trimming leading and trailing whitespace. More than 1 line may be read
 // from the file for each line returned here. if you need an accurate
@@ -40,10 +42,7 @@ char * getline_trim ( FILE *fp );
 
 char * chomp( char *buffer );
 
-END_C_DECLS
 
-
-#ifdef __cplusplus
 /* like strdup() but uses new[] */
 char *strnewp( const char * );
 
@@ -56,10 +55,9 @@ char *strnewp( const char * );
 // if mode==GETLINE_TRIM_SIMPLE_CONTINUATION, then line continuation characters
 // are interpreted without regard to comment lines that start with #
 #define GETLINE_TRIM_SIMPLE_CONTINUATION 1
-extern "C++" char * getline_trim ( FILE *fp, int & lineno, int mode=0 );
+char * getline_trim ( FILE *fp, int & lineno, int mode=0 );
 
 #include "condor_arglist.h"
-#endif
 
 #include "basename.h"
 

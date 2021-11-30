@@ -304,13 +304,11 @@ bool RemoteProc::PublishUpdateAd( ClassAd * ad ) {
 	status_file += "/.job.ad.out";
 	FILE *status_fp = safe_fopen_wrapper_follow(status_file.c_str(), "r");
 	if ( status_fp != NULL ) {
-		dprintf( D_FULLDEBUG, "JEF opened status file\n" );
 		bool is_eof = false;
 		int error = 0;
-		int rc = InsertFromFile(status_fp, *ad, is_eof, error);
-		dprintf(D_FULLDEBUG, "JEF read %d attributes\n", rc);
+		std::ignore = InsertFromFile(status_fp, *ad, is_eof, error);
 	} else {
-		dprintf( D_FULLDEBUG, "JEF failed to open status file\n" );
+		dprintf( D_FULLDEBUG, "RemoteProc: failed to open status file\n" );
 	}
 	bool exit_by_signal = false;
 	ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, exit_by_signal);
