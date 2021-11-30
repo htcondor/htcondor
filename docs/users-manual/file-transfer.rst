@@ -730,7 +730,7 @@ them to construct "pre-signed" ``https://`` URLs that temporarily allow
 the bearer access.  (Thus, an execute node needs to support ``https://``
 URLs for S3 URLs to work.)
 
-To make use of this feature, you'll need to specify a file containing
+To make use of this feature, you will need to specify a file containing
 your access key ID (and nothing else), a file containing your secret access
 key (and nothing else), and one or more S3 URLs.  See the subsections below
 for specific examples.
