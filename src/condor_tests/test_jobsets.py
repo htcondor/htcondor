@@ -63,7 +63,7 @@ def jobset_completed_success(default_condor, test_dir):
             break
         time.sleep(1)
     # Return a list of jobs in this set
-    schedd = htcondor.Schedd()
+    schedd = default_condor.get_local_schedd()
     job_ads = schedd.history(
         constraint=f"JobSetName == \"TestSubmit\"",
         projection=["JobStatus"],
@@ -104,7 +104,7 @@ job C=A D=B {
             assert False
         time.sleep(1)
     # Return a list of all jobs in this set
-    schedd = htcondor.Schedd()
+    schedd = default_condor.get_local_schedd()
     job_ads = schedd.query(
         constraint=f"JobSetName == \"BrokenJobset\"",
         projection=["JobStatus"],
