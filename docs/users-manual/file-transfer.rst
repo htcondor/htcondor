@@ -730,18 +730,21 @@ them to construct "pre-signed" ``https://`` URLs that temporarily allow
 the bearer access.  (Thus, an execute node needs to support ``https://``
 URLs for S3 URLs to work.)
 
-To make use of this feature, you will need to specify a file containing
-your access key ID (and nothing else), a file containing your secret access
-key (and nothing else), and one or more S3 URLs.  See the subsections below
-for specific examples.
+To make use of this feature, you will need to specify the following
+information in the submit file:
 
-HTCondor does not currently support transferring entire buckets or directories
-as input using the S3 protocol.  However, if you specify an ``s3://`` URL as the
-``output_destination``, that URL will be used a prefix for each output file's
-location; if you specify a URL ending a ``/``, it will be treated like a
-directory.
+- a file containing your access key ID (and nothing else)
+- a file containing your secret access key (and nothing else)
+- one or more S3 URLs as input values or output destinations.
 
-You may also use S3 URLs in ``transfer_output_remaps``.
+See the subsections below for specific examples.
+
+You may (like any other URL) specify an S3 URL in ``transfer_input_files``,
+or as part of a remap in ``transfer_output_remaps``.  However, HTCondor does
+not currently support transferring entire buckets or directories.  If you
+specify an ``s3://`` URL as the ``output_destination``, that URL will be
+used a prefix for each output file's location; if you specify a URL ending a
+``/``, it will be treated like a directory.
 
 S3 Transfer Recipes
 !!!!!!!!!!!!!!!!!!!
