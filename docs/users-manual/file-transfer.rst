@@ -813,5 +813,5 @@ key files described above.
     transfer_input_files = s3://some.other-s3-provider.org/my-bucket/large-input.file
     transfer_output_remaps = "large-output.file = s3://some.other-s3-provider.org/my-bucket/large-output.file"
 
-    # If you need to specify a region, you can do so.
-    # aws_region = <region>
+If you need to specify a region, you may do so using ``aws_region``,
+despite the name.
