@@ -112,9 +112,7 @@ Bugs Fixed:
 Version 9.3.2
 -------------
 
-.. HTCondor version 9.3.2 released on Month Date, 2021.
-
-- HTCondor version 9.3.2 not yet released.
+- HTCondor version 9.3.2 released on November 30, 2021.
 
 New Features:
 
