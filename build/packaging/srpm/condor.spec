@@ -1650,6 +1650,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Nov 30 2021 Tim Theisen <tim@cs.wisc.edu> - 9.3.2-1
+- Add allowed_execute_duration condor_submit command to cap job run time
+- Fix bug where self check-pointing jobs may be erroneously held
+
 * Tue Nov 09 2021 Tim Theisen <tim@cs.wisc.edu> - 9.3.1-1
 - Add allowed_job_duration condor_submit command to cap job run time
 
