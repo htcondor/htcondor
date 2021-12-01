@@ -284,8 +284,12 @@ void AuditLogJobProxy( const Sock &sock, PROC_ID job_id, const char *proxy_file 
 			 job_id.cluster, job_id.proc );
 	dprintf( D_AUDIT, sock, "proxy path: %s\n", proxy_file );
 
+#if !defined(WIN32)
 #if defined(HAVE_EXT_GLOBUS)
-	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( proxy_file );
+	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read_gsi( proxy_file );
+#else
+	X509Credential *proxy_handle = x509_proxy_read( proxy_file );
+#endif
 
 	if ( proxy_handle == NULL ) {
 		dprintf( D_AUDIT|D_FAILURE, sock, "Failed to read job proxy: %s\n",
@@ -2907,8 +2911,9 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			dprintf(D_ALWAYS, "Cluster %d has no " ATTR_OWNER " attribute.  Ignoring...\n", job->jid.cluster);
 			return 0;
 		}
-		// Keep track of unique owners per submitter.
-		SubData->owners.insert(OwnInfo->name);
+		OwnInfo->num.Hits += 1;
+		if (SubData) { SubData->num.Hits += 1; }
+		// don't count clusters when tracking unique owners per submitter // SubData->owners.insert(OwnInfo->name);
 
 		// clusters that have no materialized jobs need to be kickstarted to materialize.
 		// since materialization is normally triggered by job state changes.
@@ -12927,7 +12932,8 @@ Scheduler::Init()
     stats.Reconfig();
 
 	if (first_time_in_init) {
-		if (param_boolean("USE_JOBSETS", false)) {
+		static bool allow_jobsets = false; // disable jobsets entirely in 9.0.x
+		if (allow_jobsets && param_boolean("USE_JOBSETS", false)) {
 			ASSERT(jobSets == nullptr);
 			jobSets = new JobSets();
 			ASSERT(jobSets);

@@ -7,6 +7,23 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+Version 9.0.9
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.9 released on Month Date, 2021.
+
+- HTCondor version 9.0.9 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 9.0.8
 -------------
 
@@ -38,6 +55,18 @@ Bugs Fixed:
   start the job.
   :jira:`798`
 
+- Fixed daemon log message that could allow unintended processes to use
+  the **condor_shared_port** service.
+  :jira:`725`
+
+- Fixed a bug in the ClassAds function ``substr()`` that could cause a
+  crash if the ``offset`` argument was out of range.
+  :jira:`823`
+
+- Fixed bugs in the Kerberos authentication code that cause a crash on
+  macOS and can leak memory.
+  :jira:`200`
+
 - Fixed a bug where if **condor_schedd** fails to claim a **condor_startd**,
   the job matched to that **condor_startd** won't be rematched for up to
   20 minutes.
@@ -52,13 +81,11 @@ Version 9.0.7
 
 Release Notes:
 
-.. HTCondor version 9.0.7 released on Month Date, 2021.
-
-- HTCondor version 9.0.7 not yet released.
+- HTCondor version 9.0.7 released on November 2, 2021.
 
 New Features:
 
-- The configuration paramater ``SEC_TOKEN_BLACKLIST_EXPR`` has been renamed
+- The configuration parameter ``SEC_TOKEN_BLACKLIST_EXPR`` has been renamed
   to ``SEC_TOKEN_REVOCATION_EXPR``.
   The old name is still recognized if the new one isn't set.
   :jira:`744`
@@ -74,8 +101,8 @@ Bugs Fixed:
   :jira:`745`
 
 - Fixed a bug where *condor_gpu_discovery* could segfault on some older versions
-  of the NVIDIA libraries. This would result in GPUs not being detected.
-  The bug was introduced in HTCondor 9.0.6 and is known to occur with CUDA runtime 10.1.
+  of the nVidia libraries. This would result in GPUs not being detected.
+  The bug was introduced in HTCondor 9.0.6 and is known to occur with CUDA run time 10.1.
   :jira:`760`
 
 - Fixed a bug that could crash the *condor_startd* when claiming a slot
