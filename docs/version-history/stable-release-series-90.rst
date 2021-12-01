@@ -22,7 +22,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where a running parallel universe job would go to idle
+  status when the job policy indicated it should be held.
+  :jira:`869`
 
 Version 9.0.8
 -------------
@@ -71,10 +73,6 @@ Bugs Fixed:
   the job matched to that **condor_startd** won't be rematched for up to
   20 minutes.
   :jira:`769`
-
-- Fixed a bug where a running parallel universe job would go to idle
-  status when the job policy indicated it should be held.
-  :jira:`869`
 
 Version 9.0.7
 -------------
