@@ -677,6 +677,15 @@ ParallelShadow::shutDownLogic( int& exitReason ) {
 	return FALSE;
 }
 
+void
+ParallelShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
+{
+	if( ResourceList.size() && ResourceList[0] ) {
+		ResourceList[0]->setExitReason( JOB_SHOULD_HOLD );
+	}
+	BaseShadow::holdJob(reason, hold_reason_code, hold_reason_subcode);
+}
+
 int 
 ParallelShadow::handleJobRemoval( int sig ) {
 
