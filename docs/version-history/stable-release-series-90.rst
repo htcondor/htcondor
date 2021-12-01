@@ -22,7 +22,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- When a grid universe job of type ``condor`` fails on the remote system,
+  the local job is now put on hold, instead of automatically resubmitted.
+  :jira:`871`
 
 Version 9.0.8
 -------------
