@@ -43,6 +43,10 @@ Bugs Fixed:
   20 minutes.
   :jira:`769`
 
+- Fixed a bug where a running parallel universe job would go to idle
+  status when the job policy indicated it should be held.
+  :jira:`869`
+
 Version 9.0.7
 -------------
 
