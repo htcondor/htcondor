@@ -901,7 +901,15 @@ void CondorJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			if ( num_ads != 1 ) {
+			if ( num_ads == 0 ) {
+				dprintf( D_ALWAYS,
+						 "(%d.%d) condor_job_status_constrained() returned %d ads\n",
+						 procID.cluster, procID.proc, num_ads );
+				errorString = "Job disappeared from remote schedd";
+				SetRemoteJobId( NULL );
+				gmState = GM_HOLD;
+				break;
+			} else if ( num_ads != 1 ) {
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_status_constrained() returned %d ads\n",
 						 procID.cluster, procID.proc, num_ads );
@@ -1060,7 +1068,7 @@ void CondorJob::doEvaluateState()
 				gmState = GM_DELETE;
 			} else {
 				SetRemoteJobId( NULL );
-				gmState = GM_CLEAR_REQUEST;
+				gmState = GM_HOLD;
 			}
 			} break;
 		case GM_DELETE: {
