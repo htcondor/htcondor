@@ -950,6 +950,39 @@ Condor_Auth_Passwd::isTokenRevoked(const jwt::decoded_jwt &jwt)
 		return false;
 	}
 	classad::ClassAd ad;
+	auto claims = jwt.get_header_claims();
+	for (const auto &pair : claims) {
+		bool inserted = true;
+		const auto &claim = pair.second;
+		switch (claim.get_type()) {
+		case jwt::claim::type::null:
+			inserted = ad.InsertLiteral(pair.first, classad::Literal::MakeUndefined());
+			break;
+		case jwt::claim::type::boolean:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_bool());
+			break;
+		case jwt::claim::type::int64:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_int());
+			break;
+		case jwt::claim::type::number:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_number());
+			break;
+		case jwt::claim::type::string:
+			inserted = ad.InsertAttr(pair.first, pair.second.as_string());
+			break;
+		// TODO: these are not currently supported
+		case jwt::claim::type::array: // fallthrough
+		case jwt::claim::type::object: // fallthrough
+		default:
+			break;
+		}
+
+			// If, somehow, we can't build the ad, be paranoid,
+			// and assume revoked. "abundance of caution"
+		if (!inserted) {
+			return true;
+		}
+	}
 	auto claims = jwt.get_payload_claims();
 	for (const auto &pair : claims) {
 		bool inserted = true;
