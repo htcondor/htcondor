@@ -1395,6 +1395,7 @@ to setup ``IDTOKENS`` authentication, enable it in the list of authentication me
     SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), IDTOKENS
     SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), IDTOKENS
 
+:index:`SEC_TOKEN_REVOCATION_EXPR`
 **Revoking Token**: If a token is lost, stolen, or accidentally exposed,
 then the system administrator may use the token revocation mechanism in order
 to prevent unauthorized use.  Revocation can be accomplished by setting the
@@ -1414,7 +1415,10 @@ When printed using ``condor_token_list``, the human-readable form is as follows
 .. code-block:: console
 
     $ condor_token_list
-    Header: {"alg":"HS256","kid":"POOL"}
+    Header: {
+        "alg":"HS256",
+        "kid":"POOL"
+    }
     Payload: {
         "iat": 1588474719,
         "iss": "pool.example.com",
@@ -1427,6 +1431,9 @@ values for ``SEC_TOKEN_REVOCATION_EXPR``, depending on the desired breadth of
 the revocation:
 
 .. code-block:: condor-config
+
+    # Revokes all tokens generated with the HS256 algorithm from the key named POOL
+    SEC_TOKEN_REVOCATION_EXPR = alg =?= "HS256" && kid =?= "POOL"
 
     # Revokes all tokens from the user Alice:
     SEC_TOKEN_REVOCATION_EXPR = sub =?= "alice@pool.example.com"
