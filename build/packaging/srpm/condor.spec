@@ -1667,6 +1667,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Dec 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.8-1
+- Fix bug where huge values of ImageSize and others would end up negative
+- Fix bug in how MAX_JOBS_PER_OWNER applied to late materialization jobs
+- Fix bug where the schedd could choose a slot with insufficient disk space
+- Fix crash in ClassAd substr() function when the offset is out of range
+- Fix bug in Kerberos code that can crash on macOS and could leak memory
+- Fix bug where a job is ignored for 20 minutes if the startd claim fails
+
 * Tue Nov 30 2021 Tim Theisen <tim@cs.wisc.edu> - 9.3.2-1
 - Add allowed_execute_duration condor_submit command to cap job run time
 - Fix bug where self check-pointing jobs may be erroneously held
