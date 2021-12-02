@@ -1650,6 +1650,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Dec 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.4.0-1
+- Initial implementation of Job Sets in the htcondor CLI tool
+- The access point administrator can add keywords to the submit language
+- Add submit commands that limit job run time
+- Fix bug where self check-pointing jobs may be erroneously held
+
 * Thu Dec 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.8-1
 - Fix bug where huge values of ImageSize and others would end up negative
 - Fix bug in how MAX_JOBS_PER_OWNER applied to late materialization jobs
