@@ -214,7 +214,7 @@ class FileTransfer final: public Service {
 	struct FileTransferInfo {
 		FileTransferInfo() : bytes(0), duration(0), type(NoType),
 		    success(true), in_progress(false), xfer_status(XFER_STATUS_UNKNOWN),
-			try_again(true), hold_code(0), hold_subcode(0), num_cedar_files(0) {}
+			try_again(true), hold_code(0), hold_subcode(0) {}
 
 		void addSpooledFile(char const *name_in_spool);
 
@@ -227,7 +227,7 @@ class FileTransfer final: public Service {
 		bool try_again;
 		int hold_code;
 		int hold_subcode;
-		int num_cedar_files;
+		ClassAd stats;
 		MyString error_desc;
 			// List of files we created in remote spool.
 			// This is intended to become SpooledOutputFiles.
@@ -235,7 +235,9 @@ class FileTransfer final: public Service {
 		MyString tcp_stats;
 	};
 
-	FileTransferInfo GetInfo() { return Info; }
+	FileTransferInfo GetInfo() {
+		return Info;
+	}
 
 	inline bool IsServer() const {return user_supplied_key == FALSE;}
 

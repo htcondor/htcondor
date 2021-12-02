@@ -1846,10 +1846,23 @@ FileTransfer::ReadTransferPipeMsg()
 								   sizeof( int ) );
 		if(n != sizeof( int )) goto read_failed;
 
+		int stats_len = 0;
 		n = daemonCore->Read_Pipe( TransferPipe[0],
-								   (char *)&Info.num_cedar_files,
+								   (char *)&stats_len,
 								   sizeof( int ) );
 		if(n != sizeof( int )) goto read_failed;
+		if (stats_len) {
+			char *stats_buf = new char[stats_len];
+			n = daemonCore->Read_Pipe( TransferPipe[0],
+									stats_buf,
+									stats_len );
+			if(n != stats_len) {
+				delete [] stats_buf;
+				goto read_failed;
+			}
+			classad::ClassAdParser parser;
+			parser.ParseClassAd(stats_buf, Info.stats);
+		}
 
 		int error_len = 0;
 		n = daemonCore->Read_Pipe( TransferPipe[0],
@@ -1980,7 +1993,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 	Info.success = true;
 	Info.in_progress = true;
 	Info.xfer_status = XFER_STATUS_UNKNOWN;
-	Info.num_cedar_files = 0;
+	Info.stats = ClassAd();
 	TransferStart = time(NULL);
 
 	if (blocking) {
@@ -3024,7 +3037,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 		numFiles++;
 		if (xfer_command == TransferCommand::XferFile && rc == 0) {
-			Info.num_cedar_files++;
+			int num_cedar_files;
+			if (!Info.stats.LookupInteger("CedarFiles", num_cedar_files)) {
+				num_cedar_files = 0;
+			}
+			num_cedar_files++;
+			Info.stats.InsertAttr("CedarFiles", num_cedar_files);
 		}
 
 		// Gather a few more statistics
@@ -3389,7 +3407,7 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	Info.success = true;
 	Info.in_progress = true;
 	Info.xfer_status = XFER_STATUS_UNKNOWN;
-	Info.num_cedar_files = 0;
+	Info.stats = ClassAd();
 	TransferStart = time(NULL);
 
 	if (blocking) {
@@ -3485,11 +3503,23 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 				   sizeof(int) );
 		if(n != sizeof(int)) write_failed = true;
 	}
+	// Classads need to be unparsed to strings to send over the wire
+	// First send the length, then send the string itself
+	std::string stats;
+	classad::ClassAdUnParser unparser;
+	unparser.Unparse(stats, &Info.stats);
+	int stats_len = stats.length();
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
-				   (char *)&Info.num_cedar_files,
+				   (char *)&stats_len,
 				   sizeof(int) );
 		if(n != sizeof(int)) write_failed = true;
+	}
+	if(!write_failed) {
+		n = daemonCore->Write_Pipe( TransferPipe[1],
+				   stats.c_str(),
+				   stats_len );
+		if(n != stats_len) write_failed = true;
 	}
 	int error_len = Info.error_desc.length();
 	if(error_len) {
@@ -4715,7 +4745,12 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		numFiles++;
 
 		if (!fileitem.isSrcUrl() && !fileitem.isDestUrl()) {
-			Info.num_cedar_files++;
+			int num_cedar_files;
+			if (!Info.stats.LookupInteger("CedarFiles", num_cedar_files)) {
+				num_cedar_files = 0;
+			}
+			num_cedar_files++;
+			Info.stats.InsertAttr("CedarFiles", num_cedar_files);
 		}
 
 			// The spooled files list is used to generate

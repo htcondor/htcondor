@@ -248,7 +248,7 @@ class BaseShadow : public Service
 		*/
 	virtual float bytesReceived() { return 0.0; }
 
-	virtual void getFileTransferStats(int &upload_file_cnt, int &download_file_cnt) = 0;
+	virtual void getFileTransferStats(ClassAd &upload_file_stats, ClassAd &download_file_stats) = 0;
 	virtual void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status) = 0;
 
 	virtual int getExitReason( void ) = 0;
@@ -462,6 +462,9 @@ class BaseShadow : public Service
 	void startdClaimedCB(DCMsgCallback *cb);
 	bool m_lazy_queue_update;
 
+	ClassAd m_download_file_stats;
+	ClassAd m_upload_file_stats;
+
  private:
 
 	// private methods
@@ -505,9 +508,6 @@ class BaseShadow : public Service
 		// Has CommittedTime in the job ad been updated to reflect
 		// job termination?
 	bool m_committed_time_finalized;
-
-	int m_prev_run_upload_file_cnt;
-	int m_prev_run_download_file_cnt;
 
 		// This makes this class un-copy-able:
 	BaseShadow( const BaseShadow& );

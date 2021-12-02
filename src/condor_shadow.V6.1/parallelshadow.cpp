@@ -884,15 +884,15 @@ ParallelShadow::bytesReceived( void )
 }
 
 void
-ParallelShadow::getFileTransferStats(int &upload_file_cnt,int &download_file_cnt)
+ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_stats)
 {
-	upload_file_cnt = 0;
-	download_file_cnt = 0;
+	//int upload_file_cnt = 0;
+	//int download_file_cnt = 0;
 	MpiResource* mpi_res;
 	for( size_t i=0; i<ResourceList.size() ; i++ ) {
 		mpi_res = ResourceList[i];
-		upload_file_cnt += mpi_res->m_upload_xfer_file_count;
-		download_file_cnt += mpi_res->m_download_xfer_file_count;
+		m_upload_file_stats = mpi_res->m_upload_file_stats;
+		m_download_file_stats = mpi_res->m_download_file_stats;
 	}
 }
 
