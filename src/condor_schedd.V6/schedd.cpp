@@ -12446,7 +12446,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// Regardless of the state that the job currently
 				// is in, we'll put it on HOLD
 				// But let a REMOVED job stay that way.
-			if ( q_status != HELD && q_status != REMOVED ) {
+			if ( q_status != HELD && q_status != REMOVED && q_status != COMPLETED ) {
 				dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
 						 job_id.cluster, job_id.proc );
 				set_job_status( job_id.cluster, job_id.proc, HELD );
