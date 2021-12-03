@@ -7162,16 +7162,15 @@ int SubmitHash::process_vm_input_files(StringList & input_files, long long * acc
 }
 
 int SubmitHash::process_container_input_files(StringList & input_files, long long * accumulate_size_kb) {
-	auto_free_ptr transfer_container(submit_param(SUBMIT_KEY_TransferContainer, ATTR_TRANSFER_CONTAINER));
 	auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
 
 	// User said don't transfer the container
-	if (transfer_container && strcasecmp(transfer_container.ptr(), "false")) {
+	if (!submit_param_bool(SUBMIT_KEY_TransferContainer, nullptr, true)) {
 		return 0;
 	}
 
 	// don't xfer if on known shared fs
-	if (container_image.ptr()) {
+	if (container_image) {
 		auto_free_ptr sharedfs (param("CONTAINER_SHARED_FS"));
 		StringList roots(sharedfs.ptr(), ",");
 		for (const char * base = roots.first(); base != NULL; base = roots.next()) {
