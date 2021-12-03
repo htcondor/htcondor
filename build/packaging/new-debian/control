@@ -84,9 +84,12 @@ Suggests: docker.io,
           coop-computing-tools,
           singularity-container,
           slurm-client
-Conflicts: condor (<< ${binary:Version})
+Provides: blahp
+Conflicts: condor (<< ${binary:Version}),
+           blahp
 Breaks: condor (<< ${binary:Version})
-Replaces: condor (<< ${binary:Version})
+Replaces: condor (<< ${binary:Version}),
+          blahp
 Description: distributed workload management system
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
