@@ -950,8 +950,8 @@ Condor_Auth_Passwd::isTokenRevoked(const jwt::decoded_jwt &jwt)
 		return false;
 	}
 	classad::ClassAd ad;
-	auto claims = jwt.get_header_claims();
-	for (const auto &pair : claims) {
+	auto header_claims = jwt.get_header_claims();
+	for (const auto &pair : header_claims) {
 		bool inserted = true;
 		const auto &claim = pair.second;
 		switch (claim.get_type()) {
