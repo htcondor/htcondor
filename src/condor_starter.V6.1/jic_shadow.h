@@ -304,6 +304,9 @@ private:
 		/// Get the machine classad from the given stream
 	bool receiveMachineAd( Stream *stream );
 
+		/// Get the job execution overlay classad from the given stream
+	bool receiveExecutionOverlayAd(Stream* stream);
+
 		/** Initialize information about the shadow's version and
 			sinful string from the given ClassAd.  At startup, we just
 			pass the job ad, since that should have everything in it.

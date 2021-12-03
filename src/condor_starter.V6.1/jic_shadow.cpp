@@ -53,6 +53,7 @@
 extern Starter *Starter;
 ReliSock *syscall_sock = NULL;
 extern const char* JOB_AD_FILENAME;
+extern const char* JOB_EXECUTION_OVERLAY_AD_FILENAME;
 extern const char* MACHINE_AD_FILENAME;
 const char* CHIRP_CONFIG_FILENAME = ".chirp.config";
 
@@ -175,11 +176,18 @@ JICShadow::init( void )
 	if ( m_job_startd_update_sock )
 	{
 		receiveMachineAd(m_job_startd_update_sock);
+		receiveExecutionOverlayAd(m_job_startd_update_sock);
 	}
 
 		// stash a copy of the unmodified job ad in case we decide
 		// below that we want to write out an execution visa
 	ClassAd orig_ad = *job_ad;	
+
+	if (job_execution_overlay_ad) {
+		// For now, we apply the execution overlay as soon as we have copied the original job classad
+		// TODO: do this update later (or never)? but we would have to fix a bunch of call sites first.
+		job_ad->Update(*job_execution_overlay_ad);
+	}
 
 		// now that we have the job ad, see if we should go into an
 		// infinite loop, waiting for someone to attach w/ the
@@ -477,6 +485,7 @@ JICShadow::transferOutput( bool &transient_failure )
 		// remove the job and machine classad files from the
 		// ft list
 		filetrans->addFileToExceptionList(JOB_AD_FILENAME);
+		filetrans->addFileToExceptionList(JOB_EXECUTION_OVERLAY_AD_FILENAME);
 		filetrans->addFileToExceptionList(MACHINE_AD_FILENAME);
 		filetrans->addFileToExceptionList(".docker_sock");
 		filetrans->addFileToExceptionList(".docker_stdout");
@@ -3208,6 +3217,36 @@ JICShadow::receiveMachineAd( Stream *stream )
 		dPrintAd(D_JOB, *mach_ad);
 	}
 
+	return ret_val;
+}
+
+bool JICShadow::receiveExecutionOverlayAd(Stream* stream)
+{
+	bool ret_val = true;
+
+	if (job_execution_overlay_ad) {
+		delete job_execution_overlay_ad;
+	}
+	job_execution_overlay_ad = new ClassAd();
+
+	if (!getClassAd(stream, *job_execution_overlay_ad))
+	{
+		delete job_execution_overlay_ad; job_execution_overlay_ad = nullptr;
+		dprintf(D_ALWAYS, "Received invalid Execution Overlay Ad.  Discarding\n");
+		return false;
+	}
+	else
+	{
+		if ((job_execution_overlay_ad->size() > 0) && IsDebugLevel(D_JOB)) {
+			std::string adbuf;
+			dprintf(D_JOB, "Received Execution Overlay Ad:\n%s", formatAd(adbuf, *job_execution_overlay_ad, "\t"));
+		} else {
+			dprintf(D_FULLDEBUG, "Received Execution Overlay Ad (%d attributes)\n", (int)job_execution_overlay_ad->size());
+		}
+		if (job_execution_overlay_ad->size() == 0) {
+			delete job_execution_overlay_ad; job_execution_overlay_ad = nullptr;
+		}
+	}
 	return ret_val;
 }
 

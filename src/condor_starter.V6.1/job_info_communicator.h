@@ -142,6 +142,9 @@ public:
 		/// Return a pointer to the ClassAd for our job.
 	virtual ClassAd* jobClassAd( void );
 
+		/// Return a pointer to the execution overlay ClassAd for our job.
+	virtual ClassAd* jobExecutionOverlayAd( void );
+
 		/// Return a pointer to the ClassAd for the machine.
 	virtual ClassAd* machClassAd( void );
 
@@ -493,6 +496,9 @@ protected:
 	
 		/// The ClassAd for our job.  We control the memory for this.
 	ClassAd* job_ad;
+
+		/// The execution overlay ClassAd for our job.  We control the memory for this.
+	ClassAd* job_execution_overlay_ad;
 
 		// The Machine ClassAd running the job.
 	ClassAd* mach_ad;

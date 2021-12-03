@@ -59,6 +59,7 @@
 extern void main_shutdown_fast();
 
 const char* JOB_AD_FILENAME = ".job.ad";
+const char* JOB_EXECUTION_OVERLAY_AD_FILENAME = ".execution_overlay.ad";
 const char* MACHINE_AD_FILENAME = ".machine.ad";
 extern const char* JOB_WRAPPER_FAILURE_FILE;
 
@@ -3829,6 +3830,30 @@ Starter::WriteAdFiles() const
 	{
 		// If there is no job ad, this is a problem
 		ret_val = false;
+	}
+
+	ad = this->jic->jobExecutionOverlayAd();
+	if (ad && ad->size() > 0)
+	{
+		formatstr(filename, "%s%c%s", dir, DIR_DELIM_CHAR, JOB_EXECUTION_OVERLAY_AD_FILENAME);
+		fp = safe_fopen_wrapper_follow(filename.c_str(), "w");
+		if (!fp)
+		{
+			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write job execution overlay ad: "
+						"%s (errno %d)\n", filename.c_str(),
+						strerror(errno), errno);
+			ret_val = false;
+		}
+		else
+		{
+		#ifdef WIN32
+			if (has_encrypted_working_dir) {
+				DecryptFile(filename.c_str(), 0);
+			}
+		#endif
+			fPrintAd(fp, *ad);
+			fclose(fp);
+		}
 	}
 
 	// Write the machine ad
