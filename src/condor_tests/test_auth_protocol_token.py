@@ -215,9 +215,11 @@ class TestAuthProtocolToken:
         cmd = condor.run_command(["condor_ping", "-type", "master", "-table", "DAEMON"], timeout=20)
         assert cmd.returncode == 0
 
-    def test_revoke_token_expr(self, condor, token_list):
+    def test_revoke_token_expr(self, condor):
         # Get claims from existing token
-        tokenfile_string = token_list.split("\n")[-1]
+        cmd = condor.run_command(["condor_token_list"], timeout=20)
+        assert cmd.returncode == 0
+        tokenfile_string = cmd.stdout.split("\n")[-1]
         claims = json.loads(shlex.split(tokenfile_string, posix=False)[1])  # headers
         claims.update(json.loads(shlex.split(tokenfile_string, posix=False)[3]))  # payload
         assert set(claims.keys()) == {"alg", "kid", "exp", "iat", "iss", "jti", "scope", "sub"}
