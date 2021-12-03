@@ -37,7 +37,7 @@ class Cluster:
     
     def _ParseClusterId(self, cluster_unique):
         """
-        @param cluster_unique: Cluster unique string usually sent with bosco_cluster -l
+        @param cluster_unique: Cluster unique string usually sent with condor_remote_cluster -l
         @return: ( cluster_entry, cluster_type )
         """
         
