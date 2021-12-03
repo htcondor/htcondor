@@ -604,6 +604,8 @@ Requires: python3
 %else
 Requires: python >= 2.2
 %endif
+Provides: blahp = %{version}-%{release}
+Obsoletes: blahp < 9.5.0
 
 %description blahp
 %{summary}
