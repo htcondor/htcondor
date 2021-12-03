@@ -108,7 +108,6 @@ endif()
 if (LINUX)
 	add_executable(exit_37 "exit_37.c")
 	target_link_libraries(exit_37 "-static")
-	install(TARGETS exit_37 DESTINATION ${C_SBIN})
 endif()
 
 # Just like we can't asume that docker is installed or runnable on the build machine
@@ -121,4 +120,5 @@ endif()
 if (LINUX)
 	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/htcondor_docker_test DESTINATION ${C_LIBEXEC} )
 	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/exit_37.sif DESTINATION ${C_LIBEXEC} )
+	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/exit_37 DESTINATION ${C_SBIN} )
 endif()
