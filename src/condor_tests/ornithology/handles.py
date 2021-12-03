@@ -348,7 +348,7 @@ class ClusterHandle(ConstraintHandle):
             fail_condition = lambda _: False
 
         start_time = time.time()
-        self.state.read_events()
+        num_events_read = self.state.read_events()
         while True:
             if verbose:
                 logger.debug("Handle {} state: {}".format(self, self.state.counts()))
@@ -366,8 +366,14 @@ class ClusterHandle(ConstraintHandle):
                 logger.warning("Wait for handle {} timed out".format(self))
                 return False
 
-            time.sleep(1)
-            self.state.read_events()
+            # Sleep a second here if no job log events were waiting for us to prevent
+            # busy waiting.  However, if we did see an event, try to read another
+            # event as often they come in bunches - and we want to consume them
+            # as rapidly as possible.
+            if num_events_read == 0:
+                time.sleep(1)
+
+            num_events_read = self.state.read_events()
 
         logger.debug("Wait for handle {} finished successfully".format(self))
         return True
@@ -448,8 +454,10 @@ class ClusterState:
 
         # ... but actually look through everything we haven't read yet
         # in case someone else has read elsewhere
+        num_events_read = 0
         for event in self._handle.event_log.events[self._last_event_read + 1 :]:
             self._last_event_read += 1
+            num_events_read += 1
 
             new_status = JOB_EVENT_STATUS_TRANSITIONS.get(event.type, None)
             if new_status is not None:
@@ -462,6 +470,11 @@ class ClusterState:
 
                 # set new status on individual job
                 self._data[key] = new_status
+
+                # break here to avoid race conditions where a test may be waiting
+                # for a status that is very temporary and thus the wait condition never fires.
+                break
+        return num_events_read
 
     def __getitem__(self, proc):
         if isinstance(proc, int):

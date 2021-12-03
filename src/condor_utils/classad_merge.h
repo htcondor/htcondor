@@ -36,7 +36,7 @@
  *         attribute to be merged from the source into the destination,
  *         and only merge if different.
  */
-void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from, 
+void MergeClassAds(ClassAd *merge_into, const ClassAd *merge_from, 
 				   bool merge_conflicts, bool mark_dirty = true, bool keep_clean_when_possible = false);
 
 /** Like MergeClassAds() with the following settings:
@@ -44,12 +44,12 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
  *  mark_dirty = true
  *  keep_clean_when_possible=true
  */
-void MergeClassAdsCleanly(ClassAd *merge_into, ClassAd *merge_from);
+void MergeClassAdsCleanly(ClassAd *merge_into, const ClassAd *merge_from);
 
 /* Like MergeClassAds() but with a set of attributes that will not be merged
  *
  */
-int MergeClassAdsIgnoring(ClassAd *merge_into, ClassAd *merge_from,
+int MergeClassAdsIgnoring(ClassAd *merge_into, const ClassAd *merge_from,
 						  const AttrNameSet & ignore, bool mark_dirty = true);
 
 #endif

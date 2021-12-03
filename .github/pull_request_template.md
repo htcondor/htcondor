@@ -8,9 +8,10 @@
 - [ ] Verify that the Jira ticket (HTCONDOR-xxx) is mentioned at the beginning of the title. Edit it, if not
 - [ ] Verify that the branch destination of the PR matches the target version of the ticket
 - [ ] Check for correctness of change
+- [ ] Check for regression test(s) of new features and bugfixes (if the feature doesn't require root)
 - [ ] Check for documentation, if needed
 - [ ] Check for version history, if needed
-- [ ] Check BaTLab dashboard for successful build (https://batlab.chtc.wisc.edu/results/workspace.php) ) and test for either the PR or a workspace build by the developer that has the Jira ticket as a comment.
+- [ ] Check BaTLab dashboard for successful build (https://batlab.chtc.wisc.edu/results/workspace.php) and test for either the PR or a workspace build by the developer that has the Jira ticket as a comment.
 - [ ] Check that commit message references the Jira ticket (HTCONDOR-xxx)
 
 ## After the above

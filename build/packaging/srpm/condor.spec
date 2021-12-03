@@ -734,18 +734,16 @@ export CMAKE_PREFIX_PATH=/usr
 %cmake3 \
        -DBUILDID:STRING=%condor_build_id \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
-       -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=TRUE \
-       -DHAVE_BACKFILL:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
-       -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+       -DCMAKE_INSTALL_PREFIX:PATH=/ \
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
        -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
@@ -768,21 +766,12 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -D_VERBOSE:BOOL=FALSE \
 %endif
-       -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
-       -DHAVE_BACKFILL:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
-       -DHAVE_KBDD:BOOL=TRUE \
-       -DHAVE_HIBERNATION:BOOL=TRUE \
-       -DWANT_HDFS:BOOL=FALSE \
-       -DWANT_CONTRIB:BOOL=FALSE \
-       -DWITH_PIGEON:BOOL=FALSE \
-       -DWANT_FULL_DEPLOYMENT:BOOL=TRUE \
-       -DWITH_TRIGGERD:BOOL=FALSE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
        -DWITH_QPID:BOOL=FALSE \
 %if %globus
@@ -1707,6 +1696,24 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Dec 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.4.0-1
+- Initial implementation of Job Sets in the htcondor CLI tool
+- The access point administrator can add keywords to the submit language
+- Add submit commands that limit job run time
+- Fix bug where self check-pointing jobs may be erroneously held
+
+* Thu Dec 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.8-1
+- Fix bug where huge values of ImageSize and others would end up negative
+- Fix bug in how MAX_JOBS_PER_OWNER applied to late materialization jobs
+- Fix bug where the schedd could choose a slot with insufficient disk space
+- Fix crash in ClassAd substr() function when the offset is out of range
+- Fix bug in Kerberos code that can crash on macOS and could leak memory
+- Fix bug where a job is ignored for 20 minutes if the startd claim fails
+
+* Tue Nov 30 2021 Tim Theisen <tim@cs.wisc.edu> - 9.3.2-1
+- Add allowed_execute_duration condor_submit command to cap job run time
+- Fix bug where self check-pointing jobs may be erroneously held
+
 * Tue Nov 09 2021 Tim Theisen <tim@cs.wisc.edu> - 9.3.1-1
 - Add allowed_job_duration condor_submit command to cap job run time
 

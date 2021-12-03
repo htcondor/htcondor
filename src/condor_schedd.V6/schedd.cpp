@@ -2905,8 +2905,9 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 			dprintf(D_ALWAYS, "Cluster %d has no " ATTR_OWNER " attribute.  Ignoring...\n", job->jid.cluster);
 			return 0;
 		}
-		// Keep track of unique owners per submitter.
-		SubData->owners.insert(OwnInfo->name);
+		OwnInfo->num.Hits += 1;
+		if (SubData) { SubData->num.Hits += 1; }
+		// don't count clusters when tracking unique owners per submitter // SubData->owners.insert(OwnInfo->name);
 
 		// clusters that have no materialized jobs need to be kickstarted to materialize.
 		// since materialization is normally triggered by job state changes.
@@ -7527,6 +7528,13 @@ Scheduler::negotiate(int command, Stream* s)
 	for(job_index = 0; job_index < N_PrioRecs && !skip_negotiation; job_index++) {
 		prio_rec *prec = &PrioRec[job_index];
 
+		// make sure job isn't flagged as not needing matching
+		if (prec->not_runnable || prec->matched)
+		{
+			jobs--;
+			continue;
+		}
+
 		// make sure owner matches what negotiator wants
 		if (strcmp(owner, prec->submitter) != 0)
 		{
@@ -7787,6 +7795,13 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	match->claim_requester = NULL;
 
 	if( !msg->claimed_startd_success() ) {
+		// Re-enable the job for matching in the PrioRec array
+		for (int i = 0; i < N_PrioRecs; i++) {
+			if (PrioRec[i].id.cluster == match->cluster && PrioRec[i].id.proc == match->proc) {
+				PrioRec[i].matched = false;
+				break;
+			}
+		}
 		scheduler.DelMrec(match);
 		return;
 	}

@@ -7,14 +7,33 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-909:
+
+Version 9.0.9
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.0.9 released on Month Date, 2021.
+
+- HTCondor version 9.0.9 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
+.. _lts-version-history-908:
+
 Version 9.0.8
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.0.8 released on Month Date, 2021.
-
-- HTCondor version 9.0.8 not yet released.
+- HTCondor version 9.0.8 released on December 2, 2021.
 
 New Features:
 
@@ -45,6 +64,15 @@ Bugs Fixed:
 - Fixed a bug in the ClassAds function ``substr()`` that could cause a
   crash if the ``offset`` argument was out of range.
   :jira:`823`
+
+- Fixed bugs in the Kerberos authentication code that cause a crash on
+  macOS and can leak memory.
+  :jira:`200`
+
+- Fixed a bug where if **condor_schedd** fails to claim a **condor_startd**,
+  the job matched to that **condor_startd** won't be rematched for up to
+  20 minutes.
+  :jira:`769`
 
 .. _lts-version-history-907:
 
@@ -89,6 +117,8 @@ Bugs Fixed:
 - Ensure the HTCondor uses version 0.6.2 or later SciTokens library so that
   WLCG tokens can be read.
   :jira:`801`
+
+.. _lts-version-history-906:
 
 Version 9.0.6
 -------------
@@ -203,6 +233,8 @@ Bugs Fixed:
   been causing the number of bytes transferred to be undercounted.
   :jira:`722`
 
+.. _lts-version-history-905:
+
 Version 9.0.5
 -------------
 
@@ -269,6 +301,8 @@ Bugs Fixed:
   :jira:`603`
 
 
+.. _lts-version-history-904:
+
 Version 9.0.4
 -------------
 
@@ -292,6 +326,8 @@ Bugs Fixed:
    :jira:`587`
 
 
+.. _lts-version-history-903:
+
 Version 9.0.3
 -------------
 
@@ -306,6 +342,8 @@ New Features:
 Bugs Fixed:
 
 -  None.
+
+.. _lts-version-history-902:
 
 Version 9.0.2
 -------------
@@ -438,6 +476,8 @@ Bugs Fixed:
   :jira:`576`
 
 
+.. _lts-version-history-901:
+
 Version 9.0.1
 -------------
 
@@ -539,6 +579,8 @@ Bugs Fixed:
 - Fixed several bugs that could result in the *condor_token_* tools aborting with
   a c++ runtime error on newer versions of Linux.
   :jira:`449`
+
+.. _lts-version-history-900:
 
 Version 9.0.0
 -------------
