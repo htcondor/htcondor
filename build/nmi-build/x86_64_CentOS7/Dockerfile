@@ -60,7 +60,7 @@ RUN yum install -y \
 
 # Tools needed for building
 RUN yum install -y \
-    devtoolset-9-toolchain \
+    devtoolset-10-toolchain \
     make \
     patchelf \
     rpm-build \
