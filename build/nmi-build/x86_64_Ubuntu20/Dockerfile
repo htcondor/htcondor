@@ -140,6 +140,15 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     zlib1g-dev \
     && apt clean
 
+# blahp build dependencies
+RUN apt update && apt install -y \
+    autoconf \
+    automake \
+    docbook-xsl \
+    libxslt1.1 \
+    xsltproc \
+    && apt clean
+
 RUN apt update && apt install -y \
     python3-pip \
     && apt clean

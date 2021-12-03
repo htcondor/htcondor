@@ -132,6 +132,14 @@ RUN dnf install -y \
     'systemd-devel' \
     && dnf clean all
 
+# blahp build dependencies
+RUN dnf install -y \
+    'autoconf' \
+    'automake' \
+    'docbook-style-xsl' \
+    'libxslt' \
+    && dnf clean all
+
 # Additional dependencies for OSG style build
 RUN dnf install -y \
     globus-callout-devel \
