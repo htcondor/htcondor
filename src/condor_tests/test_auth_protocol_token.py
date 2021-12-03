@@ -7,6 +7,8 @@ import os
 import shutil
 import subprocess
 import time
+import shlex
+import json
 
 from ornithology import *
 from pathlib import Path
@@ -200,10 +202,32 @@ class TestAuthProtocolToken:
         cmd = condor.run_command(["condor_ping", "-type", "master", "-table", "ALL"], timeout=20)
         assert cmd.returncode == 1
 
-    def test_condor_fetch(self, condor, password_file, offline_password_file, wrong_password_file):
+    def test_create_token_authorized_user_claims(self, condor, token_list, password_file, offline_password_file, wrong_password_file):
+        # Remove existing token
+        token_file = token_list.split(' ')[-1]
+        os.unlink(token_file)
         # Switch back to correct POOL signing key
         os.rename(password_file, wrong_password_file)
         os.rename(offline_password_file, password_file)
+        # Create valid, authorized token with all possible claims
+        cmd = condor.run_command(["condor_token_create", "-identity", "administrator@domain", "-token", "tokenfile", "-authz", "DAEMON", "-lifetime", "600"], timeout=20)
+        assert cmd.returncode == 0
+        cmd = condor.run_command(["condor_ping", "-type", "master", "-table", "DAEMON"], timeout=20)
+        assert cmd.returncode == 0
+
+    def test_revoke_token_expr(self, condor, token_list):
+        # Get claims from existing token
+        claims = json.loads(shlex.split(token_list)[1])  # headers
+        claims.update(json.loads(shlex.split(token_list)[3]))  # payload
+        # Invalidate each claim and test
+        for key, value in claims.items():
+            if not isinstance(value, int):
+                value = classad.quote(value)
+            os.environ["_CONDOR_SEC_TOKEN_REVOCATION_EXPR"] = f'{key} =!= {value}'
+            cmd = condor.run_command(["condor_ping", "-type", "master", "-table", "DAEMON"], timeout=20)
+            assert cmd.returncode == 1
+
+    def test_condor_fetch(self, condor):
         # Verify condor_token_fetch
         cmd = condor.run_command(["condor_token_fetch", "-type", "master", "-token", "tokenfile"], timeout=20)
         assert cmd.returncode == 0
