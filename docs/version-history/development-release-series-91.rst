@@ -15,7 +15,8 @@ Release Notes:
 
 New Features:
 
-- None.
+- The **blahp** is now included in the HTCondor linux native packages.
+  :jira:`838`
 
 Bugs Fixed:
 
