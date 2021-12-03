@@ -331,6 +331,7 @@ Requires: munge-libs
 Requires: openssl-libs
 Requires: scitokens-cpp >= 0.6.2
 Requires: systemd-libs
+Requires: rsync
 
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
@@ -571,28 +572,6 @@ The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
 
 #######################
-%package bosco
-Summary: BOSCO, a HTCondor overlay system for managing jobs at remote clusters
-Url: https://osg-bosco.github.io/docs/
-Group: Applications/System
-%if 0%{?rhel} >= 8 || 0%{?fedora}
-Requires: python3
-%else
-Requires: python >= 2.2
-%endif
-Requires: %name = %version-%release
-Requires: rsync
-
-%description bosco
-BOSCO allows a locally-installed HTCondor to submit jobs to remote clusters,
-using SSH as a transit mechanism.  It is designed for cases where the remote
-cluster is using a different batch system such as PBS, SGE, LSF, or another
-HTCondor system.
-
-BOSCO provides an overlay system so the remote clusters appear to be a HTCondor
-cluster.  This allows the user to run their workflows using HTCondor tools across
-multiple clusters.
-
 #######################
 %package blahp
 Summary: BLAHP daemon
@@ -675,7 +654,6 @@ Requires: %name-classads = %version-%release
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
-Requires: %name-bosco = %version-%release
 %if %uw_build
 Requires: %name-externals = %version-%release
 %endif
@@ -1055,7 +1033,7 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%tarba
 #rm -rf %{buildroot}%{_datadir}/condor/python/{py3htcondor,py3classad}.so
 #rm -rf %{buildroot}%{_datadir}/condor/{libpy3classad*,py3htcondor,py3classad}.so
 
-# Install BOSCO
+# Install Campus Factory, option for condor_remote_cluster (nee BOSCO)
 %if 0%{?rhel} >= 8
 mkdir -p %{buildroot}%{python3_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python3_sitelib}
@@ -1225,11 +1203,13 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_qedit.1.gz
 %_mandir/man1/condor_reconfig.1.gz
 %_mandir/man1/condor_release.1.gz
+%_mandir/man1/condor_remote_cluster.1.gz
 %_mandir/man1/condor_reschedule.1.gz
 %_mandir/man1/condor_restart.1.gz
 %_mandir/man1/condor_rm.1.gz
 %_mandir/man1/condor_run.1.gz
 %_mandir/man1/condor_set_shutdown.1.gz
+%_mandir/man1/condor_ssh_start.1.gz
 %_mandir/man1/condor_sos.1.gz
 %_mandir/man1/condor_stats.1.gz
 %_mandir/man1/condor_status.1.gz
@@ -1337,6 +1317,9 @@ rm -rf %{buildroot}
 %_bindir/condor_nsenter
 %_bindir/condor_evicted_files
 %_bindir/condor_adstash
+%_bindir/condor_remote_cluster
+%_bindir/bosco_cluster
+%_bindir/condor_ssh_start
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1347,6 +1330,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_collector
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
+%_sbindir/condor_ft-gahp
 %_sbindir/condor_had
 %_sbindir/condor_master
 %_sbindir/condor_negotiator
@@ -1391,6 +1375,25 @@ rm -rf %{buildroot}
 %dir %_var/lib/condor/oauth_credentials
 %defattr(-,root,root,-)
 %dir %_var/lib/condor/krb_credentials
+# The Campus Factory
+%if 0%{?hcc}
+%config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
+%endif
+%if 0%{?osg} || 0%{?hcc}
+%config(noreplace) %_sysconfdir/condor/campus_factory.conf
+%endif
+%_libexecdir/condor/campus_factory
+%_sbindir/campus_factory
+%_sbindir/runfactory
+%_sbindir/glidein_creation
+%_datadir/condor/campus_factory
+%if 0%{?rhel} >= 8
+%{python3_sitelib}/GlideinWMS
+%{python3_sitelib}/campus_factory
+%else
+%{python_sitelib}/GlideinWMS
+%{python_sitelib}/campus_factory
+%endif
 
 #################
 %files devel
@@ -1578,45 +1581,6 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/40-vault-credmon.conf
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
-
-%files bosco
-%defattr(-,root,root,-)
-%if 0%{?hcc}
-%config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
-%endif
-%if 0%{?osg} || 0%{?hcc}
-%config(noreplace) %_sysconfdir/condor/campus_factory.conf
-%endif
-%_libexecdir/condor/shellselector
-%_libexecdir/condor/campus_factory
-%_sbindir/bosco_install
-%_sbindir/campus_factory
-%_sbindir/condor_ft-gahp
-%_sbindir/runfactory
-%_bindir/bosco_cluster
-%_bindir/bosco_ssh_start
-%_bindir/bosco_start
-%_bindir/bosco_stop
-%_bindir/bosco_findplatform
-%_bindir/bosco_uninstall
-%_bindir/bosco_quickstart
-%_bindir/htsub
-%_sbindir/glidein_creation
-%_datadir/condor/campus_factory
-%if 0%{?rhel} >= 8
-%{python3_sitelib}/GlideinWMS
-%{python3_sitelib}/campus_factory
-%else
-%{python_sitelib}/GlideinWMS
-%{python_sitelib}/campus_factory
-%endif
-%_mandir/man1/bosco_cluster.1.gz
-%_mandir/man1/bosco_findplatform.1.gz
-%_mandir/man1/bosco_install.1.gz
-%_mandir/man1/bosco_ssh_start.1.gz
-%_mandir/man1/bosco_start.1.gz
-%_mandir/man1/bosco_stop.1.gz
-%_mandir/man1/bosco_uninstall.1.gz
 
 %files blahp
 %config %_sysconfdir/blah.config

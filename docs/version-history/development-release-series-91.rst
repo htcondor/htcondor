@@ -27,6 +27,11 @@ New Features:
 - The **blahp** is now included in the HTCondor linux native packages.
   :jira:`838`
 
+- The tool *bosco_cluster* is being renamed to *condor_remote_cluster*.
+  The tool can still be used via the old name, but that will stop working
+  in a future release.
+  :jira:`733`
+
 Bugs Fixed:
 
 - Fixed a bug where if the submit file set checkpoint_exit_code, and the administrator
