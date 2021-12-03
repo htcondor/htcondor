@@ -253,7 +253,11 @@
 // END ckireyev myproxy
 #define ATTR_HARDWARE_ADDRESS  "HardwareAddress"
 #define ATTR_HAS_CHECKPOINTING  "HasCheckpointing"
+#define ATTR_HAS_CONTAINER  "HasContainer"
 #define ATTR_HAS_DOCKER  "HasDocker"
+#define ATTR_HAS_DOCKER_REPO  "HasDockerRepo"
+#define ATTR_HAS_SANDBOX_IMAGE  "HasSandboxImage"
+#define ATTR_HAS_SIF  "HasSIF"
 #define ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY "HasEncryptExecuteDirectory"
 #define ATTR_HAS_FILE_TRANSFER  "HasFileTransfer"
 #define ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS  "HasFileTransferPluginMethods"
