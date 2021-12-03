@@ -217,8 +217,8 @@ class TestAuthProtocolToken:
 
     def test_revoke_token_expr(self, condor, token_list):
         # Get claims from existing token
-        claims = json.loads(shlex.split(token_list)[1])  # headers
-        claims.update(json.loads(shlex.split(token_list)[3]))  # payload
+        claims = json.loads(shlex.split(token_list, posix=False)[1])  # headers
+        claims.update(json.loads(shlex.split(token_list, posix=False)[3]))  # payload
         assert set(claims.keys()) == {"alg", "kid", "exp", "iat", "iss", "jti", "scope", "sub"}
         # Invalidate each claim and test
         for key, value in claims.items():
