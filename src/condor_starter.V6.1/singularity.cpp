@@ -3,7 +3,10 @@
 
 #include "singularity.h"
 
+#ifdef LINUX
 #include <sys/wait.h>
+#endif
+
 #include <vector>
 
 #include "condor_config.h"
@@ -457,6 +460,7 @@ Singularity::canRunSandbox() {
 
 bool 
 Singularity::canRun(const std::string &image) {
+#ifdef LINUX
 	ArgList sandboxArgs;
 	std::string exec;
 	if (!find_singularity(exec)) {
@@ -491,5 +495,6 @@ Singularity::canRun(const std::string &image) {
 		return false;
 	}
 	dprintf(D_ALWAYS, "Successfully ran: '%s'.\n", displayString.c_str());
+#endif
 	return true;
 }
