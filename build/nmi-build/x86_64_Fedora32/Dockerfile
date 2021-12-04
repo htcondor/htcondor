@@ -103,6 +103,7 @@ RUN dnf install -y \
     'expat-devel' \
     'flex' \
     'gcc-c++' \
+    'glibc-static' \
     'krb5-devel' \
     'libcgroup-devel' \
     'libcurl-devel' \
