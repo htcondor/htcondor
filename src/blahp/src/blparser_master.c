@@ -68,7 +68,7 @@ int parsernumlsf=0;
 
 static pthread_mutex_t bfork_lock  = PTHREAD_MUTEX_INITIALIZER;
 
-config_handle *blah_config_handle;
+extern config_handle *blah_config_handle;
 config_entry *ret;
 
 char *config_file=NULL;
