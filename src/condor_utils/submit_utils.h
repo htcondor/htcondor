@@ -141,6 +141,7 @@
 #define SUBMIT_KEY_ShouldTransferFiles "should_transfer_files"
 #define SUBMIT_KEY_PreserveRelativePaths "preserve_relative_paths"
 #define SUBMIT_KEY_TransferCheckpointFiles "transfer_checkpoint_files"
+#define SUBMIT_KEY_TransferContainer "transfer_container"
 #define SUBMIT_KEY_TransferInputFiles "transfer_input_files"
 #define SUBMIT_KEY_TransferInputFilesAlt "TransferInputFiles"
 #define SUBMIT_KEY_TransferOutputFiles "transfer_output_files"
@@ -260,6 +261,7 @@
 #define SUBMIT_KEY_DockerImage "docker_image"
 #define SUBMIT_KEY_DockerNetworkType "docker_network_type"
 
+#define SUBMIT_KEY_ContainerImage "container_image"
 #define SUBMIT_KEY_ContainerServiceNames "container_service_names"
 #define SUBMIT_KEY_ContainerPortSuffix "_container_port"
 
@@ -665,6 +667,13 @@ public:
 	const char * full_path(const char *name, bool use_iwd=true);
 	int check_and_universalize_path(MyString &path);
 
+	enum class ContainerImageType {
+		DockerRepo,
+		SIF,
+		SandboxImage,
+		Unknown
+	};
+
 protected:
 	MACRO_SET SubmitMacroSet;
 	MACRO_EVAL_CONTEXT mctx;
@@ -709,6 +718,7 @@ protected:
 	int  JobUniverse;
 	bool JobIwdInitialized;
 	bool IsDockerJob;
+	bool IsContainerJob;
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
 	bool SubmitOnHold;
 	int  SubmitOnHoldCode;
@@ -823,7 +833,7 @@ protected:
 	int do_simple_commands(const struct SimpleSubmitKeyword * cmdtable);
 	int build_oauth_service_ads(classad::References & services, ClassAdList & ads, std::string & error) const;
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
-	int query_universe(MyString & sub_type, bool & is_docker); // figure out universe, but DON'T modify the cached members
+	int query_universe(MyString & sub_type); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
 	void push_error(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
 	void push_warning(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
@@ -847,6 +857,9 @@ private:
 	  const YourStringNoCase & gt );      /* used by SetGridParams */
 
 	int process_vm_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
+	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
+
+	ContainerImageType image_type_from_string(const std::string &image) const;
 };
 
 struct SubmitStepFromQArgs {

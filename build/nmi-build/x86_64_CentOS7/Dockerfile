@@ -141,6 +141,14 @@ RUN yum install -y \
     'which' \
     && yum clean all
 
+# blahp build dependencies
+RUN yum install -y \
+    'autoconf' \
+    'automake' \
+    'docbook-style-xsl' \
+    'libxslt' \
+    && yum clean all
+
 # Additional dependencies for OSG style build
 RUN yum install -y \
     globus-callout-devel \

@@ -1,0 +1,356 @@
+##
+#####Common section
+##
+
+##Blah common variables
+
+#Supported batch systems (e.g. pbs,lsf)
+supported_lrms=pbs,lsf,sge,slurm,condor
+
+#DGAS logfile 
+BLAHPD_ACCOUNTING_INFO_LOG=
+
+#Set to yes if you wish to disable BLAH's machinery for transferring 
+#or delegating proxies to the worker node where a job is running. (default = no)
+blah_disable_wn_proxy_renewal=yes
+
+#Set to yes to enable delegation (instead of copy) of renewed proxies
+#to worker nodes. NOTE: limited *and* delegated proxes are not 
+#accepted for default GSI authentication as of VDT 1.2, so this should
+#be enabled only if non-limited proxies are used for proxy renewal. (default = no)
+blah_delegate_renewed_proxies=
+
+#Set to yes to disable creation of a limited proxy. (default = no)
+blah_disable_limited_proxy=yes
+
+#max number of concurrent threads to serve commands (default = 500)
+blah_max_threaded_cmds=50
+
+#Colon-separated list of paths that are shared among batch system
+#head and worker nodes.
+blah_shared_directories=/
+
+#By default the job temporary work directory is created as a subdirectory
+#of wherever the batch system is configured to land the job. 
+#This variable changes the location where the work directory is created.
+#A shell variable escaped or in single quotes will be resolved on the 
+#worker node in the job environment. Non-escaped variables will be resolved 
+#on the submit node in the submit environment.
+#blah_wn_temporary_home_dir='$GLITE_LOCATION_TMP'
+
+#These two attributes allow to change the directory on the worker node where 
+#the batch system is instructed to transfer input/output sandbox files to 
+#and from.
+#These can be set in case the batch system default is not good enough
+#(e.g.: the batch systems leaves output files behind)
+#These variables can be resolved on the submit node -only-.
+#blah_wn_inputsandbox=/tmp
+#blah_wn_outputsandbox=/tmp
+
+#A directory to save each generated submit file in, for debugging.
+#Warning: This creates a new file for each job; you will have to
+#clean up the files yourself.
+#blah_debug_save_submit_info=/tmp
+
+#The following configuration attributes allow for additional
+#submit command attributes to be set in the local shell callout
+#for batch system customizations.
+#
+#Set this variable to pass all submit command attributes:
+#blah_pass_all_submit_attributes=yes
+#
+#-Or- select individual attributes as follows:
+#blah_pass_submit_attributes[0]="x509UserProxySubject"
+#blah_pass_submit_attributes[1]="x509UserProxy"
+
+#timeout before blah kill a process (default 20) 
+blah_graceful_kill_timeout=
+
+#Enable condor/glexec commands (default no)
+blah_enable_glexec_from_condor=
+
+#umask for accounting log
+blah_accounting_log_umask=
+
+#interval between two child consecutive restart (default 150)
+blah_children_restart_interval=
+
+#if blah requires proxy on submit (default no)
+blah_require_proxy_on_submit=
+
+#disable proxy user copy (default no)
+#blah_disable_proxy_user_copy=yes
+
+#a wrapper around the main executable -- the string will be prepended
+#to the executable call
+#blah_job_wrapper=
+
+##PBS common variables
+
+#Path where PBS executables are located 
+# NOTE: this path is computed many times; I worry about the overhead here.  -BB, 12-13-2012
+pbs_binpath=/usr/bin
+
+#Path where the PBS logs are located ($pbs_spoolpath/server_logs)
+#pbs_spoolpath=
+
+#If it is set to yes blah does not check the jobid in the logfiles
+pbs_nochecksubmission=
+
+#If it is set to yes blah does NOT use log files to get job status, 
+#but uses only standard LRMS query (qstat)  
+pbs_nologaccess=yes
+
+#If it is set to no blah scripts for PBS will not try to read 
+#locally from the logs if BLParser is not present
+pbs_fallback=no
+
+#Set to 'yes' to request pvmem when submitting jobs
+pbs_set_pvmem=no
+
+#Set to 'yes' if you are running PBS Pro
+pbs_pro=no
+
+#Set to 'yes' if you are running PBS with the Maui scheduler
+pbs_maui=no
+
+##LSF common variables
+
+#Path where LSF executables are located 
+lsf_binpath=/usr/bin
+
+#Path where the LSF conf file is located ($lsf_confpath/lsf.conf)
+lsf_confpath=
+
+#If it is set to yes blah does not check the jobid in the logfiles
+lsf_nochecksubmission=
+
+#If it is set to yes blah does NOT use log files to get job status, 
+#but uses only standard LRMS query (bhist)  
+lsf_nologaccess=
+
+#If it is set to no blah scripts for LSF will not try to read 
+#locally from the logs if BLParser is not present
+lsf_fallback=no
+
+##
+#####BLParser section
+##
+
+##PBS subsection
+
+#Set to yes to use Blah Log Parser for PBS
+pbs_BLParser=
+
+#Host where Blah Log Parser for PBS is running
+pbs_BLPserver=
+
+#Port where Blah Log Parser for PBS is running
+pbs_BLPport=
+
+#Number of Blah Log Parser to try for PBS (if it is null pbs_BLPserver and pbs_BLPport are used)
+pbs_num_BLParser=
+#
+pbs_BLPserver1=
+pbs_BLPport1=
+#
+pbs_BLPserver2=
+pbs_BLPport2=
+
+# Certain Torque versions, starting with 2.4.6, don't support the
+# multiple stagein/stagout directive documented in the qsub manpage due to a 
+# bug.
+# As a safe recipe for automatically detecting this condition at runtime cannot
+# be established, this is left to manual configuration.
+# Setting this attribute to 'yes' -should- be compatible with older
+# Torque versions, but may be failing with PBSpro.
+# A new setting ('multiline') triggers an undocumented syntax
+# which is reported to be compatible with most Torque version:
+# use it as failback solution if neither 'yes' nor 'no' works for you.
+blah_torque_multiple_staging_directive_bug=no
+
+##LSF subsection
+
+#Set to yes to use Blah Log Parser for LSF
+lsf_BLParser=
+
+#Host where Blah Log Parser for LSF is running
+lsf_BLPserver=
+
+#Port where Blah Log Parser for LSF is running
+lsf_BLPport=
+
+#Number of Blah Log Parser to try for LSF (if it is null lsf_BLPserver and lsf_BLPport are used)
+lsf_num_BLParser=
+#
+lsf_BLPserver1=
+lsf_BLPport1=
+#
+lsf_BLPserver2=
+lsf_BLPport2=
+
+##
+#####BUpdater/BNotifier section
+##
+
+#seconds to sleep in the main loop
+loop_interval=
+
+##
+#####BUpdater subsection
+##
+
+##Common BUpdater variables
+
+#Updater location
+bupdater_path=
+
+#Updater pid file
+bupdater_pidfile=/var/tmp/cream_tomcat_bupdater.pid
+
+#Registry file location
+job_registry=
+
+#Set the following variable to 'yes' to have multiple BLAHPD instances
+#share the job registry -index- via mmap:
+job_registry_use_mmap=no
+
+#host for asyncronous notification 
+async_notification_host=
+
+#port for asyncronous notification
+async_notification_port=
+
+#bupdater debug level
+bupdater_debug_level=1
+
+#bupdater debug log file
+bupdater_debug_logfile=/var/tmp/bupdater.log
+
+# purge interval
+purge_interval=7200
+
+#Minimum interval of time between the last update of a jobid entry and the first finalstate query try (default:30)
+finalstate_query_interval=30
+
+#after that interval an unseen job is set as done (status == 4) and exitstatus == 999 (default:3600)
+alldone_interval=3600
+
+#Command use to cache info abput the job in the batch system
+batch_command_caching_filter=
+
+#poll timeout
+bupdater_child_poll_timeout=
+
+#set to yes to enable the blah clustering
+job_registry_add_remote=
+
+#time interval between consistency check of blah registry (default 3600)
+bupdater_consistency_check_interval=
+
+##LSF
+
+#number of logs to be read by bhist (default:3)
+bhist_logs_to_read=
+
+#after that interval a bhist with -n bhist_logs_to_read is tried (default:120)
+bhist_finalstate_interval=120
+
+#use the long format for bjobs command (-l instead of -w) (yes|no) (default=yes)
+bupdater_bjobs_long_format=yes
+
+#Enable the use of the caching for the batch system commands
+#(the command is specified by batch_command_caching_filter)
+lsf_batch_caching_enabled=
+
+#use bhist to calculate suspended jobs timestamp 
+bupdater_use_bhist_for_susp=no
+
+#if set to yes bhist uses a time constraint to reduce the output (default no)
+bupdater_use_bhist_time_constraint=
+
+#use btools (default no)
+bupdater_use_btools=
+
+#btools path (default /usr/local/bin)
+bupdater_btools_path=
+
+#use bhist for jobs in idle state (default yes)
+bupdater_use_bhist_for_idle=
+
+#use bhist for killed jobs (default yes)
+bupdater_use_bhist_for_killed=
+
+##PBS
+
+#Enable the use of the caching for the batch system commands
+#(the command is specified by batch_command_caching_filter)
+pbs_batch_caching_enabled=
+
+#number of logs that tracejob read (default 2)
+tracejob_logs_to_read=
+
+#max number of lines in tracejob output. This is done to get rid of
+# a bug in pbs that causes tracejob to produce a large output (default 1000)
+tracejob_max_output=
+
+##Condor
+
+#condor bin location
+condor_binpath=/usr/bin
+
+#path to condor_config
+#export CONDOR_CONFIG="/etc/condor/condor_config"
+
+#Enable the use of the caching for the batch system commands
+#(the command is specified by batch_command_caching_filter)
+condor_batch_caching_enabled=
+
+#Expand any references to $HOME to the user's home directory
+#in the job environment
+condor_expand_home_env=no
+
+#If condor_history should be used or not to the final state info about the jobs.
+bupdater_use_condor_history=
+
+##SGE
+
+sge_binpath=
+
+sge_cellname=$SGE_CELL
+
+sge_rootpath=$SGE_ROOT
+
+#set the SGE parallel environment policy
+sge_pe_policy=*
+
+##SLURM
+
+#path to the slurm executables
+#default: /usr/bin
+slurm_binpath=/usr/bin
+
+#default: /dev/null
+slurm_std_storage=/dev/null
+
+##
+#####BNotifier subsection
+##
+
+#Notifier location
+bnotifier_path=
+
+#Notifier pid file
+bnotifier_pidfile=/var/tmp/cream_tomcat_bnotifier.pid
+
+#bnotifier debug level
+bnotifier_debug_level=1
+
+#bnotifier debug log file
+bnotifier_debug_logfile=/var/tmp/bnotifier.log
+
+#Comma-separated list of environment config files, with VAR=VAL lines
+#These lines are sourced by the shell, so embedded variables are expanded
+#File names may not include whitespace, which is treated as part of a delimiter
+blah_job_env_confs=/var/lib/osg/osg-job-environment.conf,/var/lib/osg/osg-local-job-environment.conf
+

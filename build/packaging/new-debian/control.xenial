@@ -12,6 +12,7 @@ Build-Depends: autotools-dev,
                default-jdk | gcj-jdk,
                dh-autoreconf,
                dh-python,
+               docbook-xsl,
                flex,
                help2man,
                libboost-filesystem-dev,
@@ -34,6 +35,7 @@ Build-Depends: autotools-dev,
                libvirt-dev,
                libx11-dev,
                libxml2-dev,
+               libxslt1.1,
                libxss-dev,
                po-debconf,
                python-dev,
@@ -44,6 +46,7 @@ Build-Depends: autotools-dev,
                python3-all-dev,
                uuid-dev,
                voms-dev,
+               xsltproc,
                zlib1g-dev
 Build-Conflicts: liblog4cpp5-dev
 Standards-Version: 3.9.8
@@ -79,9 +82,12 @@ Suggests: docker.io,
           coop-computing-tools,
           singularity-container,
           slurm-client
-Conflicts: condor (<< ${binary:Version})
+Provides: blahp
+Conflicts: condor (<< ${binary:Version}),
+           blahp
 Breaks: condor (<< ${binary:Version})
-Replaces: condor (<< ${binary:Version})
+Replaces: condor (<< ${binary:Version}),
+          blahp
 Description: distributed workload management system
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and

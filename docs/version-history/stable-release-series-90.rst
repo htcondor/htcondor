@@ -24,7 +24,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where bytes were trying to be written via an ASCII file
+  handler in *condor_credmon_oauth* when using Python 3.
+  :jira:`633`
 
 .. _lts-version-history-908:
 
