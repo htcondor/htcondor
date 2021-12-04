@@ -42,6 +42,7 @@
 #include <sys/select.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 #include <syslog.h>
 #ifdef MTRACE_ON
 #include <mcheck.h>

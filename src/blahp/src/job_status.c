@@ -38,6 +38,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/wait.h>
+#include <pthread.h>
 
 #include "classad_c_helper.h"
 #include "blahpd.h"

@@ -83,6 +83,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/time.h>
 
 #if defined(HAVE_GLOBUS)
 #include "globus_gsi_credential.h"
@@ -155,6 +156,7 @@ int CEReq_parse(classad_context cad, char* filename, char *proxysubject, char *p
 char* outputfileRemaps(char *sb,char *sbrmp);
 int check_TransferINOUT(classad_context cad, char **command, char *reqId, char **resultLine, char ***files_to_clean_up);
 char *ConvertArgs(char* args, char sep);
+int enqueue_result(char *res);
 
 /* Global variables */
 struct blah_managed_child {
@@ -2387,7 +2389,7 @@ cmd_get_hostport(void *args)
 	free(resultLine);
 	free_args(argv);
 	sem_post(&sem_total_commands);
-	return ;
+	return NULL;
 }
 
 /* Utility functions

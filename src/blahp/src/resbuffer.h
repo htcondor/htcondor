@@ -43,4 +43,5 @@
 int init_resbuffer(void);
 int push_result(const char* s);
 char* get_lines(void);
+int set_async_mode(int mode);
 
