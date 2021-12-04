@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 #include "blah_utils.h"
 
 const char *blah_omem_msg = "out\\ of\\ memory";
@@ -72,7 +73,7 @@ escape_spaces(const char *str)
 	*/
 	char *result = NULL;
 	char cur;
-	int i, j;
+	size_t i, j;
 
 	result = (char *) malloc (strlen(str) * 2 + 1);
 	if (result)
@@ -88,8 +89,6 @@ escape_spaces(const char *str)
 			result[j] = cur;
 		}
 	}
-	else
-		result = (char *)blah_omem_msg;
 	return(result);
 }
 
