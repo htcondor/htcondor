@@ -1,10 +1,9 @@
-Stable Release Series 8.8
-=========================
+Version 8.8 LTS Releases
+========================
 
-This is the stable release series of HTCondor. As usual, only bug fixes
+These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 (and potentially, ports to new platforms) will be provided in future
-8.8.x releases. New features will be added in the 8.9.x development
-series.
+8.8.x releases. New features will be added in the 8.9.y feature releases.
 
 The details of each version are described below.
 
@@ -124,11 +123,11 @@ Release Notes:
 
 New Features:
 
-- For compatibility with 8.9.9 (and eventually, the next stable series), add
+- For compatibility with 8.9.9 (and eventually, the next LTS release), add
   the family of version comparison functions to ClassAds.
   :jira:`36`
 
-- For compatibility with 8.9 (and eventually, the next stable series), add
+- For compatibility with 8.9 (and eventually, the next LTS release), add
   the ``unresolved`` function to ClassAds.
   :jira:`66`
 
@@ -880,7 +879,7 @@ New Features:
    local *condor_schedd*  directly to submit jobs. :ticket:`6974`
 
 -  The HTCondor startd now advertises ``HasSelfCheckpointTransfers``, so that
-   pools with 8.8.4 (and later) stable-series startds can run jobs submitted
+   pools with 8.8.4 (and later) LTS release startds can run jobs submitted
    using a new feature in 8.9.3 (and later).
    :ticket:`7112`
 
@@ -1008,7 +1007,7 @@ Bugs Fixed:
    (``EventIterator`` and ``read_events()``) for Python 2.
    In HTCondor 8.8.2, they were mistakenly restored for Python 3 only.
    These bindings are marked as deprecated and will likely be
-   removed permanently in the 8.9 series. Users should transition to the
+   removed permanently in an 8.9 feature release. Users should transition to the
    replacement bindings (``JobEventLog``)
    :ticket:`7039`
 
@@ -1092,7 +1091,7 @@ Bugs Fixed:
 -  Fixed a bug where *condor_ssh_to_job* would not work to a Docker
    universe job when file transfer was off. :ticket:`6945`
 
--  Included a patch from the development series that fixes problems that
+-  Included a patch from the a feature release that fixes problems that
    could crash *condor_annex* to crash. :ticket:`6980`
 
 -  Fixed a bug that could cause the ``job_queue.log`` file to be
@@ -1136,7 +1135,7 @@ Bugs Fixed:
 -  Restored the old Python bindings for reading the job event log
    (``EventIterator`` and ``read_events()``). These bindings are marked
    as deprecated, are not available in Python 3, and will likely be
-   removed permanently in the 8.9 series. Users should transition to the
+   removed permanently an 8.9 release. Users should transition to the
    replacement bindings (``JobEventLog``) :ticket:`6939`
 
 -  Fixed a bug that could cause entries in the job event log to be

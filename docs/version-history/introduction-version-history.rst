@@ -2,67 +2,104 @@ Introduction to HTCondor Versions
 =================================
 
 This chapter provides descriptions of what features have been added or
-bugs fixed for each version of HTCondor. The first section describes the
+bugs fixed for each release of HTCondor. The first section describes the
 HTCondor version numbering scheme, what the numbers mean, and what the
-different release series are. The rest of the sections each describe a
-specific release series, and all the HTCondor versions found in that
-series.
+different releases are. The rest of the sections each describe the
+specific releases.
 
 HTCondor Version Number Scheme
 ------------------------------
 
-HTCondor's versioning scheme reflects the fact that it
-is both a production system and a research project. The numbering scheme
-was primarily taken from the Linux kernel's version numbering, so if you
-are familiar with that, it should seem quite natural.
+We changed the version numbering scheme after the 9.1.3 release:
+what would have been the next 9.1.x release is now the 9.2.0 release.
+We made this change to give us additional flexibility in releasing
+small updates to address specific issues without disturbing the normal
+development of HTCondor.  The version number will still retain the
+MAJOR.MINOR.PATCH form with slightly different meanings.  We have borrowed
+ideas from `Semantic Versioning <https://semver.org/>`_.
 
-There will usually be two HTCondor versions available at any given time,
-the stable version, and the development version. All versions of HTCondor 
-now have exactly three numbers, separated by "."
+-   The MAJOR number increments for each new Long Term Support (LTS) release.
+    A new LTS release may have backward-incompatible changes and may require
+    updates to configuration files.  If the current LTS release is 9.0.6,
+    the next one will be 10.0.0.  A new LTS release is expected every twelve
+    to eighteen months.
 
--  The first number represents the major version number, and will change
-   very infrequently.
--  The thing that determines whether a version of HTCondor is stable or
-   development is the second digit. Even numbers represent stable
-   versions, while odd numbers represent development versions.
--  The final digit represents the minor version number, which defines a
-   particular version in a given release series.
+-   The MINOR number increments each feature release.
+    This number stays at 0 for LTS releases. If the current feature release
+    is 9.2.0, the next one will be 9.3.0.
+    A new feature release is expected every one to two months.
 
-The Stable Release Series
--------------------------
+-   The PATCH number increments when we have targeted fixes.  For the LTS
+    releases, a patch release is expected every one to two
+    months and may occur more frequently if a serious problem is
+    discovered. For the feature releases, the frequency of patch releases
+    depends on the demand for quick updates.
 
-People expecting the stable, production HTCondor system should download
-the stable version, denoted with an even number in the second digit of
-the version string. 
+Types of Releases
+^^^^^^^^^^^^^^^^^
 
-On the stable series, new minor version releases will only be made for
-bug fixes and to support new platforms. No new features will be added to
-the stable series. People are encouraged to install new stable versions
-of HTCondor when they appear, since they probably fix bugs you care
-about. Hopefully, there will not be many minor version releases for any
-given stable series.
+-   An **LTS** release is numbered **X.0.0**, and is a new long-term support
+    release.  The previous LTS
+    release is supported for six months after a new LTS version is released.
+    The final feature release undergoes a stabilization effort where the
+    software is run through multiple code quality tools (such as Valgrind)
+    to assure the best possible LTS release.  The MAJOR.0.0 version is not
+    released until the stabilization effort is complete.  Support for the
+    previous LTS release ends six months after a new LTS version is released.
+    Paid support contracts are only available for the LTS release.
 
-All minor release version within a stable series are wire-compatible
-with each other, so if an administrator needs to upgrade the central
-manager one day, the pool will run with an older scheduler or execute
-nodes.
+-   An **LTS patch** release is numbered **X.0.Z**, and is an update to the LTS
+    major release.  The patches
+    are reviewed to ensure correctness and compatibility with the LTS release.
+    These releases contain bug fixes and security updates and are released when
+    a major issue is identified, or just before the next feature release.
+    These releases go through our entire testing process.  Large code
+    changes are not permitted in the LTS release.  Enhancements are not
+    implemented in the LTS release unless there is minimal impact with a major
+    benefit.  Ports to new platforms will appear in the LTS release.  The
+    HTCondor team guarantees that patches to the LTS release are compatible.
 
-The Development Release Series
-------------------------------
+-   A **feature** release is numbered **X.Y.0** and includes one or more new
+    features.
+    The software goes through our entire testing process.
+    We use these releases in production at the Center for High Throughput
+    Computing.  These releases contain all the patches from the LTS release
+    and all the patches from the to the feature releases.  The HTCondor
+    development team guarantees protocol compatibility between the feature
+    releases and the LTS release.  However, changes in behavior may be
+    observed, and adjustments to configuration may be required when new
+    features are implemented.
 
-Users interested in the latest research, new features and improved
-performance should download the development version,
-denoted with an odd number in the second digit of the version string.
+-   A **feature patch** release is numbered **X.Y.Z** and contains targeted
+    patches to address a specific issue with a feature release.
+    specific issue with a feature release.  If there is a specific need to be
+    addressed before 9.3.0 is tested and ready, we would issue a 9.2.1 patch
+    release.  These releases have undergone code review and light testing.
+    These patch releases are cumulative.
 
-On the development series, new minor version releases happen
-at a relatively fixed cadence. Users running the development series are generally
-encouraged to upgrade when minor release comes out.
+Repositories
+^^^^^^^^^^^^
 
-After the feature set of the development series is satisfactory to the
-HTCondor Team, we will put a code freeze in place, and from that point
-forward, only bug fixes will be made to that development series. When we
-have fully tested this version, we will release a new stable series,
-resetting the minor version number, and start work on a new development
-release from there.
+These releases will be served out of three repositories.
 
+-   The LTS release and its patches (X.0.Z) are in the existing Stable channel.
+-   The feature releases (X.Y.0) are in the existing Current channel.
+-   A new Updates channel will contain quick patch releases (X.Y.Z).
+
+Recommendations
+^^^^^^^^^^^^^^^
+
+If you are new to HTCondor or require maximum stability in your environment,
+use an LTS release.  Updates to the latest LTS release should be seamless.
+A new LTS release will appear every twelve to eighteen months with clear
+directions on issues to address when upgrading to the new LTS release.
+
+If you want to take advantage of the latest features, use the feature
+releases.  This is an opportunity see our development directions early, and
+have some influence on the features being implemented.  It is what we use
+in our production environment.
+
+If you want to run the very latest release, also enable the updates
+repository to get the targeted fixes.  However, these fixes may come
+frequently, and you may wish to pick and choose which updates to install.
 

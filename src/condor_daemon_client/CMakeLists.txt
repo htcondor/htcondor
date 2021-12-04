@@ -19,7 +19,6 @@
 set (DAEMON_CLIENT_UTIL_SRCS
 ${CMAKE_CURRENT_SOURCE_DIR}/daemon.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/dc_annexd.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/dc_credd.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/dc_message.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/dc_shadow.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/dc_transfer_queue.cpp
