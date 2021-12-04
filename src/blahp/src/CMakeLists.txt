@@ -90,7 +90,7 @@ if(NOT CONDOR_PACKAGE_NAME)
 endif()
 target_link_libraries(blah_job_registry_scan_by_subject ${ClassAd_LIBRARY})
 add_executable(blah_check_config blah_check_config.c)
-target_link_libraries(blah_check_config libbfunctions libblahp)
+target_link_libraries(blah_check_config $<TARGET_OBJECTS:libbfunctions> libblahp)
 
 add_executable(blah_job_registry_dump blah_job_registry_dump.c)
 target_link_libraries(blah_job_registry_dump libblahp)
@@ -109,34 +109,34 @@ target_link_libraries(blahpd -lpthread ${ClassAd_LIBRARY})
 
 # programs for 'libexec'
 add_executable(BLClient BLClient.c)
-target_link_libraries(BLClient libblfunctions libblahp)
+target_link_libraries(BLClient $<TARGET_OBJECTS:libblfunctions> libblahp)
 
 add_executable(BLParserLSF BLParserLSF.c)
 target_link_libraries(BLParserLSF -lpthread)
-target_link_libraries(BLParserLSF libblfunctions libblahp)
+target_link_libraries(BLParserLSF $<TARGET_OBJECTS:libblfunctions> libblahp)
 
 add_executable(BLParserPBS BLParserPBS.c)
 target_link_libraries(BLParserPBS -lpthread)
-target_link_libraries(BLParserPBS libblfunctions libblahp)
+target_link_libraries(BLParserPBS $<TARGET_OBJECTS:libblfunctions> libblahp)
 
 add_executable(BUpdaterCondor BUpdaterCondor.c)
-target_link_libraries(BUpdaterCondor libbfunctions libblahp)
+target_link_libraries(BUpdaterCondor $<TARGET_OBJECTS:libbfunctions> libblahp)
 target_link_libraries(BUpdaterCondor -lpthread)
 
 add_executable(BNotifier BNotifier.c)
 target_link_libraries(BNotifier -lpthread)
-target_link_libraries(BNotifier libbfunctions libblahp)
+target_link_libraries(BNotifier $<TARGET_OBJECTS:libbfunctions> libblahp)
 
 add_executable(BUpdaterLSF BUpdaterLSF.c)
-target_link_libraries(BUpdaterLSF libbfunctions libblahp)
+target_link_libraries(BUpdaterLSF $<TARGET_OBJECTS:libbfunctions> libblahp)
 target_link_libraries(BUpdaterLSF -lpthread -lm)
 
 add_executable(BUpdaterPBS BUpdaterPBS.c)
-target_link_libraries(BUpdaterPBS libbfunctions libblahp)
+target_link_libraries(BUpdaterPBS $<TARGET_OBJECTS:libbfunctions> libblahp)
 target_link_libraries(BUpdaterPBS -lpthread -lm)
 
 add_executable(BUpdaterSGE BUpdaterSGE.c)
-target_link_libraries(BUpdaterSGE libbfunctions libblahp)
+target_link_libraries(BUpdaterSGE $<TARGET_OBJECTS:libbfunctions> libblahp)
 
 add_executable(blparser_master blparser_master.c)
 target_link_libraries(blparser_master libblahp)
