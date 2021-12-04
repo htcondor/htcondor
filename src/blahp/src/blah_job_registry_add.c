@@ -219,7 +219,7 @@ main(int argc, char *argv[])
                                              proxy_subject, TRUE);  
     if (rhret < 0)
      {
-      fprintf(stderr,"%s: warning: recording proxy subject %s (hash %s): ", proxy_subject, en.subject_hash);
+      fprintf(stderr,"%s: warning: recording proxy subject %s (hash %s): ", argv[0], proxy_subject, en.subject_hash);
       perror("");
      }
    }
