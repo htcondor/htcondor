@@ -227,9 +227,10 @@ class TestAuthProtocolToken:
         for key, value in claims.items():
             if not isinstance(value, int):
                 value = classad.quote(value)
-            os.environ["_CONDOR_SEC_TOKEN_REVOCATION_EXPR"] = f'{key} =!= {value}'
-            cmd = condor.run_command(["condor_ping", "-type", "master", "-table", "DAEMON"], timeout=20)
-            assert cmd.returncode == 1
+            mapping = {"_CONDOR_SEC_TOKEN_REVOCATION_EXPR": f'{key} =?= {value}'}
+            with SetEnv(mapping):
+                cmd = condor.run_command(["condor_ping", "-type", "master", "-table", "DAEMON"], timeout=20)
+                assert cmd.returncode == 1
 
     def test_condor_fetch(self, condor):
         # Verify condor_token_fetch
