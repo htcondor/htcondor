@@ -828,10 +828,15 @@ if __name__ == '__main__':
 
             old = queryClassAd(POOL, DAEMON, NAME, DIRECT)
 
-            # if in live mode, go ahead and print the information we have
-            if LIVE:
-                printMonitorSelf(DAEMON, NAME, old)
-                printRecentHealthStats(old)
+            # go ahead and print the information we have
+            printMonitorSelf(DAEMON, NAME, old)
+            printRecentHealthStats(old)
+
+            # if there aren't any runtime attributes in the classad,
+            # print the information we have and exit now
+            if len(getRuntimeAttrs(old)) == 0:
+                sys.stderr.write("Did not get any comparable runtime attributes from daemon ClassAd, exiting early.\n")
+                sys.exit(0)
 
             # countdown and get the "new" ClassAd from the Collector
             printCountdown()
@@ -843,8 +848,7 @@ if __name__ == '__main__':
                 pass
 
         # at this point, we have both old and new ClassAds, so print the info
-        lines = printMonitorSelf(DAEMON, NAME, new)
-        lines += printInstHealthStats(old, new)
+        lines = printInstHealthStats(old, new)
         printRuntimeTable(old, new, lines = lines)
 
         # if in live mode, continue getting new ClassAds
