@@ -35,7 +35,7 @@ Bugs Fixed:
 
 - Fixed a bug in **condor_top** where two daemon ClassAds were assumed
   to be the same if some specific attributes were missing from the
-  latest ClassAd. Also **condor_top** now exists early if no stats are
+  latest ClassAd. Also **condor_top** now exits early if no stats are
   provided by the queried daemon.
   :jira`:880
 
