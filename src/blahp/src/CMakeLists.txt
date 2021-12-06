@@ -120,20 +120,20 @@ target_link_libraries(BLParserPBS -lpthread)
 target_link_libraries(BLParserPBS $<TARGET_OBJECTS:libblfunctions> libblahp)
 
 add_executable(BUpdaterCondor BUpdaterCondor.c)
-target_link_libraries(BUpdaterCondor $<TARGET_OBJECTS:libbfunctions> libblahp)
 target_link_libraries(BUpdaterCondor -lpthread)
+target_link_libraries(BUpdaterCondor $<TARGET_OBJECTS:libbfunctions> libblahp)
 
 add_executable(BNotifier BNotifier.c)
 target_link_libraries(BNotifier -lpthread)
 target_link_libraries(BNotifier $<TARGET_OBJECTS:libbfunctions> libblahp)
 
 add_executable(BUpdaterLSF BUpdaterLSF.c)
-target_link_libraries(BUpdaterLSF $<TARGET_OBJECTS:libbfunctions> libblahp)
 target_link_libraries(BUpdaterLSF -lpthread -lm)
+target_link_libraries(BUpdaterLSF $<TARGET_OBJECTS:libbfunctions> libblahp)
 
 add_executable(BUpdaterPBS BUpdaterPBS.c)
-target_link_libraries(BUpdaterPBS $<TARGET_OBJECTS:libbfunctions> libblahp)
 target_link_libraries(BUpdaterPBS -lpthread -lm)
+target_link_libraries(BUpdaterPBS $<TARGET_OBJECTS:libbfunctions> libblahp)
 
 add_executable(BUpdaterSGE BUpdaterSGE.c)
 target_link_libraries(BUpdaterSGE $<TARGET_OBJECTS:libbfunctions> libblahp)
