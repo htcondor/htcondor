@@ -11,6 +11,7 @@
 #include "basename.h"
 #include "stat_wrapper.h"
 #include "stat_info.h"
+#include "condor_attributes.h"
 
 using namespace htcondor;
 
@@ -126,6 +127,16 @@ Singularity::detect(CondorError &err)
 bool
 Singularity::job_enabled(ClassAd &machineAd, ClassAd &jobAd)
 {
+	bool wantSIF = false;
+	bool wantSandbox  = false;
+
+	jobAd.LookupBool(ATTR_WANT_SIF, wantSIF);
+	jobAd.LookupBool(ATTR_WANT_SANDBOX_IMAGE, wantSandbox);
+
+	if (wantSIF || wantSandbox) {
+		return true;
+	}
+
 	return param_boolean("SINGULARITY_JOB", false, false, &machineAd, &jobAd);
 }
 
@@ -141,7 +152,7 @@ Singularity::setup(ClassAd &machineAd,
 {
 	ArgList sing_args;
 
-	if (!param_boolean("SINGULARITY_JOB", false, false, &machineAd, &jobAd)) {return Singularity::DISABLE;}
+	if (!job_enabled(machineAd, jobAd)) {return Singularity::DISABLE;}
 
 	if (!enabled()) {
 		dprintf(D_ALWAYS, "Singularity job has been requested but singularity does not appear to be configured on this host.\n");
@@ -154,8 +165,11 @@ Singularity::setup(ClassAd &machineAd,
 
 	std::string image;
 	if (!param_eval_string(image, "SINGULARITY_IMAGE_EXPR", "SingularityImage", &machineAd, &jobAd)) {
-		dprintf(D_ALWAYS, "Singularity support was requested but unable to determine the image to use.\n");
-		return Singularity::FAILURE;
+		jobAd.LookupString(ATTR_CONTAINER_IMAGE, image);
+		if (image.length() == 0) {
+			dprintf(D_ALWAYS, "Singularity support was requested but unable to determine the image to use.\n");
+			return Singularity::FAILURE;
+		}
 	}
 
 	std::string target_dir;

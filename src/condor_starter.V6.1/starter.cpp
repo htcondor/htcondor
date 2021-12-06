@@ -2435,6 +2435,26 @@ Starter::SpawnJob( void )
 		case CONDOR_UNIVERSE_VANILLA: {
 			bool wantDocker = false;
 			jobAd->LookupBool( ATTR_WANT_DOCKER, wantDocker );
+			bool wantContainer = false;
+			jobAd->LookupBool( ATTR_WANT_CONTAINER, wantContainer );
+
+			bool wantDockerRepo = false;
+			bool wantSandboxImage = false;
+			bool wantSIF = false;
+			jobAd->LookupBool(ATTR_WANT_DOCKER_IMAGE, wantDockerRepo);
+			jobAd->LookupBool(ATTR_WANT_SANDBOX_IMAGE, wantSandboxImage);
+			jobAd->LookupBool(ATTR_WANT_SIF, wantSIF);
+
+			std::string container_image;
+			jobAd->LookupString(ATTR_CONTAINER_IMAGE, container_image);
+			std::string docker_image;
+			jobAd->LookupString(ATTR_DOCKER_IMAGE, docker_image);
+
+			// If they give us a docker repo, use docker universe
+			if (wantContainer && wantDockerRepo) {
+				wantDocker = true;
+			}
+
 			std::string remote_cmd;
 			bool wantRemote = param(remote_cmd, "STARTER_REMOTE_CMD");
 
