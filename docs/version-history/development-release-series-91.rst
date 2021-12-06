@@ -26,9 +26,9 @@ Version 9.4.0
 
 Release Notes:
 
-.. HTCondor version 9.4.0 released on Month Date, 2021.
+- HTCondor version 9.4.0 released on December 2, 2021.
 
-- HTCondor version 9.4.0 not yet released.
+- This version includes all the updates from :ref:`lts-version-history-908`.
 
 New Features:
 
@@ -45,7 +45,7 @@ New Features:
   and timeout for an extended period of time should this happen.
   :jira:`816`
 
-- SINGULARITY_EXTRA_ARGUMENTS can now be a classad expression, so that the
+- SINGULARITY_EXTRA_ARGUMENTS can now be a ClassAd expression, so that the
   extra arguments can depend on the job.
   :jira:`570`
 
@@ -56,7 +56,7 @@ New Features:
   tool also now supports the ``-debug`` and ``-help`` flags.
   :jira:`707`
 
-- Added a config parameter HISTORY_CONTAINS_JOB_ENVIRONMENT which defaults to true.
+- Added a configuration parameter HISTORY_CONTAINS_JOB_ENVIRONMENT which defaults to true.
   When false, the job's environment attribute is not saved in the history file.  For
   some sites, this can substantially reduce the size of the history file, and allow
   the history to contain many more jobs before rotation.
@@ -85,18 +85,13 @@ New Features:
   for other startd cron jobs; see :macro:`STARTD_CRON_<JobName>_CONDITION`.
   :jira:`667`
 
-- Added a new feature where a uesr can export some of their jobs from the
+- Added a new feature where a user can export some of their jobs from the
   *condor_schedd* in the form of a job-queue file intended to be used by
   a new temporary *condor_schedd*.
   After the temporary *condor_schedd* runs the jobs, the results can be
   imported back to the original *condor_schedd*.
   This is experimental code that is not suitable for production use.
   :jira:`179`
-
-- The :ref:`htcondor_command` CLI tool now automates the
-  setup of our CHTC Slurm cluster when requesting to run jobs on these
-  resources.
-  :jira:`783`
 
 - When running *remote_gahp* interactively to start a remote
   *condor_ftp-gahp* instance, the user no longer has to set a fake
@@ -110,7 +105,7 @@ Bugs Fixed:
   emulation with this fix.
   :jira:`761`
 
-- Fixed several unlikely bugs when parsing the time strings in classads
+- Fixed several unlikely bugs when parsing the time strings in ClassAds
   :jira:`814`
 
 - Fixed a bug when computing the identity of a job's X.509 credential that
@@ -118,7 +113,7 @@ Bugs Fixed:
   :jira:`800`
 
 - Fixed a bug that prevented file transfer from working properly on Unix systems
-  when the job created a file to be transfered back to the submit machine containing
+  when the job created a file to be transferred back to the submit machine containing
   a backslash in it.
   :jira:`747`
 
@@ -129,9 +124,7 @@ Bugs Fixed:
 Version 9.3.2
 -------------
 
-.. HTCondor version 9.3.2 released on Month Date, 2021.
-
-- HTCondor version 9.3.2 not yet released.
+- HTCondor version 9.3.2 released on November 30, 2021.
 
 New Features:
 
@@ -237,6 +230,8 @@ Release Notes:
 
 - HTCondor version 9.2.0 released on September 23, 2021.
 
+- This version includes all the updates from :ref:`lts-version-history-906`.
+
 New Features:
 
 - Added a ``SERVICE`` node type to *condor_dagman*: a special node which runs
@@ -334,6 +329,8 @@ Version 9.1.3
 Release Notes:
 
 - HTCondor version 9.1.3 released on August 19, 2021.
+
+- This version includes all the updates from :ref:`lts-version-history-905`.
 
 - Globus GSI is no longer needed for X.509 proxy delegation
 
@@ -450,6 +447,8 @@ Version 9.1.0
 Release Notes:
 
 - HTCondor version 9.1.0 released on May 20, 2021.
+
+- This version includes all the updates from :ref:`lts-version-history-901`.
 
 - The *condor_convert_history* command was removed.
   :jira:`392`
