@@ -1,0 +1,2 @@
+The BLAHP daemon is a light component accepting commands to manage jobs on different Local Resources Management Systems
+

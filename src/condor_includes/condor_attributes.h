@@ -112,6 +112,7 @@
 #define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
 #define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
 #define ATTR_CONSOLE_IDLE  "ConsoleIdle"
+#define ATTR_CONTAINER_IMAGE "ContainerImage"
 #define ATTR_CONTINUE  "Continue"
 #define ATTR_CONTINUE_REASON  "ContinueReason"
 #define ATTR_CORE_SIZE  "CoreSize"
@@ -767,6 +768,7 @@
 #define ATTR_VISA_HOSTNAME  "VisaHostname"
 #define ATTR_VISA_IP  "VisaIpAddr"
 #define ATTR_WOL_PORT  "WakePort"
+#define ATTR_WANT_CONTAINER  "WantContainer"
 #define ATTR_WANT_CHECKPOINT  "WantCheckpoint"
 #define ATTR_WANT_FT_ON_CHECKPOINT "WantFTOnCheckpoint"
 #define ATTR_WANT_CLAIMING  "WantClaiming"
@@ -798,6 +800,7 @@
 #define ATTR_WHEN_TO_TRANSFER_OUTPUT  "WhenToTransferOutput"
 #define ATTR_TRANSFER_TYPE  "TransferType"
 #define ATTR_TRANSFER_KEY  "TransferKey"
+#define ATTR_TRANSFER_CONTAINER  "TransferContainer"
 #define ATTR_TRANSFER_EXECUTABLE  "TransferExecutable"
 #define ATTR_TRANSFER_INPUT  "TransferIn"
 #define ATTR_TRANSFER_OUTPUT  "TransferOut"

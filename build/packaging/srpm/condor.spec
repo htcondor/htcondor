@@ -271,14 +271,6 @@ Requires: condor-procd = %{version}-%{release}
 Requires: %name-externals = %version-%release
 %endif
 
-%if %blahp
-%if %globus
-Requires: blahp >= 2.1.1
-%else
-Requires: blahp >= 2.2.0
-%endif
-%endif
-
 # Useful tools are using the Python bindings
 Requires: python3-condor
 # The use the python-requests library in EPEL is based Python 3.6
@@ -339,6 +331,7 @@ Requires: munge-libs
 Requires: openssl-libs
 Requires: scitokens-cpp >= 0.6.2
 Requires: systemd-libs
+Requires: rsync
 
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
@@ -579,27 +572,22 @@ The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
 
 #######################
-%package bosco
-Summary: BOSCO, a HTCondor overlay system for managing jobs at remote clusters
-Url: https://osg-bosco.github.io/docs/
-Group: Applications/System
+#######################
+%package blahp
+Summary: BLAHP daemon
+Url: https://github.com/htcondor/BLAH
+Group: System/Libraries
+BuildRequires:  docbook-style-xsl, libxslt
 %if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3
 %else
 Requires: python >= 2.2
 %endif
-Requires: %name = %version-%release
-Requires: rsync
+Provides: blahp = %{version}-%{release}
+Obsoletes: blahp < 9.5.0
 
-%description bosco
-BOSCO allows a locally-installed HTCondor to submit jobs to remote clusters,
-using SSH as a transit mechanism.  It is designed for cases where the remote
-cluster is using a different batch system such as PBS, SGE, LSF, or another
-HTCondor system.
-
-BOSCO provides an overlay system so the remote clusters appear to be a HTCondor
-cluster.  This allows the user to run their workflows using HTCondor tools across
-multiple clusters.
+%description blahp
+%{summary}
 
 #######################
 %package -n minicondor
@@ -666,7 +654,6 @@ Requires: %name-classads = %version-%release
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
-Requires: %name-bosco = %version-%release
 %if %uw_build
 Requires: %name-externals = %version-%release
 %endif
@@ -732,12 +719,6 @@ export CMAKE_PREFIX_PATH=/usr
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
-%if %blahp
-       -DWITH_BLAHP:BOOL=TRUE \
-       -DBLAHP_FOUND=/usr/libexec/blahp/BLClient \
-%else
-       -DWITH_BLAHP:BOOL=FALSE \
-%endif
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
        -DCMAKE_INSTALL_PREFIX:PATH=/ \
@@ -1052,7 +1033,7 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%tarba
 #rm -rf %{buildroot}%{_datadir}/condor/python/{py3htcondor,py3classad}.so
 #rm -rf %{buildroot}%{_datadir}/condor/{libpy3classad*,py3htcondor,py3classad}.so
 
-# Install BOSCO
+# Install Campus Factory, option for condor_remote_cluster (nee BOSCO)
 %if 0%{?rhel} >= 8
 mkdir -p %{buildroot}%{python3_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python3_sitelib}
@@ -1069,6 +1050,20 @@ mv %{buildroot}%{_libexecdir}/condor/campus_factory/share/condor/condor_config.f
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{buildroot}%{_sysconfdir}/condor/
 %endif
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
+
+# Fix up blahp installation
+%if 0%{?rhel} == 7
+# Don't rely on Python 3 on EL7 (not installed by default)
+sed -i 's;/usr/bin/python3;/usr/bin/python2;' %{buildroot}%{_libexecdir}/blahp/*status.py
+%endif
+# Move batch system customization files to /etc, with symlinks in the
+# original location. Admins will need to edit these.
+install -m 0755 -d -p %{buildroot}%{_sysconfdir}/blahp
+for batch_system in condor kubernetes lsf nqs pbs sge slurm; do
+    mv %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh %{buildroot}%{_sysconfdir}/blahp
+    ln -s %{_sysconfdir}/blahp/${batch_system}_local_submit_attributes.sh \
+        %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh
+done
 
 # htcondor/dags only works with Python3
 rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
@@ -1208,11 +1203,13 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_qedit.1.gz
 %_mandir/man1/condor_reconfig.1.gz
 %_mandir/man1/condor_release.1.gz
+%_mandir/man1/condor_remote_cluster.1.gz
 %_mandir/man1/condor_reschedule.1.gz
 %_mandir/man1/condor_restart.1.gz
 %_mandir/man1/condor_rm.1.gz
 %_mandir/man1/condor_run.1.gz
 %_mandir/man1/condor_set_shutdown.1.gz
+%_mandir/man1/condor_ssh_start.1.gz
 %_mandir/man1/condor_sos.1.gz
 %_mandir/man1/condor_stats.1.gz
 %_mandir/man1/condor_status.1.gz
@@ -1320,6 +1317,9 @@ rm -rf %{buildroot}
 %_bindir/condor_nsenter
 %_bindir/condor_evicted_files
 %_bindir/condor_adstash
+%_bindir/condor_remote_cluster
+%_bindir/bosco_cluster
+%_bindir/condor_ssh_start
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1330,6 +1330,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_collector
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
+%_sbindir/condor_ft-gahp
 %_sbindir/condor_had
 %_sbindir/condor_master
 %_sbindir/condor_negotiator
@@ -1374,6 +1375,25 @@ rm -rf %{buildroot}
 %dir %_var/lib/condor/oauth_credentials
 %defattr(-,root,root,-)
 %dir %_var/lib/condor/krb_credentials
+# The Campus Factory
+%if 0%{?hcc}
+%config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
+%endif
+%if 0%{?osg} || 0%{?hcc}
+%config(noreplace) %_sysconfdir/condor/campus_factory.conf
+%endif
+%_libexecdir/condor/campus_factory
+%_sbindir/campus_factory
+%_sbindir/runfactory
+%_sbindir/glidein_creation
+%_datadir/condor/campus_factory
+%if 0%{?rhel} >= 8
+%{python3_sitelib}/GlideinWMS
+%{python3_sitelib}/campus_factory
+%else
+%{python_sitelib}/GlideinWMS
+%{python_sitelib}/campus_factory
+%endif
 
 #################
 %files devel
@@ -1562,44 +1582,34 @@ rm -rf %{buildroot}
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
 
-%files bosco
-%defattr(-,root,root,-)
-%if 0%{?hcc}
-%config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
-%endif
-%if 0%{?osg} || 0%{?hcc}
-%config(noreplace) %_sysconfdir/condor/campus_factory.conf
-%endif
-%_libexecdir/condor/shellselector
-%_libexecdir/condor/campus_factory
-%_sbindir/bosco_install
-%_sbindir/campus_factory
-%_sbindir/condor_ft-gahp
-%_sbindir/runfactory
-%_bindir/bosco_cluster
-%_bindir/bosco_ssh_start
-%_bindir/bosco_start
-%_bindir/bosco_stop
-%_bindir/bosco_findplatform
-%_bindir/bosco_uninstall
-%_bindir/bosco_quickstart
-%_bindir/htsub
-%_sbindir/glidein_creation
-%_datadir/condor/campus_factory
-%if 0%{?rhel} >= 8
-%{python3_sitelib}/GlideinWMS
-%{python3_sitelib}/campus_factory
-%else
-%{python_sitelib}/GlideinWMS
-%{python_sitelib}/campus_factory
-%endif
-%_mandir/man1/bosco_cluster.1.gz
-%_mandir/man1/bosco_findplatform.1.gz
-%_mandir/man1/bosco_install.1.gz
-%_mandir/man1/bosco_ssh_start.1.gz
-%_mandir/man1/bosco_start.1.gz
-%_mandir/man1/bosco_stop.1.gz
-%_mandir/man1/bosco_uninstall.1.gz
+%files blahp
+%config %_sysconfdir/blah.config
+%config %_sysconfdir/blparser.conf
+%_sysconfdir/rc.d/init.d/glite-ce-blah-parser
+%dir %_sysconfdir/blahp/
+%config %_sysconfdir/blahp/condor_local_submit_attributes.sh
+%config %_sysconfdir/blahp/kubernetes_local_submit_attributes.sh
+%config %_sysconfdir/blahp/lsf_local_submit_attributes.sh
+%config %_sysconfdir/blahp/nqs_local_submit_attributes.sh
+%config %_sysconfdir/blahp/pbs_local_submit_attributes.sh
+%config %_sysconfdir/blahp/sge_local_submit_attributes.sh
+%config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
+%_bindir/blahpd
+%_sbindir/blah_check_config
+%_sbindir/blah_job_registry_add
+%_sbindir/blah_job_registry_dump
+%_sbindir/blah_job_registry_lkup
+%_sbindir/blah_job_registry_purge
+%_sbindir/blah_job_registry_scan_by_subject
+%_sbindir/blahpd_daemon
+%dir %_libexecdir/blahp
+%_libexecdir/blahp/*
+%_mandir/man1/blah_check_config.1.gz
+%_mandir/man1/blah_job_registry_add.1.gz
+%_mandir/man1/blah_job_registry_dump.1.gz
+%_mandir/man1/blah_job_registry_lkup.1.gz
+%_mandir/man1/blah_job_registry_scan_by_subject.1.gz
+%_mandir/man1/blahpd.1.gz
 
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
@@ -1650,6 +1660,20 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Dec 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.4.0-1
+- Initial implementation of Job Sets in the htcondor CLI tool
+- The access point administrator can add keywords to the submit language
+- Add submit commands that limit job run time
+- Fix bug where self check-pointing jobs may be erroneously held
+
+* Thu Dec 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.8-1
+- Fix bug where huge values of ImageSize and others would end up negative
+- Fix bug in how MAX_JOBS_PER_OWNER applied to late materialization jobs
+- Fix bug where the schedd could choose a slot with insufficient disk space
+- Fix crash in ClassAd substr() function when the offset is out of range
+- Fix bug in Kerberos code that can crash on macOS and could leak memory
+- Fix bug where a job is ignored for 20 minutes if the startd claim fails
+
 * Tue Nov 30 2021 Tim Theisen <tim@cs.wisc.edu> - 9.3.2-1
 - Add allowed_execute_duration condor_submit command to cap job run time
 - Fix bug where self check-pointing jobs may be erroneously held

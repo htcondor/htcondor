@@ -1,3 +1,23 @@
+condor (9.4.0-1) stable; urgency=medium
+
+  * Initial implementation of Job Sets in the htcondor CLI tool
+  * The access point administrator can add keywords to the submit language
+  * Add submit commands that limit job run time
+  * Fix bug where self check-pointing jobs may be erroneously held
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 02 Dec 2021 14:13:00 -0600
+
+condor (9.0.8-1) stable; urgency=medium
+
+  * Fix bug where huge values of ImageSize and others would end up negative
+  * Fix bug in how MAX_JOBS_PER_OWNER applied to late materialization jobs
+  * Fix bug where the schedd could choose a slot with insufficient disk space
+  * Fix crash in ClassAd substr() function when the offset is out of range
+  * Fix bug in Kerberos code that can crash on macOS and could leak memory
+  * Fix bug where a job is ignored for 20 minutes if the startd claim fails
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 02 Dec 2021 08:56:00 -0600
+
 condor (9.3.2-1) stable; urgency=medium
 
   * Add allowed_execute_duration condor_submit command to cap job run time

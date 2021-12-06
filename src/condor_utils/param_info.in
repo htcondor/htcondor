@@ -5090,6 +5090,11 @@ review=toddt
 tags=ecryptfs,master
 restart=true
 
+[CONTAINER_SHARED_FS]
+default=/cvmfs
+type=string
+tags=submit
+
 [DOCKER]
 default=/usr/bin/docker
 win32_default=docker

@@ -129,9 +129,9 @@ if [ -n "$PRIVATE_KEY_LOCATION" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
 	# Call the external program to do ssh-add
         # If a passphrase is required pass it to the script
         if [ -n "$PASSPHRASE_LOCATION" ]; then
-	    bosco_ssh_start --key "$PRIVATE_KEY_LOCATION" --pass "$PASSPHRASE_LOCATION"
+	    condor_ssh_start --key "$PRIVATE_KEY_LOCATION" --pass "$PASSPHRASE_LOCATION"
         else
-	    bosco_ssh_start --key "$PRIVATE_KEY_LOCATION" --nopass
+	    condor_ssh_start --key "$PRIVATE_KEY_LOCATION" --nopass
         fi
 	ADD_STATUS=$?
 

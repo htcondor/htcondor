@@ -7,6 +7,8 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-909:
+
 Version 9.0.9
 -------------
 
@@ -22,16 +24,23 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+
+- Fixed a bug where a running parallel universe job would go to idle
+  status when the job policy indicated it should be held.
+  :jira:`869`
+
+- Fixed a bug where bytes were trying to be written via an ASCII file
+  handler in *condor_credmon_oauth* when using Python 3.
+  :jira:`633`
+
+.. _lts-version-history-908:
 
 Version 9.0.8
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.0.8 released on Month Date, 2021.
-
-- HTCondor version 9.0.8 not yet released.
+- HTCondor version 9.0.8 released on December 2, 2021.
 
 New Features:
 
@@ -115,6 +124,8 @@ Bugs Fixed:
 - Ensure the HTCondor uses version 0.6.2 or later SciTokens library so that
   WLCG tokens can be read.
   :jira:`801`
+
+.. _lts-version-history-906:
 
 Version 9.0.6
 -------------
@@ -229,6 +240,8 @@ Bugs Fixed:
   been causing the number of bytes transferred to be undercounted.
   :jira:`722`
 
+.. _lts-version-history-905:
+
 Version 9.0.5
 -------------
 
@@ -295,6 +308,8 @@ Bugs Fixed:
   :jira:`603`
 
 
+.. _lts-version-history-904:
+
 Version 9.0.4
 -------------
 
@@ -318,6 +333,8 @@ Bugs Fixed:
    :jira:`587`
 
 
+.. _lts-version-history-903:
+
 Version 9.0.3
 -------------
 
@@ -332,6 +349,8 @@ New Features:
 Bugs Fixed:
 
 -  None.
+
+.. _lts-version-history-902:
 
 Version 9.0.2
 -------------
@@ -464,6 +483,8 @@ Bugs Fixed:
   :jira:`576`
 
 
+.. _lts-version-history-901:
+
 Version 9.0.1
 -------------
 
@@ -565,6 +586,8 @@ Bugs Fixed:
 - Fixed several bugs that could result in the *condor_token_* tools aborting with
   a c++ runtime error on newer versions of Linux.
   :jira:`449`
+
+.. _lts-version-history-900:
 
 Version 9.0.0
 -------------
