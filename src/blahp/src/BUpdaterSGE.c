@@ -382,9 +382,8 @@ int main(int argc, char *argv[]){
 	    {
 		time_t now;
 		now=time(0);
-		sprintf(string_now,"%d",now);
+		sprintf(string_now,"%zu",now);
 		AssignState(en->batch_id,"4" ,"-1","\0","\0",string_now);
-		free(string_now);
 	    }
 	   free(en);
 	}
@@ -436,7 +435,7 @@ int FinalStateQuery(char *query,char *queryStates, char *query_err){
 		if (strcmp(list_query[l],saveptr1[0])==0){
 		    if (strcmp(list_queryStates[l],saveptr1[4])!=0){
 			now=time(0);
-			sprintf(string_now,"%d",now);
+			sprintf(string_now,"%zu",now);
 			if (strcmp(saveptr1[4],"u")==0){
 			    JOB_REGISTRY_ASSIGN_ENTRY(en.batch_id,list_query[l]);
 			    en.status=0;
@@ -535,7 +534,7 @@ int FinalStateQuery(char *query,char *queryStates, char *query_err){
 	}
 	pclose( file_output );
 	now=time(0);
-	sprintf(string_now,"%d",now);
+	sprintf(string_now,"%zu",now);
 	if ((strcmp(qExit,"137")==0)||(strcmp(qExit,"143")==0)){
 	    JOB_REGISTRY_ASSIGN_ENTRY(en.batch_id,list_query[l]);
 	    en.status=3;
@@ -591,7 +590,7 @@ int FinalStateQuery(char *query,char *queryStates, char *query_err){
 		JOB_REGISTRY_ASSIGN_ENTRY(en.wn_addr,"");
 		JOB_REGISTRY_ASSIGN_ENTRY(en.exitreason,"reason=3");
 		now=time(0);
-		sprintf(string_now,"%d",now);
+		sprintf(string_now,"%zu",now);
 		JOB_REGISTRY_ASSIGN_ENTRY(en.updater_info,string_now)
 		en.udate=now;
 		if ((ret=job_registry_update(rha, &en)) < 0){
@@ -613,7 +612,7 @@ int FinalStateQuery(char *query,char *queryStates, char *query_err){
 	    }
 	    pclose( file_output );
 	    now=time(0);
-	    sprintf(string_now,"%d",now);
+	    sprintf(string_now,"%zu",now);
 	    if ((strcmp(qExit,"137")==0)||(strcmp(qExit,"143")==0)){
 		JOB_REGISTRY_ASSIGN_ENTRY(en.batch_id,cmd);
 		en.status=3;
@@ -651,7 +650,6 @@ int AssignState (char *element, char *status, char *exit, char *reason, char *wn
     job_registry_entry en;
     time_t now;
     char *string_now=NULL;
-    int i=0;
     int n=strtoken(element, '.', &id_element);
     
     if(id_element[0]){
