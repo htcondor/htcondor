@@ -33,6 +33,11 @@ Bugs Fixed:
   handler in *condor_credmon_oauth* when using Python 3.
   :jira:`633`
 
+- Fixed a bug in **condor_top** where two daemon ClassAds were assumed
+  to be the same if some specific attributes were missing from the
+  latest ClassAd.
+  :jira`:880
+
 
 Version 9.0.8
 -------------
