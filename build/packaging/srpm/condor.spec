@@ -151,6 +151,7 @@ BuildRequires: redhat-rpm-config
 BuildRequires: sqlite-devel
 BuildRequires: perl(Data::Dumper)
 
+BuildRequires: glibc-static
 %if %uw_build
 BuildRequires: cmake >= 2.8
 BuildRequires: gcc-c++
