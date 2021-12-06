@@ -245,9 +245,9 @@ cmd_buffer_dump_internals(void)
 		fprintf(stderr, "%c (0x%02x) ", *c >= 32 ? *c : '.', *c);
 	}
 	fprintf(stderr, "\n  ---\n");
-	fprintf(stderr, "  cmd_queue_size = %d\n", cmd_queue_size);
-	fprintf(stderr, "  cmd_queue_len = %d\n", cmd_queue_len);
-	fprintf(stderr, "  cmd_current = %d\n", cmd_current);
+	fprintf(stderr, "  cmd_queue_size = %zu\n", cmd_queue_size);
+	fprintf(stderr, "  cmd_queue_len = %zu\n", cmd_queue_len);
+	fprintf(stderr, "  cmd_current = %zu\n", cmd_current);
 	fprintf(stderr, "  cmd_fds[0].fd = %d\n", cmd_fds[0].fd);
 	return (CMDBUF_OK);
 }
@@ -285,14 +285,14 @@ receive_commands(int rfd, int verbose)
 		switch(res = cmd_buffer_get_command(&command))
 		{
 		case CMDBUF_OK:
-			if (verbose>0) printf("C: %d received \"%s\"\n", time(0), command);
+			if (verbose>0) printf("C: %zu received \"%s\"\n", time(0), command);
 			if (verbose>1) cmd_buffer_dump_internals();
 			assert(strcmp(command, commands[i]) == 0);
 			free(command);
 			if (++i == NUM_COMMANDS) i = 0;
 			break;
 		case CMDBUF_TIMEOUT:
-			if (verbose>0) printf("C: %d ---timeout occurred---\n", time(0));
+			if (verbose>0) printf("C: %zu ---timeout occurred---\n", time(0));
 			if (verbose>1) cmd_buffer_dump_internals();
 			break;
 		case CMDBUF_ERROR_READ:
@@ -323,19 +323,19 @@ send_commands(int wfd, int iter, int verbose)
 		if (rand() % 3 > 0)
 		{
 			n = write(wfd, commands[c], strlen(commands[c]));
-			if (verbose>0) printf("F: %d sent %d bytes\n", time(0), n);
+			if (verbose>0) printf("F: %zu sent %ld bytes\n", time(0), n);
 		}
 		else
 		{
 			if (verbose>0) printf("F: splitting the command\n");
 			n = write(wfd, commands[c], strlen(commands[c])/2);
-			if (verbose>0) printf("F: %d sent %d bytes\n", time(0), n);
+			if (verbose>0) printf("F: %zu sent %ld bytes\n", time(0), n);
 			sleep(1);
 			n = write(wfd, commands[c]+n, strlen(commands[c])-n);
-			if (verbose>0) printf("F: %d sent %d bytes\n", time(0), n);
+			if (verbose>0) printf("F: %zu sent %ld bytes\n", time(0), n);
 		}
 		write(wfd, "\r\n", 2);
-		if (verbose>0) printf("F: %d sent '\\r\\n'\n", time(0));
+		if (verbose>0) printf("F: %zu sent '\\r\\n'\n", time(0));
 		else printf(".");
 		fflush(stdout);
 		sleep(rand() % 3);
