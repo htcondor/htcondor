@@ -72,6 +72,11 @@ class ParallelShadow : public BaseShadow
 
 	void shutDown( int exitReason );
 
+	/**
+	 * override to allow starter+shadow to gracefully exit
+	 */
+	virtual void holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode );
+
 		/** Handle job removal. */
 	int handleJobRemoval( int sig );
 

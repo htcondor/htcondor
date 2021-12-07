@@ -24,7 +24,14 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+
+- Fixed a bug where a running parallel universe job would go to idle
+  status when the job policy indicated it should be held.
+  :jira:`869`
+
+- Fixed a bug where bytes were trying to be written via an ASCII file
+  handler in *condor_credmon_oauth* when using Python 3.
+  :jira:`633`
 
 .. _lts-version-history-908:
 

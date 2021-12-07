@@ -23,7 +23,7 @@
 %endif
 
 %if %uw_build
-%define devtoolset 0
+%define devtoolset 10
 %define debug 1
 %endif
 
@@ -213,7 +213,7 @@ Requires: libcgroup
 
 %if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
 BuildRequires: which
-BuildRequires: devtoolset-9-toolchain
+BuildRequires: devtoolset-%{devtoolset}-toolchain
 %endif
 
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
@@ -270,14 +270,6 @@ Requires: condor-procd = %{version}-%{release}
 
 %if %uw_build
 Requires: %name-externals = %version-%release
-%endif
-
-%if %blahp
-%if %globus
-Requires: blahp >= 2.1.1
-%else
-Requires: blahp >= 2.2.0
-%endif
 %endif
 
 # Useful tools are using the Python bindings
@@ -581,6 +573,24 @@ The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
 
 #######################
+#######################
+%package blahp
+Summary: BLAHP daemon
+Url: https://github.com/htcondor/BLAH
+Group: System/Libraries
+BuildRequires:  docbook-style-xsl, libxslt
+%if 0%{?rhel} >= 8 || 0%{?fedora}
+Requires: python3
+%else
+Requires: python >= 2.2
+%endif
+Provides: blahp = %{version}-%{release}
+Obsoletes: blahp < 9.5.0
+
+%description blahp
+%{summary}
+
+#######################
 %package -n minicondor
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
@@ -687,7 +697,7 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 %build
 
 %if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
-. /opt/rh/devtoolset-9/enable
+. /opt/rh/devtoolset-%{devtoolset}/enable
 export CC=$(which cc)
 export CXX=$(which c++)
 %endif
@@ -710,12 +720,6 @@ export CMAKE_PREFIX_PATH=/usr
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
-%if %blahp
-       -DWITH_BLAHP:BOOL=TRUE \
-       -DBLAHP_FOUND=/usr/libexec/blahp/BLClient \
-%else
-       -DWITH_BLAHP:BOOL=FALSE \
-%endif
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
        -DCMAKE_INSTALL_PREFIX:PATH=/ \
@@ -1047,6 +1051,20 @@ mv %{buildroot}%{_libexecdir}/condor/campus_factory/share/condor/condor_config.f
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{buildroot}%{_sysconfdir}/condor/
 %endif
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
+
+# Fix up blahp installation
+%if 0%{?rhel} == 7
+# Don't rely on Python 3 on EL7 (not installed by default)
+sed -i 's;/usr/bin/python3;/usr/bin/python2;' %{buildroot}%{_libexecdir}/blahp/*status.py
+%endif
+# Move batch system customization files to /etc, with symlinks in the
+# original location. Admins will need to edit these.
+install -m 0755 -d -p %{buildroot}%{_sysconfdir}/blahp
+for batch_system in condor kubernetes lsf nqs pbs sge slurm; do
+    mv %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh %{buildroot}%{_sysconfdir}/blahp
+    ln -s %{_sysconfdir}/blahp/${batch_system}_local_submit_attributes.sh \
+        %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh
+done
 
 # htcondor/dags only works with Python3
 rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
@@ -1564,6 +1582,35 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/40-vault-credmon.conf
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
+
+%files blahp
+%config %_sysconfdir/blah.config
+%config %_sysconfdir/blparser.conf
+%_sysconfdir/rc.d/init.d/glite-ce-blah-parser
+%dir %_sysconfdir/blahp/
+%config %_sysconfdir/blahp/condor_local_submit_attributes.sh
+%config %_sysconfdir/blahp/kubernetes_local_submit_attributes.sh
+%config %_sysconfdir/blahp/lsf_local_submit_attributes.sh
+%config %_sysconfdir/blahp/nqs_local_submit_attributes.sh
+%config %_sysconfdir/blahp/pbs_local_submit_attributes.sh
+%config %_sysconfdir/blahp/sge_local_submit_attributes.sh
+%config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
+%_bindir/blahpd
+%_sbindir/blah_check_config
+%_sbindir/blah_job_registry_add
+%_sbindir/blah_job_registry_dump
+%_sbindir/blah_job_registry_lkup
+%_sbindir/blah_job_registry_purge
+%_sbindir/blah_job_registry_scan_by_subject
+%_sbindir/blahpd_daemon
+%dir %_libexecdir/blahp
+%_libexecdir/blahp/*
+%_mandir/man1/blah_check_config.1.gz
+%_mandir/man1/blah_job_registry_add.1.gz
+%_mandir/man1/blah_job_registry_dump.1.gz
+%_mandir/man1/blah_job_registry_lkup.1.gz
+%_mandir/man1/blah_job_registry_scan_by_subject.1.gz
+%_mandir/man1/blahpd.1.gz
 
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
