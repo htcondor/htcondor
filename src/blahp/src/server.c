@@ -1500,7 +1500,7 @@ cleanup_argv:
 		exit(MALLOC_ERROR);
 	}
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 #define CMD_CANCEL_JOB_ARGS 2
@@ -1595,7 +1595,7 @@ cleanup_argv:
 		free (resultLine);
 	}
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 #define CMD_STATUS_JOB_ARGS 2
@@ -1661,7 +1661,7 @@ cmd_status_job(void *args)
 	/* Free up all arguments */
 	free_args(argv);
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 void*
@@ -1775,7 +1775,7 @@ wrap_up:
 		free (resultLine);
 	}
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 int
@@ -1984,7 +1984,7 @@ cmd_renew_proxy(void *args)
 						argv[CMD_RENEW_PROXY_ARGS+1] = workernode;
 						cmd_send_proxy_to_worker_node((void *)argv);
 						if (old_proxy != NULL) free(old_proxy);
-						return;
+						return NULL;
 					}
 					else
 					{
@@ -2030,7 +2030,7 @@ cmd_renew_proxy(void *args)
 	/* Free up all arguments */
 	free_args(argv);
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 #define CMD_SEND_PROXY_TO_WORKER_NODE_ARGS 4
@@ -2125,7 +2125,7 @@ cmd_send_proxy_to_worker_node(void *args)
 	/* Free up all arguments */
 	free_args(argv);
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 void
@@ -2331,7 +2331,7 @@ cmd_hold_job(void* args)
 {
 	hold_resume(args,HOLD_JOB);
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 void *
@@ -2339,7 +2339,7 @@ cmd_resume_job(void* args)
 {
 	hold_resume(args,RESUME_JOB);
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 void *
