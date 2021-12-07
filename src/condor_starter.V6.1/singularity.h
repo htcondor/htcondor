@@ -48,6 +48,10 @@ public:
   static bool retargetEnvs(Env &job_env, const std::string &targetdir, const std::string &execute_dir);
   static bool runTest(const std::string &JobName, const ArgList &args, int orig_args_len, const Env &env, std::string &errorMessage);
 
+  static bool canRunSandbox();
+  static bool canRunSIF();
+  static bool canRun(const std::string &image);
+
 
 private:
   static bool detect(CondorError &err);

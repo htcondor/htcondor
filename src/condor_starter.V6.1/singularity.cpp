@@ -3,6 +3,10 @@
 
 #include "singularity.h"
 
+#ifdef LINUX
+#include <sys/wait.h>
+#endif
+
 #include <vector>
 
 #include "condor_config.h"
@@ -434,3 +438,65 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 	return true;
 }
 
+// Test to see if this singularity can run an exploded directory
+// We'll use the sbin directory, which should have a static linked
+// binary, exit_37 in it as the root of the "sandbox dir".
+// If we can run this from the sandbox, then singularity should 
+// be able to run with sandboxes
+
+bool
+Singularity::canRunSIF() {
+	std::string libexec_dir;
+	libexec_dir = param("LIBEXEC");
+	return Singularity::canRun(libexec_dir + "/exit_37.sif");
+}
+
+bool
+Singularity::canRunSandbox() {
+	std::string sbin_dir;
+	sbin_dir = param("SBIN");
+	return Singularity::canRun(sbin_dir);
+}
+
+bool 
+Singularity::canRun(const std::string &image) {
+#ifdef LINUX
+	ArgList sandboxArgs;
+	std::string exec;
+	if (!find_singularity(exec)) {
+		return false;
+	}
+	std::string exit_37 = "/exit_37";
+
+	sandboxArgs.AppendArg(exec);
+	sandboxArgs.AppendArg("exec");
+	sandboxArgs.AppendArg(image);
+	sandboxArgs.AppendArg(exit_37);
+
+	std::string displayString;
+	sandboxArgs.GetArgsStringForLogging( displayString );
+	dprintf(D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str());
+
+	MyPopenTimer pgm;
+	if (pgm.start_program(sandboxArgs, true, NULL, false) < 0) {
+		if (pgm.error_code() != 0) {
+			dprintf(D_ALWAYS, "Singularity exec of failed, this singularity can run some programs, but not these\n");
+			return false;
+		}
+	}
+
+	int exitCode = -1;
+	pgm.wait_for_exit(m_default_timeout, &exitCode);
+	if (WEXITSTATUS(exitCode) != 37) {  // hard coded return from exit_37
+		pgm.close_program(1);
+		std::string line;
+		pgm.output().readLine(line, false);
+		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str());
+		return false;
+	}
+	dprintf(D_ALWAYS, "Successfully ran: '%s'.\n", displayString.c_str());
+	return true;
+#else 
+	return false;
+#endif
+}
