@@ -23,7 +23,7 @@
 %endif
 
 %if %uw_build
-%define devtoolset 0
+%define devtoolset 10
 %define debug 1
 %endif
 
@@ -212,7 +212,7 @@ Requires: libcgroup
 
 %if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
 BuildRequires: which
-BuildRequires: devtoolset-9-toolchain
+BuildRequires: devtoolset-%{devtoolset}-toolchain
 %endif
 
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
@@ -696,7 +696,7 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 %build
 
 %if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
-. /opt/rh/devtoolset-9/enable
+. /opt/rh/devtoolset-%{devtoolset}/enable
 export CC=$(which cc)
 export CXX=$(which c++)
 %endif
