@@ -141,6 +141,7 @@ static int parse_format_args(int argc, const char * argv[], AttrListPrintMask & 
 static 	int dash_long = 0, dash_tot = 0, global = 0, show_io = 0, dash_dag = 0, show_held = 0;
 static  int dash_batch = 0, dash_batch_specified = 0, dash_batch_is_default = 1;
 static  int dash_factory = 0; // if non zero, bits are options, 1=cluster-ads-only, 2=late-materialize-only
+static  int dash_jobset = 0;  // if non zero, we also want to see jobset ads
 static  int dash_wide = 0; // -wide argument was used
 static ClassAdFileParseType::ParseType dash_long_format = ClassAdFileParseType::Parse_auto;
 static bool print_attrs_in_hash_order = false;
@@ -1190,6 +1191,10 @@ processCommandLineArguments (int argc, const char *argv[])
 				}
 			}
 			if ( ! dash_factory) { dash_factory = 3; } // all-cluster-ads | late-materialize-only
+		}
+		else
+		if (is_dash_arg_colon_prefix (dash_arg, "jobset", &pcolon, 5)) {
+			dash_jobset = CondorQ::fetch_IncludeJobsetAds;
 		}
 		else
 		if (is_dash_arg_prefix (dash_arg, "attributes", 2)) {
@@ -2468,6 +2473,7 @@ usage (const char *myName, int other)
 		"\t<cluster>.<proc>\t Get information about specific job\n"
 		"\t<owner>\t\t\t Information about jobs owned by <owner>\n"
 		"\t-factory\t\t Get information about late materialization job factories\n"
+//		"\t-jobset\t\t\t Use jobset ads if the Schedd has them\n"
 		"\t-autocluster\t\t Get information about the SCHEDD's autoclusters\n"
 		"\t-constraint <expr>\t Get information about jobs that match <expr>\n"
 		"\t-unmatchable\t\t Get information about jobs that do not match any machines\n"
@@ -2901,8 +2907,14 @@ static bool AddJobToClassAdCollection(void * pv, ClassAd* ad) {
 		if (dash_autocluster == CondorQ::fetch_GroupBy) attr_id = "Id";
 		ad->LookupInteger(attr_id, jobid.id);
 	} else {
-		ad->LookupInteger( ATTR_CLUSTER_ID, jobid.cluster );
-		if ( ! ad->LookupInteger( ATTR_PROC_ID, jobid.proc ) && assume_cluster_ad_if_no_proc_id) {
+		if ( ! ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster)) {
+			// Classads that have no ClusterId, but do have a JobSetId must be JOBSET ads
+			// we will sort these as cluster=0, proc=jobsetid
+			if (ad->LookupInteger(ATTR_JOB_SET_ID, jobid.proc)) {
+				jobid.cluster = 0;
+			}
+		}
+		if ( ! ad->LookupInteger( ATTR_PROC_ID, jobid.proc ) && jobid.cluster > 0 && assume_cluster_ad_if_no_proc_id) {
 			jobid.proc = -1;
 		}
 	}
@@ -3139,7 +3151,17 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 		if (dash_autocluster == CondorQ::fetch_GroupBy) attr_id = "Id";
 		job->LookupInteger(attr_id, jobid.id);
 	} else {
-		job->LookupInteger( ATTR_CLUSTER_ID, jobid.cluster );
+		if ( ! job->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster)) {
+			// Classads that have no ClusterId, but do have a JobSetId must be JOBSET ads
+			// we will sort these as cluster=0, proc=jobsetid
+			if (job->LookupInteger(ATTR_JOB_SET_ID, jobid.proc)) {
+				jobid.cluster = 0;
+				// TJ: HACK! for now stuff cluster and proc for use by the prmask.render code
+				// it is ok to do this here because we will discard the classad afterward
+				job->Assign(ATTR_CLUSTER_ID, jobid.cluster);
+				job->Assign(ATTR_PROC_ID, jobid.proc);
+			}
+		}
 		if ( ! job->LookupInteger( ATTR_PROC_ID, jobid.proc )) { jobid.proc = -1; }
 	}
 
@@ -4193,6 +4215,8 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		} else if (dash_factory && (dash_long || ! dash_batch)) {
 			fetch_opts |= CondorQ::fetch_IncludeClusterAd;
 #endif
+		} else if (dash_jobset) {
+			fetch_opts |= CondorQ::fetch_IncludeJobsetAds;
 		}
 	}
 	StringList no_attrs;

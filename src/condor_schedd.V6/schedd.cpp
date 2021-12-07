@@ -1417,9 +1417,9 @@ Scheduler::count_jobs()
 
 		// inserts/finds an entry in Owners for each job
 		// updates SubmitterCounters: Hits, JobsIdle, WeightedJobsIdle & JobsHeld
-		// 10/8/2021 TJ - count_a_job now also sees cluster ads so it will update Owner records
-		//    for job factories that have no materialized jobs and potentially trigger new materialization
-	WalkJobQueueWith(WJQ_WITH_CLUSTERS, count_a_job, nullptr);
+		// 10/8/2021 TJ - count_a_job now also sees cluster and jobset ads so it will update Owner records.
+		//    For job factories that have no materialized jobs it will potentially trigger new materialization
+	WalkJobQueueWith(WJQ_WITH_CLUSTERS | WJQ_WITH_JOBSETS, count_a_job, nullptr);
 
 	if( dedicated_scheduler.hasDedicatedClusters() ) {
 			// We found some dedicated clusters to service.  Wake up
@@ -2311,9 +2311,9 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 			has_backlog = true;
 			break;
 		}
-		IncrementLiveJobCounter(query_job_counts, job->Universe(), job->Status(), 1);
-		//if (IsFulldebug(D_FULLDEBUG)) {
-		//	dprintf(D_FULLDEBUG, "Writing job %d.%d to wire\n", job.jid.cluster, job.jid.proc);
+		if (job->IsJob()) { IncrementLiveJobCounter(query_job_counts, job->Universe(), job->Status(), 1); }
+		//if (IsDebugCatAndVerbosity(D_COMMAND | D_VERBOSE)) {
+		//	dprintf(D_COMMAND | D_VERBOSE, "Writing job %d.%d type=%d%d%d to wire\n", job->jid.cluster, job->jid.proc, job->IsJob(), job->IsCluster(), job->IsJobSet());
 		//}
 		int retval = 1;
 		if ( ! summary_only) {
@@ -2323,6 +2323,15 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 				JobQueueCluster * cad = static_cast<JobQueueCluster*>(job);
 				ClassAd iad;
 				cad->PopulateInfoAd(iad, 0, true);
+				retval = putClassAd(sock, iad,
+						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
+						projection.empty() ? NULL : &projection);
+			} else if (job->IsJobSet()) {
+				// if this is a set ad, then make a temporary child ad for returning the jobset aggregates
+				JobQueueJobSet * jobset = static_cast<JobQueueJobSet*>(static_cast<JobQueueBase*>(job));
+				ClassAd iad;
+				jobset->jobStatusAggregates.publish(iad, "Num");
+				iad.ChainToAd(jobset);
 				retval = putClassAd(sock, iad,
 						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
 						projection.empty() ? NULL : &projection);
@@ -2502,9 +2511,16 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 	}
 
 	int iter_options = 0;
-	bool include_cluster = false;
+	bool include_cluster = false, include_jobsets = false;
 	if (queryAd.EvaluateAttrBool("IncludeClusterAd", include_cluster) && include_cluster) {
 		iter_options |= JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS;
+	}
+	if (queryAd.EvaluateAttrBool("IncludeJobsetAds", include_jobsets) && include_jobsets) {
+		iter_options |= JOB_QUEUE_ITERATOR_OPT_INCLUDE_JOBSETS;
+	}
+
+	if (IsDebugCatAndVerbosity(dpf_level)) {
+		dprintf(dpf_level, "QUERY_JOB_ADS limit=%d, iter_options=0x%x\n", resultLimit, iter_options);
 	}
 
 	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, resultLimit, 1000, iter_options);
@@ -2876,13 +2892,6 @@ int
 count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 {
 	int		status;
-#if 1  // cache ownerdata pointer in job object
-#else
-	int		niceUser;
-	MyString owner_buf;
-	char const*	owner;
-	MyString domain;
-#endif
 	int		cur_hosts;
 	int		max_hosts;
 	int		universe;
@@ -2893,7 +2902,14 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 	if ( job == NULL ) {  
 		return 0;
 	}
-
+	// make sure that OwnerInfo records cannot be deleted while a jobset for that owner exists
+	if (job->IsJobSet()) {
+		JobQueueJobSet * jobset = static_cast<JobQueueJobSet*>(job);
+		if (jobset->ownerinfo) {
+			jobset->ownerinfo->num.Hits += 1;
+		}
+		return 0;
+	}
 	// cluster ads get different treatment
 	if (job->IsCluster()) {
 		// set job->ownerdata pointer if it is not yet set. we do this in case the accounting group
