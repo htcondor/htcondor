@@ -165,6 +165,7 @@ printClassAd( void )
 	// Singularity support
 	if (htcondor::Singularity::enabled()) {
 		printf("%s = True\n", ATTR_HAS_SINGULARITY);
+		printf("%s = True\n", ATTR_HAS_CONTAINER);
 		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 
 		if (htcondor::Singularity::canRunSandbox())  {
