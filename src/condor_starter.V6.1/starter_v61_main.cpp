@@ -149,7 +149,7 @@ printClassAd( void )
 	// Docker "universe."
 	if( DockerProc::Detect() ) {
 		printf( "%s = True\n", ATTR_HAS_DOCKER );
-		printf( "%s = True\n", ATTR_HAS_DOCKER_REPO);
+		printf( "%s = True\n", ATTR_HAS_DOCKER_URL);
 		printf( "%s = True\n", ATTR_HAS_CONTAINER);
 
 		std::string dockerVersion;
