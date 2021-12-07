@@ -24,6 +24,9 @@ New Features:
 
 Bugs Fixed:
 
+- When a grid universe job of type ``condor`` fails on the remote system,
+  the local job is now put on hold, instead of automatically resubmitted.
+  :jira:`871`
 
 - Fixed a bug where a running parallel universe job would go to idle
   status when the job policy indicated it should be held.
@@ -33,6 +36,7 @@ Bugs Fixed:
   handler in *condor_credmon_oauth* when using Python 3.
   :jira:`633`
 
+.. _lts-version-history-908:
 
 Version 9.0.8
 -------------
