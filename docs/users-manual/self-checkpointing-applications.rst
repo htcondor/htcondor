@@ -223,6 +223,8 @@ When you're done, release the job to see if it actually works right.
 
 You may also want to remove your copy of checkpoint files:
 
+.. code-block:: console
+
     $ cd ..; rm -fr 635.0
 
 Working Around the Assumptions
