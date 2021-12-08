@@ -36,6 +36,11 @@ Bugs Fixed:
   handler in *condor_credmon_oauth* when using Python 3.
   :jira:`633`
 
+- Fixed a bug where the user job log could be written in the wrong
+  directory when a spooled job's output was retrieved with
+  *condor_transfer_data*.
+  :jira:`886`
+
 .. _lts-version-history-908:
 
 Version 9.0.8
