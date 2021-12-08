@@ -4761,6 +4761,32 @@ int SubmitHash::SetUniverse()
 
 		if (IsContainerJob) {
 			AssignJobVal(ATTR_WANT_CONTAINER, true);
+			auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
+			auto_free_ptr docker_image(submit_param(SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE));
+
+			// if docker_image is set, assume need docker repo
+			if (docker_image) {
+				AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
+			} else {
+
+				// Otherwise, guess container image type from container image string
+				ContainerImageType image_type = image_type_from_string(container_image.ptr());
+				switch (image_type) {
+					case ContainerImageType::DockerRepo:
+						AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
+						break;
+					case ContainerImageType::SIF:
+						AssignJobVal(ATTR_WANT_SIF,true);
+						break;
+					case ContainerImageType::SandboxImage:
+						AssignJobVal(ATTR_WANT_SANDBOX_IMAGE, true);
+						break;
+					case ContainerImageType::Unknown:
+						push_error(stderr, SUBMIT_KEY_ContainerImage
+								" must be a directory, have a docker:: prefix, or end in .sif.\n");
+						ABORT_AND_RETURN(1);
+				}
+			}
 		}
 		return 0;
 	}
@@ -6099,9 +6125,8 @@ int SubmitHash::SetRequirements()
 			if (job->Lookup(ATTR_DOCKER_IMAGE)) {
 				answer += "&& TARGET.HasDockerRepo";
 			} else {
-				std::string container_image;
-				job->LookupString(ATTR_CONTAINER_IMAGE, container_image);
-				ContainerImageType image_type = image_type_from_string(container_image);
+				auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
+				ContainerImageType image_type = image_type_from_string(container_image.ptr());
 				switch (image_type) {
 					case ContainerImageType::DockerRepo:
 						answer += "&& TARGET.HasDockerRepo";
@@ -7193,7 +7218,12 @@ int SubmitHash::process_container_input_files(StringList & input_files, long lon
 		// Now that we've sure that we're transfering the container, set
 		// the container name to the basename, which what we'll see on the submit
 		// side
-		job->Assign(ATTR_CONTAINER_IMAGE, condor_basename(container_image.ptr()));
+		// but if container ends with a /, remove that so basename works
+		std::string container_tmp = container_image.ptr();
+		if (ends_with(container_tmp, "/")) {
+			container_tmp = container_tmp.substr(0, container_tmp.size() - 1);
+		}
+		job->Assign(ATTR_CONTAINER_IMAGE, condor_basename(container_tmp.c_str()));
 		return 1;
 	}
 
@@ -7236,7 +7266,7 @@ SubmitHash::image_type_from_string(const std::string &image) const {
 		return SubmitHash::ContainerImageType::DockerRepo;
 	}
 	if (ends_with(image, ".sif")) {
-		return SubmitHash::ContainerImageType::DockerRepo;
+		return SubmitHash::ContainerImageType::SIF;
 	}
 	if (ends_with(image, "/")) {
 		return SubmitHash::ContainerImageType::SandboxImage;
