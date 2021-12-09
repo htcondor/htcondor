@@ -1601,6 +1601,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_ft-gahp
 %_sbindir/runfactory
 %_bindir/bosco_cluster
+%_bindir/condor_remote_cluster
 %_bindir/bosco_ssh_start
 %_bindir/bosco_start
 %_bindir/bosco_stop
