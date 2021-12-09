@@ -32,6 +32,80 @@ for k in logging.Logger.manager.loggerDict:
     logging.getLogger(k).setLevel(logging.WARNING)
 
 
+def process_custom_ads(start_time, job_ad_file, args, metadata=None):
+    """
+    Given an iterator of ads, process its entire set of history
+    """
+    logging.info(f"Start processing the adfile: {job_ad_file}")
+
+    my_start = time.time()
+    buffered_ads = {}
+    count = 0
+    total_upload = 0
+    if not args.read_only:
+        es = elastic.get_server_handle(args)
+    try:
+        for job_ad in utils.parse_history_ad_file(job_ad_file):
+            metadata = metadata or {}
+            metadata["condor_history_source"] = "custom"
+            metadata["condor_history_runtime"] = int(my_start)
+            metadata["condor_history_host_version"] = job_ad.get("CondorVersion", "UNKNOWN")
+            metadata["condor_history_host_platform"] = job_ad.get(
+                "CondorPlatform", "UNKNOWN"
+            )
+            metadata["condor_history_host_machine"] = job_ad.get("Machine", "UNKNOWN")
+            metadata["condor_history_host_name"] = job_ad.get("Name", "UNKNOWN")
+
+            try:
+                dict_ad = convert.to_json(job_ad, return_dict=True)
+            except Exception as e:
+                message = f"Failure when converting document in {job_ad_file}: {e}"
+                exc = traceback.format_exc()
+                message += f"\n{exc}"
+                logging.warning(message)
+                continue
+
+            idx = elastic.get_index(args.es_index_name)
+            ad_list = buffered_ads.setdefault(idx, [])
+            ad_list.append((convert.unique_doc_id(dict_ad), dict_ad))
+
+            if len(ad_list) == args.es_bunch_size:
+                st = time.time()
+                if not args.read_only:
+                    elastic.post_ads(
+                        es.handle, idx, ad_list, metadata=metadata
+                    )
+                logging.debug(
+                    f"Posting {len(ad_list)} ads from {job_ad_file}"
+                )
+                total_upload += time.time() - st
+                buffered_ads[idx] = []
+
+            count += 1
+
+    except Exception:
+        message = f"Failure when processing history from {job_ad_file}"
+        logging.exception(message)
+        return
+
+    # Post the remaining ads
+    for idx, ad_list in list(buffered_ads.items()):
+        if ad_list:
+            logging.debug(
+                f"Posting remaining {len(ad_list)} ads from {job_ad_file}"
+            )
+            if not args.read_only:
+                elastic.post_ads(es.handle, idx, ad_list, metadata=metadata)
+
+    total_time = (time.time() - my_start) / 60.0
+    total_upload /= 60.0
+    logging.info(
+        f"{job_ad_file} history: response count: {count}; upload time {total_upload:.2f} min"
+    )
+
+    return
+
+
 def process_schedd(start_time, since, checkpoint_queue, schedd_ad, args, metadata=None):
     """
     Given a schedd, process its entire set of history since last checkpoint.
