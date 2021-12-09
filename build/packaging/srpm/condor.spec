@@ -573,7 +573,6 @@ The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
 
 #######################
-#######################
 %package blahp
 Summary: BLAHP daemon
 Url: https://github.com/htcondor/BLAH
