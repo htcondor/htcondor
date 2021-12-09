@@ -32,6 +32,10 @@ New Features:
   in a future release.
   :jira:`733`
 
+- **condor_adstash** can parse and push ClassAds from a file to
+  Elasticsearch by using the ``--ads FILENAME`` option.
+  :jira:`779`
+
 Bugs Fixed:
 
 - Fixed a bug where if the submit file set checkpoint_exit_code, and the administrator
