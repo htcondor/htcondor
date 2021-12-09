@@ -32,6 +32,12 @@ Bugs Fixed:
   status when the job policy indicated it should be held.
   :jira:`869`
 
+- Fixed a bug where the *condor_job_router* could crash while trying to
+  report an invalid router configuration when c-style comments were used
+  before an old syntax route classad. As a result of this fix the job router
+  now treats c-style comments as a indication that the route is old syntax.
+  :jira:`864`
+
 - Fixed a bug where bytes were trying to be written via an ASCII file
   handler in *condor_credmon_oauth* when using Python 3.
   :jira:`633`
