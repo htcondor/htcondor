@@ -27,6 +27,7 @@ endif ( LINUX OR DARWIN )
 if ( WITH_BOSCO )
 
 	install ( FILES bosco_cluster DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+	clone_install( bosco_cluster "${C_BIN}" condor_remote_cluster "${C_BIN}" )
 	install ( FILES bosco_ssh_start DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 	install ( FILES shellselector DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 	install ( FILES bosco_start DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
