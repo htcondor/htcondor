@@ -1073,8 +1073,9 @@ int Starter::execDCStarter(
 	inherit_list[0] = &child_job_update_sock;
 
 	// Pass the machine ad to the starter
-	if (claim)
-		claim->writeMachAd( s_job_update_sock );
+	if (claim) {
+		claim->writeMachAdAndOverlay(s_job_update_sock);
+	}
 
 	if( daemonCore->Register_Socket(
 			s_job_update_sock,

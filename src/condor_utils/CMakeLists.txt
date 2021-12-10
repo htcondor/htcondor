@@ -170,6 +170,8 @@ adcluster.cpp
 adcluster.h
 ad_printmask.cpp
 ad_printmask.h
+ad_transforms.cpp
+ad_transforms.h
 AWSv4-utils.cpp
 AWSv4-utils.h
 backward_file_reader.cpp

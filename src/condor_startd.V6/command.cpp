@@ -1956,6 +1956,19 @@ activate_claim( Resource* rip, Stream* stream )
 	}
 #endif	// of ifdef WIN32
 
+	ClassAd * overlay_ad = rip->r_cur->execution_overlay();
+	overlay_ad->Clear();
+	overlay_ad->ChainToAd(req_classad);
+	resmgr->m_execution_xfm.transform(overlay_ad, nullptr);
+	overlay_ad->Unchain();
+	if (overlay_ad->size() > 0) {
+		if (IsDebugLevel(D_JOB)) {
+			std::string adbuf;
+			rip->dprintf(D_JOB, "EXECUTION_OVERLAY:\n%s", formatAd(adbuf, *overlay_ad, "\t"));
+		}
+		req_classad->Update(*overlay_ad);
+	}
+
 		// update the current rank on this claim
 	float rank = rip->compute_rank( req_classad );
 	rip->r_cur->setrank( rank );
