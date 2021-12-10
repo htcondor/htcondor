@@ -105,8 +105,8 @@ Because staging data on the submit machine is not always efficient,
 HTCondor permits input files to be transferred from a location specified
 by a URL; likewise, output files may be transferred to a location
 specified by a URL. All transfers (both input and output) are
-accomplished by invoking a plug-in, an executable or shell script that
-handles the task of file transfer.
+accomplished by invoking a **file transfer plugin**: an executable or shell
+script that handles the task of file transfer.
 
 For transferring input files, URL specification is limited to jobs
 running under the vanilla universe and to a vm universe VM image file.
@@ -116,7 +116,7 @@ the job is submitted to the machine where the job is executed. Each file
 to be transferred by specifying a URL, causing a plug-in to be invoked,
 is specified separately in the job submit description file with the
 command
-**transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`;
+``transfer_input_files`` :index:`transfer_input_files<single: transfer_input_files; submit commands>`;
 see the :ref:`users-manual/file-transfer:submitting jobs without a shared
 file system: htcondor's file transfer mechanism` section for details.
 
@@ -124,10 +124,10 @@ For transferring output files, either the entire output sandbox, which
 are all files produced or modified by the job as it executes, or a
 subset of these files, as specified by the submit description file
 command
-**transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
+``transfer_output_files`` :index:`transfer_output_files<single: transfer_output_files; submit commands>`
 are transferred to the directory specified by the URL. The URL itself is
 specified in the separate submit description file command
-**output_destination** :index:`output_destination<single: output_destination; submit commands>`;
+``output_destination`` :index:`output_destination<single: output_destination; submit commands>`;
 see the :ref:`users-manual/file-transfer:submitting jobs without a shared
 file system: htcondor's file transfer mechanism` section for details. The plug-in
 is invoked once for each output file to be transferred.
@@ -164,16 +164,17 @@ list given by ``FILETRANSFER_PLUGINS`` is used.
 HTCondor assumes that all plug-ins will respond in specific ways. To
 determine the capabilities of the plug-ins as to which protocols they
 handle, the *condor_starter* daemon invokes each plug-in giving it the
-command line argument **-classad**. In response to invocation with this
-command line argument, the plug-in must respond with an output of three
-ClassAd attributes. The first two are fixed:
+command line argument ``-classad``. In response to invocation with this
+command line argument, the plug-in must respond with an output of four
+ClassAd attributes. The first three are fixed:
 
 .. code-block:: condor-classad
 
+    MultipleFileSupport = true
     PluginVersion = "0.1"
     PluginType = "FileTransfer"
 
-The third ClassAd attribute is ``SupportedMethods``. This attribute is a
+The fourth ClassAd attribute is ``SupportedMethods``. This attribute is a
 string containing a comma separated list of the protocols that the
 plug-in handles. So, for example
 
@@ -184,13 +185,13 @@ plug-in handles. So, for example
 would identify that the three protocols described by http, ftp, and file
 are supported. These strings will match the protocol specification as
 given within a URL in a
-**transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
+``transfer_input_files`` :index:`transfer_input_files<single: transfer_input_files; submit commands>`
 command or within a URL in an
-**output_destination** :index:`output_destination<single: output_destination; submit commands>`
+``output_destination`` :index:`output_destination<single: output_destination; submit commands>`
 command in a submit description file for a job.
 
 When a job specifies a URL transfer, the plug-in is invoked, without the
-command line argument **-classad**. It will instead be given two other
+command line argument ``-classad``. It will instead be given two other
 command line arguments. For the transfer of input file(s), the first
 will be the URL of the file to retrieve and the second will be the
 absolute path identifying where to place the transferred file. For the
@@ -213,25 +214,30 @@ the submit description file contains
     output_destination = url://server/some/directory/
     transfer_output_files = foo, bar, qux
 
-HTCondor invokes the plug-in that handles the ``url`` protocol three
-times. The directory delimiter (/ on Unix, and \\ on Windows) is
-appended to the destination URL, such that the three (Unix) invocations
-of the plug-in will appear similar to
+HTCondor invokes the plug-in that handles the ``url`` protocol with
+input classads describing all the files to be transferred and their
+destinations. The directory delimiter (/ on Unix, and \\ on Windows) is
+appended to the destination URL, such that the input will look like the
+following:
 
 .. code-block:: console
 
-    $ url_plugin /path/to/local/copy/of/foo url://server/some/directory//foo
-    $ url_plugin /path/to/local/copy/of/bar url://server/some/directory//bar
-    $ url_plugin /path/to/local/copy/of/qux url://server/some/directory//qux
+    [ LocalFileName = "/path/to/local/copy/of/foo"; Url = "url://server/some/directory//foo" ]
+    [ LocalFileName = "/path/to/local/copy/of/bar"; Url = "url://server/some/directory//bar" ]
+    [ LocalFileName = "/path/to/local/copy/of/qux"; Url = "url://server/some/directory//qux" ]
 
-Note that this functionality is not limited to a predefined set of
-protocols. New ones can be invented. As an invented example, the zkm
+Custom File Transfer Plugins
+''''''''''''''''''''''''''''
+
+This functionality is not limited to a predefined set of protocols or plugins.
+New ones can be invented. As an invented example, the zkm
 transfer type writes random bytes to a file. The plug-in that handles
-zkm transfers would respond to invocation with the **-classad** command
+zkm transfers would respond to invocation with the ``-classad`` command
 line argument with:
 
 .. code-block:: condor-classad
 
+    MultipleFileSupport = true
     PluginVersion = "0.1"
     PluginType = "FileTransfer"
     SupportedMethods = "zkm"
@@ -263,22 +269,29 @@ source repository under `/src/condor_examples/filetransfer_example_plugin.py
 This provides most of the functionality required in the plugin, except for
 the transfer logic itself, which is clearly indicated in the comments.
 
-The transfer of output files in this manner was introduced in HTCondor
-version 7.6.0. Incompatibility and inability to function will result if
-the executables for the *condor_starter* and *condor_shadow* are
-versions earlier than HTCondor version 7.6.0. Here is the expected
-behavior for these cases that cannot be backward compatible.
+Sending File Transfer Plugins With Your Job
+'''''''''''''''''''''''''''''''''''''''''''
 
--  If the *condor_starter* version is earlier than 7.6.0, then
-   regardless of the *condor_shadow* version, transfer of output files,
-   as identified in the submit description file with the command
-   **output_destination** :index:`output_destination<single: output_destination; submit commands>`
-   is ignored. The files are transferred back to the submit machine.
--  If the *condor_starter* version is 7.6.0 or later, but the
-   *condor_shadow* version is earlier than 7.6.0, then the
-   *condor_starter* will attempt to send the command to the
-   *condor_shadow*, but the *condor_shadow* will ignore the command.
-   No files will be transferred, and the job will be placed on hold.
+You can also use custom protocols on machines that do not have the necessary
+plugin installed. This is achieved by sending the file transfer plugin along
+with your job, using the ``transfer_plugins`` submit attribute described
+on the :doc:`/man-pages/condor_submit` man page.
+
+Assume you want to transfer some URLs that use the ``custommethod://``
+protocol, and you also have a plugin script called
+``custommethod_plugin.py`` that knows how to handle these URLs. Since this
+plugin is not available on any of the execution points in your pool, you can
+send it along with your job by including the following in the submit file:
+
+.. code-block:: condor-submit
+
+    transfer_plugins = custommethod=custommethod_plugin.py
+    transfer_output_files = custommethod://path/to/file1, custommethod://path/to/file2
+
+When the job arrives at an exeuction point, it will know to use the plugin
+script provided to transfer these URLs. If your ``custommethod://`` protocol
+is already supported at your execution point, the plugin provided in your
+submit file will take predence.
 
 Enabling the Transfer of Public Input Files over HTTP
 -----------------------------------------------------

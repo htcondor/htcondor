@@ -988,7 +988,8 @@ void JobRouter::ParseRoute(
 	std::string errmsg;
 
 	// If classad syntax, we have to do macro expansion on the route text
-	if (*text == '[') {
+	// some configs put c-style comments before the classad, so treat /* as signalling a classad config
+	if (*text == '[' || (text[0] == '/' && text[1] == '*')) {
 		// first we need to do macro expansion
 		ad_text.set(expand_param(route_text));
 		text = ad_text.ptr();
@@ -1068,10 +1069,22 @@ JobRouter::ParseRoutingEntries(
 		if ( ! route->ParseNext(routing_string,offset,&router_defaults_ad,allow_empty_requirements, source_name.c_str(), errmsg)) {
 			if ( ! errmsg.empty()) {
 				dprintf(D_ALWAYS, "JobRouter CONFIGURATION ERROR: %s\n", errmsg.c_str());
+				// HTCONDOR-864, make sure we don't use an out-of-range offset to substr or we will crash
+				std::string err_here;
+				if (this_offset >= (int)routing_string.size()) {
+					err_here = "offset ";
+					err_here += std::to_string(this_offset);
+				} else {
+					int len = (int)routing_string.size() - this_offset;
+					if (len > 79) len = 79;
+					err_here = routing_string.substr(this_offset, len);
+				}
 				dprintf(D_ALWAYS, "Ignoring the malformed route entry in JOB_ROUTER_ENTRIES%s, at offset %d starting here:\n%s\n",
-					param_tag, this_offset, routing_string.substr(this_offset, 79).c_str());
+					param_tag, this_offset, err_here.c_str());
 			}
 			delete route; route = NULL;
+			// prevent an infinite loop of we don't advance the offset
+			if (offset <= this_offset) break;
 			continue;
 		}
 
@@ -2992,10 +3005,10 @@ JobRoute::ParseNext(
 
 	// skip leading whitespace
 	while (offset < (int)routing_string.size() && isspace(routing_string[offset])) ++offset;
-	if (offset >= (int)routing_string.size()) return false;
+	if (offset+1 >= (int)routing_string.size()) return false;
 
-#if 1 // new for 8.9.7
-	if (routing_string[offset] == '[') {
+	// if the route starts with [ or with a c-style comment it must be an old-syntax classad route
+	if (routing_string[offset] == '[' || (routing_string[offset] == '/' && routing_string[offset+1] == '*')) {
 		// parse as new classad, use an empty defaults ad if none was provided
 		ClassAd dummy;
 		StringList statements;
@@ -3020,51 +3033,6 @@ JobRoute::ParseNext(
 			return false;
 		}
 	}
-#else
-	StringList statements;
-	if (routing_string[offset] == '[') {
-		// parse as new classad, use an empty defaults ad if none was provided
-		ClassAd dummy;
-		if ( ! router_defaults_ad) router_defaults_ad = &dummy;
-		int rval = ConvertClassadJobRouterRouteToXForm(statements, config_name, routing_string, offset, *router_defaults_ad, 0);
-		if (rval < 0) {
-			return false;
-		}
-		m_route_from_classad = true;
-		m_use_pre_route_transform = single_route_knob;
-	} else {
-		// consume lines up to the next transform statement or the next line starting with [
-		const char * input = routing_string.c_str() + offset;
-		StringTokenIterator lines(input, 512, "\n");
-		for (const char * line = lines.first(); line; line = lines.next()) {
-			const char * p = lines.remain();
-			if (starts_with_ignore_case(line, "transform") && ( ! line[9] || isspace(line[9]))) {
-				if ( ! p) {
-					offset = (int)routing_string.size();
-				} else {
-					offset += (p - input);
-				}
-				break;
-			}
-			statements.append(line);
-			while (p && isspace(*p)) ++p;
-			if (p && *p == '[') {
-				offset += (p - input);
-				break;
-			}
-		}
-		m_route_from_classad = false;
-		m_use_pre_route_transform = true;
-	}
-
-	if (statements.isEmpty()) {
-		return false;
-	}
-	int nlines = m_route.open(statements, WireMacro, errmsg);
-	if (nlines < 0) {
-		return false;
-	}
-#endif
 	// for routes that come from a single knob. (i.e. JOB_ROUTER_ROUTE_FOO) that name *must* be the same as the config name
 	if (single_route_knob && ! m_name.empty() && (YourStringNoCase(config_name) != m_name.c_str())) {
 		dprintf(D_ALWAYS, "WARNING: The Name specified in JOB_ROUTER_ROUTE_%s was \"%s\". using %s instead.", config_name, m_name.c_str(), config_name);
