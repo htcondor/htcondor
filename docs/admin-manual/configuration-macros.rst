@@ -6348,6 +6348,13 @@ do not specify their own with:
     seconds in the future. The default is to only refuse jobs whose
     expiration time has already passed.
 
+:macro-def:`CONTAINER_SHARED_FS`
+    This is a list of strings that name directories which are shared
+    on the execute machines and may contain container images under them.
+    The default value is /cvmfs.  When a container universe job lists
+    a *condor_image* that is under one of these directories, HTCondor
+    knows not to try to transfer the file to the worker node.
+
 condor_preen Configuration File Entries
 ----------------------------------------
 
