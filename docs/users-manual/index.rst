@@ -22,6 +22,7 @@ Users' Manual
    parallel-applications
    virtual-machine-applications
    docker-universe-applications
+   container-universe-jobs
    self-checkpointing-applications
    time-scheduling-for-job-execution
    special-environment-considerations
