@@ -75,8 +75,8 @@ BaseShadow::BaseShadow() {
 	attemptingReconnectAtStartup = false;
 	m_force_fast_starter_shutdown = false;
 	m_committed_time_finalized = false;
-	m_download_file_stats = ClassAd();
-	m_upload_file_stats = ClassAd();
+	m_prev_run_upload_file_stats = ClassAd();
+	m_prev_run_download_file_stats = ClassAd();
 }
 
 BaseShadow::~BaseShadow() {
@@ -135,6 +135,15 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 	if( !jobAd->LookupFloat(ATTR_BYTES_RECVD, prev_run_bytes_recvd) ) {
 		prev_run_bytes_recvd = 0;
+	}
+
+	ClassAd* prev_upload_stats = (ClassAd*)jobAd->Lookup(ATTR_TRANSFER_INPUT_STATS);
+	if (prev_upload_stats) {
+		m_prev_run_upload_file_stats = *prev_upload_stats;
+	}
+	ClassAd* prev_download_stats = (ClassAd*)jobAd->Lookup(ATTR_TRANSFER_OUTPUT_STATS);
+	if (prev_download_stats) {
+		m_prev_run_download_file_stats = *prev_download_stats;
 	}
 
 		// construct the core file name we'd get if we had one.
@@ -1322,16 +1331,13 @@ BaseShadow::updateJobInQueue( update_t type )
 
 	ftAd.Assign(ATTR_BYTES_RECVD, (prev_run_bytes_recvd + bytesSent()) );
 
-	classad::ClassAdUnParser unparser;
 	ClassAd upload_file_stats;
 	ClassAd download_file_stats;
-	std::string upload_file_stats_str;
-	std::string download_file_stats_str;
 	getFileTransferStats(upload_file_stats, download_file_stats);
-	unparser.Unparse(upload_file_stats_str, &upload_file_stats);
-	unparser.Unparse(download_file_stats_str, &download_file_stats);
-	ftAd.Assign(ATTR_TRANSFER_INPUT_STATS, upload_file_stats_str);
-	ftAd.Assign(ATTR_TRANSFER_OUTPUT_STATS, download_file_stats_str);
+	ClassAd* updated_upload_stats = updateFileTransferStats(m_prev_run_upload_file_stats, upload_file_stats);
+	ClassAd* updated_download_stats = updateFileTransferStats(m_prev_run_download_file_stats, download_file_stats);
+	ftAd.Insert(ATTR_TRANSFER_INPUT_STATS, updated_upload_stats);
+	ftAd.Insert(ATTR_TRANSFER_OUTPUT_STATS, updated_download_stats);
 
 	FileTransferStatus upload_status = XFER_STATUS_UNKNOWN;
 	FileTransferStatus download_status = XFER_STATUS_UNKNOWN;

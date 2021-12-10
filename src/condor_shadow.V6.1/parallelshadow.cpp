@@ -886,14 +886,23 @@ ParallelShadow::bytesReceived( void )
 void
 ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_stats)
 {
-	//int upload_file_cnt = 0;
-	//int download_file_cnt = 0;
 	MpiResource* mpi_res;
 	for( size_t i=0; i<ResourceList.size() ; i++ ) {
 		mpi_res = ResourceList[i];
-		m_upload_file_stats = mpi_res->m_upload_file_stats;
-		m_download_file_stats = mpi_res->m_download_file_stats;
+		ClassAd* res_upload_file_stats = &mpi_res->m_upload_file_stats;
+		ClassAd* res_download_file_stats = &mpi_res->m_download_file_stats;
+		// TODO: Iterate through all the attributes, add results into upload_stats, download_stats
+		//upload_stats = m_upload_file_stats;
+		//download_stats = m_download_file_stats;
 	}
+}
+
+ClassAd*
+ParallelShadow::updateFileTransferStats(ClassAd& old_stats, ClassAd &new_stats)
+{
+	// TODO: Implement this
+	ClassAd* updated_stats = new ClassAd();
+	return updated_stats;
 }
 
 void
