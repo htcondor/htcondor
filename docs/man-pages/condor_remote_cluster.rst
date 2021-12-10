@@ -1,5 +1,5 @@
 *condor_remote_cluster*
-================
+=======================
 
 Manage and configure the clusters to be accessed.
 :index:`condor_remote_cluster<single: condor_remote_cluster; HTCondor commands>`

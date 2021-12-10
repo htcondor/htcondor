@@ -7935,11 +7935,11 @@ These macros affect the *condor_job_router* daemon.
 
     .. code-block:: console
 
-        $ condor_qedit -constraint 'RoutedToJobId =!= undefined && \
-          ManagedManager == "insert_old_name"' \
+        $ condor_qedit -constraint \
+        'RoutedToJobId =!= undefined && ManagedManager == "insert_old_name"' \
           ManagedManager '"insert_new_name"'
-        condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
-          RoutedBy '"insert_new_name"'
+        $ condor_qedit -constraint \
+        'RoutedBy == "insert_old_name"' RoutedBy '"insert_new_name"'
 
 :macro-def:`JOB_ROUTER_RELEASE_ON_HOLD`
     A boolean value that defaults to ``True``. It controls how the
