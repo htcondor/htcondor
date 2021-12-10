@@ -4192,7 +4192,11 @@ details.
 :macro-def:`DOCKER_EXTRA_ARGUMENTS`
     Any additional command line options the administrator wants to be
     added to the docker container create command line can be set with
-    this parameter.
+    this parameter. Note that the admin should be careful setting this,
+    it is intended for newer docker options that HTCondor doesn't support
+    directly.  Arbitrary docker options may break docker universe, for example
+    don't pass the --rm flag in DOCKER_EXTRA_ARGUMENTS, because then
+    HTCondor cannot get the final exit status from a docker job.
 
 :macro-def:`OPENMPI_INSTALL_PATH`
     The location of the Open MPI installation on the local machine.
