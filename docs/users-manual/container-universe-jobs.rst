@@ -19,8 +19,8 @@ image with the
 **container_image** command.
 
 This container image may describe an image in a docker-style repo if it
-is prefixed with docker://, or a singularity .sif image on disk, or a
-singularity sandbox image (an exploded directory).  *condor_submit*
+is prefixed with ``docker://``, or a Singularity ``.sif`` image on disk, or a
+Singularity sandbox image (an exploded directory).  *condor_submit*
 will parse this image and advertise what type of container image it
 is, and match with startds that can support that image.
 
@@ -29,7 +29,7 @@ to never be transfered by setting
 
 .. code-block:: condor-submit
 
-      should_container = no
+      should_transfer_container = no
 
 Here is a complete submit description file for a sample container universe
 job:
