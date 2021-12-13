@@ -115,6 +115,9 @@ Source5: condor_config.local.dedicated.resource
 
 Source8: htcondor.pp
 
+# Patch credmon-oauth to use Python 2 on EL7
+Patch1: rhel7-python2.patch
+
 # Patch to use Python 2 for file transfer plugins
 # The use the python-requests library and the one in EPEL is based Python 3.6
 # However, Amazon Linux 2 has Python 3.7
@@ -537,18 +540,26 @@ the ClassAd library and HTCondor from python
 %endif
 
 
-%if 0%{?rhel} == 7
 #######################
 %package credmon-oauth
 Summary: OAuth2 credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
+%if 0%{?rhel} == 7
 Requires: python2-condor
 Requires: python2-requests-oauthlib
 Requires: python-six
 Requires: python-flask
 Requires: python2-cryptography
 Requires: python2-scitokens
+%else
+Requires: python3-condor
+Requires: python3-requests-oauthlib
+Requires: python3-six
+Requires: python3-flask
+Requires: python3-cryptography
+Requires: python3-scitokens
+%endif
 Requires: httpd
 Requires: mod_wsgi
 
@@ -564,7 +575,7 @@ Summary: Vault credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor
-Requires: python-six
+Requires: python3-six
 %if 0%{?osg}
 # Although htgettoken is only needed on the submit machine and
 #  condor-credmon-vault is needed on both the submit and credd machines,
@@ -688,6 +699,11 @@ exit 0
 %else
 # For release tarballs
 %setup -q -n %{name}-%{tarball_version}
+%endif
+
+# Patch credmon-oauth to use Python 2 on EL7
+%if 0%{?rhel} == 7
+%patch1 -p1
 %endif
 
 # Patch to use Python 2 for file transfer plugins
@@ -1556,7 +1572,6 @@ rm -rf %{buildroot}
 %endif
 %endif
 
-%if 0%{?rhel} == 7
 %files credmon-oauth
 %doc examples/condor_credmon_oauth
 %_sbindir/condor_credmon_oauth
@@ -1569,6 +1584,7 @@ rm -rf %{buildroot}
 %ghost %_var/lib/condor/oauth_credentials/wsgi_session_key
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
+%if 0%{?rhel} == 7
 ###
 # Backwards compatibility with the previous versions and configs of scitokens-credmon
 %_bindir/condor_credmon_oauth
