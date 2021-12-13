@@ -566,7 +566,6 @@ Requires: mod_wsgi
 %description credmon-oauth
 The OAuth2 credmon allows users to obtain credentials from configured
 OAuth2 endpoints and to use those credentials securely inside running jobs.
-%endif
 
 
 #######################
