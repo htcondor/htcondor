@@ -209,5 +209,5 @@ def parse_history_ad_file(adfile):
         logging.error(f"Could not read {adfile}: {str(e)}")
         return
     except Exception:
-        logging.exception(f"Error while reading {adfile} ({str(e)}, displaying traceback.")
+        logging.exception(f"Error while reading {adfile} ({str(e)}), displaying traceback.")
         return
