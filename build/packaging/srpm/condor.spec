@@ -925,8 +925,6 @@ rm -f %{buildroot}/%{_bindir}/condor_check_password
 rm -f %{buildroot}/%{_bindir}/condor_check_config
 %endif
 
-# For EL7, move oauth credmon WSGI script out of libexec to /var/www
-%if 0%{?rhel} == 7
 mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth
 mv %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi
 
@@ -934,17 +932,13 @@ mv %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi %{buildroot}/%{_
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-oauth-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-credmon.conf
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-oauth-tokens.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-tokens.conf
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
-%endif
 
 # Move vault credmon config file out of examples and into config.d
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-vault-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-vault-credmon.conf
 
-# For non-EL7, remove oauth credmon from the buildroot
-%if 0%{?rhel} > 7 || 0%{?fedora}
 rm -f %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi
 rm -f %{buildroot}/%{_sbindir}/condor_credmon_oauth
 rm -f %{buildroot}/%{_sbindir}/scitokens_credential_producer
-%endif
 
 ###
 # Backwards compatibility on EL7 with the previous versions and configs of scitokens-credmon
