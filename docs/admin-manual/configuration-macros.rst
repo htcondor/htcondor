@@ -4174,25 +4174,29 @@ details.
 
 :macro-def:`DOCKER_DROP_ALL_CAPABILITIES`
     A class ad expression, which defaults to true. Evaluated in the
-    context of the job ad and the machine ad, when true, runs the docker
+    context of the job ad and the machine ad, when true, runs the Docker
     container with the command line option -drop-all-capabilities.
     Admins should be very careful with this setting, and only allow
     trusted users to run with full Linux capabilities within the
     container.
 
 :macro-def:`DOCKER_PERFORM_TEST`
-    When the *condor_startd* starts up, it runs a simple docker
-    container to verify that docker completely works.  If 
+    When the *condor_startd* starts up, it runs a simple Docker
+    container to verify that Docker completely works.  If 
     DOCKER_PERFORM_TEST is false, this test is skipped.
 
 :macro-def:`DOCKER_RUN_UNDER_INIT`
     A boolean value which defaults to true, which tells the worker
-    node to run docker universe jobs with the --init option.
+    node to run Docker universe jobs with the --init option.
     
 :macro-def:`DOCKER_EXTRA_ARGUMENTS`
     Any additional command line options the administrator wants to be
-    added to the docker container create command line can be set with
-    this parameter.
+    added to the Docker container create command line can be set with
+    this parameter. Note that the admin should be careful setting this,
+    it is intended for newer Docker options that HTCondor doesn't support
+    directly.  Arbitrary Docker options may break Docker universe, for example
+    don't pass the --rm flag in DOCKER_EXTRA_ARGUMENTS, because then
+    HTCondor cannot get the final exit status from a Docker job.
 
 :macro-def:`OPENMPI_INSTALL_PATH`
     The location of the Open MPI installation on the local machine.
@@ -6344,6 +6348,13 @@ do not specify their own with:
     seconds in the future. The default is to only refuse jobs whose
     expiration time has already passed.
 
+:macro-def:`CONTAINER_SHARED_FS`
+    This is a list of strings that name directories which are shared
+    on the execute machines and may contain container images under them.
+    The default value is /cvmfs.  When a container universe job lists
+    a *condor_image* that is under one of these directories, HTCondor
+    knows not to try to transfer the file to the worker node.
+
 condor_preen Configuration File Entries
 ----------------------------------------
 
@@ -7935,11 +7946,11 @@ These macros affect the *condor_job_router* daemon.
 
     .. code-block:: console
 
-        $ condor_qedit -constraint 'RoutedToJobId =!= undefined && \
-          ManagedManager == "insert_old_name"' \
+        $ condor_qedit -constraint \
+        'RoutedToJobId =!= undefined && ManagedManager == "insert_old_name"' \
           ManagedManager '"insert_new_name"'
-        condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
-          RoutedBy '"insert_new_name"'
+        $ condor_qedit -constraint \
+        'RoutedBy == "insert_old_name"' RoutedBy '"insert_new_name"'
 
 :macro-def:`JOB_ROUTER_RELEASE_ON_HOLD`
     A boolean value that defaults to ``True``. It controls how the

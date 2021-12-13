@@ -13,6 +13,7 @@ universes:
 -  local
 -  parallel
 -  vm
+-  container
 -  docker
 
 The **universe** :index:`universe<single: universe; submit commands>` under which
@@ -33,8 +34,11 @@ that require multiple machines for one job. See the
 :doc:`/users-manual/parallel-applications` section for more
 about the Parallel universe. :index:`vm<single: vm; universe>` The vm universe
 allows users to run jobs where the job is no longer a simple executable,
-but a disk image, facilitating the execution of a virtual machine. The
-docker universe runs a Docker container as an HTCondor job.
+but a disk image, facilitating the execution of a virtual machine. Container
+universe allows the user to specify a container image for one of many possible
+container runtimes, just as singularity or docker, and condor will run the job
+in the appropriate container runtimes. The docker universe runs a Docker container 
+as an HTCondor job.
 
 Vanilla Universe
 ''''''''''''''''
@@ -135,4 +139,13 @@ Docker Universe
 
 The docker universe runs a docker container on an execute host as a job.
 Please see the :doc:`/users-manual/docker-universe-applications` section for
+details.
+
+Container Universe
+''''''''''''''''''
+
+:index:`container<single: container; universe>` :index:`container universe`
+
+The container universe runs a container on an execute host as a job.
+Please see the :doc:`/users-manual/container-universe-jobs` section for
 details.

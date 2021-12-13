@@ -271,6 +271,16 @@ all attributes.
     yet completed. Measured in the number of seconds since the epoch
     (00:00:00 UTC, Jan 1, 1970).
 
+:index:`ConcurrencyLimits<single: ConcurrencyLimits; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ConcurrencyLimits>`
+
+``ConcurrencyLimits``
+    A string list, delimited by commas and space characters. The items
+    in the list identify named resources that the job requires. The
+    value can be a ClassAd expression which, when evaluated in the
+    context of the job ClassAd and a matching machine ClassAd, results
+    in a string list.
+
 :index:`CondorPlatform<single: CondorPlatform; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; CondorPlatform>`
 
@@ -287,15 +297,12 @@ all attributes.
     command that created this job.  Note this may be different than the
     version of the HTCondor daemon that runs the job.
 
-:index:`ConcurrencyLimits<single: ConcurrencyLimits; ClassAd job attribute>`
-:index:`job ClassAd attribute<single: job ClassAd attribute; ConcurrencyLimits>`
+:index:`ContainerImage<single: ContainerImage; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ContainerImage>`
 
-``ConcurrencyLimits``
-    A string list, delimited by commas and space characters. The items
-    in the list identify named resources that the job requires. The
-    value can be a ClassAd expression which, when evaluated in the
-    context of the job ClassAd and a matching machine ClassAd, results
-    in a string list.
+``ContainerImage``
+    For Container universe jobs, the string that names the container image to be run
+    the job in.
 
 :index:`CumulativeSlotTime<single: CumulativeSlotTime; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; CumulativeSlotTime>`
@@ -433,9 +440,15 @@ all attributes.
     will default to an initial value of the sum of the job's executable
     and all input files.
 
+:index:`DockerImage<single: DockerImage; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; DockerImage>`
+
+``DockerImage``
+    For Docker and Container universe jobs, a string that names the docker image to run
+    inside the container.
+
 :index:`EC2AccessKeyId<single: EC2AccessKeyId; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; EC2AccessKeyId>`
-
 
 ``EC2AccessKeyId``
     Used for grid type ec2 jobs; a string taken from the definition of
@@ -2376,6 +2389,12 @@ all attributes.
     and/or files that should be transferred from the execute machine to the
     submit machine's spool when the job successfully checkpoints.
 
+:index:`job ClassAd attribute<single: job ClassAd attribute; TransferContainer>`
+
+``TransferContainer``
+    A boolean expresion that controls whether the HTCondor should transfer the
+    container image from the submit node to the worker node.
+
 :index:`job ClassAd attribute<single: job ClassAd attribute; TransferErr>`
 
 ``TransferErr``
@@ -2534,6 +2553,20 @@ all attributes.
     The full path and file name on the submit machine of the log file of
     job events.
 
+
+:index:`WantContainer<single: WantContainer; ClassAd job attribute>`
+
+``WantContainer``
+    A boolean that when true, tells HTCondor to run this job in container
+    universe.  Note that container universe jobs are a "topping" above vanilla
+    universe, and the JobUniverse attribute of container jobs will be 5 (vanilla)
+
+:index:`WantDocker<single: WantDocker; ClassAd job attribute>`
+
+``WantDocker``
+    A boolean that when true, tells HTCondor to run this job in docker
+    universe.  Note that docker universe jobs are a "topping" above vanilla
+    universe, and the JobUniverse attribute of docker jobs will be 5 (vanilla)
 
 :index:`WantFTOnCheckpoint<single: WantFTOnCheckpoint; ClassAd job attribute>`
 

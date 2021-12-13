@@ -17,6 +17,10 @@ Release Notes:
 
 New Features:
 
+- Added new Container Universe that allows users to describe container
+  images that can be run in Singularity or Docker or other container runtimes.
+  :jira:`850`
+
 - Docker universe jobs can now be user-level checkpointed by setting
   checkpoint_exit_code in submit files.
   :jira:`841`

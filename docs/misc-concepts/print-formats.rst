@@ -137,7 +137,7 @@ and the summary line.  These sections can be multiple lines, but must begin with
    Sort the ClassAds by evaluating ``<sort-expr>``.  If multiple sort keys are desired, the ``GROUP BY`` line
    can be followed by lines containing additional expressions, for example
 
-   .. code-block::
+   .. code-block:: condor-config
 
      GROUP BY
        Owner
@@ -153,7 +153,7 @@ Examples
 
 This print format file produces the default ``-nobatch`` output of *condor_q*
 
-.. code-block::
+.. code-block:: condor-config
 
    # queue.cpf
    # produce the standard output of condor_q
@@ -171,7 +171,7 @@ This print format file produces the default ``-nobatch`` output of *condor_q*
 
 This print format file produces only totals
 
-.. code-block::
+.. code-block:: condor-config
 
    # q_totals.cpf
    # show only totals with condor_q
@@ -180,7 +180,7 @@ This print format file produces only totals
 
 This print format file shows typical fields of the Schedd autoclusters.
 
-.. code-block::
+.. code-block:: condor-config
 
    # negotiator_autocluster.cpf
    SELECT FROM AUTOCLUSTER
@@ -195,7 +195,7 @@ This print format file shows typical fields of the Schedd autoclusters.
 
 This print format file shows the use of ``SELECT UNIQUE`` 
 
-.. code-block::
+.. code-block:: condor-config
 
    # count_jobs_by_owner.cpf
    # aggregate by the given attributes, return unique values plus count and jobids.
