@@ -218,12 +218,11 @@ bool JobSets::removeJobFromSet(JobQueueJob & job)
 				ATTR_TOTAL_REMOVED_JOBS, "Scheduler" ATTR_TOTAL_REMOVED_JOBS,
 				ATTR_TOTAL_COMPLETED_JOBS, "Scheduler" ATTR_TOTAL_COMPLETED_JOBS,
 			};
-			int ix = (job.Status() - REMOVED) + (job.Universe() == CONDOR_UNIVERSE_SCHEDULER) ? 2 : 0;
+			int ix = 2 * (job.Status() - REMOVED) + (job.Universe() == CONDOR_UNIVERSE_SCHEDULER) ? 1 : 0;
 			const char * attr = attrs[ix];
 			int val = 0;
 			jobset->LookupInteger(attr, val);
 			val++;
-			jobset->Assign(attr, val);
 			SetSecureAttributeInt(jobset->jid.cluster, jobset->jid.proc, attr, val);
 		}
 
