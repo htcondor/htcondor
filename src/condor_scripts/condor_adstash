@@ -64,8 +64,8 @@ def stash_ads(args):
     starttime = time.time()
 
     # Read ads from disk
-    if args.ads:
-        logging.info(f"Reading ads from {args.ads}")
+    if args.ad_file:
+        logging.info(f"Reading ads from {args.ad_file}")
         if args.schedd_history:
             logging.warning(f"Skipping querying schedds since --ads was set.")
             args.schedd_history = False
@@ -73,7 +73,7 @@ def stash_ads(args):
             logging.warning(f"Skipping querying startds since --ads was set.")
             args.startd_history = False
         history.process_custom_ads(
-            job_ad_file=args.ads,
+            job_ad_file=args.ad_file,
             start_time=starttime,
             args=args,
         )
@@ -128,7 +128,7 @@ def main():
     args.read_only = args.read_only or args.dry_run
 
     # custom ad file implies standalone mode
-    args.standalone = args.standalone or (args.ads is not None)
+    args.standalone = args.standalone or (args.ad_file is not None)
 
     # set up logging
     utils.set_up_logging(args)

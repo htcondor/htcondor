@@ -194,13 +194,20 @@ def parse_history_ad_file(adfile):
     cannot handle files with "weird" ad separators
     (e.g. "**** metadataA=foo metadata2=bar")
     """
-    with open(adfile) as f:
-        ad_string = ""
-        for line in f:
-            if line.startswith("***") or line.strip() == "":
-                if ad_string == "":
-                    continue
-                else:
-                    yield classad.parseOne(ad_string)
-                    ad_string = ""
-            ad_string += line
+    try:
+        with open(adfile) as f:
+            ad_string = ""
+            for line in f:
+                if line.startswith("***") or line.strip() == "":
+                    if ad_string == "":
+                        continue
+                    else:
+                        yield classad.parseOne(ad_string)
+                        ad_string = ""
+                ad_string += line
+    except IOError as e:
+        logging.error(f"Could not read {adfile}: {str(e)}")
+        return
+    except Exception:
+        logging.exception(f"Error while reading {adfile} ({str(e)}, displaying traceback.")
+        return

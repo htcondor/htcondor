@@ -279,11 +279,11 @@ def get_config(argv=None):
         ),
     )
     parser.add_argument(
-        "--ads",
+        "--ad_file",
         type=Path,
-        metavar="ADFILE",
+        metavar="PATH",
         help=(
-            "Load Job ClassAds from ADFILE instead of querying daemons. "
+            "Load Job ClassAds from a file instead of querying daemons. "
             "Implies --standalone, ignores --schedd_history and --startd_history."
         ),
     )

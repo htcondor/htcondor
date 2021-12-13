@@ -11,7 +11,7 @@ Synopsis
 
 **condor_adstash** [**--help** ]
 
-**condor_adstash** [**--process_name** *NAME*] [**--standalone** ] [**--ads** *ADFILE*]
+**condor_adstash** [**--process_name** *NAME*] [**--standalone** ] [**--ad_file** *PATH*]
 [**--sample_interval** *SECONDS*] [**--checkpoint_file** *PATH*]
 [**--log_file** *PATH*] [**--log_level** *LEVEL*]
 [**--threads** *THREADS*] [**--collectors** *COLLECTORS*]
@@ -62,8 +62,8 @@ Options
  **--standalone**
     Run condor_adstash in standalone mode (runs once, does not attempt to
     contact *condor_master*)
- **--ads ADFILE**
-    Load Job ClassAds from ADFILE instead of querying
+ **--ad_file** *PATH*
+    Load Job ClassAds from a file instead of querying
     daemons. Implies *--standalone*, ignores
     *--schedd_history* and *--startd_history*.
  **--sample_interval** *SECONDS*

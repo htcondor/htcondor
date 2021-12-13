@@ -33,7 +33,7 @@ New Features:
   :jira:`733`
 
 - **condor_adstash** can parse and push ClassAds from a file to
-  Elasticsearch by using the ``--ads FILENAME`` option.
+  Elasticsearch by using the ``--ad_file PATH`` option.
   :jira:`779`
 
 Bugs Fixed:
