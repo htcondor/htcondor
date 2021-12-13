@@ -936,13 +936,6 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/RE
 # Move vault credmon config file out of examples and into config.d
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-vault-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-vault-credmon.conf
 
-# For Fedora, remove oauth credmon from the buildroot
-%if 0%{?fedora}
-rm -f %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi
-rm -f %{buildroot}/%{_sbindir}/condor_credmon_oauth
-rm -f %{buildroot}/%{_sbindir}/scitokens_credential_producer
-%endif
-
 ###
 # Backwards compatibility on EL7 with the previous versions and configs of scitokens-credmon
 %if 0%{?rhel} == 7
