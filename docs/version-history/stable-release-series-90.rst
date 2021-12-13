@@ -32,10 +32,10 @@ Bugs Fixed:
   status when the job policy indicated it should be held.
   :jira:`869`
 
-- Fixed a bug running jobs in a Singularity container jobs where 
+- Fixed a bug running jobs in a Singularity container where 
   the environment variables added by HTCondor could include incorrect
   pathnames to the location of the job's scratch directory.
-  This occued when setting the ``SINGULARITY_TARGET_DIR`` config option.
+  This occurred when setting the ``SINGULARITY_TARGET_DIR`` config option.
   :jira:`885`
 
 - Fixed a bug where the *condor_job_router* could crash while trying to
