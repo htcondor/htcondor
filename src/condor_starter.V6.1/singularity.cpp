@@ -364,6 +364,11 @@ Singularity::convertEnv(Env *job_env) {
 	std::list<std::string>::iterator it;
 	for (it = envNames.begin(); it != envNames.end(); it++) {
 		std::string name = *it;
+
+		// Skip env vars that already start with SINGULARITYENV_, as they
+		// have already been converted (probably via retargetEnvs()).
+		if (name.rfind("SINGULARITYENV_",0)==0) continue;
+
 		MyString value;
 		job_env->GetEnv(name.c_str(), value);
 		std::string new_name = "SINGULARITYENV_" + name;
