@@ -1389,22 +1389,22 @@ FileTransfer::DetermineWhichFilesToSend() {
 			// it's an explicit list, so we don't have to worry about
 			// implicitly sending the file twice.
 			//
-			std::string fn;
-			bool streaming = false;
-			if( jobAd.LookupString( ATTR_JOB_OUTPUT, fn ) ) {
+			if(! JobStdoutFile.empty()) {
+				bool streaming = false;
 				jobAd.LookupBool( ATTR_STREAM_OUTPUT, streaming );
-				if( (! streaming) && (! nullFile(fn.c_str())) ) {
-					if(! CheckpointFiles->file_contains(fn.c_str()) ) {
-						CheckpointFiles->append(fn.c_str());
+				if( (! streaming) && (! nullFile(JobStdoutFile.c_str())) ) {
+					if(! CheckpointFiles->file_contains(JobStdoutFile.c_str()) ) {
+						CheckpointFiles->append(JobStdoutFile.c_str());
 					}
 				}
 			}
 
-			if( jobAd.LookupString( ATTR_JOB_ERROR, fn ) ) {
+			if(! JobStderrFile.empty()) {
+				bool streaming = false;
 				jobAd.LookupBool( ATTR_STREAM_ERROR, streaming );
-				if( (! streaming) && (! nullFile(fn.c_str())) ) {
-					if(! CheckpointFiles->file_contains(fn.c_str()) ) {
-						CheckpointFiles->append(fn.c_str());
+				if( (! streaming) && (! nullFile(JobStderrFile.c_str())) ) {
+					if(! CheckpointFiles->file_contains(JobStderrFile.c_str()) ) {
+						CheckpointFiles->append(JobStderrFile.c_str());
 					}
 				}
 			}
