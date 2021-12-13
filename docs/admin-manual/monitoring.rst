@@ -318,8 +318,10 @@ HTCondor supports pushing *condor_schedd* and *condor_startd* job
 history ClassAds to Elasticsearch via the *condor_adstash*
 tool/daemon.
 *condor_adstash* collects job history ClassAds as specified by its
-configuration, converts each ClassAd to a JSON document, and pushes
-each doc to the configured Elasticsearch index.
+configuration, either querying specified daemons' histories
+or reading job history ClassAds from a specified file,
+converts each ClassAd to a JSON document,
+and pushes each doc to the configured Elasticsearch index.
 The index is automatically created if it does not exist, and fields
 are added and configured based on well known job ClassAd attributes.
 (Custom attributes are also pushed, though always as keyword fields.)
