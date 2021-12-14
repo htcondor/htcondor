@@ -11,7 +11,7 @@ Release Notes:
 
 .. HTCondor version 9.6.0 released on Month Date, 2022.
 
-- This version includes all the updates from :ref:`lts-version-history-90x`.
+- This version includes all the updates from :ref:`lts-version-history-9010`.
 
 - HTCondor version 9.6.0 not yet released.
 
@@ -28,7 +28,7 @@ Version 9.5.0
 
 Release Notes:
 
-.. HTCondor version 9.5.0 released on Month Date, 2021.
+.. HTCondor version 9.5.0 released on Month Date, 2022.
 
 - This version includes all the updates from :ref:`lts-version-history-909`.
 
