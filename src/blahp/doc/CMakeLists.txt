@@ -23,6 +23,10 @@ endif()
 
 find_program(XSLTPROC_EXECUTABLE xsltproc)
 
+# If we don't have xsltproc on the system, don't bother making manpages
+
+if (NOT (${XSLTPROC_EXECUTABLE} STREQUAL "XSLTPROC_EXECUTABLE-NOTFOUND"))
+
 find_file(XSLTPROC_MANPAGE_STYLESHEET
     NAMES docbook.xsl
     PATHS /usr/share/sgml/docbook/xsl-stylesheets/manpages
@@ -51,3 +55,4 @@ endforeach()
 add_custom_target(all_manpages ALL
     DEPENDS ${MAN1PAGES_TO_CREATE} )
 
+endif()

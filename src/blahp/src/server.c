@@ -83,6 +83,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/time.h>
 
 #if defined(HAVE_GLOBUS)
 #include "globus_gsi_credential.h"
@@ -155,6 +156,7 @@ int CEReq_parse(classad_context cad, char* filename, char *proxysubject, char *p
 char* outputfileRemaps(char *sb,char *sbrmp);
 int check_TransferINOUT(classad_context cad, char **command, char *reqId, char **resultLine, char ***files_to_clean_up);
 char *ConvertArgs(char* args, char sep);
+int enqueue_result(char *res);
 
 /* Global variables */
 struct blah_managed_child {
@@ -1498,7 +1500,7 @@ cleanup_argv:
 		exit(MALLOC_ERROR);
 	}
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 #define CMD_CANCEL_JOB_ARGS 2
@@ -1569,7 +1571,7 @@ cmd_cancel_job(void* args)
 
 	/* Multiple job cancellation */
 	res_length = strlen(cancel_command.output);
-	for (begin_res = cancel_command.output; end_res = memchr(cancel_command.output, '\n', res_length); begin_res = end_res + 1)
+	for (begin_res = cancel_command.output; (end_res = memchr(cancel_command.output, '\n', res_length)); begin_res = end_res + 1)
 	{
 		*end_res = 0;
 		resultLine = make_message("%s%s", reqId, begin_res);
@@ -1593,7 +1595,7 @@ cleanup_argv:
 		free (resultLine);
 	}
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 #define CMD_STATUS_JOB_ARGS 2
@@ -1659,7 +1661,7 @@ cmd_status_job(void *args)
 	/* Free up all arguments */
 	free_args(argv);
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 void*
@@ -1773,7 +1775,7 @@ wrap_up:
 		free (resultLine);
 	}
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 int
@@ -1982,7 +1984,7 @@ cmd_renew_proxy(void *args)
 						argv[CMD_RENEW_PROXY_ARGS+1] = workernode;
 						cmd_send_proxy_to_worker_node((void *)argv);
 						if (old_proxy != NULL) free(old_proxy);
-						return;
+						return NULL;
 					}
 					else
 					{
@@ -2028,7 +2030,7 @@ cmd_renew_proxy(void *args)
 	/* Free up all arguments */
 	free_args(argv);
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 #define CMD_SEND_PROXY_TO_WORKER_NODE_ARGS 4
@@ -2123,7 +2125,7 @@ cmd_send_proxy_to_worker_node(void *args)
 	/* Free up all arguments */
 	free_args(argv);
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 void
@@ -2263,7 +2265,7 @@ hold_resume(void* args, int action )
 		                                        hold_res_exec(jobdescr[i], reqId, "hold", 1, argv + HOLD_RESUME_ARGS + 1);
 		                                }
 		                                else
-		                                if (resultLine = make_message("%s 1 Job\\ Idle\\ jobId\\ %s", reqId,jobdescr[i]))
+		                                if ((resultLine = make_message("%s 1 Job\\ Idle\\ jobId\\ %s", reqId,jobdescr[i])))
 		                                {
 		                                        enqueue_result(resultLine);
 		                                        free(resultLine);
@@ -2274,21 +2276,21 @@ hold_resume(void* args, int action )
 		                                {
 		                                        hold_res_exec(jobdescr[i], reqId, "hold", 2, argv + HOLD_RESUME_ARGS + 1);
 		                                }else
-		                                if (resultLine = make_message("%s 1 \\ Job\\ Running\\ jobId\\ %s", reqId, jobdescr[i]))
+		                                if ((resultLine = make_message("%s 1 \\ Job\\ Running\\ jobId\\ %s", reqId, jobdescr[i])))
 		                                {
 		                                        enqueue_result(resultLine);
 		                                        free(resultLine);
 		                                }
 		                        break;
 		                        case 3:/* REMOVED */
-		                                if (resultLine = make_message("%s 1 Job\\ Removed\\ jobId\\ %s", reqId, jobdescr[i]))
+		                                if ((resultLine = make_message("%s 1 Job\\ Removed\\ jobId\\ %s", reqId, jobdescr[i])))
 		                                {
 		                                        enqueue_result(resultLine);
 		                                        free(resultLine);
 		                                }
 		                        break;
 		                        case 4:/* COMPLETED */
-		                                if (resultLine = make_message("%s 1 Job\\ Completed\\ jobId\\ %s", reqId, jobdescr[i]))
+		                                if ((resultLine = make_message("%s 1 Job\\ Completed\\ jobId\\ %s", reqId, jobdescr[i])))
 		                                {
 		                                        enqueue_result(resultLine);
 		                                        free(resultLine);
@@ -2298,7 +2300,7 @@ hold_resume(void* args, int action )
 		                                if(action == RESUME_JOB)
 		                                        hold_res_exec(jobdescr[i], reqId, "resume", 5, argv + HOLD_RESUME_ARGS + 1);
 		                                else
-		                                if (resultLine = make_message("%s 0 Job\\ Held\\ jobId\\ %s", reqId, jobdescr[i]))
+		                                if ((resultLine = make_message("%s 0 Job\\ Held\\ jobId\\ %s", reqId, jobdescr[i])))
 		                                {
 		                                        enqueue_result(resultLine);
 		                                        free(resultLine);
@@ -2306,7 +2308,7 @@ hold_resume(void* args, int action )
 		                        break;
 		                }
 		        }else
-		        if (resultLine = make_message("%s 1 %s", reqId, errstr[i]))
+		        if ((resultLine = make_message("%s 1 %s", reqId, errstr[i])))
 		        {
 		                enqueue_result(resultLine);
 		                free(resultLine);
@@ -2329,7 +2331,7 @@ cmd_hold_job(void* args)
 {
 	hold_resume(args,HOLD_JOB);
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 void *
@@ -2337,7 +2339,7 @@ cmd_resume_job(void* args)
 {
 	hold_resume(args,RESUME_JOB);
 	sem_post(&sem_total_commands);
-	return;
+	return NULL;
 }
 
 void *
@@ -2387,7 +2389,7 @@ cmd_get_hostport(void *args)
 	free(resultLine);
 	free_args(argv);
 	sem_post(&sem_total_commands);
-	return ;
+	return NULL;
 }
 
 /* Utility functions
@@ -2425,7 +2427,7 @@ set_cmd_string_option(char **command, classad_context cad, const char *attribute
 	}
 
 	if (result == C_CLASSAD_NO_ERROR)
-		if (new_command = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1))
+		if ((new_command = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1)))
 		{
 			strcat(new_command, to_append);
 			*command = new_command;
@@ -2454,7 +2456,7 @@ set_cmd_int_option(char **command, classad_context cad, const char *attribute, c
 	}
 
 	if (result == C_CLASSAD_NO_ERROR)
-		if (new_command = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1))
+		if ((new_command = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1)))
 		{
 			strcat(new_command, to_append);
 			*command = new_command;
@@ -2485,7 +2487,7 @@ set_cmd_bool_option(char **command, classad_context cad, const char *attribute, 
 	}
 
 	if (result == C_CLASSAD_NO_ERROR)
-		if (new_command = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1))
+		if ((new_command = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1)))
 		{
 			strcat(new_command, to_append);
 			*command = new_command;
@@ -2509,11 +2511,11 @@ set_cmd_list_option(char **command, classad_context cad, const char *attribute, 
 	
 	if ((result = classad_get_string_list_attribute(cad, attribute, &list_cont)) == C_CLASSAD_NO_ERROR)
 	{
-		if (to_append = strdup(option))
+		if ((to_append = strdup(option)))
 		{
 			for (str_ptr = list_cont; (*str_ptr) != NULL; str_ptr++)
 			{
-				if (reallocated = (char *) realloc (to_append, strlen(*str_ptr) + strlen(to_append) + 2))
+				if ((reallocated = (char *) realloc (to_append, strlen(*str_ptr) + strlen(to_append) + 2)))
 				{
 					to_append = reallocated;
 					strcat(to_append, " ");
@@ -2533,7 +2535,7 @@ set_cmd_list_option(char **command, classad_context cad, const char *attribute, 
 	}
 
 	if (result == C_CLASSAD_NO_ERROR)
-		if (reallocated = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1))
+		if ((reallocated = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1)))
 		{
 			strcat(reallocated, to_append);
 			*command = reallocated;
@@ -3093,7 +3095,7 @@ getProxyInfo(char* proxname, char** subject, char** fqan)
 	if (execute_cmd(&exe_command) != 0)
 		return 1;
 	fqanlong = NULL;
-	for (begin_res = exe_command.output; end_res = strchr(begin_res, '\n'); begin_res = end_res + 1)
+	for (begin_res = exe_command.output; (end_res = strchr(begin_res, '\n')); begin_res = end_res + 1)
 	{
 		*end_res = 0;
 		if (fqanlong == NULL)
@@ -3564,7 +3566,7 @@ ConvertArgs(char* original, char separator)
 	int i, j;
 	int orig_len;
 
-	char quoted_sep[CONVARG_QUOTSEP_LEN];
+	char quoted_sep[CONVARG_QUOTSEP_LEN + 1];
 	sprintf(quoted_sep, CONVARG_QUOTSEP, separator);
 
 	orig_len = strlen(original);
