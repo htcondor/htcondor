@@ -1,0 +1,10 @@
+diff --git a/src/condor_credd/condor_credmon_oauth/condor_credmon_oauth b/src/condor_credd/condor_credmon_oauth/condor_credmon_oauth
+index b4a655d8fe..7fd038f6f9 100755
+--- a/src/condor_credd/condor_credmon_oauth/condor_credmon_oauth
++++ b/src/condor_credd/condor_credmon_oauth/condor_credmon_oauth
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python3
++#!/usr/bin/env python2
+ 
+ import os
+ import time

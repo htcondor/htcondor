@@ -32,6 +32,12 @@ Bugs Fixed:
   status when the job policy indicated it should be held.
   :jira:`869`
 
+- Fixed a bug running jobs in a Singularity container where 
+  the environment variables added by HTCondor could include incorrect
+  pathnames to the location of the job's scratch directory.
+  This occurred when setting the ``SINGULARITY_TARGET_DIR`` config option.
+  :jira:`885`
+
 - Fixed a bug where the *condor_job_router* could crash while trying to
   report an invalid router configuration when c-style comments were used
   before an old syntax route classad. As a result of this fix the job router
@@ -41,6 +47,17 @@ Bugs Fixed:
 - Fixed a bug where bytes were trying to be written via an ASCII file
   handler in *condor_credmon_oauth* when using Python 3.
   :jira:`633`
+
+- Fixed a bug in **condor_top** where two daemon ClassAds were assumed
+  to be the same if some specific attributes were missing from the
+  latest ClassAd. Also **condor_top** now exits early if no stats are
+  provided by the queried daemon.
+  :jira`:880
+
+- Fixed a bug where the user job log could be written in the wrong
+  directory when a spooled job's output was retrieved with
+  *condor_transfer_data*.
+  :jira:`886`
 
 - Fixed a bug in *condor_adstash* where setting a list of *condor_startds*
   to query in the config lead to no *condor_startds* being queried.
