@@ -48,6 +48,11 @@ Bugs Fixed:
   handler in *condor_credmon_oauth* when using Python 3.
   :jira:`633`
 
+- Fixed a bug where the user job log could be written in the wrong
+  directory when a spooled job's output was retrieved with
+  *condor_transfer_data*.
+  :jira:`886`
+
 - Fixed a bug in *condor_adstash* where setting a list of *condor_startds*
   to query in the config lead to no *condor_startds* being queried.
   :jira:`888`
