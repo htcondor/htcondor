@@ -89,7 +89,7 @@ def get_startds(args=None):
             for ad in name_ads:
                 try:
                     if ad["Name"][0:6] == "slot1@" or not ("@" in ad["Name"]):
-                        if args.startds and not (startd["Machine"] in args.startds.split(",")):
+                        if args.startds and not (ad["Machine"] in args.startds.split(",")):
                             continue
                         # Remote history bindings only exist in startds running 8.9.7+
                         version = tuple([int(x) for x in ad["CondorVersion"].split()[1].split(".")])
