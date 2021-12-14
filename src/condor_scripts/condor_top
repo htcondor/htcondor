@@ -300,10 +300,14 @@ def computeUpdateTimes(old, new):
         t_old = old['MyCurrentTime']
         t_new = new['MyCurrentTime']
 
-    # quit and notify if the ads have the same timestamp
+    # check for same timestamp
     if (t_new - t_old) == 0:
-        sys.stderr.write('Error: ClassAds have the same timestamp.\n')
-        sys.exit(1)
+        if new['MyCurrentTime'] > old['MyCurrentTime']:  # try using MyCurrentTime
+            t_new = new['MyCurrentTime']
+            t_old = old['MyCurrentTime']
+        else:  # quit and notify if the ads have the same timestamp
+            sys.stderr.write('Error: ClassAds have the same timestamp.\n')
+            sys.exit(1)
         
     return (t_old, t_new)
 
