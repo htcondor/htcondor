@@ -424,6 +424,9 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 		if (fetch_opts & fetch_IncludeClusterAd) {
 			request_ad.InsertAttr("IncludeClusterAd", true);
 		}
+		if (fetch_opts & fetch_IncludeJobsetAds) {
+			request_ad.InsertAttr("IncludeJobsetAds", true);
+		}
 	}
 
 	if (match_limit >= 0) {
