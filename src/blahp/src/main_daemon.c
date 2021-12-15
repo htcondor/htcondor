@@ -57,10 +57,9 @@ main(int argc, char *argv[])
     int fd_socket, read_socket;
     int listen_port;
     char client_ip[120];
-    struct hostent *resolved_client;
     struct sockaddr_storage tentative_addr;
     struct sockaddr *cli_addr;
-    int real_addr_size;
+    socklen_t real_addr_size;
     fd_set readfs, masterfs;
     int retcod, status;
     int exit_program = 0;

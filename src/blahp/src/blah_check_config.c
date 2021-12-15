@@ -28,6 +28,8 @@ int
 main(int argc, char *argv[])
 {
 
+	errno = argc; /* quell warning */
+
 	argv0 = argv[0];
 	
 	check_config_file("STDOUT");

@@ -430,7 +430,7 @@ execute_cmd(exec_cmd_t *cmd)
 	}
 
 	/* Do the shell expansion */
-	if(wordexp_err = wordexp(command, &args, WRDE_NOCMD))
+	if((wordexp_err = wordexp(command, &args, WRDE_NOCMD)))
 	{
 		fprintf(stderr,"wordexp: unable to parse the command line \"%s\" (error %d)\n", command, wordexp_err);
 		return(1);

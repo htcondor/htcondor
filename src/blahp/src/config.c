@@ -80,6 +80,7 @@ config_parse_array_values(config_entry *en)
       match_start += pmatch[0].rm_eo;
      }
    }
+  return 0;
  }
 
 int

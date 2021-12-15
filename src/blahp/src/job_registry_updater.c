@@ -183,7 +183,7 @@ job_registry_updater_setup_sender(char **destinations, int n_destinations,
   int i;
   struct addrinfo *ai_ans, *cur_ans;
   unsigned int ifindex;
-  int pretcod,tretcod,retsetsock;
+  int pretcod,retsetsock;
   int tfd;
   job_registry_updater_endpoint *cur, *last=NULL;
   job_registry_updater_endpoint *new_endpoint;
