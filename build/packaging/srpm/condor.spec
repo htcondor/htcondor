@@ -115,6 +115,9 @@ Source5: condor_config.local.dedicated.resource
 
 Source8: htcondor.pp
 
+# Patch credmon-oauth to use Python 2 on EL7
+Patch1: rhel7-python2.patch
+
 # Patch to use Python 2 for file transfer plugins
 # The use the python-requests library and the one in EPEL is based Python 3.6
 # However, Amazon Linux 2 has Python 3.7
@@ -537,25 +540,32 @@ the ClassAd library and HTCondor from python
 %endif
 
 
-%if 0%{?rhel} == 7
 #######################
 %package credmon-oauth
 Summary: OAuth2 credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
+%if 0%{?rhel} == 7
 Requires: python2-condor
 Requires: python2-requests-oauthlib
 Requires: python-six
 Requires: python-flask
 Requires: python2-cryptography
 Requires: python2-scitokens
+%else
+Requires: python3-condor
+Requires: python3-requests-oauthlib
+Requires: python3-six
+Requires: python3-flask
+Requires: python3-cryptography
+Requires: python3-scitokens
+%endif
 Requires: httpd
 Requires: mod_wsgi
 
 %description credmon-oauth
 The OAuth2 credmon allows users to obtain credentials from configured
 OAuth2 endpoints and to use those credentials securely inside running jobs.
-%endif
 
 
 #######################
@@ -564,7 +574,7 @@ Summary: Vault credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor
-Requires: python-six
+Requires: python3-six
 %if 0%{?osg}
 # Although htgettoken is only needed on the submit machine and
 #  condor-credmon-vault is needed on both the submit and credd machines,
@@ -688,6 +698,11 @@ exit 0
 %else
 # For release tarballs
 %setup -q -n %{name}-%{tarball_version}
+%endif
+
+# Patch credmon-oauth to use Python 2 on EL7
+%if 0%{?rhel} == 7
+%patch1 -p1
 %endif
 
 # Patch to use Python 2 for file transfer plugins
@@ -910,8 +925,6 @@ rm -f %{buildroot}/%{_bindir}/condor_check_password
 rm -f %{buildroot}/%{_bindir}/condor_check_config
 %endif
 
-# For EL7, move oauth credmon WSGI script out of libexec to /var/www
-%if 0%{?rhel} == 7
 mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth
 mv %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi
 
@@ -919,17 +932,9 @@ mv %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi %{buildroot}/%{_
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-oauth-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-credmon.conf
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-oauth-tokens.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-tokens.conf
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
-%endif
 
 # Move vault credmon config file out of examples and into config.d
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-vault-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-vault-credmon.conf
-
-# For non-EL7, remove oauth credmon from the buildroot
-%if 0%{?rhel} > 7 || 0%{?fedora}
-rm -f %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi
-rm -f %{buildroot}/%{_sbindir}/condor_credmon_oauth
-rm -f %{buildroot}/%{_sbindir}/scitokens_credential_producer
-%endif
 
 ###
 # Backwards compatibility on EL7 with the previous versions and configs of scitokens-credmon
@@ -1556,7 +1561,6 @@ rm -rf %{buildroot}
 %endif
 %endif
 
-%if 0%{?rhel} == 7
 %files credmon-oauth
 %doc examples/condor_credmon_oauth
 %_sbindir/condor_credmon_oauth
@@ -1569,6 +1573,7 @@ rm -rf %{buildroot}
 %ghost %_var/lib/condor/oauth_credentials/wsgi_session_key
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
+%if 0%{?rhel} == 7
 ###
 # Backwards compatibility with the previous versions and configs of scitokens-credmon
 %_bindir/condor_credmon_oauth

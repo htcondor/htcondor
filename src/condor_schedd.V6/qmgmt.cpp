@@ -7123,11 +7123,15 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 				command_parts.next();
 				auto dest = command_parts.next();
 				if (IsUrl(dest)) {
+					if (!url_remap_commands.empty()) {
+						url_remap_commands += ";";
+					}
 					url_remap_commands += command;
-					url_remap_commands += ";";
 				} else {
+					if (!remap_commands.empty()) {
+						remap_commands += ";";
+					}
 					remap_commands += command;
-					remap_commands += ";";
 				}
 			}
 			if (modify_ad) {
