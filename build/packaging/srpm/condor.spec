@@ -1603,11 +1603,6 @@ rm -rf %{buildroot}
 %config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
 %_bindir/blahpd
 %_sbindir/blah_check_config
-%_sbindir/blah_job_registry_add
-%_sbindir/blah_job_registry_dump
-%_sbindir/blah_job_registry_lkup
-%_sbindir/blah_job_registry_purge
-%_sbindir/blah_job_registry_scan_by_subject
 %_sbindir/blahpd_daemon
 %dir %_libexecdir/blahp
 %_libexecdir/blahp/*

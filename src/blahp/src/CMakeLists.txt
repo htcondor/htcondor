@@ -63,40 +63,49 @@ add_library(libblahp STATIC
 	server.c
 )
 
-# These are not actually libraies, but rather a cmake
-# virtual holder of .o files
-add_library(libbfunctions STATIC Bfunctions.c)
-add_library(libblfunctions STATIC BLfunctions.c)
-
 # programs for 'sbin'
 add_executable(blahpd_daemon main_daemon.c)
 target_link_libraries(blahpd_daemon libblahp)
+install(TARGETS blahpd_daemon RUNTIME DESTINATION ${SBIN_DIR})
 
 if(NOT CONDOR_PACKAGE_NAME)
     set_target_properties(blahpd_daemon PROPERTIES COMPILE_FLAGS ${ClassAd_CXX_FLAGS})
 endif()
 target_link_libraries(blahpd_daemon -lpthread ${ClassAd_LIBRARY})
-add_executable(blah_job_registry_add blah_job_registry_add.c)
-target_link_libraries(blah_job_registry_add libblahp)
 
-add_executable(blah_job_registry_lkup blah_job_registry_lkup.c)
-target_link_libraries(blah_job_registry_lkup libblahp)
-
-add_executable(blah_job_registry_scan_by_subject blah_job_registry_scan_by_subject.c)
-target_link_libraries(blah_job_registry_scan_by_subject libblahp)
-
-if(NOT CONDOR_PACKAGE_NAME)
-    set_target_properties(blah_job_registry_scan_by_subject PROPERTIES COMPILE_FLAGS ${ClassAd_CXX_FLAGS})
-endif()
-target_link_libraries(blah_job_registry_scan_by_subject ${ClassAd_LIBRARY})
+add_library(libbfunctions STATIC Bfunctions.c)
 add_executable(blah_check_config blah_check_config.c)
 target_link_libraries(blah_check_config libbfunctions libblahp)
+install(TARGETS blah_check_config RUNTIME DESTINATION ${SBIN_DIR})
 
-add_executable(blah_job_registry_dump blah_job_registry_dump.c)
-target_link_libraries(blah_job_registry_dump libblahp)
+# These binaries aren't needed by OSG, so let's not build them
+if(WITH_FULL_BLAHP)
 
-add_executable(blah_job_registry_purge blah_job_registry_purge.c)
-target_link_libraries(blah_job_registry_purge libblahp)
+	add_executable(blah_job_registry_add blah_job_registry_add.c)
+	target_link_libraries(blah_job_registry_add libblahp)
+
+	add_executable(blah_job_registry_lkup blah_job_registry_lkup.c)
+	target_link_libraries(blah_job_registry_lkup libblahp)
+
+	add_executable(blah_job_registry_scan_by_subject blah_job_registry_scan_by_subject.c)
+	target_link_libraries(blah_job_registry_scan_by_subject libblahp)
+
+	if(NOT CONDOR_PACKAGE_NAME)
+		set_target_properties(blah_job_registry_scan_by_subject PROPERTIES COMPILE_FLAGS ${ClassAd_CXX_FLAGS})
+	endif()
+	target_link_libraries(blah_job_registry_scan_by_subject ${ClassAd_LIBRARY})
+	add_executable(blah_job_registry_dump blah_job_registry_dump.c)
+	target_link_libraries(blah_job_registry_dump libblahp)
+
+	add_executable(blah_job_registry_purge blah_job_registry_purge.c)
+	target_link_libraries(blah_job_registry_purge libblahp)
+
+	install(TARGETS
+		blah_job_registry_add blah_job_registry_lkup
+		blah_job_registry_scan_by_subject
+		blah_job_registry_dump blah_job_registry_purge
+		RUNTIME DESTINATION ${SBIN_DIR})
+endif()
 
 # programs for 'bin'
 add_executable(blahpd main.c)
@@ -107,40 +116,51 @@ if(NOT CONDOR_PACKAGE_NAME)
 endif()
 target_link_libraries(blahpd -lpthread ${ClassAd_LIBRARY})
 
-# programs for 'libexec'
-add_executable(BLClient BLClient.c)
-target_link_libraries(BLClient libblfunctions libblahp)
+# These binaries aren't needed by OSG, so let's not build them
+if(WITH_FULL_BLAHP)
+	add_library(libblfunctions STATIC BLfunctions.c)
 
-add_executable(BLParserLSF BLParserLSF.c)
-target_link_libraries(BLParserLSF -lpthread)
-target_link_libraries(BLParserLSF libblfunctions libblahp)
+	# programs for 'libexec'
+	add_executable(BLClient BLClient.c)
+	target_link_libraries(BLClient libblfunctions libblahp)
 
-add_executable(BLParserPBS BLParserPBS.c)
-target_link_libraries(BLParserPBS -lpthread)
-target_link_libraries(BLParserPBS libblfunctions libblahp)
+	add_executable(BLParserLSF BLParserLSF.c)
+	target_link_libraries(BLParserLSF -lpthread)
+	target_link_libraries(BLParserLSF libblfunctions libblahp)
 
-add_executable(BUpdaterCondor BUpdaterCondor.c)
-target_link_libraries(BUpdaterCondor -lpthread)
-target_link_libraries(BUpdaterCondor libbfunctions libblahp)
+	add_executable(BLParserPBS BLParserPBS.c)
+	target_link_libraries(BLParserPBS -lpthread)
+	target_link_libraries(BLParserPBS libblfunctions libblahp)
 
-add_executable(BNotifier BNotifier.c)
-target_link_libraries(BNotifier -lpthread)
-target_link_libraries(BNotifier libbfunctions libblahp)
+	add_executable(BUpdaterCondor BUpdaterCondor.c)
+	target_link_libraries(BUpdaterCondor -lpthread)
+	target_link_libraries(BUpdaterCondor libbfunctions libblahp)
 
-add_executable(BUpdaterLSF BUpdaterLSF.c)
-target_link_libraries(BUpdaterLSF -lpthread -lm)
-target_link_libraries(BUpdaterLSF libbfunctions libblahp)
+	add_executable(BNotifier BNotifier.c)
+	target_link_libraries(BNotifier -lpthread)
+	target_link_libraries(BNotifier libbfunctions libblahp)
 
-add_executable(BUpdaterPBS BUpdaterPBS.c)
-target_link_libraries(BUpdaterPBS -lpthread -lm)
-target_link_libraries(BUpdaterPBS libbfunctions libblahp)
+	add_executable(BUpdaterLSF BUpdaterLSF.c)
+	target_link_libraries(BUpdaterLSF -lpthread -lm)
+	target_link_libraries(BUpdaterLSF libbfunctions libblahp)
 
-add_executable(BUpdaterSGE BUpdaterSGE.c)
-target_link_libraries(BUpdaterSGE libbfunctions libblahp)
+	add_executable(BUpdaterPBS BUpdaterPBS.c)
+	target_link_libraries(BUpdaterPBS -lpthread -lm)
+	target_link_libraries(BUpdaterPBS libbfunctions libblahp)
 
-add_executable(blparser_master blparser_master.c)
-target_link_libraries(blparser_master libblahp)
-target_link_libraries(blparser_master ${ClassAd_LIBRARY})
+	add_executable(BUpdaterSGE BUpdaterSGE.c)
+	target_link_libraries(BUpdaterSGE libbfunctions libblahp)
+
+	add_executable(blparser_master blparser_master.c)
+	target_link_libraries(blparser_master libblahp)
+	target_link_libraries(blparser_master ${ClassAd_LIBRARY})
+
+	install(TARGETS 
+		BLClient BLParserLSF BLParserPBS BUpdaterCondor BNotifier 
+		BUpdaterLSF BUpdaterPBS BUpdaterSGE
+		blparser_master
+		RUNTIME DESTINATION ${LIBEXEC_DIR})
+endif()
 
 if(NOT CONDOR_PACKAGE_NAME)
     if (${GLOBUS_COMMON_FOUND} AND ${GLOBUS_IO_FOUND})
@@ -159,37 +179,29 @@ if(NOT CONDOR_PACKAGE_NAME)
 endif()
 
 # test programs
-add_executable(test_job_registry_create test_job_registry_create.c)
-target_link_libraries(test_job_registry_create libblahp)
+if(WITH_FULL_BLAHP)
+	add_executable(test_job_registry_create test_job_registry_create.c)
+	target_link_libraries(test_job_registry_create libblahp)
 
-add_executable(test_job_registry_purge test_job_registry_purge.c)
-target_link_libraries(test_job_registry_purge libblahp)
+	add_executable(test_job_registry_purge test_job_registry_purge.c)
+	target_link_libraries(test_job_registry_purge libblahp)
 
-add_executable(test_job_registry_update test_job_registry_update.c)
-target_link_libraries(test_job_registry_update libblahp)
+	add_executable(test_job_registry_update test_job_registry_update.c)
+	target_link_libraries(test_job_registry_update libblahp)
 
-add_executable(test_job_registry_access test_job_registry_access.c)
-target_link_libraries(test_job_registry_access libblahp)
+	add_executable(test_job_registry_access test_job_registry_access.c)
+	target_link_libraries(test_job_registry_access libblahp)
 
-add_executable(test_job_registry_update_from_network test_job_registry_update_from_network.c)
-target_link_libraries(test_job_registry_update_from_network libblahp)
+	add_executable(test_job_registry_update_from_network test_job_registry_update_from_network.c)
+	target_link_libraries(test_job_registry_update_from_network libblahp)
 
-add_executable(test_cmdbuffer cmdbuffer.c)
-set_target_properties(test_cmdbuffer PROPERTIES COMPILE_FLAGS "-DCMDBUF_DEBUG") 
+	add_executable(test_cmdbuffer cmdbuffer.c)
+	set_target_properties(test_cmdbuffer PROPERTIES COMPILE_FLAGS "-DCMDBUF_DEBUG") 
+endif()
 
 # CPack info
 
 install(TARGETS blahpd RUNTIME DESTINATION ${BIN_DIR})
-install(TARGETS
-    blahpd_daemon blah_job_registry_add blah_job_registry_lkup
-    blah_job_registry_scan_by_subject blah_check_config 
-    blah_job_registry_dump blah_job_registry_purge
-    RUNTIME DESTINATION ${SBIN_DIR})
-install(TARGETS 
-    BLClient BLParserLSF BLParserPBS BUpdaterCondor BNotifier 
-    BUpdaterLSF BUpdaterPBS BUpdaterSGE
-    blparser_master
-    RUNTIME DESTINATION ${LIBEXEC_DIR})
 
 set(blah_scripts
     scripts/blah_load_config.sh scripts/blah_common_submit_functions.sh
