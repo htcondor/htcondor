@@ -21,7 +21,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- When the blahp submits a job to HTCondor, it no longer requests
+  email notification about job errors.
+  :jira:`895`
 
 Version 9.5.0
 -------------
