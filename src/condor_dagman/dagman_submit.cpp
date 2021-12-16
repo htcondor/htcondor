@@ -541,11 +541,9 @@ static void init_dag_vars(SubmitHash * submitHash,
 	}
 
 	//PRAGMA_REMIND("TODO: fix the tests to use $(DAG_PARENT_NAMES), and then remove custom job attribute")
-	if (!parents.empty()) {
-		submitHash->set_arg_variable("DAG_PARENT_NAMES", parents.c_str());
-		// TODO: remove this when the tests no longer need it.
-		submitHash->set_arg_variable("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"");
-	}
+	submitHash->set_arg_variable("DAG_PARENT_NAMES", parents.c_str());
+	// TODO: remove this when the tests no longer need it.
+	submitHash->set_arg_variable("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"");
 
 }
 
@@ -615,6 +613,18 @@ direct_condor_submit(const Dagman &dm, Job* node,
 		if ( ! queue_args) {
 			// submit file had no queue statement
 			errmsg = "no QUEUE statement";
+			rval = -1;
+			goto finis;
+		}
+		if (queue_args && strlen(queue_args) > 0 && dm.prohibitMultiJobs) {
+			errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n";
+			rval = -1;
+			goto finis;
+		}
+		// DAGMan does not support multi-proc factory jobs when using late materialization
+		bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
+		if (queue_args && strlen(queue_args) > 0 && is_factory) {
+			errmsg = "Cannot specify queue > 1 when using factory jobs and DAGMan direct submission.";
 			rval = -1;
 			goto finis;
 		}
