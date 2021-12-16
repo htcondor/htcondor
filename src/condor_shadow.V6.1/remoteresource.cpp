@@ -313,17 +313,6 @@ RemoteResource::killStarter( bool graceful )
 		abortFileTransfer();
 	}
 
-	// Record the activation stop time (HTCONDOR-861) and set the
-	// corresponding duration attributes.
-	activation.TerminationTime = time(NULL);
-	time_t ActivationDuration = activation.TerminationTime - activation.StartTime;
-	time_t ActivationTeardownDuration = activation.TerminationTime - activation.ExitExecutionTime;
-
-	// Where would these attributes get rotated?  Here?
-	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_DURATION, ActivationDuration );
-	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION, ActivationTeardownDuration );
-	shadow->updateJobInQueue( U_STATUS );
-
 	if( ! dc_startd->deactivateClaim(graceful,&claim_is_closing) ) {
 		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
 						 "Could not send command to startd\n" );
@@ -1658,6 +1647,17 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 	setExitReason( reason_for_exit );
 
 	m_got_job_exit = true;
+
+	// Record the activation stop time (HTCONDOR-861) and set the
+	// corresponding duration attributes.
+	activation.TerminationTime = time(NULL);
+	time_t ActivationDuration = activation.TerminationTime - activation.StartTime;
+	time_t ActivationTeardownDuration = activation.TerminationTime - activation.ExitExecutionTime;
+
+	// Where would these attributes get rotated?  Here?
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_DURATION, ActivationDuration );
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION, ActivationTeardownDuration );
+	shadow->updateJobInQueue( U_STATUS );
 
 	// record the start time of transfer output into the job ad.
 	time_t tStart = -1, tEnd = -1;
