@@ -14,9 +14,8 @@ Exceptional Features
     scalable down to run an entire pool on a single machine, and 
     many scales between these two extremes.
  Security
-    HTCondor can be configured to use strong authentication and
-    encryption between the services on remote machines used to manage
-    jobs.  The HTCondor worker node scratch directories can be encrypted,
+    HTCondor, by default, uses strong authentication and encryption on the wire.
+    The HTCondor worker node scratch directories can be encrypted,
     so that if a node is stolen or broken into, scratch files are unreadable.
  Parallelization without Reimplementation or Redesign
     HTCondor is able to run most programs which researchers can run on their
@@ -27,7 +26,7 @@ Exceptional Features
  Portability and Heterogeneity 
     HTCondor runs on most Linux distributions and on Windows.  A single HTCondor
     pool can support machines of different OSes. Worker nodes need not be identically
-    provisioned -- HTCondor detects the memory, cpu cores, gpus and other machine resources
+    provisioned -- HTCondor detects the memory, CPU cores, gpus and other machine resources
     available on a machine, and only runs jobs that match their needs to the machine's
     capabilities.
  Pools of Machines can be Joined Together
