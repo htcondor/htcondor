@@ -207,7 +207,7 @@ $transfer_output_files
 $transfer_output_remaps
 when_to_transfer_output = on_exit
 should_transfer_files = yes
-notification = error
+notification = never
 $submit_file_environment
 # Hang around for 1 day (86400 seconds) ?
 # Hang around for 30 minutes (1800 seconds) ?
