@@ -1462,7 +1462,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     to 0 if not defined.
 
     **Note**: non-zero values of success_exit_code should generally not be
-    used for DAG node jobs, unless ``when_transfer_files`` is set to
+    used for DAG node jobs, unless ``when_to_transfer_output`` is set to
     ``ON_SUCCESS`` in order to avoid failed jobs going on hold.
 
     At the present time, *condor_dagman* does not take into

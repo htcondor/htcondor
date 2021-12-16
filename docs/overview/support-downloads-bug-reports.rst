@@ -68,7 +68,7 @@ Reporting Bugs
 We recommend you use the mailing lists or email support listed above to report
 bugs. Please provide as much information as possible: detailed information 
 about the problem, relevant log files, and steps on how to reproduce it. 
-If it’s a new issue that our team was not aware of, we’ll create a new ticket 
+If it's a new issue that our team was not aware of, we'll create a new ticket 
 in our system.
 
 Ticketing System

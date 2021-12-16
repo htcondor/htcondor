@@ -10,7 +10,7 @@ The details of each version are described below.
 .. _lts-version-history-9010:
 
 Version 9.0.10
--------------
+--------------
 
 Release Notes:
 
@@ -24,7 +24,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- HTCondor will now properly transfer checkpoints if ``stream_output``
+  or ``stream_error`` is set and ``output`` or ``error``, respectively,
+  is not an absolute path.
+  :jira:`736`
 
 .. _lts-version-history-909:
 
