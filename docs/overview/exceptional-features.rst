@@ -26,7 +26,7 @@ Exceptional Features
  Portability and Heterogeneity 
     HTCondor runs on most Linux distributions and on Windows.  A single HTCondor
     pool can support machines of different OSes. Worker nodes need not be identically
-    provisioned -- HTCondor detects the memory, CPU cores, gpus and other machine resources
+    provisioned -- HTCondor detects the memory, CPU cores, GPUs and other machine resources
     available on a machine, and only runs jobs that match their needs to the machine's
     capabilities.
  Pools of Machines can be Joined Together
