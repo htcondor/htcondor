@@ -94,7 +94,6 @@ int
 append_env(env_t *env_dest, const env_t env_src)
 {
 	int env_size;
-	env_t envcopy;
 
 	if (env_src == NULL)
 	{

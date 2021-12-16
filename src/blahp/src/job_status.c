@@ -165,7 +165,7 @@ get_status(const char *jobDesc, classad_context *cad, char **deleg_parameters, c
 	}
 
 	res_length = strlen(exec_command.output);
-	for (begin_res = exec_command.output; end_res = memchr(exec_command.output, '\n', res_length); begin_res = end_res + 1)
+	for (begin_res = exec_command.output; (end_res = memchr(exec_command.output, '\n', res_length)); begin_res = end_res + 1)
 	{
 		*end_res = 0;
 		if (begin_res[0] != '1')
@@ -200,7 +200,6 @@ cleanup_cmd:
 	cleanup_cmd(&exec_command);
 free_cmd:
 	free(exec_command.command);
-free_split_id:
 	job_registry_free_split_id(spid);
 
 	*job_nr = lc;

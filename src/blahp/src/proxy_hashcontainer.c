@@ -54,7 +54,7 @@ unsigned int
 proxy_hashcontainer_hashfunction(char *id)
  {
   unsigned int bucket=0;
-  int i;
+  size_t i;
 
   if (id != NULL)
    {

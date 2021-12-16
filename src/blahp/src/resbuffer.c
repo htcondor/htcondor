@@ -149,7 +149,6 @@ get_lines(void)
  * */
 {
 	char *res_lines = NULL;
-	char *reallocated;
 
 	/* Acquire lock */
 	pthread_mutex_lock(&resbuffer_lock);

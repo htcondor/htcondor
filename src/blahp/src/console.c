@@ -40,7 +40,11 @@ processConsoleCommand()
 {
     char buffer[256];
                                                                                                                                                
-    fgets(buffer, sizeof(buffer), stdin);
+    char *p = fgets(buffer, sizeof(buffer), stdin);
+	if (p == NULL) {
+        fprintf(stderr, "Can't read from stdin\n");
+		return(1);
+	}
     if (buffer[strlen(buffer) - 1] == '\n') buffer[strlen(buffer) - 1] = '\0';
     
     if (buffer[0] == '\0')
