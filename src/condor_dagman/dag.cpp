@@ -4036,9 +4036,9 @@ Dag::submit_result_t
 Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 {
 	submit_result_t result = SUBMIT_RESULT_NO_SUBMIT;
-	bool use_condor_submit = param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true);
-	// If a submit description is already set, override the DAGMAN_USE_CONDOR_SUBMIT knob
-	if (node->GetSubmitDesc()) { use_condor_submit = false; }
+	bool use_direct_submit = param_boolean("DAGMAN_USE_DIRECT_SUBMIT", true);
+	// If a submit description is already set, override the DAGMAN_USE_DIRECT_SUBMIT knob
+	if (node->GetSubmitDesc()) { use_direct_submit = true; }
 
 		// Resetting the HTCondor ID here fixes PR 799.  wenger 2007-01-24.
 	if ( node->GetCluster() != _defaultCondorId._cluster ) {
@@ -4088,7 +4088,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    		submit_success = fake_condor_submit( condorID, 0,
 					node->GetJobName(), node->GetDirectory(),
 					_defaultNodeLog );
-	} else if (use_condor_submit) {
+	} else if (!use_direct_submit) {
 		std::string parents("");
 		if ( ! node->NoParents()) {
 			parents.reserve(2048);

@@ -731,6 +731,12 @@ type=bool
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_USE_DIRECT_SUBMIT]
+default=true
+type=bool
+tags=dagman,dagman_main
+restart=never
+
 [DAGMAN_REPORT_GRAPH_METRICS]
 default=false
 type=bool

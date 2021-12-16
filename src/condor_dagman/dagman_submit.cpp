@@ -746,7 +746,7 @@ finis:
 
 bool send_reschedule(const Dagman & /*dm*/)
 {
-	if (param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true))
+	if (param_boolean("DAGMAN_USE_DIRECT_SUBMIT", false))
 		return true; // submit already did it
 
 	DCSchedd schedd;
