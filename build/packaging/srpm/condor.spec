@@ -1606,12 +1606,6 @@ rm -rf %{buildroot}
 %_sbindir/blahpd_daemon
 %dir %_libexecdir/blahp
 %_libexecdir/blahp/*
-%_mandir/man1/blah_check_config.1.gz
-%_mandir/man1/blah_job_registry_add.1.gz
-%_mandir/man1/blah_job_registry_dump.1.gz
-%_mandir/man1/blah_job_registry_lkup.1.gz
-%_mandir/man1/blah_job_registry_scan_by_subject.1.gz
-%_mandir/man1/blahpd.1.gz
 
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
