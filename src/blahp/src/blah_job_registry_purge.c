@@ -102,8 +102,8 @@ main(int argc, char *argv[])
     free(en); 
    }
 
-  printf("First cdate == %d\n", first_cdate);
-  printf("Last  cdate == %d\n", last_cdate);
+  printf("First cdate == %ld\n", first_cdate);
+  printf("Last  cdate == %ld\n", last_cdate);
   for (i=0;i<10;i++) printf("count[%2d] == %d\n",i,count[i]);
 
   fclose(fd);

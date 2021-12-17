@@ -585,7 +585,7 @@ job_registry_send_update(const job_registry_updater_endpoint *endpoints,
   const char *sndstr[max_sndstr];
   unsigned short sndstrlen;
   ssize_t strptr;
-  unsigned char *packet;
+  char *packet;
   ssize_t plen = 0;
 
   sndstr[0] = proxy_subject;
@@ -602,7 +602,7 @@ job_registry_send_update(const job_registry_updater_endpoint *endpoints,
 
   /* TODO: add check for maximum plen */
 
-  packet = (unsigned char *)malloc(plen);
+  packet = (char *)malloc(plen);
   if (packet == NULL)
    {
     errno = ENOMEM;
@@ -721,8 +721,8 @@ job_registry_entry *
   ssize_t strptr;
   int chosen;
   int n_ready;
-  int i;
-  unsigned char buffer[4096];
+  size_t i;
+  char buffer[4096];
   const int max_retstr = 2;
   int n_retstr = 0;
   char **retstr[max_retstr];
@@ -747,7 +747,7 @@ job_registry_entry *
         if (n_ready == chosen)
          {
           retrecv = recv(pollset[i].fd, buffer, sizeof(buffer), 0); 
-          if (retrecv >= sizeof(job_registry_entry))
+          if (retrecv >= (ssize_t)sizeof(job_registry_entry))
            {
             test = (job_registry_entry *)buffer;
             if ( ((test->magic_start) == JOB_REGISTRY_MAGIC_START) &&

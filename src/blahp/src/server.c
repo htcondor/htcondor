@@ -156,7 +156,7 @@ int CEReq_parse(classad_context cad, char* filename, char *proxysubject, char *p
 char* outputfileRemaps(char *sb,char *sbrmp);
 int check_TransferINOUT(classad_context cad, char **command, char *reqId, char **resultLine, char ***files_to_clean_up);
 char *ConvertArgs(char* args, char sep);
-int enqueue_result(char *res);
+void enqueue_result(char *res);
 
 /* Global variables */
 struct blah_managed_child {
@@ -2380,7 +2380,7 @@ cmd_get_hostport(void *args)
 /* Utility functions
  * */
 
-int
+void
 enqueue_result(char *res)
 {
 	if (push_result(res))
@@ -2413,13 +2413,17 @@ set_cmd_string_option(char **command, classad_context cad, const char *attribute
 	}
 
 	if (result == C_CLASSAD_NO_ERROR)
+	{
 		if ((new_command = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1)))
 		{
 			strcat(new_command, to_append);
 			*command = new_command;
 		}
 		else
+		{
 			result = C_CLASSAD_OUT_OF_MEMORY;
+		}
+	}
 
 	if (to_append) free (to_append);
 	return(result);
@@ -2442,13 +2446,17 @@ set_cmd_int_option(char **command, classad_context cad, const char *attribute, c
 	}
 
 	if (result == C_CLASSAD_NO_ERROR)
+	{
 		if ((new_command = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1)))
 		{
 			strcat(new_command, to_append);
 			*command = new_command;
 		}
 		else
+		{
 			result = C_CLASSAD_OUT_OF_MEMORY;
+		}
+	}
 
 	if (to_append) free (to_append);
 	return(result);
@@ -2467,19 +2475,23 @@ set_cmd_bool_option(char **command, classad_context cad, const char *attribute, 
 	
 	if ((result = classad_get_bool_attribute(cad, attribute, &attr_value)) == C_CLASSAD_NO_ERROR)
 	{
-		argument = (char *)(attr_value ? str_yes : str_no);
+		argument = (attr_value ? str_yes : str_no);
 		if ((to_append = make_message(opt_format[quote_style], option, argument)) == NULL)
 			result = C_CLASSAD_OUT_OF_MEMORY;
 	}
 
 	if (result == C_CLASSAD_NO_ERROR)
+	{
 		if ((new_command = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1)))
 		{
 			strcat(new_command, to_append);
 			*command = new_command;
 		}
 		else
+		{
 			result = C_CLASSAD_OUT_OF_MEMORY;
+		}
+	}
 
 	if (to_append) free (to_append);
 	return(result);

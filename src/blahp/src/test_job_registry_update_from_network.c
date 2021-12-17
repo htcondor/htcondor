@@ -52,7 +52,7 @@ main(int argc, char *argv[])
   int ent, ret, prret, rhret;
   config_handle *cha;
   config_entry  *rge, *remupd_conf;
-  job_registry_handle *rha, *rhano;
+  job_registry_handle *rha;
   job_registry_index_mode rgin_mode = NO_INDEX;
   job_registry_updater_endpoint *remupd_head = NULL;
   struct pollfd *remupd_pollset = NULL;
@@ -182,9 +182,9 @@ main(int argc, char *argv[])
   proxy_path = NULL;
   proxy_subject = NULL;
 
-  while (en = job_registry_receive_update(remupd_pollset, remupd_nfds,
-                                          timeout_ms, &proxy_subject, 
-                                          &proxy_path))
+  while ((en = job_registry_receive_update(remupd_pollset, remupd_nfds,
+                                           timeout_ms, &proxy_subject, 
+                                           &proxy_path)))
    {
     if (proxy_path != NULL && strlen(proxy_path) > 0)
      {

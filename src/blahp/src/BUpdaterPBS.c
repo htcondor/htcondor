@@ -43,7 +43,6 @@ int main(int argc, char *argv[]){
 	int remupd_nfds;
 	
 	int version=0;
-	int first=TRUE;
 	int tmptim;
 	int finstr_len=0;
 	int loop_interval=DEFAULT_LOOP_INTERVAL;
@@ -400,8 +399,6 @@ int main(int argc, char *argv[]){
 		job_registry_firstrec(rha,fd);
 		fseek(fd,0L,SEEK_SET);
 		
-		first=TRUE;
-		
 		while ((en = job_registry_get_next(rha, fd)) != NULL){
 			if((bupdater_lookup_active_jobs(&bact, en->batch_id) != BUPDATER_ACTIVE_JOBS_SUCCESS) && en->status!=REMOVED && en->status!=COMPLETED){
 				
@@ -466,14 +463,14 @@ ReceiveUpdateFromNetwork()
 {
 	char *proxy_path, *proxy_subject;
 	int timeout_ms = 0;
-	int ent, ret, prret, rhret;
+	int ret, prret, rhret;
 	job_registry_entry *nen;
 	job_registry_entry *ren;
   
 	proxy_path = NULL;
 	proxy_subject = NULL;
 	
-	while (nen = job_registry_receive_update(remupd_pollset, remupd_nfds,timeout_ms, &proxy_subject, &proxy_path)){
+	while ((nen = job_registry_receive_update(remupd_pollset, remupd_nfds,timeout_ms, &proxy_subject, &proxy_path))){
 	
 		JOB_REGISTRY_ASSIGN_ENTRY(nen->subject_hash,"\0");
 		JOB_REGISTRY_ASSIGN_ENTRY(nen->proxy_link,"\0");
@@ -621,7 +618,7 @@ Job Id: 11.cream-12.pd.infn.it
 							}
 						}
 						if (remupd_conf != NULL){
-							if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+							if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 								do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in IntStateQuery\n",argv0);
 							}
 						}
@@ -736,7 +733,7 @@ Job Id: 11.cream-12.pd.infn.it
 				}
 			}
 			if (remupd_conf != NULL){
-				if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+				if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 					do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in IntStateQuery\n",argv0);
 				}
 			}
@@ -914,7 +911,7 @@ Job: 13.cream-12.pd.infn.it
 					job_registry_unlink_proxy(rha, &en);
 				}
 				if (remupd_conf != NULL){
-					if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+					if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 						do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in FinalStateQuery\n",argv0);
 					}
 				}
@@ -961,7 +958,7 @@ int AssignFinalState(char *batchid){
 		do_log(debuglogfile, debug, 2, "%s: registry update in AssignStateQuery for: jobid=%s creamjobid=%s status=%d\n",argv0,en.batch_id,en.user_prefix,en.status);
 		job_registry_unlink_proxy(rha, &en);
 		if (remupd_conf != NULL){
-			if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+			if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 				do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in AssignFinalState\n",argv0);
 			}
 		}

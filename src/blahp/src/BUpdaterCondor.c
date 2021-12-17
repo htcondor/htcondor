@@ -453,14 +453,14 @@ ReceiveUpdateFromNetwork()
 {
 	char *proxy_path, *proxy_subject;
 	int timeout_ms = 0;
-	int ent, ret, prret, rhret;
+	int ret, prret, rhret;
 	job_registry_entry *nen;
 	job_registry_entry *ren;
   
 	proxy_path = NULL;
 	proxy_subject = NULL;
 	
-	while (nen = job_registry_receive_update(remupd_pollset, remupd_nfds,timeout_ms, &proxy_subject, &proxy_path)){
+	while ((nen = job_registry_receive_update(remupd_pollset, remupd_nfds,timeout_ms, &proxy_subject, &proxy_path))){
 	
 		JOB_REGISTRY_ASSIGN_ENTRY(nen->subject_hash,"\0");
 		JOB_REGISTRY_ASSIGN_ENTRY(nen->proxy_link,"\0");
@@ -600,7 +600,7 @@ IntStateQuery()
 							do_log(debuglogfile, debug, 2, "%s: registry update in IntStateQuery for: jobid=%s creamjobid=%s wn=%s status=%d\n",argv0,en.batch_id,en.user_prefix,en.wn_addr,en.status);
 						}
 						if (remupd_conf != NULL){
-							if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+							if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 								do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in IntStateQuery\n",argv0);
 							}
 						}
@@ -703,7 +703,7 @@ FinalStateQuery(char *query)
 							job_registry_unlink_proxy(rha, &en);
 						}
 						if (remupd_conf != NULL){
-							if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+							if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 								do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in FinalStateQuery\n",argv0);
 							}
 						}
@@ -746,7 +746,7 @@ int AssignFinalState(char *batchid){
 		do_log(debuglogfile, debug, 2, "%s: registry update in AssignStateQuery for: jobid=%s creamjobid=%s status=%d\n",argv0,en.batch_id,en.user_prefix,en.status);
 		job_registry_unlink_proxy(rha, &en);
 		if (remupd_conf != NULL){
-			if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+			if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 				do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in AssignFinalState\n",argv0);
 			}
 		}

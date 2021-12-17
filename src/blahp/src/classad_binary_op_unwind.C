@@ -82,7 +82,7 @@ UnparseAux(std::string &buffer,Operation::OpKind op, ExprTree *t1, ExprTree *t2,
        op == Operation::IS_OP )
    {
     // Check that we have one attribute reference and one literal.
-    ExprTree *attr, *value;
+    ExprTree *attr = NULL, *value = NULL;
     bool args_ok = false;
     bool value_at_right;
     bool numeric_value;

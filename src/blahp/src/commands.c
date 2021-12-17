@@ -79,7 +79,7 @@ command_t commands_array[] = {
 int
 cmd_search_array(const void *key, const void *cmd_struct)
 {
-	return(strcasecmp((char *)key, ((command_t *)cmd_struct)->cmd_name));
+	return(strcasecmp((const char *)key, ((const command_t *)cmd_struct)->cmd_name));
 }
 
 /* Return a pointer to the command_t structure
@@ -98,9 +98,9 @@ known_commands(void)
 {
 	char *result;
 	char *reallocated;
-	int i;
+	size_t i;
 
-	if (result = strdup(""))
+	if ((result = strdup("")))
 	{
 		for (i=0; i<COMMANDS_NUM; i++)
 		{
@@ -159,10 +159,8 @@ parse_command(const char *cmd, int *argc, char ***argv)
 {
 	char *pointer;
 	char *parsed;
-	char *reallocated;
 	char *next;
 	char **retval;
-	char **curarg;
 	int my_argc, join_arg;
 
 	if (strlen(cmd) == 0)

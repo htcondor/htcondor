@@ -228,7 +228,6 @@ format_type
 get_format_type(char *fmt, int which, int *totfmts)
 {
   char *pc;
-  char *sp;
   char *start, *end;
   int nf = 0;
   format_type result = NO_FORMAT;
@@ -323,7 +322,7 @@ main(int argc, char *argv[])
   char *lookup_subject = NULL;
   char *lookup_hash = NULL;
   int cur_arg;
-  int format_args;
+  int format_args = -1;
   int select_by_job_status = 0;
   int ifr;
   int njobs = 0;

@@ -28,8 +28,8 @@ int main(int argc, char *argv[]){
     job_registry_entry *en;
     time_t now;
     time_t purge_time=0;
-    char *constraint[11];
-    char *constraint2[5];
+    char constraint[11];
+    char constraint2[5];
     char *query=NULL;
     char *queryStates=NULL;
     char *query_err=NULL;
@@ -40,14 +40,9 @@ int main(int argc, char *argv[]){
     
     int version=0;
     int tmptim;
-    int finstr_len=0;
     int loop_interval=DEFAULT_LOOP_INTERVAL;
     
-    int fsq_ret=0;
-    
     int c;
-    
-    int confirm_time=0;
     
     static int help;
     static int short_help;
@@ -409,13 +404,14 @@ int main(int argc, char *argv[]){
 
 int FinalStateQuery(char *query,char *queryStates, char *query_err){
 
-    char line[STR_CHARS],fail[6],qExit[10],qFailed[10],qHostname[100],qStatus[2],command_string[100];
+    char line[STR_CHARS],qExit[10],qFailed[10],qHostname[100],command_string[100];
     char **saveptr1,**saveptr2,**list_query,**list_queryStates;
     FILE *file_output;
     int numQuery=0,numQueryStates=0,j=0,l=0,cont=0,cont2=0, nq=0;
     time_t now;
     char string_now[11];
     job_registry_entry en;
+    int ret;
     
     numQuery=strtoken(query,' ',&list_query);
     nq=numQuery;
@@ -505,7 +501,7 @@ int FinalStateQuery(char *query,char *queryStates, char *query_err){
 	freetoken(&saveptr1,cont);
     }
     pclose( file_output );
-    sprintf(query_err,"\0");
+    query_err[0] = '\0';
     //now we have check in list_query only states that not change status 
     //because they're not in qstat result
     for (l=0; l<nq; l++){
@@ -651,6 +647,7 @@ int AssignState (char *element, char *status, char *exit, char *reason, char *wn
     time_t now;
     char *string_now=NULL;
     int n=strtoken(element, '.', &id_element);
+    int ret;
     
     if(id_element[0]){
 	JOB_REGISTRY_ASSIGN_ENTRY(en.batch_id,id_element[0]);
