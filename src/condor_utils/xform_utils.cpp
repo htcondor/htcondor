@@ -47,7 +47,7 @@
 
 // values for hashtable defaults, these are declared as char rather than as const char to make g++ on fedora shut up.
 #if defined(WIN32) || defined(LINUX)
-static char OneString[] = "1"
+static char OneString[] = "1";
 #endif
 static char ZeroString[] = "0";
 static char UnsetString[] = "";
