@@ -412,7 +412,7 @@ config_read_cmd(const char *path, const char *set_command_format, config_handle 
     line[line_len] = '\000'; /* Keep line null-terminated */
    }
   
-  fclose(cf);
+  pclose(cf);
   free(line);
 
   return TRUE;
