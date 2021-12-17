@@ -28,7 +28,7 @@ int main(int argc, char *argv[]){
     job_registry_entry *en;
     time_t now;
     time_t purge_time=0;
-    char constraint[11];
+    char constraint[JOBID_MAX_LEN + 1];
     char constraint2[5];
     char *query=NULL;
     char *queryStates=NULL;
