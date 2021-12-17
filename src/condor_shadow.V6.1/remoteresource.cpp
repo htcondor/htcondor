@@ -224,17 +224,19 @@ RemoteResource::activateClaim( int starterVersion )
 										  &claim_sock );
 		switch( reply ) {
 		case OK:
-			shadow->dprintf( D_ALWAYS, 
+			shadow->dprintf( D_ALWAYS,
 							 "Request to run on %s %s was ACCEPTED\n",
 							 machineName ? machineName:"", dc_startd->addr() );
-				// first, set a timeout on the socket 
+			// Record the activation start time (HTCONDOR-861).
+			activation.StartTime = time(NULL);
+				// first, set a timeout on the socket
 			claim_sock->timeout( 300 );
 				// Now, register it for remote system calls.
 				// It's a bit funky, but works.
-			daemonCore->Register_Socket( claim_sock, "RSC Socket", 
-				   (SocketHandlercpp)&RemoteResource::handleSysCalls, 
+			daemonCore->Register_Socket( claim_sock, "RSC Socket",
+				   (SocketHandlercpp)&RemoteResource::handleSysCalls,
 				   "HandleSyscalls", this );
-			setResourceState( RR_STARTUP );		
+			setResourceState( RR_STARTUP );
 			hadContact();
 
 				// This expiration time we calculate here may be
@@ -1646,6 +1648,17 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 
 	m_got_job_exit = true;
 
+	// Record the activation stop time (HTCONDOR-861) and set the
+	// corresponding duration attributes.
+	activation.TerminationTime = time(NULL);
+	time_t ActivationDuration = activation.TerminationTime - activation.StartTime;
+	time_t ActivationTeardownDuration = activation.TerminationTime - activation.ExitExecutionTime;
+
+	// Where would these attributes get rotated?  Here?
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_DURATION, ActivationDuration );
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION, ActivationTeardownDuration );
+	shadow->updateJobInQueue( U_STATUS );
+
 	// record the start time of transfer output into the job ad.
 	time_t tStart = -1, tEnd = -1;
 	if (filetrans.GetDownloadTimestamps(&tStart, &tEnd)) {
@@ -1745,28 +1758,38 @@ RemoteResource::startCheckingProxy()
 		proxy_check_tid = daemonCore->Register_Timer( 0, PROXY_CHECK_INTERVAL,
 							(TimerHandlercpp)&RemoteResource::checkX509Proxy,
 							"RemoteResource::checkX509Proxy()", this );
-    }
+	}
 }
 
-void 
+void
 RemoteResource::beginExecution( void )
 {
+	//
+	// Self-checkpointing jobs may begin execution more than once per
+	// activation.  Record that information for use by the activation
+	// metrics (HTCONDOR-861).
+	//
+	time_t now = time(NULL);
+	activation.StartExecutionTime = now;
+	time_t ActivationSetUpDuration = activation.StartExecutionTime - activation.StartTime;
+    // Where would this attribute get rotated?  Here?
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_SETUP_DURATION, ActivationSetUpDuration );
+	shadow->updateJobInQueue(U_STATUS);
+
 	if( began_execution ) {
-			// Only call this function once per remote resource
 		return;
 	}
 
 	began_execution = true;
 	setResourceState( RR_EXECUTING );
 
-	// add the execution start time into the job ad. 
-	int now = (int)time(NULL);
-	jobAd->Assign( ATTR_JOB_CURRENT_START_EXECUTING_DATE , now);
+	// add the execution start time into the job ad.
+	jobAd->Assign( ATTR_JOB_CURRENT_START_EXECUTING_DATE, now);
 
 	startCheckingProxy();
-	
-		// Let our shadow know so it can make global decisions (for
-		// example, should it log a JOB_EXECUTE event)
+
+	// Let our shadow know so it can make global decisions (for
+	// example, should it log a JOB_EXECUTE event)
 	shadow->resourceBeganExecution( this );
 }
 
@@ -2475,4 +2498,14 @@ RemoteResource::logRemoteAccessCheck(bool allow,char const *op,char const *name)
 			allow ? "ALLOWING" : "DENYING",
 			op,
 			name);
+}
+
+void
+RemoteResource::recordActivationExitExecutionTime(time_t when) {
+    activation.ExitExecutionTime = when;
+    time_t ActivationExecutionDuration = activation.ExitExecutionTime - activation.StartExecutionTime;
+
+    // Where would this attribute get rotated?  Here?
+    jobAd->InsertAttr( ATTR_JOB_ACTIVATION_EXECUTION_DURATION, ActivationExecutionDuration );
+    shadow->updateJobInQueue( U_STATUS );
 }

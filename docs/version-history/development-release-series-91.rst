@@ -15,7 +15,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added activation metrics (``ActivationDuration``,
+  ``ActivationExecutionDuration``, ``ActivationSetupDuration``, and
+  ``ActivationTeardownDuration``).
+  :jira:`861`
 
 Bugs Fixed:
 
