@@ -63,6 +63,10 @@ add_library(libblahp STATIC
 	server.c
 )
 
+# server.c defines a bunch of callbacks that don't need their args
+# disable warnings for those
+set_source_files_properties(server.c PROPERTIES COMPILE_FLAGS -Wno-unused-parameter)
+
 # programs for 'sbin'
 add_executable(blahpd_daemon main_daemon.c)
 target_link_libraries(blahpd_daemon libblahp)

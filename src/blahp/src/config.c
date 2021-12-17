@@ -301,7 +301,7 @@ config_read_cmd(const char *path, const char *set_command_format, config_handle 
   line = (char *)malloc(line_alloc);
   if (line == NULL) 
    {
-    fclose(cf);
+    pclose(cf);
     return FALSE;
    }
   line[0]='\000';
@@ -412,7 +412,7 @@ config_read_cmd(const char *path, const char *set_command_format, config_handle 
     line[line_len] = '\000'; /* Keep line null-terminated */
    }
   
-  fclose(cf);
+  pclose(cf);
   free(line);
 
   return TRUE;
