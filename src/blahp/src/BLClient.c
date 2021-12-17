@@ -40,7 +40,7 @@ int
 main(int argc, char *argv[])
 {
 
-	int       conn_s;
+	int       conn_s = -1;
 	char      buffer[MAX_LINE];
     
 	char      *address=NULL;

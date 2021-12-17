@@ -31,8 +31,8 @@ main(int argc, char *argv[])
 	int       i,j;
 	int       set = 1;
 	int       status;
-	int       list_s;
-	int       list_c;
+	int       list_s = -1;
+	int       list_c = -1;
 	char 	  ainfo_port_string[16];
 	struct    addrinfo ai_req, *ai_ans, *cur_ans;
 	int       address_found;
@@ -535,8 +535,8 @@ AddToStruct(char *line, int flag)
 
 	int has_blah=0;
  
-	char *trex;
-	char *rex;
+	char *trex=NULL;
+	char *rex=NULL;
 
 	int  maxtok; 
 	char **tbuf;

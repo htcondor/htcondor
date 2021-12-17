@@ -107,7 +107,7 @@ main(int argc, char *argv[])
                                                  test_subject, TRUE);
         if (rhret < 0)
          {
-          fprintf(stderr,"%s: Record of subject %s (hash %s) returns %s: ",argv[0],test_subject, en.subject_hash ,ret);
+          fprintf(stderr,"%s: Record of subject %s (hash %s) returns %d: ",argv[0],test_subject, en.subject_hash ,rhret);
           perror("");
          }
         free(test_subject);

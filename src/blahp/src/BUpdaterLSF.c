@@ -38,14 +38,12 @@ int main(int argc, char *argv[]){
 	int remupd_nfds;
 	
 	int version=0;
-	int first=TRUE;
 	int tmptim;
 	time_t finalquery_start_date;
 	int loop_interval=DEFAULT_LOOP_INTERVAL;
 	
 	int rc;				
 	int c;				
-	int status;
 	
 	pthread_t RecUpdNetThd;
 
@@ -464,7 +462,6 @@ int main(int argc, char *argv[]){
 		job_registry_firstrec(rha,fd);
 		fseek(fd,0L,SEEK_SET);
 		
-		first=TRUE;
 		finalquery_start_date = time(0);
 		
 		while ((en = job_registry_get_next(rha, fd)) != NULL){
@@ -533,14 +530,14 @@ ReceiveUpdateFromNetwork()
 {
 	char *proxy_path, *proxy_subject;
 	int timeout_ms = 0;
-	int ent, ret, prret, rhret;
+	int ret, prret, rhret;
 	job_registry_entry *nen;
 	job_registry_entry *ren;
   
 	proxy_path = NULL;
 	proxy_subject = NULL;
 	
-	while (nen = job_registry_receive_update(remupd_pollset, remupd_nfds,timeout_ms, &proxy_subject, &proxy_path)){
+	while ((nen = job_registry_receive_update(remupd_pollset, remupd_nfds,timeout_ms, &proxy_subject, &proxy_path))){
 	
 		JOB_REGISTRY_ASSIGN_ENTRY(nen->subject_hash,"\0");
 		JOB_REGISTRY_ASSIGN_ENTRY(nen->proxy_link,"\0");
@@ -609,8 +606,6 @@ IntStateQueryCustom()
 	int maxtok_l=0;
 	job_registry_entry en;
 	int ret;
-	char *timestamp;
-	time_t tmstampepoch;
 	char *tmp=NULL; 
 	char *cp=NULL; 
 	char *command_string=NULL;
@@ -674,7 +669,7 @@ IntStateQueryCustom()
 							do_log(debuglogfile, debug, 2, "%s: registry update in IntStateQueryCustom for: jobid=%s creamjobid=%s wn=%s status=%d\n",argv0,en.batch_id,en.user_prefix,en.wn_addr,en.status);
 						}
 						if (remupd_conf != NULL){
-							if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+							if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 								do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in IntStateQueryCustom\n",argv0);
 							}
 						}
@@ -778,7 +773,7 @@ IntStateQueryCustom()
 					do_log(debuglogfile, debug, 2, "%s: registry update in IntStateQueryCustom for: jobid=%s creamjobid=%s wn=%s status=%d\n",argv0,en.batch_id,en.user_prefix,en.wn_addr,en.status);
 				}
 				if (remupd_conf != NULL){
-					if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+					if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 						do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in IntStateQueryCustom\n",argv0);
 					}
 				}
@@ -877,7 +872,7 @@ IntStateQueryShort()
 							do_log(debuglogfile, debug, 2, "%s: registry update in IntStateQueryShort for: jobid=%s creamjobid=%s wn=%s status=%d\n",argv0,en.batch_id,en.user_prefix,en.wn_addr,en.status);
 						}
 						if (remupd_conf != NULL){
-							if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+							if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 								do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in IntStateQueryShort\n",argv0);
 							}
 						}
@@ -963,7 +958,7 @@ IntStateQueryShort()
 					do_log(debuglogfile, debug, 2, "%s: registry update in IntStateQueryShort for: jobid=%s creamjobid=%s wn=%s status=%d\n",argv0,en.batch_id,en.user_prefix,en.wn_addr,en.status);
 				}
 				if (remupd_conf != NULL){
-					if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+					if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 						do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in IntStateQueryShort\n",argv0);
 					}
 				}
@@ -1061,7 +1056,7 @@ IntStateQuery()
 								do_log(debuglogfile, debug, 2, "%s: registry update in IntStateQuery for: jobid=%s creamjobid=%s wn=%s status=%d\n",argv0,en.batch_id,en.user_prefix,en.wn_addr,en.status);
 							}
 							if (remupd_conf != NULL){
-								if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+								if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 									do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in IntStateQuery\n",argv0);
 								}
 							}
@@ -1245,7 +1240,7 @@ IntStateQuery()
 					do_log(debuglogfile, debug, 2, "%s: registry update in IntStateQuery for: jobid=%s creamjobid=%s wn=%s status=%d\n",argv0,en.batch_id,en.user_prefix,en.wn_addr,en.status);
 				}
 				if (remupd_conf != NULL){
-					if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+					if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 						do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in IntStateQuery\n",argv0);
 					}
 				}
@@ -1367,7 +1362,7 @@ exitcode (=0 if Done successfully) or (from Exited with exit code 2)
 						}
 					}
 					if (remupd_conf != NULL){
-						if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+						if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 							do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in FinalStateQuery\n",argv0);
 						}
 					}
@@ -1472,7 +1467,7 @@ exitcode (=0 if Done successfully) or (from Exited with exit code 2)
 				job_registry_unlink_proxy(rha, &en);
 			}
 			if (remupd_conf != NULL){
-				if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+				if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 					do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in FinalStateQuery\n",argv0);
 				}
 			}
@@ -1500,7 +1495,7 @@ get_susp_timestamp(char *jobid)
 	char **token;
 	int maxtok_t=0;
 	char *timestamp;
-	time_t tmstampepoch;
+	time_t tmstampepoch = 0;
 	char *cp=NULL; 
 	char *command_string=NULL;
 	
@@ -1544,7 +1539,7 @@ get_resume_timestamp(char *jobid)
 	char **token;
 	int maxtok_t=0;
 	char *timestamp;
-	time_t tmstampepoch;
+	time_t tmstampepoch = 0;
 	char *cp=NULL; 
 	char *command_string=NULL;
 	
@@ -1588,7 +1583,7 @@ get_pend_timestamp(char *jobid)
 	char **token;
 	int maxtok_t=0;
 	char *timestamp;
-	time_t tmstampepoch;
+	time_t tmstampepoch = 0;
 	char *cp=NULL; 
 	char *command_string=NULL;
 	
@@ -1647,7 +1642,7 @@ int AssignFinalState(char *batchid){
 		do_log(debuglogfile, debug, 2, "%s: registry update in AssignStateQuery for: jobid=%s creamjobid=%s status=%d\n",argv0,en.batch_id,en.user_prefix,en.status);
 		job_registry_unlink_proxy(rha, &en);
 		if (remupd_conf != NULL){
-			if (ret=job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
+			if (job_registry_send_update(remupd_head_send,&en,NULL,NULL)<=0){
 				do_log(debuglogfile, debug, 2, "%s: Error creating endpoint in AssignFinalState\n",argv0);
 			}
 		}

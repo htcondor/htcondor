@@ -70,7 +70,7 @@ extern "C"
     if (cad == NULL) return NULL;
 
     std::string res_s;
-    char *res_c;
+    char *res_c = NULL;
 
     ClassAd *ad = (ClassAd *)cad;
     ClassAdUnParser unparser;
