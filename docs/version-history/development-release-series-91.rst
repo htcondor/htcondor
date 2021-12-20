@@ -9,9 +9,7 @@ Version 9.4.1
 
 Release Notes:
 
-.. HTCondor version 9.4.1 released on Month Date, 2021.
-
-- HTCondor version 9.4.1 not yet released.
+- HTCondor version 9.4.1 released on December 21, 2021.
 
 New Features:
 
@@ -22,7 +20,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fix a bug where the error number could be cleared before
+  being reported when a file transfer plugin fails.
+  :jira:`889`
 
 Version 9.4.0
 -------------
