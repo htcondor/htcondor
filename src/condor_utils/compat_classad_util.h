@@ -121,9 +121,12 @@ public:
 	ConstraintHolder() : expr(NULL), exprstr(NULL) {}
 	ConstraintHolder(char * str) : expr(NULL), exprstr(str) {}
 	ConstraintHolder(classad::ExprTree * tree) : expr(tree), exprstr(NULL) {}
-	ConstraintHolder(const ConstraintHolder& that) {  // for copy constructor, we prefer the tree form
+	ConstraintHolder(ConstraintHolder&& that) : expr(that.expr), exprstr(that.exprstr) { // move constructor
+		that.expr = nullptr;
+		that.exprstr = nullptr;
+	}
+	ConstraintHolder(const ConstraintHolder& that) : expr(NULL), exprstr(NULL) {  // for copy constructor, we prefer the tree form
 		if (this == &that) return;
-		clear();
 		if (that.expr) { this->set(that.expr->Copy()); }
 		else if (that.exprstr) { set(strdup(that.exprstr)); }
 	}

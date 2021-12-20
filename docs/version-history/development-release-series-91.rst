@@ -15,7 +15,11 @@ Release Notes:
 
 - HTCondor version 9.6.0 not yet released.
 
-New Features:
+- Added list type configuration for periodic job policy configuration.
+  Added ``SYSTEM_PERIODIC_HOLD_NAMES``, ``SYSTEM_PERIODIC_RELEASE_NAMES``
+  and ``SYSTEM_PERIODIC_REMOVE_NAMES`` which each define a list of configuration
+  variables to be evaluated for periodic job policy.
+  :jira:`905`
 
 - None.
 
