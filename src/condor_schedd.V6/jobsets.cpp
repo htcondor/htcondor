@@ -116,14 +116,14 @@ bool JobSets::removeSet(JobQueueJobSet* & jobset)
 	jobset->LookupString(ATTR_JOB_SET_NAME, name);
 	if (name.empty() || ! jobset->ownerinfo) {
 		// we don't know the alias, so remove all elements that match the set id
-		dprintf(D_ALWAYS, "Removing JobSet id=%d (%zu refs)\n", jobset->Jobset(), jobset->member_count);
+		dprintf(D_ALWAYS, "Removing JobSet id=%d (%u refs)\n", jobset->Jobset(), jobset->member_count);
 		for (auto it = mapAliasToId.begin(); it != mapAliasToId.end(); /* it updated inside loop */) {
 			if (it->second == jobset->Jobset()) { it = mapAliasToId.erase(it); }
 			else { ++it; }
 		}
 	} else {
 		alias = makeAlias(name, jobset->ownerinfo->name);
-		dprintf(D_ALWAYS, "Removing JobSet %s id=%d (%zu refs)\n", alias.c_str(), jobset->Jobset(), jobset->member_count);
+		dprintf(D_ALWAYS, "Removing JobSet %s id=%d (%u refs)\n", alias.c_str(), jobset->Jobset(), jobset->member_count);
 		mapAliasToId.erase(alias);
 	}
 	bool rval = JobSetDestroy(jobset->Jobset());
