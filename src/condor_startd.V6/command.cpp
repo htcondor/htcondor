@@ -1275,13 +1275,12 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		int num_preempting = 0;
 		if (stream->code(num_preempting) && num_preempting > 0) {
 			rip->dprintf(D_FULLDEBUG, "Schedd sending %d preempting claims.\n", num_preempting);
-			Resource **dslots = (Resource **)malloc(sizeof(Resource *) * num_preempting);
+			std::vector<Resource *> dslots(num_preempting);
 			for (int i = 0; i < num_preempting; i++) {
 				char *claim_id = NULL;
 				if (! stream->get_secret(claim_id)) {
 					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
 					free(claim_id);
-					free(dslots);
 					ABORT;
 				}
 				dslots[i] = resmgr->get_by_any_id( claim_id );
@@ -1290,13 +1289,11 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					dprintf( D_ALWAYS, 
 							 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
 					free( claim_id );
-					free(dslots);
 					ABORT;
 				}
 				free( claim_id );
 				if ( !dslots[i]->retirementExpired() ) {
 					dprintf( D_ALWAYS, "Error: slot %s still has retirement time, can't preempt immediately\n", dslots[i]->r_name );
-					free(dslots);
 					ABORT;
 				}
 			}
@@ -1338,7 +1335,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			if (parent) {
 				parent->refresh_classad_resources();
 			}
-			free( dslots );
 		}
 	} else {
 		rip->dprintf(D_FULLDEBUG, "Schedd using pre-v6.1.11 claim protocol\n");
@@ -2666,8 +2662,8 @@ command_coalesce_slots(int, Stream * stream ) {
 	CAResult result = CA_SUCCESS;
 
 	Resource * parent = NULL;
-	for( auto i = ucil.begin(); i != ucil.end(); ++i ) {
-		claimID = * i;
+	for(auto i : ucil) {
+		claimID = i;
 
 		// If a slot has been preempted, don't coalesce it.
 		Resource * r = resmgr->get_by_cur_id( claimID );
@@ -2766,8 +2762,8 @@ command_coalesce_slots(int, Stream * stream ) {
 	}
 
 	dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing slots...\n" );
-	for( auto i = ucil.begin(); i != ucil.end(); ++i ) {
-		claimID = * i;
+	for(auto i : ucil) {
+		claimID = i;
 
 		// If a slot has been preempted, don't coalesce it.
 		Resource * r = resmgr->get_by_cur_id( claimID );
