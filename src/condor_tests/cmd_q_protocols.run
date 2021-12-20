@@ -66,7 +66,9 @@ my $firstappend_condor_config = '
 	ALL_DEBUG = D_FULLDEBUG D_NETWORK
 	NUM_CPUS = 1
 	CONDOR_Q_USE_V3_PROTOCOL = true
-	#use role: personal
+	# Turning this on breaks this test, which means it is way less
+	# robust than it at first may appear.
+	# SHADOW_LAZY_QUEUE_UPDATE = false
 ';
 
 
@@ -208,7 +210,9 @@ my $secondappend_condor_config = '
 	ALL_DEBUG = D_FULLDEBUG
 	NUM_CPUS = 1
 	CONDOR_Q_USE_V3_PROTOCOL = false
-	#use role: personal
+	# Turning this on breaks this test, which means it is way less
+	# robust than it at first may appear.
+	# SHADOW_LAZY_QUEUE_UPDATE = false
 ';
 
 
@@ -284,7 +288,6 @@ my $thirdappend_condor_config = '
 	ALL_DEBUG = D_FULLDEBUG
 	NUM_CPUS = 1
 	CONDOR_Q_USE_V3_PROTOCOL = true
-	#use role: personal
 ';
 
 
