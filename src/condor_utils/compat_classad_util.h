@@ -138,6 +138,14 @@ public:
 		}
 		return *this;
 	}
+	ConstraintHolder & operator=(ConstraintHolder&& that) { // move assignment operator
+		if (this != &that) {
+			clear();
+			expr = that.expr; that.expr = nullptr;
+			exprstr = that.exprstr; that.exprstr = nullptr;
+		}
+		return *this;
+	}
 	bool operator==(const ConstraintHolder & rhs) const { // for equality, we compare expressions (not strings)
 		classad::ExprTree *tree1 = Expr(), *tree2 = rhs.Expr();
 		if ( ! tree1 && ! tree2) return true;
