@@ -18,6 +18,12 @@ Release Notes:
 
 - HTCondor version 9.0.10 not yet released.
 
+Known Issues:
+
+- The *condor_annex* tool improperly handles user data over a certain
+  short length.
+  :jira:`909`
+
 New Features:
 
 - None.
@@ -28,6 +34,13 @@ Bugs Fixed:
   or ``stream_error`` is set and ``output`` or ``error``, respectively,
   is not an absolute path.
   :jira:`736`
+
+- The *condor_annex* tool no longer duplicates the first tag if given multiple
+  ``-tag`` options on the command line.  Setting user data now works again if
+  it's very short or if you specify the Base64 encoding by hand (e.g., in the
+  Spot Fleet request  JSON file).
+  :jira:`910`
+
 
 .. _lts-version-history-909:
 
