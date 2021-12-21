@@ -577,7 +577,7 @@ void handleUserData(	ClassAd & commandArguments,
 
 	if(! userData.empty()) {
 		std::string validationError;
-		char * base64Encoded = condor_base64_encode( (const unsigned char *)userData.c_str(), userData.length() );
+		char * base64Encoded = condor_base64_encode( (const unsigned char *)userData.c_str(), userData.length(), false );
 		if(! assignUserData( commandArguments, base64Encoded, clUserDataWins, validationError )) {
 			fprintf( stderr, "Failed to set user data in request ad (%s).\n", validationError.c_str() );
 			exit( 5 );
