@@ -4995,36 +4995,70 @@ These macros control the *condor_schedd*.
     upper bound is configured with ``MAX_PERIODIC_EXPR_INTERVAL``
     :index:`MAX_PERIODIC_EXPR_INTERVAL` (default 1200 seconds).
 
-:macro-def:`SYSTEM_PERIODIC_HOLD`
+:macro-def:`SYSTEM_PERIODIC_HOLD_NAMES`
+    A comma and/or space separated list of unique names, where each is
+    used in the formation of a configuration variable name that will
+    contain an expression that will be periodically evaluated for each
+    job that is not in the ``HOLD`` state. Each name in the list will be used in the name of
+    configuration variable ``SYSTEM_PERIODIC_HOLD_<Name>``. The named expressions
+    are evaluated in the order in which names appear in this list. Names are
+    not case-sensitive. After all of the named expressions are evaluated,
+    the nameless ``SYSTEM_PERIODIC_HOLD`` expression will be evaluated. If any
+    of these expression evaluates to ``True`` the job will be held.  See also
+    ``SYSTEM_PERIODIC_HOLD``
+    There is no default value.
+
+:macro-def:`SYSTEM_PERIODIC_HOLD and SYSTEM_PERIODIC_HOLD_<Name>`
     This expression behaves identically to the job expression
     ``periodic_hold``, but it is evaluated for every job in the queue.
     It defaults to ``False``. When ``True``, it causes the job to stop
     running and go on hold. Here is an example that puts jobs on hold if
     they have been restarted too many times, have an unreasonably large
     virtual memory ``ImageSize``, or have unreasonably large disk usage
-    for an invented environment.
+    for an invented environment. 
 
     .. code-block:: condor-config
 
-        SYSTEM_PERIODIC_HOLD = \
+        if version > 9.5
+           # use hold names if the version supports it
+           SYSTEM_PERIODIC_HOLD_NAMES = Mem Disk
+           SYSTEM_PERIODIC_HOLD_Mem = ImageSize > 3000000
+           SYSTEM_PERIODIC_HOLD_Disk = JobStatus == 2 && DiskUsage > 10000000
+           SYSTEM_PERIODIC_HOLD = JobStatus == 1 && JobRunCount > 10
+        else
+           SYSTEM_PERIODIC_HOLD = \
           (JobStatus == 1 || JobStatus == 2) && \
           (JobRunCount > 10 || ImageSize > 3000000 || DiskUsage > 10000000)
+        endif
 
-:macro-def:`SYSTEM_PERIODIC_HOLD_REASON`
+:macro-def:`SYSTEM_PERIODIC_HOLD_REASON and SYSTEM_PERIODIC_HOLD_<Name>_REASON`
     This string expression is evaluated when the job is placed on hold
-    due to ``SYSTEM_PERIODIC_HOLD`` evaluating to ``True``. If it
+    due to ``SYSTEM_PERIODIC_HOLD`` or ``SYSTEM_PERIODIC_HOLD_<Name>`` evaluating to ``True``. If it
     evaluates to a non-empty string, this value is used to set the job
     attribute ``HoldReason``. Otherwise, a default description is used.
 
-:macro-def:`SYSTEM_PERIODIC_HOLD_SUBCODE`
+:macro-def:`SYSTEM_PERIODIC_HOLD_SUBCODE and SYSTEM_PERIODIC_HOLD_<Name>_SUBCODE`
     This integer expression is evaluated when the job is placed on hold
-    due to ``SYSTEM_PERIODIC_HOLD`` evaluating to ``True``. If it
+    due to ``SYSTEM_PERIODIC_HOLD`` or ``SYSTEM_PERIODIC_HOLD_<Name>`` evaluating to ``True``. If it
     evaluates to a valid integer, this value is used to set the job
     attribute ``HoldReasonSubCode``. Otherwise, a default of 0 is used.
     The attribute ``HoldReasonCode`` is set to 26, which indicates that
     the job went on hold due to a system job policy expression.
 
-:macro-def:`SYSTEM_PERIODIC_RELEASE`
+:macro-def:`SYSTEM_PERIODIC_RELEASE_NAMES`
+    A comma and/or space separated list of unique names, where each is
+    used in the formation of a configuration variable name that will
+    contain an expression that will be periodically evaluated for each
+    job that is in the ``HOLD`` state. Each name in the list will be used in the name of
+    configuration variable ``SYSTEM_PERIODIC_RELEASE_<Name>``. The named expressions
+    are evaluated in the order in which names appear in this list. Names are
+    not case-sensitive. After all of the named expressions are evaluated,
+    the nameless ``SYSTEM_PERIODIC_RELEASE`` expression will be evaluated. If any
+    of these expressions evaluates to ``True`` the job will be held.  See also
+    ``SYSTEM_PERIODIC_RELEASE``
+    There is no default value.
+
+:macro-def:`SYSTEM_PERIODIC_RELEASE and SYSTEM_PERIODIC_RELEASE_<Name>`
     This expression behaves identically to a job's definition of a
     **periodic_release** :index:`periodic_release<single: periodic_release; submit commands>`
     expression in a submit description file, but it is evaluated for
@@ -5042,7 +5076,20 @@ These macros control the *condor_schedd*.
           (JobRunCount < 20 && (time() - EnteredCurrentStatus) > 1200 ) &&  \
             (HoldReasonCode == 6 && HoldReasonSubCode == 110)
 
-:macro-def:`SYSTEM_PERIODIC_REMOVE`
+:macro-def:`SYSTEM_PERIODIC_REMOVE_NAMES`
+    A comma and/or space separated list of unique names, where each is
+    used in the formation of a configuration variable name that will
+    contain an expression that will be periodically evaluated for each
+    job in the queue. Each name in the list will be used in the name of
+    configuration variable ``SYSTEM_PERIODIC_REMOVE_<Name>``. The named expressions
+    are evaluated in the order in which names appear in this list. Names are
+    not case-sensitive. After all of the named expressions are evaluated,
+    the nameless ``SYSTEM_PERIODIC_REMOVE`` expression will be evaluated. If any
+    of these expressions evaluates to ``True`` the job will be removed from the queue.  See also
+    ``SYSTEM_PERIODIC_REMOVE``
+    There is no default value.
+
+:macro-def:`SYSTEM_PERIODIC_REMOVE and SYSTEM_PERIODIC_REMOVE_<Name>`
     This expression behaves identically to the job expression
     ``periodic_remove``, but it is evaluated for every job in the queue.
     As it is in the configuration file, it is easy for an administrator
