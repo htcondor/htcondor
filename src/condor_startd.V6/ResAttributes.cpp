@@ -1340,6 +1340,10 @@ MachAttributes::publish_static(ClassAd* cp)
 		cp->Assign(ATTR_HAS_USER_NAMESPACES, true);
 	}
 #endif
+	// Temporary Hack until this is a fixed path
+	// the Starter will expand this magic string to the
+	// actual value
+	cp->Assign("CondorScratchDir", "#CoNdOrScRaTcHdIr#");
 }
 
 void

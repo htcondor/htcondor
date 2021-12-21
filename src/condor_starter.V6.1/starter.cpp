@@ -3172,6 +3172,12 @@ Starter::GetJobEnv( ClassAd *jobad, Env *job_env, std::string & env_errors )
 // helper function
 static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, const char * assigned, const char * tag);
 
+bool expandScratchDirInEnv(void * void_scratch_dir, const MyString & /*lhs */, MyString &rhs) {
+	const char *scratch_dir = (const char *) void_scratch_dir;
+	rhs.replaceString("#CoNdOrScRaTcHdIr#", scratch_dir);
+	return true;
+}
+
 void
 Starter::PublishToEnv( Env* proc_env )
 {
@@ -3420,6 +3426,10 @@ Starter::PublishToEnv( Env* proc_env )
 		dprintf( D_ALWAYS, 
 				"Failed to set _CHIRP_DELAYED_UPDATE_PREFIX environment variable\n");
 	}
+
+	// Many jobs need an absolute path into the scratch directory in an environment var
+	// expand a magic string in an env var to the scratch dir
+	proc_env->Walk(&expandScratchDirInEnv, (void *)GetWorkingDir(true));
 }
 
 // parse an environment prototype string of the form  key[[=/regex/replace/] key2=/regex2/replace2/]
