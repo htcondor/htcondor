@@ -836,9 +836,6 @@ make tests-tar-pkg
 cp -p %{_builddir}/%{name}-%{version}/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
 %endif
 
-# Drop in a symbolic link for backward compatibility
-ln -s ../..%{_libdir}/condor/condor_ssh_to_job_sshd_config_template %{buildroot}/%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
-
 %if %uw_build
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
 # Drop in a link for backward compatibility for small shadow
@@ -850,6 +847,10 @@ populate /usr/share/doc/condor-%{version}/examples %{buildroot}/usr/share/doc/co
 #rm -rf %{buildroot}/usr/share/doc/condor-%{version}/etc
 
 mkdir -p %{buildroot}/%{_sysconfdir}/condor
+
+# Drop in a symbolic link for backward compatibility
+ln -s ../..%{_libdir}/condor/condor_ssh_to_job_sshd_config_template %{buildroot}/%_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
+
 # the default condor_config file is not architecture aware and thus
 # sets the LIB directory to always be /usr/lib, we want to do better
 # than that. this is, so far, the best place to do this
