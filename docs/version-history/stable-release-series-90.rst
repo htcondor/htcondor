@@ -29,6 +29,12 @@ Bugs Fixed:
   is not an absolute path.
   :jira:`736`
 
+- The *condor_annex* tool no longer duplicates the first tag if given multiple
+  ``-tag`` options on the command line.  You can now set longer user data on
+  the command-line.
+  :jira:`910`
+
+
 .. _lts-version-history-909:
 
 Version 9.0.9

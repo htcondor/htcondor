@@ -3444,9 +3444,8 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			"SpotPrice" );
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
 			"KeyName" );
-		// AWS' documentation is wrong, claims this is 'UserData'.
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
-			"userData", "UserData" );
+			"UserData", "UserData" );
 
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
 			"InstanceType" );
