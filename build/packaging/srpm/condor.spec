@@ -775,9 +775,19 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_GLOBUS:BOOL=FALSE \
 %endif
-       -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
-       -DWITH_LIBCGROUP:BOOL=TRUE \
-       -DLIBCGROUP_FOUND_SEARCH_cgroup=/%{_lib}/libcgroup.so.1
+       -DCMAKE_INSTALL_PREFIX:PATH=/ \
+       -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
+       -DSYSCONF_INSTALL_DIR:PATH=/etc \
+       -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
+%ifarch x86_64
+       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib64 \
+       -DLIB_INSTALL_DIR:PATH=/usr/lib64 \
+       -DLIB_SUFFIX=64 \
+%else
+       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib \
+       -DLIB_INSTALL_DIR:PATH=/usr/lib \
+%endif
+       -DBUILD_SHARED_LIBS:BOOL=ON
 %endif
 
 make %{?_smp_mflags}
