@@ -275,6 +275,8 @@ Requires: condor-procd = %{version}-%{release}
 Requires: %name-externals = %version-%release
 %endif
 
+Requires: %name-blahp = %version-%release
+
 # Useful tools are using the Python bindings
 Requires: python3-condor
 # The use the python-requests library in EPEL is based Python 3.6
