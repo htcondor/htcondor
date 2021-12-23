@@ -105,12 +105,6 @@ or
 
     $ condor_run "make"
 
-or
-
-.. code-block:: console
-
-    $ condor_run "condor_compile cc -o myprog.condor myprog.c"
-
 Files
 -----
 

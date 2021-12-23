@@ -126,7 +126,6 @@ signal. This clean up signal is specified with **kill_sig**. Note that
 the clean up work needs to be quick. If the job takes too long to exit
 after getting the **kill_sig**, HTCondor sends a SIGKILL signal 
 which immediately terminates the process.
-:index:`condor_compile<single: condor_compile; HTCondor commands>`
 
 The default value for ``KillSig`` is SIGTERM, the usual method 
 to nicely terminate a Unix program.
