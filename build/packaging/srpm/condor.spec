@@ -354,6 +354,9 @@ Obsoletes: condor-small-shadow < 8.9.9
 # external-libs package discontinued as of 8.9.9
 Obsoletes: condor-external-libs < 8.9.9
 
+# Bosco package discontinued as of 9.5.0
+Obsoletes: condor-bosco < 9.5.0
+
 %description
 HTCondor is a specialized workload management system for
 compute-intensive jobs. Like other full-featured batch systems, HTCondor
