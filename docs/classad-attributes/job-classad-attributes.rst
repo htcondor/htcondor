@@ -42,6 +42,65 @@ all attributes.
     is only present if an accounting group was requested by the
     submission.
 
+:index:`ActivationDuration<single: ActivationDuration; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ActivationDuration>`
+
+``ActivationDuration``
+    Formally, the length of time in seconds from when the shadow sends a
+    claim activation to when the shadow receives a claim deactivation.
+
+    Informally, this is how much time HTCondor's fair-share mechanism
+    will charge the job for, plus one round-trip over the network.
+
+    This attribute may not be used in startd policy expressions and is
+    not computed until complete.
+
+:index:`ActivationExecutionDuration<single: ActivationExecutionDuration; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ActivationExecutionDuration>`
+
+``ActivationExecutionDuration``
+    Formally, the length of time in seconds from when the shadow received
+    notification that the job had been spawned to when the shadow received
+    notification that the spawned process has exited.
+
+    Informally, this is the duration limited by ``AllowedExecuteDuration``.
+
+    This attribute may not be used in startd policy expressions and is
+    not computed until complete.
+
+:index:`ActivationSetupDuration<single: ActivationSetupDuration; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ActivationSetupDuration>`
+
+``ActivationSetupDuration``
+    Formally, the length of time in seconds from when the shadow sends a
+    claim activation to when the shadow it notified that the job was
+    spawned.
+
+    Informally, this is how long it took the starter to prepare to execute
+    the job.  That includes file transfer, so the difference between this
+    duration and the duration of input file transfer is (roughly) the
+    execute-side overhead of preparing to start the job.
+
+    This attribute may not be used in startd policy expressions and is
+    not computed until complete.
+
+:index:`ActivationTeardownDuration<single: ActivationTeardownDuration; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ActivationTeardownDuration>`
+
+``ActivationTeardownDuration``
+    Formally, the length of time in seconds from when the shadow received
+    notification that the spawned process exited to when the shadow received
+    a claim deactivation.
+
+
+    Informally, this is how long it took the starter to finish up after the
+    job.  That includes file transfer, so the difference between this duration
+    and the duration of output file transfer is (roughly) the execute-side
+    overhead of handling job termination.
+
+    This attribute may not be used in startd policy expressions and is
+    not computed until complete.
+
 :index:`AllowedExecuteDuration<single: AllowedExecuteDuration; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; AllowedExecuteDuration>`
 
@@ -2438,14 +2497,14 @@ all attributes.
     input file transfer is enabled.
 
 ``TransferInFinished``
-    : When the job finished the most recent recent transfer of its input
+    When the job finished the most recent recent transfer of its input
     sandbox, measured in seconds from the epoch. (00:00:00 UTC Jan 1,
     1970). :index:`TransferInQueued<single: TransferInQueued; ClassAd job attribute>`
 
 :index:`job ClassAd attribute<single: job ClassAd attribute; TransferInQueued>`
 
 ``TransferInQueued``
-    : If the job's most recent transfer of its input sandbox was queued,
+    If the job's most recent transfer of its input sandbox was queued,
     this attribute says when, measured in seconds from the epoch
     (00:00:00 UTC Jan 1, 1970).
 

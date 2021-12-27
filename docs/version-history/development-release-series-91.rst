@@ -46,6 +46,26 @@ Bugs Fixed:
   enabled singularity support on the execute node, the job would go on hold at checkpoint time.
   :jira:`837`
 
+Version 9.4.1
+-------------
+
+Release Notes:
+
+- HTCondor version 9.4.1 released on December 21, 2021.
+
+New Features:
+
+- Added activation metrics (``ActivationDuration``,
+  ``ActivationExecutionDuration``, ``ActivationSetupDuration``, and
+  ``ActivationTeardownDuration``).
+  :jira:`861`
+
+Bugs Fixed:
+
+- Fix a bug where the error number could be cleared before
+  being reported when a file transfer plugin fails.
+  :jira:`889`
+
 Version 9.4.0
 -------------
 
