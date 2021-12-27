@@ -58,6 +58,8 @@ my %skipad = (
 	"AutoClusterId" => 1,
 	"RemoteSlotID" => 1,
 	"JobSetId" => 1,
+	"DiskProvisioned" => 1,
+	"ActivationSetupDuration" => 1,
 );
 
 my $firstappend_condor_config = '

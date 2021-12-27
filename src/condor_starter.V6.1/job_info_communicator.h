@@ -255,24 +255,34 @@ public:
 
 		/** Someone is attempting to disconnect from this job.
 		 */
-	virtual void disconnect() = 0;	
+	virtual void disconnect() = 0;
 
 		// // // // // // // // // // // //
 		// Notfication to our controller
 		// // // // // // // // // // // //
 
-		/** Notifyour controller that the job is about to spawn
+		/** Notify our controller that the job is about to spawn
 		 */
 	virtual void notifyJobPreSpawn( void ) = 0;
+
+	// Notify our controller that one of the job's execution has completed.
+	// This is technically redundant with notifyJobExit(), except that for
+	// self-checkpointing jobs, the job can complete arbitrarily many
+	// executions without exiting.  We also don't want to call
+	// notifyJobTermination(), since that updates a bunch of other
+	// attributes that we don't want to change.  (HTCONDOR-861)
+	virtual void notifyExecutionExit( void ) { }
 
 		/** Notify our controller that the job exited
 			@param exit_status The exit status from wait()
 			@param reason The Condor-defined exit reason
 			@param user_proc The UserProc that was running the job
 		*/
-	virtual bool notifyJobExit( int exit_status, int reason, 
+	virtual bool notifyJobExit( int exit_status, int reason,
 								UserProc* user_proc ) = 0;
 
+	// See jic_shadow.h for the explanation of how this differs from the
+	// preceeding.  Only called if Starter::transferOutput() fails.
 	virtual int notifyJobTermination( UserProc* user_proc ) = 0;
 
 	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode ) = 0;

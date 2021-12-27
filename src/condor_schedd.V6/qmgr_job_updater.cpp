@@ -130,7 +130,12 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE );
-	
+
+	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_DURATION );
+	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_EXECUTION_DURATION );
+	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_SETUP_DURATION );
+	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION );
+
 	common_job_queue_attrs->insert( "TransferInQueued" );
 	common_job_queue_attrs->insert( "TransferInStarted" );
 	common_job_queue_attrs->insert( "TransferInFinished" );

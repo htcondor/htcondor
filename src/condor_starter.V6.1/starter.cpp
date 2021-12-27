@@ -3950,4 +3950,13 @@ void
 Starter::RecordJobExitStatus(int status) {
 	recorded_job_exit_status = true;
 	job_exit_status = status;
+
+    // "When the job exits" is usually synonymous with "when the process
+    // spawned by the starter exits", but that's not the case for self-
+    // checkpointing jobs, which the starter just spawns again (after
+    // transferring the checkpoint) if the exit code indicates that the
+    // job checkpointed successfully.  Nothing else in HTCondor currently
+    // cares about this, but we've asked to track it (perhaps to see if
+    // anything else in HTCondor should care).  See HTCONDOR-861.
+    jic->notifyExecutionExit();
 }
