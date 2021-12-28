@@ -56,6 +56,12 @@ elif $(grep -qi bullseye /etc/os-release); then
     mv debian/htcondor.install.focal debian/htcondor.install
     mv debian/rules.focal debian/rules
     mv debian/patches/series.focal debian/patches/series
+elif $(grep -qi bookworm /etc/os-release); then
+    suffix='n3'
+    mv debian/control.focal debian/control
+    mv debian/htcondor.install.focal debian/htcondor.install
+    mv debian/rules.focal debian/rules
+    mv debian/patches/series.focal debian/patches/series
 elif $(grep -qi bionic /etc/os-release); then
     suffix=''
 elif $(grep -qi focal /etc/os-release); then
@@ -106,6 +112,12 @@ elif [ "$suffix" = 'n1' ]; then
     dpkg-buildpackage --build=$build -uc -us
 elif [ "$suffix" = 'n2' ]; then
     build='full'
+    dch --distribution $dist --nmu 'place holder entry'
+    dch --distribution $dist --nmu 'place holder entry'
+    dpkg-buildpackage --build=$build -uc -us
+elif [ "$suffix" = 'n3' ]; then
+    build='full'
+    dch --distribution $dist --nmu 'place holder entry'
     dch --distribution $dist --nmu 'place holder entry'
     dch --distribution $dist --nmu 'place holder entry'
     dpkg-buildpackage --build=$build -uc -us
