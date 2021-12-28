@@ -30,6 +30,7 @@
 
 #if defined(LINUX)
 #include "glexec_privsep_helper.linux.h"
+#include "../condor_startd.V6/VolumeManager.h"
 #endif
 
 #ifdef WIN32
@@ -456,6 +457,10 @@ private:
 
 	// The string to set the tmp env vars to
 	std::string tmpdir;
+
+#ifdef LINUX
+	std::unique_ptr<VolumeManager::Handle> m_volume_mgr;
+#endif // LINUX
 };
 
 #endif

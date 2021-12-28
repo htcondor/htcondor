@@ -1144,6 +1144,11 @@ default=
 type=string
 tags=startd_factory
 
+[THINPOOL_BACKING_FILE]
+default=$(SPOOL)/startd_disk.img
+type=string
+tags=startd
+
 [MAX_TIME_SKIP]
 default=1200
 range=0,
@@ -2921,7 +2926,7 @@ type=string
 tags=tools,preen
 
 [SYSTEM_VALID_SPOOL_FILES]
-default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog, startd_disk.img
 type=string
 customization=const
 description=List of files in the SPOOL directory needed by HTCondor

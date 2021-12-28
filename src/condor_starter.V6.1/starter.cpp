@@ -143,6 +143,7 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 
 	Config();
 
+
 		// Now that we know what Execute is, we can figure out what
 		// directory the starter will be working in and save that,
 		// since we'll want this info a lot while we initialize and
@@ -158,6 +159,30 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 		formatstr( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 				 (long)daemonCore->getpid() );
 	}
+
+#ifdef LINUX
+	const char *thinpool = getenv("_CONDOR_THINPOOL");
+	const char *thinpool_vg = getenv("_CONDOR_THINPOOL_VG");
+	const char *thinpool_size = getenv("_CONDOR_THINPOOL_SIZE_KB");
+	if (thinpool && thinpool_vg && thinpool_size) {
+		long size_kb;
+		try {
+			size_kb = std::stol(thinpool_size);
+		} catch (...) {
+			size_kb = -1;
+		}
+		if (size_kb > 0) {
+			// const std::string &mountpoint, const std::string &volume, const std::string &pool, const std::string &vg_name, uint64_t size_kb, CondorError &err
+			CondorError err;
+			m_volume_mgr.reset(new VolumeManager::Handle(Execute, getMySlotName(), thinpool, thinpool_vg, size_kb, err));
+			if (!err.empty()) {
+				dprintf(D_ALWAYS, "Failure when setting up filesystem for job: %s\n", err.getFullText().c_str());
+				m_volume_mgr.reset();
+			}
+		}
+	}
+#endif // LINUX
+
 
 		//
 		// We have switched all of these to call the "Remote"

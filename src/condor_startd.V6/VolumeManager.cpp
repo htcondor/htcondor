@@ -1,0 +1,631 @@
+
+#include <condor_common.h>
+#include <CondorError.h>
+#include <condor_config.h>
+#include <condor_debug.h>
+#include <my_popen.h>
+#include <condor_uid.h>
+#include <subsystem_info.h>
+
+#include <rapidjson/document.h>
+
+#include <sys/mount.h>
+
+#include "VolumeManager.h"
+
+#include <sstream>
+
+#define VOLUME_MANAGER_TIMEOUT 120
+
+
+VolumeManager::VolumeManager()
+{
+    if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
+        dprintf(D_FULLDEBUG, "Not enforcing disk limits in the startd.\n");
+        return;
+    }
+    std::string pool_name; std::string volume_group_name;
+    if (!param(pool_name, "THINPOOL_NAME") || !param(volume_group_name, "THINPOOL_VOLUME_GROUP_NAME")) {
+        param(m_loopback_filename, "THINPOOL_BACKING_FILE", "$(SPOOL)/startd_disk.img");
+        uint64_t size_mb = param_integer("THINPOOL_BACKING_SIZE_MB", 10240);
+        CondorError err;
+        dprintf(D_ALWAYS, "StartD will enforce disk limits using a loopback file %s.\n", m_loopback_filename.c_str());
+        m_loopdev_name = CreateLoopback(m_loopback_filename, size_mb*1024, err);
+        if (m_loopdev_name.empty()) {
+            dprintf(D_ALWAYS, "Failed to allocate thinpool loopback device: %s\n", err.getFullText().c_str());
+            return;
+        }
+
+        auto lname = get_mySubSystem()->getLocalName();
+        std::string condor_prefix = "_condor_" + (lname ? (std::string(lname) + "_") : "") + get_mySubSystem()->getName();
+            // Preemptively clean-up condor-owned devices.
+        CleanupAllDevices("", m_loopdev_name, condor_prefix, condor_prefix, err);
+        err.clear();
+
+        if (!CreatePV(m_loopdev_name, err)) {
+            dprintf(D_ALWAYS, "Failed to create LVM physical volume for loopback device: %s\n", err.getFullText().c_str());
+            return;
+        }
+
+        if (!CreateVG(condor_prefix, m_loopdev_name, err)) {
+            dprintf(D_ALWAYS, "Failed to create LVM volume group for loopback device %s: %s\n",
+                m_loopdev_name.c_str(), err.getFullText().c_str());
+            return;
+        }
+        m_vg_name = condor_prefix;
+
+        if (!CreateThinPool(condor_prefix, condor_prefix, err)) {
+            dprintf(D_ALWAYS, "Failed to create LVM thin logical volume for loopback device %s: %s\n",
+                m_loopdev_name.c_str(), err.getFullText().c_str());
+            return;
+        }
+        m_volume_name = m_pool_name = condor_prefix;
+        m_volume_group_name = m_vg_name;
+    } else {
+        dprintf(D_ALWAYS, "StartD will enforce disk limits using a logical volume named %s.\n", pool_name.c_str());
+        m_volume_name = pool_name;
+        m_volume_group_name = volume_group_name;
+    }
+}
+
+VolumeManager::~VolumeManager()
+{
+    if (!m_pool_name.empty()) {
+        CondorError err;
+        auto lvs = ListPoolLVs(m_pool_name, err);
+        if (!err.empty()) {
+            dprintf(D_ALWAYS, "Failed to list logical volumes when cleaning up volume manager: %s\n",
+                err.getFullText().c_str());
+        }
+        for (const auto & lv : lvs) {
+            err.clear();
+            if (!RemoveLV(lv, m_volume_group_name, err)) {
+                dprintf(D_ALWAYS, "Failed to delete logical volume %s: %s\n",
+                    lv.c_str(), err.getFullText().c_str());
+            }
+        }
+    }
+    if (!m_loopback_filename.empty()) {
+        CondorError err;
+        if (!CleanupAllDevices(m_loopdev_name, m_loopdev_name, m_vg_name, m_pool_name, err)) {
+            dprintf(D_ALWAYS, "Failed to cleanup volume manager devices: %s\n", err.getFullText().c_str());
+        }
+    }
+}
+
+
+VolumeManager::Handle::Handle(const std::string &mountpoint, const std::string &volume, const std::string &pool, const std::string &vg_name, uint64_t size_kb, CondorError &err)
+{
+    if (!VolumeManager::CreateThinLV(size_kb, volume, pool, vg_name, err)) {
+        return;
+    }
+    m_volume = volume;
+    m_vg_name = vg_name;
+    std::string device_path = "/dev/" + vg_name + "/" + volume;
+    if (!VolumeManager::CreateFilesystem(volume, device_path, err)) {
+        return;
+    }
+    if (!VolumeManager::MountFilesystem(device_path, mountpoint, err)) {
+        return;
+    }
+    m_mountpoint = mountpoint;
+}
+
+
+VolumeManager::Handle::~Handle()
+{
+    CondorError err;
+    if (!m_mountpoint.empty()) {
+        UnmountFilesystem(m_mountpoint, err);
+    }
+    if (!m_volume.empty()) {
+        RemoveLV(m_volume, m_vg_name, err);
+    }
+    if (!err.empty()) {
+        dprintf(D_ALWAYS, "Errors when cleaning up starter mounts: %s\n", err.getFullText().c_str());
+    }
+}
+
+
+bool
+VolumeManager::CleanupSlot(const std::string &slot, CondorError &err)
+{
+    dprintf(D_FULLDEBUG, "StartD is cleaning up logical volume for slot %s.\n", slot.c_str());
+    if (!slot.empty() && !m_volume_group_name.empty()) {
+        return RemoveLV(slot, m_volume_group_name, err);
+    }
+    return true;
+}
+
+
+bool
+VolumeManager::MountFilesystem(const std::string &device_path, const std::string &mountpoint, CondorError &err)
+{
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+
+    if (-1 == unshare(CLONE_NEWNS)) {
+        err.pushf("VolumeManager", 14, "Failed to create new mount namespace for starter: %s (errno=%d)",
+            strerror(errno), errno);
+        return false;
+    }
+    if (-1 == mount("", "/", "dontcare", MS_REC|MS_SLAVE, "")) {
+        err.pushf("VolumeManager", 15, "Failed to unshare the mount namespace: %s (errno=%d)",
+            strerror(errno), errno);
+        return false;
+    }
+
+    // mount -o data=writeback,barrier=0 /dev/test_vg/condor_slot_1 /mnt/condor_slot_1
+    ArgList args;
+    args.AppendArg("mount");
+    args.AppendArg("--no-mtab");
+    args.AppendArg("-o");
+    args.AppendArg("data=writeback,barrier=0,noatime,discard,nodev,nosuid,");
+    args.AppendArg(device_path);
+    args.AppendArg(mountpoint);
+    int exit_status;
+    std::unique_ptr<char> mount_output(
+        run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                    args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+    if (exit_status) {
+        err.pushf("VolumeManager", 13, "Failed to mount new filesystem %s for job (exit status %d): %s\n", mountpoint.c_str(), exit_status, mount_output ? mount_output.get(): "(no command output)");
+        return false;
+    }
+
+    if (-1 == chown(mountpoint.c_str(), get_real_condor_uid(), get_real_condor_gid())) {
+        err.pushf("VolumeManager", 14, "Failed to chown the new execute mount to condor user: %s (errno=%d)",
+            strerror(errno), errno);
+        return false;
+    }
+
+    return true;
+}
+
+
+bool
+VolumeManager::CreateFilesystem(const std::string &label, const std::string &devname, CondorError &err)
+{
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+
+    ArgList args;
+    args.AppendArg("mke2fs");
+    args.AppendArg("-t");
+    args.AppendArg("ext4");
+    args.AppendArg("-O");
+    args.AppendArg("^has_journal");
+    args.AppendArg("-E");
+    args.AppendArg("lazy_itable_init=0");
+    args.AppendArg("-L");
+    args.AppendArg(label);
+    args.AppendArg(devname);
+    int exit_status;
+    std::unique_ptr<char> mke2fs_output(
+        run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                    args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+    if (exit_status) {
+        err.pushf("VolumeManager", 13, "Failed to create new ext4 filesystem for job (exit status %d): %s\n", exit_status, mke2fs_output ? mke2fs_output.get(): "(no command output)");
+        return false;
+    }
+    return true;
+}
+
+
+std::string
+VolumeManager::CreateLoopback(const std::string &filename, uint64_t size_kb, CondorError &err)
+{
+    if (filename.empty()) {
+        err.push("VolumeManager", 1, "Loopback filenamae is empty");
+        return "";
+    }
+    if (!size_kb) {
+        err.push("VolumeManager", 2, "Loopback filesystem size is zero");
+        return "";
+    }
+
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+
+    struct stat backing_stat;
+    bool existing_device = false;
+    std::string output_devname;
+    if (0 == stat(filename.c_str(), &backing_stat)) {
+        ArgList args;
+        args.AppendArg("losetup");
+        args.AppendArg("--list");
+        args.AppendArg("--output");
+        args.AppendArg("name,back-file");
+        int exit_status;
+        std::unique_ptr<char> losetup_output(
+            run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                        args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+        if (exit_status) {
+            err.pushf("VolumeManager", 3, "Failed to list current loopback devices (exit status %d): %s\n", exit_status, losetup_output ? losetup_output.get(): "(no command output)");
+            return "";
+        }
+
+        std::stringstream ss(losetup_output.get());
+        bool found_header = false;
+        for (std::string line; std::getline(ss, line); ) {
+            if (!found_header) {
+                found_header = true;
+                continue;
+            }
+            std::stringstream ss2(line);
+            std::string devname, backing;
+            for (std::string word; std::getline(ss2, word, ' '); ) {
+                if (word.empty()) {continue;}
+                if (devname.empty()) devname = word;
+                else if (backing.empty()) backing = word;
+            }
+            if (backing.empty()) {
+                continue;
+            }
+
+            struct stat cur_backing_stat;
+            if (0 == stat(backing.c_str(), &cur_backing_stat) &&
+                cur_backing_stat.st_dev == backing_stat.st_dev &&
+                cur_backing_stat.st_ino == backing_stat.st_ino)
+            {
+                existing_device = true;
+                output_devname = devname;
+                break;
+            }
+        }
+    } else {
+        int fd = safe_create_fail_if_exists(filename.c_str(), O_WRONLY, 0600);
+        if (fd == -1) {
+            err.pushf("VolumeManager", 4, "Failed to create loopback file %s: %s (errno=%d)",
+                filename.c_str(), strerror(errno), errno);
+            return "";
+        }
+        int alloc_error = posix_fallocate(fd, 0, static_cast<off_t>(size_kb*1.02)*1024);
+        fstat(fd, &backing_stat);
+        close(fd);
+        if (alloc_error) {
+            err.pushf("VolumeManager", 5, "Failed to allocate space for data in %s: %s (errno=%d)",
+                filename.c_str(), strerror(alloc_error), alloc_error);
+            return "";
+        }
+    }
+
+
+        // TODO: Would be friendlier to unmount everything and resize instead of failing
+    if (backing_stat.st_size < static_cast<off_t>(size_kb*1.02)*1024) {
+        err.push("VolumeManager", 6, "Pre-existing loopback file is too small");
+        return "";
+    }
+
+    if (!existing_device) {
+        dprintf(D_FULLDEBUG, "Loopback device does not already exist; creating for file %s.\n", filename.c_str());
+        ArgList args;
+        args.AppendArg("losetup");
+        args.AppendArg("--find");
+        args.AppendArg("--show");
+        args.AppendArg(filename.c_str());
+        int exit_status;
+        std::unique_ptr<char> losetup_output(
+            run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                        args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+        if (exit_status) {
+            err.pushf("VolumeManager", 7, "Failed to setup loopback device from backing file %s (exit status=%d): %s",
+                filename.c_str(), exit_status, losetup_output ? losetup_output.get() : "(no output)");
+            return "";
+        }
+        output_devname = losetup_output ? losetup_output.get() : "";
+        chomp(output_devname);
+        if (output_devname.empty()) {
+            err.pushf("VolumeManager", 8, "Creation of loopback device returned empty output");
+            return "";
+        }
+    } else {
+        dprintf(D_FULLDEBUG, "Loopback device already exists; re-using %s.\n", output_devname.c_str());
+    }
+    return output_devname;
+}
+
+
+bool
+VolumeManager::CreatePV(const std::string &devname, CondorError &err)
+{
+    dprintf(D_FULLDEBUG, "Creating LVM metadata for physical volume %s.\n", devname.c_str());
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+    ArgList args;
+    args.AppendArg("pvcreate");
+    args.AppendArg(devname);
+    int exit_status;
+    std::unique_ptr<char> pvcreate_output(
+                run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                        args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+    if (exit_status) {
+        err.pushf("VolumeManager", 12, "Failed to create LVM metadata for physical volume %s (exit status %d): %s",
+            devname.c_str(), exit_status, pvcreate_output ? pvcreate_output.get() : "(no output)");
+        return false;
+    }
+    return true;
+}
+
+
+bool
+VolumeManager::CreateVG(const std::string &vg_name, const std::string &devname, CondorError &err)
+{
+    dprintf(D_FULLDEBUG, "Creating LVM volume group %s for physical volume %s.\n", vg_name.c_str(), devname.c_str());
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+    ArgList args;
+    args.AppendArg("vgcreate");
+    args.AppendArg(vg_name);
+    args.AppendArg(devname);
+    int exit_status;
+    std::unique_ptr<char> vgcreate_output(
+                run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                        args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+    if (exit_status) {
+        err.pushf("VolumeManager", 12, "Failed to create LVM volume group for physical volume %s (exit status %d): %s",
+            devname.c_str(), exit_status, vgcreate_output ? vgcreate_output.get() : "(no output)");
+        return false;
+    }
+    return true;
+}
+
+
+bool
+VolumeManager::CreateThinPool(const std::string &lv_name, const std::string &vg_name, CondorError &err)
+{
+    dprintf(D_FULLDEBUG, "Creating LVM thin logical volume %s for volume group %s.\n", lv_name.c_str(), vg_name.c_str());
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+    ArgList args;
+    args.AppendArg("lvcreate");
+    args.AppendArg("--type");
+    args.AppendArg("thin-pool");
+    args.AppendArg("-l");
+    args.AppendArg("100\%FREE");
+    args.AppendArg(vg_name);
+    args.AppendArg("-n");
+    args.AppendArg(lv_name);
+    int exit_status;
+    std::unique_ptr<char> lvcreate_output(
+                run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                        args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+    if (exit_status) {
+        err.pushf("VolumeManager", 12, "Failed to create LVM thin logical volume %s for volume group %s (exit status %d): %s",
+            lv_name.c_str(), vg_name.c_str(), exit_status, lvcreate_output ? lvcreate_output.get() : "(no output)");
+        return false;
+    }
+    return true;
+}
+
+
+bool
+VolumeManager::CreateThinLV(uint64_t size_kb, const std::string &lv_name, const std::string &pool_name, const std::string &vg_name, CondorError &err)
+{
+    dprintf(D_FULLDEBUG, "Creating LVM thin logical volume %s for volume group %s.\n", lv_name.c_str(), vg_name.c_str());
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+    ArgList args;
+    // lvcreate -V 1G -T test_vg/condor_thinpool -n condor_slot_1
+    args.AppendArg("lvcreate");
+    args.AppendArg("-V");
+    std::string size;
+    formatstr(size, "%luk", size_kb);
+    args.AppendArg(size);
+    args.AppendArg("-T");
+    args.AppendArg(vg_name + "/" + pool_name);
+    args.AppendArg("-n");
+    args.AppendArg(lv_name);
+    int exit_status;
+    std::unique_ptr<char> lvcreate_output(
+                run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                        args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+    if (exit_status) {
+        err.pushf("VolumeManager", 12, "Failed to create LVM thin logical volume %s for volume group %s (exit status %d): %s",
+            lv_name.c_str(), vg_name.c_str(), exit_status, lvcreate_output ? lvcreate_output.get() : "(no output)");
+        return false;
+    }
+    return true;
+}
+
+
+bool
+VolumeManager::UnmountFilesystem(const std::string &mountpoint, CondorError &err)
+{
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+
+    std::unique_ptr<char> cwd(get_current_dir_name());
+/*
+    ArgList args;
+    args.AppendArg("umount");
+    args.AppendArg(mountpoint);
+    int exit_status;
+    std::unique_ptr<char> unmount_output(
+        run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                    args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+*/
+    if (-1 == chdir("/")) {
+        err.pushf("VolumeManager", 16, "Failed to change directory: %s (errno=%d)",
+            strerror(errno), errno);
+    }
+    int exit_status = 0;
+    if (-1 == umount(mountpoint.c_str())) {
+        exit_status = errno;
+        err.pushf("VolumeManager", 17, "Failed to unmount %s: %s (errno=%d)",
+            mountpoint.c_str(), strerror(errno), errno);
+    }
+    if (cwd) {
+        if (-1 == chdir(cwd.get())) {
+            err.pushf("VolumeManager", 16, "Failed to change directory: %s (errno=%d)",
+                 strerror(errno), errno);
+        }
+    }
+    if (exit_status) {
+        //err.pushf("VolumeManager", 13, "Failed to unmount filesystem %s for job (exit status %d): %s\n",
+        //    mountpoint.c_str(), exit_status, unmount_output ? unmount_output.get(): "(no command output)");
+        return false;
+    }
+    return true;
+}
+
+
+bool
+VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, CondorError &err)
+{
+    dprintf(D_FULLDEBUG, "Removing logical volume %s.\n", lv_name.c_str());
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+    ArgList args;
+    args.AppendArg("lvremove");
+    args.AppendArg(vg_name + "/" + lv_name);
+    args.AppendArg("--yes");
+    int exit_status;
+    std::unique_ptr<char> lvremove_output(
+                run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                        args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+    if (exit_status) {
+        err.pushf("VolumeManager", 12, "Failed to delete logical volume %s (exit status %d): %s",
+            lv_name.c_str(), exit_status, lvremove_output ? lvremove_output.get() : "(no output)");
+        return false;
+    }
+    return true;
+}
+
+
+bool
+VolumeManager::RemoveVG(const std::string &vg_name, CondorError &err)
+{
+    dprintf(D_FULLDEBUG, "Removing LVM volume group %s.\n", vg_name.c_str());
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+    ArgList args;
+    args.AppendArg("vgremove");
+    args.AppendArg(vg_name);
+    args.AppendArg("--yes");
+    int exit_status;
+    std::unique_ptr<char> vgremove_output(
+                run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                        args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+    if (exit_status) {
+        err.pushf("VolumeManager", 12, "Failed to delete volume group %s (exit status %d): %s",
+            vg_name.c_str(), exit_status, vgremove_output ? vgremove_output.get() : "(no output)");
+        return false;
+    }
+    return true;
+}
+
+
+bool
+VolumeManager::RemovePV(const std::string &pv_name, CondorError &err)
+{
+    dprintf(D_FULLDEBUG, "Removing physical volume %s.\n", pv_name.c_str());
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+    ArgList args;
+    args.AppendArg("pvremove");
+    args.AppendArg(pv_name);
+    args.AppendArg("--yes");
+    int exit_status;
+    std::unique_ptr<char> pvremove_output(
+                run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                        args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+    if (exit_status) {
+        err.pushf("VolumeManager", 12, "Failed to delete LVM physical volume %s (exit status %d): %s",
+            pv_name.c_str(), exit_status, pvremove_output ? pvremove_output.get() : "(no output)");
+        return false;
+    }
+    return true;
+}
+
+
+bool
+VolumeManager::RemoveLoopDev(const std::string &loopdev_name, CondorError &err)
+{
+    dprintf(D_FULLDEBUG, "Removing loop devices %s.\n", loopdev_name.c_str());
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+    ArgList args;
+    args.AppendArg("losetup");
+    args.AppendArg("-d");
+    args.AppendArg(loopdev_name);
+    int exit_status;
+    std::unique_ptr<char> losetup_output(
+                run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                        args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+    if (exit_status) {
+        err.pushf("VolumeManager", 12, "Failed to delete loopback device %s (exit status %d): %s",
+            loopdev_name.c_str(), exit_status, losetup_output ? losetup_output.get() : "(no output)");
+        return false;
+    }
+    return true;
+}
+
+
+std::vector<std::string>
+VolumeManager::ListPoolLVs(const std::string &pool_name, CondorError &err)
+{
+    std::vector<std::string> lvs;
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+    ArgList args;
+    args.AppendArg("lvs");
+    args.AppendArg("--reportformat");
+    args.AppendArg("json");
+    int exit_status;
+    std::unique_ptr<char> losetup_output(
+        run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                    args, 0, nullptr, &exit_status));
+    if (exit_status) {
+        err.pushf("VolumeManager", 9, "Failed to list logical volumes (exit status=%d): %s",
+            exit_status, losetup_output ? losetup_output.get() : "(no output)");
+        return lvs;
+    }
+
+    rapidjson::Document doc;
+    if (doc.Parse(losetup_output ? losetup_output.get() : "").HasParseError()) {
+        err.pushf("VolumeManager", 10, "Failed to parse logical volume status as JSON: %s",
+            losetup_output ? losetup_output.get() : "(no output)");
+        return lvs;
+    }
+    if (!doc.IsObject() || !doc.HasMember("report")) {
+        err.pushf("VolumeManager", 11, "Invalid JSON from logical volume status: %s", losetup_output.get());
+        return lvs;
+    }
+    auto &report_obj = doc["report"];
+    if (!report_obj.IsArray() || !report_obj.Size()) {
+        err.pushf("VolumeManager", 11, "Invalid JSON from logical volume status (no LV report): %s", losetup_output.get());
+        return lvs;
+    }
+    for (auto iter = report_obj.Begin(); iter != report_obj.End(); ++iter) {
+         const auto &report_entry = *iter;
+         if (!report_entry.IsObject() || !report_entry.HasMember("lv") || !report_entry["lv"].IsArray()) {continue;}
+         auto &lvs_report = report_entry["lv"];
+         for (auto iter2 = lvs_report.Begin(); iter2 != lvs_report.End(); ++iter2) {
+             const auto &lv_report = *iter2;
+             if (!lv_report.IsObject() || !lv_report.HasMember("pool_lv") || !lv_report.HasMember("lv_name") ||
+                 !lv_report["pool_lv"].IsString() || !lv_report["lv_name"].IsString())
+             {
+                 continue;
+             }
+             if (lv_report["pool_lv"].GetString() == pool_name) {
+                 lvs.emplace_back(lv_report["lv_name"].GetString());
+             }
+         }
+    }
+    return lvs;
+}
+
+bool
+VolumeManager::CleanupAllDevices(const std::string &loopdev, const std::string &pv_name, const std::string &vg_name, const std::string &pool_name, CondorError &err)
+{
+    bool had_failure = false;
+    if (!pool_name.empty()) {
+        had_failure |= !RemoveLV(pool_name, vg_name, err);
+    }
+    if (!vg_name.empty()) {
+        had_failure |= !RemoveVG(vg_name, err);
+    }
+    if (!pv_name.empty()) {
+        had_failure |= !RemovePV(pv_name, err);
+    }
+    if (!loopdev.empty()) {
+        had_failure |= !RemoveLoopDev(loopdev, err);
+    }
+    return !had_failure;
+}
+
+
+void
+VolumeManager::UpdateStarterEnv(Env &env)
+{
+    if (m_volume_name.empty() || m_volume_group_name.empty()) {return;}
+    env.SetEnv("_CONDOR_THINPOOL", m_volume_name);
+    env.SetEnv("_CONDOR_THINPOOL_VG", m_volume_group_name);
+}
