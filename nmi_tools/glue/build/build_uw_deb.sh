@@ -74,6 +74,8 @@ else
     suffix=''
 fi
 
+# set default email address for build
+export DEBEMAIL=${DEBEMAIL-htcondor-admin@cs.wisc.edu}
 # if running in a condor slot, set parallelism to slot size
 export DEB_BUILD_OPTIONS="parallel=${OMP_NUM_THREADS-1}"
 
