@@ -1581,8 +1581,10 @@ CpuAttributes::set_total_disk(long long total, bool refresh) {
 		uint64_t used_bytes, total_bytes;
 		if (m_volume_mgr) {
 			if (m_volume_mgr->GetPoolSize(used_bytes, total_bytes, err)) {
-				c_total_disk = total_bytes - sysapi_reserve_for_fs();
+				c_total_disk = total_bytes/1024 - sysapi_reserve_for_fs();
 				c_total_disk = (c_total_disk < 0) ? 0 : c_total_disk;
+				dprintf(D_FULLDEBUG, "Used volume manager to get total logical size of %llu\n", c_total_disk);
+				return true;
 			} else {
 				dprintf(D_FULLDEBUG, "Failure to get pool size: %s\n", err.getFullText().c_str());
 			}
