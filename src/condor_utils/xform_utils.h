@@ -156,7 +156,13 @@ protected:
 //
 class XFormHash {
 public:
-	XFormHash(int options = 0);
+	enum Flavor {
+		Iterating=0, // enable Process/Step/Row iteration for LocalMacroSet (used by condor_transform_ads)
+		Basic,       // use a mininimal set of defaults for LocalMacroSet (basically IsWindows/IsLinux, used by JobRouter)
+		ParamTable,  // use config defaults as defaults for LocalMacroSet (WARNING! ignores config files!)
+	};
+
+	XFormHash(Flavor _flavor=Iterating);
 	~XFormHash();
 
 	void init();
@@ -205,6 +211,7 @@ public:
 
 protected:
 	MACRO_SET LocalMacroSet;
+	Flavor    flavor;
 
 	// automatic 'live' submit variables. these pointers are set to point into the macro set allocation
 	// pool. so the will be automatically freed. They are also set into the macro_set.defaults tables

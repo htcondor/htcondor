@@ -34,6 +34,11 @@ Bugs Fixed:
   the command-line.
   :jira:`910`
 
+- Fixed a bug in the *condor_job_router* that could result in routes and transforms
+  substituting a default configuration value rather than the value
+  from the configuration files when a route or transform was applied
+  :jira:`902`
+
 
 .. _lts-version-history-909:
 
