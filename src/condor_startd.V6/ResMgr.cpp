@@ -448,7 +448,9 @@ ResMgr::init_resources( void )
 
 	m_execution_xfm.config("JOB_EXECUTION");
 
+#ifdef LINUX
 	m_volume_mgr.reset(new VolumeManager());
+#endif // LINUX
 
     stats.Init();
 

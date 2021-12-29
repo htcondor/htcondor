@@ -1038,7 +1038,7 @@ int Starter::execDCStarter(
 		claim->rip()->getVolumeManager()->UpdateStarterEnv(new_env);
 		if (claim->rip()->r_attr) {
 			std::string size;
-			formatstr(size, "%lld", claim->rip()->r_attr->get_total_disk());
+			formatstr(size, "%lld", claim->rip()->r_attr->get_disk());
 			new_env.SetEnv("_CONDOR_THINPOOL_SIZE_KB", size.c_str());
 		}
 	}

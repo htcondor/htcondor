@@ -14,6 +14,7 @@ public:
 
     void UpdateStarterEnv(Env &env);
     bool CleanupSlot(const std::string &slot, CondorError &err);
+    bool GetPoolSize(uint64_t &used, uint64_t &total, CondorError &err);
 
     class Handle {
     public:
@@ -43,6 +44,7 @@ private:
     static bool RemovePV(const std::string &lv_name, CondorError &err);
     static bool RemoveLoopDev(const std::string &lv_name, CondorError &err);
     static std::vector<std::string> ListPoolLVs(const std::string &pool_name, CondorError &err);
+    static bool GetPoolSize(const std::string &pool_name, const std::string &vg_name, uint64_t &used, uint64_t &total, CondorError &err);
 
 
     uint64_t m_allocated_space_kb{0};

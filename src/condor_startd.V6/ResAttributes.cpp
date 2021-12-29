@@ -1564,6 +1564,36 @@ CpuAttributes::attach( Resource* res_ip )
 }
 
 
+bool
+CpuAttributes::set_total_disk(long long total, bool refresh) {
+		// if input total is < 0, that means to figure it out
+	if (total > 0) {
+		bool changed = total != c_total_disk;
+		c_total_disk = total;
+		return changed;
+	} else if (c_total_disk == 0) {
+			// calculate disk at least once if a value is not passed in
+		refresh = true;
+	}
+		// refresh disk if the flag was passed in, or we do not yet have a value
+	if (refresh) {
+		CondorError err;
+		uint64_t used_bytes, total_bytes;
+		if (m_volume_mgr) {
+			if (m_volume_mgr->GetPoolSize(used_bytes, total_bytes, err)) {
+				c_total_disk = total_bytes - sysapi_reserve_for_fs();
+				c_total_disk = (c_total_disk < 0) ? 0 : c_total_disk;
+			} else {
+				dprintf(D_FULLDEBUG, "Failure to get pool size: %s\n", err.getFullText().c_str());
+			}
+		}
+		c_total_disk = sysapi_disk_space(executeDir());
+		return true;
+	}
+	return false;
+}
+
+
 void
 CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable resource ids to a slot
 {

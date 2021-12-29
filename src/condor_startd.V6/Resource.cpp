@@ -1271,6 +1271,9 @@ void Resource::compute_unshared()
 {
 	// this either sets total disk into the slot, or causes it to be recomputed.
 	r_attr->set_condor_load(compute_condor_usage());
+#ifdef LINUX
+	r_attr->setVolumeManager(resmgr->getVolumeManager());
+#endif // LINUX
 	r_attr->set_total_disk(resmgr->m_attr->total_disk(), resmgr->m_attr->always_recompute_disk());
 	r_attr->compute_disk();
 }

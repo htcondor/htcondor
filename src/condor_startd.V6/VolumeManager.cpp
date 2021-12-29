@@ -549,15 +549,18 @@ VolumeManager::RemoveLoopDev(const std::string &loopdev_name, CondorError &err)
 }
 
 
-std::vector<std::string>
-VolumeManager::ListPoolLVs(const std::string &pool_name, CondorError &err)
+namespace {
+
+bool
+getLVSReport(CondorError &err, rapidjson::Value &result)
 {
-    std::vector<std::string> lvs;
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg("lvs");
     args.AppendArg("--reportformat");
     args.AppendArg("json");
+    args.AppendArg("--units");
+    args.AppendArg("b");
     int exit_status;
     std::unique_ptr<char> losetup_output(
         run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -565,38 +568,102 @@ VolumeManager::ListPoolLVs(const std::string &pool_name, CondorError &err)
     if (exit_status) {
         err.pushf("VolumeManager", 9, "Failed to list logical volumes (exit status=%d): %s",
             exit_status, losetup_output ? losetup_output.get() : "(no output)");
-        return lvs;
+        return false;
     }
 
     rapidjson::Document doc;
     if (doc.Parse(losetup_output ? losetup_output.get() : "").HasParseError()) {
         err.pushf("VolumeManager", 10, "Failed to parse logical volume status as JSON: %s",
             losetup_output ? losetup_output.get() : "(no output)");
-        return lvs;
+        return false;
     }
     if (!doc.IsObject() || !doc.HasMember("report")) {
         err.pushf("VolumeManager", 11, "Invalid JSON from logical volume status: %s", losetup_output.get());
-        return lvs;
+        return false;
     }
     auto &report_obj = doc["report"];
     if (!report_obj.IsArray() || !report_obj.Size()) {
         err.pushf("VolumeManager", 11, "Invalid JSON from logical volume status (no LV report): %s", losetup_output.get());
-        return lvs;
+        return false;
     }
     for (auto iter = report_obj.Begin(); iter != report_obj.End(); ++iter) {
          const auto &report_entry = *iter;
          if (!report_entry.IsObject() || !report_entry.HasMember("lv") || !report_entry["lv"].IsArray()) {continue;}
-         auto &lvs_report = report_entry["lv"];
-         for (auto iter2 = lvs_report.Begin(); iter2 != lvs_report.End(); ++iter2) {
-             const auto &lv_report = *iter2;
-             if (!lv_report.IsObject() || !lv_report.HasMember("pool_lv") || !lv_report.HasMember("lv_name") ||
-                 !lv_report["pool_lv"].IsString() || !lv_report["lv_name"].IsString())
-             {
-                 continue;
-             }
-             if (lv_report["pool_lv"].GetString() == pool_name) {
-                 lvs.emplace_back(lv_report["lv_name"].GetString());
-             }
+         result.CopyFrom(report_entry["lv"], doc.GetAllocator());
+         return true;
+    }
+    err.pushf("VolumeManager", 11, "JSON result from logical volume status did not contain any logical volumes.\n");
+    return false;
+}
+
+}
+
+
+bool
+VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err)
+{
+    if (m_volume_name.empty() || m_volume_group_name.empty()) {return false;}
+    return GetPoolSize(m_volume_name, m_volume_group_name, used_bytes, total_bytes, err);
+}
+
+
+bool
+VolumeManager::GetPoolSize(const std::string &pool_name, const std::string &vg_name, uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err)
+{
+    rapidjson::Value lvs_report;
+    std::vector<std::string> lvs;
+    if (!getLVSReport(err, lvs_report)) {
+        return -1;
+    }
+    for (auto iter = lvs_report.Begin(); iter != lvs_report.End(); ++iter) {
+         const auto &lv_report = *iter;
+         if (!lv_report.IsObject() || !lv_report.HasMember("lv_name") || !lv_report["lv_name"].IsString() ||
+             !lv_report.HasMember("lv_size") || !lv_report["lv_size"].IsString() || !lv_report.HasMember("vg_name") ||
+             !lv_report["vg_name"].IsString() || lv_report["vg_name"].GetString() != vg_name ||
+             lv_report["lv_name"].GetString() != pool_name || !lv_report.HasMember("data_percent") || !lv_report["data_percent"].IsString())
+         {
+             continue;
+         }
+         long long total_size;
+         try {
+             total_size = std::stoll(lv_report["lv_size"].GetString());
+         } catch (...) {
+             continue;
+         }
+         // Note: data_percent always has the precision of 2 decimal points; hence
+         // we convert this into an integer math problem.
+         double data_percent;
+         try {
+            data_percent = std::stod(lv_report["data_percent"].GetString());
+         } catch (...) {
+            continue;
+         }
+         uint64_t data_percent_100x_integer = data_percent * 100;
+         total_bytes = total_size;
+         used_bytes = total_size * data_percent_100x_integer / 10000;
+         return true;
+    }
+    return 0;
+}
+
+
+std::vector<std::string>
+VolumeManager::ListPoolLVs(const std::string &pool_name, CondorError &err)
+{
+    rapidjson::Value lvs_report;
+    std::vector<std::string> lvs;
+    if (!getLVSReport(err, lvs_report)) {
+        return lvs;
+    }
+    for (auto iter = lvs_report.Begin(); iter != lvs_report.End(); ++iter) {
+         const auto &lv_report = *iter;
+         if (!lv_report.IsObject() || !lv_report.HasMember("pool_lv") || !lv_report.HasMember("lv_name") ||
+             !lv_report["pool_lv"].IsString() || !lv_report["lv_name"].IsString())
+         {
+             continue;
+         }
+         if (lv_report["pool_lv"].GetString() == pool_name) {
+             lvs.emplace_back(lv_report["lv_name"].GetString());
          }
     }
     return lvs;
