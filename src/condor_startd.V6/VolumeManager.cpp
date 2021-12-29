@@ -3,6 +3,7 @@
 #include <CondorError.h>
 #include <condor_config.h>
 #include <condor_debug.h>
+#include <condor_crypt.h>
 #include <my_popen.h>
 #include <condor_uid.h>
 #include <subsystem_info.h>
@@ -19,6 +20,7 @@
 
 
 VolumeManager::VolumeManager()
+    : m_encrypt(param_boolean("STARTD_ENCRYPT_EXECUTE_DISK", false))
 {
     if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
         dprintf(D_FULLDEBUG, "Not enforcing disk limits in the startd.\n");
@@ -101,7 +103,7 @@ VolumeManager::Handle::Handle(const std::string &mountpoint, const std::string &
     }
     m_volume = volume;
     m_vg_name = vg_name;
-    std::string device_path = "/dev/" + vg_name + "/" + volume;
+    std::string device_path = "/dev/mapper/" + vg_name + "-" + volume;
     if (!VolumeManager::CreateFilesystem(volume, device_path, err)) {
         return;
     }
@@ -184,6 +186,7 @@ VolumeManager::MountFilesystem(const std::string &device_path, const std::string
 bool
 VolumeManager::CreateFilesystem(const std::string &label, const std::string &devname, CondorError &err)
 {
+    dprintf(D_FULLDEBUG, "Creating new filesystem for device %s.\n", devname.c_str());
     TemporaryPrivSentry sentry(PRIV_ROOT);
 
     ArgList args;
@@ -194,6 +197,8 @@ VolumeManager::CreateFilesystem(const std::string &label, const std::string &dev
     args.AppendArg("^has_journal");
     args.AppendArg("-E");
     args.AppendArg("lazy_itable_init=0");
+    args.AppendArg("-m");
+    args.AppendArg("0");
     args.AppendArg("-L");
     args.AppendArg(label);
     args.AppendArg(devname);
@@ -384,7 +389,7 @@ VolumeManager::CreateThinPool(const std::string &lv_name, const std::string &vg_
                 run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
                         args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
     if (exit_status) {
-        err.pushf("VolumeManager", 12, "Failed to create LVM thin logical volume %s for volume group %s (exit status %d): %s",
+        err.pushf("VolumeManager", 12, "Failed to create LVM thin logical volume pool %s for volume group %s (exit status %d): %s",
             lv_name.c_str(), vg_name.c_str(), exit_status, lvcreate_output ? lvcreate_output.get() : "(no output)");
         return false;
     }
@@ -393,8 +398,14 @@ VolumeManager::CreateThinPool(const std::string &lv_name, const std::string &vg_
 
 
 bool
-VolumeManager::CreateThinLV(uint64_t size_kb, const std::string &lv_name, const std::string &pool_name, const std::string &vg_name, CondorError &err)
+VolumeManager::CreateThinLV(uint64_t size_kb, const std::string &lv_name_input, const std::string &pool_name, const std::string &vg_name, CondorError &err)
 {
+    std::string lv_name = lv_name_input;
+    bool do_encrypt = lv_name_input.substr(lv_name_input.size() - 4, 4) == "-enc";
+    if (do_encrypt) {
+        lv_name = lv_name.substr(0, lv_name.size() - 4);
+    }
+
     dprintf(D_FULLDEBUG, "Creating LVM thin logical volume %s for volume group %s.\n", lv_name.c_str(), vg_name.c_str());
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
@@ -417,6 +428,65 @@ VolumeManager::CreateThinLV(uint64_t size_kb, const std::string &lv_name, const 
             lv_name.c_str(), vg_name.c_str(), exit_status, lvcreate_output ? lvcreate_output.get() : "(no output)");
         return false;
     }
+
+    if (do_encrypt) return EncryptThinPool(lv_name, vg_name, err);
+    return true;
+}
+
+
+// 256-bit encryption
+#define KEY_SIZE 32
+bool
+VolumeManager::EncryptThinPool(const std::string &lv_name, const std::string &vg_name, CondorError &err)
+{
+    dprintf(D_FULLDEBUG, "Encrypting LVM logical volume %s", lv_name.c_str());
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+
+    char crypto_key[] = "/dev/shm/cryptokeyXXXXXX";
+    int fd = mkstemp(crypto_key);
+    if (-1 == fd) {
+        err.pushf("VolumeManager", 17, "Failed to create temporary crypto key at %s: %s (errno=%d)",
+            crypto_key, strerror(errno), errno);
+        return false;
+    }
+
+    std::unique_ptr<unsigned char> key(Condor_Crypt_Base::randomKey(KEY_SIZE));
+    if (!key) {
+        err.push("VolumeManager", 17, "Failed to create crypto key");
+        close(fd);
+        unlink(crypto_key);
+        return false;
+    }
+
+    if (KEY_SIZE != full_write(fd, key.get(), KEY_SIZE)) {
+        err.pushf("VolumeManager", 17, "Failed to write crypto key: %s (errno=%d)",
+            strerror(errno), errno);
+        close(fd);
+        unlink(crypto_key);
+        return false;
+    }
+    close(fd);
+
+    ArgList args;
+    args.AppendArg("cryptsetup");
+    args.AppendArg("open");
+    args.AppendArg("--type");
+    args.AppendArg("plain");
+    args.AppendArg("--key-file");
+    args.AppendArg(crypto_key);
+    args.AppendArg("/dev/mapper/" + vg_name + "-" + lv_name);
+    args.AppendArg(vg_name + "-" + lv_name + "-enc");
+    int exit_status;
+    std::unique_ptr<char> cryptsetup_output(
+                run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                        args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+    unlink(crypto_key);
+    if (exit_status) {
+        err.pushf("VolumeManager", 12, "Failed to setup encrypted volume on logical volume %s (exit status %d): %s",
+            lv_name.c_str(), exit_status, cryptsetup_output ? cryptsetup_output.get() : "(no output)");
+        return false;
+    }
+
     return true;
 }
 
@@ -424,18 +494,10 @@ VolumeManager::CreateThinLV(uint64_t size_kb, const std::string &lv_name, const 
 bool
 VolumeManager::UnmountFilesystem(const std::string &mountpoint, CondorError &err)
 {
+    dprintf(D_FULLDEBUG, "Unmounting filesystem at %s.\n", mountpoint.c_str());
     TemporaryPrivSentry sentry(PRIV_ROOT);
 
     std::unique_ptr<char> cwd(get_current_dir_name());
-/*
-    ArgList args;
-    args.AppendArg("umount");
-    args.AppendArg(mountpoint);
-    int exit_status;
-    std::unique_ptr<char> unmount_output(
-        run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
-                    args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
-*/
     if (-1 == chdir("/")) {
         err.pushf("VolumeManager", 16, "Failed to change directory: %s (errno=%d)",
             strerror(errno), errno);
@@ -453,8 +515,6 @@ VolumeManager::UnmountFilesystem(const std::string &mountpoint, CondorError &err
         }
     }
     if (exit_status) {
-        //err.pushf("VolumeManager", 13, "Failed to unmount filesystem %s for job (exit status %d): %s\n",
-        //    mountpoint.c_str(), exit_status, unmount_output ? unmount_output.get(): "(no command output)");
         return false;
     }
     return true;
@@ -462,10 +522,50 @@ VolumeManager::UnmountFilesystem(const std::string &mountpoint, CondorError &err
 
 
 bool
-VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, CondorError &err)
+VolumeManager::RemoveEncryptedThinPool(const std::string &lv_name, const std::string &vg_name, CondorError &err)
 {
-    dprintf(D_FULLDEBUG, "Removing logical volume %s.\n", lv_name.c_str());
+    dprintf(D_FULLDEBUG, "Removing encrypted volume %s.\n", lv_name.c_str());
     TemporaryPrivSentry sentry(PRIV_ROOT);
+    ArgList args;
+    args.AppendArg("cryptsetup");
+    args.AppendArg("close");
+    args.AppendArg(vg_name + "-" + lv_name);
+    int exit_status;
+    std::unique_ptr<char> cryptsetup_output(
+                run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
+                        args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status));
+    if (exit_status) {
+        err.pushf("VolumeManager", 12, "Failed to delete encrypted volume %s (exit status %d): %s",
+            lv_name.c_str(), exit_status, cryptsetup_output ? cryptsetup_output.get() : "(no output)");
+        return false;
+    }
+    return true;
+}
+
+
+bool
+VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_name, CondorError &err)
+{
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+
+    std::string lv_name = lv_name_input;
+        // We know we are removing an encrypted logical volume; first invoke
+        // 'cryptsetup close'
+    if (lv_name.substr(lv_name.size() - 4, 4) == "-enc") {
+        RemoveEncryptedThinPool(lv_name, vg_name, err);
+        lv_name = lv_name.substr(0, lv_name.size() - 4);
+    } else {
+        // In some cases, we are iterating through all known LVM LVs (which doesn't include
+        // the encrypted volumes); if so, we check first if an encrypted volume exists..
+        std::string encrypted_name = lv_name + "-enc";
+        struct stat statbuf;
+        if (-1 != stat(("/dev/mapper/" + vg_name + "-" + encrypted_name).c_str(), &statbuf)) {
+            RemoveEncryptedThinPool(encrypted_name, vg_name, err);
+        }
+    }
+
+    dprintf(D_FULLDEBUG, "Removing logical volume %s.\n", lv_name_input.c_str());
+
     ArgList args;
     args.AppendArg("lvremove");
     args.AppendArg(vg_name + "/" + lv_name);
@@ -693,6 +793,6 @@ void
 VolumeManager::UpdateStarterEnv(Env &env)
 {
     if (m_volume_name.empty() || m_volume_group_name.empty()) {return;}
-    env.SetEnv("_CONDOR_THINPOOL", m_volume_name);
+    env.SetEnv("_CONDOR_THINPOOL", m_volume_name + (m_encrypt ? "-enc" : ""));
     env.SetEnv("_CONDOR_THINPOOL_VG", m_volume_group_name);
 }

@@ -37,6 +37,8 @@ private:
     static bool CreateVG(const std::string &vg_name, const std::string &device, CondorError &err);
     static bool CreatePV(const std::string &device, CondorError &err);
     static bool CreateFilesystem(const std::string &label, const std::string &device_path, CondorError &err);
+    static bool EncryptThinPool(const std::string &lv_name, const std::string &vg_name, CondorError &err);
+    static bool RemoveEncryptedThinPool(const std::string &lv_name, const std::string &vg_name, CondorError &err);
     static bool CleanupAllDevices(const std::string &loopdev, const std::string &pv_name, const std::string &vg_name, const std::string &pool_name, CondorError &err);
     static bool UnmountFilesystem(const std::string &mountpoint, CondorError &err);
     static bool RemoveLV(const std::string &lv_name, const std::string &vg_name, CondorError &err);
@@ -47,8 +49,7 @@ private:
     static bool GetPoolSize(const std::string &pool_name, const std::string &vg_name, uint64_t &used, uint64_t &total, CondorError &err);
 
 
-    uint64_t m_allocated_space_kb{0};
-    uint64_t m_total_space_kb{0};
+    bool m_encrypt{false};
     std::string m_volume_name;
     std::string m_volume_group_name;
     std::string m_loopback_filename;

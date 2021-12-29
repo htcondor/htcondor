@@ -174,7 +174,13 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 		if (size_kb > 0) {
 			// const std::string &mountpoint, const std::string &volume, const std::string &pool, const std::string &vg_name, uint64_t size_kb, CondorError &err
 			CondorError err;
-			m_volume_mgr.reset(new VolumeManager::Handle(Execute, getMySlotName(), thinpool, thinpool_vg, size_kb, err));
+                        std::string thinpool_str(thinpool), slot_name(getMySlotName());
+                        bool do_encrypt = thinpool_str.substr(thinpool_str.size() - 4, 4) == "-enc";
+                        if (do_encrypt) {
+                            slot_name += "-enc";
+                            thinpool_str = thinpool_str.substr(0, thinpool_str.size() - 4);
+                        }
+			m_volume_mgr.reset(new VolumeManager::Handle(Execute, slot_name, thinpool_str, thinpool_vg, size_kb, err));
 			if (!err.empty()) {
 				dprintf(D_ALWAYS, "Failure when setting up filesystem for job: %s\n", err.getFullText().c_str());
 				m_volume_mgr.reset();
