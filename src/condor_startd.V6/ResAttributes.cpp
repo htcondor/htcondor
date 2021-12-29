@@ -1577,6 +1577,7 @@ CpuAttributes::set_total_disk(long long total, bool refresh) {
 	}
 		// refresh disk if the flag was passed in, or we do not yet have a value
 	if (refresh) {
+#ifdef LINUX
 		CondorError err;
 		uint64_t used_bytes, total_bytes;
 		if (m_volume_mgr) {
@@ -1589,6 +1590,7 @@ CpuAttributes::set_total_disk(long long total, bool refresh) {
 				dprintf(D_FULLDEBUG, "Failure to get pool size: %s\n", err.getFullText().c_str());
 			}
 		}
+#endif // LINUX
 		c_total_disk = sysapi_disk_space(executeDir());
 		return true;
 	}
