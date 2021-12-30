@@ -2930,8 +2930,7 @@ JobRoute::ApplyRoutingJobEdits(
 	SimpleList<MacroStreamXFormSource*>& post_route,
 	unsigned int xform_flags)
 {
-	XFormHash mset(CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO /* | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_WANT_META */);
-	//mset.init();
+	XFormHash mset(XFormHash::Flavor::Basic);
 	mset.macros().apool.reserve(0x10000); // allocate workspace. TODO: keep track of route workspace size.
 	mset.macros().sources.push_back(this->Name());
 
