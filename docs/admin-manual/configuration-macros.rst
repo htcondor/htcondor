@@ -167,9 +167,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     The spool directory is where certain files used by the
     *condor_schedd* are stored, such as the job queue file and the
     initial executables of any jobs that have been submitted. In
-    addition, for systems not using a checkpoint server, all the
-    checkpoint files from jobs that have been submitted from a given
-    machine will be store in that machine's spool directory. Therefore,
+    addition, all the checkpoint files from jobs that have been submitted
+    will be stored in that machine's spool directory. Therefore,
     you will want to ensure that the spool directory is located on a
     partition with enough disk space. If a given machine is only set up
     to execute HTCondor jobs and not submit them, it would not need a
@@ -2504,7 +2503,7 @@ These macros control the *condor_master*.
     *condor_master* must differentiate between daemons that use
     DaemonCore and those that do not, so it uses the appropriate
     inter-process communication mechanisms. This list currently includes
-    all HTCondor daemons except the checkpoint server by default.
+    all HTCondor daemons.
 
     As of HTCondor version 7.2.1, a daemon may be appended to the
     default ``DC_DAEMON_LIST`` value by placing the plus character (+)
@@ -5269,20 +5268,6 @@ These macros control the *condor_schedd*.
     wrap around and reuse the same id. With a low enough value, it is
     possible for jobs to be erroneously assigned duplicate cluster ids,
     which will result in a corrupt job queue.
-
-:macro-def:`CKPT_SERVER_CLIENT_TIMEOUT`
-    An integer which specifies how long in seconds the *condor_schedd*
-    is willing to wait for a response from a checkpoint server before
-    declaring the checkpoint server down. The value of 0 makes the
-    schedd block for the operating system configured time (which could
-    be a very long time) before the ``connect()`` returns on its own
-    with a connection timeout. The default value is 20.
-
-:macro-def:`CKPT_SERVER_CLIENT_TIMEOUT_RETRY`
-    An integer which specifies how long in seconds the *condor_schedd*
-    will ignore a checkpoint server that is deemed to be down. After
-    this time elapses, the *condor_schedd* will try again in talking to
-    the checkpoint server. The default is 1200.
 
 :macro-def:`SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY`
     An integer which specifies an upper bound in seconds on how long it

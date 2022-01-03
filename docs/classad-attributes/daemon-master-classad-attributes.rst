@@ -3,12 +3,6 @@ DaemonMaster ClassAd Attributes
 
 
 :index:`DaemonMaster attributes<single: DaemonMaster attributes; ClassAd>`
-:index:`CkptServer<single: CkptServer; ClassAd DaemonMaster attribute>`
-
-``CkptServer``:
-    A string with with the fully qualified host name of the machine
-    running a checkpoint server.
-
 :index:`CondorVersion<single: CondorVersion; ClassAd DaemonMaster attribute>`
 
 ``CondorVersion``:
