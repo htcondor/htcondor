@@ -29,6 +29,9 @@ Bugs Fixed:
   email notification about job errors.
   :jira:`895`
 
+- The view server can now handle very long Accounting Group names
+  :jira:`913`
+
 Version 9.5.0
 -------------
 
