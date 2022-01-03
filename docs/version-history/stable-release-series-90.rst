@@ -20,7 +20,8 @@ Release Notes:
 
 New Features:
 
-- None.
+- The OAUTH credmon is packaged for the Enterprise Linux 8 platform.
+  :jira:`825`
 
 Bugs Fixed:
 
