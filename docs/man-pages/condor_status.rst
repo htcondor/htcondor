@@ -15,8 +15,8 @@ Description
 
 *condor_status* is a versatile tool that may be used to monitor and
 query the HTCondor pool. The *condor_status* tool can be used to query
-resource information, submitter information, checkpoint server
-information, and daemon master information. The specific query sent and
+resource information, submitter information, and daemon master 
+information. The specific query sent and
 the resulting information display is controlled by the query options
 supplied. Queries and display formats can also be customized.
 
@@ -59,9 +59,6 @@ Options
  **-avail**
     (Query option) Query *condor_startd* ClassAds and identify
     resources which are available.
- **-ckptsrvr**
-    (Query option) Query *condor_ckpt_server* ClassAds and display
-    checkpoint server attributes.
  **-claimed**
     (Query option) Query *condor_startd* ClassAds and print information
     about claimed resources.

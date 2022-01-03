@@ -1408,7 +1408,7 @@ Old ClassAds in the HTCondor System
 The simplicity and flexibility of ClassAds is heavily exploited in the
 HTCondor system. ClassAds are not only used to represent machines and
 jobs in the HTCondor pool, but also other entities that exist in the
-pool such as checkpoint servers, submitters of jobs and master daemons.
+pool such as submitters of jobs and master daemons.
 Since arbitrary expressions may be supplied and evaluated over these
 ClassAds, users have a uniform and powerful mechanism to specify
 constraints over these ClassAds. These constraints can take the form of
