@@ -2443,6 +2443,7 @@ values for these variables, should they not be set are
 
 Note that these default values are chosen such that jobs matched to
 partitionable slots function similar to static slots.
+These variables do not apply to **batch** grid universe jobs.
 
 :index:`MODIFY_REQUEST_EXPR_REQUESTCPUS`
 :index:`MODIFY_REQUEST_EXPR_REQUESTMEMORY`
