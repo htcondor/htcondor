@@ -248,8 +248,6 @@ evicted from the machine upon which it is executing. This occurs as a
 result of the machine configuration indicating that it will no longer
 execute this job.
 
-**vm** universe jobs can not use a checkpoint server.
-
 Periodic creation of checkpoints is not supported at this time.
 
 Enabling both networking and checkpointing for a **vm** universe job can

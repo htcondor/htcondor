@@ -102,11 +102,6 @@ HTCondor tools and daemons that need to communicate with the
 :index:`NEGOTIATOR_ADDRESS_FILE` or will query the
 *condor_collector* for the *condor_negotiator* 's ClassAd.
 
-Sites that configure any checkpoint servers will introduce other fixed
-ports into their network. Each *condor_ckpt_server* will listen to 4
-fixed ports: 5651, 5652, 5653, and 5654. There is currently no way to
-configure alternative values for any of these ports.
-
 Using a Non Standard, Fixed Port for the *condor_collector*
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -558,21 +553,6 @@ configuration file for the client should have
 .. code-block:: condor-config
 
       NETWORK_INTERFACE = <IP address of desired interface>
-
-A Checkpoint Server on a Machine with Multiple NICs
-'''''''''''''''''''''''''''''''''''''''''''''''''''
-
-If a checkpoint server is on a machine with multiple interfaces, then 2
-items must be correct to get things to work:
-
-#. The different interfaces have different host names associated with
-   them.
-#. In the global configuration file, set configuration variable
-   ``CKPT_SERVER_HOST`` :index:`CKPT_SERVER_HOST` to the host name
-   that corresponds with the IP address desired for the pool.
-   Configuration variable
-   ``NETWORK_INTERFACE``\ :index:`NETWORK_INTERFACE` must still be
-   specified in the local configuration file for the checkpoint server.
 
 HTCondor Connection Brokering (CCB)
 -----------------------------------
