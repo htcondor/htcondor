@@ -18,6 +18,10 @@ Release Notes:
 
 - HTCondor version 9.0.9 not yet released.
 
+- Since CentOS 8 has been retired, we now build for Enterprise Linux 8 on
+  Rocky Linux 8.
+  :jira:`911`
+
 New Features:
 
 - None.
