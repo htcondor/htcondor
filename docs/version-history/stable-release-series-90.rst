@@ -18,6 +18,9 @@ Release Notes:
 
 - HTCondor version 9.0.9 not yet released.
 
+- Debian 11 (bullseye) has been added as a supported platform.
+  :jira:`94`
+
 New Features:
 
 - The OAUTH credmon is packaged for the Enterprise Linux 8 platform.
