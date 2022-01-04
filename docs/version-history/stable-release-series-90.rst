@@ -20,7 +20,8 @@ Release Notes:
 
 New Features:
 
-- None.
+- The OAUTH credmon is packaged for the Enterprise Linux 8 platform.
+  :jira:`825`
 
 Bugs Fixed:
 
@@ -260,12 +261,7 @@ Bugs Fixed:
   is empty.
   :jira:`673`
 
-- Fixed a bug that could the starter to crash after transferring files under
-  certain rare circumstances.   This also corrected a problem which may have
-  been causing the number of bytes transferred to be undercounted.
-  :jira:`722`
-
-- Fixed a bug that could the starter to crash after transferring files under
+- Fixed a bug that could cause the starter to crash after transferring files under
   certain rare circumstances.   This also corrected a problem which may have
   been causing the number of bytes transferred to be undercounted.
   :jira:`722`
