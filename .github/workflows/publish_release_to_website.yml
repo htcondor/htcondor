@@ -30,7 +30,7 @@ jobs:
           git fetch --all
           git checkout -b build-release-page origin/${{ env.publish_branch }}
 
-          mv ../*.yml ./${{ env.publish_path }} # Move markdown created by the build_release_page action to branch
+          mv ../*.yml ./${{ env.publish_path }} # Move yaml created by the build_release_page action to branch
 
           # Publish the article
           git add .
