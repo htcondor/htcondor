@@ -27,7 +27,6 @@ jobs:
           mkdir website
           git clone ${{ env.publish_repo_ssh }} ./website
           cd website
-          git fetch --all
           git checkout -b build-release-page origin/${{ env.publish_branch }}
 
           mv ../*.yml ./${{ env.publish_path }} # Move yaml created by the build_release_page action to branch
