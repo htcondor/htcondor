@@ -44,8 +44,7 @@ Types of Releases
     The final feature release undergoes a stabilization effort where the
     software is run through multiple code quality tools (such as Valgrind)
     to assure the best possible LTS release.  The MAJOR.0.0 version is not
-    released until the stabilization effort is complete.  Support for the
-    previous LTS release ends six months after a new LTS version is released.
+    released until the stabilization effort is complete.
     Paid support contracts are only available for the LTS release.
 
 -   An **LTS patch** release is numbered **X.0.Z**, and is an update to the LTS
