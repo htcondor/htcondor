@@ -287,6 +287,8 @@ our %submit_info = (
 	},
 	'nmi-zdev:x86_64_Debian9'  => 'x86_64_Debian9',
 	'nmi-zdev:x86_64_Debian10' => 'x86_64_Debian9',
+	'nmi-zdev:x86_64_Debian11' => 'x86_64_Debian9',
+	'nmi-zdev:x86_64_Debian12' => 'x86_64_Debian9',
 
 	##########################################################################
 	# Platform CentOS 8 on x86_64
