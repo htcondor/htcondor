@@ -27,7 +27,6 @@ MAXJOBRETIREMENTTIME = 34800
 LOG = $(LOCAL_DIR)/log
 EXECUTE = $(LOCAL_DIR)/execute
 
-MAIL = /bin/mail
 DAEMON_LIST = MASTER, STARTD
 MASTER_ADDRESS_FILE = $(LOG)/.master_address
 MASTER = $(SBIN)/condor_master
