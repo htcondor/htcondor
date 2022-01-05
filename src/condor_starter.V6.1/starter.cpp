@@ -59,6 +59,7 @@
 extern void main_shutdown_fast();
 
 const char* JOB_AD_FILENAME = ".job.ad";
+const char* JOB_EXECUTION_OVERLAY_AD_FILENAME = ".execution_overlay.ad";
 const char* MACHINE_AD_FILENAME = ".machine.ad";
 extern const char* JOB_WRAPPER_FAILURE_FILE;
 
@@ -2435,6 +2436,26 @@ Starter::SpawnJob( void )
 		case CONDOR_UNIVERSE_VANILLA: {
 			bool wantDocker = false;
 			jobAd->LookupBool( ATTR_WANT_DOCKER, wantDocker );
+			bool wantContainer = false;
+			jobAd->LookupBool( ATTR_WANT_CONTAINER, wantContainer );
+
+			bool wantDockerRepo = false;
+			bool wantSandboxImage = false;
+			bool wantSIF = false;
+			jobAd->LookupBool(ATTR_WANT_DOCKER_IMAGE, wantDockerRepo);
+			jobAd->LookupBool(ATTR_WANT_SANDBOX_IMAGE, wantSandboxImage);
+			jobAd->LookupBool(ATTR_WANT_SIF, wantSIF);
+
+			std::string container_image;
+			jobAd->LookupString(ATTR_CONTAINER_IMAGE, container_image);
+			std::string docker_image;
+			jobAd->LookupString(ATTR_DOCKER_IMAGE, docker_image);
+
+			// If they give us a docker repo, use docker universe
+			if (wantContainer && wantDockerRepo) {
+				wantDocker = true;
+			}
+
 			std::string remote_cmd;
 			bool wantRemote = param(remote_cmd, "STARTER_REMOTE_CMD");
 
@@ -3151,6 +3172,12 @@ Starter::GetJobEnv( ClassAd *jobad, Env *job_env, std::string & env_errors )
 // helper function
 static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, const char * assigned, const char * tag);
 
+bool expandScratchDirInEnv(void * void_scratch_dir, const MyString & /*lhs */, MyString &rhs) {
+	const char *scratch_dir = (const char *) void_scratch_dir;
+	rhs.replaceString("#CoNdOrScRaTcHdIr#", scratch_dir);
+	return true;
+}
+
 void
 Starter::PublishToEnv( Env* proc_env )
 {
@@ -3399,6 +3426,10 @@ Starter::PublishToEnv( Env* proc_env )
 		dprintf( D_ALWAYS, 
 				"Failed to set _CHIRP_DELAYED_UPDATE_PREFIX environment variable\n");
 	}
+
+	// Many jobs need an absolute path into the scratch directory in an environment var
+	// expand a magic string in an env var to the scratch dir
+	proc_env->Walk(&expandScratchDirInEnv, (void *)GetWorkingDir(true));
 }
 
 // parse an environment prototype string of the form  key[[=/regex/replace/] key2=/regex2/replace2/]
@@ -3831,6 +3862,30 @@ Starter::WriteAdFiles() const
 		ret_val = false;
 	}
 
+	ad = this->jic->jobExecutionOverlayAd();
+	if (ad && ad->size() > 0)
+	{
+		formatstr(filename, "%s%c%s", dir, DIR_DELIM_CHAR, JOB_EXECUTION_OVERLAY_AD_FILENAME);
+		fp = safe_fopen_wrapper_follow(filename.c_str(), "w");
+		if (!fp)
+		{
+			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write job execution overlay ad: "
+						"%s (errno %d)\n", filename.c_str(),
+						strerror(errno), errno);
+			ret_val = false;
+		}
+		else
+		{
+		#ifdef WIN32
+			if (has_encrypted_working_dir) {
+				DecryptFile(filename.c_str(), 0);
+			}
+		#endif
+			fPrintAd(fp, *ad);
+			fclose(fp);
+		}
+	}
+
 	// Write the machine ad
 	ad = this->jic->machClassAd();
 	if (ad != NULL)
@@ -3895,4 +3950,13 @@ void
 Starter::RecordJobExitStatus(int status) {
 	recorded_job_exit_status = true;
 	job_exit_status = status;
+
+    // "When the job exits" is usually synonymous with "when the process
+    // spawned by the starter exits", but that's not the case for self-
+    // checkpointing jobs, which the starter just spawns again (after
+    // transferring the checkpoint) if the exit code indicates that the
+    // job checkpointed successfully.  Nothing else in HTCondor currently
+    // cares about this, but we've asked to track it (perhaps to see if
+    // anything else in HTCondor should care).  See HTCONDOR-861.
+    jic->notifyExecutionExit();
 }

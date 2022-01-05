@@ -66,6 +66,7 @@
 #include "condor_holdcodes.h"
 #include "job_transforms.h"
 #include "history_queue.h"
+#include "live_job_counters.h"
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -89,6 +90,7 @@ class JobQueueJob;
 extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 
 class JobQueueCluster;
+class JobQueueJobSet;
 
 //typedef std::set<JOB_ID_KEY> JOB_ID_SET;
 class LocalJobRec {
@@ -147,39 +149,6 @@ struct shadow_rec
 	~shadow_rec();
 }; 
 
-
-// The schedd will have one of these structures per owner, and one for the schedd as a whole
-// these counters are new for 8.7, and used with the code that keeps live counts of jobs
-// by tracking state transitions
-//
-struct LiveJobCounters {
-  int JobsSuspended;
-  int JobsIdle;             // does not count Local or Scheduler universe jobs, or Grid jobs that are externally managed.
-  int JobsRunning;
-  int JobsRemoved;
-  int JobsCompleted;
-  int JobsHeld;
-  int SchedulerJobsIdle;
-  int SchedulerJobsRunning;
-  int SchedulerJobsRemoved;
-  int SchedulerJobsCompleted;
-  int SchedulerJobsHeld;
-  void clear_counters() { memset(this, 0, sizeof(*this)); }
-  void publish(ClassAd & ad, const char * prefix) const;
-  LiveJobCounters()
-	: JobsSuspended(0)
-	, JobsIdle(0)
-	, JobsRunning(0)
-	, JobsRemoved(0)
-	, JobsCompleted(0)
-	, JobsHeld(0)
-	, SchedulerJobsIdle(0)
-	, SchedulerJobsRunning(0)
-	, SchedulerJobsRemoved(0)
-	, SchedulerJobsCompleted(0)
-	, SchedulerJobsHeld(0)
-  {}
-};
 
 struct SubmitterFlockCounters {
   int JobsRunning{0};

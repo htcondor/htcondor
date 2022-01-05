@@ -32,10 +32,6 @@
 // if user ends in @domain, only part before the @ will be used
 static const char * credmon_user_filename(std::string & file, const char * cred_dir, const char *user, const char * ext=NULL)
 {
-	size_t len = strlen(cred_dir) + strlen(user) + 10;
-	if (ext) {
-		len += strlen(ext);
-	}
 	dircat(cred_dir, user, file);
 
 	// if username has a @ we need to remove that from the filename

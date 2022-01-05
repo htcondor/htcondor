@@ -24,6 +24,11 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 
+#define ENABLE_JOB_POLICY_LISTS 1
+#ifdef ENABLE_JOB_POLICY_LISTS
+  #include "compat_classad_util.h" // for ConstraintHolder
+#else
+
 /*
  * The user_job_policy() function is deprecated and NOT to be used for
  * new code. Pete Keller said so. :-)
@@ -113,6 +118,7 @@ extern const char ATTR_USER_POLICY_ERROR[];
 /* an "errno" of sorts as to why the error happened. */
 extern const char ATTR_USER_ERROR_REASON[];
 
+#endif // ENABLE_JOB_POLICY_LISTS
 
 /* NEW INTERFACE */
 
@@ -185,12 +191,72 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 	FiringExpressionValue will be 0.
 */
 
+#ifdef ENABLE_JOB_POLICY_LISTS
+
+char * param(const char *); // forward ref from condor_config.h
+
+// This class holds both a boolean expression
+// and a Tag name for the expression
+// for instance if the config has
+//    SYSTEM_PERIODIC_HOLD_MEM = MemoryUsage > RequestMemory
+// then the Tag will be MEM and the constraint will be MemoryUsage > RequestMemory
+class JobPolicyExpr
+{
+public:
+	JobPolicyExpr(const char * _name="") : name(_name) {}
+
+	void set_from_config(const char * knob) { ch.set(param(knob)); }
+
+	ExprTree * Expr(int * error=NULL) const { return ch.Expr(error); }
+	const char * Str() const { return ch.Str(); }
+	bool empty() const { return ch.empty(); }
+	const char * Tag() const { return name.c_str(); }
+	const char * append_tag(std::string & knob) const {
+		if (!name.empty()) {
+			knob += "_";
+			knob += name;
+		}
+		return knob.c_str();
+	}
+	bool is_trivial(bool trivial_value=false) const {
+		if (!empty()) {
+			bool value = trivial_value;
+			ExprTree * expr = Expr();
+			if (expr && ExprTreeIsLiteralBool(Expr(), value) && value == trivial_value) {
+				return true;
+			}
+		}
+		return empty();
+	}
+protected:
+	ConstraintHolder ch;
+	std::string name;
+};
+
+#endif
 
 class UserPolicy
 {
+	enum FireSource { FS_NotYet, FS_JobAttribute, FS_JobDuration, FS_ExecuteDuration, FS_SystemMacro };
+
 	public: /* functions */
-		UserPolicy();
-		~UserPolicy();
+		UserPolicy()
+			: m_fire_source(FS_NotYet)
+			, m_fire_subcode(0)
+			, m_fire_expr_val(-1)
+			, m_fire_expr(nullptr)
+		#ifdef ENABLE_JOB_POLICY_LISTS
+		#else
+			, m_sys_periodic_hold(NULL)
+			, m_sys_periodic_release(NULL)
+			, m_sys_periodic_remove(NULL)
+		#endif
+			{}
+
+		~UserPolicy() {
+			ClearConfig();
+			m_fire_expr = NULL;
+		}
 
 		/* configure and reset triggers */
 		void Init();
@@ -223,7 +289,17 @@ class UserPolicy
 			job policy expressions with default values into the classad if they
 			are not already present. */
 		void Config(void);
-		void ClearConfig(void);
+		void ClearConfig(void) {
+		#ifdef ENABLE_JOB_POLICY_LISTS
+				m_sys_periodic_holds.clear();
+				m_sys_periodic_releases.clear();
+				m_sys_periodic_removes.clear();
+		#else
+				delete m_sys_periodic_hold; m_sys_periodic_hold = NULL;
+				delete m_sys_periodic_release; m_sys_periodic_release = NULL;
+				delete m_sys_periodic_remove; m_sys_periodic_remove = NULL;
+		#endif
+			}
 
 		/* I can't be copied */
 		UserPolicy(const UserPolicy&);
@@ -254,16 +330,21 @@ class UserPolicy
 		bool AnalyzeSinglePeriodicPolicy(ClassAd & ad, ExprTree * expr, int on_true_return, int & retval);
 
 	private: /* variables */
+		FireSource m_fire_source;
+		int m_fire_subcode;
+		int m_fire_expr_val;
+		const char *m_fire_expr;
+		std::string m_fire_reason;
+		std::string m_fire_unparsed_expr;
+	#ifdef ENABLE_JOB_POLICY_LISTS // multi policy
+		std::vector<JobPolicyExpr> m_sys_periodic_holds;
+		std::vector<JobPolicyExpr> m_sys_periodic_releases;
+		std::vector<JobPolicyExpr> m_sys_periodic_removes;
+	#else
 		ExprTree * m_sys_periodic_hold;
 		ExprTree * m_sys_periodic_release;
 		ExprTree * m_sys_periodic_remove;
-		int m_fire_subcode;
-		std::string m_fire_reason;
-		std::string m_fire_unparsed_expr;
-		int m_fire_expr_val;
-		enum FireSource { FS_NotYet, FS_JobAttribute, FS_SystemMacro };
-		FireSource m_fire_source;
-		const char *m_fire_expr;
+	#endif
 };
 
 

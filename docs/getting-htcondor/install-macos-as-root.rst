@@ -57,21 +57,17 @@ Unpack the tarball.
 
 .. code-block:: shell
 
-    tar -x -f condor.tar.gz
+    mkdir /usr/local/condor
+    tar -x -C /usr/local/condor --strip-components 1 -f condor.tar.gz
 
 You won't need ``condor.tar.gz`` again, so you can remove it now if you wish.
 
-Copy the files to ``/usr/local/condor`` and set up the default configuration
-file.
+Set up the log directory and default configuration files.
 
 .. code-block:: shell
 
-    cp -a condor-*stripped /usr/local/condor
-    rm -rf condor-*stripped
     cd /usr/local/condor
     mkdir -p local/log
-    mkdir -p local/spool
-    mkdir -p local/execute
     mkdir -p local/config.d
     cp etc/examples/condor_config etc/condor_config
     cp etc/examples/00-htcondor-9.0.config local/config.d
@@ -92,8 +88,6 @@ Next, fix up the permissions of the the installed files.
 
     chown -R root:wheel /usr/local/condor
     chown -R condor:condor /usr/local/condor/local/log
-    chown -R condor:condor /usr/local/condor/local/spool
-    chown -R condor:condor /usr/local/condor/local/execute
 
 Finally, make the configuration file available at one of the well-known
 locations for the tools to find.

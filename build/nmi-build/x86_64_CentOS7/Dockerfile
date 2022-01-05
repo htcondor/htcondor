@@ -60,7 +60,7 @@ RUN yum install -y \
 
 # Tools needed for building
 RUN yum install -y \
-    devtoolset-9-toolchain \
+    devtoolset-10-toolchain \
     make \
     patchelf \
     rpm-build \
@@ -139,6 +139,14 @@ RUN yum install -y \
     'systemtap-runtime' \
     'systemtap-sdt-devel' \
     'which' \
+    && yum clean all
+
+# blahp build dependencies
+RUN yum install -y \
+    'autoconf' \
+    'automake' \
+    'docbook-style-xsl' \
+    'libxslt' \
     && yum clean all
 
 # Additional dependencies for OSG style build

@@ -446,6 +446,8 @@ ResMgr::init_resources( void )
 	int i, num_res;
 	CpuAttributes** new_cpu_attrs;
 
+	m_execution_xfm.config("JOB_EXECUTION");
+
     stats.Init();
 
     m_attr->init_machine_resources();

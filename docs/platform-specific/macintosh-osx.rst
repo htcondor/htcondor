@@ -5,10 +5,8 @@ Macintosh OS X
 
 This section provides information specific to the Macintosh OS X port of
 HTCondor. The Macintosh port of HTCondor is more accurately a port of
-HTCondor to Darwin, the BSD core of OS X. HTCondor uses the Carbon
-library only to detect keyboard activity, and it does not use Cocoa at
-all. HTCondor on the Macintosh is a relatively new port, and it is not
-yet well-integrated into the Macintosh environment.
+HTCondor to Darwin, the BSD layer of OS X.
+It is not well-integrated into the Macintosh environment beyond that.
 
 HTCondor on the Macintosh has a few shortcomings:
 
@@ -17,4 +15,3 @@ HTCondor on the Macintosh has a few shortcomings:
 -  The memory size of threaded programs is reported incorrectly.
 -  No Macintosh-based installer is provided.
 -  The example start up scripts do not follow Macintosh conventions.
--  Kerberos is not supported.

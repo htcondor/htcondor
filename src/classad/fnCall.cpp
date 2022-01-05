@@ -1790,6 +1790,9 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 	alen = (int)buf.size( );
 	if( offset < 0 ) { 
 		offset = alen + offset; 
+		if( offset < 0 ) {
+			offset = 0;
+		}
 	} else if( offset >= alen ) {
 		offset = alen;
 	}
@@ -2550,9 +2553,17 @@ random( const char*,const ArgumentList &argList,EvalState &state,
 	}
 
     if (arg.IsIntegerValue(int_max)) {
+		if (int_max <= 0) {
+			result.SetErrorValue( );
+			return( false );
+		}
         random_int = get_random_integer() % int_max;
         result.SetIntegerValue(random_int);
     } else if (arg.IsRealValue(double_max)) {
+		if (double_max <= 0) {
+			result.SetErrorValue( );
+			return( false );
+		}
         random_double = double_max * get_random_real();
         result.SetRealValue(random_double);
     } else {

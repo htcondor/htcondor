@@ -170,6 +170,35 @@ public:
 		}
 	}
 
+    //
+    // This function is used by std::stable_sort() in FileTransfer::DoUpload()
+    // to group transfers.  This function used to also sort all transfers,
+    // but it no longer does; now it only sorts URLs.  (It should probably stop
+    // doing that, too, but that's another ticket.)  This is because
+    // ExpandeFileTransferList() -- which converts a list of source names
+    // into a std::vector<FileTransferItem> -- creates new non-URL
+    // FileTransferItems when it "expands" the name of a directory into
+    // the FileTransferItem which creates the directory and the
+    // FileTransferItems which populate the directory.  Obviously, creating
+    // the directory must come before populating it.
+    //
+    // Before, this almost always happened because the "source" of a directory
+    // would always sort before the source of any of the files in the
+    // directory.  However, after HTCONDOR-583 fixed a problem where file
+    // transfer would ignore directories in SPOOL, it became very easy to
+    // write job submit files which would have two different "sources" (the
+    // SPOOL and the input directory) for the same directory.  When
+    // ExpandFileTransferList() removes duplicate directories, it removes
+    // the directories which appear later in the list, because the directory
+    // needs to be created before any files in it (and the input directory,
+    // for example, could have a file in it that's not in SPOOL).  Sorting
+    // the list of non-URL FileTransferItems may undo this ordering (for
+    // instance, if SPOOL sorts before the IWD, a file from SPOOL would be
+    // transferred before the directory "sourced" in IWD would be created,
+    // because transfers from IWD are listed first (to make sure that files
+    // in SPOOL win)).
+    //
+
 	bool operator<(const FileTransferItem &other) const {
 		// Ordering of transfers:
 		// - Destination URLs first (allows these plugins to alter CEDAR transfers on
@@ -189,7 +218,7 @@ public:
 		}
 		if (is_dest_url) {
 			if (m_dest_scheme == other.m_dest_scheme) {
-				return m_dest_url < other.m_dest_url;
+				return false;
 			} else {
 				return m_dest_scheme < other.m_dest_scheme;
 			}
@@ -205,12 +234,12 @@ public:
 		}
 		if (is_src_url) { // Both are URLs
 			if (m_src_scheme == other.m_src_scheme) {
-				return m_src_name < other.m_src_name;
+				return false;
 			} else {
 				return m_src_scheme < other.m_src_scheme;
 			}
 		}
-		return m_src_name < other.m_src_name;
+		return false;
 	}
 
 private:
@@ -301,6 +330,22 @@ FileTransfer::~FileTransfer()
 #endif
 	free(m_sec_session_id);
 	delete plugin_table;
+}
+
+inline bool
+FileTransfer::shouldSendStdout() {
+	bool streaming = false;
+	jobAd.LookupBool( ATTR_STREAM_OUTPUT, streaming );
+	if( ! streaming && ! nullFile( JobStdoutFile.c_str() ) ) { return true; }
+	return false;
+}
+
+inline bool
+FileTransfer::shouldSendStderr() {
+	bool streaming = false;
+	jobAd.LookupBool( ATTR_STREAM_ERROR, streaming );
+	if( ! streaming && ! nullFile( JobStderrFile.c_str() ) ) { return true; }
+	return false;
 }
 
 int
@@ -567,42 +612,27 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		// send back new/changed files after the run
 		upload_changed_files = true;
 	}
-	// and now check stdout/err
-	bool streaming = false;
-	JobStdoutFile = "";
-	if(Ad->LookupString(ATTR_JOB_OUTPUT, buf, sizeof(buf)) == 1 ) {
-		JobStdoutFile = buf;
-		Ad->LookupBool( ATTR_STREAM_OUTPUT, streaming );
-		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
-				// not streaming it, add it to our list if we're not
-				// just going to transfer anything that was changed.
-				// only add to list if not NULL_FILE (i.e. /dev/null)
+
+	if( Ad->LookupString( ATTR_JOB_OUTPUT, JobStdoutFile ) ) {
+		if( (! upload_changed_files) && shouldSendStdout() ) {
 			if( OutputFiles ) {
-				if( !OutputFiles->file_contains(buf) ) {
-					OutputFiles->append( buf );
+				if(! OutputFiles->file_contains( JobStdoutFile.c_str() )) {
+					OutputFiles->append( JobStdoutFile.c_str() );
+				} else {
+					OutputFiles = new StringList( JobStdoutFile, "," );
 				}
-			} else {
-				OutputFiles = new StringList(buf,",");
 			}
 		}
 	}
-		// re-initialize this flag so we don't use stale info from
-		// ATTR_STREAM_OUTPUT if ATTR_STREAM_ERROR isn't defined
-	streaming = false;
-	JobStderrFile = "";
-	if( Ad->LookupString(ATTR_JOB_ERROR, buf, sizeof(buf)) == 1 ) {
-		JobStderrFile = buf;
-		Ad->LookupBool( ATTR_STREAM_ERROR, streaming );
-		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
-				// not streaming it, add it to our list if we're not
-				// just going to transfer anything that was changed.
-				// only add to list if not NULL_FILE (i.e. /dev/null)
+
+	if( Ad->LookupString( ATTR_JOB_ERROR, JobStderrFile ) ) {
+		if( (! upload_changed_files) && shouldSendStderr() ) {
 			if( OutputFiles ) {
-				if( !OutputFiles->file_contains(buf) ) {
-					OutputFiles->append( buf );
+				if(! OutputFiles->file_contains( JobStderrFile.c_str() )) {
+					OutputFiles->append( JobStderrFile.c_str() );
+				} else {
+					OutputFiles = new StringList( JobStderrFile, "," );
 				}
-			} else {
-				OutputFiles = new StringList(buf,",");
 			}
 		}
 	}
@@ -1383,16 +1413,21 @@ FileTransfer::DetermineWhichFilesToSend() {
 			if( DontEncryptCheckpointFiles ) { delete DontEncryptCheckpointFiles; }
 			DontEncryptCheckpointFiles = new StringList( NULL, "," );
 
-			// If we'd transfer output or error on success, do so on
-			// checkpoint also.
-			if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStdoutFile.c_str() )) ) {
-				if(! CheckpointFiles->file_contains( JobStdoutFile.c_str() )) {
-					CheckpointFiles->append( JobStdoutFile.c_str() );
+			//
+			// If we're not streaming ATTR_JOB_OUTPUT or ATTR_JOB_ERROR,
+			// send them along as well.  If ATTR_CHECKPOINT_FILES is set,
+			// it's an explicit list, so we don't have to worry about
+			// implicitly sending the file twice.
+			//
+			if( shouldSendStdout() ) {
+				if(! CheckpointFiles->file_contains(JobStdoutFile.c_str()) ) {
+					CheckpointFiles->append(JobStdoutFile.c_str());
 				}
 			}
-			if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStderrFile.c_str() )) ) {
-				if(! CheckpointFiles->file_contains( JobStderrFile.c_str() )) {
-					CheckpointFiles->append( JobStderrFile.c_str() );
+
+			if( shouldSendStderr() ) {
+				if(! CheckpointFiles->file_contains(JobStderrFile.c_str()) ) {
+					CheckpointFiles->append(JobStderrFile.c_str());
 				}
 			}
 
@@ -1411,11 +1446,16 @@ FileTransfer::DetermineWhichFilesToSend() {
 		CheckpointFiles = new StringList( NULL, "," );
 
 		// If we'd transfer output or error on success, do so on failure also.
-		if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStdoutFile.c_str() )) ) {
-			CheckpointFiles->append( JobStdoutFile.c_str() );
+		if( shouldSendStdout() ) {
+			if(! CheckpointFiles->file_contains(JobStdoutFile.c_str()) ) {
+				CheckpointFiles->append( JobStdoutFile.c_str() );
+			}
 		}
-		if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStderrFile.c_str() )) ) {
-			CheckpointFiles->append( JobStderrFile.c_str() );
+
+		if( shouldSendStderr() ) {
+			if(! CheckpointFiles->file_contains(JobStderrFile.c_str()) ) {
+				CheckpointFiles->append( JobStderrFile.c_str() );
+			}
 		}
 
 		if( EncryptCheckpointFiles ) { delete EncryptCheckpointFiles; }
@@ -1658,6 +1698,7 @@ FileTransfer::HandleCommands(int command, Stream *s)
 					transobject->InputFiles->append(info.filename().c_str());
 			}
 
+			// dprintf( D_ALWAYS, "HandleCommands(): InputFiles = %s\n", transobject->InputFiles->to_string().c_str() );
 			transobject->FilesToSend = transobject->InputFiles;
 			transobject->EncryptFiles = transobject->EncryptInputFiles;
 			transobject->DontEncryptFiles = transobject->DontEncryptInputFiles;
@@ -1882,7 +1923,7 @@ FileTransfer::ReadTransferPipeMsg()
 				delete [] error_buf;
 				goto read_failed;
 			}
-			
+
 			// The client should have null terminated this, but
 			// let's write the null just in case it didn't
 			error_buf[error_len - 1] = '\0';
@@ -2925,12 +2966,13 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			rc = s->get_file( &bytes, fullname.c_str(), false, false, this_file_max_bytes, &xfer_queue );
 		}
 
+		int the_error = errno;
+
 		elapsed = time(NULL)-start;
 		thisFileStats.TransferEndTime = condor_gettimestamp_double();
 		thisFileStats.ConnectionTimeSeconds = thisFileStats.TransferEndTime - thisFileStats.TransferStartTime;
 
 		if( rc < 0 ) {
-			int the_error = errno;
 			error_buf.formatstr("%s at %s failed to receive file %s",
 			                  get_mySubSystem()->getName(),
 							  s->my_ip_str(),fullname.c_str());
@@ -3878,7 +3920,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	jobAd.LookupBool( ATTR_PRESERVE_RELATIVE_PATHS, preserveRelativePaths );
 
 	FileTransferList filelist;
+	// dprintf( D_ALWAYS, ">>> DoUpload(), before ExpandFileTransferList(): InputFiles = %s\n", FilesToSend->to_string().c_str() );
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
+	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after ExpandFileTransferList(): %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 
 	// Remove any files from the catalog that are in the ExceptionList
 	if (ExceptionFiles) {
@@ -3886,7 +3930,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			std::remove_if(
 					filelist.begin(),
 					filelist.end(),
-					[&](FileTransferItem &fti) 
+					[&](FileTransferItem &fti)
 					{return ExceptionFiles->contains(condor_basename(fti.srcName().c_str()));});
 
 		filelist.erase(enditer, filelist.end());
@@ -4177,7 +4221,35 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 	}
 
-	std::sort(filelist.begin(), filelist.end());
+
+	//
+	// Remove file entries which result in duplicates at the destination.
+	// This is no longer necessary for correctness (because I changed
+	// FileTransferItem::operator < to group rather than sort), but it's
+	// still more efficient.  Some of these duplicates will have been
+	// generated internally, but not all.  It's more efficient to remove
+	// them all here (especially when the duplicate would only have been
+	// generated by expanding a directory).  We remove duplicate directory
+	// creation entries when we create the extra entries because for those,
+	// we want to preserve the earlier one, rather than the later one.
+	//
+	std::set<std::string> names;
+	for( auto iter = filelist.rbegin(); iter != filelist.rend(); ++iter ) {
+		auto & item = * iter;
+
+		if( item.isSrcUrl() ) { continue; }
+		if( item.isDestUrl() ) { continue; }
+
+		std::string rd_path = item.destDir() + DIR_DELIM_CHAR + condor_basename(item.srcName().c_str());
+		if( names.insert(rd_path).second == false ) {
+			// This incancation converts a reverse to a forward iterator.
+			filelist.erase( (iter + 1).base() );
+		}
+	}
+	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after duplicate removal: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+
+	std::stable_sort(filelist.begin(), filelist.end());
+	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after sorting: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 	for (auto &fileitem : filelist)
 	{
 			// If there's a signed URL to work with, we should use that instead.
@@ -6293,7 +6365,7 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 
 	// if this exists and is in the list do it first
 	if (X509UserProxy && input_list->contains(X509UserProxy)) {
-		if( !ExpandFileTransferList( X509UserProxy, "", Iwd, -1, expanded_list, preserveRelativePaths ) ) {
+		if( !ExpandFileTransferList( X509UserProxy, "", Iwd, -1, expanded_list, preserveRelativePaths, SpoolSpace ) ) {
 			rc = false;
 		}
 	}
@@ -6306,7 +6378,7 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 		// everything else gets expanded.  this if would short-circuit
 		// true if X509UserProxy is not defined, but i made it explicit.
 		if(!X509UserProxy || (X509UserProxy && strcmp(path, X509UserProxy) != 0)) {
-			if( !ExpandFileTransferList( path, "", Iwd, -1, expanded_list, preserveRelativePaths ) ) {
+			if( !ExpandFileTransferList( path, "", Iwd, -1, expanded_list, preserveRelativePaths, SpoolSpace ) ) {
 				rc = false;
 			}
 		}
@@ -6334,7 +6406,7 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 }
 
 bool
-FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, FileTransferList &expanded_list ) {
+FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, FileTransferList &expanded_list, const char * SpoolSpace ) {
 	// dprintf( D_ALWAYS, ">>> ExpandParentDirectories( %s, %s, ...)\n", src_path, iwd );
 
 	// Fill a stack with path components from right to left.
@@ -6361,7 +6433,7 @@ FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, 
 			partialPath += DIR_DELIM_CHAR;
 		}
 		partialPath += splitPath.back(); splitPath.pop_back();
-		if(! ExpandFileTransferList( partialPath.c_str(), parent.c_str(), iwd, 0, expanded_list, false )) {
+		if(! ExpandFileTransferList( partialPath.c_str(), parent.c_str(), iwd, 0, expanded_list, false, SpoolSpace )) {
 			return false;
 		}
 		parent = partialPath;
@@ -6371,7 +6443,7 @@ FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, 
 }
 
 bool
-FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths )
+FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace )
 {
 	ASSERT( src_path );
 	ASSERT( dest_dir );
@@ -6448,7 +6520,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 				// ExpandParentDirectories() calls ExpandFileTransferList()
 				// with preserveRelativePaths turned off -- the whole point
 				// of it being to generate paths one level at a time.
-				if(! ExpandParentDirectories( src_path, iwd, expanded_list )) {
+				if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace )) {
 					return false;
 				}
 			}
@@ -6500,15 +6572,72 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 			// dprintf( D_ALWAYS, ">>> not preserving relative path.\n" );
 			destination += condor_basename(src_path);
 		} else {
-			// dprintf( D_ALWAYS, ">>> preserving relative path.\n" );
-			destination += src_path;
+			if(! fullpath(src_path)) {
+				// dprintf( D_ALWAYS, ">>> preserving relative path of relative path %s\n", src_path );
 
-			// ExpandParentDirectories() adds this back in the correct place.
-			expanded_list.pop_back();
+				if( destination.length() > 0 ) { destination += DIR_DELIM_CHAR; }
+				destination += src_path;
 
-			// dprintf( D_ALWAYS, ">>> expanding parent directories of named directory %s\n", src_path );
-			if(! ExpandParentDirectories( src_path, iwd, expanded_list )) {
-				return false;
+				// ExpandParentDirectories() adds this back in the correct place.
+				expanded_list.pop_back();
+
+				if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace )) {
+					return false;
+				}
+			} else {
+				//
+				// The only absolute paths we want to treat as relative paths
+				// are absolute paths into the SPOOL directory.  Everything
+				// else should be transferred as usual.
+				//
+
+                // SpoolSpace is not under user control; if the admin screws
+                // up this setting, it's OK to assert and die.  (Setting
+                // SPOOL to a relative path should have already caused
+                // failures before getting here.)
+				ASSERT( SpoolSpace == NULL || fullpath(SpoolSpace) );
+				if( SpoolSpace != nullptr && starts_with(src_path, SpoolSpace) ) {
+					const char * relative_path = &src_path[strlen(SpoolSpace)];
+					if( IS_ANY_DIR_DELIM_CHAR(relative_path[0]) ) { ++relative_path; }
+					// dprintf( D_ALWAYS, ">>> preserving relative path of directory (%s) in SPOOL (as %s)\n", src_path, relative_path );
+
+					//
+					// relative_path is relative to SpoolSpace, not the
+					// destination, which means we can't use it to set
+					// destination.  Instead, see if destination is a prefix
+					// to relative_path, and correct if it is.
+					//
+					ASSERT(! fullpath(destination.c_str()));
+
+					std::string parent(SpoolSpace);
+					if( starts_with( relative_path, destination ) ) {
+						relative_path = &relative_path[destination.length()];
+						if( IS_ANY_DIR_DELIM_CHAR(relative_path[0]) ) { ++relative_path; }
+
+						if(! IS_ANY_DIR_DELIM_CHAR(parent[parent.length() - 1])) {
+							parent += DIR_DELIM_CHAR;
+						}
+						parent += destination;
+					}
+
+					if(  (! destination.empty())
+					  && (! IS_ANY_DIR_DELIM_CHAR(destination[destination.length() - 1]))
+					  ) {
+						destination += DIR_DELIM_CHAR;
+					}
+					destination += relative_path;
+
+					// ExpandParentDirectories() adds this back in the correct place.
+					expanded_list.pop_back();
+
+					// dprintf( D_ALWAYS, ">>> ExpandParentDirectories( %s, %s, ..., ... )\n", relative_path, parent.c_str() );
+					if(! ExpandParentDirectories( relative_path, parent.c_str(), expanded_list, SpoolSpace )) {
+						return false;
+					}
+				} else {
+					destination += condor_basename(src_path);
+				}
+
 			}
 		}
 	}
@@ -6532,7 +6661,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		}
 		file_full_path += file_in_dir;
 
-		if( !ExpandFileTransferList( file_full_path.c_str(), destination.c_str(), iwd, max_depth, expanded_list, preserveRelativePaths ) ) {
+		if( !ExpandFileTransferList( file_full_path.c_str(), destination.c_str(), iwd, max_depth, expanded_list, preserveRelativePaths, SpoolSpace ) ) {
 			rc = false;
 		}
 	}
@@ -6566,7 +6695,9 @@ FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, MySt
 			FileTransferList filelist;
 			// N.B.: It's only safe to flatten relative paths here because
 			// this code never calls destDir().
-			if( !ExpandFileTransferList( path, "", iwd, 1, filelist, false ) ) {
+			//
+			// This implicitly assumes that nothing in the input file list is in SPOOL.
+			if( !ExpandFileTransferList( path, "", iwd, 1, filelist, false, "" ) ) {
 				formatstr_cat(error_msg, "Failed to expand '%s' in transfer input file list. ",path);
 				result = false;
 			}

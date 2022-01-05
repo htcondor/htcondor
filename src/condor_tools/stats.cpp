@@ -66,7 +66,7 @@ int GrpConvStr(char* InpStr, char* OutStr)
 
 //------------------------------------------------------------------------
 
-int ResConvStr(char* InpStr, char* OutStr)
+int ResConvStr(const char* InpStr, std::string &OutStr)
 {
   float T,LoadAvg;
   int KbdIdle;
@@ -92,7 +92,7 @@ int ResConvStr(char* InpStr, char* OutStr)
   } else {
 	stateStr = "UNKNOWN";
   }
-  sprintf(OutStr,"%f\t%d\t%f\t%s\n",T,KbdIdle,LoadAvg,stateStr);
+  formatstr(OutStr,"%f\t%d\t%f\t%s\n",T,KbdIdle,LoadAvg,stateStr);
   return 0;
 }
 
@@ -297,24 +297,20 @@ int main(int argc, char* argv[])
     exit(1);
   }
 
-  char NewStr[200];
+  std::string NewStr;
 
   sock.decode(); 
   while(1) {
-    if (!sock.get(LinePtr,MaxLen)) {
-      fprintf(stderr, "failed to receive data from the CondorView server %s\n",
-			view_host.fullHostname());
-      if (LineCount==0) fputs("No Data.\n",outfile);
-      exit(1);
-    }
-    if (strlen(LinePtr)==0) break;
+    std::string line;
+    sock.code(line);
+    if (line.length() == 0) break;
     LineCount++;
     if (Options==0 && QueryType==QUERY_HIST_STARTD) {
-      ResConvStr(LinePtr,NewStr);
-      fputs(NewStr,outfile);
+      ResConvStr(line.c_str(),NewStr);
+      fputs(NewStr.c_str(),outfile);
     }
     else {
-      fputs(LinePtr,outfile);
+      fputs(line.c_str(),outfile);
     }
   }
   if (!sock.end_of_message()) {

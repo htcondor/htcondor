@@ -393,6 +393,8 @@ class RemoteResource : public Service {
 	// return true if job should be allowed to write to attribute
 	bool allowRemoteWriteAttributeAccess( const std::string & name );
 
+    void recordActivationExitExecutionTime( time_t when );
+
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not
@@ -470,6 +472,16 @@ class RemoteResource : public Service {
 
 	int m_attempt_shutdown_tid;
 	time_t m_started_attempting_shutdown;
+
+    //
+    // Values for computing activation-related metrics.  (HTCONDOR-861)
+    //
+    struct {
+        time_t StartTime;
+        time_t StartExecutionTime;
+        time_t ExitExecutionTime;
+        time_t TerminationTime;
+    } activation;
 
 private:
 

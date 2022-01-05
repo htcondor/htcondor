@@ -1333,11 +1333,12 @@ FILE TRANSFER COMMANDS
     :index:`transfer_plugins<single: transfer_plugins; submit commands>`
 
  transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
-    Specifies the file transfer plugins that should be transferred along with
+    Specifies the file transfer plugins
+    (see :ref:`admin-manual/setting-up-special-environments:enabling the transfer of files specified by a url`)
+    that should be transferred along with
     the input files prior to invoking file transfer plugins for files specified in
     *transfer_input_files*. *tag* should be a URL prefix that is used in *transfer_input_files*,
     and *plugin* is the path to a file transfer plugin that will handle that type of URL transfer.
-    Plugins transfered in this way must support the multi-file transfer plugin syntax.
     :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
 
  when_to_transfer_output = < ON_EXIT | ON_EXIT_OR_EVICT | ON_SUCCESS >
@@ -1404,6 +1405,15 @@ FILE TRANSFER COMMANDS
 
 POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 
+ allowed_execute_duration = <integer>
+    The longest time for which a job may be executing.  Jobs which exceed
+    this duration will go on hold.  This time does not include file-transfer
+    time.  Jobs which self-checkpoint have this long to write out each
+    checkpoint.
+
+    This attribute is intended to help minimize the time wasted by jobs
+    which may erroneously run forever.
+
  allowed_job_duration = <integer>
     The longest time for which a job may continuously be in the running state.
     Jobs which exceed this duration will go on hold.  Exiting the running
@@ -1452,7 +1462,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     to 0 if not defined.
 
     **Note**: non-zero values of success_exit_code should generally not be
-    used for DAG node jobs, unless ``when_transfer_files`` is set to
+    used for DAG node jobs, unless ``when_to_transfer_output`` is set to
     ``ON_SUCCESS`` in order to avoid failed jobs going on hold.
 
     At the present time, *condor_dagman* does not take into
@@ -2923,6 +2933,18 @@ and comments.
 
     On the machine, if the attribute ``input_file_path`` is not defined,
     then the path ``/usr/foo`` is used instead.
+
+    As a special case that only works within the submit file *environement*
+    command, the string $$(CondorScratchDir) is expanded to the value
+    of the job's scratch directory.  This does not work for scheduler universe
+    or grid universe jobs.
+    
+    For example, to set PYTHONPATH to a subdirectory of the job scratch dir,
+    one could set
+
+    .. code-block:: text
+
+        environment = PYTHONPATH=$$(CondorScratchDir)/some/directory
 
     A further extension to the syntax of the substitution macro allows
     the evaluation of a ClassAd expression to define the value. In this
