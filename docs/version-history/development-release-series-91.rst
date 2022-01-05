@@ -21,7 +21,15 @@ Release Notes:
   variables to be evaluated for periodic job policy.
   :jira:`905`
 
-- None.
+- In most situations, jobs in COMPLETED or REMOVED status will no longer
+  transition to HELD status.
+  Before, these jobs could transition to HELD status due to job policy
+  expressions, the *condor_rm* tool, or errors encountered by the
+  *condor_shadow* or *condor_starter*.
+  Grid universe jobs may still transition to HELD status if the
+  *condor_gridmanager* can not clean up job-related resources on remote
+  systems.
+  :jira:`873`
 
 Bugs Fixed:
 
