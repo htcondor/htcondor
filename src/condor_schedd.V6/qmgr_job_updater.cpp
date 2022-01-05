@@ -33,8 +33,8 @@
 #include "dc_schedd.h"
 
 
-QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address,
-	const char *schedd_version ) : common_job_queue_attrs(0),
+QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
+	: common_job_queue_attrs(0),
 	hold_job_queue_attrs(0),
 	evict_job_queue_attrs(0),
 	remove_job_queue_attrs(0),
@@ -44,14 +44,12 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address,
 	x509_job_queue_attrs(0),
 	m_pull_attrs(0),
 	job_ad(job), // we do *NOT* want to make our own copy of this ad
-	schedd_addr(schedd_address?strdup(schedd_address):0),
-	schedd_ver(schedd_version?strdup(schedd_version):0),
+	m_schedd_obj(schedd_address),
 	cluster(-1), proc(-1),
 	q_update_tid(-1) 
 {
-	if( ! is_valid_sinful(schedd_address) ) {
-		EXCEPT( "schedd_addr not specified with valid address (%s)",
-				schedd_address );
+	if( ! m_schedd_obj.locate() ) {
+		EXCEPT("Invalid schedd address (%s)", schedd_address);
 	}
 	if( !job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
 		EXCEPT("Job ad doesn't contain a %s attribute.", ATTR_CLUSTER_ID);
@@ -81,8 +79,6 @@ QmgrJobUpdater::~QmgrJobUpdater()
 		daemonCore->Cancel_Timer( q_update_tid );
 		q_update_tid = -1;
 	}
-	if( schedd_addr ) { free(schedd_addr); }
-	if (schedd_ver)   {free(schedd_ver); }
 	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
 	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
 	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
@@ -130,7 +126,12 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE );
-	
+
+	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_DURATION );
+	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_EXECUTION_DURATION );
+	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_SETUP_DURATION );
+	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION );
+
 	common_job_queue_attrs->insert( "TransferInQueued" );
 	common_job_queue_attrs->insert( "TransferInStarted" );
 	common_job_queue_attrs->insert( "TransferInFinished" );
@@ -308,7 +309,7 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 	if (log) {
 		flags = SHOULDLOG;
 	}
-	if( ConnectQ(schedd_addr,SHADOW_QMGMT_TIMEOUT,false,NULL,m_owner.c_str(),schedd_ver) ) {
+	if( ConnectQ(m_schedd_obj,SHADOW_QMGMT_TIMEOUT,false,NULL,m_owner.c_str()) ) {
 		if( SetAttribute(cluster,p,name,expr,flags) < 0 ) {
 			err_msg = "SetAttribute() failed";
 			result = FALSE;
@@ -404,7 +405,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			 job_queue_attrs->contains_anycase(name)) ) {
 
 			if( ! is_connected ) {
-				if( ! ConnectQ(schedd_addr, SHADOW_QMGMT_TIMEOUT, false, NULL, m_owner.c_str(),schedd_ver) ) {
+				if( ! ConnectQ(m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false, NULL, m_owner.c_str()) ) {
 					return false;
 				}
 				is_connected = true;
@@ -418,7 +419,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 	m_pull_attrs->rewind();
 	while ( (name = m_pull_attrs->next()) ) {
 		if ( !is_connected ) {
-			if ( !ConnectQ( schedd_addr, SHADOW_QMGMT_TIMEOUT, true, NULL, NULL, schedd_ver ) ) {
+			if ( !ConnectQ( m_schedd_obj, SHADOW_QMGMT_TIMEOUT, true ) ) {
 				return false;
 			}
 			is_connected = true;
@@ -464,7 +465,7 @@ QmgrJobUpdater::retrieveJobUpdates( void )
 	ProcIdToStr(cluster, proc, id_str);
 	job_ids.insert(id_str);
 
-	if ( !ConnectQ( schedd_addr, SHADOW_QMGMT_TIMEOUT, false ) ) {
+	if ( !ConnectQ( m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false ) ) {
 		return false;
 	}
 	if ( GetDirtyAttributes( cluster, proc, &updates ) < 0 ) {
@@ -477,8 +478,7 @@ QmgrJobUpdater::retrieveJobUpdates( void )
 	dPrintAd( D_JOB, updates );
 	MergeClassAds( job_ad, &updates, true );
 
-	DCSchedd schedd( schedd_addr );
-	if ( schedd.clearDirtyAttrs( &job_ids, &errstack ) == NULL ) {
+	if ( m_schedd_obj.clearDirtyAttrs( &job_ids, &errstack ) == NULL ) {
 		dprintf( D_ALWAYS, "clearDirtyAttrs() failed: %s\n", errstack.getFullText().c_str() );
 		return false;
 	}

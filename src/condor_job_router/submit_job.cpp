@@ -169,7 +169,7 @@ ClaimJobResult claim_job(int cluster, int proc, std::string * error_details, con
 static Qmgr_connection *open_q_as_owner(char const *effective_owner,DCSchedd &schedd,FailObj &failobj)
 {
 	CondorError errstack;
-	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack, effective_owner, schedd.version());
+	Qmgr_connection * qmgr = ConnectQ(schedd, 0 /*timeout==default*/, false /*read-only*/, & errstack, effective_owner);
 	if( ! qmgr ) {
 		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true).c_str());
 		return NULL;

@@ -752,3 +752,36 @@ int pseudo_get_sec_session_info(
 	}
 	return 1;
 }
+
+//
+// This syscall MUST ignore information it doesn't know how to deal with.
+//
+// The thinking for this syscall is the following: as Miron asks for more
+// metrics, it's highly likely that there will be other event notifications
+// that the starter needs to send to the shadow.  Rather than create a
+// semantically significant remote syscall for each one, let's just create
+// a single one that they can all use.  (As a new syscall, pools won't see
+// correct values for the new metrics until both the shadow and the starter
+// have been upgraded.)  However, rather than writing a bunch of complicated
+// code to determine which version(s) can send what events to which
+// version(s), we can just declare and require that this function just
+// ignore attributes it doesn't know how to deal with (and not fail if an
+// attribute has the wrong type).
+//
+
+int
+pseudo_event_notification( const ClassAd & ad ) {
+	std::string eventType;
+	if(! ad.LookupString( "EventType", eventType )) {
+		return 0;
+	}
+
+	ClassAd * jobAd = Shadow->getJobAd();
+	ASSERT(jobAd);
+
+	if( eventType == "ActivationExecutionExit" ) {
+		thisRemoteResource->recordActivationExitExecutionTime(time(NULL));
+	}
+
+	return 0;
+}

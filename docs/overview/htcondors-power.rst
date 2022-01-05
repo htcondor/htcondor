@@ -6,7 +6,7 @@ HTCondor's Power
 HTCondor is a software system that creates a High-Throughput Computing
 (HTC) environment. It effectively uses the computing power of
 machines connected over a network, be they a single cluster, a set
-of clusters on a campus, cloud resources either standalone or temporarily
+of clusters on a campus, cloud resources either stand alone or temporarily
 joined to a local cluster, or international grids. 
 Power comes from the ability to effectively harness shared resources with
 distributed ownership.

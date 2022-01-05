@@ -7,12 +7,42 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-9010:
+
+Version 9.0.10
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.0.10 released on Month Date, 2022.
+
+- HTCondor version 9.0.10 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- HTCondor will now properly transfer checkpoints if ``stream_output``
+  or ``stream_error`` is set and ``output`` or ``error``, respectively,
+  is not an absolute path.
+  :jira:`736`
+
+- The *condor_annex* tool no longer duplicates the first tag if given multiple
+  ``-tag`` options on the command line.  You can now set longer user data on
+  the command-line.
+  :jira:`910`
+
+
+.. _lts-version-history-909:
+
 Version 9.0.9
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.0.9 released on Month Date, 2021.
+.. HTCondor version 9.0.9 released on Month Date, 2022.
 
 - HTCondor version 9.0.9 not yet released.
 
@@ -22,16 +52,53 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- When a grid universe job of type ``condor`` fails on the remote system,
+  the local job is now put on hold, instead of automatically resubmitted.
+  :jira:`871`
+
+- Fixed a bug where a running parallel universe job would go to idle
+  status when the job policy indicated it should be held.
+  :jira:`869`
+
+- Fixed a bug running jobs in a Singularity container where 
+  the environment variables added by HTCondor could include incorrect
+  pathnames to the location of the job's scratch directory.
+  This occurred when setting the ``SINGULARITY_TARGET_DIR`` config option.
+  :jira:`885`
+
+- Fixed a bug where the *condor_job_router* could crash while trying to
+  report an invalid router configuration when c-style comments were used
+  before an old syntax route classad. As a result of this fix the job router
+  now treats c-style comments as a indication that the route is old syntax.
+  :jira:`864`
+
+- Fixed a bug where bytes were trying to be written via an ASCII file
+  handler in *condor_credmon_oauth* when using Python 3.
+  :jira:`633`
+
+- Fixed a bug in **condor_top** where two daemon ClassAds were assumed
+  to be the same if some specific attributes were missing from the
+  latest ClassAd. Also **condor_top** now exits early if no stats are
+  provided by the queried daemon.
+  :jira`:880
+
+- Fixed a bug where the user job log could be written in the wrong
+  directory when a spooled job's output was retrieved with
+  *condor_transfer_data*.
+  :jira:`886`
+
+- Fixed a bug in *condor_adstash* where setting a list of *condor_startds*
+  to query in the config lead to no *condor_startds* being queried.
+  :jira:`888`
+
+.. _lts-version-history-908:
 
 Version 9.0.8
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.0.8 released on Month Date, 2021.
-
-- HTCondor version 9.0.8 not yet released.
+- HTCondor version 9.0.8 released on December 2, 2021.
 
 New Features:
 
@@ -115,6 +182,8 @@ Bugs Fixed:
 - Ensure the HTCondor uses version 0.6.2 or later SciTokens library so that
   WLCG tokens can be read.
   :jira:`801`
+
+.. _lts-version-history-906:
 
 Version 9.0.6
 -------------
@@ -229,6 +298,8 @@ Bugs Fixed:
   been causing the number of bytes transferred to be undercounted.
   :jira:`722`
 
+.. _lts-version-history-905:
+
 Version 9.0.5
 -------------
 
@@ -295,6 +366,8 @@ Bugs Fixed:
   :jira:`603`
 
 
+.. _lts-version-history-904:
+
 Version 9.0.4
 -------------
 
@@ -318,6 +391,8 @@ Bugs Fixed:
    :jira:`587`
 
 
+.. _lts-version-history-903:
+
 Version 9.0.3
 -------------
 
@@ -332,6 +407,8 @@ New Features:
 Bugs Fixed:
 
 -  None.
+
+.. _lts-version-history-902:
 
 Version 9.0.2
 -------------
@@ -464,6 +541,8 @@ Bugs Fixed:
   :jira:`576`
 
 
+.. _lts-version-history-901:
+
 Version 9.0.1
 -------------
 
@@ -565,6 +644,8 @@ Bugs Fixed:
 - Fixed several bugs that could result in the *condor_token_* tools aborting with
   a c++ runtime error on newer versions of Linux.
   :jira:`449`
+
+.. _lts-version-history-900:
 
 Version 9.0.0
 -------------

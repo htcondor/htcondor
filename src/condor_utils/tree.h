@@ -33,7 +33,7 @@ public:
 	Tree(T data) : m_data(data), m_parent(NULL), m_child(NULL), m_sibling(NULL) { }
 
 	// delete this tree (frees memory from all children)
-	~Tree<T>() {
+	~Tree() {
 		if (m_sibling) delete m_sibling;
 		if (m_child) delete m_child;
 	}

@@ -103,8 +103,14 @@ int DockerProc::StartJob() {
 	Starter->SetJobEnvironmentReady(false);
 
 	if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageID ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE );
-		return FALSE;
+		if (! JobAd->LookupString(ATTR_CONTAINER_IMAGE, imageID)) {
+			dprintf( D_ALWAYS | D_FAILURE, "Neither %s nor %s defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE, ATTR_CONTAINER_IMAGE);
+			return FALSE;
+		}
+	}
+
+	if (starts_with(imageID, "docker://")) {
+		imageID = imageID.substr(9);
 	}
 
 	std::string command;
@@ -449,12 +455,6 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 		if( rv < 0 ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Failed to inspect (for removal) container '%s'.\n", containerName.c_str() );
-			std::string imageName;
-			if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageName ) ) {
-				dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad.\n", ATTR_DOCKER_IMAGE );
-				imageName = "Unknown"; // shouldn't ever happen
-			}
-
 			EXCEPT("Cannot inspect exited container");
 		}
 

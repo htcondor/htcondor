@@ -522,7 +522,7 @@ main(int argc, const char *argv[])
 	}
 
 	// Open job queue
-	Qmgr_connection *q = ConnectQ( schedd.addr(), 0, false, NULL, NULL, schedd.version() );
+	Qmgr_connection *q = ConnectQ( schedd );
 	if( !q ) {
 		fprintf( stderr, "Failed to connect to queue manager %s\n",
 				 schedd.addr() );

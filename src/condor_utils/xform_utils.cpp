@@ -46,8 +46,10 @@
 #include <set>
 
 // values for hashtable defaults, these are declared as char rather than as const char to make g++ on fedora shut up.
-static char OneString[] = "1", ZeroString[] = "0";
-//static char ParallelNodeString[] = "#pArAlLeLnOdE#";
+#if defined(WIN32) || defined(LINUX)
+static char OneString[] = "1";
+#endif
+static char ZeroString[] = "0";
 static char UnsetString[] = "";
 
 
@@ -67,7 +69,6 @@ static condor_params::string_value IsLinuxMacroDef = { ZeroString, 0 };
 static condor_params::string_value IsWinMacroDef = { ZeroString, 0 };
 #endif
 static condor_params::string_value UnliveRulesFileMacroDef = { UnsetString, 0 };
-//static condor_params::string_value UnliveClusterMacroDef = { OneString, 0 };
 static condor_params::string_value UnliveProcessMacroDef = { ZeroString, 0 };
 static condor_params::string_value UnliveStepMacroDef = { ZeroString, 0 };
 static condor_params::string_value UnliveRowMacroDef = { ZeroString, 0 };

@@ -38,6 +38,7 @@ extern Starter *Starter;
 JobInfoCommunicator::JobInfoCommunicator()
 {
 	job_ad = NULL;
+	job_execution_overlay_ad = NULL;
 	mach_ad = NULL;
 	job_universe = CONDOR_UNIVERSE_VANILLA;
 	job_cluster = -1;
@@ -76,6 +77,9 @@ JobInfoCommunicator::~JobInfoCommunicator()
 {
 	if( job_ad ) {
 		delete job_ad;
+	}
+	if( job_execution_overlay_ad ) {
+		delete job_execution_overlay_ad; job_execution_overlay_ad = NULL;
 	}
 	if( mach_ad ) {
 		delete mach_ad;
@@ -233,6 +237,11 @@ JobInfoCommunicator::jobClassAd( void )
 	return job_ad;
 }
 
+ClassAd*
+JobInfoCommunicator::jobExecutionOverlayAd( void )
+{
+	return job_execution_overlay_ad;
+}
 
 ClassAd*
 JobInfoCommunicator::machClassAd( void )

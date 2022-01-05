@@ -288,18 +288,26 @@ def getRuntimeAttrs(ad):
 def computeUpdateTimes(old, new):
     """Returns the ClassAds' update times (Unix epoch)"""
 
-    if ('DaemonStartTime' in new) and ('StatsLifetime' in new):
+    if (('DaemonStartTime' in new) and ('StatsLifetime' in new) and
+        ('DaemonStartTime' in old) and ('StatsLifetime' in old)):
         t_0 = new['DaemonStartTime']
+        if t_0 != old['DaemonStartTime']:
+            sys.stderr.write('Error: Daemon ads have different start times.\n')
+            sys.exit(1)
         t_old = t_0 + old['StatsLifetime']
         t_new = t_0 + new['StatsLifetime']
     else:
         t_old = old['MyCurrentTime']
-        t_new = old['MyCurrentTime']
+        t_new = new['MyCurrentTime']
 
-    # quit and notify if the ads have the same timestamp
+    # check for same timestamp
     if (t_new - t_old) == 0:
-        sys.stderr.write('Error: ClassAds have the same timestamp.\n')
-        sys.exit(1)
+        if new['MyCurrentTime'] > old['MyCurrentTime']:  # try using MyCurrentTime
+            t_new = new['MyCurrentTime']
+            t_old = old['MyCurrentTime']
+        else:  # quit and notify if the ads have the same timestamp
+            sys.stderr.write('Error: ClassAds have the same timestamp.\n')
+            sys.exit(1)
         
     return (t_old, t_new)
 
@@ -824,10 +832,15 @@ if __name__ == '__main__':
 
             old = queryClassAd(POOL, DAEMON, NAME, DIRECT)
 
-            # if in live mode, go ahead and print the information we have
-            if LIVE:
-                printMonitorSelf(DAEMON, NAME, old)
-                printRecentHealthStats(old)
+            # go ahead and print the information we have
+            printMonitorSelf(DAEMON, NAME, old)
+            printRecentHealthStats(old)
+
+            # if there aren't any runtime attributes in the classad,
+            # print the information we have and exit now
+            if len(getRuntimeAttrs(old)) == 0:
+                sys.stderr.write("Did not get any comparable runtime attributes from daemon ClassAd, exiting early.\n")
+                sys.exit(0)
 
             # countdown and get the "new" ClassAd from the Collector
             printCountdown()
@@ -839,8 +852,7 @@ if __name__ == '__main__':
                 pass
 
         # at this point, we have both old and new ClassAds, so print the info
-        lines = printMonitorSelf(DAEMON, NAME, new)
-        lines += printInstHealthStats(old, new)
+        lines = printInstHealthStats(old, new)
         printRuntimeTable(old, new, lines = lines)
 
         # if in live mode, continue getting new ClassAds

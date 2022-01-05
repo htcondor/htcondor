@@ -2014,6 +2014,8 @@ Claim::resetClaim( void )
 		delete( c_jobad );
 		c_jobad = NULL;
 	}
+	c_job_execution_overlay_ad.Clear();
+
 	c_universe = -1;
 	c_cluster = -1;
 	c_proc = -1;
@@ -2111,7 +2113,7 @@ Claim::writeJobAd( int pipe_end )
 }
 
 bool
-Claim::writeMachAd( Stream* stream )
+Claim::writeMachAdAndOverlay( Stream* stream )
 {
 	//PRAGMA_REMIND("flatten SlotEval here before printing/sending ad on wire")
 	if (IsDebugLevel(D_MACHINE)) {
@@ -2120,12 +2122,25 @@ Claim::writeMachAd( Stream* stream )
 	} else {
 		dprintf(D_FULLDEBUG, "Sending Machine Ad to Starter\n");
 	}
-	if (!putClassAd(stream, *c_rip->r_classad) || !stream->end_of_message()) {
+	if (!putClassAd(stream, *c_rip->r_classad)) {
+		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
+		return false;
+	}
+
+	// now write the execution overlay
+	if (IsDebugLevel(D_JOB)) {
+		std::string adbuf;
+		dprintf(D_JOB, "Sending Execution Overlay Ad to Starter :\n%s", formatAd(adbuf, c_job_execution_overlay_ad, "\t"));
+	} else {
+		dprintf(D_FULLDEBUG, "Sending Execution Overlay Ad to Starter (%d attributes)\n", (int)c_job_execution_overlay_ad.size());
+	}
+	if (!putClassAd(stream, c_job_execution_overlay_ad) || !stream->end_of_message()) {
 		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
 		return false;
 	}
 	return true;
 }
+
 
 ///////////////////////////////////////////////////////////////////////////
 // Client

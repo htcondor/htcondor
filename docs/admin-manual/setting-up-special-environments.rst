@@ -105,8 +105,8 @@ Because staging data on the submit machine is not always efficient,
 HTCondor permits input files to be transferred from a location specified
 by a URL; likewise, output files may be transferred to a location
 specified by a URL. All transfers (both input and output) are
-accomplished by invoking a plug-in, an executable or shell script that
-handles the task of file transfer.
+accomplished by invoking a **file transfer plugin**: an executable or shell
+script that handles the task of file transfer.
 
 For transferring input files, URL specification is limited to jobs
 running under the vanilla universe and to a vm universe VM image file.
@@ -116,7 +116,7 @@ the job is submitted to the machine where the job is executed. Each file
 to be transferred by specifying a URL, causing a plug-in to be invoked,
 is specified separately in the job submit description file with the
 command
-**transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`;
+``transfer_input_files`` :index:`transfer_input_files<single: transfer_input_files; submit commands>`;
 see the :ref:`users-manual/file-transfer:submitting jobs without a shared
 file system: htcondor's file transfer mechanism` section for details.
 
@@ -124,10 +124,10 @@ For transferring output files, either the entire output sandbox, which
 are all files produced or modified by the job as it executes, or a
 subset of these files, as specified by the submit description file
 command
-**transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
+``transfer_output_files`` :index:`transfer_output_files<single: transfer_output_files; submit commands>`
 are transferred to the directory specified by the URL. The URL itself is
 specified in the separate submit description file command
-**output_destination** :index:`output_destination<single: output_destination; submit commands>`;
+``output_destination`` :index:`output_destination<single: output_destination; submit commands>`;
 see the :ref:`users-manual/file-transfer:submitting jobs without a shared
 file system: htcondor's file transfer mechanism` section for details. The plug-in
 is invoked once for each output file to be transferred.
@@ -164,16 +164,17 @@ list given by ``FILETRANSFER_PLUGINS`` is used.
 HTCondor assumes that all plug-ins will respond in specific ways. To
 determine the capabilities of the plug-ins as to which protocols they
 handle, the *condor_starter* daemon invokes each plug-in giving it the
-command line argument **-classad**. In response to invocation with this
-command line argument, the plug-in must respond with an output of three
-ClassAd attributes. The first two are fixed:
+command line argument ``-classad``. In response to invocation with this
+command line argument, the plug-in must respond with an output of four
+ClassAd attributes. The first three are fixed:
 
 .. code-block:: condor-classad
 
+    MultipleFileSupport = true
     PluginVersion = "0.1"
     PluginType = "FileTransfer"
 
-The third ClassAd attribute is ``SupportedMethods``. This attribute is a
+The fourth ClassAd attribute is ``SupportedMethods``. This attribute is a
 string containing a comma separated list of the protocols that the
 plug-in handles. So, for example
 
@@ -184,13 +185,13 @@ plug-in handles. So, for example
 would identify that the three protocols described by http, ftp, and file
 are supported. These strings will match the protocol specification as
 given within a URL in a
-**transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
+``transfer_input_files`` :index:`transfer_input_files<single: transfer_input_files; submit commands>`
 command or within a URL in an
-**output_destination** :index:`output_destination<single: output_destination; submit commands>`
+``output_destination`` :index:`output_destination<single: output_destination; submit commands>`
 command in a submit description file for a job.
 
 When a job specifies a URL transfer, the plug-in is invoked, without the
-command line argument **-classad**. It will instead be given two other
+command line argument ``-classad``. It will instead be given two other
 command line arguments. For the transfer of input file(s), the first
 will be the URL of the file to retrieve and the second will be the
 absolute path identifying where to place the transferred file. For the
@@ -213,25 +214,30 @@ the submit description file contains
     output_destination = url://server/some/directory/
     transfer_output_files = foo, bar, qux
 
-HTCondor invokes the plug-in that handles the ``url`` protocol three
-times. The directory delimiter (/ on Unix, and \\ on Windows) is
-appended to the destination URL, such that the three (Unix) invocations
-of the plug-in will appear similar to
+HTCondor invokes the plug-in that handles the ``url`` protocol with
+input classads describing all the files to be transferred and their
+destinations. The directory delimiter (/ on Unix, and \\ on Windows) is
+appended to the destination URL, such that the input will look like the
+following:
 
 .. code-block:: console
 
-    $ url_plugin /path/to/local/copy/of/foo url://server/some/directory//foo
-    $ url_plugin /path/to/local/copy/of/bar url://server/some/directory//bar
-    $ url_plugin /path/to/local/copy/of/qux url://server/some/directory//qux
+    [ LocalFileName = "/path/to/local/copy/of/foo"; Url = "url://server/some/directory//foo" ]
+    [ LocalFileName = "/path/to/local/copy/of/bar"; Url = "url://server/some/directory//bar" ]
+    [ LocalFileName = "/path/to/local/copy/of/qux"; Url = "url://server/some/directory//qux" ]
 
-Note that this functionality is not limited to a predefined set of
-protocols. New ones can be invented. As an invented example, the zkm
+Custom File Transfer Plugins
+''''''''''''''''''''''''''''
+
+This functionality is not limited to a predefined set of protocols or plugins.
+New ones can be invented. As an invented example, the zkm
 transfer type writes random bytes to a file. The plug-in that handles
-zkm transfers would respond to invocation with the **-classad** command
+zkm transfers would respond to invocation with the ``-classad`` command
 line argument with:
 
 .. code-block:: condor-classad
 
+    MultipleFileSupport = true
     PluginVersion = "0.1"
     PluginType = "FileTransfer"
     SupportedMethods = "zkm"
@@ -263,22 +269,29 @@ source repository under `/src/condor_examples/filetransfer_example_plugin.py
 This provides most of the functionality required in the plugin, except for
 the transfer logic itself, which is clearly indicated in the comments.
 
-The transfer of output files in this manner was introduced in HTCondor
-version 7.6.0. Incompatibility and inability to function will result if
-the executables for the *condor_starter* and *condor_shadow* are
-versions earlier than HTCondor version 7.6.0. Here is the expected
-behavior for these cases that cannot be backward compatible.
+Sending File Transfer Plugins With Your Job
+'''''''''''''''''''''''''''''''''''''''''''
 
--  If the *condor_starter* version is earlier than 7.6.0, then
-   regardless of the *condor_shadow* version, transfer of output files,
-   as identified in the submit description file with the command
-   **output_destination** :index:`output_destination<single: output_destination; submit commands>`
-   is ignored. The files are transferred back to the submit machine.
--  If the *condor_starter* version is 7.6.0 or later, but the
-   *condor_shadow* version is earlier than 7.6.0, then the
-   *condor_starter* will attempt to send the command to the
-   *condor_shadow*, but the *condor_shadow* will ignore the command.
-   No files will be transferred, and the job will be placed on hold.
+You can also use custom protocols on machines that do not have the necessary
+plugin installed. This is achieved by sending the file transfer plugin along
+with your job, using the ``transfer_plugins`` submit attribute described
+on the :doc:`/man-pages/condor_submit` man page.
+
+Assume you want to transfer some URLs that use the ``custommethod://``
+protocol, and you also have a plugin script called
+``custommethod_plugin.py`` that knows how to handle these URLs. Since this
+plugin is not available on any of the execution points in your pool, you can
+send it along with your job by including the following in the submit file:
+
+.. code-block:: condor-submit
+
+    transfer_plugins = custommethod=custommethod_plugin.py
+    transfer_output_files = custommethod://path/to/file1, custommethod://path/to/file2
+
+When the job arrives at an exeuction point, it will know to use the plugin
+script provided to transfer these URLs. If your ``custommethod://`` protocol
+is already supported at your execution point, the plugin provided in your
+submit file will take predence.
 
 Enabling the Transfer of Public Input Files over HTTP
 -----------------------------------------------------
@@ -634,71 +647,6 @@ This mechanism is quite flexible and powerful. For very specific
 configuration needs, they can probably be met by using file permissions,
 the ``LOCAL_CONFIG_FILE`` configuration variable, and imagination.
 
-Full Installation of condor_compile
-------------------------------------
-
-In order to take advantage of two major HTCondor features: checkpointing
-and remote system calls, users need to relink their binaries. Programs
-that are not relinked for HTCondor can run under HTCondor's vanilla
-universe. However, these jobs cannot take checkpoints and migrate.
-
-To relink programs with HTCondor, we provide the *condor_compile* tool.
-As installed by default, *condor_compile* works with the following
-commands: *gcc*, *g++*, *g77*, *cc*, *acc*, *c89*, *CC*, *f77*,
-*fort77*, *ld*.
-
-*condor_compile* can work transparently with all commands on the
-system, including *make*. The basic idea here is to replace the system
-linker (*ld*) with the HTCondor linker. Then, when a program is to be
-linked, the HTCondor linker figures out whether this binary will be for
-HTCondor, or for a normal binary. If it is to be a normal compile, the
-old *ld* is called. If this binary is to be linked for HTCondor, the
-script performs the necessary operations in order to prepare a binary
-that can be used with HTCondor. In order to differentiate between normal
-builds and HTCondor builds, the user simply places *condor_compile*
-before their build command, which sets the appropriate environment
-variable that lets the HTCondor linker script know it needs to do its
-magic.
-
-In order to perform this full installation of *condor_compile*, the
-following steps need to be taken:
-
-#. Rename the system linker from *ld* to *ld.real*.
-#. Copy the HTCondor linker to the location of the previous *ld*.
-#. Set the owner of the linker to root.
-#. Set the permissions on the new linker to 755.
-
-The actual commands to execute depend upon the platform. The location of
-the system linker (*ld*), is as follows:
-
-.. code-block:: text
-
-    Operating System              Location of ld (ld-path)
-    Linux                         /usr/bin
-
-On these platforms, issue the following commands (as root), where
-*ld-path* is replaced by the path to the system's *ld*.
-
-.. code-block:: console
-
-    $ mv /[ld-path]/ld /<ld-path>/ld.real
-    $ cp /usr/local/condor/lib/ld /<ld-path>/ld
-    $ chown root /<ld-path>/ld
-    $ chmod 755 /<ld-path>/ld
-
-If you remove HTCondor from your system later on, linking will continue
-to work, since the HTCondor linker will always default to compiling
-normal binaries and simply call the real *ld*. In the interest of
-simplicity, it is recommended that you reverse the above changes by
-moving your *ld.real* linker back to its former position as *ld*,
-overwriting the HTCondor linker.
-
-NOTE: If you ever upgrade your operating system after performing a full
-installation of *condor_compile*, you will probably have to re-do all
-the steps outlined above. Generally speaking, new versions or patches of
-an operating system might replace the system *ld* binary, which would
-undo the full installation of *condor_compile*.
-
 The *condor_kbdd*
 ------------------
 
@@ -884,79 +832,6 @@ example, the HTCondorView collector uses port 12345.
 For this change to take effect, restart the *condor_master* on this
 host. This may be accomplished with the *condor_restart* command, if
 the command is run with administrator access to the pool.
-
-Configuring a Pool to Report to the HTCondorView Server
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-For the HTCondorView server to function, configure the existing
-collector to forward ClassAd updates to it. This configuration is only
-necessary if the HTCondorView collector is a different collector from
-the existing *condor_collector* for the pool. All the HTCondor daemons
-in the pool send their ClassAd updates to the regular
-*condor_collector*, which in turn will forward them on to the
-HTCondorView server.
-
-Define the following configuration variable:
-
-.. code-block:: condor-config
-
-      CONDOR_VIEW_HOST = full.hostname[:portnumber]
-
-where full.hostname is the full host name of the machine running the
-HTCondorView collector. The full host name is optionally followed by a
-colon and port number. This is only necessary if the HTCondorView
-collector is configured to use a port number other than the default.
-
-Place this setting in the configuration file used by the existing
-*condor_collector*. It is acceptable to place it in the global
-configuration file. The HTCondorView collector will ignore this setting
-(as it should) as it notices that it is being asked to forward ClassAds
-to itself.
-
-Once the HTCondorView server is running with this change, send a
-*condor_reconfig* command to the main *condor_collector* for the
-change to take effect, so it will begin forwarding updates. A query to
-the HTCondorView collector will verify that it is working. A query
-example:
-
-.. code-block:: console
-
-      $ condor_status -pool condor.view.host[:portnumber]
-
-A *condor_collector* may also be configured to report to multiple
-HTCondorView servers. The configuration variable ``CONDOR_VIEW_HOST``
-:index:`CONDOR_VIEW_HOST` can be given as a list of HTCondorView
-servers separated by commas and/or spaces.
-
-The following demonstrates an example configuration for two HTCondorView
-servers, where both HTCondorView servers (and the *condor_collector*)
-are running on the same machine, localhost.localdomain:
-
-.. code-block:: text
-
-    VIEWSERV01 = $(COLLECTOR)
-    VIEWSERV01_ARGS = -f -p 12345 -local-name VIEWSERV01
-    VIEWSERV01_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog01"
-    VIEWSERV01.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist01
-    VIEWSERV01.KEEP_POOL_HISTORY = TRUE
-    VIEWSERV01.CONDOR_VIEW_HOST =
-
-    VIEWSERV02 = $(COLLECTOR)
-    VIEWSERV02_ARGS = -f -p 24680 -local-name VIEWSERV02
-    VIEWSERV02_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog02"
-    VIEWSERV02.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist02
-    VIEWSERV02.KEEP_POOL_HISTORY = TRUE
-    VIEWSERV02.CONDOR_VIEW_HOST =
-
-    CONDOR_VIEW_HOST = localhost.localdomain:12345 localhost.localdomain:24680
-    DAEMON_LIST = $(DAEMON_LIST) VIEWSERV01 VIEWSERV02
-
-Note that the value of ``CONDOR_VIEW_HOST``
-:index:`CONDOR_VIEW_HOST` for VIEWSERV01 and VIEWSERV02 is unset,
-to prevent them from inheriting the global value of ``CONDOR_VIEW_HOST``
-and attempting to report to themselves or each other. If the
-HTCondorView servers are running on different machines where there is no
-global value for ``CONDOR_VIEW_HOST``, this precaution is not required.
 
 Running HTCondor Jobs within a Virtual Machine
 ----------------------------------------------

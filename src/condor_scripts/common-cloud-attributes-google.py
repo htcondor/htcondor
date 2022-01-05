@@ -148,7 +148,7 @@ def convert_metadata_to_classad(
         safe_val = getattr(metadata.instance.attributes, key, None)
         if safe_val:
             safe_attr = safe_htcondor_attribute(key)
-            ad[safe_attr] = safe_val
+            ad[safe_attr] = f'"{safe_val}"'
     return ad
 
 

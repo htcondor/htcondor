@@ -552,6 +552,10 @@ class ClusterState:
         """Return ``True`` if **all** of the jobs in the cluster are held."""
         return self.all_status(jobs.JobStatus.HELD)
 
+    def all_idle(self) -> bool:
+        """Return ``True`` if **all** of the jobs in the cluster are held."""
+        return self.all_status(jobs.JobStatus.IDLE)
+
     def any_held(self) -> bool:
         """Return ``True`` if **any** of the jobs in the cluster are held."""
         return self.any_status(jobs.JobStatus.HELD)

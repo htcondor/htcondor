@@ -2636,7 +2636,8 @@ ConnectionSentry::ConnectionSentry(Schedd &schedd, bool transaction, SetAttribut
         bool result;
         {
         condor::ModuleLock ml;
-        result = ConnectQ(schedd.m_addr.c_str(), 0, false, NULL, NULL, schedd.m_version.c_str()) == 0;
+        DCSchedd schedd_obj(schedd.m_addr.c_str());
+        result = ConnectQ(schedd_obj) == 0;
         }
         if (result)
         {
@@ -4056,6 +4057,7 @@ void export_schedd()
         .value("DefaultMyJobsOnly", CondorQ::fetch_MyJobs)
         .value("SummaryOnly", CondorQ::fetch_SummaryOnly)
         .value("IncludeClusterAd", CondorQ::fetch_IncludeClusterAd)
+        .value("IncludeJobsetAds", CondorQ::fetch_IncludeJobsetAds)
         ;
 
     enum_<BlockingMode>("BlockingMode",

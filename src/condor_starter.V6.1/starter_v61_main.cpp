@@ -149,6 +149,8 @@ printClassAd( void )
 	// Docker "universe."
 	if( DockerProc::Detect() ) {
 		printf( "%s = True\n", ATTR_HAS_DOCKER );
+		printf( "%s = True\n", ATTR_HAS_DOCKER_URL);
+		printf( "%s = True\n", ATTR_HAS_CONTAINER);
 
 		std::string dockerVersion;
 		if( DockerProc::Version( dockerVersion ) ) {
@@ -163,7 +165,15 @@ printClassAd( void )
 	// Singularity support
 	if (htcondor::Singularity::enabled()) {
 		printf("%s = True\n", ATTR_HAS_SINGULARITY);
+		printf("%s = True\n", ATTR_HAS_CONTAINER);
 		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
+
+		if (htcondor::Singularity::canRunSandbox())  {
+			printf("%s = True\n", ATTR_HAS_SANDBOX_IMAGE);
+		}
+		if (htcondor::Singularity::canRunSIF())  {
+			printf("%s = True\n", ATTR_HAS_SIF);
+		}
 	}
 
 	// Detect ability to encrypt execute directory

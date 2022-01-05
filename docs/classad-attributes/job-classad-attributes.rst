@@ -42,6 +42,65 @@ all attributes.
     is only present if an accounting group was requested by the
     submission.
 
+:index:`ActivationDuration<single: ActivationDuration; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ActivationDuration>`
+
+``ActivationDuration``
+    Formally, the length of time in seconds from when the shadow sends a
+    claim activation to when the shadow receives a claim deactivation.
+
+    Informally, this is how much time HTCondor's fair-share mechanism
+    will charge the job for, plus one round-trip over the network.
+
+    This attribute may not be used in startd policy expressions and is
+    not computed until complete.
+
+:index:`ActivationExecutionDuration<single: ActivationExecutionDuration; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ActivationExecutionDuration>`
+
+``ActivationExecutionDuration``
+    Formally, the length of time in seconds from when the shadow received
+    notification that the job had been spawned to when the shadow received
+    notification that the spawned process has exited.
+
+    Informally, this is the duration limited by ``AllowedExecuteDuration``.
+
+    This attribute may not be used in startd policy expressions and is
+    not computed until complete.
+
+:index:`ActivationSetupDuration<single: ActivationSetupDuration; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ActivationSetupDuration>`
+
+``ActivationSetupDuration``
+    Formally, the length of time in seconds from when the shadow sends a
+    claim activation to when the shadow it notified that the job was
+    spawned.
+
+    Informally, this is how long it took the starter to prepare to execute
+    the job.  That includes file transfer, so the difference between this
+    duration and the duration of input file transfer is (roughly) the
+    execute-side overhead of preparing to start the job.
+
+    This attribute may not be used in startd policy expressions and is
+    not computed until complete.
+
+:index:`ActivationTeardownDuration<single: ActivationTeardownDuration; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ActivationTeardownDuration>`
+
+``ActivationTeardownDuration``
+    Formally, the length of time in seconds from when the shadow received
+    notification that the spawned process exited to when the shadow received
+    a claim deactivation.
+
+
+    Informally, this is how long it took the starter to finish up after the
+    job.  That includes file transfer, so the difference between this duration
+    and the duration of output file transfer is (roughly) the execute-side
+    overhead of handling job termination.
+
+    This attribute may not be used in startd policy expressions and is
+    not computed until complete.
+
 :index:`AllowedExecuteDuration<single: AllowedExecuteDuration; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; AllowedExecuteDuration>`
 
@@ -271,6 +330,16 @@ all attributes.
     yet completed. Measured in the number of seconds since the epoch
     (00:00:00 UTC, Jan 1, 1970).
 
+:index:`ConcurrencyLimits<single: ConcurrencyLimits; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ConcurrencyLimits>`
+
+``ConcurrencyLimits``
+    A string list, delimited by commas and space characters. The items
+    in the list identify named resources that the job requires. The
+    value can be a ClassAd expression which, when evaluated in the
+    context of the job ClassAd and a matching machine ClassAd, results
+    in a string list.
+
 :index:`CondorPlatform<single: CondorPlatform; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; CondorPlatform>`
 
@@ -287,15 +356,12 @@ all attributes.
     command that created this job.  Note this may be different than the
     version of the HTCondor daemon that runs the job.
 
-:index:`ConcurrencyLimits<single: ConcurrencyLimits; ClassAd job attribute>`
-:index:`job ClassAd attribute<single: job ClassAd attribute; ConcurrencyLimits>`
+:index:`ContainerImage<single: ContainerImage; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ContainerImage>`
 
-``ConcurrencyLimits``
-    A string list, delimited by commas and space characters. The items
-    in the list identify named resources that the job requires. The
-    value can be a ClassAd expression which, when evaluated in the
-    context of the job ClassAd and a matching machine ClassAd, results
-    in a string list.
+``ContainerImage``
+    For Container universe jobs, the string that names the container image to be run
+    the job in.
 
 :index:`CumulativeSlotTime<single: CumulativeSlotTime; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; CumulativeSlotTime>`
@@ -433,9 +499,15 @@ all attributes.
     will default to an initial value of the sum of the job's executable
     and all input files.
 
+:index:`DockerImage<single: DockerImage; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; DockerImage>`
+
+``DockerImage``
+    For Docker and Container universe jobs, a string that names the docker image to run
+    inside the container.
+
 :index:`EC2AccessKeyId<single: EC2AccessKeyId; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; EC2AccessKeyId>`
-
 
 ``EC2AccessKeyId``
     Used for grid type ec2 jobs; a string taken from the definition of
@@ -2376,6 +2448,12 @@ all attributes.
     and/or files that should be transferred from the execute machine to the
     submit machine's spool when the job successfully checkpoints.
 
+:index:`job ClassAd attribute<single: job ClassAd attribute; TransferContainer>`
+
+``TransferContainer``
+    A boolean expresion that controls whether the HTCondor should transfer the
+    container image from the submit node to the worker node.
+
 :index:`job ClassAd attribute<single: job ClassAd attribute; TransferErr>`
 
 ``TransferErr``
@@ -2419,14 +2497,14 @@ all attributes.
     input file transfer is enabled.
 
 ``TransferInFinished``
-    : When the job finished the most recent recent transfer of its input
+    When the job finished the most recent recent transfer of its input
     sandbox, measured in seconds from the epoch. (00:00:00 UTC Jan 1,
     1970). :index:`TransferInQueued<single: TransferInQueued; ClassAd job attribute>`
 
 :index:`job ClassAd attribute<single: job ClassAd attribute; TransferInQueued>`
 
 ``TransferInQueued``
-    : If the job's most recent transfer of its input sandbox was queued,
+    If the job's most recent transfer of its input sandbox was queued,
     this attribute says when, measured in seconds from the epoch
     (00:00:00 UTC Jan 1, 1970).
 
@@ -2534,6 +2612,20 @@ all attributes.
     The full path and file name on the submit machine of the log file of
     job events.
 
+
+:index:`WantContainer<single: WantContainer; ClassAd job attribute>`
+
+``WantContainer``
+    A boolean that when true, tells HTCondor to run this job in container
+    universe.  Note that container universe jobs are a "topping" above vanilla
+    universe, and the JobUniverse attribute of container jobs will be 5 (vanilla)
+
+:index:`WantDocker<single: WantDocker; ClassAd job attribute>`
+
+``WantDocker``
+    A boolean that when true, tells HTCondor to run this job in docker
+    universe.  Note that docker universe jobs are a "topping" above vanilla
+    universe, and the JobUniverse attribute of docker jobs will be 5 (vanilla)
 
 :index:`WantFTOnCheckpoint<single: WantFTOnCheckpoint; ClassAd job attribute>`
 
