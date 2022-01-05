@@ -587,7 +587,7 @@ doContactSchedd()
 	Qmgr_connection * qmgr_connection;
 
 	errstack.clear();
-	if ((qmgr_connection = ConnectQ(dc_schedd.addr(), QMGMT_TIMEOUT, false, &errstack, NULL, dc_schedd.version() )) == NULL) {
+	if ((qmgr_connection = ConnectQ(dc_schedd, QMGMT_TIMEOUT, false, &errstack)) == NULL) {
 		error = TRUE;
 		formatstr( error_msg, "Error connecting to schedd %s: %s", ScheddAddr,
 				   errstack.getFullText().c_str() );
@@ -1092,7 +1092,7 @@ submit_report_result:
 	if (qmgr_connection != NULL)
 	{
 		DisconnectQ(qmgr_connection, FALSE);
-		if ((qmgr_connection = ConnectQ(dc_schedd.addr(), QMGMT_TIMEOUT, true, &errstack, NULL, dc_schedd.version() )) == NULL)
+		if ((qmgr_connection = ConnectQ(dc_schedd, QMGMT_TIMEOUT, true, &errstack )) == NULL)
 		{
 			formatstr(error_msg, "Error connecting to schedd %s for read-only commands: %s", ScheddAddr, errstack.getFullText().c_str());
 			dprintf(D_ALWAYS, "%s\n", error_msg.c_str());

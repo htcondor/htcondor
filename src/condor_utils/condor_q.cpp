@@ -226,7 +226,7 @@ fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errs
 	Qmgr_connection *qmgr;
 	ExprTree		*tree;
 	int     		result;
-	char    		scheddString [32];
+	std::string scheddString;
 	const char 		*constraint;
 
 	int useFastPath = 0;
@@ -242,7 +242,8 @@ fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errs
 	if (ad == 0)
 	{
 		// local case
-		if( !(qmgr = ConnectQ( 0, connect_timeout, true, errstack)) ) {
+		DCSchedd schedd(nullptr);
+		if( !(qmgr = ConnectQ( schedd, connect_timeout, true, errstack)) ) {
 			errstack->push("TEST", 0, "FOO");
 			return Q_SCHEDD_COMMUNICATION_ERROR;
 		}
@@ -251,10 +252,11 @@ fetchQueue (ClassAdList &list, StringList &attrs, ClassAd *ad, CondorError* errs
 	else
 	{
 		// remote case to handle condor_globalq
-		if (!ad->LookupString (ATTR_SCHEDD_IP_ADDR, scheddString, sizeof(scheddString)))
+		if (!ad->LookupString (ATTR_SCHEDD_IP_ADDR, scheddString))
 			return Q_NO_SCHEDD_IP_ADDR;
 
-		if( !(qmgr = ConnectQ( scheddString, connect_timeout, true, errstack)) )
+		DCSchedd schedd(scheddString.c_str());
+		if( !(qmgr = ConnectQ( schedd, connect_timeout, true, errstack)) )
 			return Q_SCHEDD_COMMUNICATION_ERROR;
 
 	}
@@ -288,7 +290,8 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, const char *host, char
 	 optimal.  :^).
 	*/
 	init();  // needed to get default connect_timeout
-	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) )
+	DCSchedd schedd(host);
+	if( !(qmgr = ConnectQ( schedd, connect_timeout, true, errstack)) )
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 
 	int useFastPath = 0;
@@ -361,7 +364,8 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	 optimal.  :^).
 	*/
 	init();  // needed to get default connect_timeout
-	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) ) {
+	DCSchedd schedd(host);
+	if( !(qmgr = ConnectQ( schedd, connect_timeout, true, errstack)) ) {
 		free( constraint );
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 	}

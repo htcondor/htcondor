@@ -439,7 +439,7 @@ bool SSHToJob::execute_ssh()
 	//
 
 	if( m_could_be_ec2_job ) {
-		Qmgr_connection * q = ConnectQ( schedd.addr(), 0, true );
+		Qmgr_connection * q = ConnectQ( schedd, 0, true );
 		if( ! q ) {
 			logError( "Can't connect to schedd\n" );
 			return false;
