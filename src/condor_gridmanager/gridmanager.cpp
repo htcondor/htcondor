@@ -633,7 +633,7 @@ doContactSchedd()
 	}
 
 
-	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false, NULL, myUserName, CondorVersion() );
+	schedd = ConnectQ( *ScheddObj, QMGMT_TIMEOUT, false, NULL, myUserName );
 	if ( !schedd ) {
 		error_str = "Failed to connect to schedd!";
 		goto contact_schedd_failure;

@@ -582,6 +582,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	char * qline = NULL;
 	const char * queue_args = NULL;
 	MacroStreamFile ms;
+	DCSchedd schedd;
 
 	// If the submitDesc hash is not set, we need to parse it from the file
 	if (!node->GetSubmitDesc()) {
@@ -629,7 +630,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 
 	submitHash->init_base_ad(time(NULL), owner);
 
-	qmgr = ConnectQ(NULL);
+	qmgr = ConnectQ(schedd);
 	if (qmgr) {
 		int cluster_id = NewCluster();
 		if (cluster_id <= 0) {

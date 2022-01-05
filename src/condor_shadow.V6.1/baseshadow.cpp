@@ -213,9 +213,9 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		// Unless we got a command line arg asking us not to
 	if (sendUpdatesToSchedd) {
 		// the usual case
-		job_updater = new QmgrJobUpdater( jobAd, scheddAddr, CondorVersion() );
+		job_updater = new QmgrJobUpdater( jobAd, scheddAddr );
 	} else {
-		job_updater = new NullQmgrJobUpdater( jobAd, scheddAddr, CondorVersion() );
+		job_updater = new NullQmgrJobUpdater( jobAd, scheddAddr );
 	}
 
 		// init user log; hold on failure

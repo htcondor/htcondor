@@ -25,6 +25,7 @@
 #include "proc.h"
 #include "../condor_utils/CondorError.h"
 #include "condor_classad.h"
+#include "dc_schedd.h"
 
 // this header declares functions for external clients of the schedd, but it is also included by the schedd itself
 // this can cause nasty link errors if the schedd tries to pull in parts of the external api, so
@@ -76,20 +77,17 @@ int InitializeConnection(const char *, const char *);
 int InitializeReadOnlyConnection(const char * );
 
 /** Initiate connection to schedd job queue and begin transaction.
-	@param qmgr_location can be the name or sinful string of a schedd or
-	       NULL to connect to the local schedd
+    @param schedd is the schedd to connect to
     @param timeout specifies the maximum time (in seconds) to wait for TCP
 	       connection establishment
     @param read_only can be set to true to skip the potentially slow
 	       authenticate step for connections which don't modify the queue
     @param effective_owner if not NULL, will call QmgmtSetEffectiveOwner()
-	@param schedd_version_str Version of schedd if known (o.w. NULL).
 	@return opaque Qmgr_connection structure
-*/		 
-Qmgr_connection *ConnectQ(const char *qmgr_location, int timeout=0, 
+*/
+Qmgr_connection *ConnectQ(DCSchedd& schedd, int timeout=0,
 				bool read_only=false, CondorError* errstack=NULL,
-				const char *effective_owner=NULL,
-				char const *schedd_version_str=NULL);
+				const char *effective_owner=NULL);
 
 /** Close the connection to the schedd job queue, and optionally commit
 	the transaction.
