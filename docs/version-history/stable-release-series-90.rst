@@ -34,6 +34,16 @@ Bugs Fixed:
   the command-line.
   :jira:`910`
 
+- Fixed a bug in the *condor_job_router* that could result in routes and transforms
+  substituting a default configuration value rather than the value
+  from the configuration files when a route or transform was applied
+  :jira:`902`
+
+- For **batch** grid universe jobs, a small default memory value is no
+  longer generated when **request_memory** is not specified in the submit
+  file.
+  This restores the behavior in versions 9.0.1 and prior.
+  :jira:`904`
 
 .. _lts-version-history-909:
 
