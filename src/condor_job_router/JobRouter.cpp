@@ -890,12 +890,8 @@ JobRouter::SetJobHeld(classad::ClassAd& ad, const char* hold_reason, int hold_co
 		dprintf(D_ALWAYS, "JobRouter failure (%d.%d): Unable to "					"retrieve current job status.\n", cluster,proc);
 		return false;
 	}
-	if (HELD != status)
+	if (HELD != status && REMOVED != status && COMPLETED != status)
 	{
-		if (REMOVED == status)
-		{
-			ad.InsertAttr(ATTR_JOB_STATUS_ON_RELEASE, REMOVED);
-		}
 		ad.InsertAttr(ATTR_JOB_STATUS, HELD);
 		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL));
 		ad.InsertAttr(ATTR_HOLD_REASON, hold_reason);

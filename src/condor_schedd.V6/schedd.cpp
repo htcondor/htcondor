@@ -6002,8 +6002,8 @@ Scheduler::actOnJobs(int, Stream* s)
 				ATTR_JOB_STATUS_ON_RELEASE,REMOVED);
 			break;
 		case JA_HOLD_JOBS:
-				// Don't hold held jobs (but do match cluster ads - so late materialization works)
-			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d)) && (", ATTR_JOB_STATUS, HELD );
+				// Don't hold held/removed/completed jobs (but do match cluster ads - so late materialization works)
+			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d && %s!=%d && %s!=%d)) && (", ATTR_JOB_STATUS, HELD, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, COMPLETED );
 			break;
 		case JA_RELEASE_JOBS:
 				// Only release held jobs which aren't waiting for
@@ -6237,10 +6237,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				jobs[i].cluster = -1;
 				continue;
 			}
-			if ( status == REMOVED &&
-				 SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-								  ATTR_JOB_STATUS_ON_RELEASE,
-								  status ) < 0 )
+			if ( status == REMOVED || status == COMPLETED )
 			{
 				results.record( tmp_id, AR_PERMISSION_DENIED );
 				jobs[i].cluster = -1;
@@ -12465,7 +12462,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// Regardless of the state that the job currently
 				// is in, we'll put it on HOLD
 				// But let a REMOVED job stay that way.
-			if ( q_status != HELD && q_status != REMOVED ) {
+			if ( q_status != HELD && q_status != REMOVED && q_status != COMPLETED ) {
 				dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
 						 job_id.cluster, job_id.proc );
 				set_job_status( job_id.cluster, job_id.proc, HELD );

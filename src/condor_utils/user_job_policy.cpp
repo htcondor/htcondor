@@ -436,6 +436,22 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 			ATTR_ON_EXIT_REMOVE_CHECK
 	*/
 
+	/* Don't do any policy evaluation on removed jobs.
+	 * Act as if no policy expressions were defined.
+	 */
+	if( state == REMOVED) {
+		if( mode == PERIODIC_ONLY ) {
+			return STAYS_IN_QUEUE;
+		} else {
+			m_fire_expr_val = 1;
+			m_fire_expr = ATTR_ON_EXIT_REMOVE_CHECK;
+			m_fire_source = FS_JobAttribute;
+			m_fire_reason.clear();
+			m_fire_unparsed_expr = "true";
+			return REMOVE_FROM_QUEUE;
+		}
+	}
+
 	/* Should I perform a hold based on the "running" time of the job? */
 	int allowedJobDuration;
 	if( ad.LookupInteger( ATTR_JOB_ALLOWED_JOB_DURATION, allowedJobDuration ) ) {
@@ -503,12 +519,14 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 	int retval;
 
 	/* should I perform a periodic hold? */
-	if(state!=HELD) {
+	if(state!=HELD && state!=COMPLETED) {
 		if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_HOLD_CHECK, POLICY_SYSTEM_PERIODIC_HOLD, HOLD_IN_QUEUE, retval)) {
 			return retval;
 		}
-	} else {
+	}
+
 	/* Should I perform a periodic release? */
+	if(state==HELD) {
 		if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_RELEASE_CHECK, POLICY_SYSTEM_PERIODIC_RELEASE, RELEASE_FROM_HOLD, retval)) {
 			return retval;
 		}
