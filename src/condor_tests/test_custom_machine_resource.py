@@ -160,6 +160,11 @@ def condor(test_dir, slot_config, discovery_script, monitor_script):
         local_dir=test_dir / "condor",
         config={**slot_config, "TEST_DIR": test_dir.as_posix()},
     ) as condor:
+        # Ornithology will run condor_who to verify that all the daemons are running,
+        # but occasionally, not all 16 slots will have made it to the collector
+
+        while 16 != len(condor.status(ad_type=htcondor.AdTypes.Startd, projection=["SlotID"])):
+            os.sleep(1)
         yield condor
 
 
