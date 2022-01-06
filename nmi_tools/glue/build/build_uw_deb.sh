@@ -53,6 +53,12 @@ elif $(grep -qi bullseye /etc/os-release); then
     mv debian/htcondor.install.focal debian/htcondor.install
     mv debian/rules.focal debian/rules
     mv debian/patches/series.focal debian/patches/series
+elif $(grep -qi bookworm /etc/os-release); then
+    suffix='n3'
+    mv debian/control.focal debian/control
+    mv debian/htcondor.install.focal debian/htcondor.install
+    mv debian/rules.focal debian/rules
+    mv debian/patches/series.focal debian/patches/series
 elif $(grep -qi bionic /etc/os-release); then
     suffix=''
 elif $(grep -qi focal /etc/os-release); then
@@ -65,6 +71,8 @@ else
     suffix=''
 fi
 
+# set default email address for build
+export DEBEMAIL=${DEBEMAIL-htcondor-admin@cs.wisc.edu}
 # if running in a condor slot, set parallelism to slot size
 export DEB_BUILD_OPTIONS="parallel=${OMP_NUM_THREADS-1}"
 
@@ -103,6 +111,12 @@ elif [ "$suffix" = 'n1' ]; then
     dpkg-buildpackage --build=$build -uc -us
 elif [ "$suffix" = 'n2' ]; then
     build='full'
+    dch --distribution $dist --nmu 'place holder entry'
+    dch --distribution $dist --nmu 'place holder entry'
+    dpkg-buildpackage --build=$build -uc -us
+elif [ "$suffix" = 'n3' ]; then
+    build='full'
+    dch --distribution $dist --nmu 'place holder entry'
     dch --distribution $dist --nmu 'place holder entry'
     dch --distribution $dist --nmu 'place holder entry'
     dpkg-buildpackage --build=$build -uc -us
