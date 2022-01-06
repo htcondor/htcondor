@@ -523,8 +523,10 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 		if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_HOLD_CHECK, POLICY_SYSTEM_PERIODIC_HOLD, HOLD_IN_QUEUE, retval)) {
 			return retval;
 		}
-	} else {
+	}
+
 	/* Should I perform a periodic release? */
+	if(state==HELD) {
 		if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_RELEASE_CHECK, POLICY_SYSTEM_PERIODIC_RELEASE, RELEASE_FROM_HOLD, retval)) {
 			return retval;
 		}
