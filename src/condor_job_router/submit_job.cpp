@@ -571,6 +571,17 @@ bool push_dirty_attributes(classad::ClassAd & src)
 		dprintf(D_ALWAYS, "push_dirty_attributes: job lacks a proc\n");
 		return false;
 	}
+	if( src.IsAttributeDirty(ATTR_JOB_STATUS) ) {
+		int schedd_status = IDLE;
+		if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &schedd_status) < 0 ) {
+			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Failed to get %s\n", cluster, proc, ATTR_JOB_STATUS);
+			return false;
+		}
+		if( schedd_status == REMOVED || schedd_status == COMPLETED ) {
+			dprintf(D_FULLDEBUG, "Not altering %s away from REMOVED\n", ATTR_JOB_STATUS);
+			src.MarkAttributeClean(ATTR_JOB_STATUS);
+		}
+	}
 	const char *rhstr = 0;
 	ExprTree * tree;
 	for( classad::ClassAd::dirtyIterator it = src.dirtyBegin();
@@ -584,17 +595,6 @@ bool push_dirty_attributes(classad::ClassAd & src)
 		if( !rhstr) { 
 			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Problem processing classad\n", cluster, proc);
 			return false;
-		}
-		if( !strcasecmp(it->c_str(), ATTR_JOB_STATUS) ) {
-			int schedd_status = IDLE;
-			if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &schedd_status) < 0 ) {
-				dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Failed to get %s\n", cluster, proc, ATTR_JOB_STATUS);
-				return false;
-			}
-			if( schedd_status == REMOVED || schedd_status == COMPLETED ) {
-				dprintf(D_FULLDEBUG, "Not altering %s away from REMOVED\n", ATTR_JOB_STATUS);
-				continue;
-			}
 		}
 		dprintf(D_FULLDEBUG, "Setting %s = %s\n", it->c_str(), rhstr);
 		if( SetAttribute(cluster, proc, it->c_str(), rhstr) == -1 ) {
