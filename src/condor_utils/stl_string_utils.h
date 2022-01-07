@@ -74,6 +74,7 @@ const char * is_attr_in_attr_list(const char * attr, const char * list);
 
 bool chomp(std::string &str);
 void trim(std::string &str);
+void trim_quotes(std::string &str, std::string quotes);
 void lower_case(std::string &str);
 void upper_case(std::string &str);
 void title_case(std::string &str); // capitalize each word

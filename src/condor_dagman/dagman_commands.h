@@ -35,7 +35,7 @@ Job* AddNode( Dag *dag, const char *name,
 			  const char* directory,
 			  const char* submitFileOrSubmitDesc,
 			  bool noop,
-			  bool done, NodeType type, MyString &failReason );
+			  bool done, NodeType type, std::string &failReason );
 
 /** Set the DAG file (if any) for a node.
 	@param dag: the DAG this node is part of
@@ -45,10 +45,10 @@ Job* AddNode( Dag *dag, const char *name,
 	@return true if successful, false otherwise
 */
 bool SetNodeDagFile( Dag *dag, const char *nodeName, const char *dagFile,
-			MyString &whynot );
+			std::string &whynot );
 
-bool IsValidNodeName( Dag *dm, const char *name, MyString &whynot );
-bool IsValidSubmitName( const char *name, MyString &whynot );
+bool IsValidNodeName( Dag *dm, const char *name, std::string &whynot );
+bool IsValidSubmitName( const char *name, std::string &whynot );
 
 /*
 bool RemoveNode( const char *name );
