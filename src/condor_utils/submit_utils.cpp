@@ -475,6 +475,8 @@ SetImageSize >> SetRequirements
 SetTransferFiles >> SetRequirements
 SetEncryptExecuteDir >> SetRequirements
 
+SetGridParams >> SetRequestResources
+
 */
 
 SubmitHash::SubmitHash()
@@ -501,6 +503,7 @@ SubmitHash::SubmitHash()
 	, JobUniverse(CONDOR_UNIVERSE_MIN)
 	, JobIwdInitialized(false)
 	, IsDockerJob(false)
+	, IsContainerJob(false)
 	, JobDisableFileChecks(false)
 	, SubmitOnHold(false)
 	, SubmitOnHoldCode(0)
@@ -508,6 +511,7 @@ SubmitHash::SubmitHash()
 	, already_warned_requirements_mem(false)
 	, already_warned_job_lease_too_small(false)
 	, already_warned_notification_never(false)
+	, UseDefaultResourceParams(true)
 {
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();
@@ -2785,7 +2789,7 @@ int SubmitHash::SetContainerSpecial()
 {
 	RETURN_IF_ABORT();
 
-	if( IsDockerJob ) {
+	if( IsDockerJob || IsContainerJob) {
 		auto_free_ptr serviceList( submit_param( SUBMIT_KEY_ContainerServiceNames, ATTR_CONTAINER_SERVICE_NAMES ));
 		if( serviceList ) {
 			AssignJobString( ATTR_CONTAINER_SERVICE_NAMES, serviceList );
@@ -3125,6 +3129,11 @@ int SubmitHash::SetGridParams()
 	if( (tmp = submit_param(SUBMIT_KEY_BatchRuntime, ATTR_BATCH_RUNTIME)) ) {
 		AssignJobExpr ( ATTR_BATCH_RUNTIME, tmp );
 		free( tmp );
+	}
+
+	// blahp jobs don't get default request resource values from config.
+	if (gridType == "batch") {
+		UseDefaultResourceParams = false;
 	}
 
 	//
@@ -4446,6 +4455,15 @@ static const char * check_docker_image(char * docker_image)
 	return docker_image;
 }
 
+static const char * check_container_image(char * container_image)
+{
+	// trim leading & trailing whitespace and remove surrounding "" if any.
+	container_image = trim_and_strip_quotes_in_place(container_image);
+
+	// TODO: add code here to validate docker image argument (if possible)
+	return container_image;
+}
+
 
 int SubmitHash::SetExecutable()
 {
@@ -4488,6 +4506,32 @@ int SubmitHash::SetExecutable()
 		role = SFR_PSEUDO_EXECUTABLE;
 	}
 
+	if (IsContainerJob) {
+		// container universe also allows docker_image to force a docker image to be used
+		auto_free_ptr docker_image(submit_param(SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE));
+		if (docker_image) {
+			const char * image = check_docker_image(docker_image.ptr());
+			if (! image || ! image[0]) {
+				push_error(stderr, "'%s' is not a valid docker_image for container universe\n", docker_image.ptr());
+				ABORT_AND_RETURN(1);
+			}
+			AssignJobString(ATTR_DOCKER_IMAGE, image);
+		}
+		auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
+		if (container_image) {
+			const char * image = check_container_image(container_image.ptr());
+			if (! image || ! image[0]) {
+				push_error(stderr, "'%s' is not a valid container_image\n", container_image.ptr());
+				ABORT_AND_RETURN(1);
+			}
+			AssignJobString(ATTR_CONTAINER_IMAGE, image);
+		} else if (!job->Lookup(ATTR_CONTAINER_IMAGE) && !job->Lookup(ATTR_DOCKER_IMAGE)) {
+			push_error(stderr, "container jobs require a container_image or docker_image\n");
+			ABORT_AND_RETURN(1);
+		}
+		role = SFR_PSEUDO_EXECUTABLE;
+	}
+
 	ename = submit_param( SUBMIT_KEY_Executable, ATTR_JOB_CMD );
 	if( ename == NULL ) {
 		// if no executable keyword, but the job already has an executable we are done.
@@ -4502,8 +4546,8 @@ int SubmitHash::SetExecutable()
 			return abort_code;
 		}
 		*/
-		if (IsDockerJob) {
-			// docker jobs don't require an executable.
+		if (IsDockerJob || IsContainerJob) {
+			// neither docker jobs nor conatiner jobs require an executable.
 			ignore_it = true;
 			role = SFR_PSEUDO_EXECUTABLE;
 		} else {
@@ -4522,7 +4566,7 @@ int SubmitHash::SetExecutable()
 	} else {
 		// For Docker Universe, if xfer_exe not set at all, and we have an exe
 		// heuristically set xfer_exe to false if is a absolute path
-		if (IsDockerJob && ename && ename[0] == '/') {
+		if ((IsDockerJob || IsContainerJob)  && ename && ename[0] == '/') {
 			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
 			transfer_it = false;
 			ignore_it = true;
@@ -4645,6 +4689,8 @@ int SubmitHash::SetUniverse()
 	}
 
 	IsDockerJob = false;
+	IsContainerJob = false;
+
 	JobUniverse = 0;
 	JobGridType.clear();
 	VMType.clear();
@@ -4656,6 +4702,12 @@ int SubmitHash::SetUniverse()
 			if (MATCH == strcasecmp(univ.ptr(), "docker")) {
 				JobUniverse = CONDOR_UNIVERSE_VANILLA;
 				IsDockerJob = true;
+			}
+			// maybe it is the "container" topping?
+
+			if (MATCH == strcasecmp(univ.ptr(), "container")) {
+				JobUniverse = CONDOR_UNIVERSE_VANILLA;
+				IsContainerJob = true;
 			}
 		}
 	} else {
@@ -4713,6 +4765,36 @@ int SubmitHash::SetUniverse()
 		if (IsDockerJob) {
 			// TODO: remove this when the docker starter no longer requires it.
 			AssignJobVal(ATTR_WANT_DOCKER, true);
+		}
+
+		if (IsContainerJob) {
+			AssignJobVal(ATTR_WANT_CONTAINER, true);
+			auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
+			auto_free_ptr docker_image(submit_param(SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE));
+
+			// if docker_image is set, assume need docker repo
+			if (docker_image) {
+				AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
+			} else {
+
+				// Otherwise, guess container image type from container image string
+				ContainerImageType image_type = image_type_from_string(container_image.ptr());
+				switch (image_type) {
+					case ContainerImageType::DockerRepo:
+						AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
+						break;
+					case ContainerImageType::SIF:
+						AssignJobVal(ATTR_WANT_SIF,true);
+						break;
+					case ContainerImageType::SandboxImage:
+						AssignJobVal(ATTR_WANT_SANDBOX_IMAGE, true);
+						break;
+					case ContainerImageType::Unknown:
+						push_error(stderr, SUBMIT_KEY_ContainerImage
+								" must be a directory, have a docker:: prefix, or end in .sif.\n");
+						ABORT_AND_RETURN(1);
+				}
+			}
 		}
 		return 0;
 	}
@@ -4876,6 +4958,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_alt_name},
 	{SUBMIT_KEY_DockerNetworkType, ATTR_DOCKER_NETWORK_TYPE, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_TransferContainer, ATTR_TRANSFER_CONTAINER, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_TransferPlugins, ATTR_TRANSFER_PLUGINS, SimpleSubmitKeyword::f_as_string},
 
 	// formerly SetJobMachineAttrs
@@ -5019,6 +5102,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// items declared below this banner are inserted by the various SetXXX methods
 
 	// invoke SetExecutable
+	{SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_exe},
 	{SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_exe},
 	{SUBMIT_KEY_Executable, ATTR_JOB_CMD, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_exefile | SimpleSubmitKeyword::f_special_exe},
 	{SUBMIT_KEY_TransferExecutable, ATTR_TRANSFER_EXECUTABLE, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_exe},
@@ -5417,7 +5501,7 @@ int SubmitHash::SetRequestMem(const char * /*key*/)
 			if (job->Lookup(ATTR_JOB_VM_MEMORY)) {
 				push_warning(stderr, SUBMIT_KEY_RequestMemory " was NOT specified.  Using " ATTR_REQUEST_MEMORY " = MY." ATTR_JOB_VM_MEMORY "\n");
 				AssignJobExpr(ATTR_REQUEST_MEMORY, "MY." ATTR_JOB_VM_MEMORY);
-			} else {
+			} else if (UseDefaultResourceParams) {
 				// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 				// the job has a request_mem keyword
 				mem.set(param("JOB_DEFAULT_REQUESTMEMORY"));
@@ -5452,7 +5536,7 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 	if ( ! disk) {
 		if (job->Lookup(ATTR_REQUEST_DISK)) {
 			// we already have a value for request disk, use that
-		} else if ( ! clusterAd) {
+		} else if ( ! clusterAd && UseDefaultResourceParams) {
 			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_memory from somewhere
 			// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 			// the job has a request_disk keyword
@@ -5490,7 +5574,7 @@ int SubmitHash::SetRequestCpus(const char * key)
 	if ( ! req_cpus) {
 		if (job->Lookup(ATTR_REQUEST_CPUS)) {
 			// we already have a value for request cpus, use that
-		} else if ( ! clusterAd) {
+		} else if ( ! clusterAd && UseDefaultResourceParams) {
 			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_cpus from somewhere
 			// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 			// the job has a request_cpus keyword
@@ -5523,7 +5607,7 @@ int SubmitHash::SetRequestGpus(const char * key)
 	if ( ! req_gpus) {
 		if (job->Lookup(ATTR_REQUEST_GPUS)) {
 			// we already have a value for request cpus, use that
-		} else if ( ! clusterAd) {
+		} else if ( ! clusterAd && UseDefaultResourceParams) {
 			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_gpus from somewhere
 			// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 			// the job has a request_gpus keyword
@@ -5556,7 +5640,7 @@ int SubmitHash::SetImageSize()
 			std::string buffer;
 			ASSERT(job->LookupString(ATTR_JOB_CMD, buffer));
 			long long exe_size_kb = 0;
-			if (buffer.empty()) { // this is allowed for docker universe
+			if (buffer.empty()) { // this is allowed for docker/container universe
 				exe_size_kb = 0;
 			} else {
 				YourStringNoCase gridType(JobGridType.c_str());
@@ -5950,8 +6034,8 @@ int SubmitHash::SetRequirements()
 
 	GetExprReferences(answer.c_str(),req_ad,&job_refs,&machine_refs);
 
-	bool	checks_arch = IsDockerJob || machine_refs.count( ATTR_ARCH );
-	bool	checks_opsys = IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
+	bool	checks_arch = IsContainerJob || IsDockerJob || machine_refs.count( ATTR_ARCH );
+	bool	checks_opsys = IsContainerJob || IsDockerJob || machine_refs.count( ATTR_OPSYS ) ||
 		machine_refs.count( ATTR_OPSYS_AND_VER ) ||
 		machine_refs.count( ATTR_OPSYS_LONG_NAME ) ||
 		machine_refs.count( ATTR_OPSYS_SHORT_NAME ) ||
@@ -6041,6 +6125,33 @@ int SubmitHash::SetRequirements()
 				answer += " && ";
 			}
 			answer += "TARGET.HasDocker";
+	} else if (IsContainerJob) {
+			if( answer[0] ) {
+				answer += " && ";
+			}
+			answer += "TARGET.HasContainer";
+			if (job->Lookup(ATTR_DOCKER_IMAGE)) {
+				answer += "&& TARGET.HasDockerRepo";
+			} else {
+				auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
+				ContainerImageType image_type = image_type_from_string(container_image.ptr());
+				switch (image_type) {
+					case ContainerImageType::DockerRepo:
+						answer += "&& TARGET.HasDockerRepo";
+						break;
+					case ContainerImageType::SIF:
+						answer += "&& TARGET.HasSIF";
+						break;
+					case ContainerImageType::SandboxImage:
+						answer += "&& TARGET.HasSandboxImage";
+						break;
+					case ContainerImageType::Unknown:
+						push_error(stderr, SUBMIT_KEY_ContainerImage
+								" must be a directory, have a docker:: prefix, or end in .sif.\n");
+						ABORT_AND_RETURN(1);
+						break;
+				}
+			}
 	} else {
 		if( !checks_arch ) {
 			if( answer[0] ) {
@@ -7083,6 +7194,50 @@ int SubmitHash::process_vm_input_files(StringList & input_files, long long * acc
 	return count;
 }
 
+int SubmitHash::process_container_input_files(StringList & input_files, long long * accumulate_size_kb) {
+	auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
+
+	// User said don't transfer the container
+	if (!submit_param_bool(SUBMIT_KEY_TransferContainer, nullptr, true)) {
+		return 0;
+	}
+
+	// don't xfer if on known shared fs
+	if (container_image) {
+		auto_free_ptr sharedfs (param("CONTAINER_SHARED_FS"));
+		StringList roots(sharedfs.ptr(), ",");
+		for (const char * base = roots.first(); base != NULL; base = roots.next()) {
+			if (starts_with(container_image.ptr(), base)) {
+				return 0;
+			}
+		}
+	}
+
+	// otherwise, add the container image to the list of input files to be xfered
+	// if only docker_image is set, never xfer it
+	// But only if the container image exists on this disk
+	struct stat buf;
+	if (container_image.ptr() && (stat(container_image.ptr(), &buf) == 0))  {
+		input_files.append(container_image.ptr());
+		if (accumulate_size_kb) {
+			*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
+		}
+
+		// Now that we've sure that we're transfering the container, set
+		// the container name to the basename, which what we'll see on the submit
+		// side
+		// but if container ends with a /, remove that so basename works
+		std::string container_tmp = container_image.ptr();
+		if (ends_with(container_tmp, "/")) {
+			container_tmp = container_tmp.substr(0, container_tmp.size() - 1);
+		}
+		job->Assign(ATTR_CONTAINER_IMAGE, condor_basename(container_tmp.c_str()));
+		return 1;
+	}
+
+	return 0;
+}
+
 int SubmitHash::process_input_file_list(StringList * input_list, long long * accumulate_size_kb)
 {
 	int count;
@@ -7111,6 +7266,28 @@ int SubmitHash::process_input_file_list(StringList * input_list, long long * acc
 		return count;
 	}
 	return 0;
+}
+
+SubmitHash::ContainerImageType 
+SubmitHash::image_type_from_string(const std::string &image) const {
+	if (starts_with(image, "docker:")) {
+		return SubmitHash::ContainerImageType::DockerRepo;
+	}
+	if (ends_with(image, ".sif")) {
+		return SubmitHash::ContainerImageType::SIF;
+	}
+	if (ends_with(image, "/")) {
+		return SubmitHash::ContainerImageType::SandboxImage;
+	}
+
+	struct stat buf;
+	if (0 == stat(image.c_str(), &buf)) {
+		if( buf.st_mode & S_IFDIR ) {
+			return SubmitHash::ContainerImageType::SandboxImage;
+		}
+	}
+
+	return SubmitHash::ContainerImageType::Unknown;
 }
 
 // SetTransferFiles also sets a global "should_transfer", which is 
@@ -7192,6 +7369,12 @@ int SubmitHash::SetTransferFiles()
 		if (process_vm_input_files(input_file_list, pInputFilesSizeKb) > 0) {
 			in_files_specified = true;
 		}
+	}
+
+	if (IsContainerJob) {
+		if (process_container_input_files(input_file_list, pInputFilesSizeKb) > 0) {
+			in_files_specified = true;
+		};
 	}
 	RETURN_IF_ABORT();
 
@@ -9170,8 +9353,7 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 	bool pseudo = false;
 	if (found->id == idKeyExecutable) {
 		MyString sub_type;
-		bool is_docker = false;
-		int uni = query_universe(sub_type, is_docker);
+		int uni = query_universe(sub_type);
 		if (uni == CONDOR_UNIVERSE_VM) {
 			pseudo = true;
 		} else if (uni == CONDOR_UNIVERSE_GRID) {
@@ -9193,9 +9375,8 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 
 // returns the universe and grid type, either by looking at the cached values
 // or by querying the hashtable if the cached values haven't been set yet.
-int SubmitHash::query_universe(MyString & sub_type, bool &is_docker)
+int SubmitHash::query_universe(MyString & sub_type)
 {
-	is_docker = IsDockerJob;
 	if (JobUniverse != CONDOR_UNIVERSE_MIN) {
 		if (JobUniverse == CONDOR_UNIVERSE_GRID) { sub_type = JobGridType; }
 		else if (JobUniverse == CONDOR_UNIVERSE_VM) { sub_type = VMType; }
@@ -9215,7 +9396,9 @@ int SubmitHash::query_universe(MyString & sub_type, bool &is_docker)
 			// maybe it's a topping?
 			if (MATCH == strcasecmp(univ.ptr(), "docker")) {
 				uni = CONDOR_UNIVERSE_VANILLA;
-				is_docker = true;
+			}
+			if (MATCH == strcasecmp(univ.ptr(), "container")) {
+				uni = CONDOR_UNIVERSE_VANILLA;
 			}
 		}
 	} else {

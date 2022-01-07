@@ -1,0 +1,39 @@
+name: Publish Release To Website
+on:
+  release:
+    types: [released, edited]
+
+jobs:
+  Publish-Release-To-Website:
+    runs-on: ubuntu-18.04
+    env:
+      publish_path: _data/releases/
+      publish_branch: master
+      publish_repo_ssh: git@github.com:htcondor/htcondor-web.git
+    steps:
+
+      - name: Build the release page a put it in current directory
+        uses: CHTC/build_release_page@master
+        with:
+          repository: ${{ github.repository }}
+          tag_name: ${{ github.event.release.tag_name }}
+
+      - name: Setup SSH Keys and known_hosts
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.HTCONDOR_WEB_DEPLOY_KEY }}
+
+      - run: |
+          mkdir website
+          git clone ${{ env.publish_repo_ssh }} ./website
+          cd website
+          git checkout -b build-release-page origin/${{ env.publish_branch }}
+
+          mv ../*.yml ./${{ env.publish_path }} # Move yaml created by the build_release_page action to branch
+
+          # Publish the article
+          git add .
+          git config user.name "Automatic Release Publish"
+          git config user.email ""
+          git commit -am "GHA: Publish Release https://github.com/${{ github.repository }}/releases/tag/${{ github.event.release.tag_name }}"
+          git push origin build-release-page:${{ env.publish_branch }}

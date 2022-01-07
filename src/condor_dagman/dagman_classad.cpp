@@ -38,8 +38,7 @@ ScheddClassad::OpenConnection() const
 		check_warning_strictness( DAG_STRICT_3 );
 		return NULL;
 	}
-	Qmgr_connection *queue = ConnectQ( _schedd->addr(), 0, false,
-				&errstack, NULL, _schedd->version() );
+	Qmgr_connection *queue = ConnectQ( *_schedd, 0, false, &errstack );
 	if ( !queue ) {
 		debug_printf( DEBUG_QUIET,
 					"WARNING: failed to connect to queue manager (%s)\n",

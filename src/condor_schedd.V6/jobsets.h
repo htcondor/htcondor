@@ -24,13 +24,15 @@
 class JobSets {
 public:
 
-	JobSets() : next_setid_num(0) {};
+	JobSets() : next_setid_num(1) {};
 
-	~JobSets();
+	~JobSets() = default;
 
-	enum class garbagePolicyEnum { immediateAfterEmpty, delayedAferEmpty };
+	//enum class garbagePolicyEnum { immediateAfterEmpty, delayedAferEmpty };
 
-	bool update(JobQueueJob & job, int old_status, int new_status);
+	bool addJobToSet(JobQueueJob & job, std::vector<unsigned int> & new_ids);
+
+	void status_change(JobQueueJob & job, int new_status);
 
 	bool removeJobFromSet(JobQueueJob & job);
 
@@ -38,41 +40,28 @@ public:
 
 	void reconfig();
 
-	bool restoreJobSet(ClassAd *ad);
+	bool restoreJobSet(JobQueueJobSet *ad);
 
-	size_t count() { return mapIdToSet.size(); };
+	bool garbageCollectSet(JobQueueJobSet* & ad);
+
+	int getOrCreateSet(const std::string & setName, const std::string & user, std::vector<unsigned int> & new_ids);
+
+	size_t count() { return mapAliasToId.size(); };
+
+	static std::string makeAlias(const std::string name, const std::string owner) {
+		std::string ret = name + "/" + owner;
+		lower_case(ret);
+		return ret;
+	}
 	
-
 private:
 
-	struct jobidkey_hash {
-		inline size_t operator()(const JOB_ID_KEY &s) const noexcept {
-			return JOB_ID_KEY::hash(s);
-		}
-	};
-
-	class JobSet {
-	public:
-		JobSet(int _id, std::string _name, std::string _owner, ClassAd *ad);
-		~JobSet() = default;
-		bool persistSetInfo();
-		unsigned int id;
-		std::string name;
-		std::string owner;
-		bool dirty = false;
-		std::unordered_set<JOB_ID_KEY, jobidkey_hash> jobsInSet;
-		LiveJobCounters jobStatusAggregates;
-		garbagePolicyEnum garbagePolicy = garbagePolicyEnum::immediateAfterEmpty;
-		ClassAd *setAd = NULL;  // never need to delete this!
-	};
-
 	unsigned int next_setid_num;
-	std::unordered_map<unsigned int, JobSet *> mapIdToSet;
 	std::unordered_map<std::string, unsigned int> mapAliasToId;
 
 	// helper implementation methods
-	JobSet* getOrCreateSet(JobQueueJob & job);
-	bool removeSet(JobSet* & set);
+	JobQueueJobSet* getSet(JobQueueJob & job);
+	bool removeSet(JobQueueJobSet* & jobset);
 };
 
 #endif

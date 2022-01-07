@@ -89,7 +89,7 @@ ActualScheddQ::~ActualScheddQ()
 
 bool ActualScheddQ::Connect(DCSchedd & MySchedd, CondorError & errstack) {
 	if (qmgr) return true;
-	qmgr = ConnectQ(MySchedd.addr(), 0 /* default */, false /* default */, &errstack, NULL, MySchedd.version());
+	qmgr = ConnectQ(MySchedd, 0 /* default */, false /* default */, &errstack);
 	allows_late = has_late = false;
 	if (qmgr) {
 		CondorVersionInfo cvi(MySchedd.version());

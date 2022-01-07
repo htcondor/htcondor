@@ -169,7 +169,7 @@ ClaimJobResult claim_job(int cluster, int proc, std::string * error_details, con
 static Qmgr_connection *open_q_as_owner(char const *effective_owner,DCSchedd &schedd,FailObj &failobj)
 {
 	CondorError errstack;
-	Qmgr_connection * qmgr = ConnectQ(schedd.addr(), 0 /*timeout==default*/, false /*read-only*/, & errstack, effective_owner, schedd.version());
+	Qmgr_connection * qmgr = ConnectQ(schedd, 0 /*timeout==default*/, false /*read-only*/, & errstack, effective_owner);
 	if( ! qmgr ) {
 		failobj.fail("Unable to connect\n%s\n", errstack.getFullText(true).c_str());
 		return NULL;
@@ -570,6 +570,17 @@ bool push_dirty_attributes(classad::ClassAd & src)
 	if( ! src.EvaluateAttrInt(ATTR_PROC_ID, proc) ) {
 		dprintf(D_ALWAYS, "push_dirty_attributes: job lacks a proc\n");
 		return false;
+	}
+	if( src.IsAttributeDirty(ATTR_JOB_STATUS) ) {
+		int schedd_status = IDLE;
+		if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &schedd_status) < 0 ) {
+			dprintf(D_ALWAYS,"(%d.%d) push_dirty_attributes: Failed to get %s\n", cluster, proc, ATTR_JOB_STATUS);
+			return false;
+		}
+		if( schedd_status == REMOVED || schedd_status == COMPLETED ) {
+			dprintf(D_FULLDEBUG, "Not altering %s away from REMOVED\n", ATTR_JOB_STATUS);
+			src.MarkAttributeClean(ATTR_JOB_STATUS);
+		}
 	}
 	const char *rhstr = 0;
 	ExprTree * tree;

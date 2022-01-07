@@ -60,7 +60,6 @@ Depends: adduser,
          python-requests,
          lsb-base (>= 3.0-6),
          libclassad15 (= ${binary:Version}),
-         blahp (>= 2.2.0),
          libcomerr2,
          libgssapi-krb5-2,
          libk5crypto3,
@@ -81,9 +80,12 @@ Suggests: docker.io,
           coop-computing-tools,
           singularity-container,
           slurm-client
-Conflicts: condor (<< ${binary:Version})
+Provides: blahp
+Conflicts: condor (<< ${binary:Version}),
+           blahp
 Breaks: condor (<< ${binary:Version})
-Replaces: condor (<< ${binary:Version})
+Replaces: condor (<< ${binary:Version}),
+          blahp
 Description: distributed workload management system
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and

@@ -242,6 +242,10 @@ Machine ClassAd Attributes
     This is useful for Vanilla universe jobs which require remote file
     access. :index:`HasDocker<single: HasDocker; ClassAd machine attribute>`
 
+``HasContainer``
+    A boolean value set to ``True`` if the machine is capable of
+    executing container universe jobs.
+
 ``HasDocker``
     A boolean value set to ``True`` if the machine is capable of
     executing docker universe jobs.

@@ -141,9 +141,9 @@ private:
 	static fpos_t* findOffset(FILE*&, int FromDate, int ToDate,
 						ExtIntArray* times_array, ExtOffArray* offsets);
 
-	static int ReadTime(char* Line);
-	static int ReadTimeAndName(char* Line, std::string& Name);
-	static int ReadTimeChkName(char* Line, const std::string& Name);
+	static int ReadTime(const char* Line);
+	static int ReadTimeAndName(const std::string &line, std::string& Name);
+	static int ReadTimeChkName(const std::string &line, const std::string& Name);
 	static int FindFileStartTime(const char *Name);
 };
 

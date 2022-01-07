@@ -103,6 +103,7 @@ RUN dnf install -y \
     'expat-devel' \
     'flex' \
     'gcc-c++' \
+    'glibc-static' \
     'krb5-devel' \
     'libcgroup-devel' \
     'libcurl-devel' \
@@ -130,6 +131,14 @@ RUN dnf install -y \
     'python-sphinx_rtd_theme' \
     'sqlite-devel' \
     'systemd-devel' \
+    && dnf clean all
+
+# blahp build dependencies
+RUN dnf install -y \
+    'autoconf' \
+    'automake' \
+    'docbook-style-xsl' \
+    'libxslt' \
     && dnf clean all
 
 # Additional dependencies for OSG style build

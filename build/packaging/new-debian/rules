@@ -78,6 +78,13 @@ doc/build:
 
 override_dh_auto_install:
 	dh_auto_install
+	rm -rf debian/tmp/etc/rc.d
+	mkdir --mode 0755 debian/tmp/etc/blahp
+	for batch_system in condor kubernetes lsf nqs pbs sge slurm; do \
+		mv debian/tmp/usr/libexec/blahp/$${batch_system}_local_submit_attributes.sh debian/tmp/etc/blahp/; \
+		ln -s /etc/blahp/$${batch_system}_local_submit_attributes.sh \
+			debian/tmp/usr/libexec/blahp/$${batch_system}_local_submit_attributes.sh; \
+	done
 	# tar up the tests
 	(cd obj-*; make tests-tar-pkg)
 	find debian/tmp|sort > /tmp/files

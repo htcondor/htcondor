@@ -79,6 +79,7 @@ JOB_ROUTER_DEFAULTS @=jrd
 #
 JOB_ROUTER_ROUTE_NAMES = Production1 Analysis3 Production2 Analysis4
 JOB_ROUTER_ENTRIES @=jre
+/* this comment tests HTCONDOR-864 */
 [
   Name = "Production1";
   TargetUniverse = 5;
@@ -95,6 +96,7 @@ JOB_ROUTER_ENTRIES @=jre
   set_AnalysisRun = 3;
   set_Requirements = target.slotId & 1
 ]
+  /* this comment tests HTCONDOR-864 */
 [
   Name = "Production2";
   TargetUniverse = 5;

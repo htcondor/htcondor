@@ -269,7 +269,7 @@ JICLocalSchedd::getLocalJobAd( void )
 	if( ! JICLocalFile::getLocalJobAd() ) {
 		return false;
 	}
-	job_updater = new QmgrJobUpdater( job_ad, schedd_addr, CondorVersion() );
+	job_updater = new QmgrJobUpdater( job_ad, schedd_addr );
 	return true;
 }
 

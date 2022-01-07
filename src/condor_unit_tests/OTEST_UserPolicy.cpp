@@ -125,7 +125,6 @@ static bool test_firing_reason_exit_periodic_remove(void);
 static bool test_firing_reason_exit_on_exit_hold(void);
 static bool test_firing_reason_exit_on_exit_remove(void);
 static bool test_custom_firing_reason_exit_on_exit_hold(void);
-static bool test_custom_firing_reason_exit_on_exit_remove(void);
 static bool test_firing_reason_exit_false(void);
 static bool test_remove_macro_analyze_policy(void);
 static bool test_remove_macro_firing_expression(void);
@@ -139,6 +138,14 @@ static bool test_hold_macro_analyze_policy(void);
 static bool test_hold_macro_firing_expression(void);
 static bool test_hold_macro_firing_expression_value(void);
 static bool test_hold_macro_firing_reason(void);
+static bool test_hold_macro_analyze_policy_bug(void);
+
+static bool test_hold_multi_macro_analyze_policy(void);
+static bool test_hold_multi_macro_firing_expression(void);
+static bool test_hold_multi_macro_firing_expression_value(void);
+static bool test_hold_multi_macro_firing_reason(void);
+static bool test_hold_multi_macro_firing_custom_reason(void);
+
 
 //global variables
 static ClassAdParser parser;
@@ -280,7 +287,6 @@ bool OTEST_UserPolicy(void) {
 	driver.register_function(test_firing_reason_exit_on_exit_hold);
 	driver.register_function(test_firing_reason_exit_on_exit_remove);
 	driver.register_function(test_custom_firing_reason_exit_on_exit_hold);
-	driver.register_function(test_custom_firing_reason_exit_on_exit_remove);
 	driver.register_function(test_firing_reason_exit_false);
 	driver.register_function(test_remove_macro_analyze_policy);
 	driver.register_function(test_remove_macro_firing_expression);
@@ -294,7 +300,13 @@ bool OTEST_UserPolicy(void) {
 	driver.register_function(test_hold_macro_firing_expression);
 	driver.register_function(test_hold_macro_firing_expression_value);
 	driver.register_function(test_hold_macro_firing_reason);
-	
+	driver.register_function(test_hold_macro_analyze_policy_bug);
+	driver.register_function(test_hold_multi_macro_analyze_policy);
+	driver.register_function(test_hold_multi_macro_firing_expression);
+	driver.register_function(test_hold_multi_macro_firing_expression_value);
+	driver.register_function(test_hold_multi_macro_firing_reason);
+	driver.register_function(test_hold_multi_macro_firing_custom_reason);
+
 	return driver.do_all_functions();
 }
 
@@ -2450,7 +2462,7 @@ static bool test_firing_reason_exit_on_exit_remove() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	formatstr(reason,"The job attribute %s expression 'true' evaluated to TRUE",
+	formatstr(reason,"The job attribute %s expression '' evaluated to TRUE",
 		ATTR_ON_EXIT_REMOVE_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.c_str());
@@ -2470,35 +2482,6 @@ static bool test_firing_reason_exit_on_exit_remove() {
 	PASS;
 }
 
-static bool test_custom_firing_reason_exit_on_exit_remove() {
-	std::string reason;
-	emit_test("Test that FiringReason() returns the correct reason after a call"
-		" to AnalyzePolicy() with the PERIODIC_THEN_EXIT mode and a ClassAd "
-		"that has OnExitRemove evaluate to true and OnExitRemoveReason is defined.");
-	ad = new ClassAd();
-	initAdFromString(ON_EXIT_REMOVE, *ad);
-	ad->AssignExpr(ATTR_ON_EXIT_REMOVE_REASON,"strcat(\"Custom\",\" reason\")");
-	unparser.Unparse(classad_string, ad);
-	emit_input_header();
-	emit_param("ClassAd", "%s", classad_string.c_str());
-	formatstr(reason, "Custom reason");
-	emit_output_expected_header();
-	emit_retval("%s", reason.c_str());
-	UserPolicy policy;
-	POLICY_INIT(ad);
-	POLICY_ANALYZE(ad, PERIODIC_THEN_EXIT);
-	std::string ret_reason;
-	int code;
-	int subcode;
-	policy.FiringReason(ret_reason,code,subcode);
-	emit_output_actual_header();
-	emit_retval("%s", ret_reason.c_str());
-	CLEANUP;
-	if(strcmp(ret_reason.c_str(), reason.c_str()) != MATCH) {
-		FAIL;
-	}
-	PASS;
-}
 
 static bool test_firing_reason_exit_false() {
 	std::string reason;
@@ -2754,7 +2737,7 @@ static bool test_release_macro_firing_reason() {
 }
 
 static bool test_hold_macro_analyze_policy() {
-	emit_test("Test that AnalyzePolicy() returns RELEASE_FROM_QUEUE when used"
+	emit_test("Test that AnalyzePolicy() returns HOLD_IN_QUEUE when used"
 		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicHold "
 		"evaluate to false, but SYSTEM_PERIODIC_HOLD evaluates to true.");
 	ad = new ClassAd();
@@ -2863,3 +2846,185 @@ static bool test_hold_macro_firing_reason() {
 	}
 	PASS;
 }
+
+static bool test_hold_macro_analyze_policy_bug() {
+	emit_test("Test that AnalyzePolicy() returns HOLD_IN_QUEUE when used"
+		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicHold  "
+		"evaluate to undefined, but SYSTEM_PERIODIC_HOLD evaluates to true.");
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
+	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "undef_attr");
+	unparser.Unparse(classad_string, ad);
+	emit_input_header();
+	emit_param("ClassAd", "%s", classad_string.c_str());
+	emit_output_expected_header();
+	emit_retval("%d", HOLD_IN_QUEUE);
+	param_insert("SYSTEM_PERIODIC_HOLD", "1+1");
+	//param_info_insert("SYSTEM_PERIODIC_HOLD", NULL, "true", NULL, ".*", 
+	//				  0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
+	UserPolicy policy;
+	POLICY_INIT(ad);
+	int ret_val = POLICY_ANALYZE(ad, PERIODIC_ONLY);
+	emit_output_actual_header();
+	emit_retval("%d", ret_val);
+	CLEANUP;
+	if(ret_val != HOLD_IN_QUEUE) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_hold_multi_macro_analyze_policy() {
+	emit_test("Test that AnalyzePolicy() returns HOLD_IN_QUEUE when used"
+		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicHold "
+		"evaluate to false, but SYSTEM_PERIODIC_HOLD_MEM evaluates to true.");
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
+	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "false");
+	insert_into_ad(ad, "Mem", "100");
+	insert_into_ad(ad, "ReqMem", "99");
+	unparser.Unparse(classad_string, ad);
+	emit_input_header();
+	emit_param("ClassAd", "%s", classad_string.c_str());
+	emit_output_expected_header();
+	emit_retval("%d", HOLD_IN_QUEUE);
+	param_insert("SYSTEM_PERIODIC_HOLD", "false");
+	param_insert("SYSTEM_PERIODIC_HOLD_NAMES", "ZERO, MEM");
+	param_insert("SYSTEM_PERIODIC_HOLD_ZERO", "0+0");
+	param_insert("SYSTEM_PERIODIC_HOLD_MEM", "Mem > ReqMem");
+	UserPolicy policy;
+	POLICY_INIT(ad);
+	int ret_val = POLICY_ANALYZE(ad, PERIODIC_ONLY);
+	emit_output_actual_header();
+	emit_retval("%d", ret_val);
+	CLEANUP;
+	if(ret_val != HOLD_IN_QUEUE) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_hold_multi_macro_firing_expression() {
+	emit_test("Test that FiringExpression() returns SYSTEM_PERIODIC_HOLD "
+		"after a call to AnalyzePolicy() with the PERIODIC_ONLY mode and a "
+		"ClassAd that has PeriodicHold evaluate to false, but "
+		"SYSTEM_PERIODIC_HOLD_ONE evaluates to true.");
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
+	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "false");
+	insert_into_ad(ad, "Mem", "100");
+	insert_into_ad(ad, "ReqMem", "99");
+	unparser.Unparse(classad_string, ad);
+	emit_input_header();
+	emit_param("ClassAd", "%s", classad_string.c_str());
+	emit_output_expected_header();
+	emit_retval("SYSTEM_PERIODIC_HOLD");
+	UserPolicy policy;
+	POLICY_INIT(ad);
+	POLICY_ANALYZE(ad, PERIODIC_ONLY);
+	const char* ret_val = policy.FiringExpression();
+	emit_output_actual_header();
+	emit_retval("%s", ret_val);
+	CLEANUP;
+	if( ! ret_val || strcmp(ret_val, "SYSTEM_PERIODIC_HOLD") != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_hold_multi_macro_firing_expression_value() {
+	emit_test("Test that FiringExpressionValue() returns 1 after a call to"
+		" AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd that "
+		"has PeriodicHold evaluate to false, but SYSTEM_PERIODIC_HOLD "
+		"evaluates to true.");
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
+	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "false");
+	insert_into_ad(ad, "Mem", "100");
+	insert_into_ad(ad, "ReqMem", "99");
+	unparser.Unparse(classad_string, ad);
+	emit_input_header();
+	emit_param("ClassAd", "%s", classad_string.c_str());
+	emit_output_expected_header();
+	emit_retval("%d", 1);
+	UserPolicy policy;
+	POLICY_INIT(ad);
+	POLICY_ANALYZE(ad, PERIODIC_ONLY);
+	int ret_val = policy.FiringExpressionValue();
+	emit_output_actual_header();
+	emit_retval("%d", ret_val);
+	CLEANUP;
+	if(ret_val != 1) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_hold_multi_macro_firing_reason() {
+	std::string reason;
+	emit_test("Test that FiringReason() returns the correct reason after a call"
+		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd "
+		"that has PeriodicHold evaluate to false, but SYSTEM_PERIODIC_HOLD "
+		"evaluates to true.");
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
+	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "false");
+	insert_into_ad(ad, "Mem", "100");
+	insert_into_ad(ad, "ReqMem", "99");
+	unparser.Unparse(classad_string, ad);
+	emit_input_header();
+	emit_param("ClassAd", "%s", classad_string.c_str());
+	formatstr(reason, "The system macro SYSTEM_PERIODIC_HOLD expression 'Mem > ReqMem' "
+		"evaluated to TRUE");
+	emit_output_expected_header();
+	emit_retval("%s", reason.c_str());
+	UserPolicy policy;
+	POLICY_INIT(ad);
+	POLICY_ANALYZE(ad, PERIODIC_ONLY);
+	std::string ret_reason;
+	int code;
+	int subcode;
+	policy.FiringReason(ret_reason,code,subcode);
+	emit_output_actual_header();
+	emit_retval("%s", ret_reason.c_str());
+	CLEANUP;
+	if(strcmp(ret_reason.c_str(), reason.c_str()) != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_hold_multi_macro_firing_custom_reason() {
+	std::string reason;
+	emit_test("Test that FiringReason() returns the correct reason after a call"
+		" to AnalyzePolicy() with the PERIODIC_ONLY mode and a ClassAd "
+		"that has PeriodicHold evaluate to false, but SYSTEM_PERIODIC_HOLD "
+		"evaluates to true.");
+	ad = new ClassAd();
+	initAdFromString(PERIODIC_HOLD, *ad);
+	insert_into_ad(ad, ATTR_PERIODIC_HOLD_CHECK, "false");
+	insert_into_ad(ad, "Mem", "100");
+	insert_into_ad(ad, "ReqMem", "99");
+	unparser.Unparse(classad_string, ad);
+	param_insert("SYSTEM_PERIODIC_HOLD_MEM_REASON", "strcat(\"Memory used (\",Mem,\") was more than requested (\", ReqMem, \")\")");
+	emit_input_header();
+	emit_param("ClassAd", "%s", classad_string.c_str());
+	formatstr(reason, "Memory used (100) was more than requested (99)");
+	emit_output_expected_header();
+	emit_retval("%s", reason.c_str());
+	UserPolicy policy;
+	POLICY_INIT(ad);
+	POLICY_ANALYZE(ad, PERIODIC_ONLY);
+	std::string ret_reason;
+	int code;
+	int subcode;
+	policy.FiringReason(ret_reason,code,subcode);
+	emit_output_actual_header();
+	emit_retval("%s", ret_reason.c_str());
+	CLEANUP;
+	if(strcmp(ret_reason.c_str(), reason.c_str()) != MATCH) {
+		FAIL;
+	}
+	PASS;
+}
+

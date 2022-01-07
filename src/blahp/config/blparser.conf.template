@@ -1,0 +1,67 @@
+#
+#PBS part
+#
+
+#Set to yes to start the PBS parser
+GLITE_CE_USE_BLPARSERPBS=yes
+
+#Set to yes to run the PBS parser in daemon mode 
+GLITE_CE_BLPARSERPBS_DAEMON=yes
+
+#Set to 1 for normal debug or 2 for more debug  
+GLITE_CE_BLPARSERPBS_DEBUGLEVEL=
+
+#Log file where the debug information are written
+GLITE_CE_BLPARSERPBS_DEBUGLOGFILE=
+
+#PBS binpath
+GLITE_CE_BLPARSERPBS_BINPATH=
+
+#PBS spooldir
+GLITE_CE_BLPARSERPBS_SPOOLDIR=
+
+#Use this to start multiple PBS parser on different ports
+#if it is not set defaults to 1
+GLITE_CE_BLPARSERPBS_NUM=
+
+#PBS parser listening port 
+GLITE_CE_BLPARSERPBS_PORT1=33332
+GLITE_CE_BLPARSERPBS_PORT2=
+
+#PBS parser listening cream port 
+GLITE_CE_BLPARSERPBS_CREAMPORT1=
+GLITE_CE_BLPARSERPBS_CREAMPORT2=
+
+#
+#LSF part
+#
+
+#Set to yes to start the LSF parser
+GLITE_CE_USE_BLPARSERLSF=
+
+#Set to yes to run the LSF parser in daemon mode 
+GLITE_CE_BLPARSERLSF_DAEMON=yes
+
+#Set to 1 for normal debug or 2 for more debug  
+GLITE_CE_BLPARSERLSF_DEBUGLEVEL=
+
+#Log file where the debug information are written
+GLITE_CE_BLPARSERLSF_DEBUGLOGFILE=
+
+#LSF binpath
+GLITE_CE_BLPARSERLSF_BINPATH=
+
+#LSF conf path (to find lsf.conf file)
+GLITE_CE_BLPARSERLSF_CONFPATH=
+
+#Use this to start multiple LSF parser on different ports
+#if it is not set defaults to 1
+GLITE_CE_BLPARSERLSF_NUM=
+
+#LSF parser listening port 
+GLITE_CE_BLPARSERLSF_PORT1=33333
+GLITE_CE_BLPARSERLSF_PORT2=
+
+#LSF parser listening cream port 
+GLITE_CE_BLPARSERLSF_CREAMPORT1=
+GLITE_CE_BLPARSERLSF_CREAMPORT2=

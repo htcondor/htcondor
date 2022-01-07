@@ -332,6 +332,22 @@ FileTransfer::~FileTransfer()
 	delete plugin_table;
 }
 
+inline bool
+FileTransfer::shouldSendStdout() {
+	bool streaming = false;
+	jobAd.LookupBool( ATTR_STREAM_OUTPUT, streaming );
+	if( ! streaming && ! nullFile( JobStdoutFile.c_str() ) ) { return true; }
+	return false;
+}
+
+inline bool
+FileTransfer::shouldSendStderr() {
+	bool streaming = false;
+	jobAd.LookupBool( ATTR_STREAM_ERROR, streaming );
+	if( ! streaming && ! nullFile( JobStderrFile.c_str() ) ) { return true; }
+	return false;
+}
+
 int
 FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 						 ReliSock *sock_to_use, priv_state priv,
@@ -596,42 +612,27 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		// send back new/changed files after the run
 		upload_changed_files = true;
 	}
-	// and now check stdout/err
-	bool streaming = false;
-	JobStdoutFile = "";
-	if(Ad->LookupString(ATTR_JOB_OUTPUT, buf, sizeof(buf)) == 1 ) {
-		JobStdoutFile = buf;
-		Ad->LookupBool( ATTR_STREAM_OUTPUT, streaming );
-		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
-				// not streaming it, add it to our list if we're not
-				// just going to transfer anything that was changed.
-				// only add to list if not NULL_FILE (i.e. /dev/null)
+
+	if( Ad->LookupString( ATTR_JOB_OUTPUT, JobStdoutFile ) ) {
+		if( (! upload_changed_files) && shouldSendStdout() ) {
 			if( OutputFiles ) {
-				if( !OutputFiles->file_contains(buf) ) {
-					OutputFiles->append( buf );
+				if(! OutputFiles->file_contains( JobStdoutFile.c_str() )) {
+					OutputFiles->append( JobStdoutFile.c_str() );
+				} else {
+					OutputFiles = new StringList( JobStdoutFile, "," );
 				}
-			} else {
-				OutputFiles = new StringList(buf,",");
 			}
 		}
 	}
-		// re-initialize this flag so we don't use stale info from
-		// ATTR_STREAM_OUTPUT if ATTR_STREAM_ERROR isn't defined
-	streaming = false;
-	JobStderrFile = "";
-	if( Ad->LookupString(ATTR_JOB_ERROR, buf, sizeof(buf)) == 1 ) {
-		JobStderrFile = buf;
-		Ad->LookupBool( ATTR_STREAM_ERROR, streaming );
-		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
-				// not streaming it, add it to our list if we're not
-				// just going to transfer anything that was changed.
-				// only add to list if not NULL_FILE (i.e. /dev/null)
+
+	if( Ad->LookupString( ATTR_JOB_ERROR, JobStderrFile ) ) {
+		if( (! upload_changed_files) && shouldSendStderr() ) {
 			if( OutputFiles ) {
-				if( !OutputFiles->file_contains(buf) ) {
-					OutputFiles->append( buf );
+				if(! OutputFiles->file_contains( JobStderrFile.c_str() )) {
+					OutputFiles->append( JobStderrFile.c_str() );
+				} else {
+					OutputFiles = new StringList( JobStderrFile, "," );
 				}
-			} else {
-				OutputFiles = new StringList(buf,",");
 			}
 		}
 	}
@@ -1412,16 +1413,21 @@ FileTransfer::DetermineWhichFilesToSend() {
 			if( DontEncryptCheckpointFiles ) { delete DontEncryptCheckpointFiles; }
 			DontEncryptCheckpointFiles = new StringList( NULL, "," );
 
-			// If we'd transfer output or error on success, do so on
-			// checkpoint also.
-			if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStdoutFile.c_str() )) ) {
-				if(! CheckpointFiles->file_contains( JobStdoutFile.c_str() )) {
-					CheckpointFiles->append( JobStdoutFile.c_str() );
+			//
+			// If we're not streaming ATTR_JOB_OUTPUT or ATTR_JOB_ERROR,
+			// send them along as well.  If ATTR_CHECKPOINT_FILES is set,
+			// it's an explicit list, so we don't have to worry about
+			// implicitly sending the file twice.
+			//
+			if( shouldSendStdout() ) {
+				if(! CheckpointFiles->file_contains(JobStdoutFile.c_str()) ) {
+					CheckpointFiles->append(JobStdoutFile.c_str());
 				}
 			}
-			if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStderrFile.c_str() )) ) {
-				if(! CheckpointFiles->file_contains( JobStderrFile.c_str() )) {
-					CheckpointFiles->append( JobStderrFile.c_str() );
+
+			if( shouldSendStderr() ) {
+				if(! CheckpointFiles->file_contains(JobStderrFile.c_str()) ) {
+					CheckpointFiles->append(JobStderrFile.c_str());
 				}
 			}
 
@@ -1440,11 +1446,16 @@ FileTransfer::DetermineWhichFilesToSend() {
 		CheckpointFiles = new StringList( NULL, "," );
 
 		// If we'd transfer output or error on success, do so on failure also.
-		if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStdoutFile.c_str() )) ) {
-			CheckpointFiles->append( JobStdoutFile.c_str() );
+		if( shouldSendStdout() ) {
+			if(! CheckpointFiles->file_contains(JobStdoutFile.c_str()) ) {
+				CheckpointFiles->append( JobStdoutFile.c_str() );
+			}
 		}
-		if( upload_changed_files || (OutputFiles && OutputFiles->file_contains( JobStderrFile.c_str() )) ) {
-			CheckpointFiles->append( JobStderrFile.c_str() );
+
+		if( shouldSendStderr() ) {
+			if(! CheckpointFiles->file_contains(JobStderrFile.c_str()) ) {
+				CheckpointFiles->append( JobStderrFile.c_str() );
+			}
 		}
 
 		if( EncryptCheckpointFiles ) { delete EncryptCheckpointFiles; }
@@ -2941,12 +2952,13 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			rc = s->get_file( &bytes, fullname.c_str(), false, false, this_file_max_bytes, &xfer_queue );
 		}
 
+		int the_error = errno;
+
 		elapsed = time(NULL)-start;
 		thisFileStats.TransferEndTime = condor_gettimestamp_double();
 		thisFileStats.ConnectionTimeSeconds = thisFileStats.TransferEndTime - thisFileStats.TransferStartTime;
 
 		if( rc < 0 ) {
-			int the_error = errno;
 			error_buf.formatstr("%s at %s failed to receive file %s",
 			                  get_mySubSystem()->getName(),
 							  s->my_ip_str(),fullname.c_str());
