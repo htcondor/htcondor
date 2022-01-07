@@ -3,9 +3,11 @@
 # Officially supported platforms
 docker://htcondor/nmi-zdev:x86_64_AmazonLinux2-09040001
 docker://htcondor/nmi-zdev:x86_64_CentOS7-09040001
-docker://htcondor/nmi-zdev:x86_64_CentOS8-09040001
 docker://htcondor/nmi-zdev:x86_64_Debian10-09040001
+docker://htcondor/nmi-zdev:x86_64_Debian11-09030001
+docker://htcondor/nmi-zdev:x86_64_Debian12-09030001
 x86_64_MacOSX15
+docker://htcondor/nmi-zdev:x86_64_Rocky8-09040001
 docker://htcondor/nmi-zdev:x86_64_Ubuntu18-09040001
 docker://htcondor/nmi-zdev:x86_64_Ubuntu20-09040001
 x86_64_Windows7
