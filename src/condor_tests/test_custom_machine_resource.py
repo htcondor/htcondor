@@ -18,6 +18,7 @@
 
 import pytest
 import logging
+import time
 
 import htcondor
 
@@ -164,7 +165,7 @@ def condor(test_dir, slot_config, discovery_script, monitor_script):
         # but occasionally, not all 16 slots will have made it to the collector
 
         while 16 != len(condor.status(ad_type=htcondor.AdTypes.Startd, projection=["SlotID"])):
-            os.sleep(1)
+            time.sleep(1)
         yield condor
 
 
