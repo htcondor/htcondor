@@ -6085,18 +6085,22 @@ int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
 			upper_case(protocol);
 			std::string attr_count = protocol + "FilesCount";
 			std::string attr_size = protocol + "SizeBytes";
-			// If these attributes already exist, add to them. If not, create them.
+
 			int num_files;
 			if (!Info.stats.LookupInteger(attr_count, num_files)) {
 				num_files = 0;
 			}
 			num_files++;
 			Info.stats.InsertAttr(attr_count, num_files);
-			int size_bytes;
-			if (!Info.stats.LookupInteger(attr_size, size_bytes)) {
-				size_bytes = 0;
+
+			int this_size_bytes;
+			if (stats.LookupInteger("TransferTotalBytes", this_size_bytes)) {
+				int prev_size_bytes;
+				if (!Info.stats.LookupInteger(attr_size, prev_size_bytes)) {
+					prev_size_bytes = 0;
+				}
+				Info.stats.InsertAttr(attr_size, prev_size_bytes + this_size_bytes);
 			}
-			size_bytes += 10;
 		}
 	}
 
