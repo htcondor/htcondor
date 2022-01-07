@@ -308,6 +308,7 @@ our %submit_info = (
 	},
 
 	'nmi-zdev:x86_64_CentOS8' => 'x86_64_CentOS8',
+	'nmi-zdev:x86_64_Rocky8' => 'x86_64_CentOS8',
 	'nmi-zdev:x86_64_AmazonLinux2' => 'x86_64_Ubuntu18',
 
 	##########################################################################
