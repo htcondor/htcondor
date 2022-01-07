@@ -37,7 +37,7 @@ static std::string cache;
 
 // NOTE: if this isn't changed via a config file or something, then all lines
 // are immediately written as they enter the cache.
-static int cache_size = 0;
+static size_t cache_size = 0;
 
 
 // from condor_util_lib/dprintf.c
@@ -240,15 +240,11 @@ debug_cache_flush(void)
 }
 
 /*--------------------------------------------------------------------------*/
-void debug_cache_set_size(int size)
+void debug_cache_set_size(size_t size)
 {
 	// Get rid of what is there, if anything.
 	if (cache_enabled && cache_is_caching) {
 		debug_cache_flush();
-	}
-
-	if (size < 0) {
-		cache_size = 0;
 	}
 
 	cache_size = size;

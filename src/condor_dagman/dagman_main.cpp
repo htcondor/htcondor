@@ -171,7 +171,7 @@ Dagman::~Dagman()
 bool
 Dagman::Config()
 {
-	int debug_cache_size = (1024*1024)*5; // 5 MB
+	size_t debug_cache_size = (1024*1024)*5; // 5 MB
 	bool debug_cache_enabled = false;
 
 		// Note: debug_printfs are DEBUG_NORMAL here because when we
@@ -209,7 +209,7 @@ Dagman::Config()
 	debug_cache_size = 
 		param_integer( "DAGMAN_DEBUG_CACHE_SIZE", debug_cache_size,
 		0, INT_MAX);
-	debug_printf( DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_SIZE setting: %d\n",
+	debug_printf( DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_SIZE setting: %lu\n",
 				debug_cache_size );
 
 	debug_cache_enabled = 

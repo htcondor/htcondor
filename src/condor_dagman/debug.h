@@ -146,7 +146,7 @@ void debug_cache_enable(void);
 void debug_cache_start_caching(void);
 void debug_cache_stop_caching(void);
 void debug_cache_flush(void);
-void debug_cache_set_size(int size);
+void debug_cache_set_size(size_t size);
 
 /**
  * The level of strictness in turning warnings into fatal errors.
