@@ -11,9 +11,9 @@ Release Notes:
 
 .. HTCondor version 9.5.0 released on Month Date, 2022.
 
-- This version includes all the updates from :ref:`lts-version-history-909`.
-
 - HTCondor version 9.5.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-909`.
 
 New Features:
 
@@ -21,14 +21,14 @@ New Features:
   images that can be run in Singularity or Docker or other container runtimes.
   :jira:`850`
 
-- Docker universe jobs can now be user-level checkpointed by setting
+- Docker universe jobs can now self-checkpoint by setting
   checkpoint_exit_code in submit files.
   :jira:`841`
 
-- Docker universe jobs now work on jobs without file transfer
+- Docker universe now works with jobs that don't transfer any files.
   :jira:`867`
 
-- The **blahp** is now included in the HTCondor linux native packages.
+- The **blahp** is now included in the HTCondor Linux native packages.
   :jira:`838`
 
 - The tool *bosco_cluster* is being renamed to *condor_remote_cluster*.
@@ -42,7 +42,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug where if the submit file set checkpoint_exit_code, and the administrator
+- Fixed a bug where if the submit file set a checkpoint_exit_code, and the administrator
   enabled singularity support on the execute node, the job would go on hold at checkpoint time.
   :jira:`837`
 
