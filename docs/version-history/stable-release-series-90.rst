@@ -56,6 +56,13 @@ Release Notes:
 
 - HTCondor version 9.0.9 not yet released.
 
+- Since CentOS 8 has been retired, we now build for Enterprise Linux 8 on
+  Rocky Linux 8.
+  :jira:`911`
+
+- Debian 11 (bullseye) has been added as a supported platform.
+  :jira:`94`
+
 New Features:
 
 - The OAUTH credmon is packaged for the Enterprise Linux 8 platform.
