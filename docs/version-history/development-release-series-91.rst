@@ -40,6 +40,10 @@ Bugs Fixed:
 - The view server can now handle very long Accounting Group names
   :jira:`913`
 
+- Fixed some bugs where ``allowed_execute_duration`` and
+  ``allowed_job_duration`` would be evaluated at the wrong points in a
+  job's lifetime.
+  :jira:`922`
 Version 9.5.0
 -------------
 
