@@ -287,6 +287,8 @@ our %submit_info = (
 	},
 	'nmi-zdev:x86_64_Debian9'  => 'x86_64_Debian9',
 	'nmi-zdev:x86_64_Debian10' => 'x86_64_Debian9',
+	'nmi-zdev:x86_64_Debian11' => 'x86_64_Debian9',
+	'nmi-zdev:x86_64_Debian12' => 'x86_64_Debian9',
 
 	##########################################################################
 	# Platform CentOS 8 on x86_64
@@ -306,6 +308,7 @@ our %submit_info = (
 	},
 
 	'nmi-zdev:x86_64_CentOS8' => 'x86_64_CentOS8',
+	'nmi-zdev:x86_64_Rocky8' => 'x86_64_CentOS8',
 	'nmi-zdev:x86_64_AmazonLinux2' => 'x86_64_Ubuntu18',
 
 	##########################################################################

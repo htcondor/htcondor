@@ -53,7 +53,7 @@ class ScheddClassad {
 			@param attrName The name of the attribute to set.
 			@param attrVal The value of the attribute.
 		*/
-	void SetAttribute( const char *attrName, const MyString &value ) const;
+	void SetAttribute( const char *attrName, const std::string &value ) const;
 
 		/** Set a nested ClassAd attribute in this DAGMan's classad.
 			@param attrName The name of the attribute to set.
@@ -63,14 +63,11 @@ class ScheddClassad {
 
 		/** Get the specified attribute (string) value from our ClassAd.
 			@param attrName: The name of the attribute.
-			@param attrVal: A MyString to receive the attribute value.
+			@param attrVal: A string to receive the attribute value.
 			@param printWarning: Whether to print a warning if we
 				can't get the requested attribute.
 			@return true if we got the requested attribute, false otherwise
 		*/
-	bool GetAttribute( const char *attrName, MyString &attrVal,
-				bool printWarning = true ) const;
-
 	bool GetAttribute( const char *attrName, std::string &attrVal,
 				bool printWarning = true ) const;
 
@@ -127,10 +124,10 @@ class DagmanClassad : public ScheddClassad {
 				int &maxPostScripts, int &maxHoldScripts );
 
 		/** Get information we need from our own ClassAd.
-			@param owner: A MyString to receive the Owner value.
-			@param nodeName: A MyString to receive the DAGNodeName value.
+			@param owner: A string to receive the Owner value.
+			@param nodeName: A string to receive the DAGNodeName value.
 		*/
-	void GetInfo( MyString &owner, MyString &nodeName );
+	void GetInfo( std::string &owner, std::string &nodeName );
 
 		/** Get the JobBatchId value from our ClassAd (setting it
 		    to the default if it's not already set).
@@ -140,16 +137,16 @@ class DagmanClassad : public ScheddClassad {
 
 		/** Get the JobBatchName value from our ClassAd (setting it
 		    to the default if it's not already set).
-			@param batchName: A MyString to receive the JobBatchName value
+			@param batchName: A string to receive the JobBatchName value
 		*/
-	void GetSetBatchName( const MyString &primaryDagFile,
-				MyString &batchName );
+	void GetSetBatchName( const std::string &primaryDagFile,
+				std::string &batchName );
 
 		/** Get the AcctGroup and AcctGroupUser values from our ClassAd.
-			@param group: A MyString to receive the AcctGroup value
-			@param user: A MyString to receive the AcctGroupUser value
+			@param group: A string to receive the AcctGroup value
+			@param user: A string to receive the AcctGroupUser value
 		*/
-	void GetAcctInfo( MyString &group, MyString &user );
+	void GetAcctInfo( std::string &group, std::string &user );
 
   private:
 		/** Initialize metrics information related to our classad.

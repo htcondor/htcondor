@@ -74,7 +74,11 @@ JOB_ROUTER_TRANSFORM_Defaults @=jrd
   DELETE RouteMe
   SET RoutedJob true
   SET Requirements true
+  SET CollHost "$(COLLECTOR_NAME)"
 @jrd
+
+# regression test for jira902
+COLLECTOR_NAME = jira902
 
 # Route even procid's to production, odd procid's to analysis
 # Production1 and Analysis3 jobs require odd slot ids, Production2 and Analysis4 jobs require even slot ids
@@ -166,7 +170,7 @@ sleep(10);
 my %job = ();  # map of job info by id
 
 my @jobs = (); # lines of output
-CondorTest::runCondorTool("condor_q -af:j RouteMe RoutedJob Managed Totem RanAt ProductionJob ProductionRun AnalysisRun RoutedToJobId RoutedFromJobId", \@jobs);
+CondorTest::runCondorTool("condor_q -af:j RouteMe RoutedJob Managed Totem RanAt ProductionJob ProductionRun AnalysisRun RoutedToJobId RoutedFromJobId CollHost", \@jobs);
 
 # build a map of jobid to completion info
 foreach my $line (@jobs) {
@@ -177,7 +181,7 @@ foreach my $line (@jobs) {
 }
 
 @jobs = ();
-CondorTest::runCondorTool("condor_history -af:j RouteMe RoutedJob Managed Totem RanAt ProductionJob ProductionRun AnalysisRun RoutedToJobId RoutedFromJobId", \@jobs);
+CondorTest::runCondorTool("condor_history -af:j RouteMe RoutedJob Managed Totem RanAt ProductionJob ProductionRun AnalysisRun RoutedToJobId RoutedFromJobId CollHost", \@jobs);
 
 foreach my $line (@jobs) {
 	fullchomp($line);
@@ -229,5 +233,27 @@ while (($jid, $info) = each(%job)) {
 
 RegisterResult($correct == 24,test_name=>$testname,check_name => "All_jobs_ran_where_they_should");
 RegisterResult($incorrect == 0,test_name=>$testname, check_name => "No_jobs_ran_where_they_should_not");
+
+print "\n----- Checking CollHost attribute (jira902 regression) ----\n";
+
+# jira902 regression test - check to see that CollHost is the expected value
+@jobs = ();
+CondorTest::runCondorTool("condor_q -const RoutedJob -af:j CollHost", \@jobs);
+
+$correct = 0;
+$incorrect = 0;
+foreach my $line (@jobs) {
+	fullchomp($line);
+	my ($jobid,$host) = split / /, $line, 2;
+	if ($host eq 'jira902') {
+		$correct += 1;
+	} else {
+		$incorrect += 1;
+		print "\tFAILURE: $jobid CollHost=$host  should be jira902\n"
+	}
+}
+
+RegisterResult($correct == 8,test_name=>$testname,check_name => "All_Correct_CollHost");
+RegisterResult($incorrect == 0,test_name=>$testname, check_name => "No_Incorrect_CollHost");
 
 CondorTest::EndTest();

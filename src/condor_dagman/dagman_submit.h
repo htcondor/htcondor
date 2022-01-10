@@ -55,12 +55,12 @@ bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* DAGNodeName, const char *DAGParentNodeNames,
 					Job* node, int priority, int retry,
 					const char* directory, const char *worflowLogFile,
-					bool hold_claim, const MyString &batchName,
+					bool hold_claim, const std::string &batchName,
 					std::string &batchId );
 
 bool direct_condor_submit(const Dagman &dm, Job* node,
 	const char *worflowLogFile,
-	const MyString &parents,
+	const std::string &parents,
 	const char *batchName,
 	const char *batchId,
 	CondorID& condorID);

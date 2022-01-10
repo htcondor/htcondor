@@ -73,8 +73,8 @@ parse_condor_submit( const char *buffer, int &jobProcCount, int &cluster )
 static bool
 submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 {
-  MyString cmd; // for debug output
-  args.GetArgsStringForDisplay( &cmd );
+  std::string cmd; // for debug output
+  args.GetArgsStringForDisplay( cmd );
 
   FILE * fp = my_popen( args, "r", MY_POPEN_OPT_WANT_STDERR );
   if (fp == NULL) {
@@ -122,11 +122,11 @@ submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
   // went wrong with the submit, so we return false.  The caller of this
   // function can retry the submit by repeatedly calling this function.
 
-  MyString  command_output("");
-  MyString keyLine("");
+  std::string command_output = "";
+  std::string keyLine = "";
   while (fgets(buffer, UTIL_MAX_LINE_LENGTH, fp)) {
-    MyString buf_line = buffer;
-	buf_line.chomp();
+	std::string buf_line = buffer;
+	chomp(buf_line);
 	debug_printf(DEBUG_VERBOSE, "From submit: %s\n", buf_line.c_str());
 	command_output += buf_line;
     if (strstr(buffer, marker) != NULL) {
@@ -189,8 +189,8 @@ submit_try( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 static bool
 do_submit( ArgList &args, CondorID &condorID, bool prohibitMultiJobs )
 {
-	MyString cmd; // for debug output
-	args.GetArgsStringForDisplay( &cmd );
+	std::string cmd; // for debug output
+	args.GetArgsStringForDisplay( cmd );
 	debug_printf( DEBUG_VERBOSE, "submitting: %s\n", cmd.c_str() );
   
 	bool success = false;
@@ -212,7 +212,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, const char *DAGParentNodeNames,
 			   Job * node, int priority, int retry,
 			   const char* directory, const char *workflowLogFile,
-			   bool hold_claim, const MyString &batchName,
+			   bool hold_claim, const std::string &batchName,
 			   std::string &batchId )
 {
 	TmpDir		tmpDir;
@@ -243,7 +243,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	args.AppendArg( dm.condorSubmitExe );
 
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	MyString nodeName = MyString(ATTR_DAG_NODE_NAME_ALT) + " = " + DAGNodeName;
+	std::string nodeName = std::string(ATTR_DAG_NODE_NAME_ALT) + " = " + DAGNodeName;
 	args.AppendArg( nodeName.c_str() );
 
 		// append a line adding the parent DAGMan's cluster ID to the job ad
@@ -275,7 +275,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	}
 
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	MyString submitEventNotes = MyString(
+	std::string submitEventNotes = std::string(
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
 	args.AppendArg( submitEventNotes.c_str() );
 
@@ -328,13 +328,13 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 	ArgList parentNameArgs;
 	parentNameArgs.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	MyString parentNodeNames = MyString("+DAGParentNodeNames = ") + "\"";
+	std::string parentNodeNames = std::string("+DAGParentNodeNames = ") + "\"";
 	if (DAGParentNodeNames) parentNodeNames += DAGParentNodeNames;
 	parentNodeNames += "\"";
 	parentNameArgs.AppendArg( parentNodeNames.c_str() );
 
 	// allow for $(JOB) expansions in the vars - and also in the submit file.
-	MyString jobarg("JOB="); jobarg += DAGNodeName;
+	std::string jobarg("JOB="); jobarg += DAGNodeName;
 	args.AppendArg("-a");
 	args.AppendArg(jobarg.c_str());
 
@@ -343,10 +343,10 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			// Substitute the node retry count if necessary.  Note that
 			// we can't do this in Job::ResolveVarsInterpolations()
 			// because that's only called at parse time.
-		MyString value = nodeVar._value;
+		std::string value = nodeVar._value;
 		std::string retryStr = std::to_string( retry );
-		value.replaceString( "$(RETRY)", retryStr.c_str() );
-		MyString varStr(nodeVar._name);
+		replace_str( value, "$(RETRY)", retryStr.c_str() );
+		std::string varStr(nodeVar._name);
 		varStr += " = ";
 		varStr += value;
 
@@ -377,7 +377,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	
 	if (dm._submitDagDeepOpts.suppress_notification) {
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-		MyString notify = MyString("notification = never");
+		std::string notify = std::string("notification = never");
 		args.AppendArg( notify.c_str() );
 	}
 
@@ -386,14 +386,14 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		//
 	if ( dm._submitDagDeepOpts.acctGroup != "" ) {
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-		MyString arg = "accounting_group=";
+		std::string arg = "accounting_group=";
 		arg += dm._submitDagDeepOpts.acctGroup;
 		args.AppendArg( arg );
 	}
 
 	if ( dm._submitDagDeepOpts.acctGroupUser != "" ) {
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-		MyString arg = "accounting_group_user=";
+		std::string arg = "accounting_group_user=";
 		arg += dm._submitDagDeepOpts.acctGroupUser;
 		args.AppendArg( arg );
 	}
@@ -406,11 +406,11 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		//
 
 		// how big is the command line so far?
-	MyString display;
-	args.GetArgsStringForDisplay( &display );
+	std::string display;
+	args.GetArgsStringForDisplay( display );
 	int cmdLineSize = display.length();
 
-	parentNameArgs.GetArgsStringForDisplay( &display );
+	parentNameArgs.GetArgsStringForDisplay( display );
 	int DAGParentNodeNamesLen = display.length();
 		// how many additional chars must we still add to command line
 	        // NOTE: according to the POSIX spec, the args +
@@ -451,7 +451,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 static void init_dag_vars(SubmitHash * submitHash,
 	const Dagman &dm, Job* node,
 	const char *workflowLogFile,
-	const MyString & parents,
+	const std::string & parents,
 	const char *batchName,
 	const char *batchId)
 {
@@ -553,7 +553,7 @@ static void init_dag_vars(SubmitHash * submitHash,
 bool
 direct_condor_submit(const Dagman &dm, Job* node,
 	const char *workflowLogFile,
-	const MyString & parents,
+	const std::string & parents,
 	const char *batchName,
 	const char *batchId,
 	CondorID& condorID)
@@ -801,7 +801,7 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 		// correctly.
 	subEvent.setSubmitHost( "<dummy-submit-for-noop-job>" );
 
-	MyString subEventNotes("DAG Node: " );
+	std::string subEventNotes("DAG Node: " );
 	subEventNotes += DAGNodeName;
 		// submitEventLogNotes get deleted in SubmitEvent destructor.
 	subEvent.submitEventLogNotes = strnewp( subEventNotes.c_str() );
@@ -863,7 +863,7 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 	pEvent.proc = condorID._proc;
 	pEvent.subproc = condorID._subproc;
 
-	MyString pEventNotes("DAG Node: " );
+	std::string pEventNotes("DAG Node: " );
 	pEventNotes += DAGNodeName;
 		// skipEventLogNotes gets deleted in PreSkipEvent destructor.
 	pEvent.skipEventLogNotes = strnewp( pEventNotes.c_str() );

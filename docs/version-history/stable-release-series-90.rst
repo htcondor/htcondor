@@ -34,6 +34,16 @@ Bugs Fixed:
   the command-line.
   :jira:`910`
 
+- Fixed a bug in the *condor_job_router* that could result in routes and transforms
+  substituting a default configuration value rather than the value
+  from the configuration files when a route or transform was applied
+  :jira:`902`
+
+- For **batch** grid universe jobs, a small default memory value is no
+  longer generated when **request_memory** is not specified in the submit
+  file.
+  This restores the behavior in versions 9.0.1 and prior.
+  :jira:`904`
 
 .. _lts-version-history-909:
 
@@ -46,9 +56,17 @@ Release Notes:
 
 - HTCondor version 9.0.9 not yet released.
 
+- Since CentOS 8 has been retired, we now build for Enterprise Linux 8 on
+  Rocky Linux 8.
+  :jira:`911`
+
+- Debian 11 (bullseye) has been added as a supported platform.
+  :jira:`94`
+
 New Features:
 
-- None.
+- The OAUTH credmon is packaged for the Enterprise Linux 8 platform.
+  :jira:`825`
 
 Bugs Fixed:
 
@@ -288,12 +306,7 @@ Bugs Fixed:
   is empty.
   :jira:`673`
 
-- Fixed a bug that could the starter to crash after transferring files under
-  certain rare circumstances.   This also corrected a problem which may have
-  been causing the number of bytes transferred to be undercounted.
-  :jira:`722`
-
-- Fixed a bug that could the starter to crash after transferring files under
+- Fixed a bug that could cause the starter to crash after transferring files under
   certain rare circumstances.   This also corrected a problem which may have
   been causing the number of bytes transferred to be undercounted.
   :jira:`722`

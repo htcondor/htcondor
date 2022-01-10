@@ -97,7 +97,7 @@ struct SubmitDagShallowOptions
     int iMaxPost;
     MyString appendFile; // append to .condor.sub file before queue
     std::list<std::string> appendLines; // append to .condor.sub file before queue
-    MyString strConfigFile;
+    std::string strConfigFile;
     bool dumpRescueDag;
     bool runValgrind;
     MyString primaryDagFile;
@@ -156,7 +156,7 @@ struct SubmitDagDeepOptions
 	std::string strDagmanPath; // path to dagman binary
     bool useDagDir;
     MyString strOutfileDir;
-    MyString batchName; // optional value from -batch-name argument, will be double quoted if it exists.
+    std::string batchName; // optional value from -batch-name argument, will be double quoted if it exists.
     std::string batchId;
     bool autoRescue;
     int doRescueFrom;
@@ -166,8 +166,8 @@ struct SubmitDagDeepOptions
     bool importEnv; // explicitly import environment into .condor.sub file
 
     bool suppress_notification;
-    MyString acctGroup;
-    MyString acctGroupUser;
+    std::string acctGroup;
+    std::string acctGroupUser;
 
     SubmitDagDeepOptions() 
     { 
@@ -206,9 +206,9 @@ public:
         std::list<std::string> &dagFileAttrLines );
 
     bool GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bool useDagDir, 
-        MyString &configFile, std::list<std::string> &attrLines, MyString &errMsg );
+        std::string &configFile, std::list<std::string> &attrLines, MyString &errMsg );
 
-    bool MakePathAbsolute(MyString &filePath, MyString &errMsg);
+    bool MakePathAbsolute(std::string &filePath, std::string &errMsg);
 
     int FindLastRescueDagNum(const char *primaryDagFile,
         bool multiDags, int maxRescueDagNum);
@@ -218,7 +218,7 @@ public:
     bool ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
         SubmitDagShallowOptions &shallowOpts);
 
-    MyString RescueDagName(const char *primaryDagFile,
+    std::string RescueDagName(const char *primaryDagFile,
         bool multiDags, int rescueDagNum);
 
     void RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags, 

@@ -19,7 +19,6 @@
 
 #include "condor_common.h"
 #include "../condor_utils/dagman_utils.h"
-#include "MyString.h"
 #include "which.h"
 #include "condor_distribution.h"
 #include "condor_config.h"
@@ -39,7 +38,7 @@ int printUsage(int iExitCode=1); // NOTE: printUsage calls exit(1), so it doesn'
 void parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts, int argc,
 			const char * const argv[]);
-bool parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
+bool parsePreservedArgs(const std::string &strArg, int &argNum, int argc,
 			const char * const argv[], SubmitDagShallowOptions &shallowOpts);
 int doRecursionNew( SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts );
@@ -47,7 +46,7 @@ int parseJobOrDagLine( const char *dagLine, dag_tokener &tokens,
 			const char *fileType, const char *&submitOrDagFile,
 			const char *&directory );
 			int getOldSubmitFlags( SubmitDagShallowOptions &shallowOpts );
-int parseArgumentsLine( const MyString &subLine,
+int parseArgumentsLine( const std::string &subLine,
 			SubmitDagShallowOptions &shallowOpts );
 int submitDag( SubmitDagShallowOptions &shallowOpts );
 
@@ -159,7 +158,7 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 
 			// Get logical lines from this DAG file.
 		MultiLogFiles::FileReader reader;
-		MyString errMsg = reader.Open( dagfile_it->c_str() );
+		std::string errMsg = reader.Open( *dagfile_it );
 		if ( errMsg != "" ) {
 			fprintf( stderr, "Error reading DAG file: %s\n",
 						errMsg.c_str() );
@@ -168,7 +167,7 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 
 
 			// Find and parse JOB and SUBDAG lines.
-		MyString dagLine;
+		std::string dagLine;
 		while ( reader.NextLogicalLine( dagLine ) ) {
 			dag_tokener tokens( dagLine.c_str() );
 			tokens.rewind();
@@ -186,17 +185,17 @@ doRecursionNew( SubmitDagDeepOptions &deepOpts,
 				}
 
 					// Now figure out whether JOB line is a nested DAG.
-				MyString submitFile( subFile );
+				std::string submitFile( subFile );
 
 					// If submit file ends in ".condor.sub", we assume it
 					// refers to a sub-DAG.
-				int start = submitFile.find( DAG_SUBMIT_FILE_SUFFIX );
-				if ( start >= 0 &&
+				std::size_t start = submitFile.find( DAG_SUBMIT_FILE_SUFFIX );
+				if ( start != std::string::npos &&
 							start + (int)strlen( DAG_SUBMIT_FILE_SUFFIX) ==
 							submitFile.length() ) {
 
 						// Change submit file name to DAG file name.
-					submitFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
+					submitFile.replace( submitFile.find(DAG_SUBMIT_FILE_SUFFIX), strlen(DAG_SUBMIT_FILE_SUFFIX), "" );
 
 						// Now run condor_submit_dag on the DAG file.
 					if ( dagmanUtils.runSubmitDag( deepOpts, submitFile.c_str(),
@@ -362,21 +361,20 @@ getOldSubmitFlags(SubmitDagShallowOptions &shallowOpts)
 		// It's not an error for the submit file to not exist.
 	if ( dagmanUtils.fileExists( shallowOpts.strSubFile ) ) {
 		MultiLogFiles::FileReader reader;
-		MyString error = reader.Open( shallowOpts.strSubFile );
+		std::string error = reader.Open( shallowOpts.strSubFile );
 		if ( error != "" ) {
 			fprintf( stderr, "Error reading submit file: %s\n",
 						error.c_str() );
 			return 1;
 		}
 
-		MyString subLine;
+		std::string subLine;
 		while ( reader.NextLogicalLine( subLine ) ) {
 			// Initialize list of tokens from subLine
 			std::list<std::string> tokens;
-			MyStringTokener tok;
-			subLine.trim();
-			tok.Tokenize( subLine.c_str() );
-			while( const char* token = tok.GetNextToken( " \t", true ) ) {
+			trim( subLine );
+			Tokenize( subLine );
+			while( const char* token = GetNextToken( " \t", true ) ) {
 				tokens.emplace_back( token );
 			}
 
@@ -402,14 +400,14 @@ getOldSubmitFlags(SubmitDagShallowOptions &shallowOpts)
 	@return 0 if successful, 1 if failed
 */
 int
-parseArgumentsLine( const MyString &subLine,
+parseArgumentsLine( const std::string &subLine,
 			SubmitDagShallowOptions &shallowOpts )
 {
 	const char *line = subLine.c_str();
 	const char *start = strchr( line, '"' );
 	const char *end = strrchr( line, '"' );
 
-	MyString arguments;
+	std::string arguments;
 	if ( start && end ) {
 		arguments = subLine.substr( start - line, 1 + end - start );
 	} else {
@@ -419,16 +417,16 @@ parseArgumentsLine( const MyString &subLine,
 	}
 
 	ArgList arglist;
-	MyString error;
+	std::string error;
 	if ( !arglist.AppendArgsV2Quoted( arguments.c_str(),
-				&error ) ) {
+				error ) ) {
 		fprintf( stderr, "Error parsing arguments: %s\n", error.c_str() );
 		return 1;
 	}
 
 	for ( int argNum = 0; argNum < arglist.Count(); argNum++ ) {
-		MyString strArg = arglist.GetArg( argNum );
-		strArg.lower_case();
+		std::string strArg = arglist.GetArg( argNum );
+		lower_case(strArg);
 		char **args = arglist.GetStringArray();
 		(void)parsePreservedArgs( strArg, argNum, arglist.Count(),
 					args, shallowOpts);
@@ -446,7 +444,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 {
 	for (int iArg = 1; iArg < argc; iArg++)
 	{
-		MyString strArg = argv[iArg];
+		std::string strArg = argv[iArg];
 
 		if (strArg[0] != '-')
 		{
@@ -465,26 +463,26 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 		}
 		else
 		{
-			strArg.lower_case();
+			lower_case(strArg);
 
 			// Note: in checking the argument names here, we only check for
 			// as much of the full name as we need to unambiguously define
 			// the argument.
-			if (strArg.find("-no_s") != -1) // -no_submit
+			if (strArg.find("-no_s") != std::string::npos) // -no_submit
 			{
 				shallowOpts.bSubmit = false;
 			}
-			else if (strArg.find("-vers") != -1) // -version
+			else if (strArg.find("-vers") != std::string::npos) // -version
 			{
 				printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 				exit( 0 );
 			}
-			else if (strArg.find("-help") != -1 || strArg.find("-h") != -1) // -help
+			else if (strArg.find("-help") != std::string::npos || strArg.find("-h") != std::string::npos) // -help
 			{
 				printUsage(0);
 			}
 				// submit and stick to a specific schedd
-			else if (strArg.find("-schedd-daemon-ad-file") != -1)
+			else if (strArg.find("-schedd-daemon-ad-file") != std::string::npos)
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-schedd-daemon-ad-file argument needs a value\n");
@@ -493,7 +491,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				shallowOpts.strScheddDaemonAdFile = argv[++iArg];
 			}
 				// submit and stick to a specific schedd
-			else if (strArg.find("-schedd-address-file") != -1)
+			else if (strArg.find("-schedd-address-file") != std::string::npos)
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-schedd-address-file argument needs a value\n");
@@ -501,11 +499,11 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				shallowOpts.strScheddAddressFile = argv[++iArg];
 			}
-			else if (strArg.find("-f") != -1) // -force
+			else if (strArg.find("-f") != std::string::npos) // -force
 			{
 				deepOpts.bForce = true;
 			}
-			else if (strArg.find("-not") != -1) // -notification
+			else if (strArg.find("-not") != std::string::npos) // -notification
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-notification argument needs a value\n");
@@ -513,7 +511,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				deepOpts.strNotification = argv[++iArg];
 			}
-			else if (strArg.find("-r") != -1) // submit to remote schedd
+			else if (strArg.find("-r") != std::string::npos) // submit to remote schedd
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-r argument needs a value\n");
@@ -521,7 +519,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				shallowOpts.strRemoteSchedd = argv[++iArg];
 			}
-			else if (strArg.find("-dagman") != -1)
+			else if (strArg.find("-dagman") != std::string::npos)
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-dagman argument needs a value\n");
@@ -529,7 +527,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				deepOpts.strDagmanPath = argv[++iArg];
 			}
-			else if (strArg.find("-de") != -1) // -debug
+			else if (strArg.find("-de") != std::string::npos) // -debug
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-debug argument needs a value\n");
@@ -537,20 +535,20 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				shallowOpts.iDebugLevel = atoi(argv[++iArg]);
 			}
-			else if (strArg.find("-noev") != -1) // -noeventchecks
+			else if (strArg.find("-noev") != std::string::npos) // -noeventchecks
 			{
 				printf( "Warning: -NoEventChecks is ignored; please use "
 							"the DAGMAN_ALLOW_EVENTS config parameter instead\n");
 			}
-			else if (strArg.find("-allowlog") != -1) // -allowlogerror
+			else if (strArg.find("-allowlog") != std::string::npos) // -allowlogerror
 			{
 				fprintf( stderr, "Warning: -AllowLogError is no longer supported\n" );
 			}
-			else if (strArg.find("-use") != -1) // -usedagdir
+			else if (strArg.find("-use") != std::string::npos) // -usedagdir
 			{
 				deepOpts.useDagDir = true;
 			}
-			else if (strArg.find("-out") != -1) // -outfile_dir
+			else if (strArg.find("-out") != std::string::npos) // -outfile_dir
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-outfile_dir argument needs a value\n");
@@ -558,7 +556,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				deepOpts.strOutfileDir = argv[++iArg];
 			}
-			else if (strArg.find("-con") != -1) // -config
+			else if (strArg.find("-con") != std::string::npos) // -config
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-config argument needs a value\n");
@@ -568,13 +566,13 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					// Internally we deal with all configuration file paths
 					// as full paths, to make it easier to determine whether
 					// several paths point to the same file.
-				MyString	errMsg;
+				std::string	errMsg;
 				if (!dagmanUtils.MakePathAbsolute(shallowOpts.strConfigFile, errMsg)) {
 					fprintf( stderr, "%s\n", errMsg.c_str() );
    					exit( 1 );
 				}
 			}
-			else if (strArg.find("-app") != -1) // -append
+			else if (strArg.find("-app") != std::string::npos) // -append
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-append argument needs a value\n");
@@ -582,16 +580,16 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				shallowOpts.appendLines.emplace_back(argv[++iArg]);
 			}
-			else if (strArg.find("-bat") != -1) // -batch-name
+			else if (strArg.find("-bat") != std::string::npos) // -batch-name
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-batch-name argument needs a value\n");
 					printUsage();
 				}
 				deepOpts.batchName = argv[++iArg];
-				deepOpts.batchName.trim_quotes("\""); // trim "" if any
+				trim_quotes(deepOpts.batchName, "\""); // trim "" if any
 			}
-			else if (strArg.find("-insert") != -1) // -insert_sub_file
+			else if (strArg.find("-insert") != std::string::npos) // -insert_sub_file
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-insert_sub_file argument needs a value\n");
@@ -605,7 +603,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				shallowOpts.appendFile = argv[iArg];
 			}
-			else if (strArg.find("-autor") != -1) // -autorescue
+			else if (strArg.find("-autor") != std::string::npos) // -autorescue
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-autorescue argument needs a value\n");
@@ -613,7 +611,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				deepOpts.autoRescue = (atoi(argv[++iArg]) != 0);
 			}
-			else if (strArg.find("-dores") != -1) // -dorescuefrom
+			else if (strArg.find("-dores") != std::string::npos) // -dorescuefrom
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-dorescuefrom argument needs a value\n");
@@ -621,41 +619,41 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				deepOpts.doRescueFrom = atoi(argv[++iArg]);
 			}
-			else if (strArg.find("-allowver") != -1) // -AllowVersionMismatch
+			else if (strArg.find("-allowver") != std::string::npos) // -AllowVersionMismatch
 			{
 				deepOpts.allowVerMismatch = true;
 			}
-			else if (strArg.find("-no_rec") != -1) // -no_recurse
+			else if (strArg.find("-no_rec") != std::string::npos) // -no_recurse
 			{
 				deepOpts.recurse = false;
 			}
-			else if (strArg.find("-do_rec") != -1) // -do_recurse
+			else if (strArg.find("-do_rec") != std::string::npos) // -do_recurse
 			{
 				deepOpts.recurse = true;
 			}
-			else if (strArg.find("-updat") != -1) // -update_submit
+			else if (strArg.find("-updat") != std::string::npos) // -update_submit
 			{
 				deepOpts.updateSubmit = true;
 			}
-			else if (strArg.find("-import_env") != -1) // -import_env
+			else if (strArg.find("-import_env") != std::string::npos) // -import_env
 			{
 				deepOpts.importEnv = true;
 			}			     
-			else if (strArg.find("-dumpr") != -1) // -DumpRescue
+			else if (strArg.find("-dumpr") != std::string::npos) // -DumpRescue
 			{
 				shallowOpts.dumpRescueDag = true;
 			}
-			else if (strArg.find("-valgrind") != -1) // -valgrind
+			else if (strArg.find("-valgrind") != std::string::npos) // -valgrind
 			{
 				shallowOpts.runValgrind = true;
 			}
 				// This must come last, so we can have other arguments
 				// that start with -v.
-			else if ( (strArg.find("-v") != -1) ) // -verbose
+			else if ( (strArg.find("-v") != std::string::npos) ) // -verbose
 			{
 				deepOpts.bVerbose = true;
 			}
-			else if ( (strArg.find("-dontalwaysrun") != -1) ) // DontAlwaysRunPost
+			else if ( (strArg.find("-dontalwaysrun") != std::string::npos) ) // DontAlwaysRunPost
 			{
 				if ( shallowOpts.bPostRunSet && shallowOpts.bPostRun ) {
 					fprintf( stderr, "ERROR: -DontAlwaysRunPost and -AlwaysRunPost are both set!\n" );
@@ -664,7 +662,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				shallowOpts.bPostRunSet = true;
 				shallowOpts.bPostRun = false;
 			}
-			else if ( (strArg.find("-alwaysrun") != -1) ) // AlwaysRunPost
+			else if ( (strArg.find("-alwaysrun") != std::string::npos) ) // AlwaysRunPost
 			{
 				if ( shallowOpts.bPostRunSet && !shallowOpts.bPostRun ) {
 					fprintf( stderr, "ERROR: -DontAlwaysRunPost and -AlwaysRunPost are both set!\n" );
@@ -673,20 +671,20 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				shallowOpts.bPostRunSet = true;
 				shallowOpts.bPostRun = true;
 			}
-			else if ( (strArg.find("-dont_use_default_node_log") != -1) )
+			else if ( (strArg.find("-dont_use_default_node_log") != std::string::npos) )
 			{
 				fprintf( stderr, "Error: -dont_use_default_node_log is no longer allowed\n" );
 				printUsage();
 			}
-			else if ( (strArg.find("-suppress_notification") != -1) )
+			else if ( (strArg.find("-suppress_notification") != std::string::npos) )
 			{
 				deepOpts.suppress_notification = true;
 			}
-			else if ( (strArg.find("-dont_suppress_notification") != -1) )
+			else if ( (strArg.find("-dont_suppress_notification") != std::string::npos) )
 			{
 				deepOpts.suppress_notification = false;
 			}
-			else if( (strArg.find("-prio") != -1) ) // -priority
+			else if( (strArg.find("-prio") != std::string::npos) ) // -priority
 			{
 				if(iArg + 1 >= argc) {
 					fprintf(stderr, "-priority argument needs a value\n");
@@ -694,7 +692,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				shallowOpts.priority = atoi(argv[++iArg]);
 			}
-			else if ( (strArg.find("-dorecov") != -1) )
+			else if ( (strArg.find("-dorecov") != std::string::npos) )
 			{
 				shallowOpts.doRecovery = true;
 			}
@@ -739,12 +737,12 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 		processed by this function
 */
 bool
-parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
+parsePreservedArgs(const std::string &strArg, int &argNum, int argc,
 			const char * const argv[], SubmitDagShallowOptions &shallowOpts)
 {
 	bool result = false;
 
-	if (strArg.find("-maxi") != -1) // -maxidle
+	if (strArg.find("-maxi") != std::string::npos) // -maxidle
 	{
 		if (argNum + 1 >= argc) {
 			fprintf(stderr, "-maxidle argument needs a value\n");
@@ -753,7 +751,7 @@ parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
 		shallowOpts.iMaxIdle = atoi(argv[++argNum]);
 		result = true;
 	}
-	else if (strArg.find("-maxj") != -1) // -maxjobs
+	else if (strArg.find("-maxj") != std::string::npos) // -maxjobs
 	{
 		if (argNum + 1 >= argc) {
 			fprintf(stderr, "-maxjobs argument needs a value\n");
@@ -762,7 +760,7 @@ parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
 		shallowOpts.iMaxJobs = atoi(argv[++argNum]);
 		result = true;
 	}
-	else if (strArg.find("-maxpr") != -1) // -maxpre
+	else if (strArg.find("-maxpr") != std::string::npos) // -maxpre
 	{
 		if (argNum + 1 >= argc) {
 			fprintf(stderr, "-maxpre argument needs a value\n");
@@ -771,7 +769,7 @@ parsePreservedArgs(const MyString &strArg, int &argNum, int argc,
 		shallowOpts.iMaxPre = atoi(argv[++argNum]);
 		result = true;
 	}
-	else if (strArg.find("-maxpo") != -1) // -maxpost
+	else if (strArg.find("-maxpo") != std::string::npos) // -maxpost
 	{
 		if (argNum + 1 >= argc) {
 			fprintf(stderr, "-maxpost argument needs a value\n");
