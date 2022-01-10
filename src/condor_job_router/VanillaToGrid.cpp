@@ -260,7 +260,7 @@ static void set_job_status_held(classad::ClassAd const &orig,classad::ClassAd &u
 {
 	int origstatus;
 	if( orig.EvaluateAttrInt(ATTR_JOB_STATUS, origstatus) ) {
-		if(origstatus == HELD ) {
+		if(origstatus == HELD || origstatus == REMOVED || origstatus == COMPLETED) {
 			return;
 		}
 	}

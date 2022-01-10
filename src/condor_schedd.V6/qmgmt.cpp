@@ -347,6 +347,8 @@ static inline const JobQueueKey& StrToKey(const char * job_id_str, JobQueueKey& 
 }
 */
 
+// Note, the only use of the following  is in the ifdef'd out section of DestroyProc
+#if 0
 static
 void
 KeyToId(JobQueueKey &key,int & cluster,int & proc)
@@ -354,6 +356,7 @@ KeyToId(JobQueueKey &key,int & cluster,int & proc)
 	cluster = key.cluster;
 	proc = key.proc;
 }
+#endif
 
 static inline bool IsSpecialJobId( int cluster_id, int /* proc_id */ )
 {
@@ -3770,7 +3773,7 @@ int DestroyProc(int cluster_id, int proc_id)
 }
 
 
-int DestroyCluster(int cluster_id, const char* reason)
+int DestroyCluster(int /*cluster_id*/, const char* /*reason*/)
 {
 #if 1 // TJ: 2021 neutered DestroyCluster because it was only used by submit on abort 
 	  // The schedd should so this cleanup on it own and in any case,

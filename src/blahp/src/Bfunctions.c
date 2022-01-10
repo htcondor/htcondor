@@ -32,7 +32,8 @@ char *argv0;
 ssize_t
 Readline(int sockd, void *vptr, size_t maxlen)
 {
-	ssize_t n, rc;
+	size_t  n;
+	ssize_t rc;
 	char    c, *buffer;
 	struct   pollfd fds[2];
 	struct   pollfd *pfds;
@@ -106,7 +107,7 @@ Writeline(int sockd, const void *vptr, size_t n)
 
 	while ( nleft > 0 ) {
 
-		if ( (nwritten = write(sockd, (char *)vptr, nleft)) <= 0 ) {
+		if ( (nwritten = write(sockd, vptr, nleft)) <= 0 ) {
 			if ( errno == EINTR ) {
 				nwritten = 0;
 			}else{
@@ -678,11 +679,10 @@ int check_config_file(char *logdev){
 	char *pbs_spool=NULL;
 	char *sge_root=NULL;
 	char *sge_cell=NULL;
-	char *sge_helperpath=NULL;
 	char *sge_path=NULL;
 	char *ldebuglogname=NULL;
-	FILE *ldebuglogfile;
-	int  ldebug;
+	FILE *ldebuglogfile=NULL;
+	int  ldebug=0;
 	int async_port;
 		
         lcha = config_read(NULL);

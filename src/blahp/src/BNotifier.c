@@ -62,7 +62,7 @@ main(int argc, char *argv[])
 	int set = 1;
 	int status;
 	int version = 0;
-	int list_c;
+	int list_c = -1;
 	char ainfo_port_string[16];
 	struct addrinfo ai_req, *ai_ans, *cur_ans;
 	int address_found;
@@ -317,7 +317,6 @@ PollDB()
 	job_registry_handle *rha;
 	job_registry_handle *rhc;
 	char *buffer=NULL;
-	char *finalbuffer=NULL;
         char *cdate=NULL;
 	time_t now;
         int  maxtok,i,maxtokl,j;

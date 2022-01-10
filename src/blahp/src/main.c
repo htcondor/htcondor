@@ -56,11 +56,6 @@ extern int synchronous_termination;
 int
 main(int argc, char *argv[])
 {
-    int fd_socket, read_socket;
-    fd_set readfs, masterfs;
-    int retcod, status;
-    int exit_program = 0;
-    pid_t pid;
 #ifdef MTRACE_ON
     char mtrace_log[2048];
 #endif

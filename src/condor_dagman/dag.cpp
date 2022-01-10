@@ -88,7 +88,7 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
 		  const char *defaultNodeLog, bool generateSubdagSubmits,
 		  SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice,
-		  DCSchedd *schedd, const MyString &spliceScope ) :
+		  DCSchedd *schedd, const std::string &spliceScope ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
 	_maxHoldScripts       (maxHoldScripts),
@@ -694,7 +694,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			// from another job proc in this job cluster
 		if ( job->GetStatus() != Job::STATUS_ERROR ) {
 			job->TerminateFailure();
-			job->error_text.formatstr (
+			formatstr ( job->error_text,
 				  "HTCondor reported %s event for job proc (%d.%d.%d)",
 				  event->eventName(),
 				  event->cluster, event->proc, event->subproc );
@@ -752,7 +752,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 				// if we haven't already gotten an error on this node.
 			if ( job->GetStatus() != Job::STATUS_ERROR ) {
 				if( termEvent->normal ) {
-					job->error_text.formatstr(
+					formatstr( job->error_text,
 							"Job proc (%d.%d.%d) failed with status %d",
 							termEvent->cluster, termEvent->proc,
 							termEvent->subproc, termEvent->returnValue );
@@ -762,7 +762,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 						job->_scriptPost->_retValJob = job->retval;
 					}
 				} else {
-					job->error_text.formatstr(
+					formatstr( job->error_text,
 							"Job proc (%d.%d.%d) failed with signal %d",
 							termEvent->cluster, termEvent->proc,
 							termEvent->subproc, termEvent->signalNumber );
@@ -827,7 +827,7 @@ void
 Dag::RemoveBatchJob(Job *node) {
 
 	ArgList args;
-	MyString constraint;
+	std::string constraint;
 
 	args.AppendArg( _condorRmExe );
 	args.AppendArg(node->GetCluster());
@@ -836,11 +836,11 @@ Dag::RemoveBatchJob(Job *node) {
 		// Adding this DAGMan's cluster ID as a constraint to
 		// be extra-careful to avoid removing someone else's
 		// job.
-	constraint.formatstr(ATTR_DAGMAN_JOB_ID "==%d", _DAGManJobId->_cluster);
+	formatstr(constraint, ATTR_DAGMAN_JOB_ID "==%d", _DAGManJobId->_cluster);
 	args.AppendArg( constraint.c_str() );
 	
-	MyString display;
-	args.GetArgsStringForDisplay( &display );
+	std::string display;
+	args.GetArgsStringForDisplay( display );
 	debug_printf( DEBUG_VERBOSE, "Executing: %s\n", display.c_str() );
 	if ( _dagmanUtils.popen( args ) != 0 ) {
 			// Note: error here can't be fatal because there's a
@@ -889,7 +889,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 				// no more retries -- job failed
 			if( job->GetRetryMax() > 0 ) {
 					// add # of retries to error_text
-				job->error_text.formatstr_cat( " (after %d node retries)",
+				formatstr_cat( job->error_text, " (after %d node retries)",
 						job->GetRetries() );
 			}
 			if ( job->_queuedNodeJobProcs == 0 ) {
@@ -952,19 +952,19 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		const PostScriptTerminatedEvent *termEvent =
 			(const PostScriptTerminatedEvent*) event;
 
-		MyString header;
-		header.formatstr( "POST Script of node %s ", job->GetJobName() );
+		std::string header;
+		formatstr( header, "POST Script of node %s ", job->GetJobName() );
 		if( !(termEvent->normal && termEvent->returnValue == 0) ) {
 				// POST script failed or was killed by a signal
 			job->TerminateFailure();
 
 			int mainJobRetval = job->retval;
 
-			MyString errStr;
+			std::string errStr;
 
 			if( termEvent->normal ) {
 					// Normal termination -- POST script failed
-				errStr.formatstr( "failed with status %d",
+				formatstr( errStr, "failed with status %d",
 							termEvent->returnValue );
 				debug_printf( DEBUG_NORMAL, "%s%s\n", header.c_str(),
 							errStr.c_str() );
@@ -975,7 +975,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				job->retval = termEvent->returnValue;
 			} else {
 					// Abnormal termination -- POST script killed by signal
-				errStr.formatstr( "died on signal %d",
+				formatstr( errStr, "died on signal %d",
 							termEvent->signalNumber );
 				debug_printf( DEBUG_NORMAL,
 							"%s%s\n", header.c_str(), errStr.c_str() );
@@ -983,7 +983,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				job->retval = (0 - termEvent->signalNumber);
 			}
 
-			job->error_text.formatstr(
+			formatstr( job->error_text,
 						"POST script %s", errStr.c_str() );
 
 				// Log post script success or failure if necessary.
@@ -1003,30 +1003,30 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				}
 
 				if( mainJobRetval > 0 ) {
-					job->error_text.formatstr( "Job exited with status %d and ",
+					formatstr( job->error_text, "Job exited with status %d and ",
 								mainJobRetval );
 				}
 				else if( mainJobRetval < 0  &&
 							mainJobRetval >= -MAX_SIGNAL ) {
-					job->error_text.formatstr( "Job died on signal %d and ",
+					formatstr( job->error_text, "Job died on signal %d and ",
 								0 - mainJobRetval );
 				}
 				else {
-					job->error_text.formatstr( "Job failed due to DAGMAN error %d and ",
+					formatstr( job->error_text, "Job failed due to DAGMAN error %d and ",
 								mainJobRetval );
 				}
 
 				if ( termEvent->normal ) {
-					job->error_text.formatstr_cat( "POST Script failed with status %d",
+					formatstr_cat( job->error_text, "POST Script failed with status %d",
 								termEvent->returnValue );
 				} else {
-					job->error_text.formatstr_cat( "POST Script died on signal %d",
+					formatstr_cat( job->error_text, "POST Script died on signal %d",
 								termEvent->signalNumber );
 				}
 
 				if ( job->GetRetryMax() > 0 ) {
 						// add # of retries to error_text
-					job->error_text.formatstr_cat( " (after %d node retries)",
+					formatstr_cat( job->error_text, " (after %d node retries)",
 							job->GetRetries() );
 				}
 			}
@@ -1827,7 +1827,7 @@ Dag::PreScriptReaper( Job *job, int status )
 		debug_printf( DEBUG_QUIET, "PRE Script of node %s died on %s\n",
 					  job->GetJobName(),
 					  daemonCore->GetExceptionString(status) );
-		job->error_text.formatstr(
+		formatstr( job->error_text,
 				"PRE Script died on %s",
 				daemonCore->GetExceptionString(status) );
 		job->retval = ( 0 - WTERMSIG(status ) );
@@ -1837,7 +1837,7 @@ Dag::PreScriptReaper( Job *job, int status )
 		debug_printf( DEBUG_QUIET,
 					  "PRE Script of Job %s failed with status %d\n",
 					  job->GetJobName(), WEXITSTATUS(status) );
-		job->error_text.formatstr(
+		formatstr( job->error_text,
 				"PRE Script failed with status %d",
 				WEXITSTATUS(status) );
 		job->retval = WEXITSTATUS( status );
@@ -1904,7 +1904,7 @@ Dag::PreScriptReaper( Job *job, int status )
 			}
 			if ( job->GetRetryMax() > 0 ) {
 					// add # of retries to error_text
-				job->error_text.formatstr_cat( " (after %d node retries)",
+				formatstr_cat( job->error_text, " (after %d node retries)",
 						job->GetRetries() );
 			}
 		}
@@ -2200,14 +2200,14 @@ void Dag::RemoveRunningJobs ( const CondorID &dmJobId, bool removeCondorJobs,
 		debug_printf( DEBUG_NORMAL, "Removing any/all submitted "
 					"HTCondor jobs...\n" );
 
-		MyString constraint;
+		std::string constraint;
 
 		args.Clear();
 		args.AppendArg( _condorRmExe );
 		args.AppendArg( "-const" );
 
 		// NOTE: having whitespace in the constraint argument will cause quoting problems on windows
-		constraint.formatstr(ATTR_DAGMAN_JOB_ID "==%d", dmJobId._cluster );
+		formatstr(constraint, ATTR_DAGMAN_JOB_ID "==%d", dmJobId._cluster );
 		args.AppendArg( constraint.c_str() );
 		if ( _dagmanUtils.popen( args ) != 0 ) {
 			debug_printf( DEBUG_NORMAL, "Error removing DAGMan jobs\n");
@@ -2263,7 +2263,7 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 			int maxRescueDagNum, bool overwrite, bool parseFailed,
 			bool isPartial ) /* const */
 {
-	MyString rescueDagFile;
+	std::string rescueDagFile;
 	if ( parseFailed ) {
 		rescueDagFile = dagFile;
 		rescueDagFile += ".parse_failed";
@@ -2612,14 +2612,14 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
 
 	const char *recovStr = recovery ? " [recovery mode]" : "";
 
-	MyString timestr;
+	std::string timestr;
 		// Be sure to pass GetEventTime() here, because we want the
 		// event time to always be output has a human-readable string,
 		// even if dprintf() is configured to print timestamps.
 	time_to_str( event->GetEventclock(), timestr );
 		// String from time_to_str has trailing blank (needed for other
 		// places in the code).
-	timestr.trim();
+	trim(timestr);
 
 	if( node ) {
 	    debug_printf( level, "Event: %s for %s Node %s (%d.%d.%d) {%s}%s\n",
@@ -2853,8 +2853,8 @@ void
 Dag::DumpDotFile(void)
 {
 	if (_dot_file_name != NULL) {
-		MyString  current_dot_file_name;
-		MyString  temp_dot_file_name;
+		std::string current_dot_file_name;
+		std::string temp_dot_file_name;
 		FILE      *temp_dot_file;
 
 		ChooseDotFileName(current_dot_file_name);
@@ -2982,7 +2982,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		//
 	debug_printf( DEBUG_DEBUG_1, "Updating node status file\n" );
 
-	MyString tmpStatusFile( _statusFileName );
+	std::string tmpStatusFile( _statusFileName );
 	tmpStatusFile += ".tmp";
 		// Note: it's not an error if this fails (file may not
 		// exist).
@@ -3015,8 +3015,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		//
 		// Print timestamp.
 		//
-	MyString timeStr = ctime( &startTime );
-	timeStr.chomp();
+	std::string timeStr = ctime( &startTime );
+	chomp(timeStr);
 	fprintf( outfile, "  Timestamp = %lu; /* %s */\n",
 				(unsigned long)startTime,
 				EscapeClassadString( timeStr.c_str() ) );
@@ -3085,8 +3085,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		}
 	}
 
-	MyString statusStr = Job::status_t_names[dagJobStatus];
-	statusStr.trim();
+	std::string statusStr = Job::status_t_names[dagJobStatus];
+	trim(statusStr);
 	statusStr += " (";
 	statusStr += statusNote;
 	statusStr += ")";
@@ -3177,7 +3177,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		fprintf( outfile, "  Node = %s;\n",
 					EscapeClassadString(_job->GetJobName() ) );
 		statusStr = Job::status_t_names[status];
-		statusStr.trim();
+		trim(statusStr);
 		fprintf( outfile, "  NodeStatus = %d; /* %s */\n", status,
 					EscapeClassadString( statusStr.c_str() ) );
 		// fprintf( outfile, "  /* HTCondorStatus = xxx; */\n" );
@@ -3201,7 +3201,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 
 	time_t endTime = time( NULL );
 	timeStr = ctime( &endTime );
-	timeStr.chomp();
+	chomp(timeStr);
 	fprintf( outfile, "  EndTime = %lu; /* %s */\n",
 				(unsigned long)endTime,
 				EscapeClassadString( timeStr.c_str() ) );
@@ -3213,7 +3213,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	} else {
 		nextTime = endTime + _minStatusUpdateTime;
 		timeStr = ctime( &nextTime );
-		timeStr.chomp();
+		chomp(timeStr);
 	}
 	fprintf( outfile, "  NextUpdate = %lu; /* %s */\n",
 				(unsigned long)nextTime,
@@ -3227,9 +3227,9 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		// Note:  we do tolerant_unlink because renaming over an
 		// existing file fails on Windows.
 		//
-	MyString statusFileName( _statusFileName );
-	_dagmanUtils.tolerant_unlink( statusFileName.Value() );
-	if ( rename( tmpStatusFile.Value(), statusFileName.Value() ) != 0 ) {
+	std::string statusFileName( _statusFileName );
+	_dagmanUtils.tolerant_unlink( statusFileName.c_str() );
+	if ( rename( tmpStatusFile.c_str(), statusFileName.c_str() ) != 0 ) {
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't rename temporary node status "
 					  "file (%s) to permanent file (%s): %s\n",
@@ -3302,7 +3302,7 @@ Dag::UnmonitorLogFile()
 
 //-------------------------------------------------------------------------
 void
-Dag::SetReject( const MyString &location )
+Dag::SetReject( const std::string &location )
 {
 	if ( _firstRejectLoc == "" ) {
 		_firstRejectLoc = location;
@@ -3312,7 +3312,7 @@ Dag::SetReject( const MyString &location )
 
 //-------------------------------------------------------------------------
 bool
-Dag::GetReject( MyString &firstLocation )
+Dag::GetReject( std::string &firstLocation )
 {
 	firstLocation = _firstRejectLoc;
 	return _reject;
@@ -3376,7 +3376,7 @@ void
 Dag::CheckAllJobs()
 {
 	CheckEvents::check_event_result_t result;
-	MyString	jobError;
+	std::string jobError;
 
 	result = _checkCondorEvents.CheckAllJobs(jobError);
 	if ( result == CheckEvents::EVENT_ERROR ) {
@@ -3650,7 +3650,7 @@ Dag::DumpDotFileArcs(FILE *temp_dot_file)
 //
 //-------------------------------------------------------------------------
 void 
-Dag::ChooseDotFileName(MyString &dot_file_name)
+Dag::ChooseDotFileName(std::string &dot_file_name)
 {
 	if (_overwrite_dot_file) {
 		dot_file_name = _dot_file_name;
@@ -3660,7 +3660,7 @@ Dag::ChooseDotFileName(MyString &dot_file_name)
 		while (!found_unused_file) {
 			FILE *fp;
 
-			dot_file_name.formatstr("%s.%d", _dot_file_name, _dot_file_name_suffix);
+			formatstr(dot_file_name, "%s.%d", _dot_file_name, _dot_file_name_suffix);
 			fp = safe_fopen_wrapper_follow(dot_file_name.c_str(), "r");
 			if (fp != NULL) {
 				fclose(fp);
@@ -3916,7 +3916,7 @@ Dag::EventSanityCheck( const ULogEvent* event,
 	ASSERT( event );
 	ASSERT( node );
 
-	MyString eventError;
+	std::string eventError;
 	CheckEvents::check_event_result_t checkResult = CheckEvents::EVENT_OKAY;
 
 	checkResult = _checkCondorEvents.CheckAnEvent( event, eventError );
@@ -3981,8 +3981,8 @@ Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node ) const
 		return true;
 	}
 
-	MyString message;
-	message.formatstr( "ERROR: node %s: job ID in userlog submit event (%d.%d.%d) "
+	std::string message;
+	formatstr( message, "ERROR: node %s: job ID in userlog submit event (%d.%d.%d) "
 				"doesn't match ID reported earlier by submit command "
 				"(%d.%d.%d)!", 
 				node->GetJobName(), condorID._cluster, condorID._proc,
@@ -4222,7 +4222,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 		debug_printf( DEBUG_QUIET, "Job submit failed after %d tr%s.\n",
 				node->_submitTries, node->_submitTries == 1 ? "y" : "ies" );
 
-		node->error_text.formatstr( "Job submit failed" );
+		formatstr( node->error_text, "Job submit failed" );
 
 			// NOTE: this failure short-circuits the "retry" feature
 			// because it's already exhausted a number of retries
@@ -4291,7 +4291,7 @@ Dag::UpdateJobCounts( Job *node, int change )
 
 //---------------------------------------------------------------------------
 void
-Dag::SetDirectory(MyString &dir)
+Dag::SetDirectory(std::string &dir)
 {
 	m_directory = dir;
 }
@@ -4307,8 +4307,6 @@ Dag::SetDirectory(char *dir)
 void
 Dag::PropagateDirectoryToAllNodes(void)
 {
-	MyString key;
-
 	if (m_directory == ".") {
 		return;
 	}
@@ -4422,20 +4420,20 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 				parentSplice->_spliceScope.c_str(),
 				childSplice->_spliceScope.c_str() );
 
-	MyString parentName = parentSplice->_spliceScope;
+	std::string parentName = parentSplice->_spliceScope;
 		// Trim trailing '+' from parentName.
 	int last = parentName.length() - 1;
 	ASSERT( last >= 0 );
 	if ( parentName[last] == '+' ) {
-		parentName.truncate( last );
+		parentName = parentName.substr(0, last);
 	}
 
-	MyString childName = childSplice->_spliceScope;
+	std::string childName = childSplice->_spliceScope;
 		// Trim trailing '+' from childName.
 	last = childName.length() - 1;
 	ASSERT( last >= 0 );
 	if ( childName[last] == '+' ) {
-		childName.truncate( last );
+		childName = childName.substr(0, last);
 	}
 
 		// Make sure the parent and child splices have pin_ins/pin_outs
@@ -4465,7 +4463,7 @@ Dag::ConnectSplices( Dag *parentSplice, Dag *childSplice )
 		return false;
 	}
 
-	MyString failReason;
+	std::string failReason;
 
 		// Go thru the pin_in/pin_out lists, and add parent/child
 		// dependencies between splices as appropriate.  (Note that
@@ -4526,9 +4524,9 @@ Dag::DeletePinList( PinList &pinList )
 
 //---------------------------------------------------------------------------
 void
-Dag::PrefixAllNodeNames(const MyString &prefix)
+Dag::PrefixAllNodeNames(const std::string &prefix)
 {
-	MyString key;
+	std::string key;
 
 	debug_printf(DEBUG_DEBUG_1, "Entering: Dag::PrefixAllNodeNames()"
 		" with prefix %s\n",prefix.c_str());
@@ -4564,7 +4562,7 @@ Dag::PrefixAllNodeNames(const MyString &prefix)
 
 //---------------------------------------------------------------------------
 bool 
-Dag::InsertSplice(MyString spliceName, Dag *splice_dag)
+Dag::InsertSplice(std::string spliceName, Dag *splice_dag)
 {
 	auto insertResult = _splices.insert(std::make_pair(spliceName, splice_dag));
 	return insertResult.second;
@@ -4572,7 +4570,7 @@ Dag::InsertSplice(MyString spliceName, Dag *splice_dag)
 
 //---------------------------------------------------------------------------
 Dag*
-Dag::LookupSplice(MyString name)
+Dag::LookupSplice(std::string name)
 {
 	auto findResult = _splices.find(name);
 	if (findResult == _splices.end()) {
@@ -4628,8 +4626,6 @@ Dag::RecordInitialAndTerminalNodes(void)
 OwnedMaterials*
 Dag::RelinquishNodeOwnership(void)
 {
-	MyString key;
-
 	std::vector<Job*> *nodes = new std::vector<Job*>();
 
 	// 1. Copy the jobs
@@ -4650,7 +4646,6 @@ OwnedMaterials*
 Dag::LiftSplices(SpliceLayer layer)
 {
 	//PrintJobList();
-	MyString key;
 	OwnedMaterials *om = NULL;
 
 	// if this splice contains no other splices, then relinquish the nodes I own
@@ -4660,7 +4655,7 @@ Dag::LiftSplices(SpliceLayer layer)
 
 	// recurse down the splice tree moving everything up into myself.
 	for (auto& splice: _splices) {
-		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", splice.first.Value());
+		debug_printf(DEBUG_DEBUG_1, "Lifting splice %s\n", splice.first.c_str());
 		om = splice.second->LiftSplices(DESCENDENTS);
 		// this function moves what it needs out of the returned object
 		AssumeOwnershipofNodes(splice.first, om);
@@ -4701,11 +4696,11 @@ Dag::AdjustEdges()
 // have true initial or final nodes, then those must move over the the
 // recorded inital and final nodes for 'here'.
 void
-Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
+Dag::AssumeOwnershipofNodes(const std::string &spliceName, OwnedMaterials *om)
 {
 	Job *job = NULL;
 	unsigned int i;
-	MyString key;
+	std::string key;
 	JobID_t key_id;
 
 	std::vector<Job*> *nodes = om->nodes;
@@ -4790,7 +4785,7 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 				key.c_str());
 			(*nodes)[i]->Dump( this );
 			debug_printf(DEBUG_QUIET, "but it collided with key %s, node:\n", 
-				key.Value());
+				key.c_str());
 			auto findResult = _nodeNameHash.find(key);
 			if (findResult != _nodeNameHash.end()) {
 				job = (*findResult).second;

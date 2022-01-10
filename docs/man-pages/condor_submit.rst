@@ -1462,7 +1462,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     to 0 if not defined.
 
     **Note**: non-zero values of success_exit_code should generally not be
-    used for DAG node jobs, unless ``when_transfer_files`` is set to
+    used for DAG node jobs, unless ``when_to_transfer_output`` is set to
     ``ON_SUCCESS`` in order to avoid failed jobs going on hold.
 
     At the present time, *condor_dagman* does not take into
@@ -2933,6 +2933,18 @@ and comments.
 
     On the machine, if the attribute ``input_file_path`` is not defined,
     then the path ``/usr/foo`` is used instead.
+
+    As a special case that only works within the submit file *environement*
+    command, the string $$(CondorScratchDir) is expanded to the value
+    of the job's scratch directory.  This does not work for scheduler universe
+    or grid universe jobs.
+    
+    For example, to set PYTHONPATH to a subdirectory of the job scratch dir,
+    one could set
+
+    .. code-block:: text
+
+        environment = PYTHONPATH=$$(CondorScratchDir)/some/directory
 
     A further extension to the syntax of the substitution macro allows
     the evaluation of a ClassAd expression to define the value. In this

@@ -47,8 +47,8 @@ typedef enum {
 class QmgrJobUpdater : public Service
 {
 public:
-	QmgrJobUpdater( ClassAd* job_a, const char*schedd_address, char const *schedd_version);
-	QmgrJobUpdater( ) :  common_job_queue_attrs(0),  hold_job_queue_attrs(0), evict_job_queue_attrs(0), remove_job_queue_attrs(0), requeue_job_queue_attrs(0), terminate_job_queue_attrs(0), checkpoint_job_queue_attrs(0), x509_job_queue_attrs(0), m_pull_attrs(0), job_ad(0), schedd_addr(0), schedd_ver(0), cluster(-1), proc(-1), q_update_tid(-1) {}
+	QmgrJobUpdater( ClassAd* job_a, const char*schedd_address );
+	QmgrJobUpdater( ) :  common_job_queue_attrs(0),  hold_job_queue_attrs(0), evict_job_queue_attrs(0), remove_job_queue_attrs(0), requeue_job_queue_attrs(0), terminate_job_queue_attrs(0), checkpoint_job_queue_attrs(0), x509_job_queue_attrs(0), m_pull_attrs(0), job_ad(0), cluster(-1), proc(-1), q_update_tid(-1) {}
 	virtual ~QmgrJobUpdater();
 
 	virtual void startUpdateTimer( void );
@@ -141,8 +141,7 @@ private:
 	StringList* m_pull_attrs;
 
 	ClassAd* job_ad;
-	char* schedd_addr;
-	char* schedd_ver;
+	DCSchedd m_schedd_obj;
 	std::string m_owner;
 
 	int cluster;
@@ -155,7 +154,7 @@ private:
 class NullQmgrJobUpdater : public QmgrJobUpdater
 {
 public:
-	NullQmgrJobUpdater( ClassAd* , const char* , char const *) : QmgrJobUpdater() {}
+	NullQmgrJobUpdater( ClassAd* , const char* ) : QmgrJobUpdater() {}
 	virtual ~NullQmgrJobUpdater() {}
 
 	virtual void startUpdateTimer( void ) {return;}

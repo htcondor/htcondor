@@ -890,12 +890,8 @@ JobRouter::SetJobHeld(classad::ClassAd& ad, const char* hold_reason, int hold_co
 		dprintf(D_ALWAYS, "JobRouter failure (%d.%d): Unable to "					"retrieve current job status.\n", cluster,proc);
 		return false;
 	}
-	if (HELD != status)
+	if (HELD != status && REMOVED != status && COMPLETED != status)
 	{
-		if (REMOVED == status)
-		{
-			ad.InsertAttr(ATTR_JOB_STATUS_ON_RELEASE, REMOVED);
-		}
 		ad.InsertAttr(ATTR_JOB_STATUS, HELD);
 		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL));
 		ad.InsertAttr(ATTR_HOLD_REASON, hold_reason);
@@ -2928,8 +2924,7 @@ JobRoute::ApplyRoutingJobEdits(
 	SimpleList<MacroStreamXFormSource*>& post_route,
 	unsigned int xform_flags)
 {
-	XFormHash mset(CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO /* | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_WANT_META */);
-	//mset.init();
+	XFormHash mset(XFormHash::Flavor::Basic);
 	mset.macros().apool.reserve(0x10000); // allocate workspace. TODO: keep track of route workspace size.
 	mset.macros().sources.push_back(this->Name());
 

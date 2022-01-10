@@ -171,7 +171,7 @@ Dagman::~Dagman()
 bool
 Dagman::Config()
 {
-	int debug_cache_size = (1024*1024)*5; // 5 MB
+	size_t debug_cache_size = (1024*1024)*5; // 5 MB
 	bool debug_cache_enabled = false;
 
 		// Note: debug_printfs are DEBUG_NORMAL here because when we
@@ -209,7 +209,7 @@ Dagman::Config()
 	debug_cache_size = 
 		param_integer( "DAGMAN_DEBUG_CACHE_SIZE", debug_cache_size,
 		0, INT_MAX);
-	debug_printf( DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_SIZE setting: %d\n",
+	debug_printf( DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_SIZE setting: %lu\n",
 				debug_cache_size );
 
 	debug_cache_enabled = 
@@ -648,7 +648,7 @@ void main_init (int argc, char ** const argv) {
 
 	printf ("Executing condor dagman ... \n");
 
-	MyString tmpcwd;
+	std::string tmpcwd;
 	condor_getcwd( tmpcwd );
 
 		// flag used if DAGMan is invoked with -WaitForDebug so we
@@ -718,8 +718,8 @@ void main_init (int argc, char ** const argv) {
 	const DagVersionData MIN_SUBMIT_FILE_VERSION = { 7, 1, 2 };
 
 		// Construct a string of the minimum submit file version.
-	MyString minSubmitVersionStr;
-	minSubmitVersionStr.formatstr( "%d.%d.%d",
+	std::string minSubmitVersionStr;
+	formatstr( minSubmitVersionStr, "%d.%d.%d",
 				MIN_SUBMIT_FILE_VERSION.majorVer,
 				MIN_SUBMIT_FILE_VERSION.minorVer,
 				MIN_SUBMIT_FILE_VERSION.subMinorVer );
@@ -980,8 +980,8 @@ void main_init (int argc, char ** const argv) {
 	CondorVersionInfo submitFileVersion( csdVersion );
 
 		// Just generate this message fragment in one place.
-	MyString versionMsg;
-	versionMsg.formatstr("the version (%s) of this DAG's HTCondor submit "
+	std::string versionMsg;
+	formatstr( versionMsg, "the version (%s) of this DAG's HTCondor submit "
 				"file (created by condor_submit_dag)", csdVersion );
 
 		// Make sure version in submit file is valid.
@@ -1139,7 +1139,7 @@ void main_init (int argc, char ** const argv) {
 		debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n",
 				  	dagman.primaryDagFile.c_str() );
 	} else {
-		MyString msg = "DAG Input files are ";
+		std::string msg = "DAG Input files are ";
 
 		for (auto & dagFile : dagman.dagFiles) {
 			msg += dagFile.c_str();
@@ -1153,7 +1153,7 @@ void main_init (int argc, char ** const argv) {
 	while( wait_for_debug ) { }
 
 	{
-		MyString cwd;
+		std::string cwd;
 		if( !condor_getcwd(cwd) ) {
 			cwd = "<null>";
 		}
@@ -1172,11 +1172,11 @@ void main_init (int argc, char ** const argv) {
 		// style" rescue DAGs).
 		//
 	int rescueDagNum = 0;
-	MyString rescueDagMsg;
+	std::string rescueDagMsg;
 
 	if ( dagman.doRescueFrom != 0 ) {
 		rescueDagNum = dagman.doRescueFrom;
-		rescueDagMsg.formatstr( "Rescue DAG number %d specified", rescueDagNum );
+		formatstr( rescueDagMsg, "Rescue DAG number %d specified", rescueDagNum );
 		dagmanUtils.RenameRescueDagsAfter( dagman.primaryDagFile.c_str(),
 					dagman.multiDags, rescueDagNum, dagman.maxRescueDagNum );
 
@@ -1184,7 +1184,7 @@ void main_init (int argc, char ** const argv) {
 		rescueDagNum = dagmanUtils.FindLastRescueDagNum(
 					dagman.primaryDagFile.c_str(),
 					dagman.multiDags, dagman.maxRescueDagNum );
-		rescueDagMsg.formatstr( "Found rescue DAG number %d", rescueDagNum );
+		formatstr( rescueDagMsg, "Found rescue DAG number %d", rescueDagNum );
 	}
 
 		//
@@ -1357,7 +1357,7 @@ void main_init (int argc, char ** const argv) {
 	debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
 				  dagman.dag->NumNodes( true ) );
 
-	MyString firstLocation;
+	std::string firstLocation;
 	if ( dagman.dag->GetReject( firstLocation ) ) {
 		debug_printf( DEBUG_QUIET, "Exiting because of REJECT "
 					"specification in %s.  This most likely means "
@@ -1510,19 +1510,19 @@ Dagman::ResolveDefaultLog()
 	char *dagDir = condor_dirname( primaryDagFile.c_str() );
 	const char *dagFile = condor_basename( primaryDagFile.c_str() );
 
-	MyString owner;
-	MyString nodeName;
+	std::string owner;
+	std::string nodeName;
 	dagman._dagmanClassad->GetInfo( owner, nodeName );
 
-	_defaultNodeLog.replaceString( "@(DAG_DIR)", dagDir );
-	_defaultNodeLog.replaceString( "@(DAG_FILE)", dagFile );
+	replace_str( _defaultNodeLog, "@(DAG_DIR)", dagDir );
+	replace_str( _defaultNodeLog, "@(DAG_FILE)", dagFile );
 	string cluster( std::to_string( DAGManJobId._cluster ) );
-	_defaultNodeLog.replaceString( "@(CLUSTER)", cluster.c_str() );
+	replace_str( _defaultNodeLog, "@(CLUSTER)", cluster.c_str() );
 	free( dagDir );
-	_defaultNodeLog.replaceString( "@(OWNER)", owner.c_str() );
-	_defaultNodeLog.replaceString( "@(NODE_NAME)", nodeName.c_str() );
+	replace_str( _defaultNodeLog, "@(OWNER)", owner.c_str() );
+	replace_str( _defaultNodeLog, "@(NODE_NAME)", nodeName.c_str() );
 
-	if ( _defaultNodeLog.find( "@(" ) >= 0 ) {
+	if ( _defaultNodeLog.find( "@(" ) != std::string::npos ) {
 		debug_printf( DEBUG_QUIET, "Warning: "
 					"default node log file %s contains a '@(' character "
 					"sequence -- unresolved macro substituion?\n",
@@ -1582,10 +1582,10 @@ Dagman::ResolveDefaultLog()
 void
 Dagman::PublishStats() {
 	ClassAd statsAd;
-	MyString statsString;
+	std::string statsString;
 	dagman._dagmanStats.Publish(statsAd);
 	sPrintAd( statsString, statsAd );
-	statsString.replaceString("\n", "; ");
+	replace_str(statsString, "\n", "; ");
 	debug_printf( DEBUG_VERBOSE, "DAGMan Runtime Statistics: [ %s]\n", statsString.c_str() );
 }
 
@@ -1896,7 +1896,7 @@ main_pre_dc_init ( int, char*[] )
 #endif
 
 		// Get the current directory
-	MyString currentDir = "";
+	std::string currentDir = "";
 	if ( condor_getcwd( currentDir ) ) {
 		currentDir += DIR_DELIM_STRING;
 	}
@@ -1907,7 +1907,7 @@ main_pre_dc_init ( int, char*[] )
 
 		// Convert the DAGMan log file name to an absolute path if it's
 		// not one already
-	MyString newLogFile;
+	std::string newLogFile;
 	const char*	logFile = GetEnv( "_CONDOR_DAGMAN_LOG" );
 	if ( logFile && !fullpath( logFile ) ) {
 		newLogFile = currentDir + logFile;

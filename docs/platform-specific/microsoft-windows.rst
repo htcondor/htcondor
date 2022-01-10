@@ -50,7 +50,7 @@ work in HTCondor:
 -  The ability to submit, run, and manage queues of jobs running on a
    cluster of Windows machines.
 -  All tools such as *condor_q*, *condor_status*, *condor_userprio*,
-   are included. Only *condor_compile* is not included.
+   are included.
 -  The ability to customize job policy using ClassAds. The machine
    ClassAds contain all the information included in the Unix version,
    including current load average, RAM and virtual memory sizes, integer

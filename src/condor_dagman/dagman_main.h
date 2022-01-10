@@ -121,12 +121,12 @@ class Dagman {
 		// is written to the right file.  It can't be a char * because
 		// that will get goofed up when the dagFiles list is cleared.
 		// wenger 2008-02-27
-	MyString primaryDagFile;
+	std::string primaryDagFile;
 
 		// Working directory where condor_dagman is invoked from.
 		// We want to keep a record of this in case the working directory
 		// gets hijacked by daemoncore.
-	MyString workingDir;
+	std::string workingDir;
 
 		// The list of all DAG files to be run by this invocation of
 		// condor_dagman.
@@ -206,7 +206,7 @@ class Dagman {
 		// will remain set to "" unless we're running a rescue DAG.
 		// This is *not* the name of the rescue DAG to write, if the
 		// current run fails.
-	MyString rescueFileToRun;
+	std::string rescueFileToRun;
 
 		// Whether to dump a rescue DAG and exit after parsing the input
 		// DAG(s).
@@ -218,7 +218,7 @@ class Dagman {
 
 		// The default log file for node jobs that don't specify a
 		// log file.
-	MyString _defaultNodeLog;
+	std::string _defaultNodeLog;
 
 		// Whether to generate the .condor.sub files for sub-DAGs
 		// at run time (just before the node is submitted).
@@ -254,7 +254,7 @@ class Dagman {
 	bool _suppressJobLogs;
 
 		// Batch-name for this workflow.
-	MyString _batchName;
+	std::string _batchName;
 
 		// Batch ID for this workflow
 	std::string _batchId;

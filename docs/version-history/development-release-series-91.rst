@@ -15,14 +15,35 @@ Release Notes:
 
 - HTCondor version 9.6.0 not yet released.
 
-New Features:
+- Added list type configuration for periodic job policy configuration.
+  Added ``SYSTEM_PERIODIC_HOLD_NAMES``, ``SYSTEM_PERIODIC_RELEASE_NAMES``
+  and ``SYSTEM_PERIODIC_REMOVE_NAMES`` which each define a list of configuration
+  variables to be evaluated for periodic job policy.
+  :jira:`905`
 
-- None.
+- In most situations, jobs in COMPLETED or REMOVED status will no longer
+  transition to HELD status.
+  Before, these jobs could transition to HELD status due to job policy
+  expressions, the *condor_rm* tool, or errors encountered by the
+  *condor_shadow* or *condor_starter*.
+  Grid universe jobs may still transition to HELD status if the
+  *condor_gridmanager* can not clean up job-related resources on remote
+  systems.
+  :jira:`873`
 
 Bugs Fixed:
 
-- None.
+- When the blahp submits a job to HTCondor, it no longer requests
+  email notification about job errors.
+  :jira:`895`
 
+- The view server can now handle very long Accounting Group names
+  :jira:`913`
+
+- Fixed some bugs where ``allowed_execute_duration`` and
+  ``allowed_job_duration`` would be evaluated at the wrong points in a
+  job's lifetime.
+  :jira:`922`
 Version 9.5.0
 -------------
 
@@ -65,6 +86,26 @@ Bugs Fixed:
   enabled singularity support on the execute node, the job would go on hold at checkpoint time.
   :jira:`837`
 
+Version 9.4.1
+-------------
+
+Release Notes:
+
+- HTCondor version 9.4.1 released on December 21, 2021.
+
+New Features:
+
+- Added activation metrics (``ActivationDuration``,
+  ``ActivationExecutionDuration``, ``ActivationSetupDuration``, and
+  ``ActivationTeardownDuration``).
+  :jira:`861`
+
+Bugs Fixed:
+
+- Fix a bug where the error number could be cleared before
+  being reported when a file transfer plugin fails.
+  :jira:`889`
+
 Version 9.4.0
 -------------
 
@@ -92,6 +133,13 @@ New Features:
 - SINGULARITY_EXTRA_ARGUMENTS can now be a ClassAd expression, so that the
   extra arguments can depend on the job.
   :jira:`570`
+
+- The Environment command in a condor submit file can now contain the string
+  $$(CondorScratchDir), which will get expanded to the value of the scratch
+  directory on the execute node.  This is useful, for example, when transferring
+  software packages to the job's scratch dir, when those packages need an environment
+  variable pointing to the root of their install.
+  :jira:`805`
 
 - The :ref:`classad_eval` tool now supports evaluating ClassAd expressions in
   the context of a match.  To specify the target ad, use the new

@@ -47,5 +47,6 @@ int pseudo_get_sec_session_info(
 	std::string &filetrans_session_id,
 	std::string &filetrans_session_info,
 	std::string &filetrans_session_key);
+int pseudo_event_notification( const ClassAd & ad );
 
 #endif

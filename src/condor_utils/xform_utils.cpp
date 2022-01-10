@@ -46,8 +46,10 @@
 #include <set>
 
 // values for hashtable defaults, these are declared as char rather than as const char to make g++ on fedora shut up.
-static char OneString[] = "1", ZeroString[] = "0";
-//static char ParallelNodeString[] = "#pArAlLeLnOdE#";
+#if defined(WIN32) || defined(LINUX)
+static char OneString[] = "1";
+#endif
+static char ZeroString[] = "0";
 static char UnsetString[] = "";
 
 
@@ -67,7 +69,6 @@ static condor_params::string_value IsLinuxMacroDef = { ZeroString, 0 };
 static condor_params::string_value IsWinMacroDef = { ZeroString, 0 };
 #endif
 static condor_params::string_value UnliveRulesFileMacroDef = { UnsetString, 0 };
-//static condor_params::string_value UnliveClusterMacroDef = { OneString, 0 };
 static condor_params::string_value UnliveProcessMacroDef = { ZeroString, 0 };
 static condor_params::string_value UnliveStepMacroDef = { ZeroString, 0 };
 static condor_params::string_value UnliveRowMacroDef = { ZeroString, 0 };
@@ -93,6 +94,12 @@ static MACRO_DEF_ITEM XFormMacroDefaults[] = {
 	{ "XFormId",    &UnliveProcessMacroDef },
 };
 
+static MACRO_DEF_ITEM XFormBasicMacroDefaults[] = {
+	{ "IsLinux",   &IsLinuxMacroDef },
+	{ "IsWindows", &IsWinMacroDef },
+	{ "Iterating", &UnliveIteratingMacroDef },
+};
+static MACRO_DEFAULTS XFormBasicDefaults = { COUNTOF(XFormBasicMacroDefaults), XFormBasicMacroDefaults, NULL };
 
 // setup XFormParamInfoDefaults using the global param table
 int param_info_init(const void ** pvdefaults);
@@ -235,12 +242,20 @@ void XFormHash::setup_macro_defaults()
 		LocalMacroSet.sources.push_back("<Live>");
 	}
 
-	// use param table as defaults table.  this uses less memory, but disables all of the live looping variables
-	if (LocalMacroSet.options & CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO) {
+	if (flavor == Basic) {
+		// use minimal defaults table. this uses less memory, but disables all of the live looping variables
+		LocalMacroSet.defaults = &XFormBasicDefaults;
+		return;
+	} else
+	if (flavor == ParamTable) {
+		// use param table as defaults table.  this uses less memory, but disables all of the live looping variables
+		// warning, don't use this option if you plan to use a MACRO_EVAL_CONTEXT with also_in_config=true
 		XFormParamInfoDefaults.size = param_info_init((const void**)&XFormParamInfoDefaults.table);
 		LocalMacroSet.defaults = &XFormParamInfoDefaults;
 		return;
 	}
+
+	// flavor == Iterating
 
 	// init the global xform default macros table (ARCH, OPSYS, etc) in case this hasn't happened already.
 	init_xform_default_macros();
@@ -264,11 +279,11 @@ void XFormHash::setup_macro_defaults()
 
 
 
-XFormHash::XFormHash(int options /* =0 */)
-	: LiveProcessString(NULL), LiveRowString(NULL), LiveStepString(NULL)
+XFormHash::XFormHash(Flavor _flavor /* = Iterating*/)
+	: flavor(_flavor), LiveProcessString(NULL), LiveRowString(NULL), LiveStepString(NULL)
 	, LiveRulesFileMacroDef(NULL), LiveIteratingMacroDef(NULL)
 {
-	int opts = options | CONFIG_OPT_SUBMIT_SYNTAX | CONFIG_OPT_NO_INCLUDE_FILE | CONFIG_OPT_NO_SMART_AUTO_USE;
+	const int opts = CONFIG_OPT_SUBMIT_SYNTAX | CONFIG_OPT_NO_INCLUDE_FILE | CONFIG_OPT_NO_SMART_AUTO_USE;
 	LocalMacroSet.initialize(opts);
 	setup_macro_defaults();
 }
@@ -484,7 +499,11 @@ void XFormHash::clear()
 	if (LocalMacroSet.sources.size() > 3) {
 		LocalMacroSet.sources.resize(3);
 	}
-	setup_macro_defaults(); // setup a defaults table for the macro_set. have to re-do this because we cleared the apool
+	if (flavor == Iterating) {
+		// setup a defaults table for the macro_set. have to re-do this when we clear the apool
+		// if the defaults were allocated from that pool
+		setup_macro_defaults();
+	}
 }
 
 

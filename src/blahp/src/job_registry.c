@@ -179,7 +179,7 @@ job_registry_purge(const char *path, time_t oldest_creation_date,
   struct flock wlock;
   char *newreg_path=NULL;
   job_registry_entry first,cur;
-  job_registry_recnum_t first_recnum, last_recnum;
+  job_registry_recnum_t last_recnum;
   int ret;
   mode_t old_umask;
   job_registry_handle *jra;
@@ -233,7 +233,7 @@ job_registry_purge(const char *path, time_t oldest_creation_date,
     return JOB_REGISTRY_CORRUPT_RECORD;
    }
 
-  first_recnum = last_recnum = first.recnum;
+  last_recnum = first.recnum;
 
   if (!force_rewrite && (first.cdate >= oldest_creation_date))
    {
@@ -360,7 +360,7 @@ job_registry_probe_next_record(FILE *fd, job_registry_entry *en)
 {
   size_t rsize = 0;
   size_t act_size;
-  long start_pos, end_pos, offset;
+  long start_pos, end_pos = 0;
   int sret, eret, cret;
   int ic;
   size_t allowed_size_incs[N_JOB_REGISTRY_ALLOWED_ENTRY_SIZE_INCS] =
@@ -453,10 +453,9 @@ job_registry_update_reg(const job_registry_handle *rha,
 {
   FILE *of, *nf;
   job_registry_entry en;
-  unsigned char *enendp;
   int encount;
-  int rret, wret;
-  int i;
+  int rret = 0;
+  int wret = 0;
 
   of = fopen(old_path,"r");
   if (of == NULL) return -1;
@@ -525,7 +524,6 @@ job_registry_init(const char *path,
   char real_file_name[FILENAME_MAX];
   int rlnk_status;
   mode_t old_umask;
-  const char *npu_tail="/npu";
   int cfd;
   FILE *fd;
   char *old_lockfile, *old_npudir, *old_path=NULL;
@@ -550,7 +548,7 @@ job_registry_init(const char *path,
     if (S_ISLNK(fst.st_mode))
      {
       rlnk_status = readlink(path, real_file_name, sizeof(real_file_name));
-      if (rlnk_status > 0 && rlnk_status < sizeof(real_file_name))
+      if (rlnk_status > 0 && (size_t)rlnk_status < sizeof(real_file_name))
        {
         real_file_name[rlnk_status] = '\000'; /* readlink does not NULL-terminate */
         path = real_file_name;
@@ -1391,7 +1389,7 @@ job_registry_sort(job_registry_handle *rha)
 
   job_registry_sort_state *sst;
   job_registry_index swap;
-  int i,k,kp,left,right,size,median;
+  int i,k,kp,left,right=0,size,median;
   char median_id[JOBID_MAX_LEN];
   int n_sorted;
 
@@ -1498,7 +1496,7 @@ int
 job_registry_append_op(job_registry_handle *rha,
                        job_registry_entry *entry, FILE *fd, time_t now)
 {
-  job_registry_recnum_t found,curr_recn;
+  job_registry_recnum_t found;
   job_registry_entry last;
   long curr_pos;
   int need_to_fclose = FALSE;
@@ -1602,9 +1600,7 @@ job_registry_get_new_npufd(job_registry_handle *rha)
   FILE *rfd = NULL;
   int lfd;
   char *tp;
-  struct stat fst;
   const char *npu_tail="/npu_XXXXXX";
-  int i;
 
   /* Append a filename to rha->npudir, so it can be passed back to */
   /* jobregistry_construct_path */
@@ -1696,7 +1692,6 @@ int
 job_registry_merge_pending_nonpriv_updates(job_registry_handle *rha,
                                            FILE *fd)
 {
-  int i;
   int nadd = 0;
   int rapp;
   int frret;
@@ -2399,7 +2394,7 @@ job_registry_open(job_registry_handle *rha, const char *mode)
 int
 job_registry_unlock(FILE *sfd)
 {
-  int fd, lfd;
+  int fd;
   struct flock ulock;
   int ret;
 
@@ -2682,7 +2677,6 @@ job_registry_entry_as_classad(const job_registry_handle *rha,
                    "CreateTime=%u; ModifiedTime=%u; UserTime=%u; "
                    "SubmitterUid=%d; %s]";
   char *result, *fmt_extra, *extra_attrs=NULL, *new_extra_attrs;
-  char *extra_attrs_append;
   int extra_attrs_size = 0;
   int need_to_free_extra_attrs = FALSE;
   int esiz,fsiz;
@@ -2858,11 +2852,11 @@ job_registry_set_proxy(const job_registry_handle *rha,
   const char *proxylink_fmt="proxy_XXXXXX";
   const char *proxylink_id_fmt="proxy_%*.*s_XXXXXX";
   char *fullpath;
-  int idlen;
+  size_t idlen;
   int spret = -1;
   int syret;
   int lfd;
-  int i,j;
+  size_t i,j;
 
   if ((idlen = strlen(en->batch_id)) > 0)
    {
@@ -2892,7 +2886,7 @@ job_registry_set_proxy(const job_registry_handle *rha,
   
   sprintf(fullpath, "%s/%s", rha->proxydir, en->proxy_link);
 
-  if (lfd = mkstemp(fullpath) < 0)
+  if ((lfd = mkstemp(fullpath)) < 0)
    {
     free(fullpath);
     return lfd;
@@ -3042,7 +3036,7 @@ job_registry_compute_subject_hash(job_registry_entry *en, const char *subject)
   if (en == NULL || subject == NULL) return;
 
   md5_init(&ctx);
-  md5_append(&ctx, subject, strlen(subject));
+  md5_append(&ctx, (const unsigned char*)subject, strlen(subject));
   md5_finish(&ctx, digest);
 
   if (sizeof(en->subject_hash) < 4) return;
@@ -3149,7 +3143,6 @@ job_registry_lookup_subject_hash(const job_registry_handle *rha,
 {
   FILE *fd;
   char subline[JOB_REGISTRY_MAX_SUBJECTLIST_LINE];
-  int retcod;
   char *en;
 
   if (rha == NULL || hash == NULL) return NULL;

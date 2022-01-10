@@ -57,7 +57,7 @@ if($SEND_EMAIL) {
         $subject .= " (" . scalar(@missing) . " platforms missing?)";
     }
 
-    if(not open(MAIL, "|/bin/mail -s \"$subject\" $SEND_EMAIL >/dev/null 2>&1")) {
+    if(not open(MAIL, "|/usr/bin/mail -s \"$subject\" $SEND_EMAIL >/dev/null 2>&1")) {
         print "Results:";
         print @email;
         logger("Failed to send mail!\n");
@@ -66,11 +66,11 @@ if($SEND_EMAIL) {
     print MAIL @email;
     if(not close(MAIL)) {
         if($!) {
-            logger("Error - failure while closing /bin/mail: $!");
+            logger("Error - failure while closing /usr/bin/mail: $!");
             return 0;
         }
         else {
-            logger("Error - /bin/mail returned exit status $?");
+            logger("Error - /usr/bin/mail returned exit status $?");
             return 0;
         }
     }

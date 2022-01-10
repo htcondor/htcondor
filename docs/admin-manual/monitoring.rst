@@ -352,3 +352,76 @@ your configuration.
 If you prefer to run *condor_adstash* in standalone mode, see the
 :doc:`../man-pages/condor_adstash` man page for more
 details.
+
+Configuring a Pool to Report to the HTCondorView Server
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+For the HTCondorView server to function, configure the existing
+collector to forward ClassAd updates to it. This configuration is only
+necessary if the HTCondorView collector is a different collector from
+the existing *condor_collector* for the pool. All the HTCondor daemons
+in the pool send their ClassAd updates to the regular
+*condor_collector*, which in turn will forward them on to the
+HTCondorView server.
+
+Define the following configuration variable:
+
+.. code-block:: condor-config
+
+      CONDOR_VIEW_HOST = full.hostname[:portnumber]
+
+where full.hostname is the full host name of the machine running the
+HTCondorView collector. The full host name is optionally followed by a
+colon and port number. This is only necessary if the HTCondorView
+collector is configured to use a port number other than the default.
+
+Place this setting in the configuration file used by the existing
+*condor_collector*. It is acceptable to place it in the global
+configuration file. The HTCondorView collector will ignore this setting
+(as it should) as it notices that it is being asked to forward ClassAds
+to itself.
+
+Once the HTCondorView server is running with this change, send a
+*condor_reconfig* command to the main *condor_collector* for the
+change to take effect, so it will begin forwarding updates. A query to
+the HTCondorView collector will verify that it is working. A query
+example:
+
+.. code-block:: console
+
+      $ condor_status -pool condor.view.host[:portnumber]
+
+A *condor_collector* may also be configured to report to multiple
+HTCondorView servers. The configuration variable ``CONDOR_VIEW_HOST``
+:index:`CONDOR_VIEW_HOST` can be given as a list of HTCondorView
+servers separated by commas and/or spaces.
+
+The following demonstrates an example configuration for two HTCondorView
+servers, where both HTCondorView servers (and the *condor_collector*)
+are running on the same machine, localhost.localdomain:
+
+.. code-block:: text
+
+    VIEWSERV01 = $(COLLECTOR)
+    VIEWSERV01_ARGS = -f -p 12345 -local-name VIEWSERV01
+    VIEWSERV01_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog01"
+    VIEWSERV01.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist01
+    VIEWSERV01.KEEP_POOL_HISTORY = TRUE
+    VIEWSERV01.CONDOR_VIEW_HOST =
+
+    VIEWSERV02 = $(COLLECTOR)
+    VIEWSERV02_ARGS = -f -p 24680 -local-name VIEWSERV02
+    VIEWSERV02_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog02"
+    VIEWSERV02.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist02
+    VIEWSERV02.KEEP_POOL_HISTORY = TRUE
+    VIEWSERV02.CONDOR_VIEW_HOST =
+
+    CONDOR_VIEW_HOST = localhost.localdomain:12345 localhost.localdomain:24680
+    DAEMON_LIST = $(DAEMON_LIST) VIEWSERV01 VIEWSERV02
+
+Note that the value of ``CONDOR_VIEW_HOST``
+:index:`CONDOR_VIEW_HOST` for VIEWSERV01 and VIEWSERV02 is unset,
+to prevent them from inheriting the global value of ``CONDOR_VIEW_HOST``
+and attempting to report to themselves or each other. If the
+HTCondorView servers are running on different machines where there is no
+global value for ``CONDOR_VIEW_HOST``, this precaution is not required.

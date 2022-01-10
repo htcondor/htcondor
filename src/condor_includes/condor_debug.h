@@ -103,11 +103,11 @@ enum {
 // first re-definition pass.  add a separate set of flags for Verbose mode
 // for each category. 
 //
-#define IsDebugLevel(cat)    ((AnyDebugBasicListener & (1<<(cat&D_CATEGORY_MASK))) != 0)
-#define IsDebugCategory(cat) ((AnyDebugBasicListener & (1<<(cat&D_CATEGORY_MASK))) != 0)
-#define IsDebugVerbose(cat)  ((AnyDebugVerboseListener & (1<<(cat&D_CATEGORY_MASK))) != 0)
+#define IsDebugLevel(cat)    ((AnyDebugBasicListener & (1<<((cat) & D_CATEGORY_MASK))) != 0)
+#define IsDebugCategory(cat) ((AnyDebugBasicListener & (1<<((cat) &D_CATEGORY_MASK))) != 0)
+#define IsDebugVerbose(cat)  ((AnyDebugVerboseListener & (1<<((cat) &D_CATEGORY_MASK))) != 0)
 #define IsFulldebug(cat)     ((AnyDebugBasicListener & D_FULLDEBUG) != 0 || IsDebugVerbose(cat))
-#define IsDebugCatAndVerbosity(flags) ((flags & (D_VERBOSE_MASK | D_FULLDEBUG)) ? IsDebugVerbose(flags) : IsDebugLevel(flags))
+#define IsDebugCatAndVerbosity(flags) (((flags) & (D_VERBOSE_MASK | D_FULLDEBUG)) ? IsDebugVerbose(flags) : IsDebugLevel(flags))
 
 // in the future, we will change the debug system to use a table rather than 
 // a bit mask.  possibly this..
@@ -333,7 +333,7 @@ class _condor_runtime
 {
 public:
 	_condor_runtime() : begin(0) { begin = _condor_debug_get_time_double(); }; // save result here
-	double elapsed_runtime() { return _condor_debug_get_time_double() - begin; }
+	double elapsed_runtime() const { return _condor_debug_get_time_double() - begin; }
 	double tick(double & last) { double now = _condor_debug_get_time_double(); double diff = now - last; last = now; return diff; }
 	double reset() { return tick(begin); } // resets begin to now and returns the difference between now and former begin.
 	double begin;

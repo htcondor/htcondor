@@ -726,6 +726,7 @@ protected:
 	bool already_warned_requirements_mem;
 	bool already_warned_job_lease_too_small;
 	bool already_warned_notification_never;
+	bool UseDefaultResourceParams;
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
 	#if !defined(WIN32)

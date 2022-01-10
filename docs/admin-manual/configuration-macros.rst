@@ -167,9 +167,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     The spool directory is where certain files used by the
     *condor_schedd* are stored, such as the job queue file and the
     initial executables of any jobs that have been submitted. In
-    addition, for systems not using a checkpoint server, all the
-    checkpoint files from jobs that have been submitted from a given
-    machine will be store in that machine's spool directory. Therefore,
+    addition, all the checkpoint files from jobs that have been submitted
+    will be stored in that machine's spool directory. Therefore,
     you will want to ensure that the spool directory is located on a
     partition with enough disk space. If a given machine is only set up
     to execute HTCondor jobs and not submit them, it would not need a
@@ -2504,7 +2503,7 @@ These macros control the *condor_master*.
     *condor_master* must differentiate between daemons that use
     DaemonCore and those that do not, so it uses the appropriate
     inter-process communication mechanisms. This list currently includes
-    all HTCondor daemons except the checkpoint server by default.
+    all HTCondor daemons.
 
     As of HTCondor version 7.2.1, a daemon may be appended to the
     default ``DC_DAEMON_LIST`` value by placing the plus character (+)
@@ -4995,36 +4994,70 @@ These macros control the *condor_schedd*.
     upper bound is configured with ``MAX_PERIODIC_EXPR_INTERVAL``
     :index:`MAX_PERIODIC_EXPR_INTERVAL` (default 1200 seconds).
 
-:macro-def:`SYSTEM_PERIODIC_HOLD`
+:macro-def:`SYSTEM_PERIODIC_HOLD_NAMES`
+    A comma and/or space separated list of unique names, where each is
+    used in the formation of a configuration variable name that will
+    contain an expression that will be periodically evaluated for each
+    job that is not in the ``HOLD`` state. Each name in the list will be used in the name of
+    configuration variable ``SYSTEM_PERIODIC_HOLD_<Name>``. The named expressions
+    are evaluated in the order in which names appear in this list. Names are
+    not case-sensitive. After all of the named expressions are evaluated,
+    the nameless ``SYSTEM_PERIODIC_HOLD`` expression will be evaluated. If any
+    of these expression evaluates to ``True`` the job will be held.  See also
+    ``SYSTEM_PERIODIC_HOLD``
+    There is no default value.
+
+:macro-def:`SYSTEM_PERIODIC_HOLD and SYSTEM_PERIODIC_HOLD_<Name>`
     This expression behaves identically to the job expression
     ``periodic_hold``, but it is evaluated for every job in the queue.
     It defaults to ``False``. When ``True``, it causes the job to stop
     running and go on hold. Here is an example that puts jobs on hold if
     they have been restarted too many times, have an unreasonably large
     virtual memory ``ImageSize``, or have unreasonably large disk usage
-    for an invented environment.
+    for an invented environment. 
 
     .. code-block:: condor-config
 
-        SYSTEM_PERIODIC_HOLD = \
+        if version > 9.5
+           # use hold names if the version supports it
+           SYSTEM_PERIODIC_HOLD_NAMES = Mem Disk
+           SYSTEM_PERIODIC_HOLD_Mem = ImageSize > 3000000
+           SYSTEM_PERIODIC_HOLD_Disk = JobStatus == 2 && DiskUsage > 10000000
+           SYSTEM_PERIODIC_HOLD = JobStatus == 1 && JobRunCount > 10
+        else
+           SYSTEM_PERIODIC_HOLD = \
           (JobStatus == 1 || JobStatus == 2) && \
           (JobRunCount > 10 || ImageSize > 3000000 || DiskUsage > 10000000)
+        endif
 
-:macro-def:`SYSTEM_PERIODIC_HOLD_REASON`
+:macro-def:`SYSTEM_PERIODIC_HOLD_REASON and SYSTEM_PERIODIC_HOLD_<Name>_REASON`
     This string expression is evaluated when the job is placed on hold
-    due to ``SYSTEM_PERIODIC_HOLD`` evaluating to ``True``. If it
+    due to ``SYSTEM_PERIODIC_HOLD`` or ``SYSTEM_PERIODIC_HOLD_<Name>`` evaluating to ``True``. If it
     evaluates to a non-empty string, this value is used to set the job
     attribute ``HoldReason``. Otherwise, a default description is used.
 
-:macro-def:`SYSTEM_PERIODIC_HOLD_SUBCODE`
+:macro-def:`SYSTEM_PERIODIC_HOLD_SUBCODE and SYSTEM_PERIODIC_HOLD_<Name>_SUBCODE`
     This integer expression is evaluated when the job is placed on hold
-    due to ``SYSTEM_PERIODIC_HOLD`` evaluating to ``True``. If it
+    due to ``SYSTEM_PERIODIC_HOLD`` or ``SYSTEM_PERIODIC_HOLD_<Name>`` evaluating to ``True``. If it
     evaluates to a valid integer, this value is used to set the job
     attribute ``HoldReasonSubCode``. Otherwise, a default of 0 is used.
     The attribute ``HoldReasonCode`` is set to 26, which indicates that
     the job went on hold due to a system job policy expression.
 
-:macro-def:`SYSTEM_PERIODIC_RELEASE`
+:macro-def:`SYSTEM_PERIODIC_RELEASE_NAMES`
+    A comma and/or space separated list of unique names, where each is
+    used in the formation of a configuration variable name that will
+    contain an expression that will be periodically evaluated for each
+    job that is in the ``HOLD`` state. Each name in the list will be used in the name of
+    configuration variable ``SYSTEM_PERIODIC_RELEASE_<Name>``. The named expressions
+    are evaluated in the order in which names appear in this list. Names are
+    not case-sensitive. After all of the named expressions are evaluated,
+    the nameless ``SYSTEM_PERIODIC_RELEASE`` expression will be evaluated. If any
+    of these expressions evaluates to ``True`` the job will be held.  See also
+    ``SYSTEM_PERIODIC_RELEASE``
+    There is no default value.
+
+:macro-def:`SYSTEM_PERIODIC_RELEASE and SYSTEM_PERIODIC_RELEASE_<Name>`
     This expression behaves identically to a job's definition of a
     **periodic_release** :index:`periodic_release<single: periodic_release; submit commands>`
     expression in a submit description file, but it is evaluated for
@@ -5042,7 +5075,20 @@ These macros control the *condor_schedd*.
           (JobRunCount < 20 && (time() - EnteredCurrentStatus) > 1200 ) &&  \
             (HoldReasonCode == 6 && HoldReasonSubCode == 110)
 
-:macro-def:`SYSTEM_PERIODIC_REMOVE`
+:macro-def:`SYSTEM_PERIODIC_REMOVE_NAMES`
+    A comma and/or space separated list of unique names, where each is
+    used in the formation of a configuration variable name that will
+    contain an expression that will be periodically evaluated for each
+    job in the queue. Each name in the list will be used in the name of
+    configuration variable ``SYSTEM_PERIODIC_REMOVE_<Name>``. The named expressions
+    are evaluated in the order in which names appear in this list. Names are
+    not case-sensitive. After all of the named expressions are evaluated,
+    the nameless ``SYSTEM_PERIODIC_REMOVE`` expression will be evaluated. If any
+    of these expressions evaluates to ``True`` the job will be removed from the queue.  See also
+    ``SYSTEM_PERIODIC_REMOVE``
+    There is no default value.
+
+:macro-def:`SYSTEM_PERIODIC_REMOVE and SYSTEM_PERIODIC_REMOVE_<Name>`
     This expression behaves identically to the job expression
     ``periodic_remove``, but it is evaluated for every job in the queue.
     As it is in the configuration file, it is easy for an administrator
@@ -5222,20 +5268,6 @@ These macros control the *condor_schedd*.
     wrap around and reuse the same id. With a low enough value, it is
     possible for jobs to be erroneously assigned duplicate cluster ids,
     which will result in a corrupt job queue.
-
-:macro-def:`CKPT_SERVER_CLIENT_TIMEOUT`
-    An integer which specifies how long in seconds the *condor_schedd*
-    is willing to wait for a response from a checkpoint server before
-    declaring the checkpoint server down. The value of 0 makes the
-    schedd block for the operating system configured time (which could
-    be a very long time) before the ``connect()`` returns on its own
-    with a connection timeout. The default value is 20.
-
-:macro-def:`CKPT_SERVER_CLIENT_TIMEOUT_RETRY`
-    An integer which specifies how long in seconds the *condor_schedd*
-    will ignore a checkpoint server that is deemed to be down. After
-    this time elapses, the *condor_schedd* will try again in talking to
-    the checkpoint server. The default is 1200.
 
 :macro-def:`SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY`
     An integer which specifies an upper bound in seconds on how long it

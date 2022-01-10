@@ -151,6 +151,7 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_utime: return "utime";
         case CONDOR_getcreds: return "getcreds";
         case CONDOR_get_delegated_proxy: return "get_delegated_proxy";
+        case CONDOR_event_notification: return "event_notification";
 	}
 	return "unknown";
 }
@@ -2296,13 +2297,36 @@ case CONDOR_getdir:
 		return put_x509_rc;
 	}
 
+	case CONDOR_event_notification:
+	{
+		ClassAd eventAd;
+		result = getClassAd(syscall_sock, eventAd);
+		ASSERT(result);
+		result = syscall_sock->end_of_message();
+		ASSERT(result);
+
+		errno = 0;
+		rval = pseudo_event_notification(eventAd);
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		// We don't care about send in the result code, but it's any
+		// easy way to leave the protocol in the right state.
+		syscall_sock->encode();
+		result = syscall_sock->code(rval);
+		ASSERT( result );
+		result = syscall_sock->end_of_message();
+		ASSERT( result );
+
+		return 0;
+	}
+
 	default:
 	{
 		dprintf(D_ALWAYS, "ERROR: unknown syscall %d received\n", condor_sysnum );
 			// If we return failure, the shadow will shutdown, so
 			// pretend everything's cool...
 		return 0;
-		
 	}
 
 	}	/* End of switch on system call number */

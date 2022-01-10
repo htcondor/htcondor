@@ -31,8 +31,8 @@ main(int argc, char *argv[])
 	int       set = 1;
 	int       i,j;
 	int       status;
-	int       list_s;
-	int       list_c;
+	int       list_s = -1;
+	int       list_c = -1;
 	char ainfo_port_string[16];
 	struct addrinfo ai_req, *ai_ans, *cur_ans;
 	int address_found;
@@ -360,9 +360,9 @@ int AddToStruct(char *line, int flag){
 	if flag ==1 AddToStruct is called elsewhere*/
 
 	int has_blah=0;
-	char *rex;
+	char *rex=NULL;
  
-	int id,realid;
+	int id,realid=0;
 	int belongs_to_current_cycle;
  
 	int  maxtok; 
@@ -969,7 +969,7 @@ char *
 GetLogDir(int largc, char *largv[])
 {
 
-	char *lsf_base_pathtmp;
+	char *lsf_base_pathtmp=NULL;
 	char *lsf_base_path;
 	char *conffile;
 	char *lsf_clustername;

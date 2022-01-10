@@ -221,8 +221,8 @@ public:
 		, dirty_flags(0)
 		, set_id(0)
 		, autocluster_id(0)
-		, submitterdata(NULL)
 		, ownerinfo(NULL)
+		, submitterdata(NULL)
 		, parent(NULL)
 	{}
 	virtual ~JobQueueJob() {};
@@ -556,7 +556,7 @@ public:
 		// eventually we should be able to get rid of this hack.  We can assume here that we will
 		// never be asked to make cluster or jobset objects
 		if ( ! Ad) {
-			ASSERT(k.cluster > 0 && k.proc >= 0 || k.cluster == 0 && k.proc == 0);
+			ASSERT((k.cluster > 0 && k.proc >= 0) || (k.cluster == 0 && k.proc == 0));
 			Ad = new JobQueueJob(); Ad->Update(*ad); new_ad = true;
 		}
 		Ad->SetDirtyTracking(true);

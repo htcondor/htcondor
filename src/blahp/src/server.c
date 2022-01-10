@@ -156,7 +156,7 @@ int CEReq_parse(classad_context cad, char* filename, char *proxysubject, char *p
 char* outputfileRemaps(char *sb,char *sbrmp);
 int check_TransferINOUT(classad_context cad, char **command, char *reqId, char **resultLine, char ***files_to_clean_up);
 char *ConvertArgs(char* args, char sep);
-int enqueue_result(char *res);
+void enqueue_result(char *res);
 
 /* Global variables */
 struct blah_managed_child {
@@ -253,8 +253,8 @@ check_on_children(struct blah_managed_child *children, const int count)
 			{
 				fprintf(stderr,"Restarting %s (%s) too frequently.\n",
 					children[i].exefile, children[i].sname);
-				fprintf(stderr,"Last restart %d seconds ago (<%d).\n",
-					(int)(now - children[i].lastfork), calldiff);
+				fprintf(stderr,"Last restart %zu seconds ago (<%zu).\n",
+					(now - children[i].lastfork), calldiff);
 				continue;
 			}
 			fret = fork();
@@ -307,17 +307,16 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 	char *reply;
 	char *result;
 	char *cmd_result;
-	fd_set readfs;
 	int exitcode = 0;
-	int reply_len;
 	pthread_t task_tid;
 	int i, argc;
 	char **argv;
 	command_t *command;
-	int bc=0;
+#if 0
 	char *needed_libs=NULL;
 	char *old_ld_lib=NULL;
 	char *new_ld_lib=NULL;
+#endif
 	config_entry *suplrms, *jre;
 	char *next_lrms_s, *next_lrms_e;
 	int lrms_len;
@@ -330,7 +329,6 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 	int n_threads_value;
 	char *final_results;
 	struct stat tmp_stat;
-	config_entry *jr_mmap;
 	job_registry_index_mode jr_mode;
 	config_entry *check_children_interval_conf;
 	int check_children_interval = -1; /* no timeout by default */
@@ -959,7 +957,6 @@ cmd_set_glexec_dn(void *args)
 	char **argv = (char **)args;
 	char *proxt4= argv[1];
 	char *ssl_client_cert = argv[2];
-	int res = 0;
 	char *proxynameNew = NULL;
 	
 	if (current_mapping_mode != MEXEC_NO_MAPPING) reset_mapping_parameters();
@@ -1037,9 +1034,6 @@ cmd_submit_job(void *args)
 	char *jobDescr = argv[2];
 	char *server_lrms = NULL;
 	int result;
-	char error_message[ERROR_MAX_LEN];
-	char *error_string;
-	int res = 1;
 	char *proxyname = NULL;
 	char *iwd = NULL;
 	char *proxysubject = NULL;
@@ -1048,20 +1042,16 @@ cmd_submit_job(void *args)
 	char *log_proxy = NULL;
 	char *command_ext = NULL;
 	char *tmp_subject, *tmp_fqan;
-	int count = 0;
 	int enable_log = 0;
 	struct timeval ts;
-	char *ce_req=NULL;
 	char *req_file=NULL;
 	char **cur_file;
 	regex_t regbuf;
-	size_t nmatch;
 	regmatch_t pmatch[3];
 	char *arguments=NULL;
 	char *conv_arguments=NULL;
 	char *environment=NULL;
 	char *conv_environment=NULL;
-	struct stat buf;
 	exec_cmd_t submit_command = EXEC_CMD_DEFAULT;
 	char *saved_proxyname=NULL;
 	char **inout_files = NULL;
@@ -1445,7 +1435,7 @@ cmd_submit_job(void *args)
 	}
 
 	submit_command.output[pmatch[2].rm_eo] = '\000';
-	strncpy(jobId, submit_command.output + pmatch[2].rm_so, sizeof(jobId));
+	strncpy(jobId, submit_command.output + pmatch[2].rm_so, sizeof(jobId) - 1);
 
 	/* PUSH A SUCCESS */
 	resultLine = make_message("%s 0 No\\ error %s", reqId, jobId);
@@ -1508,19 +1498,14 @@ void *
 cmd_cancel_job(void* args)
 {
 	int retcod;
-	char *cmd_out, *cmd_err;
 	char *escpd_cmd_out, *escpd_cmd_err;
 	char *begin_res;
 	char *end_res;
 	int res_length;
-	char *command;
 	char *resultLine = NULL;
 	char **argv = (char **)args;
-	char **arg_ptr;
 	job_registry_split_id *spid;
 	char *reqId = argv[1];
-	char *error_string;
-	char answer[1024];
 	exec_cmd_t cancel_command = EXEC_CMD_DEFAULT;
 
 	/* Split <lrms> and actual job Id */
@@ -1607,7 +1592,6 @@ cmd_status_job(void *args)
 	char *esc_str_cad;
 	char *resultLine;
 	char **argv = (char **)args;
-	char **arg_ptr;
 	char errstr[MAX_JOB_NUMBER][ERROR_MAX_LEN];
 	char *esc_errstr;
 	char *reqId = argv[1];
@@ -1676,7 +1660,7 @@ cmd_status_job_all(void *args)
 	char *reqId = argv[1];
 	char *selectad = argv[2]; /* May be NULL */
 	classad_expr_tree selecttr = NULL;
-	int jobStatus, n_jobs=0;
+	int n_jobs=0;
 	FILE *fd;
 	job_registry_entry *en;
 	int select_ret, select_result;
@@ -1896,7 +1880,6 @@ cmd_renew_proxy(void *args)
 	
 	int i, jobStatus, retcod, count;
 	char *error_string = NULL;
-	char *proxyFileNameNew = NULL;
 	int use_glexec = 0;
 	int use_mapping = 0;
 	exec_cmd_t exe_command = EXEC_CMD_DEFAULT;
@@ -2043,7 +2026,9 @@ cmd_send_proxy_to_worker_node(void *args)
 	char *jobDescr = argv[2];
 	char *proxyFileName = argv[3];
 	char *workernode = argv[4];
+#if defined(HAVE_GLOBUS)
 	char *ld_path = NULL;
+#endif
 	int retcod;
 	
 	char *error_string = NULL;
@@ -2222,7 +2207,7 @@ hold_resume(void* args, int action )
 	char *resultLine = NULL;
 	int jobStatus, retcode;
 	char *reqId = argv[1];
-	char jobdescr[MAX_JOB_NUMBER][JOBID_MAX_LEN];
+	char jobdescr[MAX_JOB_NUMBER][JOBID_MAX_LEN + 1];
 	int i,job_number;
 	char *dummyargv = argv[2];
 	char *tmpjobdescr=NULL;
@@ -2395,7 +2380,7 @@ cmd_get_hostport(void *args)
 /* Utility functions
  * */
 
-int
+void
 enqueue_result(char *res)
 {
 	if (push_result(res))
@@ -2404,6 +2389,7 @@ enqueue_result(char *res)
 		write(server_socket, "R\r\n", 3);
 		pthread_mutex_unlock(&send_lock);
 	}
+	return 0;
 }
 
 int
@@ -2427,13 +2413,17 @@ set_cmd_string_option(char **command, classad_context cad, const char *attribute
 	}
 
 	if (result == C_CLASSAD_NO_ERROR)
+	{
 		if ((new_command = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1)))
 		{
 			strcat(new_command, to_append);
 			*command = new_command;
 		}
 		else
+		{
 			result = C_CLASSAD_OUT_OF_MEMORY;
+		}
+	}
 
 	if (to_append) free (to_append);
 	return(result);
@@ -2456,13 +2446,17 @@ set_cmd_int_option(char **command, classad_context cad, const char *attribute, c
 	}
 
 	if (result == C_CLASSAD_NO_ERROR)
+	{
 		if ((new_command = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1)))
 		{
 			strcat(new_command, to_append);
 			*command = new_command;
 		}
 		else
+		{
 			result = C_CLASSAD_OUT_OF_MEMORY;
+		}
+	}
 
 	if (to_append) free (to_append);
 	return(result);
@@ -2481,19 +2475,23 @@ set_cmd_bool_option(char **command, classad_context cad, const char *attribute, 
 	
 	if ((result = classad_get_bool_attribute(cad, attribute, &attr_value)) == C_CLASSAD_NO_ERROR)
 	{
-		argument = (char *)(attr_value ? str_yes : str_no);
+		argument = (attr_value ? str_yes : str_no);
 		if ((to_append = make_message(opt_format[quote_style], option, argument)) == NULL)
 			result = C_CLASSAD_OUT_OF_MEMORY;
 	}
 
 	if (result == C_CLASSAD_NO_ERROR)
+	{
 		if ((new_command = (char *) realloc (*command, strlen(*command) + strlen(to_append) + 1)))
 		{
 			strcat(new_command, to_append);
 			*command = new_command;
 		}
 		else
+		{
 			result = C_CLASSAD_OUT_OF_MEMORY;
+		}
+	}
 
 	if (to_append) free (to_append);
 	return(result);
@@ -2717,12 +2715,10 @@ int grid_proxy_init(const char *src_filename, char *dst_filename,
 static char *
 limit_proxy(char* proxy_name, char *limited_proxy_name, char **error_message)
 {
-	int seconds_left, hours_left, minutes_left;
-	char *limcommand;
+	int seconds_left;
 	int res;
 	char *limit_command_output;
 	int tmpfd;
-	exec_cmd_t exe_command = EXEC_CMD_DEFAULT;
 	int get_lock_on_limited_proxy;
 	struct flock plock;
 	FILE *fpr;
@@ -2896,18 +2892,15 @@ limit_proxy(char* proxy_name, char *limited_proxy_name, char **error_message)
 int
 logAccInfo(char* jobId, char* server_lrms, classad_context cad, char* fqan, char* userDN, char** environment)
 {
-	int i=0, rc=0, cs=0, result=0, fd = -1, count = 0, slen = 0, slen2 = 0;
+	int result=0;
 	char *gridjobid=NULL;
 	char *clientjobid=NULL, *clientjobidstr=NULL;
 	char *ce_id=NULL;
 	char *ce_idtmp=NULL;
-	char *temp_str=NULL;
 	char date_str[MAX_TEMP_ARRAY_SIZE];
 	time_t tt;
 	struct tm *t_m=NULL;
-	char *glite_loc=NULL;
 	char host_name[MAX_TEMP_ARRAY_SIZE];
-	char *jobid=NULL;
 	char *lrms_jobid=NULL;
 	char *bs;
 	char *queue=NULL;
@@ -3047,7 +3040,6 @@ int
 getProxyInfo(char* proxname, char** subject, char** fqan)
 {
 	int  slen=0;
-	int  count=0;
 	char *begin_res;
 	char *end_res;
 	char *fqanlong;
@@ -3134,7 +3126,6 @@ int CEReq_parse(classad_context cad, char* filename,
 	FILE *req_file=NULL;
 	char **reqstr=NULL;
 	char **creq;
-	int cs=0;
 	char *attr=NULL;
 	int n_written=-1;
 	config_entry *aen;
@@ -3161,11 +3152,11 @@ int CEReq_parse(classad_context cad, char* filename,
 			}
 			if (strcasecmp(*creq, "x509UserProxySubject") == 0)
 			{
-				cs = fprintf(req_file, "%s='%s'\n", *creq, proxysubject);
+				fprintf(req_file, "%s='%s'\n", *creq, proxysubject);
 			} else if (strcasecmp(*creq, "x509UserProxyFQAN") == 0) {
-				cs = fprintf(req_file, "%s='%s'\n", *creq, proxyfqan);
+				fprintf(req_file, "%s='%s'\n", *creq, proxyfqan);
 			} else {
-				cs = fprintf(req_file, "%s='%s'\n", *creq, attr);
+				fprintf(req_file, "%s='%s'\n", *creq, attr);
 			}
 			free(attr);
 			n_written++;
@@ -3197,6 +3188,7 @@ int CEReq_parse(classad_context cad, char* filename,
 	{
 		for(creq=reqstr; (*creq)!=NULL; creq++)
 		{
+			int cs;
 			if (req_file== NULL)
 			{
 				req_file=fopen(filename,"w");
@@ -3219,7 +3211,6 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
         int result;
         char *tmpIOfilestring = NULL;
         FILE *tmpIOfile = NULL;
-        char *tmpstr = NULL;
         char *superbuffer = NULL;
         char *superbufferRemaps = NULL;
         char *superbufferTMP = NULL;
@@ -3562,7 +3553,7 @@ ConvertArgs(char* original, char separator)
 	*/
 
 	int inside_quotes = 0;
-	char *result, *short_result;
+	char *result;
 	int i, j;
 	int orig_len;
 

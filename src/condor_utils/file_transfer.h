@@ -368,6 +368,10 @@ class FileTransfer final: public Service {
 
   protected:
 
+	// There's three places where we need to know this.
+	bool shouldSendStderr();
+	bool shouldSendStdout();
+
 	int Download(ReliSock *s, bool blocking);
 	int Upload(ReliSock *s, bool blocking);
 	static int DownloadThread(void *arg, Stream *s);
@@ -430,8 +434,8 @@ class FileTransfer final: public Service {
 	char* ExecFile{nullptr};
 	char* UserLogFile{nullptr};
 	char* X509UserProxy{nullptr};
-	MyString JobStdoutFile;
-	MyString JobStderrFile;
+	std::string JobStdoutFile;
+	std::string JobStderrFile;
 	char* TransSock{nullptr};
 	char* TransKey{nullptr};
 	char* SpoolSpace{nullptr};

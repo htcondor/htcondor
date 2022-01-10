@@ -275,6 +275,8 @@ Requires: condor-procd = %{version}-%{release}
 Requires: %name-externals = %version-%release
 %endif
 
+Requires: %name-blahp = %version-%release
+
 # Useful tools are using the Python bindings
 Requires: python3-condor
 # The use the python-requests library in EPEL is based Python 3.6
@@ -353,6 +355,9 @@ Obsoletes: condor-small-shadow < 8.9.9
 
 # external-libs package discontinued as of 8.9.9
 Obsoletes: condor-external-libs < 8.9.9
+
+# Bosco package discontinued as of 9.5.0
+Obsoletes: condor-bosco < 9.5.0
 
 %description
 HTCondor is a specialized workload management system for
@@ -772,9 +777,19 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_GLOBUS:BOOL=FALSE \
 %endif
-       -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
-       -DWITH_LIBCGROUP:BOOL=TRUE \
-       -DLIBCGROUP_FOUND_SEARCH_cgroup=/%{_lib}/libcgroup.so.1
+       -DCMAKE_INSTALL_PREFIX:PATH=/ \
+       -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
+       -DSYSCONF_INSTALL_DIR:PATH=/etc \
+       -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
+%ifarch x86_64
+       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib64 \
+       -DLIB_INSTALL_DIR:PATH=/usr/lib64 \
+       -DLIB_SUFFIX=64 \
+%else
+       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib \
+       -DLIB_INSTALL_DIR:PATH=/usr/lib \
+%endif
+       -DBUILD_SHARED_LIBS:BOOL=ON
 %endif
 
 make %{?_smp_mflags}
@@ -1603,20 +1618,9 @@ rm -rf %{buildroot}
 %config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
 %_bindir/blahpd
 %_sbindir/blah_check_config
-%_sbindir/blah_job_registry_add
-%_sbindir/blah_job_registry_dump
-%_sbindir/blah_job_registry_lkup
-%_sbindir/blah_job_registry_purge
-%_sbindir/blah_job_registry_scan_by_subject
 %_sbindir/blahpd_daemon
 %dir %_libexecdir/blahp
 %_libexecdir/blahp/*
-%_mandir/man1/blah_check_config.1.gz
-%_mandir/man1/blah_job_registry_add.1.gz
-%_mandir/man1/blah_job_registry_dump.1.gz
-%_mandir/man1/blah_job_registry_lkup.1.gz
-%_mandir/man1/blah_job_registry_scan_by_subject.1.gz
-%_mandir/man1/blahpd.1.gz
 
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
@@ -1667,6 +1671,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Dec 21 2021 Tim Theisen <tim@cs.wisc.edu> - 9.4.1-1
+- Add the ability to track slot activation metrics
+- Fix bug where a file transfer plugin failure code may not be reported
+
 * Thu Dec 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.4.0-1
 - Initial implementation of Job Sets in the htcondor CLI tool
 - The access point administrator can add keywords to the submit language
