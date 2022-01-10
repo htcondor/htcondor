@@ -147,7 +147,10 @@ def condor(test_dir, slot_config):
         # but occasionally, not all slots will have made it to the collector
 
         num_slots = int(slot_config["NUM_SLOTS"])
+        loop_count = 0
         while num_slots != len(condor.status(ad_type=htcondor.AdTypes.Startd, projection=["SlotID"])):
+            loop_count = loop_count + 1
+            assert(loop_count < 20)
             time.sleep(1)
         yield condor
 
