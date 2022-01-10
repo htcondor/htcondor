@@ -45,6 +45,10 @@ Bugs Fixed:
   This restores the behavior in versions 9.0.1 and prior.
   :jira:`904`
 
+- Fixed a bug in the *condor_dagman* parser which caused ``SUBMIT-DESCRIPTION``
+  statements to return an error even after parsing correctly.
+  :jira:`928`
+
 .. _lts-version-history-909:
 
 Version 9.0.9
