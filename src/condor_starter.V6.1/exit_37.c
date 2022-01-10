@@ -18,7 +18,7 @@ void _start() {
 #else
 
 // All other platforms go here
-#include <unistd.h>
+#include <stdlib.h>
 
 int main() {
 	exit(37);
