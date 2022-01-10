@@ -900,17 +900,88 @@ ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_st
 		mpi_res = ResourceList[i];
 		ClassAd* res_upload_file_stats = &mpi_res->m_upload_file_stats;
 		ClassAd* res_download_file_stats = &mpi_res->m_download_file_stats;
-		// TODO: Iterate through all the attributes, add results into upload_stats, download_stats
-		//upload_stats = m_upload_file_stats;
-		//download_stats = m_download_file_stats;
+
+		// Calculate upload_stats as a cumulation of all resource upload stats
+		for (auto it = res_upload_file_stats->begin(); it != res_upload_file_stats->end(); it++) {
+			std::string attr = it->first.c_str();
+
+			// Lookup the value of this attribute. We only count integer values.
+			classad::Value attr_val;
+			int this_val;
+			it->second->Evaluate(attr_val);
+			if (!attr_val.IsIntegerValue(this_val)) {
+				continue;
+			}
+
+			// Lookup the previous value if it exists
+			int prev_val;
+			if (!upload_stats.LookupInteger(attr, prev_val)) {
+				prev_val = 0;
+			}
+
+			upload_stats.InsertAttr(attr, prev_val + this_val);
+		}
+
+		// Calculate download_stats as a cumulation of all resource download stats
+		for (auto it = res_download_file_stats->begin(); it != res_download_file_stats->end(); it++) {
+			std::string attr = it->first.c_str();
+
+			// Lookup the value of this attribute. We only count integer values.
+			classad::Value attr_val;
+			int this_val;
+			it->second->Evaluate(attr_val);
+			if (!attr_val.IsIntegerValue(this_val)) {
+				continue;
+			}
+
+			// Lookup the previous value if it exists
+			int prev_val;
+			if (!download_stats.LookupInteger(attr, prev_val)) {
+				prev_val = 0;
+			}
+
+			download_stats.InsertAttr(attr, prev_val + this_val);
+		}
 	}
 }
 
 ClassAd*
 ParallelShadow::updateFileTransferStats(ClassAd& old_stats, ClassAd &new_stats)
 {
-	// TODO: Implement this
 	ClassAd* updated_stats = new ClassAd();
+
+	// If new_stats is empty, just return a copy of the old stats
+	if (new_stats.size() == 0) {
+		updated_stats->CopyFrom(old_stats);
+		return updated_stats;
+	}
+
+	// Iterate over the list of new stats
+	for (auto it = new_stats.begin(); it != new_stats.end(); it++) {
+		std::string attr = it->first.c_str();
+		std::string attr_lastrun = attr + "LastRun";
+		std::string attr_total = attr + "Total";
+
+		// Lookup the value of this attribute. We only count integer values.
+		classad::Value attr_val;
+		int value;
+		it->second->Evaluate(attr_val);
+		if (!attr_val.IsIntegerValue(value)) {
+			continue;
+		}
+		updated_stats->InsertAttr(attr_lastrun, value);
+
+		// If this attribute has a previous Total value, add that to the new total
+		if (old_stats.find(attr_total) != old_stats.end()) {
+			int old_total;
+			old_stats.LookupInteger(attr_total, old_total);
+			value += old_total;
+		}
+		updated_stats->InsertAttr(attr_total, value);
+	}
+
+	// Return the pointer to our newly-created classad
+	// This will be memory-managed later by the ClassAd::Insert() function
 	return updated_stats;
 }
 
