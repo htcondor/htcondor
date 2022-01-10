@@ -110,7 +110,7 @@ if (LINUX)
 
 	# Our special assembly version of exit_37 needs special flags
 	# but only works on 64 bit linux
-	if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
+	if ("${CMAKE_LIBRARY_ARCHITECTURE}" STREQUAL "x86_64-linux-gnu")
 		target_link_libraries(exit_37 "-nostdlib -static")
 	else()
 		target_link_libraries(exit_37 "-static")
