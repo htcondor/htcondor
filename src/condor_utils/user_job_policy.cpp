@@ -452,30 +452,37 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 		}
 	}
 
-	/* Should I perform a hold based on the "running" time of the job? */
-	int allowedJobDuration;
-	if( ad.LookupInteger( ATTR_JOB_ALLOWED_JOB_DURATION, allowedJobDuration ) ) {
-		// Arguably, we should be calling BaseUserPolicy::getJobBirthday()
-		// here, but we don't have access to that here.  This will probably
-		// cause some confusion in the local universe, because it otherwise
-		// uses ATTR_JOB_START_DATE to determine duration, but using
-		// ATTR_SHADOW_BIRTHDATE was the assignment and is simpler.
+	if (state == RUNNING || state == SUSPENDED) {
 		int birthday;
-		if( ad.LookupInteger( ATTR_SHADOW_BIRTHDATE, birthday ) ) {
-			if( time(NULL) - birthday >= allowedJobDuration ) {
-				m_fire_expr = ATTR_JOB_ALLOWED_JOB_DURATION;
-				m_fire_source = FS_JobDuration;
-				formatstr(m_fire_reason, "The job exceeded allowed job duration of %d", allowedJobDuration);
-				return HOLD_IN_QUEUE;
+
+		/* Should I perform a hold based on the "running" time of the job? */
+		int allowedJobDuration;
+		if( ad.LookupInteger( ATTR_JOB_ALLOWED_JOB_DURATION, allowedJobDuration ) ) {
+			// Arguably, we should be calling BaseUserPolicy::getJobBirthday()
+			// here, but we don't have access to that here.  This will probably
+			// cause some confusion in the local universe, because it otherwise
+			// uses ATTR_JOB_START_DATE to determine duration, but using
+			// ATTR_SHADOW_BIRTHDATE was the assignment and is simpler.
+			if( ad.LookupInteger( ATTR_SHADOW_BIRTHDATE, birthday ) ) {
+				if( time(NULL) - birthday >= allowedJobDuration ) {
+					m_fire_expr = ATTR_JOB_ALLOWED_JOB_DURATION;
+					m_fire_source = FS_JobDuration;
+					formatstr(m_fire_reason, "The job exceeded allowed job duration of %d", allowedJobDuration);
+					return HOLD_IN_QUEUE;
+				}
 			}
 		}
-	}
 
-	/* Should I perform a hold based on the "execute" time of the job? */
-	if (state == RUNNING) {
+		/* Should I perform a hold based on the "execute" time of the job? */
+		/* If ATTR_JOB_CURRENT_START_EXECUTING_DATE is less than
+		 * ATTR_SHADOW_BIRTHDATE, then it's left over from a previous
+		 * execution attempt.
+		 */
 		int allowedExecuteDuration, beganExecuting;
 		if (ad.LookupInteger(ATTR_JOB_ALLOWED_EXECUTE_DURATION, allowedExecuteDuration) &&
-			ad.LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, beganExecuting)) {
+			ad.LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, beganExecuting) &&
+			ad.LookupInteger(ATTR_SHADOW_BIRTHDATE, birthday) &&
+			beganExecuting > birthday) {
 
 			// We use TransferOutFinished because the shadow only sets
 			// ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE at job exit.
