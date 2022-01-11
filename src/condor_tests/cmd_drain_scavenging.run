@@ -382,6 +382,10 @@ my $evicted = sub {
 		print( "Checking MaxJobRetirementTime and MaxMachineVacateTime...\n" );
 		for( my $delay = 0; $delay <= 20; ++$delay ) {
 			if( $delay == 20 ) {
+				open(LOGFD, "<", $logFileName);
+				while(<LOGFD>) {
+					print $_;
+				}
 				die( "... did not find all necessary state changes (found $progress of the 5) in log, aborting.\n" );
 			}
 
@@ -448,68 +452,57 @@ sub checkTiming {
 	# We're looking for the following sequence with the following time deltas:
 	#
 	# 04/15/18 14:46:54 Initiating final draining (all original jobs complete).
-	# 04/15/18 14:46:54 slot1_1: Changing activity: Busy -> Retiring
-	# 04/15/18 14:46:54 slot1_1: State change: claim retirement ended/expired
-	# 04/15/18 14:46:54 slot1_1: Changing state and activity: Claimed/Retiring -> Preempting/Vacating
-	# 04/15/18 14:46:59 slot1_1: max vacate time expired.  Escalating to a fast shutdown of the job.
+	# 04/15/18 14:46:54 slot1_x: Changing activity: Busy -> Retiring
+	# 04/15/18 14:46:54 slot1_x: State change: claim retirement ended/expired
+	# 04/15/18 14:46:54 slot1_x: Changing state and activity: Claimed/Retiring -> Preempting/Vacating
+	# 04/15/18 14:46:59 slot1_x: max vacate time expired.  Escalating to a fast shutdown of the job.
+
+	# For some consistent value of x
 	#
 
+
 	open( LOG, "<", $logFileName ) || die( "Unable to open STARTD_LOG '${logFileName}', aborting.\n" );
-
-	my $state = 0;
-	my $finalDrainStartTime = undef;
+	my $logFileContents;
 	my $jidm = '\[\d+\.\d+\]';
-	my $secondsMatch = '\d\d\/\d\d\/\d\d \d\d:\d\d:(\d\d)(\.\d\d\d)?( \(.*\))?';
-	while( my $line = <LOG> ) {
-		CondorUtils::fullchomp( $line );
+	my $state = 1;
 
-		if( $state == 0 && $line =~ /^${secondsMatch} Initiating final draining \(all original jobs complete\)\.$/ ) {
-			$finalDrainStartTime = $1;
-			$state = 1;
-			next;
-		}
-
-		# I have no idea why this log message doesn't have a job ID.
-		if( $state == 1 && $line =~ /^${secondsMatch} slot1_1: Changing activity: Busy -> Retiring$/ ) {
-			if( $finalDrainStartTime != $1 ) {
-				die( "slot1_1 did not start retiring immediately, aborting.\n" );
-			} else {
-				$state = 2;
-				next;
-			}
-		}
-
-		# I have no idea why this log message doesn't have a job ID.
-		if( $state == 2 && $line =~ /^${secondsMatch} slot1_1: State change: claim retirement ended\/expired$/ ) {
-			if( $finalDrainStartTime != $1 ) {
-				die( "MaxJobRetirementTime was not 0, aborting.\n" );
-			} else {
-				$state = 3;
-				next;
-			}
-		}
-
-		# I have no idea why this log message doesn't have a job ID.
-		if( $state == 3 && $line =~ /^${secondsMatch} slot1_1: Changing state and activity: Claimed\/Retiring -> Preempting\/Vacating$/ ) {
-			if( $finalDrainStartTime != $1 ) {
-				die( "slot1_1 did not immediately switch from retiring to preempting.\n" );
-			} else {
-				$state = 4;
-				next;
-			}
-		}
-
-		if( $state == 4 && $line =~ /^${secondsMatch} slot1_1${jidm}: max vacate time expired.  Escalating to a fast shutdown of the job.$/ ) {
-			# Especially with sub-second reporting, allow the startd some time to work.
-			if( (($finalDrainStartTime + 4) % 60) != $1 && (($finalDrainStartTime + 5) % 60) != $1 && (($finalDrainStartTime + 6) % 60) != $1 ) {
-				die( "MaxMachineVacateTime was not 5: finalDrainStartTime is $finalDrainStartTime, one is $1, \n" );
-			} else {
-				$state = 5;
-				next;
-			}
-		}
+	# slurp up entire log into one string
+	while (<LOG>) {
+		$logFileContents .= $_;
 	}
-	close( LOG );
+	close(LOG);
+
+	my $slotNumber = 0;
+	my $secondsMatch = '\d\d\/\d\d\/\d\d\ \d\d:\d\d:(\d\d)(\.\d\d\d)?(\ \([_A-Z0-9:]*\))?';
+
+	if ($logFileContents =~ /
+		 ${secondsMatch}\ Initiating\ final\ draining\ \(all\ original\ jobs\ complete\)\.
+		 .* # zero or more lines...
+		 ${secondsMatch}\ slot1_(\d):\ Changing\ activity:\ Busy\ ->\ Retiring
+		 .* # zero or more lines...
+		 ${secondsMatch}\ slot1_\7:\ State\ change:\ claim\ retirement\ ended\/expired
+		 .* # zero or more lines...
+		 ${secondsMatch}\ slot1_\7:\ Changing\ state\ and\ activity:\ Claimed\/Retiring\ ->\ Preempting\/Vacating
+		 .*
+		 ${secondsMatch}\ slot1_\7${jidm}:\ max\ vacate\ time\ expired.\ \ Escalating\ to\ a\ fast\ shutdown\ of\ the\ job
+		 /sx) {
+			my $finalDrainStartTime = $1;
+			if ($finalDrainStartTime != $4) {
+				die( "slot1_$7 did not start retiring immediately, aborting.\n" );
+			}
+			if ($finalDrainStartTime != $8) {
+				die( "MaxJobRetirementTime was not 0, aborting.\n" );
+			}
+			if ($finalDrainStartTime != $11) {
+				die( "slot1_$7 did not immediately switch from retiring to preempting.\n" );
+			}
+			# Especially with sub-second reporting, allow the startd some time to work.
+			if( (($finalDrainStartTime + 4) % 60) != $14 && (($finalDrainStartTime + 5) % 60) != $14 && (($finalDrainStartTime + 6) % 60) != $14 ) {
+				die( "MaxMachineVacateTime was not 5: finalDrainStartTime is $finalDrainStartTime, one is $14, \n" );
+			}
+			$state = 5;
+			${$progress} = $state;
+	}
 
 	${$progress} = $state;
 	return ($state == 5);
