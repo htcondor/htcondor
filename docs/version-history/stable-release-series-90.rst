@@ -14,9 +14,7 @@ Version 9.0.9
 
 Release Notes:
 
-.. HTCondor version 9.0.9 released on Month Date, 2022.
-
-- HTCondor version 9.0.9 not yet released.
+- HTCondor version 9.0.9 released on January 12, 2022.
 
 - Since CentOS 8 has been retired, we now build for Enterprise Linux 8 on
   Rocky Linux 8.
