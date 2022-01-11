@@ -75,7 +75,7 @@ else (WINDOWS)
                 set(USE_SYSTEM_BOOST True)
             endif()
         endif()
-        if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu" OR ${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8" OR ${SYSTEM_NAME} MATCHES "fc")
+        if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu" OR ${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8" OR ${SYSTEM_NAME} MATCHES "fc" OR ${SYSTEM_NAME} MATCHES "rocky8")
             set(USE_SYSTEM_BOOST True)
             # BOOST_COMPONENTS breaks CMake boost detection on Ubuntu 20.04, Debian bullseye
             set(BOOST_COMPONENTS "" )
