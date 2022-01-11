@@ -742,6 +742,11 @@ finis:
 		success = false;
 	}
 
+	// If the submitHash was only allocated in this function (and not linked to the node) delete it now
+	if (!node->GetSubmitDesc()) {
+		delete submitHash;
+	}
+
 	return success;
 }
 
