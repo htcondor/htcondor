@@ -31,6 +31,10 @@ Release Notes:
   systems.
   :jira:`873`
 
+- Reduce the size of the singularity test executable by not linking in
+  libraries it doesn't need.
+  :jira:`927`
+
 Bugs Fixed:
 
 - When the blahp submits a job to HTCondor, it no longer requests
