@@ -117,6 +117,7 @@ job_registry_updater_parse_address(const char *addstr, struct addrinfo **ai_ans,
   ai_req.ai_protocol = 0; /* Any protocol is OK */
 
   retcod = getaddrinfo(addr_loc, port_loc, &ai_req, ai_ans);
+  free(locaddr);
   return retcod;
 }
 
@@ -639,6 +640,7 @@ job_registry_send_update(const job_registry_updater_endpoint *endpoints,
      }
    }
 
+  free(packet);
   return n_success;
 }
 

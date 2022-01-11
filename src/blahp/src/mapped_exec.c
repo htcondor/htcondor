@@ -441,11 +441,13 @@ execute_cmd(exec_cmd_t *cmd)
 	if (pipe(fdpipe_stdout) == -1)
 	{
 		perror("pipe() for stdout");
+		free(command);
 		return(-1);       
 	}
 	if (pipe(fdpipe_stderr) == -1)
 	{
 		perror("pipe() for stderr");
+		free(command);
 		return(-1);       
 	}
 
@@ -454,6 +456,7 @@ execute_cmd(exec_cmd_t *cmd)
 	{
 		case -1:
 			perror("fork");
+			free(command);
 			return(-1);
 
 		case 0: /* Child process */

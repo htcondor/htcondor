@@ -154,7 +154,7 @@ strdel(char *s, const char *delete)
                 return tmp;
         }
 
-        if(!s || !strlen(s)){
+        if(!strlen(s)){
                 tmp = strndup(s, STR_CHARS);
                 return tmp;
         }
