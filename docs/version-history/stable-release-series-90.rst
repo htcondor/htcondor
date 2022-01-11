@@ -29,11 +29,29 @@ Bugs Fixed:
   is not an absolute path.
   :jira:`736`
 
+- A problem where HTCondor would not create a directory on the execute
+  node before trying to transfer a file into it should no longer occur.  (This
+  would cause the job which triggered this problem to go on hold.)  One
+  way to trigger this problem was by setting ``preserve_relative_paths``
+  and specifying the same directory in both ``transfer_input_files`` and
+  ``transfer_checkpoint_files``.
+  :jira:`857`
+
 - The *condor_annex* tool no longer duplicates the first tag if given multiple
   ``-tag`` options on the command line.  You can now set longer user data on
   the command-line.
   :jira:`910`
 
+- Fixed a bug in the *condor_job_router* that could result in routes and transforms
+  substituting a default configuration value rather than the value
+  from the configuration files when a route or transform was applied
+  :jira:`902`
+
+- For **batch** grid universe jobs, a small default memory value is no
+  longer generated when **request_memory** is not specified in the submit
+  file.
+  This restores the behavior in versions 9.0.1 and prior.
+  :jira:`904`
 
 .. _lts-version-history-909:
 
@@ -46,9 +64,17 @@ Release Notes:
 
 - HTCondor version 9.0.9 not yet released.
 
+- Since CentOS 8 has been retired, we now build for Enterprise Linux 8 on
+  Rocky Linux 8.
+  :jira:`911`
+
+- Debian 11 (bullseye) has been added as a supported platform.
+  :jira:`94`
+
 New Features:
 
-- None.
+- The OAUTH credmon is packaged for the Enterprise Linux 8 platform.
+  :jira:`825`
 
 Bugs Fixed:
 
@@ -288,12 +314,7 @@ Bugs Fixed:
   is empty.
   :jira:`673`
 
-- Fixed a bug that could the starter to crash after transferring files under
-  certain rare circumstances.   This also corrected a problem which may have
-  been causing the number of bytes transferred to be undercounted.
-  :jira:`722`
-
-- Fixed a bug that could the starter to crash after transferring files under
+- Fixed a bug that could cause the starter to crash after transferring files under
   certain rare circumstances.   This also corrected a problem which may have
   been causing the number of bytes transferred to be undercounted.
   :jira:`722`

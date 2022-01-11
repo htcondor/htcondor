@@ -282,8 +282,37 @@ MultiLogFiles::FileReader::Open( const MyString &filename )
 	return result;
 }
 
+std::string
+MultiLogFiles::FileReader::Open( const std::string &filename )
+{
+	std::string result = "";
+
+	_fp = safe_fopen_wrapper_follow( filename.c_str(), "r" );
+	if ( !_fp ) {
+		formatstr( result, "MultiLogFiles::FileReader::Open(): "
+				"safe_fopen_wrapper_follow(%s) failed with errno %d (%s)\n",
+				filename.c_str(), errno, strerror(errno) );
+		dprintf( D_ALWAYS, "%s", result.c_str() );
+	}
+
+	return result;
+}
+
 bool
 MultiLogFiles::FileReader::NextLogicalLine( MyString &line )
+{
+	int lines_read = 0;
+	char *tmpLine = getline_trim( _fp, lines_read );
+	if ( tmpLine != NULL ) {
+		line = tmpLine;
+		return true;
+	}
+
+	return false; // EOF
+}
+
+bool
+MultiLogFiles::FileReader::NextLogicalLine( std::string &line )
 {
 	int lines_read = 0;
 	char *tmpLine = getline_trim( _fp, lines_read );
@@ -476,6 +505,28 @@ MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
 			// I'd like to use realpath() here, but I'm not sure
 			// if that's portable across all platforms.  wenger 2009-01-09.
 		MyString	currentDir;
+		if ( !condor_getcwd(currentDir) ) {
+			errstack.pushf( "MultiLogFiles", UTIL_ERR_GET_CWD,
+						"ERROR: condor_getcwd() failed with errno %d (%s) at %s:%d",
+						errno, strerror(errno), __FILE__, __LINE__);
+			return false;
+		}
+
+		filename = currentDir + DIR_DELIM_STRING + filename;
+	}
+
+	return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool
+MultiLogFiles::makePathAbsolute(std::string &filename, CondorError &errstack)
+{
+	if ( !fullpath(filename.c_str()) ) {
+			// I'd like to use realpath() here, but I'm not sure
+			// if that's portable across all platforms.  wenger 2009-01-09.
+		std::string currentDir;
 		if ( !condor_getcwd(currentDir) ) {
 			errstack.pushf( "MultiLogFiles", UTIL_ERR_GET_CWD,
 						"ERROR: condor_getcwd() failed with errno %d (%s) at %s:%d",

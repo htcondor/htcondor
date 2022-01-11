@@ -21,7 +21,19 @@ Release Notes:
   variables to be evaluated for periodic job policy.
   :jira:`905`
 
-- None.
+- In most situations, jobs in COMPLETED or REMOVED status will no longer
+  transition to HELD status.
+  Before, these jobs could transition to HELD status due to job policy
+  expressions, the *condor_rm* tool, or errors encountered by the
+  *condor_shadow* or *condor_starter*.
+  Grid universe jobs may still transition to HELD status if the
+  *condor_gridmanager* can not clean up job-related resources on remote
+  systems.
+  :jira:`873`
+
+- Reduce the size of the singularity test executable by not linking in
+  libraries it doesn't need.
+  :jira:`927`
 
 Bugs Fixed:
 
@@ -31,6 +43,11 @@ Bugs Fixed:
 
 - The view server can now handle very long Accounting Group names
   :jira:`913`
+
+- Fixed some bugs where ``allowed_execute_duration`` and
+  ``allowed_job_duration`` would be evaluated at the wrong points in a
+  job's lifetime.
+  :jira:`922`
 
 - HTCondor now properly creates directories when transferring a directory
   tree out of SPOOL while preserving relative paths.  This bug would manifest

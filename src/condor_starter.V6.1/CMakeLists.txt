@@ -107,7 +107,14 @@ endif()
 # and run this small program to verify that it exits with code 37
 if (LINUX)
 	add_executable(exit_37 "exit_37.c")
-	target_link_libraries(exit_37 "-static")
+
+	# Our special assembly version of exit_37 needs special flags
+	# but only works on 64 bit linux
+	if ("${SYS_ARCH}" STREQUAL "X86_64")
+		target_link_libraries(exit_37 "-nostdlib -static")
+	else()
+		target_link_libraries(exit_37 "-static")
+	endif()
 endif()
 
 # Just like we can't asume that docker is installed or runnable on the build machine
@@ -120,5 +127,5 @@ endif()
 if (LINUX)
 	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/htcondor_docker_test DESTINATION ${C_LIBEXEC} )
 	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/exit_37.sif DESTINATION ${C_LIBEXEC} )
-	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/exit_37 DESTINATION ${C_SBIN} )
+	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/exit_37 DESTINATION ${C_SBIN} PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 endif()

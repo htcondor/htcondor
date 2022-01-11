@@ -2417,26 +2417,34 @@ If a job does not specify the required number of CPUs, amount of memory,
 or disk space, there are ways for the administrator to set default
 values for all of these parameters.
 
+:index:`JOB_DEFAULT_REQUESTCPUS`
+:index:`JOB_DEFAULT_REQUESTMEMORY`
+:index:`JOB_DEFAULT_REQUESTDISK`
 First, if any of these attributes are not set in the submit description
 file, there are three variables in the configuration file that
 condor_submit will use to fill in default values. These are
 
-    ``JOB_DEFAULT_REQUESTMEMORY``
-    :index:`JOB_DEFAULT_REQUESTMEMORY`
-    ``JOB_DEFAULT_REQUESTDISK`` :index:`JOB_DEFAULT_REQUESTDISK`
-    ``JOB_DEFAULT_REQUESTCPUS`` :index:`JOB_DEFAULT_REQUESTCPUS`
+-  ``JOB_DEFAULT_REQUESTCPUS``
+-  ``JOB_DEFAULT_REQUESTMEMORY``
+-  ``JOB_DEFAULT_REQUESTDISK``
 
 The value of these variables can be ClassAd expressions. The default
 values for these variables, should they not be set are
 
-    ``JOB_DEFAULT_REQUESTMEMORY`` =
-    ``ifThenElse(MemoryUsage =!= UNDEFINED, MemoryUsage, 1)``
-    ``JOB_DEFAULT_REQUESTCPUS`` = ``1``
-    ``JOB_DEFAULT_REQUESTDISK`` = ``DiskUsage``
+.. code-block:: condor-config
+
+    JOB_DEFAULT_REQUESTCPUS = 1
+    JOB_DEFAULT_REQUESTMEMORY = \
+        ifThenElse(MemoryUsage =!= UNDEFINED, MemoryUsage, 1)
+    JOB_DEFAULT_REQUESTDISK = DiskUsage
 
 Note that these default values are chosen such that jobs matched to
 partitionable slots function similar to static slots.
+These variables do not apply to **batch** grid universe jobs.
 
+:index:`MODIFY_REQUEST_EXPR_REQUESTCPUS`
+:index:`MODIFY_REQUEST_EXPR_REQUESTMEMORY`
+:index:`MODIFY_REQUEST_EXPR_REQUESTDISK`
 Once the job has been matched, and has made it to the execute machine,
 the *condor_startd* has the ability to modify these resource requests
 before using them to size the actual dynamic slots carved out of the
@@ -2449,9 +2457,11 @@ reuse the newly created slot when the initial job is done using it.
 The *condor_startd* configuration variables which control this and
 their defaults are
 
-    ``MODIFY_REQUEST_EXPR_REQUESTCPUS`` = ``quantize(RequestCpus, {1})`` :index:`MODIFY_REQUEST_EXPR_REQUESTCPUS`
-    ``MODIFY_REQUEST_EXPR_REQUESTMEMORY`` = ``quantize(RequestMemory, {128})`` :index:`MODIFY_REQUEST_EXPR_REQUESTMEMORY`
-    ``MODIFY_REQUEST_EXPR_REQUESTDISK`` = ``quantize(RequestDisk, {1024})`` :index:`MODIFY_REQUEST_EXPR_REQUESTDISK`
+.. code-block:: condor-config
+
+    MODIFY_REQUEST_EXPR_REQUESTCPUS = quantize(RequestCpus, {1})
+    MODIFY_REQUEST_EXPR_REQUESTMEMORY = quantize(RequestMemory, {128})
+    MODIFY_REQUEST_EXPR_REQUESTDISK = quantize(RequestDisk, {1024})
 
 condor_negotiator-Side Resource Consumption Policies
 ''''''''''''''''''''''''''''''''''''''''''''''''''''

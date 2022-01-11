@@ -475,6 +475,8 @@ SetImageSize >> SetRequirements
 SetTransferFiles >> SetRequirements
 SetEncryptExecuteDir >> SetRequirements
 
+SetGridParams >> SetRequestResources
+
 */
 
 SubmitHash::SubmitHash()
@@ -509,6 +511,7 @@ SubmitHash::SubmitHash()
 	, already_warned_requirements_mem(false)
 	, already_warned_job_lease_too_small(false)
 	, already_warned_notification_never(false)
+	, UseDefaultResourceParams(true)
 {
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();
@@ -3128,6 +3131,11 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
+	// blahp jobs don't get default request resource values from config.
+	if (gridType == "batch") {
+		UseDefaultResourceParams = false;
+	}
+
 	//
 	// EC2 grid-type submit attributes
 	//
@@ -5493,7 +5501,7 @@ int SubmitHash::SetRequestMem(const char * /*key*/)
 			if (job->Lookup(ATTR_JOB_VM_MEMORY)) {
 				push_warning(stderr, SUBMIT_KEY_RequestMemory " was NOT specified.  Using " ATTR_REQUEST_MEMORY " = MY." ATTR_JOB_VM_MEMORY "\n");
 				AssignJobExpr(ATTR_REQUEST_MEMORY, "MY." ATTR_JOB_VM_MEMORY);
-			} else {
+			} else if (UseDefaultResourceParams) {
 				// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 				// the job has a request_mem keyword
 				mem.set(param("JOB_DEFAULT_REQUESTMEMORY"));
@@ -5528,7 +5536,7 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 	if ( ! disk) {
 		if (job->Lookup(ATTR_REQUEST_DISK)) {
 			// we already have a value for request disk, use that
-		} else if ( ! clusterAd) {
+		} else if ( ! clusterAd && UseDefaultResourceParams) {
 			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_memory from somewhere
 			// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 			// the job has a request_disk keyword
@@ -5566,7 +5574,7 @@ int SubmitHash::SetRequestCpus(const char * key)
 	if ( ! req_cpus) {
 		if (job->Lookup(ATTR_REQUEST_CPUS)) {
 			// we already have a value for request cpus, use that
-		} else if ( ! clusterAd) {
+		} else if ( ! clusterAd && UseDefaultResourceParams) {
 			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_cpus from somewhere
 			// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 			// the job has a request_cpus keyword
@@ -5599,7 +5607,7 @@ int SubmitHash::SetRequestGpus(const char * key)
 	if ( ! req_gpus) {
 		if (job->Lookup(ATTR_REQUEST_GPUS)) {
 			// we already have a value for request cpus, use that
-		} else if ( ! clusterAd) {
+		} else if ( ! clusterAd && UseDefaultResourceParams) {
 			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_gpus from somewhere
 			// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 			// the job has a request_gpus keyword

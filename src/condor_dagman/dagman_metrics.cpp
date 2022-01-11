@@ -23,7 +23,6 @@
 #include "safe_fopen.h"
 #include "condor_version.h"
 #include "condor_string.h" // for getline()
-#include "MyString.h"
 #include "condor_arglist.h"
 #include "utc_time.h"
 
@@ -234,10 +233,10 @@ DagmanMetrics::GatherGraphMetrics( Dag* dag )
 }
 
 //---------------------------------------------------------------------------
-MyString
+std::string
 DagmanMetrics::GetVersion()
 {
-	MyString result;
+	std::string result;
 
 	const char *cv = CondorVersion();
 

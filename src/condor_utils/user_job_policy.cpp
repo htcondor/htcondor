@@ -436,30 +436,53 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 			ATTR_ON_EXIT_REMOVE_CHECK
 	*/
 
-	/* Should I perform a hold based on the "running" time of the job? */
-	int allowedJobDuration;
-	if( ad.LookupInteger( ATTR_JOB_ALLOWED_JOB_DURATION, allowedJobDuration ) ) {
-		// Arguably, we should be calling BaseUserPolicy::getJobBirthday()
-		// here, but we don't have access to that here.  This will probably
-		// cause some confusion in the local universe, because it otherwise
-		// uses ATTR_JOB_START_DATE to determine duration, but using
-		// ATTR_SHADOW_BIRTHDATE was the assignment and is simpler.
-		int birthday;
-		if( ad.LookupInteger( ATTR_SHADOW_BIRTHDATE, birthday ) ) {
-			if( time(NULL) - birthday >= allowedJobDuration ) {
-				m_fire_expr = ATTR_JOB_ALLOWED_JOB_DURATION;
-				m_fire_source = FS_JobDuration;
-				formatstr(m_fire_reason, "The job exceeded allowed job duration of %d", allowedJobDuration);
-				return HOLD_IN_QUEUE;
-			}
+	/* Don't do any policy evaluation on removed jobs.
+	 * Act as if no policy expressions were defined.
+	 */
+	if( state == REMOVED) {
+		if( mode == PERIODIC_ONLY ) {
+			return STAYS_IN_QUEUE;
+		} else {
+			m_fire_expr_val = 1;
+			m_fire_expr = ATTR_ON_EXIT_REMOVE_CHECK;
+			m_fire_source = FS_JobAttribute;
+			m_fire_reason.clear();
+			m_fire_unparsed_expr = "true";
+			return REMOVE_FROM_QUEUE;
 		}
 	}
 
-	/* Should I perform a hold based on the "execute" time of the job? */
-	if (state == RUNNING) {
+	if (state == RUNNING || state == SUSPENDED) {
+		int birthday;
+
+		/* Should I perform a hold based on the "running" time of the job? */
+		int allowedJobDuration;
+		if( ad.LookupInteger( ATTR_JOB_ALLOWED_JOB_DURATION, allowedJobDuration ) ) {
+			// Arguably, we should be calling BaseUserPolicy::getJobBirthday()
+			// here, but we don't have access to that here.  This will probably
+			// cause some confusion in the local universe, because it otherwise
+			// uses ATTR_JOB_START_DATE to determine duration, but using
+			// ATTR_SHADOW_BIRTHDATE was the assignment and is simpler.
+			if( ad.LookupInteger( ATTR_SHADOW_BIRTHDATE, birthday ) ) {
+				if( time(NULL) - birthday >= allowedJobDuration ) {
+					m_fire_expr = ATTR_JOB_ALLOWED_JOB_DURATION;
+					m_fire_source = FS_JobDuration;
+					formatstr(m_fire_reason, "The job exceeded allowed job duration of %d", allowedJobDuration);
+					return HOLD_IN_QUEUE;
+				}
+			}
+		}
+
+		/* Should I perform a hold based on the "execute" time of the job? */
+		/* If ATTR_JOB_CURRENT_START_EXECUTING_DATE is less than
+		 * ATTR_SHADOW_BIRTHDATE, then it's left over from a previous
+		 * execution attempt.
+		 */
 		int allowedExecuteDuration, beganExecuting;
 		if (ad.LookupInteger(ATTR_JOB_ALLOWED_EXECUTE_DURATION, allowedExecuteDuration) &&
-			ad.LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, beganExecuting)) {
+			ad.LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, beganExecuting) &&
+			ad.LookupInteger(ATTR_SHADOW_BIRTHDATE, birthday) &&
+			beganExecuting > birthday) {
 
 			// We use TransferOutFinished because the shadow only sets
 			// ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE at job exit.
@@ -503,12 +526,14 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 	int retval;
 
 	/* should I perform a periodic hold? */
-	if(state!=HELD) {
+	if(state!=HELD && state!=COMPLETED) {
 		if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_HOLD_CHECK, POLICY_SYSTEM_PERIODIC_HOLD, HOLD_IN_QUEUE, retval)) {
 			return retval;
 		}
-	} else {
+	}
+
 	/* Should I perform a periodic release? */
+	if(state==HELD) {
 		if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_RELEASE_CHECK, POLICY_SYSTEM_PERIODIC_RELEASE, RELEASE_FROM_HOLD, retval)) {
 			return retval;
 		}
