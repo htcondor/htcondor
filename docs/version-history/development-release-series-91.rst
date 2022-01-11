@@ -35,6 +35,12 @@ Release Notes:
   libraries it doesn't need.
   :jira:`927`
 
+- DAGMan now manages job submission by writing jobs directly to the 
+  *condor_schedd*, instead of forking a *condor_submit* process. This behavior
+  is controlled by the ``DAGMAN_USE_DIRECT_SUBMIT`` configuration knob, which
+  defaults to ``True``.
+  :jira:`619`
+
 Bugs Fixed:
 
 - When the blahp submits a job to HTCondor, it no longer requests
