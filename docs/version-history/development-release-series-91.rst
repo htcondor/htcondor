@@ -19,7 +19,12 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- HTCondor now properly creates directories when transferring a directory
+  tree out of SPOOL while preserving relative paths.  This bug would manifest
+  after a self-checkpointing job created a file in a new subdirectory of a
+  directory in its checkpoint: when the job was rescheduled and had to
+  download its checkpoint, it would go on hold.
+  :jira:`923`
 
 Version 9.5.0
 -------------
