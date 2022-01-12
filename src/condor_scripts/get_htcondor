@@ -129,6 +129,10 @@ check_forked() {
 				fi
 				dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
 				case "$dist_version" in
+					11)
+						dist_version_number=11
+						dist_version="bullseye"
+					;;
 					10)
 						dist_version_number=10
 						dist_version="buster"
@@ -182,6 +186,9 @@ get_distribution() {
 			# raspbian?
 			dist_version="$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')"
 			case "$dist_version" in
+				11)
+					dist_version="bullseye"
+				;;
 				10)
 					dist_version="buster"
 				;;
@@ -194,7 +201,7 @@ get_distribution() {
 			esac
 		;;
 
-		centos|rhel)
+		centos|rhel|rocky)
 			if [ -z "$dist_version" ] && [ -r /etc/os-release ]; then
 				dist_version="$(. /etc/os-release && echo "$VERSION_ID")"
 			fi
@@ -334,7 +341,7 @@ do_install() {
 				To remove: $sh_c "apt-get -y remove --purge ${PACKAGE} && apt-get -y autoremove --purge && rm -fr /etc/condor"
 			EOF
 			;;
-		centos|rhel|amzn)
+		centos|rhel|rocky|amzn)
 			PACKAGE=condor
 			if [ -z "${ROLE}" ]; then
 				PACKAGE=minicondor
@@ -400,7 +407,7 @@ do_install() {
 				fi
 			)
 			;;
-		centos|rhel|amzn)
+		centos|rhel|rocky|amzn)
 			(
 			if ! is_dry_run; then
 				set -x
@@ -408,6 +415,9 @@ do_install() {
 
 			repo_dist=${lsb_dist}
 			if [ "${repo_dist}" = "centos" ]; then
+				repo_dist="rhel"
+			fi
+			if [ "${repo_dist}" = "rocky" ]; then
 				repo_dist="rhel"
 			fi
 			if [ "${repo_dist}" = "rhel" ]; then
@@ -430,9 +440,9 @@ do_install() {
 				# Just to make our lives harder, the packages we need from
 				# EPEL depend on repositories which are disabled by default,
 				# and those repositories and how to enable them between
-				# RHEL and CentOS and between version 7 and 8.
+				# RHEL and Rocky and between version 7 and 8.
 				#
-				if [ "${lsb_dist}" = "centos" ]; then
+				if [ "${lsb_dist}" = "rocky" ]; then
 					if [ "${dist_version}" -eq 8 ]; then
 						$sh_c "dnf config-manager --set-enabled PowerTools"
 					fi
@@ -587,6 +597,9 @@ do_download() {
 			;;
 		centos|rhel)
 			OS_NAME=CentOS
+			;;
+		rocky)
+			OS_NAME=Rocky
 			;;
 		amzn)
 			OS_NAME=AmazonLinux
