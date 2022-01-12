@@ -84,6 +84,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/time.h>
+#include <assert.h>
 
 #if defined(HAVE_GLOBUS)
 #include "globus_gsi_credential.h"
@@ -602,6 +603,7 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 						if (current_mapping_mode != MEXEC_NO_MAPPING) 
 						{
 							argv = (char **)realloc(argv, (argc + MEXEC_PARAM_COUNT + 1) * sizeof(char *));
+							assert(argv);
 							for (i = 0; i < MEXEC_PARAM_COUNT; i++) 
 								argv[argc + i] = strdup(mapping_parameter[i]);
 							argv[argc + MEXEC_PARAM_COUNT] = NULL;
@@ -1273,7 +1275,7 @@ cmd_submit_job(void *args)
 
 	/* Set the CE requirements */
 	gettimeofday(&ts, NULL);
-	req_file = make_message("%s/ce-req-file-%d%d",tmp_dir, ts.tv_sec, ts.tv_usec);
+	req_file = make_message("%s/ce-req-file-%d%ld",tmp_dir, ts.tv_sec, ts.tv_usec);
 	if(CEReq_parse(cad, req_file, proxysubject, proxyfqan) >= 0)
 	{
 		command_ext = make_message("%s -C %s", command, req_file);
@@ -2389,7 +2391,7 @@ enqueue_result(char *res)
 		write(server_socket, "R\r\n", 3);
 		pthread_mutex_unlock(&send_lock);
 	}
-	return 0;
+	return;
 }
 
 int
@@ -3188,14 +3190,13 @@ int CEReq_parse(classad_context cad, char* filename,
 	{
 		for(creq=reqstr; (*creq)!=NULL; creq++)
 		{
-			int cs;
 			if (req_file== NULL)
 			{
 				req_file=fopen(filename,"w");
 				if(req_file==NULL) goto free_reqstr;
 			}
-			cs = fwrite(*creq ,1, strlen(*creq), req_file);
-			cs = fwrite("\n" ,1, strlen("\n"), req_file);
+			fwrite(*creq ,1, strlen(*creq), req_file);
+			fwrite("\n" ,1, strlen("\n"), req_file);
 			n_written++;
 		}
 	}
@@ -3217,7 +3218,8 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
         char *iwd = NULL;
 	size_t  iwd_alloc = 256;
         struct timeval ts;
-        int i=0,cs=0,fc=0,iwdlen=0;
+        size_t i=0;
+		int cs=0,fc=0;
         char *cur, *next_comma;
         int cur_len;
         char *newptr=NULL;
@@ -3268,7 +3270,6 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
 			free(superbuffer);
 			return 1;
 		}
-		iwdlen=strlen(iwd);
 		tmpIOfilestring = make_message("%s/%s_%s_%d%d", tmp_dir, "InputFileList",reqId, ts.tv_sec, ts.tv_usec);
 		tmpIOfile = fopen(tmpIOfilestring, "w");
 		if(tmpIOfile == NULL)
@@ -3340,7 +3341,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
                 {
                         superbufferTMP = strdup(superbuffer);
                 }
-                tmpIOfilestring = make_message("%s/%s_%s_%d%d", tmp_dir, "OutputFileList",reqId,ts.tv_sec, ts.tv_usec);
+                tmpIOfilestring = make_message("%s/%s_%s_%d%ld", tmp_dir, "OutputFileList",reqId,ts.tv_sec, ts.tv_usec);
                 tmpIOfile = fopen(tmpIOfilestring, "w");
                 if(tmpIOfile == NULL)
                 {
@@ -3350,6 +3351,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
                         if (superbufferRemaps != NULL) free(superbufferRemaps);
                         if (superbufferTMP != NULL) free(superbufferTMP);
                         free(superbuffer);
+						free(newptr);
                         return 1;
                 }
 
@@ -3370,8 +3372,11 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
                 fwrite("\n",1,1,tmpIOfile);
                 newptr1 = make_message("%s -O %s", newptr, tmpIOfilestring);
                 fclose(tmpIOfile);
-		if (*files_to_clean_up != NULL)
+		if (*files_to_clean_up != NULL) {
 			(*files_to_clean_up)[cleanup_file_index++] = tmpIOfilestring;
+		} else {
+			free(tmpIOfilestring);
+		}
                 free(superbuffer);
         }
         if(superbufferTMP != NULL)
@@ -3396,6 +3401,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
                         free(superbuffer);
                         free(superbufferTMP);
                         free(superbufferRemaps);
+						free(newptr);
                         return 1;
                 }
 
@@ -3518,6 +3524,7 @@ char*  outputfileRemaps(char *sb,char *sbrmp)
                         else
                         {
                                 newbuffer = (char*) realloc((void*)newbuffer, blen + strlen(tstr2) + 2);
+                                assert(newbuffer);
                                 strcpy(&newbuffer[blen],tstr2);
                                 newbuffer[blen + strlen(tstr2)] = (last? 0: ',');
                                 newbuffer[blen + strlen(tstr2) + 1] = '\0';

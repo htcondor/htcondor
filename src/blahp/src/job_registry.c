@@ -67,6 +67,7 @@
 #include <libgen.h>
 #include <time.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "job_registry.h"
 
@@ -401,7 +402,10 @@ job_registry_probe_next_record(FILE *fd, job_registry_entry *en)
          }
         else
          {
+			 /* I have no idea what the following was supposed to do
+			    It doesn't do anything, so we'll comment it out for now.
           if (feof(fd)) en->magic_start == JOB_REGISTRY_MAGIC_START;
+		  */
           break;
          }
        }
@@ -713,6 +717,7 @@ job_registry_init(const char *path,
          {
           umask(old_umask);
           job_registry_destroy(rha);
+		  if (old_path) free(old_path);
           return NULL;
          }
 	close(cfd);
@@ -721,6 +726,7 @@ job_registry_init(const char *path,
       else
        {
         job_registry_destroy(rha);
+		if (old_path) free(old_path);
         return NULL;
        }
      }
@@ -855,6 +861,7 @@ job_registry_init(const char *path,
      {
       free(old_path);
       job_registry_destroy(rha);
+	  fclose(fd);
       return NULL;
      }
     fclose(fd); /* Release lock */
@@ -1728,7 +1735,10 @@ job_registry_merge_pending_nonpriv_updates(job_registry_handle *rha,
       if (stat(cfp, &cfp_st) < 0)   { free(cfp); continue; }
       if (!S_ISREG(cfp_st.st_mode)) { free(cfp); continue; }
       cfd = fopen(cfp, "r");
-      if (cfd == NULL) continue;
+      if (cfd == NULL) {
+		  free(cfp);
+		  continue;
+	  }
 
       frret = job_registry_probe_next_record(cfd, &en);
       if (frret == 0)
@@ -2682,11 +2692,11 @@ job_registry_entry_as_classad(const job_registry_handle *rha,
   int esiz,fsiz;
   char *proxypath;
 
-  if ((entry->wn_addr != NULL) && (strlen(entry->wn_addr) > 0)) 
+  if (strlen(entry->wn_addr) > 0) 
    { 
     JOB_REGISTRY_APPEND_ATTRIBUTE("WorkerNode=\"%s\"; ",entry->wn_addr);
    }
-  if ((entry->proxy_link != NULL) && (strlen(entry->proxy_link) > 0)) 
+  if (strlen(entry->proxy_link) > 0) 
    { 
     proxypath = job_registry_get_proxy(rha, entry);
     if (proxypath != NULL)
@@ -2699,11 +2709,11 @@ job_registry_entry_as_classad(const job_registry_handle *rha,
    {
     JOB_REGISTRY_APPEND_ATTRIBUTE("ExitCode=%d; ",entry->exitcode);
    }
-  if ((entry->exitreason != NULL) && (strlen(entry->exitreason) > 0)) 
+  if (strlen(entry->exitreason) > 0) 
    { 
     JOB_REGISTRY_APPEND_ATTRIBUTE("ExitReason=\"%s\"; ",entry->exitreason);
    }
-  if ((entry->user_prefix != NULL) && (strlen(entry->user_prefix) > 0)) 
+  if (strlen(entry->user_prefix) > 0) 
    { 
     JOB_REGISTRY_APPEND_ATTRIBUTE("UserPrefix=\"%s\"; ",entry->user_prefix);
    }
@@ -3293,10 +3303,10 @@ job_registry_store_hash(job_registry_hash_store *hst,
   if (job_registry_lookup_hash(hst, hash, &insert) >= 0) return 0;
 
   new_data = realloc(hst->data , (hst->n_data+1) * sizeof(char *));
-  if (new_data == NULL) return -1;
+  assert(new_data);
 
   hash_copy = strdup(hash);
-  if (hash_copy == NULL) return -1;
+  assert(hash_copy);
 
   hst->data = new_data;
   

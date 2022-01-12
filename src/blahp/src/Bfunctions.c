@@ -23,6 +23,7 @@
 */
 
 #include "Bfunctions.h"
+#include <assert.h>
 
 pthread_mutex_t writeline_mutex = PTHREAD_MUTEX_INITIALIZER;
 int bfunctions_poll_timeout = 600000; /* Default 10 minutes */
@@ -111,6 +112,7 @@ Writeline(int sockd, const void *vptr, size_t n)
 			if ( errno == EINTR ) {
 				nwritten = 0;
 			}else{
+				pthread_mutex_unlock( &writeline_mutex );
 				return -1;
 			}
 		}
@@ -143,6 +145,7 @@ char *get_line(FILE * f)
             feof(f) ) break;
         size += BUFSIZ;
         buf = realloc(buf,size);           
+        assert(buf);
         buf[last]='\000';
 	if (fgets(buf+last,size-last,f) == NULL) break;
         len = strlen(buf);
@@ -240,7 +243,7 @@ strdel(char *s, const char *delete)
 	}
         
 	if(!s || !strlen(s)){
-		tmp = strndup(s, STR_CHARS);
+		tmp = strdup("");
 		return tmp;
 	}
         
@@ -285,7 +288,7 @@ iepoch2str(time_t epoch)
 
 	struct tm tm;
 	
-	lepoch=make_message("%d",epoch);
+	lepoch=make_message("%ld",epoch);
  
 	strptime(lepoch,"%s",&tm);
  
@@ -414,7 +417,7 @@ writepid(char * pidfile)
 	if ( !fpid ) { perror(pidfile); return 1; }
 	fchmod(fileno(fpid), pidmode);
 
-	if (fprintf(fpid, "%d", getpid()) <= 0) { perror(pidfile); return 1; }
+	if (fprintf(fpid, "%d", getpid()) <= 0) { fclose(fpid) ; perror(pidfile); return 1; }
 	if (fclose(fpid) != 0) { perror(pidfile); return 1; }
 	return 0;
 }
@@ -987,9 +990,7 @@ int check_config_file(char *logdev){
 	
 	free(supplrms);
 	free(ldebuglogname);
-	if(ldebug!=0){
-		fclose(ldebuglogfile);
-	}
+	if(ldebuglogfile) fclose(ldebuglogfile);
 
 	return 0;
 }
@@ -1013,8 +1014,8 @@ char *GetPBSSpoolPath(char *binpath)
                 if (len>0){
                         pbs_spool[len-1]='\000';
                 }
-        }
         pclose(file_output);
+        }
 	free(command_string);
 	
 	return pbs_spool;
