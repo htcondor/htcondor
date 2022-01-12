@@ -28,7 +28,7 @@ ExprTreeHolder::init()
 }
 
 ExprTreeHolder::ExprTreeHolder(boost::python::object expr_obj)
-    : m_expr(NULL), m_owns(true)
+    : m_expr(NULL)
 {
     boost::python::extract<ExprTreeHolder&>expr_extract(expr_obj);
     if (expr_extract.check()) {
@@ -46,7 +46,7 @@ ExprTreeHolder::ExprTreeHolder(boost::python::object expr_obj)
 
 
 ExprTreeHolder::ExprTreeHolder(classad::ExprTree *expr, bool owns)
-     : m_expr(expr), m_refcount(owns ? expr : NULL), m_owns(owns)
+     : m_expr(expr), m_refcount(owns ? expr : NULL)
 {
 }
 
