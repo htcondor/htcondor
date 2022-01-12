@@ -373,7 +373,7 @@ job_registry_probe_next_record(FILE *fd, job_registry_entry *en)
     if (start_pos < 0) return start_pos;
 
     if ((sret=fread(&en->magic_start, 1, sizeof(en->magic_start), fd)) < 
-        sizeof(en->magic_start)) break;
+        (int)sizeof(en->magic_start)) break;
     if (en->magic_start != JOB_REGISTRY_MAGIC_START)
      {
       fseek(fd, -sret+1, SEEK_CUR);
@@ -384,7 +384,7 @@ job_registry_probe_next_record(FILE *fd, job_registry_entry *en)
      {
       fseek(fd, allowed_size_incs[ic], SEEK_CUR);
 
-      if ((eret=fread(&en->magic_end, 1, sizeof(en->magic_end), fd)) < sizeof(en->magic_end)) break;
+      if ((eret=fread(&en->magic_end, 1, sizeof(en->magic_end), fd)) < (int)sizeof(en->magic_end)) break;
       end_pos = ftell(fd);
       if (end_pos < 0) return end_pos;
 
@@ -1081,7 +1081,7 @@ job_registry_resync_mmap(job_registry_handle *rha, FILE *fd)
       
         JOB_REGISTRY_ASSIGN_ENTRY(newin.id,chosen_id);
         newin.recnum = ren->recnum; 
-        if (write(newindex_fd, &newin, sizeof(newin)) < sizeof(newin))
+        if (write(newindex_fd, &newin, sizeof(newin)) < (int)sizeof(newin))
          {
           free(ren);
           unlink(new_index);
@@ -2594,7 +2594,7 @@ job_registry_get_next(const job_registry_handle *rha,
    {
     curr_pos = ftell(fd);
     JOB_REGISTRY_GET_REC_OFFSET(curr_recn,result->recnum,rha->disk_firstrec)
-    if (curr_pos != ((curr_recn+1)*sizeof(job_registry_entry)))
+    if (curr_pos != (long)((curr_recn+1)*sizeof(job_registry_entry)))
      {
       errno = EBADMSG;
       free(result);
@@ -3041,7 +3041,7 @@ job_registry_compute_subject_hash(job_registry_entry *en, const char *subject)
   md5_state_t ctx;
   md5_byte_t digest[16];
   char nibble[4];
-  int i;
+  size_t i;
 
   if (en == NULL || subject == NULL) return;
 

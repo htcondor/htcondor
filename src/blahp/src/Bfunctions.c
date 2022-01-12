@@ -686,7 +686,6 @@ int check_config_file(char *logdev){
 	char *ldebuglogname=NULL;
 	FILE *ldebuglogfile=NULL;
 	int  ldebug=0;
-	int async_port;
 		
         lcha = config_read(NULL);
         if (lcha == NULL) {
@@ -770,8 +769,6 @@ int check_config_file(char *logdev){
 	if (lret == NULL){
 		do_log(ldebuglogfile, ldebug, 1, "%s: key async_notification_port not found\n",argv0);
 		sysfatal("async_notification_port not defined. Exiting");
-	} else {
-                async_port=atoi(lret->value);
         }
 
 	if(strstr(supplrms,"pbs")){
