@@ -3355,7 +3355,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
                         return 1;
                 }
 
-                for(size_t i =0; i < strlen(superbuffer); i++){if (superbuffer[i] == ',')superbuffer[i] ='\n'; }
+                for(i =0; i < strlen(superbuffer); i++){if (superbuffer[i] == ',')superbuffer[i] ='\n'; }
                 cs = fwrite(superbuffer,1 , strlen(superbuffer), tmpIOfile);
                 if(strlen(superbuffer) != cs)
                 {

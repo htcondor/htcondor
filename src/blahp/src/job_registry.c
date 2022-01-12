@@ -67,6 +67,7 @@
 #include <libgen.h>
 #include <time.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "job_registry.h"
 
@@ -3302,13 +3303,10 @@ job_registry_store_hash(job_registry_hash_store *hst,
   if (job_registry_lookup_hash(hst, hash, &insert) >= 0) return 0;
 
   new_data = realloc(hst->data , (hst->n_data+1) * sizeof(char *));
-  if (new_data == NULL) return -1;
+  assert(new_data);
 
   hash_copy = strdup(hash);
-  if (hash_copy == NULL) {
-	  free(new_data);
-	  return -1;
-  }
+  assert(hash_copy);
 
   hst->data = new_data;
   
