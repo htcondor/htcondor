@@ -6438,6 +6438,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 				// ExpandParentDirectories() calls ExpandFileTransferList()
 				// with preserveRelativePaths turned off -- the whole point
 				// of it being to generate paths one level at a time.
+				// dprintf( D_ALWAYS, ">>> [c] ExpandParentDirectories( %s, %s )\n", src_path, iwd );
 				if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace )) {
 					return false;
 				}
@@ -6499,6 +6500,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 				// ExpandParentDirectories() adds this back in the correct place.
 				expanded_list.pop_back();
 
+				// dprintf( D_ALWAYS, ">>> [b] ExpandParentDirectories( %s, %s, ..., ... )\n", src_path, iwd );
 				if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace )) {
 					return false;
 				}
@@ -6519,6 +6521,17 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 					if( IS_ANY_DIR_DELIM_CHAR(relative_path[0]) ) { ++relative_path; }
 					// dprintf( D_ALWAYS, ">>> preserving relative path of directory (%s) in SPOOL (as %s)\n", src_path, relative_path );
 
+					// ExpandParentDirectories() adds this back in the correct place.
+					expanded_list.pop_back();
+
+					// ExpandParentDirectories() needs its first argument to
+					// be the path relative to SPOOL, and its second argument
+					// needs to be SPOOL (to parallel the non-SPOOL use).
+					// dprintf( D_ALWAYS, ">>> [a] ExpandParentDirectories( %s, %s, ..., ... )\n", relative_path, SpoolSpace );
+					if(! ExpandParentDirectories( relative_path, SpoolSpace, expanded_list, SpoolSpace )) {
+						return false;
+					}
+
 					//
 					// relative_path is relative to SpoolSpace, not the
 					// destination, which means we can't use it to set
@@ -6527,15 +6540,9 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 					//
 					ASSERT(! fullpath(destination.c_str()));
 
-					std::string parent(SpoolSpace);
 					if( starts_with( relative_path, destination ) ) {
 						relative_path = &relative_path[destination.length()];
 						if( IS_ANY_DIR_DELIM_CHAR(relative_path[0]) ) { ++relative_path; }
-
-						if(! IS_ANY_DIR_DELIM_CHAR(parent[parent.length() - 1])) {
-							parent += DIR_DELIM_CHAR;
-						}
-						parent += destination;
 					}
 
 					if(  (! destination.empty())
@@ -6544,14 +6551,6 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 						destination += DIR_DELIM_CHAR;
 					}
 					destination += relative_path;
-
-					// ExpandParentDirectories() adds this back in the correct place.
-					expanded_list.pop_back();
-
-					// dprintf( D_ALWAYS, ">>> ExpandParentDirectories( %s, %s, ..., ... )\n", relative_path, parent.c_str() );
-					if(! ExpandParentDirectories( relative_path, parent.c_str(), expanded_list, SpoolSpace )) {
-						return false;
-					}
 				} else {
 					destination += condor_basename(src_path);
 				}
@@ -6563,7 +6562,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	//
 	// Transfer the contents of the directory.
 	//
-	// dprintf( D_ALWAYS, ">>> transferring directory contents to %s\n", destination.c_str() );
+	// dprintf( D_ALWAYS, ">>> transferring contents of directory %s to %s\n", src_path, destination.c_str() );
 
 	Directory dir( &st );
 	dir.Rewind();
@@ -6579,6 +6578,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		}
 		file_full_path += file_in_dir;
 
+		// dprintf( D_ALWAYS, ">>> calling ExpandFileTransferList( %s, %s, %s, ... )\n", file_full_path.c_str(), destination.c_str(), iwd );
 		if( !ExpandFileTransferList( file_full_path.c_str(), destination.c_str(), iwd, max_depth, expanded_list, preserveRelativePaths, SpoolSpace ) ) {
 			rc = false;
 		}
