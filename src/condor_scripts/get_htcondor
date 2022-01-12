@@ -113,6 +113,10 @@ check_forked() {
 			fi
 			dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
 			case $dist_version in
+				11)
+					dist_version_number=11
+					dist_version="bullseye"
+				;;
 				10)
 					dist_version_number=10
 					dist_version="buster"
@@ -150,10 +154,11 @@ get_distribution() {
 		#
 		#     debian stretch 9
 		#     debian buster 10
+		#     debian bullseye 11
 		#     ubuntu bionic
 		#     ubuntu focal
 		#     centos 7
-		#     centos 8
+		#     rocky 8
 		#     amzn 2
 		#
 
@@ -188,6 +193,9 @@ get_distribution() {
 			# raspbian?
 			dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
 			case $dist_version in
+				11)
+					dist_version="bullseye"
+				;;
 				10)
 					dist_version="buster"
 				;;
@@ -200,7 +208,7 @@ get_distribution() {
 			esac
 		;;
 
-		scientific|centos|rhel)
+		scientific|centos|rhel|rocky)
 			if [[ ! $dist_version ]] && [ -r /etc/os-release ]; then
 				dist_version=$(. /etc/os-release && echo "$VERSION_ID")
 			fi
@@ -325,7 +333,7 @@ do_install() {
 				To remove: $sh_c "apt-get -y remove --purge ${PACKAGE} && apt-get -y autoremove --purge && rm -fr /etc/condor"
 			EOF
 			;;
-		scientific|centos|rhel|amzn)
+		scientific|centos|rhel|rocky|amzn)
 			PACKAGE="condor"
 			if [[ ! $ROLE ]]; then
 				PACKAGE="minicondor"
@@ -423,7 +431,7 @@ do_install() {
 				fi
 			)
 			;;
-		scientific|centos|rhel|amzn)
+		scientific|centos|rhel|rocky|amzn)
 			(
 			if ! is_dry_run; then
 				set -x
@@ -437,7 +445,7 @@ do_install() {
 
 			repo_dist=$lsb_dist
 			case $lsb_dist in
-				scientific|centos|rhel)
+				scientific|centos|rhel|rocky)
 					repo_dist="el"
 			esac
 			repo_suffix="${repo_dist}${dist_version}"
@@ -453,12 +461,12 @@ do_install() {
 			# Just to make our lives harder, the packages we need from
 			# EPEL depend on repositories which are disabled by default,
 			# and those repositories and how to enable them between
-			# RHEL and CentOS and between version 7 and 8.
+			# RHEL and Rocky and between version 7 and 8.
 			#
 			case ${lsb_dist}.${dist_version} in
-				centos.8 ) $sh_c "dnf -y install dnf-plugins-core"
-				           $sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
-				           ;;
+				rocky.8 ) $sh_c "dnf -y install dnf-plugins-core"
+				          $sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
+				          ;;
 				# subscription-manager only works if you've already
 				# "register"ed and "attach"ed the system.
 				rhel.7 ) $sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
@@ -607,6 +615,9 @@ do_download() {
 			;;
 		scientific|centos|rhel)
 			OS_NAME="CentOS"
+			;;
+		rocky)
+			OS_NAME="Rocky"
 			;;
 		amzn)
 			OS_NAME="AmazonLinux"
