@@ -2126,7 +2126,6 @@ FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
 int
 FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 {
-	int rc = 0;
 	filesize_t bytes=0;
 	filesize_t peer_max_transfer_bytes=0;
 	MyString filename;;
@@ -2251,6 +2250,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	// Start the main download loop. Read reply codes + filenames off a
 	// socket wire, s, then handle downloads according to the reply code.
 	for (;;) {
+		int rc = 0;
 		TransferCommand xfer_command = TransferCommand::Unknown;
 		{
 			int reply;
@@ -3097,7 +3097,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					errstack.getFullText().c_str() );
 				download_success = false;
 				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
-				hold_subcode = rc;
+				hold_subcode = 0;
 				try_again = false;
 				error_buf.formatstr( "%s", errstack.getFullText().c_str() );
 			}
