@@ -993,6 +993,18 @@ void ArcJob::SetRemoteJobId( const char *job_id )
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
+static
+bool AppendEnvVar(void* pv, const std::string & var, const std::string & val)
+{
+	std::string &rsl = *(std::string*)pv;
+	rsl += "<Environment><Name>";
+	rsl += escapeXML(var);
+	rsl += "</Name><Value>";
+	rsl += escapeXML(val);
+	rsl += "</Value></Environment>";
+	return true;
+}
+
 bool ArcJob::buildJobADL()
 {
 	bool transfer_exec = true;
@@ -1091,7 +1103,17 @@ bool ArcJob::buildJobADL()
 		}
 	}
 
-	// TODO Add setting of environment variables
+	Env envobj;
+	std::string env_errors;
+	if (!envobj.MergeFrom(jobAd, env_errors)) {
+		dprintf(D_ALWAYS,"(%d.%d) Failed to read job environment: %s\n",
+		        procID.cluster, procID.proc, env_errors.c_str());
+		formatstr(errorString, "Failed to read job environment: %s\n",
+		          arg_errors.c_str());
+		RSL.clear();
+		return false;
+	}
+	envobj.Walk(&AppendEnvVar, &RSL);
 
 	RSL += "</Application>";
 
