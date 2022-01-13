@@ -49,6 +49,21 @@ Bugs Fixed:
   job's lifetime.
   :jira:`922`
 
+Version 9.5.1
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.5.1 released on Month Date, 2021.
+
+- HTCondor version 9.5.1 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
 - HTCondor now properly creates directories when transferring a directory
   tree out of SPOOL while preserving relative paths.  This bug would manifest
   after a self-checkpointing job created a file in a new subdirectory of a
@@ -63,9 +78,9 @@ Release Notes:
 
 .. HTCondor version 9.5.0 released on Month Date, 2022.
 
-- This version includes all the updates from :ref:`lts-version-history-909`.
-
 - HTCondor version 9.5.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-909`.
 
 New Features:
 
@@ -73,14 +88,14 @@ New Features:
   images that can be run in Singularity or Docker or other container runtimes.
   :jira:`850`
 
-- Docker universe jobs can now be user-level checkpointed by setting
+- Docker universe jobs can now self-checkpoint by setting
   checkpoint_exit_code in submit files.
   :jira:`841`
 
-- Docker universe jobs now work on jobs without file transfer
+- Docker universe now works with jobs that don't transfer any files.
   :jira:`867`
 
-- The **blahp** is now included in the HTCondor linux native packages.
+- The **blahp** is now included in the HTCondor Linux native packages.
   :jira:`838`
 
 - The tool *bosco_cluster* is being renamed to *condor_remote_cluster*.
@@ -94,7 +109,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug where if the submit file set checkpoint_exit_code, and the administrator
+- Fixed a bug where if the submit file set a checkpoint_exit_code, and the administrator
   enabled singularity support on the execute node, the job would go on hold at checkpoint time.
   :jira:`837`
 
