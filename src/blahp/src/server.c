@@ -429,7 +429,7 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 		/* Make sure we have VirtualOrganisation here */
 		if (!virtualorg_found)
 		{
-			submit_attributes_to_pass = realloc(submit_attributes_to_pass, n_attrs+2);
+			submit_attributes_to_pass = realloc(submit_attributes_to_pass, sizeof(char *) * (n_attrs+2));
 			if (submit_attributes_to_pass != NULL)
 			{
 				submit_attributes_to_pass[n_attrs] = strdup("VirtualOrganisation");
@@ -1275,7 +1275,7 @@ cmd_submit_job(void *args)
 
 	/* Set the CE requirements */
 	gettimeofday(&ts, NULL);
-	req_file = make_message("%s/ce-req-file-%d%ld",tmp_dir, ts.tv_sec, ts.tv_usec);
+	req_file = make_message("%s/ce-req-file-%ld%ld",tmp_dir, ts.tv_sec, ts.tv_usec);
 	if(CEReq_parse(cad, req_file, proxysubject, proxyfqan) >= 0)
 	{
 		command_ext = make_message("%s -C %s", command, req_file);
@@ -3239,7 +3239,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
 	result = classad_get_dstring_attribute(cad, "TransferInput", &superbuffer);
 	if (result == C_CLASSAD_NO_ERROR)
 	{
-		result = classad_get_dstring_attribute(cad, "Iwd", &iwd);
+		classad_get_dstring_attribute(cad, "Iwd", &iwd);
 		/* very tempting, but it's a linux-only extension to POSIX:
 		if (iwd == NULL) iwd = getcwd(NULL, 0); */
 		if(iwd == NULL)
@@ -3270,7 +3270,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
 			free(superbuffer);
 			return 1;
 		}
-		tmpIOfilestring = make_message("%s/%s_%s_%d%d", tmp_dir, "InputFileList",reqId, ts.tv_sec, ts.tv_usec);
+		tmpIOfilestring = make_message("%s/%s_%s_%ld%ld", tmp_dir, "InputFileList",reqId, ts.tv_sec, ts.tv_usec);
 		tmpIOfile = fopen(tmpIOfilestring, "w");
 		if(tmpIOfile == NULL)
 		{
@@ -3341,7 +3341,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
                 {
                         superbufferTMP = strdup(superbuffer);
                 }
-                tmpIOfilestring = make_message("%s/%s_%s_%d%ld", tmp_dir, "OutputFileList",reqId,ts.tv_sec, ts.tv_usec);
+                tmpIOfilestring = make_message("%s/%s_%s_%ld%ld", tmp_dir, "OutputFileList",reqId,ts.tv_sec, ts.tv_usec);
                 tmpIOfile = fopen(tmpIOfilestring, "w");
                 if(tmpIOfile == NULL)
                 {
@@ -3351,7 +3351,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
                         if (superbufferRemaps != NULL) free(superbufferRemaps);
                         if (superbufferTMP != NULL) free(superbufferTMP);
                         free(superbuffer);
-						free(newptr);
+						if(*command != newptr) free(newptr);
                         return 1;
                 }
 
@@ -3367,6 +3367,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
                         if (superbufferRemaps != NULL) free(superbufferRemaps);
                         if (superbufferTMP != NULL) free(superbufferTMP);
                         free(superbuffer);
+						if(*command != newptr) free(newptr);
 			return 1;
                 }
                 fwrite("\n",1,1,tmpIOfile);
@@ -3388,10 +3389,12 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
                         if (resultLine != NULL) *resultLine = make_message("%s 1 Out\\ of\\ memory\\ computing\\ file\\ remaps N/A", reqId);
                         free(superbufferRemaps);
                         free(superbufferTMP);
+						if(*command != newptr) free(newptr);
+						if (newptr1) free(newptr1);	
                         return 1;
                 }
 
-                tmpIOfilestring = make_message("%s/%s_%s_%d%d", tmp_dir, "OutputFileListRemaps",reqId,ts.tv_sec, ts.tv_usec);
+                tmpIOfilestring = make_message("%s/%s_%s_%ld%ld", tmp_dir, "OutputFileListRemaps",reqId,ts.tv_sec, ts.tv_usec);
                 tmpIOfile = fopen(tmpIOfilestring, "w");
                 if(tmpIOfile == NULL)
                 {
@@ -3401,7 +3404,8 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
                         free(superbuffer);
                         free(superbufferTMP);
                         free(superbufferRemaps);
-						free(newptr);
+						if(*command != newptr) free(newptr);
+						if (newptr1) free(newptr1);	
                         return 1;
                 }
 
@@ -3417,6 +3421,8 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
                         free(superbuffer);
                         free(superbufferTMP);
                         free(superbufferRemaps);
+						if(*command != newptr) free(newptr);
+						if (newptr1) free(newptr1);	
                         return 1;
                 }
                 fwrite("\n",1,1,tmpIOfile);

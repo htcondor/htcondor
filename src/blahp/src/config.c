@@ -382,6 +382,7 @@ config_read_cmd(const char *path, const char *set_command_format, config_handle 
 				if (new_entry->key) free(new_entry->key);
 				if (new_entry->value) free(new_entry->value);
 				free(new_entry);
+				pclose(cf);
                 return FALSE;
                }
               memcpy(new_entry->key, key_start, key_len);
