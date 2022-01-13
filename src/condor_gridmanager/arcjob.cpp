@@ -1115,6 +1115,12 @@ bool ArcJob::buildJobADL()
 	}
 	envobj.Walk(&AppendEnvVar, &RSL);
 
+	// Add additional Application elements from the ArcApplication
+	// job attribute.
+	if ( jobAd->LookupString( ATTR_ARC_APPLICATION, attr_value ) ) {
+		RSL += attr_value;
+	}
+
 	RSL += "</Application>";
 
 	// Now handle the <Resources> element.

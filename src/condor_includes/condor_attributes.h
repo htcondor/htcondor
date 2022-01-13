@@ -523,6 +523,7 @@
 #define ATTR_NEXT_JOB_START_DELAY  "NextJobStartDelay"
 #define ATTR_NODE  "Node"
 #define ATTR_NORDUGRID_RSL  "NordugridRSL"
+#define ATTR_ARC_APPLICATION  "ArcApplication"
 #define ATTR_ARC_RSL  "ArcRSL"
 #define ATTR_ARC_RTE  "ArcRte"
 #define ATTR_ARC_RESOURCES  "ArcResources"
