@@ -48,10 +48,17 @@ push_env(env_t *my_env, const char *new_entry)
 
 	if (new_entry == NULL)
 	{
-		BLAHDBG("push_env: %s\n", "trying to add a null string");
+		BLAHDBG("push_env: %s\n", "trying to add to a null string");
 		errno = EINVAL;
 		return(-1);
 	}
+	if (my_env == NULL)
+	{
+		BLAHDBG("push_env: %s\n", "trying to a null environment");
+		errno = EINVAL;
+		return(-1);
+	}
+
 
 	/* Duplicate the new entry */
 	my_new_entry = strdup(new_entry);
@@ -62,17 +69,11 @@ push_env(env_t *my_env, const char *new_entry)
 		return(-1);
 	}
 	
-	/* Enlarge or create the environment */
-	if (my_env == NULL)
-	{
-		my_env_size = 1;
-		new_envcopy = (env_t)malloc(sizeof(char *) * (my_env_size + 1));
-	} else {
-		envcopy = *my_env;
-		if (envcopy != NULL)
-			while (envcopy[my_env_size - 1] != NULL) my_env_size++;
-		new_envcopy = (env_t)realloc(envcopy, sizeof(char *) * (my_env_size + 1));
-	}
+	/* Enlarge the environment */
+	envcopy = *my_env;
+	if (envcopy != NULL)
+		while (envcopy[my_env_size - 1] != NULL) my_env_size++;
+	new_envcopy = (env_t)realloc(envcopy, sizeof(char *) * (my_env_size + 1));
 
 	if (new_envcopy == NULL)
 	{

@@ -649,6 +649,7 @@ job_registry_init(const char *path,
           return NULL; /* keep the rename errno */
          }
        }
+	  if (old_path) free(old_path);
      }
    }
 
@@ -717,7 +718,6 @@ job_registry_init(const char *path,
          {
           umask(old_umask);
           job_registry_destroy(rha);
-		  if (old_path) free(old_path);
           return NULL;
          }
 	close(cfd);
@@ -726,7 +726,6 @@ job_registry_init(const char *path,
       else
        {
         job_registry_destroy(rha);
-		if (old_path) free(old_path);
         return NULL;
        }
      }
@@ -1167,7 +1166,10 @@ job_registry_resync_mmap(job_registry_handle *rha, FILE *fd)
     update_exponential_backoff*=2;
 
     /* Did a good index (updated by somebody else) appear in the meanwhile ? */
-    if (fstat(fileno(fd), &rst) < 0) return JOB_REGISTRY_STAT_FAIL;
+    if (fstat(fileno(fd), &rst) < 0) {
+		free(new_index);
+		return JOB_REGISTRY_STAT_FAIL;
+	}
     mst_ret = stat(rha->mmappableindex, &mst);
     if (mst_ret >= 0)
      {
@@ -1199,6 +1201,7 @@ job_registry_resync_mmap(job_registry_handle *rha, FILE *fd)
 
   if (newindex_fd < 0)
    {
+     off_t r;
     /* Need to attach to an existing and up-to-date mmap file */
     newindex_fd = open(rha->mmappableindex, O_RDONLY);
     if (newindex_fd < 0) return JOB_REGISTRY_FOPEN_FAIL;
@@ -1218,13 +1221,14 @@ job_registry_resync_mmap(job_registry_handle *rha, FILE *fd)
     rha->n_entries = 0;
     rha->n_alloc = 0;
 
-    rha->index_mmap_length = lseek(newindex_fd, 0, SEEK_END);
-    if (rha->index_mmap_length < 0)
+    r = lseek(newindex_fd, 0, SEEK_END);
+    if (r < 0)
      {
       close(newindex_fd);
       rha->index_mmap_length = 0;
       return JOB_REGISTRY_FSEEK_FAIL;
      }
+	rha->index_mmap_length = r;
 
     rha->entries = mmap(0, rha->index_mmap_length, PROT_READ, MAP_SHARED, newindex_fd, 0);
     if (rha->entries == NULL)

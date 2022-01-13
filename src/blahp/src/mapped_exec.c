@@ -400,8 +400,10 @@ execute_cmd(exec_cmd_t *cmd)
 		}
 		if (cmd->command)
 			command = make_message("%s -u %s %s", id_mapping_command, cmd->delegation_cred, cmd->command);
-		else
+		else {
+			if (proxy_fd != -1) close (proxy_fd);
 			return(0); /* nothing to execute */
+		}
 		break;
 	}
 
@@ -426,6 +428,7 @@ execute_cmd(exec_cmd_t *cmd)
 	if (command_tmp != NULL)
 	{
 		free(command);
+		if (proxy_fd != -1) close (proxy_fd);
 		command = command_tmp;
 	}
 
@@ -433,6 +436,8 @@ execute_cmd(exec_cmd_t *cmd)
 	if((wordexp_err = wordexp(command, &args, WRDE_NOCMD)))
 	{
 		fprintf(stderr,"wordexp: unable to parse the command line \"%s\" (error %d)\n", command, wordexp_err);
+		free(command);
+		if (proxy_fd != -1) close (proxy_fd);
 		return(1);
 	}
 	BLAHDBG("execute_cmd: will execute the command <%s>\n", command);
@@ -442,6 +447,7 @@ execute_cmd(exec_cmd_t *cmd)
 	{
 		perror("pipe() for stdout");
 		free(command);
+		if (proxy_fd != -1) close (proxy_fd);
 		return(-1);       
 	}
 	if (pipe(fdpipe_stderr) == -1)
