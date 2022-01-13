@@ -38,12 +38,17 @@ elif $(grep -qi buster /etc/os-release); then
     arch_dist="${arch}_Debian10"
 elif $(grep -qi bullseye /etc/os-release); then
     arch_dist="${arch}_Debian11"
+elif $(grep -qi bookworm /etc/os-release); then
+    arch_dist="${arch}_Debian12"
 elif $(grep -qi xenial /etc/os-release); then
     arch_dist="${arch}_Ubuntu16"
 elif $(grep -qi bionic /etc/os-release); then
     arch_dist="${arch}_Ubuntu18"
 elif $(grep -qi focal /etc/os-release); then
     arch_dist="${arch}_Ubuntu20"
+else
+    echo 'Platform not defined'
+    exit 1
 fi
 
 # Blow away whatever BaTLab made
