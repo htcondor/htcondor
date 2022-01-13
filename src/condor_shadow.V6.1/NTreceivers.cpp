@@ -584,7 +584,7 @@ do_REMOTE_syscall()
 		errno = 0;
 		off_t new_position = lseek( fd , offset , whence);
 		terrno = (condor_errno_t)errno;
-		dprintf( D_SYSCALLS, "\trval = %ld, errno = %d\n", new_position, terrno );
+		dprintf( D_SYSCALLS, "\trval = %ld, errno = %d\n", (long)new_position, terrno );
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(new_position) );

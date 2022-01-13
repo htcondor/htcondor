@@ -1398,9 +1398,8 @@ cmd_submit_job(void *args)
 	if (retcod != 0)
 	{
 		escpd_cmd_err = escape_spaces(strerror(errno));
-		if (escpd_cmd_err == NULL) escpd_cmd_err = (char *)blah_omem_msg;
 		resultLine = make_message("%s 3 Error\\ executing\\ the\\ submission\\ command:\\ %s", reqId, escpd_cmd_err);
-		if (escpd_cmd_err != blah_omem_msg) free(escpd_cmd_err);
+		if (escpd_cmd_err) free(escpd_cmd_err);
 		goto cleanup_cmd_out;
 	}
 
@@ -1538,9 +1537,8 @@ cmd_cancel_job(void* args)
 	if (retcod != 0)
 	{
 		escpd_cmd_err = escape_spaces(strerror(errno));
-		if (escpd_cmd_err == NULL) escpd_cmd_err = (char *)blah_omem_msg;
 		resultLine = make_message("%s 3 Error\\ executing\\ the\\ cancel\\ command:\\ %s", reqId, escpd_cmd_err);
-		if (escpd_cmd_err != blah_omem_msg) free(escpd_cmd_err);
+		if (escpd_cmd_err) free(escpd_cmd_err);
 		goto cleanup_command;
 	}
 
@@ -2470,7 +2468,7 @@ set_cmd_bool_option(char **command, classad_context cad, const char *attribute, 
 	const char *str_yes = "yes";
 	const char *str_no  = "no";
 	int attr_value;
-	char *argument;
+	const char *argument;
 	char *to_append = NULL;
 	char *new_command;
 	int result;
@@ -3411,7 +3409,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
 
                 for(i =0; i < strlen(superbuffer); i++){if (superbuffer[i] == ',')superbuffer[i] ='\n'; }
                 cs = fwrite(superbuffer,1 , strlen(superbuffer), tmpIOfile);
-                if(strlen(superbuffer) != cs)
+                if((int)strlen(superbuffer) != cs)
                 {
                         /* PUSH A FAILURE */
                         if (resultLine != NULL) *resultLine = make_message("%s 1 Error\\ writing\\ in\\ %s N/A", reqId,tmpIOfilestring);

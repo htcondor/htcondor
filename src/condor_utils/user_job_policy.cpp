@@ -768,11 +768,10 @@ bool UserPolicy::FiringReason(std::string &reason,int &reason_code,int &reason_s
 
 	reason = "";
 
-	const char * expr_src;
+	const char * expr_src = "UNKNOWN (never set)";
 	std::string exprString;
 	switch(m_fire_source) {
 		case FS_NotYet:
-			expr_src = "UNKNOWN (never set)";
 			break;
 
 		case FS_JobAttribute:
