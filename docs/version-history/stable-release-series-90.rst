@@ -62,6 +62,12 @@ Bugs Fixed:
   based platform.
   :jira:`942`
 
+- Fixed a bug in the FileTransfer mechanism where URL transfers caused 
+  subsequent failures to report incorrect error messages.
+  :jira:`915`
+
+.. _lts-version-history-909:
+
 Version 9.0.9
 -------------
 
