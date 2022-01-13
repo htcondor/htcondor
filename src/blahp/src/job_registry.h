@@ -157,7 +157,7 @@ typedef struct job_registry_handle_s
    job_registry_index_mode mode;
    uint32_t disk_firstrec;
    int mmap_fd;
-   off_t index_mmap_length;
+   size_t index_mmap_length;
    char *mmappableindex;
  } job_registry_handle;
 
