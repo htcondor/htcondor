@@ -41,6 +41,11 @@ Bugs Fixed:
   email notification about job errors.
   :jira:`895`
 
+- Fixed a bug introduced earlier in this series where in very 
+  rare cases, a schedd would not appear in the collector when it
+  started up, but would appear an hour later.
+  :jira:`931`
+
 - The view server can now handle very long Accounting Group names
   :jira:`913`
 
