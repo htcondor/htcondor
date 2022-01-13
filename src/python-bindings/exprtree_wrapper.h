@@ -81,7 +81,6 @@ private:
 
     classad::ExprTree *m_expr;
     boost::shared_ptr<classad::ExprTree> m_refcount;
-    bool m_owns;
 };
 
 ExprTreeHolder literal(boost::python::object);

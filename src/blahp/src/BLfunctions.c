@@ -155,7 +155,7 @@ strdel(char *s, const char *delete)
         }
 
         if(!s || !strlen(s)){
-                tmp = strndup(s, STR_CHARS);
+                tmp = strdup("");
                 return tmp;
         }
 
@@ -398,6 +398,8 @@ daemonize()
 {
 
 	int pid;
+	int r;
+	FILE *f;
     
 	pid = fork();
 	
@@ -417,12 +419,23 @@ daemonize()
 		exit(EXIT_SUCCESS);
 	}
 	
-	chdir("/");
+	r = chdir("/");
+	if (r != 0) {
+		exit(EXIT_FAILURE);
+	}
 
-	freopen ("/dev/null", "r", stdin);
-	freopen ("/dev/null", "w", stdout);
-	freopen ("/dev/null", "w", stderr);
-
+	f = freopen ("/dev/null", "r", stdin);  
+	if (f == NULL) {
+		exit(EXIT_FAILURE);
+	}
+	f = freopen ("/dev/null", "w", stdout);
+	if (f == NULL) {
+		exit(EXIT_FAILURE);
+	}
+	f = freopen ("/dev/null", "w", stderr); 
+	if (f == NULL) {
+		exit(EXIT_FAILURE);
+	}
 }
 
 void

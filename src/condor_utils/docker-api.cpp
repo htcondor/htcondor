@@ -912,6 +912,7 @@ int
 DockerAPI::testImageRuns(CondorError &err) {
 
 #ifndef LINUX
+	(void)err; // shut the compiler up
 	return 0;
 #else
 	TemporaryPrivSentry sentry(PRIV_ROOT);

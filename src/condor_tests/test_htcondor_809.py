@@ -236,6 +236,8 @@ def path_to_prp_script(default_condor, test_dir):
     if [[ $DATA == "" ]]; then
         echo "step one" >> {test_dir}/prp-test-file
         echo "step one" >> prp/data/data_file
+        mkdir prp/data/subdir
+        echo "step one" >> prp/data/subdir/other_data_file
         exit 85
     fi
     if [[ $DATA == "step one" ]]; then
