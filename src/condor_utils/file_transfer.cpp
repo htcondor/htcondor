@@ -2783,7 +2783,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				rc = GET_FILE_PLUGIN_FAILED;
 			}
 
-			if( (rc != 0) && multifile_plugins_enabled ) {
+			if( (rc == 0) && multifile_plugins_enabled ) {
 
 				// Determine which plugin to invoke, and whether it supports multiple
 				// file transfer.
@@ -2817,7 +2817,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				}
 			}
 
-			if( (rc != 0) && (!isDeferredTransfer) ) {
+			if( (rc == 0) && (!isDeferredTransfer) ) {
 				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 				TransferPluginResult result = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), &pluginStatsAd, LocalProxyName.Value());
 				// If transfer failed, set rc to error code that ReliSock recognizes
