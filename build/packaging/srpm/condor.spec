@@ -1682,6 +1682,11 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jan 13 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.9-1
+- Added Debian 11 (bullseye) as a supported platform
+- Since CentOS 8 has reached end of life, we build and test on Rocky Linux 8
+- The OAUTH credmon is now packaged for Enterprise Linux 8
+
 * Tue Dec 21 2021 Tim Theisen <tim@cs.wisc.edu> - 9.4.1-1
 - Add the ability to track slot activation metrics
 - Fix bug where a file transfer plugin failure code may not be reported
