@@ -31,6 +31,14 @@ Release Notes:
   systems.
   :jira:`873`
 
+- For **arc** grid universe jobs, environment variables specified in
+  the job ad are now included in the ADL job description given to the
+  ARC CE REST service.
+  Also, added new submit command ``arc_application``, which can be used
+  to add additional elements under the ``<Application>`` element of
+  the ADL job description given to the ARC CE REST service.
+  :jira:`932`
+
 - Reduce the size of the singularity test executable by not linking in
   libraries it doesn't need.
   :jira:`927`
