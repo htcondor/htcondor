@@ -1899,6 +1899,7 @@ cmd_renew_proxy(void *args)
 	{
 		/* Nothing needs to be done with the proxy */
 		resultLine = make_message("%s 0 Proxy\\ renewed", reqId);
+		if (old_proxy != NULL) free(old_proxy);
 	}
 	else if ((jobStatus < 0) || (old_proxy == NULL) || (old_proxy_len <= 0))
 	{
@@ -2306,7 +2307,7 @@ hold_resume(void* args, int action )
 		enqueue_result(resultLine);
 		free(resultLine);
 	}
-	if (dummyargv) free(dummyargv);
+	free(dummyargv);
 	if (reqId) free(reqId);
 	return;
 }
@@ -3323,8 +3324,11 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
 
 		newptr = make_message("%s -I %s", *command, tmpIOfilestring);
 		fclose(tmpIOfile);
-		if (*files_to_clean_up != NULL)
+		if (*files_to_clean_up != NULL) {
 			(*files_to_clean_up)[cleanup_file_index++] = tmpIOfilestring;
+		} else {
+			free(tmpIOfilestring);
+		}
 		free(superbuffer);
 		free(iwd);
 	}
@@ -3520,6 +3524,7 @@ char*  outputfileRemaps(char *sb,char *sbrmp)
                         if(strmpd == 0)
                         {
                                 newbuffer =(char*) realloc((void*)newbuffer, blen + strlen(tstr) + 2);
+                                assert(newbuffer);
                                 strcpy(&newbuffer[blen],tstr);
                                 newbuffer[blen + strlen(tstr)] = (last? 0: ',');
                                 newbuffer[blen + strlen(tstr) + 1] = '\0';
