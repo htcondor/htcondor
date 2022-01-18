@@ -49,6 +49,11 @@ Bugs Fixed:
   email notification about job errors.
   :jira:`895`
 
+- Fixed a very rare bug in the timing subsystem that would prevent
+  any daemon from appearing in the collector, and periodic expressions
+  to be run less frequently than they should.
+  :jira:`934`
+
 - Fixed a bug introduced earlier in this series where in very 
   rare cases, a schedd would not appear in the collector when it
   started up, but would appear an hour later.
