@@ -573,6 +573,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 		return false;
 	}
 	int rval = 0;
+	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
 	bool success = false;
 	std::string errmsg;
 	Qmgr_connection * qmgr = NULL;
@@ -617,26 +618,10 @@ direct_condor_submit(const Dagman &dm, Job* node,
 			rval = -1;
 			goto finis;
 		}
-
-		// Evaluate the number of procs
+		// Check for invalid queue statements
 		SubmitForeachArgs fea;
 		if (submitHash->parse_q_args(queue_args, fea, errmsg) != 0) {
 			errmsg = "Invalid queue statement (" + std::string(queue_args) + ")";
-			rval = -1;
-			goto finis;
-		}
-		int total_procs = (fea.queue_num ? fea.queue_num : 1) * fea.item_len();
-
-		// If this job has >1 procs, check if multi-proc jobs are prohibited
-		if (queue_args && total_procs > 1 && dm.prohibitMultiJobs) {
-			errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n";
-			rval = -1;
-			goto finis;
-		}
-		// DAGMan does not support multi-proc factory jobs when using late materialization
-		bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
-		if (queue_args && total_procs > 1 && is_factory) {
-			errmsg = "Cannot specify queue > 1 when using factory jobs and DAGMan direct submission.";
 			rval = -1;
 			goto finis;
 		}
@@ -678,6 +663,18 @@ direct_condor_submit(const Dagman &dm, Job* node,
 			proc_id = NewProc(cluster_id);
 			if (proc_id != jid.proc) {
 				formatstr(errmsg, "expected next ProcId to be %d, but Schedd says %d", jid.proc, proc_id);
+				rval = -1;
+				goto finis;
+			}
+			// If this job has >1 procs, check if multi-proc jobs are prohibited
+			if (proc_id > 1 && dm.prohibitMultiJobs) {
+				errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n";
+				rval = -1;
+				goto finis;
+			}
+			// DAGMan does not support multi-proc factory jobs when using late materialization
+			if (proc_id > 1 && is_factory) {
+				errmsg = "Submit generated multiple job procs; disallowed when using factory jobs and DAGMan direct submission.";
 				rval = -1;
 				goto finis;
 			}
