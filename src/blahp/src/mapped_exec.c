@@ -428,7 +428,6 @@ execute_cmd(exec_cmd_t *cmd)
 	if (command_tmp != NULL)
 	{
 		free(command);
-		if (proxy_fd != -1) close (proxy_fd);
 		command = command_tmp;
 	}
 
@@ -454,6 +453,7 @@ execute_cmd(exec_cmd_t *cmd)
 	{
 		perror("pipe() for stderr");
 		free(command);
+		if (proxy_fd != -1) close (proxy_fd);
 		return(-1);       
 	}
 

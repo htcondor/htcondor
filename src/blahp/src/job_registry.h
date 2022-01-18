@@ -120,7 +120,7 @@ typedef struct job_registry_entry_s
 
 #define JOB_REGISTRY_ASSIGN_ENTRY(dest,src) \
   (dest)[sizeof(dest)-1]='\000'; \
-  strncpy((dest),(src),sizeof(dest)); 
+  strncpy((dest),(src),sizeof(dest) - 1); 
 
 typedef struct job_registry_index_s
  {

@@ -854,13 +854,14 @@ job_registry_init(const char *path,
      {
       job_registry_destroy(rha);
       errno = ENOMEM;
+      fclose(fd);
       return NULL;
      }
     if (rename(rha->path, old_path) < 0)
      {
       free(old_path);
       job_registry_destroy(rha);
-	  fclose(fd);
+      fclose(fd);
       return NULL;
      }
     fclose(fd); /* Release lock */
@@ -2673,11 +2674,7 @@ job_registry_seek_next(FILE *fd, job_registry_entry *result)
     fmt_extra = (format); \
     esiz = snprintf(NULL, 0, fmt_extra, (attribute)) + 1; \
     new_extra_attrs = (char *)realloc(extra_attrs, extra_attrs_size + esiz); \
-    if (new_extra_attrs == NULL) \
-     { \
-      if (extra_attrs != NULL) free(extra_attrs); \
-      return NULL; \
-     } \
+	assert(new_extra_attrs); \
     need_to_free_extra_attrs = TRUE; \
     extra_attrs = new_extra_attrs; \
     snprintf(extra_attrs+extra_attrs_size, esiz, fmt_extra, (attribute)); \

@@ -351,6 +351,7 @@ config_read_cmd(const char *path, const char *set_command_format, config_handle 
                {
                 /* Out of memory */
                 free(line);
+                pclose(cf);
                 return FALSE;
                }
               memcpy(found->value, val_start, val_len);
@@ -364,6 +365,7 @@ config_read_cmd(const char *path, const char *set_command_format, config_handle 
                {
                 /* Out of memory */
                 free(line);
+                pclose(cf);
                 return FALSE;
                }
   
