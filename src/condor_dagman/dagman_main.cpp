@@ -375,9 +375,9 @@ Dagman::Config()
 	} else {
 		debug_printf(DEBUG_NORMAL, "DAGMAN_CONDOR_SUBMIT_EXE setting: %s\n", condorSubmitExe);
 	}
-	bool _use_condor_submit = param_boolean("DAGMAN_USE_DIRECT_SUBMIT", true);
+	useDirectSubmit = param_boolean("DAGMAN_USE_DIRECT_SUBMIT", true);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_USE_DIRECT_SUBMIT setting: %s\n",
-		_use_condor_submit ? "True" : "False");
+		useDirectSubmit ? "True" : "False");
 
 	free( condorRmExe );
 	condorRmExe = param( "DAGMAN_CONDOR_RM_EXE" );
