@@ -2531,7 +2531,11 @@ job_registry_wrlock(const job_registry_handle *rha, FILE *sfd)
 
   /* Make sure the world-writable lock file continues to be empty */
   /* We check this when obtaining registry write locks only */
-  ftruncate(lfd, 0);
+  ret = ftruncate(lfd, 0);
+  if (ret < 0) {
+    close(lfd); // also releases lock on lfd
+    return ret;
+  }
 
   /* Now obtain the requested write lock */
 

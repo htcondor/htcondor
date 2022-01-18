@@ -337,6 +337,7 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 	int virtualorg_found;
 	char **attr;
 	int n_attrs;
+	int write_result;
 
 	blah_config_handle = config_read(NULL);
 	if (blah_config_handle == NULL)
@@ -570,8 +571,14 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 
 	sem_init(&sem_total_commands, 0, max_threaded_cmds);
 	
-	write(server_socket, blah_version, strlen(blah_version));
-	write(server_socket, "\r\n", 2);
+	write_result = write(server_socket, blah_version, strlen(blah_version));
+	if (write_result < 0) {
+		exit_program = 1;
+	}
+	write_result = write(server_socket, "\r\n", 2);
+	if (write_result < 0) {
+		exit_program = 1;
+	}
 	while(!exit_program)
 	{
 		get_cmd_res = cmd_buffer_get_command(&input_buffer);
@@ -647,12 +654,20 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 			pthread_mutex_lock(&send_lock);
 			if (reply)
 			{
-				write(server_socket, reply, strlen(reply));
+				write_result = write(server_socket, reply, strlen(reply));
 				free(reply);
+				if (write_result < 0) {
+					exit_program = 1;
+				}
 			}
 			else
 				/* WARNING: the command here could have been actually executed */
-				write(server_socket, "F Cannot\\ allocate\\ return\\ line\r\n", 34);
+			{
+				write_result = write(server_socket, "F Cannot\\ allocate\\ return\\ line\r\n", 34);
+				if (write_result < 0) {
+					exit_program = 1;
+				}
+			}
 			pthread_mutex_unlock(&send_lock);
 			
 			free(input_buffer);
@@ -1768,7 +1783,6 @@ get_status_and_old_proxy(int map_mode, char *jobDescr, const char *proxyFileName
 			char **workernode, char **error_string)
 {
 	char *r_old_proxy=NULL;
-	int retcod;
 	classad_context status_ad[MAX_JOB_NUMBER];
 	char errstr[MAX_JOB_NUMBER][ERROR_MAX_LEN];
 	int jobNumber=0, jobStatus;
@@ -1845,12 +1859,12 @@ get_status_and_old_proxy(int map_mode, char *jobDescr, const char *proxyFileName
 
 	/* If we reach here we have a proxy *and* we have */
 	/* to check on the job status */
-	retcod = get_status(jobDescr, status_ad, status_argv, errstr, 1, &jobNumber);
+	get_status(jobDescr, status_ad, status_argv, errstr, 1, &jobNumber);
 
 	if (jobNumber > 0 && (!strcmp(errstr[0], "No Error")))
 	{
 		classad_get_int_attribute(status_ad[0], "JobStatus", &jobStatus);
-		retcod = classad_get_dstring_attribute(status_ad[0], "WorkerNode", workernode);
+		classad_get_dstring_attribute(status_ad[0], "WorkerNode", workernode);
 		for (i=0; i<jobNumber; i++) if (status_ad[i]) classad_free(status_ad[i]);
 		return jobStatus;
 	}
