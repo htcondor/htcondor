@@ -6,12 +6,117 @@ import stat
 import tempfile
 import time
 
+from datetime import datetime
 from pathlib import Path
 
+from htcondor_cli.noun import Noun
+from htcondor_cli.verb import Verb
+from htcondor_cli import JobStatus
 from htcondor_cli import TMP_DIR
 
 
 schedd = htcondor.Schedd()
+
+
+class Submit(Verb):
+    """
+    Submits a job when given a submit file
+    """
+
+    options = {
+        "dag_filename": {
+            "args": ("dag_filename",),
+            "help": "DAG file",
+        },
+    }
+
+    def __init__(self, logger, dag_filename, **options):
+        # Make sure the specified DAG file exists and is readable
+        dag_file = Path(dag_filename)
+        if not dag_file.exists():
+            raise FileNotFoundError(f"Could not find file: {str(dag_file)}")
+        if os.access(dag_file, os.R_OK) is False:
+            raise PermissionError(f"Could not access file: {str(dag_file)}")
+
+        # Get schedd
+        schedd = htcondor.Schedd()
+
+        # Submit the DAG to the local schedd
+        submit_description = htcondor.Submit.from_dag(dag_filename)
+
+        with schedd.transaction() as txn:
+            try:
+                cluster_id = submit_description.queue(txn, 1)
+                logger.info(f"DAG {cluster_id} was submitted.")
+            except Exception as e:
+                raise RuntimeError(f"Error submitting DAG:\n{str(e)}")
+
+
+class Status(Verb):
+    """
+    Shows current status of a DAG when given a DAG id
+    """
+
+    options = {
+        "dag_id": {
+            "args": ("dag_id",),
+            "help": "DAG ID",
+        },
+    }
+
+
+    def __init__(self, logger, dag_id, **options):
+        dag = None
+        dag_status = "IDLE"
+
+        # Get schedd
+        schedd = htcondor.Schedd()
+
+        # Query schedd
+        try:
+            dag = schedd.query(
+                constraint=f"ClusterId == {dag_id}",
+                projection=["JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "ResourceType"]
+            )
+        except IndexError:
+            raise RuntimeError(f"No DAG found for ID {dag_id}.")
+        except Exception as e:
+            raise RuntimeError(f"Error looking up DAG status: {str(e)}")
+        if len(dag) == 0:
+            raise RuntimeError(f"No DAG found for ID {dag_id}.")
+
+        # Now, produce DAG status
+        if JobStatus[dag[0]['JobStatus']] == "RUNNING":
+            job_running_time = datetime.now() - datetime.fromtimestamp(dag[0]["JobStartDate"])
+            logger.info(f"DAG is running since {round(job_running_time.seconds/3600)}h{round(job_running_time.seconds/60)}m{(job_running_time.seconds%60)}s")
+        elif JobStatus[dag[0]['JobStatus']] == "HELD":
+            job_held_time = datetime.now() - datetime.fromtimestamp(dag[0]["EnteredCurrentStatus"])
+            logger.info(f"DAG is held since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s\nHold Reason: {job[0]['HoldReason']}")
+        elif JobStatus[dag[0]['JobStatus']] == "COMPLETED":
+            logger.info("DAG has completed")
+        else:
+            logger.info(f"DAG is {JobStatus[dag[0]['JobStatus']]}")
+
+
+class DAG(Noun):
+    """
+    Run operations on HTCondor DAGs
+    """
+
+    class submit(Submit):
+        pass
+
+    class status(Status):
+        pass
+
+    """
+    class resources(Resources):
+        pass
+    """
+
+    @classmethod
+    def verbs(cls):
+        return [cls.submit, cls.status]
 
 
 class DAGMan:
