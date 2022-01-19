@@ -1042,7 +1042,7 @@ cmd_submit_job(void *args)
 {
 	char *escpd_cmd_out, *escpd_cmd_err;
 	int retcod;
-	char *command;
+	char *command = NULL;
 	char jobId[JOBID_MAX_LEN];
 	char *resultLine=NULL;
 	char **argv = (char **)args;
@@ -1483,7 +1483,7 @@ cleanup_inoutfiles:
 		free(inout_files);
 	}
 cleanup_command:
-	free(command);
+	if (command) free(command);
 cleanup_proxyname:
 	if (proxyname != NULL) free(proxyname);
 	if (saved_proxyname != NULL) free(saved_proxyname);
@@ -2400,8 +2400,12 @@ enqueue_result(char *res)
 {
 	if (push_result(res))
 	{
+		int write_result;
 		pthread_mutex_lock(&send_lock);
-		write(server_socket, "R\r\n", 3);
+		write_result = write(server_socket, "R\r\n", 3);
+		if (write_result < 0) {
+			exit_program = 1;
+		}
 		pthread_mutex_unlock(&send_lock);
 	}
 	return;
@@ -3373,7 +3377,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
 
                 for(i =0; i < strlen(superbuffer); i++){if (superbuffer[i] == ',')superbuffer[i] ='\n'; }
                 cs = fwrite(superbuffer,1 , strlen(superbuffer), tmpIOfile);
-                if(strlen(superbuffer) != cs)
+                if((int)strlen(superbuffer) != cs)
                 {
                         /* PUSH A FAILURE */
                         if (resultLine != NULL) *resultLine = make_message("%s 1 Error\\ writing\\ in\\ %s N/A", reqId,tmpIOfilestring);
