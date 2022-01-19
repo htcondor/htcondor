@@ -2126,7 +2126,6 @@ FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
 int
 FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 {
-	int rc = 0;
 	filesize_t bytes=0;
 	filesize_t peer_max_transfer_bytes=0;
 	MyString filename;;
@@ -2250,7 +2249,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 	// Start the main download loop. Read reply codes + filenames off a
 	// socket wire, s, then handle downloads according to the reply code.
-	for (;;) {
+	bool all_transfers_succeeded = true;
+	for( int rc = 0; ; ) {
 		TransferCommand xfer_command = TransferCommand::Unknown;
 		{
 			int reply;
@@ -2783,7 +2783,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				rc = GET_FILE_PLUGIN_FAILED;
 			}
 
-			if( (rc != GET_FILE_PLUGIN_FAILED) && multifile_plugins_enabled ) {
+			if( all_transfers_succeeded && (rc != GET_FILE_PLUGIN_FAILED) && multifile_plugins_enabled ) {
 
 				// Determine which plugin to invoke, and whether it supports multiple
 				// file transfer.
@@ -2817,7 +2817,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				}
 			}
 
-			if( (rc != GET_FILE_PLUGIN_FAILED) && (!isDeferredTransfer) ) {
+			if( all_transfers_succeeded && (rc != GET_FILE_PLUGIN_FAILED) && (!isDeferredTransfer) ) {
 				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 				TransferPluginResult result = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), &pluginStatsAd, LocalProxyName.Value());
 				// If transfer failed, set rc to error code that ReliSock recognizes
@@ -2946,7 +2946,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		thisFileStats.TransferEndTime = condor_gettimestamp_double();
 		thisFileStats.ConnectionTimeSeconds = thisFileStats.TransferEndTime - thisFileStats.TransferStartTime;
 
-		if( rc < 0 ) {
+		// Report only the first error.
+		if( rc < 0 && all_transfers_succeeded ) {
+			all_transfers_succeeded = false;
 			error_buf.formatstr("%s at %s failed to receive file %s",
 			                  get_mySubSystem()->getName(),
 							  s->my_ip_str(),fullname.Value());
@@ -3097,7 +3099,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					errstack.getFullText().c_str() );
 				download_success = false;
 				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
-				hold_subcode = rc;
+				// This should probably be something else, maybe its own
+				// (non-zero) constant.  See HTCONDOR-842.  It used to be
+				// `rc`, but that was probably always 0, and made no sense
+				// outside of the main file-transfer loop anyway.
+				hold_subcode = 0;
 				try_again = false;
 				error_buf.formatstr( "%s", errstack.getFullText().c_str() );
 			}
