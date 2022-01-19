@@ -1,3 +1,9 @@
+condor (9.5.1-1) stable; urgency=medium
+
+  * Fix bug where a self-checkpointing job may erroneously be held
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 17 Jan 2022 10:15:00 -0600
+
 condor (9.5.0-1) stable; urgency=medium
 
   * Initial implementation of Container Universe
