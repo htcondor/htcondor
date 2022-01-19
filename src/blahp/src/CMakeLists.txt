@@ -65,7 +65,11 @@ add_library(libblahp STATIC
 
 # server.c defines a bunch of callbacks that don't need their args
 # disable warnings for those
-set_source_files_properties(server.c PROPERTIES COMPILE_FLAGS -Wno-unused-parameter)
+
+# job_registry.h defines a macro that assigns '\0' to the last byte in an array
+# then strncpy's to it.  Newer gcc's, not looking at the nul assignment, issue
+# a warning.  Turn off that warning
+set_source_files_properties(server.c PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-stringop-truncation")
 
 # programs for 'sbin'
 add_executable(blahpd_daemon main_daemon.c)

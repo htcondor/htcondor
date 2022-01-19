@@ -31,6 +31,14 @@ Release Notes:
   systems.
   :jira:`873`
 
+- For **arc** grid universe jobs, environment variables specified in
+  the job ad are now included in the ADL job description given to the
+  ARC CE REST service.
+  Also, added new submit command ``arc_application``, which can be used
+  to add additional elements under the ``<Application>`` element of
+  the ADL job description given to the ARC CE REST service.
+  :jira:`932`
+
 - Reduce the size of the singularity test executable by not linking in
   libraries it doesn't need.
   :jira:`927`
@@ -46,6 +54,11 @@ Bugs Fixed:
 - When the blahp submits a job to HTCondor, it no longer requests
   email notification about job errors.
   :jira:`895`
+
+- Fixed a very rare bug in the timing subsystem that would prevent
+  any daemon from appearing in the collector, and periodic expressions
+  to be run less frequently than they should.
+  :jira:`934`
 
 - Fixed a bug introduced earlier in this series where in very 
   rare cases, a schedd would not appear in the collector when it
@@ -65,9 +78,7 @@ Version 9.5.1
 
 Release Notes:
 
-.. HTCondor version 9.5.1 released on Month Date, 2021.
-
-- HTCondor version 9.5.1 not yet released.
+- HTCondor version 9.5.1 released on January 18, 2022.
 
 New Features:
 
@@ -87,9 +98,7 @@ Version 9.5.0
 
 Release Notes:
 
-.. HTCondor version 9.5.0 released on Month Date, 2022.
-
-- HTCondor version 9.5.0 not yet released.
+- HTCondor version 9.5.0 released on January 13, 2022.
 
 - This version includes all the updates from :ref:`lts-version-history-909`.
 

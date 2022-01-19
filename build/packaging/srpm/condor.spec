@@ -1671,6 +1671,17 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Jan 18 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.1-1
+- Fix bug where a self-checkpointing job may erroneously be held
+
+* Thu Jan 13 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.0-1
+- Initial implementation of Container Universe
+- HTCondor will automatically detect container type and where it can run
+- The blahp is no longer separate, it is now an integral part of HTCondor
+- Docker Universe jobs can now self-checkpoint
+- Added Debian 11 (bullseye) as a supported platform
+- Since CentOS 8 has reached end of life, we build and test on Rocky Linux 8
+
 * Thu Jan 13 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.9-1
 - Added Debian 11 (bullseye) as a supported platform
 - Since CentOS 8 has reached end of life, we build and test on Rocky Linux 8
