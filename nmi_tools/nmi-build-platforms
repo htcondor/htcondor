@@ -1,15 +1,15 @@
 # One platform per line. Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-docker://htcondor/nmi-zdev:x86_64_AmazonLinux2-09040001
-docker://htcondor/nmi-zdev:x86_64_CentOS7-09040001
-docker://htcondor/nmi-zdev:x86_64_Debian10-09040001
-docker://htcondor/nmi-zdev:x86_64_Debian11-09030001
-docker://htcondor/nmi-zdev:x86_64_Debian12-09030001
+docker://htcondor/nmi-zdev:x86_64_AmazonLinux2-09050000
+docker://htcondor/nmi-zdev:x86_64_CentOS7-09050000
+docker://htcondor/nmi-zdev:x86_64_Debian10-09050000
+docker://htcondor/nmi-zdev:x86_64_Debian11-09050000
+docker://htcondor/nmi-zdev:x86_64_Debian12-09050000
 x86_64_MacOSX15
-docker://htcondor/nmi-zdev:x86_64_Rocky8-09040001
-docker://htcondor/nmi-zdev:x86_64_Ubuntu18-09040001
-docker://htcondor/nmi-zdev:x86_64_Ubuntu20-09040001
+docker://htcondor/nmi-zdev:x86_64_Rocky8-09050000
+docker://htcondor/nmi-zdev:x86_64_Ubuntu18-09050000
+docker://htcondor/nmi-zdev:x86_64_Ubuntu20-09050000
 x86_64_Windows7
 x86_64_Windows8
 x86_64_Windows10
@@ -18,4 +18,4 @@ x86_64_Windows10
 x86_64_CentOS7
 
 # We want to build on Fedora because it is our "warning check" platform
-docker://htcondor/nmi-zdev:x86_64_Fedora32-09040001
+docker://htcondor/nmi-zdev:x86_64_Fedora32-09050000
