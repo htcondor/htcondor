@@ -667,13 +667,13 @@ direct_condor_submit(const Dagman &dm, Job* node,
 				goto finis;
 			}
 			// If this job has >1 procs, check if multi-proc jobs are prohibited
-			if (proc_id > 1 && dm.prohibitMultiJobs) {
+			if (proc_id >= 1 && dm.prohibitMultiJobs) {
 				errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
 				rval = -1;
 				goto finis;
 			}
 			// DAGMan does not support multi-proc factory jobs when using direct submit
-			if (proc_id > 1 && is_factory) {
+			if (proc_id >= 1 && is_factory) {
 				errmsg = "Submit generated multiple job procs; disallowed when using factory jobs and DAGMan direct submission.";
 				rval = -1;
 				goto finis;
