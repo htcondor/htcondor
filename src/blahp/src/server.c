@@ -3377,7 +3377,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
 
                 for(i =0; i < strlen(superbuffer); i++){if (superbuffer[i] == ',')superbuffer[i] ='\n'; }
                 cs = fwrite(superbuffer,1 , strlen(superbuffer), tmpIOfile);
-                if(strlen(superbuffer) != cs)
+                if((int)strlen(superbuffer) != cs)
                 {
                         /* PUSH A FAILURE */
                         if (resultLine != NULL) *resultLine = make_message("%s 1 Error\\ writing\\ in\\ %s N/A", reqId,tmpIOfilestring);
