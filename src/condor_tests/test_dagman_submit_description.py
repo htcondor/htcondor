@@ -24,17 +24,17 @@ def condor(test_dir):
 def valid_submitdesc_dag_description(path_to_sleep):
     # the {{ and }} are escaped { and } because they are f-string delimiters
     return textwrap.dedent(
-        f"""
+        """
         # Create a simple SUBMIT-DESCRIPTION statement and attach it to a single job
         SUBMIT-DESCRIPTION ValidSubmitDescription {{
-            executable = {path_to_sleep}
+            executable = {}
             arguments = 1
         }}
         JOB Valid ValidSubmitDescription
 
         # Create another SUBMIT-DESCRIPTION statement and attach it to multiple jobs
         SUBMIT-DESCRIPTION AnotherSubmitDescription {{
-            executable = {path_to_sleep}
+            executable = {}
             arguments = 1
         }}
         JOB AlsoValid1 AnotherSubmitDescription
@@ -47,7 +47,7 @@ def valid_submitdesc_dag_description(path_to_sleep):
             executable = /bin/echo
             arguments = "The name ValidSubmitDescription is already taken, this should produce an error"
         }}
-        """
+        """.format(path_to_sleep, path_to_sleep)
     )
 
 
