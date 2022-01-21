@@ -53,6 +53,11 @@ Bugs Fixed:
   This restores the behavior in versions 9.0.1 and prior.
   :jira:`904`
 
+- Fix problem where **condor_ssh_to_job** may fail to connect to a job
+  running under an HTCondor tarball installation (glidein) built from an RPM
+  based platform.
+  :jira:`942`
+
 .. _lts-version-history-909:
 
 Version 9.0.9
