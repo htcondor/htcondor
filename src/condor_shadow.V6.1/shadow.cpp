@@ -266,8 +266,18 @@ UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 
 void UniShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
+	// If we previously decided to hold the job, don't do it again
+	if (remRes->getExitReason() == JOB_SHOULD_HOLD) {
+		return;
+	}
 	remRes->setExitReason( JOB_SHOULD_HOLD );
 	BaseShadow::holdJob(reason, hold_reason_code, hold_reason_subcode);
+
+	if (!remRes->wasClaimDeactivated()) {
+		// Force a disconnect and reconnect.
+		remRes->disconnectClaimSock("Failed to contact startd, forcing disconnect from starter");;
+		remove_requested = true;
+	}
 }
 
 void UniShadow::removeJob( const char* reason )

@@ -175,6 +175,11 @@ class RemoteResource : public Service {
 		*/
 	void closeClaimSock( void );
 
+		/* Close the syscall socket and enter reconnect mode, if
+		 * available.
+		 */
+	void disconnectClaimSock(const char *err_msg);
+
 		/** Return the reason this host exited.
 			@return The exit reason for this host.
 		*/ 

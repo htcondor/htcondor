@@ -606,6 +606,40 @@ RemoteResource::closeClaimSock( void )
 	}
 }
 
+void
+RemoteResource::disconnectClaimSock(const char *err_msg)
+{
+	if (!claim_sock) {
+		return;
+	}
+
+	std::string my_err_msg;
+	formatstr(my_err_msg, "%s %s",
+	          (err_msg ? err_msg : "Disconnecting from starter"),
+	          claim_sock->get_sinful_peer());
+
+	thisRemoteResource->closeClaimSock();
+
+	if( Shadow->supportsReconnect() ) {
+			// instead of having to EXCEPT, we can now try to
+			// reconnect.  happy day! :)
+		dprintf( D_ALWAYS, "%s\n", my_err_msg.c_str() );
+
+		Shadow->resourceDisconnected(thisRemoteResource);
+
+		if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
+			dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
+			Shadow->gracefulShutDown();
+			EXCEPT( "%s", my_err_msg.c_str() );
+		}
+			// tell the shadow to start trying to reconnect
+		Shadow->reconnect();
+	} else {
+			// The remote starter doesn't support it, so give up
+			// like we always used to.
+		EXCEPT( "%s", my_err_msg.c_str() );
+	}
+}
 
 int
 RemoteResource::getExitReason() const
