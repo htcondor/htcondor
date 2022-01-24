@@ -25,8 +25,8 @@ Bugs Fixed:
 -  *Security Item*: This release of HTCondor fixes a security-related bug
    described at
 
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001/>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0002/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0002/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0002 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0002>`_.
 
    :jira:`724`
    :jira:`730`
@@ -382,8 +382,8 @@ Bugs Fixed:
 -  *Security Item*: This release of HTCondor fixes a security-related bug
    described at
 
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003/>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004>`_.
 
    :jira:`509`
    :jira:`587`
