@@ -4,6 +4,28 @@ Version 9 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 9.6.0
+-------------
+
+Release Notes:
+
+-  HTCondor version 9.6.0 released on Febrary 15, 2022.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes a security-related bug
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0002/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0002/>`_.
+
+   :jira:`724`
+   :jira:`730`
+
 Version 9.5.0
 -------------
 
