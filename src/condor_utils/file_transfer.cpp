@@ -5795,7 +5795,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 		plugin_stats->LookupString("TransferError", errorMessage);
 		plugin_stats->LookupString("TransferUrl", transferUrl);
 		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)",
-			rc, plugin.Value(), errorMessage.c_str(), UrlSafePrint(transferUrl));
+			rc, plugin.c_str(), errorMessage.c_str(), UrlSafePrint(transferUrl));
 		return TransferPluginResult::Error;
 	}
 
