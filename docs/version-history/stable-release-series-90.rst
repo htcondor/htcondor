@@ -7,6 +7,31 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-9010:
+
+Version 9.0.10
+--------------
+
+Release Notes:
+
+-  HTCondor version 9.0.10 released on Febrary 15, 2022.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes a security-related bug
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0002/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0002/>`_.
+
+   :jira:`724`
+   :jira:`730`
+
+
 .. _lts-version-history-909:
 
 Version 9.0.9
