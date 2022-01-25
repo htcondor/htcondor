@@ -1,3 +1,12 @@
+condor (9.5.2-1) stable; urgency=medium
+
+  * Fix bug where job may not go on hold when exceeding allowed_job_duration
+  * Fix bug where the condor_shadow could run indefinitely
+  * Fix bug where condor_ssh_to_job may fail to connect
+  * Fix bug where a file transfer error may identify the wrong file
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 25 Jan 2022 09:44:00 -0600
+
 condor (9.5.1-1) stable; urgency=medium
 
   * Fix bug where a self-checkpointing job may erroneously be held

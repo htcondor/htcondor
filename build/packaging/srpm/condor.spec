@@ -1682,6 +1682,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Jan 25 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.2-1
+- Fix bug where job may not go on hold when exceeding allowed_job_duration
+- Fix bug where the condor_shadow could run indefinitely
+- Fix bug where condor_ssh_to_job may fail to connect
+- Fix bug where a file transfer error may identify the wrong file
+
 * Tue Jan 18 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.1-1
 - Fix bug where a self-checkpointing job may erroneously be held
 

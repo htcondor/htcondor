@@ -9,9 +9,7 @@ Version 9.5.2
 
 Release Notes:
 
-.. HTCondor version 9.5.2 released on January 25, 2021.
-
-- HTCondor version 9.5.2 not yet released.
+- HTCondor version 9.5.2 released on January 25, 2021.
 
 New Features:
 
@@ -30,7 +28,7 @@ Bugs Fixed:
   based platform.
   :jira:`942`
 
-- Fixed a bug in the FileTransfer mechanism where URL transfers caused 
+- Fixed a bug in the file transfer mechanism where URL transfers caused 
   subsequent failures to report incorrect error messages.
   :jira:`915`
 
