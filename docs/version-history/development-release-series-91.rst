@@ -21,7 +21,8 @@ Bugs Fixed:
 
 - Fixed a bug where the *condor_shadow* could run indefinitely when it
   failed to contact the *condor_startd* in an attempt to kill the
-  job.
+  job. This problem could become visible to the user in several different ways,
+  such as a job appearing to not go on hold when periodic_hold becomes true.
   :jira:`933`
 
 Version 9.5.1
