@@ -71,8 +71,6 @@ rm -r condor_tests-$version-$release-$arch_dist
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
 
-uw_externals="condor-boinc"
-
 common_externals="boost169-python3 \
     libcgroup \
     libgomp \
@@ -87,11 +85,11 @@ if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
         python36-requests \
         python36-six \
         python36-urllib3"
-    externals="$common_externals $uw_externals $el7_externals"
+    externals="$common_externals $el7_externals"
 elif [[ $arch_dist =~ Rocky8 ]]; then
-    externals="$common_externals $uw_externals"
+    externals="$common_externals"
 elif [[ $arch_dist =~ Fedora32 ]]; then
-    externals="$common_externals $uw_externals"
+    externals="$common_externals"
 fi
 
 mkdir external-packages
