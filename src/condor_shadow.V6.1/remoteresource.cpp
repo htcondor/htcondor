@@ -314,7 +314,16 @@ RemoteResource::killStarter( bool graceful )
 		abortFileTransfer();
 	}
 
-	int num_tries = m_wait_on_kill_failure ? 3 : 1;
+	// If we got the job_exit syscall, then we should expect
+	// deactivateClaim() to fail, because the starter exits right
+	// after that. But old starters (prior to 8.7.8) wait around
+	// indefinitely, expecting our deactivateClaim() to trigger their
+	// demise. So don't do our retry-and-wait-on-failure song and dance
+	// if we saw a job_exit.
+	// TODO If we add a version check or decide we don't care about 8.6.X
+	//   and earlier, we can just return true if m_got_job_exit==true.
+	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_exit;
+	int num_tries = wait_on_failure ? 3 : 1;
 	while (num_tries > 0) {
 		if (dc_startd->deactivateClaim(graceful, &claim_is_closing)) {
 			break;
@@ -332,7 +341,7 @@ RemoteResource::killStarter( bool graceful )
 	}
 
 	if (num_tries == 0) {
-		if (m_wait_on_kill_failure) {
+		if (wait_on_failure) {
 			disconnectClaimSock("Failed to contact startd, forcing disconnect from starter");
 			int remaining = remainingLeaseDuration();
 			if (remaining > 0) {
