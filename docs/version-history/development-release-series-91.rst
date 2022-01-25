@@ -19,7 +19,15 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fix problem where **condor_ssh_to_job** may fail to connect to a job
+  running under an HTCondor tarball installation (glidein) built from an RPM
+  based platform.
+  :jira:`942`
+
+- Fixed a bug in the FileTransfer mechanism where URL transfers caused 
+  subsequent failures to report incorrect error messages.
+  :jira:`915`
+
 
 Version 9.5.1
 -------------
