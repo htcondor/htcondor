@@ -55,13 +55,13 @@ def valid_submitdesc_dag_description(path_to_sleep):
 def invalid_submitdesc_dag_description(path_to_sleep):
     # the {{ and }} are escaped { and } because they are f-string delimiters
     return textwrap.dedent(
-        f"""
+        """
         # Create an invalid SUBMIT-DESCRIPTION statement, which is missing a closing bracket
         SUBMIT-DESCRIPTION InvalidSubmitDescription {{
-            executable = {path_to_sleep}
+            executable = {}
             arguments = 1
         JOB Invalid InvalidSubmitDescription
-        """
+        """.format(path_to_sleep)
     )
 
 
