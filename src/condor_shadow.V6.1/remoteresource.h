@@ -400,6 +400,8 @@ class RemoteResource : public Service {
 
     void recordActivationExitExecutionTime( time_t when );
 
+	void setWaitOnKillFailure(bool wait) { m_wait_on_kill_failure = wait; };
+
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not
@@ -525,6 +527,8 @@ private:
 	bool already_killed_graceful;
 	bool already_killed_fast;
 	bool m_got_job_exit;
+
+	bool m_wait_on_kill_failure;
 
 	void logRemoteAccessCheck(bool allow,char const *op,char const *name);
 

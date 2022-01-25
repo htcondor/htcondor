@@ -58,7 +58,8 @@ static const char *Resource_State_String [] = {
 
 RemoteResource::RemoteResource( BaseShadow *shad ) 
 	: m_want_remote_updates(false),
-	  m_want_delayed(true)
+	  m_want_delayed(true),
+	  m_wait_on_kill_failure(false)
 {
 	shadow = shad;
 	dc_startd = NULL;
@@ -313,9 +314,32 @@ RemoteResource::killStarter( bool graceful )
 		abortFileTransfer();
 	}
 
-	if( ! dc_startd->deactivateClaim(graceful,&claim_is_closing) ) {
-		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-						 "Could not send command to startd\n" );
+	int num_tries = m_wait_on_kill_failure ? 3 : 1;
+	while (num_tries > 0) {
+		if (dc_startd->deactivateClaim(graceful, &claim_is_closing)) {
+			break;
+		}
+		num_tries--;
+		if (num_tries) {
+			const int delay = 5;
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+			         "Could not send command to startd, will retry in %d seconds\n", delay );
+			sleep(delay);
+		} else {
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+			         "Could not send command to startd\n" );
+		}
+	}
+
+	if (num_tries == 0) {
+		if (m_wait_on_kill_failure) {
+			disconnectClaimSock("Failed to contact startd, forcing disconnect from starter");
+			int remaining = remainingLeaseDuration();
+			if (remaining > 0) {
+				dprintf(D_ALWAYS, "Failed to kill starter, sleeping for remaining lease duration of %d seconds\n", remaining);
+				sleep(remaining);
+			}
+		}
 		return false;
 	}
 

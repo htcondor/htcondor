@@ -100,8 +100,8 @@ BaseUserPolicy::startTimer( void )
 	}
 }
 
-/* Register a one-shot timer that will fire immediately
- * which checks the periodic policy (calling checkPeriodic()).
+/* Reset our periodic evaluation timer to fire immediately,
+ * then resume the usual interval.
  * Useful when an event merits checking the periodic policy,
  * but the effects shouldn't be triggered in the current
  * call stack.
@@ -109,16 +109,11 @@ BaseUserPolicy::startTimer( void )
 void
 BaseUserPolicy::checkPeriodicSoon()
 {
-	int tid = daemonCore->
-		Register_Timer( 0,
-		                (TimerHandlercpp)&BaseUserPolicy::checkPeriodic,
-		                "checkPeriodic",
-		                this );
-	if (tid < 0) {
-		EXCEPT( "Can't register DC timer!" );
+	if ( tid != -1 ) {
+		daemonCore->Reset_Timer(tid, 0, interval);
+		dprintf(D_FULLDEBUG, "Reset our timer to evaluate periodic user "
+		        "policy expressions immediately\n");
 	}
-	dprintf(D_FULLDEBUG, "Started one-shot timer to evaluate periodic user "
-			"policy expressions immediately\n");
 }
 
 /**
