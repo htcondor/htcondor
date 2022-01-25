@@ -45,7 +45,7 @@ def valid_submitdesc_dag_description(path_to_sleep):
         # This should produce a warning in the .dagman.out file, but still run successfully
         SUBMIT-DESCRIPTION ValidSubmitDescription {{
             executable = /bin/echo
-            arguments = "The name ValidSubmitDescription is already taken, this should produce an error"
+            arguments = "The name ValidSubmitDescription is already taken, this should produce a warning"
         }}
         """.format(path_to_sleep, path_to_sleep)
     )
@@ -124,7 +124,7 @@ def job_queue_events_for_valid_submitdesc_dag(dag_dir):
 
 @action
 def debug_output_for_invalid_submitdesc_dag(dag_dir, invalid_submitdesc_dagman_job):
-    output_log = open(dag_dir / "invalid_submitdesc.dag.dagman.out", "r")
+    output_log = open(str(dag_dir / "invalid_submitdesc.dag.dagman.out"), "r")
     contents = output_log.readlines()
     output_log.close()
     return contents
