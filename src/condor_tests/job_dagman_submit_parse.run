@@ -41,6 +41,9 @@ if( is_windows() ) {
     $appendCondorConfig .= "JOB_ROUTER.USE_SHARED_PORT = FALSE\n";
 }
 
+# Turn off direct submit. This test only applies when forking condor_submit.
+$appendCondorConfig .= "DAGMAN_USE_DIRECT_SUBMIT = False\n";
+
 CondorTest::StartCondorWithParams(
 	append_condor_config => $appendCondorConfig
 );

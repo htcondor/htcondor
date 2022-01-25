@@ -100,7 +100,7 @@ $failure = sub
 			while (<OUT>) {
 				chomp();
 				$line = $_;
-				if ($line =~ /^.*Submit generated \d job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting/ ) {
+				if ($line =~ /^.*disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting/ ) {
 					CondorTest::debug("$name: $line\n",1);
 					if ($count == 0) { $count++; }
 				}
