@@ -435,6 +435,10 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					char * stopline = NULL;
 					if (parse_up_to_close_brace(*submitDesc, ms, errmsg, &stopline) < 0) {
 						parsed_line_successfully = false;
+						debug_printf(DEBUG_NORMAL, "ERROR: Failed to parse SUBMIT-DESCRIPTION statement (line %d): %s\n", lineNumber, errmsg.c_str());
+					}
+					else {
+						parsed_line_successfully = true;
 					}
 				}
 			}

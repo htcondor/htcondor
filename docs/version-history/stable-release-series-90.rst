@@ -53,6 +53,19 @@ Bugs Fixed:
   This restores the behavior in versions 9.0.1 and prior.
   :jira:`904`
 
+- Fixed a bug in the *condor_dagman* parser which caused ``SUBMIT-DESCRIPTION``
+  statements to return an error even after parsing correctly.
+  :jira:`928`
+  
+- Fix problem where **condor_ssh_to_job** may fail to connect to a job
+  running under an HTCondor tarball installation (glidein) built from an RPM
+  based platform.
+  :jira:`942`
+
+- Fixed a bug in the FileTransfer mechanism where URL transfers caused 
+  subsequent failures to report incorrect error messages.
+  :jira:`915`
+
 .. _lts-version-history-909:
 
 Version 9.0.9
