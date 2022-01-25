@@ -19,7 +19,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where the *condor_shadow* could run indefinitely when it
+  failed to contact the *condor_startd* in an attempt to kill the
+  job.
+  :jira:`933`
 
 Version 9.5.1
 -------------
