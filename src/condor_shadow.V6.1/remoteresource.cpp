@@ -58,7 +58,8 @@ static const char *Resource_State_String [] = {
 
 RemoteResource::RemoteResource( BaseShadow *shad ) 
 	: m_want_remote_updates(false),
-	  m_want_delayed(true)
+	  m_want_delayed(true),
+	  m_wait_on_kill_failure(false)
 {
 	shadow = shad;
 	dc_startd = NULL;
@@ -313,9 +314,41 @@ RemoteResource::killStarter( bool graceful )
 		abortFileTransfer();
 	}
 
-	if( ! dc_startd->deactivateClaim(graceful,&claim_is_closing) ) {
-		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-						 "Could not send command to startd\n" );
+	// If we got the job_exit syscall, then we should expect
+	// deactivateClaim() to fail, because the starter exits right
+	// after that. But old starters (prior to 8.7.8) wait around
+	// indefinitely, expecting our deactivateClaim() to trigger their
+	// demise. So don't do our retry-and-wait-on-failure song and dance
+	// if we saw a job_exit.
+	// TODO If we add a version check or decide we don't care about 8.6.X
+	//   and earlier, we can just return true if m_got_job_exit==true.
+	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_exit;
+	int num_tries = wait_on_failure ? 3 : 1;
+	while (num_tries > 0) {
+		if (dc_startd->deactivateClaim(graceful, &claim_is_closing)) {
+			break;
+		}
+		num_tries--;
+		if (num_tries) {
+			const int delay = 5;
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+			         "Could not send command to startd, will retry in %d seconds\n", delay );
+			sleep(delay);
+		} else {
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+			         "Could not send command to startd\n" );
+		}
+	}
+
+	if (num_tries == 0) {
+		if (wait_on_failure) {
+			disconnectClaimSock("Failed to contact startd, forcing disconnect from starter");
+			int remaining = remainingLeaseDuration();
+			if (remaining > 0) {
+				dprintf(D_ALWAYS, "Failed to kill starter, sleeping for remaining lease duration of %d seconds\n", remaining);
+				sleep(remaining);
+			}
+		}
 		return false;
 	}
 
@@ -606,6 +639,40 @@ RemoteResource::closeClaimSock( void )
 	}
 }
 
+void
+RemoteResource::disconnectClaimSock(const char *err_msg)
+{
+	if (!claim_sock) {
+		return;
+	}
+
+	std::string my_err_msg;
+	formatstr(my_err_msg, "%s %s",
+	          (err_msg ? err_msg : "Disconnecting from starter"),
+	          claim_sock->get_sinful_peer());
+
+	thisRemoteResource->closeClaimSock();
+
+	if( Shadow->supportsReconnect() ) {
+			// instead of having to EXCEPT, we can now try to
+			// reconnect.  happy day! :)
+		dprintf( D_ALWAYS, "%s\n", my_err_msg.c_str() );
+
+		Shadow->resourceDisconnected(thisRemoteResource);
+
+		if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
+			dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
+			Shadow->gracefulShutDown();
+			EXCEPT( "%s", my_err_msg.c_str() );
+		}
+			// tell the shadow to start trying to reconnect
+		Shadow->reconnect();
+	} else {
+			// The remote starter doesn't support it, so give up
+			// like we always used to.
+		EXCEPT( "%s", my_err_msg.c_str() );
+	}
+}
 
 int
 RemoteResource::getExitReason() const
