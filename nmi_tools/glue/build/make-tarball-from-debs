@@ -71,7 +71,6 @@ rm -r condor_tests-$version-$release-$arch_dist
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/htcondor/examples/
 
 common_externals="blahp \
-    condor-boinc \
     libcgroup1 \
     libglobus-callout0 \
     libglobus-common0 \
