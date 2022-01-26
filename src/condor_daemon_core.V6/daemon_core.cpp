@@ -101,6 +101,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "daemon_command.h"
 #include "condor_sockfunc.h"
 #include "condor_auth_passwd.h"
+#include "exit.h"
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -3156,7 +3157,16 @@ DaemonCore::reconfig(void) {
 		free( ccb_addresses );
 
 		const bool blocking = true;
-		m_ccb_listeners->RegisterWithCCBServer(blocking);
+		int result = m_ccb_listeners->RegisterWithCCBServer(blocking);
+		if( result == 0 && m_ccb_listeners->size() > 0 ) {
+		    bool ccb_required = param_boolean( "CCB_REQUIRED_TO_START", false );
+		    if( ccb_required ) {
+		        dprintf( D_ALWAYS, "No CCB registration was successful, but CCB_REQUIRED_TO_START was true; exiting.\n" );
+                // This doesn't actually work if this is shared port daemon,
+                // but it's indicative.
+		        DC_Exit(DAEMON_NO_RESTART);
+		    }
+		}
 
 		// Drop a pool password if not already there; needed for PASSWORD and IDTOKENS security.
 		Condor_Auth_Passwd::create_pool_signing_key_if_needed();
