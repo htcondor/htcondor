@@ -17,9 +17,11 @@ Release Notes:
 
 New Features:
 
-- Added new configuration option, ``CCB_TIMEOUT``.  Added new configuration
-  option, ``CCB_REQUIRED_TO_START``, which causes HTCondor to exit if
-  ``CCB_ADDRESS`` was set but HTCondor could not obtain one.
+- Added new configuration option, :macro:`CCB_TIMEOUT`.  Added new
+  configuration option, :macro:`CCB_REQUIRED_TO_START`, which if set causes
+  HTCondor to exit if :macro:`CCB_ADDRESS` was set but HTCondor could
+  not obtain one.  :macro:`CCB_REQUIRED_TO_START` is ignored if
+  :macro:`USE_SHARED_PORT` is set, which is the default.
   :jira:`925`
 
 - Added list type configuration for periodic job policy configuration.
