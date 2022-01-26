@@ -5803,11 +5803,19 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	if (result != TransferPluginResult::Success) {
 		std::string errorMessage;
 		std::string transferUrl;
-		plugin_stats->LookupString("TransferError", errorMessage);
+		if (!plugin_stats->LookupString("TransferError", errorMessage)) {
+			errorMessage = "File transfer plugin " + plugin +
+				" exited unexpectedly without producing an error message\n";
+		}
 		plugin_stats->LookupString("TransferUrl", transferUrl);
 		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)",
 			rc, plugin.c_str(), errorMessage.c_str(), transferUrl.c_str());
 		return TransferPluginResult::Error;
+	}
+
+	if (e.getFullText().empty()) {
+		e.pushf("FILETRANSFER", 1, "File transfer plugin %s exited unexpectedly "
+			"without producing an error message\n", plugin.c_str());
 	}
 
 	return result;
@@ -5928,12 +5936,16 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// Output stats regardless of success or failure
 	output_file = safe_fopen_wrapper( output_filename.c_str(), "r" );
 	if ( output_file == NULL ) {
-		dprintf( D_ALWAYS, "FILETRANSFER: Unable to open curl_plugin output file "
-			"%s.\n", output_filename.c_str() );
+		dprintf( D_ALWAYS, "FILETRANSFER: Unable to open %s output file "
+			"%s.\n", plugin_path.c_str(), output_filename.c_str() );
+		e.pushf( "FILETRANSFER", 1, "Error: file transfer plugin %s exited with code %i, "
+			"unable to open output file %s", plugin_path.c_str(), exit_status, output_filename.c_str() );
 		return TransferPluginResult::Error;
 	}
 	if ( !adFileIter.begin( output_file, false, CondorClassAdFileParseHelper::Parse_new )) {
 		dprintf( D_ALWAYS, "FILETRANSFER: Failed to iterate over file transfer output.\n" );
+		e.pushf( "FILETRANSFER", 1, "Error: file transfer plugin %s exited with code %i, "
+			"unable to iterate over output file %s", plugin_path.c_str(), exit_status, output_filename.c_str() );
 		return TransferPluginResult::Error;
 	}
 	else {
@@ -5945,12 +5957,15 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			OutputFileTransferStats( this_file_stats_ad );
 
 			// If this classad represents a failed transfer, produce an error
-			bool transfer_success;
+			bool transfer_success = false;
 			this_file_stats_ad.LookupBool( "TransferSuccess", transfer_success );
 			if ( !transfer_success ) {
 				std::string error_message;
 				std::string transfer_url;
-				this_file_stats_ad.LookupString( "TransferError", error_message );
+				if (!this_file_stats_ad.LookupString("TransferError", error_message)) {
+					error_message = "File transfer plugin " + plugin_path +
+						" exited unexpectedly without producing an error message\n";
+				}
 				this_file_stats_ad.LookupString( "TransferUrl", transfer_url );
 				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)",
 					exit_status, plugin_path.c_str(), error_message.c_str(), transfer_url.c_str() );
@@ -5963,6 +5978,11 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		}
 	}
 	fclose(output_file);
+
+	if (result != TransferPluginResult::Success && e.getFullText().empty()) {
+		e.pushf("FILETRANSFER", 1, "File transfer plugin %s failed unexpectedly with exit code %i, "
+			"did not report a TransferError message.", plugin_path.c_str(), exit_status);
+	}
 
 	return result;
 }
