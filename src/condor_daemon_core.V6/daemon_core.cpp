@@ -3159,14 +3159,14 @@ DaemonCore::reconfig(void) {
 		const bool blocking = true;
 		int result = m_ccb_listeners->RegisterWithCCBServer(blocking);
 		if( result == 0 && m_ccb_listeners->size() > 0 ) {
-		    bool use_shared_port = param_boolean( "USE_SHARED_PORT", true );
-		    bool ccb_required = param_boolean( "CCB_REQUIRED_TO_START", false );
-		    if( (!use_shared_port) && ccb_required ) {
-		        dprintf( D_ALWAYS, "No CCB registration was successful, but CCB_REQUIRED_TO_START was true; exiting.\n" );
-                // This doesn't actually work if this is shared port daemon,
-                // but it's indicative.
-		        DC_Exit(DAEMON_NO_RESTART);
-		    }
+			bool use_shared_port = param_boolean( "USE_SHARED_PORT", true );
+			bool ccb_required = param_boolean( "CCB_REQUIRED_TO_START", false );
+			if( (!use_shared_port) && ccb_required ) {
+				dprintf( D_ALWAYS, "No CCB registration was successful, but CCB_REQUIRED_TO_START was true; exiting.\n" );
+				// This doesn't actually work if this is shared port daemon,
+				// but it's indicative.
+				DC_Exit(DAEMON_NO_RESTART);
+			}
 		}
 
 		// Drop a pool password if not already there; needed for PASSWORD and IDTOKENS security.
