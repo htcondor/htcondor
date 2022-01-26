@@ -2152,6 +2152,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	time_t start, elapsed;
 	int numFiles = 0;
 	ClassAd pluginStatsAd;
+	int plugin_exit_code = 0;
 
 	// Variable for deferred transfers, used to transfer multiple files at once
 	// by certain filte transfer plugins. These need to be scoped to the full
@@ -2835,6 +2836,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				// If transfer failed, set rc to error code that ReliSock recognizes
 				if (result != TransferPluginResult::Success) {
 					rc = GET_FILE_PLUGIN_FAILED;
+					plugin_exit_code = static_cast<int>(result);
 				}
 				CondorError err;
 				if (result == TransferPluginResult::Success && should_reuse && !m_reuse_dir->CacheFile(fullname.c_str(), iter->checksum(),
@@ -2985,6 +2987,15 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				hold_code = CONDOR_HOLD_CODE::DownloadFileError;
 				hold_subcode = the_error;
 
+				// If plugin_exit_code is greater than 0, that indicates a
+				// transfer plugin error. In this case set hold_subcode to the
+				// plugin exit code left-shifted by 8, so we can differentiate
+				// between plugin failures and regular cedar failures.
+
+				if (plugin_exit_code > 0) {
+					hold_subcode = plugin_exit_code << 8;
+				}
+
 				dprintf(D_ALWAYS,
 						"DoDownload: consuming rest of transfer and failing "
 						"after encountering the following error: %s\n",
@@ -3112,7 +3123,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					errstack.getFullText().c_str() );
 				download_success = false;
 				hold_code = CONDOR_HOLD_CODE::DownloadFileError;
-				hold_subcode = rc;
+				hold_subcode = static_cast<int>(result) << 8;
 				try_again = false;
 				error_buf.formatstr( "%s", errstack.getFullText().c_str() );
 			}
@@ -5780,6 +5791,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	int rc = my_pclose(plugin_pipe);
 	int exit_status = WEXITSTATUS(rc);
 	TransferPluginResult result = static_cast<TransferPluginResult>(exit_status);
+	plugin_stats->InsertAttr("PluginExitCode", exit_status);
 	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i\n", plugin.c_str(), exit_status);
 
 	// there is a unique issue when invoking plugins as root where shared
@@ -5809,7 +5821,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 		}
 		plugin_stats->LookupString("TransferUrl", transferUrl);
 		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)",
-			rc, plugin.c_str(), errorMessage.c_str(), transferUrl.c_str());
+			exit_status, plugin.c_str(), errorMessage.c_str(), transferUrl.c_str());
 		return TransferPluginResult::Error;
 	}
 
@@ -5954,6 +5966,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		ClassAd this_file_stats_ad;
 		while ( adFileIter.next( this_file_stats_ad ) > 0 ) {
 
+			this_file_stats_ad.InsertAttr( "PluginExitCode", exit_status );
 			OutputFileTransferStats( this_file_stats_ad );
 
 			// If this classad represents a failed transfer, produce an error
