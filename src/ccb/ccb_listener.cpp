@@ -70,8 +70,8 @@ CCBListener::InitAndReconfig()
 		}
 	}
 
-    // Globals are evil, but at least now it's configurable.
-    CCB_TIMEOUT = param_integer("CCB_TIMEOUT", 300);
+	// Globals are evil, but at least now it's configurable.
+	CCB_TIMEOUT = param_integer("CCB_TIMEOUT", 300);
 }
 
 bool
@@ -648,7 +648,7 @@ CCBListeners::RegisterWithCCBServer(bool blocking)
 		ccb_listener = (*itr);
 		if( !ccb_listener->RegisterWithCCBServer(blocking) && blocking ) {
 		} else {
-		    ++result;
+			++result;
 		}
 	}
 	return result;
