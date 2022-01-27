@@ -5967,30 +5967,35 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 	if ( !adFileIter.begin( output_file, false, CondorClassAdFileParseHelper::Parse_new )) {
 		dprintf( D_ALWAYS, "FILETRANSFER: Failed to iterate over file transfer output.\n" );
-		e.pushf( "FILETRANSFER", 1, "Error: file transfer plugin %s exited with code %i, "
-			"unable to iterate over output file %s", plugin_path.c_str(), exit_status, output_filename.c_str() );
 		return TransferPluginResult::Error;
 	}
 	else {
 		// Iterate over the classads in the file, and output each one
 		// to our transfer_history log file.
 		ClassAd this_file_stats_ad;
+		int num_ads = 0;
 		while ( adFileIter.next( this_file_stats_ad ) > 0 ) {
 
+			num_ads++;
 			this_file_stats_ad.InsertAttr( "PluginExitCode", exit_status );
 			OutputFileTransferStats( this_file_stats_ad );
 
 			// If this classad represents a failed transfer, produce an error
 			bool transfer_success = false;
-			this_file_stats_ad.LookupBool( "TransferSuccess", transfer_success );
-			if ( !transfer_success ) {
-				std::string error_message;
-				std::string transfer_url;
+			std::string error_message;
+			std::string transfer_url;
+			this_file_stats_ad.LookupString( "TransferUrl", transfer_url );
+			if ( !this_file_stats_ad.LookupBool( "TransferSuccess", transfer_success ) ) {
+				error_message = "File transfer plugin " + plugin_path +
+					" exited without producing a TransferSuccess result\n";
+				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)",
+					exit_status, plugin_path.c_str(), error_message.c_str(), transfer_url.c_str() );
+			}
+			else if ( !transfer_success ) {
 				if (!this_file_stats_ad.LookupString("TransferError", error_message)) {
 					error_message = "File transfer plugin " + plugin_path +
 						" exited unexpectedly without producing an error message\n";
 				}
-				this_file_stats_ad.LookupString( "TransferUrl", transfer_url );
 				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)",
 					exit_status, plugin_path.c_str(), error_message.c_str(), transfer_url.c_str() );
 			}
@@ -5999,6 +6004,13 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 				result_ads->emplace_back(new ClassAd());
 				result_ads->back()->CopyFrom(this_file_stats_ad);
 			}
+		}
+
+		if ( num_ads == 0 ) {
+			dprintf( D_ALWAYS, "FILETRANSFER: No valid classads in file transfer output.\n" );
+			e.pushf( "FILETRANSFER", 1, "Error: file transfer plugin %s exited with code %i, "
+				"no valid classads in output file %s", plugin_path.c_str(), exit_status, output_filename.c_str() );
+			return TransferPluginResult::Error;
 		}
 	}
 	fclose(output_file);
