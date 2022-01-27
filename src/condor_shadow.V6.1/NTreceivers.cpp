@@ -172,15 +172,6 @@ do_REMOTE_syscall()
 
 	rval = syscall_sock->code(condor_sysnum);
 	if (!rval) {
-		std::string err_msg;
-		err_msg = "Can no longer talk to condor_starter ";
-		err_msg += syscall_sock->get_sinful_peer();
-
-            // the socket is closed, there's no way to recover
-            // from this.  so, we have to cancel the socket
-            // handler in daemoncore and delete the relisock.
-		thisRemoteResource->closeClaimSock();
-
             /* It is possible that we are failing to read the
             syscall number because the starter went away
             because we *asked* it to go away. Don't be shocked
@@ -188,34 +179,18 @@ do_REMOTE_syscall()
             what we asked when we deactivated the claim.
             Or the starter went away by itself after telling us
             it's ready to do so (via a job_exit syscall). */
-       if ( thisRemoteResource->wasClaimDeactivated() ||
-            thisRemoteResource->gotJobExit() ) {
-           return -1;
-       }
-
-		if( Shadow->supportsReconnect() ) {
-				// instead of having to EXCEPT, we can now try to
-				// reconnect.  happy day! :)
-			dprintf( D_ALWAYS, "%s\n", err_msg.c_str() );
-
-			Shadow->resourceDisconnected(thisRemoteResource);
-
-			if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
-					dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
-					Shadow->gracefulShutDown();
-					EXCEPT( "%s", err_msg.c_str() );
-			}
-				// tell the shadow to start trying to reconnect
-			Shadow->reconnect();
-				// we need to return 0 so that our caller doesn't
-				// think the job exited and doesn't do anything to the
-				// syscall socket.
-			return 0;
-		} else {
-				// The remote starter doesn't support it, so give up
-				// like we always used to.
-			EXCEPT( "%s", err_msg.c_str() );
+		if ( thisRemoteResource->wasClaimDeactivated() ||
+		     thisRemoteResource->gotJobExit() ) {
+			thisRemoteResource->closeClaimSock();
+			return -1;
 		}
+
+		/* Tell the RemoteResource to close the socket and either
+		 * enter reconnect mode or EXCEPT (if reconnect isn't possible).
+		 */
+		thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");
+
+		return 0;
 	}
 
 	dprintf(D_SYSCALLS,

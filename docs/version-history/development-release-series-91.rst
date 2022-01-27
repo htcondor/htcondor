@@ -82,6 +82,34 @@ Bugs Fixed:
   job's lifetime.
   :jira:`922`
 
+Version 9.5.2
+-------------
+
+Release Notes:
+
+- HTCondor version 9.5.2 released on January 25, 2021.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where the *condor_shadow* could run indefinitely when it
+  failed to contact the *condor_startd* in an attempt to kill the
+  job. This problem could become visible to the user in several different ways,
+  such as a job appearing to not go on hold when periodic_hold becomes true.
+  :jira:`933`
+
+- Fix problem where **condor_ssh_to_job** may fail to connect to a job
+  running under an HTCondor tarball installation (glidein) built from an RPM
+  based platform.
+  :jira:`942`
+
+- Fixed a bug in the file transfer mechanism where URL transfers caused 
+  subsequent failures to report incorrect error messages.
+  :jira:`915`
+
 Version 9.5.1
 -------------
 
