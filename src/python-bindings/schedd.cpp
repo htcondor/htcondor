@@ -3110,7 +3110,7 @@ public:
             boost::python::tuple tup = boost::python::extract<boost::python::tuple>(obj);
             std::string attr = boost::python::extract<std::string>(tup[0]);
 
-            boost::python::object value(tup[0]);
+            // boost::python::object value(tup[1]);
             std::string value_str = convertToSubmitValue(tup[1]);
 
             m_hash.set_submit_param(plus_to_my(attr), value_str.c_str());
@@ -3729,7 +3729,12 @@ private:
             boost::python::extract<ExprTreeHolder*> extract_expr(value);
             if (extract_expr.check()) {
                 ExprTreeHolder *holder = extract_expr();
-                attr = holder->toString();
+                // If value is _Py_NoneStruct, holder will be NULL.
+                if( holder != NULL ) {
+                    attr = holder->toString();
+                } else {
+                    return "undefined";
+                }
             } else {
                 boost::python::extract<ClassAdWrapper*> extract_classad(value);
                 if (extract_classad.check()) {
