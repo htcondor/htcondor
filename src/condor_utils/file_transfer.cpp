@@ -3829,6 +3829,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	bool I_go_ahead_always = false;
 	bool peer_goes_ahead_always = false;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
+	int plugin_exit_code = 0;
 
 		// Declaration to make the return_and_reset_priv macro happy.
         std::string reservation_id;
@@ -4621,8 +4622,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 					file_info.Assign("Result", rc);
 
 					// If failed, put the ErrStack into the classad
-					if (result == TransferPluginResult::Error) {
+					if (result != TransferPluginResult::Success) {
 						file_info.Assign("ErrorString", errstack.getFullText());
+						plugin_exit_code = static_cast<int>(result);
 					}
 
 					// it's all assembled, so send the ad using stream s.
@@ -4717,6 +4719,15 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				try_again = false; // put job on hold
 				hold_code = CONDOR_HOLD_CODE::UploadFileError;
 				hold_subcode = the_error;
+
+				// If plugin_exit_code is greater than 0, that indicates a
+				// transfer plugin error. In this case set hold_subcode to the
+				// plugin exit code left-shifted by 8, so we can differentiate
+				// between plugin failures and regular cedar failures.
+
+				if (plugin_exit_code > 0) {
+					hold_subcode = plugin_exit_code << 8;
+				}
 
 				if (rc == PUT_FILE_OPEN_FAILED) {
 					// In this case, put_file() has transmitted a zero-byte
@@ -4830,14 +4841,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	long upload_bytes = 0;
 	if (!currentUploadRequests.empty()) {
 		TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, true, errstack, upload_bytes);
-		if (result == TransferPluginResult::Error) {
+		if (result != TransferPluginResult::Success) {
 			error_desc.formatstr_cat(": %s", errstack.getFullText().c_str());
 			if (!first_failed_file_transfer_happened) {
 				first_failed_file_transfer_happened = true;
 				first_failed_upload_success = false;
 				first_failed_try_again = false;
 				first_failed_hold_code = CONDOR_HOLD_CODE::UploadFileError;
-				first_failed_hold_subcode = 1;
+				first_failed_hold_subcode = static_cast<int>(result) << 8;
 				first_failed_error_desc = error_desc;
 				first_failed_line_number = __LINE__;
 			}
