@@ -28,6 +28,7 @@ findChildProc(pid_t parent) {
 	}
 	return -1;
 #else
+	(void)parent;	// shut the compiler up
 	return -1;
 #endif
 }

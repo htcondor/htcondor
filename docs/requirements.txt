@@ -1,6 +1,6 @@
 sphinx-autodoc-typehints==1.11.0
 nbsphinx==0.8.6
-ipython==6.5.0
+ipython==7.16.3
 Jinja2>=3.0
 htcondor>=9.1.0a0,<=9.999.999post999
 Sphinx==4.0.2

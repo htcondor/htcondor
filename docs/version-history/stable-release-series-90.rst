@@ -53,6 +53,19 @@ Bugs Fixed:
   This restores the behavior in versions 9.0.1 and prior.
   :jira:`904`
 
+- Fixed a bug in the *condor_dagman* parser which caused ``SUBMIT-DESCRIPTION``
+  statements to return an error even after parsing correctly.
+  :jira:`928`
+  
+- Fix problem where **condor_ssh_to_job** may fail to connect to a job
+  running under an HTCondor tarball installation (glidein) built from an RPM
+  based platform.
+  :jira:`942`
+
+- Fixed a bug in the FileTransfer mechanism where URL transfers caused 
+  subsequent failures to report incorrect error messages.
+  :jira:`915`
+
 .. _lts-version-history-909:
 
 Version 9.0.9
@@ -60,9 +73,7 @@ Version 9.0.9
 
 Release Notes:
 
-.. HTCondor version 9.0.9 released on Month Date, 2022.
-
-- HTCondor version 9.0.9 not yet released.
+- HTCondor version 9.0.9 released on January 13, 2022.
 
 - Since CentOS 8 has been retired, we now build for Enterprise Linux 8 on
   Rocky Linux 8.
@@ -89,16 +100,16 @@ Bugs Fixed:
 - Fixed a bug running jobs in a Singularity container where 
   the environment variables added by HTCondor could include incorrect
   pathnames to the location of the job's scratch directory.
-  This occurred when setting the ``SINGULARITY_TARGET_DIR`` config option.
+  This occurred when setting the ``SINGULARITY_TARGET_DIR`` configuration option.
   :jira:`885`
 
 - Fixed a bug where the *condor_job_router* could crash while trying to
-  report an invalid router configuration when c-style comments were used
-  before an old syntax route classad. As a result of this fix the job router
-  now treats c-style comments as a indication that the route is old syntax.
+  report an invalid router configuration when C-style comments were used
+  before an old syntax route ClassAd. As a result of this fix the job router
+  now treats C-style comments as a indication that the route is old syntax.
   :jira:`864`
 
-- Fixed a bug where bytes were trying to be written via an ASCII file
+- Fixed a bug where binary bytes were trying to be written via an ASCII file
   handler in *condor_credmon_oauth* when using Python 3.
   :jira:`633`
 
@@ -114,7 +125,7 @@ Bugs Fixed:
   :jira:`886`
 
 - Fixed a bug in *condor_adstash* where setting a list of *condor_startds*
-  to query in the config lead to no *condor_startds* being queried.
+  to query in the configuration lead to no *condor_startds* being queried.
   :jira:`888`
 
 .. _lts-version-history-908:

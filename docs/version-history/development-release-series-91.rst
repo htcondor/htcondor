@@ -15,6 +15,15 @@ Release Notes:
 
 - HTCondor version 9.6.0 not yet released.
 
+New Features:
+
+- Added new configuration option, :macro:`CCB_TIMEOUT`.  Added new
+  configuration option, :macro:`CCB_REQUIRED_TO_START`, which if set causes
+  HTCondor to exit if :macro:`CCB_ADDRESS` was set but HTCondor could
+  not obtain one.  :macro:`CCB_REQUIRED_TO_START` is ignored if
+  :macro:`USE_SHARED_PORT` is set, which is the default.
+  :jira:`925`
+
 - Added list type configuration for periodic job policy configuration.
   Added ``SYSTEM_PERIODIC_HOLD_NAMES``, ``SYSTEM_PERIODIC_RELEASE_NAMES``
   and ``SYSTEM_PERIODIC_REMOVE_NAMES`` which each define a list of configuration
@@ -31,15 +40,39 @@ Release Notes:
   systems.
   :jira:`873`
 
+- For **arc** grid universe jobs, environment variables specified in
+  the job ad are now included in the ADL job description given to the
+  ARC CE REST service.
+  Also, added new submit command ``arc_application``, which can be used
+  to add additional elements under the ``<Application>`` element of
+  the ADL job description given to the ARC CE REST service.
+  :jira:`932`
+
 - Reduce the size of the singularity test executable by not linking in
   libraries it doesn't need.
   :jira:`927`
+
+- DAGMan now manages job submission by writing jobs directly to the 
+  *condor_schedd*, instead of forking a *condor_submit* process. This behavior
+  is controlled by the ``DAGMAN_USE_DIRECT_SUBMIT`` configuration knob, which
+  defaults to ``True``.
+  :jira:`619`
 
 Bugs Fixed:
 
 - When the blahp submits a job to HTCondor, it no longer requests
   email notification about job errors.
   :jira:`895`
+
+- Fixed a very rare bug in the timing subsystem that would prevent
+  any daemon from appearing in the collector, and periodic expressions
+  to be run less frequently than they should.
+  :jira:`934`
+
+- Fixed a bug introduced earlier in this series where in very 
+  rare cases, a schedd would not appear in the collector when it
+  started up, but would appear an hour later.
+  :jira:`931`
 
 - The view server can now handle very long Accounting Group names
   :jira:`913`
@@ -48,6 +81,47 @@ Bugs Fixed:
   ``allowed_job_duration`` would be evaluated at the wrong points in a
   job's lifetime.
   :jira:`922`
+
+Version 9.5.2
+-------------
+
+Release Notes:
+
+- HTCondor version 9.5.2 released on January 25, 2021.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where the *condor_shadow* could run indefinitely when it
+  failed to contact the *condor_startd* in an attempt to kill the
+  job. This problem could become visible to the user in several different ways,
+  such as a job appearing to not go on hold when periodic_hold becomes true.
+  :jira:`933`
+
+- Fix problem where **condor_ssh_to_job** may fail to connect to a job
+  running under an HTCondor tarball installation (glidein) built from an RPM
+  based platform.
+  :jira:`942`
+
+- Fixed a bug in the file transfer mechanism where URL transfers caused 
+  subsequent failures to report incorrect error messages.
+  :jira:`915`
+
+Version 9.5.1
+-------------
+
+Release Notes:
+
+- HTCondor version 9.5.1 released on January 18, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
 
 - HTCondor now properly creates directories when transferring a directory
   tree out of SPOOL while preserving relative paths.  This bug would manifest
@@ -61,11 +135,9 @@ Version 9.5.0
 
 Release Notes:
 
-.. HTCondor version 9.5.0 released on Month Date, 2022.
+- HTCondor version 9.5.0 released on January 13, 2022.
 
 - This version includes all the updates from :ref:`lts-version-history-909`.
-
-- HTCondor version 9.5.0 not yet released.
 
 New Features:
 
@@ -73,14 +145,14 @@ New Features:
   images that can be run in Singularity or Docker or other container runtimes.
   :jira:`850`
 
-- Docker universe jobs can now be user-level checkpointed by setting
+- Docker universe jobs can now self-checkpoint by setting
   checkpoint_exit_code in submit files.
   :jira:`841`
 
-- Docker universe jobs now work on jobs without file transfer
+- Docker universe now works with jobs that don't transfer any files.
   :jira:`867`
 
-- The **blahp** is now included in the HTCondor linux native packages.
+- The **blahp** is now included in the HTCondor Linux native packages.
   :jira:`838`
 
 - The tool *bosco_cluster* is being renamed to *condor_remote_cluster*.
@@ -94,7 +166,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug where if the submit file set checkpoint_exit_code, and the administrator
+- Fixed a bug where if the submit file set a checkpoint_exit_code, and the administrator
   enabled singularity support on the execute node, the job would go on hold at checkpoint time.
   :jira:`837`
 

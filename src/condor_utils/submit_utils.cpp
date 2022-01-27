@@ -3111,6 +3111,11 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
+	if( (tmp = submit_param(SUBMIT_KEY_ArcApplication, ATTR_ARC_APPLICATION)) ) {
+		AssignJobString(ATTR_ARC_APPLICATION, tmp);
+		free( tmp );
+	}
+
 	if( (tmp = submit_param(SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS)) ) {
 		AssignJobString ( ATTR_BATCH_EXTRA_SUBMIT_ARGS, tmp );
 		free( tmp );

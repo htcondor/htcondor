@@ -34,6 +34,7 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
 	# this is now the default
 	#SCHEDD_ALLOW_LATE_MATERIALIZE = true
 	SUBMIT_FACTORY_JOBS_BY_DEFAULT = true
+	DAGMAN_USE_DIRECT_SUBMIT = false
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
@@ -169,7 +170,7 @@ $success = sub
 		$line = $output_lines[$lineindex];
 		$regex = $nodesOutputRegex[$regexindex];
 		chomp($line);
-		CondorTest::debug("Comparing <$line> to <$regex>\n");
+		#CondorTest::debug("Comparing <$line> to <$regex>\n");
 		if ($line =~ /$regex/) {
 			CondorTest::debug("\tGot a match: $line\n");
 			$regexindex += 1;
@@ -177,7 +178,6 @@ $success = sub
 
 		# If regexindex exceeds the number of regex's we're looking for, then
 		# we're all done
-		CondorTest::debug("Regexindex=$regexindex, num nodesOutputRegex=$#nodesOutputRegex\n");
 		if($regexindex > $#nodesOutputRegex) {
 			CondorTest::debug("Matched all regex expressions!");
 			last;

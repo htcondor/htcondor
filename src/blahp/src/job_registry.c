@@ -67,6 +67,7 @@
 #include <libgen.h>
 #include <time.h>
 #include <errno.h>
+#undef NDEBUG
 #include <assert.h>
 
 #include "job_registry.h"
@@ -212,7 +213,11 @@ job_registry_purge(const char *path, time_t oldest_creation_date,
 
   if ((ret = job_registry_seek_next(fd,&first)) < 0)
    {
-    if (force_rewrite) ftruncate(fileno(fd), 0);
+    int result;	
+    if (force_rewrite) {
+        result = ftruncate(fileno(fd), 0);
+        assert(result == 0);
+    }
     fclose(fd);
     job_registry_destroy(jra);
     return JOB_REGISTRY_NO_VALID_RECORD;
@@ -373,7 +378,7 @@ job_registry_probe_next_record(FILE *fd, job_registry_entry *en)
     if (start_pos < 0) return start_pos;
 
     if ((sret=fread(&en->magic_start, 1, sizeof(en->magic_start), fd)) < 
-        sizeof(en->magic_start)) break;
+        (int)sizeof(en->magic_start)) break;
     if (en->magic_start != JOB_REGISTRY_MAGIC_START)
      {
       fseek(fd, -sret+1, SEEK_CUR);
@@ -384,7 +389,7 @@ job_registry_probe_next_record(FILE *fd, job_registry_entry *en)
      {
       fseek(fd, allowed_size_incs[ic], SEEK_CUR);
 
-      if ((eret=fread(&en->magic_end, 1, sizeof(en->magic_end), fd)) < sizeof(en->magic_end)) break;
+      if ((eret=fread(&en->magic_end, 1, sizeof(en->magic_end), fd)) < (int)sizeof(en->magic_end)) break;
       end_pos = ftell(fd);
       if (end_pos < 0) return end_pos;
 
@@ -649,6 +654,7 @@ job_registry_init(const char *path,
           return NULL; /* keep the rename errno */
          }
        }
+	  if (old_path) free(old_path);
      }
    }
 
@@ -717,7 +723,6 @@ job_registry_init(const char *path,
          {
           umask(old_umask);
           job_registry_destroy(rha);
-		  if (old_path) free(old_path);
           return NULL;
          }
 	close(cfd);
@@ -726,7 +731,6 @@ job_registry_init(const char *path,
       else
        {
         job_registry_destroy(rha);
-		if (old_path) free(old_path);
         return NULL;
        }
      }
@@ -734,7 +738,9 @@ job_registry_init(const char *path,
      {
       /* Make sure the file is empty has as-restrictive as possible permissions */
       chmod(rha->lockfile, lst.st_mode&(~(S_IXUSR|S_IXGRP|S_IXOTH)));
-      truncate(rha->lockfile, 0);
+      int result;	
+      result = truncate(rha->lockfile, 0);
+      assert(result == 0);
      }
     if (stat(rha->subjectlist, &lst) < 0)
      {
@@ -855,13 +861,14 @@ job_registry_init(const char *path,
      {
       job_registry_destroy(rha);
       errno = ENOMEM;
+      fclose(fd);
       return NULL;
      }
     if (rename(rha->path, old_path) < 0)
      {
       free(old_path);
       job_registry_destroy(rha);
-	  fclose(fd);
+      fclose(fd);
       return NULL;
      }
     fclose(fd); /* Release lock */
@@ -1081,7 +1088,7 @@ job_registry_resync_mmap(job_registry_handle *rha, FILE *fd)
       
         JOB_REGISTRY_ASSIGN_ENTRY(newin.id,chosen_id);
         newin.recnum = ren->recnum; 
-        if (write(newindex_fd, &newin, sizeof(newin)) < sizeof(newin))
+        if (write(newindex_fd, &newin, sizeof(newin)) < (int)sizeof(newin))
          {
           free(ren);
           unlink(new_index);
@@ -1167,7 +1174,10 @@ job_registry_resync_mmap(job_registry_handle *rha, FILE *fd)
     update_exponential_backoff*=2;
 
     /* Did a good index (updated by somebody else) appear in the meanwhile ? */
-    if (fstat(fileno(fd), &rst) < 0) return JOB_REGISTRY_STAT_FAIL;
+    if (fstat(fileno(fd), &rst) < 0) {
+		free(new_index);
+		return JOB_REGISTRY_STAT_FAIL;
+	}
     mst_ret = stat(rha->mmappableindex, &mst);
     if (mst_ret >= 0)
      {
@@ -1199,6 +1209,7 @@ job_registry_resync_mmap(job_registry_handle *rha, FILE *fd)
 
   if (newindex_fd < 0)
    {
+     off_t r;
     /* Need to attach to an existing and up-to-date mmap file */
     newindex_fd = open(rha->mmappableindex, O_RDONLY);
     if (newindex_fd < 0) return JOB_REGISTRY_FOPEN_FAIL;
@@ -1218,13 +1229,14 @@ job_registry_resync_mmap(job_registry_handle *rha, FILE *fd)
     rha->n_entries = 0;
     rha->n_alloc = 0;
 
-    rha->index_mmap_length = lseek(newindex_fd, 0, SEEK_END);
-    if (rha->index_mmap_length < 0)
+    r = lseek(newindex_fd, 0, SEEK_END);
+    if (r < 0)
      {
       close(newindex_fd);
       rha->index_mmap_length = 0;
       return JOB_REGISTRY_FSEEK_FAIL;
      }
+	rha->index_mmap_length = r;
 
     rha->entries = mmap(0, rha->index_mmap_length, PROT_READ, MAP_SHARED, newindex_fd, 0);
     if (rha->entries == NULL)
@@ -1796,9 +1808,11 @@ job_registry_merge_pending_nonpriv_updates(job_registry_handle *rha,
         /* NPU file becomes a consistency error we have to avoid. */
         if (unlink(cfp) < 0)
          {
+          int result;
           free(cfp);
           /* Undo the append while we still hold a write lock */
-          ftruncate(fileno(ofd), last_end);
+          result = ftruncate(fileno(ofd), last_end);
+          assert(result == 0);
           rha->mode = saved_rha_mode;
           rha->lastrec = saved_rha_lastrec;
           job_registry_resync(rha, ofd);
@@ -2526,7 +2540,11 @@ job_registry_wrlock(const job_registry_handle *rha, FILE *sfd)
 
   /* Make sure the world-writable lock file continues to be empty */
   /* We check this when obtaining registry write locks only */
-  ftruncate(lfd, 0);
+  ret = ftruncate(lfd, 0);
+  if (ret < 0) {
+    close(lfd); // also releases lock on lfd
+    return ret;
+  }
 
   /* Now obtain the requested write lock */
 
@@ -2594,7 +2612,7 @@ job_registry_get_next(const job_registry_handle *rha,
    {
     curr_pos = ftell(fd);
     JOB_REGISTRY_GET_REC_OFFSET(curr_recn,result->recnum,rha->disk_firstrec)
-    if (curr_pos != ((curr_recn+1)*sizeof(job_registry_entry)))
+    if (curr_pos != (long)((curr_recn+1)*sizeof(job_registry_entry)))
      {
       errno = EBADMSG;
       free(result);
@@ -2669,11 +2687,7 @@ job_registry_seek_next(FILE *fd, job_registry_entry *result)
     fmt_extra = (format); \
     esiz = snprintf(NULL, 0, fmt_extra, (attribute)) + 1; \
     new_extra_attrs = (char *)realloc(extra_attrs, extra_attrs_size + esiz); \
-    if (new_extra_attrs == NULL) \
-     { \
-      if (extra_attrs != NULL) free(extra_attrs); \
-      return NULL; \
-     } \
+	assert(new_extra_attrs); \
     need_to_free_extra_attrs = TRUE; \
     extra_attrs = new_extra_attrs; \
     snprintf(extra_attrs+extra_attrs_size, esiz, fmt_extra, (attribute)); \
@@ -3041,7 +3055,7 @@ job_registry_compute_subject_hash(job_registry_entry *en, const char *subject)
   md5_state_t ctx;
   md5_byte_t digest[16];
   char nibble[4];
-  int i;
+  size_t i;
 
   if (en == NULL || subject == NULL) return;
 

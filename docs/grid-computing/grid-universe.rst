@@ -302,6 +302,11 @@ The value should be a chunk of XML text that could be inserted inside the
 
     arc_resources = <NetworkInfo>gigabitethernet</NetworkInfo>
 
+Similarly, submit description file command
+**arc_application** :index:`arc_application<single: arc_resources; submit commands>`
+can be used to specify these elements if they fall under the ``<Application>``
+element of the ADL.
+
 The batch Grid Type (for PBS, LSF, SGE, and SLURM)
 --------------------------------------------------
 
