@@ -20,7 +20,11 @@ Release Notes:
 
 New Features:
 
-- None.
+- The *condor_job_router* can now create an IDTOKEN and send it them along
+  with a routed job for use by the job. This is controlled by a new
+  configuration variable ``JOB_ROUTER_CREATE_IDTOKEN_NAMES`` and a new route
+  option ``SendIDTokens``.
+  :jira:`735`
 
 Bugs Fixed:
 

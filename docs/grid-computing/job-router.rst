@@ -357,6 +357,16 @@ may appear in a Routing Table entry.
     might reference a property or expression of the job that specifies a
     failure condition specific to the type of job.
 
+:index:`SendIDTokens<single: SendIDTokens; Job Router Routing Table attribute>`
+
+``SendIDTokens``
+    A string expression that lists the names of the IDTOKENS to add to the
+    input file transfer list of the routed job. The string should list one or
+    more of the IDTOKEN names specified by the ``JOB_ROUTER_CREATE_IDTOKEN_NAMES``
+    configuration variable.
+    if ``SendIDTokens`` is not specified, then the value of the JobRouter
+    configuration varible ``JOB_ROUTER_SEND_ROUTE_IDTOKENS`` will be used.
+
 :index:`UseSharedX509UserProxy<single: UseSharedX509UserProxy; Job Router Routing Table ClassAd attribute>`
 
 ``UseSharedX509UserProxy``
