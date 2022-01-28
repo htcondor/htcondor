@@ -10,7 +10,7 @@ details of the ClassAd language syntax, evaluation semantics, and
 its built-in functions.
 
 The second part is likely only of interest to HTCondor
-admnistrators: it describes the generic mechanism
+administrators: it describes the generic mechanism
 provided by HTCondor to transform ClassAds, as used in the schedd
 and the job routers, and as available via a command-line tool.
 
