@@ -438,8 +438,8 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 				comEvent.getSize(),
 				comEvent.GetEventclock()));
 			m_contents.emplace_back(std::move(entry));
-			if (GetExtraDebug()) dprintf(D_FULLDEBUG, "Incrementing stored space by %zu to %ld\n",
-				comEvent.getSize(), m_stored_space + comEvent.getSize());
+			if (GetExtraDebug()) dprintf(D_FULLDEBUG, "Incrementing stored space by %zu to %zu\n",
+				comEvent.getSize(), (size_t)m_stored_space + comEvent.getSize());
 			m_stored_space += comEvent.getSize();
 
 			auto util_iter = m_space_utilization.insert({iter->second->getTag(), SpaceUtilization()});

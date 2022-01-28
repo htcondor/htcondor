@@ -33,6 +33,7 @@ UniShadow::UniShadow() : delayedExitReason( -1 ) {
 		// pass RemoteResource ourself, so it knows where to go if
 		// it has to call something like shutDown().
 	remRes = new RemoteResource( this );
+	remRes->setWaitOnKillFailure(true);
 }
 
 UniShadow::~UniShadow() {

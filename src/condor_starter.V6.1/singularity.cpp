@@ -529,7 +529,8 @@ Singularity::canRun(const std::string &image) {
 	}
 	dprintf(D_ALWAYS, "Successfully ran: '%s'.\n", displayString.c_str());
 	return true;
-#else 
+#else
+	(void)image;	// shut the compiler up
 	return false;
 #endif
 }

@@ -541,11 +541,9 @@ static void init_dag_vars(SubmitHash * submitHash,
 	}
 
 	//PRAGMA_REMIND("TODO: fix the tests to use $(DAG_PARENT_NAMES), and then remove custom job attribute")
-	if (!parents.empty()) {
-		submitHash->set_arg_variable("DAG_PARENT_NAMES", parents.c_str());
-		// TODO: remove this when the tests no longer need it.
-		submitHash->set_arg_variable("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"");
-	}
+	submitHash->set_arg_variable("DAG_PARENT_NAMES", parents.c_str());
+	// TODO: remove this when the tests no longer need it.
+	submitHash->set_arg_variable("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"");
 
 }
 
@@ -575,6 +573,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 		return false;
 	}
 	int rval = 0;
+	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
 	bool success = false;
 	std::string errmsg;
 	Qmgr_connection * qmgr = NULL;
@@ -619,6 +618,13 @@ direct_condor_submit(const Dagman &dm, Job* node,
 			rval = -1;
 			goto finis;
 		}
+		// Check for invalid queue statements
+		SubmitForeachArgs fea;
+		if (submitHash->parse_q_args(queue_args, fea, errmsg) != 0) {
+			errmsg = "Invalid queue statement (" + std::string(queue_args) + ")";
+			rval = -1;
+			goto finis;
+		}
 	}
 	else {
 		debug_printf(DEBUG_NORMAL, "Submitting node %s from inline description using direct job submission\n", node->GetJobName());
@@ -657,6 +663,18 @@ direct_condor_submit(const Dagman &dm, Job* node,
 			proc_id = NewProc(cluster_id);
 			if (proc_id != jid.proc) {
 				formatstr(errmsg, "expected next ProcId to be %d, but Schedd says %d", jid.proc, proc_id);
+				rval = -1;
+				goto finis;
+			}
+			// If this job has >1 procs, check if multi-proc jobs are prohibited
+			if (proc_id >= 1 && dm.prohibitMultiJobs) {
+				errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
+				rval = -1;
+				goto finis;
+			}
+			// DAGMan does not support multi-proc factory jobs when using direct submit
+			if (proc_id >= 1 && is_factory) {
+				errmsg = "Submit generated multiple job procs; disallowed when using factory jobs and DAGMan direct submission.";
 				rval = -1;
 				goto finis;
 			}
@@ -732,12 +750,17 @@ finis:
 		success = false;
 	}
 
+	// If the submitHash was only allocated in this function (and not linked to the node) delete it now
+	if (!node->GetSubmitDesc()) {
+		delete submitHash;
+	}
+
 	return success;
 }
 
-bool send_reschedule(const Dagman & /*dm*/)
+bool send_reschedule(const Dagman & dm)
 {
-	if (param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true))
+	if (!dm.useDirectSubmit)
 		return true; // submit already did it
 
 	DCSchedd schedd;

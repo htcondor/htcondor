@@ -213,6 +213,7 @@ endif ()
 			condor_pl_test(test_condor_now_internals "Test condow_now internals" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_drain_policies "Test job policy and backfill/draining interactions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_submit_description "Test the DAGMan SUBMIT-DESCRIPTION command" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -228,6 +229,8 @@ endif ()
 			condor_pl_test(test_toe_exit_info "Test ToE exit info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_allowed_job_duration "test allowed_job_duration" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_jobsets "Test jobsets" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test(test_htcondor_submit_constructor "Test htcondor.Submit()", "quick;ctest"	CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)

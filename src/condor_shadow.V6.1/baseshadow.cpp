@@ -411,9 +411,13 @@ BaseShadow::reconnectFailed( const char* reason )
 		// does not return
 		DC_Exit( JOB_RECONNECT_FAILED );
 	} else {
-		dprintf(D_ALWAYS,"Exiting with JOB_SHOULD_REQUEUE\n");
+		int exit_reason = getExitReason();
+		if (exit_reason == -1) {
+			exit_reason = JOB_SHOULD_REQUEUE;
+		}
+		dprintf(D_ALWAYS,"Exiting with %d\n", exit_reason);
 		// does not return
-		DC_Exit( JOB_SHOULD_REQUEUE );
+		DC_Exit( exit_reason );
 	}
 
 	// Should never get here....
@@ -1399,7 +1403,11 @@ BaseShadow::updateJobInQueue( update_t type )
 void
 BaseShadow::evalPeriodicUserPolicy( void )
 {
-	shadow_user_policy.checkPeriodic();
+	// We may be in the middle of an RPC from the starter.
+	// If a policy expression fires, we may do some blocking network
+	// operations and/or close the syscall socket.
+	// So do the policy evaluation in a new DaemonCore callout.
+	shadow_user_policy.checkPeriodicSoon();
 }
 
 

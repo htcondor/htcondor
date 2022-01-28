@@ -1336,6 +1336,8 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 
         dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);
 
+#else
+		(void)stream;	// shut the compiler up
 #endif
 return KEEP_STREAM;
 }

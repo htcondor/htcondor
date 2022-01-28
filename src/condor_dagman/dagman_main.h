@@ -182,6 +182,11 @@ class Dagman {
 		// match expected value).
 	bool abortOnScarySubmit;
 
+		// Whether to use use direct submit (DAGMan writes jobs directly to the
+		// schedd). If set to false, DAGMan will submit jobs by forking
+		// condor_submit.
+	bool useDirectSubmit;
+
 		// The interval (in seconds) between reports on what nodes
 		// are pending.
 	int pendingReportInterval;

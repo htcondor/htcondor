@@ -1941,6 +1941,15 @@ More information about networking in HTCondor can be found in
     The size of the kernel TCP read buffer in bytes for all sockets used
     by CCB. The default value is 2 KiB.
 
+:macro-def:`CCB_REQUIRED_TO_START`
+    If true, and :macro:`USE_SHARED_PORT` is false, and :macro:`CCB_ADDRESS`
+    is set, but HTCondor fails to register with any broker, HTCondor will
+    exit rather then continue to retry indefinitely.
+
+:macro-def:`CCB_TIMEOUT`
+    The length, in seconds, that we wait for any CCB operation to complete.
+    The default value is 300.
+
 :macro-def:`CCB_WRITE_BUFFER`
     The size of the kernel TCP write buffer in bytes for all sockets
     used by CCB. The default value is 2 KiB.
@@ -8220,10 +8229,10 @@ General
     shared port-related error messages from appearing in ``dagman.out``
     files. (Introduced in version 8.6.1.)
 
-:macro-def:`DAGMAN_USE_CONDOR_SUBMIT`
+:macro-def:`DAGMAN_USE_DIRECT_SUBMIT`
     A boolean value that controls whether *condor_dagman* submits jobs using
     *condor_submit* or by opening a direct connection to the *condor_schedd*.
-    ``DAGMAN_USE_CONDOR_SUBMIT`` defaults to ``True``.  When set to ``False``
+    ``DAGMAN_USE_DIRECT_SUBMIT`` defaults to ``True``.  When set to ``True``
     *condor_dagman* will submit jobs to the local Schedd by connecting to it
     directly.  This is faster than using *condor_submit*, especially for very
     large DAGs; But this method will ignore some submit file features such as

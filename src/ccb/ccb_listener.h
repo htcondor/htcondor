@@ -97,7 +97,10 @@ class CCBListeners {
 		// example: "<ccb server>#<ccbid> <ccb server2>#<ccbid2> ..."
 	void GetCCBContactString(std::string &result);
 
-	bool RegisterWithCCBServer(bool blocking=false);
+		// returns how many broker registrations succeeded
+	int RegisterWithCCBServer(bool blocking=false);
+
+	size_t size() const { return m_ccb_listeners.size(); }
 
  private:
 	typedef std::list< classy_counted_ptr<CCBListener> > CCBListenerList;
