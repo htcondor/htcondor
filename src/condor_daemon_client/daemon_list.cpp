@@ -294,6 +294,12 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 	int num_collectors = this->Number();
 	DCCollector * daemon;
 	while (this->next(daemon)) {
+		if (!daemon->addr()) {
+			dprintf(D_ALWAYS, "Can't resolve collector %s; skipping update\n",
+					daemon->name() ? daemon->name() : "without a name(?)");
+			continue;
+		}
+
 		if ((num_collectors > 1) && daemon->isBlacklisted()) {
 			dprintf(D_ALWAYS, "Skipping update to collector %s which has timed out in the past\n", daemon->addr());
 			continue;

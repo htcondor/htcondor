@@ -18,7 +18,7 @@
 
 MACRO (ADD_DEPENDENCIES_SUFFIX_HACK _SOURCE _TARGET)
 # Many, but not all of the tests added with CondorExeTest have a target name that
-# ends in exe.  We want all of the generated executable for these to end in exe, 
+# ends in exe.  We want all of the generated executable for these to end in exe,
 # both on Unix and Windows.  To do this, the CondorExeTest macro removes the .exe
 # suffix of the target name (not the generated executable, but the target) only
 # on Windows, so CMake will tack on the exe suffix to the generated target, and we
@@ -197,6 +197,7 @@ endif ()
 		# Ornithology - partial merge - Windows and MacOSX problems; some tests not yet reliable
 		if(LINUX)
 			condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_bogus_collector "Test Bogus Collector" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_late_materialization "Test that late materialization options work correctly with each other" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -214,7 +215,7 @@ endif ()
 
 			condor_pl_test(test_manifest "Test manifest functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
-			condor_pl_test(test_htcondor_submit_constructor "Test htcondor.Submit()", "quick;ctest"	CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_htcondor_submit_constructor "Test htcondor.Submit()" "quick;ctest"	CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
