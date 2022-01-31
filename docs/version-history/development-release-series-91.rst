@@ -60,11 +60,6 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug that caused any daemon to crash when it was configured
-  to report to more than one collector, and any of the collectors'
-  names could not be resolved by DNS.
-  :jira:`952`
-
 - When the blahp submits a job to HTCondor, it no longer requests
   email notification about job errors.
   :jira:`895`
@@ -73,11 +68,6 @@ Bugs Fixed:
   any daemon from appearing in the collector, and periodic expressions
   to be run less frequently than they should.
   :jira:`934`
-
-- Fixed a bug introduced earlier in this series where in very 
-  rare cases, a schedd would not appear in the collector when it
-  started up, but would appear an hour later.
-  :jira:`931`
 
 - The view server can now handle very long Accounting Group names
   :jira:`913`
