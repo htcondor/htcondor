@@ -23,7 +23,15 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug that caused any daemon to crash when it was configured
+  to report to more than one collector, and any of the collectors'
+  names could not be resolved by DNS.
+  :jira:`952`
+
+- Fixed a bug introduced earlier in this series where in very 
+  rare cases, a schedd would not appear in the collector when it
+  started up, but would appear an hour later.
+  :jira:`931`
 
 Version 9.5.2
 -------------
