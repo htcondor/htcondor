@@ -60,6 +60,11 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug that caused any daemon to crash when it was configured
+  to report to more than one collector, and any of the collectors'
+  names could not be resolved by DNS.
+  :jira:`952`
+
 - When the blahp submits a job to HTCondor, it no longer requests
   email notification about job errors.
   :jira:`895`
