@@ -20,6 +20,7 @@ New Features:
   HTCondor to exit if :macro:`CCB_ADDRESS` was set but HTCondor could
   not obtain one.  :macro:`CCB_REQUIRED_TO_START` is ignored if
   :macro:`USE_SHARED_PORT` is set, which is the default.
+  :jira:`925`
 
 Bugs Fixed:
 
