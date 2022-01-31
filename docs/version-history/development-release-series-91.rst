@@ -60,7 +60,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug that caused the startd to crash when it was configured
+- Fixed a bug that caused any daemon to crash when it was configured
   to report to more than one collector, and any of the collectors'
   names could not be resolved by DNS.
   :jira:`952`
