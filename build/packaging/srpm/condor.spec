@@ -1682,6 +1682,11 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Feb 01 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.3-1
+- Fix daemon crash where one of multiple collectors is not in DNS
+- Fix bug where initial schedd registration was rarely delayed by an hour
+- Can set CCB_TIMEOUT and choose to not start up if CCB address unavailable
+
 * Tue Jan 25 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.2-1
 - Fix bug where job may not go on hold when exceeding allowed_job_duration
 - Fix bug where the condor_shadow could run indefinitely
