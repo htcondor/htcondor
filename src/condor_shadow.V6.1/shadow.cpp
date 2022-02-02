@@ -354,6 +354,13 @@ UniShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_stats)
 	download_stats = remRes->m_download_file_stats;
 }
 
+ /**
+ * updateFileTransferStats takes two input parameters:
+ * old_stats: A classad of old (existing) file transfer statistics
+ * new_stats: A class of new incoming file transfer statistics
+ * It then cumulates the attribute values of these two ads and returns a new
+ * classad with the updated values.
+ **/
 ClassAd*
 UniShadow::updateFileTransferStats(ClassAd& old_stats, ClassAd &new_stats) {
 

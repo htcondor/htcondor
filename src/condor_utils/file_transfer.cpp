@@ -1893,7 +1893,7 @@ FileTransfer::ReadTransferPipeMsg()
 								   sizeof( int ) );
 		if(n != sizeof( int )) goto read_failed;
 		if (stats_len) {
-			char *stats_buf = new char[stats_len];
+			char *stats_buf = new char[stats_len+1];
 			n = daemonCore->Read_Pipe( TransferPipe[0],
 									stats_buf,
 									stats_len );
@@ -1904,6 +1904,7 @@ FileTransfer::ReadTransferPipeMsg()
 			stats_buf[stats_len] = '\0';
 			classad::ClassAdParser parser;
 			parser.ParseClassAd(stats_buf, Info.stats);
+			delete [] stats_buf;
 		}
 
 		int error_len = 0;
@@ -2035,7 +2036,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 	Info.success = true;
 	Info.in_progress = true;
 	Info.xfer_status = XFER_STATUS_UNKNOWN;
-	Info.stats = ClassAd();
+	Info.stats.Clear();
 	TransferStart = time(NULL);
 
 	if (blocking) {
@@ -3305,7 +3306,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 	}
 	// If this is the condor_shadow (indicated by IsServer() == true) then update
 	// our file transfer stats to include those sent by the condor_starter
-	ClassAd* transfer_stats = (ClassAd*)ad.Lookup("TransferStats");
+	ClassAd* transfer_stats = dynamic_cast<ClassAd*>(ad.Lookup("TransferStats"));
 	if (transfer_stats && IsServer()) {
 		Info.stats.CopyFrom(*transfer_stats);
 	}
@@ -3464,7 +3465,7 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	Info.success = true;
 	Info.in_progress = true;
 	Info.xfer_status = XFER_STATUS_UNKNOWN;
-	Info.stats = ClassAd();
+	Info.stats.Clear();
 	TransferStart = time(NULL);
 
 	if (blocking) {
@@ -6109,10 +6110,6 @@ int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
 			}
 		}
 	}
-
-	classad::ClassAdUnParser unparser;
-	std::string stats_str;
-	unparser.Unparse(stats_str, &Info.stats);
 
 	return 0;
 }

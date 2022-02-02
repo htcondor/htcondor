@@ -75,8 +75,6 @@ BaseShadow::BaseShadow() {
 	attemptingReconnectAtStartup = false;
 	m_force_fast_starter_shutdown = false;
 	m_committed_time_finalized = false;
-	m_prev_run_upload_file_stats = ClassAd();
-	m_prev_run_download_file_stats = ClassAd();
 }
 
 BaseShadow::~BaseShadow() {
@@ -137,11 +135,11 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		prev_run_bytes_recvd = 0;
 	}
 
-	ClassAd* prev_upload_stats = (ClassAd*)jobAd->Lookup(ATTR_TRANSFER_INPUT_STATS);
+	ClassAd* prev_upload_stats = dynamic_cast<ClassAd*>(jobAd->Lookup(ATTR_TRANSFER_INPUT_STATS));
 	if (prev_upload_stats) {
 		m_prev_run_upload_file_stats = *prev_upload_stats;
 	}
-	ClassAd* prev_download_stats = (ClassAd*)jobAd->Lookup(ATTR_TRANSFER_OUTPUT_STATS);
+	ClassAd* prev_download_stats = dynamic_cast<ClassAd*>(jobAd->Lookup(ATTR_TRANSFER_OUTPUT_STATS));
 	if (prev_download_stats) {
 		m_prev_run_download_file_stats = *prev_download_stats;
 	}

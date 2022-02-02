@@ -914,10 +914,8 @@ ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_st
 			}
 
 			// Lookup the previous value if it exists
-			int prev_val;
-			if (!upload_stats.LookupInteger(attr, prev_val)) {
-				prev_val = 0;
-			}
+			int prev_val = 0;
+			upload_stats.LookupInteger(attr, prev_val);
 
 			upload_stats.InsertAttr(attr, prev_val + this_val);
 		}
@@ -935,16 +933,23 @@ ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_st
 			}
 
 			// Lookup the previous value if it exists
-			int prev_val;
-			if (!download_stats.LookupInteger(attr, prev_val)) {
-				prev_val = 0;
-			}
+			int prev_val = 0;
+			download_stats.LookupInteger(attr, prev_val);
 
 			download_stats.InsertAttr(attr, prev_val + this_val);
 		}
 	}
 }
 
+/**
+ * updateFileTransferStats takes two input parameters:
+ * old_stats: A classad of old (existing) file transfer statistics
+ * new_stats: A class of new incoming file transfer statistics
+ * It then cumulates the attribute values of these two ads and returns a new
+ * classad with the updated values. In the parallel universe (where a single
+ * job contains many parralel instances) it adds the values from all the
+ * different instances into the updated ad.
+ **/
 ClassAd*
 ParallelShadow::updateFileTransferStats(ClassAd& old_stats, ClassAd &new_stats)
 {
@@ -972,9 +977,8 @@ ParallelShadow::updateFileTransferStats(ClassAd& old_stats, ClassAd &new_stats)
 		updated_stats->InsertAttr(attr_lastrun, value);
 
 		// If this attribute has a previous Total value, add that to the new total
-		if (old_stats.find(attr_total) != old_stats.end()) {
-			int old_total;
-			old_stats.LookupInteger(attr_total, old_total);
+		int old_total = 0;
+		if (old_stats.LookupInteger(attr_total, old_total)) {
 			value += old_total;
 		}
 		updated_stats->InsertAttr(attr_total, value);
