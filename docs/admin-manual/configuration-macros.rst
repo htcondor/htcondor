@@ -5756,6 +5756,13 @@ These settings affect the *condor_starter*.
     the *condor_starter* will monitor less frequently than specified by
     ``STARTER_UPDATE_INTERVAL``.
 
+:macro-def:`STARTER_UPDATE_INTERVAL_MAX`
+    An integer value representing an upper bound on the number of 
+    seconds between updates controlled by ``STARTER_UPDATE_INTERVAL`` and
+    ``STARTER_UPDATE_INTERVAL_TIMESLICE``.  It is recommended to leave this parameter
+    at its default value, which is calculated 
+    as ``STARTER_UPDATE_INTERVAL`` * ( 1 / ``STARTER_UPDATE_INTERVAL_TIMESLICE`` )
+
 :macro-def:`USER_JOB_WRAPPER`
     The full path and file name of an executable or script. If
     specified, HTCondor never directly executes a job, but instead
