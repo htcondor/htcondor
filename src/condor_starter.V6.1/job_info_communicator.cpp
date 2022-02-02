@@ -950,9 +950,20 @@ JobInfoCommunicator::startUpdateTimer( void )
 	Timeslice interval;
 
 	// default interval is 5 minutes, with 8 seconds as the initial value.
-	interval.setDefaultInterval( param_integer( "STARTER_UPDATE_INTERVAL", 300, 0 ) );
-	interval.setTimeslice( param_double( "STARTER_UPDATE_INTERVAL_TIMESLICE", 0.1, 0, 1 ) );
+	int updateInterval = param_integer("STARTER_UPDATE_INTERVAL", 300, 1);
+	interval.setDefaultInterval( updateInterval );
+	double timeSlice = param_double("STARTER_UPDATE_INTERVAL_TIMESLICE", 0.1, 0, 1);
+	interval.setTimeslice(timeSlice);
 	interval.setInitialInterval( param_integer( "STARTER_INITIAL_UPDATE_INTERVAL", 8 ) );
+
+	// Set a max interval equal to 3x longer than expected in the worst case (even w/ timeslice induced slowdown),
+	// as this max interval is communicated to the shadow.  If the shadow does not receive an update from
+	// the starter within this max interval, it assumes the starter may be gone, and will close the syscall
+	// socket and attempt to reconnect (the thinking here is perhaps the syscall socket is being kept open
+	// after the starter is dead by some crappy/misbehaving NAT box).
+	interval.setMaxInterval( param_integer("STARTER_UPDATE_INTERVAL_MAX",
+		(timeSlice > 0) ? (updateInterval * (1/timeSlice)) : updateInterval,
+		updateInterval) );
 
 	if( interval.getDefaultInterval() < interval.getInitialInterval() ) {
 		interval.setInitialInterval( interval.getDefaultInterval() );
@@ -966,6 +977,16 @@ JobInfoCommunicator::startUpdateTimer( void )
 	}
 }
 
+int
+JobInfoCommunicator::periodicJobUpdateTimerMaxInterval(void)
+{
+	int delay = -1;
+	Timeslice timeslice;
+	if (daemonCore->GetTimerTimeslice(m_periodic_job_update_tid, timeslice)) {
+		delay = static_cast<int>(timeslice.getMaxInterval());
+	}
+	return delay;
+}
 
 /*
    We can't just have our periodic timer call periodicJobUpdate()
