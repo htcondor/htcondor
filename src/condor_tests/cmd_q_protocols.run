@@ -60,6 +60,7 @@ my %skipad = (
 	"JobSetId" => 1,
 	"DiskProvisioned" => 1,
 	"ActivationSetupDuration" => 1,
+	"RemoteHost" => 1,
 );
 
 my $firstappend_condor_config = '

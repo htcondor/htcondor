@@ -130,6 +130,7 @@ Dagman::Dagman() :
 	abortDuplicates (true), // so Coverity is happy
 	submitDepthFirst (false), // so Coverity is happy
 	abortOnScarySubmit (true), // so Coverity is happy
+	useDirectSubmit (true), // so Coverity is happy
 	pendingReportInterval (10 * 60), // 10 minutes
 	_dagmanConfigFile (NULL), // so Coverity is happy
 	autoRescue(true),
