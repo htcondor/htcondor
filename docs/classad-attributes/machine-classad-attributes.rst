@@ -474,7 +474,8 @@ Machine ClassAd Attributes
     *condor_shared_port*, and/or an additional private network
     interface, that information will be included here as well.
 
-:classad-attribute:`MyType`"Machine"``.
+:classad-attribute:`MyType`
+    The ClassAd type; always set to the literal string ``"Machine"``.
 
 :classad-attribute:`Name` attribute, but could be customized by the site
     administrator. On SMP machines, the *condor_startd* will divide the
@@ -809,7 +810,9 @@ Machine ClassAd Attributes
 
     For non-SMP machines with one slot, the value will be 1.
 
-:classad-attribute:`SlotType`"Partitionable"``, and all dynamic
+:classad-attribute:`SlotType`
+    For SMP machines with partitionable slots, the partitionable slot
+    will have this attribute set to ``"Partitionable"``, and all dynamic
     slots will have this attribute set to ``"Dynamic"``.
 
 :classad-attribute:`SlotWeight`

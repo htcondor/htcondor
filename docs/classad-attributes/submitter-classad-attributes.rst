@@ -3,7 +3,7 @@ Submitter ClassAd Attributes
 
 :index:`submitter attributes<single: submitter attributes; ClassAd>`
 
-:classad-attribute:`submitter attributes`
+:classad-attribute:`CondorVersion`
     A string containing the HTCondor version number, the release date,
     and the build identification number.
 
@@ -22,9 +22,13 @@ Submitter ClassAd Attributes
 
 :classad-attribute:`LocalJobsRunning`
     The number of Local universe jobs from this submitter that are
-    running. :classad-attribute:`MyAddress`
+    running. 
+    
+:classad-attribute:`MyAddress`
     The IP address associated with the *condor_schedd* daemon used by
-    the submitter. :classad-attribute:`Name`
+    the submitter.
+    
+:classad-attribute:`Name`
     The fully qualified name of the user or accounting group. It will be
     of the form ``name@submit.domain``.
 

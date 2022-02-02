@@ -3,7 +3,7 @@ DaemonMaster ClassAd Attributes
 
 :index:`DaemonMaster attributes<single: DaemonMaster attributes; ClassAd>`
 
-:classad-attribute:`DaemonMaster attributes`
+:classad-attribute:`CondorVersion`
     A string containing the HTCondor version number, the release date,
     and the build identification number.
 

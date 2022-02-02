@@ -1,8 +1,9 @@
 Negotiator ClassAd Attributes
 =============================
 
+:index:`Negotiator attributes<single: Negotiator attributes; ClassAd>`
 
-:classad-attribute:`Negotiator attributes`
+:classad-attribute:`CondorVersion`
     A string containing the HTCondor version number, the release date,
     and the build identification number.
 
@@ -22,7 +23,7 @@ Negotiator ClassAd Attributes
 
 :index:`NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT`
 
-:classad-attribute:`LastNegotiationCycleCandidateSlots<X>`
+:classad-attribute:`LastNegotiationCycleCandidateSlots`
     The number of slot ClassAds after filtering by
     ``NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT``. This is the
     number of slots actually considered for matching. The number ``<X>``
