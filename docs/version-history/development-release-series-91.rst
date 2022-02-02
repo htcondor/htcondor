@@ -82,6 +82,12 @@ Bugs Fixed:
   job's lifetime.
   :jira:`922`
 
+- Fixed several bugs in file transfer where unexpected failures by file
+  transfer plugins would not get handled correctly, resulting in empty
+  Hold Reason messages and meaningless Hold Reason Subcodes reported in the
+  job's classad.
+  :jira:`842`
+
 Version 9.5.2
 -------------
 
