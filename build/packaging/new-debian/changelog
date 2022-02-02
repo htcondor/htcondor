@@ -1,3 +1,11 @@
+condor (9.5.3-1) stable; urgency=medium
+
+  * Fix daemon crash where one of multiple collectors is not in DNS
+  * Fix bug where initial schedd registration was rarely delayed by an hour
+  * Can set CCB_TIMEOUT and choose to not start up if CCB address unavailable
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 01 Feb 2022 10:46:00 -0600
+
 condor (9.5.2-1) stable; urgency=medium
 
   * Fix bug where job may not go on hold when exceeding allowed_job_duration
