@@ -32,7 +32,7 @@ const char* IsUrl( const char *url )
 	}
 
 	const char *ptr = & url[1];
-	while ( isalnum( *ptr ) || *ptr == '+' || *ptr == '-' || *ptr == '.' ) {
+	while ( isalnum( *ptr ) || *ptr == '+' || *ptr == '-' || *ptr == '.' || *ptr == '_' ) {
 		++ptr;
 	}
 	// This is more restrictive than is necessary for URIs, which are not
