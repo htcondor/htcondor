@@ -1918,7 +1918,7 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 	//
 	// See condor_utils/filesystem_remap.cpp for details.
 	//
-	static bool hidepid = false;
+	static bool hidepid = true;
 	static bool checked_proc_mountinfo = false;
 	if(! checked_proc_mountinfo) {
 		std::string line;
@@ -1958,9 +1958,9 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 							if( pos == 0 ) {
 								std::string value = option.substr(7 + 1);
 								int v = std::stoi(value);
-								if( v > 1 ) {
-									dprintf( D_ALWAYS, "Found per-superblock option hidepid > 1 for /proc, will not check for PID 1.\n" );
-									hidepid = true;
+								if( v <= 1 ) {
+									dprintf( D_ALWAYS, "Found per-superblock option hidepid <= 1 for /proc, enabling check for PID 1.\n" );
+									hidepid = false;
 									break;
 								}
 							}
