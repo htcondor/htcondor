@@ -19,10 +19,7 @@ def make_anchor_title_node(attribute_name):
 
 def make_headerlink_node(attribute_name, options):
     ref = '#' + attribute_name
-    # The following line works but there's no apparent way to add a title="..." attribute
-    #node = nodes.reference('', '¶', refuri=ref, external=False, classes=['headerlink'], **options)
-    html_markup = f"""<a class="headerlink reference external" title="Permalink to this headline" href="{ref}">¶</a>"""
-    node = nodes.raw("", html_markup, format="html")
+    node = nodes.reference('', '¶', refuri=ref, reftitle="Permalink to this headline", classes=['headerlink'], **options)
     return node
 
 
