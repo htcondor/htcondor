@@ -45,6 +45,7 @@ static const char * ILLEGAL_CHARS = "+";
 
 static std::vector<char*> _spliceScope;
 static bool _useDagDir = false;
+static bool _useDirectSubmit = true;
 
 // _thisDagNum will be incremented for each DAG specified on the
 // condor_submit_dag command line.
@@ -179,6 +180,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 	}
 
 	_useDagDir = useDagDir;
+	_useDirectSubmit = param_boolean("DAGMAN_USE_DIRECT_SUBMIT", true);
 	_schedd = schedd;
 
 		//
@@ -274,7 +276,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 						   "submitfile" );
 			if (parsed_line_successfully && inline_submit) {
 				// go into inline subfile parsing mode
-				if (!param_boolean("DAGMAN_USE_DIRECT_SUBMIT", true)) {
+				if (!_useDirectSubmit) {
 					debug_printf(DEBUG_NORMAL, "ERROR: To use an inline job "
 					  "description for node %s, DAGMAN_USE_DIRECT_SUBMIT must "
 					  "be set to True. Aborting.\n", nodename.c_str());
@@ -334,7 +336,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					"submitfile");
 			if (parsed_line_successfully && inline_submit) {
 				// go into inline subfile parsing mode
-				if (!param_boolean("DAGMAN_USE_DIRECT_SUBMIT", true)) {
+				if (!_useDirectSubmit) {
 					debug_printf(DEBUG_NORMAL, "ERROR: To use an inline job "
 					  "description for node %s, DAGMAN_USE_DIRECT_SUBMIT must "
 					  "be set to True. Aborting.\n", nodename.c_str());
@@ -411,7 +413,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 			bool is_submit_description = desc && *desc == '{';
 			if (is_submit_description) {
 				// Start parsing submit description
-				if (!param_boolean("DAGMAN_USE_DIRECT_SUBMIT", true)) {
+				if (!_useDirectSubmit) {
 					debug_printf(DEBUG_NORMAL, "ERROR: To use an inline job "
 					  "description for node %s, DAGMAN_USE_DIRECT_SUBMIT must "
 					  "be set to True. Aborting.\n", descName.c_str());
