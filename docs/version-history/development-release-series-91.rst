@@ -15,7 +15,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Improved the ability of the Access Point to detect the disappearance
+  of an Execution Point that is running a job.  Specifically, the ability
+  of the *condor_shadow* to detect a problem with the *condor_starter*.
+  :jira:`954`
 
 Bugs Fixed:
 

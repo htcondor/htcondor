@@ -2282,6 +2282,15 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 			// insure_update, since we already have the socket open,
 			// and we want to use it (e.g. to prevent firewalls from
 			// closing it due to non-activity).
+
+			// Add an attribute that says when the shadow can expect to receive
+			// another update.  We do this because the shadow uses these updates
+			// as a heartbeat; if the shadow does not receive an expected update from
+			// us, it assumes the connection is dead (even if the syscall sock is still alive,
+			// since that may be the doing of a misbehaving NAT box).
+		ad->Assign(ATTR_JOBINFO_MAXINTERVAL, periodicJobUpdateTimerMaxInterval());
+
+			// Invoke the remote syscall
 		rval = (REMOTE_CONDOR_register_job_info(ad) == 0);
 	}
 	else {
