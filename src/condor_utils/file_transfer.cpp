@@ -5838,11 +5838,6 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 		return TransferPluginResult::Error;
 	}
 
-	if (e.getFullText().empty()) {
-		e.pushf("FILETRANSFER", 1, "File transfer plugin %s exited unexpectedly "
-			"without producing an error message\n", plugin.c_str());
-	}
-
 	return result;
 }
 
