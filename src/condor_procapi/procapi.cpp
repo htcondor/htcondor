@@ -1948,7 +1948,11 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 				getline(is, token, ' '); // per-superblock options
 				std::string ps_options = token;
 
+				bool found_proc = false;
+				bool found_hidepid = false;
 				if( mount_point == "/proc" ) {
+					found_proc = true;
+
 					std::string option;
 					std::istringstream psos(ps_options);
 					while(! psos.eof()) {
@@ -1956,6 +1960,7 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 						if(! psos.fail()) {
 							size_t pos = option.find("hidepid");
 							if( pos == 0 ) {
+								found_hidepid = true;
 								std::string value = option.substr(7 + 1);
 								int v = std::stoi(value);
 								if( v <= 1 ) {
@@ -1966,6 +1971,14 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 							}
 						}
 					}
+
+				// The default mount option for hidepid is 0; indeed, if you
+				// explicitly specify hidepid=0 in the mount command, it
+				// won't appear in /proc/self/mountinfo.
+				if( found_proc && ! found_hidepid ) {
+					dprintf( D_ALWAYS, "/proc was mounted without hidepid, assuming default of 0.\n" );
+					hidepid = false;
+				}
 
 				break;
 				}
