@@ -1925,7 +1925,7 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 		std::ifstream file("/proc/self/mountinfo");
 		if( file.good() ) {
 			while(! file.eof()) {
-				std::getline(file, line);
+				getline(file, line);
 				if(! file.good()) { break; }
 
 				std::string token;
@@ -1961,13 +1961,17 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 							size_t pos = option.find("hidepid");
 							if( pos == 0 ) {
 								found_hidepid = true;
-								std::string value = option.substr(7 + 1);
-								int v = std::stoi(value);
-								if( v <= 1 ) {
-									dprintf( D_ALWAYS, "Found per-superblock option hidepid <= 1 for /proc, enabling check for PID 1.\n" );
-									hidepid = false;
-									break;
+								try {
+									std::string value = option.substr(7 + 1);
+									int v = std::stoi(value);
+									if( v <= 1 ) {
+										dprintf( D_ALWAYS, "Found per-superblock option hidepid <= 1 for /proc, enabling check for PID 1.\n" );
+										hidepid = false;
+										break;
+									}
 								}
+								catch( std::out_of_range & e ) { break; }
+								catch( std::invalid_argument & e ) { break; }
 							}
 						}
 					}
