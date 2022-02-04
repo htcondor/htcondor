@@ -121,7 +121,7 @@ Bugs Fixed:
   to be the same if some specific attributes were missing from the
   latest ClassAd. Also **condor_top** now exits early if no stats are
   provided by the queried daemon.
-  :jira`:880
+  :jira:`880`
 
 - Fixed a bug where the user job log could be written in the wrong
   directory when a spooled job's output was retrieved with
