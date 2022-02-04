@@ -226,13 +226,22 @@ following:
     [ LocalFileName = "/path/to/local/copy/of/bar"; Url = "url://server/some/directory//bar" ]
     [ LocalFileName = "/path/to/local/copy/of/qux"; Url = "url://server/some/directory//qux" ]
 
+HTCondor also expects the plugin to exit with one of the following standardized
+exit codes:
+
+    - **0**: Transfer successful
+    - **1**: Transfer failed
+    - **2**: Transfer needs a refreshed authentication token, should be retried
+      (slated for development, not implemented yet)
+
+
 Custom File Transfer Plugins
 ''''''''''''''''''''''''''''
 
 This functionality is not limited to a predefined set of protocols or plugins.
-New ones can be invented. As an invented example, the zkm
+New ones can be invented. As an invented example, the ``zkm``
 transfer type writes random bytes to a file. The plug-in that handles
-zkm transfers would respond to invocation with the ``-classad`` command
+``zkm`` transfers would respond to invocation with the ``-classad`` command
 line argument with:
 
 .. code-block:: condor-classad
@@ -250,12 +259,13 @@ invented example:
     transfer_input_files = zkm://128/r-data
 
 the plug-in will be invoked with a first command line argument of
-zkm://128/r-data and a second command line argument giving the full path
+``zkm://128/r-data`` and a second command line argument giving the full path
 along with the file name ``r-data`` as the location for the plug-in to
 write 128 bytes of random data.
 
-URL plugins exist already for transferring files to/from
-Box.com accounts (``box://...``),
+By default, HTCondor includes plugins for standard file protocols ``http://...``,
+``https://...`` and ``ftp://...``. Additionally, URL plugins exist 
+for transferring files to/from Box.com accounts (``box://...``),
 Google Drive accounts (``gdrive://...``),
 and Microsoft OneDrive accounts (``onedrive://...``).
 These plugins require users to have obtained OAuth2 credentials
@@ -265,7 +275,7 @@ to fetch OAuth2 credentials.
 
 An example template for a file transfer plugin is available in our
 source repository under `/src/condor_examples/filetransfer_example_plugin.py
-<https://github.com/htcondor/htcondor/blob/master/src/condor_examples/filetranser_example_plugin.py>`_.
+<https://github.com/htcondor/htcondor/blob/master/src/condor_examples/filetransfer_example_plugin.py>`_.
 This provides most of the functionality required in the plugin, except for
 the transfer logic itself, which is clearly indicated in the comments.
 
