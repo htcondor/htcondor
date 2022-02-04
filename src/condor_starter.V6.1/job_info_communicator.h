@@ -330,6 +330,11 @@ public:
 		*/
 	void periodicJobUpdateTimerHandler( void );
 
+		/**
+		   Return the max controller update interval in seconds, or -1 if unknown.
+		*/
+	int periodicJobUpdateTimerMaxInterval( void );
+
 		// // // // // // // // // // // //
 		// Misc utilities
 		// // // // // // // // // // // //

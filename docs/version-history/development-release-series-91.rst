@@ -76,6 +76,29 @@ Bugs Fixed:
   job's classad.
   :jira:`842`
 
+Version 9.5.4
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.5.4 released on February 8, 2022.
+
+- HTCondor version 9.5.4 not yet released.
+
+New Features:
+
+- Improved the ability of the Access Point to detect the disappearance
+  of an Execution Point that is running a job.  Specifically, the ability
+  of the *condor_shadow* to detect a problem with the *condor_starter*.
+  :jira:`954`
+
+Bugs Fixed:
+
+- HTCondor no longer assumes that PID 1 is always visible.  Instead,
+  it checks to see if ``/proc`` was mounted with the ``hidepid`` option
+  of ``1`` or less, and only checks for PID 1 if it was.
+  :jira:`944`
+
 Version 9.5.3
 -------------
 

@@ -85,6 +85,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	supports_reconnect = false;
 	next_reconnect_tid = -1;
 	proxy_check_tid = -1;
+	no_update_received_tid = -1;
 	last_proxy_timestamp = time(0); // We haven't sent the proxy to the starter yet, so anything before "now" means it hasn't changed.
 	m_remote_proxy_expiration = 0;
 	m_remote_proxy_renew_time = 0;
@@ -135,6 +136,12 @@ RemoteResource::~RemoteResource()
 		daemonCore->Cancel_Timer(proxy_check_tid);
 		proxy_check_tid = -1;
 	}
+
+	if (no_update_received_tid != -1) {
+		daemonCore->Cancel_Timer(no_update_received_tid);
+		no_update_received_tid = -1;
+	}
+
 
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
 		if( m_claim_session.secSessionId() ) {
@@ -1112,6 +1119,31 @@ RemoteResource::setJobAd( ClassAd *jA )
 	jA->LookupString(ATTR_X509_USER_PROXY, proxy_path);
 }
 
+void
+RemoteResource::updateFromStarterTimeout()
+{
+	// If we landed here, then we expected to receive an update from the starter,
+	// but it didn't arrive yet.  Even if the remote syscall sock is still connected,
+	// failing to receive an update could mean that the starter is wedged or dead
+	// (and some goofed up NAT box is artifically keeping the remote syscall sock connected).
+
+	// So instead of the shadow hanging out forever waiting to hear from a starter that
+	// might be dead, close our remote syscall sock now and try to reconnect.
+
+	// NOTE: only close the sock if we are executing the job, not shutting down or
+	// transferring files or whatever.  Why?  Well, in these situations, the starter
+	// may legitimately be fine and yet not sending updates anymore
+	// because it is about to shutdown, or because a long file transfer is
+	// happening in the foreground.
+
+	if (getResourceState() == RR_EXECUTING && !filetrans.transferIsInProgress()) {
+		disconnectClaimSock("Failed to receive an update from the starter when expected, forcing disconnect");
+	}
+
+	// Timer is not periodic, so since it has now fired, the tid is invalid. Clear it.
+	no_update_received_tid = -1;
+}
+
 
 void
 RemoteResource::updateFromStarter( ClassAd* update_ad )
@@ -1120,7 +1152,22 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	std::string string_value;
 	bool bool_value;
 
-	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
+	int maxinterval = 0;
+	update_ad->LookupInteger(ATTR_JOBINFO_MAXINTERVAL, maxinterval);
+	if (no_update_received_tid != -1) {
+		daemonCore->Cancel_Timer(no_update_received_tid);
+		no_update_received_tid = -1;
+	}
+	if (maxinterval > 0) {
+		no_update_received_tid = daemonCore->Register_Timer(
+			maxinterval * 3,  // should receive another update in maxinterval secs, x3 to be sure
+			(TimerHandlercpp)&RemoteResource::updateFromStarterTimeout,
+			"RemoteResource::updateFromStarterTimeout()", this
+		);
+	}
+
+	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter() maxinterval=%d\n",
+		maxinterval);
 	hadContact();
 
 	if( IsDebugLevel(D_MACHINE) ) {
