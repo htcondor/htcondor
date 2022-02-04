@@ -1983,8 +1983,9 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 						dprintf( D_ALWAYS, "/proc was mounted without hidepid, assuming default of 0.\n" );
 						hidepid = false;
 					}
-				// We found `proc`, we can quit reading now.
-				break;
+
+					// We found `proc`, we can quit reading now.
+					break;
 				}
 			}
 
