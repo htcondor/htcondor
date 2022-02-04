@@ -22,7 +22,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- HTCondor no longer assumes that PID 1 is always visible.  Instead,
+  it checks to see if ``/proc`` was mounted with the ``hidepid`` option
+  of ``1`` or less, and only checks for PID 1 if it was.
+  :jira:`944`
 
 Version 9.5.3
 -------------
