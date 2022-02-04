@@ -1972,13 +1972,13 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 						}
 					}
 
-				// The default mount option for hidepid is 0; indeed, if you
-				// explicitly specify hidepid=0 in the mount command, it
-				// won't appear in /proc/self/mountinfo.
-				if( found_proc && ! found_hidepid ) {
-					dprintf( D_ALWAYS, "/proc was mounted without hidepid, assuming default of 0.\n" );
-					hidepid = false;
-				}
+					// The default mount option for hidepid is 0; indeed, if you
+					// explicitly specify hidepid=0 in the mount command, it
+					// won't appear in /proc/self/mountinfo.
+					if( found_proc && ! found_hidepid ) {
+						dprintf( D_ALWAYS, "/proc was mounted without hidepid, assuming default of 0.\n" );
+						hidepid = false;
+					}
 
 				break;
 				}
