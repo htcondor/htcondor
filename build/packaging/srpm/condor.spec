@@ -1682,6 +1682,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Feb 08 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.4-1
+- The access point more robustly detects execution points that disappear
+- The condor_procd will now function if /proc is mounted with hidepid=2
+
 * Tue Feb 01 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.3-1
 - Fix daemon crash where one of multiple collectors is not in DNS
 - Fix bug where initial schedd registration was rarely delayed by an hour
