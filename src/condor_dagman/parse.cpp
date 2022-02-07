@@ -1399,7 +1399,7 @@ parse_parent(
 					" to add dependency between parent"
 					" node \"%s\" and join node \"%s\"\n",
 					filename, lineNumber,
-					parent->GetJobName(), joinNode->GetJobName() );
+					parent->GetJobName(), joinNode ? joinNode->GetJobName() : "unknown");
 				return false;
 			}
 		}
