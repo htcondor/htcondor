@@ -265,7 +265,9 @@ job_registry_updater_setup_sender(char **destinations, int n_destinations,
               break;
             default:
               /* Don't know what to do with non IPv4/IPv6 addresses. */
-              continue;
+              close(tfd);
+              return JOB_REGISTRY_SOCKET_FAIL;
+              /*continue;*/
            }
          }
         /* Get new endpoint */
