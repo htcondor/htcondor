@@ -33,6 +33,9 @@ New Features:
   systems.
   :jira:`873`
 
+- Improved performance of the *condor_schedd* during negotiation
+  :jira:`961`
+  
 - For **arc** grid universe jobs, environment variables specified in
   the job ad are now included in the ADL job description given to the
   ARC CE REST service.
