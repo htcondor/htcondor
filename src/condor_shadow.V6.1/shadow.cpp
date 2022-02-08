@@ -197,16 +197,8 @@ UniShadow::cleanUp( bool graceful )
 void
 UniShadow::gracefulShutDown( void )
 {
-	if (remRes) {
-		int remain = remRes->remainingLeaseDuration();
-		if (!remain) {
-			// Only attempt to deactivate (gracefully) the claim if
-			// there's no lease or it has already expired.
-			remRes->killStarter(true);
-		} else {
-			DC_Exit( JOB_SHOULD_REQUEUE );
-		}
-	}
+	remRes->setExitReason(JOB_SHOULD_REQUEUE);
+	remRes->killStarter(true);
 }
 
 
