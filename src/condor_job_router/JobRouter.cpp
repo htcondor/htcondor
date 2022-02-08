@@ -670,8 +670,6 @@ JobRouter::refreshIDTokens() {
 
 	// Create or overwrite token files
 	for (const char * item = items.first(); item != NULL; item = items.next()) {
-		bool token_exists = delete_tokens.count(item) > 0;
-
 		std::string knob("JOB_ROUTER_CREATE_IDTOKEN_"); knob += item;
 		auto_free_ptr props = param(knob.c_str());
 		if (props && CreateIDTokenFile(item, props)) {
@@ -692,7 +690,7 @@ bool JobRouter::CreateIDTokenFile(const char * name, const char * props)
 	time_t lifetime = -1;
 	std::string subject, key, token, fname, dir, tmp, owner, domain;
 	std::vector<std::string> authz_list;
-	if (initAdFromString(props, ad) && ad.size() > 0) {
+	if (initAdFromString(props, ad) && ad.size()) {
 		ad.LookupString("sub", subject);
 		ad.LookupString("kid", key);
 		ad.LookupInteger("lifetime", lifetime);
@@ -706,6 +704,11 @@ bool JobRouter::CreateIDTokenFile(const char * name, const char * props)
 		ad.LookupString("filename", fname);
 		ad.LookupString(ATTR_OWNER, owner);
 		ad.LookupString(ATTR_NT_DOMAIN, domain);
+	} else {
+		// initAdFromString will print the lines it can't parse, we just need to report that
+		// the we will not be creating the token at all as a result of the config failure
+		dprintf(D_ALWAYS, "Ignoring invalid %s IDTOKEN config : %s\n", name, props);
+		return false;
 	}
 
 	if (subject.empty()) { subject = name; }
@@ -715,6 +718,7 @@ bool JobRouter::CreateIDTokenFile(const char * name, const char * props)
 	CondorError err;
 	if (!Condor_Auth_Passwd::generate_token(subject, key, authz_list, lifetime, token, 0, &err)) {
 		dprintf(D_ALWAYS, "failed to create token %s : %s\n", name, err.getFullText(false).c_str());
+		return false;
 	}
 	token += "\n"; // technically token files *can* have multiple tokens separated by newline
 
@@ -737,7 +741,7 @@ bool JobRouter::CreateIDTokenFile(const char * name, const char * props)
 	}
 
 	bool success = false;
-	int fd = safe_create_replace_if_exists(tmp.c_str(), O_CREAT | O_WRONLY, 0600);
+	int fd = safe_create_keep_if_exists(tmp.c_str(), O_CREAT | O_WRONLY | _O_BINARY, 0600);
 	if (fd >= 0) {
 		(void)_condor_full_write(fd, token.c_str(), token.size());
 		ftruncate(fd, token.size()); // incase the data in the file is less than it was before.
@@ -760,6 +764,13 @@ bool JobRouter::CreateIDTokenFile(const char * name, const char * props)
 
 bool JobRouter::RemoveIDTokenFile(const std::string & name)
 {
+	auto it = m_idtokens.find(name);
+	if (it != m_idtokens.end()) {
+		dprintf(D_ALWAYS, "deleting %s IDTOKEN file : %s\n", name.c_str(), it->second.c_str());
+		unlink(it->second.c_str());
+		m_idtokens.erase(it);
+	}
+
 	return true;
 }
 
