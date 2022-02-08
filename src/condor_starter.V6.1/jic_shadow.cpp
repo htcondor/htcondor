@@ -2359,19 +2359,17 @@ JICShadow::syscall_sock_disconnect()
 	}
 	int lease_duration = -1;
 	job_ad->LookupInteger(ATTR_JOB_LEASE_DURATION,lease_duration);
-	if (lease_duration > 0) {
-		syscall_sock_lost_tid = daemonCore->Register_Timer(
-				lease_duration,
-				(TimerHandlercpp)&JICShadow::job_lease_expired,
-				"job_lease_expired",
-				this );
-		dprintf(D_ALWAYS,
-			"Lost connection to shadow, waiting %d secs for reconnect\n",
-			lease_duration);
-	} else {
-		dprintf(D_ALWAYS,
-			"Lost connection to shadow, no job lease specified\n");
+	if (lease_duration < 0) {
+		lease_duration = 0;
 	}
+	syscall_sock_lost_tid = daemonCore->Register_Timer(
+			lease_duration,
+			(TimerHandlercpp)&JICShadow::job_lease_expired,
+			"job_lease_expired",
+			this );
+	dprintf(D_ALWAYS,
+		"Lost connection to shadow, waiting %d secs for reconnect\n",
+		lease_duration);
 
 	// Close up the syscall_socket and wait for a reconnect.  
 	if (syscall_sock) {
