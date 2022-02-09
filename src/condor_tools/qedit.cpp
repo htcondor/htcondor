@@ -57,6 +57,7 @@ void usage(int exit_code)
 	"\n    [general-opts] are:\n"
 	"\t-name <name>\t   Name of Scheduler\n"
 	"\t-pool <pool>\t   Use host as the central manager to query\n"
+	"\t-forward\t   Forward changes to shadow/gridmanager\n"
 	);
 
 	fprintf(out,
@@ -191,6 +192,7 @@ main(int argc, const char *argv[])
 	bool only_my_jobs = true;
 	bool bare_arg_must_identify_jobs = true;
 	bool has_arbitrary_constraint = false;
+	bool dash_forward = false;
 	int dash_diagnostic = 0;
 	StringList job_list; // list of job ids (or mixed job & cluster id's to modify)
 	std::map<std::string, std::string> kvp_list; // Classad of attr=value pairs to set
@@ -333,6 +335,10 @@ main(int argc, const char *argv[])
 				kvp_list[attr] = ExprTreeToString(it->second);
 			}
 			delete ad;
+		}
+		else
+		if (is_dash_arg_prefix(parg, "forward", 3)) {
+			dash_forward = true;
 		}
 		else
 		if (*parg == '-') {
@@ -541,7 +547,8 @@ main(int argc, const char *argv[])
 
 	// TODO: do the transaction
 	const char * dry_tag = "";
-	SetAttributeFlags_t setflags = SETDIRTY;
+	SetAttributeFlags_t setflags = 0;
+	if (dash_forward) setflags |= SetAttribute_SetDirty;
 	if (only_my_jobs) setflags |= SetAttribute_OnlyMyJobs;
 	if (dash_dryrun) {
 		if (schedd.version()) {

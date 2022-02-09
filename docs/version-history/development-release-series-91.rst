@@ -45,11 +45,24 @@ New Features:
   libraries it doesn't need.
   :jira:`927`
 
-- DAGMan now manages job submission by writing jobs directly to the 
+- DAGMan now manages job submission by writing jobs directly to the
   *condor_schedd*, instead of forking a *condor_submit* process. This behavior
   is controlled by the ``DAGMAN_USE_DIRECT_SUBMIT`` configuration knob, which
   defaults to ``True``.
   :jira:`619`
+
+- If a job specifies ``output_destination``, the output and error logs,
+  if requested, will now be transferred to their respective requested
+  names, instead of ``_condor_stdout`` or ``_condor_stderr``.
+  :jira:`955`
+
+- *condor_qedit* and the Python bindings no longer request that job ad
+  changes be forwarded to an active *condor_shadow* or *condor_gridmanager*.
+  If forwarding ad changes is desired (say to affect job policy evaluation),
+  *condor_qedit* has a new **-forward** option.
+  The Python methods *Schedd.edit()* and *Schedd.edit_multiple()* now
+  have an optional *flags* argument of type *TransactionFlags*.
+  :jira:`963`
 
 Bugs Fixed:
 

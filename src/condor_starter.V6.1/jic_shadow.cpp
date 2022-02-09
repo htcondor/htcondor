@@ -1556,6 +1556,7 @@ JICShadow::initWithFileTransfer()
 	if ( job_ad->LookupBool( ATTR_STREAM_OUTPUT, stream ) && !stream &&
 		 !nullFile( stdout_name.c_str() ) ) {
 		job_ad->Assign( ATTR_JOB_OUTPUT, StdoutRemapName );
+		job_ad->Assign( ATTR_JOB_ORIGINAL_OUTPUT, stdout_name );
 	}
 	if ( job_ad->LookupBool( ATTR_STREAM_ERROR, stream ) && !stream &&
 		 !nullFile( stderr_name.c_str() ) ) {
@@ -1564,6 +1565,7 @@ JICShadow::initWithFileTransfer()
 		} else {
 			job_ad->Assign( ATTR_JOB_ERROR, StderrRemapName );
 		}
+		job_ad->Assign( ATTR_JOB_ORIGINAL_ERROR, stderr_name );
 	}
 
 	wants_file_transfer = true;
