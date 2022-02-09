@@ -56,6 +56,14 @@ New Features:
   names, instead of ``_condor_stdout`` or ``_condor_stderr``.
   :jira:`955`
 
+- *condor_qedit* and the Python bindings no longer request that job ad
+  changes be forwarded to an active *condor_shadow* or *condor_gridmanager*.
+  If forwarding ad changes is desired (say to affect job policy evaluation),
+  *condor_qedit* has a new **-forward** option.
+  The Python methods *Schedd.edit()* and *Schedd.edit_multiple()* now
+  have an optional *flags* argument of type *TransactionFlags*.
+  :jira:`963`
+
 Bugs Fixed:
 
 - When the blahp submits a job to HTCondor, it no longer requests
@@ -86,9 +94,7 @@ Version 9.5.4
 
 Release Notes:
 
-.. HTCondor version 9.5.4 released on February 8, 2022.
-
-- HTCondor version 9.5.4 not yet released.
+- HTCondor version 9.5.4 released on February 8, 2022.
 
 New Features:
 
@@ -109,9 +115,7 @@ Version 9.5.3
 
 Release Notes:
 
-.. HTCondor version 9.5.3 released on February 1, 2021.
-
-- HTCondor version 9.5.3 not yet released.
+- HTCondor version 9.5.3 released on February 1, 2021.
 
 New Features:
 

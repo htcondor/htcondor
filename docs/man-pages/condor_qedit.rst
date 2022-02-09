@@ -10,7 +10,7 @@ Synopsis
 --------
 
 **condor_qedit** [**-debug** ] [**-n** *schedd-name*]
-[**-pool** *pool-name*] *{cluster | cluster.proc | owner |
+[**-pool** *pool-name*] [**-forward** ] *{cluster | cluster.proc | owner |
 -constraint constraint}* *edit-list*
 
 Description
@@ -70,6 +70,8 @@ Options
  **-pool** *pool-name*
     Modify job attributes in the queue of the schedd specified in the
     specified pool
+ **-forward**
+    Forward modifications to shadow/gridmanager
 
 Examples
 --------
