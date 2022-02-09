@@ -853,11 +853,11 @@ class ClassAd : public ExprTree
 		//
 
 		// The trailing `const` prevents this from becoming a left-hand side.
-		int operator []( std::pair< std::string, int > ) const;
+		int operator []( std::pair< const std::string &, int > ) const;
 		// For some reason, that doesn't quite work with an object, and the
 		// object has to be const.  (Note that the primitive type can't be
 		// returned as const!)
-		const std::string operator []( std::pair< std::string, std::string > ) const;
+		const std::string operator []( std::pair< const std::string &, const std::string & > ) const;
 
 
   	private:
