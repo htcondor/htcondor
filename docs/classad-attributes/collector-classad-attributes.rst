@@ -3,28 +3,19 @@ Collector ClassAd Attributes
 
 :index:`Collector attributes<single: Collector attributes; ClassAd>`
 
-:classad-attribute:`Collector attributes`
+:classad-attribute:`ActiveQueryWorkers`
     Current number of forked child processes handling queries.
 
 :classad-attribute:`ActiveQueryWorkersPeak`
     Peak number of forked child processes handling queries since
     collector startup or statistics reset.
 
-:classad-attribute:`PendingQueries`
-    Number of queries pending that are waiting to fork.
+:index:`RecentDroppedQueries (ClassAd Collector Attribute)`
 
-:classad-attribute:`PendingQueriesPeak`
-    Peak number of queries pending that are waiting to fork since
-    collector startup or statistics reset.
-
-:index:`COLLECTOR_QUERY_WORKERS_PENDING`
-
-:classad-attribute:`RecentDroppedQueries`
+:classad-attribute:`DroppedQueries`
     Total number of queries aborted since collector startup (or
     statistics reset) because ``COLLECTOR_QUERY_WORKERS_PENDING``
-    exceeded, or ``COLLECTOR_QUERY_MAX_WORKTIME``
-
-:index:`COLLECTOR_QUERY_MAX_WORKTIME` exceeded, or client
+    exceeded, or :macro:`COLLECTOR_QUERY_MAX_WORKTIME` exceeded, or client
     closed TCP socket while request was pending. This statistic is also
     available as ``RecentDroppedQueries`` which represents a count of
     recently dropped queries that occured within a recent time window
@@ -204,6 +195,13 @@ Collector ClassAd Attributes
     The maximum number of active forks of the Collector at any time
     since the Collector started. The Windows version of the Collector
     does not fork and will not have this statistic.
+
+:classad-attribute:`PendingQueries`
+    Number of queries pending that are waiting to fork.
+
+:classad-attribute:`PendingQueriesPeak`
+    Peak number of queries pending that are waiting to fork since
+    collector startup or statistics reset.
 
 :classad-attribute:`RunningJobs`
     Definition not yet written.

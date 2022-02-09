@@ -29,12 +29,15 @@ to see the full set of raw accounting ads, run the command:
     statically configured.
 
 :classad-attribute:`IsAccountingGroup`
-    The unix epoch time, in seconds, when this submitter last had
-    claimed resources.
+    A boolean which is true if this record represents an accounting group
 
 :classad-attribute:`LastUsageTime`  
     The unix epoch time, in seconds, when this submitter last had
     claimed resources.
+
+:classad-attribute:`Name`
+    The fully qualified name of the user or accounting group. It will be
+    of the form ``name@submit.domain``.
 
 :classad-attribute:`Priority`
     The current effective priority of this user.
@@ -56,10 +59,6 @@ to see the full set of raw accounting ads, run the command:
     each user should get, assuming they have infinite jobs and every job
     matches every slot, the SubmitterLimit is the absolute number of cores
     this user should get.
-
-:classad-attribute:`Name`
-    The fully qualified name of the user or accounting group. It will be
-    of the form ``name@submit.domain``.
 
 :classad-attribute:`WeightedAccumulatedUsage`
     The total amount of core-seconds used by this user since

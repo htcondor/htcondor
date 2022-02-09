@@ -176,7 +176,9 @@ Negotiator ClassAd Attributes
     epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor_schedd*
     daemon last sent a ClassAd update to the *condor_collector*.
 
-:classad-attribute:`Name` attribute, but could be customized by the site
+:classad-attribute:`Name`
+    The name of this resource; typically the same value as the
+    ``Machine`` attribute, but could be customized by the site
     administrator. On SMP machines, the *condor_startd* will divide the
     CPUs up into separate slots, each with with a unique name. These
     names will be of the form ``slot#@full.hostname``, for example,

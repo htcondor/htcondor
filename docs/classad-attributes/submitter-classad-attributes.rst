@@ -9,7 +9,9 @@ Submitter ClassAd Attributes
 
 :classad-attribute:`FlockedJobs`
     The number of jobs from this submitter that are running in another
-    pool. :classad-attribute:`HeldJobs`
+    pool.
+
+:classad-attribute:`HeldJobs`
     The number of jobs from this submitter that are in the hold state.
 
 :classad-attribute:`IdleJobs`
@@ -50,7 +52,9 @@ Submitter ClassAd Attributes
 
 :classad-attribute:`SchedulerJobsRunning`
     The number of Scheduler universe jobs from this submitter that are
-    running. :classad-attribute:`SubmitterTag`
+    running.
+
+:classad-attribute:`SubmitterTag`
     The fully qualified host name of the central manager of the pool
     used by the submitter, if the job flocked to the local pool. Or, it
     will be the empty string if submitter submitted from within the

@@ -54,7 +54,9 @@ Machine ClassAd Attributes
 
 :classad-attribute:`ClockDay`
     The day of the week, where 0 = Sunday, 1 = Monday, ..., and 6 =
-    Saturday. :classad-attribute:`ClockMin`
+    Saturday.
+    
+:classad-attribute:`ClockMin`
     The number of minutes passed since midnight.
 
 :classad-attribute:`CondorLoadAvg`
@@ -94,7 +96,13 @@ Machine ClassAd Attributes
     hosting an HTCondor job, ``CurrentRank`` is 0.0. When a machine is
     claimed, the attribute's value is computed by evaluating the
     machine's ``Rank`` expression with respect to the current job's
-    ClassAd. :classad-attribute:`DetectedCpus`.
+    ClassAd.
+    
+:classad-attribute:`DetectedCpus`
+    Set by the value of configuration variable ``DETECTED_CORES``
+
+:classad-attribute:`DetectedMemory`
+    Set by the value of configuration variable ``DETECTED_MEMORY``.
     :index:`DETECTED_MEMORY` Specified in MiB.
 
 :classad-attribute:`Disk`
@@ -434,7 +442,9 @@ Machine ClassAd Attributes
     retirement time if the job does not finish shutting down before
     then. This is an expression evaluated in the context of the job
     ClassAd, so it may refer to job attributes as well as machine
-    attributes. :classad-attribute:`Memory`
+    attributes.
+
+:classad-attribute:`Memory`
     The amount of RAM in MiB in this slot. For static slots, this value
     will be the same as in ``TotalSlotMemory``. For a partitionable
     slot, this value will be the quantity remaining in the partitionable
@@ -477,7 +487,9 @@ Machine ClassAd Attributes
 :classad-attribute:`MyType`
     The ClassAd type; always set to the literal string ``"Machine"``.
 
-:classad-attribute:`Name` attribute, but could be customized by the site
+:classad-attribute:`Name`
+    The name of this resource; typically the same value as the
+    ``Machine`` attribute, but could be customized by the site
     administrator. On SMP machines, the *condor_startd* will divide the
     CPUs up into separate slots, each with with a unique name. These
     names will be of the form "slot#@full.hostname", for example,
@@ -1013,10 +1025,14 @@ Machine ClassAd Attributes
     Defined by the amount of memory in use by the virtual machine, given
     in Mbytes.
 
+:index:`VM_MEMORY`
+
 :classad-attribute:`VM_Memory`
     Gives the amount of memory available for starting additional VM jobs
     on this machine, given in Mbytes. The maximum value is set by the
-    configuration variable ``VM_MEMORY``. :classad-attribute:`VM_MEMORY`
+    configuration variable ``VM_MEMORY``.
+    
+:classad-attribute:`VM_Networking`
     A boolean value indicating whether networking is allowed for virtual
     machines on this machine.
 
@@ -1024,7 +1040,7 @@ Machine ClassAd Attributes
     The type of virtual machine software that can run on this machine.
     The value is set by the configuration variable ``VM_TYPE``
 
-:classad-attribute:`VM_TYPE`
+:classad-attribute:`VMOfflineReason`
     The reason the VM universe went offline (usually because a VM
     universe job failed to launch).
 
@@ -1053,11 +1069,12 @@ into the machine ClassAd whenever a resource is in the Claimed state:
 :classad-attribute:`ClientMachine`
     The host name of the machine that has claimed this resource
 
+:index:`GROUP_AUTOREGROUP`
+
 :classad-attribute:`RemoteAutoregroup`
     A boolean attribute which is ``True`` if this resource was claimed
     via negotiation when the configuration variable
-    ``GROUP_AUTOREGROUP`` :classad-attribute:`GROUP_AUTOREGROUP`.
-    It is ``False`` otherwise.
+    ``GROUP_AUTOREGROUP`` is ``True``. It is ``False`` otherwise.
 
 :classad-attribute:`RemoteGroup`
     The accounting group name corresponding to the submitter that
@@ -1067,7 +1084,9 @@ into the machine ClassAd whenever a resource is in the Claimed state:
     The accounting group name under which this resource negotiated when
     it was claimed. This attribute will frequently be the same as
     attribute ``RemoteGroup``, but it may differ in cases such as when
-    configuration variable ``GROUP_AUTOREGROUP`` :classad-attribute:`GROUP_AUTOREGROUP`.
+    configuration variable ``GROUP_AUTOREGROUP`` :index:`GROUP_AUTOREGROUP` 
+    is ``True``, in which case it will
+    have the name of the root group, identified as ``<none>``.
 
 :classad-attribute:`RemoteOwner`
     The name of the user who originally claimed this resource.

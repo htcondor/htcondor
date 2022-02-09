@@ -319,7 +319,10 @@ Scheduler ClassAd Attributes
 :classad-attribute:`NumJobStartsDelayed`
     The number times a job requiring a *condor_shadow* daemon could
     have been started, but was not started because of the values of
-    configuration variables ``JOB_START_COUNT`` :classad-attribute:`JOB_START_COUNT`
+    configuration variables ``JOB_START_COUNT`` :index:`JOB_START_COUNT`
+    and ``JOB_START_DELAY`` :index:`JOB_START_DELAY`
+
+:classad-attribute:`NumPendingClaims`
     The number of machines (*condor_startd* daemons) matched to this
     *condor_schedd* daemon, which this *condor_schedd* knows about,
     but has not yet managed to claim.
@@ -360,6 +363,9 @@ Scheduler ClassAd Attributes
     defined in the ClassAd attribute ``JobsRuntimesHistogramBuckets``.
 
 :classad-attribute:`RecentJobsBadputSizes`
+    A Statistics attribute defining a histogram count of jobs that did
+    not complete successfully, as classified by image size, in the
+    previous time interval defined by attribute ``RecentStatsLifetime``.
     Counts within the histogram are separated by a comma and a space,
     where the size classification is defined in the ClassAd attribute
     ``JobsSizesHistogramBuckets``.
@@ -369,14 +375,23 @@ Scheduler ClassAd Attributes
     exited with a *condor_shadow* exit code of ``JOB_CKPTED`` in the
     previous time interval defined by attribute ``RecentStatsLifetime``.
 
-:classad-attribute:`RecentJobsCompleted`.
+:classad-attribute:`RecentJobsCompleted`
+    A Statistics attribute defining the number of jobs successfully
+    completed in the previous time interval defined by attribute
+    ``RecentStatsLifetime``.
 
-:classad-attribute:`RecentJobsCompletedRuntimes`.
+:classad-attribute:`RecentJobsCompletedRuntimes`
+    A Statistics attribute defining a histogram count of jobs that
+    completed successfully, as classified by time spent running, in the
+    previous time interval defined by attribute ``RecentStatsLifetime``.
     Counts within the histogram are separated by a comma and a space,
     where the time interval classification is defined in the ClassAd
     attribute ``JobsRuntimesHistogramBuckets``.
 
-:classad-attribute:`RecentJobsCompletedSizes`. Counts
+:classad-attribute:`RecentJobsCompletedSizes`
+    A Statistics attribute defining a histogram count of jobs that
+    completed successfully, as classified by image size, in the previous
+    time interval defined by attribute ``RecentStatsLifetime``. Counts
     within the histogram are separated by a comma and a space, where the
     size classification is defined in the ClassAd attribute
     ``JobsSizesHistogramBuckets``.
@@ -398,7 +413,10 @@ Scheduler ClassAd Attributes
     the previous time interval defined by attribute
     ``RecentStatsLifetime``.
 
-:classad-attribute:`RecentJobsExited`.
+:classad-attribute:`RecentJobsExited`
+    A Statistics attribute defining the number of times that jobs have
+    exited normally in the previous time interval defined by attribute
+    ``RecentStatsLifetime``.
 
 :classad-attribute:`RecentJobsExitedAndClaimClosing`
     A Statistics attribute defining the number of times that jobs have
@@ -701,6 +719,8 @@ These attributes are only reported once a full time span has accumulated.
     average. This attribute is published only if configuration variable
     ``FILE_TRANSFER_DISK_LOAD_THROTTLE`` is defined.
 
+:index:`TRANSFER_QUEUE_USER_EXPR`
+
 :classad-attribute:`FileTransferDownloadBytes`
     Total number of bytes downloaded as output from jobs since this
     *condor_schedd* was started. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH` 
@@ -710,8 +730,6 @@ These attributes are only reported once a full time span has accumulated.
     ``Owner_<username>_FileTransferDownloadBytes``. The published user
     name is actually the file transfer queue name, as defined by
     configuration variable ``TRANSFER_QUEUE_USER_EXPR``
-
-:index:`TRANSFER_QUEUE_USER_EXPR`
 
 :classad-attribute:`FileTransferDownloadBytesPerSecond_<timespan>`
     Exponential moving average over the specified time span of the rate
@@ -785,6 +803,41 @@ These attributes are only reported once a full time span has accumulated.
     to files transferred as output from jobs since this *condor_schedd*
     was started. If ``STATISTICS_TO_PUBLISH`` :classad-attribute:`STATISTICS_TO_PUBLISH`. The published
     user name is actually the file transfer queue name, as defined by
+    configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+
+:classad-attribute:`FileTransferNetReadLoad_<timespan>`
+    Exponential moving average over the specified time span of the rate
+    at which submit-side file transfer processes have spent time reading
+    from the network when transferring output from jobs. One file
+    transfer process spending nearly all of its time reading from the
+    network will generate a load close to 1.0. The reason a file
+    transfer process may spend a long time writing to the network could
+    be a network bottleneck on the path between the submit and execute
+    machine. It could also be caused by slow reads from the disk on the
+    execute side. The time spans that are published are configured by
+    ``TRANSFER_IO_REPORT_TIMESPANS`` :index:`TRANSFER_IO_REPORT_TIMESPANS`
+    , which defaults to 1m,
+    5m, 1h, and 1d. When less than one full time span has accumulated,
+    the attribute is not published. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH`
+    contains ``TRANSFER:2``, for
+    each active user, this attribute is also published prefixed by the
+    user name, with the name
+    ``Owner_<username>_FileTransferNetReadLoad_<timespan>``. The
+    published user name is actually the file transfer queue name, as
+    defined by configuration variable ``TRANSFER_QUEUE_USER_EXPR``
+
+:classad-attribute:`FileTransferNetReadSeconds`
+    Total number of submit-side transfer process seconds spent reading
+    from the network when transferring output from jobs since this
+    *condor_schedd* was started. The reason a file transfer process may
+    spend a long time writing to the network could be a network
+    bottleneck on the path between the submit and execute machine. It
+    could also be caused by slow reads from the disk on the execute
+    side. If ``STATISTICS_TO_PUBLISH`` :index:`STATISTICS_TO_PUBLISH` contains ``TRANSFER:2``, for
+    each active user, this attribute is also published prefixed by the
+    user name, with the name
+    ``Owner_<username>_FileTransferNetReadSeconds``. The published user
+    name is actually the file transfer queue name, as defined by
     configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
 :classad-attribute:`FileTransferNetWriteLoad_<timespan>`

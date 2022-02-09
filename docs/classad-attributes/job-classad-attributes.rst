@@ -263,7 +263,8 @@ all attributes.
 :classad-attribute:`CurrentHosts`
     The number of hosts in the claimed state, due to this job.
 
-:classad-attribute:`DAGManJobId` job ClassAd attribute
+:classad-attribute:`DAGManJobId`
+    For a DAGMan node job only, the ``ClusterId`` job ClassAd attribute
     of the *condor_dagman* job which is the parent of this node job.
     For nested DAGs, this attribute holds only the ``ClusterId`` of the
     job's immediate parent.
@@ -528,7 +529,9 @@ all attributes.
 :classad-attribute:`ExecutableSize`
     Size of the executable in KiB.
 
-:classad-attribute:`ExitBySignal` otherwise. For some grid universe jobs, how the job exited
+:classad-attribute:`ExitBySignal`
+    An attribute that is ``True`` when a user job exits via a signal and
+    ``False`` otherwise. For some grid universe jobs, how the job exited
     is unavailable. In this case, ``ExitBySignal`` is set to ``False``.
 
 :classad-attribute:`ExitCode`
@@ -547,7 +550,9 @@ all attributes.
     This attribute should no longer be used. It is not always accurate
     in heterogeneous pools, or if the job exited with a signal. Instead,
     see the attributes: ``ExitBySignal``, ``ExitCode``, and
-    ``ExitSignal``. :classad-attribute:`GceAuthFile`
+    ``ExitSignal``.
+    
+:classad-attribute:`GceAuthFile`
     Used for grid type gce jobs; a string taken from the definition of
     the submit description file command
     **gce_auth_file** :index:`gce_auth_file<single: gce_auth_file; submit commands>`.
@@ -875,7 +880,9 @@ all attributes.
     +----------------------------------+-------------------------------------+--------------------------+
 
 
-:classad-attribute:`HoldReasonSubCode`.
+:classad-attribute:`HoldReasonSubCode`
+    An integer value that represents further information to go along
+    with the ``HoldReasonCode``, for some values of ``HoldReasonCode``.
     See ``HoldReasonCode`` for a table of possible values.
 
 :classad-attribute:`HookKeyword`
@@ -1010,6 +1017,8 @@ all attributes.
     the time that the job most recently began executing. This bug is
     scheduled to be fixed in the 8.7 series.
 
+:index:`state<single: state; job>`
+
 :classad-attribute:`JobStatus`
     Integer which indicates the current status of the job.
 
@@ -1088,14 +1097,18 @@ all attributes.
 :classad-attribute:`KillSig`
     The Unix signal number that the job wishes to be sent before being
     forcibly killed. It is relevant only for jobs running on Unix
-    machines. :classad-attribute:`KillSigTimeout` as of HTCondor version 7.7.3. The number of
+    machines. 
+    
+:classad-attribute:`KillSigTimeout`
+    This attribute is replaced by the functionality in
+    ``JobMaxVacateTime`` as of HTCondor version 7.7.3. The number of
     seconds that the job requests the
     *condor_starter* wait after sending the signal defined as
     ``KillSig`` and before forcibly removing the job. The actual amount
     of time will be the minimum of this value and the execute machine's
     configuration variable ``KILLING_TIMEOUT``
 
-:classad-attribute:`KILLING_TIMEOUT`
+:classad-attribute:`LastMatchTime``
     An integer containing the epoch time when the job was last
     successfully matched with a resource (gatekeeper) Ad.
 
@@ -1341,7 +1354,9 @@ all attributes.
     :doc:`/man-pages/condor_submit`, excepting that
     double quotes must be escaped with a backslash instead of another
     double quote. If both ``PostArgs`` and ``PostArguments`` exists, the
-    former is ignored. :classad-attribute:`PostCmd`
+    former is ignored.
+    
+:classad-attribute:`PostCmd`
     A job in the vanilla, Docker, Java, or virtual machine universes may
     specify a command to run after the
     **Executable** :index:`Executable<single: Executable; submit commands>` has
@@ -1410,7 +1425,9 @@ all attributes.
     :doc:`/man-pages/condor_submit`, excepting that
     double quotes must be escape with a backslash instead of another
     double quote. If both ``PreArgs`` and ``PreArguments`` exists, the
-    former is ignored. :classad-attribute:`PreCmd`
+    former is ignored.
+    
+:classad-attribute:`PreCmd`
     A job in the vanilla, Docker, Java, or virtual machine universes may
     specify a command to run after file transfer (if any) completes but
     before the
@@ -1447,15 +1464,19 @@ all attributes.
 :classad-attribute:`PreCmdExitSignal`
     If ``SuccessPreExitCode`` or ``SuccessPreExitSignal`` were set, the
     pre command has run, and the pre command exited on a signal, then
-    this attribute will be set to that signal. It is otherwise unse
+    this attribute will be set to that signal. It is otherwise unset.
 
 :classad-attribute:`PreEnv`
     Defines the environment for the prescript using the Old environment
     syntax. If both ``PreEnv`` and ``PreEnvironment`` exist, the former
-    is ignored. :classad-attribute:`PreEnvironment`
+    is ignored.
+    
+:classad-attribute:`PreEnvironment`
     Defines the environment for the prescript using the New environment
     syntax. If both ``PreEnv`` and ``PreEnvironment`` exist, the former
-    is ignored. :classad-attribute:`PreJobPrio1`
+    is ignored.
+
+:classad-attribute:`PreJobPrio1`
     An integer value representing a user's priority to affect of choice
     of jobs to run. A larger value gives higher priority. When not
     explicitly set for a job, 0 is used for comparison purposes. This
@@ -1517,9 +1538,7 @@ all attributes.
     process is the sum of that process' memory pages divided by the
     number of processes sharing each of the pages. ``ImageSize`` is the
     same, except there is no division by the number of processes sharing
-    the pages. :classad-attribute:`QDate`
-    Time at which the job was submitted to the job queue. Measured in
-    the number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+    the pages.
 
 :classad-attribute:`QDate`
     Time at which the job was submitted to the job queue. Measured in
@@ -1536,7 +1555,7 @@ all attributes.
     ``STATISTICS_WINDOW_SECONDS``.
 
 :classad-attribute:`RecentBlockWriteKbytes`.
-    The integer number of disk blocks read for this job over the
+    The integer number of KiB written to disk for this job over the
     previous time interval defined by configuration variable
     ``STATISTICS_WINDOW_SECONDS``.
 
@@ -1934,7 +1953,9 @@ all attributes.
 
 :classad-attribute:`X509UserProxy`
     The full path and file name of the file containing the X.509 user
-    proxy. :classad-attribute:`X509UserProxyEmail`
+    proxy.
+
+:classad-attribute:`X509UserProxyEmail`
     For a job with an X.509 proxy credential, this is the email address
     extracted from the proxy.
 
