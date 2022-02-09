@@ -51,6 +51,14 @@ New Features:
   defaults to ``True``.
   :jira:`619`
 
+- *condor_qedit* and the Python bindings no longer request that job ad
+  changes be forwarded to an active *condor_shadow* or *condor_gridmanager*.
+  If forwarding ad changes is desired (say to affect job policy evaluation),
+  *condor_qedit* has a new **-forward** option.
+  The Python methods *Schedd.edit()* and *Schedd.edit_multiple()* now
+  have an optional *flags* argument of type *TransactionFlags*.
+  :jira:`963`
+
 Bugs Fixed:
 
 - When the blahp submits a job to HTCondor, it no longer requests
