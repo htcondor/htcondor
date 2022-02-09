@@ -3901,7 +3901,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 
 	// Remove any files from the catalog that are in the ExceptionList
 	if (ExceptionFiles) {
-		auto enditer = 
+		auto enditer =
 			std::remove_if(
 					filelist.begin(),
 					filelist.end(),
@@ -3968,7 +3968,26 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				if(! ends_with(local_output_url, "/")) {
 				    local_output_url += '/';
 				}
-				local_output_url += fileitem.srcName();
+				//
+				// For whatever reason we don't just write the std{out,err}
+				// logs to the filename the user requested in the sandbox,
+				// we use the "download filename remaps" (despite the fact
+				// that we're doing an upload) to remap them to the right
+				// place; the remap is set up by the shadow in
+				// initFileTransfer(), and the jic_shadow rewrites them.
+				//
+				// Although it makes sense to ignore the output remaps if
+				// output destination is set (it avoids a lot of ugly
+				// semantic questions), we know what the remap for
+				// `StdoutRemapName` and `StderrRemapName` should be.
+				//
+				std::string outputName = fileitem.srcName();
+				if( outputName == StdoutRemapName ) {
+					jobAd.LookupString( ATTR_JOB_ORIGINAL_OUTPUT, outputName );
+				} else if( outputName == StderrRemapName ) {
+					jobAd.LookupString( ATTR_JOB_ORIGINAL_ERROR, outputName );
+				}
+				local_output_url += outputName;
 			}
 			else {
 				MyString remap_filename;
@@ -4681,7 +4700,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			// the length, we'd have to make a connection to some server (via a
 			// plugin, for which no API currently exists) and ask it, and i
 			// don't want to add that latency.
-			// 
+			//
 			// instead we add the length of the URL itself, since that's what
 			// we sent.
 			bytes = fullname.length();
@@ -5923,6 +5942,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	// Invoke the plugin
 	dprintf( D_ALWAYS, "FILETRANSFER: invoking: %s \n", plugin_path.c_str() );
+	dprintf( D_FULLDEBUG, "FILETRANSFER: INPUT FILE: %s\n", transfer_files_string.c_str() );
 	FILE* plugin_pipe = my_popen( plugin_args, "r", FALSE, &plugin_env, drop_privs );
 	if( !plugin_pipe ) {
 		dprintf ( D_ALWAYS, "FILETRANSFER: failed to invoke multifile transfer "
