@@ -17,13 +17,6 @@ Release Notes:
 
 New Features:
 
-- Added new configuration option, :macro:`CCB_TIMEOUT`.  Added new
-  configuration option, :macro:`CCB_REQUIRED_TO_START`, which if set causes
-  HTCondor to exit if :macro:`CCB_ADDRESS` was set but HTCondor could
-  not obtain one.  :macro:`CCB_REQUIRED_TO_START` is ignored if
-  :macro:`USE_SHARED_PORT` is set, which is the default.
-  :jira:`925`
-
 - Added list type configuration for periodic job policy configuration.
   Added ``SYSTEM_PERIODIC_HOLD_NAMES``, ``SYSTEM_PERIODIC_RELEASE_NAMES``
   and ``SYSTEM_PERIODIC_REMOVE_NAMES`` which each define a list of configuration
@@ -69,11 +62,6 @@ Bugs Fixed:
   to be run less frequently than they should.
   :jira:`934`
 
-- Fixed a bug introduced earlier in this series where in very 
-  rare cases, a schedd would not appear in the collector when it
-  started up, but would appear an hour later.
-  :jira:`931`
-
 - The view server can now handle very long Accounting Group names
   :jira:`913`
 
@@ -81,6 +69,61 @@ Bugs Fixed:
   ``allowed_job_duration`` would be evaluated at the wrong points in a
   job's lifetime.
   :jira:`922`
+
+- Fixed several bugs in file transfer where unexpected failures by file
+  transfer plugins would not get handled correctly, resulting in empty
+  Hold Reason messages and meaningless Hold Reason Subcodes reported in the
+  job's classad.
+  :jira:`842`
+
+Version 9.5.4
+-------------
+
+Release Notes:
+
+- HTCondor version 9.5.4 released on February 8, 2022.
+
+New Features:
+
+- Improved the ability of the Access Point to detect the disappearance
+  of an Execution Point that is running a job.  Specifically, the ability
+  of the *condor_shadow* to detect a problem with the *condor_starter*.
+  :jira:`954`
+
+Bugs Fixed:
+
+- HTCondor no longer assumes that PID 1 is always visible.  Instead,
+  it checks to see if ``/proc`` was mounted with the ``hidepid`` option
+  of ``1`` or less, and only checks for PID 1 if it was.
+  :jira:`944`
+
+Version 9.5.3
+-------------
+
+Release Notes:
+
+- HTCondor version 9.5.3 released on February 1, 2021.
+
+New Features:
+
+- Added new configuration option, :macro:`CCB_TIMEOUT`.  Added new
+  configuration option, :macro:`CCB_REQUIRED_TO_START`, which if set causes
+  HTCondor to exit if :macro:`CCB_ADDRESS` was set but HTCondor could
+  not obtain one.  :macro:`CCB_REQUIRED_TO_START` is ignored if
+  :macro:`USE_SHARED_PORT` is set, which is the default.
+  :jira:`925`
+
+Bugs Fixed:
+
+- Fixed a bug that caused any daemon to crash when it was configured
+  to report to more than one collector, and any of the collectors'
+  names could not be resolved by DNS.
+  :jira:`952`
+
+- Fixed a bug introduced earlier in this series where in very 
+  rare cases, a schedd would not appear in the collector when it
+  started up, but would appear an hour later.
+  :jira:`931`
 
 Version 9.5.2
 -------------
