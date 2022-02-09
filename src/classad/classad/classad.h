@@ -834,23 +834,29 @@ class ClassAd : public ExprTree
 		// These variants of operator[] return the second item in the list
 		// -- the default value -- if the named attribute doesn't exist.
 		// Because that second item has a C++ type, these variants
-		// of operator[] return the corresponding C++ type.  The returns
-		// are const to prevent you from trying to assign to them:
-		//
-		// /* This won't do what you want! */
-		// c[{"request_cpus", 1}] = 7;
+		// of operator[] return the corresponding C++ type.  It'd be too
+		// complicated for now to allow assignment to the return to change
+		// the ClassAd, so for now these operators are const, which
+		// prevents that.
 		//
 		// classad::ClassAd c;
-		// bool should_transfer_files = c[{"ShouldTransferFiles", false}];
 		// int request_cpus = c[{"request_cpus", 1}];
 		// std::string transfer_files = c[{"Owner", ""}];
 		//
-		// C++ doesn't actually allow 'const bool' or 'const int'
-		// as a return type, sadly.  Also, it can't tell if '7' is a weird
-		// way of saying 'true', so we can't have a bool overload.
+		// C++ can't tell if '7' is a weird way of saying 'true',
+		// so we can't have a bool overload.
 		//
-		// /* const */ bool operator []( std::pair< std::string, bool > ) const;
-		/* const */ int operator []( std::pair< std::string, int > ) const;
+		// If we wanted to do something more Pythonic, we could call this
+		// function get() and split the pair up.  We could call it at(),
+		// instead, but that implies a bunch of STL behavior I don't know
+		// that we want.
+		//
+
+		// The trailing `const` prevents this from becoming a left-hand side.
+		int operator []( std::pair< std::string, int > ) const;
+		// For some reason, that doesn't quite work with an object, and the
+		// object has to be const.  (Note that the primitive type can't be
+		// returned as const!)
 		const std::string operator []( std::pair< std::string, std::string > ) const;
 
 
