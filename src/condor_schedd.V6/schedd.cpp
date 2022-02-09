@@ -11723,17 +11723,18 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 						rec->keepClaimAttributes = skip_vacate;
 					}
 						//
-						// Send a vacate
+						// Send a vacate if appropriate
 						//
 					if ( ! skip_vacate ) {
 						send_vacate( rec->match, DEACTIVATE_CLAIM );
 						dprintf( D_ALWAYS, 
 								"Sent vacate command to %s for job %d.%d\n",
 								rec->match->peer, cluster, proc );
+					}
 						//
-						// Otherwise, send a SIGKILL
+						// If shutting down, send a SIGKILL
 						//
-					} else {
+					if ( ExitWhenDone ) {
 							//
 							// Call the blocking form of Send_Signal, rather than
 							// sendSignalToShadow().
