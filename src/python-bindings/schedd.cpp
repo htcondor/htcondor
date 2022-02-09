@@ -2197,7 +2197,7 @@ struct Schedd {
             val_str = extract<std::string>(val);
         }
 
-        SetAttributeFlags_t attr_flags = SETDIRTY | SetAttribute_NoAck;
+        SetAttributeFlags_t attr_flags = SetAttribute_SetDirty | SetAttribute_NoAck;
         SetAttributeFlags_t only_my_jobs_flag = SetAttribute_OnlyMyJobs;
         if ( ! param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) { only_my_jobs_flag = 0; }
 
@@ -2274,7 +2274,7 @@ struct Schedd {
 		}
 
 
-		SetAttributeFlags_t attr_flags = SETDIRTY | SetAttribute_NoAck;
+		SetAttributeFlags_t attr_flags = SetAttribute_SetDirty | SetAttribute_NoAck;
 		SetAttributeFlags_t only_my_jobs_flag = SetAttribute_OnlyMyJobs;
 		if (! param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) { only_my_jobs_flag = 0; }
 
@@ -2364,7 +2364,7 @@ struct Schedd {
 		}
 
 
-		SetAttributeFlags_t attr_flags = SETDIRTY | SetAttribute_NoAck;
+		SetAttributeFlags_t attr_flags = SetAttribute_SetDirty | SetAttribute_NoAck;
 		classad::ClassAdUnParser unparser;
 		unparser.SetOldClassAd(true, true);
 		std::string rhs;
@@ -4020,7 +4020,7 @@ void export_schedd()
             )C0ND0R")
         .value("None", 0)
         .value("NonDurable", NONDURABLE)
-        .value("SetDirty", SETDIRTY)
+        .value("SetDirty", SetAttribute_SetDirty)
         .value("ShouldLog", SHOULDLOG)
         ;
 

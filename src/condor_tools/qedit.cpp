@@ -541,7 +541,7 @@ main(int argc, const char *argv[])
 
 	// TODO: do the transaction
 	const char * dry_tag = "";
-	SetAttributeFlags_t setflags = SETDIRTY;
+	SetAttributeFlags_t setflags = SetAttribute_SetDirty;
 	if (only_my_jobs) setflags |= SetAttribute_OnlyMyJobs;
 	if (dash_dryrun) {
 		if (schedd.version()) {
