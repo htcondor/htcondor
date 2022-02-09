@@ -2241,4 +2241,18 @@ bool ClassAd::IsAttributeDirty(const string &name) const
 	return is_dirty;
 }
 
+int
+ClassAd::operator [] ( std::pair< std::string, int > attr_default_pair ) const {
+	int default_value = attr_default_pair.second;
+	LookupInteger( attr_default_pair.first, default_value );
+	return default_value;
+}
+
+const std::string
+ClassAd::operator [] ( std::pair< std::string, std::string > attr_default_pair ) const {
+	std::string default_value = attr_default_pair.second;
+	LookupString( attr_default_pair.first, default_value );
+	return default_value;
+}
+
 } // classad

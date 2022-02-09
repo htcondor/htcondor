@@ -110,13 +110,13 @@ class ClassAd : public ExprTree
 		 *  InsertViaCache() is used to do the actual insertion, so the
 		 *    value is parsed into an ExprTree in old ClassAds syntax.
 		 */
-	bool Insert(const char *str);
-	bool Insert(const std::string &str);
+		bool Insert(const char *str);
+		bool Insert(const std::string &str);
 
 		/* Insert an attribute/value into the Classad.
 		 * The value is parsed into an ExprTree using old ClassAds syntax.
 		 */
-	bool AssignExpr(const std::string &name, const char *value);
+		bool AssignExpr(const std::string &name, const char *value);
 
 		/** Inserts an attribute into a nested classAd.  The scope expression is
 		 		evaluated to obtain a nested classad, and the attribute is 
@@ -828,6 +828,31 @@ class ClassAd : public ExprTree
 
 		static bool _GetExternalReferences( const ExprTree *, const ClassAd *,
 					EvalState &, References&, bool fullNames );
+
+
+		//
+		// These variants of operator[] return the second item in the list
+		// -- the default value -- if the named attribute doesn't exist.
+		// Because that second item has a C++ type, these variants
+		// of operator[] return the corresponding C++ type.  The returns
+		// are const to prevent you from trying to assign to them:
+		//
+		// /* This won't do what you want! */
+		// c[{"request_cpus", 1}] = 7;
+		//
+		// classad::ClassAd c;
+		// bool should_transfer_files = c[{"ShouldTransferFiles", false}];
+		// int request_cpus = c[{"request_cpus", 1}];
+		// std::string transfer_files = c[{"Owner", ""}];
+		//
+		// C++ doesn't actually allow 'const bool' or 'const int'
+		// as a return type, sadly.  Also, it can't tell if '7' is a weird
+		// way of saying 'true', so we can't have a bool overload.
+		//
+		// /* const */ bool operator []( std::pair< std::string, bool > ) const;
+		/* const */ int operator []( std::pair< std::string, int > ) const;
+		const std::string operator []( std::pair< std::string, std::string > ) const;
+
 
   	private:
 		friend 	class AttributeReference;
