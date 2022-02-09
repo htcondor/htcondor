@@ -3983,9 +3983,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				//
 				std::string outputName = fileitem.srcName();
 				if( outputName == StdoutRemapName ) {
-					jobAd.LookupString( "OriginalOut", outputName );
+					jobAd.LookupString( ATTR_JOB_ORIGINAL_OUTPUT, outputName );
 				} else if( outputName == StderrRemapName ) {
-					jobAd.LookupString( "OriginalErr", outputName );
+					jobAd.LookupString( ATTR_JOB_ORIGINAL_ERROR, outputName );
 				}
 				local_output_url += outputName;
 			}
