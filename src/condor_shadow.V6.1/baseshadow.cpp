@@ -137,11 +137,11 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 
 	ClassAd* prev_upload_stats = dynamic_cast<ClassAd*>(jobAd->Lookup(ATTR_TRANSFER_INPUT_STATS));
 	if (prev_upload_stats) {
-		m_prev_run_upload_file_stats = *prev_upload_stats;
+		m_prev_run_upload_file_stats.Update(*prev_upload_stats);
 	}
 	ClassAd* prev_download_stats = dynamic_cast<ClassAd*>(jobAd->Lookup(ATTR_TRANSFER_OUTPUT_STATS));
 	if (prev_download_stats) {
-		m_prev_run_download_file_stats = *prev_download_stats;
+		m_prev_run_download_file_stats.Update(*prev_download_stats);
 	}
 
 		// construct the core file name we'd get if we had one.
