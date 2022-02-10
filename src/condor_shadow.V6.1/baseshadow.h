@@ -285,16 +285,6 @@ class BaseShadow : public Service
 		 */
 	int handleUpdateJobAd(int sig);
 
-		/** This is used to tack on something (like "res #") 
-			after the header and before the text of a dprintf
-			message.
-		*/
-	virtual void dprintf_va( int flags, const char* fmt, va_list args );
-
-		/** A local dprintf maker that uses dprintf_va...
-		 */
-	void dprintf( int flags, const char* fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
-
 		/// Returns the jobAd for this job
 	ClassAd *getJobAd() { return jobAd; }
 		/// Returns this job's cluster number
