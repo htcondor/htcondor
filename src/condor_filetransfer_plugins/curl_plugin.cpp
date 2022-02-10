@@ -57,7 +57,7 @@ main( int argc, char **argv ) {
     } 
     else if(argc != 3) {
         printf("Usage: %s SOURCE DEST\n", argv[0]);
-        return 1;
+        return (int)TransferPluginResult::Error;
     }
 
     // Initialize win32 + SSL socket libraries.
@@ -67,11 +67,11 @@ main( int argc, char **argv ) {
     if( init != 0 ) {
         fprintf( stderr, "Error: curl_plugin initialization failed with error"
                                                 " code %d\n", init ); 
-        return -1;
+        return (int)TransferPluginResult::Error;
     }
 
     if ( ( handle = curl_easy_init() ) == NULL ) {
-        return -1;
+        return (int)TransferPluginResult::Error;
     }
 
     // Initialize the stats structure

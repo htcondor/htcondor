@@ -153,8 +153,9 @@ def files_in_spool(default_condor, all_job_handles, logged_job_handle, unlogged_
         # neither job is a terminal state to get an early out.
         time.sleep(5)
 
-    # This is kind of clumsy.
-    assert(time.now() < deadline)
+    # This is kind of clumsy.  (I'm not asserting false here because
+    # that would have explanatory power when seen in the output.)
+    assert(time.time() < deadline)
 
 
 @action

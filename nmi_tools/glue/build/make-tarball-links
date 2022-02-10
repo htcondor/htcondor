@@ -40,7 +40,6 @@ if [ -d usr/lib/condor/libexec ]; then
 fi
 ln -s usr/share/man man
 ln -s usr/include include
-ln -s sbin/bosco_install bosco_install
 ln -s sbin/condor_configure condor_configure
 ln -s sbin/condor_install condor_install
 if [ -d usr/share/doc/htcondor/examples/etc ]; then

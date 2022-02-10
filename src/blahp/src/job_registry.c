@@ -1774,7 +1774,11 @@ job_registry_merge_pending_nonpriv_updates(job_registry_handle *rha,
         /* within it. */
 
         ofd = fopen(rha->path,"a+");
-        if (ofd == NULL) return JOB_REGISTRY_FOPEN_FAIL;
+        if (ofd == NULL) {
+            free(cfp);
+            closedir(npd);
+            return JOB_REGISTRY_FOPEN_FAIL;
+        }
 
         if (job_registry_wrlock(rha,ofd) < 0)
          {

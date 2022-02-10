@@ -372,6 +372,13 @@ class RemoteResource : public Service {
 			but should be safe if you really feel like calling it yourself.
 		*/
 	virtual void checkX509Proxy( void );
+
+		/** This timer handler is called if too much time has passed since we got
+		    an update from the starter.  This could indicate a problem with our
+			remote syscall sock connection, or the starter died somehow.
+			Intended for use as a DaemonCore timer handler (this, public).
+		*/
+	void updateFromStarterTimeout( void );
 	
 	/**
 	 * used to suspend a remotely running job
@@ -498,6 +505,7 @@ private:
 	int reconnect_attempts;
 	int next_reconnect_tid;
 	int proxy_check_tid;
+	int no_update_received_tid;
 
 	std::string proxy_path;
 	time_t last_proxy_timestamp;

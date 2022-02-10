@@ -356,6 +356,7 @@
 #define ATTR_JOB_ENVIRONMENT1_DELIM  "EnvDelim"
 #define ATTR_JOB_ENVIRONMENT2  "Environment"
 #define ATTR_JOB_ERROR  "Err"
+#define ATTR_JOB_ORIGINAL_ERROR  "OriginalErr"
 #define ATTR_JOB_ERROR_SIZE  "ErrSize"
 #define ATTR_JOB_CPU_INSTRUCTIONS  "CPUInstructions"
 #define ATTR_JOB_KEEP_CLAIM_IDLE  "KeepClaimIdle"
@@ -390,6 +391,7 @@
 #define ATTR_JOB_NOOP_EXIT_CODE  "NoopJobExitCode"
 #define ATTR_JOB_NOTIFICATION  "JobNotification"
 #define ATTR_JOB_OUTPUT  "Out"
+#define ATTR_JOB_ORIGINAL_OUTPUT  "OriginalOut"
 #define ATTR_JOB_OUTPUT_SIZE  "OutSize"
 #define ATTR_JOB_PID  "JobPid"
 #define ATTR_PRE_JOB_PRIO1  "PreJobPrio1"
@@ -445,6 +447,7 @@
 #define ATTR_JOB_VM_VNC  "JobVMVNCConsole"
 #define ATTR_JOB_VM_CPU_UTILIZATION  "JobVMCpuUtilization"
 #define ATTR_JOB_SEND_CREDENTIAL  "SendCredential"
+#define ATTR_JOBINFO_MAXINTERVAL "_condor_JOBINFO_MAXINTERVAL" // Used in starter updates to shadow
 #define ATTR_OAUTH_SERVICES_NEEDED "OAuthServicesNeeded"
 #define ATTR_KEYBOARD_IDLE  "KeyboardIdle"
 #define ATTR_KFLOPS  "KFlops"
