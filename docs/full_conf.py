@@ -53,7 +53,8 @@ extensions = [
     'macro',
     'macro-def',
     'index',
-    'jira'
+    'jira',
+    'classad-attribute',
 ]
 autosectionlabel_prefix_document = True
 

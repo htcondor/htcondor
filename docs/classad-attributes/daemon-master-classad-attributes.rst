@@ -1,91 +1,61 @@
 DaemonMaster ClassAd Attributes
 ===============================
 
-
 :index:`DaemonMaster attributes<single: DaemonMaster attributes; ClassAd>`
-:index:`CondorVersion<single: CondorVersion; ClassAd DaemonMaster attribute>`
 
-``CondorVersion``:
+:classad-attribute:`CondorVersion`
     A string containing the HTCondor version number, the release date,
     and the build identification number.
 
-:index:`DaemonStartTime<single: DaemonStartTime; ClassAd DaemonMaster attribute>`
-
-``DaemonStartTime``:
+:classad-attribute:`DaemonStartTime`
     The time that this daemon was started, represented as the number of
     second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
-:index:`DaemonLastReconfigTime<single: DaemonLastReconfigTime; ClassAd DaemonMaster attribute>`
-
-``DaemonLastReconfigTime``:
+:classad-attribute:`DaemonLastReconfigTime`
     The time that this daemon was configured, represented as the number
     of second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
-:index:`Machine<single: Machine; ClassAd DaemonMaster attribute>`
-
-``Machine``:
+:classad-attribute:`Machine`
     A string with the machine's fully qualified host name.
 
-:index:`MasterIpAddr<single: MasterIpAddr; ClassAd DaemonMaster attribute>`
-
-``MasterIpAddr``:
+:classad-attribute:`MasterIpAddr`
     String with the IP and port address of the *condor_master* daemon
     which is publishing this DaemonMaster ClassAd.
 
-:index:`MonitorSelfAge<single: MonitorSelfAge; ClassAd DaemonMaster attribute>`
-
-``MonitorSelfAge``:
+:classad-attribute:`MonitorSelfAge`
     The number of seconds that this daemon has been running.
 
-:index:`MonitorSelfCPUUsage<single: MonitorSelfCPUUsage; ClassAd DaemonMaster attribute>`
-
-``MonitorSelfCPUUsage``:
+:classad-attribute:`MonitorSelfCPUUsage`
     The fraction of recent CPU time utilized by this daemon.
 
-:index:`MonitorSelfImageSize<single: MonitorSelfImageSize; ClassAd DaemonMaster attribute>`
-
-``MonitorSelfImageSize``:
+:classad-attribute:`MonitorSelfImageSize`
     The amount of virtual memory consumed by this daemon in Kbytes.
 
-:index:`MonitorSelfRegisteredSocketCount<single: MonitorSelfRegisteredSocketCount; ClassAd DaemonMaster attribute>`
-
-``MonitorSelfRegisteredSocketCount``:
+:classad-attribute:`MonitorSelfRegisteredSocketCount`
     The current number of sockets registered by this daemon.
 
-:index:`MonitorSelfResidentSetSize<single: MonitorSelfResidentSetSize; ClassAd DaemonMaster attribute>`
-
-``MonitorSelfResidentSetSize``:
+:classad-attribute:`MonitorSelfResidentSetSize`
     The amount of resident memory used by this daemon in Kbytes.
 
-:index:`MonitorSelfSecuritySessions<single: MonitorSelfSecuritySessions; ClassAd DaemonMaster attribute>`
-
-``MonitorSelfSecuritySessions``:
+:classad-attribute:`MonitorSelfSecuritySessions`
     The number of open (cached) security sessions for this daemon.
 
-:index:`MonitorSelfTime<single: MonitorSelfTime; ClassAd DaemonMaster attribute>`
-
-``MonitorSelfTime``:
+:classad-attribute:`MonitorSelfTime`
     The time, represented as the number of second elapsed since the Unix
     epoch (00:00:00 UTC, Jan 1, 1970), at which this daemon last checked
     and set the attributes with names that begin with the string
     ``MonitorSelf``.
 
-:index:`MyAddress<single: MyAddress; ClassAd DaemonMaster attribute>`
-
-``MyAddress``:
+:classad-attribute:`MyAddress`
     String with the IP and port address of the *condor_master* daemon
     which is publishing this ClassAd.
 
-:index:`MyCurrentTime<single: MyCurrentTime; ClassAd DaemonMaster attribute>`
-
-``MyCurrentTime``:
+:classad-attribute:`MyCurrentTime`
     The time, represented as the number of second elapsed since the Unix
     epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor_master*
     daemon last sent a ClassAd update to the *condor_collector*.
 
-:index:`Name<single: Name; ClassAd DaemonMaster attribute>`
-
-``Name``:
+:classad-attribute:`Name`
     The name of this resource; typically the same value as the
     ``Machine`` attribute, but could be customized by the site
     administrator. On SMP machines, the *condor_startd* will divide the
@@ -94,21 +64,13 @@ DaemonMaster ClassAd Attributes
     "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.
 
-:index:`PublicNetworkIpAddr<single: PublicNetworkIpAddr; ClassAd DaemonMaster attribute>`
-
-``PublicNetworkIpAddr``:
+:classad-attribute:`PublicNetworkIpAddr`
     Description is not yet written.
 
-:index:`RealUid<single: RealUid; ClassAd DaemonMaster attribute>`
-
-``RealUid``:
+:classad-attribute:`RealUid`
     The UID under which the *condor_master* is started.
 
-:index:`UpdateSequenceNumber<single: UpdateSequenceNumber; ClassAd DaemonMaster attribute>`
-
-``UpdateSequenceNumber``:
+:classad-attribute:`UpdateSequenceNumber`
     An integer, starting at zero, and incremented with each ClassAd
     update sent to the *condor_collector*. The *condor_collector* uses
     this value to sequence the updates it receives.
-
-
