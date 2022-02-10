@@ -1613,7 +1613,7 @@ BaseShadow::jobWantsGracefulRemoval()
  * different instances into the updated ad.
  **/
 ClassAd*
-BaseShadow::updateFileTransferStats(ClassAd& old_stats, ClassAd &new_stats)
+BaseShadow::updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new_stats)
 {
 	ClassAd* updated_stats = new ClassAd();
 
