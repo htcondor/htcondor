@@ -1137,7 +1137,7 @@ BaseShadow::logEvictEvent( int exitReason )
 
 	switch( exitReason ) {
 	case JOB_CKPTED:
-	case JOB_NOT_CKPTED:
+	case JOB_SHOULD_REQUEUE:
 	case JOB_KILLED:
 		break;
 	default:

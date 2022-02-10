@@ -427,7 +427,7 @@ main_config()
 void
 main_shutdown_fast()
 {
-	Shadow->shutDownFast( JOB_NOT_CKPTED );
+	Shadow->shutDownFast( JOB_SHOULD_REQUEUE );
 }
 
 void

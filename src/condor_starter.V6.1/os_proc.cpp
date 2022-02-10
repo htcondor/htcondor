@@ -865,7 +865,7 @@ OsProc::JobExit( void )
 		if( Starter->jic->hadHold() || Starter->jic->hadRemove() ) {
 			reason = JOB_KILLED;
 		} else {
-			reason = JOB_NOT_CKPTED;
+			reason = JOB_SHOULD_REQUEUE;
 		}
 	} else if( dumped_core ) {
 		reason = JOB_COREDUMPED;

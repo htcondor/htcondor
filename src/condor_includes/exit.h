@@ -64,8 +64,8 @@
 /* incorrect arguments to condor_shadow */
 #define JOB_SHADOW_USAGE (6 + EXIT_CODE_OFFSET)
 
-/* The job was kicked off without a checkpoint */
-#define JOB_NOT_CKPTED	(7 + EXIT_CODE_OFFSET)
+/* The job was kicked off without a checkpoint (renamed) */
+//#define JOB_NOT_CKPTED	(7 + EXIT_CODE_OFFSET)
 
 /* We define this to the same number, since we want the same behavior.
    However, "JOB_NOT_CKPTED" doesn't mean much if we're not a standard

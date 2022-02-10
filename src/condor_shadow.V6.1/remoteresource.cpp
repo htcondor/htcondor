@@ -976,7 +976,7 @@ RemoteResource::setExitReason( int reason )
 {
 	// Set the exit_reason, but not if the reason is JOB_KILLED.
 	// This prevents exit_reason being reset from JOB_KILLED to
-	// JOB_NOT_CKPTED or some such when the starter gets killed
+	// JOB_SHOULD_REQUEUE or some such when the starter gets killed
 	// and the syscall sock goes away.
 
 	if( exit_reason != JOB_KILLED && -1 == exit_reason) {

@@ -100,7 +100,7 @@ MpiResource::resourceExit( int reason, int status )
 		}
 		break;	
 	case JOB_CKPTED:
-	case JOB_NOT_CKPTED:
+	case JOB_SHOULD_REQUEUE:
 			// XXX Todo: Do we want a Node evicted event?
 		break;
 	default:
