@@ -1556,6 +1556,7 @@ JICShadow::initWithFileTransfer()
 	if ( job_ad->LookupBool( ATTR_STREAM_OUTPUT, stream ) && !stream &&
 		 !nullFile( stdout_name.c_str() ) ) {
 		job_ad->Assign( ATTR_JOB_OUTPUT, StdoutRemapName );
+		job_ad->Assign( ATTR_JOB_ORIGINAL_OUTPUT, stdout_name );
 	}
 	if ( job_ad->LookupBool( ATTR_STREAM_ERROR, stream ) && !stream &&
 		 !nullFile( stderr_name.c_str() ) ) {
@@ -1564,6 +1565,7 @@ JICShadow::initWithFileTransfer()
 		} else {
 			job_ad->Assign( ATTR_JOB_ERROR, StderrRemapName );
 		}
+		job_ad->Assign( ATTR_JOB_ORIGINAL_ERROR, stderr_name );
 	}
 
 	wants_file_transfer = true;
@@ -2282,6 +2284,15 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 			// insure_update, since we already have the socket open,
 			// and we want to use it (e.g. to prevent firewalls from
 			// closing it due to non-activity).
+
+			// Add an attribute that says when the shadow can expect to receive
+			// another update.  We do this because the shadow uses these updates
+			// as a heartbeat; if the shadow does not receive an expected update from
+			// us, it assumes the connection is dead (even if the syscall sock is still alive,
+			// since that may be the doing of a misbehaving NAT box).
+		ad->Assign(ATTR_JOBINFO_MAXINTERVAL, periodicJobUpdateTimerMaxInterval());
+
+			// Invoke the remote syscall
 		rval = (REMOTE_CONDOR_register_job_info(ad) == 0);
 	}
 	else {

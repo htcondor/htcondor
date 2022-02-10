@@ -23,6 +23,11 @@ from urllib.parse import urlparse
 DEFAULT_TIMEOUT = 30
 PLUGIN_VERSION = '1.0.0'
 
+EXIT_SUCCESS = 0
+EXIT_FAILURE = 1
+EXIT_AUTHENTICATION_REFRESH = 2
+
+
 def print_help(stream = sys.stderr):
     help_msg = '''Usage: {0} -infile <input-filename> -outfile <output-filename>
        {0} -classad
@@ -57,12 +62,12 @@ def parse_args():
     # <this> -outfile <output-filename> -infile <input-filename>
     if not len(sys.argv) in [2, 5, 6]:
         print_help()
-        sys.exit(1)
+        sys.exit(EXIT_FAILURE)
 
     # If -classad, print the capabilities of the plugin and exit early
     if (len(sys.argv) == 2) and (sys.argv[1] == '-classad'):
         print_capabilities()
-        sys.exit(0)
+        sys.exit(EXIT_SUCCESS)
 
     # If -upload, set is_upload to True and remove it from the args list
     is_upload = False
@@ -91,7 +96,7 @@ def parse_args():
                 outfile = sys.argv[i+1]
     except IndexError:
         print_help()
-        sys.exit(1)
+        sys.exit(EXIT_FAILURE)
 
     return {'infile': infile, 'outfile': outfile, 'upload': is_upload}
 
@@ -188,7 +193,7 @@ if __name__ == '__main__':
     try:
         args = parse_args()
     except Exception:
-        sys.exit(1)
+        sys.exit(EXIT_FAILURE)
 
     #CHANGE ME HERE
     example_plugin = ExamplePlugin()
@@ -205,7 +210,7 @@ if __name__ == '__main__':
                 outfile.write(str(classad.ClassAd(outfile_dict)))
         except Exception:
             pass
-        sys.exit(1)
+        sys.exit(EXIT_FAILURE)
 
     # Now iterate over the list of classads and perform the transfers.
     try:
@@ -229,7 +234,7 @@ if __name__ == '__main__':
                         outfile.write(str(classad.ClassAd(outfile_dict)))
                     except Exception:
                         pass
-                    sys.exit(1)
+                    sys.exit(EXIT_FAILURE)
 
     except Exception:
-        sys.exit(1)
+        sys.exit(EXIT_FAILURE)

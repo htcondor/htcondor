@@ -462,6 +462,7 @@ execute_cmd(exec_cmd_t *cmd)
 	{
 		case -1:
 			perror("fork");
+			if (proxy_fd != -1) close (proxy_fd);
 			free(command);
 			return(-1);
 

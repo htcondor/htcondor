@@ -273,7 +273,7 @@ SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, co
 	std::string quoted_value;
 	QuoteAdStringValue(attr_value, quoted_value);
 	JobQueueKey job_id(cluster_id, proc_id);
-	JobQueue->SetAttribute(job_id, attr_name, quoted_value.c_str(), SETDIRTY);
+	JobQueue->SetAttribute(job_id, attr_name, quoted_value.c_str(), SetAttribute_SetDirty);
 	job_ad->Delete(attr_name);
 	PrivateAttrs[job_id][attr_name] = attr_value;
 	JobQueue->setActiveTransaction(xact);
@@ -4151,7 +4151,7 @@ SetSecureAttributeInt(int cluster_id, int proc_id, const char *attr_name, int at
 	// lookup job and set attribute
 	JOB_ID_KEY_BUF key;
 	IdToKey(cluster_id,proc_id,key);
-	JobQueue->SetAttribute(key, attr_name, buf, flags & SETDIRTY);
+	JobQueue->SetAttribute(key, attr_name, buf, flags & SetAttribute_SetDirty);
 
 	return 0;
 }
@@ -4174,7 +4174,7 @@ SetSecureAttributeString(int cluster_id, int proc_id, const char *attr_name, con
 	// lookup job and set attribute to quoted string
 	JOB_ID_KEY_BUF key;
 	IdToKey(cluster_id,proc_id,key);
-	JobQueue->SetAttribute(key, attr_name, buf.c_str(), flags & SETDIRTY);
+	JobQueue->SetAttribute(key, attr_name, buf.c_str(), flags & SetAttribute_SetDirty);
 
 	return 0;
 }
@@ -4187,7 +4187,7 @@ SetSecureAttribute(int cluster_id, int proc_id, const char *attr_name, const cha
 	// lookup job and set attribute to value
 	JOB_ID_KEY_BUF key;
 	IdToKey(cluster_id,proc_id,key);
-	JobQueue->SetAttribute(key, attr_name, attr_value, flags & SETDIRTY);
+	JobQueue->SetAttribute(key, attr_name, attr_value, flags & SetAttribute_SetDirty);
 
 	return 0;
 }
@@ -4939,7 +4939,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			// first, store the actual value
 			std::string raw_attribute = attr_name;
 			raw_attribute += "_RAW";
-			JobQueue->SetAttribute(key, raw_attribute.c_str(), attr_value, flags & SETDIRTY);
+			JobQueue->SetAttribute(key, raw_attribute.c_str(), attr_value, flags & SetAttribute_SetDirty);
 			if( flags & SHOULDLOG ) {
 				char* old_val = NULL;
 				ExprTree *ltree;
@@ -5054,7 +5054,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		old_nondurable_level = JobQueue->IncNondurableCommitLevel();
 	}
 
-	JobQueue->SetAttribute(key, attr_name, attr_value, flags & SETDIRTY);
+	JobQueue->SetAttribute(key, attr_name, attr_value, flags & SetAttribute_SetDirty);
 	if( flags & SHOULDLOG ) {
 		const char* old_val = NULL;
 		if (job) {
@@ -5083,7 +5083,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	if( ( universe != CONDOR_UNIVERSE_SCHEDULER &&
 		  universe != CONDOR_UNIVERSE_LOCAL &&
 		  universe != CONDOR_UNIVERSE_STANDARD ) &&
-		( flags & SETDIRTY ) && 
+		( flags & SetAttribute_SetDirty ) && 
 		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( job ) ) ) ) {
 
 		// Add the key to list of dirty classads
@@ -5346,7 +5346,7 @@ SetTimerAttribute( int cluster, int proc, const char *attr_name, int dur )
 		return -1;
 	}
 
-	rc = SetAttributeInt( cluster, proc, attr_name, xact_start_time + dur, SETDIRTY );
+	rc = SetAttributeInt( cluster, proc, attr_name, xact_start_time + dur, SetAttribute_SetDirty );
 	return rc;
 }
 

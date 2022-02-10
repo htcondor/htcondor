@@ -3393,7 +3393,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
                 fwrite("\n",1,1,tmpIOfile);
                 newptr1 = make_message("%s -O %s", newptr, tmpIOfilestring);
                 fclose(tmpIOfile);
-		if (*files_to_clean_up != NULL) {
+		if (files_to_clean_up && (*files_to_clean_up != NULL)) {
 			(*files_to_clean_up)[cleanup_file_index++] = tmpIOfilestring;
 		} else {
 			free(tmpIOfilestring);
