@@ -941,54 +941,6 @@ ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_st
 	}
 }
 
-/**
- * updateFileTransferStats takes two input parameters:
- * old_stats: A classad of old (existing) file transfer statistics
- * new_stats: A class of new incoming file transfer statistics
- * It then cumulates the attribute values of these two ads and returns a new
- * classad with the updated values. In the parallel universe (where a single
- * job contains many parralel instances) it adds the values from all the
- * different instances into the updated ad.
- **/
-ClassAd*
-ParallelShadow::updateFileTransferStats(ClassAd& old_stats, ClassAd &new_stats)
-{
-	ClassAd* updated_stats = new ClassAd();
-
-	// If new_stats is empty, just return a copy of the old stats
-	if (new_stats.size() == 0) {
-		updated_stats->CopyFrom(old_stats);
-		return updated_stats;
-	}
-
-	// Iterate over the list of new stats
-	for (auto it = new_stats.begin(); it != new_stats.end(); it++) {
-		std::string attr = it->first.c_str();
-		std::string attr_lastrun = attr + "LastRun";
-		std::string attr_total = attr + "Total";
-
-		// Lookup the value of this attribute. We only count integer values.
-		classad::Value attr_val;
-		int value;
-		it->second->Evaluate(attr_val);
-		if (!attr_val.IsIntegerValue(value)) {
-			continue;
-		}
-		updated_stats->InsertAttr(attr_lastrun, value);
-
-		// If this attribute has a previous Total value, add that to the new total
-		int old_total = 0;
-		if (old_stats.LookupInteger(attr_total, old_total)) {
-			value += old_total;
-		}
-		updated_stats->InsertAttr(attr_total, value);
-	}
-
-	// Return the pointer to our newly-created classad
-	// This will be memory-managed later by the ClassAd::Insert() function
-	return updated_stats;
-}
-
 void
 ParallelShadow::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status)
 {
