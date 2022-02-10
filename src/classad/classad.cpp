@@ -2255,4 +2255,35 @@ ClassAd::operator [] ( const std::pair< const std::string, const std::string > &
 	return default_value;
 }
 
+int
+ClassAd::operator [] ( const ClassAd::IntegerAttributeName & ian ) const {
+	int return_value;
+	if(! LookupInteger( ian.attributeName, return_value )) {
+		throw std::out_of_range("LookupInteger() failed");
+	}
+	return return_value;
+}
+
+const std::string
+ClassAd::operator [] ( const ClassAd::StringAttributeName & san ) const {
+	std::string return_value;
+	if(! LookupString( san.attributeName, return_value )) {
+		throw std::out_of_range("LookupString() failed");
+	}
+	return return_value;
+}
+
 } // classad
+
+classad::ClassAd::IntegerAttributeName
+operator "" _ca_int( const char * s, std::size_t l ) {
+    return classad::ClassAd::IntegerAttributeName( std::string(s, l) );
+}
+
+classad::ClassAd::StringAttributeName
+operator "" _ca_str( const char * s, std::size_t l ) {
+    return classad::ClassAd::StringAttributeName( std::string(s, l) );
+}
+
+
+

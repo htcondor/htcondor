@@ -851,20 +851,53 @@ class ClassAd : public ExprTree
 		// instead, but that implies a bunch of STL behavior I don't know
 		// that we want.
 		//
-
 		// For some reason, the attribute-name string can't be const & if we
 		// want to allow string literals in the source text.  It compiles
 		// but doesn't work.  (wtf?)
+		//
 
 		// The trailing `const` prevents this from becoming a left-hand side.
 		int operator []( const std::pair< const std::string, int > & ) const;
+
 		// For some reason, that doesn't quite work with an object, and the
 		// object has to be const.  (Note that the primitive type can't be
 		// returned as const!)
 		const std::string operator []( const std::pair< const std::string, const std::string > & ) const;
 
+		//
+		// These variants of operator[] throw std::out_of_range if the
+		// corresponding Lookup<Type>() function fails.
+		//
+		// ClassAd c;
+		// int requestCPUs = c[ATTR_REQUEST_CPUS];
+		// std::string transfer_input_files = c[ATTR_TRANSFER_INPUT_FILES];
+		//
+		// int customAttribute = c["CustomAttribute"_ca_int];
+		// std::string customStringAttribute = c["CustomStringAttr"_ca_str];
+		//
 
-  	private:
+		class AttributeName {
+			public:
+				AttributeName( const std::string & an ) : attributeName(an) { }
+
+			std::string attributeName;
+		};
+
+		class StringAttributeName : public AttributeName {
+			public:
+				StringAttributeName( const std::string & an ) : AttributeName(an) { }
+		};
+
+		class IntegerAttributeName : public AttributeName {
+			public:
+				IntegerAttributeName( const std::string & an ) : AttributeName(an) { }
+		};
+
+		int operator []( const IntegerAttributeName & ) const;
+		const std::string operator[]( const StringAttributeName & ) const;
+
+
+	private:
 		friend 	class AttributeReference;
 		friend 	class ExprTree;
 		friend 	class EvalState;
@@ -898,6 +931,12 @@ class ClassAd : public ExprTree
 };
 
 } // classad
+
+classad::ClassAd::StringAttributeName
+operator "" _ca_str( const char *, std::size_t );
+
+classad::ClassAd::IntegerAttributeName
+operator "" _ca_int( const char *, std::size_t );
 
 #include "classad/classadItor.h"
 

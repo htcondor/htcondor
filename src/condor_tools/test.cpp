@@ -30,5 +30,29 @@ main(int /* argc */, char ** /* argv */) {
     std::string t = c[{"AbsentStr", "default value"}];
     fprintf( stdout, "AbsentStr: %s\n", t.c_str() );
 
+	int k = c["PresentInt"_ca_int];
+	fprintf( stdout, "PresentInt [UDL]: %d\n", k );
+
+	std::string x = c["PresentString"_ca_str];
+	fprintf( stdout, "PresentStr [UDL]: %s\n", x.c_str() );
+
+	bool success = false;
+	try {
+		int l = c["PresentString"_ca_int];
+	} catch( std::out_of_range & oor ) {
+		success = true;
+	}
+	if(success) { fprintf( stdout, "Correctly detected wrong type!\n" ); }
+	ASSERT(success);
+
+	success = false;
+	try {
+		std::string y = c["PresentInt"_ca_str];
+	} catch( std::out_of_range & oor ) {
+		success = true;
+	}
+	if(success) { fprintf( stdout, "Correctly detected wrong type!\n" ); }
+	ASSERT(success);
+
     return 0;
 }
