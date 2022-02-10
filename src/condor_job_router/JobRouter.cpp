@@ -743,7 +743,7 @@ bool JobRouter::CreateIDTokenFile(const char * name, const char * props)
 	bool success = false;
 	int fd = safe_create_keep_if_exists(tmp.c_str(), O_CREAT | O_WRONLY | _O_BINARY, 0600);
 	if (fd >= 0) {
-		(void)_condor_full_write(fd, token.c_str(), token.size());
+		(void)full_write(fd, token.c_str(), token.size());
 		ftruncate(fd, token.size()); // incase the data in the file is less than it was before.
 		close(fd);
 
