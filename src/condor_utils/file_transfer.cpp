@@ -3308,7 +3308,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 	// our file transfer stats to include those sent by the condor_starter
 	ClassAd* transfer_stats = dynamic_cast<ClassAd*>(ad.Lookup("TransferStats"));
 	if (transfer_stats && IsServer()) {
-		Info.stats.CopyFrom(*transfer_stats);
+		Info.stats.Update(*transfer_stats);
 	}
 }
 
