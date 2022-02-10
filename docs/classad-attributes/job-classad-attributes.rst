@@ -908,7 +908,9 @@ all attributes.
 
 :classad-attribute:`IOWait`
     I/O wait time of the job recorded by the cgroup controller in
-    seconds. :classad-attribute:`IwdFlushNFSCache`
+    seconds.
+
+:classad-attribute:`IwdFlushNFSCache`
     A boolean expression that controls whether or not HTCondor attempts
     to flush a submit machine's NFS cache, in order to refresh an
     HTCondor job's initial working directory. The value will be
@@ -1414,7 +1416,9 @@ all attributes.
 :classad-attribute:`PostEnvironment`
     Defines the environment for the Postscript using the New environment
     syntax. If both ``PostEnv`` and ``PostEnvironment`` exist, the
-    former is ignored. :classad-attribute:`PreArgs`
+    former is ignored.
+
+:classad-attribute:`PreArgs`
     Defines the command-line arguments for the pre command using the old
     argument syntax, as specified in :doc:`/man-pages/condor_submit`. If both
     ``PreArgs`` and ``PreArguments`` exists, the former is ignored.
@@ -1426,7 +1430,7 @@ all attributes.
     double quotes must be escape with a backslash instead of another
     double quote. If both ``PreArgs`` and ``PreArguments`` exists, the
     former is ignored.
-    
+
 :classad-attribute:`PreCmd`
     A job in the vanilla, Docker, Java, or virtual machine universes may
     specify a command to run after file transfer (if any) completes but
@@ -1570,7 +1574,9 @@ all attributes.
 
 :classad-attribute:`RemoteIwd`
     The path to the directory in which a job is to be executed on a
-    remote machine. :classad-attribute:`RemotePool`
+    remote machine.
+
+:classad-attribute:`RemotePool`
     The name of the *condor_collector* of the pool in which a job is
     running via flocking. This attribute is not defined if the job is
     not running via flocking.

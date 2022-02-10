@@ -82,7 +82,9 @@ Machine ClassAd Attributes
 
 :classad-attribute:`CpuFamily`
     On Linux machines, the Cpu family, as defined in the /proc/cpuinfo
-    file. :classad-attribute:`CpuModel`
+    file.
+
+:classad-attribute:`CpuModel`
     On Linux machines, the Cpu model number, as defined in the
     /proc/cpuinfo file.
 
@@ -189,8 +191,7 @@ Machine ClassAd Attributes
     describes a cluster of machines which all access the same,
     uniformly-mounted, networked file systems usually via NFS or AFS.
     This is useful for Vanilla universe jobs which require remote file
-    access. :classad-attribute:`HasDocker` if the machine is capable of
-    executing container universe jobs.
+    access.
 
 :classad-attribute:`HasDocker`
     A boolean value set to ``True`` if the machine is capable of

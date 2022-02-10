@@ -799,11 +799,6 @@ These attributes are only reported once a full time span has accumulated.
     ``Owner_<username>_FileTransferFileWriteSeconds``. The published
     user name is actually the file transfer queue name, as defined by
     configuration variable ``TRANSFER_QUEUE_USER_EXPR``
-    Total number of submit-side transfer process seconds spent writing
-    to files transferred as output from jobs since this *condor_schedd*
-    was started. If ``STATISTICS_TO_PUBLISH`` :classad-attribute:`STATISTICS_TO_PUBLISH`. The published
-    user name is actually the file transfer queue name, as defined by
-    configuration variable ``TRANSFER_QUEUE_USER_EXPR``
 
 :classad-attribute:`FileTransferNetReadLoad_<timespan>`
     Exponential moving average over the specified time span of the rate
