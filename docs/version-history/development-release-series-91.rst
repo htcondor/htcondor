@@ -64,6 +64,9 @@ New Features:
   have an optional *flags* argument of type *TransactionFlags*.
   :jira:`963`
 
+- Added more statistics about file transfers in the job ClassAd.
+  :jira:`822`
+
 Bugs Fixed:
 
 - When the blahp submits a job to HTCondor, it no longer requests
