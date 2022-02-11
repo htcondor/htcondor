@@ -1887,10 +1887,25 @@ FileTransfer::ReadTransferPipeMsg()
 								   sizeof( int ) );
 		if(n != sizeof( int )) goto read_failed;
 
+		int stats_len = 0;
 		n = daemonCore->Read_Pipe( TransferPipe[0],
-								   (char *)&Info.num_cedar_files,
+								   (char *)&stats_len,
 								   sizeof( int ) );
 		if(n != sizeof( int )) goto read_failed;
+		if (stats_len) {
+			char *stats_buf = new char[stats_len+1];
+			n = daemonCore->Read_Pipe( TransferPipe[0],
+									stats_buf,
+									stats_len );
+			if(n != stats_len) {
+				delete [] stats_buf;
+				goto read_failed;
+			}
+			stats_buf[stats_len] = '\0';
+			classad::ClassAdParser parser;
+			parser.ParseClassAd(stats_buf, Info.stats);
+			delete [] stats_buf;
+		}
 
 		int error_len = 0;
 		n = daemonCore->Read_Pipe( TransferPipe[0],
@@ -2021,7 +2036,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 	Info.success = true;
 	Info.in_progress = true;
 	Info.xfer_status = XFER_STATUS_UNKNOWN;
-	Info.num_cedar_files = 0;
+	Info.stats.Clear();
 	TransferStart = time(NULL);
 
 	if (blocking) {
@@ -3079,7 +3094,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 		numFiles++;
 		if (xfer_command == TransferCommand::XferFile && rc == 0) {
-			Info.num_cedar_files++;
+			int num_cedar_files = 0;
+			Info.stats.LookupInteger("CedarFilesCount", num_cedar_files);
+			num_cedar_files++;
+			Info.stats.InsertAttr("CedarFilesCount", num_cedar_files);
 		}
 
 		// Gather a few more statistics
@@ -3094,7 +3112,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 		// Write stats to disk
 		if( !isDeferredTransfer ) {
-			OutputFileTransferStats(thisFileStatsAd);
+			RecordFileTransferStats(thisFileStatsAd);
 		}
 
 		// Get rid of compiler set-but-not-used warnings on Linux
@@ -3116,8 +3134,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	// of deferred transfers, and invoke each set with the appopriate plugin.
 	if ( hold_code == 0 ) {
 		for ( auto it = deferredTransfers.begin(); it != deferredTransfers.end(); ++ it ) {
+			std::vector<std::unique_ptr<ClassAd>> result_ads;
 			TransferPluginResult result = InvokeMultipleFileTransferPlugin( errstack, it->first, it->second,
-				LocalProxyName.c_str(), false, nullptr );
+				LocalProxyName.c_str(), false, &result_ads );
 			if (result == TransferPluginResult::Success) {
 				/*  TODO: handle deferred files.  We may need to unparse the deferredTransfers files. */
 			} else {
@@ -3233,7 +3252,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 }
 
 void
-FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc) const
+FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc)
 {
 	if(!PeerDoesTransferAck) {
 		success = true;
@@ -3290,6 +3309,12 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 		error_desc = hold_reason_buf;
 		free(hold_reason_buf);
 	}
+	// If this is the condor_shadow (indicated by IsServer() == true) then update
+	// our file transfer stats to include those sent by the condor_starter
+	ClassAd* transfer_stats = dynamic_cast<ClassAd*>(ad.Lookup("TransferStats"));
+	if (transfer_stats && IsServer()) {
+		Info.stats.Update(*transfer_stats);
+	}
 }
 
 void
@@ -3328,6 +3353,7 @@ FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_cod
 	}
 
 	ad.Assign(ATTR_RESULT,result);
+	ad.Insert("TransferStats", new ClassAd(Info.stats));
 	if(!success) {
 		ad.Assign(ATTR_HOLD_REASON_CODE,hold_code);
 		ad.Assign(ATTR_HOLD_REASON_SUBCODE,hold_subcode);
@@ -3444,7 +3470,7 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	Info.success = true;
 	Info.in_progress = true;
 	Info.xfer_status = XFER_STATUS_UNKNOWN;
-	Info.num_cedar_files = 0;
+	Info.stats.Clear();
 	TransferStart = time(NULL);
 
 	if (blocking) {
@@ -3540,11 +3566,23 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 				   sizeof(int) );
 		if(n != sizeof(int)) write_failed = true;
 	}
+	// Classads need to be unparsed to strings to send over the wire
+	// First send the length, then send the string itself
+	std::string stats;
+	classad::ClassAdUnParser unparser;
+	unparser.Unparse(stats, &Info.stats);
+	int stats_len = stats.length();
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
-				   (char *)&Info.num_cedar_files,
+				   (char *)&stats_len,
 				   sizeof(int) );
 		if(n != sizeof(int)) write_failed = true;
+	}
+	if(!write_failed) {
+		n = daemonCore->Write_Pipe( TransferPipe[1],
+				   stats.c_str(),
+				   stats_len );
+		if(n != stats_len) write_failed = true;
 	}
 	int error_len = Info.error_desc.length();
 	if(error_len) {
@@ -4830,7 +4868,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		numFiles++;
 
 		if (!fileitem.isSrcUrl() && !fileitem.isDestUrl()) {
-			Info.num_cedar_files++;
+			int num_cedar_files = 0;
+			Info.stats.LookupInteger("CedarFilesCount", num_cedar_files);
+			num_cedar_files++;
+			Info.stats.InsertAttr("CedarFilesCount", num_cedar_files);
 		}
 
 			// The spooled files list is used to generate
@@ -5995,7 +6036,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 			num_ads++;
 			this_file_stats_ad.InsertAttr( "PluginExitCode", exit_status );
-			OutputFileTransferStats( this_file_stats_ad );
+			RecordFileTransferStats( this_file_stats_ad );
 
 			// If this classad represents a failed transfer, produce an error
 			bool transfer_success = false;
@@ -6040,7 +6081,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	return result;
 }
 
-int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
+int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
 
 	// this log is meant to be kept in the condor LOG directory, so switch to
 	// the correct priv state to manipulate files in that dir.
@@ -6105,6 +6146,31 @@ int FileTransfer::OutputFileTransferStats( ClassAd &stats ) {
 
 	// back to previous priv state
 	set_priv(saved_priv);
+
+	// In addition to the log file, we also want to save stats in our FileTransferInfo object
+	std::string protocol;
+	if (stats.LookupString("TransferProtocol", protocol)) {
+		// Do not record cedar stats here, only plugins
+		if (protocol != "cedar") {
+			upper_case(protocol);
+			std::string attr_count = protocol + "FilesCount";
+			std::string attr_size = protocol + "SizeBytes";
+
+			int num_files = 0;
+			Info.stats.LookupInteger(attr_count, num_files);
+			num_files++;
+			Info.stats.InsertAttr(attr_count, num_files);
+
+			int this_size_bytes;
+			if (stats.LookupInteger("TransferTotalBytes", this_size_bytes)) {
+				int prev_size_bytes;
+				if (!Info.stats.LookupInteger(attr_size, prev_size_bytes)) {
+					prev_size_bytes = 0;
+				}
+				Info.stats.InsertAttr(attr_size, prev_size_bytes + this_size_bytes);
+			}
+		}
+	}
 
 	return 0;
 }

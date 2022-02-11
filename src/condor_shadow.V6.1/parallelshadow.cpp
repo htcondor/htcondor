@@ -893,15 +893,51 @@ ParallelShadow::bytesReceived( void )
 }
 
 void
-ParallelShadow::getFileTransferStats(int &upload_file_cnt,int &download_file_cnt)
+ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_stats)
 {
-	upload_file_cnt = 0;
-	download_file_cnt = 0;
 	MpiResource* mpi_res;
 	for( size_t i=0; i<ResourceList.size() ; i++ ) {
 		mpi_res = ResourceList[i];
-		upload_file_cnt += mpi_res->m_upload_xfer_file_count;
-		download_file_cnt += mpi_res->m_download_xfer_file_count;
+		ClassAd* res_upload_file_stats = &mpi_res->m_upload_file_stats;
+		ClassAd* res_download_file_stats = &mpi_res->m_download_file_stats;
+
+		// Calculate upload_stats as a cumulation of all resource upload stats
+		for (auto it = res_upload_file_stats->begin(); it != res_upload_file_stats->end(); it++) {
+			const std::string& attr = it->first;
+
+			// Lookup the value of this attribute. We only count integer values.
+			classad::Value attr_val;
+			int this_val;
+			it->second->Evaluate(attr_val);
+			if (!attr_val.IsIntegerValue(this_val)) {
+				continue;
+			}
+
+			// Lookup the previous value if it exists
+			int prev_val = 0;
+			upload_stats.LookupInteger(attr, prev_val);
+
+			upload_stats.InsertAttr(attr, prev_val + this_val);
+		}
+
+		// Calculate download_stats as a cumulation of all resource download stats
+		for (auto it = res_download_file_stats->begin(); it != res_download_file_stats->end(); it++) {
+			const std::string& attr = it->first;
+
+			// Lookup the value of this attribute. We only count integer values.
+			classad::Value attr_val;
+			int this_val;
+			it->second->Evaluate(attr_val);
+			if (!attr_val.IsIntegerValue(this_val)) {
+				continue;
+			}
+
+			// Lookup the previous value if it exists
+			int prev_val = 0;
+			download_stats.LookupInteger(attr, prev_val);
+
+			download_stats.InsertAttr(attr, prev_val + this_val);
+		}
 	}
 }
 
