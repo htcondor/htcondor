@@ -903,7 +903,7 @@ ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_st
 
 		// Calculate upload_stats as a cumulation of all resource upload stats
 		for (auto it = res_upload_file_stats->begin(); it != res_upload_file_stats->end(); it++) {
-			std::string attr = it->first.c_str();
+			const std::string& attr = it->first;
 
 			// Lookup the value of this attribute. We only count integer values.
 			classad::Value attr_val;
@@ -922,7 +922,7 @@ ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_st
 
 		// Calculate download_stats as a cumulation of all resource download stats
 		for (auto it = res_download_file_stats->begin(); it != res_download_file_stats->end(); it++) {
-			std::string attr = it->first.c_str();
+			const std::string& attr = it->first;
 
 			// Lookup the value of this attribute. We only count integer values.
 			classad::Value attr_val;

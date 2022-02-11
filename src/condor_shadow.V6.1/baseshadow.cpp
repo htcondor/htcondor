@@ -1625,7 +1625,7 @@ BaseShadow::updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new
 
 	// Iterate over the list of new stats
 	for (auto it = new_stats.begin(); it != new_stats.end(); it++) {
-		std::string attr = it->first.c_str();
+		const std::string& attr = it->first;
 		std::string attr_lastrun = attr + "LastRun";
 		std::string attr_total = attr + "Total";
 
