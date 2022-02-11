@@ -23,6 +23,11 @@ New Features:
   variables to be evaluated for periodic job policy.
   :jira:`905`
 
+- Container universe now supports running singularity jobs where the 
+  command executable is hardcoded in to the runfile.  We call this 
+  running the container as the job.
+  :jira:`966`
+
 - In most situations, jobs in COMPLETED or REMOVED status will no longer
   transition to HELD status.
   Before, these jobs could transition to HELD status due to job policy
