@@ -150,7 +150,7 @@ printExitString( ClassAd* ad, int exit_reason, std::string &str )
 		return true;
 		break;
 
-	case JOB_NOT_CKPTED:
+	case JOB_SHOULD_REQUEUE:
 		str += "was evicted by condor, without a checkpoint";
 		return true;
 		break;

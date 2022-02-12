@@ -169,14 +169,14 @@ RemoteResource::activateClaim( int starterVersion )
 	int num_retries = 0;
 
 	if ( ! dc_startd ) {
-		shadow->dprintf( D_ALWAYS, "Shadow doesn't have startd contact "
-						 "information in RemoteResource::activateClaim()\n" ); 
+		dprintf( D_ALWAYS, "Shadow doesn't have startd contact "
+		         "information in RemoteResource::activateClaim()\n" );
 		setExitReason(JOB_SHADOW_USAGE);  // no better exit reason available
 		return false;
 	}
 
 	if ( !jobAd ) {
-		shadow->dprintf( D_ALWAYS, "JobAd not defined in RemoteResource\n" );
+		dprintf( D_ALWAYS, "JobAd not defined in RemoteResource\n" );
 		setExitReason(JOB_SHADOW_USAGE);  // no better exit reason available
 		return false;
 	}
@@ -230,9 +230,9 @@ RemoteResource::activateClaim( int starterVersion )
 										  &claim_sock );
 		switch( reply ) {
 		case OK:
-			shadow->dprintf( D_ALWAYS,
-							 "Request to run on %s %s was ACCEPTED\n",
-							 machineName ? machineName:"", dc_startd->addr() );
+			dprintf( D_ALWAYS,
+			         "Request to run on %s %s was ACCEPTED\n",
+			         machineName ? machineName:"", dc_startd->addr() );
 			// Record the activation start time (HTCONDOR-861).
 			activation.StartTime = time(NULL);
 				// first, set a timeout on the socket
@@ -256,9 +256,9 @@ RemoteResource::activateClaim( int starterVersion )
 			return true;
 			break;
 		case CONDOR_TRY_AGAIN:
-			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s %s was DELAYED (previous job still being vacated)\n",
-							 machineName ? machineName:"", dc_startd->addr() );
+			dprintf( D_ALWAYS,
+			         "Request to run on %s %s was DELAYED (previous job still being vacated)\n",
+			         machineName ? machineName:"", dc_startd->addr() );
 			num_retries++;
 			if( num_retries > max_retries ) {
 				dprintf( D_ALWAYS, "activateClaim(): Too many retries, "
@@ -272,22 +272,22 @@ RemoteResource::activateClaim( int starterVersion )
 			break;
 
 		case CONDOR_ERROR:
-			shadow->dprintf( D_ALWAYS, "%s: %s\n", machineName ? machineName:"", dc_startd->error() );
+			dprintf( D_ALWAYS, "%s: %s\n", machineName ? machineName:"", dc_startd->error() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
 
 		case NOT_OK:
-			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s %s was REFUSED\n",
-							 machineName ? machineName:"", dc_startd->addr() );
+			dprintf( D_ALWAYS,
+			         "Request to run on %s %s was REFUSED\n",
+			         machineName ? machineName:"", dc_startd->addr() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
 		default:
-			shadow->dprintf( D_ALWAYS, "Got unknown reply(%d) from "
-							 "request to run on %s %s\n", reply,
-							 machineName ? machineName:"", dc_startd->addr() );
+			dprintf( D_ALWAYS, "Got unknown reply(%d) from "
+			         "request to run on %s %s\n", reply,
+			         machineName ? machineName:"", dc_startd->addr() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
@@ -309,8 +309,8 @@ RemoteResource::killStarter( bool graceful )
 		return true;
 	}
 	if ( ! dc_startd ) {
-		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-						 "DCStartd object NULL!\n");
+		dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+		         "DCStartd object NULL!\n");
 		return false;
 	}
 
@@ -398,15 +398,15 @@ bool RemoteResource::suspend()
 			if ( dc_startd->_suspendClaim() )
 				bRet = true;
 			else
-				shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): dc_startd->suspendClaim FAILED!\n");
+				dprintf( D_ALWAYS, "RemoteResource::suspend(): dc_startd->suspendClaim FAILED!\n");
 
 		}
 		else
-			shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): DCStartd object NULL!\n");
+			dprintf( D_ALWAYS, "RemoteResource::suspend(): DCStartd object NULL!\n");
 
 	}
 	else
-		shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): Not connected to resource!\n");
+		dprintf( D_ALWAYS, "RemoteResource::suspend(): Not connected to resource!\n");
 
 	return (bRet);
 }
@@ -420,10 +420,10 @@ bool RemoteResource::resume()
 		if ( dc_startd->_continueClaim() )
 			bRet = true;
 		else
-			shadow->dprintf( D_ALWAYS, "RemoteResource::resume(): dc_startd->resume FAILED!\n");
+			dprintf( D_ALWAYS, "RemoteResource::resume(): dc_startd->resume FAILED!\n");
 	}
 	else
-		shadow->dprintf( D_ALWAYS, "RemoteResource::resume(): Not connected to resource!\n");
+		dprintf( D_ALWAYS, "RemoteResource::resume(): Not connected to resource!\n");
 		
 	return (bRet);
 }
@@ -432,33 +432,31 @@ bool RemoteResource::resume()
 void
 RemoteResource::dprintfSelf( int debugLevel )
 {
-	shadow->dprintf ( debugLevel, "RemoteResource::dprintSelf printing "
+	dprintf ( debugLevel, "RemoteResource::dprintSelf printing "
 					  "host info:\n");
 	if( dc_startd ) {
 		const char* addr = dc_startd->addr();
 		const char* id = dc_startd->getClaimId();
-		shadow->dprintf( debugLevel, "\tstartdAddr: %s\n", 
-						 addr ? addr : "Unknown" );
-		shadow->dprintf( debugLevel, "\tClaimId: %s\n", 
-						 id ? id : "Unknown" );
+		dprintf( debugLevel, "\tstartdAddr: %s\n",
+		         addr ? addr : "Unknown" );
+		dprintf( debugLevel, "\tClaimId: %s\n",
+		         id ? id : "Unknown" );
 	}
 	if( machineName ) {
-		shadow->dprintf( debugLevel, "\tmachineName: %s\n",
-						 machineName );
+		dprintf( debugLevel, "\tmachineName: %s\n", machineName );
 	}
 	if( starterAddress ) {
-		shadow->dprintf( debugLevel, "\tstarterAddr: %s\n", 
-						 starterAddress );
+		dprintf( debugLevel, "\tstarterAddr: %s\n", starterAddress );
 	}
-	shadow->dprintf( debugLevel, "\texit_reason: %d\n", exit_reason );
-	shadow->dprintf( debugLevel, "\texited_by_signal: %s\n", 
-					 exited_by_signal ? "True" : "False" );
+	dprintf( debugLevel, "\texit_reason: %d\n", exit_reason );
+	dprintf( debugLevel, "\texited_by_signal: %s\n",
+	         exited_by_signal ? "True" : "False" );
 	if( exited_by_signal ) {
-		shadow->dprintf( debugLevel, "\texit_signal: %lld\n", 
-						 (long long)exit_value );
+		dprintf( debugLevel, "\texit_signal: %lld\n",
+		         (long long)exit_value );
 	} else {
-		shadow->dprintf( debugLevel, "\texit_code: %lld\n", 
-						 (long long)exit_value );
+		dprintf( debugLevel, "\texit_code: %lld\n",
+		         (long long)exit_value );
 	}
 }
 
@@ -527,7 +525,7 @@ RemoteResource::handleSysCalls( Stream * /* sock */ )
 	thisRemoteResource = this;
 
 	if (do_REMOTE_syscall() < 0) {
-		shadow->dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
+		dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
 		attemptShutdown();
 		return KEEP_STREAM;
 	}
@@ -976,12 +974,12 @@ RemoteResource::setExitReason( int reason )
 {
 	// Set the exit_reason, but not if the reason is JOB_KILLED.
 	// This prevents exit_reason being reset from JOB_KILLED to
-	// JOB_NOT_CKPTED or some such when the starter gets killed
+	// JOB_SHOULD_REQUEUE or some such when the starter gets killed
 	// and the syscall sock goes away.
 
 	if( exit_reason != JOB_KILLED && -1 == exit_reason) {
-		shadow->dprintf( D_FULLDEBUG, "setting exit reason on %s to %d\n", 
-					 machineName ? machineName : "???", reason ); 
+		dprintf( D_FULLDEBUG, "setting exit reason on %s to %d\n",
+		         machineName ? machineName : "???", reason );
 			
 		exit_reason = reason;
 	}
@@ -1838,11 +1836,11 @@ RemoteResource::setResourceState( ResourceState s )
 {
 	if ( state != s )
 	{
-		shadow->dprintf( D_FULLDEBUG,
-						"Resource %s changing state from %s to %s\n",
-						machineName ? machineName : "???", 
-						rrStateToString(state), 
-						rrStateToString(s) );
+		dprintf( D_FULLDEBUG,
+		         "Resource %s changing state from %s to %s\n",
+		         machineName ? machineName : "???",
+		         rrStateToString(state),
+		         rrStateToString(s) );
 		state = s;
 	}
 }

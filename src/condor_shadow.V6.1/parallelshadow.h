@@ -195,13 +195,6 @@ class ParallelShadow : public BaseShadow
 		*/
 	void spawnNode( MpiResource* rr );
 
-		/** A complex function that deals with the end of an MPI
-			job.  It has two functions: 1) figure out if all the 
-			resources should be told to kill themselves and 
-			2) return TRUE if every resource is dead. 
-		    @param exitReason The job exit reason. */
-	int shutDownLogic( int& exitReason );
-
         /** The number of the next resource to start...when in start mode */
     int nextResourceToStart;
 
