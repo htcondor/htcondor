@@ -26,6 +26,103 @@ Bugs Fixed:
    :jira:`724`
    :jira:`730`
 
+Version 9.5.4
+-------------
+
+Release Notes:
+
+- HTCondor version 9.5.4 released on February 8, 2022.
+
+New Features:
+
+- Improved the ability of the Access Point to detect the disappearance
+  of an Execution Point that is running a job.  Specifically, the ability
+  of the *condor_shadow* to detect a problem with the *condor_starter*.
+  :jira:`954`
+
+Bugs Fixed:
+
+- HTCondor no longer assumes that PID 1 is always visible.  Instead,
+  it checks to see if ``/proc`` was mounted with the ``hidepid`` option
+  of ``1`` or less, and only checks for PID 1 if it was.
+  :jira:`944`
+
+Version 9.5.3
+-------------
+
+Release Notes:
+
+- HTCondor version 9.5.3 released on February 1, 2021.
+
+New Features:
+
+- Added new configuration option, :macro:`CCB_TIMEOUT`.  Added new
+  configuration option, :macro:`CCB_REQUIRED_TO_START`, which if set causes
+  HTCondor to exit if :macro:`CCB_ADDRESS` was set but HTCondor could
+  not obtain one.  :macro:`CCB_REQUIRED_TO_START` is ignored if
+  :macro:`USE_SHARED_PORT` is set, which is the default.
+  :jira:`925`
+
+Bugs Fixed:
+
+- Fixed a bug that caused any daemon to crash when it was configured
+  to report to more than one collector, and any of the collectors'
+  names could not be resolved by DNS.
+  :jira:`952`
+
+- Fixed a bug introduced earlier in this series where in very 
+  rare cases, a schedd would not appear in the collector when it
+  started up, but would appear an hour later.
+  :jira:`931`
+
+Version 9.5.2
+-------------
+
+Release Notes:
+
+- HTCondor version 9.5.2 released on January 25, 2021.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where the *condor_shadow* could run indefinitely when it
+  failed to contact the *condor_startd* in an attempt to kill the
+  job. This problem could become visible to the user in several different ways,
+  such as a job appearing to not go on hold when periodic_hold becomes true.
+  :jira:`933`
+
+- Fix problem where **condor_ssh_to_job** may fail to connect to a job
+  running under an HTCondor tarball installation (glidein) built from an RPM
+  based platform.
+  :jira:`942`
+
+- Fixed a bug in the file transfer mechanism where URL transfers caused 
+  subsequent failures to report incorrect error messages.
+  :jira:`915`
+
+Version 9.5.1
+-------------
+
+Release Notes:
+
+- HTCondor version 9.5.1 released on January 18, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- HTCondor now properly creates directories when transferring a directory
+  tree out of SPOOL while preserving relative paths.  This bug would manifest
+  after a self-checkpointing job created a file in a new subdirectory of a
+  directory in its checkpoint: when the job was rescheduled and had to
+  download its checkpoint, it would go on hold.
+  :jira:`923`
+
 Version 9.5.0
 -------------
 

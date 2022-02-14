@@ -4,7 +4,7 @@ condor (9.6.0-1) stable; urgency=high
     https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
     https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0002
 
- -- Tim Theisen <tim@cs.wisc.edu>  Mon, 24 Jan 2022 16:39:00 -0600
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 14 Feb 2022 16:39:00 -0600
 
 condor (9.0.10-1) stable; urgency=high
 
@@ -12,7 +12,37 @@ condor (9.0.10-1) stable; urgency=high
     https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
     https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0002
 
- -- Tim Theisen <tim@cs.wisc.edu>  Mon, 24 Jan 2022 10:19:00 -0600
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 14 Feb 2022 10:19:00 -0600
+
+condor (9.5.4-1) stable; urgency=medium
+
+  * The access point more robustly detects execution points that disappear
+  * The condor_procd will now function if /proc is mounted with hidepid=2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 07 Feb 2022 16:33:00 -0600
+
+condor (9.5.3-1) stable; urgency=medium
+
+  * Fix daemon crash where one of multiple collectors is not in DNS
+  * Fix bug where initial schedd registration was rarely delayed by an hour
+  * Can set CCB_TIMEOUT and choose to not start up if CCB address unavailable
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 01 Feb 2022 10:46:00 -0600
+
+condor (9.5.2-1) stable; urgency=medium
+
+  * Fix bug where job may not go on hold when exceeding allowed_job_duration
+  * Fix bug where the condor_shadow could run indefinitely
+  * Fix bug where condor_ssh_to_job may fail to connect
+  * Fix bug where a file transfer error may identify the wrong file
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 25 Jan 2022 09:44:00 -0600
+
+condor (9.5.1-1) stable; urgency=medium
+
+  * Fix bug where a self-checkpointing job may erroneously be held
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 17 Jan 2022 10:15:00 -0600
 
 condor (9.5.0-1) stable; urgency=medium
 

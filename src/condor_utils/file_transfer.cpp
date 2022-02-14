@@ -2126,7 +2126,6 @@ FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
 int
 FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 {
-	int rc = 0;
 	filesize_t bytes=0;
 	filesize_t peer_max_transfer_bytes=0;
 	std::string filename;;
@@ -2250,7 +2249,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 	// Start the main download loop. Read reply codes + filenames off a
 	// socket wire, s, then handle downloads according to the reply code.
-	for (;;) {
+	bool all_transfers_succeeded = true;
+	for( int rc = 0; ; ) {
 		TransferCommand xfer_command = TransferCommand::Unknown;
 		{
 			int reply;
@@ -2784,7 +2784,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				rc = GET_FILE_PLUGIN_FAILED;
 			}
 
-			if( (rc != GET_FILE_PLUGIN_FAILED) && multifile_plugins_enabled ) {
+			if( all_transfers_succeeded && (rc != GET_FILE_PLUGIN_FAILED) && multifile_plugins_enabled ) {
 
 				// Determine which plugin to invoke, and whether it supports multiple
 				// file transfer.
@@ -2818,7 +2818,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				}
 			}
 
-			if( (rc != GET_FILE_PLUGIN_FAILED) && (!isDeferredTransfer) ) {
+			if( all_transfers_succeeded && (rc != GET_FILE_PLUGIN_FAILED) && (!isDeferredTransfer) ) {
 				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", UrlSafePrint(URL), UrlSafePrint(fullname));
 				TransferPluginResult result = InvokeFileTransferPlugin(errstack, URL.c_str(), fullname.c_str(), &pluginStatsAd, LocalProxyName.c_str());
 				// If transfer failed, set rc to error code that ReliSock recognizes
@@ -2947,7 +2947,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		thisFileStats.TransferEndTime = condor_gettimestamp_double();
 		thisFileStats.ConnectionTimeSeconds = thisFileStats.TransferEndTime - thisFileStats.TransferStartTime;
 
-		if( rc < 0 ) {
+		// Report only the first error.
+		if( rc < 0 && all_transfers_succeeded ) {
+			all_transfers_succeeded = false;
 			error_buf.formatstr("%s at %s failed to receive file %s",
 			                  get_mySubSystem()->getName(),
 							  s->my_ip_str(),fullname.c_str());
@@ -3101,7 +3103,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					errstack.getFullText().c_str() );
 				download_success = false;
 				hold_code = CONDOR_HOLD_CODE::DownloadFileError;
-				hold_subcode = rc;
+				// This should probably be something else, maybe its own
+				// (non-zero) constant.  See HTCONDOR-842.  It used to be
+				// `rc`, but that was probably always 0, and made no sense
+				// outside of the main file-transfer loop anyway.
+				hold_subcode = 0;
 				try_again = false;
 				error_buf.formatstr( "%s", errstack.getFullText().c_str() );
 			}
@@ -6438,6 +6444,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 				// ExpandParentDirectories() calls ExpandFileTransferList()
 				// with preserveRelativePaths turned off -- the whole point
 				// of it being to generate paths one level at a time.
+				// dprintf( D_ALWAYS, ">>> [c] ExpandParentDirectories( %s, %s )\n", src_path, iwd );
 				if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace )) {
 					return false;
 				}
@@ -6499,6 +6506,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 				// ExpandParentDirectories() adds this back in the correct place.
 				expanded_list.pop_back();
 
+				// dprintf( D_ALWAYS, ">>> [b] ExpandParentDirectories( %s, %s, ..., ... )\n", src_path, iwd );
 				if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace )) {
 					return false;
 				}
@@ -6519,6 +6527,17 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 					if( IS_ANY_DIR_DELIM_CHAR(relative_path[0]) ) { ++relative_path; }
 					// dprintf( D_ALWAYS, ">>> preserving relative path of directory (%s) in SPOOL (as %s)\n", src_path, relative_path );
 
+					// ExpandParentDirectories() adds this back in the correct place.
+					expanded_list.pop_back();
+
+					// ExpandParentDirectories() needs its first argument to
+					// be the path relative to SPOOL, and its second argument
+					// needs to be SPOOL (to parallel the non-SPOOL use).
+					// dprintf( D_ALWAYS, ">>> [a] ExpandParentDirectories( %s, %s, ..., ... )\n", relative_path, SpoolSpace );
+					if(! ExpandParentDirectories( relative_path, SpoolSpace, expanded_list, SpoolSpace )) {
+						return false;
+					}
+
 					//
 					// relative_path is relative to SpoolSpace, not the
 					// destination, which means we can't use it to set
@@ -6527,15 +6546,9 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 					//
 					ASSERT(! fullpath(destination.c_str()));
 
-					std::string parent(SpoolSpace);
 					if( starts_with( relative_path, destination ) ) {
 						relative_path = &relative_path[destination.length()];
 						if( IS_ANY_DIR_DELIM_CHAR(relative_path[0]) ) { ++relative_path; }
-
-						if(! IS_ANY_DIR_DELIM_CHAR(parent[parent.length() - 1])) {
-							parent += DIR_DELIM_CHAR;
-						}
-						parent += destination;
 					}
 
 					if(  (! destination.empty())
@@ -6544,14 +6557,6 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 						destination += DIR_DELIM_CHAR;
 					}
 					destination += relative_path;
-
-					// ExpandParentDirectories() adds this back in the correct place.
-					expanded_list.pop_back();
-
-					// dprintf( D_ALWAYS, ">>> ExpandParentDirectories( %s, %s, ..., ... )\n", relative_path, parent.c_str() );
-					if(! ExpandParentDirectories( relative_path, parent.c_str(), expanded_list, SpoolSpace )) {
-						return false;
-					}
 				} else {
 					destination += condor_basename(src_path);
 				}
@@ -6563,7 +6568,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	//
 	// Transfer the contents of the directory.
 	//
-	// dprintf( D_ALWAYS, ">>> transferring directory contents to %s\n", destination.c_str() );
+	// dprintf( D_ALWAYS, ">>> transferring contents of directory %s to %s\n", src_path, destination.c_str() );
 
 	Directory dir( &st );
 	dir.Rewind();
@@ -6579,6 +6584,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		}
 		file_full_path += file_in_dir;
 
+		// dprintf( D_ALWAYS, ">>> calling ExpandFileTransferList( %s, %s, %s, ... )\n", file_full_path.c_str(), destination.c_str(), iwd );
 		if( !ExpandFileTransferList( file_full_path.c_str(), destination.c_str(), iwd, max_depth, expanded_list, preserveRelativePaths, SpoolSpace ) ) {
 			rc = false;
 		}

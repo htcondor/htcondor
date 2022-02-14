@@ -1682,15 +1682,33 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Tue Feb 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.6.0-1
+* Tue Mar 08 2022 Tim Theisen <tim@cs.wisc.edu> - 9.6.0-1
 - Fixes for security issues
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0002
 
-* Tue Feb 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.10-1
+* Tue Mar 08 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.10-1
 - Fixes for security issues
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0002
+
+* Tue Feb 08 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.4-1
+- The access point more robustly detects execution points that disappear
+- The condor_procd will now function if /proc is mounted with hidepid=2
+
+* Tue Feb 01 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.3-1
+- Fix daemon crash where one of multiple collectors is not in DNS
+- Fix bug where initial schedd registration was rarely delayed by an hour
+- Can set CCB_TIMEOUT and choose to not start up if CCB address unavailable
+
+* Tue Jan 25 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.2-1
+- Fix bug where job may not go on hold when exceeding allowed_job_duration
+- Fix bug where the condor_shadow could run indefinitely
+- Fix bug where condor_ssh_to_job may fail to connect
+- Fix bug where a file transfer error may identify the wrong file
+
+* Tue Jan 18 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.1-1
+- Fix bug where a self-checkpointing job may erroneously be held
 
 * Thu Jan 13 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.0-1
 - Initial implementation of Container Universe

@@ -58,7 +58,8 @@ static const char *Resource_State_String [] = {
 
 RemoteResource::RemoteResource( BaseShadow *shad ) 
 	: m_want_remote_updates(false),
-	  m_want_delayed(true)
+	  m_want_delayed(true),
+	  m_wait_on_kill_failure(false)
 {
 	shadow = shad;
 	dc_startd = NULL;
@@ -84,6 +85,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	supports_reconnect = false;
 	next_reconnect_tid = -1;
 	proxy_check_tid = -1;
+	no_update_received_tid = -1;
 	last_proxy_timestamp = time(0); // We haven't sent the proxy to the starter yet, so anything before "now" means it hasn't changed.
 	m_remote_proxy_expiration = 0;
 	m_remote_proxy_renew_time = 0;
@@ -134,6 +136,12 @@ RemoteResource::~RemoteResource()
 		daemonCore->Cancel_Timer(proxy_check_tid);
 		proxy_check_tid = -1;
 	}
+
+	if (no_update_received_tid != -1) {
+		daemonCore->Cancel_Timer(no_update_received_tid);
+		no_update_received_tid = -1;
+	}
+
 
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
 		if( m_claim_session.secSessionId() ) {
@@ -313,9 +321,41 @@ RemoteResource::killStarter( bool graceful )
 		abortFileTransfer();
 	}
 
-	if( ! dc_startd->deactivateClaim(graceful,&claim_is_closing) ) {
-		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-						 "Could not send command to startd\n" );
+	// If we got the job_exit syscall, then we should expect
+	// deactivateClaim() to fail, because the starter exits right
+	// after that. But old starters (prior to 8.7.8) wait around
+	// indefinitely, expecting our deactivateClaim() to trigger their
+	// demise. So don't do our retry-and-wait-on-failure song and dance
+	// if we saw a job_exit.
+	// TODO If we add a version check or decide we don't care about 8.6.X
+	//   and earlier, we can just return true if m_got_job_exit==true.
+	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_exit;
+	int num_tries = wait_on_failure ? 3 : 1;
+	while (num_tries > 0) {
+		if (dc_startd->deactivateClaim(graceful, &claim_is_closing)) {
+			break;
+		}
+		num_tries--;
+		if (num_tries) {
+			const int delay = 5;
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+			         "Could not send command to startd, will retry in %d seconds\n", delay );
+			sleep(delay);
+		} else {
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+			         "Could not send command to startd\n" );
+		}
+	}
+
+	if (num_tries == 0) {
+		if (wait_on_failure) {
+			disconnectClaimSock("Failed to contact startd, forcing disconnect from starter");
+			int remaining = remainingLeaseDuration();
+			if (remaining > 0) {
+				dprintf(D_ALWAYS, "Failed to kill starter, sleeping for remaining lease duration of %d seconds\n", remaining);
+				sleep(remaining);
+			}
+		}
 		return false;
 	}
 
@@ -606,6 +646,40 @@ RemoteResource::closeClaimSock( void )
 	}
 }
 
+void
+RemoteResource::disconnectClaimSock(const char *err_msg)
+{
+	if (!claim_sock) {
+		return;
+	}
+
+	std::string my_err_msg;
+	formatstr(my_err_msg, "%s %s",
+	          (err_msg ? err_msg : "Disconnecting from starter"),
+	          claim_sock->get_sinful_peer());
+
+	thisRemoteResource->closeClaimSock();
+
+	if( Shadow->supportsReconnect() ) {
+			// instead of having to EXCEPT, we can now try to
+			// reconnect.  happy day! :)
+		dprintf( D_ALWAYS, "%s\n", my_err_msg.c_str() );
+
+		Shadow->resourceDisconnected(thisRemoteResource);
+
+		if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
+			dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
+			Shadow->gracefulShutDown();
+			EXCEPT( "%s", my_err_msg.c_str() );
+		}
+			// tell the shadow to start trying to reconnect
+		Shadow->reconnect();
+	} else {
+			// The remote starter doesn't support it, so give up
+			// like we always used to.
+		EXCEPT( "%s", my_err_msg.c_str() );
+	}
+}
 
 int
 RemoteResource::getExitReason() const
@@ -1045,6 +1119,31 @@ RemoteResource::setJobAd( ClassAd *jA )
 	jA->LookupString(ATTR_X509_USER_PROXY, proxy_path);
 }
 
+void
+RemoteResource::updateFromStarterTimeout()
+{
+	// If we landed here, then we expected to receive an update from the starter,
+	// but it didn't arrive yet.  Even if the remote syscall sock is still connected,
+	// failing to receive an update could mean that the starter is wedged or dead
+	// (and some goofed up NAT box is artifically keeping the remote syscall sock connected).
+
+	// So instead of the shadow hanging out forever waiting to hear from a starter that
+	// might be dead, close our remote syscall sock now and try to reconnect.
+
+	// NOTE: only close the sock if we are executing the job, not shutting down or
+	// transferring files or whatever.  Why?  Well, in these situations, the starter
+	// may legitimately be fine and yet not sending updates anymore
+	// because it is about to shutdown, or because a long file transfer is
+	// happening in the foreground.
+
+	if (getResourceState() == RR_EXECUTING && !filetrans.transferIsInProgress()) {
+		disconnectClaimSock("Failed to receive an update from the starter when expected, forcing disconnect");
+	}
+
+	// Timer is not periodic, so since it has now fired, the tid is invalid. Clear it.
+	no_update_received_tid = -1;
+}
+
 
 void
 RemoteResource::updateFromStarter( ClassAd* update_ad )
@@ -1053,7 +1152,22 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	std::string string_value;
 	bool bool_value;
 
-	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
+	int maxinterval = 0;
+	update_ad->LookupInteger(ATTR_JOBINFO_MAXINTERVAL, maxinterval);
+	if (no_update_received_tid != -1) {
+		daemonCore->Cancel_Timer(no_update_received_tid);
+		no_update_received_tid = -1;
+	}
+	if (maxinterval > 0) {
+		no_update_received_tid = daemonCore->Register_Timer(
+			maxinterval * 3,  // should receive another update in maxinterval secs, x3 to be sure
+			(TimerHandlercpp)&RemoteResource::updateFromStarterTimeout,
+			"RemoteResource::updateFromStarterTimeout()", this
+		);
+	}
+
+	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter() maxinterval=%d\n",
+		maxinterval);
 	hadContact();
 
 	if( IsDebugLevel(D_MACHINE) ) {

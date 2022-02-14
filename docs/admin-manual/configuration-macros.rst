@@ -1941,6 +1941,15 @@ More information about networking in HTCondor can be found in
     The size of the kernel TCP read buffer in bytes for all sockets used
     by CCB. The default value is 2 KiB.
 
+:macro-def:`CCB_REQUIRED_TO_START`
+    If true, and :macro:`USE_SHARED_PORT` is false, and :macro:`CCB_ADDRESS`
+    is set, but HTCondor fails to register with any broker, HTCondor will
+    exit rather then continue to retry indefinitely.
+
+:macro-def:`CCB_TIMEOUT`
+    The length, in seconds, that we wait for any CCB operation to complete.
+    The default value is 300.
+
 :macro-def:`CCB_WRITE_BUFFER`
     The size of the kernel TCP write buffer in bytes for all sockets
     used by CCB. The default value is 2 KiB.
@@ -5746,6 +5755,13 @@ These settings affect the *condor_starter*.
     0.1. If monitoring, such as checking disk usage takes a long time,
     the *condor_starter* will monitor less frequently than specified by
     ``STARTER_UPDATE_INTERVAL``.
+
+:macro-def:`STARTER_UPDATE_INTERVAL_MAX`
+    An integer value representing an upper bound on the number of 
+    seconds between updates controlled by ``STARTER_UPDATE_INTERVAL`` and
+    ``STARTER_UPDATE_INTERVAL_TIMESLICE``.  It is recommended to leave this parameter
+    at its default value, which is calculated 
+    as ``STARTER_UPDATE_INTERVAL`` * ( 1 / ``STARTER_UPDATE_INTERVAL_TIMESLICE`` )
 
 :macro-def:`USER_JOB_WRAPPER`
     The full path and file name of an executable or script. If
