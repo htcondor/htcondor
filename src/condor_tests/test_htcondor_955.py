@@ -26,7 +26,6 @@ def job_python_file(test_dir):
         import json
         import os
         import posixpath
-        import requests
         import shutil
         import socket
         import sys
