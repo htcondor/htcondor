@@ -1671,6 +1671,16 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Mar 08 2022 Tim Theisen <tim@cs.wisc.edu> - 9.6.0-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0002
+
+* Tue Mar 08 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.10-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0002
+
 * Tue Feb 08 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.4-1
 - The access point more robustly detects execution points that disappear
 - The condor_procd will now function if /proc is mounted with hidepid=2
@@ -1777,12 +1787,12 @@ fi
 
 * Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.4-1
 - Fixes for security issues
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004
 
 * Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.15-1
 - Fix for security issue
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003
 
 * Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.1-1
 - Fixes for security issues
@@ -1791,12 +1801,12 @@ fi
 
 * Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.3-1
 - Fixes for security issues
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004
 
 * Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.14-1
 - Fix for security issue
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003
 
 * Thu Jul 08 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.2-1
 - HTCondor can be set up to use only FIPS 140-2 approved security functions
@@ -1862,8 +1872,8 @@ fi
 
 * Wed Jan 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.11-1
 - This release of HTCondor fixes security-related bugs described at
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002
 
 * Tue Nov 24 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.10-1
 - Fix bug where negotiator stopped making matches when group quotas are used
@@ -1937,17 +1947,17 @@ fi
 
 * Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.6-1
 - Fixes addressing CVE-2019-18823
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004
 
 * Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.8-1
 - Fixes addressing CVE-2019-18823
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004
 
 * Thu Jan 02 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.5-1
 - Added a new mode that skips jobs whose outputs are newer than their inputs
