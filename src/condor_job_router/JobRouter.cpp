@@ -38,6 +38,9 @@
 #include "get_daemon_name.h"
 #include "filename_tools.h"
 #include "condor_holdcodes.h"
+#include "condor_auth_passwd.h"
+#include "directory_util.h"
+#include "truncate.h"
 
 
 const char JR_ATTR_MAX_JOBS[] = "MaxJobs";
@@ -54,6 +57,7 @@ const char JR_ATTR_JOB_FAILURE_TEST[] = "JobFailureTest";
 const char JR_ATTR_JOB_SANDBOXED_TEST[] = "JobShouldBeSandboxed";
 const char JR_ATTR_USE_SHARED_X509_USER_PROXY[] = "UseSharedX509UserProxy";
 const char JR_ATTR_SHARED_X509_USER_PROXY[] = "SharedX509UserProxy";
+const char JR_ATTR_SEND_IDTOKENS[] = "SendIDTokens";
 const char JR_ATTR_OVERRIDE_ROUTING_ENTRY[] = "OverrideRoutingEntry";
 const char JR_ATTR_TARGET_UNIVERSE[] = "TargetUniverse";
 const char JR_ATTR_EDIT_JOB_IN_PLACE[] = "EditJobInPlace";
@@ -76,6 +80,9 @@ JobRouter::JobRouter(unsigned int as_tool)
 	m_periodic_timer_id = -1;
 	m_job_router_polling_period = 10;
 	m_enable_job_routing = true;
+
+	m_job_router_idtoken_refresh = 0;
+	m_job_router_idtoken_refresh_timer_id = -1;
 
 	m_job_router_entries_refresh = 0;
 	m_job_router_refresh_timer = -1;
@@ -306,6 +313,25 @@ JobRouter::config() {
 #if HAVE_JOB_HOOKS
 	m_hook_mgr->reconfig();
 #endif
+
+	m_job_router_idtoken_refresh = param_integer("JOB_ROUTER_IDTOKEN_REFRESH",0);
+	if ( ! m_operate_as_tool) {
+		bool initial_refresh = true;
+		if (m_job_router_idtoken_refresh_timer_id >= 0) {
+			daemonCore->Cancel_Timer(m_job_router_idtoken_refresh_timer_id);
+			m_job_router_idtoken_refresh_timer_id = -1;
+			initial_refresh = false;
+		}
+		if (m_job_router_idtoken_refresh > 0) {
+			m_job_router_idtoken_refresh_timer_id =
+				daemonCore->Register_Timer(
+					initial_refresh ? 0 : m_job_router_idtoken_refresh,
+					m_job_router_idtoken_refresh,
+					(TimerHandlercpp)&JobRouter::refreshIDTokens,
+					"JobRouter::refreshIDTokens", this);
+		}
+	}
+
 
 	m_job_router_entries_refresh = param_integer("JOB_ROUTER_ENTRIES_REFRESH",0);
 	if ( ! m_operate_as_tool ) {
@@ -626,6 +652,129 @@ JobRouter::config() {
 				m_schedd1_name_buf.c_str(),m_schedd1_pool_buf.c_str());
 	}
 }
+
+void
+JobRouter::refreshIDTokens() {
+	StringList items;
+	param_and_insert_unique_items("JOB_ROUTER_CREATE_IDTOKEN_NAMES", items);
+	items.remove_anycase("NAMES");
+
+	if (IsDebugLevel(D_ALWAYS)) {
+		auto_free_ptr tokenids(items.print_to_string());
+		dprintf(D_ALWAYS, "JobRouter::refreshIDTokens - %s\n", tokenids.ptr());
+	}
+
+	// Build a map of existing tokens that we will remove items from when we refresh these tokens
+	std::map<std::string, std::string> delete_tokens;
+	for (auto it : m_idtokens) { delete_tokens[it.first] = it.second; }
+
+	// Create or overwrite token files
+	for (const char * item = items.first(); item != NULL; item = items.next()) {
+		std::string knob("JOB_ROUTER_CREATE_IDTOKEN_"); knob += item;
+		auto_free_ptr props = param(knob.c_str());
+		if (props && CreateIDTokenFile(item, props)) {
+			// no need to delete this one because we are going to overwrite it
+			delete_tokens.erase(item);
+		}
+	}
+
+	for (auto it : delete_tokens) {
+		RemoveIDTokenFile(it.first);
+	}
+}
+
+bool JobRouter::CreateIDTokenFile(const char * name, const char * props)
+{
+	// props can be a new classad that has attributes to define the scope of the token
+	ClassAd ad;
+	time_t lifetime = -1;
+	std::string subject, key, token, fname, dir, tmp, owner, domain;
+	std::vector<std::string> authz_list;
+	if (initAdFromString(props, ad) && ad.size()) {
+		ad.LookupString("sub", subject);
+		ad.LookupString("kid", key);
+		ad.LookupInteger("lifetime", lifetime);
+		if (ad.LookupString("scope", tmp)) {
+			StringTokenIterator it(tmp);
+			for (auto str = it.first(); str; str = it.next()) {
+				authz_list.push_back(str);
+			}
+		}
+		ad.LookupString("dir", dir);
+		ad.LookupString("filename", fname);
+		ad.LookupString(ATTR_OWNER, owner);
+		ad.LookupString(ATTR_NT_DOMAIN, domain);
+	} else {
+		// initAdFromString will print the lines it can't parse, we just need to report that
+		// the we will not be creating the token at all as a result of the config failure
+		dprintf(D_ALWAYS, "Ignoring invalid %s IDTOKEN config : %s\n", name, props);
+		return false;
+	}
+
+	if (subject.empty()) { subject = name; }
+	if (fname.empty()) { fname = name; }
+	if (dir.empty()) { param(dir, "SEC_TOKEN_DIRECTORY"); }
+
+	CondorError err;
+	if (!Condor_Auth_Passwd::generate_token(subject, key, authz_list, lifetime, token, 0, &err)) {
+		dprintf(D_ALWAYS, "failed to create token %s : %s\n", name, err.getFullText(false).c_str());
+		return false;
+	}
+	token += "\n"; // technically token files *can* have multiple tokens separated by newline
+
+	dircat(dir.c_str(), fname.c_str(), tmp);
+
+	bool setpriv = !owner.empty();
+	priv_state old_priv = PRIV_UNKNOWN;
+	if (setpriv) {
+	#ifdef WIN32
+		// Windows always needs a domain name for init_user_ids
+		if (domain.empty()) { param(domain, "UID_DOMAIN"); }
+	#endif
+		if (!init_user_ids(owner.c_str(), domain.c_str()))
+		{
+			dprintf(D_ALWAYS, "Failed in init_user_ids(%s,%s) for CREATE_IDTOKEN_%s\n",
+				owner.c_str(), domain.c_str(), name);
+			return false;
+		}
+		old_priv = set_priv(PRIV_USER);
+	}
+
+	bool success = false;
+	int fd = safe_create_keep_if_exists(tmp.c_str(), O_CREAT | O_WRONLY | _O_BINARY, 0600);
+	if (fd >= 0) {
+		(void)full_write(fd, token.c_str(), token.size());
+		ftruncate(fd, token.size()); // incase the data in the file is less than it was before.
+		close(fd);
+
+		// save the filepath
+		m_idtokens[name] = tmp;
+		success = true;
+	} else {
+		dprintf(D_ALWAYS, "Cannot write token to %s: %s (errno=%d)\n", tmp.c_str(), strerror(errno), errno);
+	}
+
+	if (setpriv) {
+		set_priv(old_priv);
+		uninit_user_ids();
+	}
+
+	return success;
+}
+
+bool JobRouter::RemoveIDTokenFile(const std::string & name)
+{
+	auto it = m_idtokens.find(name);
+	if (it != m_idtokens.end()) {
+		dprintf(D_ALWAYS, "deleting %s IDTOKEN file : %s\n", name.c_str(), it->second.c_str());
+		unlink(it->second.c_str());
+		m_idtokens.erase(it);
+	}
+
+	return true;
+}
+
+
 
 void JobRouter::dump_routes(FILE* hf) // dump the routing information to the given file.
 {
@@ -2008,6 +2157,40 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 		return;
 	}
 
+	std::string idtokens;
+	if(!route->EvalSendIDTokens(job,idtokens)) {
+		dprintf(D_ALWAYS,
+				"JobRouter failure (%s): evaluated SendIDTokens value is invalid!\n",
+				job->JobDesc().c_str());
+		GracefullyRemoveJob(job);
+		return;
+	}
+	if (!idtokens.empty()) {
+		std::string addfiles;
+
+		StringTokenIterator it(idtokens);
+		for (auto str = it.first(); str; str = it.next()) {
+			auto idt = m_idtokens.find(str);
+			if (idt != m_idtokens.end()) {
+				if (!addfiles.empty()) { addfiles += ","; }
+				addfiles += idt->second;
+			} else {
+				dprintf(D_ALWAYS, "JobRouter failure (%s): unknown IDTOKEN %s\n", job->JobDesc().c_str(), str);
+				GracefullyRemoveJob(job);
+				return;
+			}
+		}
+
+		if (!addfiles.empty()) {
+			std::string xferfiles;
+			if (job->dest_ad.LookupString(ATTR_TRANSFER_INPUT_FILES, xferfiles) && ! xferfiles.empty()) {
+				addfiles += ",";
+				addfiles += xferfiles;
+			}
+			job->dest_ad.InsertAttr(ATTR_TRANSFER_INPUT_FILES, addfiles);
+		}
+	}
+
 	int dest_cluster_id = -1;
 	int dest_proc_id = -1;
 	bool rc;
@@ -2165,7 +2348,6 @@ RoutedJob::CleanupSharedX509UserProxy(JobRoute * /*route*/)
 	}
 	return true;
 }
-
 
 
 static bool ClassAdHasDirtyAttributes(classad::ClassAd *ad) {
@@ -2588,6 +2770,30 @@ JobRoute::EvalSharedX509UserProxy(RoutedJob *job,std::string &proxy_file)
 	}
 	return false;
 }
+
+bool JobRoute::EvalSendIDTokens(RoutedJob *job, std::string &idtokens)
+{
+	classad::ExprTree* expr = m_SendIDTokens.Expr();
+	if (expr) {
+		classad::Value val;
+		if (job->src_ad.EvaluateExpr(expr, val) && val.IsStringValue(idtokens)) {
+			return true;
+		}
+		// don't treat value==undefined as an error
+		if (ExprTreeIsLiteral(expr, val) && val.IsUndefinedValue()) {
+			idtokens.clear();
+			return true;
+		}
+		return false;
+	} else {
+		// if no expression, use the global knob
+		param(idtokens, "JOB_ROUTER_SEND_ROUTE_IDTOKENS");
+	}
+	return true;
+}
+
+
+
 
 void
 JobRouter::CleanupJob(RoutedJob *job) {
@@ -3057,6 +3263,11 @@ JobRoute::ParseNext(
 	m_EditJobInPlace.set(mset.local_param(JR_ATTR_EDIT_JOB_IN_PLACE, m_route.context()));
 	m_UseSharedX509UserProxy.set(mset.local_param(JR_ATTR_USE_SHARED_X509_USER_PROXY, m_route.context()));
 	m_SharedX509UserProxy.set(mset.local_param(JR_ATTR_SHARED_X509_USER_PROXY, m_route.context()));
+	if (mset.lookup(JR_ATTR_SEND_IDTOKENS, m_route.context())) {
+		m_SendIDTokens.set(mset.local_param(JR_ATTR_SEND_IDTOKENS, m_route.context()));
+		// if SendIDTokens is declared but empty, set it to the empty string so that the route does not use the global default
+		if (m_SendIDTokens.empty()) { m_SendIDTokens.set(strdup("\"\"")); }
+	}
 
 	bool knob_exists = false;
 	m_max_jobs = mset.local_param_int(JR_ATTR_MAX_JOBS, 100, m_route.context(), &knob_exists);

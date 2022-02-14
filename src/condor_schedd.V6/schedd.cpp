@@ -12324,13 +12324,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			break;
 
 		case JOB_CKPTED:
-		case JOB_NOT_CKPTED:
-				// no break, fall through and do the action
-		// case JOB_SHOULD_REQUEUE:
-				// we can't have the same value twice in our
-				// switch, so we can't really have a valid case
-				// for this, but it's the same number as
-				// JOB_NOT_CKPTED, so we're safe.
+		case JOB_SHOULD_REQUEUE:
 		case JOB_NOT_STARTED:
 			if( srec != NULL && !srec->removed && srec->match ) {
 				// Don't delete matches we're trying to use for a now job.
@@ -12345,7 +12339,6 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
                   is_goodput = true;
                   break;
                case JOB_SHOULD_REQUEUE:
-               //case JOB_NOT_CKPTED: for CONDOR_UNIVERSE_STANDARD
                   stats.JobsShouldRequeue += 1;
                   OTHER.JobsShouldRequeue += 1;
                   // for standard universe this is actually case JOB_NOT_CKPTED

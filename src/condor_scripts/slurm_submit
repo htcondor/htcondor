@@ -21,7 +21,7 @@ def write_dag_files(jobfile, runtime, node_count, email):
     os.chmod("sendmail.sh", st.st_mode | stat.S_IEXEC)
 
 
-    slurm_config = "DAGMAN_USE_CONDOR_SUBMIT = False"
+    slurm_config = "DAGMAN_USE_DIRECT_SUBMIT = True"
     slurm_config_file = open("slurm_submit.config", "w")
     slurm_config_file.write(slurm_config)
     slurm_config_file.close()

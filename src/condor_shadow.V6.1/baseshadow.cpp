@@ -75,8 +75,6 @@ BaseShadow::BaseShadow() {
 	attemptingReconnectAtStartup = false;
 	m_force_fast_starter_shutdown = false;
 	m_committed_time_finalized = false;
-	m_prev_run_upload_file_cnt = 0;
-	m_prev_run_download_file_cnt = 0;
 }
 
 BaseShadow::~BaseShadow() {
@@ -137,8 +135,14 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		prev_run_bytes_recvd = 0;
 	}
 
-	jobAd->LookupInteger(ATTR_TRANSFER_INPUT_FILES_TOTAL_COUNT, m_prev_run_upload_file_cnt);
-	jobAd->LookupInteger(ATTR_TRANSFER_OUTPUT_FILES_TOTAL_COUNT, m_prev_run_download_file_cnt);
+	ClassAd* prev_upload_stats = dynamic_cast<ClassAd*>(jobAd->Lookup(ATTR_TRANSFER_INPUT_STATS));
+	if (prev_upload_stats) {
+		m_prev_run_upload_file_stats.Update(*prev_upload_stats);
+	}
+	ClassAd* prev_download_stats = dynamic_cast<ClassAd*>(jobAd->Lookup(ATTR_TRANSFER_OUTPUT_STATS));
+	if (prev_download_stats) {
+		m_prev_run_download_file_stats.Update(*prev_download_stats);
+	}
 
 		// construct the core file name we'd get if we had one.
 	std::string tmp_name = iwd;
@@ -405,9 +409,13 @@ BaseShadow::reconnectFailed( const char* reason )
 		// does not return
 		DC_Exit( JOB_RECONNECT_FAILED );
 	} else {
-		dprintf(D_ALWAYS,"Exiting with JOB_SHOULD_REQUEUE\n");
+		int exit_reason = getExitReason();
+		if (exit_reason == -1) {
+			exit_reason = JOB_SHOULD_REQUEUE;
+		}
+		dprintf(D_ALWAYS,"Exiting with %d\n", exit_reason);
 		// does not return
-		DC_Exit( JOB_SHOULD_REQUEUE );
+		DC_Exit( exit_reason );
 	}
 
 	// Should never get here....
@@ -1133,7 +1141,7 @@ BaseShadow::logEvictEvent( int exitReason )
 
 	switch( exitReason ) {
 	case JOB_CKPTED:
-	case JOB_NOT_CKPTED:
+	case JOB_SHOULD_REQUEUE:
 	case JOB_KILLED:
 		break;
 	default:
@@ -1325,13 +1333,13 @@ BaseShadow::updateJobInQueue( update_t type )
 
 	ftAd.Assign(ATTR_BYTES_RECVD, (prev_run_bytes_recvd + bytesSent()) );
 
-	int upload_file_cnt = 0;
-	int download_file_cnt = 0;
-	getFileTransferStats(upload_file_cnt, download_file_cnt);
-	ftAd.Assign(ATTR_TRANSFER_INPUT_FILES_LAST_RUN_COUNT, upload_file_cnt);
-	ftAd.Assign(ATTR_TRANSFER_INPUT_FILES_TOTAL_COUNT, m_prev_run_upload_file_cnt + upload_file_cnt);
-	ftAd.Assign(ATTR_TRANSFER_OUTPUT_FILES_LAST_RUN_COUNT, download_file_cnt);
-	ftAd.Assign(ATTR_TRANSFER_OUTPUT_FILES_TOTAL_COUNT, m_prev_run_download_file_cnt + download_file_cnt);
+	ClassAd upload_file_stats;
+	ClassAd download_file_stats;
+	getFileTransferStats(upload_file_stats, download_file_stats);
+	ClassAd* updated_upload_stats = updateFileTransferStats(m_prev_run_upload_file_stats, upload_file_stats);
+	ClassAd* updated_download_stats = updateFileTransferStats(m_prev_run_download_file_stats, download_file_stats);
+	ftAd.Insert(ATTR_TRANSFER_INPUT_STATS, updated_upload_stats);
+	ftAd.Insert(ATTR_TRANSFER_OUTPUT_STATS, updated_download_stats);
 
 	FileTransferStatus upload_status = XFER_STATUS_UNKNOWN;
 	FileTransferStatus download_status = XFER_STATUS_UNKNOWN;
@@ -1393,7 +1401,11 @@ BaseShadow::updateJobInQueue( update_t type )
 void
 BaseShadow::evalPeriodicUserPolicy( void )
 {
-	shadow_user_policy.checkPeriodic();
+	// We may be in the middle of an RPC from the starter.
+	// If a policy expression fires, we may do some blocking network
+	// operations and/or close the syscall socket.
+	// So do the policy evaluation in a new DaemonCore callout.
+	shadow_user_policy.checkPeriodicSoon();
 }
 
 
@@ -1490,22 +1502,6 @@ BaseShadow::publishShadowAttrs( ClassAd* ad )
 }
 
 
-void BaseShadow::dprintf_va( int flags, const char* fmt, va_list args )
-{
-		// Print nothing in this version.  A subclass like MPIShadow
-		// might like to say ::dprintf( flags, "(res %d)"
-	const DPF_IDENT ident = 0; // REMIND: maybe something useful here??
-	::_condor_dprintf_va( flags, ident, fmt, args );
-}
-
-void BaseShadow::dprintf( int flags, const char* fmt, ... )
-{
-	va_list args;
-	va_start( args, fmt );
-	this->dprintf_va( flags, fmt, args );
-	va_end( args );
-}
-
 // This is declared in main.C, and is a pointer to one of the 
 // various flavors of derived classes of BaseShadow.  
 // It is only needed for this last function.
@@ -1589,4 +1585,52 @@ BaseShadow::jobWantsGracefulRemoval()
 		}
 	}
 	return job_wants_graceful_removal;
+}
+
+/**
+ * updateFileTransferStats takes two input parameters:
+ * old_stats: A classad of old (existing) file transfer statistics
+ * new_stats: A class of new incoming file transfer statistics
+ * It then cumulates the attribute values of these two ads and returns a new
+ * classad with the updated values. In the parallel universe (where a single
+ * job contains many parralel instances) it adds the values from all the
+ * different instances into the updated ad.
+ **/
+ClassAd*
+BaseShadow::updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new_stats)
+{
+	ClassAd* updated_stats = new ClassAd();
+
+	// If new_stats is empty, just return a copy of the old stats
+	if (new_stats.size() == 0) {
+		updated_stats->CopyFrom(old_stats);
+		return updated_stats;
+	}
+
+	// Iterate over the list of new stats
+	for (auto it = new_stats.begin(); it != new_stats.end(); it++) {
+		const std::string& attr = it->first;
+		std::string attr_lastrun = attr + "LastRun";
+		std::string attr_total = attr + "Total";
+
+		// Lookup the value of this attribute. We only count integer values.
+		classad::Value attr_val;
+		int value;
+		it->second->Evaluate(attr_val);
+		if (!attr_val.IsIntegerValue(value)) {
+			continue;
+		}
+		updated_stats->InsertAttr(attr_lastrun, value);
+
+		// If this attribute has a previous Total value, add that to the new total
+		int old_total = 0;
+		if (old_stats.LookupInteger(attr_total, old_total)) {
+			value += old_total;
+		}
+		updated_stats->InsertAttr(attr_total, value);
+	}
+
+	// Return the pointer to our newly-created classad
+	// This will be memory-managed later by the ClassAd::Insert() function
+	return updated_stats;
 }

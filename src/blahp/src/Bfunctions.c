@@ -109,7 +109,7 @@ Writeline(int sockd, const void *vptr, size_t n)
 
 	while ( nleft > 0 ) {
 
-		if ( (nwritten = write(sockd, vptr, nleft)) <= 0 ) {
+		if ( (nwritten = write(sockd, buffer, nleft)) <= 0 ) {
 			if ( errno == EINTR ) {
 				nwritten = 0;
 			}else{

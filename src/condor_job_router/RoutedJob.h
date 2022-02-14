@@ -171,6 +171,7 @@ class JobRoute {
 
 	bool EvalUseSharedX509UserProxy(RoutedJob *job);
 	bool EvalSharedX509UserProxy(RoutedJob *job,std::string &proxy_file);
+	bool EvalSendIDTokens(RoutedJob *job, std::string &idtokens);
 
 		// true if this entry is intended to override an entry with the
 		// same name further up in the routing table definition
@@ -203,6 +204,7 @@ class JobRoute {
 	ConstraintHolder m_EditJobInPlace;
 	ConstraintHolder m_UseSharedX509UserProxy;
 	ConstraintHolder m_SharedX509UserProxy;
+	ConstraintHolder m_SendIDTokens;
 
 		// true if this entry is intended to override an entry with the
 		// same name further up in the routing table definition

@@ -15,7 +15,7 @@ logger.setLevel(logging.DEBUG)
 def condor(test_dir):
     with Condor(
         local_dir=test_dir / "condor",
-        config={"DAGMAN_USE_CONDOR_SUBMIT": "False", "DAGMAN_USE_STRICT": "0"},
+        config={"DAGMAN_USE_STRICT": "0"},
     ) as condor:
         yield condor
 

@@ -572,6 +572,9 @@ pseudo_ulog( ClassAd *ad )
 		if(!hold_reason) {
 			hold_reason = "Job put on hold by remote host.";
 		}
+		// Let the RemoteResource know that the starter is shutting
+		// down and failing to kill it it expected.
+		thisRemoteResource->resourceExit( JOB_SHOULD_HOLD, -1 );
 		Shadow->holdJobAndExit(hold_reason,hold_reason_code,hold_reason_sub_code);
 		//should never get here, because holdJobAndExit() exits.
 	}

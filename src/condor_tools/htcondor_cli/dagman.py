@@ -161,7 +161,7 @@ class DAGMan:
         st = os.stat(TMP_DIR / "sendmail.sh")
         os.chmod(TMP_DIR / "sendmail.sh", st.st_mode | stat.S_IEXEC)
 
-        slurm_config = "DAGMAN_USE_CONDOR_SUBMIT = False\nDAGMAN_USE_STRICT = 0\n"
+        slurm_config = "DAGMAN_USE_DIRECT_SUBMIT = True\nDAGMAN_USE_STRICT = 0\n"
         with open(TMP_DIR / "slurm_submit.config", "w") as slurm_config_file:
             slurm_config_file.write(slurm_config)
 
@@ -235,7 +235,7 @@ yes | /usr/bin/condor_annex -count 1 -duration $1 -annex-name EC2Annex-{int(time
         st = os.stat(TMP_DIR / "ec2_annex.sh")
         os.chmod(TMP_DIR / "ec2_annex.sh", st.st_mode | stat.S_IEXEC)
 
-        ec2_config = "DAGMAN_USE_CONDOR_SUBMIT = False\nDAGMAN_USE_STRICT = 0\n"
+        ec2_config = "DAGMAN_USE_DIRECT_SUBMIT = True\nDAGMAN_USE_STRICT = 0\n"
         with open(TMP_DIR / "ec2_submit.config", "w") as ec2_config_file:
             ec2_config_file.write(ec2_config)
 

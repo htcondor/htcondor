@@ -67,6 +67,7 @@
 #include <libgen.h>
 #include <time.h>
 #include <errno.h>
+#undef NDEBUG
 #include <assert.h>
 
 #include "job_registry.h"
@@ -212,7 +213,11 @@ job_registry_purge(const char *path, time_t oldest_creation_date,
 
   if ((ret = job_registry_seek_next(fd,&first)) < 0)
    {
-    if (force_rewrite) ftruncate(fileno(fd), 0);
+    int result;	
+    if (force_rewrite) {
+        result = ftruncate(fileno(fd), 0);
+        assert(result == 0);
+    }
     fclose(fd);
     job_registry_destroy(jra);
     return JOB_REGISTRY_NO_VALID_RECORD;
@@ -733,7 +738,9 @@ job_registry_init(const char *path,
      {
       /* Make sure the file is empty has as-restrictive as possible permissions */
       chmod(rha->lockfile, lst.st_mode&(~(S_IXUSR|S_IXGRP|S_IXOTH)));
-      truncate(rha->lockfile, 0);
+      int result;	
+      result = truncate(rha->lockfile, 0);
+      assert(result == 0);
      }
     if (stat(rha->subjectlist, &lst) < 0)
      {
@@ -854,13 +861,14 @@ job_registry_init(const char *path,
      {
       job_registry_destroy(rha);
       errno = ENOMEM;
+      fclose(fd);
       return NULL;
      }
     if (rename(rha->path, old_path) < 0)
      {
       free(old_path);
       job_registry_destroy(rha);
-	  fclose(fd);
+      fclose(fd);
       return NULL;
      }
     fclose(fd); /* Release lock */
@@ -1766,7 +1774,11 @@ job_registry_merge_pending_nonpriv_updates(job_registry_handle *rha,
         /* within it. */
 
         ofd = fopen(rha->path,"a+");
-        if (ofd == NULL) return JOB_REGISTRY_FOPEN_FAIL;
+        if (ofd == NULL) {
+            free(cfp);
+            closedir(npd);
+            return JOB_REGISTRY_FOPEN_FAIL;
+        }
 
         if (job_registry_wrlock(rha,ofd) < 0)
          {
@@ -1800,9 +1812,11 @@ job_registry_merge_pending_nonpriv_updates(job_registry_handle *rha,
         /* NPU file becomes a consistency error we have to avoid. */
         if (unlink(cfp) < 0)
          {
+          int result;
           free(cfp);
           /* Undo the append while we still hold a write lock */
-          ftruncate(fileno(ofd), last_end);
+          result = ftruncate(fileno(ofd), last_end);
+          assert(result == 0);
           rha->mode = saved_rha_mode;
           rha->lastrec = saved_rha_lastrec;
           job_registry_resync(rha, ofd);
@@ -2530,7 +2544,11 @@ job_registry_wrlock(const job_registry_handle *rha, FILE *sfd)
 
   /* Make sure the world-writable lock file continues to be empty */
   /* We check this when obtaining registry write locks only */
-  ftruncate(lfd, 0);
+  ret = ftruncate(lfd, 0);
+  if (ret < 0) {
+    close(lfd); // also releases lock on lfd
+    return ret;
+  }
 
   /* Now obtain the requested write lock */
 
@@ -2673,11 +2691,7 @@ job_registry_seek_next(FILE *fd, job_registry_entry *result)
     fmt_extra = (format); \
     esiz = snprintf(NULL, 0, fmt_extra, (attribute)) + 1; \
     new_extra_attrs = (char *)realloc(extra_attrs, extra_attrs_size + esiz); \
-    if (new_extra_attrs == NULL) \
-     { \
-      if (extra_attrs != NULL) free(extra_attrs); \
-      return NULL; \
-     } \
+	assert(new_extra_attrs); \
     need_to_free_extra_attrs = TRUE; \
     extra_attrs = new_extra_attrs; \
     snprintf(extra_attrs+extra_attrs_size, esiz, fmt_extra, (attribute)); \

@@ -45,6 +45,7 @@ static const char * ILLEGAL_CHARS = "+";
 
 static std::vector<char*> _spliceScope;
 static bool _useDagDir = false;
+static bool _useDirectSubmit = true;
 
 // _thisDagNum will be incremented for each DAG specified on the
 // condor_submit_dag command line.
@@ -179,6 +180,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 	}
 
 	_useDagDir = useDagDir;
+	_useDirectSubmit = param_boolean("DAGMAN_USE_DIRECT_SUBMIT", true);
 	_schedd = schedd;
 
 		//
@@ -274,10 +276,10 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 						   "submitfile" );
 			if (parsed_line_successfully && inline_submit) {
 				// go into inline subfile parsing mode
-				if (param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true)) {
+				if (!_useDirectSubmit) {
 					debug_printf(DEBUG_NORMAL, "ERROR: To use an inline job "
-					  "description for node %s, DAGMAN_USE_CONDOR_SUBMIT must "
-					  "be set to False. Aborting.\n", nodename.c_str());
+					  "description for node %s, DAGMAN_USE_DIRECT_SUBMIT must "
+					  "be set to True. Aborting.\n", nodename.c_str());
 					parsed_line_successfully = false;
 				}
 				else { 
@@ -334,10 +336,10 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					"submitfile");
 			if (parsed_line_successfully && inline_submit) {
 				// go into inline subfile parsing mode
-				if (param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true)) {
+				if (!_useDirectSubmit) {
 					debug_printf(DEBUG_NORMAL, "ERROR: To use an inline job "
-					  "description for node %s, DAGMAN_USE_CONDOR_SUBMIT must "
-					  "be set to False. Aborting.\n", nodename.c_str());
+					  "description for node %s, DAGMAN_USE_DIRECT_SUBMIT must "
+					  "be set to True. Aborting.\n", nodename.c_str());
 					parsed_line_successfully = false;
 				}
 				else { 
@@ -411,10 +413,10 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 			bool is_submit_description = desc && *desc == '{';
 			if (is_submit_description) {
 				// Start parsing submit description
-				if (param_boolean("DAGMAN_USE_CONDOR_SUBMIT", true)) {
+				if (!_useDirectSubmit) {
 					debug_printf(DEBUG_NORMAL, "ERROR: To use an inline job "
-					  "description for node %s, DAGMAN_USE_CONDOR_SUBMIT must "
-					  "be set to False. Aborting.\n", descName.c_str());
+					  "description for node %s, DAGMAN_USE_DIRECT_SUBMIT must "
+					  "be set to True. Aborting.\n", descName.c_str());
 					parsed_line_successfully = false;
 				}
 				else {
@@ -435,6 +437,10 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 					char * stopline = NULL;
 					if (parse_up_to_close_brace(*submitDesc, ms, errmsg, &stopline) < 0) {
 						parsed_line_successfully = false;
+						debug_printf(DEBUG_NORMAL, "ERROR: Failed to parse SUBMIT-DESCRIPTION statement (line %d): %s\n", lineNumber, errmsg.c_str());
+					}
+					else {
+						parsed_line_successfully = true;
 					}
 				}
 			}
@@ -1393,7 +1399,7 @@ parse_parent(
 					" to add dependency between parent"
 					" node \"%s\" and join node \"%s\"\n",
 					filename, lineNumber,
-					parent->GetJobName(), joinNode->GetJobName() );
+					parent->GetJobName(), joinNode ? joinNode->GetJobName() : "unknown");
 				return false;
 			}
 		}

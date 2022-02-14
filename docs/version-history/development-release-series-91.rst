@@ -4,6 +4,25 @@ Version 9 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 9.8.0
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.8.0 released on Month Date, 2022.
+
+- HTCondor version 9.8.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-9012`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 9.6.0
 -------------
 
@@ -11,9 +30,11 @@ Release Notes:
 
 .. HTCondor version 9.6.0 released on Month Date, 2022.
 
+- HTCondor version 9.6.0 not yet released.
+
 - This version includes all the updates from :ref:`lts-version-history-9010`.
 
-- HTCondor version 9.6.0 not yet released.
+New Features:
 
 - Added list type configuration for periodic job policy configuration.
   Added ``SYSTEM_PERIODIC_HOLD_NAMES``, ``SYSTEM_PERIODIC_RELEASE_NAMES``
@@ -43,16 +64,38 @@ Release Notes:
   libraries it doesn't need.
   :jira:`927`
 
+- DAGMan now manages job submission by writing jobs directly to the
+  *condor_schedd*, instead of forking a *condor_submit* process. This behavior
+  is controlled by the ``DAGMAN_USE_DIRECT_SUBMIT`` configuration knob, which
+  defaults to ``True``.
+  :jira:`619`
+
+- If a job specifies ``output_destination``, the output and error logs,
+  if requested, will now be transferred to their respective requested
+  names, instead of ``_condor_stdout`` or ``_condor_stderr``.
+  :jira:`955`
+
+- *condor_qedit* and the Python bindings no longer request that job ad
+  changes be forwarded to an active *condor_shadow* or *condor_gridmanager*.
+  If forwarding ad changes is desired (say to affect job policy evaluation),
+  *condor_qedit* has a new **-forward** option.
+  The Python methods *Schedd.edit()* and *Schedd.edit_multiple()* now
+  have an optional *flags* argument of type *TransactionFlags*.
+  :jira:`963`
+
+- Added more statistics about file transfers in the job ClassAd.
+  :jira:`822`
+
 Bugs Fixed:
 
 - When the blahp submits a job to HTCondor, it no longer requests
   email notification about job errors.
   :jira:`895`
 
-- Fixed a bug introduced earlier in this series where in very 
-  rare cases, a schedd would not appear in the collector when it
-  started up, but would appear an hour later.
-  :jira:`931`
+- Fixed a very rare bug in the timing subsystem that would prevent
+  any daemon from appearing in the collector, and periodic expressions
+  to be run less frequently than they should.
+  :jira:`934`
 
 - The view server can now handle very long Accounting Group names
   :jira:`913`
@@ -62,14 +105,95 @@ Bugs Fixed:
   job's lifetime.
   :jira:`922`
 
+- Fixed several bugs in file transfer where unexpected failures by file
+  transfer plugins would not get handled correctly, resulting in empty
+  Hold Reason messages and meaningless Hold Reason Subcodes reported in the
+  job's classad.
+  :jira:`842`
+
+Version 9.5.4
+-------------
+
+Release Notes:
+
+- HTCondor version 9.5.4 released on February 8, 2022.
+
+New Features:
+
+- Improved the ability of the Access Point to detect the disappearance
+  of an Execution Point that is running a job.  Specifically, the ability
+  of the *condor_shadow* to detect a problem with the *condor_starter*.
+  :jira:`954`
+
+Bugs Fixed:
+
+- HTCondor no longer assumes that PID 1 is always visible.  Instead,
+  it checks to see if ``/proc`` was mounted with the ``hidepid`` option
+  of ``1`` or less, and only checks for PID 1 if it was.
+  :jira:`944`
+
+Version 9.5.3
+-------------
+
+Release Notes:
+
+- HTCondor version 9.5.3 released on February 1, 2021.
+
+New Features:
+
+- Added new configuration option, :macro:`CCB_TIMEOUT`.  Added new
+  configuration option, :macro:`CCB_REQUIRED_TO_START`, which if set causes
+  HTCondor to exit if :macro:`CCB_ADDRESS` was set but HTCondor could
+  not obtain one.  :macro:`CCB_REQUIRED_TO_START` is ignored if
+  :macro:`USE_SHARED_PORT` is set, which is the default.
+  :jira:`925`
+
+Bugs Fixed:
+
+- Fixed a bug that caused any daemon to crash when it was configured
+  to report to more than one collector, and any of the collectors'
+  names could not be resolved by DNS.
+  :jira:`952`
+
+- Fixed a bug introduced earlier in this series where in very 
+  rare cases, a schedd would not appear in the collector when it
+  started up, but would appear an hour later.
+  :jira:`931`
+
+Version 9.5.2
+-------------
+
+Release Notes:
+
+- HTCondor version 9.5.2 released on January 25, 2021.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where the *condor_shadow* could run indefinitely when it
+  failed to contact the *condor_startd* in an attempt to kill the
+  job. This problem could become visible to the user in several different ways,
+  such as a job appearing to not go on hold when periodic_hold becomes true.
+  :jira:`933`
+
+- Fix problem where **condor_ssh_to_job** may fail to connect to a job
+  running under an HTCondor tarball installation (glidein) built from an RPM
+  based platform.
+  :jira:`942`
+
+- Fixed a bug in the file transfer mechanism where URL transfers caused 
+  subsequent failures to report incorrect error messages.
+  :jira:`915`
+
 Version 9.5.1
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.5.1 released on Month Date, 2021.
-
-- HTCondor version 9.5.1 not yet released.
+- HTCondor version 9.5.1 released on January 18, 2022.
 
 New Features:
 

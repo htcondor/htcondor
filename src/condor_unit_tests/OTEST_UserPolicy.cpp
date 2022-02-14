@@ -1419,6 +1419,9 @@ static bool test_firing_expression_exit_periodic_hold() {
 	POLICY_INIT(ad);
 	POLICY_ANALYZE(ad, PERIODIC_THEN_EXIT);
 	const char* ret_val = policy.FiringExpression();
+	if (!ret_val) {
+		FAIL;
+	}
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
 	CLEANUP;

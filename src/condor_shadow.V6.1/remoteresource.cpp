@@ -58,7 +58,8 @@ static const char *Resource_State_String [] = {
 
 RemoteResource::RemoteResource( BaseShadow *shad ) 
 	: m_want_remote_updates(false),
-	  m_want_delayed(true)
+	  m_want_delayed(true),
+	  m_wait_on_kill_failure(false)
 {
 	shadow = shad;
 	dc_startd = NULL;
@@ -84,6 +85,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	supports_reconnect = false;
 	next_reconnect_tid = -1;
 	proxy_check_tid = -1;
+	no_update_received_tid = -1;
 	last_proxy_timestamp = time(0); // We haven't sent the proxy to the starter yet, so anything before "now" means it hasn't changed.
 	m_remote_proxy_expiration = 0;
 	m_remote_proxy_renew_time = 0;
@@ -99,8 +101,6 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	m_started_attempting_shutdown = 0;
 	m_upload_xfer_status = XFER_STATUS_UNKNOWN;
 	m_download_xfer_status = XFER_STATUS_UNKNOWN;
-	m_upload_xfer_file_count = 0;
-	m_download_xfer_file_count = 0;
 
 	std::string prefix;
 	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
@@ -135,6 +135,12 @@ RemoteResource::~RemoteResource()
 		proxy_check_tid = -1;
 	}
 
+	if (no_update_received_tid != -1) {
+		daemonCore->Cancel_Timer(no_update_received_tid);
+		no_update_received_tid = -1;
+	}
+
+
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
 		if( m_claim_session.secSessionId() ) {
 			daemonCore->getSecMan()->invalidateKey( m_claim_session.secSessionId() );
@@ -163,14 +169,14 @@ RemoteResource::activateClaim( int starterVersion )
 	int num_retries = 0;
 
 	if ( ! dc_startd ) {
-		shadow->dprintf( D_ALWAYS, "Shadow doesn't have startd contact "
-						 "information in RemoteResource::activateClaim()\n" ); 
+		dprintf( D_ALWAYS, "Shadow doesn't have startd contact "
+		         "information in RemoteResource::activateClaim()\n" );
 		setExitReason(JOB_SHADOW_USAGE);  // no better exit reason available
 		return false;
 	}
 
 	if ( !jobAd ) {
-		shadow->dprintf( D_ALWAYS, "JobAd not defined in RemoteResource\n" );
+		dprintf( D_ALWAYS, "JobAd not defined in RemoteResource\n" );
 		setExitReason(JOB_SHADOW_USAGE);  // no better exit reason available
 		return false;
 	}
@@ -224,9 +230,9 @@ RemoteResource::activateClaim( int starterVersion )
 										  &claim_sock );
 		switch( reply ) {
 		case OK:
-			shadow->dprintf( D_ALWAYS,
-							 "Request to run on %s %s was ACCEPTED\n",
-							 machineName ? machineName:"", dc_startd->addr() );
+			dprintf( D_ALWAYS,
+			         "Request to run on %s %s was ACCEPTED\n",
+			         machineName ? machineName:"", dc_startd->addr() );
 			// Record the activation start time (HTCONDOR-861).
 			activation.StartTime = time(NULL);
 				// first, set a timeout on the socket
@@ -250,9 +256,9 @@ RemoteResource::activateClaim( int starterVersion )
 			return true;
 			break;
 		case CONDOR_TRY_AGAIN:
-			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s %s was DELAYED (previous job still being vacated)\n",
-							 machineName ? machineName:"", dc_startd->addr() );
+			dprintf( D_ALWAYS,
+			         "Request to run on %s %s was DELAYED (previous job still being vacated)\n",
+			         machineName ? machineName:"", dc_startd->addr() );
 			num_retries++;
 			if( num_retries > max_retries ) {
 				dprintf( D_ALWAYS, "activateClaim(): Too many retries, "
@@ -266,22 +272,22 @@ RemoteResource::activateClaim( int starterVersion )
 			break;
 
 		case CONDOR_ERROR:
-			shadow->dprintf( D_ALWAYS, "%s: %s\n", machineName ? machineName:"", dc_startd->error() );
+			dprintf( D_ALWAYS, "%s: %s\n", machineName ? machineName:"", dc_startd->error() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
 
 		case NOT_OK:
-			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s %s was REFUSED\n",
-							 machineName ? machineName:"", dc_startd->addr() );
+			dprintf( D_ALWAYS,
+			         "Request to run on %s %s was REFUSED\n",
+			         machineName ? machineName:"", dc_startd->addr() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
 		default:
-			shadow->dprintf( D_ALWAYS, "Got unknown reply(%d) from "
-							 "request to run on %s %s\n", reply,
-							 machineName ? machineName:"", dc_startd->addr() );
+			dprintf( D_ALWAYS, "Got unknown reply(%d) from "
+			         "request to run on %s %s\n", reply,
+			         machineName ? machineName:"", dc_startd->addr() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
@@ -303,8 +309,8 @@ RemoteResource::killStarter( bool graceful )
 		return true;
 	}
 	if ( ! dc_startd ) {
-		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-						 "DCStartd object NULL!\n");
+		dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+		         "DCStartd object NULL!\n");
 		return false;
 	}
 
@@ -313,9 +319,41 @@ RemoteResource::killStarter( bool graceful )
 		abortFileTransfer();
 	}
 
-	if( ! dc_startd->deactivateClaim(graceful,&claim_is_closing) ) {
-		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-						 "Could not send command to startd\n" );
+	// If we got the job_exit syscall, then we should expect
+	// deactivateClaim() to fail, because the starter exits right
+	// after that. But old starters (prior to 8.7.8) wait around
+	// indefinitely, expecting our deactivateClaim() to trigger their
+	// demise. So don't do our retry-and-wait-on-failure song and dance
+	// if we saw a job_exit.
+	// TODO If we add a version check or decide we don't care about 8.6.X
+	//   and earlier, we can just return true if m_got_job_exit==true.
+	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_exit;
+	int num_tries = wait_on_failure ? 3 : 1;
+	while (num_tries > 0) {
+		if (dc_startd->deactivateClaim(graceful, &claim_is_closing)) {
+			break;
+		}
+		num_tries--;
+		if (num_tries) {
+			const int delay = 5;
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+			         "Could not send command to startd, will retry in %d seconds\n", delay );
+			sleep(delay);
+		} else {
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+			         "Could not send command to startd\n" );
+		}
+	}
+
+	if (num_tries == 0) {
+		if (wait_on_failure) {
+			disconnectClaimSock("Failed to contact startd, forcing disconnect from starter");
+			int remaining = remainingLeaseDuration();
+			if (remaining > 0) {
+				dprintf(D_ALWAYS, "Failed to kill starter, sleeping for remaining lease duration of %d seconds\n", remaining);
+				sleep(remaining);
+			}
+		}
 		return false;
 	}
 
@@ -360,15 +398,15 @@ bool RemoteResource::suspend()
 			if ( dc_startd->_suspendClaim() )
 				bRet = true;
 			else
-				shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): dc_startd->suspendClaim FAILED!\n");
+				dprintf( D_ALWAYS, "RemoteResource::suspend(): dc_startd->suspendClaim FAILED!\n");
 
 		}
 		else
-			shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): DCStartd object NULL!\n");
+			dprintf( D_ALWAYS, "RemoteResource::suspend(): DCStartd object NULL!\n");
 
 	}
 	else
-		shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): Not connected to resource!\n");
+		dprintf( D_ALWAYS, "RemoteResource::suspend(): Not connected to resource!\n");
 
 	return (bRet);
 }
@@ -382,10 +420,10 @@ bool RemoteResource::resume()
 		if ( dc_startd->_continueClaim() )
 			bRet = true;
 		else
-			shadow->dprintf( D_ALWAYS, "RemoteResource::resume(): dc_startd->resume FAILED!\n");
+			dprintf( D_ALWAYS, "RemoteResource::resume(): dc_startd->resume FAILED!\n");
 	}
 	else
-		shadow->dprintf( D_ALWAYS, "RemoteResource::resume(): Not connected to resource!\n");
+		dprintf( D_ALWAYS, "RemoteResource::resume(): Not connected to resource!\n");
 		
 	return (bRet);
 }
@@ -394,33 +432,31 @@ bool RemoteResource::resume()
 void
 RemoteResource::dprintfSelf( int debugLevel )
 {
-	shadow->dprintf ( debugLevel, "RemoteResource::dprintSelf printing "
+	dprintf ( debugLevel, "RemoteResource::dprintSelf printing "
 					  "host info:\n");
 	if( dc_startd ) {
 		const char* addr = dc_startd->addr();
 		const char* id = dc_startd->getClaimId();
-		shadow->dprintf( debugLevel, "\tstartdAddr: %s\n", 
-						 addr ? addr : "Unknown" );
-		shadow->dprintf( debugLevel, "\tClaimId: %s\n", 
-						 id ? id : "Unknown" );
+		dprintf( debugLevel, "\tstartdAddr: %s\n",
+		         addr ? addr : "Unknown" );
+		dprintf( debugLevel, "\tClaimId: %s\n",
+		         id ? id : "Unknown" );
 	}
 	if( machineName ) {
-		shadow->dprintf( debugLevel, "\tmachineName: %s\n",
-						 machineName );
+		dprintf( debugLevel, "\tmachineName: %s\n", machineName );
 	}
 	if( starterAddress ) {
-		shadow->dprintf( debugLevel, "\tstarterAddr: %s\n", 
-						 starterAddress );
+		dprintf( debugLevel, "\tstarterAddr: %s\n", starterAddress );
 	}
-	shadow->dprintf( debugLevel, "\texit_reason: %d\n", exit_reason );
-	shadow->dprintf( debugLevel, "\texited_by_signal: %s\n", 
-					 exited_by_signal ? "True" : "False" );
+	dprintf( debugLevel, "\texit_reason: %d\n", exit_reason );
+	dprintf( debugLevel, "\texited_by_signal: %s\n",
+	         exited_by_signal ? "True" : "False" );
 	if( exited_by_signal ) {
-		shadow->dprintf( debugLevel, "\texit_signal: %lld\n", 
-						 (long long)exit_value );
+		dprintf( debugLevel, "\texit_signal: %lld\n",
+		         (long long)exit_value );
 	} else {
-		shadow->dprintf( debugLevel, "\texit_code: %lld\n", 
-						 (long long)exit_value );
+		dprintf( debugLevel, "\texit_code: %lld\n",
+		         (long long)exit_value );
 	}
 }
 
@@ -489,7 +525,7 @@ RemoteResource::handleSysCalls( Stream * /* sock */ )
 	thisRemoteResource = this;
 
 	if (do_REMOTE_syscall() < 0) {
-		shadow->dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
+		dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
 		attemptShutdown();
 		return KEEP_STREAM;
 	}
@@ -606,6 +642,40 @@ RemoteResource::closeClaimSock( void )
 	}
 }
 
+void
+RemoteResource::disconnectClaimSock(const char *err_msg)
+{
+	if (!claim_sock) {
+		return;
+	}
+
+	std::string my_err_msg;
+	formatstr(my_err_msg, "%s %s",
+	          (err_msg ? err_msg : "Disconnecting from starter"),
+	          claim_sock->get_sinful_peer());
+
+	thisRemoteResource->closeClaimSock();
+
+	if( Shadow->supportsReconnect() ) {
+			// instead of having to EXCEPT, we can now try to
+			// reconnect.  happy day! :)
+		dprintf( D_ALWAYS, "%s\n", my_err_msg.c_str() );
+
+		Shadow->resourceDisconnected(thisRemoteResource);
+
+		if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
+			dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
+			Shadow->gracefulShutDown();
+			EXCEPT( "%s", my_err_msg.c_str() );
+		}
+			// tell the shadow to start trying to reconnect
+		Shadow->reconnect();
+	} else {
+			// The remote starter doesn't support it, so give up
+			// like we always used to.
+		EXCEPT( "%s", my_err_msg.c_str() );
+	}
+}
 
 int
 RemoteResource::getExitReason() const
@@ -904,12 +974,12 @@ RemoteResource::setExitReason( int reason )
 {
 	// Set the exit_reason, but not if the reason is JOB_KILLED.
 	// This prevents exit_reason being reset from JOB_KILLED to
-	// JOB_NOT_CKPTED or some such when the starter gets killed
+	// JOB_SHOULD_REQUEUE or some such when the starter gets killed
 	// and the syscall sock goes away.
 
 	if( exit_reason != JOB_KILLED && -1 == exit_reason) {
-		shadow->dprintf( D_FULLDEBUG, "setting exit reason on %s to %d\n", 
-					 machineName ? machineName : "???", reason ); 
+		dprintf( D_FULLDEBUG, "setting exit reason on %s to %d\n",
+		         machineName ? machineName : "???", reason );
 			
 		exit_reason = reason;
 	}
@@ -1045,6 +1115,31 @@ RemoteResource::setJobAd( ClassAd *jA )
 	jA->LookupString(ATTR_X509_USER_PROXY, proxy_path);
 }
 
+void
+RemoteResource::updateFromStarterTimeout()
+{
+	// If we landed here, then we expected to receive an update from the starter,
+	// but it didn't arrive yet.  Even if the remote syscall sock is still connected,
+	// failing to receive an update could mean that the starter is wedged or dead
+	// (and some goofed up NAT box is artifically keeping the remote syscall sock connected).
+
+	// So instead of the shadow hanging out forever waiting to hear from a starter that
+	// might be dead, close our remote syscall sock now and try to reconnect.
+
+	// NOTE: only close the sock if we are executing the job, not shutting down or
+	// transferring files or whatever.  Why?  Well, in these situations, the starter
+	// may legitimately be fine and yet not sending updates anymore
+	// because it is about to shutdown, or because a long file transfer is
+	// happening in the foreground.
+
+	if (getResourceState() == RR_EXECUTING && !filetrans.transferIsInProgress()) {
+		disconnectClaimSock("Failed to receive an update from the starter when expected, forcing disconnect");
+	}
+
+	// Timer is not periodic, so since it has now fired, the tid is invalid. Clear it.
+	no_update_received_tid = -1;
+}
+
 
 void
 RemoteResource::updateFromStarter( ClassAd* update_ad )
@@ -1053,7 +1148,22 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	std::string string_value;
 	bool bool_value;
 
-	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
+	int maxinterval = 0;
+	update_ad->LookupInteger(ATTR_JOBINFO_MAXINTERVAL, maxinterval);
+	if (no_update_received_tid != -1) {
+		daemonCore->Cancel_Timer(no_update_received_tid);
+		no_update_received_tid = -1;
+	}
+	if (maxinterval > 0) {
+		no_update_received_tid = daemonCore->Register_Timer(
+			maxinterval * 3,  // should receive another update in maxinterval secs, x3 to be sure
+			(TimerHandlercpp)&RemoteResource::updateFromStarterTimeout,
+			"RemoteResource::updateFromStarterTimeout()", this
+		);
+	}
+
+	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter() maxinterval=%d\n",
+		maxinterval);
 	hadContact();
 
 	if( IsDebugLevel(D_MACHINE) ) {
@@ -1726,11 +1836,11 @@ RemoteResource::setResourceState( ResourceState s )
 {
 	if ( state != s )
 	{
-		shadow->dprintf( D_FULLDEBUG,
-						"Resource %s changing state from %s to %s\n",
-						machineName ? machineName : "???", 
-						rrStateToString(state), 
-						rrStateToString(s) );
+		dprintf( D_FULLDEBUG,
+		         "Resource %s changing state from %s to %s\n",
+		         machineName ? machineName : "???",
+		         rrStateToString(state),
+		         rrStateToString(s) );
 		state = s;
 	}
 }
@@ -2043,13 +2153,13 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 	if( info.type == FileTransfer::DownloadFilesType ) {
 		m_download_xfer_status = info.xfer_status;
 		if( ! info.in_progress ) {
-			m_download_xfer_file_count += info.num_cedar_files;
+			m_download_file_stats = info.stats;
 		}
 	}
 	else {
 		m_upload_xfer_status = info.xfer_status;
 		if( ! info.in_progress ) {
-			m_upload_xfer_file_count += info.num_cedar_files;
+			m_upload_file_stats = info.stats;
 		}
 	}
 	shadow->updateJobInQueue(U_PERIODIC);

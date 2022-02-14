@@ -555,18 +555,6 @@ ParallelShadow::shutDown( int exitReason )
 			return;
 		}
 	}
-		/* With many resources, we have to figure out if all of
-		   them are done, and we have to figure out if we need
-		   to kill others.... */
-
-		// This code waits for all nodes to shut down before 
-		// we exit.  We may want an option for user jobs to
-		// specify which shutdown policy they want
-/*
-	if( !shutDownLogic( exitReason ) ) {
-		return;  // leave if we're not *really* ready to shut down.
-	}
-*/
 
 	handleJobRemoval(0);
 
@@ -577,105 +565,6 @@ ParallelShadow::shutDown( int exitReason )
 	BaseShadow::shutDown( exitReason );
 }
 
-
-int 
-ParallelShadow::shutDownLogic( int& exitReason ) {
-
-		/* What sucks for us here is that we know we want to shut 
-		   down, but we don't know *why* we are shutting down.
-		   We have to look through the set of MpiResources
-		   and figure out which have exited, how they exited, 
-		   and if we should kill them all... Basically, the only
-		   time we *don't* remove everything is when all the 
-		   resources have exited normally.  */
-
-	dprintf( D_FULLDEBUG, "Entering shutDownLogic(r=%d)\n", 
-			 exitReason );
-
-		/* if we have a 'pre-startup' exit reason, we can just
-		   dupe that to all resources and exit right away. */
-	if ( exitReason == JOB_NOT_STARTED  ||
-		 exitReason == JOB_SHADOW_USAGE ) {
-		for ( size_t i=0 ; i<ResourceList.size() ; i++ ) {
-			(ResourceList[i])->setExitReason( exitReason );
-		}
-		return TRUE;
-	}
-
-		/* Now we know that *something* started... */
-	
-	int normal_exit = FALSE;
-
-		/* If the job on the resource has exited normally, then
-		   we don't want to remove everyone else... */
-	if( (exitReason == JOB_EXITED) && !(exitedBySignal()) ) {
-		dprintf( D_FULLDEBUG, "Normal exit\n" );
-		normal_exit = TRUE;
-	}
-
-	if ( (!normal_exit) && (!shutDownMode) ) {
-		/* We get here and try to shut everyone down.  Don't worry;
-		   this function will only fire once. */
-		handleJobRemoval( 666 );
-
-		actualExitReason = exitReason;
-		shutDownMode = TRUE;
-	}
-
-		/* We now have to figure out if everyone has finished... */
-	
-	int alldone = TRUE;
-	MpiResource *r;
-
-    for ( size_t i=0 ; i<ResourceList.size() ; i++ ) {
-		r = ResourceList[i];
-		char *res = NULL;
-		r->getMachineName( res );
-		dprintf( D_FULLDEBUG, "Resource %s...%13s %d\n", res,
-				 rrStateToString(r->getResourceState()), 
-				 r->getExitReason() );
-		free( res );
-		switch ( r->getResourceState() )
-		{
-			case RR_PENDING_DEATH:
-				alldone = FALSE;  // wait for results to come in, and
-			case RR_FINISHED:
-				break;            // move on...
-			case RR_PRE: {
-					// what the heck is going on? - shouldn't happen.
-				r->setExitReason( JOB_NOT_STARTED );
-				break;
-			}
-		    case RR_STARTUP:
-			case RR_EXECUTING: {
-				if ( !normal_exit ) {
-					r->killStarter();
-				}
-				alldone = FALSE;
-				break;
-			}
-			default: {
-				dprintf ( D_ALWAYS, "ERROR: Don't know state %d\n", 
-						  r->getResourceState() );
-			}
-		} // switch()
-	} // for()
-
-	if ( (!normal_exit) && shutDownMode ) {
-		/* We want the exit reason  to be set to the exit
-		   reason of the job that caused us to shut down.
-		   Therefore, we set this here: */
-		exitReason = actualExitReason;
-	}
-
-	if ( alldone ) {
-			// everyone has reported in their exit status...
-		dprintf( D_FULLDEBUG, "All nodes have finished, ready to exit\n" );
-		return TRUE;
-	}
-
-	return FALSE;
-}
 
 void
 ParallelShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
@@ -893,15 +782,51 @@ ParallelShadow::bytesReceived( void )
 }
 
 void
-ParallelShadow::getFileTransferStats(int &upload_file_cnt,int &download_file_cnt)
+ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_stats)
 {
-	upload_file_cnt = 0;
-	download_file_cnt = 0;
 	MpiResource* mpi_res;
 	for( size_t i=0; i<ResourceList.size() ; i++ ) {
 		mpi_res = ResourceList[i];
-		upload_file_cnt += mpi_res->m_upload_xfer_file_count;
-		download_file_cnt += mpi_res->m_download_xfer_file_count;
+		ClassAd* res_upload_file_stats = &mpi_res->m_upload_file_stats;
+		ClassAd* res_download_file_stats = &mpi_res->m_download_file_stats;
+
+		// Calculate upload_stats as a cumulation of all resource upload stats
+		for (auto it = res_upload_file_stats->begin(); it != res_upload_file_stats->end(); it++) {
+			const std::string& attr = it->first;
+
+			// Lookup the value of this attribute. We only count integer values.
+			classad::Value attr_val;
+			int this_val;
+			it->second->Evaluate(attr_val);
+			if (!attr_val.IsIntegerValue(this_val)) {
+				continue;
+			}
+
+			// Lookup the previous value if it exists
+			int prev_val = 0;
+			upload_stats.LookupInteger(attr, prev_val);
+
+			upload_stats.InsertAttr(attr, prev_val + this_val);
+		}
+
+		// Calculate download_stats as a cumulation of all resource download stats
+		for (auto it = res_download_file_stats->begin(); it != res_download_file_stats->end(); it++) {
+			const std::string& attr = it->first;
+
+			// Lookup the value of this attribute. We only count integer values.
+			classad::Value attr_val;
+			int this_val;
+			it->second->Evaluate(attr_val);
+			if (!attr_val.IsIntegerValue(this_val)) {
+				continue;
+			}
+
+			// Lookup the previous value if it exists
+			int prev_val = 0;
+			download_stats.LookupInteger(attr, prev_val);
+
+			download_stats.InsertAttr(attr, prev_val + this_val);
+		}
 	}
 }
 

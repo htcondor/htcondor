@@ -1113,6 +1113,179 @@ userHome_func(const char *                 name,
 }
 
 
+bool
+is_in_tree( const classad::ClassAd * member,
+            const classad::ClassAd * leaf ) {
+	if( member == leaf ) { return true; }
+	if( leaf == NULL ) { return false; }
+
+	// We can't just walk the parent scope pointers, because the parent
+	// scope pointer for the LEFT and RIGHT ads is temporarily replaced
+	// by the corresponding context ad when the match ad is created.
+
+	const classad::ClassAd * chainedParent = leaf->GetChainedParentAd();
+	if( chainedParent != NULL && is_in_tree(member, chainedParent) ) { return true; }
+
+	const classad::ClassAd * parentScope = leaf->GetParentScope();
+	if( parentScope != NULL && is_in_tree(member, parentScope) ) { return true; }
+
+	return false;
+}
+
+classad::Value
+evaluateInContext( classad::ExprTree * expr,
+				   classad::EvalState & state,
+				   classad::ExprTree * nested_ad_reference ) {
+	classad::Value rv;
+
+	classad::Value cav;
+	if(! nested_ad_reference->Evaluate(state, cav)) {
+		dprintf( D_FULLDEBUG, "evaluateInContext(): failed to evaluate listed element\n" );
+		rv.SetErrorValue();
+		return rv;
+	}
+
+	classad::ClassAd * nested_ad = NULL;
+	if(! cav.IsClassAdValue(nested_ad)) {
+		dprintf( D_FULLDEBUG, "evaluateInContext(): listed element is not a ClassAd\n" );
+		rv.SetErrorValue();
+		return rv;
+	}
+
+	// AttributeReference::FindExpr() doesn't recursively check the parent
+	// scope's alternate scope, so set it by hand.  This allows attribute
+	// references to work correctly (if confusingly) if this function is
+	// called (as it is intended to be) during a match.
+	//
+	// If the target ad is a chained ad, as it is in the startd, then the
+	// nested ad's parent won't (usually) have an alternate scope pointer
+	// set.  Instead, we need to figure out if the nested ad's parent is
+	// on the RIGHT or LEFT side, and use the corresponding alternate scope
+	// pointer.  (We don't check for the nested ad itself because the
+	// nested ad isn't a chained parent or parent scope of RIGHT or LEFT.)
+	//
+	// The confusing part is that MY and TARGET will be reversed during the
+	// evaluation of attr if, as intended, the nested ad's parent is not the
+	// parent of the expression containing function call.  (We intend for
+	// the former to be the slot ad and the latter the job ad.)
+	classad::ClassAd * originalAlternateScope = nested_ad->alternateScope;
+
+	// This is awful, but I don't want to change the ClassAd API to fix it.
+	classad::MatchClassAd * matchAd =
+		const_cast<classad::MatchClassAd *>(dynamic_cast<const classad::MatchClassAd *>(state.rootAd));
+	if( matchAd != NULL ) {
+		const classad::ClassAd * left = matchAd->GetLeftAd();
+		const classad::ClassAd * right = matchAd->GetRightAd();
+
+		if( is_in_tree( nested_ad->GetParentScope(), left ) ) {
+			nested_ad->alternateScope = left->alternateScope;
+		} else if( is_in_tree( nested_ad->GetParentScope(), right ) ) {
+			nested_ad->alternateScope = right->alternateScope;
+		} else {
+			dprintf( D_FULLDEBUG, "evaluateInContext(): nested ad not in LEFT or RIGHT\n" );
+			rv.SetErrorValue();
+		}
+	}
+
+	classad::EvalState temporary_state;
+	temporary_state.SetScopes(nested_ad);
+	if(! expr->Evaluate(temporary_state, rv)) {
+		dprintf( D_FULLDEBUG, "evaluateInContext(): failed to evaluate expr in context\n" );
+		rv.SetErrorValue();
+	}
+
+	nested_ad->alternateScope = originalAlternateScope;
+	return rv;
+}
+
+static
+bool evalInEachContext_func( const char * /*name*/,
+							  const classad::ArgumentList &arg_list,
+							  classad::EvalState &state,
+							  classad::Value &result ) {
+	//
+	// evalInEachContext( expr, nested_ad_list )
+	//
+	// Evaluate expr in the context of the current ad and each ad in
+	// nested_ad_list, individually.  Returns the index in nested_ad_list
+	// of the first ad for which expr evaluaes to true.
+	//
+
+	if( arg_list.size() != 2 ) {
+		dprintf( D_FULLDEBUG, "evalEachInContext(): wrong number of arguments\n" );
+		result.SetErrorValue();
+		return true;
+	}
+
+	classad::ExprTree * expr = arg_list[0];
+	classad::ExprTree * nal = arg_list[1];
+
+	// If expr is an attribute reference, look it up before proceeding so
+	// that the lookup happens in the context of the match.  Likewise, if
+	// nal isn't a literal list, evaluate in the context of the match
+	// before proceeding.  Just document expr as either an attribute
+	// reference or literal expression; or maybe just the former?  (Makes
+	// it only marginally hard to use but simplifies things?)
+	if( expr->GetKind() == ExprTree::NodeKind::ATTRREF_NODE ) {
+		classad::AttributeReference * ref =
+			dynamic_cast<classad::AttributeReference *>(expr);
+		if( ref == NULL ) {
+			// This should probably be an EXCEPT().
+			dprintf( D_FULLDEBUG, "evalEachInContext(): FIXME\n" );
+			result.SetErrorValue();
+			return true;
+		}
+
+		classad::ExprTree * attr = NULL;
+		// This is a bug in the ClassAd API: this function returns values
+		// out of an anonymous enum in ExprTree, but that enum is protected.
+		// if(classad::AttributeReference::Deref( *ref, state, attr ) != classad::ExprTree::EVAL_OK) {
+		if(classad::AttributeReference::Deref( *ref, state, attr ) != 1 ) {
+			dprintf( D_FULLDEBUG, "evalEachInContext(): FIXME\n" );
+			result.SetErrorValue();
+			return true;
+		}
+		expr = attr;
+	}
+
+	if( nal->GetKind() != ExprTree::NodeKind::EXPR_LIST_NODE ) {
+		classad::Value cav;
+		nal->Evaluate(state, cav);
+		classad::ExprList * list = NULL;
+		if(cav.IsListValue(list)) {
+			nal = list;
+		}
+	}
+
+	classad::ExprList * nested_ad_list = dynamic_cast<classad::ExprList *>(nal);
+	if( nested_ad_list == NULL ) {
+		dprintf( D_FULLDEBUG, "evalEachInContext(): failed to convert second argument\n" );
+		result.SetErrorValue();
+		return true;
+	}
+
+	size_t index = 0;
+	for( auto i = nested_ad_list->begin(); i != nested_ad_list->end(); ++i ) {
+		auto nested_ad = *i;
+
+		dprintf( D_FULLDEBUG, "evalEachInContext(): evaluating index %lu\n", index );
+		classad::Value r = evaluateInContext( expr, state, nested_ad );
+		bool matched;
+		if( r.IsBooleanValue(matched) && matched ) {
+			result.SetIntegerValue(index);
+			return true;
+		}
+
+		index++;
+	}
+
+	dprintf( D_FULLDEBUG, "evalEachInContext(): did not find a match\n" );
+	result.SetBooleanValue(false);
+	return true;
+}
+
+
+
 static
 void registerClassadFunctions()
 {
@@ -1169,6 +1342,9 @@ void registerClassadFunctions()
 	classad::FunctionCall::RegisterFunction( name, splitArb_func );
 	//name = "splitsinful";
 	//classad::FunctionCall::RegisterFunction( name, splitSinful_func );
+
+    name = "evalInEachContext";
+    classad::FunctionCall::RegisterFunction( name, evalInEachContext_func);
 }
 
 void
@@ -2761,6 +2937,5 @@ bool InsertLongFormAttrValue(classad::ClassAd & ad, const char * line, bool use_
 	}
 	return ad.Insert(attr, tree);
 }
-
 
 // end functions

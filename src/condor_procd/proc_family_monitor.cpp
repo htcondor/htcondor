@@ -206,8 +206,8 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 	ret = m_member_table.lookup(root_pid, member);
 	if ((ret == -1) || (member->get_proc_family() == m_everybody_else)) {
 		dprintf(D_ALWAYS,
-		        "register_subfamily failure: pid %u not in process tree\n",
-		        root_pid);
+		        "register_subfamily failure: (%d) pid %u not in process tree\n",
+		        ret, root_pid);
 		return PROC_FAMILY_ERROR_PROCESS_NOT_FAMILY;
 	}
 

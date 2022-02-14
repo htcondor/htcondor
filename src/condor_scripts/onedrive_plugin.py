@@ -59,7 +59,7 @@ def parse_args():
     # <this> -outfile <output-filename> -infile <input-filename>
     if not len(sys.argv) in [2, 5]:
         print_help()
-        sys.exit(-1)
+        sys.exit(1)
 
     # If -classad, print the capabilities of the plugin and exit early
     elif (len(sys.argv) == 2) and (sys.argv[1] == '-classad'):
@@ -75,7 +75,7 @@ def parse_args():
                 (sys.argv[3] in ['-infile', '-outfile']) and
                 (len(sys.argv) == 5)):
             print_help()
-            sys.exit(-1)
+            sys.exit(1)
         infile = None
         outfile = None
         try:
@@ -88,7 +88,7 @@ def parse_args():
                     outfile = sys.argv[i+1]
         except IndexError:
             print_help()
-            sys.exit(-1)
+            sys.exit(1)
 
     return {'infile': infile, 'outfile': outfile}
 
@@ -221,19 +221,19 @@ class OneDrivePlugin:
             
 
 if __name__ == '__main__':
-    # Per the design doc, all failures should result in exit code -1.
+    # Per the design doc, all failures should result in exit code 1.
     # This is true even if we cannot write a ClassAd to the outfile,
     # so we catch all exceptions, try to write to the outfile if we can
-    # and always exit -1 on error.
+    # and always exit 1 on error.
     #
-    # Exiting -1 without an outfile thus means one of two things:
+    # Exiting 1 without an outfile thus means one of two things:
     # 1. Couldn't parse arguments.
     # 2. Couldn't open outfile for writing.
     
     try:
         args = parse_args()
     except Exception:
-        sys.exit(-1)
+        sys.exit(1)
 
     try:
         infile_ads = classad.parseAds(open(args['infile'], 'r'))
@@ -244,7 +244,7 @@ if __name__ == '__main__':
                 outfile.write(str(classad.ClassAd(outfile_dict)))
         except Exception:
             pass
-        sys.exit(-1)
+        sys.exit(1)
 
     try:
         with open(args['outfile'], 'w') as outfile:
@@ -263,7 +263,7 @@ if __name__ == '__main__':
                         outfile.write(str(classad.ClassAd(outfile_dict)))
                     except Exception:
                         pass
-                    sys.exit(-1)
+                    sys.exit(1)
 
     except Exception:
-        sys.exit(-1)
+        sys.exit(1)

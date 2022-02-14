@@ -337,6 +337,7 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 	int virtualorg_found;
 	char **attr;
 	int n_attrs;
+	int write_result;
 
 	blah_config_handle = config_read(NULL);
 	if (blah_config_handle == NULL)
@@ -570,8 +571,14 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 
 	sem_init(&sem_total_commands, 0, max_threaded_cmds);
 	
-	write(server_socket, blah_version, strlen(blah_version));
-	write(server_socket, "\r\n", 2);
+	write_result = write(server_socket, blah_version, strlen(blah_version));
+	if (write_result < 0) {
+		exit_program = 1;
+	}
+	write_result = write(server_socket, "\r\n", 2);
+	if (write_result < 0) {
+		exit_program = 1;
+	}
 	while(!exit_program)
 	{
 		get_cmd_res = cmd_buffer_get_command(&input_buffer);
@@ -647,12 +654,20 @@ serveConnection(int cli_socket, char* cli_ip_addr)
 			pthread_mutex_lock(&send_lock);
 			if (reply)
 			{
-				write(server_socket, reply, strlen(reply));
+				write_result = write(server_socket, reply, strlen(reply));
 				free(reply);
+				if (write_result < 0) {
+					exit_program = 1;
+				}
 			}
 			else
 				/* WARNING: the command here could have been actually executed */
-				write(server_socket, "F Cannot\\ allocate\\ return\\ line\r\n", 34);
+			{
+				write_result = write(server_socket, "F Cannot\\ allocate\\ return\\ line\r\n", 34);
+				if (write_result < 0) {
+					exit_program = 1;
+				}
+			}
 			pthread_mutex_unlock(&send_lock);
 			
 			free(input_buffer);
@@ -1027,7 +1042,7 @@ cmd_submit_job(void *args)
 {
 	char *escpd_cmd_out, *escpd_cmd_err;
 	int retcod;
-	char *command;
+	char *command = NULL;
 	char jobId[JOBID_MAX_LEN];
 	char *resultLine=NULL;
 	char **argv = (char **)args;
@@ -1468,7 +1483,7 @@ cleanup_inoutfiles:
 		free(inout_files);
 	}
 cleanup_command:
-	free(command);
+	if (command) free(command);
 cleanup_proxyname:
 	if (proxyname != NULL) free(proxyname);
 	if (saved_proxyname != NULL) free(saved_proxyname);
@@ -1768,7 +1783,6 @@ get_status_and_old_proxy(int map_mode, char *jobDescr, const char *proxyFileName
 			char **workernode, char **error_string)
 {
 	char *r_old_proxy=NULL;
-	int retcod;
 	classad_context status_ad[MAX_JOB_NUMBER];
 	char errstr[MAX_JOB_NUMBER][ERROR_MAX_LEN];
 	int jobNumber=0, jobStatus;
@@ -1845,12 +1859,12 @@ get_status_and_old_proxy(int map_mode, char *jobDescr, const char *proxyFileName
 
 	/* If we reach here we have a proxy *and* we have */
 	/* to check on the job status */
-	retcod = get_status(jobDescr, status_ad, status_argv, errstr, 1, &jobNumber);
+	get_status(jobDescr, status_ad, status_argv, errstr, 1, &jobNumber);
 
 	if (jobNumber > 0 && (!strcmp(errstr[0], "No Error")))
 	{
 		classad_get_int_attribute(status_ad[0], "JobStatus", &jobStatus);
-		retcod = classad_get_dstring_attribute(status_ad[0], "WorkerNode", workernode);
+		classad_get_dstring_attribute(status_ad[0], "WorkerNode", workernode);
 		for (i=0; i<jobNumber; i++) if (status_ad[i]) classad_free(status_ad[i]);
 		return jobStatus;
 	}
@@ -1899,6 +1913,7 @@ cmd_renew_proxy(void *args)
 	{
 		/* Nothing needs to be done with the proxy */
 		resultLine = make_message("%s 0 Proxy\\ renewed", reqId);
+		if (old_proxy != NULL) free(old_proxy);
 	}
 	else if ((jobStatus < 0) || (old_proxy == NULL) || (old_proxy_len <= 0))
 	{
@@ -2306,7 +2321,7 @@ hold_resume(void* args, int action )
 		enqueue_result(resultLine);
 		free(resultLine);
 	}
-	if (dummyargv) free(dummyargv);
+	free(dummyargv);
 	if (reqId) free(reqId);
 	return;
 }
@@ -2385,8 +2400,12 @@ enqueue_result(char *res)
 {
 	if (push_result(res))
 	{
+		int write_result;
 		pthread_mutex_lock(&send_lock);
-		write(server_socket, "R\r\n", 3);
+		write_result = write(server_socket, "R\r\n", 3);
+		if (write_result < 0) {
+			exit_program = 1;
+		}
 		pthread_mutex_unlock(&send_lock);
 	}
 	return;
@@ -3323,8 +3342,11 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
 
 		newptr = make_message("%s -I %s", *command, tmpIOfilestring);
 		fclose(tmpIOfile);
-		if (*files_to_clean_up != NULL)
+		if (*files_to_clean_up != NULL) {
 			(*files_to_clean_up)[cleanup_file_index++] = tmpIOfilestring;
+		} else {
+			free(tmpIOfilestring);
+		}
 		free(superbuffer);
 		free(iwd);
 	}
@@ -3355,7 +3377,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
 
                 for(i =0; i < strlen(superbuffer); i++){if (superbuffer[i] == ',')superbuffer[i] ='\n'; }
                 cs = fwrite(superbuffer,1 , strlen(superbuffer), tmpIOfile);
-                if(strlen(superbuffer) != cs)
+                if((int)strlen(superbuffer) != cs)
                 {
                         /* PUSH A FAILURE */
                         if (resultLine != NULL) *resultLine = make_message("%s 1 Error\\ writing\\ in\\ %s N/A", reqId,tmpIOfilestring);
@@ -3371,7 +3393,7 @@ int check_TransferINOUT(classad_context cad, char **command, char *reqId, char *
                 fwrite("\n",1,1,tmpIOfile);
                 newptr1 = make_message("%s -O %s", newptr, tmpIOfilestring);
                 fclose(tmpIOfile);
-		if (*files_to_clean_up != NULL) {
+		if (files_to_clean_up && (*files_to_clean_up != NULL)) {
 			(*files_to_clean_up)[cleanup_file_index++] = tmpIOfilestring;
 		} else {
 			free(tmpIOfilestring);
@@ -3520,6 +3542,7 @@ char*  outputfileRemaps(char *sb,char *sbrmp)
                         if(strmpd == 0)
                         {
                                 newbuffer =(char*) realloc((void*)newbuffer, blen + strlen(tstr) + 2);
+                                assert(newbuffer);
                                 strcpy(&newbuffer[blen],tstr);
                                 newbuffer[blen + strlen(tstr)] = (last? 0: ',');
                                 newbuffer[blen + strlen(tstr) + 1] = '\0';

@@ -60,13 +60,14 @@ my %skipad = (
 	"JobSetId" => 1,
 	"DiskProvisioned" => 1,
 	"ActivationSetupDuration" => 1,
+	"RemoteHost" => 1,
 );
 
 my $firstappend_condor_config = '
 	WANT_SUSPEND = FALSE
 	NEGOTIATOR_INTERVAL = 1
 	ALL_DEBUG = D_FULLDEBUG D_NETWORK
-	NUM_CPUS = 1
+	NUM_CPUS = 2
 	CONDOR_Q_USE_V3_PROTOCOL = true
 	# Turning this on breaks this test, which means it is way less
 	# robust than it at first may appear.
@@ -210,7 +211,7 @@ my $runresult = SimpleJob::RunCheck(
 my $secondappend_condor_config = '
 	WANT_SUSPEND = FALSE
 	ALL_DEBUG = D_FULLDEBUG
-	NUM_CPUS = 1
+	NUM_CPUS = 2
 	CONDOR_Q_USE_V3_PROTOCOL = false
 	# Turning this on breaks this test, which means it is way less
 	# robust than it at first may appear.
@@ -288,7 +289,7 @@ $runresult = SimpleJob::RunCheck(
 my $thirdappend_condor_config = '
 	WANT_SUSPEND = FALSE
 	ALL_DEBUG = D_FULLDEBUG
-	NUM_CPUS = 1
+	NUM_CPUS = 2
 	CONDOR_Q_USE_V3_PROTOCOL = true
 ';
 
