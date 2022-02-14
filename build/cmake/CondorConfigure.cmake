@@ -416,13 +416,6 @@ if(PACKAGEID)
   add_definitions( -DPACKAGEID=${PACKAGEID} )
 endif(PACKAGEID)
 
-if( NOT BUILD_DATE )
-  GET_DATE( BUILD_DATE )
-endif()
-if(BUILD_DATE)
-  add_definitions( -DBUILD_DATE="${BUILD_DATE}" )
-endif()
-
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 
 # set to true to enable printing of make actions
