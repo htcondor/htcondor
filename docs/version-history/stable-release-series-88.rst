@@ -23,7 +23,7 @@ Bugs Fixed:
 -  *Security Item*: This release of HTCondor fixes a security-related bug
    described at
 
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003>`_.
 
    :jira:`587`
 
@@ -522,10 +522,10 @@ Bugs Fixed:
 -  *Security Item*: This release of HTCondor fixes security-related bugs
    described at
 
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001/>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002/>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003/>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004>`_.
 
    :ticket:`7356`
    :ticket:`7427`
