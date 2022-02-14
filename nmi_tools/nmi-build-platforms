@@ -5,7 +5,7 @@ docker://htcondor/nmi-zdev:x86_64_AmazonLinux2-09050000
 docker://htcondor/nmi-zdev:x86_64_CentOS7-09050000
 docker://htcondor/nmi-zdev:x86_64_Debian10-09050000
 docker://htcondor/nmi-zdev:x86_64_Debian11-09050000
-docker://htcondor/nmi-zdev:x86_64_Debian12-09050000
+#docker://htcondor/nmi-zdev:x86_64_Debian12-09050000
 x86_64_MacOSX15
 docker://htcondor/nmi-zdev:x86_64_Rocky8-09050000
 docker://htcondor/nmi-zdev:x86_64_Ubuntu18-09050000
