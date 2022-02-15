@@ -244,7 +244,7 @@ Options
 
  **-print-format** *file*
     Read output formatting information from the given custom print format file.
-    see :doc:`/misc-concepts/print-formats` for more information about custom print format files.
+    see :doc:`/classads/print-formats` for more information about custom print format files.
 
  **-target** *filename*
     (Custom option) Where evaluation requires a target ClassAd to

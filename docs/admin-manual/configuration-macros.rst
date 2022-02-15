@@ -700,7 +700,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     ``TARGET.`` prefix are only looked up in the local ClassAd. If set
     to the default value of ``False``, Old ClassAd evaluation semantics
     are used. See
-    :ref:`misc-concepts/classad-mechanism:classads: old and new`
+    :ref:`classads/classad-mechanism:classads: old and new`
     for details.
 
 :macro-def:`CLASSAD_USER_LIBS`
@@ -5444,7 +5444,7 @@ These macros control the *condor_schedd*.
 
 :macro-def:`JOB_TRANSFORM_<Name>`
     A single job transform specified as a set of transform rules.
-    The syntax for these rules is specified in :ref:`misc-concepts/transforms:ClassAd Transforms`
+    The syntax for these rules is specified in :ref:`classads/transforms:ClassAd Transforms`
     The transform rules are applied to jobs that match
     the transform's ``REQUIREMENTS`` expression as they are submitted.
     ``<Name>`` corresponds to a name listed in ``JOB_TRANSFORM_NAMES``.
@@ -7846,7 +7846,7 @@ These macros affect the *condor_job_router* daemon.
 :macro-def:`JOB_ROUTER_ROUTE_<NAME>`
     Specification of a single route in transform syntax.  ``<NAME>`` should be one of the
     route names specified in ``JOB_ROUTER_ROUTE_NAMES``. The transform syntax is specified
-    in the :ref:`misc-concepts/transforms:ClassAd Transforms` section of this manual.
+    in the :ref:`classads/transforms:ClassAd Transforms` section of this manual.
 
 :macro-def:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`
     An ordered list of the names of transforms that should be applied when a job is being
@@ -7861,7 +7861,7 @@ These macros affect the *condor_job_router* daemon.
 :macro-def:`JOB_ROUTER_TRANSFORM_<NAME>`
     Specification of a single pre-route or post-route transform.  ``<NAME>`` should be one of the
     route names specified in ``JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`` or in ``JOB_ROUTER_POST_ROUTE_TRANSFORM_NAMES``.
-    The transform syntax is specified in the :ref:`misc-concepts/transforms:ClassAd Transforms` section of this manual.
+    The transform syntax is specified in the :ref:`classads/transforms:ClassAd Transforms` section of this manual.
 
 :macro-def:`JOB_ROUTER_DEFAULTS`
     Deprecated, use ``JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`` instead.
