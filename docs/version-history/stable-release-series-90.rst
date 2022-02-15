@@ -24,7 +24,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug in the startd drain command in the Python bindings that prevented
+  it from working with zero arguments.
+  :jira:`936`
 
 .. _lts-version-history-9010:
 
