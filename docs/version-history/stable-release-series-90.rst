@@ -24,7 +24,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- DAGMan now publishes its status (total number of nodes, nodes done, nodes
+  failed, etc.) to the job ad immediately at startup.
+  :jira:`968`
 
 .. _lts-version-history-9010:
 
