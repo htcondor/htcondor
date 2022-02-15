@@ -179,14 +179,26 @@ Singularity::setup(ClassAd &machineAd,
 	std::string target_dir;
 	bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
 
-	job_args.RemoveArg(0);
+	// If we have a process to exec, remove it from the args
+	if (exec.length() > 0) {
+		job_args.RemoveArg(0);
+	}
+
 	std::string orig_exec_val = exec;
 	if (has_target && (orig_exec_val.compare(0, execute_dir.length(), execute_dir) == 0)) {
 		exec = target_dir + "/" + orig_exec_val.substr(execute_dir.length());
 		dprintf(D_FULLDEBUG, "Updated executable path to %s for target directory mode.\n", exec.c_str());
 	}
 	sing_args.AppendArg(sing_exec_str.c_str());
-	sing_args.AppendArg("exec");
+
+	// If no "Executable" is specified, we get a zero-length exec string
+	// use "singularity run" to run in this case, and assume
+	// that there is an appropriate runscript inside the image
+	if (orig_exec_val.length() > 0) {
+		sing_args.AppendArg("exec");
+	} else {
+		sing_args.AppendArg("run");
+	}
 
 	// Bind
 	// Mount under scratch
@@ -326,7 +338,10 @@ Singularity::setup(ClassAd &machineAd,
 
 	sing_args.AppendArg(image.c_str());
 
-	sing_args.AppendArg(exec.c_str());
+	if (orig_exec_val.length() > 0) {
+		sing_args.AppendArg(exec.c_str());
+	}
+
 	sing_args.AppendArgsFromArgList(job_args);
 
 	std::string args_string;
@@ -420,7 +435,9 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 	// The last orig_args_len args are the real exec + its args.  Skip those for the test
 	for (int i = 0; i < args.Count() - orig_args_len; i++) {
 		const char *arg = args.GetArg(i);
-		if (strcmp(arg, "exec") == 0) {
+		if ((strcmp(arg, "run") == 0) || (strcmp(arg, "exec")) == 0) {
+			// Stick a -q before test to keep the download quiet
+			testArgs.AppendArg("-q");
 			arg = "test";
 		}
 		testArgs.AppendArg(arg);
