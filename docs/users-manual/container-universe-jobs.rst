@@ -16,6 +16,12 @@ runtime.  To do this, two job submit file commands are needed:
 First, set the **universe** to container, and then specify the container
 image with the **container_image** command.
 
+Note that the container may specify the executable to run, either in
+the runfile option of a singularity image, or in the entrypoint 
+option of a Dockerfile.  If this is set, the executable command in the
+HTCondor submit file is optional, and the default command in the container
+will be run.
+
 This container image may describe an image in a docker-style repo if it
 is prefixed with ``docker://``, or a Singularity ``.sif`` image on disk, or a
 Singularity sandbox image (an exploded directory).  *condor_submit*
@@ -45,3 +51,5 @@ job:
       log                     = log.$(Process)
       request_memory          = 100M
       queue 1
+
+
