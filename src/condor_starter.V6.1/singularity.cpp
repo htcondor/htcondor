@@ -191,7 +191,7 @@ Singularity::setup(ClassAd &machineAd,
 	}
 	sing_args.AppendArg(sing_exec_str.c_str());
 
-	// If no "Executable" is ommited, we get a zero-length exec string
+	// If no "Executable" is specified, we get a zero-length exec string
 	// use "singularity run" to run in this case, and assume
 	// that there is an appropriate runscript inside the image
 	if (orig_exec_val.length() > 0) {
@@ -446,12 +446,6 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 	std::string stredArgs;
 	testArgs.GetArgsStringForDisplay(stredArgs);
 
-	Env runTestEnv;
-	runTestEnv.MergeFrom(env);
-	std::string oldPath;
-   	env.GetEnv("PATH", oldPath);
-
-	runTestEnv.SetEnv("PATH", std::string("/bin:/sbin:/usr/bin:/sbin:") + oldPath);
 	dprintf(D_FULLDEBUG, "Runnning singularity test for job %s cmd is %s\n", JobName.c_str(), stredArgs.c_str());
 	FILE *sing_test_output = my_popen(testArgs, "r", MY_POPEN_OPT_WANT_STDERR, &env, true);
 	if (!sing_test_output) {
