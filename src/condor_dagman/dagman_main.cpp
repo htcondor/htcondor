@@ -1441,7 +1441,7 @@ void main_init (int argc, char ** const argv) {
 			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
 			debug_error( 1, DEBUG_QUIET, "ERROR while bootstrapping\n");
 		}
-		print_status();
+		print_status(true);
 	}
 
 	debug_printf( DEBUG_VERBOSE, "Registering condor_event_timer...\n" );

@@ -24,9 +24,14 @@ New Features:
 
 Bugs Fixed:
 
+- DAGMan now publishes its status (total number of nodes, nodes done, nodes
+  failed, etc.) to the job ad immediately at startup.
+  :jira:`968`
+
 - Fixed a bug in the startd drain command in the Python bindings that prevented
   it from working with zero arguments.
   :jira:`936`
+
 
 .. _lts-version-history-9010:
 
