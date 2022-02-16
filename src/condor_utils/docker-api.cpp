@@ -283,12 +283,11 @@ int DockerAPI::createContainer(
 
 	std::string networkType;
 	jobAd.LookupString(ATTR_DOCKER_NETWORK_TYPE, networkType);
-	if (networkType == "host") {
-		runArgs.AppendArg("--network=host");
-	}
-	if (networkType == "none") {
-		runArgs.AppendArg("--network=none");
-	}
+	if (!networkType.empty()) {
+        std::string networkArg = "--network=";
+        networkArg += networkType;
+        runArgs.AppendArg(networkArg.c_str());
+    }
 
 	// Handle port forwarding.
 	std::string containerServiceNames;
