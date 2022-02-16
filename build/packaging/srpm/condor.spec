@@ -1680,7 +1680,7 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Tue Feb 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.10-1
+* Tue Mar 08 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.10-1
 - Fixes for security issues
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0002
