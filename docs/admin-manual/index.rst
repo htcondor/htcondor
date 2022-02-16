@@ -15,6 +15,8 @@ Administrators' Manual
    security
    networking
    daemoncore
+   hooks
+   logging
    monitoring
    high-availability
    setting-up-special-environments

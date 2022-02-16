@@ -285,7 +285,7 @@ A route consists of a sequence of Macro values and commands which are applied
 in order to produce the routed job ClassAd.  Certain macro names have special meaning
 when used in a router transform.  These special macro names are listed below
 allong a brief listing of the the transform commands.  For a more detailed description
-of the tranform commands refer to the :ref:`misc-concepts/transforms:Transform Commands` section.
+of the tranform commands refer to the :ref:`classads/transforms:Transform Commands` section.
 
 The conversion of a job to a routed copy will usually require the job ClassAd to
 be modified. The Routing Table specifies attributes of the different
@@ -293,7 +293,7 @@ possible routes and it may specify specific modifications that should be
 made to the job when it is sent along a specific route. In addition to
 this mechanism for transforming the job, external programs may be
 invoked to transform the job. For more information, see
-the :ref:`misc-concepts/hooks:hooks for a job router` section.
+the :ref:`admin-manual/hooks:hooks for a job router` section.
 
 The following attributes and instructions for modifying job attributes
 may appear in a Routing Table entry.

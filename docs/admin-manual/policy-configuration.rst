@@ -27,7 +27,7 @@ the owners of machines in the pool or the users of the pool.
 ''''''''''''''''''''''''''''
 
 Understanding the configuration requires an understanding of ClassAd
-expressions, which are detailed in the :doc:`/misc-concepts/classad-mechanism`
+expressions, which are detailed in the :doc:`/classads/classad-mechanism`
 section.
 :index:`condor_startd`
 
@@ -86,7 +86,7 @@ evaluates the expression against its own ClassAd. If an expression
 cannot be locally evaluated (because it references other expressions
 that are only found in a request ClassAd, such as ``Owner`` or
 ``Imagesize``), the expression is (usually) undefined. See
-theh :doc:`/misc-concepts/classad-mechanism` section for specifics on
+theh :doc:`/classads/classad-mechanism` section for specifics on
 how undefined terms are handled in ClassAd expression evaluation.
 
 A note of caution is in order when modifying the ``START`` expression to

@@ -201,7 +201,7 @@ on machines with GPUs -- using the options described in
   sections on :doc:`../users-manual/dagman-workflows`,
   :doc:`../users-manual/choosing-an-htcondor-universe`, and
   :doc:`../users-manual/self-checkpointing-applications`.
-* Understanding :doc:`../misc-concepts/classad-mechanism` is essential for
+* Understanding :doc:`../classads/classad-mechanism` is essential for
   many administrative tasks.
 * The rest of the :doc:`../admin-manual/index`, particularly the section on
   :doc:`../admin-manual/monitoring`.
