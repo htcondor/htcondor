@@ -911,7 +911,7 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 	DCStartd d( m_rec->peer );
 	if (!d.startCommand(DEACTIVATE_CLAIM, &sock)) {
         	dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
-				 "Can't start command to startd" );
+				 "Can't start command to startd\n" );
 		return false;
 	}
 
