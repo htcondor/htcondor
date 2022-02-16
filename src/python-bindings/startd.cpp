@@ -178,7 +178,7 @@ export_startd()
             :type drain_type: :class:`DrainTypes`
             :param int on_completion: Whether the startd should start accepting jobs again
                 once draining is complete.  Otherwise, it will remain in the drained state.
-                Defaults to ``False``.  Values are 1 for Resume, 2 for Exit, 3 for Restart
+                Values are 0 for Nothing, 1 for Resume, 2 for Exit, 3 for Restart. Defaults to 0.
             :param check_expr: An expression string that must evaluate to ``true`` for all slots for
                 draining to begin. Defaults to ``'true'``.
             :type check_expr: str or :class:`ExprTree`
@@ -190,9 +190,10 @@ export_startd()
             )C0ND0R",
                (SELFARG
                 boost::python::arg("drain_type")=DRAIN_GRACEFUL,
-                boost::python::arg("resume_on_completion")=false,
+                boost::python::arg("on_completion")=0,
                 boost::python::arg("check_expr")="true",
-                boost::python::arg("start_expr")="false"
+                boost::python::arg("start_expr")="false",
+                boost::python::arg("reason")="by command"
                )
             )
         .def("cancelDrainJobs", &Startd::cancel_drain_jobs,
