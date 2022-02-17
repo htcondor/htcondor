@@ -99,7 +99,7 @@ what output is expected, and, when relevant, the exit status expected.
    a related configuration variable called ``FetchWorkDelay``
    :index:`FetchWorkDelay` which determines how long the
    *condor_startd* will wait between attempts to fetch work, which is
-   described in detail in :ref:`misc-concepts/hooks:job hooks that fetch work`.
+   described in detail in :ref:`admin-manual/hooks:job hooks that fetch work`.
    ``<Keyword>_HOOK_FETCH_WORK`` is the most important hook in the whole system,
    and is the only hook that must be defined for any of the other
    *condor_startd* hooks to operate.

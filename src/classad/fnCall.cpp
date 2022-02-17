@@ -927,6 +927,7 @@ sumAvg(const char *name, const ArgumentList &argList,
 				val.SetErrorValue();
 				return false;
 			} else if (   !listElementValue.IsRealValue() 
+						  && !listElementValue.IsBooleanValue()
 						  && !listElementValue.IsIntegerValue()) {
 				val.SetErrorValue();
 				return true;
@@ -1015,6 +1016,7 @@ minMax(const char *fn, const ArgumentList &argList,
 				val.SetErrorValue();
 				return false;
 			} else if (   !listElementValue.IsRealValue() 
+						  && !listElementValue.IsBooleanValue()
 						  && !listElementValue.IsIntegerValue()) {
 				val.SetErrorValue();
 				return true;

@@ -135,7 +135,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
         preserve_rel = false;
     }
 
-    bool relative_exe = !fullpath(JobName.c_str());
+    bool relative_exe = !fullpath(JobName.c_str()) && (JobName.length() > 0);
 
     if (relative_exe && preserve_rel && !transfer_exe) {
         dprintf(D_ALWAYS, "Preserving relative executable path: %s\n", JobName.c_str());
@@ -183,10 +183,12 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	std::string wrapper;
 	has_wrapper = param(wrapper, "USER_JOB_WRAPPER");
 
-	if( !getArgv0() || has_wrapper ) {
-		args.AppendArg(JobName.c_str());
-	} else {
-		args.AppendArg(getArgv0());
+	if (JobName.length() > 0) {
+		if( !getArgv0() || has_wrapper ) {
+			args.AppendArg(JobName.c_str());
+		} else {
+			args.AppendArg(getArgv0());
+		}
 	}
 	
 		// Support USE_PARROT 
@@ -499,6 +501,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	std::string execute_dir = ss2.str();
 	htcondor::Singularity::result sing_result; 
 	int orig_args_len = args.Count();
+
 	if (SupportsPIDNamespace()) {
 		sing_result = htcondor::Singularity::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd ? job_iwd : "", execute_dir, job_env);
 	} else {
