@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- The classad ``sum``, ``avg``, ``min`` and ``max`` functions now promote boolean
+  values in the list being operated on to integers rather than to error.
+  :jira:`970`
 
 Bugs Fixed:
 
