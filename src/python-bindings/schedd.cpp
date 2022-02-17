@@ -372,7 +372,7 @@ history_query(boost::python::object requirement, boost::python::list projection,
 			THROW_EX(ClassAdParseError, "Unable to parse since argument as an expression or as a job id.");
 		} else {
 			classad::Value val;
-			if (ExprTreeIsLiteral(since_expr_copy, val) && val.IsNumber()) {
+			if (ExprTreeIsLiteral(since_expr_copy, val) && (val.IsIntegerValue() || val.IsRealValue())) {
 				delete since_expr_copy; since_expr_copy = NULL;
 				// if the stop constraint is a numeric literal.
 				// then there are a few special cases...
@@ -2469,7 +2469,7 @@ struct Schedd {
 			THROW_EX(ClassAdParseError, "Unable to parse since argument as an expression or as a job id.");
 		} else {
 			classad::Value val;
-			if (ExprTreeIsLiteral(since_expr_copy, val) && val.IsNumber()) {
+			if (ExprTreeIsLiteral(since_expr_copy, val) && (val.IsIntegerValue() || val.IsRealValue())) {
 				delete since_expr_copy; since_expr_copy = NULL;
 				// if the stop constraint is a numeric literal.
 				// then there are a few special cases...
