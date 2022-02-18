@@ -880,7 +880,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 
 		buf = *attr;
 		buf += " = ";
-		bool is_private_attr = ClassAdAttributeIsPrivateV2(*attr);
+		bool is_private_attr = ClassAdAttributeIsPrivateAny(*attr);
 		if ( g_encryptPrivateAttrs && is_private_attr ) {
 			is_private_attr = true;
 			std::string encrypted_attribute;
