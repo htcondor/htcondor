@@ -829,7 +829,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 	bool excludeTypes = (options & PUT_CLASSAD_NO_TYPES) == PUT_CLASSAD_NO_TYPES;
 	bool exclude_private = (options & PUT_CLASSAD_NO_PRIVATE) == PUT_CLASSAD_NO_PRIVATE;
 	auto *verinfo = sock->get_peer_version();
-	bool exclude_private_v2 = exclude_private || !verinfo || !verinfo->built_since_version(9, 1, 1);
+	bool exclude_private_v2 = exclude_private || !verinfo || !verinfo->built_since_version(9, 8, 0);
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
