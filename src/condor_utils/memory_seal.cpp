@@ -128,7 +128,7 @@ bool htcondor::memory_seal(const std::vector<unsigned char> &input_data, std::st
 
 bool htcondor::memory_seal(const unsigned char *input_data, size_t input_data_len, std::string &output_data)
 {
-	output_data.resize((((input_data_len + IV_LEN + 2) / 3) << 2));
+	output_data.reserve((((input_data_len + IV_LEN + 2) / 3) << 2));
 	g_encrypt_buffer.resize(IV_LEN + calc_ciphertext_len(input_data_len));
 
 	std::unique_ptr<unsigned char, decltype(&free)> iv(
