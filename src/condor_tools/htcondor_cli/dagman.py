@@ -76,7 +76,7 @@ class Status(Verb):
         try:
             dag = schedd.query(
                 constraint=f"ClusterId == {dag_id}",
-                projection=["JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "ResourceType"]
+                projection=["JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "ResourceType", "DAG_NodesTotal"]
             )
         except IndexError:
             raise RuntimeError(f"No DAG found for ID {dag_id}.")
@@ -97,6 +97,28 @@ class Status(Verb):
         else:
             logger.info(f"DAG is {JobStatus[dag[0]['JobStatus']]}")
 
+        # Show some information about the jobs running under this DAG
+        if dag[0]['DAG_NodesTotal']:
+            logger.info(f"Of {dag[0]['DAG_NodesTotal']} total jobs:")
+
+            # Information about active jobs should come directly from the schedd
+            active_jobs = schedd.query(
+                constraint=f"DAGManJobId == {dag_id}"
+            )
+            running_jobs = [job for job in active_jobs if job['JobStatus'] == JobStatus.index("RUNNING")]
+            idle_jobs = [job for job in active_jobs if job['JobStatus'] == JobStatus.index("IDLE")]
+            held_jobs = [job for job in active_jobs if job['JobStatus'] == JobStatus.index("HELD")]
+            logger.info(f"{len(running_jobs)} are currently running")
+            logger.info(f"{len(idle_jobs)} are idle")
+            logger.info(f"{len(held_jobs)} are held")
+
+            # Information about completed jobs
+            completed_jobs = schedd.history(
+                constraint=f"DAGManJobId == {dag_id}",
+                projection=["ClusterId", "JobStatus"]
+            )
+            successful_jobs = completed_jobs = [job for job in completed_jobs if job['JobStatus'] == JobStatus.index("COMPLETED")]
+            logger.info(f"{len(successful_jobs)} completed successfully")
 
 class DAG(Noun):
     """

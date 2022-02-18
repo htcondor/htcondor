@@ -49,7 +49,7 @@ JobStatus = [
 # create an OrderedDict of nouns, mapping the name to be used on the
 # command line to the name of the class containing the noun's verbs.
 from collections import OrderedDict as _OrderedDict
-from htcondor_cli.dag import DAG
+from htcondor_cli.dagman import DAG
 from htcondor_cli.job import Job
 from htcondor_cli.job_set import JobSet
 NOUNS = _OrderedDict()
