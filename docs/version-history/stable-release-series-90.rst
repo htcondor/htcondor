@@ -32,6 +32,9 @@ Bugs Fixed:
   it from working with zero arguments.
   :jira:`936`
 
+- Fixed a bug that prevented the High-Availability Daemon (HAD) from
+  working when user-based security is enabled
+  :jira:`891`
 
 .. _lts-version-history-9010:
 

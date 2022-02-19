@@ -7211,6 +7211,7 @@ int DaemonCore::Create_Process(
 		entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 		IpVerify* ipv = getSecMan()->getIpVerify();
 		std::string id = CONDOR_CHILD_FQU;
+		ipv->PunchHole(ADMINISTRATOR, id);
 		ipv->PunchHole(DAEMON, id);
 		ipv->PunchHole(CLIENT_PERM, id);
 
@@ -9149,6 +9150,7 @@ DaemonCore::Inherit( void )
 			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 			IpVerify* ipv = getSecMan()->getIpVerify();
 			std::string id = CONDOR_PARENT_FQU;
+			ipv->PunchHole(ADMINISTRATOR, id);
 			ipv->PunchHole(DAEMON, id);
 			ipv->PunchHole(CLIENT_PERM, id);
 		}
@@ -9205,6 +9207,7 @@ DaemonCore::Inherit( void )
 			ASSERT( rc && entry && entry->policy() );
 			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 			IpVerify* ipv = getSecMan()->getIpVerify();
+			ipv->PunchHole(ADMINISTRATOR, CONDOR_FAMILY_FQU);
 			ipv->PunchHole(DAEMON, CONDOR_FAMILY_FQU);
 			ipv->PunchHole(ADVERTISE_MASTER_PERM, CONDOR_FAMILY_FQU);
 			ipv->PunchHole(ADVERTISE_SCHEDD_PERM, CONDOR_FAMILY_FQU);
