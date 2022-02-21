@@ -2934,7 +2934,9 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
 
 int
 SecMan::sec_char_to_auth_method( const char* method ) {
-    if (!strcasecmp( method, "SSL" )  ) {
+	if (!method) {
+		return 0;
+    } else if (!strcasecmp( method, "SSL" )  ) {
         return CAUTH_SSL;
     } else if (!strcasecmp( method, "GSI" )  ) {
 		return CAUTH_GSI;
@@ -3116,6 +3118,46 @@ SecMan::Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu,
 	return ipverify->Verify(perm,addr,fqu,allow_reason,deny_reason);
 }
 
+
+bool
+SecMan::IsAuthenticationSufficient(DCpermission perm, const Sock &sock, CondorError &err)
+{
+
+	auto sec_authentication = sec_req_param("SEC_%s_AUTHENTICATION", perm, SEC_REQ_OPTIONAL);
+	auto authentication_method = sock.getAuthenticationMethodUsed();
+	if (sec_authentication == SEC_REQ_REQUIRED && !authentication_method) {
+		err.push("SECMAN", 76, "Authentication is required for this authorization but it was not used");
+		return false;
+	}
+
+	auto sec_encryption = sec_req_param("SEC_%s_ENCRYPTION", perm, SEC_REQ_OPTIONAL);
+	if (sec_encryption == SEC_REQ_REQUIRED && !sock.get_encryption()) {
+		err.push("SECMAN", 77, "Encryption is required for this authorization but it is not enabled");
+		return false;
+	}
+
+	auto sec_integrity = sec_req_param("SEC_%s_INTEGRITY", perm, SEC_REQ_OPTIONAL);
+		// Note: mustEncrypt implies AES encryption which technically disables "condor" level integrity.
+	if (sec_integrity == SEC_REQ_REQUIRED && !(sock.isOutgoing_Hash_on() || sock.mustEncrypt())) {
+		err.push("SECMAN", 78, "Integrity is required for this authorization but it is not enabled");
+		return false;
+	}
+
+	auto methods = getAuthenticationMethods(perm);
+	bool allowed_method = getAuthBitmask(methods.c_str()) & sec_char_to_auth_method(sock.getAuthenticationMethodUsed());
+
+	if (!allowed_method) {
+		err.pushf("SECMAN", 80, "Used authentication method %s is not valid for permission level %s",
+			sock.getAuthenticationMethodUsed(), PermString(perm));
+		return false;
+	}
+
+	if (!sock.isAuthorizationInBoundingSet(PermString(perm))) {
+		err.pushf("SECMAN", 79, "The %s permission is not included in the authentication bounding set", PermString(perm));
+		return false;
+	}
+	return true;
+}
 
 bool
 SecMan::sec_copy_attribute( classad::ClassAd &dest, const ClassAd &source, const char* attr ) {

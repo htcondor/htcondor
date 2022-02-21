@@ -851,13 +851,16 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		// trust it to handle our capabilities.
 	bool filter_private_ads = true;
 	auto *verinfo = sock->get_peer_version();
-	if (verinfo && verinfo->built_since_version(8, 9, 3)) {
-		auto addr = static_cast<ReliSock*>(sock)->peer_addr();
-			// Given failure here is non-fatal, do not log at D_ALWAYS.
-		if (static_cast<Sock*>(sock)->isAuthorizationInBoundingSet("NEGOTIATOR") &&
-			(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", NEGOTIATOR, addr, static_cast<ReliSock*>(sock)->getFullyQualifiedUser(), D_SECURITY|D_FULLDEBUG))) {
-			filter_private_ads = false;
-		}
+	if (verinfo && verinfo->built_since_version(8, 9, 3) &&
+		(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", NEGOTIATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
+	{
+		filter_private_ads = false;
+	}
+	if (verinfo && verinfo->built_since_version(9, 8, 0) &&
+		(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", ADMINISTRATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
+	{
+		dprintf(D_SECURITY|D_FULLDEBUG, "Administrator query - will not filter private ads.\n");
+		filter_private_ads = false;
 	}
 
 	// Pull out relavent state from query_entry
@@ -2110,6 +2113,14 @@ void CollectorDaemon::sendCollectorAd()
 	//
 	int error = 0;
 	ClassAd * selfAd = new ClassAd(*ad);
+
+		// Administrative security sessions are added directly in the daemon core code; since we
+		// are bypassing DC and invoking collector.collect on the selfAd, invoke it here as well.
+	std::string capability;
+	if (daemonCore->SetupAdministratorSession(1800, capability)) {
+		selfAd->InsertAttr(ATTR_REMOTE_ADMIN_CAP, capability);
+	}
+
 	if( ! collector.collect( UPDATE_COLLECTOR_AD, selfAd, condor_sockaddr::null, error ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to add my own ad to myself (%d).\n", error );
 	}
