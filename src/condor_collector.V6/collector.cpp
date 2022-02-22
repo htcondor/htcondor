@@ -863,6 +863,31 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		filter_private_ads = false;
 	}
 
+	bool checkFQU = false;
+	const char * fqu = NULL;
+	if( filter_private_ads && verinfo && verinfo->built_since_version(9, 8, 0) ) {
+		CondorError err;
+		const Sock & s = * static_cast<ReliSock*>(sock);
+		if(! daemonCore->getSecMan()->IsAuthenticationSufficient(ADMINISTRATOR, s, err)) {
+
+		char ipstr[IP_STRING_BUF_SIZE];
+		strcpy(ipstr, "(unknown)");
+		s.peer_addr().to_ip_string(ipstr, sizeof(ipstr));
+
+		dprintf(D_ALWAYS,
+			"PERMISSION DENIED to %s from host %s for %s, "
+			"access level %s: reason: %s.\n",
+			(fqu && *fqu) ? fqu : "unauthenticated user",
+			ipstr,
+			"send private ads",
+			PermString(ADMINISTRATOR),
+			err.message());
+		} else {
+			checkFQU = true;
+			fqu = s.getFullyQualifiedUser();
+		}
+	}
+
 	// Pull out relavent state from query_entry
 	pending_query_entry_t *query_entry = (pending_query_entry_t *) in_query_entry;
 	ClassAd *cad = query_entry->cad;
@@ -883,13 +908,13 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	double end_query = condor_gettimestamp_double();
 	double end_write = 0.0;
 
-	// send the results via cedar			
+	// send the results via cedar
 	sock->timeout(QueryTimeout); // set up a network timeout of a longer duration
 	sock->encode();
 	results.Rewind();
 	ClassAd *curr_ad = NULL;
 	int more = 1;
-	
+
 		// See if query ad asks for server-side projection
 	string projection = "";
 		// turn projection string into a set of attributes
@@ -930,6 +955,19 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 			}
 		}
 
+		// FIXME: ensure that `AuthenticatedIdentity` is in the projection.
+		// (Probably not in this function, but in everyone that queries it,
+		// unless we want a second pass to remove if it wasn't requested.
+		bool filter_this_ad = filter_private_ads;
+		if( checkFQU ) {
+			std::string authenticatedIdentity;
+			if( curr_ad->LookupString( ATTR_AUTHENTICATED_IDENTITY, authenticatedIdentity) ) {
+				if( 0 == strcmp( authenticatedIdentity.c_str(), fqu ) ) {
+					filter_this_ad = false;
+				}
+			}
+		}
+
 		if (evaluate_projection) {
 			proj.clear();
 			projection.clear();
@@ -940,20 +978,20 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 			}
 		}
 
-		bool send_failed = (!sock->code(more) || !putClassAd(sock, *curr_ad, filter_private_ads ? PUT_CLASSAD_NO_PRIVATE : 0, proj.empty() ? NULL : &proj));
-        
+		bool send_failed = !sock->code(more) || !putClassAd(sock, *curr_ad, filter_this_ad ? PUT_CLASSAD_NO_PRIVATE : 0, proj.empty() ? NULL : &proj);
+
 		if (stats_ad) {
 			stats_ad->Unchain();
 			delete stats_ad;
 		}
 
 		if (send_failed)
-        {
-            dprintf (D_ALWAYS,
-                    "Error sending query result to client -- aborting\n");
-            return_status = 0;
+		{
+			dprintf (D_ALWAYS,
+			        "Error sending query result to client -- aborting\n");
+			return_status = 0;
 			goto END;
-        }
+		}
 
 		if (sock->deadline_expired()) {
 			dprintf( D_ALWAYS,
@@ -994,7 +1032,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 			 projection.c_str(),
 			 filter_private_ads);
 END:
-	
+
 	// All done.  Deallocate memory allocated in this method.  Note that DaemonCore 
 	// will supposedly free() the query_entry struct itself and also delete sock.
 
