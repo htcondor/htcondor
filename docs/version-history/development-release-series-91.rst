@@ -21,6 +21,10 @@ New Features:
   values in the list being operated on to integers rather than to error.
   :jira:`970`
 
+- Added classad functions ``countMatches`` and ``evalInEachContext``. These functions
+  are used to support matchmaking of heterogenous custom resources such as GPUs.
+  :jira:`977`
+
 Bugs Fixed:
 
 - None.
