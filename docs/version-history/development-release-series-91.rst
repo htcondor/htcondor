@@ -21,6 +21,10 @@ New Features:
   values in the list being operated on to integers rather than to error.
   :jira:`970`
 
+- Added basic tools for submitting and monitoring DAGMan workflows to our 
+  new :doc:`/man-pages/htcondor` CLI tool.
+  :jira:`929`
+
 Bugs Fixed:
 
 - None.
