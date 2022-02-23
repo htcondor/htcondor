@@ -96,7 +96,13 @@ class Submit(Verb):
             #
             annex_name = options["annex_name"]
             if annex_name is not None:
+                # Tag the job for use by `htcondor annex create` later.
                 submit_data = insert_before(submit_data, f'+TargetAnnexName = "{annex_name}"\n')
+
+                # Require that this job run only on the specified annex,
+                # whose name we'll verify by requiring that "the same"
+                # user requested the annex in question.
+                #
                 # We don't need to know what htcondor.Submit.queue() thinks
                 # what the Owner or Submitter of the job will be, because the
                 # AuthenticatedIdentity is determined by the tokens that we
@@ -110,6 +116,9 @@ class Submit(Verb):
                     submit_data = insert_before(submit_data, f'requirements = {requirements}\n')
                 else:
                     submit_data = insert_before(submit_data, f'requirements = ($(requirements)) && ({requirements})\n')
+
+                # Flock to the annex CM.
+                submit_data = insert_before(submit_data, '+FlockTo = "htcondor-cm-hpcannex.osgdev.chtc.io"\n')
 
             submit_description = htcondor.Submit(submit_data)
 
