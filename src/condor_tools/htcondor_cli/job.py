@@ -1,3 +1,4 @@
+import re
 import sys
 import os
 import logging
@@ -5,6 +6,7 @@ import subprocess
 import shlex
 import tempfile
 import time
+import getpass
 
 from datetime import datetime
 from pathlib import Path
@@ -32,6 +34,10 @@ JobStatus = [
 ]
 
 
+def insert_before(blob, new, at=re.compile('(^queue.*$)', re.M)):
+    return re.sub(at, f'{new}\\1', blob)
+
+
 class Submit(Verb):
     """
     Submits a job when given a submit file
@@ -55,6 +61,10 @@ class Submit(Verb):
             "args": ("--email",),
             "help": "Email address to receive notifications",
         },
+        "annex_name": {
+            "args": ("--annex-name",),
+            "help": "Annex name that this job must run on",
+        },
     }
 
     def __init__(self, logger, submit_file, **options):
@@ -74,6 +84,33 @@ class Submit(Verb):
 
             with submit_file.open() as f:
                 submit_data = f.read()
+
+            #
+            # Unfortunately, the Submit object is totally useless.  If
+            # we could easily submit the job on hold, it would actually
+            # be easier to code and clearer to do so, qedit the job,
+            # and then release it; but in order to submit the job on
+            # hold in this interface, we need very nearly the same ability
+            # to edit submit files that we'll need to just make the changes
+            # we want directly.
+            #
+            annex_name = options["annex_name"]
+            if annex_name is not None:
+                submit_data = insert_before(submit_data, f'+TargetAnnexName = "{annex_name}"\n')
+                # We don't need to know what htcondor.Submit.queue() thinks
+                # what the Owner or Submitter of the job will be, because the
+                # AuthenticatedIdentity is determined by the tokens that we
+                # hand out.  We will hand them out in such a way that this
+                # code always gets the right answer.
+                username = getpass.getuser()
+                my_identity = f'{username}@annex.osgdev.chtc.io'
+                requirements = f'(("{my_identity}" == TARGET.AuthenticatedIdentity) && (MY.TargetAnnexName == TARGET.AnnexName))'
+                r = re.compile( r'^requirements =', re.M | re.I )
+                if re.search(r, submit_data) is None:
+                    submit_data = insert_before(submit_data, f'requirements = {requirements}\n')
+                else:
+                    submit_data = insert_before(submit_data, f'requirements = ($(requirements)) && ({requirements})\n')
+
             submit_description = htcondor.Submit(submit_data)
 
             # The Job class can only submit a single job at a time
