@@ -1140,15 +1140,19 @@ evaluateInContext( classad::ExprTree * expr,
 
 	classad::Value cav;
 	if(! nested_ad_reference->Evaluate(state, cav)) {
-		dprintf( D_FULLDEBUG, "evaluateInContext(): failed to evaluate listed element\n" );
+		//dprintf( D_FULLDEBUG, "evaluateInContext(): failed to evaluate listed element\n" );
 		rv.SetErrorValue();
 		return rv;
 	}
 
 	classad::ClassAd * nested_ad = NULL;
 	if(! cav.IsClassAdValue(nested_ad)) {
-		dprintf( D_FULLDEBUG, "evaluateInContext(): listed element is not a ClassAd\n" );
-		rv.SetErrorValue();
+		//dprintf( D_FULLDEBUG, "evaluateInContext(): listed element is not a ClassAd\n" );
+		if (cav.IsUndefinedValue()) {
+			rv.SetUndefinedValue();
+		} else {
+			rv.SetErrorValue();
+		}
 		return rv;
 	}
 
@@ -1182,7 +1186,7 @@ evaluateInContext( classad::ExprTree * expr,
 		} else if( is_in_tree( nested_ad->GetParentScope(), right ) ) {
 			nested_ad->alternateScope = right->alternateScope;
 		} else {
-			dprintf( D_FULLDEBUG, "evaluateInContext(): nested ad not in LEFT or RIGHT\n" );
+			//dprintf( D_FULLDEBUG, "evaluateInContext(): nested ad not in LEFT or RIGHT\n" );
 			rv.SetErrorValue();
 		}
 	}
@@ -1190,7 +1194,7 @@ evaluateInContext( classad::ExprTree * expr,
 	classad::EvalState temporary_state;
 	temporary_state.SetScopes(nested_ad);
 	if(! expr->Evaluate(temporary_state, rv)) {
-		dprintf( D_FULLDEBUG, "evaluateInContext(): failed to evaluate expr in context\n" );
+		//dprintf( D_FULLDEBUG, "evaluateInContext(): failed to evaluate expr in context\n" );
 		rv.SetErrorValue();
 	}
 
@@ -1199,20 +1203,23 @@ evaluateInContext( classad::ExprTree * expr,
 }
 
 static
-bool evalInEachContext_func( const char * /*name*/,
+bool evalInEachContext_func( const char * name,
 							  const classad::ArgumentList &arg_list,
 							  classad::EvalState &state,
 							  classad::Value &result ) {
 	//
-	// evalInEachContext( expr, nested_ad_list )
+	// evalInEachContext( expr, nested_ad_list ) -> list
+	// countMatches( expr, nested_ad_list ) -> int
 	//
 	// Evaluate expr in the context of the current ad and each ad in
 	// nested_ad_list, individually.  Returns the index in nested_ad_list
 	// of the first ad for which expr evaluaes to true.
 	//
 
+	bool is_evalInEach = 0 == strcasecmp(name, "evalineachcontext");
+
 	if( arg_list.size() != 2 ) {
-		dprintf( D_FULLDEBUG, "evalEachInContext(): wrong number of arguments\n" );
+		//dprintf( D_FULLDEBUG, "evalEachInContext(): wrong number of arguments\n" );
 		result.SetErrorValue();
 		return true;
 	}
@@ -1231,21 +1238,29 @@ bool evalInEachContext_func( const char * /*name*/,
 			dynamic_cast<classad::AttributeReference *>(expr);
 		if( ref == NULL ) {
 			// This should probably be an EXCEPT().
-			dprintf( D_FULLDEBUG, "evalEachInContext(): FIXME\n" );
+			//dprintf( D_FULLDEBUG, "evalEachInContext(): FIXME\n" );
 			result.SetErrorValue();
 			return true;
 		}
 
+		// Lookup the first argument and get the expression.  If the lookup succeeds we will
+		// evaluate the expression against each ad in the list.
+		// If the lookup fails we will treat the attribute reference as the expression to evaluate
+		// thus we can use this function to evaluate an expression in a list of ads,
+		// or to project a single attribute from those ads
+		//     evalInEachContext(MY.RequireGPUs, AvailableGPUs) -> { true, false, ... }
+		//     evalInEachContext(Capability, AvailableGPUs) -> { eval(GPUs_tag1.Capability), eval(GPUs_tag1.Capability), ... }
+		// Or more specifically
+		//     sum(evalInEachContext(MY.RequireGPUs, AvailableGPUs)) -> <number of available GPUs that match the RequireGPUs expression>
+		//     max(evalInEachContext(Capability, AvailableGPUs)) -> <max capability of all available GPUs>
+		//
 		classad::ExprTree * attr = NULL;
 		// This is a bug in the ClassAd API: this function returns values
 		// out of an anonymous enum in ExprTree, but that enum is protected.
 		// if(classad::AttributeReference::Deref( *ref, state, attr ) != classad::ExprTree::EVAL_OK) {
-		if(classad::AttributeReference::Deref( *ref, state, attr ) != 1 ) {
-			dprintf( D_FULLDEBUG, "evalEachInContext(): FIXME\n" );
-			result.SetErrorValue();
-			return true;
+		if(classad::AttributeReference::Deref( *ref, state, attr ) == 1 ) {
+			expr = attr;
 		}
-		expr = attr;
 	}
 
 	if( nal->GetKind() != ExprTree::NodeKind::EXPR_LIST_NODE ) {
@@ -1254,33 +1269,79 @@ bool evalInEachContext_func( const char * /*name*/,
 		classad::ExprList * list = NULL;
 		if(cav.IsListValue(list)) {
 			nal = list;
+		} else if (cav.IsUndefinedValue()) {
+			if (is_evalInEach) {
+				// evalInEach will propagate UNDEFINED values
+				result.SetUndefinedValue();
+			} else {
+				// countMatches will not propagate UNDEFINED and will instead return 0 matches
+				result.SetIntegerValue(0);
+			}
+			return true;
 		}
 	}
 
 	classad::ExprList * nested_ad_list = dynamic_cast<classad::ExprList *>(nal);
 	if( nested_ad_list == NULL ) {
-		dprintf( D_FULLDEBUG, "evalEachInContext(): failed to convert second argument\n" );
+		//dprintf( D_FULLDEBUG, "evalEachInContext(): failed to convert second argument\n" );
 		result.SetErrorValue();
 		return true;
 	}
 
-	size_t index = 0;
-	for( auto i = nested_ad_list->begin(); i != nested_ad_list->end(); ++i ) {
-		auto nested_ad = *i;
+	if (is_evalInEach) {
 
-		dprintf( D_FULLDEBUG, "evalEachInContext(): evaluating index %lu\n", index );
-		classad::Value r = evaluateInContext( expr, state, nested_ad );
-		bool matched;
-		if( r.IsBooleanValue(matched) && matched ) {
-			result.SetIntegerValue(index);
-			return true;
+		// for evalInEachContext we will return a list of evaluation results
+		classad_shared_ptr<classad::ExprList> lst(new classad::ExprList());
+		ASSERT(lst);
+
+		size_t index = 0;
+		for (auto i = nested_ad_list->begin(); i != nested_ad_list->end(); ++i) {
+			auto nested_ad = *i;
+
+			//dprintf( D_FULLDEBUG, "evalEachInContext(): evaluating index %lu\n", index );
+			classad::Value cav = evaluateInContext(expr, state, nested_ad);
+			if (cav.IsListValue()) {
+				classad::ExprList * elv = nullptr;
+				cav.IsListValue(elv);
+				lst->push_back(elv->Copy());
+			} else if (cav.IsClassAdValue()) {
+				classad::ClassAd * cad = nullptr;
+				cav.IsClassAdValue(cad);
+				lst->push_back(cad->Copy());
+			} else {
+				lst->push_back(classad::Literal::MakeLiteral(cav));
+			}
+			index++;
 		}
 
-		index++;
+		result.SetListValue(lst);
+	} else {
+		// for countMatches - return an integer count of results that evaluate to TRUE
+		// This is useful for matching a job to a heterogenous array of custom resources like GPUs.
+		// the slot ad will have (actual names are longer)
+		//    AvailableGPUs = { GPUs_tag1, GPUs_tag2 }
+		//    GPUS_tag1 = [ Capability = 4.0; Name = "GRX"; ]
+		//    GPUS_tag2 = [ Capability = 5.5; Name = "Tesla"; ]
+		// The job will indicate which GPU it wants
+		//    RequestGPUs = 1
+		//    RequireGPUs = Capability > 4
+		// And the job's requirements will use this function to insure that the job matches the slot
+		//    Requirements = ... && countMatches(RequireGPUs, AvailableGPUs) >= RequestGPUs
+		int num_matches = 0;
+		for( auto i = nested_ad_list->begin(); i != nested_ad_list->end(); ++i ) {
+			auto nested_ad = *i;
+
+			classad::Value r = evaluateInContext( expr, state, nested_ad );
+			// not that we do *not* propagate undefined or error here because we want to use this function in matchmaking
+			bool matched = false;
+			if( r.IsBooleanValueEquiv(matched) && matched ) {
+				++num_matches;
+			}
+		}
+
+		result.SetIntegerValue(num_matches);
 	}
 
-	dprintf( D_FULLDEBUG, "evalEachInContext(): did not find a match\n" );
-	result.SetBooleanValue(false);
 	return true;
 }
 
@@ -1344,6 +1405,8 @@ void registerClassadFunctions()
 	//classad::FunctionCall::RegisterFunction( name, splitSinful_func );
 
     name = "evalInEachContext";
+    classad::FunctionCall::RegisterFunction( name, evalInEachContext_func);
+    name = "countMatches";
     classad::FunctionCall::RegisterFunction( name, evalInEachContext_func);
 }
 
