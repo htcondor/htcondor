@@ -28,6 +28,10 @@ Bugs Fixed:
   failed, etc.) to the job ad immediately at startup.
   :jira:`968`
 
+- Fixed a bug in the parallel universe that caused the *condor_schedd* to crash
+  with partitionable slots.
+  :jira:`986`
+
 - Fixed a bug in the startd drain command in the Python bindings that prevented
   it from working with zero arguments.
   :jira:`936`
