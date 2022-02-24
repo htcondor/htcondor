@@ -304,6 +304,12 @@ static bool test_size_positive(void);
 static bool test_size_zero(void);
 static bool test_size_undefined(void);
 static bool test_nested_ads(void);
+static bool test_countMatches_normal(void);
+static bool test_countMatches_undefined_list_member(void);
+static bool test_countMatches_undefined_list(void);
+static bool test_evalInEach_normal(void);
+static bool test_evalInEach_undefined_list_member(void);
+static bool test_evalInEach_undefined_list(void);
 
 
 bool OTEST_Old_Classads(void) {
@@ -581,6 +587,12 @@ bool OTEST_Old_Classads(void) {
 	driver.register_function(test_size_positive);
 	driver.register_function(test_size_zero);
 	driver.register_function(test_size_undefined);
+	driver.register_function(test_countMatches_normal);
+	driver.register_function(test_countMatches_undefined_list_member);
+	driver.register_function(test_countMatches_undefined_list);
+	driver.register_function(test_evalInEach_normal);
+	driver.register_function(test_evalInEach_undefined_list_member);
+	driver.register_function(test_evalInEach_undefined_list);
 	driver.register_function(test_nested_ads);
 
 	return driver.do_all_functions();
@@ -7920,6 +7932,228 @@ static bool test_nested_ads()
 		FAIL;
 	}
 	
+	PASS;
+}
+
+static bool test_countMatches_normal(void) {
+	emit_test("Test that countMatches() returns the number of True evaluation results ");
+    const char* classad_string = 
+		"job1 = [Prio=2; task=1;]\n"
+		"job2 = [Prio=3; task=2;]\n"
+		"joblist = {job1, job2}\n"
+		"jobtest = Prio > 2\n"
+		"hiprio = countMatches(jobtest, joblist)\n"
+		"loprio = countMatches(Prio < 2, joblist)\n"
+		"tasks = countMatches(task, joblist)\n"
+		;
+	ClassAd classad;
+	initAdFromString(classad_string, classad);
+
+	int act1, act2, act3;
+	int r1 = classad.LookupInteger("hiprio", act1);
+	int r2 = classad.LookupInteger("loprio", act2);
+	int r3 = classad.LookupInteger("tasks", act3);
+	int expect1 = 1, expect2 = 0, expect3 = 2;
+
+	emit_param("ClassAd", classad_string);
+	emit_param("Attributes", "hiprio, loprio, tasks");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Values", "%d,%d,%d", expect1, expect2, expect3);
+	emit_output_actual_header();
+	emit_retval("%d,%d,%d", r1,r2,r3);
+	emit_param("INT Values", "%d,%d,%d", act1, act2, act3);
+	if(r1 != 1 || r2 != 1 || r3 != 1 || act1 != expect1 || act2 != expect2 || act3 != expect3) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_countMatches_undefined_list_member(void) {
+	emit_test("Test that countMatches() returns the number of True evaluation results when the list has an undefined memember");
+    const char* classad_string = 
+		"job1 = [Prio=2; task=1;]\n"
+		"job2 = [Prio=3; task=2;]\n"
+		"joblist = {job1, job0, job2}\n"
+		"jobtest = Prio > 2\n"
+		"hiprio = countMatches(jobtest, joblist)\n"
+		"loprio = countMatches(Prio < 2, joblist)\n"
+		"tasks = countMatches(task, joblist)\n"
+		;
+	ClassAd classad;
+	initAdFromString(classad_string, classad);
+
+	int act1, act2, act3;
+	int r1 = classad.LookupInteger("hiprio", act1);
+	int r2 = classad.LookupInteger("loprio", act2);
+	int r3 = classad.LookupInteger("tasks", act3);
+	int expect1 = 1, expect2 = 0, expect3 = 2;
+
+	emit_param("ClassAd", classad_string);
+	emit_param("Attributes", "hiprio, loprio, tasks");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INT Values", "%d,%d,%d", expect1, expect2, expect3);
+	emit_output_actual_header();
+	emit_retval("%d,%d,%d", r1,r2,r3);
+	emit_param("INT Values", "%d,%d,%d", act1, act2, act3);
+	if(r1 != 1 || r2 != 1 || r3 != 1 || act1 != expect1 || act2 != expect2 || act3 != expect3) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_countMatches_undefined_list() {
+	emit_test("Test that countMatches() returns 0 when the list argument is undefined ");
+    const char* classad_string = 
+		"job1 = [Prio=2; task=1;]\n"
+		"job2 = [Prio=3; task=2;]\n"
+		"jobtest = Prio > 2\n"
+		"hiprio = countMatches(jobtest, joblist)\n"
+		"loprio = countMatches(Prio < 2, joblist)\n"
+		"tasks = countMatches(task, joblist)\n"
+		;
+	ClassAd classad;
+	initAdFromString(classad_string, classad);
+
+	classad::Value act1, act2, act3;
+	int r1 = classad.EvaluateAttr("hiprio", act1);
+	int r2 = classad.EvaluateAttr("loprio", act2);
+	int r3 = classad.EvaluateAttr("tasks", act3);
+	std::string val1, val2, val3;
+	ClassAdValueToString(act1, val1);
+	ClassAdValueToString(act2, val2);
+	ClassAdValueToString(act3, val3);
+	const char * expect = "0";
+
+	emit_param("ClassAd", classad_string);
+	emit_param("Attributes", "hiprio, loprio, tasks");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("Values", "%s,%s,%s", expect,expect,expect);
+	emit_output_actual_header();
+	emit_retval("%d,%d,%d", r1,r2,r3);
+	emit_param("Values", "%s,%s,%s", val1.c_str(), val2.c_str(), val3.c_str());
+	if(r1 != 1 || r2 != 1 || r3 != 1 || val1 != expect || val2 != expect || val3 != expect) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_evalInEach_normal(void) {
+	emit_test("Test that evalInEachContext() returns a correct result");
+    const char* classad_string = 
+		"job1 = [Prio=2; task=1;]\n"
+		"job2 = [Prio=3; task=2;]\n"
+		"joblist = {job1, job2}\n"
+		"jobtest = Prio > 2\n"
+		"hiprio = evalInEachContext(jobtest, joblist)\n"
+		"loprio = evalInEachContext(Prio < 2, joblist)\n"
+		"tasks = evalInEachContext(task, joblist)\n"
+		;
+	ClassAd classad;
+	initAdFromString(classad_string, classad);
+
+	classad::Value act1, act2, act3;
+	int r1 = classad.EvaluateAttr("hiprio", act1);
+	int r2 = classad.EvaluateAttr("loprio", act2);
+	int r3 = classad.EvaluateAttr("tasks", act3);
+	std::string val1, val2, val3;
+	ClassAdValueToString(act1, val1);
+	ClassAdValueToString(act2, val2);
+	ClassAdValueToString(act3, val3);
+	const char * expect1 = "{ false,true }";
+	const char * expect2 = "{ false,false }";
+	const char * expect3 = "{ 1,2 }";
+
+	emit_param("ClassAd", classad_string);
+	emit_param("Attributes", "hiprio, loprio, tasks");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("LIST Values", "%s | %s | %s", expect1, expect2, expect3);
+	emit_output_actual_header();
+	emit_retval("%d,%d,%d", r1,r2,r3);
+	emit_param("LIST Values", "%s | %s | %s", val1.c_str(), val2.c_str(), val3.c_str());
+	if(r1 != 1 || r2 != 1 || r3 != 1 || val1 != expect1 || val2 != expect2 || val3 != expect3) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_evalInEach_undefined_list_member(void) {
+	emit_test("Test that evalInEachContext() returns the number of True evaluation results when the list has an undefined memember");
+    const char* classad_string = 
+		"job1 = [Prio=2; task=1;]\n"
+		"job2 = [Prio=3; task=2;]\n"
+		"joblist = {job1, job0, job2}\n"
+		"jobtest = Prio > 2\n"
+		"hiprio = evalInEachContext(jobtest, joblist)\n"
+		"loprio = evalInEachContext(Prio < 2, joblist)\n"
+		"tasks = evalInEachContext(task, joblist)\n"
+		;
+	ClassAd classad;
+	initAdFromString(classad_string, classad);
+
+	classad::Value act1, act2, act3;
+	int r1 = classad.EvaluateAttr("hiprio", act1);
+	int r2 = classad.EvaluateAttr("loprio", act2);
+	int r3 = classad.EvaluateAttr("tasks", act3);
+	std::string val1, val2, val3;
+	ClassAdValueToString(act1, val1);
+	ClassAdValueToString(act2, val2);
+	ClassAdValueToString(act3, val3);
+	const char * expect1 = "{ false,undefined,true }";
+	const char * expect2 = "{ false,undefined,false }";
+	const char * expect3 = "{ 1,undefined,2 }";
+
+	emit_param("ClassAd", classad_string);
+	emit_param("Attributes", "hiprio, loprio, tasks");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("LIST Values", "%s | %s | %s", expect1, expect2, expect3);
+	emit_output_actual_header();
+	emit_retval("%d,%d,%d", r1,r2,r3);
+	emit_param("LIST Values", "%s | %s | %s", val1.c_str(), val2.c_str(), val3.c_str());
+	if(r1 != 1 || r2 != 1 || r3 != 1 || val1 != expect1 || val2 != expect2 || val3 != expect3) {
+		FAIL;
+	}
+	PASS;
+}
+
+static bool test_evalInEach_undefined_list() {
+	emit_test("Test that evalInEachContext() returns 0 when the list argument is undefined ");
+    const char* classad_string = 
+		"job1 = [Prio=2; task=1;]\n"
+		"job2 = [Prio=3; task=2;]\n"
+		"jobtest = Prio > 2\n"
+		"hiprio = evalInEachContext(jobtest, joblist)\n"
+		"loprio = evalInEachContext(Prio < 2, joblist)\n"
+		"tasks = evalInEachContext(task, joblist)\n"
+		;
+	ClassAd classad;
+	initAdFromString(classad_string, classad);
+
+	classad::Value act1, act2, act3;
+	int r1 = classad.EvaluateAttr("hiprio", act1);
+	int r2 = classad.EvaluateAttr("loprio", act2);
+	int r3 = classad.EvaluateAttr("tasks", act3);
+	std::string val1, val2, val3;
+	ClassAdValueToString(act1, val1);
+	ClassAdValueToString(act2, val2);
+	ClassAdValueToString(act3, val3);
+	const char * expect = "undefined";
+
+	emit_param("ClassAd", classad_string);
+	emit_param("Attributes", "hiprio, loprio, tasks");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("Values", "%s,%s,%s", expect,expect,expect);
+	emit_output_actual_header();
+	emit_retval("%d,%d,%d", r1,r2,r3);
+	emit_param("Values", "%s,%s,%s", val1.c_str(), val2.c_str(), val3.c_str());
+	if(r1 != 1 || r2 != 1 || r3 != 1 || val1 != expect || val2 != expect || val3 != expect) {
+		FAIL;
+	}
 	PASS;
 }
 
