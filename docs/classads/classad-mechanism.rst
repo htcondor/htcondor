@@ -936,8 +936,8 @@ Optional parameters are given within square brackets.
     This function evaluates its first argument as an expression in the context of
     each Classad in the second argument and returns a count of the results that
     evaluated to ``True``. The first argument should be an expression. The second argument
-    should be a list of Classads or a list of attribute references to classads, or
-    should evaluate to a list of Classads.  This function will always return a integer
+    should be a list of ClassAds or a list of attribute references to classAds, or
+    should evaluate to a list of ClassAds.  This function will always return a integer
     value when the first argument is defined and the second argument is not ``ERROR``.
 
     For example:
