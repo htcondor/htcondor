@@ -110,7 +110,9 @@ class Submit(Verb):
                 # code always gets the right answer.
                 username = getpass.getuser()
                 my_identity = f'{username}@annex.osgdev.chtc.io'
-                requirements = f'(("{my_identity}" == TARGET.AuthenticatedIdentity) && (MY.TargetAnnexName == TARGET.AnnexName))'
+                # This looks awful, but AuthenticatedIdentity isn't set in
+                # the startd's copy of the ad.
+                requirements = f'((ifthenelse(TARGET.AuthenticatedIdentity is undefined, true, "{my_identity}" == TARGET.AuthenticatedIdentity)) && (MY.TargetAnnexName == TARGET.AnnexName))'
                 r = re.compile( r'^requirements =', re.M | re.I )
                 if re.search(r, submit_data) is None:
                     submit_data = insert_before(submit_data, f'requirements = {requirements}\n')
