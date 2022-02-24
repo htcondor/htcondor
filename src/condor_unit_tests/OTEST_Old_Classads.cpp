@@ -8081,7 +8081,7 @@ static bool test_evalInEach_normal(void) {
 }
 
 static bool test_evalInEach_undefined_list_member(void) {
-	emit_test("Test that countMatches() returns the number of True evaluation results when the list has an undefined memember");
+	emit_test("Test that evalInEachContext() returns the number of True evaluation results when the list has an undefined memember");
     const char* classad_string = 
 		"job1 = [Prio=2; task=1;]\n"
 		"job2 = [Prio=3; task=2;]\n"
