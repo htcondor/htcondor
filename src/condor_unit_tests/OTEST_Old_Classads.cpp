@@ -8121,7 +8121,7 @@ static bool test_evalInEach_undefined_list_member(void) {
 }
 
 static bool test_evalInEach_undefined_list() {
-	emit_test("Test that countMatches() returns 0 when the list argument is undefined ");
+	emit_test("Test that evalInEachContext() returns 0 when the list argument is undefined ");
     const char* classad_string = 
 		"job1 = [Prio=2; task=1;]\n"
 		"job2 = [Prio=3; task=2;]\n"
