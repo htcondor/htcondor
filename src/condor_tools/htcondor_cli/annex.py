@@ -1,3 +1,5 @@
+import os
+
 import htcondor
 
 from htcondor_cli.noun import Noun
@@ -27,7 +29,8 @@ class Shutdown(Verb):
     # log in again.
     #
     def __init__(self, logger, annex_name, **options):
-        collector = htcondor.Collector()
+        # FIXME: this should probably come from configuration.
+        collector = htcondor.Collector("htcondor-cm-hpcannex.osgdev.chtc.io")
         location_ads = collector.query(
             ad_type=htcondor.AdTypes.Master,
             constraint=f'AnnexName =?= "{annex_name}"',
@@ -38,13 +41,23 @@ class Shutdown(Verb):
             return
 
         print(f"Shutting down annex '{annex_name}'...")
-        for location_ad in location_ads:
-            htcondor.send_command(
-                location_ad,
-                # Make DaemonOff vs DaemonFast a command-line option?
-                htcondor.DaemonCommands.DaemonOffFast,
-                "STARTD",
-            )
+        password_file = os.path.expanduser("~/.condor/annex_password_file")
+
+        # There's a bug here where I should be able to write
+        #   with htcondor.SecMan() as security_context:
+        # instead, but then security_context is a `lockedContext` object
+        # which doesn't have a `setConfig` attribute.
+        security_context = htcondor.SecMan()
+        with security_context:
+            security_context.setConfig("SEC_DEFAULT_AUTHENTICATION_METHODS", "FS IDTOKENS PASSWORD")
+            security_context.setConfig("SEC_PASSWORD_FILE", password_file)
+
+            for location_ad in location_ads:
+                htcondor.send_command(
+                    location_ad,
+                    htcondor.DaemonCommands.OffFast,
+                    "MASTER",
+                )
 
         print(f"... each resource in '{annex_name}' has been commanded to shut down.")
         print("After each resource shuts itself down, the remote SLURM job(s) will clean up and then exit.");
