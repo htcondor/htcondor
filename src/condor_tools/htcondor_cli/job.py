@@ -101,15 +101,12 @@ class Submit(Verb):
                 # the startd's copy of the ad.
                 annex_requirements = f'((ifthenelse(TARGET.AuthenticatedIdentity is undefined, true, "{my_identity}" == TARGET.AuthenticatedIdentity)) && (MY.TargetAnnexName == TARGET.AnnexName))'
 
-                # FIXME: htcondor.Submit.get() should allow its second
-                # argument to be None.
-                # requirements = submit_description.get("requirements", "")
-                # FIXME: htcondor.Submit object should be iterable so that
-                # `if key in s` works.
-                if "requirements" in submit_description.keys():
-                    submit_description["requirements"] = f'({submit_description["requirements"]}) && ({annex_requirements})'
-                else:
+                # This is case-insensitive; checking `in keys()` is not.
+                requirements = submit_description.get("requirements", "")
+                if requirements == "":
                     submit_description["requirements"] = annex_requirements
+                else:
+                    submit_description["requirements"] = f'({requirements}) && ({annex_requirements})'
 
                 # Flock to the annex CM.
                 # FIXME: This should probably come from configuration.
