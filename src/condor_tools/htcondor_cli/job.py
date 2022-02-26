@@ -96,7 +96,8 @@ class Submit(Verb):
                 # hand out.  We will hand them out in such a way that this
                 # code always gets the right answer.
                 username = getpass.getuser()
-                my_identity = f'{username}@annex.osgdev.chtc.io'
+                annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
+                my_identity = f'{username}@{annex_token_domain}'
                 # This looks awful, but AuthenticatedIdentity isn't set in
                 # the startd's copy of the ad.
                 annex_requirements = f'((ifthenelse(TARGET.AuthenticatedIdentity is undefined, true, "{my_identity}" == TARGET.AuthenticatedIdentity)) && (MY.TargetAnnexName == TARGET.AnnexName))'
@@ -109,9 +110,8 @@ class Submit(Verb):
                     submit_description["requirements"] = f'({requirements}) && ({annex_requirements})'
 
                 # Flock to the annex CM.
-                # FIXME: This should probably come from configuration.
-                collector = "htcondor-cm-hpcannex.osgdev.chtc.io"
-                submit_description["MY.FlockTo"] = f'"{collector}"'
+                annex_collector = htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io")
+                submit_description["MY.FlockTo"] = f'"{annex_collector}"'
 
             # The Job class can only submit a single job at a time
             submit_qargs = submit_description.getQArgs()
