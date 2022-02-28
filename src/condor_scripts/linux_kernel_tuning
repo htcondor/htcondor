@@ -111,12 +111,12 @@ increaseKernelParameter() {
 	NEW=$3
 
 	if [ -n "${NEW}" ]; then
-		OLD=`cat ${FILE}`
-		if [ ${NEW} -gt ${OLD} ]; then
+		OLD=`cat "${FILE}"`
+		if [ "${NEW}" -gt "${OLD}" ]; then
 			echo "Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}"
 			echo "# Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}" >> ${LOG}
 			echo "Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}" | ${LOGGER}
-			echo ${NEW} > ${FILE}
+			echo "${NEW}" > "${FILE}"
 		else
 			echo "Not changing ${PARAMETER} (${FILE}): new value (${NEW}) <= old value (${OLD})."
 			echo "# Not changing ${PARAMETER} (${FILE}): new value (${NEW}) <= old value (${OLD})." >> ${LOG}
