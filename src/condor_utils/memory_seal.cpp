@@ -48,6 +48,10 @@ const unsigned char *process_key() {
 		&free);
 	if (!random_bytes) {return nullptr;}
 
+	// I don't believe the hkdf() call here is necessary, as the input
+	// key material should already be uniformly random and the size we
+	// need. The call doesn't do any harm, but may slow things down.
+	//   - Jaime Frey
 	std::unique_ptr<unsigned char, decltype(&free)> new_key(
 		Condor_Crypt_Base::hkdf(random_bytes.get(), 32, 32),
 		&free);
