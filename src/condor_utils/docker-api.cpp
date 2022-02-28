@@ -285,10 +285,29 @@ int DockerAPI::createContainer(
 	jobAd.LookupString(ATTR_DOCKER_NETWORK_TYPE, networkType);
 	if (networkType == "host") {
 		runArgs.AppendArg("--network=host");
-	}
-	if (networkType == "none") {
+	} else if (networkType == "none") {
 		runArgs.AppendArg("--network=none");
+	} else if (!networkType.empty()) {
+		// We always allow network type "none" or "host",
+		// as "none" is the safest, and "host" is like a vanilla job
+		// But others must be allowed by the admin
+		std::string network_param;
+		param_eval_string(network_param, "DOCKER_NETWORKS", "", &jobAd, &machineAd);
+
+		StringList allowedNetworksList = network_param.c_str();;
+		if (allowedNetworksList.contains(networkType.c_str())) {
+			std::string networkArg = "--network=";
+			networkArg += networkType;
+			runArgs.AppendArg(networkArg);
+		} else {
+			dprintf(D_ALWAYS, "Docker job requested network %s not allowed by parameter DOCKER_NETWORKS, refusing to run job\n", networkType.c_str());
+			return -1;
+		}
+	} else {
+		dprintf(D_ALWAYS, "Docker job requested network %s, but no DOCKER_NETWORKS param defined on this sytem, refusing to run job\n", networkType.c_str());
+		return -1;
 	}
+
 
 	// Handle port forwarding.
 	std::string containerServiceNames;

@@ -6130,6 +6130,14 @@ int SubmitHash::SetRequirements()
 				answer += " && ";
 			}
 			answer += "TARGET.HasDocker";
+			std::string dockerNetworkType;
+			job->LookupString(ATTR_DOCKER_NETWORK_TYPE, dockerNetworkType);
+
+			if (!dockerNetworkType.empty()) {
+				if ((dockerNetworkType != "host") && (dockerNetworkType != "none")) {
+					answer += "&& StringListMember(My.DockerNetworkType, TARGET.DockerNetworks)";
+				}
+			}
 	} else if (IsContainerJob) {
 			if( answer[0] ) {
 				answer += " && ";
