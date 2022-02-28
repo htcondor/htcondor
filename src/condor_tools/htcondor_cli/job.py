@@ -5,6 +5,7 @@ import subprocess
 import shlex
 import tempfile
 import time
+import getpass
 
 from datetime import datetime
 from pathlib import Path
@@ -55,6 +56,10 @@ class Submit(Verb):
             "args": ("--email",),
             "help": "Email address to receive notifications",
         },
+        "annex_name": {
+            "args": ("--annex-name",),
+            "help": "Annex name that this job must run on",
+        },
     }
 
     def __init__(self, logger, submit_file, **options):
@@ -75,6 +80,38 @@ class Submit(Verb):
             with submit_file.open() as f:
                 submit_data = f.read()
             submit_description = htcondor.Submit(submit_data)
+
+            annex_name = options["annex_name"]
+            if annex_name is not None:
+                # Tag the job for use by `htcondor annex create` later.
+                submit_description["MY.TargetAnnexName"] = f'"{annex_name}"'
+
+                # Require that this job run only on the specified annex,
+                # whose name we'll verify by requiring that "the same"
+                # user requested the annex in question.
+                #
+                # We don't need to know what htcondor.Submit.queue() thinks
+                # what the Owner or Submitter of the job will be, because the
+                # AuthenticatedIdentity is determined by the tokens that we
+                # hand out.  We will hand them out in such a way that this
+                # code always gets the right answer.
+                username = getpass.getuser()
+                annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
+                my_identity = f'{username}@{annex_token_domain}'
+                # This looks awful, but AuthenticatedIdentity isn't set in
+                # the startd's copy of the ad.
+                annex_requirements = f'((ifthenelse(TARGET.AuthenticatedIdentity is undefined, true, "{my_identity}" == TARGET.AuthenticatedIdentity)) && (MY.TargetAnnexName == TARGET.AnnexName))'
+
+                # This is case-insensitive; checking `in keys()` is not.
+                requirements = submit_description.get("requirements", "")
+                if requirements == "":
+                    submit_description["requirements"] = annex_requirements
+                else:
+                    submit_description["requirements"] = f'({requirements}) && ({annex_requirements})'
+
+                # Flock to the annex CM.
+                annex_collector = htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io")
+                submit_description["MY.FlockTo"] = f'"{annex_collector}"'
 
             # The Job class can only submit a single job at a time
             submit_qargs = submit_description.getQArgs()
