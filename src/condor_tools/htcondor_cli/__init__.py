@@ -39,3 +39,7 @@ NOUNS = _OrderedDict()
 NOUNS["job"] = Job
 NOUNS["jobset"] = JobSet
 
+
+# Should we knob these lines?
+from htcondor_cli.annex import Annex
+NOUNS["annex"] = Annex
