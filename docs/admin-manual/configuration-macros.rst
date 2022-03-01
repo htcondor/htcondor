@@ -4206,6 +4206,11 @@ details.
     don't pass the --rm flag in DOCKER_EXTRA_ARGUMENTS, because then
     HTCondor cannot get the final exit status from a Docker job.
 
+:macro-def:`DOCKER_NETWORKS`
+    An optional, comma-separated list of admin-defined networks that a job
+    may request with the ``docker_network_type`` submit file command.
+    Advertised into the slot attribute DockerNetworks.
+
 :macro-def:`OPENMPI_INSTALL_PATH`
     The location of the Open MPI installation on the local machine.
     Referenced by ``examples/openmpiscript``, which is used for running
