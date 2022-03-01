@@ -1,4 +1,4 @@
-condor (9.0.10-0.1) stable; urgency=high
+condor (9.0.10-1) stable; urgency=high
 
   * Fixes for security issues
     https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
