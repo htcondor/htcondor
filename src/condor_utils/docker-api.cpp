@@ -304,7 +304,7 @@ int DockerAPI::createContainer(
 			return -1;
 		}
 	} else {
-		dprintf(D_ALWAYS, "Docker job requested network %s, but no DOCKER_NETWORKS param defined on this sytem, refusing to run job\n", networkType.c_str());
+		dprintf(D_ALWAYS, "Docker job requested network %s, but no DOCKER_NETWORKS param defined on this system, refusing to run job\n", networkType.c_str());
 		return -1;
 	}
 
