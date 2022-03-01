@@ -291,10 +291,10 @@ int DockerAPI::createContainer(
 		// We always allow network type "none" or "host",
 		// as "none" is the safest, and "host" is like a vanilla job
 		// But others must be allowed by the admin
-		std::string network_param;
-		param_eval_string(network_param, "DOCKER_NETWORKS", "", &jobAd, &machineAd);
+		std::string docker_networks;
+		machineAd.LookupString(ATTR_DOCKER_NETWORKS, docker_networks);
 
-		StringList allowedNetworksList = network_param.c_str();;
+		StringList allowedNetworksList = docker_networks.c_str();;
 		if (allowedNetworksList.contains(networkType.c_str())) {
 			std::string networkArg = "--network=";
 			networkArg += networkType;
