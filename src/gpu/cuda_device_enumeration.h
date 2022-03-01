@@ -112,6 +112,7 @@ GPUFP cuda_cc_t                 cuDeviceComputeCapability;
 
 dlopen_return_t setCUDAFunctionPointers( bool force_nvcuda = false, bool force_cudart = false, bool must_load = true );
 void setSimulatedCUDAFunctionPointers();
+bool setupSimulatedDevices(const char * args);
 
 #undef GPUFP
 
@@ -119,8 +120,6 @@ void setSimulatedCUDAFunctionPointers();
 // We can simulate CUDA device enumeration for testing purposes.
 //
 
-extern int sim_index;
-extern int sim_device_count;
 extern const int sim_index_max;
 
 // basic device properties we can query from the driver

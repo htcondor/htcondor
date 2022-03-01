@@ -59,7 +59,7 @@ private:
 class Resource : public Service
 {
 public:
-	Resource( CpuAttributes*, int id, bool multiple_slots, Resource* _parent = NULL);
+	Resource( CpuAttributes*, int id, Resource* _parent = NULL);
 	~Resource();
 
 		// override param by slot_type
@@ -387,7 +387,8 @@ public:
 	enum ResourceFeature {
 		STANDARD_SLOT,
 		PARTITIONABLE_SLOT,
-		DYNAMIC_SLOT
+		DYNAMIC_SLOT,
+		BROKEN_SLOT
 	};
 
 	void	set_feature( ResourceFeature feature ) { m_resource_feature = feature; }
@@ -395,6 +396,8 @@ public:
 
 	bool is_partitionable_slot() const { return m_resource_feature == PARTITIONABLE_SLOT; }
 	bool is_dynamic_slot() const { return m_resource_feature == DYNAMIC_SLOT; }
+	bool is_broken_slot() const { return m_resource_feature == BROKEN_SLOT; }
+	bool can_create_dslot() const { return is_partitionable_slot(); } // for now, only p-slots are splitable
 
 	void set_parent( Resource* rip );
     Resource* get_parent() { return m_parent; }
@@ -456,7 +459,7 @@ private:
 };
 
 
-/* Initialize resource for this claim/job
+/* carve off resources for this claim/job
 
 Arguments
 
@@ -475,8 +478,13 @@ be deleted.  The returned Resource might be different than the Resource passed
 in!  In particular, if the passed in Resource is a partitionable slot, we will
 carve out a new dynamic slot for his job.
 
+Note: this function was formerly called initialize_resource, it can still be used that
+way, but it just returned the first argument when the first arg was not a p-slot which
+made the code confusing, consequently it is recommended that this function be called
+only if rip->can_create_dslot() is true.
+
 The job may be rejected, in which case the returned Resource will be null.
 */
-Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim);
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim);
 
 #endif /* _STARTD_RESOURCE_H */

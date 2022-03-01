@@ -223,7 +223,7 @@ public:
     void init_machine_resources();
 
 	void publish_static(ClassAd*);     // things that can only change on reconfig
-	void publish_dynamic(ClassAd*);    // things that can change at runtime
+	void publish_dynamic(ClassAd*, int slotid, int slotsubid);    // things that can change at runtime
 	void compute_config();      // what compute(A_STATIC | A_SHARED) used to do
 	void compute_for_update();  // formerly compute(A_UPDATE | A_SHARED) -  before we send ads to the collector
 	void compute_for_policy();  // formerly compute(A_TIMEOUT | A_SHARED) - before we evaluate policy like PREEMPT
@@ -370,7 +370,7 @@ public:
 				   const std::string &execute_dir, const std::string &execute_partition_id );
 
 	void attach( Resource* );	// Attach to the given Resource
-	void bind_DevIds(int slot_id, int slot_sub_id);   // bind non-fungable resource ids to a slot
+	bool bind_DevIds(int slot_id, int slot_sub_id, bool abort_on_fail);   // bind non-fungable resource ids to a slot
 	void unbind_DevIds(int slot_id, int slot_sub_id); // release non-fungable resource ids
 	void reconfig_DevIds(int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
 
@@ -462,7 +462,7 @@ private:
     slotres_map_t c_slotres_map;
     slotres_map_t c_slottot_map;
 	slotres_constraint_map_t c_slotres_constraint_map;
-	slotres_devIds_map_t c_slotres_ids_map;
+	slotres_devIds_map_t c_slotres_ids_map; // map of resource tag to vector of Assigned devids
 	slotres_props_t c_slotres_props_map; // map if resource tag to aggregate ClassAd of props for custom resource
 
     // totals
