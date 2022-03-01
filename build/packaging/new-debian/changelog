@@ -1,8 +1,9 @@
-condor (9.0.10-1) stable; urgency=high
+condor (9.0.10-0.1) stable; urgency=high
 
   * Fixes for security issues
     https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
     https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0002
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003
 
  -- Tim Theisen <tim@cs.wisc.edu>  Wed, 16 Feb 2022 11:11:00 -0600
 
