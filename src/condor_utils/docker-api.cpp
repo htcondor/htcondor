@@ -300,7 +300,7 @@ int DockerAPI::createContainer(
 			networkArg += networkType;
 			runArgs.AppendArg(networkArg);
 		} else {
-			dprintf(D_ALWAYS, "Docker job requested network %s not allowed by parameter DOCKER_NETWORKS, refusing to run job\n", networkType.c_str());
+			dprintf(D_ALWAYS, "Docker job requested network %s not allowed by parameter DOCKER_NETWORKS with value %s, refusing to run job\n", networkType.c_str(), docker_networks.c_str());
 			return -1;
 		}
 	} else {
