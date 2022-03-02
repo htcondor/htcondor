@@ -121,7 +121,10 @@ class Submit(Verb):
             with schedd.transaction() as txn:
                 try:
                     cluster_id = submit_description.queue(txn, 1)
-                    logger.info(f"Job {cluster_id} was submitted.")
+                    if annex_name is None:
+                        logger.info(f"Job {cluster_id} was submitted.")
+                    else:
+                        logger.info(f"Job {cluster_id} was submitted and will only run on the annex '{annex_name}'.")
                 except Exception as e:
                     raise RuntimeError(f"Error submitting job:\n{str(e)}")
 
