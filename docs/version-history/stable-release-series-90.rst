@@ -36,6 +36,10 @@ Bugs Fixed:
   working when user-based security is enabled
   :jira:`891`
 
+- Fixed a bug that prevented administrators from setting certain rare custom
+  linux parameters in the linux_kernel_tuning_script
+  :jira:`990`
+
 .. _lts-version-history-9010:
 
 Version 9.0.10
