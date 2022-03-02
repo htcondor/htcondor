@@ -77,6 +77,16 @@ class Status(Verb):
                 increment(status, annex_name, request_id, "TotalCPUs", slot["TotalSlotCPUs"])
                 increment(status, annex_name, request_id, "BusyCPUs", len(slot["ChildCPUs"]))
 
+        # This could be substantially optimized with a projection.  It
+        # also assumes that the user can only see their own jobs.
+        running_jobs = {}
+        target_jobs = schedd.query(f'TargetAnnexName =!= undefined')
+        for job in target_jobs:
+            if job['JobStatus'] == htcondor.JobStatus.RUNNING:
+                count = running_jobs.get(job['TargetAnnexName'], 0)
+                count += 1
+                running_jobs[job['TargetAnnexName']] = count
+
         #
         # This is obviously the wrong format, but there's only so much
         # work I'm willing to do before I get word on what it should be.
@@ -108,6 +118,16 @@ class Status(Verb):
                     busy_CPUs += values["BusyCPUs"]
 
             print(f'{annex_name}\t\t    {requested_but_not_joined}/{requests - requested_but_not_joined - requested_and_left}/{requested_and_left}\t\t    {busy_CPUs}/{total_CPUs}')
+
+            #
+            # This what the recipe actually has.
+            #
+            # Other options include: how long the annex has left, based
+            # on the requested duration
+            #
+            if requests == 1 and total_CPUs != 0:
+                print(f"The annex '{annex_name}' is currently providing {total_CPUs} cores and running {running_jobs[annex_name]} jobs.")
+                print(f"The annex '{annex_name}' is currently running {running_jobs[annex_name]} jobs on {busy_CPUs} cores out of {total_CPUs}.")
 
 
 class Shutdown(Verb):
@@ -165,7 +185,7 @@ class Shutdown(Verb):
                 )
 
         print(f"... each resource in '{annex_name}' has been commanded to shut down.")
-        print("After each resource shuts itself down, the remote SLURM job(s) will clean up and then exit.");
+        print("It may take some time for each resource to finish shutting down.");
         print("Annex requests that are still in progress have not been affected.")
 
 
