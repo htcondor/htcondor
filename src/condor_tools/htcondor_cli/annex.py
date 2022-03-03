@@ -126,8 +126,9 @@ class Status(Verb):
             # on the requested duration
             #
             if requests == 1 and total_CPUs != 0:
-                print(f"The annex '{annex_name}' is currently providing {total_CPUs} cores and running {running_jobs[annex_name]} jobs.")
-                print(f"The annex '{annex_name}' is currently running {running_jobs[annex_name]} jobs on {busy_CPUs} cores out of {total_CPUs}.")
+                running_job_count = running_jobs.get(annex_name, 0)
+                # print(f"The annex '{annex_name}' is currently providing {total_CPUs} cores and running {running_job_count} jobs.")
+                print(f"The annex '{annex_name}' is currently running {running_job_count} jobs on {busy_CPUs} of {total_CPUs} cores.")
 
 
 class Shutdown(Verb):
