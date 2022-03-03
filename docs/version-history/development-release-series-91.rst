@@ -21,6 +21,10 @@ New Features:
   values in the list being operated on to integers rather than to error.
   :jira:`970`
 
+- Added basic tools for submitting and monitoring DAGMan workflows to our 
+  new :doc:`/man-pages/htcondor` CLI tool.
+  :jira:`929`
+
 - If an administrator configures additional custom docker networks on a worker node
   and would like jobs to be able to opt into use them, the startd knob
   ``DOCKER_NETWORKS`` has been added to allow additional custom networks

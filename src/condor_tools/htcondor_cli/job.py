@@ -15,22 +15,8 @@ import htcondor
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 from htcondor_cli.dagman import DAGMan
+from htcondor_cli import JobStatus
 from htcondor_cli import TMP_DIR
-
-
-# Must be consistent with job status definitions in
-# src/condor_includes/proc.h
-JobStatus = [
-    "NONE",
-    "IDLE",
-    "RUNNING",
-    "REMOVED",
-    "COMPLETED",
-    "HELD",
-    "TRANSFERRING_OUTPUT",
-    "SUSPENDED",
-    "JOB_STATUS_MAX"
-]
 
 
 class Submit(Verb):
