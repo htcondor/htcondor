@@ -111,12 +111,12 @@ increaseKernelParameter() {
 	NEW=$3
 
 	if [ -n "${NEW}" ]; then
-		OLD=`cat ${FILE}`
-		if [ ${NEW} -gt ${OLD} ]; then
+		OLD=`cat "${FILE}"`
+		if [ "${NEW}" -gt "${OLD}" ]; then
 			echo "Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}"
 			echo "# Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}" >> ${LOG}
 			echo "Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}" | ${LOGGER}
-			echo ${NEW} > ${FILE}
+			echo "${NEW}" > "${FILE}"
 		else
 			echo "Not changing ${PARAMETER} (${FILE}): new value (${NEW}) <= old value (${OLD})."
 			echo "# Not changing ${PARAMETER} (${FILE}): new value (${NEW}) <= old value (${OLD})." >> ${LOG}
@@ -135,7 +135,7 @@ setKernelParameter() {
 		echo "Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}"
 		echo "# Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}" >> ${LOG}
 		echo "Changing ${PARAMETER} (${FILE}) from ${OLD} to ${NEW}" | ${LOGGER}
-		echo ${NEW} > ${FILE}
+		echo "${NEW}" > "${FILE}"
 	fi
 }
 
@@ -147,7 +147,7 @@ for daemon in $daemonList; do
 	daemonFile=`condor_config_val ${daemon}`
 	if [ -n "${daemonFile}" ]; then
 		baseName=`basename ${daemonFile}`
-		if [ ${baseName} = "condor_schedd" ]; then
+		if [ "${baseName}" = "condor_schedd" ]; then
 			increaseKernelParameter "GLOBAL_MAX_PROCESSES" "/proc/sys/kernel/pid_max" ${GLOBAL_MAX_PROCESSES}
 			setKernelParameter "LOCAL_PORT_RANGE" "/proc/sys/net/ipv4/ip_local_port_range" "${LOCAL_PORT_RANGE}"
 		fi

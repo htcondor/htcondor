@@ -25,6 +25,16 @@ New Features:
   new :doc:`/man-pages/htcondor` CLI tool.
   :jira:`929`
 
+- If an administrator configures additional custom docker networks on a worker node
+  and would like jobs to be able to opt into use them, the startd knob
+  ``DOCKER_NETWORKS`` has been added to allow additional custom networks
+  to be added to the *docker_network_type* submit command.
+  :jira:`995`
+
+- Added classad functions ``countMatches`` and ``evalInEachContext``. These functions
+  are used to support matchmaking of heterogenous custom resources such as GPUs.
+  :jira:`977`
+
 Bugs Fixed:
 
 - None.

@@ -914,7 +914,41 @@ Optional parameters are given within square brackets.
     are omitted from the string. For example, ``seconds`` of 67 becomes
     "1:07". A second example, ``seconds`` of 1472523 = 17\*24\*60\*60 +
     1\*60\*60 + 2\*60 + 3, results in the string "17+1:02:03".
-    
+
+    :index:`evalInEachContext()<single: evalInEachContext(); ClassAd functions>`
+``String evalInEachContext(Expression expr, List contexts)``
+    This function evaluates its first argument as an expression in the context of
+    each Classad in the second argument and returns a list that is the result of
+    each evaluation. The first argument should be an expression. 
+    If the second argument does not evaluate to a list of ClassAds, ``ERROR`` is returned.
+
+    For example:
+
+    .. code-block:: text
+
+            {true, false} = evalInEachContext(Prio > 2, { [Prio=3;], [Prio=1;] })
+            {3, 1} = evalInEachContext(Prio, { [Prio=3;], [Prio=1;] })
+            ERROR = evalInEachContext(Prio > 2, { [Prio=3;], UNDEFINED })
+            ERROR = evalInEachContext(Prio > 2, UNDEFINED)
+
+    :index:`countMatches()<single: countMatches(); ClassAd functions>`
+``String countMatches(Expression expr, List contexts)``
+    This function evaluates its first argument as an expression in the context of
+    each Classad in the second argument and returns a count of the results that
+    evaluated to ``True``. The first argument should be an expression. The second argument
+    should be a list of ClassAds or a list of attribute references to classAds, or
+    should evaluate to a list of ClassAds.  This function will always return a integer
+    value when the first argument is defined and the second argument is not ``ERROR``.
+
+    For example:
+
+    .. code-block:: text
+
+            1 = countMatches(Prio > 2, { [Prio=3;], [Prio=1;] })
+            1 = countMatches(Prio > 2, { [Prio=3;], UNDEFINED })
+            0 = countMatches(Prio > 2, UNDEFINED)
+
+
     :index:`debug()<single: debug(); ClassAd functions>`
 ``AnyType debug(AnyType expression)``
     This function evaluates its argument, and it returns the result.

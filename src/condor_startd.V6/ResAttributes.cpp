@@ -1303,6 +1303,12 @@ MachAttributes::publish_static(ClassAd* cp)
 		free(dockerVolumes);
 	}
 
+	char *dockerNetworks = param("DOCKER_NETWORKS");
+	if (dockerNetworks) {
+		cp->Assign(ATTR_DOCKER_NETWORKS, dockerNetworks);
+		free(dockerNetworks);
+	}
+
 #ifdef WIN32
 	// window's strtok_s is the 'safe' version of strtok, it's not identical to linx's strtok_r, but it's close enough.
 #define strtok_r strtok_s

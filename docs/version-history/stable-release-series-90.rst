@@ -28,6 +28,10 @@ Bugs Fixed:
   failed, etc.) to the job ad immediately at startup.
   :jira:`968`
 
+- Fixed a bug in the parallel universe that caused the *condor_schedd* to crash
+  with partitionable slots.
+  :jira:`986`
+
 - Fixed a bug in the startd drain command in the Python bindings that prevented
   it from working with zero arguments.
   :jira:`936`
@@ -35,6 +39,10 @@ Bugs Fixed:
 - Fixed a bug that prevented the High-Availability Daemon (HAD) from
   working when user-based security is enabled
   :jira:`891`
+
+- Fixed a bug that prevented administrators from setting certain rare custom
+  linux parameters in the linux_kernel_tuning_script
+  :jira:`990`
 
 .. _lts-version-history-9010:
 
