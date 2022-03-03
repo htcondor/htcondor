@@ -109,6 +109,10 @@ class Submit(Verb):
                 else:
                     submit_description["requirements"] = f'({requirements}) && ({annex_requirements})'
 
+                # Setting this is SYSTEM_JOB_MACHINE_ATTRS doesn't work,
+                # but I don't have time to figure the problem out.
+                submit_description["job_machine_attrs"] = "AnnexName"
+
                 # Flock to the annex CM.
                 annex_collector = htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io")
                 submit_description["MY.FlockTo"] = f'"{annex_collector}"'
@@ -346,7 +350,7 @@ class Resources(Verb):
             try:
                 job = schedd.query(
                     constraint=f"ClusterId == {job_id}",
-                    projection=["RemoteHost"]
+                    projection=["RemoteHost","TargetAnnexName","MachineAttrAnnexName0"]
                 )
             except IndexError:
                 raise RuntimeError(f"No jobs found for ID {job_id}.")
@@ -360,7 +364,13 @@ class Resources(Verb):
                 job_host = job[0]["RemoteHost"]
             except KeyError:
                 raise RuntimeError(f"Job {job_id} is not running yet.")
-            logger.info(f"Job is using resource {job_host}")
+
+            target_annex = job[0].get("TargetAnnexName", None)
+            machine_annex = job[0].get("MachineAttrAnnexName0", None)
+            if target_annex is not None and machine_annex is not None and target_annex == machine_annex:
+                logger.info(f"Job is using annex '{target_annex}', resource {job_host}.")
+            else:
+                logger.info(f"Job is using resource {job_host}")
 
         # Jobs running on provisioned Slurm resources need to retrieve
         # additional information from the provisioning DAGMan log
