@@ -85,6 +85,10 @@ class Status(Verb):
         if len(dag) == 0:
             raise RuntimeError(f"No DAG found for ID {dag_id}.")
 
+        # Make sure this is a DAGMan job by verifying the DAG_NodesTotal attribute exists
+        if "DAG_NodesTotal" not in dag[0]:
+            raise RuntimeError(f"Job {dag_id} is not a DAG")
+
         # Now, produce DAG status
         if JobStatus[dag[0]['JobStatus']] == "RUNNING":
             job_running_time = datetime.now() - datetime.fromtimestamp(dag[0]["JobStartDate"])
