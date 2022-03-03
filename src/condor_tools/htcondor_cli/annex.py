@@ -88,18 +88,8 @@ class Status(Verb):
                 running_jobs[job['TargetAnnexName']] = count
 
         #
-        # This is obviously the wrong format, but there's only so much
-        # work I'm willing to do before I get word on what it should be.
+        # Do the actual reporting (after calculating some aggregates).
         #
-        #   - This probably shouldn't be a table.
-        #   - It may make sense to report on the (non-active) requests
-        #     in their own section.
-        #   - It may be helpful to report how many jobs (owned by this
-        #     user) are targetting each annex, and of those, how many
-        #     are running.
-        #
-        print(f'          \t\t           REQUESTS\t        CPUS')
-        print(f'ANNEX NAME\t\tPENDING/ACTIVE/DONE\t  BUSY/TOTAL')
         for annex_name, annex_status in status.items():
             requests = len(annex_status)
 
@@ -116,20 +106,28 @@ class Status(Verb):
                 else:
                     total_CPUs += values["TotalCPUs"]
                     busy_CPUs += values["BusyCPUs"]
-
-            print(f'{annex_name}\t\t    {requested_but_not_joined}/{requests - requested_but_not_joined - requested_and_left}/{requested_and_left}\t\t    {busy_CPUs}/{total_CPUs}')
+            requested_and_active = requests - requested_but_not_joined - requested_and_left
 
             #
             # This what the recipe actually has.
             #
-            # Other options include: how long the annex has left, based
-            # on the requested duration
+            # Other possibilities include:
+            # * how long the annex has left, based on the requested duration
+            # * how many jobs target the current annex (e.g., running x/y jobs)
+            # * how long ago the requests were made.
+            # * (approximately) how long ago the annex became active (based
+            #   on the DaemonStartTime of the slot ads).
             #
-            if requests == 1 and total_CPUs != 0:
+            if total_CPUs != 0:
                 running_job_count = running_jobs.get(annex_name, 0)
-                # print(f"The annex '{annex_name}' is currently providing {total_CPUs} cores and running {running_job_count} jobs.")
-                print(f"The annex '{annex_name}' is currently running {running_job_count} jobs on {busy_CPUs} of {total_CPUs} cores.")
+                print(f"Annex '{annex_name}' is active and running {running_job_count} jobs on {busy_CPUs} of {total_CPUs} CPUs.", end='')
+            else:
+                print(f"Annex '{annex_name}' is not active.", end='')
 
+            if requests != requested_and_active:
+                print(f"  {requested_but_not_joined}/{requested_and_active}/{requested_and_left} requests are pending/active/retired.", end='')
+
+            print()
 
 class Shutdown(Verb):
     """
