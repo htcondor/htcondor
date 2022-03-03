@@ -36,10 +36,12 @@ def parse_args():
     )
 
     # Add nouns to parser
+    noun_parsers = {}
     for noun, noun_cls in NOUNS.items():
         noun_parser = base_subparser.add_parser(noun, description=noun_cls.__doc__)
+        noun_parsers[noun] = noun_parser
         noun_subparser = noun_parser.add_subparsers(description="",
-            help=f"Types of actions you can take on {noun}s",
+            help=f"Types of actions you can take on {noun}{'s' if not noun.endswith('x') else 'es'}",
             dest="verb",
         )
 
@@ -74,6 +76,7 @@ def parse_args():
     if parsed_vars["noun"] is None:
         raise TypeError(base_parser.format_help().rstrip())
     elif parsed_vars["verb"] is None:
+        noun_parser = noun_parsers[parsed_vars["noun"]]
         raise TypeError(noun_parser.format_help().rstrip())
 
     # Return the dict representation
