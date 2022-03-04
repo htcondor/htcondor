@@ -27,6 +27,7 @@ class Create(Verb):
     options = {
         "annex_name": {
             "args": ("--name",),
+            "dest": "annex_name",
             "help": "Provide an name for this annex",
             "required": True,
         },
@@ -44,11 +45,13 @@ class Create(Verb):
         },
         "target": {
             "args": ("--machine",),
+            "dest": "target",
             "help": "HPC machine name (e.g. stampede2)",
             "required": True,
         },
         "allocation": {
             "args": ("--project",),
+            "dest": "allocation",
             "help": "The project name associated with HPC allocation (may be optional on some HPC machines)",
             "default": None,
         },
@@ -65,6 +68,7 @@ class Create(Verb):
         },
         "collector": {
             "args": ("--pool",),
+            "dest": "collector",
             "help": "Collector that the annex reports to. Defaults to %(default)s",
             "default": htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io"),
         },
@@ -89,6 +93,7 @@ class Create(Verb):
         },
         "control_path": {
             "args": ("--tmp_dir",),
+            "dest": "control_path",
             "help": "Location to store temporary annex control files, probably should not be changed. Defaults to %(default)s",
             "type": Path,
             "default": Path(htcondor.param.get("ANNEX_TMP_DIR", "~/.hpc-annex")),
@@ -288,7 +293,11 @@ class Annex(Noun):
         pass
 
 
+    class create(Create):
+        pass
+
+
     @classmethod
     def verbs(cls):
-        return [cls.shutdown, cls.status]
+        return [cls.create, cls.status, cls.shutdown]
 
