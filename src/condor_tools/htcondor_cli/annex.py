@@ -1,9 +1,96 @@
 import os
+from pathlib import Path
+import getpass
+import argparse
 
 import htcondor
 
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
+
+# Most of the annex create code is stored in a separate file.
+from htcondor_cli.annex_create import annex_create
+
+
+class Create(Verb):
+    """
+    Create an HPC annex.
+    """
+
+
+    options = {
+        "annex_name": {
+            "args": ("--name",),
+            "help": "Provide an name for this annex",
+            "required": True,
+        },
+        "nodes": {
+            "args": ("--nodes",),
+            "help": "Number of HPC nodes to schedule. Defaults to %(default)s",
+            "type": int,
+            "default": 2,
+        },
+        "lifetime": {
+            "args": ("--lifetime",),
+            "help": "Annex lifetime (in seconds). Defaults to %(default)s",
+            "type": int,
+            "default": 3600,
+        },
+        "target": {
+            "args": ("--machine",),
+            "help": "HPC machine name (e.g. stampede2)",
+            "required": True,
+        },
+        "allocation": {
+            "args": ("--project",),
+            "help": "The project name associated with HPC allocation (may be optional on some HPC machines)",
+            "default": None,
+        },
+        "queue_name": {
+            "args": ("--queue_name",),
+            "help": f"""HPC queue name. Defaults to {htcondor.param.get("ANNEX_HPC_QUEUE_NAME", 'a machine-specific default (e.g. "development" for "stampede2")')}""",
+            "default": htcondor.param.get("ANNEX_HPC_QUEUE_NAME"),
+        },
+        "owners": {
+            "args": ("--owners",),
+            #"help": "List (comma-separated) of annex owners. Defaults to current user (%(default)s)",
+            help=argparse.SUPPRESS,  # hidden option
+            "default": getpass.getuser(),
+        },
+        "collector": {
+            "args": ("--pool",),
+            "help": "Collector that the annex reports to. Defaults to %(default)s",
+            "default": htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io"),
+        },
+        "ssh_target": {
+            "args": ("--ssh_target",),
+            #"help": "SSH target to use to talk with the HPC scheduler. Defaults to %(default)s",
+            help=argparse.SUPPRESS,  # hidden option
+            "default": f"{getpass.getuser()}@{htcondor.param.get("ANNEX_SSH_HOST", "login.xsede.org")}",
+        }
+        "token_file": {
+            "args": ("--token_file",),
+            "help": "Token file. Defaults to %(default)s",
+            "type": Path,
+            "default": Path(htcondor.param.get("ANNEX_TOKEN_FILE", f"~/.condor/tokens.d/{getpass.getuser()}@annex.osgdev.chtc.io")),
+        },
+        "password_file": {
+            "args": ("--password_file",),
+            #"help": "Password file. Defaults to %(default)s",
+            help=argparse.SUPPRESS,  # hidden option
+            "type": Path,
+            "default": Path(htcondor.param.get("ANNEX_PASSWORD_FILE", "~/.condor/annex_password_file")),
+        },
+        "control_path": {
+            "args": ("--tmp_dir",),
+            "help": "Location to store temporary annex control files, probably should not be changed. Defaults to %(default)s",
+            "type": Path,
+            "default": Path(htcondor.param.get("ANNEX_TMP_DIR", "~/.hpc-annex")),
+        }
+    }
+
+    def __init__(self, logger, **options):
+        annex_create(logger, **options)
 
 
 class Shutdown(Verb):
