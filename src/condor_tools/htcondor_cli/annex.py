@@ -60,7 +60,7 @@ class Create(Verb):
         "owners": {
             "args": ("--owners",),
             #"help": "List (comma-separated) of annex owners. Defaults to current user (%(default)s)",
-            help=argparse.SUPPRESS,  # hidden option
+            "help": argparse.SUPPRESS,  # hidden option
             "default": getpass.getuser(),
         },
         "collector": {
@@ -71,7 +71,7 @@ class Create(Verb):
         "ssh_target": {
             "args": ("--ssh_target",),
             #"help": "SSH target to use to talk with the HPC scheduler. Defaults to %(default)s",
-            help=argparse.SUPPRESS,  # hidden option
+            "help": argparse.SUPPRESS,  # hidden option
             "default": f"{getpass.getuser()}@{htcondor.param.get("ANNEX_SSH_HOST", "login.xsede.org")}",
         }
         "token_file": {
@@ -83,7 +83,7 @@ class Create(Verb):
         "password_file": {
             "args": ("--password_file",),
             #"help": "Password file. Defaults to %(default)s",
-            help=argparse.SUPPRESS,  # hidden option
+            "help": argparse.SUPPRESS,  # hidden option
             "type": Path,
             "default": Path(htcondor.param.get("ANNEX_PASSWORD_FILE", "~/.condor/annex_password_file")),
         },
