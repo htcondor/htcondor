@@ -77,10 +77,9 @@ class Status(Verb):
                 increment(status, annex_name, request_id, "TotalCPUs", slot["TotalSlotCPUs"])
                 increment(status, annex_name, request_id, "BusyCPUs", len(slot["ChildCPUs"]))
 
-        # This could be substantially optimized with a projection.  It
-        # also assumes that the user can only see their own jobs.
+        # This could be substantially optimized with a projection.
         running_jobs = {}
-        target_jobs = schedd.query(f'TargetAnnexName =!= undefined')
+        target_jobs = schedd.query(f'TargetAnnexName =!= undefined', opts=htcondor.QueryOpts.DefaultMyJobsOnly)
         for job in target_jobs:
             if job['JobStatus'] == htcondor.JobStatus.RUNNING:
                 count = running_jobs.get(job['TargetAnnexName'], 0)
