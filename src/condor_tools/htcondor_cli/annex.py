@@ -12,6 +12,12 @@ from htcondor_cli.verb import Verb
 from htcondor_cli.annex_create import annex_create
 
 
+def increment(hash, key, subkey, subsubkey, number):
+    value = hash[key][subkey].get(subsubkey, 0)
+    value += number
+    hash[key][subkey][subsubkey] = value
+
+
 class Create(Verb):
     """
     Create an HPC annex.
@@ -91,12 +97,6 @@ class Create(Verb):
 
     def __init__(self, logger, **options):
         annex_create(logger, **options)
-
-
-def increment(hash, key, subkey, subsubkey, number):
-    value = hash[key][subkey].get(subsubkey, 0)
-    value += number
-    hash[key][subkey][subsubkey] = value
 
 
 class Status(Verb):
