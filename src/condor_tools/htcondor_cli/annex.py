@@ -72,8 +72,8 @@ class Create(Verb):
             "args": ("--ssh_target",),
             #"help": "SSH target to use to talk with the HPC scheduler. Defaults to %(default)s",
             "help": argparse.SUPPRESS,  # hidden option
-            "default": f"{getpass.getuser()}@{htcondor.param.get("ANNEX_SSH_HOST", "login.xsede.org")}",
-        }
+            "default": f"{getpass.getuser()}@{htcondor.param.get('ANNEX_SSH_HOST', 'login.xsede.org')}",
+        },
         "token_file": {
             "args": ("--token_file",),
             "help": "Token file. Defaults to %(default)s",
