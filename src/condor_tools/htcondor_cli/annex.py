@@ -122,10 +122,10 @@ class Status(Verb):
         the_annex_name = options["annex_name"];
 
         schedd = htcondor.Schedd()
-        if the_annex_name is None:
-            annex_jobs = schedd.query(f'hpc_annex_name =!= undefined')
-        else:
-            annex_jobs = schedd.query(f'hpc_annex_name == "{the_annex_name}"')
+        query = f'hpc_annex_name =!= undefined'
+        if the_annex_name is not None:
+            query = f'hpc_annex_name == "{the_annex_name}"'
+        annex_jobs = schedd.query(query, opts=htcondor.QueryOpts.DefaultMyJobsOnly)
 
         # Each annex request is represented by its own job, but we want
         # to present aggregate information for each annex name.
@@ -147,10 +147,12 @@ class Status(Verb):
 
         annex_collector = htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io")
         collector = htcondor.Collector(annex_collector)
-        if the_annex_name is None:
-            annex_slots = collector.query(constraint=f'AnnexName =!= undefined', ad_type=htcondor.AdTypes.Startd)
-        else:
-            annex_slots = collector.query(constraint=f'AnnexName == "{the_annex_name}"', ad_type=htcondor.AdTypes.Startd)
+
+        constraint = 'AnnexName =!= undefined'
+        if the_annex_name is not None:
+            constraint = f'AnnexName == "{the_annex_name}"'
+        constraint = f'{constraint} && AuthenticatedIdentity == "{getpass.getuser()}@annex.osgdev.chtc.io"'
+        annex_slots = collector.query(constraint=constraint, ad_type=htcondor.AdTypes.Startd)
 
         for slot in annex_slots:
             annex_name = slot["AnnexName"]
