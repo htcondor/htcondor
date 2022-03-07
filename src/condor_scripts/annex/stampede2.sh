@@ -290,6 +290,8 @@ MASTER.DAEMON_SHUTDOWN_FAST = (CurrentTime - DaemonStartTime) > ${REMAINING_LIFE
 
 # Only start jobs from the specified owner.
 START = \$(START) && stringListMember( Owner, \"${OWNERS}\" )
+# Only start jobs for this annex.
+START = \$(START) && MY.AnnexName == TARGET.TargetAnnexName
 
 # Advertise the standard annex attributes (master ad for condor_off).
 IsAnnex = TRUE
