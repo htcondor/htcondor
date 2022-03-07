@@ -261,7 +261,7 @@ def invoke_pilot_script(
     nodes,
     allocation,
     update_function,
-    cluster_id,
+    request_id,
     password_file,
 ):
     args = [
@@ -280,7 +280,7 @@ def invoke_pilot_script(
         str(nodes),
         str(remote_script_dir / f"{target}.multi-pilot"),
         str(allocation),
-        str(cluster_id),
+        request_id,
         str(remote_script_dir / password_file.name),
     ]
     proc = subprocess.Popen(
@@ -558,6 +558,7 @@ def annex_create(
     #     undefined -- to make sure it keeps polling.
     #   * The job runs every five minutes because of cron_minute.
     #
+    full_hostname = htcondor.param["FULL_HOSTNAME"]
     submit_description = htcondor.Submit(
         {
             "universe": "local",
@@ -577,8 +578,8 @@ def annex_create(
             # in debugging later.  Problem: where should it go?  How does it
             # cleaned up?
             "environment": f'PYTHONPATH={os.environ.get("PYTHONPATH", "")}',
-            "arguments": f"$(CLUSTER).0 hpc_annex_request_id $(CLUSTER) {collector}",
-            "+hpc_annex_request_id": '"$(CLUSTER)"',
+            "arguments": f"$(CLUSTER).0 hpc_annex_request_id {full_hostname}-$(CLUSTER) {collector}",
+            "+hpc_annex_request_id": f'"{full_hostname}-$(CLUSTER)"',
             # Properties of the annex request.  We should think about
             # representing these as a nested ClassAd.  Ideally, the back-end
             # would, instead of being passed a billion command-line arguments,
@@ -607,6 +608,7 @@ def annex_create(
         raise RuntimeError(f"Failed to submit state-tracking job, aborting.")
 
     cluster_id = submit_result.cluster()
+    request_id = f'{full_hostname}-{cluster_id}'
     logger.info(f"... done, with cluster ID {cluster_id}.")
 
     remotes = {}
@@ -626,7 +628,7 @@ def annex_create(
         nodes,
         allocation,
         lambda attribute, value: updateJobAd(cluster_id, attribute, value, remotes),
-        cluster_id,
+        request_id,
         password_file,
     )
 
