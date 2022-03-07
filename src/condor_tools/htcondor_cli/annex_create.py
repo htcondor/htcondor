@@ -635,7 +635,12 @@ def annex_create(
     if rc == 0:
         logger.info(f"... remote SLURM job submitted.")
     else:
-        raise RuntimeError(f"Failed to start annex, SLURM returned code {rc}")
+        error = f"Failed to start annex, SLURM returned code {rc}"
+        try:
+            schedd.act(htcondor.JobAction.Remove, f'ClusterID == {cluster_id}', error)
+        except:
+            logger.warn(f"Could not remove cluster ID {cluster_id}.")
+        raise RuntimeError(error)
 
     ##
     ## Now that we've started the annex, rewrite the jobs targeting it
@@ -669,54 +674,3 @@ def annex_create(
                     schedd.edit(job_id, "TransferInput", f'"{",".join(input_files)}"')
                 else:
                     schedd.edit(job_id, "TransferInput", "undefined")
-
-
-# FIXME: If we really care about this functionality, use argparse and duplicate
-# the args from the htcondor cli tool
-def __main():
-    """
-    Main entry point, only to be used when run as a standalone executable
-    """
-    username = getpass.getuser()
-    target = "stampede2"
-    nodes = 2
-    lifetime = 7200
-
-    annex_name = "hpc-annex"
-    queue_name = "development"
-    owners = username
-    allocation = None
-
-    collector = htcondor.param.get(
-        "ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io"
-    )
-    token_file = f"~/.condor/tokens.d/{username}@annex.osgdev.chtc.io"
-    control_path = "~/.hpc-annex"
-    password_file = htcondor.param.get(
-        "ANNEX_PASSWORD_FILE", "~/.condor/annex_password_file"
-    )
-
-    ssh_target = f"{username}@login.xsede.org"
-
-    logging.basicConfig(format="%(message)s", level=logging.INFO)
-    logger = logging.getLogger()
-
-    annex_create(
-        logger,
-        annex_name,
-        nodes,
-        lifetime,
-        allocation,
-        target,
-        queue_name,
-        owners,
-        collector,
-        token_file,
-        password_file,
-        ssh_target,
-        control_path,
-    )
-
-
-if __name__ == "__main__":
-    __main()
