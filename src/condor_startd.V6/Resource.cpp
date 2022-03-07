@@ -214,7 +214,6 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	, m_acceptedWhileDraining(false)
 {
 	std::string tmp;
-	const char* tmpName;
 
 		// we need this before we instantiate any Claim objects...
 	if (_parent) { r_sub_id = _parent->m_id_dispenser->next(); }
@@ -708,6 +707,9 @@ Resource::dropAdInLogFile( void )
 				break;
 			case DYNAMIC_SLOT:
 				if(sl.contains_anycase("dynamic")) will_print = true;
+				break;
+			case BROKEN_SLOT:
+				dprintf(D_ALWAYS, "DEBUG: unexpected to see BROKEN_SLOT ad here.\n";
 				break;
 		}
 	} else {
