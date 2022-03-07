@@ -131,6 +131,9 @@ class Status(Verb):
         # to present aggregate information for each annex name.
 
         status = { job["hpc_annex_name"]: {} for job in annex_jobs }
+        if len(status) == 0:
+                print(f"Found no annex requests.")
+
         for job in annex_jobs:
             annex_name = job["hpc_annex_name"]
             request_id = job["hpc_annex_request_id"]
@@ -154,9 +157,14 @@ class Status(Verb):
         constraint = f'{constraint} && AuthenticatedIdentity == "{getpass.getuser()}@annex.osgdev.chtc.io"'
         annex_slots = collector.query(constraint=constraint, ad_type=htcondor.AdTypes.Startd)
 
+        if len(annex_slots) == 0:
+                print(f"Found no active annexes.")
+
         for slot in annex_slots:
             annex_name = slot["AnnexName"]
             request_id = slot["hpc_annex_request_id"]
+            if status.get(annex_name) is None:
+                status[annex_name] = {}
             status[annex_name][request_id] = {}
 
         for slot in annex_slots:
