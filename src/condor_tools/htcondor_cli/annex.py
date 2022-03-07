@@ -134,7 +134,7 @@ class Status(Verb):
 
         for job in annex_jobs:
             annex_name = job["hpc_annex_name"]
-            request_id = job["hpc_annex_request_id"]
+            request_id = job.eval("hpc_annex_request_id")
 
             status[annex_name][request_id] = "requested"
             if job.get("hpc_annex_PID") is not None:
@@ -185,7 +185,6 @@ class Status(Verb):
 
         if len(status) == 0 and len(annex_slots) == 0:
                 print(f"Found no active or requested annexes.")
-
 
         #
         # Do the actual reporting (after calculating some aggregates).

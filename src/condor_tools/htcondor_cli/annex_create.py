@@ -558,7 +558,6 @@ def annex_create(
     #     undefined -- to make sure it keeps polling.
     #   * The job runs every five minutes because of cron_minute.
     #
-    full_hostname = htcondor.param["FULL_HOSTNAME"]
     submit_description = htcondor.Submit(
         {
             "universe": "local",
@@ -578,8 +577,8 @@ def annex_create(
             # in debugging later.  Problem: where should it go?  How does it
             # cleaned up?
             "environment": f'PYTHONPATH={os.environ.get("PYTHONPATH", "")}',
-            "arguments": f"$(CLUSTER).0 hpc_annex_request_id {full_hostname}-$(CLUSTER) {collector}",
-            "+hpc_annex_request_id": f'"{full_hostname}-$(CLUSTER)"',
+            "+arguments": f'strcat( "$(CLUSTER).0 hpc_annex_request_id ", GlobalJobID, " {collector}")',
+            "+hpc_annex_request_id": 'GlobalJobID',
             # Properties of the annex request.  We should think about
             # representing these as a nested ClassAd.  Ideally, the back-end
             # would, instead of being passed a billion command-line arguments,
@@ -608,8 +607,14 @@ def annex_create(
         raise RuntimeError(f"Failed to submit state-tracking job, aborting.")
 
     cluster_id = submit_result.cluster()
-    request_id = f'{full_hostname}-{cluster_id}'
     logger.info(f"... done, with cluster ID {cluster_id}.")
+
+    results = schedd.query(
+        f'ClusterID == {cluster_id} && ProcID == 0',
+        opts=htcondor.QueryOpts.DefaultMyJobsOnly,
+        projection=["GlobalJobID"],
+        )
+    request_id = results[0]["GlobalJobID"]
 
     remotes = {}
     logger.info(f"Submitting SLURM job on {target}:\n")
