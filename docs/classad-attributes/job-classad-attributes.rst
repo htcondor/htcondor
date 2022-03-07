@@ -1636,6 +1636,17 @@ all attributes.
     *condor_startd* provisioning is enabled, it is the minimum amount
     of disk space needed in the created dynamic slot.
 
+:classad-attribute:`RequestGPUs`
+    The number of GPUs requested for this job. If dynamic
+    *condor_startd* provisioning is enabled, it is the minimum number
+    of GPUs that are needed in the created dynamic slot.
+
+:classad-attribute:`RequireGPUs`
+    Constraint on the properites of GPUs requested for this job. If dynamic
+    *condor_startd* provisioning is enabled, This constraint will be tested
+    against the property attributes of the `AvailableGPUs` attribute of the
+    partitionable slot when choosing which GPUs for the dynamic slot.
+
 :classad-attribute:`RequestedChroot`
     A full path to the directory that the job requests the
     *condor_starter* use as an argument to chroot().

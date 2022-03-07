@@ -78,7 +78,9 @@
 #define SUBMIT_KEY_RequestMemory "request_memory"
 #define SUBMIT_KEY_RequestDisk "request_disk"
 #define SUBMIT_KEY_RequestGpus "request_gpus"
+#define SUBMIT_KEY_RequireGpus "require_gpus"
 #define SUBMIT_KEY_RequestPrefix "request_"
+#define SUBMIT_KEY_RequirePrefix "require_"
 
 #define SUBMIT_KEY_Universe "universe"
 #define SUBMIT_KEY_MachineCount "machine_count"
@@ -657,6 +659,9 @@ public:
 	// and ads_error be set to describe any required but missing attributes in the request_ads
 	bool NeedsOAuthServices(std::string & services, ClassAdList * request_ads=NULL, std::string * ads_error=NULL) const;
 
+	// job needs the countMatches classad function to match
+	bool NeedsCountMatchesFunc() const { return HasRequireResAttr; };
+
 	MACRO_SET& macros() { return SubmitMacroSet; }
 	int getUniverse() const  { return JobUniverse; }
 	int getClusterId() const { return jid.cluster; }
@@ -720,6 +725,7 @@ protected:
 	bool JobIwdInitialized;
 	bool IsDockerJob;
 	bool IsContainerJob;
+	bool HasRequireResAttr;
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
 	bool SubmitOnHold;
 	int  SubmitOnHoldCode;
@@ -727,6 +733,7 @@ protected:
 	bool already_warned_requirements_mem;
 	bool already_warned_job_lease_too_small;
 	bool already_warned_notification_never;
+	bool already_warned_require_gpus;
 	bool UseDefaultResourceParams;
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
