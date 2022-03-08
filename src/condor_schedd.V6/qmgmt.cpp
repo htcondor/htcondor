@@ -1930,11 +1930,13 @@ CleanJobQueue()
 		while (job_itr != PrivateAttrs.end()) {
 			ClassAd *job_ad = GetJobAd(job_itr->first);
 			if (job_ad == NULL) {
-				job_itr = PrivateAttrs.erase(job_itr);
+				auto tmp_itr = job_itr;
+				job_itr++;
+				PrivateAttrs.erase(tmp_itr);
 			} else {
-				for (auto &attr : job_itr->second) {
-					if (SetAttributeString(job_itr->first.cluster, job_itr->first.proc, attr.first.c_str(), attr.second.c_str()) == 0) {
-						job_ad->Delete(attr.first.c_str());
+				for (auto attr_itr = job_itr->second.begin(); attr_itr != job_itr->second.end(); attr_itr++) {
+					if (SetAttributeString(job_itr->first.cluster, job_itr->first.proc, attr_itr->first.c_str(), attr_itr->second.c_str()) == 0) {
+						job_ad->Delete(attr_itr->first.c_str());
 					}
 				}
 				job_itr++;
