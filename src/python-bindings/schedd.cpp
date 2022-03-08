@@ -2322,7 +2322,7 @@ struct Schedd {
 		return result;
 	}
 
-	boost::shared_ptr<EditResult> edit_multiple(boost::python::object edits, SetAttributeFlags_t flags=0)
+	boost::shared_ptr<EditResult> edit_multiple(boost::python::object edits, SetAttributeFlags_t /* flags=0 */)
 	{
 		int match_count = 0;
 		if ( ! PyList_Check(edits.ptr())) {
