@@ -709,7 +709,7 @@ Resource::dropAdInLogFile( void )
 				if(sl.contains_anycase("dynamic")) will_print = true;
 				break;
 			case BROKEN_SLOT:
-				dprintf(D_ALWAYS, "DEBUG: unexpected to see BROKEN_SLOT ad here.\n";
+				dprintf(D_ALWAYS, "DEBUG: unexpected to see BROKEN_SLOT ad here.\n");
 				break;
 		}
 	} else {
