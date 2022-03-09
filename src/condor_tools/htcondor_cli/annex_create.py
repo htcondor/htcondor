@@ -616,6 +616,47 @@ def annex_create(
         )
     request_id = results[0]["GlobalJobID"]
 
+    ##
+    ## We changed the job(s) at submit time to prevent them from running
+    ## anywhere other than the annex, so it's OK to change them again to
+    ## make it impossible to run them anywhere else before the annex job
+    ## is successfully submitted.  Doing so after allows for a race
+    ## condition, so let's not, since we don't hvae to.
+    ##
+    ## Change the jobs so that they don't transfer the .sif files we just
+    ## pre-staged.
+    ##
+    ## The startd can't rewrite the job ad the shadow uses to decide
+    ## if it should transfer the .sif file, but it can change ContainerImage
+    ## to point the pre-staged image, if it's just the basename.  (Otherwise,
+    ## it gets impossibly difficult to make the relative paths work.)
+    ##
+    ## We could do this at job-submission time, but then we'd have to record
+    ## the full path to the .sif file in some other job attribute, so it's
+    ## not worth changing at this point.
+    ##
+    for job_ad in annex_jobs:
+        job_id = f'{job_ad["ClusterID"]}.{job_ad["ProcID"]}'
+        sif_file = extract_sif_file(job_ad)
+        if sif_file is not None:
+            remote_sif_file = Path(sif_file).name
+            logger.debug(
+                f"Setting ContainerImage = {remote_sif_file} in annex job {job_id}"
+            )
+            schedd.edit(job_id, "ContainerImage", f'"{remote_sif_file}"')
+
+            transfer_input = job_ad["TransferInput"]
+            input_files = transfer_input.split(",")
+            if job_ad["ContainerImage"] in input_files:
+                logger.debug(
+                    f"Removing {job_ad['ContainerImage']} from input files in annex job {job_id}"
+                )
+                input_files.remove(job_ad["ContainerImage"])
+                if len(input_files) != 0:
+                    schedd.edit(job_id, "TransferInput", f'"{",".join(input_files)}"')
+                else:
+                    schedd.edit(job_id, "TransferInput", "undefined")
+
     remotes = {}
     logger.info(f"Submitting SLURM job on {target}:\n")
     rc = invoke_pilot_script(
@@ -647,35 +688,3 @@ def annex_create(
             logger.warn(f"Could not remove cluster ID {cluster_id}.")
         raise RuntimeError(error)
 
-    ##
-    ## Now that we've started the annex, rewrite the jobs targeting it
-    ## so that they don't transfer the .sif files we just pre-staged.
-    ##
-    ## The startd can't rewrite the job ad the shadow uses to decide
-    ## if it should transfer the .sif file, but it can change ContainerImage
-    ## to point the pre-staged image, if it's just the basename.  (Otherwise,
-    ## it gets impossibly difficult to make the relative paths work.)
-    ##
-
-    sif_dir = Path(remotes["PILOT_DIR"]) / "sif"
-    for job_ad in annex_jobs:
-        job_id = f'{job_ad["ClusterID"]}.{job_ad["ProcID"]}'
-        sif_file = extract_sif_file(job_ad)
-        if sif_file is not None:
-            remote_sif_file = Path(sif_file).name
-            logger.debug(
-                f"Setting ContainerImage = {remote_sif_file} in annex job {job_id}"
-            )
-            schedd.edit(job_id, "ContainerImage", f'"{remote_sif_file}"')
-
-            transfer_input = job_ad["TransferInput"]
-            input_files = transfer_input.split(",")
-            if job_ad["ContainerImage"] in input_files:
-                logger.debug(
-                    f"Removing {job_ad['ContainerImage']} from input files in annex job {job_id}"
-                )
-                input_files.remove(job_ad["ContainerImage"])
-                if len(input_files) != 0:
-                    schedd.edit(job_id, "TransferInput", f'"{",".join(input_files)}"')
-                else:
-                    schedd.edit(job_id, "TransferInput", "undefined")
