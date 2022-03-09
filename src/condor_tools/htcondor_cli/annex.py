@@ -111,8 +111,9 @@ class Status(Verb):
 
     options = {
         "annex_name": {
-            "args": ("--annex-name",),
+            "args": ("annex_name",),
             "help": "annex name",
+            "nargs": "?",
         },
     }
 
