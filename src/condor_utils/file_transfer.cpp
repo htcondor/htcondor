@@ -6426,6 +6426,7 @@ bool
 FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list, bool preserveRelativePaths )
 {
 	bool rc = true;
+	std::vector<std::string> pathsAlreadyPreserved;
 
 	if( !input_list ) {
 		return true;
@@ -6433,7 +6434,7 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 
 	// if this exists and is in the list do it first
 	if (X509UserProxy && input_list->contains(X509UserProxy)) {
-		if( !ExpandFileTransferList( X509UserProxy, "", Iwd, -1, expanded_list, preserveRelativePaths, SpoolSpace ) ) {
+		if( !ExpandFileTransferList( X509UserProxy, "", Iwd, -1, expanded_list, preserveRelativePaths, SpoolSpace, pathsAlreadyPreserved ) ) {
 			rc = false;
 		}
 	}
@@ -6446,35 +6447,36 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 		// everything else gets expanded.  this if would short-circuit
 		// true if X509UserProxy is not defined, but i made it explicit.
 		if(!X509UserProxy || (X509UserProxy && strcmp(path, X509UserProxy) != 0)) {
-			if( !ExpandFileTransferList( path, "", Iwd, -1, expanded_list, preserveRelativePaths, SpoolSpace ) ) {
+			if( !ExpandFileTransferList( path, "", Iwd, -1, expanded_list, preserveRelativePaths, SpoolSpace, pathsAlreadyPreserved ) ) {
 				rc = false;
 			}
 		}
 	}
 
-    // Remove duplicate directory-creation entries.
-    std::string dir;
-    std::set< std::string > dirs;
-    for( size_t i = 0; i < expanded_list.size(); ++i ) {
-        FileTransferItem fti = expanded_list[i];
-        if( fti.isDirectory() ) {
-            dir = fti.destDir();
-            if(! dir.empty()) { dir += DIR_DELIM_CHAR; }
-            dir += condor_basename( fti.srcName().c_str() );
 
-            if( dirs.find( dir ) != dirs.end() ) {
-                expanded_list.erase(expanded_list.begin() + i); --i;
-            } else {
-                dirs.insert( dir );
-            }
-        }
-    }
+/*
+	// We'll need this for testing at some point.
+	for( auto & path : pathsAlreadyPreserved ) {
+		dprintf( D_ALWAYS, "path cache includes: '%s'\n", path.c_str() );
+	}
+
+	std::string dir;
+	for( auto & fti : expanded_list ) {
+		if( fti.isDirectory() ) {
+			dir = fti.destDir();
+			if(! dir.empty()) { dir += DIR_DELIM_CHAR; }
+			dir += condor_basename( fti.srcName().c_str() );
+			dprintf( D_ALWAYS, "expanded list includes: '%s'\n", dir.c_str() );
+		}
+	}
+*/
+
 
 	return rc;
 }
 
 bool
-FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, FileTransferList &expanded_list, const char * SpoolSpace ) {
+FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, FileTransferList &expanded_list, const char * SpoolSpace, std::vector<std::string> & pathsAlreadyPreserved ) {
 	// dprintf( D_ALWAYS, ">>> ExpandParentDirectories( %s, %s, ...)\n", src_path, iwd );
 
 	// Fill a stack with path components from right to left.
@@ -6501,8 +6503,13 @@ FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, 
 			partialPath += DIR_DELIM_CHAR;
 		}
 		partialPath += splitPath.back(); splitPath.pop_back();
-		if(! ExpandFileTransferList( partialPath.c_str(), parent.c_str(), iwd, 0, expanded_list, false, SpoolSpace )) {
-			return false;
+
+		if( std::find(pathsAlreadyPreserved.begin(), pathsAlreadyPreserved.end(), partialPath) == pathsAlreadyPreserved.end() ) {
+			if(! ExpandFileTransferList( partialPath.c_str(), parent.c_str(), iwd, 0, expanded_list, false, SpoolSpace, pathsAlreadyPreserved )) {
+				return false;
+			}
+
+			pathsAlreadyPreserved.emplace_back(partialPath);
 		}
 		parent = partialPath;
 	}
@@ -6511,7 +6518,7 @@ FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, 
 }
 
 bool
-FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace )
+FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace, std::vector<std::string> & pathsAlreadyPreserved )
 {
 	ASSERT( src_path );
 	ASSERT( dest_dir );
@@ -6580,17 +6587,22 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 			if( strcmp( dirname.c_str(), "." ) != 0 ) {
 				file_xfer_item.setDestDir( dirname );
 
-				// ExpandParentDirectories() adds this back in the correct place.
-				expanded_list.pop_back();
+				// This is really clumsy.  Where's std::contains(container, value)?
+				if( std::find(pathsAlreadyPreserved.begin(), pathsAlreadyPreserved.end(), dirname) == pathsAlreadyPreserved.end() ) {
+					// dprintf( D_ALWAYS, "Creating '%s' for '%s'\n", dirname.c_str(), file_xfer_item.srcName().c_str() );
 
-				// dprintf( D_ALWAYS, ">>> expanding parent directories of named file %s\n", src_path );
-				// N.B.: This isn't an infinite loop because
-				// ExpandParentDirectories() calls ExpandFileTransferList()
-				// with preserveRelativePaths turned off -- the whole point
-				// of it being to generate paths one level at a time.
-				// dprintf( D_ALWAYS, ">>> [c] ExpandParentDirectories( %s, %s )\n", src_path, iwd );
-				if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace )) {
-					return false;
+					// ExpandParentDirectories() adds this back in the correct place.
+					expanded_list.pop_back();
+
+					// dprintf( D_ALWAYS, ">>> expanding parent directories of named file %s\n", src_path );
+					// N.B.: This isn't an infinite loop because
+					// ExpandParentDirectories() calls ExpandFileTransferList()
+					// with preserveRelativePaths turned off -- the whole point
+					// of it being to generate paths one level at a time.
+					// dprintf( D_ALWAYS, ">>> [c] ExpandParentDirectories( %s, %s )\n", src_path, iwd );
+					if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace, pathsAlreadyPreserved )) {
+						return false;
+					}
 				}
 			}
 		}
@@ -6647,12 +6659,16 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 				if( destination.length() > 0 ) { destination += DIR_DELIM_CHAR; }
 				destination += src_path;
 
-				// ExpandParentDirectories() adds this back in the correct place.
-				expanded_list.pop_back();
+				if( std::find(pathsAlreadyPreserved.begin(), pathsAlreadyPreserved.end(), src_path) == pathsAlreadyPreserved.end() ) {
+					// dprintf( D_ALWAYS, "Creating '%s' for '%s'\n", src_path, src_path );
 
-				// dprintf( D_ALWAYS, ">>> [b] ExpandParentDirectories( %s, %s, ..., ... )\n", src_path, iwd );
-				if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace )) {
-					return false;
+					// ExpandParentDirectories() adds this back in the correct place.
+					expanded_list.pop_back();
+
+					// dprintf( D_ALWAYS, ">>> [b] ExpandParentDirectories( %s, %s, ..., ... )\n", src_path, iwd );
+					if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace, pathsAlreadyPreserved )) {
+						return false;
+					}
 				}
 			} else {
 				//
@@ -6671,15 +6687,19 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 					if( IS_ANY_DIR_DELIM_CHAR(relative_path[0]) ) { ++relative_path; }
 					// dprintf( D_ALWAYS, ">>> preserving relative path of directory (%s) in SPOOL (as %s)\n", src_path, relative_path );
 
-					// ExpandParentDirectories() adds this back in the correct place.
-					expanded_list.pop_back();
+					if( std::find(pathsAlreadyPreserved.begin(), pathsAlreadyPreserved.end(), relative_path) == pathsAlreadyPreserved.end() ) {
+						// dprintf( D_ALWAYS, "Creating '%s' for '%s'\n", relative_path, src_path );
 
-					// ExpandParentDirectories() needs its first argument to
-					// be the path relative to SPOOL, and its second argument
-					// needs to be SPOOL (to parallel the non-SPOOL use).
-					// dprintf( D_ALWAYS, ">>> [a] ExpandParentDirectories( %s, %s, ..., ... )\n", relative_path, SpoolSpace );
-					if(! ExpandParentDirectories( relative_path, SpoolSpace, expanded_list, SpoolSpace )) {
-						return false;
+						// ExpandParentDirectories() adds this back in the correct place.
+						expanded_list.pop_back();
+
+						// ExpandParentDirectories() needs its first argument to
+						// be the path relative to SPOOL, and its second argument
+						// needs to be SPOOL (to parallel the non-SPOOL use).
+						// dprintf( D_ALWAYS, ">>> [a] ExpandParentDirectories( %s, %s, ..., ... )\n", relative_path, SpoolSpace );
+						if(! ExpandParentDirectories( relative_path, SpoolSpace, expanded_list, SpoolSpace, pathsAlreadyPreserved )) {
+							return false;
+						}
 					}
 
 					//
@@ -6729,7 +6749,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		file_full_path += file_in_dir;
 
 		// dprintf( D_ALWAYS, ">>> calling ExpandFileTransferList( %s, %s, %s, ... )\n", file_full_path.c_str(), destination.c_str(), iwd );
-		if( !ExpandFileTransferList( file_full_path.c_str(), destination.c_str(), iwd, max_depth, expanded_list, preserveRelativePaths, SpoolSpace ) ) {
+		if( !ExpandFileTransferList( file_full_path.c_str(), destination.c_str(), iwd, max_depth, expanded_list, preserveRelativePaths, SpoolSpace, pathsAlreadyPreserved ) ) {
 			rc = false;
 		}
 	}
@@ -6765,7 +6785,8 @@ FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, MySt
 			// this code never calls destDir().
 			//
 			// This implicitly assumes that nothing in the input file list is in SPOOL.
-			if( !ExpandFileTransferList( path, "", iwd, 1, filelist, false, "" ) ) {
+			std::vector<std::string> pap;
+			if( !ExpandFileTransferList( path, "", iwd, 1, filelist, false, "", pap ) ) {
 				formatstr_cat(error_msg, "Failed to expand '%s' in transfer input file list. ",path);
 				result = false;
 			}
