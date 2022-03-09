@@ -120,7 +120,7 @@ class Status(Verb):
 
     # Unlike `shutdown`, status should probably not require a name.
     def __init__(self, logger, **options):
-        the_annex_name = options["annex_name"];
+        the_annex_name = options["annex_name"]
 
         schedd = htcondor.Schedd()
         query = f'hpc_annex_name =!= undefined'
@@ -185,7 +185,10 @@ class Status(Verb):
                 running_jobs[job['TargetAnnexName']] = count
 
         if len(status) == 0 and len(annex_slots) == 0:
+            if the_annex_name is None:
                 print(f"Found no active or requested annexes.")
+            else:
+                print(f"Found no active or requested annexes named '{the_annex_name}'.")
 
         #
         # Do the actual reporting (after calculating some aggregates).
