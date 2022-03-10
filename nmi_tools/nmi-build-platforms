@@ -2,6 +2,7 @@
 
 # Officially supported platforms
 docker://htcondor/nmi-v88:x86_64_AmazonLinux2-2
+docker://htcondor/nmi-v88:x86_64_CentOS6-1
 docker://htcondor/nmi-v88:x86_64_CentOS7-2
 docker://htcondor/nmi-v88:x86_64_CentOS8-2
 docker://htcondor/nmi-v88:x86_64_Debian9-2
@@ -18,6 +19,7 @@ x86_64_Windows10
 x86_64_CentOS7
 
 # 32-bit platforms
+docker://htcondor/nmi-v88:x86_CentOS6-1
 docker://htcondor/nmi-v88:x86_CentOS7-2
 
 # Not officially supported.

@@ -2127,7 +2127,7 @@ bool FunctionCall::hasRefs(const char*, const ArgumentList& argList, EvalState& 
 	}
 
 	// de-reference the first argument to the the exprtree that it points to
-	ExprTree * expr = nullptr;
+	ExprTree * expr = NULL;
 	AttributeReference * atref = reinterpret_cast<AttributeReference *>(argList[0]);
 	int er = AttributeReference::Deref(*atref, state, expr);
 	if (er != EVAL_OK) {
@@ -2137,9 +2137,9 @@ bool FunctionCall::hasRefs(const char*, const ArgumentList& argList, EvalState& 
 
 	// for the 2 arg form, the second argument is a regex pattern to be compared against
 	// each of the unresolved references
-	pcre * re = nullptr;
+	pcre * re = NULL;
 	if (argList.size() == 2) {
-		const char* pattern = nullptr;
+		const char* pattern = NULL;
 		if ( !argList[1]->Evaluate(state, arg) || ! arg.IsStringValue(pattern)) {
 			result.SetErrorValue();
 			return false;
