@@ -1062,6 +1062,8 @@ all attributes.
     +-----------+------------------------+
     | 5         |*htcondor dag submit*   |
     +-----------+------------------------+
+    | 6         | User Set/Custom        |
+    +-----------+------------------------+
 
 
 :index:`JobUniverse<single: JobUniverse; ClassAd job attribute>`
