@@ -481,6 +481,17 @@ enum _submit_file_role {
 	SFR_OUTPUT,
 };
 
+// used to indicate how a job was submitted to htcondor
+enum class submit_method{
+	UNDEFINED = -1,
+	CONDOR_SUBMIT,
+	DAGMAN,
+	PYTHON_BINDINGS,
+	HTC_JOB_SUBMIT,
+	HTC_JOBSET_SUBMIT,
+	HTC_DAG_SUBMIT,
+};
+
 typedef int (*FNSUBMITPARSE)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, char * line, std::string & errmsg);
 
 class DeltaClassAd;
@@ -491,6 +502,7 @@ public:
 	~SubmitHash();
 
 	void init();
+	void init(submit_method value);
 	void clear(); // clear, but do not deallocate
 	void setScheddVersion(const char * version) { ScheddVersion = version; }
 	void setMyProxyPassword(const char * pass) { MyProxyPassword = pass; }
@@ -641,6 +653,9 @@ public:
 	bool AssignJobVal(const char * attr, int val) { return AssignJobVal(attr, (long long)val); }
 	bool AssignJobVal(const char * attr, long val) { return AssignJobVal(attr, (long long)val); }
 	//bool AssignJobVal(const char * attr, time_t val)  { return AssignJobVal(attr, (long long)val); }
+
+	void setSubmitMethod(int value){ s_method = static_cast<submit_method>(value); }//Set job submit method to enum equal to passed value
+	int getSubmitMethod(){ return static_cast<int>(s_method); }//Return job submit method value given s_method enum
 
 	MACRO_ITEM* lookup_exact(const char * name) { return find_macro_item(name, NULL, SubmitMacroSet); }
 	CondorError* error_stack() const { return SubmitMacroSet.errors; }
@@ -869,6 +884,8 @@ private:
 	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 
 	ContainerImageType image_type_from_string(const std::string &image) const;
+
+	submit_method s_method;
 };
 
 struct SubmitStepFromQArgs {
