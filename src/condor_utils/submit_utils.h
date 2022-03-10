@@ -490,6 +490,7 @@ enum class submit_method{
 	HTC_JOB_SUBMIT,
 	HTC_JOBSET_SUBMIT,
 	HTC_DAG_SUBMIT,
+	USER_SET,
 };
 
 typedef int (*FNSUBMITPARSE)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, char * line, std::string & errmsg);
@@ -654,7 +655,8 @@ public:
 	bool AssignJobVal(const char * attr, long val) { return AssignJobVal(attr, (long long)val); }
 	//bool AssignJobVal(const char * attr, time_t val)  { return AssignJobVal(attr, (long long)val); }
 
-	void setSubmitMethod(int value){ s_method = static_cast<submit_method>(value); }//Set job submit method to enum equal to passed value
+	//Set job submit method to enum equal to passed value if value is in range
+	void setSubmitMethod(int value){ s_method = (value < -1 || value > 6) ? submit_method::UNDEFINED : static_cast<submit_method>(value); }
 	int getSubmitMethod(){ return static_cast<int>(s_method); }//Return job submit method value given s_method enum
 
 	MACRO_ITEM* lookup_exact(const char * name) { return find_macro_item(name, NULL, SubmitMacroSet); }

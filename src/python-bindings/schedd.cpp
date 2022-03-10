@@ -928,7 +928,7 @@ struct SubmitJobsIterator {
 		, m_spool(spool)
 	{
 			// copy the input submit hash into our new hash.
-			m_hash.init();
+			m_hash.init(submit_method::PYTHON_BINDINGS);
 			copy_hash(h);
 			m_hash.setDisableFileChecks(true);
 			m_hash.init_base_ad(qdate, owner.c_str());
@@ -942,7 +942,7 @@ struct SubmitJobsIterator {
 		, m_spool(spool)
 	{
 		// copy the input submit hash into our new hash.
-		m_hash.init();
+		m_hash.init(submit_method::PYTHON_BINDINGS);
 		copy_hash(h);
 		m_hash.setDisableFileChecks(true);
 		m_hash.init_base_ad(qdate, owner.c_str());
@@ -2919,7 +2919,7 @@ public:
 		 m_ms_inline("", 0, EmptyMacroSrc)
        , m_queue_may_append_to_cluster(false)
     {
-        m_hash.init();
+        m_hash.init(submit_method::PYTHON_BINDINGS);
     }
 
 
@@ -2928,7 +2928,7 @@ public:
          m_ms_inline("", 0, EmptyMacroSrc)
        , m_queue_may_append_to_cluster(false)
     {
-        m_hash.init();
+        m_hash.init(submit_method::PYTHON_BINDINGS);
         update(input);
     }
 
@@ -2967,7 +2967,7 @@ public:
        , m_ms_inline("", 0, EmptyMacroSrc) 
        , m_queue_may_append_to_cluster(false)
 	{
-		m_hash.init();
+		m_hash.init(submit_method::PYTHON_BINDINGS);
 		if ( ! lines.empty()) {
 			m_hash.insert_source("<PythonString>", m_src_pystring);
 			MacroStreamMemoryFile ms(lines.c_str(), lines.size(), m_src_pystring);
@@ -3853,6 +3853,14 @@ public:
 		}
 	}
 
+	//Set function for job submit method
+	void 
+	setSubmitMethod(int value){ m_hash.setSubmitMethod(value); }
+
+	//Get function for job submit method
+	int
+	getSubmitMethod(){ return m_hash.getSubmitMethod(); }
+
 private:
 
     std::string
@@ -4713,6 +4721,22 @@ void export_schedd()
             :param str args: The arguments to pass to the ``QUEUE`` statement.
             )C0ND0R",
             boost::python::args("self", "args"))
+	.def("setSubmitMethod", &Submit::setSubmitMethod,
+	    R"CONDOR(
+	    Sets the attribute ``JobSubmitMethod`` based on passed over number. See table for
+	    values. Number must be in the range of the table or ``JobSubmitMethod`` will be 
+	    ``UNDEFINED``. This number is set behind the scenes and should not have to be set,
+	    but if wanted, you can set ``JobSubmitMethod`` to `User Set`=6 to declare custom submit method.
+	   
+	   :param int value: Value of ``JobSubmitMethod``.
+	   )CONDOR",
+	   boost::python::arg("self"), boost::python::arg("value")=-1)
+	.def("getSubmitMethod", &Submit::getSubmitMethod,
+	    R"CONDOR(
+	    :return: ``JobSubmitMethod`` attributes value. See table for values.
+	    :rtype: int
+	    )CONDOR",
+	    boost::python::arg("self"))
         .def("__delitem__", &Submit::deleteItem)
         .def("__getitem__", &Submit::getItem)
         .def("__setitem__", &Submit::setItem)
