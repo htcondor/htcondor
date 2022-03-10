@@ -1042,6 +1042,27 @@ all attributes.
     | 7     | Suspended           |
     +-------+---------------------+
 
+:classad-attribute: `JobSubmitMethod`
+    Integer which indicates how a **Job** was submitted to HTCondor.
+ 
+    +-----------+------------------------+
+    | Value     | Method of Submission   |
+    +===========+========================+
+    | Undefined | Unknown                |
+    +-----------+------------------------+
+    | 0         | *condor_submit*        |
+    +-----------+------------------------+
+    | 1         | DAGMan                 |
+    +-----------+------------------------+
+    | 2         | Python Bindings        |
+    +-----------+------------------------+
+    | 3         |*htcondor job submit*   |
+    +-----------+------------------------+
+    | 4         |*htcondor jobset submit*|
+    +-----------+------------------------+
+    | 5         |*htcondor dag submit*   |
+    +-----------+------------------------+
+
 
 :index:`JobUniverse<single: JobUniverse; ClassAd job attribute>`
 :index:`job ClassAd attribute<single: job ClassAd attribute; JobUniverse>`
