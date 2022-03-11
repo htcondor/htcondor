@@ -127,7 +127,11 @@ def make_remote_temporary_directory(
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        text=True,
+        # Don't crash on decoding errors.
+        errors="ignore",
+        # Silliness for Python 3.6
+        # text=True,
+        universal_newlines=True,
     )
 
     try:
@@ -235,7 +239,11 @@ def transfer_files(
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        text=True,
+        # Don't crash on decoding errors.
+        errors="ignore",
+        # Silliness for Python 3.6
+        # text=True,
+        universal_newlines=True,
     )
 
     try:
