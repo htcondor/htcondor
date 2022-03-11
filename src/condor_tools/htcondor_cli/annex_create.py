@@ -22,8 +22,39 @@ REMOTE_CLEANUP_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_CLEANUP_TIMEOUT", 
 REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 5))
 REMOTE_POPULATE_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_POPULATE_TIMEOUT", 60))
 
-# FIXME: Make this come from config? At least some place not hardcoded.
-MACHINE_QUEUE_MAP = {"stampede2": "normal"}
+MACHINE_TABLE = {
+
+    # The key is currently both the value of the command-line option
+    # and part of the name of some files in condor_scripts/annex.  This
+    # shouldn't be hard to change.
+    "stampede2": {
+        "pretty_name":      "Stampede 2",
+        "gsissh_name":      "stampede2",
+        "default_queue":    "normal",
+
+        # This isn't all of the queues on Stampede 2, but we
+        # need to think about what it means, if anything, if
+        # recognize certain queues.  For now, these are the
+        # only two queues I've actually tested.
+        "queues": {
+            "normal": {
+                "max_nodes_per_job":    256,
+                "max_duration":         48 * 60 * 60,
+                "max_jobs_in_queue":    50,
+
+                "cores_per_node":       68,
+            },
+            "development": {
+                "max_nodes_per_job":    16,
+                "max_duration":         2 * 60 * 60,
+                "max_jobs_in_queue":    1,
+
+                "cores_per_node":       68,
+            },
+        },
+    },
+
+}
 
 
 def make_initial_ssh_connection(
@@ -391,7 +422,8 @@ def annex_create(
     # so even if it's wrong, it will at least consistently so.
     username = getpass.getuser()
 
-    if target not in MACHINE_QUEUE_MAP:
+    target = target.lower()
+    if target not in MACHINE_TABLE:
         raise ValueError(f"{target} is not a known machine.")
 
     # Location of the local universe script files
@@ -400,7 +432,7 @@ def annex_create(
     )
 
     if queue_name is None:
-        queue_name = MACHINE_QUEUE_MAP[target]
+        queue_name = MACHINE_TABLE[target]["default_queue"]
         logger.debug(f"No queue name given, defaulting to {queue_name}")
 
     token_file = Path(token_file).expanduser()
@@ -436,7 +468,7 @@ def annex_create(
         "-o",
         f'ControlPath="{control_path}/master-%C"',
     ]
-    ssh_indirect_command = ["gsissh", target]
+    ssh_indirect_command = ["gsissh", MACHINE_TABLE[target]["gsissh_name"]]
 
     ##
     ## While we're requiring that jobs are submitted before creating the
@@ -485,7 +517,7 @@ def annex_create(
     )
     if rc != 0:
         raise RuntimeError(
-            f"Failed to make initial connection to {target}, aborting ({rc})."
+            f"Failed to make initial connection to {MACHINE_TABLE[target]['pretty_name']}, aborting ({rc})."
         )
 
     ##
@@ -658,7 +690,7 @@ def annex_create(
                     schedd.edit(job_id, "TransferInput", "undefined")
 
     remotes = {}
-    logger.info(f"Submitting SLURM job on {target}:\n")
+    logger.info(f"Submitting SLURM job on {MACHINE_TABLE[target]['pretty_name']}:\n")
     rc = invoke_pilot_script(
         ssh_connection_sharing,
         ssh_target,
