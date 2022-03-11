@@ -147,6 +147,20 @@ typedef struct JOB_ID_KEY {
 inline bool operator==( const JOB_ID_KEY a, const JOB_ID_KEY b) { return a.cluster == b.cluster && a.proc == b.proc; }
 size_t hashFunction(const JOB_ID_KEY &);
 
+// used to indicate how a job was submitted to htcondor
+enum class submit_method{
+	UNDEFINED = -1,
+	CONDOR_SUBMIT,
+	DAGMAN,
+	PYTHON_BINDINGS,
+	HTC_JOB_SUBMIT,
+	HTC_JOBSET_SUBMIT,
+	HTC_DAG_SUBMIT,
+	USER_SET,
+};
+
+const char* getSubmitMethodString(submit_method method);
+
 #define ICKPT -1
 
 #define NEW_PROC 1

@@ -97,4 +97,21 @@ getJobStatusNum( const char* name )
 	return -1;
 }
 
+//This method reads a given submit_method enum and returns a string for help display
+const char* 
+getSubmitMethodString(submit_method method)
+{
+	switch(method)
+	{
+		case submit_method::CONDOR_SUBMIT:      return "condor_submit";
+		case submit_method::DAGMAN:             return "DAGMan";
+		case submit_method::PYTHON_BINDINGS:    return "Python Bindings";
+		case submit_method::HTC_JOB_SUBMIT:     return "htcondor job submit";
+		case submit_method::HTC_JOBSET_SUBMIT:  return "htcondor jobset submit";
+		case submit_method::HTC_DAG_SUBMIT:     return "htcondor dag submit";
+		case submit_method::USER_SET:           return "User Set";
+		default:                 return "Unkown";
+	}
+}
+
 

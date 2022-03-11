@@ -481,17 +481,6 @@ enum _submit_file_role {
 	SFR_OUTPUT,
 };
 
-// used to indicate how a job was submitted to htcondor
-enum class submit_method{
-	UNDEFINED = -1,
-	CONDOR_SUBMIT,
-	DAGMAN,
-	PYTHON_BINDINGS,
-	HTC_JOB_SUBMIT,
-	HTC_JOBSET_SUBMIT,
-	HTC_DAG_SUBMIT,
-	USER_SET,
-};
 
 typedef int (*FNSUBMITPARSE)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, char * line, std::string & errmsg);
 
