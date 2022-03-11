@@ -23,7 +23,10 @@ REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 5))
 REMOTE_POPULATE_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_POPULATE_TIMEOUT", 60))
 
 # FIXME: Make this come from config? At least some place not hardcoded.
-MACHINE_QUEUE_MAP = {"stampede2": "normal"}
+MACHINE_QUEUE_MAP = {
+    "stampede2": "normal",
+    "expanse": "compute",
+}
 
 
 def make_initial_ssh_connection(

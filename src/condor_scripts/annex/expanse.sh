@@ -97,7 +97,7 @@ echo "Starting script at `date`..."
 
 # The binaries must be a tarball named condor-*, and unpacking that tarball
 # must create a directory which also matches condor-*.
-WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.5.4/update/condor-9.5.4-20220207-x86_64_CentOS7-stripped.tar.gz
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.5.4/update/condor-9.5.4-20220207-x86_64_Rocky8-stripped.tar.gz
 
 # The configuration must be a tarball which does NOT match condor-*.  It
 # will be unpacked in the root of the directory created by unpacking the
@@ -106,6 +106,7 @@ WELL_KNOWN_LOCATION_FOR_CONFIGURATION=https://cs.wisc.edu/~tlmiller/hpc-config.t
 
 # How early should HTCondor exit to make sure we have time to clean up?
 CLEAN_UP_TIME=300
+
 
 #
 # Create pilot-specific directory on shared storage.  The least-awful way
@@ -226,13 +227,10 @@ fi
 #
 # model=$(awk -F : "/model/ { print \$2; exit }" /proc/cpuinfo | sed -e "s/ \*//g")
 #
+# ^^ TODO Does that message apply to expanse?
 echo '#!/bin/bash
 export USER=`/usr/bin/id -un`
-export LD_PRELOAD=/opt/apps/xalt/xalt/lib64/libxalt_init.so
-. /etc/tacc/tacc_functions &> /dev/null
-. /etc/profile.d/z00_tacc_login.sh &> /dev/null
-. /etc/profile.d/z01_lmod.sh &> /dev/null
-module load tacc-singularity
+module load singularitypro
 exec singularity "$@"
 ' > ${PILOT_DIR}/singularity.sh
 chmod 755 ${PILOT_DIR}/singularity.sh
@@ -311,17 +309,23 @@ endif
 # Subsequent configuration is machine-specific.
 #
 
-# This is made available via 'module load tacc-singularity', but the
+# This is made available via 'module load singularitypro', but the
 # starter ignores PATH, so wrap it up.
 SINGULARITY = ${PILOT_DIR}/singularity.sh
 
-# Stampede 2 has Knight's Landing queues (4 threads per core) and Skylake
-# queues (2 threads per core).  The "KNL" nodes have 68 cores and 96 GB
-# of RAM; the "SKX" nodes have 48 cores and 192 GB of RAM.  It seems like
-# the KNL cores are different-enough to justify a little judicious
-# deception; since the SKX cores end up at 4 GB of RAM each, that seems
-# reasonable (and it would be a pain to have different config for different
-# queues).
+# XXX Expanse charges by the core and has shared partitions; what should we
+#     do here?
+# 1. Ignore them - use the whole-node partitions only and keep the multi-node
+#    job logic from Stampede2.
+# 2. Use the shared partitions but ask for the whole machine's worth of RAM/
+#    cores -- costs the same but we won't have to use multi-node job logic and
+#    the pilots will start up faster.
+# 3. Use the shared partitions, ask for a certain fraction of the machine, use
+#    NUM_CPUS and MEMORY to tell the pilot what that is.
+
+# XXX Should we still avoid scaling issues by turning off hyperthreading, or
+#     should we leave it on and perhaps modify RequestCPUs _and_ RequestMemory
+#     (to, say, 2 cores 4 GB (2 SUs))?
 COUNT_HYPERTHREAD_CPUS = FALSE
 
 # Create dynamic slots 3 GB at a time.  This number was chosen because it's
@@ -373,7 +377,7 @@ if [[ -n $ALLOCATION ]]; then
     SBATCH_ALLOCATION_LINE="#SBATCH -A ${ALLOCATION}"
 fi
 
-echo '#!/bin/bash' > ${PILOT_DIR}/stampede2.slurm
+echo '#!/bin/bash' > ${PILOT_DIR}/expanse.slurm
 echo "
 #SBATCH -J ${JOB_NAME}
 #SBATCH -o ${PILOT_DIR}/%j.out
@@ -385,14 +389,14 @@ echo "
 ${SBATCH_ALLOCATION_LINE}
 
 ${MULTI_PILOT_BIN} ${PILOT_BIN} ${PILOT_DIR}
-" >> ${PILOT_DIR}/stampede2.slurm
+" >> ${PILOT_DIR}/expanse.slurm
 
 #
 # Submit the SLURM job.
 #
 echo "Submitting SLURM job..."
 SBATCH_LOG=${PILOT_DIR}/sbatch.log
-sbatch ${PILOT_DIR}/stampede2.slurm &> ${SBATCH_LOG}
+sbatch ${PILOT_DIR}/expanse.slurm &> ${SBATCH_LOG}
 SBATCH_ERROR=$?
 if [[ $SBATCH_ERROR != 0 ]]; then
     echo "Failed to submit job to SLURM (${SBATCH_ERROR}), aborting."
