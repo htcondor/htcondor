@@ -1042,6 +1042,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_REQUEST_MEMORY  "RequestMemory"
 #define ATTR_REQUEST_DISK  "RequestDisk"
 #define ATTR_REQUEST_GPUS  "RequestGPUs"
+#define ATTR_REQUIRE_GPUS  "RequireGPUs"
 #define ATTR_REQUEST_VIRTUAL_MEMORY  "RequestVirtualMemory"
 
 // machine resource prefixes

@@ -1885,7 +1885,7 @@ Define slot types.
 
     .. code-block:: condor-config
 
-        MACHINE_RESOURCE_gpu = 16
+        MACHINE_RESOURCE_gpus = 16
         MACHINE_RESOURCE_actuator = 8
 
     If the configuration uses the optional configuration variable
@@ -1896,7 +1896,7 @@ Define slot types.
     .. code-block:: condor-config
 
         if defined MACHINE_RESOURCE_NAMES
-          MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) gpu actuator
+          MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) gpus actuator
         endif
 
     Local machine resource names defined in this way may now be used in
@@ -1909,13 +1909,13 @@ Define slot types.
 
         # declare one partitionable slot with half of the GPUs, 6 actuators, and
         # 50% of all other resources:
-        SLOT_TYPE_1 = gpu=50%,actuator=6,50%
+        SLOT_TYPE_1 = gpus=50%,actuator=6,50%
         SLOT_TYPE_1_PARTITIONABLE = TRUE
         NUM_SLOTS_TYPE_1 = 1
 
         # declare two static slots, each with 25% of the GPUs, 1 actuator, and
         # 25% of all other resources:
-        SLOT_TYPE_2 = gpu=25%,actuator=1,25%
+        SLOT_TYPE_2 = gpus=25%,actuator=1,25%
         SLOT_TYPE_2_PARTITIONABLE = FALSE
         NUM_SLOTS_TYPE_2 = 2
 
@@ -1930,7 +1930,7 @@ Define slot types.
         universe = vanilla
 
         # request two GPUs and one actuator:
-        request_gpu = 2
+        request_gpus = 2
         request_actuator = 1
 
         queue
@@ -1948,12 +1948,12 @@ Define slot types.
         ``<name>``: the amount of the resource identified by ``<name>``
         available to be used on this slot
 
-    From the example given, the ``gpu`` resource would be represented by
-    the ClassAd attributes ``TotalGpu``, ``DetectedGpu``,
-    ``TotalSlotGpu``, and ``Gpu``. In the job ClassAd, the amount of the
+    From the example given, the ``gpus`` resource would be represented by
+    the ClassAd attributes ``TotalGpus``, ``DetectedGpus``,
+    ``TotalSlotGpus``, and ``Gpus``. In the job ClassAd, the amount of the
     requested machine resource appears in a job ClassAd attribute named
     ``Request<name>``. For this example, the two attributes will be
-    ``RequestGpu`` and ``RequestActuator``.
+    ``RequestGpus`` and ``RequestActuator``.
 
     The number of each type being reported can be changed at run time,
     by issuing a reconfiguration command to the *condor_startd* daemon

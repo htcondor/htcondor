@@ -35,6 +35,14 @@ New Features:
   are used to support matchmaking of heterogenous custom resources such as GPUs.
   :jira:`977`
 
+- Added the ability to do matchmaking and targeted resource binding of GPUs into dynamic
+  slots while constraining on the properties of the GPUs.  This new behavior is enabled
+  by using the ``-nested`` option of *condor_gpu_discovery*, along with the new ``require_gpus``
+  keyword of *condor_submit*.  With this change HTCondor can now support heterogeneous GPUs
+  in a single partitionable slot, and allow a job to require to be assigned with a specific
+  GPU when creating a dynamic slot.
+  :jira:`953`
+
 Bugs Fixed:
 
 - None.

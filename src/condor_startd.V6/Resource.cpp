@@ -191,14 +191,31 @@ const char * Resource::param(std::string& out, const char * name, const char * d
 	return out.c_str();
 }
 
-Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent ) : m_acceptedWhileDraining( false )
+Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent ) 
+	: r_state(nullptr)
+	, r_config_classad(nullptr)
+	, r_classad(nullptr)
+	, r_cur(nullptr)
+	, r_pre(nullptr)
+	, r_pre_pre(nullptr)
+	, r_has_cp(false)
+	, r_cod_mgr(nullptr)
+	, r_reqexp(nullptr)
+	, r_attr(nullptr)
+	, r_load_queue(nullptr)
+	, r_name(nullptr)
+	, r_id(rid)
+	, r_sub_id(0)
+	, r_id_str(NULL)
+	, r_pair_name(NULL)
+	, m_resource_feature(STANDARD_SLOT)
+	, m_parent(nullptr)
+	, m_id_dispenser(nullptr)
+	, m_acceptedWhileDraining(false)
 {
 	std::string tmp;
-	const char* tmpName;
 
 		// we need this before we instantiate any Claim objects...
-	r_id = rid;
-	r_sub_id = 0;
 	if (_parent) { r_sub_id = _parent->m_id_dispenser->next(); }
 	const char * name_prefix = SlotType::type_param(cap, "NAME_PREFIX");
 	if (name_prefix) {
@@ -213,39 +230,39 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	if  (_parent) { formatstr_cat( tmp, "_%d", r_sub_id ); }
 	// save the constucted slot name & id string.
 	r_id_str = strdup( tmp.c_str() );
-	r_pair_name = NULL;
 
 		// we need this before we can call type()...
 	r_attr = cap;
 	r_attr->attach( this );
 
-	m_id_dispenser = NULL;
-
 		// we need this before we instantiate the Reqexp object...
 	if (SlotType::type_param_boolean(cap, "PARTITIONABLE", false)) {
 		set_feature( PARTITIONABLE_SLOT );
 		m_id_dispenser = new IdDispenser( 1 );
-	} else {
-		set_feature( STANDARD_SLOT );
 	}
 
-		// This must happen before creating the Reqexp
+	// can't bind until after we get a r_sub_id but must happen before creating the Reqexp
+	if (_parent) {
+		if ( ! r_attr->bind_DevIds(r_id, r_sub_id, false)) {
+			r_attr->unbind_DevIds(r_id, r_sub_id); // give back the ids that were bound before the failure
+			_parent->m_id_dispenser->insert(r_sub_id); // give back the slot id.
+
+			// we can't fail a constructor, so indicate the the slot is unusable instead
+			set_feature(BROKEN_SLOT);
+			m_parent = nullptr;
+			r_cur = nullptr;
+			return;
+		}
+	}
+	// set_parent will carve resource quantities out of the parent if it is not NULL
+	// this will also set feature to DYNAMIC_SLOT if _parent is non-null
 	set_parent( _parent );
 
-		// can't bind until after we get a r_sub_id, which happens inside set_parent above
-		// but must happend before createing the Reqexp
-	if (_parent) { r_attr->bind_DevIds(r_id, r_sub_id); }
-
 	prevLHF = 0;
-	r_config_classad = NULL;
-	r_classad = NULL;
 	r_state = new ResState( this );
-	r_pre = NULL;
-	r_pre_pre = NULL;
 	r_cod_mgr = new CODMgr( this );
 	r_reqexp = new Reqexp( this );
 	r_load_queue = new LoadQueue( 60 );
-    r_has_cp = false;
 
     if (get_feature() == PARTITIONABLE_SLOT) {
         // Partitionable slots may support a consumption policy
@@ -263,19 +280,12 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 
     r_cur = new Claim(this);
 
-	std::string fqdn;
-	if( Name ) {
-		tmpName = Name;
-	} else {
-		fqdn = get_local_fqdn();
-		tmpName = fqdn.c_str();
-	}
-	if( multiple_slots || get_feature() == PARTITIONABLE_SLOT ) {
-		formatstr( tmp, "%s@%s", r_id_str, tmpName );
-		r_name = strdup( tmp.c_str() );
-	} else {
-		r_name = strdup( tmpName );
-	}
+	// make the full slot name "<r_id_str>@<name>"
+	// rior to version 9.7.0 machines with a single slot would not include the slot id in the slot name
+	tmp = r_id_str;
+	tmp += "@";
+	if (Name) { tmp += Name; } else { tmp += get_local_fqdn(); }
+	r_name = strdup(tmp.c_str());
 
 	// check for slot pairing configuration
 	if (param_boolean("ALLOW_SLOT_PAIRING", false)) {
@@ -697,6 +707,9 @@ Resource::dropAdInLogFile( void )
 				break;
 			case DYNAMIC_SLOT:
 				if(sl.contains_anycase("dynamic")) will_print = true;
+				break;
+			case BROKEN_SLOT:
+				dprintf(D_ALWAYS, "DEBUG: unexpected to see BROKEN_SLOT ad here.\n");
 				break;
 		}
 	} else {
@@ -2644,7 +2657,7 @@ Resource::publish_dynamic(ClassAd* cap, bool /*for_update*/)
 	r_attr->publish_dynamic(cap);
 
 	// Put in machine-wide attributes
-	resmgr->m_attr->publish_dynamic(cap);
+	resmgr->m_attr->publish_dynamic(cap, r_id, r_sub_id);
 
 	// Put in ResMgr-specific attributes (A_STATIC, A_UPDATE, and always)
 	resmgr->publish_dynamic(cap);
@@ -3648,14 +3661,23 @@ Resource::swap_claims(Resource* ripa, Resource* ripb)
 	return true;
 }
 
-Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim)
+//
+// Create dynamic slot from p-slot
+//
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim)
 {
 	ASSERT(rip);
 	ASSERT(req_classad);
-	if( Resource::PARTITIONABLE_SLOT == rip->get_feature() ) {
+	// for legacy use case, a static slot or d-slot could be passed in and the code would expect it 
+	// to come right back out the other side.
+	if ( ! rip->can_create_dslot()) {
+		return rip;
+	}
+
+	// dummy {} to avoid unnecessary git diffs
+	{
 		ClassAd	*mach_classad = rip->r_classad;
 		CpuAttributes *cpu_attrs;
-		std::string type;
 		StringList type_list;
 		int cpus;
 		long long disk, memory, swap;
@@ -3762,6 +3784,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			// placed in the ad, aka the ATTR_REQUEST_* attributes itself.  If that does
 			// not exist, we either cons up a default or refuse the claim.
 		std::string schedd_requested_attr;
+		std::string restmp; restmp.reserve(100);
 
         if (cp_supports_policy(*mach_classad)) {
             // apply consumption policy
@@ -3770,13 +3793,14 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 
             // generate the type string used by standard code path
             for (consumption_map_t::iterator j(consumption.begin());  j != consumption.end();  ++j) {
-                if (j != consumption.begin()) type += " ";
+                restmp = j->first; restmp += "=";
                 if (MATCH == strcasecmp(j->first.c_str(),"disk")) {
                     // if it weren't for special cases, we'd have no cases at all
-                    formatstr_cat(type, "disk=%.1f%%", max(0, (0.1 + 100 * j->second / (double)rip->r_attr->get_total_disk())));
+                    formatstr_cat(restmp, "%.1f%%", max(0, (0.1 + 100 * j->second / (double)rip->r_attr->get_total_disk())));
                 } else {
-                    formatstr_cat(type, "%s=%d", j->first.c_str(), int(j->second));
+                    formatstr_cat(restmp, "%d", int(j->second));
                 }
+                type_list.append(restmp.c_str());
             }
         } else {
                 // Look to see how many CPUs are being requested.
@@ -3787,7 +3811,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                     cpus = 1; // reasonable default, for sure
                 }
             }
-            formatstr_cat( type, "cpus=%d ", cpus );
+            formatstr(restmp, "cpus=%d", cpus);
+            type_list.append(restmp.c_str());
 
                 // Look to see how much MEMORY is being requested.
             schedd_requested_attr = "_condor_";
@@ -3801,7 +3826,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                     return NULL;
                 }
             }
-            formatstr_cat( type, "memory=%lld ", memory );
+            formatstr(restmp, "memory=%lld", memory);
+            type_list.append(restmp.c_str());
 
                 // Look to see how much DISK is being requested.
             schedd_requested_attr = "_condor_";
@@ -3815,8 +3841,9 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                     return NULL;
                 }
             }
-            formatstr_cat( type, "disk=%.1f%%",
+            formatstr(restmp, "disk=%.1f%%",
                                 max((0.1 + disk / (double) rip->r_attr->get_total_disk() * 100), 0.001) );
+            type_list.append(restmp.c_str());
 
 
                 // Look to see how much swap is being requested.
@@ -3831,7 +3858,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 					if (param_boolean("PROPORTIONAL_SWAP_ASSIGNMENT", false)) {
 						// set swap to same percentage of swap as we have of physical memory
 						double mpcent = 100.0 * double(memory) / double(rip->r_attr->get_mach_attr()->phys_mem());
-						formatstr_cat(type, " swap=%d%%", int(mpcent));
+						formatstr_cat(restmp, "swap=%d%%", int(mpcent));
+						type_list.append(restmp.c_str());
 						set_swap = false;
 					} else {
 						// Fall back to you get everything and don't pay anything
@@ -3841,25 +3869,39 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
             }
 
 			if (set_swap) {
-				formatstr_cat( type, " swap=%d%%", 
+				formatstr(restmp, "swap=%d%%", 
 					max((int) ceil((swap / total_virt_mem) * 100), 1));
+				type_list.append(restmp.c_str());
 			}
 
             for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
                 string reqname;
                 formatstr(reqname, "%s%s", ATTR_REQUEST_PREFIX, j->first.c_str());
-                int reqval = 0;
-                if (!EvalInteger(reqname.c_str(), req_classad, mach_classad, reqval)) reqval = 0;
-                string attr;
-                formatstr(attr, " %s=%d", j->first.c_str(), reqval);
-                type += attr;
+                double reqval = 0;
+                if (!EvalFloat(reqname.c_str(), req_classad, mach_classad, reqval)) reqval = 0.0;
+                formatstr(restmp, "%s=%f", j->first.c_str(), reqval);
+
+                if (reqval > 0.0) {
+                    // check for a constraint on the resource
+                    formatstr(reqname, "%s%s", "Require", j->first.c_str());
+                    ExprTree * constr = req_classad->Lookup(reqname);
+                    if (constr) {
+                        restmp += " : ";
+                        // TODO: flatten and inline this expression before printing it
+                        ExprTreeToString(constr, restmp);
+                    }
+                }
+
+                type_list.append(restmp.c_str());
             }
         }
 
-		rip->dprintf( D_FULLDEBUG,
-					  "Match requesting resources: %s\n", type.c_str() );
+		if (IsDebugVerbose(D_FULLDEBUG)) {
+			auto_free_ptr reslist(type_list.print_to_delimed_string("\t"));
+			rip->dprintf(D_FULLDEBUG,
+				"Match requesting resources: %s\n", reslist.ptr());
+		}
 
-		type_list.initializeFromString( type.c_str() );
 		cpu_attrs = ::buildSlot( resmgr->m_attr, rip->r_id, &type_list, -rip->type(), false );
 		if( ! cpu_attrs ) {
 			rip->dprintf( D_ALWAYS,
@@ -3867,8 +3909,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			return NULL;
 		}
 
-		Resource * new_rip = new Resource( cpu_attrs, rip->r_id, true, rip );
-		if( ! new_rip ) {
+		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, rip);
+		if( ! new_rip || new_rip->is_broken_slot()) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to build new resource for request, aborting\n" );
 			return NULL;
@@ -3923,9 +3965,6 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 		}
 
 		return new_rip;
-	} else {
-		// Basic slot.
-		return rip;
 	}
 }
 

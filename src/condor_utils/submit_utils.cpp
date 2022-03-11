@@ -504,6 +504,7 @@ SubmitHash::SubmitHash()
 	, JobIwdInitialized(false)
 	, IsDockerJob(false)
 	, IsContainerJob(false)
+	, HasRequireResAttr(false)
 	, JobDisableFileChecks(false)
 	, SubmitOnHold(false)
 	, SubmitOnHoldCode(0)
@@ -511,6 +512,7 @@ SubmitHash::SubmitHash()
 	, already_warned_requirements_mem(false)
 	, already_warned_job_lease_too_small(false)
 	, already_warned_notification_never(false)
+	, already_warned_require_gpus(false)
 	, UseDefaultResourceParams(true)
 {
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
@@ -5625,8 +5627,15 @@ int SubmitHash::SetRequestGpus(const char * key)
 			// they want it to be undefined
 		} else {
 			AssignJobExpr(ATTR_REQUEST_GPUS, req_gpus);
+
+			// now check for "require_gpus"
+			req_gpus.set(submit_param(SUBMIT_KEY_RequireGpus, ATTR_REQUIRE_GPUS));
+			if (req_gpus) {
+				AssignJobExpr(ATTR_REQUIRE_GPUS, req_gpus);
+			}
 		}
 	}
+
 
 	RETURN_IF_ABORT();
 	return 0;
@@ -6346,7 +6355,14 @@ int SubmitHash::SetRequirements()
 			// gt6938, don't add a requirements clause when a custom resource request has a value <= 0
 			double val = 0.0;
 			if ( ! value.IsNumber(val) || val > 0) {
-				formatstr_cat(answer, " && (TARGET.%s >= %s)", tag, it->c_str());
+				// check for a Require<tag> expression that corresponds to this Request<Tag>
+				std::string require("Require"); require += tag;
+				if (job->Lookup(require)) {
+					formatstr_cat(answer, " && (countMatches(MY.%s,TARGET.Available%s) >= %s)", require.c_str(), tag, it->c_str());
+					HasRequireResAttr = true; // remember that this job uses the countMatches magic function
+				} else {
+					formatstr_cat(answer, " && (TARGET.%s >= %s)", tag, it->c_str());
+				}
 			}
 		} else if (vtype == classad::Value::ValueType::STRING_VALUE) {
 			// gt6938, don't add a requirements clause when a custom string resource request is the empty string
@@ -6356,6 +6372,15 @@ int SubmitHash::SetRequirements()
 				formatstr_cat(answer, " && regexp(%s, TARGET.%s)", it->c_str(), tag);
 			}
 		}
+	}
+	if (HasRequireResAttr && ! already_warned_require_gpus) {
+		CondorVersionInfo cvi(getScheddVersion());
+		if ( ! cvi.built_since_version(9, 8, 0)) {
+			push_warning(stderr,
+							"Your job uses a custom resource requirement like require_gpus that is not supported by "
+							"the Schedd. The job will not run until the Schedd is updated to version 9.8.0 or later.\n");
+		}
+		already_warned_require_gpus = true;
 	}
 
 	if( !checks_tdp && job->Lookup(ATTR_TOOL_DAEMON_CMD)) {

@@ -44,6 +44,11 @@ Bugs Fixed:
   linux parameters in the linux_kernel_tuning_script
   :jira:`990`
 
+- Fixed a bug that could cause a daemon to erase its security session
+  to its family of daemon processes and subsequently crash when trying to
+  connect to one of those daemons.
+  :jira:`937`
+
 .. _lts-version-history-9010:
 
 Version 9.0.10

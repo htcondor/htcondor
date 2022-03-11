@@ -1363,21 +1363,27 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rip->dprintf( D_FULLDEBUG,
 				  "Received ClaimId from schedd (%s)\n", idp.publicClaimId() );
 
+	bool has_cp = false;
+	consumption_map_t consumption;
 	Claim* leftover_claim = NULL; 
-	Resource * new_rip = initialize_resource(rip, req_classad, leftover_claim);
-	if( !new_rip ) {
-		refuse(stream);
-		ABORT;
+	if (rip->can_create_dslot()) {
+		Resource * new_rip = create_dslot(rip, req_classad, leftover_claim);
+		if ( ! new_rip) {
+			refuse(stream);
+			ABORT;
+		}
+
+		// we have to do the consumption policy stuff against the p-slot, not the new d-slot
+		has_cp = cp_supports_policy(*rip->r_classad);
+		if (has_cp) {
+			cp_override_requested(*req_classad, *rip->r_classad, consumption);
+		}
+
+		// we don't expect these to be the same, but technically if they are not then no d-slot was created.
+		if (new_rip != rip) { new_dynamic_slot = true; }
+		rip = new_rip;
 	}
 
-    consumption_map_t consumption;
-    bool has_cp = cp_supports_policy(*rip->r_classad);
-    if (has_cp) {
-        cp_override_requested(*req_classad, *rip->r_classad, consumption);
-    }
-
-	if( new_rip != rip) { new_dynamic_slot = true; }
-	rip = new_rip;
 
 		// Make sure we're willing to run this job at all.
 	if (!rip->willingToRun(req_classad)) {
@@ -1386,9 +1392,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		ABORT;
 	}
 
-    if (has_cp) {
-        cp_restore_requested(*req_classad, consumption);
-    }
+	if (has_cp) {
+		cp_restore_requested(*req_classad, consumption);
+	}
 
 		// Now, make sure it's got a high enough rank to preempt us.
 	rank = rip->compute_rank(req_classad);
@@ -2785,7 +2791,10 @@ command_coalesce_slots(int, Stream * stream ) {
 
 	Claim * leftoverClaim = NULL;
 	dprintf( D_ALWAYS, "command_coalesce_slots(): creating coalesced slot...\n" );
-	Resource * coalescedSlot = initialize_resource( parent, requestAd, leftoverClaim );
+	Resource * coalescedSlot = parent; // is it possible to get here when parent is a static slot?
+	if (parent->can_create_dslot()) {
+		coalescedSlot = create_dslot(parent, requestAd, leftoverClaim);
+	}
 	if( coalescedSlot == NULL ) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): unable to coalesce slots\n" );
 		delete requestAd;

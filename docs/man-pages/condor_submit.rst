@@ -786,6 +786,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     amount of memory. The HTCondor User's Manual contains complete
     information on the syntax and available attributes that can be used
     in the ClassAd expression.
+
     :index:`request_cpus<single: request_cpus; submit commands>`
 
  request_cpus = <num-cpus>
@@ -803,6 +804,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     For pools that enable dynamic *condor_startd* provisioning,
     specifies the minimum number of CPUs requested for this job,
     resulting in a dynamic slot being created with this many cores.
+
     :index:`request_disk<single: request_disk; submit commands>`
 
  request_disk = <quantity>
@@ -826,6 +828,45 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
     ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
     indicates TiB, 2\ :sup:`40` numbers of bytes.
+
+    :index:`request_gpus<single: request_gpus; submit commands>`
+
+ request_gpus = <num-gpus>
+    A requested number of GPUs. If not specified, no GPUs will be requested.
+    If specified and ``require_gpus`` is not also specified, the expression
+
+    .. code-block:: condor-classad-expr
+
+          && (Target.GPUs >= RequestGPUs)
+
+    is appended to the
+    **requirements** :index:`requirements<single: requirements; submit commands>`
+    expression for the job.
+
+    For pools that enable dynamic *condor_startd* provisioning,
+    specifies the minimum number of GPUs requested for this job,
+    resulting in a dynamic slot being created with this many GPUs.
+
+    :index:`request_gpus<single: request_gpus; submit commands>`
+
+ require_gpus = <constraint-expression>
+    A constraint on the properties of GPUs when used with a non-zero ``request_gpus`` value.
+    If not specified, no constraint on GPUs will be added to the job.
+    If specified and ``request_gpus`` is non-zero, the expression
+
+    .. code-block:: condor-classad-expr
+
+          && (countMatches(MY.RequireGPUs, TARGET.AvailableGPUs) >= RequestGPUs)
+
+    is appended to the
+    **requirements** :index:`requirements<single: requirements; submit commands>`
+    expression for the job.  This expression cannot be evaluated by HTCondor prior
+    to version 9.8.0. A warning to this will effect will be printed when *condor_submit* detects this condition.
+
+    For pools that enable dynamic *condor_startd* provisioning and are at least version 9.8.0,
+    the constraint will be tested against the properties of AvailbleGPUs and only those that match
+    will be assigned to the dynamic slot.
+
     :index:`request_memory<single: request_memory; submit commands>`
 
  request_memory = <quantity>
