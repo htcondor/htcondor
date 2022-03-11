@@ -603,7 +603,7 @@ def annex_create(
     try:
         logger.debug(f"... submitting {submit_description}")
         submit_result = schedd.submit(submit_description)
-    except:
+    except Exception:
         raise RuntimeError(f"Failed to submit state-tracking job, aborting.")
 
     cluster_id = submit_result.cluster()
@@ -684,7 +684,7 @@ def annex_create(
         error = f"Failed to start annex, SLURM returned code {rc}"
         try:
             schedd.act(htcondor.JobAction.Remove, f'ClusterID == {cluster_id}', error)
-        except:
+        except Exception:
             logger.warn(f"Could not remove cluster ID {cluster_id}.")
         raise RuntimeError(error)
 
