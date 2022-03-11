@@ -9,6 +9,7 @@ import signal
 import getpass
 import logging
 import secrets
+import textwrap
 import subprocess
 from pathlib import Path
 
@@ -548,7 +549,7 @@ def annex_create(
         )
     )
 
-    logger.info("Making remote temporary directory...")
+    logger.debug("Making remote temporary directory...")
     remote_script_dir = Path(
         make_remote_temporary_directory(
             logger,
@@ -557,8 +558,9 @@ def annex_create(
             ssh_indirect_command,
         )
     )
+    logger.debug(f"... made remote temporary directory {remote_script_dir} ...")
 
-    logger.info(f"Populating {remote_script_dir} ...")
+    logger.info(f"Populating remote temporary directory...")
     populate_remote_temporary_directory(
         logger,
         ssh_connection_sharing,
@@ -570,7 +572,7 @@ def annex_create(
         token_file,
         password_file,
     )
-    logger.debug("... transferring sif files ...")
+    logger.debug("... transferring container images ...")
     transfer_sif_files(
         logger,
         ssh_connection_sharing,
@@ -641,13 +643,15 @@ def annex_create(
     )
 
     try:
-        logger.debug(f"... submitting {submit_description}")
+        logger.debug(f"")
+        logger.debug(textwrap.indent(str(submit_description), "  "))
         submit_result = schedd.submit(submit_description)
     except:
         raise RuntimeError(f"Failed to submit state-tracking job, aborting.")
 
     cluster_id = submit_result.cluster()
-    logger.info(f"... done, with cluster ID {cluster_id}.")
+    logger.info(f"... done.")
+    logger.debug(f"with cluster ID {cluster_id}.")
 
     results = schedd.query(
         f'ClusterID == {cluster_id} && ProcID == 0',
