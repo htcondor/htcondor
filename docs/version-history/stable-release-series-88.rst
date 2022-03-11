@@ -8,14 +8,14 @@ series.
 
 The details of each version are described below.
 
-Version 8.8.16
---------------
+Version 8.8.17
+-------------
 
 Release Notes:
 
-- HTCondor version 8.8.16 not yet released.
+- HTCondor version 8.8.17 not yet released.
 
-.. HTCondor version 8.8.16 released on Month Date, 2021.
+.. HTCondor version 8.8.17 released on Month Date, 2022.
 
 New Features:
 
@@ -27,6 +27,26 @@ Bugs Fixed:
   policy expressions cause removal of the job.
   :jira:`408`
 
+
+Version 8.8.16
+--------------
+
+Release Notes:
+
+- HTCondor version 8.8.16 released on March 15, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes a security-related bug
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0003>`_.
+
+   :jira:`985`
 
 Version 8.8.15
 --------------

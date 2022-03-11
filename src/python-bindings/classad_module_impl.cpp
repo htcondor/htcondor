@@ -71,7 +71,7 @@ void *convert_to_FILEptr(PyObject* obj) {
     if (fd == -1)
     {
         PyErr_Clear();
-        return nullptr;
+        return NULL;
     }
 #ifdef WIN32
 	// for now, support only readonly, since we have no way to query the open state of the fd

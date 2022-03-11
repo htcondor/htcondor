@@ -1088,6 +1088,23 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	if ( method_used ) {
 		m_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
+
+		// For CLAIMTOBE, explicitly limit the authorized permission
+		// levels to that of the current command and any implied ones.
+		if ( !strcasecmp(method_used, "CLAIMTOBE") ) {
+			std::string perm_list;
+			DCpermissionHierarchy hierarchy( m_comTable[m_cmd_index].perm );
+			DCpermission const *perms = hierarchy.getImpliedPerms();
+
+			// iterate through a list of this perm and all perms implied by it
+			for (DCpermission perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
+				if (!perm_list.empty()) {
+					perm_list += ',';
+				}
+				perm_list += PermString(perm);
+			}
+			m_policy->Assign(ATTR_SEC_LIMIT_AUTHORIZATION, perm_list);
+		}
 	}
 	if ( m_sock->getAuthenticatedName() ) {
 		m_policy->Assign(ATTR_SEC_AUTHENTICATED_NAME, m_sock->getAuthenticatedName() );
@@ -1355,11 +1372,41 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 			m_perm = USER_AUTH_FAILURE;
 		}
 		else {
-			m_perm = daemonCore->Verify(
-						  command_desc.c_str(),
-						  m_comTable[m_cmd_index].perm,
-						  m_sock->peer_addr(),
-						  m_user.c_str() );
+				// Authentication methods can limit the authorizations associated with
+				// a given identity (at time of coding, only TOKEN does this); apply
+				// these limits if present.
+			std::string authz_policy;
+			bool can_attempt = true;
+			if (m_policy && m_policy->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
+				StringList authz_limits(authz_policy.c_str());
+				authz_limits.rewind();
+				const char *perm_cstr = PermString(m_comTable[m_cmd_index].perm);
+				const char *authz_name;
+				bool found_limit = false;
+				while ( (authz_name = authz_limits.next()) ) {
+					if (!strcmp(perm_cstr, authz_name)) {
+						found_limit = true;
+						break;
+					}
+				}
+				bool has_allow_perm = !strcmp(perm_cstr, "ALLOW");
+				if (!found_limit && !has_allow_perm) {
+					can_attempt = false;
+				}
+			}
+			if (can_attempt) {
+				m_perm = daemonCore->Verify(
+					command_desc.c_str(),
+					m_comTable[m_cmd_index].perm,
+					m_sock->peer_addr(),
+					m_user.c_str() );
+			} else {
+				dprintf(D_ALWAYS, "DC_AUTHENTICATE: authentication of %s was successful but resulted in a limited authorization which did not include this command (%d %s), so aborting.\n",
+					m_sock->peer_description(),
+					m_req,
+					m_comTable[m_cmd_index].command_descrip);
+				m_perm = USER_AUTH_FAILURE;
+			}
 		}
 
 	} else {
