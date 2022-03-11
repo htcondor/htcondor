@@ -4723,17 +4723,19 @@ void export_schedd()
             boost::python::args("self", "args"))
 	.def("setSubmitMethod", &Submit::setSubmitMethod,
 	    R"CONDOR(
-	    Sets the attribute ``JobSubmitMethod`` based on passed over number. See table for
-	    values. Number must be in the range of the table or ``JobSubmitMethod`` will be 
-	    ``UNDEFINED``. This number is set behind the scenes and should not have to be set,
-	    but if wanted, you can set ``JobSubmitMethod`` to `User Set`=6 to declare custom submit method.
+	    Sets the attribute ``JobSubmitMethod`` based on passed over number. See table or use 
+	    *condor_q -help Submit* for values. Number must be in the range of the table or 
+	    ``JobSubmitMethod`` will be ``UNDEFINED``. This number is set behind the scenes and
+	    should not have to be set, but if wanted, you can set ``JobSubmitMethod`` to 
+	    `User Set`=6 to declare custom submit method. Note: Setting of ``JobSubmitMethod``
+	    must occur before job is submitted.
 	   
 	   :param int value: Value of ``JobSubmitMethod``.
 	   )CONDOR",
 	   boost::python::arg("self"), boost::python::arg("value")=-1)
 	.def("getSubmitMethod", &Submit::getSubmitMethod,
 	    R"CONDOR(
-	    :return: ``JobSubmitMethod`` attributes value. See table for values.
+	    :return: ``JobSubmitMethod`` attribute value. See table or use *condor_q -help Submit* for values.
 	    :rtype: int
 	    )CONDOR",
 	    boost::python::arg("self"))

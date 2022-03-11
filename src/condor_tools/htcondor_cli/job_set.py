@@ -212,13 +212,13 @@ class Submit(Verb):
                         lineno += inlineno
                         submit_obj = htcondor.Submit(inline_data)
 			#Set s_method to HTC_JOBSET_SUBMIT
-                        submit_description.setSubmitMethod(4)
+                        submit_obj.setSubmitMethod(4)
                     else:
                         try:
                             with open(job_source, "rt") as f_sub:
                                 submit_obj = htcondor.Submit(f_sub.read())
 				#Set s_method to HTC_JOBSET_SUBMIT
-                                submit_description.setSubmitMethod(4)
+                                submit_obj.setSubmitMethod(4)
                         except IOError as e:
                             raise IOError(f"Error opening submit description file {job_source} in {job_set_file} at line {lineno}:\n{str(e)}")
 
