@@ -12,6 +12,12 @@ from htcondor_cli.verb import Verb
 from htcondor_cli.annex_create import annex_create
 
 
+def bump(hash, key, number):
+    value = hash.get(key, 0)
+    value += number
+    hash[key] = value
+
+
 def increment(hash, key, subkey, subsubkey, number):
     value = hash[key][subkey].get(subsubkey, 0)
     value += number
@@ -133,9 +139,13 @@ class Status(Verb):
 
         status = { job["hpc_annex_name"]: {} for job in annex_jobs }
 
+        requested_machines = {}
         for job in annex_jobs:
             annex_name = job["hpc_annex_name"]
             request_id = job.eval("hpc_annex_request_id")
+
+            count = job.get('hpc_annex_nodes', "0")
+            bump(requested_machines, annex_name, int(count))
 
             status[annex_name][request_id] = "requested"
             if job.get("hpc_annex_PID") is not None:
@@ -174,21 +184,34 @@ class Status(Verb):
             if slot.get("PartitionableSlot", False):
                 increment(status, annex_name, request_id, "TotalCPUs", slot["TotalSlotCPUs"])
                 increment(status, annex_name, request_id, "BusyCPUs", len(slot["ChildCPUs"]))
+                increment(status, annex_name, request_id, "MachineCount", 1)
 
-        # This could be substantially optimized with a projection.
+        all_jobs = {}
         running_jobs = {}
-        target_jobs = schedd.query(f'TargetAnnexName =!= undefined', opts=htcondor.QueryOpts.DefaultMyJobsOnly)
+        constraint = 'TargetAnnexName =!= undefined'
+        if the_annex_name is not None:
+            constraint = f'TargetAnnexName == "{the_annex_name}"'
+        target_jobs = schedd.query(
+            constraint,
+            opts=htcondor.QueryOpts.DefaultMyJobsOnly,
+            projection=['JobStatus', 'TargetAnnexName', 'hpc_annex_nodes'],
+        )
         for job in target_jobs:
+            target_annex_name = job['TargetAnnexName']
+            bump(all_jobs, target_annex_name, 1)
+
             if job['JobStatus'] == htcondor.JobStatus.RUNNING:
-                count = running_jobs.get(job['TargetAnnexName'], 0)
-                count += 1
-                running_jobs[job['TargetAnnexName']] = count
+                bump(running_jobs, target_annex_name, 1)
+
+        if len(target_jobs) == 0 and the_annex_name is not None:
+            print(f"Found no jobs targeting annex '{the_annex_name}'.");
 
         if len(status) == 0 and len(annex_slots) == 0:
             if the_annex_name is None:
                 print(f"Found no active or requested annexes.")
             else:
                 print(f"Found no active or requested annexes named '{the_annex_name}'.")
+            return
 
         #
         # Do the actual reporting (after calculating some aggregates).
@@ -198,6 +221,7 @@ class Status(Verb):
 
             busy_CPUs = 0
             total_CPUs = 0
+            machine_count = 0
             requested_and_left = 0
             requested_but_not_joined = 0
             for request_ID, values in annex_status.items():
@@ -209,28 +233,53 @@ class Status(Verb):
                 else:
                     total_CPUs += values["TotalCPUs"]
                     busy_CPUs += values["BusyCPUs"]
+                    machine_count += values["MachineCount"]
             requested_and_active = requests - requested_but_not_joined - requested_and_left
 
             #
-            # This what the recipe actually has.
-            #
             # Other possibilities include:
-            # * how long the annex has left, based on the requested duration
-            # * how many jobs target the current annex (e.g., running x/y jobs)
+            # * how long the annex has left, based on the requested duration.
             # * how long ago the requests were made.
             # * (approximately) how long ago the annex became active (based
             #   on the DaemonStartTime of the slot ads).
             #
+
+            if the_annex_name is None:
+                if total_CPUs == 0:
+                    print(f"Annex '{annex_name}' is not active.", end='')
+                else:
+                    all_job_count = all_jobs.get(annex_name, 0)
+                    running_job_count = running_jobs.get(annex_name, 0)
+                    print(f"Annex '{annex_name}' is active and running {running_job_count} of {all_job_count} jobs on {busy_CPUs} of {total_CPUs} CPUs.", end='')
+
+                if requests != requested_and_active:
+                    print(f"  {requested_but_not_joined}/{requested_and_active}/{requested_and_left} requests are pending/active/retired.", end='')
+
+                print()
+                continue
+
+            # Is the annex currently active?
             if total_CPUs != 0:
-                running_job_count = running_jobs.get(annex_name, 0)
-                print(f"Annex '{annex_name}' is active and running {running_job_count} jobs on {busy_CPUs} of {total_CPUs} CPUs.", end='')
+                print(f"Annex '{annex_name}' is active.")
             else:
-                print(f"Annex '{annex_name}' is not active.", end='')
+                print(f"Annex '{annex_name}' is not active.")
 
-            if requests != requested_and_active:
-                print(f"  {requested_but_not_joined}/{requested_and_active}/{requested_and_left} requests are pending/active/retired.", end='')
+            # How big is it?
+            requested_machines = requested_machines.get(annex_name, 0)
+            print(f"You requested {requested_machines} machines for this annex, of which {machine_count} are active.")
+            print(f"There are {total_CPUs} CPUs in the active machines, of which {busy_CPUs} are busy.")
 
+            # How many jobs target it?  Of those, how many are running?
+            all_job_count = all_jobs.get(annex_name, 0)
+            running_job_count = running_jobs.get(annex_name, 0)
+            print(f"{all_job_count} jobs must run on this annex, and {running_job_count} currently are.")
+
+            # Request information
+            print(f"You made {requests} resource request(s) for this annex, of which {requested_but_not_joined} are pending, {requested_and_active} are active, and {requested_and_left} have retired.")
+
+        if the_annex_name is None:
             print()
+            print(f"For more information about an annex, specify it on the command line: 'htcondor annex status <specific-annex-name>'")
 
 
 class Shutdown(Verb):
