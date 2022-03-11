@@ -2177,6 +2177,9 @@ fi
 %endif
 
 %changelog
+* Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 8.8.17-1
+- Fixed a memory leak in the Job Router
+
 * Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 8.8.16-1
 - Fix for security issue
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003.html

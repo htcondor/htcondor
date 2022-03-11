@@ -13,9 +13,7 @@ Version 8.8.17
 
 Release Notes:
 
-- HTCondor version 8.8.17 not yet released.
-
-.. HTCondor version 8.8.17 released on Month Date, 2022.
+- HTCondor version 8.8.17 released on March 15, 2022.
 
 New Features:
 
