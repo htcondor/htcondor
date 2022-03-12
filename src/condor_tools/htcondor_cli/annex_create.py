@@ -98,7 +98,7 @@ def make_remote_temporary_directory(
             "--directory",
         ],
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stderr=subprocess.PIPE,
         errors="replace",
     )
 
@@ -206,7 +206,7 @@ def transfer_files(
         ],
         shell=True,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stderr=subprocess.PIPE,
         errors="replace",
     )
 
