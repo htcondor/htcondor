@@ -444,6 +444,8 @@ if [[ $SBATCH_ERROR != 0 ]]; then
 fi
 JOB_ID=`cat ${SBATCH_LOG} | awk '/^Submitted batch job/{print $4}'`
 echo "${CONTROL_PREFIX} JOB_ID ${JOB_ID}"
+echo "SLURM job ID is ${JOB_ID}"
+squeue -j "${JOB_ID}"
 echo "..done."
 
 # Reset the EXIT trap so that we don't delete the temporary directory
