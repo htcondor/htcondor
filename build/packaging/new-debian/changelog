@@ -8,6 +8,12 @@ condor (9.0.11-1) stable; urgency=medium
 
  -- Tim Theisen <tim@cs.wisc.edu>  Sat, 12 Mar 2022 14:34:00 -0600
 
+condor (8.8.17-1) stable; urgency=high
+
+  * Fixed a memory leak in the Job Router
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 11 Mar 2022 13:38:00 -0600
+
 condor (9.0.10-1) stable; urgency=high
 
   * Fixes for security issues

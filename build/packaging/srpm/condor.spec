@@ -1687,6 +1687,9 @@ fi
 - Fix bug where a file transfer error may identify the wrong file
 - Fix bug where condor_ssh_to_job may fail to connect
 
+* Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 8.8.17-1
+- Fixed a memory leak in the Job Router
+
 * Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.10-1
 - Fixes for security issues
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001

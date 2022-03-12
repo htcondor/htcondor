@@ -7,6 +7,24 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+Version 8.8.17
+-------------
+
+Release Notes:
+
+- HTCondor version 8.8.17 released on March 15, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a memory leak in the job router, usually triggered when job
+  policy expressions cause removal of the job.
+  :jira:`408`
+
+
 Version 8.8.16
 --------------
 
