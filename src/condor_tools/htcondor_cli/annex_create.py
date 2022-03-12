@@ -235,7 +235,8 @@ def extract_full_lines(buffer):
     if last_newline == -1:
         return buffer, []
 
-    lines = [line.decode("utf-8") for line in buffer[:last_newline].split(b"\n")]
+    lines = [line.decode("utf-8", errors="replace")
+             for line in buffer[:last_newline].split(b"\n")]
     return buffer[last_newline + 1 :], lines
 
 
@@ -344,7 +345,7 @@ def invoke_pilot_script(
 
     # Print the remainder, if any.
     if len(out_buffer) != 0:
-        print("   ", out_buffer.decode("utf-8"))
+        print("   ", out_buffer.decode("utf-8", errors="replace"))
     print()
 
     # Set by proc.poll().
