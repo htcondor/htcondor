@@ -428,10 +428,15 @@ def annex_create(
     password_file = Path(password_file).expanduser()
     if not password_file.exists():
         try:
+            old_umask = os.umask(0o077)
             with password_file.open("wb") as f:
                 password = secrets.token_bytes(16)
                 f.write(password)
             password_file.chmod(0o0400)
+            try:
+                os.umask(old_umask)
+            except OSError:
+                pass
         except OSError as ose:
             raise OSError(
                 f"Password file {password_file} does not exist and could not be created: {ose}."
