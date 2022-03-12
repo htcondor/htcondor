@@ -607,6 +607,7 @@ def annex_create(
             # cleaned up?
             "environment": f'PYTHONPATH={os.environ.get("PYTHONPATH", "")}',
             "arguments": f"$(CLUSTER).0 hpc_annex_request_id $(CLUSTER) {collector}",
+            "jobbatchname": f'HPCAnnex_{annex_name}',
             "+hpc_annex_request_id": '"$(CLUSTER)"',
             # Properties of the annex request.  We should think about
             # representing these as a nested ClassAd.  Ideally, the back-end
