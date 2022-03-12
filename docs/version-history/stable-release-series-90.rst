@@ -49,6 +49,11 @@ Bugs Fixed:
   connect to one of those daemons.
   :jira:`937`
 
+-  The Job Router no longer sets an incorrect ``User`` job attribute
+   when routing a job between two *condor_schedd* s with different
+   values for configuration parameter ``UID_DOMAIN``.
+   :jira:`1005`
+
 .. _lts-version-history-9010:
 
 Version 9.0.10
