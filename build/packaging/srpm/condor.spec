@@ -1688,7 +1688,7 @@ fi
 
 * Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 8.8.16-1
 - Fix for security issue
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003.html
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003
 
 * Thu Jan 13 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.9-1
 - Added Debian 11 (bullseye) as a supported platform
