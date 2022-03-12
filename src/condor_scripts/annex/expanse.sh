@@ -6,8 +6,10 @@ echo "${CONTROL_PREFIX} PID $$"
 function usage() {
     echo "Usage: ${0} \\"
     echo "       JOB_NAME QUEUE_NAME COLLECTOR TOKEN_FILE LIFETIME PILOT_BIN \\"
-    echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID PASSWORD_FILE"
-    echo "where OWNERS is a comma-separated list"
+    echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID PASSWORD_FILE \\"
+    echo "       [CPUS] [MEM_MB]"
+    echo "where OWNERS is a comma-separated list.  Omit CPUS and MEM_MB to get"
+    echo "whole-node jobs.  NODES is ignored on non-whole-node jobs."
 }
 
 JOB_NAME=$1
@@ -82,6 +84,15 @@ PASSWORD_FILE=${12}
 if [[ -z $PASSWORD_FILE ]]; then
     usage
     exit 1
+fi
+
+CPUS=${13}
+if [[ ! $CPUS -gt 0 ]]; then
+    CPUS=""
+fi
+MEM_MB=${14}
+if [[ ! $MEM_MB -gt 0 ]]; then
+    MEM_MB=""
 fi
 
 BIRTH=`date +%s`
@@ -241,6 +252,20 @@ chmod 755 ${PILOT_DIR}/singularity.sh
 YOUTH=$((`date +%s` - ${BIRTH}))
 REMAINING_LIFETIME=$(((${LIFETIME} - ${YOUTH}) - ${CLEAN_UP_TIME}))
 
+
+WHOLE_NODE=1
+CONDOR_CPUS_LINE=""
+if [[ -n $CPUS && $CPUS -gt 0 ]]; then
+    CONDOR_CPUS_LINE="NUM_CPUS = ${CPUS}"
+    WHOLE_NODE=""
+fi
+
+CONDOR_MEMORY_LINE=""
+if [[ -n $MEM_MB && $MEM_MB -gt 0 ]]; then
+    CONDOR_MEMORY_LINE="MEMORY = ${MEM_MB}"
+    WHOLE_NODE=""
+fi
+
 echo "Converting to a pilot..."
 rm local/config.d/00-personal-condor
 echo "
@@ -313,20 +338,8 @@ endif
 # starter ignores PATH, so wrap it up.
 SINGULARITY = ${PILOT_DIR}/singularity.sh
 
-# XXX Expanse charges by the core and has shared partitions; what should we
-#     do here?
-# 1. Ignore them - use the whole-node partitions only and keep the multi-node
-#    job logic from Stampede2.
-# 2. Use the shared partitions but ask for the whole machine's worth of RAM/
-#    cores -- costs the same but we won't have to use multi-node job logic and
-#    the pilots will start up faster.
-# 3. Use the shared partitions, ask for a certain fraction of the machine, use
-#    NUM_CPUS and MEMORY to tell the pilot what that is.
-
-# XXX Should we still avoid scaling issues by turning off hyperthreading, or
-#     should we leave it on and perhaps modify RequestCPUs _and_ RequestMemory
-#     (to, say, 2 cores 4 GB (2 SUs))?
-COUNT_HYPERTHREAD_CPUS = FALSE
+${CONDOR_CPUS_LINE}
+${CONDOR_MEMORY_LINE}
 
 # Create dynamic slots 3 GB at a time.  This number was chosen because it's
 # the amount of RAM requested per core on the OS Pool, but we actually bother
@@ -367,11 +380,38 @@ fi
 # the wrong queue length.
 MINUTES=$(((${REMAINING_LIFETIME} + ${CLEAN_UP_TIME})/60))
 
-# Request the appropriate number of nodes. (-N)
-# Request the appropriate number of tasks. (-n)
-#
-# On Stampede 2, TACC allocates only whole nodes, so -N = ${NODES}.  Since
-# this is not an MPI job, we want one task per node, and -n = ${NODES}.
+if [[ $WHOLE_NODE ]]; then
+    # Whole node jobs request the same number of tasks per node as tasks total.
+    # They make no specific requests about CPUs, memory, etc., since the SLURM
+    # partition should already determine that.
+    SBATCH_RESOURCES_LINES="\
+#SBATCH --ntasks=${NODES}
+#SBATCH --ntasks-per-node=${NODES}
+"
+else
+    # Jobs on shared (non-whole-node) SLURM partitions can't be multi-node on
+    # Expanse.  Request one job, and specify the resources that should be
+    # allocated to the job.
+
+    # XXX Should I reject NODES > 1?
+    SBATCH_RESOURCES_LINES="\
+#SBATCH --ntasks=1
+#SBATCH --nodes=1
+"
+    if [[ $CPUS ]]; then
+        SBATCH_RESOURCES_LINES="\
+${SBATCH_RESOURCES_LINES}
+#SBATCH --cpus-per-task=${CPUS}
+"
+    fi
+    if [[ $MEM_MB ]]; then
+        SBATCH_RESOURCES_LINES="\
+${SBATCH_RESOURCES_LINES}
+#SBATCH --mem=${MEM_MB}M
+"
+    fi
+fi
+
 
 if [[ -n $ALLOCATION ]]; then
     SBATCH_ALLOCATION_LINE="#SBATCH -A ${ALLOCATION}"
@@ -383,8 +423,7 @@ echo "
 #SBATCH -o ${PILOT_DIR}/%j.out
 #SBATCH -e ${PILOT_DIR}/%j.err
 #SBATCH -p ${QUEUE_NAME}
-#SBATCH -N ${NODES}
-#SBATCH -n ${NODES}
+${SBATCH_RESOURCES_LINES}
 #SBATCH -t ${MINUTES}
 ${SBATCH_ALLOCATION_LINE}
 
