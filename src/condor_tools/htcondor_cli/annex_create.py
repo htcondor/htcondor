@@ -438,7 +438,7 @@ def annex_create(
             except OSError:
                 pass
         except OSError as ose:
-            raise OSError(
+            raise RuntimeError(
                 f"Password file {password_file} does not exist and could not be created: {ose}."
             )
 
