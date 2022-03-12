@@ -1,3 +1,13 @@
+condor (9.0.11-1) stable; urgency=medium
+
+  * The Job Router can now create an IDTOKEN for use by the job
+  * Fix bug where a self-checkpointing job may erroneously be held
+  * Fix bug where the Job Router could erroneously substitute a default value
+  * Fix bug where a file transfer error may identify the wrong file
+  * Fix bug where condor_ssh_to_job may fail to connect
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sat, 12 Mar 2022 14:34:00 -0600
+
 condor (9.0.10-1) stable; urgency=high
 
   * Fixes for security issues
