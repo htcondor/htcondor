@@ -200,9 +200,10 @@ def transfer_files(
     task,
 ):
     # FIXME: Pass an actual list to Popen
+    full_command = f'tar -c -f- {files} | ssh {" ".join(ssh_connection_sharing)} {ssh_target} {" ".join(ssh_indirect_command)} tar -C {remote_script_dir} -x -f-'
     proc = subprocess.Popen(
         [
-            f'tar -c -f- {files} | ssh {" ".join(ssh_connection_sharing)} {ssh_target} {" ".join(ssh_indirect_command)} tar -C {remote_script_dir} -x -f-'
+            full_command
         ],
         shell=True,
         stdout=subprocess.PIPE,
@@ -217,6 +218,7 @@ def transfer_files(
             return 0
         else:
             logger.error(f"Failed to {task}, aborting.")
+            logger.debug(f"command: {full_command}")
             logger.warning(f"stdout: {out.strip()}")
             logger.warning(f"stderr: {err.strip()}")
             raise RuntimeError(f"Failed to {task}")
