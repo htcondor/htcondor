@@ -410,6 +410,9 @@ def annex_create(
     local_script_dir = (
         Path(htcondor.param.get("LIBEXEC", "/usr/libexec/condor")) / "annex"
     )
+    
+    if not local_script_dir.is_dir():
+        raise RuntimeError(f"Annex script dir {local_script_dir} not found or not a directory.")
 
     if queue_name is None:
         queue_name = MACHINE_QUEUE_MAP[target]
