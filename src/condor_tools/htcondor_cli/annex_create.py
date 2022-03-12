@@ -82,7 +82,7 @@ def remove_remote_temporary_directory(
             return proc.wait(timeout=REMOTE_CLEANUP_TIMEOUT)
         except subprocess.TimeoutExpired:
             logger.error(
-                f"Did not clean up remote temporary directory after {INITIAL_CONNECTION_TIMEOUT} seconds, '{remote_script_dir}' may need to be deleted manually."
+                f"Did not clean up remote temporary directory after {REMOTE_CLEANUP_TIMEOUT} seconds, '{remote_script_dir}' may need to be deleted manually."
             )
 
     return 0
