@@ -1694,6 +1694,10 @@ fi
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0002
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003
 
+* Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 8.8.16-1
+- Fix for security issue
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003
+
 * Tue Feb 08 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.4-1
 - The access point more robustly detects execution points that disappear
 - The condor_procd will now function if /proc is mounted with hidepid=2
