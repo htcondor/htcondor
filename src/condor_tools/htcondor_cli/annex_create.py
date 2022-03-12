@@ -27,6 +27,13 @@ MACHINE_QUEUE_MAP = {
     "stampede2": "normal",
     "expanse": "compute",
 }
+# Pick a consistent login node so we get the same local file system across
+# multiple ssh connections even when the site has DNS round robining set up.
+# TODO: Probably more robust to add a second level of connection sharing...
+MACHINE_SSH_TARGET_MAP = {
+    "stampede2": "stampede2",
+    "expanse": "login01.expanse.sdsc.edu"
+}
 
 
 def make_initial_ssh_connection(
@@ -456,7 +463,7 @@ def annex_create(
         "-o",
         f'ControlPath="{control_path}/master-%C"',
     ]
-    ssh_indirect_command = ["gsissh", target]
+    ssh_indirect_command = ["gsissh", MACHINE_SSH_TARGET_MAP[target]]
 
     ##
     ## While we're requiring that jobs are submitted before creating the
