@@ -7,6 +7,12 @@ condor (9.0.10-0.1) stable; urgency=high
 
  -- Tim Theisen <tim@cs.wisc.edu>  Wed, 16 Feb 2022 11:11:00 -0600
 
+condor (8.8.16-1) stable; urgency=high
+
+  * Fix for security issue
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003.html
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 11 Mar 2022 08:20:00 -0600
 condor (9.0.9-1) stable; urgency=medium
 
   * Added Debian 11 (bullseye) as a supported platform
