@@ -6,7 +6,6 @@ docker://htcondor/nmi-zdev:x86_64_CentOS7-09000900
 docker://htcondor/nmi-zdev:x86_64_Debian9-09000900
 docker://htcondor/nmi-zdev:x86_64_Debian10-09000900
 docker://htcondor/nmi-zdev:x86_64_Debian11-09000900
-docker://htcondor/nmi-zdev:x86_64_Debian12-09000900
 x86_64_MacOSX15
 docker://htcondor/nmi-zdev:x86_64_Rocky8-09000900
 docker://htcondor/nmi-zdev:x86_64_Ubuntu18-09000900
