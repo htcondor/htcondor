@@ -266,6 +266,8 @@ def invoke_pilot_script(
     update_function,
     cluster_id,
     password_file,
+    cpus=0,
+    mem_mb=0,
 ):
     args = [
         "ssh",
@@ -285,6 +287,8 @@ def invoke_pilot_script(
         str(allocation),
         str(cluster_id),
         str(remote_script_dir / password_file.name),
+        str(cpus),
+        str(mem_mb),
     ]
     proc = subprocess.Popen(
         args,
@@ -388,6 +392,8 @@ def annex_create(
     password_file,
     ssh_target,
     control_path,
+    cpus=0,
+    mem_mb=0,
 ):
 
     # We use this same method to determine the user name in `htcondor job`,
@@ -596,6 +602,8 @@ def annex_create(
             "+hpc_annex_allocation": f'"{allocation}"'
             if allocation is not None
             else "undefined",
+            "+hpc_annex_cpus": f'{cpus}',
+            "+hpc_annex_mem_mb": f'{mem_mb}',
             # Hard state required for clean up.  We'll be adding
             # hpc_annex_PID, hpc_annex_PILOT_DIR, and hpc_annex_JOB_ID
             # as they're reported by the back-end script.
@@ -631,6 +639,8 @@ def annex_create(
         lambda attribute, value: updateJobAd(cluster_id, attribute, value, remotes),
         cluster_id,
         password_file,
+        cpus,
+        mem_mb,
     )
 
     if rc == 0:
@@ -682,6 +692,8 @@ def __main():
     target = "stampede2"
     nodes = 2
     lifetime = 7200
+    cpus = 0
+    mem_mb = 0
 
     annex_name = "hpc-annex"
     queue_name = "development"
@@ -716,6 +728,8 @@ def __main():
         password_file,
         ssh_target,
         control_path,
+        cpus,
+        mem_mb,
     )
 
 
