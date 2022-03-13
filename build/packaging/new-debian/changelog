@@ -13,7 +13,8 @@ condor (8.8.17-1) stable; urgency=high
   * Fixed a memory leak in the Job Router
 
  -- Tim Theisen <tim@cs.wisc.edu>  Fri, 11 Mar 2022 13:38:00 -0600
-condor (9.6.0-0.1) stable; urgency=high
+
+condor (9.6.0-1) stable; urgency=high
 
   * Fixes for security issues
     https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
