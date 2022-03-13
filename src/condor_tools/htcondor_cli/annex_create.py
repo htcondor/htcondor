@@ -95,7 +95,7 @@ def make_remote_temporary_directory(
     ssh_indirect_command,
 ):
     remote_command = r'mkdir -p \${HOME}/.hpc-annex/scratch && ' \
-        r'mktemp --tmpdir=\${HOME}/.hpc-annex/scratch --directory'
+        r'mktemp --tmpdir=\${HOME}/.hpc-annex/scratch --directory remote_script.XXXXXXXX'
     proc = subprocess.Popen(
         [
             "ssh",

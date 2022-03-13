@@ -132,7 +132,7 @@ CLEAN_UP_TIME=300
 echo "Creating temporary directory for pilot..."
 SCRATCH=${SCRATCH:-$HOME/.hpc-annex/scratch}
 mkdir -p "$SCRATCH"
-PILOT_DIR=`/usr/bin/mktemp --directory --tmpdir=${SCRATCH} 2>&1`
+PILOT_DIR=`/usr/bin/mktemp --directory --tmpdir=${SCRATCH} pilot.XXXXXXXX 2>&1`
 if [[ $? != 0 ]]; then
     echo "Failed to create temporary directory for pilot, aborting."
     echo ${PILOT_DIR}
