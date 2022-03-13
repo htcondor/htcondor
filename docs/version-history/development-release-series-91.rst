@@ -103,7 +103,7 @@ New Features:
 
 Bugs Fixed:
 
--  *Security Item*: This release of HTCondor fixes security-related bugs
+-  *Security Items*: This release of HTCondor fixes security-related bugs
    described at
 
    -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001>`_.
@@ -676,7 +676,7 @@ New Features:
 
 Bugs Fixed:
 
--  *Security Item*: This release of HTCondor fixes a security-related bug
+-  *Security Items*: This release of HTCondor fixes security-related bugs
    described at
 
    -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003>`_.

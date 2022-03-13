@@ -7,14 +7,14 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-9010:
+.. _lts-version-history-9011:
 
 Version 9.0.11
 --------------
 
 Release Notes:
 
-- HTCondor version 9.0.11 released on March 8, 2022.
+- HTCondor version 9.0.11 released on March 15, 2022.
 
 New Features:
 
@@ -79,7 +79,7 @@ Version 9.0.10
 
 Release Notes:
 
-- HTCondor version 9.0.10 released on March 8, 2022.
+-  HTCondor version 9.0.10 released on March 15, 2022.
 
 New Features:
 
@@ -87,7 +87,7 @@ New Features:
 
 Bugs Fixed:
 
--  *Security Item*: This release of HTCondor fixes security-related bugs
+-  *Security Items*: This release of HTCondor fixes security-related bugs
    described at
 
    -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001>`_.
@@ -445,7 +445,7 @@ New Features:
 
 Bugs Fixed:
 
--  *Security Item*: This release of HTCondor fixes a security-related bug
+-  *Security Items*: This release of HTCondor fixes security-related bugs
    described at
 
    -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003>`_.

@@ -1671,6 +1671,16 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.11-1
+- The Job Router can now create an IDTOKEN for use by the job
+- Fix bug where a self-checkpointing job may erroneously be held
+- Fix bug where the Job Router could erroneously substitute a default value
+- Fix bug where a file transfer error may identify the wrong file
+- Fix bug where condor_ssh_to_job may fail to connect
+
+* Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 8.8.17-1
+- Fixed a memory leak in the Job Router
+
 * Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.6.0-1
 - Fixes for security issues
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
@@ -1681,6 +1691,10 @@ fi
 - Fixes for security issues
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0002
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003
+
+* Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 8.8.16-1
+- Fix for security issue
 - https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003
 
 * Tue Feb 08 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.4-1
