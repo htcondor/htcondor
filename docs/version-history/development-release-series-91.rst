@@ -9,7 +9,7 @@ Version 9.7.0
 
 Release Notes:
 
-- HTCondor version 9.7.0 released on March 8, 2022.
+- HTCondor version 9.7.0 released on March 15, 2022.
 
 - This version includes all the updates from :ref:`lts-version-history-9011`.
 

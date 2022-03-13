@@ -1671,6 +1671,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.7.0-1
+- Support environment variables, other application elements in ARC REST jobs
+- Container universe supports Singularity jobs with hard-coded command
+- DAGMan submits jobs directly (does not shell out to condor_submit)
+- Meaningful error message and sub-code for file transfer failures
+- Add file transfer statistics for file transfer plugins
+- Add named list policy knobs for SYSTEM_PERIODIC_ policies
+
 * Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.11-1
 - The Job Router can now create an IDTOKEN for use by the job
 - Fix bug where a self-checkpointing job may erroneously be held
