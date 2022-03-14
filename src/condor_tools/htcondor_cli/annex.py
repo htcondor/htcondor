@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 import getpass
 import argparse
@@ -134,11 +135,17 @@ class Status(Verb):
             query = f'hpc_annex_name == "{the_annex_name}"'
         annex_jobs = schedd.query(query, opts=htcondor.QueryOpts.DefaultMyJobsOnly)
 
+        ## This all very ugly and can't possibly be the best way to do this.
+
         # Each annex request is represented by its own job, but we want
         # to present aggregate information for each annex name.
-
         status = { job["hpc_annex_name"]: {} for job in annex_jobs }
 
+        # The 'status' dictionary stores information about each resource
+        # request.  This dictionary stores per-annex information.
+        annex_attrs = { job["hpc_annex_name"]: {} for job in annex_jobs }
+
+        lifetimes = {}
         requested_machines = {}
         for job in annex_jobs:
             annex_name = job["hpc_annex_name"]
@@ -156,6 +163,8 @@ class Status(Verb):
                 status[annex_name][request_id] = "submitted"
             if job["JobStatus"] == htcondor.JobStatus.IDLE:
                 status[annex_name][request_id] = "granted"
+
+            lifetimes[request_id] = job.get("hpc_annex_lifetime")
 
         annex_collector = htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io")
         collector = htcondor.Collector(annex_collector)
@@ -185,6 +194,16 @@ class Status(Verb):
                 increment(status, annex_name, request_id, "TotalCPUs", slot["TotalSlotCPUs"])
                 increment(status, annex_name, request_id, "BusyCPUs", len(slot["ChildCPUs"]))
                 increment(status, annex_name, request_id, "MachineCount", 1)
+
+            slot_birthday = slot.get("DaemonStartTime")
+            annex_birthday = annex_attrs[annex_name].get('first_birthday')
+            if annex_birthday is None or slot_birthday < annex_birthday:
+                annex_attrs[annex_name]['first_birthday'] = slot_birthday
+                annex_attrs[annex_name]['first_request_id'] = slot.get("hpc_annex_request_id")
+            annex_birthday = annex_attrs[annex_name].get('last_birthday')
+            if annex_birthday is None or slot_birthday > annex_birthday:
+                annex_attrs[annex_name]['last_birthday'] = slot_birthday
+                annex_attrs[annex_name]['last_request_id'] = slot.get("hpc_annex_request_id")
 
         all_jobs = {}
         running_jobs = {}
@@ -236,14 +255,6 @@ class Status(Verb):
                     machine_count += values["MachineCount"]
             requested_and_active = requests - requested_but_not_joined - requested_and_left
 
-            #
-            # Other possibilities include:
-            # * how long the annex has left, based on the requested duration.
-            # * how long ago the requests were made.
-            # * (approximately) how long ago the annex became active (based
-            #   on the DaemonStartTime of the slot ads).
-            #
-
             if the_annex_name is None:
                 if total_CPUs == 0:
                     print(f"Annex '{annex_name}' is not active.", end='')
@@ -261,6 +272,27 @@ class Status(Verb):
             # Is the annex currently active?
             if total_CPUs != 0:
                 print(f"Annex '{annex_name}' is active.")
+
+                # When did the annex start, and how long does it have to run?
+                oldest_time = annex_attrs[annex_name]['first_birthday']
+                oldest_hours = int(lifetimes[annex_attrs[annex_name]['first_request_id']])
+                youngest_time = annex_attrs[annex_name]['last_birthday']
+                youngest_hours = int(lifetimes[annex_attrs[annex_name]['last_request_id']])
+
+                now = int(time.time())
+                print(
+                    f"Its oldest machine activated about "
+                    f"{(now - oldest_time)/(60*60):.2f} hours ago "
+                    f"and will retire in "
+                    f"{((oldest_time + oldest_hours) - now)/(60*60):.2f} hours."
+                )
+                if annex_attrs[annex_name]['first_request_id'] != annex_attrs[annex_name]['last_request_id']:
+                    print(
+                        f"Its youngest active machine activated about "
+                        f"{(now - youngest_time)/(60*60):.2f} hours ago "
+                        f"and will retire in "
+                        f"{((youngest_time + oldest_hours) - now)/(60*60):.2f} hours."
+                    )
             else:
                 print(f"Annex '{annex_name}' is not active.")
 
@@ -274,7 +306,7 @@ class Status(Verb):
             running_job_count = running_jobs.get(annex_name, 0)
             print(f"{all_job_count} jobs must run on this annex, and {running_job_count} currently are.")
 
-            # Request information
+            # How many resource requests were made, and what's their status?
             print(f"You made {requests} resource request(s) for this annex, of which {requested_but_not_joined} are pending, {requested_and_active} are active, and {requested_and_left} have retired.")
 
         if the_annex_name is None:
