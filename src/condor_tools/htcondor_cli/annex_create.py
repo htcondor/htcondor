@@ -155,7 +155,7 @@ def transfer_sif_files(
     files = f"-h {files}"
 
     # Meaning, "stuff these files into the sif/ directory."
-    files = f"--transform='s/^/sif\//' ${files}"
+    files = f"--transform='s|^|sif/|' {files}"
 
     transfer_files(
         logger,
