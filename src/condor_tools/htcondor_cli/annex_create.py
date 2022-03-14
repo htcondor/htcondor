@@ -23,6 +23,13 @@ REMOTE_CLEANUP_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_CLEANUP_TIMEOUT", 
 REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 5))
 REMOTE_POPULATE_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_POPULATE_TIMEOUT", 60))
 
+#
+# For queues with the whole-node allocation policy, cores and RAM -per-node
+# are only informative at the moment; we could compute the necessary number
+# of nodes for the user (as long as we echo it back to them), but let's not
+# do that for now and just tell the user to size their requests with the
+# units appropriate to the queue.
+#
 MACHINE_TABLE = {
 
     # The key is currently both the value of the command-line option
@@ -36,21 +43,77 @@ MACHINE_TABLE = {
         # This isn't all of the queues on Stampede 2, but we
         # need to think about what it means, if anything, if
         # recognize certain queues.  For now, these are the
-        # only two queues I've actually tested.
+        # only three queues I've actually tested.
         "queues": {
             "normal": {
                 "max_nodes_per_job":    256,
                 "max_duration":         48 * 60 * 60,
-                "max_jobs_in_queue":    50,
-
+                "allocation_type":      "node",
                 "cores_per_node":       68,
+
+                "max_jobs_in_queue":    50,
             },
             "development": {
                 "max_nodes_per_job":    16,
                 "max_duration":         2 * 60 * 60,
-                "max_jobs_in_queue":    1,
-
+                "allocation_type":      "node",
                 "cores_per_node":       68,
+
+                "max_jobs_in_queue":    1,
+            },
+            "skx-normal": {
+                "max_nodes_per_job":    128,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       48,
+
+                "max_jobs_in_queue":    20,
+            },
+        },
+    },
+
+    "expanse": {
+        "pretty_name":      "Expanse",
+        "gsissh_name":      "expanse",
+        "default_queue":    "shared",
+
+        # GPUs are completed untested, see above.
+        "queues": {
+            "compute": {
+                "max_nodes_per_job":    32,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       128,
+                "ram_per_node":         256,
+
+                "max_jobs_in_queue":    64,
+            },
+            "gpu": {
+                "max_nodes_per_job":    4,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       40,
+                "ram_per_node":         256,
+
+                "max_jobs_in_queue":    8,
+            },
+            "shared": {
+                "max_nodes_per_job":    1,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       128,
+                "ram_per_node":         256,
+
+                "max_jobs_in_queue":    4096,
+            },
+            "gpu-shared": {
+                "max_nodes_per_job":    1,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       40,
+                "ram_per_node":         384,
+
+                "max_jobs_in_queue":    24,
             },
         },
     },
@@ -526,7 +589,7 @@ def annex_create(
     )
     if rc != 0:
         raise RuntimeError(
-            f"Failed to make initial connection to {MACHINE_TABLE[target]['pretty_name']}, aborting ({rc})."
+            f"Failed to make initial connection to {MACHINE_TABLE[target]['pretty_name']}, aborting ({rc}).\n\nIf the error message was 'Host key verication failed.', use the 'ssh' command above to run 'gsissh {MACHINE_TABLE[target]['gsissh_name']}' and type yes."
         )
 
     ##
