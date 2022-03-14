@@ -19,7 +19,7 @@ INITIAL_CONNECTION_TIMEOUT = int(
     htcondor.param.get("ANNEX_INITIAL_CONNECTION_TIMEOUT", 180)
 )
 REMOTE_CLEANUP_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_CLEANUP_TIMEOUT", 60))
-REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 5))
+REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 30))
 REMOTE_POPULATE_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_POPULATE_TIMEOUT", 60))
 
 # FIXME: Make this come from config? At least some place not hardcoded.
