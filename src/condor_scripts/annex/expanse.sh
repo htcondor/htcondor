@@ -241,8 +241,11 @@ fi
 # model=$(awk -F : "/model/ { print \$2; exit }" /proc/cpuinfo | sed -e "s/ \*//g")
 #
 # ^^ TODO Does that message apply to expanse?
-echo '#!/bin/bash
+echo '#!/bin/bash -l
+/usr/bin/env | /usr/bin/sort
 export USER=`/usr/bin/id -un`
+#. /etc/profile.d/00-sdsc-modules.sh
+#. /etc/profile.d/modules.sh
 module load singularitypro
 exec singularity "$@"
 ' > ${PILOT_DIR}/singularity.sh
