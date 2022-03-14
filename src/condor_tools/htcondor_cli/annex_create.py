@@ -94,15 +94,17 @@ def make_remote_temporary_directory(
     ssh_target,
     ssh_indirect_command,
 ):
+    remote_command = r'mkdir -p \${HOME}/.hpc-annex/scratch && ' \
+        r'mktemp --tmpdir=\${HOME}/.hpc-annex/scratch --directory'
     proc = subprocess.Popen(
         [
             "ssh",
             *ssh_connection_sharing,
             ssh_target,
             *ssh_indirect_command,
-            "mktemp",
-            "--tmpdir=\\${SCRATCH}",
-            "--directory",
+            "sh",
+            "-c",
+            f"\"'{remote_command}'\"",
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
