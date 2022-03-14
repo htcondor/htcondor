@@ -690,7 +690,7 @@ def annex_create(
             )
             schedd.edit(job_id, "ContainerImage", f'"{remote_sif_file}"')
 
-            transfer_input = job_ad["TransferInput"]
+            transfer_input = job_ad.get("TransferInput", "")
             input_files = transfer_input.split(",")
             if job_ad["ContainerImage"] in input_files:
                 logger.debug(
