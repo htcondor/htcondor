@@ -208,8 +208,8 @@ class Status(Verb):
                     else:
                         requested_but_not_joined += 1
                 else:
-                    total_CPUs += values["TotalCPUs"]
-                    busy_CPUs += values["BusyCPUs"]
+                    total_CPUs += values.get("TotalCPUs", 0)
+                    busy_CPUs += values.get("BusyCPUs", 0)
             requested_and_active = requests - requested_but_not_joined - requested_and_left
 
             #
