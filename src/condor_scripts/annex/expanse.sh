@@ -220,32 +220,12 @@ fi
 # Unfortunately, the `module` command doesn't work without a bunch of
 # random environmental set-up that's done when we're forking a process;
 # for whatever reason, it's not good enough to run
-# `module load tacc-singularity` before starting the master.  So
-# we wanted to use a wrapper with `bash -l`.  That worked, but polluted the
-# job's stderr with a message about a broken pipe.
+# `module load singularitypro` before starting the master.
+# Using a wrapper with bash -l (to load the rc files; without -l, PATH
+# wouldn't be set).  bash -l is quiet on Expanse (unlike Stampede2).
 #
-# The problem is that /etc/profile.d/z00_tacc_login.sh runs a pipeline
-# to determine the CPU model number that deliberately breaks the pipe;
-# the awk scipt should not contain an 'exit' and instead the should have
-# a '| head -n 1' at the end.
-#
-# It's not clear how one would run a command under `bash -l` and only
-# get the command's standard error log.  It might be cleaner to depend
-# on the error appearing rather than the following sequence, in which
-# case we could ..?
-#
-# Yeah, screw all this for now.  We'll try to make TACC fix this broken
-# script, instead.  I tested both the original line and the following one
-# in the singularity.sh script, and the following line didn't have the error:
-#
-# model=$(awk -F : "/model/ { print \$2; exit }" /proc/cpuinfo | sed -e "s/ \*//g")
-#
-# ^^ TODO Does that message apply to expanse?
 echo '#!/bin/bash -l
-/usr/bin/env | /usr/bin/sort
 export USER=`/usr/bin/id -un`
-#. /etc/profile.d/00-sdsc-modules.sh
-#. /etc/profile.d/modules.sh
 module load singularitypro
 exec singularity "$@"
 ' > ${PILOT_DIR}/singularity.sh
