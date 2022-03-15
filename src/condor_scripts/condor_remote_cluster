@@ -1051,6 +1051,9 @@ rsync -aq  $archive_dir/$libdir/lib*.so* $remote_glite_dir/$libdir/ 2>/dev/null
 # Copy the condor_ft-gahp
 rsync -aq  $archive_dir/sbin/condor_ft-gahp $remote_glite_dir/bin 2>/dev/null
 
+# Copy rvgahp_server
+rsync -aq  $archive_dir/sbin/rvgahp_server $remote_glite_dir/bin 2>/dev/null
+
 # link in local submit attributes with correct symlinks
 (cd $remote_glite_dir/libexec; ln -sf ../etc/blahp/*_local_submit_attributes.sh .)
 
