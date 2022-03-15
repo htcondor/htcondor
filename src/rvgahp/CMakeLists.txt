@@ -17,6 +17,8 @@
  # 
  ############################################################### 
 
-condor_exe(rvgahp_server "rvgahp_server.c;common.c" ${C_SBIN} "" OFF)
-condor_exe(rvgahp_proxy "rvgahp_proxy.c;common.c" ${C_SBIN} "" OFF)
-condor_exe(rvgahp_client "rvgahp_client.c;common.c" ${C_SBIN} "" OFF)
+if(UNIX)
+	condor_exe(rvgahp_server "rvgahp_server.c;common.c" ${C_SBIN} "" OFF)
+	condor_exe(rvgahp_proxy "rvgahp_proxy.c;common.c" ${C_SBIN} "" OFF)
+	condor_exe(rvgahp_client "rvgahp_client.c;common.c" ${C_SBIN} "" OFF)
+endif()
