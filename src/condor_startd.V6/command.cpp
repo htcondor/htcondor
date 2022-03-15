@@ -1942,21 +1942,11 @@ activate_claim( Resource* rip, Stream* stream )
 		ABORT;
 	}
 
-		// if we're daemonCore, hold onto the sock the shadow used for
+		// hold onto the sock the shadow used for
 		// this command, and we'll use that for the shadow RSC sock.
 		// otherwise, if we're not windoze, setup our two ports, tell
 		// the shadow about them, and wait for it to connect.
-	Stream* shadow_sock = NULL;
-	if( tmp_starter->is_dc() ) {
-		shadow_sock = stream;
-	} 
-#ifndef WIN32
-	else {
-		rip->dprintf( D_ALWAYS, "Standard universe starter is not supported.\n" );
-		delete tmp_starter;
-		ABORT;
-	}
-#endif	// of ifdef WIN32
+	Stream* shadow_sock = stream;
 
 	ClassAd * overlay_ad = rip->r_cur->execution_overlay();
 	overlay_ad->Clear();

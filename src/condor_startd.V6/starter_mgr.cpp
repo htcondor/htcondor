@@ -38,7 +38,7 @@
 #include "my_popen.h"
 
 
-StarterMgr::StarterMgr() : _haveStandardUni(false)
+StarterMgr::StarterMgr()
 {
 }
 
@@ -170,14 +170,10 @@ StarterMgr::newStarter( ClassAd* job_ad, ClassAd* mach_ad, bool &no_starter,
 				// no type specified, just use the job_ad directly
 			break;
 		case 0:
-				// non-dc standard/vanilla starter
-			if( tmp_starter->is_dc() ||
-				!(tmp_starter->provides(ATTR_HAS_REMOTE_SYSCALLS)) ) {
-				dprintf( D_FULLDEBUG, 
-						 "Job wants old RSC/Ckpt starter, skipping %s\n",
-						 tmp_starter->path() );
-				continue;
-			}
+				// non-dc standard starter
+			dprintf( D_ALWAYS, "ERROR: old standard starter is not supported, "
+					 "returning failure\n" );
+			return NULL;
 			break;
 		case 1:
 				// non-dc pvm starter
@@ -187,7 +183,7 @@ StarterMgr::newStarter( ClassAd* job_ad, ClassAd* mach_ad, bool &no_starter,
 			break;
 		case 2:
 				// dc starter (mpi, java, etc)
-			if( ! tmp_starter->is_dc() ) {
+			if( ! true /*tmp_starter->is_dc()*/ ) {
 				dprintf( D_FULLDEBUG, 
 						 "Job wants DaemonCore starter, skipping %s\n",
 						 tmp_starter->path() );
@@ -262,15 +258,6 @@ StarterMgr::registerStarter( const char* path )
 	new_starter = new Starter();
 	new_starter->setAd( ad );
 	new_starter->setPath( path );
-	bool is_dc = false;
-	ad->LookupBool( ATTR_IS_DAEMON_CORE, is_dc );
-	new_starter->setIsDC( is_dc );
-
-	bool has_checkpoint = false;
-	ad->LookupBool( ATTR_HAS_CHECKPOINTING, has_checkpoint);
-	if (has_checkpoint) {
-		_haveStandardUni = true;
-	}
 
 	return new_starter;
 }

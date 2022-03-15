@@ -64,14 +64,11 @@ public:
 						  int starter_num = -1); 
 
 	void printStarterInfo( int debug_level );
-
-	bool haveStandardUni() const { return _haveStandardUni; }
 private:
 
 	Starter* registerStarter( const char* path );
 
 	SimpleList<Starter*> starters;
-	bool _haveStandardUni;
 
         // This makes this class un-copy-able:
     StarterMgr( const StarterMgr& );

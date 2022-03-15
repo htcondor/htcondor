@@ -61,7 +61,6 @@ Starter *findStarterByPid(pid_t pid)
 Starter::Starter()
 	: s_ad(NULL)
 	, s_path(NULL)
-	, s_is_dc(false)
 	, s_orphaned_jobad(NULL)
 {
 	initRunData();
@@ -72,7 +71,6 @@ Starter::Starter( const Starter& s )
 	: Service( s )
 	, s_ad(NULL)
 	, s_path(NULL)
-	, s_is_dc(false)
 	, s_orphaned_jobad(NULL)
 {
 	if( s.s_pid || s.s_birthdate )
@@ -91,8 +89,6 @@ Starter::Starter( const Starter& s )
 	} else {
 		s_path = NULL;
 	}
-
-	s_is_dc = s.s_is_dc;
 
 	initRunData();
 }
@@ -234,12 +230,6 @@ Starter::setPath( const char* updated_path )
 	s_path = strdup( updated_path );
 }
 
-void
-Starter::setIsDC( bool updated_is_dc )
-{
-	s_is_dc = updated_is_dc;
-}
-
 
 void
 Starter::publish( ClassAd* ad, StringList* list )
@@ -298,7 +288,7 @@ Starter::reallykill( int signo, int type )
 #ifndef WIN32
 	struct stat st;
 #endif
-	int 		ret = 0, sig = 0;
+	int 		ret = 0;
 	priv_state	priv;
 	const char *signame = "";
 
@@ -336,37 +326,6 @@ Starter::reallykill( int signo, int type )
 	}
 
 #if !defined(WIN32)
-
-	if( !is_dc() ) {
-		switch( signo ) {
-		case DC_SIGSUSPEND:
-			sig = SIGUSR1;
-			break;
-		case SIGQUIT:
-		case DC_SIGHARDKILL:
-			sig = SIGINT;
-			break;
-		case SIGTERM:
-		case DC_SIGSOFTKILL:
-			sig = SIGTSTP;
-			break;
-		case DC_SIGPCKPT:
-			sig = SIGUSR2;
-			break;
-		case DC_SIGCONTINUE:
-			sig = SIGCONT;
-			break;
-		case SIGHUP:
-			sig = SIGHUP;
-			break;
-		case SIGKILL:
-			sig = SIGKILL;
-			break;
-		default:
-			EXCEPT( "Unknown signal (%d) in Starter::reallykill", signo );
-		}
-	}
-
 
 		/* 
 		   On sites where the condor binaries are installed on NFS,
@@ -444,13 +403,11 @@ Starter::reallykill( int signo, int type )
 	}
 #endif	// if !defined(WIN32)
 
-	if( is_dc() ) {
-			// With DaemonCore, fow now convert a request to kill a
-			// process group into a request to kill a process family via
-			// DaemonCore
-		if ( type == 1 ) {
-			type = 2;
-		}
+		// With DaemonCore, fow now convert a request to kill a
+		// process group into a request to kill a process family via
+		// DaemonCore
+	if ( type == 1 ) {
+		type = 2;
 	}
 
 	switch( type ) {
@@ -459,11 +416,13 @@ Starter::reallykill( int signo, int type )
 				 "In Starter::kill() with pid %d, sig %d (%s)\n", 
 				 s_pid, signo, signame );
 		break;
+	/*
 	case 1:
 		dprintf( D_FULLDEBUG, 
 				 "In Starter::killpg() with pid %d, sig %d (%s)\n", 
 				 s_pid, signo, signame );
 		break;
+	*/
 	case 2:
 		dprintf( D_FULLDEBUG, 
 				 "In Starter::kill_kids() with pid %d, sig %d (%s)\n", 
@@ -475,23 +434,6 @@ Starter::reallykill( int signo, int type )
 
 	priv = set_root_priv();
 
-#ifndef WIN32
-	if( ! is_dc() ) {
-			// If we're just doing a plain kill, and the signal we're
-			// sending isn't SIGSTOP or SIGCONT, send a SIGCONT to the 
-			// starter just for good measure.
-		if( sig != SIGSTOP && sig != SIGCONT && sig != SIGKILL ) {
-			if( type == 1 ) { 
-				ret = ::kill( -(s_pid), SIGCONT );
-			} else if( type == 0 && 
-						!daemonCore->ProcessExitedButNotReaped(s_pid)) 
-			{
-				ret = ::kill( (s_pid), SIGCONT );
-			}
-		}
-	}
-#endif /* ! WIN32 */
-
 		// Finally, do the deed.
 	switch( type ) {
 	case 0:
@@ -499,29 +441,14 @@ Starter::reallykill( int signo, int type )
 			ret = 0;
 			break;
 		}
-		if( is_dc() ) {		
-			ret = daemonCore->Send_Signal( (s_pid), signo );
-				// Translate Send_Signal's return code to Unix's kill()
-			if( ret == FALSE ) {
-				ret = -1;
-			} else {
-				ret = 0;
-			}
-			break;
-		} 
-#ifndef WIN32
-		else {
-			ret = ::kill( (s_pid), sig );
-			break;
+		ret = daemonCore->Send_Signal( (s_pid), signo );
+			// Translate Send_Signal's return code to Unix's kill()
+		if( ret == FALSE ) {
+			ret = -1;
+		} else {
+			ret = 0;
 		}
-#endif /* ! WIN32 */
-
-	case 1:
-#ifndef WIN32
-			// We already know we're not DaemonCore.
-		ret = ::kill( -(s_pid), sig );
 		break;
-#endif /* ! WIN32 */
 
 	case 2:
 		if( signo != SIGKILL ) {
@@ -615,12 +542,8 @@ int Starter::spawn(Claim * claim, time_t now, Stream* s)
 		s_pid = execBOINCStarter(claim);
 	}
 #endif /* HAVE_BOINC */
-	else if( is_dc() ) {
-		s_pid = execDCStarter(claim, s);
-	}
 	else {
-		dprintf( D_ALWAYS, "The standard universe starter is no longer supported!\n" );
-		s_pid = 0;
+		s_pid = execDCStarter(claim, s);
 	}
 
 	if( s_pid == 0 ) {
@@ -1253,8 +1176,7 @@ void
 Starter::printInfo( int debug_level )
 {
 	dprintf( debug_level, "Info for \"%s\":\n", s_path );
-	dprintf( debug_level | D_NOHEADER, "IsDaemonCore: %s\n", 
-			 s_is_dc ? "True" : "False" );
+	dprintf( debug_level | D_NOHEADER, "IsDaemonCore: True\n" );
 	if( ! s_ad ) {
 		dprintf( debug_level | D_NOHEADER, 
 				 "No ClassAd available!\n" ); 
@@ -1468,9 +1390,6 @@ Starter::softkillTimeout( void )
 bool
 Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,int timeout)
 {
-	if( !s_is_dc ) {
-		return false;  // this starter does not support putting jobs on hold
-	}
 	if( m_hold_job_cb ) {
 		dprintf(D_ALWAYS,"holdJob() called when operation already in progress (starter pid %d).\n", s_pid);
 		return true;

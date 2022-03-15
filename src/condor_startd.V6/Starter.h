@@ -53,7 +53,6 @@ public:
 	void	exited(Claim *, int status);
 	int 	spawn(Claim *, time_t now, Stream* s );
 	pid_t	pid() const {return s_pid;};
-	bool	is_dc() const {return s_is_dc;};
 	bool	active() const;
 	const ProcFamilyUsage & updateUsage(void);
 
@@ -91,7 +90,6 @@ public:
 
 	void	setAd( ClassAd* ad );
 	void	setPath( const char* path );
-	void	setIsDC( bool is_dc );
 
 #if HAVE_BOINC
 	bool	isBOINC( void ) const { return s_is_boinc; };
@@ -145,7 +143,6 @@ private:
 		// starter (i.e. things that are valid for copying)
 	ClassAd* s_ad; // starter capabilities ad, (not the job ad!)
 	char*	s_path;
-	bool 	s_is_dc;
 
 		// data that only makes sense once this Starter object has
 		// been assigned to a given resource and spawned.
