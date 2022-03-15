@@ -33,6 +33,7 @@
 #include "common.h"
 
 char *argv0 = NULL;
+char *base_dir = NULL;
 
 void sigterm(int sig) {
     log(stderr, "Recieved SIGTERM\n");
@@ -40,78 +41,33 @@ void sigterm(int sig) {
 }
 
 void usage() {
-    fprintf(stderr, "Usage: %s [-d] [-l LOGFILE]\n", argv0);
+    fprintf(stderr, "Usage: %s [-d] [-l LOGFILE] [-b base_dir]\n", argv0);
     fprintf(stderr, "  -d          Daemonize\n");
     fprintf(stderr, "  -l LOGFILE  Write logging messages to LOGFILE\n");
+    fprintf(stderr, "  -b base dir Base directory of rvgahp files\n");
 }
 
-int set_condor_config() {
-    char *homedir = getenv("HOME");
-    if (homedir == NULL) {
-        fprintf(stderr, "ERROR HOME is not set in environment");
+int set_config() {
+    if (base_dir == NULL) {
+		base_dir = getenv("BLAHPD_LOCATION");
+		if (base_dir == NULL) {
+			fprintf(stderr, "ERROR Base directory unknown!\n");
+			return -1;
+		}
+    } else {
+		setenv("BLAHPD_LOCATION", base_dir, 1);
+	}
+
+    if (access(base_dir, F_OK) < 0) {
+        fprintf(stderr, "ERROR Base directory doesn't exist\n");
         return -1;
     }
 
-    char config_file[BUFSIZ];
-    snprintf(config_file, BUFSIZ, "%s/%s", homedir, ".rvgahp/condor_config.rvgahp");
-    if (access(config_file, R_OK) < 0) {
-        fprintf(stderr, "ERROR Cannot find config file %s", config_file);
-        return -1;
-    }
-
-    setenv("CONDOR_CONFIG", config_file, 1);
-    return 0;
-}
-
-int _condor_config_val(char *var, char *val, size_t valsize, const char *default_val) {
-    char cmd[BUFSIZ];
-    snprintf(cmd, BUFSIZ, "condor_config_val %s 2>&1", var);
-
-    FILE *proc = popen(cmd, "r");
-    if (proc == NULL) {
-        fprintf(stderr, "ERROR getting %s config var\n", var);
-        return -1;
-    }
-
-    char buf[BUFSIZ];
-    if (fgets(buf, BUFSIZ, proc) == NULL) {
-        fprintf(stderr, "ERROR reading output of condor_config_val\n");
-        pclose(proc);
-        return -1;
-    }
-
-    int status = pclose(proc);
-    int saverrno = errno;
-
-    if (strncmp("Not defined:", buf, 12) == 0) {
-        if (default_val == NULL) {
-            return -1;
-        }
-        snprintf(val, valsize, "%s", default_val);
-        return 0;
-    }
-
-    if (status != 0) {
-        fprintf(stderr, "ERROR reading condor_config_val %s: %s\n", var, strerror(saverrno));
-        fprintf(stderr, "%s", buf);
-        return -1;
-    }
-
-    /* Trim the string */
-    strtok(buf, "\r\n");
-
-    snprintf(val, valsize, "%s", buf);
+    char tmp_buf[BUFSIZ];
+    snprintf(tmp_buf, BUFSIZ, "%s/etc/condor_config.ft-gahp", base_dir);
+    setenv("CONDOR_CONFIG", tmp_buf, 1);
 
     return 0;
-}
-
-int condor_config_val(char *var, char *val, size_t valsize, const char *default_val) {
-    /* Need to restore the default handler for this function so that wait4()
-     * and, as a result, pclose() work correctly. */
-    void *sigchld_handler = signal(SIGCHLD, SIG_DFL);
-    int result = _condor_config_val(var, val, valsize, default_val);
-    signal(SIGCHLD, sigchld_handler);
-    return result;
 }
 
 int loop() {
@@ -128,13 +84,15 @@ int loop() {
     log(stdout, "Starting SSH connection\n");
     pid_t ssh_pid = fork();
     if (ssh_pid == 0) {
+		char ssh_cmd[BUFSIZ];
+		snprintf(ssh_cmd, BUFSIZ, "%s/bin/rvgahp_ssh", base_dir);
         int orig_err = dup(STDERR_FILENO);
         close(gahp_sock);
         close(0);
         close(1);
         dup(ssh_sock);
         dup(ssh_sock);
-        execl("/bin/sh", "/bin/sh", "-c", "~/.rvgahp/rvgahp_ssh", NULL);
+        execl("/bin/sh", "/bin/sh", "-c", ssh_cmd, NULL);
         dprintf(orig_err, "ERROR execing ssh script\n");
         _exit(1);
     } else if (ssh_pid < 0) {
@@ -165,22 +123,10 @@ int loop() {
 
     /* Construct the actual GAHP command */
     char gahp_command[BUFSIZ];
-    if (strncmp("batch_gahp", gahp, 10) == 0) {
-        char batch_gahp[BUFSIZ]; 
-        if (condor_config_val("BATCH_GAHP", batch_gahp, BUFSIZ, NULL) < 0) {
-            goto error;
-        }
-        char glite_location[BUFSIZ];
-        if (condor_config_val("GLITE_LOCATION", glite_location, BUFSIZ, NULL) < 0) {
-            goto error;
-        }
-        snprintf(gahp_command, BUFSIZ, "GLITE_LOCATION=%s %s", glite_location, batch_gahp);
+    if (strncmp("blahpd", gahp, 6) == 0) {
+        snprintf(gahp_command, BUFSIZ, "%s/bin/%s", base_dir, gahp);
     } else if (strncmp("condor_ft-gahp", gahp, 14) == 0) {
-        char ft_gahp[BUFSIZ];
-        if (condor_config_val("FT_GAHP", ft_gahp, BUFSIZ, NULL) < 0) {
-            goto error;
-        }
-        snprintf(gahp_command, BUFSIZ, "%s -f", ft_gahp);
+        snprintf(gahp_command, BUFSIZ, "%s/bin/%s", base_dir, gahp);
     } else {
         dprintf(gahp_sock, "ERROR: Unknown GAHP: %s\n", gahp);
         goto error;
@@ -219,13 +165,16 @@ int main(int argc, char** argv) {
     char *logfilename = NULL;
     int daemonize = 0;
     int c;
-    while ((c = getopt (argc, argv, "dl:")) != -1) {
+    while ((c = getopt (argc, argv, "dl:b:")) != -1) {
         switch (c) {
         case 'd':
             daemonize = 1;
             break;
         case 'l':
             logfilename = optarg;
+            break;
+        case 'b':
+            base_dir = optarg;
             break;
         case '?':
             if (optopt == 'l') {
@@ -247,7 +196,7 @@ int main(int argc, char** argv) {
     }
 
     /* Set up configuration */
-    if (set_condor_config() < 0) {
+    if (set_config() < 0) {
         exit(1);
     }
 
