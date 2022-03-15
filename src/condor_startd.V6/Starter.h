@@ -47,9 +47,8 @@ public:
 	time_t	birthdate( void ) const {return s_birthdate;};
 	time_t	got_update(void) const {return s_last_update_time;}
 	bool	got_final_update(void) const {return s_got_final_update;}
-	bool	kill(int);
-	bool	killpg(int);
-	void	killkids(int);
+	bool	signal(int);
+	bool	killfamily();
 	void	exited(Claim *, int status);
 	int 	spawn(Claim *, time_t now, Stream* s );
 	pid_t	pid() const {return s_pid;};
@@ -107,7 +106,7 @@ public:
 private:
 
 		// methods
-	bool	reallykill(int, int);
+	bool	reallykill(int, bool);
 	int		execJobPipeStarter( Claim * );
 	int		execDCStarter( Claim *, Stream* s );
 		// claim is optional here, and may be NULL (e.g. boinc) but it may NOT be null when glexec is enabled. (sigh)

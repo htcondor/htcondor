@@ -262,28 +262,21 @@ Starter::publish( ClassAd* ad, StringList* list )
 
 
 bool
-Starter::kill( int signo )
+Starter::signal( int signo )
 {
-	return reallykill( signo, 0 );
+	return reallykill( signo, false );
 }
 
 
 bool
-Starter::killpg( int signo )
+Starter::killfamily()
 {
-	return reallykill( signo, 1 );
-}
-
-
-void
-Starter::killkids( int signo ) 
-{
-	reallykill( signo, 2 );
+	return reallykill( SIGKILL, true );
 }
 
 
 bool
-Starter::reallykill( int signo, int type )
+Starter::reallykill( int signo, bool kill_family )
 {
 #ifndef WIN32
 	struct stat st;
@@ -301,12 +294,10 @@ Starter::reallykill( int signo, int type )
 	case DC_SIGSUSPEND:
 		signame = "DC_SIGSUSPEND";
 		break;
-	case DC_SIGHARDKILL:
-		signo = SIGQUIT;
+	case SIGQUIT:
 		signame = "SIGQUIT";
 		break;
-	case DC_SIGSOFTKILL:
-		signo = SIGTERM;
+	case SIGTERM:
 		signame = "SIGTERM";
 		break;
 	case DC_SIGPCKPT:
@@ -403,58 +394,24 @@ Starter::reallykill( int signo, int type )
 	}
 #endif	// if !defined(WIN32)
 
-		// With DaemonCore, fow now convert a request to kill a
-		// process group into a request to kill a process family via
-		// DaemonCore
-	if ( type == 1 ) {
-		type = 2;
-	}
-
-	switch( type ) {
-	case 0:
+	if (kill_family) {
 		dprintf( D_FULLDEBUG, 
-				 "In Starter::kill() with pid %d, sig %d (%s)\n", 
+				 "In Starter::killfamily() with pid %d, sig %d (%s)\n",
 				 s_pid, signo, signame );
-		break;
-	/*
-	case 1:
+	} else {
 		dprintf( D_FULLDEBUG, 
-				 "In Starter::killpg() with pid %d, sig %d (%s)\n", 
+				 "In Starter::signal() with pid %d, sig %d (%s)\n",
 				 s_pid, signo, signame );
-		break;
-	*/
-	case 2:
-		dprintf( D_FULLDEBUG, 
-				 "In Starter::kill_kids() with pid %d, sig %d (%s)\n", 
-				 s_pid, signo, signame );
-		break;
-	default:
-		EXCEPT( "Unknown type (%d) in Starter::reallykill", type );
 	}
 
 	priv = set_root_priv();
 
 		// Finally, do the deed.
-	switch( type ) {
-	case 0:
-		if( daemonCore->ProcessExitedButNotReaped(s_pid) ) {
-			ret = 0;
-			break;
-		}
-		ret = daemonCore->Send_Signal( (s_pid), signo );
-			// Translate Send_Signal's return code to Unix's kill()
-		if( ret == FALSE ) {
-			ret = -1;
-		} else {
-			ret = 0;
-		}
-		break;
-
-	case 2:
+	if (kill_family) {
 		if( signo != SIGKILL ) {
 			dprintf( D_ALWAYS, 
-					 "In Starter::killkids() with %s\n", signame );
-			EXCEPT( "Starter::killkids() can only handle SIGKILL!" );
+					 "In Starter::killfamily() with %s\n", signame );
+			EXCEPT( "Starter::killfamily() can only handle SIGKILL!" );
 		}
 		if (daemonCore->Kill_Family(s_pid) == FALSE) {
 			dprintf(D_ALWAYS,
@@ -462,7 +419,18 @@ Starter::reallykill( int signo, int type )
 				s_pid);
 			ret = -1;
 		}
-		break;
+	} else {
+		if( daemonCore->ProcessExitedButNotReaped(s_pid) ) {
+			ret = TRUE;
+		} else {
+			ret = daemonCore->Send_Signal( (s_pid), signo );
+		}
+			// Translate Send_Signal's return code to Unix's kill()
+		if( ret == FALSE ) {
+			ret = -1;
+		} else {
+			ret = 0;
+		}
 	}
 
 	set_priv(priv);
@@ -1215,8 +1183,8 @@ Starter::killHard( int timeout )
 		return true;
 	}
 	
-	if( ! kill(DC_SIGHARDKILL) ) {
-		killpg( SIGKILL );
+	if( ! signal(SIGQUIT) ) {
+		killfamily();
 		return false;
 	}
 	dprintf(D_FULLDEBUG, "in starter:killHard starting kill timer\n");
@@ -1232,8 +1200,8 @@ Starter::killSoft( int timeout, bool /*state_change*/ )
 	if( ! active() ) {
 		return true;
 	}
-	if( ! kill(DC_SIGSOFTKILL) ) {
-		killpg( SIGKILL );
+	if( ! signal(SIGTERM) ) {
+		killfamily();
 		return false;
 	}
 
@@ -1260,8 +1228,8 @@ Starter::suspend( void )
 	if( ! active() ) {
 		return true;
 	}
-	if( ! kill(DC_SIGSUSPEND) ) {
-		killpg( SIGKILL );
+	if( ! signal(DC_SIGSUSPEND) ) {
+		killfamily();
 		return false;
 	}
 	return true;
@@ -1274,8 +1242,8 @@ Starter::resume( void )
 	if( ! active() ) {
 		return true;
 	}
-	if( ! kill(DC_SIGCONTINUE) ) {
-		killpg( SIGKILL );
+	if( ! signal(DC_SIGCONTINUE) ) {
+		killfamily();
 		return false;
 	}
 	return true;
@@ -1369,11 +1337,8 @@ Starter::sigkillStarter( void )
 				 "directly hard kill the starter and all its "
 				 "decendents.\n", s_pid );
 
-			// Kill all of the starter's children.
-		killkids( SIGKILL );
-
-			// Kill the starter's entire process group.
-		killpg( SIGKILL );
+			// Kill the starter's entire family.
+		killfamily();
 	}
 }
 

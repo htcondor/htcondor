@@ -1654,13 +1654,13 @@ Claim::resumeClaim( void )
 
 
 bool
-Claim::starterKill( int sig ) const
+Claim::starterSignal( int sig ) const
 {
 		// don't need to work about the state, since we don't use this
 		// method to send any signals that change the claim state...
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter)  {
-		return starter->kill( sig );
+		return starter->signal( sig );
 	}
 
 		// if there's no starter, we don't need to kill anything, so
@@ -1670,14 +1670,14 @@ Claim::starterKill( int sig ) const
 
 
 bool
-Claim::starterKillPg( int sig )
+Claim::starterKillFamily()
 {
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter) {
-			// if we're using KillPg, we're trying to hard-kill the
+			// if we're using killfamily(), we're trying to hard-kill the
 			// starter and all its children
 		changeState( CLAIM_KILLING );
-		return starter->killpg( sig );
+		return starter->killfamily();
 	}
 
 		// if there's no starter, we don't need to kill anything, so
@@ -1874,7 +1874,7 @@ Claim::periodicCheckpoint( void )
 {
 	Starter * starter = findStarterByPid(c_starter_pid);
 	if (starter) {
-		if( ! starter->kill(DC_SIGPCKPT) ) {
+		if( ! starter->signal(DC_SIGPCKPT) ) {
 			return false;
 		}
 	}

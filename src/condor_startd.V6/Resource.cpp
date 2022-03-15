@@ -606,7 +606,7 @@ int
 Resource::request_new_proc( void )
 {
 	if( state() == claimed_state && r_cur->isActive()) {
-		return (int)r_cur->starterKill( SIGHUP );
+		return (int)r_cur->starterSignal( SIGHUP );
 	} else {
 		return FALSE;
 	}
