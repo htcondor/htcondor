@@ -100,16 +100,16 @@ class Create(Verb):
         },
         "cpus": {
             "args": ("--cpus",),
-            "help": "Number of CPUs to request (shared queues only). Unset by default.",
+            "help": "Number of CPUs to request (shared queues only).  Unset by default.",
             "type": int,
-            "default": 0,
+            "default": None,
         },
         "mem_mb": {
             "args": ("--mem_mb",),
             # TODO: Parse units instead of requiring this to be a number of MBs
-            "help": "Memory (in MB) to request (shared queues only). Unset by default.",
+            "help": "Memory (in MB) to request (shared queues only).  Unset by default.",
             "type": int,
-            "default": 0,
+            "default": None,
         },
     }
 

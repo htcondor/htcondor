@@ -87,11 +87,11 @@ if [[ -z $PASSWORD_FILE ]]; then
 fi
 
 CPUS=${13}
-if [[ ! $CPUS -gt 0 ]]; then
+if [[ $CPUS == "None" ]]; then
     CPUS=""
 fi
 MEM_MB=${14}
-if [[ ! $MEM_MB -gt 0 ]]; then
+if [[ $MEM_MB == "None" ]]; then
     MEM_MB=""
 fi
 
