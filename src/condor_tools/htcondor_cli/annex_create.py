@@ -107,7 +107,7 @@ def make_remote_temporary_directory(
             f"\"'{remote_command}'\"",
         ],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         errors="replace",
     )
 
@@ -118,8 +118,7 @@ def make_remote_temporary_directory(
             return out.strip()
         else:
             logger.error("Failed to make remote temporary directory, got output:")
-            logger.error(f"stdout: {out.strip()}")
-            logger.error(f"stderr: {err.strip()}")
+            logger.error(f"{out.strip()}")
             raise IOError("Failed to make remote temporary directory.")
 
     except subprocess.TimeoutExpired:
@@ -216,7 +215,7 @@ def transfer_files(
         ],
         shell=True,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         errors="replace",
     )
 
@@ -227,9 +226,8 @@ def transfer_files(
             return 0
         else:
             logger.error(f"Failed to {task}, aborting.")
-            logger.debug(f"command: {full_command}")
-            logger.warning(f"stdout: {out.strip()}")
-            logger.warning(f"stderr: {err.strip()}")
+            logger.debug(f"Command '{full_command}' got output:")
+            logger.warning(f"{out.strip()}")
             raise RuntimeError(f"Failed to {task}")
 
     except subprocess.TimeoutExpired:
