@@ -1,3 +1,35 @@
+condor (9.0.11-1) stable; urgency=medium
+
+  * The Job Router can now create an IDTOKEN for use by the job
+  * Fix bug where a self-checkpointing job may erroneously be held
+  * Fix bug where the Job Router could erroneously substitute a default value
+  * Fix bug where a file transfer error may identify the wrong file
+  * Fix bug where condor_ssh_to_job may fail to connect
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sat, 12 Mar 2022 14:34:00 -0600
+
+condor (8.8.17-1) stable; urgency=high
+
+  * Fixed a memory leak in the Job Router
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 11 Mar 2022 13:38:00 -0600
+
+condor (9.0.10-1) stable; urgency=high
+
+  * Fixes for security issues
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0002
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 16 Feb 2022 11:11:00 -0600
+
+condor (8.8.16-1) stable; urgency=high
+
+  * Fix for security issue
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 11 Mar 2022 08:20:00 -0600
+
 condor (9.0.9-1) stable; urgency=medium
 
   * Added Debian 11 (bullseye) as a supported platform
@@ -52,30 +84,30 @@ condor (9.0.5-1) stable; urgency=medium
 condor (9.0.4-1) stable; urgency=high
 
   * Fixes for security issues
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004
 
  -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 Jul 2021 10:35:12 -0500
 
 condor (8.8.15-1) stable; urgency=high
 
   * Fix for security issue
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003
 
  -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 Jul 2021 10:35:12 -0500
 
 condor (9.0.3-1) stable; urgency=high
 
   * Fixes for security issues
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004
 
  -- Tim Theisen <tim@cs.wisc.edu>  Tue, 13 Jul 2021 09:11:38 -0500
 
 condor (8.8.14-1) stable; urgency=high
 
   * Fix for security issue
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003
 
  -- Tim Theisen <tim@cs.wisc.edu>  Tue, 13 Jul 2021 09:11:38 -0500
 
@@ -155,8 +187,8 @@ condor (8.8.13-1) stable; urgency=medium
 condor (8.9.11-1) stable; urgency=high
 
   * This release of HTCondor fixes security-related bugs described at
-  * https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001/
-  * https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002/
+  * https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001
+  * https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002
 
  -- Tim Theisen <tim@cs.wisc.edu>  Mon, 28 Dec 2020 09:55:44 -0600
 
@@ -257,20 +289,20 @@ condor (8.8.9-1) stable; urgency=medium
 condor (8.9.6-1) unstable; urgency=high
 
   * Fixes addressing CVE-2019-18823
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001/
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002/
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003/
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004
 
  -- Tim Theisen <tim@cs.wisc.edu>  Wed, 18 Mar 2020 15:40:28 -0500
 
 condor (8.8.8-1) stable; urgency=high
 
   * Fixes addressing CVE-2019-18823
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001/
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002/
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003/
-    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004/
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003
+    https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004
 
  -- Tim Theisen <tim@cs.wisc.edu>  Tue, 17 Mar 2020 11:05:03 -0500
 
