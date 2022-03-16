@@ -378,18 +378,6 @@ enum MrecStatus {
     M_ACTIVE
 };
 
-	
-typedef enum {
-	NO_SHADOW_STD,
-	NO_SHADOW_JAVA,
-	NO_SHADOW_WIN32,
-	NO_SHADOW_DC_VANILLA,
-	NO_SHADOW_OLD_VANILLA,
-	NO_SHADOW_RECONNECT,
-	NO_SHADOW_MPI,
-	NO_SHADOW_VM,
-} NoShadowFailure_t;
-
 
 namespace std
 {
@@ -969,7 +957,6 @@ private:
 	void			tryNextJob();
 	int				jobThrottle( void );
 	void			initLocalStarterDir( void );
-	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
 	bool			jobExitCode( PROC_ID job_id, int exit_code );
 	double			calcSlotWeight(match_rec *mrec) const;
 	double			guessJobSlotWeight(JobQueueJob * job);
