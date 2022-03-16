@@ -50,7 +50,6 @@
 #include "list.h"
 #include "write_user_log.h"
 #include "autocluster.h"
-#include "shadow_mgr.h"
 #include "enum_utils.h"
 #include "self_draining_queue.h"
 #include "schedd_cron_job_mgr.h"
@@ -734,9 +733,6 @@ class Scheduler : public Service
 	void			mail_problem_message();
 	bool            FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ=true);
 
-		// object to manage our various shadows and their ClassAds
-	ShadowMgr shadow_mgr;
-
 		// hashtable used to hold matching ClassAds for Globus Universe
 		// jobs which desire matchmaking.
 	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
@@ -1027,8 +1023,7 @@ private:
 	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 										ArgList const &args,
 										Env const *env, 
-										const char* name, bool is_dc,
-										bool wants_pipe, bool want_udp );
+										const char* name, bool want_udp );
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);

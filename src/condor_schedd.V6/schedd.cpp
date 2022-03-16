@@ -9400,145 +9400,37 @@ Scheduler::spawnShadow( shadow_rec* srec )
 	int universe = srec->universe;
 	PROC_ID* job_id = &srec->job_id;
 
-	Shadow*	shadow_obj = NULL;
-	bool	sh_is_dc = FALSE;
 	char* 	shadow_path = NULL;
-	bool wants_reconnect = false;
+	bool wants_reconnect = srec->is_reconnect;
 
-	wants_reconnect = srec->is_reconnect;
-
-#ifdef WIN32
-		// nothing to choose on NT, there's only 1 shadow
 	shadow_path = param("SHADOW");
-	sh_is_dc = TRUE;
-	bool sh_reads_file = true;
-#else
-		// UNIX
-
-	if( ! shadow_obj ) {
-		switch( universe ) {
-		case CONDOR_UNIVERSE_STANDARD:
-			shadow_obj = shadow_mgr.findShadow( ATTR_HAS_CHECKPOINTING );
-			if( ! shadow_obj ) {
-				dprintf( D_ALWAYS, "Trying to run a STANDARD job but you "
-						 "do not have a condor_shadow that will work, "
-						 "aborting.\n" );
-				noShadowForJob( srec, NO_SHADOW_STD );
-				return;
-			}
-			break;
-		case CONDOR_UNIVERSE_VANILLA:
-		case CONDOR_UNIVERSE_LOCAL: // but only when m_use_start_for_local is true
-			shadow_obj = shadow_mgr.findShadow( ATTR_IS_DAEMON_CORE ); 
-			if( ! shadow_obj ) {
-				dprintf( D_ALWAYS, "Trying to run a VANILLA job, but you "
-						 "do not have a daemon-core-based shadow, "
-						 "aborting.\n" );
-				noShadowForJob( srec, NO_SHADOW_DC_VANILLA );
-				return;
-			}
-			break;
-		case CONDOR_UNIVERSE_JAVA:
-			shadow_obj = shadow_mgr.findShadow( ATTR_HAS_JAVA );
-			if( ! shadow_obj ) {
-				dprintf( D_ALWAYS, "Trying to run a JAVA job but you "
-						 "do not have a condor_shadow that will work, "
-						 "aborting.\n" );
-				noShadowForJob( srec, NO_SHADOW_JAVA );
-				return;
-			}
-			break;
-		case CONDOR_UNIVERSE_MPI:
-		case CONDOR_UNIVERSE_PARALLEL:
-			shadow_obj = shadow_mgr.findShadow( ATTR_HAS_MPI );
-			if( ! shadow_obj ) {
-				dprintf( D_ALWAYS, "Trying to run a MPI job but you "
-						 "do not have a condor_shadow that will work, "
-						 "aborting.\n" );
-				noShadowForJob( srec, NO_SHADOW_MPI );
-				return;
-			}
-			break;
-		case CONDOR_UNIVERSE_VM:
-			shadow_obj = shadow_mgr.findShadow( ATTR_HAS_VM);
-			if( ! shadow_obj ) {
-				dprintf( D_ALWAYS, "Trying to run a VM job but you "
-						"do not have a condor_shadow that will work, "
-						"aborting.\n" );
-				noShadowForJob( srec, NO_SHADOW_VM );
-				return;
-			}
-			break;
-		default:
-			EXCEPT( "StartJobHandler() does not support %d universe jobs",
-					universe );
-		}
-	}
-
-	sh_is_dc = shadow_obj->isDC();
-	bool sh_reads_file = shadow_obj->provides( ATTR_HAS_JOB_AD_FROM_FILE );
-	shadow_path = strdup( shadow_obj->path() );
-
-	delete( shadow_obj );
-	shadow_obj = NULL;
-
-#endif /* ! WIN32 */
-
-	if( wants_reconnect && !(sh_is_dc && sh_reads_file) ) {
-		dprintf( D_ALWAYS, "Trying to reconnect but you do not have a "
-				 "condor_shadow that will work, aborting.\n" );
-		noShadowForJob( srec, NO_SHADOW_RECONNECT );
-		free(shadow_path);
-		return;
-	}
 
 	args.AppendArg("condor_shadow");
-	if(sh_is_dc) {
-		args.AppendArg("-f");
-	}
 
 	std::string argbuf;
 
-	if ( sh_reads_file ) {
-		if( sh_is_dc ) { 
-			formatstr(argbuf,"%d.%d", job_id->cluster, job_id->proc);
-			args.AppendArg(argbuf);
+	formatstr(argbuf,"%d.%d", job_id->cluster, job_id->proc);
+	args.AppendArg(argbuf);
 
-			if(wants_reconnect) {
-				args.AppendArg("--reconnect");
-			}
-
-			// pass the public ip/port of the schedd (used w/ reconnect)
-			// We need this even if we are not currently in reconnect mode,
-			// because the shadow may go into reconnect mode at any time.
-			formatstr(argbuf, "--schedd=%s", daemonCore->publicNetworkIpAddr());
-			args.AppendArg(argbuf);
-
-			if( m_have_xfer_queue_contact ) {
-				formatstr(argbuf, "--xfer-queue=%s", m_xfer_queue_contact.c_str());
-				args.AppendArg(argbuf);
-			}
-
-				// pass the private socket ip/port for use just by shadows
-			args.AppendArg(MyShadowSockName);
-				
-			args.AppendArg("-");
-		} else {
-			args.AppendArg(MyShadowSockName);
-			args.AppendArg(mrec->peer);
-			args.AppendArg("*");
-			args.AppendArg(job_id->cluster);
-			args.AppendArg(job_id->proc);
-			args.AppendArg("-");
-		}
-	} else {
-			// CRUFT: pre-6.7.0 shadows...
-		args.AppendArg(MyShadowSockName);
-		args.AppendArg(mrec->peer);
-		args.AppendArg(mrec->claimId());
-		args.AppendArg(job_id->cluster);
-		args.AppendArg(job_id->proc);
+	if(wants_reconnect) {
+		args.AppendArg("--reconnect");
 	}
+
+	// pass the public ip/port of the schedd (used w/ reconnect)
+	// We need this even if we are not currently in reconnect mode,
+	// because the shadow may go into reconnect mode at any time.
+	formatstr(argbuf, "--schedd=%s", daemonCore->publicNetworkIpAddr());
+	args.AppendArg(argbuf);
+
+	if( m_have_xfer_queue_contact ) {
+		formatstr(argbuf, "--xfer-queue=%s", m_xfer_queue_contact.c_str());
+		args.AppendArg(argbuf);
+	}
+
+		// pass the private socket ip/port for use just by shadows
+	args.AppendArg(MyShadowSockName);
+
+	args.AppendArg("-");
 
 	bool want_udp = true;
 #ifndef WIN32
@@ -9553,7 +9445,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 #endif
 
 	rval = spawnJobHandlerRaw( srec, shadow_path, args, NULL, "shadow",
-							   sh_is_dc, sh_reads_file, want_udp );
+							   want_udp );
 
 	free( shadow_path );
 
@@ -9662,8 +9554,7 @@ Scheduler::tryNextJob()
 bool
 Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path, 
 							   ArgList const &args, Env const *env, 
-							   const char* name, bool is_dc, bool wants_pipe,
-							   bool want_udp)
+							   const char* name, bool want_udp)
 {
 	int pid = -1;
 	PROC_ID* job_id = &srec->job_id;
@@ -9710,20 +9601,16 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	int pipe_fds[2];
 	pipe_fds[0] = -1;
 	pipe_fds[1] = -1;
-	if( wants_pipe ) {
-		if( ! daemonCore->Create_Pipe(pipe_fds) ) {
-			dprintf( D_ALWAYS, 
-					 "ERROR: Can't create DC pipe for writing job "
-					 "ClassAd to the %s, aborting\n", name );
-			return false;
-		} 
-			// pipe_fds[0] is the read-end of the pipe.  we want that
-			// setup as STDIN for the handler.  we'll hold onto the
-			// write end of it so we can write the job ad there.
-		std_fds[0] = pipe_fds[0];
-	} else {
-		std_fds[0] = -1;
-	}
+	if( ! daemonCore->Create_Pipe(pipe_fds) ) {
+		dprintf( D_ALWAYS, 
+				 "ERROR: Can't create DC pipe for writing job "
+				 "ClassAd to the %s, aborting\n", name );
+		return false;
+	} 
+		// pipe_fds[0] is the read-end of the pipe.  we want that
+		// setup as STDIN for the handler.  we'll hold onto the
+		// write end of it so we can write the job ad there.
+	std_fds[0] = pipe_fds[0];
 	std_fds[1] = -1;
 	std_fds[2] = -1;
 	std_fds_p = std_fds;
@@ -9815,7 +9702,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	   shadow/handler with PRIV_USER_FINAL... */
 	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName(name);
 	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
-	                                  is_dc, is_dc, env, NULL, fip, NULL, 
+	                                  true, true, env, NULL, fip, NULL, 
 	                                  std_fds_p, NULL, niceness,
 									  NULL, create_process_opts,
 									  NULL, NULL, daemon_sock.c_str());
@@ -9824,11 +9711,9 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		args.GetArgsStringForDisplay(arg_string);
 		dprintf( D_FAILURE|D_ALWAYS, "spawnJobHandlerRaw: "
 				 "CreateProcess(%s, %s) failed\n", path, arg_string.c_str() );
-		if( wants_pipe ) {
-			for( int i = 0; i < 2; i++ ) {
-				if( pipe_fds[i] >= 0 ) {
-					daemonCore->Close_Pipe( pipe_fds[i] );
-				}
+		for( int i = 0; i < 2; i++ ) {
+			if( pipe_fds[i] >= 0 ) {
+				daemonCore->Close_Pipe( pipe_fds[i] );
 			}
 		}
 		if( job_ad ) {
@@ -9845,39 +9730,37 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	add_shadow_rec_pid( srec );
 
 		// finally, now that the handler has been spawned, we need to
-		// do some things with the pipe (if there is one):
-	if( wants_pipe ) {
-			// 1) close our copy of the read end of the pipe, so we
-			// don't leak it.  we have to use DC::Close_Pipe() for
-			// this, not just close(), so things work on windoze.
-		daemonCore->Close_Pipe( pipe_fds[0] );
+		// do some things with the pipe:
+		// 1) close our copy of the read end of the pipe, so we
+		// don't leak it.  we have to use DC::Close_Pipe() for
+		// this, not just close(), so things work on windoze.
+	daemonCore->Close_Pipe( pipe_fds[0] );
 
-			// 2) dump out the job ad to the write end, since the
-			// handler is now alive and can read from the pipe.
-		ASSERT( job_ad );
-		std::string ad_str;
-		sPrintAdWithSecrets(ad_str, *job_ad);
-		const char* ptr = ad_str.c_str();
-		int len = ad_str.length();
-		while (len) {
-			int bytes_written = daemonCore->Write_Pipe(pipe_fds[1], ptr, len);
-			if (bytes_written == -1) {
-				dprintf(D_ALWAYS, "writeJobAd: Write_Pipe failed\n");
-				break;
-			}
-			ptr += bytes_written;
-			len -= bytes_written;
+		// 2) dump out the job ad to the write end, since the
+		// handler is now alive and can read from the pipe.
+	ASSERT( job_ad );
+	std::string ad_str;
+	sPrintAdWithSecrets(ad_str, *job_ad);
+	const char* ptr = ad_str.c_str();
+	int len = ad_str.length();
+	while (len) {
+		int bytes_written = daemonCore->Write_Pipe(pipe_fds[1], ptr, len);
+		if (bytes_written == -1) {
+			dprintf(D_ALWAYS, "writeJobAd: Write_Pipe failed\n");
+			break;
 		}
-
-			// TODO: if this is an MPI job, we should really write all
-			// the match info (ClaimIds, sinful strings and machine
-			// ads) to the pipe before we close it, but that's just a
-			// performance optimization, not a correctness issue.
-
-			// Now that all the data is written to the pipe, we can
-			// safely close the other end, too.  
-		daemonCore->Close_Pipe(pipe_fds[1]);
+		ptr += bytes_written;
+		len -= bytes_written;
 	}
+
+		// TODO: if this is an MPI job, we should really write all
+		// the match info (ClaimIds, sinful strings and machine
+		// ads) to the pipe before we close it, but that's just a
+		// performance optimization, not a correctness issue.
+
+		// Now that all the data is written to the pipe, we can
+		// safely close the other end, too.  
+	daemonCore->Close_Pipe(pipe_fds[1]);
 
 	{
 		ClassAd *machine_ad = NULL;
@@ -10099,7 +9982,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	starter_env.SetEnv(execute_env.c_str(),LocalUnivExecuteDir);
 	
 	rval = spawnJobHandlerRaw( srec, starter_path, starter_args,
-							   &starter_env, "starter", true, true, true );
+							   &starter_env, "starter", true );
 
 	free( starter_path );
 	starter_path = NULL;
@@ -13557,9 +13440,6 @@ Scheduler::Init()
 		// the shadow command socket.
 		daemonCore->SetInheritParentSinful( MyShadowSockName );
 	}
-		
-		// initialize our ShadowMgr, too.
-	shadow_mgr.init();
 
 		// Startup the cron logic (only do it once, though)
 	if ( ! CronJobMgr ) {
