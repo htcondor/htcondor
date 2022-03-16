@@ -2563,7 +2563,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 				// TODO: write to job log success/failure for each file (as a custom event?)
 				dprintf(D_ALWAYS, "DoDownload: other side transferred %s to %s and got result %i\n",
-						rt_src.c_str(), rt_dst.c_str(), rt_result );
+				        UrlSafePrint(rt_src), UrlSafePrint(rt_dst), rt_result );
 
 				if(rt_result == 0) {
 					rc = 0;
@@ -2806,8 +2806,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				// we shouldn't get here, because a job shouldn't match to a machine that won't
 				// support URL transfers if the job needs URL transfers.  but if we do get here,
 				// give a nice error message.
-				errstack.pushf( "FILETRANSFER", 1, "URL transfers are disabled by configuration.  Cannot transfer %s.", URL.c_str());
-				dprintf ( D_FULLDEBUG, "FILETRANSFER: URL transfers are disabled by configuration.  Cannot transfer %s.\n", URL.c_str());
+				errstack.pushf( "FILETRANSFER", 1, "URL transfers are disabled by configuration.  Cannot transfer %s.", UrlSafePrint(URL));
+				dprintf ( D_FULLDEBUG, "FILETRANSFER: URL transfers are disabled by configuration.  Cannot transfer %s.\n", UrlSafePrint(URL));
 				rc = GET_FILE_PLUGIN_FAILED;
 			}
 
@@ -2826,7 +2826,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// Instead, add it to a deferred list, which we'll deal with
 					// after the main download loop.
 					dprintf( D_FULLDEBUG, "DoDownload: deferring transfer of URL %s "
-						" until end of download loop.\n", URL.c_str() );
+						" until end of download loop.\n", UrlSafePrint(URL) );
 					thisTransfer->Clear();
 					thisTransfer->InsertAttr( "Url", URL );
 					thisTransfer->InsertAttr( "LocalFileName", fullname );
@@ -2846,7 +2846,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			}
 
 			if( all_transfers_succeeded && (rc != GET_FILE_PLUGIN_FAILED) && (!isDeferredTransfer) ) {
-				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.c_str(), fullname.c_str());
+				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", UrlSafePrint(URL), UrlSafePrint(fullname));
 				TransferPluginResult result = InvokeFileTransferPlugin(errstack, URL.c_str(), fullname.c_str(), &pluginStatsAd, LocalProxyName.c_str());
 				// If transfer failed, set rc to error code that ReliSock recognizes
 				if (result != TransferPluginResult::Success) {
@@ -4303,14 +4303,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			dprintf(D_FULLDEBUG,"DoUpload: sending file %s to %s%c\n", filename.c_str(), dest_dir.c_str(), DIR_DELIM_CHAR);
 		}
 		else {
-			dprintf(D_FULLDEBUG,"DoUpload: sending file %s\n", filename.c_str());
+			dprintf(D_FULLDEBUG,"DoUpload: sending file %s\n", UrlSafePrint(filename));
 		}
 
 		if( fileitem.isSrcUrl() ) {
 			if( param_boolean("ENABLE_URL_TRANSFERS", true) ) {
 				// looks like a URL
 				fullname = filename;
-				dprintf(D_FULLDEBUG, "DoUpload: sending %s as URL.\n", filename.c_str());
+				dprintf(D_FULLDEBUG, "DoUpload: sending %s as URL.\n", UrlSafePrint(filename));
 			} else {
 				// A URL was requested but the sysadmin has disabled URL transfers; this
 				// should have been prevented by matchmaking, so we fail this instead of
@@ -4430,7 +4430,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		std::string multifilePluginPath;
 		if ( fileitem.isDestUrl() ) {
 			dprintf(D_FULLDEBUG, "FILETRANSFER: Using command 999:7 for output URL destination: %s\n",
-				fileitem.destUrl().c_str());
+					UrlSafePrint(fileitem.destUrl()));
 
 			// switch from whatever command we had before to new classad
 			// command new classad command 999 and subcommand 7.
@@ -4495,7 +4495,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 
 		dprintf ( D_FULLDEBUG, "FILETRANSFER: outgoing file_command is %i for %s\n",
-				static_cast<int>(file_command), filename.c_str() );
+			static_cast<int>(file_command), UrlSafePrint(filename) );
 
 			// Frustratingly, we cannot skip the header of the first transfer command
 			// if we are defering uploads as we may have to acquire a transfer token below.
@@ -4668,10 +4668,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				} else {
 					// actually invoke the plugin.  this could block indefinitely.
 					ClassAd pluginStatsAd;
-					dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", source_filename.c_str(), local_output_url.c_str());
+					dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", UrlSafePrint(source_filename), UrlSafePrint(local_output_url));
 					dprintf (D_FULLDEBUG, "LocalProxyName: %s\n", LocalProxyName.c_str());
 					TransferPluginResult result = InvokeFileTransferPlugin(errstack, source_filename.c_str(), local_output_url.c_str(), &pluginStatsAd, LocalProxyName.c_str());
-					dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", source_filename.c_str(), local_output_url.c_str(), rc);
+					dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", UrlSafePrint(source_filename), UrlSafePrint(local_output_url), rc);
 
 					// report the results:
 					file_info.Assign("Filename", source_filename);
@@ -4708,7 +4708,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				}
 			} else {
 				dprintf( D_ALWAYS, "DoUpload: invalid subcommand %i, skipping %s.",
-						static_cast<int>(file_subcommand), filename.c_str());
+					static_cast<int>(file_subcommand), UrlSafePrint(filename));
 				bytes = 0;
 				rc = 0;
 			}
@@ -4726,10 +4726,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			// send the URL and that's it for now.
 			// TODO: this should probably be a classad
 			if(!s->code(fullname)) {
-				dprintf( D_FULLDEBUG, "DoUpload: failed to send fullname: %s\n", fullname.c_str());
+				dprintf( D_FULLDEBUG, "DoUpload: failed to send fullname: %s\n", UrlSafePrint(fullname));
 				rc = -1;
 			} else {
-				dprintf( D_FULLDEBUG, "DoUpload: sent fullname and NO eom: %s\n", fullname.c_str());
+				dprintf( D_FULLDEBUG, "DoUpload: sent fullname and NO eom: %s\n", UrlSafePrint(fullname));
 				rc = 0;
 			}
 
@@ -4773,7 +4773,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		if( rc < 0 ) {
 			int the_error = errno;
 			upload_success = false;
-			error_desc.formatstr("error sending %s",fullname.c_str());
+			error_desc.formatstr("error sending %s",UrlSafePrint(fullname));
 			if((rc == PUT_FILE_OPEN_FAILED) || (rc == PUT_FILE_PLUGIN_FAILED) || (rc == PUT_FILE_MAX_BYTES_EXCEEDED)) {
 				try_again = false; // put job on hold
 				hold_code = CONDOR_HOLD_CODE::UploadFileError;
@@ -5079,7 +5079,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 				 go_ahead_desc,
 				 ip ? ip : "(null)",
 				 downloading ? "send" : "receive",
-				 full_fname,
+				 UrlSafePrint(full_fname),
 				 (go_ahead == GO_AHEAD_ALWAYS) ? " and all further files":"");
 
 		s->encode();
@@ -5226,7 +5226,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 				s->timeout(new_timeout);
 				dprintf(D_FULLDEBUG,"Peer specified different timeout "
 				        "for GoAhead protocol: %d (for %s)\n",
-						new_timeout, fname);
+						new_timeout, UrlSafePrint(fname));
 			}
 
 			dprintf(D_FULLDEBUG,"Still waiting for GoAhead for %s.\n",fname);
@@ -5263,7 +5263,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 
 	dprintf(D_FULLDEBUG,"Received GoAhead from peer to %s %s%s.\n",
 			downloading ? "receive" : "send",
-			fname,
+			UrlSafePrint(fname),
 			go_ahead_always ? " and all further files" : "");
 
 	return true;
@@ -5713,12 +5713,12 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 	if( IsUrl( dest ) ) {
 		URL = const_cast<char*>(dest);
 		dprintf( D_FULLDEBUG, "FILETRANSFER: DFT: using destination to determine "
-			"plugin type: %s\n", dest );
+			"plugin type: %s\n", UrlSafePrint(dest) );
 	}
 	else {
 		URL = const_cast<char*>(source);
 		dprintf( D_FULLDEBUG, "FILETRANSFER: DFT: using source to determine "
-			"plugin type: %s\n", source );
+			"plugin type: %s\n", UrlSafePrint(source) );
 	}
 
 	// Find the type of transfer
@@ -5751,16 +5751,16 @@ TransferPluginResult
 FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest, ClassAd* plugin_stats, const char* proxy_filename) {
 
 	// detect which plugin to invoke
-	char *URL = NULL;
+	const char *URL = NULL;
 
 	// first, check the dest to see if it looks like a URL.  if not, source must
 	// be the URL.
 	if(IsUrl(dest)) {
-		URL = const_cast<char*>(dest);
-		dprintf(D_FULLDEBUG, "FILETRANSFER: IFT: using destination to determine plugin type: %s\n", dest);
+		URL = dest;
+		dprintf(D_FULLDEBUG, "FILETRANSFER: IFT: using destination to determine plugin type: %s\n", UrlSafePrint(dest));
 	} else {
-		URL = const_cast<char*>(source);
-		dprintf(D_FULLDEBUG, "FILETRANSFER: IFT: using source to determine plugin type: %s\n", source);
+		URL = source;
+		dprintf(D_FULLDEBUG, "FILETRANSFER: IFT: using source to determine plugin type: %s\n", UrlSafePrint(source));
 	}
 
 	// find the type of transfer
@@ -5838,7 +5838,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	plugin_args.AppendArg(plugin);
 	plugin_args.AppendArg(source);
 	plugin_args.AppendArg(dest);
-	dprintf(D_FULLDEBUG, "FileTransfer::InvokeFileTransferPlugin invoking: %s %s %s\n", plugin.c_str(), source, dest);
+	dprintf(D_FULLDEBUG, "FileTransfer::InvokeFileTransferPlugin invoking: %s %s %s\n", plugin.c_str(), UrlSafePrint(source), UrlSafePrint(dest));
 
 	// determine if we want to run the plugin with root priv (if available).
 	// if so, drop_privs should be false.  the default is to drop privs.
@@ -5894,7 +5894,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 		}
 		plugin_stats->LookupString("TransferUrl", transferUrl);
 		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)",
-			exit_status, plugin.c_str(), errorMessage.c_str(), transferUrl.c_str());
+			exit_status, plugin.c_str(), errorMessage.c_str(), UrlSafePrint(transferUrl));
 		return TransferPluginResult::Error;
 	}
 
@@ -6055,7 +6055,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 						" exited unexpectedly without producing an error message\n";
 				}
 				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)",
-					exit_status, plugin_path.c_str(), error_message.c_str(), transfer_url.c_str() );
+					exit_status, plugin_path.c_str(), error_message.c_str(), UrlSafePrint(transfer_url) );
 			}
 
 			if (result_ads) {
@@ -6564,7 +6564,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		// also not an error. Remove the entry from the list and return true.
 	if( file_xfer_item.isDomainSocket() ) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: File %s is a domain socket, excluding "
-			"from transfer list\n", full_src_path.c_str() );
+			"from transfer list\n", UrlSafePrint(full_src_path) );
 		expanded_list.pop_back();
 		return true;
 	}
@@ -6583,7 +6583,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 				// ExpandParentDirectories() adds this back in the correct place.
 				expanded_list.pop_back();
 
-				// dprintf( D_ALWAYS, ">>> expanding parent directories of named file %s\n", src_path );
+				// dprintf( D_ALWAYS, ">>> expanding parent directories of named file %s\n", UrlSafePrint(src_path) );
 				// N.B.: This isn't an infinite loop because
 				// ExpandParentDirectories() calls ExpandFileTransferList()
 				// with preserveRelativePaths turned off -- the whole point

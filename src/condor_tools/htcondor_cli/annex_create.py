@@ -276,10 +276,10 @@ def invoke_pilot_script(
     nodes,
     allocation,
     update_function,
-    cluster_id,
+    request_id,
     password_file,
-    cpus=0,
-    mem_mb=0,
+    cpus,
+    mem_mb,
 ):
     args = [
         "ssh",
@@ -297,7 +297,7 @@ def invoke_pilot_script(
         str(nodes),
         str(remote_script_dir / f"{target}.multi-pilot"),
         str(allocation),
-        str(cluster_id),
+        request_id,
         str(remote_script_dir / password_file.name),
         str(cpus),
         str(mem_mb),
@@ -404,8 +404,8 @@ def annex_create(
     password_file,
     ssh_target,
     control_path,
-    cpus=0,
-    mem_mb=0,
+    cpus,
+    mem_mb,
 ):
 
     # We use this same method to determine the user name in `htcondor job`,
@@ -419,7 +419,7 @@ def annex_create(
     local_script_dir = (
         Path(htcondor.param.get("LIBEXEC", "/usr/libexec/condor")) / "annex"
     )
-    
+
     if not local_script_dir.is_dir():
         raise RuntimeError(f"Annex script dir {local_script_dir} not found or not a directory.")
 
@@ -606,9 +606,9 @@ def annex_create(
             # in debugging later.  Problem: where should it go?  How does it
             # cleaned up?
             "environment": f'PYTHONPATH={os.environ.get("PYTHONPATH", "")}',
-            "arguments": f"$(CLUSTER).0 hpc_annex_request_id $(CLUSTER) {collector}",
+            "+arguments": f'strcat( "$(CLUSTER).0 hpc_annex_request_id ", GlobalJobID, " {collector}")',
             "jobbatchname": f'HPCAnnex_{annex_name}',
-            "+hpc_annex_request_id": '"$(CLUSTER)"',
+            "+hpc_annex_request_id": 'GlobalJobID',
             # Properties of the annex request.  We should think about
             # representing these as a nested ClassAd.  Ideally, the back-end
             # would, instead of being passed a billion command-line arguments,
@@ -621,10 +621,9 @@ def annex_create(
             "+hpc_annex_owners": f'"{owners}"',
             "+hpc_annex_nodes": f'"{nodes}"',
             "+hpc_annex_allocation": f'"{allocation}"'
-            if allocation is not None
-            else "undefined",
-            "+hpc_annex_cpus": f'{cpus}',
-            "+hpc_annex_mem_mb": f'{mem_mb}',
+                if allocation is not None else "undefined",
+            "+hpc_annex_cpus": f'"{cpus}"',
+            "+hpc_annex_mem_mb": f'"{mem_mb}"',
             # Hard state required for clean up.  We'll be adding
             # hpc_annex_PID, hpc_annex_PILOT_DIR, and hpc_annex_JOB_ID
             # as they're reported by the back-end script.
@@ -635,51 +634,38 @@ def annex_create(
     try:
         logger.debug(f"... submitting {submit_description}")
         submit_result = schedd.submit(submit_description)
-    except:
+    except Exception:
         raise RuntimeError(f"Failed to submit state-tracking job, aborting.")
 
     cluster_id = submit_result.cluster()
     logger.info(f"... done, with cluster ID {cluster_id}.")
 
-    remotes = {}
-    logger.info(f"Submitting SLURM job on {target}:\n")
-    rc = invoke_pilot_script(
-        ssh_connection_sharing,
-        ssh_target,
-        ssh_indirect_command,
-        remote_script_dir,
-        target,
-        annex_name,
-        queue_name,
-        collector,
-        token_file,
-        lifetime,
-        owners,
-        nodes,
-        allocation,
-        lambda attribute, value: updateJobAd(cluster_id, attribute, value, remotes),
-        cluster_id,
-        password_file,
-        cpus,
-        mem_mb,
-    )
-
-    if rc == 0:
-        logger.info(f"... remote SLURM job submitted.")
-    else:
-        raise RuntimeError(f"Failed to start annex, SLURM returned code {rc}")
+    results = schedd.query(
+        f'ClusterID == {cluster_id} && ProcID == 0',
+        opts=htcondor.QueryOpts.DefaultMyJobsOnly,
+        projection=["GlobalJobID"],
+        )
+    request_id = results[0]["GlobalJobID"]
 
     ##
-    ## Now that we've started the annex, rewrite the jobs targeting it
-    ## so that they don't transfer the .sif files we just pre-staged.
+    ## We changed the job(s) at submit time to prevent them from running
+    ## anywhere other than the annex, so it's OK to change them again to
+    ## make it impossible to run them anywhere else before the annex job
+    ## is successfully submitted.  Doing so after allows for a race
+    ## condition, so let's not, since we don't hvae to.
+    ##
+    ## Change the jobs so that they don't transfer the .sif files we just
+    ## pre-staged.
     ##
     ## The startd can't rewrite the job ad the shadow uses to decide
     ## if it should transfer the .sif file, but it can change ContainerImage
     ## to point the pre-staged image, if it's just the basename.  (Otherwise,
     ## it gets impossibly difficult to make the relative paths work.)
     ##
-
-    sif_dir = Path(remotes["PILOT_DIR"]) / "sif"
+    ## We could do this at job-submission time, but then we'd have to record
+    ## the full path to the .sif file in some other job attribute, so it's
+    ## not worth changing at this point.
+    ##
     for job_ad in annex_jobs:
         job_id = f'{job_ad["ClusterID"]}.{job_ad["ProcID"]}'
         sif_file = extract_sif_file(job_ad)
@@ -702,57 +688,35 @@ def annex_create(
                 else:
                     schedd.edit(job_id, "TransferInput", "undefined")
 
-
-# FIXME: If we really care about this functionality, use argparse and duplicate
-# the args from the htcondor cli tool
-def __main():
-    """
-    Main entry point, only to be used when run as a standalone executable
-    """
-    username = getpass.getuser()
-    target = "stampede2"
-    nodes = 2
-    lifetime = 7200
-    cpus = 0
-    mem_mb = 0
-
-    annex_name = "hpc-annex"
-    queue_name = "development"
-    owners = username
-    allocation = None
-
-    collector = htcondor.param.get(
-        "ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io"
-    )
-    token_file = f"~/.condor/tokens.d/{username}@annex.osgdev.chtc.io"
-    control_path = "~/.hpc-annex"
-    password_file = htcondor.param.get(
-        "ANNEX_PASSWORD_FILE", "~/.condor/annex_password_file"
-    )
-
-    ssh_target = f"{username}@login.xsede.org"
-
-    logging.basicConfig(format="%(message)s", level=logging.INFO)
-    logger = logging.getLogger()
-
-    annex_create(
-        logger,
-        annex_name,
-        nodes,
-        lifetime,
-        allocation,
+    remotes = {}
+    logger.info(f"Submitting SLURM job on {target}:\n")
+    rc = invoke_pilot_script(
+        ssh_connection_sharing,
+        ssh_target,
+        ssh_indirect_command,
+        remote_script_dir,
         target,
+        annex_name,
         queue_name,
-        owners,
         collector,
         token_file,
+        lifetime,
+        owners,
+        nodes,
+        allocation,
+        lambda attribute, value: updateJobAd(cluster_id, attribute, value, remotes),
+        request_id,
         password_file,
-        ssh_target,
-        control_path,
         cpus,
         mem_mb,
     )
 
-
-if __name__ == "__main__":
-    __main()
+    if rc == 0:
+        logger.info(f"... remote SLURM job submitted.")
+    else:
+        error = f"Failed to start annex, SLURM returned code {rc}"
+        try:
+            schedd.act(htcondor.JobAction.Remove, f'ClusterID == {cluster_id}', error)
+        except Exception:
+            logger.warn(f"Could not remove cluster ID {cluster_id}.")
+        raise RuntimeError(error)

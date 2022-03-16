@@ -1179,6 +1179,23 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	if ( method_used ) {
 		m_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
+
+		// For CLAIMTOBE, explicitly limit the authorized permission
+		// levels to that of the current command and any implied ones.
+		if ( !strcasecmp(method_used, "CLAIMTOBE") ) {
+			std::string perm_list;
+			DCpermissionHierarchy hierarchy( m_comTable[m_cmd_index].perm );
+			DCpermission const *perms = hierarchy.getImpliedPerms();
+
+			// iterate through a list of this perm and all perms implied by it
+			for (DCpermission perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
+				if (!perm_list.empty()) {
+					perm_list += ',';
+				}
+				perm_list += PermString(perm);
+			}
+			m_policy->Assign(ATTR_SEC_LIMIT_AUTHORIZATION, perm_list);
+		}
 	}
 	if ( m_sock->getAuthenticatedName() ) {
 		m_policy->Assign(ATTR_SEC_AUTHENTICATED_NAME, m_sock->getAuthenticatedName() );
