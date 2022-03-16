@@ -1824,6 +1824,7 @@ activate_claim( Resource* rip, Stream* stream )
 			 shadow_addr );
 
 		// Find out what version of the starter to use for the activation.
+		// This is now ignored, as there's only one starter.
 	if( ! stream->code( starter ) ) {
 		rip->dprintf( D_ALWAYS, "Can't read starter type from %s\n",
 				 shadow_addr );
@@ -1904,29 +1905,11 @@ activate_claim( Resource* rip, Stream* stream )
 		}
 	}
 
-		// now, try to satisfy the job.  while we're at it, we'll
-		// figure out what starter they want to use
-	Starter* tmp_starter;
-	bool no_starter = false;
-	tmp_starter = resmgr->starter_mgr.newStarter( req_classad,
-												   mach_classad,
-												   no_starter,
-												   starter );
+	Starter* tmp_starter = new Starter;
 
     if (has_cp) {
         cp_restore_requested(*req_classad, consumption);
     }
-
-	if( ! tmp_starter ) {
-		if( no_starter ) {
-			rip->dprintf( D_ALWAYS, "No valid starter found to run this job!  Is something wrong with your Condor installation?\n" );
-		}
-		else {
-			rip->dprintf( D_ALWAYS, "Job Requirements check failed!\n" );
-		}
-		refuse( stream );
-	    ABORT;
-	}
 
 		// If we're here, we've decided to activate the claim.  Tell
 		// the shadow we're ok.

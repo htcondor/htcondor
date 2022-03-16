@@ -36,9 +36,9 @@ class Starter : public Service
 {
 public:
 	Starter();
-	Starter( const Starter& s );
 	~Starter();
 
+	static void config();
 
 	void	dprintf( int, const char* ... );
 	void	set_dprintf_prefix(const char * prefix) { if (prefix) { s_dpf = prefix; } else { s_dpf.clear(); } }
@@ -82,13 +82,7 @@ public:
 		// Called by our softkill timer
 	void softkillTimeout( void );
 	
-	void	publish( ClassAd* ad, StringList* list );
-
-	bool	satisfies( ClassAd* job_ad, ClassAd* mach_ad );
-	bool	provides( const char* ability );
-
-	void	setAd( ClassAd* ad );
-	void	setPath( const char* path );
+	static void	publish( ClassAd* ad );
 
 #if HAVE_BOINC
 	bool	isBOINC( void ) const { return s_is_boinc; };
@@ -140,8 +134,8 @@ private:
 
 		// data that will be the same across all instances of this
 		// starter (i.e. things that are valid for copying)
-	ClassAd* s_ad; // starter capabilities ad, (not the job ad!)
-	char*	s_path;
+	static ClassAd* s_ad; // starter capabilities ad, (not the job ad!)
+	static char* s_path;
 
 		// data that only makes sense once this Starter object has
 		// been assigned to a given resource and spawned.

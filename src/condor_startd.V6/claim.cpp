@@ -1856,13 +1856,7 @@ Claim::publishStarterAd(ClassAd *cad) const
 
 
 		// stuff in starter-specific attributes, if we have them.
-	StringList ability_list;
-	starter->publish(cad, &ability_list);
-	char* ability_str = ability_list.print_to_string();
-	if (ability_str) {
-		cad->Assign(ATTR_STARTER_ABILITY_LIST, ability_str);
-		free(ability_str);
-	}
+	starter->publish(cad);
 
 		// TODO add more goodness to this ClassAd??
 

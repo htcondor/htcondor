@@ -42,6 +42,9 @@
 #include "glexec_starter.linux.h"
 #endif
 
+ClassAd* Starter::s_ad = nullptr; // starter capabilities ad, (not the job ad!)
+char* Starter::s_path = nullptr;
+
 // Keep track of living Starters
 std::map<pid_t, Starter*> living_starters;
 
@@ -59,37 +62,8 @@ Starter *findStarterByPid(pid_t pid)
 
 
 Starter::Starter()
-	: s_ad(NULL)
-	, s_path(NULL)
-	, s_orphaned_jobad(NULL)
+	: s_orphaned_jobad(NULL)
 {
-	initRunData();
-}
-
-
-Starter::Starter( const Starter& s )
-	: Service( s )
-	, s_ad(NULL)
-	, s_path(NULL)
-	, s_orphaned_jobad(NULL)
-{
-	if( s.s_pid || s.s_birthdate )
-	{
-		EXCEPT( "Trying to copy a Starter object that's already running!" );
-	}
-
-	if( s.s_ad ) {
-		s_ad = new ClassAd( *(s.s_ad) );
-	} else {
-		s_ad = NULL;
-	}
-
-	if( s.s_path ) {
-		s_path = strdup( s.s_path );
-	} else {
-		s_path = NULL;
-	}
-
 	initRunData();
 }
 
@@ -152,12 +126,6 @@ Starter::~Starter()
 		}
 	}
 
-	if (s_path) {
-		free(s_path);
-	}
-	if( s_ad ) {
-		delete( s_ad );
-	}
 	if( s_job_update_sock ) {
 		daemonCore->Cancel_Socket( s_job_update_sock );
 		delete s_job_update_sock;
@@ -169,76 +137,74 @@ Starter::~Starter()
 	}
 }
 
-
-bool
-Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
-{
-	bool requirements = false;
-	ClassAd* merged_ad;
-	if( mach_ad ) {
-		merged_ad = new ClassAd( *mach_ad );
-		MergeClassAds( merged_ad, s_ad, true );
-	} else {
-		merged_ad = new ClassAd( *s_ad );
-	}
-	if( ! EvalBool(ATTR_REQUIREMENTS, job_ad, merged_ad, requirements) ) {
-		requirements = false;
-		dprintf( D_ALWAYS, "Failed to find requirements in merged ad?\n" );
-		classad::PrettyPrint pp;
-		std::string szbuff;
-		pp.Unparse(szbuff,job_ad);
-		dprintf( D_ALWAYS, "job_ad\n%s\n",szbuff.c_str());
-		pp.Unparse(szbuff,merged_ad);
-		dprintf( D_ALWAYS, "merged_ad\n%s\n",szbuff.c_str());
-		
-	}
-	delete( merged_ad );
-	return requirements;
-}
-
-
-bool
-Starter::provides( const char* ability )
-{
-	bool has_it = false;
-	if( ! s_ad ) {
-		return false;
-	}
-	if( ! s_ad->LookupBool(ability, has_it) ) {
-		has_it = false;
-	}
-	return has_it;
-}
-
-
 void
-Starter::setAd( ClassAd* ad )
+Starter::config()
 {
-	if( s_ad ) {
-		delete( s_ad );
+	free(s_path);
+	s_path = nullptr;
+	delete s_ad;
+	s_ad = nullptr;
+
+	s_path = param("STARTER");
+	if (s_path == nullptr) {
+		::dprintf(D_ALWAYS, "STARTER not defined in config file!\n");
+		return;
+	}
+
+	FILE* fp;
+	const char *args[] = { s_path,
+					 "-classad",
+					 NULL };
+	char buf[1024];
+
+		// first, try to execute the given path with a "-classad"
+		// option, and grab the output as a ClassAd
+		// note we run the starter here as root if possible,
+		// since that is how the starter will be invoked for real,
+		// and the real uid of the starter may influence the
+		// list of capabilities the "-classad" option returns.
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		fp = my_popenv( args, "r", FALSE );
+	}
+
+	if( ! fp ) {
+		::dprintf( D_ALWAYS, "Failed to execute %s!\n", s_path );
+		return;
+	}
+	ClassAd* ad = new ClassAd;
+	bool read_something = false;
+	while( fgets(buf, 1024, fp) ) {
+		read_something = true;
+		if( ! ad->Insert(buf) ) {
+			::dprintf( D_ALWAYS, "Failed to insert \"%s\" into starter ClassAd!\n", buf );
+			delete( ad );
+			pclose( fp );
+			return;
+		}
+	}
+	my_pclose( fp );
+	if( ! read_something ) {
+		::dprintf( D_ALWAYS,
+		         "\"%s -classad\" did not produce any output, ignoring\n",
+		         s_path );
+		delete( ad );
+		return;
 	}
 	s_ad = ad;
 }
 
-
 void
-Starter::setPath( const char* updated_path )
+Starter::publish( ClassAd* ad )
 {
-	if( s_path ) {
-		free(s_path);
+	StringList ability_list;
+	StringList ignored_attr_list;
+	ignored_attr_list.append(ATTR_VERSION);
+	ignored_attr_list.append(ATTR_IS_DAEMON_CORE);
+
+	if (!s_ad) {
+		return;
 	}
-	s_path = strdup( updated_path );
-}
-
-
-void
-Starter::publish( ClassAd* ad, StringList* list )
-{
-	StringList* ignored_attr_list = NULL;
-	ignored_attr_list = new StringList();
-	ignored_attr_list->append(ATTR_VERSION);
-	ignored_attr_list->append(ATTR_IS_DAEMON_CORE);
-	
 
 	ExprTree *tree, *pCopy;
 	const char *lhstr = NULL;
@@ -248,16 +214,27 @@ Starter::publish( ClassAd* ad, StringList* list )
 		pCopy=0;
 	
 			// insert every attr that's not in the ignored_attr_list
-		if (!ignored_attr_list->contains(lhstr)) {
+		if (!ignored_attr_list.contains(lhstr)) {
 			pCopy = tree->Copy();
 			ad->Insert(lhstr, pCopy);
 			if (strncasecmp(lhstr, "Has", 3) == MATCH) {
-				list->append(lhstr);
+				ability_list.append(lhstr);
 			}
 		}
 	}
 
-	delete ignored_attr_list;
+	// finally, print out all the abilities we added into the
+	// classad so that other folks can know what we did.
+	char* ability_str = ability_list.print_to_string();
+
+	// If our ability list is NULL it means that we have no starters.
+	// This is ok for hawkeye; nothing more to do here!
+	if ( NULL == ability_str ) {
+		ability_str = strdup("");
+	}
+	ad->Assign( ATTR_STARTER_ABILITY_LIST, ability_str );
+	free( ability_str );
+
 }
 
 
