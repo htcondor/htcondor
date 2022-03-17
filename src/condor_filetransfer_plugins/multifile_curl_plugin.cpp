@@ -4,6 +4,7 @@
 #include "../condor_utils/condor_url.h"
 #include "multifile_curl_plugin.h"
 #include "utc_time.h"
+#include <algorithm>
 #include <exception>
 #include <sstream>
 #include <iostream>
