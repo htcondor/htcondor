@@ -107,7 +107,7 @@ GetToken(const std::string & cred_name, std::string & token) {
 
 	// Cred name (via URL scheme) come in as <provider>[.<handle>]
 	// but tokens are stored on disk as <provider>[_<handle>].use
-	std::string cred_basename = cred_name
+	std::string cred_basename = cred_name;
 	std::replace(cred_basename.begin(), cred_basename.end(), '.', '_');
 
 	std::string cred_path = std::string(creddir) + DIR_DELIM_STRING + cred_basename + ".use";
