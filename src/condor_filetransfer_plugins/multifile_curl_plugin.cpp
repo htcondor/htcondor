@@ -105,7 +105,12 @@ GetToken(const std::string & cred_name, std::string & token) {
 		throw std::runtime_error(ss.str());
 	}
 
-	std::string cred_path = std::string(creddir) + DIR_DELIM_STRING + cred_name + ".use";
+	// Cred name (via URL scheme) come in as <provider>[.<handle>]
+	// but tokens are stored on disk as <provider>[_<handle>].use
+	std::string cred_basename = cred_name
+	std::replace(cred_basename.begin(), cred_basename.end(), '.', '_');
+
+	std::string cred_path = std::string(creddir) + DIR_DELIM_STRING + cred_basename + ".use";
 	int fd = open(cred_path.c_str(), O_RDONLY);
 	if (-1 == fd) {
 		fprintf( stderr, "Error: Unable to open credential file %s: %s (errno=%d)", cred_path.c_str(),
