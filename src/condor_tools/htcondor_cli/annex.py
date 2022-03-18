@@ -205,8 +205,8 @@ class Status(Verb):
                 annex_attrs[annex_name]['last_birthday'] = slot_birthday
                 annex_attrs[annex_name]['last_request_id'] = slot.get("hpc_annex_request_id")
 
-        all_jobs = {}
-        running_jobs = {}
+        all_jobs = defaultdict(int)
+        running_jobs = defaultdict(int)
         constraint = 'TargetAnnexName =!= undefined'
         if the_annex_name is not None:
             constraint = f'TargetAnnexName == "{the_annex_name}"'
