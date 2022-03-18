@@ -220,7 +220,7 @@ class Status(Verb):
             bump(all_jobs, target_annex_name, 1)
 
             if job['JobStatus'] == htcondor.JobStatus.RUNNING:
-                bump(running_jobs, target_annex_name, 1)
+                running_jobs[target_annex_name] += 1
 
         if len(target_jobs) == 0 and the_annex_name is not None:
             print(f"Found no jobs targeting annex '{the_annex_name}'.");
