@@ -90,6 +90,7 @@ CPUS=${13}
 if [[ $CPUS == "None" ]]; then
     CPUS=""
 fi
+
 MEM_MB=${14}
 if [[ $MEM_MB == "None" ]]; then
     MEM_MB=""
@@ -370,8 +371,8 @@ if [[ $WHOLE_NODE ]]; then
     # They make no specific requests about CPUs, memory, etc., since the SLURM
     # partition should already determine that.
     SBATCH_RESOURCES_LINES="\
+#SBATCH --nodes=${NODES}
 #SBATCH --ntasks=${NODES}
-#SBATCH --ntasks-per-node=${NODES}
 "
 else
     # Jobs on shared (non-whole-node) SLURM partitions can't be multi-node on
@@ -379,6 +380,7 @@ else
     # allocated to the job.
 
     # XXX Should I reject NODES > 1?
+    # FIXME: I'm OK with ignoring it, but the FE should check..
     SBATCH_RESOURCES_LINES="\
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
