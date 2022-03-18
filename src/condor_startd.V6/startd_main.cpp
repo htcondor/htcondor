@@ -178,11 +178,11 @@ main_init( int, char* argv[] )
 	resmgr = new ResMgr;
 
 		// find all the starters we care about and get their classads. 
-	resmgr->starter_mgr.init();
+	Starter::config();
 
 	ClassAd tmp_classad;
 	std::string starter_ability_list;
-	resmgr->starter_mgr.publish(&tmp_classad);
+	Starter::publish(&tmp_classad);
 	tmp_classad.LookupString(ATTR_STARTER_ABILITY_LIST, starter_ability_list);
 	if( starter_ability_list.find(ATTR_HAS_VM) != std::string::npos ) {
 		// Now starter has codes for vm universe.
@@ -478,7 +478,7 @@ finish_main_config( void )
 	dprintf( D_FULLDEBUG, "MainConfig finish\n" );
 	cron_job_mgr->Reconfig(  );
 	bench_job_mgr->Reconfig(  );
-	resmgr->starter_mgr.init();
+	Starter::config();
 
 #if HAVE_HIBERNATION
 	resmgr->updateHibernateConfiguration();

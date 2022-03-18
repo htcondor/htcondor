@@ -216,8 +216,6 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	checkpoint_job_queue_attrs = new StringList();
 	checkpoint_job_queue_attrs->insert( ATTR_NUM_CKPTS );
 	checkpoint_job_queue_attrs->insert( ATTR_LAST_CKPT_TIME );
-	checkpoint_job_queue_attrs->insert( ATTR_CKPT_ARCH );
-	checkpoint_job_queue_attrs->insert( ATTR_CKPT_OPSYS );
 	checkpoint_job_queue_attrs->insert( ATTR_VM_CKPT_MAC );
 	checkpoint_job_queue_attrs->insert( ATTR_VM_CKPT_IP );
 

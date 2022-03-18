@@ -208,19 +208,10 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 				bool param_exists;
 				SpoolLastExecutable = sub->submit_param_bool( SUBMIT_KEY_CopyToSpool, "CopyToSpool", false, &param_exists );
 				if ( ! param_exists) {
-					if ( submit_hash.getUniverse() == CONDOR_UNIVERSE_STANDARD ) {
-							// Standard universe jobs can't restore from a checkpoint
-							// if the executable changes.  Therefore, it is deemed
-							// too risky to have copy_to_spool=false by default
-							// for standard universe.
-						SpoolLastExecutable = true;
-					}
-					else {
-							// In so many cases, copy_to_spool=true would just add
-							// needless overhead.  Therefore, (as of 6.9.3), the
-							// default is false.
-						SpoolLastExecutable = false;
-					}
+						// In so many cases, copy_to_spool=true would just add
+						// needless overhead.  Therefore, (as of 6.9.3), the
+						// default is false.
+					SpoolLastExecutable = false;
 				}
 			}
 		}

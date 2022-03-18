@@ -1637,14 +1637,6 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 	// Update timestamp of the last checkpoint
 	jobAd->Assign(ATTR_LAST_CKPT_TIME, now);
 
-	// Update CkptArch and CkptOpSys
-	if( starterArch ) {
-		jobAd->Assign(ATTR_CKPT_ARCH, starterArch);
-	}
-	if( starterOpsys ) {
-		jobAd->Assign(ATTR_CKPT_OPSYS, starterOpsys);
-	}
-
 	// Update Ckpt MAC and IP address of VM
 	if( update_ad->LookupString(ATTR_VM_CKPT_MAC,string_value) ) {
 		jobAd->Assign(ATTR_VM_CKPT_MAC, string_value);
@@ -1729,15 +1721,6 @@ RemoteResource::printCheckpointStats( int debug_level )
 	int_value = 0;
 	jobAd->LookupInteger( ATTR_LAST_CKPT_TIME, int_value);
 	dprintf( debug_level, "%s = %d\n", ATTR_LAST_CKPT_TIME, int_value);
-
-	// CkptArch and CkptOpSys
-	string_attr = "";
-	jobAd->LookupString(ATTR_CKPT_ARCH, string_attr);
-	dprintf( debug_level, "%s = %s\n", ATTR_CKPT_ARCH, string_attr.c_str());
-
-	string_attr = "";
-	jobAd->LookupString(ATTR_CKPT_OPSYS, string_attr);
-	dprintf( debug_level, "%s = %s\n", ATTR_CKPT_OPSYS, string_attr.c_str());
 
 	// MAC and IP address of VM
 	string_attr = "";

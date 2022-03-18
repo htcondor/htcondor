@@ -34,7 +34,6 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "dedicated_scheduler.h"
-#include "shadow_mgr.h"
 #include "scheduler.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -459,7 +458,6 @@ DedicatedScheduler::DedicatedScheduler()
 
 	ds_owner = NULL;
 	ds_name = NULL;
-	shadow_obj = NULL;
 
 	startdQueryTime = 0;
 	split_match_count = 0;
@@ -480,10 +478,6 @@ DedicatedScheduler::~DedicatedScheduler()
 	if( ds_owner ) { free(ds_owner); }
 	if( ds_name ) { free(ds_name); }
 
-	if( shadow_obj ) {
-		delete shadow_obj;
-		shadow_obj = NULL;
-	}
 	if( daemonCore && hdjt_tid != -1 ) {
 		daemonCore->Cancel_Timer( hdjt_tid );
 	}
@@ -607,10 +601,6 @@ DedicatedScheduler::reconfig( void )
 	}
 	old_unused_timeout = unused_timeout;
 
-	if( shadow_obj ) {
-		delete shadow_obj;
-		shadow_obj = NULL;
-	}
 	return TRUE;
 }
 
@@ -1483,15 +1473,6 @@ DedicatedScheduler::handleDedicatedJobs( void )
 	    // to actually care about this value in any meaningful way.
 	now = 0;
 
-		// first, make sure we've got a shadow that can handle mpi
-		// jobs.  if not, we're screwed, so instead of computing a
-		// schedule, requesting resources, etc, etc, we should just
-		// put all the jobs on hold...
-	if( ! hasDedicatedShadow() ) {
-		holdAllDedicatedJobs();
-		return FALSE;
-	}
-
 		// This will gather up pointers to all the job classads we
 		// care about, and sort them by QDate.
 	if( ! sortJobs() ) {
@@ -1934,16 +1915,6 @@ DedicatedScheduler::spawnJobs( void )
 	if( ! allocations ) {
 			// Nothing to do
 		return true;
-	}
-
-	if( ! shadow_obj ) {
-		shadow_obj = scheduler.shadow_mgr.findShadow( ATTR_HAS_MPI );
-	}
-
-	if( ! shadow_obj ) {
-		dprintf( D_ALWAYS, "ERROR: Can't find a shadow with %s -- "
-				 "can't spawn MPI jobs, aborting\n", ATTR_HAS_MPI );
-		return false;
 	}
 
 	allocations->startIterations();
@@ -3910,21 +3881,6 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 	return false;
 }
 
-bool
-DedicatedScheduler::hasDedicatedShadow( void ) 
-{
-	if( ! shadow_obj ) {
-		shadow_obj = scheduler.shadow_mgr.findShadow( ATTR_HAS_MPI );
-	}
-	if( ! shadow_obj ) {
-		dprintf( D_ALWAYS, "ERROR: Can't find a shadow with %s -- "
-				 "can't run MPI jobs!\n", ATTR_HAS_MPI );
-		return false;
-	} 
-	return true;
-}
-
-
 void
 DedicatedScheduler::holdAllDedicatedJobs( void ) 
 {
@@ -4395,9 +4351,6 @@ findAvailTime( match_rec* mrec )
 				// it should "cost" to kill a job?
 			if( universe == CONDOR_UNIVERSE_VANILLA ) {
 				return now + 15;
-			}
-			if( universe == CONDOR_UNIVERSE_STANDARD ) {
-				return now + 120;
 			}
 			return now + 60;
 		} 

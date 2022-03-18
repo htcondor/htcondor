@@ -659,7 +659,7 @@ ResState::leave_action( State cur_s, Activity cur_a, State new_s,
 					// mean the starter has blown up and we didn't
 					// know about it.  Send SIGKILL to the process
 					// group and go to the owner state.
-				rip->r_cur->starterKillPg( SIGKILL );
+				rip->r_cur->starterKillFamily();
 				dprintf( D_ALWAYS,
 						 "State change: Error sending signals to starter\n" );
 				if( new_s != preempting_state ) {
@@ -745,7 +745,7 @@ ResState::enter_action( State s, Activity a,
 		}
 		if (a == suspended_act) {
 			if( ! rip->r_cur->suspendClaim() ) {
-				rip->r_cur->starterKillPg( SIGKILL );
+				rip->r_cur->starterKillFamily();
 				dprintf( D_ALWAYS,
 						 "State change: Error sending signals to starter\n" );
 				change( preempting_state );
@@ -882,7 +882,7 @@ ResState::enter_action( State s, Activity a,
 					rip->hold_job(true);
 				}
 				else if( ! rip->r_cur->starterKillSoft(true) ) {
-					rip->r_cur->starterKillPg( SIGKILL );
+					rip->r_cur->starterKillFamily();
 					dprintf( D_ALWAYS,
 							 "State change: Error sending signals to starter\n" );
 					change( owner_state );

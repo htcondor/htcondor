@@ -395,8 +395,6 @@ class DedicatedScheduler : public Service {
 		*/
 	bool isPossibleToSatisfy( CAList* jobs, int max_hosts );
 
-	bool hasDedicatedShadow( void );
-
 	void holdAllDedicatedJobs( void );
 
 	bool satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs);
@@ -494,8 +492,6 @@ class DedicatedScheduler : public Service {
 
 	int unused_timeout;	// How many seconds are we willing to hold
 		// onto a resource without using it before we release it? 
-
-	Shadow* shadow_obj;
 
 	friend class CandidateList;
 

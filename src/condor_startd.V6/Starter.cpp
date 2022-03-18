@@ -42,6 +42,9 @@
 #include "glexec_starter.linux.h"
 #endif
 
+ClassAd* Starter::s_ad = nullptr; // starter capabilities ad, (not the job ad!)
+char* Starter::s_path = nullptr;
+
 // Keep track of living Starters
 std::map<pid_t, Starter*> living_starters;
 
@@ -59,41 +62,8 @@ Starter *findStarterByPid(pid_t pid)
 
 
 Starter::Starter()
-	: s_ad(NULL)
-	, s_path(NULL)
-	, s_is_dc(false)
-	, s_orphaned_jobad(NULL)
+	: s_orphaned_jobad(NULL)
 {
-	initRunData();
-}
-
-
-Starter::Starter( const Starter& s )
-	: Service( s )
-	, s_ad(NULL)
-	, s_path(NULL)
-	, s_is_dc(false)
-	, s_orphaned_jobad(NULL)
-{
-	if( s.s_pid || s.s_birthdate )
-	{
-		EXCEPT( "Trying to copy a Starter object that's already running!" );
-	}
-
-	if( s.s_ad ) {
-		s_ad = new ClassAd( *(s.s_ad) );
-	} else {
-		s_ad = NULL;
-	}
-
-	if( s.s_path ) {
-		s_path = strdup( s.s_path );
-	} else {
-		s_path = NULL;
-	}
-
-	s_is_dc = s.s_is_dc;
-
 	initRunData();
 }
 
@@ -156,12 +126,6 @@ Starter::~Starter()
 		}
 	}
 
-	if (s_path) {
-		free(s_path);
-	}
-	if( s_ad ) {
-		delete( s_ad );
-	}
 	if( s_job_update_sock ) {
 		daemonCore->Cancel_Socket( s_job_update_sock );
 		delete s_job_update_sock;
@@ -173,82 +137,74 @@ Starter::~Starter()
 	}
 }
 
-
-bool
-Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
-{
-	bool requirements = false;
-	ClassAd* merged_ad;
-	if( mach_ad ) {
-		merged_ad = new ClassAd( *mach_ad );
-		MergeClassAds( merged_ad, s_ad, true );
-	} else {
-		merged_ad = new ClassAd( *s_ad );
-	}
-	if( ! EvalBool(ATTR_REQUIREMENTS, job_ad, merged_ad, requirements) ) {
-		requirements = false;
-		dprintf( D_ALWAYS, "Failed to find requirements in merged ad?\n" );
-		classad::PrettyPrint pp;
-		std::string szbuff;
-		pp.Unparse(szbuff,job_ad);
-		dprintf( D_ALWAYS, "job_ad\n%s\n",szbuff.c_str());
-		pp.Unparse(szbuff,merged_ad);
-		dprintf( D_ALWAYS, "merged_ad\n%s\n",szbuff.c_str());
-		
-	}
-	delete( merged_ad );
-	return requirements;
-}
-
-
-bool
-Starter::provides( const char* ability )
-{
-	bool has_it = false;
-	if( ! s_ad ) {
-		return false;
-	}
-	if( ! s_ad->LookupBool(ability, has_it) ) {
-		has_it = false;
-	}
-	return has_it;
-}
-
-
 void
-Starter::setAd( ClassAd* ad )
+Starter::config()
 {
-	if( s_ad ) {
-		delete( s_ad );
+	free(s_path);
+	s_path = nullptr;
+	delete s_ad;
+	s_ad = nullptr;
+
+	s_path = param("STARTER");
+	if (s_path == nullptr) {
+		::dprintf(D_ALWAYS, "STARTER not defined in config file!\n");
+		return;
+	}
+
+	FILE* fp;
+	const char *args[] = { s_path,
+					 "-classad",
+					 NULL };
+	char buf[1024];
+
+		// first, try to execute the given path with a "-classad"
+		// option, and grab the output as a ClassAd
+		// note we run the starter here as root if possible,
+		// since that is how the starter will be invoked for real,
+		// and the real uid of the starter may influence the
+		// list of capabilities the "-classad" option returns.
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		fp = my_popenv( args, "r", FALSE );
+	}
+
+	if( ! fp ) {
+		::dprintf( D_ALWAYS, "Failed to execute %s!\n", s_path );
+		return;
+	}
+	ClassAd* ad = new ClassAd;
+	bool read_something = false;
+	while( fgets(buf, 1024, fp) ) {
+		read_something = true;
+		if( ! ad->Insert(buf) ) {
+			::dprintf( D_ALWAYS, "Failed to insert \"%s\" into starter ClassAd!\n", buf );
+			delete( ad );
+			pclose( fp );
+			return;
+		}
+	}
+	my_pclose( fp );
+	if( ! read_something ) {
+		::dprintf( D_ALWAYS,
+		         "\"%s -classad\" did not produce any output, ignoring\n",
+		         s_path );
+		delete( ad );
+		return;
 	}
 	s_ad = ad;
 }
 
-
 void
-Starter::setPath( const char* updated_path )
+Starter::publish( ClassAd* ad )
 {
-	if( s_path ) {
-		free(s_path);
+	StringList ability_list;
+	StringList ignored_attr_list;
+	ignored_attr_list.append(ATTR_VERSION);
+	ignored_attr_list.append(ATTR_IS_DAEMON_CORE);
+
+	if (!s_ad) {
+		return;
 	}
-	s_path = strdup( updated_path );
-}
-
-void
-Starter::setIsDC( bool updated_is_dc )
-{
-	s_is_dc = updated_is_dc;
-}
-
-
-void
-Starter::publish( ClassAd* ad, StringList* list )
-{
-	StringList* ignored_attr_list = NULL;
-	ignored_attr_list = new StringList();
-	ignored_attr_list->append(ATTR_VERSION);
-	ignored_attr_list->append(ATTR_IS_DAEMON_CORE);
-	
 
 	ExprTree *tree, *pCopy;
 	const char *lhstr = NULL;
@@ -258,47 +214,51 @@ Starter::publish( ClassAd* ad, StringList* list )
 		pCopy=0;
 	
 			// insert every attr that's not in the ignored_attr_list
-		if (!ignored_attr_list->contains(lhstr)) {
+		if (!ignored_attr_list.contains(lhstr)) {
 			pCopy = tree->Copy();
 			ad->Insert(lhstr, pCopy);
 			if (strncasecmp(lhstr, "Has", 3) == MATCH) {
-				list->append(lhstr);
+				ability_list.append(lhstr);
 			}
 		}
 	}
 
-	delete ignored_attr_list;
+	// finally, print out all the abilities we added into the
+	// classad so that other folks can know what we did.
+	char* ability_str = ability_list.print_to_string();
+
+	// If our ability list is NULL it means that we have no starters.
+	// This is ok for hawkeye; nothing more to do here!
+	if ( NULL == ability_str ) {
+		ability_str = strdup("");
+	}
+	ad->Assign( ATTR_STARTER_ABILITY_LIST, ability_str );
+	free( ability_str );
+
 }
 
 
 bool
-Starter::kill( int signo )
+Starter::signal( int signo )
 {
-	return reallykill( signo, 0 );
+	return reallykill( signo, false );
 }
 
 
 bool
-Starter::killpg( int signo )
+Starter::killfamily()
 {
-	return reallykill( signo, 1 );
-}
-
-
-void
-Starter::killkids( int signo ) 
-{
-	reallykill( signo, 2 );
+	return reallykill( SIGKILL, true );
 }
 
 
 bool
-Starter::reallykill( int signo, int type )
+Starter::reallykill( int signo, bool kill_family )
 {
 #ifndef WIN32
 	struct stat st;
 #endif
-	int 		ret = 0, sig = 0;
+	int 		ret = 0;
 	priv_state	priv;
 	const char *signame = "";
 
@@ -311,12 +271,10 @@ Starter::reallykill( int signo, int type )
 	case DC_SIGSUSPEND:
 		signame = "DC_SIGSUSPEND";
 		break;
-	case DC_SIGHARDKILL:
-		signo = SIGQUIT;
+	case SIGQUIT:
 		signame = "SIGQUIT";
 		break;
-	case DC_SIGSOFTKILL:
-		signo = SIGTERM;
+	case SIGTERM:
 		signame = "SIGTERM";
 		break;
 	case DC_SIGPCKPT:
@@ -336,37 +294,6 @@ Starter::reallykill( int signo, int type )
 	}
 
 #if !defined(WIN32)
-
-	if( !is_dc() ) {
-		switch( signo ) {
-		case DC_SIGSUSPEND:
-			sig = SIGUSR1;
-			break;
-		case SIGQUIT:
-		case DC_SIGHARDKILL:
-			sig = SIGINT;
-			break;
-		case SIGTERM:
-		case DC_SIGSOFTKILL:
-			sig = SIGTSTP;
-			break;
-		case DC_SIGPCKPT:
-			sig = SIGUSR2;
-			break;
-		case DC_SIGCONTINUE:
-			sig = SIGCONT;
-			break;
-		case SIGHUP:
-			sig = SIGHUP;
-			break;
-		case SIGKILL:
-			sig = SIGKILL;
-			break;
-		default:
-			EXCEPT( "Unknown signal (%d) in Starter::reallykill", signo );
-		}
-	}
-
 
 		/* 
 		   On sites where the condor binaries are installed on NFS,
@@ -444,90 +371,24 @@ Starter::reallykill( int signo, int type )
 	}
 #endif	// if !defined(WIN32)
 
-	if( is_dc() ) {
-			// With DaemonCore, fow now convert a request to kill a
-			// process group into a request to kill a process family via
-			// DaemonCore
-		if ( type == 1 ) {
-			type = 2;
-		}
-	}
-
-	switch( type ) {
-	case 0:
+	if (kill_family) {
 		dprintf( D_FULLDEBUG, 
-				 "In Starter::kill() with pid %d, sig %d (%s)\n", 
+				 "In Starter::killfamily() with pid %d, sig %d (%s)\n",
 				 s_pid, signo, signame );
-		break;
-	case 1:
+	} else {
 		dprintf( D_FULLDEBUG, 
-				 "In Starter::killpg() with pid %d, sig %d (%s)\n", 
+				 "In Starter::signal() with pid %d, sig %d (%s)\n",
 				 s_pid, signo, signame );
-		break;
-	case 2:
-		dprintf( D_FULLDEBUG, 
-				 "In Starter::kill_kids() with pid %d, sig %d (%s)\n", 
-				 s_pid, signo, signame );
-		break;
-	default:
-		EXCEPT( "Unknown type (%d) in Starter::reallykill", type );
 	}
 
 	priv = set_root_priv();
 
-#ifndef WIN32
-	if( ! is_dc() ) {
-			// If we're just doing a plain kill, and the signal we're
-			// sending isn't SIGSTOP or SIGCONT, send a SIGCONT to the 
-			// starter just for good measure.
-		if( sig != SIGSTOP && sig != SIGCONT && sig != SIGKILL ) {
-			if( type == 1 ) { 
-				ret = ::kill( -(s_pid), SIGCONT );
-			} else if( type == 0 && 
-						!daemonCore->ProcessExitedButNotReaped(s_pid)) 
-			{
-				ret = ::kill( (s_pid), SIGCONT );
-			}
-		}
-	}
-#endif /* ! WIN32 */
-
 		// Finally, do the deed.
-	switch( type ) {
-	case 0:
-		if( daemonCore->ProcessExitedButNotReaped(s_pid) ) {
-			ret = 0;
-			break;
-		}
-		if( is_dc() ) {		
-			ret = daemonCore->Send_Signal( (s_pid), signo );
-				// Translate Send_Signal's return code to Unix's kill()
-			if( ret == FALSE ) {
-				ret = -1;
-			} else {
-				ret = 0;
-			}
-			break;
-		} 
-#ifndef WIN32
-		else {
-			ret = ::kill( (s_pid), sig );
-			break;
-		}
-#endif /* ! WIN32 */
-
-	case 1:
-#ifndef WIN32
-			// We already know we're not DaemonCore.
-		ret = ::kill( -(s_pid), sig );
-		break;
-#endif /* ! WIN32 */
-
-	case 2:
+	if (kill_family) {
 		if( signo != SIGKILL ) {
 			dprintf( D_ALWAYS, 
-					 "In Starter::killkids() with %s\n", signame );
-			EXCEPT( "Starter::killkids() can only handle SIGKILL!" );
+					 "In Starter::killfamily() with %s\n", signame );
+			EXCEPT( "Starter::killfamily() can only handle SIGKILL!" );
 		}
 		if (daemonCore->Kill_Family(s_pid) == FALSE) {
 			dprintf(D_ALWAYS,
@@ -535,7 +396,18 @@ Starter::reallykill( int signo, int type )
 				s_pid);
 			ret = -1;
 		}
-		break;
+	} else {
+		if( daemonCore->ProcessExitedButNotReaped(s_pid) ) {
+			ret = TRUE;
+		} else {
+			ret = daemonCore->Send_Signal( (s_pid), signo );
+		}
+			// Translate Send_Signal's return code to Unix's kill()
+		if( ret == FALSE ) {
+			ret = -1;
+		} else {
+			ret = 0;
+		}
 	}
 
 	set_priv(priv);
@@ -615,12 +487,8 @@ int Starter::spawn(Claim * claim, time_t now, Stream* s)
 		s_pid = execBOINCStarter(claim);
 	}
 #endif /* HAVE_BOINC */
-	else if( is_dc() ) {
-		s_pid = execDCStarter(claim, s);
-	}
 	else {
-		dprintf( D_ALWAYS, "The standard universe starter is no longer supported!\n" );
-		s_pid = 0;
+		s_pid = execDCStarter(claim, s);
 	}
 
 	if( s_pid == 0 ) {
@@ -1253,8 +1121,7 @@ void
 Starter::printInfo( int debug_level )
 {
 	dprintf( debug_level, "Info for \"%s\":\n", s_path );
-	dprintf( debug_level | D_NOHEADER, "IsDaemonCore: %s\n", 
-			 s_is_dc ? "True" : "False" );
+	dprintf( debug_level | D_NOHEADER, "IsDaemonCore: True\n" );
 	if( ! s_ad ) {
 		dprintf( debug_level | D_NOHEADER, 
 				 "No ClassAd available!\n" ); 
@@ -1293,8 +1160,8 @@ Starter::killHard( int timeout )
 		return true;
 	}
 	
-	if( ! kill(DC_SIGHARDKILL) ) {
-		killpg( SIGKILL );
+	if( ! signal(SIGQUIT) ) {
+		killfamily();
 		return false;
 	}
 	dprintf(D_FULLDEBUG, "in starter:killHard starting kill timer\n");
@@ -1310,8 +1177,8 @@ Starter::killSoft( int timeout, bool /*state_change*/ )
 	if( ! active() ) {
 		return true;
 	}
-	if( ! kill(DC_SIGSOFTKILL) ) {
-		killpg( SIGKILL );
+	if( ! signal(SIGTERM) ) {
+		killfamily();
 		return false;
 	}
 
@@ -1338,8 +1205,8 @@ Starter::suspend( void )
 	if( ! active() ) {
 		return true;
 	}
-	if( ! kill(DC_SIGSUSPEND) ) {
-		killpg( SIGKILL );
+	if( ! signal(DC_SIGSUSPEND) ) {
+		killfamily();
 		return false;
 	}
 	return true;
@@ -1352,8 +1219,8 @@ Starter::resume( void )
 	if( ! active() ) {
 		return true;
 	}
-	if( ! kill(DC_SIGCONTINUE) ) {
-		killpg( SIGKILL );
+	if( ! signal(DC_SIGCONTINUE) ) {
+		killfamily();
 		return false;
 	}
 	return true;
@@ -1447,11 +1314,8 @@ Starter::sigkillStarter( void )
 				 "directly hard kill the starter and all its "
 				 "decendents.\n", s_pid );
 
-			// Kill all of the starter's children.
-		killkids( SIGKILL );
-
-			// Kill the starter's entire process group.
-		killpg( SIGKILL );
+			// Kill the starter's entire family.
+		killfamily();
 	}
 }
 
@@ -1468,9 +1332,6 @@ Starter::softkillTimeout( void )
 bool
 Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,int timeout)
 {
-	if( !s_is_dc ) {
-		return false;  // this starter does not support putting jobs on hold
-	}
 	if( m_hold_job_cb ) {
 		dprintf(D_ALWAYS,"holdJob() called when operation already in progress (starter pid %d).\n", s_pid);
 		return true;

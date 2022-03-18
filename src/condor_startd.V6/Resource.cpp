@@ -606,7 +606,7 @@ int
 Resource::request_new_proc( void )
 {
 	if( state() == claimed_state && r_cur->isActive()) {
-		return (int)r_cur->starterKill( SIGHUP );
+		return (int)r_cur->starterSignal( SIGHUP );
 	} else {
 		return FALSE;
 	}
@@ -1909,7 +1909,6 @@ Resource::wants_pckpt( void )
 			if( ! wantCheckpoint ) { return FALSE; }
 			} break;
 
-		case CONDOR_UNIVERSE_STANDARD:
 		case CONDOR_UNIVERSE_VM:
 			break;
 
@@ -3283,18 +3282,6 @@ Resource::willingToRun(ClassAd* request_ad)
 			slot_requirements = false;
 		}
 
-			// Since we have a request ad, we can also check its requirements.
-		Starter* tmp_starter;
-		bool no_starter = false;
-		tmp_starter = resmgr->starter_mgr.newStarter(request_ad, r_classad, no_starter );
-		if (!tmp_starter) {
-			req_requirements = false;
-		}
-		else {
-			delete(tmp_starter);
-			req_requirements = true;
-		}
-
 			// The following dprintfs are only done if request_ad !=
 			// NULL, because this function is frequently called with
 			// request_ad==NULL when the startd is evaluating its
@@ -3309,10 +3296,7 @@ Resource::willingToRun(ClassAd* request_ad)
 				dprintf(D_ALWAYS, "Slot ad was ============================\n");
 				dPrintAd(D_ALWAYS, *r_classad);
 			}
-			if (no_starter) {
-				dprintf(D_FAILURE|D_ALWAYS, "No starter found to run this job!  Is something wrong with your Condor installation?\n");
-			}
-			else if (!req_requirements) {
+			if (!req_requirements) {
 				dprintf(D_FAILURE|D_ALWAYS, "Job requirements not satisfied.\n");
 				dprintf(D_ALWAYS, "Job ad was ============================\n");
 				dPrintAd(D_ALWAYS, *request_ad);
@@ -3396,15 +3380,7 @@ Resource::createFetchClaim(ClassAd* job_ad, float rank)
 bool
 Resource::spawnFetchedWork(void)
 {
-		// First, we have to find a Starter that will work.
-	Starter* tmp_starter;
-	bool no_starter = false;
-	tmp_starter = resmgr->starter_mgr.newStarter(r_cur->ad(), r_classad, no_starter);
-	if( ! tmp_starter ) {
-		dprintf(D_ALWAYS|D_FAILURE, "ERROR: Could not find a starter that can run fetched work request, aborting.\n");
-		change_state(owner_state);
-		return false;
-	}
+	Starter* tmp_starter = new Starter;
 
 		// Update the claim object with info from the job classad stored in the Claim object
 		// Then spawn the given starter.

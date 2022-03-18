@@ -538,7 +538,6 @@ JICLocal::checkUniverse( int univ )
 			// for now, we don't support much. :)
 		return true;
 
-	case CONDOR_UNIVERSE_STANDARD:
 	case CONDOR_UNIVERSE_SCHEDULER:
 	case CONDOR_UNIVERSE_MPI:
 	case CONDOR_UNIVERSE_GRID:

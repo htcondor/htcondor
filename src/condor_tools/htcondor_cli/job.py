@@ -215,7 +215,7 @@ class Status(Verb):
         try:
             job = schedd.query(
                 constraint=f"ClusterId == {job_id}",
-                projection=["JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "ResourceType"]
+                projection=["JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "ResourceType", "TargetAnnexName"]
             )
         except IndexError:
             raise RuntimeError(f"No job found for ID {job_id}.")
@@ -229,16 +229,20 @@ class Status(Verb):
 
         # Now, produce job status based on the resource type
         if resource_type == "htcondor":
+            target_annex_name = job[0].get('TargetAnnexName')
+            if target_annex_name is not None:
+                logger.info(f"Job will only run on annex '{target_annex_name}'.")
+
             if JobStatus[job[0]['JobStatus']] == "RUNNING":
                 job_running_time = datetime.now() - datetime.fromtimestamp(job[0]["JobStartDate"])
-                logger.info(f"Job is running since {round(job_running_time.seconds/3600)}h{round(job_running_time.seconds/60)}m{(job_running_time.seconds%60)}s")
+                logger.info(f"Job has been running for {round(job_running_time.seconds/3600)} hour(s), {round(job_running_time.seconds/60)} minute(s), and {(job_running_time.seconds%60)} second(s).")
             elif JobStatus[job[0]['JobStatus']] == "HELD":
                 job_held_time = datetime.now() - datetime.fromtimestamp(job[0]["EnteredCurrentStatus"])
-                logger.info(f"Job is held since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s\nHold Reason: {job[0]['HoldReason']}")
+                logger.info(f"Job has been held for {round(job_held_time.seconds/3600)} hour(s), {round(job_held_time.seconds/60)} minute(s), and {(job_held_time.seconds%60)} second(s).\nHold Reason: {job[0]['HoldReason']}")
             elif JobStatus[job[0]['JobStatus']] == "COMPLETED":
-                logger.info("Job has completed")
+                logger.info("Job completed.")
             else:
-                logger.info(f"Job is {JobStatus[job[0]['JobStatus']]}")
+                logger.info(f"Job is {JobStatus[job[0]['JobStatus']]}.")
 
         # Jobs running on provisioned Slurm or EC2 resources need to retrieve
         # additional information from the provisioning DAGMan log

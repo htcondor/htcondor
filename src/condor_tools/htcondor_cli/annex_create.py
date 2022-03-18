@@ -9,6 +9,7 @@ import signal
 import getpass
 import logging
 import secrets
+import textwrap
 import subprocess
 from pathlib import Path
 
@@ -22,10 +23,100 @@ REMOTE_CLEANUP_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_CLEANUP_TIMEOUT", 
 REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 30))
 REMOTE_POPULATE_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_POPULATE_TIMEOUT", 60))
 
-# FIXME: Make this come from config? At least some place not hardcoded.
-MACHINE_QUEUE_MAP = {
-    "stampede2": "normal",
-    "expanse": "compute",
+#
+# For queues with the whole-node allocation policy, cores and RAM -per-node
+# are only informative at the moment; we could compute the necessary number
+# of nodes for the user (as long as we echo it back to them), but let's not
+# do that for now and just tell the user to size their requests with the
+# units appropriate to the queue.
+#
+MACHINE_TABLE = {
+
+    # The key is currently both the value of the command-line option
+    # and part of the name of some files in condor_scripts/annex.  This
+    # shouldn't be hard to change.
+    "stampede2": {
+        "pretty_name":      "Stampede 2",
+        "gsissh_name":      "stampede2",
+        "default_queue":    "normal",
+
+        # This isn't all of the queues on Stampede 2, but we
+        # need to think about what it means, if anything, if
+        # recognize certain queues.  For now, these are the
+        # only three queues I've actually tested.
+        "queues": {
+            "normal": {
+                "max_nodes_per_job":    256,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       68,
+
+                "max_jobs_in_queue":    50,
+            },
+            "development": {
+                "max_nodes_per_job":    16,
+                "max_duration":         2 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       68,
+
+                "max_jobs_in_queue":    1,
+            },
+            "skx-normal": {
+                "max_nodes_per_job":    128,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       48,
+
+                "max_jobs_in_queue":    20,
+            },
+        },
+    },
+
+    "expanse": {
+        "pretty_name":      "Expanse",
+        "gsissh_name":      "expanse",
+        "default_queue":    "compute",
+
+        # GPUs are completed untested, see above.
+        "queues": {
+            "compute": {
+                "max_nodes_per_job":    32,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       128,
+                "ram_per_node":         256,
+
+                "max_jobs_in_queue":    64,
+            },
+            "gpu": {
+                "max_nodes_per_job":    4,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       40,
+                "ram_per_node":         256,
+
+                "max_jobs_in_queue":    8,
+            },
+            "shared": {
+                "max_nodes_per_job":    1,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       128,
+                "ram_per_node":         256,
+
+                "max_jobs_in_queue":    4096,
+            },
+            "gpu-shared": {
+                "max_nodes_per_job":    1,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       40,
+                "ram_per_node":         384,
+
+                "max_jobs_in_queue":    24,
+            },
+        },
+    },
 }
 
 
@@ -101,6 +192,7 @@ def make_remote_temporary_directory(
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        # This implies text mode.
         errors="replace",
     )
 
@@ -209,6 +301,7 @@ def transfer_files(
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        # This implies text mode.
         errors="replace",
     )
 
@@ -403,7 +496,8 @@ def annex_create(
     # so even if it's wrong, it will at least consistently so.
     username = getpass.getuser()
 
-    if target not in MACHINE_QUEUE_MAP:
+    target = target.casefold()
+    if target not in MACHINE_TABLE:
         raise ValueError(f"{target} is not a known machine.")
 
     # Location of the local universe script files
@@ -415,7 +509,7 @@ def annex_create(
         raise RuntimeError(f"Annex script dir {local_script_dir} not found or not a directory.")
 
     if queue_name is None:
-        queue_name = MACHINE_QUEUE_MAP[target]
+        queue_name = MACHINE_TABLE[target]["default_queue"]
         logger.debug(f"No queue name given, defaulting to {queue_name}")
 
     token_file = Path(token_file).expanduser()
@@ -456,7 +550,7 @@ def annex_create(
         "-o",
         f'ControlPath="{control_path}/master-%C"',
     ]
-    ssh_indirect_command = ["gsissh", target]
+    ssh_indirect_command = ["gsissh", MACHINE_TABLE[target]["gsissh_name"]]
 
     ##
     ## While we're requiring that jobs are submitted before creating the
@@ -505,7 +599,7 @@ def annex_create(
     )
     if rc != 0:
         raise RuntimeError(
-            f"Failed to make initial connection to {target}, aborting ({rc})."
+            f"Failed to make initial connection to {MACHINE_TABLE[target]['pretty_name']}, aborting ({rc}).\n\nIf the error message was 'Host key verication failed.', use the 'ssh' command above to run 'gsissh {MACHINE_TABLE[target]['gsissh_name']}' and type yes."
         )
 
     ##
@@ -528,7 +622,7 @@ def annex_create(
         )
     )
 
-    logger.info("Making remote temporary directory...")
+    logger.debug("Making remote temporary directory...")
     remote_script_dir = Path(
         make_remote_temporary_directory(
             logger,
@@ -537,8 +631,9 @@ def annex_create(
             ssh_indirect_command,
         )
     )
+    logger.debug(f"... made remote temporary directory {remote_script_dir} ...")
 
-    logger.info(f"Populating {remote_script_dir} ...")
+    logger.info(f"Populating remote temporary directory...")
     populate_remote_temporary_directory(
         logger,
         ssh_connection_sharing,
@@ -550,7 +645,7 @@ def annex_create(
         token_file,
         password_file,
     )
-    logger.debug("... transferring sif files ...")
+    logger.debug("... transferring container images ...")
     transfer_sif_files(
         logger,
         ssh_connection_sharing,
@@ -623,13 +718,15 @@ def annex_create(
     )
 
     try:
-        logger.debug(f"... submitting {submit_description}")
+        logger.debug(f"")
+        logger.debug(textwrap.indent(str(submit_description), "  "))
         submit_result = schedd.submit(submit_description)
     except Exception:
         raise RuntimeError(f"Failed to submit state-tracking job, aborting.")
 
     cluster_id = submit_result.cluster()
-    logger.info(f"... done, with cluster ID {cluster_id}.")
+    logger.info(f"... done.")
+    logger.debug(f"with cluster ID {cluster_id}.")
 
     results = schedd.query(
         f'ClusterID == {cluster_id} && ProcID == 0',
@@ -680,7 +777,7 @@ def annex_create(
                     schedd.edit(job_id, "TransferInput", "undefined")
 
     remotes = {}
-    logger.info(f"Submitting SLURM job on {target}:\n")
+    logger.info(f"Submitting SLURM job on {MACHINE_TABLE[target]['pretty_name']}:\n")
     rc = invoke_pilot_script(
         ssh_connection_sharing,
         ssh_target,
