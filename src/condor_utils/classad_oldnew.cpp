@@ -737,14 +737,14 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			std::string const &attr = itor->first;
 
 			// This logic is paralleled below when sending the attributes.
-			if (crypto_is_noop && !exclude_private && !exclude_prviate_v2 && !g_encryptPrivateAttrs) {
+			if (crypto_is_noop && !exclude_private && !exclude_private_v2 && !g_encryptPrivateAttrs) {
 				// If the channel is encrypted or we can't encrypt, and
 				// we're sending all attributes, and in-memory values aren't
 				// encrypted, then don't bother checking
 				// if any attributes are private.
 				numExprs++;
 			} else {
-				bool private_attr_v2 = ClassAdAttributeIsPrivateV2(attr));
+				bool private_attr_v2 = ClassAdAttributeIsPrivateV2(attr);
 				bool private_attr = private_attr_v2 || ClassAdAttributeIsPrivateV1(attr) ||
 					(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()));
 				if (private_attr) {
@@ -798,7 +798,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			// This parallels the logic above that counts the number of
 			// attributes to send, except that we skip checking for
 			// private attributes if we know there aren't any.
-			if ((crypto_is_noop && !exclude_private && !exclude_prviate_v2 && !g_encryptPrivateAttrs) || (private_count == 0)) {
+			if ((crypto_is_noop && !exclude_private && !exclude_private_v2 && !g_encryptPrivateAttrs) || (private_count == 0)) {
 				// We can send everything without special handling of
 				// private attributes for one of these reasons:
 				// 1) We're sending all attributes and either the channel
@@ -806,7 +806,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 				//    Also, no in-memory values are encrypted.
 				// 2) There are no private attributes to worry about.
 			} else {
-        bool private_attr_v2 = ClassAdAttributeIsPrivateV2(attr));
+				bool private_attr_v2 = ClassAdAttributeIsPrivateV2(attr);
 				bool private_attr = private_attr_v2 || ClassAdAttributeIsPrivateV1(attr) ||
 					(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()));
 				if ((exclude_private && private_attr) || (exclude_private_v2 && private_attr_v2)) {
