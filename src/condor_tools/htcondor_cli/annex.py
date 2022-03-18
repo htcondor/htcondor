@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 import getpass
 import argparse
+from collections import defaultdict
 
 import htcondor
 
@@ -11,12 +12,6 @@ from htcondor_cli.verb import Verb
 
 # Most of the annex create code is stored in a separate file.
 from htcondor_cli.annex_create import annex_create
-
-
-def bump(hash, key, number):
-    value = hash.get(key, 0)
-    value += number
-    hash[key] = value
 
 
 def increment(hash, key, subkey, subsubkey, number):
