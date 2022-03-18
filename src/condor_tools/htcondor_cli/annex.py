@@ -130,10 +130,6 @@ class Status(Verb):
         # to present aggregate information for each annex name.
         status = { job["hpc_annex_name"]: {} for job in annex_jobs }
 
-        # The 'status' dictionary stores information about each resource
-        # request.  This dictionary stores per-annex information.
-        annex_attrs = { job["hpc_annex_name"]: {} for job in annex_jobs }
-
         lifetimes = {}
         requested_machines = defaultdict(int)
         for job in annex_jobs:
@@ -164,12 +160,14 @@ class Status(Verb):
         constraint = f'{constraint} && AuthenticatedIdentity == "{getpass.getuser()}@annex.osgdev.chtc.io"'
         annex_slots = collector.query(constraint=constraint, ad_type=htcondor.AdTypes.Startd)
 
+        annex_attrs = {}
         for slot in annex_slots:
             annex_name = slot["AnnexName"]
             request_id = slot["hpc_annex_request_id"]
             if status.get(annex_name) is None:
                 status[annex_name] = {}
             status[annex_name][request_id] = defaultdict(int)
+            annex_attrs[annex_name] = {}
 
         for slot in annex_slots:
             annex_name = slot["AnnexName"]
@@ -264,24 +262,37 @@ class Status(Verb):
 
                 # When did the annex start, and how long does it have to run?
                 oldest_time = annex_attrs[annex_name]['first_birthday']
-                oldest_hours = int(lifetimes[annex_attrs[annex_name]['first_request_id']])
+                oldest_hours = lifetimes.get(annex_attrs[annex_name]['first_request_id'])
                 youngest_time = annex_attrs[annex_name]['last_birthday']
-                youngest_hours = int(lifetimes[annex_attrs[annex_name]['last_request_id']])
+                youngest_hours = lifetimes.get(annex_attrs[annex_name]['last_request_id'])
 
                 now = int(time.time())
                 print(
                     f"Its oldest machine activated about "
-                    f"{(now - oldest_time)/(60*60):.2f} hours ago "
-                    f"and will retire in "
-                    f"{((oldest_time + oldest_hours) - now)/(60*60):.2f} hours."
+                    f"{(now - oldest_time)/(60*60):.2f} hours ago",
+                    end=""
                 )
+                if oldest_hours is not None:
+                    print(
+                        f" and will retire in "
+                        f"{((oldest_time + int(oldest_hours)) - now)/(60*60):.2f} hours."
+                    )
+                else:
+                    print(".")
+
                 if annex_attrs[annex_name]['first_request_id'] != annex_attrs[annex_name]['last_request_id']:
                     print(
                         f"Its youngest active machine activated about "
-                        f"{(now - youngest_time)/(60*60):.2f} hours ago "
-                        f"and will retire in "
-                        f"{((youngest_time + oldest_hours) - now)/(60*60):.2f} hours."
+                        f"{(now - youngest_time)/(60*60):.2f} hours ago",
+                        end=""
                     )
+                    if youngest_hours is not None:
+                        print(
+                            f" and will retire in "
+                            f"{((youngest_time + int(youngest_hours)) - now)/(60*60):.2f} hours."
+                        )
+                    else:
+                        print(".")
             else:
                 print(f"Annex '{annex_name}' is not active.")
 
