@@ -1909,7 +1909,6 @@ Resource::wants_pckpt( void )
 			if( ! wantCheckpoint ) { return FALSE; }
 			} break;
 
-		case CONDOR_UNIVERSE_STANDARD:
 		case CONDOR_UNIVERSE_VM:
 			break;
 

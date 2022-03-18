@@ -4352,9 +4352,6 @@ findAvailTime( match_rec* mrec )
 			if( universe == CONDOR_UNIVERSE_VANILLA ) {
 				return now + 15;
 			}
-			if( universe == CONDOR_UNIVERSE_STANDARD ) {
-				return now + 120;
-			}
 			return now + 60;
 		} 
 

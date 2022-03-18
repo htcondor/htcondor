@@ -3716,7 +3716,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	int job_prio = 0;
 	ad->LookupInteger(ATTR_JOB_PRIO, job_prio);
 
-	int universe = CONDOR_UNIVERSE_STANDARD;
+	int universe = CONDOR_UNIVERSE_VANILLA;
 	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 
 	if( (universe == CONDOR_UNIVERSE_MPI) ||
@@ -5081,8 +5081,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
 	if( ( universe != CONDOR_UNIVERSE_SCHEDULER &&
-		  universe != CONDOR_UNIVERSE_LOCAL &&
-		  universe != CONDOR_UNIVERSE_STANDARD ) &&
+		  universe != CONDOR_UNIVERSE_LOCAL ) &&
 		( flags & SetAttribute_SetDirty ) && 
 		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( job ) ) ) ) {
 

@@ -32,8 +32,6 @@
 #define SUBMIT_CMD_AllowEnvironmentV1 "allow_environment_v1"
 #define SUBMIT_CMD_GetEnvironment "getenv"
 #define SUBMIT_CMD_GetEnvironmentAlt "get_env"
-#define SUBMIT_CMD_AllowStartupScript "allow_startup_script"
-#define SUBMIT_CMD_AllowStartupScriptAlt "AllowStartupScript"
 #define SUBMIT_CMD_SendCredential "send_credential"
 
 /*
@@ -47,7 +45,6 @@
 #define SUBMIT_KEY_Priority "priority"
 #define SUBMIT_KEY_Prio "prio"
 #define SUBMIT_KEY_Notification "notification"
-#define SUBMIT_KEY_WantRemoteIO "want_remote_io"
 #define SUBMIT_KEY_Executable "executable"
 #define SUBMIT_KEY_Description "description"
 #define SUBMIT_KEY_Arguments1 "arguments"

@@ -2977,7 +2977,7 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 		max_hosts = ((status == IDLE) ? 1 : 0);
 	}
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0) {
-		universe = CONDOR_UNIVERSE_STANDARD;
+		universe = CONDOR_UNIVERSE_VANILLA;
 	}
 
 	int request_cpus = 0;
@@ -3557,7 +3557,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 	// Mark the job clean
 	MarkJobClean(job_id);
 
-	int job_universe = CONDOR_UNIVERSE_STANDARD;
+	int job_universe = CONDOR_UNIVERSE_VANILLA;
 	job_ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
 
 
@@ -5199,7 +5199,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 				continue;
 			}
 
-			int universe = CONDOR_UNIVERSE_STANDARD;
+			int universe = CONDOR_UNIVERSE_VANILLA;
 			ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 			FreeJobAd(ad);
 
@@ -8622,7 +8622,7 @@ Scheduler::StartJob(match_rec *rec)
 }
 
 bool
-Scheduler::FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ)
+Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 {
 	ASSERT( mrec );
 
@@ -8638,13 +8638,6 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ)
 		return false;
 	}
 
-	if( !accept_std_univ && new_job_id.proc == -1 ) {
-		int new_universe = -1;
-		GetAttributeInt(new_job_id.cluster,new_job_id.proc,ATTR_JOB_UNIVERSE,&new_universe);
-		if( new_universe == CONDOR_UNIVERSE_STANDARD ) {
-			new_job_id.proc = -1;
-		}
-	}
 	if( new_job_id.proc == -1 ) {
 			// no more jobs to run
 		// AsyncXfer: If this match has a paired match that can start jobs,
@@ -10578,7 +10571,7 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 						current_time);
 	}
 
-	int job_univ = CONDOR_UNIVERSE_STANDARD;
+	int job_univ = CONDOR_UNIVERSE_VANILLA;
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &job_univ);
 
 
@@ -11259,7 +11252,7 @@ mark_job_running(PROC_ID* job_id)
 
 		// If this is a scheduler universe job, increment the
 		// job counter for the number of times it started executing.
-	int univ = CONDOR_UNIVERSE_STANDARD;
+	int univ = CONDOR_UNIVERSE_VANILLA;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE, &univ);
 	if (univ == CONDOR_UNIVERSE_SCHEDULER) {
 		int num;
@@ -11354,7 +11347,7 @@ mark_job_stopped(PROC_ID* job_id)
 		BeginTransaction();
 	}
 
-	int universe = CONDOR_UNIVERSE_STANDARD;
+	int universe = CONDOR_UNIVERSE_VANILLA;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
 					&universe);
 	int wantPS = 0;
@@ -11745,7 +11738,7 @@ IsLocalUniverse( shadow_rec* srec )
 void
 set_job_status(int cluster, int proc, int status)
 {
-	int universe = CONDOR_UNIVERSE_STANDARD;
+	int universe = CONDOR_UNIVERSE_VANILLA;
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
 
 	int wantPS = 0;
@@ -12051,8 +12044,6 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		//
 	bool is_badput = false;
 	bool is_goodput = false;
-	int universe = 0;
-	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_UNIVERSE, &universe);
 	int job_image_size = 0;
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_IMAGE_SIZE, &job_image_size);
 	int job_start_date = 0;
@@ -12135,12 +12126,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
                case JOB_SHOULD_REQUEUE:
                   stats.JobsShouldRequeue += 1;
                   OTHER.JobsShouldRequeue += 1;
-                  // for standard universe this is actually case JOB_NOT_CKPTED
-                  if (CONDOR_UNIVERSE_STANDARD == universe) {
-                     is_badput = true;
-                  } else {
-                     is_goodput = true;
-                  }
+                  is_goodput = true;
                   break;
                case JOB_NOT_STARTED:
                   stats.JobsNotStarted += 1;
@@ -15144,7 +15130,6 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 
 	job_is_suitable = false;
 	switch( universe ) {
-	case CONDOR_UNIVERSE_STANDARD:
 	case CONDOR_UNIVERSE_GRID:
 	case CONDOR_UNIVERSE_SCHEDULER:
 		break; // these universes not supported
@@ -16840,18 +16825,11 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		srec->exit_already_handled = true;
 	}
 
-		// The standard universe shadow never calls this function,
-		// and the shadow that does call this function is not capable of
-		// running standard universe jobs, so if the job we are trying
-		// to run next is standard universe, tell this shadow we are
-		// out of work.
-	const bool accept_std_univ = false;
-
 	if (mrec->keep_while_idle) {
 		mrec->idle_timer_deadline = time(NULL) + mrec->keep_while_idle;
 	}
 
-	if( !FindRunnableJobForClaim(mrec,accept_std_univ) ) {
+	if( !FindRunnableJobForClaim(mrec) ) {
 		dprintf(D_FULLDEBUG,
 			"No runnable jobs for shadow pid %d (was running job %d.%d); shadow will exit.\n",
 			shadow_pid, prev_job_id.cluster, prev_job_id.proc);

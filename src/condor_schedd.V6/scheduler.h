@@ -719,7 +719,7 @@ class Scheduler : public Service
 
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
-	bool            FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ=true);
+	bool            FindRunnableJobForClaim(match_rec* mrec);
 
 		// hashtable used to hold matching ClassAds for Globus Universe
 		// jobs which desire matchmaking.

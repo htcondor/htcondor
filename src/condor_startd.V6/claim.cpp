@@ -252,10 +252,6 @@ Claim::publish( ClassAd* cad )
 
 		int numJobPids = c_client->numPids();
 		
-		//In standard universe, numJobPids should be 1
-		if(c_universe == CONDOR_UNIVERSE_STANDARD) {
-			numJobPids = 1;
-		}
 		cad->Assign( ATTR_NUM_PIDS, numJobPids );
 
         if ((tmp = c_client->rmtgrp())) {
@@ -764,7 +760,7 @@ Claim::beginActivation( double now )
 
 	int univ;
 	if( c_jobad->LookupInteger(ATTR_JOB_UNIVERSE, univ) == 0 ) {
-		univ = CONDOR_UNIVERSE_STANDARD;
+		univ = CONDOR_UNIVERSE_VANILLA;
 		c_rip->dprintf( D_ALWAYS, "Default universe \"%s\" (%d) "
 						"since not in classad\n",
 						CondorUniverseName(univ), univ );
@@ -782,7 +778,6 @@ Claim::beginActivation( double now )
 			if( ! wantCheckpoint ) { break; }
 			//@fallthrough@
 		case CONDOR_UNIVERSE_VM:
-		case CONDOR_UNIVERSE_STANDARD:
 			c_last_pckpt = (int)now;
 		default:
 			break;
