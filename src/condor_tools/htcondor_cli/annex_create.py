@@ -494,7 +494,7 @@ def annex_create(
     # so even if it's wrong, it will at least consistently so.
     username = getpass.getuser()
 
-    target = target.lower()
+    target = target.casefold()
     if target not in MACHINE_TABLE:
         raise ValueError(f"{target} is not a known machine.")
 
