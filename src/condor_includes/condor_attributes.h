@@ -789,7 +789,6 @@
 #define ATTR_WANT_PARALLEL_SCHEDULING_GROUPS  "WantParallelSchedulingGroups"
 #define ATTR_WANT_CHECKPOINT_SIGNAL  "WantCheckpointSignal"
 #define ATTR_WANT_PSLOT_PREEMPTION  "WantPslotPreemption"
-#define ATTR_WANT_REMOTE_SYSCALLS  "WantRemoteSyscalls"
 #define ATTR_WANT_SCHEDD_COMPLETION_VISA  "WantCompletionVisaFromSchedD"
 #define ATTR_WANT_STARTER_EXECUTION_VISA  "WantExecutionVisaFromStarter"
 #define ATTR_WANT_AD_REVAULATE  "WantAdRevaluate"

@@ -79,7 +79,6 @@ SubmitEventNotes="ipso lorem"
 SubmitEventUserNotes="user ipso lorem"
 UserLog=/".*[0-9]+.log"/
 WantGracefulRemoval=true
-WantRemoteIO=false
 
 ==gpu.sub
 RequestGPUs=1
