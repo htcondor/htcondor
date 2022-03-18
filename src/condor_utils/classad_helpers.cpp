@@ -302,10 +302,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_MAX_HOSTS, 1 );
 	job_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
 
-	job_ad->Assign( ATTR_WANT_REMOTE_SYSCALLS, false );
-	job_ad->Assign( ATTR_WANT_CHECKPOINT, false );
-	job_ad->Assign( ATTR_WANT_REMOTE_IO, true );
-
 	job_ad->Assign( ATTR_JOB_STATUS, IDLE );
 	job_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
 

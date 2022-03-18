@@ -45,7 +45,6 @@ schedd_negotiate.cpp
 ScheddPluginManager.cpp
 schedd_stats.cpp
 schedd_td.cpp
-shadow_mgr.cpp
 tdman.cpp
 transfer_queue.cpp
 )

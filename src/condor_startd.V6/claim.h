@@ -253,8 +253,8 @@ public:
 	bool deactivateClaim( bool graceful );
 	bool suspendClaim( void );
 	bool resumeClaim( void );
-	bool starterKill( int sig ) const;
-	bool starterKillPg( int sig );
+	bool starterSignal( int sig ) const;
+	bool starterKillFamily();
 	bool starterKillSoft( bool state_change = false );
 	bool starterKillHard( void );
 	void starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft );

@@ -1305,7 +1305,6 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 	std::string resource;
 	switch(universe) {
 			// Known valid
-		case CONDOR_UNIVERSE_STANDARD:
 		case CONDOR_UNIVERSE_JAVA:
 		case CONDOR_UNIVERSE_VANILLA:
 			break;

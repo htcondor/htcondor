@@ -1824,6 +1824,7 @@ activate_claim( Resource* rip, Stream* stream )
 			 shadow_addr );
 
 		// Find out what version of the starter to use for the activation.
+		// This is now ignored, as there's only one starter.
 	if( ! stream->code( starter ) ) {
 		rip->dprintf( D_ALWAYS, "Can't read starter type from %s\n",
 				 shadow_addr );
@@ -1904,29 +1905,11 @@ activate_claim( Resource* rip, Stream* stream )
 		}
 	}
 
-		// now, try to satisfy the job.  while we're at it, we'll
-		// figure out what starter they want to use
-	Starter* tmp_starter;
-	bool no_starter = false;
-	tmp_starter = resmgr->starter_mgr.newStarter( req_classad,
-												   mach_classad,
-												   no_starter,
-												   starter );
+	Starter* tmp_starter = new Starter;
 
     if (has_cp) {
         cp_restore_requested(*req_classad, consumption);
     }
-
-	if( ! tmp_starter ) {
-		if( no_starter ) {
-			rip->dprintf( D_ALWAYS, "No valid starter found to run this job!  Is something wrong with your Condor installation?\n" );
-		}
-		else {
-			rip->dprintf( D_ALWAYS, "Job Requirements check failed!\n" );
-		}
-		refuse( stream );
-	    ABORT;
-	}
 
 		// If we're here, we've decided to activate the claim.  Tell
 		// the shadow we're ok.
@@ -1942,21 +1925,11 @@ activate_claim( Resource* rip, Stream* stream )
 		ABORT;
 	}
 
-		// if we're daemonCore, hold onto the sock the shadow used for
+		// hold onto the sock the shadow used for
 		// this command, and we'll use that for the shadow RSC sock.
 		// otherwise, if we're not windoze, setup our two ports, tell
 		// the shadow about them, and wait for it to connect.
-	Stream* shadow_sock = NULL;
-	if( tmp_starter->is_dc() ) {
-		shadow_sock = stream;
-	} 
-#ifndef WIN32
-	else {
-		rip->dprintf( D_ALWAYS, "Standard universe starter is not supported.\n" );
-		delete tmp_starter;
-		ABORT;
-	}
-#endif	// of ifdef WIN32
+	Stream* shadow_sock = stream;
 
 	ClassAd * overlay_ad = rip->r_cur->execution_overlay();
 	overlay_ad->Clear();

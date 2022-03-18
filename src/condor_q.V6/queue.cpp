@@ -1865,7 +1865,7 @@ render_remote_host (std::string & result, ClassAd *ad, Formatter &)
 	//static char unknownHost [] = "[????????????????]";
 	condor_sockaddr addr;
 
-	int universe = CONDOR_UNIVERSE_STANDARD;
+	int universe = CONDOR_UNIVERSE_VANILLA;
 	ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	if (((universe == CONDOR_UNIVERSE_SCHEDULER) || (universe == CONDOR_UNIVERSE_LOCAL)) &&
 		addr.from_sinful(scheddAddr) == true) {
@@ -2149,38 +2149,22 @@ render_buffer_io_misc (std::string & misc, ClassAd *ad, Formatter & /*fmt*/)
 {
 	misc.clear();
 
-	int univ = 0;
-	if ( ! ad->LookupInteger(ATTR_JOB_UNIVERSE,univ))
-		return false;
+	int ix = 0;
+	bool bb = false;
+	ad->LookupBool(ATTR_TRANSFERRING_INPUT, bb);
+	ix += bb?1:0;
 
-	if (univ==CONDOR_UNIVERSE_STANDARD) {
+	bb = false;
+	ad->LookupBool(ATTR_TRANSFERRING_OUTPUT,bb);
+	ix += bb?2:0;
 
-		double seek_count=0;
-		int buffer_size=0, block_size=0;
-		ad->LookupFloat(ATTR_FILE_SEEK_COUNT,seek_count);
-		ad->LookupInteger(ATTR_BUFFER_SIZE,buffer_size);
-		ad->LookupInteger(ATTR_BUFFER_BLOCK_SIZE,block_size);
+	bb = false;
+	ad->LookupBool(ATTR_TRANSFER_QUEUED,bb);
+	ix += bb?4:0;
 
-		formatstr(misc, " seeks=%d, buf=%d,%d", (int)seek_count, buffer_size, block_size);
-	} else {
-
-		int ix = 0;
-		bool bb = false;
-		ad->LookupBool(ATTR_TRANSFERRING_INPUT, bb);
-		ix += bb?1:0;
-
-		bb = false;
-		ad->LookupBool(ATTR_TRANSFERRING_OUTPUT,bb);
-		ix += bb?2:0;
-
-		bb = false;
-		ad->LookupBool(ATTR_TRANSFER_QUEUED,bb);
-		ix += bb?4:0;
-
-		if (ix) {
-			static const char * const ax[] = { "in", "out", "in,out", "queued", "in,queued", "out,queued", "in,out,queued" };
-			formatstr(misc, " transfer=%s", ax[ix-1]); 
-		}
+	if (ix) {
+		static const char * const ax[] = { "in", "out", "in,out", "queued", "in,queued", "out,queued", "in,out,queued" };
+		formatstr(misc, " transfer=%s", ax[ix-1]);
 	}
 
 	return true;
