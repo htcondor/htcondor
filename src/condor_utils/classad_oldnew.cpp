@@ -24,10 +24,21 @@
 #include "condor_attributes.h"
 #include "my_hostname.h"
 #include "string_list.h"
+#include "memory_seal.h"
 
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
 #include "compat_classad.h"
+
+namespace {
+
+bool g_encryptPrivateAttrs = false;
+
+}
+
+void setEncryptPrivateAttributes() {
+	g_encryptPrivateAttrs = true;
+}
 
 // local helper functions, options are one or more of PUT_CLASSAD_* flags
 int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options,
@@ -44,6 +55,39 @@ void AttrList_setPublishServerTime(bool publish)
 }
 
 static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
+
+// This is a version similar to InsertLongFormAttrValue currently in compat_classad.cpp
+// However, this logic cannot be embedded into that function due to linking issues - compat_classad.cpp
+// goes into a library that's not linked against libcrypto (which is needed for memory_seal).
+//
+bool InsertLongFormAttrValueEncrypted(classad::ClassAd & ad, const char * line, bool use_cache)
+{
+	std::string attr;
+	const char * rhs;
+	if ( ! SplitLongFormAttrValue(line, attr, rhs)) {
+		return false;
+	}
+
+	if (ClassAdAttributeIsPrivateAny(attr)) {
+		std::string encrypted_value;
+		if (!htcondor::memory_seal(rhs, encrypted_value)) {
+			return false;
+		}
+		return ad.InsertAttr(attr, encrypted_value);
+	}
+
+	if (use_cache) {
+		return ad.InsertViaCache(attr, rhs);
+	}
+
+	classad::ClassAdParser parser;
+	parser.SetOldClassAd(true);
+	ExprTree *tree = parser.ParseExpression(rhs);
+	if ( ! tree) {
+		return false;
+	}
+	return ad.Insert(attr, tree);
+}
 
 ClassAd *
 getClassAd( Stream *sock )
@@ -92,11 +136,13 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 				dprintf(D_FULLDEBUG, "Failed to read encrypted ClassAd expression.\n");
 				break;
 			}
-			inserted = InsertLongFormAttrValue(ad, secret_line, true);
+			inserted = g_encryptPrivateAttrs ? InsertLongFormAttrValueEncrypted(ad, secret_line, true) :
+				InsertLongFormAttrValue(ad, secret_line, true);
 			free( secret_line );
 		}
 		else {
-			inserted = InsertLongFormAttrValue(ad, strptr, true);
+			inserted = g_encryptPrivateAttrs ? InsertLongFormAttrValueEncrypted(ad, strptr, true) :
+				InsertLongFormAttrValue(ad, strptr, true);
 		}
 
 		// inserts expression at a time
@@ -288,13 +334,25 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 			dprintf(D_ALWAYS, "getClassAd FAILED to split%s %s\n", its_a_secret?" secret":"", strptr );
 			return false;
 		}
+		bool inserted = false;
+
+			// Don't parse a private attr; instead, we encrypt it and leave
+			// the parsing as an exercise to the caller.
+		if (g_encryptPrivateAttrs && ClassAdAttributeIsPrivateAny(attr)) {
+			std::string encrypted_expr;
+			if (!htcondor::memory_seal(rhs, encrypted_expr)) {
+				dprintf(D_ALWAYS, "getClassAdEx failed to encrypt private attribute %s.\n", attr.c_str());
+				return false;
+			}
+			inserted = ad.InsertAttr(attr, encrypted_expr);
+			continue;
+		}
 
 		// Fast tricks pre-parses the right hand side when it is detected as a simple literal
 		// this is faster than letting the classad parser parse it (as of 8.7.0) and also
 		// uses less memory than letting the classad cache see it since literal nodes are the same
 		// size as envelope nodes.
 		//
-		bool inserted = false;
 		IF_PROFILE_GETCLASSAD(int subtype = 0);
 		size_t cbrhs = cb - (rhs - strptr);
 		if (fast_tricks) {
@@ -628,6 +686,8 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 {
 	bool excludeTypes = (options & PUT_CLASSAD_NO_TYPES) == PUT_CLASSAD_NO_TYPES;
 	bool exclude_private = (options & PUT_CLASSAD_NO_PRIVATE) == PUT_CLASSAD_NO_PRIVATE;
+	auto *verinfo = sock->get_peer_version();
+	bool exclude_private_v2 = exclude_private || !verinfo || !verinfo->built_since_version(9, 8, 0);
 
 	classad::ClassAdUnParser	unp;
 	std::string					buf;
@@ -677,18 +737,20 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			std::string const &attr = itor->first;
 
 			// This logic is paralleled below when sending the attributes.
-			if (crypto_is_noop && !exclude_private) {
+			if (crypto_is_noop && !exclude_private && !exclude_private_v2 && !g_encryptPrivateAttrs) {
 				// If the channel is encrypted or we can't encrypt, and
-				// we're sending all attributes, then don't bother checking
+				// we're sending all attributes, and in-memory values aren't
+				// encrypted, then don't bother checking
 				// if any attributes are private.
 				numExprs++;
 			} else {
-				bool private_attr = ClassAdAttributeIsPrivate(attr) ||
+				bool private_attr_v2 = ClassAdAttributeIsPrivateV2(attr);
+				bool private_attr = private_attr_v2 || ClassAdAttributeIsPrivateV1(attr) ||
 					(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()));
 				if (private_attr) {
 					private_count++;
 				}
-				if (exclude_private && private_attr) {
+				if ((exclude_private && private_attr) || (exclude_private_v2 && private_attr_v2)) {
 					// This is a private attribute that should be excluded.
 					// Do not send it.
 					continue;
@@ -731,35 +793,59 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			classad::ExprTree const *expr = itor->second;
 
 			bool encrypt_it = false;
+      bool decrypt_memory = false;
 
 			// This parallels the logic above that counts the number of
 			// attributes to send, except that we skip checking for
 			// private attributes if we know there aren't any.
-			if ((crypto_is_noop && !exclude_private) || (private_count == 0)) {
+			if ((crypto_is_noop && !exclude_private && !exclude_private_v2 && !g_encryptPrivateAttrs) || (private_count == 0)) {
 				// We can send everything without special handling of
 				// private attributes for one of these reasons:
 				// 1) We're sending all attributes and either the channel
 				//    is already encrypted or can't be encrypted.
+				//    Also, no in-memory values are encrypted.
 				// 2) There are no private attributes to worry about.
 			} else {
-				bool private_attr = ClassAdAttributeIsPrivate(attr) ||
+				bool private_attr_v2 = ClassAdAttributeIsPrivateV2(attr);
+				bool private_attr = private_attr_v2 || ClassAdAttributeIsPrivateV1(attr) ||
 					(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()));
-				if (exclude_private && private_attr) {
+				if ((exclude_private && private_attr) || (exclude_private_v2 && private_attr_v2)) {
 					// This is a private attribute that should be excluded.
 					// Do not send it.
 					continue;
 				}
-				if (private_attr) {
+				if (private_attr && !crypto_is_noop) {
 					// This is a private attribute and the channel is
 					// currently unencrypted.
 					// Turn on encryption for just this attribute.
 					encrypt_it = true;
 				}
+				if (private_attr && g_encryptPrivateAttrs) {
+					// This is a private attribute whose in-memory value
+					// is encrypted.
+					// We'll need to decrypt it before sending.
+					decrypt_memory = true;
+				}
 			}
 
 			buf = attr;
 			buf += " = ";
-			unp.Unparse( buf, expr );
+			if ( decrypt_memory ) {
+				std::string encrypted_attribute;
+				classad::Value val;
+				if (!expr->Evaluate(val) || !val.IsStringValue(encrypted_attribute)) {
+					dprintf(D_ALWAYS, "Unable to evaluate encrypted attribute %s\n", attr.c_str());
+					return false;
+				}
+				std::vector<unsigned char> plaintext;
+				if (!htcondor::memory_unseal(encrypted_attribute, plaintext)) {
+					dprintf(D_ALWAYS, "Failed to decrypt attribute value.\n");
+					return false;
+				}
+				buf += std::string(reinterpret_cast<char*>(plaintext.data()), plaintext.size());
+			} else {
+				unp.Unparse( buf, expr );
+			}
 
 			if (encrypt_it) {
 				sock->put(SECRET_MARKER);
@@ -779,16 +865,20 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 {
 	bool excludeTypes = (options & PUT_CLASSAD_NO_TYPES) == PUT_CLASSAD_NO_TYPES;
 	bool exclude_private = (options & PUT_CLASSAD_NO_PRIVATE) == PUT_CLASSAD_NO_PRIVATE;
+	auto *verinfo = sock->get_peer_version();
+	bool exclude_private_v2 = exclude_private || !verinfo || !verinfo->built_since_version(9, 8, 0);
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
 
 	classad::References blacklist;
 	for (classad::References::const_iterator attr = whitelist.begin(); attr != whitelist.end(); ++attr) {
-		if ( ! ad.Lookup(*attr) || (exclude_private && (
-			ClassAdAttributeIsPrivate(*attr) ||
-			(encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end()))
-		))) {
+		if ( !ad.Lookup(*attr) ||
+			(exclude_private &&
+				(ClassAdAttributeIsPrivateV1(*attr) || (encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end())))
+			) ||
+			(exclude_private_v2 && ClassAdAttributeIsPrivateV2(*attr))
+		) {
 			blacklist.insert(*attr);
 		}
 	}
@@ -824,11 +914,30 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 
 		classad::ExprTree const *expr = ad.Lookup(*attr);
 		buf = *attr;
+
+		buf = *attr;
 		buf += " = ";
-		unp.Unparse( buf, expr );
+		bool is_private_attr = ClassAdAttributeIsPrivateAny(*attr);
+		if ( g_encryptPrivateAttrs && is_private_attr ) {
+			is_private_attr = true;
+			std::string encrypted_attribute;
+			classad::Value val;
+			if (!expr->Evaluate(val) || !val.IsStringValue(encrypted_attribute)) {
+				dprintf(D_ALWAYS, "Unable to evaluate encrypted attribute %s\n", attr->c_str());
+				return false;
+			}
+			std::vector<unsigned char> plaintext;
+			if (!htcondor::memory_unseal(encrypted_attribute, plaintext)) {
+				dprintf(D_ALWAYS, "Failed to decrypt attribute value.\n");
+				return false;
+			}
+			buf += std::string(reinterpret_cast<char*>(plaintext.data()), plaintext.size());
+		} else {
+			unp.Unparse( buf, expr );
+		}
 
 		if ( ! crypto_is_noop &&
-			(ClassAdAttributeIsPrivate(*attr) ||
+			(is_private_attr ||
 			(encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end())))
 		) {
 			if (!sock->put(SECRET_MARKER)) {
