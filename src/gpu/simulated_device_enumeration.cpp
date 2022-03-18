@@ -20,9 +20,6 @@
 #include "cuda_header_doc.h"
 #include "cuda_device_enumeration.h"
 
-int sim_index = 0;
-int sim_device_count = 0;
-
 //From Dumbo.
 //DetectedGPUs="GPU-c4a646d7, GPU-6a96bd13"
 //CUDACoresPerCU=64
@@ -153,26 +150,58 @@ static const struct _simulated_cuda_config aSimConfig[] = {
 };
 
 const int sim_index_max = (int)(sizeof(aSimConfig)/sizeof(aSimConfig[0]));
+bool sim_enable_mig = false;
+
+static std::vector<const struct _simulated_cuda_config *> sim_devices;
+bool setupSimulatedDevices(const char * args)
+{
+	if ( ! args) {
+		// if no args passed, use the first device as the default
+		sim_devices.push_back(&aSimConfig[0]);
+		return true;
+	}
+
+	// if the first arg is equal to the size of the device table, simulate one of each device
+	if (atoi(args) == sim_index_max) {
+		sim_enable_mig = true;
+		// one of each device
+		for (int dev = 0; dev < sim_index_max; ++dev)
+			sim_devices.push_back(&aSimConfig[dev]);
+		return true;
+	}
+
+	// args is a list of sim_index,count pairs
+	while (args && args[0]) {
+		char * endp = nullptr;
+		int ix = strtol(args, &endp, 10);
+		if (ix < 0 || ix > sim_index_max || endp==args) {
+			return false;
+		}
+		int count = 1;
+		if (endp && *endp == ',') {
+			args = endp + 1;
+			count = strtol(args, &endp, 10);
+		}
+		if (endp && *endp == ',') ++endp;
+		args = endp;
+		for (int dev = 0; dev < count; ++dev) {
+			sim_devices.push_back(&aSimConfig[ix]);
+		}
+		if (ix > 1) sim_enable_mig = true;
+	}
+
+	return true;
+}
 
 cudaError_t CUDACALL sim_cudaGetDeviceCount(int* pdevs) {
-	*pdevs = 0;
-	if (sim_index < 0 || sim_index > sim_index_max)
-		return cudaErrorInvalidValue;
-	if (sim_index == sim_index_max) { // simulate N one of each device
-		*pdevs = sim_index_max * (sim_device_count?sim_device_count:1);
-	} else if (sim_device_count) {
-		*pdevs = sim_device_count;
-	} else {
-		*pdevs = aSimConfig[sim_index].deviceCount;
-	}
+	*pdevs = (int)sim_devices.size();
 	return cudaSuccess;
 }
 
 cudaError_t CUDACALL sim_cudaDriverGetVersion(int* pver) {
-	if (sim_index < 0 || sim_index > sim_index_max)
+	if (sim_devices.empty())
 		return cudaErrorInvalidValue;
-	int ix = sim_index < sim_index_max ? sim_index : 0;
-	*pver = aSimConfig[ix].driverVer;
+	*pver = sim_devices[0]->driverVer;
 	return cudaSuccess; 
 }
 
@@ -184,20 +213,11 @@ static unsigned char* sim_makeuuid(int devID, unsigned int migID=0x34) {
 }
 
 cudaError_t CUDACALL sim_getBasicProps(int devID, BasicProps * p) {
-	if (sim_index < 0 || sim_index > sim_index_max)
+	if (sim_devices.empty())
 		return cudaErrorNoDevice;
-
-	const struct _simulated_cuda_device * dev;
-	if (sim_index == sim_index_max) { // simulate N one of each device
-		int iter = (sim_device_count ? sim_device_count : 1);
-		dev = aSimConfig[devID/iter].device;
-	} else {
-		int cDevs = sim_device_count ? sim_device_count : aSimConfig[sim_index].deviceCount;
-		if (devID < 0 || devID >= cDevs)
-			return cudaErrorInvalidDevice;
-		dev = aSimConfig[sim_index].device;
-	}
-
+	if (devID < 0 || devID >= (int)sim_devices.size())
+		return cudaErrorInvalidDevice;
+	const struct _simulated_cuda_device * dev = sim_devices[devID]->device;
 	p->name = dev->name;
 	p->setUUIDFromBuffer( sim_makeuuid(devID) );
 	sprintf(p->pciId, "0000:%02x:00.0", devID + 0x40);
@@ -233,9 +253,8 @@ inline unsigned int nvmldev_is_mig(nvmlDevice_t device) {
 
 nvmlReturn_t
 sim_nvmlDeviceGetHandleByIndex(unsigned int devID, nvmlDevice_t * pdev) {
-	if (devID < 0 || devID > (unsigned int)sim_index_max) {
+	if (devID > (unsigned int)sim_devices.size())
 		return NVML_ERROR_NOT_FOUND;
-	}
 	* pdev = sim_index_to_nvmldev(devID);
 	return NVML_SUCCESS;
 }
@@ -277,22 +296,10 @@ sim_nvmlDeviceGetCount (unsigned int * count) {
 static nvmlReturn_t sim_getconfig(nvmlDevice_t device, const struct _simulated_cuda_config *& config) {
 	config = nullptr;
 
-	int ix = sim_index; // assume all devices are of type sim_index
 	int devID = nvmldev_to_sim_index(device);
-	if (sim_index < 0 || sim_index > sim_index_max)
-		return NVML_ERROR_NOT_SUPPORTED;
-	if (sim_index == sim_index_max) { // simulating one of each device
-		ix = devID;
-	} else {
-		int cDevs = sim_device_count ? sim_device_count : aSimConfig[sim_index].deviceCount;
-		if (devID < 0 || devID >= cDevs)
-			return NVML_ERROR_NOT_FOUND;
-	}
-	// now ix is the index into the simulated devices table,
-	if (ix < 0 || ix >= sim_index_max) {
-		return NVML_ERROR_NOT_SUPPORTED;
-	}
-	config = &aSimConfig[ix];
+	if (devID < 0 || devID >= (int)sim_devices.size())
+		return NVML_ERROR_NOT_FOUND;
+	config = sim_devices[devID];
 	return NVML_SUCCESS;
 }
 
@@ -364,11 +371,11 @@ sim_nvmlDeviceGetUUID(nvmlDevice_t device, char *buf, unsigned int bufsize ) {
 }
 
 nvmlReturn_t
-sim_nvmlDeviceGetName(nvmlDevice_t device, char *buf, unsigned int bufsize) {
+sim_nvmlDeviceGetName(nvmlDevice_t device, char *buf, unsigned int /* bufsize */) {
 	const struct _simulated_cuda_config * config = nullptr;
 	nvmlReturn_t ret = sim_getconfig(device, config);
 	if (ret != NVML_SUCCESS) { return ret; }
-	int devID = nvmldev_to_sim_index(device);
+	/* int devID = */ nvmldev_to_sim_index(device);
 	if (nvmldev_is_mig(device)) {
 		// TODO: is driver 470 different than driver 450 ?
 		// strcpy(buf, config->device->name);
@@ -384,7 +391,7 @@ sim_nvmlDeviceGetMemoryInfo(nvmlDevice_t device, nvmlMemory_t * memory ) {
 	const struct _simulated_cuda_config * config = nullptr;
 	nvmlReturn_t ret = sim_getconfig(device, config);
 	if (ret != NVML_SUCCESS) { return ret; }
-	int devID = nvmldev_to_sim_index(device);
+	/* int devID = */ nvmldev_to_sim_index(device);
 	if (nvmldev_is_mig(device)) {
 		memory->total = config->mig->inst[nvmldev_to_mig_index(device)].memory * (size_t)(1024*1024);
 	} else {
@@ -396,11 +403,11 @@ sim_nvmlDeviceGetMemoryInfo(nvmlDevice_t device, nvmlMemory_t * memory ) {
 }
 
 nvmlReturn_t
-sim_nvmlDeviceGetEccMode( nvmlDevice_t device, nvmlEnableState_t* current, nvmlEnableState_t* pending ) {
+sim_nvmlDeviceGetEccMode( nvmlDevice_t device, nvmlEnableState_t* current, nvmlEnableState_t* /* pending */ ) {
 	const struct _simulated_cuda_config * config = nullptr;
 	nvmlReturn_t ret = sim_getconfig(device, config);
 	if (ret != NVML_SUCCESS) { return ret; }
-	int devID = nvmldev_to_sim_index(device);
+	/* int devID = */ nvmldev_to_sim_index(device);
 	int enabled = 0;
 	if (nvmldev_is_mig(device)) { // TODO: per MIG ecc?
 		enabled = config->device->ECCEnabled;
@@ -416,7 +423,7 @@ sim_nvmlDeviceGetMaxClockInfo( nvmlDevice_t device, nvmlClockType_t /*ct*/, unsi
 	const struct _simulated_cuda_config * config = nullptr;
 	nvmlReturn_t ret = sim_getconfig(device, config);
 	if (ret != NVML_SUCCESS) { return ret; }
-	int devID = nvmldev_to_sim_index(device);
+	/* int devID = */ nvmldev_to_sim_index(device);
 	int clockRate = 0;
 	if (nvmldev_is_mig(device)) { // TODO: per MIG ecc?
 		clockRate = config->device->clockRate;
@@ -428,6 +435,28 @@ sim_nvmlDeviceGetMaxClockInfo( nvmlDevice_t device, nvmlClockType_t /*ct*/, unsi
 	return NVML_SUCCESS;
 }
 
+const char * 
+sim_nvmlErrorString( nvmlReturn_t rt)
+{
+	switch (rt) {
+	case NVML_SUCCESS: return "The operation was successful";
+	case NVML_ERROR_UNINITIALIZED: return "NVML was not first initialized with nvmlInit()";
+	case NVML_ERROR_INVALID_ARGUMENT: return "A supplied argument is invalid";
+	case NVML_ERROR_NOT_SUPPORTED: return "The requested operation is not available on target device";
+	case NVML_ERROR_NO_PERMISSION: return "The current user does not have permission for operation";
+	case NVML_ERROR_ALREADY_INITIALIZED: return "Deprecated: Multiple initializations are now allowed through ref counting";
+	case NVML_ERROR_NOT_FOUND: return "A query to find an object was unsuccessful";
+	case NVML_ERROR_INSUFFICIENT_SIZE: return "An input argument is not large enough";
+	case NVML_ERROR_INSUFFICIENT_POWER: return "A device's external power cables are not properly attached";
+	case NVML_ERROR_DRIVER_NOT_LOADED: return "NVIDIA driver is not loaded";
+	case NVML_ERROR_TIMEOUT: return "User provided timeout passed";
+	case NVML_ERROR_IRQ_ISSUE: return "NVIDIA Kernel detected an interrupt issue with a GPU";
+	case NVML_ERROR_LIBRARY_NOT_FOUND: return "NVML Shared Library couldn't be found or loaded";
+	case NVML_ERROR_FUNCTION_NOT_FOUND: return "Local version of NVML doesn't implement this function";
+	case NVML_ERROR_CORRUPTED_INFOROM: return "infoROM is corrupted";
+	default: return "unknown";
+	}
+}
 
 void
 setSimulatedCUDAFunctionPointers() {
@@ -448,9 +477,10 @@ setSimulatedNVMLFunctionPointers() {
     nvmlDeviceGetHandleByUUID = sim_nvmlDeviceGetHandleByUUID;
     nvmlDeviceGetHandleByIndex = sim_nvmlDeviceGetHandleByIndex;
 	nvmlDeviceGetUUID = sim_nvmlDeviceGetUUID;
+	nvmlErrorString = sim_nvmlErrorString;
 
 	findNVMLDeviceHandle = sim_findNVMLDeviceHandle;
-	if (sim_index > 1) { // for later versions of the runtime, enable MIG
+	if (sim_enable_mig) { // for later versions of the runtime, enable MIG
 		nvmlDeviceGetCount = sim_nvmlDeviceGetCount;
 		nvmlDeviceGetName = sim_nvmlDeviceGetName;
 		nvmlDeviceGetMemoryInfo = sim_nvmlDeviceGetMemoryInfo;
@@ -459,5 +489,5 @@ setSimulatedNVMLFunctionPointers() {
 		nvmlDeviceGetMaxMigDeviceCount = sim_nvmlDeviceGetMaxMigDeviceCount;
 		nvmlDeviceGetMigDeviceHandleByIndex = sim_nvmlDeviceGetMigDeviceHandleByIndex;
 	}
-	return sim_index > 1;
+	return sim_enable_mig;
 }

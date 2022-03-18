@@ -36,17 +36,14 @@
 #include <stdio.h>
 #include <string.h>
 
-int main(int argc, char **argv);
 static int check_environment_variable(
 	char *variable_name,
 	char repeating_character);
 
-int main(int  argc, char ** argv)
+int main() /* Yes, this is legal in C */
 {
 	int  some_test_failed;
 
-	argc = argc;
-	argv = argv; /* turn off warnings */
 	some_test_failed = 0;
 
 	if (check_environment_variable("V1", '1')) some_test_failed = 1;

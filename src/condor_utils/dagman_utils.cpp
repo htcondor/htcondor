@@ -584,7 +584,7 @@ DagmanUtils::setUpOptions( SubmitDagDeepOptions &deepOpts,
 */
 bool
 DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bool useDagDir, 
-			MyString &configFile, std::list<std::string> &attrLines, MyString &errMsg )
+			std::string &configFile, std::list<std::string> &attrLines, MyString &errMsg )
 {
 	bool		result = true;
 		// Note: destructor will change back to original directory.
@@ -596,7 +596,7 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 			// Change to the DAG file's directory if necessary, and
 			// get the filename we need to use for it from that directory.
 			//
-		const char *	newDagFile;
+		std::string newDagFile;
 		if ( useDagDir ) {
 			std::string	tmpErrMsg;
 			if ( !dagDir.Cd2TmpDirFile( dagFile.c_str(), tmpErrMsg ) ) {
@@ -685,8 +685,8 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 			// been set yet, flagging an error if config files conflict.
 			//
 		for (auto & configfile_it : configFiles) {
-			MyString cfgFileMS = configfile_it.c_str();
-			MyString tmpErrMsg;
+			std::string cfgFileMS = configfile_it.c_str();
+			std::string tmpErrMsg;
 			if ( MakePathAbsolute( cfgFileMS, tmpErrMsg ) ) {
 				if ( configFile == "" ) {
 					configFile = cfgFileMS;
@@ -719,16 +719,16 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 
 /** Make the given path into an absolute path, if it is not already.
 	@param filePath: the path to make absolute (filePath is changed)
-	@param errMsg: a MyString to receive any error message.
+	@param errMsg: a std::string to receive any error message.
 	@return true if the operation succeeded; otherwise false
 */
 bool
-DagmanUtils::MakePathAbsolute(MyString &filePath, MyString &errMsg)
+DagmanUtils::MakePathAbsolute(std::string &filePath, std::string &errMsg)
 {
 	bool result = true;
 
 	if ( !fullpath( filePath.c_str() ) ) {
-		MyString currentDir;
+		std::string currentDir;
 		if ( !condor_getcwd( currentDir ) ) {
 			formatstr( errMsg, "condor_getcwd() failed with errno %d (%s) at %s:%d",
 					   errno, strerror(errno), __FILE__, __LINE__ );
@@ -789,7 +789,7 @@ DagmanUtils::FindLastRescueDagNum( const char *primaryDagFile, bool multiDags,
 	@param rescueDagNum The rescue DAG number
 	@return The full name of the rescue DAG
 */
-MyString
+std::string
 DagmanUtils::RescueDagName(const char *primaryDagFile, bool multiDags,
 			int rescueDagNum)
 {

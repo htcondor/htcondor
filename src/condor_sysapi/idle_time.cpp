@@ -18,36 +18,18 @@
  ***************************************************************/
 
 
-#ifdef Darwin
-/*
-  This is REALLY evil, but it works (for now).  Carbon.h defines a
-  bunch of stuff as enums that the regular system header files declare
-  with #define.  If you include all the system headers first and
-  *then* include Carbon.h, this enum crap creates header file parse
-  error madness on TCP_NODELAY (for example).  However, if you include
-  Carbon.h first, it all works, since Carbon.h does its own #define
-  and the system headers check #ifdef before they do their own
-  #define.  Even though it goes against everything else we say about
-  condor_common.h always being included first, for this 1 .C file
-  (since it's the only place we include Carbon.h), for this 1
-  platform, it seems that this is an easy work-around and this file
-  still compiles.  Derek <wright@cs.wisc.edu> 2005-09-11.
-*/
-#define dprintf dprintf_hide
-
-#include <mach/mach.h>
-#include <IOKit/IOKitLib.h>
-#include <IOKit/hid/IOHIDLib.h>
-#include <CoreFoundation/CoreFoundation.h>
-#include <Carbon/Carbon.h>
-#undef dprintf
-#endif
-
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "sysapi.h"
 #include "sysapi_externs.h"
+
+#if defined(DARWIN)
+#include <mach/mach.h>
+#include <IOKit/IOKitLib.h>
+#include <IOKit/hid/IOHIDLib.h>
+#include <CoreFoundation/CoreFoundation.h>
+#endif
 
 /* define some static functions */
 #if defined(WIN32)
@@ -780,8 +762,7 @@ extract_idle_time(
     CFMutableDictionaryRef  properties)
 {
     time_t    idle_time = -1;
-	UInt64  nanoseconds, billion, seconds_64, remainder;
-	UInt32  seconds;
+	int64_t nanoseconds;
     CFTypeRef object = CFDictionaryGetValue(properties, CFSTR(kIOHIDIdleTimeKey));
 	CFRetain(object);
  
@@ -807,11 +788,9 @@ extract_idle_time(
             dprintf(D_ALWAYS, "IDLE: Idle time didnt match CFDataGetTypeID.\n");
 			CFRelease(object);
 			return idle_time;
-		}	
-		billion = U64SetU(1000000000);
-		seconds_64 = U64Divide(nanoseconds, billion, &remainder);
-		seconds = U32SetU(seconds_64);
-		idle_time = seconds;
+		}
+		// Convert from nanoseconds to seconds
+		idle_time = nanoseconds / 1000000000;
     }
 	// CFRelease seems to be hip with taking a null object. This seems
 	// strange to me, but hey, at least I thought about it

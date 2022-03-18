@@ -1006,7 +1006,7 @@ main( int argc, char **argv ) {
         fprintf( stderr, "[general-opts] are:\n" );
         fprintf( stderr, "\t-diagnostic\t\tRun the plugin in diagnostic (verbose) mode\n\n" );
         fprintf( stderr, "\t-upload\t\tRun the plugin in upload mode, copying files to a remote location\n\n" );
-        return -1;
+        return (int)TransferPluginResult::Error;
     }
 
 	// Mainly for testing to not wait forever to see errors

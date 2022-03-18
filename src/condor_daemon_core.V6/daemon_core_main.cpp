@@ -2733,10 +2733,9 @@ int
 handle_invalidate_key(int, Stream* stream)
 {
 	int result = 0;
-	char *key_id = NULL;
+	std::string key_id;
 	std::string their_sinful;
-	char *info_ad_str;
-	ClassAd info_ad;
+	size_t id_end_idx;
 
 	stream->decode();
 	if ( ! stream->code(key_id) ) {
@@ -2745,29 +2744,33 @@ handle_invalidate_key(int, Stream* stream)
 	}
 
 	if ( ! stream->end_of_message() ) {
-		dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: unable to receive EOM on key %s.\n", key_id);
+		dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: unable to receive EOM on key %s.\n", key_id.c_str());
 		return FALSE;
 	}
 
-	info_ad_str = strchr(key_id, '\n');
-	if ( info_ad_str ) {
-		*info_ad_str = '\0';
-		info_ad_str++;
+	id_end_idx = key_id.find('\n');
+	if (id_end_idx != std::string::npos) {
+		ClassAd info_ad;
+		int info_ad_idx = id_end_idx + 1;
 		classad::ClassAdParser parser;
-		if (!parser.ParseClassAd(info_ad_str, info_ad, false)) {
+		if (!parser.ParseClassAd(key_id, info_ad, info_ad_idx)) {
 			dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: got unparseable classad\n");
 			return FALSE;
 		}
 		info_ad.LookupString(ATTR_SEC_CONNECT_SINFUL, their_sinful);
+		key_id.erase(id_end_idx);
 	}
 
-	result = daemonCore->getSecMan()->invalidateKey(key_id);
-	if ( !their_sinful.empty() && !strcmp(key_id, daemonCore->m_family_session_id.c_str()) ) {
-		dprintf(D_ALWAYS, "DC_INVALIDATE_KEY: The daemon at %s says it's not in the same family of Condor daemon processes as me.\n", their_sinful.c_str());
-		dprintf(D_ALWAYS, "  If that is in error, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
-		daemonCore->getSecMan()->m_not_my_family.insert(their_sinful);
+	if (key_id == daemonCore->m_family_session_id) {
+		dprintf(D_FULLDEBUG, "DC_INVALIDATE_KEY: Refusing to invalidate family session\n");
+		if (!their_sinful.empty()) {
+			dprintf(D_ALWAYS, "DC_INVALIDATE_KEY: The daemon at %s says it's not in the same family of Condor daemon processes as me.\n", their_sinful.c_str());
+			dprintf(D_ALWAYS, "  If that is in error, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
+			daemonCore->getSecMan()->m_not_my_family.insert(their_sinful);
+		}
+	} else {
+		result = daemonCore->getSecMan()->invalidateKey(key_id.c_str());
 	}
-	free(key_id);
 	return result;
 }
 

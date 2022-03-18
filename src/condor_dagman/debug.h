@@ -23,8 +23,6 @@
 
 #include "condor_header_features.h"
 
-class MyString;
-
 /** @name debug.h
     
     This debug module offers the user (or programmer) a way to dynamically
@@ -148,7 +146,7 @@ void debug_cache_enable(void);
 void debug_cache_start_caching(void);
 void debug_cache_stop_caching(void);
 void debug_cache_flush(void);
-void debug_cache_set_size(int size);
+void debug_cache_set_size(size_t size);
 
 /**
  * The level of strictness in turning warnings into fatal errors.
@@ -175,16 +173,16 @@ bool check_warning_strictness( strict_level_t strictness,
 /** Convert a timestamp into a string, formatted in the same way
     as HTCondor dprintf strings.
 	@param timestamp:  The timestamp to convert.
-	@param tstr:  A MyString to hold the resulting string.
+	@param tstr:  The resulting string.
 */
-void time_to_str( time_t timestamp, MyString &tstr );
+void time_to_str( time_t timestamp, std::string &tstr );
 
 /** Convert a timestamp into a string, formatted in the same way
     as HTCondor dprintf strings.
 	@param tm:  The tm to convert.
-	@param tstr:  A MyString to hold the resulting string.
+	@param tstr:  The resulting string.
 */
-void time_to_str( const struct tm *tm, MyString &tstr );
+void time_to_str( const struct tm *tm, std::string &tstr );
 
 #endif /* ifndef DAGMAN_DEBUG_H */
 

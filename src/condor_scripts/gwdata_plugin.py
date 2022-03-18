@@ -57,7 +57,7 @@ def parse_args():
     # <this> -outfile <output-filename> -infile <input-filename>
     if not len(sys.argv) in [2, 5, 6]:
         print_help()
-        sys.exit(-1)
+        sys.exit(1)
 
     # If -classad, print the capabilities of the plugin and exit early
     if (len(sys.argv) == 2) and (sys.argv[1] == '-classad'):
@@ -67,7 +67,7 @@ def parse_args():
     # Upload is not supported
     if '-upload' in sys.argv[1:]:
         print("Upload is not supported. You should not be seeing this.")
-        sys.exit(-1)
+        sys.exit(1)
 
     # -infile and -outfile must be in the first and third position
     if not (
@@ -77,7 +77,7 @@ def parse_args():
             (sys.argv[3] in ['-infile', '-outfile']) and
             (len(sys.argv) == 5)):
         print_help()
-        sys.exit(-1)
+        sys.exit(1)
     infile = None
     outfile = None
     try:
@@ -90,7 +90,7 @@ def parse_args():
                 outfile = sys.argv[i+1]
     except IndexError:
         print_help()
-        sys.exit(-1)
+        sys.exit(1)
 
     return {'infile': infile, 'outfile': outfile}
 
@@ -277,7 +277,7 @@ if __name__ == '__main__':
     try:
         args = parse_args()
     except Exception:
-        sys.exit(-1)
+        sys.exit(1)
 
     gwdata = GWDataPlugin()
 
@@ -292,7 +292,7 @@ if __name__ == '__main__':
                 outfile.write(str(classad.ClassAd(outfile_dict)))
         except Exception:
             pass
-        sys.exit(-1)
+        sys.exit(1)
     
     # Now iterate over the list of classads and perform the transfers.
     try:
@@ -305,7 +305,7 @@ if __name__ == '__main__':
                         outfile.write(str(classad.ClassAd(ad)))
 
                     if not transfer_success:
-                        sys.exit(-1)
+                        sys.exit(1)
 
                 except Exception as err:
                     print(err)
@@ -314,7 +314,7 @@ if __name__ == '__main__':
                         outfile.write(str(classad.ClassAd(outfile_dict)))
                     except Exception:
                         pass
-                    sys.exit(-1)
+                    sys.exit(1)
 
     except Exception:
-        sys.exit(-1)
+        sys.exit(1)

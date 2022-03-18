@@ -27,7 +27,7 @@ the owners of machines in the pool or the users of the pool.
 ''''''''''''''''''''''''''''
 
 Understanding the configuration requires an understanding of ClassAd
-expressions, which are detailed in the :doc:`/misc-concepts/classad-mechanism`
+expressions, which are detailed in the :doc:`/classads/classad-mechanism`
 section.
 :index:`condor_startd`
 
@@ -86,7 +86,7 @@ evaluates the expression against its own ClassAd. If an expression
 cannot be locally evaluated (because it references other expressions
 that are only found in a request ClassAd, such as ``Owner`` or
 ``Imagesize``), the expression is (usually) undefined. See
-theh :doc:`/misc-concepts/classad-mechanism` section for specifics on
+theh :doc:`/classads/classad-mechanism` section for specifics on
 how undefined terms are handled in ClassAd expression evaluation.
 
 A note of caution is in order when modifying the ``START`` expression to
@@ -1885,7 +1885,7 @@ Define slot types.
 
     .. code-block:: condor-config
 
-        MACHINE_RESOURCE_gpu = 16
+        MACHINE_RESOURCE_gpus = 16
         MACHINE_RESOURCE_actuator = 8
 
     If the configuration uses the optional configuration variable
@@ -1896,7 +1896,7 @@ Define slot types.
     .. code-block:: condor-config
 
         if defined MACHINE_RESOURCE_NAMES
-          MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) gpu actuator
+          MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) gpus actuator
         endif
 
     Local machine resource names defined in this way may now be used in
@@ -1909,13 +1909,13 @@ Define slot types.
 
         # declare one partitionable slot with half of the GPUs, 6 actuators, and
         # 50% of all other resources:
-        SLOT_TYPE_1 = gpu=50%,actuator=6,50%
+        SLOT_TYPE_1 = gpus=50%,actuator=6,50%
         SLOT_TYPE_1_PARTITIONABLE = TRUE
         NUM_SLOTS_TYPE_1 = 1
 
         # declare two static slots, each with 25% of the GPUs, 1 actuator, and
         # 25% of all other resources:
-        SLOT_TYPE_2 = gpu=25%,actuator=1,25%
+        SLOT_TYPE_2 = gpus=25%,actuator=1,25%
         SLOT_TYPE_2_PARTITIONABLE = FALSE
         NUM_SLOTS_TYPE_2 = 2
 
@@ -1930,7 +1930,7 @@ Define slot types.
         universe = vanilla
 
         # request two GPUs and one actuator:
-        request_gpu = 2
+        request_gpus = 2
         request_actuator = 1
 
         queue
@@ -1948,12 +1948,12 @@ Define slot types.
         ``<name>``: the amount of the resource identified by ``<name>``
         available to be used on this slot
 
-    From the example given, the ``gpu`` resource would be represented by
-    the ClassAd attributes ``TotalGpu``, ``DetectedGpu``,
-    ``TotalSlotGpu``, and ``Gpu``. In the job ClassAd, the amount of the
+    From the example given, the ``gpus`` resource would be represented by
+    the ClassAd attributes ``TotalGpus``, ``DetectedGpus``,
+    ``TotalSlotGpus``, and ``Gpus``. In the job ClassAd, the amount of the
     requested machine resource appears in a job ClassAd attribute named
     ``Request<name>``. For this example, the two attributes will be
-    ``RequestGpu`` and ``RequestActuator``.
+    ``RequestGpus`` and ``RequestActuator``.
 
     The number of each type being reported can be changed at run time,
     by issuing a reconfiguration command to the *condor_startd* daemon
@@ -2417,26 +2417,34 @@ If a job does not specify the required number of CPUs, amount of memory,
 or disk space, there are ways for the administrator to set default
 values for all of these parameters.
 
+:index:`JOB_DEFAULT_REQUESTCPUS`
+:index:`JOB_DEFAULT_REQUESTMEMORY`
+:index:`JOB_DEFAULT_REQUESTDISK`
 First, if any of these attributes are not set in the submit description
 file, there are three variables in the configuration file that
 condor_submit will use to fill in default values. These are
 
-    ``JOB_DEFAULT_REQUESTMEMORY``
-    :index:`JOB_DEFAULT_REQUESTMEMORY`
-    ``JOB_DEFAULT_REQUESTDISK`` :index:`JOB_DEFAULT_REQUESTDISK`
-    ``JOB_DEFAULT_REQUESTCPUS`` :index:`JOB_DEFAULT_REQUESTCPUS`
+-  ``JOB_DEFAULT_REQUESTCPUS``
+-  ``JOB_DEFAULT_REQUESTMEMORY``
+-  ``JOB_DEFAULT_REQUESTDISK``
 
 The value of these variables can be ClassAd expressions. The default
 values for these variables, should they not be set are
 
-    ``JOB_DEFAULT_REQUESTMEMORY`` =
-    ``ifThenElse(MemoryUsage =!= UNDEFINED, MemoryUsage, 1)``
-    ``JOB_DEFAULT_REQUESTCPUS`` = ``1``
-    ``JOB_DEFAULT_REQUESTDISK`` = ``DiskUsage``
+.. code-block:: condor-config
+
+    JOB_DEFAULT_REQUESTCPUS = 1
+    JOB_DEFAULT_REQUESTMEMORY = \
+        ifThenElse(MemoryUsage =!= UNDEFINED, MemoryUsage, 1)
+    JOB_DEFAULT_REQUESTDISK = DiskUsage
 
 Note that these default values are chosen such that jobs matched to
 partitionable slots function similar to static slots.
+These variables do not apply to **batch** grid universe jobs.
 
+:index:`MODIFY_REQUEST_EXPR_REQUESTCPUS`
+:index:`MODIFY_REQUEST_EXPR_REQUESTMEMORY`
+:index:`MODIFY_REQUEST_EXPR_REQUESTDISK`
 Once the job has been matched, and has made it to the execute machine,
 the *condor_startd* has the ability to modify these resource requests
 before using them to size the actual dynamic slots carved out of the
@@ -2449,9 +2457,11 @@ reuse the newly created slot when the initial job is done using it.
 The *condor_startd* configuration variables which control this and
 their defaults are
 
-    ``MODIFY_REQUEST_EXPR_REQUESTCPUS`` = ``quantize(RequestCpus, {1})`` :index:`MODIFY_REQUEST_EXPR_REQUESTCPUS`
-    ``MODIFY_REQUEST_EXPR_REQUESTMEMORY`` = ``quantize(RequestMemory, {128})`` :index:`MODIFY_REQUEST_EXPR_REQUESTMEMORY`
-    ``MODIFY_REQUEST_EXPR_REQUESTDISK`` = ``quantize(RequestDisk, {1024})`` :index:`MODIFY_REQUEST_EXPR_REQUESTDISK`
+.. code-block:: condor-config
+
+    MODIFY_REQUEST_EXPR_REQUESTCPUS = quantize(RequestCpus, {1})
+    MODIFY_REQUEST_EXPR_REQUESTMEMORY = quantize(RequestMemory, {128})
+    MODIFY_REQUEST_EXPR_REQUESTDISK = quantize(RequestDisk, {1024})
 
 condor_negotiator-Side Resource Consumption Policies
 ''''''''''''''''''''''''''''''''''''''''''''''''''''

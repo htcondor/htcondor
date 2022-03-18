@@ -329,7 +329,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		dprintf(D_FULLDEBUG,
 				"Partitionable slot %s adjusted for job %d.%d: "
 				"cpus = %ld, memory = %ld, disk = %ld\n",
-				slot_name, job_id.cluster, job_id.proc, cpus, memory, disk);
+				slot_name, job_id.cluster, job_id.proc, (long)cpus, (long)memory, (long)disk);
 	}
 
 	return result;

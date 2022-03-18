@@ -78,7 +78,9 @@
 #define SUBMIT_KEY_RequestMemory "request_memory"
 #define SUBMIT_KEY_RequestDisk "request_disk"
 #define SUBMIT_KEY_RequestGpus "request_gpus"
+#define SUBMIT_KEY_RequireGpus "require_gpus"
 #define SUBMIT_KEY_RequestPrefix "request_"
+#define SUBMIT_KEY_RequirePrefix "require_"
 
 #define SUBMIT_KEY_Universe "universe"
 #define SUBMIT_KEY_MachineCount "machine_count"
@@ -108,6 +110,7 @@
 #define SUBMIT_KEY_NordugridRSL "nordugrid_rsl"
 #define SUBMIT_KEY_ArcRSL "arc_rsl"
 #define SUBMIT_KEY_ArcRte "arc_rte"
+#define SUBMIT_KEY_ArcApplication "arc_application"
 #define SUBMIT_KEY_ArcResources "arc_resources"
 #define SUBMIT_KEY_RendezvousDir "rendezvousdir"
 #define SUBMIT_KEY_BatchExtraSubmitArgs "batch_extra_submit_args"
@@ -141,6 +144,7 @@
 #define SUBMIT_KEY_ShouldTransferFiles "should_transfer_files"
 #define SUBMIT_KEY_PreserveRelativePaths "preserve_relative_paths"
 #define SUBMIT_KEY_TransferCheckpointFiles "transfer_checkpoint_files"
+#define SUBMIT_KEY_TransferContainer "transfer_container"
 #define SUBMIT_KEY_TransferInputFiles "transfer_input_files"
 #define SUBMIT_KEY_TransferInputFilesAlt "TransferInputFiles"
 #define SUBMIT_KEY_TransferOutputFiles "transfer_output_files"
@@ -260,6 +264,7 @@
 #define SUBMIT_KEY_DockerImage "docker_image"
 #define SUBMIT_KEY_DockerNetworkType "docker_network_type"
 
+#define SUBMIT_KEY_ContainerImage "container_image"
 #define SUBMIT_KEY_ContainerServiceNames "container_service_names"
 #define SUBMIT_KEY_ContainerPortSuffix "_container_port"
 
@@ -350,6 +355,8 @@
 #define SUBMIT_KEY_NextJobStartDelay "next_job_start_delay"
 #define SUBMIT_KEY_WantGracefulRemoval "want_graceful_removal"
 #define SUBMIT_KEY_JobMaxVacateTime "job_max_vacate_time"
+#define SUBMIT_KEY_AllowedJobDuration "allowed_job_duration"
+#define SUBMIT_KEY_AllowedExecuteDuration "allowed_execute_duration"
 
 #define SUBMIT_KEY_JobMaterializeLimit "max_materialize"
 #define SUBMIT_KEY_JobMaterializeMaxIdle "max_idle"
@@ -652,6 +659,9 @@ public:
 	// and ads_error be set to describe any required but missing attributes in the request_ads
 	bool NeedsOAuthServices(std::string & services, ClassAdList * request_ads=NULL, std::string * ads_error=NULL) const;
 
+	// job needs the countMatches classad function to match
+	bool NeedsCountMatchesFunc() const { return HasRequireResAttr; };
+
 	MACRO_SET& macros() { return SubmitMacroSet; }
 	int getUniverse() const  { return JobUniverse; }
 	int getClusterId() const { return jid.cluster; }
@@ -662,6 +672,13 @@ public:
 	const char * getIWD();
 	const char * full_path(const char *name, bool use_iwd=true);
 	int check_and_universalize_path(MyString &path);
+
+	enum class ContainerImageType {
+		DockerRepo,
+		SIF,
+		SandboxImage,
+		Unknown
+	};
 
 protected:
 	MACRO_SET SubmitMacroSet;
@@ -707,6 +724,8 @@ protected:
 	int  JobUniverse;
 	bool JobIwdInitialized;
 	bool IsDockerJob;
+	bool IsContainerJob;
+	bool HasRequireResAttr;
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
 	bool SubmitOnHold;
 	int  SubmitOnHoldCode;
@@ -714,6 +733,8 @@ protected:
 	bool already_warned_requirements_mem;
 	bool already_warned_job_lease_too_small;
 	bool already_warned_notification_never;
+	bool already_warned_require_gpus;
+	bool UseDefaultResourceParams;
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
 	#if !defined(WIN32)
@@ -821,7 +842,7 @@ protected:
 	int do_simple_commands(const struct SimpleSubmitKeyword * cmdtable);
 	int build_oauth_service_ads(classad::References & services, ClassAdList & ads, std::string & error) const;
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
-	int query_universe(MyString & sub_type, bool & is_docker); // figure out universe, but DON'T modify the cached members
+	int query_universe(MyString & sub_type); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
 	void push_error(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
 	void push_warning(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
@@ -845,6 +866,9 @@ private:
 	  const YourStringNoCase & gt );      /* used by SetGridParams */
 
 	int process_vm_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
+	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
+
+	ContainerImageType image_type_from_string(const std::string &image) const;
 };
 
 struct SubmitStepFromQArgs {

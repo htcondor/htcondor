@@ -24,6 +24,7 @@ import logging
 import logging.handlers
 
 import htcondor
+import classad
 
 from pathlib import Path
 
@@ -89,7 +90,7 @@ def get_startds(args=None):
             for ad in name_ads:
                 try:
                     if ad["Name"][0:6] == "slot1@" or not ("@" in ad["Name"]):
-                        if args.startds and not (startd["Machine"] in args.startds.split(",")):
+                        if args.startds and not (ad["Machine"] in args.startds.split(",")):
                             continue
                         # Remote history bindings only exist in startds running 8.9.7+
                         version = tuple([int(x) for x in ad["CondorVersion"].split()[1].split(".")])
@@ -184,3 +185,29 @@ def collect_process_metadata():
     result["es_push_username"] = pwd.getpwuid(os.geteuid()).pw_name
     result["es_push_runtime"] = int(time.time())
     return result
+
+
+def parse_history_ad_file(adfile):
+    """
+    Generates one ClassAd at a time from adfile.
+    Necessary because classad.parseAds()
+    cannot handle files with "weird" ad separators
+    (e.g. "**** metadataA=foo metadata2=bar")
+    """
+    try:
+        with open(adfile) as f:
+            ad_string = ""
+            for line in f:
+                if line.startswith("***") or line.strip() == "":
+                    if ad_string == "":
+                        continue
+                    else:
+                        yield classad.parseOne(ad_string)
+                        ad_string = ""
+                ad_string += line
+    except IOError as e:
+        logging.error(f"Could not read {adfile}: {str(e)}")
+        return
+    except Exception:
+        logging.exception(f"Error while reading {adfile} ({str(e)}), displaying traceback.")
+        return

@@ -1,0 +1,121 @@
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+
+    <!ENTITY dhtitle "User Manuals">
+    <!ENTITY dhcommand "blah_job_registry_scan_by_subject">
+    <!ENTITY dhsection "1">
+    
+    <!ENTITY dhfirstname "Massimo">
+    <!ENTITY dhsurname "Mezzadri">
+    <!ENTITY dhemail "Massimo.Mezzadri@mi.infn.it">
+    <!ENTITY dhcontrib "Developer of the BLAHP suite">
+    
+]>
+
+
+
+<refentry>
+
+    <refentryinfo>
+        <title>&dhtitle;</title>
+        <productname>&dhcommand;</productname>
+        <authorgroup>
+            <author>
+                <firstname>&dhfirstname;</firstname>
+                <surname>&dhsurname;</surname>
+                <contrib>&dhcontrib;</contrib>
+                <address>
+                    <email>&dhemail;</email>
+                </address>
+            </author>
+        </authorgroup>
+    </refentryinfo>
+
+    <refmeta>
+        <refentrytitle>&dhcommand;</refentrytitle>
+        <manvolnum>&dhsection;</manvolnum>
+    </refmeta>
+
+    <refnamediv>
+        <refname>&dhcommand;</refname>
+        <refpurpose>Query the registry.</refpurpose>
+    </refnamediv>
+
+    <refsynopsisdiv>
+        <cmdsynopsis>
+            <command>&dhcommand;</command>
+            <arg choice="opt"><option>options</option></arg>
+        </cmdsynopsis>
+    </refsynopsisdiv>
+
+    <refsect1>
+    
+        <title>DESCRIPTION</title>
+        <para>The command <command>&dhcommand;</command> prints the content of the registry.</para>
+        
+        <para>With no options specified all the jobs contained in the registry are dumped.</para>
+                
+    </refsect1>
+
+    <refsect1>
+        <title>OPTIONS</title>
+        <variablelist>
+
+            <varlistentry>
+                <term><option>-h <replaceable>proxy subject hash</replaceable></option></term>
+                <listitem>
+                    <para>specify the proxy subject hash</para>
+                </listitem>
+            </varlistentry>
+
+            <varlistentry>
+                <term><option>-s <replaceable>proxy subject</replaceable></option></term>
+                <listitem>
+                    <para>specify the proxy subject</para>
+                </listitem>
+            </varlistentry>
+
+            <varlistentry>
+                <term><option>-j <replaceable>job status</replaceable></option></term>
+                <listitem>
+                    <para>specify the job status, available values are:
+                    <itemizedlist>
+                        <listitem><para>unexpanded (0)</para></listitem>
+                        <listitem><para>idle (1)</para></listitem>
+                        <listitem><para>running (2)</para></listitem>
+                        <listitem><para>removed (3)</para></listitem>
+                        <listitem><para>completed (4)</para></listitem>
+                        <listitem><para>held (5)</para></listitem>
+                    </itemizedlist>
+                    </para>
+                </listitem>
+            </varlistentry>
+            
+        </variablelist>
+    </refsect1>
+
+    <refsect1>
+        <title>EXIT STATUS</title>
+        <para><command>&dhcommand;</command> exits with a status value of 0 (zero) upon success and >0 (greater than zero) upon failure.</para>
+    </refsect1>
+
+    <refsect1>
+        <title>SEE ALSO</title>
+        <para>
+            <citerefentry>
+                <refentrytitle>blah_job_registry_add</refentrytitle>
+                <manvolnum>1</manvolnum>
+            </citerefentry>,
+            <citerefentry>
+                <refentrytitle>blah_job_registry_lkup</refentrytitle>
+                <manvolnum>1</manvolnum>
+            </citerefentry>
+            <citerefentry>
+                <refentrytitle>blah_job_registry_dump</refentrytitle>
+                <manvolnum>1</manvolnum>
+            </citerefentry>
+        </para>
+    </refsect1>
+
+</refentry>
+

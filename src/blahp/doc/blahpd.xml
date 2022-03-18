@@ -1,0 +1,106 @@
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+
+    <!ENTITY dhtitle "User Manuals">
+    <!ENTITY dhcommand "blahpd">
+    <!ENTITY dhsection "1">
+    
+    <!ENTITY dhfirstname "David">
+    <!ENTITY dhsurname "Rebatto">
+    <!ENTITY dhemail "David.Rebatto@mi.infn.it">
+    <!ENTITY dhcontrib "Developer of the BLAHP suite">
+    
+]>
+
+
+
+<refentry>
+
+    <refentryinfo>
+        <title>&dhtitle;</title>
+        <productname>&dhcommand;</productname>
+        <authorgroup>
+            <author>
+                <firstname>&dhfirstname;</firstname>
+                <surname>&dhsurname;</surname>
+                <contrib>&dhcontrib;</contrib>
+                <address>
+                    <email>&dhemail;</email>
+                </address>
+            </author>
+        </authorgroup>
+    </refentryinfo>
+
+    <refmeta>
+        <refentrytitle>&dhcommand;</refentrytitle>
+        <manvolnum>&dhsection;</manvolnum>
+    </refmeta>
+
+    <refnamediv>
+        <refname>&dhcommand;</refname>
+        <refpurpose>Blahpd daemon.</refpurpose>
+    </refnamediv>
+
+    <refsynopsisdiv>
+        <cmdsynopsis>
+            <command>&dhcommand;</command>
+            <arg choice="opt"><replaceable>-s</replaceable></arg>
+        </cmdsynopsis>
+    </refsynopsisdiv>
+
+    <refsect1>
+    
+        <title>DESCRIPTION</title>
+        <para><command>&dhcommand;</command> is the Batch Local ASCII Helper
+        Protocol (BLAHP) server. It exposes a BLAHP interface for job 
+        controllers like CREAM and Condor gridmanager.
+        <command>&dhcommand;</command> is not intended to be a job controller
+        itself. It can be regarded as a modular interface between job state
+        machines and LRMSs.</para>
+        
+        <para>For a description of the BLAH protocol commands, please see
+        <link>http://wiki.italiangrid.it/twiki/bin/view/CREAM/BlahUserGuide#BLAH_Commands_syntax_and_semanti</link>
+        </para>
+                
+    </refsect1>
+
+    <refsect1>
+        <title>OPTIONS</title>
+        <variablelist>
+            <varlistentry>
+                <term><option>-s</option></term>
+                <listitem>
+                    <para>on termination, let the daemon wait for all the 
+                    pending commands to terminate before exiting (off by 
+                    default)</para>
+                </listitem>
+            </varlistentry>
+        </variablelist>
+    </refsect1>
+
+    <refsect1>
+        <title>EXIT STATUS</title>
+        <para><command>&dhcommand;</command> exits with a status value of 0
+        (zero) upon success and >0 (greater than zero) upon failure.</para>
+    </refsect1>
+
+    <refsect1>
+        <title>SEE ALSO</title>
+        <para>
+            <citerefentry>
+                <refentrytitle>blah_job_registry_add</refentrytitle>
+                <manvolnum>1</manvolnum>
+            </citerefentry>,
+            <citerefentry>
+                <refentrytitle>blah_job_registry_dump</refentrytitle>
+                <manvolnum>1</manvolnum>
+            </citerefentry>,
+            <citerefentry>
+                <refentrytitle>blah_job_registry_scan_by_subject</refentrytitle>
+                <manvolnum>1</manvolnum>
+            </citerefentry>
+        </para>
+    </refsect1>
+
+</refentry>
+

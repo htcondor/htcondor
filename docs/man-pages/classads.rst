@@ -279,7 +279,7 @@ Specification
 -------------
 
 For use in HTCondor, including a complete list of functions, see
-https://htcondor.readthedocs.io/en/latest/misc-concepts/classad-mechanism.html.
+https://htcondor.readthedocs.io/en/latest/classads/classad-mechanism.html.
 
 For the language specification,
 see https://research.cs.wisc.edu/htcondor/classad/refman/.

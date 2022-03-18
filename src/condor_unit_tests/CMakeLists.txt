@@ -16,8 +16,40 @@
  # 
  ############################################################### 
 
-file(GLOB FTSrcs "FTEST_*.cpp")
-file(GLOB OTSrcs "OTEST_*.cpp")
+
+set( FTSrcs
+FTEST_basename.cpp
+FTEST_dirname.cpp
+FTEST_flatten_and_inline.cpp
+FTEST_fullpath.cpp
+FTEST_getHostFromAddr.cpp
+FTEST_getPortFromAddr.cpp
+FTEST_host_in_domain.cpp
+FTEST_is_valid_sinful.cpp
+FTEST_stl_string_utils.cpp
+FTEST_string_to_port.cpp
+FTEST_strlwr.cpp
+FTEST_strupr.cpp
+FTEST_tokener.cpp
+FTEST_your_string.cpp
+)
+set( OTSrcs
+OTEST_ArgList.cpp
+OTEST_condor_sockaddr.cpp
+OTEST_Directory.cpp
+OTEST_Env.cpp
+OTEST_FileLock.cpp
+OTEST_HashTable.cpp
+OTEST_Iso_Dates.cpp
+OTEST_MyString.cpp
+OTEST_Old_Classads.cpp
+OTEST_ranger.cpp
+OTEST_StatInfo.cpp
+OTEST_StringList.cpp
+OTEST_Timeslice.cpp
+OTEST_TmpDir.cpp
+OTEST_UserPolicy.cpp
+)
 
 # old style condor unit tests that all link into a single huge exe
 condor_exe_test(condor_unit_tests "${FTSrcs};${OTSrcs};emit.cpp;function_test_driver.cpp;unit_test_utils.cpp;unit_tests.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}")

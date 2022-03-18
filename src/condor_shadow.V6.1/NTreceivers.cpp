@@ -151,6 +151,7 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_utime: return "utime";
         case CONDOR_getcreds: return "getcreds";
         case CONDOR_get_delegated_proxy: return "get_delegated_proxy";
+        case CONDOR_event_notification: return "event_notification";
 	}
 	return "unknown";
 }
@@ -171,15 +172,6 @@ do_REMOTE_syscall()
 
 	rval = syscall_sock->code(condor_sysnum);
 	if (!rval) {
-		std::string err_msg;
-		err_msg = "Can no longer talk to condor_starter ";
-		err_msg += syscall_sock->get_sinful_peer();
-
-            // the socket is closed, there's no way to recover
-            // from this.  so, we have to cancel the socket
-            // handler in daemoncore and delete the relisock.
-		thisRemoteResource->closeClaimSock();
-
             /* It is possible that we are failing to read the
             syscall number because the starter went away
             because we *asked* it to go away. Don't be shocked
@@ -187,34 +179,18 @@ do_REMOTE_syscall()
             what we asked when we deactivated the claim.
             Or the starter went away by itself after telling us
             it's ready to do so (via a job_exit syscall). */
-       if ( thisRemoteResource->wasClaimDeactivated() ||
-            thisRemoteResource->gotJobExit() ) {
-           return -1;
-       }
-
-		if( Shadow->supportsReconnect() ) {
-				// instead of having to EXCEPT, we can now try to
-				// reconnect.  happy day! :)
-			dprintf( D_ALWAYS, "%s\n", err_msg.c_str() );
-
-			Shadow->resourceDisconnected(thisRemoteResource);
-
-			if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
-					dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
-					Shadow->gracefulShutDown();
-					EXCEPT( "%s", err_msg.c_str() );
-			}
-				// tell the shadow to start trying to reconnect
-			Shadow->reconnect();
-				// we need to return 0 so that our caller doesn't
-				// think the job exited and doesn't do anything to the
-				// syscall socket.
-			return 0;
-		} else {
-				// The remote starter doesn't support it, so give up
-				// like we always used to.
-			EXCEPT( "%s", err_msg.c_str() );
+		if ( thisRemoteResource->wasClaimDeactivated() ||
+		     thisRemoteResource->gotJobExit() ) {
+			thisRemoteResource->closeClaimSock();
+			return -1;
 		}
+
+		/* Tell the RemoteResource to close the socket and either
+		 * enter reconnect mode or EXCEPT (if reconnect isn't possible).
+		 */
+		thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");
+
+		return 0;
 	}
 
 	dprintf(D_SYSCALLS,
@@ -583,7 +559,7 @@ do_REMOTE_syscall()
 		errno = 0;
 		off_t new_position = lseek( fd , offset , whence);
 		terrno = (condor_errno_t)errno;
-		dprintf( D_SYSCALLS, "\trval = %ld, errno = %d\n", new_position, terrno );
+		dprintf( D_SYSCALLS, "\trval = %ld, errno = %d\n", (long)new_position, terrno );
 
 		syscall_sock->encode();
 		result = ( syscall_sock->code(new_position) );
@@ -2296,13 +2272,36 @@ case CONDOR_getdir:
 		return put_x509_rc;
 	}
 
+	case CONDOR_event_notification:
+	{
+		ClassAd eventAd;
+		result = getClassAd(syscall_sock, eventAd);
+		ASSERT(result);
+		result = syscall_sock->end_of_message();
+		ASSERT(result);
+
+		errno = 0;
+		rval = pseudo_event_notification(eventAd);
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		// We don't care about send in the result code, but it's any
+		// easy way to leave the protocol in the right state.
+		syscall_sock->encode();
+		result = syscall_sock->code(rval);
+		ASSERT( result );
+		result = syscall_sock->end_of_message();
+		ASSERT( result );
+
+		return 0;
+	}
+
 	default:
 	{
 		dprintf(D_ALWAYS, "ERROR: unknown syscall %d received\n", condor_sysnum );
 			// If we return failure, the shadow will shutdown, so
 			// pretend everything's cool...
 		return 0;
-		
 	}
 
 	}	/* End of switch on system call number */

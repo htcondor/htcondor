@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -48,7 +48,7 @@ ShadowUserPolicy::init( ClassAd *job_ad_ptr, BaseShadow *shadow_ptr )
 }
 
 int
-ShadowUserPolicy::getJobBirthday( ) 
+ShadowUserPolicy::getJobBirthday( )
 {
 	int bday = 0;
 	if ( this->job_ad ) {
@@ -58,7 +58,7 @@ ShadowUserPolicy::getJobBirthday( )
 }
 
 void
-ShadowUserPolicy::doAction( int action, bool is_periodic ) 
+ShadowUserPolicy::doAction( int action, bool is_periodic )
 {
 	std::string reason;
 	int reason_code;
@@ -96,8 +96,7 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 		break;
 
 	default:
-		EXCEPT( "Unknown action (%d) in ShadowUserPolicy::doAction", 
+		EXCEPT( "Unknown action (%d) in ShadowUserPolicy::doAction",
 				action );
 	}
 }
-

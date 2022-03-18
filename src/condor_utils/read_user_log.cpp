@@ -893,7 +893,7 @@ ReadUserLog::readEventWithLock (ULogEvent *& event, bool store_state, FileLockBa
 		// could check at object construction time if this file is on
 		// AFS (using statfs) and skip this system call if not.
 		struct stat statbuf;
-		int ignored = fstat(m_fd, &statbuf);
+		std::ignore = fstat(m_fd, &statbuf);
 	}
 
 	if ( !m_fp ) {

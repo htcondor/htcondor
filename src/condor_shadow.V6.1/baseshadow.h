@@ -248,7 +248,8 @@ class BaseShadow : public Service
 		*/
 	virtual float bytesReceived() { return 0.0; }
 
-	virtual void getFileTransferStats(int &upload_file_cnt, int &download_file_cnt) = 0;
+	virtual void getFileTransferStats(ClassAd &upload_file_stats, ClassAd &download_file_stats) = 0;
+	ClassAd* updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new_stats);
 	virtual void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status) = 0;
 
 	virtual int getExitReason( void ) = 0;
@@ -284,16 +285,6 @@ class BaseShadow : public Service
 		/** Update this job.
 		 */
 	int handleUpdateJobAd(int sig);
-
-		/** This is used to tack on something (like "res #") 
-			after the header and before the text of a dprintf
-			message.
-		*/
-	virtual void dprintf_va( int flags, const char* fmt, va_list args );
-
-		/** A local dprintf maker that uses dprintf_va...
-		 */
-	void dprintf( int flags, const char* fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
 
 		/// Returns the jobAd for this job
 	ClassAd *getJobAd() { return jobAd; }
@@ -462,6 +453,9 @@ class BaseShadow : public Service
 	void startdClaimedCB(DCMsgCallback *cb);
 	bool m_lazy_queue_update;
 
+	ClassAd m_prev_run_upload_file_stats;
+	ClassAd m_prev_run_download_file_stats;
+
  private:
 
 	// private methods
@@ -505,9 +499,6 @@ class BaseShadow : public Service
 		// Has CommittedTime in the job ad been updated to reflect
 		// job termination?
 	bool m_committed_time_finalized;
-
-	int m_prev_run_upload_file_cnt;
-	int m_prev_run_download_file_cnt;
 
 		// This makes this class un-copy-able:
 	BaseShadow( const BaseShadow& );

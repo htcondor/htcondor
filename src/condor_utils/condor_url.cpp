@@ -74,3 +74,25 @@ std::string getURLType( const char *url, bool scheme_suffix ) {
 	}
 	return scheme;
 }
+
+const char* UrlSafePrint(const std::string& in)
+{
+	const size_t buffer_sz = 2;
+	static size_t buffer_idx = 0;
+	static std::string buffer[buffer_sz];
+
+	buffer_idx = (buffer_idx + 1) % buffer_sz;
+	return UrlSafePrint(in, buffer[buffer_idx]);
+}
+
+const char* UrlSafePrint(const std::string& in, std::string& out)
+{
+	out = in;
+	if (IsUrl(in.c_str())) {
+		size_t question = out.find('?');
+		if (question != out.npos) {
+			out.replace(question, out.npos, "?...");
+		}
+	}
+	return out.c_str();
+}

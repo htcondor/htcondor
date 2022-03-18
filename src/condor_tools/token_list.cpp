@@ -48,7 +48,7 @@
 #define OPENSSL10
 #endif
 
-#if defined(__cpp_attributes) && !defined(__has_cpp_attribute)
+#if defined(__cpp_attributes) && !defined(__has_cpp_attribute) && !defined(WIN32)
 #undef __cpp_attributes
 #endif
 
@@ -77,10 +77,15 @@ GCC_DIAG_ON(cast-qual)
 
 namespace {
 
-void print_usage(const char *argv0) {
-	fprintf(stderr, "Usage: %s\n\n"
-		"Lists all the tokens available to the current user.\n", argv0);
-	exit(1);
+void print_usage(FILE* fp, const char *argv0) {
+	fprintf(fp, "Usage: %s [-dir PATH]\n"
+		"Lists the tokens available to the current user.\n"
+		"\noptions:\n"
+		"    -dir  <path>  Look in the given directory for tokens\n"
+		"    -help         print this message\n"
+		"\nIf no -dir agument is supplied, tokens are located by using the condor config files.\n"
+		"Ordinary users will use SEC_TOKEN_DIRECTORY or ~/tokens.d, The root user will use SEC_TOKEN_SYSTEM_DIRECTORY."
+		"\n", argv0);
 }
 
 bool printToken(const std::string &tokenfilename) {
@@ -94,7 +99,9 @@ bool printToken(const std::string &tokenfilename) {
 			tokenfilename.c_str(), errno, strerror(errno));
 		return false;
 	}
-    
+
+	int valid_tokens = 0;
+	int invalid_lines = 0;
 	for( std::string line; readLine( line, f, false ); ) {
 		trim(line);  // remove leading and trailing whitespace incl ending /r and /n
 		if (line.empty() || line[0] == '#') {
@@ -106,23 +113,33 @@ bool printToken(const std::string &tokenfilename) {
 			printf("Header: %s Payload: %s File: %s\n", decoded_jwt.get_header().c_str(),
 				decoded_jwt.get_payload().c_str(),
 				tokenfilename.c_str());
+			++valid_tokens;
 		} catch (...) {
-			dprintf(D_ALWAYS, "Failed to decode JWT in keyfile '%s'; ignoring.\n", tokenfilename.c_str());
+			++invalid_lines;
 		}
 #endif
+	}
+	if (invalid_lines) {
+		if (valid_tokens) {
+			dprintf(D_ALWAYS, "Failed to decode %d JWT lines in keyfile '%s'\n", invalid_lines, tokenfilename.c_str());
+		} else {
+			dprintf(D_FULLDEBUG, "file '%s' has no tokens\n", tokenfilename.c_str());
+		}
 	}
 	return true;
 }
 
 bool
-printAllTokens() {
-	std::string dirpath;
-	if (!param(dirpath, "SEC_TOKEN_DIRECTORY")) {
-		std::string file_location;
-		if (!find_user_file(file_location, "tokens.d", false, false)) {
-			param(dirpath, "SEC_TOKEN_SYSTEM_DIRECTORY");
-		} else {
-			dirpath = file_location;
+printAllTokens(const char * token_dir) {
+	std::string dirpath(token_dir?token_dir:"");
+	if (dirpath.empty()) {
+        if (!param(dirpath, "SEC_TOKEN_DIRECTORY")) {
+            std::string file_location;
+            if (!find_user_file(file_location, "tokens.d", false, false)) {
+                param(dirpath, "SEC_TOKEN_SYSTEM_DIRECTORY");
+            } else {
+                dirpath = file_location;
+			}
 		}
 	}
 	dprintf(D_FULLDEBUG, "Looking for tokens in directory %s\n", dirpath.c_str());
@@ -175,31 +192,40 @@ printAllTokens() {
 }
 
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
 #if !defined(HAVE_EXT_OPENSSL)
 	fprintf(stderr, "Cannot list tokens on HTCondor build without OpenSSL\n");
 	return 1;
 #else
 
+	const char * token_dir = nullptr;
+
 	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 
-        for (int i = 1; i < argc; i++) {
-		if(!strcmp(argv[i],"-debug")) {
+	for (int i = 1; i < argc; i++) {
+		if(is_dash_arg_prefix(argv[i],"debug",3)) {
 			// dprintf to console
 			dprintf_set_tool_debug("TOOL", 0);
 		} else if (is_dash_arg_prefix(argv[i], "help", 1)) {
-			print_usage(argv[0]);
-			exit(1);
+			print_usage(stdout, argv[0]);
+			exit(0);
+		} else if (is_dash_arg_prefix(argv[i], "dir", 1)) {
+			if (!argv[i+1]) {
+				fprintf(stderr, "%s: -dir requires path argument.\n", argv[0]);
+				print_usage(stderr, argv[0]);
+				exit(1);
+			}
+			token_dir = argv[++i];
 		} else {
 			fprintf(stderr, "%s: Invalid command line argument: %s\n", argv[0], argv[i]);
-			print_usage(argv[0]);
+			print_usage(stderr, argv[0]);
 			exit(1);
 		}
 	}
 
-	printAllTokens();
+	printAllTokens(token_dir);
 	return 0;
 #endif
 }

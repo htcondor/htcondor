@@ -60,7 +60,7 @@ RUN yum install -y \
 
 # Tools needed for building
 RUN yum install -y \
-    devtoolset-9-toolchain \
+    devtoolset-10-toolchain \
     make \
     patchelf \
     rpm-build \
@@ -141,6 +141,14 @@ RUN yum install -y \
     'which' \
     && yum clean all
 
+# blahp build dependencies
+RUN yum install -y \
+    'autoconf' \
+    'automake' \
+    'docbook-style-xsl' \
+    'libxslt' \
+    && yum clean all
+
 # Additional dependencies for OSG style build
 RUN yum install -y \
     globus-callout-devel \
@@ -173,5 +181,4 @@ RUN yum install -y \
 RUN pip3 install pytest pytest-httpserver
 
 # Enable daily repo to get latest packages for tarballs
-RUN yum-config-manager --enable htcondor-daily
-RUN yum list -y blahp
+RUN yum-config-manager --enable htcondor-daily && yum list -y blahp && yum clean all

@@ -103,8 +103,14 @@ int DockerProc::StartJob() {
 	Starter->SetJobEnvironmentReady(false);
 
 	if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageID ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE );
-		return FALSE;
+		if (! JobAd->LookupString(ATTR_CONTAINER_IMAGE, imageID)) {
+			dprintf( D_ALWAYS | D_FAILURE, "Neither %s nor %s defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE, ATTR_CONTAINER_IMAGE);
+			return FALSE;
+		}
+	}
+
+	if (starts_with(imageID, "docker://")) {
+		imageID = imageID.substr(9);
 	}
 
 	std::string command;
@@ -131,7 +137,7 @@ int DockerProc::StartJob() {
 	#endif
 #else
 	// TODO: make this work on Linux also
-	std::string innerdir = Starter->GetWorkingDir(true);
+	std::string innerdir = Starter->jic->jobRemoteIWD();
 #endif
 
 	//
@@ -210,9 +216,14 @@ int DockerProc::StartJob() {
 
 	std::list<std::string> extras;
 	std::string scratchDir = Starter->GetWorkingDir(0);
-		// if file xfer is off, need to also mount SCRATCH_DIR (= cwd)
-	if (scratchDir != sandboxPath) {
-		extras.push_back(scratchDir + ":" + scratchDir);
+
+	// map the scratch dir inside the container
+	extras.push_back(scratchDir + ":" + scratchDir);
+
+	// if file xfer is off, also map the iwd
+	std::string iwd = Starter->jic->jobRemoteIWD();
+	if (iwd != scratchDir) {
+		extras.push_back(iwd + ":" + iwd);
 	}
 
 	buildExtraVolumes(extras, *machineAd, *JobAd);
@@ -444,12 +455,6 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 		if( rv < 0 ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Failed to inspect (for removal) container '%s'.\n", containerName.c_str() );
-			std::string imageName;
-			if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageName ) ) {
-				dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad.\n", ATTR_DOCKER_IMAGE );
-				imageName = "Unknown"; // shouldn't ever happen
-			}
-
 			EXCEPT("Cannot inspect exited container");
 		}
 
@@ -541,6 +546,13 @@ bool DockerProc::JobReaper( int pid, int status ) {
 void
 DockerProc::SetupDockerSsh() {
 #ifdef LINUX
+	static bool first_time = true;
+	if (first_time) {
+		first_time = false;
+	} else {
+		return;
+	}
+
 	// First, create a unix domain socket that we can listen on
 	int uds = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (uds < 0) {
@@ -913,6 +925,18 @@ bool DockerProc::Version( std::string & version ) {
 	}
 
 	return foundVersion;
+}
+void 
+DockerProc::restartCheckpointedJob() {
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	CondorError error;
+	int rv = DockerAPI::rm( containerName, error );
+	if( rv < 0 ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container '%s' after checkpoint exit.\n", containerName.c_str() );
+		// Will fail later when we try to restart if it still exists.  If it doesn't :shrug: all good!
+	}
+
+	VanillaProc::restartCheckpointedJob();
 }
 
 // Generate a list of strings that are suitable arguments to

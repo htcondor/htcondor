@@ -39,16 +39,15 @@ int main()
 	SafeSock mySock;
 	int op, result;
 
-	char c, cont, *charString;
+	char c, cont;
 	int integer;
 	long lint;
 	short sint;
 	float f;
 	double d;
+	std::string charString;
 
 	config();
-
-	charString =  0;
 
 	cout << "(1) Server" << endl;
 	cout << "(2) Client" << endl;
@@ -118,7 +117,6 @@ int main()
 			}
 			cout << "Connected to [" << serverName<< ", " << SERVER_PORT << "]\n";
 			
-			charString = (char *) malloc(100);
 
 			while(true) {
 				mySock.encode();

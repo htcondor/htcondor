@@ -87,7 +87,7 @@ extern "C" {
 	int REMOTE_CONDOR_getcreds( const char *creds_receive_dir );
 	int REMOTE_CONDOR_get_delegated_proxy( const char* proxy_source_path, const char* proxy_dest_path, time_t proxy_expiration );
 
-    int REMOTE_CONDOR_get_sec_session_info(
+	int REMOTE_CONDOR_get_sec_session_info(
 		char const *starter_reconnect_session_info,
 		std::string &reconnect_session_id,
 		std::string &reconnect_session_info,
@@ -97,6 +97,8 @@ extern "C" {
 		std::string &filetrans_session_info,
 		std::string &filetrans_session_key);
 
+	// Why are these all C-linkage?
+	int REMOTE_CONDOR_event_notification(ClassAd * event);
 }
 
 #endif

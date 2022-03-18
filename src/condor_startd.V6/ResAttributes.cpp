@@ -23,6 +23,7 @@
 #include "my_popen.h"
 #include <math.h>
 #include "filesystem_remap.h"
+#include "classad_helpers.h" // for cleanStringForUseAsAttr
 
 #include <set>
 #include <algorithm>
@@ -632,6 +633,7 @@ bool MachAttributes::ReleaseDynamicDevId(const std::string & tag, const char * i
 	return false;
 }
 
+
 // log level for custom resource device id (e.g. CUDA0) management
 static int d_log_devids = D_FULLDEBUG;
 
@@ -812,19 +814,25 @@ bool MachAttributes::ComputeDevProps(
 		return false;
 	}
 
+	// TODO: move knobs out of this function
+	bool nested_props = param_boolean("USE_NESTED_CUSTOM_RESOURCE_PROPS", true);
+	bool verbose_nested_props = param_boolean("VERBOSE_NESTED_CUSTOM_RESOURCE_PROPS", nested_props);
+
+	// we begin by assuming that the device 0 props are common to all
 	auto ip = tagPropsIter->second.find(ids.front());
 	if (ip != tagPropsIter->second.end()) {
 		ad.Update(ip->second);
-		if (ids.size() == 1) return true;
+		if ( ! verbose_nested_props && ids.size() == 1) {
+			return true;
+		}
 	}
 
-	// we begin by assuming that the device 0 props are common to all
-	// and build a temporary map of common properties.
+	// build a temporary map of common properties using device 0 properties
 	// note that this map does not own the exprtrees it holds.
 	std::map<std::string, classad::ExprTree*, classad::CaseIgnLTStr> common;
 	for (auto & kvp : ip->second) { common[kvp.first] = kvp.second; }
 
-	// remove items from the common props map that are do not have the same value  for all devices
+	// remove items from the common props map that do not have the same value for all devices
 	// and build a map of property lists for the non-common properties. like the common list above
 	// this map does not own the exptrees it holds
 	std::map<std::string, std::vector<classad::ExprTree*>, classad::CaseIgnLTStr> props;
@@ -843,7 +851,8 @@ bool MachAttributes::ComputeDevProps(
 			if (it != ad1.end() && *it->second == *et->second) {
 				// it matches, so it may be a common attribute
 			} else {
-				// no match, remove from the common list, and add 
+				// no match, remove from the common list, and reserve space in the props vector
+				ad.Delete(et->first);
 				props[et->first].reserve(ids.size());
 				common.erase(et);
 			}
@@ -852,37 +861,77 @@ bool MachAttributes::ComputeDevProps(
 		if (common.empty()) break;
 	}
 
+	// to publish verbose nested props, we don't do any duplicate elimination of the nested props
+	// so just add a nested ad for each assigned id that is a full copy of
+	// the device props ad plus an attribute that is the id itself
+	if (verbose_nested_props) {
+		for (auto id : ids) {
+			auto ip = tagPropsIter->second.find(id);
+			if (ip == tagPropsIter->second.end()) {
+				continue;
+			}
+			ClassAd * props_ad = (ClassAd*)ip->second.Copy();
+			props_ad->Assign("Id", id);
+			std::string attr(id); 
+			cleanStringForUseAsAttr(attr, '_');
+			ad.Insert(attr, props_ad);
+		}
+		return true;
+	}
+
 	// at this point, the common props map has only props that are the same across all assigned devices
 	// and the props map has empty vectors for each of the non-common properties
-
-	// create list items for the non-common properties
+	// create list or nested ad items for the non-common properties
 	// and stuff them into the output classad
-	for (auto & propit : props) {
+	if (nested_props) {
 		for (auto id : ids) {
 			ip = tagPropsIter->second.find(id);
 			if (ip == tagPropsIter->second.end()) {
 				continue;
 			}
-			ClassAd & ad1 = ip->second;
-			auto it = ad1.find(propit.first);
-			if (it != ad1.end()) {
-				// copy the expr tree, which right now is a pointer into a m_machres_devProps_map ClassAd
-				// we will insert the copies into and exprList and insert that into the output ad
-				propit.second.push_back(it->second->Copy());
+			if ( ! props.empty()) {
+				ClassAd * props_ad = new ClassAd();
+				for (auto & propit : props) {
+					ClassAd & ad1 = ip->second;
+					auto it = ad1.find(propit.first);
+					if (it != ad1.end()) {
+						props_ad->Insert(propit.first, it->second->Copy());
+					}
+				}
+				if (props_ad->size() <= 0) {
+					delete props_ad;
+				} else {
+					std::string attr(id); 
+					cleanStringForUseAsAttr(attr, '_');
+					ad.Insert(attr, props_ad);
+				}
 			}
 		}
-		if (propit.second.empty()) {
-			ad.Delete(propit.first);
-		} else {
-			// this transfers ownership of the ExprTrees, which we created a copies of the 
-			// original properties for that purpose.
-			ad.Delete(propit.first);
-			attr = propit.first; attr += "List";
-			ad.Insert(attr, classad::ExprList::MakeExprList(propit.second));
+	} else {
+		for (auto & propit : props) {
+			for (auto id : ids) {
+				ip = tagPropsIter->second.find(id);
+				if (ip == tagPropsIter->second.end()) {
+					continue;
+				}
+				ClassAd & ad1 = ip->second;
+				auto it = ad1.find(propit.first);
+				if (it != ad1.end()) {
+					// copy the expr tree, which right now is a pointer into a m_machres_devProps_map ClassAd
+					// we will insert the copies into an exprList and insert that into the output ad
+					propit.second.push_back(it->second->Copy());
+				}
+			}
+			if ( ! propit.second.empty()) {
+				// this transfers ownership of the ExprTrees, which we created as copies of the 
+				// original properties for that purpose.
+				attr = propit.first; attr += "List";
+				ad.Insert(attr, classad::ExprList::MakeExprList(propit.second));
+			}
 		}
 	}
 
-	return false;
+	return true;
 }
 
 
@@ -1303,6 +1352,12 @@ MachAttributes::publish_static(ClassAd* cp)
 		free(dockerVolumes);
 	}
 
+	char *dockerNetworks = param("DOCKER_NETWORKS");
+	if (dockerNetworks) {
+		cp->Assign(ATTR_DOCKER_NETWORKS, dockerNetworks);
+		free(dockerNetworks);
+	}
+
 #ifdef WIN32
 	// window's strtok_s is the 'safe' version of strtok, it's not identical to linx's strtok_r, but it's close enough.
 #define strtok_r strtok_s
@@ -1340,12 +1395,16 @@ MachAttributes::publish_static(ClassAd* cp)
 		cp->Assign(ATTR_HAS_USER_NAMESPACES, true);
 	}
 #endif
+	// Temporary Hack until this is a fixed path
+	// the Starter will expand this magic string to the
+	// actual value
+	cp->Assign("CondorScratchDir", "#CoNdOrScRaTcHdIr#");
 }
 
 void
-MachAttributes::publish_dynamic( ClassAd* cp)
+MachAttributes::publish_dynamic(ClassAd* cp, int slot_id, int slot_subid)
 {
-	// things that need to be refrehsed periodially
+	// things that need to be refreshed periodially
 
 	// KFLOPS and MIPS are only conditionally computed; thus, only
 	// advertise them if we computed them.
@@ -1390,6 +1449,42 @@ MachAttributes::publish_dynamic( ClassAd* cp)
 		} else {
 			cp->Assign(attr, ids);
 		}
+	}
+
+	// publish "Available" custom resources and resource properties
+	// for use by the evalInEachContext matchmaking function
+	for (auto f(m_machres_devIds_map.begin()); f != m_machres_devIds_map.end(); ++f) {
+		const slotres_assigned_ids_t & ids(f->second);
+
+		std::string attr; attr.reserve(18);
+		std::string avail; avail.reserve(2 + (ids.size() * 18));
+		avail = "{";
+
+		auto o(m_machres_devIdOwners_map.find(f->first));
+		if (o != m_machres_devIdOwners_map.end() && slot_id >= 0 && o->second.size() >= ids.size()) {
+			const slotres_assigned_id_owners_t & owners(o->second);
+			for (size_t ix = 0; ix < ids.size(); ++ix) {
+				if (owners[ix].id != slot_id) continue; // does not belong to this slot or any d-slot under it
+				if (owners[ix].dyn_id != slot_subid) continue; // dyn_id is 0 when resource is Available in p-slot
+				attr = f->first; attr += "_";
+				attr += ids[ix];
+				cleanStringForUseAsAttr(attr, '_');
+				if (avail.size() > 1) { avail += ","; }
+				avail += attr;
+			}
+		} else {
+			for (auto str : ids) { 
+				attr = f->first; attr += "_";
+				attr += str;
+				cleanStringForUseAsAttr(attr, '_');
+				if (avail.size() > 1) { avail += ","; }
+				avail += attr;
+			}
+		}
+
+		avail += "}";
+		attr = "Available"; attr += f->first;
+		cp->AssignExpr(attr, avail.c_str());
 	}
 
 	cp->Assign( ATTR_TOTAL_VIRTUAL_MEMORY, m_virt_mem );
@@ -1560,18 +1655,18 @@ CpuAttributes::attach( Resource* res_ip )
 }
 
 
-void
-CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable resource ids to a slot
+bool
+CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id, bool abort_on_fail) // bind non-fungable resource ids to a slot
 {
 	if ( ! map)
-		return;
+		return true;
 
 	if (IsDebugCatAndVerbosity(d_log_devids)) {
 		std::string ids_dump;
 		if (rip) { // on startup this is called before this structure has been attached to a RIP
-			dprintf(d_log_devids, "bind_DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+			dprintf(d_log_devids, "bind DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
 		} else {
-			::dprintf(d_log_devids, "bind_DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+			::dprintf(d_log_devids, "bind DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
 		}
 	}
 
@@ -1588,7 +1683,7 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable re
 		slotres_constraint_map_t::const_iterator req(c_slotres_constraint_map.find(j->first));
 		if (req != c_slotres_constraint_map.end()) { request = req->second.c_str(); }
 
-		::dprintf(D_ALWAYS, "bind_DevIds tag=%s contraint=%s\n", j->first.c_str(), request ? request : "");
+		::dprintf(D_ALWAYS, "bind DevIds tag=%s contraint=%s\n", j->first.c_str(), request ? request : "");
 
 		slotres_devIds_map_t::const_iterator k(map->machres_devIds().find(j->first));
 		if (k != map->machres_devIds().end()) {
@@ -1598,12 +1693,16 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable re
 				if (id) {
 					++cAllocated;
 					c_slotres_ids_map[j->first].push_back(id);
-					::dprintf(d_log_devids, "bind_DevIds for slot%d.%d bound %s %d\n",
+					::dprintf(d_log_devids, "bind DevIds for slot%d.%d bound %s %d\n",
 						slot_id, slot_sub_id, id, (int)c_slotres_ids_map[j->first].size());
 				}
 			}
 			if (cAllocated < cAssigned) {
-				EXCEPT("Failed to bind local resource '%s'", j->first.c_str());
+				dprintf(D_ALWAYS | D_BACKTRACE, "Failed to bind local resource '%s'\n", j->first.c_str());
+				if (abort_on_fail) {
+					EXCEPT("Failed to bind local resource '%s'", j->first.c_str());
+				}
+				return false;
 			}
 			// if any ids were allocated, calculate the effective properties attributes for the assigned ids
 			// we *dont* want to execute this code if there are no allocated ids, because it has the side effect
@@ -1619,11 +1718,13 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable re
 	if (IsDebugCatAndVerbosity(d_log_devids)) {
 		std::string ids_dump;
 		if (rip) {
-			dprintf(d_log_devids, "bind_DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+			dprintf(d_log_devids, "bind DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
 		} else {
-			::dprintf(d_log_devids, "bind_DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+			::dprintf(d_log_devids, "bind DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
 		}
 	}
+
+	return true;
 }
 
 void
@@ -1633,7 +1734,7 @@ CpuAttributes::unbind_DevIds(int slot_id, int slot_sub_id) // release non-fungab
 
 	if (IsDebugCatAndVerbosity(d_log_devids)) {
 		std::string ids_dump;
-		dprintf(d_log_devids, "unbind_DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+		dprintf(d_log_devids, "unbind DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
 	}
 
 	if ( ! slot_sub_id) return;
@@ -1644,7 +1745,7 @@ CpuAttributes::unbind_DevIds(int slot_id, int slot_sub_id) // release non-fungab
 			slotres_assigned_ids_t & ids = c_slotres_ids_map[j->first];
 			while ( ! ids.empty()) {
 				bool released = map->ReleaseDynamicDevId(j->first, ids.back().c_str(), slot_id, slot_sub_id);
-				dprintf(released ? d_log_devids : D_ALWAYS, "ubind_DevIds for slot%d.%d unbind %s %d %s\n",
+				dprintf(released ? d_log_devids : D_ALWAYS, "ubind DevIds for slot%d.%d unbind %s %d %s\n",
 					slot_id, slot_sub_id, ids.back().c_str(), (int)ids.size(), released ? "OK" : "failed");
 				ids.pop_back();
 			}
@@ -1653,7 +1754,7 @@ CpuAttributes::unbind_DevIds(int slot_id, int slot_sub_id) // release non-fungab
 
 	if (IsDebugCatAndVerbosity(d_log_devids)) {
 		std::string ids_dump;
-		dprintf(d_log_devids, "unbind_DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+		dprintf(d_log_devids, "unbind DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
 	}
 }
 
@@ -1703,6 +1804,8 @@ CpuAttributes::publish_dynamic(ClassAd* cp) const
 void
 CpuAttributes::publish_static(ClassAd* cp)
 {
+		string ids;
+
 		cp->Assign( ATTR_MEMORY, c_phys_mem );
 		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, c_slot_mem );
 		cp->Assign( ATTR_TOTAL_SLOT_DISK, c_slot_disk );
@@ -1719,19 +1822,21 @@ CpuAttributes::publish_static(ClassAd* cp)
 
 		// publish local resource quantities for this slot
 		for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
-			cp->Assign(j->first, int(j->second));
+			cp->Assign(j->first, int(j->second));                    // example: set GPUs = 1
 			string attr = ATTR_TOTAL_SLOT_PREFIX; attr += j->first;
-			cp->Assign(attr, int(c_slottot_map[j->first]));
+			cp->Assign(attr, int(c_slottot_map[j->first]));          // example: set TotalSlotGPUs = 2
 			slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j->first));
 			if (k != c_slotres_ids_map.end()) {
+				ids.clear();
 				attr = "Assigned";
 				attr += j->first;
-				string ids;
-				join(k->second, ",", ids);
-				cp->Assign(attr, ids);
+				join(k->second, ",", ids);  // k->second is type slotres_assigned_ids_t which is vector<string>
+				cp->Assign(attr, ids);   // example: AssignedGPUs = "GPU-01abcdef,GPU-02bcdefa"
+			} else {
+				continue;
 			}
 
-			// publish properties off assigned local resources
+			// publish properties of assigned local resources
 			auto it = c_slotres_props_map.find(j->first);
 			if (it != c_slotres_props_map.end()) {
 				for (auto kvp : it->second) {
@@ -1739,6 +1844,7 @@ CpuAttributes::publish_static(ClassAd* cp)
 					cp->Insert(attr, kvp.second->Copy());
 				}
 			}
+
 		}
 }
 

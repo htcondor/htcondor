@@ -106,7 +106,7 @@ $failure = sub
 				CondorTest::debug("Saw recursive submit\n",1);
 				$passed2 = 1;
 			}
-			if(/Submit generated 2 job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting/){
+			if(/disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting/){
 				CondorTest::debug("$name: $_\n",1);
 				CondorTest::debug("Saw expected multi-job error message\n",1);
 				$passed3 = 1;

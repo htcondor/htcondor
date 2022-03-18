@@ -2662,5 +2662,39 @@ REMOTE_CONDOR_get_delegated_proxy( const char* proxy_source_path, const char* pr
 	return get_x509_rc;
 }
 
+int
+REMOTE_CONDOR_event_notification( ClassAd * event ) {
+	int result = 0, rval = -1;
+
+	dprintf( D_SYSCALLS, "Doing CONDOR_event_notification\n" );
+	CurrentSysCall = CONDOR_event_notification;
+
+	if(! event) {
+		EXCEPT( "CONDOR_event_notification called with NULL event!" );
+		return -1;
+	}
+
+	if(! syscall_sock->is_connected()) {
+		dprintf( D_ALWAYS, "RPC error: disconnected from shadow\n" );
+		errno = ETIMEDOUT;
+		return -1;
+	}
+
+	syscall_sock->encode();
+	result = syscall_sock->code(CurrentSysCall);
+	ON_ERROR_RETURN( result );
+	result = putClassAd(syscall_sock, *event);
+	ON_ERROR_RETURN( result );
+	result = syscall_sock->end_of_message();
+	ON_ERROR_RETURN( result );
+
+	syscall_sock->decode();
+	result = syscall_sock->code(rval);
+	ON_ERROR_RETURN( result );
+	result = syscall_sock->end_of_message();
+	ON_ERROR_RETURN( result );
+
+	return rval;
+}
 
 } // extern "C"

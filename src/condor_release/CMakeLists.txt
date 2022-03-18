@@ -17,7 +17,7 @@
  ############################################################### 
 
 
-if (NOT WINDOWS AND WANT_FULL_DEPLOYMENT)
+if (NOT WINDOWS)
 
 	install ( DIRECTORY examples
 			DESTINATION ${C_SHARE_EXAMPLES} )
@@ -25,4 +25,4 @@ if (NOT WINDOWS AND WANT_FULL_DEPLOYMENT)
 	install(FILES ../../LICENSE-2.0.txt ../../NOTICE.txt README
 			DESTINATION ${C_DOC})
 
-endif (NOT WINDOWS AND WANT_FULL_DEPLOYMENT)
+endif (NOT WINDOWS)

@@ -5,6 +5,7 @@ import subprocess
 import shlex
 import tempfile
 import time
+import getpass
 
 from datetime import datetime
 from pathlib import Path
@@ -14,22 +15,8 @@ import htcondor
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 from htcondor_cli.dagman import DAGMan
+from htcondor_cli import JobStatus
 from htcondor_cli import TMP_DIR
-
-
-# Must be consistent with job status definitions in
-# src/condor_includes/proc.h
-JobStatus = [
-    "NONE",
-    "IDLE",
-    "RUNNING",
-    "REMOVED",
-    "COMPLETED",
-    "HELD",
-    "TRANSFERRING_OUTPUT",
-    "SUSPENDED",
-    "JOB_STATUS_MAX"
-]
 
 
 class Submit(Verb):
@@ -55,6 +42,10 @@ class Submit(Verb):
             "args": ("--email",),
             "help": "Email address to receive notifications",
         },
+        "annex_name": {
+            "args": ("--annex-name",),
+            "help": "Annex name that this job must run on",
+        },
     }
 
     def __init__(self, logger, submit_file, **options):
@@ -76,6 +67,42 @@ class Submit(Verb):
                 submit_data = f.read()
             submit_description = htcondor.Submit(submit_data)
 
+            annex_name = options["annex_name"]
+            if annex_name is not None:
+                # Tag the job for use by `htcondor annex create` later.
+                submit_description["MY.TargetAnnexName"] = f'"{annex_name}"'
+
+                # Require that this job run only on the specified annex,
+                # whose name we'll verify by requiring that "the same"
+                # user requested the annex in question.
+                #
+                # We don't need to know what htcondor.Submit.queue() thinks
+                # what the Owner or Submitter of the job will be, because the
+                # AuthenticatedIdentity is determined by the tokens that we
+                # hand out.  We will hand them out in such a way that this
+                # code always gets the right answer.
+                username = getpass.getuser()
+                annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
+                my_identity = f'{username}@{annex_token_domain}'
+                # This looks awful, but AuthenticatedIdentity isn't set in
+                # the startd's copy of the ad.
+                annex_requirements = f'((ifthenelse(TARGET.AuthenticatedIdentity is undefined, true, "{my_identity}" == TARGET.AuthenticatedIdentity)) && (MY.TargetAnnexName == TARGET.AnnexName))'
+
+                # This is case-insensitive; checking `in keys()` is not.
+                requirements = submit_description.get("requirements", "")
+                if requirements == "":
+                    submit_description["requirements"] = annex_requirements
+                else:
+                    submit_description["requirements"] = f'({requirements}) && ({annex_requirements})'
+
+                # Setting this is SYSTEM_JOB_MACHINE_ATTRS doesn't work,
+                # but I don't have time to figure the problem out.
+                submit_description["job_machine_attrs"] = "AnnexName"
+
+                # Flock to the annex CM.
+                annex_collector = htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io")
+                submit_description["MY.FlockTo"] = f'"{annex_collector}"'
+
             # The Job class can only submit a single job at a time
             submit_qargs = submit_description.getQArgs()
             if submit_qargs != "" and submit_qargs != "1":
@@ -84,7 +111,10 @@ class Submit(Verb):
             with schedd.transaction() as txn:
                 try:
                     cluster_id = submit_description.queue(txn, 1)
-                    logger.info(f"Job {cluster_id} was submitted.")
+                    if annex_name is None:
+                        logger.info(f"Job {cluster_id} was submitted.")
+                    else:
+                        logger.info(f"Job {cluster_id} was submitted and will only run on the annex '{annex_name}'.")
                 except Exception as e:
                     raise RuntimeError(f"Error submitting job:\n{str(e)}")
 
@@ -96,7 +126,7 @@ class Submit(Verb):
             # Check if bosco is setup to provide Slurm access
             is_bosco_setup = False
             try:
-                check_bosco_cmd = "bosco_cluster --status hpclogin1.chtc.wisc.edu"
+                check_bosco_cmd = "condor_remote_cluster --status hpclogin1.chtc.wisc.edu"
                 logger.debug(f"Attempting to run: {check_bosco_cmd}")
                 subprocess.check_output(shlex.split(check_bosco_cmd))
                 is_bosco_setup = True
@@ -108,13 +138,13 @@ class Submit(Verb):
             if is_bosco_setup is False:
                 try:
                     logger.info(f"Please enter your Slurm account password when prompted.")
-                    setup_bosco_cmd = "bosco_cluster --add hpclogin1.chtc.wisc.edu slurm"
+                    setup_bosco_cmd = "condor_remote_cluster --add hpclogin1.chtc.wisc.edu slurm"
                     subprocess.check_output(shlex.split(setup_bosco_cmd), timeout=60)
                 except Exception as e:
                     logger.info(f"Failed to configure Slurm account access.")
                     logger.info(f"If you do not already have a CHTC Slurm account, please request this at htcondor-inf@cs.wisc.edu")
                     logger.info(f"\nYou can also try to configure your account manually using the following command:")
-                    logger.info(f"\nbosco_cluster --add hpclogin1.chtc.wisc.edu slurm\n")
+                    logger.info(f"\ncondor_remote_cluster --add hpclogin1.chtc.wisc.edu slurm\n")
                     raise RuntimeError(f"Unable to setup Slurm execution environment")
 
             Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
@@ -306,7 +336,7 @@ class Resources(Verb):
             try:
                 job = schedd.query(
                     constraint=f"ClusterId == {job_id}",
-                    projection=["RemoteHost"]
+                    projection=["RemoteHost","TargetAnnexName","MachineAttrAnnexName0"]
                 )
             except IndexError:
                 raise RuntimeError(f"No jobs found for ID {job_id}.")
@@ -320,7 +350,13 @@ class Resources(Verb):
                 job_host = job[0]["RemoteHost"]
             except KeyError:
                 raise RuntimeError(f"Job {job_id} is not running yet.")
-            logger.info(f"Job is using resource {job_host}")
+
+            target_annex = job[0].get("TargetAnnexName", None)
+            machine_annex = job[0].get("MachineAttrAnnexName0", None)
+            if target_annex is not None and machine_annex is not None and target_annex == machine_annex:
+                logger.info(f"Job is using annex '{target_annex}', resource {job_host}.")
+            else:
+                logger.info(f"Job is using resource {job_host}")
 
         # Jobs running on provisioned Slurm resources need to retrieve
         # additional information from the provisioning DAGMan log

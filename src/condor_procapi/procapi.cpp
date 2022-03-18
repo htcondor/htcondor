@@ -1907,8 +1907,94 @@ ProcAPI::initProcInfoRaw(procInfoRaw& procRaw){
  */
 
 #if !defined(Darwin) && !defined(CONDOR_FREEBSD)
+
+#include <fstream>
+
 int
 build_pid_list( std::vector<pid_t> & newPidList ) {
+	//
+	// If you mount /proc with the option hidepid=2, then PID 1 isn't
+	// necessarily listed in /proc.
+	//
+	// See condor_utils/filesystem_remap.cpp for details.
+	//
+	static bool hidepid = true;
+	static bool checked_proc_mountinfo = false;
+	if(! checked_proc_mountinfo) {
+		std::string line;
+		std::ifstream file("/proc/self/mountinfo");
+		if( file.good() ) {
+			while(! file.eof()) {
+				getline(file, line);
+				if(! file.good()) { break; }
+
+				std::string token;
+				std::istringstream is(line);
+				getline(is, token, ' '); // mount ID
+				getline(is, token, ' '); // parent ID
+				getline(is, token, ' '); // major:minor
+				getline(is, token, ' '); // root
+				getline(is, token, ' '); // mount point
+				std::string mount_point = token;
+				getline(is, token, ' '); // mount options
+
+				// Any number of optional fields followed by a '-'.
+				do {
+					getline(is, token, ' ');
+				} while( token != "-" );
+
+				getline(is, token, ' '); // filesystem type
+				getline(is, token, ' '); // mount source
+				getline(is, token, ' '); // per-superblock options
+				std::string ps_options = token;
+
+				bool found_proc = false;
+				bool found_hidepid = false;
+				if( mount_point == "/proc" ) {
+					found_proc = true;
+
+					std::string option;
+					std::istringstream psos(ps_options);
+					while(! psos.eof()) {
+						getline(psos, option, ',');
+						if(! psos.fail()) {
+							size_t pos = option.find("hidepid");
+							if( pos == 0 ) {
+								found_hidepid = true;
+								try {
+									std::string value = option.substr(7 + 1);
+									int v = std::stoi(value);
+									if( v <= 1 ) {
+										dprintf( D_ALWAYS, "Found per-superblock option hidepid <= 1 for /proc, enabling check for PID 1.\n" );
+										hidepid = false;
+										break;
+									}
+								}
+								catch( std::out_of_range & e ) { break; }
+								catch( std::invalid_argument & e ) { break; }
+							}
+						}
+					}
+
+					// The default mount option for hidepid is 0; indeed, if you
+					// explicitly specify hidepid=0 in the mount command, it
+					// won't appear in /proc/self/mountinfo.
+					if( found_proc && ! found_hidepid ) {
+						dprintf( D_ALWAYS, "/proc was mounted without hidepid, assuming default of 0.\n" );
+						hidepid = false;
+					}
+
+					// We found `proc`, we can quit reading now.
+					break;
+				}
+			}
+
+			file.close();
+		}
+
+		checked_proc_mountinfo = true;
+	}
+
 	pid_t my_pid = getpid();
 	pid_t my_ppid = getppid();
 
@@ -1954,7 +2040,7 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 
 	dprintf(D_FULLDEBUG, "ProcAPI: read %d pid entries out of %d total entries in /proc\n", pid_entries, total_entries);
 
-	if( saw_pid1 && saw_ppid && saw_pid ) {
+	if( (hidepid || saw_pid1) && saw_ppid && saw_pid ) {
 		return pid_entries;
 	} else {
 		return -3;

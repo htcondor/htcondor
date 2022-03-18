@@ -47,7 +47,7 @@ if [[ $dist == amzn2 ]]; then
 elif [[ $dist == el7 ]]; then
     arch_dist="${arch}_CentOS7"
 elif [[ $dist == el8 ]]; then
-    arch_dist="${arch}_CentOS8"
+    arch_dist="${arch}_Rocky8"
 elif [[ $dist == fc32 ]]; then
     arch_dist="${arch}_Fedora32"
 fi
@@ -61,13 +61,15 @@ mv condor_tests-* condor_tests-$version-$release-$arch_dist
 (cd condor_tests-$version-$release-$arch_dist; chmod a+x $(file $(find -type f)|grep 'executable'|sed -e s/:.*//))
 (cd condor_tests-$version-$release-$arch_dist; chmod a+x $(find -type f -name script\*))
 $cmd_dir/set-tarball-rpath condor_tests-$version-$release-$arch_dist '$ORIGIN/../lib64'
+if [ $? -ne 0 ];then
+    echo 'ERROR: set rpath script failed'
+    exit 1
+fi
 tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$release-$arch_dist
 rm -r condor_tests-$version-$release-$arch_dist
 
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
-
-uw_externals="blahp condor-boinc"
 
 common_externals="boost169-python3 \
     libcgroup \
@@ -83,11 +85,11 @@ if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
         python36-requests \
         python36-six \
         python36-urllib3"
-    externals="$common_externals $uw_externals $el7_externals"
-elif [[ $arch_dist =~ CentOS8 ]]; then
-    externals="$common_externals $uw_externals"
+    externals="$common_externals $el7_externals"
+elif [[ $arch_dist =~ Rocky8 ]]; then
+    externals="$common_externals"
 elif [[ $arch_dist =~ Fedora32 ]]; then
-    externals="$common_externals $uw_externals"
+    externals="$common_externals"
 fi
 
 mkdir external-packages
@@ -121,6 +123,10 @@ if [ $? -ne 0 ];then
     exit 1
 fi
 $cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64'
+if [ $? -ne 0 ];then
+    echo 'ERROR: set rpath script failed'
+    exit 1
+fi
 
 # Fixup directory permissions for the tarball
 chmod 755 tarball/etc/condor/passwords.d

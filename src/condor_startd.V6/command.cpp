@@ -1275,13 +1275,12 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		int num_preempting = 0;
 		if (stream->code(num_preempting) && num_preempting > 0) {
 			rip->dprintf(D_FULLDEBUG, "Schedd sending %d preempting claims.\n", num_preempting);
-			Resource **dslots = (Resource **)malloc(sizeof(Resource *) * num_preempting);
+			std::vector<Resource *> dslots(num_preempting);
 			for (int i = 0; i < num_preempting; i++) {
 				char *claim_id = NULL;
 				if (! stream->get_secret(claim_id)) {
 					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
 					free(claim_id);
-					free(dslots);
 					ABORT;
 				}
 				dslots[i] = resmgr->get_by_any_id( claim_id );
@@ -1290,13 +1289,11 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					dprintf( D_ALWAYS, 
 							 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
 					free( claim_id );
-					free(dslots);
 					ABORT;
 				}
 				free( claim_id );
 				if ( !dslots[i]->retirementExpired() ) {
 					dprintf( D_ALWAYS, "Error: slot %s still has retirement time, can't preempt immediately\n", dslots[i]->r_name );
-					free(dslots);
 					ABORT;
 				}
 			}
@@ -1338,7 +1335,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			if (parent) {
 				parent->refresh_classad_resources();
 			}
-			free( dslots );
 		}
 	} else {
 		rip->dprintf(D_FULLDEBUG, "Schedd using pre-v6.1.11 claim protocol\n");
@@ -1367,21 +1363,27 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rip->dprintf( D_FULLDEBUG,
 				  "Received ClaimId from schedd (%s)\n", idp.publicClaimId() );
 
+	bool has_cp = false;
+	consumption_map_t consumption;
 	Claim* leftover_claim = NULL; 
-	Resource * new_rip = initialize_resource(rip, req_classad, leftover_claim);
-	if( !new_rip ) {
-		refuse(stream);
-		ABORT;
+	if (rip->can_create_dslot()) {
+		Resource * new_rip = create_dslot(rip, req_classad, leftover_claim);
+		if ( ! new_rip) {
+			refuse(stream);
+			ABORT;
+		}
+
+		// we have to do the consumption policy stuff against the p-slot, not the new d-slot
+		has_cp = cp_supports_policy(*rip->r_classad);
+		if (has_cp) {
+			cp_override_requested(*req_classad, *rip->r_classad, consumption);
+		}
+
+		// we don't expect these to be the same, but technically if they are not then no d-slot was created.
+		if (new_rip != rip) { new_dynamic_slot = true; }
+		rip = new_rip;
 	}
 
-    consumption_map_t consumption;
-    bool has_cp = cp_supports_policy(*rip->r_classad);
-    if (has_cp) {
-        cp_override_requested(*req_classad, *rip->r_classad, consumption);
-    }
-
-	if( new_rip != rip) { new_dynamic_slot = true; }
-	rip = new_rip;
 
 		// Make sure we're willing to run this job at all.
 	if (!rip->willingToRun(req_classad)) {
@@ -1390,9 +1392,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		ABORT;
 	}
 
-    if (has_cp) {
-        cp_restore_requested(*req_classad, consumption);
-    }
+	if (has_cp) {
+		cp_restore_requested(*req_classad, consumption);
+	}
 
 		// Now, make sure it's got a high enough rank to preempt us.
 	rank = rip->compute_rank(req_classad);
@@ -1955,6 +1957,19 @@ activate_claim( Resource* rip, Stream* stream )
 		ABORT;
 	}
 #endif	// of ifdef WIN32
+
+	ClassAd * overlay_ad = rip->r_cur->execution_overlay();
+	overlay_ad->Clear();
+	overlay_ad->ChainToAd(req_classad);
+	resmgr->m_execution_xfm.transform(overlay_ad, nullptr);
+	overlay_ad->Unchain();
+	if (overlay_ad->size() > 0) {
+		if (IsDebugLevel(D_JOB)) {
+			std::string adbuf;
+			rip->dprintf(D_JOB, "EXECUTION_OVERLAY:\n%s", formatAd(adbuf, *overlay_ad, "\t"));
+		}
+		req_classad->Update(*overlay_ad);
+	}
 
 		// update the current rank on this claim
 	float rank = rip->compute_rank( req_classad );
@@ -2653,8 +2668,8 @@ command_coalesce_slots(int, Stream * stream ) {
 	CAResult result = CA_SUCCESS;
 
 	Resource * parent = NULL;
-	for( auto i = ucil.begin(); i != ucil.end(); ++i ) {
-		claimID = * i;
+	for(auto i : ucil) {
+		claimID = i;
 
 		// If a slot has been preempted, don't coalesce it.
 		Resource * r = resmgr->get_by_cur_id( claimID );
@@ -2753,8 +2768,8 @@ command_coalesce_slots(int, Stream * stream ) {
 	}
 
 	dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing slots...\n" );
-	for( auto i = ucil.begin(); i != ucil.end(); ++i ) {
-		claimID = * i;
+	for(auto i : ucil) {
+		claimID = i;
 
 		// If a slot has been preempted, don't coalesce it.
 		Resource * r = resmgr->get_by_cur_id( claimID );
@@ -2776,7 +2791,10 @@ command_coalesce_slots(int, Stream * stream ) {
 
 	Claim * leftoverClaim = NULL;
 	dprintf( D_ALWAYS, "command_coalesce_slots(): creating coalesced slot...\n" );
-	Resource * coalescedSlot = initialize_resource( parent, requestAd, leftoverClaim );
+	Resource * coalescedSlot = parent; // is it possible to get here when parent is a static slot?
+	if (parent->can_create_dslot()) {
+		coalescedSlot = create_dslot(parent, requestAd, leftoverClaim);
+	}
 	if( coalescedSlot == NULL ) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): unable to coalesce slots\n" );
 		delete requestAd;

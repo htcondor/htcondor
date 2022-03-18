@@ -786,6 +786,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     amount of memory. The HTCondor User's Manual contains complete
     information on the syntax and available attributes that can be used
     in the ClassAd expression.
+
     :index:`request_cpus<single: request_cpus; submit commands>`
 
  request_cpus = <num-cpus>
@@ -803,6 +804,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     For pools that enable dynamic *condor_startd* provisioning,
     specifies the minimum number of CPUs requested for this job,
     resulting in a dynamic slot being created with this many cores.
+
     :index:`request_disk<single: request_disk; submit commands>`
 
  request_disk = <quantity>
@@ -826,6 +828,45 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
     ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
     indicates TiB, 2\ :sup:`40` numbers of bytes.
+
+    :index:`request_gpus<single: request_gpus; submit commands>`
+
+ request_gpus = <num-gpus>
+    A requested number of GPUs. If not specified, no GPUs will be requested.
+    If specified and ``require_gpus`` is not also specified, the expression
+
+    .. code-block:: condor-classad-expr
+
+          && (Target.GPUs >= RequestGPUs)
+
+    is appended to the
+    **requirements** :index:`requirements<single: requirements; submit commands>`
+    expression for the job.
+
+    For pools that enable dynamic *condor_startd* provisioning,
+    specifies the minimum number of GPUs requested for this job,
+    resulting in a dynamic slot being created with this many GPUs.
+
+    :index:`request_gpus<single: request_gpus; submit commands>`
+
+ require_gpus = <constraint-expression>
+    A constraint on the properties of GPUs when used with a non-zero ``request_gpus`` value.
+    If not specified, no constraint on GPUs will be added to the job.
+    If specified and ``request_gpus`` is non-zero, the expression
+
+    .. code-block:: condor-classad-expr
+
+          && (countMatches(MY.RequireGPUs, TARGET.AvailableGPUs) >= RequestGPUs)
+
+    is appended to the
+    **requirements** :index:`requirements<single: requirements; submit commands>`
+    expression for the job.  This expression cannot be evaluated by HTCondor prior
+    to version 9.8.0. A warning to this will effect will be printed when *condor_submit* detects this condition.
+
+    For pools that enable dynamic *condor_startd* provisioning and are at least version 9.8.0,
+    the constraint will be tested against the properties of AvailbleGPUs and only those that match
+    will be assigned to the dynamic slot.
+
     :index:`request_memory<single: request_memory; submit commands>`
 
  request_memory = <quantity>
@@ -1333,11 +1374,12 @@ FILE TRANSFER COMMANDS
     :index:`transfer_plugins<single: transfer_plugins; submit commands>`
 
  transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
-    Specifies the file transfer plugins that should be transferred along with
+    Specifies the file transfer plugins
+    (see :ref:`admin-manual/setting-up-special-environments:enabling the transfer of files specified by a url`)
+    that should be transferred along with
     the input files prior to invoking file transfer plugins for files specified in
     *transfer_input_files*. *tag* should be a URL prefix that is used in *transfer_input_files*,
     and *plugin* is the path to a file transfer plugin that will handle that type of URL transfer.
-    Plugins transfered in this way must support the multi-file transfer plugin syntax.
     :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
 
  when_to_transfer_output = < ON_EXIT | ON_EXIT_OR_EVICT | ON_SUCCESS >
@@ -1404,6 +1446,23 @@ FILE TRANSFER COMMANDS
 
 POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
 
+ allowed_execute_duration = <integer>
+    The longest time for which a job may be executing.  Jobs which exceed
+    this duration will go on hold.  This time does not include file-transfer
+    time.  Jobs which self-checkpoint have this long to write out each
+    checkpoint.
+
+    This attribute is intended to help minimize the time wasted by jobs
+    which may erroneously run forever.
+
+ allowed_job_duration = <integer>
+    The longest time for which a job may continuously be in the running state.
+    Jobs which exceed this duration will go on hold.  Exiting the running
+    state resets the job duration used by this command.
+
+    This command is intended to help minimize the time wasted by jobs
+    which may erroneously run forever.
+
  max_retries = <integer>
     The maximum number of retries allowed for this job (must be
     non-negative). If the job fails (does not exit with the
@@ -1444,7 +1503,7 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     to 0 if not defined.
 
     **Note**: non-zero values of success_exit_code should generally not be
-    used for DAG node jobs, unless ``when_transfer_files`` is set to
+    used for DAG node jobs, unless ``when_to_transfer_output`` is set to
     ``ON_SUCCESS`` in order to avoid failed jobs going on hold.
 
     At the present time, *condor_dagman* does not take into
@@ -1692,8 +1751,15 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
     configuration macros.
 
-COMMANDS FOR THE GRID :index:`arc_resources<single: arc_resources; submit commands>`
+COMMANDS FOR THE GRID
 
+:index:`arc_application<single: arc_application; submit commands>`
+ arc_application = <XML-string>
+    For grid universe jobs of type **arc**, provides additional XML
+    attributes under the ``<Application>`` section of the ARC ADL job
+    description which are not covered by regular submit description file
+    parameters.
+    :index:`arc_resources<single: arc_resources; submit commands>`
  arc_resources = <XML-string>
     For grid universe jobs of type **arc**, provides additional XML
     attributes under the ``<Resources>`` section of the ARC ADL job
@@ -2277,11 +2343,13 @@ COMMANDS FOR THE DOCKER UNIVERSE
     Defines the name of the Docker image that is the basis for the
     docker container.
 
- docker_network_type = < host | none >
+ docker_network_type = < host | none | custom_admin_defined_value>
     If docker_network_type is set to the string host, then the job is run
     using the host's network. If docker_network_type is set to the string none,
     then the job is run with no network. If this is not set, each job gets
-    a private network interface.
+    a private network interface.  Some administrators may define
+    site specific docker networks on a given worker node.  When this
+    is the case, additional values may be valid here.
 
  container_service_names = <service-name>[, <service-name>]*
     A string- or comma- separated list of *service name*\s.
@@ -2915,6 +2983,18 @@ and comments.
 
     On the machine, if the attribute ``input_file_path`` is not defined,
     then the path ``/usr/foo`` is used instead.
+
+    As a special case that only works within the submit file *environement*
+    command, the string $$(CondorScratchDir) is expanded to the value
+    of the job's scratch directory.  This does not work for scheduler universe
+    or grid universe jobs.
+    
+    For example, to set PYTHONPATH to a subdirectory of the job scratch dir,
+    one could set
+
+    .. code-block:: text
+
+        environment = PYTHONPATH=$$(CondorScratchDir)/some/directory
 
     A further extension to the syntax of the substitution macro allows
     the evaluation of a ClassAd expression to define the value. In this

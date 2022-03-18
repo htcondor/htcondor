@@ -49,7 +49,7 @@ Here's the simplest possible configuration file.  It will force all
 jobs on this machine to run under Singularity, and to use an image
 that it located in the filesystem in the path ``/cvfms/cernvm-prod.cern.ch/cvm3``:
 
-.. code-block::
+.. code-block:: condor-config
 
       # Forces _all_ jobs to run inside singularity.
       SINGULARITY_JOB = true

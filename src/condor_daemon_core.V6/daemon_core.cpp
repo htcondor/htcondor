@@ -101,6 +101,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "daemon_command.h"
 #include "condor_sockfunc.h"
 #include "condor_auth_passwd.h"
+#include "exit.h"
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -3159,7 +3160,17 @@ DaemonCore::reconfig(void) {
 		free( ccb_addresses );
 
 		const bool blocking = true;
-		m_ccb_listeners->RegisterWithCCBServer(blocking);
+		int result = m_ccb_listeners->RegisterWithCCBServer(blocking);
+		if( result == 0 && m_ccb_listeners->size() > 0 ) {
+			bool use_shared_port = param_boolean( "USE_SHARED_PORT", true );
+			bool ccb_required = param_boolean( "CCB_REQUIRED_TO_START", false );
+			if( (!use_shared_port) && ccb_required ) {
+				dprintf( D_ALWAYS, "No CCB registration was successful, but CCB_REQUIRED_TO_START was true; exiting.\n" );
+				// This doesn't actually work if this is shared port daemon,
+				// but it's indicative.
+				DC_Exit(DAEMON_NO_RESTART);
+			}
+		}
 
 		// Drop a pool password if not already there; needed for PASSWORD and IDTOKENS security.
 		Condor_Auth_Passwd::create_pool_signing_key_if_needed();
@@ -7230,6 +7241,7 @@ int DaemonCore::Create_Process(
 		entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 		IpVerify* ipv = getSecMan()->getIpVerify();
 		std::string id = CONDOR_CHILD_FQU;
+		ipv->PunchHole(ADMINISTRATOR, id);
 		ipv->PunchHole(DAEMON, id);
 		ipv->PunchHole(CLIENT_PERM, id);
 
@@ -9168,6 +9180,7 @@ DaemonCore::Inherit( void )
 			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 			IpVerify* ipv = getSecMan()->getIpVerify();
 			std::string id = CONDOR_PARENT_FQU;
+			ipv->PunchHole(ADMINISTRATOR, id);
 			ipv->PunchHole(DAEMON, id);
 			ipv->PunchHole(CLIENT_PERM, id);
 		}
@@ -9224,6 +9237,7 @@ DaemonCore::Inherit( void )
 			ASSERT( rc && entry && entry->policy() );
 			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 			IpVerify* ipv = getSecMan()->getIpVerify();
+			ipv->PunchHole(ADMINISTRATOR, CONDOR_FAMILY_FQU);
 			ipv->PunchHole(DAEMON, CONDOR_FAMILY_FQU);
 			ipv->PunchHole(ADVERTISE_MASTER_PERM, CONDOR_FAMILY_FQU);
 			ipv->PunchHole(ADVERTISE_SCHEDD_PERM, CONDOR_FAMILY_FQU);

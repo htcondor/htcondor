@@ -36,6 +36,7 @@
 #include "claim.h"
 #include "starter_mgr.h"
 #include "vmuniverse_mgr.h"
+#include "ad_transforms.h"
 
 #if HAVE_HIBERNATION
 #  include "hibernation_manager.h"
@@ -263,6 +264,8 @@ public:
 	StarterMgr starter_mgr;
 
 	VMUniverseMgr m_vmuniverse_mgr;
+
+	AdTransforms m_execution_xfm;
 
 #if HAVE_BACKFILL
 	BackfillMgr* m_backfill_mgr;

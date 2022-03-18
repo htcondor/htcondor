@@ -731,6 +731,12 @@ type=bool
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_USE_DIRECT_SUBMIT]
+default=true
+type=bool
+tags=dagman,dagman_main
+restart=never
+
 [DAGMAN_REPORT_GRAPH_METRICS]
 default=false
 type=bool
@@ -5095,6 +5101,11 @@ description=Will master discard session keyring on startup
 review=toddt
 tags=ecryptfs,master
 restart=true
+
+[CONTAINER_SHARED_FS]
+default=/cvmfs
+type=string
+tags=submit
 
 [DOCKER]
 default=/usr/bin/docker

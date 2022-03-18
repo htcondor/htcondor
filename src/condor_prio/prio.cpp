@@ -155,11 +155,10 @@ main( int argc, char *argv[] )
 	}
 
 	// Open job queue
-	DaemonName = schedd.addr();
-	q = ConnectQ(DaemonName.c_str());
+	q = ConnectQ(schedd);
 	if( !q ) {
 		fprintf( stderr, "Failed to connect to queue manager %s\n", 
-				 DaemonName.c_str() );
+		         schedd.addr() );
 		exit(1);
 	}
 	for(i = 0; i < nArgs; i++)

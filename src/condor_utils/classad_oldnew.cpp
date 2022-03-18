@@ -708,6 +708,11 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 		haveChainedAd = true;
 	}
 
+	bool crypto_is_noop = sock->prepare_crypto_for_secret_is_noop();
+
+	// Remember whether the ad has any private attributes for the cases
+	// where we care (when selectively encrypting them or when excluding
+	// them).
 	int private_count = 0;
 	for(int pass = 0; pass < 2; pass++){
 
@@ -731,13 +736,25 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 		for(;itor != itor_end; itor++) {
 			std::string const &attr = itor->first;
 
-			if (exclude_private_v2 && ClassAdAttributeIsPrivateV2(attr)) {
-				private_count++;
-			} else if (exclude_private &&
-				(ClassAdAttributeIsPrivateV1(attr) || (encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
-			{
-				private_count++;
+			// This logic is paralleled below when sending the attributes.
+			if (crypto_is_noop && !exclude_private && !exclude_prviate_v2 && !g_encryptPrivateAttrs) {
+				// If the channel is encrypted or we can't encrypt, and
+				// we're sending all attributes, and in-memory values aren't
+				// encrypted, then don't bother checking
+				// if any attributes are private.
+				numExprs++;
 			} else {
+				bool private_attr_v2 = ClassAdAttributeIsPrivateV2(attr));
+				bool private_attr = private_attr_v2 || ClassAdAttributeIsPrivateV1(attr) ||
+					(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()));
+				if (private_attr) {
+					private_count++;
+				}
+				if ((exclude_private && private_attr) || (exclude_private_v2 && private_attr_v2)) {
+					// This is a private attribute that should be excluded.
+					// Do not send it.
+					continue;
+				}
 				numExprs++;
 			}
 		}
@@ -771,26 +788,49 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			itor_end = ad.end();
 		}
 
-		bool crypto_is_noop = sock->prepare_crypto_for_secret_is_noop();
 		for(;itor != itor_end; itor++) {
 			std::string const &attr = itor->first;
 			classad::ExprTree const *expr = itor->second;
 
-			if (exclude_private_v2 && ClassAdAttributeIsPrivateV2(attr)) {
-				continue;
-			}
+			bool encrypt_it = false;
+      bool decrypt_memory = false;
 
-			if(exclude_private && (ClassAdAttributeIsPrivateV1(attr) ||
-				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
-			{
-				continue;
+			// This parallels the logic above that counts the number of
+			// attributes to send, except that we skip checking for
+			// private attributes if we know there aren't any.
+			if ((crypto_is_noop && !exclude_private && !exclude_prviate_v2 && !g_encryptPrivateAttrs) || (private_count == 0)) {
+				// We can send everything without special handling of
+				// private attributes for one of these reasons:
+				// 1) We're sending all attributes and either the channel
+				//    is already encrypted or can't be encrypted.
+				//    Also, no in-memory values are encrypted.
+				// 2) There are no private attributes to worry about.
+			} else {
+        bool private_attr_v2 = ClassAdAttributeIsPrivateV2(attr));
+				bool private_attr = private_attr_v2 || ClassAdAttributeIsPrivateV1(attr) ||
+					(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()));
+				if ((exclude_private && private_attr) || (exclude_private_v2 && private_attr_v2)) {
+					// This is a private attribute that should be excluded.
+					// Do not send it.
+					continue;
+				}
+				if (private_attr && !crypto_is_noop) {
+					// This is a private attribute and the channel is
+					// currently unencrypted.
+					// Turn on encryption for just this attribute.
+					encrypt_it = true;
+				}
+				if (private_attr && g_encryptPrivateAttrs) {
+					// This is a private attribute whose in-memory value
+					// is encrypted.
+					// We'll need to decrypt it before sending.
+					decrypt_memory = true;
+				}
 			}
 
 			buf = attr;
 			buf += " = ";
-			bool is_private_attr = ClassAdAttributeIsPrivateAny(attr);
-			if ( g_encryptPrivateAttrs && is_private_attr ) {
-				is_private_attr = true;
+			if ( decrypt_memory ) {
 				std::string encrypted_attribute;
 				classad::Value val;
 				if (!expr->Evaluate(val) || !val.IsStringValue(encrypted_attribute)) {
@@ -807,10 +847,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 				unp.Unparse( buf, expr );
 			}
 
-			if( ! crypto_is_noop && private_count &&
-				(is_private_attr ||
-				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))) )
-			{
+			if (encrypt_it) {
 				sock->put(SECRET_MARKER);
 
 				sock->put_secret(buf.c_str());

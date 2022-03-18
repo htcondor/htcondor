@@ -11,7 +11,9 @@
 # want to test the pieces individually, you'll have to change the code.
 #
 
+import pytest 
 import logging
+import time
 
 import htcondor
 
@@ -140,6 +142,16 @@ def condor(test_dir, slot_config):
         local_dir=test_dir / "condor",
         config={**slot_config, "TEST_DIR": test_dir.as_posix()},
     ) as condor:
+
+        # Ornithology will run condor_who to verify that all the daemons are running,
+        # but occasionally, not all slots will have made it to the collector
+
+        num_slots = int(slot_config["NUM_SLOTS"])
+        loop_count = 0
+        while num_slots != len(condor.status(ad_type=htcondor.AdTypes.Startd, projection=["SlotID"])):
+            loop_count = loop_count + 1
+            assert(loop_count < 20)
+            time.sleep(1)
         yield condor
 
 

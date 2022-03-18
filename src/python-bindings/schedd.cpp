@@ -2144,7 +2144,7 @@ struct Schedd {
 
 
     // TODO: allow user to specify flags.
-    boost::shared_ptr<EditResult> edit(object job_spec, std::string attr, object val)
+    boost::shared_ptr<EditResult> edit(object job_spec, std::string attr, object val, SetAttributeFlags_t flags=0)
     {
         int match_count = 0;
         std::vector<int> clusters;
@@ -2197,7 +2197,7 @@ struct Schedd {
             val_str = extract<std::string>(val);
         }
 
-        SetAttributeFlags_t attr_flags = SETDIRTY | SetAttribute_NoAck;
+        SetAttributeFlags_t attr_flags = flags | SetAttribute_NoAck;
         SetAttributeFlags_t only_my_jobs_flag = SetAttribute_OnlyMyJobs;
         if ( ! param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) { only_my_jobs_flag = 0; }
 
@@ -2238,7 +2238,7 @@ struct Schedd {
         return mc;
     }
 
-	boost::shared_ptr<EditResult> mergeJobAd(boost::python::object job_spec, boost::python::object ad)
+	boost::shared_ptr<EditResult> mergeJobAd(boost::python::object job_spec, boost::python::object ad, SetAttributeFlags_t flags=0)
 	{
 		const ClassAdWrapper wrapper = extract<ClassAdWrapper>(ad);
 		int match_count = 0;
@@ -2274,7 +2274,7 @@ struct Schedd {
 		}
 
 
-		SetAttributeFlags_t attr_flags = SETDIRTY | SetAttribute_NoAck;
+		SetAttributeFlags_t attr_flags = flags | SetAttribute_NoAck;
 		SetAttributeFlags_t only_my_jobs_flag = SetAttribute_OnlyMyJobs;
 		if (! param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) { only_my_jobs_flag = 0; }
 
@@ -2322,7 +2322,7 @@ struct Schedd {
 		return result;
 	}
 
-	boost::shared_ptr<EditResult> edit_multiple(boost::python::object edits)
+	boost::shared_ptr<EditResult> edit_multiple(boost::python::object edits, SetAttributeFlags_t /* flags=0 */)
 	{
 		int match_count = 0;
 		if ( ! PyList_Check(edits.ptr())) {
@@ -2364,7 +2364,7 @@ struct Schedd {
 		}
 
 
-		SetAttributeFlags_t attr_flags = SETDIRTY | SetAttribute_NoAck;
+		SetAttributeFlags_t attr_flags = flags | SetAttribute_NoAck;
 		classad::ClassAdUnParser unparser;
 		unparser.SetOldClassAd(true, true);
 		std::string rhs;
@@ -2636,7 +2636,8 @@ ConnectionSentry::ConnectionSentry(Schedd &schedd, bool transaction, SetAttribut
         bool result;
         {
         condor::ModuleLock ml;
-        result = ConnectQ(schedd.m_addr.c_str(), 0, false, NULL, NULL, schedd.m_version.c_str()) == 0;
+        DCSchedd schedd_obj(schedd.m_addr.c_str());
+        result = ConnectQ(schedd_obj) == 0;
         }
         if (result)
         {
@@ -3245,7 +3246,7 @@ public:
             boost::python::tuple tup = boost::python::extract<boost::python::tuple>(obj);
             std::string attr = boost::python::extract<std::string>(tup[0]);
 
-            boost::python::object value(tup[0]);
+            // boost::python::object value(tup[1]);
             std::string value_str = convertToSubmitValue(tup[1]);
 
             m_hash.set_submit_param(plus_to_my(attr), value_str.c_str());
@@ -3864,7 +3865,12 @@ private:
             boost::python::extract<ExprTreeHolder*> extract_expr(value);
             if (extract_expr.check()) {
                 ExprTreeHolder *holder = extract_expr();
-                attr = holder->toString();
+                // If value is _Py_NoneStruct, holder will be NULL.
+                if( holder != NULL ) {
+                    attr = holder->toString();
+                } else {
+                    return "undefined";
+                }
             } else {
                 boost::python::extract<ClassAdWrapper*> extract_classad(value);
                 if (extract_classad.check()) {
@@ -4014,7 +4020,7 @@ void export_schedd()
             )C0ND0R")
         .value("None", 0)
         .value("NonDurable", NONDURABLE)
-        .value("SetDirty", SETDIRTY)
+        .value("SetDirty", SetAttribute_SetDirty)
         .value("ShouldLog", SHOULDLOG)
         ;
 
@@ -4056,6 +4062,7 @@ void export_schedd()
         .value("DefaultMyJobsOnly", CondorQ::fetch_MyJobs)
         .value("SummaryOnly", CondorQ::fetch_SummaryOnly)
         .value("IncludeClusterAd", CondorQ::fetch_IncludeClusterAd)
+        .value("IncludeJobsetAds", CondorQ::fetch_IncludeJobsetAds)
         ;
 
     enum_<BlockingMode>("BlockingMode",
@@ -4382,10 +4389,13 @@ void export_schedd()
                 be converted to a ClassAd expression, or an ExprTree object.  Be mindful of quoting
                 issues; to set the value to the string ``foo``, one would set the value to ``''foo''``
             :type value: str or :class:`~classad.ExprTree`
+            :param flags: Flags controlling the behavior of the transaction, defaulting to 0.
+            :type flags: :class:`TransactionFlags`
             :return: An EditResult containing the number of jobs that were edited.
             :rtype: :class:`EditResult`
             )C0ND0R",
-            boost::python::args("self", "job_spec", "attr", "value"))
+            (boost::python::arg("self"), boost::python::arg("job_spec"), boost::python::arg("attr"), boost::python::arg("value"), boost::python::arg("flags")=0)
+            )
         .def("edit", &Schedd::mergeJobAd,
             R"C0ND0R(
             Edit one or more jobs in the queue.
@@ -4397,20 +4407,26 @@ void export_schedd()
             :type job_spec: list[str] or str or ExprTree
             :param ad: A classad that should be merged into the jobs
             :type ad: :class:`~classad.ClassAd`
+            :param flags: Flags controlling the behavior of the transaction, defaulting to 0.
+            :type flags: :class:`TransactionFlags`
             :return: An EditResult containing the number of jobs that were edited.
             :rtype: :class:`EditResult`
             )C0ND0R",
-            boost::python::args("self", "job_spec", "ad"))
+            (boost::python::arg("self"), boost::python::arg("job_spec"), boost::python::arg("ad"), boost::python::arg("flags")=0)
+            )
         .def("edit_multiple", &Schedd::edit_multiple,
             R"C0ND0R(
             Edit one or more jobs in the queue.
 
             :param list edits: list of tuples of (job_spec,classad) where job_spec can be a list of job ids or a constraint expression
                   and classad is a dict or a :class:`~classad.ClassAd` indicating the edits.
+            :param flags: Flags controlling the behavior of the transaction, defaulting to 0.
+            :type flags: :class:`TransactionFlags`
             :return: An EditResult containing the number of jobs that were edited.
             :rtype: :class:`EditResult`
             )C0ND0R",
-            boost::python::args("self", "edits"))
+            (boost::python::arg("self"), boost::python::arg("edits"), boost::python::arg("flags")=0)
+            )
         .def("export_jobs", &Schedd::exportJobs,
             R"C0ND0R(
             Export one or more job clusters from the queue to put those jobs into the externally managed state.

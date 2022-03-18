@@ -28,14 +28,36 @@ GLOBAL_OPTIONS = {
     },
 }
 
+# Global objects
+
+# Must be consistent with job status definitions in
+# src/condor_includes/proc.h
+JobStatus = [
+    "NONE",
+    "IDLE",
+    "RUNNING",
+    "REMOVED",
+    "COMPLETED",
+    "HELD",
+    "TRANSFERRING_OUTPUT",
+    "SUSPENDED",
+    "JOB_STATUS_MAX"
+]
+
 
 # Import all of the noun classes (do this section last) and then
 # create an OrderedDict of nouns, mapping the name to be used on the
 # command line to the name of the class containing the noun's verbs.
 from collections import OrderedDict as _OrderedDict
+from htcondor_cli.dagman import DAG
 from htcondor_cli.job import Job
 from htcondor_cli.job_set import JobSet
 NOUNS = _OrderedDict()
+NOUNS["dag"] = DAG
 NOUNS["job"] = Job
 NOUNS["jobset"] = JobSet
 
+
+# Should we knob these lines?
+from htcondor_cli.annex import Annex
+NOUNS["annex"] = Annex

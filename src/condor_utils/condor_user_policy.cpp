@@ -100,6 +100,22 @@ BaseUserPolicy::startTimer( void )
 	}
 }
 
+/* Reset our periodic evaluation timer to fire immediately,
+ * then resume the usual interval.
+ * Useful when an event merits checking the periodic policy,
+ * but the effects shouldn't be triggered in the current
+ * call stack.
+ */
+void
+BaseUserPolicy::checkPeriodicSoon()
+{
+	if ( tid != -1 ) {
+		daemonCore->Reset_Timer(tid, 0, interval);
+		dprintf(D_FULLDEBUG, "Reset our timer to evaluate periodic user "
+		        "policy expressions immediately\n");
+	}
+}
+
 /**
  * This is to be called when a job is exiting from a daemon
  * We pass the action id we get back from the user_policy object
@@ -143,7 +159,7 @@ BaseUserPolicy::checkPeriodic( void )
 			// special to do, we'll just return now.
 		return;
 	}
-	
+
 		// if we're supposed to do anything else with the job, we
 		// need to perform some actions now, so call our helper:
 	this->doAction( action, true );

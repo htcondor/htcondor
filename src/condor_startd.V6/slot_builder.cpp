@@ -189,7 +189,7 @@ CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList
 	}
 
 	for (int i=0; i<num; i++) {
-		cap_array[i]->bind_DevIds(i+1, 0);
+		cap_array[i]->bind_DevIds(i+1, 0, true);
 	}
 	return cap_array;
 }
@@ -264,8 +264,10 @@ int countTypes( int max_types, int num_cpus, int** array_ptr, bool except )
 	} else {
 			// We haven't found any special types yet.  Therefore,
 			// we're evenly dividing things, so we only have to figure
-			// out how many nodes to advertise.
-		my_type_nums[0] = param_integer("NUM_SLOTS", num_cpus);
+			// out how many nodes to advertise.  If the type0 slot is partitionable
+			// we make 1 p-slot, otherwise we make as many slots as there are cpus
+		bool pslot = param_boolean("SLOT_TYPE_0_PARTITIONABLE", false);
+		my_type_nums[0] = param_integer("NUM_SLOTS", pslot ? 1 : num_cpus);
 		num = my_type_nums[0];
 	}
 	*array_ptr = my_type_nums;

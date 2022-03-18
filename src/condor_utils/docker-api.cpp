@@ -82,7 +82,7 @@ int DockerAPI::createContainer(
 	const std::string & command,
 	const ArgList & args,
 	const Env & env,
-	const std::string & outside_sandboxPath,
+	const std::string & /*outside_sandboxPath*/,
 	const std::string & inside_directory,
 	const std::list<std::string> extraVolumes,
 	int & pid,
@@ -179,15 +179,6 @@ int DockerAPI::createContainer(
 		dprintf( D_ALWAYS, "Failed to pass enviroment to docker.\n" );
 		return -8;
 	}
-
-	// Map the external sandbox to the internal sandbox.
-	runArgs.AppendArg("--volume");
-#ifdef USE_NAMED_VOLUMES // bind mount with volumeName:/inner/path
-	std::string volumeName(condor_basename(outside_sandboxPath.c_str()));
-	runArgs.AppendArg(volumeName + ":" + inside_directory);
-#else // bind mount with c:/outer/path:/inner/path
-	runArgs.AppendArg(outside_sandboxPath + ":" + inside_directory);
-#endif
 
 #ifdef WIN32
 	// TODO: extra volumes is used for /home/ when not doing file transfer, we can't support this on Windows
@@ -294,10 +285,29 @@ int DockerAPI::createContainer(
 	jobAd.LookupString(ATTR_DOCKER_NETWORK_TYPE, networkType);
 	if (networkType == "host") {
 		runArgs.AppendArg("--network=host");
-	}
-	if (networkType == "none") {
+	} else if (networkType == "none") {
 		runArgs.AppendArg("--network=none");
+	} else if (!networkType.empty()) {
+		// We always allow network type "none" or "host",
+		// as "none" is the safest, and "host" is like a vanilla job
+		// But others must be allowed by the admin
+		std::string docker_networks;
+		machineAd.LookupString(ATTR_DOCKER_NETWORKS, docker_networks);
+
+		StringList allowedNetworksList = docker_networks.c_str();;
+		if (allowedNetworksList.contains(networkType.c_str())) {
+			std::string networkArg = "--network=";
+			networkArg += networkType;
+			runArgs.AppendArg(networkArg);
+		} else {
+			dprintf(D_ALWAYS, "Docker job requested network %s not allowed by parameter DOCKER_NETWORKS with value %s, refusing to run job\n", networkType.c_str(), docker_networks.c_str());
+			return -1;
+		}
+	} else {
+		dprintf(D_ALWAYS, "Docker job requested network %s, but no DOCKER_NETWORKS param defined on this system, refusing to run job\n", networkType.c_str());
+		return -1;
 	}
+
 
 	// Handle port forwarding.
 	std::string containerServiceNames;
@@ -921,6 +931,7 @@ int
 DockerAPI::testImageRuns(CondorError &err) {
 
 #ifndef LINUX
+	(void)err; // shut the compiler up
 	return 0;
 #else
 	TemporaryPrivSentry sentry(PRIV_ROOT);

@@ -24,7 +24,6 @@
 #include "condor_common.h"      /* for <stdio.h> */
 #include "condor_constants.h"   /* from condor_includes/ directory */
 #include "simplelist.h"         /* from condor_utils/ directory */
-#include "MyString.h"
 #include "condor_id.h"
 #include "throttle_by_category.h"
 #include "read_multiple_logs.h"
@@ -136,7 +135,7 @@ class Job {
 	static const char * status_t_names[];
 
 	// explanation text for errors
-	MyString error_text;
+	std::string error_text;
 
 	static int NOOP_NODE_PROCID;
   
@@ -161,7 +160,7 @@ class Job {
 		*/
 	void Cleanup();
 
-	void PrefixName(const MyString &prefix);
+	void PrefixName(const std::string &prefix);
 	inline const char* GetJobName() const { return _jobName; }
 	inline const char* GetDirectory() const { return _directory; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
@@ -177,8 +176,8 @@ class Job {
 	static const char* JobTypeString() { return "HTCondor"; }
 
 	bool AddScript( ScriptType script_type, const char *cmd, int defer_status,
-				time_t defer_time, MyString &whynot );
-	bool AddPreSkip( int exitCode, MyString &whynot );
+				time_t defer_time, std::string &whynot );
+	bool AddPreSkip( int exitCode, std::string &whynot );
 
 	void SetType( NodeType type ) { _type = type; }
 	NodeType GetType() const { return _type; }
@@ -269,15 +268,15 @@ class Job {
 		// double-check internal data structures for consistency
 	bool SanityCheck() const;
 
-	bool CanAddParent(Job* parent, MyString &whynot);
-	bool CanAddChild(Job* child, MyString &whynot) const;
+	bool CanAddParent(Job* parent, std::string &whynot);
+	bool CanAddChild(Job* child, std::string &whynot) const;
 	// check to see if we can add this as a child, and it allows us as a parent..
-	bool CanAddChildren(std::forward_list<Job*> & children, MyString &whynot);
+	bool CanAddChildren(std::forward_list<Job*> & children, std::string &whynot);
 
 	// insert a SORTED list of UNIQUE children.
 	// the caller is responsible for calling sort() and unique() on the list if needed
 	// before passing it to this function
-	bool AddChildren(std::forward_list<Job*> & children, MyString &whynot);
+	bool AddChildren(std::forward_list<Job*> & children, std::string &whynot);
 
 	bool AddVar(const char * name, const char * value, const char* filename, int lineno);
 	void ShrinkVars() { /*varsFromDag.shrink_to_fit();*/ }
@@ -330,7 +329,7 @@ class Job {
 		@param prefix: the prefix to be joined to the directory using "/"
 		@return void
 	*/
-	void PrefixDirectory( MyString &prefix );
+	void PrefixDirectory( std::string &prefix );
 
 	/** Set the DAG file (if any) for this node.  (This is set for nested
 			DAGs defined with the "SUBDAG" keyword.)
