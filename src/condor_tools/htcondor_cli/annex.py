@@ -217,7 +217,7 @@ class Status(Verb):
         )
         for job in target_jobs:
             target_annex_name = job['TargetAnnexName']
-            bump(all_jobs, target_annex_name, 1)
+            all_jobs[target_annex_name] += 1
 
             if job['JobStatus'] == htcondor.JobStatus.RUNNING:
                 running_jobs[target_annex_name] += 1
