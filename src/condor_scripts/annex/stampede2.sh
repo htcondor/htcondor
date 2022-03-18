@@ -85,7 +85,7 @@ if [[ -z $PASSWORD_FILE ]]; then
 fi
 
 BIRTH=`date +%s`
-echo "Starting script at `date`..."
+# echo "Starting script at `date`..."
 
 #
 # Download and configure the pilot on the head node before running it
@@ -117,7 +117,7 @@ CLEAN_UP_TIME=300
 # we'll leave that for then.
 #
 
-echo "Creating temporary directory for pilot..."
+echo "Creating temporary directory..."
 PILOT_DIR=`/usr/bin/mktemp --directory --tmpdir=${SCRATCH} 2>&1`
 if [[ $? != 0 ]]; then
     echo "Failed to create temporary directory for pilot, aborting."
@@ -166,7 +166,7 @@ fi
 #
 # Download the binaries.
 #
-echo "Downloading binaries..."
+echo "Downloading required software..."
 BINARIES_FILE=`basename ${WELL_KNOWN_LOCATION_FOR_BINARIES}`
 CURL_LOGGING=`curl -fsSL ${WELL_KNOWN_LOCATION_FOR_BINARIES} -o ${BINARIES_FILE} 2>&1`
 if [[ $? != 0 ]]; then
@@ -178,7 +178,7 @@ fi
 #
 # Unpack the binaries.
 #
-echo "Unpacking binaries..."
+echo "Unpacking software..."
 TAR_LOGGING=`tar -z -x -f ${BINARIES_FILE} 2>&1`
 if [[ $? != 0 ]]; then
     echo "Failed to unpack binaries from '${BINARIES_FILE}', aborting."
@@ -192,7 +192,7 @@ fi
 rm condor-*.tar.gz
 cd condor-*
 
-echo "Making a personal condor..."
+echo "Configuring software (part 1)..."
 MPC_LOGGING=`./bin/make-personal-from-tarball 2>&1`
 if [[ $? != 0 ]]; then
     echo "Failed to make personal condor, aborting."
@@ -243,7 +243,7 @@ chmod 755 ${PILOT_DIR}/singularity.sh
 YOUTH=$((`date +%s` - ${BIRTH}))
 REMAINING_LIFETIME=$(((${LIFETIME} - ${YOUTH}) - ${CLEAN_UP_TIME}))
 
-echo "Converting to a pilot..."
+echo "Configuring software (part 2)..."
 rm local/config.d/00-personal-condor
 echo "
 use role:execute
@@ -344,7 +344,7 @@ mv ${PASSWORD_FILE} local/passwords.d/POOL
 # Unpack the configuration on top.
 #
 
-echo "Unpacking configuration..."
+echo "Configuring software (part 3)..."
 TAR_LOGGING=`tar -z -x -f ../${CONFIGURATION_FILE} 2>&1`
 if [[ $? != 0 ]]; then
     echo "Failed to unpack binaries from '${CONFIGURATION_FILE}', aborting."
