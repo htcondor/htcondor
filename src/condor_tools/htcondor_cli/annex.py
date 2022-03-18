@@ -146,13 +146,13 @@ class Status(Verb):
         annex_attrs = { job["hpc_annex_name"]: {} for job in annex_jobs }
 
         lifetimes = {}
-        requested_machines = {}
+        requested_machines = defaultdict(int)
         for job in annex_jobs:
             annex_name = job["hpc_annex_name"]
             request_id = job.eval("hpc_annex_request_id")
 
             count = job.get('hpc_annex_nodes', "0")
-            bump(requested_machines, annex_name, int(count))
+            requested_machines[annex_name] += int(count)
 
             status[annex_name][request_id] = "requested"
             if job.get("hpc_annex_PID") is not None:
