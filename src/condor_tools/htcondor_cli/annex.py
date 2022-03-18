@@ -14,12 +14,6 @@ from htcondor_cli.verb import Verb
 from htcondor_cli.annex_create import annex_create
 
 
-def increment(hash, key, subkey, subsubkey, number):
-    value = hash[key][subkey].get(subsubkey, 0)
-    value += number
-    hash[key][subkey][subsubkey] = value
-
-
 class Create(Verb):
     """
     Create an HPC annex.
@@ -175,7 +169,7 @@ class Status(Verb):
             request_id = slot["hpc_annex_request_id"]
             if status.get(annex_name) is None:
                 status[annex_name] = {}
-            status[annex_name][request_id] = {}
+            status[annex_name][request_id] = defaultdict(int)
 
         for slot in annex_slots:
             annex_name = slot["AnnexName"]
@@ -186,9 +180,9 @@ class Status(Verb):
             # don't ever start any annexes with static slots.  (Bad
             # admin, no cookie!)
             if slot.get("PartitionableSlot", False):
-                increment(status, annex_name, request_id, "TotalCPUs", slot["TotalSlotCPUs"])
-                increment(status, annex_name, request_id, "BusyCPUs", len(slot["ChildCPUs"]))
-                increment(status, annex_name, request_id, "MachineCount", 1)
+                status[annex_name][request_id]["TotalCPUs"] += slot["TotalSlotCPUs"]
+                status[annex_name][request_id]["BusyCPUs"] += len(slot["ChildCPUs"])
+                status[annex_name][request_id]["MachineCount"] += 1
 
             slot_birthday = slot.get("DaemonStartTime")
             annex_birthday = annex_attrs[annex_name].get('first_birthday')
