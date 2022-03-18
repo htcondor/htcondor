@@ -54,6 +54,11 @@ Bugs Fixed:
    values for configuration parameter ``UID_DOMAIN``.
    :jira:`1005`
 
+- Fixed a bug where a credential file with an underscore in its filename could
+  not be used by the curl plugin when doing HTTPS transfers with a bearer token.
+  It can now be accessed by replacing "_" with "." in the URL scheme.
+  :jira:`1011`
+
 .. _lts-version-history-9011:
 
 Version 9.0.11
