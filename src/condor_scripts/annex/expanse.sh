@@ -131,7 +131,7 @@ CLEAN_UP_TIME=300
 #
 
 echo "Creating temporary directory for pilot..."
-SCRATCH=${SCRATCH:-$HOME/.hpc-annex/scratch}
+SCRATCH=${SCRATCH:-/expanse/lustre/scratch/$USER/temp_project}
 mkdir -p "$SCRATCH"
 PILOT_DIR=`/usr/bin/mktemp --directory --tmpdir=${SCRATCH} pilot.XXXXXXXX 2>&1`
 if [[ $? != 0 ]]; then
