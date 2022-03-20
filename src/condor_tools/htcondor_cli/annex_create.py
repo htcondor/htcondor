@@ -117,6 +117,44 @@ MACHINE_TABLE = {
             },
         },
     },
+
+    "bridges2": {
+        "pretty_name":      "Bridges-2",
+        "gsissh_name":      "bridges2",
+        "default_queue":    "RM",
+
+        # Omitted the GPU queues because they are based on a different set of parameters.
+        # Queue limits are not documented, possibly nonexistent.
+        "queues": {
+            "RM": {
+                "max_nodes_per_job":    50,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       128,
+                "ram_per_node":         256,
+
+                "max_jobs_in_queue":    50,
+            },
+            "RM-shared": {
+                "max_nodes_per_job":    1,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,
+                "ram_per_node":         128,
+
+                "max_jobs_in_queue":    50,
+            },
+            "EM": {
+                "max_nodes_per_job":    2,
+                "max_duration":         120 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       96,
+                "ram_per_node":         4096,
+
+                "max_jobs_in_queue":    50,
+            },
+        },
+    },
 }
 
 
