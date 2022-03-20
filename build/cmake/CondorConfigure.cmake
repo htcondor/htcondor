@@ -1049,7 +1049,7 @@ endif()
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
-if (DLOPEN_GSI_LIBS)
+if (DLOPEN_GSI_LIBS OR DLOPEN_VOMS_LIBS)
 	set (SECURITY_LIBS "")
 	set (SECURITY_LIBS_STATIC "")
 else()
