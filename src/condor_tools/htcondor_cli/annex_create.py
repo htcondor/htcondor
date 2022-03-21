@@ -629,7 +629,7 @@ def annex_create(
                 raise RuntimeError(
                     f"""Job {job_ad["ClusterID"]}.{job_ad["ProcID"]} specified container image '{sif_file}', which doesn't exist."""
                 )
-    if len(sif_files) > 0:
+    if sif_files:
         logger.debug(f"Got sif files: {sif_files}")
     else:
         logger.debug("No sif files found, continuing...")
@@ -695,15 +695,16 @@ def annex_create(
         token_file,
         password_file,
     )
-    logger.debug("... transferring container images ...")
-    transfer_sif_files(
-        logger,
-        ssh_connection_sharing,
-        ssh_target,
-        ssh_indirect_command,
-        remote_script_dir,
-        sif_files,
-    )
+    if sif_files:
+        logger.debug("... transferring container images ...")
+        transfer_sif_files(
+            logger,
+            ssh_connection_sharing,
+            ssh_target,
+            ssh_indirect_command,
+            remote_script_dir,
+            sif_files,
+        )
     logger.info("... remote directory populated.")
 
     # Submit local universe job.
