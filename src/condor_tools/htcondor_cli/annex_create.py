@@ -125,13 +125,23 @@ MACHINE_TABLE = {
 
         # Omitted the GPU queues because they are based on a different set of parameters.
         # Queue limits are not documented, possibly nonexistent.
+        # XXX You don't request memory for Bridges2; should we do a "ram_per_core" instead?
         "queues": {
             "RM": {
                 "max_nodes_per_job":    50,
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       128,
-                "ram_per_node":         256,
+                "ram_per_node":         (253000 // 1024),
+
+                "max_jobs_in_queue":    50,
+            },
+            "RM-512": {
+                "max_nodes_per_job":    2,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       128,
+                "ram_per_node":         (515000 // 1024),
 
                 "max_jobs_in_queue":    50,
             },
@@ -139,8 +149,9 @@ MACHINE_TABLE = {
                 "max_nodes_per_job":    1,
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
+                # RM-shared lets you request up to half an RM node
                 "cores_per_node":       64,
-                "ram_per_node":         128,
+                "ram_per_node":         (253000 // 2 // 1024),
 
                 "max_jobs_in_queue":    50,
             },
@@ -149,7 +160,8 @@ MACHINE_TABLE = {
                 "max_duration":         120 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       96,
-                "ram_per_node":         4096,
+                # The EM queue specifies "MaxMemPerCPU"
+                "ram_per_node":         (42955 * 96 // 1024),
 
                 "max_jobs_in_queue":    50,
             },
