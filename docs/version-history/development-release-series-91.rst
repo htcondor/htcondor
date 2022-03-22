@@ -44,7 +44,7 @@ New Features:
   :jira:`953`
 
 - Added the Reverse GAHP, which allows *condor_remote_cluster* to work with
-  remote clusters that don't all SSH keys or require Multi-Factor
+  remote clusters that don't allow SSH keys or require Multi-Factor
   Authentication for all SSH connections.
   :jira:`1007`
 
