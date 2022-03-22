@@ -45,11 +45,7 @@ class MapFile; // forward ref
 
 class ClassAdFileParseHelper;
 
-bool ClassAdAttributeIsPrivateV1( const std::string &name );
-
-bool ClassAdAttributeIsPrivateV2( const std::string &name );
-
-bool ClassAdAttributeIsPrivateAny( const std::string &name );
+bool ClassAdAttributeIsPrivate( const std::string &name );
 
 typedef std::set<std::string, classad::CaseIgnLTStr> AttrNameSet;
 

@@ -847,6 +847,12 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	double begin = condor_gettimestamp_double();
 	List<ClassAd> results;
 
+	// Pull out relavent state from query_entry
+	pending_query_entry_t *query_entry = (pending_query_entry_t *) in_query_entry;
+	ClassAd *cad = query_entry->cad;
+	bool is_locate = query_entry->is_locate;
+	AdTypes whichAds = query_entry->whichAds;
+
 		// If our peer is at least 8.9.3 and has NEGOTIATOR authz, then we'll
 		// trust it to handle our capabilities.
 	bool filter_private_ads = true;
@@ -856,18 +862,16 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	{
 		filter_private_ads = false;
 	}
-	if (verinfo && verinfo->built_since_version(9, 8, 0) &&
+
+		// If our peer is at least 9.8.0 and has ADMINISTRATOR authz
+		// and is doing a locate query,
+		// then we'll trust it to handle our capabilities
+	if (verinfo && verinfo->built_since_version(9, 8, 0) && is_locate &&
 		(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", ADMINISTRATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
 	{
-		dprintf(D_SECURITY|D_FULLDEBUG, "Administrator query - will not filter private ads.\n");
+		dprintf(D_SECURITY|D_FULLDEBUG, "Administrator locate query - will not filter private ads.\n");
 		filter_private_ads = false;
 	}
-
-	// Pull out relavent state from query_entry
-	pending_query_entry_t *query_entry = (pending_query_entry_t *) in_query_entry;
-	ClassAd *cad = query_entry->cad;
-	bool is_locate = query_entry->is_locate;
-	AdTypes whichAds = query_entry->whichAds;
 
 		// Always send private attributes in private ads.
 	if (whichAds == STARTD_PVT_AD) {
@@ -1490,8 +1494,10 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
 
 	int rc = 1;
 	ExprTree *cap_expr = NULL;
+	ExprTree *admin_cap_expr = nullptr;
 	if ( __hidePvtAttrs__ ) {
 		cap_expr = cad->Remove(ATTR_CAPABILITY);
+		admin_cap_expr = cad->Remove(ATTR_REMOTE_ADMIN_CAPABILITY);
 	}
 	classad::Value result;
 	bool val;
@@ -1509,6 +1515,9 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
 
 	if ( cap_expr ) {
 		cad->Insert(ATTR_CAPABILITY, cap_expr);
+	}
+	if ( admin_cap_expr ) {
+		cad->Insert(ATTR_REMOTE_ADMIN_CAPABILITY, admin_cap_expr);
 	}
     return rc;
 }
@@ -1545,10 +1554,8 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 		__resultLimit__ = INT_MAX; // no limit
 	}
 
-	__hidePvtAttrs__ = false;
-	if ( whichAds == SUBMITTOR_AD || whichAds == SCHEDD_AD || whichAds == GENERIC_AD || whichAds == ANY_AD ) {
-		__hidePvtAttrs__ = true;
-	}
+	// Hide private attributes from constraint evaluation for all ad types.
+	__hidePvtAttrs__ = true;
 
 	// See if we should exclude Collector Ads from generic queries.  Still
 	// give them out for specific collector queries, which is registered as
@@ -2118,7 +2125,7 @@ void CollectorDaemon::sendCollectorAd()
 		// are bypassing DC and invoking collector.collect on the selfAd, invoke it here as well.
 	std::string capability;
 	if (daemonCore->SetupAdministratorSession(1800, capability)) {
-		selfAd->InsertAttr(ATTR_REMOTE_ADMIN_CAP, capability);
+		selfAd->InsertAttr(ATTR_REMOTE_ADMIN_CAPABILITY, capability);
 	}
 
 	if( ! collector.collect( UPDATE_COLLECTOR_AD, selfAd, condor_sockaddr::null, error ) ) {

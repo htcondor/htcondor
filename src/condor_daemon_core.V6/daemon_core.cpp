@@ -11119,7 +11119,7 @@ DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
 		// Provide the collector with a capability to administer us.
 	std::string capability;
 	if (SetupAdministratorSession(1800, capability)) {
-		ad1->InsertAttr(ATTR_REMOTE_ADMIN_CAP, capability);
+		ad1->InsertAttr(ATTR_REMOTE_ADMIN_CAPABILITY, capability);
 	}
 
 		// Even if we just decided to shut ourselves down, we should

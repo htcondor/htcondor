@@ -187,7 +187,7 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
             itor.CurrentAttribute( buf, expr );
 
 
-            if(!ClassAdAttributeIsPrivateAny(buf))
+            if(!ClassAdAttributeIsPrivate(buf))
             {
                 if(excludeTypes)
                 {
@@ -237,7 +237,7 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
 
             attrItor.CurrentAttribute( buf, expr );
 
-            if(ClassAdAttributeIsPrivateAny(buf)){
+            if(ClassAdAttributeIsPrivate(buf)){
                 continue;
             }
 
@@ -258,7 +258,7 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
             strncpy(exprString, buf.c_str(),buf.size() + 1 ); 
             /*
             if( ! sock->prepare_crypto_for_secret_is_noop() &&
-                    ClassAdAttributeIsPrivateAny(tmpAttrName)) {
+                    ClassAdAttributeIsPrivate(tmpAttrName)) {
                 sock->put(SECRET_MARKER);
 
                 sock->put_secret(exprString);

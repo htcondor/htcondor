@@ -373,8 +373,6 @@ MapFile.cpp
 MapFile.h
 mark_thread.cpp
 match_prefix.cpp
-memory_seal.cpp
-memory_seal.h
 metric_units.cpp
 metric_units.h
 mk_cache_links.cpp

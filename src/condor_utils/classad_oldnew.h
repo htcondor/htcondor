@@ -32,15 +32,6 @@ class Stream;
 
 void AttrList_setPublishServerTime(bool publish);
 
-/**
- * Permanently set all private attributes to be encrypted in-memory in the
- * ClassAd.  To access the attribute valus, one must separately decrypt and
- * parse them.
- *
- * Once set, this cannot be unset.
- */
-void setEncryptPrivateAttributes();
-
 classad::ClassAd* getClassAd( Stream *sock );
 
 bool getClassAd( Stream *sock, classad::ClassAd& ad);

@@ -1985,7 +1985,7 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 	initStringFromAd( ad, ATTR_PLATFORM, &_platform );
 
 	std::string capability;
-	if (ad->EvaluateAttrString(ATTR_REMOTE_ADMIN_CAP, capability)) {
+	if (ad->EvaluateAttrString(ATTR_REMOTE_ADMIN_CAPABILITY, capability)) {
 		ClaimIdParser cidp(capability.c_str());
 		dprintf(D_FULLDEBUG, "Creating a new administrative session for capability %s\n", cidp.publicClaimId());
 		_sec_man.CreateNonNegotiatedSecuritySession(

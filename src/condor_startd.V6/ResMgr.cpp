@@ -1947,7 +1947,7 @@ static void clean_private_attrs(ClassAd & ad)
 	for (auto i = ad.begin(); i != ad.end(); ++i) {
 		const std::string & name = i->first;
 
-		if (ClassAdAttributeIsPrivateAny(name)) {
+		if (ClassAdAttributeIsPrivate(name)) {
 			// TODO: redact these while still providing some info, perhaps return the HASH?
 			ad.Assign(name, "<redacted>");
 		}
