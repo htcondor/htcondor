@@ -1276,7 +1276,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 	if (constraint!=NULL) {
 	  query.addANDConstraint(constraint);
 	}
-
+	query.setLocationLookup("tool", false);
 
 	if (pool_addr) {
 		q_result = query.fetchAds(ads, pool_addr, &errstack);
