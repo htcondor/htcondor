@@ -123,9 +123,9 @@ int loop() {
 
     /* Construct the actual GAHP command */
     char gahp_command[BUFSIZ];
-    if (strncmp("blahpd", gahp, 6) == 0) {
+    if (strcmp("blahpd", gahp) == 0) {
         snprintf(gahp_command, BUFSIZ, "%s/bin/%s", base_dir, gahp);
-    } else if (strncmp("condor_ft-gahp", gahp, 14) == 0) {
+    } else if (strcmp("condor_ft-gahp", gahp) == 0) {
         snprintf(gahp_command, BUFSIZ, "%s/bin/%s", base_dir, gahp);
     } else {
         dprintf(gahp_sock, "ERROR: Unknown GAHP: %s\n", gahp);
