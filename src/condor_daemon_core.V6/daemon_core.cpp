@@ -11434,23 +11434,15 @@ DaemonCore::SetupAdministratorSession(unsigned duration, std::string &capability
 	}
 
 		// What should the collector admin be able to do to this daemon?
-		// - 401: CONTINUE_CLAIM
-		// - 402: SUSPEND_CLAIM
-		// - 403: DEACTIVATE_CLAIM
-		// - 404: DEACTIVATE_CLAIM_FORCIBLY
-		// - 447: VACATE_ALL_CLAIMS
 		// - 453: RESTART
 		// - 454: DAEMONS_OFF
 		// - 455: DAEMONS_ON
 		// - 456: MASTER_OFF
 		// - 461: DAEMONS_OFF_FAST
 		// - 462: MASTER_OFF_FAST
-		// - 465: VACATE_CLAIM
 		// - 467: DAEMON_OFF
 		// - 468: DAEMON_OFF_FAST
 		// - 469: DAEMON_ON
-		// - 474: VACATE_ALL_FAST
-		// - 475:: VACATE_CLAIM_FAST
 		// - 483: DAEMON_OFF_PEACEFUL
 		// - 484: DAEMONS_OFF_PEACEFUL
 		// - 485: RESTART_PEACEFUL
@@ -11462,11 +11454,8 @@ DaemonCore::SetupAdministratorSession(unsigned duration, std::string &capability
 		// - 60015: DC_OFF_PEACEFUL
 		// - 60016: DC_SET_PEACEFUL_SHUTDOWN
 		// - 60041: DC_SET_FORCE_SHUTDOWN
-		// - 60042: DC_OFF_FORCE
-		// CANCEL_DRAIN_JOBS
-		// DRAIN_JOBS
 
-	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"401,402,403,404,447,453,454,455,456,461,462,467,468,469,474,475,483,484,485,60013,60018,60006,60005,60042,60015,60016,60041\"]";
+	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"453,454,455,456,461,462,467,468,469,483,484,485,60013,60018,60006,60005,60042,60015,60016,60041\"]";
 
 	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 		ADMINISTRATOR,
