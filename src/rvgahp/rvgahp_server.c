@@ -49,14 +49,14 @@ void usage() {
 
 int set_config() {
     if (base_dir == NULL) {
-		base_dir = getenv("BLAHPD_LOCATION");
-		if (base_dir == NULL) {
-			fprintf(stderr, "ERROR Base directory unknown!\n");
-			return -1;
-		}
+        base_dir = getenv("BLAHPD_LOCATION");
+        if (base_dir == NULL) {
+            fprintf(stderr, "ERROR Base directory unknown!\n");
+            return -1;
+        }
     } else {
-		setenv("BLAHPD_LOCATION", base_dir, 1);
-	}
+        setenv("BLAHPD_LOCATION", base_dir, 1);
+    }
 
     if (access(base_dir, F_OK) < 0) {
         fprintf(stderr, "ERROR Base directory doesn't exist\n");
@@ -84,8 +84,8 @@ int loop() {
     log(stdout, "Starting SSH connection\n");
     pid_t ssh_pid = fork();
     if (ssh_pid == 0) {
-		char ssh_cmd[BUFSIZ];
-		snprintf(ssh_cmd, BUFSIZ, "%s/bin/rvgahp_ssh", base_dir);
+        char ssh_cmd[BUFSIZ];
+        snprintf(ssh_cmd, BUFSIZ, "%s/bin/rvgahp_ssh", base_dir);
         int orig_err = dup(STDERR_FILENO);
         close(gahp_sock);
         close(0);
