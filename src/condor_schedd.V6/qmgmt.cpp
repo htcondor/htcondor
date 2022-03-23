@@ -323,12 +323,6 @@ GetJobQueueIteratorEnd()
 	return JobQueue->GetIteratorEnd();
 }
 
-static inline JobQueueKey& IdToKey(int cluster, int proc, JobQueueKey& key)
-{
-	key.cluster = cluster;
-	key.proc = proc;
-	return key;
-}
 typedef JOB_ID_KEY_BUF JobQueueKeyBuf;
 static inline JobQueueKey& IdToKey(int cluster, int proc, JobQueueKeyBuf& key)
 {
@@ -8653,6 +8647,10 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	bool match_any_user = (user == NULL) ? true : false;
 
 	ASSERT(my_match_ad);
+
+	bool scheddsAreSubmitters = false;
+	my_match_ad->LookupBool(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, scheddsAreSubmitters);
+	if (scheddsAreSubmitters) match_any_user = true;
 
 		// indicate failure by setting proc to -1.  do this now
 		// so if we bail out early anywhere, we say we failed.
