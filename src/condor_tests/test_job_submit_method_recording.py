@@ -11,12 +11,16 @@
 from ornithology import *
 import os
 from time import sleep
+from time import time
 
 
 #Function to wait until schedd has no jobs
 def wait(schedd):
+     t_end = time() + 180 #Give a 2 minute maximum for waiting
      while any(schedd.query(constraint='true',projection=["JobSubmitMethod"])) == True:
           sleep(0.1)
+          if time() >= t_end:
+               break
 
 #Fixture to write simple .sub file for general use
 @action
