@@ -34,7 +34,8 @@ PRIVATE_KEY_LOCATION=`echo ~/.ssh/bosco_key.rsa`
 # Set 'ssh -o BatchMode yes' by default so we fail if a password is requested
 SSH_BATCHMODE=yes
 BASH_LOGIN=yes
-
+RVGAHP=no
+RVGAHP_SOCKET=""
 
 # Parse command line arguments 
 PROG_NAME=$0
@@ -50,6 +51,7 @@ Options: \n \
  --rgahp-script SCRIPT \tpath to script to start up blahp (PATH/bin/blahpd)\n \
  --rgahp-nobatchmode \t\tDisable SSH BatchMode \n \
  --rgahp-nologin \t\tDisable bash -l flag \n \
+ --rvgahp-socket SOCKET_FILE \tUse the reverse gahp with the given socket file \n \
  --help, -h \t\t\tprint this\n \
  remote_hostname: [USER@]HOST[:PORT] same string that can be used to ssh to the host\n \
  remote arguments are passed to the REMOTE_CMD
@@ -81,6 +83,9 @@ while [ $# != 0 ] ; do
         --rgahp-* ) echo "Unknown option: $1" 1>&2
             echo -e "$USAGE"
             exit 1;;
+        --rvgahp-socket ) RVGAHP_SOCKET="$2"
+            RVGAHP=yes
+            shift 2;;
         -- ) shift
             if [ "$REMOTE_CMD" = "" -o "$1" = "condor_ft-gahp" ] ; then
                 REMOTE_CMD="$1"
@@ -114,6 +119,13 @@ fi
 if [ "$REMOTE_CMD" = "" ] ; then
     echo "Missing remote command" 1>&2
     echo -e "$USAGE"
+    exit 1
+fi
+
+if [ "$RVGAHP" = "yes" ] ; then
+    # TODO handle default RVGAHP_SOCKET
+    exec $(condor_config_val SBIN)/rvgahp_client "${RVGAHP_SOCKET}" "${REMOTE_CMD}"
+    echo "Failed to run rvgahp_client" 1>&2
     exit 1
 fi
 
