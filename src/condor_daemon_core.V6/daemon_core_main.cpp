@@ -2650,6 +2650,7 @@ handle_dc_session_token(int, Stream* stream)
 	}
 
 	std::string final_key_name = htcondor::get_token_signing_key(err);
+	ad.EvaluateAttrString(ATTR_SEC_REQUESTED_KEY, final_key_name);
 
 	classad::ClassAd policy_ad;
 	static_cast<ReliSock*>(stream)->getPolicyAd(policy_ad);
