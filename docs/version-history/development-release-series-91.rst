@@ -48,6 +48,10 @@ New Features:
   Authentication for all SSH connections.
   :jira:`1007`
 
+- Added support for a global CM which only schedules fair-share between schedds,
+  with each schedd owning a local CM for fair-share between users.
+  :jira:`1003`
+
 Bugs Fixed:
 
 - None.
