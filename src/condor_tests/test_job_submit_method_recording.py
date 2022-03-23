@@ -13,6 +13,11 @@ import os
 from time import sleep
 
 
+#Function to wait until schedd has no jobs
+def wait(schedd):
+     while any(schedd.query(constraint='true',projection=["JobSubmitMethod"])) == True:
+          sleep(0.1)
+
 #Fixture to write simple .sub file for general use
 @action
 def write_sub_file(test_dir,path_to_sleep):
@@ -42,9 +47,9 @@ PARENT A CHILD B
 def run_condor_submit(default_condor,write_sub_file):
      #Submit job
      p = default_condor.run_command(["condor_submit", write_sub_file])
-     sleep(10)
      #Get the job ad for completed job
      schedd = default_condor.get_local_schedd()
+     wait(schedd)
      job_ad = schedd.history(
           constraint=None,
           projection=["JobSubmitMethod"],
@@ -58,9 +63,9 @@ def run_condor_submit(default_condor,write_sub_file):
 def run_dagman_submission(default_condor,write_dag_file):
      #Submit job 
      p = default_condor.run_command(["condor_submit_dag",write_dag_file])
-     sleep(20)
      #Get the job ad for completed job
      schedd = default_condor.get_local_schedd()
+     wait(schedd)
      job_ad = schedd.history(
           constraint=None,
           projection=["JobSubmitMethod"],
@@ -102,9 +107,9 @@ print(job.getSubmitMethod())
 @action
 def run_htcondor_job_submit(default_condor,write_sub_file):
      p = default_condor.run_command(["htcondor","job","submit",write_sub_file])
-     sleep(10)
      #Get the job ad for completed job
      schedd = default_condor.get_local_schedd()
+     wait(schedd)
      job_ad = schedd.history(
           constraint=None,
           projection=["JobSubmitMethod"],
@@ -133,9 +138,9 @@ job {{
      jobset_file.close()
 
      p = default_condor.run_command(["htcondor","jobset","submit",test_dir / "job.set"])
-     sleep(10)
      #Get the job ad for completed job
      schedd = default_condor.get_local_schedd()
+     wait(schedd)
      job_ad = schedd.history(
           constraint=f"JobSetName == \"JobSubmitMethodTest\"",
           projection=["JobSubmitMethod"],
@@ -158,12 +163,12 @@ def run_htcondor_dag_submit(default_condor,write_dag_file,test_dir):
           p = default_condor.run_command(["mv",test_dir / name, test_dir / "dag_test1"])
      #run second dag submission test 
      p = default_condor.run_command(["htcondor","dag","submit", write_dag_file])
-     sleep(20)
      #move secodn test files into dag_test2 directory
      for name in files_to_move:
-          p = default_condor.run_command(["mv",test_dir / name, test_dir / "dag_test1"])
+          p = default_condor.run_command(["mv",test_dir / name, test_dir / "dag_test2"])
      #Get the job ad for completed job
      schedd = default_condor.get_local_schedd()
+     wait(schedd)
      job_ad = schedd.history(
           constraint=None,
           projection=["JobSubmitMethod"],
