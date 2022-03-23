@@ -473,11 +473,16 @@ def extract_sif_file(job_ad):
     return iwd / container_image
 
 
-def create_annex_token():
+def create_annex_token(logger):
     token_lifetime = int(htcondor.param.get("ANNEX_TOKEN_LIFETIME", 60 * 60 * 24 * 90))
+    annex_token_key_name = htcondor.param.get("ANNEX_TOKEN_KEY_NAME", "ANNEX")
+
+    # FIXME: token_name should be specific to this instance request and
+    # the local universe job should clean it up on the way out.
+    # FIXME: htcondor annex status and shutdown will need to issue themselves
+    # a token as well.
     annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
     token_name = f"{getpass.getuser()}@{annex_token_domain}"
-    annex_token_key_name = htcondor.param.get("ANNEX_TOKEN_KEY_NAME", "ANNEX")
 
     args = [
         'condor_token_fetch',
@@ -556,7 +561,7 @@ def annex_create(
     # If the user didn't specify a token file, create one on the fly.
     if token_file is None:
         logger.debug("Creating annex token...")
-        token_file = create_annex_token()
+        token_file = create_annex_token(logger)
         logger.debug("..done.")
 
     token_file = Path(token_file).expanduser()
