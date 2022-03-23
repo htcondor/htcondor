@@ -16,12 +16,11 @@ from pathlib import Path
 import htcondor
 
 
-INITIAL_CONNECTION_TIMEOUT = int(
-    htcondor.param.get("ANNEX_INITIAL_CONNECTION_TIMEOUT", 180)
-)
+INITIAL_CONNECTION_TIMEOUT = int(htcondor.param.get("ANNEX_INITIAL_CONNECTION_TIMEOUT", 180))
 REMOTE_CLEANUP_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_CLEANUP_TIMEOUT", 60))
 REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 30))
 REMOTE_POPULATE_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_POPULATE_TIMEOUT", 60))
+TOKEN_FETCH_TIMEOUT = int(htcondor.param.get("ANNEX_TOKEN_FETCH_TIMEOUT", 20))
 
 #
 # For queues with the whole-node allocation policy, cores and RAM -per-node
@@ -474,6 +473,48 @@ def extract_sif_file(job_ad):
     return iwd / container_image
 
 
+def create_annex_token():
+    token_lifetime = int(htcondor.param.get("ANNEX_TOKEN_LIFETIME", 60 * 60 * 24 * 90))
+    annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
+    token_name = f"{getpass.getuser()}@{annex_token_domain}"
+    annex_token_key_name = htcondor.param.get("ANNEX_TOKEN_KEY_NAME", "ANNEX")
+
+    args = [
+        'condor_token_fetch',
+        '-lifetime', str(token_lifetime),
+        '-token', token_name,
+        '-key', annex_token_key_name,
+        '-authz', 'READ',
+        '-authz', 'ADVERTISE_STARTD',
+        '-authz', 'ADVERTISE_MASTER',
+        '-authz', 'ADVERTISE_SCHEDD',
+    ]
+
+    proc = subprocess.Popen(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        # This implies text mode.
+        errors="replace",
+    )
+
+    try:
+        out, err = proc.communicate(timeout=TOKEN_FETCH_TIMEOUT)
+
+        if proc.returncode == 0:
+            return f"~/.condor/tokens.d/{token_name}"
+        else:
+            logger.error(f"Failed to create annex token, aborting.")
+            logger.warning(f"{out.strip()}")
+            raise RuntimeError(f"Failed to create annex token")
+
+    except subprocess.TimeoutExpired:
+        logger.error(f"Failed to create annex token in {TOKEN_FETCH_TIMEOUT} seconds, aborting.")
+        proc.kill()
+        out, err = proc.communicate()
+        raise RuntimeError(f"Failed to create annex token in {TOKEN_FETCH_TIMEOUT} seconds")
+
+
 def annex_create(
     logger,
     annex_name,
@@ -511,6 +552,12 @@ def annex_create(
     if queue_name is None:
         queue_name = MACHINE_TABLE[target]["default_queue"]
         logger.debug(f"No queue name given, defaulting to {queue_name}")
+
+    # If the user didn't specify a token file, create one on the fly.
+    if token_file is None:
+        logger.debug("Creating annex token...")
+        token_file = create_annex_token()
+        logger.debug("..done.")
 
     token_file = Path(token_file).expanduser()
     if not token_file.exists():
@@ -693,7 +740,7 @@ def annex_create(
             # cleaned up?
             "environment": f'PYTHONPATH={os.environ.get("PYTHONPATH", "")}',
             "+arguments": f'strcat( "$(CLUSTER).0 hpc_annex_request_id ", GlobalJobID, " {collector}")',
-            "jobbatchname": f'HPCAnnex_{annex_name}',
+            "jobbatchname": f'{annex_name} [HPC Annex]',
             "+hpc_annex_request_id": 'GlobalJobID',
             # Properties of the annex request.  We should think about
             # representing these as a nested ClassAd.  Ideally, the back-end
@@ -705,11 +752,16 @@ def annex_create(
             "+hpc_annex_collector": f'"{collector}"',
             "+hpc_annex_lifetime": f'"{lifetime}"',
             "+hpc_annex_owners": f'"{owners}"',
-            "+hpc_annex_nodes": f'"{nodes}"',
+            # FIXME: `nodes` should be undefined if not set on the
+            # command line but either cpus or mem_mb are.
+            "+hpc_annex_nodes": f'"{nodes}"'
+                if nodes is not None else "undefined",
+            "+hpc_annex_cpus": f'"{cpus}"'
+                if cpus is not None else "undefined",
+            "+hpc_annex_mem_mb": f'"{mem_mb}"'
+                if mem_mb is not None else "undefined",
             "+hpc_annex_allocation": f'"{allocation}"'
                 if allocation is not None else "undefined",
-            "+hpc_annex_cpus": f'"{cpus}"',
-            "+hpc_annex_mem_mb": f'"{mem_mb}"',
             # Hard state required for clean up.  We'll be adding
             # hpc_annex_PID, hpc_annex_PILOT_DIR, and hpc_annex_JOB_ID
             # as they're reported by the back-end script.

@@ -76,9 +76,9 @@ class Create(Verb):
         },
         "token_file": {
             "args": ("--token_file",),
-            "help": "Token file. Defaults to %(default)s",
+            "help": "Token file.  Normally obtained automatically.",
             "type": Path,
-            "default": Path(htcondor.param.get("ANNEX_TOKEN_FILE", f"~/.condor/tokens.d/{getpass.getuser()}@annex.osgdev.chtc.io")),
+            "default": None,
         },
         "password_file": {
             "args": ("--password_file",),
