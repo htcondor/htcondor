@@ -693,7 +693,7 @@ def annex_create(
             # cleaned up?
             "environment": f'PYTHONPATH={os.environ.get("PYTHONPATH", "")}',
             "+arguments": f'strcat( "$(CLUSTER).0 hpc_annex_request_id ", GlobalJobID, " {collector}")',
-            "jobbatchname": f'HPCAnnex_{annex_name}',
+            "jobbatchname": f'{annex_name} [HPC Annex]',
             "+hpc_annex_request_id": 'GlobalJobID',
             # Properties of the annex request.  We should think about
             # representing these as a nested ClassAd.  Ideally, the back-end
@@ -705,11 +705,16 @@ def annex_create(
             "+hpc_annex_collector": f'"{collector}"',
             "+hpc_annex_lifetime": f'"{lifetime}"',
             "+hpc_annex_owners": f'"{owners}"',
-            "+hpc_annex_nodes": f'"{nodes}"',
+            # FIXME: `nodes` should be undefined if not set on the
+            # command line but either cpus or mem_mb are.
+            "+hpc_annex_nodes": f'"{nodes}"'
+                if nodes is not None else "undefined",
+            "+hpc_annex_cpus": f'"{cpus}"'
+                if cpus is not None else "undefined",
+            "+hpc_annex_mem_mb": f'"{mem_mb}"'
+                if mem_mb is not None else "undefined",
             "+hpc_annex_allocation": f'"{allocation}"'
                 if allocation is not None else "undefined",
-            "+hpc_annex_cpus": f'"{cpus}"',
-            "+hpc_annex_mem_mb": f'"{mem_mb}"',
             # Hard state required for clean up.  We'll be adding
             # hpc_annex_PID, hpc_annex_PILOT_DIR, and hpc_annex_JOB_ID
             # as they're reported by the back-end script.
