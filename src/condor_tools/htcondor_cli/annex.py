@@ -93,7 +93,20 @@ class Create(Verb):
             "help": "Location to store temporary annex control files, probably should not be changed. Defaults to %(default)s",
             "type": Path,
             "default": Path(htcondor.param.get("ANNEX_TMP_DIR", "~/.hpc-annex")),
-        }
+        },
+        "cpus": {
+            "args": ("--cpus",),
+            "help": "Number of CPUs to request (shared queues only).  Unset by default.",
+            "type": int,
+            "default": None,
+        },
+        "mem_mb": {
+            "args": ("--mem_mb",),
+            # TODO: Parse units instead of requiring this to be a number of MBs
+            "help": "Memory (in MB) to request (shared queues only).  Unset by default.",
+            "type": int,
+            "default": None,
+        },
     }
 
     def __init__(self, logger, **options):
@@ -237,9 +250,9 @@ class Status(Verb):
                     else:
                         requested_but_not_joined += 1
                 else:
-                    total_CPUs += values["TotalCPUs"]
-                    busy_CPUs += values["BusyCPUs"]
-                    machine_count += values["MachineCount"]
+                    total_CPUs += values.get("TotalCPUs", 0)
+                    busy_CPUs += values.get("BusyCPUs", 0)
+                    machine_count += values.get("MachineCount", 0)
             requested_and_active = requests - requested_but_not_joined - requested_and_left
 
             if the_annex_name is None:

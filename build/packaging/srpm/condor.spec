@@ -1200,10 +1200,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/elastic.py
 %_libexecdir/condor/adstash/history.py
 %_libexecdir/condor/adstash/utils.py
-%_libexecdir/condor/annex/annex-local-universe.py
-%_libexecdir/condor/annex/stampede2.multi-pilot
-%_libexecdir/condor/annex/stampede2.pilot
-%_libexecdir/condor/annex/stampede2.sh
+%_libexecdir/condor/annex
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_password.1.gz

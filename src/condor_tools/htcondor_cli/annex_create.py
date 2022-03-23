@@ -20,7 +20,7 @@ INITIAL_CONNECTION_TIMEOUT = int(
     htcondor.param.get("ANNEX_INITIAL_CONNECTION_TIMEOUT", 180)
 )
 REMOTE_CLEANUP_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_CLEANUP_TIMEOUT", 60))
-REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 5))
+REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 30))
 REMOTE_POPULATE_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_POPULATE_TIMEOUT", 60))
 
 #
@@ -75,7 +75,7 @@ MACHINE_TABLE = {
     "expanse": {
         "pretty_name":      "Expanse",
         "gsissh_name":      "expanse",
-        "default_queue":    "shared",
+        "default_queue":    "compute",
 
         # GPUs are completed untested, see above.
         "queues": {
@@ -117,7 +117,6 @@ MACHINE_TABLE = {
             },
         },
     },
-
 }
 
 
@@ -167,7 +166,7 @@ def remove_remote_temporary_directory(
             return proc.wait(timeout=REMOTE_CLEANUP_TIMEOUT)
         except subprocess.TimeoutExpired:
             logger.error(
-                f"Did not clean up remote temporary directory after {INITIAL_CONNECTION_TIMEOUT} seconds, '{remote_script_dir}' may need to be deleted manually."
+                f"Did not clean up remote temporary directory after {REMOTE_CLEANUP_TIMEOUT} seconds, '{remote_script_dir}' may need to be deleted manually."
             )
 
     return 0
@@ -179,23 +178,22 @@ def make_remote_temporary_directory(
     ssh_target,
     ssh_indirect_command,
 ):
+    remote_command = r'mkdir -p \${HOME}/.hpc-annex/scratch && ' \
+        r'mktemp --tmpdir=\${HOME}/.hpc-annex/scratch --directory remote_script.XXXXXXXX'
     proc = subprocess.Popen(
         [
             "ssh",
             *ssh_connection_sharing,
             ssh_target,
             *ssh_indirect_command,
-            "mktemp",
-            "--tmpdir=\\${SCRATCH}",
-            "--directory",
+            "sh",
+            "-c",
+            f"\"'{remote_command}'\"",
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        # Don't crash on decoding errors.
-        errors="ignore",
-        # Silliness for Python 3.6
-        # text=True,
-        universal_newlines=True,
+        # This implies text mode.
+        errors="replace",
     )
 
     try:
@@ -205,8 +203,7 @@ def make_remote_temporary_directory(
             return out.strip()
         else:
             logger.error("Failed to make remote temporary directory, got output:")
-            logger.error(f"stdout: {out.strip()}")
-            logger.error(f"stderr: {err.strip()}")
+            logger.error(f"{out.strip()}")
             raise IOError("Failed to make remote temporary directory.")
 
     except subprocess.TimeoutExpired:
@@ -242,7 +239,7 @@ def transfer_sif_files(
     files = f"-h {files}"
 
     # Meaning, "stuff these files into the sif/ directory."
-    files = f"--transform='s/^/sif\//' ${files}"
+    files = f"--transform='s|^|sif/|' {files}"
 
     transfer_files(
         logger,
@@ -296,18 +293,16 @@ def transfer_files(
     task,
 ):
     # FIXME: Pass an actual list to Popen
+    full_command = f'tar -c -f- {files} | ssh {" ".join(ssh_connection_sharing)} {ssh_target} {" ".join(ssh_indirect_command)} tar -C {remote_script_dir} -x -f-'
     proc = subprocess.Popen(
         [
-            f'tar -c -f- {files} | ssh {" ".join(ssh_connection_sharing)} {ssh_target} {" ".join(ssh_indirect_command)} tar -C {remote_script_dir} -x -f-'
+            full_command
         ],
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        # Don't crash on decoding errors.
-        errors="ignore",
-        # Silliness for Python 3.6
-        # text=True,
-        universal_newlines=True,
+        # This implies text mode.
+        errors="replace",
     )
 
     try:
@@ -317,8 +312,8 @@ def transfer_files(
             return 0
         else:
             logger.error(f"Failed to {task}, aborting.")
-            logger.warning(f"stdout: {out.strip()}")
-            logger.warning(f"stderr: {err.strip()}")
+            logger.debug(f"Command '{full_command}' got output:")
+            logger.warning(f"{out.strip()}")
             raise RuntimeError(f"Failed to {task}")
 
     except subprocess.TimeoutExpired:
@@ -335,7 +330,8 @@ def extract_full_lines(buffer):
     if last_newline == -1:
         return buffer, []
 
-    lines = [line.decode("utf-8") for line in buffer[:last_newline].split(b"\n")]
+    lines = [line.decode("utf-8", errors="replace")
+             for line in buffer[:last_newline].split(b"\n")]
     return buffer[last_newline + 1 :], lines
 
 
@@ -366,6 +362,8 @@ def invoke_pilot_script(
     update_function,
     request_id,
     password_file,
+    cpus,
+    mem_mb,
 ):
     args = [
         "ssh",
@@ -385,6 +383,8 @@ def invoke_pilot_script(
         str(allocation),
         request_id,
         str(remote_script_dir / password_file.name),
+        str(cpus),
+        str(mem_mb),
     ]
     proc = subprocess.Popen(
         args,
@@ -440,7 +440,7 @@ def invoke_pilot_script(
 
     # Print the remainder, if any.
     if len(out_buffer) != 0:
-        print("   ", out_buffer.decode("utf-8"))
+        print("   ", out_buffer.decode("utf-8", errors="replace"))
     print()
 
     # Set by proc.poll().
@@ -488,6 +488,8 @@ def annex_create(
     password_file,
     ssh_target,
     control_path,
+    cpus,
+    mem_mb,
 ):
 
     # We use this same method to determine the user name in `htcondor job`,
@@ -502,6 +504,9 @@ def annex_create(
     local_script_dir = (
         Path(htcondor.param.get("LIBEXEC", "/usr/libexec/condor")) / "annex"
     )
+
+    if not local_script_dir.is_dir():
+        raise RuntimeError(f"Annex script dir {local_script_dir} not found or not a directory.")
 
     if queue_name is None:
         queue_name = MACHINE_TABLE[target]["default_queue"]
@@ -522,12 +527,17 @@ def annex_create(
     password_file = Path(password_file).expanduser()
     if not password_file.exists():
         try:
+            old_umask = os.umask(0o077)
             with password_file.open("wb") as f:
                 password = secrets.token_bytes(16)
                 f.write(password)
             password_file.chmod(0o0400)
+            try:
+                os.umask(old_umask)
+            except OSError:
+                pass
         except OSError as ose:
-            raise OSError(
+            raise RuntimeError(
                 f"Password file {password_file} does not exist and could not be created: {ose}."
             )
 
@@ -683,6 +693,7 @@ def annex_create(
             # cleaned up?
             "environment": f'PYTHONPATH={os.environ.get("PYTHONPATH", "")}',
             "+arguments": f'strcat( "$(CLUSTER).0 hpc_annex_request_id ", GlobalJobID, " {collector}")',
+            "jobbatchname": f'{annex_name} [HPC Annex]',
             "+hpc_annex_request_id": 'GlobalJobID',
             # Properties of the annex request.  We should think about
             # representing these as a nested ClassAd.  Ideally, the back-end
@@ -694,10 +705,16 @@ def annex_create(
             "+hpc_annex_collector": f'"{collector}"',
             "+hpc_annex_lifetime": f'"{lifetime}"',
             "+hpc_annex_owners": f'"{owners}"',
-            "+hpc_annex_nodes": f'"{nodes}"',
+            # FIXME: `nodes` should be undefined if not set on the
+            # command line but either cpus or mem_mb are.
+            "+hpc_annex_nodes": f'"{nodes}"'
+                if nodes is not None else "undefined",
+            "+hpc_annex_cpus": f'"{cpus}"'
+                if cpus is not None else "undefined",
+            "+hpc_annex_mem_mb": f'"{mem_mb}"'
+                if mem_mb is not None else "undefined",
             "+hpc_annex_allocation": f'"{allocation}"'
-            if allocation is not None
-            else "undefined",
+                if allocation is not None else "undefined",
             # Hard state required for clean up.  We'll be adding
             # hpc_annex_PID, hpc_annex_PILOT_DIR, and hpc_annex_JOB_ID
             # as they're reported by the back-end script.
@@ -752,7 +769,7 @@ def annex_create(
             )
             schedd.edit(job_id, "ContainerImage", f'"{remote_sif_file}"')
 
-            transfer_input = job_ad["TransferInput"]
+            transfer_input = job_ad.get("TransferInput", "")
             input_files = transfer_input.split(",")
             if job_ad["ContainerImage"] in input_files:
                 logger.debug(
@@ -783,6 +800,8 @@ def annex_create(
         lambda attribute, value: updateJobAd(cluster_id, attribute, value, remotes),
         request_id,
         password_file,
+        cpus,
+        mem_mb,
     )
 
     if rc == 0:
@@ -794,4 +813,3 @@ def annex_create(
         except Exception:
             logger.warn(f"Could not remove cluster ID {cluster_id}.")
         raise RuntimeError(error)
-
