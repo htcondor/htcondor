@@ -447,7 +447,7 @@ You can kill the program once it's working correctly.
     2022-03-23 13:06:08.304520 rvgahp_proxy[8169]: rvgahp_proxy starting...
     2022-03-23 13:06:08.304766 rvgahp_proxy[8169]: UNIX socket: /tmp/alice.rvgahp.sock
 
-Fifth, run the *rvgahp_server* program on the remote machine.
+Finally, run the *rvgahp_server* program on the remote machine.
 You must ensure it remains running during the entire time you are
 submitting and running jobs on the batch system.
 
