@@ -432,18 +432,6 @@ void add_account_cleanup_reminder(const std::string & name)
 	}
 }
 
-#if defined( DEPRECATED_SOCKET_CALLS )
-int
-create_port( ReliSock* rsock )
-{
-	/* FALSE means this is an incoming connection */
-	rsock->bind( FALSE );
-	rsock->listen();
-	return rsock->get_file_desc();
-}
-#endif /* DEPRECATED_SOCKET_CALLS */
-
-
 bool
 reply( Stream* s, int cmd )
 {
