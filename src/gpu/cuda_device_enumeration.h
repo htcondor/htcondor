@@ -93,7 +93,7 @@ GPUFP cuda_t                    cudaRuntimeGetVersion;
 GPUFP dev_basic_props           getBasicProps;
 GPUFP cuda_DevicePropBuf_int    cudaGetDevicePropertiesOfIndeterminateStructure;
 
-typedef void * cudev;
+typedef int * cudev;
 typedef cudaError_t (CUDACALL* cuda_dev_int_t)(cudev *, int);
 typedef cudaError_t (CUDACALL* cuda_name_t)(char *, int, cudev);
 typedef CUresult (CUDACALL * cuda_uuid_t)(unsigned char uuid[16], cudev);
