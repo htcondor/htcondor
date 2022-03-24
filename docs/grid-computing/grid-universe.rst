@@ -307,23 +307,26 @@ Similarly, submit description file command
 can be used to specify these elements if they fall under the ``<Application>``
 element of the ADL.
 
-The batch Grid Type (for PBS, LSF, SGE, and SLURM)
+The batch Grid Type (for SLURM, PBS, LSF, and SGE)
 --------------------------------------------------
 
 :index:`batch grid type`
 
-The **batch** grid type is used to submit to a local PBS, LSF, SGE, or
-SLURM system using the **grid** universe and the
+The **batch** grid type is used to submit to a local SLURM, PBS, LSF, or
+SGE system using the **grid** universe and the
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
 command by placing a variant of the following into the submit
 description file.
 
 .. code-block:: text
 
-    grid_resource = batch pbs
+    grid_resource = batch slurm
 
-The second argument on the right hand side will be one of ``pbs``,
-``lsf``, ``sge``, or ``slurm``.
+The second argument on the right hand side will be one of ``slurm``,
+``pbs``, ``lsf``, or ``sge``.
+
+Submission to a batch system on a remote machine using SSH is also
+possible. This is described below.
 
 The batch GAHP server is a piece of software called the blahp.
 The configuration parameters ``BATCH_GAHP`` and ``BLAHPD_LOCATION``
@@ -337,7 +340,7 @@ The batch GAHP supports translating certain job classad attributes into the corr
 The following table summarizes how job classad attributes will be translated into the corresponding Slurm job parameters.
 
 +-------------------+---------------------+
-| Classad           | Slurm               |
+| Job ClassAd       | Slurm               |
 +===================+=====================+
 | ``RequestMemory`` | ``--mem``           |
 +-------------------+---------------------+
@@ -354,62 +357,111 @@ The following table summarizes how job classad attributes will be translated int
 
 Note that for Slurm, ``Queue`` is used for both ``--partition`` and ``--clusters``. If you use the ``partition@cluster`` syntax, the partition will be set to whatever is before the ``@``, and the cluster to whatever is after the ``@``. If you only wish to set the cluster, leave out the partition (e.g. use ``@cluster``).
 
-
-:index:`PBS (Portable Batch System)`
-:index:`submitting jobs to PBS<single: submitting jobs to PBS; grid computing>`
-
-The popular PBS (Portable Batch System) can be found at
-`http://www.pbsworks.com/ <http://www.pbsworks.com/>`_, and Torque is
-at
-(`http://www.adaptivecomputing.com/products/open-source/torque/ <http://www.adaptivecomputing.com/products/open-source/torque/>`_).
-
-As an alternative to the submission details given above, HTCondor jobs
-may be submitted to a local PBS system using the **grid** universe and
-the **grid_resource** command by placing the following into the submit
-description file.
+You can specify batch system parameters that HTCondor doesn't have
+translations for using the **batch_extra_submit_args** command in the
+submit description file.
 
 .. code-block:: text
 
-    grid_resource = pbs
-
-:index:`LSF`
-:index:`submitting jobs to Platform LSF<single: submitting jobs to Platform LSF; grid computing>`
-
-HTCondor jobs may be submitted to the Platform LSF batch system. Find
-the Platform product from the page
-`http://www.platform.com/Products/ <http://www.platform.com/Products/>`_
-for more information about Platform LSF.
-
-As an alternative to the submission details given above, HTCondor jobs
-may be submitted to a local Platform LSF system using the **grid**
-universe and the **grid_resource** command by placing the following
-into the submit description file.
-
-.. code-block:: text
-
-    grid_resource = lsf
-
-:index:`SGE (Sun Grid Engine)`
-:index:`submitting jobs to SGE<single: submitting jobs to SGE; grid computing>`
-
-The popular Grid Engine batch system (formerly known as Sun Grid Engine
-and abbreviated SGE) is available in two varieties: Oracle Grid Engine
-(`http://www.oracle.com/us/products/tools/oracle-grid-engine-075549.html <http://www.oracle.com/us/products/tools/oracle-grid-engine-075549.html>`_)
-and Univa Grid Engine
-(`http://www.univa.com/?gclid=CLXg6-OEy6wCFWICQAodl0lm9Q <http://www.univa.com/?gclid=CLXg6-OEy6wCFWICQAodl0lm9Q>`_).
-
-As an alternative to the submission details given above, HTCondor jobs
-may be submitted to a local SGE system using the **grid** universe and
-adding the **grid_resource** command by placing into the submit
-description file:
-
-.. code-block:: text
-
-    grid_resource = sge
+    batch_extra_submit_args = --cpus-per-task=4 --qos=fast
 
 The *condor_qsub* command line tool will take PBS/SGE style batch files
 or command line arguments and submit the job to HTCondor instead. See
 the :doc:`/man-pages/condor_qsub` manual page for details.
+
+Remote batch Job Submission via SSH
+'''''''''''''''''''''''''''''''''''
+
+HTCondor can submit jobs to a batch system on a remote machine via SSH.
+This requires an initial setup step that installs some binaries under
+your home directory on the remote machine and creates an SSH key that
+allows SSH authentication without the user typing a password.
+The setup command is *condor_remote_cluster*, which you should run at
+the command line.
+
+.. code-block:: text
+
+    condor_remote_cluster --add alice@login.example.edu slurm
+
+Once this setup command finishes successfully, you can submit jobs for the
+remote batch system by including the username and hostname in the
+**grid_resource** command in your submit description file.
+
+.. code-block:: text
+
+    grid_resource = batch slurm alice@login.example.edu
+
+Remote batch Job Submission via Reverse SSH
+'''''''''''''''''''''''''''''''''''''''''''
+
+Submission to a batch system on a remote machine requires that HTCondor
+be able to establish an SSH connection using just an ssh key for
+authentication.
+If the remote machine doesn't allow ssh keys or requires Multi-Factor
+Authentication (MFA), then the SSH connection can be established in the
+reverse connection using the Reverse GAHP.
+This requires some extra setup and maintanence, and is not recommended if
+the normal SSH connection method can be made to work.
+
+For the Reverse GAHP to work, your local machine must be reachable on
+the network from the remote machine on the SSH and HTCondor ports
+(22 and 9618, respectively).
+Also, your local machine must allow SSH logins using just an ssh key
+for authentication.
+
+First, run the *condor_remote_cluster* as you would for a regular
+remote SSH setup.
+
+.. code-block:: text
+
+    condor_remote_cluster --add alice@login.example.edu slurm
+
+Second, create an ssh key that's authorized to login to your account on
+your local machine and save the private key on the remote machine.
+The private key should not be protected with a passphrase.
+In the following examples, we'll assume the ssh private key is named
+``~/.ssh/id_rsa_rvgahp``.
+
+Third, select a pathname on your local machine for a unix socket file
+that will be used by the Reverse GAHP components to communicate with
+each other.
+The Reverse GAHP programs will create the file as your user identity,
+so we suggest using a location under your home directory or /tmp.
+In the following examples, we'll use ``/tmp/alice.rvgahp.socket``.
+
+Fourth, on the remote machine, create a ``~/bosco/glite/bin/rvgahp_ssh``
+shell script like this:
+
+.. code-block:: text
+
+    #!/bin/bash
+    exec ssh -o "ServerAliveInterval 60" -o "BatchMode yes" -i ~/.ssh/id_rsa_rvgahp alice@submithost "/usr/sbin/rvgahp_proxy /tmp/alice.rvgahp.sock"
+
+Run this script manually to ensure it works.
+It should print a couple messages from the *rvgahp_proxy* started on your
+local machine.
+You can kill the program once it's working correctly.
+
+.. code-block:: text
+
+    2022-03-23 13:06:08.304520 rvgahp_proxy[8169]: rvgahp_proxy starting...
+    2022-03-23 13:06:08.304766 rvgahp_proxy[8169]: UNIX socket: /tmp/alice.rvgahp.sock
+
+Fifth, run the *rvgahp_server* program on the remote machine.
+You must ensure it remains running during the entire time you are
+submitting and runnings jobs on the batch system.
+
+.. code-block:: text
+
+    ~/bosco/glite/bin/rvgahp_server -b ~/bosco/glite
+
+Now, you can submit jobs for the remote batch system.
+Adding the **--rvgahp-socket** option to your **grid_resource** submit
+command tells HTCondor to use the Reverse GAHP for the SSH connection.
+
+.. code-block:: text
+
+    grid_resource = batch slurm alice@login.example.edu --rvgahp-socket /tmp/alice.rvgahp.sock
 
 The EC2 Grid Type
 -----------------
