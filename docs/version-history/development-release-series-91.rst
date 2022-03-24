@@ -43,6 +43,11 @@ New Features:
   GPU when creating a dynamic slot.
   :jira:`953`
 
+- Added the Reverse GAHP, which allows *condor_remote_cluster* to work with
+  remote clusters that don't allow SSH keys or require Multi-Factor
+  Authentication for all SSH connections.
+  :jira:`1007`
+
 Bugs Fixed:
 
 - None.

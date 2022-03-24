@@ -1380,6 +1380,9 @@ rm -rf %{buildroot}
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
 %_sbindir/remote_gahp
+%_sbindir/rvgahp_client
+%_sbindir/rvgahp_proxy
+%_sbindir/rvgahp_server
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
 %_sbindir/arc_gahp
