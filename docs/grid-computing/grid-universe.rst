@@ -277,7 +277,7 @@ The submit description file command
 **arc_rte** :index:`arc_rte<single: arc_resources; submit commands>`
 can be used to request one of more of these labels.
 It is a comma-delimited list. If a label supports optional parameters, they
-can be provided after the label spearated by spaces.
+can be provided after the label separated by spaces.
 Here is an example showing use of two standard RTE labels, one with
 an optional parameter:
 
@@ -292,7 +292,7 @@ HTCondor constructs an ADL description of the job based on attributes in
 the job ClassAd, but some ADL elements don't have an equivalent job ClassAd
 attribute.
 The submit description file command
-**arc_resources** :index:`arc_resoruces<single: arc_resources; submit commands>`
+**arc_resources** :index:`arc_resources<single: arc_resources; submit commands>`
 can be used to specify these elements if they fall under the ``<Resources>``
 element of the ADL.
 The value should be a chunk of XML text that could be inserted inside the
@@ -335,9 +335,9 @@ files, respectively.
 The blahp has its own configuration file, located at /etc/blah.config
 (``$(RELEASE_DIR)``/etc/blah.config for a tarball release).
 
-The batch GAHP supports translating certain job classad attributes into the corresponding batch system submission parameters. However, note that not all parameters are supported.
+The batch GAHP supports translating certain job ClassAd attributes into the corresponding batch system submission parameters. However, note that not all parameters are supported.
 
-The following table summarizes how job classad attributes will be translated into the corresponding Slurm job parameters.
+The following table summarizes how job ClassAd attributes will be translated into the corresponding Slurm job parameters.
 
 +-------------------+---------------------+
 | Job ClassAd       | Slurm               |
@@ -400,7 +400,7 @@ authentication.
 If the remote machine doesn't allow ssh keys or requires Multi-Factor
 Authentication (MFA), then the SSH connection can be established in the
 reverse connection using the Reverse GAHP.
-This requires some extra setup and maintanence, and is not recommended if
+This requires some extra setup and maintenance, and is not recommended if
 the normal SSH connection method can be made to work.
 
 For the Reverse GAHP to work, your local machine must be reachable on
@@ -449,7 +449,7 @@ You can kill the program once it's working correctly.
 
 Fifth, run the *rvgahp_server* program on the remote machine.
 You must ensure it remains running during the entire time you are
-submitting and runnings jobs on the batch system.
+submitting and running jobs on the batch system.
 
 .. code-block:: text
 
@@ -971,7 +971,7 @@ information about Azure is available at
 Azure Job Submission
 ''''''''''''''''''''
 
-HTCondor jobs are submitted to the Azyre service with the **grid**
+HTCondor jobs are submitted to the Azure service with the **grid**
 universe, setting the
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
 command to **azure**, followed by your Azure subscription id. The submit
@@ -1003,7 +1003,7 @@ in a file under your HOME directory. HTCondor will use these credentials
 to communicate with Azure.
 
 You can also set up a service account in Azure for HTCondor to use. This
-lets you limit the level of acccess HTCondor has to your Azure account.
+lets you limit the level of access HTCondor has to your Azure account.
 Instructions for creating a service account can be found here:
 `http://research.cs.wisc.edu/htcondor/gahp/AzureGAHPSetup.docx <http://research.cs.wisc.edu/htcondor/gahp/AzureGAHPSetup.docx>`_.
 
