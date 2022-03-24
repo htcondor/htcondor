@@ -248,7 +248,7 @@ universe. The
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
 command specifies the name of the ARC CE service as follows:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = arc https://arc.example.com:443/arex/rest/1.0
 
@@ -281,7 +281,7 @@ can be provided after the label spearated by spaces.
 Here is an example showing use of two standard RTE labels, one with
 an optional parameter:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     arc_rte = ENV/RTE,ENV/PROXY USE_DELEGATION_DB
 
@@ -298,7 +298,7 @@ element of the ADL.
 The value should be a chunk of XML text that could be inserted inside the
 ``<Resources>`` element. For example:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     arc_resources = <NetworkInfo>gigabitethernet</NetworkInfo>
 
@@ -318,7 +318,7 @@ SGE system using the **grid** universe and the
 command by placing a variant of the following into the submit
 description file.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = batch slurm
 
@@ -361,7 +361,7 @@ You can specify batch system parameters that HTCondor doesn't have
 translations for using the **batch_extra_submit_args** command in the
 submit description file.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     batch_extra_submit_args = --cpus-per-task=4 --qos=fast
 
@@ -387,7 +387,7 @@ Once this setup command finishes successfully, you can submit jobs for the
 remote batch system by including the username and hostname in the
 **grid_resource** command in your submit description file.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = batch slurm alice@login.example.edu
 
@@ -459,7 +459,7 @@ Now, you can submit jobs for the remote batch system.
 Adding the **--rvgahp-socket** option to your **grid_resource** submit
 command tells HTCondor to use the Reverse GAHP for the SSH connection.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = batch slurm alice@login.example.edu --rvgahp-socket /tmp/alice.rvgahp.sock
 
@@ -491,7 +491,7 @@ universe, setting the
 command to **ec2**, followed by the service's URL. For example, partial
 contents of the submit description file may be
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = ec2 https://ec2.us-east-1.amazonaws.com/
 
@@ -518,7 +518,7 @@ first authentication method uses the EC2 API's built-in authentication.
 Specify the service with expected ``http://`` or ``https://`` URL, and
 set the EC2 access key and secret access key as follows:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     ec2_access_key_id = /path/to/access.key
     ec2_secret_access_key = /path/to/secret.key
@@ -539,7 +539,7 @@ specifies the path to the X.509 private key, which is not the same as
 the built-in authentication's secret key. The following example
 illustrates the specification for X.509 authentication:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = ec2 x509://service.example
     ec2_access_key_id = /path/to/x.509/public.key
@@ -599,7 +599,7 @@ are separated by a commas, and/or spaces. For example, to specify that
 the first ephemeral device should be ``/dev/sdb`` and the second
 ``/dev/sdc``:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     ec2_block_device_mapping = ephemeral0:/dev/sdb, ephemeral1:/dev/sdc
 
@@ -658,7 +658,7 @@ submit command
 specifies this floating point value. For example, to bid 1.1 cents per
 hour on Amazon:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     ec2_spot_price = 0.011
 
@@ -694,7 +694,7 @@ command name.
 For example, the submit description file commands to set parameter
 ``IamInstanceProfile.Name`` to value ``ExampleProfile`` are
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     ec2_parameter_names = IamInstanceProfile.Name
     ec2_parameter_IamInstanceProfile_Name = ExampleProfile
@@ -851,7 +851,7 @@ command to **gce**, followed by the service's URL, your GCE project, and
 the desired GCE zone to be used. The submit description file command
 will be similar to:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = gce https://www.googleapis.com/compute/v1 my_proj us-central1-a
 
@@ -881,7 +881,7 @@ description file using the
 **gce_auth_file** :index:`gce_auth_file<single: gce_auth_file; submit commands>`
 command, as in the example:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     gce_auth_file = /path/to/auth-file
 
@@ -902,7 +902,7 @@ the submit description file using the
 command. The value should be a comma-separated list of name=value
 settings, as the example:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     gce_metadata = setting1=foo,setting2=bar
 
@@ -948,7 +948,7 @@ the number of seconds between restarts using *GCE_GAHP_LIFETIME*, where zero
 means to never restart.  Restarting the *gce_gahp* does not affect the jobs
 themselves.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     GCE_GAHP     = $(SBIN)/gce_gahp
     GCE_GAHP_LOG = /tmp/GceGahpLog.$(USERNAME)
@@ -977,7 +977,7 @@ universe, setting the
 command to **azure**, followed by your Azure subscription id. The submit
 description file command will be similar to:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = azure 4843bfe3-1ebe-423e-a6ea-c777e57700a9
 
@@ -1012,7 +1012,7 @@ you can specify its location in the submit description file using the
 **azure_auth_file** :index:`azure_auth_file<single: azure_auth_file; submit commands>`
 command, as in the example:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     azure_auth_file = /path/to/auth-file
 
@@ -1064,7 +1064,7 @@ and specify its location in the submit description file using the
 **boinc_authenticator_file** :index:`boinc_authenticator_file<single: boinc_authenticator_file; submit commands>`
 command, as in the example:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     boinc_authenticator_file = /path/to/auth-file
 
@@ -1090,6 +1090,6 @@ The following configuration variable is specific to the **boinc** grid
 type. The value listed here is the default. A different value may be
 specified in the HTCondor configuration files.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     BOINC_GAHP = $(SBIN)/boinc_gahp
