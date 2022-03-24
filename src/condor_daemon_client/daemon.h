@@ -574,7 +574,7 @@ public:
 		 * then set `lifetime` to -1.
 		 */
 	bool getSessionToken( const std::vector<std::string> &authz_bounding_limit, int lifetime,
-		std::string &token, CondorError *err=NULL );
+		std::string &token, const std::string &key, CondorError *err=NULL );
 
 		/*
 		 * Start a token request workflow from the remote daemon, potentially as an
