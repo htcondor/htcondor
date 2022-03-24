@@ -4234,9 +4234,13 @@ int dc_main( int argc, char** argv )
 								  handle_nop,
 								  "handle_nop()", ADMINISTRATOR );
 
+	// CRUFT The old OWNER authorization level was merged into
+	//   ADMINISTRATOR in HTCondor 9.9.0. For older clients, we still
+	//   recognize the DC_NOP_OWNER command.
+	//   We should remove it eventually.
 	daemonCore->Register_Command( DC_NOP_OWNER, "DC_NOP_OWNER",
 								  handle_nop,
-								  "handle_nop()", OWNER );
+								  "handle_nop()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_NOP_CONFIG, "DC_NOP_CONFIG",
 								  handle_nop,

@@ -35,8 +35,6 @@ PermString( DCpermission perm )
 		return "NEGOTIATOR";
 	case ADMINISTRATOR:
 		return "ADMINISTRATOR";
-	case OWNER:
-		return "OWNER";
 	case CONFIG_PERM:
 		return "CONFIG";
     case DAEMON:

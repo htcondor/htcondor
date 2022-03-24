@@ -39,7 +39,6 @@ typedef enum {
   /** Able to modify data (submit jobs) */   WRITE,
   /** From the negotiator */                 NEGOTIATOR,
   /** Administrative cmds (on, off, etc) */  ADMINISTRATOR,
-  /** The machine owner (vacate) */          OWNER,
   /** Changing config settings remotely */   CONFIG_PERM,
   /** Daemon to daemon communcation     */   DAEMON,
   /** SOAP interface (http PUT) */			 SOAP_PERM,

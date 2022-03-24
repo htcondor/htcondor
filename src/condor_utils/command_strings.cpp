@@ -539,8 +539,6 @@ int getSampleCommand( int authz_level ) {
                         return DC_NOP_NEGOTIATOR;
                 case ADMINISTRATOR:
                         return DC_NOP_ADMINISTRATOR;
-                case OWNER:
-                        return DC_NOP_OWNER;
                 case CONFIG_PERM:
                         return DC_NOP_CONFIG;
                 case DAEMON:
