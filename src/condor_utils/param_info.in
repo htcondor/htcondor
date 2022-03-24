@@ -6793,6 +6793,19 @@ default : @fin
 			SET Requirements $(addl_reqs)
 		endif
 	@end
+
+	if $(ANNEX_JOBS_EXCLUSIVELY:TRUE)
+		JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AnnexJobsExclusively
+		JOB_TRANSFORM_AnnexJobsExclusively @=end
+			REQUIREMENTS TargetAnnexName =?= undefined
+			addl_reqs = ifThenElse(TARGET.AuthenticatedIdentity is undefined, true, !regexp(".*@$(ANNEX_TOKEN_DOMAIN)", TARGET.AuthenticatedIdentity))
+			if defined MY.Requirements
+				SET Requirements $(addl_reqs) && ($(MY.Requirements))
+			else
+				SET Requirements $(addl_reqs)
+			endif
+		@end
+	endif
 @fin
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^
