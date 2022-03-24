@@ -332,13 +332,14 @@ ResourceRequestList::fetchRequestsFromSchedd(ReliSock* const sock, bool blocking
 
 		// 2d.  get the request
 		dprintf (D_FULLDEBUG,"    Got JOB_INFO command; getting classad/eom\n");
-		request_ad = getClassAd(sock);	// allocates a new ClassAd on success, NULL on fail
-		if ( request_ad==NULL || !sock->end_of_message() )
+		request_ad = new ClassAd();
+		if ( !getClassAd(sock, *request_ad) || !sock->end_of_message() )
 		{
 			dprintf(D_ALWAYS, "    JOB_INFO command not followed by ad/eom\n");
 			sock->end_of_message();
 			errcode = __LINE__;
 			m_requests_to_fetch = 0;
+			delete request_ad;
 			return RRL_ERROR;
 		}
 		m_ads.push_back(request_ad);
