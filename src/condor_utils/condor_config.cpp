@@ -777,7 +777,7 @@ config_host(const char* host, int config_options, const char * root_config)
 void
 condor_auth_config(int is_daemon)
 {
-#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_GLOBUS)
+#if defined(HAVE_EXT_GLOBUS)
 
 		// First, if there is X509_USER_PROXY, we clear it
 		// (if we're a daemon).

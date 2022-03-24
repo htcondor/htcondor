@@ -21,8 +21,6 @@
 #ifndef CONDOR_AUTHENTICATOR_FILESYSTEM
 #define CONDOR_AUTHENTICATOR_FILESYSTEM
 
-#if !defined(SKIP_AUTHENTICATION)
-
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 
 class Condor_Auth_FS : public Condor_Auth_Base {
@@ -59,7 +57,5 @@ class Condor_Auth_FS : public Condor_Auth_Base {
 	std::string m_new_dir;
     int    remote_;
 };
-
-#endif
 
 #endif
