@@ -539,7 +539,7 @@ main( int argc, const char *argv[] )
 	}
 
 	init_params();
-	submit_hash.init(submit_method::CONDOR_SUBMIT);
+	submit_hash.init(CONDOR_SUBMIT);
 
 	default_to_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", default_to_factory);
 

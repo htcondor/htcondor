@@ -17,6 +17,7 @@ from htcondor_cli import TMP_DIR
 
 schedd = htcondor.Schedd()
 
+CONST_SUBMIT_METHOD = 4
 
 class Submit(Verb):
     """
@@ -44,7 +45,7 @@ class Submit(Verb):
         # Submit the DAG to the local schedd
         submit_description = htcondor.Submit.from_dag(dag_filename)
 	#Set s_method to HTC_DAG_SUBMIT
-        submit_description.setSubmitMethod(5)
+        submit_description._setSubmitMethod(CONST_SUBMIT_METHOD,True)
 
         with schedd.transaction() as txn:
             try:

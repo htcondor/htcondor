@@ -518,8 +518,6 @@ SubmitHash::SubmitHash()
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();
 
-	s_method = submit_method::UNDEFINED;//Initialize JobSubmitMethod to undefined
-
 	mctx.init("SUBMIT", 3);
 }
 
@@ -1167,23 +1165,11 @@ void SubmitHash::init()
 	mctx.cwd = NULL;
 }
 
-//init() overload for assigning JobSubmitMethod to init passed value as enum
-void SubmitHash::init(submit_method value)
-{
-	clear();
-	SubmitMacroSet.sources.push_back("<Detected>");
-	SubmitMacroSet.sources.push_back("<Default>");
-	SubmitMacroSet.sources.push_back("<Argument>");
-	SubmitMacroSet.sources.push_back("<Live>");
-
-	s_method = value;//Enum variable being set to passed value for JobSubmitMethod
-
-	// in case this hasn't happened already.
-	init_submit_default_macros();
-
-	JobIwd.clear();
-	mctx.cwd = NULL;
+void SubmitHash::init(int value){
+	s_method = value;
+	init();
 }
+
 
 void SubmitHash::clear()
 {
@@ -8264,9 +8250,9 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	baseJob.Assign(ATTR_COMPLETION_DATE, 0);
 	
 	// set all jobs submission method if s_method is defined
-	if ( s_method != submit_method::UNDEFINED)
+	if ( s_method >= JOB_SUBMIT_METHOD_MIN)
 	{
-		baseJob.Assign(ATTR_JOB_SUBMIT_METHOD, static_cast<int>(s_method));
+		baseJob.Assign(ATTR_JOB_SUBMIT_METHOD, s_method);
 	}
 
 	// as of 8.9.5 we no longer think it is a good idea for submit to set the Owner attribute
@@ -9602,5 +9588,4 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 
 	return out.c_str();
 }
-
 
