@@ -2575,9 +2575,15 @@ usage (const char *myName, int other)
 	}
 	if (other & usage_SubmitMethod) {
 		printf("    %s codes:\n", ATTR_JOB_SUBMIT_METHOD);
-		printf("\t%3s %s\n", "UND", getSubmitMethodString(submit_method::UNDEFINED));
-		for (int met = 0; met <= static_cast<int>(submit_method::USER_SET); ++met) {
-			printf("\t%3d %s\n", met, getSubmitMethodString(static_cast<submit_method>(met)));
+		printf("\t%3s  %s\n", "UND", "Undefined");
+		for (int met = JOB_SUBMIT_METHOD_MIN; met <= JOB_SUBMIT_METHOD_MAX; ++met) {
+			std::string display = getSubmitMethodString(met);
+			//If number yeilds final enum key then output and break out of loop
+			if(display.compare("Portal/User-Set") == 0){
+				printf("\t%3d+ %s\n", USER_SET, display.c_str());
+				break;
+			}
+			printf("\t%3d  %s\n", met, display.c_str());
 		}
 		printf("\n");
 	}

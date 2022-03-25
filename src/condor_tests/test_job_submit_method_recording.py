@@ -46,6 +46,42 @@ PARENT A CHILD B
      dag_file.close()
      return test_dir / "simple.dag"
 
+#Fixture to test if an unknown submission doesn't add JobSubmitMethod Attribute
+@action
+def test_unknown_submission(default_condor,test_dir,path_to_sleep):
+     #This test works by making a fake unknown job submission via python bindings
+     #To do this the python file uses the non-documented _setSubmitMethod()
+     #for internal use to set the submit method value to -1 thus indicating 
+     #an unknown submission method
+     python_file = open(test_dir / "test_unknown.py", "w")
+     python_file.write(
+     """import htcondor
+import classad
+
+job = htcondor.Submit({{
+     "executable":"{0}"
+}})
+
+job._setSubmitMethod(-1,True)
+schedd = htcondor.Schedd()
+submit_result = schedd.submit(job)
+""".format(path_to_sleep))
+     python_file.close()
+     #^^^Make python file for submission^^^
+
+     #Submit file to run job
+     p = default_condor.run_command(["python3",test_dir / "test_unknown.py"])
+     #Get the job ad for completed job
+     schedd = default_condor.get_local_schedd()
+     wait(schedd)
+     job_ad = schedd.history(
+          constraint=None,
+          projection=["JobSubmitMethod"],
+          match=1,
+     )
+     
+     return job_ad
+
 #Fixture to run condor_submit and check the JobSubmitMethod attr
 @action
 def run_condor_submit(default_condor,write_sub_file):
@@ -80,7 +116,13 @@ def run_dagman_submission(default_condor,write_dag_file):
 
 subTestNum = 0
 #Fixture to run python bindings with and without user set value and check the JobSubmitMethod attr
-@action(params={"normal":'',"user_set":"job.setSubmitMethod(6)"})#Add line to have setting JobSubmitMethod to value 6 in python files
+@action(params={
+"normal":'',
+"user_set(1)":"job.setSubmitMethod(-3)",
+"user_set(2)":"job.setSubmitMethod(53)",
+"user_set(3)":"job.setSubmitMethod(100)",
+"user_set(4)":"job.setSubmitMethod(666)",
+})#Parameter tests: Standard, User-set(-3), User-set(53), User-set(100), and User-set(666)
 def run_python_bindings(default_condor,test_dir,path_to_sleep,request):
      global subTestNum
      filename = "test{}.py".format(subTestNum)
@@ -185,6 +227,14 @@ def run_htcondor_dag_submit(default_condor,write_dag_file,test_dir):
 #JobSubmitMethod Tests
 class TestJobSubmitMethod:
 
+
+     #Test that a job submited with value < Minimum doestn't add JobSubmitMethod attr
+     def test_job_submit_unknown_doesnt_define_attribute(self,test_unknown_submission):
+          passed = False
+          if any(test_unknown_submission) == False:
+               passed = True
+          assert passed
+
      #Test condor_submit yields 0
      def test_condor_submit_method_value(self,run_condor_submit):
           i = 0
@@ -222,7 +272,9 @@ class TestJobSubmitMethod:
           passed = False
           if run_python_bindings.stdout == '2':
                passed = True
-          elif run_python_bindings.stdout == '6':
+          elif run_python_bindings.stdout == "100":
+               passed = True
+          elif run_python_bindings.stdout == "666":
                passed = True
           assert passed
 
@@ -241,29 +293,14 @@ class TestJobSubmitMethod:
           #If made it this far then the test passed
           assert passed
 
-     #Test 'htcondor jobset submit yields 4
-     def test_htcondor_jobset_submit_method_value(self,run_htcondor_jobset_submit):
-          i = 0
-          passed = False
-          #Check that returned job ads have a submission value of 4
-          for ad in run_htcondor_jobset_submit:
-               i += 1
-               #If job ad submit method is not 4 then fail test
-               if ad["JobSubmitMethod"] == 4:
-                    passed = True
-          if i != 2:
-               passed = False
-          #If made it this far then the test passed
-          assert passed
-
-     #Test 'htcondor dag submit yields 5
+     #Test 'htcondor dag submit yields 4
      def test_htcondor_dag_submit_method_value(self,run_htcondor_dag_submit):
           countDAG = 0
           countJobs = 0
           passed = False
           #Check that returned job ads 
           for ad in run_htcondor_dag_submit:
-               if ad["JobSubmitMethod"] == 5:
+               if ad["JobSubmitMethod"] == 4:
                     countDAG += 1
                if ad["JobSubmitMethod"] == 1:
                     countJobs += 1
@@ -272,6 +309,23 @@ class TestJobSubmitMethod:
 
           #If made it this far then the test passed
           assert passed
+
+     #Test 'htcondor jobset submit yields 5
+     def test_htcondor_jobset_submit_method_value(self,run_htcondor_jobset_submit):
+          i = 0
+          passed = False
+          #Check that returned job ads have a submission value of 4
+          for ad in run_htcondor_jobset_submit:
+               i += 1
+               #If job ad submit method is not 4 then fail test
+               if ad["JobSubmitMethod"] == 5:
+                    passed = True
+          if i != 2:
+               passed = False
+          #If made it this far then the test passed
+          assert passed
+
+
 
 
 

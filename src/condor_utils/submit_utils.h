@@ -492,7 +492,7 @@ public:
 	~SubmitHash();
 
 	void init();
-	void init(submit_method value);
+	void init(int value);
 	void clear(); // clear, but do not deallocate
 	void setScheddVersion(const char * version) { ScheddVersion = version; }
 	void setMyProxyPassword(const char * pass) { MyProxyPassword = pass; }
@@ -645,8 +645,8 @@ public:
 	//bool AssignJobVal(const char * attr, time_t val)  { return AssignJobVal(attr, (long long)val); }
 
 	//Set job submit method to enum equal to passed value if value is in range
-	void setSubmitMethod(int value){ s_method = (value < -1 || value > 6) ? submit_method::UNDEFINED : static_cast<submit_method>(value); }
-	int getSubmitMethod(){ return static_cast<int>(s_method); }//Return job submit method value given s_method enum
+	void setSubmitMethod(int value) { s_method = value; }
+	int getSubmitMethod(){ return s_method; }//Return job submit method value given s_method enum
 
 	MACRO_ITEM* lookup_exact(const char * name) { return find_macro_item(name, NULL, SubmitMacroSet); }
 	CondorError* error_stack() const { return SubmitMacroSet.errors; }
@@ -876,7 +876,7 @@ private:
 
 	ContainerImageType image_type_from_string(const std::string &image) const;
 
-	submit_method s_method;
+	int s_method = -1; //-1 represents undefined job submit method
 };
 
 struct SubmitStepFromQArgs {

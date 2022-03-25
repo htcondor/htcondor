@@ -97,20 +97,31 @@ getJobStatusNum( const char* name )
 	return -1;
 }
 
+//Array of strings for names of Job Submit Methods
+static const char* JobSubmitMethodNames[] = {
+	"condor_submit",
+	"DAGMan-Direct",
+	"Python Bindings",
+	"htcondor job submit",
+	"htcondor jobset submit",
+	"htcondor dag submit",
+	//Any new methods should go above this comment in order of the table
+	"Portal/User-Set",//<-This should always be last
+};
+
 //This method reads a given submit_method enum and returns a string for help display
 const char* 
-getSubmitMethodString(submit_method method)
+getSubmitMethodString(int method)
 {
-	switch(method)
-	{
-		case submit_method::CONDOR_SUBMIT:      return "condor_submit";
-		case submit_method::DAGMAN:             return "DAGMan";
-		case submit_method::PYTHON_BINDINGS:    return "Python Bindings";
-		case submit_method::HTC_JOB_SUBMIT:     return "htcondor job submit";
-		case submit_method::HTC_JOBSET_SUBMIT:  return "htcondor jobset submit";
-		case submit_method::HTC_DAG_SUBMIT:     return "htcondor dag submit";
-		case submit_method::USER_SET:           return "User Set";
-		default:                 return "Unkown";
+	int array_size = *(&JobSubmitMethodNames+1)-JobSubmitMethodNames;
+	//Check to see if value is greater than the array index of second to last element
+	//or greater than or equal to 100 (final possible listing)
+	//If so then we will just return the cap (Portal/User-set at 100)
+	if(method > (array_size - 2) || method >= JOB_SUBMIT_METHOD_MAX){
+		return JobSubmitMethodNames[array_size-1];
+	}
+	else{
+		return JobSubmitMethodNames[method];
 	}
 }
 

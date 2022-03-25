@@ -12,6 +12,8 @@ from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
 
+CONST_SUBMIT_METHOD = 5
+
 class Submit(Verb):
     """
     Submits a job set when given a job set file
@@ -212,13 +214,13 @@ class Submit(Verb):
                         lineno += inlineno
                         submit_obj = htcondor.Submit(inline_data)
 			#Set s_method to HTC_JOBSET_SUBMIT
-                        submit_obj.setSubmitMethod(4)
+                        submit_obj._setSubmitMethod(CONST_SUBMIT_METHOD,True)
                     else:
                         try:
                             with open(job_source, "rt") as f_sub:
                                 submit_obj = htcondor.Submit(f_sub.read())
 				#Set s_method to HTC_JOBSET_SUBMIT
-                                submit_obj.setSubmitMethod(4)
+                                submit_obj._setSubmitMethod(CONST_SUBMIT_METHOD,True)
                         except IOError as e:
                             raise IOError(f"Error opening submit description file {job_source} in {job_set_file} at line {lineno}:\n{str(e)}")
 
