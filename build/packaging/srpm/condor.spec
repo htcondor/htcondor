@@ -38,11 +38,7 @@
 
 %define python 1
 
-%if 0%{?osg}
-%define globus 0
-%else
 %define globus 1
-%endif
 
 # Temporarily turn parallel_setup off
 %define parallel_setup 0
