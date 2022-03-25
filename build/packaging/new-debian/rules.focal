@@ -3,6 +3,7 @@
 srcpkg = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Source:' | cut -d ' ' -f 2,2)
 debver = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Version:' | cut -d ' ' -f 2,2 )
 upstreamver = $(shell echo $(debver) | cut -d '-' -f 1,1 )
+buildid = $(shell cat ../../BUILD-ID)
 
 # this figures out the last merge point from 'master' into the Debian branch and
 # then described this commit relative to the last release tag (V...)
@@ -27,9 +28,8 @@ override_dh_auto_configure:
 		-DCLIPPED:BOOL=ON \
 		-DNO_PHONE_HOME:BOOL=ON \
 		-D_DEBUG:BOOL=TRUE \
-		-DBUILDID:STRING="Debian-$(debver)"\
+		-DBUILDID:STRING="$(buildid)"\
 		-DPACKAGEID:STRING="$(debver)"\
-		-DFORCE_PRE_RELEASE:STRING="Debian-$(debver)"\
 		-DCMAKE_INSTALL_PREFIX:PATH=/ \
 		-DCMAKE_SKIP_RPATH:BOOL=ON \
 		-DHAVE_EXT_CURL:BOOL=ON \
