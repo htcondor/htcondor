@@ -4735,8 +4735,9 @@ void export_schedd()
             R"C0ND0R(
             Sets the Job Ad attribute ``JobSubmitMethod`` to passed over number. Set
             number must be greater than or equal to ``100``. If no number is passed then
-            ``JobSubmitMethod`` will be undefined. Note: Setting of ``JobSubmitMethod``
+            ``JobSubmitMethod`` will be undefined. **Note~** Setting of ``JobSubmitMethod``
             must occur before job is submitted to Schedd.
+
             :param int value: Value of ``JobSubmitMethod``.
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("value")=-1))
