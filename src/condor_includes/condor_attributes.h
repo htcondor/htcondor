@@ -926,6 +926,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_CLIENT_ID "ClientId"
 #define ATTR_SEC_REQUEST_ID "RequestId"
 #define ATTR_SEC_LIFETIME "Lifetime"
+#define ATTR_SEC_REQUESTED_KEY "RequestedKey"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 

@@ -48,6 +48,13 @@ New Features:
   Authentication for all SSH connections.
   :jira:`1007`
 
+- Added the ``-key`` command-line option to *condor_token_request*, which
+  allows users to ask HTCondor to use a particular signing key when creating
+  the IDTOKEN.  Added the corresponding configuration macro,
+  :macro:`SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS`, which defaults to the default key
+  (``POOL``).
+  :jira:`1024`
+
 Bugs Fixed:
 
 - None.
