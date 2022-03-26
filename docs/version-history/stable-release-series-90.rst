@@ -59,6 +59,9 @@ Bugs Fixed:
   It can now be accessed by replacing "_" with "." in the URL scheme.
   :jira:`1011`
 
+- Fixed several unlikely bugs when parsing the time strings in ClassAds.
+  :jira:`814`
+
 .. _lts-version-history-9011:
 
 Version 9.0.11
