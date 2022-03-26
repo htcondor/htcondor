@@ -60,6 +60,25 @@ Bugs Fixed:
 - Fix for *condor_gpu_discovery* crash when run on Linux for Power (ppc64le) architecture.
   :jira:`967`
 
+Version 9.7.1
+-------------
+
+Release Notes:
+
+- HTCondor version 9.7.1 released on March 29, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed bug introduced in HTCondor v9.7.0 where job may go on hold without
+  setting a ``HoldReason`` and/or ``HoldReasonCode`` and ``HoldReasonSubCode``
+  attributes in the job classad.  In particular, this could happen when file transfer
+  using a file transfer plugin failed.
+  :jira:`1035`
+
 Version 9.7.0
 -------------
 
