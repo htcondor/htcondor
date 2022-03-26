@@ -17,7 +17,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bug introduced in HTCondor v9.7.0 where job may go on hold without
+  setting a ``HoldReason`` and/or ``HoldReasonCode`` and ``HoldReasonSubCode``
+  attributes in the job classad.  In particular, this could happen when file transfer
+  using a file transfer plugin failed.
+  :jira:`1035`
 
 Version 9.7.0
 -------------
