@@ -50,7 +50,8 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fix for *condor_gpu_discovery* crash when run on Linux for Power (ppc64le) architecture.
+  :jira:`967`
 
 Version 9.7.0
 -------------
