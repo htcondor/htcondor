@@ -322,7 +322,7 @@ bool operator()(const prio_rec& a, prio_rec& b) const
 		return false;
 	}
 	if( a.post_job_prio2 > b.post_job_prio2 ) {
-		return false;
+		return true;
 	}
 
 	 /* here, all job_prios are both equal */
