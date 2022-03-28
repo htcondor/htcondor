@@ -19,13 +19,16 @@ class Create(Verb):
     Create an HPC annex.
     """
 
-
     options = {
         "annex_name": {
-            "args": ("--name",),
-            "dest": "annex_name",
-            "help": "Provide an name for this annex",
-            "required": True,
+            "args": ("annex_name",),
+            "metavar": "annex-name",
+            "help": "Provide an name for your annex",
+        },
+        "target": {
+            "args": ("queue_at_machine",),
+            "metavar": "queue@machine",
+            "help": "Specify the queue and the HPC machine",
         },
         "nodes": {
             "args": ("--nodes",),
@@ -39,22 +42,11 @@ class Create(Verb):
             "type": int,
             "default": 3600,
         },
-        "target": {
-            "args": ("--machine",),
-            "dest": "target",
-            "help": "HPC machine name (e.g. stampede2)",
-            "required": True,
-        },
         "allocation": {
             "args": ("--project",),
             "dest": "allocation",
             "help": "The project name associated with HPC allocation (may be optional on some HPC machines)",
             "default": None,
-        },
-        "queue_name": {
-            "args": ("--queue_name",),
-            "help": f"""HPC queue name. Defaults to {htcondor.param.get("ANNEX_HPC_QUEUE_NAME", 'a machine-specific default (e.g. "development" for "stampede2")')}""",
-            "default": htcondor.param.get("ANNEX_HPC_QUEUE_NAME"),
         },
         "owners": {
             "args": ("--owners",),
