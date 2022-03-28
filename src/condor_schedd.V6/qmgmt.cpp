@@ -263,7 +263,7 @@ std::map<JobQueueKey, std::map<std::string, std::string>> PrivateAttrs;
 // This maximizes the likelyhood the compiler will inline
 // the comparison
 struct prio_compar {
-bool operator()(const prio_rec& a, prio_rec& b) const 
+bool operator()(const prio_rec& a, const prio_rec& b) const 
 {
 	// First sort by owner name.  This doesn't need to be alphabetical,
 	// just unique.  Sort first by length, as that's faster,
