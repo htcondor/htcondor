@@ -21,7 +21,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fix a rare bug where the starter will fail to start a job, and the job will
+  immediately transition back to the idle state to be run elsewhere.
+  :jira:`1040`
 
 Version 9.8.0
 -------------
