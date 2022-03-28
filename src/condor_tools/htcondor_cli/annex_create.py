@@ -38,7 +38,6 @@ MACHINE_TABLE = {
     "stampede2": {
         "pretty_name":      "Stampede 2",
         "gsissh_name":      "stampede2",
-        "default_queue":    "normal",
 
         # This isn't all of the queues on Stampede 2, but we
         # need to think about what it means, if anything, if
@@ -75,7 +74,6 @@ MACHINE_TABLE = {
     "expanse": {
         "pretty_name":      "Expanse",
         "gsissh_name":      "expanse",
-        "default_queue":    "compute",
 
         # GPUs are completed untested, see above.
         "queues": {
@@ -530,8 +528,7 @@ def annex_create(
     nodes,
     lifetime,
     allocation,
-    target,
-    queue_name,
+    queue_at_machine,
     owners,
     collector,
     token_file,
@@ -541,6 +538,10 @@ def annex_create(
     cpus,
     mem_mb,
 ):
+    if '@' in queue_at_machine:
+        (queue_name, target) = queue_at_machine.split('@', 2)
+    else:
+        raise ValueError("Target must have the form queue@machine.")
 
     # We use this same method to determine the user name in `htcondor job`,
     # so even if it's wrong, it will at least consistently so.
@@ -557,10 +558,6 @@ def annex_create(
 
     if not local_script_dir.is_dir():
         raise RuntimeError(f"Annex script dir {local_script_dir} not found or not a directory.")
-
-    if queue_name is None:
-        queue_name = MACHINE_TABLE[target]["default_queue"]
-        logger.debug(f"No queue name given, defaulting to {queue_name}")
 
     token_file = Path(token_file).expanduser()
     if not token_file.exists():
