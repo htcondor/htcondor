@@ -635,8 +635,8 @@ def annex_create(
     ##
     ## The user will do the 2FA/SSO dance here.
     ##
-    logger.info("Making initial SSH connection...")
-    logger.info(
+    logger.info(f"Connecting to {MACHINE_TABLE[target]['pretty_name']}...")
+    logger.debug(
         f"  (You can run 'ssh {' '.join(ssh_connection_sharing)} {ssh_target}' to use the shared connection.)"
     )
     rc = make_initial_ssh_connection(
@@ -646,8 +646,9 @@ def annex_create(
     )
     if rc != 0:
         raise RuntimeError(
-            f"Failed to make initial connection to {MACHINE_TABLE[target]['pretty_name']}, aborting ({rc}).\n\nIf the error message was 'Host key verication failed.', use the 'ssh' command above to run 'gsissh {MACHINE_TABLE[target]['gsissh_name']}' and type yes."
+            f"Failed to make initial connection to {MACHINE_TABLE[target]['pretty_name']}, aborting ({rc})."
         )
+    logger.info(f"... connected.")
 
     ##
     ## Register the clean-up function before creating the mess to clean-up.
@@ -680,7 +681,7 @@ def annex_create(
     )
     logger.debug(f"... made remote temporary directory {remote_script_dir} ...")
 
-    logger.info(f"Populating remote temporary directory...")
+    logger.info(f"Populating annex temporary directory...")
     populate_remote_temporary_directory(
         logger,
         ssh_connection_sharing,
@@ -702,10 +703,10 @@ def annex_create(
             remote_script_dir,
             sif_files,
         )
-    logger.info("... remote directory populated.")
+    logger.info("... annex temporary directory populated.")
 
     # Submit local universe job.
-    logger.info("Submitting state-tracking job...")
+    logger.debug("Submitting state-tracking job...")
     local_job_executable = local_script_dir / "annex-local-universe.py"
     if not local_job_executable.exists():
         raise RuntimeError(
@@ -778,7 +779,7 @@ def annex_create(
         raise RuntimeError(f"Failed to submit state-tracking job, aborting.")
 
     cluster_id = submit_result.cluster()
-    logger.info(f"... done.")
+    logger.debug(f"... done.")
     logger.debug(f"with cluster ID {cluster_id}.")
 
     results = schedd.query(
