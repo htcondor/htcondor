@@ -2043,10 +2043,12 @@ build_pid_list( std::vector<pid_t> & newPidList, pid_t BOLOpid = 0) {
 	dprintf(D_FULLDEBUG, "ProcAPI: read %d pid entries out of %d total entries in /proc\n", pid_entries, total_entries);
 
 	if (saw_bolo_pid) {
-		dprintf(D_ALWAYS, "As expected, we saw root of subfamily pid of %d\n", BOLOpid);
+		dprintf(D_FULLDEBUG, "As expected, we saw root of subfamily pid of %d\n", BOLOpid);
 	} else {
 		if (BOLOpid != 0) {
-			dprintf(D_ALWAYS, "Potential error, expected subfamily pid of %d was not found in /proc\n", BOLOpid);
+			dprintf(D_ALWAYS, "Warning, expected subfamily pid of %d was not found in /proc, adding to set of assumed alived pids\n", BOLOpid);
+			newPidList.push_back(BOLOpid);
+			++pid_entries;
 		}
 	}
 	if( (hidepid || saw_pid1) && saw_ppid && saw_pid ) {
