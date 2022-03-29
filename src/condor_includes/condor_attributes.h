@@ -427,6 +427,7 @@
 #define ATTR_LAST_JOB_STATUS  "LastJobStatus"
 #define ATTR_JOB_TOE "ToE"  // termination of execution ad
 #define ATTR_JOB_STATUS_ON_RELEASE  "JobStatusOnRelease"
+#define ATTR_JOB_SUBMIT_METHOD "JobSubmitMethod"
 #define ATTR_JOB_TRANSFERRING_OUTPUT  "JobTransferringOutput"
 #define ATTR_JOB_TRANSFERRING_OUTPUT_TIME  "JobTransferringOutputTime"
 #define ATTR_JOB_UNIVERSE  "JobUniverse"

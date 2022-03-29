@@ -7,6 +7,7 @@ import tempfile
 import time
 import getpass
 
+
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from htcondor_cli.dagman import DAGMan
 from htcondor_cli import JobStatus
 from htcondor_cli import TMP_DIR
 
+JSM_HTC_JOB_SUBMIT = 3
 
 class Submit(Verb):
     """
@@ -66,6 +68,8 @@ class Submit(Verb):
             with submit_file.open() as f:
                 submit_data = f.read()
             submit_description = htcondor.Submit(submit_data)
+	    #Set s_method to HTC_JOB_SUBMIT
+            submit_description.setSubmitMethod(JSM_HTC_JOB_SUBMIT,True)
 
             annex_name = options["annex_name"]
             if annex_name is not None:

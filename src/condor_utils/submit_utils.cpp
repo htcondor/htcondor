@@ -1150,7 +1150,7 @@ const char * init_submit_default_macros()
 	return ret;
 }
 
-void SubmitHash::init()
+void SubmitHash::init(int value)
 {
 	clear();
 	SubmitMacroSet.sources.push_back("<Detected>");
@@ -1161,9 +1161,12 @@ void SubmitHash::init()
 	// in case this hasn't happened already.
 	init_submit_default_macros();
 
+	s_method = value;
+
 	JobIwd.clear();
 	mctx.cwd = NULL;
 }
+
 
 void SubmitHash::clear()
 {
@@ -8103,6 +8106,12 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	// all jobs should end up with the same qdate, so we only query time once.
 	baseJob.Assign(ATTR_Q_DATE, submit_time);
 	baseJob.Assign(ATTR_COMPLETION_DATE, 0);
+	
+	// set all jobs submission method if s_method is defined
+	if ( s_method >= JOB_SUBMIT_METHOD_MIN)
+	{
+		baseJob.Assign(ATTR_JOB_SUBMIT_METHOD, s_method);
+	}
 
 	// as of 8.9.5 we no longer think it is a good idea for submit to set the Owner attribute
 	// for jobs, even for local jobs, but just in case, set this knob to true to enable the
@@ -9435,5 +9444,4 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 
 	return out.c_str();
 }
-
 
