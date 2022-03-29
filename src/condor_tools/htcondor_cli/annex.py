@@ -10,7 +10,8 @@ import htcondor
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
-# Most of the annex create code is stored in a separate file.
+# Most of the annex add/create code is stored in a separate file.
+from htcondor_cli.annex_create import annex_add
 from htcondor_cli.annex_create import annex_create
 
 
@@ -23,7 +24,7 @@ class Create(Verb):
         "annex_name": {
             "args": ("annex_name",),
             "metavar": "annex-name",
-            "help": "Provide an name for your annex",
+            "help": "Provide a name for your annex",
         },
         "target": {
             "args": ("queue_at_machine",),
@@ -105,6 +106,11 @@ class Create(Verb):
         if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
             raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
         annex_create(logger, **options)
+
+
+class Add(Create):
+    def __init__(self, logger, **options):
+        annex_add(logger, **options)
 
 
 class Status(Verb):
@@ -404,7 +410,11 @@ class Annex(Noun):
         pass
 
 
+    class add(Add):
+        pass
+
+
     @classmethod
     def verbs(cls):
-        return [cls.create, cls.status, cls.shutdown]
+        return [cls.create, cls.add, cls.status, cls.shutdown]
 
