@@ -480,7 +480,7 @@ def extract_sif_file(job_ad):
     return iwd / container_image
 
 
-def annex_create(
+def annex_inner_func(
     logger,
     annex_name,
     nodes,
@@ -854,3 +854,26 @@ def annex_create(
         except Exception:
             logger.warn(f"Could not remove cluster ID {cluster_id}.")
         raise RuntimeError(error)
+
+
+def annex_name_exists(annex_name):
+    schedd = htcondor.Schedd()
+    constraint = f'hpc_annex_name == "{annex_name}"'
+    annex_jobs = schedd.query(
+        constraint,
+        opts=htcondor.QueryOpts.DefaultMyJobsOnly,
+        projection=['ClusterID', 'ProcID'],
+    )
+    return len(annex_jobs) > 0
+
+
+def annex_create(logger, annex_name, **others):
+    if annex_name_exists(annex_name):
+        raise ValueError(f"You've already created an annex named '{annex_name}'.  To request more resources, use 'htcondor annex add'.")
+    return annex_inner_func(logger, annex_name, **others)
+
+
+def annex_add(logger, annex_name, **others):
+    if not annex_name_exists(annex_name):
+        raise ValueError(f"You need to create an an annex named '{annex_name}' first.  To do so, use 'htcondor annex create'.")
+    return annex_inner_func(logger, annex_name, **others)
