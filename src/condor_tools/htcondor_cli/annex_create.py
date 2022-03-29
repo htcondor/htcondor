@@ -15,6 +15,10 @@ from pathlib import Path
 
 import htcondor
 
+#
+# We could try to import colorama here -- see condor_watch_q -- but that's
+# only necessary for Windows.
+#
 
 INITIAL_CONNECTION_TIMEOUT = int(
     htcondor.param.get("ANNEX_INITIAL_CONNECTION_TIMEOUT", 180)
@@ -193,6 +197,8 @@ def make_initial_ssh_connection(
         raise RuntimeError(
             f"Did not make initial connection after {INITIAL_CONNECTION_TIMEOUT} seconds, aborting."
         )
+    except KeyboardInterrupt:
+        sys.exit(1)
 
 
 def remove_remote_temporary_directory(
@@ -658,10 +664,19 @@ def annex_create(
         logger.debug("No sif files found, continuing...")
     # The .sif files will be transferred to the target machine later.
 
+    # Distinguish our text from SSH's text.
+    ANSI_BRIGHT = "\033[1m"
+    ANSI_RESET_ALL = "\033[0m"
+
     ##
     ## The user will do the 2FA/SSO dance here.
     ##
-    logger.info(f"Connecting to {MACHINE_TABLE[target]['pretty_name']}...")
+    logger.info(
+        f"{ANSI_BRIGHT}This command will prompt you with a "
+        f"{MACHINE_TABLE[target]['pretty_name']} log-in.  To proceed, "
+        f"log-in to {MACHINE_TABLE[target]['pretty_name']} at the prompt "
+        f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
+    )
     logger.debug(
         f"  (You can run 'ssh {' '.join(ssh_connection_sharing)} {ssh_target}' to use the shared connection.)"
     )
@@ -674,7 +689,7 @@ def annex_create(
         raise RuntimeError(
             f"Failed to make initial connection to {MACHINE_TABLE[target]['pretty_name']}, aborting ({rc})."
         )
-    logger.info(f"... connected.")
+    logger.info(f"{ANSI_BRIGHT}Thank you.{ANSI_RESET_ALL}\n")
 
     ##
     ## Register the clean-up function before creating the mess to clean-up.
