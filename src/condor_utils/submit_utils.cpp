@@ -1150,7 +1150,7 @@ const char * init_submit_default_macros()
 	return ret;
 }
 
-void SubmitHash::init()
+void SubmitHash::init(int value)
 {
 	clear();
 	SubmitMacroSet.sources.push_back("<Detected>");
@@ -1161,13 +1161,10 @@ void SubmitHash::init()
 	// in case this hasn't happened already.
 	init_submit_default_macros();
 
+	s_method = value;
+
 	JobIwd.clear();
 	mctx.cwd = NULL;
-}
-
-void SubmitHash::init(int value){
-	s_method = value;
-	init();
 }
 
 

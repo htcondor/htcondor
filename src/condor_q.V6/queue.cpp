@@ -2580,7 +2580,7 @@ usage (const char *myName, int other)
 			std::string display = getSubmitMethodString(met);
 			//If number yeilds final enum key then output and break out of loop
 			if(display.compare("Portal/User-Set") == 0){
-				printf("\t%3d+ %s\n", USER_SET, display.c_str());
+				printf("\t%3d+ %s\n", JSM_USER_SET, display.c_str());
 				break;
 			}
 			printf("\t%3d  %s\n", met, display.c_str());

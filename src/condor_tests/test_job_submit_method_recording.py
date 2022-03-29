@@ -62,7 +62,7 @@ job = htcondor.Submit({{
      "executable":"{0}"
 }})
 
-job._setSubmitMethod(-1,True)
+job.setSubmitMethod(-1,True)
 schedd = htcondor.Schedd()
 submit_result = schedd.submit(job)
 """.format(path_to_sleep))
@@ -119,9 +119,10 @@ subTestNum = 0
 @action(params={
 "normal":'',
 "user_set(1)":"job.setSubmitMethod(-3)",
-"user_set(2)":"job.setSubmitMethod(53)",
-"user_set(3)":"job.setSubmitMethod(100)",
-"user_set(4)":"job.setSubmitMethod(666)",
+"user_set(2)":"job.setSubmitMethod(69)",
+"user_set(3)":"job.setSubmitMethod(69,True)",
+"user_set(4)":"job.setSubmitMethod(100)",
+"user_set(5)":"job.setSubmitMethod(666)",
 })#Parameter tests: Standard, User-set(-3), User-set(53), User-set(100), and User-set(666)
 def run_python_bindings(default_condor,test_dir,path_to_sleep,request):
      global subTestNum
@@ -272,10 +273,15 @@ class TestJobSubmitMethod:
           passed = False
           if run_python_bindings.stdout == '2':
                passed = True
+          elif run_python_bindings.stdout == "69":
+               passed = True
           elif run_python_bindings.stdout == "100":
                passed = True
           elif run_python_bindings.stdout == "666":
                passed = True
+          elif "htcondor.HTCondorValueError: Submit Method value must be" in run_python_bindings.stderr:
+               if "or greater. Or allow_reserved_values must be set to True." in run_python_bindings.stderr:
+                    passed = True
           assert passed
 
      #Test 'htcondor job submit' yields 3

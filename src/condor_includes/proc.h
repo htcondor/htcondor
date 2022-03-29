@@ -149,13 +149,13 @@ size_t hashFunction(const JOB_ID_KEY &);
 
 // Macros used to indicate how a job was submitted to htcondor
 #define JOB_SUBMIT_METHOD_MIN 0
-#define CONDOR_SUBMIT 0
-#define DAGMAN 1
-#define PYTHON_BINDINGS 2
-#define HTC_JOB_SUBMIT 3
-#define HTC_DAG_SUBMIT 4
-#define HTC_JOBSET_SUBMIT 5
-#define USER_SET 100
+#define JSM_CONDOR_SUBMIT 0
+#define JSM_DAGMAN 1
+#define JSM_PYTHON_BINDINGS 2
+#define JSM_HTC_JOB_SUBMIT 3
+#define JSM_HTC_DAG_SUBMIT 4
+#define JSM_HTC_JOBSET_SUBMIT 5
+#define JSM_USER_SET 100
 #define JOB_SUBMIT_METHOD_MAX 100
 
 const char* getSubmitMethodString(int method);

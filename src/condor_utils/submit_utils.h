@@ -491,8 +491,7 @@ public:
 	SubmitHash();
 	~SubmitHash();
 
-	void init();
-	void init(int value);
+	void init(int value=-1);
 	void clear(); // clear, but do not deallocate
 	void setScheddVersion(const char * version) { ScheddVersion = version; }
 	void setMyProxyPassword(const char * pass) { MyProxyPassword = pass; }
@@ -876,7 +875,7 @@ private:
 
 	ContainerImageType image_type_from_string(const std::string &image) const;
 
-	int s_method = -1; //-1 represents undefined job submit method
+	int s_method; //-1 represents undefined job submit method
 };
 
 struct SubmitStepFromQArgs {
