@@ -38,6 +38,7 @@ MACHINE_TABLE = {
     "stampede2": {
         "pretty_name":      "Stampede 2",
         "gsissh_name":      "stampede2",
+        "default_queue":    "normal",
 
         # This isn't all of the queues on Stampede 2, but we
         # need to think about what it means, if anything, if
@@ -74,6 +75,7 @@ MACHINE_TABLE = {
     "expanse": {
         "pretty_name":      "Expanse",
         "gsissh_name":      "expanse",
+        "default_queue":    "compute",
 
         # GPUs are completed untested, see above.
         "queues": {
@@ -491,7 +493,31 @@ def annex_create(
     if '@' in queue_at_machine:
         (queue_name, target) = queue_at_machine.split('@', 2)
     else:
-        raise ValueError("Target must have the form queue@machine.")
+        error_string = "Target must have the form queue@machine."
+
+        target = queue_at_machine.casefold()
+        if target not in MACHINE_TABLE:
+            error_string = f"{error_string}  Also, '{queue_at_machine}' is not a known machine."
+        else:
+            default_queue = MACHINE_TABLE[target]['default_queue']
+            queue_list = "\n    ".join([q for q in MACHINE_TABLE[target]['queues']])
+            error_string = f"{error_string}  Supported queues are:\n    {queue_list}\nUse '{default_queue}' if you're not sure."
+
+        raise ValueError(error_string)
+
+    #
+    # We'll need to validate the requested nodes (or CPUs and memory)
+    # against the requested queue[-machine pair].  We also need to
+    # check the lifetime (and idle time, once we support it).  Once
+    # all of that's been validated, we should print something like:
+    #
+    #   Once provisioned by the batch system of Stampede 2, the annex
+    #   will be available to run jobs for no more than 48 hours (use
+    #   --duration to change).  It will self-destruct after 20 minutes
+    #   of inactivity (use --idle to change).
+    #
+    # .. although it should maybe also include the queue name and size.
+    #
 
     # We use this same method to determine the user name in `htcondor job`,
     # so even if it's wrong, it will at least consistently so.
@@ -652,7 +678,7 @@ def annex_create(
         remote_script_dir,
         sif_files,
     )
-    logger.info("... annex temporary directory populated.")
+    logger.info("... populated.")
 
     # Submit local universe job.
     logger.debug("Submitting state-tracking job...")
@@ -780,7 +806,7 @@ def annex_create(
                     schedd.edit(job_id, "TransferInput", "undefined")
 
     remotes = {}
-    logger.info(f"Submitting SLURM job on {MACHINE_TABLE[target]['pretty_name']}:\n")
+    logger.info(f"Requesting annex named '{annex_name}' from queue '{queue_name}' on {MACHINE_TABLE[target]['pretty_name']}...\n")
     rc = invoke_pilot_script(
         ssh_connection_sharing,
         ssh_target,
@@ -803,7 +829,9 @@ def annex_create(
     )
 
     if rc == 0:
-        logger.info(f"... remote SLURM job submitted.")
+        logger.info(f"... requested.")
+        logger.info(f"\nIt may take some time for {MACHINE_TABLE[target]['pretty_name']} to provision the requested resources.")
+        logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
     else:
         error = f"Failed to start annex, SLURM returned code {rc}"
         try:
