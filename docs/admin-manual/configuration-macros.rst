@@ -9132,6 +9132,11 @@ macros are described in the :doc:`/admin-manual/security` section.
     for token authentication.  Defaults to ``/etc/condor/passwords.d`` on
     Unix and to ``$(RELEASE_DIR)\tokens.sk`` on Windows.
 
+:macro-def:`SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS`
+    A comma or space -separated list of signing key names that can be used
+    if to create a token if requested by *condor_token_fetch*.  Defaults
+    to ``POOL``.
+
 :macro-def:`SEC_TOKEN_POOL_SIGNING_KEY_FILE`
     The path and filename for the file containing the default signing key
     for token authentication.  Defaults to ``/etc/condor/passwords.d/POOL`` on Unix

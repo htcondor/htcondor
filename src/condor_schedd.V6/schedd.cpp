@@ -123,11 +123,6 @@ extern GridUniverseLogic* _gridlogic;
 #define DIR_DELIM_STR "/"
 #endif
 
-extern "C"
-{
-	int prio_compar(prio_rec*, prio_rec*);
-}
-
 extern char* Spool;
 extern char * Name;
 static char * NameInEnv = NULL;
@@ -7538,6 +7533,9 @@ Scheduler::negotiate(int command, Stream* s)
 	int next_cluster = 0;
 	int skipped_auto_cluster = -1;
 
+	// std::string'ify owner to speed up comparisons in the loop
+	std::string owner_str(owner);
+
 	for(job_index = 0; job_index < N_PrioRecs && !skip_negotiation; job_index++) {
 		prio_rec *prec = &PrioRec[job_index];
 
@@ -7549,7 +7547,7 @@ Scheduler::negotiate(int command, Stream* s)
 		}
 
 		// make sure owner matches what negotiator wants
-		if (strcmp(owner, prec->submitter) != 0)
+		if (owner_str != prec->submitter)
 		{
 			jobs--;
 			continue;
@@ -13816,79 +13814,6 @@ Scheduler::RegisterTimers()
 		periodicid = -1;
 	}
 }
-
-
-extern "C" {
-int
-prio_compar(prio_rec* a, prio_rec* b)
-{
-	 /* compare submitted job preprio's: higher values have more priority */
-	 /* Typically used to prioritize entire DAG jobs over other DAG jobs */
-	if( a->pre_job_prio1 < b->pre_job_prio1 ) {
-		return 1;
-	}
-	if( a->pre_job_prio1 > b->pre_job_prio1 ) {
-		return -1;
-	}
-
-	if( a->pre_job_prio2 < b->pre_job_prio2 ) {
-		return 1;
-	}
-	if( a->pre_job_prio2 > b->pre_job_prio2 ) {
-		return -1;
-	}
-	 
-	 /* compare job priorities: higher values have more priority */
-	 if( a->job_prio < b->job_prio ) {
-		  return 1;
-	 }
-	 if( a->job_prio > b->job_prio ) {
-		  return -1;
-	 }
-	 
-	 /* compare submitted job postprio's: higher values have more priority */
-	 /* Typically used to prioritize entire DAG jobs over other DAG jobs */
-	if( a->post_job_prio1 < b->post_job_prio1 ) {
-		return 1;
-	}
-	if( a->post_job_prio1 > b->post_job_prio1 ) {
-		return -1;
-	}
-
-	if( a->post_job_prio2 < b->post_job_prio2 ) {
-		return 1;
-	}
-	if( a->post_job_prio2 > b->post_job_prio2 ) {
-		return -1;
-	}
-
-	 /* here,updown priority and job_priority are both equal */
-
-	 /* check for job submit times */
-	 if( a->qdate < b->qdate ) {
-		  return -1;
-	 }
-	 if( a->qdate > b->qdate ) {
-		  return 1;
-	 }
-
-	 /* go in order of cluster id */
-	if ( a->id.cluster < b->id.cluster )
-		return -1;
-	if ( a->id.cluster > b->id.cluster )
-		return 1;
-
-	/* finally, go in order of the proc id */
-	if ( a->id.proc < b->id.proc )
-		return -1;
-	if ( a->id.proc > b->id.proc )
-		return 1;
-
-	/* give up! very unlikely we'd ever get here */
-	return 0;
-}
-} // end of extern
-
 
 void Scheduler::reconfig() {
 	/***********************************

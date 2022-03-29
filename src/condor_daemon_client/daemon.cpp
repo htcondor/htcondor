@@ -2503,11 +2503,11 @@ Daemon::getSessionToken( const std::vector<std::string> &authz_bounding_limit, i
 		return false;
 	}
 
-    if( (!key.empty()) && !ad.InsertAttr(ATTR_SEC_REQUESTED_KEY, key)) {
+	if( (!key.empty()) && !ad.InsertAttr(ATTR_SEC_REQUESTED_KEY, key)) {
 		if (err) err->pushf("DAEMON", 1, "Failed to create token request ClassAd");
 		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
 		return false;
-    }
+	}
 
 	ReliSock rSock;
 	rSock.timeout( 5 );

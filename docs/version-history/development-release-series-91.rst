@@ -4,6 +4,25 @@ Version 9 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 9.9.0
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.9.0 released on Month Date, 2022.
+
+- HTCondor version 9.9.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-9013`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 9.8.0
 -------------
 
@@ -48,9 +67,36 @@ New Features:
   Authentication for all SSH connections.
   :jira:`1007`
 
+- Added the ``-key`` command-line option to *condor_token_request*, which
+  allows users to ask HTCondor to use a particular signing key when creating
+  the IDTOKEN.  Added the corresponding configuration macro,
+  :macro:`SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS`, which defaults to the default key
+  (``POOL``).
+  :jira:`1024`
+
 Bugs Fixed:
 
+- Fix for *condor_gpu_discovery* crash when run on Linux for Power (ppc64le) architecture.
+  :jira:`967`
+
+Version 9.7.1
+-------------
+
+Release Notes:
+
+- HTCondor version 9.7.1 released on March 29, 2022.
+
+New Features:
+
 - None.
+
+Bugs Fixed:
+
+- Fixed bug introduced in HTCondor v9.7.0 where job may go on hold without
+  setting a ``HoldReason`` and/or ``HoldReasonCode`` and ``HoldReasonSubCode``
+  attributes in the job classad.  In particular, this could happen when file transfer
+  using a file transfer plugin failed.
+  :jira:`1035`
 
 Version 9.7.0
 -------------
@@ -84,6 +130,9 @@ New Features:
   systems.
   :jira:`873`
 
+- Improved performance of the *condor_schedd* during negotiation
+  :jira:`961`
+  
 - For **arc** grid universe jobs, environment variables specified in
   the job ad are now included in the ADL job description given to the
   ARC CE REST service.
