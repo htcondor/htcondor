@@ -518,7 +518,7 @@ def annex_inner_func(
     # all of that's been validated, we should print something like:
     #
     #   Once established by Stampede 2, the annex will be available to
-    #   run jobs for no more than 48 hours (use --duration to change).
+    #   run your jobs for no more than 48 hours (use --duration to change).
     #   It will self-destruct after 20 minutes of inactivity (use
     #   --idle to change).
     #
