@@ -567,10 +567,10 @@ def annex_create(
     # check the lifetime (and idle time, once we support it).  Once
     # all of that's been validated, we should print something like:
     #
-    #   Once provisioned by the batch system of Stampede 2, the annex
-    #   will be available to run jobs for no more than 48 hours (use
-    #   --duration to change).  It will self-destruct after 20 minutes
-    #   of inactivity (use --idle to change).
+    #   Once established by Stampede 2, the annex will be available to
+    #   run jobs for no more than 48 hours (use --duration to change).
+    #   It will self-destruct after 20 minutes of inactivity (use
+    #   --idle to change).
     #
     # .. although it should maybe also include the queue name and size.
     #
@@ -896,7 +896,7 @@ def annex_create(
 
     if rc == 0:
         logger.info(f"... requested.")
-        logger.info(f"\nIt may take some time for {MACHINE_TABLE[target]['pretty_name']} to provision the requested resources.")
+        logger.info(f"\nIt may take some time for {MACHINE_TABLE[target]['pretty_name']} to establish the requested annex.")
         logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
     else:
         error = f"Failed to start annex, SLURM returned code {rc}"

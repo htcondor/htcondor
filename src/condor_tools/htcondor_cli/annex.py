@@ -224,9 +224,9 @@ class Status(Verb):
 
         if len(status) == 0 and len(annex_slots) == 0:
             if the_annex_name is None:
-                print(f"Found no active or requested annexes.")
+                print(f"Found no established or requested annexes.")
             else:
-                print(f"Found no active or requested annexes named '{the_annex_name}'.")
+                print(f"Found no established or requested annexes named '{the_annex_name}'.")
             return
 
         #
@@ -254,11 +254,11 @@ class Status(Verb):
 
             if the_annex_name is None:
                 if total_CPUs == 0:
-                    print(f"Annex '{annex_name}' is not active.", end='')
+                    print(f"Annex '{annex_name}' is not established.", end='')
                 else:
                     all_job_count = all_jobs.get(annex_name, 0)
                     running_job_count = running_jobs.get(annex_name, 0)
-                    print(f"Annex '{annex_name}' is active and running {running_job_count} of {all_job_count} jobs on {busy_CPUs} of {total_CPUs} CPUs.", end='')
+                    print(f"Annex '{annex_name}' is established and running {running_job_count} of {all_job_count} jobs on {busy_CPUs} of {total_CPUs} CPUs.", end='')
 
                 if requests != requested_and_active:
                     print(f"  {requested_but_not_joined}/{requested_and_active}/{requested_and_left} requests are pending/active/retired.", end='')
@@ -268,7 +268,7 @@ class Status(Verb):
 
             # Is the annex currently active?
             if total_CPUs != 0:
-                print(f"Annex '{annex_name}' is active.")
+                print(f"Annex '{annex_name}' is established.")
 
                 # When did the annex start, and how long does it have to run?
                 oldest_time = annex_attrs[annex_name]['first_birthday']
@@ -278,8 +278,8 @@ class Status(Verb):
 
                 now = int(time.time())
                 print(
-                    f"Its oldest machine activated about "
-                    f"{(now - oldest_time)/(60*60):.2f} hours ago",
+                    f"Its oldest established request is about "
+                    f"{(now - oldest_time)/(60*60):.2f} hours old",
                     end=""
                 )
                 if oldest_hours is not None:
@@ -292,8 +292,8 @@ class Status(Verb):
 
                 if annex_attrs[annex_name]['first_request_id'] != annex_attrs[annex_name]['last_request_id']:
                     print(
-                        f"Its youngest active machine activated about "
-                        f"{(now - youngest_time)/(60*60):.2f} hours ago",
+                        f"Its youngest established request is about "
+                        f"{(now - youngest_time)/(60*60):.2f} hours old",
                         end=""
                     )
                     if youngest_hours is not None:
@@ -304,12 +304,12 @@ class Status(Verb):
                     else:
                         print(".")
             else:
-                print(f"Annex '{annex_name}' is not active.")
+                print(f"Annex '{annex_name}' is not established.")
 
             # How big is it?
             requested_machines = requested_machines.get(annex_name, 0)
-            print(f"You requested {requested_machines} machines for this annex, of which {machine_count} are active.")
-            print(f"There are {total_CPUs} CPUs in the active machines, of which {busy_CPUs} are busy.")
+            print(f"You requested {requested_machines} machines for this annex, of which {machine_count} are in established annexes.")
+            print(f"There are {total_CPUs} CPUs in the established machines, of which {busy_CPUs} are busy.")
 
             # How many jobs target it?  Of those, how many are running?
             all_job_count = all_jobs.get(annex_name, 0)
@@ -317,7 +317,7 @@ class Status(Verb):
             print(f"{all_job_count} jobs must run on this annex, and {running_job_count} currently are.")
 
             # How many resource requests were made, and what's their status?
-            print(f"You made {requests} resource request(s) for this annex, of which {requested_but_not_joined} are pending, {requested_and_active} are active, and {requested_and_left} have retired.")
+            print(f"You made {requests} resource request(s) for this annex, of which {requested_but_not_joined} are pending, {requested_and_active} are established, and {requested_and_left} have retired.")
 
         if the_annex_name is None:
             print()
