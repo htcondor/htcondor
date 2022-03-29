@@ -103,8 +103,8 @@ static const char* JobSubmitMethodNames[] = {
 	"DAGMan-Direct",
 	"Python Bindings",
 	"htcondor job submit",
-	"htcondor jobset submit",
 	"htcondor dag submit",
+	"htcondor jobset submit",
 	//Any new methods should go above this comment in order of the table
 	"Portal/User-Set",//<-This should always be last
 };
@@ -113,11 +113,14 @@ static const char* JobSubmitMethodNames[] = {
 const char* 
 getSubmitMethodString(int method)
 {
-	int array_size = *(&JobSubmitMethodNames+1)-JobSubmitMethodNames;
+	if( method < JOB_SUBMIT_METHOD_MIN)
+		return "UNDEFINED";
+
+	int array_size = COUNTOF(JobSubmitMethodNames);
 	//Check to see if value is greater than the array index of second to last element
 	//or greater than or equal to 100 (final possible listing)
 	//If so then we will just return the cap (Portal/User-set at 100)
-	if(method > (array_size - 2) || method >= JOB_SUBMIT_METHOD_MAX){
+	if(method > (array_size - 2)){
 		return JobSubmitMethodNames[array_size-1];
 	}
 	else{

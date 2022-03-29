@@ -271,15 +271,17 @@ class TestJobSubmitMethod:
      #Test python bindings job submission yields 2 for normal submission and 6 for when a user sets the value to 6
      def test_python_bindings_submit_method_value(self,run_python_bindings):
           passed = False
-          if run_python_bindings.stdout == '2':
+          if run_python_bindings.stdout == '2':#Check normal
                passed = True
-          elif run_python_bindings.stdout == "69":
+          elif run_python_bindings.stdout == "-3":#Check user-set(1)
                passed = True
-          elif run_python_bindings.stdout == "100":
+          elif run_python_bindings.stdout == "69":#Check user-set(3)
                passed = True
-          elif run_python_bindings.stdout == "666":
+          elif run_python_bindings.stdout == "100":#Check user-set(4)
                passed = True
-          elif "htcondor.HTCondorValueError: Submit Method value must be" in run_python_bindings.stderr:
+          elif run_python_bindings.stdout == "666":#Check user-set(5)
+               passed = True
+          elif "htcondor.HTCondorValueError: Submit Method value must be" in run_python_bindings.stderr:#Check user-set(2)
                if "or greater. Or allow_reserved_values must be set to True." in run_python_bindings.stderr:
                     passed = True
           assert passed

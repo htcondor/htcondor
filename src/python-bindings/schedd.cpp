@@ -3855,7 +3855,8 @@ public:
 
 	void //Undocumented for internal use so users dont mess up number assignments
 	setSubmitMethod(int method_value, bool allow_reserved_values = false){
-		if ( method_value < JSM_USER_SET && !allow_reserved_values) {
+		//If value is in range of reserves and allow_reserved_values isn't true then throw an exception
+		if ( method_value >= 0 && method_value < JSM_USER_SET && !allow_reserved_values) {
 			std::string error_message = "Submit Method value must be " +std::to_string(JSM_USER_SET)+" or greater. Or allow_reserved_values must be set to True.";
 			THROW_EX(HTCondorValueError,error_message.c_str());
 		}
@@ -4730,10 +4731,11 @@ void export_schedd()
             R"C0ND0R(
             Sets the **Job Ad** attribute ``JobSubmitMethod`` to passed over number. ``method_value``
             is recommended to be set to a value of ``100`` or greater to avoid confusion
-            to pre-set values. If wanted, any number can be set by passing ``True`` to
-            ``allow_reserved_values``. This allows any number to be set including negatives that
-            will result in ``JobSubmitMethod`` to not be defined in the **Job Ad**. 
-            **Note~** Setting of ``JobSubmitMethod`` must occur before job is submitted to Schedd.
+            to pre-set values. Negative numbers will result in ``JobSubmitMethod`` to not be defined 
+            in the **Job Ad**. If wanted, any number can be set by passing ``True`` to
+            ``allow_reserved_values``. This allows any positive number to be set to ``JobSubmitMethod``.
+            This includes all reserved numbers. **Note~** Setting of ``JobSubmitMethod`` must occur
+            before job is submitted to Schedd.
 
             :param int method_value: Value set to ``JobSubmitMethod``.
             :param bool allow_reserved_values: Boolean that allows any number to be set to
