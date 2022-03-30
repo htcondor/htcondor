@@ -530,6 +530,48 @@ def extract_sif_file(job_ad):
     return iwd / container_image
 
 
+def create_annex_token(logger, type):
+    token_lifetime = int(htcondor.param.get("ANNEX_TOKEN_LIFETIME", 60 * 60 * 24 * 90))
+    annex_token_key_name = htcondor.param.get("ANNEX_TOKEN_KEY_NAME", "hpcannex-key")
+    annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
+    token_name = f"{type}.{getpass.getuser()}@{annex_token_domain}"
+
+    args = [
+        'condor_token_fetch',
+        '-lifetime', str(token_lifetime),
+        '-token', token_name,
+        '-key', annex_token_key_name,
+        '-authz', 'READ',
+        '-authz', 'ADVERTISE_STARTD',
+        '-authz', 'ADVERTISE_MASTER',
+        '-authz', 'ADVERTISE_SCHEDD',
+    ]
+
+    proc = subprocess.Popen(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        # This implies text mode.
+        errors="replace",
+    )
+
+    try:
+        out, err = proc.communicate(timeout=TOKEN_FETCH_TIMEOUT)
+
+        if proc.returncode == 0:
+            return os.path.expanduser(f"~/.condor/tokens.d/{token_name}")
+        else:
+            logger.error(f"Failed to create annex token, aborting.")
+            logger.warning(f"{out.strip()}")
+            raise RuntimeError(f"Failed to create annex token")
+
+    except subprocess.TimeoutExpired:
+        logger.error(f"Failed to create annex token in {TOKEN_FETCH_TIMEOUT} seconds, aborting.")
+        proc.kill()
+        out, err = proc.communicate()
+        raise RuntimeError(f"Failed to create annex token in {TOKEN_FETCH_TIMEOUT} seconds")
+
+
 def annex_inner_func(
     logger,
     annex_name,
@@ -590,6 +632,13 @@ def annex_inner_func(
 
     if not local_script_dir.is_dir():
         raise RuntimeError(f"Annex script dir {local_script_dir} not found or not a directory.")
+
+    # If the user didn't specify a token file, create one on the fly.
+    if token_file is None:
+        logger.debug("Creating annex token...")
+        token_file = create_annex_token(logger, annex_name)
+        atexit.register(lambda: os.unlink(token_file))
+        logger.debug("..done.")
 
     token_file = Path(token_file).expanduser()
     if not token_file.exists():
