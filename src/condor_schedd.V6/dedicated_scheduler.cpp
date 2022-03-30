@@ -3250,8 +3250,8 @@ DedicatedScheduler::AddMrec(
 	match_rec *existing_mrec;
 	if( all_matches->lookup(slot_name, existing_mrec) == 0) {
 			// Already have this match
-		dprintf(D_ALWAYS, "DedicatedScheduler: negotiator sent match for %s, but we've already got it, deleting old one\n", slot_name);
-		DelMrec(existing_mrec);
+		dprintf(D_ALWAYS, "DedicatedScheduler: negotiator sent match for %s, but we've already got it, ignoring\n", slot_name);
+		return nullptr;
 	}
 
 	// Next, insert this match_rec into our hashtables
