@@ -1456,15 +1456,6 @@ DedicatedScheduler::handleDedicatedJobs( void )
 	dprintf( D_FULLDEBUG, "Starting "
 			 "DedicatedScheduler::handleDedicatedJobs\n" );
 
-	static time_t lastRun = 0;
-
-
-	int delay_factor = param_integer( "DEDICATED_SCHEDULER_DELAY_FACTOR", 5 );
-	if ((time(0) - lastRun) < (delay_factor * startdQueryTime)) {
-		dprintf(D_ALWAYS, "Delaying scheduling of parallel jobs because startd query time is long (%ld) seconds\n", startdQueryTime);
-		return FALSE;
-	}
-
 // 	now = (int)time(0);
 		// Just for debugging, set now to 0 to make everything easier
 		// to parse when looking at log files.
@@ -1492,8 +1483,6 @@ DedicatedScheduler::handleDedicatedJobs( void )
 
 		// Sort them, so we know if we can use them or not.
 	sortResources();
-
-	lastRun = time(0);
 
 		// Figure out what we want to do, based on what we have now.  
 	if( ! computeSchedule() ) { 
