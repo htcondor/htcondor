@@ -5240,13 +5240,6 @@ These macros control the *condor_schedd*.
     jobs have finished spooling in their input files and have been
     scheduled.
 
-:macro-def:`DEDICATED_SCHEDULER_DELAY_FACTOR`
-    Limits the cpu usage of the dedicated scheduler within the
-    *condor_schedd*. The default value of 5 is the ratio of time spent
-    not in the dedicated scheduler to the time scheduling parallel jobs.
-    Therefore, the default caps the time spent in the dedicated
-    scheduler to 20%.
-
 :macro-def:`SCHEDD_SEND_VACATE_VIA_TCP`
     A boolean value that defaults to ``True``. When ``True``, the
     *condor_schedd* daemon sends vacate signals via TCP, instead of the
