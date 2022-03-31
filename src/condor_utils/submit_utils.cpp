@@ -6014,7 +6014,9 @@ int SubmitHash::SetRequirements()
 			job->LookupString(ATTR_DOCKER_NETWORK_TYPE, dockerNetworkType);
 
 			if (!dockerNetworkType.empty()) {
-				if ((dockerNetworkType != "host") && (dockerNetworkType != "none")) {
+				// We assume every docker runtime supports "host", "none", and "nat", and don't bother
+				// to explicitly advertise those or match on them.
+				if ((dockerNetworkType != "host") && (dockerNetworkType != "none") && (dockerNetworkType != "nat")) {
 					answer += "&& StringListMember(My.DockerNetworkType, TARGET.DockerNetworks)";
 				}
 			}
