@@ -21,7 +21,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug in the dedicated scheduler when using partionable slots that would
+  cause the schedd to assert.
+  :jira:`1042`
 
 Version 9.8.0
 -------------
