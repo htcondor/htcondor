@@ -1671,6 +1671,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Apr 05 2022 Tim Theisen <tim@cs.wisc.edu> - 9.7.1-1
+- Fix recent bug where jobs may go on hold without a hold reason or code
+
 * Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.7.0-1
 - Support environment variables, other application elements in ARC REST jobs
 - Container universe supports Singularity jobs with hard-coded command
