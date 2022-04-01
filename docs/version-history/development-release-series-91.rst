@@ -25,6 +25,10 @@ Bugs Fixed:
   immediately transition back to the idle state to be run elsewhere.
   :jira:`1040`
 
+- Fixed a bug in the dedicated scheduler when using partionable slots that would
+  cause the schedd to assert.
+  :jira:`1042`
+
 Version 9.8.0
 -------------
 

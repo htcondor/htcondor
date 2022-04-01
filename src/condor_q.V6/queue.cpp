@@ -76,7 +76,7 @@ static  bool streaming_print_job(void*, ClassAd*);
 typedef bool (* buffer_line_processor)(void*, ClassAd *);
 
 static 	void usage (const char *, int other=0);
-enum { usage_Universe=1, usage_JobStatus=2, usage_AllOther=0xFF };
+enum { usage_Universe=1, usage_JobStatus=2, usage_SubmitMethod=4, usage_AllOther=0xFF };
 static bool render_job_status_char(std::string & result, ClassAd*ad, Formatter &);
 
 // functions to fetch job ads and print them out
@@ -1378,6 +1378,8 @@ processCommandLineArguments (int argc, const char *argv[])
 					other |= usage_Universe;
 				} else if (is_arg_prefix(argv[i], "state", 2) || is_arg_prefix(argv[i], "State", 2) || is_arg_prefix(argv[i], "status", 2)) {
 					other |= usage_JobStatus;
+				} else if (is_arg_prefix(argv[i], "submit", 2) || is_arg_prefix(argv[i], "Submit", 2)) {
+					other |= usage_SubmitMethod;
 				} else if (is_arg_prefix(argv[i], "all", 2)) {
 					other |= usage_AllOther;
 				}
@@ -2552,6 +2554,20 @@ usage (const char *myName, int other)
 		printf("    %s codes:\n", ATTR_JOB_STATUS);
 		for (int st = JOB_STATUS_MIN; st <= JOB_STATUS_MAX; ++st) {
 			printf("\t%2d %c %s\n", st, encode_status(st), getJobStatusString(st));
+		}
+		printf("\n");
+	}
+	if (other & usage_SubmitMethod) {
+		printf("    %s codes:\n", ATTR_JOB_SUBMIT_METHOD);
+		printf("\t%3s  %s\n", "UND", "Undefined");
+		for (int met = JOB_SUBMIT_METHOD_MIN; met <= JOB_SUBMIT_METHOD_MAX; ++met) {
+			std::string display = getSubmitMethodString(met);
+			//If number yeilds final enum key then output and break out of loop
+			if(display.compare("Portal/User-Set") == 0){
+				printf("\t%3d+ %s\n", JSM_USER_SET, display.c_str());
+				break;
+			}
+			printf("\t%3d  %s\n", met, display.c_str());
 		}
 		printf("\n");
 	}

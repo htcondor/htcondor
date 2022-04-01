@@ -588,7 +588,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 		debug_printf(DEBUG_NORMAL, "Submitting node %s from file %s using direct job submission\n", node->GetJobName(), node->GetCmdFile());
 		submitHash = new SubmitHash();
 		// Start by populating the hash with some parameters
-		submitHash->init();
+		submitHash->init(JSM_DAGMAN);
 		submitHash->setDisableFileChecks(true);
 		submitHash->setScheddVersion(CondorVersion());
 		// if (myproxy_password) submitHash.setMyProxyPassword(myproxy_password);
