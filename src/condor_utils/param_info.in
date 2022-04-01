@@ -6804,7 +6804,7 @@ default : @fin
 		JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AnnexJobsExclusively
 		JOB_TRANSFORM_AnnexJobsExclusively @=end
 			REQUIREMENTS TargetAnnexName =?= undefined
-			addl_reqs = ifThenElse(TARGET.AuthenticatedIdentity is undefined, true, !regexp(".*@$(ANNEX_TOKEN_DOMAIN)$", TARGET.AuthenticatedIdentity))
+			addl_reqs = ifThenElse(TARGET.AuthenticatedIdentity is undefined, true, regexp("^condor(_pool)?@.*$", TARGET.AuthenticatedIdentity))
 			if defined MY.Requirements
 				SET Requirements $(addl_reqs) && ($(MY.Requirements))
 			else
