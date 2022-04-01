@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- The ``OWNER`` authorization level has been removed. Commands that used to
+  require this level now require ``ADMINISTRATOR`` authorization.
+  :jira:`1023`
 
 Bugs Fixed:
 
