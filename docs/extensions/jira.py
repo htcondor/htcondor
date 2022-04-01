@@ -22,11 +22,11 @@ def make_link_node(rawtext, app, type, slug, options):
 def ticket_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     try:
         ticket_id = int(text)
-        if ticket_id > 1000:
+        if ticket_id > 10000:
             raise ValueError
     except ValueError:
         msg = inliner.reporter.error(
-            'HTCondor ticket number must be a number less than or equal to 1000; '
+            'HTCondor ticket number must be a number less than or equal to 10000; '
             '"%s" is invalid.' % text, line=lineno)
         prb = inliner.problematic(rawtext, rawtext, msg)
         return [prb], [msg]

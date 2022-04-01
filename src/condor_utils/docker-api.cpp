@@ -287,9 +287,12 @@ int DockerAPI::createContainer(
 		runArgs.AppendArg("--network=host");
 	} else if (networkType == "none") {
 		runArgs.AppendArg("--network=none");
+	} else if (networkType == "nat") {
+		// leave empty, as this is the default
 	} else if (!networkType.empty()) {
-		// We always allow network type "none" or "host",
-		// as "none" is the safest, and "host" is like a vanilla job
+		// We always allow network type "none", "host", or "nat"
+		// as "none" is the safest, "nat" is the default, should be 
+		// pretty safe, and "host" is like a vanilla job
 		// But others must be allowed by the admin
 		std::string docker_networks;
 		machineAd.LookupString(ATTR_DOCKER_NETWORKS, docker_networks);
@@ -303,11 +306,7 @@ int DockerAPI::createContainer(
 			dprintf(D_ALWAYS, "Docker job requested network %s not allowed by parameter DOCKER_NETWORKS with value %s, refusing to run job\n", networkType.c_str(), docker_networks.c_str());
 			return -1;
 		}
-	} else {
-		dprintf(D_ALWAYS, "Docker job requested network %s, but no DOCKER_NETWORKS param defined on this system, refusing to run job\n", networkType.c_str());
-		return -1;
-	}
-
+	} 
 
 	// Handle port forwarding.
 	std::string containerServiceNames;

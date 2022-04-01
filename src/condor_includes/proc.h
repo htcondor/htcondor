@@ -147,6 +147,19 @@ typedef struct JOB_ID_KEY {
 inline bool operator==( const JOB_ID_KEY a, const JOB_ID_KEY b) { return a.cluster == b.cluster && a.proc == b.proc; }
 size_t hashFunction(const JOB_ID_KEY &);
 
+// Macros used to indicate how a job was submitted to htcondor
+#define JOB_SUBMIT_METHOD_MIN 0
+#define JSM_CONDOR_SUBMIT 0
+#define JSM_DAGMAN 1
+#define JSM_PYTHON_BINDINGS 2
+#define JSM_HTC_JOB_SUBMIT 3
+#define JSM_HTC_DAG_SUBMIT 4
+#define JSM_HTC_JOBSET_SUBMIT 5
+#define JSM_USER_SET 100
+#define JOB_SUBMIT_METHOD_MAX 100
+
+const char* getSubmitMethodString(int method);
+
 #define ICKPT -1
 
 #define NEW_PROC 1

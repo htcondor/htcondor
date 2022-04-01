@@ -5240,13 +5240,6 @@ These macros control the *condor_schedd*.
     jobs have finished spooling in their input files and have been
     scheduled.
 
-:macro-def:`DEDICATED_SCHEDULER_DELAY_FACTOR`
-    Limits the cpu usage of the dedicated scheduler within the
-    *condor_schedd*. The default value of 5 is the ratio of time spent
-    not in the dedicated scheduler to the time scheduling parallel jobs.
-    Therefore, the default caps the time spent in the dedicated
-    scheduler to 20%.
-
 :macro-def:`SCHEDD_SEND_VACATE_VIA_TCP`
     A boolean value that defaults to ``True``. When ``True``, the
     *condor_schedd* daemon sends vacate signals via TCP, instead of the
@@ -9131,6 +9124,11 @@ macros are described in the :doc:`/admin-manual/security` section.
     The path to the directory containing signing key files
     for token authentication.  Defaults to ``/etc/condor/passwords.d`` on
     Unix and to ``$(RELEASE_DIR)\tokens.sk`` on Windows.
+
+:macro-def:`SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS`
+    A comma or space -separated list of signing key names that can be used
+    if to create a token if requested by *condor_token_fetch*.  Defaults
+    to ``POOL``.
 
 :macro-def:`SEC_TOKEN_POOL_SIGNING_KEY_FILE`
     The path and filename for the file containing the default signing key
