@@ -21,17 +21,13 @@ import logging
 
 import htcondor
 
-from htcondor_cli.annex import create_annex_token
-
 (exe, local_job_id, attribute_name, attribute_value, collector_name) = sys.argv
 
 logger = logging.getLogger(__name__)
 collector = htcondor.Collector(collector_name)
-token_file = create_annex_token(logger, "state")
 ads = collector.query(
     constraint=f'{attribute_name} == "{attribute_value}"',
 )
-os.unlink(token_file)
 
 if len(ads) == 0:
     print(f'Did not find machines with {attribute_name} == "{attribute_value}"')
