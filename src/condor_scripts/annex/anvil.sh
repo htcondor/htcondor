@@ -131,7 +131,7 @@ CLEAN_UP_TIME=300
 #
 
 echo "Creating temporary directory for pilot..."
-SCRATCH=${SCRATCH:-/expanse/lustre/scratch/$USER/temp_project}
+SCRATCH=${SCRATCH:-/anvil/scratch/$USER}
 mkdir -p "$SCRATCH"
 PILOT_DIR=`/usr/bin/mktemp --directory --tmpdir=${SCRATCH} pilot.XXXXXXXX 2>&1`
 if [[ $? != 0 ]]; then
@@ -215,22 +215,6 @@ if [[ $? != 0 ]]; then
     exit 4
 fi
 
-#
-# Create the script we need for Singularity.
-#
-# Unfortunately, the `module` command doesn't work without a bunch of
-# random environmental set-up that's done when we're forking a process;
-# for whatever reason, it's not good enough to run
-# `module load singularitypro` before starting the master.
-# Using a wrapper with bash -l (to load the rc files; without -l, PATH
-# wouldn't be set).  bash -l is quiet on Expanse (unlike Stampede2).
-#
-echo '#!/bin/bash -l
-export USER=`/usr/bin/id -un`
-module load singularitypro
-exec singularity "$@"
-' > ${PILOT_DIR}/singularity.sh
-chmod 755 ${PILOT_DIR}/singularity.sh
 
 # It may have take some time to get everything installed, so to make sure
 # we get our full clean-up time, subtract off how long we've been running
@@ -320,10 +304,6 @@ endif
 # Subsequent configuration is machine-specific.
 #
 
-# This is made available via 'module load singularitypro', but the
-# starter ignores PATH, so wrap it up.
-SINGULARITY = ${PILOT_DIR}/singularity.sh
-
 ${CONDOR_CPUS_LINE}
 ${CONDOR_MEMORY_LINE}
 
@@ -404,7 +384,7 @@ if [[ -n $ALLOCATION ]]; then
     SBATCH_ALLOCATION_LINE="#SBATCH -A ${ALLOCATION}"
 fi
 
-echo '#!/bin/bash' > ${PILOT_DIR}/expanse.slurm
+echo '#!/bin/bash' > ${PILOT_DIR}/anvil.slurm
 echo "
 #SBATCH -J ${JOB_NAME}
 #SBATCH -o ${PILOT_DIR}/%j.out
@@ -415,14 +395,14 @@ ${SBATCH_RESOURCES_LINES}
 ${SBATCH_ALLOCATION_LINE}
 
 ${MULTI_PILOT_BIN} ${PILOT_BIN} ${PILOT_DIR}
-" >> ${PILOT_DIR}/expanse.slurm
+" >> ${PILOT_DIR}/anvil.slurm
 
 #
 # Submit the SLURM job.
 #
 echo "Submitting SLURM job..."
 SBATCH_LOG=${PILOT_DIR}/sbatch.log
-sbatch ${PILOT_DIR}/expanse.slurm &> ${SBATCH_LOG}
+sbatch ${PILOT_DIR}/anvil.slurm &> ${SBATCH_LOG}
 SBATCH_ERROR=$?
 if [[ $SBATCH_ERROR != 0 ]]; then
     echo "Failed to submit job to SLURM (${SBATCH_ERROR}), aborting."

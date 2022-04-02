@@ -125,45 +125,36 @@ MACHINE_TABLE = {
     "anvil": {
         "pretty_name":      "Anvil",
         "gsissh_name":      "anvil",
-        "default_queue":    "compute",
+        "default_queue":    "standard",
 
         # GPUs are completed untested, see above.
         "queues": {
-            "compute": {
-                "max_nodes_per_job":    32,
-                "max_duration":         48 * 60 * 60,
+            "standard": {
+                "max_nodes_per_job":    16,
+                "max_duration":         96 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       128,
-                "ram_per_node":         256,
+                "ram_per_node":         (25600 // 1024),
 
-                "max_jobs_in_queue":    64,
+                "max_jobs_in_queue":    128,
             },
-            "gpu": {
-                "max_nodes_per_job":    4,
-                "max_duration":         48 * 60 * 60,
+            "wide": {
+                "max_nodes_per_job":    56,
+                "max_duration":         12 * 60 * 60,
                 "allocation_type":      "node",
-                "cores_per_node":       40,
-                "ram_per_node":         256,
+                "cores_per_node":       128,
+                "ram_per_node":         (25600 // 1024),
 
-                "max_jobs_in_queue":    8,
+                "max_jobs_in_queue":    10,
             },
             "shared": {
                 "max_nodes_per_job":    1,
-                "max_duration":         48 * 60 * 60,
+                "max_duration":         96 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       128,
-                "ram_per_node":         256,
+                "ram_per_node":         (25600 // 1024),
 
-                "max_jobs_in_queue":    4096,
-            },
-            "gpu-shared": {
-                "max_nodes_per_job":    1,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "cores_or_ram",
-                "cores_per_node":       40,
-                "ram_per_node":         384,
-
-                "max_jobs_in_queue":    24,
+                "max_jobs_in_queue":    999999,  # unlimited
             },
         },
     },
