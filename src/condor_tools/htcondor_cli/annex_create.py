@@ -122,6 +122,52 @@ MACHINE_TABLE = {
         },
     },
 
+    "anvil": {
+        "pretty_name":      "Anvil",
+        "gsissh_name":      "anvil",
+        "default_queue":    "compute",
+
+        # GPUs are completed untested, see above.
+        "queues": {
+            "compute": {
+                "max_nodes_per_job":    32,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       128,
+                "ram_per_node":         256,
+
+                "max_jobs_in_queue":    64,
+            },
+            "gpu": {
+                "max_nodes_per_job":    4,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       40,
+                "ram_per_node":         256,
+
+                "max_jobs_in_queue":    8,
+            },
+            "shared": {
+                "max_nodes_per_job":    1,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       128,
+                "ram_per_node":         256,
+
+                "max_jobs_in_queue":    4096,
+            },
+            "gpu-shared": {
+                "max_nodes_per_job":    1,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       40,
+                "ram_per_node":         384,
+
+                "max_jobs_in_queue":    24,
+            },
+        },
+    },
+
     "bridges2": {
         "pretty_name":      "Bridges-2",
         "gsissh_name":      "bridges2",
