@@ -233,10 +233,7 @@ Sock::~Sock()
 
 #if defined(WIN32)
 
-#if !defined(SKIP_AUTHENTICATION)
-#include "authentication.h"
 HINSTANCE _condor_hSecDll = NULL;
-#endif
 
 	// This class has a global ctor/dtor, and loads in 
 	// WINSOCK.DLL and, if security support is compiled in, SECURITY.DLL.
@@ -270,12 +267,10 @@ SockInitializer::SockInitializer()
 			LOBYTE( wsaData.wVersion ), HIBYTE( wsaData.wVersion ) );
 	}
 
-#if !defined(SKIP_AUTHENTICATION)
 	if ( (_condor_hSecDll = LoadLibrary( "security.dll" )) == NULL ) {
 		fprintf(stderr,"Can't find SECURITY.DLL!\n");
 		exit(1);
 	}
-#endif
 	_condor_SockInitializerCalled = true;
 }	// end of SockInitializer() ctor
 
@@ -288,11 +283,9 @@ SockInitializer::~SockInitializer()
 		fprintf(stderr, "WSACleanup() failed, errno = %d\n", 
 				WSAGetLastError());
 	}
-#if !defined(SKIP_AUTHENTICATION)
 	if ( _condor_hSecDll ) {
 		FreeLibrary(_condor_hSecDll);			
 	}
-#endif
 }	// end of ~SockInitializer() dtor
 
 static SockInitializer _SockInitializer;

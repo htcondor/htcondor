@@ -1193,14 +1193,10 @@ else(MSVC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-nonnull-compare -Wno-error=nonnull-compare")
 	endif(c_Wnonnull_compare)
 
-	# gcc on our AIX machines recognizes -fstack-protector, but lacks
-	# the requisite library.
-	if (NOT AIX)
-		check_c_compiler_flag(-fstack-protector c_fstack_protector)
-		if (c_fstack_protector)
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
-		endif(c_fstack_protector)
-	endif(NOT AIX)
+	check_c_compiler_flag(-fstack-protector c_fstack_protector)
+	if (c_fstack_protector)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
+	endif(c_fstack_protector)
 
 	# Clang on Mac OS X doesn't support -rdynamic, but the
 	# check below claims it does. This is probably because the compiler
@@ -1228,11 +1224,6 @@ else(MSVC)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--enable-new-dtags")
 		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--enable-new-dtags")
 	endif(LINUX)
-
-	if (AIX)
-		# specifically ask for the C++ libraries to be statically linked
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -static-libgcc")
-	endif(AIX)
 
 	if ( NOT PROPER AND HAVE_LIBRESOLV )
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lresolv")

@@ -2649,7 +2649,29 @@ handle_dc_session_token(int, Stream* stream)
 		requested_lifetime = -1;
 	}
 
+	std::string requested_key_name;
 	std::string final_key_name = htcondor::get_token_signing_key(err);
+	if (ad.EvaluateAttrString(ATTR_SEC_REQUESTED_KEY, requested_key_name)) {
+		std::string allowed_key_names_list;
+		param( allowed_key_names_list, "SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS", "POOL" );
+		StringList sl(allowed_key_names_list);
+		if( sl.contains_withwildcard(requested_key_name.c_str()) ) {
+			final_key_name = requested_key_name;
+		} else {
+			result_ad.InsertAttr(ATTR_ERROR_STRING, "Server will not sign with requested key.");
+			result_ad.InsertAttr(ATTR_ERROR_CODE, 3);
+
+			// *sigh*
+			stream->encode();
+			if (!putClassAd(stream, result_ad) ||
+				!stream->end_of_message())
+			{
+				dprintf(D_FULLDEBUG, "handle_dc_session_token: failed to send response ad to client\n");
+				return false;
+			}
+			return true;
+		}
+	}
 
 	classad::ClassAd policy_ad;
 	static_cast<ReliSock*>(stream)->getPolicyAd(policy_ad);
@@ -2677,7 +2699,7 @@ handle_dc_session_token(int, Stream* stream)
 		result_ad.InsertAttr(ATTR_ERROR_STRING, "Server did not successfully authenticate session.");
 		result_ad.InsertAttr(ATTR_ERROR_CODE, 2);
 	} else if (final_key_name.empty()) {
-		result_ad.InsertAttr(ATTR_ERROR_STRING, "Server does not have access to requested key.");
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Server does not have access to configured key.");
 		result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
 		std::string key_name = "POOL";
 		param(key_name, "SEC_TOKEN_ISSUER_KEY");
@@ -4234,9 +4256,13 @@ int dc_main( int argc, char** argv )
 								  handle_nop,
 								  "handle_nop()", ADMINISTRATOR );
 
+	// CRUFT The old OWNER authorization level was merged into
+	//   ADMINISTRATOR in HTCondor 9.9.0. For older clients, we still
+	//   recognize the DC_NOP_OWNER command.
+	//   We should remove it eventually.
 	daemonCore->Register_Command( DC_NOP_OWNER, "DC_NOP_OWNER",
 								  handle_nop,
-								  "handle_nop()", OWNER );
+								  "handle_nop()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_NOP_CONFIG, "DC_NOP_CONFIG",
 								  handle_nop,

@@ -440,15 +440,6 @@ described.
     except those specified in the ``condor_config.root`` configuration
     file. The ``CONFIG`` level of access implies ``READ`` access.
 
-``OWNER``
-    This level of access is required for commands that the owner of a
-    machine (any local user) should be able to use, in addition to the
-    HTCondor administrators. An example that requires the ``OWNER``
-    access level is the *condor_vacate* command. The command causes the
-    *condor_startd* daemon to vacate any HTCondor job currently running
-    on a machine. The owner of that machine should be able to cause the
-    removal of a job running on the machine.
-
 ``DAEMON``
     This access level is used for commands that are internal to the
     operation of HTCondor. An example of this internal operation is when
@@ -519,10 +510,6 @@ STARTD:
 ``READ``
     The command that *condor_preen* sends to request the current state
     of the *condor_startd* daemon.
-
-``OWNER``
-    The command that *condor_vacate* sends to cause any running jobs to
-    stop running.
 
 ``NEGOTIATOR``
     The command that the *condor_negotiator* daemon sends to match a
@@ -674,7 +661,6 @@ taking place. <context> may be any one of
         WRITE
         ADMINISTRATOR
         CONFIG
-        OWNER
         DAEMON
         NEGOTIATOR
         ADVERTISE_MASTER
@@ -842,7 +828,6 @@ level: :index:`SEC_DEFAULT_AUTHENTICATION`
 :index:`SEC_WRITE_AUTHENTICATION`
 :index:`SEC_ADMINISTRATOR_AUTHENTICATION`
 :index:`SEC_CONFIG_AUTHENTICATION`
-:index:`SEC_OWNER_AUTHENTICATION`
 :index:`SEC_DAEMON_AUTHENTICATION`
 :index:`SEC_NEGOTIATOR_AUTHENTICATION`
 :index:`SEC_ADVERTISE_MASTER_AUTHENTICATION`
@@ -856,7 +841,6 @@ level: :index:`SEC_DEFAULT_AUTHENTICATION`
         SEC_WRITE_AUTHENTICATION
         SEC_ADMINISTRATOR_AUTHENTICATION
         SEC_CONFIG_AUTHENTICATION
-        SEC_OWNER_AUTHENTICATION
         SEC_DAEMON_AUTHENTICATION
         SEC_NEGOTIATOR_AUTHENTICATION
         SEC_ADVERTISE_MASTER_AUTHENTICATION
@@ -902,7 +886,6 @@ macros :index:`SEC_DEFAULT_AUTHENTICATION_METHODS`
 :index:`SEC_ADMINISTRATOR_AUTHENTICATION_METHODS`
 :index:`SEC_DAEMON_AUTHENTICATION_METHODS`
 :index:`SEC_CONFIG_AUTHENTICATION_METHODS`
-:index:`SEC_OWNER_AUTHENTICATION_METHODS`
 :index:`SEC_NEGOTIATOR_AUTHENTICATION_METHODS`
 :index:`SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS`
 :index:`SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS`
@@ -915,7 +898,6 @@ macros :index:`SEC_DEFAULT_AUTHENTICATION_METHODS`
         SEC_WRITE_AUTHENTICATION_METHODS
         SEC_ADMINISTRATOR_AUTHENTICATION_METHODS
         SEC_CONFIG_AUTHENTICATION_METHODS
-        SEC_OWNER_AUTHENTICATION_METHODS
         SEC_DAEMON_AUTHENTICATION_METHODS
         SEC_NEGOTIATOR_AUTHENTICATION_METHODS
         SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS
@@ -1634,7 +1616,7 @@ For the daemon, there are seven macros to enable or disable encryption:
 :index:`SEC_WRITE_ENCRYPTION`
 :index:`SEC_ADMINISTRATOR_ENCRYPTION`
 :index:`SEC_DAEMON_ENCRYPTION`
-:index:`SEC_CONFIG_ENCRYPTION` :index:`SEC_OWNER_ENCRYPTION`
+:index:`SEC_CONFIG_ENCRYPTION`
 :index:`SEC_NEGOTIATOR_ENCRYPTION`
 :index:`SEC_ADVERTISE_MASTER_ENCRYPTION`
 :index:`SEC_ADVERTISE_STARTD_ENCRYPTION`
@@ -1647,7 +1629,6 @@ For the daemon, there are seven macros to enable or disable encryption:
     SEC_WRITE_ENCRYPTION
     SEC_ADMINISTRATOR_ENCRYPTION
     SEC_CONFIG_ENCRYPTION
-    SEC_OWNER_ENCRYPTION
     SEC_DAEMON_ENCRYPTION
     SEC_NEGOTIATOR_ENCRYPTION
     SEC_ADVERTISE_MASTER_ENCRYPTION
@@ -1691,7 +1672,6 @@ macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
 :index:`SEC_ADMINISTRATOR_CRYPTO_METHODS`
 :index:`SEC_DAEMON_CRYPTO_METHODS`
 :index:`SEC_CONFIG_CRYPTO_METHODS`
-:index:`SEC_OWNER_CRYPTO_METHODS`
 :index:`SEC_NEGOTIATOR_CRYPTO_METHODS`
 :index:`SEC_ADVERTISE_MASTER_CRYPTO_METHODS`
 :index:`SEC_ADVERTISE_STARTD_CRYPTO_METHODS`
@@ -1704,7 +1684,6 @@ macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
     SEC_WRITE_CRYPTO_METHODS
     SEC_ADMINISTRATOR_CRYPTO_METHODS
     SEC_CONFIG_CRYPTO_METHODS
-    SEC_OWNER_CRYPTO_METHODS
     SEC_DAEMON_CRYPTO_METHODS
     SEC_NEGOTIATOR_CRYPTO_METHODS
     SEC_ADVERTISE_MASTER_CRYPTO_METHODS
@@ -1752,7 +1731,6 @@ check: :index:`SEC_DEFAULT_INTEGRITY`
 :index:`SEC_READ_INTEGRITY` :index:`SEC_WRITE_INTEGRITY`
 :index:`SEC_ADMINISTRATOR_INTEGRITY`
 :index:`SEC_DAEMON_INTEGRITY` :index:`SEC_CONFIG_INTEGRITY`
-:index:`SEC_OWNER_INTEGRITY`
 :index:`SEC_NEGOTIATOR_INTEGRITY`
 :index:`SEC_ADVERTISE_MASTER_INTEGRITY`
 :index:`SEC_ADVERTISE_STARTD_INTEGRITY`
@@ -1765,7 +1743,6 @@ check: :index:`SEC_DEFAULT_INTEGRITY`
     SEC_WRITE_INTEGRITY
     SEC_ADMINISTRATOR_INTEGRITY
     SEC_CONFIG_INTEGRITY
-    SEC_OWNER_INTEGRITY
     SEC_DAEMON_INTEGRITY
     SEC_NEGOTIATOR_INTEGRITY
     SEC_ADVERTISE_MASTER_INTEGRITY
@@ -1836,10 +1813,10 @@ level may have its own list of authorized users. A complete list of the
 authorization macros: :index:`ALLOW_READ`
 :index:`ALLOW_WRITE` :index:`ALLOW_ADMINISTRATOR`
 :index:`ALLOW_CONFIG` :index:`ALLOW_DAEMON`
-:index:`ALLOW_OWNER` :index:`ALLOW_NEGOTIATOR`
+:index:`ALLOW_NEGOTIATOR`
 :index:`DENY_READ` :index:`DENY_WRITE`
 :index:`DENY_ADMINISTRATOR` :index:`DENY_CONFIG`
-:index:`DENY_DAEMON` :index:`DENY_OWNER`
+:index:`DENY_DAEMON`
 :index:`DENY_NEGOTIATOR`
 
 .. code-block:: text
@@ -1848,14 +1825,12 @@ authorization macros: :index:`ALLOW_READ`
     ALLOW_WRITE
     ALLOW_ADMINISTRATOR
     ALLOW_CONFIG
-    ALLOW_OWNER
     ALLOW_NEGOTIATOR
     ALLOW_DAEMON
     DENY_READ
     DENY_WRITE
     DENY_ADMINISTRATOR
     DENY_CONFIG
-    DENY_OWNER
     DENY_NEGOTIATOR
     DENY_DAEMON
 
@@ -2084,17 +2059,6 @@ running as condor to carry out requests that require the ``DAEMON``
 access level, where the commands originate from any machine in the
 cs.wisc.edu domain.
 
-In the local configuration file for each host, the host's owner should
-be authorized as the owner of the machine. An example of the entry in
-the local configuration file:
-
-.. code-block:: condor-config
-
-    ALLOW_OWNER = username@cs.wisc.edu/hostname.cs.wisc.edu
-
-In this example the owner has a login of username, and the machine's
-name is represented by hostname.
-
 Debugging Security Configuration
 ''''''''''''''''''''''''''''''''
 
@@ -2313,14 +2277,6 @@ HTCondor can be registered with:
         machine. It is recommended that ``ADMINISTRATOR`` access is granted
         with due diligence.
 
-``OWNER``
-    This level of access is required for commands that the owner of a
-    machine (any local user) should be able to use, in addition to the
-    HTCondor administrators. For example, the *condor_vacate* command
-    causes the *condor_startd* daemon to vacate any running HTCondor
-    job. It requires ``OWNER`` permission, so that any user logged into
-    a local machine can issue a *condor_vacate* command.
-
 ``NEGOTIATOR``
     This access level is used specifically to verify that commands are
     sent by the *condor_negotiator* daemon. The *condor_negotiator*
@@ -2379,15 +2335,10 @@ HTCondor can be registered with:
     contacted.
 
 ``ADMINISTRATOR`` and ``NEGOTIATOR`` access default to the central
-manager machine. ``OWNER`` access defaults to the local machine, as well
-as any machines given with ``ADMINISTRATOR`` access. ``CONFIG`` access
+manager machine. ``CONFIG`` access
 is not granted to any machine as its default. These defaults are
 sufficient for most pools, and should not be changed without a
-compelling reason. If machines other than the default are to have to
-have ``OWNER`` access, they probably should also have ``ADMINISTRATOR``
-access. By granting machines ``ADMINISTRATOR`` access, they will
-automatically have ``OWNER`` access, given how ``OWNER`` access is set
-within the configuration.
+compelling reason.
 
 Examples of Security Configuration
 ----------------------------------
@@ -2399,7 +2350,6 @@ Here is a sample security configuration:
 .. code-block:: condor-config
 
     ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
-    ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
     ALLOW_READ = *
     ALLOW_WRITE = *
     ALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
@@ -2466,7 +2416,6 @@ this.
    .. code-block:: condor-config
 
        ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 -  Only allow machines at NCSA to join or view the pool. The central
    manager is the only machine with ``ADMINISTRATOR`` access.
@@ -2476,7 +2425,6 @@ this.
        ALLOW_READ = *.ncsa.uiuc.edu
        ALLOW_WRITE = *.ncsa.uiuc.edu
        ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 -  Only allow machines at NCSA and the U of I Math department join the
    pool, except do not allow lab machines to do so. Also, do not allow
@@ -2489,7 +2437,6 @@ this.
        ALLOW_WRITE = *.ncsa.uiuc.edu, *.math.uiuc.edu
        DENY_WRITE = lab-*.edu, *.lab.uiuc.edu, 177.55.*
        ALLOW_ADMINISTRATOR = bigcheese.ncsa.uiuc.edu
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 -  Only allow machines at NCSA and UW-Madison's CS department to view
    the pool. Only NCSA machines and the machine raven.cs.wisc.edu can
@@ -2506,7 +2453,6 @@ this.
        ALLOW_WRITE = *.ncsa.uiuc.edu, raven.cs.wisc.edu
        ALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \
                                  biggercheese.uiuc.edu
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 -  Allow anyone except the military to view the status of the pool, but
    only let machines at NCSA view the job queues. Only NCSA machines can
@@ -2522,7 +2468,6 @@ this.
        ALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \
                                  biggercheese.uiuc.edu
        ALLOW_ADMINISTRATOR_NEGOTIATOR = biggercheese.uiuc.edu
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 Changing the Security Configuration
 -----------------------------------
@@ -2574,7 +2519,6 @@ use the power to change configuration attributes to compromise the
 security of your HTCondor pool.
 :index:`SETTABLE_ATTRS_<PERMISSION-LEVEL>`
 :index:`SETTABLE_ATTRS_CONFIG` :index:`SETTABLE_ATTRS_WRITE`
-:index:`SETTABLE_ATTRS_OWNER`
 :index:`SETTABLE_ATTRS_ADMINISTRATOR`
 
 The control lists are defined by configuration settings that contain
@@ -2587,8 +2531,8 @@ following form:
 
 The two parts of this name that can vary are the <PERMISSION-LEVEL> and
 the <SUBSYS>. The <PERMISSION-LEVEL> can be any of the security access
-levels described earlier in this section. Examples include ``WRITE``,
-``OWNER``, and ``CONFIG``.
+levels described earlier in this section. Examples include ``WRITE``
+and ``CONFIG``.
 
 The <SUBSYS> is an optional portion of the name. It can be used to
 define separate rules for which configuration attributes can be set for
@@ -2622,21 +2566,6 @@ Some examples of valid definitions of control lists with explanations:
    _DEBUG (for example, ``STARTD_DEBUG``) and any attribute that
    matched MAX_*_LOG (for example, ``MAX_SCHEDD_LOG``) to any host
    with ``ADMINISTRATOR`` access.
-
--  .. code-block:: condor-config
-
-       STARTD.SETTABLE_ATTRS_OWNER = HasDataSet
-
-   Allows any request to modify the ``HasDataSet`` attribute that came
-   from a host with ``OWNER`` access. By default, ``OWNER`` covers any
-   request originating from the local host, plus any machines listed in
-   the ``ADMINISTRATOR`` level. Therefore, any HTCondor job would
-   qualify for OWNER access to the machine where it is running. So, this
-   setting would allow any process running on a given host, including an
-   HTCondor job, to modify the ``HasDataSet`` variable for that host.
-   ``HasDataSet`` is not used by HTCondor, it is an invented attribute
-   included in the ``STARTD_ATTRS`` :index:`STARTD_ATTRS` setting
-   in order for this example to make sense.
 
 Using HTCondor w/ Firewalls, Private Networks, and NATs
 -------------------------------------------------------
@@ -2932,8 +2861,9 @@ Under Unix, HTCondor runs jobs as one of
       :index:`STARTER_ALLOW_RUNAS_OWNER` must be ``True`` on the
       machine that will run the job. Its default value is ``True`` on
       Unix platforms and ``False`` on Windows platforms.
-   #. The job's ClassAd must have attribute ``RunAsOwner`` set to
-      ``True``. This can be set up for all users by adding an attribute
+   #. If the job's ClassAd has the attribute ``RunAsOwner``, it must be
+      set to ``True`; if unset, the job must be run on a Unix system.
+      This attribute can be set up for all users by adding an attribute
       to configuration variable ``SUBMIT_ATTRS``
       :index:`SUBMIT_ATTRS`. If this were the only attribute to be
       added to all job ClassAds, it would be set up with

@@ -8,7 +8,7 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 The details of each version are described below.
 
 Version 8.8.17
--------------
+--------------
 
 Release Notes:
 

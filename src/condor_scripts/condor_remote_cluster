@@ -939,12 +939,14 @@ if [ -z "${release_url}" ]; then
 	exit 1
     fi
     version="${ver_str[1]}"
-    series=`echo $version | sed -e 's/[.][0-9][0-9]*$//'`
-    if [ "$(uname)" == "Darwin" ] ; then
-        date=`date -j -f "%b %d %Y" "${ver_str[2]} ${ver_str[3]} ${ver_str[4]}" "+%Y%m%d"`
-    else
-        date=`date -d "${ver_str[2]} ${ver_str[3]} ${ver_str[4]}" "+%Y%m%d"`
+    aversion=(${version//./ })
+    major_ver=${aversion[0]}
+    minor_ver=${aversion[1]}
+    series="${major_ver}.${minor_ver}"
+    if [ $minor_ver -ne 0 ]; then
+        series="${major_ver}.x"
     fi
+    date=${ver_str[2]//-/}
 
     if [ ! -z "${platform_force}" ] ; then
         platform="${platform_force}"

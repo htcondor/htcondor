@@ -7,6 +7,25 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-9013:
+
+Version 9.0.13
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.0.13 released on Month Date, 2022.
+
+- HTCondor version 9.0.13 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-9012:
 
 Version 9.0.12
@@ -58,6 +77,9 @@ Bugs Fixed:
   not be used by the curl plugin when doing HTTPS transfers with a bearer token.
   It can now be accessed by replacing "_" with "." in the URL scheme.
   :jira:`1011`
+
+- Fixed several unlikely bugs when parsing the time strings in ClassAds.
+  :jira:`814`
 
 .. _lts-version-history-9011:
 

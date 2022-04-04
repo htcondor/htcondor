@@ -21,11 +21,7 @@
 #ifndef _CONDOR_NFS_H
 #define _CONDOR_NFS_H
 
-#if defined(AIX)
-#include <rpcsvc/mount.h>
-#else
 #include <sys/mount.h>
-#endif
 
 #if defined(LINUX)
 #	include <linux/nfs.h>
@@ -57,10 +53,6 @@
 
 #   endif /* FreeBSDFreeBSD4 */
 #endif /* ! defined(LINUX) */ 
-
-#if defined(HPUX10) 
-#	include <nfs/export.h>
-#endif
 
 #endif /* _CONDOR_NFS_H */
 
