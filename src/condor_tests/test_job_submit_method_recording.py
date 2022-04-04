@@ -210,9 +210,7 @@ def run_htcondor_dag_submit(default_condor,write_dag_file,test_dir):
           p = default_condor.run_command(["mv",test_dir / name, test_dir / "dag_test1"])
      #run second dag submission test 
      p = default_condor.run_command(["htcondor","dag","submit", write_dag_file])
-     #move secodn test files into dag_test2 directory
-     for name in files_to_move:
-          p = default_condor.run_command(["mv",test_dir / name, test_dir / "dag_test2"])
+
      #Get the job ad for completed job
      schedd = default_condor.get_local_schedd()
      wait(schedd)
