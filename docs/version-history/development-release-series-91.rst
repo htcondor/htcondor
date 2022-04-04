@@ -75,6 +75,10 @@ New Features:
   Authentication for all SSH connections.
   :jira:`1007`
 
+- Added support for a global CM which only schedules fair-share between schedds,
+  with each schedd owning a local CM for fair-share between users.
+  :jira:`1003`
+
 - Added the ``-key`` command-line option to *condor_token_request*, which
   allows users to ask HTCondor to use a particular signing key when creating
   the IDTOKEN.  Added the corresponding configuration macro,

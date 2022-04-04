@@ -179,6 +179,7 @@ int  count_a_job( JobQueueJob *job, const JOB_ID_KEY& jid, void* user);
 void mark_jobs_idle();
 void load_job_factories();
 static void WriteCompletionVisa(ClassAd* ad);
+bool forwardMatchToSidecarCM(const char *claim_id, const char *claim_ids, ClassAd &match_ad, const char *slot_name);
 
 schedd_runtime_probe WalkJobQ_check_for_spool_zombies_runtime;
 schedd_runtime_probe WalkJobQ_count_a_job_runtime;
@@ -6980,11 +6981,21 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	dprintf(D_MATCH,"Received match for job %d.%d (delivered=%d): %s\n",
 			job_id.cluster, job_id.proc, m_current_resources_delivered, slot_name);
 
+	bool scheddsAreSubmitters = false;;
+	match_ad.LookupBool(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, scheddsAreSubmitters);
+
+	if (scheddsAreSubmitters) {
+		// Not a real match we can directly use.  Send it to our sidecar cm, and let
+		// it figure out the fair-share, etc.
+		return forwardMatchToSidecarCM(claim_id, extra_claims, match_ad, slot_name);
+	}
+
 	const char* because = "";
 	bool skip_all_such = false;
 	JobQueueJob *job = GetJobAd(job_id);
 	if (scheduler_skipJob(job, &match_ad, skip_all_such, because) && ! skip_all_such) {
-		// TODO: try a different owner??
+		// See if it is a real match for us
+
 		FindRunnableJob(job_id, &match_ad, getMatchUser());
 
 		// we may have found a new job. but FindRunnableJob doesn't check to see
@@ -7070,6 +7081,42 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	}
 
 	return true;
+}
+
+// Negotiator has send the schedd a match to use for any user.  Forward the slot to our cm-on-the-side
+// for subsequent matching
+bool forwardMatchToSidecarCM(const char *claim_id, const char *extra_claims, ClassAd &match_ad, const char *slot_name) {
+	dprintf(D_FULLDEBUG, "Forwarding match %s to local cm\n", slot_name);
+	auto_free_ptr local_cm(param("SCHEDD_LOCAL_CM"));
+
+	if (!local_cm) {
+		dprintf(D_ALWAYS, "Got forwarding match for %s, but no knob SCHEDD_LOCAL_CM defined, dropping match\n", slot_name);
+		return false;
+	}
+
+	std::string startdAddr;
+	match_ad.LookupString(ATTR_STARTD_IP_ADDR, startdAddr);
+	// Put the start into Matched state, so the global cm won't try to match it while the
+	// local one is trying to as well
+	NotifyStartdOfMatchHandler *h =
+		new NotifyStartdOfMatchHandler(
+				slot_name,startdAddr.c_str(), 60,
+				claim_id, true);
+
+	h->startCommand(); // if the match_info fails, it fails
+
+	DCCollector localCollector(local_cm);
+	match_ad.Delete(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS);
+
+	ClassAd privateAd;
+	privateAd.Assign(ATTR_NAME, slot_name);
+	privateAd.Assign(ATTR_CLAIM_ID, claim_id);
+	if (extra_claims) {
+		privateAd.Assign("PreemptDslotClaims", extra_claims);
+	}
+
+	DCCollectorAdSequences adseq; // need a bogus one of these for the interface
+	return localCollector.sendUpdate(UPDATE_STARTD_AD, &match_ad, adseq, &privateAd, false);
 }
 
 void
@@ -7319,6 +7366,8 @@ Scheduler::negotiate(int command, Stream* s)
 	ClassAd negotiate_ad;
 	std::string submitter_tag;
 	ExprTree *neg_constraint = NULL;
+	bool scheddsAreSubmitters = false;
+
 	s->decode();
 	if( command == NEGOTIATE ) {
 		if( !getClassAd( s, negotiate_ad ) ) {
@@ -7344,6 +7393,7 @@ Scheduler::negotiate(int command, Stream* s)
 		negotiate_ad.LookupInteger("JOBPRIO_MIN",consider_jobprio_min);
 		negotiate_ad.LookupInteger("JOBPRIO_MAX",consider_jobprio_max);
 		neg_constraint = negotiate_ad.Lookup(ATTR_NEGOTIATOR_JOB_CONSTRAINT);
+		negotiate_ad.LookupBool(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, scheddsAreSubmitters);
 	}
 	else {
 			// old NEGOTIATE_WITH_SIGATTRS protocol
@@ -7372,7 +7422,8 @@ Scheduler::negotiate(int command, Stream* s)
 		submitter_tag = policy_remote_pool;
 	}
 
-	if (!SubmitterMap.IsSubmitterValid(submitter_tag, owner, time(NULL))) {
+	
+	if (!SubmitterMap.IsSubmitterValid(submitter_tag, owner, time(NULL)) && !scheddsAreSubmitters) {
 		dprintf(D_ALWAYS, "Remote negotiator (host=%s, pool=%s) is trying to negotiate with submitter %s;"
 			" that submitter was not sent to the negotiator, so aborting the negotiation attempt.\n",
 			sock->peer_ip_str(), submitter_tag.c_str(), owner);
@@ -7471,9 +7522,9 @@ Scheduler::negotiate(int command, Stream* s)
 
 	if( remote_pool ) {
 		dprintf (D_ALWAYS, "Negotiating for owner: %s (flock level %d, pool %s)\n",
-				 owner, which_negotiator, remote_pool);
+				 scheddsAreSubmitters ? "All Owners" : owner, which_negotiator, remote_pool);
 	} else {
-		dprintf (D_ALWAYS, "Negotiating for owner: %s\n", owner);
+		dprintf (D_ALWAYS, "Negotiating for owner: %s\n", scheddsAreSubmitters ? "All Owners" : owner);
 	}
 
 	if ( consider_jobprio_min > INT_MIN || consider_jobprio_max < INT_MAX ) {
@@ -7509,7 +7560,7 @@ Scheduler::negotiate(int command, Stream* s)
 	JobsStarted = 0;
 
 	// owner here is the ATTR_OWNER from the negotiator, which is really the Submitter (i.e. accounting group, etc)
-	if (user_is_the_new_owner) {
+	if (user_is_the_new_owner || scheddsAreSubmitters) {
 		// SubmitterData is keyed by fully qualified names
 	} else {
 		// SubmitterData is keyed by bare names, so truncate owner at '@'
@@ -7518,7 +7569,7 @@ Scheduler::negotiate(int command, Stream* s)
 	}
 	// find owner in the Owners array
 	SubmitterData * Owner = find_submitter(owner);
-	if ( ! Owner) {
+	if ( ! Owner && !scheddsAreSubmitters) {
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
 		jobs = 0;
 		skip_negotiation = true;
@@ -7547,7 +7598,8 @@ Scheduler::negotiate(int command, Stream* s)
 		}
 
 		// make sure owner matches what negotiator wants
-		if (owner_str != prec->submitter)
+
+		if (!scheddsAreSubmitters && owner_str != prec->submitter)
 		{
 			jobs--;
 			continue;

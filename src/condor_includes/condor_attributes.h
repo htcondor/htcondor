@@ -516,6 +516,7 @@
 #define ATTR_NEGOTIATOR_JOB_CONSTRAINT  "NegotiatorJobConstraint"
 #define ATTR_NEGOTIATOR_NAME  "NegotiatorName"
 #define ATTR_NEGOTIATOR_REQUIREMENTS  "NegotiatorRequirements"
+#define ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS  "NegotiatorScheddsAreSubmitters"
 #define ATTR_NETWORK_IN  "NetworkInputMb"
 #define ATTR_NETWORK_OUT  "NetworkOutputMb"
 #define ATTR_NEXT_CLUSTER_NUM  "NextClusterNum"
