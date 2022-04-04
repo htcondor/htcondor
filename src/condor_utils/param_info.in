@@ -6147,7 +6147,6 @@ default : @end
 description=Default (host based) Authorization policy based on IPs and DNS names
 default : @end
 	ALLOW_ADMINISTRATOR=$(CONDOR_HOST)
-	ALLOW_OWNER=$(FULL_HOSTNAME) $(IPV4_ADDRESS) $(IPV6_ADDRESS)
 	ALLOW_READ=*
 	ALLOW_WRITE=$(FULL_HOSTNAME) $(IPV4_ADDRESS) $(IPV6_ADDRESS)
 	ALLOW_DAEMON=$(FULL_HOSTNAME) $(IPV4_ADDRESS) $(IPV6_ADDRESS)
@@ -6186,7 +6185,6 @@ default : @end
 	  authuser=$(USERNAME)
 	endif
 	ALLOW_ADMINISTRATOR=$(authuser)@$(CONDOR_HOST)
-	ALLOW_OWNER=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
 	ALLOW_READ=*
 	ALLOW_WRITE=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
 	ALLOW_DAEMON=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
@@ -6479,10 +6477,8 @@ TRUST_DOMAIN = $(CONDOR_HOST)
 ALLOW_READ = *
 
 # Give root on each machine ADMINISTRATOR access (in case something goes
-# wrong with IDTOKENS) and OWNER access (so they can force HTCondor to
-# stop all running jobs on that machine).  Do NOT issue IDTOKENS to root.
+# wrong with IDTOKENS).  Do NOT issue IDTOKENS to root.
 ALLOW_ADMINISTRATOR = root@* condor@$(TRUST_DOMAIN)
-ALLOW_OWNER = root@* condor@$(TRUST_DOMAIN)
 
 # Accept non-read connections only from other daemons in the same pool.
 ALLOW_WRITE = condor@$(TRUST_DOMAIN)
