@@ -31,9 +31,6 @@ class StringList;
 void	cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir=false);
 void	cleanup_execute_dirs( StringList &list );
 void	check_execute_dir_perms( StringList &list );
-#if defined( DEPRECATED_SOCKET_CALLS )
-int 	create_port( ReliSock* );
-#endif /* DEPRECATED_SOCKET_CALLS */
 
 bool	reply( Stream*, int );
 bool	refuse( Stream* );

@@ -21,7 +21,7 @@
 #ifndef CONDOR_AUTH_NTSSPI
 #define CONDOR_AUTH_NTSSPI
 
-#if !defined(SKIP_AUTHENTICATION) && defined(WIN32)
+#if defined(WIN32)
 
 #define	SECURITY_WIN32 1
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
