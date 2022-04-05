@@ -24,8 +24,8 @@ New Features:
 
 Bugs Fixed:
 
-- The *condor_run* tool now outputs submission warnings 
-  and errors rather than piping stderr to stdout.
+- The *condor_run* tool now reports job submit errors
+  and warnings rather than writing them into a log file.
   :jira:`1002`
 
 .. _lts-version-history-9012:
