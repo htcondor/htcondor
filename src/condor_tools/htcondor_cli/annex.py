@@ -11,8 +11,7 @@ from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
 # Most of the annex add/create code is stored in a separate file.
-from htcondor_cli.annex_create import annex_add
-from htcondor_cli.annex_create import annex_create
+from htcondor_cli.annex_create import annex_add, annex_create
 
 
 class Create(Verb):
