@@ -1,3 +1,9 @@
+condor (9.7.1-1) stable; urgency=medium
+
+  * Fix recent bug where jobs may go on hold without a hold reason or code
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 01 Apr 2022 09:51:00 -0500
+
 condor (9.7.0-1) stable; urgency=medium
 
   * Support environment variables, other application elements in ARC REST jobs
