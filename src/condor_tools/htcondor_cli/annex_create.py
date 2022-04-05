@@ -547,7 +547,7 @@ def annex_inner_func(
     mem_mb,
 ):
     if '@' in queue_at_machine:
-        (queue_name, target) = queue_at_machine.split('@', 2)
+        (queue_name, target) = queue_at_machine.split('@', 1)
     else:
         error_string = "Target must have the form queue@machine."
 
