@@ -24,7 +24,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- The *condor_run* tool now outputs submission warnings 
+  and errors rather than piping stderr to stdout.
+  :jira:`1002`
 
 .. _lts-version-history-9012:
 
