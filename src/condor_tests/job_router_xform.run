@@ -170,6 +170,7 @@ sleep(10);
 my %job = ();  # map of job info by id
 
 my @jobs = (); # lines of output
+my @historyjobs = (); # lines of output
 CondorTest::runCondorTool("condor_q -af:j RouteMe RoutedJob Managed Totem RanAt ProductionJob ProductionRun AnalysisRun RoutedToJobId RoutedFromJobId CollHost", \@jobs);
 
 # build a map of jobid to completion info
@@ -239,6 +240,15 @@ print "\n----- Checking CollHost attribute (jira902 regression) ----\n";
 # jira902 regression test - check to see that CollHost is the expected value
 @jobs = ();
 CondorTest::runCondorTool("condor_q -const RoutedJob -af:j CollHost", \@jobs);
+
+# It may be the case that the routed jobs have left the queue. If so, find them
+# in the history file
+@historyjobs = ();
+if ($#jobs < 7) {
+	CondorTest::runCondorTool("condor_history -const RoutedJob -af:j CollHost", \@historyjobs);
+}
+
+@jobs = (@jobs, @historyjobs);
 
 $correct = 0;
 $incorrect = 0;
