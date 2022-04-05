@@ -2941,7 +2941,7 @@ SecMan::GenerateKeyExchange(CondorError *errstack)
 	pctx.reset(EVP_PKEY_CTX_new_id(EVP_PKEY_EC, nullptr));
 	if (!pctx ||
 		1 != EVP_PKEY_paramgen_init(pctx.get()) ||
-		1 != EVP_PKEY_CTX_set_ec_paramgen_curve_nid(pctx.get(), NID_X9_62_prime256v1))
+		EVP_PKEY_CTX_set_ec_paramgen_curve_nid(pctx.get(), NID_X9_62_prime256v1) <= 0)
 	{
 		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
 			"Failed to allocate a new param context for key exchange.");
@@ -2949,7 +2949,7 @@ SecMan::GenerateKeyExchange(CondorError *errstack)
 	}
 
 	EVP_PKEY *params_raw = nullptr;
-	if (!EVP_PKEY_paramgen(pctx.get(), &params_raw)) {
+	if (1 != EVP_PKEY_paramgen(pctx.get(), &params_raw)) {
 		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
 			"Failed to allocate a new parameter object for key exchange.");
 		return pkey;
@@ -2957,7 +2957,7 @@ SecMan::GenerateKeyExchange(CondorError *errstack)
 	params.reset(params_raw);
 
 	kctx.reset(EVP_PKEY_CTX_new(params.get(), nullptr));
-	if (!kctx || !EVP_PKEY_keygen_init(kctx.get())) {
+	if (!kctx || 1 != EVP_PKEY_keygen_init(kctx.get())) {
 		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
 			"Failed to setup new key context for key exchange.");
 		return pkey;
