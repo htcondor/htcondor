@@ -35,6 +35,7 @@
 #include "condor_version.h"
 #include "ipv6_hostname.h"
 #include "daemon_command.h"
+#include "condor_base64.h"
 
 
 // For AES (and newer).
@@ -737,6 +738,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_result = FALSE;
 					return CommandProtocolFinished;
 				}
+				m_auth_info.Delete(ATTR_SEC_NONCE);
 
 				// lookup the suggested key
 				if (!m_sec_man->session_cache->lookup(m_sid, session)) {
@@ -940,59 +942,77 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_sid = strdup(tmpStr.c_str());
 
 					if (will_authenticate == SecMan::SEC_FEAT_ACT_YES) {
-
-						char *crypto_method = NULL;
-						if (!m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, &crypto_method)) {
+						std::string crypto_method;
+						if (!m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method)) {
 							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: tried to enable encryption for request from %s, but we have none!\n", m_sock->peer_description() );
-							m_result = FALSE;
+							m_result = false;
 							return CommandProtocolFinished;
 						}
+						Protocol method = SecMan::getCryptProtocolNameToEnum(crypto_method.c_str());
 
-						unsigned char* rkey = Condor_Crypt_Base::randomKey(GENERATED_KEY_LENGTH_V9);
-						unsigned char  rbuf[GENERATED_KEY_LENGTH_V9];
-						if (rkey) {
-							memcpy (rbuf, rkey, GENERATED_KEY_LENGTH_V9);
-							// this was malloced in randomKey
-							free (rkey);
+							// If the client provided a EC key, we'll respond in kind.
+						std::string peer_ec;
+						if (m_auth_info.EvaluateAttrString("ECP256pub", peer_ec)) {
+							m_peer_pubkey_encoded = peer_ec;
+							if (!(m_keyexchange = SecMan::GenerateKeyExchange(m_errstack))) {
+								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Error in generating key: %s\n", m_errstack->getFullText().c_str());
+								return CommandProtocolFinished;
+							}
+							std::string encoded_pubkey;
+							if (!SecMan::EncodePubkey(m_keyexchange.get(), encoded_pubkey, m_errstack)) {
+								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Error in encoded key: %s\n", m_errstack->getFullText().c_str());
+								return CommandProtocolFinished;
+							}
+							if (!m_policy->InsertAttr("ECP256pub", encoded_pubkey)) {
+								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to add pubkey to policy ad.\n");
+								return CommandProtocolFinished;
+							}
+
+								// We will derive the key post-authentication.
+							m_key = nullptr;
 						} else {
-							memset (rbuf, 0, GENERATED_KEY_LENGTH_V9);
-							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: unable to generate key for request from %s - no crypto available!\n", m_sock->peer_description() );							
-							free( crypto_method );
-							crypto_method = NULL;
-							m_result = FALSE;
-							return CommandProtocolFinished;
+								// Server will explicitly send the key to the client during the authentication; we need
+								// to generate it first.
+
+							unsigned char* rkey = Condor_Crypt_Base::randomKey(GENERATED_KEY_LENGTH_V9);
+							unsigned char  rbuf[GENERATED_KEY_LENGTH_V9];
+							if (rkey) {
+								memcpy (rbuf, rkey, GENERATED_KEY_LENGTH_V9);
+								// this was malloced in randomKey
+								free (rkey);
+							} else {
+								memset (rbuf, 0, GENERATED_KEY_LENGTH_V9);
+								dprintf ( D_ALWAYS, "DC_AUTHENTICATE: unable to generate key for request from %s - no crypto available!\n", m_sock->peer_description() );
+								m_result = FALSE;
+								return CommandProtocolFinished;
+							}
+							switch (method) {
+								case CONDOR_BLOWFISH:
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", m_sid);
+									m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_OLD, CONDOR_BLOWFISH, 0);
+									break;
+								case CONDOR_3DES:
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", m_sid);
+									m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_OLD, CONDOR_3DES, 0);
+									break;
+								case CONDOR_AESGCM: {
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %s...\n", m_sid);
+									m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_V9, CONDOR_AESGCM, 0);
+									}
+									break;
+								default:
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", m_sid);
+									m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_OLD, CONDOR_NO_PROTOCOL, 0);
+									break;
+							}
+
+							if (!m_key) {
+								m_result = FALSE;
+								return CommandProtocolFinished;
+							}
+
+							m_sec_man->key_printf (D_SECURITY, m_key);
 						}
-
-						Protocol method = SecMan::getCryptProtocolNameToEnum(crypto_method);
-						switch (method) {
-							case CONDOR_BLOWFISH:
-								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_OLD, CONDOR_BLOWFISH, 0);
-								break;
-							case CONDOR_3DES:
-								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_OLD, CONDOR_3DES, 0);
-								break;
-							case CONDOR_AESGCM: {
-								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_V9, CONDOR_AESGCM, 0);
-								}
-								break;
-							default:
-								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_OLD, CONDOR_NO_PROTOCOL, 0);
-								break;
-						}
-
-						free( crypto_method );
-						crypto_method = NULL;
-
-						if (!m_key) {
-							m_result = FALSE;
-							return CommandProtocolFinished;
-						}
-
-						m_sec_man->key_printf (D_SECURITY, m_key);
 
 						// Update the session policy to reflect the
 						// crypto method we're using
@@ -1018,6 +1038,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						m_result = FALSE;
 						return CommandProtocolFinished;
 					}
+					// We don't need our encoded pubkey anymore
+					m_policy->Delete("ECP256pub");
 					m_sock->decode();
 				} else {
 					dprintf( D_SECURITY, "SECMAN: Enact was '%s', not sending response.\n",
@@ -1069,6 +1091,28 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				if ( will_authenticate == SecMan::SEC_FEAT_ACT_YES ) {
 					if ((!m_new_session)) {
+						std::string want_replay;
+						if (m_policy->EvaluateAttrString(ATTR_SEC_REPLAY_PROTECTION, want_replay) && want_replay == "YES") {
+							dprintf(D_SECURITY|D_FULLDEBUG, "DC_AUTHENTICATE: sending random nonce to remote side for replay protection.\n");
+							std::unique_ptr<unsigned char, decltype(&free)> random_bytes(Condor_Crypt_Base::randomKey(33), &free);
+							std::unique_ptr<char, decltype(&free)> encoded_bytes(
+								condor_base64_encode(random_bytes.get(), 33, false),
+								&free);
+
+							ClassAd ad;
+							if (!ad.InsertAttr(ATTR_SEC_NONCE, encoded_bytes.get())) {
+								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to generate nonce to send for session resumption.\n");
+								m_result = false;
+								return CommandProtocolFinished;
+							}
+							m_sock->encode();
+							if (!putClassAd(m_sock, ad) || !m_sock->end_of_message()) {
+								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to send nonce to peer at %s.\n", m_sock->peer_description());
+								m_result = false;
+								return CommandProtocolFinished;
+							}
+						}
+
 						char * remote_version = NULL;
 						m_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
 						if(remote_version) {
@@ -1229,6 +1273,29 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	if( auth_success ) {
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: authentication of %s complete.\n", m_sock->peer_ip_str());
 		m_sock->getPolicyAd(*m_policy);
+
+		if (m_keyexchange) {
+			std::string crypto_method;
+			if (!m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method)) {
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: No crypto methods enabled for request from %s.\n", m_sock->peer_description() );
+				m_result = false;
+				return CommandProtocolFinished;
+			}
+			Protocol method = SecMan::getCryptProtocolNameToEnum(crypto_method.c_str());
+
+			size_t keylen = method == CONDOR_AESGCM ? GENERATED_KEY_LENGTH_V9 : GENERATED_KEY_LENGTH_OLD;
+			std::unique_ptr<unsigned char, decltype(&free)> rbuf(
+				static_cast<unsigned char *>(malloc(keylen)),
+				&free);
+			if (!SecMan::FinishKeyExchange(std::move(m_keyexchange), m_peer_pubkey_encoded.c_str(), rbuf.get(), keylen, m_errstack)) {
+				dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to generate a symmetric key for session with %s: %s.\n", m_sock->peer_description(), m_errstack->getFullText().c_str());
+				m_result = false;
+				return CommandProtocolFinished;
+			}
+
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: generating %s key for session %s...\n", crypto_method.c_str(), m_sid);
+			m_key = new KeyInfo(rbuf.get(), keylen, method, 0);
+		}
 	}
 	else {
 		bool auth_required = true;
