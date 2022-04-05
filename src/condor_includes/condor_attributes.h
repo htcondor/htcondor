@@ -914,7 +914,7 @@
 #define ATTR_SEC_USER  "User"
 #define ATTR_SEC_MY_REMOTE_USER_NAME  "MyRemoteUserName"
 #define ATTR_SEC_NEW_SESSION  "NewSession"
-#define ATTR_SEC_NONCE  "nonce"
+#define ATTR_SEC_NONCE  "Nonce"
 #define ATTR_SEC_USE_SESSION  "UseSession"
 #define ATTR_SEC_COOKIE  "Cookie"
 extern const char ATTR_SEC_AUTHENTICATED_USER [];
@@ -931,6 +931,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_REQUEST_ID "RequestId"
 #define ATTR_SEC_LIFETIME "Lifetime"
 #define ATTR_SEC_REQUESTED_KEY "RequestedKey"
+#define ATTR_SEC_ECDH_PUBLIC_KEY "ECDHPublicKey"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 

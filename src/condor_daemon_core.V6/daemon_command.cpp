@@ -945,7 +945,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 							// If the client provided a EC key, we'll respond in kind.
 						std::string peer_ec;
-						if (m_auth_info.EvaluateAttrString("ECP256pub", peer_ec)) {
+						if (m_auth_info.EvaluateAttrString(ATTR_SEC_ECDH_PUBLIC_KEY, peer_ec)) {
 							m_peer_pubkey_encoded = peer_ec;
 							if (!(m_keyexchange = SecMan::GenerateKeyExchange(m_errstack))) {
 								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Error in generating key: %s\n", m_errstack->getFullText().c_str());
@@ -956,7 +956,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Error in encoded key: %s\n", m_errstack->getFullText().c_str());
 								return CommandProtocolFinished;
 							}
-							if (!m_policy->InsertAttr("ECP256pub", encoded_pubkey)) {
+							if (!m_policy->InsertAttr(ATTR_SEC_ECDH_PUBLIC_KEY, encoded_pubkey)) {
 								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to add pubkey to policy ad.\n");
 								return CommandProtocolFinished;
 							}
@@ -1032,7 +1032,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						return CommandProtocolFinished;
 					}
 					// We don't need our encoded pubkey anymore
-					m_policy->Delete("ECP256pub");
+					m_policy->Delete(ATTR_SEC_ECDH_PUBLIC_KEY);
 					m_sock->decode();
 				} else {
 					dprintf( D_SECURITY, "SECMAN: Enact was '%s', not sending response.\n",

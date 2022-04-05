@@ -1977,10 +1977,10 @@ SecManStartCommand::sendAuthInfo_inner()
 		return StartCommandFailed;
 	}
 		// Remove ECDH key; we don't need it in the policy.
-	m_auth_info.Delete("ECP256pub");
+	m_auth_info.Delete(ATTR_SEC_ECDH_PUBLIC_KEY);
 
 		// No need to keep the nonce around as it's never used again.
-	m_auth_info.Delete("nonce");
+	m_auth_info.Delete(ATTR_SEC_NONCE);
 
 	if (m_is_tcp) {
 
@@ -2046,7 +2046,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			}
 
 				// Record any pubkeys; will be used later for key derivation.
-			auth_response.EvaluateAttrString("ECP256pub", m_server_pubkey);
+			auth_response.EvaluateAttrString(ATTR_SEC_ECDH_PUBLIC_KEY, m_server_pubkey);
 
 				// Get rid of our sinful address in what will become
 				// the session policy ad.  It's there because we sent
@@ -3107,7 +3107,7 @@ SecManStartCommand::PopulateKeyExchange()
 	if (!m_sec_man.EncodePubkey(pkey.get(), encoded_pubkey, m_errstack)) return false;
 
 		// Add to the outgoing ClassAd
-	if (!m_auth_info.InsertAttr("ECP256pub", encoded_pubkey)) {
+	if (!m_auth_info.InsertAttr(ATTR_SEC_ECDH_PUBLIC_KEY, encoded_pubkey)) {
 		m_errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
 			"Failed to include pubkey in auth ad.");
 		return false;
