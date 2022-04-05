@@ -49,12 +49,6 @@
 #include <algorithm>
 #include <string>
 
-// For AES (and newer).
-#define GENERATED_KEY_LENGTH_V9  32
-
-// For BLOWFISH and 3DES
-#define GENERATED_KEY_LENGTH_OLD 24
-
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
 // special security session "hint" used to specify that a new
@@ -2332,7 +2326,7 @@ SecManStartCommand::authenticate_inner_finish()
 			}
 			Protocol method = SecMan::getCryptProtocolNameToEnum(crypto_method.c_str());
 
-			size_t keylen = method == CONDOR_AESGCM ? GENERATED_KEY_LENGTH_V9 : GENERATED_KEY_LENGTH_OLD;
+			size_t keylen = method == CONDOR_AESGCM ? SEC_SESSION_KEY_LENGTH_V9 : SEC_SESSION_KEY_LENGTH_OLD;
 			std::unique_ptr<unsigned char, decltype(&free)> rbuf(static_cast<unsigned char*>(malloc(keylen)), &free);
 			if (!SecMan::FinishKeyExchange(std::move(m_keyexchange), m_server_pubkey.c_str(), rbuf.get(), keylen, m_errstack)) {
 				dprintf(D_SECURITY, "SECMAN: Failed to generate a symmetric key for session with %s: %s.\n", m_sock->peer_description(), m_errstack->getFullText().c_str());

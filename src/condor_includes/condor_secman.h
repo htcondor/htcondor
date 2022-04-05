@@ -26,6 +26,11 @@
 #include "classy_counted_ptr.h"
 #include "reli_sock.h"
 
+// For AES (and newer).
+#define SEC_SESSION_KEY_LENGTH_V9  32
+
+// For BLOWFISH and 3DES
+#define SEC_SESSION_KEY_LENGTH_OLD 24
 
 typedef void StartCommandCallbackType(bool success, Sock *sock, CondorError *errstack, const std::string &trust_domain, bool should_try_token_request, void *misc_data);
 
