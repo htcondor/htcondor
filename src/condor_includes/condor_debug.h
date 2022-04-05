@@ -103,11 +103,11 @@ enum {
 // first re-definition pass.  add a separate set of flags for Verbose mode
 // for each category. 
 //
-#define IsDebugLevel(cat)    ((AnyDebugBasicListener & (1<<(cat&D_CATEGORY_MASK))) != 0)
-#define IsDebugCategory(cat) ((AnyDebugBasicListener & (1<<(cat&D_CATEGORY_MASK))) != 0)
-#define IsDebugVerbose(cat)  ((AnyDebugVerboseListener & (1<<(cat&D_CATEGORY_MASK))) != 0)
+#define IsDebugLevel(cat)    ((AnyDebugBasicListener & (1<<((cat) & D_CATEGORY_MASK))) != 0)
+#define IsDebugCategory(cat) ((AnyDebugBasicListener & (1<<((cat) &D_CATEGORY_MASK))) != 0)
+#define IsDebugVerbose(cat)  ((AnyDebugVerboseListener & (1<<((cat) &D_CATEGORY_MASK))) != 0)
 #define IsFulldebug(cat)     ((AnyDebugBasicListener & D_FULLDEBUG) != 0 || IsDebugVerbose(cat))
-#define IsDebugCatAndVerbosity(flags) ((flags & (D_VERBOSE_MASK | D_FULLDEBUG)) ? IsDebugVerbose(flags) : IsDebugLevel(flags))
+#define IsDebugCatAndVerbosity(flags) (((flags) & (D_VERBOSE_MASK | D_FULLDEBUG)) ? IsDebugVerbose(flags) : IsDebugLevel(flags))
 
 // in the future, we will change the debug system to use a table rather than 
 // a bit mask.  possibly this..
@@ -116,11 +116,8 @@ enum {
 //#define IsDebugLevel(cat)    (DebugLevels & (3<<((cat)*2))) != 0)
 
 
-#ifdef __cplusplus
 #include <string>
 #include <map>
-extern "C" {
-#endif
 
 #if _MSC_VER >= 1400 /* VC++ 2005 version */
 #define PREFAST_NORETURN __declspec(noreturn)
@@ -151,10 +148,7 @@ extern int (*DebugId)(char **buf,int *bufpos,int *buflen);
 
 typedef unsigned long long DPF_IDENT;
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
-#ifdef __cplusplus
-}
 void dprintf ( int flags, DPF_IDENT ident, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
-extern "C" {
 // parse config files and use them to fill out the array of dprintf_output_settings
 // one for each output log file. returns the number of entries needed in p_info, (may be larger than c_info!)
 // if p_info is NULL, then dprintf_set_outputs is called with the dprintf_output_settings array.  if != NULL, then
@@ -191,7 +185,6 @@ void _condor_parse_merge_debug_flags(
 
 bool dprintf_to_term_check();
 
-#endif
 void _condor_dprintf_va ( int flags, DPF_IDENT ident, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
@@ -301,12 +294,6 @@ extern int (*_EXCEPT_Cleanup)(int,int,const char*);	/* Function to call to clean
 extern void (*_EXCEPT_Reporter)(const char * msg, int line, const char * file); /* called instead of dprintf if non-NULL */
 extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
 
-#if defined(__cplusplus)
-}
-#endif
-
-#if defined(__cplusplus)
-
 class dprintf_on_function_exit {
 public:
 	dprintf_on_function_exit(bool on_entry, int _flags, const char * fmt, ...);
@@ -346,7 +333,7 @@ class _condor_runtime
 {
 public:
 	_condor_runtime() : begin(0) { begin = _condor_debug_get_time_double(); }; // save result here
-	double elapsed_runtime() { return _condor_debug_get_time_double() - begin; }
+	double elapsed_runtime() const { return _condor_debug_get_time_double() - begin; }
 	double tick(double & last) { double now = _condor_debug_get_time_double(); double diff = now - last; last = now; return diff; }
 	double reset() { return tick(begin); } // resets begin to now and returns the difference between now and former begin.
 	double begin;
@@ -365,10 +352,9 @@ public:
 
 // print hex bytes from data into buf, up to a maximum of datalen bytes
 // caller must supply the buffer and must insure that it is at least datalen*3+1
+// if compact=true, then the buffer must be at least datalen*2+1
 // this is intended to provide a way to add small hex dumps to dprintf logging
-extern const char * debug_hex_dump(char * buf, const char * data, int datalen);
-
-#endif // defined(__cplusplus)
+extern const char * debug_hex_dump(char * buf, const char * data, int datalen, bool compact = false);
 
 #ifndef CONDOR_ASSERT
 #define CONDOR_ASSERT(cond) \
@@ -383,34 +369,6 @@ extern const char * debug_hex_dump(char * buf, const char * data, int datalen);
 #define TRACE \
 	fprintf( stderr, "TRACE at line %d in file \"%s\"\n",  __LINE__, __FILE__ );
 #endif /* TRACE */
-
-#ifdef MALLOC_DEBUG
-#define MALLOC(size) mymalloc(__FILE__,__LINE__,size)
-#define CALLOC(nelem,size) mycalloc(__FILE__,__LINE__,nelem,size)
-#define REALLOC(ptr,size) myrealloc(__FILE__,__LINE__,ptr,size)
-#define FREE(ptr) myfree(__FILE__,__LINE__,ptr)
-char    *mymalloc(), *myrealloc(), *mycalloc();
-#else
-#define MALLOC(size) malloc(size)
-#define CALLOC(nelem,size) calloc(nelem,size)
-#define REALLOC(ptr,size) realloc(ptr,size)
-#define FREE(ptr) free(ptr)
-#endif /* MALLOC_DEBUG */
-
-#define D_RUSAGE( flags, ptr ) { \
-        dprintf( flags, "(ptr)->ru_utime = %d.%06d\n", (ptr)->ru_utime.tv_sec,\
-        (ptr)->ru_utime.tv_usec ); \
-        dprintf( flags, "(ptr)->ru_stime = %d.%06d\n", (ptr)->ru_stime.tv_sec,\
-        (ptr)->ru_stime.tv_usec ); \
-}
-
-#ifndef ABEND
-#define ABEND(cond) \
-	if( !(cond) ) { \
-		dprintf( D_ERROR | D_BACKTRACE, "Failed to assert (%s) at %s, line %d; aborting.\n", #cond, __FILE__, __LINE__ ); \
-		abort(); \
-	}
-#endif /* ABEND */
 
 #ifndef PRAGMA_REMIND
 # ifdef _MSC_VER // for Microsoft C, prefix file and line to the the message

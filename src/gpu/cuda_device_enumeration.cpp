@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 
 // For pi_dynlink.h
 #if       defined(WIN32)
@@ -324,7 +325,7 @@ setNVMLFunctionPointers() {
 //
 
 dlopen_return_t
-setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
+setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart, bool must_load ) {
 	//
 	// We try to load and initialize the nvcuda library; if that fails,
 	// we load the cudart library, instead.
@@ -403,23 +404,30 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart ) {
 			cudaGetDevicePropertiesOfIndeterminateStructure =
 				(cuda_DevicePropBuf_int)dlsym( cudart_handle, "cudaGetDeviceProperties" );
 		} else {
-			fprintf( stderr, "Unable to find cudaRuntimGetVersion().\n" );
+			fprintf( stderr, "# Unable to find cudaRuntimGetVersion().\n" );
 			dlclose( cudart_handle );
 			return NULL;
 		}
 
 		findNVMLDeviceHandle = nvml_findNVMLDeviceHandle;
 		return cudart_handle;
-	} else {
-		fprintf( stderr, "Unable to load a CUDA library (%s or %s).\n",
+	} else if (must_load) {
+		fprintf( stderr, "# Unable to load a CUDA library (%s or %s).\n",
 			cuda_library, cudart_library );
-		return NULL;
+	} else {
+		print_error(MODE_DIAGNOSTIC_MSG, "# Unable to load a CUDA library (%s or %s).\n",
+			cuda_library, cudart_library);
 	}
+	return NULL;
 }
 
 
 nvmlReturn_t
-getUUIDToMIGDeviceHandleMap( std::map< std::string, nvmlDevice_t > & map ) {
+getMIGParentDeviceUUIDs( std::set< std::string > & parentDeviceUUIDs ) {
+	// if this version of the library doesn't have a nvmlDeviceGetMaxMigDeviceCount function
+	// then there can be no MIG parent devices, trivial success
+	if (! nvmlDeviceGetMaxMigDeviceCount) { return NVML_SUCCESS; }
+
 	unsigned int deviceCount = 0;
 	nvmlReturn_t r = nvmlDeviceGetCount(& deviceCount);
 	if( NVML_SUCCESS != r ) { return r; }
@@ -435,7 +443,47 @@ getUUIDToMIGDeviceHandleMap( std::map< std::string, nvmlDevice_t > & map ) {
 			for( unsigned int index = 0; index < maxMigDeviceCount; ++index ) {
 				nvmlDevice_t migDevice;
 				r = nvmlDeviceGetMigDeviceHandleByIndex( device, index, & migDevice );
+				if( NVML_SUCCESS != r ) { continue; }
+
+				char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
+				r = nvmlDeviceGetUUID( device, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
 				if( NVML_SUCCESS != r ) { return r; }
+
+				parentDeviceUUIDs.insert( uuid );
+				break;
+			}
+		}
+	}
+
+	return NVML_SUCCESS;
+}
+
+
+nvmlReturn_t
+getUUIDToMIGDeviceHandleMap( std::map< std::string, nvmlDevice_t > & map ) {
+	unsigned int deviceCount = 0;
+	nvmlReturn_t r = nvmlDeviceGetCount(& deviceCount);
+	if( NVML_SUCCESS != r ) { return r; }
+
+	// if this version of the library doesn't have a nvmlDeviceGetMaxMigDeviceCount function
+	// then we behave as if the mig device count was 0, trivial success.
+	if (! nvmlDeviceGetMaxMigDeviceCount) { return NVML_SUCCESS; }
+
+	for( unsigned int i = 0; i < deviceCount; ++i ) {
+		nvmlDevice_t device;
+		r = nvmlDeviceGetHandleByIndex( i, & device );
+		if( NVML_SUCCESS != r ) { return r; }
+
+		unsigned int maxMigDeviceCount = 0;
+		r = nvmlDeviceGetMaxMigDeviceCount( device, & maxMigDeviceCount );
+		if( NVML_SUCCESS == r && maxMigDeviceCount != 0 ) {
+			for( unsigned int index = 0; index < maxMigDeviceCount; ++index ) {
+				nvmlDevice_t migDevice;
+				r = nvmlDeviceGetMigDeviceHandleByIndex( device, index, & migDevice );
+				// It is possible to enable MIG on a MIG-capable device but
+				// not create any compute instances.  Since nobody can use
+				// those devices, ignore them.
+				if( NVML_SUCCESS != r ) { continue; }
 
 				char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
 				r = nvmlDeviceGetUUID( migDevice, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
@@ -488,9 +536,11 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 	}
 
 	nvmlPciInfo_t pci;
-	r = nvmlDeviceGetPciInfo_v3( migDevice, & pci );
-	if( NVML_SUCCESS == r ) {
-		strncpy( p->pciId, pci.busIdLegacy, NVML_DEVICE_PCI_BUS_ID_BUFFER_V2_SIZE );
+	if(nvmlDeviceGetPciInfo_v3) {
+		r = nvmlDeviceGetPciInfo_v3( migDevice, & pci );
+		if( NVML_SUCCESS == r ) {
+			strncpy( p->pciId, pci.busIdLegacy, NVML_DEVICE_PCI_BUS_ID_BUFFER_V2_SIZE );
+		}
 	}
 
 	nvmlMemory_t memory;
@@ -500,10 +550,12 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 	}
 
 	int ccMajor = 0, ccMinor = 0;
-	r = nvmlDeviceGetCudaComputeCapability( migDevice, & ccMajor, & ccMinor );
-	if( NVML_SUCCESS == r ) {
-		p->ccMajor = ccMajor;
-		p->ccMinor = ccMinor;
+	if(nvmlDeviceGetCudaComputeCapability) {
+		r = nvmlDeviceGetCudaComputeCapability( migDevice, & ccMajor, & ccMinor );
+		if( NVML_SUCCESS == r ) {
+			p->ccMajor = ccMajor;
+			p->ccMinor = ccMinor;
+		}
 	}
 
 	// This is not always the same as cuDeviceGetAttribute(CLOCK_RATE).
@@ -516,9 +568,11 @@ nvml_getBasicProps( nvmlDevice_t migDevice, BasicProps * p ) {
 
 	// This only exists for MIG devices.
 	nvmlDeviceAttributes_t attributes;
-	r = nvmlDeviceGetAttributes( migDevice, & attributes );
-	if( NVML_SUCCESS == r ) {
-		p->multiProcessorCount = attributes.multiprocessorCount;
+	if(nvmlDeviceGetAttributes) {
+		r = nvmlDeviceGetAttributes( migDevice, & attributes );
+		if( NVML_SUCCESS == r ) {
+			p->multiProcessorCount = attributes.multiprocessorCount;
+		}
 	}
 
 	nvmlEnableState_t current, pending;
@@ -537,7 +591,7 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 	static std::map< std::string, nvmlDevice_t > uuidsToHandles;
 	if(! mapInitialized) {
 		r = getUUIDToMIGDeviceHandleMap( uuidsToHandles );
-		if( NVML_SUCCESS != r ) { return r;	}
+		if( NVML_SUCCESS != r ) { return r; }
 	}
 
 	for( auto i = uuidsToHandles.begin(); i != uuidsToHandles.end(); ++i ) {
@@ -546,6 +600,7 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 		BasicProps bp;
 		bp.uuid = i->first;
 		r = nvml_getBasicProps( migDevice, & bp );
+		print_error(MODE_DIAGNOSTIC_MSG, "# nvml_getBasicProps() for MIG %s returns %d\n", bp.uuid.c_str(), r);
 		if( NVML_SUCCESS != r ) { return r; }
 
 		devices.push_back( bp );
@@ -564,7 +619,9 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 		if( NVML_SUCCESS != r ) { return r; }
 
 		unsigned int maxMigDeviceCount = 0;
-		r = nvmlDeviceGetMaxMigDeviceCount( device, & maxMigDeviceCount );
+		if (nvmlDeviceGetMaxMigDeviceCount) {
+			r = nvmlDeviceGetMaxMigDeviceCount(device, & maxMigDeviceCount);
+		}
 		if( NVML_SUCCESS == r && maxMigDeviceCount == 0 ) {
 			char uuid[NVML_DEVICE_UUID_V2_BUFFER_SIZE];
 			r = nvmlDeviceGetUUID( device, uuid, NVML_DEVICE_UUID_V2_BUFFER_SIZE );
@@ -573,9 +630,9 @@ enumerateNVMLDevices( std::vector< BasicProps > & devices ) {
 			BasicProps bp;
 			bp.uuid = uuid;
 			r = nvml_getBasicProps( device, & bp );
+			print_error(MODE_DIAGNOSTIC_MSG, "# nvml_getBasicProps() for %s returns %d\n", bp.uuid.c_str(), r);
 			if( NVML_SUCCESS != r ) { return r; }
 
-			// fprintf( stderr, "Adding NVML device %s\n", uuid );
 			devices.push_back( bp );
 		}
 	}
@@ -587,10 +644,33 @@ std::string
 gpuIDFromUUID( const std::string & uuid, int opt_short_uuid ) {
 	std::string gpuID = uuid;
 
-	// Some of our UUIDs came from CUDA.
+	//
+	// UUIDs from CUDA are _just_ the UUID.  UUIDs from NVML may include
+	// a leading "GPU-", or, as of driver version 470, a leading "MIG-".
+	//
+	// However, the GPU IDs with a leading "MIG-" don't work if shortened,
+	// so never do that.
+	//
+
+	if( gpuID.find( "MIG-" ) == 0 ) {
+		return gpuID;
+	}
+
+	//
+	// By a "GPU ID", we mean an identifier that can be used in
+	// CUDA_VISIBLE_DEVICES.  Oddly, the bare UUID returned from CUDA
+	// can't; the UUID must be prefixed with "GPU-", to make it look
+	// like an NVML "UUID".
+	//
+
 	if( gpuID.find( "GPU-" ) == std::string::npos ) {
 		gpuID = "GPU-" + gpuID;
 	}
+
+	//
+	// GPU IDs don't have to include the entire UUID, just enough of
+	// a prefix to uniquely identify the device.
+	//
 
 	if( opt_short_uuid ) {
 		// MIG-GPU-<UUID>/x/y

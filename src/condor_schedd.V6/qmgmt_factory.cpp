@@ -35,12 +35,13 @@
 #include "submit_utils.h"
 #include "set_user_priv_from_ad.h"
 #include "my_async_fread.h"
+#include "spooled_job_files.h"
 
 
 class JobFactory : public SubmitHash {
 
 public:
-	JobFactory(const char * name, int id);
+	JobFactory(const char * name, int id, const classad::ClassAd* extended_cmds);
 	~JobFactory();
 
 	//enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
@@ -133,7 +134,12 @@ protected:
 	friend int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::string & remainder);
 	friend bool TakeJobFactoryItemdata(JobFactory *factory, void * itemdata, int itemdata_size);
 	friend int JobFactoryRowCount(JobFactory * factory);
-	friend JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_filename, bool spooled_submit_file, std::string & errmsg);
+	friend JobFactory * MakeJobFactory(
+		JobQueueCluster* job,
+		const classad::ClassAd * extended_cmds,
+		const char * submit_digest_filename,
+		bool spooled_submit_file,
+		std::string & errmsg);
 	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 	friend bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
 
@@ -144,7 +150,7 @@ protected:
 		std::string & errmsg);           // OUT: error message if return value is not 0
 };
 
-JobFactory::JobFactory(const char * _name, int id)
+JobFactory::JobFactory(const char * _name, int id, const classad::ClassAd * extended_cmds)
 	: name(NULL)
 #ifdef HOLDS_DIGEST_FILE_OPEN
 	, fp_digestX(NULL)
@@ -158,6 +164,7 @@ JobFactory::JobFactory(const char * _name, int id)
 	memset(&source, 0, sizeof(source));
 	this->init();
 	setScheddVersion(CondorVersion());
+	if (extended_cmds) { this->addExtendedCommands(*extended_cmds); }
 	// add digestfile into string pool, and store that pointer in the class
 	insert_source(_name, source);
 	name = macro_source_filename(source, SubmitMacroSet);
@@ -197,9 +204,9 @@ bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster)
 	return false;
 }
 
-class JobFactory * NewJobFactory(int cluster_id)
+class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds)
 {
-	return new JobFactory(NULL, cluster_id);
+	return new JobFactory(NULL, cluster_id, extended_cmds);
 }
 
 // Make a job factory for a job object that has been submitted, but not yet committed.
@@ -254,10 +261,15 @@ int JobFactoryRowCount(JobFactory * factory)
 // Make a job factory for a Job object that exists, this entry point is used when
 // the submit digest is a file on disk - either because condor_submit put it there, or
 // because we are restarting. 
-JobFactory * MakeJobFactory(JobQueueCluster* job, const char * submit_digest_file, bool spooled_submit_file, std::string & errmsg)
+JobFactory * MakeJobFactory(
+	JobQueueCluster* job,
+	const classad::ClassAd * extended_cmds,
+	const char * submit_digest_file,
+	bool spooled_submit_file,
+	std::string & errmsg)
 {
 
-	JobFactory * factory = new JobFactory(submit_digest_file, job->jid.cluster);
+	JobFactory * factory = new JobFactory(submit_digest_file, job->jid.cluster, extended_cmds);
 
 	// Starting the 8.7.3 The digest file may be in the spool directory and owned by condor
 	// or in the user directory and owned by the user (the 8.7.1 model).
@@ -582,7 +594,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 		std::string txt(factory->error_stack()->getFullText()); if (txt.empty()) { txt = ""; }
 		formatstr(msg, "failed to create ClassAd for Job %d.%d : %s", jid.cluster, jid.proc, txt.c_str());
 		dprintf(D_ALWAYS, "ERROR: %s", msg.c_str());
-		setJobFactoryPauseAndLog(ClusterAd, mmHold, CONDOR_HOLD_CODE_Unspecified, msg);
+		setJobFactoryPauseAndLog(ClusterAd, mmHold, CONDOR_HOLD_CODE::Unspecified, msg);
 		//factory->Pause(mmHold);
 		//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSED, mmHold);
 		//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSE_REASON, msg);
@@ -677,7 +689,7 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 				} else if (fea.items_filename.empty()) {
 					// this is ok?
 				} else if (fea.items_filename == "<" || fea.items_filename == "-") {
-					formatstr(errmsg, "invalid filename '%s' for foreach from", fea.items_filename.Value());
+					formatstr(errmsg, "invalid filename '%s' for foreach from", fea.items_filename.c_str());
 				} else if (reader.eof_was_read()) {
 					// the reader was primed with itemdata sent over the wire...
 				} else if (fea.items.number() > 0) {
@@ -692,13 +704,12 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 						priv = set_user_priv_from_ad(*user_ident);
 					} else {
 						// if we are not impersonating a user, then the items filename MUST be in spool
-						extern void GetSpooledMaterializeDataPath(MyString &path, int cluster, const char *dir /*= NULL*/);
 						extern char* Spool; // in schedd_main.cpp. 
-						MyString spooled_filename;
+						std::string spooled_filename;
 						GetSpooledMaterializeDataPath(spooled_filename, cluster_id, Spool);
 						if (spooled_filename != fea.items_filename) {
-							dprintf(D_MATERIALIZE, "invalid filename '%s' for foreach from, Cluster %d factory will be disabled\n", fea.items_filename.Value(), cluster_id);
-							formatstr(errmsg, "invalid filename '%s' for foreach from. File must be in Spool.", fea.items_filename.Value());
+							dprintf(D_MATERIALIZE, "invalid filename '%s' for foreach from, Cluster %d factory will be disabled\n", fea.items_filename.c_str(), cluster_id);
+							formatstr(errmsg, "invalid filename '%s' for foreach from. File must be in Spool.", fea.items_filename.c_str());
 							rval = -1;
 						}
 					}
@@ -713,12 +724,12 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 						// setup an async reader for the itemdata
 						rval = reader.open(fea.items_filename.c_str());
 						if (rval) {
-							formatstr(errmsg, "could not open item data file '%s', error = %d", fea.items_filename.Value(), rval);
+							formatstr(errmsg, "could not open item data file '%s', error = %d", fea.items_filename.c_str(), rval);
 						}
 						else {
 							rval = reader.queue_next_read();
 							if (rval) {
-								formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d", fea.items_filename.Value(), rval);
+								formatstr(errmsg, "could not initiate reading from item data file '%s', error = %d", fea.items_filename.c_str(), rval);
 							}
 							else {
 								fea.foreach_mode = foreach_from_async;
@@ -759,7 +770,7 @@ bool JobFactory::RowDataIsLoading(int row)
 		if (reader.done_reading()) {
 			if ( ! reader.eof_was_read()) {
 				std::string filename;
-				dprintf(D_ALWAYS, "failed to read all of the item data from '%s', error %d\n", fea.items_filename.Value(), reader.error_code());
+				dprintf(D_ALWAYS, "failed to read all of the item data from '%s', error %d\n", fea.items_filename.c_str(), reader.error_code());
 			}
 			// we have read all we are going to, so close the reader now.
 			reader.close();

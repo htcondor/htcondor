@@ -21,7 +21,7 @@
 #ifndef PIPE_BUFFER_H
 #define PIPE_BUFFER_H
 
-#include "MyString.h"
+#include <string>
 
 /**
  *

@@ -77,14 +77,14 @@ if [ -z "$CONDOROPTS" ] && [ -z "$HTGETTOKENOPTS" ]; then
     fatal 'Neither SEC_CREDENTIAL_GETTOKEN_OPTS condor value nor $HTGETTOKENOPTS environment set'
 fi
 
-# Keep the standard duration vault token in $VTOKEN.$SERVICE to make
+# Keep the standard duration vault token in $VTOKEN-$SERVICE to make
 #  sure that credmon has a long-duration one, but copy it to $VTOKEN if a
 #  new one is generated.
 ID="`id -u`"
 VTOKEN="/tmp/vt_u$ID"
 BTOKEN=""
 if [ -z "$BEARER_TOKEN_FILE" ]; then
-    # Also store the bearer token with a .$SERVICE extension
+    # Also store the bearer token with a -$SERVICE suffix
     BTOKEN="${XDG_RUNTIME_DIR:-/tmp}/bt_u$ID"
 fi
 
@@ -131,9 +131,9 @@ for REQUEST; do
         1)  if [ -n "$STOREMSG" ]; then
                 verbose "$STOREMSG"
             fi
-            if [ -f "$VTOKEN.$SERVICE" ]; then
-                verbose "Removing $VTOKEN.$SERVICE because there are no $SERVICE credentials stored"
-                rm -f "$VTOKEN.$SERVICE"
+            if [ -f "$VTOKEN-$SERVICE" ]; then
+                verbose "Removing $VTOKEN-$SERVICE because there are no $SERVICE credentials stored"
+                rm -f "$VTOKEN-$SERVICE"
             fi;;
         2) fatal "Credentials exist that do not match the request.
 They can be removed by
@@ -143,9 +143,9 @@ but make sure no other job is using them."
         *) fatal "${STOREMSG}${NL}Querying condor credentials failed";;
     esac
     if [ -n "$BTOKEN" ]; then
-        OPTS=("-o" "$BTOKEN.$SERVICE" "${OPTS[@]}")
+        OPTS=("-o" "$BTOKEN-$SERVICE" "${OPTS[@]}")
     fi
-    OPTS=("--vaulttokenttl=28d" "${OPTS[@]}" "--vaulttokeninfile=$VTOKEN.$SERVICE" "--vaulttokenfile=/dev/stdout" "--showbearerurl")
+    OPTS=("--vaulttokenttl=28d" "${OPTS[@]}" "--vaulttokeninfile=$VTOKEN-$SERVICE" "--vaulttokenfile=/dev/stdout" "--showbearerurl")
     verbose "Attempting to get tokens for $SERVICE"
     # First attempt to get tokens quietly without oidc
     CRED="`htgettoken "${OPTS[@]}" --nooidc ${VERBOSE:--q}`"
@@ -161,11 +161,11 @@ but make sure no other job is using them."
         fi
     fi
 
-    if [ -n "$BTOKEN" ] && [ -f $BTOKEN.$SERVICE ]; then
+    if [ -n "$BTOKEN" ] && [ -f $BTOKEN-$SERVICE ]; then
         verbose "Copying bearer token to $BTOKEN"
         # Copy bearer token to $BTOKEN atomically
         TMPFILE="`mktemp $BTOKEN.XXXXXXXXXX`"
-        cat $BTOKEN.$SERVICE >$TMPFILE
+        cat $BTOKEN-$SERVICE >$TMPFILE
         mv $TMPFILE $BTOKEN
     fi
 
@@ -177,14 +177,14 @@ but make sure no other job is using them."
     # A new long-duration vault token was received, followed by bearer URL
     # Exchange vault token for a shorter duration vault token on disk
     # Normally do this quietly
-    echo ${CRED%$NL*}|htgettoken $CONDOROPTS --nobearertoken --vaulttokeninfile=/dev/stdin "--vaulttokenfile=$VTOKEN.$SERVICE" ${VERBOSE:--q} >&2
+    echo ${CRED%$NL*}|htgettoken $CONDOROPTS --nobearertoken --vaulttokeninfile=/dev/stdin "--vaulttokenfile=$VTOKEN-$SERVICE" ${VERBOSE:--q} >&2
     if [ $? != 0 ]; then
         fatal "Failed to exchange vault token"
     fi
 
     verbose "Copying vault token to $VTOKEN"
     TMPFILE="`mktemp $VTOKEN.XXXXXXXXXX`"
-    cat $VTOKEN.$SERVICE >$TMPFILE
+    cat $VTOKEN-$SERVICE >$TMPFILE
     mv $TMPFILE $VTOKEN
 
     if $SHOWSTORING; then

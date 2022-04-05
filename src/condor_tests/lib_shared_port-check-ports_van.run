@@ -39,22 +39,6 @@ my %superexpectedcounts = ();
 my $mixedmode = 0;
 my $debugmode = 0;
 
-#my $firstappend_condor_config = '
-	#DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	#NUM_CPUS = 2
-	#NEGOTIATOR_INTERVAL = 5
-	#ENABLE_IPV4 = True
-	#ENABLE_IPV6 = True
-#';
-
-#$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"compressedtestname");
-#print "local config file:$configfile\n";
-
-#CondorTest::StartCondorWithParams(
-    #condor_name => "compressedtestname",
-    #fresh_local => "TRUE",
-    #condorlocalsrc => "$configfile",
-#);
 
 # get the actual name of the collector exe, because that's what netstat will show.
 my $collector_exe = "condor_collector";
@@ -158,9 +142,9 @@ $on_execute = sub {
 
 	my $netstatlength = @netstat_result;
 
-	print "Show netstat capture\n";
+	print "Show netstat capture ($netstatlength lines)\n";
 	foreach my $line (@netstat_result) {
-		chomp($line);
+		fullchomp($line);
 		print "nstat: $line\n"
 	}
 
@@ -265,7 +249,7 @@ $on_execute = sub {
 	my $found_listening_daemon = 0;
 	my $unexpected_listening_daemon = 1;
 	foreach my $candidate (@netstat_result) {
-		chomp($candidate);
+		fullchomp($candidate);
 		print "considering <$candidate>\n";
 		if(is_windows()) {
 
@@ -367,10 +351,6 @@ my $append_condor_config = '
   DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 
   SHARED_PORT_DEBUG = D_COMMAND D_FULLDEBUG
-
-  # named sockets cannot have very long paths (~100 chars), so put them
-  # in /tmp to avoid problems
-  DAEMON_SOCKET_DIR = /tmp/$(USERNAME)-condor-test-sock
 ';
 
 CondorTest::StartCondorWithParams(
@@ -405,10 +385,6 @@ my $append_condor_config = '
   DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 
   SHARED_PORT_DEBUG = D_COMMAND D_FULLDEBUG
-
-  # named sockets cannot have very long paths (~100 chars), so put them
-  # in /tmp to avoid problems
-  DAEMON_SOCKET_DIR = /tmp/$(USERNAME)-condor-test-sock
 ';
 
 CondorTest::StartCondorWithParams(

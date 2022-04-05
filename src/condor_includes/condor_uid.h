@@ -41,10 +41,6 @@
 #ifndef _UID_H
 #define _UID_H
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 /*
   Our code depends on _priv_state_threshold being last, so if you add
   another priv state here, put it *BEFORE* _priv_state_threshold!!!!
@@ -92,6 +88,7 @@ void init_condor_ids(void);
 void uninit_user_ids(void);
 void uninit_file_owner_ids(void);
 int set_file_owner_ids( uid_t uid, gid_t gid );
+bool user_ids_are_inited();
 int init_user_ids(const char username[], const char domain[]);
 int init_user_ids_quiet(const char username[]);
 int set_user_ids(uid_t uid, gid_t gid);
@@ -139,11 +136,6 @@ typedef enum {
    } CompareUsersOpt;
 bool is_same_user(const char user1[], const char user2[], CompareUsersOpt opt);
 
-#if defined(__cplusplus)
-}
-#endif
-
-#if defined(__cplusplus)
 
 #if ! defined WIN32
 #include "passwd_cache.unix.h"
@@ -155,12 +147,16 @@ extern passwd_cache* pcache(void);
 class TemporaryPrivSentry {
 
 public:
-	TemporaryPrivSentry(bool clear_user_ids = false) {
+	TemporaryPrivSentry() : TemporaryPrivSentry(!user_ids_are_inited()) {}
+
+	TemporaryPrivSentry(bool clear_user_ids) {
 		m_orig_state = get_priv_state();
 		m_clear_user_ids = clear_user_ids;
 	}
 
-	TemporaryPrivSentry(priv_state dest_state, bool clear_user_ids = false) {
+	TemporaryPrivSentry(priv_state dest_state) : TemporaryPrivSentry(dest_state, !user_ids_are_inited()) {}
+
+	TemporaryPrivSentry(priv_state dest_state, bool clear_user_ids) {
 		m_orig_state = set_priv(dest_state);
 		m_clear_user_ids = clear_user_ids;
 	}
@@ -182,7 +178,5 @@ private:
 	priv_state m_orig_state;
 	bool m_clear_user_ids;
 };
-
-#endif // __cplusplus
 
 #endif /* _UID_H */

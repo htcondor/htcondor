@@ -68,10 +68,8 @@ OutputDestination=/"/scratch/output/[0-9]+"/
 ParallelScriptShadow="shadow.cmd"
 ParallelScriptStarter="starter.cmd"
 RemoteIwd="sandbox"
-Remote_GlobusRSL="what goes here"
 Remote_GridResource="condor stuff"
 Remote_NordugridRSL="or here"
-Remote_Remote_GlobusRSL="what goes over there"
 Remote_Remote_GridResource="condor remoter stuff"
 Remote_Remote_NordugridRSL="or over there"
 Requirements=/TARGET\.HasEncryptExecuteDirectory.+TARGET\.HasJobDeferral.+DeferralTime.+DeferralPrepTime/
@@ -81,7 +79,6 @@ SubmitEventNotes="ipso lorem"
 SubmitEventUserNotes="user ipso lorem"
 UserLog=/".*[0-9]+.log"/
 WantGracefulRemoval=true
-WantRemoteIO=false
 
 ==gpu.sub
 RequestGPUs=1
@@ -287,14 +284,6 @@ PeriodicRelease=HoldSubCode == 93
 PeriodicRemove=(time() - QDate) > 3600 * 2
 
 ==x509.sub
-DelegateJobGSICredentialsLifetime=2600
-MyProxyCredentialName="bob"
-MyProxyHost="example"
-MyProxyNewProxyLifetime=1 * 60 + 20
-MyProxyPassword=really - secure - huh
-MyProxyRefreshThreshold=2 * 60
-MyProxyServerDN="example.com"
-x509userproxy=/".+proxy"/
 
 ==notify.sub
 EmailAttributes="the,quick,red,fox"
@@ -315,12 +304,12 @@ JobMaxRetries=3
 OnExitHold=ExitCode > 42
 OnExitHoldReason="job fooled by succeeding to well"
 OnExitHoldSubCode=43
-OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode == 0
+OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode =?= 0
 
 ==success.sub
 JobMaxRetries=2
 JobSuccessExitCode=5
-OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode == JobSuccessExitCode
+OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode =?= JobSuccessExitCode
 
 ==parallel.sub
 JobUniverse=11
@@ -370,7 +359,7 @@ Err="prediction_script_data_70_0.err"
 Iwd=/".+Multilevel_Thesis_WheatData/70"/
 JobMaterializeMaxIdle=2000
 JobMaxRetries=5
-OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode == 0
+OnExitRemove=NumJobCompletions > JobMaxRetries || ExitCode =?= 0
 Out="prediction_script_data_70.out"
 PeriodicHold=(NumJobCompletions > 10)
 RequestDisk=716800

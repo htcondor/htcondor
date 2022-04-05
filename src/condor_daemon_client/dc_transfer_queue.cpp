@@ -168,7 +168,7 @@ DCTransferQueue::GoAheadAlways( bool downloading ) const {
 }
 
 bool
-DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,int timeout,MyString &error_desc)
+DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,int timeout,std::string &error_desc)
 {
 	ASSERT(fname);
 	ASSERT(jobid);
@@ -270,7 +270,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_si
 }
 
 bool
-DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,MyString &error_desc)
+DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,std::string &error_desc)
 {
 	if( GoAheadAlways( m_xfer_downloading ) ) {
 		return true;

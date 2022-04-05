@@ -56,6 +56,7 @@ public:
 			@return true if successful, false if failed
 		 */
 	static bool makePathAbsolute(MyString &filename, CondorError &errstack);
+	static bool makePathAbsolute(std::string &filename, CondorError &errstack);
 
 		/** Initializes the given file -- creates it if it doesn't exist,
 			possibly truncates it if it does.
@@ -96,13 +97,15 @@ public:
 				@return: "" on success; error message on failure
 			 */
 		MyString Open( const MyString &filename );
+		std::string Open( const std::string &filename );
 
 			/** Real the next "logical" line from the file.  (This means
 				lines are combined if they end with a continuation character.)
-				@param line: a MyString to receive the line string
+				@param line: a string to receive the line string
 				@return: true iff we got any data
 			 */
 		bool NextLogicalLine( MyString &line );
+		bool NextLogicalLine( std::string &line );
 
 			/** Close the file.
 			 */
@@ -185,7 +188,7 @@ public:
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		*/
-	bool monitorLogFile(MyString logfile, bool truncateIfFirst,
+	bool monitorLogFile(const MyString & logfile, bool truncateIfFirst,
 				CondorError &errstack);
 
 		/** Unmonitor the given log file
@@ -193,7 +196,7 @@ public:
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		*/
-	bool unmonitorLogFile(MyString logfile, CondorError &errstack);
+	bool unmonitorLogFile(const MyString & logfile, CondorError &errstack);
 
 		/** Returns the number of log files we're actively monitoring
 			at the present time.

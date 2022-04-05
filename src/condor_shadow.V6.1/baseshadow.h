@@ -141,7 +141,7 @@ class BaseShadow : public Service
 			informational purposes only.  It may be empty if there
 			is no appropriate answer (and function will return false).
 		*/
-	virtual bool getMachineName( MyString &machineName );
+	virtual bool getMachineName( std::string &machineName );
 
 		/** Put this job on hold, if requested, notify the user about
 			it.  This function does _not_ exit.  Use holdJobAndExit()
@@ -248,6 +248,8 @@ class BaseShadow : public Service
 		*/
 	virtual float bytesReceived() { return 0.0; }
 
+	virtual void getFileTransferStats(ClassAd &upload_file_stats, ClassAd &download_file_stats) = 0;
+	ClassAd* updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new_stats);
 	virtual void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status) = 0;
 
 	virtual int getExitReason( void ) = 0;
@@ -283,16 +285,6 @@ class BaseShadow : public Service
 		/** Update this job.
 		 */
 	int handleUpdateJobAd(int sig);
-
-		/** This is used to tack on something (like "res #") 
-			after the header and before the text of a dprintf
-			message.
-		*/
-	virtual void dprintf_va( int flags, const char* fmt, va_list args );
-
-		/** A local dprintf maker that uses dprintf_va...
-		 */
-	void dprintf( int flags, const char* fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
 
 		/// Returns the jobAd for this job
 	ClassAd *getJobAd() { return jobAd; }
@@ -406,7 +398,7 @@ class BaseShadow : public Service
 
 	virtual void logDisconnectedEvent( const char* reason ) = 0;
 
-	char const *getTransferQueueContactInfo() {return m_xfer_queue_contact_info.Value();}
+	char const *getTransferQueueContactInfo() {return m_xfer_queue_contact_info.c_str();}
 
 		/** True if attemping a reconnect from startup, i.e. if
 			reconnecting based upon command-line flag -reconnect. 
@@ -461,6 +453,9 @@ class BaseShadow : public Service
 	void startdClaimedCB(DCMsgCallback *cb);
 	bool m_lazy_queue_update;
 
+	ClassAd m_prev_run_upload_file_stats;
+	ClassAd m_prev_run_download_file_stats;
+
  private:
 
 	// private methods
@@ -484,7 +479,7 @@ class BaseShadow : public Service
 	std::string iwd;
 	char *scheddAddr;
 	char *core_file_name;
-	MyString m_xfer_queue_contact_info;
+	std::string m_xfer_queue_contact_info;
 
 		/// Timer id for the job cleanup retry handler.
 	int m_cleanup_retry_tid;

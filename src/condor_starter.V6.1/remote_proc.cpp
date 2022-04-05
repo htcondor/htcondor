@@ -31,7 +31,7 @@ RemoteProc::RemoteProc( ClassAd * job_ad )
 	dprintf ( D_FULLDEBUG, "In RemoteProc::RemoteProc()\n" );
 	JobAd = job_ad;
 
-	formatstr( m_remoteJobId, "%s-%ld", Starter->getMySlotName().Value(), (long)daemonCore->getpid() );
+	formatstr( m_remoteJobId, "%s-%ld", Starter->getMySlotName().c_str(), (long)daemonCore->getpid() );
 }
 
 RemoteProc::~RemoteProc() {
@@ -128,6 +128,7 @@ bool RemoteProc::JobReaper( int pid, int status )
 					int r = read(fd, buf, 511);
 					if (r < 0) {
 						dprintf(D_ALWAYS, "Cannot read worker output file on job submission. Errno %d\n", errno);
+						sprintf(buf, "Cannot read worker output file on job submission. Errno %d\n", errno);
 					} else {
 						buf[r] = '\0';
 						int buflen = strlen(buf);
@@ -142,7 +143,7 @@ bool RemoteProc::JobReaper( int pid, int status )
 				unlink(".worker_stdout");
 			}
 			message = buf;
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
 			return UserProc::JobReaper( pid, status );
 		}
 
@@ -174,7 +175,7 @@ bool RemoteProc::JobExit() {
 		if( Starter->jic->hadHold() || Starter->jic->hadRemove() ) {
 			reason = JOB_KILLED;
 		} else {
-			reason = JOB_NOT_CKPTED;
+			reason = JOB_SHOULD_REQUEUE;
 		}
 //	} else if( job_not_started ) {
 //		reason = JOB_NOT_STARTED;
@@ -303,13 +304,11 @@ bool RemoteProc::PublishUpdateAd( ClassAd * ad ) {
 	status_file += "/.job.ad.out";
 	FILE *status_fp = safe_fopen_wrapper_follow(status_file.c_str(), "r");
 	if ( status_fp != NULL ) {
-		dprintf( D_FULLDEBUG, "JEF opened status file\n" );
 		bool is_eof = false;
 		int error = 0;
-		int rc = InsertFromFile(status_fp, *ad, is_eof, error);
-		dprintf(D_FULLDEBUG, "JEF read %d attributes\n", rc);
+		std::ignore = InsertFromFile(status_fp, *ad, is_eof, error);
 	} else {
-		dprintf( D_FULLDEBUG, "JEF failed to open status file\n" );
+		dprintf( D_FULLDEBUG, "RemoteProc: failed to open status file\n" );
 	}
 	bool exit_by_signal = false;
 	ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, exit_by_signal);

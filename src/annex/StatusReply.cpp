@@ -79,9 +79,9 @@ printClassAds(	const std::map< std::string, std::string > & instances,
 		return;
 	}
 	unsigned char * md = mmc.computeMD();
-	MyString md5;
+	std::string md5;
 	for( int i = 0; i < MAC_SIZE; ++i ) {
-		md5.formatstr_cat( "%02x", (int)(md[i]) );
+		formatstr_cat( md5, "%02x", (int)(md[i]) );
 	}
 	free( md );
 
@@ -265,8 +265,8 @@ printHumanReadable( std::map< std::string, std::string > & instances,
 		formatstr( auditString, "%s%s %u, ", auditString.c_str(), i->first.c_str(), i->second );
 		fprintf( stdout, "%-14.14s %5u\n", i->first.c_str(), i->second );
 	}
-	formatstr( auditString, "%stotal %lu", auditString.c_str(), instances.size() );
-	fprintf( stdout, "%-14.14s %5lu\n", "TOTAL", instances.size() );
+	formatstr( auditString, "%stotal %zu", auditString.c_str(), instances.size() );
+	fprintf( stdout, "%-14.14s %5zu\n", "TOTAL", instances.size() );
 
 	std::map< std::string, std::vector< std::string > > instanceIDsByStatus;
 	for( auto i = instances.begin(); i != instances.end(); ++i ) {

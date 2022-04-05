@@ -20,6 +20,13 @@ condor_exe( condor_testingd "testingd.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 condor_exe( condor_sinful "sinful-tool.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 condor_exe( test_user_mapping "test_user_mapping.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 
+if( NOT BUILD_DATE )
+	GET_DATE( BUILD_DATE )
+endif()
+if(BUILD_DATE)
+	set_source_files_properties(condor_version.cpp PROPERTIES COMPILE_DEFINITIONS BUILD_DATE="${BUILD_DATE}")
+endif()
+
 # We need this .o statically linked into every exe for the version object
 # to parse.  Make this an object library to link everywhere.
 add_library(condor_version_obj STATIC condor_version.cpp)
@@ -146,14 +153,10 @@ endif(WINDOWS)
 
 if(NOT WINDOWS)
 	list(APPEND CONDOR_API_AND_UTILS_SRC
-		credential.unix.cpp
-		credential.unix.h
 		lock_file.unix.cpp
 		passwd_cache.unix.cpp
 		passwd_cache.unix.h
 		sig_install.unix.cpp
-		X509credential.unix.cpp
-		X509credential.unix.h
 	)
 endif(NOT WINDOWS)
 
@@ -174,6 +177,8 @@ adcluster.cpp
 adcluster.h
 ad_printmask.cpp
 ad_printmask.h
+ad_transforms.cpp
+ad_transforms.h
 AWSv4-utils.cpp
 AWSv4-utils.h
 backward_file_reader.cpp
@@ -221,13 +226,11 @@ condor_blkng_full_disk_io.cpp
 condor_claimid_parser.h
 condor_common.cpp
 condor_config.cpp
-condor_create_id.cpp
 condor_crontab.cpp
 condor_crontab.h
 condor_fsync.cpp
 condor_fsync.h
 condor_ftp.cpp
-condor_full_io.cpp
 condor_getcwd.cpp
 condor_getcwd.h
 condor_holdcodes.h
@@ -282,6 +285,8 @@ date_util.cpp
 date_util.h
 dc_service.cpp
 dc_service.h
+DelegationInterface.cpp
+DelegationInterface.h
 d_format_time.cpp
 docker-api.cpp
 docker-api.h
@@ -587,6 +592,7 @@ endif()
 # Build "Object" libraries, which are just a set of .o files which can later to into libraries
 add_library(condor_api_and_utils_objects OBJECT ${CONDOR_API_AND_UTILS_SRC})
 add_library(condor_utils_objects OBJECT ${CONDOR_UTILS_SRC})
+add_dependencies(condor_utils_objects utils_genparams)
 add_library(condor_extra_objects OBJECT ${EXTRA_SRCS})
 add_library(condor_safe_objects OBJECT ${SAFE_OPEN_SRC})
 
@@ -641,7 +647,7 @@ if ( LINUX )
   set_target_properties( condor_utils PROPERTIES LINK_FLAGS "-Wl,--wrap=dprintf" )
 endif()
 
-if (DLOPEN_GSI_LIBS)
+if (DLOPEN_GSI_LIBS OR DLOPEN_VOMS_LIBS)
 	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${SCITOKENS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
 else()
 	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${SCITOKENS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
@@ -680,7 +686,7 @@ if (DOCKER_ALLOW_RUN_AS_ROOT)
 	set_source_files_properties(docker-api.cpp PROPERTIES COMPILE_DEFINITIONS DOCKER_ALLOW_RUN_AS_ROOT=1)
 endif()
 
-target_link_libraries(condorapi ${CLASSADS_FOUND};${CMAKE_DL_LIBS};${RT_FOUND})
+target_link_libraries(condorapi classads;${CMAKE_DL_LIBS};${RT_FOUND})
 if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condorapi ${LIBUUID_FOUND})
 endif()
@@ -696,25 +702,23 @@ if (LINUX OR DARWIN)
 	set_target_properties( condorapi_shared PROPERTIES OUTPUT_NAME condorapi )
 endif()
 
-if (WANT_FULL_DEPLOYMENT)
-	install (FILES MyString.h
-			 condor_event.h
-			 condor_holdcodes.h
-			 read_user_log.h
-			 user_log.c++.h
-			 user_log.README
-			 write_user_log.h
-			 compat_classad.h
-			 compat_classad_list.h
-			 compat_classad_util.h
-			 stl_string_utils.h
-			DESTINATION ${C_INCLUDE})
+install (FILES MyString.h
+		 condor_event.h
+		 condor_holdcodes.h
+		 read_user_log.h
+		 user_log.c++.h
+		 user_log.README
+		 write_user_log.h
+		 compat_classad.h
+		 compat_classad_list.h
+		 compat_classad_util.h
+		 stl_string_utils.h
+		DESTINATION ${C_INCLUDE})
 
-    install ( TARGETS condorapi DESTINATION ${C_LIB} )
-    if (LINUX OR DARWIN)
-        install ( TARGETS condorapi_shared DESTINATION ${C_LIB} )
-    endif()
-endif(WANT_FULL_DEPLOYMENT)
+install ( TARGETS condorapi DESTINATION ${C_LIB} )
+if (LINUX OR DARWIN)
+    install ( TARGETS condorapi_shared DESTINATION ${C_LIB} )
+endif()
 
 set_source_files_properties(test_log_reader.cpp PROPERTIES DEFINITIONS ENABLE_STATE_DUMP)
 

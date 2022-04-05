@@ -25,7 +25,6 @@
 #include "condor_classad.h"
 #include "daemon.h"
 #include "dc_schedd.h"
-#include "MyString.h"
 
 /* This file deals with the processing of various active transfer requests.
 	An active transfer request is a request that the transferd must deal with

@@ -24,8 +24,6 @@
 #include "condor_common.h"      /* for <stdio.h> */
 #include "condor_constants.h"   /* from condor_includes/ directory */
 #include "simplelist.h"         /* from condor_utils/ directory */
-#include "MyString.h"
-#include "list.h"
 #include "condor_id.h"
 #include "throttle_by_category.h"
 #include "read_multiple_logs.h"
@@ -36,15 +34,7 @@
 #include <deque>
 #include <forward_list>
 #include <algorithm>
-
- // define this to build with the old memory hoggy behavior of 3 complete sets of edges per job.
-//#define MEMORY_HOG
-
-#ifdef MEMORY_HOG
- #include <set>
-#else
- #include <set>
-#endif
+#include <set>
 
 class ThrottleByCategory;
 class Dag;
@@ -60,16 +50,14 @@ class DagmanMetrics;
 typedef int JobID_t;
 #define NO_ID -1
 
-#ifdef MEMORY_HOG
-#else
-  typedef int EdgeID_t;
-  #define NO_EDGE_ID -1
-#endif
+typedef int EdgeID_t;
+#define NO_EDGE_ID -1
 
 enum NodeType {
 	JOB,
 	FINAL,
-	PROVISIONER
+	PROVISIONER,
+	SERVICE
 };
 
 #define EXEC_MASK 0x1
@@ -107,75 +95,21 @@ enum NodeType {
 class Job {
   public:
   
-#ifdef DEAD_CODE
-    /** Enumeration for specifying which queue for Add() and Remove().
-        If you change this enum, you *must* also update queue_t_names
-    */
-    enum queue_t {
-        /** Parents of this job.  The list of parent jobs, which does not
-            change while DAGMan is running.
-        */
-        Q_PARENTS,
-
-        /** Parents of this job not finished.  The list of parents that
-            have not yet finished.  Once this queue is empty, this job may
-            run.
-        */
-        Q_WAITING,
-
-        /** Children of this job.  The list of child jobs, which does not
-            change while DAGMan is running.
-        */
-        Q_CHILDREN
-    };
-
-    /** The string names for the queue_t enumeration.  Use this for printing
-        the names "Q_PARENTS", "Q_WAITING", or "Q_CHILDREN".  For example,
-        to print out whether the children queue is empty:<p>
-        <pre>
-          Job * job;  // Assume this is assigned to a job
-          printf ("The %s queue of job %s is %s empty\n",
-                  Job::queue_t_names[Q_CHILDREN], job->GetJobName(),
-                  job->IsEmpty(Q_CHILDREN) ? "", "not");
-        </pre>
-    */
-    static const char *queue_t_names[];
-  
-	/** Returns how many direct parents a node has.
-		@return number of parents
-	*/
-	int NumParents() const;
-
-
-	/** Returns how many direct children a node has.
-		@return number of children
-	*/
-	int NumChildren() const;
-#else
 	// true when node has no parents at this time
 	bool NoParents() const {
-	#ifdef MEMORY_HOG
-		return _parents.empty();
-	#else
 		// Once we are done with AdjustEdges this should agree
 		// but some code checks for parents during parse time (see the splice code)
 		// so we check _numparehttps://politics.theonion.com/wisconsin-primary-voters-receive-i-voted-gravestones-1842729790nts (set at parse time) and also _parent (set by AdjustEdges)
 		return _parent == NO_ID && _numparents == 0;
-	#endif
 	}
 
 	// true when node has no children at this time
 	bool NoChildren() const {
-	#ifdef MEMORY_HOG
-		return _children.empty();
-	#else
 		return _child == NO_ID;
-	#endif
 	}
 
 	// returns the number of children.  NOTE: this is not guaranteed to be fast!
 	int CountChildren() const;
-#endif
 
     /** The Status of a Job
         If you update this enum, you *must* also update status_t_names
@@ -201,7 +135,7 @@ class Job {
 	static const char * status_t_names[];
 
 	// explanation text for errors
-	MyString error_text;
+	std::string error_text;
 
 	static int NOOP_NODE_PROCID;
   
@@ -226,7 +160,7 @@ class Job {
 		*/
 	void Cleanup();
 
-	void PrefixName(const MyString &prefix);
+	void PrefixName(const std::string &prefix);
 	inline const char* GetJobName() const { return _jobName; }
 	inline const char* GetDirectory() const { return _directory; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
@@ -234,6 +168,7 @@ class Job {
 	void setSubmitDesc( SubmitHash *submitDesc ) { _submitDesc = submitDesc; }
 	inline JobID_t GetJobID() const { return _jobID; }
 	inline int GetRetryMax() const { return retry_max; }
+	void SetRetryMax( int new_max ) { retry_max = new_max; }
 	inline int GetRetries() const { return retries; }
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
@@ -241,61 +176,24 @@ class Job {
 	static const char* JobTypeString() { return "HTCondor"; }
 
 	bool AddScript( ScriptType script_type, const char *cmd, int defer_status,
-				time_t defer_time, MyString &whynot );
-	bool AddPreSkip( int exitCode, MyString &whynot );
+				time_t defer_time, std::string &whynot );
+	bool AddPreSkip( int exitCode, std::string &whynot );
 
 	void SetType( NodeType type ) { _type = type; }
 	NodeType GetType() const { return _type; }
 	void SetNoop( bool value ) { _noop = value; }
 	bool GetNoop( void ) const { return _noop; }
+	void SetHold( bool value ) { _hold = value; }
+	bool GetHold( void ) const { return _hold; }
 
 	Script * _scriptPre;
 	Script * _scriptPost;
 	Script * _scriptHold;
 
 
-#ifdef DEAD_CODE
-	///
-    inline std::set<JobID_t> & GetQueueRef (const queue_t queue) {
-        return _queues[queue];
-    }
-
-    /** Add a job to one of the queues.  Adds the job with ID jobID to
-        the parents, children, or waiting queue of this job.
-        @param jobID ID of the job to be added.  Should not be this job's ID
-        @param queue The queue to add the job to
-        @return true: success, false: failure (lack of memory)
-    */
-    bool Add( const queue_t queue, const JobID_t jobID );
-
-	/** Remove a job from one of the queues.  Removes the job with ID
-        jobID from the parents, children, or waiting queue of this job.
-        @param jobID ID of the job to be removed.  Should not be this job's ID
-        @param queue The queue to add the job to
-        @return true: success, false: failure (jobID not found in queue)
-    */
-    bool Remove (const queue_t queue, const JobID_t jobID);
-
-    /** Returns true if a queue is empty (has no jobs)
-        @param queue Selects which queue to look at
-        @return true: queue is empty, false: otherwise
-    */
-    inline bool IsEmpty (const queue_t queue) const {
-        return _queues[queue].empty();
-    }
-
 	// returns true if the job is waiting for other jobs to finish
-	inline bool IsWaiting() const {
-		return ! IsEmpty(Q_WAITING);
-	}
-#else
-	// returns true if the job is waiting for other jobs to finish
- #ifdef MEMORY_HOG
-	bool IsWaiting() const { return ! _waiting.empty(); }
- #else
- 	bool IsWaiting() const { return (_parent != NO_ID) && ! _parents_done; };
- #endif
-	// remove this parent from the waiting collection, and ! IsWaiting
+  	bool IsWaiting() const { return (_parent != NO_ID) && ! _parents_done; };
+ 	// remove this parent from the waiting collection, and ! IsWaiting
 	bool ParentComplete(Job * parent);
 	// append parent node names into the given buffer using the given printf format string
 	int PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const char * fmt) const;
@@ -311,7 +209,7 @@ class Job {
 	// notify children of parent completion, and call the optional callback for each
 	// child that is no longer waiting
 	int NotifyChildren(Dag& dag, bool(*fn)(Dag& dag, Job* child));
-#endif
+
 	/** Returns true if this job is ready for submission.
 		@return true if job is submittable, false if not
 	*/
@@ -362,44 +260,23 @@ class Job {
 		*/
 	bool HasParent( Job* parent );
 
-#ifdef DEAD_CODE
-	bool RemoveChild( Job* child );
-	bool RemoveChild( Job* child, MyString &whynot );
-	bool RemoveParent( Job* parent, MyString &whynot );
-	bool RemoveDependency( queue_t queue, JobID_t job );
-	bool RemoveDependency( queue_t queue, JobID_t job, MyString &whynot );
-#endif
-
     /** Dump the contents of this Job to stdout for debugging purposes.
 		@param the current DAG (used to translate node ID to node object)
 	*/
     void Dump ( const Dag *dag ) const;
   
-#if 0 // not used -- wenger 2015-02-17
-    /** Print the identification info for this Job to stdout.
-        @param condorID If true, also print the job's CondorID
-     */
-    void Print (bool condorID = false) const;
-#endif
-  
 		// double-check internal data structures for consistency
 	bool SanityCheck() const;
 
-	bool CanAddParent(Job* parent, MyString &whynot);
-	bool CanAddChild(Job* child, MyString &whynot) const;
+	bool CanAddParent(Job* parent, std::string &whynot);
+	bool CanAddChild(Job* child, std::string &whynot) const;
 	// check to see if we can add this as a child, and it allows us as a parent..
-	bool CanAddChildren(std::forward_list<Job*> & children, MyString &whynot);
-#ifdef DEAD_CODE
-	bool AddParent( Job* parent );
-	bool AddParent( Job* parent, MyString &whynot );
+	bool CanAddChildren(std::forward_list<Job*> & children, std::string &whynot);
 
-	bool AddChild( Job* child );
-	bool AddChild( Job* child, MyString &whynot );
-#else
 	// insert a SORTED list of UNIQUE children.
 	// the caller is responsible for calling sort() and unique() on the list if needed
 	// before passing it to this function
-	bool AddChildren(std::forward_list<Job*> & children, MyString &whynot);
+	bool AddChildren(std::forward_list<Job*> & children, std::string &whynot);
 
 	bool AddVar(const char * name, const char * value, const char* filename, int lineno);
 	void ShrinkVars() { /*varsFromDag.shrink_to_fit();*/ }
@@ -410,7 +287,6 @@ class Job {
 	void BeginAdjustEdges(Dag* dag);
 	void AdjustEdges(Dag* dag);
 	void FinalizeAdjustEdges(Dag* dag);
-#endif
 
 		// should be called when the job terminates
 	bool TerminateSuccess();
@@ -447,20 +323,13 @@ class Job {
 	*/
 	ThrottleByCategory::ThrottleInfo *GetThrottleInfo() {
 			return _throttleInfo; }
-	
-#ifdef DEAD_CODE // dead. we let submit handle $(JOB) expansions now.
-	/** Interpolate any vars values with $(JOB) with the name of the job
-		@return void
-	*/
-	void ResolveVarsInterpolations(void);
-#endif
 
 	/** Add a prefix to the Directory setting for this job. If the prefix
 		is ".", then do nothing.
 		@param prefix: the prefix to be joined to the directory using "/"
 		@return void
 	*/
-	void PrefixDirectory( MyString &prefix );
+	void PrefixDirectory( std::string &prefix );
 
 	/** Set the DAG file (if any) for this node.  (This is set for nested
 			DAGs defined with the "SUBDAG" keyword.)
@@ -575,25 +444,18 @@ private:
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to HTCondor).
 	bool _noop;
+		// Whether this is a hold job (should be submitted on hold)
+	bool _hold;
 		// What type of node (job, final, provisioner)
 	NodeType _type;
 public:
 
-#ifdef DEAD_CODE
-	struct NodeVar {
-		MyString _name;
-		MyString _value;
-	};
-
-	List<NodeVar> *varsFromDag;
-#else
 	struct NodeVar {
 		const char * _name; // stringspace string, not owned by this struct
 		const char * _value; // stringspace string, not owned by this struct
 		NodeVar(const char * n, const char * v) : _name(n), _value(v) {}
 	};
 	std::forward_list<NodeVar> varsFromDag;
-#endif
 
 		// Count of the number of job procs currently in the batch system
 		// queue for this node.
@@ -669,32 +531,6 @@ private:
 
     /** */ status_t _Status;
 
-#ifdef DEAD_CODE
-    /*  Job queues
-	    NOTE: indexed by queue_t
-
-		WARNING: The execution order of ready nodes is, and
-		should always be, undefined. This is so noone starts
-		building dag structures that rely on some order of
-		execution. In practice, there is an ordering due to the
-		data structures that hold the information, but we should
-		never rely on that behavior cause the representational
-		structures may change. This comment was written because the
-		data structures *DID* change, and we had to consider the
-		ramifications of it.
-
-		parents -> dependencies coming into the Job 
-		children -> dependencies going out of the Job
-		waiting -> Jobs on which the current Job is waiting for output
-    */ 
-	
-	std::set<JobID_t> _queues[3];
-#else
-  #ifdef MEMORY_HOG
-	std::set<JobID_t> _parents;
-	std::set<JobID_t> _waiting;
-	std::set<JobID_t> _children;
-  #else
 	// these may be job ids when there is a single dependency
 	// they will be edge ids when there are multiple dependencies
 	JobID_t _parent;
@@ -708,8 +544,6 @@ private:
 	bool _multiple_children; // true when _child is an EdgeID rather than a JobID
 	bool _parents_done;      // set to true when all of the parents of this node are done
 	bool _spare;
-  #endif
-#endif
 
     /*	The ID of this job.  This serves as a primary key for Jobs, where each
 		Job's ID is unique from all the rest 
@@ -757,18 +591,6 @@ private:
 		// for proc.
 	std::vector<unsigned char> _gotEvents;	
 
-#ifdef DEAD_CODE // dead, these are now flags in _gotEvents[proc]
-		// _isIdle[proc] is true iff proc is currently idle, held, etc.
-		// (in the queue but not running)
-	std::vector<unsigned char> _isIdle;	
-
-	/** _onHold[proc] is nonzero if the condor job
-		with ProcId == proc is on hold, and zero
-		otherwise
-	*/
-	std::vector<unsigned char> _onHold;
-#endif
-
 	/** Print the list of which procs are idle/not idle for this node
 	 *  (for debugging).
 	*/
@@ -791,8 +613,6 @@ struct EqualJobsById
 	// bool operator ()(const Job & a, const Job & b) { return a.GetJobID() == b.GetJobID(); }
 };
 
-#ifdef MEMORY_HOG
-#else
 
 // This class holds multiple JobId entries in a sorted vector, use it to hold
 // either the parent or child list for a Job node.
@@ -808,7 +628,7 @@ protected:
 	Edge() {};
 	Edge(std::vector<JobID_t> & in) : _ary(in) {};
 public:
-	~Edge() {};
+	virtual ~Edge() {};
 
 	std::vector<JobID_t> _ary; // sorted array  of jobid's, either parent or child edge list
 	//std::set<JobID_t> _check; // used to double check the correctness of the edge list.
@@ -829,18 +649,18 @@ public:
 	}
 
 	// this table holds all of the allocated edges, stored by EdgeId (which is the index into the table)
-	static std::deque<Edge*> _edgeTable;
+	static std::deque<std::unique_ptr<Edge>> _edgeTable;
 
 	static Edge * ById(EdgeID_t id) {
 		if (id >= 0 && id < (EdgeID_t)_edgeTable.size())
-			return _edgeTable.at(id);
+			return _edgeTable.at(id).get();
 		return NULL;
 	}
 	// create a new, empty edge returning it's ID
 	static EdgeID_t NewEdge(Edge* & edge) {
 		EdgeID_t id = (EdgeID_t)_edgeTable.size();
 		edge = new Edge();
-		_edgeTable.push_back(edge);
+		_edgeTable.push_back(std::unique_ptr<Edge>(edge));
 		return id;
 	}
 	// create an edge as a copy of an existing edge, returning the new EdgeID
@@ -848,8 +668,7 @@ public:
 		Edge* from = ById(id);
 		if ( ! from) return NO_ID;
 		id = (EdgeID_t)_edgeTable.size();
-		Edge* edge = new Edge(from->_ary);
-		_edgeTable.push_back(edge);
+		_edgeTable.push_back(std::unique_ptr<Edge>(new Edge(from->_ary)));
 		return id;
 	}
 
@@ -892,18 +711,17 @@ protected:
 	std::vector<bool> _wait;  // a bit vector where true=waiting, the same size and order as _ary
 	int _num_waiting;         // the number of true bits in the _wait vector
 public:
-	~WaitEdge() {};
+	virtual ~WaitEdge() {};
 
 	static EdgeID_t NewWaitEdge(int num) {
 		EdgeID_t id = (EdgeID_t)_edgeTable.size();
-		WaitEdge * edge = new WaitEdge(num);
-		_edgeTable.push_back(edge);
+		_edgeTable.push_back(std::unique_ptr<Edge>(new WaitEdge(num)));
 		return id;
 	}
 
 	static WaitEdge * ById(EdgeID_t id) {
 		if (id >= 0 && id < (EdgeID_t)_edgeTable.size())
-			return static_cast<WaitEdge*>(_edgeTable.at(id));
+			return static_cast<WaitEdge*>(_edgeTable.at(id).get());
 		return NULL;
 	}
 
@@ -933,23 +751,12 @@ public:
 };
 
 
-#endif
-
 // return true if a collection has more than a single item in it
 template<class T> bool more_than_one(T & lst)
 {
 	auto it = lst.cbegin();
 	return (it != lst.cend()) && (++it != lst.cend());
 }
-
-
-#if 0 // not used -- wenger 2015-02-17
-/** A wrapper function for Job::Print which allows a NULL job pointer.
-    @param job Pointer to job object, if NULL then "(UNKNOWN)" is printed
-    @param condorID If true, also print the job's CondorID
-*/
-void job_print (Job * job, bool condorID = false);
-#endif
 
 
 #endif /* ifndef JOB_H */

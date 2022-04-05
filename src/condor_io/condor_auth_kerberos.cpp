@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 
-#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_KRB5)
+#if defined(HAVE_EXT_KRB5)
 
 #include "condor_auth_kerberos.h"
 #include "condor_config.h"
@@ -50,7 +50,7 @@ const char STR_DEFAULT_CONDOR_SERVICE[] = "host";
 #define KERBEROS_MUTUAL  3
 #define KERBEROS_PROCEED 4
 
-HashTable<MyString, MyString> * Condor_Auth_Kerberos::RealmMap = 0;
+HashTable<std::string, std::string> * Condor_Auth_Kerberos::RealmMap = 0;
 //----------------------------------------------------------------------
 // Kerberos Implementation
 //----------------------------------------------------------------------
@@ -627,10 +627,10 @@ int Condor_Auth_Kerberos :: init_daemon()
 	sname = tmpsname;
 	free (tmpsname);
 
-	dprintf(D_SECURITY, "init_daemon: Trying to get tgt credential for service %s\n", sname.Value());
+	dprintf(D_SECURITY, "init_daemon: Trying to get tgt credential for service %s\n", sname.c_str());
 
 	priv = set_root_priv();   // Get the old privilige
-	code = (*krb5_get_init_creds_keytab_ptr)(krb_context_, creds_, krb_principal_, keytab, 0, const_cast<char*>(sname.Value()), 0);
+	code = (*krb5_get_init_creds_keytab_ptr)(krb_context_, creds_, krb_principal_, keytab, 0, const_cast<char*>(sname.c_str()), 0);
 	set_priv(priv);
 	if(code) {
 		goto error;
@@ -1140,8 +1140,6 @@ int Condor_Auth_Kerberos :: client_mutual_authenticate()
 int Condor_Auth_Kerberos :: init_kerberos_context()
 {
     krb5_error_code code = 0;
-    krb5_address  ** localAddr  = NULL;
-    krb5_address  ** remoteAddr = NULL;
 
     // kerberos context_
     if (krb_context_ == NULL) {
@@ -1169,12 +1167,18 @@ int Condor_Auth_Kerberos :: init_kerberos_context()
         goto error;
     }
 
-    if ((code = (*krb5_auth_con_getaddrs_ptr)(krb_context_, 
+#if !defined(DARWIN)
+    // Passing nullptr causes a crash on macOS, though the docs say it's
+    // allowed. This call should be a noop, but just in case it can fail
+    // and that's a useful indicator of problems on other platforms, leave
+    // it in place for them.
+    if ((code = (*krb5_auth_con_getaddrs_ptr)(krb_context_,
                                       auth_context_,
-                                      localAddr, 
-                                      remoteAddr))) {
+                                      nullptr,
+                                      nullptr))) {
         goto error;
     }
+#endif
 
     // stash location
     defaultStash_ = param(STR_CONDOR_CACHE_DIR);
@@ -1280,13 +1284,13 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
     // two cases, if domain is the same as the current uid domain,
     // then we are okay, other wise, see if we have a map
     if (RealmMap) {
-        MyString from(domain), to;
+        std::string from(domain), to;
         if (RealmMap->lookup(from, to) != -1) {
 			if (IsFulldebug(D_SECURITY)) {
 				dprintf (D_SECURITY, "KERBEROS: mapping realm %s to domain %s.\n", 
-					from.Value(), to.Value());
+					from.c_str(), to.c_str());
 			}
-            setRemoteDomain(to.Value());
+            setRemoteDomain(to.c_str());
             return TRUE;
         } else {
 			// if the map exists, they must be listed.  and they're NOT!
@@ -1354,7 +1358,7 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 		char *f, * t;
 		while ( (f = from.next()) ) {
 			t = to.next();
-			RealmMap->insert(MyString(f), MyString(t));
+			RealmMap->insert(std::string(f), std::string(t));
 			from.deleteCurrent();
 			to.deleteCurrent();
 		}
@@ -1425,15 +1429,15 @@ int Condor_Auth_Kerberos :: init_server_info()
     // if we are client side, figure out remote server_ credentials
     if (mySock_->isClient()) {
 
-        MyString remoteName = get_hostname(mySock_->peer_addr());
+		std::string remoteName = get_hostname(mySock_->peer_addr());
 
         char *service = param(STR_KERBEROS_SERVER_SERVICE);
         if (!service)
             service = strdup(STR_DEFAULT_CONDOR_SERVICE);
 
-        err = (*krb5_sname_to_principal_ptr)(krb_context_, remoteName.Value(), service, KRB5_NT_SRV_HST, &server_);
+        err = (*krb5_sname_to_principal_ptr)(krb_context_, remoteName.c_str(), service, KRB5_NT_SRV_HST, &server_);
         dprintf(D_SECURITY, "KERBEROS: get remote server principal for \"%s/%s\"%s\n",
-                service, remoteName.Value(), err ? " FAILED" : "");
+                service, remoteName.c_str(), err ? " FAILED" : "");
 
         if (!err)
             err = !map_kerberos_name(&server_);
@@ -1521,16 +1525,24 @@ void Condor_Auth_Kerberos :: setRemoteAddress()
     //
     // it (somewhat surprisingly) also calls free on the array itself, so
     // allocate it with malloc() and not on the stack!
-    krb5_address**  remoteAddrs;
-    remoteAddrs = (krb5_address**)malloc(2*sizeof(krb5_address*));
-    remoteAddrs[0] = NULL;  // this one we will use
-    remoteAddrs[1] = NULL;  // keep this entry NULL so we can free everything later
+    //
+    // Some kerberos docs reference krb5_free_address(), which frees a
+    // single krb5_address, but that doesn't appear to be available for us
+    // to call.
+    // macOS appears to require non-NULL values for both the local_addr and
+    // remote_addr parameters of krb5_auth_con_getaddrs().
+    //
+    // Since krb5_free_addresses() expects a NULL-terminated array of
+    // krb5_address*, allocate arrays of size 2, one for our single
+    // krb5_address and one for terminating the array.
+    krb5_address** localAddrs = (krb5_address**)calloc(2, sizeof(krb5_address*));
+    krb5_address** remoteAddrs = (krb5_address**)calloc(2, sizeof(krb5_address*));
 
     // Get remote host's address first
     if ((code = (*krb5_auth_con_getaddrs_ptr)(krb_context_, 
                                       auth_context_, 
-                                      NULL, 
-                                      &(remoteAddrs[0])))) {
+                                      localAddrs,
+                                      remoteAddrs))) {
         goto error;
     }
     dprintf(D_SECURITY | D_VERBOSE, "KERBEROS: remoteAddrs[] is {%p, %p}\n", remoteAddrs[0], remoteAddrs[1]);
@@ -1539,14 +1551,18 @@ void Condor_Auth_Kerberos :: setRemoteAddress()
         struct in_addr in;
         memcpy(&(in.s_addr), (remoteAddrs[0])[0].contents, sizeof(in_addr));
         setRemoteHost(inet_ntoa(in));
-        (*krb5_free_addresses_ptr)(krb_context_, remoteAddrs);
     }
+    (*krb5_free_addresses_ptr)(krb_context_, localAddrs);
+    (*krb5_free_addresses_ptr)(krb_context_, remoteAddrs);
     
     dprintf(D_SECURITY, "Remote host is %s\n", getRemoteHost());
 
     return;
 
  error:
+    (*krb5_free_addresses_ptr)(krb_context_, localAddrs);
+    (*krb5_free_addresses_ptr)(krb_context_, remoteAddrs);
+
     dprintf( D_ALWAYS, "KERBEROS: Unable to obtain remote address: %s\n",
 			 (*error_message_ptr)(code) );
 }

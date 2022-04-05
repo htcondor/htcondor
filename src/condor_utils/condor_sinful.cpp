@@ -25,8 +25,6 @@
 #include "daemon.h"	// for global_dc_sinful()
 #include "condor_config.h"
 
-#include <sstream>
-
 /* Split "<host:port?params>" into parts: host, port, and params. If
    the port or params are not in the string, the result is set to
    NULL.  Any of the result char** values may be NULL, in which case
@@ -389,18 +387,27 @@ Sinful::setHost(char const *host)
 	regenerateStrings();
 }
 void
-Sinful::setPort(char const *port)
+Sinful::setPort(char const *port, bool update_all)
 {
 	ASSERT(port);
 	m_port = port;
+	if( update_all ) {
+		int portnum = atoi(port);
+		for( auto& addr : addrs) {
+			addr.set_port(portnum);
+		}
+	}
 	regenerateStrings();
 }
 void
-Sinful::setPort(int port)
+Sinful::setPort(int port, bool update_all)
 {
-	std::ostringstream tmp;
-	tmp << port;
-	m_port = tmp.str();
+	m_port = std::to_string(port);
+	if( update_all ) {
+		for( auto& addr : addrs ) {
+			addr.set_port(port);
+		}
+	}
 	regenerateStrings();
 }
 
@@ -573,7 +580,7 @@ bool hasTwoColonsInHost( char const * sinful ) {
 	return false;
 }
 
-Sinful::Sinful( char const * sinful ) {
+Sinful::Sinful( char const * sinful ) : m_valid(false) {
 	if( sinful == NULL ) {
 		// default constructor
 		m_valid = true;
@@ -751,10 +758,10 @@ bool Sinful::getSourceRoutes( std::vector< SourceRoute > & v, std::string * host
 		if( remainder == NULL ) { return false; }
 
 		// Yes, yes, yes, I know.
-		char nameBuffer[64];
-		char addressBuffer[64];
+		char nameBuffer[65];
+		char addressBuffer[65];
 		int port = -1;
-		char protocolBuffer[16];
+		char protocolBuffer[17];
 		int matches = sscanf( open, "[ p=%16s a=%64s port=%d; n=%64s ",
 			protocolBuffer, addressBuffer, & port, nameBuffer );
 		if( matches != 4 ) { return false; }

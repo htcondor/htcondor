@@ -138,7 +138,7 @@ AbstractReplicatorStateMachine::reinitialize()
         free( buffer );
     } else {
         utilCrucialError( utilNoParameterError("REPLICATION_LIST", 
-		  								       "REPLICATION").Value( ) );
+		                                       "REPLICATION").c_str( ) );
     }
 
 	m_connectionTimeout = param_integer("HAD_CONNECTION_TIMEOUT",
@@ -148,9 +148,9 @@ AbstractReplicatorStateMachine::reinitialize()
 	buffer = param( "TRANSFERER" );
 	if (!buffer) {
 		utilCrucialError(utilConfigurationError("TRANSFERER",
-												"REPLICATION").Value());
+												"REPLICATION").c_str());
 	}
-	m_transfererPath = buffer;
+	m_transfererPath = buffer ? buffer : "";
 	free( buffer );
 
 	char* spoolDirectory = param( "SPOOL" );
@@ -178,7 +178,7 @@ AbstractReplicatorStateMachine::reinitialize()
         free( spoolDirectory );
     } else {
         utilCrucialError( utilNoParameterError("SPOOL", "REPLICATION").
-                          Value( ) );
+                          c_str( ) );
     }
 	printDataMembers( );
 }
@@ -224,7 +224,7 @@ AbstractReplicatorStateMachine::downloadReplicaTransfererReaper(
             pid, WEXITSTATUS( exitStatus ) );
         return TRANSFERER_FALSE;
     }
-    MyString temporaryFilesExtension;
+    std::string temporaryFilesExtension;
 
     formatstr( temporaryFilesExtension, "%d.%s", pid,
                DOWNLOADING_TEMPORARY_FILES_EXTENSION );
@@ -233,11 +233,11 @@ AbstractReplicatorStateMachine::downloadReplicaTransfererReaper(
     // upon failure we do not synchronize the local version, since such
 	// downloading is considered invalid
 	if( ! FilesOperations::safeRotateFile(
-						  replicatorStateMachine->m_versionFilePath.Value(),
-										  temporaryFilesExtension.Value()) ||
+						  replicatorStateMachine->m_versionFilePath.c_str(),
+										  temporaryFilesExtension.c_str()) ||
 		! FilesOperations::safeRotateFile(
-						    replicatorStateMachine->m_stateFilePath.Value(),
-										  temporaryFilesExtension.Value()) ) {
+						    replicatorStateMachine->m_stateFilePath.c_str(),
+										  temporaryFilesExtension.c_str()) ) {
 		return TRANSFERER_FALSE;
 	}
     replicatorStateMachine->m_myVersion.synchronize( false );
@@ -313,27 +313,27 @@ bool
 AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
 {
 	ArgList  processArguments;
-	processArguments.AppendArg( m_transfererPath.Value() );
+	processArguments.AppendArg( m_transfererPath );
 	processArguments.AppendArg( "-f" );
 	processArguments.AppendArg( "down" );
 	processArguments.AppendArg( daemonSinfulString );
-	processArguments.AppendArg( m_versionFilePath.Value() );
+	processArguments.AppendArg( m_versionFilePath );
 	processArguments.AppendArg( "1" );
-	processArguments.AppendArg( m_stateFilePath.Value() );
+	processArguments.AppendArg( m_stateFilePath );
 	// Get arguments from this ArgList object for descriptional purposes.
-	MyString	s;
-	processArguments.GetArgsStringForDisplay( &s );
+	std::string	s;
+	processArguments.GetArgsStringForDisplay( s );
     dprintf( D_FULLDEBUG,
 			 "AbstractReplicatorStateMachine::download creating "
 			 "downloading condor_transferer process: \n \"%s\"\n",
-			 s.Value( ) );
+			 s.c_str( ) );
 
 	// PRIV_ROOT privilege is necessary here to create the process
 	// so we can read GSI certs <sigh>
 	priv_state privilege = PRIV_ROOT;
 
 	int transfererPid = daemonCore->Create_Process(
-        m_transfererPath.Value( ),    // name
+        m_transfererPath.c_str( ),    // name
         processArguments,             // args
         privilege,                    // priv
         m_downloadReaperId,           // reaper id
@@ -370,27 +370,27 @@ bool
 AbstractReplicatorStateMachine::downloadNew( const char* daemonSinfulString )
 {
 	ArgList  processArguments;
-	processArguments.AppendArg( m_transfererPath.Value() );
+	processArguments.AppendArg( m_transfererPath );
 	processArguments.AppendArg( "-f" );
 	processArguments.AppendArg( "down-new" );
 	processArguments.AppendArg( daemonSinfulString );
-	processArguments.AppendArg( m_versionFilePath.Value() );
+	processArguments.AppendArg( m_versionFilePath );
 	processArguments.AppendArg( "1" );
-	processArguments.AppendArg( m_stateFilePath.Value() );
+	processArguments.AppendArg( m_stateFilePath );
 	// Get arguments from this ArgList object for descriptional purposes.
-	MyString	s;
-	processArguments.GetArgsStringForDisplay( &s );
+	std::string	s;
+	processArguments.GetArgsStringForDisplay( s );
 	dprintf( D_FULLDEBUG,
 		"AbstractReplicatorStateMachine::downloadNew creating "
 		"downloading condor_transferer process: \n \"%s\"\n",
-		s.Value( ) );
+		s.c_str( ) );
 
 	// PRIV_ROOT privilege is necessary here to create the process
 	// so we can read GSI certs <sigh>
 	priv_state privilege = PRIV_ROOT;
 
 	int transfererPid = daemonCore->Create_Process(
-		m_transfererPath.Value( ),    // name
+		m_transfererPath.c_str( ),    // name
 		processArguments,             // args
 		privilege,                    // priv
 		m_downloadReaperId,           // reaper id
@@ -429,28 +429,28 @@ bool
 AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
 {
 	ArgList  processArguments;
-	processArguments.AppendArg( m_transfererPath.Value() );
+	processArguments.AppendArg( m_transfererPath );
 	processArguments.AppendArg( "-f" );
 	processArguments.AppendArg( "up" );
 	processArguments.AppendArg( daemonSinfulString );
-	processArguments.AppendArg( m_versionFilePath.Value() );
+	processArguments.AppendArg( m_versionFilePath );
 	processArguments.AppendArg( "1" );
-	processArguments.AppendArg( m_stateFilePath.Value() );
+	processArguments.AppendArg( m_stateFilePath );
 
 	// Get arguments from this ArgList object for descriptional purposes.
-	MyString	s;
-	processArguments.GetArgsStringForDisplay( &s );
+	std::string	s;
+	processArguments.GetArgsStringForDisplay( s );
     dprintf( D_FULLDEBUG,
 			 "AbstractReplicatorStateMachine::upload creating "
 			 "uploading condor_transferer process: \n \"%s\"\n",
-			 s.Value( ) );
+			 s.c_str( ) );
 
 	// PRIV_ROOT privilege is necessary here to create the process
 	// so we can read GSI certs <sigh>
 	priv_state privilege = PRIV_ROOT;
 
     int transfererPid = daemonCore->Create_Process(
-        m_transfererPath.Value( ),    // name
+        m_transfererPath.c_str( ),    // name
         processArguments,             // args
         privilege,                    // priv
         m_uploadReaperId,             // reaper id
@@ -496,32 +496,32 @@ AbstractReplicatorStateMachine::uploadNew( Stream *stream )
 	// TODO take ReliSock instead of sinful
 	//   have child inherit ReliSock
 	ArgList  processArguments;
-	processArguments.AppendArg( m_transfererPath.Value() );
+	processArguments.AppendArg( m_transfererPath );
 	processArguments.AppendArg( "-f" );
 	processArguments.AppendArg( "up-new" );
 	processArguments.AppendArg( "" );
-	processArguments.AppendArg( m_versionFilePath.Value() );
+	processArguments.AppendArg( m_versionFilePath );
 	processArguments.AppendArg( "1" );
-	processArguments.AppendArg( m_stateFilePath.Value() );
+	processArguments.AppendArg( m_stateFilePath );
 
 	Stream *inherit_list[] =
 		{ stream /*connection to client*/,
 		  0 /*terminal NULL*/ };
 
 	// Get arguments from this ArgList object for descriptional purposes.
-	MyString	s;
-	processArguments.GetArgsStringForDisplay( &s );
+	std::string	s;
+	processArguments.GetArgsStringForDisplay( s );
 	dprintf( D_FULLDEBUG,
 		"AbstractReplicatorStateMachine::uploadNew creating "
 		"uploading condor_transferer process: \n \"%s\"\n",
-		s.Value( ) );
+		s.c_str( ) );
 
 	// PRIV_ROOT privilege is necessary here to create the process
 	// so we can read GSI certs <sigh>
 	priv_state privilege = PRIV_ROOT;
 
 	int transfererPid = daemonCore->Create_Process(
-		m_transfererPath.Value( ),    // name
+		m_transfererPath.c_str( ),    // name
 		processArguments,             // args
 		privilege,                    // priv
 		m_uploadReaperId,             // reaper id
@@ -608,7 +608,7 @@ AbstractReplicatorStateMachine::updateVersionsList( Version& newVersion )
     }
     dprintf( D_FULLDEBUG,
         "AbstractReplicatorStateMachine::updateVersionsList appending %s\n",
-         newVersion.toString( ).Value( ) );
+         newVersion.toString( ).c_str( ) );
     m_versionsList.Append( &newVersion );
     m_versionsList.Rewind( );
 // End of TODO: Atomic operation
@@ -754,16 +754,16 @@ AbstractReplicatorStateMachine::killTransferers()
 		// when the process is killed, it could have not yet erased its
         // temporary files, this is why we ensure it by erasing it in killer
         // function
-        MyString extension;
+        std::string extension;
         // the .down ending is needed in order not to confuse between upload and
         // download processes temporary files
         formatstr( extension, "%d.%s", m_downloadTransfererMetadata.m_pid,
                    DOWNLOADING_TEMPORARY_FILES_EXTENSION );
 
-        FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
-                                         extension.Value( ) );
-        FilesOperations::safeUnlinkFile( m_stateFilePath.Value( ),
-                                         extension.Value( ) );
+        FilesOperations::safeUnlinkFile( m_versionFilePath.c_str( ),
+                                         extension.c_str( ) );
+        FilesOperations::safeUnlinkFile( m_stateFilePath.c_str( ),
+                                         extension.c_str( ) );
 		m_downloadTransfererMetadata.set();
     }
 
@@ -784,16 +784,16 @@ AbstractReplicatorStateMachine::killTransferers()
 			            // erased its
             // temporary files, this is why we ensure it by erasing it in killer
             // function
-            MyString extension;
+            std::string extension;
             // the .up ending is needed in order not to confuse between
             // upload and download processes temporary files
             formatstr( extension, "%d.%s", uploadTransfererMetadata->m_pid,
                        UPLOADING_TEMPORARY_FILES_EXTENSION );
 
-            FilesOperations::safeUnlinkFile( m_versionFilePath.Value( ),
-                                             extension.Value( ) );
-            FilesOperations::safeUnlinkFile( m_stateFilePath.Value( ),
-                                             extension.Value( ) );
+            FilesOperations::safeUnlinkFile( m_versionFilePath.c_str( ),
+                                             extension.c_str( ) );
+            FilesOperations::safeUnlinkFile( m_stateFilePath.c_str( ),
+                                             extension.c_str( ) );
 			delete uploadTransfererMetadata;
 			// after deletion the iterator is moved to the previous member
 			// so advancing the iterator twice and missing one entry does not

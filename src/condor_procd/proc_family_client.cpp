@@ -98,22 +98,23 @@ ProcFamilyClient::register_subfamily(pid_t root_pid,
 	
 	// fill in the commmand id
 	//
-	*(proc_family_command_t*)ptr = PROC_FAMILY_REGISTER_SUBFAMILY;
+	proc_family_command_t cmd = PROC_FAMILY_REGISTER_SUBFAMILY;
+	memcpy(ptr, &cmd, sizeof(proc_family_command_t));
 	ptr += sizeof(proc_family_command_t);
 
 	// fill in the root pid
 	//
-	*(pid_t*)ptr = root_pid;
+	memcpy(ptr, &root_pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
 
 	// fill in the watcher pid
 	//
-	*(pid_t*)ptr = watcher_pid;
+	memcpy(ptr, &watcher_pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
 
 	// fill in the requested maximum snapshot interval
 	//
-	*(int*)ptr = max_snapshot_interval;
+	memcpy(ptr, &max_snapshot_interval, sizeof(int));
 	ptr += sizeof(int);
 
 	// quick sanity check
@@ -162,16 +163,18 @@ ProcFamilyClient::track_family_via_environment(pid_t pid,
 	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
-	*(proc_family_command_t*)ptr = PROC_FAMILY_TRACK_FAMILY_VIA_ENVIRONMENT;
+	proc_family_command_t cmd = PROC_FAMILY_TRACK_FAMILY_VIA_ENVIRONMENT;
+	memcpy(ptr, &cmd, sizeof(proc_family_command_t));
 	ptr += sizeof(proc_family_command_t);
 
-	*(pid_t*)ptr = pid;
+	memcpy(ptr, &pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
 
-	*(int*)ptr = sizeof(PidEnvID);
+	int pidenvid_len = sizeof(PidEnvID);
+	memcpy(ptr, &pidenvid_len, sizeof(int));
 	ptr += sizeof(int);
 
-	pidenvid_copy((PidEnvID*)ptr, &penvid);
+	memcpy(ptr, &penvid, sizeof(PidEnvID));
 	ptr += sizeof(PidEnvID);
 
 	assert(ptr - (char*)buffer == message_len);
@@ -218,13 +221,14 @@ ProcFamilyClient::track_family_via_login(pid_t pid,
 	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
-	*(proc_family_command_t*)ptr = PROC_FAMILY_TRACK_FAMILY_VIA_LOGIN;
+	proc_family_command_t cmd = PROC_FAMILY_TRACK_FAMILY_VIA_LOGIN;
+	memcpy(ptr, &cmd, sizeof(proc_family_command_t));
 	ptr += sizeof(proc_family_command_t);
 
-	*(pid_t*)ptr = pid;
+	memcpy(ptr, &pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
 
-	*(int*)ptr = login_len;
+	memcpy(ptr, &login_len, sizeof(int));
 	ptr += sizeof(int);
 
 	memcpy(ptr, login, login_len);
@@ -271,11 +275,11 @@ ProcFamilyClient::track_family_via_allocated_supplementary_group(pid_t pid,
 	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
-	*(proc_family_command_t*)ptr =
-		PROC_FAMILY_TRACK_FAMILY_VIA_ALLOCATED_SUPPLEMENTARY_GROUP;
+	proc_family_command_t cmd = PROC_FAMILY_TRACK_FAMILY_VIA_ALLOCATED_SUPPLEMENTARY_GROUP;
+	memcpy(ptr, &cmd, sizeof(proc_family_command_t));
 	ptr += sizeof(proc_family_command_t);
 
-	*(pid_t*)ptr = pid;
+	memcpy(ptr, &pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
 
 	assert(ptr - (char*)buffer == message_len);
@@ -331,14 +335,14 @@ ProcFamilyClient::track_family_via_associated_supplementary_group(pid_t pid,
 	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
-	*(proc_family_command_t*)ptr =
-		PROC_FAMILY_TRACK_FAMILY_VIA_ASSOCIATED_SUPPLEMENTARY_GROUP;
+	proc_family_command_t cmd = PROC_FAMILY_TRACK_FAMILY_VIA_ASSOCIATED_SUPPLEMENTARY_GROUP;
+	memcpy(ptr, &cmd, sizeof(proc_family_command_t));
 	ptr += sizeof(proc_family_command_t);
 
-	*(pid_t*)ptr = pid;
+	memcpy(ptr, &pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
 
-	*(gid_t*)ptr = gid;
+	memcpy(ptr, &gid, sizeof(gid_t));
 	ptr += sizeof(gid_t);
 
 	assert(ptr - (char*)buffer == message_len);
@@ -388,14 +392,14 @@ ProcFamilyClient::track_family_via_cgroup(pid_t pid,
 	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
-	*(proc_family_command_t*)ptr =
-		PROC_FAMILY_TRACK_FAMILY_VIA_CGROUP;
+	proc_family_command_t cmd = PROC_FAMILY_TRACK_FAMILY_VIA_CGROUP;
+	memcpy(ptr, &cmd, sizeof(proc_family_command_t));
 	ptr += sizeof(proc_family_command_t);
 
-	*(pid_t*)ptr = pid;
+	memcpy(ptr, &pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
 
-	*(size_t*)ptr = cgroup_len;
+	memcpy(ptr, &cgroup_len, sizeof(size_t));
 	ptr += sizeof(size_t);
 
 	memcpy((void *)ptr, (const void *)cgroup, sizeof(char)*cgroup_len);
@@ -446,13 +450,14 @@ ProcFamilyClient::use_glexec_for_family(pid_t pid,
 	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
-	*(proc_family_command_t*)ptr = PROC_FAMILY_USE_GLEXEC_FOR_FAMILY;
+	proc_family_command_t cmd = PROC_FAMILY_USE_GLEXEC_FOR_FAMILY;
+	memcpy(ptr, &cmd, sizeof(proc_family_command_t));
 	ptr += sizeof(proc_family_command_t);
 
-	*(pid_t*)ptr = pid;
+	memcpy(ptr, &pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
 
-	*(int*)ptr = proxy_len;
+	memcpy(ptr, &proxy_len, sizeof(int));
 	ptr += sizeof(int);
 
 	memcpy(ptr, proxy, proxy_len);
@@ -497,10 +502,11 @@ ProcFamilyClient::get_usage(pid_t pid, ProcFamilyUsage& usage, bool& response)
 	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
-	*(proc_family_command_t*)ptr = PROC_FAMILY_GET_USAGE;
+	proc_family_command_t cmd = PROC_FAMILY_GET_USAGE;
+	memcpy(ptr, &cmd, sizeof(proc_family_command_t));
 	ptr += sizeof(proc_family_command_t);
 
-	*(pid_t*)ptr = pid;
+	memcpy(ptr, &pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
 
 	assert(ptr - (char*)buffer == message_len);
@@ -549,13 +555,14 @@ ProcFamilyClient::signal_process(pid_t pid, int sig, bool& response)
 	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
-	*(proc_family_command_t*)ptr = PROC_FAMILY_SIGNAL_PROCESS;
+	proc_family_command_t cmd = PROC_FAMILY_SIGNAL_PROCESS;
+	memcpy(ptr, &cmd, sizeof(proc_family_command_t));
 	ptr += sizeof(proc_family_command_t);
 
-	*(pid_t*)ptr = pid;
+	memcpy(ptr, &pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
 
-	*(int*)ptr = sig;
+	memcpy(ptr, &sig, sizeof(int));
 	ptr += sizeof(int);
 
 	assert(ptr - (char*)buffer == message_len);
@@ -629,10 +636,10 @@ ProcFamilyClient::signal_family(pid_t pid,
 	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
-	*(proc_family_command_t*)ptr = command;
+	memcpy(ptr, &command, sizeof(proc_family_command_t));
 	ptr += sizeof(proc_family_command_t);
 
-	*(pid_t*)ptr = pid;
+	memcpy(ptr, &pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
 
 	assert(ptr - (char*)buffer == message_len);
@@ -672,10 +679,11 @@ ProcFamilyClient::unregister_family(pid_t pid, bool& response)
 	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
-	*(proc_family_command_t*)ptr = PROC_FAMILY_UNREGISTER_FAMILY;
+	proc_family_command_t cmd = PROC_FAMILY_UNREGISTER_FAMILY;
+	memcpy(ptr, &cmd, sizeof(proc_family_command_t));
 	ptr += sizeof(proc_family_command_t);
 
-	*(pid_t*)ptr = pid;
+	memcpy(ptr, &pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
 
 	if (!m_client->start_connection(buffer, message_len)) {
@@ -767,10 +775,11 @@ ProcFamilyClient::dump(pid_t pid,
 	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
-	*(proc_family_command_t*)ptr = PROC_FAMILY_DUMP;
+	proc_family_command_t cmd = PROC_FAMILY_DUMP;
+	memcpy(ptr, &cmd, sizeof(proc_family_command_t));
 	ptr += sizeof(proc_family_command_t);
 
-	*(pid_t*)ptr = pid;
+	memcpy(ptr, &pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
 
 	assert(ptr - (char*)buffer == message_len);

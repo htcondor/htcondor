@@ -30,12 +30,15 @@ class XFormHash;
 // variables live in the hashtable mset.
 // returns < 0 on failure, errmsg will have details
 //
+#define XFORM_UTILS_LOG_ERRORS      0x0001  // Log errors to stderr or dprintf
+#define XFORM_UTILS_LOG_STEPS       0x0002  // Log errors to stdout or dprintf
+#define XFORM_UTILS_LOG_TO_DPRINTF  0xFF00  // Dprintf category, if 0 log to stdout/stderr
 int TransformClassAd (
 	ClassAd * input_ad,           // the ad to be transformed
 	MacroStreamXFormSource & xfm, // the set of transform rules
 	XFormHash & mset,             // the hashtable used as temporary storage
 	std::string & errmsg,
-	unsigned int  flags=0);  // flags control output to stdout/stderr. 0x0001 = errors to stdout, 0x0002 = verbose logging to stdout.
+	unsigned int  flags=0);  // One or move of XFORM_UTILS_* flags
 
 /*
 Basic workflow for classad transformation is 
@@ -153,7 +156,13 @@ protected:
 //
 class XFormHash {
 public:
-	XFormHash(int options = 0);
+	enum Flavor {
+		Iterating=0, // enable Process/Step/Row iteration for LocalMacroSet (used by condor_transform_ads)
+		Basic,       // use a mininimal set of defaults for LocalMacroSet (basically IsWindows/IsLinux, used by JobRouter)
+		ParamTable,  // use config defaults as defaults for LocalMacroSet (WARNING! ignores config files!)
+	};
+
+	XFormHash(Flavor _flavor=Iterating);
 	~XFormHash();
 
 	void init();
@@ -202,6 +211,7 @@ public:
 
 protected:
 	MACRO_SET LocalMacroSet;
+	Flavor    flavor;
 
 	// automatic 'live' submit variables. these pointers are set to point into the macro set allocation
 	// pool. so the will be automatically freed. They are also set into the macro_set.defaults tables

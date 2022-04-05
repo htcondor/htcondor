@@ -22,7 +22,6 @@ Environment = 	_condor_CONDOR_HOST=$(GLIDEIN_HOST); \
 				_condor_NUM_CPUS=1; \
 				_condor_UID_DOMAIN=$(GLIDEIN_HOST); \
 				_condor_FILESYSTEM_DOMAIN=$(GLIDEIN_HOST); \
-				_condor_MAIL=/bin/mail; \
 				_condor_STARTD_NOCLAIM_SHUTDOWN=1200; \
 				_campusfactory_wntmp=$(WN_TMP); \
 				_condor_GLIDEIN_Site="$(GLIDEIN_Site)"; \

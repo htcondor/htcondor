@@ -37,16 +37,16 @@ public:
 	static int ReconnectAll();
 
 private:
-	char	buffer[STREAM_BUFFER_SIZE];
-	MyString	filename;
-	MyString	streamname;
-	bool	is_output;
-	int	pipe_fds[2];
-	int	job_pipe;
-	int	handler_pipe;
-	int	remote_fd;
-	off_t	offset;
-	int flags;
+	char            buffer[STREAM_BUFFER_SIZE];
+	std::string     filename;
+	std::string     streamname;
+	bool            is_output;
+	int             pipe_fds[2];
+	int             job_pipe;
+	int             handler_pipe;
+	int             remote_fd;
+	off_t           offset;
+	int             flags;
 
 	static std::list< StreamHandler * > handlers;
 

@@ -32,9 +32,6 @@ condor_status(	const char * annexName, const char * sURL,
 	}
 
 
-	// The standard incantations...
-	ClassAd * reply = new ClassAd();
-	ClassAd * scratchpad = new ClassAd();
 
 	std::string commandID;
 	generateCommandID( commandID );
@@ -55,6 +52,10 @@ condor_status(	const char * annexName, const char * sURL,
 			return 1;
 		}
 	}
+	//
+	// The standard incantations...
+	ClassAd * reply = new ClassAd();
+	ClassAd * scratchpad = new ClassAd();
 
 	EC2GahpClient * ec2Gahp = startOneGahpClient( publicKeyFile, serviceURL );
 

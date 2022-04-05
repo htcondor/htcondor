@@ -1,8 +1,0 @@
-#!/bin/sh
-
-JAVA_HOME=/s/java/i386_cent40/
-PLATFORM=i386
-
-LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/$PLATFORM/server:.
-
-./hdfs_plugin $*

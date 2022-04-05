@@ -120,8 +120,12 @@ bool StrIsProcId(const char *str, int &cluster, int &proc, const char ** pend)
 	return valid;
 }
 
+void JOB_ID_KEY::sprint(std::string & s) const
+{
+	formatstr(s,"%d.%d", this->cluster, this->proc);
+}
 
-void JOB_ID_KEY::sprint(MyString &s) const 
+void JOB_ID_KEY::sprint(MyString &s) const
 {
 	s.formatstr("%d.%d", this->cluster, this->proc);
 }

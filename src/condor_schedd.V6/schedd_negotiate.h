@@ -184,7 +184,7 @@ class ScheddNegotiate: public DCMsg {
 
 		// data in message received from negotiator
 	int m_operation;             // the negotiation operation
-	MyString m_reject_reason; // why the job was rejected
+	std::string m_reject_reason; // why the job was rejected
 	std::string m_claim_id;      // the string "null" if none
 	std::string m_extra_claims;
 

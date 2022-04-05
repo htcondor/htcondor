@@ -44,8 +44,8 @@ public:
 	 *  			pVersionFilePath - OS path to version file
 	 * Description: initializes all data members
 	 */
-    void initialize( const MyString& pStateFilePath, 
-					 const MyString& pVersionFilePath );
+    void initialize( const std::string& pStateFilePath, 
+					 const std::string& pVersionFilePath );
 	/* Function    : synchronize
      * Arguments   : isLogicalClockIncremented - whether to increment the 
 	 *				 logical clock or not
@@ -82,12 +82,12 @@ public:
      * Description : returns logical clock
      */
 	int         getLogicalClock() const { return m_logicalClock; };
-    MyString    getSinfulString() const { return m_sinfulString; };
+	std::string getSinfulString() const { return m_sinfulString; };
 	/* Function    : getHostName
-	 * Return value: MyString - this replication daemon host name
+	 * Return value: std::string - this replication daemon host name
 	 * Description : returns this replication daemon host name
 	 */
-    MyString    getHostName()     const;
+	std::string    getHostName()     const;
     /* Function    : load
  	 * Arguments   : temporaryGid - the value of OS file gid field will be 
 	 *								assigned to the parameter
@@ -154,10 +154,10 @@ public:
 // End of mutators
 // Convertors
 	/* Function    : toString
-     * Return value: MyString - string representation of Version object
+     * Return value: std::string - string representation of Version object
 	 * Description : represents the Version object as string
      */
-    MyString toString() const;
+    std::string toString() const;
 // End of convertors
 
 private:
@@ -172,13 +172,13 @@ private:
     static time_t         m_lastModifiedTime;
    
 	// configuration variables
-	MyString			  m_stateFilePath;
-	MyString			  m_versionFilePath;
+	std::string			  m_stateFilePath;
+	std::string			  m_versionFilePath;
  
 	// components of the version
     int                   m_gid;
     int                   m_logicalClock;
-    MyString              m_sinfulString;
+    std::string           m_sinfulString;
 	ReplicatorState       m_state;
 	// added support for conservative policy of accepting updates from primary
 	// HAD machines only

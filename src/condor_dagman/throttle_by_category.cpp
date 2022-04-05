@@ -22,35 +22,33 @@
 #include "throttle_by_category.h"
 #include "dagman_main.h"
 #include "debug.h"
-#include "MyString.h"
 
 const int ThrottleByCategory::noThrottleSetting = -1;
 
 //---------------------------------------------------------------------------
 ThrottleByCategory::ThrottleByCategory() :
-			_throttles( hashFunction )
+			_throttles( {} )
 {
 }
 
 //---------------------------------------------------------------------------
 ThrottleByCategory::~ThrottleByCategory()
 {
-	_throttles.startIterations();
-	ThrottleInfo	*info;
-	while ( _throttles.iterate( info ) ) {
-		delete info;
+	for ( auto throttle: _throttles ) {
+		delete throttle.second;
 	}
 }
 
 //---------------------------------------------------------------------------
 ThrottleByCategory::ThrottleInfo *
-ThrottleByCategory::AddCategory( const MyString *category, int maxJobs )
+ThrottleByCategory::AddCategory( const std::string *category, int maxJobs )
 {
 	ASSERT( category != NULL );
 
 	ThrottleInfo *	info = new ThrottleInfo( category, maxJobs );
-	if ( _throttles.insert( *(info->_category), info ) != 0 ) {
-		EXCEPT( "HashTable error" );
+	auto insertResult = _throttles.insert( std::make_pair( *(info->_category), info ) );
+	if ( insertResult.second == false ) {
+		EXCEPT( "Error adding new throttle category" );
 	}
 
 	return info;
@@ -58,12 +56,12 @@ ThrottleByCategory::AddCategory( const MyString *category, int maxJobs )
 
 //---------------------------------------------------------------------------
 void
-ThrottleByCategory::SetThrottle( const MyString *category, int maxJobs )
+ThrottleByCategory::SetThrottle( const std::string *category, int maxJobs )
 {
 	ASSERT( category != NULL );
 
-	ThrottleInfo	*info;
-	if ( _throttles.lookup( *category, info ) != 0 ) {
+	auto findResult = _throttles.find( *category );
+	if ( findResult == _throttles.end() ) {
 			// category not in table
 
 			// Coverity complains about not storing the return value here, but
@@ -71,11 +69,11 @@ ThrottleByCategory::SetThrottle( const MyString *category, int maxJobs )
 		AddCategory( category, maxJobs );
 	} else {
 			// category is in table
-
+		ThrottleInfo *info = ( *findResult ).second;
 		if ( info->isSet() && info->_maxJobs != maxJobs ) {
 			debug_printf( DEBUG_NORMAL, "Warning: new maxjobs value %d "
 						"for category %s overrides old value %d\n",
-						maxJobs, category->Value(), info->_maxJobs );
+						maxJobs, category->c_str(), info->_maxJobs );
 			check_warning_strictness( DAG_STRICT_3 );
 		}
 		info->_maxJobs = maxJobs;
@@ -84,21 +82,21 @@ ThrottleByCategory::SetThrottle( const MyString *category, int maxJobs )
 
 //---------------------------------------------------------------------------
 ThrottleByCategory::ThrottleInfo *
-ThrottleByCategory::GetThrottleInfo( const MyString *category )
+ThrottleByCategory::GetThrottleInfo( const std::string *category )
 {
 	ASSERT( category != NULL );
 
-	ThrottleInfo	*info;
-	if ( _throttles.lookup( *category, info ) != 0 ) {
+	auto findResult = _throttles.find( *category );
+	if ( findResult == _throttles.end() ) {
 		return NULL;
 	} else {
-		return info;
+		return ( *findResult ).second;
 	}
 }
 
 //---------------------------------------------------------------------------
 void
-ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
+ThrottleByCategory::PrefixAllCategoryNames( const std::string &prefix )
 {
 		// We copy the ThrottleInfo objects into this hash table,
 		// and then copy this hash table over the one in this object
@@ -106,22 +104,22 @@ ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 		// new names.  Note that we don't need to delete any
 		// ThrottleInfo objects because we're re-using the ones
 		// we already have.
-	HashTable<MyString, ThrottleInfo *> tmpThrottles( hashFunction );
+	std::map<std::string, ThrottleInfo *> tmpThrottles( {} );
 
-	_throttles.startIterations();
-	ThrottleInfo	*info;
-	while ( _throttles.iterate( info ) ) {
+	for ( auto throttle: _throttles ) {
+		ThrottleInfo *info = throttle.second;
 			// Don't change category names for global categories (names
 			// starting with '+') (allows nodes in different splices to
 			// be in the same category).
 		if ( ! info->isGlobal() ) {
-			MyString *newCat = new MyString( prefix );
+			std::string *newCat = new std::string( prefix );
 			*newCat += *(info->_category);
 			delete info->_category;
 			info->_category = newCat;
 		}
-		if ( tmpThrottles.insert( *(info->_category), info ) != 0 ) {
-			EXCEPT( "HashTable error" );
+		auto insertResult = tmpThrottles.insert( std::make_pair( *(info->_category), info ) );
+		if ( !insertResult.second ) {
+			EXCEPT( "Error inserting temporary throttle" );
 		}
 	}
 
@@ -141,11 +139,10 @@ ThrottleByCategory::PrintThrottles( FILE *fp ) /* const */
 {
 	ASSERT( fp != NULL );
 
-	_throttles.startIterations();
-	ThrottleInfo	*info;
-	while ( _throttles.iterate( info ) ) {
+	for ( auto throttle: _throttles ) {
+		ThrottleInfo *info = throttle.second;
 		if ( info->isSet() ) {
-			fprintf( fp, "MAXJOBS %s %d\n", info->_category->Value(),
+			fprintf( fp, "MAXJOBS %s %d\n", info->_category->c_str(),
 						info->_maxJobs );
 		}
 	}

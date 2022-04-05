@@ -571,7 +571,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 		MyString temp_path;
 		if (  NULL == path ) {
 			m_state->GeneratePath( m_state->Rotation(), temp_path );
-			path = temp_path.Value( );
+			path = temp_path.c_str( );
 		}
 
 		// Now, try read the header
@@ -589,7 +589,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 			dprintf( D_FULLDEBUG,
 					 "%s: Set UniqId to '%s', sequence to %d\n",
 					 m_state->CurPath(),
-					 header_reader.getId().Value(),
+					 header_reader.getId().c_str(),
 					 header_reader.getSequence() );
 		}
 
@@ -884,6 +884,16 @@ ReadUserLog::readEventWithLock (ULogEvent *& event, bool store_state, FileLockBa
 		if ( ULOG_OK != status ) {
 			return status;
 		}
+	} else {
+		// If the file wasn't closed, and the file is on AFS, we need
+		// to stat() it to make sure that AFS notices if some other
+		// machine wrote to the file since we last looked at it.
+		//
+		// See HTCONDOR-463 for details.  If it ends up mattering, we
+		// could check at object construction time if this file is on
+		// AFS (using statfs) and skip this system call if not.
+		struct stat statbuf;
+		std::ignore = fstat(m_fd, &statbuf);
 	}
 
 	if ( !m_fp ) {
@@ -1553,7 +1563,7 @@ ReadUserLogMatch::MatchInternal(
 		path_str = path;
 	}
 	dprintf( D_FULLDEBUG, "Match: score of '%s' = %d\n",
-			 path_str.Value(), score );
+			 path_str.c_str(), score );
 
 	// Quick look at the score passed in from the state comparison
 	// We can return immediately in some cases
@@ -1570,10 +1580,10 @@ ReadUserLogMatch::MatchInternal(
 	// We'll instantiate a new log reader to do this for us
 	// Note: we disable rotation for this one, so we won't recurse infinitely
 	ReadUserLog			 log_reader;
-	dprintf( D_FULLDEBUG, "Match: reading file %s\n", path_str.Value() );
+	dprintf( D_FULLDEBUG, "Match: reading file %s\n", path_str.c_str() );
 
 	// Initialize the reader
-	if ( !log_reader.initialize( path_str.Value(), false, false ) ) {
+	if ( !log_reader.initialize( path_str.c_str(), false, false ) ) {
 		return MATCH_ERROR;
 	}
 
@@ -1602,7 +1612,7 @@ ReadUserLogMatch::MatchInternal(
 		result_str = "no match";
 	}
 	dprintf( D_FULLDEBUG, "Read ID from '%s' as '%s': %d (%s)\n",
-			 path_str.Value(), header_reader.getId().Value(),
+			 path_str.c_str(), header_reader.getId().c_str(),
 			 id_result, result_str );
 
 	// And, last but not least, re-evaluate the score

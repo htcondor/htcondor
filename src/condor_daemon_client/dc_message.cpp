@@ -292,7 +292,7 @@ char const *DCMessenger::peerDescription()
 
 void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 {
-	MyString error;
+	std::string error;
 	msg->setMessenger( this );
 
 	if( msg->deliveryStatus() == DCMsg::DELIVERY_CANCELED ) {
@@ -319,7 +319,7 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 			// timer for each case.  Then it would be possible to control
 			// priority of different messages etc.
 		dprintf(D_FULLDEBUG, "Delaying delivery of %s to %s, because %s\n",
-				msg->name(),peerDescription(),error.Value());
+				msg->name(),peerDescription(),error.c_str());
 		startCommandAfterDelay( 1, msg );
 		return;
 	}
@@ -440,6 +440,9 @@ void DCMessenger::writeMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 		/* Some day, we may send message asynchronously and call
 		   messageSent() later, after the delivery.  For now, we do it
 		   all synchronously, right here. */
+
+	msg->setPeerFqu(sock->getFullyQualifiedUser());
+	msg->setPeerAddr(sock->peer_addr());
 
 	sock->encode();
 

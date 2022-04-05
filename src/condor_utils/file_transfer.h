@@ -63,7 +63,7 @@ struct CatalogEntry {
 typedef HashTable <MyString, FileTransfer *> TranskeyHashTable;
 typedef HashTable <int, FileTransfer *> TransThreadHashTable;
 typedef HashTable <MyString, CatalogEntry *> FileCatalogHashTable;
-typedef HashTable <MyString, MyString> PluginHashTable;
+typedef HashTable <std::string, std::string> PluginHashTable;
 
 typedef int		(Service::*FileTransferHandlerCpp)(FileTransfer *);
 typedef int		(*FileTransferHandler)(FileTransfer *);
@@ -227,6 +227,7 @@ class FileTransfer final: public Service {
 		bool try_again;
 		int hold_code;
 		int hold_subcode;
+		ClassAd stats;
 		MyString error_desc;
 			// List of files we created in remote spool.
 			// This is intended to become SpooledOutputFiles.
@@ -234,7 +235,9 @@ class FileTransfer final: public Service {
 		MyString tcp_stats;
 	};
 
-	FileTransferInfo GetInfo() { return Info; }
+	FileTransferInfo GetInfo() {
+		return Info;
+	}
 
 	inline bool IsServer() const {return user_supplied_key == FALSE;}
 
@@ -312,17 +315,17 @@ class FileTransfer final: public Service {
 
 	void setTransferQueueContactInfo(char const *contact);
 
-	void InsertPluginMappings(MyString methods, MyString p);
+	void InsertPluginMappings(const std::string& methods, const std::string& p);
 	void SetPluginMappings( CondorError &e, const char* path );
 	int InitializeSystemPlugins(CondorError &e);
 	int InitializeJobPlugins(const ClassAd &job, CondorError &e);
 	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles) const;
-	MyString DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
+	std::string DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
 	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload, std::vector<std::unique_ptr<ClassAd>> *);
 	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long &upload_bytes);
-    int OutputFileTransferStats( ClassAd &stats );
-	MyString GetSupportedMethods(CondorError &err);
+    int RecordFileTransferStats( ClassAd &stats );
+	std::string GetSupportedMethods(CondorError &err);
 	void DoPluginConfiguration();
 
 		// Convert directories with a trailing slash to a list of the contents
@@ -331,9 +334,9 @@ class FileTransfer final: public Service {
 		// inputs.  See the lengthy comment in the function body for additional
 		// explanation of why this is necessary.
 		// Returns false on failure and sets error_msg.
-	static bool ExpandInputFileList( ClassAd *job, MyString &error_msg );
+	static bool ExpandInputFileList( ClassAd *job, std::string &error_msg );
 		// use this function when you don't want to party on the job ad like the above function does 
-	static bool ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, MyString &error_msg );
+	static bool ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, std::string &error_msg );
 
 	// When downloading files, store files matching source_name as the name
 	// specified by target_name.
@@ -366,6 +369,10 @@ class FileTransfer final: public Service {
 	bool transferIsInProgress() const { return ActiveTransferTid != -1; }
 
   protected:
+
+	// There's three places where we need to know this.
+	bool shouldSendStderr();
+	bool shouldSendStdout();
 
 	int Download(ReliSock *s, bool blocking);
 	int Upload(ReliSock *s, bool blocking);
@@ -429,8 +436,8 @@ class FileTransfer final: public Service {
 	char* ExecFile{nullptr};
 	char* UserLogFile{nullptr};
 	char* X509UserProxy{nullptr};
-	MyString JobStdoutFile;
-	MyString JobStderrFile;
+	std::string JobStdoutFile;
+	std::string JobStderrFile;
 	char* TransSock{nullptr};
 	char* TransKey{nullptr};
 	char* SpoolSpace{nullptr};
@@ -450,7 +457,7 @@ class FileTransfer final: public Service {
 	bool ClientCallbackWantsStatusUpdates{false};
 	FileTransferInfo Info;
 	PluginHashTable* plugin_table{nullptr};
-	std::map<MyString, bool> plugins_multifile_support;
+	std::map<std::string, bool> plugins_multifile_support;
 	std::map<std::string, bool> plugins_from_job;
 	bool I_support_filetransfer_plugins{false};
 	bool I_support_S3{false};
@@ -501,7 +508,7 @@ class FileTransfer final: public Service {
 	void SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
 
 	// Receive acknowledgment of success/failure after downloading files.
-	void GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc) const;
+	void GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
 
 	// Stash transfer success/failure info that will be propagated back to
 	// caller of file transfer operation, using GetInfo().
@@ -519,7 +526,7 @@ class FileTransfer final: public Service {
 	// Save failure information with SaveTransferInfo().
 	bool ObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,filesize_t sandbox_size,char const *full_fname,bool &go_ahead_always);
 
-	bool DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,filesize_t sandbox_size,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
+	bool DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,filesize_t sandbox_size,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,std::string &error_desc);
 
 	std::string GetTransferQueueUser();
 
@@ -527,6 +534,15 @@ class FileTransfer final: public Service {
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
 	ClassAd jobAd;
 
+	//
+	// As of this writing, this function should only ever be called from
+	// DoUpload().  It converts from a StringList of entries to a
+	// a FileTransferList, a std::vector of FileTransferItems.  The
+	// FileTransferList is a sequence of commands, and should not be
+	// reordered except by operator < (and probably not even then),
+	// because -- for example -- directories must be created before the
+	// file that live in them.
+	//
 	bool ExpandFileTransferList( StringList *input_list, FileTransferList &expanded_list, bool preserveRelativePaths );
 
 		// This function generates a list of files to transfer, including
@@ -537,10 +553,23 @@ class FileTransfer final: public Service {
 		// iwd       - relative paths are relative to this path
 		// max_depth - how deep to recurse (-1 for infinite)
 		// expanded_list - the list of files to transfer
-	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths );
+		// preserve_relative_paths - if false, use the old behavior and
+		//      transfer src_path to its basename. if true, and
+		//      src_path is a relative path, transfer it to the same
+		//      relative path
+		// SpoolSpace - if preserve_relative_paths is set, then a
+		//      src_path which begins with this path is treated as a
+		//      relative path.  This allows us to preserve the relative
+		//      paths of files stored in SPOOL, whether from
+		//      self-checkpointing, ON_EXIT_OR_EVICT, or remote input
+		//      file spooling.
+	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace );
 
         // Function internal to ExpandFileTransferList() -- called twice there.
-    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list );
+        // The SpoolSpace argument is only necessary because this function
+        // calls back into  ExpandFileTransferList(); see that function
+        // for details.
+    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list, const char *SpoolSpace );
 
 		// Returns true if path is a legal path for our peer to tell us it
 		// wants us to write to.  It must be a relative path, containing

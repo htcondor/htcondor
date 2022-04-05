@@ -286,13 +286,13 @@ inline int is_alpha(char ch) { return isalpha( (int)( (unsigned char)(ch) ) ); }
 
 // If no inttypes, try to define our own
 #if !defined( PRId64 )
-# define PRId64 "I64d"
+# define PRId64 "lld"
 #endif
 #if !defined( PRIi64 )
-# define PRIi64 "I64i"
+# define PRIi64 "lli"
 #endif
 #if !defined( PRIu64 )
-# define PRIu64 "I64u"
+# define PRIu64 "llu"
 #endif
 
 /* fix [f]stat on Windows */

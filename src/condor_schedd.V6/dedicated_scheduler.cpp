@@ -34,7 +34,6 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "dedicated_scheduler.h"
-#include "shadow_mgr.h"
 #include "scheduler.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -459,7 +458,6 @@ DedicatedScheduler::DedicatedScheduler()
 
 	ds_owner = NULL;
 	ds_name = NULL;
-	shadow_obj = NULL;
 
 	startdQueryTime = 0;
 	split_match_count = 0;
@@ -480,14 +478,10 @@ DedicatedScheduler::~DedicatedScheduler()
 	if( ds_owner ) { free(ds_owner); }
 	if( ds_name ) { free(ds_name); }
 
-	if( shadow_obj ) {
-		delete shadow_obj;
-		shadow_obj = NULL;
-	}
-	if( hdjt_tid != -1 ) {
+	if( daemonCore && hdjt_tid != -1 ) {
 		daemonCore->Cancel_Timer( hdjt_tid );
 	}
-	if( sanity_tid != -1 ) {
+	if( daemonCore && sanity_tid != -1 ) {
 		daemonCore->Cancel_Timer( sanity_tid );
 	}
 
@@ -607,10 +601,6 @@ DedicatedScheduler::reconfig( void )
 	}
 	old_unused_timeout = unused_timeout;
 
-	if( shadow_obj ) {
-		delete shadow_obj;
-		shadow_obj = NULL;
-	}
 	return TRUE;
 }
 
@@ -911,7 +901,7 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 	DCStartd d( m_rec->peer );
 	if (!d.startCommand(DEACTIVATE_CLAIM, &sock)) {
         	dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
-				 "Can't start command to startd" );
+				 "Can't start command to startd\n" );
 		return false;
 	}
 
@@ -1036,7 +1026,7 @@ DedicatedScheduler::reaper( int pid, int status )
 		case JOB_EXEC_FAILED:
 			break;
 		case JOB_CKPTED:
-		case JOB_NOT_CKPTED:
+		case JOB_SHOULD_REQUEUE:
 		case JOB_NOT_STARTED:
 			if (!srec->removed) {
 				shutdownMpiJob( srec , true);
@@ -1372,7 +1362,7 @@ DedicatedScheduler::sortJobs( void )
 
 		formatstr(fifoConstraint, "%s == %d && %s == %d && %s == %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PARALLEL, 
 																ATTR_JOB_STATUS, HELD, 
-																ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput);
+																ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::SpoolingInput);
 		ClassAd *spoolingInJob = NULL;
 		bool firstTime = true;
 		while ((spoolingInJob = GetNextJobByConstraint(fifoConstraint.c_str(), firstTime))) {
@@ -1466,15 +1456,6 @@ DedicatedScheduler::handleDedicatedJobs( void )
 	dprintf( D_FULLDEBUG, "Starting "
 			 "DedicatedScheduler::handleDedicatedJobs\n" );
 
-	static time_t lastRun = 0;
-
-
-	int delay_factor = param_integer( "DEDICATED_SCHEDULER_DELAY_FACTOR", 5 );
-	if ((time(0) - lastRun) < (delay_factor * startdQueryTime)) {
-		dprintf(D_ALWAYS, "Delaying scheduling of parallel jobs because startd query time is long (%ld) seconds\n", startdQueryTime);
-		return FALSE;
-	}
-
 // 	now = (int)time(0);
 		// Just for debugging, set now to 0 to make everything easier
 		// to parse when looking at log files.
@@ -1482,15 +1463,6 @@ DedicatedScheduler::handleDedicatedJobs( void )
 	    // as well remain this way until the scheduler is improved
 	    // to actually care about this value in any meaningful way.
 	now = 0;
-
-		// first, make sure we've got a shadow that can handle mpi
-		// jobs.  if not, we're screwed, so instead of computing a
-		// schedule, requesting resources, etc, etc, we should just
-		// put all the jobs on hold...
-	if( ! hasDedicatedShadow() ) {
-		holdAllDedicatedJobs();
-		return FALSE;
-	}
 
 		// This will gather up pointers to all the job classads we
 		// care about, and sort them by QDate.
@@ -1511,8 +1483,6 @@ DedicatedScheduler::handleDedicatedJobs( void )
 
 		// Sort them, so we know if we can use them or not.
 	sortResources();
-
-	lastRun = time(0);
 
 		// Figure out what we want to do, based on what we have now.  
 	if( ! computeSchedule() ) { 
@@ -1558,7 +1528,7 @@ void
 DedicatedScheduler::listDedicatedJobs( int debug_level )
 {
 	int cluster, proc;
-	MyString owner_str;
+	std::string owner_str;
 
 	if( ! idle_clusters ) {
 		dprintf( debug_level, "DedicatedScheduler: No dedicated jobs\n" );
@@ -1573,7 +1543,7 @@ DedicatedScheduler::listDedicatedJobs( int debug_level )
 		owner_str = "";
 		GetAttributeString( cluster, proc, ATTR_OWNER, owner_str ); 
 		dprintf( debug_level, "Dedicated job: %d.%d %s\n", cluster,
-				 proc, owner_str.Value() );
+				 proc, owner_str.c_str() );
 	}
 }
 
@@ -1585,7 +1555,7 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 	CondorQuery	query(STARTD_AD);
 
 	time_t b4 = time(0);
-	MyString constraint;
+	std::string constraint;
 
 		// Now, clear out any old list we might have for the resources
 		// themselves. 
@@ -1594,8 +1564,8 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 		// Make a new list to hold our resource classads.
 	resources = new ClassAdList;
 
-    constraint.formatstr("DedicatedScheduler == \"%s\"", name());
-	query.addORConstraint( constraint.Value() );
+    formatstr(constraint, "DedicatedScheduler == \"%s\"", name());
+	query.addORConstraint( constraint.c_str() );
 
 		// This should fill in resources with all the classads we care
 		// about
@@ -1616,7 +1586,7 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 		return true;
 	}
 
-	dprintf (D_ALWAYS, "Unable to run query %s\n",  constraint.Value());
+	dprintf (D_ALWAYS, "Unable to run query %s\n",  constraint.c_str());
 	return false;
 }
 
@@ -1936,16 +1906,6 @@ DedicatedScheduler::spawnJobs( void )
 		return true;
 	}
 
-	if( ! shadow_obj ) {
-		shadow_obj = scheduler.shadow_mgr.findShadow( ATTR_HAS_MPI );
-	}
-
-	if( ! shadow_obj ) {
-		dprintf( D_ALWAYS, "ERROR: Can't find a shadow with %s -- "
-				 "can't spawn MPI jobs, aborting\n", ATTR_HAS_MPI );
-		return false;
-	}
-
 	allocations->startIterations();
 	while( allocations->iterate(allocation) ) {
 		if( allocation->status != A_NEW ) {
@@ -2058,14 +2018,14 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 				char const *claim = (*(*allocation->matches)[p])[i]->claimId();
 				char const *publicClaim = (*(*allocation->matches)[p])[i]->publicClaimId();
 
-				MyString claim_buf;
+				std::string claim_buf;
 				if( strchr(claim,',') ) {
 						// the claimid contains a comma, which is the delimiter
 						// in the list of claimids, so we must escape it
 					claim_buf = claim;
-					ASSERT( !strstr(claim_buf.Value(),"$(COMMA)") );
-					claim_buf.replaceString(",","$(COMMA)");
-					claim = claim_buf.Value();
+					ASSERT( !strstr(claim_buf.c_str(),"$(COMMA)") );
+					replace_str(claim_buf, ",","$(COMMA)");
+					claim = claim_buf.c_str();
 				}
 
 				claims.append(claim);
@@ -2081,7 +2041,7 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 
 			char *claims_str = claims.print_to_string();
 			if ( claims_str ) {
-				SetAttributeString(allocation->cluster, p, ATTR_CLAIM_IDS, claims_str);
+				SetPrivateAttributeString(allocation->cluster, p, ATTR_CLAIM_IDS, claims_str);
 				free(claims_str);
 				claims_str = NULL;
 			}
@@ -3279,8 +3239,8 @@ DedicatedScheduler::AddMrec(
 	match_rec *existing_mrec;
 	if( all_matches->lookup(slot_name, existing_mrec) == 0) {
 			// Already have this match
-		dprintf(D_ALWAYS, "DedicatedScheduler: negotiator sent match for %s, but we've already got it, deleting old one\n", slot_name);
-		DelMrec(existing_mrec);
+		dprintf(D_ALWAYS, "DedicatedScheduler: negotiator sent match for %s, but we've already got it, ignoring\n", slot_name);
+		return nullptr;
 	}
 
 	// Next, insert this match_rec into our hashtables
@@ -3910,21 +3870,6 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 	return false;
 }
 
-bool
-DedicatedScheduler::hasDedicatedShadow( void ) 
-{
-	if( ! shadow_obj ) {
-		shadow_obj = scheduler.shadow_mgr.findShadow( ATTR_HAS_MPI );
-	}
-	if( ! shadow_obj ) {
-		dprintf( D_ALWAYS, "ERROR: Can't find a shadow with %s -- "
-				 "can't run MPI jobs!\n", ATTR_HAS_MPI );
-		return false;
-	} 
-	return true;
-}
-
-
 void
 DedicatedScheduler::holdAllDedicatedJobs( void ) 
 {
@@ -4017,7 +3962,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 	CondorQuery query(STARTD_AD);
 	ClassAdList result;
 	ClassAdList ads;
-	MyString constraint;
+	std::string constraint;
 
 	SimpleList<PROC_ID> jobsToReconnectLater = jobsToReconnect;
 
@@ -4049,7 +3994,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			constraint += "==\"";
 			constraint += host;
 			constraint += "\"";
-			query.addORConstraint(constraint.Value()); 
+			query.addORConstraint(constraint.c_str()); 
 		}
 	}
 
@@ -4095,7 +4040,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			// we've rolled over to a new job with procid 0
 			// create the allocation for what we've built up.
 		if (! firstTime && id.proc == 0) {
-			dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.%d)\n", id.cluster, id.proc);
+			dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.*)\n", last_id.cluster);
 
 			// We're going to try to start this reconnect job, so remove it
 			// from the reconnectLater list
@@ -4130,10 +4075,10 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 		char *remote_hosts = NULL;
 		GetAttributeStringNew(id.cluster, id.proc, ATTR_REMOTE_HOSTS, &remote_hosts);
 
-		char *claims = NULL;
-		GetAttributeStringNew(id.cluster, id.proc, ATTR_CLAIM_IDS, &claims);
+		std::string claims;
+		GetPrivateAttributeString(id.cluster, id.proc, ATTR_CLAIM_IDS, claims);
 
-		StringList escapedClaimList(claims,",");
+		StringList escapedClaimList(claims.c_str(),",");
 		StringList claimList;
 		StringList hosts(remote_hosts);
 
@@ -4142,9 +4087,9 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 
 		escapedClaimList.rewind();
 		while( (claim = escapedClaimList.next()) ) {
-			MyString buf = claim;
-			buf.replaceString("$(COMMA)",",");
-			claimList.append(buf.Value());
+			std::string buf = claim;
+			replace_str(buf, "$(COMMA)",",");
+			claimList.append(buf.c_str());
 		}
 
 			// Foreach host in the stringlist, find matching machine by name
@@ -4161,7 +4106,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 						id.cluster, id.proc,
 						host, 
 						remote_hosts ? remote_hosts : "(null)",
-						claims ? claims : "(null)");
+						claims.c_str());
 				dPrintAd(D_ALWAYS, *job);
 					// we will break out of the loop below
 			}
@@ -4235,12 +4180,11 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			sinful = NULL;
 		}
 		free(remote_hosts);
-		free(claims);
 	}
 
 		// Last time through, create the last bit of allocations, if there are any
 	if (machinesToAllocate.Number() > 0) {
-		dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.%d)\n", id.cluster, id.proc);
+		dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.*)\n", id.cluster);
 		// We're going to try to start this reconnect job, so remove it
 		// from the reconnectLater list
 		removeFromList(&jobsToReconnectLater, &jobsToAllocate);
@@ -4396,9 +4340,6 @@ findAvailTime( match_rec* mrec )
 				// it should "cost" to kill a job?
 			if( universe == CONDOR_UNIVERSE_VANILLA ) {
 				return now + 15;
-			}
-			if( universe == CONDOR_UNIVERSE_STANDARD ) {
-				return now + 120;
 			}
 			return now + 60;
 		} 

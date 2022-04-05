@@ -42,7 +42,6 @@ BaseShadow* BaseShadow::myshadow_ptr = NULL;
 
 
 // this appears at the bottom of this file:
-//extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 extern bool sendUpdatesToSchedd;
 
@@ -103,7 +102,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 	scheddAddr = sendUpdatesToSchedd ? strdup( schedd_addr ) : strdup("noschedd");
 
-	m_xfer_queue_contact_info = xfer_queue_contact_info;
+	m_xfer_queue_contact_info = xfer_queue_contact_info ? xfer_queue_contact_info : "";
 
 	if ( !jobAd->LookupString(ATTR_OWNER, owner)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_OWNER);
@@ -136,10 +135,19 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		prev_run_bytes_recvd = 0;
 	}
 
+	ClassAd* prev_upload_stats = dynamic_cast<ClassAd*>(jobAd->Lookup(ATTR_TRANSFER_INPUT_STATS));
+	if (prev_upload_stats) {
+		m_prev_run_upload_file_stats.Update(*prev_upload_stats);
+	}
+	ClassAd* prev_download_stats = dynamic_cast<ClassAd*>(jobAd->Lookup(ATTR_TRANSFER_OUTPUT_STATS));
+	if (prev_download_stats) {
+		m_prev_run_download_file_stats.Update(*prev_download_stats);
+	}
+
 		// construct the core file name we'd get if we had one.
-	MyString tmp_name = iwd;
+	std::string tmp_name = iwd;
 	formatstr_cat( tmp_name, "%ccore.%d.%d", DIR_DELIM_CHAR, cluster, proc );
-	core_file_name = strdup( tmp_name.Value() );
+	core_file_name = strdup( tmp_name.c_str() );
 
         // put the shadow's sinful string into the jobAd.  Helpful for
         // the mpi shadow, at least...and a good idea in general.
@@ -209,9 +217,9 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		// Unless we got a command line arg asking us not to
 	if (sendUpdatesToSchedd) {
 		// the usual case
-		job_updater = new QmgrJobUpdater( jobAd, scheddAddr, CondorVersion() );
+		job_updater = new QmgrJobUpdater( jobAd, scheddAddr );
 	} else {
-		job_updater = new NullQmgrJobUpdater( jobAd, scheddAddr, CondorVersion() );
+		job_updater = new NullQmgrJobUpdater( jobAd, scheddAddr );
 	}
 
 		// init user log; hold on failure
@@ -315,11 +323,11 @@ int BaseShadow::cdToIwd() {
 		dprintf(D_ALWAYS, "\n\nPath does not exist.\n"
 				"He who travels without bounds\n"
 				"Can't locate data.\n\n" );
-		MyString hold_reason;
-		hold_reason.formatstr("Cannot access initial working directory %s: %s",
+		std::string hold_reason;
+		formatstr(hold_reason, "Cannot access initial working directory %s: %s",
 		                    iwd.c_str(), strerror(chdir_errno));
-		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-		holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
+		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
+		holdJobAndExit(hold_reason.c_str(),CONDOR_HOLD_CODE::IwdError,chdir_errno);
 		iRet = -1;
 	}
 	
@@ -401,9 +409,13 @@ BaseShadow::reconnectFailed( const char* reason )
 		// does not return
 		DC_Exit( JOB_RECONNECT_FAILED );
 	} else {
-		dprintf(D_ALWAYS,"Exiting with JOB_SHOULD_REQUEUE\n");
+		int exit_reason = getExitReason();
+		if (exit_reason == -1) {
+			exit_reason = JOB_SHOULD_REQUEUE;
+		}
+		dprintf(D_ALWAYS,"Exiting with %d\n", exit_reason);
 		// does not return
-		DC_Exit( JOB_SHOULD_REQUEUE );
+		DC_Exit( exit_reason );
 	}
 
 	// Should never get here....
@@ -726,8 +738,8 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 void
 BaseShadow::evictJob( int reason )
 {
-	MyString from_where;
-	MyString machine;
+	std::string from_where;
+	std::string machine;
 
 	// If we previously delayed exiting to let the starter wrap up, then
 	// immediately try exiting now. None of the cleanup below here is
@@ -738,10 +750,10 @@ BaseShadow::evictJob( int reason )
 	}
 
 	if( getMachineName(machine) ) {
-		from_where.formatstr(" from %s",machine.Value());
+		formatstr(from_where, " from %s" ,machine.c_str());
 	}
 	dprintf( D_ALWAYS, "Job %d.%d is being evicted%s\n",
-			 getCluster(), getProc(), from_where.Value() );
+			 getCluster(), getProc(), from_where.c_str() );
 
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In evictJob() w/ NULL JobAd!\n" );
@@ -829,7 +841,7 @@ void BaseShadow::initUserLog()
 		formatstr(hold_reason,"Failed to initialize user log");
 		dprintf( D_ALWAYS, "%s\n",hold_reason.c_str());
 		holdJobAndExit(hold_reason.c_str(),
-				CONDOR_HOLD_CODE_UnableToInitUserLog,0);
+				CONDOR_HOLD_CODE::UnableToInitUserLog,0);
 			// holdJobAndExit() should not return, but just in case it does
 			// EXCEPT
 		EXCEPT("Failed to initialize user log: %s",hold_reason.c_str());
@@ -1129,7 +1141,7 @@ BaseShadow::logEvictEvent( int exitReason )
 
 	switch( exitReason ) {
 	case JOB_CKPTED:
-	case JOB_NOT_CKPTED:
+	case JOB_SHOULD_REQUEUE:
 	case JOB_KILLED:
 		break;
 	default:
@@ -1321,6 +1333,14 @@ BaseShadow::updateJobInQueue( update_t type )
 
 	ftAd.Assign(ATTR_BYTES_RECVD, (prev_run_bytes_recvd + bytesSent()) );
 
+	ClassAd upload_file_stats;
+	ClassAd download_file_stats;
+	getFileTransferStats(upload_file_stats, download_file_stats);
+	ClassAd* updated_upload_stats = updateFileTransferStats(m_prev_run_upload_file_stats, upload_file_stats);
+	ClassAd* updated_download_stats = updateFileTransferStats(m_prev_run_download_file_stats, download_file_stats);
+	ftAd.Insert(ATTR_TRANSFER_INPUT_STATS, updated_upload_stats);
+	ftAd.Insert(ATTR_TRANSFER_OUTPUT_STATS, updated_download_stats);
+
 	FileTransferStatus upload_status = XFER_STATUS_UNKNOWN;
 	FileTransferStatus download_status = XFER_STATUS_UNKNOWN;
 	getFileTransferStatus(upload_status,download_status);
@@ -1381,7 +1401,11 @@ BaseShadow::updateJobInQueue( update_t type )
 void
 BaseShadow::evalPeriodicUserPolicy( void )
 {
-	shadow_user_policy.checkPeriodic();
+	// We may be in the middle of an RPC from the starter.
+	// If a policy expression fires, we may do some blocking network
+	// operations and/or close the syscall socket.
+	// So do the policy evaluation in a new DaemonCore callout.
+	shadow_user_policy.checkPeriodicSoon();
 }
 
 
@@ -1398,10 +1422,20 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 {
 		// Set our flag to remember we've really started.
 	began_execution = true;
-
 		// Start the timer for the periodic user job policy evaluation.
 	shadow_user_policy.startTimer();
-		
+
+	int allowed_job_duration;
+	if( jobAd->LookupInteger( ATTR_JOB_ALLOWED_JOB_DURATION, allowed_job_duration ) ) {
+		int tid = daemonCore->Register_Timer( allowed_job_duration + 1, 0,
+			(TimerHandlercpp)&BaseUserPolicy::checkPeriodic,
+			"check_for_allowed_job_duration",
+			& shadow_user_policy );
+		if( tid < 0 ) {
+			dprintf( D_ALWAYS, "Failed to register timer to check for allowed job duration, jobs may run a little long.\n" );
+		}
+	}
+
 		// Start the timer for updating the job queue for this job.
 	startQueueUpdateTimer();
 
@@ -1426,15 +1460,12 @@ BaseShadow::resourceBeganExecution( RemoteResource* /* rr */ )
 		// and since the copy in RAM is already updated, all the
 		// periodic user policy expressions will work right, so the
 		// default is to do it lazy.
-	if (m_lazy_queue_update) {
-			// For lazy update, we just want to make sure the
-			// job_updater object knows about this attribute (which we
-			// already updated our copy of).
-		job_updater->watchAttribute(ATTR_NUM_JOB_STARTS);
-	}
-	else {
-			// They want it now, so do the qmgmt operation directly.
-		updateJobAttr(ATTR_NUM_JOB_STARTS, job_start_cnt);
+		// We want other attributes updated at the same time
+		// (e.g. JobCurrentStartExecutingDate), so do a full update to
+		// the schedd if we're not being lazy.
+	if (!m_lazy_queue_update) {
+			// They want it now, so do an update right here.
+		updateJobInQueue(U_STATUS);
 	}
 }
 
@@ -1471,22 +1502,6 @@ BaseShadow::publishShadowAttrs( ClassAd* ad )
 }
 
 
-void BaseShadow::dprintf_va( int flags, const char* fmt, va_list args )
-{
-		// Print nothing in this version.  A subclass like MPIShadow
-		// might like to say ::dprintf( flags, "(res %d)"
-	const DPF_IDENT ident = 0; // REMIND: maybe something useful here??
-	::_condor_dprintf_va( flags, ident, fmt, args );
-}
-
-void BaseShadow::dprintf( int flags, const char* fmt, ... )
-{
-	va_list args;
-	va_start( args, fmt );
-	this->dprintf_va( flags, fmt, args );
-	va_end( args );
-}
-
 // This is declared in main.C, and is a pointer to one of the 
 // various flavors of derived classes of BaseShadow.  
 // It is only needed for this last function.
@@ -1494,9 +1509,7 @@ extern BaseShadow *Shadow;
 
 // This function is called by dprintf - always display our job, proc,
 // and pid in our log entries. 
-//extern "C" 
 int
-//display_dprintf_header(char **buf,int *bufpos,int *buflen)
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	static pid_t mypid = 0;
@@ -1522,7 +1535,7 @@ display_dprintf_header(char **buf,int *bufpos,int *buflen)
 }
 
 bool
-BaseShadow::getMachineName( MyString & /*machineName*/ )
+BaseShadow::getMachineName( std::string & /*machineName*/ )
 {
 	return false;
 }
@@ -1572,4 +1585,52 @@ BaseShadow::jobWantsGracefulRemoval()
 		}
 	}
 	return job_wants_graceful_removal;
+}
+
+/**
+ * updateFileTransferStats takes two input parameters:
+ * old_stats: A classad of old (existing) file transfer statistics
+ * new_stats: A class of new incoming file transfer statistics
+ * It then cumulates the attribute values of these two ads and returns a new
+ * classad with the updated values. In the parallel universe (where a single
+ * job contains many parralel instances) it adds the values from all the
+ * different instances into the updated ad.
+ **/
+ClassAd*
+BaseShadow::updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new_stats)
+{
+	ClassAd* updated_stats = new ClassAd();
+
+	// If new_stats is empty, just return a copy of the old stats
+	if (new_stats.size() == 0) {
+		updated_stats->CopyFrom(old_stats);
+		return updated_stats;
+	}
+
+	// Iterate over the list of new stats
+	for (auto it = new_stats.begin(); it != new_stats.end(); it++) {
+		const std::string& attr = it->first;
+		std::string attr_lastrun = attr + "LastRun";
+		std::string attr_total = attr + "Total";
+
+		// Lookup the value of this attribute. We only count integer values.
+		classad::Value attr_val;
+		int value;
+		it->second->Evaluate(attr_val);
+		if (!attr_val.IsIntegerValue(value)) {
+			continue;
+		}
+		updated_stats->InsertAttr(attr_lastrun, value);
+
+		// If this attribute has a previous Total value, add that to the new total
+		int old_total = 0;
+		if (old_stats.LookupInteger(attr_total, old_total)) {
+			value += old_total;
+		}
+		updated_stats->InsertAttr(attr_total, value);
+	}
+
+	// Return the pointer to our newly-created classad
+	// This will be memory-managed later by the ClassAd::Insert() function
+	return updated_stats;
 }

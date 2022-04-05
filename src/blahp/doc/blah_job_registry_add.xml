@@ -1,0 +1,191 @@
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+
+    <!ENTITY dhtitle "User Manuals">
+    <!ENTITY dhcommand "blah_job_registry_add">
+    <!ENTITY dhsection "1">
+    
+    <!ENTITY dhfirstname "Massimo">
+    <!ENTITY dhsurname "Mezzadri">
+    <!ENTITY dhemail "Massimo.Mezzadri@mi.infn.it">
+    <!ENTITY dhcontrib "Developer of the BLAHP suite">
+    
+]>
+
+
+
+<refentry>
+
+    <refentryinfo>
+        <title>&dhtitle;</title>
+        <productname>&dhcommand;</productname>
+        <authorgroup>
+            <author>
+                <firstname>&dhfirstname;</firstname>
+                <surname>&dhsurname;</surname>
+                <contrib>&dhcontrib;</contrib>
+                <address>
+                    <email>&dhemail;</email>
+                </address>
+            </author>
+        </authorgroup>
+    </refentryinfo>
+
+    <refmeta>
+        <refentrytitle>&dhcommand;</refentrytitle>
+        <manvolnum>&dhsection;</manvolnum>
+    </refmeta>
+
+    <refnamediv>
+        <refname>&dhcommand;</refname>
+        <refpurpose>Insert a new item in the registry.</refpurpose>
+    </refnamediv>
+
+    <refsynopsisdiv>
+        <cmdsynopsis>
+            <command>&dhcommand;</command>
+            <arg choice="opt"><option>options</option></arg>
+            <arg choice="plain"><replaceable><![CDATA[<BLAH id>]]></replaceable></arg>
+            <arg choice="plain"><replaceable><![CDATA[<batch id>]]></replaceable></arg>
+            <arg choice="opt"><replaceable>job status</replaceable></arg>
+            <arg choice="opt"><replaceable>udate</replaceable></arg>
+            <arg choice="opt"><replaceable>user prefix</replaceable></arg>
+            <arg choice="opt"><replaceable>user proxy</replaceable></arg>
+            <arg choice="opt"><replaceable>renew proxy</replaceable></arg>
+            <arg choice="opt"><replaceable>proxy subject</replaceable></arg>
+            <arg choice="opt"><replaceable>worker node</replaceable></arg>
+            <arg choice="opt"><replaceable>exit code</replaceable></arg>
+            <arg choice="opt"><replaceable>exit reason</replaceable></arg>
+        </cmdsynopsis>
+    </refsynopsisdiv>
+
+    <refsect1>
+    
+        <title>DESCRIPTION</title>
+        <para>The command <command>&dhcommand;</command> inserts a new item in the registry.</para>
+        
+    </refsect1>
+
+    <refsect1>
+        <title>OPTIONS</title>
+        <variablelist>
+
+            <varlistentry>
+                <term><option>-h</option></term>
+                <listitem>
+                    <para>Display information about this command</para>
+                </listitem>
+            </varlistentry>
+
+            <varlistentry>
+                <term><option>-u</option></term>
+                <listitem>
+                    <para>Check that the blah_id is unique</para>
+                </listitem>
+            </varlistentry>
+
+            <varlistentry>
+                <term><![CDATA[<BLAH id>]]></term>
+                <listitem>
+                    <para>Blah id</para>
+                </listitem>
+            </varlistentry>
+            
+            <varlistentry>
+                <term><![CDATA[<batch id>]]></term>
+                <listitem>
+                    <para>Batch id</para>
+                </listitem>
+            </varlistentry>
+            
+            <varlistentry>
+                <term>job status</term>
+                <listitem>
+                    <para>Status for the job (1=IDLE, 2=RUNNING, 3=REMOVED, 4=COMPLETED, 5=HELD)</para>
+                </listitem>
+            </varlistentry>
+            
+            <varlistentry>
+                <term>udate</term>
+                <listitem>
+                    <para>User timestamp</para>
+                </listitem>
+            </varlistentry>
+            
+            <varlistentry>
+                <term>user prefix</term>
+                <listitem>
+                    <para>Cream jobid</para>
+                </listitem>
+            </varlistentry>
+            
+            <varlistentry>
+                <term>user proxy</term>
+                <listitem>
+                    <para>User proxy</para>
+                </listitem>
+            </varlistentry>
+            
+            <varlistentry>
+                <term>renew proxy</term>
+                <listitem>
+                    <para>Flag for proxy renewal</para>
+                </listitem>
+            </varlistentry>
+            
+            <varlistentry>
+                <term>proxy subject</term>
+                <listitem>
+                    <para>Proxy subject</para>
+                </listitem>
+            </varlistentry>
+            
+            <varlistentry>
+                <term>worker node</term>
+                <listitem>
+                    <para>Worker node</para>
+                </listitem>
+            </varlistentry>
+            
+            <varlistentry>
+                <term>exit code</term>
+                <listitem>
+                    <para>Job exit code</para>
+                </listitem>
+            </varlistentry>
+            
+            <varlistentry>
+                <term>exit reason</term>
+                <listitem>
+                    <para>Job exit reason</para>
+                </listitem>
+            </varlistentry>
+            
+        </variablelist>
+    </refsect1>
+
+    <refsect1>
+        <title>EXIT STATUS</title>
+        <para><command>&dhcommand;</command> exits with a status value of 0 (zero) upon success and >0 (greater than zero) upon failure.</para>
+    </refsect1>
+
+    <refsect1>
+        <title>SEE ALSO</title>
+        <para>
+            <citerefentry>
+                <refentrytitle>blah_job_registry_dump</refentrytitle>
+                <manvolnum>1</manvolnum>
+            </citerefentry>,
+            <citerefentry>
+                <refentrytitle>blah_job_registry_lkup</refentrytitle>
+                <manvolnum>1</manvolnum>
+            </citerefentry>,
+            <citerefentry>
+                <refentrytitle>blah_job_registry_scan_by_subject</refentrytitle>
+                <manvolnum>1</manvolnum>
+            </citerefentry>
+        </para>
+    </refsect1>
+
+</refentry>
+

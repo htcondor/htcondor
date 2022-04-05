@@ -30,14 +30,13 @@
 #include "condor_distribution.h"
 #include "basename.h"
 #include "internet.h"
-#include "MyString.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_ftp.h"
 
 
 const char	*MyName = NULL;
-MyString global_constraint;
+std::string global_constraint;
 bool had_error = false;
 DCSchedd* schedd = NULL;
 bool All = false;
@@ -91,7 +90,7 @@ procArg(const char* arg)
 	int		c, p;								// cluster/proc #
 	char*	tmp;
 
-	MyString constraint;
+	std::string constraint;
 
 	if(isdigit(*arg))
 	// process by cluster/proc #
@@ -106,8 +105,8 @@ procArg(const char* arg)
 		if(*tmp == '\0')
 		// delete the cluster
 		{
-			constraint.formatstr( "%s==%d", ATTR_CLUSTER_ID, c );
-			addConstraint(constraint.Value());
+			formatstr( constraint, "%s==%d", ATTR_CLUSTER_ID, c );
+			addConstraint(constraint.c_str());
 			return;
 		}
 		if(*tmp == '.')
@@ -122,10 +121,10 @@ procArg(const char* arg)
 			if(*tmp == '\0')
 			// process a proc
 			{
-				constraint.formatstr( "(%s==%d && %s==%d)", 
+				formatstr( constraint, "(%s==%d && %s==%d)", 
 					ATTR_CLUSTER_ID, c,
 					ATTR_PROC_ID, p);
-				addConstraint(constraint.Value());
+				addConstraint(constraint.c_str());
 				return;
 			}
 		}
@@ -135,8 +134,8 @@ procArg(const char* arg)
 	else if(isalpha(*arg))
 	// process by user name
 	{
-		constraint.formatstr( "%s == \"%s\"", ATTR_OWNER, arg );
-		addConstraint(constraint.Value());
+		formatstr( constraint, "%s == \"%s\"", ATTR_OWNER, arg );
+		addConstraint(constraint.c_str());
 	} else {
 		fprintf( stderr, "Warning: unrecognized \"%s\" skipped\n", arg );
 	}
@@ -146,7 +145,7 @@ procArg(const char* arg)
 void
 addConstraint( const char *constraint )
 {
-	if ( global_constraint.Length() > 0 ) {
+	if ( global_constraint.length() > 0 ) {
 		global_constraint += " || (";
 	} else {
 		global_constraint += "(";
@@ -177,7 +176,7 @@ main(int argc, char *argv[])
 	char* pool = NULL;
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
-	MyString method;
+	std::string method;
 	char *tmp;
 
 	myDistro->Init( argc, argv );
@@ -315,7 +314,7 @@ main(int argc, char *argv[])
 	if (st_method == STM_UNKNOWN) {
 		fprintf( stderr,
 			"%s: Unknown sandbox transfer method: %s\n", MyName,
-			method.Value());
+			method.c_str());
 		usage();
 		exit(1);
 	}
@@ -355,9 +354,10 @@ main(int argc, char *argv[])
 			}
 		}
 	}
+	free(args);
 
 		// Sanity check: make certain we now have a constraint
-	if ( global_constraint.Length() <= 0 ) {			
+	if ( global_constraint.length() <= 0 ) {
 		fprintf( stderr, "Unable to create a job constraint!\n");
 		exit(1);
 	}
@@ -371,7 +371,7 @@ main(int argc, char *argv[])
 			// Get the sandbox directly from the schedd.
 			// And now, do the work.
 			CondorError errstack;
-			result = schedd->receiveJobSandbox(global_constraint.Value(),
+			result = schedd->receiveJobSandbox(global_constraint.c_str(),
 				&errstack);
 			if ( !result ) {
 				fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
@@ -398,7 +398,7 @@ main(int argc, char *argv[])
 			std::string td_sinful;
 			std::string td_cap;
 
-			result = schedd->requestSandboxLocation(FTPD_DOWNLOAD, 
+			result = schedd->requestSandboxLocation(FTPD_DOWNLOAD,
 				global_constraint, FTP_CFTP, &respad, &errstack);
 			if ( !result ) {
 				fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );

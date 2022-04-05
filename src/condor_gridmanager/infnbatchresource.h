@@ -23,6 +23,7 @@
     
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include <map>
 
 #include "infnbatchjob.h"
 #include "baseresource.h"
@@ -35,7 +36,7 @@ class INFNBatchResource : public BaseResource
 public:
 	void Reconfig();
 
-	static const char *HashName( const char * batch_type, 
+	static std::string & HashName( const char * batch_type,
 	                             const char * gahp_args );
 
 	static INFNBatchResource* FindOrCreateResource( const char * batch_type, 
@@ -51,7 +52,7 @@ public:
 
 	~INFNBatchResource();
 
-	static HashTable <std::string, INFNBatchResource *> ResourcesByName;
+	static std::map <std::string, INFNBatchResource *> ResourcesByName;
 
 	const char *ResourceType();
 

@@ -213,7 +213,7 @@ createConfigTarball(	const char * configDir,
 
 	std::string contents;
 	formatstr( contents,
-		"use security : host_based\n"
+		"use security:host_based\n"
 		"LOCAL_HOSTS = $(FULL_HOSTNAME) $(IP_ADDRESS) 127.0.0.1 $(TCP_FORWARDING_HOST)\n"
 		"CONDOR_HOST = condor_pool@*/* $(LOCAL_HOSTS)\n"
 		"COLLECTOR_HOST = %s\n"
@@ -404,6 +404,8 @@ help( const char * argv0 ) {
 		"\t[-duration <lease duration in decimal hours>]\n"
 		"\t[-idle <idle duration in decimal hours>]\n"
 		"\n"
+		"To start the annex automatically without a yes/no approval prompt:\n"
+		"\t[-yes]"
 		"To customize the annex's HTCondor configuration:\n"
 		"\t[-config-dir </full/path/to/config.d>]\n"
 		"\n"
@@ -577,7 +579,7 @@ void handleUserData(	ClassAd & commandArguments,
 
 	if(! userData.empty()) {
 		std::string validationError;
-		char * base64Encoded = condor_base64_encode( (const unsigned char *)userData.c_str(), userData.length() );
+		char * base64Encoded = condor_base64_encode( (const unsigned char *)userData.c_str(), userData.length(), false );
 		if(! assignUserData( commandArguments, base64Encoded, clUserDataWins, validationError )) {
 			fprintf( stderr, "Failed to set user data in request ad (%s).\n", validationError.c_str() );
 			exit( 5 );
@@ -594,7 +596,7 @@ bool saidYes( const std::string & response ) {
 
 void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 						bool leaseDurationSpecified, bool unclaimedTimeoutSpecified,
-						long int count, long int leaseDuration, long int unclaimedTimeout ) {
+						long int count, long int leaseDuration, long int unclaimedTimeout, bool skipYesNoPrompt ) {
 	FILE * file = NULL;
 	bool closeFile = true;
 	if( strcmp( sfrConfigFile, "-" ) == 0 ) {
@@ -628,6 +630,8 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 		commandArguments = spotFleetRequest;
 	}
 
+	std::string response;
+
 	fprintf( stdout,
 		"Will request %ld spot slot%s for %.2f hours.  "
 		"Each instance will terminate after being idle for %.2f hours.\n",
@@ -637,9 +641,13 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 		unclaimedTimeout / 3600.0
 	);
 
-	std::string response;
-	fprintf( stdout, "Is that OK?  (Type 'yes' or 'no'): " );
-	std::getline( std::cin, response );
+	if(! skipYesNoPrompt) {
+		fprintf( stdout, "Is that OK?  (Type 'yes' or 'no'): " );
+		std::getline( std::cin, response );
+	}
+	else {
+		response = "yes";
+	}
 
 	if(! saidYes( response )) {
 		fprintf( stdout, "Not starting an annex; user did not confirm.\n\n" );
@@ -661,7 +669,7 @@ void getSFRApproval(	ClassAd & commandArguments, const char * sfrConfigFile,
 void getODIApproval(	ClassAd & commandArguments,
 						const char * odiInstanceType, bool odiInstanceTypeSpecified,
 						bool leaseDurationSpecified, bool unclaimedTimeoutSpecified,
-						long int count, long int leaseDuration, long int unclaimedTimeout ) {
+						long int count, long int leaseDuration, long int unclaimedTimeout, bool skipYesNoPrompt ) {
 	fprintf( stdout,
 		"Will request %ld %s on-demand instance%s for %.2f hours.  "
 		"Each instance will terminate after being idle for %.2f hours.\n",
@@ -670,8 +678,13 @@ void getODIApproval(	ClassAd & commandArguments,
 	);
 
 	std::string response;
-	fprintf( stdout, "Is that OK?  (Type 'yes' or 'no'): " );
-	std::getline( std::cin, response );
+	if(! skipYesNoPrompt) {
+		fprintf( stdout, "Is that OK?  (Type 'yes' or 'no'): " );
+		std::getline( std::cin, response );
+	}
+	else {
+		response = "yes";
+	}
 
 	if(! saidYes( response )) {
 		fprintf( stdout, "Not starting an annex; user did not confirm.\n\n" );
@@ -753,6 +766,7 @@ annex_main( int argc, char ** argv ) {
 	std::string userData;
 	const char * userDataFileName = NULL;
 	std::vector< std::pair< std::string, std::string > > tags;
+	bool skipYesNoPrompt = false;
 
 	enum annex_t {
 		at_none = 0,
@@ -1156,6 +1170,8 @@ annex_main( int argc, char ** argv ) {
 			theCommand = ct_status;
 		} else if( is_dash_arg_prefix( argv[i], "classads", 7 ) ) {
 			wantClassAds = true;
+		} else if( is_dash_arg_prefix( argv[i], "yes", 3 ) ) {
+			skipYesNoPrompt = true;
 		} else if( argv[i][0] == '-' && argv[i][1] != '\0' ) {
 			fprintf( stderr, "%s: unrecognized option (%s).\n", argv[0], argv[i] );
 			return 1;
@@ -1310,9 +1326,9 @@ annex_main( int argc, char ** argv ) {
 			StringList tagNames;
 			std::string attrName;
 			for( unsigned i = 0; i < tags.size(); ++i ) {
-				tagNames.append(tags[0].first.c_str());
-				formatstr( attrName, "%s%s", ATTR_EC2_TAG_PREFIX, tags[0].first.c_str() );
-				commandArguments.Assign( attrName, tags[0].second.c_str() );
+				tagNames.append(tags[i].first.c_str());
+				formatstr( attrName, "%s%s", ATTR_EC2_TAG_PREFIX, tags[i].first.c_str() );
+				commandArguments.Assign( attrName, tags[i].second.c_str() );
 			}
 
 			char * sl = tagNames.print_to_string();
@@ -1418,10 +1434,14 @@ annex_main( int argc, char ** argv ) {
 			return condor_off( annexName, argc, argv, subCommandIndex );
 
 		case ct_condor_status:
+			// Obviously the wrong command int, but it no longer matters.
+			prepareCommandAd( commandArguments, CA_BULK_REQUEST );
 			return condor_status( annexName, sURLy.c_str(),
 				argc, argv, subCommandIndex );
 
 		case ct_status:
+			// Obviously the wrong command int, but it no longer matters.
+			prepareCommandAd( commandArguments, CA_BULK_REQUEST );
 			return status( annexName, wantClassAds, sURLy.c_str() );
 
 		case ct_setup: {
@@ -1453,7 +1473,7 @@ annex_main( int argc, char ** argv ) {
 				case at_sfr:
 					getSFRApproval(	commandArguments, sfrConfigFile,
 									leaseDurationSpecified, unclaimedTimeoutSpecified,
-									count, leaseDuration, unclaimedTimeout );
+									count, leaseDuration, unclaimedTimeout, skipYesNoPrompt );
 					break;
 
 				case at_odi:
@@ -1472,7 +1492,7 @@ annex_main( int argc, char ** argv ) {
 					getODIApproval( commandArguments,
 									odiInstanceType, odiInstanceTypeSpecified,
 									leaseDurationSpecified, unclaimedTimeoutSpecified,
-									count, leaseDuration, unclaimedTimeout );
+									count, leaseDuration, unclaimedTimeout, skipYesNoPrompt );
 					break;
 
 				default:
@@ -1500,7 +1520,10 @@ main_init( int argc, char ** argv ) {
 	// Make sure that, e.g., updateInterval is set.
 	main_config();
 
-	commandState = new ClassAdCollection( NULL, commandStateFile.c_str() );
+	commandState = new ClassAdCollection( NULL );
+	if( !commandState->InitLogFile(commandStateFile.c_str()) ) {
+		DC_Exit( 1 );
+	}
 
 	int rv = annex_main( argc, argv );
 	if( rv != 0 ) { DC_Exit( rv ); }

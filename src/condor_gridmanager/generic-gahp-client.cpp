@@ -1,7 +1,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "MyString.h"
 
 #include "gahp-client.h"
 

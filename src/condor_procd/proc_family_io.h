@@ -101,6 +101,7 @@ struct ProcFamilyUsage {
 	int64_t          block_writes;
 	int64_t          block_read_bytes;
 	int64_t          block_write_bytes;
+	int64_t          m_instructions;
 	double           io_wait;;
 
 	ProcFamilyUsage() :
@@ -120,6 +121,7 @@ struct ProcFamilyUsage {
 		block_writes(0),
 		block_read_bytes(0),
 		block_write_bytes(0),
+		m_instructions(0),
 		io_wait(0.0)
 	{ }
 
@@ -137,6 +139,7 @@ struct ProcFamilyUsage {
 
 		// These are current.
 		num_procs = other.num_procs;
+		m_instructions = other.m_instructions;
 
 		// These are job maxima.  (Although we only document max_image_size,
 		// total_resident_set_size, and total_proportional_set_size_available

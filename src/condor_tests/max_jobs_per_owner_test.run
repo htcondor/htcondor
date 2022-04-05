@@ -27,6 +27,14 @@ use strict;
 use warnings;
 
 my $testname = "max_jobs_per_owner_test";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	MAX_JOBS_PER_OWNER = 10
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 my $path_to_file;   # path to config file
 my $path_to_dir;    # path to the dir of config file
 
@@ -37,27 +45,6 @@ my $submit_content;
 my $submitfile;
 my @content;
 
-$path_to_dir = `condor_config_val LOCAL_DIR`;
-$path_to_dir =~ s/\n//;
-$path_to_file = "$path_to_dir/condor_config.local";
-$path_to_file =~ s/\n//;
-# write to config file
-open my $in, '<', $path_to_file or print "Can't read old file: $!\n";
-open my $out, ">$path_to_dir/condor_config_copy.local" or print "Can't write new file: $!\n";
-while (<$in>){
-	print $out $_;
-}
-print $out "MAX_JOBS_PER_OWNER=10\n";
-close $out;
-close $in;
-
-rename $path_to_file, "$path_to_dir/condor_config_orig.local";
-rename "$path_to_dir/condor_config_copy.local", $path_to_file;
-`condor_reconfig`;
-if (wait_for_reconfig() eq 0) {
-	print "Waited too long!!\n";
-	exit(1);
-}
 print "######################## test config knob MAX_JOBS_PER_OWNER ##########################\n";
 # submit 12 jobs
 $submit_content = 
@@ -119,11 +106,6 @@ if (how_many_entries(\@content) eq 8){
 }
 
 `condor_rm -all`;
-
-unlink $path_to_file;
-rename "$path_to_dir/condor_config_orig.local", $path_to_file;
-
-`condor_reconfig`;
 
 CondorTest::EndTest();
 exit(0);

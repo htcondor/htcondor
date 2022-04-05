@@ -38,6 +38,9 @@
 #include "get_daemon_name.h"
 #include "filename_tools.h"
 #include "condor_holdcodes.h"
+#include "condor_auth_passwd.h"
+#include "directory_util.h"
+#include "truncate.h"
 
 
 const char JR_ATTR_MAX_JOBS[] = "MaxJobs";
@@ -54,6 +57,7 @@ const char JR_ATTR_JOB_FAILURE_TEST[] = "JobFailureTest";
 const char JR_ATTR_JOB_SANDBOXED_TEST[] = "JobShouldBeSandboxed";
 const char JR_ATTR_USE_SHARED_X509_USER_PROXY[] = "UseSharedX509UserProxy";
 const char JR_ATTR_SHARED_X509_USER_PROXY[] = "SharedX509UserProxy";
+const char JR_ATTR_SEND_IDTOKENS[] = "SendIDTokens";
 const char JR_ATTR_OVERRIDE_ROUTING_ENTRY[] = "OverrideRoutingEntry";
 const char JR_ATTR_TARGET_UNIVERSE[] = "TargetUniverse";
 const char JR_ATTR_EDIT_JOB_IN_PLACE[] = "EditJobInPlace";
@@ -76,6 +80,9 @@ JobRouter::JobRouter(unsigned int as_tool)
 	m_periodic_timer_id = -1;
 	m_job_router_polling_period = 10;
 	m_enable_job_routing = true;
+
+	m_job_router_idtoken_refresh = 0;
+	m_job_router_idtoken_refresh_timer_id = -1;
 
 	m_job_router_entries_refresh = 0;
 	m_job_router_refresh_timer = -1;
@@ -136,12 +143,9 @@ JobRouter::~JobRouter() {
 		m_scheduler2 = NULL;
 	}
 
-#ifdef USE_XFORM_UTILS
 	clear_pre_and_post_xfms();
-#endif
 }
 
-#ifdef USE_XFORM_UTILS
 void JobRouter::clear_pre_and_post_xfms()
 {
 	MacroStreamXFormSource *xfm = NULL;
@@ -153,7 +157,6 @@ void JobRouter::clear_pre_and_post_xfms()
 	while (m_post_route_xfms.Next(xfm)) { delete xfm; }
 	m_post_route_xfms.Clear();
 }
-#endif
 
 void
 JobRouter::init() {
@@ -173,7 +176,7 @@ JobRouter::GetInstanceLock() {
 	// We may be an ordinary user, so cannot lock in $(LOCK)
 	param(lock_fullname,"JOB_ROUTER_LOCK");
 	ASSERT( !lock_fullname.empty() );
-	canonicalize_dir_delimiters(const_cast<char *>(lock_fullname.c_str()));
+	canonicalize_dir_delimiters(lock_fullname);
 
 	m_router_lock_fd = safe_open_wrapper_follow(lock_fullname.c_str(),O_CREAT|O_APPEND|O_WRONLY,0600);
 	if(m_router_lock_fd == -1) {
@@ -196,14 +199,12 @@ static bool initRouterDefaultsAd(classad::ClassAd & router_defaults_ad)
 	bool valid_defaults = true;
 	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
 
-#ifdef USE_XFORM_UTILS
 	// NOTE: for htcondor 9.0 we should change the default of this knob to false
 	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", true);
 	if ( ! use_entries && param_defined("JOB_ROUTER_DEFAULTS")) {
 		dprintf(D_ALWAYS, "JobRouter WARNING: JOB_ROUTER_DEFAULTS is defined, but will be ignored because JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES is false\n");
 		return true;
 	}
-#endif
 
 	auto_free_ptr router_defaults(param("JOB_ROUTER_DEFAULTS"));
 	if (router_defaults) {
@@ -270,25 +271,36 @@ JobRouter::config() {
 	bool allow_empty_requirements = false;
 	m_enable_job_routing = true;
 
-	if( !m_scheduler ) {
-		m_scheduler = new Scheduler("JOB_ROUTER_SCHEDD1_SPOOL");
-		m_scheduler->init();
-	}
+	// NOTE the Scheduler() class and the underlying JobLogMirror class does not handle
+	// a reconfig that changes what file that class is following, so we will param for
+	// the filename only once.  It is a restart knob, not a reconfig knob
+	// the param calls happen inside the constructors of the Scheduler() class.
 
-	std::string spool2;
-	if( param(spool2,"JOB_ROUTER_SCHEDD2_SPOOL") ) {
-		if( !m_scheduler2 ) {
-				// schedd2_spool is configured, but we have no schedd2, so create it
-			dprintf(D_ALWAYS,"Reading destination schedd spool %s\n",spool2.c_str());
-			m_scheduler2 = new Scheduler("JOB_ROUTER_SCHEDD2_SPOOL");
+	if (!m_scheduler) {
+		// we pass 0 here so that it will param for JOB_QUEUE_LOG if there is
+		// no configured JOB_ROUTER_SCHEDD1_* knobs to define the log
+		m_scheduler = new Scheduler(0);
+		if ( ! m_scheduler->following()) {
+			// if there was no configured file to follow, we abort
+			EXCEPT("No job_queue.log to follow for source schedd (SCHEDD1)");
+		}
+		m_scheduler->init();
+
+		m_scheduler2 = new Scheduler(2);
+		if (m_scheduler2->following()) {
 			m_scheduler2->init();
+		} else {
+			// SCHEDD2 is not configured, so just delete the class
+			delete m_scheduler2;
+			m_scheduler2 = nullptr;
 		}
 	}
-	else if( m_scheduler2 ) {
-			// schedd2_spool is not configured, but we have a schedd2, so delete it
-		dprintf(D_ALWAYS,"Destination schedd spool is now same as source schedd spool\n");
-		delete m_scheduler2;
-		m_scheduler2 = NULL;
+
+	dprintf(D_ALWAYS, "Following source schedd (SCHEDD1): %s\n", m_scheduler->following());
+	if (m_scheduler2) {
+		dprintf(D_ALWAYS, "Watching destination schedd (SCHEDD2): %s\n", m_scheduler2->following());
+	} else {
+		dprintf(D_ALWAYS, "Destination schedd (SCHEDD2) not configured, using source schedd as destintation also\n");
 	}
 
 	m_scheduler->config();
@@ -301,6 +313,25 @@ JobRouter::config() {
 #if HAVE_JOB_HOOKS
 	m_hook_mgr->reconfig();
 #endif
+
+	m_job_router_idtoken_refresh = param_integer("JOB_ROUTER_IDTOKEN_REFRESH",0);
+	if ( ! m_operate_as_tool) {
+		bool initial_refresh = true;
+		if (m_job_router_idtoken_refresh_timer_id >= 0) {
+			daemonCore->Cancel_Timer(m_job_router_idtoken_refresh_timer_id);
+			m_job_router_idtoken_refresh_timer_id = -1;
+			initial_refresh = false;
+		}
+		if (m_job_router_idtoken_refresh > 0) {
+			m_job_router_idtoken_refresh_timer_id =
+				daemonCore->Register_Timer(
+					initial_refresh ? 0 : m_job_router_idtoken_refresh,
+					m_job_router_idtoken_refresh,
+					(TimerHandlercpp)&JobRouter::refreshIDTokens,
+					"JobRouter::refreshIDTokens", this);
+		}
+	}
+
 
 	m_job_router_entries_refresh = param_integer("JOB_ROUTER_ENTRIES_REFRESH",0);
 	if ( ! m_operate_as_tool ) {
@@ -349,7 +380,6 @@ JobRouter::config() {
 	auto_free_ptr routing_cmd(param("JOB_ROUTER_ENTRIES_CMD"));
 	auto_free_ptr routing_entries(param("JOB_ROUTER_ENTRIES"));
 
-#ifdef USE_XFORM_UTILS
 	// NOTE: for htcondor 9.0 we should change the default of this knob to false
 	bool use_entries = param_boolean("JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES", true);
 	if ( ! use_entries && (routing_file || routing_cmd || routing_entries)) {
@@ -360,7 +390,6 @@ JobRouter::config() {
 		routing_cmd.set(NULL);
 		routing_entries.set(NULL);
 	}
-#endif
 
 	bool routing_entries_defined = route_names || routing_file || routing_cmd || routing_entries;
 	if(!routing_entries_defined) {
@@ -374,9 +403,9 @@ JobRouter::config() {
 
 	if (routing_cmd) {
 		ArgList args;
-		MyString error_msg;
-		if ( ! args.AppendArgsV1RawOrV2Quoted(routing_cmd, &error_msg)) {
-			EXCEPT("Invalid value specified for JOB_ROUTER_ENTRIES_CMD: %s", error_msg.Value());
+		std::string error_msg;
+		if ( ! args.AppendArgsV1RawOrV2Quoted(routing_cmd, error_msg)) {
+			EXCEPT("Invalid value specified for JOB_ROUTER_ENTRIES_CMD: %s", error_msg.c_str());
 		}
 
 			// I have tested with want_stderr 0 and 1, but I have not observed
@@ -445,7 +474,6 @@ JobRouter::config() {
 			new_routes);
 	}
 
-#ifdef USE_XFORM_UTILS
 	clear_pre_and_post_xfms();
 
 	classad::References xfm_names; // a set of all pre and post route transform names (used for error checking)
@@ -517,7 +545,6 @@ JobRouter::config() {
 
 		ParseRoute(route_str, name, allow_empty_requirements, new_routes);
 	}
-#endif
 
 	if(!m_enable_job_routing) {
 		delete new_routes;
@@ -626,6 +653,129 @@ JobRouter::config() {
 	}
 }
 
+void
+JobRouter::refreshIDTokens() {
+	StringList items;
+	param_and_insert_unique_items("JOB_ROUTER_CREATE_IDTOKEN_NAMES", items);
+	items.remove_anycase("NAMES");
+
+	if (IsDebugLevel(D_ALWAYS)) {
+		auto_free_ptr tokenids(items.print_to_string());
+		dprintf(D_ALWAYS, "JobRouter::refreshIDTokens - %s\n", tokenids.ptr());
+	}
+
+	// Build a map of existing tokens that we will remove items from when we refresh these tokens
+	std::map<std::string, std::string> delete_tokens;
+	for (auto it : m_idtokens) { delete_tokens[it.first] = it.second; }
+
+	// Create or overwrite token files
+	for (const char * item = items.first(); item != NULL; item = items.next()) {
+		std::string knob("JOB_ROUTER_CREATE_IDTOKEN_"); knob += item;
+		auto_free_ptr props = param(knob.c_str());
+		if (props && CreateIDTokenFile(item, props)) {
+			// no need to delete this one because we are going to overwrite it
+			delete_tokens.erase(item);
+		}
+	}
+
+	for (auto it : delete_tokens) {
+		RemoveIDTokenFile(it.first);
+	}
+}
+
+bool JobRouter::CreateIDTokenFile(const char * name, const char * props)
+{
+	// props can be a new classad that has attributes to define the scope of the token
+	ClassAd ad;
+	time_t lifetime = -1;
+	std::string subject, key, token, fname, dir, tmp, owner, domain;
+	std::vector<std::string> authz_list;
+	if (initAdFromString(props, ad) && ad.size()) {
+		ad.LookupString("sub", subject);
+		ad.LookupString("kid", key);
+		ad.LookupInteger("lifetime", lifetime);
+		if (ad.LookupString("scope", tmp)) {
+			StringTokenIterator it(tmp);
+			for (auto str = it.first(); str; str = it.next()) {
+				authz_list.push_back(str);
+			}
+		}
+		ad.LookupString("dir", dir);
+		ad.LookupString("filename", fname);
+		ad.LookupString(ATTR_OWNER, owner);
+		ad.LookupString(ATTR_NT_DOMAIN, domain);
+	} else {
+		// initAdFromString will print the lines it can't parse, we just need to report that
+		// the we will not be creating the token at all as a result of the config failure
+		dprintf(D_ALWAYS, "Ignoring invalid %s IDTOKEN config : %s\n", name, props);
+		return false;
+	}
+
+	if (subject.empty()) { subject = name; }
+	if (fname.empty()) { fname = name; }
+	if (dir.empty()) { param(dir, "SEC_TOKEN_DIRECTORY"); }
+
+	CondorError err;
+	if (!Condor_Auth_Passwd::generate_token(subject, key, authz_list, lifetime, token, 0, &err)) {
+		dprintf(D_ALWAYS, "failed to create token %s : %s\n", name, err.getFullText(false).c_str());
+		return false;
+	}
+	token += "\n"; // technically token files *can* have multiple tokens separated by newline
+
+	dircat(dir.c_str(), fname.c_str(), tmp);
+
+	bool setpriv = !owner.empty();
+	priv_state old_priv = PRIV_UNKNOWN;
+	if (setpriv) {
+	#ifdef WIN32
+		// Windows always needs a domain name for init_user_ids
+		if (domain.empty()) { param(domain, "UID_DOMAIN"); }
+	#endif
+		if (!init_user_ids(owner.c_str(), domain.c_str()))
+		{
+			dprintf(D_ALWAYS, "Failed in init_user_ids(%s,%s) for CREATE_IDTOKEN_%s\n",
+				owner.c_str(), domain.c_str(), name);
+			return false;
+		}
+		old_priv = set_priv(PRIV_USER);
+	}
+
+	bool success = false;
+	int fd = safe_create_keep_if_exists(tmp.c_str(), O_CREAT | O_WRONLY | _O_BINARY, 0600);
+	if (fd >= 0) {
+		(void)full_write(fd, token.c_str(), token.size());
+		ftruncate(fd, token.size()); // incase the data in the file is less than it was before.
+		close(fd);
+
+		// save the filepath
+		m_idtokens[name] = tmp;
+		success = true;
+	} else {
+		dprintf(D_ALWAYS, "Cannot write token to %s: %s (errno=%d)\n", tmp.c_str(), strerror(errno), errno);
+	}
+
+	if (setpriv) {
+		set_priv(old_priv);
+		uninit_user_ids();
+	}
+
+	return success;
+}
+
+bool JobRouter::RemoveIDTokenFile(const std::string & name)
+{
+	auto it = m_idtokens.find(name);
+	if (it != m_idtokens.end()) {
+		dprintf(D_ALWAYS, "deleting %s IDTOKEN file : %s\n", name.c_str(), it->second.c_str());
+		unlink(it->second.c_str());
+		m_idtokens.erase(it);
+	}
+
+	return true;
+}
+
+
+
 void JobRouter::dump_routes(FILE* hf) // dump the routing information to the given file.
 {
 	// build a set of route names, we will remove names from this list as we print them
@@ -635,7 +785,6 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 		remaining_names.insert(route->Name());
 	}
 
-#ifdef USE_XFORM_UTILS
 	// dump pre route transforms
 	std::string buf;
 	if ( ! m_pre_route_xfms.IsEmpty()) {
@@ -662,7 +811,6 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 			fprintf(hf, "\n\n");
 		}
 	}
-#endif
 
 
 	// print the enabled routes in the order that they will be used
@@ -693,11 +841,7 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 		fprintf(hf, "GridResource : %s\n", route->GridResource());
 		fprintf(hf, "Requirements : %s\n", route->RouteRequirementsString());
 
-	#ifdef USE_XFORM_UTILS
-		fprintf(hf, "Route        : %s\n", route->UsesPreRouteTransform() ? "uses Pre-Route Transform" : "");
-	#else
-		fprintf(hf, "ClassAd      : ");
-	#endif
+		fprintf(hf, "Route        : %s\n", route->UsesPreRouteTransform() ? "uses Pre/Post-Route Transforms" : "");
 		std::string route_ad_string;
 		if (route->RouteStringPretty(route_ad_string)) {
 			fprintf(hf, "%s", route_ad_string.c_str());
@@ -775,6 +919,7 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 	while(m_jobs.iterate(job))
 	{
 		orig_ad = ad_collection->GetClassAd(job->src_key);
+		
 		// Forward any update of TimerRemove from the source schedd's
 		// job ad to our other copy of the ad.
 		// This brute-force update assumes that if  TimerRemove initially
@@ -783,12 +928,11 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 		// Do the same for x509UserProxyExpiration, which is used in some
 		// users' job policy expressions.
 		int timer_remove = -1;
-		MSC_SUPPRESS_WARNING(6011) // code analysis thinks orig_ad may be null, code analysis is wrong
-		if (orig_ad->EvaluateAttrInt(ATTR_TIMER_REMOVE_CHECK, timer_remove)) {
+		if (orig_ad && orig_ad->EvaluateAttrInt(ATTR_TIMER_REMOVE_CHECK, timer_remove)) {
 			job->src_ad.InsertAttr(ATTR_TIMER_REMOVE_CHECK, timer_remove);
 			job->src_ad.MarkAttributeClean(ATTR_TIMER_REMOVE_CHECK);
 		}
-		if (orig_ad->EvaluateAttrInt(ATTR_X509_USER_PROXY_EXPIRATION, timer_remove)) {
+		if (orig_ad && orig_ad->EvaluateAttrInt(ATTR_X509_USER_PROXY_EXPIRATION, timer_remove)) {
 			job->src_ad.InsertAttr(ATTR_X509_USER_PROXY_EXPIRATION, timer_remove);
 			job->src_ad.MarkAttributeClean(ATTR_X509_USER_PROXY_EXPIRATION);
 		}
@@ -797,11 +941,10 @@ JobRouter::EvalAllSrcJobPeriodicExprs()
 			dprintf(D_ALWAYS, "JobRouter failure (%s): Unable to "
 					"evaluate job's periodic policy "
 					"expressions.\n", job->JobDesc().c_str());
-			if( !orig_ad ) {
-				dprintf(D_ALWAYS, "JobRouter failure (%s): "
-					"failed to reset src job "
-					"attributes, because ad not found "
-					"in collection.\n",job->JobDesc().c_str());
+
+			if (!orig_ad) {
+				dprintf(D_ALWAYS, "JobRouter failure (%s): failed to reset src job attributes, because ad not found in collection.\n",
+						job->JobDesc().c_str());
 				continue;
 			}
 
@@ -833,21 +976,15 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 	UserPolicy user_policy;
 	ClassAd converted_ad;
 	int action;
-	MyString reason;
+	std::string reason;
 	int reason_code;
 	int reason_subcode;
 	bool ret_val = false;
 
 	converted_ad = job->src_ad;
-#ifdef USE_NON_MUTATING_USERPOLICY
 	user_policy.Init();
 
 	action = user_policy.AnalyzePolicy(converted_ad, PERIODIC_ONLY);
-#else
-	user_policy.Init(&converted_ad);
-
-	action = user_policy.AnalyzePolicy(PERIODIC_ONLY);
-#endif
 
 	user_policy.FiringReason(reason,reason_code,reason_subcode);
 	if ( reason == "" ) {
@@ -857,17 +994,17 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 	switch(action)
 	{
 		case UNDEFINED_EVAL:
-			ret_val = SetJobHeld(job->src_ad, reason.Value(), reason_code, reason_subcode);
+			ret_val = SetJobHeld(job->src_ad, reason.c_str(), reason_code, reason_subcode);
 			break;
 		case STAYS_IN_QUEUE:
 			// do nothing
 			ret_val = true;
 			break;
 		case REMOVE_FROM_QUEUE:
-			ret_val = SetJobRemoved(job->src_ad, reason.Value());
+			ret_val = SetJobRemoved(job->src_ad, reason.c_str());
 			break;
 		case HOLD_IN_QUEUE:
-			ret_val = SetJobHeld(job->src_ad, reason.Value(), reason_code, reason_subcode);
+			ret_val = SetJobHeld(job->src_ad, reason.c_str(), reason_code, reason_subcode);
 			break;
 		case RELEASE_FROM_HOLD:
 			// When a job that is managed by the job router is
@@ -902,12 +1039,8 @@ JobRouter::SetJobHeld(classad::ClassAd& ad, const char* hold_reason, int hold_co
 		dprintf(D_ALWAYS, "JobRouter failure (%d.%d): Unable to "					"retrieve current job status.\n", cluster,proc);
 		return false;
 	}
-	if (HELD != status)
+	if (HELD != status && REMOVED != status && COMPLETED != status)
 	{
-		if (REMOVED == status)
-		{
-			ad.InsertAttr(ATTR_JOB_STATUS_ON_RELEASE, REMOVED);
-		}
 		ad.InsertAttr(ATTR_JOB_STATUS, HELD);
 		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL));
 		ad.InsertAttr(ATTR_HOLD_REASON, hold_reason);
@@ -978,7 +1111,6 @@ JobRouter::SetJobRemoved(classad::ClassAd& ad, const char* remove_reason)
 	return ret_val;
 }
 
-#ifdef USE_XFORM_UTILS
 
 void JobRouter::ParseRoute(
 	const char * route_text,
@@ -1001,7 +1133,8 @@ void JobRouter::ParseRoute(
 	std::string errmsg;
 
 	// If classad syntax, we have to do macro expansion on the route text
-	if (*text == '[') {
+	// some configs put c-style comments before the classad, so treat /* as signalling a classad config
+	if (*text == '[' || (text[0] == '/' && text[1] == '*')) {
 		// first we need to do macro expansion
 		ad_text.set(expand_param(route_text));
 		text = ad_text.ptr();
@@ -1041,7 +1174,6 @@ void JobRouter::ParseRoute(
 	//hash_order.insert(route->Name(), hash_index);
 }
 
-#endif
 
 void
 JobRouter::ParseRoutingEntries(
@@ -1071,53 +1203,35 @@ JobRouter::ParseRoutingEntries(
 		while (offset < (int)routing_string.size() && isspace(routing_string[offset])) ++offset;
 		if (offset >= (int)routing_string.size()) break;
 
-		MyString source_name;
+		std::string source_name;
 		formatstr(source_name, source_fmt, source_index++);
 		JobRoute * route = new JobRoute(source_name.c_str());
 		JobRoute *existing_route = NULL;
 		int this_offset = offset; //save offset before eating an ad.
 		bool ignore_route = false;
 
-#ifdef USE_XFORM_UTILS
 		std::string errmsg;
 		if ( ! route->ParseNext(routing_string,offset,&router_defaults_ad,allow_empty_requirements, source_name.c_str(), errmsg)) {
 			if ( ! errmsg.empty()) {
 				dprintf(D_ALWAYS, "JobRouter CONFIGURATION ERROR: %s\n", errmsg.c_str());
+				// HTCONDOR-864, make sure we don't use an out-of-range offset to substr or we will crash
+				std::string err_here;
+				if (this_offset >= (int)routing_string.size()) {
+					err_here = "offset ";
+					err_here += std::to_string(this_offset);
+				} else {
+					int len = (int)routing_string.size() - this_offset;
+					if (len > 79) len = 79;
+					err_here = routing_string.substr(this_offset, len);
+				}
 				dprintf(D_ALWAYS, "Ignoring the malformed route entry in JOB_ROUTER_ENTRIES%s, at offset %d starting here:\n%s\n",
-					param_tag, this_offset, routing_string.substr(this_offset, 79).c_str());
+					param_tag, this_offset, err_here.c_str());
 			}
 			delete route; route = NULL;
+			// prevent an infinite loop of we don't advance the offset
+			if (offset <= this_offset) break;
 			continue;
 		}
-#else
-		if ( ! route->ParseClassAd(routing_string,offset,&router_defaults_ad,allow_empty_requirements))
-		{
-			delete route; route = NULL;
-
-			classad::ClassAdParser parser;
-			classad::ClassAd ad;
-			int final_offset = this_offset;
-			std::string final_routing_string = routing_string;
-			final_routing_string += "\n[]"; // add an empty ClassAd
-
-			if(parser.ParseClassAd(final_routing_string,ad,final_offset)) {
-					// There must have been some trailing whitespace or
-					// comments after the last ClassAd, so the only reason
-					// ParseClassAd() failed was because there was no ad.
-					// Therefore, we are done.
-				break;
-			}
-
-			dprintf(D_ALWAYS,"JobRouter CONFIGURATION ERROR: Ignoring the malformed route entry in JOB_ROUTER_ENTRIES%s, at offset %d starting here:\n%s\n",
-				param_tag, this_offset, routing_string.substr(this_offset, 79).c_str());
-
-			// skip any junk and try parsing the next route in the list
-			while((int)routing_string.size() > offset && routing_string[offset] != '[') offset++;
-
-			ignore_route = true;
-			continue;
-		}
-#endif
 
 		const char * route_name = route->Name();
 		int hash_index = hash_order.getNumElements(); // in case we are not replacing
@@ -1175,7 +1289,7 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
 		route = it->second;
 		if (0 == new_routes->count(route->Name())) {
-			dprintf(D_ALWAYS,"JobRouter Note: dropping route '%s'\n",route->RouteString().c_str());
+			dprintf(D_ALWAYS,"JobRouter Note: dropping route '%s'\n",route->RouteDescription().c_str());
 		}
 	}
 
@@ -1184,7 +1298,7 @@ void JobRouter::SetRoutingTable(RoutingTable *new_routes, HashTable<std::string,
 		route = it->second;
 		auto found = m_routes->find(route->Name());
 		if (found == m_routes->end()) {
-			dprintf(D_ALWAYS,"JobRouter Note: adding new route '%s'\n",route->RouteString().c_str());
+			dprintf(D_ALWAYS,"JobRouter Note: adding new route '%s'\n",route->RouteDescription().c_str());
 		}
 		else {
 				// preserve state from the old route entry
@@ -1519,9 +1633,9 @@ JobRouter::AdoptOrphans() {
 		classad::ClassAd *src_ad = ad_collection->GetClassAd(src_key);
 		if(!src_ad) {
 			dprintf(D_ALWAYS,"JobRouter (src=%s,dest=%s): removing orphaned destination job with no matching source job.\n",src_key.c_str(),dest_key.c_str());
-			MyString err_desc;
+			std::string err_desc;
 			if(!remove_job(*dest_ad,dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",m_schedd2_name,m_schedd2_pool,err_desc)) {
-				dprintf(D_ALWAYS,"JobRouter (src=%s,dest=%s): failed to remove dest job: %s\n",src_key.c_str(),dest_key.c_str(),err_desc.Value());
+				dprintf(D_ALWAYS,"JobRouter (src=%s,dest=%s): failed to remove dest job: %s\n",src_key.c_str(),dest_key.c_str(),err_desc.c_str());
 			}
 			continue;
 		}
@@ -1567,9 +1681,9 @@ JobRouter::AdoptOrphans() {
 
 		if(!AddJob(job)) {
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to add orphaned job to my routed job list; aborting it.\n",job->JobDesc().c_str());
-			MyString err_desc;
+			std::string err_desc;
 			if(!remove_job(job->dest_ad,dest_proc_id.cluster,dest_proc_id.proc,"JobRouter orphan",m_schedd2_name,m_schedd2_pool,err_desc)) {
-				dprintf(D_ALWAYS,"JobRouter (%s): failed to remove dest job: %s\n",job->JobDesc().c_str(),err_desc.Value());
+				dprintf(D_ALWAYS,"JobRouter (%s): failed to remove dest job: %s\n",job->JobDesc().c_str(),err_desc.c_str());
 			}
 			delete job;
 		}
@@ -1612,12 +1726,12 @@ JobRouter::AdoptOrphans() {
 		//Yield management of this job so that it doesn't sit there
 		//forever in the queue.
 
-		MyString error_details;
+		std::string error_details;
 		PROC_ID src_proc_id = getProcByString(src_key.c_str());
 		if(!yield_job(*src_ad,m_schedd1_name,m_schedd1_pool,false,src_proc_id.cluster,src_proc_id.proc,&error_details,JobRouterName().c_str(),true,m_release_on_hold)) {
 			dprintf(D_ALWAYS,"JobRouter (src=%s): failed to yield orphan job: %s\n",
 					src_key.c_str(),
-					error_details.Value());
+					error_details.c_str());
 		} else {
 			// yield_job() sets the job's status to IDLE. If the job was
 			// previously running, we need an evict event.
@@ -1844,31 +1958,12 @@ JobRouter::ChooseRoute(classad::ClassAd *job_ad,bool *all_routes_full) {
 	for (auto it = m_route_order.begin(); it != m_route_order.end(); ++it) {
 		route = safe_lookup_route(*it);
 		if ( ! route) continue;
-#ifdef USE_XFORM_UTILS
 		if(!route->AcceptingMoreJobs()) continue;
 		*all_routes_full = false;
 		if (route->Matches(job_ad)) {
 			matches.push_back(route);
 			if (m_operate_as_tool) { dprintf(D_FULLDEBUG, "JobRouter: \tRoute Matches: %s\n", route->Name()); }
 		}
-#else
-		classad::MatchClassAd mad;
-		bool match = false;
-
-		if(!route->AcceptingMoreJobs()) continue;
-		*all_routes_full = false;
-
-		mad.ReplaceLeftAd(route->RouteAd());
-		mad.ReplaceRightAd(job_ad);
-
-		if(mad.EvaluateAttrBool("RightMatchesLeft", match) && match) {
-			matches.push_back(route);
-			if (m_operate_as_tool) { dprintf(D_FULLDEBUG, "JobRouter: \tRoute Matches: %s\n", route->Name()); }
-		}
-
-		mad.RemoveLeftAd();
-		mad.RemoveRightAd();
-#endif
 
 		if (!m_round_robin_selection && !matches.empty()) {
 			break;
@@ -1933,12 +2028,12 @@ JobRouter::TakeOverJob(RoutedJob *job) {
 		return;
 	}
 
-	MyString error_details;
+	std::string error_details;
 	ClaimJobResult cjr = claim_job(job->src_ad,m_schedd1_name,m_schedd1_pool,job->src_proc_id.cluster, job->src_proc_id.proc, &error_details, JobRouterName().c_str(), job->is_sandboxed);
 
 	switch(cjr) {
 	case CJR_ERROR: {
-		dprintf(D_ALWAYS,"JobRouter failure (%s): candidate job could not be claimed by JobRouter: %s\n",job->JobDesc().c_str(),error_details.Value());
+		dprintf(D_ALWAYS,"JobRouter failure (%s): candidate job could not be claimed by JobRouter: %s\n",job->JobDesc().c_str(),error_details.c_str());
 		GracefullyRemoveJob(job);
 		break;
 	}
@@ -1963,8 +2058,6 @@ JobRouter::SubmitJob(RoutedJob *job) {
 #if HAVE_JOB_HOOKS
 	if (NULL != m_hook_mgr)
 	{
-	        std::string route_info;
-
 	        // Retrieve the routing definition
 	        JobRoute *route = GetRouteByName(job->route_name.c_str());
         	if(!route) {
@@ -1973,7 +2066,7 @@ JobRouter::SubmitJob(RoutedJob *job) {
         		return;
         	}
 
-		route_info = route->RouteString();
+		std::string route_info = route->RouteDescription();
 		int rval = m_hook_mgr->hookTranslateJob(job, route_info);
 		switch (rval)
 		{
@@ -2016,12 +2109,12 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 		return;
 	}
 
+	unsigned int xform_flags = 0;
+	if (m_operate_as_tool & JOB_ROUTER_TOOL_FLAG_LOG_XFORM_ERRORS) { xform_flags |= XFORM_UTILS_LOG_ERRORS; }
+	if (m_operate_as_tool & JOB_ROUTER_TOOL_FLAG_LOG_XFORM_STEPS) { xform_flags |= XFORM_UTILS_LOG_STEPS; }
+
 	// The route ClassAd may change some things in the routed ad.
-#ifdef USE_XFORM_UTILS
-	if(!route->ApplyRoutingJobEdits(reinterpret_cast<ClassAd*>(&job->dest_ad), m_pre_route_xfms, m_post_route_xfms)) {
-#else
-	if(!route->ApplyRoutingJobEdits(&job->dest_ad)) {
-#endif
+	if(!route->ApplyRoutingJobEdits(reinterpret_cast<ClassAd*>(&job->dest_ad), m_pre_route_xfms, m_post_route_xfms, xform_flags)) {
 		dprintf(D_FULLDEBUG,"JobRouter failure (%s): failed to apply route ClassAd modifications to target ad.\n",job->JobDesc().c_str());
 		GracefullyRemoveJob(job);
 		return;
@@ -2062,6 +2155,40 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 	if(!job->PrepareSharedX509UserProxy(route)) {
 		GracefullyRemoveJob(job);
 		return;
+	}
+
+	std::string idtokens;
+	if(!route->EvalSendIDTokens(job,idtokens)) {
+		dprintf(D_ALWAYS,
+				"JobRouter failure (%s): evaluated SendIDTokens value is invalid!\n",
+				job->JobDesc().c_str());
+		GracefullyRemoveJob(job);
+		return;
+	}
+	if (!idtokens.empty()) {
+		std::string addfiles;
+
+		StringTokenIterator it(idtokens);
+		for (auto str = it.first(); str; str = it.next()) {
+			auto idt = m_idtokens.find(str);
+			if (idt != m_idtokens.end()) {
+				if (!addfiles.empty()) { addfiles += ","; }
+				addfiles += idt->second;
+			} else {
+				dprintf(D_ALWAYS, "JobRouter failure (%s): unknown IDTOKEN %s\n", job->JobDesc().c_str(), str);
+				GracefullyRemoveJob(job);
+				return;
+			}
+		}
+
+		if (!addfiles.empty()) {
+			std::string xferfiles;
+			if (job->dest_ad.LookupString(ATTR_TRANSFER_INPUT_FILES, xferfiles) && ! xferfiles.empty()) {
+				addfiles += ",";
+				addfiles += xferfiles;
+			}
+			job->dest_ad.InsertAttr(ATTR_TRANSFER_INPUT_FILES, addfiles);
+		}
 	}
 
 	int dest_cluster_id = -1;
@@ -2221,7 +2348,6 @@ RoutedJob::CleanupSharedX509UserProxy(JobRoute * /*route*/)
 	}
 	return true;
 }
-
 
 
 static bool ClassAdHasDirtyAttributes(classad::ClassAd *ad) {
@@ -2542,36 +2668,7 @@ JobRouter::TestJobSuccess(RoutedJob *job)
 			// any route associated with this job.
 		return true;
 	}
-	bool test_result = false;
-#ifdef USE_XFORM_UTILS
-	test_result = route->JobFailureTest(&job->src_ad);
-#else
-	classad::MatchClassAd mad;
-
-	mad.ReplaceLeftAd(route->RouteAd());
-	mad.ReplaceRightAd(&job->src_ad);
-
-	classad::ClassAd *upd;
-	classad::ClassAdParser parser;
-	std::string upd_str;
-	upd_str = "[leftJobFailureTest = LEFT.";
-	upd_str += JR_ATTR_JOB_FAILURE_TEST;
-	upd_str += " ;]";
-	upd = parser.ParseClassAd(upd_str);
-	ASSERT(upd);
-
-	mad.Update(*upd);
-	delete upd;
-
-	bool rc = mad.EvaluateAttrBool("leftJobFailureTest", test_result);
-	if(!rc) {
-			// UNDEFINED etc. are treated as NOT failure
-		test_result = false;
-	}
-
-	mad.RemoveLeftAd();
-	mad.RemoveRightAd();
-#endif
+	bool test_result = route->JobFailureTest(&job->src_ad);
 	return !test_result;
 }
 
@@ -2584,36 +2681,7 @@ JobRouter::TestJobSandboxed(RoutedJob *job)
 			// any route associated with this job.
 		return true;
 	}
-	bool test_result = false;
-
-#ifdef USE_XFORM_UTILS
-	test_result = route->JobShouldBeSandboxed(&job->src_ad);
-#else
-	classad::MatchClassAd mad;
-	mad.ReplaceLeftAd(route->RouteAd());
-	mad.ReplaceRightAd(&job->src_ad);
-
-	classad::ClassAd *upd;
-	classad::ClassAdParser parser;
-	std::string upd_str;
-	upd_str = "[leftJobSandboxedTest = LEFT.";
-	upd_str += JR_ATTR_JOB_SANDBOXED_TEST;
-	upd_str += " ;]";
-	upd = parser.ParseClassAd(upd_str);
-	ASSERT(upd);
-
-	mad.Update(*upd);
-	delete upd;
-
-	bool rc = mad.EvaluateAttrBool("leftJobSandboxedTest", test_result);
-	if(!rc) {
-			// UNDEFINED etc. are treated as NOT sandboxed
-		test_result = false;
-	}
-
-	mad.RemoveLeftAd();
-	mad.RemoveRightAd();
-#endif
+	bool test_result = route->JobShouldBeSandboxed(&job->src_ad);
 	return test_result;
 }
 
@@ -2626,40 +2694,10 @@ JobRouter::TestEditJobInPlace(RoutedJob *job)
 			// any route associated with this job.
 		return true;
 	}
-	bool test_result = false;
-
-#ifdef USE_XFORM_UTILS
-	test_result = route->EditJobInPlace(&job->src_ad);
-#else
-	classad::MatchClassAd mad;
-	mad.ReplaceLeftAd(route->RouteAd());
-	mad.ReplaceRightAd(&job->src_ad);
-
-	classad::ClassAd *upd;
-	classad::ClassAdParser parser;
-	std::string upd_str;
-	upd_str = "[leftEditJobInPlace = LEFT.";
-	upd_str += JR_ATTR_EDIT_JOB_IN_PLACE;
-	upd_str += " ;]";
-	upd = parser.ParseClassAd(upd_str);
-	ASSERT(upd);
-
-	mad.Update(*upd);
-	delete upd;
-
-	bool rc = mad.EvaluateAttrBool("leftEditJobInPlace", test_result);
-	if(!rc) {
-			// UNDEFINED etc. are treated as false
-		test_result = false;
-	}
-
-	mad.RemoveLeftAd();
-	mad.RemoveRightAd();
-#endif
+	bool test_result = route->EditJobInPlace(&job->src_ad);
 	return test_result;
 }
 
-#ifdef USE_XFORM_UTILS
 
 bool JobRoute::JobFailureTest(classad::ClassAd * job_ad)
 {
@@ -2703,14 +2741,12 @@ bool JobRoute::EditJobInPlace(classad::ClassAd * job_ad)
 	return test_result;
 }
 
-#endif
 
 bool
 JobRoute::EvalUseSharedX509UserProxy(RoutedJob *job)
 {
 	bool test_result = false;
 
-#ifdef USE_XFORM_UTILS
 	classad::ExprTree* expr = m_UseSharedX509UserProxy.Expr();
 	if (expr) {
 		classad::Value val;
@@ -2719,39 +2755,12 @@ JobRoute::EvalUseSharedX509UserProxy(RoutedJob *job)
 			test_result = false;
 		}
 	}
-#else
-	classad::MatchClassAd mad;
-	mad.ReplaceLeftAd(RouteAd());
-	mad.ReplaceRightAd(&job->src_ad);
-
-	classad::ClassAd *upd;
-	classad::ClassAdParser parser;
-	std::string upd_str;
-	upd_str = "[leftTest = LEFT.";
-	upd_str += JR_ATTR_USE_SHARED_X509_USER_PROXY;
-	upd_str += " ;]";
-	upd = parser.ParseClassAd(upd_str);
-	ASSERT(upd);
-
-	mad.Update(*upd);
-	delete upd;
-
-	bool rc = mad.EvaluateAttrBool("leftTest", test_result);
-	if(!rc) {
-			// UNDEFINED etc. are treated as FALSE
-		test_result = false;
-	}
-
-	mad.RemoveLeftAd();
-	mad.RemoveRightAd();
-#endif
 	return test_result;
 }
 
 bool
 JobRoute::EvalSharedX509UserProxy(RoutedJob *job,std::string &proxy_file)
 {
-#ifdef USE_XFORM_UTILS
 	classad::ExprTree* expr = m_SharedX509UserProxy.Expr();
 	if (expr) {
 		classad::Value val;
@@ -2760,32 +2769,31 @@ JobRoute::EvalSharedX509UserProxy(RoutedJob *job,std::string &proxy_file)
 		}
 	}
 	return false;
-#else
-	classad::MatchClassAd mad;
-
-	mad.ReplaceLeftAd(RouteAd());
-	mad.ReplaceRightAd(&job->src_ad);
-
-	classad::ClassAd *upd;
-	classad::ClassAdParser parser;
-	std::string upd_str;
-	upd_str = "[leftValue = LEFT.";
-	upd_str += JR_ATTR_SHARED_X509_USER_PROXY;
-	upd_str += " ;]";
-	upd = parser.ParseClassAd(upd_str);
-	ASSERT(upd);
-
-	mad.Update(*upd);
-	delete upd;
-
-	bool rc = mad.EvaluateAttrString("leftValue", proxy_file);
-
-	mad.RemoveLeftAd();
-	mad.RemoveRightAd();
-
-	return rc;
-#endif
 }
+
+bool JobRoute::EvalSendIDTokens(RoutedJob *job, std::string &idtokens)
+{
+	classad::ExprTree* expr = m_SendIDTokens.Expr();
+	if (expr) {
+		classad::Value val;
+		if (job->src_ad.EvaluateExpr(expr, val) && val.IsStringValue(idtokens)) {
+			return true;
+		}
+		// don't treat value==undefined as an error
+		if (ExprTreeIsLiteral(expr, val) && val.IsUndefinedValue()) {
+			idtokens.clear();
+			return true;
+		}
+		return false;
+	} else {
+		// if no expression, use the global knob
+		param(idtokens, "JOB_ROUTER_SEND_ROUTE_IDTOKENS");
+	}
+	return true;
+}
+
+
+
 
 void
 JobRouter::CleanupJob(RoutedJob *job) {
@@ -2824,9 +2832,9 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 
 	if(!job->is_done && job->dest_proc_id.cluster != -1) {
 		// Remove (abort) destination job.
-		MyString err_desc;
+		std::string err_desc;
 		if(!remove_job(job->dest_ad,job->dest_proc_id.cluster,job->dest_proc_id.proc,"JobRouter aborted job",m_schedd2_name,m_schedd2_pool,err_desc)) {
-			dprintf(D_ALWAYS,"JobRouter (%s): failed to remove dest job: %s\n",job->JobDesc().c_str(),err_desc.Value());
+			dprintf(D_ALWAYS,"JobRouter (%s): failed to remove dest job: %s\n",job->JobDesc().c_str(),err_desc.c_str());
 		}
 		else {
 			job->dest_proc_id.cluster = -1;
@@ -2834,7 +2842,7 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 	}
 
 	if(job->is_claimed) {
-		MyString error_details;
+		std::string error_details;
 		bool keep_trying = true;
 		int job_status = IDLE;
 		// yield_job() sets the job's status to IDLE. If the job was
@@ -2847,7 +2855,7 @@ JobRouter::FinishCleanupJob(RoutedJob *job) {
 		{
 			dprintf(D_ALWAYS,"JobRouter (%s): failed to yield job: %s\n",
 					job->JobDesc().c_str(),
-					error_details.Value());
+					error_details.c_str());
 
 			classad::ClassAd *src_ad = ad_collection->GetClassAd(job->src_key);
 			if(!src_ad) {
@@ -2907,15 +2915,14 @@ JobRouter::CleanupRetiredJob(RoutedJob *job) {
 	classad::ClassAdCollection *ad_collection = m_scheduler->GetClassAds();
 	classad::ClassAd *src_ad = ad_collection->GetClassAd(job->src_key);
 
-	// If src_ad cannot be found in the mirror, then the ad has probably
-	// been deleted, and we could just count that as being in sync.
-	// However, there is no penalty to keeping the job waiting around in
-	// retirement in this case, because without src_ad, we can't possibly
-	// try to route this job again or anything like that.  Therefore,
-	// play it safe and only count the mirror as synchronized if we
-	// can find src_ad and directly observe that it is not managed by us.
+	// If src_ad cannot be found in the mirror, then the ad has already
+	// been retired from the job ad. This is particularly likely to
+	// happen if we removed the job (e.g. due to job policy expressions).
+	// Consider it synchronized.
 
-	if(src_ad) {
+	if(!src_ad) {
+		src_job_synchronized = true;
+	} else {
 		std::string managed;
 		std::string manager;
 		src_ad->EvaluateAttrString(ATTR_JOB_MANAGED,managed);
@@ -2973,15 +2980,15 @@ JobRouter::TimerHandler_UpdateCollector() {
 void
 JobRouter::InvalidatePublicAd() {
 	ClassAd invalidate_ad;
-	MyString line;
+	std::string line;
 
 	ASSERT( ! m_operate_as_tool);
 
 	SetMyTypeName(invalidate_ad, QUERY_ADTYPE);
 	SetTargetTypeName(invalidate_ad, "Job_Router");
 
-	line.formatstr("%s == \"%s\"", ATTR_NAME, daemonName.c_str());
-	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.Value());
+	formatstr(line, "%s == \"%s\"", ATTR_NAME, daemonName.c_str());
+	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
 	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &invalidate_ad, NULL, false);
 }
 
@@ -2998,12 +3005,8 @@ JobRoute::JobRoute(const char * source) : m_source(source) {
 	m_throttle = 0;
 	m_override_routing_entry = -1;
 	m_target_universe = CONDOR_UNIVERSE_GRID;
-#ifdef USE_XFORM_UTILS
 	m_route_from_classad = false;
 	m_use_pre_route_transform = false;
-#else
-	m_route_requirements = NULL;
-#endif
 }
 
 JobRoute::~JobRoute() {
@@ -3018,6 +3021,17 @@ bool JobRoute::AcceptingMoreJobs() const
 	}
 	return m_num_jobs < m_max_jobs;
 }
+// HTCONDOR-646, for backward compatible logging/hooks print a classad containing the route name
+std::string JobRoute::RouteDescription() {
+	std::string info;
+	classad::ClassAd ad;
+	ad.InsertAttr(ATTR_NAME, m_name);
+	ad.InsertAttr(JR_ATTR_TARGET_UNIVERSE, m_target_universe);
+	if ( ! m_grid_resource.empty()) { ad.InsertAttr(ATTR_GRID_RESOURCE, m_grid_resource); }
+	classad::ClassAdUnParser unparser;
+	unparser.Unparse(info,&ad);
+	return info;
+}
 std::string
 JobRoute::ThrottleDesc() {
 	return ThrottleDesc(m_throttle);
@@ -3029,9 +3043,7 @@ JobRoute::ThrottleDesc(double throttle) {
 		desc = "none";
 	}
 	else {
-		MyString buf;
-		buf.formatstr("%g jobs/sec",throttle/THROTTLE_UPDATE_INTERVAL);
-		desc = buf.Value();
+		formatstr(desc, "%g jobs/sec", throttle/THROTTLE_UPDATE_INTERVAL);
 	}
 	return desc;
 }
@@ -3111,69 +3123,14 @@ JobRoute::AdjustFailureThrottles() {
 	m_recent_jobs_succeeded = 0;
 }
 
-#ifdef USE_XFORM_UTILS
-#else
-bool
-JobRoute::DigestRouteAd(bool allow_empty_requirements) {
-	if( !m_route_ad.EvaluateAttrInt( JR_ATTR_MAX_JOBS, m_max_jobs ) ) {
-		m_max_jobs = 100;
-	}
-	if( !m_route_ad.EvaluateAttrInt( JR_ATTR_MAX_IDLE_JOBS, m_max_idle_jobs ) ) {
-		m_max_idle_jobs = 50;
-	}
-	if( !m_route_ad.EvaluateAttrReal( JR_ATTR_FAILURE_RATE_THRESHOLD, m_failure_rate_threshold ) ) {
-		m_failure_rate_threshold = 0.03;
-	}
-	if( !m_route_ad.EvaluateAttrInt( JR_ATTR_TARGET_UNIVERSE, m_target_universe ) ) {
-		m_target_universe = CONDOR_UNIVERSE_GRID;
-	}
-	if( m_target_universe == CONDOR_UNIVERSE_GRID ) {
-		if( !m_route_ad.EvaluateAttrString( ATTR_GRID_RESOURCE, m_grid_resource ) ) {
-			dprintf(D_ALWAYS, "JobRouter: Missing or invalid %s in job route.\n",ATTR_GRID_RESOURCE);
-			return false;
-		}	
-	}
-	if( !m_route_ad.EvaluateAttrString( ATTR_NAME, m_name ) ) {
-		// If no name is specified, use the GridResource as the name.
-		m_name = m_grid_resource;
-
-		if( m_name.empty() ) {
-			dprintf(D_ALWAYS, "JobRouter: Missing or invalid %s in job route.\n",ATTR_NAME);
-			return false;
-		}
-	}
-	m_route_requirements = m_route_ad.Lookup( ATTR_REQUIREMENTS );
-	if(!m_route_requirements) {
-		m_route_requirements_str = "";
-		if(!allow_empty_requirements) {
-			dprintf(D_ALWAYS, "JobRouter CONFIGURATION ERROR: Missing %s in job route.\n",ATTR_REQUIREMENTS);
-			return false;
-		}
-	}
-	else {
-		classad::ClassAdUnParser unparser;
-		unparser.Unparse(m_route_requirements_str,m_route_requirements);
-	}
-	bool override;
-	if( !m_route_ad.EvaluateAttrBool( JR_ATTR_OVERRIDE_ROUTING_ENTRY, override ) ) {
-		m_override_routing_entry = -1;
-	}
-	else {
-		m_override_routing_entry = override;
-	}
-	return true;
-}
-#endif
-
-#ifdef USE_XFORM_UTILS
 bool
 JobRoute::ApplyRoutingJobEdits(
 	ClassAd *src_ad,
 	SimpleList<MacroStreamXFormSource*>& pre_route,
-	SimpleList<MacroStreamXFormSource*>& post_route)
+	SimpleList<MacroStreamXFormSource*>& post_route,
+	unsigned int xform_flags)
 {
-	XFormHash mset(CONFIG_OPT_DEFAULTS_ARE_PARAM_INFO /* | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_WANT_META */);
-	//mset.init();
+	XFormHash mset(XFormHash::Flavor::Basic);
 	mset.macros().apool.reserve(0x10000); // allocate workspace. TODO: keep track of route workspace size.
 	mset.macros().sources.push_back(this->Name());
 
@@ -3187,7 +3144,8 @@ JobRoute::ApplyRoutingJobEdits(
 				dprintf(D_FULLDEBUG, "JobRouter pre-route transform %s: does not match job. skippping it.\n", xfm->getName());
 				continue;
 			}
-			rval = TransformClassAd(src_ad, *xfm, mset, errmsg);
+			if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying pre-route transform: %s\n", xfm->getName()); }
+			rval = TransformClassAd(src_ad, *xfm, mset, errmsg, xform_flags);
 			if (rval < 0) {
 				// transform failed, errmsg says why.
 				dprintf(D_ALWAYS, "JobRouter failure in pre-route transform %s: %s.\n", xfm->getName(), errmsg.c_str());
@@ -3199,7 +3157,8 @@ JobRoute::ApplyRoutingJobEdits(
 		optimize_macros(mset.macros());
 	}
 
-	rval = TransformClassAd(src_ad, m_route, mset, errmsg);
+	if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying route: %s\n", m_route.getName()); }
+	rval = TransformClassAd(src_ad, m_route, mset, errmsg, xform_flags);
 	if (rval < 0) {
 		// transform failed, errmsg says why.
 		dprintf(D_ALWAYS,"JobRouter failure (route=%s): %s.\n",Name(), errmsg.c_str());
@@ -3214,7 +3173,8 @@ JobRoute::ApplyRoutingJobEdits(
 				dprintf(D_FULLDEBUG, "JobRouter post-route transform %s: does not match job. skippping it.\n", xfm->getName());
 				continue;
 			}
-			rval = TransformClassAd(src_ad, *xfm, mset, errmsg);
+			if (xform_flags & XFORM_UTILS_LOG_STEPS) { dprintf(D_ALWAYS, "\tApplying post-route transform: %s\n", xfm->getName()); }
+			rval = TransformClassAd(src_ad, *xfm, mset, errmsg, xform_flags);
 			if (rval < 0) {
 				// transform failed, errmsg says why.
 				dprintf(D_ALWAYS, "JobRouter failure in pre-route transform %s: %s.\n", xfm->getName(), errmsg.c_str());
@@ -3246,10 +3206,10 @@ JobRoute::ParseNext(
 
 	// skip leading whitespace
 	while (offset < (int)routing_string.size() && isspace(routing_string[offset])) ++offset;
-	if (offset >= (int)routing_string.size()) return false;
+	if (offset+1 >= (int)routing_string.size()) return false;
 
-#if 1 // new for 8.9.7
-	if (routing_string[offset] == '[') {
+	// if the route starts with [ or with a c-style comment it must be an old-syntax classad route
+	if (routing_string[offset] == '[' || (routing_string[offset] == '/' && routing_string[offset+1] == '*')) {
 		// parse as new classad, use an empty defaults ad if none was provided
 		ClassAd dummy;
 		StringList statements;
@@ -3274,51 +3234,6 @@ JobRoute::ParseNext(
 			return false;
 		}
 	}
-#else
-	StringList statements;
-	if (routing_string[offset] == '[') {
-		// parse as new classad, use an empty defaults ad if none was provided
-		ClassAd dummy;
-		if ( ! router_defaults_ad) router_defaults_ad = &dummy;
-		int rval = ConvertClassadJobRouterRouteToXForm(statements, config_name, routing_string, offset, *router_defaults_ad, 0);
-		if (rval < 0) {
-			return false;
-		}
-		m_route_from_classad = true;
-		m_use_pre_route_transform = single_route_knob;
-	} else {
-		// consume lines up to the next transform statement or the next line starting with [
-		const char * input = routing_string.c_str() + offset;
-		StringTokenIterator lines(input, 512, "\n");
-		for (const char * line = lines.first(); line; line = lines.next()) {
-			const char * p = lines.remain();
-			if (starts_with_ignore_case(line, "transform") && ( ! line[9] || isspace(line[9]))) {
-				if ( ! p) {
-					offset = (int)routing_string.size();
-				} else {
-					offset += (p - input);
-				}
-				break;
-			}
-			statements.append(line);
-			while (p && isspace(*p)) ++p;
-			if (p && *p == '[') {
-				offset += (p - input);
-				break;
-			}
-		}
-		m_route_from_classad = false;
-		m_use_pre_route_transform = true;
-	}
-
-	if (statements.isEmpty()) {
-		return false;
-	}
-	int nlines = m_route.open(statements, WireMacro, errmsg);
-	if (nlines < 0) {
-		return false;
-	}
-#endif
 	// for routes that come from a single knob. (i.e. JOB_ROUTER_ROUTE_FOO) that name *must* be the same as the config name
 	if (single_route_knob && ! m_name.empty() && (YourStringNoCase(config_name) != m_name.c_str())) {
 		dprintf(D_ALWAYS, "WARNING: The Name specified in JOB_ROUTER_ROUTE_%s was \"%s\". using %s instead.", config_name, m_name.c_str(), config_name);
@@ -3348,6 +3263,11 @@ JobRoute::ParseNext(
 	m_EditJobInPlace.set(mset.local_param(JR_ATTR_EDIT_JOB_IN_PLACE, m_route.context()));
 	m_UseSharedX509UserProxy.set(mset.local_param(JR_ATTR_USE_SHARED_X509_USER_PROXY, m_route.context()));
 	m_SharedX509UserProxy.set(mset.local_param(JR_ATTR_SHARED_X509_USER_PROXY, m_route.context()));
+	if (mset.lookup(JR_ATTR_SEND_IDTOKENS, m_route.context())) {
+		m_SendIDTokens.set(mset.local_param(JR_ATTR_SEND_IDTOKENS, m_route.context()));
+		// if SendIDTokens is declared but empty, set it to the empty string so that the route does not use the global default
+		if (m_SendIDTokens.empty()) { m_SendIDTokens.set(strdup("\"\"")); }
+	}
 
 	bool knob_exists = false;
 	m_max_jobs = mset.local_param_int(JR_ATTR_MAX_JOBS, 100, m_route.context(), &knob_exists);
@@ -3395,124 +3315,6 @@ JobRoute::ParseNext(
 
 	return true;
 }
-#else
-
-std::string
-JobRoute::RouteString() {
-	std::string route_string;
-	classad::ClassAdUnParser unparser;
-	unparser.Unparse(route_string,&m_route_ad);
-	return route_string;
-}
-
-bool JobRoute::RouteStringPretty(std::string & str) {
-	if (m_route_ad.size() <= 0)
-		return false;
-	classad::PrettyPrint unparser;
-	unparser.Unparse(str, &m_route_ad);
-	return !str.empty();
-}
-
-bool
-JobRoute::ParseClassAd(std::string routing_string,int &offset,classad::ClassAd const *router_defaults_ad,bool allow_empty_requirements) {
-	classad::ClassAdParser parser;
-	classad::ClassAd ad;
-	if(!parser.ParseClassAd(routing_string,ad,offset)) {
-		return false;
-	}
-	m_route_ad = *router_defaults_ad;
-	m_route_ad.Update(ad);
-	return DigestRouteAd(allow_empty_requirements);
-}
-
-bool
-JobRoute::ApplyRoutingJobEdits(classad::ClassAd *src_ad) {
-	classad::AttrList::const_iterator itr;
-	classad::ExprTree *tree;
-
-	src_ad->DisableDirtyTracking();
-	// Do attribute copies
-	for( itr = m_route_ad.begin( ); itr != m_route_ad.end( ); itr++ ) {
-		char const *attr = itr->first.c_str();
-		std::string new_attr;
-		classad::ExprTree *expr;
-		if(strncmp(attr,"copy_",5)) continue;
-		attr = attr + 5;
-		if(!m_route_ad.EvaluateAttrString( itr->first, new_attr )) {
-			dprintf(D_ALWAYS,"JobRouter failure (route=%s): ApplyRoutingJobEdits failed to evaluate %s to a string.\n",Name(),itr->first.c_str());
-			continue;
-		}
-		dprintf(D_FULLDEBUG,"JobRouter (route=%s): Copying attribute %s to %s\n",Name(),attr,new_attr.c_str());
-		if(! (expr = src_ad->Lookup(attr)) ) {
-			classad::ClassAdParser parser;
-			expr = parser.ParseExpression( "undefined" );
-		}
-		else {
-			expr = expr->Copy();
-		}
-		if(!src_ad->Insert(new_attr,expr)) {
-			return false;
-		}
-	}
-	// Do attribute deletion
-	for( itr = m_route_ad.begin( ); itr != m_route_ad.end( ); itr++ ) {
-		char const *attr = itr->first.c_str();
-		if(strncmp(attr,"delete_",7)) continue;
-		attr = attr + 7;
-		dprintf(D_FULLDEBUG,"JobRouter (route=%s): Deleting attribute %s\n",Name(),attr);
-
-		src_ad->Delete(attr);
-	}
-	// Do attribute assignments
-	for( itr = m_route_ad.begin( ); itr != m_route_ad.end( ); itr++ ) {
-		char const *attr = itr->first.c_str();
-		if(strncmp(attr,"set_",4)) continue;
-		attr = attr + 4;
-		dprintf(D_FULLDEBUG,"JobRouter (route=%s): Setting attribute %s\n",Name(),attr);
-		if( !( tree = itr->second->Copy( ) ) ) {
-			return false;
-		}
-		if(!src_ad->Insert(attr,tree)) {
-			return false;
-		}
-	}
-	// Do attribute evaluation assignments
-	for( itr = m_route_ad.begin( ); itr != m_route_ad.end( ); itr++ ) {
-		char const *attr = itr->first.c_str();
-		if(strncmp(attr,"eval_set_",9)) continue;
-		attr = attr + 9;
-		dprintf(D_FULLDEBUG,"JobRouter (route=%s): Setting attribute %s to an evaluated expression\n",Name(),attr);
-		if( !( tree = itr->second->Copy( ) ) ) {
-			return false;
-		}
-		if(!src_ad->Insert(attr,tree)) {
-			return false;
-		}
-		classad::Value val;
-		if(!src_ad->EvaluateAttr(attr,val)) {
-			dprintf(D_ALWAYS,"JobRouter (route=%s): Failed to evaluate %s\n",Name(),attr);
-			return false;
-		}
-		classad::ClassAdUnParser unparser;
-		std::string valstr;
-		unparser.Unparse( valstr, val );
-
-		classad::ExprTree *valtree;
-		classad::ClassAdParser parser;
-		valtree=parser.ParseExpression(valstr);
-		if( !valtree ) {
-			dprintf(D_ALWAYS,"JobRouter (route=%s): Failed to parse unparsed evaluation of %s\n",Name(),attr);
-			return false;
-		}
-		if(!src_ad->Insert(attr,valtree)) {
-			return false;
-		}
-	}
-	src_ad->EnableDirtyTracking();
-
-	return true;
-}
-#endif
 
 std::string
 RoutedJob::JobDesc() const {

@@ -79,6 +79,14 @@ class BaseUserPolicy : public Service
 		*/
 	void checkPeriodic( void );
 
+		/* Reset our periodic evaluation timer to fire immediately,
+		 * then resume the usual interval.
+		 * Useful when an event merits checking the periodic policy,
+		 * but the effects shouldn't be triggered in the current
+		 * call stack.
+		 */
+	void checkPeriodicSoon();
+
  protected:
 
 		/** Initialize this class.  

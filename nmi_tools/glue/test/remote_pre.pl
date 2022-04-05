@@ -160,7 +160,7 @@ if( TestGlue::is_windows() ) {
 	}
 
 	# lets get our base config in place
-	my $genericconfig = "$targetdir" . "\\etc\\condor_config.generic";
+	my $genericconfig = "$targetdir" . "\\etc\\condor_config.base";
 	my $mainconfig = "$targetdir" . "\\condor_config";
 	my $localonfig = "$targetdir" . "\\condor_config.local";
 	my $localdir = $targetdir;
@@ -260,14 +260,11 @@ if( not TestGlue::is_windows() ) {
 		system( "ln -s condor/lib64 lib64" );
 	}
     
-	if(-f "condor/condor_install") {
-		system("ls condor");
-		chdir("condor");
-		system("chmod 755 condor_install");
-		system("./condor_install -make-personal-condor");
-		system("ls");
-		chdir("condor");
-	}
+	system("ls condor");
+	chdir("condor");
+	system("chmod 755 bin/make-personal-from-tarball");
+	system("./bin/make-personal-from-tarball");
+	system("ls");
 
     # Remove leftovers from extracting built binaries.
     print "Removing $version tar file and extraction\n";
@@ -278,6 +275,19 @@ if( not TestGlue::is_windows() ) {
 	# needing to be harvested later so before we start
 	# tweeking personal condors we have our condor_paths
 	# and CONDOR_CONFIG. 
+
+	# CondorPersonal.pl assumes LOCAL_CONFIG_FILE will be set in the
+	# source configuration, but make-personal-from-tarball doesn't
+	# set it. So append it here.
+	#
+	# Also, the test cmd_q_format_file appends parameters to the local
+	# config file that we define here (instead of creating a derived
+	# configuation).
+	my $mainConfigFile = $ENV{ CONDOR_CONFIG };
+	open( MAIN, ">> $mainConfigFile" ) or die "Failed to open original config file: $mainConfigFile :$!\n";
+	print MAIN "LOCAL_CONFIG_FILE = \$(LOCAL_DIR)/condor_config.local\n";
+	close( MAIN );
+	system("touch local/condor_config.local");
 }
 
 #Look for condor_tests/testconfigappend which we want at the end

@@ -30,16 +30,13 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my @submitfiles =	();
-
-my $pid = $$;
-my $ClusterId = 0;
+my $testname = "cmd_gpu_discovery";
 
 my $totalcpus = 6;
 my $totalgpus = 4;
 
-my $firstappend_condor_config = '
-
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	# These are for GPU configuration
 	MACHINE_RESOURCE_INVENTORY_GPUs = $(LIBEXEC)/condor_gpu_discovery -simulate:0,4 -properties
 	ENVIRONMENT_FOR_AssignedGPUs = CUDA_VISIBLE_DEVICES
@@ -52,30 +49,12 @@ my $firstappend_condor_config = '
 
 	# General settings 
 	NUM_CPUS = 6
-	NEGOTIATION_INTERVAL = 5
 	ALL_DEBUG = D_FULLDEBUG
 	MASTER_DEBUG = D_SECURITY:1 D_COMMAND:1
-';
-# don't forget PERSISTENT_CONFIG settings
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"cmdgpudiscovery");
-
-my $testname = "cmd_gpu_discovery";
-
-# First order up the config but do not start it. If the condor_config_val fails
-# there is no reason to go on
-
-CondorTest::StartCondorWithParams(
-	condor_name => "cmdgpudiscovery",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
-#print "************************** CONDOR_CONFIG now set to:$ENV{CONDOR_CONFIG} ******************\n";
-
-
-# now start the personal condor to ensure it comes up
+# -simulate:0,4 gives DetectedGPUs="GPU-a0223334, GPU-b1223334, GPU-c2223334, GPU-d3223334"
 
 #Do a job before setting tesing exit codes
 print "First test basic job\n";
@@ -206,14 +185,14 @@ if($configres != 1) {
 #while (<CF>) {
 #	print NF "$_";
 #}
-#print NF "OFFLINE_MACHINE_RESOURCE_GPUs=CUDA2\n";
+#print NF "OFFLINE_MACHINE_RESOURCE_GPUs=GPU-c2223334\n";
 #close(NF);
 #close(CF);
 
 #system("mv $localfig $oldconfiglocal");
 #system("mv $newconfiglocal $localfig");
 
-my $res = system('condor_config_val -startd -set "OFFLINE_MACHINE_RESOURCE_GPUS=CUDA2"');
+my $res = system('condor_config_val -startd -set "OFFLINE_MACHINE_RESOURCE_GPUS=GPU-c2223334"');
 
 if($res == 0) {
 	print "Correctly requested one gpu offline\n";
@@ -232,9 +211,9 @@ my @updates = ();
 my $trys = 0;
 while($slotsupdated < $totalcpus) {
 	if(is_windows()) {
-		runCondorTool('condor_status -constraint OfflineGPUs==\"CUDA2\" -af name',\@updates,2,{emit_output=>1});
+		runCondorTool('condor_status -constraint OfflineGPUs==\"GPU-c2223334\" -af name',\@updates,2,{emit_output=>1});
 	} else {
-		runCondorTool("condor_status -constraint \'OfflineGPUs==\"CUDA2\"\' -af name",\@updates,2,{emit_output=>1});
+		runCondorTool("condor_status -constraint \'OfflineGPUs==\"GPU-c2223334\"\' -af name",\@updates,2,{emit_output=>1});
 	}
 	$slotsupdated =  @updates;
 	$trys += 1;

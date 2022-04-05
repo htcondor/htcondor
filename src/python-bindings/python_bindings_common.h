@@ -40,13 +40,19 @@
 // but the python guys don't actually ship a pythonNNN_d.lib,  we avoid this problem by
 // including pyconfig.h via boost/python.hpp
 //
+
+// boost python as of boost 1.78 uses _1 placeholders for bind that
+// boost now declares to be deprecated.  This #define silences the
+// warning this generates.  Revisit this #define at such time as 
+// boost python gets updated.
+// https://github.com/boostorg/python/issues/359
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS 1
 #include <boost/python.hpp>
 
 #ifdef _MSC_VER // WINDOWS
  #pragma pop_macro("PLATFORM")
  // remove defines set by python headers that conflict in detail
  // but not in substance with the condor_common defines.
- #undef HAVE_SNPRINTF
  #undef snprintf
  #undef vsnprintf
  #undef S_ISDIR

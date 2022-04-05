@@ -455,19 +455,32 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptUDPReq
 			bool turn_encryption_on = will_enable_encryption == SecMan::SEC_FEAT_ACT_YES;
 
 			KeyInfo* key_to_use;
-			KeyInfo* blowfish_key;
+			KeyInfo* fallback_key;
+
+			// There's no AES support for UDP, so fall back to
+			// BLOWFISH (default) or 3DES if specified.  3DES would
+			// be preferred in FIPS mode.
+			std::string fallback_method_str = "BLOWFISH";
+			Protocol fallback_method = CONDOR_BLOWFISH;
+			if (param_boolean("FIPS", false)) {
+				fallback_method_str = "3DES";
+				fallback_method = CONDOR_3DES;
+			}
+			dprintf(D_SECURITY|D_VERBOSE, "SESSION: fallback crypto method would be %s.\n", fallback_method_str.c_str());
 
 			key_to_use = session->key();
-			blowfish_key = session->key(CONDOR_BLOWFISH);
+			fallback_key = session->key(fallback_method);
 
 			dprintf(D_NETWORK|D_VERBOSE, "UDP: server normal key (proto %i): %p\n", key_to_use->getProtocol(), key_to_use);
-			dprintf(D_NETWORK|D_VERBOSE, "UDP: server BF key (proto %i): %p\n", (blowfish_key ? blowfish_key->getProtocol() : 0), blowfish_key);
+			dprintf(D_NETWORK|D_VERBOSE, "UDP: server %s key (proto %i): %p\n",
+				fallback_method_str.c_str(),
+				(fallback_key ? fallback_key->getProtocol() : 0), fallback_key);
 			dprintf(D_NETWORK|D_VERBOSE, "UDP: server m_is_tcp: 0\n");
 
-			// this is UDP.  if we were going to use AES, use BLOWFISH instead (if it exists)
-			if((key_to_use->getProtocol() == CONDOR_AESGCM) && (blowfish_key)) {
-				dprintf(D_NETWORK, "UDP: SWITCHING FROM AES TO BLOWFISH.\n");
-				key_to_use = blowfish_key;
+			// this is UDP.  if we were going to use AES, use fallback instead (if it exists)
+			if((key_to_use->getProtocol() == CONDOR_AESGCM) && (fallback_key)) {
+				dprintf(D_NETWORK, "UDP: SWITCHING FROM AES TO %s.\n", fallback_method_str.c_str());
+				key_to_use = fallback_key;
 			}
 
 			if (!m_sock->set_crypto_key(turn_encryption_on, key_to_use)) {
@@ -923,7 +936,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					// generate a unique ID.
 					std::string tmpStr;
 					formatstr( tmpStr, "%s:%i:%i:%i",
-									get_local_hostname().Value(), daemonCore->mypid,
+									get_local_hostname().c_str(), daemonCore->mypid,
 							 (int)time(0), ZZZ_always_increase() );
 					assert (m_sid == NULL);
 					m_sid = strdup(tmpStr.c_str());
@@ -1210,6 +1223,23 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	if ( method_used ) {
 		m_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
+
+		// For CLAIMTOBE, explicitly limit the authorized permission
+		// levels to that of the current command and any implied ones.
+		if ( !strcasecmp(method_used, "CLAIMTOBE") ) {
+			std::string perm_list;
+			DCpermissionHierarchy hierarchy( m_comTable[m_cmd_index].perm );
+			DCpermission const *perms = hierarchy.getImpliedPerms();
+
+			// iterate through a list of this perm and all perms implied by it
+			for (DCpermission perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
+				if (!perm_list.empty()) {
+					perm_list += ',';
+				}
+				perm_list += PermString(perm);
+			}
+			m_policy->Assign(ATTR_SEC_LIMIT_AUTHORIZATION, perm_list);
+		}
 	}
 	if ( m_sock->getAuthenticatedName() ) {
 		m_policy->Assign(ATTR_SEC_AUTHENTICATED_NAME, m_sock->getAuthenticatedName() );
@@ -1299,28 +1329,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto
 {
 	dprintf( D_DAEMONCORE, "DAEMONCORE: EnableCrypto()\n");
 
-	if (m_will_enable_integrity == SecMan::SEC_FEAT_ACT_YES) {
-
-		if (!m_key) {
-			// uhm, there should be a key here!
-			m_result = FALSE;
-			return CommandProtocolFinished;
-		}
-
-		m_sock->decode();
-		if (!m_sock->set_MD_mode(MD_ALWAYS_ON, m_key)) {
-			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing request from %s.\n", m_sock->peer_description());
-			m_result = FALSE;
-			return CommandProtocolFinished;
-		} else {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", m_sid);
-			m_sec_man->key_printf (D_SECURITY, m_key);
-		}
-	} else {
-		m_sock->set_MD_mode(MD_OFF, m_key);
-	}
-
-
+	// We must configure encryption before integrity on the socket
+	// when using AES over TCP. If we do integrity first, then ReliSock
+	// will initialize an MD5 context and then tear it down when it
+	// learns it's doing AES. This breaks FIPS compliance.
 	if (m_will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) {
 
 		if (!m_key) {
@@ -1339,6 +1351,38 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto
 		}
 	} else {
 		m_sock->set_crypto_key(false, m_key);
+	}
+
+	if (m_will_enable_integrity == SecMan::SEC_FEAT_ACT_YES) {
+
+		if (!m_key) {
+			// uhm, there should be a key here!
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		}
+
+		m_sock->decode();
+
+		// if the encryption method is AES, we don't actually want to enable the MAC
+		// here as that instantiates an MD5 object which will cause FIPS to blow up.
+		bool result;
+		if(m_key->getProtocol() != CONDOR_AESGCM) {
+			result = m_sock->set_MD_mode(MD_ALWAYS_ON, m_key);
+		} else {
+			dprintf(D_SECURITY|D_VERBOSE, "SECMAN: because protocal is AES, not using other MAC.\n");
+			result = m_sock->set_MD_mode(MD_OFF, m_key);
+		}
+
+		if (!result) {
+			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing request from %s.\n", m_sock->peer_description());
+			m_result = FALSE;
+			return CommandProtocolFinished;
+		} else {
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", m_sid);
+			m_sec_man->key_printf (D_SECURITY, m_key);
+		}
+	} else {
+		m_sock->set_MD_mode(MD_OFF, m_key);
 	}
 
 	m_state = CommandProtocolVerifyCommand;
@@ -1739,7 +1783,17 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 
 		// add the key(s) to the cache
 
-		// if this is AES, we'll also create a derived BLOWFISH key (for UDP), if BLOWFISH is allowed
+		// if this is AES, we'll also create a derived fallback key
+		// (for UDP), if fallback is allowed.
+		//
+		// BLOWFISH is default, 3DES would be preferred in FIPS mode.
+		std::string fallback_method_str = "BLOWFISH";
+		Protocol fallback_method = CONDOR_BLOWFISH;
+		if (param_boolean("FIPS", false)) {
+			fallback_method_str = "3DES";
+			fallback_method = CONDOR_3DES;
+		}
+		dprintf(D_SECURITY|D_VERBOSE, "SESSION: fallback crypto method would be %s.\n", fallback_method_str.c_str());
 
 		std::vector<KeyInfo*> keyvec;
 		dprintf(D_SECURITY|D_VERBOSE, "SESSION: server checking key type: %i\n", (m_key ? m_key->getProtocol() : -1));
@@ -1747,17 +1801,19 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 			// put the normal key into the vector
 			keyvec.push_back(new KeyInfo(*m_key));
 
-			// now see if we want to (and are allowed) to add a BLOWFISH key in addition to AES
+			// now see if we want to (and are allowed) to add a fallback key in addition to AES
 			if (m_key->getProtocol() == CONDOR_AESGCM) {
 				std::string all_methods;
 				if (m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS_LIST, all_methods)) {
 					dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
 					StringList sl(all_methods.c_str());
-					if (sl.contains_anycase("BLOWFISH")) {
-						keyvec.push_back(new KeyInfo(m_key->getKeyData(), 24, CONDOR_BLOWFISH, 0));
-						dprintf(D_SECURITY, "SESSION: server duplicated AES to BLOWFISH key for UDP.\n");
+					if (sl.contains_anycase(fallback_method_str.c_str())) {
+						keyvec.push_back(new KeyInfo(m_key->getKeyData(), 24, fallback_method, 0));
+						dprintf(D_SECURITY, "SESSION: server duplicated AES to %s key for UDP.\n",
+							fallback_method_str.c_str());
 					} else {
-						dprintf(D_SECURITY, "SESSION: BLOWFISH not allowed.  UDP will not work.\n");
+						dprintf(D_SECURITY, "SESSION: %s not allowed.  UDP will not work.\n",
+							fallback_method_str.c_str());
 					}
 				} else {
 					dprintf(D_ALWAYS, "SESSION: no crypto methods list\n");

@@ -24,20 +24,17 @@
 #include "condor_universe.h"
 #include "condor_header_features.h"
 
-#if defined(__cplusplus)
 // parse a string of the form X.Y as a PROC_ID.
 // return true the input string was a valid proc id and ended with \0 or whitespace.
 // a pointer to the first unparsed character is optionally returned.
 // input may be X  or X.  or X.Y.  if no Y is specified then proc will be set to -1
 bool StrIsProcId(const char *str, int &cluster, int &proc, const char ** pend);
-#endif
 
 // a handy little structure used in a lot of places it has to remain a c style struct
 // because some c code (I'm looking at you std-u) depends on it.
 typedef struct PROC_ID {
 	int		cluster;
 	int		proc;
-#if defined(__cplusplus)
 	bool operator<(const PROC_ID& cp) const {
 		int diff = this->cluster - cp.cluster;
 		if ( ! diff) diff = this->proc - cp.proc;
@@ -56,14 +53,9 @@ typedef struct PROC_ID {
 	PROC_ID( int c, int p ) : cluster(c), proc(p) {}
 	bool isValid() const { return cluster != 0 && proc != 1; }
 	void invalidate() { cluster = 0; proc = 1; }
-#endif
 } PROC_ID;
 
-
-#if defined(__cplusplus)
 class MyString;
-template <class Item> class ExtArray;
-#endif
 
 /*
 **	Possible notification options
@@ -91,16 +83,9 @@ template <class Item> class ExtArray;
 #define SUSPENDED			7
 #define JOB_STATUS_MAX  	7 /* Largest valid job status value */
 
-// Put C funtion definitions here
-BEGIN_C_DECLS
-
 const char* getJobStatusString( int status );
 int getJobStatusNum( const char* name );
 
-END_C_DECLS
-
-// Put C++ definitions here
-#if defined(__cplusplus)
 bool operator==( const PROC_ID a, const PROC_ID b);
 size_t hashFuncPROC_ID( const PROC_ID & );
 size_t hashFunction(const PROC_ID &);
@@ -154,6 +139,7 @@ typedef struct JOB_ID_KEY {
 	operator const PROC_ID&() const { return *((const PROC_ID*)this); }
 	operator std::string() const;
 	void sprint(MyString &s) const;
+	void sprint(std::string &s) const;
 	bool set(const char * job_id_str) { return StrIsProcId(job_id_str, this->cluster, this->proc, NULL); }
 	static size_t hash(const JOB_ID_KEY &) noexcept;
 } JOB_ID_KEY;
@@ -161,7 +147,18 @@ typedef struct JOB_ID_KEY {
 inline bool operator==( const JOB_ID_KEY a, const JOB_ID_KEY b) { return a.cluster == b.cluster && a.proc == b.proc; }
 size_t hashFunction(const JOB_ID_KEY &);
 
-#endif
+// Macros used to indicate how a job was submitted to htcondor
+#define JOB_SUBMIT_METHOD_MIN 0
+#define JSM_CONDOR_SUBMIT 0
+#define JSM_DAGMAN 1
+#define JSM_PYTHON_BINDINGS 2
+#define JSM_HTC_JOB_SUBMIT 3
+#define JSM_HTC_DAG_SUBMIT 4
+#define JSM_HTC_JOBSET_SUBMIT 5
+#define JSM_USER_SET 100
+#define JOB_SUBMIT_METHOD_MAX 100
+
+const char* getSubmitMethodString(int method);
 
 #define ICKPT -1
 

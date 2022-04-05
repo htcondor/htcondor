@@ -269,7 +269,7 @@ JICLocalSchedd::getLocalJobAd( void )
 	if( ! JICLocalFile::getLocalJobAd() ) {
 		return false;
 	}
-	job_updater = new QmgrJobUpdater( job_ad, schedd_addr, CondorVersion() );
+	job_updater = new QmgrJobUpdater( job_ad, schedd_addr );
 	return true;
 }
 
@@ -497,7 +497,7 @@ JICLocalSchedd::initLocalUserLog( void )
 	bool ret = u_log->initFromJobAd( job_ad, false );
 	if( ! ret ) {
 		job_ad->Assign( ATTR_HOLD_REASON, "Failed to initialize user log");
-		job_ad->Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_UnableToInitUserLog );
+		job_ad->Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::UnableToInitUserLog );
 		job_ad->Assign( ATTR_HOLD_REASON_SUBCODE, 0 );
 		job_updater->updateJob(U_HOLD);
 		Starter->StarterExit(JOB_SHOULD_HOLD);

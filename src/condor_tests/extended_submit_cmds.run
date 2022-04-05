@@ -1,0 +1,243 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use CondorPersonal;
+use strict;
+use warnings;
+
+# request that a personal HTCondor be started before the test, and that it have
+# the following appended to its config file.
+#testreq: personal
+my $config = <<'CONDOR_TESTREQ_CONFIG';
+# add extensions to the submit language
+EXTENDED_SUBMIT_COMMANDS @=end
+    LongJob = true
+    ShortJob= false
+    accounting_group_user = error
+    JobSite = "string"
+    FavoriteFruit = "a,b"
+    SomeFile = "filename"
+    SomeInt = -1
+    SomeUint = 0
+    getReal =1.0
+    some_expression=a+b
+@end
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $testname = "extended_submit_cmds";
+
+# level 1 is default, level 2 will show all userlog events
+#Condor::DebugLevel(2);
+
+my $pid = $$;
+my $basefile = "$testname$pid";
+my $submitfile = "$basefile.sub";
+
+my $basesubmit = '
+	executable = x_cat.pl
+	arguments = .job.ad
+	output = $(BASE)$(procid).ad
+	error  = $(BASE)$(procid).err
+	# use file transfer so that IWD is the job sandbox
+	should_transfer_files = yes
+
+	longjob=$(procid)
+	shortjob=1-$(procid)
+	jobsite = chtc
+	FavoriteFruit = "kiwi grapefruit"
+	someFile = $(BASE).out
+	someint=42
+	someuint=6*7+1
+	getreal = 1e3
+	some_expression = $(getreal)*$(procid)
+';
+
+TLOG("creating submit file $submitfile\n");
+print $basesubmit;
+print "\tBASE=$basefile\n";
+print "\tlog=$submitfile.log\n";
+
+# create the submit file
+open(SF,">$submitfile") or die "Failed to open '$submitfile' : $!\n";
+print SF $basesubmit;
+print SF "\tBASE=$basefile\n";
+print SF "\tlog=$submitfile.log\n";
+print SF "\n\tQueue 2\n";
+close(SF);
+
+# callbacks for the log reader while the job is in the queue
+
+my $on_submit = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $procid = $args{"job"};
+	if ($procid < 0) {
+		TLOG "OK: Factory $cluster was submitted\n";
+	} else {
+		TLOG "OK: Job $cluster.$procid was submitted\n";
+	}
+	return 0;
+};
+CondorTest::RegisterSubmit($testname, $on_submit);
+
+my $on_execute = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $procid = $args{"job"};
+
+	TLOG "OK: Job $cluster.$procid began executing\n";
+	return 0;
+};
+CondorTest::RegisterExecute($testname, $on_execute);
+
+my $on_exit = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $procid = $args{"job"};
+	if ($procid < 0) {
+		TLOG "OK: Factory $cluster was removed\n";
+	} else {
+		TLOG "OK: Job $cluster.$procid exited\n";
+	}
+	return 0;
+};
+CondorTest::RegisterExited($testname, $on_exit);
+CondorTest::RegisterExitedSuccess($testname, $on_exit);
+CondorTest::RegisterExitedFailure($testname, $on_exit);
+
+my $shadowex = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $procid = $args{"job"};
+	my $shadowerr = $args{"shadowerror"};
+
+	TLOG "HMM: Job $cluster.$procid had shadow exception $shadowerr\n";
+	return 0;
+};
+CondorTest::RegisterShadow($testname, $shadowex);
+
+Condor::SetAllowedEvents("RegisterEvictedWithRequeue");
+Condor::SetAllowedEvents("RegisterEvictedWithoutCheckpoint");
+Condor::SetAllowedEvents("RegisterImageUpdated");
+
+# submit a job and make sure it succeeds
+# then check to see if the job has the expected attributes
+#
+TLOG("Submitting $submitfile to test extended submit commands\n");
+my $res = CondorTest::RunTest($testname, $submitfile, 0);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'all-jobs-ran');
+
+my %expect = ('LongJob'=>'false', 'ShortJob'=>'true', 'JobSite'=>'"chtc"', 'FavoriteFruit'=>'"kiwi,grapefruit"',
+	'SomeInt'=>'42','SomeUint'=> '43', 'getReal'=>'1000.0', 'some_expression'=>'1000.0 * 0',
+	);
+
+$res = 1;
+if ( ! CheckExpectations("${basefile}0.ad")) { $res = 0; }
+$expect{'LongJob'} = 'true';
+$expect{'ShortJob'} = 'false';
+$expect{'some_expression'} = '1000.0 * 1';
+if ( ! CheckExpectations("${basefile}1.ad")) { $res = 0; }
+
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'expected-job-attrs');
+
+TLOG("Checking for expected submit failures\n");
+my $args = "-a 'someuint=-1'";
+if (CondorUtils::is_windows()) { $args = "-a someuint=-1"; }
+
+my @results;
+my $rt = runCondorTool("condor_submit $submitfile $args",\@results,2,{emit_output=>0,expect_result=>\&ANY});
+print "\tcondor_submit $args returned exit code=$rt (expected=1):\n";
+for (@results) { print "\t: $_"; }
+$res = $rt; # because we expect failure, rt==1 should make $res==1 (which is success)
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'invalid-uint');
+
+$args = "-a accounting_group_user=bob";
+$rt = runCondorTool("condor_submit $submitfile $args",\@results,2,{emit_output=>0,expect_result=>\&ANY});
+print "\tcondor_submit $args returned exit code=$rt (expected=1):\n";
+for (@results) { print "\t: $_"; }
+$res = $rt;
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'invalid-command');
+
+## -- late materialization test ---
+
+$basefile = "${testname}LM$pid";
+$submitfile = "$basefile.sub";
+$basesubmit .= "\tgetreal=2e3\n\tmax_idle=2\n\tBASE=$basefile\n";
+
+TLOG("creating late materialize submit file $submitfile\n");
+print $basesubmit;
+print "\tlog=$submitfile.log\n";
+
+# create the submit file
+open(SF,">$submitfile") or die "Failed to open '$submitfile' : $!\n";
+print SF $basesubmit;
+print SF "\tlog=$submitfile.log\n";
+print SF "\n\tQueue 2\n";
+close(SF);
+
+$res = CondorTest::RunTest($testname, $submitfile, 0);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'late-mat-jobs-ran');
+
+$expect{getReal} = '2000.0';
+$expect{LongJob} = 'false';
+$expect{ShortJob} = 'true';
+$expect{some_expression} = '2000.0 * 0';
+$res = 1; # assume success
+if ( ! CheckExpectations("${basefile}0.ad")) { $res = 0; }
+$expect{'LongJob'} = 'true';
+$expect{'ShortJob'} = 'false';
+$expect{'some_expression'} = '2000.0 * 1';
+if ( ! CheckExpectations("${basefile}1.ad")) { $res = 0; }
+
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'expected-late-mat-attrs');
+
+
+CondorTest::EndTest();
+
+# -------------- worker functions ---------
+#
+sub CheckExpectations {
+	my $file = $_[0];
+	my $num_good = 0;
+	my $num_bad = 0;
+
+	TLOG("Checking $file for expected attributes\n");
+
+	my @attrs = `condor_q -job $file -af:lrng LongJob ShortJob JobSite FavoriteFruit SomeInt SomeUint getReal some_expression`;
+	for (@attrs) {
+		next if $_ =~ /^\s*$/;
+		my ($attr,$val) = $_ =~ m{^\s*([a-zA-Z0-9_\$\.]+)\s*=\s*(.*)$};
+		if ($val eq $expect{$attr}) {
+			print "\tSUCCESS: $attr expected $expect{$attr} : got $val\n";
+			$num_good += 1;
+		} else {
+			print "\tFAIL: $attr expected $expect{$attr} : got $val\n";
+			$num_bad += 1;
+		}
+	}
+
+	my $res = $num_good > 0 && $num_bad == 0;
+	return($res);
+}
+
+

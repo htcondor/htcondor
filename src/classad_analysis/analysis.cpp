@@ -2061,7 +2061,6 @@ bool ClassAdAnalyzer::
 DefinedLiteralValue( classad::Value &val )
 {
 	return ( val.IsStringValue( ) ||
-			 val.IsBooleanValue( ) ||
 			 val.IsNumber( ) ||
 			 val.IsAbsoluteTimeValue( ) ||
 			 val.IsRelativeTimeValue( ) );

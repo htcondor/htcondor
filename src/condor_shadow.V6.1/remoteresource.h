@@ -175,6 +175,11 @@ class RemoteResource : public Service {
 		*/
 	void closeClaimSock( void );
 
+		/* Close the syscall socket and enter reconnect mode, if
+		 * available.
+		 */
+	void disconnectClaimSock(const char *err_msg);
+
 		/** Return the reason this host exited.
 			@return The exit reason for this host.
 		*/ 
@@ -215,13 +220,13 @@ class RemoteResource : public Service {
 		*/
 	bool getSecSessionInfo(
 		char const *starter_reconnect_session_info,
-		MyString &reconnect_session_id,
-		MyString &reconnect_session_info,
-		MyString &reconnect_session_key,
+		std::string &reconnect_session_id,
+		std::string &reconnect_session_info,
+		std::string &reconnect_session_key,
 		char const *starter_filetrans_session_info,
-		MyString &filetrans_session_id,
-		MyString &filetrans_session_info,
-		MyString &filetrans_session_key);
+		std::string &filetrans_session_id,
+		std::string &filetrans_session_info,
+		std::string &filetrans_session_key);
 
 		/** Set the reason this host exited.  
 			@param reason Why did it exit?  Film at 11.
@@ -264,6 +269,8 @@ class RemoteResource : public Service {
 	FileTransfer filetrans;
 	FileTransferStatus m_upload_xfer_status;
 	FileTransferStatus m_download_xfer_status;
+	ClassAd m_upload_file_stats;
+	ClassAd m_download_file_stats;
 
 	void initFileTransfer();
 
@@ -365,6 +372,13 @@ class RemoteResource : public Service {
 			but should be safe if you really feel like calling it yourself.
 		*/
 	virtual void checkX509Proxy( void );
+
+		/** This timer handler is called if too much time has passed since we got
+		    an update from the starter.  This could indicate a problem with our
+			remote syscall sock connection, or the starter died somehow.
+			Intended for use as a DaemonCore timer handler (this, public).
+		*/
+	void updateFromStarterTimeout( void );
 	
 	/**
 	 * used to suspend a remotely running job
@@ -390,6 +404,10 @@ class RemoteResource : public Service {
 
 	// return true if job should be allowed to write to attribute
 	bool allowRemoteWriteAttributeAccess( const std::string & name );
+
+    void recordActivationExitExecutionTime( time_t when );
+
+	void setWaitOnKillFailure(bool wait) { m_wait_on_kill_failure = wait; };
 
  protected:
 
@@ -469,6 +487,16 @@ class RemoteResource : public Service {
 	int m_attempt_shutdown_tid;
 	time_t m_started_attempting_shutdown;
 
+    //
+    // Values for computing activation-related metrics.  (HTCONDOR-861)
+    //
+    struct {
+        time_t StartTime;
+        time_t StartExecutionTime;
+        time_t ExitExecutionTime;
+        time_t TerminationTime;
+    } activation;
+
 private:
 
 		/// Private helper methods for trying to reconnect
@@ -477,6 +505,7 @@ private:
 	int reconnect_attempts;
 	int next_reconnect_tid;
 	int proxy_check_tid;
+	int no_update_received_tid;
 
 	std::string proxy_path;
 	time_t last_proxy_timestamp;
@@ -506,6 +535,8 @@ private:
 	bool already_killed_graceful;
 	bool already_killed_fast;
 	bool m_got_job_exit;
+
+	bool m_wait_on_kill_failure;
 
 	void logRemoteAccessCheck(bool allow,char const *op,char const *name);
 

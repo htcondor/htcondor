@@ -548,7 +548,7 @@ FileLock::obtain( LOCK_TYPE t )
 	int saved_errno = -1;
 
 	if ( m_use_kernel_mutex == -1 ) {
-		m_use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+		m_use_kernel_mutex = (int)param_boolean("FILE_LOCK_VIA_MUTEX", true);
 	}
 
 		// If we have the path, we can try to lock via a mutex.  
@@ -698,7 +698,7 @@ FileLock::updateLockTimestamp(void)
 
 // create a temporary lock path name into supplied buffer.
 const char *
-FileLock::getTempPath(MyString & pathbuf)
+FileLock::getTempPath(std::string & pathbuf)
 {
 	const char *suffix = "";
 	const char *result = NULL;
@@ -716,7 +716,7 @@ FileLock::getTempPath(MyString & pathbuf)
 char *
 FileLock::CreateHashName(const char *orig, bool useDefault)
 {
-	MyString pathbuf;
+	std::string pathbuf;
 	const char *path = getTempPath(pathbuf);
 	unsigned long hash = 0;
 	char *temp_filename;

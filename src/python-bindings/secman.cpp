@@ -209,6 +209,14 @@ int getCommand(object command)
         {
             return getSampleCommand(res);
         }
+        // CRUFT The old OWNER authorization level was merged into
+        //   ADMINISTRATOR in HTCondor 9.9.0. For older daemons, we still
+	    //   recognize "OWNER" and issue the DC_NOP_OWNER command.
+        //   We should remove it eventually.
+        if (0 == strcasecmp(cmdstring.c_str(), "OWNER"))
+        {
+            return DC_NOP_OWNER;
+        }
         if (-1 != (res = getCommandNum(cmdstring.c_str())))
         {
             return res;
@@ -287,8 +295,8 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         // create the socket, due to processing of things like private network interfaces.
         addr = sock->get_connect_addr();
 
-	// Get the policy stored in the socket.
-	ClassAd sock_policy;
+        // Get the policy stored in the socket.
+        ClassAd sock_policy;
         sock->getPolicyAd(sock_policy);
 
         // Don't leak sock!
@@ -296,15 +304,15 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         sock = NULL;
         ml.release();
 
-        MyString cmd_map_ent;
+        std::string cmd_map_ent;
         const std::string &tag = m_tag_set ? m_tag : SecMan::getTag();
         if (tag.size()) {
-                cmd_map_ent.formatstr ("{%s,%s,<%i>}", tag.c_str(), addr.c_str(), num);
+                formatstr(cmd_map_ent, "{%s,%s,<%i>}", tag.c_str(), addr.c_str(), num);
         } else {
-                cmd_map_ent.formatstr ("{%s,<%i>}", addr.c_str(), num);
+                formatstr(cmd_map_ent, "{%s,<%i>}", addr.c_str(), num);
         }
 
-        MyString session_id;
+        std::string session_id;
         KeyCacheEntry *k = NULL;
         ClassAd *policy = NULL;
 
@@ -317,7 +325,7 @@ SecManWrapper::ping(object locate_obj, object command_obj)
         std::string origTag = SecMan::getTag();
         if (m_tag_set) {SecMan::setTag(tag);}
         // IMPORTANT: this hashtable returns 1 on success!
-        if (!(SecMan::session_cache)->lookup(session_id.Value(), k))
+        if (!(SecMan::session_cache)->lookup(session_id.c_str(), k))
         {
             if (m_tag_set) {SecMan::setTag(origTag);}
             THROW_EX(HTCondorValueError, "No valid entry in session map hash table!");
@@ -396,14 +404,14 @@ bool SecManWrapper::applyThreadLocalConfigOverrides(ConfigOverrides & old)
         return false;
 }
 
-void SecManWrapper::setFamilySession(const std::string & sess)
+bool SecManWrapper::setFamilySession(const std::string & sess)
 {
-    if ( ! m_key_allocated) return;
+    if ( ! m_key_allocated) return false;
 
     SecManWrapper *man = static_cast<SecManWrapper*>(MODULE_LOCK_TLS_GET(m_key));
     if (man) { 
         ClaimIdParser claimid(sess.c_str());
-        man->m_secman.CreateNonNegotiatedSecuritySession(
+        return man->m_secman.CreateNonNegotiatedSecuritySession(
                 DAEMON,
                 claimid.secSessionId(),
                 claimid.secSessionKey(),
@@ -414,6 +422,7 @@ void SecManWrapper::setFamilySession(const std::string & sess)
                 0,
                 nullptr);
     }
+	return false;
 }
 
 

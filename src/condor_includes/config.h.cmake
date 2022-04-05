@@ -26,16 +26,6 @@
 #define __CONFIGURE_H_CMAKE__
 
 //////////////////////////////////////////////////
-/// TODO: OS VARS, may be able to ax with some smart mods
-/// the definitions
-/// I may be able to do away with all of this.
-///* Define if on OS X 10.3 */
-//#cmakedefine Darwin_10_3
-///* Define if on OS X 10.4 */
-//#cmakedefine Darwin_10_4
-//////////////////////////////////////////////////
-
-//////////////////////////////////////////////////
 // Sadly, some of these are still in use
 /* Define if on FreeBSD 4 */
 #cmakedefine CONDOR_FREEBSD4
@@ -62,35 +52,11 @@
 
 //////////////////////////////////////////////////
 
-//////////////////////////////////////////////////
-/// Options which may be changed if standard universe
-/// goes away
-///* Define if we can do checkpointing */
-//#cmakedefine DOES_CHECKPOINTING
-///* Define if we can compress checkpoints */
-//#cmakedefine DOES_COMPRESS_CKPT
-///* Define if we can do remote syscalls */
-//#cmakedefine DOES_REMOTE_SYSCALLS
-///* Used in condor_ckpt/image.C */
-//#cmakedefine HAS_DYNAMIC_USER_JOBS
-//////////////////////////////////////////////////
-
-//////////////////////////////////////////////////
-/// Used only for libcondorapi
-///* does gcc support the -fPIC flag */
-//#cmakedefine HAVE_CC_PIC_FLAG
-///* does gcc support the -shared flag */
-//#cmakedefine HAVE_CC_SHARED_FLAG
-//////////////////////////////////////////////////
-
 #cmakedefine BUILDID ${BUILDID}
 
 /////////////////////////////////////////
 // The following are configurable options
 // previously --enable or --with...
-
-/* Define if sha1 checksums are required for released packages*/
-#cmakedefine ENABLE_CHECKSUM_SHA1 1
 
 /* Define to 1 to support invoking hooks throughout the workflow of a job (USED)*/
 #cmakedefine HAVE_JOB_HOOKS 1
@@ -110,16 +76,8 @@
 /* Define to 1 to support public input file transfer over HTTP */
 #cmakedefine HAVE_HTTP_PUBLIC_FILES 1
 
-/* Define if enabling KBDD (USED)*/
-#cmakedefine NEEDS_KBDD 1
 // configurable options.
 /////////////////////////////////////////
-
-/* Define if HAS_INET_NTOA*/
-#cmakedefine HAS_INET_NTOA 1
-
-/* Define if pthreads are available for DRMAA */
-#cmakedefine HAS_PTHREADS 1
 
 /* Define if pthreads are available (USED)*/
 #cmakedefine HAVE_PTHREADS 1
@@ -142,9 +100,6 @@
 /* Define to 1 to use clone() for fast forking (USED)*/
 #cmakedefine HAVE_CLONE 1
 
-///* Define to 1 of you know you can produce the debuglink tarball (USED by Imake, might eliminate)*/
-//#cmakedefine HAVE_DEBUGLINK_TARBALL 1
-
 /* Define to 1 if you have the declaration of 'res_init', and to 0 if you don't.  (USED-daemoncore */
 #cmakedefine HAVE_DECL_RES_INIT 1
 
@@ -153,18 +108,6 @@
 
 /* Define to 1 if you have the declaration of 'SIOCGIFCONF', and to 0 if you don't. (USED)*/
 #cmakedefine HAVE_DECL_SIOCGIFCONF 1
-
-/* Define to 1 if you have the 'dirfd' function. (USED)*/
-#cmakedefine HAVE_DIRFD 1
-
-/* Define to 1 if you have the <dlfcn.h> header file. (USED)*/
-#cmakedefine HAVE_DLFCN_H 1
-
-/* dlopen function is available  (used) */
-#cmakedefine HAVE_DLOPEN 1
-
-/* Define to 1 if you have the 'execl' function. (used)*/
-#cmakedefine HAVE_EXECL 1
 
 /* Define to 1 if you have the 'readdir64' function. (used)*/
 #cmakedefine HAVE_READDIR64 1
@@ -208,35 +151,17 @@
 /* Do we have the scitokens external (USED)*/
 #cmakedefine HAVE_EXT_SCITOKENS 1
 
-/* Do we have the unicoregahp external (USED)*/
-#cmakedefine HAVE_EXT_UNICOREGAHP 1
-
 /* Do we have the voms external (USED)*/
 #cmakedefine HAVE_EXT_VOMS 1
 
 /* Do we have the libvirt external (USED)*/
 #cmakedefine HAVE_EXT_LIBVIRT 1
 
-///* Do we have the cream external (Imake?)*/
-#cmakedefine HAVE_EXT_CREAM
-
 ///* Do we have the curl external (Imake)*/
 #cmakedefine HAVE_EXT_CURL
 
-///* Do we have the drmaa external (Imake)*/
-#cmakedefine HAVE_EXT_DRMAA
-
 ///* Do we have the glibc external*/
 #cmakedefine HAVE_EXT_GLIBC
-
-///* Do we have the hadoop external*/
-#cmakedefine HAVE_EXT_HADOOP
-
-///* Do we have the linuxlibcheaders external*/
-#cmakedefine HAVE_EXT_LINUXLIBCHEADERS
-
-///* Do we have the man external*/
-#cmakedefine HAVE_EXT_MAN
 
 ///* Do we have the pcre external*/
 #cmakedefine HAVE_EXT_PCRE
@@ -250,14 +175,8 @@
 /* Define to 1 if you have the 'getdtablesize' function. (USED)*/
 #cmakedefine HAVE_GETDTABLESIZE 1
 
-/* Define to 1 if you have the 'getpagesize' function. (USED)*/
-#cmakedefine HAVE_GETPAGESIZE 1
-
 /* Define to 1 if you have the 'gettimeofday' function. (USED)*/
 #cmakedefine HAVE_GETTIMEOFDAY 1
-
-/* Define to 1 if you have the 'clock_gettime' function. (USED)*/
-#cmakedefine HAVE_CLOCK_GETTIME 1
 
 /* Define to 1 if you have the 'clock_nanosleep' function. (USED)*/
 #cmakedefine HAVE_CLOCK_NANOSLEEP 1
@@ -265,35 +184,17 @@
 /* are we using the GNU linker (USED) */
 #cmakedefine HAVE_GNU_LD 1
 
-/* Define to 1 if the system has the type 'id_t'. (USED)*/
-#cmakedefine HAVE_ID_T 1
-
 /* Define to 1 if the system has the type 'int64_t'. (USED)*/
 #cmakedefine HAVE_INT64_T 1
 
 /* Define to 1 if you have the <inttypes.h> header file. (USED)*/
 #cmakedefine HAVE_INTTYPES_H 1
 
-/* Define to 1 if you have the 'lchown' function. (USED)*/
-#cmakedefine HAVE_LCHOWN 1
-
 /* Define to 1 if you have the <ldap.h> header file. (USED)*/
 #cmakedefine HAVE_LDAP_H 1
 
-/* Define to 1 if you have the 'gen' library (-lgen) (USED)*/
-#cmakedefine HAVE_LIBGEN 1
-
 /* Define to 1 if you have the <linux/ethtool.h> header file.*/
 #cmakedefine HAVE_LINUX_ETHTOOL_H 1
-
-/* Define to 1 if you have the <linux/magic.h> header file. (USED)*/
-#cmakedefine HAVE_LINUX_MAGIC_H 1
-
-/* Define to 1 if you have the <linux/nfsd/const.h> header file. (USED)*/
-#cmakedefine HAVE_LINUX_NFSD_CONST_H 1
-
-/* Define to 1 if you have the <linux/personality.h> header file. (USED)*/
-#cmakedefine HAVE_LINUX_PERSONALITY_H 1
 
 /* Define to 1 if you have the <linux/sockios.h> header file. (USED)*/
 #cmakedefine HAVE_LINUX_SOCKIOS_H 1
@@ -313,12 +214,6 @@
 /* Define to the size of the of type 'long'. (USED)*/
 #cmakedefine SIZEOF_LONG ${SIZEOF_LONG}
 
-/* Define to the size of the of type 'int'. (USED)*/
-#cmakedefine SIZEOF_INT ${SIZEOF_INT}
-
-/* Define to the size of the of type 'void *'. (USED)*/
-#cmakedefine SIZEOF_VOIDPTR ${SIZEOF_VOIDPTR}
-
 /* Define to 1 if you have the 'lstat' function. (USED)*/
 #cmakedefine HAVE_LSTAT 1
 
@@ -330,9 +225,6 @@
 
 /* Define to 1 if you have the <net/if.h> header file. (USED)*/
 #cmakedefine HAVE_NET_IF_H 1
-
-/* Define to 1 if you have the <openssl/ssl.h> header file. (USED)*/
-#cmakedefine HAVE_OPENSSL_SSL_H 1
 
 /* Define to 1 if you have the <os_types.h> header file. (USED)*/
 #cmakedefine HAVE_OS_TYPES_H 1
@@ -352,41 +244,17 @@
 /* does sched_setaffinity take two args (USED)*/
 #cmakedefine HAVE_SCHED_SETAFFINITY_2ARG 1
 
-/* Define to 1 if you have the 'setegid' function. (USED)*/
-#cmakedefine HAVE_SETEGID 1
-
-/* Define to 1 if you have the 'setenv' function. (USED)*/
-#cmakedefine HAVE_SETENV 1
-
-/* Define to 1 if you have the 'seteuid' function. (USED)*/
-#cmakedefine HAVE_SETEUID 1
-
-/* Define to 1 if you have the 'setlinebuf' function. (USED)*/
-#cmakedefine HAVE_SETLINEBUF 1
-
-/* Define to 1 if you have the 'snprintf' function. (USED)*/
-#cmakedefine HAVE_SNPRINTF 1
-
 /* Define to 1 if you have the 'eventfd' function. (USED)*/
 #cmakedefine HAVE_EVENTFD 1
 
 /* Define to 1 if we have the netgroup innetgr() function */
 #cmakedefine HAVE_INNETGR 1
 
-/* Define to 1 if we have the netgroup getgrnam() function */
-#cmakedefine HAVE_GETGRNAM 1
-
 /* Define to 1 if you have the 'stat64' function. (USED)*/
 #cmakedefine HAVE_STAT64 1
 
 /* Define to 1 if you have the 'statfs' function. (USED)*/
 #cmakedefine HAVE_STATFS 1
-
-/* Define to 1 if you have the 'statvfs' function. (USED)*/
-#cmakedefine HAVE_STATVFS 1
-
-/* Define to 1 if you have the <stdint.h> header file. (USED)*/
-#cmakedefine HAVE_STDINT_H 1
 
 /* Define to 1 if you have the 'strcasestr' function. (USED)*/
 #cmakedefine HAVE_STRCASESTR 1
@@ -406,47 +274,14 @@
 /* Define to 1 if struct sockaddr_in has sin_len member. (USED)*/
 #cmakedefine HAVE_STRUCT_SOCKADDR_IN_SIN_LEN 1
 
-/* Define to 1 if 'f_fstyp' is member of 'struct statfs'. (USED)*/
-#cmakedefine HAVE_STRUCT_STATFS_F_FSTYP 1
-
 /* Define to 1 if 'f_fstypename' is member of 'struct statfs'. (USED)*/
 #cmakedefine HAVE_STRUCT_STATFS_F_FSTYPENAME 1
-
-/* Define to 1 if 'f_type' is member of 'struct statfs'. (USED)*/
-#cmakedefine HAVE_STRUCT_STATFS_F_TYPE 1
-
-/* Define to 1 if 'f_basetype' is member of 'struct statvfs'. (USED)*/
-#cmakedefine HAVE_STRUCT_STATVFS_F_BASETYPE 1
-
-/* Define to 1 if you have the <sys/mount.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_MOUNT_H 1
 
 /* Define to 1 if you have the <sys/param.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_PARAM_H 1
 
-/* Define to 1 if you have the <sys/personality.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_PERSONALITY_H 1
-
-/* Define to 1 if you have the <sys/syscall.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_SYSCALL_H 1
-
-/* Define to 1 if you have the <sys/statfs.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_STATFS_H 1
-
-/* Define to 1 if you have the <sys/statvfs.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_STATVFS_H 1
-
 /* Define to 1 if you have the <sys/types.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_TYPES_H 1
-
-/* Define to 1 if you have the <sys/vfs.h> header file. (USED)*/
-#cmakedefine HAVE_SYS_VFS_H 1
-
-/* Define to 1 if you have the <ustat.h> header file. (USED)*/
-#cmakedefine HAVE_USTAT_H 1
-
-/* Define to 1 if you have the <valgrind.h> header file. (USED)*/
-#cmakedefine HAVE_VALGRIND_H 1
 
 /* Define to 1 if you have the <procfs.h> header file. (USED)*/
 #cmakedefine HAVE_PROCFS_H 1
@@ -459,9 +294,6 @@
 
 /* Define if vmware is available (USED)*/
 #cmakedefine HAVE_VMWARE 1
-
-/* "use system (v)snprintf instead of our replacement" (USED)*/
-#cmakedefine HAVE_WORKING_SNPRINTF 1
 
 /* Define to 1 if you have the '_fstati64' function. (USED)*/
 #cmakedefine HAVE__FSTATI64 1
@@ -477,12 +309,6 @@
 
 /* Define to 1 if the system has the type '__int64'. (USED)*/
 #cmakedefine HAVE___INT64 1
-
-/* Define if NEEDS_64BIT_STRUCTS (USED)*/
-#cmakedefine NEEDS_64BIT_STRUCTS 1
-
-/* Define if NEEDS_64BIT_SYSCALLS (USED)*/
-#cmakedefine NEEDS_64BIT_SYSCALLS 1
 
 /* Define to the address where bug reports for this package should be sent. (USED)*/
 #cmakedefine PACKAGE_BUGREPORT 1
@@ -517,9 +343,6 @@
 /* Define to 1 if the OS has support for epoll (Linux) */
 #cmakedefine CONDOR_HAVE_EPOLL
 
-/* Define to 1 if the OS has support for poll (Unix) */
-#cmakedefine CONDOR_HAVE_POLL
-
 /* Define to 1 if the OS has support for the TCP_KEEPALIVE setsockopt (Mac) */
 #cmakedefine HAVE_TCP_KEEPALIVE
 
@@ -540,6 +363,9 @@
 
 /* Define to 1 if the GSI libraries need to dlopen()d */
 #cmakedefine DLOPEN_GSI_LIBS
+
+/* Define to 1 if the VOMS libraries need to dlopen()d */
+#cmakedefine DLOPEN_VOMS_LIBS
 
 /* Define to 1 if the OS has inotify API support */
 #cmakedefine HAVE_INOTIFY

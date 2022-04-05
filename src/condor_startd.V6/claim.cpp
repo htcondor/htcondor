@@ -252,10 +252,6 @@ Claim::publish( ClassAd* cad )
 
 		int numJobPids = c_client->numPids();
 		
-		//In standard universe, numJobPids should be 1
-		if(c_universe == CONDOR_UNIVERSE_STANDARD) {
-			numJobPids = 1;
-		}
 		cad->Assign( ATTR_NUM_PIDS, numJobPids );
 
         if ((tmp = c_client->rmtgrp())) {
@@ -764,7 +760,7 @@ Claim::beginActivation( double now )
 
 	int univ;
 	if( c_jobad->LookupInteger(ATTR_JOB_UNIVERSE, univ) == 0 ) {
-		univ = CONDOR_UNIVERSE_STANDARD;
+		univ = CONDOR_UNIVERSE_VANILLA;
 		c_rip->dprintf( D_ALWAYS, "Default universe \"%s\" (%d) "
 						"since not in classad\n",
 						CondorUniverseName(univ), univ );
@@ -782,7 +778,6 @@ Claim::beginActivation( double now )
 			if( ! wantCheckpoint ) { break; }
 			//@fallthrough@
 		case CONDOR_UNIVERSE_VM:
-		case CONDOR_UNIVERSE_STANDARD:
 			c_last_pckpt = (int)now;
 		default:
 			break;
@@ -1283,12 +1278,12 @@ Claim::setRequestStream(Stream* stream)
 	c_request_stream = stream;
 
 	if( c_request_stream ) {
-		MyString desc;
-		desc.formatstr("request claim %s", publicClaimId() );
+		std::string desc;
+		formatstr(desc, "request claim %s", publicClaimId() );
 
 		int register_rc = daemonCore->Register_Socket(
 			c_request_stream,
-			desc.Value(),
+			desc.c_str(),
 			(SocketHandlercpp)&Claim::requestClaimSockClosed,
 			"requestClaimSockClosed",
 			this );
@@ -1418,7 +1413,7 @@ int Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 		cacheJobInfo(job);
 	}
 
-	MyString prefix;
+	std::string prefix;
 	formatstr(prefix, "%s[%d.%d]", c_rip->r_id_str, c_cluster, c_proc);
 	starter->set_dprintf_prefix(prefix.c_str());
 
@@ -1654,13 +1649,13 @@ Claim::resumeClaim( void )
 
 
 bool
-Claim::starterKill( int sig ) const
+Claim::starterSignal( int sig ) const
 {
 		// don't need to work about the state, since we don't use this
 		// method to send any signals that change the claim state...
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter)  {
-		return starter->kill( sig );
+		return starter->signal( sig );
 	}
 
 		// if there's no starter, we don't need to kill anything, so
@@ -1670,14 +1665,14 @@ Claim::starterKill( int sig ) const
 
 
 bool
-Claim::starterKillPg( int sig )
+Claim::starterKillFamily()
 {
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter) {
-			// if we're using KillPg, we're trying to hard-kill the
+			// if we're using killfamily(), we're trying to hard-kill the
 			// starter and all its children
 		changeState( CLAIM_KILLING );
-		return starter->killpg( sig );
+		return starter->killfamily();
 	}
 
 		// if there's no starter, we don't need to kill anything, so
@@ -1786,7 +1781,7 @@ Claim::makeCODStarterArgs( ArgList &args )
 	args.AppendArg("cod");
 	args.AppendArg("-header");
 
-	MyString cod_id_arg;
+	std::string cod_id_arg;
 	cod_id_arg += "(";
 	if( resmgr->is_smp() ) {
 		cod_id_arg += c_rip->r_id_str;
@@ -1794,7 +1789,7 @@ Claim::makeCODStarterArgs( ArgList &args )
 	}
 	cod_id_arg += codId();
 	cod_id_arg += ")";
-	args.AppendArg(cod_id_arg.Value());
+	args.AppendArg(cod_id_arg);
 
 		// if we've got a cluster and proc for the job, append those
 	if( c_cluster >= 0 ) {
@@ -1856,13 +1851,7 @@ Claim::publishStarterAd(ClassAd *cad) const
 
 
 		// stuff in starter-specific attributes, if we have them.
-	StringList ability_list;
-	starter->publish(cad, &ability_list);
-	char* ability_str = ability_list.print_to_string();
-	if (ability_str) {
-		cad->Assign(ATTR_STARTER_ABILITY_LIST, ability_str);
-		free(ability_str);
-	}
+	starter->publish(cad);
 
 		// TODO add more goodness to this ClassAd??
 
@@ -1874,7 +1863,7 @@ Claim::periodicCheckpoint( void )
 {
 	Starter * starter = findStarterByPid(c_starter_pid);
 	if (starter) {
-		if( ! starter->kill(DC_SIGPCKPT) ) {
+		if( ! starter->signal(DC_SIGPCKPT) ) {
 			return false;
 		}
 	}
@@ -2014,6 +2003,8 @@ Claim::resetClaim( void )
 		delete( c_jobad );
 		c_jobad = NULL;
 	}
+	c_job_execution_overlay_ad.Clear();
+
 	c_universe = -1;
 	c_cluster = -1;
 	c_proc = -1;
@@ -2091,12 +2082,12 @@ Claim::writeJobAd( int pipe_end )
 	// pipe_end is a DaemonCore pipe, so we must use
 	// DC::Write_Pipe for writing to it
 	
-	MyString ad_str;
+	std::string ad_str;
 	// The starter doesn't need to know any secrets.
 	sPrintAd(ad_str, *c_jobad);
 
-	const char* ptr = ad_str.Value();
-	int len = ad_str.Length();
+	const char* ptr = ad_str.c_str();
+	int len = ad_str.length();
 	while (len) {
 		int bytes_written = daemonCore->Write_Pipe(pipe_end, ptr, len);
 		if (bytes_written == -1) {
@@ -2111,7 +2102,7 @@ Claim::writeJobAd( int pipe_end )
 }
 
 bool
-Claim::writeMachAd( Stream* stream )
+Claim::writeMachAdAndOverlay( Stream* stream )
 {
 	//PRAGMA_REMIND("flatten SlotEval here before printing/sending ad on wire")
 	if (IsDebugLevel(D_MACHINE)) {
@@ -2120,12 +2111,25 @@ Claim::writeMachAd( Stream* stream )
 	} else {
 		dprintf(D_FULLDEBUG, "Sending Machine Ad to Starter\n");
 	}
-	if (!putClassAd(stream, *c_rip->r_classad) || !stream->end_of_message()) {
+	if (!putClassAd(stream, *c_rip->r_classad)) {
+		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
+		return false;
+	}
+
+	// now write the execution overlay
+	if (IsDebugLevel(D_JOB)) {
+		std::string adbuf;
+		dprintf(D_JOB, "Sending Execution Overlay Ad to Starter :\n%s", formatAd(adbuf, c_job_execution_overlay_ad, "\t"));
+	} else {
+		dprintf(D_FULLDEBUG, "Sending Execution Overlay Ad to Starter (%d attributes)\n", (int)c_job_execution_overlay_ad.size());
+	}
+	if (!putClassAd(stream, c_job_execution_overlay_ad) || !stream->end_of_message()) {
 		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
 		return false;
 	}
 	return true;
 }
+
 
 ///////////////////////////////////////////////////////////////////////////
 // Client
@@ -2329,7 +2333,7 @@ newIdString( char** id_str_ptr )
 	static int sequence_num = 0;
 	sequence_num++;
 
-	MyString id;
+	std::string id;
 	// Keeping with tradition, we insert the startd's address in
 	// the claim id.  As of condor 7.2, nothing relies on this.
 	// Starting in 8.9, we use the full sinful string, which can
@@ -2348,7 +2352,7 @@ newIdString( char** id_str_ptr )
 	id += keybuf;
 	free( keybuf );
 
-	*id_str_ptr = strdup( id.Value() );
+	*id_str_ptr = strdup( id.c_str() );
 	return sequence_num;
 }
 
@@ -2380,8 +2384,8 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 
 		bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 			DAEMON,
-			session_id.Value(),
-			session_key.Value(),
+			session_id.c_str(),
+			session_key.c_str(),
 			NULL,
 			AUTH_METHOD_MATCH,
 			SUBMIT_SIDE_MATCHSESSION_FQU,
@@ -2391,22 +2395,22 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 
 		if( !rc ) {
 			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create "
-					"security session for claim id %s\n", session_id.Value());
+					"security session for claim id %s\n", session_id.c_str());
 		}
 		else {
 				// fill in session_info so that schedd will have
 				// enough info to create a pre-built security session
 				// compatible with the one we just created.
 			rc = daemonCore->getSecMan()->ExportSecSessionInfo(
-				session_id.Value(),
+				session_id.c_str(),
 				session_info );
 
 			if( !rc ) {
 				dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to get "
-						"session info for claim id %s\n",session_id.Value());
+						"session info for claim id %s\n",session_id.c_str());
 			}
 			else {
-				claimid_parser.setSecSessionInfo( session_info.Value() );
+				claimid_parser.setSecSessionInfo( session_info.c_str() );
 				free( c_id );
 				c_id = strdup(claimid_parser.claimId());
 
@@ -2462,27 +2466,27 @@ ClaimId::dropFile( int slot_id )
 		return;
 	}
 
-	MyString filename_final = filename;
-	MyString filename_tmp = filename;
+	std::string filename_final = filename;
+	std::string filename_tmp = filename;
 	free( filename );
 	filename = NULL;
 
 	filename_tmp += ".new";
 
-	FILE* NEW_FILE = safe_fopen_wrapper_follow( filename_tmp.Value(), "w", 0600 );
+	FILE* NEW_FILE = safe_fopen_wrapper_follow( filename_tmp.c_str(), "w", 0600 );
 	if( ! NEW_FILE ) {
 		dprintf( D_ALWAYS,
 				 "ERROR: can't open claim id file: %s: %s (errno: %d)\n",
-				 filename_tmp.Value(), strerror(errno), errno );
+				 filename_tmp.c_str(), strerror(errno), errno );
  		return;
 	}
 	fprintf( NEW_FILE, "%s\n", c_id );
 	fclose( NEW_FILE );
-	if( rotate_file(filename_tmp.Value(), filename_final.Value()) < 0 ) {
+	if( rotate_file(filename_tmp.c_str(), filename_final.c_str()) < 0 ) {
 		dprintf( D_ALWAYS, "ERROR: failed to move %s into place, removing\n",
-				 filename_tmp.Value() );
-		if (unlink(filename_tmp.Value()) < 0) {
-			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_tmp.Value() );
+				 filename_tmp.c_str() );
+		if (unlink(filename_tmp.c_str()) < 0) {
+			dprintf( D_ALWAYS, "ERROR: failed to remove %s\n", filename_tmp.c_str() );
 		}
 	}
 }

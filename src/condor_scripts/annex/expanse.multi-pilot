@@ -1,0 +1,29 @@
+#!/bin/bash
+
+PILOT_BIN=$1
+PILOT_DIR=$2
+
+function cleanup() {
+    echo "Cleaning up temporary directory (${PILOT_DIR})..."
+    rm -fr ${PILOT_DIR}
+}
+trap cleanup EXIT
+
+# Which nodes are in this job?
+SCONTROL_LOGGING=`scontrol show hostname ${SLURM_NODELIST} > ${PILOT_DIR}/nodelist`
+if [[ $? != 0 ]]; then
+    echo "Failed to get node list, aborting."
+    echo ${SCONTROL_LOGGING}
+    exit 7
+fi
+
+# Start the pilot on each node in this job.
+for host in `cat ${PILOT_DIR}/nodelist`; do
+    ssh ${host} ${PILOT_BIN} ${PILOT_DIR} &
+done
+
+# Wait for every node's pilot to finish.
+wait
+
+echo "Exiting after all nodes finished."
+exit 0

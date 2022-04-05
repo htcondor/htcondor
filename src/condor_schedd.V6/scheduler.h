@@ -50,7 +50,6 @@
 #include "list.h"
 #include "write_user_log.h"
 #include "autocluster.h"
-#include "shadow_mgr.h"
 #include "enum_utils.h"
 #include "self_draining_queue.h"
 #include "schedd_cron_job_mgr.h"
@@ -66,6 +65,7 @@
 #include "condor_holdcodes.h"
 #include "job_transforms.h"
 #include "history_queue.h"
+#include "live_job_counters.h"
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -89,6 +89,7 @@ class JobQueueJob;
 extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 
 class JobQueueCluster;
+class JobQueueJobSet;
 
 //typedef std::set<JOB_ID_KEY> JOB_ID_SET;
 class LocalJobRec {
@@ -131,7 +132,7 @@ struct shadow_rec
 	int				removed;
 	bool			isZombie;	// added for Maui by stolley
 	bool			is_reconnect;
-	bool			reconnect_succeeded;
+	bool			reconnect_done; // could be success or failure
 		//
 		// This flag will cause the schedd to keep certain claim
 		// attributes for jobs with leases during a graceful shutdown
@@ -147,39 +148,6 @@ struct shadow_rec
 	~shadow_rec();
 }; 
 
-
-// The schedd will have one of these structures per owner, and one for the schedd as a whole
-// these counters are new for 8.7, and used with the code that keeps live counts of jobs
-// by tracking state transitions
-//
-struct LiveJobCounters {
-  int JobsSuspended;
-  int JobsIdle;             // does not count Local or Scheduler universe jobs, or Grid jobs that are externally managed.
-  int JobsRunning;
-  int JobsRemoved;
-  int JobsCompleted;
-  int JobsHeld;
-  int SchedulerJobsIdle;
-  int SchedulerJobsRunning;
-  int SchedulerJobsRemoved;
-  int SchedulerJobsCompleted;
-  int SchedulerJobsHeld;
-  void clear_counters() { memset(this, 0, sizeof(*this)); }
-  void publish(ClassAd & ad, const char * prefix) const;
-  LiveJobCounters()
-	: JobsSuspended(0)
-	, JobsIdle(0)
-	, JobsRunning(0)
-	, JobsRemoved(0)
-	, JobsCompleted(0)
-	, JobsHeld(0)
-	, SchedulerJobsIdle(0)
-	, SchedulerJobsRunning(0)
-	, SchedulerJobsRemoved(0)
-	, SchedulerJobsCompleted(0)
-	, SchedulerJobsHeld(0)
-  {}
-};
 
 struct SubmitterFlockCounters {
   int JobsRunning{0};
@@ -331,7 +299,7 @@ class match_rec: public ClaimIdParser
 		// if we created a dynamic hole in the DAEMON auth level
 		// to support flocking, this will be set to the id of the
 		// punched hole
-	MyString*		auth_hole_id;
+	std::string*	auth_hole_id;
 
 	match_rec *m_paired_mrec;
 	bool m_can_start_jobs;
@@ -383,17 +351,17 @@ class UserIdentity {
 				m_domain == rhs.m_domain && 
 				m_auxid == rhs.m_auxid;
 		}
-		MyString username() const { return m_username; }
-		MyString domain() const { return m_domain; }
-		MyString auxid() const { return m_auxid; }
+		std::string username() const { return m_username; }
+		std::string domain() const { return m_domain; }
+		std::string auxid() const { return m_auxid; }
 
 			// For use in HashTables
 		static size_t HashFcn(const UserIdentity & index);
 	
 	private:
-		MyString m_username;
-		MyString m_domain;
-		MyString m_auxid;
+		std::string m_username;
+		std::string m_domain;
+		std::string m_auxid;
 };
 
 
@@ -409,18 +377,6 @@ enum MrecStatus {
 	M_CLAIMED,
     M_ACTIVE
 };
-
-	
-typedef enum {
-	NO_SHADOW_STD,
-	NO_SHADOW_JAVA,
-	NO_SHADOW_WIN32,
-	NO_SHADOW_DC_VANILLA,
-	NO_SHADOW_OLD_VANILLA,
-	NO_SHADOW_RECONNECT,
-	NO_SHADOW_MPI,
-	NO_SHADOW_VM,
-} NoShadowFailure_t;
 
 
 namespace std
@@ -639,7 +595,7 @@ class Scheduler : public Service
 	bool			WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync );
 	bool			WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, const char * reason, bool do_fsync=false ); // write pause or resume event.
 	int				receive_startd_alive(int cmd, Stream *s) const;
-	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
+	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine, bool do_rotation );
 		// Public startd socket management functions
 	void            checkContactQueue();
 
@@ -695,6 +651,7 @@ class Scheduler : public Service
 	int				getMaxMaterializedJobsPerCluster() const { return MaxMaterializedJobsPerCluster; }
 	bool			getAllowLateMaterialize() const { return AllowLateMaterialize; }
 	bool			getNonDurableLateMaterialize() const { return NonDurableLateMaterialize; }
+	const ClassAd * getExtendedSubmitCommands() const { return &m_extendedSubmitCommands; }
 	bool			getEnableJobQueueTimestamps() const { return EnableJobQueueTimestamps; }
 	int				getMaxJobsRunning() const { return MaxJobsRunning; }
 	int				getJobsTotalAds() const { return JobsTotalAds; };
@@ -712,7 +669,7 @@ class Scheduler : public Service
 		// Used by the DedicatedScheduler class
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
-	void			delete_shadow_rec(shadow_rec*);
+	void			delete_shadow_rec(shadow_rec *rec);
 	shadow_rec*     add_shadow_rec( int pid, PROC_ID*, int univ, match_rec*,
 									int fd );
 	shadow_rec*		add_shadow_rec(shadow_rec*);
@@ -762,10 +719,7 @@ class Scheduler : public Service
 
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
-	bool            FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ=true);
-
-		// object to manage our various shadows and their ClassAds
-	ShadowMgr shadow_mgr;
+	bool            FindRunnableJobForClaim(match_rec* mrec);
 
 		// hashtable used to hold matching ClassAds for Globus Universe
 		// jobs which desire matchmaking.
@@ -804,6 +758,10 @@ class Scheduler : public Service
 	// Class to manage sets of Job 
 	JobSets *jobSets;
 
+	bool ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const char *user, const char * new_spool_dir="##");
+	bool ImportExportedJobResults(ClassAd & result, const char * import_dir, const char *user);
+	bool UnexportJobs(ClassAd & result, std::set<int> & clusters, const char *user);
+
 private:
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
@@ -838,6 +796,7 @@ private:
 	SubmitRequirements	m_submitRequirements;
 	ClassAd*			m_adSchedd;
 	ClassAd*        	m_adBase;
+	ClassAd             m_extendedSubmitCommands;
 
 	// information about the command port which Shadows use
 	char*			MyShadowSockName;
@@ -959,7 +918,6 @@ private:
 
 	// useful names
 	char*			CondorAdministrator;
-	char*			Mail;
 	char*			AccountantName;
     char*			UidDomain;
 	std::string		AccountingDomain;
@@ -999,7 +957,6 @@ private:
 	void			tryNextJob();
 	int				jobThrottle( void );
 	void			initLocalStarterDir( void );
-	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
 	bool			jobExitCode( PROC_ID job_id, int exit_code );
 	double			calcSlotWeight(match_rec *mrec) const;
 	double			guessJobSlotWeight(JobQueueJob * job);
@@ -1053,8 +1010,7 @@ private:
 	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 										ArgList const &args,
 										Env const *env, 
-										const char* name, bool is_dc,
-										bool wants_pipe, bool want_udp );
+										const char* name, bool want_udp );
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);
@@ -1086,9 +1042,6 @@ private:
 	int				aliveid;	// timer id for sending keepalives to startd
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
 
-		// put state into ClassAd return it.  Used for condor_squawk
-	int	dumpState(int, Stream *);
-
 		// get connection info for creating sec session to a running job
 		// (e.g. condor_ssh_to_job)
 	int get_job_connect_info_handler(int, Stream* s);
@@ -1099,6 +1052,11 @@ private:
 
 		// Mark a job as clean
 	int clear_dirty_job_attrs_handler(int, Stream *stream);
+
+		// command handlers for Lumberjack export and import
+	int export_jobs_handler(int, Stream *stream);
+	int import_exported_job_results_handler(int, Stream *stream);
+	int unexport_jobs_handler(int, Stream *stream);
 
 		// Command handlers for direct startd
    int receive_startd_update(int, Stream *s);
@@ -1160,6 +1118,7 @@ extern bool moveIntAttr( PROC_ID job_id, const char* old_attr,
 						 const char* new_attr, bool verbose );
 extern bool abortJob( int cluster, int proc, const char *reason, bool use_transaction );
 extern bool abortJobsByConstraint( const char *constraint, const char *reason, bool use_transaction );
+extern void incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nestedAdAttrName = nullptr);
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 int reason_code=0, int reason_subcode=0,
 					 bool use_transaction = false, 

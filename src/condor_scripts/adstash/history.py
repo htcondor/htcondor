@@ -32,10 +32,86 @@ for k in logging.Logger.manager.loggerDict:
     logging.getLogger(k).setLevel(logging.WARNING)
 
 
+def process_custom_ads(start_time, job_ad_file, args, metadata=None):
+    """
+    Given an iterator of ads, process its entire set of history
+    """
+    logging.info(f"Start processing the adfile: {job_ad_file}")
+
+    my_start = time.time()
+    buffered_ads = {}
+    count = 0
+    total_upload = 0
+    if not args.read_only:
+        es = elastic.get_server_handle(args)
+    try:
+        for job_ad in utils.parse_history_ad_file(job_ad_file):
+            metadata = metadata or {}
+            metadata["condor_history_source"] = "custom"
+            metadata["condor_history_runtime"] = int(my_start)
+            metadata["condor_history_host_version"] = job_ad.get("CondorVersion", "UNKNOWN")
+            metadata["condor_history_host_platform"] = job_ad.get(
+                "CondorPlatform", "UNKNOWN"
+            )
+            metadata["condor_history_host_machine"] = job_ad.get("Machine", "UNKNOWN")
+            metadata["condor_history_host_name"] = job_ad.get("Name", "UNKNOWN")
+
+            try:
+                dict_ad = convert.to_json(job_ad, return_dict=True)
+            except Exception as e:
+                message = f"Failure when converting document in {job_ad_file}: {e}"
+                exc = traceback.format_exc()
+                message += f"\n{exc}"
+                logging.warning(message)
+                continue
+
+            idx = elastic.get_index(args.es_index_name)
+            ad_list = buffered_ads.setdefault(idx, [])
+            ad_list.append((convert.unique_doc_id(dict_ad), dict_ad))
+
+            if len(ad_list) == args.es_bunch_size:
+                st = time.time()
+                if not args.read_only:
+                    elastic.post_ads(
+                        es.handle, idx, ad_list, metadata=metadata
+                    )
+                logging.debug(
+                    f"Posting {len(ad_list)} ads from {job_ad_file}"
+                )
+                total_upload += time.time() - st
+                buffered_ads[idx] = []
+
+            count += 1
+
+    except Exception:
+        message = f"Failure when processing history from {job_ad_file}"
+        logging.exception(message)
+        return
+
+    # Post the remaining ads
+    for idx, ad_list in list(buffered_ads.items()):
+        if ad_list:
+            logging.debug(
+                f"Posting remaining {len(ad_list)} ads from {job_ad_file}"
+            )
+            if not args.read_only:
+                elastic.post_ads(es.handle, idx, ad_list, metadata=metadata)
+
+    total_time = (time.time() - my_start) / 60.0
+    total_upload /= 60.0
+    logging.info(
+        f"{job_ad_file} history: response count: {count}; upload time {total_upload:.2f} min"
+    )
+
+    return
+
+
 def process_schedd(start_time, since, checkpoint_queue, schedd_ad, args, metadata=None):
     """
     Given a schedd, process its entire set of history since last checkpoint.
     """
+    logging.info(f"Start processing the scheduler: {schedd_ad['Name']}")
+
     my_start = time.time()
     metadata = metadata or {}
     metadata["condor_history_source"] = "schedd"
@@ -52,7 +128,10 @@ def process_schedd(start_time, since, checkpoint_queue, schedd_ad, args, metadat
     )
 
     schedd = htcondor.Schedd(schedd_ad)
-
+    max_ads = args.schedd_history_max_ads  # specify number of history entries to read 
+    if max_ads > 10000:
+        logging.debug(f"Please note that the maximum number of queries per scheduler is also limited by the scheduler's config (HISTORY_HELPER_MAX_HISTORY).")
+        logging.info(f"Note that a too large number of schedd_history_max_ads can cause condor_adstash to break!")
     logging.info(f"Querying {schedd_ad['Name']} for history ads since: {since_str}")
     buffered_ads = {}
     count = 0
@@ -65,7 +144,7 @@ def process_schedd(start_time, since, checkpoint_queue, schedd_ad, args, metadat
             history_iter = schedd.history(
                 constraint="true",
                 projection=[],
-                match=min(10000, args.schedd_history_max_ads),
+                match=max_ads,  # default=10000
                 since=since_str
             )
         else:
@@ -142,9 +221,9 @@ def process_schedd(start_time, since, checkpoint_queue, schedd_ad, args, metadat
     logging.info(
         f"Schedd {schedd_ad['Name']} history: response count: {count}; last job {last_formatted}; query time {total_time - total_upload:.2f} min; upload time {total_upload:.2f} min"
     )
-    if count >= min(10000, args.schedd_history_max_ads):
+    if count >= max_ads:
         logging.warning(
-            f"Max ads ({min(10000, args.schedd_history_max_ads)}) was reached "
+            f"Max ads ({max_ads}) was reached "
             f"for {schedd_ad['Name']}, older history may be missing!"
         )
 
@@ -173,6 +252,11 @@ def process_startd(start_time, since, checkpoint_queue, startd_ad, args, metadat
     last_completion = since["EnteredCurrentStatus"]
     since_str = f"""(GlobalJobId == "{since['GlobalJobId']}") && (EnteredCurrentStatus == {since['EnteredCurrentStatus']})"""
 
+    max_ads = args.startd_history_max_ads  # specify number of history entries to read 
+    if max_ads > 10000:
+        logging.debug(f"Please note that the maximum number of queries per scheduler is also limited by the scheduler's config (HISTORY_HELPER_MAX_HISTORY).")
+        logging.info(f"Note that a too large number of startd_history_max_ads can cause condor_adstash to break!")
+
     startd = htcondor.Startd(startd_ad)
     logging.info(f"Querying {startd_ad['Machine']} for history since: {since_str}")
     buffered_ads = {}
@@ -186,7 +270,7 @@ def process_startd(start_time, since, checkpoint_queue, startd_ad, args, metadat
             history_iter = startd.history(
                 requirements="true",
                 projection=[],
-                match=min(10000, args.startd_history_max_ads),
+                match=max_ads,  # default=10000
                 since=since_str
             )
         else:
@@ -261,9 +345,9 @@ def process_startd(start_time, since, checkpoint_queue, startd_ad, args, metadat
     logging.info(
         f"Startd {startd_ad['Machine']} history: response count: {count}; last job {last_formatted}; query time {total_time - total_upload:.2f} min; upload time {total_upload:.2f} min"
     )
-    if count >= min(10000, args.startd_history_max_ads):
+    if count >= max_ads:
         logging.warning(
-            f"Max ads ({min(10000, args.schedd_history_max_ads)}) was reached "
+            f"Max ads ({max_ads}) was reached "
             f"for {startd_ad['Machine']}, some history may be missing!"
         )
 

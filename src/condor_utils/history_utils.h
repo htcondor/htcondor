@@ -150,16 +150,16 @@ short_print(
         int  /*image_size*/,
         const char *cmd
         ) {
-		MyString SubmitDateStr=format_date(date);
-		MyString CompDateStr=format_date(CompDate);
+		std::string SubmitDateStr=format_date(date);
+		std::string CompDateStr=format_date(CompDate);
         printf( "%4d.%-3d %-14s %-11s %-12s %-2c %-11s %-15s\n",
                 cluster,
                 proc,
                 owner,
-                SubmitDateStr.Value(),
+                SubmitDateStr.c_str(),
                 format_time(time),
                 encode_status(status),
-                CompDateStr.Value(),
+                CompDateStr.c_str(),
                 cmd
         );
 }

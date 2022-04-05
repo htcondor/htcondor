@@ -41,8 +41,8 @@ class Rooster: public Service {
  private:
 	int m_polling_interval; // delay between checks of offline startds
 	int m_polling_timer;
-	MyString m_unhibernate_constraint;
-	MyString m_wakeup_cmd;
+	std::string m_unhibernate_constraint;
+	std::string m_wakeup_cmd;
 	ArgList m_wakeup_args;
 	ClassAd m_rank_ad;
 	int m_max_unhibernate;

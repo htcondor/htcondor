@@ -23,6 +23,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/types.h>
+#include <algorithm>
 #ifdef WIN32
 #include "condor_header_features.h"
 #include "condor_sys_nt.h"
@@ -35,6 +36,8 @@
 #include "write_user_log.h"
 #include "my_username.h"
 
+
+extern char *strnewp(const char *); // can't include this w/o including the world
 struct hostent *NameEnt;
 
 int writeSubmitEvent(WriteUserLog *log);
@@ -51,7 +54,9 @@ main(int argc, char **argv)
 	}
 
 	char *logname = argv[1];
-	int count = atoi(argv[3]);
+
+	// Prevent static analysis taint complaint by max'ing to 100000-
+	int count = std::min(100000, atoi(argv[3]));
 
 	if( strcmp(argv[2],"submit") == 0) {
 		//printf("Drop submit events\n");
@@ -82,8 +87,8 @@ int writeSubmitEvent(WriteUserLog *log)
 {
 	SubmitEvent submit;
 	submit.setSubmitHost("<128.105.165.12:32779>");
-	submit.submitEventLogNotes = strdup("DAGMan info");
-	submit.submitEventUserNotes = strdup("User info");
+	submit.submitEventLogNotes = strnewp("DAGMan info");
+	submit.submitEventUserNotes = strnewp("User info");
 	if ( !log->writeEvent(&submit) ) {
 		printf("Bad submit write\n");
 		exit(1);

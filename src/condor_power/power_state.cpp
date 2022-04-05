@@ -231,8 +231,8 @@ hibernate_machine(void)
 static void
 dump_ad( void )
 {
-	unsigned 	mask = hibernator->getStates();
-	MyString	states;
+	unsigned	mask = hibernator->getStates();
+	std::string	states;
 	if ( !HibernatorBase::maskToString(mask, states) ) {
 		error( E_STATES );
 	}

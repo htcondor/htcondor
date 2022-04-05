@@ -55,15 +55,23 @@ my %skipad = (
 	"ServerTime" => 1,
 	"ShadowBday" => 1,
 	"EnteredCurrentStatus" => 1,
+	"AutoClusterId" => 1,
+	"RemoteSlotID" => 1,
+	"JobSetId" => 1,
+	"DiskProvisioned" => 1,
+	"ActivationSetupDuration" => 1,
+	"RemoteHost" => 1,
 );
 
 my $firstappend_condor_config = '
 	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 5
+	NEGOTIATOR_INTERVAL = 1
 	ALL_DEBUG = D_FULLDEBUG D_NETWORK
-	NUM_CPUS = 6
+	NUM_CPUS = 2
 	CONDOR_Q_USE_V3_PROTOCOL = true
-	#use role: personal
+	# Turning this on breaks this test, which means it is way less
+	# robust than it at first may appear.
+	# SHADOW_LAZY_QUEUE_UPDATE = false
 ';
 
 
@@ -93,7 +101,7 @@ my $personal_counter = 0;
 my $GetClusterId = sub {
 	my $cid = shift;
 	$ClusterId = $cid;
-	print "Resquestd Cluster Got $ClusterId\n";
+	print "Requested Cluster Got $ClusterId\n";
 	##########################
 	#
 	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
@@ -202,11 +210,12 @@ my $runresult = SimpleJob::RunCheck(
 
 my $secondappend_condor_config = '
 	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 5
 	ALL_DEBUG = D_FULLDEBUG
-	NUM_CPUS = 6
+	NUM_CPUS = 2
 	CONDOR_Q_USE_V3_PROTOCOL = false
-	#use role: personal
+	# Turning this on breaks this test, which means it is way less
+	# robust than it at first may appear.
+	# SHADOW_LAZY_QUEUE_UPDATE = false
 ';
 
 
@@ -279,11 +288,9 @@ $runresult = SimpleJob::RunCheck(
 
 my $thirdappend_condor_config = '
 	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 5
 	ALL_DEBUG = D_FULLDEBUG
-	NUM_CPUS = 6
+	NUM_CPUS = 2
 	CONDOR_Q_USE_V3_PROTOCOL = true
-	#use role: personal
 ';
 
 

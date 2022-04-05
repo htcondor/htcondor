@@ -45,16 +45,16 @@ using namespace std;
 
 extern void main_shutdown_graceful();
 
-MyString
+std::string
 utilNoParameterError( const char* parameter, const char* daemonName )
 {
-	MyString error;
+	std::string error;
 
 	if( ! strcasecmp( daemonName, "HAD" ) ) {
-		error.formatstr( "HAD configuration error: no %s in config file",
+		formatstr( error, "HAD configuration error: no %s in config file",
                         parameter );
 	} else if( ! strcasecmp( daemonName, "REPLICATION" ) ) {
-		error.formatstr( "Replication configuration error: no %s in config file",
+		formatstr( error, "Replication configuration error: no %s in config file",
                        parameter );
 	} else {
 		dprintf( D_ALWAYS, "utilNoParameterError no such daemon name %s\n", 
@@ -64,17 +64,17 @@ utilNoParameterError( const char* parameter, const char* daemonName )
 	return error;
 }
 
-MyString
+std::string
 utilConfigurationError( const char* parameter, const char* daemonName )
 {
-	MyString error;
+	std::string error;
 
     if( ! strcasecmp( daemonName, "HAD" ) ) {
-		error.formatstr("HAD configuration error: %s is not valid in config file",
+		formatstr(error, "HAD configuration error: %s is not valid in config file",
 					   parameter );
 	} else if( ! strcasecmp( daemonName, "REPLICATION" ) ) {
-    	error.formatstr( "Replication configuration error: %s is not valid "
-                       "in config file", parameter );
+		formatstr( error, "Replication configuration error: %s is not valid "
+		           "in config file", parameter );
 	} else {
         dprintf( D_ALWAYS, "utilConfigurationError no such daemon name %s\n", 
                  daemonName );
@@ -135,15 +135,15 @@ utilToSinful( char* address )
 			return 0;
 		}
 		free(ipAddress);
-		MyString ipaddr_str = addrs.front().to_ip_string();
-		ipAddress = strdup(ipaddr_str.Value());
+		std::string ipaddr_str = addrs.front().to_ip_string();
+		ipAddress = strdup(ipaddr_str.c_str());
 	}
-	MyString sinfulString;
+	std::string sinfulString;
 
 	sinfulString = generate_sinful(ipAddress, port);
     free( ipAddress );
     
-    return strdup( sinfulString.Value( ) );
+    return strdup( sinfulString.c_str( ) );
 }
 
 void
@@ -177,14 +177,14 @@ static const char * encode_hex(char * buf, int bufsiz, const unsigned char * dat
 }
 
 bool
-utilSafePutFile( ReliSock& socket, const MyString& filePath, int fips_mode )
+utilSafePutFile( ReliSock& socket, const std::string& filePath, int fips_mode )
 {
 	REPLICATION_ASSERT( filePath != "" );
 	// bool       successValue = true;
 	filesize_t bytes        = 0; // set by socket.put_file
 	char       md[MD5_MAC_SIZE]; // holds MD5 digest in non-fips mode, and all zeros in fips mode
 	char       file_hash[SHA256_DIGEST_LENGTH * 2 + 4]; // the SHA256 checksum as a hex string, used only in FIPS mode
-	dprintf(D_ALWAYS, "utilSafePutFile %s started\n", filePath.Value());
+	dprintf(D_ALWAYS, "utilSafePutFile %s started\n", filePath.c_str());
 
 	// The original MD5 sum was done using a ifstream opened in text mode.  This is wrong
 	// but we have to preserve the wrongness for backward compatibility
@@ -273,7 +273,7 @@ utilSafePutFile( ReliSock& socket, const MyString& filePath, int fips_mode )
 }
 
 bool
-utilSafeGetFile( ReliSock& socket, const MyString& filePath, int fips_mode )
+utilSafeGetFile( ReliSock& socket, const std::string& filePath, int fips_mode )
 {
 	REPLICATION_ASSERT( filePath != "" );
 	filesize_t  bytes      = 0;
@@ -284,7 +284,7 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath, int fips_mode )
 	memset(wireMd, 0, sizeof(wireMd));
 	memset(localMd, 0, sizeof(localMd));
 
-	dprintf( D_ALWAYS, "utilSafeGetFile %s started\n", filePath.Value( ) );	
+	dprintf( D_ALWAYS, "utilSafeGetFile %s started\n", filePath.c_str( ) );	
 	socket.decode( );
 
 	if ( ! socket.code_bytes(wireMd, sizeof(wireMd))) {
@@ -302,7 +302,7 @@ utilSafeGetFile( ReliSock& socket, const MyString& filePath, int fips_mode )
 			dprintf(D_ALWAYS, "got %d char SHA-2 hash %s\n", (int)file_hash.size(), file_hash.c_str());
 		}
 	}
-	if (socket.get_file(&bytes, filePath.Value(), true) < 0) {
+	if (socket.get_file(&bytes, filePath.c_str(), true) < 0) {
 		dprintf(D_ALWAYS, "utilSafeGetFile unable to get file %s\n", filePath.c_str());
 		return false;
 	}

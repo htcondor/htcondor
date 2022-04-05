@@ -79,11 +79,11 @@ def get_htcondor_config(name="ADSTASH"):
     }
 
     # Convert debug level
-    if conf.get("debug_levels") is not None:
+    if conf.get("debug_levels") is not None and conf.get("debug_levels") != "":
         conf["log_level"] = debug2level(conf["debug_levels"])
 
     # Grab password from password file
-    if conf.get("es_password_file") is not None:
+    if conf.get("es_password_file") is not None and conf.get("es_password_file") != "":
         passwd = Path(conf["es_password_file"])
         try:
             with passwd.open() as f:
@@ -276,6 +276,15 @@ def get_config(argv=None):
         help=(
             "Run %(prog)s in standalone mode "
             "(run once, do not contact condor_master)"
+        ),
+    )
+    parser.add_argument(
+        "--ad_file",
+        type=Path,
+        metavar="PATH",
+        help=(
+            "Load Job ClassAds from a file instead of querying daemons. "
+            "Implies --standalone, ignores --schedd_history and --startd_history."
         ),
     )
     parser.add_argument(

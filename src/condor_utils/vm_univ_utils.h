@@ -23,11 +23,10 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "MyString.h"
 #include "string_list.h"
 
 // Removes leading/tailing single(') or double(") quote
-MyString delete_quotation_marks(const char *value);
+std::string delete_quotation_marks(const char *value);
 
 /*
   Find all suffix-matched files in the directory 'dirpath'.
@@ -52,7 +51,7 @@ void delete_all_files_in_filelist(StringList *file_list);
 bool has_suffix(const char *filename, const char *suffix);
 
 // Parse the string like "Name = Value" or "Name=Value"
-void parse_param_string(const char *line, MyString &name, MyString &value, bool del_quotes);
+void parse_param_string(const char *line, std::string &name, std::string &value, bool del_quotes);
 
 // Create name for virtual machine
 // name consists of user + cluster id + proc id

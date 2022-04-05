@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "MyString.h"
 #include "vmgahp_common.h"
 #include "vm_request.h"
 

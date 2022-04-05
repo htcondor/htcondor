@@ -26,14 +26,13 @@
 #include "condor_io.h"
 #include "enum_utils.h"
 #include "daemon.h"
-#include "MyString.h"
 
 
 typedef enum {
 	AR_ERROR,
-	AR_SUCCESS, 
-	AR_NOT_FOUND, 
-	AR_BAD_STATUS, 
+	AR_SUCCESS,
+	AR_NOT_FOUND,
+	AR_BAD_STATUS,
 	AR_ALREADY_DONE,
 	AR_PERMISSION_DENIED
 } action_result_t;
@@ -52,7 +51,7 @@ typedef void ImpersonationTokenCallbackType(bool success, const std::string &tok
 	void *misc_data);
 
 /** This is the Schedd-specific class derived from Daemon.  It
-	implements some of the schedd's daemonCore command interface.  
+	implements some of the schedd's daemonCore command interface.
 	For now, it implements the "ACT_ON_JOBS" command, which is used
 	for the new condor_(rm|hold|release) tools.
 */
@@ -61,7 +60,7 @@ public:
 
 		/** Constructor.  Same as a Daemon object.
 		  @param name The name (or sinful string) of the daemon, NULL
-		              if you want local  
+		              if you want local
 		  @param pool The name of the pool, NULL if you want local
 		*/
 	DCSchedd( const char* const name = NULL, const char* pool = NULL );
@@ -134,7 +133,7 @@ public:
 
 		/** Hold all jobs specified in the given StringList.  The list
 			should contain a comma-seperated list of cluster.proc job
-			ids.  Also, set ATTR_HOLD_REASON to the given reason. 
+			ids.  Also, set ATTR_HOLD_REASON to the given reason.
 			@param constraint What jobs to act on
 			@param reason Why the action is being done
 			@param result_type What kind of results you want
@@ -150,7 +149,7 @@ public:
 		/** Remove all jobs specified in the given StringList.  The
 			list should contain a comma-seperated list of cluster.proc
 			job ids.  Also, set ATTR_REMOVE_REASON to the given
-			reason. 
+			reason.
 			@param constraint What jobs to act on
 			@param reason Why the action is being done
 			@param result_type What kind of results you want
@@ -220,7 +219,7 @@ public:
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_TOTALS );
 
-	
+
 	/** Suspend all jobs specified in the given StringList.  The list
 			should contain a comma-seperated list of cluster.proc job
 			ids.
@@ -234,7 +233,7 @@ public:
 	ClassAd* suspendJobs( StringList* ids, const char* reason,
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG );
-	
+
 	/** Suspend all jobs that match the given constraint.
 			@param constraint What jobs to act on
 			@param reason Why the action is being done
@@ -246,7 +245,7 @@ public:
 	ClassAd* suspendJobs( const char* constraint, const char* reason,
 						  CondorError * errstack,
 						  action_result_type_t result_type = AR_TOTALS );
-	
+
 	/** Continue all jobs specified in the given StringList.  The list
 			should contain a comma-seperated list of cluster.proc job
 			ids.
@@ -260,7 +259,7 @@ public:
 	ClassAd* continueJobs( StringList* ids, const char* reason,
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG );
-	
+
 		/** Continue all jobs that match the given constraint.
 			@param constraint What jobs to act on
 			@param reason Why the action is being done
@@ -272,13 +271,32 @@ public:
 	ClassAd* continueJobs( const char* constraint, const char* reason,
 						  CondorError * errstack,
 						  action_result_type_t result_type = AR_TOTALS );
-	
+
 	/** Clear dirty attributes for a list of job ids
 			@param ids What jobs to act on
 			@param result_type What kind of results you want
 		*/
 	ClassAd* clearDirtyAttrs( StringList* ids, CondorError * errstack,
 						action_result_type_t result_type = AR_TOTALS );
+
+	/** export jobs to an external job_queue and put mark them as MANAGED by Lumberjack
+	    @param ids or constraint What jobs to act on
+	    @param export_dir what directory to export the jobs to. <export_dir>/job_queue.log will be the exported log
+	    @param new_spool_dir what value to use when rewriting paths into the SPOOL directory
+	*/
+	ClassAd* exportJobs( StringList* ids, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
+	ClassAd* exportJobs( const char * constraint, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
+
+	/** import the results from a previously exported job_queue.log managed by Lumberjack
+	    @param import_dir directory containing the exported job_queue.log and job files to be imported
+	*/
+	ClassAd* importExportedJobResults(const char * import_dir, CondorError * errstack);
+
+	/** unexport jobs that were previously exported via exportJobs().
+	    @param ids or constraint What jobs to act on
+	*/
+	ClassAd* unexportJobs( StringList* ids, CondorError * errstack);
+	ClassAd* unexportJobs( const char * constraint, CondorError * errstack);
 
 	/** Vacate the victim and schedule the beneficiary on its slot.  Hard-
 		kills the job.  The caller must authenticate as a queue user or
@@ -335,30 +353,30 @@ public:
 
 	bool register_transferd(const std::string &sinful, const std::string &id, int timeout, 
 		ReliSock **regsock_ptr, CondorError *errstack);
-	
+
 
 	// Request a sandbox location for a set of ads described by a
 	// constraint as applied to the job queue
-	bool requestSandboxLocation(int direction, MyString &constraint, 
+	bool requestSandboxLocation(int direction, std::string & constraint,
 		int protocol, ClassAd *respad, CondorError * errstack);
 
 	// Request a sandbox location for a set of specific job ids.
-	bool requestSandboxLocation(int direction, int JobAdsArrayLen, 
-		ClassAd* JobAdsArray[], int protocol, ClassAd *respad, 
+	bool requestSandboxLocation(int direction, int JobAdsArrayLen,
+		ClassAd* JobAdsArray[], int protocol, ClassAd *respad,
 		CondorError * errstack);
-		
+
 	// Request a sandbox location using a raw request classad.
 	bool requestSandboxLocation(ClassAd *reqad, ClassAd *respad,
 		CondorError * errstack);
 
-	bool updateGSIcredential(const int cluster, const int proc, 
+	bool updateGSIcredential(const int cluster, const int proc,
 		const char* path_to_proxy_file, CondorError * errstack);
 
 		// expiration_time: 0 if none; o.w. time to expire delegated proxy
 		// result_expiration_time: if non-NULL, gets set to the delegated
 		//                         proxy expiration time, which may be sooner
 		//                         than requested if source proxy expires
-	bool delegateGSIcredential(const int cluster, const int proc, 
+	bool delegateGSIcredential(const int cluster, const int proc,
 							   const char* path_to_proxy_file, time_t expiration_time,
 							   time_t *result_expiration_time,
 							   CondorError * errstack);
@@ -366,7 +384,7 @@ public:
 		// Caller should delete new_job_ad when done with it.
 		// Returns false on error (see error_msg)
 		// If no new job found, returns true with *new_job_ad=NULL
-	bool recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, MyString &error_msg );
+	bool recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, std::string & error_msg );
 
 
 		/*
@@ -400,8 +418,8 @@ private:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* actOnJobs( JobAction action, 
-						const char* constraint, StringList* ids, 
+	ClassAd* actOnJobs( JobAction action,
+						const char* constraint, StringList* ids,
 						const char* reason, const char* reason_attr,
 						const char* reason_code, const char* reason_code_attr,
 						action_result_type_t result_type,
@@ -411,6 +429,10 @@ private:
 		const std::string &trust_domain, bool should_try_token_request, void *misc_data);
 
 	int requestImpersonationTokenFinish(Stream *stream);
+
+	ClassAd* exportJobsWorker( StringList* ids, const char * constraint, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
+
+	ClassAd* unexportJobsWorker( StringList* ids, const char * constraint, CondorError * errstack);
 
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );
@@ -426,7 +448,7 @@ private:
 	call the readResults() method and pass in whatever ClassAd you got
 	back from DCSchedd::*Jobs().  Then you can call methods to query
 	the results for specific jobs, or to access the totals, depending
-	on what kind of results you requested when you sent the command. 
+	on what kind of results you requested when you sent the command.
 */
 class JobActionResults {
 public:
@@ -464,7 +486,7 @@ public:
 	int numNotFound( void ) const { return ar_not_found; };
 	int numBadStatus( void ) const { return ar_bad_status; };
 	int numAlreadyDone( void ) const { return ar_already_done; };
-	int numPermissionDenied( void ) const { return ar_permission_denied; }; 
+	int numPermissionDenied( void ) const { return ar_permission_denied; };
 
 		/** Return the result code for the given job.
 			@param job_id The job you care about

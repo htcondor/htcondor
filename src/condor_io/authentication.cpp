@@ -40,13 +40,11 @@
 
 
 
-#if !defined(SKIP_AUTHENTICATION)
-#   include "condor_debug.h"
-#   include "condor_config.h"
-#   include "string_list.h"
+#include "condor_debug.h"
+#include "condor_config.h"
+#include "string_list.h"
 #include "MapFile.h"
 #include "condor_daemon_core.h"
-#endif /* !defined(SKIP_AUTHENTICATION) */
 
 
 //----------------------------------------------------------------------
@@ -77,8 +75,6 @@ Authentication::Authentication( ReliSock *sock )
 	  m_continue_handshake(false),
 	  m_continue_auth(false)
 {
-// Do this regardless of the state of SKIP_AUTHENTICATION)
-// even if SKIP_AUTHENTICATION is true, we call sock->Timeout later
 	mySock              = sock;
 	auth_status         = CAUTH_NONE;
 	method_used         = NULL;
@@ -87,7 +83,6 @@ Authentication::Authentication( ReliSock *sock )
 
 Authentication::~Authentication()
 {
-#if !defined(SKIP_AUTHENTICATION)
 	mySock = NULL;
 
 	if (authenticator_)
@@ -102,8 +97,6 @@ Authentication::~Authentication()
 	if (method_used) {
 		free (method_used);
 	}
-
-#endif
 }
 
 int Authentication::authenticate( char *hostAddr, KeyInfo *& key, 
@@ -134,14 +127,6 @@ int Authentication::authenticate( char *hostAddr, const char* auth_methods,
 int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods,
 		CondorError* errstack, int timeout, bool non_blocking)
 {
-#if defined(SKIP_AUTHENTICATION)
-	dprintf(D_ALWAYS, "Skipping....\n");
-	/*
-	errstack->push ( "AUTHENTICATE", AUTHENTICATE_ERR_NOT_BUILT,
-			"this condor was built with SKIP_AUTHENTICATION");
-	*/
-	return 0;
-#else
 	m_host_addr = hostAddr ? hostAddr : "(unknown)";
 	if (timeout > 0) {
 		dprintf( D_SECURITY, "AUTHENTICATE: setting timeout for %s to %d.\n", m_host_addr.c_str(), timeout);
@@ -169,7 +154,6 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 	m_auth = NULL;
 
 	return authenticate_continue(errstack, non_blocking);
-#endif
 }
 
 int Authentication::authenticate_continue( CondorError* errstack, bool non_blocking )
@@ -338,7 +322,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 					// we want this to be set to true!).
 					// In the future, we can always reproduce the entire chain of
 					// logic to determine if TOKEN auth is tried.
-					m_should_try_token_request |= mySock->isClient();
+					m_should_try_token_request |= (mySock->isClient() != 0);
 
 				return 0;
 
@@ -494,7 +478,7 @@ int Authentication::authenticate_finish(CondorError *errstack)
 					authenticator_->getRemoteUser()?authenticator_->getRemoteUser():"(null)");
 			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: pre-map: current domain is '%s'\n",
 					authenticator_->getRemoteDomain()?authenticator_->getRemoteDomain():"(null)");
-			map_authentication_name_to_canonical_name(auth_status, method_used, name_to_map);
+			map_authentication_name_to_canonical_name(auth_status, method_used ? method_used : "(null)", name_to_map);
 		} else {
 			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: name to map is null, not mapping.\n");
 		}
@@ -527,7 +511,6 @@ int Authentication::authenticate_finish(CondorError *errstack)
 
 	mySock->allow_one_empty_message();
 
-#if !defined(SKIP_AUTHENTICATION)
 	if (retval && retval != 2 && m_key != NULL) {        // will always try to exchange key!
 		// This is a hack for now, when we have only one authenticate method
 		// this will be gone
@@ -540,7 +523,6 @@ int Authentication::authenticate_finish(CondorError *errstack)
 		dprintf(D_SECURITY, "AUTHENTICATE: Result of end of authenticate is %d.\n", retval);
 		mySock->allow_one_empty_message();
 	}
-#endif
 
 	return ( retval );
 }
@@ -551,12 +533,10 @@ void Authentication::reconfigMapFile()
 }
 
 
-#if !defined(SKIP_AUTHENTICATION)
 // takes the type (as defined in handshake bitmask, CAUTH_*) and result of authentication,
 // and maps it to the cannonical condor name.
 //
-void Authentication::map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name) {
-
+void Authentication::load_map_file() {
 	// make sure the mapfile is loaded.  it's a static global variable.
 	if (global_map_file_load_attempted == false) {
 		if (global_map_file) {
@@ -588,6 +568,10 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	} else {
 		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: map file already loaded.\n");
 	}
+}
+
+void Authentication::map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name) {
+    load_map_file();
 
 	dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: attempting to map '%s'\n", authentication_name);
 
@@ -609,17 +593,17 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 #endif
 
 	if (global_map_file) {
-		MyString canonical_user;
+		std::string canonical_user;
 
 		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 1: attempting to map '%s'\n", auth_name_to_map.c_str());
 		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
-		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
+		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.c_str());
 
 		// if it did not find a user, and we included voms attrs, try again without voms
 		if (mapret && included_voms) {
 			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: now attempting to map '%s'\n", authentication_name);
 			mapret = global_map_file->GetCanonicalization(method_string, authentication_name, canonical_user);
-			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: now 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.Value());
+			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: now 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.c_str());
 		}
 
 		// if the method is SCITOKENS and mapping failed, try again
@@ -648,7 +632,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 
 		if (!mapret) {
 			// returns true on failure?
-			dprintf (D_FULLDEBUG|D_VERBOSE, "AUTHENTICATION: successful mapping to %s\n", canonical_user.Value());
+			dprintf (D_FULLDEBUG|D_VERBOSE, "AUTHENTICATION: successful mapping to %s\n", canonical_user.c_str());
 
 			// there is a switch for GSI to use the default globus function for this, in
 			// case there is some custom globus mapping add-on, or the admin just wants
@@ -674,16 +658,16 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 				return;
 			} else {
 
-				dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: found user %s, splitting.\n", canonical_user.Value());
+				dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: found user %s, splitting.\n", canonical_user.c_str());
 
-				MyString user;
-				MyString domain;
+				std::string user;
+				std::string domain;
 
 				// this sets user and domain
 				split_canonical_name( canonical_user, user, domain);
 
-				authenticator_->setRemoteUser( user.Value() );
-				authenticator_->setRemoteDomain( domain.Value() );
+				authenticator_->setRemoteUser( user.c_str() );
+				authenticator_->setRemoteDomain( domain.c_str() );
 
 				// we're done.
 				return;
@@ -711,18 +695,18 @@ void Authentication::split_canonical_name(char const *can_name,char **user,char 
 		// This version of the function exists to avoid use of MyString
 		// in ReliSock, because that gets linked into std univ jobs.
 		// This function is stubbed out in cedar_no_ckpt.C.
-	MyString my_user,my_domain;
+	std::string my_user,my_domain;
 	split_canonical_name(can_name,my_user,my_domain);
-	*user = strdup(my_user.Value());
-	*domain = strdup(my_domain.Value());
+	*user = strdup(my_user.c_str());
+	*domain = strdup(my_domain.c_str());
 }
 
-void Authentication::split_canonical_name(MyString can_name, MyString& user, MyString& domain ) {
+void Authentication::split_canonical_name(const std::string& can_name, std::string& user, std::string& domain ) {
 
     char local_user[256];
  
 	// local storage so we can modify it.
-	strncpy (local_user, can_name.Value(), 255);
+	strncpy (local_user, can_name.c_str(), 255);
 	local_user[255] = 0;
 
     // split it into user@domain
@@ -743,22 +727,16 @@ void Authentication::split_canonical_name(MyString can_name, MyString& user, MyS
         domain = (tmp+1);
     }
 }
-#endif //SKIP_AUTHENTICATION
 
 
 int Authentication::isAuthenticated() const
 {
-#if defined(SKIP_AUTHENTICATION)
-    return 0;
-#else
     return( auth_status != CAUTH_NONE );
-#endif
 }
 
 
 void Authentication::unAuthenticate()
 {
-#if !defined(SKIP_AUTHENTICATION)
     auth_status = CAUTH_NONE;
 	if (authenticator_) {
     	delete authenticator_;
@@ -768,44 +746,24 @@ void Authentication::unAuthenticate()
 		free (method_used);
 		method_used = 0;
 	}
-#endif
 }
 
 
 char* Authentication::getMethodUsed() {
-#if !defined(SKIP_AUTHENTICATION)
 	return method_used;
-#else
-	return NULL;
-#endif
 }
-/*
-void Authentication::setAuthAny()
-{
-#if !defined(SKIP_AUTHENTICATION)
-    canUseFlags = CAUTH_ANY;
-#endif
-}
-*/
 
 const char* Authentication::getAuthenticatedName()
 {
-#if defined(SKIP_AUTHENTICATION)
-	return NULL;
-#else
 	if ( authenticator_ ) {
 		return authenticator_->getAuthenticatedName();
 	} else {
 		return NULL;
 	}
-#endif
 }
 
 const char* Authentication::getFQAuthenticatedName()
 {
-#if defined(SKIP_AUTHENTICATION)
-	return NULL;
-#else
 	if ( authenticator_ ) {
 #if defined(HAVE_EXT_GLOBUS)
 		if(strcasecmp("GSI", method_used) == 0) {
@@ -819,14 +777,10 @@ const char* Authentication::getFQAuthenticatedName()
 	} else {
 		return NULL;
 	}
-#endif // defined(SKIP_AUTHENTICATION)
 }
 
 int Authentication::setOwner( const char *owner ) 
 {
-#if defined(SKIP_AUTHENTICATION)
-	return 0;
-#else
 	if ( authenticator_ ) {
             authenticator_->setRemoteUser(owner);
             return 1;
@@ -834,7 +788,6 @@ int Authentication::setOwner( const char *owner )
         else {
             return 0;
         }
-#endif /* SKIP_AUTHENTICATION */
 }
 
 //----------------------------------------------------------------------
@@ -842,9 +795,6 @@ int Authentication::setOwner( const char *owner )
 //----------------------------------------------------------------------
 const char * Authentication :: getRemoteAddress() const
 {
-#if defined(SKIP_AUTHENTICATION)
-    return NULL;
-#else
     // If we are not using Kerberos
     if (authenticator_) {
         return authenticator_->getRemoteHost();
@@ -852,7 +802,6 @@ const char * Authentication :: getRemoteAddress() const
     else {
         return NULL;
     }
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -860,23 +809,16 @@ const char * Authentication :: getRemoteAddress() const
 //----------------------------------------------------------------------
 const char * Authentication :: getDomain() const
 {
-#if defined(SKIP_AUTHENTICATION)
-    return NULL;
-#else
     if (authenticator_) {
         return authenticator_->getRemoteDomain();
     }
     else {
         return NULL;
     }
-#endif
 }
 
 const char * Authentication::getOwner() const
 {
-#if defined(SKIP_AUTHENTICATION)
-    return NULL;
-#else
     // Since we never use getOwner() like it allocates memory
     // anywhere in the code, it shouldn't actually allocate
     // memory.  We can always just return claimToBe, since it'll
@@ -897,14 +839,10 @@ const char * Authentication::getOwner() const
 		}
 	}
 	return owner;
-#endif  
 }               
 
 const char * Authentication::getFullyQualifiedUser() const
 {
-#if defined(SKIP_AUTHENTICATION)
-    return NULL;
-#else
     // Since we never use getOwner() like it allocates memory
     // anywhere in the code, it shouldn't actually allocate
     // memory.  We can always just return claimToBe, since it'll
@@ -916,28 +854,23 @@ const char * Authentication::getFullyQualifiedUser() const
     else {
         return NULL;
     }
-#endif  
 }           
 
 int Authentication :: end_time()
 {
     int endtime = 0;
-#if !defined(SKIP_AUTHENTICATION)
     if (authenticator_) {
         endtime = authenticator_->endTime();
     }
-#endif
     return endtime;
 }
 
 bool Authentication :: is_valid()
 {
     bool valid = FALSE;
-#if !defined(SKIP_AUTHENTICATION)
     if (authenticator_) {
         valid = authenticator_->isValid();
     }
-#endif
     return valid;
 }
 
@@ -946,9 +879,6 @@ int Authentication :: wrap(char*  input,
 			   char*& output,
 			   int&   output_len)
 {
-#if defined(SKIP_AUTHENTICATION)
-    return FALSE;
-#else
     // Shouldn't we check the flag first?
     if (authenticator_) {
         return authenticator_->wrap(input, input_len, output, output_len);
@@ -956,7 +886,6 @@ int Authentication :: wrap(char*  input,
     else {
         return FALSE;
     }
-#endif
 }
 	
 int Authentication :: unwrap(char*  input, 
@@ -964,9 +893,6 @@ int Authentication :: unwrap(char*  input,
 			     char*& output, 
 			     int&   output_len)
 {
-#if defined(SKIP_AUTHENTICATION)
-    return FALSE;
-#else
     // Shouldn't we check the flag first?
     if (authenticator_) {
         return authenticator_->unwrap(input, input_len, output, output_len);
@@ -974,11 +900,8 @@ int Authentication :: unwrap(char*  input,
     else {
         return FALSE;
     }
-#endif
 }
 
-
-#if !defined(SKIP_AUTHENTICATION)
 
 int Authentication::exchangeKey(KeyInfo *& key)
 {
@@ -1249,6 +1172,4 @@ int Authentication::selectAuthenticationType( const std::string& method_order, i
 	return 0;
 }
 
-
-#endif /* !defined(SKIP_AUTHENTICATION) */
 

@@ -21,7 +21,6 @@
 #define BASE_REPLICA_TRANSFERER_H
 
 #include "dc_service.h"
-#include "MyString.h"
 #include "reli_sock.h"
 
 /* Class      : BaseReplicaTransfererer
@@ -55,9 +54,8 @@ public:
      *             pVersionFilePath     - version string in dot-separated format
      *             pStateFilesPathsList - list of paths to the state files
      */
-    BaseReplicaTransferer(const MyString&  pDaemonSinfulString,
-                          const MyString&  pVersionFilePath,
-                          //const MyString&  pStateFilePath);
+    BaseReplicaTransferer(const std::string&  pDaemonSinfulString,
+                          const std::string&  pVersionFilePath,
 						  const StringList& pStateFilePathsList);
     ~BaseReplicaTransferer();                        
     /* Function    : initialize
@@ -75,8 +73,7 @@ public:
 	 */
     virtual int initialize() = 0;
 // Inspectors
-	MyString getVersionFilePath() { return m_versionFilePath; };
-	//MyString getStateFilePath()   { return m_stateFilePath; };
+	std::string getVersionFilePath() { return m_versionFilePath; };
 	StringList& getStateFilePathsList() { return m_stateFilePathsList; };
 // End of inspectors
 protected:
@@ -90,15 +87,14 @@ protected:
 	 */
 	static void
 	safeUnlinkStateAndVersionFiles(StringList& stateFilePathsList,
-	                               const MyString&   versionFilePath,
-			                       const MyString&   extension);
+	                               const std::string& versionFilePath,
+			                       const std::string& extension);
 	// address of the downloading/uploading counterpart	
-    MyString  m_daemonSinfulString;
+	std::string  m_daemonSinfulString;
 	// path to the file where local version is stored
-    MyString  m_versionFilePath;
+	std::string  m_versionFilePath;
 	// path to the list of files where the state, protected by the replication 
 	// is stored
-    //MyString  m_stateFilePath;
 	StringList m_stateFilePathsList;
 
     // TCP socket, over which all the communication is done

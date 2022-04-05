@@ -55,327 +55,11 @@ static const char *Resource_State_String [] = {
 	"CHECKPOINTED",
 };
 
-#if defined(DLOPEN_GSI_LIBS)
-/* The following functions use a child process to call GSI and VOMS
- * functions. This allows us to not dlopen() the GSI and VOMS libraries
- * in the main shadow process, thus reducing memory usage.
- */
-
-/* This function works like fgets(), with the follow exceptions:
- *   - It reads from a file descriptor.
- *   - If the buffer s is filled, it continues to read from the fd until
- *     a newline or EOF. The additional input is discarded.
- *   - When a newline is read, it is discarded (not placed in the buffer).
- */
-static char *
-my_fgets( char *s, int size, int fd )
-{
-	int rc;
-	int i = 0;
-	char c;
-
-	rc = read( fd, &c, 1 );
-	if ( rc <= 0 ) {
-		s[0] = '\0';
-		return NULL;
-	}
-	while ( rc > 0 && c != '\n' ) {
-		if ( i < size - 1 ) {
-			s[i] = c;
-			i++;
-		}
-		rc = read( fd, &c, 1 );
-	}
-	s[i] = '\0';
-	return s;
-}
-
-/* Inspect the job's proxy in a child process and read information about
- * it via a pipe from the child.
- */
-static int
-QueryJobProxy( const char *proxy_file, time_t *expiration_time, char **identity,
-			   char **voname, char **firstfqan, char **quoted_DN_and_FQAN )
-{
-	int result = 1;
-	int rc;
-	int fds[2];
-	pid_t child_pid = 0;
-	int child_status = 0;
-
-	if ( pipe( fds ) < 0 ) {
-		dprintf( D_ALWAYS, "QueryJobProxy(): pipe() failed: errno %d (%s)\n",
-				 errno, strerror( errno ) );
-		return 1;
-	}
-
-	child_pid = fork();
-	if ( child_pid < 0 ) {
-			// Error
-		dprintf( D_ALWAYS, "QueryJobProxy(): fork() failed: errno %d (%s)\n",
-				 errno, strerror( errno ) );
-		close( fds[0] );
-		close( fds[1] );
-		return 1;
-
-	} else if ( child_pid == 0 ) {
-			// Child
-		close( fds[0] );
-
-		if ( activate_globus_gsi() != 0 ) {
-			dprintf( D_ALWAYS, "QueryJobProxy(): %s\n", x509_error_string() );
-		}
-
-		std::string reply;
-		if ( expiration_time ) {
-			formatstr_cat( reply, "%ld\n", (long)x509_proxy_expiration_time( proxy_file ) );
-		}
-
-		if ( identity ) {
-			char *id = x509_proxy_identity_name( proxy_file );
-			formatstr_cat( reply, "%s\n", id ? id : "" );
-			free( id );
-		}
-
-		if ( voname || firstfqan || quoted_DN_and_FQAN ) {
-		//   query voms if wanted, write result to pipe
-			int vomserr = 1;
-#if defined(HAVE_EXT_VOMS)
-			vomserr = extract_VOMS_info_from_file( proxy_file,
-												   0, /*do not verify*/
-												   voname,
-												   firstfqan,
-												   quoted_DN_and_FQAN);
-#endif
-			if ( voname ) {
-				formatstr_cat( reply, "%s\n", !vomserr && *voname ? *voname : "" );
-			}
-			if ( firstfqan ) {
-				formatstr_cat( reply, "%s\n", !vomserr && *firstfqan ? *firstfqan : "" );
-			}
-			if ( quoted_DN_and_FQAN ) {
-				formatstr_cat( reply, "%s\n", !vomserr && *quoted_DN_and_FQAN ? *quoted_DN_and_FQAN : "" );
-			}
-
-		}
-
-		if ( write( fds[1], reply.c_str(), reply.length() ) < (ssize_t)reply.length() ) {
-			dprintf( D_ALWAYS, "QueryJobProxy(): Failed to write reply to parent!\n" );
-			_exit( 1 );
-		}
-		close( fds[1] );
-
-			// TODO we always indicate success. Do we want to signal failure
-			//   in any situation?
-		_exit( 0 );
-	}
-
-		// Parent
-	close( fds[1] );
-
-	char buf[1024];
-	if ( expiration_time ) {
-		if ( my_fgets( buf, sizeof(buf), fds[0] ) ) {
-			*expiration_time = atol( buf );
-		} else {
-			*expiration_time = -1;
-		}
-	}
-	if ( identity ) {
-		if ( my_fgets( buf, sizeof(buf), fds[0] ) ) {
-			*identity = strdup( buf );
-		} else {
-			*identity = strdup( "" );
-		}
-	}
-	if ( voname ) {
-		if ( my_fgets( buf, sizeof(buf), fds[0] ) ) {
-			*voname = strdup( buf );
-		} else {
-			*voname = strdup( "" );
-		}
-	}
-	if ( firstfqan ) {
-		if ( my_fgets( buf, sizeof(buf), fds[0] ) ) {
-			*firstfqan = strdup( buf );
-		} else {
-			*firstfqan = strdup( "" );
-		}
-	}
-	if ( quoted_DN_and_FQAN ) {
-		if ( my_fgets( buf, sizeof(buf), fds[0] ) ) {
-			*quoted_DN_and_FQAN = strdup( buf );
-		} else {
-			*quoted_DN_and_FQAN = strdup( "" );
-		}
-	}
-
-	close( fds[0] );
-
-	do {
-		rc = waitpid( child_pid, &child_status, 0 );
-	} while ( rc < 0 && errno == EINTR );
-
-	if ( child_status != 0 ) {
-		result = 1;
-	}
-
-	return result;
-}
-
-/* Call DCStartd::delegateX509Proxy() in a child process.
- */
-static int
-StartdDelegateX509Proxy( DCStartd *dc_startd, const char* proxy, time_t expiration_time )
-{
-	int result = -1;
-	int rc;
-	int fds[2];
-	pid_t child_pid = 0;
-	int child_status = 0;
-
-	if ( pipe( fds ) < 0 ) {
-		dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): pipe() failed: errno %d (%s)\n",
-				 errno, strerror( errno ) );
-		return -1;
-	}
-
-	child_pid = fork();
-	if ( child_pid < 0 ) {
-			// Error
-		dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): fork() failed: errno %d (%s)\n",
-				 errno, strerror( errno ) );
-		close( fds[0] );
-		close( fds[1] );
-		return -1;
-
-	} else if ( child_pid == 0 ) {
-			// Child
-		close( fds[0] );
-
-		if ( activate_globus_gsi() != 0 ) {
-			dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): %s\n", x509_error_string() );
-		}
-
-		// Call delegation
-		int dReply = dc_startd->delegateX509Proxy (proxy, expiration_time, NULL );
-
-		if ( write( fds[1], &dReply, sizeof(int) ) < (ssize_t)sizeof(int) ) {
-			dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): Failed to write reply to parent!\n" );
-			_exit( 1 );
-		}
-		close( fds[1] );
-
-			// TODO we always indicate success. Do we want to signal failure
-			//   in any situation?
-		_exit( 0 );
-	}
-
-		// Parent
-	close( fds[1] );
-
-	rc = read( fds[0], &result, sizeof(int) );
-	if ( rc < (int)sizeof(int) ) {
-		dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): read() returned %d\n", rc );
-		result = -1;
-	}
-
-	close( fds[0] );
-
-	do {
-		rc = waitpid( child_pid, &child_status, 0 );
-	} while ( rc < 0 && errno == EINTR );
-
-	if ( child_status != 0 ) {
-		dprintf( D_ALWAYS, "StartdDelegateX509Proxy(): child exited with status %d\n", child_status );
-		result = -1;
-	}
-
-	return result;
-}
-
-/* Call DCStarter::delegateX509Proxy() in a child process
- */
-static DCStarter::X509UpdateStatus
-StarterDelegateX509Proxy(DCStarter *dc_starter, const char * filename, time_t expiration_time,char const *sec_session_id, time_t *result_expiration_time)
-{
-	DCStarter::X509UpdateStatus result = DCStarter::XUS_Error;
-	int rc;
-	int fds[2];
-	pid_t child_pid = 0;
-	int child_status = 0;
-
-	if ( pipe( fds ) < 0 ) {
-		dprintf( D_ALWAYS, "StarterDelegateX509Proxy(): pipe() failed: errno %d (%s)\n",
-				 errno, strerror( errno ) );
-		return result;
-	}
-
-	child_pid = fork();
-	if ( child_pid < 0 ) {
-			// Error
-		dprintf( D_ALWAYS, "StarterDelegateX509Proxy(): fork() failed: errno %d (%s)\n",
-				 errno, strerror( errno ) );
-		close( fds[0] );
-		close( fds[1] );
-		return result;
-
-	} else if ( child_pid == 0 ) {
-			// Child
-		close( fds[0] );
-
-		if ( activate_globus_gsi() != 0 ) {
-			dprintf( D_ALWAYS, "StarterDelegateX509Proxy(): %s\n", x509_error_string() );
-		}
-
-		// Call delegation
-		DCStarter::X509UpdateStatus dReply = dc_starter->delegateX509Proxy (filename, expiration_time, sec_session_id, result_expiration_time );
-
-		if ( write( fds[1], &dReply, sizeof(DCStarter::X509UpdateStatus) ) < (ssize_t)sizeof(DCStarter::X509UpdateStatus) ||
-			 write( fds[1], result_expiration_time, sizeof(time_t) ) < (ssize_t)sizeof(time_t) ) {
-			dprintf( D_ALWAYS, "StarerDelegateX509Proxy(): Failed to write reply to parent!\n" );
-			_exit( 1 );
-		}
-		close( fds[1] );
-
-			// TODO we always indicate success. Do we want to signal failure
-			//   in any situation?
-		_exit( 0 );
-	}
-
-		// Parent
-	close( fds[1] );
-
-	rc = read( fds[0], &result, sizeof(DCStarter::X509UpdateStatus) );
-	if ( rc < (int)sizeof(int) ) {
-		dprintf( D_ALWAYS, "StarterDelegateX509Proxy(): read() returned %d\n", rc );
-		result = DCStarter::XUS_Error;
-	}
-	rc = read( fds[0], result_expiration_time, sizeof(time_t) );
-	if ( rc < (int)sizeof(time_t) ) {
-		dprintf( D_ALWAYS, "StarterDelegateX509Proxy(): read() returned %d\n", rc );
-		result = DCStarter::XUS_Error;
-	}
-
-	close( fds[0] );
-
-	do {
-		rc = waitpid( child_pid, &child_status, 0 );
-	} while ( rc < 0 && errno == EINTR );
-
-	if ( child_status != 0 ) {
-		dprintf( D_ALWAYS, "StarterDelegateX509Proxy(): child exited with status %d\n", child_status );
-		result = DCStarter::XUS_Error;
-	}
-
-	return result;
-}
-#endif /* defined(DLOPEN_GSI_LIBS) */
-
 
 RemoteResource::RemoteResource( BaseShadow *shad ) 
 	: m_want_remote_updates(false),
-	  m_want_delayed(true)
+	  m_want_delayed(true),
+	  m_wait_on_kill_failure(false)
 {
 	shadow = shad;
 	dc_startd = NULL;
@@ -401,6 +85,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	supports_reconnect = false;
 	next_reconnect_tid = -1;
 	proxy_check_tid = -1;
+	no_update_received_tid = -1;
 	last_proxy_timestamp = time(0); // We haven't sent the proxy to the starter yet, so anything before "now" means it hasn't changed.
 	m_remote_proxy_expiration = 0;
 	m_remote_proxy_renew_time = 0;
@@ -450,6 +135,12 @@ RemoteResource::~RemoteResource()
 		proxy_check_tid = -1;
 	}
 
+	if (no_update_received_tid != -1) {
+		daemonCore->Cancel_Timer(no_update_received_tid);
+		no_update_received_tid = -1;
+	}
+
+
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
 		if( m_claim_session.secSessionId() ) {
 			daemonCore->getSecMan()->invalidateKey( m_claim_session.secSessionId() );
@@ -478,14 +169,14 @@ RemoteResource::activateClaim( int starterVersion )
 	int num_retries = 0;
 
 	if ( ! dc_startd ) {
-		shadow->dprintf( D_ALWAYS, "Shadow doesn't have startd contact "
-						 "information in RemoteResource::activateClaim()\n" ); 
+		dprintf( D_ALWAYS, "Shadow doesn't have startd contact "
+		         "information in RemoteResource::activateClaim()\n" );
 		setExitReason(JOB_SHADOW_USAGE);  // no better exit reason available
 		return false;
 	}
 
 	if ( !jobAd ) {
-		shadow->dprintf( D_ALWAYS, "JobAd not defined in RemoteResource\n" );
+		dprintf( D_ALWAYS, "JobAd not defined in RemoteResource\n" );
 		setExitReason(JOB_SHADOW_USAGE);  // no better exit reason available
 		return false;
 	}
@@ -500,11 +191,7 @@ RemoteResource::activateClaim( int starterVersion )
 		dprintf( D_FULLDEBUG,
 	                 "trying early delegation (for glexec) of proxy: %s\n", proxy );
 		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
-#if defined(DLOPEN_GSI_LIBS)
-		int dReply = StartdDelegateX509Proxy( dc_startd, proxy, expiration_time );
-#else
 		int dReply = dc_startd->delegateX509Proxy( proxy, expiration_time, NULL );
-#endif
 		if( dReply == OK ) {
 			// early delegation was successful. this means the startd
 			// is going to launch the starter using glexec, so we need
@@ -543,17 +230,19 @@ RemoteResource::activateClaim( int starterVersion )
 										  &claim_sock );
 		switch( reply ) {
 		case OK:
-			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s %s was ACCEPTED\n",
-							 machineName ? machineName:"", dc_startd->addr() );
-				// first, set a timeout on the socket 
+			dprintf( D_ALWAYS,
+			         "Request to run on %s %s was ACCEPTED\n",
+			         machineName ? machineName:"", dc_startd->addr() );
+			// Record the activation start time (HTCONDOR-861).
+			activation.StartTime = time(NULL);
+				// first, set a timeout on the socket
 			claim_sock->timeout( 300 );
 				// Now, register it for remote system calls.
 				// It's a bit funky, but works.
-			daemonCore->Register_Socket( claim_sock, "RSC Socket", 
-				   (SocketHandlercpp)&RemoteResource::handleSysCalls, 
+			daemonCore->Register_Socket( claim_sock, "RSC Socket",
+				   (SocketHandlercpp)&RemoteResource::handleSysCalls,
 				   "HandleSyscalls", this );
-			setResourceState( RR_STARTUP );		
+			setResourceState( RR_STARTUP );
 			hadContact();
 
 				// This expiration time we calculate here may be
@@ -567,9 +256,9 @@ RemoteResource::activateClaim( int starterVersion )
 			return true;
 			break;
 		case CONDOR_TRY_AGAIN:
-			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s %s was DELAYED (previous job still being vacated)\n",
-							 machineName ? machineName:"", dc_startd->addr() );
+			dprintf( D_ALWAYS,
+			         "Request to run on %s %s was DELAYED (previous job still being vacated)\n",
+			         machineName ? machineName:"", dc_startd->addr() );
 			num_retries++;
 			if( num_retries > max_retries ) {
 				dprintf( D_ALWAYS, "activateClaim(): Too many retries, "
@@ -583,22 +272,22 @@ RemoteResource::activateClaim( int starterVersion )
 			break;
 
 		case CONDOR_ERROR:
-			shadow->dprintf( D_ALWAYS, "%s: %s\n", machineName ? machineName:"", dc_startd->error() );
+			dprintf( D_ALWAYS, "%s: %s\n", machineName ? machineName:"", dc_startd->error() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
 
 		case NOT_OK:
-			shadow->dprintf( D_ALWAYS, 
-							 "Request to run on %s %s was REFUSED\n",
-							 machineName ? machineName:"", dc_startd->addr() );
+			dprintf( D_ALWAYS,
+			         "Request to run on %s %s was REFUSED\n",
+			         machineName ? machineName:"", dc_startd->addr() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
 		default:
-			shadow->dprintf( D_ALWAYS, "Got unknown reply(%d) from "
-							 "request to run on %s %s\n", reply,
-							 machineName ? machineName:"", dc_startd->addr() );
+			dprintf( D_ALWAYS, "Got unknown reply(%d) from "
+			         "request to run on %s %s\n", reply,
+			         machineName ? machineName:"", dc_startd->addr() );
 			setExitReason( JOB_NOT_STARTED );
 			return false;
 			break;
@@ -620,8 +309,8 @@ RemoteResource::killStarter( bool graceful )
 		return true;
 	}
 	if ( ! dc_startd ) {
-		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-						 "DCStartd object NULL!\n");
+		dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+		         "DCStartd object NULL!\n");
 		return false;
 	}
 
@@ -630,9 +319,41 @@ RemoteResource::killStarter( bool graceful )
 		abortFileTransfer();
 	}
 
-	if( ! dc_startd->deactivateClaim(graceful,&claim_is_closing) ) {
-		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
-						 "Could not send command to startd\n" );
+	// If we got the job_exit syscall, then we should expect
+	// deactivateClaim() to fail, because the starter exits right
+	// after that. But old starters (prior to 8.7.8) wait around
+	// indefinitely, expecting our deactivateClaim() to trigger their
+	// demise. So don't do our retry-and-wait-on-failure song and dance
+	// if we saw a job_exit.
+	// TODO If we add a version check or decide we don't care about 8.6.X
+	//   and earlier, we can just return true if m_got_job_exit==true.
+	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_exit;
+	int num_tries = wait_on_failure ? 3 : 1;
+	while (num_tries > 0) {
+		if (dc_startd->deactivateClaim(graceful, &claim_is_closing)) {
+			break;
+		}
+		num_tries--;
+		if (num_tries) {
+			const int delay = 5;
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+			         "Could not send command to startd, will retry in %d seconds\n", delay );
+			sleep(delay);
+		} else {
+			dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+			         "Could not send command to startd\n" );
+		}
+	}
+
+	if (num_tries == 0) {
+		if (wait_on_failure) {
+			disconnectClaimSock("Failed to contact startd, forcing disconnect from starter");
+			int remaining = remainingLeaseDuration();
+			if (remaining > 0) {
+				dprintf(D_ALWAYS, "Failed to kill starter, sleeping for remaining lease duration of %d seconds\n", remaining);
+				sleep(remaining);
+			}
+		}
 		return false;
 	}
 
@@ -655,8 +376,12 @@ RemoteResource::killStarter( bool graceful )
 	bool wantReleaseClaim = false;
 	jobAd->LookupBool(ATTR_RELEASE_CLAIM, wantReleaseClaim);
 	if (wantReleaseClaim) {
-		ClassAd replyAd;
-		dc_startd->releaseClaim(VACATE_FAST, &replyAd);
+		classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg(RELEASE_CLAIM, dc_startd->getClaimId());
+		msg->setSecSessionId(m_claim_session.secSessionId());
+		msg->setSuccessDebugLevel(D_ALWAYS);
+		msg->setTimeout( 20);
+		msg->setStreamType(Stream::reli_sock);
+		dc_startd->sendBlockingMsg(msg.get());
 	}
 	return true;
 }
@@ -673,15 +398,15 @@ bool RemoteResource::suspend()
 			if ( dc_startd->_suspendClaim() )
 				bRet = true;
 			else
-				shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): dc_startd->suspendClaim FAILED!\n");
+				dprintf( D_ALWAYS, "RemoteResource::suspend(): dc_startd->suspendClaim FAILED!\n");
 
 		}
 		else
-			shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): DCStartd object NULL!\n");
+			dprintf( D_ALWAYS, "RemoteResource::suspend(): DCStartd object NULL!\n");
 
 	}
 	else
-		shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): Not connected to resource!\n");
+		dprintf( D_ALWAYS, "RemoteResource::suspend(): Not connected to resource!\n");
 
 	return (bRet);
 }
@@ -695,10 +420,10 @@ bool RemoteResource::resume()
 		if ( dc_startd->_continueClaim() )
 			bRet = true;
 		else
-			shadow->dprintf( D_ALWAYS, "RemoteResource::resume(): dc_startd->resume FAILED!\n");
+			dprintf( D_ALWAYS, "RemoteResource::resume(): dc_startd->resume FAILED!\n");
 	}
 	else
-		shadow->dprintf( D_ALWAYS, "RemoteResource::resume(): Not connected to resource!\n");
+		dprintf( D_ALWAYS, "RemoteResource::resume(): Not connected to resource!\n");
 		
 	return (bRet);
 }
@@ -707,33 +432,31 @@ bool RemoteResource::resume()
 void
 RemoteResource::dprintfSelf( int debugLevel )
 {
-	shadow->dprintf ( debugLevel, "RemoteResource::dprintSelf printing "
+	dprintf ( debugLevel, "RemoteResource::dprintSelf printing "
 					  "host info:\n");
 	if( dc_startd ) {
 		const char* addr = dc_startd->addr();
 		const char* id = dc_startd->getClaimId();
-		shadow->dprintf( debugLevel, "\tstartdAddr: %s\n", 
-						 addr ? addr : "Unknown" );
-		shadow->dprintf( debugLevel, "\tClaimId: %s\n", 
-						 id ? id : "Unknown" );
+		dprintf( debugLevel, "\tstartdAddr: %s\n",
+		         addr ? addr : "Unknown" );
+		dprintf( debugLevel, "\tClaimId: %s\n",
+		         id ? id : "Unknown" );
 	}
 	if( machineName ) {
-		shadow->dprintf( debugLevel, "\tmachineName: %s\n",
-						 machineName );
+		dprintf( debugLevel, "\tmachineName: %s\n", machineName );
 	}
 	if( starterAddress ) {
-		shadow->dprintf( debugLevel, "\tstarterAddr: %s\n", 
-						 starterAddress );
+		dprintf( debugLevel, "\tstarterAddr: %s\n", starterAddress );
 	}
-	shadow->dprintf( debugLevel, "\texit_reason: %d\n", exit_reason );
-	shadow->dprintf( debugLevel, "\texited_by_signal: %s\n", 
-					 exited_by_signal ? "True" : "False" );
+	dprintf( debugLevel, "\texit_reason: %d\n", exit_reason );
+	dprintf( debugLevel, "\texited_by_signal: %s\n",
+	         exited_by_signal ? "True" : "False" );
 	if( exited_by_signal ) {
-		shadow->dprintf( debugLevel, "\texit_signal: %lld\n", 
-						 (long long)exit_value );
+		dprintf( debugLevel, "\texit_signal: %lld\n",
+		         (long long)exit_value );
 	} else {
-		shadow->dprintf( debugLevel, "\texit_code: %lld\n", 
-						 (long long)exit_value );
+		dprintf( debugLevel, "\texit_code: %lld\n",
+		         (long long)exit_value );
 	}
 }
 
@@ -749,7 +472,7 @@ RemoteResource::abortFileTransfer()
 {
 	filetrans.stopServer();
 	if( state == RR_PENDING_TRANSFER ) {
-		state = RR_FINISHED;
+		setResourceState(RR_FINISHED);
 	}
 }
 
@@ -802,7 +525,7 @@ RemoteResource::handleSysCalls( Stream * /* sock */ )
 	thisRemoteResource = this;
 
 	if (do_REMOTE_syscall() < 0) {
-		shadow->dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
+		dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
 		attemptShutdown();
 		return KEEP_STREAM;
 	}
@@ -919,6 +642,40 @@ RemoteResource::closeClaimSock( void )
 	}
 }
 
+void
+RemoteResource::disconnectClaimSock(const char *err_msg)
+{
+	if (!claim_sock) {
+		return;
+	}
+
+	std::string my_err_msg;
+	formatstr(my_err_msg, "%s %s",
+	          (err_msg ? err_msg : "Disconnecting from starter"),
+	          claim_sock->get_sinful_peer());
+
+	thisRemoteResource->closeClaimSock();
+
+	if( Shadow->supportsReconnect() ) {
+			// instead of having to EXCEPT, we can now try to
+			// reconnect.  happy day! :)
+		dprintf( D_ALWAYS, "%s\n", my_err_msg.c_str() );
+
+		Shadow->resourceDisconnected(thisRemoteResource);
+
+		if (!Shadow->shouldAttemptReconnect(thisRemoteResource)) {
+			dprintf(D_ALWAYS, "This job cannot reconnect to starter, so job exiting\n");
+			Shadow->gracefulShutDown();
+			EXCEPT( "%s", my_err_msg.c_str() );
+		}
+			// tell the shadow to start trying to reconnect
+		Shadow->reconnect();
+	} else {
+			// The remote starter doesn't support it, so give up
+			// like we always used to.
+		EXCEPT( "%s", my_err_msg.c_str() );
+	}
+}
 
 int
 RemoteResource::getExitReason() const
@@ -1049,11 +806,11 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 				// by the startd, but for file transfer, it makes more sense
 				// to use the shadow's policy.
 
-			MyString filetrans_claimid;
+			std::string filetrans_claimid;
 				// prepend something to the claim id so that the session id
 				// is different for file transfer than for the claim session
-			filetrans_claimid.formatstr("filetrans.%s",claim_id);
-			m_filetrans_session = ClaimIdParser(filetrans_claimid.Value());
+			formatstr(filetrans_claimid,"filetrans.%s",claim_id);
+			m_filetrans_session = ClaimIdParser(filetrans_claimid.c_str());
 
 				// Get rid of session parameters set by startd.
 				// We will set our own based on the shadow WRITE policy.
@@ -1062,12 +819,12 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 				// Since we just removed the session info, we must
 				// set ignore_session_info=true in the following call or
 				// we will get NULL for the session id.
-			MyString filetrans_session_id =
+			std::string filetrans_session_id =
 				m_filetrans_session.secSessionId(/*ignore_session_info=*/ true);
 
 			rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 				WRITE,
-				filetrans_session_id.Value(),
+				filetrans_session_id.c_str(),
 				m_filetrans_session.secSessionKey(),
 				NULL,
 				AUTH_METHOD_MATCH,
@@ -1083,16 +840,16 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 					// fill in session_info so that starter will have
 					// enough info to create a security session
 					// compatible with the one we just created.
-				MyString session_info;
+				std::string session_info;
 				rc = daemonCore->getSecMan()->ExportSecSessionInfo(
-					filetrans_session_id.Value(),
+					filetrans_session_id.c_str(),
 					session_info );
 
 				if( !rc ) {
 					dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to get session info for claim id %s\n",m_filetrans_session.publicClaimId());
 				}
 				else {
-					m_filetrans_session.setSecSessionInfo( session_info.Value() );
+					m_filetrans_session.setSecSessionInfo( session_info.c_str() );
 				}
 			}
 		}
@@ -1217,12 +974,12 @@ RemoteResource::setExitReason( int reason )
 {
 	// Set the exit_reason, but not if the reason is JOB_KILLED.
 	// This prevents exit_reason being reset from JOB_KILLED to
-	// JOB_NOT_CKPTED or some such when the starter gets killed
+	// JOB_SHOULD_REQUEUE or some such when the starter gets killed
 	// and the syscall sock goes away.
 
 	if( exit_reason != JOB_KILLED && -1 == exit_reason) {
-		shadow->dprintf( D_FULLDEBUG, "setting exit reason on %s to %d\n", 
-					 machineName ? machineName : "???", reason ); 
+		dprintf( D_FULLDEBUG, "setting exit reason on %s to %d\n",
+		         machineName ? machineName : "???", reason );
 			
 		exit_reason = reason;
 	}
@@ -1358,6 +1115,31 @@ RemoteResource::setJobAd( ClassAd *jA )
 	jA->LookupString(ATTR_X509_USER_PROXY, proxy_path);
 }
 
+void
+RemoteResource::updateFromStarterTimeout()
+{
+	// If we landed here, then we expected to receive an update from the starter,
+	// but it didn't arrive yet.  Even if the remote syscall sock is still connected,
+	// failing to receive an update could mean that the starter is wedged or dead
+	// (and some goofed up NAT box is artifically keeping the remote syscall sock connected).
+
+	// So instead of the shadow hanging out forever waiting to hear from a starter that
+	// might be dead, close our remote syscall sock now and try to reconnect.
+
+	// NOTE: only close the sock if we are executing the job, not shutting down or
+	// transferring files or whatever.  Why?  Well, in these situations, the starter
+	// may legitimately be fine and yet not sending updates anymore
+	// because it is about to shutdown, or because a long file transfer is
+	// happening in the foreground.
+
+	if (getResourceState() == RR_EXECUTING && !filetrans.transferIsInProgress()) {
+		disconnectClaimSock("Failed to receive an update from the starter when expected, forcing disconnect");
+	}
+
+	// Timer is not periodic, so since it has now fired, the tid is invalid. Clear it.
+	no_update_received_tid = -1;
+}
+
 
 void
 RemoteResource::updateFromStarter( ClassAd* update_ad )
@@ -1366,7 +1148,22 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	std::string string_value;
 	bool bool_value;
 
-	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
+	int maxinterval = 0;
+	update_ad->LookupInteger(ATTR_JOBINFO_MAXINTERVAL, maxinterval);
+	if (no_update_received_tid != -1) {
+		daemonCore->Cancel_Timer(no_update_received_tid);
+		no_update_received_tid = -1;
+	}
+	if (maxinterval > 0) {
+		no_update_received_tid = daemonCore->Register_Timer(
+			maxinterval * 3,  // should receive another update in maxinterval secs, x3 to be sure
+			(TimerHandlercpp)&RemoteResource::updateFromStarterTimeout,
+			"RemoteResource::updateFromStarterTimeout()", this
+		);
+	}
+
+	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter() maxinterval=%d\n",
+		maxinterval);
 	hadContact();
 
 	if( IsDebugLevel(D_MACHINE) ) {
@@ -1478,7 +1275,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     CopyAttribute("Recent" ATTR_BLOCK_READS, *jobAd, *update_ad);
     CopyAttribute("Recent" ATTR_BLOCK_WRITES, *jobAd, *update_ad);
 
+
     CopyAttribute(ATTR_IO_WAIT, *jobAd, *update_ad);
+    CopyAttribute(ATTR_JOB_CPU_INSTRUCTIONS, *jobAd, *update_ad);
 
 	// FIXME: If we're convinced that we want a whitelist here (chirp
 	// would seem to make a mockery of that), we should at least rewrite
@@ -1838,14 +1637,6 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 	// Update timestamp of the last checkpoint
 	jobAd->Assign(ATTR_LAST_CKPT_TIME, now);
 
-	// Update CkptArch and CkptOpSys
-	if( starterArch ) {
-		jobAd->Assign(ATTR_CKPT_ARCH, starterArch);
-	}
-	if( starterOpsys ) {
-		jobAd->Assign(ATTR_CKPT_OPSYS, starterOpsys);
-	}
-
 	// Update Ckpt MAC and IP address of VM
 	if( update_ad->LookupString(ATTR_VM_CKPT_MAC,string_value) ) {
 		jobAd->Assign(ATTR_VM_CKPT_MAC, string_value);
@@ -1931,15 +1722,6 @@ RemoteResource::printCheckpointStats( int debug_level )
 	jobAd->LookupInteger( ATTR_LAST_CKPT_TIME, int_value);
 	dprintf( debug_level, "%s = %d\n", ATTR_LAST_CKPT_TIME, int_value);
 
-	// CkptArch and CkptOpSys
-	string_attr = "";
-	jobAd->LookupString(ATTR_CKPT_ARCH, string_attr);
-	dprintf( debug_level, "%s = %s\n", ATTR_CKPT_ARCH, string_attr.c_str());
-
-	string_attr = "";
-	jobAd->LookupString(ATTR_CKPT_OPSYS, string_attr);
-	dprintf( debug_level, "%s = %s\n", ATTR_CKPT_OPSYS, string_attr.c_str());
-
 	// MAC and IP address of VM
 	string_attr = "";
 	jobAd->LookupString(ATTR_VM_CKPT_MAC, string_attr);
@@ -1958,6 +1740,17 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 	setExitReason( reason_for_exit );
 
 	m_got_job_exit = true;
+
+	// Record the activation stop time (HTCONDOR-861) and set the
+	// corresponding duration attributes.
+	activation.TerminationTime = time(NULL);
+	time_t ActivationDuration = activation.TerminationTime - activation.StartTime;
+	time_t ActivationTeardownDuration = activation.TerminationTime - activation.ExitExecutionTime;
+
+	// Where would these attributes get rotated?  Here?
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_DURATION, ActivationDuration );
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION, ActivationTeardownDuration );
+	shadow->updateJobInQueue( U_STATUS );
 
 	// record the start time of transfer output into the job ad.
 	time_t tStart = -1, tEnd = -1;
@@ -2026,11 +1819,11 @@ RemoteResource::setResourceState( ResourceState s )
 {
 	if ( state != s )
 	{
-		shadow->dprintf( D_FULLDEBUG,
-						"Resource %s changing state from %s to %s\n",
-						machineName ? machineName : "???", 
-						rrStateToString(state), 
-						rrStateToString(s) );
+		dprintf( D_FULLDEBUG,
+		         "Resource %s changing state from %s to %s\n",
+		         machineName ? machineName : "???",
+		         rrStateToString(state),
+		         rrStateToString(s) );
 		state = s;
 	}
 }
@@ -2058,28 +1851,38 @@ RemoteResource::startCheckingProxy()
 		proxy_check_tid = daemonCore->Register_Timer( 0, PROXY_CHECK_INTERVAL,
 							(TimerHandlercpp)&RemoteResource::checkX509Proxy,
 							"RemoteResource::checkX509Proxy()", this );
-    }
+	}
 }
 
-void 
+void
 RemoteResource::beginExecution( void )
 {
+	//
+	// Self-checkpointing jobs may begin execution more than once per
+	// activation.  Record that information for use by the activation
+	// metrics (HTCONDOR-861).
+	//
+	time_t now = time(NULL);
+	activation.StartExecutionTime = now;
+	time_t ActivationSetUpDuration = activation.StartExecutionTime - activation.StartTime;
+    // Where would this attribute get rotated?  Here?
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_SETUP_DURATION, ActivationSetUpDuration );
+	shadow->updateJobInQueue(U_STATUS);
+
 	if( began_execution ) {
-			// Only call this function once per remote resource
 		return;
 	}
 
 	began_execution = true;
 	setResourceState( RR_EXECUTING );
 
-	// add the execution start time into the job ad. 
-	int now = (int)time(NULL);
-	jobAd->Assign( ATTR_JOB_CURRENT_START_EXECUTING_DATE , now);
+	// add the execution start time into the job ad.
+	jobAd->Assign( ATTR_JOB_CURRENT_START_EXECUTING_DATE, now);
 
 	startCheckingProxy();
-	
-		// Let our shadow know so it can make global decisions (for
-		// example, should it log a JOB_EXECUTE event)
+
+	// Let our shadow know so it can make global decisions (for
+	// example, should it log a JOB_EXECUTE event)
 	shadow->resourceBeganExecution( this );
 }
 
@@ -2157,10 +1960,10 @@ RemoteResource::reconnect( void )
 	if( !remaining ) {
 		dprintf( D_ALWAYS, "%s remaining: EXPIRED!\n",
 			 ATTR_JOB_LEASE_DURATION );
-		MyString reason;
+		std::string reason;
 		formatstr( reason, "Job disconnected too long: %s (%d seconds) expired",
 		           ATTR_JOB_LEASE_DURATION, lease_duration );
-		shadow->reconnectFailed( reason.Value() );
+		shadow->reconnectFailed( reason.c_str() );
 	}
 	dprintf( D_ALWAYS, "%s remaining: %d\n", ATTR_JOB_LEASE_DURATION,
 			 remaining );
@@ -2327,14 +2130,20 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 {
 	ASSERT(jobAd);
 
-	FileTransfer::FileTransferInfo info = transobject->GetInfo();
+	const FileTransfer::FileTransferInfo& info = transobject->GetInfo();
 	dprintf(D_FULLDEBUG,"RemoteResource::transferStatusUpdateCallback(in_progress=%d)\n",info.in_progress);
 
 	if( info.type == FileTransfer::DownloadFilesType ) {
 		m_download_xfer_status = info.xfer_status;
+		if( ! info.in_progress ) {
+			m_download_file_stats = info.stats;
+		}
 	}
 	else {
 		m_upload_xfer_status = info.xfer_status;
+		if( ! info.in_progress ) {
+			m_upload_file_stats = info.stats;
+		}
 	}
 	shadow->updateJobInQueue(U_PERIODIC);
 	return 0;
@@ -2413,7 +2222,7 @@ RemoteResource::requestReconnect( void )
 	ReliSock* rsock = new ReliSock;
 	ClassAd req;
 	ClassAd reply;
-	MyString msg;
+	std::string msg;
 
 		// First, fill up the request with all the data we need
 	shadow->publishShadowAttrs( &req );
@@ -2488,7 +2297,7 @@ RemoteResource::requestReconnect( void )
 			msg = "Starter refused request (";
 			msg += starter.error();
 			msg += ')';
-			shadow->reconnectFailed( msg.Value() );
+			shadow->reconnectFailed( msg.c_str() );
 			break;
 
 				// All the errors that can only be programmer
@@ -2534,16 +2343,30 @@ RemoteResource::requestReconnect( void )
 		// this stuff about itself. 
 	setStarterInfo( &reply );
 
-	began_execution = true;
-	setResourceState( RR_EXECUTING );
-	reconnect_attempts = 0;
-	hadContact();
-
 	int proxy_expiration = 0;
 	if( jobAd->LookupInteger(ATTR_DELEGATED_PROXY_EXPIRATION,proxy_expiration) ) {
 		setRemoteProxyRenewTime(proxy_expiration);
 	}
-	startCheckingProxy();
+
+	// If the shadow started in reconnect mode, check the job ad to see
+	// if we previously heard about the job starting execution, and set
+	// up our state accordingly.
+	if ( shadow->attemptingReconnectAtStartup ) {
+		time_t job_execute_date = 0;
+		time_t claim_start_date = 0;
+		jobAd->LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, job_execute_date);
+		jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, claim_start_date);
+		if ( job_execute_date >= claim_start_date ) {
+			began_execution = true;
+			setResourceState( RR_EXECUTING );
+			startCheckingProxy();
+		} else {
+			setResourceState( RR_STARTUP );
+		}
+	}
+
+	reconnect_attempts = 0;
+	hadContact();
 
 		// Tell the Shadow object so it can take care of the rest.
 	shadow->resourceReconnected( this );
@@ -2575,13 +2398,7 @@ RemoteResource::setRemoteProxyRenewTime()
 	}
 
 	time_t desired_expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
-#if defined(DLOPEN_GSI_LIBS)
-	time_t proxy_expiration_time = -1;
-	QueryJobProxy( proxy_path.c_str(), &proxy_expiration_time, NULL, NULL,
-				   NULL, NULL );
-#else
 	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.c_str());
-#endif
 	time_t expiration_time = desired_expiration_time;
 
 	if( proxy_expiration_time == (time_t)-1 ) {
@@ -2614,11 +2431,7 @@ RemoteResource::updateX509Proxy(const char * filename)
 	if ( param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) == true ) {
 		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
 		time_t result_expiration_time = 0;
-#if defined(DLOPEN_GSI_LIBS)
-		ret = StarterDelegateX509Proxy(&starter, filename, expiration_time, m_claim_session.secSessionId(),&result_expiration_time);
-#else
 		ret = starter.delegateX509Proxy(filename, expiration_time, m_claim_session.secSessionId(),&result_expiration_time);
-#endif
 		if( ret == DCStarter::XUS_Okay ) {
 			setRemoteProxyRenewTime(result_expiration_time);
 		}
@@ -2675,85 +2488,13 @@ RemoteResource::checkX509Proxy( void )
 	}
 
 
-	// if the proxy has been modified, attempt to reload various attributes
-	// and update them in the jobAd.  we do this on the submit side regardless
+	// if the proxy has been modified, attempt to reload the expiration time
+	// and update it in the jobAd.  we do this on the submit side regardless
 	// of whether or not the remote side succesfully receives the proxy, since
 	// this allows us to use the attributes in job policy (periodic_hold, etc.)
 
-#if defined(DLOPEN_GSI_LIBS)
-	char *proxy_subject = NULL;
-	time_t proxy_expiration_time = -1;
-	char *voname = NULL;
-	char *firstfqan = NULL;
-	char *quoted_DN_and_FQAN = NULL;
-	QueryJobProxy( proxy_path.c_str(), &proxy_expiration_time, &proxy_subject,
-				   &voname, &firstfqan, &quoted_DN_and_FQAN );
-
-	jobAd->Assign(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration_time);
-	/* These are secure attributes, only settable by the schedd.
-	 * Assume they won't change during job execution.
-	if ( proxy_subject && *proxy_subject ) {
-		jobAd->Assign(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
-	}
-	if ( voname && *voname ) {
-		jobAd->Assign(ATTR_X509_USER_PROXY_VONAME, voname);
-	}
-	if ( firstfqan && *firstfqan ) {
-		jobAd->Assign(ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);
-	}
-	if ( quoted_DN_and_FQAN && *quoted_DN_and_FQAN ) {
-		jobAd->Assign(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);
-	}
-	*/
-	free( proxy_subject );
-	free( voname );
-	free( firstfqan );
-	free( quoted_DN_and_FQAN );
-#else
-	// first, do the DN and expiration time, which all proxies have
-	char* proxy_subject = x509_proxy_identity_name(proxy_path.c_str());
 	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.c_str());
-	/* This is a secure attribute, only settable by the schedd.
-	 * Assume it won't change during job execution.
-	jobAd->Assign(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
-	*/
 	jobAd->Assign(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration_time);
-	if (proxy_subject) {
-		free(proxy_subject);
-	}
-
-#if defined(HAVE_EXT_VOMS)
-	// second, worry about the VOMS attributes, which may or may not be present
-	char * voname = NULL;
-	char * firstfqan = NULL;
-	char * quoted_DN_and_FQAN = NULL;
-	int vomserr = extract_VOMS_info_from_file(
-			proxy_path.c_str(),
-			0 /*do not verify*/,
-			&voname,
-			&firstfqan,
-			&quoted_DN_and_FQAN);
-	if (vomserr == 0) {
-		// VOMS attributes were found
-		if (IsDebugVerbose(D_SECURITY)) {
-			dprintf(D_SECURITY, "VOMS attributes were found\n");
-		}
-		/* These are secure attributes, only settable by the schedd.
-		 * Assume they won't change during job execution.
-		jobAd->Assign(ATTR_X509_USER_PROXY_VONAME, voname);
-		jobAd->Assign(ATTR_X509_USER_PROXY_FIRST_FQAN, firstfqan);
-		jobAd->Assign(ATTR_X509_USER_PROXY_FQAN, quoted_DN_and_FQAN);
-		*/
-		free(voname);
-		free(firstfqan);
-		free(quoted_DN_and_FQAN);
-	} else {
-		if (IsDebugVerbose(D_SECURITY)) {
-			dprintf(D_SECURITY, "VOMS attributes were not found\n");
-		}
-	}
-#endif
-#endif
 	shadow->updateJobInQueue(U_X509);
 
 	// Proxy file updated.  Time to upload
@@ -2764,13 +2505,13 @@ RemoteResource::checkX509Proxy( void )
 bool
 RemoteResource::getSecSessionInfo(
 	char const *,
-	MyString &reconnect_session_id,
-	MyString &reconnect_session_info,
-	MyString &reconnect_session_key,
+	std::string &reconnect_session_id,
+	std::string &reconnect_session_info,
+	std::string &reconnect_session_key,
 	char const *,
-	MyString &filetrans_session_id,
-	MyString &filetrans_session_info,
-	MyString &filetrans_session_key)
+	std::string &filetrans_session_id,
+	std::string &filetrans_session_info,
+	std::string &filetrans_session_key)
 {
 	if( !param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
 		dprintf(D_ALWAYS,"Request for security session info from starter, but SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION is not True, so ignoring.\n");
@@ -2850,4 +2591,14 @@ RemoteResource::logRemoteAccessCheck(bool allow,char const *op,char const *name)
 			allow ? "ALLOWING" : "DENYING",
 			op,
 			name);
+}
+
+void
+RemoteResource::recordActivationExitExecutionTime(time_t when) {
+    activation.ExitExecutionTime = when;
+    time_t ActivationExecutionDuration = activation.ExitExecutionTime - activation.StartExecutionTime;
+
+    // Where would this attribute get rotated?  Here?
+    jobAd->InsertAttr( ATTR_JOB_ACTIVATION_EXECUTION_DURATION, ActivationExecutionDuration );
+    shadow->updateJobInQueue( U_STATUS );
 }

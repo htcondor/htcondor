@@ -26,6 +26,11 @@
 #include "condor_threads.h"
 
 #ifndef SELECTOR_USE_POLL
+// TODO: actually use WSAPoll (and it's POLL* constants)
+#undef POLLIN
+#undef POLLOUT
+#undef POLLERR
+#undef POLLHUP
 #define POLLIN 1
 #define POLLOUT 2
 #define POLLERR 4

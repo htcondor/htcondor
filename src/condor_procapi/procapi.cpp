@@ -983,7 +983,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 }
 
 int
-ProcAPI::buildProcInfoList()
+ProcAPI::buildProcInfoList(pid_t /*BOLOpid*/)
 {
 	int mib[4];
 	struct kinfo_proc *kp = NULL;
@@ -1535,7 +1535,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 // what happens above in getProcInfoRaw
 //
 int
-ProcAPI::buildProcInfoList()
+ProcAPI::buildProcInfoList(pid_t /*BOLOpid*/)
 {
     double begin = qpcBegin();
 
@@ -1838,9 +1838,9 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 }
 
 procInfo*
-ProcAPI::getProcInfoList()
+ProcAPI::getProcInfoList(pid_t BOLOpid)
 {
-	if (buildProcInfoList() != PROCAPI_SUCCESS) {
+	if (buildProcInfoList(BOLOpid) != PROCAPI_SUCCESS) {
 		dprintf(D_ALWAYS,
 		        "ProcAPI: error retrieving list of process data\n");
 		deallocAllProcInfos();
@@ -1907,20 +1907,109 @@ ProcAPI::initProcInfoRaw(procInfoRaw& procRaw){
  */
 
 #if !defined(Darwin) && !defined(CONDOR_FREEBSD)
+
+#include <fstream>
+
 int
-build_pid_list( std::vector<pid_t> & pidList ) {
+build_pid_list( std::vector<pid_t> & newPidList, pid_t BOLOpid = 0) {
+	//
+	// If you mount /proc with the option hidepid=2, then PID 1 isn't
+	// necessarily listed in /proc.
+	//
+	// See condor_utils/filesystem_remap.cpp for details.
+	//
+	static bool hidepid = true;
+	static bool checked_proc_mountinfo = false;
+	if(! checked_proc_mountinfo) {
+		std::string line;
+		std::ifstream file("/proc/self/mountinfo");
+		if( file.good() ) {
+			while(! file.eof()) {
+				getline(file, line);
+				if(! file.good()) { break; }
+
+				std::string token;
+				std::istringstream is(line);
+				getline(is, token, ' '); // mount ID
+				getline(is, token, ' '); // parent ID
+				getline(is, token, ' '); // major:minor
+				getline(is, token, ' '); // root
+				getline(is, token, ' '); // mount point
+				std::string mount_point = token;
+				getline(is, token, ' '); // mount options
+
+				// Any number of optional fields followed by a '-'.
+				do {
+					getline(is, token, ' ');
+				} while( token != "-" );
+
+				getline(is, token, ' '); // filesystem type
+				getline(is, token, ' '); // mount source
+				getline(is, token, ' '); // per-superblock options
+				std::string ps_options = token;
+
+				bool found_proc = false;
+				bool found_hidepid = false;
+				if( mount_point == "/proc" ) {
+					found_proc = true;
+
+					std::string option;
+					std::istringstream psos(ps_options);
+					while(! psos.eof()) {
+						getline(psos, option, ',');
+						if(! psos.fail()) {
+							size_t pos = option.find("hidepid");
+							if( pos == 0 ) {
+								found_hidepid = true;
+								try {
+									std::string value = option.substr(7 + 1);
+									int v = std::stoi(value);
+									if( v <= 1 ) {
+										dprintf( D_ALWAYS, "Found per-superblock option hidepid <= 1 for /proc, enabling check for PID 1.\n" );
+										hidepid = false;
+										break;
+									}
+								}
+								catch( std::out_of_range & e ) { break; }
+								catch( std::invalid_argument & e ) { break; }
+							}
+						}
+					}
+
+					// The default mount option for hidepid is 0; indeed, if you
+					// explicitly specify hidepid=0 in the mount command, it
+					// won't appear in /proc/self/mountinfo.
+					if( found_proc && ! found_hidepid ) {
+						dprintf( D_ALWAYS, "/proc was mounted without hidepid, assuming default of 0.\n" );
+						hidepid = false;
+					}
+
+					// We found `proc`, we can quit reading now.
+					break;
+				}
+			}
+
+			file.close();
+		}
+
+		checked_proc_mountinfo = true;
+	}
+
 	pid_t my_pid = getpid();
 	pid_t my_ppid = getppid();
 
 	bool saw_pid1 = false;
 	bool saw_ppid = false;
 	bool saw_pid = false;
+	bool saw_bolo_pid = false;
 
-	pidList.clear();
 	condor_DIR * dirp = condor_opendir("/proc");
 	if( dirp == NULL ) {
+		dprintf( D_ALWAYS, "ProcAPI: opendir('/proc') failed (%d): %s\n", errno, strerror(errno) );
 		return -1;
 	}
+
+	newPidList.clear();
 
 	int total_entries = 0;
 	int pid_entries = 0;
@@ -1934,24 +2023,35 @@ build_pid_list( std::vector<pid_t> & pidList ) {
 		++total_entries;
 		if( isdigit(direntp->d_name[0]) ) {
 			pid_t the_pid = (pid_t)atol(direntp->d_name);
-			pidList.push_back(the_pid);
+			newPidList.push_back(the_pid);
 			++pid_entries;
 
 			if( the_pid == 1 ) { saw_pid1 = true; }
 			if( the_pid == my_ppid ) { saw_ppid  = true; }
 			if( the_pid == my_pid ) { saw_pid = true; }
+			if( the_pid == BOLOpid ) { saw_bolo_pid = true; }
 		}
 	}
 	if( errno != 0 ) {
 		dprintf(D_ALWAYS, "ProcAPI: readdir() failed: errno %d (%s)\n",
 			errno, strerror(errno));
+		condor_closedir( dirp );
 		return -2;
 	}
 	condor_closedir( dirp );
 
 	dprintf(D_FULLDEBUG, "ProcAPI: read %d pid entries out of %d total entries in /proc\n", pid_entries, total_entries);
 
-	if( saw_pid1 && saw_ppid && saw_pid ) {
+	if (saw_bolo_pid) {
+		dprintf(D_FULLDEBUG, "As expected, we saw root of subfamily pid of %d\n", BOLOpid);
+	} else {
+		if (BOLOpid != 0) {
+			dprintf(D_ALWAYS, "Warning, expected subfamily pid of %d was not found in /proc, adding to set of assumed alived pids\n", BOLOpid);
+			newPidList.push_back(BOLOpid);
+			++pid_entries;
+		}
+	}
+	if( (hidepid || saw_pid1) && saw_ppid && saw_pid ) {
 		return pid_entries;
 	} else {
 		return -3;
@@ -1959,11 +2059,11 @@ build_pid_list( std::vector<pid_t> & pidList ) {
 }
 
 int
-ProcAPI::buildPidList() {
+ProcAPI::buildPidList(pid_t BOLOpid) {
 	static bool retry = true;
 
 	std::vector<pid_t> newPidList;
-	int rv = build_pid_list(newPidList);
+	int rv = build_pid_list(newPidList, BOLOpid);
 
     //
     // Based on analysis of our logs from December 2020 and the first
@@ -1985,11 +2085,20 @@ ProcAPI::buildPidList() {
             fraction = d;
         }
     }
-    dprintf( D_ALWAYS, "PROCAPI_RETRY_FRACTION = %f\n", fraction );
 
+    //
+    // FIXME: this code doesn't ever reset the expected number of PIDs,
+    // so the test suite (and possible others) gets stuck in a loop of
+    // "bad" reads which continues to return increasingly-obsolete data
+    // about the PIDs until something (e.g., registration of a job's PID
+    // by the starter) fails.  So I'm disabling this test until we figure
+    // out something saner to do.  Since this test was broken for months
+    // without causing CHTC any problems, maybe we won't have to.
+    //
     bool suddenly_too_many_fewer = false;
     if( rv >= 0 && rv < (int)(pidList.size() * fraction) ) {
-        suddenly_too_many_fewer = true;
+        dprintf( D_ALWAYS, "PROCAPI_RETRY_FRACTION = %f means that the current read of %d is suddenly too much smaller than the previous read of %zu\n", fraction, rv, pidList.size() );
+        // suddenly_too_many_fewer = true;
     }
 
 	if( rv == -1 ) {
@@ -2001,14 +2110,14 @@ ProcAPI::buildPidList() {
 
 		std::stringstream buffer;
 
-		for( unsigned i = 0; i < pidList.size(); ++i ) {
-			buffer << " " << pidList[i];
+		for( auto pid : pidList ) {
+			buffer << " " << pid;
 		}
 		dprintf( D_ALWAYS, "ProcAPI: previous PID list:%s\n",
 			buffer.str().c_str() );
 
-		for( unsigned i = 1; i < newPidList.size(); ++i ) {
-			buffer << " " << newPidList[i];
+		for( auto pid: newPidList ) {
+			buffer << " " << pid;
 		}
 		dprintf( D_ALWAYS, "ProcAPI: new PID list:%s\n",
 			buffer.str().c_str() );
@@ -2084,7 +2193,7 @@ ProcAPI::buildPidList() {
 
 #if !defined(WIN32) && !defined(DARWIN)
 int
-ProcAPI::buildProcInfoList() {
+ProcAPI::buildProcInfoList(pid_t BOLOpid) {
   
 	piPTR current;
 	piPTR temp;
@@ -2092,7 +2201,7 @@ ProcAPI::buildProcInfoList() {
 
 	deallocAllProcInfos();
 
-	if (buildPidList() != PROCAPI_SUCCESS) {
+	if (buildPidList(BOLOpid) != PROCAPI_SUCCESS) {
 		dprintf(D_ALWAYS, "ProcAPI: error retrieving list of processes\n");
 		return PROCAPI_FAILURE;
 	}
@@ -2119,8 +2228,6 @@ ProcAPI::buildProcInfoList() {
 	temp = allProcInfos;
 	allProcInfos = allProcInfos->next;
 	delete temp;
-
-	pidList.clear();
 
 	return PROCAPI_SUCCESS;
 }

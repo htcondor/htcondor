@@ -32,8 +32,6 @@
 #include "condor_uid.h"
 #include "ipv6_hostname.h"
 
-extern "C" {
-
 // Return the host portion of a daemon name string.  Either the name
 // includes an "@" sign, in which case we return whatever is after it,
 // or it doesn't, in which case we just return what we got passed.
@@ -125,7 +123,7 @@ build_valid_daemon_name( const char* name )
 				// no '@', see if what we have is our hostname
 			std::string fqdn = get_fqdn_from_hostname(name);
 			if( fqdn.length() > 0 ) {
-				if( !strcasecmp( get_local_fqdn().Value(), fqdn.c_str() ) ) {
+				if( !strcasecmp( get_local_fqdn().c_str(), fqdn.c_str() ) ) {
 						// Yup, so just the full hostname.
 					just_host = true;
 				}					
@@ -137,14 +135,14 @@ build_valid_daemon_name( const char* name )
 	}
 
 	if( just_host ) {
-		daemon_name = strdup( get_local_fqdn().Value() );
+		daemon_name = strdup( get_local_fqdn().c_str() );
 	} else {
 		if( just_name ) {
 			daemon_name = strdup( name );
 		} else {
 			size = strlen(name) + get_local_fqdn().length() + 2; 
 			daemon_name = (char *)malloc(size);
-			sprintf( daemon_name, "%s@%s", name, get_local_fqdn().Value() ); 
+			sprintf( daemon_name, "%s@%s", name, get_local_fqdn().c_str() ); 
 		}
 	}
 	return daemon_name;
@@ -161,11 +159,11 @@ char*
 default_daemon_name( void )
 {
 	if( is_root() ) {
-		return strdup( get_local_fqdn().Value() );
+		return strdup( get_local_fqdn().c_str() );
 	}
 #ifndef WIN32
 	if( getuid() == get_real_condor_uid() ) {
-		return strdup( get_local_fqdn().Value() );
+		return strdup( get_local_fqdn().c_str() );
 	}
 #endif /* ! LOSE32 */
 	char* name = my_username();
@@ -182,10 +180,8 @@ default_daemon_name( void )
 		free( name );
 		return NULL;
 	}
-	sprintf( ans, "%s@%s", name, get_local_fqdn().Value() );
+	sprintf( ans, "%s@%s", name, get_local_fqdn().c_str() );
 	free(name);
 	return ans;
 }
 
-
-} /* extern "C" */

@@ -451,6 +451,14 @@ bool MyStringAioSource::allDataIsAvailable()
 	return aio.eof_was_read();
 }
 
+bool
+MyStringAioSource::readLine(std::string & str, bool append) {
+	MyString ms(str.c_str());
+	bool rv = readLine(ms, append);
+	str = ms;
+	return rv;
+}
+
 bool MyStringAioSource::readLine(MyString & str, bool append /* = false*/)
 {
 	const char * p1;

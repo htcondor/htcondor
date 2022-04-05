@@ -275,9 +275,9 @@ main_init( int argc, char ** const argv )
 			args.AppendArg(schedd_pool.c_str());
 		}
 
-		MyString args_string;
-		args.GetArgsStringForDisplay(&args_string);
-		dprintf (D_FULLDEBUG, "Staring worker # %d: %s\n", i, args_string.Value());
+		std::string args_string;
+		args.GetArgsStringForDisplay(args_string);
+		dprintf (D_FULLDEBUG, "Staring worker # %d: %s\n", i, args_string.c_str());
 
 			// We want IO thread to inherit these ends of pipes
 		int std_fds[3];
@@ -785,9 +785,7 @@ main( int argc, char **argv )
 
 // This function is called by dprintf - always display our pid in our
 // log entries.
-//extern "C"
 int
-//display_dprintf_header(char **buf,int *bufpos,int *buflen)
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	static pid_t mypid = 0;

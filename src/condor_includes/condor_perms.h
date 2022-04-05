@@ -39,7 +39,6 @@ typedef enum {
   /** Able to modify data (submit jobs) */   WRITE,
   /** From the negotiator */                 NEGOTIATOR,
   /** Administrative cmds (on, off, etc) */  ADMINISTRATOR,
-  /** The machine owner (vacate) */          OWNER,
   /** Changing config settings remotely */   CONFIG_PERM,
   /** Daemon to daemon communcation     */   DAEMON,
   /** SOAP interface (http PUT) */			 SOAP_PERM,
@@ -48,14 +47,13 @@ typedef enum {
   /** startd ad */                           ADVERTISE_STARTD_PERM,
   /** schedd ad */                           ADVERTISE_SCHEDD_PERM,
   /** master ad */                           ADVERTISE_MASTER_PERM,
-  /** Place holder, must be last */          LAST_PERM
+  /** Place holder, must be last */          LAST_PERM,
+  /** Perm value is unset*/                  UNSET_PERM
 } DCpermission;
 
 // convenience macro for iterating through DCpermission values
 #define NEXT_PERM(perm) ( (DCpermission) (((int)perm)+1) )
 
-BEGIN_C_DECLS
-	
 	/** PermString() converts the given DCpermission into the
 		human-readable string version of the name.
 		@param perm The permission you want to convert
@@ -64,10 +62,6 @@ BEGIN_C_DECLS
 const char* PermString( DCpermission perm );
 
 DCpermission getPermissionFromString( const char * permstring );
-
-END_C_DECLS
-
-#if defined(__cplusplus)
 
 class DCpermissionHierarchy {
 
@@ -110,8 +104,6 @@ public:
 
 	DCpermissionHierarchy(DCpermission perm);
 };
-
-#endif
 
 
 #endif /* _CONDOR_PERMS_H_ */

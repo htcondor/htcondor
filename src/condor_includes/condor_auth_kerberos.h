@@ -21,7 +21,7 @@
 #ifndef CONDOR_AUTHENTICATOR_KERBEROS
 #define CONDOR_AUTHENTICATOR_KERBEROS
 
-#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_KRB5)
+#if defined(HAVE_EXT_KRB5)
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "MyString.h"
@@ -230,7 +230,7 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     char *             ccname_;           // FILE:/krbcc_name
     char *             defaultStash_;     // Default stash location
     char *             keytabName_;       // keytab to use   
-    typedef HashTable<MyString, MyString> Realm_Map_t;
+    typedef HashTable<std::string, std::string> Realm_Map_t;
     static Realm_Map_t * RealmMap;
 };
 

@@ -539,10 +539,7 @@ BASIC COMMANDS :index:`arguments<single: arguments; submit commands>`
     before execution to the remote scratch directory of the machine
     where the job is executed. If not specified, the default value of
     ``/dev/null`` is used for submission to a Unix machine. If not
-    specified, input is ignored for submission to a Windows machine. For
-    grid universe jobs,
-    **input** :index:`input<single: input; submit commands>` may be a URL that
-    the Globus tool *globus_url_copy* understands.
+    specified, input is ignored for submission to a Windows machine.
 
     Note that this command does not refer to the command-line arguments
     of the program. The command-line arguments are specified by the
@@ -789,6 +786,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     amount of memory. The HTCondor User's Manual contains complete
     information on the syntax and available attributes that can be used
     in the ClassAd expression.
+
     :index:`request_cpus<single: request_cpus; submit commands>`
 
  request_cpus = <num-cpus>
@@ -806,6 +804,7 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     For pools that enable dynamic *condor_startd* provisioning,
     specifies the minimum number of CPUs requested for this job,
     resulting in a dynamic slot being created with this many cores.
+
     :index:`request_disk<single: request_disk; submit commands>`
 
  request_disk = <quantity>
@@ -829,6 +828,45 @@ COMMANDS FOR MATCHMAKING :index:`rank<single: rank; submit commands>`
     or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
     ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
     indicates TiB, 2\ :sup:`40` numbers of bytes.
+
+    :index:`request_gpus<single: request_gpus; submit commands>`
+
+ request_gpus = <num-gpus>
+    A requested number of GPUs. If not specified, no GPUs will be requested.
+    If specified and ``require_gpus`` is not also specified, the expression
+
+    .. code-block:: condor-classad-expr
+
+          && (Target.GPUs >= RequestGPUs)
+
+    is appended to the
+    **requirements** :index:`requirements<single: requirements; submit commands>`
+    expression for the job.
+
+    For pools that enable dynamic *condor_startd* provisioning,
+    specifies the minimum number of GPUs requested for this job,
+    resulting in a dynamic slot being created with this many GPUs.
+
+    :index:`request_gpus<single: request_gpus; submit commands>`
+
+ require_gpus = <constraint-expression>
+    A constraint on the properties of GPUs when used with a non-zero ``request_gpus`` value.
+    If not specified, no constraint on GPUs will be added to the job.
+    If specified and ``request_gpus`` is non-zero, the expression
+
+    .. code-block:: condor-classad-expr
+
+          && (countMatches(MY.RequireGPUs, TARGET.AvailableGPUs) >= RequestGPUs)
+
+    is appended to the
+    **requirements** :index:`requirements<single: requirements; submit commands>`
+    expression for the job.  This expression cannot be evaluated by HTCondor prior
+    to version 9.8.0. A warning to this will effect will be printed when *condor_submit* detects this condition.
+
+    For pools that enable dynamic *condor_startd* provisioning and are at least version 9.8.0,
+    the constraint will be tested against the properties of AvailbleGPUs and only those that match
+    will be assigned to the dynamic slot.
+
     :index:`request_memory<single: request_memory; submit commands>`
 
  request_memory = <quantity>
@@ -1010,6 +1048,11 @@ FILE TRANSFER COMMANDS
     method of encryption utilized will be as agreed upon in security
     negotiation; if that negotiation failed, then the file transfer
     mechanism must also fail for files to be network encrypted.
+    :index:`erase_output_and_error_on_restart<single: erase_output_and_error_on_restart; submit commands>`
+ erase_output_and_error_on_restart
+    If false, and ``when_to_transfer_output`` is ``ON_EXIT_OR_EVICT``, HTCondor
+    will append to the output and error logs rather than erase (truncate) them
+    when the job restarts.
     :index:`max_transfer_input_mb<single: max_transfer_input_mb; submit commands>`
  max_transfer_input_mb = <ClassAd Integer Expression>
     This integer expression specifies the maximum allowed total size in
@@ -1193,6 +1236,10 @@ FILE TRANSFER COMMANDS
         # If necessary
         aws_region = <region>
 
+    You may specify the corresponding access key ID and secret access key
+    with ``s3_access_key_id_file`` and ``s3_secret_access_key_file`` if
+    you prefer (which may reduce confusion, if you're not using AWS).
+
     If you must access S3 using temporary credentials, you may specify the
     temporary credentials using ``aws_access_key_id_file`` and
     ``aws_secret_access_key_file`` for the files containing the corresponding
@@ -1204,6 +1251,20 @@ FILE TRANSFER COMMANDS
     expire.  If you are using S3 to upload output files, the job must finish
     before the credentials expire.  HTCondor does not know when the credentials
     will expire; if they do so before they are needed, file transfer will fail.
+
+    HTCondor does not presently support transferring entire buckets or
+    directories from S3.
+
+    HTCondor supports Google Cloud Storage URLs -- ``gs://`` -- via Google's
+    "interoperability" API.  You may specify ``gs://`` URLs as if they were
+    ``s3://`` URLs, and they work the same way.
+    You may specify the corresponding access key ID and secret access key
+    with ``gs_access_key_id_file`` and ``gs_secret_access_key_file`` if
+    you prefer (which may reduce confusion).
+
+    Note that (at present), you may not provide more than one set of
+    credentials for ``s3://`` or ``gs://`` file transfer; this implies
+    that all such URLs download from or upload to the same service.
 
     :index:`transfer_output_files<single: transfer_output_files; submit commands>`
 
@@ -1313,11 +1374,12 @@ FILE TRANSFER COMMANDS
     :index:`transfer_plugins<single: transfer_plugins; submit commands>`
 
  transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
-    Specifies the file transfer plugins that should be transferred along with
+    Specifies the file transfer plugins
+    (see :ref:`admin-manual/setting-up-special-environments:enabling the transfer of files specified by a url`)
+    that should be transferred along with
     the input files prior to invoking file transfer plugins for files specified in
     *transfer_input_files*. *tag* should be a URL prefix that is used in *transfer_input_files*,
     and *plugin* is the path to a file transfer plugin that will handle that type of URL transfer.
-    Plugins transfered in this way must support the multi-file transfer plugin syntax.
     :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
 
  when_to_transfer_output = < ON_EXIT | ON_EXIT_OR_EVICT | ON_SUCCESS >
@@ -1350,22 +1412,56 @@ FILE TRANSFER COMMANDS
 
     In all three cases, the job will go on hold if ``transfer_output_files``
     specifies a file which does not exist at transfer time.
+    :index:`aws_access_key_id_file<single: aws_access_key_id_file; submit commands>`
+    :index:`s3_access_key_id_file<single: s3_access_key_id_file; submit commands>`
 
- aws_access_key_id_file
-    Required if you specify an S3 URL, this command specifies the file containing
-    the access key ID (and only the access key ID) used to pre-sign the
-    S3 URLs.  Required.
+ aws_access_key_id_file, s3_access_key_id_file
+    One of these commands is required if you specify an ``s3://`` URL; they
+    specify the file containing the access key ID (and only the access key
+    ID) used to pre-sign the URLs.  Use only one.
+    :index:`aws_secret_access_key_file<single: aws_secret_access_key_file; submit commands>`
+    :index:`s3_secret_access_key_file<single: s3_secret_access_key_file; submit commands>`
 
- aws_secret_access_key_file
-    Required if you specify an S3 URL, this command specifies the file containing
-    the secret access key (and only the secret access key) used to
-    pre-sign the S3 URLs.
+ aws_secret_access_key_file, s3_secret_access_key_file
+    One of these commands is required if you specify an ``s3://`` URL; they
+    specify the file containing the secret access key (and only the secret
+    access key) used to pre-sign the URLs.  Use only one.
+    :index:`aws_region<single: aws_region; submit commands>`
 
  aws_region
     Optional if you specify an S3 URL (and ignored otherwise), this command
     specifies the region to use if one is not specified in the URL.
+    :index:`gs_access_key_id_file<single: gs_access_key_id_file; submit commands>`
+
+ gs_access_key_id_file
+    Required if you specify a ``gs://`` URLs, ths command
+    specifies the file containing the access key ID (and only the access key
+    ID) used to pre-sign the URLs.
+    :index:`gs_secret_access_key_file<single: gs_secret_access_key_file; submit commands>`
+
+ gs_secret_access_key_file
+    Required if you specify a ``gs://`` URLs, this command
+    specifies the file containing the secret access key (and only the secret
+    access key) used to pre-sign the URLs.
 
 POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
+
+ allowed_execute_duration = <integer>
+    The longest time for which a job may be executing.  Jobs which exceed
+    this duration will go on hold.  This time does not include file-transfer
+    time.  Jobs which self-checkpoint have this long to write out each
+    checkpoint.
+
+    This attribute is intended to help minimize the time wasted by jobs
+    which may erroneously run forever.
+
+ allowed_job_duration = <integer>
+    The longest time for which a job may continuously be in the running state.
+    Jobs which exceed this duration will go on hold.  Exiting the running
+    state resets the job duration used by this command.
+
+    This command is intended to help minimize the time wasted by jobs
+    which may erroneously run forever.
 
  max_retries = <integer>
     The maximum number of retries allowed for this job (must be
@@ -1392,14 +1488,22 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     If **retry_until** is an integer, the job exiting with that exit
     code will cause retries to cease. If **retry_until** is a ClassAd
     expression, the expression evaluating to ``True`` will cause retries
-    to cease. :index:`success_exit_code<single: success_exit_code; submit commands>`
+    to cease.  For example, if you only want to retry exit codes
+    17, 34, and 81:
+
+    .. code-block:: condor-submit
+
+        max_retries = 5
+        retry_until = !member( ExitCode, {17, 34, 81} )
+
+    :index:`success_exit_code<single: success_exit_code; submit commands>`
 
  success_exit_code = <integer>
     The exit code that is considered successful for this job. Defaults
     to 0 if not defined.
 
     **Note**: non-zero values of success_exit_code should generally not be
-    used for DAG node jobs, unless ``when_transfer_files`` is set to
+    used for DAG node jobs, unless ``when_to_transfer_output`` is set to
     ``ON_SUCCESS`` in order to avoid failed jobs going on hold.
 
     At the present time, *condor_dagman* does not take into
@@ -1647,8 +1751,28 @@ POLICY COMMANDS :index:`max_retries<single: max_retries; submit commands>`
     ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
     configuration macros.
 
-COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit commands>`
+COMMANDS FOR THE GRID
 
+:index:`arc_application<single: arc_application; submit commands>`
+ arc_application = <XML-string>
+    For grid universe jobs of type **arc**, provides additional XML
+    attributes under the ``<Application>`` section of the ARC ADL job
+    description which are not covered by regular submit description file
+    parameters.
+    :index:`arc_resources<single: arc_resources; submit commands>`
+ arc_resources = <XML-string>
+    For grid universe jobs of type **arc**, provides additional XML
+    attributes under the ``<Resources>`` section of the ARC ADL job
+    description which are not covered by regular submit description file
+    parameters.
+    :index:`arc_rte<single: arc_rte; submit commands>`
+ arc_rte = < rte1 option,rte2 >
+    For grid universe jobs of type **arc**, provides a list of Runtime
+    Environment names that the job requires on the ARC system.
+    The list is comma-delimited. If a Runtime Environment name supports
+    options, those can be provided after the name, separated by spaces.
+    Runtime Environment names are defined by the ARC server.
+    :index:`azure_admin_key<single: azure_admin_key; submit commands>`
  azure_admin_key = <pathname>
     For grid type **azure** jobs, specifies the path and file name of a
     file that contains an SSH public key. This key can be used to log
@@ -1677,6 +1801,11 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
  azure_size = <machine type>
     For grid type **azure** jobs, the hardware configuration that the
     virtual machine instance is to run on.
+    :index:`batch_extra_submit_args<single: batch_extra_submit_args; submit commands>`
+ batch_extra_submit_args = <command-line arguments>
+    Used for **batch** grid universe jobs.
+    Specifies additional command-line arguments to be given to the target
+    batch system's job submission command.
     :index:`batch_project<single: batch_project; submit commands>`
  batch_project = <projectname>
     Used for **batch** grid universe jobs.
@@ -1713,12 +1842,6 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     the running instance. The label name will be lower-cased; use
     **cloud_label_names** :index:`cloud_label_names<single: cloud_label_names; submit commands>`
     to change the case.
-    :index:`cream_attributes<single: cream_attributes; submit commands>`
- cream_attributes = <name=value;...;name=value>
-    Provides a list of attribute/value pairs to be set in a CREAM job
-    description of a grid universe job destined for the CREAM grid
-    system. The pairs are separated by semicolons, and written in New
-    ClassAd syntax.
     :index:`delegate_job_GSI_credentials_lifetime<single: delegate_job_GSI_credentials_lifetime; submit commands>`
  delegate_job_GSI_credentials_lifetime = <seconds>
     Specifies the maximum number of seconds for which delegated proxies
@@ -1729,9 +1852,8 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     to one day. A value of 0 indicates that the delegated proxy should
     be valid for as long as allowed by the credential used to create the
     proxy. This setting currently only applies to proxies delegated for
-    non-grid jobs and for HTCondor-C jobs. It does not currently apply
-    to globus grid jobs, which always behave as though this setting were
-    0. This variable has no effect if the configuration variable
+    non-grid jobs and for HTCondor-C jobs.
+    This variable has no effect if the configuration variable
     ``DELEGATE_JOB_GSI_CREDENTIALS``
     :index:`DELEGATE_JOB_GSI_CREDENTIALS` is ``False``, because in
     that case the job proxy is copied rather than delegated.
@@ -1901,111 +2023,33 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
  gce_preemptible = <True | False>
     For grid type **gce** jobs, specifies whether the virtual machine
     instance should be preemptible. The default is for the instance to
-    not be preemptible. :index:`globus_rematch<single: globus_rematch; submit commands>`
- globus_rematch = <ClassAd Boolean Expression>
-    This expression is evaluated by the *condor_gridmanager* whenever:
+    not be preemptible.
 
-    #. the
-       **globus_resubmit** :index:`globus_resubmit<single: globus_resubmit; submit commands>`
-       expression evaluates to ``True``
-    #. the *condor_gridmanager* decides it needs to retry a submission
-       (as when a previous submission failed to commit)
-
-    If
-    **globus_rematch** :index:`globus_rematch<single: globus_rematch; submit commands>`
-    evaluates to ``True``, then before the job is submitted again to
-    globus, the *condor_gridmanager* will request that the
-    *condor_schedd* daemon renegotiate with the matchmaker (the
-    *condor_negotiator*). The result is this job will be matched again.
-    :index:`globus_resubmit<single: globus_resubmit; submit commands>`
-
- globus_resubmit = <ClassAd Boolean Expression>
-    The expression is evaluated by the *condor_gridmanager* each time
-    the *condor_gridmanager* gets a job ad to manage. Therefore, the
-    expression is evaluated:
-
-    #. when a grid universe job is first submitted to HTCondor-G
-    #. when a grid universe job is released from the hold state
-    #. when HTCondor-G is restarted (specifically, whenever the
-       *condor_gridmanager* is restarted)
-
-    If the expression evaluates to ``True``, then any previous
-    submission to the grid universe will be forgotten and this job will
-    be submitted again as a fresh submission to the grid universe. This
-    may be useful if there is a desire to give up on a previous
-    submission and try again. Note that this may result in the same job
-    running more than once. Do not treat this operation lightly.
-    :index:`globus_rsl<single: globus_rsl; submit commands>`
-
- globus_rsl = <RSL-string>
-    Used to provide any additional Globus RSL string attributes which
-    are not covered by other submit description file commands or job
-    attributes. Used for **grid** **universe** jobs, where the grid
-    resource has a **grid-type-string** of **gt2**.
     :index:`grid_resource<single: grid_resource; submit commands>`
  grid_resource = <grid-type-string> <grid-specific-parameter-list>
     For each **grid-type-string** value, there are further type-specific
     values that must specified. This submit description file command
     allows each to be given in a space-separated list. Allowable
-    **grid-type-string** values are **batch**, **condor**, **cream**,
-    **ec2**, **gt2**, **gt5**, **lsf**, **nordugrid**, **pbs**, **sge**,
-    and **unicore**. The HTCondor manual chapter on Grid Computing
+    **grid-type-string** values are **arc**, **azure**, **batch**, **boinc**,
+    **condor**, **ec2**, and **gce**.
+    The HTCondor manual chapter on Grid Computing
     details the variety of grid types.
 
     For a **grid-type-string** of **batch**, the single parameter is the
     name of the local batch system, and will be one of ``pbs``, ``lsf``,
-    or ``sge``.
+    ``slurm``, or ``sge``.
 
     For a **grid-type-string** of **condor**, the first parameter is the
     name of the remote *condor_schedd* daemon. The second parameter is
     the name of the pool to which the remote *condor_schedd* daemon
     belongs.
 
-    For a **grid-type-string** of **cream**, there are three parameters.
-    The first parameter is the web services address of the CREAM server.
-    The second parameter is the name of the batch system that sits
-    behind the CREAM server. The third parameter identifies a
-    site-specific queue within the batch system.
-
     For a **grid-type-string** of **ec2**, one additional parameter
     specifies the EC2 URL.
 
-    For a **grid-type-string** of **gt2**, the single parameter is the
-    name of the pre-WS GRAM resource to be used.
+    For a **grid-type-string** of **arc**, the single
+    parameter is the name of the ARC resource to be used.
 
-    For a **grid-type-string** of **gt5**, the single parameter is the
-    name of the pre-WS GRAM resource to be used, which is the same as
-    for the **grid-type-string** of **gt2**.
-
-    For a **grid-type-string** of **lsf**, no additional parameters are
-    used.
-
-    For a **grid-type-string** of **nordugrid**, the single parameter is
-    the name of the NorduGrid resource to be used.
-
-    For a **grid-type-string** of **pbs**, no additional parameters are
-    used.
-
-    For a **grid-type-string** of **sge**, no additional parameters are
-    used.
-
-    For a **grid-type-string** of **unicore**, the first parameter is
-    the name of the Unicore Usite to be used. The second parameter is
-    the name of the Unicore Vsite to be used.
-    :index:`keystore_alias<single: keystore_alias; submit commands>`
-
- keystore_alias = <name>
-    A string to locate the certificate in a Java keystore file, as used
-    for a **unicore** job.
-    :index:`keystore_file<single: keystore_file; submit commands>`
- keystore_file = <pathname>
-    The complete path and file name of the Java keystore file containing
-    the certificate to be used for a **unicore** job.
-    :index:`keystore_passphrase_file<single: keystore_passphrase_file; submit commands>`
- keystore_passphrase_file = <pathname>
-    The complete path and file name to the file containing the
-    passphrase protecting a Java keystore file containing the
-    certificate. Relevant for a **unicore** job.
     :index:`MyProxyCredentialName<single: MyProxyCredentialName; submit commands>`
  MyProxyCredentialName = <symbolic name>
     The symbolic name that identifies a credential to the *MyProxy*
@@ -2041,12 +2085,7 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     specified when the *MyProxy* server DN does not follow the
     conventional naming scheme of a host credential. This occurs, for
     example, when the *MyProxy* server DN begins with a user credential.
-    :index:`nordugrid_rsl<single: nordugrid_rsl; submit commands>`
- nordugrid_rsl = <RSL-string>
-    Used to provide any additional RSL string attributes which are not
-    covered by regular submit description file parameters. Used when the
-    **universe** is **grid**, and the type of grid system is
-    **nordugrid**. :index:`transfer_error<single: transfer_error; submit commands>`
+    :index:`transfer_error<single: transfer_error; submit commands>`
  transfer_error = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
     error output (from ``stderr``) from the job is transferred from the
@@ -2093,8 +2132,8 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     X.509 user proxy. If **x509userproxy** is set, then that file is
     used for the proxy. Otherwise, the proxy is looked for in the
     standard locations. If **x509userproxy** is set or if the job is a
-    grid universe job of grid type **gt2**, **gt5**, **cream**, or
-    **nordugrid**, then the value of **use_x509userproxy** is forced to
+    grid universe job of grid type **arc**,
+    then the value of **use_x509userproxy** is forced to
     ``True``. Defaults to ``False``.
     :index:`x509userproxy<single: x509userproxy; submit commands>`
  x509userproxy = <full-pathname>
@@ -2118,10 +2157,30 @@ COMMANDS FOR THE GRID :index:`azure_admin_key<single: azure_admin_key; submit co
     **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` is
     relevant when the **universe** is **vanilla**, or when the
     **universe** is **grid** and the type of grid system is one of
-    **gt2**, **gt5**, **condor**, **cream**, or **nordugrid**. Defining
+    **condor**, or **arc**. Defining
     a value causes the proxy to be delegated to the execute machine.
     Further, VOMS attributes defined in the proxy will appear in the job
     ClassAd.
+
+ use_scitokens = <True | False | Auto>
+    Set this command to ``True`` to indicate that the job requires a scitoken.
+    If **scitokens_file** is set, then that file is
+    used for the scitoken filename. Otherwise, the the scitoken filename is looked for in the
+    ``BEARER_TOKEN_FILE`` environment variable. If **scitokens_file** is set
+    then the value of **use_scitokens** defaults to ``True``.  If the filename is not
+    defined in on one of these two places, then *condor_submit* will fail with an error message.
+    Set this command to ``Auto`` to indicate that the job will use a scitoken if **scitokens_file**
+    or the ``BEARER_TOKEN_FILE`` environment variable is set, but it will not be an error if no
+    file is specified.
+    :index:`use_scitokens<single: use_scitokens; submit commands>`
+
+ scitokens_file = <full-pathname>
+    Used to set the path to the file containing the scitoken that the job needs,
+    or to override the path to the scitoken contained in the ``BEARER_TOKEN_FILE``
+    environment variable.
+    :index:`scitokens_file<single: scitokens_file; submit commands>`
+
+
 
 COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
 :index:`hold_kill_sig<single: hold_kill_sig; submit commands>`
@@ -2284,11 +2343,13 @@ COMMANDS FOR THE DOCKER UNIVERSE
     Defines the name of the Docker image that is the basis for the
     docker container.
 
- docker_network_type = < host | none >
+ docker_network_type = < host | none | custom_admin_defined_value>
     If docker_network_type is set to the string host, then the job is run
     using the host's network. If docker_network_type is set to the string none,
     then the job is run with no network. If this is not set, each job gets
-    a private network interface.
+    a private network interface.  Some administrators may define
+    site specific docker networks on a given worker node.  When this
+    is the case, additional values may be valid here.
 
  container_service_names = <service-name>[, <service-name>]*
     A string- or comma- separated list of *service name*\s.
@@ -2922,6 +2983,18 @@ and comments.
 
     On the machine, if the attribute ``input_file_path`` is not defined,
     then the path ``/usr/foo`` is used instead.
+
+    As a special case that only works within the submit file *environement*
+    command, the string $$(CondorScratchDir) is expanded to the value
+    of the job's scratch directory.  This does not work for scheduler universe
+    or grid universe jobs.
+    
+    For example, to set PYTHONPATH to a subdirectory of the job scratch dir,
+    one could set
+
+    .. code-block:: text
+
+        environment = PYTHONPATH=$$(CondorScratchDir)/some/directory
 
     A further extension to the syntax of the substitution macro allows
     the evaluation of a ClassAd expression to define the value. In this

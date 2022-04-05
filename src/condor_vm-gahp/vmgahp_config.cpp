@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "MyString.h"
 #include "vmgahp_common.h"
 #include "vmgahp_config.h"
 
@@ -61,7 +60,6 @@ bool
 VMGahpConfig::init(const char* vmtype)
 {
 	char *config_value = NULL;
-	MyString fixedvalue;
 
 	if( !vmtype ) {
 		return false;
@@ -69,7 +67,7 @@ VMGahpConfig::init(const char* vmtype)
 
 	// Handle VM_TYPE
 	m_vm_type = vmtype;
-	m_vm_type.lower_case();
+	lower_case(m_vm_type);
 
 	// Read VM_MEMORY
 	int tmp_config_value = param_integer("VM_MEMORY", 0);
@@ -94,13 +92,13 @@ VMGahpConfig::init(const char* vmtype)
 			              "So 'VM_NETWORKING' is disabled\n");
 			m_vm_networking = false;
 		}else {
-			MyString networking_type = delete_quotation_marks(config_value);
-			networking_type.trim();
+			std::string networking_type = delete_quotation_marks(config_value);
+			trim(networking_type);
 			// change string to lowercase
-			networking_type.lower_case();
+			lower_case(networking_type);
 			free(config_value);
 
-			StringList networking_types(networking_type.Value(), ", ");
+			StringList networking_types(networking_type.c_str(), ", ");
 			m_vm_networking_types.create_union(networking_types, false);
 
 			if( m_vm_networking_types.isEmpty() ) {

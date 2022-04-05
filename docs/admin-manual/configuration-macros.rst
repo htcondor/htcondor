@@ -167,9 +167,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     The spool directory is where certain files used by the
     *condor_schedd* are stored, such as the job queue file and the
     initial executables of any jobs that have been submitted. In
-    addition, for systems not using a checkpoint server, all the
-    checkpoint files from jobs that have been submitted from a given
-    machine will be store in that machine's spool directory. Therefore,
+    addition, all the checkpoint files from jobs that have been submitted
+    will be stored in that machine's spool directory. Therefore,
     you will want to ensure that the spool directory is located on a
     partition with enough disk space. If a given machine is only set up
     to execute HTCondor jobs and not submit them, it would not need a
@@ -195,6 +194,10 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
     Do not stage other files in this directory; any files not created by
     HTCondor in this directory are subject to removal.
+
+    Ideally, this directory should not be placed under /tmp or /var/tmp, if
+    it is, HTCondor loses the ability to make private instances of /tmp and /var/tmp
+    for jobs.
 
 :macro-def:`TMP_DIR`
     A directory path to a directory where temporary files are placed by
@@ -483,6 +486,12 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     rotated, and this rotation would cause the number of backups to be
     too large, the oldest file is removed.
 
+:macro-def:`HISTORY_CONTAINS_JOB_ENVIRONMENT`
+    This parameter defaults to true.  When set to false, the job's
+    environment attribute (which can be very large) is not written to
+    the history file.  This may allow many more jobs to be kept in the
+    history before rotation.
+
 :macro-def:`HISTORY_HELPER_MAX_CONCURRENCY`
     Specifies the maximum number of concurrent remote *condor_history*
     queries allowed at a time; defaults to 50. When this maximum is
@@ -691,7 +700,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     ``TARGET.`` prefix are only looked up in the local ClassAd. If set
     to the default value of ``False``, Old ClassAd evaluation semantics
     are used. See
-    :ref:`misc-concepts/classad-mechanism:classads: old and new`
+    :ref:`classads/classad-mechanism:classads: old and new`
     for details.
 
 :macro-def:`CLASSAD_USER_LIBS`
@@ -901,7 +910,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 :macro-def:`IGNORE_TARGET_PROTOCOL_PREFERENCE`
     A string (treated as a boolean). If
     ``IGNORE_TARGET_PROTOCOL_PREFERENCE`` evaluates to ``True``, the
-    target's listed protocol preferences will be ignored; othwerwise
+    target's listed protocol preferences will be ignored; otherwise
     they will not. Defaults to ``$(PREFER_IPV4)``.
 
 :macro-def:`IGNORE_DNS_PROTOCOL_PREFERENCE`
@@ -1536,7 +1545,7 @@ a file that receives job events, but across all users and user's jobs.
     ``LEGACY``
         Set all time formatting flags to be compatible with older versions of HTCondor.
 
-    All of the above options are case-insensitive, and can be preceeded by a ! to invert their meaning,
+    All of the above options are case-insensitive, and can be preceded by a ! to invert their meaning,
     so configuring ``!UTC, !ISO_DATE, !SUB_SECOND`` gives the same result as configuring ``LEGACY``.
 
 :macro-def:`EVENT_LOG_USE_XML`
@@ -1678,9 +1687,8 @@ that DaemonCore uses which affect all HTCondor daemons.
     ClassAd describing itself to the *condor_collector*, it will also
     place a copy of the ClassAd in this file. Currently, this setting
     only works for the *condor_schedd*. :index:`<SUBSYS>_ATTRS`
-    :index:`<SUBSYS>_EXPRS`
 
-:macro-def:`<SUBSYS>_ATTRS` or :macro-def:`<SUBSYS>_EXPRS`
+:macro-def:`<SUBSYS>_ATTRS`
     Allows any DaemonCore daemon to advertise arbitrary expressions from
     the configuration file in its ClassAd. Give the comma-separated list
     of entries from the configuration file you want in the given
@@ -1691,10 +1699,6 @@ that DaemonCore uses which affect all HTCondor daemons.
     The macro is named by substituting ``<SUBSYS>`` with the appropriate
     subsystem string as defined in
     :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
-
-    ``<SUBSYS>_EXPRS`` is a historic setting that functions identically
-    to ``<SUBSYS>_ATTRS``. It may be removed in the future, so use
-    ``<SUBSYS>_ATTRS``.
 
     .. note::
 
@@ -1936,6 +1940,15 @@ More information about networking in HTCondor can be found in
 :macro-def:`CCB_READ_BUFFER`
     The size of the kernel TCP read buffer in bytes for all sockets used
     by CCB. The default value is 2 KiB.
+
+:macro-def:`CCB_REQUIRED_TO_START`
+    If true, and :macro:`USE_SHARED_PORT` is false, and :macro:`CCB_ADDRESS`
+    is set, but HTCondor fails to register with any broker, HTCondor will
+    exit rather then continue to retry indefinitely.
+
+:macro-def:`CCB_TIMEOUT`
+    The length, in seconds, that we wait for any CCB operation to complete.
+    The default value is 300.
 
 :macro-def:`CCB_WRITE_BUFFER`
     The size of the kernel TCP write buffer in bytes for all sockets
@@ -2327,7 +2340,7 @@ using a shared file system`.
     when the *condor_starter* and *condor_shadow* are on the same
     machine. If this parameter is set to ``True``, then the
     *condor_shadow* 's ``UID_DOMAIN`` doesn't have to be a substring
-    its hostname. If this paramater is set to ``False``, then
+    its hostname. If this parameter is set to ``False``, then
     ``UID_DOMAIN`` controls whether this substring requirement is
     enforced by the *condor_starter*. The default is ``True``.
 
@@ -2346,9 +2359,19 @@ using a shared file system`.
     The name of a user for HTCondor to use instead of user nobody, as
     part of a solution that plugs a security hole whereby a lurker
     process can prey on a subsequent job run as user name nobody.
-    ``<N>`` is an integer associated with slots. On Windows,
-    ``SLOT<N>_USER`` will only work if the credential of the specified
+    ``<N>`` is an integer associated with slots. On non Windows platforms
+    you can use ``NOBODY_SLOT_USER`` instead of this configuration variable.
+    On Windows, ``SLOT<N>_USER`` will only work if the credential of the specified
     user is stored on the execute machine using *condor_store_cred*.
+    See :ref:`admin-manual/security:user accounts in htcondor on unix platforms`
+    for more information.
+
+:macro-def:`NOBODY_SLOT_USER`
+    The name of a user for HTCondor to use instead of user nobody when
+    The ``SLOT<N>_USER`` for this slot is not configured.  Configure
+    this to the value ``$(STARTER_SLOT_NAME)`` to use the name of the slot
+    as the user name. This configuration macro is ignored on Windows,
+    where the Starter will automatically create a unique temporary user for each slot as needed.
     See :ref:`admin-manual/security:user accounts in htcondor on unix platforms`
     for more information.
 
@@ -2489,7 +2512,7 @@ These macros control the *condor_master*.
     *condor_master* must differentiate between daemons that use
     DaemonCore and those that do not, so it uses the appropriate
     inter-process communication mechanisms. This list currently includes
-    all HTCondor daemons except the checkpoint server by default.
+    all HTCondor daemons.
 
     As of HTCondor version 7.2.1, a daemon may be appended to the
     default ``DC_DAEMON_LIST`` value by placing the plus character (+)
@@ -2571,7 +2594,7 @@ These macros control the *condor_master*.
     we specified some account other than the condor user, as set by the
     (``CONDOR_IDS``) configuration variable, then we would need to
     configure the log files for these daemons to be in a directory that
-    they can write to. When using GSI security or any other security
+    they can write to. When using a security
     method in which the daemon credential is owned by root, it is also
     necessary to make a copy of the credential, make it be owned by the
     account the daemons are using, and configure the daemons to use that
@@ -2947,7 +2970,7 @@ section.
 :macro-def:`DEFAULT_DRAINING_START_EXPR`
     An alternate ``START`` expression to use while draining when the
     drain command is sent without a ``-start`` argument.  When this
-    confiuration parameter is not set and the drain command does not specify
+    configuration parameter is not set and the drain command does not specify
     a ``-start`` argument, ``START`` will have the value ``undefined``
     and ``Requirements`` will be ``false`` while draining. This will prevent new
     jobs from matching.  To allow evictable jobs to match while draining,
@@ -3071,16 +3094,6 @@ section.
     amount of time given depends on ``MachineMaxVacateTime``
     :index:`MachineMaxVacateTime` and ``KILL``
     :index:`KILL`. The default value is ``True``.
-
-:macro-def:`ENABLE_VERSIONED_OPSYS`
-    A boolean expression that determines whether pre-7.7.2 strings used
-    for the machine ClassAd attribute ``OpSys`` are used or not.
-    Defaults to ``False`` on Windows platforms, meaning that the newer
-    behavior of setting ``OpSys = "WINDOWS"`` and ``OpSysVer = 601``
-    (for example), while ``OpSysAndVer = "WINNT61"``. On platforms other
-    than Windows, the default value is ``True``, meaning that the values
-    for ``OpSys`` and ``OpSysAndVer`` are the same, implementing the
-    pre-7.7.2 behavior.
 
 :macro-def:`IS_OWNER`
     A boolean expression that determines when a machine ad should enter
@@ -3286,9 +3299,7 @@ section.
         Since these are already ClassAd expressions, do not do anything
         unusual with strings. By default, the job ClassAd attributes
         JobUniverse, NiceUser, ExecutableSize and ImageSize are advertised
-        into the machine ClassAd. This setting was formerly called
-        ``STARTD_JOB_EXPRS``. The older name is still supported, but support
-        for the older name may be removed in a future version of HTCondor.
+        into the machine ClassAd.
 
 :macro-def:`STARTD_ATTRS`
     This macro is described in :macro:`<SUBSYS>_ATTRS`.
@@ -3533,8 +3544,8 @@ section.
     For Docker Universe jobs, any directories that are mounted under
     scratch are also volume mounted on the same paths inside the
     container. That is, any reads or writes to files in those
-    directories goes to the host filesytem under the scratch directory.
-    This is useful if a container has limited space to grow a filesytem.
+    directories goes to the host filesystem under the scratch directory.
+    This is useful if a container has limited space to grow a filesystem.
 
 :macro-def:`MOUNT_PRIVATE_DEV_SHM`
     This boolean value, which defaults to ``True`` tells the *condor_starter*
@@ -3639,9 +3650,7 @@ section for details.
 :macro-def:`STARTD_SLOT_ATTRS`
     The list of ClassAd attribute names that should be shared across all
     slots on the same machine. This setting was formerly know as
-    ``STARTD_VM_ATTRS`` :index:`STARTD_VM_ATTRS` or
-    ``STARTD_VM_EXPRS`` :index:`STARTD_VM_EXPRS` (before version
-    6.9.3). For each attribute in the list, the attribute's value is
+    ``STARTD_VM_ATTRS`` :index:`STARTD_VM_ATTRS` For each attribute in the list, the attribute's value is
     taken from each slot's machine ClassAd and placed into the machine
     ClassAd of all the other slots within the machine. For example, if
     the configuration file for a 2-slot machine contains
@@ -4173,16 +4182,34 @@ details.
 
 :macro-def:`DOCKER_DROP_ALL_CAPABILITIES`
     A class ad expression, which defaults to true. Evaluated in the
-    context of the job ad and the machine ad, when true, runs the docker
+    context of the job ad and the machine ad, when true, runs the Docker
     container with the command line option -drop-all-capabilities.
     Admins should be very careful with this setting, and only allow
-    trusted users to run with full linux capabilities within the
+    trusted users to run with full Linux capabilities within the
     container.
 
+:macro-def:`DOCKER_PERFORM_TEST`
+    When the *condor_startd* starts up, it runs a simple Docker
+    container to verify that Docker completely works.  If 
+    DOCKER_PERFORM_TEST is false, this test is skipped.
+
+:macro-def:`DOCKER_RUN_UNDER_INIT`
+    A boolean value which defaults to true, which tells the worker
+    node to run Docker universe jobs with the --init option.
+    
 :macro-def:`DOCKER_EXTRA_ARGUMENTS`
     Any additional command line options the administrator wants to be
-    added to the docker container create command line can be set with
-    this parameter.
+    added to the Docker container create command line can be set with
+    this parameter. Note that the admin should be careful setting this,
+    it is intended for newer Docker options that HTCondor doesn't support
+    directly.  Arbitrary Docker options may break Docker universe, for example
+    don't pass the --rm flag in DOCKER_EXTRA_ARGUMENTS, because then
+    HTCondor cannot get the final exit status from a Docker job.
+
+:macro-def:`DOCKER_NETWORKS`
+    An optional, comma-separated list of admin-defined networks that a job
+    may request with the ``docker_network_type`` submit file command.
+    Advertised into the slot attribute DockerNetworks.
 
 :macro-def:`OPENMPI_INSTALL_PATH`
     The location of the Open MPI installation on the local machine.
@@ -4981,36 +5008,70 @@ These macros control the *condor_schedd*.
     upper bound is configured with ``MAX_PERIODIC_EXPR_INTERVAL``
     :index:`MAX_PERIODIC_EXPR_INTERVAL` (default 1200 seconds).
 
-:macro-def:`SYSTEM_PERIODIC_HOLD`
+:macro-def:`SYSTEM_PERIODIC_HOLD_NAMES`
+    A comma and/or space separated list of unique names, where each is
+    used in the formation of a configuration variable name that will
+    contain an expression that will be periodically evaluated for each
+    job that is not in the ``HOLD`` state. Each name in the list will be used in the name of
+    configuration variable ``SYSTEM_PERIODIC_HOLD_<Name>``. The named expressions
+    are evaluated in the order in which names appear in this list. Names are
+    not case-sensitive. After all of the named expressions are evaluated,
+    the nameless ``SYSTEM_PERIODIC_HOLD`` expression will be evaluated. If any
+    of these expression evaluates to ``True`` the job will be held.  See also
+    ``SYSTEM_PERIODIC_HOLD``
+    There is no default value.
+
+:macro-def:`SYSTEM_PERIODIC_HOLD and SYSTEM_PERIODIC_HOLD_<Name>`
     This expression behaves identically to the job expression
     ``periodic_hold``, but it is evaluated for every job in the queue.
     It defaults to ``False``. When ``True``, it causes the job to stop
     running and go on hold. Here is an example that puts jobs on hold if
     they have been restarted too many times, have an unreasonably large
     virtual memory ``ImageSize``, or have unreasonably large disk usage
-    for an invented environment.
+    for an invented environment. 
 
     .. code-block:: condor-config
 
-        SYSTEM_PERIODIC_HOLD = \
+        if version > 9.5
+           # use hold names if the version supports it
+           SYSTEM_PERIODIC_HOLD_NAMES = Mem Disk
+           SYSTEM_PERIODIC_HOLD_Mem = ImageSize > 3000000
+           SYSTEM_PERIODIC_HOLD_Disk = JobStatus == 2 && DiskUsage > 10000000
+           SYSTEM_PERIODIC_HOLD = JobStatus == 1 && JobRunCount > 10
+        else
+           SYSTEM_PERIODIC_HOLD = \
           (JobStatus == 1 || JobStatus == 2) && \
           (JobRunCount > 10 || ImageSize > 3000000 || DiskUsage > 10000000)
+        endif
 
-:macro-def:`SYSTEM_PERIODIC_HOLD_REASON`
+:macro-def:`SYSTEM_PERIODIC_HOLD_REASON and SYSTEM_PERIODIC_HOLD_<Name>_REASON`
     This string expression is evaluated when the job is placed on hold
-    due to ``SYSTEM_PERIODIC_HOLD`` evaluating to ``True``. If it
+    due to ``SYSTEM_PERIODIC_HOLD`` or ``SYSTEM_PERIODIC_HOLD_<Name>`` evaluating to ``True``. If it
     evaluates to a non-empty string, this value is used to set the job
     attribute ``HoldReason``. Otherwise, a default description is used.
 
-:macro-def:`SYSTEM_PERIODIC_HOLD_SUBCODE`
+:macro-def:`SYSTEM_PERIODIC_HOLD_SUBCODE and SYSTEM_PERIODIC_HOLD_<Name>_SUBCODE`
     This integer expression is evaluated when the job is placed on hold
-    due to ``SYSTEM_PERIODIC_HOLD`` evaluating to ``True``. If it
+    due to ``SYSTEM_PERIODIC_HOLD`` or ``SYSTEM_PERIODIC_HOLD_<Name>`` evaluating to ``True``. If it
     evaluates to a valid integer, this value is used to set the job
     attribute ``HoldReasonSubCode``. Otherwise, a default of 0 is used.
     The attribute ``HoldReasonCode`` is set to 26, which indicates that
     the job went on hold due to a system job policy expression.
 
-:macro-def:`SYSTEM_PERIODIC_RELEASE`
+:macro-def:`SYSTEM_PERIODIC_RELEASE_NAMES`
+    A comma and/or space separated list of unique names, where each is
+    used in the formation of a configuration variable name that will
+    contain an expression that will be periodically evaluated for each
+    job that is in the ``HOLD`` state. Each name in the list will be used in the name of
+    configuration variable ``SYSTEM_PERIODIC_RELEASE_<Name>``. The named expressions
+    are evaluated in the order in which names appear in this list. Names are
+    not case-sensitive. After all of the named expressions are evaluated,
+    the nameless ``SYSTEM_PERIODIC_RELEASE`` expression will be evaluated. If any
+    of these expressions evaluates to ``True`` the job will be held.  See also
+    ``SYSTEM_PERIODIC_RELEASE``
+    There is no default value.
+
+:macro-def:`SYSTEM_PERIODIC_RELEASE and SYSTEM_PERIODIC_RELEASE_<Name>`
     This expression behaves identically to a job's definition of a
     **periodic_release** :index:`periodic_release<single: periodic_release; submit commands>`
     expression in a submit description file, but it is evaluated for
@@ -5028,7 +5089,20 @@ These macros control the *condor_schedd*.
           (JobRunCount < 20 && (time() - EnteredCurrentStatus) > 1200 ) &&  \
             (HoldReasonCode == 6 && HoldReasonSubCode == 110)
 
-:macro-def:`SYSTEM_PERIODIC_REMOVE`
+:macro-def:`SYSTEM_PERIODIC_REMOVE_NAMES`
+    A comma and/or space separated list of unique names, where each is
+    used in the formation of a configuration variable name that will
+    contain an expression that will be periodically evaluated for each
+    job in the queue. Each name in the list will be used in the name of
+    configuration variable ``SYSTEM_PERIODIC_REMOVE_<Name>``. The named expressions
+    are evaluated in the order in which names appear in this list. Names are
+    not case-sensitive. After all of the named expressions are evaluated,
+    the nameless ``SYSTEM_PERIODIC_REMOVE`` expression will be evaluated. If any
+    of these expressions evaluates to ``True`` the job will be removed from the queue.  See also
+    ``SYSTEM_PERIODIC_REMOVE``
+    There is no default value.
+
+:macro-def:`SYSTEM_PERIODIC_REMOVE and SYSTEM_PERIODIC_REMOVE_<Name>`
     This expression behaves identically to the job expression
     ``periodic_remove``, but it is evaluated for every job in the queue.
     As it is in the configuration file, it is easy for an administrator
@@ -5166,13 +5240,6 @@ These macros control the *condor_schedd*.
     jobs have finished spooling in their input files and have been
     scheduled.
 
-:macro-def:`DEDICATED_SCHEDULER_DELAY_FACTOR`
-    Limits the cpu usage of the dedicated scheduler within the
-    *condor_schedd*. The default value of 5 is the ratio of time spent
-    not in the dedicated scheduler to the time scheduling parallel jobs.
-    Therefore, the default caps the time spent in the dedicated
-    scheduler to 20%.
-
 :macro-def:`SCHEDD_SEND_VACATE_VIA_TCP`
     A boolean value that defaults to ``True``. When ``True``, the
     *condor_schedd* daemon sends vacate signals via TCP, instead of the
@@ -5208,20 +5275,6 @@ These macros control the *condor_schedd*.
     wrap around and reuse the same id. With a low enough value, it is
     possible for jobs to be erroneously assigned duplicate cluster ids,
     which will result in a corrupt job queue.
-
-:macro-def:`CKPT_SERVER_CLIENT_TIMEOUT`
-    An integer which specifies how long in seconds the *condor_schedd*
-    is willing to wait for a response from a checkpoint server before
-    declaring the checkpoint server down. The value of 0 makes the
-    schedd block for the operating system configured time (which could
-    be a very long time) before the ``connect()`` returns on its own
-    with a connection timeout. The default value is 20.
-
-:macro-def:`CKPT_SERVER_CLIENT_TIMEOUT_RETRY`
-    An integer which specifies how long in seconds the *condor_schedd*
-    will ignore a checkpoint server that is deemed to be down. After
-    this time elapses, the *condor_schedd* will try again in talking to
-    the checkpoint server. The default is 1200.
 
 :macro-def:`SCHEDD_JOB_QUEUE_LOG_FLUSH_DELAY`
     An integer which specifies an upper bound in seconds on how long it
@@ -5333,6 +5386,51 @@ These macros control the *condor_schedd*.
     *condor_schedd* does use configuration variable ``SLOT_WEIGHT`` to
     weight running and idle job counts in the submitter ClassAd.
 
+:macro-def:`EXTENDED_SUBMIT_COMMANDS`
+    A long form ClassAd that defines extended submit commands and their associated
+    job ad attributes for a specific Schedd.  *condor_submit* will query the
+    destination schedd for this ClassAd and use it to modify the internal
+    table of submit commands before interpreting the submit file.
+
+    Each entry in this ClassAd will define a new submit command, the value will
+    indicate the required data type to the submit file parser with the data type
+    given by example from the value according to this list of types
+
+    -  *string-list* - a quoted string containing a comma. e.g. ``"a,b"``. *string-list* values
+       are converted to canonical form.
+    -  *filename* - a quoted string beginning with the word file.  e.g. ``"filename"``. *filename* values
+       are converted to fully qualified file paths using the same rules as other submit filenames.
+    -  *string* - a quoted string that does not match the above special rules. e.g. ``"string"``. *string* values
+       can be provided quoted or unquoted in the submit file.  Unquoted values will have leading and trailing
+       whitespace removed.
+    -  *unsigned-integer* - any non-negative integer e.g. ``0``. *unsigned-integer* values are evaluated as expressions
+       and submit will fail if the result does not convert to an unsigned integer.  A simple integer value
+       will be stored in the job.
+    -  *integer* - any negative integer e.g. ``-1``.  *integer* values are evaluated as expressions and submit
+       will fail if the result does not convert to an integer.  A simple integer value will be stored in the job.
+    -  *boolean* - any boolean value e.g. ``true``. *boolean* values are evaluated as expressions and submit will
+       fail if the result does not convert to ``true`` or ``false``.
+    -  *expression* - any expression or floating point number that is not one of the above. e.g. ``a+b``. *expression*
+       values will be parsed as a classad expression and stored in the job.
+    -  *error* - the literal ``error`` will tell submit to generate an error when the command is used. 
+       this provides a way for admins to disable existing submit commands.
+    -  *undefined* - the literal ``undefined`` will be treated by *condor_submit* as if that
+       attribute is not in this ad. This is intended to aid composability of this ad across multiple
+       configuration files.
+
+    The following example will add four new submit commands and disable the use of the
+    the ``accounting_group_user`` submit command.
+
+    .. code-block:: condor-config
+
+          EXTENDED_SUBMIT_COMMANDS @=end
+             LongJob = true
+             Project = "string"
+             FavoriteFruit = "a,b"
+             SomeFile = "filename"
+             acounting_group_user = error
+          @end
+
 :macro-def:`JOB_TRANSFORM_NAMES`
     A comma and/or space separated list of unique names, where each is
     used in the formation of a configuration variable name that will
@@ -5343,11 +5441,15 @@ These macros control the *condor_schedd*.
     not case-sensitive. There is no default value.
 
 :macro-def:`JOB_TRANSFORM_<Name>`
-    A single job transform specified as a set of transform rules in new
-    classad syntax. The transform rules are applied to jobs that match
-    the transform's ``Requirements`` expression as they are submitted.
+    A single job transform specified as a set of transform rules.
+    The syntax for these rules is specified in :ref:`classads/transforms:ClassAd Transforms`
+    The transform rules are applied to jobs that match
+    the transform's ``REQUIREMENTS`` expression as they are submitted.
     ``<Name>`` corresponds to a name listed in ``JOB_TRANSFORM_NAMES``.
     Names are not case-sensitive. There is no default value.
+    For jobs submitted as late materialization factories, the factory Cluster ad is transformed
+    at submit time.  When job ads are later materialized, attribute values set by the transform
+    will override values set by the job factory for those attributes.
 
 :macro-def:`SUBMIT_REQUIREMENT_NAMES`
     A comma and/or space separated list of unique names, where each is
@@ -5448,7 +5550,7 @@ These macros control the *condor_schedd*.
     to their account.
     Most often, this should be set to name of the OAuth2 service
     (e.g. ``box``, ``gdrive``, ``onedrive``, etc.).
-    The dervied return URL is passed on to the *condor_credmon_oauth*
+    The derived return URL is passed on to the *condor_credmon_oauth*
     when a job requests OAuth2 credentials
     for a configured OAuth2 service.
 
@@ -5606,10 +5708,10 @@ condor_starter Configuration File Entries
 These settings affect the *condor_starter*.
 
 :macro-def:`DISABLE_SETUID`
-    By default, HTCondor prevents jobs from running setuid executables
+    HTCondor can prevent jobs from running setuid executables
     on Linux by setting the no-new-privileges flag.  This can be
-    disabled (i.e. to allow setuid binaries) by setting ``DISABLE_SETIUD``
-    to false.
+    enabled (i.e. to disallow setuid binaries) by setting ``DISABLE_SETUID``
+    to true.
 
 :macro-def:`EXEC_TRANSFER_ATTEMPTS`
     Sometimes due to a router misconfiguration, kernel bug, or other
@@ -5683,7 +5785,7 @@ These settings affect the *condor_starter*.
     Defaults to
     CUBACORES, GOMAXPROCS, JULIA_NUM_THREADS, MKL_NUM_THREADS,
     NUMEXPR_NUM_THREADS, OMP_NUM_THREADS, OMP_THREAD_LIMIT,
-    TF_LOOP_PARALLEL_ITERATIONS, TF_NUM_THREADS.
+    OPENBLAS_NUM_THREADS, TF_LOOP_PARALLEL_ITERATIONS, TF_NUM_THREADS.
 
 :macro-def:`STARTER_UPDATE_INTERVAL`
     An integer value representing the number of seconds between ClassAd
@@ -5698,6 +5800,13 @@ These settings affect the *condor_starter*.
     0.1. If monitoring, such as checking disk usage takes a long time,
     the *condor_starter* will monitor less frequently than specified by
     ``STARTER_UPDATE_INTERVAL``.
+
+:macro-def:`STARTER_UPDATE_INTERVAL_MAX`
+    An integer value representing an upper bound on the number of 
+    seconds between updates controlled by ``STARTER_UPDATE_INTERVAL`` and
+    ``STARTER_UPDATE_INTERVAL_TIMESLICE``.  It is recommended to leave this parameter
+    at its default value, which is calculated 
+    as ``STARTER_UPDATE_INTERVAL`` * ( 1 / ``STARTER_UPDATE_INTERVAL_TIMESLICE`` )
 
 :macro-def:`USER_JOB_WRAPPER`
     The full path and file name of an executable or script. If
@@ -6059,8 +6168,9 @@ These settings affect the *condor_starter*.
     the target, then skip this bind mount.
 
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS`
-    A string value containing a list of extra arguments to be appended
-    to the Singularity command line.
+    A string value or classad expression containing a list of extra arguments to be appended
+    to the Singularity command line. This can be an expression evaluted in the context of the
+    job ad and the machine ad.
 
 condor_submit Configuration File Entries
 -----------------------------------------
@@ -6246,9 +6356,7 @@ do not specify their own with:
     forgotten in a job's submit description file. The command in the
     submit description file results in actions by *condor_submit*,
     while the use of ``SUBMIT_ATTRS`` adds a job ClassAd attribute at a
-    later point in time. ``SUBMIT_EXPRS`` is a historic setting that
-    functions identically to ``SUBMIT_ATTRS``. It may be removed in the
-    future, so use ``SUBMIT_ATTRS``.
+    later point in time.
 
 :macro-def:`SUBMIT_ALLOW_GETENV`
     A boolean attribute which defaults to true. If set to false, the
@@ -6285,6 +6393,13 @@ do not specify their own with:
     submit a job whose x509 expiration time is less than this many
     seconds in the future. The default is to only refuse jobs whose
     expiration time has already passed.
+
+:macro-def:`CONTAINER_SHARED_FS`
+    This is a list of strings that name directories which are shared
+    on the execute machines and may contain container images under them.
+    The default value is /cvmfs.  When a container universe job lists
+    a *condor_image* that is under one of these directories, HTCondor
+    knows not to try to transfer the file to the worker node.
 
 condor_preen Configuration File Entries
 ----------------------------------------
@@ -6661,7 +6776,7 @@ These macros affect the *condor_collector*.
     The default value is ``$(NEGOTIATOR_CONSIDER_PREEMPTION)``.
 
 :macro-def:`COLLECTOR_FORWARD_PROJECTION`
-    An expresion that evaluates to a string in the context of an update. The string is treated as a list
+    An expression that evaluates to a string in the context of an update. The string is treated as a list
     of attributes to forward.  If the string has no attributes, it is ignored. The intended use is to
     restrict the list of attributes forwarded for claimed Machine ads.
     When ``$(NEGOTIATOR_CONSIDER_PREEMPTION)`` is false, the negotiator needs only a few attributes from
@@ -6736,8 +6851,16 @@ These macros affect the *condor_negotiator*.
     for defaults and composition of valid HTCondor daemon names.
 
 :macro-def:`NEGOTIATOR_INTERVAL`
-    Sets how often the *condor_negotiator* starts a negotiation cycle.
+    Sets the maximum time the *condor_negotiator* will wait before
+    starting a new negotiation cycle, counting from the start of the
+    previous cycle.
     It is defined in seconds and defaults to 60 (1 minute).
+
+:macro-def:`NEGOTIATOR_MIN_INTERVAL`
+    Sets the minimum time the *condor_negotiator* will wait before
+    starting a new negotiation cycle, counting from the start of the
+    previous cycle.
+    It is defined in seconds and defaults to 5.
 
 :macro-def:`NEGOTIATOR_UPDATE_INTERVAL`
     This macro determines how often the *condor_negotiator* daemon
@@ -6796,6 +6919,10 @@ These macros affect the *condor_negotiator*.
     who who do not belong to the local domain. See
     :doc:`/admin-manual/user-priorities-negotiation` for details.
     Defaults to 10000000.
+
+:macro-def:`ACCOUNTANT_DATABASE_FILE`
+    Defines the full path of the accountant database log file.
+    The default value is ``$(SPOOL)/Accountantnew.log``
 
 :macro-def:`ACCOUNTANT_LOCAL_DOMAIN`
     Describes the local UID domain. This variable is used to decide if a
@@ -6892,8 +7019,8 @@ These macros affect the *condor_negotiator*.
     the ClassAd of the idle (candidate) job. There is no direct access
     to the currently running job, but attributes of the currently
     running job that need to be accessed in ``PREEMPTION_REQUIREMENTS``
-    can be placed in the machine ClassAd using ``STARTD_JOB_EXPRS``
-    :index:`STARTD_JOB_EXPRS`. If not explicitly set in the
+    can be placed in the machine ClassAd using ``STARTD_JOB_ATTRS``
+    :index:`STARTD_JOB_ATTRS`. If not explicitly set in the
     HTCondor configuration file, the default value for this expression
     is ``False``. ``PREEMPTION_REQUIREMENTS`` should include the term
     ``(SubmitterGroup =?= RemoteGroup)``, if a preemption policy that
@@ -7083,12 +7210,6 @@ These macros affect the *condor_negotiator*.
     next job is part of the same auto cluster, meaning that it is a very
     similar job, the *condor_negotiator* will reuse the previous list
     of machines, instead of recreating the list from scratch.
-
-    If matching grid resources, and the desire is for a given resource
-    to potentially match multiple times per *condor_negotiator* pass,
-    ``NEGOTIATOR_MATCHLIST_CACHING`` should be ``False``. See
-    :ref:`grid-computing/grid-universe:matchmaking in the grid universe` in the
-    subsection on Advertising Grid Resources to HTCondor for an example.
 
 :macro-def:`NEGOTIATOR_CONSIDER_PREEMPTION`
     For expert users only. A boolean value that defaults to ``True``.
@@ -7400,6 +7521,10 @@ condor_procd Configuration File Macros
     disable cgroup tracking, define this to an empty string. See
     :ref:`admin-manual/setting-up-special-environments:cgroup-based process
     tracking` for a description of cgroup-based process tracking.
+    An administrator can configure distinct cgroup roots for 
+    different slot types within the same startd by prefixing
+    the *BASE_CGROUP* macro with the slot type. e.g. setting
+    SLOT_TYPE_1.BASE_CGROUP = hiprio_cgroup and SLOT_TYPE_2.BASE_CGROUP = low_prio
 
 condor_credd Configuration File Macros
 ---------------------------------------
@@ -7475,7 +7600,8 @@ These macros affect the *condor_gridmanager*.
     credential. The default is 10 minutes (600 seconds).
 
 :macro-def:`GRIDMANAGER_PROXY_REFRESH_TIME`
-    For GRAM jobs, the *condor_gridmanager* will not forward a
+    For remote schedulers that allow for X.509 proxy refresh,
+    the *condor_gridmanager* will not forward a
     refreshed proxy until the lifetime left for the proxy on the remote
     machine falls below this value. The value is in seconds and the
     default is 21600 (6 hours).
@@ -7509,6 +7635,16 @@ These macros affect the *condor_gridmanager*.
 
           GRIDMANAGER_SELECTION_EXPR = GridResource
 
+:macro-def:`GRIDMANAGER_LOG_APPEND_SELECTION_EXPR`
+    A boolean value that defaults to ``False``. When ``True``, the
+    evaluated value of ``GRIDMANAGER_SELECTION_EXPR`` (if set) is
+    appended to the value of ``GRIDMANAGER_LOG`` for each
+    *condor_gridmanager* instance.
+    The value is sanitized to remove characters that have special
+    meaning to the shell.
+    This allows each *condor_gridmanager* instance that runs concurrently
+    to write to a separate daemon log.
+
 :macro-def:`GRIDMANAGER_CONTACT_SCHEDD_DELAY`
     The minimum number of seconds between connections to the
     *condor_schedd*. The default is 5 seconds.
@@ -7521,7 +7657,7 @@ These macros affect the *condor_gridmanager*.
 
     .. code-block:: condor-config
 
-          GRIDMANAGER_JOB_PROBE_INTERVAL_GT5 = 300
+          GRIDMANAGER_JOB_PROBE_INTERVAL_ARC = 300
 
 
 :macro-def:`GRIDMANAGER_JOB_PROBE_RATE`
@@ -7536,7 +7672,7 @@ These macros affect the *condor_gridmanager*.
 
     .. code-block:: condor-config
 
-          GRIDMANAGER_JOB_PROBE_RATE_GT5 = 15
+          GRIDMANAGER_JOB_PROBE_RATE_ARC = 15
 
 
 :macro-def:`GRIDMANAGER_RESOURCE_PROBE_INTERVAL`
@@ -7572,30 +7708,11 @@ These macros affect the *condor_gridmanager*.
 
     .. code-block:: condor-config
 
-          GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_CREAM = 300
+          GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_PBS = 300
 
 
-    In this example, the job limit for all CREAM resources is 300.
+    In this example, the job limit for all PBS resources is 300.
     Defaults to 1000.
-
-:macro-def:`GRIDMANAGER_MAX_JOBMANAGERS_PER_RESOURCE`
-    For grid jobs of type **gt2**, limits the number of
-    globus-job-manager processes that the *condor_gridmanager* lets run
-    at a time on the remote head node. Allowing too many
-    globus-job-managers to run causes severe load on the head note,
-    possibly making it non-functional. This number may be exceeded if it
-    is reduced through the use of *condor_reconfig* while the
-    *condor_gridmanager* is running, or if some globus-job-managers
-    take a few extra seconds to exit. The value 0 means there is no
-    limit. The default value is 10.
-
-:macro-def:`GAHP`
-    The full path to the binary of the GAHP server. This configuration
-    variable is no longer used. Use :macro:`GT2_GAHP` instead.
-
-:macro-def:`GAHP_ARGS`
-    Arguments to be passed to the GAHP server. This configuration
-    variable is no longer used.
 
 :macro-def:`GAHP_DEBUG_HIDE_SENSITIVE_DATA`
     A boolean value that determines when sensitive data such as security
@@ -7619,16 +7736,6 @@ These macros affect the *condor_gridmanager*.
     The number of times to retry a command that failed due to a timeout
     or a failed connection. The default is 3.
 
-:macro-def:`GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT`
-    The duration, in seconds, of the two phase commit timeout to Globus
-    for gt2 jobs only. This maps directly to the ``two_phase`` setting
-    in the Globus RSL.
-
-:macro-def:`GLOBUS_GATEKEEPER_TIMEOUT`
-    The number of seconds after which if a gt2 grid universe job fails
-    to ping the gatekeeper, the job will be put on hold. Defaults to 5
-    days (in seconds).
-
 :macro-def:`EC2_RESOURCE_TIMEOUT`
     The number of seconds after which if an EC2 grid universe job fails
     to ping the EC2 service, the job will be put on hold. Defaults to
@@ -7639,19 +7746,9 @@ These macros affect the *condor_gridmanager*.
     The minimum interval, in whole milliseconds, between requests to the
     same EC2 service with the same credentials. Defaults to 100.
 
-:macro-def:`GRAM_VERSION_DETECTION`
-    A boolean value that defaults to ``True``. When ``True``, the
-    *condor_gridmanager* treats grid types ``gt2`` and ``gt5``
-    identically, and queries each server to determine which protocol it
-    is using. When ``False``, the *condor_gridmanager* trusts the grid
-    type provided in job attribute ``GridResource``, and treats the
-    server accordingly. Beware that identifying a ``gt2`` server as
-    ``gt5`` can result in overloading the server, if a large number of
-    jobs are submitted.
-
 :macro-def:`BATCH_GAHP_CHECK_STATUS_ATTEMPTS`
     The number of times a failed status command issued to the
-    *batch_gahp* should be retried. These retries allow the
+    *blahpd* should be retried. These retries allow the
     *condor_gridmanager* to tolerate short-lived failures of the
     underlying batch system. The default value is 5.
 
@@ -7678,11 +7775,10 @@ These macros affect the *condor_gridmanager*.
     higher-priority) commands are read and performed.
     The default value is 10.
 
-:macro-def:`GLITE_LOCATION`
-    The complete path to the directory containing the Glite software.
-    The default value is ``$(LIBEXEC)``/glite. The necessary Glite
-    software is included with HTCondor, and is required for grid-type
-    batch jobs.
+:macro-def:`BLAHPD_LOCATION`
+    The complete path to the directory containing the *blahp* software,
+    which is required for grid-type batch jobs.
+    The default value is ``$(RELEASE_DIR)``.
 
 :macro-def:`GAHP_SSL_CADIR`
     The path to a directory that may contain the certificates (each in
@@ -7702,55 +7798,14 @@ These macros affect the *condor_gridmanager*.
     The complete path and file name of the EC2 GAHP executable. The
     default value is ``$(SBIN)``/ec2_gahp.
 
-:macro-def:`GT2_GAHP`
-    The complete path and file name of the GT2 GAHP executable. The
-    default value is ``$(SBIN)``/gahp_server.
-
 :macro-def:`BATCH_GAHP`
     The complete path and file name of the batch GAHP executable, to be
-    used for PBS, LSF, SGE, and similar batch systems. The default
-    location is ``$(GLITE_LOCATION)``/bin/batch_gahp.
+    used for Slurm, PBS, LSF, SGE, and similar batch systems. The default
+    location is ``$(BIN)``/blahpd.
 
-:macro-def:`PBS_GAHP`
-    The complete path and file name of the PBS GAHP executable. The use
-    of the configuration variable ``BATCH_GAHP`` is preferred and
-    encouraged, as this variable may no longer be supported in a future
-    version of HTCondor. A value given with this configuration variable
-    will override a value specified by ``BATCH_GAHP``, and the value
-    specified by ``BATCH_GAHP`` is the default if this variable is not
-    defined.
-
-:macro-def:`LSF_GAHP`
-    The complete path and file name of the LSF GAHP executable. The use
-    of the configuration variable ``BATCH_GAHP`` is preferred and
-    encouraged, as this variable may no longer be supported in a future
-    version of HTCondor. A value given with this configuration variable
-    will override a value specified by ``BATCH_GAHP``, and the value
-    specified by ``BATCH_GAHP`` is the default if this variable is not
-    defined.
-
-:macro-def:`UNICORE_GAHP`
-    The complete path and file name of the wrapper script that invokes
-    the Unicore GAHP executable. The default value is
-    ``$(SBIN)``/unicore_gahp.
-
-:macro-def:`NORDUGRID_GAHP`
-    The complete path and file name of the wrapper script that invokes
-    the NorduGrid GAHP executable. The default value is
-    ``$(SBIN)``/nordugrid_gahp.
-
-:macro-def:`CREAM_GAHP`
-    The complete path and file name of the CREAM GAHP executable. The
-    default value is ``$(SBIN)``/cream_gahp.
-
-:macro-def:`SGE_GAHP`
-    The complete path and file name of the SGE GAHP executable. The use
-    of the configuration variable ``BATCH_GAHP`` is preferred and
-    encouraged, as this variable may no longer be supported in a future
-    version of HTCondor. A value given with this configuration variable
-    will override a value specified by ``BATCH_GAHP``, and the value
-    specified by ``BATCH_GAHP`` is the default if this variable is not
-    defined.
+:macro-def:`ARC_GAHP`
+    The complete path and file name of the ARC GAHP executable.
+    The default value is ``$(SBIN)``/arc_gahp.
 
 :macro-def:`GCE_GAHP`
     The complete path and file name of the GCE GAHP executable. The
@@ -7781,7 +7836,7 @@ These macros affect the *condor_job_router* daemon.
     Routes will be matched to jobs in the order their names are declared in this list.  Routes not
     declared in this list will be disabled.  
 
-    If routes are specifed in the deprecated `JOB_ROUTER_ENTRIES`, `JOB_ROUTER_ENTRIES_FILE`
+    If routes are specified in the deprecated `JOB_ROUTER_ENTRIES`, `JOB_ROUTER_ENTRIES_FILE`
     and `JOB_ROUTER_ENTRIES_CMD` configuration variables, then ``JOB_ROUTER_ROUTE_NAMES`` is optional.
     if it is empty, the order in which routes are considered will be the order in
     which their names hash.
@@ -7789,7 +7844,7 @@ These macros affect the *condor_job_router* daemon.
 :macro-def:`JOB_ROUTER_ROUTE_<NAME>`
     Specification of a single route in transform syntax.  ``<NAME>`` should be one of the
     route names specified in ``JOB_ROUTER_ROUTE_NAMES``. The transform syntax is specified
-    in the :ref:`misc-concepts/transforms:ClassAd Transforms` section of this manual.
+    in the :ref:`classads/transforms:ClassAd Transforms` section of this manual.
 
 :macro-def:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`
     An ordered list of the names of transforms that should be applied when a job is being
@@ -7804,7 +7859,7 @@ These macros affect the *condor_job_router* daemon.
 :macro-def:`JOB_ROUTER_TRANSFORM_<NAME>`
     Specification of a single pre-route or post-route transform.  ``<NAME>`` should be one of the
     route names specified in ``JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`` or in ``JOB_ROUTER_POST_ROUTE_TRANSFORM_NAMES``.
-    The transform syntax is specified in the :ref:`misc-concepts/transforms:ClassAd Transforms` section of this manual.
+    The transform syntax is specified in the :ref:`classads/transforms:ClassAd Transforms` section of this manual.
 
 :macro-def:`JOB_ROUTER_DEFAULTS`
     Deprecated, use ``JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES`` instead.
@@ -7890,12 +7945,12 @@ These macros affect the *condor_job_router* daemon.
     an unlimited number of jobs may be routed.
 
 :macro-def:`JOB_ROUTER_DEFAULT_MAX_JOBS_PER_ROUTE`
-    An iteger value representing the maximum number of jobs that may be
+    An integer value representing the maximum number of jobs that may be
     routed to a single route when the route does not specify a ``MaxJobs``
     value. The default value is 100.
 
 :macro-def:`JOB_ROUTER_DEFAULT_MAX_IDLE_JOBS_PER_ROUTE`
-    An iteger value representing the maximum number of jobs in a single
+    An integer value representing the maximum number of jobs in a single
     route that may be in the idle state.  When the number of jobs routed
     to that site exceeds this number, no more jobs will be routed to it. 
     A route may specify ``MaxIdleJobs`` to override this number.
@@ -7937,11 +7992,11 @@ These macros affect the *condor_job_router* daemon.
 
     .. code-block:: console
 
-        $ condor_qedit -constraint 'RoutedToJobId =!= undefined && \
-          ManagedManager == "insert_old_name"' \
+        $ condor_qedit -constraint \
+        'RoutedToJobId =!= undefined && ManagedManager == "insert_old_name"' \
           ManagedManager '"insert_new_name"'
-        condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
-          RoutedBy '"insert_new_name"'
+        $ condor_qedit -constraint \
+        'RoutedBy == "insert_old_name"' RoutedBy '"insert_new_name"'
 
 :macro-def:`JOB_ROUTER_RELEASE_ON_HOLD`
     A boolean value that defaults to ``True``. It controls how the
@@ -8011,9 +8066,59 @@ These macros affect the *condor_job_router* daemon.
 :macro-def:`JOB_ROUTER_ROUND_ROBIN_SELECTION`
     A boolean value that controls which route is chosen for a candidate
     job that matches multiple routes. When set to ``False``, the
-    default, the first matching route is awlays selected. When set to
+    default, the first matching route is always selected. When set to
     ``True``, the Job Router attempts to distribute jobs across all
     matching routes, round robin style.
+
+:macro-def:`JOB_ROUTER_CREATE_IDTOKEN_NAMES`
+    An list of the names of IDTOKENs that the JobRouter should create and refresh.
+    IDTOKENS whose names are listed here should each have a ``JOB_ROUTER_CREATE_IDTOKEN_<NAME>``
+    configuration variable that specifies the the filename, ownership and properties of the IDTOKEN.
+
+:macro-def:`JOB_ROUTER_IDTOKEN_REFRESH`
+    An integer value of secounds that controls the rate at which the JobRouter will refresh
+    the IDTOKENS listed by the ``JOB_ROUTER_CREATE_IDTOKEN_NAMES`` configuration variable.
+
+:macro-def:`JOB_ROUTER_CREATE_IDTOKEN_<NAME>`
+    Specification of a single IDTOKEN that will be created an refreshed by the JobRouter.
+    ``<NAME>`` should be one of the IDTOKEN names specified in ``JOB_ROUTER_CREATE_IDTOKEN_NAMES``.
+    The filename, ownership and properties of the IDTOKEN are defined by the following attributes.
+    Each attribute value must be a classad expression that evaluates to a string, except ``lifetime``
+    which must evaluate to an integer.
+
+    :macro-def:`kid`
+         The ID of the token signing key to use, equivalent to the ``-key`` argument of *condor_token_create*
+         and the ``kid`` attribute of *condor_token_list*.  Defaults to "POOL"
+
+    :macro-def:`sub`
+         The subject or user identity, equivalent to the ``-identity`` argument of *condor_token_create*
+         and the ``sub`` attribute of *condor_token_list*. Defaults the token name.
+
+    :macro-def:`scope`
+         List of allowed authorizations, equivalent to the ``-authz`` argument of *condor_token_create*
+         and the ``scope`` attribute of *condor_token_list*. 
+
+    :macro-def:`lifetime`
+         Time in seconds that the IDTOKEN is valid after creation, equivalent to the ``-lifetime`` argument of *condor_token_create*.
+         The ``exp`` attribute of *condor_token_list* is the creation time of the token plus this value.
+
+    :macro-def:`file`
+         The filename of the IDTOKEN file, equivalent to the ``-token`` argument of *condor_token_create*.
+         Defaults to the token name.
+
+    :macro-def:`dir`
+         The directory that the IDTOKEN file will be created and refreshed into. Defaults to ``$(SEC_TOKEN_DIRECTORY)``.
+
+    :macro-def:`owner`
+         If specified, the IDTOKEN file will be owned by this user.  If not specified, the IDTOKEN file will be owned
+         by the owner of *condor_job_router* process.  This attribute is optional if the *condor_job_router* is running as an ordinary user
+         but required if it is running as a Windows service or as the ``root`` or ``condor`` user.  The owner specified here
+         should be the same as the ``Owner`` attribute of the jobs that this IDTOKEN is intended to be sent to.
+
+:macro-def:`JOB_ROUTER_SEND_ROUTE_IDTOKENS`
+    List of the names of the IDTOKENS to add to the input file transfer list of each routed job. This list should be one or
+    more of the IDTOKEN names specified by the ``JOB_ROUTER_CREATE_IDTOKEN_NAMES``.
+    If the route has a ``SendIDTokens`` definition, this configuration variable is not used for that route.
 
 condor_lease_manager Configuration File Entries
 -------------------------------------------------
@@ -8101,93 +8206,6 @@ in configuration. This allows multiple instances of the
     types of ClassAds from the *condor_collector*. There is no default
     value, resulting in no constraints being placed on query.
 
-Grid Monitor Configuration File Entries
----------------------------------------
-
-:index:`Grid Monitor configuration variables<single: Grid Monitor configuration variables; configuration>`
-
-These macros affect the Grid Monitor.
-
-:macro-def:`ENABLE_GRID_MONITOR`
-    A boolean value that when ``True`` enables the Grid Monitor. The
-    Grid Monitor is used to reduce load on Globus gatekeepers. This
-    parameter only affects grid jobs of type **gt2**. The variable
-    ``GRID_MONITOR`` must also be correctly configured. Defaults to
-    ``True``. See :ref:`grid-computing/grid-universe:htcondor-g, the gt2,
-    and gt5 grid types` for more information.
-
-:macro-def:`GRID_MONITOR`
-    The complete path name of the *grid_monitor.sh* tool used to reduce
-    the load on Globus gatekeepers. This parameter only affects grid
-    jobs of type **gt2**. This parameter is not referenced unless
-    ``ENABLE_GRID_MONITOR`` is set to ``True`` (the default value).
-
-:macro-def:`GRID_MONITOR_HEARTBEAT_TIMEOUT`
-    The integer number of seconds that may pass without hearing from a
-    working Grid Monitor before it is assumed to be dead. Defaults to
-    300 (5 minutes). Increasing this number will improve the ability of
-    the Grid Monitor to survive in the face of transient problems, but
-    will also increase the time before HTCondor notices a problem.
-
-:macro-def:`GRID_MONITOR_RETRY_DURATION`
-    When HTCondor-G attempts to start the Grid Monitor at a particular
-    site, it will wait this many seconds to start hearing from the Grid
-    Monitor. Defaults to 900 (15 minutes). If this duration passes
-    without success, the Grid Monitor will be disabled for the site in
-    question for the period of time set by ``GRID_MONITOR_DISABLE_TIME``
-    :index:`GRID_MONITOR_DISABLE_TIME`.
-
-:macro-def:`GRID_MONITOR_NO_STATUS_TIMEOUT`
-    Jobs can disappear from the Grid Monitor's status reports for short
-    periods of time under normal circumstances, but a prolonged absence
-    is often a sign of problems on the remote machine. This variable
-    sets the amount of time (in seconds) that a job can be absent before
-    the *condor_gridmanager* reacts by restarting the GRAM
-    *jobmanager*. The default is 900, which is 15 minutes.
-
-:macro-def:`GRID_MONITOR_DISABLE_TIME`
-    When an error occurs with a Grid Monitor job, this parameter
-    controls how long the *condor_gridmanager* will wait before
-    attempting to start a new Grid Monitor job. The value is in seconds
-    and the default is 3600 (1 hour).
-
-Configuration File Entries Relating to Grid Usage
--------------------------------------------------
-
-:index:`grid configuration variables<single: grid configuration variables; configuration>`
-
-These macros affect the HTCondor's usage of grid resources.
-
-:macro-def:`GLEXEC_JOB`
-    A boolean value that defaults to ``False``. When ``True``, it
-    enables the use of *glexec* on the machine.
-
-:macro-def:`GLEXEC`
-    The full path and file name of the *glexec* executable.
-
-:macro-def:`GLEXEC_RETRIES`
-    An integer value that specifies the maximum number of times to retry
-    a call to *glexec* when *glexec* exits with status 202 or 203, error
-    codes that indicate a possible transient error condition. The
-    default number of retries is 3.
-
-:macro-def:`GLEXEC_RETRY_DELAY`
-    An integer value that specifies the minimum number of seconds to
-    wait between retries of a failed call to *glexec*. The default is 5
-    seconds. The actual delay to be used is determined by a random
-    exponential backoff algorithm that chooses a delay with a minimum of
-    the value of ``GLEXEC_RETRY_DELAY`` and a maximum of 100 times that
-    value.
-
-:macro-def:`GLEXEC_HOLD_ON_INITIAL_FAILURE`
-    A boolean value that when ``False`` prevents a job from being put on
-    hold when a failure is encountered during the glexec setup phase of
-    managing a job. The default is ``True``. *glexec* is invoked
-    multiple times during each attempt to run a job. This configuration
-    setting only disables putting the job on hold for the initial
-    invocation. Subsequent failures during that run attempt always put
-    the job on hold.
-
 Configuration File Entries for DAGMan
 -------------------------------------
 
@@ -8266,11 +8284,11 @@ General
     shared port-related error messages from appearing in ``dagman.out``
     files. (Introduced in version 8.6.1.)
 
-:macro-def:`DAGMAN_USE_CONDOR_SUBMIT`
-    A boolan value that controls wither *condor_dagman* submits jobs using
+:macro-def:`DAGMAN_USE_DIRECT_SUBMIT`
+    A boolean value that controls whether *condor_dagman* submits jobs using
     *condor_submit* or by opening a direct connection to the *condor_schedd*.
-    ``DAGMAN_USE_CONDOR_SUBMIT`` defaults to ``True``.  When set to ``False``
-    *condor_dagman* will submit jobs to the local Schedd by connnecting to it
+    ``DAGMAN_USE_DIRECT_SUBMIT`` defaults to ``True``.  When set to ``True``
+    *condor_dagman* will submit jobs to the local Schedd by connecting to it
     directly.  This is faster than using *condor_submit*, especially for very
     large DAGs; But this method will ignore some submit file features such as
     ``max_materialize`` and more than one ``QUEUE`` statement.
@@ -8282,6 +8300,14 @@ General
     optimizes the graph structure by reducing the number of dependencies, 
     resulting in a significant improvement to the *condor_dagman* memory 
     footprint, parse time, and submit speed.
+
+:macro-def:`DAGMAN_PUT_FAILED_JOBS_ON_HOLD`
+    A boolean value that controls what happens when a job in a DAG fails.
+    When set to ``True``, *condor_dagman* will keep the job in the queue and
+    put it on hold. If the failure was due to a transient error (i.e. a
+    temporary network outage), this gives users an opportunity to fix the
+    problem, release the job and continue their DAG execution. Defaults 
+    to ``False``.
 
 Throttling
 ''''''''''
@@ -8463,7 +8489,7 @@ Node job submission/removal
     node jobs itself when it is removed (in addition to the
     *condor_schedd* removing them). Note that setting
     ``DAGMAN_REMOVE_NODE_JOBS`` to ``True`` is the safer option (setting
-    it to ``False`` means that there is some chance of endig up with
+    it to ``False`` means that there is some chance of ending up with
     "orphan" node jobs). Setting ``DAGMAN_REMOVE_NODE_JOBS`` to
     ``False`` is a performance optimization (decreasing the load on the
     *condor_schedd* when a *condor_dagman* job is removed). Note that
@@ -8898,14 +8924,14 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SEC_*_AUTHENTICATION_METHODS`
     An ordered list of allowed authentication methods for a given authorization
     level.  This set of configuration variables controls both the ordering and
-    the allowed methods.  Currently allowed values are ``GSI`` (non-Windows),
+    the allowed methods.  Currently allowed values are
     ``SSL``, ``KERBEROS``, ``PASSWORD``, ``FS`` (non-Windows), ``FS_REMOTE``
     (non-Windows), ``NTSSPI``, ``MUNGE``, ``CLAIMTOBE``, ``IDTOKENS``,
     ``SCITOKENS``,  and ``ANONYMOUS``.
     See the :doc:`/admin-manual/security` section for a discussion of the
     relative merits of each method; some, such as ``CLAIMTOBE`` provide effectively
     no security at all.  The default authentication methods are
-    ``NTSSPI,FS,IDTOKENS,KERBEROS,GSI,SSL``.
+    ``NTSSPI,FS,IDTOKENS,KERBEROS,SSL``.
 
     These methods are tried in order until one succeeds or they all fail; for
     this reason, we do not recommend changing the default method list.
@@ -8920,126 +8946,26 @@ macros are described in the :doc:`/admin-manual/security` section.
     the setting per authorization level; it is recommended to leave these
     settings untouched.
 
-:macro-def:`GSI_DAEMON_NAME`
-    This configuration variable is retired. Instead use ``ALLOW_CLIENT``
-    :index:`ALLOW_CLIENT` or ``DENY_CLIENT``
-    :index:`DENY_CLIENT` as appropriate. When used, this variable
-    defined a comma separated list of the subject name(s) of the
-    certificate(s) used by Condor daemons to which this configuration of
-    Condor will connect. The \* character may be used as a wild card
-    character. When ``GSI_DAEMON_NAME`` is defined, only certificates
-    matching ``GSI_DAEMON_NAME`` pass the authentication step, and no
-    check is performed to require that the host name of the daemon
-    matches the host name in the daemon's certificate. When
-    ``GSI_DAEMON_NAME`` is not defined, the host name of the daemon and
-    certificate must match unless exempted by the use of
-    ``GSI_SKIP_HOST_CHECK`` and/or ``GSI_SKIP_HOST_CHECK_CERT_REGEX``.
-
-:macro-def:`GSI_SKIP_HOST_CHECK`
-    A boolean variable that controls whether a check is performed during
-    GSI authentication of a Condor daemon. When the default value of
-    ``False``, the check is not skipped, so the daemon host name must
-    match the host name in the daemon's certificate, unless otherwise
-    exempted by the use of ``GSI_DAEMON_NAME``
-    :index:`GSI_DAEMON_NAME` or
-    ``GSI_SKIP_HOST_CHECK_CERT_REGEX``. When ``True``, this check is
-    skipped, and hosts will not be rejected due to a mismatch of
-    certificate and host name.
-
-:macro-def:`GSI_SKIP_HOST_CHECK_CERT_REGEX`
-    This may be set to a regular expression. GSI certificates of Condor
-    daemons with a subject name that are matched in full by this regular
-    expression are not required to have a matching daemon host name and
-    certificate host name. The default is an empty regular expression,
-    which will not match any certificates, even if they have an empty
-    subject name.
-
 :macro-def:`HOST_ALIAS`
     Specifies the fully qualified host name that clients authenticating
-    this daemon with GSI should expect the daemon's certificate to
+    this daemon with SSL should expect the daemon's certificate to
     match. The alias is advertised to the *condor_collector* as part of
     the address of the daemon. When this is not set, clients validate
     the daemon's certificate host name by matching it against DNS A
     records for the host they are connected to. See
-    ``GSI_SKIP_HOST_CHECK`` :index:`GSI_SKIP_HOST_CHECK` for ways
+    ``SSL_SKIP_HOST_CHECK`` :index:`SSL_SKIP_HOST_CHECK` for ways
     to disable this validation step.
-
-:macro-def:`GSI_DAEMON_DIRECTORY`
-    A directory name used in the construction of complete paths for the
-    configuration variables ``GSI_DAEMON_CERT``, ``GSI_DAEMON_KEY``, and
-    ``GSI_DAEMON_TRUSTED_CA_DIR``, for any of these configuration
-    variables are not explicitly set. The value is unset by default.
-
-:macro-def:`GSI_DAEMON_CERT`
-    A complete path and file name to the X.509 certificate to be used in
-    GSI authentication. If this configuration variable is not defined,
-    and ``GSI_DAEMON_DIRECTORY`` is defined, then HTCondor uses
-    ``GSI_DAEMON_DIRECTORY`` to construct the path and file name as
-
-    .. code-block:: condor-config
-
-          GSI_DAEMON_CERT  = $(GSI_DAEMON_DIRECTORY)/hostcert.pem
-
-
-:macro-def:`GSI_DAEMON_KEY`
-    A complete path and file name to the X.509 private key to be used in
-    GSI authentication. If this configuration variable is not defined,
-    and ``GSI_DAEMON_DIRECTORY`` is defined, then HTCondor uses
-    ``GSI_DAEMON_DIRECTORY`` to construct the path and file name as
-
-    .. code-block:: condor-config
-
-          GSI_DAEMON_KEY  = $(GSI_DAEMON_DIRECTORY)/hostkey.pem
-
-
-:macro-def:`GSI_DAEMON_TRUSTED_CA_DIR`
-    The directory that contains the list of trusted certification
-    authorities to be used in GSI authentication. The files in this
-    directory are the public keys and signing policies of the trusted
-    certification authorities. If this configuration variable is not
-    defined, and ``GSI_DAEMON_DIRECTORY`` is defined, then HTCondor uses
-    ``GSI_DAEMON_DIRECTORY`` to construct the directory path as
-
-    .. code-block:: condor-config
-
-          GSI_DAEMON_TRUSTED_CA_DIR  = $(GSI_DAEMON_DIRECTORY)/certificates
-
-    The EC2 GAHP may use this directory in the specification a trusted
-    CA.
-
-:macro-def:`GSI_DAEMON_PROXY`
-    A complete path and file name to the X.509 proxy to be used in GSI
-    authentication. When this configuration variable is defined, use of
-    this proxy takes precedence over use of a certificate and key.
-
-:macro-def:`GSI_AUTHZ_CONF`
-    A complete path and file name of the Globus mapping library that
-    looks for the mapping call out configuration. There is no default
-    value; as such, HTCondor uses the environment variable
-    ``GSI_AUTHZ_CONF`` when this variable is not defined. Setting this
-    variable to ``/dev/null`` disables callouts.
-
-:macro-def:`GSS_ASSIST_GRIDMAP_CACHE_EXPIRATION`
-    The length of time, in seconds, to cache the result of the Globus
-    mapping lookup result when using Globus to map certificates to
-    HTCondor user names. The lookup only occurs when the canonical name
-    ``GSS_ASSIST_GRIDMAP`` is present in the HTCondor map file. The
-    default value is 0 seconds, which is a special value that disables
-    caching. The cache uses the DN and VOMS FQAN as a key; very rare
-    Globus configurations that utilize other certificate attributes for
-    the mapping may cause the cache to return a different user than
-    Globus.
 
 :macro-def:`DELEGATE_JOB_GSI_CREDENTIALS`
     A boolean value that defaults to ``True`` for HTCondor version
-    6.7.19 and more recent versions. When ``True``, a job's GSI X.509
+    6.7.19 and more recent versions. When ``True``, a job's X.509
     credentials are delegated, instead of being copied. This results in
     a more secure communication when not encrypted.
 
 :macro-def:`DELEGATE_FULL_JOB_GSI_CREDENTIALS`
     A boolean value that controls whether HTCondor will delegate a full
-    or limited GSI X.509 proxy. The default value of ``False`` indicates
-    the limited GSI X.509 proxy.
+    or limited X.509 proxy. The default value of ``False`` indicates
+    the limited X.509 proxy.
 
 :macro-def:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`
     An integer value that specifies the maximum number of seconds for
@@ -9050,8 +8976,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     **delegate_job_GSI_credentials_lifetime** :index:`delegate_job_GSI_credentials_lifetime<single: delegate_job_GSI_credentials_lifetime; submit commands>`
     submit file command. This configuration variable currently only
     applies to proxies delegated for non-grid jobs and HTCondor-C jobs.
-    It does not currently apply to globus grid jobs, which always behave
-    as though the value is 0. This variable has no effect if
+    This variable has no effect if
     ``DELEGATE_JOB_GSI_CREDENTIALS``
     :index:`DELEGATE_JOB_GSI_CREDENTIALS` is ``False``.
 
@@ -9070,23 +8995,6 @@ macros are described in the :doc:`/admin-manual/security` section.
     :index:`SHADOW_CHECKPROXY_INTERVAL`. To ensure that the
     delegated proxy remains valid, the interval for checking the proxy
     should be, at most, half of the interval for refreshing it.
-
-:macro-def:`GSI_DELEGATION_KEYBITS`
-    The integer number of bits in the GSI key. If set to 0, the number
-    of bits will be that preferred by the GSI library. If set to less
-    than 1024, the value will be ignored, and the key size will be the
-    default size of 1024 bits. Setting the value greater than 4096 is
-    likely to cause long compute times.
-
-:macro-def:`GSI_DELEGATION_CLOCK_SKEW_ALLOWABLE`
-    The number of seconds of clock skew permitted for delegated proxies.
-    The default value is 300 (5 minutes). This default value is also
-    used if this variable is set to 0.
-
-:macro-def:`GRIDMAP`
-    The complete path and file name of the Globus Gridmap file. The
-    Gridmap file is used to map X.509 distinguished names to HTCondor
-    user ids. :index:`SEC_DEFAULT_SESSION_DURATION`
 
 :macro-def:`SEC_<access-level>_SESSION_DURATION`
     The amount of time in seconds before a communication session
@@ -9213,8 +9121,19 @@ macros are described in the :doc:`/admin-manual/security` section.
     pool password for password authentication.
 
 :macro-def:`SEC_PASSWORD_DIRECTORY`
-    For Unix machines, the path to the directory containing password files
-    for token authentication.  Defaults to ``/etc/condor/passwords.d``.
+    The path to the directory containing signing key files
+    for token authentication.  Defaults to ``/etc/condor/passwords.d`` on
+    Unix and to ``$(RELEASE_DIR)\tokens.sk`` on Windows.
+
+:macro-def:`SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS`
+    A comma or space -separated list of signing key names that can be used
+    if to create a token if requested by *condor_token_fetch*.  Defaults
+    to ``POOL``.
+
+:macro-def:`SEC_TOKEN_POOL_SIGNING_KEY_FILE`
+    The path and filename for the file containing the default signing key
+    for token authentication.  Defaults to ``/etc/condor/passwords.d/POOL`` on Unix
+    and to ``$(RELEASE_DIR)\tokens.sk\POOL`` on Windows.
 
 :macro-def:`SEC_TOKEN_SYSTEM_DIRECTORY`
     For Unix machines, the path to the directory containing tokens for
@@ -9225,14 +9144,14 @@ macros are described in the :doc:`/admin-manual/security` section.
     For Unix machines, the path to the directory containing tokens for
     user authentication with the token method.  Defaults to ``~/.condor/tokens.d``.
 
-:macro-def:`SEC_TOKEN_BLACKLIST_EXPR`
+:macro-def:`SEC_TOKEN_REVOCATION_EXPR`
     A ClassAd expression evaluated against tokens during authentication;
-    if ``SEC_TOKEN_BLACKLIST_EXPR`` is set and evaluates to true, then the
-    token is blacklisted and the authentication attempt is denied.
+    if ``SEC_TOKEN_REVOCATION_EXPR`` is set and evaluates to true, then the
+    token is revoked and the authentication attempt is denied.
 
 :macro-def:`SEC_TOKEN_REQUEST_LIMITS`
     If set, this is a comma-separated list of authorization levels that limit
-    the authorizations a token request can recieve.  For example, if
+    the authorizations a token request can receive.  For example, if
     ``SEC_TOKEN_REQUEST_LIMITS`` is set to ``READ, WRITE``, then a token
     cannot be issued with the authorization ``DAEMON`` even if this would
     otherwise be permissible.
@@ -9281,6 +9200,14 @@ macros are described in the :doc:`/admin-manual/security` section.
     The path and file name of the file containing the private key for
     the client side of a communication authenticating with SSL.
 
+:macro-def:`AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE`
+    A boolean value that controls whether the client side of a
+    communication authenticating with SSL must have a credential.
+    If set to ``True`` and the client doesn't have a credential, then
+    the SSL authentication will fail and other authentication methods
+    will be tried.
+    The default is ``False``.
+
 :macro-def:`SSL_SKIP_HOST_CHECK`
     A boolean variable that controls whether a host check is performed
     by the client during an SSL authentication of a Condor daemon. This
@@ -9323,7 +9250,7 @@ macros are described in the :doc:`/admin-manual/security` section.
 
     Important: for this mechanism to be secure, integrity
     and encryption, should be enabled in the startd configuration. Also,
-    some form of strong mutual authentication (e.g. GSI) should be
+    some form of strong mutual authentication (e.g. SSL) should be
     enabled between all daemons and the central manager.  Otherwise, the shared
     secret which is exchanged in matchmaking cannot be safely encrypted
     when transmitted over the network.
@@ -9383,11 +9310,17 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SCITOKENS_FILE`
     The path and file name of a file containing a SciToken for use by
     the client during the SCITOKENS authentication methods.  This variable
-    has no default value.
+    has no default value.  If left unset, HTCondor will use the bearer
+    token discovery protocol defined by the WLCG (https://zenodo.org/record/3937438)
+    to find one.
 
 :macro-def:`SEC_CREDENTIAL_SWEEP_DELAY`
     The number of seconds to wait before cleaning up unused credentials.
     Defaults to 3,600 seconds (1 hour).
+
+:macro-def:`SEC_CREDENTIAL_DIRECTORY_KRB`
+    The directory that users' Kerberos credentials should be stored in.
+    This variable has no default value.
 
 :macro-def:`SEC_CREDENTIAL_DIRECTORY_OAUTH`
     The directory that users' OAuth2 credentials should be stored in.
@@ -9395,23 +9328,31 @@ macros are described in the :doc:`/admin-manual/security` section.
 
 :macro-def:`SEC_CREDENTIAL_PRODUCER`
     A script for *condor_submit* to execute to produce credentials while
-    using the kerberos type of credentials.  No parameters are passed,
+    using the Kerberos type of credentials.  No parameters are passed,
     and credentials most be sent to stdout.
 
-.. only:: Vault
+:macro-def:`SEC_CREDENTIAL_STORER`
+    A script for *condor_submit* to execute to produce credentials while
+    using the OAuth2 type of credentials.  The oauth services specified
+    in the ``use_auth_services`` line in the submit file are passed as
+    parameters to the script, and the script should use
+    ``condor_store_cred`` to store credentials for each service.
+    Additional modifiers to each service may be passed: &handle=,
+    &scopes=, or &audience=.  The handle should be appended after
+    an underscore to the service name used with ``condor_store_cred``,
+    the comma-separated list of scopes should be passed to the command
+    with the -S option, and the audience should be passed to it with the
+    -A option.
 
-    :macro-def:`SEC_CREDENTIAL_STORER`
-        A script for *condor_submit* to execute to produce credentials while
-        using the OAuth2 type of credentials.  The oauth services specified
-        in the ``use_auth_services`` line in the submit file are passed as
-        parameters to the script, and the script should use
-        ``condor_store_cred`` to store credentials for each service.
-        Additional modifiers to each service may be passed: &handle=,
-        &scopes=, or &audience=.  The handle should be appended after
-        an underscore to the service name used with ``condor_store_cred``,
-        the comma-separated list of scopes should be passed to the command
-        with the -S option, and the audience should be passed to it with the
-        -A option.
+:macro-def:`LEGACY_ALLOW_SEMANTICS`
+    A boolean parameter that defaults to ``False``.
+    In HTCondor 8.8 and prior, if `ALLOW_DAEMON` or `DENY_DAEMON` wasn't
+    set in the configuration files, then the value of `ALLOW_WRITE` or
+    `DENY_DAEMON` (respectively) was used for these parameters.
+    Setting `LEGACY_ALLOW_SEMANTICS` to ``True`` enables this old behavior.
+    This is a potential security concern, so this setting should only be
+    used to ease the upgrade of an existing pool from 8.8 or prior to
+    9.0 or later.
 
 
 Configuration File Entries Relating to Virtual Machines
@@ -9795,12 +9736,12 @@ These macros affect the high availability operation of HTCondor.
 :macro-def:`HAD_FIPS_MODE`
     Controls what type of checksum will be sent along with files that are replicated.
     Set it to 0 for MD5 checksums and to 1 for SHA-2 checksums. Default value is 0.
-    Prior to verions 8.8.14 and 8.9.12 only MD5 checksums are supported. In the 9.0 and
+    Prior to versions 8.8.13 and 8.9.12 only MD5 checksums are supported. In the 9.0 and
     later release of HTCondor, MD5 support will be removed and only SHA-2 will be
     supported.  This configuration variable is intended to provide a transition
     between the 8.8 and 9.0 releases.  As soon as all of machines involved in replication
-    are running HTCondor 8.8.14 or 8.9.12 or later you should set this configuration variable
-    to 1 to prepare for the transiation to 9.0
+    are running HTCondor 8.8.13 or 8.9.12 or later you should set this configuration variable
+    to 1 to prepare for the transition to 9.0
 
 :macro-def:`REPLICATION_LIST`
     A comma-separated list of all *condor_replication* daemons in the
@@ -9898,7 +9839,7 @@ These macros affect the high availability operation of HTCondor.
 MyProxy Configuration File Macros
 ---------------------------------
 
-In some cases, HTCondor can autonomously refresh GSI certificate proxies
+In some cases, HTCondor can autonomously refresh certificate proxies
 via *MyProxy*, available from
 `http://myproxy.ncsa.uiuc.edu/ <http://myproxy.ncsa.uiuc.edu/>`_.
 
@@ -10210,17 +10151,17 @@ see :ref:`admin-manual/networking:reducing port usage with the
     perform, before the oldest one will be rotated away. The default
     value is 1.
 
-Configuration File Entries Relating to Hooks
---------------------------------------------
+Configuration File Entries Relating to Job Hooks
+------------------------------------------------
 
-:index:`hook configuration variables<single: hook configuration variables; configuration>`
+:index:`job hook configuration variables<single: job hook configuration variables; configuration>`
 :index:`Job Router`
 
 These macros control the various hooks that interact with HTCondor.
 Currently, there are two independent sets of hooks. One is a set of
 fetch work hooks, some of which are invoked by the *condor_startd* to
 optionally fetch work, and some are invoked by the *condor_starter*.
-See :ref:`misc-concepts/hooks:job hooks that fetch work` for more
+See :ref:`admin-manual/hooks:job hooks that fetch work` for more
 details. The other set replace functionality of the
 *condor_job_router* daemon. Documentation for the
 *condor_job_router* daemon is in
@@ -10273,7 +10214,7 @@ details. The other set replace functionality of the
     For the fetch work hooks, the full path to the program invoked by
     the *condor_starter* periodically as the job runs, allowing the
     *condor_starter* to present an updated and augmented job ClassAd to
-    the program. See :ref:`misc-concepts/hooks:job hooks that fetch work` for
+    the program. See :ref:`admin-manual/hooks:job hooks that fetch work` for
     the list of additional attributes included. When the job is first invoked,
     the *condor_starter* will invoke the program after
     ``$(STARTER_INITIAL_UPDATE_INTERVAL)`` seconds. Thereafter, the
@@ -10315,7 +10256,7 @@ details. The other set replace functionality of the
     (if any). The expression must evaluate to an integer. If not
     defined, the *condor_startd* will wait 300 seconds (five minutes)
     between attempts to fetch work. For more information about this
-    expression, see :ref:`misc-concepts/hooks:job hooks that fetch work`.
+    expression, see :ref:`admin-manual/hooks:job hooks that fetch work`.
 
 :macro-def:`JOB_ROUTER_HOOK_KEYWORD`
     For the Job Router hooks, the keyword used to define the set of
@@ -10342,39 +10283,48 @@ details. The other set replace functionality of the
     Router finishes managing the job. ``<Keyword>`` is the hook keyword
     defined by ``JOB_ROUTER_HOOK_KEYWORD`` to identify the hooks.
 
-The following macros describe the Daemon ClassAd Hook capabilities of
-HTCondor. The Daemon ClassAd Hook mechanism is used to run executables
-(called jobs) directly from the *condor_startd* and *condor_schedd*
-daemons. The output from the jobs is incorporated into the machine
-ClassAd generated by the respective daemon. The mechanism is described
-in :ref:`misc-concepts/hooks:daemon classad hooks`.
+Configuration File Entries Relating to Daemon ClassAd Hooks
+-----------------------------------------------------------
 
-:macro-def:`STARTD_CRON_NAME`  and :macro-def:`SCHEDD_CRON_NAME`
-    These variables will be honored through HTCondor versions 7.6, and
-    support will be removed in HTCondor version 7.7. They are no longer
-    documented as to their usage.
+:index:`daemon ClassAd hook configuration variables<single: daemon ClassAd hook configuration variables; configuration>`
 
-    Defines a logical name to be used in the formation of related
-    configuration macro names. This macro made other Daemon ClassAd Hook
-    macros more readable and maintainable. A common example was
+The following macros describe the daemon ClassAd hook capabilities of
+HTCondor.  The daemon ClassAd hook mechanism is used to run executables
+directly from the *condor_startd* and *condor_schedd*
+daemons.  The output from the jobs is incorporated into the machine
+ClassAd generated by the respective daemon.  The mechanism is described
+in :ref:`admin-manual/hooks:daemon classad hooks`.
 
-    .. code-block:: condor-config
+These macros are listed in alphabetical order for ease of reference, except
+that the the job-specific macros follow the general ones.  These macros
+all include ``CRON`` because the default mode for a daemon ClassAd hook is
+to run periodically.  Likewise, a specific daemon ClassAd hook is referred
+to as a ``JOB``.
 
-           STARTD_CRON_NAME = HAWKEYE
+To define a job:
 
-    This example allowed the naming of other related macros to contain
-    the string HAWKEYE in their name, replacing the string STARTD_CRON.
+* Start by adding a ``JobName`` to :macro:`STARTD_CRON_JOBLIST`.  (If
+  you want to define a benchmark, or a daemon ClassAd hook in the schedd,
+  use ``BENCHMARK`` or ``SCHEDD`` in the macro name instead.)  A
+  ``JobName`` identifies a specific job and must be unique.  In the rest of
+  this section, where ``<JobName>`` appears in a macro name, it means to
+  replace ``<JobName>`` with one of the names :macro:`STARTD_CRON_JOBLIST`.
 
-    The value of these variables may not be BENCHMARKS. The Daemon
-    ClassAd Hook mechanism is used to implement a set of provided hooks
-    that provide benchmark attributes.
+* You must set :macro:`STARTD_CRON_<JobName>_EXECUTABLE`,
+  and you'll probably want to set :macro:`STARTD_CRON_<JobName>_ARGS` as well.
+  These macros tell HTCondor how to actually run the job.
 
-:macro-def:`STARTD_CRON_CONFIG_VAL`  and :macro-def:`SCHEDD_CRON_CONFIG_VAL`  and :macro-def:`BENCHMARKS_CONFIG_VAL`
-    This configuration variable can be used to specify the path and
-    executable name of the *condor_config_val* program which the jobs
-    (hooks) should use to get configuration information from the daemon.
-    If defined, an environment variable by the same name with the same
-    value will be passed to all jobs.
+* You must also decide when your job will run.  By default, a job runs
+  every :macro:`STARTD_CRON_<JobName>_PERIOD` seconds after the daemon
+  starts up.  You may set :macro:`STARTD_CRON_<JobName>_MODE` to change
+  to this to continuously (``WaitForExit``); on start-up (``OneShot``)
+  and optionally, when the daemon is reconfigured; or as a benchmark
+  (``OnDemand``).  If you do not select ``OneShot``, you must set
+  :macro:`STARTD_CRON_<JobName>_PERIOD`.
+
+All the other job-specific macros are optional, of which
+:macro:`STARTD_CRON_<JobName>_ENV` and :macro:`STARTD_CRON_<JobName>_CWD`
+are probably the most common.
 
 :macro-def:`STARTD_CRON_AUTOPUBLISH`
     Optional setting that determines if the *condor_startd* should
@@ -10404,6 +10354,13 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
         last ran. It is ignored when ``STARTD_CRON_AUTOPUBLISH`` is set
         to ``If_Changed``.
 
+:macro-def:`STARTD_CRON_CONFIG_VAL`  and :macro-def:`SCHEDD_CRON_CONFIG_VAL`  and :macro-def:`BENCHMARKS_CONFIG_VAL`
+    This configuration variable can be used to specify the path and
+    executable name of the *condor_config_val* program which the jobs
+    (hooks) should use to get configuration information from the daemon.
+    If defined, an environment variable by the same name with the same
+    value will be passed to all jobs.
+
 :macro-def:`STARTD_CRON_JOBLIST`  and :macro-def:`SCHEDD_CRON_JOBLIST`  and :macro-def:`BENCHMARKS_JOBLIST`
     These configuration variables are defined by a comma and/or white
     space separated list of job names to run. Each is the logical name
@@ -10412,30 +10369,49 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     and on reconfig.  The *condor_schedd* reads this variable and other 
     ``SCHEDD_CRON_*`` variables only on startup.
 
-:macro-def:`STARTD_CRON_<JobName>_PREFIX`  and :macro-def:`SCHEDD_CRON_<JobName>_PREFIX`  and :macro-def:`BENCHMARKS_<JobName>_PREFIX`
-    Specifies a string which is prepended by HTCondor to all attribute
-    names that the job generates. The use of prefixes avoids the
-    conflicts that would be caused by attributes of the same name
-    generated and utilized by different jobs. For example, if a module
-    prefix is ``xyz_``, and an individual attribute is named ``abc``, then the
-    resulting attribute name will be ``xyz_abc``. Due to restrictions on
-    ClassAd names, a prefix is only permitted to contain alpha-numeric
-    characters and the underscore character.
+:macro-def:`STARTD_CRON_MAX_JOB_LOAD`  and :macro-def:`SCHEDD_CRON_MAX_JOB_LOAD`  and :macro-def:`BENCHMARKS_MAX_JOB_LOAD`
+    A floating point value representing a threshold for CPU load, such
+    that if starting another job would cause the sum of assumed loads
+    for all running jobs to exceed this value, no further jobs will be
+    started. The default value for ``STARTD_CRON`` or a ``SCHEDD_CRON``
+    hook managers is 0.1. This implies that a maximum of 10 jobs (using
+    their default, assumed load) could be concurrently running. The
+    default value for the ``BENCHMARKS`` hook manager is 1.0. This
+    implies that only 1 ``BENCHMARKS`` job (at the default, assumed
+    load) may be running.
+
+:macro-def:`STARTD_CRON_<JobName>_ARGS`  and :macro-def:`SCHEDD_CRON_<JobName>_ARGS`  and :macro-def:`BENCHMARKS_<JobName>_ARGS`
+    The command line arguments to pass to the job as it is invoked. The
+    first argument will be ``<JobName>``.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_SLOTS`  and :macro-def:`BENCHMARKS_<JobName>_SLOTS`
-    Only the slots specified in this comma-separated list may
-    incorporate the output of the job specified by ``<JobName>``. If the
-    list is not specified, any slot may. Whether or not a specific slot
-    actually incorporates the output depends on the output; see
-    :ref:`misc-concepts/hooks:daemon classad hooks`.
+:macro-def:`STARTD_CRON_<JobName>_CONDITION`
+    A ClassAd expression evaluated each time the job might otherwise
+    be started.  If this macro is set, but the expression does not evaluate to
+    ``True``, the job will not be started.  The expression is evaluated in
+    a context similar to a slot ad, but without any slot-specific attributes.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
-    configuration variable ``STARTD_CRON_JOBLIST`` or
-    ``BENCHMARKS_JOBLIST``.
+    configuration variable ``STARTD_CRON_JOBLIST``.
+
+:macro-def:`STARTD_CRON_<JobName>_CWD`  and :macro-def:`SCHEDD_CRON_<JobName>_CWD`  and :macro-def:`BENCHMARKS_<JobName>_CWD`
+    The working directory in which to start the job.
+
+    ``<JobName>`` is the logical name assigned for a job as defined by
+    configuration variable ``STARTD_CRON_JOBLIST``,
+    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
+
+:macro-def:`STARTD_CRON_<JobName>_ENV`  and :macro-def:`SCHEDD_CRON_<JobName>_ENV`  and :macro-def:`BENCHMARKS_<JobName>_ENV`
+    The environment string to pass to the job. The syntax is the same as
+    that of ``<DaemonName>_ENVIRONMENT`` as defined at
+    :ref:`admin-manual/configuration-macros:condor_master configuration file macros`.
+
+    ``<JobName>`` is the logical name assigned for a job as defined by
+    configuration variable ``STARTD_CRON_JOBLIST``,
+    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
 :macro-def:`STARTD_CRON_<JobName>_EXECUTABLE`  and :macro-def:`SCHEDD_CRON_<JobName>_EXECUTABLE`  and :macro-def:`BENCHMARKS_<JobName>_EXECUTABLE`
     The full path and executable to run for this job. Note that multiple
@@ -10446,18 +10422,29 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     configuration variable ``STARTD_CRON_JOBLIST``,
     ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_PERIOD`  and :macro-def:`SCHEDD_CRON_<JobName>_PERIOD`  and :macro-def:`BENCHMARKS_<JobName>_PERIOD`
-    The period specifies time intervals at which the job should be run.
-    For periodic jobs, this is the time interval that passes between
-    starting the execution of the job. The value may be specified in
-    seconds, minutes, or hours. Specify this time by appending the
-    character ``s``, ``m``, or ``h`` to the value. As an example, 5m
-    starts the execution of the job every five minutes. If no character
-    is appended to the value, seconds are used as a default. In
-    ``WaitForExit`` mode, the value has a different meaning: the period
-    specifies the length of time after the job ceases execution and
-    before it is restarted. The minimum valid value of the period is 1
-    second.
+:macro-def:`STARTD_CRON_<JobName>_JOB_LOAD`  and :macro-def:`SCHEDD_CRON_<JobName>_JOB_LOAD`  and :macro-def:`BENCHMARKS_<JobName>_JOB_LOAD`
+    A floating point value that represents the assumed and therefore
+    expected CPU load that a job induces on the system. This job load is
+    then used to limit the total number of jobs that run concurrently,
+    by not starting new jobs if the assumed total load from all jobs is
+    over a set threshold. The default value for each individual
+    ``STARTD_CRON`` or a ``SCHEDD_CRON`` job is 0.01. The default value
+    for each individual ``BENCHMARKS`` job is 1.0.
+
+    ``<JobName>`` is the logical name assigned for a job as defined by
+    configuration variable ``STARTD_CRON_JOBLIST``,
+    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
+
+:macro-def:`STARTD_CRON_<JobName>_KILL`  and :macro-def:`SCHEDD_CRON_<JobName>_KILL`  and :macro-def:`BENCHMARKS_<JobName>_KILL`
+    A boolean value applicable only for jobs with a ``MODE`` of anything
+    other than ``WaitForExit``. The default value is ``False``.
+
+    This variable controls the behavior of the daemon hook manager when
+    it detects that an instance of the job's executable is still running
+    as it is time to invoke the job again. If ``True``, the daemon hook
+    manager will kill the currently running job and then invoke an new
+    instance of the job. If ``False``, the existing job invocation is
+    allowed to continue running.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
     configuration variable ``STARTD_CRON_JOBLIST``,
@@ -10478,7 +10465,7 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     resource monitor (CMRM), and its output is handled differently than
     a normal job's. A CMRM should output one ad per custom machine
     resource instance and use ``SlotMergeConstraint``\ s (see
-    :ref:`misc-concepts/hooks:daemon classad hooks`) to specify the instance to
+    :ref:`admin-manual/hooks:daemon classad hooks`) to specify the instance to
     which it applies.
 
     The ad corresponding to each custom machine resource instance should
@@ -10570,6 +10557,37 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     specified as ``OnDemand`` will never run. Additional future features
     may allow for other ``OnDemand`` job uses.
 
+:macro-def:`STARTD_CRON_<JobName>_PERIOD`  and :macro-def:`SCHEDD_CRON_<JobName>_PERIOD`  and :macro-def:`BENCHMARKS_<JobName>_PERIOD`
+    The period specifies time intervals at which the job should be run.
+    For periodic jobs, this is the time interval that passes between
+    starting the execution of the job. The value may be specified in
+    seconds, minutes, or hours. Specify this time by appending the
+    character ``s``, ``m``, or ``h`` to the value. As an example, 5m
+    starts the execution of the job every five minutes. If no character
+    is appended to the value, seconds are used as a default. In
+    ``WaitForExit`` mode, the value has a different meaning: the period
+    specifies the length of time after the job ceases execution and
+    before it is restarted. The minimum valid value of the period is 1
+    second.
+
+    ``<JobName>`` is the logical name assigned for a job as defined by
+    configuration variable ``STARTD_CRON_JOBLIST``,
+    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
+
+:macro-def:`STARTD_CRON_<JobName>_PREFIX`  and :macro-def:`SCHEDD_CRON_<JobName>_PREFIX`  and :macro-def:`BENCHMARKS_<JobName>_PREFIX`
+    Specifies a string which is prepended by HTCondor to all attribute
+    names that the job generates. The use of prefixes avoids the
+    conflicts that would be caused by attributes of the same name
+    generated and utilized by different jobs. For example, if a module
+    prefix is ``xyz_``, and an individual attribute is named ``abc``, then the
+    resulting attribute name will be ``xyz_abc``. Due to restrictions on
+    ClassAd names, a prefix is only permitted to contain alpha-numeric
+    characters and the underscore character.
+
+    ``<JobName>`` is the logical name assigned for a job as defined by
+    configuration variable ``STARTD_CRON_JOBLIST``,
+    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
+
 :macro-def:`STARTD_CRON_<JobName>_RECONFIG`  and :macro-def:`SCHEDD_CRON_<JobName>_RECONFIG`
     A boolean value that when ``True``, causes the daemon to send an HUP
     signal to the job when the daemon is reconfigured. The job is
@@ -10580,7 +10598,7 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     ``SCHEDD_CRON_JOBLIST``.
 
 :macro-def:`STARTD_CRON_<JobName>_RECONFIG_RERUN`  and :macro-def:`SCHEDD_CRON_<JobName>_RECONFIG_RERUN`
-    A boolean value that when ``True``, causes the daemon ClassAd hooks
+    A boolean value that when ``True``, causes the daemon ClassAd hook
     mechanism to re-run the specified job when the daemon is
     reconfigured via *condor_reconfig*. The default value is ``False``.
 
@@ -10588,68 +10606,17 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     configuration variable ``STARTD_CRON_JOBLIST`` or
     ``SCHEDD_CRON_JOBLIST``.
 
-:macro-def:`STARTD_CRON_<JobName>_JOB_LOAD`  and :macro-def:`SCHEDD_CRON_<JobName>_JOB_LOAD`  and :macro-def:`BENCHMARKS_<JobName>_JOB_LOAD`
-    A floating point value that represents the assumed and therefore
-    expected CPU load that a job induces on the system. This job load is
-    then used to limit the total number of jobs that run concurrently,
-    by not starting new jobs if the assumed total load from all jobs is
-    over a set threshold. The default value for each individual
-    ``STARTD_CRON`` or a ``SCHEDD_CRON`` job is 0.01. The default value
-    for each individual ``BENCHMARKS`` job is 1.0.
+:macro-def:`STARTD_CRON_<JobName>_SLOTS`  and :macro-def:`BENCHMARKS_<JobName>_SLOTS`
+    Only the slots specified in this comma-separated list may
+    incorporate the output of the job specified by ``<JobName>``. If the
+    list is not specified, any slot may. Whether or not a specific slot
+    actually incorporates the output depends on the output; see
+    :ref:`admin-manual/hooks:daemon classad hooks`.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
-    configuration variable ``STARTD_CRON_JOBLIST``,
-    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
+    configuration variable ``STARTD_CRON_JOBLIST`` or
+    ``BENCHMARKS_JOBLIST``.
 
-:macro-def:`STARTD_CRON_MAX_JOB_LOAD`  and :macro-def:`SCHEDD_CRON_MAX_JOB_LOAD`  and :macro-def:`BENCHMARKS_MAX_JOB_LOAD`
-    A floating point value representing a threshold for CPU load, such
-    that if starting another job would cause the sum of assumed loads
-    for all running jobs to exceed this value, no further jobs will be
-    started. The default value for ``STARTD_CRON`` or a ``SCHEDD_CRON``
-    hook managers is 0.1. This implies that a maximum of 10 jobs (using
-    their default, assumed load) could be concurrently running. The
-    default value for the ``BENCHMARKS`` hook manager is 1.0. This
-    implies that only 1 ``BENCHMARKS`` job (at the default, assumed
-    load) may be running.
-
-:macro-def:`STARTD_CRON_<JobName>_KILL`  and :macro-def:`SCHEDD_CRON_<JobName>_KILL`  and :macro-def:`BENCHMARKS_<JobName>_KILL`
-    A boolean value applicable only for jobs with a ``MODE`` of anything
-    other than ``WaitForExit``. The default value is ``False``.
-
-    This variable controls the behavior of the daemon hook manager when
-    it detects that an instance of the job's executable is still running
-    as it is time to invoke the job again. If ``True``, the daemon hook
-    manager will kill the currently running job and then invoke an new
-    instance of the job. If ``False``, the existing job invocation is
-    allowed to continue running.
-
-    ``<JobName>`` is the logical name assigned for a job as defined by
-    configuration variable ``STARTD_CRON_JOBLIST``,
-    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
-
-:macro-def:`STARTD_CRON_<JobName>_ARGS`  and :macro-def:`SCHEDD_CRON_<JobName>_ARGS`  and :macro-def:`BENCHMARKS_<JobName>_ARGS`
-    The command line arguments to pass to the job as it is invoked. The
-    first argument will be ``<JobName>``.
-
-    ``<JobName>`` is the logical name assigned for a job as defined by
-    configuration variable ``STARTD_CRON_JOBLIST``,
-    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
-
-:macro-def:`STARTD_CRON_<JobName>_ENV`  and :macro-def:`SCHEDD_CRON_<JobName>_ENV`  and :macro-def:`BENCHMARKS_<JobName>_ENV`
-    The environment string to pass to the job. The syntax is the same as
-    that of ``<DaemonName>_ENVIRONMENT`` as defined at
-    :ref:`admin-manual/configuration-macros:condor_master configuration file macros`.
-
-    ``<JobName>`` is the logical name assigned for a job as defined by
-    configuration variable ``STARTD_CRON_JOBLIST``,
-    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
-
-:macro-def:`STARTD_CRON_<JobName>_CWD`  and :macro-def:`SCHEDD_CRON_<JobName>_CWD`  and :macro-def:`BENCHMARKS_<JobName>_CWD`
-    The working directory in which to start the job.
-
-    ``<JobName>`` is the logical name assigned for a job as defined by
-    configuration variable ``STARTD_CRON_JOBLIST``,
-    ``SCHEDD_CRON_JOBLIST``, or ``BENCHMARKS_JOBLIST``.
 
 Configuration File Entries Only for Windows Platforms
 -----------------------------------------------------
@@ -10710,7 +10677,7 @@ general discussion of *condor_defrag* may be found in
 :macro-def:`DEFRAG_DRAINING_START_EXPR`
     A ClassAd expression that replaces the machine's ``START``
     :index:`START` expression while it's draining. Slots which
-    accepted a job after the machine begain draining set the machine ad
+    accepted a job after the machine began draining set the machine ad
     attribute ``AcceptedWhileDraining`` to ``true``. When the last job
     which was not accepted while draining exits, all other jobs are
     immediately evicted with a ``MaxJobRetirementTime`` of 0; job vacate

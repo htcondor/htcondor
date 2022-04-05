@@ -38,11 +38,9 @@ class MapFile;
 extern int reconfig_user_maps();
 extern bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
 
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 #include <dlfcn.h>
 #endif
-
-using namespace std;
 
 // Utility to clarify a couple of evaluations
 static inline bool
@@ -108,7 +106,7 @@ void ClassAdReconfig()
 			if (classad::FunctionCall::RegisterSharedLibraryFunctions(loc.c_str()))
 			{
 				ClassAdUserLibs.append(loc.c_str());
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 				void *dl_hdl = dlopen(loc.c_str(), RTLD_LAZY);
 				if (dl_hdl) // Not warning on failure as the RegisterSharedLibraryFunctions should have done that.
 				{
@@ -506,7 +504,7 @@ bool userMap_func( const char * /*name*/,
 
 	MyString output;
 	if (user_map_do_mapping(mapName.c_str(), userName.c_str(), output)) {
-		StringList items(output.Value(), ",");
+		StringList items(output.c_str(), ",");
 
 		if (cargs == 2) {
 			// 2 arg form, return a list.
@@ -752,14 +750,14 @@ ArgsToList( const char * name,
 	if ((vers == 1) && !arg_list.AppendArgsV1Raw(args.c_str(), &error_msg))
 	{
 		std::stringstream ss;
-		ss << "Error when parsing argument to arg V1: " << error_msg.Value();
+		ss << "Error when parsing argument to arg V1: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
 	else if ((vers == 2) && !arg_list.AppendArgsV2Raw(args.c_str(), &error_msg))
 	{
 		std::stringstream ss;
-		ss << "Error when parsing argument to arg V2: " << error_msg.Value();
+		ss << "Error when parsing argument to arg V2: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
@@ -872,18 +870,18 @@ ListToArgs(const char * name,
 	if ((vers == 1) && !arg_list.GetArgsStringV1Raw(&result_mystr, &error_msg))
 	{
 		std::stringstream ss;
-		ss << "Error when parsing argument to arg V1: " << error_msg.Value();
+		ss << "Error when parsing argument to arg V1: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
 	else if ((vers == 2) && !arg_list.GetArgsStringV2Raw(&result_mystr, &error_msg))
 	{
 		std::stringstream ss;
-		ss << "Error when parsing argument to arg V2: " << error_msg.Value();
+		ss << "Error when parsing argument to arg V2: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
-	result.SetStringValue(result_mystr.Value());
+	result.SetStringValue(result_mystr.c_str());
 	return true;
 }
 
@@ -929,13 +927,13 @@ EnvironmentV1ToV2(const char * name,
 	if (!env.MergeFromV1Raw(args.c_str(), &error_msg))
 	{
 		std::stringstream ss;
-		ss << "Error when parsing argument to environment V1: " << error_msg.Value();
+		ss << "Error when parsing argument to environment V1: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
 	MyString result_mystr;
 	env.getDelimitedStringV2Raw(&result_mystr, NULL);
-	result.SetStringValue(result_mystr.Value());
+	result.SetStringValue(result_mystr.c_str());
 	return true;
 }
 
@@ -984,7 +982,7 @@ MergeEnvironment(const char * /*name*/,
 	}
 	MyString result_mystr;
 	env.getDelimitedStringV2Raw(&result_mystr, NULL);
-	result.SetStringValue(result_mystr.Value());
+	result.SetStringValue(result_mystr.c_str());
 	return true;
 }
 
@@ -1115,6 +1113,240 @@ userHome_func(const char *                 name,
 }
 
 
+bool
+is_in_tree( const classad::ClassAd * member,
+            const classad::ClassAd * leaf ) {
+	if( member == leaf ) { return true; }
+	if( leaf == NULL ) { return false; }
+
+	// We can't just walk the parent scope pointers, because the parent
+	// scope pointer for the LEFT and RIGHT ads is temporarily replaced
+	// by the corresponding context ad when the match ad is created.
+
+	const classad::ClassAd * chainedParent = leaf->GetChainedParentAd();
+	if( chainedParent != NULL && is_in_tree(member, chainedParent) ) { return true; }
+
+	const classad::ClassAd * parentScope = leaf->GetParentScope();
+	if( parentScope != NULL && is_in_tree(member, parentScope) ) { return true; }
+
+	return false;
+}
+
+classad::Value
+evaluateInContext( classad::ExprTree * expr,
+				   classad::EvalState & state,
+				   classad::ExprTree * nested_ad_reference ) {
+	classad::Value rv;
+
+	classad::Value cav;
+	if(! nested_ad_reference->Evaluate(state, cav)) {
+		//dprintf( D_FULLDEBUG, "evaluateInContext(): failed to evaluate listed element\n" );
+		rv.SetErrorValue();
+		return rv;
+	}
+
+	classad::ClassAd * nested_ad = NULL;
+	if(! cav.IsClassAdValue(nested_ad)) {
+		//dprintf( D_FULLDEBUG, "evaluateInContext(): listed element is not a ClassAd\n" );
+		if (cav.IsUndefinedValue()) {
+			rv.SetUndefinedValue();
+		} else {
+			rv.SetErrorValue();
+		}
+		return rv;
+	}
+
+	// AttributeReference::FindExpr() doesn't recursively check the parent
+	// scope's alternate scope, so set it by hand.  This allows attribute
+	// references to work correctly (if confusingly) if this function is
+	// called (as it is intended to be) during a match.
+	//
+	// If the target ad is a chained ad, as it is in the startd, then the
+	// nested ad's parent won't (usually) have an alternate scope pointer
+	// set.  Instead, we need to figure out if the nested ad's parent is
+	// on the RIGHT or LEFT side, and use the corresponding alternate scope
+	// pointer.  (We don't check for the nested ad itself because the
+	// nested ad isn't a chained parent or parent scope of RIGHT or LEFT.)
+	//
+	// The confusing part is that MY and TARGET will be reversed during the
+	// evaluation of attr if, as intended, the nested ad's parent is not the
+	// parent of the expression containing function call.  (We intend for
+	// the former to be the slot ad and the latter the job ad.)
+	classad::ClassAd * originalAlternateScope = nested_ad->alternateScope;
+
+	// This is awful, but I don't want to change the ClassAd API to fix it.
+	classad::MatchClassAd * matchAd =
+		const_cast<classad::MatchClassAd *>(dynamic_cast<const classad::MatchClassAd *>(state.rootAd));
+	if( matchAd != NULL ) {
+		const classad::ClassAd * left = matchAd->GetLeftAd();
+		const classad::ClassAd * right = matchAd->GetRightAd();
+
+		if( is_in_tree( nested_ad->GetParentScope(), left ) ) {
+			nested_ad->alternateScope = left->alternateScope;
+		} else if( is_in_tree( nested_ad->GetParentScope(), right ) ) {
+			nested_ad->alternateScope = right->alternateScope;
+		} else {
+			//dprintf( D_FULLDEBUG, "evaluateInContext(): nested ad not in LEFT or RIGHT\n" );
+			rv.SetErrorValue();
+		}
+	}
+
+	classad::EvalState temporary_state;
+	temporary_state.SetScopes(nested_ad);
+	if(! expr->Evaluate(temporary_state, rv)) {
+		//dprintf( D_FULLDEBUG, "evaluateInContext(): failed to evaluate expr in context\n" );
+		rv.SetErrorValue();
+	}
+
+	nested_ad->alternateScope = originalAlternateScope;
+	return rv;
+}
+
+static
+bool evalInEachContext_func( const char * name,
+							  const classad::ArgumentList &arg_list,
+							  classad::EvalState &state,
+							  classad::Value &result ) {
+	//
+	// evalInEachContext( expr, nested_ad_list ) -> list
+	// countMatches( expr, nested_ad_list ) -> int
+	//
+	// Evaluate expr in the context of the current ad and each ad in
+	// nested_ad_list, individually.  Returns the index in nested_ad_list
+	// of the first ad for which expr evaluaes to true.
+	//
+
+	bool is_evalInEach = 0 == strcasecmp(name, "evalineachcontext");
+
+	if( arg_list.size() != 2 ) {
+		//dprintf( D_FULLDEBUG, "evalEachInContext(): wrong number of arguments\n" );
+		result.SetErrorValue();
+		return true;
+	}
+
+	classad::ExprTree * expr = arg_list[0];
+	classad::ExprTree * nal = arg_list[1];
+
+	// If expr is an attribute reference, look it up before proceeding so
+	// that the lookup happens in the context of the match.  Likewise, if
+	// nal isn't a literal list, evaluate in the context of the match
+	// before proceeding.  Just document expr as either an attribute
+	// reference or literal expression; or maybe just the former?  (Makes
+	// it only marginally hard to use but simplifies things?)
+	if( expr->GetKind() == ExprTree::NodeKind::ATTRREF_NODE ) {
+		classad::AttributeReference * ref =
+			dynamic_cast<classad::AttributeReference *>(expr);
+		if( ref == NULL ) {
+			// This should probably be an EXCEPT().
+			//dprintf( D_FULLDEBUG, "evalEachInContext(): FIXME\n" );
+			result.SetErrorValue();
+			return true;
+		}
+
+		// Lookup the first argument and get the expression.  If the lookup succeeds we will
+		// evaluate the expression against each ad in the list.
+		// If the lookup fails we will treat the attribute reference as the expression to evaluate
+		// thus we can use this function to evaluate an expression in a list of ads,
+		// or to project a single attribute from those ads
+		//     evalInEachContext(MY.RequireGPUs, AvailableGPUs) -> { true, false, ... }
+		//     evalInEachContext(Capability, AvailableGPUs) -> { eval(GPUs_tag1.Capability), eval(GPUs_tag1.Capability), ... }
+		// Or more specifically
+		//     sum(evalInEachContext(MY.RequireGPUs, AvailableGPUs)) -> <number of available GPUs that match the RequireGPUs expression>
+		//     max(evalInEachContext(Capability, AvailableGPUs)) -> <max capability of all available GPUs>
+		//
+		classad::ExprTree * attr = NULL;
+		// This is a bug in the ClassAd API: this function returns values
+		// out of an anonymous enum in ExprTree, but that enum is protected.
+		// if(classad::AttributeReference::Deref( *ref, state, attr ) != classad::ExprTree::EVAL_OK) {
+		if(classad::AttributeReference::Deref( *ref, state, attr ) == 1 ) {
+			expr = attr;
+		}
+	}
+
+	if( nal->GetKind() != ExprTree::NodeKind::EXPR_LIST_NODE ) {
+		classad::Value cav;
+		nal->Evaluate(state, cav);
+		classad::ExprList * list = NULL;
+		if(cav.IsListValue(list)) {
+			nal = list;
+		} else if (cav.IsUndefinedValue()) {
+			if (is_evalInEach) {
+				// evalInEach will propagate UNDEFINED values
+				result.SetUndefinedValue();
+			} else {
+				// countMatches will not propagate UNDEFINED and will instead return 0 matches
+				result.SetIntegerValue(0);
+			}
+			return true;
+		}
+	}
+
+	classad::ExprList * nested_ad_list = dynamic_cast<classad::ExprList *>(nal);
+	if( nested_ad_list == NULL ) {
+		//dprintf( D_FULLDEBUG, "evalEachInContext(): failed to convert second argument\n" );
+		result.SetErrorValue();
+		return true;
+	}
+
+	if (is_evalInEach) {
+
+		// for evalInEachContext we will return a list of evaluation results
+		classad_shared_ptr<classad::ExprList> lst(new classad::ExprList());
+		ASSERT(lst);
+
+		size_t index = 0;
+		for (auto i = nested_ad_list->begin(); i != nested_ad_list->end(); ++i) {
+			auto nested_ad = *i;
+
+			//dprintf( D_FULLDEBUG, "evalEachInContext(): evaluating index %lu\n", index );
+			classad::Value cav = evaluateInContext(expr, state, nested_ad);
+			if (cav.IsListValue()) {
+				classad::ExprList * elv = nullptr;
+				cav.IsListValue(elv);
+				lst->push_back(elv->Copy());
+			} else if (cav.IsClassAdValue()) {
+				classad::ClassAd * cad = nullptr;
+				cav.IsClassAdValue(cad);
+				lst->push_back(cad->Copy());
+			} else {
+				lst->push_back(classad::Literal::MakeLiteral(cav));
+			}
+			index++;
+		}
+
+		result.SetListValue(lst);
+	} else {
+		// for countMatches - return an integer count of results that evaluate to TRUE
+		// This is useful for matching a job to a heterogenous array of custom resources like GPUs.
+		// the slot ad will have (actual names are longer)
+		//    AvailableGPUs = { GPUs_tag1, GPUs_tag2 }
+		//    GPUS_tag1 = [ Capability = 4.0; Name = "GRX"; ]
+		//    GPUS_tag2 = [ Capability = 5.5; Name = "Tesla"; ]
+		// The job will indicate which GPU it wants
+		//    RequestGPUs = 1
+		//    RequireGPUs = Capability > 4
+		// And the job's requirements will use this function to insure that the job matches the slot
+		//    Requirements = ... && countMatches(RequireGPUs, AvailableGPUs) >= RequestGPUs
+		int num_matches = 0;
+		for( auto i = nested_ad_list->begin(); i != nested_ad_list->end(); ++i ) {
+			auto nested_ad = *i;
+
+			classad::Value r = evaluateInContext( expr, state, nested_ad );
+			// not that we do *not* propagate undefined or error here because we want to use this function in matchmaking
+			bool matched = false;
+			if( r.IsBooleanValueEquiv(matched) && matched ) {
+				++num_matches;
+			}
+		}
+
+		result.SetIntegerValue(num_matches);
+	}
+
+	return true;
+}
+
+
+
 static
 void registerClassadFunctions()
 {
@@ -1171,6 +1403,11 @@ void registerClassadFunctions()
 	classad::FunctionCall::RegisterFunction( name, splitArb_func );
 	//name = "splitsinful";
 	//classad::FunctionCall::RegisterFunction( name, splitSinful_func );
+
+    name = "evalInEachContext";
+    classad::FunctionCall::RegisterFunction( name, evalInEachContext_func);
+    name = "countMatches";
+    classad::FunctionCall::RegisterFunction( name, evalInEachContext_func);
 }
 
 void
@@ -1609,15 +1846,15 @@ CondorClassAdFileParseHelper::ParseType CondorClassAdListWriter::autoSetFormat(C
 //    < 0 failure,
 //    0   nothing written
 //    1   non-empty ad appended
-int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, StringList * whitelist, bool hash_order)
+int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, StringList * includelist, bool hash_order)
 {
 	if (ad.size() == 0) return 0;
 	size_t cchBegin = output.size();
 
 	classad::References attrs;
 	classad::References *print_order = NULL;
-	if ( ! hash_order || whitelist) {
-		sGetAdAttrs(attrs, ad, true, whitelist);
+	if ( ! hash_order || includelist) {
+		sGetAdAttrs(attrs, ad, true, includelist);
 		print_order = &attrs;
 	}
 
@@ -1739,12 +1976,12 @@ int CondorClassAdListWriter::appendFooter(std::string & buf, bool xml_always_wri
 //    0   nothing written
 //    1   non-empty ad written
 static const int cchReserveForPrintingAds = 16384;
-int CondorClassAdListWriter::writeAd(const ClassAd & ad, FILE * out, StringList * whitelist, bool hash_order)
+int CondorClassAdListWriter::writeAd(const ClassAd & ad, FILE * out, StringList * includelist, bool hash_order)
 {
 	buffer.clear();
 	if ( ! cNonEmptyOutputAds) buffer.reserve(cchReserveForPrintingAds);
 
-	int rval = appendAd(ad, buffer, whitelist, hash_order);
+	int rval = appendAd(ad, buffer, includelist, hash_order);
 	if (rval < 0) return rval;
 
 	if ( ! buffer.empty()) {
@@ -1978,20 +2215,20 @@ initAdFromString( char const *str, classad::ClassAd &ad )
 
 		// output functions
 int
-fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, const classad::References *excludeAttrs )
 {
-	MyString buffer;
+	std::string buffer;
 
 	if( exclude_private ) {
-		sPrintAd( buffer, ad, attr_white_list );
+		sPrintAd( buffer, ad, attr_include_list, excludeAttrs);
 	} else {
-		sPrintAdWithSecrets( buffer, ad, attr_white_list );
+		sPrintAdWithSecrets( buffer, ad, attr_include_list, excludeAttrs);
 	}
 
-	if ( fprintf(file, "%s", buffer.Value()) < 0 ) {
-		return FALSE;
+	if (fputs(buffer.c_str(), file) < 0 ) {
+		return false;
 	} else {
-		return TRUE;
+		return true;
 	}
 }
 
@@ -1999,7 +2236,7 @@ void
 dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private )
 {
 	if ( IsDebugCatAndVerbosity( level ) ) {
-		MyString buffer;
+		std::string buffer;
 
 		if( exclude_private ) {
 			sPrintAd( buffer, ad );
@@ -2007,26 +2244,90 @@ dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private )
 			sPrintAdWithSecrets( buffer, ad );
 		}
 
-		dprintf( level|D_NOHEADER, "%s", buffer.Value() );
+		dprintf( level|D_NOHEADER, "%s", buffer.c_str() );
 	}
 }
 
+int sortByFirst(const std::pair<std::string, ExprTree *> & lhs,
+				const std::pair<std::string, ExprTree *> & rhs) {
+	return lhs.first < rhs.first;
+}
 
 int
-_sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+_sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, const classad::References *excludeAttrs /* = nullptr */)
 {
 	classad::ClassAd::const_iterator itr;
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
-	string value;
+	const classad::ClassAd *parent = ad.GetChainedParentAd();
+
+	// Not sure why we need to sort the output. Do we?
+	std::vector<std::pair<std::string, ExprTree *>> attributes;
+
+	attributes.reserve(ad.size() + ( parent ? parent->size() : 0));
+	if ( parent ) {
+		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
+			if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
+				continue; // not in include-list
+			}
+
+			if (excludeAttrs && (excludeAttrs->find(itr->first) != excludeAttrs->end())) {
+				continue;
+			}
+
+			if ( ad.LookupIgnoreChain(itr->first) ) {
+				continue; // attribute exists in child ad; we will print it below
+			}
+			if ( !exclude_private ||
+				 !ClassAdAttributeIsPrivate( itr->first ) ) {
+				attributes.emplace_back(itr->first,itr->second);
+			}
+		}
+	}
+
+	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
+		if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
+			continue; // not in include-list
+		}
+
+		if (excludeAttrs && (excludeAttrs->find(itr->first) != excludeAttrs->end())) {
+			continue;
+		}
+
+		if ( !exclude_private ||
+			 !ClassAdAttributeIsPrivate( itr->first ) ) {
+			attributes.emplace_back(itr->first,itr->second);
+		}
+	}
+
+	std::sort(attributes.begin(), attributes.end(), sortByFirst);
+
+	for( const auto &i : attributes) {
+		output += i.first;
+		output += " = ";
+		unp.Unparse( output, i.second );
+		output += '\n';
+	}
+
+	return true;
+}
+	
+int
+_sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list )
+{
+	classad::ClassAd::const_iterator itr;
+
+	classad::ClassAdUnParser unp;
+	unp.SetOldClassAd( true, true );
+	std::string value;
 
 	const classad::ClassAd *parent = ad.GetChainedParentAd();
 
 	std::map< std::string, std::string > attributes;
 	if ( parent ) {
 		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
-			if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+			if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
 				continue; // not in white-list
 			}
 			if ( ad.LookupIgnoreChain(itr->first) ) {
@@ -2043,7 +2344,7 @@ _sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, S
 	}
 
 	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
-		if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+		if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
@@ -2068,46 +2369,40 @@ _sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, S
 }
 
 int
-sPrintAd( MyString &output, const classad::ClassAd &ad, StringList *attr_white_list ) {
-	return _sPrintAd( output, ad, true, attr_white_list );
+sPrintAd( MyString &output, const classad::ClassAd &ad, StringList *attr_include_list ) {
+	return _sPrintAd( output, ad, true, attr_include_list );
 }
 
 int
-sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringList *attr_white_list ) {
-	return _sPrintAd( output, ad, false, attr_white_list );
+sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringList *attr_include_list ) {
+	return _sPrintAd( output, ad, false, attr_include_list );
 }
 
 
 int
-sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list )
+sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, const classad::References *excludeAttrs )
 {
-	MyString myout;
-	int rc = sPrintAd( myout, ad, attr_white_list );
-	output += myout;
-	return rc;
+	return _sPrintAd( output, ad, true, attr_include_list, excludeAttrs );
 }
 
 int
-sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList *attr_white_list )
+sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, const classad::References *excludeAttrs )
 {
-	MyString myout;
-	int rc = sPrintAdWithSecrets( myout, ad, attr_white_list );
-	output += myout;
-	return rc;
+	return _sPrintAd( output, ad, false, attr_include_list, excludeAttrs );
 }
 
-/** Get a sorted list of attributes that are in the given ad, and also match the given whitelist (if any)
+/** Get a sorted list of attributes that are in the given ad, and also match the given includelist (if any)
 	and privacy criteria.
 	@param attrs the set of attrs to insert into. This is set is NOT cleared first.
 	@return TRUE
 */
 int
-sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list, bool ignore_parent )
+sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, bool ignore_parent )
 {
 	classad::ClassAd::const_iterator itr;
 
 	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
-		if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+		if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
@@ -2122,7 +2417,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 			if ( attrs.find(itr->first) != attrs.end() ) {
 				continue; // we already inserted this into the attrs list.
 			}
-			if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
+			if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
 				continue; // not in white-list
 			}
 			if ( !exclude_private ||
@@ -2196,10 +2491,10 @@ sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::R
 	@param output The std::string to write into
 	@return std::string.c_str()
 */
-const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent /*= "\t"*/, StringList *attr_white_list /*= NULL*/, bool exclude_private /*= false*/)
+const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent /*= "\t"*/, StringList *attr_include_list /*= NULL*/, bool exclude_private /*= false*/)
 {
 	classad::References attrs;
-	sGetAdAttrs(attrs, ad, exclude_private, attr_white_list);
+	sGetAdAttrs(attrs, ad, exclude_private, attr_include_list);
 	sPrintAdAttrs(buffer, ad, attrs, indent);
 	if (buffer.empty() || (buffer[buffer.size()-1] != '\n')) { buffer += "\n"; }
 	return buffer.c_str();
@@ -2217,7 +2512,7 @@ sPrintExpr(const classad::ClassAd &ad, const char* name)
 	char *buffer = NULL;
 	size_t buffersize = 0;
 	classad::ClassAdUnParser unp;
-    string parsedString;
+	std::string parsedString;
 	classad::ExprTree* expr;
 
 	unp.SetOldClassAd( true, true );
@@ -2250,7 +2545,7 @@ void
 SetMyTypeName( classad::ClassAd &ad, const char *myType )
 {
 	if( myType ) {
-		ad.InsertAttr( ATTR_MY_TYPE, string( myType ) );
+		ad.InsertAttr( ATTR_MY_TYPE, std::string( myType ) );
 	}
 
 	return;
@@ -2259,7 +2554,7 @@ SetMyTypeName( classad::ClassAd &ad, const char *myType )
 const char*
 GetMyTypeName( const classad::ClassAd &ad )
 {
-	static string myTypeStr;
+	static std::string myTypeStr;
 	if( !ad.EvaluateAttrString( ATTR_MY_TYPE, myTypeStr ) ) {
 		return "";
 	}
@@ -2270,7 +2565,7 @@ void
 SetTargetTypeName( classad::ClassAd &ad, const char *targetType )
 {
 	if( targetType ) {
-		ad.InsertAttr( ATTR_TARGET_TYPE, string( targetType ) );
+		ad.InsertAttr( ATTR_TARGET_TYPE, std::string( targetType ) );
 	}
 
 	return;
@@ -2279,7 +2574,7 @@ SetTargetTypeName( classad::ClassAd &ad, const char *targetType )
 const char*
 GetTargetTypeName( const classad::ClassAd &ad )
 {
-	static string targetTypeStr;
+	static std::string targetTypeStr;
 	if( !ad.EvaluateAttrString( ATTR_TARGET_TYPE, targetTypeStr ) ) {
 		return "";
 	}
@@ -2370,7 +2665,7 @@ CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const
 //////////////XML functions///////////
 
 int
-fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list)
+fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_list)
 {
     if(!fp)
     {
@@ -2378,24 +2673,24 @@ fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list)
     }
 
     std::string out;
-    sPrintAdAsXML(out,ad,attr_white_list);
+    sPrintAdAsXML(out,ad,attr_include_list);
     fprintf(fp, "%s", out.c_str());
     return TRUE;
 }
 
 int
-sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list)
+sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_include_list)
 {
 	classad::ClassAdXMLUnParser unparser;
 	std::string xml;
 
 	unparser.SetCompactSpacing(false);
-	if ( attr_white_list ) {
+	if ( attr_include_list ) {
 		classad::ClassAd tmp_ad;
 		classad::ExprTree *expr;
 		const char *attr;
-		attr_white_list->rewind();
-		while( (attr = attr_white_list->next()) ) {
+		attr_include_list->rewind();
+		while( (attr = attr_include_list->next()) ) {
 			if ( (expr = ad.Lookup( attr )) ) {
 				classad::ExprTree *new_expr = expr->Copy();
 				tmp_ad.Insert( attr, new_expr );
@@ -2411,7 +2706,7 @@ sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_
 ///////////// end XML functions /////////
 
 int
-fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list, bool oneline)
+fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_list, bool oneline)
 {
     if(!fp)
     {
@@ -2419,22 +2714,22 @@ fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list
     }
 
     std::string out;
-    sPrintAdAsJson(out,ad,attr_white_list,oneline);
+    sPrintAdAsJson(out,ad,attr_include_list,oneline);
     fprintf(fp, "%s", out.c_str());
     return TRUE;
 }
 
 int
-sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list, bool oneline)
+sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, bool oneline)
 {
 	classad::ClassAdJsonUnParser unparser(oneline);
 
-	if ( attr_white_list ) {
+	if ( attr_include_list ) {
 		classad::ClassAd tmp_ad;
 		classad::ExprTree *expr;
 		const char *attr;
-		attr_white_list->rewind();
-		while( (attr = attr_white_list->next()) ) {
+		attr_include_list->rewind();
+		while( (attr = attr_include_list->next()) ) {
 			if ( (expr = ad.Lookup( attr )) ) {
 				classad::ExprTree *new_expr = expr->Copy();
 				tmp_ad.Insert( attr, new_expr );
@@ -2705,6 +3000,5 @@ bool InsertLongFormAttrValue(classad::ClassAd & ad, const char * line, bool use_
 	}
 	return ad.Insert(attr, tree);
 }
-
 
 // end functions

@@ -54,7 +54,6 @@ void handleAll();
 void doSquawk( const char *addr );
 int handleSquawk( char *line, char *addr );
 int doSquawkReconnect( char *addr );
-void squawkHelp( const char *token );
 int  printAdToFile(ClassAd *ad, char* filename);
 int strncmp_auto(const char *s1, const char *s2);
 void PREFAST_NORETURN usage( const char *str, int iExitCode=1 );
@@ -81,7 +80,7 @@ bool IgnoreMissingDaemon = false;
 
 bool all_good = true;
 
-HashTable<MyString, bool> addresses_sent( hashFunction );
+HashTable<std::string, bool> addresses_sent( hashFunction );
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
@@ -116,11 +115,10 @@ usage( const char *str, int iExitCode )
 	fprintf( stderr, 
 			 "    -pool hostname\tuse the given central manager to find daemons\n" );
 	if( cmd == DAEMONS_OFF || cmd == DAEMON_OFF || cmd == RESTART ) {
-		fprintf( stderr, "    -graceful\t\tgracefully shutdown daemons %s\n", 
-				 "(the default)" );
-		fprintf( stderr, "    -fast\t\tquickly shutdown daemons\n" );
-		fprintf( stderr, "    -peaceful\t\twait indefinitely for jobs to finish\n" );
-		fprintf( stderr, "    -force-graceful\t\tupgrade a peaceful shutdown to a graceful shutdown\n" );
+		fprintf( stderr, "    -graceful\t\tThe default. If jobs are running, wait for up to the configured \n\t\t\tgrace period for them to finish, then exit\n");
+		fprintf( stderr, "    -fast\t\tquickly shutdown daemons, immediately evicting any running jobs\n" );
+		fprintf( stderr, "    -peaceful\t\twait indefinitely for jobs to finish before shutdown\n" );
+		fprintf( stderr, "    -force-graceful\tupgrade a peaceful shutdown to a graceful shutdown\n" );
 	}
 	if( cmd == VACATE_CLAIM ) {
 		fprintf( stderr, 
@@ -214,11 +212,6 @@ usage( const char *str, int iExitCode )
 				 "they are done checkpointing.\n",
 				 str);
 		break;
-	case SQUAWK:
-		fprintf( stderr, "  %s\n"
-				 "is a developer-only command used to talk to daemons.", 
-				 str );
-		break;
 	default:
 		fprintf( stderr, "  Valid commands are:\n%s%s",
 				 "\toff, on, restart, reconfig, reschedule, ",
@@ -296,8 +289,6 @@ cmdToStr( int c )
 		return "Reschedule";
 	case DC_RECONFIG_FULL:
 		return "Reconfig";
-	case SQUAWK:
-		return "Squawk";
 	case SET_SHUTDOWN_PROGRAM:
 		return "Set-Shutdown-Program";
 	}
@@ -408,9 +399,6 @@ main( int argc, char *argv[] )
 		cmd = VACATE_CLAIM;
 	} else if( !strncmp_auto( cmd_str, "_checkpoint" ) ) {
 		cmd = PCKPT_JOB;
-	} else if ( !strncmp_auto( cmd_str, "_squawk" ) ) {
-		cmd = SQUAWK;
-		takes_subsys = 1;
 	} else if ( !strncmp_auto( cmd_str, "_set_shutdown" ) ) {
 		cmd = SET_SHUTDOWN_PROGRAM;
 	} else {
@@ -1199,9 +1187,6 @@ computeRealAction( void )
 	case SET_SHUTDOWN_PROGRAM:
 		real_dt = DT_MASTER;
 		break;
-
-	case SQUAWK:
-		break;
 	}
 
 	if( real_cmd < 0 ) {
@@ -1284,7 +1269,6 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 
 	CondorError errstack;
 	QueryResult q_result;
-	MyString buffer;
 
 	if (adtype == GENERIC_AD) {
 		query.setGenericQueryType(subsys);
@@ -1501,19 +1485,12 @@ doCommand( Daemon* d )
 		// since we'll send the claim-id after the command and it
 		// won't be duplication of effort.
 		if( ! is_per_claim_startd_cmd ) {
-			MyString hash_key = d->addr();
+			std::string hash_key = d->addr();
 			bool sent_it = false;
 			if( addresses_sent.lookup(hash_key, sent_it) >= 0 && sent_it ) {
 				return;
 			}
 			addresses_sent.insert( hash_key, true );
-		}
-
-			/* Squawking does its own connect... */
-		if( real_cmd == SQUAWK ) {
-			doSquawk( d->addr() );
-			printf ( "Bye!\n" );
-			return;
 		}
 
 		/* Connect to the daemon */
@@ -1895,7 +1872,6 @@ handleSquawk( char *line, char *addr ) {
 
 	case 'h': /* help */
 		if ( ( token = strtok( NULL, " " )) != NULL ) {
-			squawkHelp( token );
 			return TRUE;
 		}
 			/* Generic help falls thru to here: */

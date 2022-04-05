@@ -1,23 +1,107 @@
-Stable Release Series 8.8
-=========================
+Version 8.8 LTS Releases
+========================
 
-This is the stable release series of HTCondor. As usual, only bug fixes
+These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 (and potentially, ports to new platforms) will be provided in future
-8.8.x releases. New features will be added in the 8.9.x development
-series.
+8.8.x releases. New features will be added in the 8.9.y feature releases.
 
 The details of each version are described below.
+
+Version 8.8.17
+--------------
+
+Release Notes:
+
+- HTCondor version 8.8.17 released on March 15, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a memory leak in the job router, usually triggered when job
+  policy expressions cause removal of the job.
+  :jira:`408`
+
+
+Version 8.8.16
+--------------
+
+Release Notes:
+
+- HTCondor version 8.8.16 released on March 15, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes a security-related bug
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0003>`_.
+
+   :jira:`985`
+
+Version 8.8.15
+--------------
+
+Release Notes:
+
+-  HTCondor version 8.8.15 released on July 29, 2021.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes a security-related bug
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003>`_.
+
+   :jira:`587`
+
+
+Version 8.8.14
+--------------
+
+Release Notes:
+
+-  HTCondor version 8.8.14 released on July 27, 2021 and pulled two days later when an issue was found with the patch.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  None.
+
 
 Version 8.8.13
 --------------
 
 Release Notes:
 
-- HTCondor version 8.8.13 not yet released.
-
-.. HTCondor version 8.8.13 released on Month Date, 2021.
+- HTCondor version 8.8.13 released on March 23, 2021.
 
 New Features:
+
+- Docker version 20.10.4 has a serious bug that prevents Docker Universe from 
+  working.  HTCondor now detects this version of Docker, and sets 
+  HasDocker = false in the slot ad, so Docker Universe jobs will not match on
+  such machines.
+  :jira:`310`
+
+- condor_ssh_to_job into a container now properly maps carriage return and 
+  newline.  The most common symptom of this problem was that the nano
+  editor would not work properly. Also, the performance of transferring large
+  amounts of data has been substantially improved.
+  :jira:`311`
 
 - The HA replication mechanism can now accept either SHA-2 or MD5 checksums.
   This is because support for MD5 checksums must be removed in the 9.0 release of HTCondor.
@@ -28,7 +112,16 @@ New Features:
   of HTCondor before this release.
   :jira:`130`
 
+- Submission to NorduGrid ARC CE (grid universe type **nordugrid**) now works
+  with newer ARC CE versions where the X.509 Distinguished Names (DNs) of
+  job submitters are obscured in the LDAP information service.
+  :jira:`281`
+
 Bugs Fixed:
+
+- Fixed a bug where ``condor_annex`` would crash when executing the ``-status``
+  or ``status`` commands if built with sufficiently-modern compilers.
+  :jira:`318`
 
 - Fixed a bug where ``use feature: GPUsMonitor`` set the wrong path to the
   GPU monitor binary on Windows.
@@ -40,7 +133,24 @@ Bugs Fixed:
   :jira:`144`
 
 - Fixed a bug with pslot preemption and disks with more than 4 TB of space.
-  :jira:`194`
+  :jira:`195`
+
+- Fixed a bug where the counts of job reconnections can be off in the
+  Schedd Restart Report.
+  :jira:`190`
+
+- Fixed a bug that in rare cases can crash the *condor_schedd* if a DAG
+  is quickly released and then removed.
+  :jira:`309`
+
+- Fixed a bug in DAGMan that prevented the use of the ``@`` symbol in the event
+  log file path, where it was mistaken as an unresolved macro substitution.
+  We now look for the ``@(`` character sequence to identify unresolved macros.
+  :jira:`159`
+
+- Fixed a bug where the Operating System and Version information were not
+  detected on the Amazon Linux platform.
+  :jira:`342`
 
 Version 8.8.12
 --------------
@@ -51,11 +161,11 @@ Release Notes:
 
 New Features:
 
-- For compatibility with 8.9.9 (and eventually, the next stable series), add
+- For compatibility with 8.9.9 (and eventually, the next LTS release), add
   the family of version comparison functions to ClassAds.
   :jira:`36`
 
-- For compatibility with 8.9 (and eventually, the next stable series), add
+- For compatibility with 8.9 (and eventually, the next LTS release), add
   the ``unresolved`` function to ClassAds.
   :jira:`66`
 
@@ -450,10 +560,10 @@ Bugs Fixed:
 -  *Security Item*: This release of HTCondor fixes security-related bugs
    described at
 
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001.html>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002.html>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003.html>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004.html>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004>`_.
 
    :ticket:`7356`
    :ticket:`7427`
@@ -807,7 +917,7 @@ New Features:
    local *condor_schedd*  directly to submit jobs. :ticket:`6974`
 
 -  The HTCondor startd now advertises ``HasSelfCheckpointTransfers``, so that
-   pools with 8.8.4 (and later) stable-series startds can run jobs submitted
+   pools with 8.8.4 (and later) LTS release startds can run jobs submitted
    using a new feature in 8.9.3 (and later).
    :ticket:`7112`
 
@@ -935,7 +1045,7 @@ Bugs Fixed:
    (``EventIterator`` and ``read_events()``) for Python 2.
    In HTCondor 8.8.2, they were mistakenly restored for Python 3 only.
    These bindings are marked as deprecated and will likely be
-   removed permanently in the 8.9 series. Users should transition to the
+   removed permanently in an 8.9 feature release. Users should transition to the
    replacement bindings (``JobEventLog``)
    :ticket:`7039`
 
@@ -1019,7 +1129,7 @@ Bugs Fixed:
 -  Fixed a bug where *condor_ssh_to_job* would not work to a Docker
    universe job when file transfer was off. :ticket:`6945`
 
--  Included a patch from the development series that fixes problems that
+-  Included a patch from the a feature release that fixes problems that
    could crash *condor_annex* to crash. :ticket:`6980`
 
 -  Fixed a bug that could cause the ``job_queue.log`` file to be
@@ -1063,7 +1173,7 @@ Bugs Fixed:
 -  Restored the old Python bindings for reading the job event log
    (``EventIterator`` and ``read_events()``). These bindings are marked
    as deprecated, are not available in Python 3, and will likely be
-   removed permanently in the 8.9 series. Users should transition to the
+   removed permanently an 8.9 release. Users should transition to the
    replacement bindings (``JobEventLog``) :ticket:`6939`
 
 -  Fixed a bug that could cause entries in the job event log to be

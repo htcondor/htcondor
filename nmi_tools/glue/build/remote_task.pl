@@ -111,13 +111,21 @@ if ($enable_vs14 && $ENV{VS140COMNTOOLS} =~ /common7/i) {
 if( $taskname eq $EXTERNALS_TASK ) {
     # Since we do not declare the externals task on Windows, we don't have
     # to handle invoking the Windows build tools in this step.
-    $execstr = "make VERBOSE=1 externals";
+    my $num_cores = 1;
+    if (defined($ENV{"OMP_NUM_THREADS"})) {
+	$num_cores = $ENV{"OMP_NUM_THREADS"};
+    }
+    $execstr = "make VERBOSE=1 -j ${num_cores} externals";
 }
 elsif( $taskname eq $BUILD_TASK ) {
     # Since we do not declare the externals task on Windows, we don't have
     # to handle invoking the Windows build tools in this step.
+    my $num_cores = 1;
+    if (defined($ENV{"OMP_NUM_THREADS"})) {
+	$num_cores = $ENV{"OMP_NUM_THREADS"};
+    }
     $execstr = get_cmake_args();
-    $execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 install";
+    $execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 -j ${num_cores} install";
 }
 elsif( $taskname eq $BUILD_TESTS_TASK ) {
     $execstr = "make VERBOSE=1 tests";
@@ -155,7 +163,7 @@ elsif ($taskname eq $NATIVE_TASK || $taskname eq $NATIVE_DEBUG_TASK) {
         print "Detected OS is Debian or Ubuntu.  Creating Deb package.\n";
         $execstr = create_deb($is_debug);
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|amazonlinux|centos|sl)/i) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|amazonlinux|centos|rocky|sl)/i) {
         print "Detected OS is Red Hat.  Creating RPM package.\n";
         $execstr = create_rpm($is_debug);
     }
@@ -174,7 +182,7 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
         print "Detected OS is Debian.  Validating Deb package.\n";
         $execstr = check_deb();
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|amazonlinux|centos|sl)/i) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|amazonlinux|centos|rocky|sl)/i) {
         print "Detected OS is Red Hat.  Validating RPM package.\n";
         $execstr = check_rpm();
     }
@@ -190,7 +198,8 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
 } elsif ($taskname eq $COVERITY_ANALYSIS) {
 	print "Running Coverity analysis\n";
 	$ENV{PATH} = "/bin:$ENV{PATH}:/usr/local/coverity/cov-analysis-linux64-2020.06/bin";
-	$execstr = get_cmake_args();
+	#$execstr = get_cmake_args();
+	$execstr = "/usr/bin/cmake3 ";
 	$execstr .= " -DBUILD_TESTING:bool=false -DWITH_SCITOKENS:bool=false";
 	$execstr .= " && cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host batlabsubmit0001.chtc.wisc.edu --user admin --password `cat /usr/local/coverity/.p`";
 } elsif ($taskname eq $EXTRACT_TARBALLS_TASK) {
@@ -296,7 +305,7 @@ sub get_tarball_check_script {
 }
 
 sub get_extract_tarballs_script {
-    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|SL)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|Rocky|SL)/) {
         return dirname($0) . "/make-tarball-from-rpms";
     }
     if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/i) {
@@ -317,7 +326,7 @@ sub get_tarball_name {
 
 sub create_rpm {
     my $is_debug = $_[0];
-    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|SL)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|Rocky|SL)/) {
         # Use native packaging tool
         return dirname($0) . "/build_uw_rpm.sh";
     } else {

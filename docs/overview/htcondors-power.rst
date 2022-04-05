@@ -6,7 +6,7 @@ HTCondor's Power
 HTCondor is a software system that creates a High-Throughput Computing
 (HTC) environment. It effectively uses the computing power of
 machines connected over a network, be they a single cluster, a set
-of clusters on a campus, cloud resources either standalone or temporarily
+of clusters on a campus, cloud resources either stand alone or temporarily
 joined to a local cluster, or international grids. 
 Power comes from the ability to effectively harness shared resources with
 distributed ownership.
@@ -53,5 +53,5 @@ ranking resource offer ads with resource request ads, making certain
 that all requirements in both ads are satisfied. During this
 match-making process, HTCondor also considers several layers of priority
 values: the priority the user assigned to the resource request ad, the
-priority of the user which submitted the ad, and desire of machines in
+priority of the user which submitted the ad, and the desire of machines in
 the pool to accept certain types of ads over others.

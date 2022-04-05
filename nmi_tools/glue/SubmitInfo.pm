@@ -82,13 +82,10 @@ my @minimal_build_configure_args =
 	 '-DPROPER:BOOL'			 => 'OFF',
 	 '-D_VERBOSE:BOOL'			  => 'ON',
 	 '-DWITH_BLAHP:BOOL'		 => 'OFF',
-	 '-DWITH_CREAM:BOOL'		 => 'OFF',
-	 '-DWITH_DRMAA:BOOL'		 => 'OFF',
 	 '-DWITH_GLOBUS:BOOL'		 => 'OFF',
 	 '-DWITH_HADOOP:BOOL'		 => 'OFF',
 	 '-DWITH_LIBVIRT:BOOL'		 => 'OFF',
 	 '-DWITH_LIBXML2:BOOL'		 => 'OFF',
-	 '-DWITH_UNICOREGAHP:BOOL'	 => 'OFF',
 	 '-DWITH_VOMS:BOOL'			 => 'OFF',
 	);
 
@@ -290,6 +287,8 @@ our %submit_info = (
 	},
 	'nmi-zdev:x86_64_Debian9'  => 'x86_64_Debian9',
 	'nmi-zdev:x86_64_Debian10' => 'x86_64_Debian9',
+	'nmi-zdev:x86_64_Debian11' => 'x86_64_Debian9',
+	'nmi-zdev:x86_64_Debian12' => 'x86_64_Debian9',
 
 	##########################################################################
 	# Platform CentOS 8 on x86_64
@@ -309,6 +308,7 @@ our %submit_info = (
 	},
 
 	'nmi-zdev:x86_64_CentOS8' => 'x86_64_CentOS8',
+	'nmi-zdev:x86_64_Rocky8' => 'x86_64_CentOS8',
 	'nmi-zdev:x86_64_AmazonLinux2' => 'x86_64_Ubuntu18',
 
 	##########################################################################
@@ -653,9 +653,7 @@ our %submit_info = (
 
 	'x86_64_Ubuntu18'	=> {
 		'build' => {
-			'configure_args' => { @default_build_configure_args,
-								  '-DWITH_CREAM:BOOL' => 'OFF',
-			},
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 		},
 

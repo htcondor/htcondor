@@ -170,7 +170,7 @@ class SecEnvRequest:
 ########################################################################
 
 CONDOR_CONTEXT_LIST=('DEFAULT',
-                     'ADMINISTRATOR','NEGOTIATOR','CLIENT','OWNER',
+                     'ADMINISTRATOR','NEGOTIATOR','CLIENT',
                      'READ','WRITE','DAEMON','CONFIG',
                      'ADVERTISE_MASTER','ADVERTISE_STARTD','ADVERTISE_SCHEDD')
 

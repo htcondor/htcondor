@@ -112,7 +112,7 @@ pthread_mutex_unlock(pthread_mutex_t *mv)
 	return 0;
 }
 
-static enum 
+enum 
 {
     SIGNAL = 0,
     BROADCAST = 1,

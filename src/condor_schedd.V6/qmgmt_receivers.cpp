@@ -150,7 +150,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		assert( syscall_sock->get(owner) );
 		assert( syscall_sock->end_of_message() );
 
-		rval = QmgmtSetEffectiveOwner( owner.Value() );
+		rval = QmgmtSetEffectiveOwner( owner.c_str() );
 		terrno = errno;
 
 		syscall_sock->encode();
@@ -163,7 +163,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		char const *fqu = syscall_sock->getFullyQualifiedUser();
 		dprintf(D_SYSCALLS, "\tSetEffectiveOwner\n");
 		dprintf(D_SYSCALLS, "\tauthenticated user = '%s'\n", fqu ? fqu : "");
-		dprintf(D_SYSCALLS, "\trequested owner = '%s'\n", owner.Value());
+		dprintf(D_SYSCALLS, "\trequested owner = '%s'\n", owner.c_str());
 		dprintf(D_SYSCALLS, "\trval %d, errno %d\n", rval, terrno);
 
 		return 0;
@@ -525,7 +525,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "	flags = 0x%x\n", flags );
 
 		int terrno = 0;
-		MyString filename; // set to the filename that the data was spooled to.
+		std::string filename; // set to the filename that the data was spooled to.
 		if (cluster_id != active_cluster_num) {
 			return -1;
 		}

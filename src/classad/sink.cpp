@@ -30,6 +30,7 @@ using namespace std;
 
 namespace classad {
 
+static References reserved_words { "error", "false", "is", "isnt", "parent", "true", "undefined" };
 static bool identifierNeedsQuoting( const string & );
 
 
@@ -187,7 +188,7 @@ Unparse( string &buffer, const Value &val )
 			return;
 		}
 		case Value::BOOLEAN_VALUE: {
-			bool b;
+			bool b = false;
 			val.IsBooleanValue( b );
 			buffer += b ? "true" : "false";
 			return;
@@ -772,6 +773,9 @@ identifierNeedsQuoting( const string &str )
 		// needs quoting if we found a special character
 		// before the end of the string.
 		needs_quoting =  !(*ch == '\0' );
+	}
+	if( reserved_words.find(str) != reserved_words.end() ) {
+		needs_quoting = true;
 	}
 	return needs_quoting;
 }

@@ -73,6 +73,7 @@ class Matchmaker : public Service
 		int GET_PRIORITY_commandHandler(int, Stream*);
 		int GET_PRIORITY_ROLLUP_commandHandler(int, Stream*);
 		int GET_RESLIST_commandHandler(int, Stream*);
+		int QUERY_ADS_commandHandler(int, Stream*);
 
 		// timeout handler (for periodic negotiations)
 		void negotiationTime ();
@@ -90,7 +91,7 @@ class Matchmaker : public Service
 		bool getGroupInfoFromUserId(const char* user, std::string& groupName, float& groupQuota, float& groupUsage);
 
 		void forwardAccountingData(std::set<std::string> &names);
-		void forwardGroupAccounting(CollectorList *cl, GroupEntry *ge);
+		void forwardGroupAccounting(GroupEntry *ge);
 
 		void calculateRanks(ClassAd &request, ClassAd *offer, PreemptState candidatePreemptState, double &candidateRankValue, double &candidatePreJobRankValue, double &candidatePostJobRankValue, double &candidatePreemptRankValue);
 
@@ -312,7 +313,8 @@ class Matchmaker : public Service
 
 		// configuration information
 		char *AccountantHost;		// who (if at all) is the accountant?
-		int  NegotiatorInterval;	// interval between negotiation cycles
+		int  NegotiatorInterval;	// max interval between negotiation cycles
+		int  NegotiatorMinInterval;	// min interval between negotiation cycles
 		int  NegotiatorTimeout;		// timeouts for communication
 		int  MaxTimePerCycle;		// how long for total negotiation cycle
 		int  MaxTimePerSubmitter;   // how long to talk to any one submitter
@@ -350,10 +352,9 @@ class Matchmaker : public Service
 
 		CollectorList* Collectors;
 
-		typedef HashTable<MyString, MapEntry*> AdHash;
+		typedef HashTable<std::string, MapEntry*> AdHash;
 		AdHash *stashedAds;			
 
-		typedef HashTable<MyString, float> groupQuotasHashType;
 		groupQuotasHashType *groupQuotasHash;
 
 		// rank condition on matches
@@ -374,7 +375,8 @@ class Matchmaker : public Service
 		// external references in startd ads ... used for autoclustering
 		char * job_attr_references;
 
-		// Epoch time when we finished most rescent negotiation cycle
+		// Epoch time when we started/finished most rescent negotiation cycle
+		time_t startedLastCycleTime;
 		time_t completedLastCycleTime;
 
 		// diagnostics
@@ -410,7 +412,7 @@ class Matchmaker : public Service
 			double			PostJobRankValue;
 			double			PreemptRankValue;
 			PreemptState	PreemptStateValue;
-			MyString			DslotClaims;
+			std::string			DslotClaims;
 			ClassAd *ad;
 		};
 
@@ -497,7 +499,7 @@ class Matchmaker : public Service
 		private:
 			
 			// AdListEntry* peek_candidate();
-			static int sort_compare(const void*, const void*);
+			static bool sort_compare(const AdListEntry &Elem1, const AdListEntry &Elem2);
 			AdListEntry* AdListArray;			
 			int adListMaxLen;	// max length of AdListArray
 			int adListLen;		// current length of AdListArray

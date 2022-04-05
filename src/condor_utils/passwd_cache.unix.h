@@ -22,7 +22,7 @@
 #define __PASSWD_CACHE_H
 
 #include <grp.h>
-#include "MyString.h"
+#include <string>
 
 template <class Key, class Value> class HashTable;
 
@@ -38,11 +38,8 @@ typedef struct uid_entry {
 	time_t 	lastupdated;	/* timestamp of when this entry was updated */
 } uid_entry;
 
-/* define our hash function */
-int compute_user_hash(const MyString &key, int numBuckets);
-
-typedef HashTable <MyString, uid_entry*> UidHashTable;
-typedef HashTable <MyString, group_entry*> GroupHashTable;
+typedef HashTable <std::string, uid_entry*> UidHashTable;
+typedef HashTable <std::string, group_entry*> GroupHashTable;
 
 /*
 Don't declare your own instances of this.  Instead see
@@ -108,7 +105,7 @@ class passwd_cache {
 
 		// builds a string in the format expected for the
 		// configuration variable USERID_MAP
-		void getUseridMap(MyString &usermap);
+		void getUseridMap(std::string &usermap);
 
 	private:
 

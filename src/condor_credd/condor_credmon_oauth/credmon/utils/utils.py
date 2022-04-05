@@ -26,7 +26,7 @@ def atomic_output(file_contents, output_fname, mode=stat.S_IRUSR):
 
     tmp_fd, tmp_file_name = tempfile.mkstemp(dir = dir_name, prefix=file_name)
     try:
-        with os.fdopen(tmp_fd, 'w') as fp:
+        with os.fdopen(tmp_fd, 'wb') as fp:
             fp.write(file_contents)
 
         # atomically move new tokens in place

@@ -111,6 +111,8 @@ class CheckEvents {
 	*/
 	check_event_result_t CheckAnEvent(const ULogEvent *event,
 			MyString &errorMsg);
+	check_event_result_t CheckAnEvent(const ULogEvent *event,
+			std::string &errorMsg);
 
 	/** Check all jobs when we think they're done.  Makes sure we have
 		exactly one submit event and one termanated/aborted/executable
@@ -122,6 +124,7 @@ class CheckEvents {
 		@return check_event_result_t, see above.
 	*/
 	check_event_result_t CheckAllJobs(MyString &errorMsg);
+	check_event_result_t CheckAllJobs(std::string &errorMsg);
 
 	/** Convert a check_event_result_t to the corresponding string.
 		@param The result.

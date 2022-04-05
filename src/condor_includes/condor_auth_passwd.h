@@ -24,7 +24,7 @@
 // Where HAVE_EXT_OPENSSL is defined.
 #include "config.h"
 
-#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)
+#if defined(HAVE_EXT_OPENSSL)
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "condor_crypt_3des.h"
@@ -165,8 +165,8 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	/** Retry search for tokens */
 	static void retry_token_search() {m_should_search_for_tokens = true;}
 
-	/** Check and generate a pool password if not already done */
-	static void create_pool_password_if_needed();
+	/** Check and generate a POOL token signing key if not already done */
+	static void create_pool_signing_key_if_needed();
 
 		/** Simple wrapper around the OpenSSL HKDF function. */
 	static int hkdf(const unsigned char *sk, size_t sk_len,
@@ -225,9 +225,11 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		/** Lookup a shared key based on the correspondent's
 			information.  
 		*/
-	static char* fetchPassword(const char* nameA,
-	                    const std::string &token,
-	                    const char* nameB);
+	static char* fetchPoolSharedKey(int & len);
+	static char* fetchTokenSharedKey(const std::string & token, int & len);
+		/** Lookup the legacy pool password 
+		*/
+	char* fetchPoolPassword(int & len);
 
 		/** Return a malloc-ed string "user@domain" that represents who we
 		 	are.
@@ -332,9 +334,9 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	CondorAuthPasswordRetval doServerRec1(CondorError* errstack, bool non_blocking);
 	CondorAuthPasswordRetval doServerRec2(CondorError* errstack, bool non_blocking);
 
-		/** Check to see if a given token is on the blacklist; returns
-		    true if the token is blacklisted. */
-	bool isTokenBlacklisted(const jwt::decoded_jwt &jwt);
+		/** Check to see if a given token has been revoked; returns
+		    true if the token is revoked. */
+	bool isTokenRevoked(const jwt::decoded_jwt &jwt);
 
 	int m_client_status;
 	int m_server_status;
@@ -362,7 +364,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	std::string m_keyfile_token;
 	std::string m_server_issuer;
 	std::set<std::string> m_server_keys;
-	std::unique_ptr<classad::ExprTree> m_token_blacklist_expr;
+	std::unique_ptr<classad::ExprTree> m_token_revocation_expr;
 
 	CondorAuthPasswordState m_state;
 
@@ -371,6 +373,6 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	static bool m_tokens_avail; // Are any tokens known to be available?
 };
 
-#endif /* SKIP_AUTHENTICATION */
+#endif /* HAVE_EXT_OPENSSL */
 
 #endif /* CONDOR_AUTH_PASSWD */

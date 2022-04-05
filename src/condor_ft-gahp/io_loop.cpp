@@ -65,7 +65,7 @@ std::string peer_condor_version;
 std::string sec_session_id;
 
 // this appears at the bottom of this file
-extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
+int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 
 #ifdef WIN32
 int STDIN_FILENO = fileno(stdin);
@@ -698,7 +698,6 @@ main( int argc, char **argv )
 
 // This function is called by dprintf - always display our pid in our
 // log entries.
-extern "C"
 int
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
@@ -1054,7 +1053,7 @@ int do_command_download_sandbox(void *arg, Stream*) {
 	// the "true" param to DownloadFiles here means blocking (i.e. "in the foreground")
 	if (!ft.DownloadFiles(true)) {
 		// FAIL
-		write_to_pipe( ChildErrorPipe, ft.GetInfo().error_desc.Value() );
+		write_to_pipe( ChildErrorPipe, ft.GetInfo().error_desc.c_str() );
 		return 1;
 	}
 
@@ -1119,7 +1118,7 @@ int do_command_upload_sandbox(void *arg, Stream*) {
 	// the "true" param to UploadFiles here means blocking (i.e. "in the foreground")
 	if (!ft.UploadFiles(true)) {
 		// FAIL
-		write_to_pipe( ChildErrorPipe, ft.GetInfo().error_desc.Value() );
+		write_to_pipe( ChildErrorPipe, ft.GetInfo().error_desc.c_str() );
 		return 1;
 	}
 

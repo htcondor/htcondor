@@ -43,37 +43,18 @@ use strict;
 use warnings;
 use Check::SimpleJob;
 
-my $topdir = getcwd();
-print scalar localtime() . "\n";
-
 my $testname = "job_core_crontab";
-my $base_name = $testname;
 
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	NUM_CPUS = 2
 	NEGOTIATOR_INTERVAL = 5
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobcorecrontab");
-print "local config file:$configfile\n";
 
-CondorTest::StartCondorWithParams(
-    condor_name => "jobcorecrontab",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
-
-# where am I running
-my $currenthost = CondorTest::getFqdnHost();
-
-my $mypid = $$;
-my $mysaveme = $testname . ".saveme";
 my $finalresult = 0;
-
-if($mypid == 0) {
-	die "Saveme setup for test failed\n";
-}
 
 my $bulksubmitentries = '
 ##
@@ -414,28 +395,7 @@ SimpleJob::RunCheck(
 	append_submit_commands=>$bulksubmitentries,
 );
 
-# reinitialize so we can do the same test for vanilla universe
-
-$run_ctr = 0;
-$max_run_ctr = 2;
-$DEFERRAL_TIME = 0;
-$LAST_DEFERRAL_TIME = 0;
-$longuniverse = "vanilla"; #this is the default if we do not mention universe
-
-SimpleJob::RunCheck(
-	runthis=>"x_time.pl",
-	on_submit=>$submitted,
-	on_execute=>$executed,
-	on_success=>$success,
-	on_hold=>$held,
-	duration=>20,
-	on_evictedwithrequeue=>$evicted,
-	append_submit_commands=>$bulksubmitentries,
-);
-
-
 CondorTest::EndTest();
-print scalar localtime() . "\n";
 
 if( $finalresult != 0 )
 {

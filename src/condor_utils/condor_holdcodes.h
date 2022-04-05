@@ -21,136 +21,161 @@
 #ifndef CONDOR_HOLDCODES_H
 #define CONDOR_HOLDCODES_H
 
+
 /* This file contains hold reason codes.
+
+   They are stored in a reflective enum class CONDOR_HOLD_CODE via enum.h 
+   (see https://tinyurl.com/yfn3auay for complete docs on Better Enums).
+   The TLDR is you can use these enums as you would expect, including conversions to ints, like so:
+       int code = CONDOR_HOLD_CODE::JobPolicy;
+       switch (code) {
+	        CONDOR_HOLD_CODE::GlobalGramError:
+            ...
+       }
+   But you can also do a bunch more than with normal enums.  For example, you can fetch 
+   the name of the enum as a string with method _to_string, and create an enum from an 
+   int with _from_integral.  A pithy example using both:
+       int reason_code = 1;   // code 1 is CONDOR_HOLD_CODE::UserRequest
+       const char *holdstr = (CONDOR_HOLD_CODE::_from_integral(reason_code))._to_string();
+       // Now holdstr = "UserRequst"
+   There is a lot more, see the docs for BetterEnums at the url above.
  */
 
-//There may still be some lingering cases that result in this
-//unspecified hold code.  Hopefully they will be eliminated soon.
-const int CONDOR_HOLD_CODE_Unspecified = 0;
+#include "enum.h" 
+BETTER_ENUM(CONDOR_HOLD_CODE, int,
 
-//User put the job on hold with condor_hold
-const int CONDOR_HOLD_CODE_UserRequest = 1;
+	//There may still be some lingering cases that result in this
+	//unspecified hold code.  Hopefully they will be eliminated soon.
+	Unspecified = 0,
 
-//Globus reported an error.  The subcode is the GRAM error number.
-const int CONDOR_HOLD_CODE_GlobusGramError = 2;
+	//User put the job on hold with condor_hold
+	UserRequest = 1,
 
-//The periodic hold expression evaluated to true
-const int CONDOR_HOLD_CODE_JobPolicy   = 3;
+	//Globus reported an error.  The subcode is the GRAM error number.
+	GlobusGramError = 2,
 
-//The credentials for the job (e.g. X509 proxy file) are invalid.
-const int CONDOR_HOLD_CODE_CorruptedCredential = 4;
+	//The periodic hold expression evaluated to true
+	JobPolicy = 3,
 
-//A job policy expression (such as PeriodicHold) evaluated to UNDEFINED.
-const int CONDOR_HOLD_CODE_JobPolicyUndefined   = 5;
+	//The credentials for the job (e.g. X509 proxy file) are invalid.
+	CorruptedCredential = 4,
 
-//The condor_starter failed to start the executable.
-//The subcode will contain the unix errno.
-const int CONDOR_HOLD_CODE_FailedToCreateProcess = 6;
+	//A job policy expression (such as PeriodicHold) evaluated to UNDEFINED.
+	JobPolicyUndefined = 5,
 
-//The standard output file for the job could not be opened.
-//The subcode will contain the unix errno.
-const int CONDOR_HOLD_CODE_UnableToOpenOutput = 7;
+	//The condor_starter failed to start the executable.
+	//The subcode will contain the unix errno.
+	FailedToCreateProcess = 6,
 
-//The standard input file for the job could not be opened.
-//The subcode will contain the unix errno.
-const int CONDOR_HOLD_CODE_UnableToOpenInput = 8;
+	//The standard output file for the job could not be opened.
+	//The subcode will contain the unix errno.
+	UnableToOpenOutput = 7,
 
-//The standard output stream for the job could not be opened.
-//The subcode will contain the unix errno.
-const int CONDOR_HOLD_CODE_UnableToOpenOutputStream = 9;
+	//The standard input file for the job could not be opened.
+	//The subcode will contain the unix errno.
+	UnableToOpenInput = 8,
 
-//The standard input stream for the job could not be opened.
-//The subcode will contain the unix errno.
-const int CONDOR_HOLD_CODE_UnableToOpenInputStream = 10;
+	//The standard output stream for the job could not be opened.
+	//The subcode will contain the unix errno.
+	UnableToOpenOutputStream = 9,
 
-//An internal Condor protocol error was encountered when transferring files.
-const int CONDOR_HOLD_CODE_InvalidTransferAck = 11;
+	//The standard input stream for the job could not be opened.
+	//The subcode will contain the unix errno.
+	UnableToOpenInputStream = 10,
 
-//The starter or shadow failed to receive or write job files.
-//The subcode will contain the unix errno.
-const int CONDOR_HOLD_CODE_DownloadFileError = 12;
+	//An internal Condor protocol error was encountered when transferring files.
+	InvalidTransferAck = 11,
 
-//The starter or shadow failed to read or send job files.
-//The subcode will contain the unix errno.
-const int CONDOR_HOLD_CODE_UploadFileError = 13;
+	//The starter or shadow failed to receive or write job files.
+	//The subcode will contain the unix errno.
+	DownloadFileError = 12,
 
-//The initial working directory of the job cannot be accessed.
-//The subcode will contain the unix errno.
-const int CONDOR_HOLD_CODE_IwdError = 14;
+	//The starter or shadow failed to read or send job files.
+	//The subcode will contain the unix errno.
+	UploadFileError = 13,
 
-//The user requested the job be submitted on hold.
-const int CONDOR_HOLD_CODE_SubmittedOnHold = 15;
+	//The initial working directory of the job cannot be accessed.
+	//The subcode will contain the unix errno.
+	IwdError = 14,
 
-//Input files are being spooled.
-const int CONDOR_HOLD_CODE_SpoolingInput = 16;
+	//The user requested the job be submitted on hold.
+	SubmittedOnHold = 15,
 
-//In the standard universe, the job and shadows versions aren't
-//compatible.
-const int CONDOR_HOLD_CODE_JobShadowMismatch = 17;
+	//Input files are being spooled.
+	SpoolingInput = 16,
 
-//An internal Condor protocol error was encountered when transferring files.
-const int CONDOR_HOLD_CODE_InvalidTransferGoAhead = 18;
+	//In the standard universe, the job and shadows versions aren't
+	//compatible.
+	JobShadowMismatch = 17,
 
-#if HAVE_JOB_HOOKS
-/**
-   HOOK_PREPARE_JOB was defined but couldn't execute or returned failure.
-   The hold subcode will be 0 if we failed to execute, the exit status
-   if it exited with a failure code, or a negative number with the signal
-   number if it was killed by a signal (e.g. -9).
-*/
-const int CONDOR_HOLD_CODE_HookPrepareJobFailure = 19;
-#endif /* HAVE_JOB_HOOKS */
+	//An internal Condor protocol error was encountered when transferring files.
+	InvalidTransferGoAhead = 18,
 
-const int CONDOR_HOLD_CODE_MissedDeferredExecutionTime = 20;
+	/**
+	   HOOK_PREPARE_JOB was defined but couldn't execute or returned failure.
+	   The hold subcode will be 0 if we failed to execute, the exit status
+	   if it exited with a failure code, or a negative number with the signal
+	   number if it was killed by a signal (e.g. -9).
+	*/
+	HookPrepareJobFailure = 19,
 
-const int CONDOR_HOLD_CODE_StartdHeldJob = 21;
+	MissedDeferredExecutionTime = 20,
 
-// There was a problem opening or otherwise initializing
-// the user log for writing.
-const int CONDOR_HOLD_CODE_UnableToInitUserLog = 22;
+	StartdHeldJob = 21,
 
-const int CONDOR_HOLD_CODE_FailedToAccessUserAccount = 23;
+	// There was a problem opening or otherwise initializing
+	// the user log for writing.
+	UnableToInitUserLog = 22,
 
-const int CONDOR_HOLD_CODE_NoCompatibleShadow = 24;
+	FailedToAccessUserAccount = 23,
 
-const int CONDOR_HOLD_CODE_InvalidCronSettings = 25;
+	NoCompatibleShadow = 24,
 
-// The SYSTEM_PERIODIC_HOLD expression put the job on hold
-const int CONDOR_HOLD_CODE_SystemPolicy = 26;
+	InvalidCronSettings = 25,
 
-const int CONDOR_HOLD_CODE_SystemPolicyUndefined = 27;
+	// The SYSTEM_PERIODIC_HOLD expression put the job on hold
+	SystemPolicy = 26,
 
-const int CONDOR_HOLD_CODE_GlexecChownSandboxToUser = 28;
+	SystemPolicyUndefined = 27,
 
-const int CONDOR_HOLD_CODE_PrivsepChownSandboxToUser = 29;
+	GlexecChownSandboxToUser = 28,
 
-const int CONDOR_HOLD_CODE_GlexecChownSandboxToCondor = 30;
+	PrivsepChownSandboxToUser = 29,
 
-const int CONDOR_HOLD_CODE_PrivsepChownSandboxToCondor = 31;
+	GlexecChownSandboxToCondor = 30,
 
-const int CONDOR_HOLD_CODE_MaxTransferInputSizeExceeded = 32;
+	PrivsepChownSandboxToCondor = 31,
 
-const int CONDOR_HOLD_CODE_MaxTransferOutputSizeExceeded = 33;
+	MaxTransferInputSizeExceeded = 32,
 
-const int CONDOR_HOLD_CODE_JobOutOfResources = 34;
+	MaxTransferOutputSizeExceeded = 33,
 
-const int CONDOR_HOLD_CODE_InvalidDockerImage = 35;
+	JobOutOfResources = 34,
 
-const int CONDOR_HOLD_CODE_FailedToCheckpoint = 36;
+	InvalidDockerImage = 35,
 
-const int CONDOR_HOLD_CODE_EC2UserError = 37;
-const int CONDOR_HOLD_CODE_EC2InternalError = 38;
-const int CONDOR_HOLD_CODE_EC2AdminError = 39;
-const int CONDOR_HOLD_CODE_EC2ConnectionProblem = 40;
-const int CONDOR_HOLD_CODE_EC2ServerError = 41;
-const int CONDOR_HOLD_CODE_EC2InstancePotentiallyLostError = 42;
+	FailedToCheckpoint = 36,
 
-const int CONDOR_HOLD_CODE_PreScriptFailed = 43;
-const int CONDOR_HOLD_CODE_PostScriptFailed = 44;
+	EC2UserError = 37,
+	EC2InternalError = 38,
+	EC2AdminError = 39,
+	EC2ConnectionProblem = 40,
+	EC2ServerError = 41,
+	EC2InstancePotentiallyLostError = 42,
 
-// Running singularity test before a sinularity job returned non-zero
-const int CONDOR_HOLD_CODE_SingularityTestFailed = 45;
+	PreScriptFailed = 43,
+	PostScriptFailed = 44,
 
-// NOTE!!! If you add a new hold code here, don't forget to update the condor-wiki magic numbers page!
+	// Running singularity test before a sinularity job returned non-zero
+	SingularityTestFailed = 45,
+
+	JobDurationExceeded = 46,
+	JobExecuteExceeded = 47
+
+	// NOTE!!! If you add a new hold code here, don't forget to add a commas after all entries but the last!
+	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
+)
+
+
 
 #endif

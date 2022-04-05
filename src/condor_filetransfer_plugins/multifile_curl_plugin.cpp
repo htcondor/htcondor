@@ -4,6 +4,7 @@
 #include "../condor_utils/condor_url.h"
 #include "multifile_curl_plugin.h"
 #include "utc_time.h"
+#include <algorithm>
 #include <exception>
 #include <sstream>
 #include <iostream>
@@ -15,6 +16,7 @@
 #include <rapidjson/document.h>
 
 #define MAX_RETRY_ATTEMPTS 20
+int max_retry_attempts = MAX_RETRY_ATTEMPTS;
 
 // Setup a transfer progress callback. We'll use this to manually timeout 
 // any transfers that are not making forward progress.
@@ -25,8 +27,12 @@ struct xferProgress {
 };
 struct xferProgress myProgress;
 
-static int xferInfo(void *p, double dltotal, double dlnow, double ultotal, double ulnow)
+static int xferInfo(void *p, double /* dltotal */, double dlnow, double /* ultotal */, double ulnow)
 {
+	/* Note : we cannot rely on dltotal or ultotal being correct, since
+	they will only be non-zero if the server responded with the optional
+	Content-Length header.  */
+
     struct xferProgress *progress = (struct xferProgress *)p;
     CURL *curl = progress->curl;
     double curTime = 0;
@@ -37,13 +43,13 @@ static int xferInfo(void *p, double dltotal, double dlnow, double ultotal, doubl
     if (curTime > 30) {
 
         // If this is a download and not making progress, abort
-        if (dltotal > 0 && curTime > dlnow) return 1;
+        if (dlnow > 0 && curTime > dlnow) return 1;
 
         // If this is an upload and not making progress, abort
-        if (ultotal > 0 && curTime > ulnow) return 1;
+        if (ulnow > 0 && curTime > ulnow) return 1;
 
-        // Sometimes a misconfigured proxy will report 0 bytes available. Abort.
-        if (dltotal <= 0 && ultotal <= 0) return 1;
+        // If not a single byte has been transferred either direction after 30 seconds, abort
+        if (dlnow <= 0 && ulnow <= 0) return 1;
     }
 
     // All good. Return success.
@@ -100,7 +106,12 @@ GetToken(const std::string & cred_name, std::string & token) {
 		throw std::runtime_error(ss.str());
 	}
 
-	std::string cred_path = std::string(creddir) + DIR_DELIM_STRING + cred_name + ".use";
+	// Cred name (via URL scheme) come in as <provider>[.<handle>]
+	// but tokens are stored on disk as <provider>[_<handle>].use
+	std::string cred_basename = cred_name;
+	std::replace(cred_basename.begin(), cred_basename.end(), '.', '_');
+
+	std::string cred_path = std::string(creddir) + DIR_DELIM_STRING + cred_basename + ".use";
 	int fd = open(cred_path.c_str(), O_RDONLY);
 	if (-1 == fd) {
 		fprintf( stderr, "Error: Unable to open credential file %s: %s (errno=%d)", cred_path.c_str(),
@@ -327,9 +338,17 @@ MultiFileCurlPlugin::FinishCurlTransfer( int rval, FILE *file ) {
     _this_file_stats->LibcurlReturnCode = rval;
 
     if( rval == CURLE_OK ) {
+            // Transfer successful!
         _this_file_stats->TransferSuccess = true;
         _this_file_stats->TransferError = "";
         _this_file_stats->TransferFileBytes = ftell( file );
+    }
+    else if ( rval == CURLE_ABORTED_BY_CALLBACK ) {
+            // Transfer failed because our xferInfo callback above returned abort.
+            // The error string returned by libcurl just says "Callback aborted",
+            // so lets give something more meaningful.
+        _this_file_stats->TransferSuccess = false;
+        _this_file_stats->TransferError = "Aborted due to lack of progress";
     }
     else {
         _this_file_stats->TransferSuccess = false;
@@ -617,7 +636,7 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
             }
             // If we have not exceeded the maximum number of retries, and we encounter
             // a non-fatal error, stay in the loop and try again
-            else if( retry_count <= MAX_RETRY_ATTEMPTS &&
+            else if( retry_count <= max_retry_attempts &&
                      ShouldRetryTransfer(file_rval) ) {
                 continue;
             }
@@ -706,7 +725,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
             }
             // If we have not exceeded the maximum number of retries, and we encounter
             // a non-fatal error, stay in the loop and try again
-            else if( retry_count <= MAX_RETRY_ATTEMPTS && 
+            else if( retry_count <= max_retry_attempts && 
                      ShouldRetryTransfer(rval) ) {
                 continue;
             }
@@ -993,8 +1012,16 @@ main( int argc, char **argv ) {
         fprintf( stderr, "[general-opts] are:\n" );
         fprintf( stderr, "\t-diagnostic\t\tRun the plugin in diagnostic (verbose) mode\n\n" );
         fprintf( stderr, "\t-upload\t\tRun the plugin in upload mode, copying files to a remote location\n\n" );
-        return -1;
+        return (int)TransferPluginResult::Error;
     }
+
+	// Mainly for testing to not wait forever to see errors
+	const char *attempts_str = getenv("CONDOR_CURL_MAX_RETRY_ATTEMPTS");
+	if (attempts_str) {
+		if (atoi(attempts_str) > 0) {
+			max_retry_attempts = atoi(attempts_str);
+		}
+	}
 
     // Instantiate a MultiFileCurlPlugin object and handle the request
     MultiFileCurlPlugin curl_plugin( diagnostic );

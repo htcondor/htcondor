@@ -3,6 +3,250 @@ Security
 
 :index:`in HTCondor<single: in HTCondor; security>`
 
+Security Overview
+-----------------
+
+Beginning in HTCondor version 9, a main goal is to make all condor
+installations easier to secure.  In previous versions, a default installation
+typically required additional steps after setup to enable end-to-end security
+for all users and daemons in the system.  Configuring various different types
+of authentication and security policy could also involve setting quite a number
+of different configuration parameters and a fairly deep foray into the manual
+to understand how they all work together.
+
+This overview will explain the high-level concepts involved in securing an
+HTCondor pool.  If possible, we recommend performing a clean installation "from
+scratch" and then migrating over pieces of your old configuration as needed.
+Here are some quick links for getting started if you want to jump right in:
+
+Quick Links:
+   If you are upgrading an existing pool from 8.9.X to 9.0.X, please visit
+   https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UpgradingFromEightNineToNineZero
+
+   If you are upgrading an existing pool from 8.8.X to 9.0.X, please visit
+   :doc:`/version-history/upgrading-from-88-to-90-series`.
+
+   If you are installing a new HTCondor pool from scratch, please read
+   about :doc:`/getting-htcondor/index`
+
+
+General Security Flow
+'''''''''''''''''''''
+
+Establishing a secure connection in HTCondor goes through four major steps,
+which are very briefly enumerated here for reference.
+
+1. Negotiation: In order for a client and server to communicate, they need to
+   agree on which security mechanisms will be used for the connection.  This
+   includes whether or not the connection will be authenticated, which types of
+   authentication methods can be used, whether the connection will be encrypted,
+   and which different types of encryption algorithms can be used.  The client
+   sends its capabilities, preferences, and requirements; the server compares
+   those against its own, decides what to do, and tells the client; if a
+   connection is possible, they both then work to enact it.  We call the decisions
+   the server makes during negotiation the "security policy" for that connection;
+   see :ref:`admin-manual/security:security negotiation` for details on policy
+   configuration.
+2. Authentication/Mapping:  If the server decides to authenticate (and we
+   strongly recommend that it almost always either do so or reject the
+   connection), the methods allowed are tried in the order decided by the server
+   until one of them succeeds.  After a successful authentication, the server
+   decides the canonical name of the user based on the credentials used by the
+   client.  For SSL, this involves mapping the DN to a user@domain.name format.
+   For most other methods the result is already in user@domain.name format.  For
+   details on different types of supported authentication methods, please see
+   :ref:`admin-manual/security:authentication`.
+3. Encryption and Integrity: If the server decided that encryption would be
+   used, both sides now enable encryption and integrity checks using the method
+   preferred by the server.  AES is now the preferred method and enabled by
+   default.  The overhead of doing the encryption and integrity checks is minimal
+   so we have decided to simplify configuration by requiring changes to disable it
+   rather than enable it.  For details on different types of supported
+   authentication methods, see :ref:`admin-manual/security:encryption`.
+4. Authorization: The canonical user is now checked to see if they are allowed
+   to send the command to the server that they wish to send.  Commands are
+   "registered" at different authorization levels, and there is an ALLOW/DENY list
+   for each level.  If the canonical user is authorized, HTCondor performs the
+   requested action.  If authorization fails, the permission is DENIED and the
+   network connection is closed.  For list of authorization levels and more
+   information on configuring ALLOW and DENY lists, please see
+   :ref:`admin-manual/security:authorization`.
+
+
+Highlights of New Features In Version 9.0.0
+'''''''''''''''''''''''''''''''''''''''''''
+
+Introducing: IDTOKENS
+"""""""""""""""""""""
+
+In 9.0.0, we have introduced a new authentication mechanism called
+``IDTOKENS``.  These tokens are easy for the administrator to issue, and in
+many cases users can also acquire their own tokens on a machine used to submit
+jobs (running the *condor_schedd*).  An ``IDTOKEN`` is a relatively lightweight
+credential that can be used to prove an identity.  The contents of the token
+are actually a JWT (https://jwt.io/) that is signed by a "Token Signing Key"
+that establishes the trustworthiness of the token.  Typically, this signing key
+is something accessible only to HTCondor (and owned by the "root" user of the
+system) and not users, and by default lives in /etc/condor/passwords.d/POOL.
+To make configuration easier, this signing key is generated automatically by
+HTCondor if it does not exist on the machine that runs the Central Manager, or
+the *condor_collector* daemon in particular.  So after installing the central
+manager and starting it up for the first time, you should as the administrator
+be all set to start issuing tokens.  That said, you will need to copy the
+signing key to all other machines in your pool that you want to be able to
+receive and validate the ``IDTOKEN`` credentials that you issue.
+
+Documentation for the command line tools used for creating and managing
+``IDTOKENS`` is available in the :ref:`admin-manual/security:token
+authentication` section.
+
+
+Introducing: AES
+""""""""""""""""
+
+In version 9.0.0 we have also added support for AES, a widely-used encryption
+method that has hardware support in most modern CPUS.  Because the overhead of
+encryption is so much lower, we have turned it on by default.  We use AES in
+such a way (called AESGCM mode) that it provides integrity checks (checksums)
+on transmitted data, and this method is now on by default and is the preferred
+method to be used if both sides support it.
+
+
+Types of Network Connections
+''''''''''''''''''''''''''''
+
+We generally consider user-to-daemon and daemon-to-daemon connections
+distinctly. User-to-daemon connections almost always issue ``READ`` or
+``WRITE`` level commands, and the vast majority of those connections are to the
+schedd or the collector; many of those connections will be between processes on
+the same machine.  Conversely, daemon-to-daemon connections are typically
+between two different machines, and use commands registered at all levels.
+
+
+User-to-Daemon Connections (User Authentication)
+""""""""""""""""""""""""""""""""""""""""""""""""
+
+In order for users to submit jobs to the HTCondor system, they will need to
+authenticate to the *condor_schedd* daemon.  They also need to authenticate to
+the SchedD to modify, remove, hold, or release jobs.  When users are
+interacting with the *condor_schedd*, they issue commands that need to be
+authorized at either the "READ" or "WRITE" level.  (Unless the user is an
+administrator, in which case they might also issue "ADMINISTRATOR"-level
+commands).
+
+
+Authenticating using FS
+^^^^^^^^^^^^^^^^^^^^^^^
+
+On a Linux system this is typically done by logging into the machine that is
+running the *condor_schedd* daemon and authentication using a method called
+``FS`` (on Linux see Windows note below this paragraph).  ``FS`` stands for
+"File System" and the method works by having the user create a file in /tmp
+that the *condor_schedd* can then examine to determine who the owner is.
+Because this operates in /tmp, this only works for connections to daemons on
+the same machine.  ``FS`` is enabled by default so the administrator does not
+need to do anything to allow users to interact with the job queue this way.
+(There are other methods, mentioned below, that can work over a network
+connection.)
+
+[Windows note:  HTCondor on Windows does not use ``FS``, but rather a method
+specific to Windows called NTSSPI.  See the section on
+:ref:`admin-manual/security:authentication` for more more info. ]
+
+If it is necessary to do a "remote submit" -- that is, run *condor_submit* on a
+different machine than is running the *condor_schedd* -- then the administrator
+will need to configure another method.  ``FS_REMOTE`` works similarly to ``FS``
+but uses a shared directory other than /tmp.  Mechanisms such as ``KERBEROS``,
+``SSL``, and ``MUNGE`` can also be configured.  However, with the addition of
+``IDTOKENS`` in 9.0.0, it is easy to configure and deploy this mechanism and we
+would suggest you do so unless you have a specific need to use one of the
+alternatives.
+
+
+Authenticating using IDTOKENS
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If a user is able to log in to the machine running the *condor_schedd*, and the
+SchedD has been set up with the Token Signing Key (see above for how that is
+created and deployed) then the user can simply run *condor_token_fetch* and
+retreive their own token.  This token can then be (securely) moved to another
+machine and used to interact with the job queue, including submission, edits,
+hold, release, and removing the job.
+
+If the user cannot log in to the machine running the *condor_schedd*, they
+should ask their administrator to create tokens for them using the
+*condor_token_create* command line tool.  Once again, more info can be found in
+the :ref:`admin-manual/security:token authentication` section.
+
+Daemon-to-Daemon Connections (Daemon Authentication)
+""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+HTCondor daemons need to trust each other to pass information security from one
+to the other.  This information may contain important attributes about a job to
+run, such as which executable to run, the arguments, and which user to run the
+job as.  Obviously, being able to tamper those could allow an impersonator to
+perform all sorts of nefarious tasks.
+
+For daemons that run on the same machine, for example a *condor_master*,
+*condor_schedd*, and the *condor_shadow* daemons launched by the
+*condor_schedd*, this authentication is performed using a secret that is shared
+with each condor daemon when it is launched.  These are called "family
+sessions", since the processes sharing the secret are all part of the same unix
+process family.  This allows the HTCondor daemons to contact one another
+locally without having to use another type of authentication.  So essentially,
+when we are discussing daemon-to-daemon communication, we are talking about
+HTCondor daemons on two different physical machines.  In those cases, they need
+to establish trust using some mechanism that works over a network.  The ``FS``
+mechanism used for user job submission typically doesn't work here because it
+relies on sharing a directory between the two daemons, typically /tmp.
+However, ``IDTOKENS`` are able to work here as long as the server has a copy of
+the Signing Key that was used to issue the token that the client is using.  The
+daemon will authenticate as ``condor@$(TRUST_DOMAIN)`` where the trust domain
+is the string set by the token issuer, and is usually equal to the
+``$(UID_DOMAIN)`` setting on the central manager.  (Note that setting
+:macro:`UID_DOMAIN` has other consequences.)
+
+Once HTCondor has determined the authenticate principal, it checks the
+authorization lists as mentioned above in
+:ref:`admin-manual/security:general security flow`.  For daemon-to-daemon
+authorization, there are a few lists that may be consulted.
+
+If the condor daemon receiving the connection is the *condor_collector*, it first
+checks to see if there are specific authorization lists for daemons advertising
+to the collector (i.e. joining the pool).  If the incoming command is
+advertising a submit node (i.e. a *condor_schedd* daemon), it will check
+``ALLOW_ADVERTISE_SCHEDD``.  If the incoming command is for an execute node (a
+*condor_startd* daemon), it will check ``ALLOW_ADVERTISE_STARTD``.  And if the
+incoming command is for a *condor_master* (which runs on all HTCondor nodes) it
+will check ``ALLOW_ADVERTISE_MASTER``.  If the list it checks is undefined, it will
+then check ``ALLOW_DAEMON`` instead.
+
+If the condor daemon receiving the connection is not a *condor_collector*, the
+``ALLOW_DAEMON`` is the only list that is looked at.
+
+It is notable that many daemon-to-daemon connections have been optimized to not
+need to authenticate using one of the standard methods.  Similar to the
+"family" sessions that work internally on one machine, there are sessions
+called "match" sessions that can be used internally within one POOL of
+machines.  Here, trust is established by the negotiator when matching a job to
+a resource -- the Negotiator takes a secret generated by the *condor_startd* and
+securely passes it to the *condor_schedd* when a match is made.  The submit and
+execute machines can now use this secret to establish a secure channel.
+Because of this, you do not necessarily need to have authentication from one to
+the other configured; it is enough to have secure channels from the SchedD to
+the Collector and from the StartD to the collector.  Likewise, a Negotiator can
+establish trust with a SchedD in the same way: the SchedD trusts the Collector
+to tell only trustworthy Negotiators its secret.  However, some features such
+as *condor_ssh_to_job* and *condor_tail* will not work unless the submit machine
+can authenticate directly to the execute machine, which is why we mentioned
+needing to distribute the signing key earlier -- if the server does not have
+the signing key, it cannot directly validate the incoming ``IDTOKEN`` used for
+authentication.
+
+
+Security Terms
+--------------
+
 Security in HTCondor is a broad issue, with many aspects to consider.
 Because HTCondor's main purpose is to allow users to run arbitrary code
 on large numbers of computers, it is important to try to limit who can
@@ -41,7 +285,7 @@ Authentication
     impostors. By default, HTCondor's authentication uses the user id
     (UID) to determine identity, but HTCondor can choose among a variety
     of authentication mechanisms, including the stronger authentication
-    methods Kerberos and GSI.
+    methods Kerberos and SSL.
 
 Authorization
     Authorization specifies who is allowed to do what. Some users are
@@ -74,6 +318,12 @@ Integrity
 Quick Configuration of Security
 -------------------------------
 
+**Note:** This method of configuring security is experimental.
+Many tools and daemons that send administrative commands between machines
+(e.g. *condor_off*, *condor_drain*, or *condor_defrag*)
+won't work without further setup.
+We plan to remove this limitation in future releases.
+
 While pool administrators with complex configurations or application developers may need to
 understand the full security model described in this chapter, HTCondor
 strives to make it easy to enable reasonable security settings for new pools.
@@ -83,8 +333,8 @@ are no unprivileged users logged in to the submit hosts:
 
 1. Start HTCondor on your central manager host (containing the *condor_collector* daemon) first.
    For a fresh install, this will automatically generate a random key in
-   the file specified by ``SEC_PASSWORD_FILE`` (defaulting to ``/etc/condor/passwords.d/POOL``
-   on Linux).
+   the file specified by ``SEC_TOKEN_POOL_SIGNING_KEY_FILE``
+   (defaulting to ``/etc/condor/passwords.d/POOL`` on Linux and ``$(RELEASE_DIR)\tokens.sk\POOL`` on Windows).
 2. Install an auto-approval rule on the central manager using ``condor_token_request_auto_approve``.
    This automatically approves any daemons starting on a specified network for
    a fixed period of time.  For example, to auto-authorize any daemon on the network ``192.168.0.0/24``
@@ -190,15 +440,6 @@ described.
     except those specified in the ``condor_config.root`` configuration
     file. The ``CONFIG`` level of access implies ``READ`` access.
 
-``OWNER``
-    This level of access is required for commands that the owner of a
-    machine (any local user) should be able to use, in addition to the
-    HTCondor administrators. An example that requires the ``OWNER``
-    access level is the *condor_vacate* command. The command causes the
-    *condor_startd* daemon to vacate any HTCondor job currently running
-    on a machine. The owner of that machine should be able to cause the
-    removal of a job running on the machine.
-
 ``DAEMON``
     This access level is used for commands that are internal to the
     operation of HTCondor. An example of this internal operation is when
@@ -269,10 +510,6 @@ STARTD:
 ``READ``
     The command that *condor_preen* sends to request the current state
     of the *condor_startd* daemon.
-
-``OWNER``
-    The command that *condor_vacate* sends to cause any running jobs to
-    stop running.
 
 ``NEGOTIATOR``
     The command that the *condor_negotiator* daemon sends to match a
@@ -424,7 +661,6 @@ taking place. <context> may be any one of
         WRITE
         ADMINISTRATOR
         CONFIG
-        OWNER
         DAEMON
         NEGOTIATOR
         ADVERTISE_MASTER
@@ -592,7 +828,6 @@ level: :index:`SEC_DEFAULT_AUTHENTICATION`
 :index:`SEC_WRITE_AUTHENTICATION`
 :index:`SEC_ADMINISTRATOR_AUTHENTICATION`
 :index:`SEC_CONFIG_AUTHENTICATION`
-:index:`SEC_OWNER_AUTHENTICATION`
 :index:`SEC_DAEMON_AUTHENTICATION`
 :index:`SEC_NEGOTIATOR_AUTHENTICATION`
 :index:`SEC_ADVERTISE_MASTER_AUTHENTICATION`
@@ -606,7 +841,6 @@ level: :index:`SEC_DEFAULT_AUTHENTICATION`
         SEC_WRITE_AUTHENTICATION
         SEC_ADMINISTRATOR_AUTHENTICATION
         SEC_CONFIG_AUTHENTICATION
-        SEC_OWNER_AUTHENTICATION
         SEC_DAEMON_AUTHENTICATION
         SEC_NEGOTIATOR_AUTHENTICATION
         SEC_ADVERTISE_MASTER_AUTHENTICATION
@@ -652,7 +886,6 @@ macros :index:`SEC_DEFAULT_AUTHENTICATION_METHODS`
 :index:`SEC_ADMINISTRATOR_AUTHENTICATION_METHODS`
 :index:`SEC_DAEMON_AUTHENTICATION_METHODS`
 :index:`SEC_CONFIG_AUTHENTICATION_METHODS`
-:index:`SEC_OWNER_AUTHENTICATION_METHODS`
 :index:`SEC_NEGOTIATOR_AUTHENTICATION_METHODS`
 :index:`SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS`
 :index:`SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS`
@@ -665,7 +898,6 @@ macros :index:`SEC_DEFAULT_AUTHENTICATION_METHODS`
         SEC_WRITE_AUTHENTICATION_METHODS
         SEC_ADMINISTRATOR_AUTHENTICATION_METHODS
         SEC_CONFIG_AUTHENTICATION_METHODS
-        SEC_OWNER_AUTHENTICATION_METHODS
         SEC_DAEMON_AUTHENTICATION_METHODS
         SEC_NEGOTIATOR_AUTHENTICATION_METHODS
         SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS
@@ -681,7 +913,6 @@ indicated in the following list of defined values:
 
 .. code-block:: text
 
-        GSI       (not available on Windows platforms)
         SSL
         KERBEROS
         PASSWORD
@@ -698,15 +929,15 @@ For example, a client may be configured with:
 
 .. code-block:: condor-config
 
-    SEC_CLIENT_AUTHENTICATION_METHODS = FS, GSI
+    SEC_CLIENT_AUTHENTICATION_METHODS = FS, SSL
 
 and a daemon the client is trying to contact with:
 
 .. code-block:: condor-config
 
-    SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
+    SEC_DEFAULT_AUTHENTICATION_METHODS = SSL
 
-Security negotiation will determine that GSI authentication is the only
+Security negotiation will determine that SSL authentication is the only
 compatible choice. If there are multiple compatible authentication
 methods, security negotiation will make a list of acceptable methods and
 they will be tried in order until one succeeds.
@@ -742,251 +973,30 @@ value of OPTIONAL. Authentication will be required for any operation
 which modifies the job queue, such as *condor_qedit* and *condor_rm*.
 If the configuration for a machine does not define any variable for
 ``SEC_<access-level>_AUTHENTICATION_METHODS``, the default value for a
-Unix machine is FS, IDTOKENS, KERBEROS, GSI. This default value for a Windows
-machine is NTSSPI, IDTOKENS, KERBEROS, GSI.
-
-GSI Authentication
-''''''''''''''''''
-
-:index:`GSI<single: GSI; authentication>`
-
-The GSI (Grid Security Infrastructure) protocol provides an avenue for
-HTCondor to do PKI-based (Public Key Infrastructure) authentication
-using X.509 certificates. The basics of GSI are well-documented
-elsewhere, such as `https://gridcf.org/gct-docs/latest/gsic/key/index.html <https://gridcf.org/gct-docs/latest/gsic/key/index.html>`_.
-
-A simple introduction to this type of authentication defines HTCondor's
-use of terminology, and it illuminates the needed items that HTCondor
-must access to do this authentication. Assume that A authenticates to B.
-In this example, A is the client, and B is the daemon within their
-communication. This example's one-way authentication implies that B is
-verifying the identity of A, using the certificate A provides, and
-utilizing B's own set of trusted CAs (Certification Authorities). Client
-A provides its certificate (or proxy) to daemon B. B does two things: B
-checks that the certificate is valid, and B checks to see that the CA
-that signed A's certificate is one that B trusts.
-
-For the GSI authentication protocol, an X.509 certificate is required.
-:index:`X.509<single: X.509; certificate>`\ Files with predetermined names hold a
-certificate, a key, and optionally, a proxy. A separate directory has
-one or more files that become the list of trusted CAs.
-
-Allowing HTCondor to do this GSI authentication requires knowledge of
-the locations of the client A's certificate and the daemon B's list of
-trusted CAs. When one side of the communication (as either client A or
-daemon B) is an HTCondor daemon, these locations are determined by
-configuration or by default locations. When one side of the
-communication (as a client A) is a user of HTCondor (the process owner
-of an HTCondor tool, for example *condor_submit*), these locations are
-determined by the pre-set values of environment variables or by default
-locations.
-
- GSI certificate locations for HTCondor daemons
-    For an HTCondor daemon, the certificate may be a single host
-    certificate, :index:`host certificate`\ and all HTCondor
-    daemons on the same machine may share the same certificate. In some
-    cases, the certificate can also be copied to other machines, where
-    local copies are necessary. This may occur only in cases where a
-    single host certificate can match multiple host names, something
-    that is beyond the scope of this manual. The certificates must be
-    protected by access rights to files, since the password file is not
-    encrypted.
-
-    The specification of the location of the necessary files through
-    configuration uses the following precedence.
-
-    #. Configuration variable ``GSI_DAEMON_DIRECTORY``
-       :index:`GSI_DAEMON_DIRECTORY` gives the complete path name
-       to the directory that contains the certificate, key, and
-       directory with trusted CAs. HTCondor uses this directory as
-       follows in its construction of the following configuration
-       variables:
-
-       .. code-block:: condor-config
-
-           GSI_DAEMON_CERT           = $(GSI_DAEMON_DIRECTORY)/hostcert.pem
-           GSI_DAEMON_KEY            = $(GSI_DAEMON_DIRECTORY)/hostkey.pem
-           GSI_DAEMON_TRUSTED_CA_DIR = $(GSI_DAEMON_DIRECTORY)/certificates
-
-       Note that no proxy is assumed in this case.
-
-    #. If the ``GSI_DAEMON_DIRECTORY`` is not defined, or when defined,
-       the location may be overridden with specific configuration
-       variables that specify the complete path and file name of the
-       certificate with
-
-           ``GSI_DAEMON_CERT`` :index:`GSI_DAEMON_CERT`
-
-       the key with
-
-           ``GSI_DAEMON_KEY`` :index:`GSI_DAEMON_KEY`
-
-       a proxy with
-
-           ``GSI_DAEMON_PROXY`` :index:`GSI_DAEMON_PROXY`
-
-       the complete path to the directory containing the list of trusted
-       CAs with
-
-           ``GSI_DAEMON_TRUSTED_CA_DIR``
-           :index:`GSI_DAEMON_TRUSTED_CA_DIR`
-
-    #. The default location assumed is ``/etc/grid-security``. Note that
-       this implemented by setting the value of
-       ``GSI_DAEMON_DIRECTORY``.
-
-    When a daemon acts as the client within authentication, the daemon
-    needs a listing of those from which it will accept certificates.
-    This is done with ``GSI_DAEMON_NAME``. This name is specified with
-    the following format
-
-    .. code-block:: condor-config
-
-        GSI_DAEMON_NAME = /X.509/name/of/server/1,/X.509/name/of/server/2,...
-
-    :index:`unified map file<single: unified map file; authentication>`
-
-    HTCondor will also need a way to map an X.509 distinguished name to
-    an HTCondor user id. There are two ways to accomplish this mapping.
-    For a first way to specify the mapping, see
-    :ref:`admin-manual/security:the unified map file for authentication` to use
-    HTCondor's unified map file. The second way to do the mapping is within an
-    administrator-maintained GSI-specific file called an X.509 map file,
-    mapping from X.509 Distinguished Name (DN) to HTCondor user id. It
-    is similar to a Globus grid map file, except that it is only used
-    for mapping to a user id, not for authorization. If the user names
-    in the map file do not specify a domain for the user (specification
-    would appear as user@domain), then the value of ``UID_DOMAIN`` is
-    used. Entries (lines) in the file each contain two items. The first
-    item in an entry is the X.509 certificate subject name, and it is
-    enclosed in double quote marks (using the character "). The second
-    item is the HTCondor user id. The two items in an entry are
-    separated by tab or space character(s). Here is an example of an
-    entry in an X.509 map file. Entries must be on a single line; this
-    example is broken onto two lines for formatting reasons.
-
-    .. code-block:: text
-
-        "/C=US/O=Globus/O=University of Wisconsin/OU=Computer Sciences Department/CN=Alice Smith" asmith
-
-    HTCondor finds the map file in one of three ways. If the
-    configuration variable ``GRIDMAP`` :index:`GRIDMAP` is
-    defined, it gives the full path name to the map file. When not
-    defined, HTCondor looks for the map file in
-
-    .. code-block:: console
-
-        $(GSI_DAEMON_DIRECTORY)/grid-mapfile
-
-    If ``GSI_DAEMON_DIRECTORY`` :index:`GSI_DAEMON_DIRECTORY` is
-    not defined, then the third place HTCondor looks for the map file is
-    given by
-
-    .. code-block:: text
-
-        /etc/grid-security/grid-mapfile
-
- GSI certificate locations for Users
-    The user specifies the location of a certificate, proxy, etc. in one
-    of two ways:
-
-    #. Environment variables give the location of necessary items.
-
-       ``X509_USER_PROXY`` gives the path and file name of the proxy.
-       This proxy will have been created using the *grid-proxy-init*
-       program, which will place the proxy in the ``/tmp`` directory
-       with the file name being determined by the format:
-
-       .. code-block:: text
-
-             /tmp/x509up_uXXXX
-
-       The specific file name is given by substituting the XXXX
-       characters with the UID of the user. Note that when a valid proxy
-       is used, the certificate and key locations are not needed.
-
-       ``X509_USER_CERT`` gives the path and file name of the
-       certificate. It is also used if a proxy location has been
-       checked, but the proxy is no longer valid.
-
-       ``X509_USER_KEY`` gives the path and file name of the key. Note
-       that most keys are password encrypted, such that knowing the
-       location could not lead to using the key.
-
-       ``X509_CERT_DIR`` gives the path to the directory containing the
-       list of trusted CAs.
-
-    #. Without environment variables to give locations of necessary
-       certificate information, HTCondor uses a default directory for
-       the user. This directory is given by
-
-       .. code-block:: text
-
-           $(HOME)/.globus
-
- Example GSI Security Configuration
-    Here is an example portion of the configuration file that would
-    enable and require GSI authentication, along with a minimal set of
-    other variables to make it work.
-
-    .. code-block:: condor-config
-
-        SEC_DEFAULT_AUTHENTICATION = REQUIRED
-        SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
-        SEC_DEFAULT_INTEGRITY = REQUIRED
-        GSI_DAEMON_DIRECTORY = /etc/grid-security
-        GRIDMAP = /etc/grid-security/grid-mapfile
-
-        # authorize based on user names produced by the map file
-        ALLOW_READ = *@cs.wisc.edu/*.cs.wisc.edu
-        ALLOW_DAEMON = condor@cs.wisc.edu/*.cs.wisc.edu
-        ALLOW_NEGOTIATOR = condor@cs.wisc.edu/condor.cs.wisc.edu, \
-                           condor@cs.wisc.edu/condor2.cs.wisc.edu
-        ALLOW_ADMINISTRATOR = condor-admin@cs.wisc.edu/*.cs.wisc.edu
-
-        # condor daemon certificate(s) trusted by condor tools and daemons
-        # when connecting to other condor daemons
-        GSI_DAEMON_NAME = /C=US/O=Condor/O=UW/OU=CS/CN=condor@cs.wisc.edu
-
-    The ``SEC_DEFAULT_AUTHENTICATION`` macro specifies that
-    authentication is required for all communications. This single macro
-    covers all communications, but could be replaced with a set of
-    macros that require authentication for only specific communications.
-
-    The macro ``GSI_DAEMON_DIRECTORY`` is specified to give HTCondor a
-    single place to find the daemon's certificate. This path may be a
-    directory on a shared file system such as AFS. Alternatively, this
-    path name can point to local copies of the certificate stored in a
-    local file system.
-
-    The macro ``GRIDMAP`` specifies the file to use for mapping GSI
-    names to user names within HTCondor. For example, it might look like
-    this:
-
-    .. code-block:: condor-config
-
-        GRIDMAP = "/C=US/O=Condor/O=UW/OU=CS/CN=condor@cs.wisc.edu" condor@cs.wisc.edu
-
-    Additional mappings would be needed for the users who submit jobs to
-    the pool or who issue administrative commands.
+Unix machine is FS, IDTOKENS, KERBEROS. This default value for a Windows
+machine is NTSSPI, IDTOKENS, KERBEROS.
 
 SSL Authentication
 ''''''''''''''''''
 
 :index:`SSL<single: SSL; authentication>`
 
-SSL authentication is similar to GSI authentication, but without GSI's
-delegation (proxy) capabilities. SSL utilizes X.509 certificates.
+SSL authentication utilizes X.509 certificates.
 
-All SSL authentication is mutual authentication in HTCondor. This means
-that when SSL authentication is used and when one process communicates
-with another, each process must be able to verify the signature on the
-certificate presented by the other process. The process that initiates
-the connection is the client, and the process that receives the
-connection is the server. For example, when a *condor_startd* daemon
-authenticates with a *condor_collector* daemon to provide a machine
-ClassAd, the *condor_startd* daemon initiates the connection and acts
-as the client, and the *condor_collector* daemon acts as the server.
+SSL authentication may be mutual or server-only.
+That is, the server always needs a certificate that can be verified by
+the client, but a certificate for the client may be optional.
+Whether a client certificate is required is controlled by
+configuration variable ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``
+:index:`AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE`, a boolean value
+that defaults to ``False``.
+If the value is ``False``, then the client may present a certificate
+to be verified by the server.
+if the client doesn't have a certificate, then its identity is set to
+``unauthenticated`` by the server.
+If the value is ``True`` and the client doesn't have a certificate, then
+the SSL authentication fails (other authentication methods may then be
+tried).
 
 The names and locations of keys and certificates for clients, servers,
 and the files used to specify trusted certificate authorities (CAs) are
@@ -1206,7 +1216,7 @@ communication between HTCondor daemons.
     SEC_NEGOTIATOR_AUTHENTICATION = REQUIRED
     SEC_NEGOTIATOR_INTEGRITY = REQUIRED
     SEC_NEGOTIATOR_AUTHENTICATION_METHODS = PASSWORD
-    SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI
+    SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS
     ALLOW_DAEMON = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu, \
                    condor@$(UID_DOMAIN)/$(IP_ADDRESS)
     ALLOW_NEGOTIATOR = condor_pool@$(UID_DOMAIN)/negotiator.machine.name
@@ -1233,7 +1243,7 @@ themselves to the *condor_collector* daemon.
     SEC_ADVERTISE_STARTD_AUTHENTICATION = REQUIRED
     SEC_ADVERTISE_STARTD_INTEGRITY = REQUIRED
     SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS = PASSWORD
-    SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS, GSI
+    SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD, KERBEROS
     ALLOW_ADVERTISE_STARTD = condor_pool@$(UID_DOMAIN)/*.cs.wisc.edu
 
 Token Authentication
@@ -1249,18 +1259,24 @@ authentication to flock to a remote pool.
 
 Token-based authentication is a newer extension to ``PASSWORD`` authentication
 that allows the pool administrator to generate new, low-privilege tokens
-from a pool password.  It also allows the administrator to install multiple
-passwords.  As tokens are derived from a specific password, if an administrator
-removes the password from the directory specified in ``SEC_PASSWORD_DIRECTORY``,
+from a pool signing key.  It also allows the administrator to install what are
+effectively multiple passwords. As tokens are derived from a specific signing key,
+if an administrator removes the signing key from the directory specified in ``SEC_PASSWORD_DIRECTORY``,
 then all derived tokens are immediately invalid.  Most simple installs will
-utilize a single password, kept in ``SEC_PASSWORD_FILE`` (identical to ``PASSWORD``
-authentication).
+utilize a single signing key, kept in ``SEC_TOKEN_POOL_SIGNING_KEY``.  On Linux the same file
+can be both the pool signing key and the pool password if ``SEC_PASSWORD_FILE``
+and ``SEC_TOKEN_POOL_SIGNING_KEY`` to refer to the same file.  However this is not preferred
+because in order to properly interoperate with older versions of HTCondor the pool password will
+be read as a text file and truncated at the first NULL character.  This differs from
+the pool signing key which is read as binary in HTCondor 9.0.  Some 8.9 releases
+used the pool password as the pool signing key for tokens, those versions will not
+interoperate with 9.0 if the pool signing key file contains NULL characters.
 
-The passwords in the ``SEC_PASSWORD_DIRECTORY`` or ``SEC_PASSWORD_FILE`` can still
-be created utilizing ``condor_store_cred`` (as specified in
+The pool password in the ``SEC_PASSWORD_FILE`` can be created utilizing ``condor_store_cred``
+(as specified in
 :ref:`admin-manual/security:password authentication`).  Alternately, the *condor_collector*
-process will automatically generate a password in ``SEC_PASSWORD_FILE`` on startup
-if that file is empty.
+process will automatically generate a pool signing key in ``SEC_TOKEN_POOL_SIGNING_KEY`` on startup
+if that file does not exist
 
 To generate a token, the administrator may utilize the ``condor_token_create``
 command-line utility:
@@ -1274,14 +1290,15 @@ specified by ``SEC_TOKEN_DIRECTORY`` (defaults to ``~/.condor/tokens.d``).  Subs
 authentications to the pool will utilize this token and cause Frida to be authenticated
 as the identity ``frida@pool.example.com``.  For daemons, tokens are stored in
 ``SEC_TOKEN_SYSTEM_DIRECTORY``; on Unix platforms, this defaults to
-``/etc/condor/tokens.d``.
+``/etc/condor/tokens.d`` which should be a directory with permissions that only allow
+read and write access by user root.
 
-*Note* that each password is named (the pool password defaults to the special name
+*Note* that each pool signing key is named (the pool signing key defaults to the special name
 ``POOL``) by its corresponding filename in ``SEC_PASSWORD_DIRECTORY``; HTCondor
 will assume that, for all daemons in the same *trust domain* (defaulting to the
-HTCondor pool) will have the same passwords for the same name.  That is, the
-password contained in ``key1`` in host ``pool.example.com`` is identical to the
-password contained in ``key1`` in host ``submit.example.com``.
+HTCondor pool) will have the same signing key for the same name.  That is, the
+signing key contained in ``key1`` in host ``pool.example.com`` is identical to the
+signing key contained in ``key1`` in host ``submit.example.com``.
 
 Unlike pool passwords, tokens can have a limited lifetime and can limit the
 authorizations allowed to the client.  For example,
@@ -1360,10 +1377,11 @@ to setup ``IDTOKENS`` authentication, enable it in the list of authentication me
     SEC_DEFAULT_AUTHENTICATION_METHODS=$(SEC_DEFAULT_AUTHENTICATION_METHODS), IDTOKENS
     SEC_CLIENT_AUTHENTICATION_METHODS=$(SEC_CLIENT_AUTHENTICATION_METHODS), IDTOKENS
 
-**Blacklisting Token**: If a token is lost, stolen, or accidentally exposed,
-then the system administrator may use the token blacklisting mechanism in order
-to prevent unauthorized use.  Blacklisting can be accomplished by setting the
-``SEC_TOKEN_BLACKLIST_EXPR``; when set, the value of this parameter will be
+**Revoking Token**: If a token is lost, stolen, or accidentally exposed,
+then the system administrator may use the token revocation mechanism in order
+to prevent unauthorized use.  Revocation can be accomplished by setting the
+``SEC_TOKEN_REVOCATION_EXPR`` configuration parameter;
+when set, the value of this parameter will be
 evaluated as a ClassAd expression against the token's contents.
 
 For example, consider the following token:
@@ -1386,28 +1404,28 @@ When printed using ``condor_token_list``, the human-readable form is as follows
         "sub": "alice@pool.example.com"
     }
 
-If we would like to blacklist this token, we could utilize any of the following
-values for ``SEC_TOKEN_BLACKLIST_EXPR``, depending on the desired breadth of
-the blacklist:
+If we would like to revoke this token, we could utilize any of the following
+values for ``SEC_TOKEN_REVOCATION_EXPR``, depending on the desired breadth of
+the revocation:
 
 .. code-block:: condor-config
 
-    # Blacklists all tokens from the user Alice:
-    SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com"
+    # Revokes all tokens from the user Alice:
+    SEC_TOKEN_REVOCATION_EXPR = sub =?= "alice@pool.example.com"
 
-    # Blacklists all tokens from Alice issued before or after this one:
-    SEC_TOKEN_BLACKLIST_EXPR = sub =?= "alice@pool.example.com" && \
+    # Revokes all tokens from Alice issued before or after this one:
+    SEC_TOKEN_REVOCATION_EXPR = sub =?= "alice@pool.example.com" && \
         iat <= 1588474719
 
-    # Blacklists *only* this token:
-    SEC_TOKEN_BLACKLIST_EXPR = jti =?= "c760c2af193a1fd4e40bc9c53c96ee7c"
+    # Revokes *only* this token:
+    SEC_TOKEN_REVOCATION_EXPR = jti =?= "c760c2af193a1fd4e40bc9c53c96ee7c"
 
-The blacklist only works on the daemon where ``SEC_TOKEN_BLACKLIST_EXPR`` is
-set; to blacklist a token across the entire pool, set
-``SEC_TOKEN_BLACKLIST_EXPR`` on every host.
+The revocation only works on the daemon where ``SEC_TOKEN_REVOCATION_EXPR`` is
+set; to revoke a token across the entire pool, set
+``SEC_TOKEN_REVOCATION_EXPR`` on every host.
 
 In order to invalidate all tokens issued by a given master password in
-``SEC_PASSWORD_DIRECTORY``, simply remove the password file from the directory.
+``SEC_PASSWORD_DIRECTORY``, simply remove the file from the directory.
 
 File System Authentication
 ''''''''''''''''''''''''''
@@ -1497,7 +1515,6 @@ repeated here:
 
 .. code-block:: text
 
-        GSI
         SSL
         KERBEROS
         PASSWORD
@@ -1550,20 +1567,12 @@ the following mappings, with some additional logic noted below:
 
     FS (.*) \1
     FS_REMOTE (.*) \1
-    GSI (.*) GSS_ASSIST_GRIDMAP
     SSL (.*) ssl@unmapped
     KERBEROS ([^/]*)/?[^@]*@(.*) \1@\2
     NTSSPI (.*) \1
     MUNGE (.*) \1
     CLAIMTOBE (.*) \1
     PASSWORD (.*) \1
-
-For GSI (or SSL), the special name ``GSS_ASSIST_GRIDMAP`` instructs
-HTCondor to use the GSI grid map file (configured with ``GRIDMAP``
-:index:`GRIDMAP` as shown in
-:ref:`admin-manual/security:authentication` to do the mapping. If no mapping
-can be found for GSI (with or without the use of
-``GSS_ASSIST_GRIDMAP``), the user is mapped to gsi@unmapped.
 
 For Kerberos, if ``KERBEROS_MAP_FILE`` :index:`KERBEROS_MAP_FILE`
 is specified, the domain portion of the name is obtained by mapping the
@@ -1575,7 +1584,7 @@ See the :ref:`admin-manual/security:authentication` section for details.
 If authentication did not happen or failed and was not required, then
 the user is given the name unauthenticated@unmapped.
 
-With the integration of VOMS for GSI authentication, the interpretation
+With the integration of VOMS for authentication, the interpretation
 of the regular expression representing the authenticated name may
 change. First, the full serialized DN and FQAN are used in attempting a
 match. If no match is found using the full DN and FQAN, then the DN is
@@ -1607,7 +1616,7 @@ For the daemon, there are seven macros to enable or disable encryption:
 :index:`SEC_WRITE_ENCRYPTION`
 :index:`SEC_ADMINISTRATOR_ENCRYPTION`
 :index:`SEC_DAEMON_ENCRYPTION`
-:index:`SEC_CONFIG_ENCRYPTION` :index:`SEC_OWNER_ENCRYPTION`
+:index:`SEC_CONFIG_ENCRYPTION`
 :index:`SEC_NEGOTIATOR_ENCRYPTION`
 :index:`SEC_ADVERTISE_MASTER_ENCRYPTION`
 :index:`SEC_ADVERTISE_STARTD_ENCRYPTION`
@@ -1620,7 +1629,6 @@ For the daemon, there are seven macros to enable or disable encryption:
     SEC_WRITE_ENCRYPTION
     SEC_ADMINISTRATOR_ENCRYPTION
     SEC_CONFIG_ENCRYPTION
-    SEC_OWNER_ENCRYPTION
     SEC_DAEMON_ENCRYPTION
     SEC_NEGOTIATOR_ENCRYPTION
     SEC_ADVERTISE_MASTER_ENCRYPTION
@@ -1664,7 +1672,6 @@ macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
 :index:`SEC_ADMINISTRATOR_CRYPTO_METHODS`
 :index:`SEC_DAEMON_CRYPTO_METHODS`
 :index:`SEC_CONFIG_CRYPTO_METHODS`
-:index:`SEC_OWNER_CRYPTO_METHODS`
 :index:`SEC_NEGOTIATOR_CRYPTO_METHODS`
 :index:`SEC_ADVERTISE_MASTER_CRYPTO_METHODS`
 :index:`SEC_ADVERTISE_STARTD_CRYPTO_METHODS`
@@ -1677,7 +1684,6 @@ macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
     SEC_WRITE_CRYPTO_METHODS
     SEC_ADMINISTRATOR_CRYPTO_METHODS
     SEC_CONFIG_CRYPTO_METHODS
-    SEC_OWNER_CRYPTO_METHODS
     SEC_DAEMON_CRYPTO_METHODS
     SEC_NEGOTIATOR_CRYPTO_METHODS
     SEC_ADVERTISE_MASTER_CRYPTO_METHODS
@@ -1691,8 +1697,14 @@ list indicates the highest preference. Possible values are
 
 .. code-block:: text
 
-    3DES
+    AES
     BLOWFISH
+    3DES
+
+As of version 9.0.2 HTCondor can be configured to be FIPS compliant.  This
+disallows BLOWFISH as an encryption method.  Please see the
+:ref:`admin-manual/security:FIPS` section below.
+
 
 Integrity
 ---------
@@ -1704,11 +1716,6 @@ parties have not been tampered with. Any change, such as addition,
 modification, or deletion can be detected. Through configuration macros,
 both the client and the daemon can specify whether an integrity check is
 required of further communication.
-
-Note at this time, integrity checks are not performed upon job data
-files that are transferred by HTCondor via the File Transfer Mechanism
-described in :ref:`users-manual/file-transfer:submitting jobs without a
-shared file system: htcondor's file transfer mechanism`.
 
 The client uses one of two macros to enable or disable an integrity
 check: :index:`SEC_DEFAULT_INTEGRITY`
@@ -1724,7 +1731,6 @@ check: :index:`SEC_DEFAULT_INTEGRITY`
 :index:`SEC_READ_INTEGRITY` :index:`SEC_WRITE_INTEGRITY`
 :index:`SEC_ADMINISTRATOR_INTEGRITY`
 :index:`SEC_DAEMON_INTEGRITY` :index:`SEC_CONFIG_INTEGRITY`
-:index:`SEC_OWNER_INTEGRITY`
 :index:`SEC_NEGOTIATOR_INTEGRITY`
 :index:`SEC_ADVERTISE_MASTER_INTEGRITY`
 :index:`SEC_ADVERTISE_STARTD_INTEGRITY`
@@ -1737,7 +1743,6 @@ check: :index:`SEC_DEFAULT_INTEGRITY`
     SEC_WRITE_INTEGRITY
     SEC_ADMINISTRATOR_INTEGRITY
     SEC_CONFIG_INTEGRITY
-    SEC_OWNER_INTEGRITY
     SEC_DAEMON_INTEGRITY
     SEC_NEGOTIATOR_INTEGRITY
     SEC_ADVERTISE_MASTER_INTEGRITY
@@ -1763,11 +1768,18 @@ then this default defines the daemon's needs for integrity checks over
 all access levels. Where a specific macro is present, its value takes
 precedence over any default given.
 
-A signed MD5 check sum is currently the only available method for
+If ``AES`` encryption is used for a connection, then a secure checksum is
+included within the AES data regardless of any INTEGRITY settings.
+
+If another type of encryption was used (i.e. ``BLOWFISH`` or ``3DES``),
+then a signed MD5 check sum is the only available method for
 integrity checking. Its use is implied whenever integrity checks occur.
-If more methods are implemented, then there will be further macros to
-allow both the client and the daemon to specify which methods are
-acceptable.
+
+As of version 9.0.2 HTCondor can be configured to be FIPS compliant.  This
+disallows MD5 as an integrity method.  We suggest you use AES encryption as the
+AES-GCM mode we have implemented also provides integrity checks.  Please see
+the :ref:`admin-manual/security:FIPS` section below.
+
 
 Authorization
 -------------
@@ -1801,10 +1813,10 @@ level may have its own list of authorized users. A complete list of the
 authorization macros: :index:`ALLOW_READ`
 :index:`ALLOW_WRITE` :index:`ALLOW_ADMINISTRATOR`
 :index:`ALLOW_CONFIG` :index:`ALLOW_DAEMON`
-:index:`ALLOW_OWNER` :index:`ALLOW_NEGOTIATOR`
+:index:`ALLOW_NEGOTIATOR`
 :index:`DENY_READ` :index:`DENY_WRITE`
 :index:`DENY_ADMINISTRATOR` :index:`DENY_CONFIG`
-:index:`DENY_DAEMON` :index:`DENY_OWNER`
+:index:`DENY_DAEMON`
 :index:`DENY_NEGOTIATOR`
 
 .. code-block:: text
@@ -1813,14 +1825,12 @@ authorization macros: :index:`ALLOW_READ`
     ALLOW_WRITE
     ALLOW_ADMINISTRATOR
     ALLOW_CONFIG
-    ALLOW_OWNER
     ALLOW_NEGOTIATOR
     ALLOW_DAEMON
     DENY_READ
     DENY_WRITE
     DENY_ADMINISTRATOR
     DENY_CONFIG
-    DENY_OWNER
     DENY_NEGOTIATOR
     DENY_DAEMON
 
@@ -2049,17 +2059,6 @@ running as condor to carry out requests that require the ``DAEMON``
 access level, where the commands originate from any machine in the
 cs.wisc.edu domain.
 
-In the local configuration file for each host, the host's owner should
-be authorized as the owner of the machine. An example of the entry in
-the local configuration file:
-
-.. code-block:: condor-config
-
-    ALLOW_OWNER = username@cs.wisc.edu/hostname.cs.wisc.edu
-
-In this example the owner has a login of username, and the machine's
-name is represented by hostname.
-
 Debugging Security Configuration
 ''''''''''''''''''''''''''''''''
 
@@ -2083,6 +2082,32 @@ Typos in DNS mappings are an occasional source of unexpected behavior.
 If the authorization policy is not behaving as expected, carefully
 compare the names in the policy with the host names HTCondor mentions in
 the explanations of why requests are granted or denied.
+
+
+FIPS
+----
+As of version 9.0.2, HTCondor is now FIPS compliant when configured to be so.
+In practice this means that MD5 digests and Blowfish encryption are no longer
+used anywhere.  To make this easy to configure, we have added a configuration
+macro, and all you need to add to your config is the following:
+
+      .. code-block:: condor-config
+ 
+            use security:FIPS
+ 
+This will configure HTCondor to use AES encryption with AES-GCM message digests
+for all TCP network connections.  If you are using UDP for any reason, HTCondor
+will then fall back to using 3DES for UDP packet encryption because HTCondor
+does not currently support AES for UDP.  The main reasons anyone would be using
+UDP would be if you had configured a large pool to be supported by Collector
+trees using UDP, or if you are using Windows (because HTCondor sends signals to
+daemons on Windows using UDP).
+ 
+[optional inclusion depending on HAD test success/failure] Currently, the use
+of the High-Availability Daemon (HAD) is not supported when running on a
+machine that is FIPS compliant.
+
+
 
 Security Sessions
 -----------------
@@ -2112,7 +2137,7 @@ preventing the need to continuously re-establish secure connections.
 Each entity of a connection will have access to a session key that
 proves the identity of the other entity on the opposing side of the
 connection. This session key is exchanged securely using a strong
-authentication method, such as Kerberos or GSI. Other authentication
+authentication method, such as Kerberos. Other authentication
 methods, such as ``NTSSPI``, ``FS_REMOTE``, ``CLAIMTOBE``, and
 ``ANONYMOUS``, do not support secure key exchange. An entity listening
 on the wire may be able to impersonate the client or server in a session
@@ -2252,14 +2277,6 @@ HTCondor can be registered with:
         machine. It is recommended that ``ADMINISTRATOR`` access is granted
         with due diligence.
 
-``OWNER``
-    This level of access is required for commands that the owner of a
-    machine (any local user) should be able to use, in addition to the
-    HTCondor administrators. For example, the *condor_vacate* command
-    causes the *condor_startd* daemon to vacate any running HTCondor
-    job. It requires ``OWNER`` permission, so that any user logged into
-    a local machine can issue a *condor_vacate* command.
-
 ``NEGOTIATOR``
     This access level is used specifically to verify that commands are
     sent by the *condor_negotiator* daemon. The *condor_negotiator*
@@ -2318,15 +2335,10 @@ HTCondor can be registered with:
     contacted.
 
 ``ADMINISTRATOR`` and ``NEGOTIATOR`` access default to the central
-manager machine. ``OWNER`` access defaults to the local machine, as well
-as any machines given with ``ADMINISTRATOR`` access. ``CONFIG`` access
+manager machine. ``CONFIG`` access
 is not granted to any machine as its default. These defaults are
 sufficient for most pools, and should not be changed without a
-compelling reason. If machines other than the default are to have to
-have ``OWNER`` access, they probably should also have ``ADMINISTRATOR``
-access. By granting machines ``ADMINISTRATOR`` access, they will
-automatically have ``OWNER`` access, given how ``OWNER`` access is set
-within the configuration.
+compelling reason.
 
 Examples of Security Configuration
 ----------------------------------
@@ -2338,7 +2350,6 @@ Here is a sample security configuration:
 .. code-block:: condor-config
 
     ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
-    ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
     ALLOW_READ = *
     ALLOW_WRITE = *
     ALLOW_NEGOTIATOR = $(COLLECTOR_HOST)
@@ -2405,7 +2416,6 @@ this.
    .. code-block:: condor-config
 
        ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 -  Only allow machines at NCSA to join or view the pool. The central
    manager is the only machine with ``ADMINISTRATOR`` access.
@@ -2415,7 +2425,6 @@ this.
        ALLOW_READ = *.ncsa.uiuc.edu
        ALLOW_WRITE = *.ncsa.uiuc.edu
        ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 -  Only allow machines at NCSA and the U of I Math department join the
    pool, except do not allow lab machines to do so. Also, do not allow
@@ -2428,7 +2437,6 @@ this.
        ALLOW_WRITE = *.ncsa.uiuc.edu, *.math.uiuc.edu
        DENY_WRITE = lab-*.edu, *.lab.uiuc.edu, 177.55.*
        ALLOW_ADMINISTRATOR = bigcheese.ncsa.uiuc.edu
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 -  Only allow machines at NCSA and UW-Madison's CS department to view
    the pool. Only NCSA machines and the machine raven.cs.wisc.edu can
@@ -2445,7 +2453,6 @@ this.
        ALLOW_WRITE = *.ncsa.uiuc.edu, raven.cs.wisc.edu
        ALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \
                                  biggercheese.uiuc.edu
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 -  Allow anyone except the military to view the status of the pool, but
    only let machines at NCSA view the job queues. Only NCSA machines can
@@ -2461,7 +2468,6 @@ this.
        ALLOW_ADMINISTRATOR = $(CONDOR_HOST), bigcheese.ncsa.uiuc.edu, \
                                  biggercheese.uiuc.edu
        ALLOW_ADMINISTRATOR_NEGOTIATOR = biggercheese.uiuc.edu
-       ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 
 Changing the Security Configuration
 -----------------------------------
@@ -2513,7 +2519,6 @@ use the power to change configuration attributes to compromise the
 security of your HTCondor pool.
 :index:`SETTABLE_ATTRS_<PERMISSION-LEVEL>`
 :index:`SETTABLE_ATTRS_CONFIG` :index:`SETTABLE_ATTRS_WRITE`
-:index:`SETTABLE_ATTRS_OWNER`
 :index:`SETTABLE_ATTRS_ADMINISTRATOR`
 
 The control lists are defined by configuration settings that contain
@@ -2526,8 +2531,8 @@ following form:
 
 The two parts of this name that can vary are the <PERMISSION-LEVEL> and
 the <SUBSYS>. The <PERMISSION-LEVEL> can be any of the security access
-levels described earlier in this section. Examples include ``WRITE``,
-``OWNER``, and ``CONFIG``.
+levels described earlier in this section. Examples include ``WRITE``
+and ``CONFIG``.
 
 The <SUBSYS> is an optional portion of the name. It can be used to
 define separate rules for which configuration attributes can be set for
@@ -2561,21 +2566,6 @@ Some examples of valid definitions of control lists with explanations:
    _DEBUG (for example, ``STARTD_DEBUG``) and any attribute that
    matched MAX_*_LOG (for example, ``MAX_SCHEDD_LOG``) to any host
    with ``ADMINISTRATOR`` access.
-
--  .. code-block:: condor-config
-
-       STARTD.SETTABLE_ATTRS_OWNER = HasDataSet
-
-   Allows any request to modify the ``HasDataSet`` attribute that came
-   from a host with ``OWNER`` access. By default, ``OWNER`` covers any
-   request originating from the local host, plus any machines listed in
-   the ``ADMINISTRATOR`` level. Therefore, any HTCondor job would
-   qualify for OWNER access to the machine where it is running. So, this
-   setting would allow any process running on a given host, including an
-   HTCondor job, to modify the ``HasDataSet`` variable for that host.
-   ``HasDataSet`` is not used by HTCondor, it is an invented attribute
-   included in the ``STARTD_ATTRS`` :index:`STARTD_ATTRS` setting
-   in order for this example to make sense.
 
 Using HTCondor w/ Firewalls, Private Networks, and NATs
 -------------------------------------------------------
@@ -2646,6 +2636,14 @@ submitting user's UID anyway (as defined in the submitting machine's
 password file). If ``SOFT_UID_DOMAIN`` is False, and ``UID_DOMAIN``
 matches, and the user is not in the execute machine's password file,
 then the job execution attempt will be aborted.
+
+Jobs that run as nobody are low priviledge, but can still interfere with each other.
+To avoid this, you can configure ``NOBODY_SLOT_USER`` to the value
+``$(STARTER_SLOT_NAME)`` or configure ``SLOT<N>_USER`` for each slot
+to define a different username to use for each slot instead of the user nobody.
+If ``NOBODY_SLOT_USER`` is configured to be ``$(STARTER_SLOT_NAME)``
+usernames such as ``slot1``, ``slot2`` and ``slot1_2`` will be used instead of
+nobody and each slot will use a different name than every other slot.
 
 Running HTCondor as Non-Root
 ''''''''''''''''''''''''''''
@@ -2863,8 +2861,9 @@ Under Unix, HTCondor runs jobs as one of
       :index:`STARTER_ALLOW_RUNAS_OWNER` must be ``True`` on the
       machine that will run the job. Its default value is ``True`` on
       Unix platforms and ``False`` on Windows platforms.
-   #. The job's ClassAd must have attribute ``RunAsOwner`` set to
-      ``True``. This can be set up for all users by adding an attribute
+   #. If the job's ClassAd has the attribute ``RunAsOwner``, it must be
+      set to ``True`; if unset, the job must be run on a Unix system.
+      This attribute can be set up for all users by adding an attribute
       to configuration variable ``SUBMIT_ATTRS``
       :index:`SUBMIT_ATTRS`. If this were the only attribute to be
       added to all job ClassAds, it would be set up with

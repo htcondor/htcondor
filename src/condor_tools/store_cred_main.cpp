@@ -56,6 +56,7 @@ struct StoreCredOptions {
 	char *daemonname;
 	const char *pw; // password if supplied on the command line
 	const char *service; // service name from the -s argument
+	const char *handle; // handle name from the -H argument
 	const char *scopes;  // scopes from the -S argument
 	const char *audience; // audience from the -A argument
 	const char *credential_file;
@@ -73,7 +74,7 @@ bool goAheadAnyways();
 
 int main(int argc, const char *argv[]) {
 	
-	MyString my_full_name;
+	std::string my_full_name;
 	const char *full_name;
 	struct StoreCredOptions options;
 	int result = FAILURE_ABORTED;
@@ -141,7 +142,7 @@ int main(int argc, const char *argv[]) {
 			// default to current user and domain
 			auto_free_ptr my_name(my_username());
 			auto_free_ptr my_domain(my_domainname());
-			my_full_name.formatstr("%s@%s", my_name.ptr(), my_domain.ptr());
+			formatstr(my_full_name, "%s@%s", my_name.ptr(), my_domain.ptr());
 		}
 	} else if (strcmp(options.username, POOL_PASSWORD_USERNAME) == 0) {
 #if !defined(WIN32)
@@ -163,7 +164,7 @@ int main(int argc, const char *argv[]) {
 				goto cleanup;
 			}
 		}
-		my_full_name.formatstr(POOL_PASSWORD_USERNAME "@%s", domain);
+		formatstr(my_full_name, POOL_PASSWORD_USERNAME "@%s", domain);
 		free(domain);
 	} else {
 			// username was specified on the command line
@@ -171,7 +172,7 @@ int main(int argc, const char *argv[]) {
 	}
 	// print the account, if we haven't looked up the account because we want the credd
 	// to figure it out print the name of the current user just as a double check
-	full_name = my_full_name.Value();
+	full_name = my_full_name.c_str();
 	if (my_full_name.empty()) {
 		auto_free_ptr user(my_username());
 		printf("Account: <current> (%s)\n", user.ptr());
@@ -183,6 +184,9 @@ int main(int argc, const char *argv[]) {
 	// setup cred_info classad
 	if (options.service) {
 		cred_info.Assign("service", options.service);
+	}
+	if (options.handle) {
+		cred_info.Assign("handle", options.handle);
 	}
 	if (options.scopes) {
 		cred_info.Assign("scopes", options.scopes);
@@ -233,7 +237,7 @@ int main(int argc, const char *argv[]) {
 					// disable CR+LF munging of the stdin stream, we want to treat it as binary data
 					_setmode(_fileno(stdin), _O_BINARY);
 					#endif
-					credlen = _condor_full_read(fileno(stdin), cred.ptr(), max_len);
+					credlen = full_read(fileno(stdin), cred.ptr(), max_len);
 					if (((ssize_t)credlen) < 0) {
 						fprintf(stderr, "ERROR: could read from stdin: %s\n", strerror(errno));
 						goto cleanup;
@@ -417,6 +421,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
 	opts->pool_password_file = NULL;;
 	opts->pw = NULL;
 	opts->service = NULL;
+	opts->handle = NULL;
 	opts->scopes = NULL;
 	opts->audience = NULL;
 	opts->help = false;
@@ -635,6 +640,23 @@ parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
 					}
 					break;
 
+				case 'H':
+					if (ix+1 < argc) {
+						if (opts->handle) {
+							fprintf(stderr, "ERROR: OAuth handle already specified\n");
+							usage();
+							err = true;
+						}
+						else {
+							opts->handle = argv[ix + 1];
+							++ix;
+			}
+					} else {
+						err = true;
+						optionNeedsArg(arg, "handle");
+					}
+					break;
+
 				case 'S':
 					if (ix+1 < argc) {
 						if (opts->scopes) {
@@ -765,6 +787,7 @@ usage()
 	                 "                         If <filename> is -, read from stdin\n"
 	);
 	fprintf( stderr, "    -s <service>      Add/Remove/Query for the given OAuth2 service\n" );
+	fprintf( stderr, "    -H <handle>       Specify a handle for the given OAuth2 service\n" );
 	fprintf( stderr, "    -S <scopes>       Add the given OAuth2 comma-separated scopes, or make sure\n" );
 	fprintf( stderr, "                         a Query matches\n" );
 	fprintf( stderr, "    -A <audience>     Add the given OAuth2 audience, or make sure a Query matches\n" );

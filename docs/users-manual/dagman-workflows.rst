@@ -206,11 +206,11 @@ The syntax used for each *PRE* or *POST* command is
 
 .. code-block:: condor-dagman
 
-    SCRIPT [DEFER status time] PRE [JobName | ALL_NODES] ExecutableName [arguments]
+    SCRIPT [DEFER status time] PRE <JobName | ALL_NODES> ExecutableName [arguments]
 
 .. code-block:: condor-dagman
 
-    SCRIPT [DEFER status time] POST [JobName | ALL_NODES] ExecutableName [arguments]
+    SCRIPT [DEFER status time] POST <JobName | ALL_NODES> ExecutableName [arguments]
 
 The *SCRIPT* command can use the *PRE* or *POST* keyword, which specifies
 the relative timing of when the script is to be run. The *JobName*
@@ -244,7 +244,7 @@ The syntax used for a *HOLD* command is
 
 .. code-block:: condor-dagman
 
-    SCRIPT [DEFER status time] HOLD [JobName | ALL_NODES] ExecutableName [arguments]
+    SCRIPT [DEFER status time] HOLD <JobName | ALL_NODES> ExecutableName [arguments]
 
 Unlike *PRE* and *POST* scripts, *HOLD* scripts are not considered part of the
 DAG workflow and are run on a best-effort basis. If one does not complete
@@ -501,7 +501,7 @@ within the DAG input file uses the syntax:
 
 .. code-block:: condor-dagman
 
-    PRE_SKIP [JobName | ALL_NODES] non-zero-exit-code
+    PRE_SKIP <JobName | ALL_NODES> non-zero-exit-code
 
 The PRE script of a node identified by *JobName* that exits with the
 value given by *non-zero-exit-code* skips the remainder of the node
@@ -640,7 +640,7 @@ A *SUBMIT-DESCRIPTION* can be defined using the following syntax:
 
 .. code-block:: condor-dagman
 
-    SUBMIT-DESCRIPTION [DescriptionName] {
+    SUBMIT-DESCRIPTION DescriptionName {
         # submit attributes go here
     }
 
@@ -649,7 +649,7 @@ not used by any of the jobs. It can then be linked to a job as follows:
 
 .. code-block:: condor-dagman
 
-    JOB [JobName] [DescriptionName]
+    JOB JobName DescriptionName
 
 For example, the previous diamond.dag example could be written as follows:
 
@@ -1062,7 +1062,7 @@ The syntax for retry is
 
 .. code-block:: condor-dagman
 
-    RETRY [JobName | ALL_NODES] NumberOfRetries [UNLESS-EXIT value]
+    RETRY <JobName | ALL_NODES> NumberOfRetries [UNLESS-EXIT value]
 
 where *JobName* identifies the node. *NumberOfRetries* is an integer
 number of times to retry the node after failure. The implied number of
@@ -1113,7 +1113,7 @@ is
 
 .. code-block:: condor-dagman
 
-    ABORT-DAG-ON [JobName | ALL_NODES] AbortExitValue [RETURN DAGReturnValue]
+    ABORT-DAG-ON <JobName | ALL_NODES> AbortExitValue [RETURN DAGReturnValue]
 
 If the return value of the node specified by *JobName* matches
 *AbortExitValue*, the DAG is immediately aborted. A DAG abort differs
@@ -1176,7 +1176,7 @@ a macro. Macros are defined on a per-node basis, using the syntax
 
 .. code-block:: condor-dagman
 
-    VARS [JobName | ALL_NODES] macroname="string" [macroname2="string2" ... ]
+    VARS <JobName | ALL_NODES> macroname="string" [macroname2="string2" ... ]
 
 The macro may be used within the submit description file of the relevant
 node. A *macroname* may contain alphanumeric characters (a-z, A-Z, and
@@ -1479,7 +1479,7 @@ HTCondor job(s) associated with the node). The syntax for *PRIORITY* is
 
 .. code-block:: condor-dagman
 
-    PRIORITY [JobName | ALL_NODES] PriorityValue
+    PRIORITY <JobName | ALL_NODES> PriorityValue
 
 The priority value is an integer (which can be negative). A larger
 numerical priority is better. The default priority is 0.
@@ -1611,7 +1611,7 @@ for *CATEGORY* is
 
 .. code-block:: condor-dagman
 
-    CATEGORY [JobName | ALL_NODES] CategoryName
+    CATEGORY <JobName | ALL_NODES> CategoryName
 
 Category names cannot contain white space.
 
@@ -2842,6 +2842,36 @@ A PROVISIONER runs for a set amount of time defined in its job. It does not
 get terminated automatically at the end of a DAG workflow. The expectation
 is that it needs to explicitly deprovision any resources, such as expensive
 cloud computing instances that should not be allowed to run indefinitely. 
+
+SERVICE node
+''''''''''''
+
+:index:`SERVICE command<single: SERVICE command; DAG input file>`
+:index:`SERVICE node<single: SERVICE node; DAGMan>`
+
+A **SERVICE** node is a special type of node that is always run at the
+beginning of a DAG. These are typically used to run tasks that need to run
+alongside a DAGMan workflow (ie. progress monitoring) without any direct
+dependencies to the other nodes in the workflow.
+
+The syntax used for the *SERVICE* command is
+
+.. code-block:: condor-dagman
+
+    SERVICE ServiceName SubmitDescriptionFileName
+
+When a SERVICE is defined in a DAG, it gets started at the beginning of the
+workflow. There is no guarantee that it will start running before any of the
+other nodes, although running it directly from the access point using
+``universe = local`` or ``universe = scheduler`` will almost always make this 
+go first.
+
+A SERVICE node runs on a **best-effort basis**. If this node fails to submit
+correctly, this will not register as an error and the DAG workflow 
+will continue normally.
+
+If a DAGMan workflow finishes while there are SERVICE nodes still running,
+it will shut these down and then exit the workflow successfully.
 
 FINAL node
 ''''''''''

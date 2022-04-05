@@ -92,10 +92,10 @@ ResMgr::ResMgr() :
 				 primary->interfaceName() );
 	}
 	m_hibernation_manager->initialize( );
-	MyString	states;
+	std::string	states;
 	m_hibernation_manager->getSupportedStates(states);
 	dprintf( D_FULLDEBUG,
-			 "Detected hibernation states: %s\n", states.Value() );
+			 "Detected hibernation states: %s\n", states.c_str() );
 
 	m_hibernating = FALSE;
 #endif
@@ -252,7 +252,7 @@ ResMgr::init_config_classad( void )
 	if( !configInsert( config_classad, ATTR_UNHIBERNATE, false ) ) {
 		MyString default_expr;
 		default_expr.formatstr("MY.%s =!= UNDEFINED",ATTR_MACHINE_LAST_MATCH_TIME);
-		config_classad->AssignExpr( ATTR_UNHIBERNATE, default_expr.Value() );
+		config_classad->AssignExpr( ATTR_UNHIBERNATE, default_expr.c_str() );
 	}
 #endif /* HAVE_HIBERNATION */
 
@@ -446,6 +446,8 @@ ResMgr::init_resources( void )
 	int i, num_res;
 	CpuAttributes** new_cpu_attrs;
 
+	m_execution_xfm.config("JOB_EXECUTION");
+
     stats.Init();
 
     m_attr->init_machine_resources();
@@ -489,7 +491,7 @@ ResMgr::init_resources( void )
 		// Now, we can finally allocate our resources array, and
 		// populate it.
 	for( i=0; i<num_res; i++ ) {
-		addResource( new Resource( new_cpu_attrs[i], i+1, num_res>1 ) );
+		addResource( new Resource( new_cpu_attrs[i], i+1 ) );
 	}
 
 		// We can now seed our IdDispenser with the right slot id.
@@ -785,7 +787,7 @@ ResMgr::adlist_replace( const char *name, ClassAd *newAd, bool report_diff, cons
 		StringList ignore_list;
 		MyString ignore = prefix;
 		ignore += "LastUpdate";
-		ignore_list.append( ignore.Value() );
+		ignore_list.append( ignore.c_str() );
 		return extra_ads.Replace( name, newAd, true, &ignore_list );
 	}
 	else {
@@ -1234,7 +1236,7 @@ ResMgr::report_updates( void ) const
 		}
 		dprintf( D_FULLDEBUG,
 				 "Sent %d update(s) to the collector (%s)\n",
-				 num_updates, list.Value());
+				 num_updates, list.c_str());
 	}
 }
 
@@ -1739,11 +1741,11 @@ ResMgr::addResource( Resource *rip )
 		EXCEPT("Failed to allocate memory for new resource");
 	}
 
-		// Copy over the old Resource pointers.  If nresources is 0
-		// (b/c we used to be configured to have no slots), this won't
-		// copy anything (and won't seg fault).
-	memcpy( (void*)new_resources, (void*)resources,
-			(sizeof(Resource*)*nresources) );
+		// Copy over any old Resource pointers. 
+	if (nresources > 0) {
+		memcpy((void*)new_resources, (void*)resources,
+			sizeof(Resource*) * nresources);
+	}
 
 	new_resources[nresources] = rip;
 
@@ -2115,13 +2117,11 @@ ResMgr::processAllocList( void )
 
 		// We're done destroying, and there's something to allocate.
 
-	bool multiple_slots = (alloc_list.Number() + numSlots()) > 1;
-
 		// Create the new Resource objects.
 	CpuAttributes* cap;
 	alloc_list.Rewind();
 	while( alloc_list.Next(cap) ) {
-		addResource( new Resource( cap, nextId(), multiple_slots ) );
+		addResource( new Resource( cap, nextId() ) );
 		alloc_list.DeleteCurrent();
 	}
 

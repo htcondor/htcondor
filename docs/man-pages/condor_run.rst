@@ -93,7 +93,7 @@ required platform:
     $ export CONDOR_OPSYS="SOLARIS28"
 
 Then, use *condor_run* to submit the compilation as in the following
-three examples.
+two examples.
 
 .. code-block:: console
 
@@ -104,12 +104,6 @@ or
 .. code-block:: console
 
     $ condor_run "make"
-
-or
-
-.. code-block:: console
-
-    $ condor_run "condor_compile cc -o myprog.condor myprog.c"
 
 Files
 -----

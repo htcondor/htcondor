@@ -72,6 +72,11 @@ class ParallelShadow : public BaseShadow
 
 	void shutDown( int exitReason );
 
+	/**
+	 * override to allow starter+shadow to gracefully exit
+	 */
+	virtual void holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode );
+
 		/** Handle job removal. */
 	int handleJobRemoval( int sig );
 
@@ -90,6 +95,7 @@ class ParallelShadow : public BaseShadow
 
 	float bytesSent( void );
 	float bytesReceived( void );
+	void getFileTransferStats(ClassAd &upload_stats, ClassAd &download_stats);
 	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status);
 
 	bool exitedBySignal( void );
@@ -188,13 +194,6 @@ class ParallelShadow : public BaseShadow
 			@param rr Pointer to the RemoteResource to spawn
 		*/
 	void spawnNode( MpiResource* rr );
-
-		/** A complex function that deals with the end of an MPI
-			job.  It has two functions: 1) figure out if all the 
-			resources should be told to kill themselves and 
-			2) return TRUE if every resource is dead. 
-		    @param exitReason The job exit reason. */
-	int shutDownLogic( int& exitReason );
 
         /** The number of the next resource to start...when in start mode */
     int nextResourceToStart;

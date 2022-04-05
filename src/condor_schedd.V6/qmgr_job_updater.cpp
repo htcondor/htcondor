@@ -33,8 +33,8 @@
 #include "dc_schedd.h"
 
 
-QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address,
-	const char *schedd_version ) : common_job_queue_attrs(0),
+QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
+	: common_job_queue_attrs(0),
 	hold_job_queue_attrs(0),
 	evict_job_queue_attrs(0),
 	remove_job_queue_attrs(0),
@@ -44,14 +44,12 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address,
 	x509_job_queue_attrs(0),
 	m_pull_attrs(0),
 	job_ad(job), // we do *NOT* want to make our own copy of this ad
-	schedd_addr(schedd_address?strdup(schedd_address):0),
-	schedd_ver(schedd_version?strdup(schedd_version):0),
+	m_schedd_obj(schedd_address),
 	cluster(-1), proc(-1),
 	q_update_tid(-1) 
 {
-	if( ! is_valid_sinful(schedd_address) ) {
-		EXCEPT( "schedd_addr not specified with valid address (%s)",
-				schedd_address );
+	if( ! m_schedd_obj.locate() ) {
+		EXCEPT("Invalid schedd address (%s)", schedd_address);
 	}
 	if( !job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
 		EXCEPT("Job ad doesn't contain a %s attribute.", ATTR_CLUSTER_ID);
@@ -81,8 +79,6 @@ QmgrJobUpdater::~QmgrJobUpdater()
 		daemonCore->Cancel_Timer( q_update_tid );
 		q_update_tid = -1;
 	}
-	if( schedd_addr ) { free(schedd_addr); }
-	if (schedd_ver)   {free(schedd_ver); }
 	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
 	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
 	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
@@ -131,13 +127,20 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE );
 
+	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_DURATION );
+	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_EXECUTION_DURATION );
+	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_SETUP_DURATION );
+	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION );
+
 	common_job_queue_attrs->insert( "TransferInQueued" );
 	common_job_queue_attrs->insert( "TransferInStarted" );
 	common_job_queue_attrs->insert( "TransferInFinished" );
 	common_job_queue_attrs->insert( "TransferOutQueued" );
 	common_job_queue_attrs->insert( "TransferOutStarted" );
 	common_job_queue_attrs->insert( "TransferOutFinished" );
-
+	common_job_queue_attrs->insert( ATTR_TRANSFER_INPUT_STATS );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_OUTPUT_STATS );
+	common_job_queue_attrs->insert( ATTR_NUM_JOB_STARTS );
 	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_EXECUTING_DATE );
 	common_job_queue_attrs->insert( ATTR_CUMULATIVE_TRANSFER_TIME );
 	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
@@ -152,6 +155,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_BLOCK_READS );
 	common_job_queue_attrs->insert( ATTR_NETWORK_IN );
 	common_job_queue_attrs->insert( ATTR_NETWORK_OUT );
+	common_job_queue_attrs->insert( ATTR_JOB_CPU_INSTRUCTIONS );
     common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_KBYTES );
     common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITE_KBYTES );
     common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_BYTES );
@@ -212,8 +216,6 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	checkpoint_job_queue_attrs = new StringList();
 	checkpoint_job_queue_attrs->insert( ATTR_NUM_CKPTS );
 	checkpoint_job_queue_attrs->insert( ATTR_LAST_CKPT_TIME );
-	checkpoint_job_queue_attrs->insert( ATTR_CKPT_ARCH );
-	checkpoint_job_queue_attrs->insert( ATTR_CKPT_OPSYS );
 	checkpoint_job_queue_attrs->insert( ATTR_VM_CKPT_MAC );
 	checkpoint_job_queue_attrs->insert( ATTR_VM_CKPT_IP );
 
@@ -284,7 +286,7 @@ bool
 QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaster, bool log )
 {
 	bool result;
-	MyString err_msg;
+	std::string err_msg;
 	SetAttributeFlags_t flags=0;
 
 	dprintf( D_FULLDEBUG, "QmgrJobUpdater::updateAttr: %s = %s\n",
@@ -302,7 +304,7 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 	if (log) {
 		flags = SHOULDLOG;
 	}
-	if( ConnectQ(schedd_addr,SHADOW_QMGMT_TIMEOUT,false,NULL,m_owner.c_str(),schedd_ver) ) {
+	if( ConnectQ(m_schedd_obj,SHADOW_QMGMT_TIMEOUT,false,NULL,m_owner.c_str()) ) {
 		if( SetAttribute(cluster,p,name,expr,flags) < 0 ) {
 			err_msg = "SetAttribute() failed";
 			result = FALSE;
@@ -317,7 +319,7 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 
 	if( result == FALSE ) {
 		dprintf( D_ALWAYS, "QmgrJobUpdater::updateAttr: failed to "
-				 "update (%s = %s): %s\n", name, expr, err_msg.Value() );
+				 "update (%s = %s): %s\n", name, expr, err_msg.c_str() );
 	}
 	return result;
 }
@@ -326,9 +328,9 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 bool
 QmgrJobUpdater::updateAttr( const char *name, int value, bool updateMaster, bool log )
 {
-	MyString buf;
-    buf.formatstr("%d", value);
-	return updateAttr(name, buf.Value(), updateMaster, log);
+	std::string buf;
+	formatstr(buf, "%d", value);
+	return updateAttr(name, buf.c_str(), updateMaster, log);
 }
 
 
@@ -366,6 +368,10 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		job_queue_attrs = x509_job_queue_attrs;
 		break;
 	case U_STATUS:
+		// This fixes a problem where OnExitHold evaluating to true
+		// prevented ExitCode from being set; see HTCONDOR-599.
+		job_queue_attrs = terminate_job_queue_attrs;
+		break;
 	case U_PERIODIC:
 			// No special attributes needed...
 		break;
@@ -394,7 +400,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			 job_queue_attrs->contains_anycase(name)) ) {
 
 			if( ! is_connected ) {
-				if( ! ConnectQ(schedd_addr, SHADOW_QMGMT_TIMEOUT, false, NULL, m_owner.c_str(),schedd_ver) ) {
+				if( ! ConnectQ(m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false, NULL, m_owner.c_str()) ) {
 					return false;
 				}
 				is_connected = true;
@@ -408,7 +414,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 	m_pull_attrs->rewind();
 	while ( (name = m_pull_attrs->next()) ) {
 		if ( !is_connected ) {
-			if ( !ConnectQ( schedd_addr, SHADOW_QMGMT_TIMEOUT, true, NULL, NULL, schedd_ver ) ) {
+			if ( !ConnectQ( m_schedd_obj, SHADOW_QMGMT_TIMEOUT, true ) ) {
 				return false;
 			}
 			is_connected = true;
@@ -450,12 +456,11 @@ QmgrJobUpdater::retrieveJobUpdates( void )
 	CondorError errstack;
 	StringList job_ids;
 	char id_str[PROC_ID_STR_BUFLEN];
-	MyString error;
 
 	ProcIdToStr(cluster, proc, id_str);
 	job_ids.insert(id_str);
 
-	if ( !ConnectQ( schedd_addr, SHADOW_QMGMT_TIMEOUT, false ) ) {
+	if ( !ConnectQ( m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false ) ) {
 		return false;
 	}
 	if ( GetDirtyAttributes( cluster, proc, &updates ) < 0 ) {
@@ -468,8 +473,7 @@ QmgrJobUpdater::retrieveJobUpdates( void )
 	dPrintAd( D_JOB, updates );
 	MergeClassAds( job_ad, &updates, true );
 
-	DCSchedd schedd( schedd_addr );
-	if ( schedd.clearDirtyAttrs( &job_ids, &errstack ) == NULL ) {
+	if ( m_schedd_obj.clearDirtyAttrs( &job_ids, &errstack ) == NULL ) {
 		dprintf( D_ALWAYS, "clearDirtyAttrs() failed: %s\n", errstack.getFullText().c_str() );
 		return false;
 	}

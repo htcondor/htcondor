@@ -35,9 +35,7 @@
 #include "consumption_policy.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "StartdPlugin.h"
-#endif
 #endif
 
 #include "stat_info.h"
@@ -193,14 +191,31 @@ const char * Resource::param(std::string& out, const char * name, const char * d
 	return out.c_str();
 }
 
-Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent ) : m_acceptedWhileDraining( false )
+Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent ) 
+	: r_state(nullptr)
+	, r_config_classad(nullptr)
+	, r_classad(nullptr)
+	, r_cur(nullptr)
+	, r_pre(nullptr)
+	, r_pre_pre(nullptr)
+	, r_has_cp(false)
+	, r_cod_mgr(nullptr)
+	, r_reqexp(nullptr)
+	, r_attr(nullptr)
+	, r_load_queue(nullptr)
+	, r_name(nullptr)
+	, r_id(rid)
+	, r_sub_id(0)
+	, r_id_str(NULL)
+	, r_pair_name(NULL)
+	, m_resource_feature(STANDARD_SLOT)
+	, m_parent(nullptr)
+	, m_id_dispenser(nullptr)
+	, m_acceptedWhileDraining(false)
 {
-	MyString tmp;
-	const char* tmpName;
+	std::string tmp;
 
 		// we need this before we instantiate any Claim objects...
-	r_id = rid;
-	r_sub_id = 0;
 	if (_parent) { r_sub_id = _parent->m_id_dispenser->next(); }
 	const char * name_prefix = SlotType::type_param(cap, "NAME_PREFIX");
 	if (name_prefix) {
@@ -211,43 +226,43 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	}
 	// append slot id
 	// for dynamic slots, also append sub_id
-	tmp.formatstr_cat( "%d", r_id );
-	if  (_parent) { tmp.formatstr_cat( "_%d", r_sub_id ); }
+	formatstr_cat( tmp, "%d", r_id );
+	if  (_parent) { formatstr_cat( tmp, "_%d", r_sub_id ); }
 	// save the constucted slot name & id string.
-	r_id_str = strdup( tmp.Value() );
-	r_pair_name = NULL;
+	r_id_str = strdup( tmp.c_str() );
 
 		// we need this before we can call type()...
 	r_attr = cap;
 	r_attr->attach( this );
 
-	m_id_dispenser = NULL;
-
 		// we need this before we instantiate the Reqexp object...
 	if (SlotType::type_param_boolean(cap, "PARTITIONABLE", false)) {
 		set_feature( PARTITIONABLE_SLOT );
 		m_id_dispenser = new IdDispenser( 1 );
-	} else {
-		set_feature( STANDARD_SLOT );
 	}
 
-		// This must happen before creating the Reqexp
+	// can't bind until after we get a r_sub_id but must happen before creating the Reqexp
+	if (_parent) {
+		if ( ! r_attr->bind_DevIds(r_id, r_sub_id, false)) {
+			r_attr->unbind_DevIds(r_id, r_sub_id); // give back the ids that were bound before the failure
+			_parent->m_id_dispenser->insert(r_sub_id); // give back the slot id.
+
+			// we can't fail a constructor, so indicate the the slot is unusable instead
+			set_feature(BROKEN_SLOT);
+			m_parent = nullptr;
+			r_cur = nullptr;
+			return;
+		}
+	}
+	// set_parent will carve resource quantities out of the parent if it is not NULL
+	// this will also set feature to DYNAMIC_SLOT if _parent is non-null
 	set_parent( _parent );
 
-		// can't bind until after we get a r_sub_id, which happens inside set_parent above
-		// but must happend before createing the Reqexp
-	if (_parent) { r_attr->bind_DevIds(r_id, r_sub_id); }
-
 	prevLHF = 0;
-	r_config_classad = NULL;
-	r_classad = NULL;
 	r_state = new ResState( this );
-	r_pre = NULL;
-	r_pre_pre = NULL;
 	r_cod_mgr = new CODMgr( this );
 	r_reqexp = new Reqexp( this );
 	r_load_queue = new LoadQueue( 60 );
-    r_has_cp = false;
 
     if (get_feature() == PARTITIONABLE_SLOT) {
         // Partitionable slots may support a consumption policy
@@ -265,19 +280,12 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 
     r_cur = new Claim(this);
 
-	MyString fqdn;
-	if( Name ) {
-		tmpName = Name;
-	} else {
-		fqdn = get_local_fqdn();
-		tmpName = fqdn.Value();
-	}
-	if( multiple_slots || get_feature() == PARTITIONABLE_SLOT ) {
-		tmp.formatstr( "%s@%s", r_id_str, tmpName );
-		r_name = strdup( tmp.Value() );
-	} else {
-		r_name = strdup( tmpName );
-	}
+	// make the full slot name "<r_id_str>@<name>"
+	// rior to version 9.7.0 machines with a single slot would not include the slot id in the slot name
+	tmp = r_id_str;
+	tmp += "@";
+	if (Name) { tmp += Name; } else { tmp += get_local_fqdn(); }
+	r_name = strdup(tmp.c_str());
 
 	// check for slot pairing configuration
 	if (param_boolean("ALLOW_SLOT_PAIRING", false)) {
@@ -598,7 +606,7 @@ int
 Resource::request_new_proc( void )
 {
 	if( state() == claimed_state && r_cur->isActive()) {
-		return (int)r_cur->starterKill( SIGHUP );
+		return (int)r_cur->starterSignal( SIGHUP );
 	} else {
 		return FALSE;
 	}
@@ -699,6 +707,9 @@ Resource::dropAdInLogFile( void )
 				break;
 			case DYNAMIC_SLOT:
 				if(sl.contains_anycase("dynamic")) will_print = true;
+				break;
+			case BROKEN_SLOT:
+				dprintf(D_ALWAYS, "DEBUG: unexpected to see BROKEN_SLOT ad here.\n");
 				break;
 		}
 	} else {
@@ -1371,22 +1382,35 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 	// It looks like attributes you add during an iteration may also be
 	// seen during that iteration.  This could cause problems later, but
 	// doesn't seem like it's worth fixing now.
+	//
+	// Actually, adding attributes during an iteration can force a rehash,
+	// which invalidates the iterator.  Let's just cache the keys before we
+	// actually do anything with them.
+
+	std::vector<std::string> attrNames;
+	for( const auto & ad : public_ad ) {
+		attrNames.push_back(ad.first);
+	}
+
+	// This isn't necessary to work around the iterators any more, but
+	// not deleting attributes is handy when taking snapshots.
 	std::vector< std::string > deleteList;
-	for( auto i = public_ad.begin(); i != public_ad.end(); ++i ) {
-		const std::string & name = i->first;
+	for( const auto & name : attrNames ) {
+		ExprTree * value = public_ad.Lookup(name);
+		if(value == NULL) { continue; }
 
 		// if this attribute has an expression with the SlotEval function
 		// flatten that function and write the flattened expression into the ad
 		//
-		if (ExprHasSlotEval(i->second)) {
+		if (ExprHasSlotEval(value)) {
 			unparse_buffer.clear();
-			if (ExprTreeIsSlotEval(i->second)) {
+			if (ExprTreeIsSlotEval(value)) {
 				// if the entire expression is a single SlotEval call, just flatten it
 				//    Foo = SlotEval("slot1",expr)
 				// becomes
 				//    Foo = <value of expr evaluated against slot1>
 				unparser.setIndirectThroughAttr(false);
-				unparser.Unparse(unparse_buffer, i->second);
+				unparser.Unparse(unparse_buffer, value);
 			} else {
 				// if the expression *contains* a SlotEval, the unparser will
 				// create an intermediate attribute to contain the value.
@@ -1398,9 +1422,9 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 				// slot1_Activity is stored in the unparser, we will insert it into the ad
 				// after this loop exits
 				unparser.setIndirectThroughAttr(true);
-				unparser.Unparse(unparse_buffer, i->second);
+				unparser.Unparse(unparse_buffer, value);
 			}
-			public_ad.AssignExpr(i->first, unparse_buffer.c_str());
+			public_ad.AssignExpr(name, unparse_buffer.c_str());
 		}
 
 		//
@@ -1428,13 +1452,12 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			if(! StartdCronJobParams::attributeIsSumMetric( name ) ) { continue; }
 			if(! StartdCronJobParams::getResourceNameFromAttributeName( name, resourceName )) { continue; }
 			if(! param_boolean( "ADVERTISE_CMR_UPTIME_SECONDS", false )) {
-			    deleteList.push_back( name );
+				deleteList.push_back( name );
 			}
 
 			classad::Value v;
 			double uptimeValue;
-			ExprTree * expr = i->second;
-			expr->Evaluate( v );
+			value->Evaluate( v );
 			if(! v.IsNumber( uptimeValue )) {
 				dprintf( D_ALWAYS, "Metric %s is not a number, ignoring.\n", name.c_str() );
 				continue;
@@ -1488,12 +1511,13 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			deleteList.push_back(firstUpdateName);
 
 		} else if( name.find( "StartOfJobUptime" ) == 0
-			|| (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
-			|| name.find( "FirstUpdate" ) == 0 ) {
-		deleteList.push_back( name );
+		  || (name != "LastUpdate" && name.find( "LastUpdate" ) == 0)
+		  || name.find( "FirstUpdate" ) == 0 ) {
+			deleteList.push_back( name );
 		}
 
 	}
+
 	if ( ! snapshot) {
 		for (auto i = deleteList.begin(); i != deleteList.end(); ++i) {
 			public_ad.Delete(* i);
@@ -1531,9 +1555,7 @@ Resource::do_update( void )
 	publish_private(&private_ad);
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Update(&public_ad, &private_ad);
-#endif
 #endif
 
 		// Send class ads to collector(s)
@@ -1601,7 +1623,7 @@ void
 Resource::final_update( void )
 {
 	ClassAd invalidate_ad;
-	MyString line;
+	std::string line;
 	string escaped_name;
 
 		// Set the correct types
@@ -1614,15 +1636,13 @@ Resource::final_update( void )
 	 * the IP was added to allow the collector to create a hash key to delete in O(1).
      */
 	 QuoteAdStringValue( r_name, escaped_name );
-     line.formatstr( "( TARGET.%s == %s )", ATTR_NAME, escaped_name.c_str() );
-     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
+     formatstr( line, "( TARGET.%s == %s )", ATTR_NAME, escaped_name.c_str() );
+     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.c_str() );
      invalidate_ad.Assign( ATTR_NAME, r_name );
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Invalidate(&invalidate_ad);
-#endif
 #endif
 
 	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
@@ -1762,7 +1782,7 @@ Resource::hold_job( bool soft )
 
 	EvalInteger("WANT_HOLD_SUBCODE", r_classad, r_cur->ad(), hold_subcode);
 
-	r_cur->starterHoldJob(hold_reason.c_str(),CONDOR_HOLD_CODE_StartdHeldJob,hold_subcode,soft);
+	r_cur->starterHoldJob(hold_reason.c_str(),CONDOR_HOLD_CODE::StartdHeldJob,hold_subcode,soft);
 }
 
 int
@@ -1889,7 +1909,6 @@ Resource::wants_pckpt( void )
 			if( ! wantCheckpoint ) { return FALSE; }
 			} break;
 
-		case CONDOR_UNIVERSE_STANDARD:
 		case CONDOR_UNIVERSE_VM:
 			break;
 
@@ -2170,9 +2189,9 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 {
 	int tmp;
 	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
-		MyString tmp_expr_name = expr_name;
+		std::string tmp_expr_name = expr_name;
 		tmp_expr_name += "_VANILLA";
-		tmp = eval_expr( tmp_expr_name.Value(), false, false );
+		tmp = eval_expr( tmp_expr_name.c_str(), false, false );
 		if( tmp >= 0 ) {
 				// found it, just return the value;
 			return tmp;
@@ -2180,9 +2199,9 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 			// otherwise, fall through and try the non-vanilla version
 	}
 	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VM ) {
-		MyString tmp_expr_name = expr_name;
+		std::string tmp_expr_name = expr_name;
 		tmp_expr_name += "_VM";
-		tmp = eval_expr( tmp_expr_name.Value(), false, false );
+		tmp = eval_expr( tmp_expr_name.c_str(), false, false );
 		if( tmp >= 0 ) {
 				// found it, just return the value;
 			return tmp;
@@ -2451,9 +2470,9 @@ void Resource::publish_static(ClassAd* cap)
 
 		// use the slot name prefix up to the first _ as a config prefix, we do this so dynamic slots
 		// get the same values as their parent slots.
-		MyString slot_name(r_id_str);
-		int iUnderPos = slot_name.find("_");
-		if (iUnderPos >=0) { slot_name.truncate (iUnderPos); }
+		std::string slot_name(r_id_str);
+		size_t iUnderPos = slot_name.find('_');
+		if (iUnderPos != std::string::npos) { slot_name.erase (iUnderPos); }
 
 		// load the relevant param that controls the attribute list.  
 		// We preserve the behavior of config_fill_ad here so the effective list is STARTD_ATTRS + SLOTn_STARTD_ATTRS
@@ -2465,14 +2484,14 @@ void Resource::publish_static(ClassAd* cap)
 		StringList slot_attrs;
 		auto_free_ptr tmp(param("STARTD_ATTRS"));
 		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
-		MyString param_name(slot_name); param_name += "_STARTD_ATTRS";
+		std::string param_name(slot_name); param_name += "_STARTD_ATTRS";
 		tmp.set(param(param_name.c_str()));
 		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
 
 		// check for obsolete STARTD_EXPRS and generate a warning if both STARTD_ATTRS and STARTD_EXPRS is set.
 		if ( ! slot_attrs.isEmpty() && ! warned_startd_attrs_once)
 		{
-			MyString tname(slot_name); tname += "_STARTD_EXPRS";
+			std::string tname(slot_name); tname += "_STARTD_EXPRS";
 			auto_free_ptr tmp2(param(tname.c_str()));
 			if ( ! tmp2.empty()) {
 				dprintf(D_ALWAYS, "WARNING: config contains obsolete %s or SLOT_TYPE_n_%s which will be (partially) ignored! use *_STARTD_ATTRS instead.\n", tname.c_str(), tname.c_str());
@@ -2490,7 +2509,7 @@ void Resource::publish_static(ClassAd* cap)
 
 		slot_attrs.rewind();
 		for (char* attr = slot_attrs.first(); attr != NULL; attr = slot_attrs.next()) {
-			param_name.formatstr("%s_%s", slot_name.c_str(), attr);
+			formatstr(param_name, "%s_%s", slot_name.c_str(), attr);
 			tmp.set(param(param_name.c_str()));
 			if ( ! tmp) { tmp.set(param(attr)); } // if no SLOTn_attr config definition, lookup just attr
 			if ( ! tmp) continue;  // no definition of either type, skip this attribute.
@@ -2637,7 +2656,7 @@ Resource::publish_dynamic(ClassAd* cap, bool /*for_update*/)
 	r_attr->publish_dynamic(cap);
 
 	// Put in machine-wide attributes
-	resmgr->m_attr->publish_dynamic(cap);
+	resmgr->m_attr->publish_dynamic(cap, r_id, r_sub_id);
 
 	// Put in ResMgr-specific attributes (A_STATIC, A_UPDATE, and always)
 	resmgr->publish_dynamic(cap);
@@ -2751,7 +2770,7 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 
 		// Write to a temporary file first and then rename it
 		// to ensure atomic updates.
-		MyString updateAdTmpPath;
+		std::string updateAdTmpPath;
 		dircat(updateAdDir.c_str(), ".update.ad.tmp", updateAdTmpPath);
 
 		FILE * updateAdFile = NULL;
@@ -2788,7 +2807,7 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 
 
 			// Rename the temporary.
-			MyString updateAdPath;
+			std::string updateAdPath;
 			dircat(updateAdDir.c_str(), ".update.ad", updateAdPath);
 
 #if defined(WINDOWS)
@@ -2979,11 +2998,11 @@ Resource::publishSlotAttrs( ClassAd* cap, bool as_literal, bool only_valid_value
 		}
 	} else {
 		char* ptr;
-		MyString prefix = r_id_str;
+		std::string prefix = r_id_str;
 		prefix += '_';
 		startd_slot_attrs->rewind();
 		while ((ptr = startd_slot_attrs->next())) {
-			caInsert(cap, r_classad, ptr, prefix.Value());
+			caInsert(cap, r_classad, ptr, prefix.c_str());
 		}
 	}
 }
@@ -3263,18 +3282,6 @@ Resource::willingToRun(ClassAd* request_ad)
 			slot_requirements = false;
 		}
 
-			// Since we have a request ad, we can also check its requirements.
-		Starter* tmp_starter;
-		bool no_starter = false;
-		tmp_starter = resmgr->starter_mgr.newStarter(request_ad, r_classad, no_starter );
-		if (!tmp_starter) {
-			req_requirements = false;
-		}
-		else {
-			delete(tmp_starter);
-			req_requirements = true;
-		}
-
 			// The following dprintfs are only done if request_ad !=
 			// NULL, because this function is frequently called with
 			// request_ad==NULL when the startd is evaluating its
@@ -3289,10 +3296,7 @@ Resource::willingToRun(ClassAd* request_ad)
 				dprintf(D_ALWAYS, "Slot ad was ============================\n");
 				dPrintAd(D_ALWAYS, *r_classad);
 			}
-			if (no_starter) {
-				dprintf(D_FAILURE|D_ALWAYS, "No starter found to run this job!  Is something wrong with your Condor installation?\n");
-			}
-			else if (!req_requirements) {
+			if (!req_requirements) {
 				dprintf(D_FAILURE|D_ALWAYS, "Job requirements not satisfied.\n");
 				dprintf(D_ALWAYS, "Job ad was ============================\n");
 				dPrintAd(D_ALWAYS, *request_ad);
@@ -3376,15 +3380,7 @@ Resource::createFetchClaim(ClassAd* job_ad, float rank)
 bool
 Resource::spawnFetchedWork(void)
 {
-		// First, we have to find a Starter that will work.
-	Starter* tmp_starter;
-	bool no_starter = false;
-	tmp_starter = resmgr->starter_mgr.newStarter(r_cur->ad(), r_classad, no_starter);
-	if( ! tmp_starter ) {
-		dprintf(D_ALWAYS|D_FAILURE, "ERROR: Could not find a starter that can run fetched work request, aborting.\n");
-		change_state(owner_state);
-		return false;
-	}
+	Starter* tmp_starter = new Starter;
 
 		// Update the claim object with info from the job classad stored in the Claim object
 		// Then spawn the given starter.
@@ -3555,9 +3551,9 @@ char*
 Resource::getHookKeyword()
 {
 	if (!m_hook_keyword_initialized) {
-		MyString param_name;
-		param_name.formatstr("%s_JOB_HOOK_KEYWORD", r_id_str);
-		m_hook_keyword = param(param_name.Value());
+		std::string param_name;
+		formatstr(param_name, "%s_JOB_HOOK_KEYWORD", r_id_str);
+		m_hook_keyword = param(param_name.c_str());
 		if (!m_hook_keyword) {
 			m_hook_keyword = param("STARTD_JOB_HOOK_KEYWORD");
 		}
@@ -3626,7 +3622,7 @@ Resource::swap_claims(Resource* ripa, Resource* ripb)
 	ripb->r_cur->setResource(ripb);
 
 	// swap execute directory
-	MyString str = ripa->m_execute_dir;
+	std::string str = ripa->m_execute_dir;
 	ripa->m_execute_dir = ripb->m_execute_dir;
 	ripb->m_execute_dir = str;
 
@@ -3641,14 +3637,23 @@ Resource::swap_claims(Resource* ripa, Resource* ripb)
 	return true;
 }
 
-Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim)
+//
+// Create dynamic slot from p-slot
+//
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim)
 {
 	ASSERT(rip);
 	ASSERT(req_classad);
-	if( Resource::PARTITIONABLE_SLOT == rip->get_feature() ) {
+	// for legacy use case, a static slot or d-slot could be passed in and the code would expect it 
+	// to come right back out the other side.
+	if ( ! rip->can_create_dslot()) {
+		return rip;
+	}
+
+	// dummy {} to avoid unnecessary git diffs
+	{
 		ClassAd	*mach_classad = rip->r_classad;
 		CpuAttributes *cpu_attrs;
-		MyString type;
 		StringList type_list;
 		int cpus;
 		long long disk, memory, swap;
@@ -3668,9 +3673,9 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			// Now make the modifications.
 		static const char* resources[] = {ATTR_REQUEST_CPUS, ATTR_REQUEST_DISK, ATTR_REQUEST_MEMORY, NULL};
 		for (int i=0; resources[i]; i++) {
-			MyString knob("MODIFY_REQUEST_EXPR_");
+			std::string knob("MODIFY_REQUEST_EXPR_");
 			knob += resources[i];
-			char *tmp = param(knob.Value());
+			char *tmp = param(knob.c_str());
 			if( tmp ) {
 				ExprTree *tree = NULL;
 				classad::Value result;
@@ -3754,7 +3759,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			// original request. If the schedd does not specify, go with whatever the user
 			// placed in the ad, aka the ATTR_REQUEST_* attributes itself.  If that does
 			// not exist, we either cons up a default or refuse the claim.
-		MyString schedd_requested_attr;
+		std::string schedd_requested_attr;
+		std::string restmp; restmp.reserve(100);
 
         if (cp_supports_policy(*mach_classad)) {
             // apply consumption policy
@@ -3763,29 +3769,31 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 
             // generate the type string used by standard code path
             for (consumption_map_t::iterator j(consumption.begin());  j != consumption.end();  ++j) {
-                if (j != consumption.begin()) type += " ";
+                restmp = j->first; restmp += "=";
                 if (MATCH == strcasecmp(j->first.c_str(),"disk")) {
                     // if it weren't for special cases, we'd have no cases at all
-                    type.formatstr_cat("disk=%.1f%%", max(0, (0.1 + 100 * j->second / (double)rip->r_attr->get_total_disk())));
+                    formatstr_cat(restmp, "%.1f%%", max(0, (0.1 + 100 * j->second / (double)rip->r_attr->get_total_disk())));
                 } else {
-                    type.formatstr_cat("%s=%d", j->first.c_str(), int(j->second));
+                    formatstr_cat(restmp, "%d", int(j->second));
                 }
+                type_list.append(restmp.c_str());
             }
         } else {
                 // Look to see how many CPUs are being requested.
             schedd_requested_attr = "_condor_";
             schedd_requested_attr += ATTR_REQUEST_CPUS;
-            if( !EvalInteger( schedd_requested_attr.Value(), req_classad, mach_classad, cpus ) ) {
+            if( !EvalInteger( schedd_requested_attr.c_str(), req_classad, mach_classad, cpus ) ) {
                 if( !EvalInteger( ATTR_REQUEST_CPUS, req_classad, mach_classad, cpus ) ) {
                     cpus = 1; // reasonable default, for sure
                 }
             }
-            type.formatstr_cat( "cpus=%d ", cpus );
+            formatstr(restmp, "cpus=%d", cpus);
+            type_list.append(restmp.c_str());
 
                 // Look to see how much MEMORY is being requested.
             schedd_requested_attr = "_condor_";
             schedd_requested_attr += ATTR_REQUEST_MEMORY;
-            if( !EvalInteger( schedd_requested_attr.Value(), req_classad, mach_classad, memory ) ) {
+            if( !EvalInteger( schedd_requested_attr.c_str(), req_classad, mach_classad, memory ) ) {
                 if( !EvalInteger( ATTR_REQUEST_MEMORY, req_classad, mach_classad, memory ) ) {
                         // some memory size must be available else we cannot
                         // match, plus a job ad without ATTR_MEMORY is sketchy
@@ -3794,12 +3802,13 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                     return NULL;
                 }
             }
-            type.formatstr_cat( "memory=%lld ", memory );
+            formatstr(restmp, "memory=%lld", memory);
+            type_list.append(restmp.c_str());
 
                 // Look to see how much DISK is being requested.
             schedd_requested_attr = "_condor_";
             schedd_requested_attr += ATTR_REQUEST_DISK;
-            if( !EvalInteger( schedd_requested_attr.Value(), req_classad, mach_classad, disk ) ) {
+            if( !EvalInteger( schedd_requested_attr.c_str(), req_classad, mach_classad, disk ) ) {
                 if( !EvalInteger( ATTR_REQUEST_DISK, req_classad, mach_classad, disk ) ) {
                         // some disk size must be available else we cannot
                         // match, plus a job ad without ATTR_DISK is sketchy
@@ -3808,8 +3817,9 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
                     return NULL;
                 }
             }
-            type.formatstr_cat( "disk=%.1f%%",
+            formatstr(restmp, "disk=%.1f%%",
                                 max((0.1 + disk / (double) rip->r_attr->get_total_disk() * 100), 0.001) );
+            type_list.append(restmp.c_str());
 
 
                 // Look to see how much swap is being requested.
@@ -3818,13 +3828,14 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			double total_virt_mem = rip->r_attr->get_mach_attr()->virt_mem();
 			bool set_swap = true;
 
-            if( !EvalInteger( schedd_requested_attr.Value(), req_classad, mach_classad, swap ) ) {
+            if( !EvalInteger( schedd_requested_attr.c_str(), req_classad, mach_classad, swap ) ) {
                 if( !EvalInteger( ATTR_REQUEST_VIRTUAL_MEMORY, req_classad, mach_classad, swap ) ) {
 						// Schedd didn't set it, user didn't request it
 					if (param_boolean("PROPORTIONAL_SWAP_ASSIGNMENT", false)) {
 						// set swap to same percentage of swap as we have of physical memory
 						double mpcent = 100.0 * double(memory) / double(rip->r_attr->get_mach_attr()->phys_mem());
-						type.formatstr_cat(" swap=%d%%", int(mpcent));
+						formatstr_cat(restmp, "swap=%d%%", int(mpcent));
+						type_list.append(restmp.c_str());
 						set_swap = false;
 					} else {
 						// Fall back to you get everything and don't pay anything
@@ -3834,25 +3845,39 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
             }
 
 			if (set_swap) {
-				type.formatstr_cat( " swap=%d%%", 
+				formatstr(restmp, "swap=%d%%", 
 					max((int) ceil((swap / total_virt_mem) * 100), 1));
+				type_list.append(restmp.c_str());
 			}
 
             for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
                 string reqname;
                 formatstr(reqname, "%s%s", ATTR_REQUEST_PREFIX, j->first.c_str());
-                int reqval = 0;
-                if (!EvalInteger(reqname.c_str(), req_classad, mach_classad, reqval)) reqval = 0;
-                string attr;
-                formatstr(attr, " %s=%d", j->first.c_str(), reqval);
-                type += attr;
+                double reqval = 0;
+                if (!EvalFloat(reqname.c_str(), req_classad, mach_classad, reqval)) reqval = 0.0;
+                formatstr(restmp, "%s=%f", j->first.c_str(), reqval);
+
+                if (reqval > 0.0) {
+                    // check for a constraint on the resource
+                    formatstr(reqname, "%s%s", "Require", j->first.c_str());
+                    ExprTree * constr = req_classad->Lookup(reqname);
+                    if (constr) {
+                        restmp += " : ";
+                        // TODO: flatten and inline this expression before printing it
+                        ExprTreeToString(constr, restmp);
+                    }
+                }
+
+                type_list.append(restmp.c_str());
             }
         }
 
-		rip->dprintf( D_FULLDEBUG,
-					  "Match requesting resources: %s\n", type.Value() );
+		if (IsDebugVerbose(D_FULLDEBUG)) {
+			auto_free_ptr reslist(type_list.print_to_delimed_string("\t"));
+			rip->dprintf(D_FULLDEBUG,
+				"Match requesting resources: %s\n", reslist.ptr());
+		}
 
-		type_list.initializeFromString( type.Value() );
 		cpu_attrs = ::buildSlot( resmgr->m_attr, rip->r_id, &type_list, -rip->type(), false );
 		if( ! cpu_attrs ) {
 			rip->dprintf( D_ALWAYS,
@@ -3860,8 +3885,8 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			return NULL;
 		}
 
-		Resource * new_rip = new Resource( cpu_attrs, rip->r_id, true, rip );
-		if( ! new_rip ) {
+		Resource * new_rip = new Resource(cpu_attrs, rip->r_id, rip);
+		if( ! new_rip || new_rip->is_broken_slot()) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to build new resource for request, aborting\n" );
 			return NULL;
@@ -3916,9 +3941,6 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 		}
 
 		return new_rip;
-	} else {
-		// Basic slot.
-		return rip;
 	}
 }
 

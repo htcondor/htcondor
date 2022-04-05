@@ -17,10 +17,6 @@
  ############################################################### 
 
 
-if (DARWIN)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework IOKit -framework Carbon")
-endif()
-
 set(startdElements
 backfill_mgr.cpp
 claim.cpp
@@ -47,7 +43,6 @@ startd_named_classad.cpp
 startd_named_classad_list.cpp
 StartdPluginManager.cpp
 Starter.cpp
-starter_mgr.cpp
 util.cpp
 vm_common.cpp
 VMMachine.cpp
@@ -76,7 +71,7 @@ endif()
 
 condor_daemon( EXE condor_startd SOURCES "${startdElements}" LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}" INSTALL "${C_SBIN}")
 
-if (LINUX AND GLOBUS_FOUND)
+if (LINUX AND GLOBUS_FOUND AND WANT_GLEXEC)
   condor_exe(condor_glexec_wrapper "glexec_wrapper.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF )
   install (FILES glexec_starter_setup.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 endif()

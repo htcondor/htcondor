@@ -31,7 +31,6 @@
 #include "match_prefix.h"
 
 #include "extArray.h"
-#include "MyString.h"
 #include "string_list.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
@@ -124,6 +123,15 @@ int SimScheddQ::get_Capabilities(ClassAd & caps) {
 	caps.Assign("LateMaterializeVersion", 2);
 	return true;
 }
+
+bool SimScheddQ::has_extended_submit_commands(ClassAd &cmds) {
+	auto_free_ptr extended_cmds(param("EXTENDED_SUBMIT_COMMANDS"));
+	if (extended_cmds) {
+		initAdFromString(extended_cmds, cmds);
+	}
+	return cmds.size() > 0;
+}
+
 
 // hack for 8.7.8 testing
 extern int attr_chain_depth;

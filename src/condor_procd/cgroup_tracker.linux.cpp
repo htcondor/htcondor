@@ -67,7 +67,7 @@ CGroupTracker::check_process(procInfo* pi)
 	int ret = snprintf(path, 32, "/proc/%u/cgroup", pi->pid);
 	if (ret < 0) {
 		dprintf(D_ALWAYS,
-			"GroupTracker (pid = %u): snprintf error: %s (%d)\n",
+			"CGroupTracker (pid = %u): snprintf error: %s (%d)\n",
 			pi->pid,
 			strerror(errno),
 			errno);
@@ -75,7 +75,7 @@ CGroupTracker::check_process(procInfo* pi)
         }
 	if (ret >= 32) {
 		dprintf(D_ALWAYS,
-			"GroupTracker (pid = %u): error: path buffer too small\n",
+			"CGroupTracker (pid = %u): error: path buffer too small\n",
 			pi->pid);
 		return false;
 	}
@@ -85,7 +85,7 @@ CGroupTracker::check_process(procInfo* pi)
 	FILE* fp = safe_fopen_wrapper(path, "r");
 	if (fp == NULL) {
 		dprintf(D_ALWAYS,
-			"GroupTracker (pid = %u): fopen error: Failed to open file '%s'. Error %s (%d)\n",
+			"CGroupTracker (pid = %u): fopen error: Failed to open file '%s'. Error %s (%d)\n",
 			pi->pid,
 			path,
 			strerror(errno),
@@ -130,7 +130,7 @@ CGroupTracker::check_process(procInfo* pi)
 	int line_len = strlen(buffer);
 	if (buffer[line_len - 1] != '\n') {
 		dprintf(D_ALWAYS,
-			"GroupTracker (pid = %u): "
+			"CGroupTracker (pid = %u): "
 			"read partial line from status file\n",
 			pi->pid);
 		return false;

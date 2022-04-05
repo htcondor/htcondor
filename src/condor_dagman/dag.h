@@ -22,19 +22,15 @@
 #define DAG_H
 
 #include "condor_common.h"
-#include "list.h"
 #include "job.h"
 #include "scriptQ.h"
 #include "condor_constants.h"      /* from condor_includes/ directory */
-#include "HashTable.h"
-#include "extArray.h"
 #include "condor_daemon_core.h"
 #include "read_multiple_logs.h"
 #include "check_events.h"
 #include "condor_id.h"
 #include "prioritysimplelist.h"
 #include "throttle_by_category.h"
-#include "MyString.h"
 #include "../condor_utils/dagman_utils.h"
 #include "jobstate_log.h"
 #include "dagman_classad.h"
@@ -48,7 +44,6 @@ enum SpliceLayer {
 };
 
 class Dagman;
-class MyString;
 class DagmanMetrics;
 class CondorID;
 
@@ -63,8 +58,8 @@ class OwnedMaterials
 	public:
 		// this structure owns the containers passed to it, but not the memory 
 		// contained in the containers...
-		OwnedMaterials(ExtArray<Job*> *a, ThrottleByCategory *tr,
-				bool reject, MyString firstRejectLoc ) :
+		OwnedMaterials(std::vector<Job*> *a, ThrottleByCategory *tr,
+				bool reject, std::string firstRejectLoc ) :
 				nodes (a), throttles (tr), _reject(reject),
 				_firstRejectLoc(firstRejectLoc) {};
 		~OwnedMaterials() 
@@ -72,10 +67,10 @@ class OwnedMaterials
 			delete nodes;
 		};
 
-	ExtArray<Job*> *nodes;
+	std::vector<Job*> *nodes;
 	ThrottleByCategory *throttles;
 	bool _reject;
-	MyString _firstRejectLoc;
+	std::string _firstRejectLoc;
 };
 
 //------------------------------------------------------------------------
@@ -139,7 +134,7 @@ class Dag {
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
 		 SubmitDagDeepOptions *submitDagDeepOpts,
 		 bool isSplice = false, DCSchedd *schedd = NULL,
-		 const MyString &spliceScope = "root" );
+		 const std::string &spliceScope = "root" );
 
     ///
     ~Dag();
@@ -173,16 +168,6 @@ class Dag {
 
     /// Add a job to the collection of jobs managed by this Dag.
     bool Add( Job& job );
-
-#ifdef DEAD_CODE
-    /** Specify a dependency between two jobs. The child job will only
-        run after the parent job has finished.
-        @param parent The parent job
-        @param child The child job (depends on the parent)
-        @return true: successful, false: failure
-    */
-    static bool AddDependency (Job * parent, Job * child);
-#endif
 
 	/** Run waiting/deferred scripts that are ready to run.  Note: scripts
 	    are also limited by halt status and maxpre/maxpost.
@@ -339,9 +324,9 @@ class Dag {
     bool NodeExists( const char *nodeName ) const;
 
 	/** Prefix all of the nodenames with a specified label.
-		@param prefix a MyString of the prefix for all nodes.
+		@param prefix a string of the prefix for all nodes.
 	*/
-	void PrefixAllNodeNames(const MyString &prefix);
+	void PrefixAllNodeNames(const std::string &prefix);
 
     /** Set the event checking level.
 		@param allowEvents what "bad" events to treat as non-fatal (as
@@ -486,6 +471,16 @@ class Dag {
 		*/
 	bool StartFinalNode();
 
+		/** Start the DAG's service nodes, if any exist
+			@return true iff all service nodes were actually started.
+		*/
+	bool StartServiceNodes();
+
+		/** Terminate the DAG's service nodes, if any exist
+			@return true iff all service nodes were actually started.
+		*/
+	bool RemoveServiceNodes();
+
 		/** Start the DAG's provisioner node if there is one.
 			@return true iff the provisioner node was actually started.
 		*/
@@ -565,15 +560,6 @@ class Dag {
 
 	std::map<std::string, SubmitHash*> SubmitDescriptions;
 
-#if 0
-	bool RemoveNode( const char *name, MyString &whynot );
-#endif
-
-#ifdef DEAD_CODE
-	bool RemoveDependency( Job *parent, Job *child );
-	bool RemoveDependency( Job *parent, Job *child, MyString &whynot );
-#endif
-	
     /* Detects cycle within dag submitted by user
 	   @return true if there is cycle
 	*/
@@ -601,7 +587,7 @@ class Dag {
 			directive.
 			@param location: the file and line # of the REJECT keyword
 		*/
-	void SetReject( const MyString &location );
+	void SetReject( const std::string &location );
 
 		/** Get the reject setting of this DAG (true means we shouldn't
 			actually run the DAG).
@@ -609,19 +595,11 @@ class Dag {
 				directive we encountered in parsing the DAG (including
 				splices)
 		*/
-	bool GetReject( MyString &firstLocation );
+	bool GetReject( std::string &firstLocation );
 
 	void SetJobstateLogFileName( const char *logFileName );
 
 	void CheckAllJobs();
-
-#ifdef DEAD_CODE
-		/** Returns a delimited string listing the node names of all
-			of the given node's parents if the number of parents is less than or equal to max_parents
-			@return delimited string of parent node names
-		*/
-	const MyString ParentListString( Job *node, size_t max_parents=256, const char delim = ',' ) const;
-#endif
 
 	int NumIdleJobProcs() const { return _numIdleJobProcs; }
 
@@ -726,23 +704,23 @@ class Dag {
 		return JobIsNoop( id ) ? id._subproc : id._cluster; 
 	}
 
-	// return same thing as HashTable.insert()
-	int InsertSplice(MyString spliceName, Dag *splice_dag);
+	// return same thing as std::map::insert()
+	bool InsertSplice(std::string spliceName, Dag *splice_dag);
 
-	// return same thing as HashTable.lookup()
-	int LookupSplice(MyString name, Dag *&splice_dag);
+	// return same thing as std::map::find()
+	Dag* LookupSplice(std::string name);
 
 	// return an array of job pointers to all of the nodes with no
 	// parents in this dag.
 	// These pointers are aliased and should not be freed.
 	// However the array itself is allocated and must be freed.
-	ExtArray<Job*>* InitialRecordedNodes(void);
+	std::vector<Job*>* InitialRecordedNodes(void);
 
 	// return an array of job pointers to all of the nodes with no
 	// children in this dag.
 	// These pointers are aliased and should not be freed.
 	// However the array itself is allocated and must be freed.
-	ExtArray<Job*>* FinalRecordedNodes(void);
+	std::vector<Job*>* FinalRecordedNodes(void);
 
 	// called just after a parse of a dag, this will keep track of the
 	// original intial and terminal nodes of a dag (after all parent and
@@ -758,20 +736,13 @@ class Dag {
 	OwnedMaterials* RelinquishNodeOwnership(void);
 
 	// Take an array from RelinquishNodeOwnership) and store it in my self.
-	void AssumeOwnershipofNodes(const MyString &spliceName,
+	void AssumeOwnershipofNodes(const std::string &spliceName,
 				OwnedMaterials *om);
-
-#ifdef DEAD_CODE // we now do this at submit time.
-	// This must be called after the toplevel dag has been parsed and
-	// the splices lifted. It will resolve the use of $(JOB) in the value
-	// of the VARS attribute.
-	void ResolveVarsInterpolations(void);
-#endif
 
 	// When parsing a splice (which is itself a dag), there must always be a
 	// DIR concept associated with it. If DIR is left off, then it is ".",
 	// otherwise it is whatever specified.
-	void SetDirectory(MyString &dir);
+	void SetDirectory(std::string &dir);
 	void SetDirectory(char *dir);
 
 	// After the nodes in the dag have been made, we take our DIR setting,
@@ -866,7 +837,7 @@ class Dag {
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
 	// defaults to ".".
- 	MyString m_directory;
+ 	std::string m_directory;
 
 	// move the nodes from the splice into the parent
 	void LiftSplice(Dag *parent, Dag *splice);
@@ -875,12 +846,12 @@ class Dag {
 	// and final nodes were for the dag. This is so when we are using this
 	// dag as a parent or a child, we can always reference the correct nodes
 	// even in the face of AddDependency().
-	ExtArray<Job*> _splice_initial_nodes;
-	ExtArray<Job*> _splice_terminal_nodes;
+	std::vector<Job*> _splice_initial_nodes;
+	std::vector<Job*> _splice_terminal_nodes;
 
   	// A hash table with key of a splice name and value of the dag parse 
 	// associated with the splice.
-	HashTable<MyString, Dag*> _splices;
+	std::map<std::string, Dag*> _splices;
 
 	// A reference to something the dagman passes into the constructor
 	std::list<std::string>& _dagFiles;
@@ -1016,13 +987,13 @@ class Dag {
 			@param whether the node is a NOOP node
 			@return a pointer to the appropriate hash table
 		*/
-	HashTable<int, Job *> *		GetEventIDHash(bool isNoop);
+	std::map<int, Job *> *		GetEventIDHash(bool isNoop);
 
 		/** Get the appropriate hash table for event ID->node mapping.
 			@param whether the node is a NOOP node
 			@return a pointer to the appropriate hash table
 		*/
-	const HashTable<int, Job *> *		GetEventIDHash(bool isNoop) const;
+	const std::map<int, Job *> *		GetEventIDHash(bool isNoop) const;
 
 	// run DAGs in directories from DAG file paths if true
 	bool _useDagDir;
@@ -1081,7 +1052,7 @@ class Dag {
 
 protected:
     // List of Job objects
-    List<Job>     _jobs;
+    mutable std::vector<Job*>     _jobs;
 
 private:
 		// Note: the final node is in the _jobs list; this pointer is just
@@ -1094,16 +1065,18 @@ private:
 
 	bool _provisioner_ready = false;
 
-	HashTable<MyString, Job *>		_nodeNameHash;
+	std::list<Job*> _service_nodes{};
 
-	HashTable<JobID_t, Job *>		_nodeIDHash;
+	std::map<std::string, Job *>	_nodeNameHash;
+
+	std::map<JobID_t, Job *>		_nodeIDHash;
 
 	// Hash by HTCondorID (really just by the cluster ID because all
 	// procs in the same cluster map to the same node).
-	HashTable<int, Job *>			_condorIDHash;
+	std::map<int, Job *>			_condorIDHash;
 
 	// NOOP nodes are indexed by subprocID.
-	HashTable<int, Job *>			_noopIDHash;
+	std::map<int, Job *>			_noopIDHash;
 
     // Number of nodes that are done (completed execution)
     int _numNodesDone;
@@ -1185,7 +1158,7 @@ private:
 	void IncludeExtraDotCommands(FILE *dot_file);
 	void DumpDotFileNodes(FILE *temp_dot_file);
 	void DumpDotFileArcs(FILE *temp_dot_file);
-	void ChooseDotFileName(MyString &dot_file_name);
+	void ChooseDotFileName(std::string &dot_file_name);
 
 		// Name of node status file.
 	char *_statusFileName;
@@ -1285,7 +1258,7 @@ private:
 		// The splice "scope" for this DAG (e.g., "A+B+", or "root").
 		// This is currently just used for diagnostic messages
 		// (wenger 2010-06-07)
-	MyString _spliceScope;
+	std::string _spliceScope;
 
 		// The maximum fake subprocID we see in recovery mode (needed to
 		// initialize the ID for subsequent fake events so IDs don't
@@ -1303,7 +1276,7 @@ private:
 
 		// The file and line number where we first found a REJECT
 		// specification, if any.
-	MyString _firstRejectLoc;
+	std::string _firstRejectLoc;
 
 		// The object for logging to the jobstate.log file (for Pegasus).
 	JobstateLog _jobstateLog;
@@ -1329,7 +1302,7 @@ private:
 	bool _dagIsAborted;
 
 		// The name of the halt file (we halt the DAG if that file exists).
-	MyString _haltFile;
+	std::string _haltFile;
 	
 		// Object to deal with reporting DAGMan metrics (to Pegasus).
 	DagmanMetrics *_metrics;
@@ -1387,7 +1360,7 @@ private:
 	static void DeletePinList( PinList &pinList );
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Iterator for ALL_NODES implementation.
-	mutable ListIterator<Job> *_allNodesIt;
+	mutable std::vector<Job*>::iterator _allNodesIt;
 
 		// The schedd we need to talk to to update the classad.
 	DCSchedd *_schedd;

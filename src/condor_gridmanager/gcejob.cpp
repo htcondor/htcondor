@@ -88,12 +88,8 @@ void GCEJobReconfig()
 	GCEJob::setConnectFailureRetry( cfrc );
 
 	// Tell all the resource objects to deal with their new config values
-	GCEResource *next_resource;
-
-	GCEResource::ResourcesByName.startIterations();
-
-	while ( GCEResource::ResourcesByName.iterate( next_resource ) != 0 ) {
-		next_resource->Reconfig();
+	for (auto &elem : GCEResource::ResourcesByName) {
+		elem.second->Reconfig();
 	}
 }
 

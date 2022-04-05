@@ -9,16 +9,20 @@ db_version 2.0
 
 case "$1" in
     configure)
-        # take care of starting condor if it is not yet running -- if it is
-        # already running this command should have no effect
-        systemctl enable condor
-        systemctl start condor
-        # send the restart command to condor, as we know that the installation
-        # is finished. condor_master should figure this out on its own within
-        # 5 minutes, but there is no need to wait
-        # check for a running condor master first, as otherwise the restart
-        # command fails and consequently package installation fails
-        condor_status -master 2> /dev/null && condor_restart || true
+        # If systemctl command is not found, or RUNLEVEL=1, then just
+        # install the packages without trying to start the service.
+        if $(systemctl status > /dev/null 2>&1) && [ "$RUNLEVEL" != "1" ]; then
+           # take care of starting condor if it is not yet running -- if it is
+           # already running this command should have no effect
+           systemctl enable condor
+           systemctl start condor
+           # send the restart command to condor, as we know that the installation
+           # is finished. condor_master should figure this out on its own within
+           # 5 minutes, but there is no need to wait
+           # check for a running condor master first, as otherwise the restart
+           # command fails and consequently package installation fails
+           condor_status -master 2> /dev/null && condor_restart || true
+        fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

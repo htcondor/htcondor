@@ -36,7 +36,7 @@ namespace classad {
 
 ClassAdParser::
 ClassAdParser ()
-	: oldClassAd(false)
+	: depth(0), oldClassAd(false)
 {
 }
 
@@ -351,6 +351,22 @@ parseExpression( ExprTree *&tree, bool full )
 	Lexer::TokenType 	tt;
 	ExprTree  	*treeL = NULL, *treeM = NULL, *treeR = NULL;
 	Operation 	*newTree = NULL;
+
+	// No matter how we return from this function, decrement
+	// ClassAdParser::depth to keep track of stack depth
+	struct RAIIDecrementer {
+		int &parser_depth;
+		RAIIDecrementer(int &i) : parser_depth(i) {}
+		~RAIIDecrementer() {parser_depth--;}
+		RAIIDecrementer &operator++() {parser_depth++;return *this;}
+		int operator()() {return parser_depth;}
+	} stack_guard(depth);
+
+	++stack_guard;
+	// prevent unbounded stack depth
+	if (stack_guard() > 1000) { // years of careful research
+		return false;
+	}
 
 	if( !parseLogicalORExpression (tree) ) return false;
 	if( ( tt  = lexer.PeekToken() ) == Lexer::LEX_QMARK) {

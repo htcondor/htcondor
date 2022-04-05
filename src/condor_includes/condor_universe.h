@@ -23,15 +23,13 @@
 
 #include "condor_header_features.h"
 
-BEGIN_C_DECLS
-
 /*
 Warning: These symbols must stay in sync
 with the strings in condor_universe.c
 */
 
 #define CONDOR_UNIVERSE_MIN       0  /* A placeholder, not a universe */
-#define CONDOR_UNIVERSE_STANDARD  1  /* Single process relinked jobs */
+#define CONDOR_UNIVERSE_STANDARD  1  /* A placeholder, no longer used */
 #define CONDOR_UNIVERSE_PIPE      2  /* A placeholder, no longer used */
 #define CONDOR_UNIVERSE_LINDA     3  /* A placeholder, no longer used */
 #define CONDOR_UNIVERSE_PVM       4  /* Parallel Virtual Machine apps */
@@ -65,8 +63,6 @@ int CondorUniverseInfo( const char* univ_or_topping, int * topping_id, int * is_
 const char *CondorUniverseOrToppingName( int universe, int topping );
 
 BOOLEAN universeCanReconnect( int universe );
-
-END_C_DECLS
 
 #endif
 

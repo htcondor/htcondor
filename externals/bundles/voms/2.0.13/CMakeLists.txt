@@ -25,7 +25,7 @@ if (LINUX OR DARWIN)
   option( WITH_VOMS "Compiling with support for VOMS" ON )
 endif(LINUX OR DARWIN)
 
-if ( WITH_VOMS AND WITH_GLOBUS )
+if ( WITH_VOMS )
 
 	if (NOT PROPER)
 
@@ -135,8 +135,11 @@ if ( WITH_VOMS AND WITH_GLOBUS )
 	else(NOT PROPER)
 
 		find_multiple( "vomsapi" VOMS_FOUND)
-		find_so_name( LIBVOMSAPI_SO ${VOMS_FOUND} )
-		set( LIBVOMSAPI_SO ${LIBVOMSAPI_SO} PARENT_SCOPE )
+
+		if (DLOPEN_VOMS_LIBS)
+			find_so_name( LIBVOMSAPI_SO ${VOMS_FOUND} )
+			set( LIBVOMSAPI_SO ${LIBVOMSAPI_SO} PARENT_SCOPE )
+		endif(DLOPEN_VOMS_LIBS)
 
 	endif(NOT PROPER)
 

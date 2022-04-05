@@ -82,7 +82,7 @@ private:
 
 	// Hook definitions in a hash table.  Hook keyword is the hash key,
 	// and the validated hook paths are the value
-	HashTable<MyString, char**> m_hook_paths;
+	HashTable<std::string, char**> m_hook_paths;
 
 	// Mapping of HookType sequential numbers that is used for
 	// storing/accessing the hooks for a specific keyword

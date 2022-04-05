@@ -22,21 +22,21 @@
 use Cwd;
 use CondorUtils;
 use CondorTest;
+use File::Temp;
 
 my $iswindows = CondorUtils::is_windows();
 
 $cmd = 'job_dagman_maxprescripts.dag';
 
 
-my $pid = $$;
-runcmd("mkdir -p $pid");
 my $curcwd = getcwd();
+my $dir = File::Temp->newdir(CLEANUP => 0, DIR => $curcwd);
 CondorTest::debug("current directory is $curcwd\n",1);
 $serversubFile = "job_dagman_maxprescripts-srvr.cmd";
 
 my $socketname = "maxpresock";
-my $newsocketname = $curcwd . "/" . $pid . "/maxpresock";
-my $flowlog = $curcwd . "/" . $pid . "/job_dagman_maxprescripts-srvr-log.log";
+my $newsocketname = $dir->dirname . "/maxpresock";
+my $flowlog = $dir->dirname . "/job_dagman_maxprescripts-srvr-log.log";
 my $appendfile = "filetoappwndto";
 if($iswindows) {
 	$_ = $flowlog;

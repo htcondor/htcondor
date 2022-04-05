@@ -933,13 +933,13 @@ REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *&actual_url)
 
 int REMOTE_CONDOR_ulog_error_printf( int hold_reason_code, int hold_reason_subcode, char const *str, ... )
 {
-	MyString buf;
+	std::string buf;
 	va_list args;
 	int retval;
 
 	va_start(args,str);
-	buf.vformatstr(str,args);
-	retval = REMOTE_CONDOR_ulog_error( hold_reason_code, hold_reason_subcode, buf.Value() );
+	vformatstr(buf, str, args);
+	retval = REMOTE_CONDOR_ulog_error( hold_reason_code, hold_reason_subcode, buf.c_str() );
 	va_end(args);
 
 	return retval;
@@ -1135,13 +1135,13 @@ REMOTE_CONDOR_constrain( char *  expr)
 
 int REMOTE_CONDOR_get_sec_session_info(
 	char const *starter_reconnect_session_info,
-	MyString &reconnect_session_id,
-	MyString &reconnect_session_info,
-	MyString &reconnect_session_key,
+	std::string &reconnect_session_id,
+	std::string &reconnect_session_info,
+	std::string &reconnect_session_key,
 	char const *starter_filetrans_session_info,
-	MyString &filetrans_session_id,
-	MyString &filetrans_session_info,
-	MyString &filetrans_session_key)
+	std::string &filetrans_session_id,
+	std::string &filetrans_session_info,
+	std::string &filetrans_session_key)
 {
 	int	rval=-1;
 	condor_errno_t	terrno;
@@ -2662,5 +2662,39 @@ REMOTE_CONDOR_get_delegated_proxy( const char* proxy_source_path, const char* pr
 	return get_x509_rc;
 }
 
+int
+REMOTE_CONDOR_event_notification( ClassAd * event ) {
+	int result = 0, rval = -1;
+
+	dprintf( D_SYSCALLS, "Doing CONDOR_event_notification\n" );
+	CurrentSysCall = CONDOR_event_notification;
+
+	if(! event) {
+		EXCEPT( "CONDOR_event_notification called with NULL event!" );
+		return -1;
+	}
+
+	if(! syscall_sock->is_connected()) {
+		dprintf( D_ALWAYS, "RPC error: disconnected from shadow\n" );
+		errno = ETIMEDOUT;
+		return -1;
+	}
+
+	syscall_sock->encode();
+	result = syscall_sock->code(CurrentSysCall);
+	ON_ERROR_RETURN( result );
+	result = putClassAd(syscall_sock, *event);
+	ON_ERROR_RETURN( result );
+	result = syscall_sock->end_of_message();
+	ON_ERROR_RETURN( result );
+
+	syscall_sock->decode();
+	result = syscall_sock->code(rval);
+	ON_ERROR_RETURN( result );
+	result = syscall_sock->end_of_message();
+	ON_ERROR_RETURN( result );
+
+	return rval;
+}
 
 } // extern "C"

@@ -39,7 +39,7 @@ static void (*enforcer_acl_free_ptr)(Acl *acls) = nullptr;
 static int (*scitoken_get_expiration_ptr)(const SciToken token, long long *value, char **err_msg) =
 	nullptr;
 static int (*scitoken_get_claim_string_list_ptr)(const SciToken token, const char *key, char ***value, char **err_msg) = nullptr;
-static int (*scitoken_free_string_list_ptr)(char **value) = nullptr;
+static void (*scitoken_free_string_list_ptr)(char **value) = nullptr;
 
 #define LIBSCITOKENS_SO "libSciTokens.so.0"
 
@@ -131,6 +131,7 @@ htcondor::init_scitokens()
 	}
 
 #ifndef WIN32
+#if defined(DLOPEN_SECURITY_LIBS)
 	dlerror();
 	void *dl_hdl = nullptr;
 	if (
@@ -152,13 +153,30 @@ htcondor::init_scitokens()
 			// Note: these methods are only in a more recent version of the SciTokens library; hence, if they
 			// are missing it's considered non-fatal.
 		scitoken_get_claim_string_list_ptr = (int (*)(const SciToken token, const char *key, char ***value, char **err_msg))dlsym(dl_hdl, "scitoken_get_claim_string_list");
-		scitoken_free_string_list_ptr = (int (*)(char **value))dlsym(dl_hdl, "scitoken_free_string_list");
+		scitoken_free_string_list_ptr = (void (*)(char **value))dlsym(dl_hdl, "scitoken_free_string_list");
 	}
+#else
+#if defined(HAVE_EXT_SCITOKENS)
+	scitoken_deserialize_ptr = scitoken_deserialize;
+	scitoken_get_claim_string_ptr = scitoken_get_claim_string;
+	scitoken_destroy_ptr = scitoken_destroy;
+	enforcer_create_ptr = enforcer_create;
+	enforcer_destroy_ptr = enforcer_destroy;
+	enforcer_generate_acls_ptr = enforcer_generate_acls;
+	enforcer_acl_free_ptr = enforcer_acl_free;
+	scitoken_get_expiration_ptr = scitoken_get_expiration;
+	scitoken_get_claim_string_list_ptr = scitoken_get_claim_string_list;
+	scitoken_free_string_list_ptr = scitoken_free_string_list;
+	g_init_tried = true;
+#else
+	dprintf(D_SECURITY, "SciTokens support is not compiled in.\n");
+	g_init_success = false;
+#endif
+#endif
 #else
 	dprintf(D_SECURITY, "SciTokens is not supported on Windows.\n");
 	g_init_success = false;
 #endif
-	g_init_tried = true;
 	return g_init_success;
 }
 
@@ -211,8 +229,15 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 	}
 
 	if (ident && IsDebugCategory(D_AUDIT)) {
-		auto jwt = jwt::decode(scitoken_str);
-		dprintf(D_AUDIT, ident, "Examining SciToken with payload %s.\n", jwt.get_payload().c_str());
+		try {
+			auto jwt = jwt::decode(scitoken_str);
+			dprintf(D_AUDIT, ident, "Examining SciToken with payload %s.\n", jwt.get_payload().c_str());
+		} catch (...) {
+			err.pushf("SCITOKENS", 2, "Failed to decode scitoken for audit log.");
+			dprintf(D_AUDIT, ident, "Failed to decode a SciToken in order to examine it - rejecting.\n");
+			return false;
+
+		}
 	}
 
 	SciToken token = nullptr;
@@ -281,6 +306,10 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 	} else {
 			// Success block - everything checks out!
 		std::vector<std::string> authz;
+		// add a "dummy" entry so the list is not empty.  empty could
+		// be interpreted later as "no restrictions" but for SciTokens
+		// should mean "no capabilities".
+		authz.push_back("DENY");
 		if (acls) {
 			int idx = 0;
 			Acl acl = acls[idx++];

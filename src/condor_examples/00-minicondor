@@ -44,6 +44,11 @@ ALLOW_NEGOTIATOR = condor@$(UID_DOMAIN)
 # If you wish any user to do so, comment out the line below.
 ALLOW_ADMINISTRATOR = root@$(UID_DOMAIN) condor@$(UID_DOMAIN)
 
+# Allow anyone (on the loopback interface) to submit jobs.
+ALLOW_WRITE = *
+# Allow anyone (on the loopback interface) to run condor_q or condor_status.
+ALLOW_READ = *
+
 # --- PERFORMANCE TUNING SETTINGS ---
 
 # Since there is just one server in this pool, we can tune various

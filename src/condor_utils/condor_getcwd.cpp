@@ -22,6 +22,14 @@
 #include "MyString.h"
 #include "condor_debug.h"
 
+bool condor_getcwd(std::string &path)
+{
+	MyString mystr;
+	bool rv = condor_getcwd(mystr);
+	path = mystr.c_str();
+	return rv;
+}
+
 bool condor_getcwd(MyString &path) {
 	size_t buflen = 0;
 	char *buf = NULL;

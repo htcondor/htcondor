@@ -21,8 +21,8 @@
             <RadioButton Value="N" X="0" Y="0" Width="220" Height="12" Text="Keep the job in memory and restart it when you leave."/>
             <RadioButton Value="Y" X="0" Y="12" Width="220" Height="12" Text="Restart the job on a different machine."/>
           </RadioButtonGroup>
-          <Property Id="VACATEJOBS" Value="N" />
-		  <Condition Action="disable">RUNJOBS="N"</Condition>
+          <Property Id="VACATEJOBS" Value="Y" />
+          <Condition Action="disable">RUNJOBS="N"</Condition>
           <Condition Action="disable">RUNJOBS="A"</Condition>
           <Condition Action="enable">RUNJOBS="I"</Condition>
           <Condition Action="enable">RUNJOBS="C"</Condition>

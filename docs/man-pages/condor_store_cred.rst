@@ -98,6 +98,8 @@ Options
     stdin.  Required for *add-krb* and *add-oauth*.
  **-s** *service*
     The Oauth2 service.  Required for all *-oauth* actions.
+ **-H** *handle*
+    Specify a handle for the given OAuth2 service.
  **-S** *scopes*
     Optional comma-separated list of scopes to request for *add-oauth*
     action.  If used with the *query-oauth* action, makes sure that

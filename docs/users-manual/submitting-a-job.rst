@@ -303,7 +303,7 @@ file.
     ``$(Process)`` or ``$(ProcId)`` will have the same value as the job
     ClassAd attribute ``ProcId``.
 
-``$$(a_machine_classad_attribue)``
+``$$(a_machine_classad_attribute)``
     When the machine is matched to this job for it to run on, any
     dollar-dollar expressions are looked up from the machine ad, and then
     expanded.  This lets you put the value of some machine ad attribute
@@ -817,7 +817,7 @@ examples, you see that writing ClassAd expressions is intuitive,
 especially if you are familiar with the programming language C. There
 are some pretty nifty expressions you can write with ClassAds. A
 complete description of ClassAds and their expressions can be found in
-the :doc:`/misc-concepts/classad-mechanism` section.
+the :doc:`/classads/classad-mechanism` section.
 
 All of the commands in the submit description file are case insensitive,
 except for the ClassAd attribute string values. ClassAd attribute names
@@ -1170,31 +1170,29 @@ a user can still request multiple credentials by affixing handles to
     cloudboxdrive_oauth_permissions_personal =
     cloudboxdrive_oauth_permissions_public =
 
-.. only:: Vault
+When the Vault credential monitor is configured, the service name may
+optionally be split into two parts with an underscore between them,
+where the first part is the issuer and the second part is the role.  In
+this example the issuer is "dune" and the role is "production", both
+as configured by the administrator of the Vault server:
 
-    When the Vault credential monitor is configured, the service name may
-    optionally be split into two parts with an underscore between them,
-    where the first part is the issuer and the second part is the role.  In
-    this example the issuer is "dune" and the role is "production", both
-    as configured by the administrator of the Vault server:
+.. code-block:: condor-submit
 
-    .. code-block:: condor-submit
+    use_oauth_services = dune_production
 
-        use_oauth_services = dune_production
+Vault does not require permissions or resources to be
+set, but they may be set to reduce the default permissions or restrict
+the resources that may use the credential.  The full service name
+including an underscore may be used in an ``oauth_permissions`` or
+``oauth_resource``.  Avoid using handles that might be confused as
+role names.  For example, the following will result in a conflict
+between two credentials called ``dune_production.use``:
 
-    Vault server.  Vault does not require permissions or resources to be
-    set, but they may be set to reduce the default permissions or restrict
-    the resources that may use the credential.  The full service name
-    including an underscore may be used in an ``oauth_permissions`` or
-    ``oauth_resource``.  Avoid using handles that might be confused as
-    role names.  For example, the following will result in a conflict
-    between two credentials called ``dune_production.use``:
+.. code-block:: condor-submit
 
-    .. code-block:: condor-submit
-
-        use_oauth_services = dune, dune_production
-        dune_oauth_permissions_production =
-        dune_production_oauth_permissions =
+    use_oauth_services = dune, dune_production
+    dune_oauth_permissions_production =
+    dune_production_oauth_permissions =
 
 
 Jobs That Require GPUs
@@ -1411,14 +1409,6 @@ The following limitations apply:
   time to produce the Cluster ad, but these macro functions will not be included in
   the *submit digest* and so will have the same value for all jobs.
 - Spooling of input files does not work with late materialization.
-- :macro:`SUBMIT_REQUIREMENT_*` and :macro:`JOB_TRANSFORM_*` configuration parameters in
-  the *condor_schedd* are applied to jobs as they are materialized,
-  but not to the Cluster ad as it is submitted.  So a :macro:`SUBMIT_REQUIREMENT` might not fail
-  at submit time, causing the user to think that they had met the submit requirements when in 
-  fact the jobs would fail to materialize at some time in the future.  This can be 
-  confusing because a factory that has no materialized jobs is not visible in the normal
-  *condor_q* output. The only way to see late materialization job factories is to use the
-  ``-factory`` option with *condor_q*
 
 Displaying the Factory
 ''''''''''''''''''''''

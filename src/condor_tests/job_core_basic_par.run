@@ -38,7 +38,8 @@ machine_count = 4
 my $debuglevel = 1;
 
 # where am I running
-my $currenthost = CondorTest::getFqdnHost();
+my $currenthost = `condor_config_val FULL_HOSTNAME`;
+chomp($currenthost);
 
 print scalar localtime() . "\n";
 

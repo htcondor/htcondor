@@ -433,8 +433,11 @@ bool convertValueToStringValue(const Value value, Value &stringValue);
 inline bool Value::
 IsBooleanValue( bool& b ) const
 {
-	b = booleanValue;
-	return( valueType == BOOLEAN_VALUE );
+	if (valueType == BOOLEAN_VALUE ) {
+		b = booleanValue;
+		return true;
+	}
+	return false;
 }
 
 inline bool Value::
@@ -664,7 +667,7 @@ IsRelativeTimeValue( time_t &secs ) const
 inline bool Value::
 IsNumber( ) const
 {
-	return( valueType==INTEGER_VALUE || valueType==REAL_VALUE );
+	return( valueType==INTEGER_VALUE || valueType==REAL_VALUE || valueType==BOOLEAN_VALUE );
 }
 } // classad
 

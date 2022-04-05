@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include <map>
 
 #include "azurejob.h"
 #include "baseresource.h"
@@ -37,7 +38,7 @@ class AzureResource : public BaseResource
 public:
 	void Reconfig();
 
-	static const char *HashName( const char *resource_name,
+	static std::string & HashName( const char *resource_name,
 	                             const char *subscription,
 	                             const char *auth_file );
 
@@ -54,7 +55,7 @@ public:
 
 	~AzureResource();
 
-	static HashTable <std::string, AzureResource *> ResourcesByName;
+	static std::map <std::string, AzureResource *> ResourcesByName;
 
 	const char *ResourceType();
 

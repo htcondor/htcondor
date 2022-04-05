@@ -44,7 +44,7 @@
 #include "credmon_interface.h"
 #include "directory_util.h"
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
 #endif
@@ -74,7 +74,7 @@ void
 main_init(int argc, char* argv[])
 {
 	char**		ptr; 
-	MyString		job_queue_name;
+	std::string job_queue_name;
  
 	int argc_count = 1;
 	for(ptr = argv + 1, argc_count = 1; argc_count<argc && *ptr; ptr++,argc_count++)
@@ -105,7 +105,7 @@ main_init(int argc, char* argv[])
 		// each creating their own
 	daemonCore->Proc_Family_Init();
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	ClassAdLogPluginManager::Load();
 	ScheddPluginManager::Load();
 
@@ -136,35 +136,31 @@ main_init(int argc, char* argv[])
 	scheduler.Register();
 
 		// Initialize the job queue
-	char *job_queue_param_name = param("JOB_QUEUE_LOG");
-
-	if (job_queue_param_name == NULL) {
+	param(job_queue_name, "JOB_QUEUE_LOG");
+	if (job_queue_name.empty()) {
 		// the default place for the job_queue.log is in spool
-		job_queue_name.formatstr( "%s/job_queue.log", Spool);
-	} else {
-		job_queue_name = job_queue_param_name; // convert char * to MyString
-		free(job_queue_param_name);
+		formatstr(job_queue_name, "%s/job_queue.log", Spool);
 	}
 
 		// Make a backup of the job queue?
 	if ( param_boolean_crufty("SCHEDD_BACKUP_SPOOL", false) ) {
-			MyString hostname;
+			std::string hostname;
 			hostname = get_local_hostname();
-			MyString		job_queue_backup;
-			job_queue_backup.formatstr( "%s/job_queue.bak.%s.%ld",
-			                            Spool, hostname.Value(), (long)time(NULL) );
-			if ( copy_file( job_queue_name.Value(), job_queue_backup.Value() ) ) {
+			std::string		job_queue_backup;
+			formatstr( job_queue_backup, "%s/job_queue.bak.%s.%ld",
+			                            Spool, hostname.c_str(), (long)time(NULL) );
+			if ( copy_file( job_queue_name.c_str(), job_queue_backup.c_str() ) ) {
 				dprintf( D_ALWAYS, "Failed to backup spool to '%s'\n",
-						 job_queue_backup.Value() );
+						 job_queue_backup.c_str() );
 			} else {
 				dprintf( D_FULLDEBUG, "Spool backed up to '%s'\n",
-						 job_queue_backup.Value() );
+						 job_queue_backup.c_str() );
 			}
 	}
 
 	int max_historical_logs = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
 
-	InitJobQueue(job_queue_name.Value(),max_historical_logs);
+	InitJobQueue(job_queue_name.c_str(),max_historical_logs);
 	PostInitJobQueue();
 
 		// Initialize the dedicated scheduler stuff
@@ -173,7 +169,7 @@ main_init(int argc, char* argv[])
 		// Do a timeout now at startup to get the ball rolling...
 	scheduler.timeout();
 
-#if defined(HAVE_DLOPEN)
+#ifdef UNIX
 	ScheddPluginManager::Initialize();
 	ClassAdLogPluginManager::Initialize();
 #endif

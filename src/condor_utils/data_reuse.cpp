@@ -99,7 +99,7 @@ DataReuseDirectory::CreatePaths()
 		m_valid = false;
 		return;
 	}
-	MyString subdir, subdir2;
+	std::string subdir, subdir2;
 	auto name = dircat(m_dirpath.c_str(), "tmp", subdir);
 	if (!mkdir_and_parents_if_needed(name, 0700, 0700, PRIV_CONDOR)) {
 		m_valid = false;
@@ -163,7 +163,7 @@ DataReuseDirectory::FileEntry::fname(const std::string &dirpath,
 	const std::string &checksum,
 	const std::string &tag)
 {
-	MyString hash_dir;
+	std::string hash_dir;
 	dircat(dirpath.c_str(), checksum_type.c_str(), hash_dir);
 
 	char hash_substring[3];
@@ -171,10 +171,10 @@ DataReuseDirectory::FileEntry::fname(const std::string &dirpath,
 	hash_substring[0] = checksum[0];
 	hash_substring[1] = checksum[1];
 
-	MyString file_dir;
+	std::string file_dir;
 	dircat(hash_dir.c_str(), hash_substring, file_dir);
 
-	MyString fname;
+	std::string fname;
 	std::string hash_name(checksum.c_str() + 2, checksum.size()-2);
 	hash_name += "." + tag;
 	dircat(file_dir.c_str(), hash_name.c_str(), fname);
@@ -391,9 +391,9 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 		std::string fname = FileEntry::fname(m_dirpath, comEvent.getChecksumType(),
 			comEvent.getChecksum(), iter->second->getTag());
 		if (iter->second->getReservedSpace() < comEvent.getSize()) {
-			dprintf(D_FAILURE, "File completed with size %lu, which is larger than the space"
+			dprintf(D_FAILURE, "File completed with size %zu, which is larger than the space"
 				" reservation size.\n", comEvent.getSize());
-			err.pushf("DataReuse", 12, "File completed with size %lu, which is larger than the space"
+			err.pushf("DataReuse", 12, "File completed with size %zu, which is larger than the space"
 				" reservation size.", comEvent.getSize());
 			unlink(fname.c_str());
 			return false;
@@ -438,8 +438,8 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 				comEvent.getSize(),
 				comEvent.GetEventclock()));
 			m_contents.emplace_back(std::move(entry));
-			if (GetExtraDebug()) dprintf(D_FULLDEBUG, "Incrementing stored space by %lu to %lu\n",
-				comEvent.getSize(), m_stored_space + comEvent.getSize());
+			if (GetExtraDebug()) dprintf(D_FULLDEBUG, "Incrementing stored space by %zu to %zu\n",
+				comEvent.getSize(), (size_t)m_stored_space + comEvent.getSize());
 			m_stored_space += comEvent.getSize();
 
 			auto util_iter = m_space_utilization.insert({iter->second->getTag(), SpaceUtilization()});
@@ -572,10 +572,12 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 
 	std::unique_ptr<FileEntry> new_entry(new FileEntry(*this, checksum, checksum_type, iter->second->getTag(), stat_buf.st_size, time(NULL)));
 	std::string dest_fname = new_entry->fname();
-        auto dest_fname_template = dest_fname + ".XXXXXX";
-        std::vector<char> dest_tmp_fname;
-        dest_tmp_fname.reserve(dest_fname_template.size() + 1);
-        strcpy(&dest_tmp_fname[0], dest_fname_template.c_str());
+	// create a filename pattern for condor_mkstmp consisting of fname + "." + "XXXXXX"
+	// mkstmp will overwrite the 6 X's to create a unique filename.
+	std::vector<char> dest_tmp_fname(dest_fname.size() + 1 + 6 + 1, 'X');
+	strcpy(&dest_tmp_fname[0], dest_fname.c_str());
+	dest_tmp_fname[dest_fname.size()] = '.';
+	dest_tmp_fname[dest_fname.size() + 1 + 6] = 0;
 	int dest_fd = -1;
 	TemporaryPrivSentry priv_sentry(PRIV_CONDOR);
 	dest_fd = condor_mkstemp(&dest_tmp_fname[0]);
@@ -590,20 +592,20 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	auto mdctx = EVP_MD_CTX_create();
 	EVP_DigestInit_ex(mdctx, md, NULL);
 
-	std::vector<char> memory_buffer;
-	memory_buffer.reserve(64*1024);
+	const int membufsiz = 64 * 1024;
+	std::unique_ptr<void, decltype(&free)> memory_buffer(malloc(membufsiz), free);
 	ssize_t bytes;
 	while (true) {
-		bytes = _condor_full_read(source_fd, &memory_buffer[0], 64*1024);
+		bytes = full_read(source_fd, memory_buffer.get(), membufsiz);
 		if (bytes <= 0) {
 			break;
 		}
-		auto write_bytes = _condor_full_write(dest_fd, &memory_buffer[0], bytes);
+		auto write_bytes = full_write(dest_fd, memory_buffer.get(), bytes);
 		if (write_bytes != bytes) {
 			bytes = -1;
 			break;
 		}
-		int result = EVP_DigestUpdate(mdctx, &memory_buffer[0], write_bytes);
+		int result = EVP_DigestUpdate(mdctx, memory_buffer.get(), write_bytes);
 		if (result != 1) {
 			err.pushf("DataReuse", errno, "Failure when updating hash");
 			close(dest_fd);
@@ -629,9 +631,7 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	unsigned int md_len;
 	EVP_DigestFinal_ex(mdctx, md_value, &md_len);
 	EVP_MD_CTX_destroy(mdctx);
-	std::vector<char> computed_checksum;
-	computed_checksum.reserve(2*md_len + 1);
-	computed_checksum[2*md_len] = '\0';
+	std::vector<char> computed_checksum(2*md_len + 1, 0);
 	for (unsigned int idx = 0; idx < md_len; idx++) {
 		sprintf(&computed_checksum[2*idx], "%02x", md_value[idx]);
 	}
@@ -716,7 +716,7 @@ DataReuseDirectory::ReleaseSpace(const std::string &uuid, CondorError &err)
 	auto iter = m_space_reservations.find(uuid);
 	if (iter == m_space_reservations.end()) {
 		err.pushf("DataReuse", 7, "Failed to find space reservation (%s) to release; "
-			"there are %lu active reservations.",
+			"there are %zu active reservations.",
 			uuid.c_str(), m_space_reservations.size());
 		return false;
 	}
@@ -802,20 +802,20 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 	auto mdctx = EVP_MD_CTX_create();
 	EVP_DigestInit_ex(mdctx, md, NULL);
 
-	std::vector<char> memory_buffer;
-	memory_buffer.reserve(64*1024);
+	const int membufsiz = 64 * 1024;
+	std::unique_ptr<void, decltype(&free)> memory_buffer(malloc(membufsiz), free);
 	ssize_t bytes;
 	while (true) {
-		bytes = _condor_full_read(source_fd, &memory_buffer[0], 64*1024);
+		bytes = full_read(source_fd, memory_buffer.get(), membufsiz);
 		if (bytes <= 0) {
 			break;
 		}
-		auto write_bytes = _condor_full_write(dest_fd, &memory_buffer[0], bytes);
+		auto write_bytes = full_write(dest_fd, memory_buffer.get(), bytes);
 		if (write_bytes != bytes) {
 			bytes = -1;
 			break;
 		}
-		int result = EVP_DigestUpdate(mdctx, &memory_buffer[0], write_bytes);
+		int result = EVP_DigestUpdate(mdctx, memory_buffer.get(), write_bytes);
 		if (result != 1) {
 			err.pushf("DataReuse", errno, "Failure when updating hash");
 			close(dest_fd);
@@ -839,9 +839,7 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 	unsigned int md_len;
 	EVP_DigestFinal_ex(mdctx, md_value, &md_len);
 	EVP_MD_CTX_destroy(mdctx);
-	std::vector<char> computed_checksum;
-	computed_checksum.reserve(2*md_len + 1);
-	computed_checksum[2*md_len] = '\0';
+	std::vector<char> computed_checksum(2*md_len + 1, 0);
 	for (unsigned int idx = 0; idx < md_len; idx++) {
 		sprintf(&computed_checksum[2*idx], "%02x", md_value[idx]);
 	}

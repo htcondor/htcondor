@@ -258,9 +258,6 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 	// Fill in latest usage/prio info for the groups.
 	// While we're at it, reset fields prior to reloading from submitter ads.
 
-	// note this is different than GroupEntry::autoregroup
-	const bool autoregroup = param_boolean("GROUP_AUTOREGROUP", false);
-
 	for( GroupEntry *group : hgq_groups) {
 		group->quota = 0;
 		group->requested = 0;
@@ -336,7 +333,7 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 	}
 
 	// Any groups with autoregroup are allowed to also negotiate in root group ("none")
-	if (autoregroup) {
+	if (hgq_root_group->autoregroup) { // autoregroup is set at the root if any children have it
 		unsigned long n = 0;
 		for (std::vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
 			GroupEntry* group = *j;
@@ -345,9 +342,9 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 			group->submitterAds->Open();
 			while (ClassAd* ad = group->submitterAds->Next()) {
 				hgq_root_group->submitterAds->Insert(ad);
+				++n;
 			}
 			group->submitterAds->Close();
-			++n;
 		}
 		dprintf(D_ALWAYS, "group quotas: autoregroup mode: appended %lu submitters to group %s negotiation\n", n, hgq_root_group->name.c_str());
 	}
@@ -362,7 +359,7 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 
 void
 GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vector<GroupEntry *> &hgq_groups, groupQuotasHashType* groupQuotasHash, double hgq_total_quota, Accountant &accountant, const std::function<void(GroupEntry *, int)> &fn, bool global_accept_surplus) {
-	// GGT -- Why?  Do we really need this?  Why not just wait until next negotiation?
+	// Why not just wait until next negotiation?
 	// A user/admin can set this to > 1, to allow the algorithm an opportunity to re-distribute
 	// slots that were not used due to rejection.
 	int maxrounds = 0;
@@ -374,7 +371,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 	}
 
 	const bool ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
-	const bool autoregroup = param_boolean("GROUP_AUTOREGROUP", false);
+	const bool autoregroup = hgq_root_group->autoregroup;
 
 	// The allocation of slots may occur multiple times, if rejections
 	// prevent some allocations from being filled.
@@ -424,7 +421,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 			GroupEntry* group = *j;
 			dprintf(D_FULLDEBUG, "group quotas: group= %s  quota= %g  requested= %g  allocated= %g  unallocated= %g\n",
 					group->name.c_str(), group->quota, group->requested+group->allocated, group->allocated, group->requested);
-			groupQuotasHash->insert(MyString(group->name.c_str()), group->quota);
+			groupQuotasHash->insert(group->name.c_str(), group->quota);
 			requested_total += group->requested;
 			allocated_total += group->allocated;
 			if (group->allocated > 0) served_groups += 1;
@@ -1134,29 +1131,30 @@ GroupEntry::GetAssignedGroup(GroupEntry *hgq_root_group, const std::string& Cust
 void
 GroupEntry::displayGroups(int dprintfLevel, bool onlyConfigInfo, bool firstLine /* = true */) const {
 	if (firstLine) {
-		dprintf(dprintfLevel, "%-20s %8s %8s %8s %8s %8s %8s %8s", "Group", "Computed","Config", "Quota",  "Use", "Claimed", "Requestd", "Submters");
+		dprintf(dprintfLevel, "%-20s %8s %8s %8s %8s %8s %8s %8s %8s", "Group", "Computed","Config", "Quota",  "Use", "Auto", "Claimed", "Requestd", "Submters");
 		if (!onlyConfigInfo) {
 			dprintf(dprintfLevel | D_NOHEADER, "%8s", "Allocatd");
 		}
 
 		dprintf(dprintfLevel | D_NOHEADER, "\n");
-		dprintf(dprintfLevel, "%-20s %8s %8s %8s %8s %8s %8s %8s", "Name",  "quota",   "quota",  "static", "surplus", "cores", "cores", "in group");
+		dprintf(dprintfLevel, "%-20s %8s %8s %8s %8s %8s %8s %8s %8s", "Name",  "quota",   "quota",  "static", "surplus", "Regroup", "cores", "cores", "in group");
 		if (!onlyConfigInfo) {
 			dprintf(dprintfLevel | D_NOHEADER, "%8s", "cores");
 		}
 		dprintf(dprintfLevel | D_NOHEADER, "\n");
-		dprintf(dprintfLevel, "------------------------------------------------------------------------------------");
+		dprintf(dprintfLevel, "--------------------------------------------------------------------------------------------");
 		if (!onlyConfigInfo) {
 			dprintf(dprintfLevel | D_NOHEADER, "--------");
 		}
 		dprintf(dprintfLevel | D_NOHEADER, "\n");
 	}
-	dprintf(dprintfLevel, "%-20s %8g %8g %8c %8c %8g %8g %8d",
+	dprintf(dprintfLevel, "%-20s %8g %8g %8c %8c %8c %8g %8g %8d",
 			this->name.c_str(),
 			this->quota,
 			this->config_quota,
 			this->static_quota ? 'Y' : 'N',
 			this->accept_surplus ? 'Y' : 'N',
+			this->autoregroup ? 'Y' : 'N',
 			this->usage,
 			this->requested,
 			this->submitterAds ? this->submitterAds->Length() : -1);

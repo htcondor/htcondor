@@ -22,7 +22,7 @@
 
 #include "condor_constants.h"
 #include <stdio.h>	// for FILE
-#include <MyString.h>
+#include <string>
 
 typedef enum { READ_LOCK, WRITE_LOCK, UN_LOCK } LOCK_TYPE;
 
@@ -158,7 +158,7 @@ class FileLock : public FileLockBase
 	virtual void display(void) const;
 
 	void updateLockTimestamp(void);
-	static const char *getTempPath(MyString & pathbuf);	// get a temporary path from the local file system
+	static const char *getTempPath(std::string & pathbuf);	// get a temporary path from the local file system
 
   private:
 

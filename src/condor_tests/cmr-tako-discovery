@@ -1,3 +1,0 @@
-#!/bin/bash
-echo 'DetectedTAKOs="TAKO0, TAKO1, TAKO2, TAKO3"'
-exit 0

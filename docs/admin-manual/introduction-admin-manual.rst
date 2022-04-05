@@ -198,13 +198,6 @@ started under HTCondor and what they do:
     actions are necessary, given the policy it has been configured to
     enforce. :index:`condor_ckpt_server daemon`
 
-*condor_ckpt_server*
-    The checkpoint server services requests to store and retrieve
-    checkpoint files. If the pool is configured to use a checkpoint
-    server, but that machine or the server itself is down, HTCondor will
-    revert to sending the checkpoint files for a given job back to the
-    submit machine. :index:`condor_gridmanager daemon`
-
 *condor_gridmanager*
     This daemon handles management and execution of all **grid**
     universe jobs. The *condor_schedd* invokes the

@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "MyString.h"
 #include "pbuffer.h"
 #include "condor_daemon_core.h"
 #include "vmgahp_common.h"
@@ -48,7 +47,7 @@ PBuffer::PBuffer() {
 	memset((void *) readahead_buffer, 0, P_BUFFER_READAHEAD_SIZE);
 }
 
-MyString *
+std::string *
 PBuffer::GetNextLine () {
 	if( pipe_end == -1 ) {
 		error = true;
@@ -85,7 +84,7 @@ PBuffer::GetNextLine () {
 
 		if (c == '\n' && !last_char_was_escape) {
 			// We got a completed line!
-			MyString* result = new MyString(buffer);
+			std::string* result = new std::string(buffer);
 			ASSERT(result);
 			buffer = "";
 			return result;
@@ -119,7 +118,7 @@ PBuffer::Write (const char * towrite) {
 		buffer += towrite;
 	}
 
-	int len = buffer.Length();
+	int len = buffer.length();
 	if (len == 0) {
 		return 0;
 	}
@@ -128,10 +127,10 @@ PBuffer::Write (const char * towrite) {
 		len = 4096;
 	}
 
-	int numwritten = daemonCore->Write_Pipe (pipe_end, buffer.Value(), len);
+	int numwritten = daemonCore->Write_Pipe (pipe_end, buffer.c_str(), len);
 	if (numwritten > 0) {
 		// shorten the buffer
-		buffer = buffer.substr(numwritten, buffer.Length());
+		buffer = buffer.substr(numwritten);
 		return numwritten;
 	} else if ( numwritten == 0 ) {
 		return 0;
@@ -149,5 +148,5 @@ PBuffer::Write (const char * towrite) {
 
 int
 PBuffer::IsEmpty() {
-	return (buffer.Length() == 0);
+	return (buffer.length() == 0);
 }

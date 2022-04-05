@@ -18,10 +18,7 @@
 
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
-	# All recent versions of Mac OS X are 64-bit, but 'uname -p'
-	# (the source for SYS_ARCH) reports 'i386'.
-	# Override that to set the actual architecture.
-	set (SYS_ARCH "X86_64")
+	#this needs to be evaluated in order due to WIN collision.
 elseif(${OS_NAME} MATCHES "WIN")
 	set(WINDOWS ON)
 
@@ -43,9 +40,6 @@ elseif(${OS_NAME} MATCHES "WIN")
 	set(CMD_TERM \r\n)
 	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
 	#set(CMAKE_SUPPRESS_REGENERATION TRUE)
-
-	set (HAVE_SNPRINTF 1)
-	set (HAVE_WORKING_SNPRINTF 1)
 
 	if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
 		dprint("**** IN SOURCE BUILDING ON WINDOWS IS NOT ADVISED ****")
@@ -80,6 +74,9 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 
 # To find python in Windows we will use alternate technique
 option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
+option(WANT_PYTHON2_BINDINGS "Build python bindings for python2" ON)
+option(WANT_PYTHON3_BINDINGS "Build python bindings for python3" ON)
+
 if(NOT WINDOWS)
     if(WANT_PYTHON_WHEELS)
         include (FindPythonInterp)
@@ -100,13 +97,16 @@ if(NOT WINDOWS)
         # This will be easier in cmake 3
 
         if(${OS_NAME} STREQUAL "DARWIN")
-            find_program(PYTHON_EXECUTABLE python)
+            # macOS 12.X (Monterey) and above don't support python2
+            if(NOT ${OS_VER} MATCHES "2[1-9]")
+                find_program(PYTHON_EXECUTABLE python)
+            endif()
         else()
             find_program(PYTHON_EXECUTABLE python2)
         endif()
 
 message(STATUS "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}")
-        if (PYTHON_EXECUTABLE)
+        if (WANT_PYTHON2_BINDINGS AND PYTHON_EXECUTABLE)
             set(PYTHONINTERP_FOUND TRUE)
             set(PYTHON_QUERY_PART_01 "from distutils import sysconfig;")
             set(PYTHON_QUERY_PART_02 "import sys;")
@@ -170,7 +170,7 @@ message(STATUS "PYTHON_LIB = ${PYTHON_LIB}")
             message(STATUS "PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
         endif()
         find_program(PYTHON3_EXECUTABLE python3)
-        if (PYTHON3_EXECUTABLE)
+        if (WANT_PYTHON3_BINDINGS AND PYTHON3_EXECUTABLE)
             set(PYTHON3INTERP_FOUND TRUE)
             set(PYTHON_QUERY_PART_01 "from distutils import sysconfig;")
             set(PYTHON_QUERY_PART_02 "import sys;")
@@ -416,13 +416,6 @@ if(PACKAGEID)
   add_definitions( -DPACKAGEID=${PACKAGEID} )
 endif(PACKAGEID)
 
-if( NOT BUILD_DATE )
-  GET_DATE( BUILD_DATE )
-endif()
-if(BUILD_DATE)
-  add_definitions( -DBUILD_DATE="${BUILD_DATE}" )
-endif()
-
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 
 # set to true to enable printing of make actions
@@ -453,8 +446,6 @@ if( NOT WINDOWS)
 
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
-	find_path(HAVE_OPENSSL_SSL_H "openssl/ssl.h")
-
 	if ( ${OS_NAME} STREQUAL "DARWIN" )
 		# Mac OS X includes the pcre library but not the header
 		# file. Supply a copy ourselves.
@@ -481,17 +472,9 @@ if( NOT WINDOWS)
 	find_path(HAVE_UUID_UUID_H "uuid/uuid.h")
 	find_multiple( "resolv" HAVE_LIBRESOLV )
 	find_library( HAVE_LIBLTDL "ltdl" )
-	find_multiple( "cares" HAVE_LIBCARES )
-	# On RedHat6, there's a libcares19 package, but no libcares
-	find_multiple( "cares19" HAVE_LIBCARES19 )
-	find_multiple( "pam" HAVE_LIBPAM )
-	find_program( AUTOCONF autoconf )
-	find_program( AUTOMAKE automake )
-	find_program( LIBTOOLIZE libtoolize )
 	check_include_files("sqlite3.h" HAVE_SQLITE3_H)
 	find_library( SQLITE3_LIB "sqlite3" )
 
-	check_library_exists(dl dlopen "" HAVE_DLOPEN)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)
 	check_symbol_exists(TCP_KEEPIDLE "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPIDLE)
 	check_symbol_exists(TCP_KEEPALIVE "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPALIVE)
@@ -511,41 +494,26 @@ if( NOT WINDOWS)
 	check_symbol_exists(MS_REC  "sys/mount.h" HAVE_MS_REC)
 	# Python also defines HAVE_EPOLL; hence, we use non-standard 'CONDOR_HAVE_EPOLL' here.
 	check_symbol_exists(epoll_create1 "sys/epoll.h" CONDOR_HAVE_EPOLL)
-	check_symbol_exists(poll "sys/poll.h" CONDOR_HAVE_POLL)
-	check_symbol_exists(fdatasync "unistd.h" HAVE_FDATASYNC)
-	check_function_exists("clock_gettime" HAVE_CLOCK_GETTIME)
+	check_symbol_exists(fdatasync "unistd.h" HAVE_FDATASYNC) # POSIX 2008 but MacOS as of Big Sur doesn't implement.
 	check_function_exists("clock_nanosleep" HAVE_CLOCK_NANOSLEEP)
 
-	check_function_exists("access" HAVE_ACCESS)
+	set(HAVE_ACCESS 1) # POSIX 2001
 	check_function_exists("clone" HAVE_CLONE)
-	check_function_exists("dirfd" HAVE_DIRFD)
 	check_function_exists("euidaccess" HAVE_EUIDACCESS)
-	check_function_exists("execl" HAVE_EXECL)
 	check_function_exists("fstat64" HAVE_FSTAT64)
 	check_function_exists("_fstati64" HAVE__FSTATI64)
 	check_function_exists("getdtablesize" HAVE_GETDTABLESIZE)
-	check_function_exists("getpagesize" HAVE_GETPAGESIZE)
-	check_function_exists("gettimeofday" HAVE_GETTIMEOFDAY)
-	check_function_exists("inet_ntoa" HAS_INET_NTOA)
-	check_function_exists("lchown" HAVE_LCHOWN)
+	set(HAVE_GETTIMEOFDAY 1) # POSIX 2001
 	check_function_exists("lstat" HAVE_LSTAT)
 	check_function_exists("lstat64" HAVE_LSTAT64)
 	check_function_exists("_lstati64" HAVE__LSTATI64)
-	check_function_exists("mkstemp" HAVE_MKSTEMP)
-	check_function_exists("setegid" HAVE_SETEGID)
-	check_function_exists("setenv" HAVE_SETENV)
-	check_function_exists("seteuid" HAVE_SETEUID)
-	check_function_exists("setlinebuf" HAVE_SETLINEBUF)
-	check_function_exists("snprintf" HAVE_SNPRINTF)
-	check_function_exists("snprintf" HAVE_WORKING_SNPRINTF)
+	set(HAVE_MKSTEMP 1) # POSIX 2001
 	check_include_files("sys/eventfd.h" HAVE_EVENTFD)
         check_function_exists("innetgr" HAVE_INNETGR)
-        check_function_exists("getgrnam" HAVE_GETGRNAM)
 
 	check_function_exists("stat64" HAVE_STAT64)
 	check_function_exists("_stati64" HAVE__STATI64)
 	check_function_exists("statfs" HAVE_STATFS)
-	check_function_exists("statvfs" HAVE_STATVFS)
 	check_function_exists("res_init" HAVE_DECL_RES_INIT)
 	check_function_exists("strcasestr" HAVE_STRCASESTR)
 	check_function_exists("strsignal" HAVE_STRSIGNAL)
@@ -556,7 +524,6 @@ if( NOT WINDOWS)
 	check_function_exists("unshare" HAVE_UNSHARE)
 
 	# we can likely put many of the checks below in here.
-	check_include_files("dlfcn.h" HAVE_DLFCN_H)
 	check_include_files("inttypes.h" HAVE_INTTYPES_H)
 	check_include_files("ldap.h" HAVE_LDAP_H)
 	if (${OS_NAME} STREQUAL "DARWIN")
@@ -567,17 +534,8 @@ if( NOT WINDOWS)
 	check_include_files("net/if.h" HAVE_NET_IF_H)
 	check_include_files("os_types.h" HAVE_OS_TYPES_H)
 	check_include_files("resolv.h" HAVE_RESOLV_H)
-	check_include_files("sys/mount.h" HAVE_SYS_MOUNT_H)
 	check_include_files("sys/param.h" HAVE_SYS_PARAM_H)
-	check_include_files("sys/personality.h" HAVE_SYS_PERSONALITY_H)
-	check_include_files("sys/syscall.h" HAVE_SYS_SYSCALL_H)
-	check_include_files("sys/statfs.h" HAVE_SYS_STATFS_H)
-	check_include_files("sys/statvfs.h" HAVE_SYS_STATVFS_H)
 	check_include_files("sys/types.h" HAVE_SYS_TYPES_H)
-	check_include_files("sys/vfs.h" HAVE_SYS_VFS_H)
-	check_include_files("stdint.h" HAVE_STDINT_H)
-	check_include_files("ustat.h" HAVE_USTAT_H)
-	check_include_files("valgrind.h" HAVE_VALGRIND_H)
 	check_include_files("procfs.h" HAVE_PROCFS_H)
 	check_include_files("sys/procfs.h" HAVE_SYS_PROCFS_H)
 
@@ -588,16 +546,9 @@ if( NOT WINDOWS)
 
 	check_struct_has_member("struct sockaddr_in" sin_len "netinet/in.h" HAVE_STRUCT_SOCKADDR_IN_SIN_LEN)
 
-	check_struct_has_member("struct statfs" f_fstyp "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYP)
 	if (NOT ${OS_NAME} STREQUAL "DARWIN")
-  	  if( HAVE_SYS_STATFS_H )
 		check_struct_has_member("struct statfs" f_fstypename "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYPENAME )
-	  else()
-		check_struct_has_member("struct statfs" f_fstypename "sys/mount.h" HAVE_STRUCT_STATFS_F_FSTYPENAME )
-	  endif()
 	endif()
-	check_struct_has_member("struct statfs" f_type "sys/statfs.h" HAVE_STRUCT_STATFS_F_TYPE)
-	check_struct_has_member("struct statvfs" f_basetype "sys/types.h;sys/statvfs.h" HAVE_STRUCT_STATVFS_F_BASETYPE)
 
 	# the follow arg checks should be a posix check.
 	# previously they were ~=check_cxx_source_compiles
@@ -621,16 +572,12 @@ find_program(SPHINXBUILD NAMES sphinx-build sphinx-1.0-build)
 check_type_size("id_t" ID_T)
 check_type_size("__int64" __INT64)
 check_type_size("int64_t" INT64_T)
-check_type_size("int" INTEGER)
-set(SIZEOF_INT "${INTEGER}")
 check_type_size("long" LONG_INTEGER)
 set(SIZEOF_LONG "${LONG_INTEGER}")
 check_type_size("long long" LONG_LONG)
 if(HAVE_LONG_LONG)
   set(SIZEOF_LONG_LONG "${LONG_LONG}")
 endif()
-check_type_size("void *" VOIDPTR)
-set(SIZEOF_VOIDPTR "${VOIDPTR}")
 
 
 ##################################################
@@ -647,9 +594,6 @@ if(${OS_NAME} STREQUAL "LINUX")
 	check_symbol_exists(SIOCGIFCONF "linux/sockios.h" HAVE_DECL_SIOCGIFCONF)
 	check_include_files("linux/types.h" HAVE_LINUX_TYPES_H)
 	check_include_files("linux/types.h;linux/ethtool.h" HAVE_LINUX_ETHTOOL_H)
-	check_include_files("linux/magic.h" HAVE_LINUX_MAGIC_H)
-	check_include_files("linux/nfsd/const.h" HAVE_LINUX_NFSD_CONST_H)
-	check_include_files("linux/personality.h" HAVE_LINUX_PERSONALITY_H)
 	check_include_files("linux/sockios.h" HAVE_LINUX_SOCKIOS_H)
 	check_include_files("X11/Xlib.h" HAVE_XLIB_H)
 	check_include_files("X11/extensions/scrnsaver.h" HAVE_XSS_H)
@@ -674,7 +618,6 @@ if(${OS_NAME} STREQUAL "LINUX")
     endif()
 
 	dprint("Threaded functionality only enabled in Linux, Windows, and Mac OS X > 10.6")
-	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 
 	# Even if the flavor of linux we are compiling on doesn't
@@ -686,6 +629,7 @@ if(${OS_NAME} STREQUAL "LINUX")
 	set(HAVE_GNU_LD ON)
     option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
+    option(WITH_BLAHP "Compiling the blahp" ON)
 elseif(${OS_NAME} STREQUAL "DARWIN")
 	add_definitions(-DDarwin)
 	set(DARWIN ON)
@@ -700,10 +644,8 @@ elseif(${OS_NAME} STREQUAL "DARWIN")
 	check_symbol_exists(PTHREAD_RECURSIVE_MUTEX_INITIALIZER "pthread.h" HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER)
 	check_symbol_exists(PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP "pthread.h" HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
 	if (HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER OR HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
-		set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 		set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 	else()
-		set(HAS_PTHREADS FALSE)
 		set(HAVE_PTHREADS FALSE)
 	endif()
 
@@ -726,11 +668,12 @@ option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
 option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(WANT_CONTRIB "Enable building of contrib modules" OFF)
-option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
-option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
+option(WANT_GLEXEC "Build and install condor glexec functionality" OFF)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
+option(WITH_ADDRESS_SANITIZER "Build with address sanitizer" OFF)
+option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
 option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run as root inside their container" OFF)
 
 #####################################
@@ -756,6 +699,25 @@ if ( NOT CMAKE_SKIP_RPATH )
 	set( CMAKE_INSTALL_RPATH ${CONDOR_RPATH} )
 	set( CMAKE_BUILD_WITH_INSTALL_RPATH TRUE )
 endif()
+
+if (WITH_ADDRESS_SANITIZER)
+	# Condor daemons dup stderr to /dev/null, so to see output need to run with
+	# ASAN_OPTIONS="log_path=/tmp/asan" condor_master 
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+endif()
+
+if (WITH_UB_SANITIZER)
+	# Condor daemons dup stderr to /dev/null, so to see output need to run with
+	# UBSAN_OPTIONS="log_path=/tmp/asan print_stacktrace=true" condor_master 
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+endif()
+
 
 #####################################
 # KBDD option
@@ -920,12 +882,9 @@ if (WINDOWS)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1)
   endif()
 
-  # DRMAA currently punted on Windows until we can figure out correct build
-  #add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.2)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 else ()
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6.2)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
   if (DARWIN)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
@@ -942,7 +901,6 @@ else ()
   endif()
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.41)
@@ -959,7 +917,7 @@ else ()
 		endif()
 	elseif(DARWIN)
 		exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
-		if (${TEST_VER} MATCHES "10.1[3-9]" OR ${TEST_VER} MATCHES "11.[1-9]")
+		if (${TEST_VER} MATCHES "10.1[3-9]" OR ${TEST_VER} MATCHES "1[1-9].[1-9]")
 			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/6.0)
 		else()
 			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.5)
@@ -967,7 +925,6 @@ else ()
 	else()
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.5)
 	endif()
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.5.1)
 	# voms held back for MacOS (config issues) (2.1.0 needed for OpenSSL 1.1)
 	# old voms also builds on manylinux1 (centos5 docker image)
     if (LINUX AND NOT ${SYSTEM_NAME} MATCHES "centos5.11")
@@ -975,7 +932,6 @@ else ()
     else()
         add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.13)
     endif()
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.15.4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/7.14.1)
 
         if (LINUX)
@@ -1018,6 +974,16 @@ if (NOT DEFINED DLOPEN_GSI_LIBS)
 		set(DLOPEN_GSI_LIBS TRUE)
 	else()
 		set(DLOPEN_GSI_LIBS FALSE)
+	endif()
+endif()
+
+#####################################
+# Do we want to link in the VOMS libraries or dlopen() them at runtime?
+if (NOT DEFINED DLOPEN_VOMS_LIBS)
+    if (HAVE_EXT_VOMS AND LINUX AND NOT WANT_PYTHON_WHEELS)
+        set(DLOPEN_VOMS_LIBS TRUE)
+	else()
+        set(DLOPEN_VOMS_LIBS FALSE)
 	endif()
 endif()
 
@@ -1083,7 +1049,7 @@ endif()
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
-if (DLOPEN_GSI_LIBS)
+if (DLOPEN_GSI_LIBS OR DLOPEN_VOMS_LIBS)
 	set (SECURITY_LIBS "")
 	set (SECURITY_LIBS_STATIC "")
 else()
@@ -1092,13 +1058,11 @@ else()
 endif()
 
 ###########################################
-# in order to use clock_gettime, you need to link the the rt library
-# (only for linux with glibc < 2.17)
-if (HAVE_CLOCK_GETTIME AND LINUX)
-    set(RT_FOUND "rt")
-else()
-    set(RT_FOUND "")
+# -lrt is required for aio_* functions.
+if (LINUX)
+	set(RT_FOUND "rt")
 endif()
+
 
 set (CONDOR_LIBS_STATIC "condor_utils_s;classads;${SECURITY_LIBS_STATIC};${RT_FOUND};${PCRE_FOUND};${SCITOKENS_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${RT_FOUND};${MUNGE_FOUND}")
 set (CONDOR_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${PCRE_FOUND};${MUNGE_FOUND}")
@@ -1229,14 +1193,10 @@ else(MSVC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-nonnull-compare -Wno-error=nonnull-compare")
 	endif(c_Wnonnull_compare)
 
-	# gcc on our AIX machines recognizes -fstack-protector, but lacks
-	# the requisite library.
-	if (NOT AIX)
-		check_c_compiler_flag(-fstack-protector c_fstack_protector)
-		if (c_fstack_protector)
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
-		endif(c_fstack_protector)
-	endif(NOT AIX)
+	check_c_compiler_flag(-fstack-protector c_fstack_protector)
+	if (c_fstack_protector)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
+	endif(c_fstack_protector)
 
 	# Clang on Mac OS X doesn't support -rdynamic, but the
 	# check below claims it does. This is probably because the compiler
@@ -1264,11 +1224,6 @@ else(MSVC)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--enable-new-dtags")
 		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--enable-new-dtags")
 	endif(LINUX)
-
-	if (AIX)
-		# specifically ask for the C++ libraries to be statically linked
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -static-libgcc")
-	endif(AIX)
 
 	if ( NOT PROPER AND HAVE_LIBRESOLV )
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lresolv")

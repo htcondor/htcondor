@@ -18,6 +18,7 @@ public:
 	virtual int  get_type() = 0;
 	virtual bool has_late_materialize(int &ver) = 0;
 	virtual bool allows_late_materialize() = 0;
+	virtual bool has_extended_submit_commands(ClassAd &cmds) = 0;
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text) = 0;
 	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o) = 0;
 
@@ -53,6 +54,7 @@ public:
 	virtual int  get_type() { return AbstractQ_TYPE_SCHEDD_RPC; }
 	virtual bool has_late_materialize(int &ver); // version check for late materialize
 	virtual bool allows_late_materialize(); // capabilities check ffor late materialize enabled.
+	virtual bool has_extended_submit_commands(ClassAd &cmds); // capabilities check for extended submit commands
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
 	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
 

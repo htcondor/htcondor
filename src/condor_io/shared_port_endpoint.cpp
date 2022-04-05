@@ -50,7 +50,7 @@ static char const *WINDOWS_DAEMON_SOCKET_DIR = "\\\\.\\pipe\\condor";
 bool SharedPortEndpoint::m_initialized_socket_dir = false;
 bool SharedPortEndpoint::m_created_shared_port_dir = false;
 
-MyString
+std::string
 SharedPortEndpoint::GenerateEndpointName(char const *daemon_name, bool addSequenceNo ) {
 	static unsigned short rand_tag = 0;
 	static unsigned int sequence = 0;
@@ -62,25 +62,25 @@ SharedPortEndpoint::GenerateEndpointName(char const *daemon_name, bool addSequen
 		rand_tag = (unsigned short)(get_random_float_insecure()*(((float)0xFFFF)+1));
 	}
 
-	MyString buffer;
+	std::string buffer;
 	if(! daemon_name) {
 		daemon_name = "unknown";
 	} else {
 		buffer = daemon_name;
-		buffer.lower_case();
+		lower_case(buffer);
 		daemon_name = buffer.c_str();
 	}
 
-	MyString m_local_id;
+	std::string local_id;
 	if( (sequence == 0) || (! addSequenceNo) ) {
-		m_local_id.formatstr("%s_%lu_%04hx",buffer.c_str(),(unsigned long)getpid(),rand_tag);
+		formatstr(local_id,"%s_%lu_%04hx",buffer.c_str(),(unsigned long)getpid(),rand_tag);
 	}
 	else {
-		m_local_id.formatstr("%s_%lu_%04hx_%u",buffer.c_str(),(unsigned long)getpid(),rand_tag,sequence);
+		formatstr(local_id,"%s_%lu_%04hx_%u",buffer.c_str(),(unsigned long)getpid(),rand_tag,sequence);
 	}
 	sequence++;
 
-	return m_local_id;
+	return local_id;
 }
 
 SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
@@ -150,7 +150,7 @@ SharedPortEndpoint::~SharedPortEndpoint()
 char const *
 SharedPortEndpoint::GetSharedPortID()
 {
-	return m_local_id.Value();
+	return m_local_id.c_str();
 }
 
 
@@ -173,7 +173,7 @@ SharedPortEndpoint::InitAndReconfig()
 	}
 	else if( m_socket_dir != socket_dir ) {
 		dprintf(D_ALWAYS,"SharedPortEndpoint: DAEMON_SOCKET_DIR changed from %s to %s, so restarting.\n",
-				m_socket_dir.Value(), socket_dir.c_str());
+				m_socket_dir.c_str(), socket_dir.c_str());
 		StopListener();
 		m_socket_dir = socket_dir;
 		StartListener();
@@ -213,7 +213,7 @@ SharedPortEndpoint::StopListener()
 				break;
 			}
 			child_pipe = CreateFile(
-				m_full_name.Value(),
+				m_full_name.c_str(),
 				GENERIC_READ | GENERIC_WRITE,
 				0,
 				NULL,
@@ -231,7 +231,7 @@ SharedPortEndpoint::StopListener()
 
 			if(GetLastError() == ERROR_PIPE_BUSY)
 			{
-				if (!WaitNamedPipe(m_full_name.Value(), 20000))
+				if (!WaitNamedPipe(m_full_name.c_str(), 20000))
 				{
 					dprintf(D_ALWAYS, "ERROR: SharedPortEndpoint: Wait for named pipe for sending socket timed out: %d\n", GetLastError());
 					MSC_SUPPRESS_WARNING_FOREVER(6258) // warning: Using TerminateThread does not allow proper thread clean up
@@ -258,8 +258,8 @@ SharedPortEndpoint::StopListener()
 		daemonCore->Cancel_Socket( &m_listener_sock );
 	}
 	m_listener_sock.close();
-	if( !m_full_name.IsEmpty() ) {
-		RemoveSocket(m_full_name.Value());
+	if( !m_full_name.empty() ) {
+		RemoveSocket(m_full_name.c_str());
 	}
 
 	if( m_retry_remote_addr_timer != -1 ) {
@@ -288,10 +288,10 @@ SharedPortEndpoint::CreateListener()
 		return true;
 	}
 
-	m_full_name.formatstr("%s%c%s", m_socket_dir.c_str(), DIR_DELIM_CHAR, m_local_id.c_str());
+	formatstr(m_full_name, "%s%c%s", m_socket_dir.c_str(), DIR_DELIM_CHAR, m_local_id.c_str());
 
 	pipe_end = CreateNamedPipe(
-		m_full_name.Value(),
+		m_full_name.c_str(),
 		PIPE_ACCESS_DUPLEX,
 		PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
 		1,
@@ -322,7 +322,7 @@ SharedPortEndpoint::CreateListener()
 	m_listener_sock.close();
 	m_listener_sock.assignDomainSocket( sock_fd );
 
-	m_full_name.formatstr("%s%c%s", m_socket_dir.c_str(), DIR_DELIM_CHAR, m_local_id.c_str());
+	formatstr(m_full_name, "%s%c%s", m_socket_dir.c_str(), DIR_DELIM_CHAR, m_local_id.c_str());
 
 	struct sockaddr_un named_sock_addr;
 	memset(&named_sock_addr, 0, sizeof(named_sock_addr));
@@ -330,19 +330,19 @@ SharedPortEndpoint::CreateListener()
 	unsigned named_sock_addr_len;
 	bool is_no_good;
 	if (m_is_file_socket) {
-		strncpy(named_sock_addr.sun_path, m_full_name.Value(), sizeof(named_sock_addr.sun_path)-1);
+		strncpy(named_sock_addr.sun_path, m_full_name.c_str(), sizeof(named_sock_addr.sun_path)-1);
 		named_sock_addr_len = SUN_LEN(&named_sock_addr);
-		is_no_good = strcmp(named_sock_addr.sun_path,m_full_name.Value());
+		is_no_good = strcmp(named_sock_addr.sun_path,m_full_name.c_str());
 	} else {
-		strncpy(named_sock_addr.sun_path+1, m_full_name.Value(), sizeof(named_sock_addr.sun_path)-2);
+		strncpy(named_sock_addr.sun_path+1, m_full_name.c_str(), sizeof(named_sock_addr.sun_path)-2);
 		named_sock_addr_len = sizeof(named_sock_addr) - sizeof(named_sock_addr.sun_path) + 1 + strlen(named_sock_addr.sun_path+1);
-		is_no_good = strcmp(named_sock_addr.sun_path+1,m_full_name.Value());;
+		is_no_good = strcmp(named_sock_addr.sun_path+1,m_full_name.c_str());;
 	}
 	if( is_no_good ) {
 		dprintf(D_ALWAYS,
 			"ERROR: SharedPortEndpoint: full listener socket name is too long."
 			" Consider changing DAEMON_SOCKET_DIR to avoid this:"
-			" %s\n",m_full_name.Value());
+			" %s\n",m_full_name.c_str());
 		return false;
 	}
 
@@ -372,29 +372,29 @@ SharedPortEndpoint::CreateListener()
 
 			// bind failed: deal with some common sources of error
 
-		if( m_is_file_socket && RemoveSocket(m_full_name.Value()) ) {
+		if( m_is_file_socket && RemoveSocket(m_full_name.c_str()) ) {
 			dprintf(D_ALWAYS,
 				"WARNING: SharedPortEndpoint: removing pre-existing socket %s\n",
-				m_full_name.Value());
+				m_full_name.c_str());
 			continue;
 		}
 		else if( m_is_file_socket && MakeDaemonSocketDir() ) {
 			dprintf(D_ALWAYS,
 				"SharedPortEndpoint: creating DAEMON_SOCKET_DIR=%s\n",
-				m_socket_dir.Value());
+				m_socket_dir.c_str());
 			continue;
 		}
 
 		dprintf(D_ALWAYS,
 				"ERROR: SharedPortEndpoint: failed to bind to %s: %s\n",
-				m_full_name.Value(), strerror(bind_errno));
+				m_full_name.c_str(), strerror(bind_errno));
 		return false;
 	}
 
 	if( listen( sock_fd, param_integer( "SOCKET_LISTEN_BACKLOG", 500 ) ) ) {
 		dprintf(D_ALWAYS,
 				"ERROR: SharedPortEndpoint: failed to listen on %s: %s\n",
-				m_full_name.Value(), strerror(errno));
+				m_full_name.c_str(), strerror(errno));
 		return false;
 	}
 
@@ -437,7 +437,7 @@ SharedPortEndpoint::StartListener()
 	int rc;
 	rc = daemonCore->Register_Socket(
 		&m_listener_sock,
-		m_full_name.Value(),
+		m_full_name.c_str(),
 		(SocketHandlercpp)&SharedPortEndpoint::HandleListenerAccept,
 		"SharedPortEndpoint::HandleListenerAccept",
 		this);
@@ -458,7 +458,7 @@ SharedPortEndpoint::StartListener()
 	}
 
 	dprintf(D_ALWAYS,"SharedPortEndpoint: waiting for connections to named socket %s\n",
-			m_local_id.Value());
+			m_local_id.c_str());
 
 	m_registered_listener = true;
 
@@ -529,12 +529,12 @@ void ThreadSafeLogError(const char * msg, int err) {
 #endif
 
 // a thread safe accumulation of messages
-static void sldprintf(MyString &str, const char * fmt, ...)
+static void sldprintf(std::string &str, const char * fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
 
-	if (str.Length() > 10000) {
+	if (str.length() > 10000) {
 		// set an upper limit on the number of messages that can be appended.
 		return;
 	}
@@ -544,8 +544,8 @@ static void sldprintf(MyString &str, const char * fmt, ...)
 	condor_gettimestamp(tv);
 	time_t now = tv.tv_sec;
 	localtime_r(&now, &tm);
-	str.formatstr_cat("\t%02d:%02d:%02d.%03d ", tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
-	str.vformatstr_cat(fmt, args);
+	formatstr_cat(str, "\t%02d:%02d:%02d.%03d ", tm.tm_hour, tm.tm_min, tm.tm_sec, (int)(tv.tv_usec/1000));
+	vformatstr_cat(str, fmt, args);
 
 	va_end(args);
 }
@@ -564,7 +564,7 @@ SharedPortEndpoint::PipeListenerThread()
 	// temp variables for use in debug logging
 	void *dst = NULL, *src = NULL;
 	int dst_fd = 0, src_fd = 0;
-	MyString msgs;
+	std::string msgs;
 	MyString wake_status;
 
 	while(true)
@@ -675,7 +675,8 @@ SharedPortEndpoint::PipeListenerThread()
 			
 			if(!wake_select_dest)
 			{
-				char * msg = msgs.detach_buffer();
+				char * msg = strdup(msgs.c_str());
+				msgs.clear();
 				ThreadSafeLogError("SharedPortEndpoint: Registering Pump worker to move the socket", 0);
 				int status = daemonCore->Register_PumpWork_TS(SharedPortEndpoint::PipeListenerHelper, this, msg);
 				ThreadSafeLogError("SharedPortEndpoint: back from Register_PumpWork_TS with status", status);
@@ -687,13 +688,15 @@ SharedPortEndpoint::PipeListenerThread()
 					if (!(hotness & 1)) {
 						sldprintf(msgs, "SharedPortEndpoint: WARNING wake socket not hot dst(%p=%d), src(%p=%d) %d %s\n",
 							dst, dst_fd, src, src_fd, hotness, wake_status.c_str());
-						msg = msgs.detach_buffer();
+						msg = strdup(msgs.c_str());
+						msgs.clear();
 						daemonCore->Register_PumpWork_TS(SharedPortEndpoint::DebugLogHelper, this, msg);
 					} else {
 					#if 0
 						sldprintf(msgs, "SharedPortEndpoint: OK wake socket is hot dst(%p=%d), src(%p=%d) %d %s\n",
 							dst, dst_fd, src, src_fd, hotness, wake_status.c_str());
-						msg = msgs.detach_buffer();
+						msg = msgs.c_str();
+						msgs.clear();
 						daemonCore->Register_PumpWork_TS(SharedPortEndpoint::DebugLogHelper, this, msg);
 					#endif
 					}
@@ -769,20 +772,20 @@ SharedPortEndpoint::TouchSocketInterval()
 void
 SharedPortEndpoint::SocketCheck()
 {
-	if( !m_listening || m_full_name.IsEmpty() || !m_is_file_socket) {
+	if( !m_listening || m_full_name.empty() || !m_is_file_socket) {
 		return;
 	}
 
 	priv_state orig_priv = set_condor_priv();
 
-	int rc = utime(m_full_name.Value(), NULL);
+	int rc = utime(m_full_name.c_str(), NULL);
 
 	int utime_errno = errno;
 	set_priv(orig_priv);
 
 	if( rc < 0 ) {
 		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to touch %s: %s\n",
-				m_full_name.Value(), strerror(utime_errno));
+				m_full_name.c_str(), strerror(utime_errno));
 
 		if( utime_errno == ENOENT ) {
 			dprintf(D_ALWAYS,"SharedPortEndpoint: attempting to recreate vanished socket!\n");
@@ -816,10 +819,10 @@ SharedPortEndpoint::InitRemoteAddress()
 		EXCEPT("SHARED_PORT_DAEMON_AD_FILE must be defined");
 	}
 
-	FILE *fp = safe_fopen_wrapper_follow(shared_port_server_ad_file.Value(),"r");
+	FILE *fp = safe_fopen_wrapper_follow(shared_port_server_ad_file.c_str(),"r");
 	if( !fp ) {
 		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to open %s: %s\n",
-				shared_port_server_ad_file.Value(), strerror(errno));
+				shared_port_server_ad_file.c_str(), strerror(errno));
 		return false;
 	}
 
@@ -834,7 +837,7 @@ SharedPortEndpoint::InitRemoteAddress()
 
 	if( errorReadingAd ) {
 		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to read ad from %s.\n",
-				shared_port_server_ad_file.Value());
+				shared_port_server_ad_file.c_str());
 		return false;
 	}
 
@@ -842,18 +845,18 @@ SharedPortEndpoint::InitRemoteAddress()
 	if( !ad->LookupString(ATTR_MY_ADDRESS,public_addr) ) {
 		dprintf(D_ALWAYS,
 				"SharedPortEndpoint: failed to find %s in ad from %s.\n",
-				ATTR_MY_ADDRESS, shared_port_server_ad_file.Value());
+				ATTR_MY_ADDRESS, shared_port_server_ad_file.c_str());
 		return false;
 	}
 
 	Sinful sinful(public_addr.c_str());
-	sinful.setSharedPortID( m_local_id.Value() );
+	sinful.setSharedPortID( m_local_id.c_str() );
 
 		// if there is a private address, set the shared port id on that too
 	char const *private_addr = sinful.getPrivateAddr();
 	if( private_addr ) {
 		Sinful private_sinful( private_addr );
-		private_sinful.setSharedPortID( m_local_id.Value() );
+		private_sinful.setSharedPortID( m_local_id.c_str() );
 		sinful.setPrivateAddr( private_sinful.getSinful() );
 	}
 
@@ -868,12 +871,12 @@ SharedPortEndpoint::InitRemoteAddress()
 		while ((commandSinfulStr = sl.next()))
 		{
 			Sinful altsinful(commandSinfulStr);
-			altsinful.setSharedPortID(m_local_id.Value());
+			altsinful.setSharedPortID(m_local_id.c_str());
 			char const *private_addr = sinful.getPrivateAddr();
 			if (private_addr)
 			{
 				Sinful private_sinful(private_addr);
-				private_sinful.setSharedPortID(m_local_id.Value());
+				private_sinful.setSharedPortID(m_local_id.c_str());
 				altsinful.setPrivateAddr(private_sinful.getSinful());
 			}
 			m_remote_addrs.push_back(altsinful);
@@ -893,7 +896,7 @@ SharedPortEndpoint::RetryInitRemoteAddress()
 
 	m_retry_remote_addr_timer = -1;
 
-	MyString orig_remote_addr = m_remote_addr;
+	std::string orig_remote_addr = m_remote_addr;
 
 	bool inited = InitRemoteAddress();
 
@@ -970,7 +973,7 @@ SharedPortEndpoint::ReloadSharedPortServerAddr()
 void
 SharedPortEndpoint::EnsureInitRemoteAddress()
 {
-	if( m_remote_addr.IsEmpty() && m_retry_remote_addr_timer==-1 ) {
+	if( m_remote_addr.empty() && m_retry_remote_addr_timer==-1 ) {
 		RetryInitRemoteAddress();
 	}
 }
@@ -984,10 +987,10 @@ SharedPortEndpoint::GetMyRemoteAddress()
 
 	EnsureInitRemoteAddress();
 
-	if( m_remote_addr.IsEmpty() ) {
+	if( m_remote_addr.empty() ) {
 		return NULL;
 	}
-	return m_remote_addr.Value();
+	return m_remote_addr.c_str();
 }
 
 const std::vector<Sinful> &
@@ -1003,7 +1006,7 @@ SharedPortEndpoint::GetMyLocalAddress()
 	if( !m_listening ) {
 		return NULL;
 	}
-	if( m_local_addr.IsEmpty() ) {
+	if( m_local_addr.empty() ) {
 		Sinful sinful;
 			// port 0 is used as an indicator that no SharedPortServer
 			// address is included in this address.  This address should
@@ -1012,16 +1015,16 @@ SharedPortEndpoint::GetMyLocalAddress()
 			// direct access to our named socket.
 		sinful.setPort("0");
 		// TODO: Picking IPv4 arbitrarily.
-		MyString my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
-		sinful.setHost(my_ip.Value());
-		sinful.setSharedPortID( m_local_id.Value() );
+		std::string my_ip = get_local_ipaddr(CP_IPV4).to_ip_string();
+		sinful.setHost(my_ip.c_str());
+		sinful.setSharedPortID( m_local_id.c_str() );
 		std::string alias;
 		if( param(alias,"HOST_ALIAS") ) {
 			sinful.setAlias(alias.c_str());
 		}
 		m_local_addr = sinful.getSinful();
 	}
-	return m_local_addr.Value();
+	return m_local_addr.c_str();
 }
 
 int
@@ -1081,7 +1084,7 @@ SharedPortEndpoint::DoListenerAccept(ReliSock *return_remote_sock)
 	if( !accepted_sock ) {
 		dprintf(D_ALWAYS,
 				"SharedPortEndpoint: failed to accept connection on %s\n",
-				m_full_name.Value());
+				m_full_name.c_str());
 		return;
 	}
 
@@ -1094,7 +1097,7 @@ SharedPortEndpoint::DoListenerAccept(ReliSock *return_remote_sock)
 	if( !accepted_sock->get(cmd) ) {
 		dprintf(D_ALWAYS,
 				"SharedPortEndpoint: failed to read command on %s\n",
-				m_full_name.Value());
+				m_full_name.c_str());
 		delete accepted_sock;
 		return;
 	}
@@ -1104,7 +1107,7 @@ SharedPortEndpoint::DoListenerAccept(ReliSock *return_remote_sock)
 				"SharedPortEndpoint: received unexpected command %d (%s) on named socket %s\n",
 				cmd,
 				getCommandString(cmd),
-				m_full_name.Value());
+				m_full_name.c_str());
 		delete accepted_sock;
 		return;
 	}
@@ -1113,7 +1116,7 @@ SharedPortEndpoint::DoListenerAccept(ReliSock *return_remote_sock)
 		dprintf(D_ALWAYS,
 				"SharedPortEndpoint: failed to read end of message for cmd %s on %s\n",
 				getCommandString(cmd),
-				m_full_name.Value());
+				m_full_name.c_str());
 		delete accepted_sock;
 		return;
 	}
@@ -1121,7 +1124,7 @@ SharedPortEndpoint::DoListenerAccept(ReliSock *return_remote_sock)
 	dprintf(D_COMMAND|D_FULLDEBUG,
 			"SharedPortEndpoint: received command %d SHARED_PORT_PASS_SOCK on named socket %s\n",
 			cmd,
-			m_full_name.Value());
+			m_full_name.c_str());
 
 	ReceiveSocket(accepted_sock,return_remote_sock);
 
@@ -1309,7 +1312,7 @@ SharedPortEndpoint::Detach()
 }
 
 bool
-SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
+SharedPortEndpoint::UseSharedPort(std::string *why_not,bool already_open)
 {
 #ifndef HAVE_SHARED_PORT
 	if( why_not ) {
@@ -1385,7 +1388,7 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 		if (!GetDaemonSocketDir(socket_dir)) {
 			is_file_socket = true;
 			if (!GetAltDaemonSocketDir(socket_dir)) {
-				why_not->formatstr("No DAEMON_SOCKET_DIR is available.\n");
+				*why_not = "No DAEMON_SOCKET_DIR is available";
 				cached_result = false;
 				return cached_result;
 			}
@@ -1410,7 +1413,7 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 		}
 
 		if( !cached_result && why_not ) {
-			why_not->formatstr("cannot write to %s: %s",
+			formatstr(*why_not, "cannot write to %s: %s",
 						   socket_dir.c_str(),
 						   strerror(errno));
 		}
@@ -1494,7 +1497,7 @@ SharedPortEndpoint::ChownSocket(priv_state priv)
 			int rc = fchown( m_listener_sock.get_file_desc(),get_user_uid(),get_user_gid() );
 			if( rc != 0 ) {
 				dprintf(D_ALWAYS,"SharedPortEndpoint: failed to chown %s to %d:%d: %s.\n",
-						m_full_name.Value(),
+						m_full_name.c_str(),
 						get_user_uid(),
 						get_user_gid(),
 						strerror(errno));
@@ -1516,7 +1519,7 @@ SharedPortEndpoint::ChownSocket(priv_state priv)
 char const *
 SharedPortEndpoint::GetSocketFileName()
 {
-	return m_full_name.Value();
+	return m_full_name.c_str();
 }
 
 #ifndef WIN32
@@ -1536,7 +1539,7 @@ SharedPortEndpoint::MakeDaemonSocketDir()
 {
 	priv_state orig_state = set_condor_priv();
 
-	int mkdir_rc = mkdir(m_socket_dir.Value(),0755);
+	int mkdir_rc = mkdir(m_socket_dir.c_str(),0755);
 
 	set_priv( orig_state );
 	return mkdir_rc == 0;

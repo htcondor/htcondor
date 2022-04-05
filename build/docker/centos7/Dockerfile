@@ -19,14 +19,13 @@ RUN yum install -y systemtap-sdt-devel patch c-ares-devel autoconf automake libt
 # Install all the rest of the dependecies for a UW style RPM build, e.g. GSI, CREAM, etc.
 # Note: a lot of this stuff is still listed as required in the RPM
 # spec file, but really is not longer needed.  Like all the LaTeX stuff.  Sigh.
-RUN yum install -y rpm-build cmake perl-Data-Dumper glibc-devel libcurl-devel globus-gssapi-gsi-devel globus-gass-server-ez-devel globus-gass-transfer-devel globus-gram-client-devel globus-rsl-devel globus-gram-protocol globus-io-devel globus-xio-devel globus-gssapi-error-devel globus-gss-assist-devel globus-gsi-proxy-core-devel globus-gsi-credential-devel globus-gsi-callback-devel globus-gsi-sysconfig-devel globus-gsi-cert-utils-devel globus-openssl-module-devel globus-gsi-openssl-error-devel globus-gsi-proxy-ssl-devel globus-callout-devel globus-common-devel globus-ftp-client-devel globus-ftp-control-devel munge-devel voms-devel libcgroup-devel glite-ce-cream-client-devel glite-lbjp-common-gsoap-plugin-devel log4cpp-devel gridsite-devel systemd-devel systemd-units boost-devel boost-python graphviz \
+RUN yum install -y rpm-build cmake perl-Data-Dumper glibc-devel libcurl-devel globus-gssapi-gsi-devel globus-rsl-devel globus-io-devel globus-xio-devel globus-gssapi-error-devel globus-gss-assist-devel globus-gsi-proxy-core-devel globus-gsi-credential-devel globus-gsi-callback-devel globus-gsi-sysconfig-devel globus-gsi-cert-utils-devel globus-openssl-module-devel globus-gsi-openssl-error-devel globus-gsi-proxy-ssl-devel globus-callout-devel globus-common-devel globus-ftp-client-devel globus-ftp-control-devel munge-devel voms-devel libcgroup-devel systemd-devel systemd-units boost-devel boost-python graphviz scitokens-cpp-devel \
  && yum clean all
 
-USER build
-
 # Install some pip package dependencies for the manual and man pages in docs/
-RUN pip3 --no-cache install --user sphinx sphinx_rtd_theme nbsphinx sphinx-autobuild ipython
+RUN pip3 --no-cache install pathlib sphinx-autodoc-typehints==1.11.0 nbsphinx==0.8.6 ipython==6.5.0 sphinx-rtd-theme==0.5.2 Sphinx==4.0.2 htcondor>=9.0
 
+USER build
 
 # Set up entrypoint script; see that script for more on what it does
 COPY --chown=build:build entrypoint.sh /home/build/.entrypoint.sh

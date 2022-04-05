@@ -901,6 +901,7 @@ nordugrid_submit_start_callback( void *arg,
 
 	if ( error != GLOBUS_SUCCESS ) {
 		nordugrid_submit_cwd2_callback( arg, handle, error );
+		return;
 	}
 
 	sprintf( url, "gsiftp://%s/jobs/new", user_arg->cmd[2] );
@@ -1079,6 +1080,7 @@ void nordugrid_status_start_callback( void *arg,
 
 	if ( error != GLOBUS_SUCCESS ) {
 		nordugrid_status_get_callback( arg, handle, error );
+		return;
 	}
 
 	sprintf( url, "gsiftp://%s/jobs/info/%s/status",
@@ -1219,6 +1221,7 @@ nordugrid_cancel_start_callback( void *arg,
 
 	if ( error != GLOBUS_SUCCESS ) {
 		nordugrid_cancel_rmdir_callback( arg, handle, error );
+		return;
 	}
 
 	sprintf( url, "gsiftp://%s/jobs/%s", user_arg->cmd[2],
@@ -1305,6 +1308,7 @@ nordugrid_stage_in_start_callback( void *arg,
 
 	if ( error != GLOBUS_SUCCESS ) {
 		nordugrid_stage_in_start_file_callback( arg, handle, error );
+		return;
 	}
 
 	sprintf( url, "gsiftp://%s/jobs/%s/%s", user_arg->cmd[2],
@@ -1765,6 +1769,7 @@ void nordugrid_exit_info_start_callback( void *arg,
 
 	if ( error != GLOBUS_SUCCESS ) {
 		nordugrid_exit_info_get_callback( arg, handle, error );
+		return;
 	}
 
 	sprintf( url, "gsiftp://%s/jobs/info/%s/diag",
@@ -2009,6 +2014,7 @@ nordugrid_ping_start_callback( void *arg,
 
 	if ( error != GLOBUS_SUCCESS ) {
 		nordugrid_ping_exists_callback( arg, handle, error );
+		return;
 	}
 
 	sprintf( url, "gsiftp://%s/jobs", user_arg->cmd[2] );
@@ -2267,6 +2273,7 @@ void gridftp_transfer_start_callback( void *arg,
 
 	if ( error != GLOBUS_SUCCESS ) {
 		gridftp_transfer_done_callback( arg, handle, error );
+		return;
 	}
 
 	if ( strncmp( user_arg->cmd[2], "file://", 7 ) == 0 ) {

@@ -1,39 +1,19 @@
-# This is an execute node image for HTCondor
-ARG EL
-ARG VERSION
-ARG SUFFIX
+ARG BASE_IMAGE=htcondor/base:el7
+FROM ${BASE_IMAGE}
+ARG BASE_IMAGE
+ARG PACKAGE_LIST
 
-FROM htcondor/base:${VERSION}-el${EL}${SUFFIX}
+LABEL org.opencontainers.image.title="HTCondor Execute image derived from ${BASE_IMAGE}"
 
-ARG EL
-ARG VERSION
-ARG BUILDDATE
-ARG SUFFIX
-
-# https://label-schema.org/rc1
-LABEL org.label-schema.name="htcondor/execute:${VERSION}-el${EL}${SUFFIX}" \
-      org.label-schema.description="HTCondor ${VERSION} execute image for RHEL ${EL}-compatible" \
-      org.label-schema.vendor="HTCondor" \
-      org.label-schema.license="Apache-2.0"
-
-# Create slot users slot1 through slot64
+# Create pslots slot users slot1_1 through slot1_64
 RUN \
    for n in `seq 1 64`; do \
-       useradd slot${n}; \
+       useradd slot1_${n} || exit $?; \
    done
 
-# Install extra packages commonly used by jobs
-# including the docker repo and packages
-COPY execute/packagelist.txt /tmp/packagelist.txt
-RUN \
-    yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo && \
-    yum install -y docker-ce-cli && \
-    grep '^[A-Za-z]' /tmp/packagelist.txt \
-    | xargs -r yum -y install; \
-    yum clean all; \
-    rm -rf /var/cache/yum/*; \
-    rm /tmp/packagelist.txt
+COPY $PACKAGE_LIST /root/extra-packagelist.txt
+COPY container-install-execute.sh /root/container-install-execute.sh
+RUN bash -x /root/container-install-execute.sh /root/extra-packagelist.txt
 
-COPY execute/condor/*.conf /etc/condor/config.d/
+COPY condor/*.conf /etc/condor/config.d/
 
-LABEL org.label-schema.build-date="${BUILDDATE}"

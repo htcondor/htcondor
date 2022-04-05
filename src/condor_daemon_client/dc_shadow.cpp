@@ -171,7 +171,7 @@ DCShadow::updateJobInfo( ClassAd* ad, bool insure_update )
 }
 
 bool
-DCShadow::getUserPassword( const char* user, const char* domain, MyString& passwd)
+DCShadow::getUserPassword( const char* user, const char* domain, std::string& passwd)
 {
 	ReliSock reli_sock;
 	bool  result;
@@ -196,9 +196,9 @@ DCShadow::getUserPassword( const char* user, const char* domain, MyString& passw
 	// will close the connection.
 	reli_sock.set_crypto_mode(true);
 
-	MyString senduser = user;
-	MyString senddomain = domain;
-	MyString recvcredential;
+	std::string senduser = user;
+	std::string senddomain = domain;
+	std::string recvcredential;
 
 	if(!reli_sock.code(senduser)) {
 		dprintf( D_FULLDEBUG, "Failed to send user (%s) to shadow\n", senduser.c_str() );

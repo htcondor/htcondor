@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 
-#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)
+#if defined(HAVE_EXT_OPENSSL)
 #define ouch(x) dprintf(D_SECURITY,"SSL Auth: %s",x)
 #include "authentication.h"
 #include "condor_auth_ssl.h"
@@ -591,8 +591,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 			m_auth_state->m_done = 0;
 			m_auth_state->m_round_ctr = 0;
 			uint32_t network_size = htonl(scitoken.size());
-			std::vector<unsigned char> network_bytes;
-			network_bytes.reserve(sizeof(network_size) + scitoken.size());
+			std::vector<unsigned char> network_bytes(sizeof(network_size) + scitoken.size(), 0);
 			memcpy(&network_bytes[0], static_cast<void*>(&network_size), sizeof(network_size));
 			memcpy(&network_bytes[0] + sizeof(network_size), scitoken.c_str(), scitoken.size());
 			while(!m_auth_state->m_done) {
@@ -693,9 +692,9 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 		CondorAuthSSLRetval tmp_status = authenticate_server_pre(errstack, non_blocking);
 		if (tmp_status == CondorAuthSSLRetval::Fail) {
 			return static_cast<int>(authenticate_fail());
-		} else if (tmp_status != CondorAuthSSLRetval::Success) {
-			return static_cast<int>(tmp_status);
 		}
+
+		return static_cast<int>(tmp_status);
 	}
 	return static_cast<int>(authenticate_finish(errstack, non_blocking));
 }
@@ -951,7 +950,7 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 				}
 			}
 			if (m_auth_state->m_token_length >= 0) {
-				token_contents.reserve(m_auth_state->m_token_length + sizeof(uint32_t));
+				token_contents.resize(m_auth_state->m_token_length + sizeof(uint32_t), 0);
 				m_auth_state->m_ssl_status = (*SSL_read_ptr)(m_auth_state->m_ssl,
 					static_cast<void*>(&token_contents[0]),
 					m_auth_state->m_token_length + sizeof(uint32_t));
@@ -985,6 +984,27 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 				m_auth_state->m_server_status = AUTH_SSL_HOLDING;
 			} else {
 				m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+			}
+
+
+			// We don't currently go back and try another authentication method
+			// if authorization fails, so check for a succesful mapping here.
+			//
+			// We can't delay this info authentication_finish() because we
+			// need to be able to tell the client that the authN failed.
+			std::string canonical_user;
+			Authentication::load_map_file();
+			auto global_map_file = Authentication::getGlobalMapFile();
+			bool mapFailed = true;
+			if( global_map_file != NULL ) {
+				mapFailed = global_map_file->GetCanonicalization( "SCITOKENS", m_scitokens_auth_name, canonical_user );
+			}
+			if( mapFailed ) {
+				dprintf(D_SECURITY, "Failed to map SCITOKENS authenticated identity '%s', failing authentication to give another authentication method a go.\n", m_scitokens_auth_name.c_str() );
+
+				m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+			} else {
+				dprintf(D_SECURITY|D_VERBOSE, "Mapped SCITOKENS authenticated identity '%s' to %s, assuming authorization will succeed.\n", m_scitokens_auth_name.c_str(), canonical_user.c_str() );
 			}
 		}
 		if(m_auth_state->m_round_ctr % 2 == 1) {
@@ -1091,7 +1111,7 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 		setRemoteUser("scitokens");
 		setAuthenticatedName( m_scitokens_auth_name.c_str() );
 	} else {
-    	X509 *peer = (*SSL_get_peer_certificate_ptr)(m_auth_state->m_ssl);
+		X509 *peer = (*SSL_get_peer_certificate_ptr)(m_auth_state->m_ssl);
 		if (peer) {
 			X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
 			(*X509_free)(peer);
@@ -1103,9 +1123,9 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 		setAuthenticatedName( subjectname );
 	}
 
-    dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", getAuthenticatedName());
+	dprintf(D_SECURITY,"SSL authentication succeeded to %s\n", getAuthenticatedName());
 	m_auth_state.reset();
-    return retval;
+	return retval;
 }
 
 
@@ -1511,8 +1531,11 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 		if (mySock_->isClient()) {
 			dprintf(D_SECURITY,"SSL_get_peer_certificate returned null.\n" );
 			goto err_occured;
+		} else if (!m_scitokens_mode && param_boolean("AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE", false)) {
+			dprintf(D_SECURITY,"SSL Auth: Anonymous client is not allowed.\n");
+			goto err_occured;
 		} else {
-			dprintf(D_SECURITY, "Peer is anonymous; not checking.\n");
+			dprintf(D_SECURITY, "SSL Auth: Anonymous client is allowed; not checking.\n");
 			return X509_V_OK;
 		}
 	}
@@ -1660,6 +1683,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     char *certfile     = NULL;
     char *keyfile      = NULL;
     char *cipherlist   = NULL;
+    bool i_need_cert   = is_server;
 
 		// Not sure where we want to get these things from but this
 		// will do for now.
@@ -1677,6 +1701,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 			// default credential.  All non-default credential owners
 			// will auth anonymously.
 		} else if (SecMan::getTagCredentialOwner().empty()) {
+			i_need_cert = param_boolean("AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE", false);
 			certfile   = param( AUTH_SSL_CLIENT_CERTFILE_STR );
 			keyfile    = param( AUTH_SSL_CLIENT_KEYFILE_STR );
 		}
@@ -1685,10 +1710,11 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if( cipherlist == NULL ) {
 		cipherlist = strdup(AUTH_SSL_DEFAULT_CIPHERLIST);
     }
-    if( is_server && (!certfile || !keyfile) ) {
-        ouch( "Please specify path to server certificate and key\n" );
+    if( i_need_cert && (!certfile || !keyfile) ) {
+        ouch( "Please specify path to local certificate and key\n" );
         dprintf(D_SECURITY, "in config file : '%s' and '%s'.\n",
-                AUTH_SSL_SERVER_CERTFILE_STR, AUTH_SSL_SERVER_KEYFILE_STR );
+                is_server ? AUTH_SSL_SERVER_CERTFILE_STR : AUTH_SSL_CLIENT_CERTFILE_STR,
+                is_server ? AUTH_SSL_SERVER_KEYFILE_STR : AUTH_SSL_CLIENT_KEYFILE_STR);
 		ctx = NULL;
         goto setup_server_ctx_err;
     }

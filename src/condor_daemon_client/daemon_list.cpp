@@ -231,8 +231,8 @@ CollectorList::resortLocal( const char *preferred_collector )
 
 	if ( !preferred_collector ) {
         // figure out our hostname for plan b) above
-		MyString _hostname_str = get_local_fqdn();
-		const char * _hostname = _hostname_str.Value();
+		auto _hostname_str = get_local_fqdn();
+		const char * _hostname = _hostname_str.c_str();
 		if (!(*_hostname)) {
 				// Can't get our hostname??? fuck off
 			return -1;
@@ -291,8 +291,19 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 	if (seqgen) { seqgen->advance(now); }
 
 	this->rewind();
+	int num_collectors = this->Number();
 	DCCollector * daemon;
 	while (this->next(daemon)) {
+		if (!daemon->addr()) {
+			dprintf(D_ALWAYS, "Can't resolve collector %s; skipping update\n",
+					daemon->name() ? daemon->name() : "without a name(?)");
+			continue;
+		}
+
+		if ((num_collectors > 1) && daemon->isBlacklisted()) {
+			dprintf(D_ALWAYS, "Skipping update to collector %s which has timed out in the past\n", daemon->addr());
+			continue;
+		}
 		dprintf( D_FULLDEBUG, 
 				 "Trying to update collector %s\n", 
 				 daemon->addr() );
@@ -301,11 +312,22 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 			data = token_requester->createCallbackData(daemon->name(),
 				identity, authz_name);
 		}
-		if( daemon->sendUpdate(cmd, ad1, *adSeq, ad2, nonblocking,
-			DCTokenRequester::daemonUpdateCallback, data) )
+
+		if( num_collectors > 1 ) {
+			daemon->blacklistMonitorQueryStarted();
+		}
+
+		bool success = daemon->sendUpdate(cmd, ad1, *adSeq, ad2, nonblocking,
+			DCTokenRequester::daemonUpdateCallback, data);
+
+		if( num_collectors > 1 ) {
+			daemon->blacklistMonitorQueryFinished(success);
+		}
+
+		if (success)
 		{
 			success_count++;
-		} 
+		}
 	}
 
 	return success_count;

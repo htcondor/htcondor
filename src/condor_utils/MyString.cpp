@@ -69,7 +69,7 @@ MyString::~MyString()
 
 MyString::operator std::string() const
 {
-    std::string r = this->Value();
+    std::string r = this->c_str();
     return r;
 }
 
@@ -131,14 +131,14 @@ MyString::truncate(int pos)
 MyString& MyString::
 operator=(const MyString& S) 
 {
-	assign_str(S.Value(), S.Len);
+	assign_str(S.c_str(), S.Len);
     return *this;
 }
 
 /** Destructively moves a MyString guts from rhs to this */
 MyString& 
 MyString::operator=(MyString &&rhs)  noexcept {
-	delete Data;
+	delete [] Data;
 	this->Data     = rhs.Data;
 	this->Len      = rhs.Len;
 	this->capacity = rhs.capacity;
@@ -258,7 +258,7 @@ MyString&
 MyString::operator+=(const MyString& S) 
 {
 	
-    append_str( S.Value(), S.Len );
+    append_str( S.c_str(), S.Len );
     return *this;
 }
 
@@ -324,7 +324,7 @@ MyString::append_to_list(char const *str,char const *delim /* = "," */) {
 
 void
 MyString::append_to_list(MyString const &str,char const *delim /* ="," */) {
-	append_to_list(str.Value(),delim);
+	append_to_list(str.c_str(),delim);
 }
 
 MyString& 
@@ -451,6 +451,14 @@ bool YourStringDeserializer::deserialize_string(MyString & val, const char * sep
 	const char * p; size_t len;
 	if ( ! deserialize_string(p, len, sep)) return false;
 	val.set(p, (int)len);
+	return true;
+}
+
+bool YourStringDeserializer::deserialize_string(std::string & val, const char * sep)
+{
+	const char * p; size_t len;
+	if ( ! deserialize_string(p, len, sep)) return false;
+	val.assign(p, len);
 	return true;
 }
 
@@ -664,7 +672,7 @@ MyString::vformatstr_cat(const char *format,va_list args)
 	int s_len;
 
     if( !format || *format == '\0' ) {
-		return Value();
+		return c_str();
 	}
 #ifdef HAVE_VASPRINTF
 	s_len = vasprintf(&buffer, format, args);
@@ -690,7 +698,7 @@ MyString::vformatstr_cat(const char *format,va_list args)
 	::vsprintf(Data + Len, format, args);
 #endif
 	Len += s_len;
-    return Value();
+    return c_str();
 }
 
 const char *
@@ -856,23 +864,6 @@ MyString::remove_prefix(const char * prefix)
 }
 
 void
-MyString::RemoveAllWhitespace( void )
-{
-	int i;
-	int j;
-	for ( i = 0, j = 0; i < Length(); i++ ) {
-		if ( !isspace( Data[i] ) ) {
-			if ( i != j ) {
-				Data[j] = Data[i];
-			}
-			j++;
-		}
-	}
-	Data[j] = '\0';
-	Len = j;
-}
-
-void
 MyString::init()
 {
     Data=NULL;
@@ -911,7 +902,7 @@ int operator==(const MyString& S1, const MyString& S2)
 
 int operator==(const MyString& S1, const char *S2) 
 {
-    if ((!S1.Data || !S1.Length()) && (!S2 || !strlen(S2))) {
+    if ((!S1.Data || !S1.length()) && (!S2 || !strlen(S2))) {
 		return 1;
 	}
     if (!S1.Data || !S2) {
@@ -925,7 +916,7 @@ int operator==(const MyString& S1, const char *S2)
 
 int operator==(const char *S1, const MyString& S2) 
 {
-    if ((!S2.Data || !S2.Length()) && (!S1 || !strlen(S1))) {
+    if ((!S2.Data || !S2.length()) && (!S1 || !strlen(S1))) {
 		return 1;
 	}
     if (!S2.Data || !S1) {
@@ -1024,11 +1015,25 @@ MyStringFpSource::readLine(MyString & str, bool append /* = false*/)
 }
 
 bool
+MyStringFpSource::readLine(std::string & str, bool append /* = false*/)
+{
+    return ::readLine(str, fp, append);
+}
+
+bool
 MyStringFpSource::isEof()
 {
 	return feof(fp) != 0;
 }
 
+
+bool
+MyStringCharSource::readLine(std::string & str, bool append /* = false*/) {
+    MyString ms(str);
+    bool rv = readLine(ms, append);
+    str = ms;
+    return rv;
+}
 
 // the MyStringCharSource scans a string buffer returning
 // whenver it sees a \n
@@ -1153,7 +1158,7 @@ const char *MyStringTokener::GetNextToken(const char *delim, bool skipBlankToken
 MyStringWithTokener::MyStringWithTokener(const MyString &S)
 {
 	init();
-	assign_str(S.Value(), S.Len);
+	assign_str(S.c_str(), S.Len);
 }
 
 MyStringWithTokener::MyStringWithTokener(const char *s)

@@ -3,6 +3,10 @@
 
 #include "singularity.h"
 
+#ifdef LINUX
+#include <sys/wait.h>
+#endif
+
 #include <vector>
 
 #include "condor_config.h"
@@ -11,6 +15,7 @@
 #include "basename.h"
 #include "stat_wrapper.h"
 #include "stat_info.h"
+#include "condor_attributes.h"
 
 using namespace htcondor;
 
@@ -18,7 +23,7 @@ using namespace htcondor;
 bool Singularity::m_enabled = false;
 bool Singularity::m_probed = false;
 int  Singularity::m_default_timeout = 120;
-MyString Singularity::m_singularity_version;
+std::string Singularity::m_singularity_version;
 
 
 static bool find_singularity(std::string &exec)
@@ -80,8 +85,8 @@ Singularity::detect(CondorError &err)
 	infoArgs.AppendArg(exec);
 	infoArgs.AppendArg("--version");
 
-	MyString displayString;
-	infoArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	infoArgs.GetArgsStringForLogging( displayString );
 	dprintf(D_FULLDEBUG, "Attempting to run: '%s %s'.\n", exec.c_str(), displayString.c_str());
 
 	MyPopenTimer pgm;
@@ -99,21 +104,21 @@ Singularity::detect(CondorError &err)
 	int exitCode;
 	if ( ! pgm.wait_for_exit(m_default_timeout, &exitCode) || exitCode != 0) {
 		pgm.close_program(1);
-		MyString line;
-		line.readLine(pgm.output(), false); line.chomp();
+		std::string line;
+		pgm.output().readLine(line, false);
+		chomp(line);
 		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str());
 		err.pushf("Singularity::detect", 2, "'%s' exited with status %d", displayString.c_str(), exitCode);
 		return false;
 	}
 
-	m_singularity_version.readLine(pgm.output(), false);
-	m_singularity_version.chomp();
+	pgm.output().readLine(m_singularity_version, false);
+	chomp(m_singularity_version);
 	dprintf( D_FULLDEBUG, "[singularity version] %s\n", m_singularity_version.c_str() );
 	if (IsFulldebug(D_ALWAYS)) {
-		MyString line;
-		while (line.readLine(pgm.output(), false)) {
-			line.readLine(pgm.output(), false);
-			line.chomp();
+		std::string line;
+		while (pgm.output().readLine(line, false)) {
+			chomp(line);
 			dprintf( D_FULLDEBUG, "[singularity info] %s\n", line.c_str() );
 		}
 	}
@@ -126,6 +131,16 @@ Singularity::detect(CondorError &err)
 bool
 Singularity::job_enabled(ClassAd &machineAd, ClassAd &jobAd)
 {
+	bool wantSIF = false;
+	bool wantSandbox  = false;
+
+	jobAd.LookupBool(ATTR_WANT_SIF, wantSIF);
+	jobAd.LookupBool(ATTR_WANT_SANDBOX_IMAGE, wantSandbox);
+
+	if (wantSIF || wantSandbox) {
+		return true;
+	}
+
 	return param_boolean("SINGULARITY_JOB", false, false, &machineAd, &jobAd);
 }
 
@@ -141,7 +156,7 @@ Singularity::setup(ClassAd &machineAd,
 {
 	ArgList sing_args;
 
-	if (!param_boolean("SINGULARITY_JOB", false, false, &machineAd, &jobAd)) {return Singularity::DISABLE;}
+	if (!job_enabled(machineAd, jobAd)) {return Singularity::DISABLE;}
 
 	if (!enabled()) {
 		dprintf(D_ALWAYS, "Singularity job has been requested but singularity does not appear to be configured on this host.\n");
@@ -154,21 +169,36 @@ Singularity::setup(ClassAd &machineAd,
 
 	std::string image;
 	if (!param_eval_string(image, "SINGULARITY_IMAGE_EXPR", "SingularityImage", &machineAd, &jobAd)) {
-		dprintf(D_ALWAYS, "Singularity support was requested but unable to determine the image to use.\n");
-		return Singularity::FAILURE;
+		jobAd.LookupString(ATTR_CONTAINER_IMAGE, image);
+		if (image.length() == 0) {
+			dprintf(D_ALWAYS, "Singularity support was requested but unable to determine the image to use.\n");
+			return Singularity::FAILURE;
+		}
 	}
 
 	std::string target_dir;
 	bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
 
-	job_args.RemoveArg(0);
+	// If we have a process to exec, remove it from the args
+	if (exec.length() > 0) {
+		job_args.RemoveArg(0);
+	}
+
 	std::string orig_exec_val = exec;
 	if (has_target && (orig_exec_val.compare(0, execute_dir.length(), execute_dir) == 0)) {
 		exec = target_dir + "/" + orig_exec_val.substr(execute_dir.length());
 		dprintf(D_FULLDEBUG, "Updated executable path to %s for target directory mode.\n", exec.c_str());
 	}
 	sing_args.AppendArg(sing_exec_str.c_str());
-	sing_args.AppendArg("exec");
+
+	// If no "Executable" is specified, we get a zero-length exec string
+	// use "singularity run" to run in this case, and assume
+	// that there is an appropriate runscript inside the image
+	if (orig_exec_val.length() > 0) {
+		sing_args.AppendArg("exec");
+	} else {
+		sing_args.AppendArg("run");
+	}
 
 	// Bind
 	// Mount under scratch
@@ -280,15 +310,23 @@ Singularity::setup(ClassAd &machineAd,
 
 	sing_args.AppendArg("-C");
 
-	MyString args_error;
-	char *tmp = param("SINGULARITY_EXTRA_ARGUMENTS");
-	if(!sing_args.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
+	std::string args_error;
+	std::string sing_extra_args;
+
+	if (!param_eval_string(sing_extra_args, "SINGULARITY_EXTRA_ARGUMENTS", "", &machineAd, &jobAd)) {
+		// SINGULARITY_EXTRA_ARGUMENTS isn't a valid expression.  Try just an unquoted string
+		char *xtra = param("SINGULARITY_EXTRA_ARGUMENTS");
+		if (xtra) {
+			sing_extra_args = xtra;
+			free(xtra);
+		}
+	}
+
+	if(!sing_extra_args.empty() && !sing_args.AppendArgsV1RawOrV2Quoted(sing_extra_args.c_str(),args_error)) {
 		dprintf(D_ALWAYS,"singularity: failed to parse extra arguments: %s\n",
-		args_error.Value());
-		free(tmp);
+		args_error.c_str());
 		return Singularity::FAILURE;
 	}
-	if (tmp) free(tmp);
 
 	// if the startd has assigned us a gpu, add --nv to the sing exec
 	// arguments to mount the nvidia devices
@@ -300,23 +338,26 @@ Singularity::setup(ClassAd &machineAd,
 
 	sing_args.AppendArg(image.c_str());
 
-	sing_args.AppendArg(exec.c_str());
+	if (orig_exec_val.length() > 0) {
+		sing_args.AppendArg(exec.c_str());
+	}
+
 	sing_args.AppendArgsFromArgList(job_args);
 
-	MyString args_string;
+	std::string args_string;
 	job_args = sing_args;
-	job_args.GetArgsStringForDisplay(&args_string, 1);
+	job_args.GetArgsStringForDisplay(args_string, 1);
 	exec = sing_exec_str;
-	dprintf(D_FULLDEBUG, "Arguments updated for executing with singularity: %s %s\n", exec.c_str(), args_string.Value());
+	dprintf(D_FULLDEBUG, "Arguments updated for executing with singularity: %s %s\n", exec.c_str(), args_string.c_str());
 
 	Singularity::convertEnv(&job_env);
 	return Singularity::SUCCESS;
 }
 
 static bool
-envToList(void *list, const MyString &Name, const MyString & /*value*/) {
+envToList(void *list, const std::string & name, const std::string & /*value*/) {
 	std::list<std::string> *slist = (std::list<std::string> *)list;
-	slist->push_back(std::string(Name));
+	slist->push_back(name);
 	return true;
 }
 
@@ -326,29 +367,37 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 	// if SINGULARITY_TARGET_DIR is set, we need to reset
 	// all the job's environment variables that refer to the scratch dir
 
-	MyString oldScratchDir;
+	std::string oldScratchDir;
 	job_env.GetEnv("_CONDOR_SCRATCH_DIR", oldScratchDir);
+
+	// Walk thru all the environment variables, and for each one where the value
+	// contains the scratch dir path, make a new SINGULARITYENV_xxx variable that
+	// replaces the scratch dir path in the value with the target_dir path.
+	// This way processes outside of the container, such as the USER_JOB_WRAPPER, will
+	// get the original environment variable values, but variables passed into the
+	// container will have the path changed to target_dir.
+
+	std::list<std::string> envNames;
+	job_env.Walk(envToList, (void *)&envNames);
+	for (const std::string & name : envNames) {
+		MyString myValue;
+		job_env.GetEnv(name.c_str(), myValue);
+		std::string  value = myValue;
+		auto index_execute_dir = value.find(execute_dir);
+		if (index_execute_dir != std::string::npos) {
+			std::string new_name = "SINGULARITYENV_" + name;
+			job_env.SetEnv(
+				new_name.c_str(),
+				value.replace(index_execute_dir, execute_dir.length(), target_dir)
+			);
+		}
+	}
+
 	job_env.SetEnv("_CONDOR_SCRATCH_DIR_OUTSIDE_CONTAINER", oldScratchDir);
 
-	job_env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir.c_str());
-	job_env.SetEnv("TEMP", target_dir.c_str());
-	job_env.SetEnv("TMP", target_dir.c_str());
-	job_env.SetEnv("TMPDIR", target_dir.c_str());
-	std::string chirp = target_dir + "/.chirp.config";
-	std::string machine_ad = target_dir + "/.machine.ad";
-	std::string job_ad = target_dir + "/.job.ad";
-	job_env.SetEnv("_CONDOR_CHIRP_CONFIG", chirp.c_str());
-	job_env.SetEnv("_CONDOR_MACHINE_AD", machine_ad.c_str());
-	job_env.SetEnv("_CONDOR_JOB_AD", job_ad.c_str());
-	MyString proxy_file;
-	if ( job_env.GetEnv( "X509_USER_PROXY", proxy_file ) &&
-	     strncmp( execute_dir.c_str(), proxy_file.Value(),
-	      execute_dir.length() ) == 0 ) {
-		std::string new_proxy = target_dir + "/" + condor_basename( proxy_file.Value() );
-		job_env.SetEnv( "X509_USER_PROXY", new_proxy.c_str() );
-	}
 	return true;
 }
+
 bool
 Singularity::convertEnv(Env *job_env) {
 	std::list<std::string> envNames;
@@ -356,10 +405,21 @@ Singularity::convertEnv(Env *job_env) {
 	std::list<std::string>::iterator it;
 	for (it = envNames.begin(); it != envNames.end(); it++) {
 		std::string name = *it;
-		MyString value;
+		std::string  value;
+
+		// Skip env vars that already start with SINGULARITYENV_, as they
+		// have already been converted (probably via retargetEnvs()).
+		if (name.rfind("SINGULARITYENV_",0)==0) continue;
+
 		job_env->GetEnv(name.c_str(), value);
 		std::string new_name = "SINGULARITYENV_" + name;
-		job_env->SetEnv(new_name.c_str(), value);
+		// Only copy over the value to the new_name if the new_name
+		// does not already exist because perhaps it was already set
+		// in retargetEnvs().  Note that 'value' is not touched if
+		// GetEnv returns false.
+		if (job_env->GetEnv(new_name.c_str(), value) == false) {
+			job_env->SetEnv(new_name.c_str(), value);
+		}
 	}
 	return true;
 }
@@ -375,14 +435,16 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 	// The last orig_args_len args are the real exec + its args.  Skip those for the test
 	for (int i = 0; i < args.Count() - orig_args_len; i++) {
 		const char *arg = args.GetArg(i);
-		if (strcmp(arg, "exec") == 0) {
+		if ((strcmp(arg, "run") == 0) || (strcmp(arg, "exec")) == 0) {
+			// Stick a -q before test to keep the download quiet
+			testArgs.AppendArg("-q");
 			arg = "test";
 		}
 		testArgs.AppendArg(arg);
 	}
 
-	MyString stredArgs;
-	testArgs.GetArgsStringForDisplay(&stredArgs);
+	std::string stredArgs;
+	testArgs.GetArgsStringForDisplay(stredArgs);
 
 	dprintf(D_FULLDEBUG, "Runnning singularity test for job %s cmd is %s\n", JobName.c_str(), stredArgs.c_str());
 	FILE *sing_test_output = my_popen(testArgs, "r", MY_POPEN_OPT_WANT_STDERR, &env, true);
@@ -403,6 +465,15 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 
 	errorMessage = buf;
 
+	// my_pclose will return an error if there is more than a pipe full
+	// of output at close time.  Drain the input pipe to prevent this.
+	while (!feof(sing_test_output)) {
+		int r = fread(buf,1,255, sing_test_output);
+		if (r < 0) {
+			dprintf(D_ALWAYS, "Error %d draining singularity test pipe\n", errno);
+		}
+	}
+
 	int rc = my_pclose(sing_test_output);
 	dprintf(D_ALWAYS, "singularity test returns %d\n", rc);
 
@@ -417,3 +488,66 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 	return true;
 }
 
+// Test to see if this singularity can run an exploded directory
+// We'll use the sbin directory, which should have a static linked
+// binary, exit_37 in it as the root of the "sandbox dir".
+// If we can run this from the sandbox, then singularity should 
+// be able to run with sandboxes
+
+bool
+Singularity::canRunSIF() {
+	std::string libexec_dir;
+	libexec_dir = param("LIBEXEC");
+	return Singularity::canRun(libexec_dir + "/exit_37.sif");
+}
+
+bool
+Singularity::canRunSandbox() {
+	std::string sbin_dir;
+	sbin_dir = param("SBIN");
+	return Singularity::canRun(sbin_dir);
+}
+
+bool 
+Singularity::canRun(const std::string &image) {
+#ifdef LINUX
+	ArgList sandboxArgs;
+	std::string exec;
+	if (!find_singularity(exec)) {
+		return false;
+	}
+	std::string exit_37 = "/exit_37";
+
+	sandboxArgs.AppendArg(exec);
+	sandboxArgs.AppendArg("exec");
+	sandboxArgs.AppendArg(image);
+	sandboxArgs.AppendArg(exit_37);
+
+	std::string displayString;
+	sandboxArgs.GetArgsStringForLogging( displayString );
+	dprintf(D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str());
+
+	MyPopenTimer pgm;
+	if (pgm.start_program(sandboxArgs, true, NULL, false) < 0) {
+		if (pgm.error_code() != 0) {
+			dprintf(D_ALWAYS, "Singularity exec of failed, this singularity can run some programs, but not these\n");
+			return false;
+		}
+	}
+
+	int exitCode = -1;
+	pgm.wait_for_exit(m_default_timeout, &exitCode);
+	if (WEXITSTATUS(exitCode) != 37) {  // hard coded return from exit_37
+		pgm.close_program(1);
+		std::string line;
+		pgm.output().readLine(line, false);
+		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str());
+		return false;
+	}
+	dprintf(D_ALWAYS, "Successfully ran: '%s'.\n", displayString.c_str());
+	return true;
+#else
+	(void)image;	// shut the compiler up
+	return false;
+#endif
+}

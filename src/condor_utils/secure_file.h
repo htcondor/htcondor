@@ -25,6 +25,7 @@
 
 void simple_scramble(char* scrambled,  const char* orig, int len);
 int write_password_file(const char* path, const char* password);
+int write_binary_password_file(const char* path, const char* password, size_t password_len);
 FILE* open_secure_file_for_write(const char* path, bool as_root, bool group_readable = false);
 bool write_secure_file(const char* path, const void* data, size_t len, bool as_root, bool group_readable = false);
 

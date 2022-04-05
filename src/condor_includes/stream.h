@@ -541,6 +541,9 @@ public:
 	/** Returns true if this stream can turn on encryption. */
 	virtual bool canEncrypt() const = 0;
 
+	/** Returns true if this stream must always use encryption (e.g. AES). */
+	virtual bool mustEncrypt() const = 0;
+
 	static int set_timeout_multiplier(int secs);
 	static int get_timeout_multiplier();
 

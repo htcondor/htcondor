@@ -25,18 +25,18 @@
 
 #include "stl_string_utils.h"
 
-bool operator==(const MyString& L, const std::string& R) { return R == L.Value(); }
-bool operator==(const std::string& L, const MyString& R) { return L == R.Value(); }
-bool operator!=(const MyString& L, const std::string& R) { return R != L.Value(); }
-bool operator!=(const std::string& L, const MyString& R) { return L != R.Value(); }
-bool operator<(const MyString& L, const std::string& R) { return R > L.Value(); }
-bool operator<(const std::string& L, const MyString& R) { return L < R.Value(); }
-bool operator>(const MyString& L, const std::string& R) { return R < L.Value(); }
-bool operator>(const std::string& L, const MyString& R) { return L > R.Value(); }
-bool operator<=(const MyString& L, const std::string& R) { return R >= L.Value(); }
-bool operator<=(const std::string& L, const MyString& R) { return L <= R.Value(); }
-bool operator>=(const MyString& L, const std::string& R) { return R <= L.Value(); }
-bool operator>=(const std::string& L, const MyString& R) { return L >= R.Value(); }
+bool operator==(const MyString& L, const std::string& R) { return R == L.c_str(); }
+bool operator==(const std::string& L, const MyString& R) { return L == R.c_str(); }
+bool operator!=(const MyString& L, const std::string& R) { return R != L.c_str(); }
+bool operator!=(const std::string& L, const MyString& R) { return L != R.c_str(); }
+bool operator<(const MyString& L, const std::string& R) { return R > L.c_str(); }
+bool operator<(const std::string& L, const MyString& R) { return L < R.c_str(); }
+bool operator>(const MyString& L, const std::string& R) { return R < L.c_str(); }
+bool operator>(const std::string& L, const MyString& R) { return L > R.c_str(); }
+bool operator<=(const MyString& L, const std::string& R) { return R >= L.c_str(); }
+bool operator<=(const std::string& L, const MyString& R) { return L <= R.c_str(); }
+bool operator>=(const MyString& L, const std::string& R) { return R <= L.c_str(); }
+bool operator>=(const std::string& L, const MyString& R) { return L >= R.c_str(); }
 
 
 static
@@ -179,6 +179,12 @@ bool readLine(std::string& str, FILE *fp, bool append)
 	}
 }
 
+// populate a std::string from any MyStringSource
+//
+bool readLine( std::string &dst, MyStringSource & src, bool append /*= false*/) {
+	return src.readLine(dst, append);
+}
+
 
 bool chomp(std::string &str)
 {
@@ -213,6 +219,19 @@ void trim( std::string &str )
 
 	if ( begin != 0 || end != (int)(str.length()) - 1 ) {
 		str = str.substr(begin, (end - begin) + 1);
+	}
+}
+
+void trim_quotes (std::string &str, std::string quotes)
+{
+	if (str.length() < 2) {
+		return;
+	}
+	if (quotes.find(str.front()) != std::string::npos) {
+		str.erase(0, 1);
+	}
+	if (quotes.find(str.back()) != std::string::npos) {
+		str.pop_back();
 	}
 }
 
@@ -419,7 +438,7 @@ const char * is_attr_in_attr_list(const char * attr, const char * list)
 #if 1
 static MyStringTokener tokenbuf;
 void Tokenize(const char *str) { tokenbuf.Tokenize(str); }
-void Tokenize(const MyString &str) { Tokenize(str.Value()); }
+void Tokenize(const MyString &str) { Tokenize(str.c_str()); }
 void Tokenize(const std::string &str) { Tokenize(str.c_str()); }
 const char *GetNextToken(const char *delim, bool skipBlankTokens) { return tokenbuf.GetNextToken(delim, skipBlankTokens); }
 #else
@@ -645,5 +664,27 @@ bool StringTokenIterator::next(MyString & tok)
 	const char * p = next(); 
 	tok = p;
 	return p != NULL; 
+}
+
+int
+replace_str( std::string & str, const std::string & from, const std::string & to, size_t start ) {
+    if( from.empty() ) { return -1; }
+
+    int replacements = 0;
+    while( (start = str.find(from, start)) != std::string::npos ) {
+        str.replace( start, from.length(), to );
+        start += to.length();
+        ++replacements;
+    }
+
+    return replacements;
+}
+
+const char * empty_if_null(const char * c_str) {
+    if( c_str == NULL ) {
+        return "";
+    }
+
+    return c_str;
 }
 

@@ -133,7 +133,7 @@ static struct popen_entry * find_child(FILE* fp)
 // Windows versions of my_popen / my_pclose 
 //////////////////////////////////////////////////////////////////////////
 
-extern "C" FILE *
+FILE *
 my_popen(const char *const_cmd, const char *mode, int options)
 {
 	int want_stderr = (options & MY_POPEN_OPT_WANT_STDERR);
@@ -249,9 +249,9 @@ my_popen(const ArgList &args, const char *mode, int want_stderr, const Env *zkmE
 	/* drop_privs HAS NO EFFECT ON WINDOWS */
 	/* write_data IS NOT YET IMPLEMENTED ON WINDOWS - we can do so when we need it */
 
-	MyString cmdline, err;
-	if (!args.GetArgsStringWin32(&cmdline, 0, &err)) {
-		dprintf(D_ALWAYS, "my_popen: error making command line: %s\n", err.Value());
+	MyString cmdline;
+	if (!args.GetArgsStringWin32(&cmdline, 0)) {
+		dprintf(D_ALWAYS, "my_popen: error making command line\n");
 		return NULL;
 	}
 	if (write_data && write_data[0]) {
@@ -262,7 +262,7 @@ my_popen(const ArgList &args, const char *mode, int want_stderr, const Env *zkmE
 	return my_popen(cmdline.Value(), mode, want_stderr);
 }
 
-extern "C" FILE *
+FILE *
 my_popenv(const char *const args[], const char *mode, int options)
 {
 	// build the argument list
@@ -274,7 +274,7 @@ my_popenv(const char *const args[], const char *mode, int options)
 	return my_popen(arglist, mode, options);
 }
 
-extern "C" int
+int
 my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 {
 	HANDLE hChildProcess;
@@ -307,7 +307,6 @@ my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 }
 
 // this is the backward compatible my_pclose function that NO CONDOR CODE SHOULD USE!
-extern "C"
 int my_pclose( FILE *fp )
 {
 	int rv = my_pclose_ex(fp, 0xFFFFFFFF, false);
@@ -317,7 +316,7 @@ int my_pclose( FILE *fp )
 	return rv;
 }
 
-extern "C" int
+int
 my_system(const char *cmd)
 {
 	FILE* fp = my_popen(cmd, "w", FALSE);
@@ -514,7 +513,15 @@ my_popenv_impl( const char *const args[],
 			egid = getegid();
 			if( seteuid( 0 ) ) { }
 			if( setgid( egid ) ) { }
-			if( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
+
+			// Some linux environment make it an error, to
+			// setuid'ing to our current euid.  So don't check first
+			
+			if (getuid() != euid) {
+				if (setuid(euid) < 0) {
+					_exit(ENOEXEC);
+				}
+			}
 		}
 
 			/* before we exec(), clear the signal mask and reset SIGPIPE
@@ -531,14 +538,14 @@ my_popenv_impl( const char *const args[],
 		if (env_ptr) {
 			char **m_unix_env = NULL;
 			m_unix_env = env_ptr->getStringArray();
-			execve(cmd.Value(), const_cast<char *const*>(args), m_unix_env );
+			execve(cmd.c_str(), const_cast<char *const*>(args), m_unix_env );
 
 				// delete the memory even though we're on our way out
 				// if exec failed.
 			deleteStringArray(m_unix_env);
 
 		} else {
-			execvp(cmd.Value(), const_cast<char *const*>(args) );
+			execvp(cmd.c_str(), const_cast<char *const*>(args) );
 		}
 
 			/* If we get here, inform the parent of our errno */
@@ -617,7 +624,7 @@ my_popenv_impl( const char *const args[],
 	return retp;
 }
 
-extern "C" FILE *
+FILE *
 my_popenv( const char *const args[],
            const char * mode,
            int options )
@@ -649,7 +656,7 @@ my_popen(const ArgList &args, const char *mode, int options, const Env *env_ptr,
 }
 
 // this is the backward compatible my_pclose function that NO CONDOR CODE SHOULD USE!
-extern "C" int
+int
 my_pclose(FILE *fp)
 {
 	int			status;
@@ -699,7 +706,7 @@ static bool waitpid_with_timeout(pid_t pid, int *pstatus, time_t timeout)
 }
 
 
-extern "C" int
+int
 my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 {
 	int			status;
@@ -740,7 +747,7 @@ my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 
 #endif // !WIN32
 
-extern "C" int
+int
 my_systemv(const char *const args[])
 {
 	FILE* fp = my_popenv(args, "w", FALSE);
@@ -776,7 +783,7 @@ pid_t ChildPid = 0;
     0: Success (wait == true)
 */
 #define MAXARGS	32
-extern "C" int
+int
 my_spawnl( const char* cmd, ... )
 {
 	int		rval;
@@ -817,7 +824,7 @@ my_spawnl( const char* cmd, ... )
     -1: failure
     >0 == Return status of child
 */
-extern "C" int
+int
 my_spawnv( const char* cmd, const char *const argv[] )
 {
 	int					status;
@@ -1162,6 +1169,8 @@ int MyPopenTimer::read_until_eof(time_t timeout)
 	if (cbTot > 0) {
 		store_buffers(src, &bufs[0], cbBuf, cbTot, bytes_read > 0);
 		bytes_read += cbTot;
+	} else {
+		free(buffer);
 	}
 
 	return error;

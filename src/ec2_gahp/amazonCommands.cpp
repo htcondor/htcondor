@@ -22,7 +22,6 @@
 #include "condor_config.h"
 #include "string_list.h"
 #include "condor_arglist.h"
-#include "MyString.h"
 #include "util_lib_proto.h"
 #include "internet.h"
 #include "my_popen.h"
@@ -129,7 +128,7 @@ AmazonRequest::~AmazonRequest() { }
 class Throttle {
     public:
         Throttle() : count( 0 ), rateLimit( 0 ) {
-#if defined(HAVE_CLOCK_GETTIME)
+#ifdef UNIX
             // Determine which type of clock to use.
             int rv = clock_gettime( CLOCK_MONOTONIC, & when );
             if( rv == 0 ) { type = CLOCK_MONOTONIC; }
@@ -198,7 +197,7 @@ class Throttle {
 
         static void now( struct timespec * t ) {
             if( t != NULL ) {
-#if defined(HAVE_CLOCK_GETTIME)
+#ifdef UNIX
                 clock_gettime( type, t );
 #else
                 struct timeval tv;
@@ -294,7 +293,7 @@ class Throttle {
         }
 
     protected:
-#if defined(HAVE_CLOCK_GETTIME)
+#ifdef UNIX
         static clockid_t type;
 #endif
         unsigned int count;
@@ -308,7 +307,7 @@ class Throttle {
 
 };
 
-#if defined(HAVE_CLOCK_GETTIME)
+#ifdef UNIX
 clockid_t Throttle::type;
 #endif
 Throttle globalCurlThrottle;
@@ -342,8 +341,8 @@ bool parseURL(	const std::string & url,
     Regex r; int errCode = 0; const char * errString = 0;
     bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", & errString, & errCode );
     ASSERT( patternOK );
-    ExtArray<MyString> groups(5);
-    if(! r.match( url.c_str(), & groups )) { return false; }
+    ExtArray<std::string> groups(5);
+    if(! r.match_str( url.c_str(), & groups )) { return false; }
 
     protocol = groups[1];
     host = groups[3];
@@ -928,7 +927,7 @@ bool AmazonRequest::SendJSONRequest( const std::string & payload ) {
 // via us-east-1, which is moderately crazy.
 bool AmazonRequest::SendS3Request( const std::string & payload ) {
 	headers[ "Content-Type" ] = "binary/octet-stream";
-	std::string contentLength; formatstr( contentLength, "%lu", payload.size() );
+	std::string contentLength; formatstr( contentLength, "%zu", payload.size() );
 	headers[ "Content-Length" ] = contentLength;
 	// Another undocumented CURL feature: transfer-encoding is "chunked"
 	// by default for "PUT", which we really don't want.
@@ -3445,9 +3444,8 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			"SpotPrice" );
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
 			"KeyName" );
-		// AWS' documentation is wrong, claims this is 'UserData'.
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
-			"userData", "UserData" );
+			"UserData", "UserData" );
 
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
 			"InstanceType" );
@@ -4158,8 +4156,8 @@ bool AmazonCreateStack::SendRequest() {
 		Regex r; int errCode = 0; const char * errString = 0;
 		bool patternOK = r.compile( "<StackId>(.*)</StackId>", & errString, & errCode );
 		ASSERT( patternOK );
-		ExtArray<MyString> groups(2);
-		if( r.match( resultString, & groups ) ) {
+		ExtArray<std::string> groups(2);
+		if( r.match_str( resultString, & groups ) ) {
 			this->stackID = groups[1];
 		}
 	}
@@ -4238,25 +4236,25 @@ bool AmazonDescribeStacks::SendRequest() {
 		Regex r;
 		bool patternOK = r.compile( "<StackStatus>(.*)</StackStatus>", & errString, & errCode );
 		ASSERT( patternOK );
-		ExtArray<MyString> statusGroups( 2 );
-		if( r.match( resultString, & statusGroups ) ) {
+		ExtArray<std::string> statusGroups( 2 );
+		if( r.match_str( resultString, & statusGroups ) ) {
 			this->stackStatus = statusGroups[1];
 		}
 
 		Regex s;
 		patternOK = s.compile( "<Outputs>(.*)</Outputs>", & errString, & errCode, Regex::multiline | Regex::dotall );
 		ASSERT( patternOK );
-		ExtArray<MyString> outputGroups( 2 );
-		if( s.match( resultString, & outputGroups ) ) {
+		ExtArray<std::string> outputGroups( 2 );
+		if( s.match_str( resultString, & outputGroups ) ) {
 			dprintf( D_ALWAYS, "Found output string '%s'.\n", outputGroups[1].c_str() );
-			MyString membersRemaining = outputGroups[1];
+			std::string membersRemaining = outputGroups[1];
 
 			Regex t;
 			patternOK = t.compile( "\\s*<member>\\s*(.*?)\\s*</member>\\s*", & errString, & errCode, Regex::multiline | Regex::dotall );
 			ASSERT( patternOK );
 
-			ExtArray<MyString> memberGroups( 2 );
-			while( t.match( membersRemaining, & memberGroups ) ) {
+			ExtArray<std::string> memberGroups( 2 );
+			while( t.match_str( membersRemaining, & memberGroups ) ) {
 				std::string member = memberGroups[1].c_str();
 				dprintf( D_ALWAYS, "Found member '%s'.\n", member.c_str() );
 
@@ -4265,8 +4263,8 @@ bool AmazonDescribeStacks::SendRequest() {
 				ASSERT( patternOK );
 
 				std::string outputKey;
-				ExtArray<MyString> keyGroups( 2 );
-				if( u.match( member, & keyGroups ) ) {
+				ExtArray<std::string> keyGroups( 2 );
+				if( u.match_str( member, & keyGroups ) ) {
 					outputKey = keyGroups[1];
 				}
 
@@ -4275,8 +4273,8 @@ bool AmazonDescribeStacks::SendRequest() {
 				ASSERT( patternOK );
 
 				std::string outputValue;
-				ExtArray<MyString> valueGroups( 2 );
-				if( v.match( member, & valueGroups ) ) {
+				ExtArray<std::string> valueGroups( 2 );
+				if( v.match_str( member, & valueGroups ) ) {
 					outputValue = valueGroups[1];
 				}
 
@@ -4285,7 +4283,7 @@ bool AmazonDescribeStacks::SendRequest() {
 					outputs.push_back( outputValue );
 				}
 
-				membersRemaining.replaceString( memberGroups[0].c_str(), "" );
+				replace_str( membersRemaining, memberGroups[0].c_str(), "" );
 			}
 		}
 	}

@@ -21,7 +21,6 @@
 #define FILES_OPERATIONS_H
 
 #include "condor_daemon_core.h"
-#include "MyString.h"
 
 class FilesOperations
 {

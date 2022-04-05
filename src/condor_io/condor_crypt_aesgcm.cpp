@@ -38,7 +38,7 @@ void Condor_Crypt_AESGCM::initState(StreamCryptoState* stream_state)
 	dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::initState for %p.\n", stream_state);
 	if (stream_state) {
 		// reset encrypt side
-		RAND_pseudo_bytes(stream_state->m_iv_enc.iv, IV_SIZE);
+		RAND_bytes(stream_state->m_iv_enc.iv, IV_SIZE);
 		stream_state->m_ctr_enc = 0;
 
 		// reset decrypt side
@@ -185,27 +185,29 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     // we never use the result of len or len2 after this.  how would len2 be non-zero?
     ASSERT(len2 == 0);
 
-    dprintf(D_NETWORK | D_VERBOSE,
-        "Condor_Crypt_AESGCM::encrypt DUMP : Plain text: %0x %0x %0x %0x ... %0x %0x %0x %0x\n",
-        *(input),
-        *(input + 1),
-        *(input + 2),
-        *(input + 3),
-        *(input + input_len - 4),
-        *(input + input_len - 3),
-        *(input + input_len - 2),
-        *(input + input_len - 1));
+	if (IsDebugLevel(D_NETWORK) && (input_len > 3) && (output_len > 3)) {
+		dprintf(D_NETWORK | D_VERBOSE,
+				"Condor_Crypt_AESGCM::encrypt DUMP : Plain text: %0x %0x %0x %0x ... %0x %0x %0x %0x\n",
+				*(input),
+				*(input + 1),
+				*(input + 2),
+				*(input + 3),
+				*(input + input_len - 4),
+				*(input + input_len - 3),
+				*(input + input_len - 2),
+				*(input + input_len - 1));
 
-    dprintf(D_NETWORK | D_VERBOSE,
-        "Condor_Crypt_AESGCM::encrypt DUMP : Cipher text: %0x %0x %0x %0x ... %0x %0x %0x %0x\n",
-        *(output + (sending_IV ? IV_SIZE : 0)),
-        *(output + (sending_IV ? IV_SIZE : 0) + 1),
-        *(output + (sending_IV ? IV_SIZE : 0) + 2),
-        *(output + (sending_IV ? IV_SIZE : 0) + 3),
-        *(output + output_len - MAC_SIZE - 4),
-        *(output + output_len - MAC_SIZE - 3),
-        *(output + output_len - MAC_SIZE - 2),
-        *(output + output_len - MAC_SIZE - 1));
+		dprintf(D_NETWORK | D_VERBOSE,
+				"Condor_Crypt_AESGCM::encrypt DUMP : Cipher text: %0x %0x %0x %0x ... %0x %0x %0x %0x\n",
+				*(output + (sending_IV ? IV_SIZE : 0)),
+				*(output + (sending_IV ? IV_SIZE : 0) + 1),
+				*(output + (sending_IV ? IV_SIZE : 0) + 2),
+				*(output + (sending_IV ? IV_SIZE : 0) + 3),
+				*(output + output_len - MAC_SIZE - 4),
+				*(output + output_len - MAC_SIZE - 3),
+				*(output + output_len - MAC_SIZE - 2),
+				*(output + output_len - MAC_SIZE - 1));
+	}
 
     // extract the tag directly into the output stream to be given to CEDAR
     if (1 != EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_GET_TAG, MAC_SIZE, output + output_len - MAC_SIZE)) {
@@ -335,26 +337,29 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
         return false;
     }
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : produced output of size %d\n", len);
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : Cipher text: "
-        "%0x %0x %0x %0x ... %0x %0x %0x %0x\n",
-        *(input + (receiving_IV ? IV_SIZE : 0)),
-        *(input + (receiving_IV ? IV_SIZE : 0) + 1),
-        *(input + (receiving_IV ? IV_SIZE : 0) + 2),
-        *(input + (receiving_IV ? IV_SIZE : 0) + 3),
-        *(input + input_len - MAC_SIZE - 4),
-        *(input + input_len - MAC_SIZE - 3),
-        *(input + input_len - MAC_SIZE - 2),
-        *(input + input_len - MAC_SIZE - 1));
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : Plain text: "
-        "%0x %0x %0x %0x ... %0x %0x %0x %0x\n",
-        *(output),
-        *(output + 1),
-        *(output + 2),
-        *(output + 3),
-        *(output + len - 4),
-        *(output + len - 3),
-        *(output + len - 2),
-        *(output + len - 1));
+
+	if (IsDebugLevel(D_NETWORK) && (input_len > 3) && (len > 3)) {
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : Cipher text: "
+				"%0x %0x %0x %0x ... %0x %0x %0x %0x\n",
+				*(input + (receiving_IV ? IV_SIZE : 0)),
+				*(input + (receiving_IV ? IV_SIZE : 0) + 1),
+				*(input + (receiving_IV ? IV_SIZE : 0) + 2),
+				*(input + (receiving_IV ? IV_SIZE : 0) + 3),
+				*(input + input_len - MAC_SIZE - 4),
+				*(input + input_len - MAC_SIZE - 3),
+				*(input + input_len - MAC_SIZE - 2),
+				*(input + input_len - MAC_SIZE - 1));
+		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : Plain text: "
+				"%0x %0x %0x %0x ... %0x %0x %0x %0x\n",
+				*(output),
+				*(output + 1),
+				*(output + 2),
+				*(output + 3),
+				*(output + len - 4),
+				*(output + len - 3),
+				*(output + len - 2),
+				*(output + len - 1));
+	}
 
     if (!EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_SET_TAG, MAC_SIZE, const_cast<unsigned char *>(input + input_len - MAC_SIZE))) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: failed due to failed set of tag.\n");

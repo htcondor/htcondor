@@ -38,6 +38,7 @@ extern Starter *Starter;
 JobInfoCommunicator::JobInfoCommunicator()
 {
 	job_ad = NULL;
+	job_execution_overlay_ad = NULL;
 	mach_ad = NULL;
 	job_universe = CONDOR_UNIVERSE_VANILLA;
 	job_cluster = -1;
@@ -76,6 +77,9 @@ JobInfoCommunicator::~JobInfoCommunicator()
 {
 	if( job_ad ) {
 		delete job_ad;
+	}
+	if( job_execution_overlay_ad ) {
+		delete job_execution_overlay_ad; job_execution_overlay_ad = NULL;
 	}
 	if( mach_ad ) {
 		delete mach_ad;
@@ -233,6 +237,11 @@ JobInfoCommunicator::jobClassAd( void )
 	return job_ad;
 }
 
+ClassAd*
+JobInfoCommunicator::jobExecutionOverlayAd( void )
+{
+	return job_execution_overlay_ad;
+}
 
 ClassAd*
 JobInfoCommunicator::machClassAd( void )
@@ -642,14 +651,14 @@ JobInfoCommunicator::checkDedicatedExecuteAccounts( char const *name )
 	}
 
 		// force the matching of the whole string
-	MyString full_pattern;
-	full_pattern.formatstr("^%s$",pattern_string);
+	std::string full_pattern;
+	formatstr(full_pattern, "^%s$", pattern_string);
 
 	Regex re;
 	char const *errstr = NULL;
 	int erroffset = 0;
 
-	if( !re.compile( full_pattern.Value(), &errstr, &erroffset, 0 ) ) {
+	if( !re.compile( full_pattern.c_str(), &errstr, &erroffset, 0 ) ) {
 		EXCEPT("Invalid regular expression for %s (%s): %s",
 			   DEDICATED_EXECUTE_ACCOUNT_REGEXP,
 			   pattern_string,
@@ -672,7 +681,7 @@ JobInfoCommunicator::setExecuteAccountIsDedicated( char const *name )
 	}
 	else {
 		m_dedicated_execute_account_buf = name;
-		m_dedicated_execute_account = m_dedicated_execute_account_buf.Value();
+		m_dedicated_execute_account = m_dedicated_execute_account_buf.c_str();
 	}
 }
 
@@ -741,10 +750,10 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	}
 
 	if ( !name ) {
-		MyString slotName = Starter->getMySlotName();
-		slotName.upper_case();
+		std::string slotName = Starter->getMySlotName();
+		upper_case(slotName);
 		slotName += "_USER";
-		char *run_jobs_as = param(slotName.Value());
+		char *run_jobs_as = param(slotName.c_str());
 		if (run_jobs_as) {		
 			getDomainAndName(run_jobs_as, domain, name);
 				/* 
@@ -772,10 +781,10 @@ JobInfoCommunicator::initUserPrivWindows( void )
 			init_priv_succeeded = false;			
 		} 
 		else {
-			MyString login_name;
+			std::string login_name;
 			joinDomainAndName(name, domain, login_name);
-			if( checkDedicatedExecuteAccounts( login_name.Value() ) ) {
-				setExecuteAccountIsDedicated( login_name.Value() );
+			if( checkDedicatedExecuteAccounts( login_name.c_str() ) ) {
+				setExecuteAccountIsDedicated( login_name.c_str() );
 			}
 		}
 
@@ -875,7 +884,7 @@ JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
 		return;
 	}
 	priv_state priv = set_user_priv();
-	MyString filename;
+	std::string filename;
 	bool ok = classad_visa_write(&visa_ad,
 	                             get_mySubSystem()->getName(),
 	                             daemonCore->InfoCommandSinfulString(),
@@ -883,7 +892,7 @@ JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
 	                             &filename);
 	set_priv(priv);
 	if (ok) {
-		addToOutputFiles(filename.Value());
+		addToOutputFiles(filename.c_str());
 	}
 }
 
@@ -941,9 +950,20 @@ JobInfoCommunicator::startUpdateTimer( void )
 	Timeslice interval;
 
 	// default interval is 5 minutes, with 8 seconds as the initial value.
-	interval.setDefaultInterval( param_integer( "STARTER_UPDATE_INTERVAL", 300, 0 ) );
-	interval.setTimeslice( param_double( "STARTER_UPDATE_INTERVAL_TIMESLICE", 0.1, 0, 1 ) );
+	int updateInterval = param_integer("STARTER_UPDATE_INTERVAL", 300, 1);
+	interval.setDefaultInterval( updateInterval );
+	double timeSlice = param_double("STARTER_UPDATE_INTERVAL_TIMESLICE", 0.1, 0, 1);
+	interval.setTimeslice(timeSlice);
 	interval.setInitialInterval( param_integer( "STARTER_INITIAL_UPDATE_INTERVAL", 8 ) );
+
+	// Set a max interval equal to 3x longer than expected in the worst case (even w/ timeslice induced slowdown),
+	// as this max interval is communicated to the shadow.  If the shadow does not receive an update from
+	// the starter within this max interval, it assumes the starter may be gone, and will close the syscall
+	// socket and attempt to reconnect (the thinking here is perhaps the syscall socket is being kept open
+	// after the starter is dead by some crappy/misbehaving NAT box).
+	interval.setMaxInterval( param_integer("STARTER_UPDATE_INTERVAL_MAX",
+		(timeSlice > 0) ? (updateInterval * (1/timeSlice)) : updateInterval,
+		updateInterval) );
 
 	if( interval.getDefaultInterval() < interval.getInitialInterval() ) {
 		interval.setInitialInterval( interval.getDefaultInterval() );
@@ -957,6 +977,16 @@ JobInfoCommunicator::startUpdateTimer( void )
 	}
 }
 
+int
+JobInfoCommunicator::periodicJobUpdateTimerMaxInterval(void)
+{
+	int delay = -1;
+	Timeslice timeslice;
+	if (daemonCore->GetTimerTimeslice(m_periodic_job_update_tid, timeslice)) {
+		delay = static_cast<int>(timeslice.getMaxInterval());
+	}
+	return delay;
+}
 
 /*
    We can't just have our periodic timer call periodicJobUpdate()

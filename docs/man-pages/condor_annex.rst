@@ -105,6 +105,8 @@ Options
     Set the maximum idle duration in decimal *hours*. An instance idle
     for longer than this duration will terminate itself. Defaults to 15
     minutes.
+ **-yes**
+    Start the annex automatically without a yes/no confirmation prompt.
  **-tag** *name* *value*
     Add a tag named *name* with value *value* to each instance in the
     requested annex.  Only works at annex creation.  This option may be

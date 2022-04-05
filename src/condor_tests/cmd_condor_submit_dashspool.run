@@ -24,26 +24,16 @@ use Check::SimpleJob;
 #use Check::CondorLog;
 use Check::ProcInfo;
 
-my $configfile = "";
-my $ClusterId = 0;
 my $testname =  "cmd_condor_submit_dashspool";
 
 
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	NUM_CPUS = 5
 	ALL_DEBUG = 
-';
-
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"submitdashspool");
-
-my $condorinfo =CondorTest::StartCondorWithParams(
-	condor_name => "submitdashspool",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
-print "We know this about the just started personal condor <$condorinfo>\n";
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
 # arguments == 0, don't muck with any files and no return files
 my $submitdashpool1 = '

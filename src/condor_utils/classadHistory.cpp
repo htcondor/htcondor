@@ -18,9 +18,9 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_classad.h"
-#include "MyString.h"
 #include "condor_attributes.h"
 #include "basename.h"
 #include "directory.h"      // for StatInfo
@@ -127,13 +127,21 @@ AppendHistory(ClassAd* ad)
   if (!JobHistoryFileName) return;
   dprintf(D_FULLDEBUG, "Saving classad to history file\n");
 
+  classad::References excludeAttrs;
+  bool include_env = param_boolean("HISTORY_CONTAINS_JOB_ENVIRONMENT", true);
+
+  // Remove Env before serializing, if asked to
+  if (!include_env) {
+	excludeAttrs.emplace(ATTR_JOB_ENVIRONMENT2);
+  }
   // First we serialize the ad. If history file rotation is on,
   // we'll need to know how big the ad is before we write it to the 
   // history file. 
-  MyString ad_string;
+
+  std::string ad_string;
   int ad_size;
-  sPrintAd(ad_string, *ad);
-  ad_size = ad_string.Length();
+  sPrintAd(ad_string, *ad, nullptr, include_env ? nullptr : &excludeAttrs);
+  ad_size = ad_string.length();
 
   MaybeRotateHistory(ad_size);
 
@@ -144,7 +152,7 @@ AppendHistory(ClassAd* ad)
 	  failed = true;
   } else {
 	  int offset = findHistoryOffset(LogFile);
-	  if (!fPrintAd(LogFile, *ad)) {
+	  if (fputs(ad_string.c_str(), LogFile) == EOF) {
 		  dprintf(D_ALWAYS, 
 				  "ERROR: failed to write job class ad to history file %s\n",
 				  JobHistoryFileName);
@@ -230,16 +238,16 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 		        "not writing per-job history file: no proc id in ad\n");
 		return;
 	}
-	MyString file_name;
-	MyString temp_file_name;
+	std::string file_name;
+	std::string temp_file_name;
 	if (useGjid) {
 		std::string gjid;
 		ad->LookupString(ATTR_GLOBAL_JOB_ID, gjid);
-		file_name.formatstr("%s/history.%s", PerJobHistoryDir, gjid.c_str());
-		temp_file_name.formatstr("%s/.history.%s.tmp", PerJobHistoryDir, gjid.c_str());
+		formatstr(file_name, "%s/history.%s", PerJobHistoryDir, gjid.c_str());
+		formatstr(temp_file_name, "%s/.history.%s.tmp", PerJobHistoryDir, gjid.c_str());
 	} else {
-		file_name.formatstr("%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
-		temp_file_name.formatstr("%s/.history.%d.%d.tmp", PerJobHistoryDir, cluster, proc);
+		formatstr(file_name, "%s/history.%d.%d", PerJobHistoryDir, cluster, proc);
+		formatstr(temp_file_name, "%s/.history.%d.%d.tmp", PerJobHistoryDir, cluster, proc);
 	}
 
 	// Now write out the file.  We write it first to temp_file_name, and then
@@ -248,7 +256,7 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	// is read at the same time we are still writing it.
 
 	// first write out the file to the temp_file_name
-	int fd = safe_open_wrapper_follow(temp_file_name.Value(), O_WRONLY | O_CREAT | O_EXCL, 0644);
+	int fd = safe_open_wrapper_follow(temp_file_name.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
 	if (fd == -1) {
 		dprintf(D_ALWAYS | D_FAILURE,
 		        "error %d (%s) opening per-job history file for job %d.%d\n",
@@ -261,25 +269,31 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 		        "error %d (%s) opening file stream for per-job history for job %d.%d\n",
 		        errno, strerror(errno), cluster, proc);
 		close(fd);
-		unlink(temp_file_name.Value());
+		unlink(temp_file_name.c_str());
 		return;
 	}
-	if (!fPrintAd(fp, *ad)) {
+	bool include_env = param_boolean("HISTORY_CONTAINS_JOB_ENVIRONMENT", true);
+	classad::References env;
+	if (!include_env) {
+			env.emplace(ATTR_JOB_ENVIRONMENT2);
+	}
+
+	if (!fPrintAd(fp, *ad, true, nullptr, include_env ? nullptr : &env)) {
 		dprintf(D_ALWAYS | D_FAILURE,
 		        "error writing per-job history file for job %d.%d\n",
 		        cluster, proc);
 		fclose(fp);
-		unlink(temp_file_name.Value());
+		unlink(temp_file_name.c_str());
 		return;
 	}
 	fclose(fp);
 
 	// now atomically rename from temp_file_name to file_name
-    if (rotate_file(temp_file_name.Value(), file_name.Value())) {
+    if (rotate_file(temp_file_name.c_str(), file_name.c_str())) {
 		dprintf(D_ALWAYS | D_FAILURE,
 		        "error writing per-job history file for job %d.%d (during rename)\n",
 		        cluster, proc);
-		unlink(temp_file_name.Value());
+		unlink(temp_file_name.c_str());
     }
 }
 
@@ -560,16 +574,16 @@ RotateHistory(void)
                                ISO8601_DateAndTime, false);
 
     // First, select a name for the rotated history file
-    MyString   rotated_history_name(JobHistoryFileName);
+	std::string  rotated_history_name(JobHistoryFileName);
     rotated_history_name += '.';
     rotated_history_name += iso_time;
 
 	CloseJobHistoryFile();
 
     // Now rotate the file
-    if (rotate_file(JobHistoryFileName, rotated_history_name.Value())) {
+    if (rotate_file(JobHistoryFileName, rotated_history_name.c_str())) {
         dprintf(D_ALWAYS, "Failed to rotate history file to %s\n",
-                rotated_history_name.Value());
+                rotated_history_name.c_str());
         dprintf(D_ALWAYS, "Because rotation failed, the history file may get very large.\n");
     }
 

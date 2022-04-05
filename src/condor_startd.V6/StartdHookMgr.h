@@ -121,7 +121,7 @@ private:
 		   searched and it's not defined or invalid, and NULL if it
 		   hasn't been initialized yet.
 		*/
-	HashTable<MyString, char**> m_keyword_hook_paths;
+	HashTable<std::string, char**> m_keyword_hook_paths;
 
 };
 

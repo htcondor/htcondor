@@ -373,3 +373,20 @@ on the execute directories for all the startd machines:
     $ chcon -Rt svirt_sandbox_file_t /var/lib/condor/execute
 
 
+All docker universe jobs can request either host-based networking
+or no networking at all.  The latter might be for security reasons.
+If the worker node administrator has defined additional custom docker
+networks, perhaps a VPN or other custom type, those networks can be
+defined for HTCondor jobs to opt into with the docker_network_type
+submit command.  Simple set
+
+.. code-block:: condor-config
+
+    DOCKER_NETWORKS = some_virtual_network, another_network
+
+
+And these two networks will be advertised by the startd, and
+jobs that request these network type will only match to machines
+that support it.  Note that HTCondor cannot test the validity
+of these networks, and merely trusts that the administrator has
+correctly configured them.

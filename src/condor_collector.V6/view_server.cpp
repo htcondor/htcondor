@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,10 +40,10 @@ int ViewServer::MaxFileSize;
 DataSetInfo ViewServer::DataSet[DataSetCount][HistoryLevels];
 int ViewServer::TimeStamp;
 int ViewServer::HistoryTimer;
-MyString ViewServer::DataFormat[DataSetCount];
+std::string ViewServer::DataFormat[DataSetCount];
 AccHash* ViewServer::GroupHash;
 bool ViewServer::KeepHistory;
-HashTable< MyString, int >* ViewServer::FileHash;
+HashTable< std::string, int >* ViewServer::FileHash;
 ExtArray< ExtIntArray* >* ViewServer::TimesArray;
 ExtArray< ExtOffArray* >* ViewServer::OffsetsArray;
 
@@ -122,7 +122,7 @@ void ViewServer::Init()
 		}
 	}
 	GroupHash = new AccHash(hashFunction);
-	FileHash = new HashTable< MyString, int >(hashFunction);
+	FileHash = new HashTable< std::string, int >(hashFunction);
 	OffsetsArray = new ExtArray< ExtOffArray* >(30);
 	TimesArray = new ExtArray< ExtIntArray* >(30);
 
@@ -133,7 +133,7 @@ void ViewServer::Init()
 	DataFormat[StartdData]="%d\t%s\t:\t%.0f\t%7.3f\t%.0f\n";
 	DataFormat[GroupsData]="%d\t%s\t:\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n";
 	DataFormat[CkptData]="%d\t%s\t:\t%.3f\t%.3f\t%.3f\t%.3f\n";
-	
+
 	return;
 }
 
@@ -147,7 +147,7 @@ void ViewServer::Config()
 	char const *history_dir;
 	char* tmp;
 	dprintf(D_ALWAYS, "In ViewServer::Config()\n");
-	
+
 	// Configure Collector daemon
 
 	CollectorDaemon::Config();
@@ -185,10 +185,10 @@ void ViewServer::Config()
 		for (int j=0; j<HistoryLevels; j++) {
 			DataSet[i][j].MaxSamples=4*((int) pow((double)4,(double)j));
 			DataSet[i][j].NumSamples=0;
-			DataSet[i][j].OldFileName.formatstr("%s/viewhist%d.%d.old",history_dir,i,j);
-			DataSet[i][j].OldStartTime=FindFileStartTime(DataSet[i][j].OldFileName.Value());
-			DataSet[i][j].NewFileName.formatstr("%s/viewhist%d.%d.new",history_dir,i,j);
-			DataSet[i][j].NewStartTime=FindFileStartTime(DataSet[i][j].NewFileName.Value());
+			formatstr(DataSet[i][j].OldFileName, "%s/viewhist%d.%d.old",history_dir,i,j);
+			DataSet[i][j].OldStartTime=FindFileStartTime(DataSet[i][j].OldFileName.c_str());
+			formatstr(DataSet[i][j].NewFileName, "%s/viewhist%d.%d.new",history_dir,i,j);
+			DataSet[i][j].NewStartTime=FindFileStartTime(DataSet[i][j].NewFileName.c_str());
 		}
 	}
 
@@ -238,7 +238,7 @@ int ViewServer::ReceiveHistoryQuery(int command, Stream* sock)
 		dprintf(D_ALWAYS,"Can't receive history query!\n");
 		free( Line );
 		return 1;
-	} 
+	}
 
 	dprintf(D_ALWAYS, "Got history query: FromDate=%d, ToDate=%d, Type=%d, Arg=%s\n",FromDate,ToDate,command,Line);
 
@@ -254,8 +254,8 @@ int ViewServer::ReceiveHistoryQuery(int command, Stream* sock)
 	    !sock->end_of_message()) {
 		dprintf(D_ALWAYS,"Can't send information to client!\n");
 		return 1;
-	} 
-	
+	}
+
 	return 0;
 }
 
@@ -264,7 +264,7 @@ int ViewServer::ReceiveHistoryQuery(int command, Stream* sock)
 // appropriate function to send the data
 //-------------------------------------------------------------------
 
-int ViewServer::HandleQuery(Stream* sock, int command, int FromDate, int ToDate, int Options, MyString Arg)
+int ViewServer::HandleQuery(Stream* sock, int command, int FromDate, int ToDate, int Options, std::string Arg)
 {
 	int DataSetIdx=-1;
 	int ListFlag=0;
@@ -347,21 +347,17 @@ int ViewServer::HandleQuery(Stream* sock, int command, int FromDate, int ToDate,
 // requested time range
 //---------------------------------------------------------------------
 
-int ViewServer::SendListReply(Stream* sock,const MyString& FileName, int FromDate, int ToDate, std::set<std::string>& Names) 
+int ViewServer::SendListReply(Stream* sock,const std::string& FileName, int FromDate, int ToDate, std::set<std::string>& Names)
 {
-	char InpLine[200];
-	char OutLine[200];
-	char* OutLinePtr=OutLine;
-	MyString Arg;
 	int T = 0;
 	int file_array_index;
 	ExtIntArray* times_array = NULL;
 	ExtOffArray* offsets = NULL;
 	// dprintf(D_ALWAYS, "Caches found=%d, looking for correct one...\n", TimesArray->length());
-	
+
 		// first find out which ExtArray to use, by checking the hash
 	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
-		
+
 			// FileName was not found in the FileHash
 			// Create the necessary arrays and set the index appropriately
 		// dprintf(D_ALWAYS, "No cache found for this file, generating new one...\n");
@@ -372,7 +368,7 @@ int ViewServer::SendListReply(Stream* sock,const MyString& FileName, int FromDat
 		TimesArray->add( times_array );
 		OffsetsArray->add( offsets );
 	} else {
-		
+
 			// otherwise just get the appropriate array
 		times_array = (TimesArray->getElementAt( file_array_index ));
 		offsets = (OffsetsArray->getElementAt( file_array_index ));
@@ -380,7 +376,7 @@ int ViewServer::SendListReply(Stream* sock,const MyString& FileName, int FromDat
 	}
 
 	// dprintf(D_ALWAYS,"Filename=%s\n",(const char*)FileName);
-	FILE* fp=safe_fopen_wrapper_follow(FileName.Value(),"r");
+	FILE* fp=safe_fopen_wrapper_follow(FileName.c_str(),"r");
 	if (!fp) return -1;
 
 		//find the offset to search at
@@ -393,34 +389,40 @@ int ViewServer::SendListReply(Stream* sock,const MyString& FileName, int FromDat
 			return -1;
 		}
 	}
-	
+
+	std::string Arg;
+	std::string line;
 	int new_offset_counter = 1;		// every fifty loops, mark an offset
-	while(fgets(InpLine,sizeof(InpLine),fp)) {
-		
-		// dprintf(D_ALWAYS,"Line read: %s\n",InpLine);
-		T=ReadTimeAndName(InpLine,Arg);
-		// dprintf(D_ALWAYS,"T=%d\n",T);
+	while(readLine(line,fp)) {
+
+		T = ReadTimeAndName(line, Arg);
 		if( times_array->length() < offsets->length() ) {
 				// a file offset was recorded before this line was read; now
 				// store the time that was on the marked line
-			// dprintf(D_ALWAYS, "Adding time=%d to the cache", T);
 			times_array->add( T );
 		}
-		
-		if (T>ToDate) break;
-		if (T<FromDate) {
+
+		if (T > ToDate) break;
+		if (T < FromDate) {
 				// continue to the next loop; but first, if 50 times have been
 				// checked, mark the position in the file and the time
 			addNewOffset(fp, new_offset_counter, T, times_array, offsets);
 			continue;
 		}
-		
+
 		if (Names.count(Arg) == 0) {
-			// dprintf(D_ALWAYS,"Adding Name=%s\n",Arg.Value());
 			Names.insert(Arg);
-			sprintf(OutLinePtr,"%s\n",Arg.Value());
-			if (!sock->code(OutLinePtr)) {
-				dprintf(D_ALWAYS,"Can't send information to client!\n");
+				// Send the name...
+			if (!sock->code(Arg)) {
+				dprintf(D_ALWAYS,"Can't send name to client!\n");
+				fclose(fp);
+				return -1;
+			}
+
+			// with a newline
+			char newline = '\n';
+			if (!sock->code(newline)) {
+				dprintf(D_ALWAYS,"Can't send trailing newline to client!\n");
 				fclose(fp);
 				return -1;
 			}
@@ -432,13 +434,9 @@ int ViewServer::SendListReply(Stream* sock,const MyString& FileName, int FromDat
 	return 0;
 }
 
-int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDate, int ToDate, int Options, const MyString& Arg) 
+int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, int FromDate, int ToDate, int Options, const std::string& Arg)
 {
-	char InpLine[200];
-	char* InpLinePtr=InpLine;
-	char OutLine[200];
-	char* OutLinePtr=OutLine;
-	char* tmp;
+	std::string InpLine;
 	int Status=0;
 	int NewTime, OldTime;
 	float OutTime;
@@ -450,7 +448,7 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 
 		// first find out which ExtArray to use, by checking the hash
 	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
-		
+
 			// FileName was not found in the FileHash
 			// Create the necessary arrays and set the index appropriately
 		// dprintf(D_ALWAYS, "No cache found for this file, generating new one...\n");
@@ -461,7 +459,7 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 		TimesArray->add( times_array );
 		OffsetsArray->add( offsets );
 	} else {
-		
+
 			// otherwise just get the appropriate array
 		times_array = (TimesArray->getElementAt( file_array_index ));
 		offsets = (OffsetsArray->getElementAt( file_array_index ));
@@ -469,7 +467,7 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 	}
 
 	OldTime = 0;
-	FILE* fp=safe_fopen_wrapper_follow(FileName.Value(),"r");
+	FILE* fp=safe_fopen_wrapper_follow(FileName.c_str(),"r");
 	if (!fp) return -1;
 
 		//find the offset to search at
@@ -482,9 +480,9 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 			return -1;
 		}
 	}
-	
+
 	int new_offset_counter = 1;		// every fifty loops, mark an offset
-	while(fgets(InpLine,sizeof(InpLine),fp)) {
+	while(readLine(InpLine,fp)) {
 
 		// dprintf(D_ALWAYS,"Line read: %s\n",InpLine);
 		T=ReadTimeChkName(InpLine,Arg);
@@ -495,7 +493,7 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 			times_array->add( T );
 		}
 		// dprintf(D_ALWAYS,"T=%d\n",T);
-		
+
 		if (T>ToDate) break;
 		if (T<FromDate) {
 				// continue to the next loop; but first, if 50 times have been
@@ -503,16 +501,19 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 			addNewOffset(fp, new_offset_counter, T, times_array, offsets);
 			continue;
 		}
-		
+
 		if (Options) {
-			if (!sock->code(InpLinePtr)) {
+			if (!sock->code(InpLine)) {
 				dprintf(D_ALWAYS,"Can't send information to client!\n");
 				Status=-1;
 				break;
 			}
-		} 
+		}
 		else {
-			tmp=strchr(InpLine,':');
+			char OutLine[200];
+			char* OutLinePtr=OutLine;
+
+			const char *tmp = strchr(InpLine.c_str(),':');
 			OutTime=float(T-FromDate)/float(ToDate-FromDate);
 			NewTime=(int)rint(1000*OutTime);
 			if (NewTime==OldTime) continue;
@@ -523,7 +524,7 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 				Status=-1;
 				break;
 			}
-		} 
+		}
 		addNewOffset(fp, new_offset_counter, T, times_array, offsets);
 	}
 
@@ -573,7 +574,7 @@ ViewServer::findOffset(FILE* & /*fp*/, int FromDate, int ToDate, ExtIntArray* ti
 		return NULL;
 
 	} else if( times_array->getElementAt( 0 ) > FromDate ) {
-		
+
 		if( times_array->getElementAt( 0 ) > ToDate ) {
 				// if this is the case then the record won't be found, so end
 			// dprintf(D_ALWAYS, "Impossible request\n");
@@ -631,12 +632,12 @@ ViewServer::findOffset(FILE* & /*fp*/, int FromDate, int ToDate, ExtIntArray* ti
 
 int ViewServer::FindFileStartTime(const char *Name)
 {
-	char Line[200];
+	std::string line;
 	int T=-1;
 	FILE* fp=safe_fopen_wrapper_follow(Name,"r");
 	if (fp) {
-		if (fgets(Line,sizeof(Line),fp)) {
-			T=ReadTime(Line);
+		if (readLine(line,fp)) {
+			T=ReadTime(line.c_str());
 		} else {
 			T=-1; // fgets failed, return -1 instead of parsing uninit memory
 			dprintf(D_ALWAYS, "Failed to parse first line of %s\n", Name);
@@ -651,7 +652,7 @@ int ViewServer::FindFileStartTime(const char *Name)
 // Parse the entry time from the line
 //-------------------------------------------------------------------
 
-int ViewServer::ReadTime(char* Line)
+int ViewServer::ReadTime(const char* Line)
 {
 	int t=-1;
 	if (sscanf(Line,"%d",&t)!=1) return -1;
@@ -662,25 +663,43 @@ int ViewServer::ReadTime(char* Line)
 // Parse the entry time and name from the line
 //-------------------------------------------------------------------
 
-int ViewServer::ReadTimeAndName(char* Line, MyString& Name)
+int ViewServer::ReadTimeAndName(const std::string &line, std::string& Name)
 {
 	int t=-1;
-	char tmp[100];
-	if (sscanf(Line,"%d %s",&t,tmp)!=2) return -1;
-	Name=tmp;
-	return t;
+
+	// Line contains int, tab, a string, tab then junk
+	char *endOfInt = nullptr;
+	t = strtol(line.c_str(), &endOfInt, 10);
+	if (endOfInt) {
+		endOfInt++; // skip past tabl
+		char *endOfString = endOfInt;
+		while (*endOfString != '\t') endOfString++;
+		Name = std::string(endOfInt, endOfString);
+		return t;
+	} else {
+		// Some kind of error
+		return -1;
+	}
 }
 
 //-------------------------------------------------------------------
 // Parse the time and check for the specified name
 //-------------------------------------------------------------------
 
-int ViewServer::ReadTimeChkName(char* Line, const MyString& Name)
+int ViewServer::ReadTimeChkName(const std::string &line, const std::string& Name)
 {
 	int t=-1;
-	char tmp[100];
-	if (sscanf(Line,"%d %s",&t,tmp)!=2) return -1;
-	if (Name!="*" && Name!=MyString(tmp)) return -1;
+	//if (sscanf(Line,"%d %s",&t,tmp)!=2) return -1;
+	char *p = nullptr;
+	t = strtol(line.c_str(), &p, 10);
+	if (p) {
+		p++; // skip the tab separator
+		char *endOfString = p;
+		while (*endOfString != '\t') endOfString++;
+
+		if (Name != "*" && Name != std::string(p, endOfString)) return -1;
+		return t;
+	}
 	return t;
 }
 
@@ -694,11 +713,11 @@ int ViewServer::ReadTimeChkName(char* Line, const MyString& Name)
 
 void ViewServer::WriteHistory()
 {
-	MyString Key;
+	std::string Key;
 	GeneralRecord* GenRec;
 	FILE* DataFile;
 	struct stat statbuf;
-	char OutLine[200];
+	std::string outline;
 
 	// Accumulate data
 
@@ -733,10 +752,10 @@ void ViewServer::WriteHistory()
 			DataSet[i][j].NumSamples++;
 			if (DataSet[i][j].NumSamples<DataSet[i][j].MaxSamples) continue;
 			DataSet[i][j].NumSamples=0;
-			dprintf(D_FULLDEBUG,"Openning file %s\n",DataSet[i][j].NewFileName.Value());
-			DataFile=safe_fopen_wrapper_follow(DataSet[i][j].NewFileName.Value(),"a");
+			dprintf(D_FULLDEBUG,"Opening file %s\n",DataSet[i][j].NewFileName.c_str());
+			DataFile=safe_fopen_wrapper_follow(DataSet[i][j].NewFileName.c_str(),"a");
 			if (!DataFile) {
-				dprintf(D_ALWAYS,"Could not open data file %s for appending!!! errno=%d\n",DataSet[i][j].NewFileName.Value(),errno);
+				dprintf(D_ALWAYS,"Could not open data file %s for appending!!! errno=%d\n",DataSet[i][j].NewFileName.c_str(),errno);
 				EXCEPT("Could not open data file appending!!!");
 			}
 
@@ -744,11 +763,11 @@ void ViewServer::WriteHistory()
 
 			DataSet[i][j].AccData->startIterations();
 			while(DataSet[i][j].AccData->iterate(Key,GenRec)) {
-				sprintf(OutLine,DataFormat[i].Value(),TimeStamp,Key.Value(),GenRec->Data[0],GenRec->Data[1],GenRec->Data[2],GenRec->Data[3],GenRec->Data[4],GenRec->Data[5],GenRec->Data[6], GenRec->Data[7], GenRec->Data[8]);
+				formatstr(outline,DataFormat[i].c_str(),TimeStamp,Key.c_str(),GenRec->Data[0],GenRec->Data[1],GenRec->Data[2],GenRec->Data[3],GenRec->Data[4],GenRec->Data[5],GenRec->Data[6], GenRec->Data[7], GenRec->Data[8]);
 				delete GenRec;
-				fputs(OutLine, DataFile);
+				fputs(outline.c_str(), DataFile);
 			}
-	
+
 			// Clear accumulated values
 
 			DataSet[i][j].AccData->clear();
@@ -756,7 +775,7 @@ void ViewServer::WriteHistory()
 			// close file
 
 			fclose(DataFile);
-			dprintf(D_FULLDEBUG,"Closing file %s\n",DataSet[i][j].NewFileName.Value());
+			dprintf(D_FULLDEBUG,"Closing file %s\n",DataSet[i][j].NewFileName.c_str());
 
 			// Update file start time
 
@@ -764,19 +783,19 @@ void ViewServer::WriteHistory()
 
 			// Check for size limitation and take necessary action
 
-			if (stat(DataSet[i][j].NewFileName.Value(),&statbuf)) {
-				dprintf(D_ALWAYS,"Could not check data file %s size!!! errno=%d\n",DataSet[i][j].NewFileName.Value(),errno);
+			if (stat(DataSet[i][j].NewFileName.c_str(),&statbuf)) {
+				dprintf(D_ALWAYS,"Could not check data file %s size!!! errno=%d\n",DataSet[i][j].NewFileName.c_str(),errno);
 				EXCEPT("Could not check data file size!!!");
 			}
 			if (statbuf.st_size>MaxFileSize) {
-				int r = rotate_file(DataSet[i][j].NewFileName.Value(), DataSet[i][j].OldFileName.Value());
+				int r = rotate_file(DataSet[i][j].NewFileName.c_str(), DataSet[i][j].OldFileName.c_str());
 				if (r < 0) {
-					dprintf(D_ALWAYS,"Could not rename %s to %s (%d)\n", DataSet[i][j].NewFileName.Value(), DataSet[i][j].OldFileName.Value(), errno);
+					dprintf(D_ALWAYS,"Could not rename %s to %s (%d)\n", DataSet[i][j].NewFileName.c_str(), DataSet[i][j].OldFileName.c_str(), errno);
 					EXCEPT("Could not rename data file");
 				}
 				int newFileIndex = -1;
 				int oldFileIndex = -1;
-				if(FileHash->lookup(DataSet[i][j].OldFileName.Value(),
+				if(FileHash->lookup(DataSet[i][j].OldFileName.c_str(),
 														oldFileIndex) != -1) {
 						// get rid of the old arrays and make new ones
 					delete (*TimesArray)[oldFileIndex];
@@ -787,23 +806,23 @@ void ViewServer::WriteHistory()
 					delete (*OffsetsArray)[oldFileIndex];
 					(*TimesArray)[oldFileIndex] = new ExtIntArray;
 					(*OffsetsArray)[oldFileIndex] = new ExtOffArray;
-					if(FileHash->lookup(DataSet[i][j].NewFileName.Value(),
+					if(FileHash->lookup(DataSet[i][j].NewFileName.c_str(),
 														newFileIndex) != -1) {
 							// switch the indices to avoid copying data
-						FileHash->remove(DataSet[i][j].OldFileName.Value());
-						FileHash->remove(DataSet[i][j].NewFileName.Value());
-						FileHash->insert(DataSet[i][j].OldFileName.Value(),
+						FileHash->remove(DataSet[i][j].OldFileName.c_str());
+						FileHash->remove(DataSet[i][j].NewFileName.c_str());
+						FileHash->insert(DataSet[i][j].OldFileName.c_str(),
 															newFileIndex);
-						FileHash->insert(DataSet[i][j].NewFileName.Value(),
+						FileHash->insert(DataSet[i][j].NewFileName.c_str(),
 															oldFileIndex);
 					}
 				}
-				else if(FileHash->lookup(DataSet[i][j].NewFileName.Value(),
+				else if(FileHash->lookup(DataSet[i][j].NewFileName.c_str(),
 													newFileIndex) != -1) {
 						// if no file got overwritten, then just add to the
 						// hash and arrays
-					FileHash->remove(DataSet[i][j].NewFileName.Value());
-					FileHash->insert(DataSet[i][j].OldFileName.Value(),
+					FileHash->remove(DataSet[i][j].NewFileName.c_str());
+					FileHash->insert(DataSet[i][j].OldFileName.c_str(),
 															newFileIndex);
 				}
 				DataSet[i][j].OldStartTime=DataSet[i][j].NewStartTime;
@@ -821,18 +840,20 @@ void ViewServer::WriteHistory()
 
 int ViewServer::SubmittorScanFunc(ClassAd* cad)
 {
-	char Machine[200];
-	char Name[200];
+	std::string machine;
+	std::string submittorName;
 	int JobsRunning, JobsIdle;
-	MyString GroupName;
+	std::string GroupName;
 
 	// Get Data From Class Ad
 
-	if (cad->LookupString(ATTR_NAME,Name,sizeof(Name))==false) return 1;
-	if (cad->LookupString(ATTR_MACHINE,Machine,sizeof(Machine))==false) return 1;
-	GroupName=Name;
-	strcat(Name,"/");
-	strcat(Name,Machine);
+	if (cad->LookupString(ATTR_NAME,submittorName)==false) return 1;
+	if (cad->LookupString(ATTR_MACHINE,machine)==false) return 1;
+	GroupName = submittorName;
+
+	submittorName += '/';
+	submittorName += machine; 	
+	
 	if (cad->LookupInteger(ATTR_RUNNING_JOBS,JobsRunning)==false) JobsRunning=0;
 	if (cad->LookupInteger(ATTR_IDLE_JOBS,JobsIdle)==false) JobsIdle=0;
 
@@ -844,12 +865,12 @@ int ViewServer::SubmittorScanFunc(ClassAd* cad)
 	GenRec=GetAccData(GroupHash,GroupName);
 	GenRec->Data[0]+=JobsRunning;
 	GenRec->Data[1]+=JobsIdle;
-	
+
 	// Add to accumulated data
 
 	int NumSamples;
 	for (int j=0; j<HistoryLevels; j++) {
-		GenRec=GetAccData(DataSet[SubmittorData][j].AccData, Name);
+		GenRec=GetAccData(DataSet[SubmittorData][j].AccData, submittorName);
 		NumSamples=DataSet[SubmittorData][j].NumSamples;
 		GenRec->Data[0]=(GenRec->Data[0]*NumSamples+JobsRunning)/(NumSamples+1);
 		GenRec->Data[1]=(GenRec->Data[1]*NumSamples+JobsIdle)/(NumSamples+1);
@@ -865,7 +886,7 @@ int ViewServer::SubmittorTotalFunc(void)
 {
 	// Add to Accumulated Data
 
-	MyString GroupName;
+	std::string GroupName;
 	GeneralRecord* CurValue;
 	GeneralRecord* AccValue;
 	int NumSamples;
@@ -892,18 +913,18 @@ int ViewServer::SubmittorTotalFunc(void)
 
 int ViewServer::StartdScanFunc(ClassAd* cad)
 {
-	char Name[200] = "";
-	char StateDesc[50];
+	std::string Name;
+	std::string StateDesc;
 	float LoadAvg;
 	int KbdIdle;
-	
+
 	// Get Data From Class Ad
 
-	if ( !cad->LookupString(ATTR_NAME,Name,sizeof(Name)) ) return 1;
+	if ( !cad->LookupString(ATTR_NAME,Name)) return 1;
 	if ( !cad->LookupInteger(ATTR_KEYBOARD_IDLE,KbdIdle) ) KbdIdle=0;
 	if ( !cad->LookupFloat(ATTR_LOAD_AVG,LoadAvg) ) LoadAvg=0;
-	if ( !cad->LookupString(ATTR_STATE,StateDesc,sizeof(StateDesc)) ) strcpy(StateDesc,"");
-	State StateEnum=string_to_state( StateDesc );
+	cad->LookupString(ATTR_STATE,StateDesc);
+	State StateEnum=string_to_state( StateDesc.c_str());
 
 	// This block should be kept in sync with view_server.h and
 	// condor_state.h.
@@ -939,17 +960,17 @@ int ViewServer::StartdScanFunc(ClassAd* cad)
 	default:
 		dprintf( D_ALWAYS,
 				 "WARNING: Unknown machine state %d from '%s' (ignoring)",
-				 (int)StateEnum, Name );
+				 (int)StateEnum, Name.c_str());
 		return 1;
 	}
 
 	// Get Group Name
 
-	char tmp[200];
-	if (cad->LookupString(ATTR_ARCH,tmp,sizeof(tmp))==false) strcpy(tmp,"Unknown");
-	MyString GroupName=MyString(tmp)+"/";
-	if (cad->LookupString(ATTR_OPSYS,tmp,sizeof(tmp))==false) strcpy(tmp,"Unknown");
-	GroupName+=tmp;
+	std::string tmp;
+	if (cad->LookupString(ATTR_ARCH,tmp)==false) tmp = "Unknown";
+	std::string GroupName = tmp + '/';
+	if (cad->LookupString(ATTR_OPSYS,tmp)==false) tmp = "Unknown";
+	GroupName += tmp;
 
 	// Add to group Totals
 	// NRL: I'm not sure exactly what this block of code does, but
@@ -968,7 +989,7 @@ int ViewServer::StartdScanFunc(ClassAd* cad)
 	GenRec=GetAccData(GroupHash,GroupName);
 	ASSERT( GenRec );
 	GenRec->Data[group_index] += 1.0;
-	
+
 	// Add to accumulated data
 
 	int NumSamples;
@@ -993,7 +1014,7 @@ int ViewServer::StartdTotalFunc(void)
 {
 	// Add to Accumulated Data
 
-	MyString GroupName;
+	std::string GroupName;
 	GeneralRecord* CurValue;
 	GeneralRecord* AccValue;
 	int NumSamples;
@@ -1020,14 +1041,14 @@ int ViewServer::StartdTotalFunc(void)
 
 int ViewServer::CkptScanFunc(ClassAd* cad)
 {
-	char Name[200];
+	std::string Name;
 	int Bytes;
 	float BytesReceived,BytesSent;
 	float AvgReceiveBandwidth,AvgSendBandwidth;
-	
+
 	// Get Data From Class Ad
 
-	if (cad->LookupString(ATTR_NAME,Name,sizeof(Name))==false) return 1;
+	if (cad->LookupString(ATTR_NAME,Name)==false) return 1;
 	if (cad->LookupInteger("BytesReceived",Bytes)==false) Bytes=0;
 	BytesReceived=float(Bytes)/(1024*1024);
 	if (cad->LookupInteger("BytesSent",Bytes)==false) Bytes=0;
@@ -1057,7 +1078,7 @@ int ViewServer::CkptScanFunc(ClassAd* cad)
 // Insert or update data accumulated entry
 //---------------------------------------------------------------------
 
-GeneralRecord* ViewServer::GetAccData(AccHash* AccData,const MyString& Key)
+GeneralRecord* ViewServer::GetAccData(AccHash* AccData,const std::string& Key)
 {
 	GeneralRecord* GenRec = NULL;
 	int rval;
@@ -1075,7 +1096,7 @@ GeneralRecord* ViewServer::GetAccData(AccHash* AccData,const MyString& Key)
 			EXCEPT( "Failed to allocate a GeneralRecord" );
 		}
 		if ( AccData->insert(Key,GenRec) < 0 ) {
-			EXCEPT( "Insert failed: Key=%s", Key.Value() );
+			EXCEPT( "Insert failed: Key=%s", Key.c_str() );
 		}
 	}
 	return GenRec;

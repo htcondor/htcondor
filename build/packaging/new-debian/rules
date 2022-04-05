@@ -3,12 +3,18 @@
 srcpkg = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Source:' | cut -d ' ' -f 2,2)
 debver = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Version:' | cut -d ' ' -f 2,2 )
 upstreamver = $(shell echo $(debver) | cut -d '-' -f 1,1 )
+buildid = $(shell cat ../../BUILD-ID)
 
 # this figures out the last merge point from 'master' into the Debian branch and
 # then described this commit relative to the last release tag (V...)
 # If this should make any sense the local upstream branch must track upstream's
 # master or whatever other source branch.
 gitver = $(shell [ -x /usr/bin/git ] && git describe --tags --match 'V[0-9]_[0-9]_*[0-9]' $$(git merge-base -a HEAD upstream) | sed -e 's/^V//' -e 's/_/./g' -e 's/-/+git/')~dfsg.1
+
+ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+    NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+    MAKEFLAGS += -j$(NUMJOBS)
+endif
 
 # one ring to rule them all ...
 %:
@@ -19,18 +25,15 @@ override_dh_auto_configure:
 	dh_auto_configure -- \
 		-DCONDOR_PACKAGE_BUILD:BOOL=ON \
 		-DPROPER:BOOL=ON \
-		-DUW_BUILD:BOOL=OFF \
 		-D_DEBUG:BOOL=TRUE \
-		-DBUILDID:STRING="Debian-$(debver)"\
+		-DBUILDID:STRING="$(buildid)"\
 		-DPACKAGEID:STRING="$(debver)"\
-		-DFORCE_PRE_RELEASE:STRING="Debian-$(debver)"\
+		-DCMAKE_INSTALL_PREFIX:PATH=/ \
 		-DCMAKE_SKIP_RPATH:BOOL=ON \
-		-DHAVE_EXT_GSOAP:BOOL=OFF \
-		-DWITH_GSOAP:BOOL=OFF \
 		-DHAVE_EXT_CURL:BOOL=ON \
 		-DHAVE_EXT_OPENSSL:BOOL=ON \
 		-DHAVE_EXT_BOOST:BOOL=ON \
-		-DHAVE_EXT_GLOBUS:BOOL=ON \
+		-DHAVE_EXT_GLOBUS:BOOL=OFF \
 		-DHAVE_EXT_KRB5:BOOL=ON \
 		-DHAVE_EXT_LIBVIRT:BOOL=ON \
 		-DHAVE_EXT_LIBXML2:BOOL=ON \
@@ -38,15 +41,14 @@ override_dh_auto_configure:
 		-DHAVE_EXT_PCRE:BOOL=ON \
 		-DWITH_LIBCGROUP:BOOL=ON \
 		-DWANT_CONTRIB:BOOL=OFF \
-		-DWITH_BOSCO:BOOL=OFF \
 		-DWITH_PYTHON_BINDINGS:BOOL=ON \
-		-DWITH_SCITOKENS:BOOL=OFF \
+		-DWITH_SCITOKENS:BOOL=ON \
 		-DBUILD_TESTING:BOOL=ON \
 		-DWITH_CAMPUSFACTORY:BOOL=OFF
 
 
 override_dh_auto_build: doc/build
-	dh_auto_build -- VERBOSE=1
+	dh_auto_build --parallel -- VERBOSE=1
 	# The tests don't get built eventhough was asked for them
 	(cd obj-*; make tests)
 	# post-fixing things that have to be done due to changes introduced by
@@ -76,6 +78,13 @@ doc/build:
 
 override_dh_auto_install:
 	dh_auto_install
+	rm -rf debian/tmp/etc/rc.d
+	mkdir --mode 0755 debian/tmp/etc/blahp
+	for batch_system in condor kubernetes lsf nqs pbs sge slurm; do \
+		mv debian/tmp/usr/libexec/blahp/$${batch_system}_local_submit_attributes.sh debian/tmp/etc/blahp/; \
+		ln -s /etc/blahp/$${batch_system}_local_submit_attributes.sh \
+			debian/tmp/usr/libexec/blahp/$${batch_system}_local_submit_attributes.sh; \
+	done
 	# tar up the tests
 	(cd obj-*; make tests-tar-pkg)
 	find debian/tmp|sort > /tmp/files

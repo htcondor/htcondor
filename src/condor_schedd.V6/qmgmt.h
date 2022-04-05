@@ -26,6 +26,7 @@
 #include "prio_rec.h"
 #include "condor_sockaddr.h"
 #include "classad_log.h"
+#include "live_job_counters.h"
 
 // the pedantic idiots at gcc generate this warning whenever you use offsetof on a struct or class that has a constructor....
 GCC_DIAG_OFF(invalid-offsetof)
@@ -136,7 +137,6 @@ public:
 
 	// return a pointer to the class that this qelm is part of.
 	template <typename T> T* as() {
-		if ( ! this) return NULL;
 		char * p = (char*)this - offsetof(T,qe);
 		return reinterpret_cast<T*>(p);
 	}
@@ -168,12 +168,28 @@ public:
 		entry_type_cluster,
 		entry_type_job,
 	};
+	void SetJidAndType(const JOB_ID_KEY &key); // called when reloading the job queue
 	bool IsType(char _type) { if (!entry_type) this->PopulateFromAd(); return entry_type == _type; }
 	bool IsJob() { return IsType(entry_type_job); }
 	bool IsHeader() { return IsType(entry_type_header); }
 	bool IsJobSet() { return IsType(entry_type_jobset); }
 	bool IsCluster() { return IsType(entry_type_cluster); }
 };
+
+// map jobset id to jobqueue key2
+inline int JOBSETID_to_qkey2(unsigned int jobset_id) {
+    if (jobset_id <= 0) dprintf(D_ALWAYS | D_BACKTRACE, "JOBSETID_to_qkey2 called with id=%ud", jobset_id);
+	ASSERT(jobset_id > 0);
+	return (int)(0 - jobset_id);
+}
+
+// map jobqueue key2 to jobset id
+inline unsigned int qkey2_to_JOBSETID(int proc) {
+	if (proc >= 0) dprintf(D_ALWAYS | D_BACKTRACE, "qkey2_to_JOBSETID called with key2=%d", proc);
+	ASSERT(proc < 0);
+	return (unsigned int)(0 - proc);
+}
+
 
 class JobQueueJob : public JobQueueBase {
 public:
@@ -189,8 +205,8 @@ public:
 	// cached pointer into schedulers's SubmitterDataMap and OwnerInfoMap
 	// it is set by count_jobs() or by scheduler::get_submitter_and_owner()
 	// DO NOT FREE FROM HERE!
-	struct SubmitterData * submitterdata;
 	struct OwnerInfo * ownerinfo;
+	struct SubmitterData * submitterdata;
 protected:
 	JobQueueCluster * parent; // job pointer back to the 
 	qelm qe;
@@ -205,8 +221,8 @@ public:
 		, dirty_flags(0)
 		, set_id(0)
 		, autocluster_id(0)
-		, submitterdata(NULL)
 		, ownerinfo(NULL)
+		, submitterdata(NULL)
 		, parent(NULL)
 	{}
 	virtual ~JobQueueJob() {};
@@ -215,6 +231,7 @@ public:
 
 	int  Universe() const { return universe; }
 	int  Status() const { return status; }
+	unsigned int  Jobset() const { return set_id < 0 ? 0 : set_id; }
 	void SetUniverse(int uni) { universe = uni; }
 	void SetStatus(int st) { status = st; }
 	bool IsNoopJob();
@@ -273,17 +290,75 @@ public:
 	void AttachJob(JobQueueJob * job);
 	void DetachJob(JobQueueJob * job);
 	void DetachAllJobs(); // When you absolutely positively need to free this class...
+	JobQueueJob * FirstJob();
+	JobQueueJob * NextJob(JobQueueJob * job);
 	void JobStatusChanged(int old_status, int new_status);  // update cluster counters by job status.
 
 	void PopulateInfoAd(ClassAd & iad, int num_pending, bool include_factory_info); // fill out an info ad from fields in this structure and from the factory
 };
+
+// There are some bits of the qmgmt code that iterate the job queue
+// and assume that they are looking at a JobQueueJob without checking the type
+// so (until we can refactor out this behavior). 
+//
+#if 1 // JobQueueJobSet from JobQueueJob
+class JobQueueJobSet : public JobQueueJob {
+#else
+class JobQueueJobSet : public JobQueueBase {
+#endif
+public:
+	//inherited from JobQueueBase JOB_ID_KEY jid;
+	//inherited from JobQueueBase char entry_type;
+	enum class garbagePolicyEnum { immediateAfterEmpty, delayedAferEmpty };
+
+#if 1 // JobQueueJobSet from JobQueueJob
+public:
+	garbagePolicyEnum garbagePolicy = garbagePolicyEnum::immediateAfterEmpty;
+	unsigned int member_count = 0;
+	LiveJobCounters jobStatusAggregates;
+#else
+protected:
+	// 3 bytes needed to align the next int
+	char spareA = 0;
+	char spareB = 0;
+	bool dirty = false;
+public:
+	garbagePolicyEnum garbagePolicy = garbagePolicyEnum::immediateAfterEmpty;
+	unsigned int id = 0;
+	unsigned int member_count = 0;
+	struct OwnerInfo * ownerinfo = nullptr;
+	LiveJobCounters jobStatusAggregates;
+	unsigned int Jobset() const { return id; }
+#endif
+
+public:
+#if 1 // JobQueueJobSet from JobQueueJob
+	JobQueueJobSet(unsigned int jobset_id)
+		: JobQueueJob(entry_type_jobset)
+	{
+		jid.cluster = 0;
+		jid.proc = JOBSETID_to_qkey2(jobset_id);
+		set_id = jobset_id;
+	}
+#else
+	JobQueueJobSet(unsigned int jobset_id)
+		: JobQueueBase(entry_type_jobset)
+		, id(jobset_id)
+	{
+		jid.proc = JOBSETID_to_qkey2(jobset_id);
+	}
+#endif
+	virtual ~JobQueueJobSet() = default;
+	virtual void PopulateFromAd(); // populate this structure from contained ClassAd state
+};
+
 
 class TransactionWatcher;
 
 
 // from qmgmt_factory.cpp
 // make an empty job factory
-class JobFactory * NewJobFactory(int cluster_id);
+class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds);
 // make a job factory from submit digest text, used on submit, optional user_ident is who to inpersonate when reading item data file (if any)
 bool LoadJobFactoryDigest(JobFactory *factory, const char * submit_digest_text, ClassAd * user_ident, std::string & errmsg);
 // attach submitted itemdata to a job factory that is pending submit.
@@ -291,7 +366,12 @@ bool LoadJobFactoryDigest(JobFactory *factory, const char * submit_digest_text, 
 int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::string & remainder);
 int JobFactoryRowCount(JobFactory * factory);
 // make a job factory from an on-disk submit digest - used on schedd restart
-class JobFactory * MakeJobFactory(JobQueueCluster * job, const char * submit_file, bool spooled_submit_file, std::string & errmsg);
+class JobFactory * MakeJobFactory(
+	JobQueueCluster * job,
+	const classad::ClassAd * extended_cmds,
+	const char * submit_file,
+	bool spooled_submit_file,
+	std::string & errmsg);
 void DestroyJobFactory(JobFactory * factory);
 
 void AttachJobFactoryToCluster(JobFactory * factory, JobQueueCluster * cluster);
@@ -326,10 +406,11 @@ bool GetJobFactoryMaterializeMode(JobQueueCluster * cluster, int & pause_code);
 void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
 void ScheduleClusterForDeferredCleanup(int cluster_id);
+void ScheduleClusterForJobMaterializeNow(int cluster_id);
 
 // called by qmgmt_recievers to handle the SetJobFactory RPC call
 int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * digest_text);
-int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, MyString & filename, int& row_count, int &terrno);
+int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, std::string & filename, int& row_count, int &terrno);
 
 void SetMaxHistoricalLogs(int max_historical_logs);
 time_t GetOriginalJobQueueBirthdate();
@@ -344,12 +425,12 @@ bool isQueueSuperUser( const char* user );
 // to modify the given job.  In addition to everything UserCheck2()
 // does, this also calls IPVerify to check for WRITE authorization.
 // This call assumes Q_SOCK is set to a valid QmgmtPeer object.
-bool UserCheck( ClassAd *ad, const char *test_owner );
+bool UserCheck( const ClassAd *ad, const char *test_owner );
 
 // Verify that the user issuing a command (test_owner) is authorized
 // to modify the given job.  Either ad or job_owner should be given
 // but not both.  If job_owner is NULL, the owner is looked up in the ad.
-bool UserCheck2( ClassAd *ad, const char *test_owner, char const *job_owner=NULL );
+bool UserCheck2( const ClassAd *ad, const char *test_owner, char const *job_owner=NULL );
 
 bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray();
@@ -366,6 +447,7 @@ int GetJobInfo(JobQueueJob *job, const OwnerInfo* &powni); // returns universe a
 JobQueueJob* GetJobAd(int cluster, int proc);
 JobQueueCluster* GetClusterAd(const PROC_ID& jid);
 JobQueueCluster* GetClusterAd(int cluster);
+JobQueueJobSet* GetJobSetAd(unsigned int jobset_id);
 ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id, bool expStardAttrs = false, bool persist_expansions = true );
 ClassAd *GetJobByConstraint_as_ClassAd(const char *constraint);
 ClassAd *GetNextJobByConstraint_as_ClassAd(const char *constraint, int initScan);
@@ -433,6 +515,11 @@ public:
 	JOB_ID_KEY_BUF(const JOB_ID_KEY& rhs)     : JOB_ID_KEY(rhs.cluster, rhs.proc) { job_id_str[0] = 0; }
 };
 
+typedef JOB_ID_KEY JobQueueKey;
+typedef JobQueueJob* JobQueuePayload;
+// new for 8.3, use a non-string type as the key for the JobQueue
+// and a type derived from ClassAd for the payload.
+typedef ClassAdLog<JOB_ID_KEY, JobQueuePayload> JobQueueLogType;
 
 // specialize the helper class for create/destroy of hashtable entries for the ClassAdLog class
 template <>
@@ -463,11 +550,18 @@ public:
 	virtual bool insert(const char * key, ClassAd * ad) {
 		JOB_ID_KEY k(key);
 		bool new_ad = false;
-		JobQueueJob * Ad = dynamic_cast<JobQueueJob*>(ad);
-		// if the incoming ad is really a ClassAd and not a JobQueueJob, then make a new object.
-		if ( ! Ad) { Ad = new JobQueueJob(); Ad->Update(*ad); new_ad = true; }
+		JobQueuePayload Ad = dynamic_cast<JobQueuePayload>(ad);
+		// if the incoming ad is really a ClassAd and not a JobQueue object, then make a new object.
+		// note this hack is just in case we have old code that is still treating jobs as classad
+		// eventually we should be able to get rid of this hack.  We can assume here that we will
+		// never be asked to make cluster or jobset objects
+		if ( ! Ad) {
+			ASSERT((k.cluster > 0 && k.proc >= 0) || (k.cluster == 0 && k.proc == 0));
+			Ad = new JobQueueJob(); Ad->Update(*ad); new_ad = true;
+		}
 		Ad->SetDirtyTracking(true);
-		int iret = table.insert(k, Ad);
+		JobQueueJob* payload = reinterpret_cast<JobQueueJob*>(Ad);
+		int iret = table.insert(k, payload);
 		// If we made a new ad, we must now delete one of them.
 		// On success, delete the original ad.
 		// On failure, delete the new ad (our caller will delete the original one).
@@ -535,24 +629,22 @@ private:
 	bool completed;
 };
 
-// new for 8.3, use a non-string type as the key for the JobQueue
-// and a type derived from ClassAd for the payload.
-typedef JOB_ID_KEY JobQueueKey;
-typedef JobQueueJob* JobQueuePayload;
-typedef ClassAdLog<JOB_ID_KEY, JobQueuePayload> JobQueueLogType;
 
 #define JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS     0x0001
+#define JOB_QUEUE_ITERATOR_OPT_INCLUDE_JOBSETS      0x0002
 JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
 JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
 
 
 class schedd_runtime_probe;
-typedef int (*queue_classad_scan_func)(ClassAd *ad, void* user);
-void WalkJobQueue3(queue_classad_scan_func fn, void* pv, schedd_runtime_probe & ftm);
+#define WJQ_WITH_CLUSTERS 1  // include cluster ads when walking the job queue
+#define WJQ_WITH_JOBSETS  2  // include jobset ads when walking the job queue
+#define WJQ_WITH_NO_JOBS  4  // do not include job (proc) ads when walking the job queue
 typedef int (*queue_job_scan_func)(JobQueueJob *ad, const JobQueueKey& key, void* user);
-void WalkJobQueue3(queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm);
-#define WalkJobQueue(fn) WalkJobQueue3( (fn), NULL, WalkJobQ_ ## fn ## _runtime )
-#define WalkJobQueue2(fn,pv) WalkJobQueue3( (fn), (pv), WalkJobQ_ ## fn ## _runtime )
+void WalkJobQueueEntries(int with, queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm);
+#define WalkJobQueue(fn) WalkJobQueueEntries(0, (fn), NULL, WalkJobQ_ ## fn ## _runtime )
+#define WalkJobQueue2(fn,pv) WalkJobQueueEntries(0, (fn), (pv), WalkJobQ_ ## fn ## _runtime )
+#define WalkJobQueueWith(with,fn,pv) WalkJobQueueEntries(with, (fn), pv, WalkJobQ_ ## fn ## _runtime )
 
 bool InWalkJobQueue();
 
@@ -576,7 +668,7 @@ QmgmtPeer* getQmgmtConnectionInfo();
 
 // JobSet qmgmt support functions
 bool JobSetDestroy(int setid);
-bool JobSetStoreAllDirtyAttrs(int setid, ClassAd & src, bool create);
+bool JobSetCreate(int setId, const char * setName, const char * ownerinfoName);
 
 // priority records
 extern prio_rec *PrioRec;
@@ -589,5 +681,9 @@ extern int Runnable(PROC_ID*);
 extern int Runnable(JobQueueJob *job, const char *& reason);
 
 extern class ForkWork schedd_forker;
+
+int SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value);
+int GetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, std::string &attr_value);
+int DeletePrivateAttribute(int cluster_id, int proc_id, const char *attr_name);
 
 #endif /* _QMGMT_H */

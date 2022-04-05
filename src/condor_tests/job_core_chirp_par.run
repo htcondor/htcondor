@@ -24,7 +24,6 @@ use warnings;
 use CondorTest;
 use CondorUtils;
 
-
 my $cmd_template = "job_core_chirp_par.template";
 my $testdesc =  'job_core_chirp_par - Simple parallel job';
 my $testname = "job_core_chirp_par";
@@ -33,7 +32,8 @@ my $corename = "job_core_chirp_par";
 my $debuglevel = 2;
 
 # where am I running
-my $currenthost = CondorTest::getFqdnHost();
+my $currenthost = `condor_config_val FULL_HOSTNAME`;
+chomp($currenthost);
 
 print scalar localtime() . "\n";
 

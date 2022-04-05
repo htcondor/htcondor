@@ -28,9 +28,13 @@ import subprocess
 
 import pytest
 
+from _pytest.nodes import Item
+from _pytest.runner import CallInfo
+
 import htcondor
 
 from ornithology import Condor, CONFIG_IDS
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -209,3 +213,30 @@ def pytest_runtest_protocol(item, nextitem):
 def default_condor(test_dir):
     with Condor(local_dir=test_dir / "condor") as condor:
         yield condor
+
+
+custom_exit_status = 0
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item: Item, call: CallInfo):
+    # Do the wrapped thing.
+    outcome = yield
+
+    global custom_exit_status
+
+    result = outcome.get_result()
+    if result.failed and custom_exit_status != 1:
+        if result.when == "setup":
+            custom_exit_status = 136
+        elif result.when == "teardown":
+            custom_exit_status = 137
+        else:
+            custom_exit_status = 1
+
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session, exitstatus):
+    global custom_exit_status
+
+    if custom_exit_status > 1:
+        session.exitstatus = custom_exit_status

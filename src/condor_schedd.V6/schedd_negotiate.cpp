@@ -289,8 +289,8 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 	if (EvalInteger(ATTR_REQUEST_DISK, job_ad, match_ad, disk)) {
 		float total_disk = disk;
 		match_ad->LookupFloat(ATTR_TOTAL_DISK, total_disk);
-		disk = (MAX((int64_t) ceil((disk / total_disk) * 100), 1)) *
-			int64_t(total_disk/100.0);
+		disk = (MAX((int64_t) ceil((disk / total_disk) * 1000), 1)) *
+			int64_t(total_disk/1000.0);
 		match_ad->Assign(ATTR_DISK, disk);
 	} else {
 		dprintf(D_ALWAYS, "No disk request in job %d.%d, skipping match to partitionable slot %s\n", job_id.cluster, job_id.proc, slot_name);
@@ -329,7 +329,7 @@ ScheddNegotiate::fixupPartitionableSlot(ClassAd *job_ad, ClassAd *match_ad)
 		dprintf(D_FULLDEBUG,
 				"Partitionable slot %s adjusted for job %d.%d: "
 				"cpus = %ld, memory = %ld, disk = %ld\n",
-				slot_name, job_id.cluster, job_id.proc, cpus, memory, disk);
+				slot_name, job_id.cluster, job_id.proc, (long)cpus, (long)memory, (long)disk);
 	}
 
 	return result;
@@ -512,10 +512,10 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		// if so, reset m_current_auto_cluster_id and m_current_job_id
 		// with the values contained in the reject reason, and truncate
 		// this information out of m_reject_reason.
-		int pos = m_reject_reason.FindChar('|');
-		if ( pos >= 0 ) {
+		size_t pos = m_reject_reason.find('|');
+		if ( pos != std::string::npos ) {
 			MyStringTokener tok;
-			tok.Tokenize(m_reject_reason.Value());
+			tok.Tokenize(m_reject_reason.c_str());
 			/*const char *reason =*/ tok.GetNextToken("|",false);
 			const char *ac = tok.GetNextToken("|",false);
 			const char *jobid = tok.GetNextToken("|",false);
@@ -529,7 +529,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 				m_current_job_id.cluster = rr_cluster;
 				m_current_job_id.proc = rr_proc;
 			}
-			m_reject_reason.truncate(pos);	// will truncate string at pos
+			m_reject_reason.erase(pos);	// will truncate string at pos
 		}
 		scheduler_handleJobRejected( m_current_job_id, m_reject_reason.c_str() );
 		m_jobs_rejected++;

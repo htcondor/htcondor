@@ -32,6 +32,7 @@ class PIDTracker : public ProcFamilyTracker {
 public:
 
 	PIDTracker(ProcFamilyMonitor* pfm) : ProcFamilyTracker(pfm) { }
+	virtual ~PIDTracker() { m_list.clear();}
 
 	void add_mapping(ProcFamily* family, pid_t pid, birthday_t birthday)
 	{

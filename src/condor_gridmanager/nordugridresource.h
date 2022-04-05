@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include <map>
 
 #include "baseresource.h"
 #include "gahp-client.h"
@@ -40,7 +41,7 @@ class NordugridResource : public BaseResource
 	const char *ResourceType();
 	void Reconfig();
 
-	static const char *HashName( const char *resource_name,
+	static std::string & HashName( const char *resource_name,
 								 const char *proxy_subject );
 	static NordugridResource *FindOrCreateResource( const char *resource_name,
 													const Proxy *proxy );
@@ -53,7 +54,7 @@ class NordugridResource : public BaseResource
 	char *proxyFQAN;
 	GahpClient *gahp;
 
-	static HashTable <std::string, NordugridResource *> ResourcesByName;
+	static std::map <std::string, NordugridResource *> ResourcesByName;
 
  private:
 	void DoPing( unsigned& ping_delay, bool& ping_complete,

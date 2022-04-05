@@ -42,9 +42,11 @@ typedef std::map<std::string,JobRoute *, classad::CaseIgnLTStr> RoutingTable;
 
 // one or more of these flags can be passed to the JobRouter constructor
 #define JOB_ROUTER_TOOL_FLAG_AS_TOOL          0x0001  // basic operate as tool
-#define JOB_ROUTER_TOOL_FLAG_DIAGNOSTIC       0x0002  // diagnostic level output
-#define JOB_ROUTER_TOOL_FLAG_DEBUG_UMBRELLA   0x0004  // wrap umbrella constraint in debug()
-#define JOB_ROUTER_TOOL_FLAG_CAN_SWITCH_IDS   0x0008  // route as if userid switching was possible
+#define JOB_ROUTER_TOOL_FLAG_LOG_XFORM_ERRORS 0x0002  // log tranform errors to dprintf log
+#define JOB_ROUTER_TOOL_FLAG_LOG_XFORM_STEPS  0x0004  // log tranform steps to dprintf log
+#define JOB_ROUTER_TOOL_FLAG_DIAGNOSTIC       0x0008  // diagnostic level output
+#define JOB_ROUTER_TOOL_FLAG_DEBUG_UMBRELLA   0x0010  // wrap umbrella constraint in debug()
+#define JOB_ROUTER_TOOL_FLAG_CAN_SWITCH_IDS   0x0020  // route as if userid switching was possible
 
 /*
  * The JobRouter is responsible for finding idle jobs of one flavor
@@ -82,6 +84,9 @@ class JobRouter: public Service {
 	// This is called in a timer to evaluate periodic expressions for the
 	// jobs the JobRouter manages.
 	void EvalAllSrcJobPeriodicExprs();
+
+	// this is called on a timer to create/refresh IDTOKEN that will be sent along with routed jobs
+	void refreshIDTokens();
 
 	void config();
 	void set_schedds(Scheduler* schedd, Scheduler* schedd2); // let the tool mode push simulated schedulers
@@ -130,6 +135,7 @@ class JobRouter: public Service {
 	HashTable<std::string,RoutedJob *> m_jobs;  //key="src job id"
 	RoutingTable *m_routes; //key="route name"
 	std::list<std::string> m_route_order; // string="route name". the order in which routes should be considered
+	std::map<std::string,std::string> m_idtokens; // IDTOKENs created by the job router that can be included in routed jobs
 
 	// m_routes->at() will throw if we try and lookup a route that's not in the list,
 	// we don't ever want to do that, we want NULL back for routes not found
@@ -161,6 +167,9 @@ class JobRouter: public Service {
 	bool m_enable_job_routing;
 	bool m_release_on_hold;
 	bool m_round_robin_selection;
+
+	int m_job_router_idtoken_refresh;
+	int m_job_router_idtoken_refresh_timer_id;
 
 	int m_job_router_entries_refresh;
 	int m_job_router_refresh_timer;
@@ -242,7 +251,7 @@ private:
 		bool allow_empty_requirements,
 		HashTable<std::string,int> & hash_order,
 		RoutingTable *new_routes );
-#ifdef USE_XFORM_UTILS
+
 	void ParseRoute(const char * route_text,
 		const char * name,
 		bool allow_empty_requirements,
@@ -254,7 +263,6 @@ private:
 	SimpleList<MacroStreamXFormSource*> m_pre_route_xfms;
 	SimpleList<MacroStreamXFormSource*> m_post_route_xfms;
 	void clear_pre_and_post_xfms();
-#endif
 
 	JobRoute *GetRouteByName(char const *name);
 
@@ -279,6 +287,10 @@ private:
 	// Return true if job should be edited in place rather than
 	// having a new copy submitted
 	bool TestEditJobInPlace(RoutedJob *job);
+
+	// create and destroy IDTOKEN files that can be sent along with routed jobs
+	bool CreateIDTokenFile(const char * name, const char * props);
+	bool RemoveIDTokenFile(const std::string & name);
 
 	//Produce a default JobRouter name.
 	std::string DaemonIdentityString();

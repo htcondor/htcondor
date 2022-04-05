@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "domain_tools.h"
 #include "condor_debug.h"
-#include "MyString.h"
+#include "stl_string_utils.h"
 
 bool
 domainAndNameMatch( const char *account1,
@@ -51,13 +51,13 @@ getDomainAndName( char* namestr, char* &domain, char* &name ) {
 }
 
 void
-joinDomainAndName( char const *domain, char const *name, class MyString &result )
+joinDomainAndName( char const *domain, char const *name, std::string &result )
 {
 	ASSERT( name );
 	if( !domain ) {
 		result = name;
 	}
 	else {
-		result.formatstr("%s\\%s",domain,name);
+		formatstr(result, "%s\\%s", domain, name);
 	}
 }

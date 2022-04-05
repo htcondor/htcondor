@@ -96,7 +96,7 @@ char *GetSpooledExecutablePath( int cluster, const char *dir )
 	}
 }
 
-void GetSpooledSubmitDigestPath(MyString &path, int cluster, const char *dir /*= NULL*/ )
+void GetSpooledSubmitDigestPath(std::string &path, int cluster, const char *dir /*= NULL*/ )
 {
 	auto_free_ptr spooldir;
 	if ( ! dir) {
@@ -104,10 +104,10 @@ void GetSpooledSubmitDigestPath(MyString &path, int cluster, const char *dir /*=
 		dir = spooldir;
 	}
 
-	path.formatstr("%s%c%d%ccondor_submit.%d.digest", dir, DIR_DELIM_CHAR, cluster % 10000, DIR_DELIM_CHAR, cluster);
+	formatstr(path, "%s%c%d%ccondor_submit.%d.digest", dir, DIR_DELIM_CHAR, cluster % 10000, DIR_DELIM_CHAR, cluster);
 }
 
-void GetSpooledMaterializeDataPath(MyString &path, int cluster, const char *dir /*= NULL*/ )
+void GetSpooledMaterializeDataPath(std::string &path, int cluster, const char *dir /*= NULL*/ )
 {
 	auto_free_ptr spooldir;
 	if ( ! dir) {
@@ -115,7 +115,7 @@ void GetSpooledMaterializeDataPath(MyString &path, int cluster, const char *dir 
 		dir = spooldir;
 	}
 
-	path.formatstr("%s%c%d%ccondor_submit.%d.items", dir, DIR_DELIM_CHAR, cluster % 10000, DIR_DELIM_CHAR, cluster);
+	formatstr(path, "%s%c%d%ccondor_submit.%d.items", dir, DIR_DELIM_CHAR, cluster % 10000, DIR_DELIM_CHAR, cluster);
 }
 
 void
@@ -324,13 +324,6 @@ SpooledJobFiles::createJobSwapSpoolDirectory(classad::ClassAd const *job_ad,priv
 bool
 SpooledJobFiles::createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_state )
 {
-	int universe=-1;
-
-	job_ad->EvaluateAttrInt(ATTR_JOB_UNIVERSE,universe);
-	if( universe == CONDOR_UNIVERSE_STANDARD ) {
-		return createParentSpoolDirectories(job_ad);
-	}
-
 	if ( param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) == false ) {
 		desired_priv_state = PRIV_USER;
 	}

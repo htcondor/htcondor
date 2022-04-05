@@ -31,7 +31,7 @@ SocketProxy::SocketProxy():
 char const *SocketProxy::getErrorMsg()
 {
 	if( m_error ) {
-		return m_error_msg.Value();
+		return m_error_msg.c_str();
 	}
 	return NULL;
 }
@@ -151,10 +151,10 @@ void SocketProxy::execute()
 					it->shutdown = true;
 				}
 				else if( n < 0 ) {
-					MyString error_msg;
-					error_msg.formatstr("Error reading from socket %d: %s\n",
+					std::string error_msg;
+					formatstr(error_msg, "Error reading from socket %d: %s\n",
 									  it->from_socket, strerror(errno));
-					setErrorMsg(error_msg.Value());
+					setErrorMsg(error_msg.c_str());
 					break;
 				}
 			}

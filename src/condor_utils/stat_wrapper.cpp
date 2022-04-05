@@ -79,7 +79,22 @@ StatWrapper::StatWrapper( const MyString &path, bool do_lstat )
 	memset( &m_statbuf, 0, sizeof(StatStructType) );
 
 	if ( !path.empty() ) {
-		m_path = path.Value();
+		m_path = path.c_str();
+		Stat();
+	}
+}
+
+StatWrapper::StatWrapper( const std::string &path, bool do_lstat )
+	: m_rc( 0 ),
+	  m_errno( 0 ),
+	  m_fd( -1 ),
+	  m_do_lstat( do_lstat ),
+	  m_buf_valid( false )
+{
+	memset( &m_statbuf, 0, sizeof(StatStructType) );
+
+	if ( !path.empty() ) {
+		m_path = path;
 		Stat();
 	}
 }
@@ -137,7 +152,7 @@ StatWrapper::IsInitialized( void ) const
 void
 StatWrapper::SetPath( const MyString &path, bool do_lstat )
 {
-	SetPath( path.Value(), do_lstat );
+	SetPath( path.c_str(), do_lstat );
 }
 
 // Set the path(s)

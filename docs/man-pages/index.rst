@@ -5,25 +5,17 @@ Command Reference Manual (man pages)
    :maxdepth: 1
    :glob:
 
-   bosco_cluster
-   bosco_findplatform
-   bosco_install
-   bosco_ssh_start
-   bosco_start
-   bosco_stop
-   bosco_uninstall
-   classads
    classad_eval
+   classads
    condor_adstash
    condor_advertise
    condor_annex
+   condor_check_password
    condor_check_userlogs
    condor_chirp
-   condor_cod
    condor_configure
    condor_config_val
    condor_continue
-   condor_convert_history
    condor_dagman
    condor_drain
    condor_evicted_files
@@ -45,27 +37,29 @@ Command Reference Manual (man pages)
    condor_preen
    condor_prio
    condor_procd
-   condor_qedit
    condor_q
+   condor_qedit
    condor_qsub
    condor_reconfig
    condor_release
+   condor_remote_cluster
    condor_reschedule
    condor_restart
-   condor_rmdir
    condor_rm
+   condor_rmdir
    condor_router_history
    condor_router_q
    condor_router_rm
    condor_run
    condor_set_shutdown
    condor_sos
+   condor_ssh_start
    condor_ssh_to_job
    condor_stats
    condor_status
    condor_store_cred
-   condor_submit_dag
    condor_submit
+   condor_submit_dag
    condor_suspend
    condor_tail
    condor_token_create
@@ -91,4 +85,5 @@ Command Reference Manual (man pages)
    condor_who
    get_htcondor
    gidd_alloc
+   htcondor
    procd_ctl

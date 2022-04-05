@@ -57,6 +57,7 @@ void usage(int exit_code)
 	"\n    [general-opts] are:\n"
 	"\t-name <name>\t   Name of Scheduler\n"
 	"\t-pool <pool>\t   Use host as the central manager to query\n"
+	"\t-forward\t   Forward changes to shadow/gridmanager\n"
 	);
 
 	fprintf(out,
@@ -128,32 +129,32 @@ int IsProtectedAttribute(const char *attr)
 	return NORMAL_ATTR;
 }
 
-static void appendProcsForCluster(MyString & out, int cluster, std::set<int> & procs)
+static void appendProcsForCluster(std::string & out, int cluster, std::set<int> & procs)
 {
 	if (cluster <= 0)
 		return;
 
 	if (procs.empty()) {
-		out.formatstr_cat(ATTR_CLUSTER_ID " == %d ", cluster);
+		formatstr_cat(out, ATTR_CLUSTER_ID " == %d ", cluster);
 	} else {
-		out.formatstr_cat("( " ATTR_CLUSTER_ID " == %d && ", cluster);
+		formatstr_cat(out, "( " ATTR_CLUSTER_ID " == %d && ", cluster);
 		if (procs.size() > 1) {
 			out += "(";
 			const char * op = "";
 			for (std::set<int>::iterator it = procs.begin(); it != procs.end(); ++it) {
 				out += op;
-				out.formatstr_cat(ATTR_PROC_ID " == %d ", *it);
+				formatstr_cat(out, ATTR_PROC_ID " == %d ", *it);
 				op = " || ";
 			}
 			out += ")";
 		} else {
-			out.formatstr_cat(ATTR_PROC_ID " == %d ", *procs.begin());
+			formatstr_cat(out, ATTR_PROC_ID " == %d ", *procs.begin());
 		}
 		out += ")";
 	}
 }
 
-const char * makeJobidConstraint(MyString & out, std::set<JOB_ID_KEY> & jobids)
+const char * makeJobidConstraint(std::string & out, std::set<JOB_ID_KEY> & jobids)
 {
 	if (jobids.empty()) return out.c_str();
 	int cluster = -1;
@@ -173,8 +174,6 @@ const char * makeJobidConstraint(MyString & out, std::set<JOB_ID_KEY> & jobids)
 }
 
 
-#define NEW_ARG_PARSING
-
 int
 main(int argc, const char *argv[])
 {
@@ -186,7 +185,6 @@ main(int argc, const char *argv[])
 		usage(1);
 	}
 
-#ifdef NEW_ARG_PARSING
 	GenericQuery gquery;
 	const char * ownername = NULL;
 	bool dash_dryrun = false;
@@ -194,17 +192,10 @@ main(int argc, const char *argv[])
 	bool only_my_jobs = true;
 	bool bare_arg_must_identify_jobs = true;
 	bool has_arbitrary_constraint = false;
+	bool dash_forward = false;
 	int dash_diagnostic = 0;
 	StringList job_list; // list of job ids (or mixed job & cluster id's to modify)
 	std::map<std::string, std::string> kvp_list; // Classad of attr=value pairs to set
-#else
-	bool has_proc = false;
-	int nextarg = 1, cluster=0, proc=0;
-	MyString constraint;
-	bool UseConstraint = false;
-	ExprTree* value_expr;
-#endif
-
 
 	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
@@ -214,7 +205,6 @@ main(int argc, const char *argv[])
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
-#ifdef NEW_ARG_PARSING
 	const char * pcolon;
 
 	only_my_jobs = param_boolean("CONDOR_Q_ONLY_MY_JOBS", only_my_jobs);
@@ -288,7 +278,7 @@ main(int argc, const char *argv[])
 				exit(1);
 			}
 			ownername = argv[ixarg]; // remember this in case we need it later
-			MyString expr; expr.formatstr(ATTR_OWNER "==\"%s\"", ownername);
+			std::string expr; formatstr(expr, ATTR_OWNER "==\"%s\"", ownername);
 			gquery.addCustomAND(expr.c_str());
 			bare_arg_must_identify_jobs = false;
 			only_my_jobs = false;
@@ -347,6 +337,10 @@ main(int argc, const char *argv[])
 			delete ad;
 		}
 		else
+		if (is_dash_arg_prefix(parg, "forward", 3)) {
+			dash_forward = true;
+		}
+		else
 		if (*parg == '-') {
 			fprintf(stderr, "%s: %s is not a valid option\n", MyName, parg);
 			usage(1);
@@ -365,7 +359,7 @@ main(int argc, const char *argv[])
 			} else {
 				// assume that this argument is an ownername
 				ownername = argv[ixarg];
-				MyString expr; expr.formatstr(ATTR_OWNER "==\"%s\"", ownername);
+				std::string expr; formatstr(expr, ATTR_OWNER "==\"%s\"", ownername);
 				gquery.addCustomAND(expr.c_str());
 			}
 		}
@@ -414,10 +408,10 @@ main(int argc, const char *argv[])
 
 	//
 	// cook and validiate arguments
-	// 
+	//
 
 	ConstraintHolder constraint;
-	MyString query_string;
+	std::string query_string;
 	gquery.makeQuery(query_string);
 
 	// cook jobid strings into either a set of job ids, or more constraints
@@ -447,7 +441,7 @@ main(int argc, const char *argv[])
 		}
 	}
 	if ( ! query_string.empty()) {
-		constraint.set(query_string.StrDup());
+		constraint.set(strdup(query_string.c_str()));
 	}
 
 	// got the args, now check for consistency
@@ -472,7 +466,7 @@ main(int argc, const char *argv[])
 		fprintf(stdout, "FROM %s (%s)\n", schedd_name ? schedd_name : "local", pool_name ? pool_name : "local");
 		// echo back the arguments
 		if ( ! jobids.empty()) {
-			MyString buffer, id;
+			std::string buffer, id;
 			for (std::set<JOB_ID_KEY>::iterator jid = jobids.begin(); jid != jobids.end(); ++jid) {
 				jid->sprint(id);
 				buffer += id;
@@ -522,46 +516,6 @@ main(int argc, const char *argv[])
 		exit(1);
 	}
 
-#else
-
-	// if -debug is present, it must be first. sigh.
-	if (argv[nextarg][0] == '-' && argv[nextarg][1] == 'd') {
-		// output dprintf messages to stderror at TOOL_DEBUG level
-		dprintf_set_tool_debug("TOOL", 0);
-		nextarg++;
-	}
-
-	// if it is present, it must be first after debug.
-	if (argv[nextarg][0] == '-' && argv[nextarg][1] == 'n') {
-		nextarg++;
-		// use the given name as the schedd name to connect to
-		if (argc <= nextarg) {
-			fprintf(stderr, "%s: -n requires another argument\n", 
-					argv[0]);
-			exit(1);
-		}				
-		schedd_name = argv[nextarg];
-		nextarg++;
-	}
-
-	if (argc <= nextarg) {
-		usage(1);
-	}
-
-	// if it is present, it must be just after -n flag
-	if (argv[nextarg][0] == '-' && argv[nextarg][1] == 'p') {
-		nextarg++;
-		if (argc <= nextarg) {
-			fprintf(stderr, "%s: -pool requires another argument\n", 
-					argv[0]);
-			exit(1);
-		}
-		pool_name = argv[nextarg];
-		nextarg++;
-	}
-
-#endif // end of argument parsing / validation
-
 	DCSchedd schedd(schedd_name, pool_name);
 	if ( schedd.locate(Daemon::LOCATE_FOR_LOOKUP) == false ) {
 		if ( ! schedd_name) {
@@ -573,10 +527,10 @@ main(int argc, const char *argv[])
 		exit(1);
 	}
 
-	// Open job queue 
-	Qmgr_connection *q = ConnectQ( schedd.addr(), 0, false, NULL, NULL, schedd.version() );
+	// Open job queue
+	Qmgr_connection *q = ConnectQ( schedd );
 	if( !q ) {
-		fprintf( stderr, "Failed to connect to queue manager %s\n", 
+		fprintf( stderr, "Failed to connect to queue manager %s\n",
 				 schedd.addr() );
 		exit(1);
 	}
@@ -591,10 +545,10 @@ main(int argc, const char *argv[])
 		}
 	}
 
-#ifdef NEW_ARG_PARSING
 	// TODO: do the transaction
 	const char * dry_tag = "";
-	SetAttributeFlags_t setflags = SETDIRTY;
+	SetAttributeFlags_t setflags = 0;
+	if (dash_forward) setflags |= SetAttribute_SetDirty;
 	if (only_my_jobs) setflags |= SetAttribute_OnlyMyJobs;
 	if (dash_dryrun) {
 		if (schedd.version()) {
@@ -647,9 +601,9 @@ main(int argc, const char *argv[])
 			match_count += rval;
 		}
 		if (transaction_aborted) break;
-		MyString count("all");
-		if (match_count > 0) count.formatstr("%d", match_count);
-		printf("%sSet attribute \"%s\" for %s matching jobs.\n", dry_tag, attr, count.Value());
+		std::string count("all");
+		if (match_count > 0) formatstr(count, "%d", match_count);
+		printf("%sSet attribute \"%s\" for %s matching jobs.\n", dry_tag, attr, count.c_str());
 	}
 
 	if ( ! transaction_aborted && jobids.empty() && (setflags & SetAttribute_QueryOnly)) {
@@ -660,142 +614,6 @@ main(int argc, const char *argv[])
 	}
 
 bail:
-
-#else
-	if (argc <= nextarg) {
-		usage(1);
-	}
-
-	if (isdigit(argv[nextarg][0])) {
-		char *tmp;
-		cluster = strtol(argv[nextarg], &tmp, 10);
-		if (cluster <= 0) {
-			fprintf( stderr, "Invalid cluster # from %s.\n", argv[nextarg]);
-			exit(1);
-		}
-		if (*tmp == '.') {
-			proc = strtol(tmp + 1, &tmp, 10);
-			if (cluster <= 0) {
-				fprintf( stderr, "Invalid proc # from %s.\n", argv[nextarg]);
-				exit(1);
-			}
-			UseConstraint = false;
-			has_proc = true;
-		} else {
-			constraint.formatstr("(%s == %d)", ATTR_CLUSTER_ID, cluster);
-			UseConstraint = true;
-		}
-		nextarg++;
-	} else if (!match_prefix(argv[nextarg], "-constraint")) {
-		constraint.formatstr("(%s == \"%s\")", ATTR_OWNER, argv[nextarg]);
-		nextarg++;
-		UseConstraint = true;
-	}
-
-	if (argc <= nextarg) {
-		usage(1);
-	}
-
-	while (match_prefix(argv[nextarg], "-constraint")) {
-
-		if ( has_proc ){
-			fprintf(stderr, "condor_qedit: proc_id specified. Ignoring constraint option\n");
-			nextarg+=2;
-			continue;
-		}
-
-		nextarg++;
-		
-		if (argc <= nextarg) {
-			usage(1);
-		}
-
-		if ( !UseConstraint ){
-			constraint = argv[nextarg];
-		}
-		else{
-			constraint = "( " + constraint + " ) && " + argv[nextarg];
-		}
-
-		nextarg++;
-		UseConstraint = true;
-	}
-
-	if (argc <= nextarg) {
-		usage(1);
-	}
-
-	for (; nextarg < argc; nextarg += 2) {
-		if (argc <= nextarg+1) {
-			usage(1);
-		}
-		if (IsProtectedAttribute(argv[nextarg])) {
-			fprintf(stderr, "Update of attribute \"%s\" is not allowed.\n",
-					argv[nextarg]);
-			fprintf(stderr,
-				"Transaction failed.  No attributes were set.\n");
-			exit(1);
-		}
-
-		// Check validity of attribute-name
-		if ( blankline(argv[nextarg]) ||
-			 !IsValidAttrName(argv[nextarg]) )
-		{
-			fprintf(stderr,
-				"Update aborted, illegal attribute-name specified for attribute \"%s\".\n",
-				argv[nextarg]);
-			fprintf(stderr,
-				"Transaction failed.  No attributes were set.\n");
-			exit(1);
-		}
-
-		// Check validity of attribute-value
-		value_expr = NULL;
-		if ( blankline(argv[nextarg+1]) ||
-			 !IsValidAttrValue(argv[nextarg+1]) ||
-			 ParseClassAdRvalExpr(argv[nextarg+1], value_expr) )
-		{
-			fprintf(stderr,
-				"Update aborted, illegal attribute-value specified for attribute \"%s\".\n",
-				argv[nextarg]);
-			fprintf(stderr,
-				"Transaction failed.  No attributes were set.\n");
-			exit(1);
-		}
-		if (value_expr) delete value_expr;
-
-		if (UseConstraint) {
-			// Try to communicate with the newer protocol first
-			if (SetAttributeByConstraint(constraint.Value(),
-							argv[nextarg],
-							argv[nextarg+1],
-							SETDIRTY) < 0) {
-				if (SetAttributeByConstraint(constraint.Value(),
-							argv[nextarg],
-							argv[nextarg+1]) < 0) {
-
-					fprintf(stderr,
-						"Failed to set attribute \"%s\" by constraint: %s\n",
-						argv[nextarg], constraint.Value());
-					fprintf(stderr,
-						"Transaction failed.  No attributes were set.\n");
-					exit(1);
-				}
-			}
-		} else {
-			if (SetAttribute(cluster, proc, argv[nextarg],
-							 argv[nextarg+1], SETDIRTY) < 0) {
-				fprintf(stderr,
-						"Failed to set attribute \"%s\" for job %d.%d.\n",
-						argv[nextarg], cluster, proc);
-				fprintf(stderr,
-						"Transaction failed.  No attributes were set.\n");
-				exit(1);
-			}
-		}
-		printf("Set attribute \"%s\".\n", argv[nextarg]);
-	}
-#endif
 
 	if (!DisconnectQ(q) || transaction_aborted) {
 		fprintf(stderr,

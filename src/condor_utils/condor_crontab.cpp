@@ -377,7 +377,7 @@ CronTab::initRegexObject() {
 		if ( ! CronTab::regex.compile( pattern, &errptr, &erroffset )) {
 			MyString error = "CronTab: Failed to compile Regex - ";
 			error += pattern;
-			EXCEPT( "%s", error.Value() );
+			EXCEPT( "%s", error.c_str() );
 		}
 	}
 }
@@ -719,10 +719,10 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		// the error message to the log
 		//
 	MyString error;
-	if ( ! CronTab::validateParameter(	param->Value(),
+	if ( ! CronTab::validateParameter(	param->c_str(),
 										CronTab::attributes[attribute_idx],
 										error ) ) {
-		dprintf( D_ALWAYS, "%s", error.Value() );
+		dprintf( D_ALWAYS, "%s", error.c_str() );
 			//
 			// Store the error in case they want to email
 			// the user to tell them that they goofed
@@ -741,7 +741,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		// First start by spliting the string by commas
 		//
 	MyStringTokener tok;
-	tok.Tokenize(param->Value());
+	tok.Tokenize(param->c_str());
 	const char *_token;
 	while ( ( _token = tok.GetNextToken( CRONTAB_DELIMITER, true ) ) != NULL ) {
 		MyStringWithTokener token( _token );
@@ -767,7 +767,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 			if ( ( _temp = token.GetNextToken( CRONTAB_STEP, true ) ) != NULL ) {
 				MyString stepStr( _temp );
 				stepStr.trim();
-				cur_step = atoi( stepStr.Value() );
+				cur_step = atoi( stepStr.c_str() );
 				if (cur_step == 0) {
 					return false;
 				}
@@ -799,7 +799,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 				//
 			_temp = new MyString( token.GetNextToken( CRONTAB_RANGE, true ) );
 			_temp->trim();
-			value = atoi( _temp->Value() );
+			value = atoi( _temp->c_str() );
 			cur_min = ( value >= min ? value : min );
 			delete _temp;
 				//
@@ -807,7 +807,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 				//
 			_temp = new MyString( token.GetNextToken( CRONTAB_RANGE, true ) );
 			_temp->trim();
-			value = atoi( _temp->Value() );
+			value = atoi( _temp->c_str() );
 			cur_max = ( value <= max ? value : max );
 			delete _temp;
 			
@@ -846,7 +846,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 				// Replace the range to be just this value only if it
 				// fits in the min/max range we were given
 				//
-			int value = atoi(token.Value());
+			int value = atoi(token.c_str());
 			if ( value >= min && value <= max ) {
 				cur_min = cur_max = value;
 			}

@@ -124,16 +124,16 @@ param_boinc( const char* attr_name, const char* alt_name )
 	if( ! attr_name ) {
 		EXCEPT( "param_boinc() called with NULL attr_name" );
 	}
-	MyString param_name;
-	param_name.formatstr( "BOINC_%s", attr_name );
-	char* tmp = param( param_name.Value() );
+	std::string param_name;
+	formatstr( param_name, "BOINC_%s", attr_name );
+	char* tmp = param( param_name.c_str() );
 	if( tmp ) {
 		free( tmp );
 		return true;
 	}
 	if( alt_name ) {
-		param_name.formatstr( "BOINC_%s", alt_name );
-		tmp = param( param_name.Value() );
+		formatstr( param_name, "BOINC_%s", alt_name );
+		tmp = param( param_name.c_str() );
 		if( tmp ) {
 			free( tmp );
 			return true;
@@ -314,19 +314,7 @@ BOINC_BackfillMgr::spawnClient( Resource *rip )
 	}
 
 	if( ! m_boinc_starter ) {
-		Starter* tmp_starter;
-		ClassAd fake_ad;
-		std::string fake_req;
-		bool no_starter = false;
-		formatstr( fake_req, "TARGET.%s", ATTR_HAS_JIC_LOCAL_CONFIG );
-		fake_ad.AssignExpr( ATTR_REQUIREMENTS, fake_req.c_str() );
-		tmp_starter = resmgr->starter_mgr.newStarter( &fake_ad, NULL, no_starter );
-		if( ! tmp_starter ) {
-			dprintf( D_ALWAYS, "ERROR: Can't find a starter with %s\n",
-					 ATTR_HAS_JIC_LOCAL_CONFIG );
-			return false;
-		}
-		m_boinc_starter = tmp_starter;
+		m_boinc_starter = new Starter;
 		m_boinc_starter->setIsBOINC( true );
 		m_boinc_starter->setReaperID( m_reaper_id );
 		ASSERT( rip );

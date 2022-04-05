@@ -275,9 +275,9 @@ protected:
     // list of versions sent to the daemon during JOINING state
 	List<Version>            m_versionsList;
 	// configuration variables	
-    MyString                 m_stateFilePath;
-    MyString                 m_versionFilePath;
-	MyString                 m_transfererPath;
+    std::string              m_stateFilePath;
+    std::string              m_versionFilePath;
+    std::string                 m_transfererPath;
 
 	// the replication daemon state
     ReplicatorState          m_state;
@@ -301,8 +301,8 @@ protected:
 						   "Connection timeout     - %d\n"
 						   "Downloading reaper id  - %d\n"
 						   "Uploading reaper id    - %d\n",
-				 m_stateFilePath.Value(), m_versionFilePath.Value(), 
-				 m_state, m_transfererPath.Value(), m_connectionTimeout,
+				 m_stateFilePath.c_str(), m_versionFilePath.c_str(), 
+				 m_state, m_transfererPath.c_str(), m_connectionTimeout,
 				 m_downloadReaperId, m_uploadReaperId );    
 	};
 	// process ids of uploading/downloading 'condor_transferer' processes for

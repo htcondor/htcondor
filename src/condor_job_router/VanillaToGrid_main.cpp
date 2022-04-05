@@ -37,12 +37,12 @@ void die(const char * s) {
 	exit(1);
 }
 
-MyString slurp_file(const char * filename) {
+std::string slurp_file(const char * filename) {
 	int fd = safe_open_wrapper_follow(filename, O_RDONLY);
 	if(fd == -1) {
 		die("failed to open input");
 	}
-	MyString s;
+	std::string s;
 	char buf[1024];
 	while(true) {
 		int bytes = read(fd, buf, sizeof(buf));
@@ -79,9 +79,9 @@ int vanilla2grid(int argc, char **argv)
 
 
 	// Load old classad string.
-	MyString s_jobad = slurp_file(argv[1]);
+	std::string s_jobad = slurp_file(argv[1]);
 	// Read in as old ClassAds format
-	ClassAd jobad((char *)s_jobad.Value(),'\n');
+	ClassAd jobad((char *)s_jobad.c_str(),'\n');
 
 	int orig_cluster;
 	if( ! jobad.EvaluateAttrInt(ATTR_CLUSTER_ID, orig_cluster) ) {
@@ -99,16 +99,16 @@ int vanilla2grid(int argc, char **argv)
 	VanillaToGrid::vanillaToGrid(&jobad, argv[2]);
 
 	printf("Claiming job %d.%d\n", orig_cluster, orig_proc);
-	MyString errors;
+	std::string errors;
 	switch(claim_job(jobad, NULL, NULL, orig_cluster, orig_proc, &errors, MYID))
 	{
 		case CJR_OK:
 			break;
 		case CJR_BUSY:
-			fprintf(stderr, "Unable to claim original job %d.%d because it's busy (%s)\n.  Continuing anyway.\n", orig_cluster, orig_proc, errors.Value());
+			fprintf(stderr, "Unable to claim original job %d.%d because it's busy (%s)\n.  Continuing anyway.\n", orig_cluster, orig_proc, errors.c_str());
 			break;
 		case CJR_ERROR:
-			fprintf(stderr, "Unable to claim original job %d.%d because of an error: %s\n.  Continuing anyway.\n", orig_cluster, orig_proc, errors.Value());
+			fprintf(stderr, "Unable to claim original job %d.%d because of an error: %s\n.  Continuing anyway.\n", orig_cluster, orig_proc, errors.c_str());
 			break;
 	}
 
@@ -130,9 +130,9 @@ int vanilla2grid(int argc, char **argv)
 	if(0) // Print the transformed add.
 	{
 		// Convert to old classad string
-		MyString out;
+		std::string out;
 		sPrintAd(out, jobad);
-		printf("%s\n", out.Value());
+		printf("%s\n", out.c_str());
 	}
 
 
@@ -141,9 +141,9 @@ int vanilla2grid(int argc, char **argv)
 
 bool load_classad_from_old_file(const char * filename, ClassAd & ad) {
 	// Load old classad strings.
-	MyString ad_string = slurp_file(filename);
+	std::string ad_string = slurp_file(filename);
 	// Read in as old ClassAds format
-	ClassAd ad((char *)ad_string.Value(),'\n');
+	ClassAd ad((char *)ad_string.c_str(),'\n');
 	return true;
 }
 
@@ -214,7 +214,7 @@ int grid2vanilla(int argc, char **argv)
 	if( ! b ) { return 1; }
 
 	// Yield the original job
-	MyString errors;
+	std::string errors;
 	b = yield_job(n_ad_van,0,0,true, vcluster, vproc, &errors, MYID);
 	printf("Yield attempt on %d.%d %s\n", vcluster, vproc, b?"succeeded":"failed");
 	return b?0:1;

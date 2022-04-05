@@ -31,7 +31,7 @@
 #include "condor_fsync.h"
 #include "condor_attributes.h"
 
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 #include "ClassAdLogPlugin.h"
 #endif
 
@@ -111,7 +111,7 @@ FILE* LoadClassAdLog(
 		case CondorLogOp_Error:
 			// this is defensive, ought to be caught in InstantiateLogEntry()
 			errmsg.formatstr("ERROR: in log %s transaction record %lu was bad (byte offset %lld)\n", filename, count, curr_log_entry_pos);
-			fclose(log_fp);
+			fclose(log_fp); log_fp = NULL;
 
 			delete active_transaction;
 			return NULL;
@@ -181,9 +181,7 @@ FILE* LoadClassAdLog(
 		log_rec = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
 		if (log_rec->Write(log_fp) < 0) {
 			errmsg.formatstr("write to %s failed, errno = %d\n", filename, errno);
-			fclose(log_fp);
-			delete log_rec;
-			return NULL;
+			fclose(log_fp); log_fp = NULL;
 		}
 		delete log_rec;
 	}
@@ -223,10 +221,10 @@ bool SaveHistoricalClassAdLogs(
 		return false;
 	}
 
-	dprintf(D_FULLDEBUG,"About to save historical log %s\n",new_histfile.Value());
+	dprintf(D_FULLDEBUG,"About to save historical log %s\n",new_histfile.c_str());
 
-	if( hardlink_or_copy_file(filename, new_histfile.Value()) < 0) {
-		dprintf(D_ALWAYS,"Failed to copy %s to %s.\n", filename, new_histfile.Value());
+	if( hardlink_or_copy_file(filename, new_histfile.c_str()) < 0) {
+		dprintf(D_ALWAYS,"Failed to copy %s to %s.\n", filename, new_histfile.c_str());
 		return false;
 	}
 
@@ -237,15 +235,15 @@ bool SaveHistoricalClassAdLogs(
 		return true; // this is not a fatal error
 	}
 
-	if( unlink(old_histfile.Value()) == 0 ) {
-		dprintf(D_FULLDEBUG,"Removed historical log %s.\n",old_histfile.Value());
+	if( unlink(old_histfile.c_str()) == 0 ) {
+		dprintf(D_FULLDEBUG,"Removed historical log %s.\n",old_histfile.c_str());
 	}
 	else {
 		// It's ok if the old file simply doesn't exist.
 		if( errno != ENOENT ) {
 			// Otherwise, it's not a fatal error, but definitely odd that
 			// we failed to remove it.
-			dprintf(D_ALWAYS,"WARNING: failed to remove '%s': %s\n",old_histfile.Value(),strerror(errno));
+			dprintf(D_ALWAYS,"WARNING: failed to remove '%s': %s\n",old_histfile.c_str(),strerror(errno));
 		}
 		return true; // this is not a fatal error
 	}
@@ -267,19 +265,19 @@ bool TruncateClassAdLog(
 	FILE *new_log_fp;
 
 	tmp_log_filename.formatstr( "%s.tmp", filename);
-	new_log_fd = safe_create_replace_if_exists(tmp_log_filename.Value(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
+	new_log_fd = safe_create_replace_if_exists(tmp_log_filename.c_str(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (new_log_fd < 0) {
 		errmsg.formatstr("failed to rotate log: safe_create_replace_if_exists(%s) failed with errno %d (%s)\n",
-			tmp_log_filename.Value(), errno, strerror(errno));
+			tmp_log_filename.c_str(), errno, strerror(errno));
 		return false;
 	}
 
 	new_log_fp = fdopen(new_log_fd, "r+");
 	if (new_log_fp == NULL) {
 		errmsg.formatstr("failed to rotate log: fdopen(%s) returns NULL\n",
-				tmp_log_filename.Value());
+				tmp_log_filename.c_str());
 		close(new_log_fd);
-		unlink(tmp_log_filename.Value());
+		unlink(tmp_log_filename.c_str());
 		return false;
 	}
 
@@ -289,7 +287,7 @@ bool TruncateClassAdLog(
 
 	// flush our current state into the temp file,
 	// with a future value for sequence number
-	bool success = WriteClassAdLogState(new_log_fp, tmp_log_filename.Value(),
+	bool success = WriteClassAdLogState(new_log_fp, tmp_log_filename.c_str(),
 		future_sequence_number, m_original_log_birthdate,
 		la, maker, errmsg);
 
@@ -302,15 +300,15 @@ bool TruncateClassAdLog(
 	// functions just EXCEPT'ed rather than returning errors.
 	if ( ! success) {
 		fclose(new_log_fp);
-		unlink(tmp_log_filename.Value());
+		unlink(tmp_log_filename.c_str());
 		return false;
 	}
 
 	fclose(new_log_fp);	// avoid sharing violation on move
-	if (rotate_file(tmp_log_filename.Value(), filename) < 0) {
+	if (rotate_file(tmp_log_filename.c_str(), filename) < 0) {
 		errmsg.formatstr("failed to rotate job queue log!\n");
 
-		unlink(tmp_log_filename.Value());
+		unlink(tmp_log_filename.c_str());
 
 		int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 		if (log_fd < 0) {
@@ -682,7 +680,7 @@ LogNewClassAd::Play(void *data_structure)
 		ctor.Delete(ad);
 	}
 
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 	ClassAdLogPluginManager::NewClassAd(key);
 #endif
 
@@ -773,7 +771,7 @@ LogDestroyClassAd::Play(void *data_structure)
 		return -1;
 	}
 
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 	ClassAdLogPluginManager::DestroyClassAd(key);
 #endif
 
@@ -837,7 +835,7 @@ LogSetAttribute::Play(void *data_structure)
 		ad->MarkAttributeClean(name);
 	}
 
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 	ClassAdLogPluginManager::SetAttribute(key, name, value);
 #endif
 
@@ -946,7 +944,7 @@ LogDeleteAttribute::Play(void *data_structure)
 	if ( ! table->lookup(key, ad))
 		return -1;
 
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 	ClassAdLogPluginManager::DeleteAttribute(key, name);
 #endif
 
@@ -978,7 +976,7 @@ LogDeleteAttribute::WriteBody(FILE* fp)
 
 int
 LogBeginTransaction::Play(void *){
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 	ClassAdLogPluginManager::BeginTransaction();
 #endif
 
@@ -998,7 +996,7 @@ LogBeginTransaction::ReadBody(FILE* fp)
 
 int
 LogEndTransaction::Play(void *) {
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 	ClassAdLogPluginManager::EndTransaction();
 #endif
 

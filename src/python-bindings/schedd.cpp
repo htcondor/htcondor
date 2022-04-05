@@ -149,11 +149,11 @@ make_spool(classad::ClassAd& ad)
         THROW_EX(HTCondorInternalError, "Unable to set job to hold.");
     if (!ad.InsertAttr(ATTR_HOLD_REASON, "Spooling input data files"))
         THROW_EX(HTCondorInternalError, "Unable to set job hold reason.")
-    if (!ad.InsertAttr(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput))
+    if (!ad.InsertAttr(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::SpoolingInput))
         THROW_EX(HTCondorInternalError, "Unable to set job hold code.")
     std::stringstream ss;
     ss << ATTR_JOB_STATUS << " == " << COMPLETED << " && ( ";
-    ss << ATTR_COMPLETION_DATE << "=?= UNDDEFINED || " << ATTR_COMPLETION_DATE << " == 0 || ";
+    ss << ATTR_COMPLETION_DATE << " =?= UNDEFINED || " << ATTR_COMPLETION_DATE << " == 0 || ";
     ss << "((time() - " << ATTR_COMPLETION_DATE << ") < " << 60 * 60 * 24 * 10 << "))";
     classad::ClassAdParser parser;
     classad::ExprTree * new_expr;
@@ -372,7 +372,7 @@ history_query(boost::python::object requirement, boost::python::list projection,
 			THROW_EX(ClassAdParseError, "Unable to parse since argument as an expression or as a job id.");
 		} else {
 			classad::Value val;
-			if (ExprTreeIsLiteral(since_expr_copy, val) && val.IsNumber()) {
+			if (ExprTreeIsLiteral(since_expr_copy, val) && (val.IsIntegerValue() || val.IsRealValue())) {
 				delete since_expr_copy; since_expr_copy = NULL;
 				// if the stop constraint is a numeric literal.
 				// then there are a few special cases...
@@ -832,10 +832,10 @@ struct SubmitStepFromPyIter {
 			}
 			const char * key = m_fea.vars.first();
 			for (Py_ssize_t ix = 0; ix < num; ++ix) {
+				if ( ! key) break;
 				PyObject * v = PyList_GetItem(obj, ix);
 				m_livevars[key] = extract<std::string>(v);
 				key = m_fea.vars.next();
-				if ( ! key) break;
 			}
 		} else {
 			// not a list or a dict, the item must be a string.
@@ -928,7 +928,7 @@ struct SubmitJobsIterator {
 		, m_spool(spool)
 	{
 			// copy the input submit hash into our new hash.
-			m_hash.init();
+			m_hash.init(JSM_PYTHON_BINDINGS);
 			copy_hash(h);
 			m_hash.setDisableFileChecks(true);
 			m_hash.init_base_ad(qdate, owner.c_str());
@@ -942,7 +942,7 @@ struct SubmitJobsIterator {
 		, m_spool(spool)
 	{
 		// copy the input submit hash into our new hash.
-		m_hash.init();
+		m_hash.init(JSM_PYTHON_BINDINGS);
 		copy_hash(h);
 		m_hash.setDisableFileChecks(true);
 		m_hash.init_base_ad(qdate, owner.c_str());
@@ -1539,10 +1539,10 @@ struct Schedd {
     bool
     owner_from_sock(std::string &result) const
     {
-        MyString cmd_map_ent;
-        cmd_map_ent.formatstr ("{%s,<%i>}", m_addr.c_str(), QMGMT_WRITE_CMD);
+        std::string cmd_map_ent;
+        formatstr(cmd_map_ent, "{%s,<%i>}", m_addr.c_str(), QMGMT_WRITE_CMD);
 
-        MyString session_id;
+        std::string session_id;
         KeyCacheEntry *k = NULL;
         int ret = 0;
 
@@ -1554,7 +1554,7 @@ struct Schedd {
         }
 
         // IMPORTANT: this hashtable returns 1 on success!
-        ret = (SecMan::session_cache)->lookup(session_id.Value(), k);
+        ret = (SecMan::session_cache)->lookup(session_id.c_str(), k);
         if (!ret)
         {
             return false;
@@ -1708,6 +1708,141 @@ struct Schedd {
     {
         return actOnJobs(action, job_spec, object("Python-initiated action."));
     }
+
+	object exportJobs(object job_spec, std::string export_dir, std::string new_spool_dir)
+	{
+		std::string constraint;
+		StringList ids;
+		boost::python::extract<std::string> str_obj(job_spec);
+		bool use_ids = false;
+		if (PyList_Check(job_spec.ptr()) && !str_obj.check()) {
+			int id_len = py_len(job_spec);
+			for (int i = 0; i < id_len; i++)
+			{
+				std::string str = extract<std::string>(job_spec[i]);
+				ids.append(str.c_str());
+			}
+			use_ids = true;
+		} else {
+			bool is_number = false;
+			if (! convert_python_to_constraint(job_spec, constraint, true, &is_number)) {
+				THROW_EX(HTCondorValueError, "job_spec is not a valid constraint expression.")
+			}
+			// export does not allow empty or null constraint argument, so use "true" instead
+			if (constraint.empty()) { constraint = "true"; } else if (is_number) { // if the "constraint" string is really a number, treat it like a job id
+				extract<std::string> string_extract(job_spec);
+				if (string_extract.check()) {
+					constraint = string_extract();
+					JOB_ID_KEY jid;
+					if (jid.set(constraint.c_str())) {
+						ids.append(constraint.c_str());
+						use_ids = true;
+					}
+				}
+			}
+		}
+
+		DCSchedd schedd(m_addr.c_str());
+		ClassAd *result = NULL;
+		CondorError errstack;
+		const char * spool = new_spool_dir.empty() ? nullptr : new_spool_dir.c_str();
+		if (use_ids)
+		{
+			condor::ModuleLock ml;
+			result = schedd.exportJobs(&ids, export_dir.c_str(), spool, &errstack);
+		} else {
+			condor::ModuleLock ml;
+			result = schedd.exportJobs(constraint.c_str(), export_dir.c_str(), spool, &errstack);
+		}
+
+		if (errstack.code() > 0) {
+			THROW_EX(HTCondorIOError, errstack.getFullText(true).c_str());
+		} else if ( ! result) {
+			THROW_EX(HTCondorIOError, "No result ad");
+		}
+
+		boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+		if (result) { result_ptr->CopyFrom(*result); }
+		object result_obj(result_ptr);
+
+		return result_obj;
+	}
+
+	object importExportedJobResults(std::string import_dir)
+	{
+		DCSchedd schedd(m_addr.c_str());
+		ClassAd *result = NULL;
+		CondorError errstack;
+		{
+			condor::ModuleLock ml;
+			result = schedd.importExportedJobResults(import_dir.c_str(), &errstack);
+		}
+		// TODO: throw if export fails (as indicated by no result ad or "Error" in the result ad)
+
+		boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+		if (result) { result_ptr->CopyFrom(*result); }
+		object result_obj(result_ptr);
+
+		return result_obj;
+	}
+
+	object unexportJobs(object job_spec)
+	{
+		std::string constraint;
+		StringList ids;
+		boost::python::extract<std::string> str_obj(job_spec);
+		bool use_ids = false;
+		if (PyList_Check(job_spec.ptr()) && !str_obj.check()) {
+			int id_len = py_len(job_spec);
+			for (int i = 0; i < id_len; i++)
+			{
+				std::string str = extract<std::string>(job_spec[i]);
+				ids.append(str.c_str());
+			}
+			use_ids = true;
+		} else {
+			bool is_number = false;
+			if (! convert_python_to_constraint(job_spec, constraint, true, &is_number)) {
+				THROW_EX(HTCondorValueError, "job_spec is not a valid constraint expression.")
+			}
+			// unexport does not allow empty or null constraint argument, so use "true" instead
+			if (constraint.empty()) { constraint = "true"; } else if (is_number) { // if the "constraint" string is really a number, treat it like a job id
+				extract<std::string> string_extract(job_spec);
+				if (string_extract.check()) {
+					constraint = string_extract();
+					JOB_ID_KEY jid;
+					if (jid.set(constraint.c_str())) {
+						ids.append(constraint.c_str());
+						use_ids = true;
+					}
+				}
+			}
+		}
+
+		DCSchedd schedd(m_addr.c_str());
+		ClassAd *result = NULL;
+		CondorError errstack;
+		if (use_ids)
+		{
+			condor::ModuleLock ml;
+			result = schedd.unexportJobs(&ids, &errstack);
+		} else {
+			condor::ModuleLock ml;
+			result = schedd.unexportJobs(constraint.c_str(), &errstack);
+		}
+
+		if (errstack.code() > 0) {
+			THROW_EX(HTCondorIOError, errstack.getFullText(true).c_str());
+		} else if ( ! result) {
+			THROW_EX(HTCondorIOError, "No result ad");
+		}
+
+		boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+		if (result) { result_ptr->CopyFrom(*result); }
+		object result_obj(result_ptr);
+
+		return result_obj;
+	}
 
     int submitMany(const ClassAdWrapper &wrapper, boost::python::object proc_ads, bool spool, boost::python::object ad_results=object())
     {
@@ -1999,18 +2134,17 @@ struct Schedd {
             }
             // Note: x509_error_string() is not thread-safe; hence, we are not using the HTCondor-generated
             // error handling.
-            int result = x509_proxy_seconds_until_expire(proxy_filename.c_str());
-            if (result < 0) {
+            result_expiration = x509_proxy_expiration_time(proxy_filename.c_str());
+            if (result_expiration < 0) {
                 THROW_EX(HTCondorValueError, "Unable to determine proxy expiration time");
             }
-            return result;
         }
         return result_expiration - now;
     }
 
 
     // TODO: allow user to specify flags.
-    boost::shared_ptr<EditResult> edit(object job_spec, std::string attr, object val)
+    boost::shared_ptr<EditResult> edit(object job_spec, std::string attr, object val, SetAttributeFlags_t flags=0)
     {
         int match_count = 0;
         std::vector<int> clusters;
@@ -2063,7 +2197,7 @@ struct Schedd {
             val_str = extract<std::string>(val);
         }
 
-        SetAttributeFlags_t attr_flags = SETDIRTY | SetAttribute_NoAck;
+        SetAttributeFlags_t attr_flags = flags | SetAttribute_NoAck;
         SetAttributeFlags_t only_my_jobs_flag = SetAttribute_OnlyMyJobs;
         if ( ! param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) { only_my_jobs_flag = 0; }
 
@@ -2104,7 +2238,7 @@ struct Schedd {
         return mc;
     }
 
-	boost::shared_ptr<EditResult> mergeJobAd(boost::python::object job_spec, boost::python::object ad)
+	boost::shared_ptr<EditResult> mergeJobAd(boost::python::object job_spec, boost::python::object ad, SetAttributeFlags_t flags=0)
 	{
 		const ClassAdWrapper wrapper = extract<ClassAdWrapper>(ad);
 		int match_count = 0;
@@ -2140,7 +2274,7 @@ struct Schedd {
 		}
 
 
-		SetAttributeFlags_t attr_flags = SETDIRTY | SetAttribute_NoAck;
+		SetAttributeFlags_t attr_flags = flags | SetAttribute_NoAck;
 		SetAttributeFlags_t only_my_jobs_flag = SetAttribute_OnlyMyJobs;
 		if (! param_boolean("CONDOR_Q_ONLY_MY_JOBS", true)) { only_my_jobs_flag = 0; }
 
@@ -2188,7 +2322,7 @@ struct Schedd {
 		return result;
 	}
 
-	boost::shared_ptr<EditResult> edit_multiple(boost::python::object edits)
+	boost::shared_ptr<EditResult> edit_multiple(boost::python::object edits, SetAttributeFlags_t /* flags=0 */)
 	{
 		int match_count = 0;
 		if ( ! PyList_Check(edits.ptr())) {
@@ -2230,7 +2364,7 @@ struct Schedd {
 		}
 
 
-		SetAttributeFlags_t attr_flags = SETDIRTY | SetAttribute_NoAck;
+		SetAttributeFlags_t attr_flags = flags | SetAttribute_NoAck;
 		classad::ClassAdUnParser unparser;
 		unparser.SetOldClassAd(true, true);
 		std::string rhs;
@@ -2335,7 +2469,7 @@ struct Schedd {
 			THROW_EX(ClassAdParseError, "Unable to parse since argument as an expression or as a job id.");
 		} else {
 			classad::Value val;
-			if (ExprTreeIsLiteral(since_expr_copy, val) && val.IsNumber()) {
+			if (ExprTreeIsLiteral(since_expr_copy, val) && (val.IsIntegerValue() || val.IsRealValue())) {
 				delete since_expr_copy; since_expr_copy = NULL;
 				// if the stop constraint is a numeric literal.
 				// then there are a few special cases...
@@ -2502,7 +2636,8 @@ ConnectionSentry::ConnectionSentry(Schedd &schedd, bool transaction, SetAttribut
         bool result;
         {
         condor::ModuleLock ml;
-        result = ConnectQ(schedd.m_addr.c_str(), 0, false, NULL, NULL, schedd.m_version.c_str()) == 0;
+        DCSchedd schedd_obj(schedd.m_addr.c_str());
+        result = ConnectQ(schedd_obj) == 0;
         }
         if (result)
         {
@@ -2784,7 +2919,7 @@ public:
 		 m_ms_inline("", 0, EmptyMacroSrc)
        , m_queue_may_append_to_cluster(false)
     {
-        m_hash.init();
+        m_hash.init(JSM_PYTHON_BINDINGS);
     }
 
 
@@ -2793,7 +2928,7 @@ public:
          m_ms_inline("", 0, EmptyMacroSrc)
        , m_queue_may_append_to_cluster(false)
     {
-        m_hash.init();
+        m_hash.init(JSM_PYTHON_BINDINGS);
         update(input);
     }
 
@@ -2832,7 +2967,7 @@ public:
        , m_ms_inline("", 0, EmptyMacroSrc) 
        , m_queue_may_append_to_cluster(false)
 	{
-		m_hash.init();
+		m_hash.init(JSM_PYTHON_BINDINGS);
 		if ( ! lines.empty()) {
 			m_hash.insert_source("<PythonString>", m_src_pystring);
 			MacroStreamMemoryFile ms(lines.c_str(), lines.size(), m_src_pystring);
@@ -3111,7 +3246,7 @@ public:
             boost::python::tuple tup = boost::python::extract<boost::python::tuple>(obj);
             std::string attr = boost::python::extract<std::string>(tup[0]);
 
-            boost::python::object value(tup[0]);
+            // boost::python::object value(tup[1]);
             std::string value_str = convertToSubmitValue(tup[1]);
 
             m_hash.set_submit_param(plus_to_my(attr), value_str.c_str());
@@ -3311,7 +3446,7 @@ public:
 			// send over the itemdata
 			int row_count = 1;
 			if (ssi.has_items()) {
-				MyString items_filename;
+				std::string items_filename;
 				if (SendMaterializeData(cluster, 0, ssi.send_row, &ssi, items_filename, &row_count) < 0 || row_count <= 0) {
 					THROW_EX(HTCondorIOError, "Failed to to send materialize itemdata");
 				}
@@ -3718,6 +3853,20 @@ public:
 		}
 	}
 
+	void //Undocumented for internal use so users dont mess up number assignments
+	setSubmitMethod(int method_value, bool allow_reserved_values = false){
+		//If value is in range of reserves and allow_reserved_values isn't true then throw an exception
+		if ( method_value >= 0 && method_value < JSM_USER_SET && !allow_reserved_values) {
+			std::string error_message = "Submit Method value must be " +std::to_string(JSM_USER_SET)+" or greater. Or allow_reserved_values must be set to True.";
+			THROW_EX(HTCondorValueError,error_message.c_str());
+		}
+		m_hash.setSubmitMethod(method_value); 
+	}
+
+	//Get function for job submit method
+	int
+	getSubmitMethod(){ return m_hash.getSubmitMethod(); }
+
 private:
 
     std::string
@@ -3730,7 +3879,12 @@ private:
             boost::python::extract<ExprTreeHolder*> extract_expr(value);
             if (extract_expr.check()) {
                 ExprTreeHolder *holder = extract_expr();
-                attr = holder->toString();
+                // If value is _Py_NoneStruct, holder will be NULL.
+                if( holder != NULL ) {
+                    attr = holder->toString();
+                } else {
+                    return "undefined";
+                }
             } else {
                 boost::python::extract<ClassAdWrapper*> extract_classad(value);
                 if (extract_classad.check()) {
@@ -3880,7 +4034,7 @@ void export_schedd()
             )C0ND0R")
         .value("None", 0)
         .value("NonDurable", NONDURABLE)
-        .value("SetDirty", SETDIRTY)
+        .value("SetDirty", SetAttribute_SetDirty)
         .value("ShouldLog", SHOULDLOG)
         ;
 
@@ -3922,6 +4076,7 @@ void export_schedd()
         .value("DefaultMyJobsOnly", CondorQ::fetch_MyJobs)
         .value("SummaryOnly", CondorQ::fetch_SummaryOnly)
         .value("IncludeClusterAd", CondorQ::fetch_IncludeClusterAd)
+        .value("IncludeJobsetAds", CondorQ::fetch_IncludeJobsetAds)
         ;
 
     enum_<BlockingMode>("BlockingMode",
@@ -4063,14 +4218,28 @@ void export_schedd()
 
             :param constraint: A query constraint.
                 Only jobs matching this constraint will be returned.
-                Defaults to ``'true'``, which means all jobs will be returned.
+                ``None`` will return all jobs.
             :type constraint: str or :class:`~classad.ExprTree`
-            :param projection: Attributes that will be returned for each job in the query.
-                At least the attributes in this list will be returned, but additional ones may be returned as well.
-                An empty list (the default) returns all attributes.
+            :param projection: Attributes that will be returned for each job
+                in the query.  At least the attributes in this list will be
+                returned, but additional ones may be returned as well.
+                An empty list returns all attributes.
             :type projection: list[str]
-            :param int match: An limit on the number of jobs to include; the default (``-1``)
-                indicates to return all matching jobs.
+            :param int match: A limit on the number of jobs to include; the
+                default (``-1``) indicates to return all matching jobs.
+                The schedd may return fewer than ``match`` jobs because of its
+                setting of ``HISTORY_HELPER_MAX_HISTORY`` (default 10,000).
+            :param since: A cluster ID, job ID, or expression.  If a cluster ID
+                (passed as an `int`) or job ID (passed a `str` in the format
+                ``{clusterID}.{procID}``), only jobs recorded in the history
+                file after (and not including) the matching ID will be
+                returned.  If an expression (passed as a `str` or
+                :class:`~classad.ExprTree`), jobs will be returned,
+                most-recently-recorded first, until the expression becomes
+                true; the job making the expression become true will not be
+                returned.  Thus, ``1038`` and ``clusterID == 1038`` return the
+                same set of jobs.
+            :type since: int, str, or :class:`~classad.ExprTree`
             :return: All matching ads in the Schedd history, with attributes according to the
                 ``projection`` keyword.
             :rtype: :class:`HistoryIterator`
@@ -4104,7 +4273,7 @@ void export_schedd()
             Submit one or more jobs to the *condor_schedd* daemon.
 
             This method requires the invoker to provide a :class:`~htcondor.Submit` object that
-            describes the jobs to submit.  The return value will be a :class::`~htcondor.SubmitResult`
+            describes the jobs to submit.  The return value will be a :class:`~htcondor.SubmitResult`
             that contains the cluster ID and ClassAd of the submitted jobs.
 
             For backward compatibility, this method will also accept a :class:`~classad.ClassAd`
@@ -4234,10 +4403,13 @@ void export_schedd()
                 be converted to a ClassAd expression, or an ExprTree object.  Be mindful of quoting
                 issues; to set the value to the string ``foo``, one would set the value to ``''foo''``
             :type value: str or :class:`~classad.ExprTree`
+            :param flags: Flags controlling the behavior of the transaction, defaulting to 0.
+            :type flags: :class:`TransactionFlags`
             :return: An EditResult containing the number of jobs that were edited.
             :rtype: :class:`EditResult`
             )C0ND0R",
-            boost::python::args("self", "job_spec", "attr", "value"))
+            (boost::python::arg("self"), boost::python::arg("job_spec"), boost::python::arg("attr"), boost::python::arg("value"), boost::python::arg("flags")=0)
+            )
         .def("edit", &Schedd::mergeJobAd,
             R"C0ND0R(
             Edit one or more jobs in the queue.
@@ -4249,20 +4421,59 @@ void export_schedd()
             :type job_spec: list[str] or str or ExprTree
             :param ad: A classad that should be merged into the jobs
             :type ad: :class:`~classad.ClassAd`
+            :param flags: Flags controlling the behavior of the transaction, defaulting to 0.
+            :type flags: :class:`TransactionFlags`
             :return: An EditResult containing the number of jobs that were edited.
             :rtype: :class:`EditResult`
             )C0ND0R",
-            boost::python::args("self", "job_spec", "ad"))
+            (boost::python::arg("self"), boost::python::arg("job_spec"), boost::python::arg("ad"), boost::python::arg("flags")=0)
+            )
         .def("edit_multiple", &Schedd::edit_multiple,
             R"C0ND0R(
             Edit one or more jobs in the queue.
 
             :param list edits: list of tuples of (job_spec,classad) where job_spec can be a list of job ids or a constraint expression
                   and classad is a dict or a :class:`~classad.ClassAd` indicating the edits.
+            :param flags: Flags controlling the behavior of the transaction, defaulting to 0.
+            :type flags: :class:`TransactionFlags`
             :return: An EditResult containing the number of jobs that were edited.
             :rtype: :class:`EditResult`
             )C0ND0R",
-            boost::python::args("self", "edits"))
+            (boost::python::arg("self"), boost::python::arg("edits"), boost::python::arg("flags")=0)
+            )
+        .def("export_jobs", &Schedd::exportJobs,
+            R"C0ND0R(
+            Export one or more job clusters from the queue to put those jobs into the externally managed state.
+
+            :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
+                Only jobs matching this description will be acted upon.
+            :type job_spec: list[str] or str or ExprTree
+            :param str export_dir: The path to the directory that exported jobs will be written into.
+            :param str new_spool_dir: The path to the base directory that exported jobs will use as IWD while they are exported
+            :return: A ClassAd containing information about the export operation.
+            :rtype: :class:`~classad.ClassAd`
+            )C0ND0R",
+            boost::python::args("self", "job_spec", "export_dir", "new_spool_dir"))
+        .def("import_exported_job_results", &Schedd::importExportedJobResults,
+            R"C0ND0R(
+            Import results from previously exported jobs, and take those jobs back out of the externally managed state.
+
+            :param str import_dir: The path to the modified form of a previously-exported direcory.
+            :return: A ClassAd containing information about the import operation.
+            :rtype: :class:`~classad.ClassAd`
+            )C0ND0R",
+            boost::python::args("self", "import_dir"))
+        .def("unexport_jobs", &Schedd::unexportJobs,
+            R"C0ND0R(
+            Unexport one or more job clusters that were previously exported from the queue.
+
+            :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
+                Only jobs matching this description will be acted upon.
+            :type job_spec: list[str] or str or ExprTree
+            :return: A ClassAd containing information about the unexport operation.
+            :rtype: :class:`~classad.ClassAd`
+            )C0ND0R",
+            boost::python::args("self", "job_spec"))
         .def("reschedule", &Schedd::reschedule,
             R"C0ND0R(
             Send reschedule command to the schedd.
@@ -4516,6 +4727,27 @@ void export_schedd()
             :param str args: The arguments to pass to the ``QUEUE`` statement.
             )C0ND0R",
             boost::python::args("self", "args"))
+        .def("setSubmitMethod", &Submit::setSubmitMethod,
+            R"C0ND0R(
+            Sets the **Job Ad** attribute ``JobSubmitMethod`` to passed over number. ``method_value``
+            is recommended to be set to a value of ``100`` or greater to avoid confusion
+            to pre-set values. Negative numbers will result in ``JobSubmitMethod`` to not be defined 
+            in the **Job Ad**. If wanted, any number can be set by passing ``True`` to
+            ``allow_reserved_values``. This allows any positive number to be set to ``JobSubmitMethod``.
+            This includes all reserved numbers. **Note~** Setting of ``JobSubmitMethod`` must occur
+            before job is submitted to Schedd.
+
+            :param int method_value: Value set to ``JobSubmitMethod``.
+            :param bool allow_reserved_values: Boolean that allows any number to be set to
+                 ``JobSubmitMethod``.
+            )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("method_value")=-1, boost::python::arg("allow_reserved_values")=false))
+        .def("getSubmitMethod", &Submit::getSubmitMethod,
+            R"C0ND0R(
+            :return: ``JobSubmitMethod`` attribute value. See table or use *condor_q -help Submit* for values.
+            :rtype: int
+            )C0ND0R",
+            (boost::python::arg("self")))
         .def("__delitem__", &Submit::deleteItem)
         .def("__getitem__", &Submit::getItem)
         .def("__setitem__", &Submit::setItem)

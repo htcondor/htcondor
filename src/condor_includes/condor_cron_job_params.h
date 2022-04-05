@@ -48,14 +48,15 @@ class CronJobParams : public CronParamBase
 	bool AddArgs( const ArgList &args );
 
 	// Manipulate the job
-	const char *GetName( void ) const { return m_name.Value(); };
-	const char *GetPrefix( void ) const { return m_prefix.Value(); };
-	const char *GetExecutable( void ) const { return m_executable.Value(); };
+	const char *GetName( void ) const { return m_name.c_str(); };
+	const char *GetPrefix( void ) const { return m_prefix.c_str(); };
+	const char *GetExecutable( void ) const { return m_executable.c_str(); };
 	const ArgList &GetArgs( void ) const { return m_args; };
 	const Env &GetEnv( void ) const { return m_env; };
-	const char *GetCwd( void ) const { return m_cwd.Value(); };
+	const char *GetCwd( void ) const { return m_cwd.c_str(); };
 	unsigned GetPeriod( void ) const { return m_period; };
 	double GetJobLoad( void ) const { return m_jobLoad; };
+	const ConstraintHolder & GetCondition( void ) const { return m_condition; };
 
 	// Options
 	bool OptKill( void ) const { return m_optKill; };
@@ -108,6 +109,7 @@ class CronJobParams : public CronParamBase
 	MyString		 m_cwd;				// Process's initial CWD
 	unsigned		 m_period;			// The configured period
 	double			 m_jobLoad;			// Job's assigned load
+	ConstraintHolder	 m_condition;			// should the job run?
 
 	// Options
 	bool			 m_optKill;			// Kill the job if before next run?

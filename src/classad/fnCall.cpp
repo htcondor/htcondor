@@ -52,7 +52,7 @@
   #endif
 #endif
 
-#if defined(HAVE_DLFCN_H)
+#ifdef UNIX
 #include <dlfcn.h>
 #endif
 
@@ -351,7 +351,7 @@ void FunctionCall::RegisterFunctions(
 bool FunctionCall::RegisterSharedLibraryFunctions(
 	const char *shared_library_path)
 {
-#ifdef HAVE_DLOPEN
+#ifdef UNIX
 	bool success;
 	void *dynamic_library_handle;
 		
@@ -416,11 +416,11 @@ bool FunctionCall::RegisterSharedLibraryFunctions(
 	}
 
 	return success;
-#else /* end HAVE_DLOPEN */
+#else /* end UNIX */
     CondorErrno = ERR_CANT_LOAD_DYNAMIC_LIBRARY;
     CondorErrMsg = "Shared library support not available.";
     return false;
-#endif /* end !HAVE_DLOPEN */
+#endif /* end !UNIX */
 }
 
 void FunctionCall::
@@ -641,7 +641,7 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 {
     Value     		arg0, arg1, cArg;
     const ExprTree 	*tree;
-	const ExprList	*el;
+	const ExprList	*el = NULL;
 	bool			b;
 	bool			useIS = ( strcasecmp( "identicalmember", name ) == 0 );
 
@@ -926,8 +926,7 @@ sumAvg(const char *name, const ArgumentList &argList,
 			if (!listElement->Evaluate(state, listElementValue)) {
 				val.SetErrorValue();
 				return false;
-			} else if (   !listElementValue.IsRealValue() 
-						  && !listElementValue.IsIntegerValue()) {
+			} else if (!listElementValue.IsNumber()) {
 				val.SetErrorValue();
 				return true;
 			}
@@ -1014,8 +1013,7 @@ minMax(const char *fn, const ArgumentList &argList,
 			if(!listElement->Evaluate(state, listElementValue)) {
 				val.SetErrorValue();
 				return false;
-			} else if (   !listElementValue.IsRealValue() 
-						  && !listElementValue.IsIntegerValue()) {
+			} else if (!listElementValue.IsNumber()) {
 				val.SetErrorValue();
 				return true;
 			}
@@ -1790,6 +1788,9 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 	alen = (int)buf.size( );
 	if( offset < 0 ) { 
 		offset = alen + offset; 
+		if( offset < 0 ) {
+			offset = 0;
+		}
 	} else if( offset >= alen ) {
 		offset = alen;
 	}
@@ -2330,7 +2331,7 @@ convTime(const char* name,const ArgumentList &argList,EvalState &state,
 
 		case Value::ABSOLUTE_TIME_VALUE:
 			{
-				abstime_t secs;
+				abstime_t secs = { 0, 0 };
 				arg.IsAbsoluteTimeValue( secs );
 				if( relative ) {
 					result.SetRelativeTimeValue( secs.secs );
@@ -2455,7 +2456,7 @@ doMath2( const char* name,const ArgumentList &argList,EvalState &state,
 			val.IsRealValue(rval);
 
 			if (arg2.IsListValue()) {
-				const ExprList *list;
+				const ExprList *list = NULL;
 				arg2.IsListValue(list);
 				base.SetRealValue(0.0), rbase = 0.0; // treat an empty list as 'don't quantize'
 				for (ExprListIterator itr(list); !itr.IsAfterLast(); itr.NextExpr()) {
@@ -2550,9 +2551,17 @@ random( const char*,const ArgumentList &argList,EvalState &state,
 	}
 
     if (arg.IsIntegerValue(int_max)) {
+		if (int_max <= 0) {
+			result.SetErrorValue( );
+			return( false );
+		}
         random_int = get_random_integer() % int_max;
         result.SetIntegerValue(random_int);
     } else if (arg.IsRealValue(double_max)) {
+		if (double_max <= 0) {
+			result.SetErrorValue( );
+			return( false );
+		}
         random_double = double_max * get_random_real();
         result.SetRealValue(random_double);
     } else {

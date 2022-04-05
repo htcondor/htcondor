@@ -23,6 +23,7 @@ use CondorTest;
 use CondorUtils;
 use Cwd;
 use Sys::Hostname;
+use File::Temp;
 
 $cmd = 'job_core_queue_sched.cmd';
 $testdesc =  'condor_submit queue - scheduler U';
@@ -30,18 +31,17 @@ $testname = "job_core_queue_sched";
 $queuelog = "submit_queue_scheduler_log.log";
 
 
-my $pid = $$;
-runcmd("mkdir $pid");
 my $curcwd = getcwd();
+my $dir = File::Temp->newdir(CLEANUP => 0, DIR => $curcwd);
 CondorTest::debug("current directory is $curcwd\n",1);
 
 my $socketname = "/tmp/queuetest";
-my $newsocketname = $curcwd . "/" . $pid . "/queuetest";
+my $newsocketname = $dir->dirname . "/queuetest";
 CondorTest::debug("current directory is $newsocketname\n",1);
 @filestoedit = qw/job_core_queue.pl/;
 @filestochmod = qw/job_core_queue.pl/;
 
-# now make sure each place using socket refers to pid specific directory!
+# now make sure each place using socket refers to the temporary directory!
 foreach $name (@filestoedit)
 {
 	CondorTest::debug("Correcting socket name in $name\n",1);

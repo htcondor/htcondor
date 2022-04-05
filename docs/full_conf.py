@@ -53,7 +53,8 @@ extensions = [
     'macro',
     'macro-def',
     'index',
-    'jira'
+    'jira',
+    'classad-attribute',
 ]
 autosectionlabel_prefix_document = True
 
@@ -303,7 +304,7 @@ def modify_signature(app, what, name, obj, options, signature, return_annotation
 
 
 def setup(app):
-    app.add_stylesheet('css/htcondor-manual.css')
+    app.add_css_file('css/htcondor-manual.css')
     app.connect('autodoc-process-docstring', modify_docstring)
     app.connect('autodoc-process-signature', modify_signature)
 
@@ -578,7 +579,7 @@ CONFIG_VALUE_SHARED = [
     (r"\b(true|false)\b", token.Keyword.Constant),
     # security keywords
     (
-        r"\b(required|optional|never|preferred|password|fs|kerberos|gsi)\b",
+        r"\b(required|optional|never|preferred|password|fs|kerberos)\b",
         token.Keyword,
     ),
     # catch-all

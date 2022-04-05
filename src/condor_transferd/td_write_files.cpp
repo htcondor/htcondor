@@ -23,7 +23,6 @@
 #include "condor_td.h"
 #include "extArray.h"
 #include "condor_classad.h"
-#include "MyString.h"
 #include "condor_attributes.h"
 #include "condor_ftp.h"
 
@@ -51,7 +50,7 @@ TransferD::write_files_handler(int /* cmd */, Stream *sock)
 	std::string capability;
 	int protocol = FTP_UNKNOWN;
 	TransferRequest *treq = NULL;
-	MyString fquser;
+	std::string fquser;
 	static int transfer_reaper_id = -1;
 	ThreadArg *thread_arg;
 	int tid;
@@ -117,7 +116,7 @@ TransferD::write_files_handler(int /* cmd */, Stream *sock)
 
 		dprintf(D_ALWAYS, "Client identity '%s' tried to write some files "
 			"using capability '%s', but there was no such capability. "
-			"Access denied.\n", fquser.Value(), capability.c_str());
+			"Access denied.\n", fquser.c_str(), capability.c_str());
 		return CLOSE_STREAM;
 	}
 
@@ -137,7 +136,7 @@ TransferD::write_files_handler(int /* cmd */, Stream *sock)
 
 			dprintf(D_ALWAYS, "Client identity '%s' tried to write some files "
 				"using protocol '%d', but I don't support that protocol. "
-				"Access denied.\n", fquser.Value(), protocol);
+				"Access denied.\n", fquser.c_str(), protocol);
 			return CLOSE_STREAM;
 	}
 
@@ -151,7 +150,7 @@ TransferD::write_files_handler(int /* cmd */, Stream *sock)
 
 			dprintf(D_ALWAYS, "Client identity '%s' tried to write some files "
 				"to a transfer request that wasn't expecting to be written. "
-				"Access denied.\n", fquser.Value());
+				"Access denied.\n", fquser.c_str());
 	}
 
 	/////////////////////////////////////////////////////////////////////////

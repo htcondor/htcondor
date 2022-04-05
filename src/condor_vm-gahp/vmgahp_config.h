@@ -34,18 +34,18 @@ class VMGahpConfig {
 
 		bool init(const char* vmtype);
 
-		MyString m_vm_type;
+		std::string m_vm_type;
 
 		int m_vm_max_memory;
 
 		bool m_vm_networking;
 		StringList m_vm_networking_types;
-		MyString m_vm_default_networking_type;
+		std::string m_vm_default_networking_type;
 
 		bool m_vm_hardware_vt;
 
-		MyString m_prog_for_script; // program to execute a below script(perl etc.)
-		MyString m_vm_script; // Script program for virtual machines
+		std::string m_prog_for_script; // program to execute a below script(perl etc.)
+		std::string m_vm_script; // Script program for virtual machines
 };
 
 #endif /* VM_GAHP_CONFIG_H */

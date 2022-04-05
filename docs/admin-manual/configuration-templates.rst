@@ -109,12 +109,13 @@ incorporates.
        Enables use of the vm universe with VMware virtual machines. Note
        that this feature depends on Perl.
 
-    -  ``GPUs``
+    -  ``GPUs([discovery_args])``
 
        Sets configuration based on detection with the
        *condor_gpu_discovery* tool, and defines a custom resource
        using the name ``GPUs``. Supports both OpenCL and CUDA, if
        detected. Automatically includes the ``GPUsMonitor`` feature.
+       Optional discovery_args are passed to *condor_gpu_discovery*
 
     -  ``GPUsMonitor``
 
@@ -124,7 +125,7 @@ incorporates.
 
        Configures a custom machine resource monitor with the given name,
        mode, period, executable, and metrics. See
-       :ref:`misc-concepts/hooks:daemon classad hooks` for the definitions of
+       :ref:`admin-manual/hooks:daemon classad hooks` for the definitions of
        these terms.
 
     -  ``PartitionableSlot( slot_type_num [, allocation] )``
@@ -135,13 +136,21 @@ incorporates.
        :ref:`admin-manual/policy-configuration:*condor_startd* policy
        configuration` for information on partitionalble slot policies.
 
-    -  ``AssignAccountingGroup( map_filename )`` Sets up a
+    -  ``AssignAccountingGroup( map_filename [, check_request] )`` Sets up a
        *condor_schedd* job transform that assigns an accounting group
-       to each job as it is submitted. The accounting is determined by
-       mapping the Owner attribute of the job using the given map file.
+       to each job as it is submitted. The accounting group is determined by
+       mapping the Owner attribute of the job using the given map file, which
+       should specify the allowed accounting groups each Owner is permitted to use.
+       If the submitted job has an accounting group, that is treated as a requested
+       accounting group and validated against the map.  If the optional
+       ``check_request`` argument is true or not present submission will
+       fail if the requested accounting group is present and not valid.  If the argument
+       is false, the requested accounting group will be ignored if it is not valid.
+
     -  ``ScheddUserMapFile( map_name, map_filename )`` Defines a
        *condor_schedd* usermap named map_name using the given map
        file.
+
     -  ``SetJobAttrFromUserMap( dst_attr, src_attr, map_name [, map_filename] )``
        Sets up a *condor_schedd* job transform that sets the dst_attr
        attribute of each job as it is submitted. The value of dst_attr
@@ -149,58 +158,59 @@ incorporates.
        usermap named map_name. If the optional map_filename argument
        is specifed, then this metaknob also defines a *condor_schedd*
        usermap named map_Name using the given map file.
+
     -  ``StartdCronOneShot( job_name, exe [, hook_args] )``
 
        Create a one-shot *condor_startd* job hook.
-       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
+       (See :ref:`admin-manual/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``StartdCronPeriodic( job_name, period, exe [, hook_args] )``
 
        Create a periodic-shot *condor_startd* job hook.
-       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
+       (See :ref:`admin-manual/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``StartdCronContinuous( job_name, exe [, hook_args] )``
 
        Create a (nearly) continuous *condor_startd* job hook.
-       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
+       (See :ref:`admin-manual/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``ScheddCronOneShot( job_name, exe [, hook_args] )``
 
        Create a one-shot *condor_schedd* job hook.
-       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
+       (See :ref:`admin-manual/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``ScheddCronPeriodic( job_name, period, exe [, hook_args] )``
 
        Create a periodic-shot *condor_schedd* job hook.
-       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
+       (See :ref:`admin-manual/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``ScheddCronContinuous( job_name, exe [, hook_args] )``
 
        Create a (nearly) continuous *condor_schedd* job hook.
-       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
+       (See :ref:`admin-manual/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``OneShotCronHook( STARTD_CRON | SCHEDD_CRON, job_name, hook_exe [,hook_args] )``
 
        Create a one-shot job hook.
-       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
+       (See :ref:`admin-manual/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``PeriodicCronHook( STARTD_CRON | SCHEDD_CRON , job_name, period, hook_exe [,hook_args] )``
 
        Create a periodic job hook.
-       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
+       (See :ref:`admin-manual/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``ContinuousCronHook( STARTD_CRON | SCHEDD_CRON , job_name, hook_exe [,hook_args] )``
 
        Create a (nearly) continuous job hook.
-       (See :ref:`misc-concepts/hooks:daemon classad hooks` for more information
+       (See :ref:`admin-manual/hooks:daemon classad hooks` for more information
        about job hooks.)
 
     -  ``OAuth``
@@ -224,6 +234,20 @@ incorporates.
        ``UWCS_Desktop_Policy_Values`` template. For example,
        ``POLICY : UWCS_Desktop`` uses the
        ``FEATURE : UWCS_Desktop_Policy_Values`` template.)
+
+.. _CommonCloudAttributesConfiguration:
+
+    - ``CommonCloudAttributesAWS``
+    - ``CommonCloudAttributesGoogle``
+
+       Sets configuration that will put some common cloud-related attributes
+       in the slot ads.  Use the version which specifies the cloud you're
+       using.  See :ref:`CommonCloudAttributes` for details.
+
+    - ``JobsHaveInstanceIDs``
+
+       Sets configuration that will cause job ads to track the instance IDs
+       of slots that they ran on (if available).
 
 ``POLICY category``
     Describes configuration for the circumstances under which machines

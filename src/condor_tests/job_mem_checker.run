@@ -31,11 +31,10 @@ use POSIX qw/sys_wait_h strftime/;
 use strict;
 use warnings;
 
-my $host = hostfqdn();
-print "$host\n";
+my $testname = "job_mem_checker";
 
-
-my $firstappend_condor_config = '
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	STARTD_JOB_ATTRS = MemoryUsage, ResidentSetSize_RAW, ResidentSetSize
 	ALL_DEBUG = 
@@ -46,10 +45,9 @@ my $firstappend_condor_config = '
 	PROCD_MAX_SNAPSHOT_INTERVAL = 5
 	NUM_CPUS = 4
 	SUSPEND = FALSE
-';
+CONDOR_TESTREQ_CONFIG
+#endtestreq
  
-my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"memchecker");
-my $testname = "job_mem_checker";
 my $ClusterId;
 
 my $myupdates = 0;
@@ -57,12 +55,6 @@ my $slot = "";
 my @updatejobads = ();
 my @updateslotads = ();
 my @updatetimestamps = ();
-
-CondorTest::StartCondorWithParams(
-	condor_name => "memchecker",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
 
 my $on_abort = sub {
 	print "Abort from removing sleep 0 jobs.\n";
@@ -173,7 +165,7 @@ system("rm -rf mem_checker.out mem_checker.err mem_checker.log mem_checker.pid")
 	user_log => "mem_checker.log",
 	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	queue_sz => 1,
-	duration => "1024 10 60 30 60 50 60 25 60 5 60 50 60",
+	duration => "1024 1 6 3 6 5 6 3 6 5 6 5 6",
 	should_transfer_files => "YES",
 	when_to_transfer_output => "ON_EXIT",
 	append_submit_commands => $append_submit_commands,

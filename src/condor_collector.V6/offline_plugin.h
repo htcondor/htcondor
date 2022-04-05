@@ -24,7 +24,6 @@
  * Headers
  ***************************************************************/
 
-#include "MyString.h"
 #include "classad_collection.h"
 
 /***************************************************************
@@ -98,13 +97,13 @@ private:
 		mykey.Value()  (this is what the persistent ad collection
 		code wants); on failure, return NULL.
 		*/
-	const char* makeOfflineKey( const ClassAd &ad, MyString & mykey);
+	const char* makeOfflineKey( const ClassAd &ad, std::string & mykey );
 
 	/** Store ad into the persistent log with the given key, first
 		removing any ad w/ the same key already stored.
 		If key is passed in as NULL, then a key will be created via
 		makeOfflineKey().
-		Return true on success, false on failure. 
+		Return true on success, false on failure.
 		*/
 	bool persistentStoreAd(const char *key, ClassAd &ad);
 

@@ -41,10 +41,6 @@
 #include "ipv6_hostname.h"
 #include "condor_sockfunc.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 
 const char *
 sock_to_string(SOCKET sockd)
@@ -263,7 +259,7 @@ is_valid_sinful( const char *sinful )
 		int colon_pos = ipaddr.FindChar(':');
 		if(colon_pos == -1) { return false; }
 		ipaddr.truncate(colon_pos);
-		if( ! is_ipv4_addr_implementation(ipaddr.Value(),NULL,NULL,false) ) {
+		if( ! is_ipv4_addr_implementation(ipaddr.c_str(),NULL,NULL,false) ) {
 			return FALSE;
 		}
 		acc = acc + colon_pos;
@@ -428,34 +424,12 @@ getHostFromAddr( const char* addr )
 }
 
 
-int generate_sinful(char* buf, int len, const char* ip, int port) {
+std::string generate_sinful(const char* ip, int port) {
+	std::string buf;
 	if (strchr(ip, ':')) {
-		return snprintf(buf, len, "<[%s]:%d>", ip, port);
+		formatstr(buf, "<[%s]:%d>", ip, port);
 	} else {
-		return snprintf(buf, len, "<%s:%d>", ip, port);
-	}
-}
-
-#if defined(__cplusplus)
-}
-
-MyString generate_sinful(const char* ip, int port) {
-	MyString buf;
-	if (strchr(ip, ':')) {
-		buf.formatstr("<[%s]:%d>", ip, port);
-	} else {
-		buf.formatstr("<%s:%d>", ip, port);
+		formatstr(buf, "<%s:%d>", ip, port);
 	}
 	return buf;
 }
-
-
-bool sinful_to_ipstr(const char * addr, MyString & ipout)
-{
-	condor_sockaddr sa;
-	if(!sa.from_sinful(addr)) { return false; }
-	ipout = sa.to_ip_string();
-	return true;
-}
-
-#endif

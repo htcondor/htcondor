@@ -55,11 +55,7 @@ void
 BaseUserPolicy::init( ClassAd* job_ad_ptr )
 {
 	this->job_ad = job_ad_ptr;
-#ifdef USE_NON_MUTATING_USERPOLICY
 	this->user_policy.Init();
-#else
-	this->user_policy.Init( this->job_ad );
-#endif
 	this->interval = param_integer("PERIODIC_EXPR_INTERVAL",
 								   DEFAULT_PERIODIC_EXPR_INTERVAL);
 }
@@ -70,7 +66,7 @@ BaseUserPolicy::init( ClassAd* job_ad_ptr )
 void
 BaseUserPolicy::cancelTimer( void )
 {
-	if ( this->tid != -1 ) {
+	if ( daemonCore && this->tid != -1 ) {
 		daemonCore->Cancel_Timer( this->tid );
 		this->tid = -1;
 	}
@@ -104,6 +100,22 @@ BaseUserPolicy::startTimer( void )
 	}
 }
 
+/* Reset our periodic evaluation timer to fire immediately,
+ * then resume the usual interval.
+ * Useful when an event merits checking the periodic policy,
+ * but the effects shouldn't be triggered in the current
+ * call stack.
+ */
+void
+BaseUserPolicy::checkPeriodicSoon()
+{
+	if ( tid != -1 ) {
+		daemonCore->Reset_Timer(tid, 0, interval);
+		dprintf(D_FULLDEBUG, "Reset our timer to evaluate periodic user "
+		        "policy expressions immediately\n");
+	}
+}
+
 /**
  * This is to be called when a job is exiting from a daemon
  * We pass the action id we get back from the user_policy object
@@ -115,11 +127,7 @@ BaseUserPolicy::checkAtExit( void )
 	double old_run_time;
 	this->updateJobTime( &old_run_time );
 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	int action = this->user_policy.AnalyzePolicy( *(this->job_ad), PERIODIC_THEN_EXIT );
-#else
-	int action = this->user_policy.AnalyzePolicy( PERIODIC_THEN_EXIT );
-#endif
 	this->restoreJobTime( old_run_time );
 
 		//
@@ -141,11 +149,7 @@ BaseUserPolicy::checkPeriodic( void )
 	double old_run_time;
 	this->updateJobTime( &old_run_time );
 
-#ifdef USE_NON_MUTATING_USERPOLICY
 	int action = this->user_policy.AnalyzePolicy( *(this->job_ad), PERIODIC_ONLY );
-#else
-	int action = this->user_policy.AnalyzePolicy( PERIODIC_ONLY );
-#endif
 
 	this->restoreJobTime( old_run_time );
 
@@ -155,7 +159,7 @@ BaseUserPolicy::checkPeriodic( void )
 			// special to do, we'll just return now.
 		return;
 	}
-	
+
 		// if we're supposed to do anything else with the job, we
 		// need to perform some actions now, so call our helper:
 	this->doAction( action, true );

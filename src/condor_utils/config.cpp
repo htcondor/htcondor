@@ -211,10 +211,6 @@ getline_implementation( T & src, int requested_bufsize, int options, int & line_
 }
 #endif
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 #ifdef GETLINE_IMPL_IS_TEMPLATE
 // changed to a template and moved out of extern "C" block.
 #else
@@ -1052,6 +1048,9 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 	source.meta_off = -1;
 
 	ConfigIfStack ifstack;
+	StringList hereList;
+	std::string hereName;
+	std::string hereTag;
 
 	StringList lines(config, "\n");
 	lines.rewind();
@@ -1065,6 +1064,28 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		++source.meta_off;
 		if( line[0] == '#' || blankline(line) )
 			continue;
+
+		// if we are processing a here @= knob, just accumulate lines until we see the closing @
+		// when we see the closing @, expand the value and stuff it into the given name.
+		if ( ! hereName.empty()) {
+			const char * name = line;
+			if (name[0] == '@' && hereTag == name+1) {
+				/* expand self references only */
+				auto_free_ptr rhs(hereList.print_to_delimed_string("\n"));
+				auto_free_ptr value(expand_self_macro(rhs, hereName.c_str(), macro_set, ctx));
+				if (value.ptr() == NULL) {
+					return -1;
+				}
+				insert_macro(hereName.c_str(), value, macro_set, source, ctx);
+
+				hereName.clear();
+				hereTag.clear();
+				hereList.clearAll();
+				continue;
+			}
+			hereList.append(line);
+			continue;
+		}
 
 		std::string errmsg;
 		if (ifstack.line_is_if(line, errmsg, macro_set, ctx)) {
@@ -1105,7 +1126,15 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		}
 		// parse to the start of the value, it's ok to not have any value
 		while (*ptr) {
-			if (ISOP(*ptr)) {
+			if (*ptr == '@') {
+				if (ptr[1] != '=') {
+					op = 0; // @ must be followed by =
+					break;
+				}
+				pop = ptr;
+				op = *ptr;
+				++ptr; // extra skip because @=
+			} else if (ISOP(*ptr)) {
 				if (ISOP(op)) {
 					op = 0; // more than one op is not allowed, so trigger a failure
 					break;
@@ -1193,6 +1222,13 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 				return -1111;
 			}
 
+			if (op == '@') {
+				hereName = name;
+				hereTag = rhs;
+				hereList.clearAll();
+				continue;
+			}
+
 			/* expand self references only */
 			char * value = expand_self_macro(rhs, name, macro_set, ctx);
 			if (value == NULL) {
@@ -1200,10 +1236,10 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 			}
 
 			insert_macro(name, value, macro_set, source, ctx);
-			FREE(value);
+			free(value);
 		}
 
-		// FREE(expanded_name);
+		// free(expanded_name);
 	}
 	source.meta_off = -2;
 	return 0;
@@ -1497,8 +1533,8 @@ Parse_macros(
 				}
 				insert_macro(hereName.c_str(), value, macro_set, FileSource, *pctx);
 
-				FREE(rhs); rhs = NULL;
-				FREE(value); value = NULL;
+				free(rhs); rhs = NULL;
+				free(value); value = NULL;
 				hereName.clear();
 				hereTag.clear();
 				hereList.clearAll();
@@ -1854,7 +1890,7 @@ Parse_macros(
 				hereName = name;
 				hereTag = rhs;
 				hereList.clearAll();
-				FREE(name); name = NULL;
+				free(name); name = NULL;
 				continue;
 			}
 
@@ -1890,9 +1926,9 @@ Parse_macros(
 			}
 		}
 
-		FREE( name );
+		free( name );
 		name = NULL;
-		FREE( value );
+		free( value );
 		value = NULL;
 	}
 
@@ -1905,8 +1941,8 @@ Parse_macros(
 	}
 
  cleanup:
-	if(name) { FREE( name ); }
-	if(value) { FREE( value ); }
+	if(name) { free( name ); }
+	if(value) { free( value ); }
 	return retval;
 }
 
@@ -1965,7 +2001,7 @@ FILE* Open_macro_source (
 			ArgList argList;
 			MyString args_errors;
 			if(!argList.AppendArgsV1RawOrV2Quoted(cmd, &args_errors)) {
-				formatstr(config_errmsg, "Can't append args, %s", args_errors.Value());
+				formatstr(config_errmsg, "Can't append args, %s", args_errors.c_str());
 				return NULL;
 			}
 			fp = my_popen(argList, "r", 0 | MY_POPEN_OPT_FAIL_QUIETLY);
@@ -2025,7 +2061,7 @@ FILE* Copy_macro_source_into (
 		ArgList argList;
 		MyString args_errors;
 		if(!argList.AppendArgsV1RawOrV2Quoted(cmd, &args_errors)) {
-			formatstr(errmsg, "Can't append args, %s", args_errors.Value());
+			formatstr(errmsg, "Can't append args, %s", args_errors.c_str());
 			return NULL;
 		}
 		fp = my_popen(argList, "rb", MY_POPEN_OPT_FAIL_QUIETLY);
@@ -2372,20 +2408,20 @@ int get_macro_ref_count (const char *name, MACRO_SET & set)
 
 
 // These provide external linkage to the getline_implementation function for use by non-config code
-extern "C" char * getline_trim( FILE *fp ) {
+char * getline_trim( FILE *fp ) {
 	int lineno=0;
 	const int options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	FileStarLineSource ls(fp);
 	return getline_implementation(ls, _POSIX_ARG_MAX, options, lineno);
 }
-extern "C++" char * getline_trim( FILE *fp, int & lineno, int mode ) {
+char * getline_trim( FILE *fp, int & lineno, int mode ) {
 	const int default_options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	const int simple_options = 0;
 	int options = (mode & GETLINE_TRIM_SIMPLE_CONTINUATION) ? simple_options : default_options;
 	FileStarLineSource ls(fp);
 	return getline_implementation(ls,_POSIX_ARG_MAX, options, lineno);
 }
-extern "C++" char * getline_trim( MacroStream & ms, int mode ) {
+char * getline_trim( MacroStream & ms, int mode ) {
 	const int default_options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	const int simple_options = 0;
 	int options = (mode & GETLINE_TRIM_SIMPLE_CONTINUATION) ? simple_options : default_options;
@@ -2396,12 +2432,12 @@ extern "C++" char * getline_trim( MacroStream & ms, int mode ) {
 #else
 
 // These provide external linkage to the getline_implementation function for use by non-config code
-extern "C" char * getline_trim( FILE *fp ) {
+char * getline_trim( FILE *fp ) {
 	int lineno=0;
 	const int options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	return getline_implementation(fp, _POSIX_ARG_MAX, options, lineno);
 }
-extern "C++" char * getline_trim( FILE *fp, int & lineno, int mode ) {
+char * getline_trim( FILE *fp, int & lineno, int mode ) {
 	const int default_options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	const int simple_options = 0;
 	int options = (mode & GETLINE_TRIM_SIMPLE_CONTINUATION) ? simple_options : default_options;
@@ -2539,8 +2575,6 @@ getline_implementation( FILE *fp, int requested_bufsize, int options, int & line
 	}
 }
 #endif
-
-} // end of extern "C"
 
 /* 
 ** Utility function to get an integer from a string.
@@ -2763,12 +2797,12 @@ const char * condor_basename_plus_dirs(const char *path, int num_dirs)
 	return path;
 }
 
-// strdup a string with room to grow and an optional leading quote
-// and room for a trailing quote.
+// copy a string stripping leading an trailing double quotes or quotes of the given type
+// and optionally adding leading and trailing quotes of the given type
 char * strcpy_quoted(char* out, const char* str, int cch, char quoted) {
 	ASSERT(cch >= 0);
 
-	// ignore leading and/or trailing quotes when we dup
+	// ignore leading and/or trailing quotes when we copy
 	char quote_char = 0;
 	if (*str=='"' || (*str && *str == quoted)) { quote_char = *str; ++str; --cch; }
 	if (cch > 0 && str[cch-1] && str[cch-1] == quote_char) --cch;
@@ -2799,12 +2833,13 @@ char * strdup_quoted(const char* str, int cch, char quoted) {
 // strdup a string with room to grow and an optional leading quote
 // and room for a trailing quote, also canocalize windows path characters
 //
-char * strdup_path_quoted(const char* str, int cch, char quoted, char to_path_char) {
+char * strdup_path_quoted(const char* str, int cch, int cch_extra, char quoted, char to_path_char) {
 	if (cch < 0) cch = (int)strlen(str);
 
 	// malloc with room for quotes and a terminating 0
-	char * out = (char*)malloc(cch+3);
+	char * out = (char*)malloc(cch+3+cch_extra);
 	ASSERT(out);
+	memset(out + cch, 0, 3 + cch_extra);
 	strcpy_quoted(out, str, cch, quoted);
 	if (to_path_char) {
 		char path_char = (to_path_char == '/') ? '\\' : '/';
@@ -2824,7 +2859,7 @@ char * strdup_full_path_quoted(const char *name, int cch, MACRO_EVAL_CONTEXT & c
 		|| !ctx.cwd || !ctx.cwd[0]
 	   )
 	{
-		return strdup_path_quoted(name, cch, quoted, to_path_char);
+		return strdup_path_quoted(name, cch, 0, quoted, to_path_char);
 	}
 	else
 	{
@@ -2837,7 +2872,7 @@ char * strdup_full_path_quoted(const char *name, int cch, MACRO_EVAL_CONTEXT & c
 	#endif
 		if (has_dir_delim) { cch_cwd -= 1; }
 		if (cch < 0) { name = strlen_unquote(name, cch); }
-		char * str = strdup_path_quoted(ctx.cwd, cch_cwd + cch + 1, quoted, to_path_char);
+		char * str = strdup_path_quoted(ctx.cwd, cch_cwd, cch + 1, quoted, to_path_char);
 		if (str) {
 			char * p = str + cch_cwd;
 			if (quoted) ++p;
@@ -3007,11 +3042,11 @@ char * expand_meta_args(const char *value, std::string & argstr)
 				tvalue = *tvalue ? "1" : "0";
 			}
 
-			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			rval = (char *)malloc( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
 			ASSERT(rval);
 
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
-			FREE( tmp );
+			free( tmp );
 			tmp = rval;
 		}
 	}
@@ -3019,6 +3054,7 @@ char * expand_meta_args(const char *value, std::string & argstr)
 	return tmp;
 }
 #endif
+
 
 /*
 ** Expand parameter references of the form "left$(middle)right".  This
@@ -3028,8 +3064,7 @@ char * expand_meta_args(const char *value, std::string & argstr)
 ** Also expand references of the form "left$RANDOM_CHOICE(middle)right".
 */
 
-
-const char * lookup_macro_exact_no_default(const char *name, MACRO_SET & set, int use)
+const char * lookup_macro_exact_no_default_impl(const char *name, MACRO_SET & set, int use)
 {
 	MACRO_ITEM* pitem = find_macro_item(name, NULL, set);
 	if (pitem) {
@@ -3043,8 +3078,22 @@ const char * lookup_macro_exact_no_default(const char *name, MACRO_SET & set, in
 	return NULL;
 }
 
+std::string
+lookup_macro_exact_no_default( const std::string & name, MACRO_SET & set, int use ) {
+	const char * rv = lookup_macro_exact_no_default_impl(name.c_str(), set, use);
+	if( rv == NULL ) {
+		return std::string();
+	} else {
+		return std::string(rv);
+	}
+}
 
-const char * lookup_macro_exact_no_default(const char *name, const char *prefix, MACRO_SET & set, int use)
+bool
+exists_macro_exact_no_default( const std::string & name, MACRO_SET & set, int use ) {
+	return NULL != lookup_macro_exact_no_default_impl(name.c_str(), set, use);
+}
+
+const char * lookup_macro_exact_no_default_impl(const char *name, const char *prefix, MACRO_SET & set, int use)
 {
 	MACRO_ITEM* pitem = find_macro_item(name, prefix, set);
 	if (pitem) {
@@ -3057,6 +3106,7 @@ const char * lookup_macro_exact_no_default(const char *name, const char *prefix,
 	}
 	return NULL;
 }
+
 
 // lookup macro in all of the usual places.  The lookup order is
 //    localname.name in config file
@@ -3075,7 +3125,7 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 {
 	const char * lval = NULL;
 	if (ctx.localname) {
-		lval = lookup_macro_exact_no_default(name, ctx.localname, macro_set, ctx.use_mask);
+		lval = lookup_macro_exact_no_default_impl(name, ctx.localname, macro_set, ctx.use_mask);
 		if (lval) return lval;
 
 		if (macro_set.defaults && ! ctx.without_default) {
@@ -3084,7 +3134,7 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 		}
 	}
 	if (ctx.subsys) {
-		lval = lookup_macro_exact_no_default(name, ctx.subsys, macro_set, ctx.use_mask);
+		lval = lookup_macro_exact_no_default_impl(name, ctx.subsys, macro_set, ctx.use_mask);
 		if (lval) return lval;
 
 		if (macro_set.defaults && ! ctx.without_default) {
@@ -3097,7 +3147,7 @@ const char * lookup_macro(const char * name, MACRO_SET & macro_set, MACRO_EVAL_C
 	// Note that if 'name' has been explicitly set to nothing,
 	// lval will _not_ be NULL so we will not call
 	// find_macro_def_item().  See gittrack #1302
-	lval = lookup_macro_exact_no_default(name, macro_set, ctx.use_mask);
+	lval = lookup_macro_exact_no_default_impl(name, macro_set, ctx.use_mask);
 	if (lval) return lval;
 
 	// if not found in the config file, lookup in the param table
@@ -3659,7 +3709,7 @@ static const char * evaluate_macro_func (
 				if (full_path) {
 					buf = strdup_full_path_quoted(umval, cchum, ctx, quote_char, to_path_char);
 				} else if (parts || to_path_char || bare) {
-					buf = strdup_path_quoted(umval, cchum, quote_char, to_path_char);  // copy the macro value with quotes add/removed as requested.
+					buf = strdup_path_quoted(umval, cchum, 0, quote_char, to_path_char);  // copy the macro value with quotes add/removed as requested.
 				} else {
 					buf = strdup_quoted(umval, cchum, quote_char);  // copy the macro value with quotes add/removed as requested.
 				}
@@ -3744,11 +3794,11 @@ expand_macro(const char *value,
 			auto_free_ptr tbuf; // malloc or strdup'd buffer (if needed)
 			tvalue = evaluate_macro_func(func, special_id, name, tbuf, macro_set, ctx);
 
-			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			rval = (char *)malloc( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
 			ASSERT(rval);
 
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
-			FREE( tmp );
+			free( tmp );
 			tmp = rval;
 		}
 	}
@@ -3756,11 +3806,11 @@ expand_macro(const char *value,
 	// Now, deal with the special $(DOLLAR) macro.
 	DollarOnlyBody dollar_only; // matches only $(DOLLAR)
 	while( next_config_macro(is_config_macro, dollar_only, tmp, 0, &left, &name, &right, &func) ) {
-		rval = (char *)MALLOC( (unsigned)(strlen(left) + 1 +
+		rval = (char *)malloc( (unsigned)(strlen(left) + 1 +
 										  strlen(right) + 1));
 		ASSERT( rval != NULL );
 		(void)sprintf( rval, "%s$%s", left, right );
-		FREE( tmp );
+		free( tmp );
 		tmp = rval;
 	}
 
@@ -4339,7 +4389,7 @@ static ptrdiff_t evaluate_macro_func (
 				if (full_path) {
 					buf = strdup_full_path_quoted(umval, cchum, ctx, quote_char, to_path_char);
 				} else if (parts || to_path_char || bare) {
-					buf = strdup_path_quoted(umval, cchum, quote_char, to_path_char);  // copy the macro value with quotes add/removed as requested.
+					buf = strdup_path_quoted(umval, cchum, 0, quote_char, to_path_char);  // copy the macro value with quotes add/removed as requested.
 				} else {
 					buf = strdup_quoted(umval, cchum, quote_char);  // copy the macro value with quotes add/removed as requested.
 				}
@@ -4850,11 +4900,11 @@ expand_self_macro(const char *value,
 			auto_free_ptr tbuf; // malloc or strdup'd buffer (if needed)
 			tvalue = evaluate_macro_func(func, func_id, body, tbuf, macro_set, ctx);
 
-			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			rval = (char *)malloc( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
 			ASSERT(rval);
 
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
-			FREE( tmp );
+			free( tmp );
 			tmp = rval;
 		}
 	}

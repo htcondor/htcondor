@@ -73,9 +73,8 @@ request_remote_token(const std::string &pool, const std::string &name, daemon_t 
 		exit(1);
 	}
 
-	std::vector<char> hostname;
-	hostname.reserve(MAXHOSTNAMELEN);
-	if (condor_gethostname(&hostname[0], MAXHOSTNAMELEN)) {
+	char hostname[MAXHOSTNAMELEN];
+	if (condor_gethostname(hostname, sizeof(hostname))) {
 		fprintf(stderr, "ERROR: Unable to determine hostname.\n");
 		exit(1);
 	}
@@ -83,7 +82,7 @@ request_remote_token(const std::string &pool, const std::string &name, daemon_t 
 	CondorError err;
 	std::string token, request_id;
 
-	std::string client_id = std::string(&hostname[0]) + "-" + std::to_string(get_csrng_uint() % 1000);
+	std::string client_id = std::string(hostname) + "-" + std::to_string(get_csrng_uint() % 1000);
 
 	if (!daemon->startTokenRequest(identity, authz_list, lifetime, client_id, token, request_id, &err)) {
 		fprintf(stderr, "Failed to request a new token: %s\n", err.getFullText().c_str());

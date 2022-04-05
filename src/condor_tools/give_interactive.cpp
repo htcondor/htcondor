@@ -33,7 +33,6 @@
 #include "daemon.h"
 #include "extArray.h"
 #include "HashTable.h"
-#include "MyString.h"
 #include "basename.h"
 #include "condor_distribution.h"
 #include "subsystem_info.h"
@@ -44,7 +43,7 @@
 
 double priority = 0.00001;
 const char *pool = NULL;
-struct 	PrioEntry { MyString name; float prio; };
+struct 	PrioEntry { std::string name; float prio; };
 static  ExtArray<PrioEntry> prioTable;
 #ifndef WIN32
 #endif
@@ -373,7 +372,7 @@ fetchSubmittorPrios()
 static int
 findSubmittor( char *name ) 
 {
-	MyString 	sub(name);
+	std::string sub(name);
 	int			last = prioTable.getlast();
 	int			i;
 	

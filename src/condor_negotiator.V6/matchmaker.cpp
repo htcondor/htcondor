@@ -50,10 +50,8 @@
 #include <sstream>
 #include <deque>
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
 #include "NegotiatorPlugin.h"
-#endif
 #endif
 
 // the comparison function must be declared before the declaration of the
@@ -165,7 +163,7 @@ NegotiationCycleStats::NegotiationCycleStats():
 }
 
 
-static MyString MachineAdID(ClassAd * ad)
+static std::string MachineAdID(ClassAd * ad)
 {
 	ASSERT(ad);
 	std::string addr;
@@ -177,8 +175,8 @@ static MyString MachineAdID(ClassAd * ad)
 		addr = "<No Address>";
 	}
 
-	MyString ID(addr);
-	ID += " ";
+	std::string ID(addr);
+	ID += ' ';
 	ID += name;
 	return ID;
 }
@@ -249,7 +247,7 @@ bool ResourcesInUseByUsersGroup_classad_func( const char * /*name*/,
 
 	float group_quota = 0;
 	float group_usage = 0;
-    string group_name;
+	std::string group_name;
 	if( !matchmaker_for_classad_func->getGroupInfoFromUserId(user.c_str(),group_name,group_quota,group_usage) ) {
 		result.SetErrorValue();
 		return true;
@@ -264,7 +262,7 @@ bool dslotLookup( const classad::ClassAd *ad, const char *name, int idx, classad
 	if ( ad == NULL || name == NULL || idx < 0 ) {
 		return false;
 	}
-	string attr_name = "Child";
+	std::string attr_name = "Child";
 	attr_name += name;
 	// lookup or evaluate Child<name>
 	// set value to idx-th entry of resulting ExprList
@@ -284,7 +282,7 @@ bool dslotLookup( const classad::ClassAd *ad, const char *name, int idx, classad
 	return true;
 }
 
-bool dslotLookupString( const classad::ClassAd *ad, const char *name, int idx, string &value )
+bool dslotLookupString( const classad::ClassAd *ad, const char *name, int idx, std::string &value )
 {
 	classad::Value val;
 	if ( !dslotLookup( ad, name, idx, val ) ) {
@@ -401,6 +399,7 @@ Matchmaker ()
 	ConsiderEarlyPreemption = false;
 	want_nonblocking_startd_contact = true;
 
+	startedLastCycleTime = 0;
 	completedLastCycleTime = (time_t) 0;
 
 	publicAd = NULL;
@@ -441,6 +440,7 @@ Matchmaker ()
 	preemption_rank_unstable = true;
 	NegotiatorTimeout = 30;
  	NegotiatorInterval = 60;
+	NegotiatorMinInterval = 5;
  	MaxTimePerSubmitter = 31536000;
 	MaxTimePerSchedd = 31536000;
  	MaxTimePerSpin = 31536000;
@@ -561,6 +561,12 @@ initialize (const char *neg_name)
     daemonCore->Register_Command (GET_RESLIST, "GetResList",
 		(CommandHandlercpp) &Matchmaker::GET_RESLIST_commandHandler,
 			"GET_RESLIST_commandHandler", this, READ);
+    daemonCore->Register_Command (QUERY_NEGOTIATOR_ADS, "QUERY_NEGOTIATOR_ADS",
+		(CommandHandlercpp) &Matchmaker::QUERY_ADS_commandHandler,
+			"QUERY_ADS_commandHandler", this, READ);
+    daemonCore->Register_Command (QUERY_ACCOUNTING_ADS, "QUERY_ACCOUNTING_ADS",
+		(CommandHandlercpp) &Matchmaker::QUERY_ADS_commandHandler,
+			"QUERY_ADS_commandHandler", this, READ);
 
 	// Set a timer to renegotiate.
     negotiation_timerID = daemonCore->Register_Timer (0,  NegotiatorInterval,
@@ -573,11 +579,9 @@ initialize (const char *neg_name)
 			"Update Collector", this );
 
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
 	NegotiatorPluginManager::Load();
 	NegotiatorPluginManager::Initialize();
-#endif
 #endif
 }
 
@@ -615,6 +619,8 @@ reinitialize ()
 	// get timeout values
 
  	NegotiatorInterval = param_integer("NEGOTIATOR_INTERVAL",60);
+
+	NegotiatorMinInterval = param_integer("NEGOTIATOR_MIN_INTERVAL",5);
 
 	NegotiatorTimeout = param_integer("NEGOTIATOR_TIMEOUT",30);
 
@@ -705,6 +711,7 @@ reinitialize ()
 	dprintf (D_ALWAYS,"ACCOUNTANT_HOST = %s\n", AccountantHost ?
 			AccountantHost : "None (local)");
 	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %d sec\n",NegotiatorInterval);
+	dprintf (D_ALWAYS,"NEGOTIATOR_MIN_INTERVAL = %d sec\n",NegotiatorMinInterval);
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT = %d sec\n",NegotiatorTimeout);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_CYCLE = %d sec\n",MaxTimePerCycle);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_SUBMITTER = %d sec\n",MaxTimePerSubmitter);
@@ -1078,7 +1085,7 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 
 		MyString map_output;
 		if (user_map_do_mapping("PRIORITY_FACTOR_AUTHORIZATION", peer_identity, map_output)) {
-			StringList items(map_output.Value(), ",");
+			StringList items(map_output.c_str(), ",");
 			items.rewind();
 			char * item;
 			while ( (item = items.next()) ) {
@@ -1090,7 +1097,7 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 	}
 	if (!authorized) {
 		errstack.pushf("NEGOTIATOR", 4, "Client %s requested to set the priority factor of %s but is not authorized.",
-			peer_identity ? peer_identity : "(unknown)", submitter.c_str());
+			peer_identity, submitter.c_str());
 		return returnPrioFactor(strm, errstack);
 	}
 
@@ -1297,6 +1304,72 @@ GET_RESLIST_commandHandler (int, Stream *strm)
 	return TRUE;
 }
 
+int Matchmaker::
+QUERY_ADS_commandHandler (int cmd, Stream *strm)
+{
+	bool query_negotiator_ad =  (cmd == QUERY_NEGOTIATOR_ADS);
+	bool query_accounting_ads = (cmd == QUERY_ACCOUNTING_ADS);
+
+	ClassAd queryAd;
+	ClassAd *ad;
+	ClassAdList ads;
+	int more = 1, num_ads = 0;
+	dprintf( D_FULLDEBUG, "In QUERY_ADS_commandHandler cmd=%d\n", cmd );
+
+	strm->decode();
+	strm->timeout(15);
+	if( !getClassAd(strm, queryAd) || !strm->end_of_message()) {
+		dprintf( D_ALWAYS, "Failed to receive query on TCP: aborting\n" );
+		return FALSE;
+	}
+
+		// Construct a list of all our ClassAds that match the query
+	if (query_negotiator_ad) {
+		std::string stats_config;
+		queryAd.LookupString("STATISTICS_TO_PUBLISH", stats_config);
+		if ( ! publicAd) { init_public_ad(); }
+		if (publicAd) {
+			ad = new ClassAd(*publicAd);
+			publishNegotiationCycleStats(ad);
+			daemonCore->dc_stats.Publish(*ad, stats_config.c_str());
+			daemonCore->monitor_data.ExportData(ad);
+			ads.Insert(ad);
+		}
+	}
+	if (query_accounting_ads) {
+		this->accountant.ReportState(queryAd, ads);
+	}
+
+	classad::References proj;
+	std::string projection;
+	if (queryAd.LookupString(ATTR_PROJECTION, projection) && ! projection.empty()) {
+		StringTokenIterator list(projection);
+		const std::string * attr;
+		while ((attr = list.next_string())) { proj.insert(*attr); }
+	}
+
+		// Now, return the ClassAds that match.
+	strm->encode();
+	ads.Open();
+	while( (ad = ads.Next()) ) {
+		if( !strm->code(more) || !putClassAd(strm, *ad, PUT_CLASSAD_NO_PRIVATE, proj.empty() ? NULL : &proj) ) {
+			dprintf (D_ALWAYS, 
+						"Error sending query result to client -- aborting\n");
+			return FALSE;
+		}
+		num_ads++;
+	}
+
+		// Finally, close up shop.  We have to send NO_MORE.
+	more = 0;
+	if( !strm->code(more) || !strm->end_of_message() ) {
+		dprintf( D_ALWAYS, "Error sending EndOfResponse (0) to client\n" );
+		return FALSE;
+	}
+	dprintf( D_FULLDEBUG, "Sent %d ads in response to query\n", num_ads ); 
+	return TRUE;
+}
+
 
 char *
 Matchmaker::
@@ -1453,7 +1526,7 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 
 
 bool Matchmaker::
-getGroupInfoFromUserId(const char* user, string& groupName, float& groupQuota, float& groupUsage)
+getGroupInfoFromUserId(const char* user, std::string& groupName, float& groupQuota, float& groupUsage)
 {
 	ASSERT(groupQuotasHash);
 
@@ -1541,6 +1614,17 @@ negotiationTime ()
 		dprintf(D_FULLDEBUG,
 			"New cycle requested but just finished one -- delaying %u secs\n",
 			cycle_delay - elapsed);
+		return;
+	}
+
+	elapsed = time(NULL) - startedLastCycleTime;
+	if ( elapsed < NegotiatorMinInterval ) {
+		daemonCore->Reset_Timer(negotiation_timerID,
+							NegotiatorMinInterval - elapsed,
+							NegotiatorInterval);
+		dprintf(D_FULLDEBUG,
+			"New cycle requested but last one started too recently -- delaying %u secs\n",
+			NegotiatorMinInterval - elapsed);
 		return;
 	}
 
@@ -1730,6 +1814,7 @@ negotiationTime ()
     // ----- Done with the negotiation cycle
     dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
 
+	startedLastCycleTime = start_time;
     completedLastCycleTime = time(NULL);
 
     negotiation_cycle_stats[0]->end_time = completedLastCycleTime;
@@ -1776,10 +1861,8 @@ void
 Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 		std::set<std::string>::iterator it;
 		
-		//DCCollector collector;
-		CollectorList *cl = daemonCore->getCollectorList();
-		if (cl == NULL) {
-			dprintf(D_ALWAYS, "Not updating collector with accounting information, as no collector are found\n");
+		if (nullptr == daemonCore->getCollectorList()) {
+			dprintf(D_ALWAYS, "Not updating collector with accounting information, as no collectors are found\n");
 			return;
 		}
 	
@@ -1822,16 +1905,16 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 				// will be zero.  Don't include those submitters.
 
 				if (updateAd.LookupInteger("ResourcesUsed", resUsed)) {
-					cl->sendUpdates(UPDATE_ACCOUNTING_AD, &updateAd, NULL, false);
+					daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &updateAd, NULL, false);
 				}
 			}
 		}
-		forwardGroupAccounting(cl, hgq_root_group);
+		forwardGroupAccounting(hgq_root_group);
 		dprintf(D_FULLDEBUG, "Done Updating collector with accounting information\n");
 }
 
 void
-Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
+Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 
 	ClassAd accountingAd;
 	accountingAd.Assign("MyType", "Accounting");
@@ -1841,9 +1924,9 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
 	accountingAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 
 
-    string CustomerName = group->name;
+	std::string CustomerName = group->name;
 
-	ClassAd *CustomerAd = accountant.GetClassAd(string("Customer.") + CustomerName);
+	ClassAd *CustomerAd = accountant.GetClassAd(std::string("Customer.") + CustomerName);
 
     if (CustomerAd == NULL) {
         dprintf(D_ALWAYS, "WARNING: Expected AcctLog entry \"%s\" to exist.\n", CustomerName.c_str());
@@ -1919,11 +2002,11 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
 
 	// And send the ad to the collector
 	DCCollectorAdSequences seq; // Don't need them, interface requires them
-	cl->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
+	daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
 
     // Populate group's children recursively, if it has any
     for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-        forwardGroupAccounting(cl, *j);
+        forwardGroupAccounting(*j);
     }
 }
 
@@ -2846,7 +2929,7 @@ obtainAdsFromCollector (
 				oldAd = NULL;
 				oldAdEntry = NULL;
 
-				MyString adID = MachineAdID(ad);
+				std::string adID = MachineAdID(ad);
 				stashedAds->lookup( adID, oldAdEntry);
 				// if we find it...
 				oldSequence = -1;
@@ -2941,13 +3024,21 @@ obtainAdsFromCollector (
 				ad->AssignExpr(ATTR_SLOT_WEIGHT, slotWeightStr);
 			}
 
+			if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
+				std::string scheddName;
+				if (!ad->LookupString(ATTR_SCHEDD_NAME, scheddName)) {
+					dprintf(D_ALWAYS, "WARNING: slot ad %s is missing a schedd name, skipping\n",remoteHost);
+					continue;
+				}
+				ad->Assign(ATTR_REMOTE_USER, scheddName);
+			}
 			OptimizeMachineAdForMatchmaking( ad );
 
 			startdAds.Insert(ad);
 		} else if( !strcmp(GetMyTypeName(*ad),SUBMITTER_ADTYPE) ) {
 
             std::string subname;
-            string schedd_addr;
+			std::string schedd_addr;
             if (!ad->LookupString(ATTR_NAME, subname) ||
                 !ad->LookupString(ATTR_SCHEDD_IP_ADDR, schedd_addr)) {
 
@@ -2957,6 +3048,16 @@ obtainAdsFromCollector (
 			if ( !IsValidSubmitterName( subname.c_str() ) ) {
 				dprintf( D_ALWAYS, "WARNING: ignoring submitter ad with invalid name: %s\n", subname.c_str() );
 				continue;
+			}
+
+			if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
+				std::string scheddName;
+				if (!ad->LookupString(ATTR_SCHEDD_NAME, scheddName)) {
+					dprintf(D_ALWAYS, "WARNING: Submitter Ad %s is missing a schedd name, skipping\n",subname.c_str());
+					continue;
+				}
+				ad->Assign(ATTR_NAME, scheddName);
+				subname = scheddName;
 			}
 
 			if (!TransformSubmitterAd(*ad)) {
@@ -2978,7 +3079,7 @@ obtainAdsFromCollector (
                 continue;
             }
 
-			submitterNames.insert(std::string(subname.c_str()));
+			submitterNames.insert(subname);
 
     		ad->Assign(ATTR_TOTAL_TIME_IN_CYCLE, 0);
 
@@ -3051,7 +3152,7 @@ obtainAdsFromCollector (
 
 	MakeClaimIdHash(startdPvtAdList,claimIds);
 
-	dprintf(D_ALWAYS, "Got ads: %d public and %lu private\n",
+	dprintf(D_ALWAYS, "Got ads: %d public and %zu private\n",
 	        allAds.MyLength(),claimIds.size());
 
 	dprintf(D_ALWAYS, "Public ads include %d submitter, %d startd\n",
@@ -3110,8 +3211,8 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 	while( (ad = startdPvtAdList.Next()) ) {
 		std::string name;
 		std::string ip_addr;
-		string claim_id;
-        string claimlist;
+		std::string claim_id;
+		std::string claimlist;
 
 		if( !ad->LookupString(ATTR_NAME, name) ) {
 			continue;
@@ -3130,7 +3231,7 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 		}
 
 			// hash key is name + ip_addr
-        string key = name;
+		std::string key = name;
         key += ip_addr;
         ClaimIdHash::iterator f(claimIds.find(key));
         if (f == claimIds.end()) {
@@ -3633,6 +3734,11 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 		negotiate_ad.InsertAttr(ATTR_AUTO_CLUSTER_ATTRS, job_attr_references ? job_attr_references : "");
 		// Tell the schedd a submitter tag value (used for flocking levels)
 		negotiate_ad.InsertAttr(ATTR_SUBMITTER_TAG, submitter_tag.c_str());
+
+		if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
+			negotiate_ad.InsertAttr(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, true);
+		}
+
 		if (!putClassAd(sock, negotiate_ad))
 		{
 			dprintf(D_ALWAYS, "    Failed to send negotiation header to %s\n",
@@ -3698,7 +3804,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 	bool		only_consider_startd_rank = false;
 	bool		display_overlimit = true;
 	bool		limited_by_submitterLimit = false;
-	string remoteUser;
+	std::string remoteUser;
 	double limitUsed = 0.0;
 	double limitUsedUnclaimed = 0.0;
 
@@ -3805,7 +3911,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
         negotiation_cycle_stats[0]->num_jobs_considered += 1;
 
         // information regarding the negotiating group context:
-        string negGroupName = (groupName != NULL) ? groupName : hgq_root_group->name.c_str();
+		std::string negGroupName = (groupName != NULL) ? groupName : hgq_root_group->name.c_str();
         request.Assign(ATTR_SUBMITTER_NEGOTIATING_GROUP, negGroupName);
         request.Assign(ATTR_SUBMITTER_AUTOREGROUP, (autoregroup && (negGroupName == hgq_root_group->name)));
 
@@ -3817,7 +3923,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 		// next insert the submitter user usage attributes into the request
 		request.Assign(ATTR_SUBMITTER_USER_RESOURCES_IN_USE,
 					   accountant.GetWeightedResourcesUsed ( submitterName ));
-        string temp_groupName;
+		std::string temp_groupName;
 		float temp_groupQuota, temp_groupUsage;
 		if (getGroupInfoFromUserId(submitterName, temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
@@ -3863,7 +3969,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 				// 2 = match diagnostics string w/ autocluster + jobid
 				int want_match_diagnostics = 0;
 				request.LookupInteger(ATTR_WANT_MATCH_DIAGNOSTICS,want_match_diagnostics);
-				string diagnostic_message;
+				std::string diagnostic_message;
 				// no match found
 				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
 						cluster, proc, submitterName, scheddAddr.c_str());
@@ -3906,7 +4012,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 				}
 				// add in autocluster and job id info if requested
 				if ( want_match_diagnostics == 2 ) {
-					string diagnostic_jobinfo;
+					std::string diagnostic_jobinfo;
 					formatstr(diagnostic_jobinfo," |%d|%d.%d|",autocluster,cluster,proc);
 					diagnostic_message += diagnostic_jobinfo;
 				}
@@ -4048,7 +4154,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 
 void Matchmaker::
 updateNegCycleEndTime(time_t startTime, ClassAd *submitter) {
-	string schedd_addr;
+	std::string schedd_addr;
 	time_t endTime;
 	int oldTotalTime;
 
@@ -4237,7 +4343,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 	double			candidatePostJobRankValue;
 	double			candidatePreemptRankValue;
 	PreemptState	candidatePreemptState;
-	string			candidateDslotClaims;
+	std::string			candidateDslotClaims;
 		// to store the best candidate so far
 	ClassAd 		*bestSoFar = NULL;	
 	ClassAd 		*cached_bestSoFar = NULL;	
@@ -4246,10 +4352,10 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 	double			bestPostJobRankValue = -(FLT_MAX);
 	double			bestPreemptRankValue = -(FLT_MAX);
 	PreemptState	bestPreemptState = (PreemptState)-1;
-	string			bestDslotClaims;
+	std::string			bestDslotClaims;
 	bool			newBestFound;
 		// to store results of evaluations
-	string remoteUser;
+	std::string remoteUser;
 	classad::Value	result;
 	bool			val;
 		// request attributes
@@ -4710,106 +4816,6 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 	return bestSoFar;
 }
 
-class NotifyStartdOfMatchHandler {
-public:
-	std::string m_startdName;
-	std::string  m_startdAddr;
-	std::string  m_claim_id;
-	int m_timeout;
-	DCStartd m_startd;
-	bool m_nonblocking;
-
-	NotifyStartdOfMatchHandler(char const *startdName,char const *startdAddr,int timeout,char const *claim_id,bool nonblocking):
-		
-		m_startdName(startdName),
-		m_startdAddr(startdAddr),
-		m_claim_id(claim_id),
-		m_timeout(timeout),
-		m_startd(startdAddr),
-		m_nonblocking(nonblocking) {}
-
-	static void startCommandCallback(bool success,Sock *sock,CondorError * /*errstack*/,
-		const std::string & /*trust_domain*/, bool /*should_try_token_request*/, void *misc_data)
-	{
-		NotifyStartdOfMatchHandler *self = (NotifyStartdOfMatchHandler *)misc_data;
-		ASSERT(misc_data);
-
-		if(!success) {
-			dprintf (D_ALWAYS,"      Failed to initiate socket to send MATCH_INFO to %s\n",
-					 self->m_startdName.c_str());
-		}
-		else {
-			self->WriteMatchInfo(sock);
-		}
-		if(sock) {
-			delete sock;
-		}
-		delete self;
-	}
-
-	bool WriteMatchInfo(Sock *sock) const
-	{
-		ClaimIdParser idp( m_claim_id.c_str() );
-		ASSERT(sock);
-
-		// pass the startd MATCH_INFO and claim id string
-		dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/claim id to %s\n",
-		         m_startdName.c_str());
-		dprintf (D_FULLDEBUG, "      (Claim ID is \"%s\" )\n",
-		         idp.publicClaimId() );
-
-		if ( !sock->put_secret (m_claim_id.c_str()) ||
-			 !sock->end_of_message())
-		{
-			dprintf (D_ALWAYS,
-			        "      Could not send MATCH_INFO/claim id to %s\n",
-			        m_startdName.c_str() );
-			dprintf (D_FULLDEBUG,
-			        "      (Claim ID is \"%s\")\n",
-			        idp.publicClaimId() );
-			return false;
-		}
-		return true;
-	}
-
-	bool startCommand()
-	{
-		dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n",
-					m_startdName.c_str(), m_startdAddr.c_str());
-
-		if(!m_nonblocking) {
-			Stream::stream_type st = m_startd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
-			Sock *sock =  m_startd.startCommand(MATCH_INFO,st,m_timeout);
-			bool result = false;
-			if(!sock) {
-				dprintf (D_ALWAYS,"      Failed to initiate socket (blocking mode) to send MATCH_INFO to %s\n",
-						 m_startdName.c_str());
-			}
-			else {
-				result = WriteMatchInfo(sock);
-			}
-			if(sock) {
-				delete sock;
-			}
-			delete this;
-			return result;
-		}
-
-		Stream::stream_type st = m_startd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
-		m_startd.startCommand_nonblocking (
-			MATCH_INFO,
-			st,
-			m_timeout,
-			NULL,
-			NotifyStartdOfMatchHandler::startCommandCallback,
-			this);
-
-			// Since this is nonblocking, we cannot give any immediate
-			// feedback on whether the message to the startd succeeds.
-		return true;
-	}
-};
-
 void Matchmaker::
 insertNegotiatorMatchExprs( ClassAdListDoesNotDeleteAds &cal )
 {
@@ -4925,7 +4931,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	int  cluster = 0;
 	int proc = 0;
 	std::string startdAddr;
-	string remoteUser;
+	std::string remoteUser;
 	char accountingGroup[256];
 	char remoteOwner[256];
 	std::string startdName;
@@ -4972,12 +4978,12 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// claim_id and all_claim_ids will have the primary claim id.
 	// For pslot preemption, all_claim_ids will also have the claim ids
 	// of the dslots being preempted.
-	string claim_id;
-	string all_claim_ids;
-	string dslotDesc;
+	std::string claim_id;
+	std::string all_claim_ids;
+	std::string dslotDesc;
     ClaimIdHash::iterator claimset = claimIds.end();
 	if (want_claiming) {
-        string key = startdName;
+		std::string key = startdName;
         key += startdAddr;
         claimset = claimIds.find(key);
         if ((claimIds.end() == claimset) || (claimset->second.size() < 1)) {
@@ -4988,12 +4994,12 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		all_claim_ids = claim_id;
 
 		// If there are extra preempting dslot claims, hand them out too
-		string extraClaims;
+		std::string extraClaims;
 		if (offer->LookupString("PreemptDslotClaims", extraClaims)) {
 			all_claim_ids += " ";
 			all_claim_ids += extraClaims;
 			size_t numExtraClaims = std::count(extraClaims.begin(), extraClaims.end(), ' ');
-			formatstr(dslotDesc, "%ld dslots", numExtraClaims);
+			formatstr(dslotDesc, "%zu dslots", numExtraClaims);
 			offer->Delete("PreemptDslotClaims");
 		}
 
@@ -5050,6 +5056,10 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// used by schedd_negotiate.cpp when resource request lists are being used
 	offer->Assign(ATTR_RESOURCE_REQUEST_CLUSTER,cluster);
 	offer->Assign(ATTR_RESOURCE_REQUEST_PROC,proc);
+
+	if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
+		offer->InsertAttr(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, true);
+	}
 
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd
@@ -5155,7 +5165,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 void
 Matchmaker::calculateSubmitterLimit(
-	const string &submitterName,
+	const std::string &submitterName,
 	char const *groupAccountingName,
 	float groupQuota,
 	float groupusage,
@@ -5287,14 +5297,14 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds,
 	// also, do not factor in ads with the same ATTR_NAME more than once -
 	// ads with the same ATTR_NAME signify the same user submitting from multiple
 	// machines.
-	std::set<MyString> names;
+	std::set<std::string> names;
 	normalFactor = 0.0;
 	normalAbsFactor = 0.0;
 	submitterAds.Open();
 	while (ClassAd* ad = submitterAds.Next()) {
 		std::string subname;
 		ad->LookupString(ATTR_NAME, subname);
-        std::pair<std::set<MyString>::iterator, bool> r = names.insert(subname);
+        std::pair<std::set<std::string>::iterator, bool> r = names.insert(subname);
         // Only count each submitter once
         if (!r.second) continue;
 
@@ -5328,15 +5338,15 @@ void Matchmaker::
 addRemoteUserPrios( ClassAd	*ad )
 {	
 	std::string	remoteUser;
-	string buffer,buffer1,buffer2,buffer3;
-	string slot_prefix;
-	string expr;
-	string expr_buffer;
+	std::string buffer,buffer1,buffer2,buffer3;
+	std::string slot_prefix;
+	std::string expr;
+	std::string expr_buffer;
 	float	prio;
 	int     total_slots, i;
 	float     preemptingRank;
 	float temp_groupQuota, temp_groupUsage;
-    string temp_groupName;
+	std::string temp_groupName;
 
 		// If there is a preempting user, use that for computing remote user prio.
 		// Otherwise, use the current user.
@@ -5423,7 +5433,7 @@ reeval(ClassAd *ad)
 	cur_matches = 0;
 	ad->LookupInteger("CurMatches", cur_matches);
 
-	MyString adID = MachineAdID(ad);
+	std::string adID = MachineAdID(ad);
 	stashedAds->lookup( adID, oldAdEntry);
 		
 	cur_matches++;
@@ -5487,7 +5497,7 @@ peek_candidate()
 #endif
 
 ClassAd* Matchmaker::MatchListType::
-pop_candidate(string &dslot_claims)
+pop_candidate(std::string &dslot_claims)
 {
 	ClassAd* candidate = NULL;
 
@@ -5530,7 +5540,7 @@ insert_candidate(ClassAd * candidate,
 	int insert_idx = adListHead;
 	while ( insert_idx < adListLen - 1 )
 	{
-		if ( sort_compare( &new_entry, &AdListArray[insert_idx + 1] ) > 0 ) {
+		if ( sort_compare( new_entry, AdListArray[insert_idx + 1])) {
 			AdListArray[insert_idx] = AdListArray[insert_idx + 1];
 			insert_idx++;
 		} else {
@@ -5538,6 +5548,7 @@ insert_candidate(ClassAd * candidate,
 		}
 	}
 	AdListArray[insert_idx] = new_entry;
+
 	return true;
 }
 
@@ -5660,7 +5671,7 @@ add_candidate(ClassAd * candidate,
 					double candidatePostJobRankValue,
 					double candidatePreemptRankValue,
 					PreemptState candidatePreemptState,
-					const string &candidateDslotClaims)
+					const std::string &candidateDslotClaims)
 {
 	ASSERT(AdListArray);
 	ASSERT(adListLen < adListMaxLen);  // don't write off end of array!
@@ -5710,23 +5721,20 @@ void Matchmaker::DeleteMatchList()
 	unmutatedSlotAds.clear();
 }
 
-int Matchmaker::MatchListType::
-sort_compare(const void* elem1, const void* elem2)
+bool Matchmaker::MatchListType::
+sort_compare(const AdListEntry &Elem1, const AdListEntry &Elem2)
 {
-	const AdListEntry* Elem1 = (const AdListEntry*) elem1;
-	const AdListEntry* Elem2 = (const AdListEntry*) elem2;
+	const double candidateRankValue = Elem1.RankValue;
+	const double candidatePreJobRankValue = Elem1.PreJobRankValue;
+	const double candidatePostJobRankValue = Elem1.PostJobRankValue;
+	const double candidatePreemptRankValue = Elem1.PreemptRankValue;
+	const PreemptState candidatePreemptState = Elem1.PreemptStateValue;
 
-	const double candidateRankValue = Elem1->RankValue;
-	const double candidatePreJobRankValue = Elem1->PreJobRankValue;
-	const double candidatePostJobRankValue = Elem1->PostJobRankValue;
-	const double candidatePreemptRankValue = Elem1->PreemptRankValue;
-	const PreemptState candidatePreemptState = Elem1->PreemptStateValue;
-
-	const double bestRankValue = Elem2->RankValue;
-	const double bestPreJobRankValue = Elem2->PreJobRankValue;
-	const double bestPostJobRankValue = Elem2->PostJobRankValue;
-	const double bestPreemptRankValue = Elem2->PreemptRankValue;
-	const PreemptState bestPreemptState = Elem2->PreemptStateValue;
+	const double bestRankValue = Elem2.RankValue;
+	const double bestPreJobRankValue = Elem2.PreJobRankValue;
+	const double bestPostJobRankValue = Elem2.PostJobRankValue;
+	const double bestPreemptRankValue = Elem2.PreemptRankValue;
+	const PreemptState bestPreemptState = Elem2.PreemptStateValue;
 
 	if ( candidateRankValue == bestRankValue &&
 		 candidatePreJobRankValue == bestPreJobRankValue &&
@@ -5734,7 +5742,7 @@ sort_compare(const void* elem1, const void* elem2)
 		 candidatePreemptRankValue == bestPreemptRankValue &&
 		 candidatePreemptState == bestPreemptState )
 	{
-		return 0;
+		return false;
 	}
 
 	// the quality of a match is determined by a lexicographic sort on
@@ -5770,11 +5778,11 @@ sort_compare(const void* elem1, const void* elem2)
 	}
 
 	if ( newBestFound ) {
-		// candidate is better: candidate is elem1, and qsort man page
-		// says return < 0 is elem1 is less than elem2
-		return -1;
+		// candidate is better: candidate is elem1, and std::sort man page
+		// says return true is elem1 is better than elem2
+		return true;
 	} else {
-		return 1;
+		return false;
 	}
 }
 			
@@ -5787,7 +5795,7 @@ sort()
 
 	// Note: since we must use static members, sort() is
 	// _NOT_ thread safe!!!
-	qsort(AdListArray,adListLen,sizeof(AdListEntry),sort_compare);
+	std::sort(AdListArray,AdListArray + adListLen,sort_compare);
 
 	already_sorted = true;
 }
@@ -5828,10 +5836,8 @@ Matchmaker::updateCollector() {
         daemonCore->dc_stats.Publish(*publicAd);
 		daemonCore->monitor_data.ExportData(publicAd);
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
 		NegotiatorPluginManager::Update(*publicAd);
-#endif
 #endif
 		daemonCore->sendUpdates(UPDATE_NEGOTIATOR_AD, publicAd, NULL, true);
 	}
@@ -6113,7 +6119,7 @@ bool rankPairCompare(std::pair<int,double> lhs, std::pair<int,double> rhs) {
 	// Only consider startd RANK for now.
 bool
 Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitterName,
-                            bool only_startd_rank, string &dslot_claims, PreemptState &candidatePreemptState)
+                            bool only_startd_rank, std::string &dslot_claims, PreemptState &candidatePreemptState)
 {
 	bool isPartitionable = false;
 	PreemptState saved_candidatePreemptState = candidatePreemptState;
@@ -6157,7 +6163,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 	for ( int i = 0; i < numDslots; i++ ) {
 		double currentRank = 0.0; // global default startd rank
 		int retire_time = 0;
-		string state = "";
+		std::string state = "";
 		dslotLookupFloat( machine, ATTR_CURRENT_RANK, i, currentRank );
 		dslotLookupInteger( machine, ATTR_RETIREMENT_TIME_REMAINING, i,
 							retire_time );

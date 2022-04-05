@@ -41,8 +41,10 @@ public:
     int         job_prio;
     int         status;
     int         qdate;
-    char        submitter[MAX_CONDOR_USERNAME_LEN];
 	int			auto_cluster_id;
+	std::string submitter;
+	bool		not_runnable;
+	bool		matched;
 
 	prio_rec() {
 		id.cluster = 0;
@@ -56,6 +58,8 @@ public:
 		pre_job_prio2 = 0;
 		post_job_prio1 = 0;
 		post_job_prio2 = 0;
+		not_runnable = false;
+		matched = false;
 	}
 };
 

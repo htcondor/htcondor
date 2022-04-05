@@ -187,6 +187,7 @@ ReadCheckPointFile(){
 	  if( ( fd_check = open( CheckFileName.c_str(), O_RDWR | O_CREAT, 0600 ) ) < 0 ) {
             CondorErrno = ERR_CACHE_FILE_ERROR;
 	    CondorErrMsg = "internal error:  unable to open checkpoint file";
+		return false;
 	  }
 	  string buffer;
 	  int fempty=lseek(fd_check,0,SEEK_END);

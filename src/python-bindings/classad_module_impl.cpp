@@ -258,7 +258,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(get_overloads, get, 1, 2);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(init_overloads, init, 0, 1);
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(evaluate_overloads, Evaluate, 0, 1);
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(simplify_overloads, simplify, 0, 1);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(simplify_overloads, simplify, 0, 2);
 
 #define PYTHON_OPERATOR(op) \
 .def("__" #op "__", &ExprTreeHolder:: __ ##op ##__)
@@ -672,7 +672,7 @@ export_classad()
         .def("__getitem__", &ExprTreeHolder::getItem, condor::classad_expr_return_policy<>())
         .def("_get", &ExprTreeHolder::subscript, condor::classad_expr_return_policy<>())
         .def("simplify", &ExprTreeHolder::simplify, simplify_overloads(
-            boost::python::args("self", "scope"),
+            boost::python::args("self", "scope", "target"),
             R"C0ND0R(
             Evaluate the expression and return as a :class:`ExprTree`.
 
@@ -694,6 +694,12 @@ export_classad()
 
                 If passed, ``scope`` must be a :class:`classad.ClassAd`.
             :type scope: :class:`ClassAd`
+
+            :param target: Optionally, the :class:`ClassAd` TARGET ad.
+
+                If passed, ``target`` must be a :class:`classAd.ClassAd`.
+            :type target: :class:`ClassAd`
+
             :return: The evaluated expression as an :class:`ExprTree`.
             )C0ND0R"))
         .def("eval", &ExprTreeHolder::Evaluate, evaluate_overloads(

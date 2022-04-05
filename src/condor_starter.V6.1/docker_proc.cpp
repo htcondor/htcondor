@@ -103,8 +103,14 @@ int DockerProc::StartJob() {
 	Starter->SetJobEnvironmentReady(false);
 
 	if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageID ) ) {
-		dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE );
-		return FALSE;
+		if (! JobAd->LookupString(ATTR_CONTAINER_IMAGE, imageID)) {
+			dprintf( D_ALWAYS | D_FAILURE, "Neither %s nor %s defined in job ad, unable to start job.\n", ATTR_DOCKER_IMAGE, ATTR_CONTAINER_IMAGE);
+			return FALSE;
+		}
+	}
+
+	if (starts_with(imageID, "docker://")) {
+		imageID = imageID.substr(9);
 	}
 
 	std::string command;
@@ -131,7 +137,7 @@ int DockerProc::StartJob() {
 	#endif
 #else
 	// TODO: make this work on Linux also
-	std::string innerdir = Starter->GetWorkingDir(true);
+	std::string innerdir = Starter->jic->jobRemoteIWD();
 #endif
 
 	//
@@ -153,8 +159,8 @@ int DockerProc::StartJob() {
 
 	ArgList args;
 	args.SetArgV1SyntaxToCurrentPlatform();
-	MyString argsError;
-	if( ! args.AppendArgsFromClassAd( JobAd, & argsError ) ) {
+	std::string argsError;
+	if( ! args.AppendArgsFromClassAd( JobAd, argsError ) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to read job arguments from job ad: '%s'.\n", argsError.c_str() );
 		return FALSE;
 	}
@@ -168,9 +174,9 @@ int DockerProc::StartJob() {
 	}
 
 	Env job_env;
-	MyString env_errors;
-	if( !Starter->GetJobEnv(JobAd,&job_env,&env_errors) ) {
-		dprintf( D_ALWAYS, "Aborting DockerProc::StartJob: %s\n", env_errors.Value());
+	std::string env_errors;
+	if( !Starter->GetJobEnv(JobAd,&job_env, env_errors) ) {
+		dprintf( D_ALWAYS, "Aborting DockerProc::StartJob: %s\n", env_errors.c_str());
 		return 0;
 	}
 
@@ -210,9 +216,14 @@ int DockerProc::StartJob() {
 
 	std::list<std::string> extras;
 	std::string scratchDir = Starter->GetWorkingDir(0);
-		// if file xfer is off, need to also mount SCRATCH_DIR (= cwd)
-	if (scratchDir != sandboxPath) {
-		extras.push_back(scratchDir + ":" + scratchDir);
+
+	// map the scratch dir inside the container
+	extras.push_back(scratchDir + ":" + scratchDir);
+
+	// if file xfer is off, also map the iwd
+	std::string iwd = Starter->jic->jobRemoteIWD();
+	if (iwd != scratchDir) {
+		extras.push_back(iwd + ":" + iwd);
 	}
 
 	buildExtraVolumes(extras, *machineAd, *JobAd);
@@ -281,6 +292,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 				int r = read(fd, buf, 511);
 				if (r < 0) {
 					dprintf(D_ALWAYS, "Cannot read docker error file on docker create container. Errno %d\n", errno);
+					buf[0] = '\0';
 				} else {
 					buf[r] = '\0';
 					int buflen = strlen(buf);
@@ -294,7 +306,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			}
 			}
 			message = buf;
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_InvalidDockerImage, 0);
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
 			{
 			TemporaryPrivSentry sentry(PRIV_USER);
 			unlink("docker_stderror");
@@ -443,12 +455,6 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 		if( rv < 0 ) {
 			dprintf( D_ALWAYS | D_FAILURE, "Failed to inspect (for removal) container '%s'.\n", containerName.c_str() );
-			std::string imageName;
-			if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageName ) ) {
-				dprintf( D_ALWAYS | D_FAILURE, "%s not defined in job ad.\n", ATTR_DOCKER_IMAGE );
-				imageName = "Unknown"; // shouldn't ever happen
-			}
-
 			EXCEPT("Cannot inspect exited container");
 		}
 
@@ -480,7 +486,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
 
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
 			DockerAPI::rm( containerName, error );
 
 			if ( Starter->Hold( ) ) {
@@ -505,7 +511,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
 
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE_FailedToCreateProcess, 0);
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
 			DockerAPI::rm( containerName, error );
 
 			if ( Starter->Hold( ) ) {
@@ -540,6 +546,13 @@ bool DockerProc::JobReaper( int pid, int status ) {
 void
 DockerProc::SetupDockerSsh() {
 #ifdef LINUX
+	static bool first_time = true;
+	if (first_time) {
+		first_time = false;
+	} else {
+		return;
+	}
+
 	// First, create a unix domain socket that we can listen on
 	int uds = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (uds < 0) {
@@ -612,9 +625,9 @@ DockerProc::AcceptSSHClient(Stream *stream) {
 	args.AppendArg("-i");
 
 	Env env;
-	MyString env_errors;
-	if( !Starter->GetJobEnv(JobAd,&env,&env_errors) ) {
-		dprintf( D_ALWAYS, "Aborting DockerProc::exec: %s\n", env_errors.Value());
+	std::string env_errors;
+	if( !Starter->GetJobEnv(JobAd,&env, env_errors) ) {
+		dprintf( D_ALWAYS, "Aborting DockerProc::exec: %s\n", env_errors.c_str());
 		return 0;
 	}
 
@@ -885,6 +898,15 @@ bool DockerProc::Detect() {
 	CondorError err;
 	bool hasDocker = DockerAPI::detect( err ) == 0;
 
+	if (hasDocker) {
+		int r  = DockerAPI::testImageRuns(err);
+		if (r == 0) {
+			hasDocker = true;
+		} else {
+			hasDocker = false;
+		}
+	}
+
 	return hasDocker;
 }
 
@@ -903,6 +925,18 @@ bool DockerProc::Version( std::string & version ) {
 	}
 
 	return foundVersion;
+}
+void 
+DockerProc::restartCheckpointedJob() {
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	CondorError error;
+	int rv = DockerAPI::rm( containerName, error );
+	if( rv < 0 ) {
+		dprintf( D_ALWAYS | D_FAILURE, "Failed to remove container '%s' after checkpoint exit.\n", containerName.c_str() );
+		// Will fail later when we try to restart if it still exists.  If it doesn't :shrug: all good!
+	}
+
+	VanillaProc::restartCheckpointedJob();
 }
 
 // Generate a list of strings that are suitable arguments to
@@ -930,7 +964,7 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 		char *scratchName = 0;
 			// Foreach scratch name...
 		while ( (scratchName=sl.next()) ) {
-			MyString hostdirbuf;
+			std::string hostdirbuf;
 			const char * hostDir = dirscat(workingDir.c_str(), scratchName, hostdirbuf);
 			std::string volumePath;
 			volumePath.append(hostDir).append(":").append(scratchName);

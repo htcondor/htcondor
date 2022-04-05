@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
+#include <map>
 
 #include "baseresource.h"
 #include "gahp-client.h"
@@ -60,7 +61,7 @@ class BoincResource : public BaseResource
 	BoincSubmitResponse Submit( BoincJob *job, std::string &error_str );
 	bool JobDone( BoincJob *job );
 
-	static const char *HashName( const char *resource_name,
+	static std::string & HashName( const char *resource_name,
 								 const char *authenticator );
 
 	static BoincResource *FindOrCreateResource( const char *resource_name,
@@ -72,7 +73,7 @@ class BoincResource : public BaseResource
 	static bool BatchReadyToSubmit( BoincBatch *batch, unsigned *delay = NULL );
 
 	// This should be private, but BoincJob references it directly for now
-	static HashTable <std::string, BoincResource *> ResourcesByName;
+	static std::map <std::string, BoincResource *> ResourcesByName;
 
 	char *m_serviceUri;
 	char *m_authenticator;

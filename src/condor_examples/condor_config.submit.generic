@@ -644,8 +644,8 @@ C_GAHP_WORKER_THREAD_LOCK = /tmp/CGAHPWorkerLock.$(USERNAME)
 ## Location of the PBS/LSF gahp and its associated binaries
 ##
 GLITE_LOCATION = $(LIB)/glite
-PBS_GAHP = $(GLITE_LOCATION)/bin/batch_gahp
-LSF_GAHP = $(GLITE_LOCATION)/bin/batch_gahp
+PBS_GAHP = $(BIN)/blahpd
+LSF_GAHP = $(BIN)/blahpd
 
 ##
 ## The location of the wrapper for invoking the Unicore GAHP server

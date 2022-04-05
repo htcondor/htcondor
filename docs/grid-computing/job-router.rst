@@ -109,13 +109,6 @@ for routing.
    it is important to explicitly specify all output files that must be
    transferred upon job completion.
 
-   An additional difference between the vanilla universe jobs and
-   **gt2** grid universe jobs is that **gt2** jobs do not return any
-   information about the job's exit status. The exit status as reported
-   in the job ClassAd and job event log are always 0. Therefore, jobs
-   that may be routed to a **gt2** grid site must not rely upon a
-   non-zero job exit status.
-
 -  One configuration for routed jobs requires the jobs to identify
    themselves as candidates for Job Routing. This may be accomplished by
    inventing a ClassAd attribute that the configuration utilizes in
@@ -206,8 +199,8 @@ The following sample configuration sets up potential job routing to
 three routes (grid sites). Definitions of the configuration variables
 specific to the Job Router are in the 
 :ref:`admin-manual/configuration-macros:condor_job_router configuration file
-entries` section. One route is an HTCondor site accessed via the Globus gt2
-protocol. A second route is a PBS site, also accessed via Globus gt2. The third
+entries` section. One route a local SLURM cluster.
+A second route is cluster accessed via ARC CE. The third
 site is an HTCondor site accessed by HTCondor-C. The *condor_job_router* daemon
 does not know which site will be best for a given job. The policy implemented in
 this sample configuration stops sending more jobs to a site, if ten jobs
@@ -217,11 +210,9 @@ These configuration settings belong in the local configuration file of
 the machine where jobs are submitted. Check that the machine can
 successfully submit grid jobs before setting up and using the Job
 Router. Typically, the single required element that needs to be added
-for GSI authentication is an X.509 trusted certification authority
+for SSL authentication is an X.509 trusted certification authority
 directory, in a place recognized by HTCondor (for example,
-``/etc/grid-security/certificates``). The VDT
-(`http://vdt.cs.wisc.edu <http://vdt.cs.wisc.edu>`_) project provides a
-convenient way to set up and install a trusted CA, if needed.
+``/etc/grid-security/certificates``).
 
 Note that, as of version 8.5.6, the configuration language supports
 multi-line values, as shown in the example below (see the
@@ -248,22 +239,22 @@ will be considered in the order given by this configuration variable.
     JOB_ROUTER_ROUTE_NAMES = Site1 Site2 CondorSite
 
     JOB_ROUTER_ROUTE_Site1 @=rt
-      GridResource = "gt2 site1.edu/jobmanager-condor"
+      GridResource = "batch slurm"
     @rt
 
     JOB_ROUTER_ROUTE_Site2 @=rt
-      GridResource = "gt2 site2.edu/jobmanager-condor"
-      SET GlobusRSL = "(maxwalltime=$(ROUTED_JOB_MAX_TIME))(jobType=single)"
+      GridResource = "arc site2.edu"
+      SET ArcRte = "ENV/PROXY"
     @rt
 
     JOB_ROUTER_ROUTE_CondorSite @=rt
       MaxIdleJobs = 20
-      GridResource = "condor submit.site3.edu condor.site3.edu"
+      GridResource = "condor submit.site3.edu cm.site3.edu"
       SET remote_jobuniverse = 5
     @rt
 
     # define a pre-route transform that does the transforms all routes should do
-    JOB_ROUTER_PRE_ROUTE_TRANSFORMS = Defaults
+    JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES = Defaults
 
     JOB_ROUTER_TRANSFORM_Defaults @=jrd
        # remove routed job if it goes on hold or stays idle for over 6 hours
@@ -294,7 +285,7 @@ A route consists of a sequence of Macro values and commands which are applied
 in order to produce the routed job ClassAd.  Certain macro names have special meaning
 when used in a router transform.  These special macro names are listed below
 allong a brief listing of the the transform commands.  For a more detailed description
-of the tranform commands refer to the :ref:`misc-concepts/transforms:Transform Commands` section.
+of the tranform commands refer to the :ref:`classads/transforms:Transform Commands` section.
 
 The conversion of a job to a routed copy will usually require the job ClassAd to
 be modified. The Routing Table specifies attributes of the different
@@ -302,7 +293,7 @@ possible routes and it may specify specific modifications that should be
 made to the job when it is sent along a specific route. In addition to
 this mechanism for transforming the job, external programs may be
 invoked to transform the job. For more information, see
-the :ref:`misc-concepts/hooks:hooks for a job router` section.
+the :ref:`admin-manual/hooks:hooks for a job router` section.
 
 The following attributes and instructions for modifying job attributes
 may appear in a Routing Table entry.
@@ -363,6 +354,16 @@ may appear in a Routing Table entry.
     ``target.RemoteWallClockTime < 1800``. A more flexible expression
     might reference a property or expression of the job that specifies a
     failure condition specific to the type of job.
+
+:index:`SendIDTokens<single: SendIDTokens; Job Router Routing Table attribute>`
+
+``SendIDTokens``
+    A string expression that lists the names of the IDTOKENS to add to the
+    input file transfer list of the routed job. The string should list one or
+    more of the IDTOKEN names specified by the ``JOB_ROUTER_CREATE_IDTOKEN_NAMES``
+    configuration variable.
+    if ``SendIDTokens`` is not specified, then the value of the JobRouter
+    configuration varible ``JOB_ROUTER_SEND_ROUTE_IDTOKENS`` will be used.
 
 :index:`UseSharedX509UserProxy<single: UseSharedX509UserProxy; Job Router Routing Table ClassAd attribute>`
 
@@ -495,58 +496,6 @@ may appear in a Routing Table entry.
     Deletes all attributes that match the regular expression ``<regex>`` from the routed copy of the job.
 
 
-Example: constructing the routing table from ReSS
--------------------------------------------------
-
-The Open Science Grid has a service called ReSS (Resource Selection
-Service). It presents grid sites as ClassAds in an HTCondor collector.
-This example builds a routing table from the site ClassAds in the ReSS
-collector.
-
-Using ``JOB_ROUTER_ENTRIES_CMD`` :index:`JOB_ROUTER_ENTRIES_CMD`,
-we tell the *condor_job_router* daemon to call a simple script which
-queries the collector and outputs a routing table. The script, called
-osg_ress_routing_table.sh, is just this:
-
-.. code-block:: bash
-
-    #!/bin/sh
-
-    # you _MUST_ change this:
-    export condor_status=/path/to/condor_status
-    # if no command line arguments specify -pool, use this:
-    export _CONDOR_COLLECTOR_HOST=osg-ress-1.fnal.gov
-
-    condor_status -format '[ ' BeginAd \
-                  -format 'GridResource = "gt2 %s"; ' GlueCEInfoContactString \
-                  -format ']\n' EndAd "$@" | uniq
-
-Save this script to a file and make sure the permissions on the file
-mark it as executable. Test this script by calling it by hand before
-trying to use it with the *condor_job_router* daemon. You may supply
-additional arguments such as **-constraint** to limit the sites which
-are returned.
-
-Once you are satisfied that the routing table constructed by the script
-is what you want, configure the *condor_job_router* daemon to use it:
-
-.. code-block:: condor-config
-
-    # command to build the routing table
-    JOB_ROUTER_ENTRIES_CMD = /path/to/osg_ress_routing_table.sh <extra arguments>
-
-    # how often to rebuild the routing table:
-    JOB_ROUTER_ENTRIES_REFRESH = 3600
-
-Using the example configuration, use the above settings to replace
-``JOB_ROUTER_ENTRIES`` :index:`JOB_ROUTER_ENTRIES`. Or, leave
-``JOB_ROUTER_ENTRIES`` :index:`JOB_ROUTER_ENTRIES` there and have
-a routing table containing entries from both sources. When you restart
-or reconfigure the *condor_job_router* daemon, you should see messages
-in the Job Router's log indicating that it is adding more routes to the
-table.
-
-
 Deprecated router configuration
 ---------------------------------------
 
@@ -607,14 +556,14 @@ so routes were normally given mutually exclusive requirements.
 
     # Now we define each of the routes to send jobs on
     JOB_ROUTER_ENTRIES @=jre
-      [ GridResource = "gt2 site1.edu/jobmanager-condor";
+      [ GridResource = "batch slurm";
         name = "Site_1";
       ]
-      [ GridResource = "gt2 site2.edu/jobmanager-pbs";
+      [ GridResource = "arc site2.edu";
         name = "Site_2";
-        set_GlobusRSL = "(maxwalltime=$(ROUTED_JOB_MAX_TIME))(jobType=single)";
+        set_ArcRte = "ENV/PROXY";
       ]
-      [ GridResource = "condor submit.site3.edu condor.site3.edu";
+      [ GridResource = "condor submit.site3.edu cm.site3.edu";
         name = "Site_3";
         set_remote_jobuniverse = 5;
       ]

@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,6 @@
 #include "condor_common.h"
 #include "baseshadow.h"
 #include "shadow_user_policy.h"
-#include "MyString.h"
 #include "condor_holdcodes.h"
 
 
@@ -49,7 +48,7 @@ ShadowUserPolicy::init( ClassAd *job_ad_ptr, BaseShadow *shadow_ptr )
 }
 
 int
-ShadowUserPolicy::getJobBirthday( ) 
+ShadowUserPolicy::getJobBirthday( )
 {
 	int bday = 0;
 	if ( this->job_ad ) {
@@ -59,13 +58,13 @@ ShadowUserPolicy::getJobBirthday( )
 }
 
 void
-ShadowUserPolicy::doAction( int action, bool is_periodic ) 
+ShadowUserPolicy::doAction( int action, bool is_periodic )
 {
-	MyString reason;
+	std::string reason;
 	int reason_code;
 	int reason_subcode;
 	this->user_policy.FiringReason(reason,reason_code,reason_subcode);
-	if ( reason.IsEmpty() ) {
+	if ( reason.empty() ) {
 		EXCEPT( "ShadowUserPolicy: Empty FiringReason." );
 	}
 
@@ -73,16 +72,16 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 	case UNDEFINED_EVAL:
 	case HOLD_IN_QUEUE:
 		if( is_periodic ) {
-			shadow->holdJob( reason.Value(), reason_code, reason_subcode );
+			shadow->holdJob( reason.c_str(), reason_code, reason_subcode );
 		}
 		else {
-			shadow->holdJobAndExit( reason.Value(), reason_code, reason_subcode );
+			shadow->holdJobAndExit( reason.c_str(), reason_code, reason_subcode );
 		}
 		break;
 
 	case REMOVE_FROM_QUEUE:
 		if( is_periodic ) {
-			this->shadow->removeJob( reason.Value() );
+			this->shadow->removeJob( reason.c_str() );
 		} else {
 			this->shadow->terminateJob();
 		}
@@ -93,12 +92,11 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 			EXCEPT( "STAYS_IN_QUEUE should never be handled by "
 					"periodic doAction()" );
 		}
-		this->shadow->requeueJob( reason.Value() );
+		this->shadow->requeueJob( reason.c_str() );
 		break;
 
 	default:
-		EXCEPT( "Unknown action (%d) in ShadowUserPolicy::doAction", 
+		EXCEPT( "Unknown action (%d) in ShadowUserPolicy::doAction",
 				action );
 	}
 }
-

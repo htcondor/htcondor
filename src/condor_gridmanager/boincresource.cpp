@@ -41,11 +41,14 @@ using std::set;
 #define SUBMIT_DELAY				2
 #define LEASE_RETRY_INTERVAL		(5 * 60)
 
+// This result code from the boinc_gahp looks like a bad copy-pasta
+// from the gram gahp. But I'm leaving it alone for now.
+#define GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER 79
 
 int BoincResource::gahpCallTimeout = 300;	// default value
 
-HashTable <std::string, BoincResource *>
-    BoincResource::ResourcesByName( hashFunction );
+std::map <std::string, BoincResource *>
+    BoincResource::ResourcesByName;
 
 enum BatchSubmitStatus {
 	BatchUnsubmitted,
@@ -72,23 +75,20 @@ struct BoincBatch {
 BoincResource *BoincResource::FindOrCreateResource( const char *resource_name,
 													const char *authenticator )
 {
-	int rc;
 	BoincResource *resource = NULL;
-
-	const char *hash_name = HashName( resource_name, authenticator );
-	ASSERT(hash_name);
-
-	rc = ResourcesByName.lookup( hash_name, resource );
-	if ( rc != 0 ) {
+	std::string &key = HashName( resource_name, authenticator );
+	auto itr = ResourcesByName.find( key );
+	if ( itr == ResourcesByName.end() ) {
 		resource = new BoincResource( resource_name, authenticator );
 		ASSERT(resource);
 		if ( resource->Init() == false ) {
 			delete resource;
 			resource = NULL;
 		} else {
-			ResourcesByName.insert( hash_name, resource );
+			ResourcesByName[key] = resource;
 		}
 	} else {
+		resource = itr->second;
 		ASSERT(resource);
 	}
 
@@ -134,7 +134,7 @@ BoincResource::~BoincResource()
 	daemonCore->Cancel_Timer( m_leaseTid );
 	daemonCore->Cancel_Timer( m_submitTid );
 
-	ResourcesByName.remove( HashName( resourceName, m_authenticator ) );
+	ResourcesByName.erase( HashName( resourceName, m_authenticator ) );
 
 	free( m_serviceUri );
 	free( m_authenticator );
@@ -226,14 +226,14 @@ const char *BoincResource::ResourceType()
 	return "boinc";
 }
 
-const char *BoincResource::HashName( const char *resource_name,
+std::string & BoincResource::HashName( const char *resource_name,
 									 const char *authenticator )
 {
 	static std::string hash_name;
 
 	formatstr( hash_name, "boinc %s %s", resource_name, authenticator );
 
-	return hash_name.c_str();
+	return hash_name;
 }
 
 void BoincResource::RegisterJob( BaseJob *base_job )
@@ -305,7 +305,7 @@ void BoincResource::UnregisterJob( BaseJob *base_job )
 
 const char *BoincResource::GetHashName()
 {
-	return HashName( resourceName, m_authenticator );
+	return HashName( resourceName, m_authenticator ).c_str();
 }
 
 void BoincResource::PublishResourceAd( ClassAd *resource_ad )

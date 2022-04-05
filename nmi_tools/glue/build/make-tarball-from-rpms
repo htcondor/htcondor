@@ -47,7 +47,7 @@ if [[ $dist == amzn2 ]]; then
 elif [[ $dist == el7 ]]; then
     arch_dist="${arch}_CentOS7"
 elif [[ $dist == el8 ]]; then
-    arch_dist="${arch}_CentOS8"
+    arch_dist="${arch}_Rocky8"
 elif [[ $dist == fc32 ]]; then
     arch_dist="${arch}_Fedora32"
 fi
@@ -61,38 +61,19 @@ mv condor_tests-* condor_tests-$version-$release-$arch_dist
 (cd condor_tests-$version-$release-$arch_dist; chmod a+x $(file $(find -type f)|grep 'executable'|sed -e s/:.*//))
 (cd condor_tests-$version-$release-$arch_dist; chmod a+x $(find -type f -name script\*))
 $cmd_dir/set-tarball-rpath condor_tests-$version-$release-$arch_dist '$ORIGIN/../lib64'
+if [ $? -ne 0 ];then
+    echo 'ERROR: set rpath script failed'
+    exit 1
+fi
 tar cfz condor_tests-$version-$release-$arch_dist.tar.gz condor_tests-$version-$release-$arch_dist
 rm -r condor_tests-$version-$release-$arch_dist
 
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
 
-uw_externals="blahp condor-boinc"
-
 common_externals="boost169-python3 \
-    globus-callout \
-    globus-common \
-    globus-ftp-client \
-    globus-ftp-control \
-    globus-gass-transfer \
-    globus-gram-client \
-    globus-gram-protocol \
-    globus-gsi-callback \
-    globus-gsi-cert-utils \
-    globus-gsi-credential \
-    globus-gsi-openssl-error \
-    globus-gsi-proxy-core \
-    globus-gsi-proxy-ssl \
-    globus-gsi-sysconfig \
-    globus-gss-assist \
-    globus-gssapi-error \
-    globus-gssapi-gsi \
-    globus-io \
-    globus-openssl-module \
-    globus-rsl \
-    globus-xio \
-    globus-xio-gsi-driver \
-    globus-xio-popen-driver \
+    libcgroup \
+    libgomp \
     munge-libs \
     scitokens-cpp \
     voms"
@@ -104,15 +85,15 @@ if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
         python36-requests \
         python36-six \
         python36-urllib3"
-    externals="$common_externals $uw_externals $el7_externals"
-elif [[ $arch_dist =~ CentOS8 ]]; then
-    externals="$common_externals $uw_externals"
+    externals="$common_externals $el7_externals"
+elif [[ $arch_dist =~ Rocky8 ]]; then
+    externals="$common_externals"
 elif [[ $arch_dist =~ Fedora32 ]]; then
     externals="$common_externals"
 fi
 
 mkdir external-packages
-yumdownloader --downloadonly --destdir=external-packages $externals
+yumdownloader --assumeyes --downloadonly --destdir=external-packages $externals
 
 # Extract external RPMs
 for file in external-packages/*.rpm; do
@@ -127,8 +108,25 @@ for file in external-packages/*.rpm; do
 done
 
 rm -r external-packages
+
+# Check tarball for externals (in case of download errors)
+for package in $externals; do
+    if ! grep $package tarball/Manifest.txt; then
+        echo "ERROR: external $package is missing!"
+        exit 1
+    fi
+done
+
 $cmd_dir/make-tarball-links tarball
+if [ $? -ne 0 ];then
+    echo 'ERROR: tarball link script failed'
+    exit 1
+fi
 $cmd_dir/set-tarball-rpath tarball '$ORIGIN/../lib64'
+if [ $? -ne 0 ];then
+    echo 'ERROR: set rpath script failed'
+    exit 1
+fi
 
 # Fixup directory permissions for the tarball
 chmod 755 tarball/etc/condor/passwords.d

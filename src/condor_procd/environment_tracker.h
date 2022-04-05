@@ -32,6 +32,7 @@ class EnvironmentTracker : public ProcFamilyTracker {
 public:
 
 	EnvironmentTracker(ProcFamilyMonitor* pfm) : ProcFamilyTracker(pfm) { }
+	virtual ~EnvironmentTracker()  {m_list.clear();}
 
 	void add_mapping(ProcFamily* family, PidEnvID* penvid)
 	{

@@ -41,7 +41,7 @@
 
 #include "collector.h"
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
 #include "CollectorPlugin.h"
 #endif
 
@@ -78,6 +78,7 @@ int CollectorDaemon::__failed__;
 List<ClassAd>* CollectorDaemon::__ClassAdResultList__;
 std::string CollectorDaemon::__adType__;
 ExprTree *CollectorDaemon::__filter__;
+bool CollectorDaemon::__hidePvtAttrs__;
 
 TrackTotals* CollectorDaemon::normalTotals = NULL;
 int CollectorDaemon::submittorRunningJobs;
@@ -1198,7 +1199,7 @@ int CollectorDaemon::receive_invalidation(int command,
     /* let the off-line plug-in invalidate the given ad */
     offline_plugin_.invalidate ( command, cad );
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
 	CollectorPluginManager::Invalidate(command, cad);
 #endif
 
@@ -1285,7 +1286,7 @@ int CollectorDaemon::receive_update(int command, Stream* sock)
 	/* let the off-line plug-in have at it */
 	offline_plugin_.update ( command, *cad );
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
 	CollectorPluginManager::Update(command, *cad);
 #endif
 
@@ -1425,7 +1426,7 @@ int CollectorDaemon::receive_update_expect_ack(int command,
 	if(cad)
     offline_plugin_.update ( command, *cad );
 
-#if defined(HAVE_DLOPEN) && !defined(DARWIN)
+#if defined(UNIX) && !defined(DARWIN)
     CollectorPluginManager::Update ( command, *cad );
 #endif
 
@@ -1447,11 +1448,11 @@ CollectorDaemon::stashSocket( ReliSock* sock )
 		return KEEP_STREAM;
 	}
 
-	MyString msg;
+	std::string msg;
 	if( daemonCore->TooManyRegisteredSockets(sock->get_file_desc(),&msg) ) {
 		dprintf(D_ALWAYS,
 				"WARNING: cannot register TCP update socket from %s: %s\n",
-				sock->peer_description(), msg.Value());
+				sock->peer_description(), msg.c_str());
 		return FALSE;
 	}
 
@@ -1484,6 +1485,11 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
 		}
 	}
 
+	int rc = 1;
+	ExprTree *cap_expr = NULL;
+	if ( __hidePvtAttrs__ ) {
+		cap_expr = cad->Remove(ATTR_CAPABILITY);
+	}
 	classad::Value result;
 	bool val;
 	if ( EvalExprTree( __filter__, cad, NULL, result ) &&
@@ -1492,13 +1498,16 @@ int CollectorDaemon::query_scanFunc (ClassAd *cad)
         __numAds__++;
 		__ClassAdResultList__->Append(cad);
 		if (__numAds__ >= __resultLimit__) {
-			return 0; // tell it to stop iterating, we have all the results we want
+			rc = 0; // tell it to stop iterating, we have all the results we want
 		}
     } else {
 		__failed__++;
 	}
 
-    return 1;
+	if ( cap_expr ) {
+		cad->Insert(ATTR_CAPABILITY, cap_expr);
+	}
+    return rc;
 }
 
 
@@ -1533,6 +1542,11 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 		__resultLimit__ = INT_MAX; // no limit
 	}
 
+	__hidePvtAttrs__ = false;
+	if ( whichAds == SUBMITTOR_AD || whichAds == SCHEDD_AD || whichAds == GENERIC_AD || whichAds == ANY_AD ) {
+		__hidePvtAttrs__ = true;
+	}
+
 	// See if we should exclude Collector Ads from generic queries.  Still
 	// give them out for specific collector queries, which is registered as
 	// ADMINISTRATOR when PROTECT_COLLECTOR_ADS is true.  This setting is
@@ -1540,17 +1554,17 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	// in the param table.
 	if ((whichAds != COLLECTOR_AD) && param_boolean("PROTECT_COLLECTOR_ADS", false)) {
 		dprintf(D_FULLDEBUG, "Received query with generic type; filtering collector ads\n");
-		MyString modified_filter;
-		modified_filter.formatstr("(%s) && (MyType =!= \"Collector\")",
+		std::string modified_filter;
+		formatstr(modified_filter, "(%s) && (MyType =!= \"Collector\")",
 			ExprTreeToString(__filter__));
-		query->AssignExpr(ATTR_REQUIREMENTS,modified_filter.Value());
+		query->AssignExpr(ATTR_REQUIREMENTS,modified_filter.c_str());
 		__filter__ = query->LookupExpr(ATTR_REQUIREMENTS);
 		if ( __filter__ == NULL ) {
-			dprintf (D_ALWAYS, "Failed to parse modified filter: %s\n", 
-				modified_filter.Value());
+			dprintf (D_ALWAYS, "Failed to parse modified filter: %s\n",
+				modified_filter.c_str());
 			return;
 		}
-		dprintf(D_FULLDEBUG,"Query after modification: *%s*\n",modified_filter.Value());
+		dprintf(D_FULLDEBUG,"Query after modification: *%s*\n",modified_filter.c_str());
 	}
 
 	// If ABSENT_REQUIREMENTS is defined, rewrite filter to filter-out absent ads 
@@ -1562,17 +1576,17 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 		GetReferences(ATTR_REQUIREMENTS,*query,NULL,&machine_refs);
 		checks_absent = machine_refs.count( ATTR_ABSENT );
 		if (!checks_absent) {
-			MyString modified_filter;
-			modified_filter.formatstr("(%s) && (%s =!= True)",
+			std::string modified_filter;
+			formatstr(modified_filter, "(%s) && (%s =!= True)",
 				ExprTreeToString(__filter__),ATTR_ABSENT);
-			query->AssignExpr(ATTR_REQUIREMENTS,modified_filter.Value());
+			query->AssignExpr(ATTR_REQUIREMENTS,modified_filter.c_str());
 			__filter__ = query->LookupExpr(ATTR_REQUIREMENTS);
 			if ( __filter__ == NULL ) {
 				dprintf (D_ALWAYS, "Failed to parse modified filter: %s\n", 
-					modified_filter.Value());
+					modified_filter.c_str());
 				return;
 			}
-			dprintf(D_FULLDEBUG,"Query after modification: *%s*\n",modified_filter.Value());
+			dprintf(D_FULLDEBUG,"Query after modification: *%s*\n",modified_filter.c_str());
 		}
 	}
 
@@ -1582,7 +1596,7 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	}
 
 	dprintf (D_ALWAYS, "(Sending %d ads in response to query)\n", __numAds__);
-}	
+}
 
 //
 // Setting ATTR_LAST_HEARD_FROM to 0 causes the housekeeper to invalidate
@@ -1841,7 +1855,7 @@ void CollectorDaemon::Config()
 	// This it temporary (for 8.7.0) just in case we need to turn off the new getClassAdEx options
 	collector.m_get_ad_options = param_integer("COLLECTOR_GETAD_OPTIONS", GET_CLASSAD_FAST | GET_CLASSAD_LAZY_PARSE);
 	collector.m_get_ad_options &= (GET_CLASSAD_LAZY_PARSE | GET_CLASSAD_FAST | GET_CLASSAD_NO_CACHE);
-	MyString opts;
+	std::string opts;
 	if (collector.m_get_ad_options & GET_CLASSAD_FAST) { opts += "fast "; }
 	if (collector.m_get_ad_options & GET_CLASSAD_NO_CACHE) { opts += "no-cache "; }
 	else if (collector.m_get_ad_options & GET_CLASSAD_LAZY_PARSE) { opts += "lazy-parse "; }
@@ -1849,12 +1863,12 @@ void CollectorDaemon::Config()
 	dprintf(D_ALWAYS, "COLLECTOR_GETAD_OPTIONS set to %s(0x%x)\n", opts.c_str(), collector.m_get_ad_options);
 
 	tmp = param(COLLECTOR_REQUIREMENTS);
-	MyString collector_req_err;
+	std::string collector_req_err;
 	if( !collector.setCollectorRequirements( tmp, collector_req_err ) ) {
 		EXCEPT("Handling of '%s=%s' failed: %s",
 			   COLLECTOR_REQUIREMENTS,
 			   tmp ? tmp : "(null)",
-			   collector_req_err.Value());
+			   collector_req_err.c_str());
 	}
 	if( tmp ) {
 		free( tmp );
@@ -2137,10 +2151,10 @@ void CollectorDaemon::init_classad(int interval)
             if( strchr( CollectorName, '@' ) ) {
                formatstr( id, "%s", CollectorName );
             } else {
-               formatstr( id, "%s@%s", CollectorName, get_local_fqdn().Value() );
+               formatstr( id, "%s@%s", CollectorName, get_local_fqdn().c_str() );
             }
     } else {
-            formatstr( id, "%s", get_local_fqdn().Value() );
+            formatstr( id, "%s", get_local_fqdn().c_str() );
     }
     ad->Assign( ATTR_NAME, id );
 

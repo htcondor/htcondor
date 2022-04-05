@@ -113,6 +113,7 @@ class UniShadow : public BaseShadow
 		 */
 	float bytesSent();
 	float bytesReceived();
+	void getFileTransferStats(ClassAd &upload_stats, ClassAd &download_stats);
 	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status);
 
 	int updateFromStarter(int command, Stream *s);
@@ -162,7 +163,7 @@ class UniShadow : public BaseShadow
 
 	virtual void logDisconnectedEvent( const char* reason );
 
-	virtual bool getMachineName( MyString &machineName );
+	virtual bool getMachineName( std::string &machineName );
 	
 	/**
 	 * Handle the situation where the job is to be suspended

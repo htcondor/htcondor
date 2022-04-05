@@ -228,6 +228,18 @@ int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * 
 		ExprTree * tree = job.Lookup(*attr);
 		sigset.push_back(tree);
 		if (expand_refs && tree) {
+			// bare attribute references that are not resolved locally show up as external refs
+			// but they may be something like JobMachineAttrs that get added to the job later.
+			// Also When something like Requirements has MY.foo, foo shows up as external ref foo when
+			// the job does not have a foo.  So we get the fully qualified external refs and then
+			// delete those that have a "." in them which gets rid of the unambiguously external refs.
+			// (Also we can't tolerate dotted attribute names in the significant attrs list)
+			job.GetExternalReferences(tree, exattrs, true);
+			for (auto it = exattrs.begin(); it != exattrs.end();) { // c++ 20 has erase_if, but we can't use it
+				auto tmp = it++;
+				if (tmp->find_first_of('.') != std::string::npos) { exattrs.erase(tmp); }
+			}
+			// now add in the internal refs
 			job.GetInternalReferences(tree, exattrs, false);
 		}
 	}
@@ -690,22 +702,6 @@ JobAggregationResults * AutoCluster::aggregateOn(
 #ifdef ALLOW_ON_THE_FLY_AGGREGATION
 
 	JobCluster * pjc = new JobCluster();
-#if 1
-#else
-	pjc->keepJobIds(true);
-	pjc->setSigAttrs(projection, false, true);
-	aggregate_jobs_args agg_args(pjc, constraint);
-
-	schedd_runtime_probe runtime;
-	WalkJobQueue3(
-		// aggregate_jobs as lambda (ignores constraint, assumes pv is pjc
-		// [](JobQueueJob *job, const JOB_ID_KEY &, void * pv) -> int { ((JobCluster*)pv)->getClusterid(*job, true, NULL); return 0; },
-		aggregate_jobs,
-		&agg_args,
-		runtime);
-
-	dprintf(D_ALWAYS, "Spent %.3f sec aggregating on '%s'\n", runtime.Total(), projection);
-#endif
 	return new JobAggregationResults(*pjc, projection, result_limit, constraint);
 #else
 	return NULL;
@@ -724,7 +720,7 @@ bool JobAggregationResults::compute()
 	aggregate_jobs_args agg_args(&jc, constraint);
 
 	schedd_runtime_probe runtime;
-	WalkJobQueue3(
+	WalkJobQueueEntries(0,
 		// aggregate_jobs as lambda (ignores constraint, assumes pv is pjc
 		// [](JobQueueJob *job, const JOB_ID_KEY &, void * pv) -> int { ((JobCluster*)pv)->getClusterid(*job, true, NULL); return 0; },
 		aggregate_jobs,

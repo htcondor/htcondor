@@ -1,0 +1,37 @@
+######################################################################
+##
+##  condor_config
+##
+##  This is the global configuration file for condor. This is where
+##  you define where the local config file is. Any settings
+##  made here may potentially be overridden in the local configuration
+##  files.  KEEP THAT IN MIND!  To double-check that a variable is
+##  getting set from the configuration file that you expect, use
+##  condor_config_val -v <variable name>
+##
+##  We recommend making configuration changes in the local config file
+##  and/or config directory, whose locations are set below.  Settings
+##  that are defined here MUST BE DEFINED since they have no default
+##  value or a different default value than we need.
+##
+######################################################################
+
+##  Where have you installed the bin, sbin and lib condor directories?
+RELEASE_DIR = /usr/local/condor
+
+##  Where is the local condor directory?  This is where the local config file(s), logs and
+##  spool/execute directories are located.
+LOCAL_DIR = $(RELEASE_DIR)/local
+
+##  Where is the machine-specific local config file for each host?
+#LOCAL_CONFIG_FILE = $(LOCAL_DIR)/condor_config.local
+##  If the local config file is not present, is it an error? (WARNING: This is a potential security issue.)
+#REQUIRE_LOCAL_CONFIG_FILE = true
+
+##  The normal way to do configuration with RPM and Debian packaging is to read all of the
+##  files in a given directory that don't match a regex as configuration files.
+##  Config files are read in lexicographic order.
+##  Multiple directories may be specified, separated by commas; directories
+##  are read in left-to-right order.
+LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config.d
+#LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$

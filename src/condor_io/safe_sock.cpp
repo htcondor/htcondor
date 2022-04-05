@@ -266,7 +266,7 @@ SafeSock::my_ip_str() const
 
 	condor_sockaddr addr;
 	addr = s.my_addr();
-	strcpy(_my_ip_buf, addr.to_ip_string().Value());
+	strcpy(_my_ip_buf, addr.to_ip_string().c_str());
 	return _my_ip_buf;
 }
 MSC_RESTORE_WARNING(6262) // function uses 64k of stack
@@ -290,7 +290,7 @@ int SafeSock::connect(
 		if (host[0] == '<') {
 			set_connect_addr(host);
 			} else {
-			set_connect_addr(_who.to_sinful().Value());
+			set_connect_addr(_who.to_sinful().c_str());
 		}
     	addr_changed();
 	}
@@ -590,7 +590,7 @@ int SafeSock::handle_incoming_packet()
 
 	if (IsDebugLevel(D_NETWORK))
     	dprintf( D_NETWORK, "RECV %d bytes at %s from %s\n",
-			 received, sock_to_string(_sock), _who.to_sinful().Value());
+			 received, sock_to_string(_sock), _who.to_sinful().c_str());
 
 	length = received;
     _shortMsg.reset(); // To be sure
@@ -739,11 +739,11 @@ char * SafeSock::serialize() const
 {
 	char * parent_state = Sock::serialize();
 
-	MyString state;
-	formatstr( state, "%s%d*%s*", parent_state, _special_state, _who.to_sinful().Value() );
+	std::string state;
+	formatstr( state, "%s%d*%s*", parent_state, _special_state, _who.to_sinful().c_str() );
 	delete[] parent_state;
 
-	return state.detach_buffer();
+	return strdup(state.c_str());
 }
 
 const char * SafeSock::serialize(const char *buf)
