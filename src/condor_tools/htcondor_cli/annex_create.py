@@ -723,9 +723,9 @@ def annex_inner_func(
     ## The user will do the 2FA/SSO dance here.
     ##
     logger.info(
-        f"{ANSI_BRIGHT}This command will prompt you with a "
-        f"{MACHINE_TABLE[target]['pretty_name']} log-in.  To proceed, "
-        f"log-in to {MACHINE_TABLE[target]['pretty_name']} at the prompt "
+        f"{ANSI_BRIGHT}This command will access "
+        f"{MACHINE_TABLE[target]['pretty_name']} via XSEDE.  To proceed, "
+        f"enter your XSEDE user name and password at the prompt "
         f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
     )
     logger.debug(
