@@ -12,7 +12,7 @@ from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
 # Most of the annex add/create code is stored in a separate file.
-from htcondor_cli.annex_create import annex_add, annex_create
+from htcondor_cli.annex_create import annex_add, annex_create, create_annex_token
 
 class Create(Verb):
     """
@@ -68,9 +68,9 @@ class Create(Verb):
         },
         "token_file": {
             "args": ("--token_file",),
-            "help": "Token file. Defaults to %(default)s",
+            "help": "Token file.  Normally obtained automatically.",
             "type": Path,
-            "default": Path(htcondor.param.get("ANNEX_TOKEN_FILE", f"~/.condor/tokens.d/{getpass.getuser()}@annex.osgdev.chtc.io")),
+            "default": None,
         },
         "password_file": {
             "args": ("--password_file",),

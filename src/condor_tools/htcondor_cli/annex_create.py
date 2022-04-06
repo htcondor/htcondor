@@ -20,12 +20,11 @@ import htcondor
 # only necessary for Windows.
 #
 
-INITIAL_CONNECTION_TIMEOUT = int(
-    htcondor.param.get("ANNEX_INITIAL_CONNECTION_TIMEOUT", 180)
-)
+INITIAL_CONNECTION_TIMEOUT = int(htcondor.param.get("ANNEX_INITIAL_CONNECTION_TIMEOUT", 180))
 REMOTE_CLEANUP_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_CLEANUP_TIMEOUT", 60))
 REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 30))
 REMOTE_POPULATE_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_POPULATE_TIMEOUT", 60))
+TOKEN_FETCH_TIMEOUT = int(htcondor.param.get("ANNEX_TOKEN_FETCH_TIMEOUT", 20))
 
 #
 # For queues with the whole-node allocation policy, cores and RAM -per-node
@@ -559,7 +558,9 @@ def create_annex_token(logger, type):
         out, err = proc.communicate(timeout=TOKEN_FETCH_TIMEOUT)
 
         if proc.returncode == 0:
-            sec_token_directory = htcondor.param.get("SEC_TOKEN_DIRECTORY", "~/.condor/tokens.d")
+            sec_token_directory = htcondor.param.get("SEC_TOKEN_DIRECTORY")
+            if sec_token_directory == "":
+                sec_token_directory = "~/.condor/tokens.d"
             return os.path.expanduser(f"{sec_token_directory}/{token_name}")
         else:
             logger.error(f"Failed to create annex token, aborting.")
