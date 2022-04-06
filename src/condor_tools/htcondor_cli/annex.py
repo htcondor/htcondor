@@ -110,6 +110,8 @@ class Create(Verb):
     }
 
     def __init__(self, logger, **options):
+        if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
+            raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
         annex_create(logger, **options)
 
 
@@ -129,6 +131,9 @@ class Status(Verb):
 
     # Unlike `shutdown`, status should probably not require a name.
     def __init__(self, logger, **options):
+        if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
+            raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
+
         the_annex_name = options["annex_name"]
 
         schedd = htcondor.Schedd()
@@ -350,6 +355,9 @@ class Shutdown(Verb):
     # log in again.
     #
     def __init__(self, logger, annex_name, **options):
+        if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
+            raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
+
         annex_collector = htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io")
         collector = htcondor.Collector(annex_collector)
         location_ads = collector.query(
