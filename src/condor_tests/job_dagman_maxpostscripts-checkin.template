@@ -22,11 +22,11 @@ use CondorUtils;
 
 my $iswindows = CondorUtils::is_windows();
 if($iswindows) {
-	system("appendmsg -n -f filetoappendto open");
+	system('appendmsg -n -f filetoappendto open');
 	# Make scripts not finish immediately to better test throttling;
 	# specific sleep duration is not critical.
 	sleep(15);
-	system("appendmsg -n -f filetoappendto close");
+	system('appendmsg -n -f filetoappendto close');
 } else {
 	system("./x_general_client.pl maxpostsock open");
 	# Make scripts not finish immediately to better test throttling;
