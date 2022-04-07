@@ -309,7 +309,6 @@ class TestJobSubmitMethod:
           count = 0
           passed = False
           #Check that returned job ads 
-          print("")
           for ad in run_dagman_direct_false_submission:
                if ad["JobSubmitMethod"] == 0:
                     count += 1
