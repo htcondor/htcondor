@@ -23,7 +23,7 @@ use CondorUtils;
 
 my $iswindows = CondorUtils::is_windows();
 if($iswindows) {
-	system("appendmsg -n -f filetoappendto postscriptran");
+	system('appendmsg -n -f filetoappendto postscriptran');
 } else {
 	system("./x_general_client.pl prepostsock postscript_ran");
 }
