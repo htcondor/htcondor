@@ -20,12 +20,11 @@ import htcondor
 # only necessary for Windows.
 #
 
-INITIAL_CONNECTION_TIMEOUT = int(
-    htcondor.param.get("ANNEX_INITIAL_CONNECTION_TIMEOUT", 180)
-)
+INITIAL_CONNECTION_TIMEOUT = int(htcondor.param.get("ANNEX_INITIAL_CONNECTION_TIMEOUT", 180))
 REMOTE_CLEANUP_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_CLEANUP_TIMEOUT", 60))
 REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 30))
 REMOTE_POPULATE_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_POPULATE_TIMEOUT", 60))
+TOKEN_FETCH_TIMEOUT = int(htcondor.param.get("ANNEX_TOKEN_FETCH_TIMEOUT", 20))
 
 #
 # For queues with the whole-node allocation policy, cores and RAM -per-node
@@ -530,6 +529,51 @@ def extract_sif_file(job_ad):
     return iwd / container_image
 
 
+def create_annex_token(logger, type):
+    token_lifetime = int(htcondor.param.get("ANNEX_TOKEN_LIFETIME", 60 * 60 * 24 * 90))
+    annex_token_key_name = htcondor.param.get("ANNEX_TOKEN_KEY_NAME", "hpcannex-key")
+    annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
+    token_name = f"{type}.{getpass.getuser()}@{annex_token_domain}"
+
+    args = [
+        'condor_token_fetch',
+        '-lifetime', str(token_lifetime),
+        '-token', token_name,
+        '-key', annex_token_key_name,
+        '-authz', 'READ',
+        '-authz', 'ADVERTISE_STARTD',
+        '-authz', 'ADVERTISE_MASTER',
+        '-authz', 'ADVERTISE_SCHEDD',
+    ]
+
+    proc = subprocess.Popen(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        # This implies text mode.
+        errors="replace",
+    )
+
+    try:
+        out, err = proc.communicate(timeout=TOKEN_FETCH_TIMEOUT)
+
+        if proc.returncode == 0:
+            sec_token_directory = htcondor.param.get("SEC_TOKEN_DIRECTORY")
+            if sec_token_directory == "":
+                sec_token_directory = "~/.condor/tokens.d"
+            return os.path.expanduser(f"{sec_token_directory}/{token_name}")
+        else:
+            logger.error(f"Failed to create annex token, aborting.")
+            logger.warning(f"{out.strip()}")
+            raise RuntimeError(f"Failed to create annex token")
+
+    except subprocess.TimeoutExpired:
+        logger.error(f"Failed to create annex token in {TOKEN_FETCH_TIMEOUT} seconds, aborting.")
+        proc.kill()
+        out, err = proc.communicate()
+        raise RuntimeError(f"Failed to create annex token in {TOKEN_FETCH_TIMEOUT} seconds")
+
+
 def annex_inner_func(
     logger,
     annex_name,
@@ -590,6 +634,13 @@ def annex_inner_func(
 
     if not local_script_dir.is_dir():
         raise RuntimeError(f"Annex script dir {local_script_dir} not found or not a directory.")
+
+    # If the user didn't specify a token file, create one on the fly.
+    if token_file is None:
+        logger.debug("Creating annex token...")
+        token_file = create_annex_token(logger, annex_name)
+        atexit.register(lambda: os.unlink(token_file))
+        logger.debug("..done.")
 
     token_file = Path(token_file).expanduser()
     if not token_file.exists():
@@ -672,9 +723,9 @@ def annex_inner_func(
     ## The user will do the 2FA/SSO dance here.
     ##
     logger.info(
-        f"{ANSI_BRIGHT}This command will prompt you with a "
-        f"{MACHINE_TABLE[target]['pretty_name']} log-in.  To proceed, "
-        f"log-in to {MACHINE_TABLE[target]['pretty_name']} at the prompt "
+        f"{ANSI_BRIGHT}This command will access "
+        f"{MACHINE_TABLE[target]['pretty_name']} via XSEDE.  To proceed, "
+        f"enter your XSEDE user name and password at the prompt "
         f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
     )
     logger.debug(
