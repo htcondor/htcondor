@@ -3790,7 +3790,7 @@ SecMan::getPreferredOldCryptProtocol(const std::string &name)
 }
 
 bool
-SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input, bool allow_multiple_methods)
+SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input, bool new_session)
 {
 	if (policy_input) {
 		dprintf(D_SECURITY|D_VERBOSE, "NONNEGOTIATEDSESSION: policy_input ad is:\n");
@@ -3839,25 +3839,16 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		return false;
 	}
 
+	// If this is a brand-new session, record our version
+	if( new_session ) {
+		policy.Assign(ATTR_SEC_REMOTE_VERSION, CondorVersion());
+	}
+
 	std::string crypto_methods;
 	policy.LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_methods);
 
 	// preserve full list
 	policy.Assign(ATTR_SEC_CRYPTO_METHODS_LIST, crypto_methods);
-
-	// ZKM FIXME TODO:
-	// why would we disallow multiple methods?
-	allow_multiple_methods = true;
-
-	// remove all but the first crypto method, if multiple methods
-	// aren't allowed
-	if (!allow_multiple_methods) {
-		size_t pos = crypto_methods.find(',');
-		if( pos != std::string::npos ) {
-			crypto_methods.erase(pos);
-			policy.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_methods);
-		}
-	}
 
 	policy.Assign(ATTR_SEC_USE_SESSION, "YES");
 	policy.Assign(ATTR_SEC_SID, sesid);

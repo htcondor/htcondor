@@ -420,7 +420,7 @@ bool SecManWrapper::setFamilySession(const std::string & sess)
                 "condor@family",
                 NULL,
                 0,
-                nullptr);
+                nullptr, false);
     }
 	return false;
 }

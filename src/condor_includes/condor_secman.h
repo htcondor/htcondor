@@ -286,10 +286,12 @@ public:
 		// is no longer needed.)
 		//
 		// If additional attributes should be copied into the session policy,
-		// these can be copied into the policy parameter:
+		// these can be copied into the policy parameter.
+		// new_session=true: brand new session
+		// new_session=false: imported session from elsewhere
 	bool CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid, char const *private_key,
 		char const *exported_session_info, const char *auth_method, char const *peer_fqu, char const *peer_sinful, int duration,
-		classad::ClassAd *policy, bool allow_multiple_methods=false);
+		classad::ClassAd *policy, bool new_session);
 
 		// Get security session info to send to our peer so that peer
 		// can create pre-built security session compatible with ours.

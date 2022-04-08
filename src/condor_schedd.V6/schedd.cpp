@@ -431,7 +431,7 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 				EXECUTE_SIDE_MATCHSESSION_FQU,
 				peer,
 				0,
-				nullptr );
+				nullptr, false );
 
 			if( rc ) {
 					// we're good to go; use the claimid security session
