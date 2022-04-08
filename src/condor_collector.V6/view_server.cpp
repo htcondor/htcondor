@@ -143,7 +143,7 @@ void ViewServer::Init()
 
 void ViewServer::Config()
 {
-	string history_dir_buf;
+	std::string history_dir_buf;
 	char const *history_dir;
 	char* tmp;
 	dprintf(D_ALWAYS, "In ViewServer::Config()\n");

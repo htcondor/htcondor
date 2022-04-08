@@ -3102,7 +3102,7 @@ DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) 
 				}
 				std::string psgString;
 				if (!aJob->LookupString(ATTR_MATCHED_PSG, psgString)) {
-					string psgExpr;
+					std::string psgExpr;
 					formatstr(psgExpr, "ParallelSchedulingGroup =?= \"%s\"", groupName);
 					aJob->AssignExpr(ATTR_MATCHED_PSG, psgExpr.c_str());
 				} else {
