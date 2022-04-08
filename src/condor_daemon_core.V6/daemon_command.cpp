@@ -863,14 +863,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_sock->setSessionID(session->id());
 				}
 
-				// When using a cached session, only use the version
-				// from the session for the socket's peer version.
+				// If the cached policy doesn't have a version, then
+				// we're dealing with a non-negotaited session from an
+				// old peer (pre-9.9.0).
+				// In that case, clear out the socket's peer version.
 				// This maintains symmetry of version info between
 				// client and server.
-				if ( !peer_version.empty() ) {
-					CondorVersionInfo ver_info( peer_version.c_str() );
-					m_sock->set_peer_version( &ver_info );
-				} else {
+				if ( peer_version.empty() ) {
 					m_sock->set_peer_version( NULL );
 				}
 
@@ -1093,6 +1092,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 								&free);
 
 							ClassAd ad;
+							ad.Assign(ATTR_SEC_REMOTE_VERSION, CondorVersion());
 							if (!ad.InsertAttr(ATTR_SEC_NONCE, encoded_bytes.get())) {
 								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to generate nonce to send for session resumption.\n");
 								m_result = false;

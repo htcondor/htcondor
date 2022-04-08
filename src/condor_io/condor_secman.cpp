@@ -2258,12 +2258,14 @@ SecManStartCommand::authenticate_inner()
 						"Failed to read replay protection classad from server." );
 					return StartCommandFailed;
 				}
-					// We otherwise ignore the contents of this ClassAd; we are simply relying
-					// on the side-effect of it changing the connection's chec; we are simply relying
-					// on the side-effect of it changing the connection's checksum.
 				if (IsDebugVerbose(D_SECURITY)) {
 					dprintf(D_SECURITY, "SECMAN: server replay protection responded with:\n");
 					dPrintAd(D_SECURITY, auth_response);
+				}
+				std::string peer_version;
+				if (auth_response.LookupString(ATTR_SEC_REMOTE_VERSION, peer_version)) {
+					CondorVersionInfo ver_info(peer_version.c_str());
+					m_sock->set_peer_version(&ver_info);
 				}
 			}
 
