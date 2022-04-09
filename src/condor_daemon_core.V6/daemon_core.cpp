@@ -7166,7 +7166,7 @@ int DaemonCore::Create_Process(
 	if(want_command_port != FALSE)
 	{
 		char* c_session_id = Condor_Crypt_Base::randomHexKey();
-		char* c_session_key = Condor_Crypt_Base::randomHexKey();
+		char* c_session_key = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 
 		session_id.assign(c_session_id);
 		std::string session_key(c_session_key);
@@ -9165,7 +9165,7 @@ DaemonCore::Inherit( void )
 			new_family_session = true;
 			dprintf(D_DAEMONCORE, "Creating family security session.\n");
 			char* c_session_id = Condor_Crypt_Base::randomHexKey();
-			char* c_session_key = Condor_Crypt_Base::randomHexKey();
+			char* c_session_key = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 
 			m_family_session_id = "family:";
 			m_family_session_id += c_session_id;
