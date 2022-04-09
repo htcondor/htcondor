@@ -790,6 +790,24 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				session->renewLease();
 
+				// For a non-negotiated session, remember the version of
+				// our peer in case we use the session later as a client.
+				// TODO We only need this for non-negotiated sessions.
+				//   Should we limit this to them?
+				if (!peer_version.empty()) {
+					session->setLastPeerVersion(peer_version);
+				} else {
+					// Old verions (pre-9.9.0) don't send their version
+					// in the resume session ad.
+					// The important thing here is that they're older than
+					// 9.9.0 and thus don't know about the server response
+					// ad when resuming a session.
+					CondorVersionInfo ver_info(9, 8, 0, "FakeOldVersion");
+					char* ver_str = ver_info.get_version_string();
+					session->setLastPeerVersion(ver_str);
+					free(ver_str);
+				}
+
 				// If the session has multiple crypto methods, we need to
 				// figure out which one to use.
 				// If the client's resume session ad gives a crypto method
@@ -1083,29 +1101,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				if ( will_authenticate == SecMan::SEC_FEAT_ACT_YES ) {
 					if ((!m_new_session)) {
-						std::string want_replay;
-						if (m_policy->EvaluateAttrString(ATTR_SEC_REPLAY_PROTECTION, want_replay) && want_replay == "YES") {
-							dprintf(D_SECURITY|D_FULLDEBUG, "DC_AUTHENTICATE: sending random nonce to remote side for replay protection.\n");
-							std::unique_ptr<unsigned char, decltype(&free)> random_bytes(Condor_Crypt_Base::randomKey(33), &free);
-							std::unique_ptr<char, decltype(&free)> encoded_bytes(
-								condor_base64_encode(random_bytes.get(), 33, false),
-								&free);
-
-							ClassAd ad;
-							ad.Assign(ATTR_SEC_REMOTE_VERSION, CondorVersion());
-							if (!ad.InsertAttr(ATTR_SEC_NONCE, encoded_bytes.get())) {
-								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to generate nonce to send for session resumption.\n");
-								m_result = false;
-								return CommandProtocolFinished;
-							}
-							m_sock->encode();
-							if (!putClassAd(m_sock, ad) || !m_sock->end_of_message()) {
-								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to send nonce to peer at %s.\n", m_sock->peer_description());
-								m_result = false;
-								return CommandProtocolFinished;
-							}
-						}
-
 						char * remote_version = NULL;
 						m_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
 						if(remote_version) {
@@ -1124,7 +1119,31 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					}
 				}
 
+				if (!m_new_session) {
+					bool want_resume_response = false;
+					m_auth_info.LookupBool(ATTR_SEC_RESUME_RESPONSE, want_resume_response);
+					if (want_resume_response) {
+						dprintf(D_SECURITY|D_FULLDEBUG, "DC_AUTHENTICATE: sending random nonce to remote side for replay protection.\n");
+						std::unique_ptr<unsigned char, decltype(&free)> random_bytes(Condor_Crypt_Base::randomKey(33), &free);
+						std::unique_ptr<char, decltype(&free)> encoded_bytes(
+							condor_base64_encode(random_bytes.get(), 33, false),
+							&free);
 
+						ClassAd ad;
+						ad.Assign(ATTR_SEC_REMOTE_VERSION, CondorVersion());
+						if (!ad.InsertAttr(ATTR_SEC_NONCE, encoded_bytes.get())) {
+							dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to generate nonce to send for session resumption.\n");
+							m_result = false;
+							return CommandProtocolFinished;
+						}
+						m_sock->encode();
+						if (!putClassAd(m_sock, ad) || !m_sock->end_of_message()) {
+							dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to send nonce to peer at %s.\n", m_sock->peer_description());
+							m_result = false;
+							return CommandProtocolFinished;
+						}
+					}
+				}
 
 				if (m_is_tcp && (will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
 

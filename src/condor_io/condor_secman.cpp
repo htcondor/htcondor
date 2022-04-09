@@ -1044,6 +1044,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		m_pending_socket_registered(false),
 		m_sec_man(*sec_man),
 		m_use_tmp_sec_session(false),
+		m_want_resume_response(true),
 		m_owner(owner),
 		m_methods(methods)
 	{
@@ -1153,6 +1154,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	bool m_use_tmp_sec_session;
 	bool m_already_logged_startcommand;
 	bool m_sock_had_no_deadline;
+	bool m_want_resume_response;
 	ClassAd m_auth_info;
 	SecMan::sec_req m_negotiation;
 	std::string m_remote_version;
@@ -1568,6 +1570,30 @@ SecManStartCommand::sendAuthInfo_inner()
 			m_auth_info.Delete(ATTR_SEC_CRYPTO_METHODS);
 		}
 
+		// extract the version attribute current in the classad - it is
+		// the version of the remote side.
+		// With a non-negotiated session, the version of the peer that last
+		// connected to us with this session is a better guide of the
+		// peer's version.
+		m_remote_version = m_enc_key->getLastPeerVersion();
+		if (m_remote_version.empty()) {
+			m_auth_info.LookupString(ATTR_SEC_REMOTE_VERSION, m_remote_version);
+		}
+		if (!m_remote_version.empty()) {
+			CondorVersionInfo ver_info(m_remote_version.c_str());
+			m_sock->set_peer_version(&ver_info);
+			m_want_resume_response = ver_info.built_since_version(9, 9, 0);
+		} else {
+			m_want_resume_response = false;
+		}
+
+		// If we think we're talking to an old peer that doesn't understand
+		// the server response to a resumed session, say so in our ad.
+		// That way, if we're wrong, we don't get out-of-sync with the server.
+		if (m_is_tcp) {
+			m_auth_info.Assign(ATTR_SEC_RESUME_RESPONSE, m_want_resume_response);
+		}
+
 			// When resuming, always send a nonce; this helps prevent replay attacks.
 		std::unique_ptr<unsigned char, decltype(&free)> random_bytes(Condor_Crypt_Base::randomKey(33), &free);
 		std::unique_ptr<char, decltype(&free)> encoded_bytes(
@@ -1744,13 +1770,6 @@ SecManStartCommand::sendAuthInfo_inner()
 		}
 
 		ASSERT (m_enc_key == NULL);
-	}
-
-	// extract the version attribute current in the classad - it is
-	// the version of the remote side.
-	if(m_auth_info.LookupString( ATTR_SEC_REMOTE_VERSION, m_remote_version )) {
-		CondorVersionInfo ver_info(m_remote_version.c_str());
-		m_sock->set_peer_version(&ver_info);
 	}
 
 	// fill in our version
@@ -2241,8 +2260,7 @@ SecManStartCommand::authenticate_inner()
 				// a random nonce in the client and server side, each connection has
 				// a unique header, meaning any attempted replay will fail due to the
 				// incorrect checksum.
-			std::string want_replay;
-			if (m_auth_info.EvaluateAttrString(ATTR_SEC_REPLAY_PROTECTION, want_replay) && want_replay == "YES") {
+			if (m_want_resume_response) {
 
 				if (m_nonblocking && !m_sock->readReady()) {
 					return WaitForSocketCallback();
@@ -3344,6 +3362,8 @@ SecMan::SecMan() :
 		m_resume_proj.insert(ATTR_SEC_COOKIE);
 		m_resume_proj.insert(ATTR_SEC_CRYPTO_METHODS);
 		m_resume_proj.insert(ATTR_SEC_NONCE);
+		m_resume_proj.insert(ATTR_SEC_RESUME_RESPONSE);
+		m_resume_proj.insert(ATTR_SEC_REMOTE_VERSION);
 	}
 
 	if ( NULL == m_ipverify ) {
