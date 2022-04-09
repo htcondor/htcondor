@@ -121,8 +121,6 @@ def test_job_hash():
 
 @action
 def completed_test_job(condor, test_job_hash):
-    os.system("/bin/pwd")
-    os.system("ls -CFR ../..")
 
     ctj = condor.submit(
         {**test_job_hash}, count=1
