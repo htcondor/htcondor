@@ -94,7 +94,6 @@ echo "Unknown/unsupported singularity command: $@"
 exit 0
     """
     filename = test_dir / 'singularity_tester.sh'
-    print(filename)
     write_file(filename, mock_singularity)
     os.chmod(filename, stat.S_IRWXU)
     return filename
