@@ -7205,10 +7205,6 @@ int DaemonCore::Create_Process(
 			dprintf(D_ALWAYS, "ERROR: Create_Process failed to create security session for child daemon.\n");
 			goto wrapup;
 		}
-		KeyCacheEntry *entry = NULL;
-		rc = getSecMan()->session_cache->lookup(session_id_c_str,entry);
-		ASSERT( rc && entry && entry->policy() );
-		entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 		IpVerify* ipv = getSecMan()->getIpVerify();
 		std::string id = CONDOR_CHILD_FQU;
 		ipv->PunchHole(ADMINISTRATOR, id);
@@ -9144,10 +9140,6 @@ DaemonCore::Inherit( void )
 			{
 				dprintf(D_ALWAYS, "Error: Failed to recreate security session in child daemon.\n");
 			}
-			KeyCacheEntry *entry = NULL;
-			rc = getSecMan()->session_cache->lookup(claimid.secSessionId(),entry);
-			ASSERT( rc && entry && entry->policy() );
-			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 			IpVerify* ipv = getSecMan()->getIpVerify();
 			std::string id = CONDOR_PARENT_FQU;
 			ipv->PunchHole(ADMINISTRATOR, id);
@@ -9204,10 +9196,6 @@ DaemonCore::Inherit( void )
 			m_family_session_key.clear();
 		} else {
 
-			KeyCacheEntry *entry = NULL;
-			rc = getSecMan()->session_cache->lookup(m_family_session_id.c_str(),entry);
-			ASSERT( rc && entry && entry->policy() );
-			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 			IpVerify* ipv = getSecMan()->getIpVerify();
 			ipv->PunchHole(ADMINISTRATOR, CONDOR_FAMILY_FQU);
 			ipv->PunchHole(DAEMON, CONDOR_FAMILY_FQU);
