@@ -1,6 +1,7 @@
 import os
 import time
 from pathlib import Path
+import atexit
 import getpass
 import argparse
 from collections import defaultdict
@@ -11,8 +12,7 @@ from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
 # Most of the annex add/create code is stored in a separate file.
-from htcondor_cli.annex_create import annex_add, annex_create
-
+from htcondor_cli.annex_create import annex_add, annex_create, create_annex_token
 
 class Create(Verb):
     """
@@ -68,9 +68,9 @@ class Create(Verb):
         },
         "token_file": {
             "args": ("--token_file",),
-            "help": "Token file. Defaults to %(default)s",
+            "help": "Token file.  Normally obtained automatically.",
             "type": Path,
-            "default": Path(htcondor.param.get("ANNEX_TOKEN_FILE", f"~/.condor/tokens.d/{getpass.getuser()}@annex.osgdev.chtc.io")),
+            "default": None,
         },
         "password_file": {
             "args": ("--password_file",),
@@ -172,7 +172,11 @@ class Status(Verb):
         constraint = 'AnnexName =!= undefined'
         if the_annex_name is not None:
             constraint = f'AnnexName == "{the_annex_name}"'
-        constraint = f'{constraint} && AuthenticatedIdentity == "{getpass.getuser()}@annex.osgdev.chtc.io"'
+        annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
+        constraint = f'{constraint} && AuthenticatedIdentity == "{getpass.getuser()}@{annex_token_domain}"'
+
+        token_file = create_annex_token(logger, "status")
+        atexit.register(lambda: os.unlink(token_file))
         annex_slots = collector.query(constraint=constraint, ad_type=htcondor.AdTypes.Startd)
 
         annex_attrs = {}
@@ -357,6 +361,9 @@ class Shutdown(Verb):
 
         annex_collector = htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io")
         collector = htcondor.Collector(annex_collector)
+
+        token_file = create_annex_token(logger, "shutdown")
+        atexit.register(lambda: os.unlink(token_file))
         location_ads = collector.query(
             ad_type=htcondor.AdTypes.Master,
             constraint=f'AnnexName =?= "{annex_name}"',
