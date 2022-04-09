@@ -15,6 +15,15 @@ public:
     void UpdateStarterEnv(Env &env);
     bool CleanupSlot(const std::string &slot, CondorError &err);
     bool GetPoolSize(uint64_t &used, uint64_t &total, CondorError &err);
+	//
+	// Return the usage of a specific volume managed by HTCondor; returns false on
+	// error and populates CondorError appropriately.
+	//
+	// `out_of_space` is set to True if the underlying thin pool is full (which indicates that
+	// all writes to the volume are likely to block).
+	//
+    static bool GetThinVolumeUsage(const std::string &thin_volume_name, const std::string &pool, const std::string &vg_name, uint64_t &used_bytes, bool &out_of_space, CondorError &err);
+
 
     class Handle {
     public:

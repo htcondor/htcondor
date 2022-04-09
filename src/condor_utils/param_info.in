@@ -1149,6 +1149,11 @@ default=$(SPOOL)/startd_disk.img
 type=string
 tags=startd
 
+[THINPOOL_EXTRA_SIZE_MB]
+default=2000
+type=int
+tags=starter
+
 [MAX_TIME_SKIP]
 default=1200
 range=0,

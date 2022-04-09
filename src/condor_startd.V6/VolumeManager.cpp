@@ -98,6 +98,9 @@ VolumeManager::~VolumeManager()
 
 VolumeManager::Handle::Handle(const std::string &mountpoint, const std::string &volume, const std::string &pool, const std::string &vg_name, uint64_t size_kb, CondorError &err)
 {
+    auto extra_volume_size_mb = param_integer("THINPOOL_EXTRA_SIZE_MB", 0);
+    size_kb += 1024*extra_volume_size_mb;
+
     if (!VolumeManager::CreateThinLV(size_kb, volume, pool, vg_name, err)) {
         return;
     }
@@ -696,6 +699,37 @@ getLVSReport(CondorError &err, rapidjson::Value &result)
     return false;
 }
 
+
+bool
+getTotalUsedBytes(const std::string &lv_size, const std::string &data_percent, uint64_t &total_bytes, uint64_t &used_bytes, CondorError &err)
+{
+	long long total_size;
+	try {
+		total_size = std::stoll(lv_size);
+	} catch (...) {
+		err.pushf("VolumeManager", 20, "Failed to convert size to integer: %s", lv_size.c_str());
+		return false;
+	}
+		// Note: data_percent always has the precision of 2 decimal points; hence
+		// we convert this into an integer math problem.
+	double data_percent_val;
+	try {
+		data_percent_val = std::stod(data_percent);
+	} catch (...) {
+		err.pushf("VolumeManager", 20, "Failed to convert percent used to float: %s", data_percent.c_str());
+		return false;
+	}
+	total_bytes = total_size;
+	uint64_t data_percent_100x_integer = data_percent_val * 100;
+		// Special case: if all space is used, avoid potential rounding errors.
+	if (data_percent == "100.00") {
+		used_bytes = total_bytes;
+	} else {
+		used_bytes = total_size * data_percent_100x_integer / 10000;
+	}
+	return true;
+}
+
 }
 
 
@@ -713,7 +747,7 @@ VolumeManager::GetPoolSize(const std::string &pool_name, const std::string &vg_n
     rapidjson::Value lvs_report;
     std::vector<std::string> lvs;
     if (!getLVSReport(err, lvs_report)) {
-        return -1;
+        return false;
     }
     for (auto iter = lvs_report.Begin(); iter != lvs_report.End(); ++iter) {
          const auto &lv_report = *iter;
@@ -724,26 +758,52 @@ VolumeManager::GetPoolSize(const std::string &pool_name, const std::string &vg_n
          {
              continue;
          }
-         long long total_size;
-         try {
-             total_size = std::stoll(lv_report["lv_size"].GetString());
-         } catch (...) {
-             continue;
+         if (!getTotalUsedBytes(lv_report["lv_size"].GetString(), lv_report["data_percent"].GetString(), total_bytes, used_bytes, err)) {
+             return false;
          }
-         // Note: data_percent always has the precision of 2 decimal points; hence
-         // we convert this into an integer math problem.
-         double data_percent;
-         try {
-            data_percent = std::stod(lv_report["data_percent"].GetString());
-         } catch (...) {
-            continue;
-         }
-         uint64_t data_percent_100x_integer = data_percent * 100;
-         total_bytes = total_size;
-         used_bytes = total_size * data_percent_100x_integer / 10000;
          return true;
     }
-    return 0;
+    err.pushf("VolumeManager", 18, "LVS failed to provide information about %s in its output.", pool_name.c_str());
+    return false;
+}
+
+
+bool
+VolumeManager::GetThinVolumeUsage(const std::string &thin_volume_name, const std::string &volume_name, const std::string &volume_group_name, uint64_t &used_bytes, bool &out_of_space, CondorError &err)
+{
+	rapidjson::Value lvs_report;
+	std::vector<std::string> lvs;
+	if (!getLVSReport(err, lvs_report)) {
+		return false;
+	}
+	if (volume_name.empty() || volume_group_name.empty()) {
+		err.pushf("VolumeManager", 19, "VolumeManager doesn't know its VG or volume name.");
+		return false;
+	}
+	bool found_thin_volume = false;
+	for (auto iter = lvs_report.Begin(); iter != lvs_report.End(); ++iter) {
+		const auto &lv_report = *iter;
+		if (!lv_report.IsObject() || !lv_report.HasMember("lv_name") || !lv_report["lv_name"].IsString() ||
+		    !lv_report.HasMember("lv_size") || !lv_report["lv_size"].IsString() || !lv_report.HasMember("vg_name") ||
+		    !lv_report["vg_name"].IsString() || lv_report["vg_name"].GetString() != volume_group_name ||
+		    !lv_report.HasMember("pool_lv") || !lv_report["pool_lv"].IsString() ||
+		    !lv_report.HasMember("data_percent") || !lv_report["data_percent"].IsString())
+		{
+			continue;
+		}
+		uint64_t reported_total_bytes, reported_used_bytes;
+		if (!getTotalUsedBytes(lv_report["lv_size"].GetString(), lv_report["data_percent"].GetString(), reported_total_bytes, reported_used_bytes, err)) {
+			return false;
+		}
+		if ((lv_report["lv_name"].GetString() == volume_name) && (reported_total_bytes == reported_used_bytes)) {
+			out_of_space = true;
+		}
+		if ((lv_report["lv_name"].GetString() == thin_volume_name) && (lv_report["pool_lv"].GetString() == volume_name)) {
+			found_thin_volume = true;
+			used_bytes = reported_used_bytes;
+		}
+	}
+	return found_thin_volume;
 }
 
 
