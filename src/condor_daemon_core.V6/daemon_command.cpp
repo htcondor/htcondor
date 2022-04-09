@@ -1123,7 +1123,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					bool want_resume_response = false;
 					m_auth_info.LookupBool(ATTR_SEC_RESUME_RESPONSE, want_resume_response);
 					if (want_resume_response) {
-						dprintf(D_SECURITY|D_FULLDEBUG, "DC_AUTHENTICATE: sending random nonce to remote side for replay protection.\n");
+						dprintf(D_SECURITY|D_FULLDEBUG, "DC_AUTHENTICATE: sending response to client's resume session request.\n");
 						std::unique_ptr<unsigned char, decltype(&free)> random_bytes(Condor_Crypt_Base::randomKey(33), &free);
 						std::unique_ptr<char, decltype(&free)> encoded_bytes(
 							condor_base64_encode(random_bytes.get(), 33, false),
