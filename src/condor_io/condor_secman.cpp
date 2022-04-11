@@ -1562,16 +1562,38 @@ SecManStartCommand::sendAuthInfo_inner()
 		// With a non-negotiated session, the version of the peer that last
 		// connected to us with this session is a better guide of the
 		// peer's version.
-		m_remote_version = m_enc_key->getLastPeerVersion();
-		if (m_remote_version.empty()) {
-			m_auth_info.LookupString(ATTR_SEC_REMOTE_VERSION, m_remote_version);
+		bool negotiated_session = true;
+		m_auth_info.LookupBool(ATTR_SEC_NEGOTIATED_SESSION, negotiated_session);
+		std::string last_peer_vers;
+		if (!negotiated_session) {
+			last_peer_vers = m_enc_key->getLastPeerVersion();
 		}
-		if (!m_remote_version.empty()) {
-			CondorVersionInfo ver_info(m_remote_version.c_str());
-			m_sock->set_peer_version(&ver_info);
-			m_want_resume_response = ver_info.built_since_version(9, 9, 0);
+		m_auth_info.LookupString(ATTR_SEC_REMOTE_VERSION, m_remote_version);
+		if (negotiated_session || last_peer_vers.empty()) {
+			if (!m_remote_version.empty()) {
+				CondorVersionInfo ver_info(m_remote_version.c_str());
+				m_sock->set_peer_version(&ver_info);
+				m_want_resume_response = ver_info.built_since_version(9, 9, 0);
+			} else {
+				m_want_resume_response = false;
+			}
 		} else {
-			m_want_resume_response = false;
+			CondorVersionInfo ver_info(last_peer_vers.c_str());
+			if (ver_info.built_since_version(9, 9, 0)) {
+				// The socket's peer version will be populated when we
+				// get the server's response.
+				m_want_resume_response = true;
+			} else {
+				m_want_resume_response = false;
+				// Old servers clear out the socket's peer version if the
+				// cached session ad don't have a version attribute.
+				// Don't set our socket's peer version in that situation,
+				// to maintain symmetry of version info between client and
+				// server.
+				if (!m_remote_version.empty()) {
+					m_sock->set_peer_version(&ver_info);
+				}
+			}
 		}
 
 		// If we think we're talking to an old peer that doesn't understand
@@ -1646,6 +1668,7 @@ SecManStartCommand::sendAuthInfo_inner()
 			// for now, always open a session for tcp.
 			m_new_session = true;
 			m_auth_info.Assign(ATTR_SEC_NEW_SESSION,"YES");
+			m_auth_info.Assign(ATTR_SEC_NEGOTIATED_SESSION, true);
 		}
 	}
 
@@ -3846,6 +3869,8 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	if( !ImportSecSessionInfo(exported_session_info,policy) ) {
 		return false;
 	}
+
+	policy.Assign(ATTR_SEC_NEGOTIATED_SESSION, false);
 
 	// If this is a brand-new session, record our version
 	if( new_session ) {

@@ -932,6 +932,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_REQUESTED_KEY "RequestedKey"
 #define ATTR_SEC_ECDH_PUBLIC_KEY "ECDHPublicKey"
 #define ATTR_SEC_RESUME_RESPONSE "ResumeResponse"
+#define ATTR_SEC_NEGOTIATED_SESSION "NegotiatedSession"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 

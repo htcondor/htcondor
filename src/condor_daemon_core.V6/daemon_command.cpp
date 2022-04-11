@@ -933,6 +933,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					}
 				}
 
+				m_policy->Assign(ATTR_SEC_NEGOTIATED_SESSION, true);
+
 				// add our version to the policy to be sent over
 				m_policy->Assign(ATTR_SEC_REMOTE_VERSION, CondorVersion());
 
