@@ -6,13 +6,12 @@
 #Then it collects the recent job ads from schedd history and returns
 #them for evaluation.
 #
-#Written by: Cole Bollig @ March 2022
-#
-#Tickets:
-# Base: HTCONDOR-996
+
 
 from ornithology import *
 import os
+from glob import glob as find
+from shutil import move
 from time import sleep
 from time import time
 
@@ -27,14 +26,13 @@ def wait(schedd):
                break
 #-----------------------------------------------------------------------------------------
 #Function to clean up files created by dags
-def clean_up(default_condor, t_dir, dir_name):
-     #List of files needed to be moved
-     files_to_move = ["simple.dag.condor.sub","simple.dag.dagman.log","simple.dag.dagman.out","simple.dag.lib.err","simple.dag.lib.out","simple.dag.metrics","simple.dag.nodes.log"]
+def clean_up(t_dir, dir_name):
+     dir_path = os.path.join(str(t_dir),dir_name)
      #make directory dag submission tests to avoid errors
-     p = default_condor.run_command(["mkdir",t_dir / "dag_test_{0}".format(dir_name)])
+     os.mkdir(dir_path)
      #move test files into dag_test# directory
-     for name in files_to_move:
-          p = default_condor.run_command(["mv",t_dir / name, t_dir / "dag_test_{0}".format(dir_name)])
+     for file_name in find(os.path.join(str(t_dir),"simple.dag.*")):
+          move(os.path.join(str(t_dir),file_name),dir_path)
 #-----------------------------------------------------------------------------------------
 #Fixture to write simple .sub file for general use
 @action
@@ -131,7 +129,7 @@ def run_dagman_submission(default_condor,test_dir,write_dag_file):
           match=3,
      )
      
-     clean_up(default_condor,test_dir,"submit_command")
+     clean_up(test_dir,"submit_command")
 
      return job_ad
 #-----------------------------------------------------------------------------------------
@@ -154,7 +152,7 @@ def run_dagman_direct_false_submission(dag_no_direct_condor,test_dir,write_dag_f
           match=3,
      )
      
-     clean_up(dag_no_direct_condor,test_dir,"no_direct_submit")
+     clean_up(test_dir,"no_direct_submit")
 
      return job_ad
 #-----------------------------------------------------------------------------------------
@@ -256,7 +254,7 @@ def run_htcondor_dag_submit(default_condor,write_dag_file,test_dir):
           match=3,
      )
 
-     clean_up(default_condor,test_dir,"htcondor_cli")
+     clean_up(test_dir,"htcondor_cli")
      
      return job_ad
 
