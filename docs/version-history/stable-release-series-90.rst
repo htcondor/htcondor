@@ -20,7 +20,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- *condor_config_val* will now print an ``@=end/@end`` pair rather than simply ``=``
+  when printing multi-line configuration values for ``-dump``, ``-summary``, and ``-verbose``
+  mode output.
+  :jira:`1032`
 
 Bugs Fixed:
 

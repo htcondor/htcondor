@@ -501,6 +501,35 @@ static const char * RemoteRawValuePart(MyString & raw)
 	return raw.Value();
 }
 
+// format a multiline config value into the given buffer with the specified indent per line
+// TODO: make this aware of if statemnts and indent further for them
+static const char * indent_herefile(const char * raw, const char * indent, std::string & buf, const char * tag=NULL)
+{
+	buf.clear();
+	if (tag) { buf += "@="; buf += tag; }
+	StringTokenIterator lines(raw, 200, "\n");
+	for (const char * line = lines.first(); line; line = lines.next()) {
+		buf += "\n";
+		buf += indent;
+		buf += line;
+	}
+	if (tag) { buf += "\n@"; buf += tag; }
+	return buf.c_str();
+}
+
+// print "= value" or "@=end\n   value...@end" depending on whether value is multiline or not.
+static const char * RemotePrintValue(const char * val, const char * indent, std::string & buf, const char * tag=NULL)
+{
+	bool is_herefile = val && strchr(val, '\n');
+	if (is_herefile) {
+		return indent_herefile(val, indent, buf, tag);
+	}
+	buf.clear();
+	if (tag) { buf += "= "; }
+	if (val) { buf += val; }
+	return buf.c_str();
+}
+
 int
 main( int argc, const char* argv[] )
 {
@@ -992,6 +1021,7 @@ main( int argc, const char* argv[] )
 			while ((tmp = params.next()) != NULL) {
 				if (tmp && tmp[0]) { fprintf(stdout, "\n# Parameters with names that match %s:\n", tmp); }
 				std::vector<std::string> names;
+				std::string rawvalbuf;
 				Regex re; int err = 0; const char * pszMsg = 0;
 				if (re.compile(tmp, &pszMsg, &err, PCRE_CASELESS)) {
 					if (show_by_usage) {
@@ -1017,15 +1047,22 @@ main( int argc, const char* argv[] )
 								if ( ! show_by_usage_unused && pmet->use_count+pmet->ref_count <= 0)
 									continue;
 							}
+
+							bool is_herefile = (pmet && pmet->multi_line) || (rawval && strchr(rawval, '\n'));
+							const char * equal_begin = is_herefile ? "@=end" : "= ";
+							const char * equal_end = is_herefile ? "\n@end" : "";
+
 							if (expand_dumped_variables) {
 								MyString upname = name; //upname.upper_case();
-								const char * val = param(name);
-								fprintf(stdout, "%s = %s\n", upname.Value(), val ? val : "");
+								auto_free_ptr val(param(name));
+								const char * tval = is_herefile ? indent_herefile(val, "   ", rawvalbuf) : val.ptr();
+								fprintf(stdout, "%s %s%s%s\n", upname.Value(), equal_begin, tval?tval:"", equal_end);
 							} else {
 								MyString upname = name_used;
 								if (upname.IsEmpty()) upname = name;
 								//upname.upper_case();
-								fprintf(stdout, "%s = %s\n", upname.Value(), rawval ? rawval : "");
+								const char * tval = is_herefile ? indent_herefile(rawval, "   ", rawvalbuf) : rawval;
+								fprintf(stdout, "%s %s%s%s\n", upname.Value(), equal_begin, tval?tval:"", equal_end);
 							}
 							if (verbose) {
 								MyString range;
@@ -1040,12 +1077,21 @@ main( int argc, const char* argv[] )
 								param_get_location(pmet, location);
 								fprintf(stdout, " # at: %s\n", location.c_str());
 								if (expand_dumped_variables) {
-									fprintf(stdout, " # raw: %s\n", rawval ? rawval : "");
+									const char * tval = is_herefile ? indent_herefile(rawval, " #     ", rawvalbuf) : rawval;
+									fprintf(stdout, " # raw: %s\n", tval?tval:"");
 								} else {
-									const char * val = param(name);
-									fprintf(stdout, " # expanded: %s\n", val ? val : "");
+									auto_free_ptr val(param(name));
+									const char * tval = is_herefile ? indent_herefile(val, " #     ", rawvalbuf) : val.ptr();
+									fprintf(stdout, " # expanded: %s\n", tval?tval:"");
 								}
-								if (def_val) { fprintf(stdout, " # default: %s\n", def_val); }
+								if (def_val) {
+									if (strchr(def_val, '\n')) {
+										const char * tval = indent_herefile(def_val, " #     ", rawvalbuf);
+										fprintf(stdout, " # default: %s\n", tval?tval:"");
+									} else {
+										fprintf(stdout, " # default: %s\n", def_val);
+									}
+								}
 								if (show_param_info) {
 									print_param_table_info(stdout, pmet->param_id, type_and_flags, used_for, tags);
 								}
@@ -1172,6 +1218,7 @@ main( int argc, const char* argv[] )
 	// 
 	int num_not_defined = 0;
 	while( (tmp = params.next()) ) {
+		std::string herevalbuf;
 		// empty parens so that we don't have to change the brace level of ALL of the code below.
 		{
 			MyString name_used, raw_value, file_and_line, def_value, usage_report;
@@ -1229,9 +1276,9 @@ main( int argc, const char* argv[] )
 
 							name_used = names[ii];
 							if (expand_dumped_variables || ! raw_supported) {
-								printf("%s = %s\n", name_used.Value(), value ? value : "");
+								printf("%s %s\n", name_used.Value(), RemotePrintValue(value, "   ", herevalbuf, "end"));
 							} else {
-								printf("%s = %s\n", name_used.Value(), RemoteRawValuePart(raw_value));
+								printf("%s %s\n", name_used.Value(), RemotePrintValue(RemoteRawValuePart(raw_value), "   ", herevalbuf, "end"));
 							}
 							if ( ! raw_supported && (verbose || ! expand_dumped_variables)) {
 								printf(" # remote HTCondor version does not support -verbose\n");
@@ -1246,12 +1293,12 @@ main( int argc, const char* argv[] )
 									printf(" # at: %s\n", file_and_line.Value());
 								}
 								if (expand_dumped_variables) {
-									printf(" # raw: %s\n", raw_value.Value());
+									printf(" # raw: %s\n", RemotePrintValue(raw_value.Value(), " #   ", herevalbuf));
 								} else {
-									printf(" # expanded: %s\n", value);
+									printf(" # expanded: %s\n", RemotePrintValue(value, " #   ", herevalbuf));
 								}
 								if ( ! def_value.IsEmpty()) {
-									printf(" # default: %s\n", def_value.Value());
+									printf(" # default: %s\n", RemotePrintValue(def_value.Value(), " #   ", herevalbuf));
 								}
 								if (show_param_info) {
 									print_param_table_info(stdout, param_id, type_and_flags, used_for, tags);
@@ -1361,7 +1408,7 @@ main( int argc, const char* argv[] )
 				++num_not_defined;
 			} else {
 				if (verbose) {
-					printf("%s = %s\n", name_used.c_str(), value);
+					printf("%s %s\n", name_used.c_str(), RemotePrintValue(value, "   ", herevalbuf, "end"));
 				} else {
 					printf("%s\n", value);
 				}
@@ -1376,10 +1423,10 @@ main( int argc, const char* argv[] )
 					printf(" # at: %s\n", file_and_line.Value());
 				}
 				if ( ! raw_value.IsEmpty()) {
-					printf(" # raw: %s\n", raw_value.Value());
+					printf(" # raw: %s\n", RemotePrintValue(raw_value.Value(), " #   ", herevalbuf));
 				}
 				if ( ! def_value.IsEmpty()) {
-					printf(" # default: %s\n", def_value.Value());
+					printf(" # default: %s\n", RemotePrintValue(def_value.Value(), " #   ", herevalbuf));
 				}
 				if (dump_both_only_type > 0) {
 					print_as_type(tmp, dump_both_only_type);
@@ -1994,8 +2041,10 @@ struct _write_config_args {
 	const char * pszLast;
 	StringList *obsolete;
 	StringList *obsoleteif;
+	std::string * buffer;
 	std::map<unsigned long long, std::string> output;
 };
+
 
 // iterator callback that writes a single entry
 bool write_config_callback(void* user, HASHITER & it) {
@@ -2069,6 +2118,13 @@ bool write_config_callback(void* user, HASHITER & it) {
 	}
 	const char * name = hash_iter_key(it);
 	const char * rawval = hash_iter_value(it);
+	const char * equal_begin = "= ";
+	const char * equal_end = "";
+	if (pmeta->multi_line) {
+		equal_begin = "@=end";
+		equal_end = "\n@end";
+		rawval = indent_herefile(rawval, (comment_me[0]=='#') ? "#   " : "   ", *(pargs->buffer));
+	}
 
 	bool is_dup = (pargs->pszLast && (MATCH == strcasecmp(name, pargs->pszLast)));
 	if (is_dup && ! pargs->opt.show_dup) {
@@ -2081,13 +2137,13 @@ bool write_config_callback(void* user, HASHITER & it) {
 	}
 	if (pargs->opt.sort_name) {
 		// if sorting the output by name, we can just print it now.
-		fprintf(fh, "%s%s = %s\n", comment_me, name, rawval ? rawval : "");
+		fprintf(fh, "%s%s %s%s%s\n", comment_me, name, equal_begin, rawval?rawval:"", equal_end);
 		if ( ! source.empty()) { fprintf(fh, " # at: %s\n", source.c_str()); }
 	} else {
 		MyString line;
 		//the next line makes the difference between NULL and "" visible
 		//if (rawval && !rawval[0]) rawval = "\"\"";
-		line.formatstr("%s%s = %s", comment_me, name, rawval ? rawval : "");
+		line.formatstr("%s%s %s%s%s", comment_me, name, equal_begin, rawval?rawval:"", equal_end);
 		if ( ! source.empty()) { line += "\n"; line += source; }
 		// generate a unique source sort key so that we end up sorting by
 		// source file id, line, & meta-knob line in that order.
@@ -2402,9 +2458,11 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 		close_file = true;
 	}
 
+	std::string argbuf;
 	struct _write_config_args args;
 	args.fh = fh;
 	args.opt.all = opts.all;
+	args.buffer = &argbuf;
 	args.iter = 0;
 	args.obsolete = NULL;
 	args.obsoleteif = NULL;
