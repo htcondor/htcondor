@@ -21,6 +21,10 @@ New Features:
   require this level now require ``ADMINISTRATOR`` authorization.
   :jira:`1023`
 
+- Improved the algorithm in the schedd to speed up the scheduling of jobs
+  when reusing claims.
+  :jira:`1056`
+
 Bugs Fixed:
 
 - Fix a rare bug where the starter will fail to start a job, and the job will
