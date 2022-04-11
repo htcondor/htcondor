@@ -1090,32 +1090,15 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				m_will_enable_integrity  = m_sec_man->sec_lookup_feat_act(*m_policy, ATTR_SEC_INTEGRITY);
 
 
-				// protocol fix:
-				//
-				// up to and including 6.6.0, will_authenticate would be set to
-				// true if we are resuming a session that was authenticated.
-				// this is not necessary.
-				//
-				// so, as of 6.6.1, if we are resuming a session (as determined
-				// by the expression (!m_new_session), AND the other side is
-				// 6.6.1 or higher, we will force will_authenticate to
-				// SEC_FEAT_ACT_NO.
-
+				// When resuming an existing security session, will_authenticate
+				// reflects the original decision about whether to authenticate.
+				// We don't want to re-authenticate when resuming, so force
+				// will_authenticate to SEC_FEAT_ACT_NO in that case.
 				if ( will_authenticate == SecMan::SEC_FEAT_ACT_YES ) {
 					if ((!m_new_session)) {
-						char * remote_version = NULL;
-						m_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
-						if(remote_version) {
-							// this attribute was added in 6.6.1.  it's mere
-							// presence means that the remote side is 6.6.1 or
-							// higher, so no need to instantiate a CondorVersionInfo.
-							dprintf( D_SECURITY, "SECMAN: other side is %s, NOT reauthenticating.\n", remote_version );
-							will_authenticate = SecMan::SEC_FEAT_ACT_NO;
+						dprintf( D_SECURITY, "SECMAN: resume, NOT reauthenticating.\n" );
+						will_authenticate = SecMan::SEC_FEAT_ACT_NO;
 
-							free (remote_version);
-						} else {
-							dprintf( D_SECURITY, "SECMAN: other side is pre 6.6.1, reauthenticating.\n" );
-						}
 					} else {
 						dprintf( D_SECURITY, "SECMAN: new session, doing initial authentication.\n" );
 					}
@@ -1688,24 +1671,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		}
 
 		if (m_sock->triedAuthentication()) {
-				// Clients older than 7.1.2 behave differently when re-using a
-				// security session.  If they reach a point in the code where
-				// authentication is forced (e.g. to submit jobs), they will
-				// always re-authenticate at that point.  Therefore, we only
-				// set TriedAuthentication=True for newer clients which respect
-				// that setting.  When the setting is not there or false, the server
-				// and client will re-authenticate at such points because
-				// triedAuthentication() (or isAuthenticated() in the older code)
-				// will be false.
-			char * remote_version = NULL;
-			m_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
-			CondorVersionInfo verinfo(remote_version);
-			free(remote_version);
-
-			if (verinfo.built_since_version(7,1,2)) {
-				pa_ad.Assign(ATTR_SEC_TRIED_AUTHENTICATION,m_sock->triedAuthentication());
-			}
-
+			pa_ad.Assign(ATTR_SEC_TRIED_AUTHENTICATION,m_sock->triedAuthentication());
 		}
 
 			// remember on the server side what we told the client

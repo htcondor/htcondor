@@ -2170,27 +2170,14 @@ SecManStartCommand::authenticate_inner()
 			return StartCommandFailed;
 		}
 
-		// protocol fix:
-		//
-		// up to and including 6.6.0, will_authenticate would be set to true
-		// if we are resuming a session that was authenticated.  this is not
-		// necessary.
-		//
-		// so, as of 6.6.1, if we are resuming a session (as determined
-		// by the expression (!m_new_session), AND the other side is 6.6.1
-		// or higher, we will force will_authenticate to SEC_FEAT_ACT_NO.
-		//
-		// we can tell easily if the other side is 6.6.1 or higher by the
-		// mere presence of the version, since that is when it was added.
-
+		// When resuming an existing security session, will_authenticate
+		// reflects the original decision about whether to authenticate.
+		// We don't want to re-authenticate when resuming, so force
+		// will_authenticate to SEC_FEAT_ACT_NO in that case.
 		if ( will_authenticate == SecMan::SEC_FEAT_ACT_YES ) {
 			if ((!m_new_session)) {
-				if( !m_remote_version.empty() ) {
-					dprintf( D_SECURITY, "SECMAN: resume, other side is %s, NOT reauthenticating.\n", m_remote_version.c_str() );
-					will_authenticate = SecMan::SEC_FEAT_ACT_NO;
-				} else {
-					dprintf( D_SECURITY, "SECMAN: resume, other side is pre 6.6.1, reauthenticating.\n");
-				}
+				dprintf( D_SECURITY, "SECMAN: resume, NOT reauthenticating.\n" );
+				will_authenticate = SecMan::SEC_FEAT_ACT_NO;
 			} else {
 				dprintf( D_SECURITY, "SECMAN: new session, doing initial authentication.\n" );
 			}
