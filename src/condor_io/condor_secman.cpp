@@ -1596,6 +1596,11 @@ SecManStartCommand::sendAuthInfo_inner()
 			}
 		}
 
+		if (!param_boolean("SEC_ENABLE_RESUME_SERVER_RESPONSE", true)) {
+			dprintf(D_SECURITY, "SECMAN: Requesting no server response to resume due to configuration\n");
+			m_want_resume_response = false;
+		}
+
 		// If we think we're talking to an old peer that doesn't understand
 		// the server response to a resumed session, say so in our ad.
 		// That way, if we're wrong, we don't get out-of-sync with the server.
