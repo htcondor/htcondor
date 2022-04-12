@@ -3080,13 +3080,13 @@ SecMan::FinishKeyExchange(std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> my
 	unsigned char *secret_raw = nullptr;
 	size_t secret_len = 0;
 	if (1 != EVP_PKEY_derive(ctx.get(), nullptr, &secret_len) ||
-		nullptr == (secret_raw = (unsigned char *)OPENSSL_malloc(secret_len)))
+		nullptr == (secret_raw = (unsigned char *)malloc(secret_len)))
 	{
 		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
 			"Failed to allocate new secret buffer for key generation.");
 		return false;
 	}
-	std::unique_ptr<unsigned char, decltype(&OPENSSL_freeFunc)> secret(secret_raw, &OPENSSL_freeFunc);
+	std::unique_ptr<unsigned char, decltype(&free)> secret(secret_raw, &free);
 
 		// Derive shared secret
 	if (1 != EVP_PKEY_derive(ctx.get(), secret.get(), &secret_len)) {
