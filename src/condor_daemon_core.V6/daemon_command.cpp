@@ -739,34 +739,49 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					// the key id they sent was not in our cache.  this is a
 					// problem.
 
-					char * return_addr = NULL;
-					m_auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
-					std::string our_sinful;
-					m_auth_info.LookupString(ATTR_SEC_CONNECT_SINFUL, our_sinful);
-					ClassAd info_ad;
-					// Presence of the ConnectSinful attribute indicates
-					// that the client understands and wants the
-					// extended information ad in the
-					// DC_INVALIDATE_KEY message.
-					if ( !our_sinful.empty() ) {
-						info_ad.Assign(ATTR_SEC_CONNECT_SINFUL, our_sinful);
-					}
-
+					std::string return_addr;
+					m_auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, return_addr);
 					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
-							   "invalid session %s, failing; this session was requested by %s with return address %s\n", m_sid, m_sock->peer_description(), return_addr ? return_addr : "(none)");
+					         "invalid session %s, failing; this session was requested by %s with return address %s\n", m_sid, m_sock->peer_description(), return_addr.empty() ? "(none)" : return_addr.c_str());
 					if( !strncmp( m_sid, "family:", strlen("family:") ) ) {
 						dprintf(D_ALWAYS, "  The remote daemon thinks that we are in the same family of Condor daemon processes as it, but I don't recognize its family security session.\n");
 						dprintf(D_ALWAYS, "  If we are in the same family of processes, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
 					}
 
-					if( return_addr ) {
-						daemonCore->send_invalidate_session( return_addr, m_sid, &info_ad );
-						free (return_addr);
-					}
+					bool want_resume_response = false;
+					m_auth_info.LookupBool(ATTR_SEC_RESUME_RESPONSE, want_resume_response);
+					if (want_resume_response) {
+						// New client, tell them here that we don't like
+						// their session id.
+						ClassAd resp_ad;
+						resp_ad.Assign(ATTR_SEC_RETURN_CODE, "SID_NOT_FOUND");
 
-					// consume the rejected message
-					m_sock->decode();
-					m_sock->end_of_message();
+						m_sock->encode();
+						if (!putClassAd(m_sock, resp_ad) || !m_sock->end_of_message()) {
+							dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to send unknown session reply to peer at %s.\n", m_sock->peer_description());
+						}
+					} else {
+						// Old client (pre-9.9.0), send out-of-band
+						// notification of invalid session.
+						std::string our_sinful;
+						m_auth_info.LookupString(ATTR_SEC_CONNECT_SINFUL, our_sinful);
+						ClassAd info_ad;
+						// Presence of the ConnectSinful attribute indicates
+						// that the client understands and wants the
+						// extended information ad in the
+						// DC_INVALIDATE_KEY message.
+						if ( !our_sinful.empty() ) {
+							info_ad.Assign(ATTR_SEC_CONNECT_SINFUL, our_sinful);
+						}
+
+						if( !return_addr.empty() ) {
+							daemonCore->send_invalidate_session( return_addr.c_str(), m_sid, &info_ad );
+						}
+
+						// consume the rejected message
+						m_sock->decode();
+						m_sock->end_of_message();
+					}
 
 					// close the connection.
 					m_result = FALSE;
@@ -1115,6 +1130,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 							&free);
 
 						ClassAd ad;
+						ad.Assign(ATTR_SEC_RETURN_CODE, "AUTHORIZED");
 						ad.Assign(ATTR_SEC_REMOTE_VERSION, CondorVersion());
 						if (!ad.InsertAttr(ATTR_SEC_NONCE, encoded_bytes.get())) {
 							dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to generate nonce to send for session resumption.\n");

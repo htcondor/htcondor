@@ -2281,6 +2281,29 @@ SecManStartCommand::authenticate_inner()
 					dprintf(D_SECURITY, "SECMAN: server responded to resume session with:\n");
 					dPrintAd(D_SECURITY, auth_response);
 				}
+
+				std::string response_rc;
+				auth_response.LookupString(ATTR_SEC_RETURN_CODE,response_rc);
+				if (response_rc == "SID_NOT_FOUND") {
+					dprintf(D_ALWAYS, "SECMAN: Server rejected our session id\n");
+					m_errstack->push("SECMAN", SECMAN_ERR_NO_SESSION, "Server rejected our session id");
+					bool negotiated_session = true;
+					m_auth_info.LookupBool(ATTR_SEC_NEGOTIATED_SESSION, negotiated_session);
+					if (negotiated_session) {
+						dprintf(D_ALWAYS, "SECMAN: Invalidating negotiated session rejected by peer\n");
+						std::string sid;
+						m_auth_info.LookupString(ATTR_SEC_SID, sid);
+						m_sec_man.invalidateKey(sid.c_str());
+					}
+					return StartCommandFailed;
+				} else if (response_rc != "" && response_rc != "AUTHORIZED") {
+					std::string err_msg;
+					formatstr(err_msg, "Received \"%s\" from server", response_rc.c_str());
+					dprintf(D_ALWAYS, "SECMAN: FAILED: %s\n", err_msg.c_str());
+					m_errstack->push("SECMAN", SECMAN_ERR_AUTHORIZATION_FAILED, err_msg.c_str());
+					return StartCommandFailed;
+				}
+
 				std::string peer_version;
 				if (auth_response.LookupString(ATTR_SEC_REMOTE_VERSION, peer_version)) {
 					CondorVersionInfo ver_info(peer_version.c_str());
