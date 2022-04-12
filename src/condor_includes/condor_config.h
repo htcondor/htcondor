@@ -71,8 +71,9 @@ typedef struct macro_meta {
 	    unsigned matches_default :1;
 	    unsigned inside          :1;
 	    unsigned param_table     :1;
-	    unsigned live            :1; // future
-	    unsigned checkpointed    :1; // future
+	    unsigned multi_line      :1;
+	    unsigned live            :1;
+	    unsigned checkpointed    :1;
 	  };
 	};
 	short int    source_id;    // index into MACRO_SOURCES table
@@ -502,7 +503,7 @@ BEGIN_C_DECLS
 	extern const MACRO_SOURCE WireMacro;
 	extern const MACRO_SOURCE DetectedMacro;
 
-	void insert_macro (const char *name, const char *value, MACRO_SET& macro_set, const MACRO_SOURCE & source, MACRO_EVAL_CONTEXT & ctx);
+	void insert_macro (const char *name, const char *value, MACRO_SET& macro_set, const MACRO_SOURCE & source, MACRO_EVAL_CONTEXT & ctx, bool is_herefile=false);
 	inline const char * macro_source_filename(MACRO_SOURCE& source, MACRO_SET& set) { return set.sources[source.id]; }
 	
 	/** Sets the whether or not a macro has actually been used
