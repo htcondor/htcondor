@@ -21,6 +21,9 @@ New Features:
   require this level now require ``ADMINISTRATOR`` authorization.
   :jira:`1023`
 
+- Singularity jobs can now pull images from docker style repos.
+  :jira:`1059`
+
 Bugs Fixed:
 
 - Fix a rare bug where the starter will fail to start a job, and the job will
