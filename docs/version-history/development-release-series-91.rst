@@ -21,6 +21,18 @@ New Features:
   require this level now require ``ADMINISTRATOR`` authorization.
   :jira:`1023`
 
+- Elliptic-curve Diffie-Hellman (ECDH) Key Exchange is now used to generate
+  session keys for network communication.
+  :jira:`283`
+
+- Added replay protection for authenticated network communication.
+  :jira:`287`
+  :jira:`1054`
+
+- Improved notification between network peers when a cached security
+  session is not recognized.
+  :jira:`1057`
+
 Bugs Fixed:
 
 - Fix a rare bug where the starter will fail to start a job, and the job will
