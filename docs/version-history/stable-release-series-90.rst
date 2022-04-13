@@ -31,6 +31,9 @@ Bugs Fixed:
   and warnings rather than writing them into a log file.
   :jira:`1002`
 
+- Updated the Windows build of HTCondor to use SSL 1.1.1m
+  :jira:`840`
+
 .. _lts-version-history-9012:
 
 Version 9.0.12
