@@ -350,6 +350,17 @@ Singularity::setup(ClassAd &machineAd,
 	exec = sing_exec_str;
 	dprintf(D_FULLDEBUG, "Arguments updated for executing with singularity: %s %s\n", exec.c_str(), args_string.c_str());
 
+	// For some reason, singularity really wants /usr/sbin near the beginning of the PATH
+	// when running /usr/sbin/mksquashfs when running docker: images
+	std::string oldPath;
+	job_env.GetEnv("PATH", oldPath);
+	job_env.SetEnv("PATH", std::string("/usr/sbin:" + oldPath));
+
+	// If reading an image from a docker hub, store it in the scratch dir
+	// when we get AP sandboxes, that would be a better place to store these
+	job_env.SetEnv("SINGULARITY_CACHEDIR", execute_dir);
+	job_env.SetEnv("SINGULARITY_TEMPDIR", execute_dir);
+
 	Singularity::convertEnv(&job_env);
 	return Singularity::SUCCESS;
 }
