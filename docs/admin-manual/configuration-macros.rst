@@ -9279,6 +9279,20 @@ macros are described in the :doc:`/admin-manual/security` section.
     bypasses the security authorization settings. The default value is
     ``True``.
 
+:macro-def:`SEC_ENABLE_REMOTE_ADMINISTRATION`
+    A boolean parameter that controls whether daemons should include a
+    secret administration key when they advertise themselves to the
+    **condor_collector**.
+    Anyone with this key is authorized to send ADMINISTRATOR-level
+    commands to the daemon.
+    The **condor_collector** will only provide this key to clients who
+    are authorized at the ADMINISTRATOR level to the **condor_collector**.
+    The default value is ``False``.
+
+    When this parameter is enabled for all daemons, control of who is
+    allowed to administer the pool can be consolidated in the
+    **condor_collector** and its security configuration.
+
 :macro-def:`KERBEROS_SERVER_KEYTAB`
     The path and file name of the keytab file that holds the necessary
     Kerberos principals. If not defined, this variable's value is set by

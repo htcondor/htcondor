@@ -24,6 +24,15 @@ New Features:
 - Singularity jobs can now pull images from docker style repos.
   :jira:`1059`
 
+- Daemons now send a security capability when they advertise themselves
+  to the **condor_collector**.
+  Authorized administrator tools can retrieve this capability from the
+  **condor_collector**, which allows them to send administrative commands
+  to the daemons.
+  This allows the authentication and authorization of administrators of a
+  whole pool to be centralized at the **condor_collector**.
+  :jira:`638`
+
 Bugs Fixed:
 
 - Fix a rare bug where the starter will fail to start a job, and the job will
