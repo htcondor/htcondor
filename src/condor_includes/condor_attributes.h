@@ -427,6 +427,7 @@
 #define ATTR_LAST_JOB_STATUS  "LastJobStatus"
 #define ATTR_JOB_TOE "ToE"  // termination of execution ad
 #define ATTR_JOB_STATUS_ON_RELEASE  "JobStatusOnRelease"
+#define ATTR_JOB_SUBMIT_METHOD "JobSubmitMethod"
 #define ATTR_JOB_TRANSFERRING_OUTPUT  "JobTransferringOutput"
 #define ATTR_JOB_TRANSFERRING_OUTPUT_TIME  "JobTransferringOutputTime"
 #define ATTR_JOB_UNIVERSE  "JobUniverse"
@@ -515,6 +516,7 @@
 #define ATTR_NEGOTIATOR_JOB_CONSTRAINT  "NegotiatorJobConstraint"
 #define ATTR_NEGOTIATOR_NAME  "NegotiatorName"
 #define ATTR_NEGOTIATOR_REQUIREMENTS  "NegotiatorRequirements"
+#define ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS  "NegotiatorScheddsAreSubmitters"
 #define ATTR_NETWORK_IN  "NetworkInputMb"
 #define ATTR_NETWORK_OUT  "NetworkOutputMb"
 #define ATTR_NEXT_CLUSTER_NUM  "NextClusterNum"
@@ -790,7 +792,6 @@
 #define ATTR_WANT_PARALLEL_SCHEDULING_GROUPS  "WantParallelSchedulingGroups"
 #define ATTR_WANT_CHECKPOINT_SIGNAL  "WantCheckpointSignal"
 #define ATTR_WANT_PSLOT_PREEMPTION  "WantPslotPreemption"
-#define ATTR_WANT_REMOTE_SYSCALLS  "WantRemoteSyscalls"
 #define ATTR_WANT_SCHEDD_COMPLETION_VISA  "WantCompletionVisaFromSchedD"
 #define ATTR_WANT_STARTER_EXECUTION_VISA  "WantExecutionVisaFromStarter"
 #define ATTR_WANT_AD_REVAULATE  "WantAdRevaluate"
@@ -928,6 +929,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_CLIENT_ID "ClientId"
 #define ATTR_SEC_REQUEST_ID "RequestId"
 #define ATTR_SEC_LIFETIME "Lifetime"
+#define ATTR_SEC_REQUESTED_KEY "RequestedKey"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 

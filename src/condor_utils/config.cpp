@@ -2259,7 +2259,7 @@ static bool same_param_value(
 	return false;
 }
 
-void insert_macro(const char *name, const char *value, MACRO_SET & set, const MACRO_SOURCE & source, MACRO_EVAL_CONTEXT & ctx)
+void insert_macro(const char *name, const char *value, MACRO_SET & set, const MACRO_SOURCE & source, MACRO_EVAL_CONTEXT & ctx, bool is_herefile /*=false*/)
 {
 	// if already in the macro-set, we need to expand self-references and replace
 	MACRO_ITEM * pitem = find_macro_item(name, NULL, set);
@@ -2275,6 +2275,7 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 			pmeta->source_meta_id = source.meta_id;
 			pmeta->source_meta_off = source.meta_off;
 			pmeta->inside = (source.is_inside != false);
+			pmeta->multi_line = is_herefile || (pitem->raw_value && strchr(pitem->raw_value, '\n'));
 			pmeta->param_table = false;
 			// use the name here in case we have a compound name, i.e "master.value"
 			const char * post_prefix = NULL;
@@ -2350,6 +2351,7 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 		pmeta->flags = 0; // clear all flags.
 		pmeta->matches_default = matches_default;
 		pmeta->inside = source.is_inside;
+		pmeta->multi_line = is_herefile || (pitem->raw_value && strchr(pitem->raw_value, '\n'));
 		pmeta->source_id = source.id;
 		pmeta->source_line = source.line;
 		pmeta->source_meta_id = source.meta_id;

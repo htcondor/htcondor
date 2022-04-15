@@ -2499,7 +2499,7 @@ Daemon::getInstanceID( std::string & instanceID ) {
 
 bool
 Daemon::getSessionToken( const std::vector<std::string> &authz_bounding_limit, int lifetime,
-	std::string &token, CondorError *err)
+	std::string &token, const std::string &key, CondorError *err)
 {
 	if( IsDebugLevel( D_COMMAND ) ) {
 		dprintf( D_COMMAND, "Daemon::getSessionToken() making connection to "
@@ -2518,6 +2518,12 @@ Daemon::getSessionToken( const std::vector<std::string> &authz_bounding_limit, i
 		return false;
 	}
 	if ((lifetime > 0) && !ad.InsertAttr(ATTR_SEC_TOKEN_LIFETIME, lifetime)) {
+		if (err) err->pushf("DAEMON", 1, "Failed to create token request ClassAd");
+		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
+		return false;
+	}
+
+	if( (!key.empty()) && !ad.InsertAttr(ATTR_SEC_REQUESTED_KEY, key)) {
 		if (err) err->pushf("DAEMON", 1, "Failed to create token request ClassAd");
 		dprintf(D_FULLDEBUG, "Failed to create token request ClassAd\n");
 		return false;

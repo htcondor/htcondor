@@ -26,6 +26,7 @@
 #include "condor_query.h"
 #include "condor_io.h"
 #include "enum_utils.h"
+#include "condor_claimid_parser.h"
 
 
 /** The subclass of the Daemon object for talking to a startd
@@ -319,5 +320,104 @@ private:
 	std::string m_claim_id;
 };
 
+class NotifyStartdOfMatchHandler {
+public:
+	std::string m_startdName;
+	std::string  m_startdAddr;
+	std::string  m_claim_id;
+	int m_timeout;
+	DCStartd m_startd;
+	bool m_nonblocking;
+
+	NotifyStartdOfMatchHandler(char const *startdName,char const *startdAddr,int timeout,char const *claim_id,bool nonblocking):
+		
+		m_startdName(startdName),
+		m_startdAddr(startdAddr),
+		m_claim_id(claim_id),
+		m_timeout(timeout),
+		m_startd(startdAddr),
+		m_nonblocking(nonblocking) {}
+
+	static void startCommandCallback(bool success,Sock *sock,CondorError * /*errstack*/,
+		const std::string & /*trust_domain*/, bool /*should_try_token_request*/, void *misc_data)
+	{
+		NotifyStartdOfMatchHandler *self = (NotifyStartdOfMatchHandler *)misc_data;
+		ASSERT(misc_data);
+
+		if(!success) {
+			dprintf (D_ALWAYS,"      Failed to initiate socket to send MATCH_INFO to %s\n",
+					 self->m_startdName.c_str());
+		}
+		else {
+			self->WriteMatchInfo(sock);
+		}
+		if(sock) {
+			delete sock;
+		}
+		delete self;
+	}
+
+	bool WriteMatchInfo(Sock *sock) const
+	{
+		ClaimIdParser idp( m_claim_id.c_str() );
+		ASSERT(sock);
+
+		// pass the startd MATCH_INFO and claim id string
+		dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/claim id to %s\n",
+		         m_startdName.c_str());
+		dprintf (D_FULLDEBUG, "      (Claim ID is \"%s\" )\n",
+		         idp.publicClaimId() );
+
+		if ( !sock->put_secret (m_claim_id.c_str()) ||
+			 !sock->end_of_message())
+		{
+			dprintf (D_ALWAYS,
+			        "      Could not send MATCH_INFO/claim id to %s\n",
+			        m_startdName.c_str() );
+			dprintf (D_FULLDEBUG,
+			        "      (Claim ID is \"%s\")\n",
+			        idp.publicClaimId() );
+			return false;
+		}
+		return true;
+	}
+
+	bool startCommand()
+	{
+		dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n",
+					m_startdName.c_str(), m_startdAddr.c_str());
+
+		if(!m_nonblocking) {
+			Stream::stream_type st = m_startd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+			Sock *sock =  m_startd.startCommand(MATCH_INFO,st,m_timeout);
+			bool result = false;
+			if(!sock) {
+				dprintf (D_ALWAYS,"      Failed to initiate socket (blocking mode) to send MATCH_INFO to %s\n",
+						 m_startdName.c_str());
+			}
+			else {
+				result = WriteMatchInfo(sock);
+			}
+			if(sock) {
+				delete sock;
+			}
+			delete this;
+			return result;
+		}
+
+		Stream::stream_type st = m_startd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+		m_startd.startCommand_nonblocking (
+			MATCH_INFO,
+			st,
+			m_timeout,
+			NULL,
+			NotifyStartdOfMatchHandler::startCommandCallback,
+			this);
+
+			// Since this is nonblocking, we cannot give any immediate
+			// feedback on whether the message to the startd succeeds.
+		return true;
+	}
+};
 
 #endif /* _CONDOR_DC_STARTD_H */

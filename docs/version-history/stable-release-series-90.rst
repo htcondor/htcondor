@@ -7,6 +7,33 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-9013:
+
+Version 9.0.13
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.0.13 released on Month Date, 2022.
+
+- HTCondor version 9.0.13 not yet released.
+
+New Features:
+
+- *condor_config_val* will now print an ``@=end/@end`` pair rather than simply ``=``
+  when printing multi-line configuration values for ``-dump``, ``-summary``, and ``-verbose``
+  mode output.
+  :jira:`1032`
+
+Bugs Fixed:
+
+- The *condor_run* tool now reports job submit errors
+  and warnings rather than writing them into a log file.
+  :jira:`1002`
+
+- Updated the Windows build of HTCondor to use SSL 1.1.1m
+  :jira:`840`
+
 .. _lts-version-history-9012:
 
 Version 9.0.12
@@ -53,6 +80,14 @@ Bugs Fixed:
    when routing a job between two *condor_schedd* s with different
    values for configuration parameter ``UID_DOMAIN``.
    :jira:`1005`
+
+- Fixed a bug where a credential file with an underscore in its filename could
+  not be used by the curl plugin when doing HTTPS transfers with a bearer token.
+  It can now be accessed by replacing "_" with "." in the URL scheme.
+  :jira:`1011`
+
+- Fixed several unlikely bugs when parsing the time strings in ClassAds.
+  :jira:`814`
 
 .. _lts-version-history-9011:
 

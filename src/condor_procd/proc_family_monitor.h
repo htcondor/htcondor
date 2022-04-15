@@ -130,7 +130,7 @@ public:
 	// use a snapshot of all processes on the system (from ProcAPI)
 	// to update the families we are tracking
 	//
-	void snapshot();
+	void snapshot(pid_t BOLOpid = 0);
 
 	// used to access the pid_t to ProcFamilyMember hash table
 	// (these need to be public since they are called from the

@@ -309,6 +309,15 @@ int getSomeCommandFromString ( const char * cmdstring ) {
 		dprintf( D_ALWAYS, "recognized %s as authorization level, using command %i.\n", cmdstring, res );
 		return res;
 	}
+	// CRUFT The old OWNER authorization level was merged into
+	//   ADMINISTRATOR in HTCondor 9.9.0. For older daemons, we still
+	//   recognize "OWNER" and issue the DC_NOP_OWNER command.
+	//   We should remove it eventually.
+	if (strcasecmp(cmdstring, "OWNER") == 0) {
+		res = DC_NOP_OWNER;
+		dprintf( D_ALWAYS, "recognized %s as old authorization level, using command %i.\n", cmdstring, res );
+		return res;
+	}
 
 	res = getCommandNum( cmdstring );
 	if (res != -1) {
@@ -479,6 +488,10 @@ int main( int argc, char *argv[] )
 			dprintf_set_tool_debug("TOOL", 0);
 		} else if(argv[i][0]!='-' || !strcmp(argv[i],"-")) {
 			// a special case
+			// CRUFT The old OWNER authorization level was merged into
+			//   ADMINISTRATOR in HTCondor 9.9.0. For older daemons, we still
+			//   recognize "OWNER" and issue the DC_NOP_OWNER command.
+			//   We should remove it eventually.
 			if(strcasecmp("ALL", argv[i]) == 0) {
 				worklist_name.push_back("ALLOW");
 				worklist_name.push_back("READ");

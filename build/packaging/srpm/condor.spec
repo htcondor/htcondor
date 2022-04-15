@@ -1200,10 +1200,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/elastic.py
 %_libexecdir/condor/adstash/history.py
 %_libexecdir/condor/adstash/utils.py
-%_libexecdir/condor/annex/annex-local-universe.py
-%_libexecdir/condor/annex/stampede2.multi-pilot
-%_libexecdir/condor/annex/stampede2.pilot
-%_libexecdir/condor/annex/stampede2.sh
+%_libexecdir/condor/annex
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_password.1.gz
@@ -1383,6 +1380,9 @@ rm -rf %{buildroot}
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
 %_sbindir/remote_gahp
+%_sbindir/rvgahp_client
+%_sbindir/rvgahp_proxy
+%_sbindir/rvgahp_server
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
 %_sbindir/arc_gahp
@@ -1675,6 +1675,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Apr 05 2022 Tim Theisen <tim@cs.wisc.edu> - 9.7.1-1
+- Fix recent bug where jobs may go on hold without a hold reason or code
+
 * Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.7.0-1
 - Support environment variables, other application elements in ARC REST jobs
 - Container universe supports Singularity jobs with hard-coded command

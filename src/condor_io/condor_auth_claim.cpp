@@ -22,8 +22,6 @@
 #include "condor_config.h"
 #include "CondorError.h"
 
-#if !defined(SKIP_AUTHENTICATION)
-
 #include "condor_auth_claim.h"
 
 Condor_Auth_Claim :: Condor_Auth_Claim(ReliSock * sock)
@@ -204,5 +202,3 @@ int Condor_Auth_Claim :: isValid() const
 {
     return TRUE;
 }
-
-#endif

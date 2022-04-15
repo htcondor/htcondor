@@ -857,10 +857,10 @@ if (WINDOWS)
     #  set(BOOST_DOWNLOAD_WIN boost-1.68.0-VC15-Win32.tar.gz)
     #endif()
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.2l)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.40)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.14.5)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.54.1)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.1.1m)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.45)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.82.0)
   elseif(NOT (MSVC_VERSION LESS 1700))
 	if (MSVC11)
       if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
@@ -1049,7 +1049,7 @@ endif()
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
-if (DLOPEN_GSI_LIBS)
+if (DLOPEN_GSI_LIBS OR DLOPEN_VOMS_LIBS)
 	set (SECURITY_LIBS "")
 	set (SECURITY_LIBS_STATIC "")
 else()
@@ -1193,14 +1193,10 @@ else(MSVC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-nonnull-compare -Wno-error=nonnull-compare")
 	endif(c_Wnonnull_compare)
 
-	# gcc on our AIX machines recognizes -fstack-protector, but lacks
-	# the requisite library.
-	if (NOT AIX)
-		check_c_compiler_flag(-fstack-protector c_fstack_protector)
-		if (c_fstack_protector)
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
-		endif(c_fstack_protector)
-	endif(NOT AIX)
+	check_c_compiler_flag(-fstack-protector c_fstack_protector)
+	if (c_fstack_protector)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
+	endif(c_fstack_protector)
 
 	# Clang on Mac OS X doesn't support -rdynamic, but the
 	# check below claims it does. This is probably because the compiler
@@ -1228,11 +1224,6 @@ else(MSVC)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--enable-new-dtags")
 		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--enable-new-dtags")
 	endif(LINUX)
-
-	if (AIX)
-		# specifically ask for the C++ libraries to be statically linked
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -static-libgcc")
-	endif(AIX)
 
 	if ( NOT PROPER AND HAVE_LIBRESOLV )
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lresolv")

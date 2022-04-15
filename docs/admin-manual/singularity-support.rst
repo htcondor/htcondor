@@ -41,7 +41,10 @@ may be a path to file on a local file system that contains an singularity
 image, in any format that singularity supports.  It may be a string that
 begins with ``docker://``, and refer to an image located on docker hub,
 or other repository.  It can begin with ``http://``, and refer to an image
-to be fetched from an HTTP server.  It can be a relative path, in which
+to be fetched from an HTTP server.  In this case, singularity will fetch
+the image into the job's scratch directory, convert it to a .sif file and
+run it from there.  Note this may require the job to request more disk space
+that it otherwise would need. It can be a relative path, in which
 case it refers to a file in the scratch directory, so that the image
 can be transfered by HTCondor's file transfer mechanism.
 

@@ -209,6 +209,14 @@ int getCommand(object command)
         {
             return getSampleCommand(res);
         }
+        // CRUFT The old OWNER authorization level was merged into
+        //   ADMINISTRATOR in HTCondor 9.9.0. For older daemons, we still
+	    //   recognize "OWNER" and issue the DC_NOP_OWNER command.
+        //   We should remove it eventually.
+        if (0 == strcasecmp(cmdstring.c_str(), "OWNER"))
+        {
+            return DC_NOP_OWNER;
+        }
         if (-1 != (res = getCommandNum(cmdstring.c_str())))
         {
             return res;

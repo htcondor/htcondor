@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 
-#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_GLOBUS)
+#if defined(HAVE_EXT_GLOBUS)
 
 #include "condor_auth_x509.h"
 #include "authentication.h"

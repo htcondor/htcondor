@@ -196,7 +196,7 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 
 	// get our family tree state as up to date as possible
 	//
-	snapshot();
+	snapshot(root_pid);
 
 	// find the root process of the (potential) new subfamily
 	// in our snapshot. we require that the process of any newly
@@ -534,7 +534,7 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 }
 
 void
-ProcFamilyMonitor::snapshot()
+ProcFamilyMonitor::snapshot(pid_t BOLOpid)
 {
 	dprintf(D_ALWAYS, "taking a snapshot...\n");
 
@@ -543,7 +543,7 @@ ProcFamilyMonitor::snapshot()
 	// (the algorithm below will handle it just fine, but its probably an
 	// indication that something is wrong)
 	//
-	procInfo* pi_list = ProcAPI::getProcInfoList();
+	procInfo* pi_list = ProcAPI::getProcInfoList(BOLOpid);
 
 	// print info about all procInfo allocations
 	//
@@ -591,12 +591,18 @@ ProcFamilyMonitor::snapshot()
 			//
 			*prev_ptr = curr->next;
 			pm->still_alive(curr);
+			if (curr->pid == BOLOpid) {
+				dprintf(D_ALWAYS, "Register_subfamily root pid has been seen before!\n");
+			}
 		}
 		else {
 			// this process is not in any of our families, so it stays
 			// on the list
 			//
 			prev_ptr = &curr->next;
+			if (curr->pid == BOLOpid) {
+				dprintf(D_ALWAYS, "Register_subfamily pid has NOT been seen before!\n");
+			}
 		}
 
 		curr = curr->next;

@@ -21,8 +21,6 @@
 #ifndef CONDOR_AUTHENTICATOR_ANONYMOUS
 #define CONDOR_AUTHENTICATOR_ANONYMOUS
 
-#if !defined(SKIP_AUTHENTICATION)
-
 #include "condor_auth_claim.h"        // Condor_Auth_Base class is defined here
 
 class Condor_Auth_Anonymous : public Condor_Auth_Claim {
@@ -47,7 +45,5 @@ class Condor_Auth_Anonymous : public Condor_Auth_Claim {
  private:
 
 };
-
-#endif  // SKIP_AUTHENTICATION
 
 #endif
