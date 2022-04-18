@@ -119,6 +119,7 @@ RUN dnf install -y \
     'openldap-devel' \
     'pam-devel' \
     'pcre-devel' \
+    'pcre2-devel' \
     'perl(Archive::Tar)' \
     'perl(Data::Dumper)' \
     'perl(Digest::MD5)' \

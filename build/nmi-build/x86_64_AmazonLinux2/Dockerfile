@@ -123,6 +123,7 @@ RUN yum install -y \
     'openssl-devel' \
     'pam-devel' \
     'pcre-devel' \
+    'pcre2-devel' \
     'perl(Archive::Tar)' \
     'perl(Data::Dumper)' \
     'perl(Digest::MD5)' \

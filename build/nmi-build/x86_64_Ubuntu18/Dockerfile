@@ -131,6 +131,7 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     libxml2-dev \
     libxss-dev \
     patchelf \
+    pcre2-utils \
     pkg-config \
     po-debconf \
     python3-all-dev \
