@@ -110,6 +110,11 @@ for REQUEST; do
         fi
     fi
     STOREOPTS=()
+    if [ -n "$SEC_CREDENTIAL_STORECRED_OPTS" ]; then
+        for OPT in $SEC_CREDENTIAL_STORECRED_OPTS; do
+            STOREOPTS+=($OPT)
+        done
+    fi
     for PART in "${PARTS[@]:1}"; do
         VAL="${PART#*=}"
         case "$PART" in
