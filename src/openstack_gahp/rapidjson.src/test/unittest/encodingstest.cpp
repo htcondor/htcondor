@@ -240,7 +240,6 @@ static const unsigned kCodepointRanges[] = {
 // See http://bjoern.hoehrmann.de/utf-8/decoder/dfa/ for details.
 
 #define UTF8_ACCEPT 0u
-#define UTF8_REJECT 12u
 
 static const unsigned char utf8d[] = {
     // The first part of the table maps bytes to character classes that
@@ -298,13 +297,14 @@ TEST(EncodingsTest, UTF8) {
 
                 unsigned decodedCount = 0;
                 for (const char* s = encodedStr; *s; ++s)
-                    if (!decode(&state, &decodedCodepoint, (unsigned char)*s)) {
+                    if (!decode(&state, &decodedCodepoint, static_cast<unsigned char>(*s))) {
                         EXPECT_EQ(codepoint, decodedCodepoint);
                         decodedCount++;
                     }
 
-                if (*encodedStr)                // This decoder cannot handle U+0000
+                if (*encodedStr) {                  // This decoder cannot handle U+0000
                     EXPECT_EQ(1u, decodedCount);    // Should only contain one code point
+                }
 
                 EXPECT_EQ(UTF8_ACCEPT, state);
                 if (UTF8_ACCEPT != state)
@@ -355,7 +355,7 @@ TEST(EncodingsTest, UTF16) {
                 unsigned state = 0;
                 UTF16<>::Ch buffer[3], *p = &buffer[0];
                 for (const char* s = utf8os.GetString(); *s; ++s) {
-                    if (!decode(&state, &decodedCodepoint, (unsigned char)*s))
+                    if (!decode(&state, &decodedCodepoint, static_cast<unsigned char>(*s)))
                         break;
                 }
 
@@ -421,6 +421,31 @@ TEST(EncodingsTest, UTF32) {
                 EXPECT_TRUE(result);
                 EXPECT_EQ(0, StrCmp(encodedStr, os2.GetString()));
             }
+        }
+    }
+}
+
+TEST(EncodingsTest, ASCII) {
+    StringBuffer os, os2;
+    for (unsigned codepoint = 0; codepoint < 128; codepoint++) {
+        os.Clear();
+        ASCII<>::Encode(os, codepoint);
+        const ASCII<>::Ch* encodedStr = os.GetString();
+        {
+            StringStream is(encodedStr);
+            unsigned decodedCodepoint;
+            bool result = ASCII<>::Decode(is, &decodedCodepoint);
+            if (!result || codepoint != decodedCodepoint)
+                std::cout << std::hex << codepoint << " " << decodedCodepoint << std::endl;
+        }
+
+        // Validate
+        {
+            StringStream is(encodedStr);
+            os2.Clear();
+            bool result = ASCII<>::Validate(is, os2);
+            EXPECT_TRUE(result);
+            EXPECT_EQ(0, StrCmp(encodedStr, os2.GetString()));
         }
     }
 }
