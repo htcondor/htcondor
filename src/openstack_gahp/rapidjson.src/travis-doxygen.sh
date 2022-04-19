@@ -42,8 +42,8 @@ abort() {
 	skip "Running Doxygen only for updates on 'master' branch (current: ${TRAVIS_BRANCH})."
 
 # check for job number
-[ "${TRAVIS_JOB_NUMBER}" = "${TRAVIS_BUILD_NUMBER}.1" ] || \
-	skip "Running Doxygen only on first job of build ${TRAVIS_BUILD_NUMBER} (current: ${TRAVIS_JOB_NUMBER})."
+# [ "${TRAVIS_JOB_NUMBER}" = "${TRAVIS_BUILD_NUMBER}.1" ] || \
+# 	skip "Running Doxygen only on first job of build ${TRAVIS_BUILD_NUMBER} (current: ${TRAVIS_JOB_NUMBER})."
 
 # install doxygen binary distribution
 doxygen_install()
@@ -66,7 +66,7 @@ gh_pages_prepare()
 	[ ! -d "html" ] || \
 		abort "Doxygen target directory already exists."
 	git --version
-	git clone --single-branch -b gh-pages "${GITHUB_CLONE}" html
+	git clone -b gh-pages "${GITHUB_CLONE}" html
 	cd html
 	# setup git config (with defaults)
 	git config user.name "${GIT_NAME-travis}"
