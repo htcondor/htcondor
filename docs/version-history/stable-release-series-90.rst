@@ -14,9 +14,7 @@ Version 9.0.12
 
 Release Notes:
 
-.. HTCondor version 9.0.12 released on Month Date, 2022.
-
-- HTCondor version 9.0.12 not yet released.
+- HTCondor version 9.0.12 released on April 19, 2022.
 
 New Features:
 
@@ -28,6 +26,11 @@ Bugs Fixed:
   with partitionable slots.
   :jira:`986`
 
+- Fixed a bug that could cause a daemon to erase its security session
+  to its family of daemon processes and subsequently crash when trying to
+  connect to one of those daemons.
+  :jira:`937`
+
 - Fixed a bug that prevented the High-Availability Daemon (HAD) from
   working when user-based security is enabled.
   :jira:`891`
@@ -36,16 +39,6 @@ Bugs Fixed:
   to update to collectors that may have failed.  It will no longer block
   and timeout for an extended period of time should this happen.
   :jira:`816`
-
-- Fixed a bug that could cause a daemon to erase its security session
-  to its family of daemon processes and subsequently crash when trying to
-  connect to one of those daemons.
-  :jira:`937`
-
-- Fixed a bug that caused any daemon to crash when it was configured
-  to report to more than one collector, and any of the collectors'
-  names could not be resolved by DNS.
-  :jira:`952`
 
 - The Job Router no longer sets an incorrect ``User`` job attribute
   when routing a job between two *condor_schedd* s with different
@@ -68,11 +61,6 @@ Bugs Fixed:
   not be used by the curl plugin when doing HTTPS transfers with a bearer token.
   It can now be accessed by replacing "_" with "." in the URL scheme.
   :jira:`1011`
-
-- Fixed a bug, introduced earlier in an 9.0 LTS version, where in very
-  rare cases, a schedd would not appear in the collector when it
-  started up, but would appear an hour later.
-  :jira:`931`
 
 - Fixed several unlikely bugs when parsing the time strings in ClassAds.
   :jira:`998`
