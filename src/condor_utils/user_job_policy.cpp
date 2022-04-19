@@ -497,7 +497,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 			if ((time(NULL) - beganExecuting) > allowedExecuteDuration) {
 				m_fire_expr = ATTR_JOB_ALLOWED_EXECUTE_DURATION;
 				m_fire_source = FS_ExecuteDuration;
-				formatstr(m_fire_reason, "The job exceeded allowed execute duration:%s", format_time(allowedJobDuration));
+				formatstr(m_fire_reason, "The job exceeded allowed execute duration:%s", format_time(allowedExecuteDuration));
 				return HOLD_IN_QUEUE;
 			}
 		}
