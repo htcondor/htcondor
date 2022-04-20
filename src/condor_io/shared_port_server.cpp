@@ -171,8 +171,8 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 	sock->decode();
 
 		// to avoid possible D-O-S attacks, we read into fixed-length buffers
-	char shared_port_id[512];
-	char client_name[512];
+	char shared_port_id[1024];
+	char client_name[1024];
 	int deadline = 0;
 	int more_args = 0;
 
