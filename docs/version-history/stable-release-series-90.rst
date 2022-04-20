@@ -14,9 +14,7 @@ Version 9.0.12
 
 Release Notes:
 
-.. HTCondor version 9.0.12 released on Month Date, 2022.
-
-- HTCondor version 9.0.12 not yet released.
+- HTCondor version 9.0.12 released on April 19, 2022.
 
 New Features:
 
@@ -24,35 +22,40 @@ New Features:
 
 Bugs Fixed:
 
-- DAGMan now publishes its status (total number of nodes, nodes done, nodes
-  failed, etc.) to the job ad immediately at startup.
-  :jira:`968`
-
 - Fixed a bug in the parallel universe that caused the *condor_schedd* to crash
   with partitionable slots.
   :jira:`986`
-
-- Fixed a bug in the startd drain command in the Python bindings that prevented
-  it from working with zero arguments.
-  :jira:`936`
-
-- Fixed a bug that prevented the High-Availability Daemon (HAD) from
-  working when user-based security is enabled
-  :jira:`891`
-
-- Fixed a bug that prevented administrators from setting certain rare custom
-  linux parameters in the linux_kernel_tuning_script
-  :jira:`990`
 
 - Fixed a bug that could cause a daemon to erase its security session
   to its family of daemon processes and subsequently crash when trying to
   connect to one of those daemons.
   :jira:`937`
 
--  The Job Router no longer sets an incorrect ``User`` job attribute
-   when routing a job between two *condor_schedd* s with different
-   values for configuration parameter ``UID_DOMAIN``.
-   :jira:`1005`
+- Fixed a bug that prevented the High-Availability Daemon (HAD) from
+  working when user-based security is enabled.
+  :jira:`891`
+
+- In a HAD configuration, the negotiator is now more robust when trying
+  to update to collectors that may have failed.  It will no longer block
+  and timeout for an extended period of time should this happen.
+  :jira:`816`
+
+- The Job Router no longer sets an incorrect ``User`` job attribute
+  when routing a job between two *condor_schedd* s with different
+  values for configuration parameter ``UID_DOMAIN``.
+  :jira:`1005`
+
+- Fixed a bug in the startd drain command in the Python bindings that prevented
+  it from working with zero arguments.
+  :jira:`936`
+
+- Fixed a bug that prevented administrators from setting certain rare custom
+  Linux parameters in the linux_kernel_tuning_script.
+  :jira:`990`
+
+- DAGMan now publishes its status (total number of nodes, nodes done, nodes
+  failed, etc.) to the job ad immediately at startup.
+  :jira:`968`
 
 - Fixed a bug where a credential file with an underscore in its filename could
   not be used by the curl plugin when doing HTTPS transfers with a bearer token.
@@ -60,7 +63,10 @@ Bugs Fixed:
   :jira:`1011`
 
 - Fixed several unlikely bugs when parsing the time strings in ClassAds.
-  :jira:`814`
+  :jira:`998`
+
+- *condor_version* now reports the build ID on Debian and Ubuntu platforms.
+  :jira:`749`
 
 .. _lts-version-history-9011:
 

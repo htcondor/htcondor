@@ -1675,6 +1675,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Apr 19 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.12-1
+- Fix bug in parallel universe that could cause the schedd to crash
+- Fix rare crash where a daemon tries to use a discarded security session
+
 * Tue Apr 05 2022 Tim Theisen <tim@cs.wisc.edu> - 9.7.1-1
 - Fix recent bug where jobs may go on hold without a hold reason or code
 
