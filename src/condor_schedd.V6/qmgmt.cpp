@@ -6006,7 +6006,7 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 
 	// See if the values have already been set
 	ClassAd *x509_attrs = &policy_ad;
-	string last_proxy_file;
+	std::string last_proxy_file;
 	ClassAd proxy_file_attrs;
 
 	// Put X509 credential information in cluster ads (from either the
@@ -6015,8 +6015,8 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 	// have a proxy file different than in their cluster ad.
 	for (std::list<std::string>::const_iterator it = new_ad_keys.begin(); it != new_ad_keys.end(); ++it)
 	{
-		string x509up;
-		string iwd;
+		std::string x509up;
+		std::string iwd;
 		JobQueueKey job( it->c_str() );
 		GetAttributeString(job.cluster, job.proc, ATTR_X509_USER_PROXY, x509up);
 		GetAttributeString(job.cluster, job.proc, ATTR_JOB_IWD, iwd);
@@ -6061,7 +6061,7 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 		} else {
 			// We have a cluster ad with a proxy file or a proc ad with a
 			// proxy file that may be different than in its cluster's ad.
-			string full_path;
+			std::string full_path;
 			if ( x509up[0] == DIR_DELIM_CHAR ) {
 				full_path = x509up;
 			} else {
@@ -6071,13 +6071,13 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 				formatstr( full_path, "%s%c%s", iwd.c_str(), DIR_DELIM_CHAR, x509up.c_str() );
 			}
 			if (job.proc != -1) {
-				string cluster_full_path;
-				string cluster_x509up;
+				std::string cluster_full_path;
+				std::string cluster_x509up;
 				GetAttributeString(job.cluster, -1, ATTR_X509_USER_PROXY, cluster_x509up);
 				if (cluster_x509up[0] == DIR_DELIM_CHAR) {
 					cluster_full_path = cluster_x509up;
 				} else {
-					string cluster_iwd;
+					std::string cluster_iwd;
 					GetAttributeString(job.cluster, -1, ATTR_JOB_IWD, cluster_iwd );
 					formatstr( cluster_full_path, "%s%c%s", cluster_iwd.c_str(), DIR_DELIM_CHAR, cluster_x509up.c_str() );
 				}
@@ -6089,7 +6089,7 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 				}
 			}
 			if ( full_path != last_proxy_file ) {
-				string owner;
+				std::string owner;
 				if ( GetAttributeString(job.cluster, job.proc, ATTR_OWNER, owner) == -1 ) {
 					GetAttributeString(job.cluster, -1, ATTR_OWNER, owner);
 				}

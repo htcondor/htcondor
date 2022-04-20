@@ -30,28 +30,28 @@ template <>
 struct Traits<uint32_t> {
     enum { kBufferSize = 11 };
     enum { kMaxDigit = 10 };
-    static uint32_t Negate(uint32_t x) { return x; };
+    static uint32_t Negate(uint32_t x) { return x; }
 };
 
 template <>
 struct Traits<int32_t> {
     enum { kBufferSize = 12 };
     enum { kMaxDigit = 10 };
-    static int32_t Negate(int32_t x) { return -x; };
+    static int32_t Negate(int32_t x) { return -x; }
 };
 
 template <>
 struct Traits<uint64_t> {
     enum { kBufferSize = 21 };
     enum { kMaxDigit = 20 };
-    static uint64_t Negate(uint64_t x) { return x; };
+    static uint64_t Negate(uint64_t x) { return x; }
 };
 
 template <>
 struct Traits<int64_t> {
     enum { kBufferSize = 22 };
     enum { kMaxDigit = 20 };
-    static int64_t Negate(int64_t x) { return -x; };
+    static int64_t Negate(int64_t x) { return -x; }
 };
 
 template <typename T>
@@ -84,6 +84,8 @@ static void Verify(void(*f)(T, char*), char* (*g)(T, char*)) {
                 VerifyValue<T>(Traits<T>::Negate(i + 1), f, g);
             }
             last = i;
+            if (i > static_cast<T>(std::numeric_limits<T>::max() / static_cast<T>(power)))
+                break;
             i *= power;
         } while (last < i);
     }
@@ -93,7 +95,7 @@ static void u32toa_naive(uint32_t value, char* buffer) {
     char temp[10];
     char *p = temp;
     do {
-        *p++ = char(value % 10) + '0';
+        *p++ = static_cast<char>(char(value % 10) + '0');
         value /= 10;
     } while (value > 0);
 
@@ -117,7 +119,7 @@ static void u64toa_naive(uint64_t value, char* buffer) {
     char temp[20];
     char *p = temp;
     do {
-        *p++ = char(value % 10) + '0';
+        *p++ = static_cast<char>(char(value % 10) + '0');
         value /= 10;
     } while (value > 0);
 

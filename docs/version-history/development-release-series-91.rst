@@ -33,6 +33,14 @@ New Features:
   session is not recognized.
   :jira:`1057`
 
+- Changed the result returned by evaluating a nested classad a
+  with no attribute named "missing" to return undefined when evaluating
+  a["missing"].  This matches the a.missing syntax
+  :jira:`1065`
+
+- Singularity jobs can now pull images from docker style repos.
+  :jira:`1059`
+
 Bugs Fixed:
 
 - Fix a rare bug where the starter will fail to start a job, and the job will

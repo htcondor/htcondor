@@ -16,6 +16,11 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
+#ifdef __clang__
+RAPIDJSON_DIAG_PUSH
+RAPIDJSON_DIAG_OFF(c++98-compat)
+#endif
+
 using namespace rapidjson;
 
 TEST(StringBuffer, InitialSize) {
@@ -30,6 +35,13 @@ TEST(StringBuffer, Put) {
 
     EXPECT_EQ(1u, buffer.GetSize());
     EXPECT_STREQ("A", buffer.GetString());
+}
+
+TEST(StringBuffer, PutN_Issue672) {
+    GenericStringBuffer<UTF8<>, MemoryPoolAllocator<> > buffer;
+    EXPECT_EQ(0, buffer.GetSize());
+    rapidjson::PutN(buffer, ' ', 1);
+    EXPECT_EQ(1, buffer.GetSize());
 }
 
 TEST(StringBuffer, Clear) {
@@ -69,6 +81,8 @@ TEST(StringBuffer, Pop) {
 
 #if RAPIDJSON_HAS_CXX11_RVALUE_REFS
 
+#if 0 // Many old compiler does not support these. Turn it off temporaily.
+
 #include <type_traits>
 
 TEST(StringBuffer, Traits) {
@@ -105,6 +119,8 @@ TEST(StringBuffer, Traits) {
     static_assert(std::is_nothrow_destructible<StringBuffer>::value, "");
 #endif
 }
+
+#endif
 
 TEST(StringBuffer, MoveConstructor) {
     StringBuffer x;
@@ -148,3 +164,7 @@ TEST(StringBuffer, MoveAssignment) {
 }
 
 #endif // RAPIDJSON_HAS_CXX11_RVALUE_REFS
+
+#ifdef __clang__
+RAPIDJSON_DIAG_POP
+#endif

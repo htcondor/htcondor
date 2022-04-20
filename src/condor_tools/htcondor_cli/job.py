@@ -206,7 +206,7 @@ class Status(Verb):
         if resource_type == "htcondor":
             target_annex_name = job[0].get('TargetAnnexName')
             if target_annex_name is not None:
-                logger.info(f"Job will only run on annex '{target_annex_name}'.")
+                logger.info(f"Job will only run on your annex named '{target_annex_name}'.")
 
             if JobStatus[job[0]['JobStatus']] == "RUNNING":
                 job_running_time = datetime.now() - datetime.fromtimestamp(job[0]["JobStartDate"])

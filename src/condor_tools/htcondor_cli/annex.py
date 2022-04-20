@@ -1,6 +1,7 @@
 import os
 import time
 from pathlib import Path
+import atexit
 import getpass
 import argparse
 from collections import defaultdict
@@ -10,22 +11,24 @@ import htcondor
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
-# Most of the annex create code is stored in a separate file.
-from htcondor_cli.annex_create import annex_create
-
+# Most of the annex add/create code is stored in a separate file.
+from htcondor_cli.annex_create import annex_add, annex_create, create_annex_token
 
 class Create(Verb):
     """
     Create an HPC annex.
     """
 
-
     options = {
         "annex_name": {
-            "args": ("--name",),
-            "dest": "annex_name",
-            "help": "Provide an name for this annex",
-            "required": True,
+            "args": ("annex_name",),
+            "metavar": "annex-name",
+            "help": "Provide a name for your annex",
+        },
+        "target": {
+            "args": ("queue_at_machine",),
+            "metavar": "queue@machine",
+            "help": "Specify the queue and the HPC machine",
         },
         "nodes": {
             "args": ("--nodes",),
@@ -39,22 +42,11 @@ class Create(Verb):
             "type": int,
             "default": 3600,
         },
-        "target": {
-            "args": ("--machine",),
-            "dest": "target",
-            "help": "HPC machine name (e.g. stampede2)",
-            "required": True,
-        },
         "allocation": {
             "args": ("--project",),
             "dest": "allocation",
             "help": "The project name associated with HPC allocation (may be optional on some HPC machines)",
             "default": None,
-        },
-        "queue_name": {
-            "args": ("--queue_name",),
-            "help": f"""HPC queue name. Defaults to {htcondor.param.get("ANNEX_HPC_QUEUE_NAME", 'a machine-specific default (e.g. "development" for "stampede2")')}""",
-            "default": htcondor.param.get("ANNEX_HPC_QUEUE_NAME"),
         },
         "owners": {
             "args": ("--owners",),
@@ -76,9 +68,9 @@ class Create(Verb):
         },
         "token_file": {
             "args": ("--token_file",),
-            "help": "Token file. Defaults to %(default)s",
+            "help": "Token file.  Normally obtained automatically.",
             "type": Path,
-            "default": Path(htcondor.param.get("ANNEX_TOKEN_FILE", f"~/.condor/tokens.d/{getpass.getuser()}@annex.osgdev.chtc.io")),
+            "default": None,
         },
         "password_file": {
             "args": ("--password_file",),
@@ -110,7 +102,14 @@ class Create(Verb):
     }
 
     def __init__(self, logger, **options):
+        if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
+            raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
         annex_create(logger, **options)
+
+
+class Add(Create):
+    def __init__(self, logger, **options):
+        annex_add(logger, **options)
 
 
 class Status(Verb):
@@ -129,6 +128,9 @@ class Status(Verb):
 
     # Unlike `shutdown`, status should probably not require a name.
     def __init__(self, logger, **options):
+        if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
+            raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
+
         the_annex_name = options["annex_name"]
 
         schedd = htcondor.Schedd()
@@ -170,7 +172,11 @@ class Status(Verb):
         constraint = 'AnnexName =!= undefined'
         if the_annex_name is not None:
             constraint = f'AnnexName == "{the_annex_name}"'
-        constraint = f'{constraint} && AuthenticatedIdentity == "{getpass.getuser()}@annex.osgdev.chtc.io"'
+        annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
+        constraint = f'{constraint} && AuthenticatedIdentity == "{getpass.getuser()}@{annex_token_domain}"'
+
+        token_file = create_annex_token(logger, "status")
+        atexit.register(lambda: os.unlink(token_file))
         annex_slots = collector.query(constraint=constraint, ad_type=htcondor.AdTypes.Startd)
 
         annex_attrs = {}
@@ -227,9 +233,9 @@ class Status(Verb):
 
         if len(status) == 0 and len(annex_slots) == 0:
             if the_annex_name is None:
-                print(f"Found no active or requested annexes.")
+                print(f"Found no established or requested annexes.")
             else:
-                print(f"Found no active or requested annexes named '{the_annex_name}'.")
+                print(f"Found no established or requested annexes named '{the_annex_name}'.")
             return
 
         #
@@ -257,11 +263,11 @@ class Status(Verb):
 
             if the_annex_name is None:
                 if total_CPUs == 0:
-                    print(f"Annex '{annex_name}' is not active.", end='')
+                    print(f"Annex '{annex_name}' is not established.", end='')
                 else:
                     all_job_count = all_jobs.get(annex_name, 0)
                     running_job_count = running_jobs.get(annex_name, 0)
-                    print(f"Annex '{annex_name}' is active and running {running_job_count} of {all_job_count} jobs on {busy_CPUs} of {total_CPUs} CPUs.", end='')
+                    print(f"Annex '{annex_name}' is established and running {running_job_count} of {all_job_count} jobs on {busy_CPUs} of {total_CPUs} CPUs.", end='')
 
                 if requests != requested_and_active:
                     print(f"  {requested_but_not_joined}/{requested_and_active}/{requested_and_left} requests are pending/active/retired.", end='')
@@ -271,7 +277,7 @@ class Status(Verb):
 
             # Is the annex currently active?
             if total_CPUs != 0:
-                print(f"Annex '{annex_name}' is active.")
+                print(f"Annex '{annex_name}' is established.")
 
                 # When did the annex start, and how long does it have to run?
                 oldest_time = annex_attrs[annex_name]['first_birthday']
@@ -281,8 +287,8 @@ class Status(Verb):
 
                 now = int(time.time())
                 print(
-                    f"Its oldest machine activated about "
-                    f"{(now - oldest_time)/(60*60):.2f} hours ago",
+                    f"Its oldest established request is about "
+                    f"{(now - oldest_time)/(60*60):.2f} hours old",
                     end=""
                 )
                 if oldest_hours is not None:
@@ -295,8 +301,8 @@ class Status(Verb):
 
                 if annex_attrs[annex_name]['first_request_id'] != annex_attrs[annex_name]['last_request_id']:
                     print(
-                        f"Its youngest active machine activated about "
-                        f"{(now - youngest_time)/(60*60):.2f} hours ago",
+                        f"Its youngest established request is about "
+                        f"{(now - youngest_time)/(60*60):.2f} hours old",
                         end=""
                     )
                     if youngest_hours is not None:
@@ -307,12 +313,12 @@ class Status(Verb):
                     else:
                         print(".")
             else:
-                print(f"Annex '{annex_name}' is not active.")
+                print(f"Annex '{annex_name}' is not established.")
 
             # How big is it?
             requested_machines = requested_machines.get(annex_name, 0)
-            print(f"You requested {requested_machines} machines for this annex, of which {machine_count} are active.")
-            print(f"There are {total_CPUs} CPUs in the active machines, of which {busy_CPUs} are busy.")
+            print(f"You requested {requested_machines} machines for this annex, of which {machine_count} are in established annexes.")
+            print(f"There are {total_CPUs} CPUs in the established machines, of which {busy_CPUs} are busy.")
 
             # How many jobs target it?  Of those, how many are running?
             all_job_count = all_jobs.get(annex_name, 0)
@@ -320,7 +326,7 @@ class Status(Verb):
             print(f"{all_job_count} jobs must run on this annex, and {running_job_count} currently are.")
 
             # How many resource requests were made, and what's their status?
-            print(f"You made {requests} resource request(s) for this annex, of which {requested_but_not_joined} are pending, {requested_and_active} are active, and {requested_and_left} have retired.")
+            print(f"You made {requests} resource request(s) for this annex, of which {requested_but_not_joined} are pending, {requested_and_active} are established, and {requested_and_left} have retired.")
 
         if the_annex_name is None:
             print()
@@ -350,8 +356,14 @@ class Shutdown(Verb):
     # log in again.
     #
     def __init__(self, logger, annex_name, **options):
+        if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
+            raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
+
         annex_collector = htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io")
         collector = htcondor.Collector(annex_collector)
+
+        token_file = create_annex_token(logger, "shutdown")
+        atexit.register(lambda: os.unlink(token_file))
         location_ads = collector.query(
             ad_type=htcondor.AdTypes.Master,
             constraint=f'AnnexName =?= "{annex_name}"',
@@ -404,7 +416,11 @@ class Annex(Noun):
         pass
 
 
+    class add(Add):
+        pass
+
+
     @classmethod
     def verbs(cls):
-        return [cls.create, cls.status, cls.shutdown]
+        return [cls.create, cls.add, cls.status, cls.shutdown]
 

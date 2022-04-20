@@ -5076,7 +5076,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			{
 				SpooledJobFiles::createJobSpoolDirectory( ad, PRIV_USER );
 			}
-			string owner;
+			std::string owner;
 			ad->LookupString( ATTR_OWNER, owner );
 			if ( !init_user_ids( owner.c_str(), NULL ) ) {
 				dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "

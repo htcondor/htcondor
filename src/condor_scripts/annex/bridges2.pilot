@@ -1,0 +1,16 @@
+#!/bin/bash
+
+PILOT_DIR=$1
+
+cd ${PILOT_DIR}
+cd condor-*
+
+. ./condor.sh
+
+# In case I'm part of a multi-node job, make my own node-specific local dir.
+FULL_HOSTNAME=`condor_config_val FULL_HOSTNAME`
+cp -a local ${FULL_HOSTNAME}
+echo "LOCAL_DIR = $(pwd)/\$(FULL_HOSTNAME)" >> etc/condor_config
+
+condor_master -f
+exit $?

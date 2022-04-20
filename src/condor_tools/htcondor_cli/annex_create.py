@@ -15,13 +15,16 @@ from pathlib import Path
 
 import htcondor
 
+#
+# We could try to import colorama here -- see condor_watch_q -- but that's
+# only necessary for Windows.
+#
 
-INITIAL_CONNECTION_TIMEOUT = int(
-    htcondor.param.get("ANNEX_INITIAL_CONNECTION_TIMEOUT", 180)
-)
+INITIAL_CONNECTION_TIMEOUT = int(htcondor.param.get("ANNEX_INITIAL_CONNECTION_TIMEOUT", 180))
 REMOTE_CLEANUP_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_CLEANUP_TIMEOUT", 60))
 REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 30))
 REMOTE_POPULATE_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_POPULATE_TIMEOUT", 60))
+TOKEN_FETCH_TIMEOUT = int(htcondor.param.get("ANNEX_TOKEN_FETCH_TIMEOUT", 20))
 
 #
 # For queues with the whole-node allocation policy, cores and RAM -per-node
@@ -117,6 +120,56 @@ MACHINE_TABLE = {
             },
         },
     },
+
+    "bridges2": {
+        "pretty_name":      "Bridges-2",
+        "gsissh_name":      "bridges2",
+        "default_queue":    "RM",
+
+        # Omitted the GPU queues because they are based on a different set of parameters.
+        # Queue limits are not documented, possibly nonexistent.
+        # XXX You don't request memory for Bridges2; should we do a "ram_per_core" instead?
+        "queues": {
+            "RM": {
+                "max_nodes_per_job":    50,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       128,
+                "ram_per_node":         (253000 // 1024),
+
+                "max_jobs_in_queue":    50,
+            },
+            "RM-512": {
+                "max_nodes_per_job":    2,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       128,
+                "ram_per_node":         (515000 // 1024),
+
+                "max_jobs_in_queue":    50,
+            },
+            "RM-shared": {
+                "max_nodes_per_job":    1,
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                # RM-shared lets you request up to half an RM node
+                "cores_per_node":       64,
+                "ram_per_node":         (253000 // 2 // 1024),
+
+                "max_jobs_in_queue":    50,
+            },
+            "EM": {
+                "max_nodes_per_job":    2,
+                "max_duration":         120 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       96,
+                # The EM queue specifies "MaxMemPerCPU"
+                "ram_per_node":         (42955 * 96 // 1024),
+
+                "max_jobs_in_queue":    50,
+            },
+        },
+    },
 }
 
 
@@ -143,6 +196,8 @@ def make_initial_ssh_connection(
         raise RuntimeError(
             f"Did not make initial connection after {INITIAL_CONNECTION_TIMEOUT} seconds, aborting."
         )
+    except KeyboardInterrupt:
+        sys.exit(1)
 
 
 def remove_remote_temporary_directory(
@@ -474,14 +529,58 @@ def extract_sif_file(job_ad):
     return iwd / container_image
 
 
-def annex_create(
+def create_annex_token(logger, type):
+    token_lifetime = int(htcondor.param.get("ANNEX_TOKEN_LIFETIME", 60 * 60 * 24 * 90))
+    annex_token_key_name = htcondor.param.get("ANNEX_TOKEN_KEY_NAME", "hpcannex-key")
+    annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
+    token_name = f"{type}.{getpass.getuser()}@{annex_token_domain}"
+
+    args = [
+        'condor_token_fetch',
+        '-lifetime', str(token_lifetime),
+        '-token', token_name,
+        '-key', annex_token_key_name,
+        '-authz', 'READ',
+        '-authz', 'ADVERTISE_STARTD',
+        '-authz', 'ADVERTISE_MASTER',
+        '-authz', 'ADVERTISE_SCHEDD',
+    ]
+
+    proc = subprocess.Popen(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        # This implies text mode.
+        errors="replace",
+    )
+
+    try:
+        out, err = proc.communicate(timeout=TOKEN_FETCH_TIMEOUT)
+
+        if proc.returncode == 0:
+            sec_token_directory = htcondor.param.get("SEC_TOKEN_DIRECTORY")
+            if sec_token_directory == "":
+                sec_token_directory = "~/.condor/tokens.d"
+            return os.path.expanduser(f"{sec_token_directory}/{token_name}")
+        else:
+            logger.error(f"Failed to create annex token, aborting.")
+            logger.warning(f"{out.strip()}")
+            raise RuntimeError(f"Failed to create annex token")
+
+    except subprocess.TimeoutExpired:
+        logger.error(f"Failed to create annex token in {TOKEN_FETCH_TIMEOUT} seconds, aborting.")
+        proc.kill()
+        out, err = proc.communicate()
+        raise RuntimeError(f"Failed to create annex token in {TOKEN_FETCH_TIMEOUT} seconds")
+
+
+def annex_inner_func(
     logger,
     annex_name,
     nodes,
     lifetime,
     allocation,
-    target,
-    queue_name,
+    queue_at_machine,
     owners,
     collector,
     token_file,
@@ -491,6 +590,34 @@ def annex_create(
     cpus,
     mem_mb,
 ):
+    if '@' in queue_at_machine:
+        (queue_name, target) = queue_at_machine.split('@', 1)
+    else:
+        error_string = "Target must have the form queue@machine."
+
+        target = queue_at_machine.casefold()
+        if target not in MACHINE_TABLE:
+            error_string = f"{error_string}  Also, '{queue_at_machine}' is not a known machine."
+        else:
+            default_queue = MACHINE_TABLE[target]['default_queue']
+            queue_list = "\n    ".join([q for q in MACHINE_TABLE[target]['queues']])
+            error_string = f"{error_string}  Supported queues are:\n    {queue_list}\nUse '{default_queue}' if you're not sure."
+
+        raise ValueError(error_string)
+
+    #
+    # We'll need to validate the requested nodes (or CPUs and memory)
+    # against the requested queue[-machine pair].  We also need to
+    # check the lifetime (and idle time, once we support it).  Once
+    # all of that's been validated, we should print something like:
+    #
+    #   Once established by Stampede 2, the annex will be available to
+    #   run your jobs for no more than 48 hours (use --duration to change).
+    #   It will self-destruct after 20 minutes of inactivity (use
+    #   --idle to change).
+    #
+    # .. although it should maybe also include the queue name and size.
+    #
 
     # We use this same method to determine the user name in `htcondor job`,
     # so even if it's wrong, it will at least consistently so.
@@ -508,9 +635,12 @@ def annex_create(
     if not local_script_dir.is_dir():
         raise RuntimeError(f"Annex script dir {local_script_dir} not found or not a directory.")
 
-    if queue_name is None:
-        queue_name = MACHINE_TABLE[target]["default_queue"]
-        logger.debug(f"No queue name given, defaulting to {queue_name}")
+    # If the user didn't specify a token file, create one on the fly.
+    if token_file is None:
+        logger.debug("Creating annex token...")
+        token_file = create_annex_token(logger, annex_name)
+        atexit.register(lambda: os.unlink(token_file))
+        logger.debug("..done.")
 
     token_file = Path(token_file).expanduser()
     if not token_file.exists():
@@ -579,17 +709,26 @@ def annex_create(
                 raise RuntimeError(
                     f"""Job {job_ad["ClusterID"]}.{job_ad["ProcID"]} specified container image '{sif_file}', which doesn't exist."""
                 )
-    if len(sif_files) > 0:
+    if sif_files:
         logger.debug(f"Got sif files: {sif_files}")
     else:
         logger.debug("No sif files found, continuing...")
     # The .sif files will be transferred to the target machine later.
 
+    # Distinguish our text from SSH's text.
+    ANSI_BRIGHT = "\033[1m"
+    ANSI_RESET_ALL = "\033[0m"
+
     ##
     ## The user will do the 2FA/SSO dance here.
     ##
-    logger.info("Making initial SSH connection...")
     logger.info(
+        f"{ANSI_BRIGHT}This command will access "
+        f"{MACHINE_TABLE[target]['pretty_name']} via XSEDE.  To proceed, "
+        f"enter your XSEDE user name and password at the prompt "
+        f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
+    )
+    logger.debug(
         f"  (You can run 'ssh {' '.join(ssh_connection_sharing)} {ssh_target}' to use the shared connection.)"
     )
     rc = make_initial_ssh_connection(
@@ -599,8 +738,9 @@ def annex_create(
     )
     if rc != 0:
         raise RuntimeError(
-            f"Failed to make initial connection to {MACHINE_TABLE[target]['pretty_name']}, aborting ({rc}).\n\nIf the error message was 'Host key verication failed.', use the 'ssh' command above to run 'gsissh {MACHINE_TABLE[target]['gsissh_name']}' and type yes."
+            f"Failed to make initial connection to {MACHINE_TABLE[target]['pretty_name']}, aborting ({rc})."
         )
+    logger.info(f"{ANSI_BRIGHT}Thank you.{ANSI_RESET_ALL}\n")
 
     ##
     ## Register the clean-up function before creating the mess to clean-up.
@@ -633,7 +773,7 @@ def annex_create(
     )
     logger.debug(f"... made remote temporary directory {remote_script_dir} ...")
 
-    logger.info(f"Populating remote temporary directory...")
+    logger.info(f"Populating annex temporary directory...")
     populate_remote_temporary_directory(
         logger,
         ssh_connection_sharing,
@@ -645,19 +785,20 @@ def annex_create(
         token_file,
         password_file,
     )
-    logger.debug("... transferring container images ...")
-    transfer_sif_files(
-        logger,
-        ssh_connection_sharing,
-        ssh_target,
-        ssh_indirect_command,
-        remote_script_dir,
-        sif_files,
-    )
-    logger.info("... remote directory populated.")
+    if sif_files:
+        logger.debug("... transferring container images ...")
+        transfer_sif_files(
+            logger,
+            ssh_connection_sharing,
+            ssh_target,
+            ssh_indirect_command,
+            remote_script_dir,
+            sif_files,
+        )
+    logger.info("... populated.")
 
     # Submit local universe job.
-    logger.info("Submitting state-tracking job...")
+    logger.debug("Submitting state-tracking job...")
     local_job_executable = local_script_dir / "annex-local-universe.py"
     if not local_job_executable.exists():
         raise RuntimeError(
@@ -730,7 +871,7 @@ def annex_create(
         raise RuntimeError(f"Failed to submit state-tracking job, aborting.")
 
     cluster_id = submit_result.cluster()
-    logger.info(f"... done.")
+    logger.debug(f"... done.")
     logger.debug(f"with cluster ID {cluster_id}.")
 
     results = schedd.query(
@@ -782,7 +923,7 @@ def annex_create(
                     schedd.edit(job_id, "TransferInput", "undefined")
 
     remotes = {}
-    logger.info(f"Submitting SLURM job on {MACHINE_TABLE[target]['pretty_name']}:\n")
+    logger.info(f"Requesting annex named '{annex_name}' from queue '{queue_name}' on {MACHINE_TABLE[target]['pretty_name']}...\n")
     rc = invoke_pilot_script(
         ssh_connection_sharing,
         ssh_target,
@@ -805,7 +946,9 @@ def annex_create(
     )
 
     if rc == 0:
-        logger.info(f"... remote SLURM job submitted.")
+        logger.info(f"... requested.")
+        logger.info(f"\nIt may take some time for {MACHINE_TABLE[target]['pretty_name']} to establish the requested annex.")
+        logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
     else:
         error = f"Failed to start annex, SLURM returned code {rc}"
         try:
@@ -813,3 +956,26 @@ def annex_create(
         except Exception:
             logger.warn(f"Could not remove cluster ID {cluster_id}.")
         raise RuntimeError(error)
+
+
+def annex_name_exists(annex_name):
+    schedd = htcondor.Schedd()
+    constraint = f'hpc_annex_name == "{annex_name}"'
+    annex_jobs = schedd.query(
+        constraint,
+        opts=htcondor.QueryOpts.DefaultMyJobsOnly,
+        projection=['ClusterID', 'ProcID'],
+    )
+    return len(annex_jobs) > 0
+
+
+def annex_create(logger, annex_name, **others):
+    if annex_name_exists(annex_name):
+        raise ValueError(f"You've already created an annex named '{annex_name}'.  To request more resources, use 'htcondor annex add'.")
+    return annex_inner_func(logger, annex_name, **others)
+
+
+def annex_add(logger, annex_name, **others):
+    if not annex_name_exists(annex_name):
+        raise ValueError(f"You need to create an an annex named '{annex_name}' first.  To do so, use 'htcondor annex create'.")
+    return annex_inner_func(logger, annex_name, **others)

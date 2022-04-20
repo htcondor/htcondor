@@ -159,10 +159,10 @@ close(JDF) ||
     &abort("Failed to write temporary (JDF) file in current directory.\n");
 
 # submit the job; $cluster contains cluster number if successful
-open(SUBMIT, "condor_submit .condor_submit.$$ 2>&1 |") ||
+open(SUBMIT, "condor_submit -terse .condor_submit.$$ |") ||
     &abort("Failed to run condor_submit.  Please check your path.\n");
 while(<SUBMIT>) {
-    if (/^1 job\(s\) submitted to cluster (\d+)./) {
+    if (/^(\d+)\.\d+ -/) {
 	($cluster) = $1;
     } elsif (/WARNING.*Invalid log file/ ||
 	     /WARNING.*is not writable by condor/) {

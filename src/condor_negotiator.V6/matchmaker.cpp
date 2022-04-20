@@ -1394,6 +1394,11 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 		}
 		classad::ClassAd::const_iterator attr_it;
 		for ( attr_it = startd_ad->begin(); attr_it != startd_ad->end(); attr_it++ ) {
+			// ignore list type values when computing external refs.
+			// this prevents Child* and AvailableGPUs slot attributes from polluting the sig attrs
+			if (attr_it->second->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
+				continue;
+			}
 			startd_ad->GetExternalReferences( attr_it->second, external_references, true );
 		}
 	}	// while startd_ad

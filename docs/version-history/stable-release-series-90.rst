@@ -20,11 +20,19 @@ Release Notes:
 
 New Features:
 
-- None.
+- *condor_config_val* will now print an ``@=end/@end`` pair rather than simply ``=``
+  when printing multi-line configuration values for ``-dump``, ``-summary``, and ``-verbose``
+  mode output.
+  :jira:`1032`
 
 Bugs Fixed:
 
-- None.
+- The *condor_run* tool now reports job submit errors
+  and warnings rather than writing them into a log file.
+  :jira:`1002`
+
+- Updated the Windows build of HTCondor to use SSL 1.1.1m
+  :jira:`840`
 
 .. _lts-version-history-9012:
 

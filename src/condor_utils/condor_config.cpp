@@ -2851,11 +2851,12 @@ const char * hash_iter_def_value(HASHITER& it)
 	return param_exact_default_string(name);
 }
 
+
 const char * param_get_info(
 	const char * name,
 	const char * subsys,
 	const char * local,
-	std::string & name_used,
+	MyString & name_used,
 	const char ** pdef_val,
 	const MACRO_META **ppmet)
 {
@@ -2875,6 +2876,14 @@ const char * param_get_info(
 	return val;
 }
 
+const char * param_get_info(const char * name, const char * subsys, const char * local,
+	std::string & name_used, const char ** pdef_val, const MACRO_META **ppmet)
+{
+	MyString my_name;
+	const char * rv = param_get_info(name, subsys, local, my_name, pdef_val, ppmet);
+	name_used = my_name.c_str();
+	return rv;
+}
 
 void
 reinsert_specials( const char* host )
