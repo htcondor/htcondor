@@ -34,7 +34,8 @@ Bugs Fixed:
 - Updated the Windows build of HTCondor to use SSL 1.1.1m
   :jira:`840`
 
-- Fixed Kerberos Authentication error for dagman.
+- Fixed a bug where Kerberos Authentication would fail for
+  dagman.
   :jira:`1060`
 
 .. _lts-version-history-9012:
