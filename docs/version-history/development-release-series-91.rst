@@ -17,7 +17,7 @@ Release Notes:
 
 New Features:
 
-- Job duration policy hold message now displays ``AllowedJobDuration`` in 
+- Job duration policy hold message now displays the time exceeded in 
   'dd+hh:mm:ss' format rather than just seconds.
   :jira:`1062`
 
