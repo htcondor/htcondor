@@ -78,6 +78,7 @@ class ArcJob : public BaseJob
 	char *remoteJobId;
 	std::string remoteJobState;
 
+	std::string m_tokenFile;
 	Proxy *jobProxy;
 	ArcResource *myResource;
 	GahpClient *gahp;

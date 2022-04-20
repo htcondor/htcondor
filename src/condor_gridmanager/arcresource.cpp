@@ -35,24 +35,27 @@ std::map <std::string, ArcResource *>
     ArcResource::ResourcesByName;
 
 std::string& ArcResource::HashName( const char *resource_name,
-                                    const char *proxy_subject )
+                                    const char *proxy_subject,
+                                    const std::string& token_file )
 {
 	static std::string hash_name;
 
-	formatstr( hash_name, "arc %s#%s", resource_name,
-			proxy_subject ? proxy_subject : "NULL" );
+	formatstr( hash_name, "arc %s#%s#%s", resource_name,
+	           proxy_subject ? proxy_subject : "NULL",
+	           token_file.c_str() );
 
 	return hash_name;
 }
 
 ArcResource *ArcResource::FindOrCreateResource( const char * resource_name,
-												const Proxy *proxy )
+                                                const Proxy *proxy,
+                                                const std::string& token_file )
 {
 	ArcResource *resource = NULL;
-	const std::string &key = HashName( resource_name, proxy->subject->fqan );
+	const std::string &key = HashName( resource_name, proxy->subject->fqan, token_file );
 	auto itr = ResourcesByName.find( key );
 	if ( itr == ResourcesByName.end() ) {
-		resource = new ArcResource( resource_name, proxy );
+		resource = new ArcResource( resource_name, proxy, token_file );
 		ASSERT(resource);
 		resource->Reconfig();
 		ResourcesByName[key] = resource;
@@ -65,16 +68,18 @@ ArcResource *ArcResource::FindOrCreateResource( const char * resource_name,
 }
 
 ArcResource::ArcResource( const char *resource_name,
-								  const Proxy *proxy )
+                          const Proxy *proxy,
+                          const std::string& token_file )
 	: BaseResource( resource_name )
 {
 	proxySubject = strdup( proxy->subject->subject_name );
 	proxyFQAN = strdup( proxy->subject->fqan );
+	m_tokenFile = token_file;
 
 	gahp = NULL;
 
 	std::string buff;
-	formatstr( buff, "ARC/%s", proxyFQAN );
+	formatstr( buff, "ARC/%s#%s", proxyFQAN, m_tokenFile.c_str() );
 
 	gahp = new GahpClient( buff.c_str() );
 	gahp->setNotificationTimerId( pingTimerId );
@@ -96,7 +101,7 @@ ArcResource::ArcResource( const char *resource_name,
 
 ArcResource::~ArcResource()
 {
-	ResourcesByName.erase( HashName( resourceName, proxyFQAN ) );
+	ResourcesByName.erase( HashName( resourceName, proxyFQAN, m_tokenFile ) );
 	free( proxyFQAN );
 	if ( proxySubject ) {
 		free( proxySubject );
@@ -124,15 +129,22 @@ const char *ArcResource::ResourceType()
 
 const char *ArcResource::GetHashName()
 {
-	return HashName( resourceName, proxyFQAN ).c_str();
+	return HashName( resourceName, proxyFQAN, m_tokenFile ).c_str();
 }
 
 void ArcResource::PublishResourceAd( ClassAd *resource_ad )
 {
 	BaseResource::PublishResourceAd( resource_ad );
 
-	resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
-	resource_ad->Assign( ATTR_X509_USER_PROXY_FQAN, proxyFQAN );
+	if (proxySubject) {
+		resource_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT, proxySubject );
+	}
+	if (proxyFQAN) {
+		resource_ad->Assign( ATTR_X509_USER_PROXY_FQAN, proxyFQAN );
+	}
+	if ( !m_tokenFile.empty() ) {
+		resource_ad->Assign( ATTR_SCITOKENS_FILE, m_tokenFile );
+	}
 
 	gahp->PublishStats( resource_ad );
 }
