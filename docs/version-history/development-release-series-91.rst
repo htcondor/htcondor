@@ -9,9 +9,7 @@ Version 9.8.0
 
 Release Notes:
 
-.. HTCondor version 9.8.0 released on Month Date, 2022.
-
-- HTCondor version 9.8.0 not yet released.
+- HTCondor version 9.8.0 released on April 21, 2022.
 
 - This version includes all the updates from :ref:`lts-version-history-9012`.
 
@@ -111,7 +109,7 @@ New Features:
   systems.
   :jira:`873`
 
-- Improved performance of the *condor_schedd* during negotiation
+- Improved performance of the *condor_schedd* during negotiation.
   :jira:`961`
   
 - For **arc** grid universe jobs, environment variables specified in

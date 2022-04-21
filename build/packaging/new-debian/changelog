@@ -1,3 +1,11 @@
+condor (9.8.0-1) stable; urgency=medium
+
+  * Support for Heterogeneous GPUs, some configuration required
+  * Allow HTCondor to utilize grid sites requiring two-factor authentication
+  * Technology preview: bring your own resources from (some) NSF HPC clusters
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 21 Apr 2022 14:16:00 -0600
+
 condor (9.0.12-1) stable; urgency=medium
 
   * Fix bug in parallel universe that could cause the schedd to crash
