@@ -1932,7 +1932,7 @@ int
 main( int argc, char **argv )
 {
 
-	set_mySubSystem( "DAGMAN", SUBSYSTEM_TYPE_DAGMAN );
+	set_mySubSystem( "DAGMAN", false, SUBSYSTEM_TYPE_DAGMAN );
 
 		// Record the workingDir before invoking daemoncore (which hijacks it)
 	condor_getcwd( dagman.workingDir );

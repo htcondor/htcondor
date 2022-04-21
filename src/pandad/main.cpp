@@ -46,7 +46,7 @@ int main( int /* argc */, char ** /* argv */ ) {
 
 	// This incantation makes dprintf() work.
 	set_priv_initialize();
-	set_mySubSystem( "pandad", SUBSYSTEM_TYPE_DAEMON );
+	set_mySubSystem( "pandad", true, SUBSYSTEM_TYPE_DAEMON );
 	config();
 	dprintf_config( "pandad" );
 	const char * debug_string = getenv( "DebugLevel" );

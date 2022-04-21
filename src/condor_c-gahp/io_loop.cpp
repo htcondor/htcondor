@@ -773,7 +773,7 @@ main_pre_command_sock_init( )
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem("C_GAHP", SUBSYSTEM_TYPE_GAHP);
+	set_mySubSystem("C_GAHP", false, SUBSYSTEM_TYPE_GAHP);
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

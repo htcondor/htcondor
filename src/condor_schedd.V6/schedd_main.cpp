@@ -207,7 +207,7 @@ main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem( "SCHEDD", SUBSYSTEM_TYPE_SCHEDD );
+	set_mySubSystem( "SCHEDD", true, SUBSYSTEM_TYPE_SCHEDD );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

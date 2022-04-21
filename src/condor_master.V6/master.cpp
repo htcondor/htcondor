@@ -1946,7 +1946,7 @@ main( int argc, char **argv )
     bool is_daemon = dc_args_is_background(argc, argv);
 #endif
 
-	set_mySubSystem( "MASTER", SUBSYSTEM_TYPE_MASTER );
+	set_mySubSystem( "MASTER", true, SUBSYSTEM_TYPE_MASTER );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

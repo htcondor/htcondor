@@ -1549,7 +1549,7 @@ main_pre_command_sock_init() {
 
 int
 main( int argc, char ** argv ) {
-	set_mySubSystem( "ANNEX", SUBSYSTEM_TYPE_DAEMON );
+	set_mySubSystem( "ANNEX", true, SUBSYSTEM_TYPE_DAEMON );
 
 	// This is dumb, but easier than fighting daemon core about parsing.
 	_argc = argc;
