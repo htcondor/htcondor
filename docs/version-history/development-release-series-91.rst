@@ -17,6 +17,10 @@ Release Notes:
 
 New Features:
 
+- Job duration policy hold message now displays the time exceeded in 
+  'dd+hh:mm:ss' format rather than just seconds.
+  :jira:`1062`
+
 - The ``OWNER`` authorization level has been removed. Commands that used to
   require this level now require ``ADMINISTRATOR`` authorization.
   :jira:`1023`
