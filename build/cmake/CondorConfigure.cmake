@@ -77,8 +77,9 @@ option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF
 option(WANT_PYTHON2_BINDINGS "Build python bindings for python2" ON)
 option(WANT_PYTHON3_BINDINGS "Build python bindings for python3" ON)
 if (WINDOWS)
-	# so far only python 3.6 is known to work with our bindings on Windows (sigh)
-	option(WANT_PYTHON36 "Prefer python 3.6 to other versions of python3" ON)
+	# Python 3.6 on windows will look in the PATH for dependent dll's (like boost-python)
+	# Python 3.8 or later will not, so 3.6 might be preferable for some users
+	option(WANT_PYTHON36 "Prefer python 3.6 to other versions of python3" OFF)
 endif (WINDOWS)
 
 if(NOT WINDOWS)
@@ -909,7 +910,14 @@ endif()
 if (WINDOWS)
 
   if(NOT (MSVC_VERSION LESS 1900))
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
+    if (PYTHON3_VERSION_MINOR LESS 8 AND MSVC_VERSION LESS 1920)
+      # boost 1.68 is vc141 and has python 2.7, 3.6, 3.8 and 3.9
+      add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
+    else()
+      # boost 1.78 is vc140 with Python 3.6, 3.8, 3.9 and 3.10
+      #            or vc143 with Python 3.8 and 3.9 and 3.10
+      add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.78.0)
+    endif()
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.1.1m)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.45)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
