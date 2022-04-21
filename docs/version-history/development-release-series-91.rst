@@ -17,24 +17,6 @@ Release Notes:
 
 New Features:
 
-- The classad ``sum``, ``avg``, ``min`` and ``max`` functions now promote boolean
-  values in the list being operated on to integers rather than to error.
-  :jira:`970`
-
-- Added basic tools for submitting and monitoring DAGMan workflows to our 
-  new :doc:`/man-pages/htcondor` CLI tool.
-  :jira:`929`
-
-- If an administrator configures additional custom docker networks on a worker node
-  and would like jobs to be able to opt into use them, the startd knob
-  ``DOCKER_NETWORKS`` has been added to allow additional custom networks
-  to be added to the *docker_network_type* submit command.
-  :jira:`995`
-
-- Added classad functions ``countMatches`` and ``evalInEachContext``. These functions
-  are used to support matchmaking of heterogenous custom resources such as GPUs.
-  :jira:`977`
-
 - Added the ability to do matchmaking and targeted resource binding of GPUs into dynamic
   slots while constraining on the properties of the GPUs.  This new behavior is enabled
   by using the ``-nested`` option of *condor_gpu_discovery*, along with the new ``require_gpus``
@@ -43,10 +25,20 @@ New Features:
   GPU when creating a dynamic slot.
   :jira:`953`
 
+- Added ClassAd functions ``countMatches`` and ``evalInEachContext``. These functions
+  are used to support matchmaking of heterogeneous custom resources such as GPUs.
+  :jira:`977`
+
 - Added the Reverse GAHP, which allows *condor_remote_cluster* to work with
   remote clusters that don't allow SSH keys or require Multi-Factor
   Authentication for all SSH connections.
   :jira:`1007`
+
+- If an administrator configures additional custom docker networks on a worker node
+  and would like jobs to be able to opt into use them, the startd knob
+  ``DOCKER_NETWORKS`` has been added to allow additional custom networks
+  to be added to the *docker_network_type* submit command.
+  :jira:`995`
 
 - Added the ``-key`` command-line option to *condor_token_request*, which
   allows users to ask HTCondor to use a particular signing key when creating
@@ -54,6 +46,14 @@ New Features:
   :macro:`SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS`, which defaults to the default key
   (``POOL``).
   :jira:`1024`
+
+- Added basic tools for submitting and monitoring DAGMan workflows to our 
+  new :doc:`/man-pages/htcondor` CLI tool.
+  :jira:`929`
+
+- The ClassAd ``sum``, ``avg``, ``min`` and ``max`` functions now promote boolean
+  values in the list being operated on to integers rather than to error.
+  :jira:`970`
 
 Bugs Fixed:
 
