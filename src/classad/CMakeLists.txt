@@ -19,6 +19,8 @@
 project(CLASSADS LANGUAGES CXX)
 cmake_minimum_required(VERSION 3.8)
 
+set(CMAKE_CXX_STANDARD 11)
+
 if ( UNIX )
   # set external reference to the shared library for linux
   # Note: classad without the s means "shared"
@@ -48,7 +50,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
 	# Should use find_package here for either case
 	set(PCRE_INCLUDE /usr/include)
-	set(PCRE_FOUND -lpcre)
+	set(PCRE_FOUND -lpcre2-8)
 	set(HAVE_PCRE_H TRUE)
 
 	set(C_BIN bin)
