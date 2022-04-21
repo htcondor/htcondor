@@ -106,12 +106,11 @@ format_time_short( int tot_secs )
      char *time = format_time(tot_secs);
 
      int offset = 0;
-     while ( true ){//Run till break
+     while ( time[offset] == NULL ){//Run till break
           //If character is not whitespace, 0, or the + symbol we stop
           if ( time[offset] != ' ' && time[offset] != '0' && time[offset] != '+' ){
-     		//Check to see if current offset character is ':'
-     		if ( time[offset] == ':' )
-          		offset++; //If so then increment to not only display mm:ss
+               //Check to see if current offset character is ':'
+               if ( time[offset] == ':' ) offset++; //If so then increment to only display mm:ss
                break;
           }
           offset++;
