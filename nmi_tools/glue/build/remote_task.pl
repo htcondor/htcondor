@@ -226,6 +226,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
         $VCVER = "VC$1";
         if ($VCVER =~ /^VC([0-9]+)\s+([0-9]+)\s*/) { $VCVER = "VC$1"; }
         if ($cmake_args =~ /\s+Win64/i) { $win64 = "x64"; }
+        if ($1 >= 17) { $win64 = "x64"; } # starting with VC17 there is no x86 vs x64
         print "cmake was invoked with a Visual Studio $VCVER $win64 generator\n";
     }
     if ($taskname eq $EXTERNALS_TASK) {
