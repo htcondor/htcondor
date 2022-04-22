@@ -11,8 +11,6 @@ Release Notes:
 
 - HTCondor version 9.8.1 released on April 26, 2022.
 
-- This version includes all the updates from :ref:`lts-version-history-9012`.
-
 New Features:
 
 - None.
