@@ -33,6 +33,12 @@ New Features:
 - Singularity jobs can now pull images from docker style repos.
   :jira:`1059`
 
+- Python bindings on Windows have been updated to Python 3.9. Bindings for
+  Python 2.7 will no longer be available. If you are building HTCondor
+  for Windows yourself, Visual Studio 2022 and Python 3.8, 3.9 and 3.10
+  are now supported by the build.
+  :jira:`1008`
+
 Bugs Fixed:
 
 - Fix a rare bug where the starter will fail to start a job, and the job will
