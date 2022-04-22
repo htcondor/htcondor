@@ -119,6 +119,7 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     libldap2-dev \
     libmunge-dev \
     libpam0g-dev \
+    libpcre2-dev \
     libpcre3-dev \
     libpq-dev \
     libscitokens-dev \
@@ -129,7 +130,6 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     libxml2-dev \
     libxss-dev \
     patchelf \
-    pcre2-utils \
     pkg-config \
     po-debconf \
     python3-all-dev \
