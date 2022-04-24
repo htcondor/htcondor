@@ -1,3 +1,10 @@
+condor (9.0.12-1) stable; urgency=medium
+
+  * Fix bug in parallel universe that could cause the schedd to crash
+  * Fix rare crash where a daemon tries to use a discarded security session
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 19 Apr 2022 14:26:00 -0600
+
 condor (9.7.1-1) stable; urgency=medium
 
   * Fix recent bug where jobs may go on hold without a hold reason or code
