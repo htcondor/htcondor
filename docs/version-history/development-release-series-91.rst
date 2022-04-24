@@ -9,7 +9,7 @@ Version 9.8.1
 
 Release Notes:
 
-- HTCondor version 9.8.1 released on April 26, 2022.
+- HTCondor version 9.8.1 released on April 25, 2022.
 
 New Features:
 
@@ -17,11 +17,10 @@ New Features:
 
 Bugs Fixed:
 
-- The shared port daemon only accepts address strings of a certain maximum
-  length.  Some naturally-occurring addresses were recently found to exceed
-  that length, causing daemons to be unable to register with the
-  *condor_master* and to fail to start.  The maximum length has been
-  increased.
+- Fix problem that can cause HTCondor to not start up when the network
+  configuration is complex.
+  Long hostnames, multiple CCB addresses, having both IPv4 and IPv6 addresses,
+  and long private network names all contribute to complexity.
   :jira:`1070`
 
 Version 9.8.0
