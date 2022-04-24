@@ -31,14 +31,13 @@ Bugs Fixed:
   and warnings rather than writing them into a log file.
   :jira:`1002`
 
-- Updated the Windows build of HTCondor to use SSL 1.1.1m
+- Updated the Windows build of HTCondor to use SSL 1.1.1m.
   :jira:`840`
 
-- The shared port daemon only accepts address strings of a certain maximum
-  length.  Some naturally-occurring addresses were recently found to exceed
-  that length, causing daemons to be unable to register with the
-  *condor_master* and to fail to start.  The maximum length has been
-  increased.
+- Fix problem that can cause HTCondor to not start up when the network
+  configuration is complex.
+  Long hostnames, multiple CCB addresses, having both IPv4 and IPv6 addresses,
+  and long private network names all contribute to complexity.
   :jira:`1070`
 
 .. _lts-version-history-9012:
