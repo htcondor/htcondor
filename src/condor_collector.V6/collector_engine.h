@@ -25,6 +25,18 @@
 #include "collector_stats.h"
 #include "hashkey.h"
 
+struct CollectorRecord
+{
+	CollectorRecord(ClassAd* public_ad) : m_publicAd(public_ad) {}
+	~CollectorRecord() { delete m_publicAd; }
+
+	ClassAd* m_publicAd;
+};
+
+// type for the hash tables ...
+typedef HashTable <AdNameHashKey, CollectorRecord *> CollectorHashTable;
+typedef HashTable <std::string, CollectorHashTable *> GenericAdHashTable;
+
 class CollectorEngine : public Service
 {
   public:
@@ -68,7 +80,7 @@ class CollectorEngine : public Service
 	int remove (AdTypes, AdNameHashKey &);
 
 	// walk specified hash table with the given visit procedure
-	int walkHashTable (AdTypes, int (*)(ClassAd *));
+	int walkHashTable (AdTypes, int (*)(CollectorRecord *));
 
 	// Walk through a specific (non-generic, non-ANY) table using a lambda
 	template<typename T>
@@ -86,11 +98,11 @@ class CollectorEngine : public Service
 		}
 
 			// walk the hash table
-		ClassAd *ad;
+		CollectorRecord *record;
 		table->startIterations();
-		while (table->iterate(ad)) {
+		while (table->iterate(record)) {
 				// call scan function for each ad
-			if (!scanFunction(ad)) {break;}
+			if (!scanFunction(record)) {break;}
 		}
 
 		return 1;
@@ -144,9 +156,9 @@ class CollectorEngine : public Service
 	GenericAdHashTable GenericAds;
 
 	// for walking through the generic hash tables
-	static int (*genericTableScanFunction)(ClassAd *);
+	static int (*genericTableScanFunction)(CollectorRecord *);
 	static int genericTableWalker(CollectorHashTable *cht);
-	int walkGenericTables(int (*scanFunction)(ClassAd *));
+	int walkGenericTables(int (*scanFunction)(CollectorRecord *));
 
 	// relevant variables from the config file
 	int	clientTimeout;

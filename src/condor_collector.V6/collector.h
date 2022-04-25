@@ -109,13 +109,13 @@ public:
 	static int select_by_match( ClassAd *cad );
 	static void process_invalidation(AdTypes, ClassAd&, Stream*);
 
-	static int query_scanFunc(ClassAd*);
-	static int invalidation_scanFunc(ClassAd*);
-	static int expiration_scanFunc(ClassAd*);
+	static int query_scanFunc(CollectorRecord*);
+	static int invalidation_scanFunc(CollectorRecord*);
+	static int expiration_scanFunc(CollectorRecord*);
 
-	static int reportStartdScanFunc(ClassAd*);
-	static int reportSubmittorScanFunc(ClassAd*);
-	static int reportMiniStartdScanFunc(ClassAd *cad);
+	static int reportStartdScanFunc(CollectorRecord*);
+	static int reportSubmittorScanFunc(CollectorRecord*);
+	static int reportMiniStartdScanFunc(CollectorRecord*);
 
 	static int sigint_handler(Service*, int);
 	static void unixsigint_handler();

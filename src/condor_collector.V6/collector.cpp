@@ -225,13 +225,13 @@ CollectorDaemon::schedd_token_request(int, Stream *stream)
 		error_string = "No schedd target specified.";
 	}
 	std::string capability, schedd_addr;
-	if (!error_code && !collector.walkConcreteTable(SCHEDD_AD, [&](ClassAd *ad) -> int {
+	if (!error_code && !collector.walkConcreteTable(SCHEDD_AD, [&](CollectorRecord *record) -> int {
 			std::string local_schedd_name;
-			if (!ad ||
-				!ad->EvaluateAttrString(ATTR_NAME, local_schedd_name) ||
+			if (!record || !record->m_publicAd ||
+				!record->m_publicAd->EvaluateAttrString(ATTR_NAME, local_schedd_name) ||
 				(schedd_name != local_schedd_name) ||
-				!ad->EvaluateAttrString(ATTR_CAPABILITY, capability) ||
-				!ad->EvaluateAttrString(ATTR_MY_ADDRESS, schedd_addr))
+				!record->m_publicAd->EvaluateAttrString(ATTR_CAPABILITY, capability) ||
+				!record->m_publicAd->EvaluateAttrString(ATTR_MY_ADDRESS, schedd_addr))
 			{
 				return 1;
 			}
@@ -1475,8 +1475,10 @@ CollectorDaemon::stashSocket( ReliSock* sock )
 	return KEEP_STREAM;
 }
 
-int CollectorDaemon::query_scanFunc (ClassAd *cad)
+int CollectorDaemon::query_scanFunc (CollectorRecord *record)
 {
+	ClassAd* cad = record->m_publicAd;
+
 	if ( !__adType__.empty() ) {
 		std::string type = "";
 		cad->LookupString( ATTR_MY_TYPE, type );
@@ -1605,14 +1607,14 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 // invalidated ads allows the offline plugin to decide if they should go
 // absent, instead.
 //
-int CollectorDaemon::expiration_scanFunc (ClassAd *cad)
+int CollectorDaemon::expiration_scanFunc (CollectorRecord *record)
 {
-    return setAttrLastHeardFrom( cad, 1 );
+    return setAttrLastHeardFrom( record->m_publicAd, 1 );
 }
 
-int CollectorDaemon::invalidation_scanFunc (ClassAd *cad)
+int CollectorDaemon::invalidation_scanFunc (CollectorRecord *record)
 {
-    return setAttrLastHeardFrom( cad, 0 );
+    return setAttrLastHeardFrom( record->m_publicAd, 0 );
 }
 
 int CollectorDaemon::setAttrLastHeardFrom (ClassAd* cad, unsigned long time)
@@ -1709,18 +1711,18 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 
 
 
-int CollectorDaemon::reportStartdScanFunc( ClassAd *cad )
+int CollectorDaemon::reportStartdScanFunc( CollectorRecord *record )
 {
-	return normalTotals->update( cad );
+	return normalTotals->update( record->m_publicAd );
 }
 
-int CollectorDaemon::reportSubmittorScanFunc( ClassAd *cad )
+int CollectorDaemon::reportSubmittorScanFunc( CollectorRecord *record )
 {
 	++submittorNumAds;
 
 	int tmp1, tmp2;
-	if( !cad->LookupInteger( ATTR_RUNNING_JOBS , tmp1 ) ||
-		!cad->LookupInteger( ATTR_IDLE_JOBS, tmp2 ) )
+	if( !record->m_publicAd->LookupInteger( ATTR_RUNNING_JOBS , tmp1 ) ||
+		!record->m_publicAd->LookupInteger( ATTR_IDLE_JOBS, tmp2 ) )
 			return 0;
 	submittorRunningJobs += tmp1;
 	submittorIdleJobs	 += tmp2;
@@ -1728,14 +1730,14 @@ int CollectorDaemon::reportSubmittorScanFunc( ClassAd *cad )
 	return 1;
 }
 
-int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *cad )
+int CollectorDaemon::reportMiniStartdScanFunc( CollectorRecord *record )
 {
     char buf[80];
 	int iRet = 0;
 
 	++startdNumAds;
 
-	if ( cad && cad->LookupString( ATTR_STATE, buf, sizeof(buf) ) )
+	if ( record->m_publicAd->LookupString( ATTR_STATE, buf, sizeof(buf) ) )
 	{
 		machinesTotal++;
 		switch ( buf[0] )
@@ -1753,7 +1755,7 @@ int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *cad )
 
 		// Count the number of jobs in each universe
 		int universe;
-		if ( cad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) )
+		if ( record->m_publicAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) )
 		{
 			ustatsAccum.accumulate( universe );
 		}

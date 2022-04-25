@@ -93,11 +93,11 @@ public:
 	static int SendDataReply(Stream*,const std::string& FileName, int FromDate, int ToDate, int Options, const std::string& Arg);
 
 	static void WriteHistory();
-	static int SubmittorScanFunc(ClassAd* ad);
+	static int SubmittorScanFunc(CollectorRecord*);
 	static int SubmittorTotalFunc(void);
-	static int StartdScanFunc(ClassAd* ad);
+	static int StartdScanFunc(CollectorRecord*);
 	static int StartdTotalFunc(void);
-	static int CkptScanFunc(ClassAd* ad);
+	static int CkptScanFunc(CollectorRecord*);
 
 private:
 
