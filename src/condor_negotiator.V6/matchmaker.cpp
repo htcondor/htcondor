@@ -928,7 +928,7 @@ Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			sinful.c_str(),
 			1200,
-			nullptr, true
+			nullptr, false
 		);
 
 	}

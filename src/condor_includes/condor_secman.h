@@ -26,6 +26,11 @@
 #include "classy_counted_ptr.h"
 #include "reli_sock.h"
 
+// For AES (and newer).
+#define SEC_SESSION_KEY_LENGTH_V9  32
+
+// For BLOWFISH and 3DES
+#define SEC_SESSION_KEY_LENGTH_OLD 24
 
 typedef void StartCommandCallbackType(bool success, Sock *sock, CondorError *errstack, const std::string &trust_domain, bool should_try_token_request, void *misc_data);
 
@@ -262,6 +267,16 @@ public:
 
 	static classad::References* getResumeProj() { return &m_resume_proj; };
 
+		// Generate a EC P256 keypair for key exchange
+	static std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> GenerateKeyExchange(CondorError *errstack);
+
+		// Given the local key and a base64-encoded EC P256 peerkey, generate a key appropriate
+		// for use as a symmetric key.  The resulting key is passed through HKDF.
+	static bool FinishKeyExchange(std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> mykey, const char *encoded_peerkey, unsigned char *outkey, size_t outlen, CondorError *errstack);
+
+		// Given a keypair, encode the pubkey to base64-encoded DER.
+	static bool EncodePubkey(const EVP_PKEY *pkey, std::string &encoded_pkey, CondorError *errstack);
+
 		// Create a security session from scratch (without doing any
 		// security negotation with the peer).  The session id and
 		// key will presumably be communicated to the peer using some
@@ -271,10 +286,12 @@ public:
 		// is no longer needed.)
 		//
 		// If additional attributes should be copied into the session policy,
-		// these can be copied into the policy parameter:
+		// these can be copied into the policy parameter.
+		// new_session=true: brand new session
+		// new_session=false: imported session from elsewhere
 	bool CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid, char const *private_key,
 		char const *exported_session_info, const char *auth_method, char const *peer_fqu, char const *peer_sinful, int duration,
-		classad::ClassAd *policy, bool allow_multiple_methods=false);
+		classad::ClassAd *policy, bool new_session);
 
 		// Get security session info to send to our peer so that peer
 		// can create pre-built security session compatible with ours.

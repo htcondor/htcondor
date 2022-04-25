@@ -2343,12 +2343,7 @@ newIdString( char** id_str_ptr )
 	formatstr( id, "%s#%d#%d#", daemonCore->publicNetworkIpAddr(),
 	           (int)startd_startup, sequence_num );
 
-		// keylen is 20 in order to avoid generating claim ids that
-		// overflow the 80 byte buffer in pre-7.1.3 negotiators
-		// Note: Claim id strings have been longer than 80 characters
-		//   ever since we started putting a security session ad in them.
-	const size_t keylen = 20;
-	char *keybuf = Condor_Crypt_Base::randomHexKey(keylen);
+	char *keybuf = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 	id += keybuf;
 	free( keybuf );
 

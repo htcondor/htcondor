@@ -25,6 +25,18 @@ New Features:
   require this level now require ``ADMINISTRATOR`` authorization.
   :jira:`1023`
 
+- Elliptic-curve Diffie-Hellman (ECDH) Key Exchange is now used to generate
+  session keys for network communication.
+  :jira:`283`
+
+- Added replay protection for authenticated network communication.
+  :jira:`287`
+  :jira:`1054`
+
+- Improved notification between network peers when a cached security
+  session is not recognized.
+  :jira:`1057`
+
 - Changed the result returned by evaluating a nested classad a
   with no attribute named "missing" to return undefined when evaluating
   a["missing"].  This matches the a.missing syntax
