@@ -1675,6 +1675,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Apr 25 2022 Tim Theisen <tim@cs.wisc.edu> - 9.8.1-1
+- Fix HTCondor startup failure with certain complex network configurations
+
 * Thu Apr 21 2022 Tim Theisen <tim@cs.wisc.edu> - 9.8.0-1
 - Support for Heterogeneous GPUs, some configuration required
 - Allow HTCondor to utilize grid sites requiring two-factor authentication
