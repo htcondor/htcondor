@@ -1675,6 +1675,11 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Apr 21 2022 Tim Theisen <tim@cs.wisc.edu> - 9.8.0-1
+- Support for Heterogeneous GPUs, some configuration required
+- Allow HTCondor to utilize grid sites requiring two-factor authentication
+- Technology preview: bring your own resources from (some) NSF HPC clusters
+
 * Tue Apr 19 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.12-1
 - Fix bug in parallel universe that could cause the schedd to crash
 - Fix rare crash where a daemon tries to use a discarded security session
