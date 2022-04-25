@@ -53,6 +53,25 @@ Bugs Fixed:
   cause the schedd to assert.
   :jira:`1042`
 
+Version 9.8.1
+-------------
+
+Release Notes:
+
+- HTCondor version 9.8.1 released on April 25, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fix problem that can cause HTCondor to not start up when the network
+  configuration is complex.
+  Long hostnames, multiple CCB addresses, having both IPv4 and IPv6 addresses,
+  and long private network names all contribute to complexity.
+  :jira:`1070`
+
 Version 9.8.0
 -------------
 
