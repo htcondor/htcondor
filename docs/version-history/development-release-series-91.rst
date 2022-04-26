@@ -25,6 +25,10 @@ New Features:
   require this level now require ``ADMINISTRATOR`` authorization.
   :jira:`1023`
 
+- Improved the algorithm in the schedd to speed up the scheduling of jobs
+  when reusing claims.
+  :jira:`1056`
+
 - Elliptic-curve Diffie-Hellman (ECDH) Key Exchange is now used to generate
   session keys for network communication.
   :jira:`283`
@@ -54,6 +58,7 @@ New Features:
 - Added support for a global CM which only schedules fair-share between schedds,
   with each schedd owning a local CM for fair-share between users.
   :jira:`1003`
+
 
 Bugs Fixed:
 
