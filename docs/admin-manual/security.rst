@@ -2862,7 +2862,7 @@ Under Unix, HTCondor runs jobs as one of
       machine that will run the job. Its default value is ``True`` on
       Unix platforms and ``False`` on Windows platforms.
    #. If the job's ClassAd has the attribute ``RunAsOwner``, it must be
-      set to ``True`; if unset, the job must be run on a Unix system.
+      set to ``True``; if unset, the job must be run on a Unix system.
       This attribute can be set up for all users by adding an attribute
       to configuration variable ``SUBMIT_ATTRS``
       :index:`SUBMIT_ATTRS`. If this were the only attribute to be
