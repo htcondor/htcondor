@@ -15,11 +15,29 @@
 
 import logging as _logging
 
+import os as _os
+import platform as _platform
+
 # SET UP NULL LOG HANDLER
 _logger = _logging.getLogger(__name__)
 _logger.setLevel(_logging.DEBUG)
 _logger.addHandler(_logging.NullHandler())
 
-from .classad import *
+def _add_dll_dir():
+    """
+    On windows for Python 3.8 or later, we have to add the bin directory to the search path
+    for DLLs because python will no longer use the PATH environment variable to find DLLs.
+    We assume here that this file is in $(RELEASE_DIR)\lib\python\classd and that the
+    bin directory is relative to it at $(RELEASE_DIR)\bin
+    """
+    if _platform.system() in ["Windows"]:
+        import sys as _sys
+        if _sys.version_info >= (3,8):
+            bin_path = _os.path.realpath(_os.path.join(__file__,r'..\..\..\..\bin'))
+            return _os.add_dll_directory(bin_path)
+    return memoryview(b'') # noop context manager
+
+with _add_dll_dir():
+    from .classad import *
 
 __version__ = version()

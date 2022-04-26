@@ -427,7 +427,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 			val2.IsStringValue(index);
 			
             if (!classad->Lookup(index)) {
-				result.SetErrorValue();
+				result.SetUndefinedValue();
 				return SIG_CHLD2;
             }
 			if (!classad->EvaluateAttr(index, result)) {

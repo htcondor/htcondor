@@ -790,7 +790,7 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 				EXECUTE_SIDE_MATCHSESSION_FQU,
 				dc_startd->addr(),
 				0 /*don't expire*/,
-				nullptr );
+				nullptr, false );
 
 			if( !rc ) {
 				dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session for %s, so will fall back on security negotiation\n",m_claim_session.publicClaimId());

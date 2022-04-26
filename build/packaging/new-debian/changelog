@@ -1,3 +1,24 @@
+condor (9.8.1-1) stable; urgency=medium
+
+  * Fix HTCondor startup failure with certain complex network configurations
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 25 Apr 2022 19:39:00 -0500
+
+condor (9.8.0-1) stable; urgency=medium
+
+  * Support for Heterogeneous GPUs, some configuration required
+  * Allow HTCondor to utilize grid sites requiring two-factor authentication
+  * Technology preview: bring your own resources from (some) NSF HPC clusters
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 21 Apr 2022 14:16:00 -0500
+
+condor (9.0.12-1) stable; urgency=medium
+
+  * Fix bug in parallel universe that could cause the schedd to crash
+  * Fix rare crash where a daemon tries to use a discarded security session
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 19 Apr 2022 14:26:00 -0500
+
 condor (9.7.1-1) stable; urgency=medium
 
   * Fix recent bug where jobs may go on hold without a hold reason or code

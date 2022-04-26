@@ -17,6 +17,10 @@ Release Notes:
 
 New Features:
 
+- Job duration policy hold message now displays the time exceeded in 
+  'dd+hh:mm:ss' format rather than just seconds.
+  :jira:`1062`
+
 - The ``OWNER`` authorization level has been removed. Commands that used to
   require this level now require ``ADMINISTRATOR`` authorization.
   :jira:`1023`
@@ -24,6 +28,37 @@ New Features:
 - Improved the algorithm in the schedd to speed up the scheduling of jobs
   when reusing claims.
   :jira:`1056`
+
+- Elliptic-curve Diffie-Hellman (ECDH) Key Exchange is now used to generate
+  session keys for network communication.
+  :jira:`283`
+
+- Added replay protection for authenticated network communication.
+  :jira:`287`
+  :jira:`1054`
+
+- Improved notification between network peers when a cached security
+  session is not recognized.
+  :jira:`1057`
+
+- Changed the result returned by evaluating a nested classad a
+  with no attribute named "missing" to return undefined when evaluating
+  a["missing"].  This matches the a.missing syntax
+  :jira:`1065`
+
+- Singularity jobs can now pull images from docker style repos.
+  :jira:`1059`
+
+- Python bindings on Windows have been updated to Python 3.9. Bindings for
+  Python 2.7 will no longer be available. If you are building HTCondor
+  for Windows yourself, Visual Studio 2022 and Python 3.8, 3.9 and 3.10
+  are now supported by the build.
+  :jira:`1008`
+
+- Added support for a global CM which only schedules fair-share between schedds,
+  with each schedd owning a local CM for fair-share between users.
+  :jira:`1003`
+
 
 Bugs Fixed:
 
@@ -35,36 +70,35 @@ Bugs Fixed:
   cause the schedd to assert.
   :jira:`1042`
 
+Version 9.8.1
+-------------
+
+Release Notes:
+
+- HTCondor version 9.8.1 released on April 25, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fix problem that can cause HTCondor to not start up when the network
+  configuration is complex.
+  Long hostnames, multiple CCB addresses, having both IPv4 and IPv6 addresses,
+  and long private network names all contribute to complexity.
+  :jira:`1070`
+
 Version 9.8.0
 -------------
 
 Release Notes:
 
-.. HTCondor version 9.8.0 released on Month Date, 2022.
-
-- HTCondor version 9.8.0 not yet released.
+- HTCondor version 9.8.0 released on April 21, 2022.
 
 - This version includes all the updates from :ref:`lts-version-history-9012`.
 
 New Features:
-
-- The classad ``sum``, ``avg``, ``min`` and ``max`` functions now promote boolean
-  values in the list being operated on to integers rather than to error.
-  :jira:`970`
-
-- Added basic tools for submitting and monitoring DAGMan workflows to our 
-  new :doc:`/man-pages/htcondor` CLI tool.
-  :jira:`929`
-
-- If an administrator configures additional custom docker networks on a worker node
-  and would like jobs to be able to opt into use them, the startd knob
-  ``DOCKER_NETWORKS`` has been added to allow additional custom networks
-  to be added to the *docker_network_type* submit command.
-  :jira:`995`
-
-- Added classad functions ``countMatches`` and ``evalInEachContext``. These functions
-  are used to support matchmaking of heterogenous custom resources such as GPUs.
-  :jira:`977`
 
 - Added the ability to do matchmaking and targeted resource binding of GPUs into dynamic
   slots while constraining on the properties of the GPUs.  This new behavior is enabled
@@ -74,14 +108,20 @@ New Features:
   GPU when creating a dynamic slot.
   :jira:`953`
 
+- Added ClassAd functions ``countMatches`` and ``evalInEachContext``. These functions
+  are used to support matchmaking of heterogeneous custom resources such as GPUs.
+  :jira:`977`
+
 - Added the Reverse GAHP, which allows *condor_remote_cluster* to work with
   remote clusters that don't allow SSH keys or require Multi-Factor
   Authentication for all SSH connections.
   :jira:`1007`
 
-- Added support for a global CM which only schedules fair-share between schedds,
-  with each schedd owning a local CM for fair-share between users.
-  :jira:`1003`
+- If an administrator configures additional custom docker networks on a worker node
+  and would like jobs to be able to opt into use them, the startd knob
+  ``DOCKER_NETWORKS`` has been added to allow additional custom networks
+  to be added to the *docker_network_type* submit command.
+  :jira:`995`
 
 - Added the ``-key`` command-line option to *condor_token_request*, which
   allows users to ask HTCondor to use a particular signing key when creating
@@ -89,6 +129,14 @@ New Features:
   :macro:`SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS`, which defaults to the default key
   (``POOL``).
   :jira:`1024`
+
+- Added basic tools for submitting and monitoring DAGMan workflows to our 
+  new :doc:`/man-pages/htcondor` CLI tool.
+  :jira:`929`
+
+- The ClassAd ``sum``, ``avg``, ``min`` and ``max`` functions now promote boolean
+  values in the list being operated on to integers rather than to error.
+  :jira:`970`
 
 Bugs Fixed:
 
@@ -146,7 +194,7 @@ New Features:
   systems.
   :jira:`873`
 
-- Improved performance of the *condor_schedd* during negotiation
+- Improved performance of the *condor_schedd* during negotiation.
   :jira:`961`
   
 - For **arc** grid universe jobs, environment variables specified in

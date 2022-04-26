@@ -81,7 +81,7 @@ The standard output for this job will go to the file
 the standard error output will go to ``errorfile``. 
 
 HTCondor will append events about the job to a log file wih the 
-requested name``myexe.log``. When the job
+requested name ``myexe.log``. When the job
 finishes, its exit conditions and resource usage will also be noted in the log file. 
 This file's contents are an excellent way to figure out what happened to jobs.
 

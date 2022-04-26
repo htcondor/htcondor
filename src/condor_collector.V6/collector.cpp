@@ -276,7 +276,7 @@ CollectorDaemon::schedd_token_request(int, Stream *stream)
 		SUBMIT_SIDE_MATCHSESSION_FQU,
 		schedd_addr.c_str(),
 		1200,
-		nullptr
+		nullptr, false
 	);
 
 
