@@ -365,8 +365,8 @@ bool operator()(const prio_rec& a, const std::string &user) const {
 		return true;
 	}
 
-	if (a.submitter < user) {
-		return false;
+	if (a.submitter > user) {
+		return true;
 	}
 
 	return false;
