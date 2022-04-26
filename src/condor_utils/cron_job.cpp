@@ -348,13 +348,15 @@ CronJob::KillHandler( void )
 int
 CronJob::Reaper( int exitPid, int exitStatus )
 {
+	bool failed = false;
 	if( WIFSIGNALED(exitStatus) ) {
+		failed = true;
 		dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) exit_signal=%d\n",
 			 GetName(), exitPid, WTERMSIG(exitStatus) );
 	} else {
 		auto debugLevel = D_FULLDEBUG;
 		auto es = WEXITSTATUS(exitStatus);
-		if( es != 0 ) { debugLevel = D_ALWAYS; }
+		if( es != 0 ) { failed = true; debugLevel = D_ALWAYS; }
 		dprintf( debugLevel, "CronJob: '%s' (pid %d) exit_status=%d\n",
 			 GetName(), exitPid, es );
 	}
@@ -376,6 +378,22 @@ CronJob::Reaper( int exitPid, int exitStatus )
 	}
 	if ( m_stdErr >= 0 ) {
 		StderrHandler( m_stdErr );
+	}
+
+	if( failed ) {
+		int linecount = m_stdOutBuf->GetQueueSize();
+		if( linecount == 0 ) {
+			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced no output\n",
+			         GetName(), exitPid );
+		} else {
+			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced %d lines of output, which follow.\n",
+			         GetName(), exitPid, linecount );
+			char * linebuf;
+			while( (linebuf = m_stdOutBuf->GetLineFromQueue()) != NULL ) {
+				dprintf( D_ALWAYS, "['%s' (pid %d)] %s\n",
+				         GetName(), exitPid, linebuf );
+			}
+		}
 	}
 
 	// Clean up it's file descriptors
