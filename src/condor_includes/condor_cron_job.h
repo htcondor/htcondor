@@ -57,7 +57,7 @@ class CronJob : public Service
 
 	bool SetParams( CronJobParams *params );
 
-	int ProcessOutputQueue( void );
+	int ProcessOutputQueue( bool dump = false, int exitPid = -1 );
 	virtual int ProcessOutput( const char * /*line*/ ) { return 0; };
 	virtual int ProcessOutputSep( const char * /*args*/ ) { return 0; };
 

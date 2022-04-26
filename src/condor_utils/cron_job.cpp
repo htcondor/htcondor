@@ -380,22 +380,6 @@ CronJob::Reaper( int exitPid, int exitStatus )
 		StderrHandler( m_stdErr );
 	}
 
-	if( failed ) {
-		int linecount = m_stdOutBuf->GetQueueSize();
-		if( linecount == 0 ) {
-			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced no output\n",
-			         GetName(), exitPid );
-		} else {
-			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced %d lines of output, which follow.\n",
-			         GetName(), exitPid, linecount );
-			char * linebuf;
-			while( (linebuf = m_stdOutBuf->GetLineFromQueue()) != NULL ) {
-				dprintf( D_ALWAYS, "['%s' (pid %d)] %s\n",
-				         GetName(), exitPid, linebuf );
-			}
-		}
-	}
-
 	// Clean up it's file descriptors
 	CleanAll( );
 
@@ -448,8 +432,21 @@ CronJob::Reaper( int exitPid, int exitStatus )
 
 	}
 
+	// If we dump the output to the log here, it won't get processed.  That's
+	// probably a good thing for the devel series...
+	if( failed ) {
+		int linecount = m_stdOutBuf->GetQueueSize();
+		if( linecount == 0 ) {
+			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced no output\n",
+			         GetName(), exitPid );
+		} else {
+			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced %d lines of output, which follow.\n",
+			         GetName(), exitPid, linecount );
+		}
+	}
+
 	// Process the output
-	ProcessOutputQueue( );
+	ProcessOutputQueue( failed, exitPid );
 
 	// Finally, notify my manager
 	m_mgr.JobExited( *this );
@@ -459,7 +456,7 @@ CronJob::Reaper( int exitPid, int exitStatus )
 
 // Publisher
 int
-CronJob::ProcessOutputQueue( void )
+CronJob::ProcessOutputQueue( bool failed, int exitPid )
 {
 	int		status = 0;
 	int		linecount = m_stdOutBuf->GetQueueSize( );
@@ -474,6 +471,10 @@ CronJob::ProcessOutputQueue( void )
 		// Read all of the data from the queue
 		char	*linebuf;
 		while( ( linebuf = m_stdOutBuf->GetLineFromQueue( ) ) != NULL ) {
+			if( failed ) {
+				dprintf( D_ALWAYS, "['%s' (%d)] %s\n", GetName(), exitPid, linebuf );
+			}
+
 			int		tmpstatus = ProcessOutput( linebuf );
 			if ( tmpstatus ) {
 				status = tmpstatus;
