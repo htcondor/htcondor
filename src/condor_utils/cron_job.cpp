@@ -349,16 +349,19 @@ int
 CronJob::Reaper( int exitPid, int exitStatus )
 {
 	if( WIFSIGNALED(exitStatus) ) {
-		dprintf( D_FULLDEBUG, "CronJob: '%s' (pid %d) exit_signal=%d\n",
+		dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) exit_signal=%d\n",
 			 GetName(), exitPid, WTERMSIG(exitStatus) );
 	} else {
-		dprintf( D_FULLDEBUG, "CronJob: '%s' (pid %d) exit_status=%d\n",
-			 GetName(), exitPid, WEXITSTATUS(exitStatus) );
+		auto debugLevel = D_FULLDEBUG;
+		auto es = WEXITSTATUS(exitStatus);
+		if( es != 0 ) { debugLevel = D_ALWAYS; }
+		dprintf( debugLevel, "CronJob: '%s' (pid %d) exit_status=%d\n",
+			 GetName(), exitPid, es );
 	}
 
 	// What if the PIDs don't match?!
 	if ( exitPid != m_pid ) {
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 			"CronJob: WARNING: Child PID %d != Exit PID %d\n",
 			m_pid, exitPid );
 	}
