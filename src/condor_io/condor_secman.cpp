@@ -3116,25 +3116,24 @@ bool
 SecMan::EncodePubkey(const EVP_PKEY *pkey, std::string &encoded_pkey, CondorError *errstack)
 {
 		// Serialize the public key to the DER format
-	unsigned char *der_pubkey_raw = nullptr;
-	int length = i2d_PublicKey(const_cast<EVP_PKEY *>(pkey), &der_pubkey_raw);
+	unsigned char *der_pubkey = nullptr;
+	int length = i2d_PublicKey(const_cast<EVP_PKEY *>(pkey), &der_pubkey);
 	if (length < 0) {
 		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
 			"Failed to serialize new key for key exchange.");
 		return false;
 	}
-	std::unique_ptr<unsigned char, decltype(&free)> der_pubkey(der_pubkey_raw, &free);
 
 		// Encode the DER bytes into base64
-	std::unique_ptr<char, decltype(&free)> encoded_pubkey(
-		condor_base64_encode(der_pubkey.get(), length, false),
-		&free);
+	char* encoded_pubkey = condor_base64_encode(der_pubkey, length, false);
+	OPENSSL_free(der_pubkey);
 	if (!encoded_pubkey) {
 		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
 			"Failed to base64 encode new key for key exchange.");
 		return false;
 	}
-	encoded_pkey = std::string(encoded_pubkey.get());
+	encoded_pkey = encoded_pubkey;
+	free(encoded_pubkey);
 	return true;
 }
 
