@@ -1015,7 +1015,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 class SecManStartCommand: Service, public ClassyCountedPtr {
  public:
 	SecManStartCommand (
-		int cmd,Sock *sock,bool raw_protocol,
+		int cmd,Sock *sock,bool raw_protocol, bool resume_response,
 		CondorError *errstack,int subcmd,StartCommandCallbackType *callback_fn,
 		void *misc_data,bool nonblocking,char const *cmd_description,char const *sec_session_id_hint,
 		const std::string &owner, const std::vector<std::string> &methods, SecMan *sec_man):
@@ -1031,7 +1031,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		m_pending_socket_registered(false),
 		m_sec_man(*sec_man),
 		m_use_tmp_sec_session(false),
-		m_want_resume_response(true),
+		m_want_resume_response(resume_response),
 		m_owner(owner),
 		m_methods(methods)
 	{
@@ -1229,6 +1229,7 @@ SecMan::startCommand(const StartCommandRequest &req)
 		req.m_cmd,
 		req.m_sock,
 		req.m_raw_protocol,
+		req.m_resume_response,
 		req.m_errstack,
 		req.m_subcmd,
 		req.m_callback_fn,
@@ -1562,6 +1563,8 @@ SecManStartCommand::sendAuthInfo_inner()
 		// With a non-negotiated session, the version of the peer that last
 		// connected to us with this session is a better guide of the
 		// peer's version.
+		// If m_want_resume_response has been set to false (not the default),
+		// respect that request.
 		bool negotiated_session = true;
 		m_auth_info.LookupBool(ATTR_SEC_NEGOTIATED_SESSION, negotiated_session);
 		std::string last_peer_vers;
@@ -1573,7 +1576,9 @@ SecManStartCommand::sendAuthInfo_inner()
 			if (!m_remote_version.empty()) {
 				CondorVersionInfo ver_info(m_remote_version.c_str());
 				m_sock->set_peer_version(&ver_info);
-				m_want_resume_response = ver_info.built_since_version(9, 9, 0);
+				if (m_want_resume_response) {
+					m_want_resume_response = ver_info.built_since_version(9, 9, 0);
+				}
 			} else {
 				m_want_resume_response = false;
 			}
@@ -1582,7 +1587,6 @@ SecManStartCommand::sendAuthInfo_inner()
 			if (ver_info.built_since_version(9, 9, 0)) {
 				// The socket's peer version will be populated when we
 				// get the server's response.
-				m_want_resume_response = true;
 			} else {
 				m_want_resume_response = false;
 				// Old servers clear out the socket's peer version if the
@@ -2786,6 +2790,7 @@ SecManStartCommand::DoTCPAuth_inner()
 		DC_AUTHENTICATE,
 		tcp_auth_sock,
 		m_raw_protocol,
+		m_want_resume_response,
 		m_errstack,
 		m_cmd,
 		m_nonblocking ? SecManStartCommand::TCPAuthCallback : NULL,
