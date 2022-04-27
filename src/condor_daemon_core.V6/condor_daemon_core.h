@@ -247,10 +247,17 @@ int BindAnyLocalCommandPort(ReliSock *rsock, SafeSock *ssock);
     TCP and UDP command socket */
 int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock, condor_protocol proto);
 
+// Multiple senders of DCSignalMsg assume it won't block when resuming a
+// session. This is false if the server is expected to send a reply to the
+// resumed session and the server is blocked (possibly trying to connect to
+// this process). This can result in a timeout-limited deadlock.
+// Since these messages are local to the machine and there's no data sent
+// after the security communication, disabling the server response to the
+// resume session request is acceptable.
 class DCSignalMsg: public DCMsg {
  public:
 	DCSignalMsg(pid_t pid, int s): DCMsg(DC_RAISESIGNAL)
-		{m_pid = pid; m_signal = s; m_messenger_delivery = false;}
+		{m_pid = pid; m_signal = s; m_messenger_delivery = false; setResumeResponse(false);}
 
 	int theSignal() const {return m_signal;}
 	pid_t thePid() const {return m_pid;}

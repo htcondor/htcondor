@@ -358,7 +358,8 @@ public:
 				Stream::stream_type st = Stream::reli_sock,
 				int sec = 0, CondorError* errstack = NULL,
 				char const *cmd_description = NULL,
-				bool raw_protocol=false, char const *sec_session_id=NULL );
+				bool raw_protocol=false, char const *sec_session_id=NULL,
+				bool resume_response=true );
 
 
 		/** Start sending the given command and subcommand to the daemon. The caller
@@ -382,7 +383,8 @@ public:
 				Stream::stream_type st = Stream::reli_sock,
 				int sec = 0, CondorError* errstack = NULL,
 				char const *cmd_description = NULL,
-				bool raw_protocol=false, char const *sec_session_id=NULL );
+				bool raw_protocol=false, char const *sec_session_id=NULL,
+				bool resume_response=true);
 
 		/** Start sending the given command to the daemon.  The caller
 		  gives the command they want to send, and a pointer to the
@@ -401,7 +403,8 @@ public:
 	bool startCommand( int cmd, Sock* sock,
 			int sec = 0, CondorError* errstack = NULL,
 			char const *cmd_description=NULL,
-			bool raw_protocol=false, char const *sec_session_id=NULL );
+			bool raw_protocol=false, char const *sec_session_id=NULL,
+			bool resume_response=true);
 
 		/** Start sending the given command and subcommand to the daemon.  The caller
 		  gives the command they want to send, and a pointer to the
@@ -421,7 +424,8 @@ public:
 	bool startSubCommand( int cmd, int subcmd, Sock* sock,
 			int sec = 0, CondorError* errstack = NULL,
 			char const *cmd_description=NULL,
-			bool raw_protocol=false, char const *sec_session_id=NULL );
+			bool raw_protocol=false, char const *sec_session_id=NULL,
+			bool resume_response=true );
 			
 		/** Start sending the given command to the daemon.  This
 			command claims to be nonblocking, but currently it only
@@ -452,7 +456,7 @@ public:
 			@param sec_session_id use specified session if available
 			@return see definition of StartCommandResult enumeration.
 		  */
-	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL );
+	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
 		/** Start sending the given command to the daemon.  This
 			command claims to be nonblocking, but currently it only
@@ -483,7 +487,7 @@ public:
 			@param sec_session_id use specified session if available
 			@return see definition of StartCommandResult enumeration.
 		*/
-	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL );
+	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
 		/**
 		 * Asynchronously send a message (command + whatever) to the
@@ -917,7 +921,7 @@ protected:
 		   nonblocking flag.  This version creates a socket of the
 		   specified type and connects it.
 		 */
-	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL );
+	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
 		/**
 		   Class used internally to handle non-blocking connects for
