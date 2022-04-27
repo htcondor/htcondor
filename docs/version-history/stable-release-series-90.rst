@@ -31,12 +31,18 @@ Bugs Fixed:
   and warnings rather than writing them into a log file.
   :jira:`1002`
 
-- Updated the Windows build of HTCondor to use SSL 1.1.1m
+- Updated the Windows build of HTCondor to use SSL 1.1.1m.
   :jira:`840`
 
 - Fixed a bug where Kerberos Authentication would fail for
   dagman.
   :jira:`1060`
+
+- Fix problem that can cause HTCondor to not start up when the network
+  configuration is complex.
+  Long hostnames, multiple CCB addresses, having both IPv4 and IPv6 addresses,
+  and long private network names all contribute to complexity.
+  :jira:`1070`
 
 .. _lts-version-history-9012:
 
