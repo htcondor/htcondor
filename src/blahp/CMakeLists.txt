@@ -15,7 +15,7 @@
 
 if (NOT CONDOR_PACKAGE_NAME)
 
-    cmake_minimum_required(VERSION 2.6)
+    cmake_minimum_required(VERSION 3.0)
 
     project(glite-ce-blahp)
     project(BLAH)
