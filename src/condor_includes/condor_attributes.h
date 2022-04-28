@@ -595,7 +595,7 @@
 #define ATTR_REAL_UID  "RealUid"
 #define ATTR_RELEASE_CLAIM  "ReleaseClaim"
 #define ATTR_RELEASE_REASON  "ReleaseReason"
-#define ATTR_REMOTE_ADMIN_CAPABILITY "RemoteAdminCapability"
+#define ATTR_REMOTE_ADMIN_CAPABILITY "_condor_PrivRemoteAdminCapability"
 #define ATTR_REMOTE_AUTOREGROUP  "RemoteAutoregroup"
 #define ATTR_REMOTE_GROUP  "RemoteGroup"
 #define ATTR_REMOTE_GROUP_RESOURCES_IN_USE  "RemoteGroupResourcesInUse"
