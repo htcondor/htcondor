@@ -10327,6 +10327,11 @@ in :ref:`misc-concepts/hooks:daemon classad hooks`.
     and on reconfig.  The *condor_schedd* reads this variable and other 
     ``SCHEDD_CRON_*`` variables only on startup.
 
+:macro-def:`STARTD_CRON_LOG_NON_ZERO_EXIT` and :macro-def:`SCHEDD_CRON_LOG_NON_ZERO_EXIT`
+    If true, each time a cron job returns a non-zero exit code, the
+    corresponding daemon will log the cron job's exit code and output.  There
+    is no default value, so no logging will occur by default.
+
 :macro-def:`STARTD_CRON_<JobName>_PREFIX`  and :macro-def:`SCHEDD_CRON_<JobName>_PREFIX`  and :macro-def:`BENCHMARKS_<JobName>_PREFIX`
     Specifies a string which is prepended by HTCondor to all attribute
     names that the job generates. The use of prefixes avoids the
