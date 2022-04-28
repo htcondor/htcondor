@@ -1110,9 +1110,6 @@ updateClassAd (CollectorHashTable &hashTable,
 			collectorStats->update( label, old_ad, new_ad );
 		}
 
-		// Now, finally, store the new ClassAd
-		record->ReplaceAds(new_ad, new_pvt_ad);
-
 		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "StartdPvt" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
 			bool forward = false;
 			int last_forwarded = 0;
@@ -1140,8 +1137,8 @@ updateClassAd (CollectorHashTable &hashTable,
 			new_ad->Assign( ATTR_LAST_FORWARDED, forward ? (int)time(NULL) : last_forwarded );
 		}
 
-		delete old_ad;
-		delete old_pvt_ad;
+		// Now, finally, store the new ClassAd
+		record->ReplaceAds(new_ad, new_pvt_ad);
 
 		insert = 0;
 		return record;
