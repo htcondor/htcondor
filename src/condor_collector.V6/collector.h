@@ -104,7 +104,7 @@ public:
 	static int receive_update(int, Stream*);
     static int receive_update_expect_ack(int, Stream*);
 
-	static void process_query_public(AdTypes, ClassAd*, List<ClassAd>*);
+	static void process_query_public(AdTypes, ClassAd*, List<CollectorRecord>*);
 	static ClassAd * process_global_query( const char *constraint, void *arg );
 	static int select_by_match( ClassAd *cad );
 	static void process_invalidation(AdTypes, ClassAd&, Stream*);
@@ -185,7 +185,7 @@ protected:
 	static char* CollectorName;
 
 	static ClassAd* __query__;
-	static List<ClassAd>* __ClassAdResultList__;
+	static List<CollectorRecord>* __ClassAdResultList__;
 	static int __numAds__;
 	static int __resultLimit__;
 	static int __failed__;

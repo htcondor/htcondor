@@ -75,10 +75,9 @@ ClassAd* CollectorDaemon::__query__;
 int CollectorDaemon::__numAds__;
 int CollectorDaemon::__resultLimit__;
 int CollectorDaemon::__failed__;
-List<ClassAd>* CollectorDaemon::__ClassAdResultList__;
+List<CollectorRecord>* CollectorDaemon::__ClassAdResultList__;
 std::string CollectorDaemon::__adType__;
 ExprTree *CollectorDaemon::__filter__;
-bool CollectorDaemon::__hidePvtAttrs__;
 
 TrackTotals* CollectorDaemon::normalTotals = NULL;
 int CollectorDaemon::submittorRunningJobs;
@@ -845,7 +844,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 {
 	int return_status = TRUE;
 	double begin = condor_gettimestamp_double();
-	List<ClassAd> results;
+	List<CollectorRecord> results;
 
 		// If our peer is at least 8.9.3 and has NEGOTIATOR authz, then we'll
 		// trust it to handle our capabilities.
@@ -884,7 +883,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	sock->timeout(QueryTimeout); // set up a network timeout of a longer duration
 	sock->encode();
 	results.Rewind();
-	ClassAd *curr_ad = NULL;
+	CollectorRecord* curr_rec = nullptr;
 	int more = 1;
 	
 		// See if query ad asks for server-side projection
@@ -902,8 +901,9 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		evaluate_projection = true;
 	}
 
-	while ( (curr_ad=results.Next()) )
+	while ( (curr_rec=results.Next()) )
 	{
+		ClassAd* ad_to_send = filter_private_ads ? curr_rec->m_publicAd : curr_rec->m_pvtAd;
 		// if querying collector ads, and the collectors own ad appears in this list.
 		// then we want to shove in current statistics. we do this by chaining a
 		// temporary stats ad into the ad to be returned, and publishing updated
@@ -911,7 +911,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 		// is increased we do NOT want to put the high-verbosity attributes into
 		// our persistent collector ad.
 		ClassAd * stats_ad = NULL;
-		if ((whichAds == COLLECTOR_AD) && collector.isSelfAd(curr_ad)) {
+		if ((whichAds == COLLECTOR_AD) && collector.isSelfAd(curr_rec)) {
 			dprintf(D_ALWAYS,"Query includes collector's self ad\n");
 			// update stats in the collector ad before we return it.
 			std::string stats_config;
@@ -919,25 +919,28 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 			if (stats_config != "stored") {
 				dprintf(D_ALWAYS,"Updating collector stats using a chained ad and config=%s\n", stats_config.c_str());
 				stats_ad = new ClassAd();
+				if (!filter_private_ads) {
+					stats_ad->CopyFrom(*curr_rec->m_pvtAd);
+				}
 				daemonCore->dc_stats.Publish(*stats_ad, stats_config.c_str());
 				daemonCore->monitor_data.ExportData(stats_ad, true);
 				collectorStats.publishGlobal(stats_ad, stats_config.c_str());
-				stats_ad->ChainToAd(curr_ad);
-				curr_ad = stats_ad; // send the stats ad instead of the self ad.
+				stats_ad->ChainToAd(curr_rec->m_publicAd);
+				ad_to_send = stats_ad; // send the stats ad instead of the self ad.
 			}
 		}
 
 		if (evaluate_projection) {
 			proj.clear();
 			projection.clear();
-			if (EvalString(ATTR_PROJECTION, cad, curr_ad, projection) && ! projection.empty()) {
+			if (EvalString(ATTR_PROJECTION, cad, curr_rec->m_publicAd, projection) && ! projection.empty()) {
 				StringTokenIterator list(projection);
 				const std::string * attr;
 				while ((attr = list.next_string())) { proj.insert(*attr); }
 			}
 		}
 
-		bool send_failed = (!sock->code(more) || !putClassAd(sock, *curr_ad, filter_private_ads ? PUT_CLASSAD_NO_PRIVATE : 0, proj.empty() ? NULL : &proj));
+		bool send_failed = (!sock->code(more) || !putClassAd(sock, *ad_to_send, 0, proj.empty() ? NULL : &proj));
         
 		if (stats_ad) {
 			stats_ad->Unchain();
@@ -1231,7 +1234,7 @@ collector_runtime_probe CollectorEngine_ru_stash_socket_runtime;
 int CollectorDaemon::receive_update(int command, Stream* sock)
 {
     int	insert;
-	ClassAd *cad;
+	CollectorRecord *record;
 	_condor_auto_accum_runtime<collector_runtime_probe> rt(CollectorEngine_receive_update_runtime);
 #ifdef PROFILE_RECEIVE_UPDATE
 	double rt_last = rt.begin;
@@ -1249,7 +1252,7 @@ int CollectorDaemon::receive_update(int command, Stream* sock)
 	CollectorEngine_ru_pre_collect_runtime += rt.tick(rt_last);
 #endif
     // process the given command
-	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
+	if (!(record = collector.collect (command,(Sock*)sock,from,insert)))
 	{
 		if (insert == -2)
 		{
@@ -1284,10 +1287,11 @@ int CollectorDaemon::receive_update(int command, Stream* sock)
 #endif
 
 	/* let the off-line plug-in have at it */
-	offline_plugin_.update ( command, *cad );
+	offline_plugin_.update ( command, *record->m_publicAd );
 
 #if defined(UNIX) && !defined(DARWIN)
-	CollectorPluginManager::Update(command, *cad);
+	// JEF TODO Should we use the private ad here?
+	CollectorPluginManager::Update(command, *record->m_publicAd);
 #endif
 
 #ifdef PROFILE_RECEIVE_UPDATE
@@ -1297,7 +1301,7 @@ int CollectorDaemon::receive_update(int command, Stream* sock)
 	if (viewCollectorTypes || command == UPDATE_STARTD_AD || command == UPDATE_SUBMITTOR_AD) {
 		forward_classad_to_view_collector(command,
 										  ATTR_MY_TYPE,
-										  cad);
+										  record->m_pvtAd);
 	}
 
 #ifdef PROFILE_RECEIVE_UPDATE
@@ -1355,13 +1359,13 @@ int CollectorDaemon::receive_update_expect_ack(int command,
 	condor_sockaddr from = socket->peer_addr();
 
     /* "collect" the ad */
-    ClassAd *cad = collector.collect ( 
+    CollectorRecord *record = collector.collect ( 
         command,
         updateAd,
         from,
         insert );
 
-    if ( !cad ) {
+    if ( !record ) {
 
         /* attempting to "collect" a QUERY or INVALIDATE command?!? */
         if ( -2 == insert ) {
@@ -1423,17 +1427,18 @@ int CollectorDaemon::receive_update_expect_ack(int command,
     }
 
     /* let the off-line plug-in have at it */
-	if(cad)
-    offline_plugin_.update ( command, *cad );
+	if(record)
+    offline_plugin_.update ( command, *record->m_publicAd );
 
 #if defined(UNIX) && !defined(DARWIN)
-    CollectorPluginManager::Update ( command, *cad );
+	// JEF TODO Should we use the private ad here?
+    CollectorPluginManager::Update ( command, *record->m_publicAd );
 #endif
 
 	if (viewCollectorTypes || UPDATE_STARTD_AD_WITH_ACK == command) {
 		forward_classad_to_view_collector(command,
 										  ATTR_MY_TYPE,
-										  cad);
+										  record->m_pvtAd);
 	}
 
 	// let daemon core clean up the socket
@@ -1488,26 +1493,18 @@ int CollectorDaemon::query_scanFunc (CollectorRecord *record)
 	}
 
 	int rc = 1;
-	ExprTree *cap_expr = NULL;
-	if ( __hidePvtAttrs__ ) {
-		cap_expr = cad->Remove(ATTR_CAPABILITY);
-	}
 	classad::Value result;
 	bool val;
 	if ( EvalExprTree( __filter__, cad, NULL, result ) &&
 		 result.IsBooleanValueEquiv(val) && val ) {
 		// Found a match 
         __numAds__++;
-		__ClassAdResultList__->Append(cad);
+		__ClassAdResultList__->Append(record);
 		if (__numAds__ >= __resultLimit__) {
 			rc = 0; // tell it to stop iterating, we have all the results we want
 		}
     } else {
 		__failed__++;
-	}
-
-	if ( cap_expr ) {
-		cad->Insert(ATTR_CAPABILITY, cap_expr);
 	}
     return rc;
 }
@@ -1515,7 +1512,7 @@ int CollectorDaemon::query_scanFunc (CollectorRecord *record)
 
 void CollectorDaemon::process_query_public (AdTypes whichAds,
 											ClassAd *query,
-											List<ClassAd>* results)
+											List<CollectorRecord>* results)
 {
 	// set up for hashtable scan
 	__query__ = query;
@@ -1542,11 +1539,6 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	__resultLimit__ = INT_MAX; // no limit
 	if ( ! query->LookupInteger(ATTR_LIMIT_RESULTS, __resultLimit__) || __resultLimit__ <= 0) {
 		__resultLimit__ = INT_MAX; // no limit
-	}
-
-	__hidePvtAttrs__ = false;
-	if ( whichAds == SUBMITTOR_AD || whichAds == SCHEDD_AD || whichAds == GENERIC_AD || whichAds == ANY_AD ) {
-		__hidePvtAttrs__ = true;
 	}
 
 	// See if we should exclude Collector Ads from generic queries.  Still
@@ -2112,10 +2104,12 @@ void CollectorDaemon::sendCollectorAd()
 	//
 	int error = 0;
 	ClassAd * selfAd = new ClassAd(*ad);
-	if( ! collector.collect( UPDATE_COLLECTOR_AD, selfAd, condor_sockaddr::null, error ) ) {
+	CollectorRecord* self_rec = nullptr;
+	if( ! (self_rec = collector.collect( UPDATE_COLLECTOR_AD, selfAd, condor_sockaddr::null, error )) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to add my own ad to myself (%d).\n", error );
+		delete selfAd;
 	}
-	collector.identifySelfAd(selfAd);
+	collector.identifySelfAd(self_rec);
 
 	// inserting the selfAd into the collector hashtable will stomp the update counters
 	// so clear out the per-daemon Updates* stats to avoid confusion with the global stats
@@ -2205,11 +2199,13 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 		// the rest of the pool.
 		AdNameHashKey hk;
 		ASSERT( makeStartdAdHashKey (hk, theAd) );
-		pvtAd = collector.lookup(STARTD_PVT_AD,hk);
-		if (pvtAd && !forwardClaimedPrivateAds){
+		CollectorRecord* pvt_rec = collector.lookup(STARTD_PVT_AD,hk);
+		if (pvt_rec && !forwardClaimedPrivateAds){
 			std::string state;
 			if (theAd->LookupString(ATTR_STATE, state) && state == "Claimed") {
 				pvtAd = NULL;
+			} else {
+				pvtAd = pvt_rec->m_pvtAd;
 			}
 		}
 	}
@@ -2227,7 +2223,15 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 
 	// Transform ad
 	//
-	m_forward_ad_xfm.transform(theAd, nullptr);
+	// If we're forwarding an update, then theAd points to the private
+	// ad in our collection. We want to transform the public ad that it's
+	// chained to.
+	// If we're forwarding an invalidate, then there is no chained parent.
+	ClassAd* xfm_ad = theAd->GetChainedParentAd();
+	if (!xfm_ad) {
+		xfm_ad = theAd;
+	}
+	m_forward_ad_xfm.transform(xfm_ad, nullptr);
 
     for (auto e(vc_list.begin());  e != vc_list.end();  ++e) {
         DCCollector* view_coll = e->collector;

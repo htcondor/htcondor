@@ -345,11 +345,11 @@ collector_runtime_probe CollectorEngine_rucc_other_runtime;
 #endif
 
 
-ClassAd *CollectorEngine::
+CollectorRecord *CollectorEngine::
 collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 {
-	ClassAd	*clientAd;
-	ClassAd	*rval;
+	ClassAd *clientAd;
+	CollectorRecord *rval;
 
 #ifdef PROFILE_RECEIVE_UPDATE
 	_condor_auto_accum_runtime<collector_runtime_probe> rt(CollectorEngine_ruc_runtime);
@@ -536,10 +536,10 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 
 bool   last_updateClassAd_was_insert;
 
-ClassAd *CollectorEngine::
+CollectorRecord *CollectorEngine::
 collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,Sock *sock)
 {
-	ClassAd		*retVal;
+	CollectorRecord* retVal;
 	ClassAd		*pvtAd;
 	int		insPvt;
 	AdNameHashKey		hk;
@@ -576,7 +576,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
 			insert = -3;
-			retVal = 0;
+			retVal = nullptr;
 			break;
 		}
 		hk.sprint(hashString);
@@ -623,8 +623,8 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 				// Negotiator matches up private ad with public ad by
 				// using the following.
 			if( retVal ) {
-				CopyAttribute( ATTR_MY_ADDRESS, *pvtAd, *retVal );
-				CopyAttribute( ATTR_NAME, *pvtAd, *retVal );
+				CopyAttribute( ATTR_MY_ADDRESS, *pvtAd, *retVal->m_publicAd );
+				CopyAttribute( ATTR_NAME, *pvtAd, *retVal->m_publicAd );
 			}
 
 #ifdef PROFILE_RECEIVE_UPDATE
@@ -914,7 +914,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	return retVal;
 }
 
-ClassAd *CollectorEngine::
+CollectorRecord *CollectorEngine::
 lookup (AdTypes adType, AdNameHashKey &hk)
 {
 	CollectorRecord *val;
@@ -928,8 +928,7 @@ lookup (AdTypes adType, AdNameHashKey &hk)
 		return 0;
 	}
 
-		// JEF push record to caller
-	return val->m_publicAd;
+	return val;
 }
 
 int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query, bool *query_contains_hash_key)
@@ -981,7 +980,6 @@ int CollectorEngine::expire( AdTypes adType, const ClassAd & query, bool * query
             if( hTable->lookup( hKey, record ) != -1 ) {
                 record->m_publicAd->Assign( ATTR_LAST_HEARD_FROM, 1 );
 
-					// JEF push record into offline_plugin_?
                 if( CollectorDaemon::offline_plugin_.expire( * record->m_publicAd ) == true ) {
                     return rVal;
                 }
@@ -1017,14 +1015,28 @@ remove (AdTypes adType, AdNameHashKey &hk)
 }
 
 void CollectorEngine::
-identifySelfAd(ClassAd * ad)
+identifySelfAd(CollectorRecord * ad)
 {
 	__self_ad__ = (void*)ad;
 }
 
 extern bool   last_updateClassAd_was_insert;
 
-ClassAd * CollectorEngine::
+void
+movePrivateAttrs(ClassAd& dest, ClassAd& src)
+{
+	for (auto itr = src.begin(); itr != src.end(); /* no increment */ ) {
+		if (ClassAdAttributeIsPrivate(itr->first)) {
+			const std::string name = itr->first;
+			ExprTree* expr = src.Remove((itr++)->first);
+			dest.Insert(name, expr);
+		} else {
+			itr++;
+		}
+	}
+}
+
+CollectorRecord * CollectorEngine::
 updateClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
 			   const char *label,
@@ -1036,6 +1048,7 @@ updateClassAd (CollectorHashTable &hashTable,
 {
 	CollectorRecord* record = nullptr;
 	ClassAd		*old_ad, *new_ad;
+	ClassAd     *old_pvt_ad, *new_pvt_ad;
 	time_t		now;
 
 		// NOTE: LastHeardFrom will already be in ad if we are loading
@@ -1054,6 +1067,9 @@ updateClassAd (CollectorHashTable &hashTable,
 	new_ad = ad;
 	last_updateClassAd_was_insert = false;
 
+	new_pvt_ad = new ClassAd();
+	movePrivateAttrs(*new_pvt_ad, *new_ad);
+
 	// check if it already exists in the hash table ...
 	if ( hashTable.lookup (hk, record) == -1)
 	{
@@ -1067,7 +1083,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		}
 
 		// Now, store it away
-		record = new CollectorRecord(new_ad);
+		record = new CollectorRecord(new_ad, new_pvt_ad);
 		if (hashTable.insert (hk, record) == -1)
 		{
 			EXCEPT ("Error inserting ad (out of memory)");
@@ -1079,7 +1095,7 @@ updateClassAd (CollectorHashTable &hashTable,
 			new_ad->Assign( ATTR_LAST_FORWARDED, (int)time(NULL) );
 		}
 
-		return new_ad;
+		return record;
 	}
 	else
     {
@@ -1087,6 +1103,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		dprintf (D_FULLDEBUG, "%s: Updating ... \"%s\"\n", adType, hashString.c_str() );
 
 		old_ad = record->m_publicAd;
+		old_pvt_ad = record->m_pvtAd;
 
 		// Update statistics
 		if (strcmp(label, "StartdPvt") != 0) {
@@ -1094,7 +1111,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		}
 
 		// Now, finally, store the new ClassAd
-		record->m_publicAd = new_ad;
+		record->ReplaceAds(new_ad, new_pvt_ad);
 
 		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "StartdPvt" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
 			bool forward = false;
@@ -1123,16 +1140,15 @@ updateClassAd (CollectorHashTable &hashTable,
 			new_ad->Assign( ATTR_LAST_FORWARDED, forward ? (int)time(NULL) : last_forwarded );
 		}
 
-		if (isSelfAd(old_ad)) { __self_ad__ = new_ad; }
-
 		delete old_ad;
+		delete old_pvt_ad;
 
 		insert = 0;
-		return new_ad;
+		return record;
 	}
 }
 
-ClassAd * CollectorEngine::
+CollectorRecord * CollectorEngine::
 mergeClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
 			   const char * /*label*/,
@@ -1143,7 +1159,6 @@ mergeClassAd (CollectorHashTable &hashTable,
 			   const condor_sockaddr& /*from*/ )
 {
 	CollectorRecord* record = nullptr;
-	ClassAd		*old_ad = NULL;
 
 	insert = 0;
 
@@ -1168,11 +1183,15 @@ mergeClassAd (CollectorHashTable &hashTable,
 		new_ad_copy.Delete(ATTR_MY_TYPE);
 		new_ad_copy.Delete(ATTR_TARGET_TYPE);
 
+		ClassAd new_pvt_ad;
+		movePrivateAttrs(new_pvt_ad, new_ad_copy);
+
 		// Now, finally, merge the new ClassAd into the old one
-		MergeClassAds(record->m_publicAd,&new_ad_copy,true);
+		MergeClassAds(record->m_publicAd, &new_ad_copy, true);
+		MergeClassAds(record->m_pvtAd, &new_pvt_ad, true);
 	}
 	delete new_ad;
-	return record->m_publicAd;
+	return record;
 }
 
 
