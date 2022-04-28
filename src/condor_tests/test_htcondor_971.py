@@ -65,6 +65,7 @@ def path_to_sig_kill(test_dir):
 def condor(test_dir, daemon, path_to_exit_zero, path_to_exit_one, path_to_sig_kill):
     raw_config = f"""
     {daemon}_DEBUG = D_ALWAYS
+    {daemon}_CRON_LOG_NON_ZERO_EXIT = TRUE
     {daemon}_CRON_JOBLIST = exit_zero, exit_one, sig_kill
 
     {daemon}_CRON_exit_zero_EXECUTABLE = {path_to_exit_zero}

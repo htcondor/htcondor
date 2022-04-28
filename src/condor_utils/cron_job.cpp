@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include <limits.h>
 #include <string.h>
+#include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_cron_job_mgr.h"
@@ -356,7 +357,13 @@ CronJob::Reaper( int exitPid, int exitStatus )
 	} else {
 		auto debugLevel = D_FULLDEBUG;
 		auto es = WEXITSTATUS(exitStatus);
-		if( es != 0 ) { failed = true; debugLevel = D_ALWAYS; }
+
+		std::string knob_name;
+		formatstr( knob_name, "%s_CRON_LOG_NON_ZERO_EXIT", m_mgr.GetName() );
+		if( es != 0 && param_boolean( knob_name.c_str(), false ) ) {
+			failed = true;
+			debugLevel = D_ALWAYS;
+		}
 		dprintf( debugLevel, "CronJob: '%s' (pid %d) exit_status=%d\n",
 			 GetName(), exitPid, es );
 	}
