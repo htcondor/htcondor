@@ -49,8 +49,8 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
 
 	# Should use find_package here for either case
-	set(PCRE_INCLUDE /usr/include)
-	set(PCRE_FOUND -lpcre2-8)
+	set(PCRE2_INCLUDE /usr/include)
+	set(PCRE2_FOUND -lpcre2-8)
 	set(HAVE_PCRE_H TRUE)
 
 	set(C_BIN bin)
@@ -72,15 +72,15 @@ else()
 	set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )
 
 	###### Test executables
-	condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)
-	condor_exe_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)
+	condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE2_FOUND};${CMAKE_DL_LIBS}" OFF)
+	condor_exe_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND};${PCRE2_FOUND};${CMAKE_DL_LIBS}" OFF)
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # disable PCRE build unless dep added to externals.
-if(PCRE_FOUND)
-	include_directories(${PCRE_INCLUDE})
+if(PCRE2_FOUND)
+	include_directories(${PCRE2_INCLUDE})
 	add_definitions(-DUSE_PCRE)
 	if(HAVE_PCRE_H)
 		add_definitions(-DHAVE_PCRE_H)
@@ -89,7 +89,7 @@ if(PCRE_FOUND)
 	endif()
 else()
 	add_definitions(-DUSE_POSIX_REGEX) 
-endif(PCRE_FOUND)
+endif(PCRE2_FOUND)
 
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	add_definitions( -DCLASSAD_VERSION="${PACKAGE_VERSION}"
@@ -173,13 +173,13 @@ xmlSource.cpp
 add_library(classads_objects OBJECT ${ClassadSrcs})
 set_property(TARGET classads_objects PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library( classads STATIC $<TARGET_OBJECTS:classads_objects> )    # the one which all of condor depends upon
-target_link_libraries( classads PUBLIC ${PCRE_FOUND};${CMAKE_DL_LIBS})
+target_link_libraries( classads PUBLIC ${PCRE2_FOUND};${CMAKE_DL_LIBS})
 set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 
 if (UNIX)  
   add_library( classad SHARED $<TARGET_OBJECTS:classads_objects>)   # for distribution at this point may swap to depend at a future date.
   set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 15 )
-  target_link_libraries( classad "${PCRE_FOUND};${CMAKE_DL_LIBS}" )
+  target_link_libraries( classad "${PCRE2_FOUND};${CMAKE_DL_LIBS}" )
   install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
 endif()
 if ( APPLE )
@@ -188,11 +188,11 @@ if ( APPLE )
 endif()
 
 add_executable( classad_functional_tester "classad_functional_tester.cpp" )
-target_link_libraries( classad_functional_tester "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}")
+target_link_libraries( classad_functional_tester "${CLASSADS_FOUND};${PCRE2_FOUND};${CMAKE_DL_LIBS}")
 install (TARGETS classad_functional_tester DESTINATION ${C_BIN} )
 
 add_executable( classad_version "classad_version.cpp" )
-target_link_libraries( classad_version "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}")
+target_link_libraries( classad_version "${CLASSADS_FOUND};${PCRE2_FOUND};${CMAKE_DL_LIBS}")
 install (TARGETS classad_version DESTINATION ${C_BIN} )
 
 ###### Install elements with our distribution
