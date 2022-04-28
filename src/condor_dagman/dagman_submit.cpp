@@ -350,7 +350,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		varStr += " = ";
 		varStr += value;
 
-		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
+		if ( !nodeVar._prepend ) { args.AppendArg( "-a" ); }// Append var if prepend is false; -a == -append; using -a to save chars
 		args.AppendArg( varStr.c_str() );
 	}
 
@@ -453,7 +453,8 @@ static void init_dag_vars(SubmitHash * submitHash,
 	const char *workflowLogFile,
 	const std::string & parents,
 	const char *batchName,
-	const char *batchId)
+	const char *batchId,
+	bool before_subFile)
 {
 	const char* DAGNodeName = node->GetJobName();
 	int priority = node->_effectivePriority;
@@ -509,7 +510,7 @@ static void init_dag_vars(SubmitHash * submitHash,
 	// this allows for $(JOB) expansions in the vars (and in the submit file)
 	submitHash->set_arg_variable("JOB", node->GetJobName());
 	for (auto & it : node->varsFromDag) {
-		submitHash->set_arg_variable(it._name, it._value);
+		if ( it._prepend == before_subFile ) { submitHash->set_arg_variable(it._name, it._value); }
 	}
 
 	// set RETRY for $(RETRY) substitution
@@ -592,6 +593,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 		submitHash->setDisableFileChecks(true);
 		submitHash->setScheddVersion(CondorVersion());
 		// if (myproxy_password) submitHash.setMyProxyPassword(myproxy_password);
+		init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId, true);
 
 		// open the submit file
 		if (! ms.open(cmdFile, false, submitHash->macros(), errmsg)) {
@@ -632,7 +634,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	}
 
 	// set submit keywords defined by dagman and VARS
-	init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId);
+	init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId, false);
 
 	submitHash->init_base_ad(time(NULL), owner);
 

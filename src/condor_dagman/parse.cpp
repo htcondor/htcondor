@@ -1730,7 +1730,7 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 //-----------------------------------------------------------------------------
 static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 {
-	const char* example = "Vars JobName VarName1=\"value1\" VarName2=\"value2\"";
+	const char* example = "Vars JobName [PREPEND | APPEND] VarName1=\"value1\" VarName2=\"value2\"";
 	const char *jobName = strtok( NULL, DELIMITERS );
 	if ( jobName == NULL ) {
 		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n",
@@ -1745,8 +1745,27 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 
 	std::string varName;
 	std::string varValue;
+	bool prepend; //Bool for if variable is prepended or appended. Default is false
 
-	char *varsStr = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
+	char *varsStr = strtok( NULL, "\n" ); // just get all the rest and we will manually parse vars
+
+/*	
+*	Check to see if PREPEND or APPEND was specified before variables to be passed.
+*	If option is found then we set prepend boolean appropriately and increment
+*	the original varsStr pointer to point at char after option. -Cole Bollig
+*/
+	std::string temp(varsStr);//Make string with current token
+        if ( temp.find("PREPEND") != std::string::npos ){//See if PREPEND is a sub-string
+		prepend = true;
+		varsStr += 7;
+	} else if ( temp.find("APPEND") != std::string::npos ){//See if APPEND is a sub-string
+		prepend = false;
+		varsStr += 6;
+	} else {
+		//If options aren't found then set to global knob
+		// !append -> prepend
+		prepend = !param_boolean("DAGMAN_DEFAULT_APPEND_VARS", true);
+	}
 
 	Job *job;
 	while ( ( job = dag->FindAllNodesByName( jobName,
@@ -1778,7 +1797,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 				break;
 			}
 
-			job->AddVar(varName.c_str(), varValue.c_str(), filename, lineNumber);
+			job->AddVar(varName.c_str(), varValue.c_str(), filename, lineNumber, prepend);
 			debug_printf(DEBUG_DEBUG_1,
 				"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
 				varName.c_str(), varValue.c_str());
