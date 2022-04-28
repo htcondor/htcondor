@@ -667,7 +667,7 @@ IsRelativeTimeValue( time_t &secs ) const
 inline bool Value::
 IsNumber( ) const
 {
-	return( valueType==INTEGER_VALUE || valueType==REAL_VALUE );
+	return( valueType==INTEGER_VALUE || valueType==REAL_VALUE || valueType==BOOLEAN_VALUE );
 }
 } // classad
 

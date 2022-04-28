@@ -18,7 +18,7 @@
  ***************************************************************/
 
 
-#if !defined(SKIP_AUTHENTICATION) && !defined(WIN32)
+#if !defined(WIN32)
 #include "condor_auth_fs.h"
 #include "condor_config.h"
 #include "condor_environ.h"

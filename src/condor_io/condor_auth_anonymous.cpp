@@ -21,8 +21,6 @@
 #include "condor_common.h"
 #include "CondorError.h"
 
-#if !defined(SKIP_AUTHENTICATION)
-
 const char STR_ANONYMOUS[]  = "CONDOR_ANONYMOUS_USER";
 
 #include "condor_auth_anonymous.h"
@@ -62,5 +60,3 @@ int Condor_Auth_Anonymous :: authenticate(const char * /* remoteHost */, CondorE
     
     return retval;
 }
-
-#endif

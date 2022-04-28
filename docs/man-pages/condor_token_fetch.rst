@@ -11,7 +11,7 @@ Synopsis
 
 **condor_token_fetch** [**-authz** *authz* ...] [**-lifetime** *value*]
 [**-pool** *pool_name*] [**-name** hostname] [**-type** *type*]
-[**-token** *filename*]
+[**-token** *filename*] [**-key** *signing_key*]
 
 **condor_token_fetch** [**-help** ]
 
@@ -77,6 +77,9 @@ Options
  **-type** *type*
     Request a token from a specific daemon type *type*.  If not given, a
     *condor_schedd* is used.
+ **-key** *signing_key*
+    Request a token signed by the signing key named *signing_key*.  If not
+    given, the daemon's default key will be used.
 
 Examples
 --------

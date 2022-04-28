@@ -34,7 +34,6 @@
 
 #include "Resource.h"
 #include "claim.h"
-#include "starter_mgr.h"
 #include "vmuniverse_mgr.h"
 #include "ad_transforms.h"
 
@@ -153,7 +152,7 @@ private:
 public:
 	void	compute_static();
 	void	compute_dynamic(bool for_update, Resource * rip=NULL);
-	void	publish_static(ClassAd* cp) { starter_mgr.publish(cp); }
+	void	publish_static(ClassAd* cp) { Starter::publish(cp); }
 	void	publish_dynamic(ClassAd*);
 	void	publishSlotAttrs( ClassAd* cap );
 
@@ -260,8 +259,6 @@ public:
 
 	void		markShutdown() { is_shutting_down = true; };
 	bool		isShuttingDown() const { return is_shutting_down; };
-
-	StarterMgr starter_mgr;
 
 	VMUniverseMgr m_vmuniverse_mgr;
 

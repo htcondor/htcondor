@@ -2649,7 +2649,29 @@ handle_dc_session_token(int, Stream* stream)
 		requested_lifetime = -1;
 	}
 
+	std::string requested_key_name;
 	std::string final_key_name = htcondor::get_token_signing_key(err);
+	if (ad.EvaluateAttrString(ATTR_SEC_REQUESTED_KEY, requested_key_name)) {
+		std::string allowed_key_names_list;
+		param( allowed_key_names_list, "SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS", "POOL" );
+		StringList sl(allowed_key_names_list);
+		if( sl.contains_withwildcard(requested_key_name.c_str()) ) {
+			final_key_name = requested_key_name;
+		} else {
+			result_ad.InsertAttr(ATTR_ERROR_STRING, "Server will not sign with requested key.");
+			result_ad.InsertAttr(ATTR_ERROR_CODE, 3);
+
+			// *sigh*
+			stream->encode();
+			if (!putClassAd(stream, result_ad) ||
+				!stream->end_of_message())
+			{
+				dprintf(D_FULLDEBUG, "handle_dc_session_token: failed to send response ad to client\n");
+				return false;
+			}
+			return true;
+		}
+	}
 
 	classad::ClassAd policy_ad;
 	static_cast<ReliSock*>(stream)->getPolicyAd(policy_ad);
@@ -2677,7 +2699,7 @@ handle_dc_session_token(int, Stream* stream)
 		result_ad.InsertAttr(ATTR_ERROR_STRING, "Server did not successfully authenticate session.");
 		result_ad.InsertAttr(ATTR_ERROR_CODE, 2);
 	} else if (final_key_name.empty()) {
-		result_ad.InsertAttr(ATTR_ERROR_STRING, "Server does not have access to requested key.");
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Server does not have access to configured key.");
 		result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
 		std::string key_name = "POOL";
 		param(key_name, "SEC_TOKEN_ISSUER_KEY");
@@ -2733,10 +2755,9 @@ int
 handle_invalidate_key(int, Stream* stream)
 {
 	int result = 0;
-	char *key_id = NULL;
+	std::string key_id;
 	std::string their_sinful;
-	char *info_ad_str;
-	ClassAd info_ad;
+	size_t id_end_idx;
 
 	stream->decode();
 	if ( ! stream->code(key_id) ) {
@@ -2745,23 +2766,24 @@ handle_invalidate_key(int, Stream* stream)
 	}
 
 	if ( ! stream->end_of_message() ) {
-		dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: unable to receive EOM on key %s.\n", key_id);
+		dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: unable to receive EOM on key %s.\n", key_id.c_str());
 		return FALSE;
 	}
 
-	info_ad_str = strchr(key_id, '\n');
-	if ( info_ad_str ) {
-		*info_ad_str = '\0';
-		info_ad_str++;
+	id_end_idx = key_id.find('\n');
+	if (id_end_idx != std::string::npos) {
+		ClassAd info_ad;
+		int info_ad_idx = id_end_idx + 1;
 		classad::ClassAdParser parser;
-		if (!parser.ParseClassAd(info_ad_str, info_ad, false)) {
+		if (!parser.ParseClassAd(key_id, info_ad, info_ad_idx)) {
 			dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: got unparseable classad\n");
 			return FALSE;
 		}
 		info_ad.LookupString(ATTR_SEC_CONNECT_SINFUL, their_sinful);
+		key_id.erase(id_end_idx);
 	}
 
-	if (!strcmp(key_id, daemonCore->m_family_session_id.c_str())) {
+	if (key_id == daemonCore->m_family_session_id) {
 		dprintf(D_FULLDEBUG, "DC_INVALIDATE_KEY: Refusing to invalidate family session\n");
 		if (!their_sinful.empty()) {
 			dprintf(D_ALWAYS, "DC_INVALIDATE_KEY: The daemon at %s says it's not in the same family of Condor daemon processes as me.\n", their_sinful.c_str());
@@ -2769,9 +2791,8 @@ handle_invalidate_key(int, Stream* stream)
 			daemonCore->getSecMan()->m_not_my_family.insert(their_sinful);
 		}
 	} else {
-		result = daemonCore->getSecMan()->invalidateKey(key_id);
+		result = daemonCore->getSecMan()->invalidateKey(key_id.c_str());
 	}
-	free(key_id);
 	return result;
 }
 
@@ -4235,9 +4256,13 @@ int dc_main( int argc, char** argv )
 								  handle_nop,
 								  "handle_nop()", ADMINISTRATOR );
 
+	// CRUFT The old OWNER authorization level was merged into
+	//   ADMINISTRATOR in HTCondor 9.9.0. For older clients, we still
+	//   recognize the DC_NOP_OWNER command.
+	//   We should remove it eventually.
 	daemonCore->Register_Command( DC_NOP_OWNER, "DC_NOP_OWNER",
 								  handle_nop,
-								  "handle_nop()", OWNER );
+								  "handle_nop()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_NOP_CONFIG, "DC_NOP_CONFIG",
 								  handle_nop,

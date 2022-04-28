@@ -32,8 +32,6 @@
 #define SUBMIT_CMD_AllowEnvironmentV1 "allow_environment_v1"
 #define SUBMIT_CMD_GetEnvironment "getenv"
 #define SUBMIT_CMD_GetEnvironmentAlt "get_env"
-#define SUBMIT_CMD_AllowStartupScript "allow_startup_script"
-#define SUBMIT_CMD_AllowStartupScriptAlt "AllowStartupScript"
 #define SUBMIT_CMD_SendCredential "send_credential"
 
 /*
@@ -47,7 +45,6 @@
 #define SUBMIT_KEY_Priority "priority"
 #define SUBMIT_KEY_Prio "prio"
 #define SUBMIT_KEY_Notification "notification"
-#define SUBMIT_KEY_WantRemoteIO "want_remote_io"
 #define SUBMIT_KEY_Executable "executable"
 #define SUBMIT_KEY_Description "description"
 #define SUBMIT_KEY_Arguments1 "arguments"
@@ -481,6 +478,7 @@ enum _submit_file_role {
 	SFR_OUTPUT,
 };
 
+
 typedef int (*FNSUBMITPARSE)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, char * line, std::string & errmsg);
 
 class DeltaClassAd;
@@ -490,7 +488,7 @@ public:
 	SubmitHash();
 	~SubmitHash();
 
-	void init();
+	void init(int value=-1);
 	void clear(); // clear, but do not deallocate
 	void setScheddVersion(const char * version) { ScheddVersion = version; }
 	void setMyProxyPassword(const char * pass) { MyProxyPassword = pass; }
@@ -641,6 +639,10 @@ public:
 	bool AssignJobVal(const char * attr, int val) { return AssignJobVal(attr, (long long)val); }
 	bool AssignJobVal(const char * attr, long val) { return AssignJobVal(attr, (long long)val); }
 	//bool AssignJobVal(const char * attr, time_t val)  { return AssignJobVal(attr, (long long)val); }
+
+	//Set job submit method to enum equal to passed value if value is in range
+	void setSubmitMethod(int value) { s_method = value; }
+	int getSubmitMethod(){ return s_method; }//Return job submit method value given s_method enum
 
 	MACRO_ITEM* lookup_exact(const char * name) { return find_macro_item(name, NULL, SubmitMacroSet); }
 	CondorError* error_stack() const { return SubmitMacroSet.errors; }
@@ -869,6 +871,8 @@ private:
 	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 
 	ContainerImageType image_type_from_string(const std::string &image) const;
+
+	int s_method; //-1 represents undefined job submit method
 };
 
 struct SubmitStepFromQArgs {

@@ -75,7 +75,10 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	//ad->Delete(ATTR_OWNER); // How does schedd filter?
 		// User may be from non-default UID_DOMAIN; if so, we want to keep this
 		// for the grid job.
-	// ad->Delete(ATTR_USER); // Schedd will set this with the proper UID_DOMAIN.
+		// But we can't keep it currently, since the schedd doesn't
+		// immediately correct a "wrong" value when not using non-default
+		// UID_DOMAIN (which isn't supported yet anyway).
+	ad->Delete(ATTR_USER); // Schedd will set this with the proper UID_DOMAIN.
 	ad->Delete(ATTR_Q_DATE);
 	ad->Delete(ATTR_JOB_REMOTE_WALL_CLOCK);
 	ad->Delete(ATTR_JOB_LAST_REMOTE_WALL_CLOCK);

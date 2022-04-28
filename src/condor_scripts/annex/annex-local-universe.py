@@ -13,13 +13,17 @@
 # job attributes to poll it using this script.
 #
 
+import os
 import sys
 import time
+
+import logging
 
 import htcondor
 
 (exe, local_job_id, attribute_name, attribute_value, collector_name) = sys.argv
 
+logger = logging.getLogger(__name__)
 collector = htcondor.Collector(collector_name)
 ads = collector.query(
     constraint=f'{attribute_name} == "{attribute_value}"',
@@ -33,4 +37,5 @@ if len(ads) == 0:
 schedd = htcondor.Schedd()
 schedd.edit(local_job_id, "hpc_annex_start_time", f"{int(time.time())}")
 print(f"Set {local_job_id}'s hpc_annex_start_time to now.")
+
 exit(0)

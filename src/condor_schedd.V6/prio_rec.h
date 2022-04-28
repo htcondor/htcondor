@@ -41,8 +41,8 @@ public:
     int         job_prio;
     int         status;
     int         qdate;
-    char        submitter[MAX_CONDOR_USERNAME_LEN];
 	int			auto_cluster_id;
+	std::string submitter;
 	bool		not_runnable;
 	bool		matched;
 

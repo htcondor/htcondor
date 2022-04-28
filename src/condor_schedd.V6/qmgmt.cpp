@@ -55,6 +55,7 @@
 #include "classad_helpers.h"
 #include "iso_dates.h"
 #include "jobsets.h"
+#include <algorithm>
 #include <param_info.h>
 
 #include "ScheddPlugin.h"
@@ -158,10 +159,6 @@ extern char *Name;
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
 
-extern "C" {
-	int	prio_compar(prio_rec*, prio_rec*);
-}
-
 extern  void    cleanup_ckpt_files(int, int, const char*);
 extern	bool	service_this_universe(int, ClassAd *);
 static QmgmtPeer *Q_SOCK = NULL;
@@ -261,6 +258,100 @@ static const char *default_super_user =
 
 std::map<JobQueueKey, std::map<std::string, std::string>> PrivateAttrs;
 
+
+// a struct with no data and a functor for std::sort
+// This maximizes the likelyhood the compiler will inline
+// the comparison
+struct prio_compar {
+bool operator()(const prio_rec& a, const prio_rec& b) const 
+{
+	// First sort by owner name.  This doesn't need to be alphabetical,
+	// just unique.  Sort first by length, as that's faster,
+	if (a.submitter.length() < b.submitter.length()) {
+		return false;
+	}
+
+	if (a.submitter.length() > b.submitter.length()) {
+		return true;
+	}
+
+	if (a.submitter < b.submitter) {
+		return false;
+	}
+
+	if (a.submitter > b.submitter) {
+		return true;
+	}
+
+	// If we get here, the submitters are the same, so sort by priorities
+	
+	 /* compare submitted job preprio's: higher values have more priority */
+	 /* Typically used to prioritize entire DAG jobs over other DAG jobs */
+	if( a.pre_job_prio1 < b.pre_job_prio1 ) {
+		return false;
+	}
+	if( a.pre_job_prio1 > b.pre_job_prio1 ) {
+		return true;
+	}
+
+	if( a.pre_job_prio2 < b.pre_job_prio2 ) {
+		return false;
+	}
+	if( a.pre_job_prio2 > b.pre_job_prio2 ) {
+		return true;
+	}
+	 
+	 /* compare job priorities: higher values have more priority */
+	 if( a.job_prio < b.job_prio ) {
+		  return false;
+	 }
+	 if( a.job_prio > b.job_prio ) {
+		  return true;
+	 }
+	 
+	 /* compare submitted job postprio's: higher values have more priority */
+	 /* Typically used to prioritize entire DAG jobs over other DAG jobs */
+	if( a.post_job_prio1 < b.post_job_prio1 ) {
+		return false;
+	}
+	if( a.post_job_prio1 > b.post_job_prio1 ) {
+		return true;
+	}
+
+	if( a.post_job_prio2 < b.post_job_prio2 ) {
+		return false;
+	}
+	if( a.post_job_prio2 > b.post_job_prio2 ) {
+		return true;
+	}
+
+	 /* here, all job_prios are both equal */
+
+	 /* check for job submit times */
+	 if( a.qdate < b.qdate ) {
+		  return true;
+	 }
+	 if( a.qdate > b.qdate ) {
+		  return false;
+	 }
+
+	 /* go in order of cluster id */
+	if ( a.id.cluster < b.id.cluster )
+		return true;
+	if ( a.id.cluster > b.id.cluster )
+		return false;
+
+	/* finally, go in order of the proc id */
+	if ( a.id.proc < b.id.proc )
+		return true;
+	if ( a.id.proc > b.id.proc )
+		return false;
+
+	/* give up! very unlikely we'd ever get here */
+	return false;
+}
+};
+
 int
 SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value)
 {
@@ -323,12 +414,6 @@ GetJobQueueIteratorEnd()
 	return JobQueue->GetIteratorEnd();
 }
 
-static inline JobQueueKey& IdToKey(int cluster, int proc, JobQueueKey& key)
-{
-	key.cluster = cluster;
-	key.proc = proc;
-	return key;
-}
 typedef JOB_ID_KEY_BUF JobQueueKeyBuf;
 static inline JobQueueKey& IdToKey(int cluster, int proc, JobQueueKeyBuf& key)
 {
@@ -3716,7 +3801,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	int job_prio = 0;
 	ad->LookupInteger(ATTR_JOB_PRIO, job_prio);
 
-	int universe = CONDOR_UNIVERSE_STANDARD;
+	int universe = CONDOR_UNIVERSE_VANILLA;
 	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 
 	if( (universe == CONDOR_UNIVERSE_MPI) ||
@@ -5081,8 +5166,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
 	if( ( universe != CONDOR_UNIVERSE_SCHEDULER &&
-		  universe != CONDOR_UNIVERSE_LOCAL &&
-		  universe != CONDOR_UNIVERSE_STANDARD ) &&
+		  universe != CONDOR_UNIVERSE_LOCAL ) &&
 		( flags & SetAttribute_SetDirty ) && 
 		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( job ) ) ) ) {
 
@@ -5922,7 +6006,7 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 
 	// See if the values have already been set
 	ClassAd *x509_attrs = &policy_ad;
-	string last_proxy_file;
+	std::string last_proxy_file;
 	ClassAd proxy_file_attrs;
 
 	// Put X509 credential information in cluster ads (from either the
@@ -5931,8 +6015,8 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 	// have a proxy file different than in their cluster ad.
 	for (std::list<std::string>::const_iterator it = new_ad_keys.begin(); it != new_ad_keys.end(); ++it)
 	{
-		string x509up;
-		string iwd;
+		std::string x509up;
+		std::string iwd;
 		JobQueueKey job( it->c_str() );
 		GetAttributeString(job.cluster, job.proc, ATTR_X509_USER_PROXY, x509up);
 		GetAttributeString(job.cluster, job.proc, ATTR_JOB_IWD, iwd);
@@ -5977,7 +6061,7 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 		} else {
 			// We have a cluster ad with a proxy file or a proc ad with a
 			// proxy file that may be different than in its cluster's ad.
-			string full_path;
+			std::string full_path;
 			if ( x509up[0] == DIR_DELIM_CHAR ) {
 				full_path = x509up;
 			} else {
@@ -5987,13 +6071,13 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 				formatstr( full_path, "%s%c%s", iwd.c_str(), DIR_DELIM_CHAR, x509up.c_str() );
 			}
 			if (job.proc != -1) {
-				string cluster_full_path;
-				string cluster_x509up;
+				std::string cluster_full_path;
+				std::string cluster_x509up;
 				GetAttributeString(job.cluster, -1, ATTR_X509_USER_PROXY, cluster_x509up);
 				if (cluster_x509up[0] == DIR_DELIM_CHAR) {
 					cluster_full_path = cluster_x509up;
 				} else {
-					string cluster_iwd;
+					std::string cluster_iwd;
 					GetAttributeString(job.cluster, -1, ATTR_JOB_IWD, cluster_iwd );
 					formatstr( cluster_full_path, "%s%c%s", cluster_iwd.c_str(), DIR_DELIM_CHAR, cluster_x509up.c_str() );
 				}
@@ -6005,7 +6089,7 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 				}
 			}
 			if ( full_path != last_proxy_file ) {
-				string owner;
+				std::string owner;
 				if ( GetAttributeString(job.cluster, job.proc, ATTR_OWNER, owner) == -1 ) {
 					GetAttributeString(job.cluster, -1, ATTR_OWNER, owner);
 				}
@@ -8165,7 +8249,7 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 		PrioRec[N_PrioRecs].auto_cluster_id = auto_id;
 	}
 
-	strcpy(PrioRec[N_PrioRecs].submitter, powner);
+	PrioRec[N_PrioRecs].submitter = powner;
 
     N_PrioRecs += 1;
 	if ( N_PrioRecs == MAX_PRIO_REC ) {
@@ -8520,14 +8604,9 @@ static void DoBuildPrioRecArray() {
 	BuildPrioRec_walk_runtime += rt.tick(now);
 
 		// N_PrioRecs might be 0, if we have no jobs to run at the
-		// moment.  If so, we don't want to call qsort(), since that's
-		// bad.  We can still try to find the owner in the Owners
-		// array, since that's not that expensive, and we need it for
-		// all the flocking logic at the end of this function.
-		// Discovered by Derek Wright and insure-- on 2/28/01
+		// moment. 
 	if( N_PrioRecs ) {
-		qsort( (char *)PrioRec, N_PrioRecs, sizeof(PrioRec[0]),
-			   (int(*)(const void*, const void*))prio_compar );
+		std::sort(PrioRec, PrioRec + N_PrioRecs, prio_compar{});
 		BuildPrioRec_sort_runtime += rt.tick(now);
 	}
 
@@ -8655,6 +8734,10 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 	ASSERT(my_match_ad);
 
+	bool scheddsAreSubmitters = false;
+	my_match_ad->LookupBool(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, scheddsAreSubmitters);
+	if (scheddsAreSubmitters) match_any_user = true;
+
 		// indicate failure by setting proc to -1.  do this now
 		// so if we bail out early anywhere, we say we failed.
 	jobid.proc = -1;	
@@ -8701,6 +8784,9 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 		// Iterate through the most recently constructed list of
 		// jobs, nicely pre-sorted in priority order.
 
+	// Stringify the user to make comparison faster
+	std::string user_str = user ? user : "";
+
 	do {
 		for (i=0; i < N_PrioRecs; i++) {
 
@@ -8710,7 +8796,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				continue;
 			}
 
-			if ( !match_any_user && strcmp(PrioRec[i].submitter, user) != 0 ) {
+			if ( !match_any_user && (PrioRec[i].submitter != user_str) != 0) {
 					// Owner doesn't match.
 				continue;
 			}
@@ -8929,51 +9015,6 @@ int Runnable(PROC_ID* id)
 	dprintf (D_FULLDEBUG, "Job %d.%d: %s\n", id->cluster, id->proc, reason);
 	return runnable;
 }
-
-#if 0 // not used
-// From the priority records, find the runnable job with the highest priority
-// use the function prio_compar. By runnable I mean that its status is IDLE.
-void FindPrioJob(PROC_ID & job_id)
-{
-	int			i;								// iterator over all prio rec
-	int			flag = FALSE;
-
-	// Compare each job in the priority record list with the first job in the
-	// list. If the first job is of lower priority, replace the first job with
-	// the job it is compared against.
-	if(!Runnable(&PrioRec[0].id))
-	{
-		for(i = 1; i < N_PrioRecs; i++)
-		{
-			if(Runnable(&PrioRec[i].id))
-			{
-				PrioRec[0] = PrioRec[i];
-				flag = TRUE;
-				break;
-			}
-		}
-		if(!flag)
-		{
-			job_id.proc = -1;
-			return;
-		}
-	}
-	for(i = 1; i < N_PrioRecs; i++)
-	{
-		if( (PrioRec[0].id.proc == PrioRec[i].id.proc) &&
-			(PrioRec[0].id.cluster == PrioRec[i].id.cluster) )
-		{
-			continue;
-		}
-		if(prio_compar(&PrioRec[0], &PrioRec[i])!=-1&&Runnable(&PrioRec[i].id))
-		{
-			PrioRec[0] = PrioRec[i];
-		}
-	}
-	job_id.proc = PrioRec[0].id.proc;
-	job_id.cluster = PrioRec[0].id.cluster;
-}
-#endif
 
 void
 dirtyJobQueue()

@@ -983,7 +983,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 }
 
 int
-ProcAPI::buildProcInfoList()
+ProcAPI::buildProcInfoList(pid_t /*BOLOpid*/)
 {
 	int mib[4];
 	struct kinfo_proc *kp = NULL;
@@ -1535,7 +1535,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 // what happens above in getProcInfoRaw
 //
 int
-ProcAPI::buildProcInfoList()
+ProcAPI::buildProcInfoList(pid_t /*BOLOpid*/)
 {
     double begin = qpcBegin();
 
@@ -1838,9 +1838,9 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 }
 
 procInfo*
-ProcAPI::getProcInfoList()
+ProcAPI::getProcInfoList(pid_t BOLOpid)
 {
-	if (buildProcInfoList() != PROCAPI_SUCCESS) {
+	if (buildProcInfoList(BOLOpid) != PROCAPI_SUCCESS) {
 		dprintf(D_ALWAYS,
 		        "ProcAPI: error retrieving list of process data\n");
 		deallocAllProcInfos();
@@ -1911,7 +1911,7 @@ ProcAPI::initProcInfoRaw(procInfoRaw& procRaw){
 #include <fstream>
 
 int
-build_pid_list( std::vector<pid_t> & newPidList ) {
+build_pid_list( std::vector<pid_t> & newPidList, pid_t BOLOpid = 0) {
 	//
 	// If you mount /proc with the option hidepid=2, then PID 1 isn't
 	// necessarily listed in /proc.
@@ -2001,6 +2001,7 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 	bool saw_pid1 = false;
 	bool saw_ppid = false;
 	bool saw_pid = false;
+	bool saw_bolo_pid = false;
 
 	condor_DIR * dirp = condor_opendir("/proc");
 	if( dirp == NULL ) {
@@ -2028,6 +2029,7 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 			if( the_pid == 1 ) { saw_pid1 = true; }
 			if( the_pid == my_ppid ) { saw_ppid  = true; }
 			if( the_pid == my_pid ) { saw_pid = true; }
+			if( the_pid == BOLOpid ) { saw_bolo_pid = true; }
 		}
 	}
 	if( errno != 0 ) {
@@ -2040,6 +2042,15 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 
 	dprintf(D_FULLDEBUG, "ProcAPI: read %d pid entries out of %d total entries in /proc\n", pid_entries, total_entries);
 
+	if (saw_bolo_pid) {
+		dprintf(D_FULLDEBUG, "As expected, we saw root of subfamily pid of %d\n", BOLOpid);
+	} else {
+		if (BOLOpid != 0) {
+			dprintf(D_ALWAYS, "Warning, expected subfamily pid of %d was not found in /proc, adding to set of assumed alived pids\n", BOLOpid);
+			newPidList.push_back(BOLOpid);
+			++pid_entries;
+		}
+	}
 	if( (hidepid || saw_pid1) && saw_ppid && saw_pid ) {
 		return pid_entries;
 	} else {
@@ -2048,11 +2059,11 @@ build_pid_list( std::vector<pid_t> & newPidList ) {
 }
 
 int
-ProcAPI::buildPidList() {
+ProcAPI::buildPidList(pid_t BOLOpid) {
 	static bool retry = true;
 
 	std::vector<pid_t> newPidList;
-	int rv = build_pid_list(newPidList);
+	int rv = build_pid_list(newPidList, BOLOpid);
 
     //
     // Based on analysis of our logs from December 2020 and the first
@@ -2182,7 +2193,7 @@ ProcAPI::buildPidList() {
 
 #if !defined(WIN32) && !defined(DARWIN)
 int
-ProcAPI::buildProcInfoList() {
+ProcAPI::buildProcInfoList(pid_t BOLOpid) {
   
 	piPTR current;
 	piPTR temp;
@@ -2190,7 +2201,7 @@ ProcAPI::buildProcInfoList() {
 
 	deallocAllProcInfos();
 
-	if (buildPidList() != PROCAPI_SUCCESS) {
+	if (buildPidList(BOLOpid) != PROCAPI_SUCCESS) {
 		dprintf(D_ALWAYS, "ProcAPI: error retrieving list of processes\n");
 		return PROCAPI_FAILURE;
 	}

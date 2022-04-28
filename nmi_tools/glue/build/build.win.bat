@@ -74,6 +74,15 @@ for /D %%I in ("%VS150COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC150_
 for /D %%I in ("%VS150COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC150_IDE=%%~sdpICommon7\IDE
 for /D %%I in ("%VS150COMNTOOLS%..") do set VS150ROOT=%%~sdpI
 
+:: pick up compiler path from VS170COMNTOOLS environment variable
+::
+for /D %%I in ("%VS170COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC170_BIN=%%~sdpIVC\bin
+for /D %%I in ("%VS170COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC150_IDE=%%~sdpICommon7\IDE
+for /D %%I in ("%VS170COMNTOOLS%..") do set VS170ROOT=%%~sdpI
+
+if NOT DEFINED VS150R00T set VS150ROOT=%VS170ROOT%
+if NOT DEFINED VS160R00T set VS160ROOT=%VS170ROOT%
+
 set VS_DIR=%VS90ROOT:~0,-1%
 set VS_GEN="Visual Studio 9 2008"
 if "%~2"=="VC10" (
@@ -108,11 +117,28 @@ if "%~2"=="VC15" (
 )
 :: append Win64 if needed, note we have to strip the quotes from the VS_GEN value before we append to it.
 if "%~3"=="x64" set VS_GEN="%VS_GEN:~1,-1% Win64"
+:: starting with VC16, we no longer append Win64
+if "%~2"=="VC16" (
+    if DEFINED VS160ROOT (
+        set VS_DIR=%VS160ROOT:~0,-1%
+        set VS_GEN="Visual Studio 16 2019"
+    )
+)
+if "%~2"=="VC17" (
+    if DEFINED VS170ROOT (
+        set VS_DIR=%VS170ROOT:~0,-1%
+        set VS_GEN="Visual Studio 17 2022"
+    )
+)
 echo VS_DIR is now [%VS_DIR%] %VS_GEN%
+dir "%VS_DIR%"
 set VC_DIR=%VS_DIR%\VC
 set VC_BIN=%VC_DIR%\bin
 if exist "%VS_DIR%\Common7\IDE\devenv.exe" set DEVENV_DIR=%VS_DIR%\Common7\IDE
 
+:: Visual Studio 17 2022 comes with a new msbuild
+if exist "%VS_DIR%\MSBuild\Current\bin\msbuild.exe" set MSBUILD_PATH=%VS_DIR%\MSBuild\Current\bin
+echo MSBUILD_PATH is now [%MSBUILD_PATH%]
 
 set DOTNET_PATH=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
 
@@ -172,6 +198,7 @@ if NOT "~%_NMI_PREREQ_cmake_ROOT%"=="~" (
 :: If building with Visual Studio 14 or later, cmake 3 is required
 for /F "tokens=3" %%I in ('%CMAKE_BIN_DIR%cmake.exe -version') do set CMAKE_VER=%%~nI
 echo CMAKE_VER=%CMAKE_VER%
+if "%~2"=="VC17" goto :need_cmake3
 if "%~2"=="VC15" goto :need_cmake3
 if "%~2"=="VC14" goto :need_cmake3
 goto :clean_cmake
@@ -219,8 +246,8 @@ if "%BUILDID:~1,1%"=="." (
    set BUILD_VERSION=%BUILDID%
    set BUILDID=
 ) else (
-   if exist CMakeLists.txt for /f "tokens=2 delims=) " %%I in ('grep set.VERSION CMakeLists.txt') do set BUILD_VERSION=%%~I
-   if exist CPackConfig.cmake for /f "tokens=2 delims=) " %%I in ('grep "SET.CPACK_PACKAGE_VERSION " CPackConfig.cmake') do set BUILD_VERSION=%%~I
+   if exist CMakeLists.txt for /f "tokens=2 delims=) " %%I in ('grep -i set.VERSION CMakeLists.txt') do set BUILD_VERSION=%%~I
+   if exist CPackConfig.cmake for /f "tokens=2 delims=) " %%I in ('grep -i "set.CPACK_PACKAGE_VERSION " CPackConfig.cmake') do set BUILD_VERSION=%%~I
 )
 if NOT "%BUILD_VERSION%"=="" (
   if NOT "%BUILDID%"=="" set BUILD_VERSION=%BUILD_VERSION%-%BUILDID%

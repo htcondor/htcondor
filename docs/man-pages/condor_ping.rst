@@ -35,6 +35,8 @@ in the file ``condor_includes/condor_commands.h``.
 An authorization level may be one of the following strings. If ``ALL``
 is listed, then negotiation is attempted for each of these possible
 authorization levels.
+Note that OWNER is no longer used in HTCondor, but is kept here for use
+when talking to older daemons (prior to 9.9.0).
 
  READ
  WRITE

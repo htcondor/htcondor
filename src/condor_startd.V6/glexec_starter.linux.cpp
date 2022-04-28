@@ -202,7 +202,7 @@ glexec_starter_prepare(const char* starter_path,
 	// GLEXEC_CLIENT_CERT - cert to use for the mapping
 	glexec_env.SetEnv( "GLEXEC_CLIENT_CERT", proxy_file );
 
-#if defined(HAVE_EXT_GLOBUS) && !defined(SKIP_AUTHENTICATION)
+#if defined(HAVE_EXT_GLOBUS)
 	// GLEXEC_SOURCE_PROXY -  proxy to provide to the child
 	//                        (file is owned by us)
 	glexec_env.SetEnv( "GLEXEC_SOURCE_PROXY", proxy_file );

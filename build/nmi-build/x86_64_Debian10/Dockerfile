@@ -119,6 +119,7 @@ RUN apt update && apt install -y \
     libldap2-dev \
     libmunge-dev \
     libpam0g-dev \
+    libpcre2-dev \
     libpcre3-dev \
     libpq-dev \
     libscitokens-dev \

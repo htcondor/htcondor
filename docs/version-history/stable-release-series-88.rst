@@ -7,6 +7,44 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+Version 8.8.17
+--------------
+
+Release Notes:
+
+- HTCondor version 8.8.17 released on March 15, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a memory leak in the job router, usually triggered when job
+  policy expressions cause removal of the job.
+  :jira:`408`
+
+
+Version 8.8.16
+--------------
+
+Release Notes:
+
+- HTCondor version 8.8.16 released on March 15, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+-  *Security Item*: This release of HTCondor fixes a security-related bug
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0003>`_.
+
+   :jira:`985`
+
 Version 8.8.15
 --------------
 
@@ -23,7 +61,7 @@ Bugs Fixed:
 -  *Security Item*: This release of HTCondor fixes a security-related bug
    described at
 
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003>`_.
 
    :jira:`587`
 
@@ -522,10 +560,10 @@ Bugs Fixed:
 -  *Security Item*: This release of HTCondor fixes security-related bugs
    described at
 
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001/>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002/>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003/>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004>`_.
 
    :ticket:`7356`
    :ticket:`7427`

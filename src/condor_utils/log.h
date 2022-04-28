@@ -23,7 +23,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include <string>
-using std::string;
 
 /* 
    This defines a base class for logs of data structure operations.  
@@ -103,7 +102,7 @@ class LogRecordError : public LogRecord {
         }
         return (int)body.size();
     }
-    string body;
+	std::string body;
 };
 
 #endif

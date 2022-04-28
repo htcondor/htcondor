@@ -7915,6 +7915,11 @@ static bool test_nested_ads()
 	}
 	ad.Insert( "C", tree );
 
+	if ( !parser.ParseExpression( "B[0][\"ZZZ\"]", tree ) ) {
+		FAIL;
+	}
+	ad.Insert( "D", tree );
+
 	std::string str;
 	unparser.Unparse( str, &ad );
 	emit_input_header();
@@ -7922,6 +7927,7 @@ static bool test_nested_ads()
 	emit_output_expected_header();
 	emit_param("A =", "4");
 	emit_param("C =", "4");
+	emit_param("D =", "undefined");
 	
 	int result;
 	if ( !ad.EvaluateAttrInt( "A", result ) || result != 4 ) {
@@ -7932,6 +7938,12 @@ static bool test_nested_ads()
 		FAIL;
 	}
 	
+	classad::Value val;
+	EvalExprTree(tree, &ad, NULL, val);
+	if (val.GetType() != classad::Value::UNDEFINED_VALUE) {
+		FAIL;
+	}
+
 	PASS;
 }
 

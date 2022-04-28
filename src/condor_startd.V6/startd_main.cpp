@@ -178,11 +178,11 @@ main_init( int, char* argv[] )
 	resmgr = new ResMgr;
 
 		// find all the starters we care about and get their classads. 
-	resmgr->starter_mgr.init();
+	Starter::config();
 
 	ClassAd tmp_classad;
 	std::string starter_ability_list;
-	resmgr->starter_mgr.publish(&tmp_classad);
+	Starter::publish(&tmp_classad);
 	tmp_classad.LookupString(ATTR_STARTER_ABILITY_LIST, starter_ability_list);
 	if( starter_ability_list.find(ATTR_HAS_VM) != std::string::npos ) {
 		// Now starter has codes for vm universe.
@@ -251,7 +251,7 @@ main_init( int, char* argv[] )
 		// action on that resource.  Plus, all of these commands only
 		// make sense when we're in the claimed state.  So, we can
 		// handle them all with a common handler.  For all of them,
-		// you need WRITE permission.
+		// you need DAEMON permission.
 	daemonCore->Register_Command( ALIVE, "ALIVE", 
 								  command_handler,
 								  "command_handler", DAEMON,
@@ -334,23 +334,23 @@ main_init( int, char* argv[] )
 								  command_coalesce_slots,
 								  "command_coalesce_slots", DAEMON );
 
-		// OWNER permission commands
+		// ex-OWNER permission commands, now ADMINISTRATOR
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
 								  "VACATE_ALL_CLAIMS",
 								  command_vacate_all,
-								  "command_vacate_all", OWNER );
+								  "command_vacate_all", ADMINISTRATOR );
 	daemonCore->Register_Command( VACATE_ALL_FAST,
 								  "VACATE_ALL_FAST",
 								  command_vacate_all,
-								  "command_vacate_all", OWNER );
+								  "command_vacate_all", ADMINISTRATOR );
 	daemonCore->Register_Command( VACATE_CLAIM,
 								  "VACATE_CLAIM",
 								  command_name_handler,
-								  "command_name_handler", OWNER );
+								  "command_name_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( VACATE_CLAIM_FAST,
 								  "VACATE_CLAIM_FAST",
 								  command_name_handler,
-								  "command_name_handler", OWNER );
+								  "command_name_handler", ADMINISTRATOR );
 
 		// NEGOTIATOR permission commands
 	daemonCore->Register_Command( MATCH_INFO, "MATCH_INFO",
@@ -478,7 +478,7 @@ finish_main_config( void )
 	dprintf( D_FULLDEBUG, "MainConfig finish\n" );
 	cron_job_mgr->Reconfig(  );
 	bench_job_mgr->Reconfig(  );
-	resmgr->starter_mgr.init();
+	Starter::config();
 
 #if HAVE_HIBERNATION
 	resmgr->updateHibernateConfiguration();

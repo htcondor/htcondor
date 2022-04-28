@@ -66,7 +66,6 @@ max_job_retirement_time = 6*60
 job_lease_duration = 7*60
 core_size = 34*1024
 priority = 3
-want_remote_io = false
 run_as_owner = false
 queue 3
 

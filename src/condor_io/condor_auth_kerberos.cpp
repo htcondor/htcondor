@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 
-#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_KRB5)
+#if defined(HAVE_EXT_KRB5)
 
 #include "condor_auth_kerberos.h"
 #include "condor_config.h"

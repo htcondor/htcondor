@@ -34,7 +34,6 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "dedicated_scheduler.h"
-#include "shadow_mgr.h"
 #include "scheduler.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -459,7 +458,6 @@ DedicatedScheduler::DedicatedScheduler()
 
 	ds_owner = NULL;
 	ds_name = NULL;
-	shadow_obj = NULL;
 
 	startdQueryTime = 0;
 	split_match_count = 0;
@@ -480,10 +478,6 @@ DedicatedScheduler::~DedicatedScheduler()
 	if( ds_owner ) { free(ds_owner); }
 	if( ds_name ) { free(ds_name); }
 
-	if( shadow_obj ) {
-		delete shadow_obj;
-		shadow_obj = NULL;
-	}
 	if( daemonCore && hdjt_tid != -1 ) {
 		daemonCore->Cancel_Timer( hdjt_tid );
 	}
@@ -607,10 +601,6 @@ DedicatedScheduler::reconfig( void )
 	}
 	old_unused_timeout = unused_timeout;
 
-	if( shadow_obj ) {
-		delete shadow_obj;
-		shadow_obj = NULL;
-	}
 	return TRUE;
 }
 
@@ -1466,15 +1456,6 @@ DedicatedScheduler::handleDedicatedJobs( void )
 	dprintf( D_FULLDEBUG, "Starting "
 			 "DedicatedScheduler::handleDedicatedJobs\n" );
 
-	static time_t lastRun = 0;
-
-
-	int delay_factor = param_integer( "DEDICATED_SCHEDULER_DELAY_FACTOR", 5 );
-	if ((time(0) - lastRun) < (delay_factor * startdQueryTime)) {
-		dprintf(D_ALWAYS, "Delaying scheduling of parallel jobs because startd query time is long (%ld) seconds\n", startdQueryTime);
-		return FALSE;
-	}
-
 // 	now = (int)time(0);
 		// Just for debugging, set now to 0 to make everything easier
 		// to parse when looking at log files.
@@ -1482,15 +1463,6 @@ DedicatedScheduler::handleDedicatedJobs( void )
 	    // as well remain this way until the scheduler is improved
 	    // to actually care about this value in any meaningful way.
 	now = 0;
-
-		// first, make sure we've got a shadow that can handle mpi
-		// jobs.  if not, we're screwed, so instead of computing a
-		// schedule, requesting resources, etc, etc, we should just
-		// put all the jobs on hold...
-	if( ! hasDedicatedShadow() ) {
-		holdAllDedicatedJobs();
-		return FALSE;
-	}
 
 		// This will gather up pointers to all the job classads we
 		// care about, and sort them by QDate.
@@ -1511,8 +1483,6 @@ DedicatedScheduler::handleDedicatedJobs( void )
 
 		// Sort them, so we know if we can use them or not.
 	sortResources();
-
-	lastRun = time(0);
 
 		// Figure out what we want to do, based on what we have now.  
 	if( ! computeSchedule() ) { 
@@ -1934,16 +1904,6 @@ DedicatedScheduler::spawnJobs( void )
 	if( ! allocations ) {
 			// Nothing to do
 		return true;
-	}
-
-	if( ! shadow_obj ) {
-		shadow_obj = scheduler.shadow_mgr.findShadow( ATTR_HAS_MPI );
-	}
-
-	if( ! shadow_obj ) {
-		dprintf( D_ALWAYS, "ERROR: Can't find a shadow with %s -- "
-				 "can't spawn MPI jobs, aborting\n", ATTR_HAS_MPI );
-		return false;
 	}
 
 	allocations->startIterations();
@@ -3142,7 +3102,7 @@ DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) 
 				}
 				std::string psgString;
 				if (!aJob->LookupString(ATTR_MATCHED_PSG, psgString)) {
-					string psgExpr;
+					std::string psgExpr;
 					formatstr(psgExpr, "ParallelSchedulingGroup =?= \"%s\"", groupName);
 					aJob->AssignExpr(ATTR_MATCHED_PSG, psgExpr.c_str());
 				} else {
@@ -3279,8 +3239,8 @@ DedicatedScheduler::AddMrec(
 	match_rec *existing_mrec;
 	if( all_matches->lookup(slot_name, existing_mrec) == 0) {
 			// Already have this match
-		dprintf(D_ALWAYS, "DedicatedScheduler: negotiator sent match for %s, but we've already got it, deleting old one\n", slot_name);
-		DelMrec(existing_mrec);
+		dprintf(D_ALWAYS, "DedicatedScheduler: negotiator sent match for %s, but we've already got it, ignoring\n", slot_name);
+		return nullptr;
 	}
 
 	// Next, insert this match_rec into our hashtables
@@ -3910,21 +3870,6 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 	return false;
 }
 
-bool
-DedicatedScheduler::hasDedicatedShadow( void ) 
-{
-	if( ! shadow_obj ) {
-		shadow_obj = scheduler.shadow_mgr.findShadow( ATTR_HAS_MPI );
-	}
-	if( ! shadow_obj ) {
-		dprintf( D_ALWAYS, "ERROR: Can't find a shadow with %s -- "
-				 "can't run MPI jobs!\n", ATTR_HAS_MPI );
-		return false;
-	} 
-	return true;
-}
-
-
 void
 DedicatedScheduler::holdAllDedicatedJobs( void ) 
 {
@@ -4395,9 +4340,6 @@ findAvailTime( match_rec* mrec )
 				// it should "cost" to kill a job?
 			if( universe == CONDOR_UNIVERSE_VANILLA ) {
 				return now + 15;
-			}
-			if( universe == CONDOR_UNIVERSE_STANDARD ) {
-				return now + 120;
 			}
 			return now + 60;
 		} 

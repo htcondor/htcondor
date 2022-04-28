@@ -2453,6 +2453,12 @@ description=Name of the key used to issue session tokens
 type=string
 tags=condor_auth_passwd
 
+[SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS]
+default=POOL
+description=StringList of keys allowed to sign from condor_token_request
+type=string
+tags=condor_auth_passwd
+
 [SEC_TOKEN_POOL_SIGNING_KEY_FILE]
 default=$(SEC_PASSWORD_FILE)
 win32_default=$(RELEASE_DIR)\tokens.sk\POOL
@@ -3826,6 +3832,24 @@ tags=annex
 [us_west_2.ANNEX_DEFAULT_ODI_IMAGE_ID_V8_7_8]
 default = ami-00daecb4d3b8f077f
 type=string
+tags=annex
+
+[HPC_ANNEX_ENABLED]
+default=false
+type=bool
+description=Boolean indicating whether or not HPC annexes have been enabled
+tags=annex
+
+[ANNEX_COLLECTOR]
+default=
+type=string
+description=HPC annex collector address
+tags=annex
+
+[ANNEX_TOKEN_DOMAIN]
+default=$(TRUST_DOMAIN)
+type=string
+description=HPC annex collector's token domain (i.e. the domain in annex collector tokens' sub claim)
 tags=annex
 
 [SCHEDD]
@@ -6123,7 +6147,6 @@ default : @end
 description=Default (host based) Authorization policy based on IPs and DNS names
 default : @end
 	ALLOW_ADMINISTRATOR=$(CONDOR_HOST)
-	ALLOW_OWNER=$(FULL_HOSTNAME) $(IPV4_ADDRESS) $(IPV6_ADDRESS)
 	ALLOW_READ=*
 	ALLOW_WRITE=$(FULL_HOSTNAME) $(IPV4_ADDRESS) $(IPV6_ADDRESS)
 	ALLOW_DAEMON=$(FULL_HOSTNAME) $(IPV4_ADDRESS) $(IPV6_ADDRESS)
@@ -6162,7 +6185,6 @@ default : @end
 	  authuser=$(USERNAME)
 	endif
 	ALLOW_ADMINISTRATOR=$(authuser)@$(CONDOR_HOST)
-	ALLOW_OWNER=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
 	ALLOW_READ=*
 	ALLOW_WRITE=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
 	ALLOW_DAEMON=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
@@ -6455,10 +6477,8 @@ TRUST_DOMAIN = $(CONDOR_HOST)
 ALLOW_READ = *
 
 # Give root on each machine ADMINISTRATOR access (in case something goes
-# wrong with IDTOKENS) and OWNER access (so they can force HTCondor to
-# stop all running jobs on that machine).  Do NOT issue IDTOKENS to root.
+# wrong with IDTOKENS).  Do NOT issue IDTOKENS to root.
 ALLOW_ADMINISTRATOR = root@* condor@$(TRUST_DOMAIN)
-ALLOW_OWNER = root@* condor@$(TRUST_DOMAIN)
 
 # Accept non-read connections only from other daemons in the same pool.
 ALLOW_WRITE = condor@$(TRUST_DOMAIN)
@@ -6741,5 +6761,53 @@ default : @end
 	use FEATURE : StartdCronOneShot(cloud, $(LIBEXEC)/common-cloud-attributes-aws.py, $(0))
 	STARTD_CRON_cloud_PREFIX = Cloud
 @end
+
+[$FEATURE.AssignAnnex]
+description=Automatically sets jobs' annex attributes if jobs set TargetAnnexName args:(annex_collector[, annex_token_domain])
+default : @fin
+	if ! $(1?)
+		error : use FEATURE : AssignAnnex requires at least 1 argument: annex_collector [,annex_token_domain]
+	endif
+	HPC_ANNEX_ENABLED = true
+	ANNEX_COLLECTOR = $(1)
+	ANNEX_TOKEN_DOMAIN = $(ANNEX_COLLECTOR)
+	if $(2?)
+		ANNEX_TOKEN_DOMAIN = $(2)
+	endif
+	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AssignAnnex
+	JOB_TRANSFORM_AssignAnnex @=end
+		REQUIREMENTS TargetAnnexName =!= undefined
+		my_identity = "$(MY.Owner)@$(ANNEX_TOKEN_DOMAIN)"
+		addl_reqs = ifThenElse(TARGET.AuthenticatedIdentity is undefined, true, $(my_identity) == TARGET.AuthenticatedIdentity) && (MY.TargetAnnexName == TARGET.AnnexName)
+		if defined MY.FlockTo
+			SET FlockTo "$(MY.FlockTo),$(ANNEX_COLLECTOR)"
+		else
+			SET FlockTo "$(ANNEX_COLLECTOR)"
+		endif
+		if defined MY.JobMachineAttrs
+			SET JobMachineAttrs "$(MY.JobMachineAttrs),AnnexName"
+		else
+			SET JobMachineAttrs "AnnexName"
+		endif
+		if defined MY.Requirements
+			SET Requirements $(addl_reqs) && ($(MY.Requirements))
+		else
+			SET Requirements $(addl_reqs)
+		endif
+	@end
+
+	if $(ANNEX_JOBS_EXCLUSIVELY:TRUE)
+		JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AnnexJobsExclusively
+		JOB_TRANSFORM_AnnexJobsExclusively @=end
+			REQUIREMENTS TargetAnnexName =?= undefined
+			addl_reqs = ifThenElse(TARGET.AuthenticatedIdentity is undefined, true, regexp("^condor(_pool)?@.*$", TARGET.AuthenticatedIdentity))
+			if defined MY.Requirements
+				SET Requirements $(addl_reqs) && ($(MY.Requirements))
+			else
+				SET Requirements $(addl_reqs)
+			endif
+		@end
+	endif
+@fin
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

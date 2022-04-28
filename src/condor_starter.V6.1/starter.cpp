@@ -630,7 +630,7 @@ Starter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 	}
 
 	char *session_id = Condor_Crypt_Base::randomHexKey();
-	char *session_key = Condor_Crypt_Base::randomHexKey();
+	char *session_key = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 
 	std::string session_info;
 	input.LookupString(ATTR_SESSION_INFO,session_info);

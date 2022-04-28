@@ -85,7 +85,7 @@ if [[ -z $PASSWORD_FILE ]]; then
 fi
 
 BIRTH=`date +%s`
-echo "Starting script at `date`..."
+# echo "Starting script at `date`..."
 
 #
 # Download and configure the pilot on the head node before running it
@@ -117,7 +117,8 @@ CLEAN_UP_TIME=300
 # we'll leave that for then.
 #
 
-echo "Creating temporary directory for pilot..."
+# echo "Creating temporary directory..."
+echo "Step 1 of 8..."
 PILOT_DIR=`/usr/bin/mktemp --directory --tmpdir=${SCRATCH} 2>&1`
 if [[ $? != 0 ]]; then
     echo "Failed to create temporary directory for pilot, aborting."
@@ -154,7 +155,8 @@ mv ${MULTI_PILOT_BIN} ${PILOT_DIR}
 PILOT_BIN=${PILOT_DIR}/`basename ${PILOT_BIN}`
 MULTI_PILOT_BIN=${PILOT_DIR}/`basename ${MULTI_PILOT_BIN}`
 
-echo "Downloading configuration..."
+# echo "Downloading configuration..."
+echo "Step 2 of 8..."
 CONFIGURATION_FILE=`basename ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}`
 CURL_LOGGING=`curl -fsSL ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION} -o ${CONFIGURATION_FILE} 2>&1`
 if [[ $? != 0 ]]; then
@@ -166,7 +168,8 @@ fi
 #
 # Download the binaries.
 #
-echo "Downloading binaries..."
+# echo "Downloading required software..."
+echo "Step 3 of 8..."
 BINARIES_FILE=`basename ${WELL_KNOWN_LOCATION_FOR_BINARIES}`
 CURL_LOGGING=`curl -fsSL ${WELL_KNOWN_LOCATION_FOR_BINARIES} -o ${BINARIES_FILE} 2>&1`
 if [[ $? != 0 ]]; then
@@ -178,7 +181,8 @@ fi
 #
 # Unpack the binaries.
 #
-echo "Unpacking binaries..."
+# echo "Unpacking software..."
+echo "Step 4 of 8..."
 TAR_LOGGING=`tar -z -x -f ${BINARIES_FILE} 2>&1`
 if [[ $? != 0 ]]; then
     echo "Failed to unpack binaries from '${BINARIES_FILE}', aborting."
@@ -192,7 +196,8 @@ fi
 rm condor-*.tar.gz
 cd condor-*
 
-echo "Making a personal condor..."
+# echo "Configuring software (part 1)..."
+echo "Step 5 of 8..."
 MPC_LOGGING=`./bin/make-personal-from-tarball 2>&1`
 if [[ $? != 0 ]]; then
     echo "Failed to make personal condor, aborting."
@@ -243,7 +248,8 @@ chmod 755 ${PILOT_DIR}/singularity.sh
 YOUTH=$((`date +%s` - ${BIRTH}))
 REMAINING_LIFETIME=$(((${LIFETIME} - ${YOUTH}) - ${CLEAN_UP_TIME}))
 
-echo "Converting to a pilot..."
+# echo "Configuring software (part 2)..."
+echo "Step 6 of 8..."
 rm local/config.d/00-personal-condor
 echo "
 use role:execute
@@ -290,6 +296,8 @@ MASTER.DAEMON_SHUTDOWN_FAST = (CurrentTime - DaemonStartTime) > ${REMAINING_LIFE
 
 # Only start jobs from the specified owner.
 START = \$(START) && stringListMember( Owner, \"${OWNERS}\" )
+# Only start jobs for this annex.
+START = \$(START) && MY.AnnexName == TARGET.TargetAnnexName
 
 # Advertise the standard annex attributes (master ad for condor_off).
 IsAnnex = TRUE
@@ -342,7 +350,8 @@ mv ${PASSWORD_FILE} local/passwords.d/POOL
 # Unpack the configuration on top.
 #
 
-echo "Unpacking configuration..."
+# echo "Configuring software (part 3)..."
+echo "Step 7 of 8..."
 TAR_LOGGING=`tar -z -x -f ../${CONFIGURATION_FILE} 2>&1`
 if [[ $? != 0 ]]; then
     echo "Failed to unpack binaries from '${CONFIGURATION_FILE}', aborting."
@@ -390,7 +399,8 @@ ${MULTI_PILOT_BIN} ${PILOT_BIN} ${PILOT_DIR}
 #
 # Submit the SLURM job.
 #
-echo "Submitting SLURM job..."
+# echo "Submitting SLURM job..."
+echo "Step 8 of 8..."
 SBATCH_LOG=${PILOT_DIR}/sbatch.log
 sbatch ${PILOT_DIR}/stampede2.slurm &> ${SBATCH_LOG}
 SBATCH_ERROR=$?
@@ -401,7 +411,7 @@ if [[ $SBATCH_ERROR != 0 ]]; then
 fi
 JOB_ID=`cat ${SBATCH_LOG} | awk '/^Submitted batch job/{print $4}'`
 echo "${CONTROL_PREFIX} JOB_ID ${JOB_ID}"
-echo "..done."
+echo "... done."
 
 # Reset the EXIT trap so that we don't delete the temporary directory
 # that the SLURM job needs.  (We pass it the temporary directory so that
