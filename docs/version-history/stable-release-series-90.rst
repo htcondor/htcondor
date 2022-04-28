@@ -25,6 +25,11 @@ New Features:
   mode output.
   :jira:`1032`
 
+- If the configuration macro ``[SCHEDD|STARTD]_CRON_LOG_NON_ZERO_EXIT`` is
+  set to true, the corresponding daemon will write the cron job's non-zero
+  exit code to the log, followed by the cron job's output.
+  :jira:`971`
+
 Bugs Fixed:
 
 - The *condor_run* tool now reports job submit errors
