@@ -641,6 +641,7 @@
 #define ATTR_SHADOW_WAIT_FOR_DEBUG  "ShadowWaitForDebug"
 #define ATTR_SHOULD_FORWARD	"ShouldForward"
 #define ATTR_SCITOKENS_FILE "ScitokensFile"
+#define ATTR_SEND_PRIVATE_ATTRIBUTES "SendPrivateAttributes"
 #define ATTR_SINGULARITY_VERSION "SingularityVersion"
 #define ATTR_SLOT_ID  "SlotID"
 #define ATTR_SLOT_PAIR_NAME  "SlotPairName"

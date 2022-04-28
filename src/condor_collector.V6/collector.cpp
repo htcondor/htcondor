@@ -852,30 +852,32 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	ClassAd *cad = query_entry->cad;
 	bool is_locate = query_entry->is_locate;
 	AdTypes whichAds = query_entry->whichAds;
+	bool wants_pvt_attrs = false;
+
+	cad->LookupBool(ATTR_SEND_PRIVATE_ATTRIBUTES, wants_pvt_attrs);
 
 		// If our peer is at least 8.9.3 and has NEGOTIATOR authz, then we'll
 		// trust it to handle our capabilities.
-	bool filter_private_ads = true;
+	bool filter_private_attrs = true;
 	auto *verinfo = sock->get_peer_version();
 	if (verinfo && verinfo->built_since_version(8, 9, 3) &&
-		(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", NEGOTIATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
+		(USER_AUTH_SUCCESS == daemonCore->Verify("send private attrs", NEGOTIATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
 	{
-		filter_private_ads = false;
+		filter_private_attrs = false;
 	}
 
-		// If our peer is at least 9.8.0 and has ADMINISTRATOR authz
-		// and is doing a locate query,
-		// then we'll trust it to handle our capabilities
-	if (verinfo && verinfo->built_since_version(9, 8, 0) && is_locate &&
-		(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", ADMINISTRATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
+		// If our peer has ADMINISTRATOR authz and explicitly asks for
+		// private attributes, then we'll trust it to handle our capabilities
+	if (wants_pvt_attrs &&
+		(USER_AUTH_SUCCESS == daemonCore->Verify("send private attrs", ADMINISTRATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
 	{
-		dprintf(D_SECURITY|D_FULLDEBUG, "Administrator locate query - will not filter private ads.\n");
-		filter_private_ads = false;
+		dprintf(D_SECURITY|D_FULLDEBUG, "Administrator requesting private attributes - will not filter.\n");
+		filter_private_attrs = false;
 	}
 
 		// Always send private attributes in private ads.
 	if (whichAds == STARTD_PVT_AD) {
-		filter_private_ads = false;
+		filter_private_attrs = false;
 	}
 
 	// Perform the query
@@ -944,7 +946,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 			}
 		}
 
-		bool send_failed = (!sock->code(more) || !putClassAd(sock, *curr_ad, filter_private_ads ? PUT_CLASSAD_NO_PRIVATE : 0, proj.empty() ? NULL : &proj));
+		bool send_failed = (!sock->code(more) || !putClassAd(sock, *curr_ad, filter_private_attrs ? PUT_CLASSAD_NO_PRIVATE : 0, proj.empty() ? NULL : &proj));
         
 		if (stats_ad) {
 			stats_ad->Unchain();
@@ -984,7 +986,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	end_write = condor_gettimestamp_double();
 
 	dprintf (D_ALWAYS,
-			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; from=%s; peer=%s; projection={%s}; filter_private_ads=%d\n",
+			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; from=%s; peer=%s; projection={%s}; filter_private_attrs=%d\n",
 			 __numAds__,
 			 __failed__,
 			 end_query - begin,
@@ -996,7 +998,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 			 query_entry->subsys,
 			 sock->peer_description(),
 			 projection.c_str(),
-			 filter_private_ads);
+			 filter_private_attrs);
 END:
 	
 	// All done.  Deallocate memory allocated in this method.  Note that DaemonCore 
