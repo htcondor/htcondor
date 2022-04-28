@@ -17,7 +17,7 @@ Release Notes:
 
 New Features:
 
-- Job duration policy hold message now displays the time exceeded in 
+- Job duration policy hold message now displays the time exceeded in
   'dd+hh:mm:ss' format rather than just seconds.
   :jira:`1062`
 
@@ -38,8 +38,8 @@ New Features:
   :jira:`1057`
 
 - Changed the result returned by evaluating a nested classad a
-  with no attribute named "missing" to return undefined when evaluating
-  a["missing"].  This matches the a.missing syntax
+  with no attribute named ``missing`` to return undefined when evaluating
+  ``a["missing"]``.  This matches the ``a.missing`` syntax
   :jira:`1065`
 
 - Singularity jobs can now pull images from docker style repos.
@@ -64,6 +64,10 @@ Bugs Fixed:
 - Fixed a bug in the dedicated scheduler when using partionable slots that would
   cause the schedd to assert.
   :jira:`1042`
+
+- Fixed a bug preventing ``preserve_relative_paths`` from working with
+  lots (tens of thousands) of files.
+  :jira:`993`
 
 Version 9.8.1
 -------------
