@@ -51,7 +51,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 	# Should use find_package here for either case
 	set(PCRE2_INCLUDE /usr/include)
 	set(PCRE2_FOUND -lpcre2-8)
-	set(HAVE_PCRE_H TRUE)
 
 	set(C_BIN bin)
 	set(C_LIB_PUBLIC lib/condor)
@@ -79,8 +78,6 @@ endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 include_directories(${PCRE2_INCLUDE})
-add_definitions(-DUSE_PCRE)
-add_definitions(-DHAVE_PCRE_H)
 
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	add_definitions( -DCLASSAD_VERSION="${PACKAGE_VERSION}"

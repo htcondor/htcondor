@@ -37,21 +37,8 @@
 #include <sys/time.h>
 #endif
 
-#if defined(WIN32) && !defined(USE_PCRE) && !defined(USE_POSIX_REGEX)
-  #define USE_PCRE
-  #define HAVE_PCRE_H
-#endif
-
-#if defined USE_POSIX_REGEX 
-  #include <regex.h>
-#elif defined USE_PCRE
-  #ifdef HAVE_PCRE_H
-    #define PCRE2_CODE_UNIT_WIDTH 8
-    #include <pcre2.h>
-  #elif defined HAVE_PCRE_PCRE_H
-    #include <pcre/pcre.h>
-  #endif
-#endif
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 #ifdef UNIX
 #include <dlfcn.h>
@@ -161,13 +148,11 @@ FunctionCall( )
 		functionTable["version_in_range"] = (void*)versionInRange;
 
 			// pattern matching (regular expressions)
-#if defined USE_POSIX_REGEX || defined USE_PCRE
 		functionTable["regexp"		] =	(void*)matchPattern;
 		functionTable["regexpmember"] =	(void*)matchPatternMember;
 		functionTable["regexps"     ] = (void*)substPattern;
 		functionTable["replace"     ] = (void*)substPattern;
 		functionTable["replaceall"  ] = (void*)substPattern;
-#endif
 
 			// conversion functions
 		functionTable["int"			] =	(void*)convInt;
@@ -2794,7 +2779,6 @@ debug( const char* name,const ArgumentList &argList,EvalState &state,
 	return true;
 }
 
-#if defined USE_POSIX_REGEX || defined USE_PCRE
 static bool regexp_helper(const char *pattern, const char *target,
                           const char *replace,
                           bool have_options, string options_string,
@@ -3057,118 +3041,6 @@ static bool regexp_helper(
 	bool		full_target = false;
 	bool		find_all = false;
 
-#if defined (USE_POSIX_REGEX)
-	regex_t		re;
-
-	const int MAX_REGEX_GROUPS=11;
-	regmatch_t pmatch[MAX_REGEX_GROUPS];
-	size_t      nmatch = MAX_REGEX_GROUPS;
-
-    options = REG_EXTENDED;
-	if( !replace ) {
-		options |= REG_NOSUB;
-	}
-    if( have_options ){
-        // We look for the options we understand, and ignore
-        // any others that we might find, hopefully allowing
-        // forwards compatibility.
-        if ( options_string.find( 'i' ) != string::npos ) {
-            options |= REG_ICASE;
-        }
-        if ( options_string.find( 'f' ) != string::npos ) {
-            full_target = true;
-        }
-    }
-
-		// compile the patern
-	if( regcomp( &re, pattern, options ) != 0 ) {
-			// error in pattern
-		result.SetErrorValue( );
-		return( true );
-	}
-
-		// test the match
-	status = regexec( &re, target, nmatch, pmatch, 0 );
-
-		// dispose memory created by regcomp()
-	regfree( &re );
-
-	if( status == 0 && replace ) {
-		string group_buffers[MAX_REGEX_GROUPS];
-		char const *groups[MAX_REGEX_GROUPS];
-		int ngroups = MAX_REGEX_GROUPS;
-		int i;
-
-		for(i=0;i<MAX_REGEX_GROUPS;i++) {
-			regoff_t rm_so = pmatch[i].rm_so;
-			regoff_t rm_eo = pmatch[i].rm_eo;
-			if( rm_so >= 0 ) {
-				group_buffers[i].append(target,rm_so,rm_eo-rm_so);
-				groups[i] = group_buffers[i].c_str();
-			}
-			else {
-				groups[i] = NULL;
-			}
-		}
-
-		string output;
-		bool replace_success = true;
-
-		if ( full_target ) {
-			output.append(target, pmatch[0].rm_so);
-		}
-		while (*replace) {
-			if (*replace == '\\') {
-				if (isdigit(replace[1])) {
-					int offset = replace[1] - '0';
-					replace++;
-					if( offset >= ngroups || !groups[offset] ) {
-						replace_success = false;
-						break;
-					}
-					output += groups[offset];
-				} else {
-					output += '\\';
-				}
-			} else {
-				output += *replace;
-			}
-			replace++;
-		}
-		if ( replace_success && full_target ) {
-			output.append(target+pmatch[0].rm_eo, strlen(target+pmatch[0].rm_eo));
-		}
-
-		if( replace_success ) {
-			result.SetStringValue( output );
-		}
-		else {
-			result.SetErrorValue( );
-		}
-		return( true );
-	}
-	else if( status == REG_NOMATCH && replace ) {
-		if ( full_target ) {
-			result.SetStringValue( target );
-		} else {
-			result.SetStringValue( "" );
-		}
-		return( true );
-	}
-
-		// check for success/failure
-	if( status == 0 ) {
-		result.SetBooleanValue( true );
-		return( true );
-	} else if( status == REG_NOMATCH ) {
-		result.SetBooleanValue( false );
-		return( true );
-	} else {
-			// some error; we could possibly return 'false' here ...
-		result.SetErrorValue( );
-		return( true );
-	}
-#elif defined (USE_PCRE)
 	PCRE2_SIZE error_offset;
 	int error_code;
 	pcre2_code * re = NULL;
@@ -3308,10 +3180,7 @@ static bool regexp_helper(
 		pcre2_code_free(re);
 	}
     return true;
-#endif
 }
-
-#endif /* defined USE_POSIX_REGEX || defined USE_PCRE */
 
 static bool 
 doSplitTime(const Value &time, ClassAd * &splitClassAd)
