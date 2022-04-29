@@ -514,6 +514,7 @@ SubmitHash::SubmitHash()
 	, already_warned_notification_never(false)
 	, already_warned_require_gpus(false)
 	, UseDefaultResourceParams(true)
+	, s_method(1)
 {
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();
