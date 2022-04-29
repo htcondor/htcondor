@@ -1242,31 +1242,55 @@ subsystem corresponding to the daemon.
 :macro-def:`<SUBSYS>_DEBUG`
     All of the HTCondor daemons can produce different levels of output depending
     on how much information is desired. The various levels of verbosity for a 
-    given daemon are determined by this macro. All daemons have the default 
-    level ``D_ALWAYS``, and log messages for that level will be printed to the
-    daemon's log, regardless of this macro's setting. Settings are a
-    comma- or space-separated list of the following values:
+    given daemon are determined by this macro. Settings are a
+    comma, vertical bar, or space-separated list of categories and options. Each
+    category can be followed by a colon and a single digit indicating the verbosity
+    for that category ``:1`` is assumed if there is no verbosity modifier.
+    Permitted verbosity values are ``:1`` for
+    normal, ``:2`` for extra messages, and ``:0`` to disable logging of that
+    category of messages. The primary daemon log will always include category and verbosity
+    ``D_ALWAYS:1``, unless ``D_ALWAYS:0`` is added to this list.  Category and option names are:
 
-    ``D_ALL``
-        This flag turns on all debugging output by enabling all of the
-        debug levels at once. There is no need to list any other debug
-        levels in addition to ``D_ALL``; doing so would be redundant. Be
+    ``D_ANY``
+        This flag turns on all cagetories of messages Be
         warned: this will generate about a HUGE amount of output. To
         obtain a higher level of output than the default, consider using
         ``D_FULLDEBUG`` before using this option.
+
+    ``D_ALL``
+        This is equivalent to ``D_ANY D_PID D_FDS D_CAT`` Be
+        warned: this will generate about a HUGE amount of output. To
+        obtain a higher level of output than the default, consider using
+        ``D_FULLDEBUG`` before using this option.
+
+     ``D_FAILURE``
+        This category is used for messages that indicate the daemon is unable
+        to continue running. These message are "always" printed unless
+        ``D_FAILURE:0`` is added to the list
+
+     ``D_STATUS``
+        This category is used for messages that indicate what task the
+        daemon is currently doing or progress. Messages of this category will
+        be always printed unless ``D_STATUS:0`` is added to the list
+
+    ``D_ALWAYS``
+        This category is used for messages that are "always" printed unless
+        ``D_ALWAYS:0`` is configured.  These can be progress or status
+        message, as well as failures that do not prevent the daemon from
+        continuing to operate such as a failure to start a job.  At verbosity
+        2 this category is equivalent to ``D_FULLDEBUG`` below.
 
     ``D_FULLDEBUG``
         This level provides verbose output of a general nature into the
         log files. Frequent log messages for very specific debugging
         purposes would be excluded. In those cases, the messages would
         be viewed by having that another flag and ``D_FULLDEBUG`` both
-        listed in the configuration file.
+        listed in the configuration file.  This is equivalent to ``D_ALWAYS:2``
 
     ``D_DAEMONCORE``
         Provides log file entries specific to DaemonCore, such as timers
         the daemons have set and the commands that are registered. If
-        both ``D_FULLDEBUG`` and ``D_DAEMONCORE`` are set, expect very
-        verbose output.
+        ``D_DAEMONCORE:2`` is set, expect very verbose output.
 
     ``D_PRIV``
         This flag provides log messages about the privilege state
@@ -1347,6 +1371,8 @@ subsystem corresponding to the daemon.
         process itself. See
         :ref:`admin-manual/security:htcondor's security model`
         for more information about secure communication configuration.
+        ``D_SECURITY:2`` logging is highly verbose and should be used only
+        when actively debugging security configuration problems.
 
     ``D_PROCFAMILY``
         HTCondor often times needs to manage an entire family of
@@ -1392,13 +1418,13 @@ subsystem corresponding to the daemon.
         HTCondor's use of system file descriptors as it will generally
         track the number of file descriptors that HTCondor has open.
 
-    ``D_CATEGORY``
+    ``D_CAT`` or ``D_CATEGORY``
         This flag is different from the other flags, because it is used
         to change the formatting of all log messages that are printed,
         as opposed to specifying what kinds of messages should be
-        printed. If ``D_CATEGORY`` is set, Condor will include the
+        printed. If ``D_CAT`` or ``D_CATEGORY`` is set, Condor will include the
         debugging level flags that were in effect for each line of
-        output. This may be used to filter log output by the level or
+        output.  This may be used to filter log output by the level or
         tag it, for example, identifying all logging output at level
         ``D_SECURITY``, or ``D_ACCOUNTANT``.
 
