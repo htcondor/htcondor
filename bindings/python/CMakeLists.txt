@@ -63,12 +63,12 @@ if (WITH_PYTHON_BINDINGS)
         endif()
     endif()
 
-    if (PYTHONLIBS_FOUND)
+    if (PYTHONLIBS_FOUND OR (WINDOWS AND PYTHON3LIBS_FOUND))
         set(TIMESTAMP_FILE "${CMAKE_CURRENT_BINARY_DIR}/build/timestamp")
         if (WINDOWS) # build scaffolding for both Python 2 and 3 on Windows
             add_custom_command(
                 OUTPUT ${TIMESTAMP_FILE}
-                COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} build
+                COMMAND "${PYTHON_EXECUTABLE}" ${SETUP_PY} build
                 COMMAND ${CMAKE_COMMAND} ARGS -E touch ${TIMESTAMP_FILE}
                 DEPENDS ${DEPS}
             )
@@ -85,7 +85,7 @@ if (WITH_PYTHON_BINDINGS)
         if (WINDOWS) # Windows can call setup.py as normal
             install(CODE "execute_process(
                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} install --root=${CMAKE_INSTALL_PREFIX} --install-lib=${C_PYTHONARCHLIB}
+                COMMAND \"${PYTHON_EXECUTABLE}\" ${SETUP_PY} install --root=${CMAKE_INSTALL_PREFIX} --install-lib=${C_PYTHONARCHLIB}
                 ERROR_VARIABLE _err
                 RESULT_VARIABLE _ret)
                 if (NOT \${_ret} EQUAL \"0\")

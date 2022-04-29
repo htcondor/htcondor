@@ -431,7 +431,7 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 				EXECUTE_SIDE_MATCHSESSION_FQU,
 				peer,
 				0,
-				nullptr );
+				nullptr, false );
 
 			if( rc ) {
 					// we're good to go; use the claimid security session
@@ -921,10 +921,8 @@ Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, st
 	formatstr( id, "%s#%ld#%lu", daemonCore->publicNetworkIpAddr(),
 	           m_scheduler_startup, (long unsigned)m_negotiator_seq);
 
-	// A keylength of 32 bytes = 256 bits.
-	const size_t keylen = 32;
 	auto keybuf = std::unique_ptr<char, decltype(free)*>{
-		Condor_Crypt_Base::randomHexKey(keylen),
+		Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9),
 		free
 	};
 	if (!keybuf.get()) {
@@ -970,9 +968,8 @@ Scheduler::SetupCollectorSession(unsigned duration, std::string &capability)
 	formatstr( id, "%s#%ld#%lu", daemonCore->publicNetworkIpAddr(),
 	           m_scheduler_startup, static_cast<long unsigned>(m_negotiator_seq));
 
-	const size_t keylen = 32;
 	auto keybuf = std::unique_ptr<char, decltype(free)*>{
-		Condor_Crypt_Base::randomHexKey(keylen),
+		Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9),
 		free
 	};
 	if (!keybuf.get()) {

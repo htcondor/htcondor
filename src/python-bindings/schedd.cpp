@@ -1102,6 +1102,7 @@ private:
     bool m_connected;
     bool m_transaction;
     bool m_queried_capabilities;
+    bool m_deferred_reschedule;
     int  m_cluster_id; // non-zero when there is a submit transaction and newCluster has been called already
     int  m_proc_id; // the last value returned from newProc
     SetAttributeFlags_t m_flags;
@@ -2622,7 +2623,7 @@ private:
 };
 
 ConnectionSentry::ConnectionSentry(Schedd &schedd, bool transaction, SetAttributeFlags_t flags, bool continue_txn)
-     : m_connected(false), m_transaction(false), m_queried_capabilities(false), m_cluster_id(0), m_proc_id(-1), m_flags(flags), m_schedd(schedd)
+     : m_connected(false), m_transaction(false), m_queried_capabilities(false), m_deferred_reschedule(false), m_cluster_id(0), m_proc_id(-1), m_flags(flags), m_schedd(schedd)
 {
     if (schedd.m_connection)
     {
@@ -2689,7 +2690,11 @@ ConnectionSentry::newProc()
 void
 ConnectionSentry::reschedule()
 {
-    m_schedd.reschedule();
+    if (m_connected) {
+        m_deferred_reschedule = true;
+    } else {
+        m_schedd.reschedule();
+    }
 }
 
 
@@ -2791,6 +2796,10 @@ ConnectionSentry::disconnect()
             std::string esMsg = errstack.getFullText();
             if( ! esMsg.empty() ) { errmsg += " " + esMsg; }
             THROW_EX(HTCondorIOError, errmsg.c_str());
+        }
+        if (m_deferred_reschedule) {
+            reschedule();
+            m_deferred_reschedule = false;
         }
     }
     if (throw_commit_error)

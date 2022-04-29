@@ -24,6 +24,7 @@
 #include "user_job_policy.h"
 #include "proc.h"
 #include "condor_holdcodes.h"
+#include "format_time.h"
 
 #define PARAM_SYSTEM_PERIODIC_REMOVE "SYSTEM_PERIODIC_REMOVE"
 #define PARAM_SYSTEM_PERIODIC_RELEASE "SYSTEM_PERIODIC_RELEASE"
@@ -467,7 +468,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 				if( time(NULL) - birthday >= allowedJobDuration ) {
 					m_fire_expr = ATTR_JOB_ALLOWED_JOB_DURATION;
 					m_fire_source = FS_JobDuration;
-					formatstr(m_fire_reason, "The job exceeded allowed job duration of %d", allowedJobDuration);
+					formatstr(m_fire_reason, "The job exceeded allowed job duration of %s", format_time_short(allowedJobDuration));
 					return HOLD_IN_QUEUE;
 				}
 			}
@@ -496,7 +497,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
 			if ((time(NULL) - beganExecuting) > allowedExecuteDuration) {
 				m_fire_expr = ATTR_JOB_ALLOWED_EXECUTE_DURATION;
 				m_fire_source = FS_ExecuteDuration;
-				formatstr(m_fire_reason, "The job exceeded allowed execute duration of %d", allowedExecuteDuration);
+				formatstr(m_fire_reason, "The job exceeded allowed execute duration of %s", format_time_short(allowedExecuteDuration));
 				return HOLD_IN_QUEUE;
 			}
 		}

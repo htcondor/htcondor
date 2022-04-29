@@ -79,7 +79,7 @@ CondorUniverseNameUcFirst( int u )
 	}
 }
 
-BOOLEAN
+bool
 universeCanReconnect( int universe )
 {
 	if( universe <= CONDOR_UNIVERSE_MIN || universe >= CONDOR_UNIVERSE_MAX ) {

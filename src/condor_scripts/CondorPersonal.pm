@@ -1561,6 +1561,9 @@ sub StateChange
 				print "StateChange: <$node_name> Master did not exit in $masterlimit seconds. giving up.\n";
 				$condor_instance->DisplayWhoDataInstances();
 				return(0);
+			} else {
+				# We see occasionally condor_off getting lost on Windows.  Let's condor_off again
+				CondorTest::runToolNTimes("condor_off -master -fast",1,0,{expect_result=>\&ANY,emit_output=>0});
 			}
 		}
 		if((($now - $RunningTimeStamp) >= $timelimit) && ($timelimit >= $masterlimit)) {

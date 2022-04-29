@@ -591,7 +591,7 @@ Daemon::makeConnectedSocket( Stream::stream_type st,
 }
 
 StartCommandResult
-Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
+Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	// This function may be either blocking or non-blocking, depending on
 	// the flag that was passed in.
@@ -622,6 +622,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	req.m_cmd = cmd;
 	req.m_sock = *sock;
 	req.m_raw_protocol = raw_protocol;
+	req.m_resume_response = resume_response;
 	req.m_errstack = errstack;
 	req.m_subcmd = subcmd;
 	req.m_callback_fn = callback_fn;
@@ -637,12 +638,13 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 
 
 bool
-Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id )
+Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	SecMan::StartCommandRequest req;
 	req.m_cmd = cmd;
 	req.m_sock = sock;
 	req.m_raw_protocol = raw_protocol;
+	req.m_resume_response = resume_response;
 	req.m_errstack = errstack;
 	req.m_subcmd = subcmd;
 	req.m_callback_fn = nullptr;
@@ -672,12 +674,12 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorErr
 
 
 Sock*
-Daemon::startSubCommand( int cmd, int subcmd, Stream::stream_type st, int timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
+Daemon::startSubCommand( int cmd, int subcmd, Stream::stream_type st, int timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	// This is a blocking version of startCommand.
 	const bool nonblocking = false;
 	Sock *sock = NULL;
-	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,subcmd,NULL,NULL,nonblocking,cmd_description,raw_protocol,sec_session_id);
+	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,subcmd,NULL,NULL,nonblocking,cmd_description,raw_protocol,sec_session_id,resume_response);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return sock;
@@ -697,12 +699,12 @@ Daemon::startSubCommand( int cmd, int subcmd, Stream::stream_type st, int timeou
 
 
 Sock*
-Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
+Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	// This is a blocking version of startCommand.
 	const bool nonblocking = false;
 	Sock *sock = NULL;
-	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,0,NULL,NULL,nonblocking,cmd_description,raw_protocol,sec_session_id);
+	StartCommandResult rc = startCommand(cmd,st,&sock,timeout,errstack,0,NULL,NULL,nonblocking,cmd_description,raw_protocol,sec_session_id,resume_response);
 	switch(rc) {
 	case StartCommandSucceeded:
 		return sock;
@@ -721,23 +723,24 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError*
 }
 
 StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
+Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	// This is a nonblocking version of startCommand.
 	const int nonblocking = true;
 	Sock *sock = NULL;
 	// We require that callback_fn be non-NULL. The startCommand() we call
 	// here does that check.
-	return startCommand(cmd,st,&sock,timeout,errstack,0,callback_fn,misc_data,nonblocking,cmd_description,raw_protocol,sec_session_id);
+	return startCommand(cmd,st,&sock,timeout,errstack,0,callback_fn,misc_data,nonblocking,cmd_description,raw_protocol,sec_session_id,resume_response);
 }
 
 StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
+Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	SecMan::StartCommandRequest req;
 	req.m_cmd = cmd;
 	req.m_sock = sock;
 	req.m_raw_protocol = raw_protocol;
+	req.m_resume_response = resume_response;
 	req.m_errstack = errstack;
 	req.m_subcmd = 0; // no sub-command
 	req.m_callback_fn = callback_fn;
@@ -753,12 +756,13 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError 
 }
 
 bool
-Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id )
+Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	SecMan::StartCommandRequest req;
 	req.m_cmd = cmd;
 	req.m_sock = sock;
 	req.m_raw_protocol = raw_protocol;
+	req.m_resume_response = resume_response;
 	req.m_errstack = errstack;
 	req.m_subcmd = 0; // no sub-command
 	req.m_callback_fn = nullptr;

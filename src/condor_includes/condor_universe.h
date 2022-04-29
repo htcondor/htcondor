@@ -62,7 +62,7 @@ int CondorUniverseInfo( const char* univ_or_topping, int * topping_id, int * is_
 /* return universe or "universe" name given universe id and topping id */
 const char *CondorUniverseOrToppingName( int universe, int topping );
 
-BOOLEAN universeCanReconnect( int universe );
+bool universeCanReconnect( int universe );
 
 #endif
 

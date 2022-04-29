@@ -42,6 +42,7 @@
 #include "ipv6_hostname.h"
 #include "condor_auth_passwd.h"
 #include "condor_auth_ssl.h"
+#include "condor_base64.h"
 #include "globus_utils.h" // for warn_on_gsi_config()
 
 #include <sstream>
@@ -749,6 +750,17 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 	cli_ad.LookupString(attr, &cli_buf);
 	srv_ad.LookupString(attr, &srv_buf);
 
+		// If some attribute is missing (perhaps because it was part of an old
+		// condor version that doesn't support something),
+		// we assume that it means the other side doesn't support it and we
+		// assume that's equivalent to NEVER.
+	if (!cli_buf) {
+		cli_buf = strdup("NEVER");
+	}
+	if (!srv_buf) {
+		srv_buf = strdup("NEVER");
+	}
+
 	// convert it to an enum
 	cli_req = sec_alpha_to_sec_req(cli_buf);
 	srv_req = sec_alpha_to_sec_req(srv_buf);
@@ -845,6 +857,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 	sec_feat_act authentication_action;
 	sec_feat_act encryption_action;
 	sec_feat_act integrity_action;
+
 	bool auth_required = false;
 
 
@@ -887,7 +900,6 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 	action_ad->Assign(ATTR_SEC_ENCRYPTION, SecMan::sec_feat_act_rev[encryption_action]);
 
 	action_ad->Assign(ATTR_SEC_INTEGRITY, SecMan::sec_feat_act_rev[integrity_action]);
-
 
 	char* cli_methods = NULL;
 	char* srv_methods = NULL;
@@ -1003,7 +1015,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 class SecManStartCommand: Service, public ClassyCountedPtr {
  public:
 	SecManStartCommand (
-		int cmd,Sock *sock,bool raw_protocol,
+		int cmd,Sock *sock,bool raw_protocol, bool resume_response,
 		CondorError *errstack,int subcmd,StartCommandCallbackType *callback_fn,
 		void *misc_data,bool nonblocking,char const *cmd_description,char const *sec_session_id_hint,
 		const std::string &owner, const std::vector<std::string> &methods, SecMan *sec_man):
@@ -1019,6 +1031,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		m_pending_socket_registered(false),
 		m_sec_man(*sec_man),
 		m_use_tmp_sec_session(false),
+		m_want_resume_response(resume_response),
 		m_owner(owner),
 		m_methods(methods)
 	{
@@ -1128,6 +1141,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	bool m_use_tmp_sec_session;
 	bool m_already_logged_startcommand;
 	bool m_sock_had_no_deadline;
+	bool m_want_resume_response;
 	ClassAd m_auth_info;
 	SecMan::sec_req m_negotiation;
 	std::string m_remote_version;
@@ -1136,6 +1150,10 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 	std::string m_sec_session_id_hint;
 	std::string m_owner;
 	std::vector<std::string> m_methods;
+
+		// The generated (and received) keys for ECDH (key exchange).
+	std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> m_keyexchange{nullptr, &EVP_PKEY_free};
+	std::string m_server_pubkey;
 
 	enum StartCommandState {
 		SendAuthInfo,
@@ -1188,6 +1206,9 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		// This is where we get called back when a
 		// non-blocking socket operation finishes.
 	int SocketCallback( Stream *stream );
+
+		// Populate the security ad with information necessary for key exchange.
+	bool PopulateKeyExchange();
 };
 
 StartCommandResult
@@ -1208,6 +1229,7 @@ SecMan::startCommand(const StartCommandRequest &req)
 		req.m_cmd,
 		req.m_sock,
 		req.m_raw_protocol,
+		req.m_resume_response,
 		req.m_errstack,
 		req.m_subcmd,
 		req.m_callback_fn,
@@ -1536,6 +1558,67 @@ SecManStartCommand::sendAuthInfo_inner()
 			m_auth_info.Delete(ATTR_SEC_CRYPTO_METHODS);
 		}
 
+		// extract the version attribute current in the classad - it is
+		// the version of the remote side.
+		// With a non-negotiated session, the version of the peer that last
+		// connected to us with this session is a better guide of the
+		// peer's version.
+		// If m_want_resume_response has been set to false (not the default),
+		// respect that request.
+		bool negotiated_session = true;
+		m_auth_info.LookupBool(ATTR_SEC_NEGOTIATED_SESSION, negotiated_session);
+		std::string last_peer_vers;
+		if (!negotiated_session) {
+			last_peer_vers = m_enc_key->getLastPeerVersion();
+		}
+		m_auth_info.LookupString(ATTR_SEC_REMOTE_VERSION, m_remote_version);
+		if (negotiated_session || last_peer_vers.empty()) {
+			if (!m_remote_version.empty()) {
+				CondorVersionInfo ver_info(m_remote_version.c_str());
+				m_sock->set_peer_version(&ver_info);
+				if (m_want_resume_response) {
+					m_want_resume_response = ver_info.built_since_version(9, 9, 0);
+				}
+			} else {
+				m_want_resume_response = false;
+			}
+		} else {
+			CondorVersionInfo ver_info(last_peer_vers.c_str());
+			if (ver_info.built_since_version(9, 9, 0)) {
+				// The socket's peer version will be populated when we
+				// get the server's response.
+			} else {
+				m_want_resume_response = false;
+				// Old servers clear out the socket's peer version if the
+				// cached session ad don't have a version attribute.
+				// Don't set our socket's peer version in that situation,
+				// to maintain symmetry of version info between client and
+				// server.
+				if (!m_remote_version.empty()) {
+					m_sock->set_peer_version(&ver_info);
+				}
+			}
+		}
+
+		if (!param_boolean("SEC_ENABLE_RESUME_SERVER_RESPONSE", true)) {
+			dprintf(D_SECURITY, "SECMAN: Requesting no server response to resume due to configuration\n");
+			m_want_resume_response = false;
+		}
+
+		// If we think we're talking to an old peer that doesn't understand
+		// the server response to a resumed session, say so in our ad.
+		// That way, if we're wrong, we don't get out-of-sync with the server.
+		if (m_is_tcp) {
+			m_auth_info.Assign(ATTR_SEC_RESUME_RESPONSE, m_want_resume_response);
+		}
+
+			// When resuming, always send a nonce; this helps prevent replay attacks.
+		std::unique_ptr<unsigned char, decltype(&free)> random_bytes(Condor_Crypt_Base::randomKey(33), &free);
+		std::unique_ptr<char, decltype(&free)> encoded_bytes(
+			condor_base64_encode(random_bytes.get(), 33, false),
+			&free);
+		m_auth_info.InsertAttr(ATTR_SEC_NONCE, encoded_bytes.get());
+
 			// Ideally, we would only increment our lease expiration time after
 			// verifying that the server renewed the lease on its side.  However,
 			// there is no ACK in the protocol, so we just do it here.  Worst case,
@@ -1576,6 +1659,10 @@ SecManStartCommand::sendAuthInfo_inner()
 			return StartCommandFailed;
 		}
 
+		if (!PopulateKeyExchange()) {
+			return StartCommandFailed;
+		}
+
 		if (IsDebugVerbose(D_SECURITY)) {
 			if( m_use_tmp_sec_session ) {
 				dprintf (D_SECURITY, "SECMAN: using temporary security session for %s.\n", m_session_key.c_str() );
@@ -1590,6 +1677,7 @@ SecManStartCommand::sendAuthInfo_inner()
 			// for now, always open a session for tcp.
 			m_new_session = true;
 			m_auth_info.Assign(ATTR_SEC_NEW_SESSION,"YES");
+			m_auth_info.Assign(ATTR_SEC_NEGOTIATED_SESSION, true);
 		}
 	}
 
@@ -1701,13 +1789,6 @@ SecManStartCommand::sendAuthInfo_inner()
 		}
 
 		ASSERT (m_enc_key == NULL);
-	}
-
-	// extract the version attribute current in the classad - it is
-	// the version of the remote side.
-	if(m_auth_info.LookupString( ATTR_SEC_REMOTE_VERSION, m_remote_version )) {
-		CondorVersionInfo ver_info(m_remote_version.c_str());
-		m_sock->set_peer_version(&ver_info);
 	}
 
 	// fill in our version
@@ -1933,7 +2014,11 @@ SecManStartCommand::sendAuthInfo_inner()
 						"Failed to send auth_info." );
 		return StartCommandFailed;
 	}
+		// Remove ECDH key; we don't need it in the policy.
+	m_auth_info.Delete(ATTR_SEC_ECDH_PUBLIC_KEY);
 
+		// No need to keep the nonce around as it's never used again.
+	m_auth_info.Delete(ATTR_SEC_NONCE);
 
 	if (m_is_tcp) {
 
@@ -1997,6 +2082,9 @@ SecManStartCommand::receiveAuthInfo_inner()
 			if (auth_response.EvaluateAttrString(ATTR_SEC_TRUST_DOMAIN, trust_domain)) {
 				m_sock->setTrustDomain(trust_domain);
 			}
+
+				// Record any pubkeys; will be used later for key derivation.
+			auth_response.EvaluateAttrString(ATTR_SEC_ECDH_PUBLIC_KEY, m_server_pubkey);
 
 				// Get rid of our sinful address in what will become
 				// the session policy ad.  It's there because we sent
@@ -2091,27 +2179,14 @@ SecManStartCommand::authenticate_inner()
 			return StartCommandFailed;
 		}
 
-		// protocol fix:
-		//
-		// up to and including 6.6.0, will_authenticate would be set to true
-		// if we are resuming a session that was authenticated.  this is not
-		// necessary.
-		//
-		// so, as of 6.6.1, if we are resuming a session (as determined
-		// by the expression (!m_new_session), AND the other side is 6.6.1
-		// or higher, we will force will_authenticate to SEC_FEAT_ACT_NO.
-		//
-		// we can tell easily if the other side is 6.6.1 or higher by the
-		// mere presence of the version, since that is when it was added.
-
+		// When resuming an existing security session, will_authenticate
+		// reflects the original decision about whether to authenticate.
+		// We don't want to re-authenticate when resuming, so force
+		// will_authenticate to SEC_FEAT_ACT_NO in that case.
 		if ( will_authenticate == SecMan::SEC_FEAT_ACT_YES ) {
 			if ((!m_new_session)) {
-				if( !m_remote_version.empty() ) {
-					dprintf( D_SECURITY, "SECMAN: resume, other side is %s, NOT reauthenticating.\n", m_remote_version.c_str() );
-					will_authenticate = SecMan::SEC_FEAT_ACT_NO;
-				} else {
-					dprintf( D_SECURITY, "SECMAN: resume, other side is pre 6.6.1, reauthenticating.\n");
-				}
+				dprintf( D_SECURITY, "SECMAN: resume, NOT reauthenticating.\n" );
+				will_authenticate = SecMan::SEC_FEAT_ACT_NO;
 			} else {
 				dprintf( D_SECURITY, "SECMAN: new session, doing initial authentication.\n" );
 			}
@@ -2183,15 +2258,68 @@ SecManStartCommand::authenticate_inner()
 						m_sock->peer_description() );
 			}
 
-		} else {
 			// !m_new_session is equivalent to use_session in this client.
-			if (!m_new_session) {
-				// we are using this key
-				if (m_enc_key && m_enc_key->key()) {
-					m_private_key = new KeyInfo(*(m_enc_key->key()));
-				} else {
-					ASSERT (m_private_key == NULL);
+		} else if (!m_new_session) {
+
+				// AES-GCM mode keeps a checksum of the security handshake; by having
+				// a random nonce in the client and server side, each connection has
+				// a unique header, meaning any attempted replay will fail due to the
+				// incorrect checksum.
+			if (m_want_resume_response) {
+
+				if (m_nonblocking && !m_sock->readReady()) {
+					return WaitForSocketCallback();
 				}
+				ClassAd auth_response;
+				m_sock->decode();
+
+				if (!getClassAd(m_sock, auth_response) ||
+					!m_sock->end_of_message()) {
+
+					dprintf (D_ALWAYS, "SECMAN: Failed to read resume session response classad from server.\n");
+					m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+						"Failed to read resume session response classad from server." );
+					return StartCommandFailed;
+				}
+				if (IsDebugVerbose(D_SECURITY)) {
+					dprintf(D_SECURITY, "SECMAN: server responded to resume session with:\n");
+					dPrintAd(D_SECURITY, auth_response);
+				}
+
+				std::string response_rc;
+				auth_response.LookupString(ATTR_SEC_RETURN_CODE,response_rc);
+				if (response_rc == "SID_NOT_FOUND") {
+					dprintf(D_ALWAYS, "SECMAN: Server rejected our session id\n");
+					m_errstack->push("SECMAN", SECMAN_ERR_NO_SESSION, "Server rejected our session id");
+					bool negotiated_session = true;
+					m_auth_info.LookupBool(ATTR_SEC_NEGOTIATED_SESSION, negotiated_session);
+					if (negotiated_session) {
+						dprintf(D_ALWAYS, "SECMAN: Invalidating negotiated session rejected by peer\n");
+						std::string sid;
+						m_auth_info.LookupString(ATTR_SEC_SID, sid);
+						m_sec_man.invalidateKey(sid.c_str());
+					}
+					return StartCommandFailed;
+				} else if (response_rc != "" && response_rc != "AUTHORIZED") {
+					std::string err_msg;
+					formatstr(err_msg, "Received \"%s\" from server", response_rc.c_str());
+					dprintf(D_ALWAYS, "SECMAN: FAILED: %s\n", err_msg.c_str());
+					m_errstack->push("SECMAN", SECMAN_ERR_AUTHORIZATION_FAILED, err_msg.c_str());
+					return StartCommandFailed;
+				}
+
+				std::string peer_version;
+				if (auth_response.LookupString(ATTR_SEC_REMOTE_VERSION, peer_version)) {
+					CondorVersionInfo ver_info(peer_version.c_str());
+					m_sock->set_peer_version(&ver_info);
+				}
+			}
+
+			// we are using this key
+			if (m_enc_key && m_enc_key->key()) {
+				m_private_key = new KeyInfo(*(m_enc_key->key()));
+			} else {
+				ASSERT (m_private_key == NULL);
 			}
 		}
 	}
@@ -2237,6 +2365,25 @@ SecManStartCommand::authenticate_inner_finish()
 			// We've successfully authenticated; clear out any prior authentication errors
 			// so they don't affect future messages in the stack.
 		m_errstack->clear();
+
+		if (!m_server_pubkey.empty()) {
+			std::string crypto_method;
+			if (!m_auth_info.EvaluateAttrString(ATTR_SEC_CRYPTO_METHODS, crypto_method)) {
+				dprintf(D_SECURITY, "SECMAN: No crypto methods enabled for request from %s.\n", m_sock->peer_description() );
+				return StartCommandFailed;
+			}
+			Protocol method = SecMan::getCryptProtocolNameToEnum(crypto_method.c_str());
+
+			size_t keylen = method == CONDOR_AESGCM ? SEC_SESSION_KEY_LENGTH_V9 : SEC_SESSION_KEY_LENGTH_OLD;
+			std::unique_ptr<unsigned char, decltype(&free)> rbuf(static_cast<unsigned char*>(malloc(keylen)), &free);
+			if (!SecMan::FinishKeyExchange(std::move(m_keyexchange), m_server_pubkey.c_str(), rbuf.get(), keylen, m_errstack)) {
+				dprintf(D_SECURITY, "SECMAN: Failed to generate a symmetric key for session with %s: %s.\n", m_sock->peer_description(), m_errstack->getFullText().c_str());
+				return StartCommandFailed;
+			}
+
+			dprintf (D_SECURITY, "SECMAN: generating %s key for session with %s...\n", crypto_method.c_str(), m_sock->peer_description());
+			m_private_key = new KeyInfo(rbuf.get(), keylen, method, 0);
+		}
 
 		// We must configure encryption before integrity on the socket
 		// when using AES over TCP. If we do integrity first, then ReliSock
@@ -2643,6 +2790,7 @@ SecManStartCommand::DoTCPAuth_inner()
 		DC_AUTHENTICATE,
 		tcp_auth_sock,
 		m_raw_protocol,
+		m_want_resume_response,
 		m_errstack,
 		m_cmd,
 		m_nonblocking ? SecManStartCommand::TCPAuthCallback : NULL,
@@ -2828,6 +2976,192 @@ SecManStartCommand::SocketCallback( Stream *stream )
 	decRefCount();
 
 	return KEEP_STREAM;
+}
+
+
+std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)>
+SecMan::GenerateKeyExchange(CondorError *errstack)
+{
+	std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> pctx(nullptr, &EVP_PKEY_CTX_free);
+	std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> kctx(nullptr, &EVP_PKEY_CTX_free);
+	std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> params(nullptr, &EVP_PKEY_free);
+	std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> pkey(nullptr, &EVP_PKEY_free);
+
+	pctx.reset(EVP_PKEY_CTX_new_id(EVP_PKEY_EC, nullptr));
+	if (!pctx ||
+		1 != EVP_PKEY_paramgen_init(pctx.get()) ||
+		EVP_PKEY_CTX_set_ec_paramgen_curve_nid(pctx.get(), NID_X9_62_prime256v1) <= 0)
+	{
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to allocate a new param context for key exchange.");
+		return pkey;
+	}
+
+	EVP_PKEY *params_raw = nullptr;
+	if (1 != EVP_PKEY_paramgen(pctx.get(), &params_raw)) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to allocate a new parameter object for key exchange.");
+		return pkey;
+	}
+	params.reset(params_raw);
+
+	kctx.reset(EVP_PKEY_CTX_new(params.get(), nullptr));
+	if (!kctx || 1 != EVP_PKEY_keygen_init(kctx.get())) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to setup new key context for key exchange.");
+		return pkey;
+	}
+
+	EVP_PKEY *pkey_raw = nullptr;
+	if (1 != EVP_PKEY_keygen(kctx.get(), &pkey_raw)) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to generate new key for key exchange.");
+		return pkey;
+	}
+	pkey.reset(pkey_raw);
+	return pkey;
+}
+
+
+bool
+SecMan::FinishKeyExchange(std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> mykey,
+	const char *encoded_peerkey, unsigned char *outkey, size_t outlen, CondorError *errstack)
+{
+		// Decode the peer key
+	unsigned char *der_peerkey_raw = nullptr;
+	int peerkey_length = 0;
+	condor_base64_decode(encoded_peerkey, &der_peerkey_raw, &peerkey_length, false);
+	std::unique_ptr<unsigned char, decltype(&free)> der_peerkey(der_peerkey_raw, &free);
+
+		// We must feed d2i_PublicKey a valid EVP_PKEY with the right curve setup.
+
+	std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> ec_key(EC_KEY_new_by_curve_name(NID_X9_62_prime256v1), &EC_KEY_free);
+	if (!ec_key) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to create EC key object for deserialization");
+		return false;
+	}
+	EVP_PKEY *peerkey_raw = EVP_PKEY_new();
+	if (!peerkey_raw) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to create pubkey object for deserialization");
+		return false;
+	}
+	// Note: due to the following bug:
+	// 	https://github.com/openssl/openssl/commit/2aa2beb06cc25c1f8accdc3d87b946205becfd86
+	// d2i_PublicKey is broken until OpenSSL 3.0.  Hence, we use the low-level deserialize...
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	EVP_PKEY_set1_EC_KEY(peerkey_raw, ec_key.get());
+	if (!(peerkey_raw = d2i_PublicKey(EVP_PKEY_base_id(mykey.get()), &peerkey_raw,
+		const_cast<const unsigned char**>(&der_peerkey_raw), peerkey_length))) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to deserialize peer's encoded key");
+		return false;
+	}
+#else
+	EC_KEY *ec_key_copy = ec_key.get();
+	if (!o2i_ECPublicKey(&ec_key_copy, const_cast<const unsigned char**>(&der_peerkey_raw), peerkey_length)) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to deserialize peer's encoded key");
+		return false;
+	}
+	EVP_PKEY_set1_EC_KEY(peerkey_raw, ec_key.get());
+#endif
+	std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> peerkey(peerkey_raw, &EVP_PKEY_free);
+
+		// Initialize the key generation context.
+	std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> ctx(
+		EVP_PKEY_CTX_new(mykey.get(), nullptr),
+		&EVP_PKEY_CTX_free);
+	if (!ctx ||
+		1 != EVP_PKEY_derive_init(ctx.get()) ||
+		1 != EVP_PKEY_derive_set_peer(ctx.get(), peerkey.get())) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to initialize new key generation context.");
+		return false;
+	}
+
+		// Allocate secret
+	unsigned char *secret_raw = nullptr;
+	size_t secret_len = 0;
+	if (1 != EVP_PKEY_derive(ctx.get(), nullptr, &secret_len) ||
+		nullptr == (secret_raw = (unsigned char *)malloc(secret_len)))
+	{
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to allocate new secret buffer for key generation.");
+		return false;
+	}
+	std::unique_ptr<unsigned char, decltype(&free)> secret(secret_raw, &free);
+
+		// Derive shared secret
+	if (1 != EVP_PKEY_derive(ctx.get(), secret.get(), &secret_len)) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to derive new shared secret.");
+		return false;
+	}
+
+		// Derive new key of given length
+	std::unique_ptr<unsigned char, decltype(&free)> shared_key(
+		Condor_Crypt_Base::hkdf(secret.get(), secret_len, outlen),
+		&free
+	);
+	if (!shared_key) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to generate new key from secret.");
+		return false;
+	}
+
+		// Copy the new key to the user-provided buffer.
+	memcpy(outkey, shared_key.get(), outlen);
+	return true;
+}
+
+
+bool
+SecMan::EncodePubkey(const EVP_PKEY *pkey, std::string &encoded_pkey, CondorError *errstack)
+{
+		// Serialize the public key to the DER format
+	unsigned char *der_pubkey = nullptr;
+	int length = i2d_PublicKey(const_cast<EVP_PKEY *>(pkey), &der_pubkey);
+	if (length < 0) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to serialize new key for key exchange.");
+		return false;
+	}
+
+		// Encode the DER bytes into base64
+	char* encoded_pubkey = condor_base64_encode(der_pubkey, length, false);
+	OPENSSL_free(der_pubkey);
+	if (!encoded_pubkey) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to base64 encode new key for key exchange.");
+		return false;
+	}
+	encoded_pkey = encoded_pubkey;
+	free(encoded_pubkey);
+	return true;
+}
+
+
+bool
+SecManStartCommand::PopulateKeyExchange()
+{
+	auto pkey = m_sec_man.GenerateKeyExchange(m_errstack);
+	if (!pkey) {
+		return false;
+	}
+
+	std::string encoded_pubkey;
+	if (!m_sec_man.EncodePubkey(pkey.get(), encoded_pubkey, m_errstack)) return false;
+
+		// Add to the outgoing ClassAd
+	if (!m_auth_info.InsertAttr(ATTR_SEC_ECDH_PUBLIC_KEY, encoded_pubkey)) {
+		m_errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to include pubkey in auth ad.");
+		return false;
+	}
+	m_keyexchange = std::move(pkey);
+	return true;
 }
 
 
@@ -3057,6 +3391,9 @@ SecMan::SecMan() :
 		m_resume_proj.insert(ATTR_SEC_CONNECT_SINFUL);
 		m_resume_proj.insert(ATTR_SEC_COOKIE);
 		m_resume_proj.insert(ATTR_SEC_CRYPTO_METHODS);
+		m_resume_proj.insert(ATTR_SEC_NONCE);
+		m_resume_proj.insert(ATTR_SEC_RESUME_RESPONSE);
+		m_resume_proj.insert(ATTR_SEC_REMOTE_VERSION);
 	}
 
 	if ( NULL == m_ipverify ) {
@@ -3545,7 +3882,7 @@ SecMan::getPreferredOldCryptProtocol(const std::string &name)
 }
 
 bool
-SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input, bool allow_multiple_methods)
+SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input, bool new_session)
 {
 	if (policy_input) {
 		dprintf(D_SECURITY|D_VERBOSE, "NONNEGOTIATEDSESSION: policy_input ad is:\n");
@@ -3594,25 +3931,18 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		return false;
 	}
 
+	policy.Assign(ATTR_SEC_NEGOTIATED_SESSION, false);
+
+	// If this is a brand-new session, record our version
+	if( new_session ) {
+		policy.Assign(ATTR_SEC_REMOTE_VERSION, CondorVersion());
+	}
+
 	std::string crypto_methods;
 	policy.LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_methods);
 
 	// preserve full list
 	policy.Assign(ATTR_SEC_CRYPTO_METHODS_LIST, crypto_methods);
-
-	// ZKM FIXME TODO:
-	// why would we disallow multiple methods?
-	allow_multiple_methods = true;
-
-	// remove all but the first crypto method, if multiple methods
-	// aren't allowed
-	if (!allow_multiple_methods) {
-		size_t pos = crypto_methods.find(',');
-		if( pos != std::string::npos ) {
-			crypto_methods.erase(pos);
-			policy.Assign(ATTR_SEC_CRYPTO_METHODS, crypto_methods);
-		}
-	}
 
 	policy.Assign(ATTR_SEC_USE_SESSION, "YES");
 	policy.Assign(ATTR_SEC_SID, sesid);

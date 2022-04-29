@@ -120,6 +120,13 @@ public:
 		m_raw_protocol=raw_protocol;
 	}
 
+		// Set to false to disable server response when resuming a session.
+		// Kludge to avoid blocking when sending a message with no reply
+		// to an unresponsive server.
+	void setResumeResponse(bool resume_response=true) {
+		m_resume_response = resume_response;
+	}
+
 	void setSecSessionId(char const *sesid=NULL) {
 		m_sec_session_id = sesid ? sesid : "";
 	}
@@ -136,6 +143,7 @@ public:
 	time_t getDeadline() const {return m_deadline;}
 	bool getDeadlineExpired() const;
 	bool getRawProtocol() const {return m_raw_protocol;}
+	bool getResumeResponse() const {return m_resume_response;}
 	char const *getSecSessionId() {
 		return m_sec_session_id.c_str()[0] ? m_sec_session_id.c_str() : NULL;
 	}
@@ -255,6 +263,7 @@ private:
 	int m_timeout;
 	time_t m_deadline;
 	bool m_raw_protocol;
+	bool m_resume_response;
 	std::string m_sec_session_id;
 
 	std::string m_peer_fqu;

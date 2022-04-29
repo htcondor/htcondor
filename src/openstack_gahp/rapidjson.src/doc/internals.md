@@ -114,7 +114,7 @@ Number is a bit more complicated. For normal integer values, it can contains `kI
 
 ## Short-String Optimization {#ShortString}
 
- Kosta (@Kosta-Github) provided a very neat short-string optimization. The optimization idea is given as follow. Excluding the `flags_`, a `Value` has 12 or 16 bytes (32-bit or 64-bit) for storing actual data. Instead of storing a pointer to a string, it is possible to store short strings in these space internally. For encoding with 1-byte character type (e.g. `char`), it can store maximum 11 or 15 characters string inside the `Value` type.
+ [Kosta](https://github.com/Kosta-Github) provided a very neat short-string optimization. The optimization idea is given as follow. Excluding the `flags_`, a `Value` has 12 or 16 bytes (32-bit or 64-bit) for storing actual data. Instead of storing a pointer to a string, it is possible to store short strings in these space internally. For encoding with 1-byte character type (e.g. `char`), it can store maximum 11 or 15 characters string inside the `Value` type.
 
 | ShortString (Ch=char) |                                   |32-bit|64-bit|
 |---------------------|-------------------------------------|:----:|:----:|
@@ -126,7 +126,7 @@ A special technique is applied. Instead of storing the length of string directly
 
 This optimization can reduce memory usage for copy-string. It can also improve cache-coherence thus improve runtime performance.
 
-# Allocator {#Allocator}
+# Allocator {#InternalAllocator}
 
 `Allocator` is a concept in RapidJSON:
 ~~~cpp
@@ -158,7 +158,7 @@ Note that `Malloc()` and `Realloc()` are member functions but `Free()` is static
 
 Internally, it allocates chunks of memory from the base allocator (by default `CrtAllocator`) and stores the chunks as a singly linked list. When user requests an allocation, it allocates memory from the following order:
 
-1. User supplied buffer if it is available. (See [User Buffer section in DOM](dom.md))
+1. User supplied buffer if it is available. (See [User Buffer section in DOM](doc/dom.md))
 2. If user supplied buffer is full, use the current memory chunk.
 3. If the current block is full, allocate a new block of memory.
 
@@ -198,6 +198,20 @@ To enable this optimization, need to define `RAPIDJSON_SSE2` or `RAPIDJSON_SSE42
 ~~~
 
 Note that, these are compile-time settings. Running the executable on a machine without such instruction set support will make it crash.
+
+### Page boundary issue
+
+In an early version of RapidJSON, [an issue](https://code.google.com/archive/p/rapidjson/issues/104) reported that the `SkipWhitespace_SIMD()` causes crash very rarely (around 1 in 500,000). After investigation, it is suspected that `_mm_loadu_si128()` accessed bytes after `'\0'`, and across a protected page boundary.
+
+In [Intel® 64 and IA-32 Architectures Optimization Reference Manual
+](http://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-optimization-manual.html), section 10.2.1:
+
+> To support algorithms requiring unaligned 128-bit SIMD memory accesses, memory buffer allocation by a caller function should consider adding some pad space so that a callee function can safely use the address pointer safely with unaligned 128-bit SIMD memory operations.
+> The minimal padding size should be the width of the SIMD register that might be used in conjunction with unaligned SIMD memory access.
+
+This is not feasible as RapidJSON should not enforce such requirement.
+
+To fix this issue, currently the routine process bytes up to the next aligned address. After tha, use aligned read to perform SIMD processing. Also see [#85](https://github.com/miloyip/rapidjson/issues/85).
 
 ## Local Stream Copy {#LocalStreamCopy}
 

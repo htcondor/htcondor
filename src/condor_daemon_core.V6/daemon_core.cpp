@@ -7196,7 +7196,7 @@ int DaemonCore::Create_Process(
 	if(want_command_port != FALSE)
 	{
 		char* c_session_id = Condor_Crypt_Base::randomHexKey();
-		char* c_session_key = Condor_Crypt_Base::randomHexKey();
+		char* c_session_key = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 
 		session_id.assign(c_session_id);
 		std::string session_key(c_session_key);
@@ -7228,17 +7228,13 @@ int DaemonCore::Create_Process(
 			CONDOR_CHILD_FQU,
 			NULL,
 			0,
-			nullptr);
+			nullptr, true);
 
 		if(!rc)
 		{
 			dprintf(D_ALWAYS, "ERROR: Create_Process failed to create security session for child daemon.\n");
 			goto wrapup;
 		}
-		KeyCacheEntry *entry = NULL;
-		rc = getSecMan()->session_cache->lookup(session_id_c_str,entry);
-		ASSERT( rc && entry && entry->policy() );
-		entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 		IpVerify* ipv = getSecMan()->getIpVerify();
 		std::string id = CONDOR_CHILD_FQU;
 		ipv->PunchHole(ADMINISTRATOR, id);
@@ -9169,15 +9165,11 @@ DaemonCore::Inherit( void )
 				CONDOR_PARENT_FQU,
 				saved_sinful_string.c_str(),
 				0,
-				nullptr);
+				nullptr, false);
 			if(!rc)
 			{
 				dprintf(D_ALWAYS, "Error: Failed to recreate security session in child daemon.\n");
 			}
-			KeyCacheEntry *entry = NULL;
-			rc = getSecMan()->session_cache->lookup(claimid.secSessionId(),entry);
-			ASSERT( rc && entry && entry->policy() );
-			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 			IpVerify* ipv = getSecMan()->getIpVerify();
 			std::string id = CONDOR_PARENT_FQU;
 			ipv->PunchHole(ADMINISTRATOR, id);
@@ -9197,11 +9189,13 @@ DaemonCore::Inherit( void )
 		}
 	}
 
+	bool new_family_session = false;
 	if ( m_family_session_id.empty() ) {
 		if ( m_create_family_session && param_boolean("SEC_USE_FAMILY_SESSION", true) ) {
+			new_family_session = true;
 			dprintf(D_DAEMONCORE, "Creating family security session.\n");
 			char* c_session_id = Condor_Crypt_Base::randomHexKey();
-			char* c_session_key = Condor_Crypt_Base::randomHexKey();
+			char* c_session_key = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 
 			m_family_session_id = "family:";
 			m_family_session_id += c_session_id;
@@ -9224,7 +9218,7 @@ DaemonCore::Inherit( void )
 				CONDOR_FAMILY_FQU,
 				NULL,
 				0,
-				nullptr);
+				nullptr, new_family_session);
 
 		if(!rc) {
 			dprintf(D_ALWAYS, "ERROR: Failed to create family security session.\n");
@@ -9232,10 +9226,6 @@ DaemonCore::Inherit( void )
 			m_family_session_key.clear();
 		} else {
 
-			KeyCacheEntry *entry = NULL;
-			rc = getSecMan()->session_cache->lookup(m_family_session_id.c_str(),entry);
-			ASSERT( rc && entry && entry->policy() );
-			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 			IpVerify* ipv = getSecMan()->getIpVerify();
 			ipv->PunchHole(ADMINISTRATOR, CONDOR_FAMILY_FQU);
 			ipv->PunchHole(DAEMON, CONDOR_FAMILY_FQU);

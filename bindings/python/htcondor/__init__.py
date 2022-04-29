@@ -48,10 +48,25 @@ def _check_for_config():
             _warnings.warn(message)
             _os.environ["CONDOR_CONFIG"] = "/dev/null"
 
+def _add_dll_dir():
+    """
+    On windows for Python 3.8 or later, we have to add the bin directory to the search path for DLLs
+    Because python will no longer use the PATH environment variable to find dlls.
+    We assume here that this file is in $(RELEASE_DIR)\lib\python\htcondor and that the
+    bin directory is relative to it at $(RELEASE_DIR)\bin
+    """
+    if _platform.system() in ["Windows"]:
+        import sys as _sys
+        if _sys.version_info >= (3,8):
+            bin_path = _path.realpath(_path.join(__file__,r'..\..\..\..\bin'))
+            return _os.add_dll_directory(bin_path)
+    return memoryview(b'') # noop context manager
 
 _check_for_config()
 
-from . import htcondor, _lock
+with _add_dll_dir():
+    import classad
+    from . import htcondor, _lock
 
 # get the version using regexp ideally, and fall back to basic string parsing
 try:

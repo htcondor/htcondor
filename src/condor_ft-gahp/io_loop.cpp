@@ -364,7 +364,7 @@ stdin_pipe_handler(int) {
 										CONDOR_PARENT_FQU,
 										NULL,
 										0,
-										nullptr ) ) {
+										nullptr, false ) ) {
 					gahp_output_return_error();
 				} else {
 					sec_session_id = claimid.secSessionId();
