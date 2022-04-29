@@ -101,7 +101,7 @@ int main(int argc, const char ** argv)
 
 	// tell the dprintf code to write to stderr
 	dprintf_output_settings my_output;
-	my_output.choice = (1<<D_ALWAYS) | (1<<D_ERROR);
+	my_output.choice = (1<<D_ALWAYS) | (1<<D_ERROR) | (1<<D_STATUS);
 	my_output.accepts_all = true;
 	my_output.logPath = "2>";
 	my_output.HeaderOpts = D_NOHEADER;

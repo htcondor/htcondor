@@ -52,7 +52,7 @@ int		_condor_dprintf_works = 0;
 
 extern const char * const _condor_DebugCategoryNames[D_CATEGORY_COUNT];
 const char * const _condor_DebugCategoryNames[D_CATEGORY_COUNT] = {
-	"D_ALWAYS", "D_ERROR", "D_STATUS", "D_GENERAL",
+	"D_ALWAYS", "D_ERROR", "D_STATUS", "D_ZKM",
 	"D_JOB", "D_MACHINE", "D_CONFIG", "D_PROTOCOL",
 	"D_PRIV", "D_DAEMONCORE", "D_FULLDEBUG", "D_SECURITY",
 	"D_COMMAND", "D_MATCH", "D_NETWORK", "D_KEYBOARD",
@@ -135,7 +135,8 @@ _condor_parse_merge_debug_flags(
 	// this flag is set when D_FLAG:n syntax is used, 
 	// when true, D_FULLDEBUG is treated strictly as a category and 
 	// not as a verbosity modifier of other flags.
-	bool individual_verbosity = false;
+	// TJ 2022 - disabled secondary meaning of D_FULLDEBUG as a global verbosity modifier
+	bool individual_verbosity = true;
 
 	HeaderOpts |= (flags & ~(D_CATEGORY_RESERVED_MASK | D_FULLDEBUG | D_VERBOSE_MASK));
 
