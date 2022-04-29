@@ -219,12 +219,12 @@ CollectorEngine::invalidateAds(AdTypes adType, ClassAd &query)
 	}
 
 	int count = 0;
-	ClassAd  *ad;
+	CollectorRecord  *record;
 	AdNameHashKey  hk;
 	std::string hkString;
 	(*table).startIterations();
-	while ((*table).iterate (ad)) {
-		if (IsAHalfMatch(&query, ad)) {
+	while ((*table).iterate (record)) {
+		if (IsAHalfMatch(&query, record->m_publicAd)) {
 			(*table).getCurrentKey(hk);
 			hk.sprint(hkString);
 			if ((*table).remove(hk) == -1) {
@@ -235,7 +235,7 @@ CollectorEngine::invalidateAds(AdTypes adType, ClassAd &query)
 				dprintf(D_ALWAYS,
 						"\t\t**** Invalidating ad: \"%s\"\n",
 						hkString.c_str());
-				delete ad;
+				delete record;
 				count++;
 			}
 		}
@@ -244,7 +244,7 @@ CollectorEngine::invalidateAds(AdTypes adType, ClassAd &query)
 	return count;
 }
 
-int (*CollectorEngine::genericTableScanFunction)(ClassAd *) = NULL;
+int (*CollectorEngine::genericTableScanFunction)(CollectorRecord *) = NULL;
 
 int CollectorEngine::
 genericTableWalker(CollectorHashTable *cht)
@@ -254,7 +254,7 @@ genericTableWalker(CollectorHashTable *cht)
 }
 
 int CollectorEngine::
-walkGenericTables(int (*scanFunction)(ClassAd *))
+walkGenericTables(int (*scanFunction)(CollectorRecord *))
 {
 	int ret;
 	genericTableScanFunction = scanFunction;
@@ -264,7 +264,7 @@ walkGenericTables(int (*scanFunction)(ClassAd *))
 }
 
 int CollectorEngine::
-walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
+walkHashTable (AdTypes adType, int (*scanFunction)(CollectorRecord *))
 {
 	//int retval = 1;
 
@@ -295,12 +295,12 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 	}
 
 	// walk the hash table
-	ClassAd *ad;
+	CollectorRecord *record;
 	(*table).startIterations ();
-	while ((*table).iterate (ad))
+	while ((*table).iterate (record))
 	{
 		// call scan function for each ad
-		if (!scanFunction (ad))
+		if (!scanFunction (record))
 		{
 			//retval = 0;
 			break;
@@ -345,11 +345,11 @@ collector_runtime_probe CollectorEngine_rucc_other_runtime;
 #endif
 
 
-ClassAd *CollectorEngine::
+CollectorRecord *CollectorEngine::
 collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 {
-	ClassAd	*clientAd;
-	ClassAd	*rval;
+	ClassAd *clientAd;
+	CollectorRecord *rval;
 
 #ifdef PROFILE_RECEIVE_UPDATE
 	_condor_auto_accum_runtime<collector_runtime_probe> rt(CollectorEngine_ruc_runtime);
@@ -536,10 +536,10 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 
 bool   last_updateClassAd_was_insert;
 
-ClassAd *CollectorEngine::
+CollectorRecord *CollectorEngine::
 collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,Sock *sock)
 {
-	ClassAd		*retVal;
+	CollectorRecord* retVal;
 	ClassAd		*pvtAd;
 	int		insPvt;
 	AdNameHashKey		hk;
@@ -576,7 +576,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
 			insert = -3;
-			retVal = 0;
+			retVal = nullptr;
 			break;
 		}
 		hk.sprint(hashString);
@@ -623,8 +623,8 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 				// Negotiator matches up private ad with public ad by
 				// using the following.
 			if( retVal ) {
-				CopyAttribute( ATTR_MY_ADDRESS, *pvtAd, *retVal );
-				CopyAttribute( ATTR_NAME, *pvtAd, *retVal );
+				CopyAttribute( ATTR_MY_ADDRESS, *pvtAd, *retVal->m_publicAd );
+				CopyAttribute( ATTR_NAME, *pvtAd, *retVal->m_publicAd );
 			}
 
 #ifdef PROFILE_RECEIVE_UPDATE
@@ -914,10 +914,10 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	return retVal;
 }
 
-ClassAd *CollectorEngine::
+CollectorRecord *CollectorEngine::
 lookup (AdTypes adType, AdNameHashKey &hk)
 {
-	ClassAd *val;
+	CollectorRecord *val;
 
 	CollectorHashTable *table;
 	CollectorEngine::HashFunc func;
@@ -946,18 +946,18 @@ int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query, bool *q
 	// making it generic so any would be invalid query can contain these params.
 	if ( LookupByAdType (t_AddType, table, makeKey) )
 	{
-		ClassAd * pAd=0;
+		CollectorRecord* record = nullptr;
 		// try to create a hk from the query ad if it is possible.
 		if ( (*makeKey) (hk, &c_query) ) {
 			if( query_contains_hash_key ) {
 				*query_contains_hash_key = true;
 			}
-			if( table->lookup(hk, pAd) != -1 )
+			if( table->lookup(hk, record) != -1 )
 			{
 				hk.sprint( hkString );
 				iRet = !table->remove(hk);
 				dprintf (D_ALWAYS,"\t\t**** Removed(%d) ad(s): \"%s\"\n", iRet, hkString.c_str() );
-				delete pAd;
+				delete record;
 			}
 		}
 	}
@@ -976,11 +976,11 @@ int CollectorEngine::expire( AdTypes adType, const ClassAd & query, bool * query
         if( (* hFunc)( hKey, & query ) ) {
             if( queryContainsHashKey ) { * queryContainsHashKey = true; }
 
-            ClassAd * cAd = NULL;
-            if( hTable->lookup( hKey, cAd ) != -1 ) {
-                cAd->Assign( ATTR_LAST_HEARD_FROM, 1 );
-                
-                if( CollectorDaemon::offline_plugin_.expire( * cAd ) == true ) {
+            CollectorRecord* record = nullptr;
+            if( hTable->lookup( hKey, record ) != -1 ) {
+                record->m_publicAd->Assign( ATTR_LAST_HEARD_FROM, 1 );
+
+                if( CollectorDaemon::offline_plugin_.expire( * record->m_publicAd ) == true ) {
                     return rVal;
                 }
 
@@ -995,7 +995,7 @@ int CollectorEngine::expire( AdTypes adType, const ClassAd & query, bool * query
                 hKey.sprint( hkString );
                 dprintf( D_ALWAYS, "\t\t**** Removed(%d) stale ad(s): \"%s\"\n", rVal, hkString.c_str() );
 
-                delete cAd;
+                delete record;
             }
         }
     }
@@ -1015,14 +1015,28 @@ remove (AdTypes adType, AdNameHashKey &hk)
 }
 
 void CollectorEngine::
-identifySelfAd(ClassAd * ad)
+identifySelfAd(CollectorRecord * ad)
 {
 	__self_ad__ = (void*)ad;
 }
 
 extern bool   last_updateClassAd_was_insert;
 
-ClassAd * CollectorEngine::
+void
+movePrivateAttrs(ClassAd& dest, ClassAd& src)
+{
+	for (auto itr = src.begin(); itr != src.end(); /* no increment */ ) {
+		if (ClassAdAttributeIsPrivate(itr->first)) {
+			const std::string name = itr->first;
+			ExprTree* expr = src.Remove((itr++)->first);
+			dest.Insert(name, expr);
+		} else {
+			itr++;
+		}
+	}
+}
+
+CollectorRecord * CollectorEngine::
 updateClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
 			   const char *label,
@@ -1032,7 +1046,9 @@ updateClassAd (CollectorHashTable &hashTable,
 			   int  &insert,
 			   const condor_sockaddr& /*from*/ )
 {
+	CollectorRecord* record = nullptr;
 	ClassAd		*old_ad, *new_ad;
+	ClassAd     *old_pvt_ad, *new_pvt_ad;
 	time_t		now;
 
 		// NOTE: LastHeardFrom will already be in ad if we are loading
@@ -1051,8 +1067,11 @@ updateClassAd (CollectorHashTable &hashTable,
 	new_ad = ad;
 	last_updateClassAd_was_insert = false;
 
+	new_pvt_ad = new ClassAd();
+	movePrivateAttrs(*new_pvt_ad, *new_ad);
+
 	// check if it already exists in the hash table ...
-	if ( hashTable.lookup (hk, old_ad) == -1)
+	if ( hashTable.lookup (hk, record) == -1)
 	{
 		// no ... new ad
 		last_updateClassAd_was_insert = true;
@@ -1064,7 +1083,8 @@ updateClassAd (CollectorHashTable &hashTable,
 		}
 
 		// Now, store it away
-		if (hashTable.insert (hk, new_ad) == -1)
+		record = new CollectorRecord(new_ad, new_pvt_ad);
+		if (hashTable.insert (hk, record) == -1)
 		{
 			EXCEPT ("Error inserting ad (out of memory)");
 		}
@@ -1075,24 +1095,19 @@ updateClassAd (CollectorHashTable &hashTable,
 			new_ad->Assign( ATTR_LAST_FORWARDED, (int)time(NULL) );
 		}
 
-		return new_ad;
+		return record;
 	}
 	else
     {
 		// yes ... old ad must be updated
 		dprintf (D_FULLDEBUG, "%s: Updating ... \"%s\"\n", adType, hashString.c_str() );
 
+		old_ad = record->m_publicAd;
+		old_pvt_ad = record->m_pvtAd;
+
 		// Update statistics
 		if (strcmp(label, "StartdPvt") != 0) {
 			collectorStats->update( label, old_ad, new_ad );
-		}
-
-		// Now, finally, store the new ClassAd
-		if (hashTable.remove(hk) == -1) {
-			EXCEPT( "Error removing ad" );
-		}
-		if (hashTable.insert(hk, new_ad) == -1) {
-			EXCEPT( "Error inserting ad" );
 		}
 
 		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "StartdPvt" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
@@ -1122,16 +1137,15 @@ updateClassAd (CollectorHashTable &hashTable,
 			new_ad->Assign( ATTR_LAST_FORWARDED, forward ? (int)time(NULL) : last_forwarded );
 		}
 
-		if (isSelfAd(old_ad)) { __self_ad__ = new_ad; }
-
-		delete old_ad;
+		// Now, finally, store the new ClassAd
+		record->ReplaceAds(new_ad, new_pvt_ad);
 
 		insert = 0;
-		return new_ad;
+		return record;
 	}
 }
 
-ClassAd * CollectorEngine::
+CollectorRecord * CollectorEngine::
 mergeClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
 			   const char * /*label*/,
@@ -1141,12 +1155,12 @@ mergeClassAd (CollectorHashTable &hashTable,
 			   int  &insert,
 			   const condor_sockaddr& /*from*/ )
 {
-	ClassAd		*old_ad = NULL;
+	CollectorRecord* record = nullptr;
 
 	insert = 0;
 
 	// check if it already exists in the hash table ...
-	if ( hashTable.lookup (hk, old_ad) == -1)
+	if ( hashTable.lookup (hk, record) == -1)
     {
 		dprintf (D_ALWAYS, "%s: Failed to merge update for ** \"%s\" because "
 				 "no existing ad matches.\n", adType, hashString.c_str() );
@@ -1166,11 +1180,15 @@ mergeClassAd (CollectorHashTable &hashTable,
 		new_ad_copy.Delete(ATTR_MY_TYPE);
 		new_ad_copy.Delete(ATTR_TARGET_TYPE);
 
+		ClassAd new_pvt_ad;
+		movePrivateAttrs(new_pvt_ad, new_ad_copy);
+
 		// Now, finally, merge the new ClassAd into the old one
-		MergeClassAds(old_ad,&new_ad_copy,true);
+		MergeClassAds(record->m_publicAd, &new_ad_copy, true);
+		MergeClassAds(record->m_pvtAd, &new_pvt_ad, true);
 	}
 	delete new_ad;
-	return old_ad;
+	return record;
 }
 
 
@@ -1245,7 +1263,7 @@ housekeeper()
 void CollectorEngine::
 cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey) const
 {
-	ClassAd         *ad;
+	CollectorRecord *record;
 	int             timeStamp;
 	int             max_lifetime;
 	AdNameHashKey   hk;
@@ -1253,10 +1271,10 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey) con
 	std::string     hkString;
 
 	hashTable.startIterations ();
-	while (hashTable.iterate (ad))
+	while (hashTable.iterate (record))
 	{
 		// Read the timestamp of the ad
-		if (!ad->LookupInteger (ATTR_LAST_HEARD_FROM, timeStamp)) {
+		if (!record->m_publicAd->LookupInteger (ATTR_LAST_HEARD_FROM, timeStamp)) {
 			dprintf (D_ALWAYS, "\t\tError looking up time stamp on ad\n");
 			continue;
 		}
@@ -1264,7 +1282,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey) con
 		// how long has it been since the last update?
 		timeDiff = difftime( now, timeStamp );
 
-		if( !ad->LookupInteger( ATTR_CLASSAD_LIFETIME, max_lifetime ) ) {
+		if( !record->m_publicAd->LookupInteger( ATTR_CLASSAD_LIFETIME, max_lifetime ) ) {
 			max_lifetime = machineUpdateInterval;
 		}
 
@@ -1272,7 +1290,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey) con
 		if ( timeDiff > (double) max_lifetime )
 		{
 			// then remove it from the segregated table
-			(*makeKey) (hk, ad);
+			(*makeKey) (hk, record->m_publicAd);
 			hk.sprint( hkString );
 			if( timeStamp == 0 ) {
 				dprintf (D_ALWAYS,"\t\t**** Removing invalidated ad: \"%s\"\n", hkString.c_str() );
@@ -1283,7 +1301,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey) con
 				   potentially mark the ad absent. if expire() returns false, then delete
 				   the ad as planned; if it return true, it was likely marked as absent,
 				   so then this ad should NOT be deleted. */
-				if ( CollectorDaemon::offline_plugin_.expire( *ad ) == true ) {
+				if ( CollectorDaemon::offline_plugin_.expire( *record->m_publicAd ) == true ) {
 					// plugin say to not delete this ad, so continue
 					continue;
 				} else {
@@ -1294,7 +1312,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey) con
 			{
 				dprintf (D_ALWAYS, "\t\tError while removing ad\n");
 			}
-			delete ad;
+			delete record;
 		}
 	}
 }
@@ -1370,26 +1388,26 @@ CollectorEngine::LookupByAdType(AdTypes adType,
 static void
 purgeHashTable( CollectorHashTable &table )
 {
-	ClassAd* ad;
+	CollectorRecord* record;
 	AdNameHashKey hk;
 	table.startIterations();
-	while( table.iterate(hk,ad) ) {
+	while( table.iterate(hk,record) ) {
 		if( table.remove(hk) == -1 ) {
 			dprintf( D_ALWAYS, "\t\tError while removing ad\n" );
 		}		
-		delete ad;
+		delete record;
 	}
 }
 
 static void
 killHashTable (CollectorHashTable &table)
 {
-	ClassAd *ad;
+	CollectorRecord *record;
 
 	table.startIterations();
-	while (table.iterate (ad))
+	while (table.iterate (record))
 	{
-		delete ad;
+		delete record;
 	}
 }
 
