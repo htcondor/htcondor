@@ -1284,7 +1284,7 @@ subsystem corresponding to the daemon.
         This level provides verbose output of a general nature into the
         log files. Frequent log messages for very specific debugging
         purposes would be excluded. In those cases, the messages would
-        be viewed by having that another flag and ``D_FULLDEBUG`` both
+        be viewed by having that other flag and ``D_FULLDEBUG`` both
         listed in the configuration file.  This is equivalent to ``D_ALWAYS:2``
 
     ``D_DAEMONCORE``

@@ -63,7 +63,7 @@ New Features:
   of other message catagories.  For instance ``D_FULLDEBUG D_SECURITY`` will now select
   debug messages and ``D_SECURITY:1`` messages.  In previous versions it would select debug
   messages and also modify ``D_SECURITY`` to select ``D_SECURITY:2`` messages.   The manual
-  has been updated to explain the use of verbosity modifiers.
+  has been updated to explain the use of verbosity modifiers in :macro:`<SUBSYS>_DEBUG`.
   :jira:`1090`
 
 
