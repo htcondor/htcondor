@@ -1026,7 +1026,7 @@ void
 movePrivateAttrs(ClassAd& dest, ClassAd& src)
 {
 	for (auto itr = src.begin(); itr != src.end(); /* no increment */ ) {
-		if (ClassAdAttributeIsPrivate(itr->first)) {
+		if (ClassAdAttributeIsPrivateAny(itr->first)) {
 			const std::string name = itr->first;
 			ExprTree* expr = src.Remove((itr++)->first);
 			dest.Insert(name, expr);

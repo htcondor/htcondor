@@ -49,6 +49,15 @@ New Features:
 - Singularity jobs can now pull images from docker style repos.
   :jira:`1059`
 
+- Daemons now send a security capability when they advertise themselves
+  to the **condor_collector**.
+  Authorized administrator tools can retrieve this capability from the
+  **condor_collector**, which allows them to send administrative commands
+  to the daemons.
+  This allows the authentication and authorization of administrators of a
+  whole pool to be centralized at the **condor_collector**.
+  :jira:`638`
+
 - Python bindings on Windows have been updated to Python 3.9. Bindings for
   Python 2.7 will no longer be available. If you are building HTCondor
   for Windows yourself, Visual Studio 2022 and Python 3.8, 3.9 and 3.10
@@ -65,7 +74,6 @@ New Features:
   messages and also modify ``D_SECURITY`` to select ``D_SECURITY:2`` messages.   The manual
   has been updated to explain the use of verbosity modifiers in :macro:`<SUBSYS>_DEBUG`.
   :jira:`1090`
-
 
 Bugs Fixed:
 

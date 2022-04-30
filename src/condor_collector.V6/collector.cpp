@@ -846,28 +846,37 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	double begin = condor_gettimestamp_double();
 	List<CollectorRecord> results;
 
-		// If our peer is at least 8.9.3 and has NEGOTIATOR authz, then we'll
-		// trust it to handle our capabilities.
-	bool filter_private_ads = true;
-	auto *verinfo = sock->get_peer_version();
-	if (verinfo && verinfo->built_since_version(8, 9, 3)) {
-		auto addr = static_cast<ReliSock*>(sock)->peer_addr();
-			// Given failure here is non-fatal, do not log at D_ALWAYS.
-		if (static_cast<Sock*>(sock)->isAuthorizationInBoundingSet("NEGOTIATOR") &&
-			(USER_AUTH_SUCCESS == daemonCore->Verify("send private ads", NEGOTIATOR, addr, static_cast<ReliSock*>(sock)->getFullyQualifiedUser(), D_SECURITY|D_FULLDEBUG))) {
-			filter_private_ads = false;
-		}
-	}
-
 	// Pull out relavent state from query_entry
 	pending_query_entry_t *query_entry = (pending_query_entry_t *) in_query_entry;
 	ClassAd *cad = query_entry->cad;
 	bool is_locate = query_entry->is_locate;
 	AdTypes whichAds = query_entry->whichAds;
+	bool wants_pvt_attrs = false;
+
+	cad->LookupBool(ATTR_SEND_PRIVATE_ATTRIBUTES, wants_pvt_attrs);
+
+		// If our peer is at least 8.9.3 and has NEGOTIATOR authz, then we'll
+		// trust it to handle our capabilities.
+	bool filter_private_attrs = true;
+	auto *verinfo = sock->get_peer_version();
+	if (verinfo && verinfo->built_since_version(8, 9, 3) &&
+		(USER_AUTH_SUCCESS == daemonCore->Verify("send private attrs", NEGOTIATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
+	{
+		filter_private_attrs = false;
+	}
+
+		// If our peer has ADMINISTRATOR authz and explicitly asks for
+		// private attributes, then we'll trust it to handle our capabilities
+	if (wants_pvt_attrs &&
+		(USER_AUTH_SUCCESS == daemonCore->Verify("send private attrs", ADMINISTRATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
+	{
+		dprintf(D_SECURITY|D_FULLDEBUG, "Administrator requesting private attributes - will not filter.\n");
+		filter_private_attrs = false;
+	}
 
 		// Always send private attributes in private ads.
 	if (whichAds == STARTD_PVT_AD) {
-		filter_private_ads = false;
+		filter_private_attrs = false;
 	}
 
 	// Perform the query
@@ -903,7 +912,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 
 	while ( (curr_rec=results.Next()) )
 	{
-		ClassAd* ad_to_send = filter_private_ads ? curr_rec->m_publicAd : curr_rec->m_pvtAd;
+		ClassAd* ad_to_send = filter_private_attrs ? curr_rec->m_publicAd : curr_rec->m_pvtAd;
 		// if querying collector ads, and the collectors own ad appears in this list.
 		// then we want to shove in current statistics. we do this by chaining a
 		// temporary stats ad into the ad to be returned, and publishing updated
@@ -919,7 +928,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 			if (stats_config != "stored") {
 				dprintf(D_ALWAYS,"Updating collector stats using a chained ad and config=%s\n", stats_config.c_str());
 				stats_ad = new ClassAd();
-				if (!filter_private_ads) {
+				if (!filter_private_attrs) {
 					stats_ad->CopyFrom(*curr_rec->m_pvtAd);
 				}
 				daemonCore->dc_stats.Publish(*stats_ad, stats_config.c_str());
@@ -980,7 +989,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 	end_write = condor_gettimestamp_double();
 
 	dprintf (D_ALWAYS,
-			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; from=%s; peer=%s; projection={%s}; filter_private_ads=%d\n",
+			 "Query info: matched=%d; skipped=%d; query_time=%f; send_time=%f; type=%s; requirements={%s}; locate=%d; limit=%d; from=%s; peer=%s; projection={%s}; filter_private_attrs=%d\n",
 			 __numAds__,
 			 __failed__,
 			 end_query - begin,
@@ -992,7 +1001,7 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 			 query_entry->subsys,
 			 sock->peer_description(),
 			 projection.c_str(),
-			 filter_private_ads);
+			 filter_private_attrs);
 END:
 	
 	// All done.  Deallocate memory allocated in this method.  Note that DaemonCore 
@@ -1506,6 +1515,7 @@ int CollectorDaemon::query_scanFunc (CollectorRecord *record)
     } else {
 		__failed__++;
 	}
+
     return rc;
 }
 
@@ -2104,6 +2114,14 @@ void CollectorDaemon::sendCollectorAd()
 	//
 	int error = 0;
 	ClassAd * selfAd = new ClassAd(*ad);
+
+		// Administrative security sessions are added directly in the daemon core code; since we
+		// are bypassing DC and invoking collector.collect on the selfAd, invoke it here as well.
+	std::string capability;
+	if (daemonCore->SetupAdministratorSession(1800, capability)) {
+		selfAd->InsertAttr(ATTR_REMOTE_ADMIN_CAPABILITY, capability);
+	}
+
 	CollectorRecord* self_rec = nullptr;
 	if( ! (self_rec = collector.collect( UPDATE_COLLECTOR_AD, selfAd, condor_sockaddr::null, error )) ) {
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to add my own ad to myself (%d).\n", error );

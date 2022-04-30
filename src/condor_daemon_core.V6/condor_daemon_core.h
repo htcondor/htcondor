@@ -475,6 +475,20 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Verify (char const *command_descrip, DCpermission perm, const condor_sockaddr& addr, const char * fqu, int log_level=D_ALWAYS);
+
+	/** Given a socket, check to see whether it has a given permission.
+	    This checks:
+	    - the authentication was done with an appropriate settings and methods.
+	    - any permission limits on the authentication (such as used with fine-grained tokens)
+	      are applied correctly.
+	    - the user / IP address has authorization (e.g., applies ALLOW_* / DENY_* from the IpVerify
+	      class).
+
+	    The `command_descrip` is used to generate a useful logging message on an authorization allowed
+	    or denied; log_level controls how "loud" the log message is.
+	 */
+    int Verify (char const *command_descrip, DCpermission perm, const Sock &sock, int log_level=D_ALWAYS);
+
     int AddAllowHost( const char* host, DCpermission perm );
 
     /** clear all sessions associated with the child 
@@ -1654,7 +1668,7 @@ class DaemonCore : public Service
 
 	DCCollectorAdSequences & getUpdateAdSeq() { return m_collector_list->getAdSeq(); }
 
-	bool getStartTime(int & startTime);
+	time_t getStartTime() const {return m_startup_time;}
 
 		/**
 		   Indicates if this daemon wants to be restarted by its
@@ -1790,6 +1804,16 @@ class DaemonCore : public Service
 	} dc_stats;
 
 	bool wants_dc_udp_self() const { return m_wants_dc_udp_self;}
+
+		// Create a session that permits a remote entity to be an administrator
+		// of this daemon.
+		// - duration: Lifetime of the session.
+		// - capability (output): Resulting serialized session string.
+		// - Return: true on success.
+		// This is public so the collector process can invoke this directly for
+		// its selfAd.
+	bool SetupAdministratorSession(unsigned duration, std::string &capability);
+
   private:      
 
 		// do and our parents/children want/have a udp comment socket?
@@ -2352,6 +2376,15 @@ class DaemonCore : public Service
 	void InitSharedPort(bool in_init_dc_command_socket=false);
 
 	std::string m_inherit_parent_sinful;
+
+		// Enable remote administration for this daemon.
+	void SetRemoteAdmin(bool remote_admin);
+
+	static unsigned m_remote_admin_seq;
+	static time_t m_startup_time;
+	bool m_enable_remote_admin{false};
+	time_t m_remote_admin_last_time{0};
+	std::string m_remote_admin_last;
 };
 
 /**
