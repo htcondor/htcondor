@@ -110,6 +110,11 @@ for REQUEST; do
         fi
     fi
     STOREOPTS=()
+    if [ -n "$SEC_CREDENTIAL_STORECRED_OPTS" ]; then
+        for OPT in $SEC_CREDENTIAL_STORECRED_OPTS; do
+            STOREOPTS+=($OPT)
+        done
+    fi
     for PART in "${PARTS[@]:1}"; do
         VAL="${PART#*=}"
         case "$PART" in
@@ -169,10 +174,14 @@ but make sure no other job is using them."
         mv $TMPFILE $BTOKEN
     fi
 
-    if ! [[ "$CRED" =~ ^s\..* ]]; then
-        # No new vault token was generated
-        continue
-    fi 
+    CREDLINES="$(echo "$CRED"|wc -l)"
+    case $CREDLINES in
+        1)  # No new vault token was generated
+            continue;;
+        2)  # First line is new vault token, second line is bearer URL
+            ;;
+        *)  fatal "Unexpected number of stdout lines from htgettoken: $CREDLINES";;
+    esac
 
     # A new long-duration vault token was received, followed by bearer URL
     # Exchange vault token for a shorter duration vault token on disk
