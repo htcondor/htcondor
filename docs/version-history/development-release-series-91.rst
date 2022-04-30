@@ -4,6 +4,17 @@ Version 9 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 9.10.0
+--------------
+
+New Features:
+
+- SSL authentication will automatically be configured in the **condor_collector**,
+  providing a mechanism to more easily bootstrap secure authentication within the
+  pool.  Tools will allow users to setup trust with the generated CA similarly to
+  how SSH enables trust on first use of a remote host.
+  :jira:`501`
+
 Version 9.9.0
 -------------
 

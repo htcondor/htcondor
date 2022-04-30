@@ -9243,6 +9243,30 @@ macros are described in the :doc:`/admin-manual/security` section.
     When ``True``, this check is skipped, and hosts will not be rejected due
     to a mismatch of certificate and host name.
 
+:macro-def:`TRUST_DOMAIN_CAFILE`
+    A path specifying the location of the CA the collector will automatically
+    generate.  This CA will be used to generate a host certificate and key
+    if one isn't provided in ``AUTH_SSL_SERVER_KEYFILE`` :index:`AUTH_SSL_SERVER_KEYFILE`.
+    On Linux, this defaults to ``/etc/condor/trust_domain_ca.pem``.
+
+:macro-def:`TRUST_DOMAIN_CAKEY`
+    A path specifying the location of the private key for the CA generated at
+    ``TRUST_DOMAIN_CAFILE``.  On Linux, this defaults ``/etc/condor/trust_domain_ca_privkey.pem``.
+
+:macro-def:`BOOTSTRAP_SSL_SERVER_TRUST`
+    A boolean variable controlling whether tools and daemons automatically trust
+    the SSL host certificate presented on first authentication.  When the
+    default of ``false`` is set, daemons only trust host certificates from known
+    CAs and tools prompt the user for confirmation if the certificate is not trusted.
+    After the first authentication, the method and certificate are persisted to a
+    ``known_hosts`` file; subsequent authentications will succeed only if the certificate
+    is unchanged from the one in the ``known_hosts`` file.
+
+:macro-def:`SEC_SYSTEM_KNOWN_HOSTS`
+    The location of the ``known_hosts`` file for daemon authentication.  This defaults
+    to ``/etc/condor/known_hosts`` on Linux.  Tools will always save their ``known_hosts``
+    file inside ``$HOME/.condor``.
+
 :macro-def:`CERTIFICATE_MAPFILE`
     A path and file name of the unified map file.
 
