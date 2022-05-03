@@ -64,6 +64,8 @@ class KeyCacheEntry {
 	void                  setLingerFlag(bool flag) { _lingering = flag; }
 	bool                  getLingerFlag() const { return _lingering; }
 	bool                  setPreferredProtocol(Protocol preferred);
+	void                  setLastPeerVersion(const std::string& version) { _last_peer_version = version; }
+	std::string           getLastPeerVersion() const { return _last_peer_version; }
 
 	void                  renewLease();
  private:
@@ -81,6 +83,7 @@ class KeyCacheEntry {
 	bool                 _lingering; // true if session only exists
 	                                 // to catch lingering communication
 	Protocol             _preferred_protocol;
+	std::string          _last_peer_version;
 };
 
 

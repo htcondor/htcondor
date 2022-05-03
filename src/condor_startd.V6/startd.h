@@ -66,7 +66,6 @@ class Resource;
 #include "ResMgr.h"
 #include "command.h"
 #include "util.h"
-#include "starter_mgr.h"
 #include "cod_mgr.h"
 #include "startd_cron_job_mgr.h"
 #include "startd_bench_job_mgr.h"

@@ -40,7 +40,7 @@ enum {
    D_ALWAYS = 0,
    D_ERROR,
    D_STATUS,
-   D_GENERAL,
+   D_ZKM,
    D_JOB,
    D_MACHINE,
    D_CONFIG,

@@ -926,8 +926,7 @@ sumAvg(const char *name, const ArgumentList &argList,
 			if (!listElement->Evaluate(state, listElementValue)) {
 				val.SetErrorValue();
 				return false;
-			} else if (   !listElementValue.IsRealValue() 
-						  && !listElementValue.IsIntegerValue()) {
+			} else if (!listElementValue.IsNumber()) {
 				val.SetErrorValue();
 				return true;
 			}
@@ -1014,8 +1013,7 @@ minMax(const char *fn, const ArgumentList &argList,
 			if(!listElement->Evaluate(state, listElementValue)) {
 				val.SetErrorValue();
 				return false;
-			} else if (   !listElementValue.IsRealValue() 
-						  && !listElementValue.IsIntegerValue()) {
+			} else if (!listElementValue.IsNumber()) {
 				val.SetErrorValue();
 				return true;
 			}

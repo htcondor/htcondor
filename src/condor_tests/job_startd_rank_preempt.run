@@ -43,6 +43,7 @@ print SUBMIT "universe = vanilla\n";
 print SUBMIT "executable = x_sleep.pl\n";
 print SUBMIT "arguments = 600\n";
 print SUBMIT "notification = never\n";
+print SUBMIT "priority = 100\n";
 print SUBMIT "queue\n";
 close( SUBMIT );
 
@@ -50,8 +51,7 @@ my $normal_jobid = Condor::Submit($normal_submit);
 
 my $append_submit_info = '
 +TimeSensitive = true
-# this forces the negotiator to start the other job first
-accounting_group = nice-user
+priority = 1
 ';
 
 # verify that a time sensitive job runs

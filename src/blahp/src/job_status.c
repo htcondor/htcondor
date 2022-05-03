@@ -185,10 +185,11 @@ get_status(const char *jobDesc, classad_context *cad, char **deleg_parameters, c
 		}
 		else
 		{
-			tmpcad = classad_parse(cad_str[i]);                       
+			tmpcad = classad_parse(cad_str[i]);
 			if (tmpcad == NULL)
 			{
 				strncpy((error_str[i]), "Error allocating memory", ERROR_MAX_LEN);
+				job_registry_free_split_id(spid);
 				return(1);
 			}
 			cad[i] = tmpcad;

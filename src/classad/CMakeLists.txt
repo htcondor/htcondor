@@ -21,22 +21,46 @@ cmake_minimum_required(VERSION 3.8)
 
 if ( UNIX )
   # set external reference to the shared library for linux
+  # Note: classad without the s means "shared"
   set (CLASSADS_FOUND classad)
 else()
   # set external reference to the static library for non-linux
+  # Note: classads with an s means "static"
   set (CLASSADS_FOUND classads)
 endif()
 
-# Condor including us will set PACKAGE_VERSION
-# If we build standalone, set it to some value
-if (NOT PACKAGE_VERSION)
-
+# The canonical way to say this is a standalone cmake,
+# not included by the higher level HTCondor
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+	# A random default
 	set(PACKAGE_VERSION "1.0.0")
+	set(CPACK_PACKAGE_VERSION_MAJOR "1")
+	set(CPACK_PACKAGE_VERSION_MINOR "0")
+	set(CPACK_PACKAGE_VERSION_PATCH "0")
+
+	set(CPACK_PACKAGE_VENDOR "Center for High Throughput Computing")
+	set(CPACK_INSTALL_PREFIX "/")
+
+	set (CPACK_PACKAGE_NAME "classads")
+	set (CPACK_SET_DESTDIR OFF)
+	#set (CPACK_INSTALL_PREFIX "/")
+
 
 	# Should use find_package here for either case
 	set(PCRE_INCLUDE /usr/include)
 	set(PCRE_FOUND -lpcre)
 	set(HAVE_PCRE_H TRUE)
+
+	set(C_BIN bin)
+	set(C_LIB_PUBLIC lib/condor)
+	set(C_INCLUDE_PUBLIC include/condor)
+
+	# This avoids quoting bugs in cpack.
+	# CPack can't have it on by default because of backward compatibility
+	set (CPACK_VERBATIM_VARIABLES ON)
+
+	# and away we go...
+	include (CPack)
 
 else()
 
@@ -201,4 +225,3 @@ if (NOT PROPER)
   endif()
 
 endif(NOT PROPER)
-

@@ -36,7 +36,8 @@ DCMsg::DCMsg(int cmd):
 	m_stream_type( Stream::reli_sock ),
 	m_timeout( DEFAULT_CEDAR_TIMEOUT ),
 	m_deadline( 0 ),
-	m_raw_protocol( false )
+	m_raw_protocol( false ),
+	m_resume_response( true )
 {
 	setDeadlineTime(time(NULL)+DEFAULT_SHORT_COMMAND_DEADLINE);
 }
@@ -358,7 +359,8 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 		this,
 		msg->name(),
 		msg->getRawProtocol(),
-		msg->getSecSessionId());
+		msg->getSecSessionId(),
+		msg->getResumeResponse());
 
 	// TODO: Brian - get rid if this code and do the right thing to propagate these...
 	if (m_callback_sock) {
@@ -378,7 +380,8 @@ DCMessenger::sendBlockingMsg( classy_counted_ptr<DCMsg> msg )
 		&msg->m_errstack,
 		msg->name(),
 		msg->getRawProtocol(),
-		msg->getSecSessionId());
+		msg->getSecSessionId(),
+		msg->getResumeResponse());
 
 	if( !sock ) {
 		msg->callMessageSendFailed( this );

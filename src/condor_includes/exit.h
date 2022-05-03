@@ -43,7 +43,7 @@
 /* The job exited (not killed) */
 #define JOB_EXITED		(0 + EXIT_CODE_OFFSET)
 
-/* The job was checkpointed */
+/* The job was checkpointed (UNUSED) */
 #define JOB_CKPTED		(1 + EXIT_CODE_OFFSET)
 
 /* The job was killed */
@@ -64,8 +64,8 @@
 /* incorrect arguments to condor_shadow */
 #define JOB_SHADOW_USAGE (6 + EXIT_CODE_OFFSET)
 
-/* The job was kicked off without a checkpoint */
-#define JOB_NOT_CKPTED	(7 + EXIT_CODE_OFFSET)
+/* The job was kicked off without a checkpoint (renamed) */
+//#define JOB_NOT_CKPTED	(7 + EXIT_CODE_OFFSET)
 
 /* We define this to the same number, since we want the same behavior.
    However, "JOB_NOT_CKPTED" doesn't mean much if we're not a standard
@@ -77,13 +77,13 @@
 /* Can't connect to startd or request refused */
 #define JOB_NOT_STARTED	(8 + EXIT_CODE_OFFSET)
 
-/* Job status != RUNNING on startup */
+/* Job status != RUNNING on startup (UNUSED) */
 #define JOB_BAD_STATUS	(9 + EXIT_CODE_OFFSET)
 
-/* Exec failed for some reason other than ENOMEM */
+/* Exec failed for some reason other than ENOMEM (UNUSED) */
 #define JOB_EXEC_FAILED (10 + EXIT_CODE_OFFSET)
 
-/* There is no checkpoint file (lost) */
+/* There is no checkpoint file (lost) (UNUSED) */
 #define JOB_NO_CKPT_FILE (11 + EXIT_CODE_OFFSET)
 
 /* The job should be put on hold */

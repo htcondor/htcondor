@@ -266,7 +266,6 @@ int
 CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 {
 	std::string err_msg;
-	ClassAd *mach_classad = rip->r_classad;
 
 	switch( claim->state() ) {
 	case CLAIM_IDLE:
@@ -288,29 +287,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 		break;
 	}
 
-		// first, we have to find a Starter that matches the request
-	Starter* tmp_starter;
-	bool no_starter = false;
-	tmp_starter = resmgr->starter_mgr.newStarter( req, mach_classad, no_starter );
-	if( ! tmp_starter ) {
-		ExprTree *tree;
-		tree = req->LookupExpr( ATTR_REQUIREMENTS );
-		if( ! tree ) {
-			err_msg = "Request does not contain ";
-			err_msg += ATTR_REQUIREMENTS;
-			err_msg += ", cannot find a valid starter to activate";
-			return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
-								   CA_INVALID_REQUEST, err_msg.c_str() ); 
-		}
-		err_msg = "Cannot find starter that satisfies requirements '";
-		err_msg += ExprTreeToString( tree );
-		err_msg += "'";
-		if( no_starter ) {
-			err_msg += " because no valid starter is installed";
-		}
-		return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
-							   CA_INVALID_REQUEST, err_msg.c_str() );
-	}
+	Starter* tmp_starter = new Starter;
 
 		// verify the ClassAd to make sure it's got what we need to
 		// spawn the COD job 

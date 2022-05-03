@@ -475,6 +475,8 @@ SetImageSize >> SetRequirements
 SetTransferFiles >> SetRequirements
 SetEncryptExecuteDir >> SetRequirements
 
+SetGridParams >> SetRequestResources
+
 */
 
 SubmitHash::SubmitHash()
@@ -502,6 +504,7 @@ SubmitHash::SubmitHash()
 	, JobIwdInitialized(false)
 	, IsDockerJob(false)
 	, IsContainerJob(false)
+	, HasRequireResAttr(false)
 	, JobDisableFileChecks(false)
 	, SubmitOnHold(false)
 	, SubmitOnHoldCode(0)
@@ -509,6 +512,9 @@ SubmitHash::SubmitHash()
 	, already_warned_requirements_mem(false)
 	, already_warned_job_lease_too_small(false)
 	, already_warned_notification_never(false)
+	, already_warned_require_gpus(false)
+	, UseDefaultResourceParams(true)
+	, s_method(1)
 {
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();
@@ -1145,7 +1151,7 @@ const char * init_submit_default_macros()
 	return ret;
 }
 
-void SubmitHash::init()
+void SubmitHash::init(int value)
 {
 	clear();
 	SubmitMacroSet.sources.push_back("<Detected>");
@@ -1156,9 +1162,12 @@ void SubmitHash::init()
 	// in case this hasn't happened already.
 	init_submit_default_macros();
 
+	s_method = value;
+
 	JobIwd.clear();
 	mctx.cwd = NULL;
 }
+
 
 void SubmitHash::clear()
 {
@@ -1626,15 +1635,6 @@ int SubmitHash::SetEnvironment()
 		ABORT_AND_RETURN(1);
 	}
 
-		// For standard universe, we set a special environment variable to tell it to skip the
-	// check that the exec was linked with the standard universe runtime. The usual reason
-	// to do that is that the executable is a script
-	if (JobUniverse == CONDOR_UNIVERSE_STANDARD) {
-		if (submit_param_bool(SUBMIT_CMD_AllowStartupScript, SUBMIT_CMD_AllowStartupScriptAlt, false)) {
-			envobject.SetEnv("_CONDOR_NOCHECK", "1");
-		}
-	}
-
 	// if getenv == TRUE, merge the variables from the user's environment that
 	// are not already set in the envobject
 	auto_free_ptr envlist(submit_param(SUBMIT_CMD_GetEnvironment, SUBMIT_CMD_GetEnvironmentAlt));
@@ -1859,15 +1859,9 @@ int SubmitHash::SetRank()
 		}
 	} else {
 
-		switch (JobUniverse) {
-		case CONDOR_UNIVERSE_STANDARD:
-			default_rank.set(param("DEFAULT_RANK_STANDARD"));
-			append_rank.set(param("APPEND_RANK_STANDARD"));
-			break;
-		case CONDOR_UNIVERSE_VANILLA:
+		if (JobUniverse == CONDOR_UNIVERSE_VANILLA) {
 			default_rank.set(param("DEFAULT_RANK_VANILLA"));
 			append_rank.set(param("APPEND_RANK_VANILLA"));
-			break;
 		}
 
 		// If they're not yet defined, or they're defined but empty,
@@ -2122,14 +2116,6 @@ int SubmitHash::SetMaxJobRetirementTime()
 	auto_free_ptr value(submit_param(SUBMIT_KEY_MaxJobRetirementTime, ATTR_MAX_JOB_RETIREMENT_TIME));
 	if (value) {
 		AssignJobExpr(ATTR_MAX_JOB_RETIREMENT_TIME, value.ptr());
-	} else if (JobUniverse == CONDOR_UNIVERSE_STANDARD) {
-		// Regardless of the startd graceful retirement policy,
-		// nice_user and standard universe jobs that do not specify
-		// otherwise will self-limit their retirement time to 0.  So
-		// the user plays nice by default, but they have the option to
-		// override this (assuming, of course, that the startd policy
-		// actually gives them any retirement time to play with).
-		AssignJobVal(ATTR_MAX_JOB_RETIREMENT_TIME, 0);
 	}
 	return 0;
 }
@@ -2281,18 +2267,6 @@ int SubmitHash::SetNoopJob()
 	}
 
 	return 0;
-}
-
-int SubmitHash::SetWantRemoteIO()
-{
-	RETURN_IF_ABORT();
-
-	bool param_exists;
-	bool remote_io = submit_param_bool( SUBMIT_KEY_WantRemoteIO, ATTR_WANT_REMOTE_IO, true, &param_exists );
-	RETURN_IF_ABORT();
-
-	AssignJobVal(ATTR_WANT_REMOTE_IO, remote_io);
-	return abort_code;
 }
 
 #endif // above code is obsolete, kept temporarily for reference
@@ -2739,9 +2713,6 @@ int SubmitHash::SetKillSig()
 	RETURN_IF_ABORT();
 	if( ! sig_name ) {
 		switch(JobUniverse) {
-		case CONDOR_UNIVERSE_STANDARD:
-			sig_name = strdup( "SIGTSTP" );
-			break;
 		case CONDOR_UNIVERSE_VANILLA:
 			// Don't define sig_name for Vanilla Universe
 			sig_name = NULL;
@@ -3108,6 +3079,11 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
+	if( (tmp = submit_param(SUBMIT_KEY_ArcApplication, ATTR_ARC_APPLICATION)) ) {
+		AssignJobString(ATTR_ARC_APPLICATION, tmp);
+		free( tmp );
+	}
+
 	if( (tmp = submit_param(SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS)) ) {
 		AssignJobString ( ATTR_BATCH_EXTRA_SUBMIT_ARGS, tmp );
 		free( tmp );
@@ -3126,6 +3102,11 @@ int SubmitHash::SetGridParams()
 	if( (tmp = submit_param(SUBMIT_KEY_BatchRuntime, ATTR_BATCH_RUNTIME)) ) {
 		AssignJobExpr ( ATTR_BATCH_RUNTIME, tmp );
 		free( tmp );
+	}
+
+	// blahp jobs don't get default request resource values from config.
+	if (gridType == "batch") {
+		UseDefaultResourceParams = false;
 	}
 
 	//
@@ -3637,15 +3618,6 @@ int SubmitHash::SetAutoAttributes()
 		AssignJobVal(ATTR_CURRENT_HOSTS, 0);
 	}
 
-	// standard universe wants syscalls and checkpointing. other universes do not.
-	// PRAGMA_REMIND("do we remove this as part of removing STANDARD universe?")
-	if ( ! job->Lookup(ATTR_WANT_REMOTE_SYSCALLS)) {
-		AssignJobVal(ATTR_WANT_REMOTE_SYSCALLS, JobUniverse == CONDOR_UNIVERSE_STANDARD);
-	}
-	if (! job->Lookup(ATTR_WANT_CHECKPOINT)) {
-		AssignJobVal(ATTR_WANT_CHECKPOINT, JobUniverse == CONDOR_UNIVERSE_STANDARD);
-	}
-
 	// The starter ignores ATTR_CHECKPOINT_EXIT_CODE if ATTR_WANT_FT_ON_CHECKPOINT isn't set.
 	if (job->Lookup(ATTR_CHECKPOINT_EXIT_CODE)) {
 		AssignJobVal(ATTR_WANT_FT_ON_CHECKPOINT, true);
@@ -3660,9 +3632,9 @@ int SubmitHash::SetAutoAttributes()
 	if ( ! job->Lookup(ATTR_MAX_JOB_RETIREMENT_TIME)) {
 		bool is_nice = false;
 		job->LookupBool(ATTR_NICE_USER_deprecated, is_nice);
-		if (is_nice || (JobUniverse == CONDOR_UNIVERSE_STANDARD)) {
+		if (is_nice) {
 			// Regardless of the startd graceful retirement policy,
-			// nice_user and standard universe jobs that do not specify
+			// nice_user jobs that do not specify
 			// otherwise will self-limit their retirement time to 0.  So
 			// the user plays nice by default, but they have the option to
 			// override this (assuming, of course, that the startd policy
@@ -3705,11 +3677,6 @@ int SubmitHash::SetAutoAttributes()
 		AssignJobVal(ATTR_JOB_PRIO, 0);
 	}
 
-	// formerly SetWantRemoteIO
-	if ( ! job->Lookup(ATTR_WANT_REMOTE_IO)) {
-		AssignJobVal(ATTR_WANT_REMOTE_IO, true);
-	}
-
 #if 1 // hacks to make it easier to see unintentional differences
 	#ifdef NO_DEPRECATE_NICE_USER
 	// formerly SetNiceUser
@@ -3723,25 +3690,6 @@ int SubmitHash::SetAutoAttributes()
 		AssignJobVal(ATTR_ENCRYPT_EXECUTE_DIRECTORY, false);
 	}
 #endif
-
-	// Standard universe needs BufferSize and BufferBlockSize
-	if (JobUniverse == CONDOR_UNIVERSE_STANDARD) {
-		if ( ! job->Lookup(ATTR_BUFFER_SIZE)) {
-			auto_free_ptr tmp(param("DEFAULT_IO_BUFFER_SIZE"));
-			if ( ! tmp) {
-				tmp = strdup("524288");
-			}
-			AssignJobExpr(ATTR_BUFFER_SIZE, tmp);
-		}
-
-		if ( ! job->Lookup(ATTR_BUFFER_BLOCK_SIZE)) {
-			auto_free_ptr tmp(param("DEFAULT_IO_BUFFER_BLOCK_SIZE"));
-			if ( ! tmp) {
-				tmp = strdup("32768");
-			}
-			AssignJobExpr(ATTR_BUFFER_BLOCK_SIZE, tmp);
-		}
-	}
 
 	return abort_code;
 }
@@ -4601,41 +4549,6 @@ int SubmitHash::SetExecutable()
 	}
 
 	AssignJobVal (ATTR_CURRENT_HOSTS, 0);
-
-	switch(JobUniverse) 
-	{
-	case CONDOR_UNIVERSE_STANDARD:
-		AssignJobVal (ATTR_WANT_REMOTE_SYSCALLS, true);
-		AssignJobVal (ATTR_WANT_CHECKPOINT, true);
-		break;
-	case CONDOR_UNIVERSE_MPI:  // for now
-		/*
-		if(!use_condor_mpi_universe) {
-			push_error(stderr, "mpi universe no longer suppported. Please use parallel universe.\n"
-					"You can submit mpi jobs using parallel universe. Most likely, a substitution of\n"
-					"\nuniverse = parallel\n\n"
-					"in place of\n"
-					"\nuniverse = mpi\n\n"
-					"in you submit description file will suffice.\n"
-					"See the HTCondor Manual Parallel Applications section (2.9) for further details.\n");
-			ABORT_AND_RETURN( 1 );
-		}
-		*/
-		//Purposely fall through if use_condor_mpi_universe is true
-	case CONDOR_UNIVERSE_VANILLA:
-	case CONDOR_UNIVERSE_LOCAL:
-	case CONDOR_UNIVERSE_SCHEDULER:
-	case CONDOR_UNIVERSE_PARALLEL:
-	case CONDOR_UNIVERSE_GRID:
-	case CONDOR_UNIVERSE_JAVA:
-	case CONDOR_UNIVERSE_VM:
-		AssignJobVal (ATTR_WANT_REMOTE_SYSCALLS, false);
-		AssignJobVal (ATTR_WANT_CHECKPOINT, false);
-		break;
-	default:
-		push_error(stderr, "Unknown universe %d (%s)\n", JobUniverse, CondorUniverseName(JobUniverse) );
-		ABORT_AND_RETURN( 1 );
-	}
 #endif
 
 
@@ -4790,15 +4703,6 @@ int SubmitHash::SetUniverse()
 		}
 		return 0;
 	}
-
-	if (JobUniverse == CONDOR_UNIVERSE_STANDARD) {
-		push_error(stderr, "You are trying to submit a \"%s\" job to Condor. "
-				 "However, this installation of Condor does not support the "
-				 "Standard Universe.\n%s\n%s\n",
-				 univ.ptr(), CondorVersion(), CondorPlatform() );
-		ABORT_AND_RETURN( 1 );
-	};
-
 
 	// "globus" or "grid" universe
 	if (JobUniverse == CONDOR_UNIVERSE_GRID) {
@@ -5046,8 +4950,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	// formerly SetPrio
 	{SUBMIT_KEY_Priority, ATTR_JOB_PRIO, SimpleSubmitKeyword::f_as_int},
 	{SUBMIT_KEY_Prio, ATTR_JOB_PRIO, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name},
-	// formerly SetWantRemoteIO
-	{SUBMIT_KEY_WantRemoteIO, ATTR_WANT_REMOTE_IO, SimpleSubmitKeyword::f_as_bool},
 	// formerly SetRunAsOwner
 	{SUBMIT_KEY_RunAsOwner, ATTR_JOB_RUNAS_OWNER, SimpleSubmitKeyword::f_as_bool},
 	// formerly SetTransferFiles
@@ -5190,8 +5092,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_CMD_AllowEnvironmentV1, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_env},
 	{SUBMIT_CMD_GetEnvironment, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_env},
 	{SUBMIT_CMD_GetEnvironmentAlt, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_env},
-	{SUBMIT_CMD_AllowStartupScript, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_env},
-	{SUBMIT_CMD_AllowStartupScriptAlt, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_env},
 
 	// invoke SetNotification
 	{SUBMIT_KEY_Notification, ATTR_JOB_NOTIFICATION, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_notify},
@@ -5493,7 +5393,7 @@ int SubmitHash::SetRequestMem(const char * /*key*/)
 			if (job->Lookup(ATTR_JOB_VM_MEMORY)) {
 				push_warning(stderr, SUBMIT_KEY_RequestMemory " was NOT specified.  Using " ATTR_REQUEST_MEMORY " = MY." ATTR_JOB_VM_MEMORY "\n");
 				AssignJobExpr(ATTR_REQUEST_MEMORY, "MY." ATTR_JOB_VM_MEMORY);
-			} else {
+			} else if (UseDefaultResourceParams) {
 				// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 				// the job has a request_mem keyword
 				mem.set(param("JOB_DEFAULT_REQUESTMEMORY"));
@@ -5528,7 +5428,7 @@ int SubmitHash::SetRequestDisk(const char * /*key*/)
 	if ( ! disk) {
 		if (job->Lookup(ATTR_REQUEST_DISK)) {
 			// we already have a value for request disk, use that
-		} else if ( ! clusterAd) {
+		} else if ( ! clusterAd && UseDefaultResourceParams) {
 			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_memory from somewhere
 			// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 			// the job has a request_disk keyword
@@ -5566,7 +5466,7 @@ int SubmitHash::SetRequestCpus(const char * key)
 	if ( ! req_cpus) {
 		if (job->Lookup(ATTR_REQUEST_CPUS)) {
 			// we already have a value for request cpus, use that
-		} else if ( ! clusterAd) {
+		} else if ( ! clusterAd && UseDefaultResourceParams) {
 			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_cpus from somewhere
 			// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 			// the job has a request_cpus keyword
@@ -5599,7 +5499,7 @@ int SubmitHash::SetRequestGpus(const char * key)
 	if ( ! req_gpus) {
 		if (job->Lookup(ATTR_REQUEST_GPUS)) {
 			// we already have a value for request cpus, use that
-		} else if ( ! clusterAd) {
+		} else if ( ! clusterAd && UseDefaultResourceParams) {
 			// we aren't (yet) doing late materialization, so it's ok to grab a default value of request_gpus from somewhere
 			// NOTE: that we don't expect to ever get here because in 8.9 this function is never called unless
 			// the job has a request_gpus keyword
@@ -5612,8 +5512,15 @@ int SubmitHash::SetRequestGpus(const char * key)
 			// they want it to be undefined
 		} else {
 			AssignJobExpr(ATTR_REQUEST_GPUS, req_gpus);
+
+			// now check for "require_gpus"
+			req_gpus.set(submit_param(SUBMIT_KEY_RequireGpus, ATTR_REQUIRE_GPUS));
+			if (req_gpus) {
+				AssignJobExpr(ATTR_REQUIRE_GPUS, req_gpus);
+			}
 		}
 	}
+
 
 	RETURN_IF_ABORT();
 	return 0;
@@ -5972,9 +5879,6 @@ int SubmitHash::SetRequirements()
 		case CONDOR_UNIVERSE_VANILLA:
 			append_req.set(param("APPEND_REQ_VANILLA"));
 			break;
-		case CONDOR_UNIVERSE_STANDARD:
-			append_req.set(param("APPEND_REQ_STANDARD"));
-			break;
 		case CONDOR_UNIVERSE_VM:
 			append_req.set(param("APPEND_REQ_VM"));
 			break;
@@ -6021,7 +5925,6 @@ int SubmitHash::SetRequirements()
 		// want to detect references.  Otherwise, unqualified references
 		// get classified as external references.
 	req_ad.Assign(ATTR_REQUEST_MEMORY,0);
-	req_ad.Assign(ATTR_CKPT_ARCH,"");
 	req_ad.Assign(ATTR_VM_CKPT_MAC, "");
 
 	GetExprReferences(answer.c_str(),req_ad,&job_refs,&machine_refs);
@@ -6041,16 +5944,12 @@ int SubmitHash::SetRequirements()
 	bool	checks_credd = machine_refs.count( ATTR_LOCAL_CREDD );
 #endif
 	bool	checks_fsdomain = false;
-	bool	checks_ckpt_arch = false;
 	bool	checks_file_transfer = false;
 	bool	checks_file_transfer_plugin_methods = false;
 	bool	checks_per_file_encryption = false;
 	bool	checks_mpi = false;
 	bool	checks_hsct = false;
 
-	if (JobUniverse == CONDOR_UNIVERSE_STANDARD || JobUniverse == CONDOR_UNIVERSE_VM) {
-		checks_ckpt_arch = job_refs.count( ATTR_CKPT_ARCH );
-	}
 	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 		checks_mpi = machine_refs.count( ATTR_HAS_MPI );
 	}
@@ -6097,11 +5996,6 @@ int SubmitHash::SetRequirements()
 		}
 		bool uses_vmcheckpoint = false;
 		if (job->LookupBool(ATTR_JOB_VM_CHECKPOINT, uses_vmcheckpoint) && uses_vmcheckpoint) {
-			if (!checks_ckpt_arch) {
-				// VM checkpoint files created on AMD 
-				// can not be used in INTEL. vice versa.
-				answer += " && ((MY.CkptArch == Arch) || (MY.CkptArch =?= UNDEFINED))";
-			}
 			bool checks_vm_ckpt_mac = job_refs.count(ATTR_VM_CKPT_MAC);
 			if (!checks_vm_ckpt_mac) {
 				// VMs with the same MAC address cannot run 
@@ -6117,6 +6011,16 @@ int SubmitHash::SetRequirements()
 				answer += " && ";
 			}
 			answer += "TARGET.HasDocker";
+			std::string dockerNetworkType;
+			job->LookupString(ATTR_DOCKER_NETWORK_TYPE, dockerNetworkType);
+
+			if (!dockerNetworkType.empty()) {
+				// We assume every docker runtime supports "host", "none", and "nat", and don't bother
+				// to explicitly advertise those or match on them.
+				if ((dockerNetworkType != "host") && (dockerNetworkType != "none") && (dockerNetworkType != "nat")) {
+					answer += "&& StringListMember(My.DockerNetworkType, TARGET.DockerNetworks)";
+				}
+			}
 	} else if (IsContainerJob) {
 			if( answer[0] ) {
 				answer += " && ";
@@ -6159,12 +6063,6 @@ int SubmitHash::SetRequirements()
 			answer += OpsysMacroDef.psz;
 			answer += "\")";
 		}
-	}
-
-	if ( JobUniverse == CONDOR_UNIVERSE_STANDARD && !checks_ckpt_arch ) {
-		answer +=
-			" && ((CkptArch =?= UNDEFINED) || (CkptArch == TARGET.Arch))"
-			" && ((CkptOpSys =?= UNDEFINED) || (CkptOpSys == TARGET.OpSys))";
 	}
 
 	if( !checks_disk ) {
@@ -6325,7 +6223,14 @@ int SubmitHash::SetRequirements()
 			// gt6938, don't add a requirements clause when a custom resource request has a value <= 0
 			double val = 0.0;
 			if ( ! value.IsNumber(val) || val > 0) {
-				formatstr_cat(answer, " && (TARGET.%s >= %s)", tag, it->c_str());
+				// check for a Require<tag> expression that corresponds to this Request<Tag>
+				std::string require("Require"); require += tag;
+				if (job->Lookup(require)) {
+					formatstr_cat(answer, " && (countMatches(MY.%s,TARGET.Available%s) >= %s)", require.c_str(), tag, it->c_str());
+					HasRequireResAttr = true; // remember that this job uses the countMatches magic function
+				} else {
+					formatstr_cat(answer, " && (TARGET.%s >= %s)", tag, it->c_str());
+				}
 			}
 		} else if (vtype == classad::Value::ValueType::STRING_VALUE) {
 			// gt6938, don't add a requirements clause when a custom string resource request is the empty string
@@ -6335,6 +6240,15 @@ int SubmitHash::SetRequirements()
 				formatstr_cat(answer, " && regexp(%s, TARGET.%s)", it->c_str(), tag);
 			}
 		}
+	}
+	if (HasRequireResAttr && ! already_warned_require_gpus) {
+		CondorVersionInfo cvi(getScheddVersion());
+		if ( ! cvi.built_since_version(9, 8, 0)) {
+			push_warning(stderr,
+							"Your job uses a custom resource requirement like require_gpus that is not supported by "
+							"the Schedd. The job will not run until the Schedd is updated to version 9.8.0 or later.\n");
+		}
+		already_warned_require_gpus = true;
 	}
 
 	if( !checks_tdp && job->Lookup(ATTR_TOOL_DAEMON_CMD)) {
@@ -7700,8 +7614,7 @@ int SubmitHash::SetTransferFiles()
 	// required renaming in the non-spooling case.
 	CondorVersionInfo cvi(getScheddVersion());
 	if ( (!cvi.built_since_version(7, 7, 2) && should_transfer != STF_NO &&
-		  JobUniverse != CONDOR_UNIVERSE_GRID &&
-		  JobUniverse != CONDOR_UNIVERSE_STANDARD) ||
+		  JobUniverse != CONDOR_UNIVERSE_GRID) ||
 		 IsRemoteJob ) {
 
 		std::string output;
@@ -8196,6 +8109,12 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	// all jobs should end up with the same qdate, so we only query time once.
 	baseJob.Assign(ATTR_Q_DATE, submit_time);
 	baseJob.Assign(ATTR_COMPLETION_DATE, 0);
+	
+	// set all jobs submission method if s_method is defined
+	if ( s_method >= JOB_SUBMIT_METHOD_MIN)
+	{
+		baseJob.Assign(ATTR_JOB_SUBMIT_METHOD, s_method);
+	}
 
 	// as of 8.9.5 we no longer think it is a good idea for submit to set the Owner attribute
 	// for jobs, even for local jobs, but just in case, set this knob to true to enable the
@@ -9480,8 +9399,6 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 	if (options == 0) { // options == 0 is the default behavior, perhaps turn this into a set of flags in the future?
 		omit_knobs.insert(SUBMIT_CMD_GetEnvironment);
 		omit_knobs.insert(SUBMIT_CMD_GetEnvironmentAlt);
-		omit_knobs.insert(SUBMIT_CMD_AllowStartupScript);
-		omit_knobs.insert(SUBMIT_CMD_AllowStartupScriptAlt);
 
 		//PRAGMA_REMIND("tj: This will cause a bug where $() in user requirments are ignored during late materialization - a better fix is needed for this")
 		// omit user specified requirements because we set FACTORY.Requirements
@@ -9530,5 +9447,4 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 
 	return out.c_str();
 }
-
 

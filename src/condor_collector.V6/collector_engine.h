@@ -25,6 +25,22 @@
 #include "collector_stats.h"
 #include "hashkey.h"
 
+struct CollectorRecord
+{
+	CollectorRecord(ClassAd* public_ad, ClassAd* pvt_ad)
+		: m_publicAd(public_ad), m_pvtAd(pvt_ad) { m_pvtAd->ChainToAd(m_publicAd); }
+	~CollectorRecord() { delete m_publicAd; delete m_pvtAd; }
+	void ReplaceAds(ClassAd* public_ad, ClassAd* pvt_ad)
+	{ delete m_publicAd; delete m_pvtAd; m_publicAd=public_ad; m_pvtAd=pvt_ad; m_pvtAd->ChainToAd(m_publicAd); }
+
+	ClassAd* m_publicAd;
+	ClassAd* m_pvtAd;
+};
+
+// type for the hash tables ...
+typedef HashTable <AdNameHashKey, CollectorRecord *> CollectorHashTable;
+typedef HashTable <std::string, CollectorHashTable *> GenericAdHashTable;
+
 class CollectorEngine : public Service
 {
   public:
@@ -40,11 +56,11 @@ class CollectorEngine : public Service
 	int invalidateAds(AdTypes, ClassAd &);
 
 	// perform the collect operation of the given command
-	ClassAd *collect (int, Sock *, const condor_sockaddr&, int &);
-	ClassAd *collect (int, ClassAd *, const condor_sockaddr&, int &, Sock* = NULL);
+	CollectorRecord *collect (int, Sock *, const condor_sockaddr&, int &);
+	CollectorRecord *collect (int, ClassAd *, const condor_sockaddr&, int &, Sock* = NULL);
 
 	// lookup classad in the specified table with the given hashkey
-	ClassAd *lookup (AdTypes, AdNameHashKey &);
+	CollectorRecord *lookup (AdTypes, AdNameHashKey &);
 
 	/**
 	* remove () - attempts to construct a hashkey from a query
@@ -68,7 +84,7 @@ class CollectorEngine : public Service
 	int remove (AdTypes, AdNameHashKey &);
 
 	// walk specified hash table with the given visit procedure
-	int walkHashTable (AdTypes, int (*)(ClassAd *));
+	int walkHashTable (AdTypes, int (*)(CollectorRecord *));
 
 	// Walk through a specific (non-generic, non-ANY) table using a lambda
 	template<typename T>
@@ -86,11 +102,11 @@ class CollectorEngine : public Service
 		}
 
 			// walk the hash table
-		ClassAd *ad;
+		CollectorRecord *record;
 		table->startIterations();
-		while (table->iterate(ad)) {
+		while (table->iterate(record)) {
 				// call scan function for each ad
-			if (!scanFunction(ad)) {break;}
+			if (!scanFunction(record)) {break;}
 		}
 
 		return 1;
@@ -100,7 +116,7 @@ class CollectorEngine : public Service
 	// register the collector's own ad pointer, and check to see if a given ad is that ad.
 	// this is used to allow us to recognise the collector ad during iteration and automatically
 	// insert fresh stats into it when it is fetched.
-	void identifySelfAd(ClassAd * ad);
+	void identifySelfAd(CollectorRecord * record);
 	bool isSelfAd(void * ad) { return __self_ad__ != NULL && __self_ad__ == ad; }
 
 	// Publish stats into the collector's ClassAd
@@ -144,9 +160,9 @@ class CollectorEngine : public Service
 	GenericAdHashTable GenericAds;
 
 	// for walking through the generic hash tables
-	static int (*genericTableScanFunction)(ClassAd *);
+	static int (*genericTableScanFunction)(CollectorRecord *);
 	static int genericTableWalker(CollectorHashTable *cht);
-	int walkGenericTables(int (*scanFunction)(ClassAd *));
+	int walkGenericTables(int (*scanFunction)(CollectorRecord *));
 
 	// relevant variables from the config file
 	int	clientTimeout;
@@ -155,11 +171,11 @@ class CollectorEngine : public Service
 	void  housekeeper ();
 	int  housekeeperTimerID;
 	void cleanHashTable (CollectorHashTable &, time_t, HashFunc) const;
-	ClassAd* updateClassAd(CollectorHashTable&,const char*, const char *,
+	CollectorRecord* updateClassAd(CollectorHashTable&,const char*, const char *,
 						   ClassAd*,AdNameHashKey&, const std::string &, int &,
 						   const condor_sockaddr& );
 
-	ClassAd * mergeClassAd (CollectorHashTable &hashTable,
+	CollectorRecord* mergeClassAd (CollectorHashTable &hashTable,
 							const char *adType,
 							const char *label,
 							ClassAd *new_ad,

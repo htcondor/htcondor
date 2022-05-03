@@ -36,11 +36,12 @@ void print_usage(const char *argv0) {
 		"\nToken options:\n"
 		"    -authz    <authz>                Whitelist one or more authorization\n"
 		"    -lifetime <val>                  Max token lifetime, in seconds\n"
+		"    -key      <key>                  Request an alternate signing key\n"
 		"Specifying target options:\n"
-		"    -pool    <host>                 Query this collector\n"
-		"    -remote                         Have collector fetch token remotely\n"
-		"    -name    <name>                 Find a daemon with this name\n"
-		"    -type    <subsystem>            Type of daemon to contact (default: SCHEDD)\n"
+		"    -pool    <host>                  Query this collector\n"
+		"    -remote                          Have collector fetch token remotely\n"
+		"    -name    <name>                  Find a daemon with this name\n"
+		"    -type    <subsystem>             Type of daemon to contact (default: SCHEDD)\n"
 		"\nOther options:\n"
 		"    -token    <NAME>                 Name of token file\n", argv0);
 	exit(1);
@@ -49,7 +50,7 @@ void print_usage(const char *argv0) {
 
 int
 generate_remote_token(const std::string &pool, const std::string &name, daemon_t dtype,
-	const std::vector<std::string> &authz_list, long lifetime, const std::string &token_name)
+	const std::vector<std::string> &authz_list, long lifetime, const std::string &token_name, const std::string &key)
 {
 	std::unique_ptr<Daemon> daemon;
 	if (!pool.empty()) {
@@ -74,7 +75,7 @@ generate_remote_token(const std::string &pool, const std::string &name, daemon_t
 
 	CondorError err;
 	std::string token;
-	if (!daemon->getSessionToken(authz_list, lifetime, token, &err)) {
+	if (!daemon->getSessionToken(authz_list, lifetime, token, key, &err)) {
 		fprintf(stderr, "Failed to request a session token: %s\n", err.getFullText().c_str());
 		exit(1);
 	}
@@ -120,6 +121,7 @@ int main(int argc, char *argv[]) {
 	config();
 
 	daemon_t dtype = DT_SCHEDD;
+	std::string key;
 	std::string pool;
 	std::string name;
 	std::string identity;
@@ -161,6 +163,13 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 			name = argv[i];
+		} else if (is_dash_arg_prefix(argv[i], "key", 1)) {
+			i++;
+			if (!argv[i]) {
+				fprintf(stderr, "%s: -key requires a key name argument.\n", argv[0]);
+				exit(1);
+			}
+			key = argv[i];
 		} else if (is_dash_arg_prefix(argv[i], "token", 2)) {
 			i++;
 			if (!argv[i]) {
@@ -208,6 +217,6 @@ int main(int argc, char *argv[]) {
 	}
 	else
 	{
-		return generate_remote_token(pool, name, dtype, authz_list, lifetime, token_name);
+		return generate_remote_token(pool, name, dtype, authz_list, lifetime, token_name, key);
 	}
 }

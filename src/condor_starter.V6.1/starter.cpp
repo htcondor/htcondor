@@ -673,7 +673,7 @@ Starter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 	}
 
 	char *session_id = Condor_Crypt_Base::randomHexKey();
-	char *session_key = Condor_Crypt_Base::randomHexKey();
+	char *session_key = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 
 	std::string session_info;
 	input.LookupString(ATTR_SESSION_INFO,session_info);
@@ -3472,7 +3472,7 @@ Starter::PublishToEnv( Env* proc_env )
 
 	// Many jobs need an absolute path into the scratch directory in an environment var
 	// expand a magic string in an env var to the scratch dir
-	proc_env->Walk(&expandScratchDirInEnv, (void *)GetWorkingDir(true));
+	proc_env->Walk(&expandScratchDirInEnv, (void *)const_cast<char *>(GetWorkingDir(true)));
 }
 
 // parse an environment prototype string of the form  key[[=/regex/replace/] key2=/regex2/replace2/]

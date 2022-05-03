@@ -781,7 +781,7 @@ X509* X509Credential::Delegate(X509_REQ* request, const DelegationRestrictions& 
   subject=X509_NAME_dup(subject);
   if(!subject) goto err;
   if(!X509_set_issuer_name(cert,subject)) goto err;
-  if(!X509_NAME_add_entry_by_NID(subject,NID_commonName,MBSTRING_ASC,(unsigned char *)proxy_cn.c_str(),proxy_cn.length(),-1,0)) goto err;
+  if(!X509_NAME_add_entry_by_NID(subject,NID_commonName,MBSTRING_ASC,(unsigned char *)const_cast<char *>(proxy_cn.c_str()),proxy_cn.length(),-1,0)) goto err;
   if(!X509_set_subject_name(cert,subject)) goto err;
   X509_NAME_free(subject); subject=NULL;
   // This was changed from the original to expect only unix epoch time values.

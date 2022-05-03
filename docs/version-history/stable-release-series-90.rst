@@ -7,20 +7,125 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-9010:
+.. _lts-version-history-9013:
 
-Version 9.0.10
+Version 9.0.13
 --------------
 
 Release Notes:
 
-.. HTCondor version 9.0.10 released on Month Date, 2022.
+.. HTCondor version 9.0.13 released on Month Date, 2022.
 
-- HTCondor version 9.0.10 not yet released.
+- HTCondor version 9.0.13 not yet released.
+
+New Features:
+
+- *condor_config_val* will now print an ``@=end/@end`` pair rather than simply ``=``
+  when printing multi-line configuration values for ``-dump``, ``-summary``, and ``-verbose``
+  mode output.
+  :jira:`1032`
+
+- If the configuration macro ``[SCHEDD|STARTD]_CRON_LOG_NON_ZERO_EXIT`` is
+  set to true, the corresponding daemon will write the cron job's non-zero
+  exit code to the log, followed by the cron job's output.
+  :jira:`971`
+
+Bugs Fixed:
+
+- The *condor_run* tool now reports job submit errors
+  and warnings rather than writing them into a log file.
+  :jira:`1002`
+
+- Updated the Windows build of HTCondor to use SSL 1.1.1m.
+  :jira:`840`
+
+- Fixed a bug where Kerberos Authentication would fail for
+  dagman.
+  :jira:`1060`
+
+- Fix problem that can cause HTCondor to not start up when the network
+  configuration is complex.
+  Long hostnames, multiple CCB addresses, having both IPv4 and IPv6 addresses,
+  and long private network names all contribute to complexity.
+  :jira:`1070`
+
+.. _lts-version-history-9012:
+
+Version 9.0.12
+--------------
+
+Release Notes:
+
+- HTCondor version 9.0.12 released on April 19, 2022.
 
 New Features:
 
 - None.
+
+Bugs Fixed:
+
+- Fixed a bug in the parallel universe that caused the *condor_schedd* to crash
+  with partitionable slots.
+  :jira:`986`
+
+- Fixed a bug that could cause a daemon to erase its security session
+  to its family of daemon processes and subsequently crash when trying to
+  connect to one of those daemons.
+  :jira:`937`
+
+- Fixed a bug that prevented the High-Availability Daemon (HAD) from
+  working when user-based security is enabled.
+  :jira:`891`
+
+- In a HAD configuration, the negotiator is now more robust when trying
+  to update to collectors that may have failed.  It will no longer block
+  and timeout for an extended period of time should this happen.
+  :jira:`816`
+
+- The Job Router no longer sets an incorrect ``User`` job attribute
+  when routing a job between two *condor_schedd* s with different
+  values for configuration parameter ``UID_DOMAIN``.
+  :jira:`1005`
+
+- Fixed a bug in the startd drain command in the Python bindings that prevented
+  it from working with zero arguments.
+  :jira:`936`
+
+- Fixed a bug that prevented administrators from setting certain rare custom
+  Linux parameters in the linux_kernel_tuning_script.
+  :jira:`990`
+
+- DAGMan now publishes its status (total number of nodes, nodes done, nodes
+  failed, etc.) to the job ad immediately at startup.
+  :jira:`968`
+
+- Fixed a bug where a credential file with an underscore in its filename could
+  not be used by the curl plugin when doing HTTPS transfers with a bearer token.
+  It can now be accessed by replacing "_" with "." in the URL scheme.
+  :jira:`1011`
+
+- Fixed several unlikely bugs when parsing the time strings in ClassAds.
+  :jira:`998`
+
+- *condor_version* now reports the build ID on Debian and Ubuntu platforms.
+  :jira:`749`
+
+.. _lts-version-history-9011:
+
+Version 9.0.11
+--------------
+
+Release Notes:
+
+- HTCondor version 9.0.11 released on March 15, 2022.
+
+New Features:
+
+- The *condor_job_router* can now create an IDTOKEN and send it them along
+  with a routed job for use by the job. This is controlled by a new
+  configuration variable ``JOB_ROUTER_CREATE_IDTOKEN_NAMES`` and a new route
+  option ``SendIDTokens``.
+  :jira:`735`
 
 Bugs Fixed:
 
@@ -29,11 +134,72 @@ Bugs Fixed:
   is not an absolute path.
   :jira:`736`
 
+- A problem where HTCondor would not create a directory on the execute
+  node before trying to transfer a file into it should no longer occur.  (This
+  would cause the job which triggered this problem to go on hold.)  One
+  way to trigger this problem was by setting ``preserve_relative_paths``
+  and specifying the same directory in both ``transfer_input_files`` and
+  ``transfer_checkpoint_files``.
+  :jira:`857`
+
 - The *condor_annex* tool no longer duplicates the first tag if given multiple
   ``-tag`` options on the command line.  You can now set longer user data on
   the command-line.
   :jira:`910`
 
+- Fixed a bug in the *condor_job_router* that could result in routes and transforms
+  substituting a default configuration value rather than the value
+  from the configuration files when a route or transform was applied
+  :jira:`902`
+
+- For **batch** grid universe jobs, a small default memory value is no
+  longer generated when **request_memory** is not specified in the submit
+  file.
+  This restores the behavior in versions 9.0.1 and prior.
+  :jira:`904`
+
+- Fixed a bug in the FileTransfer mechanism where URL transfers caused
+  subsequent failures to report incorrect error messages.
+  :jira:`915`
+
+- Fixed a bug in the *condor_dagman* parser which caused ``SUBMIT-DESCRIPTION``
+  statements to return an error even after parsing correctly.
+  :jira:`928`
+
+- Fix problem where **condor_ssh_to_job** may fail to connect to a job
+  running under an HTCondor tarball installation (glidein) built from an RPM
+  based platform.
+  :jira:`942`
+
+- The Python bindings no longer segfault when the ``htcondor.Submit``
+  constructor is passed a dictionary with an entry whose value is ``None``.
+  :jira:`950`
+
+.. _lts-version-history-9010:
+
+Version 9.0.10
+--------------
+
+Release Notes:
+
+-  HTCondor version 9.0.10 released on March 15, 2022.
+
+New Features:
+
+-  None.
+
+Bugs Fixed:
+
+-  *Security Items*: This release of HTCondor fixes security-related bugs
+   described at
+
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0001>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0002 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0002>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2022-0003>`_.
+
+   :jira:`724`
+   :jira:`730`
+   :jira:`985`
 
 .. _lts-version-history-909:
 
@@ -42,13 +208,19 @@ Version 9.0.9
 
 Release Notes:
 
-.. HTCondor version 9.0.9 released on Month Date, 2022.
+- HTCondor version 9.0.9 released on January 13, 2022.
 
-- HTCondor version 9.0.9 not yet released.
+- Since CentOS 8 has been retired, we now build for Enterprise Linux 8 on
+  Rocky Linux 8.
+  :jira:`911`
+
+- Debian 11 (bullseye) has been added as a supported platform.
+  :jira:`94`
 
 New Features:
 
-- None.
+- The OAUTH credmon is packaged for the Enterprise Linux 8 platform.
+  :jira:`825`
 
 Bugs Fixed:
 
@@ -63,16 +235,16 @@ Bugs Fixed:
 - Fixed a bug running jobs in a Singularity container where 
   the environment variables added by HTCondor could include incorrect
   pathnames to the location of the job's scratch directory.
-  This occurred when setting the ``SINGULARITY_TARGET_DIR`` config option.
+  This occurred when setting the ``SINGULARITY_TARGET_DIR`` configuration option.
   :jira:`885`
 
 - Fixed a bug where the *condor_job_router* could crash while trying to
-  report an invalid router configuration when c-style comments were used
-  before an old syntax route classad. As a result of this fix the job router
-  now treats c-style comments as a indication that the route is old syntax.
+  report an invalid router configuration when C-style comments were used
+  before an old syntax route ClassAd. As a result of this fix the job router
+  now treats C-style comments as a indication that the route is old syntax.
   :jira:`864`
 
-- Fixed a bug where bytes were trying to be written via an ASCII file
+- Fixed a bug where binary bytes were trying to be written via an ASCII file
   handler in *condor_credmon_oauth* when using Python 3.
   :jira:`633`
 
@@ -80,7 +252,7 @@ Bugs Fixed:
   to be the same if some specific attributes were missing from the
   latest ClassAd. Also **condor_top** now exits early if no stats are
   provided by the queried daemon.
-  :jira`:880
+  :jira:`880`
 
 - Fixed a bug where the user job log could be written in the wrong
   directory when a spooled job's output was retrieved with
@@ -88,7 +260,7 @@ Bugs Fixed:
   :jira:`886`
 
 - Fixed a bug in *condor_adstash* where setting a list of *condor_startds*
-  to query in the config lead to no *condor_startds* being queried.
+  to query in the configuration lead to no *condor_startds* being queried.
   :jira:`888`
 
 .. _lts-version-history-908:
@@ -288,12 +460,7 @@ Bugs Fixed:
   is empty.
   :jira:`673`
 
-- Fixed a bug that could the starter to crash after transferring files under
-  certain rare circumstances.   This also corrected a problem which may have
-  been causing the number of bytes transferred to be undercounted.
-  :jira:`722`
-
-- Fixed a bug that could the starter to crash after transferring files under
+- Fixed a bug that could cause the starter to crash after transferring files under
   certain rare circumstances.   This also corrected a problem which may have
   been causing the number of bytes transferred to be undercounted.
   :jira:`722`
@@ -381,11 +548,11 @@ New Features:
 
 Bugs Fixed:
 
--  *Security Item*: This release of HTCondor fixes a security-related bug
+-  *Security Items*: This release of HTCondor fixes security-related bugs
    described at
 
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003/>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0004>`_.
 
    :jira:`509`
    :jira:`587`

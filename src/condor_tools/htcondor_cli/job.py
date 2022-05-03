@@ -5,6 +5,8 @@ import subprocess
 import shlex
 import tempfile
 import time
+import getpass
+
 
 from datetime import datetime
 from pathlib import Path
@@ -14,23 +16,10 @@ import htcondor
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 from htcondor_cli.dagman import DAGMan
+from htcondor_cli import JobStatus
 from htcondor_cli import TMP_DIR
 
-
-# Must be consistent with job status definitions in
-# src/condor_includes/proc.h
-JobStatus = [
-    "NONE",
-    "IDLE",
-    "RUNNING",
-    "REMOVED",
-    "COMPLETED",
-    "HELD",
-    "TRANSFERRING_OUTPUT",
-    "SUSPENDED",
-    "JOB_STATUS_MAX"
-]
-
+JSM_HTC_JOB_SUBMIT = 3
 
 class Submit(Verb):
     """
@@ -55,6 +44,10 @@ class Submit(Verb):
             "args": ("--email",),
             "help": "Email address to receive notifications",
         },
+        "annex_name": {
+            "args": ("--annex-name",),
+            "help": "Annex name that this job must run on",
+        },
     }
 
     def __init__(self, logger, submit_file, **options):
@@ -75,6 +68,15 @@ class Submit(Verb):
             with submit_file.open() as f:
                 submit_data = f.read()
             submit_description = htcondor.Submit(submit_data)
+	    #Set s_method to HTC_JOB_SUBMIT
+            submit_description.setSubmitMethod(JSM_HTC_JOB_SUBMIT,True)
+
+            annex_name = options["annex_name"]
+            if annex_name is not None:
+                if htcondor.param.get("HPC_ANNEX_ENABLED", False):
+                    submit_description["MY.TargetAnnexName"] = f'"{annex_name}"'
+                else:
+                    raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
 
             # The Job class can only submit a single job at a time
             submit_qargs = submit_description.getQArgs()
@@ -84,7 +86,10 @@ class Submit(Verb):
             with schedd.transaction() as txn:
                 try:
                     cluster_id = submit_description.queue(txn, 1)
-                    logger.info(f"Job {cluster_id} was submitted.")
+                    if annex_name is None:
+                        logger.info(f"Job {cluster_id} was submitted.")
+                    else:
+                        logger.info(f"Job {cluster_id} was submitted and will only run on the annex '{annex_name}'.")
                 except Exception as e:
                     raise RuntimeError(f"Error submitting job:\n{str(e)}")
 
@@ -185,7 +190,7 @@ class Status(Verb):
         try:
             job = schedd.query(
                 constraint=f"ClusterId == {job_id}",
-                projection=["JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "ResourceType"]
+                projection=["JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "ResourceType", "TargetAnnexName"]
             )
         except IndexError:
             raise RuntimeError(f"No job found for ID {job_id}.")
@@ -199,16 +204,20 @@ class Status(Verb):
 
         # Now, produce job status based on the resource type
         if resource_type == "htcondor":
+            target_annex_name = job[0].get('TargetAnnexName')
+            if target_annex_name is not None:
+                logger.info(f"Job will only run on your annex named '{target_annex_name}'.")
+
             if JobStatus[job[0]['JobStatus']] == "RUNNING":
                 job_running_time = datetime.now() - datetime.fromtimestamp(job[0]["JobStartDate"])
-                logger.info(f"Job is running since {round(job_running_time.seconds/3600)}h{round(job_running_time.seconds/60)}m{(job_running_time.seconds%60)}s")
+                logger.info(f"Job has been running for {round(job_running_time.seconds/3600)} hour(s), {round(job_running_time.seconds/60)} minute(s), and {(job_running_time.seconds%60)} second(s).")
             elif JobStatus[job[0]['JobStatus']] == "HELD":
                 job_held_time = datetime.now() - datetime.fromtimestamp(job[0]["EnteredCurrentStatus"])
-                logger.info(f"Job is held since {round(job_held_time.seconds/3600)}h{round(job_held_time.seconds/60)}m{(job_held_time.seconds%60)}s\nHold Reason: {job[0]['HoldReason']}")
+                logger.info(f"Job has been held for {round(job_held_time.seconds/3600)} hour(s), {round(job_held_time.seconds/60)} minute(s), and {(job_held_time.seconds%60)} second(s).\nHold Reason: {job[0]['HoldReason']}")
             elif JobStatus[job[0]['JobStatus']] == "COMPLETED":
-                logger.info("Job has completed")
+                logger.info("Job completed.")
             else:
-                logger.info(f"Job is {JobStatus[job[0]['JobStatus']]}")
+                logger.info(f"Job is {JobStatus[job[0]['JobStatus']]}.")
 
         # Jobs running on provisioned Slurm or EC2 resources need to retrieve
         # additional information from the provisioning DAGMan log
@@ -306,7 +315,7 @@ class Resources(Verb):
             try:
                 job = schedd.query(
                     constraint=f"ClusterId == {job_id}",
-                    projection=["RemoteHost"]
+                    projection=["RemoteHost","TargetAnnexName","MachineAttrAnnexName0"]
                 )
             except IndexError:
                 raise RuntimeError(f"No jobs found for ID {job_id}.")
@@ -320,7 +329,13 @@ class Resources(Verb):
                 job_host = job[0]["RemoteHost"]
             except KeyError:
                 raise RuntimeError(f"Job {job_id} is not running yet.")
-            logger.info(f"Job is using resource {job_host}")
+
+            target_annex = job[0].get("TargetAnnexName", None)
+            machine_annex = job[0].get("MachineAttrAnnexName0", None)
+            if target_annex is not None and machine_annex is not None and target_annex == machine_annex:
+                logger.info(f"Job is using annex '{target_annex}', resource {job_host}.")
+            else:
+                logger.info(f"Job is using resource {job_host}")
 
         # Jobs running on provisioned Slurm resources need to retrieve
         # additional information from the provisioning DAGMan log

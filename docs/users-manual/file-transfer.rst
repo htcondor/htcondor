@@ -676,6 +676,45 @@ following in the submit file:
 
     transfer_input_files = cred+https://download.com/bar
 
+If your credential file has an underscore in it,
+the underscore must be replaced in the ``transfer_input_files`` URL
+with a ".", e.g. for ``$_CONDOR_CREDS/cred_local.use``:
+
+.. code-block:: condor-submit
+
+    transfer_input_files = cred.local+https://download.com/bar
+
+Otherwise, the credential file must have a name that only contains
+alphanumeric characters (a-z, A-Z, 0-9) and/or ``-``,
+except for the ``.`` in the ```.use`` extension.
+
+If you're using a token from an OAuth service provider,
+the credential will be named based on the OAuth provider.
+For example, if your submit file has ``use_oauth_services = mytokens``,
+you can request files using that token by doing:
+
+.. code-block:: condor-submit
+
+    use_oauth_services = mytokens
+
+    transfer_input_files = mytokens+https://download.com/bar
+
+If you add an optional handle to the token name,
+append the handle name to the token name in the URL with a ".":
+
+.. code-block:: condor-submit
+
+    use_oauth_services = mytokens
+    mytokens_oauth_permissions_personal =
+    mytokens_oauth_permissions_group =
+
+    transfer_input_files = mytokens.personal+https://download.com/bar, mytokens.group+https://download.com/foo
+
+Note that in the above token-with-a-handle case,
+the token files will be stored in the job
+environment at ``$_CONDOR_CREDS/mytokens_personal.use``
+and ``$_CONDOR_CREDS/mytokens_group.use``.
+
 **Transferring files using file transfer plugins**
 
 HTCondor comes with file transfer plugins

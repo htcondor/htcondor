@@ -434,7 +434,7 @@ class ProcAPI {
 
 	@return a procInfo list representing all processes on the system
   */
-  static procInfo* getProcInfoList();
+  static procInfo* getProcInfoList(pid_t BOLOpid = 0);
 
   /* used to deallocate the memory for a list of procInfo structures
 
@@ -606,9 +606,9 @@ class ProcAPI {
 								 );
 
 #if !defined(DARWIN) && !defined(WIN32)
-  static int buildPidList();                      // just what it says
+  static int buildPidList(pid_t BOLOpid = 0);                      // just what it says
 #endif
-  static int buildProcInfoList();                 // ditto.
+  static int buildProcInfoList(pid_t BOLOpid = 0);                 // ditto.
   static long secsSinceEpoch();                   // used for wall clock age
   static double convertTimeval ( struct timeval );// convert timeval to double
   static void deallocAllProcInfos();              // respective lists.

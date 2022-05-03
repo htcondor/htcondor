@@ -43,7 +43,6 @@ startd_named_classad.cpp
 startd_named_classad_list.cpp
 StartdPluginManager.cpp
 Starter.cpp
-starter_mgr.cpp
 util.cpp
 vm_common.cpp
 VMMachine.cpp

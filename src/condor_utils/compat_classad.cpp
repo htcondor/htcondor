@@ -1113,6 +1113,240 @@ userHome_func(const char *                 name,
 }
 
 
+bool
+is_in_tree( const classad::ClassAd * member,
+            const classad::ClassAd * leaf ) {
+	if( member == leaf ) { return true; }
+	if( leaf == NULL ) { return false; }
+
+	// We can't just walk the parent scope pointers, because the parent
+	// scope pointer for the LEFT and RIGHT ads is temporarily replaced
+	// by the corresponding context ad when the match ad is created.
+
+	const classad::ClassAd * chainedParent = leaf->GetChainedParentAd();
+	if( chainedParent != NULL && is_in_tree(member, chainedParent) ) { return true; }
+
+	const classad::ClassAd * parentScope = leaf->GetParentScope();
+	if( parentScope != NULL && is_in_tree(member, parentScope) ) { return true; }
+
+	return false;
+}
+
+classad::Value
+evaluateInContext( classad::ExprTree * expr,
+				   classad::EvalState & state,
+				   classad::ExprTree * nested_ad_reference ) {
+	classad::Value rv;
+
+	classad::Value cav;
+	if(! nested_ad_reference->Evaluate(state, cav)) {
+		//dprintf( D_FULLDEBUG, "evaluateInContext(): failed to evaluate listed element\n" );
+		rv.SetErrorValue();
+		return rv;
+	}
+
+	classad::ClassAd * nested_ad = NULL;
+	if(! cav.IsClassAdValue(nested_ad)) {
+		//dprintf( D_FULLDEBUG, "evaluateInContext(): listed element is not a ClassAd\n" );
+		if (cav.IsUndefinedValue()) {
+			rv.SetUndefinedValue();
+		} else {
+			rv.SetErrorValue();
+		}
+		return rv;
+	}
+
+	// AttributeReference::FindExpr() doesn't recursively check the parent
+	// scope's alternate scope, so set it by hand.  This allows attribute
+	// references to work correctly (if confusingly) if this function is
+	// called (as it is intended to be) during a match.
+	//
+	// If the target ad is a chained ad, as it is in the startd, then the
+	// nested ad's parent won't (usually) have an alternate scope pointer
+	// set.  Instead, we need to figure out if the nested ad's parent is
+	// on the RIGHT or LEFT side, and use the corresponding alternate scope
+	// pointer.  (We don't check for the nested ad itself because the
+	// nested ad isn't a chained parent or parent scope of RIGHT or LEFT.)
+	//
+	// The confusing part is that MY and TARGET will be reversed during the
+	// evaluation of attr if, as intended, the nested ad's parent is not the
+	// parent of the expression containing function call.  (We intend for
+	// the former to be the slot ad and the latter the job ad.)
+	classad::ClassAd * originalAlternateScope = nested_ad->alternateScope;
+
+	// This is awful, but I don't want to change the ClassAd API to fix it.
+	classad::MatchClassAd * matchAd =
+		const_cast<classad::MatchClassAd *>(dynamic_cast<const classad::MatchClassAd *>(state.rootAd));
+	if( matchAd != NULL ) {
+		const classad::ClassAd * left = matchAd->GetLeftAd();
+		const classad::ClassAd * right = matchAd->GetRightAd();
+
+		if( is_in_tree( nested_ad->GetParentScope(), left ) ) {
+			nested_ad->alternateScope = left->alternateScope;
+		} else if( is_in_tree( nested_ad->GetParentScope(), right ) ) {
+			nested_ad->alternateScope = right->alternateScope;
+		} else {
+			//dprintf( D_FULLDEBUG, "evaluateInContext(): nested ad not in LEFT or RIGHT\n" );
+			rv.SetErrorValue();
+		}
+	}
+
+	classad::EvalState temporary_state;
+	temporary_state.SetScopes(nested_ad);
+	if(! expr->Evaluate(temporary_state, rv)) {
+		//dprintf( D_FULLDEBUG, "evaluateInContext(): failed to evaluate expr in context\n" );
+		rv.SetErrorValue();
+	}
+
+	nested_ad->alternateScope = originalAlternateScope;
+	return rv;
+}
+
+static
+bool evalInEachContext_func( const char * name,
+							  const classad::ArgumentList &arg_list,
+							  classad::EvalState &state,
+							  classad::Value &result ) {
+	//
+	// evalInEachContext( expr, nested_ad_list ) -> list
+	// countMatches( expr, nested_ad_list ) -> int
+	//
+	// Evaluate expr in the context of the current ad and each ad in
+	// nested_ad_list, individually.  Returns the index in nested_ad_list
+	// of the first ad for which expr evaluaes to true.
+	//
+
+	bool is_evalInEach = 0 == strcasecmp(name, "evalineachcontext");
+
+	if( arg_list.size() != 2 ) {
+		//dprintf( D_FULLDEBUG, "evalEachInContext(): wrong number of arguments\n" );
+		result.SetErrorValue();
+		return true;
+	}
+
+	classad::ExprTree * expr = arg_list[0];
+	classad::ExprTree * nal = arg_list[1];
+
+	// If expr is an attribute reference, look it up before proceeding so
+	// that the lookup happens in the context of the match.  Likewise, if
+	// nal isn't a literal list, evaluate in the context of the match
+	// before proceeding.  Just document expr as either an attribute
+	// reference or literal expression; or maybe just the former?  (Makes
+	// it only marginally hard to use but simplifies things?)
+	if( expr->GetKind() == ExprTree::NodeKind::ATTRREF_NODE ) {
+		classad::AttributeReference * ref =
+			dynamic_cast<classad::AttributeReference *>(expr);
+		if( ref == NULL ) {
+			// This should probably be an EXCEPT().
+			//dprintf( D_FULLDEBUG, "evalEachInContext(): FIXME\n" );
+			result.SetErrorValue();
+			return true;
+		}
+
+		// Lookup the first argument and get the expression.  If the lookup succeeds we will
+		// evaluate the expression against each ad in the list.
+		// If the lookup fails we will treat the attribute reference as the expression to evaluate
+		// thus we can use this function to evaluate an expression in a list of ads,
+		// or to project a single attribute from those ads
+		//     evalInEachContext(MY.RequireGPUs, AvailableGPUs) -> { true, false, ... }
+		//     evalInEachContext(Capability, AvailableGPUs) -> { eval(GPUs_tag1.Capability), eval(GPUs_tag1.Capability), ... }
+		// Or more specifically
+		//     sum(evalInEachContext(MY.RequireGPUs, AvailableGPUs)) -> <number of available GPUs that match the RequireGPUs expression>
+		//     max(evalInEachContext(Capability, AvailableGPUs)) -> <max capability of all available GPUs>
+		//
+		classad::ExprTree * attr = NULL;
+		// This is a bug in the ClassAd API: this function returns values
+		// out of an anonymous enum in ExprTree, but that enum is protected.
+		// if(classad::AttributeReference::Deref( *ref, state, attr ) != classad::ExprTree::EVAL_OK) {
+		if(classad::AttributeReference::Deref( *ref, state, attr ) == 1 ) {
+			expr = attr;
+		}
+	}
+
+	if( nal->GetKind() != ExprTree::NodeKind::EXPR_LIST_NODE ) {
+		classad::Value cav;
+		nal->Evaluate(state, cav);
+		classad::ExprList * list = NULL;
+		if(cav.IsListValue(list)) {
+			nal = list;
+		} else if (cav.IsUndefinedValue()) {
+			if (is_evalInEach) {
+				// evalInEach will propagate UNDEFINED values
+				result.SetUndefinedValue();
+			} else {
+				// countMatches will not propagate UNDEFINED and will instead return 0 matches
+				result.SetIntegerValue(0);
+			}
+			return true;
+		}
+	}
+
+	classad::ExprList * nested_ad_list = dynamic_cast<classad::ExprList *>(nal);
+	if( nested_ad_list == NULL ) {
+		//dprintf( D_FULLDEBUG, "evalEachInContext(): failed to convert second argument\n" );
+		result.SetErrorValue();
+		return true;
+	}
+
+	if (is_evalInEach) {
+
+		// for evalInEachContext we will return a list of evaluation results
+		classad_shared_ptr<classad::ExprList> lst(new classad::ExprList());
+		ASSERT(lst);
+
+		size_t index = 0;
+		for (auto i = nested_ad_list->begin(); i != nested_ad_list->end(); ++i) {
+			auto nested_ad = *i;
+
+			//dprintf( D_FULLDEBUG, "evalEachInContext(): evaluating index %lu\n", index );
+			classad::Value cav = evaluateInContext(expr, state, nested_ad);
+			if (cav.IsListValue()) {
+				classad::ExprList * elv = nullptr;
+				cav.IsListValue(elv);
+				lst->push_back(elv->Copy());
+			} else if (cav.IsClassAdValue()) {
+				classad::ClassAd * cad = nullptr;
+				cav.IsClassAdValue(cad);
+				lst->push_back(cad->Copy());
+			} else {
+				lst->push_back(classad::Literal::MakeLiteral(cav));
+			}
+			index++;
+		}
+
+		result.SetListValue(lst);
+	} else {
+		// for countMatches - return an integer count of results that evaluate to TRUE
+		// This is useful for matching a job to a heterogenous array of custom resources like GPUs.
+		// the slot ad will have (actual names are longer)
+		//    AvailableGPUs = { GPUs_tag1, GPUs_tag2 }
+		//    GPUS_tag1 = [ Capability = 4.0; Name = "GRX"; ]
+		//    GPUS_tag2 = [ Capability = 5.5; Name = "Tesla"; ]
+		// The job will indicate which GPU it wants
+		//    RequestGPUs = 1
+		//    RequireGPUs = Capability > 4
+		// And the job's requirements will use this function to insure that the job matches the slot
+		//    Requirements = ... && countMatches(RequireGPUs, AvailableGPUs) >= RequestGPUs
+		int num_matches = 0;
+		for( auto i = nested_ad_list->begin(); i != nested_ad_list->end(); ++i ) {
+			auto nested_ad = *i;
+
+			classad::Value r = evaluateInContext( expr, state, nested_ad );
+			// not that we do *not* propagate undefined or error here because we want to use this function in matchmaking
+			bool matched = false;
+			if( r.IsBooleanValueEquiv(matched) && matched ) {
+				++num_matches;
+			}
+		}
+
+		result.SetIntegerValue(num_matches);
+	}
+
+	return true;
+}
+
+
+
 static
 void registerClassadFunctions()
 {
@@ -1169,6 +1403,11 @@ void registerClassadFunctions()
 	classad::FunctionCall::RegisterFunction( name, splitArb_func );
 	//name = "splitsinful";
 	//classad::FunctionCall::RegisterFunction( name, splitSinful_func );
+
+    name = "evalInEachContext";
+    classad::FunctionCall::RegisterFunction( name, evalInEachContext_func);
+    name = "countMatches";
+    classad::FunctionCall::RegisterFunction( name, evalInEachContext_func);
 }
 
 void
@@ -1769,10 +2008,19 @@ int CondorClassAdListWriter::writeFooter(FILE* out, bool xml_always_write_header
 
 
 bool
-ClassAdAttributeIsPrivate( const std::string &name )
+ClassAdAttributeIsPrivateV1( const std::string &name )
 {
 	return ClassAdPrivateAttrs.find(name) != ClassAdPrivateAttrs.end();
 }
+
+bool
+ClassAdAttributeIsPrivateV2( const std::string &name )
+{
+	return strncasecmp(name.c_str(), "_condor_priv", 12) == 0;
+}
+
+bool
+ClassAdAttributeIsPrivateAny( const std::string &name ) {return ClassAdAttributeIsPrivateV2(name) || ClassAdAttributeIsPrivateV1(name);}
 
 int
 EvalAttr( const char *name, classad::ClassAd *my, classad::ClassAd *target, classad::Value & value)
@@ -2041,7 +2289,7 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 				continue; // attribute exists in child ad; we will print it below
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first ) ) {
+				 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 				attributes.emplace_back(itr->first,itr->second);
 			}
 		}
@@ -2057,7 +2305,7 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 		}
 
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first ) ) {
+			 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 			attributes.emplace_back(itr->first,itr->second);
 		}
 	}
@@ -2095,7 +2343,7 @@ _sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, S
 				continue; // attribute exists in child ad; we will print it below
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first ) ) {
+				 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 				value = "";
 				unp.Unparse( value, itr->second );
 				// output.formatstr_cat( "%s = %s\n", itr->first.c_str(), value.c_str() );
@@ -2109,7 +2357,7 @@ _sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, S
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first ) ) {
+			 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 			value = "";
 			unp.Unparse( value, itr->second );
 			// output.formatstr_cat( "%s = %s\n", itr->first.c_str(), value.c_str() );
@@ -2167,7 +2415,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first ) ) {
+			 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 			attrs.insert(itr->first);
 		}
 	}
@@ -2182,7 +2430,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 				continue; // not in white-list
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first ) ) {
+				 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 				attrs.insert(itr->first);
 			}
 		}
@@ -2761,6 +3009,5 @@ bool InsertLongFormAttrValue(classad::ClassAd & ad, const char * line, bool use_
 	}
 	return ad.Insert(attr, tree);
 }
-
 
 // end functions

@@ -1367,21 +1367,27 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rip->dprintf( D_FULLDEBUG,
 				  "Received ClaimId from schedd (%s)\n", idp.publicClaimId() );
 
+	bool has_cp = false;
+	consumption_map_t consumption;
 	Claim* leftover_claim = NULL; 
-	Resource * new_rip = initialize_resource(rip, req_classad, leftover_claim);
-	if( !new_rip ) {
-		refuse(stream);
-		ABORT;
+	if (rip->can_create_dslot()) {
+		Resource * new_rip = create_dslot(rip, req_classad, leftover_claim);
+		if ( ! new_rip) {
+			refuse(stream);
+			ABORT;
+		}
+
+		// we have to do the consumption policy stuff against the p-slot, not the new d-slot
+		has_cp = cp_supports_policy(*rip->r_classad);
+		if (has_cp) {
+			cp_override_requested(*req_classad, *rip->r_classad, consumption);
+		}
+
+		// we don't expect these to be the same, but technically if they are not then no d-slot was created.
+		if (new_rip != rip) { new_dynamic_slot = true; }
+		rip = new_rip;
 	}
 
-    consumption_map_t consumption;
-    bool has_cp = cp_supports_policy(*rip->r_classad);
-    if (has_cp) {
-        cp_override_requested(*req_classad, *rip->r_classad, consumption);
-    }
-
-	if( new_rip != rip) { new_dynamic_slot = true; }
-	rip = new_rip;
 
 		// Make sure we're willing to run this job at all.
 	if (!rip->willingToRun(req_classad)) {
@@ -1390,9 +1396,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		ABORT;
 	}
 
-    if (has_cp) {
-        cp_restore_requested(*req_classad, consumption);
-    }
+	if (has_cp) {
+		cp_restore_requested(*req_classad, consumption);
+	}
 
 		// Now, make sure it's got a high enough rank to preempt us.
 	rank = rip->compute_rank(req_classad);
@@ -1822,6 +1828,7 @@ activate_claim( Resource* rip, Stream* stream )
 			 shadow_addr );
 
 		// Find out what version of the starter to use for the activation.
+		// This is now ignored, as there's only one starter.
 	if( ! stream->code( starter ) ) {
 		rip->dprintf( D_ALWAYS, "Can't read starter type from %s\n",
 				 shadow_addr );
@@ -1902,29 +1909,11 @@ activate_claim( Resource* rip, Stream* stream )
 		}
 	}
 
-		// now, try to satisfy the job.  while we're at it, we'll
-		// figure out what starter they want to use
-	Starter* tmp_starter;
-	bool no_starter = false;
-	tmp_starter = resmgr->starter_mgr.newStarter( req_classad,
-												   mach_classad,
-												   no_starter,
-												   starter );
+	Starter* tmp_starter = new Starter;
 
     if (has_cp) {
         cp_restore_requested(*req_classad, consumption);
     }
-
-	if( ! tmp_starter ) {
-		if( no_starter ) {
-			rip->dprintf( D_ALWAYS, "No valid starter found to run this job!  Is something wrong with your Condor installation?\n" );
-		}
-		else {
-			rip->dprintf( D_ALWAYS, "Job Requirements check failed!\n" );
-		}
-		refuse( stream );
-	    ABORT;
-	}
 
 		// If we're here, we've decided to activate the claim.  Tell
 		// the shadow we're ok.
@@ -1940,21 +1929,11 @@ activate_claim( Resource* rip, Stream* stream )
 		ABORT;
 	}
 
-		// if we're daemonCore, hold onto the sock the shadow used for
+		// hold onto the sock the shadow used for
 		// this command, and we'll use that for the shadow RSC sock.
 		// otherwise, if we're not windoze, setup our two ports, tell
 		// the shadow about them, and wait for it to connect.
-	Stream* shadow_sock = NULL;
-	if( tmp_starter->is_dc() ) {
-		shadow_sock = stream;
-	} 
-#ifndef WIN32
-	else {
-		rip->dprintf( D_ALWAYS, "Standard universe starter is not supported.\n" );
-		delete tmp_starter;
-		ABORT;
-	}
-#endif	// of ifdef WIN32
+	Stream* shadow_sock = stream;
 
 	ClassAd * overlay_ad = rip->r_cur->execution_overlay();
 	overlay_ad->Clear();
@@ -2789,7 +2768,10 @@ command_coalesce_slots(int, Stream * stream ) {
 
 	Claim * leftoverClaim = NULL;
 	dprintf( D_ALWAYS, "command_coalesce_slots(): creating coalesced slot...\n" );
-	Resource * coalescedSlot = initialize_resource( parent, requestAd, leftoverClaim );
+	Resource * coalescedSlot = parent; // is it possible to get here when parent is a static slot?
+	if (parent->can_create_dslot()) {
+		coalescedSlot = create_dslot(parent, requestAd, leftoverClaim);
+	}
 	if( coalescedSlot == NULL ) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): unable to coalesce slots\n" );
 		delete requestAd;

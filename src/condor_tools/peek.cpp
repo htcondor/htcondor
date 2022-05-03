@@ -288,7 +288,7 @@ HTCondorPeek::create_session()
 					EXECUTE_SIDE_MATCHSESSION_FQU,
 					m_starter_addr.c_str(),
 					0,
-					nullptr );
+					nullptr, false );
 		if( !success ) {
 			error_msg = "Failed to create security session to connect to starter.";
 		}

@@ -14,7 +14,7 @@ Center for High Throughput Computing, University of Wisconsin–Madison.
    overview/index
    users-manual/index
    admin-manual/index
-   misc-concepts/index
+   classads/index
    grid-computing/index
    cloud-computing/index
    apis/index

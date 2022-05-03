@@ -36,9 +36,9 @@ class Starter : public Service
 {
 public:
 	Starter();
-	Starter( const Starter& s );
 	~Starter();
 
+	static void config();
 
 	void	dprintf( int, const char* ... );
 	void	set_dprintf_prefix(const char * prefix) { if (prefix) { s_dpf = prefix; } else { s_dpf.clear(); } }
@@ -47,13 +47,11 @@ public:
 	time_t	birthdate( void ) const {return s_birthdate;};
 	time_t	got_update(void) const {return s_last_update_time;}
 	bool	got_final_update(void) const {return s_got_final_update;}
-	bool	kill(int);
-	bool	killpg(int);
-	void	killkids(int);
+	bool	signal(int);
+	bool	killfamily();
 	void	exited(Claim *, int status);
 	int 	spawn(Claim *, time_t now, Stream* s );
 	pid_t	pid() const {return s_pid;};
-	bool	is_dc() const {return s_is_dc;};
 	bool	active() const;
 	const ProcFamilyUsage & updateUsage(void);
 
@@ -84,14 +82,7 @@ public:
 		// Called by our softkill timer
 	void softkillTimeout( void );
 	
-	void	publish( ClassAd* ad, StringList* list );
-
-	bool	satisfies( ClassAd* job_ad, ClassAd* mach_ad );
-	bool	provides( const char* ability );
-
-	void	setAd( ClassAd* ad );
-	void	setPath( const char* path );
-	void	setIsDC( bool is_dc );
+	static void	publish( ClassAd* ad );
 
 #if HAVE_BOINC
 	bool	isBOINC( void ) const { return s_is_boinc; };
@@ -109,7 +100,7 @@ public:
 private:
 
 		// methods
-	bool	reallykill(int, int);
+	bool	reallykill(int, bool);
 	int		execJobPipeStarter( Claim * );
 	int		execDCStarter( Claim *, Stream* s );
 		// claim is optional here, and may be NULL (e.g. boinc) but it may NOT be null when glexec is enabled. (sigh)
@@ -143,9 +134,8 @@ private:
 
 		// data that will be the same across all instances of this
 		// starter (i.e. things that are valid for copying)
-	ClassAd* s_ad; // starter capabilities ad, (not the job ad!)
-	char*	s_path;
-	bool 	s_is_dc;
+	static ClassAd* s_ad; // starter capabilities ad, (not the job ad!)
+	static char* s_path;
 
 		// data that only makes sense once this Starter object has
 		// been assigned to a given resource and spawned.

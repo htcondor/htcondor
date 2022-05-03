@@ -32,8 +32,6 @@ class Stream;
 
 void AttrList_setPublishServerTime(bool publish);
 
-classad::ClassAd* getClassAd( Stream *sock );
-
 bool getClassAd( Stream *sock, classad::ClassAd& ad);
 bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options);
 #define GET_CLASSAD_NO_CACHE            0x01 // don't use the classAdCache (default is to cache)

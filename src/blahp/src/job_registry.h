@@ -120,7 +120,7 @@ typedef struct job_registry_entry_s
 
 #define JOB_REGISTRY_ASSIGN_ENTRY(dest,src) \
   (dest)[sizeof(dest)-1]='\000'; \
-  strncpy((dest),(src),sizeof(dest)); 
+  strncpy((dest),(src),sizeof(dest) - 1); 
 
 typedef struct job_registry_index_s
  {
@@ -157,7 +157,7 @@ typedef struct job_registry_handle_s
    job_registry_index_mode mode;
    uint32_t disk_firstrec;
    int mmap_fd;
-   off_t index_mmap_length;
+   size_t index_mmap_length;
    char *mmappableindex;
  } job_registry_handle;
 

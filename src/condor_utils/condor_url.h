@@ -29,4 +29,15 @@
 const char* IsUrl( const char *url );
 std::string getURLType( const char *url, bool scheme_suffix );
 
+// Return a copy of the given URL where the query component
+// (the part after '?') is replaced with '...'.
+// Useful when printing URLs that may contain sensitive information
+// in the query component.
+// The pointer returned by the first variant is valid until 2 subsequent
+// calls are made. This allows inline calls in a dprintf() that prints two
+// URLs that we want to redact.
+// The second variant writes to 'out' and returns out.c_str().
+const char* UrlSafePrint(const std::string& in);
+const char* UrlSafePrint(const std::string& in, std::string& out);
+
 #endif

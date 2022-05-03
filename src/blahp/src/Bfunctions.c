@@ -23,6 +23,8 @@
 */
 
 #include "Bfunctions.h"
+#include <assert.h>
+#include <stdlib.h>
 
 pthread_mutex_t writeline_mutex = PTHREAD_MUTEX_INITIALIZER;
 int bfunctions_poll_timeout = 600000; /* Default 10 minutes */
@@ -107,10 +109,11 @@ Writeline(int sockd, const void *vptr, size_t n)
 
 	while ( nleft > 0 ) {
 
-		if ( (nwritten = write(sockd, vptr, nleft)) <= 0 ) {
+		if ( (nwritten = write(sockd, buffer, nleft)) <= 0 ) {
 			if ( errno == EINTR ) {
 				nwritten = 0;
 			}else{
+				pthread_mutex_unlock( &writeline_mutex );
 				return -1;
 			}
 		}
@@ -143,6 +146,7 @@ char *get_line(FILE * f)
             feof(f) ) break;
         size += BUFSIZ;
         buf = realloc(buf,size);           
+        assert(buf);
         buf[last]='\000';
 	if (fgets(buf+last,size-last,f) == NULL) break;
         len = strlen(buf);
@@ -240,7 +244,7 @@ strdel(char *s, const char *delete)
 	}
         
 	if(!s || !strlen(s)){
-		tmp = strndup(s, STR_CHARS);
+		tmp = strdup("");
 		return tmp;
 	}
         
@@ -285,7 +289,7 @@ iepoch2str(time_t epoch)
 
 	struct tm tm;
 	
-	lepoch=make_message("%d",epoch);
+	lepoch=make_message("%ld",epoch);
  
 	strptime(lepoch,"%s",&tm);
  
@@ -308,8 +312,8 @@ str2epoch(char *str, char * f)
 	time_t idate;
 	time_t now;
 
-	struct tm tm;
-        struct tm tmnow;
+	struct tm tm = { 0,0,0,0,0,0,0,0,0,0,0};
+	struct tm tmnow;
 	
 	int mdlog,mdnow;
 	
@@ -372,6 +376,8 @@ daemonize()
 {
 
 	int pid;
+	int r;
+	FILE *f;
     
 	pid = fork();
 	
@@ -390,12 +396,23 @@ daemonize()
 	}else if (pid >0){
 		exit(EXIT_SUCCESS);
 	}
-	chdir("/");
+	r = chdir("/");
+	if (r != 0) {
+		exit(EXIT_FAILURE);
+	}
     
-	freopen ("/dev/null", "r", stdin);  
-	freopen ("/dev/null", "w", stdout);
-	freopen ("/dev/null", "w", stderr); 
-
+	f = freopen ("/dev/null", "r", stdin);  
+	if (f == NULL) {
+		exit(EXIT_FAILURE);
+	}
+	f = freopen ("/dev/null", "w", stdout);
+	if (f == NULL) {
+		exit(EXIT_FAILURE);
+	}
+	f = freopen ("/dev/null", "w", stderr); 
+	if (f == NULL) {
+		exit(EXIT_FAILURE);
+	}
 }
 
 int
@@ -405,16 +422,16 @@ writepid(char * pidfile)
 	struct stat pstat;
 	mode_t pidmode = S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH;
 
-	if (stat(pidfile, &pstat) >= 0){
+	fpid = fopen(pidfile, "w");
+	if ( !fpid ) { perror(pidfile); return 1; }
+	
+	if (fstat(fileno(fpid), &pstat) >= 0){
 		pidmode = pstat.st_mode;
 		pidmode &= ~(S_IWGRP|S_IWOTH);
 	}
+	(void) fchmod(fileno(fpid), pidmode);
 
-	fpid = fopen(pidfile, "w");
-	if ( !fpid ) { perror(pidfile); return 1; }
-	fchmod(fileno(fpid), pidmode);
-
-	if (fprintf(fpid, "%d", getpid()) <= 0) { perror(pidfile); return 1; }
+	if (fprintf(fpid, "%d", getpid()) <= 0) { fclose(fpid) ; perror(pidfile); return 1; }
 	if (fclose(fpid) != 0) { perror(pidfile); return 1; }
 	return 0;
 }
@@ -683,7 +700,6 @@ int check_config_file(char *logdev){
 	char *ldebuglogname=NULL;
 	FILE *ldebuglogfile=NULL;
 	int  ldebug=0;
-	int async_port;
 		
         lcha = config_read(NULL);
         if (lcha == NULL) {
@@ -767,9 +783,7 @@ int check_config_file(char *logdev){
 	if (lret == NULL){
 		do_log(ldebuglogfile, ldebug, 1, "%s: key async_notification_port not found\n",argv0);
 		sysfatal("async_notification_port not defined. Exiting");
-	} else {
-                async_port=atoi(lret->value);
-        }
+	} 
 
 	if(strstr(supplrms,"pbs")){
 	
@@ -987,9 +1001,7 @@ int check_config_file(char *logdev){
 	
 	free(supplrms);
 	free(ldebuglogname);
-	if(ldebug!=0){
-		fclose(ldebuglogfile);
-	}
+	if(ldebuglogfile) fclose(ldebuglogfile);
 
 	return 0;
 }
@@ -1013,8 +1025,8 @@ char *GetPBSSpoolPath(char *binpath)
                 if (len>0){
                         pbs_spool[len-1]='\000';
                 }
-        }
         pclose(file_output);
+        }
 	free(command_string);
 	
 	return pbs_spool;

@@ -35,13 +35,7 @@
 #include "condor_version.h"
 #include "ipv6_hostname.h"
 #include "daemon_command.h"
-
-
-// For AES (and newer).
-#define GENERATED_KEY_LENGTH_V9  32
-
-// For BLOWFISH and 3DES
-#define GENERATED_KEY_LENGTH_OLD 24
+#include "condor_base64.h"
 
 
 static unsigned int ZZZZZ = 0;
@@ -737,6 +731,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_result = FALSE;
 					return CommandProtocolFinished;
 				}
+				m_auth_info.Delete(ATTR_SEC_NONCE);
 
 				// lookup the suggested key
 				if (!m_sec_man->session_cache->lookup(m_sid, session)) {
@@ -744,34 +739,49 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					// the key id they sent was not in our cache.  this is a
 					// problem.
 
-					char * return_addr = NULL;
-					m_auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr);
-					std::string our_sinful;
-					m_auth_info.LookupString(ATTR_SEC_CONNECT_SINFUL, our_sinful);
-					ClassAd info_ad;
-					// Presence of the ConnectSinful attribute indicates
-					// that the client understands and wants the
-					// extended information ad in the
-					// DC_INVALIDATE_KEY message.
-					if ( !our_sinful.empty() ) {
-						info_ad.Assign(ATTR_SEC_CONNECT_SINFUL, our_sinful);
-					}
-
+					std::string return_addr;
+					m_auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, return_addr);
 					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
-							   "invalid session %s, failing; this session was requested by %s with return address %s\n", m_sid, m_sock->peer_description(), return_addr ? return_addr : "(none)");
+					         "invalid session %s, failing; this session was requested by %s with return address %s\n", m_sid, m_sock->peer_description(), return_addr.empty() ? "(none)" : return_addr.c_str());
 					if( !strncmp( m_sid, "family:", strlen("family:") ) ) {
 						dprintf(D_ALWAYS, "  The remote daemon thinks that we are in the same family of Condor daemon processes as it, but I don't recognize its family security session.\n");
 						dprintf(D_ALWAYS, "  If we are in the same family of processes, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
 					}
 
-					if( return_addr ) {
-						daemonCore->send_invalidate_session( return_addr, m_sid, &info_ad );
-						free (return_addr);
-					}
+					bool want_resume_response = false;
+					m_auth_info.LookupBool(ATTR_SEC_RESUME_RESPONSE, want_resume_response);
+					if (want_resume_response) {
+						// New client, tell them here that we don't like
+						// their session id.
+						ClassAd resp_ad;
+						resp_ad.Assign(ATTR_SEC_RETURN_CODE, "SID_NOT_FOUND");
 
-					// consume the rejected message
-					m_sock->decode();
-					m_sock->end_of_message();
+						m_sock->encode();
+						if (!putClassAd(m_sock, resp_ad) || !m_sock->end_of_message()) {
+							dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to send unknown session reply to peer at %s.\n", m_sock->peer_description());
+						}
+					} else {
+						// Old client (pre-9.9.0), send out-of-band
+						// notification of invalid session.
+						std::string our_sinful;
+						m_auth_info.LookupString(ATTR_SEC_CONNECT_SINFUL, our_sinful);
+						ClassAd info_ad;
+						// Presence of the ConnectSinful attribute indicates
+						// that the client understands and wants the
+						// extended information ad in the
+						// DC_INVALIDATE_KEY message.
+						if ( !our_sinful.empty() ) {
+							info_ad.Assign(ATTR_SEC_CONNECT_SINFUL, our_sinful);
+						}
+
+						if( !return_addr.empty() ) {
+							daemonCore->send_invalidate_session( return_addr.c_str(), m_sid, &info_ad );
+						}
+
+						// consume the rejected message
+						m_sock->decode();
+						m_sock->end_of_message();
+					}
 
 					// close the connection.
 					m_result = FALSE;
@@ -794,6 +804,24 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				}
 
 				session->renewLease();
+
+				// For a non-negotiated session, remember the version of
+				// our peer in case we use the session later as a client.
+				// TODO We only need this for non-negotiated sessions.
+				//   Should we limit this to them?
+				if (!peer_version.empty()) {
+					session->setLastPeerVersion(peer_version);
+				} else {
+					// Old verions (pre-9.9.0) don't send their version
+					// in the resume session ad.
+					// The important thing here is that they're older than
+					// 9.9.0 and thus don't know about the server response
+					// ad when resuming a session.
+					CondorVersionInfo ver_info(9, 8, 0, "FakeOldVersion");
+					char* ver_str = ver_info.get_version_string();
+					session->setLastPeerVersion(ver_str);
+					free(ver_str);
+				}
 
 				// If the session has multiple crypto methods, we need to
 				// figure out which one to use.
@@ -868,14 +896,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_sock->setSessionID(session->id());
 				}
 
-				// When using a cached session, only use the version
-				// from the session for the socket's peer version.
+				// If the cached policy doesn't have a version, then
+				// we're dealing with a non-negotaited session from an
+				// old peer (pre-9.9.0).
+				// In that case, clear out the socket's peer version.
 				// This maintains symmetry of version info between
 				// client and server.
-				if ( !peer_version.empty() ) {
-					CondorVersionInfo ver_info( peer_version.c_str() );
-					m_sock->set_peer_version( &ver_info );
-				} else {
+				if ( peer_version.empty() ) {
 					m_sock->set_peer_version( NULL );
 				}
 
@@ -921,6 +948,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					}
 				}
 
+				m_policy->Assign(ATTR_SEC_NEGOTIATED_SESSION, true);
+
 				// add our version to the policy to be sent over
 				m_policy->Assign(ATTR_SEC_REMOTE_VERSION, CondorVersion());
 
@@ -940,59 +969,77 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_sid = strdup(tmpStr.c_str());
 
 					if (will_authenticate == SecMan::SEC_FEAT_ACT_YES) {
-
-						char *crypto_method = NULL;
-						if (!m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, &crypto_method)) {
+						std::string crypto_method;
+						if (!m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method)) {
 							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: tried to enable encryption for request from %s, but we have none!\n", m_sock->peer_description() );
-							m_result = FALSE;
+							m_result = false;
 							return CommandProtocolFinished;
 						}
+						Protocol method = SecMan::getCryptProtocolNameToEnum(crypto_method.c_str());
 
-						unsigned char* rkey = Condor_Crypt_Base::randomKey(GENERATED_KEY_LENGTH_V9);
-						unsigned char  rbuf[GENERATED_KEY_LENGTH_V9];
-						if (rkey) {
-							memcpy (rbuf, rkey, GENERATED_KEY_LENGTH_V9);
-							// this was malloced in randomKey
-							free (rkey);
+							// If the client provided a EC key, we'll respond in kind.
+						std::string peer_ec;
+						if (m_auth_info.EvaluateAttrString(ATTR_SEC_ECDH_PUBLIC_KEY, peer_ec)) {
+							m_peer_pubkey_encoded = peer_ec;
+							if (!(m_keyexchange = SecMan::GenerateKeyExchange(m_errstack))) {
+								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Error in generating key: %s\n", m_errstack->getFullText().c_str());
+								return CommandProtocolFinished;
+							}
+							std::string encoded_pubkey;
+							if (!SecMan::EncodePubkey(m_keyexchange.get(), encoded_pubkey, m_errstack)) {
+								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Error in encoded key: %s\n", m_errstack->getFullText().c_str());
+								return CommandProtocolFinished;
+							}
+							if (!m_policy->InsertAttr(ATTR_SEC_ECDH_PUBLIC_KEY, encoded_pubkey)) {
+								dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to add pubkey to policy ad.\n");
+								return CommandProtocolFinished;
+							}
+
+								// We will derive the key post-authentication.
+							m_key = nullptr;
 						} else {
-							memset (rbuf, 0, GENERATED_KEY_LENGTH_V9);
-							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: unable to generate key for request from %s - no crypto available!\n", m_sock->peer_description() );							
-							free( crypto_method );
-							crypto_method = NULL;
-							m_result = FALSE;
-							return CommandProtocolFinished;
+								// Server will explicitly send the key to the client during the authentication; we need
+								// to generate it first.
+
+							unsigned char* rkey = Condor_Crypt_Base::randomKey(SEC_SESSION_KEY_LENGTH_V9);
+							unsigned char  rbuf[SEC_SESSION_KEY_LENGTH_V9];
+							if (rkey) {
+								memcpy (rbuf, rkey, SEC_SESSION_KEY_LENGTH_V9);
+								// this was malloced in randomKey
+								free (rkey);
+							} else {
+								memset (rbuf, 0, SEC_SESSION_KEY_LENGTH_V9);
+								dprintf ( D_ALWAYS, "DC_AUTHENTICATE: unable to generate key for request from %s - no crypto available!\n", m_sock->peer_description() );
+								m_result = FALSE;
+								return CommandProtocolFinished;
+							}
+							switch (method) {
+								case CONDOR_BLOWFISH:
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", m_sid);
+									m_key = new KeyInfo(rbuf, SEC_SESSION_KEY_LENGTH_OLD, CONDOR_BLOWFISH, 0);
+									break;
+								case CONDOR_3DES:
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", m_sid);
+									m_key = new KeyInfo(rbuf, SEC_SESSION_KEY_LENGTH_OLD, CONDOR_3DES, 0);
+									break;
+								case CONDOR_AESGCM: {
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %s...\n", m_sid);
+									m_key = new KeyInfo(rbuf, SEC_SESSION_KEY_LENGTH_V9, CONDOR_AESGCM, 0);
+									}
+									break;
+								default:
+									dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", m_sid);
+									m_key = new KeyInfo(rbuf, SEC_SESSION_KEY_LENGTH_OLD, CONDOR_NO_PROTOCOL, 0);
+									break;
+							}
+
+							if (!m_key) {
+								m_result = FALSE;
+								return CommandProtocolFinished;
+							}
+
+							m_sec_man->key_printf (D_SECURITY, m_key);
 						}
-
-						Protocol method = SecMan::getCryptProtocolNameToEnum(crypto_method);
-						switch (method) {
-							case CONDOR_BLOWFISH:
-								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_OLD, CONDOR_BLOWFISH, 0);
-								break;
-							case CONDOR_3DES:
-								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_OLD, CONDOR_3DES, 0);
-								break;
-							case CONDOR_AESGCM: {
-								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating AES-GCM key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_V9, CONDOR_AESGCM, 0);
-								}
-								break;
-							default:
-								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating RANDOM key for session %s...\n", m_sid);
-								m_key = new KeyInfo(rbuf, GENERATED_KEY_LENGTH_OLD, CONDOR_NO_PROTOCOL, 0);
-								break;
-						}
-
-						free( crypto_method );
-						crypto_method = NULL;
-
-						if (!m_key) {
-							m_result = FALSE;
-							return CommandProtocolFinished;
-						}
-
-						m_sec_man->key_printf (D_SECURITY, m_key);
 
 						// Update the session policy to reflect the
 						// crypto method we're using
@@ -1018,6 +1065,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						m_result = FALSE;
 						return CommandProtocolFinished;
 					}
+					// We don't need our encoded pubkey anymore
+					m_policy->Delete(ATTR_SEC_ECDH_PUBLIC_KEY);
 					m_sock->decode();
 				} else {
 					dprintf( D_SECURITY, "SECMAN: Enact was '%s', not sending response.\n",
@@ -1056,38 +1105,46 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				m_will_enable_integrity  = m_sec_man->sec_lookup_feat_act(*m_policy, ATTR_SEC_INTEGRITY);
 
 
-				// protocol fix:
-				//
-				// up to and including 6.6.0, will_authenticate would be set to
-				// true if we are resuming a session that was authenticated.
-				// this is not necessary.
-				//
-				// so, as of 6.6.1, if we are resuming a session (as determined
-				// by the expression (!m_new_session), AND the other side is
-				// 6.6.1 or higher, we will force will_authenticate to
-				// SEC_FEAT_ACT_NO.
-
+				// When resuming an existing security session, will_authenticate
+				// reflects the original decision about whether to authenticate.
+				// We don't want to re-authenticate when resuming, so force
+				// will_authenticate to SEC_FEAT_ACT_NO in that case.
 				if ( will_authenticate == SecMan::SEC_FEAT_ACT_YES ) {
 					if ((!m_new_session)) {
-						char * remote_version = NULL;
-						m_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
-						if(remote_version) {
-							// this attribute was added in 6.6.1.  it's mere
-							// presence means that the remote side is 6.6.1 or
-							// higher, so no need to instantiate a CondorVersionInfo.
-							dprintf( D_SECURITY, "SECMAN: other side is %s, NOT reauthenticating.\n", remote_version );
-							will_authenticate = SecMan::SEC_FEAT_ACT_NO;
+						dprintf( D_SECURITY, "SECMAN: resume, NOT reauthenticating.\n" );
+						will_authenticate = SecMan::SEC_FEAT_ACT_NO;
 
-							free (remote_version);
-						} else {
-							dprintf( D_SECURITY, "SECMAN: other side is pre 6.6.1, reauthenticating.\n" );
-						}
 					} else {
 						dprintf( D_SECURITY, "SECMAN: new session, doing initial authentication.\n" );
 					}
 				}
 
+				if (!m_new_session) {
+					bool want_resume_response = false;
+					m_auth_info.LookupBool(ATTR_SEC_RESUME_RESPONSE, want_resume_response);
+					if (want_resume_response) {
+						dprintf(D_SECURITY|D_FULLDEBUG, "DC_AUTHENTICATE: sending response to client's resume session request.\n");
+						std::unique_ptr<unsigned char, decltype(&free)> random_bytes(Condor_Crypt_Base::randomKey(33), &free);
+						std::unique_ptr<char, decltype(&free)> encoded_bytes(
+							condor_base64_encode(random_bytes.get(), 33, false),
+							&free);
 
+						ClassAd ad;
+						ad.Assign(ATTR_SEC_RETURN_CODE, "AUTHORIZED");
+						ad.Assign(ATTR_SEC_REMOTE_VERSION, CondorVersion());
+						if (!ad.InsertAttr(ATTR_SEC_NONCE, encoded_bytes.get())) {
+							dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to generate nonce to send for session resumption.\n");
+							m_result = false;
+							return CommandProtocolFinished;
+						}
+						m_sock->encode();
+						if (!putClassAd(m_sock, ad) || !m_sock->end_of_message()) {
+							dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to send nonce to peer at %s.\n", m_sock->peer_description());
+							m_result = false;
+							return CommandProtocolFinished;
+						}
+					}
+				}
 
 				if (m_is_tcp && (will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
 
@@ -1179,6 +1236,23 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	if ( method_used ) {
 		m_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
+
+		// For CLAIMTOBE, explicitly limit the authorized permission
+		// levels to that of the current command and any implied ones.
+		if ( !strcasecmp(method_used, "CLAIMTOBE") ) {
+			std::string perm_list;
+			DCpermissionHierarchy hierarchy( m_comTable[m_cmd_index].perm );
+			DCpermission const *perms = hierarchy.getImpliedPerms();
+
+			// iterate through a list of this perm and all perms implied by it
+			for (DCpermission perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
+				if (!perm_list.empty()) {
+					perm_list += ',';
+				}
+				perm_list += PermString(perm);
+			}
+			m_policy->Assign(ATTR_SEC_LIMIT_AUTHORIZATION, perm_list);
+		}
 	}
 	if ( m_sock->getAuthenticatedName() ) {
 		m_policy->Assign(ATTR_SEC_AUTHENTICATED_NAME, m_sock->getAuthenticatedName() );
@@ -1212,6 +1286,29 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	if( auth_success ) {
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: authentication of %s complete.\n", m_sock->peer_ip_str());
 		m_sock->getPolicyAd(*m_policy);
+
+		if (m_keyexchange) {
+			std::string crypto_method;
+			if (!m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method)) {
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: No crypto methods enabled for request from %s.\n", m_sock->peer_description() );
+				m_result = false;
+				return CommandProtocolFinished;
+			}
+			Protocol method = SecMan::getCryptProtocolNameToEnum(crypto_method.c_str());
+
+			size_t keylen = method == CONDOR_AESGCM ? SEC_SESSION_KEY_LENGTH_V9 : SEC_SESSION_KEY_LENGTH_OLD;
+			std::unique_ptr<unsigned char, decltype(&free)> rbuf(
+				static_cast<unsigned char *>(malloc(keylen)),
+				&free);
+			if (!SecMan::FinishKeyExchange(std::move(m_keyexchange), m_peer_pubkey_encoded.c_str(), rbuf.get(), keylen, m_errstack)) {
+				dprintf(D_ALWAYS, "DC_AUTHENTICATE: Failed to generate a symmetric key for session with %s: %s.\n", m_sock->peer_description(), m_errstack->getFullText().c_str());
+				m_result = false;
+				return CommandProtocolFinished;
+			}
+
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: generating %s key for session %s...\n", crypto_method.c_str(), m_sid);
+			m_key = new KeyInfo(rbuf.get(), keylen, method, 0);
+		}
 	}
 	else {
 		bool auth_required = true;
@@ -1590,24 +1687,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		}
 
 		if (m_sock->triedAuthentication()) {
-				// Clients older than 7.1.2 behave differently when re-using a
-				// security session.  If they reach a point in the code where
-				// authentication is forced (e.g. to submit jobs), they will
-				// always re-authenticate at that point.  Therefore, we only
-				// set TriedAuthentication=True for newer clients which respect
-				// that setting.  When the setting is not there or false, the server
-				// and client will re-authenticate at such points because
-				// triedAuthentication() (or isAuthenticated() in the older code)
-				// will be false.
-			char * remote_version = NULL;
-			m_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
-			CondorVersionInfo verinfo(remote_version);
-			free(remote_version);
-
-			if (verinfo.built_since_version(7,1,2)) {
-				pa_ad.Assign(ATTR_SEC_TRIED_AUTHENTICATION,m_sock->triedAuthentication());
-			}
-
+			pa_ad.Assign(ATTR_SEC_TRIED_AUTHENTICATION,m_sock->triedAuthentication());
 		}
 
 			// remember on the server side what we told the client

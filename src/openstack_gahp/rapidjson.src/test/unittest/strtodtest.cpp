@@ -16,6 +16,11 @@
 
 #include "rapidjson/internal/strtod.h"
 
+#ifdef __clang__
+RAPIDJSON_DIAG_PUSH
+RAPIDJSON_DIAG_OFF(unreachable-code)
+#endif
+
 #define BIGINTEGER_LITERAL(s) BigInteger(s, sizeof(s) - 1)
 
 using namespace rapidjson::internal;
@@ -37,7 +42,7 @@ TEST(Strtod, CheckApproximationCase) {
     u.u = 0x465a72e467d88 | ((static_cast<uint64_t>(-149 + kExponentBias)) << kSignificandSize);
     const double b = u.d;
     const uint64_t bInt = (u.u & kSignificandMask) | kHiddenBit;
-    const int bExp = ((u.u & kExponentMask) >> kSignificandSize) - kExponentBias - kSignificandSize;
+    const int bExp = static_cast<int>(((u.u & kExponentMask) >> kSignificandSize) - kExponentBias - kSignificandSize);
     EXPECT_DOUBLE_EQ(1.7864e-45, b);
     EXPECT_EQ(RAPIDJSON_UINT64_C2(0x001465a7, 0x2e467d88), bInt);
     EXPECT_EQ(-201, bExp);
@@ -99,13 +104,13 @@ TEST(Strtod, CheckApproximationCase) {
     EXPECT_EQ(49, hS_Exp5);
 
     BigInteger dS = BIGINTEGER_LITERAL(dInt);
-    dS.MultiplyPow5(dS_Exp5) <<= dS_Exp2;
+    dS.MultiplyPow5(static_cast<unsigned>(dS_Exp5)) <<= static_cast<size_t>(dS_Exp2);
 
     BigInteger bS(bInt);
-    bS.MultiplyPow5(bS_Exp5) <<= bS_Exp2;
+    bS.MultiplyPow5(static_cast<unsigned>(bS_Exp5)) <<= static_cast<size_t>(bS_Exp2);
 
     BigInteger hS(1);
-    hS.MultiplyPow5(hS_Exp5) <<= hS_Exp2;
+    hS.MultiplyPow5(static_cast<unsigned>(hS_Exp5)) <<= static_cast<size_t>(hS_Exp2);
 
     EXPECT_TRUE(BIGINTEGER_LITERAL("203970822259994138521801764465966248930731085529088") == dS);
     EXPECT_TRUE(BIGINTEGER_LITERAL("203970822259994122305215569213032722473144531250000") == bS);
@@ -121,3 +126,7 @@ TEST(Strtod, CheckApproximationCase) {
 
     EXPECT_EQ(-1, delta.Compare(hS));
 }
+
+#ifdef __clang__
+RAPIDJSON_DIAG_POP
+#endif

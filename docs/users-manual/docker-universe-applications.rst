@@ -120,6 +120,11 @@ In the job submit file, if the user specifies
 
 then, instead of a NATed interface, the job will use the host's
 network interface, just like a vanilla universe job.
+If an administrator has defined additional, custom docker
+networks, they will be advertised in the slot attribute
+*DockerNetworks*, and any value in that list can be
+a valid argument for this keyword.
+
 :index:`docker universe`
 
 

@@ -76,7 +76,7 @@ static  bool streaming_print_job(void*, ClassAd*);
 typedef bool (* buffer_line_processor)(void*, ClassAd *);
 
 static 	void usage (const char *, int other=0);
-enum { usage_Universe=1, usage_JobStatus=2, usage_AllOther=0xFF };
+enum { usage_Universe=1, usage_JobStatus=2, usage_SubmitMethod=4, usage_AllOther=0xFF };
 static bool render_job_status_char(std::string & result, ClassAd*ad, Formatter &);
 
 // functions to fetch job ads and print them out
@@ -1378,6 +1378,8 @@ processCommandLineArguments (int argc, const char *argv[])
 					other |= usage_Universe;
 				} else if (is_arg_prefix(argv[i], "state", 2) || is_arg_prefix(argv[i], "State", 2) || is_arg_prefix(argv[i], "status", 2)) {
 					other |= usage_JobStatus;
+				} else if (is_arg_prefix(argv[i], "submit", 2) || is_arg_prefix(argv[i], "Submit", 2)) {
+					other |= usage_SubmitMethod;
 				} else if (is_arg_prefix(argv[i], "all", 2)) {
 					other |= usage_AllOther;
 				}
@@ -1865,7 +1867,7 @@ render_remote_host (std::string & result, ClassAd *ad, Formatter &)
 	//static char unknownHost [] = "[????????????????]";
 	condor_sockaddr addr;
 
-	int universe = CONDOR_UNIVERSE_STANDARD;
+	int universe = CONDOR_UNIVERSE_VANILLA;
 	ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	if (((universe == CONDOR_UNIVERSE_SCHEDULER) || (universe == CONDOR_UNIVERSE_LOCAL)) &&
 		addr.from_sinful(scheddAddr) == true) {
@@ -2149,38 +2151,22 @@ render_buffer_io_misc (std::string & misc, ClassAd *ad, Formatter & /*fmt*/)
 {
 	misc.clear();
 
-	int univ = 0;
-	if ( ! ad->LookupInteger(ATTR_JOB_UNIVERSE,univ))
-		return false;
+	int ix = 0;
+	bool bb = false;
+	ad->LookupBool(ATTR_TRANSFERRING_INPUT, bb);
+	ix += bb?1:0;
 
-	if (univ==CONDOR_UNIVERSE_STANDARD) {
+	bb = false;
+	ad->LookupBool(ATTR_TRANSFERRING_OUTPUT,bb);
+	ix += bb?2:0;
 
-		double seek_count=0;
-		int buffer_size=0, block_size=0;
-		ad->LookupFloat(ATTR_FILE_SEEK_COUNT,seek_count);
-		ad->LookupInteger(ATTR_BUFFER_SIZE,buffer_size);
-		ad->LookupInteger(ATTR_BUFFER_BLOCK_SIZE,block_size);
+	bb = false;
+	ad->LookupBool(ATTR_TRANSFER_QUEUED,bb);
+	ix += bb?4:0;
 
-		formatstr(misc, " seeks=%d, buf=%d,%d", (int)seek_count, buffer_size, block_size);
-	} else {
-
-		int ix = 0;
-		bool bb = false;
-		ad->LookupBool(ATTR_TRANSFERRING_INPUT, bb);
-		ix += bb?1:0;
-
-		bb = false;
-		ad->LookupBool(ATTR_TRANSFERRING_OUTPUT,bb);
-		ix += bb?2:0;
-
-		bb = false;
-		ad->LookupBool(ATTR_TRANSFER_QUEUED,bb);
-		ix += bb?4:0;
-
-		if (ix) {
-			static const char * const ax[] = { "in", "out", "in,out", "queued", "in,queued", "out,queued", "in,out,queued" };
-			formatstr(misc, " transfer=%s", ax[ix-1]); 
-		}
+	if (ix) {
+		static const char * const ax[] = { "in", "out", "in,out", "queued", "in,queued", "out,queued", "in,out,queued" };
+		formatstr(misc, " transfer=%s", ax[ix-1]);
 	}
 
 	return true;
@@ -2568,6 +2554,20 @@ usage (const char *myName, int other)
 		printf("    %s codes:\n", ATTR_JOB_STATUS);
 		for (int st = JOB_STATUS_MIN; st <= JOB_STATUS_MAX; ++st) {
 			printf("\t%2d %c %s\n", st, encode_status(st), getJobStatusString(st));
+		}
+		printf("\n");
+	}
+	if (other & usage_SubmitMethod) {
+		printf("    %s codes:\n", ATTR_JOB_SUBMIT_METHOD);
+		printf("\t%3s  %s\n", "UND", "Undefined");
+		for (int met = JOB_SUBMIT_METHOD_MIN; met <= JOB_SUBMIT_METHOD_MAX; ++met) {
+			std::string display = getSubmitMethodString(met);
+			//If number yeilds final enum key then output and break out of loop
+			if(display.compare("Portal/User-Set") == 0){
+				printf("\t%3d+ %s\n", JSM_USER_SET, display.c_str());
+				break;
+			}
+			printf("\t%3d  %s\n", met, display.c_str());
 		}
 		printf("\n");
 	}

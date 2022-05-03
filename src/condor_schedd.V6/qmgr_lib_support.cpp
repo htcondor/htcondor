@@ -34,7 +34,7 @@ ReliSock *qmgmt_sock = NULL;
 static Qmgr_connection connection;
 
 Qmgr_connection *
-ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* errstack, const char *effective_owner, const char* /*schedd_version_str*/ )
+ConnectQ(DCSchedd& schedd, int timeout, bool read_only, CondorError* errstack, const char *effective_owner)
 {
 	int		rval, ok;
 	int cmd = read_only ? QMGMT_READ_CMD : QMGMT_WRITE_CMD;
@@ -54,17 +54,11 @@ ConnectQ(const char *qmgr_location, int timeout, bool read_only, CondorError* er
 	}
 
     // no connection active as of now; create a new one
-	Daemon d( DT_SCHEDD, qmgr_location );
-	if( ! d.locate() ) {
+	if( ! schedd.locate() ) {
 		ok = FALSE;
-		if( qmgr_location ) {
-			dprintf( D_ALWAYS, "Can't find address of queue manager %s\n", 
-					 qmgr_location );
-		} else {
-			dprintf( D_ALWAYS, "Can't find address of local queue manager\n" );
-		}
+		dprintf( D_ALWAYS, "Can't find address of queue manager\n" );
 	} else { 
-		qmgmt_sock = (ReliSock*) d.startCommand( cmd,
+		qmgmt_sock = (ReliSock*) schedd.startCommand( cmd,
 												 Stream::reli_sock,
 												 timeout,
 												 errstack_select);
