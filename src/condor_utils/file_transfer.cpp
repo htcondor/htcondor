@@ -6454,23 +6454,22 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 	}
 
 
-/*
-	// We'll need this for testing at some point.
-	for( auto & path : pathsAlreadyPreserved ) {
-		dprintf( D_ALWAYS, "path cache includes: '%s'\n", path.c_str() );
-	}
+	// For testing.
+	if( param_boolean( "TEST_HTCONDOR_993", false ) ) {
+		for( auto & path : pathsAlreadyPreserved ) {
+			dprintf( D_ALWAYS, "path cache includes: '%s'\n", path.c_str() );
+		}
 
-	std::string dir;
-	for( auto & fti : expanded_list ) {
-		if( fti.isDirectory() ) {
-			dir = fti.destDir();
-			if(! dir.empty()) { dir += DIR_DELIM_CHAR; }
-			dir += condor_basename( fti.srcName().c_str() );
-			dprintf( D_ALWAYS, "expanded list includes: '%s'\n", dir.c_str() );
+		std::string dir;
+		for( auto & fti : expanded_list ) {
+			if( fti.isDirectory() ) {
+				dir = fti.destDir();
+				if(! dir.empty()) { dir += DIR_DELIM_CHAR; }
+				dir += condor_basename( fti.srcName().c_str() );
+				dprintf( D_ALWAYS, "directory list includes: '%s'\n", dir.c_str() );
+			}
 		}
 	}
-*/
-
 
 	return rc;
 }
@@ -6509,7 +6508,24 @@ FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, 
 				return false;
 			}
 
-			pathsAlreadyPreserved.emplace_back(partialPath);
+			// If partialPath is not a directory, don't add it to
+			// this list.  This should keep this list nice and small.
+
+			// Refactor this common-with-EFTL() code.
+			std::string full_path;
+			if( !fullpath( partialPath.c_str() ) ) {
+				full_path = iwd;
+				if( full_path.length() > 0 ) {
+					full_path += DIR_DELIM_CHAR;
+				}
+			}
+			full_path += partialPath;
+
+			// We know this will succeed because it already did in EFTL().
+			StatInfo st( full_path.c_str() );
+			if( st.IsDirectory() ) {
+				pathsAlreadyPreserved.emplace_back(partialPath);
+			}
 		}
 		parent = partialPath;
 	}
