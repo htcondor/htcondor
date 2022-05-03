@@ -35,8 +35,8 @@
 char *argv0 = NULL;
 char *base_dir = NULL;
 
-void sigterm(int sig) {
-    log(stderr, "Recieved SIGTERM\n");
+void sigterm(int signo){
+    log(stderr, "Recieved SIGTERM (%d)\n", signo);
     exit(1);
 }
 
