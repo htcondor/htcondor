@@ -46,10 +46,6 @@ class AdNameHashKey
 // the hash functions
 size_t adNameHashFunction (const AdNameHashKey &);
 
-// type for the hash tables ...
-typedef HashTable <AdNameHashKey, ClassAd *> CollectorHashTable;
-typedef HashTable <std::string, CollectorHashTable *> GenericAdHashTable;
-
 // functions to make the hashkeys
 bool makeStartdAdHashKey (AdNameHashKey &, const ClassAd *);
 bool makeScheddAdHashKey (AdNameHashKey &, const ClassAd *);

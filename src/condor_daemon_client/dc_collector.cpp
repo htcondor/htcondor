@@ -387,12 +387,12 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 bool
 DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd* ad2, StartCommandCallbackType callback_fn, void *miscdata )
 {
-		// Only send secrets in the case where there's a private ad (ad2)
-		// or the collector has been build since 8.9.3 and understands not
+		// Only send secrets in the case where
+		// the collector has been build since 8.9.3 and understands not
 		// to share submitter secrets.
 	auto *verinfo = sock->get_peer_version();
 	bool send_submitter_secrets = false;
-	if (!ad2 && verinfo && verinfo->built_since_version(8, 9, 3)) {
+	if (verinfo && verinfo->built_since_version(8, 9, 3)) {
 		send_submitter_secrets = true;
 	}
 

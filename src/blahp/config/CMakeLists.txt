@@ -13,7 +13,7 @@
 #
 # 5-Nov-2012  Created 
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.0)
 
 install(FILES 
     blah.config.template 

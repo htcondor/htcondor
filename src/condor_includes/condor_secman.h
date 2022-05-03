@@ -117,6 +117,7 @@ public:
 		int m_cmd{-1};
 		Sock *m_sock{nullptr};
 		bool m_raw_protocol{false};
+		bool m_resume_response{true};
 		CondorError *m_errstack{nullptr};
 		int m_subcmd{-1};
 		StartCommandCallbackType *m_callback_fn{nullptr};
@@ -264,6 +265,11 @@ public:
 	void reconfig();
 	static IpVerify *getIpVerify();
 	static int Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu, std::string &allow_reason, std::string &deny_reason );
+
+		// Check to see if the authentication that was performed on the socket
+		// (if any at all!) is sufficient to have the socket authorized at a given
+		// permission level.
+	bool IsAuthenticationSufficient(DCpermission perm, const Sock &sock, CondorError &err);
 
 	static classad::References* getResumeProj() { return &m_resume_proj; };
 

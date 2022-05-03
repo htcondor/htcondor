@@ -5063,8 +5063,8 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 					"transfer files for job %d.%d\n",cluster,proc);
 		}
 
-		dprintf(D_ALWAYS, "The submitting job ad as the FileTransferObject sees it\n");
-		dPrintAd(D_ALWAYS, *ad);
+		dprintf(D_JOB, "The submitting job ad as the FileTransferObject sees it\n");
+		dPrintAd(D_JOB, *ad);
 
 #if !defined(WIN32)
 		if ( xfer_priv == PRIV_USER ) {

@@ -1015,7 +1015,7 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 class SecManStartCommand: Service, public ClassyCountedPtr {
  public:
 	SecManStartCommand (
-		int cmd,Sock *sock,bool raw_protocol,
+		int cmd,Sock *sock,bool raw_protocol, bool resume_response,
 		CondorError *errstack,int subcmd,StartCommandCallbackType *callback_fn,
 		void *misc_data,bool nonblocking,char const *cmd_description,char const *sec_session_id_hint,
 		const std::string &owner, const std::vector<std::string> &methods, SecMan *sec_man):
@@ -1031,7 +1031,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		m_pending_socket_registered(false),
 		m_sec_man(*sec_man),
 		m_use_tmp_sec_session(false),
-		m_want_resume_response(true),
+		m_want_resume_response(resume_response),
 		m_owner(owner),
 		m_methods(methods)
 	{
@@ -1229,6 +1229,7 @@ SecMan::startCommand(const StartCommandRequest &req)
 		req.m_cmd,
 		req.m_sock,
 		req.m_raw_protocol,
+		req.m_resume_response,
 		req.m_errstack,
 		req.m_subcmd,
 		req.m_callback_fn,
@@ -1562,6 +1563,8 @@ SecManStartCommand::sendAuthInfo_inner()
 		// With a non-negotiated session, the version of the peer that last
 		// connected to us with this session is a better guide of the
 		// peer's version.
+		// If m_want_resume_response has been set to false (not the default),
+		// respect that request.
 		bool negotiated_session = true;
 		m_auth_info.LookupBool(ATTR_SEC_NEGOTIATED_SESSION, negotiated_session);
 		std::string last_peer_vers;
@@ -1573,7 +1576,9 @@ SecManStartCommand::sendAuthInfo_inner()
 			if (!m_remote_version.empty()) {
 				CondorVersionInfo ver_info(m_remote_version.c_str());
 				m_sock->set_peer_version(&ver_info);
-				m_want_resume_response = ver_info.built_since_version(9, 9, 0);
+				if (m_want_resume_response) {
+					m_want_resume_response = ver_info.built_since_version(9, 9, 0);
+				}
 			} else {
 				m_want_resume_response = false;
 			}
@@ -1582,7 +1587,6 @@ SecManStartCommand::sendAuthInfo_inner()
 			if (ver_info.built_since_version(9, 9, 0)) {
 				// The socket's peer version will be populated when we
 				// get the server's response.
-				m_want_resume_response = true;
 			} else {
 				m_want_resume_response = false;
 				// Old servers clear out the socket's peer version if the
@@ -2786,6 +2790,7 @@ SecManStartCommand::DoTCPAuth_inner()
 		DC_AUTHENTICATE,
 		tcp_auth_sock,
 		m_raw_protocol,
+		m_want_resume_response,
 		m_errstack,
 		m_cmd,
 		m_nonblocking ? SecManStartCommand::TCPAuthCallback : NULL,
@@ -3116,25 +3121,24 @@ bool
 SecMan::EncodePubkey(const EVP_PKEY *pkey, std::string &encoded_pkey, CondorError *errstack)
 {
 		// Serialize the public key to the DER format
-	unsigned char *der_pubkey_raw = nullptr;
-	int length = i2d_PublicKey(const_cast<EVP_PKEY *>(pkey), &der_pubkey_raw);
+	unsigned char *der_pubkey = nullptr;
+	int length = i2d_PublicKey(const_cast<EVP_PKEY *>(pkey), &der_pubkey);
 	if (length < 0) {
 		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
 			"Failed to serialize new key for key exchange.");
 		return false;
 	}
-	std::unique_ptr<unsigned char, decltype(&free)> der_pubkey(der_pubkey_raw, &free);
 
 		// Encode the DER bytes into base64
-	std::unique_ptr<char, decltype(&free)> encoded_pubkey(
-		condor_base64_encode(der_pubkey.get(), length, false),
-		&free);
+	char* encoded_pubkey = condor_base64_encode(der_pubkey, length, false);
+	OPENSSL_free(der_pubkey);
 	if (!encoded_pubkey) {
 		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
 			"Failed to base64 encode new key for key exchange.");
 		return false;
 	}
-	encoded_pkey = std::string(encoded_pubkey.get());
+	encoded_pkey = encoded_pubkey;
+	free(encoded_pubkey);
 	return true;
 }
 
@@ -3264,7 +3268,9 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
 
 int
 SecMan::sec_char_to_auth_method( const char* method ) {
-    if (!strcasecmp( method, "SSL" )  ) {
+	if (!method) {
+		return 0;
+    } else if (!strcasecmp( method, "SSL" )  ) {
         return CAUTH_SSL;
     } else if (!strcasecmp( method, "GSI" )  ) {
 		return CAUTH_GSI;
@@ -3449,6 +3455,46 @@ SecMan::Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu,
 	return ipverify->Verify(perm,addr,fqu,allow_reason,deny_reason);
 }
 
+
+bool
+SecMan::IsAuthenticationSufficient(DCpermission perm, const Sock &sock, CondorError &err)
+{
+
+	auto sec_authentication = sec_req_param("SEC_%s_AUTHENTICATION", perm, SEC_REQ_OPTIONAL);
+	auto authentication_method = sock.getAuthenticationMethodUsed();
+	if (sec_authentication == SEC_REQ_REQUIRED && !authentication_method) {
+		err.push("SECMAN", 76, "Authentication is required for this authorization but it was not used");
+		return false;
+	}
+
+	auto sec_encryption = sec_req_param("SEC_%s_ENCRYPTION", perm, SEC_REQ_OPTIONAL);
+	if (sec_encryption == SEC_REQ_REQUIRED && !sock.get_encryption()) {
+		err.push("SECMAN", 77, "Encryption is required for this authorization but it is not enabled");
+		return false;
+	}
+
+	auto sec_integrity = sec_req_param("SEC_%s_INTEGRITY", perm, SEC_REQ_OPTIONAL);
+		// Note: mustEncrypt implies AES encryption which technically disables "condor" level integrity.
+	if (sec_integrity == SEC_REQ_REQUIRED && !(sock.isOutgoing_Hash_on() || sock.mustEncrypt())) {
+		err.push("SECMAN", 78, "Integrity is required for this authorization but it is not enabled");
+		return false;
+	}
+
+	auto methods = getAuthenticationMethods(perm);
+	bool allowed_method = getAuthBitmask(methods.c_str()) & sec_char_to_auth_method(sock.getAuthenticationMethodUsed());
+
+	if (!allowed_method) {
+		err.pushf("SECMAN", 80, "Used authentication method %s is not valid for permission level %s",
+			sock.getAuthenticationMethodUsed(), PermString(perm));
+		return false;
+	}
+
+	if (!sock.isAuthorizationInBoundingSet(PermString(perm))) {
+		err.pushf("SECMAN", 79, "The %s permission is not included in the authentication bounding set", PermString(perm));
+		return false;
+	}
+	return true;
+}
 
 bool
 SecMan::sec_copy_attribute( classad::ClassAd &dest, const ClassAd &source, const char* attr ) {
