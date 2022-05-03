@@ -1284,6 +1284,9 @@ void Resource::compute_unshared()
 {
 	// this either sets total disk into the slot, or causes it to be recomputed.
 	r_attr->set_condor_load(compute_condor_usage());
+#ifdef LINUX
+	r_attr->setVolumeManager(resmgr->getVolumeManager());
+#endif // LINUX
 	r_attr->set_total_disk(resmgr->m_attr->total_disk(), resmgr->m_attr->always_recompute_disk());
 	r_attr->compute_disk();
 }
@@ -1463,8 +1466,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 				continue;
 			}
 
-			int birth;
-			if(! daemonCore->getStartTime(birth)) { continue; }
+			auto birth = daemonCore->getStartTime();
 			int duration = time(NULL) - birth;
 			double average = uptimeValue / duration;
 			// Since we don't have a whole-machine ad, we won't bother to

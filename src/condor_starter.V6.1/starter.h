@@ -30,6 +30,7 @@
 
 #if defined(LINUX)
 #include "glexec_privsep_helper.linux.h"
+#include "../condor_startd.V6/VolumeManager.h"
 #endif
 
 #ifdef WIN32
@@ -390,6 +391,13 @@ private:
 
 
 	bool WriteAdFiles() const;
+
+		//
+		// Check the disk usage of this job; if over the limits, potentially
+		// put the job on hold.
+		//
+	void CheckDiskUsage(void);
+
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
@@ -427,6 +435,18 @@ private:
 		//
 	int deferral_tid;
 
+		//
+		// When HTCondor manages dedicated disk space, this tracks
+		// the maximum permitted disk usage and the polling timer
+		//
+	int64_t m_lvm_max_size_kb{0};
+	int m_lvm_poll_tid{-1};
+	time_t m_lvm_last_space_issue{-1};
+	bool m_lvm_held_job{false};
+	std::string m_lvm_thin_volume;
+	std::string m_lvm_thin_pool;
+	std::string m_lvm_volume_group;
+
 	UserProc* pre_script;
 	UserProc* post_script;
 
@@ -456,6 +476,10 @@ private:
 
 	// The string to set the tmp env vars to
 	std::string tmpdir;
+
+#ifdef LINUX
+	std::unique_ptr<VolumeManager::Handle> m_volume_mgr;
+#endif // LINUX
 };
 
 #endif

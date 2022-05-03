@@ -79,7 +79,7 @@ dprintf_config_tool_on_error(int cat_and_flags)
 		if (pval) {
 			tool_output[cOutputs].logPath = ">BUFFER";
 			tool_output[cOutputs].HeaderOpts = 0;
-			tool_output[cOutputs].choice |= (1<<D_ALWAYS | 1<<D_ERROR);
+			tool_output[cOutputs].choice |= (1<<D_ALWAYS) | (1<<D_ERROR) | (1<<D_STATUS);
 			tool_output[cOutputs].VerboseCats = 0;
 			tool_output[cOutputs].accepts_all = true;
 			_condor_parse_merge_debug_flags( pval, 0,
@@ -108,7 +108,7 @@ dprintf_config_tool(const char* subsys, int /*flags*/, const char * logfile /*=N
 	//PRAGMA_REMIND("TJ: allow callers of dprintf_config_tool to pass logging verbosity and flags");
 
 	dprintf_output_settings tool_output[2];
-	tool_output[0].choice = 1<<D_ALWAYS | 1<<D_ERROR;
+	tool_output[0].choice = (1<<D_ALWAYS) | (1<<D_ERROR) | (1<<D_STATUS);
 	tool_output[0].accepts_all = true;
 	
 	/*
@@ -275,7 +275,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	//PRAGMA_REMIND("TJ: move verbose into choice")
 
 	std::vector<struct dprintf_output_settings> DebugParams(1);
-	DebugParams[0].choice = 1<<D_ALWAYS | 1<<D_ERROR;
+	DebugParams[0].choice = (1<<D_ALWAYS) | (1<<D_ERROR) | (1<<D_STATUS);
 	DebugParams[0].accepts_all = true;
 
 	/*

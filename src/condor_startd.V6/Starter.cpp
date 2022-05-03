@@ -576,6 +576,18 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 	ASSERT( executeDir() );
 	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir );
 
+#ifdef LINUX
+        if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
+		auto &slot_name = claim->rip()->r_id_str;
+		CondorError err;
+                if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
+			dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s",
+				slot_name, err.getFullText().c_str());
+		}
+        }
+#endif // LINUX
+	
+
 #if defined(LINUX)
 	if( param_boolean( "GLEXEC_STARTER", false ) ) {
 		cleanupAfterGlexec(claim);
@@ -884,6 +896,22 @@ int Starter::execDCStarter(
 	ASSERT( executeDir() );
 	new_env.SetEnv( "_CONDOR_EXECUTE", executeDir() );
 
+#ifdef LINUX
+	if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
+		auto &slot_name = claim->rip()->r_id_str;
+			// Cleanup from any previously-crashed starters.
+		CondorError err;
+                claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err);
+
+		claim->rip()->getVolumeManager()->UpdateStarterEnv(new_env);
+		if (claim->rip()->r_attr) {
+			std::string size;
+			formatstr(size, "%lld", claim->rip()->r_attr->get_disk());
+			new_env.SetEnv("_CONDOR_THINPOOL_SIZE_KB", size.c_str());
+		}
+	}
+#endif // LINUX
+
 	env = &new_env;
 
 
@@ -924,7 +952,6 @@ int Starter::execDCStarter(
 		new_env.SetEnv("_CONDOR_ENFORCE_CPU_AFFINITY", "true");
 		dprintf(D_ALWAYS, "Setting affinity env to %s\n", affinityString.c_str());
 	}
-
 
 	ReliSock child_job_update_sock;   // child inherits this socket
 	ASSERT( !s_job_update_sock );

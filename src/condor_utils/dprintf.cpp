@@ -467,7 +467,16 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 					_condor_dprintf_exit(sprintf_error, "Error writing to debug header\n");	
 				}
 			}
-			const char * orfail = (cat_and_flags & D_FAILURE) ? "|D_FAILURE" : "";
+			// If the D_FAILURE flag was or'd to the category, then this is both a category message (i.e. D_AUDIT)
+			// and should also show up in the primary log as a D_ERROR category message. we print this as |D_FAILURE for
+			// most categories, but just as D_ERROR for D_ALWAYS and D_ERROR categories.
+			const char * orfail = "";
+			if (cat_and_flags & D_FAILURE) {
+				if (cat > D_ERROR) { orfail = "|D_FAILURE"; }
+				else { cat = D_ERROR; }
+			}
+			// For now, print D_STATUS messages as D_ALWAYS.. TODO: TJ remove this someday!
+			if (cat == D_STATUS) { cat = D_ALWAYS; }
 			rc = sprintf_realloc(&buf, &bufpos, &buflen, "(%s%s%s) ", _condor_DebugCategoryNames[cat], verbosity, orfail);
 			if (rc < 0) sprintf_errno = errno;
 		}

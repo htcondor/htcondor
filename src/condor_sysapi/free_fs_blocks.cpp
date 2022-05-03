@@ -32,7 +32,6 @@
 
 /* static function declarations */
 static int reserve_for_afs_cache(void);
-static int reserve_for_fs(void);
 
 /* the code starts here */
 
@@ -132,8 +131,8 @@ reserve_for_afs_cache()
   How much disk space we need to reserve for the regular file system.
   Answer is in kilobytes.
 */
-static int
-reserve_for_fs()
+int
+sysapi_reserve_for_fs()
 {
 	/* XXX make cleaner */
 	int	answer = -1;
@@ -223,7 +222,7 @@ sysapi_disk_space(const char *filename)
 
 	answer =  sysapi_disk_space_raw(filename)
 			- reserve_for_afs_cache()
-			- reserve_for_fs();
+			- sysapi_reserve_for_fs();
 	return answer < 0 ? 0 : answer;
 
 }
