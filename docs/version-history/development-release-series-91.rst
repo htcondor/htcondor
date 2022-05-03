@@ -4,6 +4,25 @@ Version 9 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 9.10.0
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.10.0 released on Month Date, 2022.
+
+- HTCondor version 9.10.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-9014`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 9.9.0
 -------------
 
