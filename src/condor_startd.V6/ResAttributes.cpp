@@ -1688,6 +1688,7 @@ CpuAttributes::set_total_disk(long long total, bool refresh) {
 	return false;
 }
 
+bool
 CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id, bool abort_on_fail) // bind non-fungable resource ids to a slot
 {
 	if ( ! map)
