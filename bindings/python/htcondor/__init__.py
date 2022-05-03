@@ -20,6 +20,7 @@ import warnings as _warnings
 import os as _os
 from os import path as _path
 import re as _re
+from contextlib import contextmanager as _contextmanager
 
 # SET UP NULL LOG HANDLER
 _logger = _logging.getLogger(__name__)
@@ -60,7 +61,12 @@ def _add_dll_dir():
         if _sys.version_info >= (3,8):
             bin_path = _path.realpath(_path.join(__file__,r'..\..\..\..\bin'))
             return _os.add_dll_directory(bin_path)
-    return memoryview(b'') # noop context manager
+
+    # Return a noop context manager
+    @_contextmanager
+    def _noop():
+        yield None
+    return _noop()
 
 _check_for_config()
 
