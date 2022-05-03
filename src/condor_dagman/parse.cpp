@@ -1764,7 +1764,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 	} else {
 		//If options aren't found then set to global knob
 		// !append -> prepend
-		prepend = !param_boolean("DAGMAN_DEFAULT_APPEND_VARS", true);
+		prepend = !param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
 	}
 
 	Job *job;
