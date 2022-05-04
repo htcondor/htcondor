@@ -150,7 +150,6 @@ class CollectorEngine : public Service
 
 	// the lesser tables
 	CollectorHashTable CkptServerAds;
-	CollectorHashTable GatewayAds;
 	CollectorHashTable CollectorAds;
 	CollectorHashTable NegotiatorAds;
 	CollectorHashTable HadAds;

@@ -53,7 +53,6 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	StorageAds    (&adNameHashFunction),
 	AccountingAds (&adNameHashFunction),
 	CkptServerAds (&adNameHashFunction),
-	GatewayAds    (&adNameHashFunction),
 	CollectorAds  (&adNameHashFunction),
 	NegotiatorAds (&adNameHashFunction),
 	HadAds        (&adNameHashFunction),
@@ -87,7 +86,6 @@ CollectorEngine::
 	killHashTable (StorageAds);
 	killHashTable (AccountingAds);
 	killHashTable (CkptServerAds);
-	killHashTable (GatewayAds);
 	killHashTable (CollectorAds);
 	killHashTable (NegotiatorAds);
 	killHashTable (HadAds);
