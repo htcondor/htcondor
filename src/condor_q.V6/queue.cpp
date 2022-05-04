@@ -76,7 +76,7 @@ static  bool streaming_print_job(void*, ClassAd*);
 typedef bool (* buffer_line_processor)(void*, ClassAd *);
 
 static 	void usage (const char *, int other=0);
-enum { usage_Universe=1, usage_JobStatus=2, usage_AllOther=0xFF };
+enum { usage_Universe=1, usage_JobStatus=2, usage_SubmitMethod=4, usage_AllOther=0xFF };
 static bool render_job_status_char(std::string & result, ClassAd*ad, Formatter &);
 
 // functions to fetch job ads and print them out
@@ -141,6 +141,7 @@ static int parse_format_args(int argc, const char * argv[], AttrListPrintMask & 
 static 	int dash_long = 0, dash_tot = 0, global = 0, show_io = 0, dash_dag = 0, show_held = 0;
 static  int dash_batch = 0, dash_batch_specified = 0, dash_batch_is_default = 1;
 static  int dash_factory = 0; // if non zero, bits are options, 1=cluster-ads-only, 2=late-materialize-only
+static  int dash_jobset = 0;  // if non zero, we also want to see jobset ads
 static  int dash_wide = 0; // -wide argument was used
 static ClassAdFileParseType::ParseType dash_long_format = ClassAdFileParseType::Parse_auto;
 static bool print_attrs_in_hash_order = false;
@@ -1192,6 +1193,10 @@ processCommandLineArguments (int argc, const char *argv[])
 			if ( ! dash_factory) { dash_factory = 3; } // all-cluster-ads | late-materialize-only
 		}
 		else
+		if (is_dash_arg_colon_prefix (dash_arg, "jobset", &pcolon, 5)) {
+			dash_jobset = CondorQ::fetch_IncludeJobsetAds;
+		}
+		else
 		if (is_dash_arg_prefix (dash_arg, "attributes", 2)) {
 			if( argc <= i+1 ) {
 				fprintf( stderr, "Error: -attributes requires a list of attributes to show\n" );
@@ -1373,6 +1378,8 @@ processCommandLineArguments (int argc, const char *argv[])
 					other |= usage_Universe;
 				} else if (is_arg_prefix(argv[i], "state", 2) || is_arg_prefix(argv[i], "State", 2) || is_arg_prefix(argv[i], "status", 2)) {
 					other |= usage_JobStatus;
+				} else if (is_arg_prefix(argv[i], "submit", 2) || is_arg_prefix(argv[i], "Submit", 2)) {
+					other |= usage_SubmitMethod;
 				} else if (is_arg_prefix(argv[i], "all", 2)) {
 					other |= usage_AllOther;
 				}
@@ -1860,7 +1867,7 @@ render_remote_host (std::string & result, ClassAd *ad, Formatter &)
 	//static char unknownHost [] = "[????????????????]";
 	condor_sockaddr addr;
 
-	int universe = CONDOR_UNIVERSE_STANDARD;
+	int universe = CONDOR_UNIVERSE_VANILLA;
 	ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	if (((universe == CONDOR_UNIVERSE_SCHEDULER) || (universe == CONDOR_UNIVERSE_LOCAL)) &&
 		addr.from_sinful(scheddAddr) == true) {
@@ -2144,38 +2151,22 @@ render_buffer_io_misc (std::string & misc, ClassAd *ad, Formatter & /*fmt*/)
 {
 	misc.clear();
 
-	int univ = 0;
-	if ( ! ad->LookupInteger(ATTR_JOB_UNIVERSE,univ))
-		return false;
+	int ix = 0;
+	bool bb = false;
+	ad->LookupBool(ATTR_TRANSFERRING_INPUT, bb);
+	ix += bb?1:0;
 
-	if (univ==CONDOR_UNIVERSE_STANDARD) {
+	bb = false;
+	ad->LookupBool(ATTR_TRANSFERRING_OUTPUT,bb);
+	ix += bb?2:0;
 
-		double seek_count=0;
-		int buffer_size=0, block_size=0;
-		ad->LookupFloat(ATTR_FILE_SEEK_COUNT,seek_count);
-		ad->LookupInteger(ATTR_BUFFER_SIZE,buffer_size);
-		ad->LookupInteger(ATTR_BUFFER_BLOCK_SIZE,block_size);
+	bb = false;
+	ad->LookupBool(ATTR_TRANSFER_QUEUED,bb);
+	ix += bb?4:0;
 
-		formatstr(misc, " seeks=%d, buf=%d,%d", (int)seek_count, buffer_size, block_size);
-	} else {
-
-		int ix = 0;
-		bool bb = false;
-		ad->LookupBool(ATTR_TRANSFERRING_INPUT, bb);
-		ix += bb?1:0;
-
-		bb = false;
-		ad->LookupBool(ATTR_TRANSFERRING_OUTPUT,bb);
-		ix += bb?2:0;
-
-		bb = false;
-		ad->LookupBool(ATTR_TRANSFER_QUEUED,bb);
-		ix += bb?4:0;
-
-		if (ix) {
-			static const char * const ax[] = { "in", "out", "in,out", "queued", "in,queued", "out,queued", "in,out,queued" };
-			formatstr(misc, " transfer=%s", ax[ix-1]); 
-		}
+	if (ix) {
+		static const char * const ax[] = { "in", "out", "in,out", "queued", "in,queued", "out,queued", "in,out,queued" };
+		formatstr(misc, " transfer=%s", ax[ix-1]);
 	}
 
 	return true;
@@ -2248,7 +2239,7 @@ render_batch_name (std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 
 
 static bool
-render_gridStatus( std::string & result, ClassAd * ad, Formatter & fmt )
+render_gridStatus( std::string & result, ClassAd * ad, Formatter & /* fmt */ )
 {
 	if (ad->LookupString(ATTR_GRID_JOB_STATUS, result)) {
 		return true;
@@ -2468,6 +2459,7 @@ usage (const char *myName, int other)
 		"\t<cluster>.<proc>\t Get information about specific job\n"
 		"\t<owner>\t\t\t Information about jobs owned by <owner>\n"
 		"\t-factory\t\t Get information about late materialization job factories\n"
+//		"\t-jobset\t\t\t Use jobset ads if the Schedd has them\n"
 		"\t-autocluster\t\t Get information about the SCHEDD's autoclusters\n"
 		"\t-constraint <expr>\t Get information about jobs that match <expr>\n"
 		"\t-unmatchable\t\t Get information about jobs that do not match any machines\n"
@@ -2562,6 +2554,20 @@ usage (const char *myName, int other)
 		printf("    %s codes:\n", ATTR_JOB_STATUS);
 		for (int st = JOB_STATUS_MIN; st <= JOB_STATUS_MAX; ++st) {
 			printf("\t%2d %c %s\n", st, encode_status(st), getJobStatusString(st));
+		}
+		printf("\n");
+	}
+	if (other & usage_SubmitMethod) {
+		printf("    %s codes:\n", ATTR_JOB_SUBMIT_METHOD);
+		printf("\t%3s  %s\n", "UND", "Undefined");
+		for (int met = JOB_SUBMIT_METHOD_MIN; met <= JOB_SUBMIT_METHOD_MAX; ++met) {
+			std::string display = getSubmitMethodString(met);
+			//If number yeilds final enum key then output and break out of loop
+			if(display.compare("Portal/User-Set") == 0){
+				printf("\t%3d+ %s\n", JSM_USER_SET, display.c_str());
+				break;
+			}
+			printf("\t%3d  %s\n", met, display.c_str());
 		}
 		printf("\n");
 	}
@@ -2901,8 +2907,14 @@ static bool AddJobToClassAdCollection(void * pv, ClassAd* ad) {
 		if (dash_autocluster == CondorQ::fetch_GroupBy) attr_id = "Id";
 		ad->LookupInteger(attr_id, jobid.id);
 	} else {
-		ad->LookupInteger( ATTR_CLUSTER_ID, jobid.cluster );
-		if ( ! ad->LookupInteger( ATTR_PROC_ID, jobid.proc ) && assume_cluster_ad_if_no_proc_id) {
+		if ( ! ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster)) {
+			// Classads that have no ClusterId, but do have a JobSetId must be JOBSET ads
+			// we will sort these as cluster=0, proc=jobsetid
+			if (ad->LookupInteger(ATTR_JOB_SET_ID, jobid.proc)) {
+				jobid.cluster = 0;
+			}
+		}
+		if ( ! ad->LookupInteger( ATTR_PROC_ID, jobid.proc ) && jobid.cluster > 0 && assume_cluster_ad_if_no_proc_id) {
 			jobid.proc = -1;
 		}
 	}
@@ -3139,7 +3151,17 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 		if (dash_autocluster == CondorQ::fetch_GroupBy) attr_id = "Id";
 		job->LookupInteger(attr_id, jobid.id);
 	} else {
-		job->LookupInteger( ATTR_CLUSTER_ID, jobid.cluster );
+		if ( ! job->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster)) {
+			// Classads that have no ClusterId, but do have a JobSetId must be JOBSET ads
+			// we will sort these as cluster=0, proc=jobsetid
+			if (job->LookupInteger(ATTR_JOB_SET_ID, jobid.proc)) {
+				jobid.cluster = 0;
+				// TJ: HACK! for now stuff cluster and proc for use by the prmask.render code
+				// it is ok to do this here because we will discard the classad afterward
+				job->Assign(ATTR_CLUSTER_ID, jobid.cluster);
+				job->Assign(ATTR_PROC_ID, jobid.proc);
+			}
+		}
 		if ( ! job->LookupInteger( ATTR_PROC_ID, jobid.proc )) { jobid.proc = -1; }
 	}
 
@@ -4193,6 +4215,8 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		} else if (dash_factory && (dash_long || ! dash_batch)) {
 			fetch_opts |= CondorQ::fetch_IncludeClusterAd;
 #endif
+		} else if (dash_jobset) {
+			fetch_opts |= CondorQ::fetch_IncludeJobsetAds;
 		}
 	}
 	StringList no_attrs;
@@ -4594,7 +4618,7 @@ const char * const jobFactory_PrintFormat = "SELECT\n"
    "JobsIdle      AS '  IDLE' WIDTH 6 PRINTF %6d\n"
    "JobsHeld      AS '  HOLD' WIDTH 6 PRINTF %6d\n"
     ATTR_JOB_MATERIALIZE_NEXT_PROC_ID " AS 'NEXTID' WIDTH 6 PRINTF %6d\n"
-    ATTR_JOB_MATERIALIZE_PAUSED       " AS MODE PRINTAS JOB_FACTORY_MODE OR _\n"
+    ATTR_JOB_MATERIALIZE_PAUSED "?:JobFactoryPaused AS MODE PRINTAS JOB_FACTORY_MODE OR _\n"
     ATTR_JOB_MATERIALIZE_DIGEST_FILE  " AS DIGEST\n"
 "WHERE (ProcId is undefined) && (" ATTR_JOB_MATERIALIZE_DIGEST_FILE " isnt undefined)\n"
 "SUMMARY NONE\n";

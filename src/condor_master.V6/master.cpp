@@ -46,9 +46,7 @@
 #include "credmon_interface.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "MasterPlugin.h"
-#endif
 #if defined(WIN32)
 extern int load_master_mgmt(void);
 #endif
@@ -349,9 +347,7 @@ master_exit(int retval)
 #endif
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
 	MasterPluginManager::Shutdown();
-#endif
 #endif
 
 		// If we're positive that we are going to shut down,
@@ -667,7 +663,7 @@ main_init( int argc, char* argv[] )
 	init_firewall_exceptions();
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(UNIX)
 	MasterPluginManager::Load();
 #elif defined(WIN32)
 	load_master_mgmt();

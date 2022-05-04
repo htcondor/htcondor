@@ -18,7 +18,7 @@
 
 MACRO (ADD_DEPENDENCIES_SUFFIX_HACK _SOURCE _TARGET)
 # Many, but not all of the tests added with CondorExeTest have a target name that
-# ends in exe.  We want all of the generated executable for these to end in exe, 
+# ends in exe.  We want all of the generated executable for these to end in exe,
 # both on Unix and Windows.  To do this, the CondorExeTest macro removes the .exe
 # suffix of the target name (not the generated executable, but the target) only
 # on Windows, so CMake will tack on the exe suffix to the generated target, and we
@@ -187,23 +187,38 @@ endif ()
 		condor_pl_test (test_htcondor_dags "htcondor-dags test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_dags")
 
 		# htcondor.personal test suite
-		condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_personal")
+		if (NOT WINDOWS)
+			condor_pl_test (test_htcondor_personal "htcondor-personal test suite" "quick;ctest" CTEST DEPENDS "src/condor_tests/test_htcondor_personal")
+		endif()
 
 		# ClassAds test suite
 		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+		if (LINUX)
+			# test_classad_eval doesn't actually depend on ornithology at all,
+			# but run_test.pl doesn't know that, and always runs pytest with an
+			# ornithology-specific command-line flag
+			condor_pl_test(test_classad_eval "Test classad_eval" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems; some tests not yet reliable
 		if(LINUX)
 			condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_num_holds "Test Hold Aggregates" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_job_env "Test Job Environment" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_bogus_collector "Test Bogus Collector" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_late_materialization "Test that late materialization options work correctly with each other" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_concurrency_limits "Test that concurrency limits are obeyed" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_condor_now "Test that condow_now works and never leaks memory" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_condor_run "Test condor_run outputs submission warnings" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_condor_now_internals "Test condow_now internals" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_drain_policies "Test job policy and backfill/draining interactions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_submit_description "Test the DAGMan SUBMIT-DESCRIPTION command" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_parallel_uni "Test parallel uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_container_uni "Test container uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_collector "Test that the Python htcondor.Collector bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -216,6 +231,12 @@ endif ()
 			condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_htcondor_cli "Test the htcondor CLI tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_toe_exit_info "Test ToE exit info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_allowed_job_duration "test allowed_job_duration" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_jobsets "Test jobsets" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test(test_htcondor_submit_constructor "Test htcondor.Submit()" "quick;ctest"	CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test(test_job_submit_method_recording "Test recording of JobSubmitMethod job attribute" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -223,6 +244,11 @@ endif ()
 				condor_pl_test(test_custom_machine_resources "Test that multiple custom machine resources are assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcmr.py")
 				condor_pl_test(test_custom_machine_resource_instances "Test that multiple instances of custom machine resources are assigned, limited, and monitored correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_tests/libcmr.py")
 				condor_pl_test(test_curl_plugin "Test the curl file transfer plugin" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_allowed_execute_duration "Test allowed_execute_duration implementation" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_htcondor_736 "Test bugs fixed in HTCONDOR-736" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_htcondor_809 "Additional file-transfer tests" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_activation_metrics "Test activation metrics" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_htcondor_955 "Test output_destination with standard stream names" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 		endif()
 	endif()
@@ -261,11 +287,8 @@ endif ()
 	add_dependencies(classad_unit_test classad_unit_tester)
 	condor_pl_test(classad_cache_unit_test "Run classads parse test with and without classad caching" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/_test_classad_parse")
 	add_dependencies(classad_unit_test _test_classad_parse)
-	if (NOT(${SYSTEM_NAME} MATCHES "amzn2"))
-	# This test will fail until we update patchelf in the AmazonLinux Docker build image
 	condor_pl_test(unit_test_async_fread "Run MyAsyncFileReader Unit Tests" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/async_freader_tests")
 	add_dependencies(unit_test_async_fread async_freader_tests)
-	endif()
 	#need to copy the underlying exe into condor_tests directory before these tests can be run
 	#condor_pl_test(consumption_policy_unit_test "Run Consumption policy unit tests" "quick;ctest")
 	#condor_pl_test(ring_buffer_unit_test "Run ring buffer unit tests" "quick;ctest")
@@ -299,7 +322,7 @@ endif ()
 	#condor_pl_test(job_dagman_splice-R "Simple Dagman Splice R" "dagman;quick;ctest")
 	condor_pl_test(job_dagman_pre_skip-A "Simple Dagman Pre Skip A" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_pre_skip-A_A.cmd;src/condor_tests/job_dagman_pre_skip-A_A.sh;src/condor_tests/job_dagman_pre_skip-A_B.cmd;src/condor_tests/job_dagman_pre_skip-A_B.sh;src/condor_tests/job_dagman_pre_skip-A.dag")
 	condor_pl_test(job_dagman_pre_skip-B "Simple Dagman Pre Skip B" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_pre_skip-B_A.cmd;src/condor_tests/job_dagman_pre_skip-B_A.sh;src/condor_tests/job_dagman_pre_skip-B.dag;src/condor_tests/job_dagman_pre_skip-B_A-post.sh;src/condor_tests/job_dagman_pre_skip-B_B.cmd")
-	condor_pl_test(job_dagman_pre_skip-C "Simple Dagman Pre Skip C" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_pre_skip-C_A.cmd;src/condor_tests/job_dagman_pre_skip-C_A.sh;src/condor_tests/job_dagman_pre_skip-C_B.cmd;src/condor_tests/job_dagman_pre_skip-C.dag")
+	condor_pl_test(job_dagman_pre_skip-C "Simple Dagman Pre Skip C" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_pre_skip-C_A.cmd;src/condor_tests/job_dagman_pre_skip-C_A.pl;src/condor_tests/job_dagman_pre_skip-C_B.cmd;src/condor_tests/job_dagman_pre_skip-C.dag")
 	condor_pl_test(job_dagman_always_run_post-A "Always run post A" "dagman;quick;ctest" CTEST)
 	condor_pl_test(job_dagman_always_run_post-B "Always run post B" "dagman;quick;ctest" CTEST)
 	condor_pl_test(job_dagman_always_run_post-C "Always run post C" "dagman;quick;ctest" CTEST)
@@ -589,6 +612,7 @@ endif ()
 	condor_pl_test(job_core_queue_sched "Scheduler: Verify the  queue command" "quick;ctest" CTEST DEPENDS "src/condor_tests/job_core_queue_sched.cmd;src/condor_tests/job_core_queue.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_readqueuelog.pl")
 	condor_pl_test(job_core_max-running_local "Local: Max job running limit" "quick;ctest;local" CTEST)
 	condor_pl_test(job_late_materialize "Late materialization of jobs" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	condor_pl_test(extended_submit_cmds "Extended submit commands" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_cat.pl")
 	condor_pl_test(job_schedd_restart-holdjobs-ok "Held queue ok after schedd restart" "quick;ctest" CTEST)
 	condor_pl_test(job_schedd_restart-runningjobs-ok "Running queue ok after schedd restart" "quick;ctest" CTEST)
 	condor_pl_test(job_schedd_restart-basic "schedd restarts" "quick;ctest" CTEST)
@@ -635,7 +659,7 @@ endif ()
 "src/condor_tests/job_dagman_subdag-A-lower1.dag;src/condor_tests/job_dagman_subdag-A-lower1-node.cmd;src/condor_tests/job_dagman_subdag-A-lower2.dag;src/condor_tests/job_dagman_subdag-A-lower2-node.cmd;src/condor_tests/job_dagman_subdag-A-lowerlower1.dag;src/condor_tests/job_dagman_subdag-A-lowerlower1-node.cmd;src/condor_tests/job_dagman_subdag-A-lower-nodeA-post.pl;src/condor_tests/job_dagman_subdag-A-lower-nodeA-pre.pl;src/condor_tests/job_dagman_subdag-A-upper.dag;src/condor_tests/job_dagman_subdag-A-upper-node.cmd")
 #   GGT  debug this one later in new batlab
 #	condor_pl_test(job_dagman_subdag-AE "Test condor_submit_dag recursion on nested DAGs, SUBDAG EXTERNAL keyword, eager .condor.sub generation" "dagman;quick;ctest")
-condor_pl_test(job_dagman_subdag_in_splice-A "Test a sub-DAG inside a splice -- only works with lazy submit file generation" "dagman;quick;ctest" CTEST DEPENDS 
+condor_pl_test(job_dagman_subdag_in_splice-A "Test a sub-DAG inside a splice -- only works with lazy submit file generation" "dagman;quick;ctest" CTEST DEPENDS
 	"src/condor_tests/job_dagman_subdag_in_splice-A-lower.dag;src/condor_tests/job_dagman_subdag_in_splice-A-lowerlower.dag;src/condor_tests/job_dagman_subdag_in_splice-A-lowerlower-node.cmd;src/condor_tests/job_dagman_subdag_in_splice-A-lower-nodeA-post.pl;src/condor_tests/job_dagman_subdag_in_splice-A-lower-nodeA-pre.pl;src/condor_tests/job_dagman_subdag_in_splice-A-lower-node.cmd;src/condor_tests/job_dagman_subdag_in_splice-A-upper.dag;src/condor_tests/job_dagman_subdag_in_splice-A-upper-node.cmd")
 	condor_pl_test(job_dagman_pre_subdag-A "Test sub-DAG generated by PRE script" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_pre_subdag-A-node.cmd;src/condor_tests/job_dagman_pre_subdag-A-pre.pl;src/condor_tests/job_dagman_pre_subdag-A-upper.dag")
 	condor_pl_test(job_dagman_splice-cat "Test DAG splice/node category" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_splice-cat.cmd;src/condor_tests/job_dagman_splice-cat.dag;src/condor_tests/job_dagman_splice-cat-splice1.dag;src/condor_tests/job_dagman_splice-cat-splice2.dag")

@@ -16,6 +16,64 @@
  # 
  ############################################################### 
  
+project(CLASSADS LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.8)
+
+if ( UNIX )
+  # set external reference to the shared library for linux
+  # Note: classad without the s means "shared"
+  set (CLASSADS_FOUND classad)
+else()
+  # set external reference to the static library for non-linux
+  # Note: classads with an s means "static"
+  set (CLASSADS_FOUND classads)
+endif()
+
+# The canonical way to say this is a standalone cmake,
+# not included by the higher level HTCondor
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+	# A random default
+	set(PACKAGE_VERSION "1.0.0")
+	set(CPACK_PACKAGE_VERSION_MAJOR "1")
+	set(CPACK_PACKAGE_VERSION_MINOR "0")
+	set(CPACK_PACKAGE_VERSION_PATCH "0")
+
+	set(CPACK_PACKAGE_VENDOR "Center for High Throughput Computing")
+	set(CPACK_INSTALL_PREFIX "/")
+
+	set (CPACK_PACKAGE_NAME "classads")
+	set (CPACK_SET_DESTDIR OFF)
+	#set (CPACK_INSTALL_PREFIX "/")
+
+
+	# Should use find_package here for either case
+	set(PCRE_INCLUDE /usr/include)
+	set(PCRE_FOUND -lpcre)
+	set(HAVE_PCRE_H TRUE)
+
+	set(C_BIN bin)
+	set(C_LIB_PUBLIC lib/condor)
+	set(C_INCLUDE_PUBLIC include/condor)
+
+	# This avoids quoting bugs in cpack.
+	# CPack can't have it on by default because of backward compatibility
+	set (CPACK_VERBATIM_VARIABLES ON)
+
+	# and away we go...
+	include (CPack)
+
+else()
+
+	# This branch is for actions that can only happen
+	# for classads build by the higher level condor cmake
+
+	set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )
+
+	###### Test executables
+	condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)
+	condor_exe_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)
+endif()
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # disable PCRE build unless dep added to externals.
@@ -30,14 +88,6 @@ if(PCRE_FOUND)
 else()
 	add_definitions(-DUSE_POSIX_REGEX) 
 endif(PCRE_FOUND)
-
-if (HAVE_DLOPEN)
-	add_definitions(-DHAVE_DLOPEN)
-endif()
-
-if (HAVE_DLFCN_H)
-	add_definitions(-DHAVE_DLFCN_H)
-endif()
 
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	add_definitions( -DCLASSAD_VERSION="${PACKAGE_VERSION}"
@@ -90,7 +140,6 @@ classad.cpp
 collectionBase.cpp
 collection.cpp
 common.cpp
-cxi.cpp
 debug.cpp
 exprList.cpp
 exprTree.cpp
@@ -125,23 +174,15 @@ add_library( classads STATIC $<TARGET_OBJECTS:classads_objects> )    # the one w
 target_link_libraries( classads PUBLIC ${PCRE_FOUND};${CMAKE_DL_LIBS})
 set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 
-if (LINUX OR DARWIN)  
+if (UNIX)  
   add_library( classad SHARED $<TARGET_OBJECTS:classads_objects>)   # for distribution at this point may swap to depend at a future date.
   set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 15 )
   target_link_libraries( classad "${PCRE_FOUND};${CMAKE_DL_LIBS}" )
   install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
 endif()
-if ( DARWIN )
+if ( APPLE )
   set_target_properties( classad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib )
   install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB_PUBLIC}/libclassad.${PACKAGE_VERSION}.dylib)" )
-endif()
-
-if ( LINUX OR DARWIN )
-  # set external reference to the shared library for linux
-  set (CLASSADS_FOUND classad)
-else()
-  # set external reference to the static library for non-linux
-  set (CLASSADS_FOUND classads)
 endif()
 
 add_executable( classad_functional_tester "classad_functional_tester.cpp" )
@@ -156,9 +197,6 @@ install (TARGETS classad_version DESTINATION ${C_BIN} )
 install( TARGETS classads DESTINATION ${C_LIB_PUBLIC} )
 install( FILES ${Headers} DESTINATION ${C_INCLUDE_PUBLIC}/classad )
 
-
-set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )
-
 # standard output message used to slog users.  
 message (STATUS "configured (CLASSADS_FOUND= ${CLASSADS_FOUND})")
 
@@ -169,7 +207,7 @@ if (NOT PROPER)
 	add_dependencies( classads ${PCRE_REF} )
   endif()
 
-  if (NOT WINDOWS)
+  if (NOT WIN32)
 	############################################################################## 
 	file( COPY ${Headers} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/include/classad )
 	set_target_properties( classads
@@ -177,7 +215,7 @@ if (NOT PROPER)
 		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib
 		RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib
 		OUTPUT_NAME classad)
-	if ( LINUX OR DARWIN )
+	if ( UNIX )
 		set_target_properties( classad
 			PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib 
 			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib
@@ -187,7 +225,3 @@ if (NOT PROPER)
   endif()
 
 endif(NOT PROPER)
-
-###### Test executables
-condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)
-condor_exe_test( _test_classad_parse "test_classad_parse.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${CMAKE_DL_LIBS}" OFF)

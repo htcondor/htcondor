@@ -41,6 +41,7 @@ Timeslice::Timeslice() {
 		timerclear( &m_start_time );
 	}
 
+
 void 
 Timeslice::setTimeslice(double timeslice) 
 {
@@ -200,7 +201,9 @@ Timeslice::updateNextStartTime()
 unsigned int 
 Timeslice::getTimeToNextRun() const 
 {
-	int delta = int(m_next_start_time - time(NULL));
+	struct timeval tv;
+	condor_gettimestamp( tv );
+	int delta = int(m_next_start_time - tv.tv_sec);
 	if( delta < 0 ) {
 		return 0;
 	}

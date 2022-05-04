@@ -84,7 +84,6 @@ int condor_fdatasync(int, const char*)
 	return 0;
 }
 
-BEGIN_C_DECLS
 void
 config( int, bool )
 {
@@ -112,21 +111,10 @@ int param_integer(const char *, int default_value)
 	return default_value;
 }
 
-int param_boolean_int(const char *, int default_value)
-{
-	return default_value;
-}
-
-int param_integer_c(const char *, int default_value, int /*min_val*/, int /*max_val*/ )
-{
-	return default_value;
-}
-
 // stubs for classad_usermap.cpp functions needed by compat_classad
 int reconfig_user_maps() { return 0; }
 bool user_map_do_mapping(const char *, const char *, MyString & output) { output.clear(); return false; }
 
-END_C_DECLS
 int param_integer(const char *, int default_value, int, int, ClassAd *, 
 	ClassAd *, bool)
 {
@@ -256,10 +244,10 @@ int pthread_sigmask(int how, const sigset_t *newmask, sigset_t *oldmask)
 }
 #endif
 
+END_C_DECLS
+
 int my_spawnl( const char*, ... )
 { return not_impl(); }
-
-END_C_DECLS
 
 void statusString( int, std::string & )
 { not_impl(); }

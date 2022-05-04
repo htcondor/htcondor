@@ -25,7 +25,7 @@ will be written to a file instead of to standard output. The **-pool**
 option can be used to get information from other pools, instead of from
 the local (default) pool. The *condor_stats* tool is used to query
 resource information (single or by platform), submitter and user
-information, and checkpoint server information. If a time range is not
+information. If a time range is not
 specified, the default query provides information for the previous 24
 hours. Otherwise, information can be retrieved for other time ranges
 such as the last specified number of hours, last week, last month, or a
@@ -115,15 +115,6 @@ specification as given by an argument.
  **-usergrouplist**
     Queries for the list of all users for which the *condor_collector*
     has historic information within the query's time range.
- **-ckptquery** *hostname*
-    Query about a checkpoint server given its host name. The information
-    displayed includes the number of MiB received, MiB sent, average
-    receive bandwidth (in KiB/sec), and average send bandwidth (in
-    KiB/sec).
- **-ckptlist**
-    Query for the entire list of checkpoint servers for which the
-    *condor_collector* has historic information in the query's time
-    range.
 
 Options
 -------
@@ -136,7 +127,7 @@ Options
     Display the information in an alternate format for timing, which
     presents timestamps since the Unix epoch. This argument only affects
     the display of *resoursequery*, *resgroupquery*, *userquery*,
-    *usergroupquery*, and *ckptquery*.
+    and *usergroupquery*.
 
 Exit Status
 -----------

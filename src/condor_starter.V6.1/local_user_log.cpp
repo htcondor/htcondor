@@ -255,7 +255,7 @@ LocalUserLog::logJobExit( ClassAd* ad, int exit_reason )
     case JOB_CKPTED:
 		return logEvict( ad, true );
 		break;
-    case JOB_NOT_CKPTED:
+    case JOB_SHOULD_REQUEUE:
     case JOB_KILLED:
 		return logEvict( ad, false );
         break;

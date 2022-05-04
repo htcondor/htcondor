@@ -1,0 +1,97 @@
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+          "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+
+    <!ENTITY dhtitle "User Manuals">
+    <!ENTITY dhcommand "blah_check_config">
+    <!ENTITY dhsection "1">
+    
+    <!ENTITY dhfirstname "Massimo">
+    <!ENTITY dhsurname "Mezzadri">
+    <!ENTITY dhemail "Massimo.Mezzadri@mi.infn.it">
+    <!ENTITY dhcontrib "Developer of the BLAHP suite">
+    
+]>
+
+
+
+<refentry>
+
+    <refentryinfo>
+        <title>&dhtitle;</title>
+        <productname>&dhcommand;</productname>
+        <authorgroup>
+            <author>
+                <firstname>&dhfirstname;</firstname>
+                <surname>&dhsurname;</surname>
+                <contrib>&dhcontrib;</contrib>
+                <address>
+                    <email>&dhemail;</email>
+                </address>
+            </author>
+        </authorgroup>
+    </refentryinfo>
+
+    <refmeta>
+        <refentrytitle>&dhcommand;</refentrytitle>
+        <manvolnum>&dhsection;</manvolnum>
+    </refmeta>
+
+    <refnamediv>
+        <refname>&dhcommand;</refname>
+        <refpurpose>Perform some check on the config file.</refpurpose>
+    </refnamediv>
+
+    <refsynopsisdiv>
+        <cmdsynopsis>
+            <command>&dhcommand;</command>
+        </cmdsynopsis>
+    </refsynopsisdiv>
+
+    <refsect1>
+    
+        <title>DESCRIPTION</title>
+        <para>The command <command>&dhcommand;</command> perform some checks on the config file.</para>
+        
+        <para>For all the batch system:</para>
+	<para>Check if job_registry is defined.</para> 
+	<para>Check if async_notification_port is defined.</para>
+	<para>For PBS:</para>
+	<para>Check if pbs_binpath exists and that the programs that use it are executables.</para>
+	<para>Check if pbs_spoolpath/server_logs exists and is accessible.</para>
+	<para>For LSF:</para>
+	<para>Check if lsf_binpath exists  and that the programs that use it are executables.</para>
+	<para>For Condor:</para>
+	<para>Check if condor_binpath exists  and that the programs that use it are executables.</para>
+	<para>For SGE:</para>
+	<para>Check if sge_root,sge_cell and sge_helper exists  and that the programs that use it are executables.</para>
+	<para>Check if sge_cellname exists and is accessible.</para>
+	<para>Check if sge_rootpath exists and is accessible.</para>	
+	
+                
+    </refsect1>
+
+    <refsect1>
+        <title>EXIT STATUS</title>
+        <para><command>&dhcommand;</command> exits with a status value of 0 (zero) upon success and 1 upon failure.</para>
+    </refsect1>
+
+    <refsect1>
+        <title>SEE ALSO</title>
+        <para>
+            <citerefentry>
+                <refentrytitle>blah_job_registry_add</refentrytitle>
+                <manvolnum>1</manvolnum>
+            </citerefentry>,
+            <citerefentry>
+                <refentrytitle>blah_job_registry_dump</refentrytitle>
+                <manvolnum>1</manvolnum>
+            </citerefentry>,
+            <citerefentry>
+                <refentrytitle>blah_job_registry_scan_by_subject</refentrytitle>
+                <manvolnum>1</manvolnum>
+            </citerefentry>
+        </para>
+    </refsect1>
+
+</refentry>
+

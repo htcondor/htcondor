@@ -22,7 +22,7 @@
 #include "ccb_listener.h"
 #include "subsystem_info.h"
 
-static const int CCB_TIMEOUT = 300;
+static int CCB_TIMEOUT = 300;
 
 CCBListener::CCBListener(char const *ccb_address):
 	m_ccb_address(ccb_address),
@@ -69,6 +69,9 @@ CCBListener::InitAndReconfig()
 			RescheduleHeartbeat();
 		}
 	}
+
+	// Globals are evil, but at least now it's configurable.
+	CCB_TIMEOUT = param_integer("CCB_TIMEOUT", 300);
 }
 
 bool
@@ -632,10 +635,10 @@ CCBListeners::GetCCBContactString(std::string &result)
 	}
 }
 
-bool
+int
 CCBListeners::RegisterWithCCBServer(bool blocking)
 {
-	bool result = true;
+	int result = 0;
 
 	classy_counted_ptr<CCBListener> ccb_listener;
 	for(CCBListenerList::iterator itr = m_ccb_listeners.begin();
@@ -644,7 +647,8 @@ CCBListeners::RegisterWithCCBServer(bool blocking)
 	{
 		ccb_listener = (*itr);
 		if( !ccb_listener->RegisterWithCCBServer(blocking) && blocking ) {
-			result = false;
+		} else {
+			++result;
 		}
 	}
 	return result;

@@ -211,10 +211,6 @@ getline_implementation( T & src, int requested_bufsize, int options, int & line_
 }
 #endif
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 #ifdef GETLINE_IMPL_IS_TEMPLATE
 // changed to a template and moved out of extern "C" block.
 #else
@@ -1052,6 +1048,9 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 	source.meta_off = -1;
 
 	ConfigIfStack ifstack;
+	StringList hereList;
+	std::string hereName;
+	std::string hereTag;
 
 	StringList lines(config, "\n");
 	lines.rewind();
@@ -1065,6 +1064,28 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		++source.meta_off;
 		if( line[0] == '#' || blankline(line) )
 			continue;
+
+		// if we are processing a here @= knob, just accumulate lines until we see the closing @
+		// when we see the closing @, expand the value and stuff it into the given name.
+		if ( ! hereName.empty()) {
+			const char * name = line;
+			if (name[0] == '@' && hereTag == name+1) {
+				/* expand self references only */
+				auto_free_ptr rhs(hereList.print_to_delimed_string("\n"));
+				auto_free_ptr value(expand_self_macro(rhs, hereName.c_str(), macro_set, ctx));
+				if (value.ptr() == NULL) {
+					return -1;
+				}
+				insert_macro(hereName.c_str(), value, macro_set, source, ctx);
+
+				hereName.clear();
+				hereTag.clear();
+				hereList.clearAll();
+				continue;
+			}
+			hereList.append(line);
+			continue;
+		}
 
 		std::string errmsg;
 		if (ifstack.line_is_if(line, errmsg, macro_set, ctx)) {
@@ -1105,7 +1126,15 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 		}
 		// parse to the start of the value, it's ok to not have any value
 		while (*ptr) {
-			if (ISOP(*ptr)) {
+			if (*ptr == '@') {
+				if (ptr[1] != '=') {
+					op = 0; // @ must be followed by =
+					break;
+				}
+				pop = ptr;
+				op = *ptr;
+				++ptr; // extra skip because @=
+			} else if (ISOP(*ptr)) {
 				if (ISOP(op)) {
 					op = 0; // more than one op is not allowed, so trigger a failure
 					break;
@@ -1191,6 +1220,13 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 			   alphanumeric characters and _ allowed*/
 			if ( ! is_valid_param_name(name) ) {
 				return -1111;
+			}
+
+			if (op == '@') {
+				hereName = name;
+				hereTag = rhs;
+				hereList.clearAll();
+				continue;
 			}
 
 			/* expand self references only */
@@ -2223,7 +2259,7 @@ static bool same_param_value(
 	return false;
 }
 
-void insert_macro(const char *name, const char *value, MACRO_SET & set, const MACRO_SOURCE & source, MACRO_EVAL_CONTEXT & ctx)
+void insert_macro(const char *name, const char *value, MACRO_SET & set, const MACRO_SOURCE & source, MACRO_EVAL_CONTEXT & ctx, bool is_herefile /*=false*/)
 {
 	// if already in the macro-set, we need to expand self-references and replace
 	MACRO_ITEM * pitem = find_macro_item(name, NULL, set);
@@ -2239,6 +2275,7 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 			pmeta->source_meta_id = source.meta_id;
 			pmeta->source_meta_off = source.meta_off;
 			pmeta->inside = (source.is_inside != false);
+			pmeta->multi_line = is_herefile || (pitem->raw_value && strchr(pitem->raw_value, '\n'));
 			pmeta->param_table = false;
 			// use the name here in case we have a compound name, i.e "master.value"
 			const char * post_prefix = NULL;
@@ -2314,6 +2351,7 @@ void insert_macro(const char *name, const char *value, MACRO_SET & set, const MA
 		pmeta->flags = 0; // clear all flags.
 		pmeta->matches_default = matches_default;
 		pmeta->inside = source.is_inside;
+		pmeta->multi_line = is_herefile || (pitem->raw_value && strchr(pitem->raw_value, '\n'));
 		pmeta->source_id = source.id;
 		pmeta->source_line = source.line;
 		pmeta->source_meta_id = source.meta_id;
@@ -2372,20 +2410,20 @@ int get_macro_ref_count (const char *name, MACRO_SET & set)
 
 
 // These provide external linkage to the getline_implementation function for use by non-config code
-extern "C" char * getline_trim( FILE *fp ) {
+char * getline_trim( FILE *fp ) {
 	int lineno=0;
 	const int options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	FileStarLineSource ls(fp);
 	return getline_implementation(ls, _POSIX_ARG_MAX, options, lineno);
 }
-extern "C++" char * getline_trim( FILE *fp, int & lineno, int mode ) {
+char * getline_trim( FILE *fp, int & lineno, int mode ) {
 	const int default_options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	const int simple_options = 0;
 	int options = (mode & GETLINE_TRIM_SIMPLE_CONTINUATION) ? simple_options : default_options;
 	FileStarLineSource ls(fp);
 	return getline_implementation(ls,_POSIX_ARG_MAX, options, lineno);
 }
-extern "C++" char * getline_trim( MacroStream & ms, int mode ) {
+char * getline_trim( MacroStream & ms, int mode ) {
 	const int default_options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	const int simple_options = 0;
 	int options = (mode & GETLINE_TRIM_SIMPLE_CONTINUATION) ? simple_options : default_options;
@@ -2396,12 +2434,12 @@ extern "C++" char * getline_trim( MacroStream & ms, int mode ) {
 #else
 
 // These provide external linkage to the getline_implementation function for use by non-config code
-extern "C" char * getline_trim( FILE *fp ) {
+char * getline_trim( FILE *fp ) {
 	int lineno=0;
 	const int options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	return getline_implementation(fp, _POSIX_ARG_MAX, options, lineno);
 }
-extern "C++" char * getline_trim( FILE *fp, int & lineno, int mode ) {
+char * getline_trim( FILE *fp, int & lineno, int mode ) {
 	const int default_options = CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT | CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE;
 	const int simple_options = 0;
 	int options = (mode & GETLINE_TRIM_SIMPLE_CONTINUATION) ? simple_options : default_options;
@@ -2539,8 +2577,6 @@ getline_implementation( FILE *fp, int requested_bufsize, int options, int & line
 	}
 }
 #endif
-
-} // end of extern "C"
 
 /* 
 ** Utility function to get an integer from a string.
@@ -3878,7 +3914,7 @@ static const char * get_lookup_and_expand_macro_arg (
 //          |    |     |
 //     dollar    body  defval - 0 if no :
 //
-typedef struct {
+typedef struct _config_macro_position {
 	ptrdiff_t dollar;
 	ptrdiff_t body;
 	ptrdiff_t defval;

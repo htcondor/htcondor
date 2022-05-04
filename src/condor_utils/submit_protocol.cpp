@@ -89,7 +89,7 @@ ActualScheddQ::~ActualScheddQ()
 
 bool ActualScheddQ::Connect(DCSchedd & MySchedd, CondorError & errstack) {
 	if (qmgr) return true;
-	qmgr = ConnectQ(MySchedd.addr(), 0 /* default */, false /* default */, &errstack, NULL, MySchedd.version());
+	qmgr = ConnectQ(MySchedd, 0 /* default */, false /* default */, &errstack);
 	allows_late = has_late = false;
 	if (qmgr) {
 		CondorVersionInfo cvi(MySchedd.version());
@@ -116,8 +116,10 @@ int ActualScheddQ::destroy_Cluster(int cluster_id, const char *reason) { return 
 
 int ActualScheddQ::init_capabilities() {
 	int rval = 0;
-	if ( ! tried_to_get_capabilities) {
-		rval = GetScheddCapabilites(0, capabilities);
+	if (! tried_to_get_capabilities) {
+		if (!GetScheddCapabilites(0, capabilities)) {
+			rval = -1;
+		}
 		tried_to_get_capabilities = true;
 
 		// fetch late materialize caps from the capabilities ad.
@@ -144,6 +146,18 @@ bool ActualScheddQ::has_late_materialize(int &ver) {
 bool ActualScheddQ::allows_late_materialize() {
 	init_capabilities();
 	return allows_late;
+}
+bool ActualScheddQ::has_extended_submit_commands(ClassAd &cmds) {
+	int rval = init_capabilities();
+	if (rval == 0) {
+		const classad::ExprTree * expr = capabilities.Lookup("ExtendedSubmitCommands");
+		if (expr && (expr->GetKind() == classad::ExprTree::NodeKind::CLASSAD_NODE)) {
+			const classad::ClassAd * cad = static_cast<const classad::ClassAd*>(expr);
+			cmds.Update(*cad);
+			return cmds.size() > 0;
+		}
+	}
+	return false;
 }
 int ActualScheddQ::get_Capabilities(ClassAd & caps) {
 	int rval = init_capabilities();

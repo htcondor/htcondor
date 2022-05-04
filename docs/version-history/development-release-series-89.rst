@@ -1,7 +1,7 @@
-Development Release Series 8.9
-==============================
+Version 8.9 Feature Releases
+============================
 
-This is the development release series of HTCondor. The details of each
+We release new features in these releases of HTCondor. The details of each
 version are described below.
 
 Version 8.9.13
@@ -227,7 +227,7 @@ Bugs Fixed:
 
 - Fixed a bug where daemons would leak memory whenever sending updates
   to the collector, at the rate of a few megabytes per day.  This leak
-  was introduced earlier in the HTCondor v8.9.x series.
+  was introduced in an earlier HTCondor v8.9.x release.
   :jira:`323`
 
 - Malformed or missing SciToken can result in a schedd abort when using ``SCHEDD_AUDIT_LOG``.
@@ -321,7 +321,7 @@ Version 8.9.11
 
 Release Notes:
 
-- HTCondor version 8.8.11 released on January 27, 2021.
+- HTCondor version 8.9.11 released on January 27, 2021.
 
 New Features:
 
@@ -332,8 +332,8 @@ Bugs Fixed:
 -  *Security Item*: This release of HTCondor fixes security-related bugs
    described at
 
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0001/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0001/>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0002/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0002/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0001>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0002 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0002>`_.
 
    :ticket:`7893`
    :ticket:`7894`
@@ -1254,10 +1254,10 @@ Bugs Fixed:
 -  *Security Item*: This release of HTCondor fixes security-related bugs
    described at
 
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001/>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002/>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003/>`_.
-   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004/ <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004/>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0001>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0002>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0003>`_.
+   -  `http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2020-0004>`_.
 
    :ticket:`7356`
    :ticket:`7427`
@@ -1979,7 +1979,7 @@ Release Notes:
 Known Issues:
 
 This release may require configuration changes to work as before. During
-this release series, we are making changes to make it easier to deploy
+the 8.9 development series, we are making changes to make it easier to deploy
 secure pools. This release contains two security related configuration
 changes.
 

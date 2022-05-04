@@ -13,6 +13,8 @@ in the unnumbered subsection labeled ClassAd Attributes Added by the
 Here is a list of defined values for ``MyType``, as well as a reference
 to a list attributes relevant to that type.
 
+:index:`Accounting (ClassAd Types)`
+
 ``Accounting``
     The *condor_negotiator* keeps persistent records for every submitter
     who has every submitted a job to the pool, containing total usage and 
@@ -24,12 +26,16 @@ to a list attributes relevant to that type.
     Accounting ads hold information about total usage over the user's
     HTCondor lifetime, but submitter ads hold instantaneous information.
 
+:index:`Collector (ClassAd Types)`
+
 ``Collector``
     Each *condor_collector* daemon describes its state. ClassAd
     attributes that appear in a Collector ClassAd are listed and
     described in the unnumbered subsection labeled Collector ClassAd
     Attributes on the :doc:`/classad-attributes/collector-classad-attributes`
     page. These ads can be shown by running condor_status -collector.
+
+:index:`DaemonMaster (ClassAd Types)`
 
 ``DaemonMaster``
     Each *condor_master* daemon describes its state. ClassAd attributes
@@ -38,12 +44,16 @@ to a list attributes relevant to that type.
     the :doc:`/classad-attributes/daemon-master-classad-attributes`.
     These ads can be shown by running condor_status -master.
 
+:index:`Defrag (ClassAd Types)`
+
 ``Defrag``
     Each *condor_defrag* daemon describes its state. ClassAd attributes
     that appear in a Defrag ClassAd are listed and described in the
     unnumbered subsection labeled Defrag ClassAd Attributes on
     the :doc:`/classad-attributes/defrag-classad-attributes` page.
     This ad can be shown by running condor_status -defrag.
+
+:index:`Job (ClassAd Types)`
 
 ``Job``
     Each submitted job describes its state, for use by the
@@ -53,6 +63,8 @@ to a list attributes relevant to that type.
     Attributes on the :doc:`/classad-attributes/job-classad-attributes` page.
     These ads can be shown by running condor_q.
 
+:index:`Machine (ClassAd Types)`
+
 ``Machine``
     Each machine in the pool (and hence, the *condor_startd* daemon
     running on that machine) describes its state. ClassAd attributes
@@ -61,6 +73,8 @@ to a list attributes relevant to that type.
     the :doc:`/classad-attributes/machine-classad-attributes` page.
     These ads can be shown by running condor_status.
 
+:index:`Negotiator (ClassAd Types)`
+
 ``Negotiator``
     Each *condor_negotiator* daemon describes its state. ClassAd
     attributes that appear in a Negotiator ClassAd are listed and
@@ -68,12 +82,16 @@ to a list attributes relevant to that type.
     Attributes on the :doc:`/classad-attributes/negotiator-classad-attributes`
     page.  This ad can be shown by running condor_status -negotiator.
 
+:index:`Scheduler (ClassAd Types)`
+
 ``Scheduler``
     Each *condor_schedd* daemon describes its state. ClassAd attributes
     that appear in a Scheduler ClassAd are listed and described in the
     unnumbered subsection labeled Scheduler ClassAd Attributes on
     the :doc:`/classad-attributes/scheduler-classad-attributes` page.
     These ads can be shown by running condor_status -scheduler.
+
+:index:`Submitter (ClassAd Types)`
 
 ``Submitter``
     Each submitter is described by a ClassAd. ClassAd attributes that

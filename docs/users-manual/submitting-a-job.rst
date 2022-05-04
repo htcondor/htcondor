@@ -81,7 +81,7 @@ The standard output for this job will go to the file
 the standard error output will go to ``errorfile``. 
 
 HTCondor will append events about the job to a log file wih the 
-requested name``myexe.log``. When the job
+requested name ``myexe.log``. When the job
 finishes, its exit conditions and resource usage will also be noted in the log file. 
 This file's contents are an excellent way to figure out what happened to jobs.
 
@@ -817,7 +817,7 @@ examples, you see that writing ClassAd expressions is intuitive,
 especially if you are familiar with the programming language C. There
 are some pretty nifty expressions you can write with ClassAds. A
 complete description of ClassAds and their expressions can be found in
-the :doc:`/misc-concepts/classad-mechanism` section.
+the :doc:`/classads/classad-mechanism` section.
 
 All of the commands in the submit description file are case insensitive,
 except for the ClassAd attribute string values. ClassAd attribute names
@@ -1409,14 +1409,6 @@ The following limitations apply:
   time to produce the Cluster ad, but these macro functions will not be included in
   the *submit digest* and so will have the same value for all jobs.
 - Spooling of input files does not work with late materialization.
-- :macro:`SUBMIT_REQUIREMENT_*` and :macro:`JOB_TRANSFORM_*` configuration parameters in
-  the *condor_schedd* are applied to jobs as they are materialized,
-  but not to the Cluster ad as it is submitted.  So a :macro:`SUBMIT_REQUIREMENT` might not fail
-  at submit time, causing the user to think that they had met the submit requirements when in 
-  fact the jobs would fail to materialize at some time in the future.  This can be 
-  confusing because a factory that has no materialized jobs is not visible in the normal
-  *condor_q* output. The only way to see late materialization job factories is to use the
-  ``-factory`` option with *condor_q*
 
 Displaying the Factory
 ''''''''''''''''''''''

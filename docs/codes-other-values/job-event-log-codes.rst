@@ -98,25 +98,6 @@ These are all of the events that can show up in a job log file:
   should be run after a job. The script is run on the submit host. This
   event signals that the post script has completed.
 
-| **Event Number:** 017
-| **Event Name:** Job submitted to Globus
-| **Event Description:** A grid job has been delegated to Globus
-  (version 2, 3, or 4). This event is no longer used.
-
-| **Event Number:** 018
-| **Event Name:** Globus submit failed
-| **Event Description:** The attempt to delegate a job to Globus failed.
-
-| **Event Number:** 019
-| **Event Name:** Globus resource up
-| **Event Description:** The Globus resource that a job wants to run on
-  was unavailable, but is now available. This event is no longer used.
-
-| **Event Number:** 020
-| **Event Name:** Detected Down Globus Resource
-| **Event Description:** The Globus resource that a job wants to run on
-  has become unavailable. This event is no longer used.
-
 | **Event Number:** 021
 | **Event Name:** Remote error
 | **Event Description:** The *condor_starter* (which monitors the job
@@ -261,14 +242,6 @@ Table B.2: Event Codes in a Job Event Log
 | 015   | NODE_TERMINATED           | Node terminated                                   |
 +-------+---------------------------+---------------------------------------------------+
 | 016   | POST_SCRIPT_TERMINATED    | Post script terminated                            |
-+-------+---------------------------+---------------------------------------------------+
-| 017   | GLOBUS_SUBMIT             | Globus submit (no longer used)                    |
-+-------+---------------------------+---------------------------------------------------+
-| 018   | GLOBUS_SUBMIT_FAILED      | Globus submit failed                              |
-+-------+---------------------------+---------------------------------------------------+
-| 019   | GLOBUS_RESOURCE_UP        | Globus resource up (no longer used)               |
-+-------+---------------------------+---------------------------------------------------+
-| 020   | GLOBUS_RESOURCE_DOWN      | Globus resource down (no longer used)             |
 +-------+---------------------------+---------------------------------------------------+
 | 021   | REMOTE_ERROR              | Remote error                                      |
 +-------+---------------------------+---------------------------------------------------+

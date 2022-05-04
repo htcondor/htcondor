@@ -20,22 +20,6 @@
 #ifndef CONDOR_CONSTANTS_H
 #define CONDOR_CONSTANTS_H
 
-/*
-	Set up a boolean variable type.  Since this definition could conflict
-	with other reasonable definition of BOOLEAN, i.e. using an enumeration,
-	it is conditional.
-*/
-#ifndef BOOLEAN_TYPE_DEFINED
-#if defined(WIN32)
-typedef unsigned char BOOLEAN;
-typedef unsigned char BOOL_T;
-#else
-typedef int BOOLEAN;
-typedef int BOOL_T;
-#endif
-#define BOOLEAN_TYPE_DEFINED
-#endif
-
 #ifndef _CONDOR_NO_TRUE_FALSE
 #if defined(TRUE)
 #	undef TRUE

@@ -414,6 +414,43 @@ int __cdecl main(int argc, const char * argv[])
 			} else {
 				dir = argv[++ix];
 			}
+		} else if (is_dash_arg_prefix(argv[ix], "load", 3)) {
+			if (! argv[ix + 1]) {
+				arg_needed("load");
+			} else {
+				DWORD oldmode;
+				SetThreadErrorMode(0, &oldmode);
+				const char * dllname = argv[++ix];
+				HINSTANCE hmod = LoadLibraryA(dllname);
+				if ( ! hmod) {
+					DWORD err = GetLastError();
+					fprintf_s(stdout, "load %s failed : %d(0x%0x)\n", dllname, err, err);
+				} else {
+					char pyinit_proc[MAX_PATH] = "PyInit_";
+					char* pi = pyinit_proc + 7;
+					const char*pd = dllname;
+					while (*pd) {
+						if (*pd == '\\') { pi = pyinit_proc + 7; ++pd; continue; }
+						else if (*pd == '.') { *pi = 0; break; }
+						*pi++ = *pd++;
+					}
+					void* (__cdecl *fp)() = reinterpret_cast<void* (__cdecl *)()>(GetProcAddress(hmod, pyinit_proc));
+					fprintf_s(stdout, "%s = 0x%p\n", pyinit_proc, fp);
+					//void* pyobj = fp();
+				}
+				exit(hmod ? 0 : 1);
+			}
+		} else if (is_dash_arg_prefix(argv[ix], "waitfordebugger", 4)) {
+			UINT ms = GetTickCount() - 10;
+			BOOL is_debugger = IsDebuggerPresent();
+			while ( ! is_debugger) {
+				if (GetTickCount() > ms) {
+					fprintf_s(stdout, "waiting for debugger to attach to pid %d.\n", GetCurrentProcessId());
+					ms = GetTickCount() + (1000 * 60 * 1); // repeat message every 1 minute
+				}
+				Sleep(1000);
+				is_debugger = IsDebuggerPresent();
+			}
 		}
 	}
 

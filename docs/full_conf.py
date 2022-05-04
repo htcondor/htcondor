@@ -53,7 +53,8 @@ extensions = [
     'macro',
     'macro-def',
     'index',
-    'jira'
+    'jira',
+    'classad-attribute',
 ]
 autosectionlabel_prefix_document = True
 
@@ -578,7 +579,7 @@ CONFIG_VALUE_SHARED = [
     (r"\b(true|false)\b", token.Keyword.Constant),
     # security keywords
     (
-        r"\b(required|optional|never|preferred|password|fs|kerberos|gsi)\b",
+        r"\b(required|optional|never|preferred|password|fs|kerberos)\b",
         token.Keyword,
     ),
     # catch-all

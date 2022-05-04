@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "CondorError.h"
 
-#if !defined(SKIP_AUTHENTICATION) && defined(WIN32)
+#if defined(WIN32)
 
 #include "condor_auth_sspi.h"
 

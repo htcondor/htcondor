@@ -579,7 +579,7 @@ void handleUserData(	ClassAd & commandArguments,
 
 	if(! userData.empty()) {
 		std::string validationError;
-		char * base64Encoded = condor_base64_encode( (const unsigned char *)userData.c_str(), userData.length() );
+		char * base64Encoded = condor_base64_encode( (const unsigned char *)userData.c_str(), userData.length(), false );
 		if(! assignUserData( commandArguments, base64Encoded, clUserDataWins, validationError )) {
 			fprintf( stderr, "Failed to set user data in request ad (%s).\n", validationError.c_str() );
 			exit( 5 );
@@ -1326,9 +1326,9 @@ annex_main( int argc, char ** argv ) {
 			StringList tagNames;
 			std::string attrName;
 			for( unsigned i = 0; i < tags.size(); ++i ) {
-				tagNames.append(tags[0].first.c_str());
-				formatstr( attrName, "%s%s", ATTR_EC2_TAG_PREFIX, tags[0].first.c_str() );
-				commandArguments.Assign( attrName, tags[0].second.c_str() );
+				tagNames.append(tags[i].first.c_str());
+				formatstr( attrName, "%s%s", ATTR_EC2_TAG_PREFIX, tags[i].first.c_str() );
+				commandArguments.Assign( attrName, tags[i].second.c_str() );
 			}
 
 			char * sl = tagNames.print_to_string();
@@ -1520,7 +1520,10 @@ main_init( int argc, char ** argv ) {
 	// Make sure that, e.g., updateInterval is set.
 	main_config();
 
-	commandState = new ClassAdCollection( NULL, commandStateFile.c_str() );
+	commandState = new ClassAdCollection( NULL );
+	if( !commandState->InitLogFile(commandStateFile.c_str()) ) {
+		DC_Exit( 1 );
+	}
 
 	int rv = annex_main( argc, argv );
 	if( rv != 0 ) { DC_Exit( rv ); }

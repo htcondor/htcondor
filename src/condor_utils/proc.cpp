@@ -97,4 +97,35 @@ getJobStatusNum( const char* name )
 	return -1;
 }
 
+//Array of strings for names of Job Submit Methods
+static const char* JobSubmitMethodNames[] = {
+	"condor_submit",
+	"DAGMan-Direct",
+	"Python Bindings",
+	"htcondor job submit",
+	"htcondor dag submit",
+	"htcondor jobset submit",
+	//Any new methods should go above this comment in order of the table
+	"Portal/User-Set",//<-This should always be last
+};
+
+//This method reads a given submit_method enum and returns a string for help display
+const char* 
+getSubmitMethodString(int method)
+{
+	if( method < JOB_SUBMIT_METHOD_MIN)
+		return "UNDEFINED";
+
+	int array_size = COUNTOF(JobSubmitMethodNames);
+	//Check to see if value is greater than the array index of second to last element
+	//or greater than or equal to 100 (final possible listing)
+	//If so then we will just return the cap (Portal/User-set at 100)
+	if(method > (array_size - 2)){
+		return JobSubmitMethodNames[array_size-1];
+	}
+	else{
+		return JobSubmitMethodNames[method];
+	}
+}
+
 

@@ -44,6 +44,9 @@ Interacting with Schedulers
    .. automethod:: retrieve
    .. automethod:: refreshGSIProxy
    .. automethod:: reschedule
+   .. automethod:: export_jobs
+   .. automethod:: import_exported_job_results
+   .. automethod:: unexport_jobs
 
 .. autoclass:: JobAction
 
@@ -82,6 +85,8 @@ Submitting Jobs
    .. automethod:: getQArgs
    .. automethod:: setQArgs
    .. automethod:: from_dag
+   .. automethod:: setSubmitMethod
+   .. automethod:: getSubmitMethod
 
 .. autoclass:: QueueItemsIterator
 
@@ -153,7 +158,6 @@ Security Management
    .. automethod:: ping
    .. automethod:: getCommandString
    .. automethod:: setConfig
-   .. automethod:: setGSICredential
    .. automethod:: setPoolPassword
    .. automethod:: setTag
    .. automethod:: setToken

@@ -39,6 +39,19 @@ static const char kPrettyJson[] =
 "    \"i64\": -1234567890123456789\n"
 "}";
 
+static const char kPrettyJson_FormatOptions_SLA[] =
+"{\n"
+"    \"hello\": \"world\",\n"
+"    \"t\": true,\n"
+"    \"f\": false,\n"
+"    \"n\": null,\n"
+"    \"i\": 123,\n"
+"    \"pi\": 3.1416,\n"
+"    \"a\": [1, 2, 3, -1],\n"
+"    \"u64\": 1234567890123456789,\n"
+"    \"i64\": -1234567890123456789\n"
+"}";
+
 TEST(PrettyWriter, Basic) {
     StringBuffer buffer;
     PrettyWriter<StringBuffer> writer(buffer);
@@ -46,6 +59,16 @@ TEST(PrettyWriter, Basic) {
     StringStream s(kJson);
     reader.Parse(s, writer);
     EXPECT_STREQ(kPrettyJson, buffer.GetString());
+}
+
+TEST(PrettyWriter, FormatOptions) {
+    StringBuffer buffer;
+    PrettyWriter<StringBuffer> writer(buffer);
+    writer.SetFormatOptions(kFormatSingleLineArray);
+    Reader reader;
+    StringStream s(kJson);
+    reader.Parse(s, writer);
+    EXPECT_STREQ(kPrettyJson_FormatOptions_SLA, buffer.GetString());
 }
 
 TEST(PrettyWriter, SetIndent) {
@@ -149,13 +172,32 @@ TEST(PrettyWriter, FileWriteStream) {
 
     fp = fopen(filename, "rb");
     fseek(fp, 0, SEEK_END);
-    size_t size = (size_t)ftell(fp);
+    size_t size = static_cast<size_t>(ftell(fp));
     fseek(fp, 0, SEEK_SET);
-    char* json = (char*)malloc(size + 1);
+    char* json = static_cast<char*>(malloc(size + 1));
     size_t readLength = fread(json, 1, size, fp);
     json[readLength] = '\0';
     fclose(fp);
     remove(filename);
     EXPECT_STREQ(kPrettyJson, json);
     free(json);
+}
+
+TEST(PrettyWriter, RawValue) {
+    StringBuffer buffer;
+    PrettyWriter<StringBuffer> writer(buffer);
+    writer.StartObject();
+    writer.Key("a");
+    writer.Int(1);
+    writer.Key("raw");
+    const char json[] = "[\"Hello\\nWorld\", 123.456]";
+    writer.RawValue(json, strlen(json), kArrayType);
+    writer.EndObject();
+    EXPECT_TRUE(writer.IsComplete());
+    EXPECT_STREQ(
+        "{\n"
+        "    \"a\": 1,\n"
+        "    \"raw\": [\"Hello\\nWorld\", 123.456]\n" // no indentation within raw value
+        "}",
+        buffer.GetString());
 }

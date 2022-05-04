@@ -128,7 +128,7 @@ AmazonRequest::~AmazonRequest() { }
 class Throttle {
     public:
         Throttle() : count( 0 ), rateLimit( 0 ) {
-#if defined(HAVE_CLOCK_GETTIME)
+#ifdef UNIX
             // Determine which type of clock to use.
             int rv = clock_gettime( CLOCK_MONOTONIC, & when );
             if( rv == 0 ) { type = CLOCK_MONOTONIC; }
@@ -197,7 +197,7 @@ class Throttle {
 
         static void now( struct timespec * t ) {
             if( t != NULL ) {
-#if defined(HAVE_CLOCK_GETTIME)
+#ifdef UNIX
                 clock_gettime( type, t );
 #else
                 struct timeval tv;
@@ -293,7 +293,7 @@ class Throttle {
         }
 
     protected:
-#if defined(HAVE_CLOCK_GETTIME)
+#ifdef UNIX
         static clockid_t type;
 #endif
         unsigned int count;
@@ -307,7 +307,7 @@ class Throttle {
 
 };
 
-#if defined(HAVE_CLOCK_GETTIME)
+#ifdef UNIX
 clockid_t Throttle::type;
 #endif
 Throttle globalCurlThrottle;
@@ -3444,9 +3444,8 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			"SpotPrice" );
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
 			"KeyName" );
-		// AWS' documentation is wrong, claims this is 'UserData'.
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
-			"userData", "UserData" );
+			"UserData", "UserData" );
 
 		request.setLaunchSpecificationAttribute( lcIndex, blob,
 			"InstanceType" );

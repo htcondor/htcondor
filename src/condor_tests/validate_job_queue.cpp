@@ -101,7 +101,7 @@ int main(int argc, const char ** argv)
 
 	// tell the dprintf code to write to stderr
 	dprintf_output_settings my_output;
-	my_output.choice = (1<<D_ALWAYS) | (1<<D_ERROR);
+	my_output.choice = (1<<D_ALWAYS) | (1<<D_ERROR) | (1<<D_STATUS);
 	my_output.accepts_all = true;
 	my_output.logPath = "2>";
 	my_output.HeaderOpts = D_NOHEADER;
@@ -126,7 +126,9 @@ int main(int argc, const char ** argv)
 
 static int validate_queue(const char * filename, int max_logs, bool verbose)
 {
-	ClassAdCollection * JobQueue = new ClassAdCollection(NULL, filename, max_logs);
+	ClassAdCollection * JobQueue = new ClassAdCollection(NULL);
+	bool init = JobQueue->InitLogFile(filename, max_logs);
+	ASSERT(init);
 
 	ClassAd * ad;
 	if ( ! JobQueue->LookupClassAd("0.0", ad)) {

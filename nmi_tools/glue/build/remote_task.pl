@@ -163,7 +163,7 @@ elsif ($taskname eq $NATIVE_TASK || $taskname eq $NATIVE_DEBUG_TASK) {
         print "Detected OS is Debian or Ubuntu.  Creating Deb package.\n";
         $execstr = create_deb($is_debug);
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|amazonlinux|centos|sl)/i) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|amazonlinux|centos|rocky|sl)/i) {
         print "Detected OS is Red Hat.  Creating RPM package.\n";
         $execstr = create_rpm($is_debug);
     }
@@ -182,7 +182,7 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
         print "Detected OS is Debian.  Validating Deb package.\n";
         $execstr = check_deb();
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|amazonlinux|centos|sl)/i) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|amazonlinux|centos|rocky|sl)/i) {
         print "Detected OS is Red Hat.  Validating RPM package.\n";
         $execstr = check_rpm();
     }
@@ -226,6 +226,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
         $VCVER = "VC$1";
         if ($VCVER =~ /^VC([0-9]+)\s+([0-9]+)\s*/) { $VCVER = "VC$1"; }
         if ($cmake_args =~ /\s+Win64/i) { $win64 = "x64"; }
+        if ($1 >= 17) { $win64 = "x64"; } # starting with VC17 there is no x86 vs x64
         print "cmake was invoked with a Visual Studio $VCVER $win64 generator\n";
     }
     if ($taskname eq $EXTERNALS_TASK) {
@@ -305,7 +306,7 @@ sub get_tarball_check_script {
 }
 
 sub get_extract_tarballs_script {
-    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|SL)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|Rocky|SL)/) {
         return dirname($0) . "/make-tarball-from-rpms";
     }
     if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/i) {
@@ -326,7 +327,7 @@ sub get_tarball_name {
 
 sub create_rpm {
     my $is_debug = $_[0];
-    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|SL)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|Rocky|SL)/) {
         # Use native packaging tool
         return dirname($0) . "/build_uw_rpm.sh";
     } else {

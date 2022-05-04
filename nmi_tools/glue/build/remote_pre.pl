@@ -57,7 +57,7 @@ my %defines = (
 $| = 1;
 
 # Streamlined Linux builds do not need remote_pre
-if ($platform =~ m/AmazonLinux|CentOS|Debian|Fedora|Ubuntu/) {
+if ($platform =~ m/AmazonLinux|CentOS|Debian|Fedora|Rocky|Ubuntu/) {
     print "remote_pre not needed for $platform, create_native does this.\n";
     exit 0; # cmake configuration is run as part of create_native
 }
@@ -67,6 +67,9 @@ if ($boos) { $CloneDir =~ s/userdir/sources/; }
 
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	my $enable_vs9 = 0;
+	my $enable_vs15 = 0;
+	my $enable_vs16 = 0;
+	my $enable_vs17 = 1;
 	my $enable_x64 = 1;
 	my $use_latest_vs = 1;
 	my $use_cmake3 = 1;
@@ -74,6 +77,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	#uncomment to use vs9 on Win7 platform
 	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs9 = 1; }
 	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $use_latest_vs = 1; $use_cmake3 = 1; }
+	#if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs17 = 1; $enable_vs16 = 0; $enable_vs15 = 0; }
 
 	#uncomment to build x86 on Win8 platform (the rest of the build will follow this)
 	#if ($ENV{NMI_PLATFORM} =~ /Windows8/i) { $enable_x64 = 0; }
@@ -82,12 +86,21 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 		$defines{visualstudio} = '-G "Visual Studio 9 2008"';
 		$ENV{PATH} = "$ENV{VS90COMNTOOLS}..\\IDE;$ENV{VS90COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
 	} elsif ($use_latest_vs) {
-		# todo, detect other VS versions here.
-		$defines{visualstudio} = '-G "Visual Studio 14 2015"';
-		$ENV{PATH} = "$ENV{VS140COMNTOOLS}..\\IDE;$ENV{VS140COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
-		if ($enable_x64) {
-			$defines{visualstudio} = '-G "Visual Studio 14 2015 Win64"';
+		if ($enable_vs17 && exists $ENV{VS170COMNTOOLS}) {
+			$defines{visualstudio} = '-G "Visual Studio 17 2022"';
+			#$ENV{PATH} = "$ENV{VS170COMNTOOLS}..\\..\\VC\\TOOLS\\MSVC\\14.31.31103\bin\hostx64\x64;$ENV{PATH}";
+		} elsif ($enable_vs16 && exists $ENV{VS170COMNTOOLS}) {
+			$defines{visualstudio} = '-G "Visual Studio 17 2022" -T v142';
+			#$ENV{PATH} = "$ENV{VS170COMNTOOLS}..\\..\\VC\\TOOLS\\MSVC\\14.29.30133\bin\hostx64\x64;$ENV{PATH}";
+		} elsif ($enable_vs15 && exists $ENV{VS170COMNTOOLS}) {
+			$defines{visualstudio} = '-G "Visual Studio 17 2022" -T v141';
+			#$ENV{PATH} = "$ENV{VS170COMNTOOLS}..\\..\\VC\\TOOLS\\MSVC\\14.16.27023\bin\hostx64\x64;$ENV{PATH}";
+		} else {
+			$defines{visualstudio} = '-G "Visual Studio 14 2015"';
+			$ENV{PATH} = "$ENV{VS140COMNTOOLS}..\\IDE;$ENV{VS140COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
+			if ($enable_x64) { $defines{visualstudio} = '-G "Visual Studio 14 2015 Win64"'; }
 		}
+		$defines{python36} = "-DWANT_PYTHON36:BOOL=FALSE";
 	} else {
 		$defines{visualstudio} = '-G "Visual Studio 11"';
 		$ENV{PATH} = "$ENV{VS110COMNTOOLS}..\\IDE;$ENV{VS110COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";

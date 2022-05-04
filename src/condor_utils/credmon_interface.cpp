@@ -32,10 +32,6 @@
 // if user ends in @domain, only part before the @ will be used
 static const char * credmon_user_filename(std::string & file, const char * cred_dir, const char *user, const char * ext=NULL)
 {
-	size_t len = strlen(cred_dir) + strlen(user) + 10;
-	if (ext) {
-		len += strlen(ext);
-	}
 	dircat(cred_dir, user, file);
 
 	// if username has a @ we need to remove that from the filename
@@ -198,7 +194,7 @@ bool credmon_kick(int cred_type)
 		if (fd) {
 			char buf[256];
 			memset(buf, 0, sizeof(buf));
-			size_t len = _condor_full_read(fd, buf, sizeof(buf));
+			size_t len = full_read(fd, buf, sizeof(buf));
 			buf[len] = 0;
 #if 0 //def WIN32
 			HANDLE h = INVALID_HANDLE_VALUE;

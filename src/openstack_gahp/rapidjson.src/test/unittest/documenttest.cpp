@@ -21,6 +21,12 @@
 #include <sstream>
 #include <algorithm>
 
+#ifdef __clang__
+RAPIDJSON_DIAG_PUSH
+RAPIDJSON_DIAG_OFF(c++98-compat)
+RAPIDJSON_DIAG_OFF(missing-variable-declarations)
+#endif
+
 using namespace rapidjson;
 
 template <typename DocumentType>
@@ -28,6 +34,9 @@ void ParseCheck(DocumentType& doc) {
     typedef typename DocumentType::ValueType ValueType;
 
     EXPECT_FALSE(doc.HasParseError());
+    if (doc.HasParseError())
+        printf("Error: %d at %zu\n", static_cast<int>(doc.GetParseError()), doc.GetErrorOffset());
+    EXPECT_TRUE(static_cast<ParseResult>(doc));
 
     EXPECT_TRUE(doc.IsObject());
 
@@ -62,8 +71,8 @@ void ParseCheck(DocumentType& doc) {
     const ValueType& a = doc["a"];
     EXPECT_TRUE(a.IsArray());
     EXPECT_EQ(4u, a.Size());
-    for (SizeType i = 0; i < 4; i++)
-        EXPECT_EQ(i + 1, a[i].GetUint());
+    for (SizeType j = 0; j < 4; j++)
+        EXPECT_EQ(j + 1, a[j].GetUint());
 }
 
 template <typename Allocator, typename StackAllocator>
@@ -86,6 +95,26 @@ void ParseTest() {
     doc.ParseInsitu(buffer);
     ParseCheck(doc);
     free(buffer);
+
+    // Parse(const Ch*, size_t)
+    size_t length = strlen(json);
+    buffer = reinterpret_cast<char*>(malloc(length * 2));
+    memcpy(buffer, json, length);
+    memset(buffer + length, 'X', length);
+#if RAPIDJSON_HAS_STDSTRING
+    std::string s2(buffer, length); // backup buffer
+#endif
+    doc.SetNull();
+    doc.Parse(buffer, length);
+    free(buffer);
+    ParseCheck(doc);
+
+#if RAPIDJSON_HAS_STDSTRING
+    // Parse(std::string)
+    doc.SetNull();
+    doc.Parse(s2);
+    ParseCheck(doc);
+#endif
 }
 
 TEST(Document, Parse) {
@@ -99,33 +128,79 @@ TEST(Document, UnchangedOnParseError) {
     Document doc;
     doc.SetArray().PushBack(0, doc.GetAllocator());
 
-    doc.Parse("{]");
+    ParseResult err = doc.Parse("{]");
     EXPECT_TRUE(doc.HasParseError());
+    EXPECT_EQ(err.Code(), doc.GetParseError());
+    EXPECT_EQ(err.Offset(), doc.GetErrorOffset());
     EXPECT_TRUE(doc.IsArray());
     EXPECT_EQ(doc.Size(), 1u);
 
-    doc.Parse("{}");
+    err = doc.Parse("{}");
     EXPECT_FALSE(doc.HasParseError());
+    EXPECT_FALSE(err.IsError());
+    EXPECT_EQ(err.Code(), doc.GetParseError());
+    EXPECT_EQ(err.Offset(), doc.GetErrorOffset());
     EXPECT_TRUE(doc.IsObject());
     EXPECT_EQ(doc.MemberCount(), 0u);
 }
 
 static FILE* OpenEncodedFile(const char* filename) {
     const char *paths[] = {
-        "encodings/%s",
-        "bin/encodings/%s",
-        "../bin/encodings/%s",
-        "../../bin/encodings/%s",
-        "../../../bin/encodings/%s"
+        "encodings",
+        "bin/encodings",
+        "../bin/encodings",
+        "../../bin/encodings",
+        "../../../bin/encodings"
     };
     char buffer[1024];
     for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); i++) {
-        sprintf(buffer, paths[i], filename);
+        sprintf(buffer, "%s/%s", paths[i], filename);
         FILE *fp = fopen(buffer, "rb");
         if (fp)
             return fp;
     }
     return 0;
+}
+
+TEST(Document, Parse_Encoding) {
+    const char* json = " { \"hello\" : \"world\", \"t\" : true , \"f\" : false, \"n\": null, \"i\":123, \"pi\": 3.1416, \"a\":[1, 2, 3, 4] } ";
+
+    typedef GenericDocument<UTF16<> > DocumentType;
+    DocumentType doc;
+    
+    // Parse<unsigned, SourceEncoding>(const SourceEncoding::Ch*)
+    // doc.Parse<kParseDefaultFlags, UTF8<> >(json);
+    // EXPECT_FALSE(doc.HasParseError());
+    // EXPECT_EQ(0, StrCmp(doc[L"hello"].GetString(), L"world"));
+
+    // Parse<unsigned, SourceEncoding>(const SourceEncoding::Ch*, size_t)
+    size_t length = strlen(json);
+    char* buffer = reinterpret_cast<char*>(malloc(length * 2));
+    memcpy(buffer, json, length);
+    memset(buffer + length, 'X', length);
+#if RAPIDJSON_HAS_STDSTRING
+    std::string s2(buffer, length); // backup buffer
+#endif
+    doc.SetNull();
+    doc.Parse<kParseDefaultFlags, UTF8<> >(buffer, length);
+    free(buffer);
+    EXPECT_FALSE(doc.HasParseError());
+    if (doc.HasParseError())
+        printf("Error: %d at %zu\n", static_cast<int>(doc.GetParseError()), doc.GetErrorOffset());
+    EXPECT_EQ(0, StrCmp(doc[L"hello"].GetString(), L"world"));
+
+#if RAPIDJSON_HAS_STDSTRING
+    // Parse<unsigned, SourceEncoding>(std::string)
+    doc.SetNull();
+
+#if defined(_MSC_VER) && _MSC_VER < 1800
+    doc.Parse<kParseDefaultFlags, UTF8<> >(s2.c_str()); // VS2010 or below cannot handle templated function overloading. Use const char* instead.
+#else
+    doc.Parse<kParseDefaultFlags, UTF8<> >(s2);
+#endif
+    EXPECT_FALSE(doc.HasParseError());
+    EXPECT_EQ(0, StrCmp(doc[L"hello"].GetString(), L"world"));
+#endif
 }
 
 TEST(Document, ParseStream_EncodedInputStream) {
@@ -151,22 +226,22 @@ TEST(Document, ParseStream_EncodedInputStream) {
     StringBuffer bos;
     typedef EncodedOutputStream<UTF8<>, StringBuffer> OutputStream;
     OutputStream eos(bos, false);   // Not writing BOM
-    Writer<OutputStream, UTF16<>, UTF8<> > writer(eos);
-    d.Accept(writer);
-
     {
-        // Condense the original file and compare.
-        FILE *fp = OpenEncodedFile("utf8.json");
-        FileReadStream is(fp, buffer, sizeof(buffer));
-        Reader reader;
-        StringBuffer bos2;
-        Writer<StringBuffer> writer(bos2);
-        reader.Parse(is, writer);
-        fclose(fp);
-
-        EXPECT_EQ(bos.GetSize(), bos2.GetSize());
-        EXPECT_EQ(0, memcmp(bos.GetString(), bos2.GetString(), bos2.GetSize()));
+        Writer<OutputStream, UTF16<>, UTF8<> > writer(eos);
+        d.Accept(writer);
     }
+
+    // Condense the original file and compare.
+    fp = OpenEncodedFile("utf8.json");
+    FileReadStream is(fp, buffer, sizeof(buffer));
+    Reader reader;
+    StringBuffer bos2;
+    Writer<StringBuffer> writer2(bos2);
+    reader.Parse(is, writer2);
+    fclose(fp);
+
+    EXPECT_EQ(bos.GetSize(), bos2.GetSize());
+    EXPECT_EQ(0, memcmp(bos.GetString(), bos2.GetString(), bos2.GetSize()));
 }
 
 TEST(Document, ParseStream_AutoUTFInputStream) {
@@ -193,19 +268,17 @@ TEST(Document, ParseStream_AutoUTFInputStream) {
     Writer<StringBuffer> writer(bos);
     d.Accept(writer);
 
-    {
-        // Condense the original file and compare.
-        FILE *fp = OpenEncodedFile("utf8.json");
-        FileReadStream is(fp, buffer, sizeof(buffer));
-        Reader reader;
-        StringBuffer bos2;
-        Writer<StringBuffer> writer(bos2);
-        reader.Parse(is, writer);
-        fclose(fp);
+    // Condense the original file and compare.
+    fp = OpenEncodedFile("utf8.json");
+    FileReadStream is(fp, buffer, sizeof(buffer));
+    Reader reader;
+    StringBuffer bos2;
+    Writer<StringBuffer> writer2(bos2);
+    reader.Parse(is, writer2);
+    fclose(fp);
 
-        EXPECT_EQ(bos.GetSize(), bos2.GetSize());
-        EXPECT_EQ(0, memcmp(bos.GetString(), bos2.GetString(), bos2.GetSize()));
-    }
+    EXPECT_EQ(bos.GetSize(), bos2.GetSize());
+    EXPECT_EQ(0, memcmp(bos.GetString(), bos2.GetString(), bos2.GetSize()));
 }
 
 TEST(Document, Swap) {
@@ -257,11 +330,15 @@ TEST(Document, Swap) {
 struct OutputStringStream : public std::ostringstream {
     typedef char Ch;
 
+    virtual ~OutputStringStream();
+
     void Put(char c) {
         put(c);
     }
     void Flush() {}
 };
+
+OutputStringStream::~OutputStringStream() {}
 
 TEST(Document, AcceptWriter) {
     Document doc;
@@ -320,6 +397,8 @@ TEST(Document, UTF16_Document) {
 
 #if RAPIDJSON_HAS_CXX11_RVALUE_REFS
 
+#if 0 // Many old compiler does not support these. Turn it off temporaily.
+
 #include <type_traits>
 
 TEST(Document, Traits) {
@@ -357,6 +436,8 @@ TEST(Document, Traits) {
 #endif
 }
 
+#endif
+
 template <typename Allocator>
 struct DocumentMove: public ::testing::Test {
 };
@@ -366,10 +447,10 @@ TYPED_TEST_CASE(DocumentMove, MoveAllocatorTypes);
 
 TYPED_TEST(DocumentMove, MoveConstructor) {
     typedef TypeParam Allocator;
-    typedef GenericDocument<UTF8<>, Allocator> Document;
+    typedef GenericDocument<UTF8<>, Allocator> D;
     Allocator allocator;
 
-    Document a(&allocator);
+    D a(&allocator);
     a.Parse("[\"one\", \"two\", \"three\"]");
     EXPECT_FALSE(a.HasParseError());
     EXPECT_TRUE(a.IsArray());
@@ -377,11 +458,11 @@ TYPED_TEST(DocumentMove, MoveConstructor) {
     EXPECT_EQ(&a.GetAllocator(), &allocator);
 
     // Document b(a); // does not compile (!is_copy_constructible)
-    Document b(std::move(a));
+    D b(std::move(a));
     EXPECT_TRUE(a.IsNull());
     EXPECT_TRUE(b.IsArray());
     EXPECT_EQ(3u, b.Size());
-    EXPECT_EQ(&a.GetAllocator(), (void*)0);
+    EXPECT_THROW(a.GetAllocator(), AssertException);
     EXPECT_EQ(&b.GetAllocator(), &allocator);
 
     b.Parse("{\"Foo\": \"Bar\", \"Baz\": 42}");
@@ -390,27 +471,27 @@ TYPED_TEST(DocumentMove, MoveConstructor) {
     EXPECT_EQ(2u, b.MemberCount());
 
     // Document c = a; // does not compile (!is_copy_constructible)
-    Document c = std::move(b);
+    D c = std::move(b);
     EXPECT_TRUE(b.IsNull());
     EXPECT_TRUE(c.IsObject());
     EXPECT_EQ(2u, c.MemberCount());
-    EXPECT_EQ(&b.GetAllocator(), (void*)0);
+    EXPECT_THROW(b.GetAllocator(), AssertException);
     EXPECT_EQ(&c.GetAllocator(), &allocator);
 }
 
 TYPED_TEST(DocumentMove, MoveConstructorParseError) {
     typedef TypeParam Allocator;
-    typedef GenericDocument<UTF8<>, Allocator> Document;
+    typedef GenericDocument<UTF8<>, Allocator> D;
 
     ParseResult noError;
-    Document a;
+    D a;
     a.Parse("{ 4 = 4]");
     ParseResult error(a.GetParseError(), a.GetErrorOffset());
     EXPECT_TRUE(a.HasParseError());
     EXPECT_NE(error.Code(), noError.Code());
     EXPECT_NE(error.Offset(), noError.Offset());
 
-    Document b(std::move(a));
+    D b(std::move(a));
     EXPECT_FALSE(a.HasParseError());
     EXPECT_TRUE(b.HasParseError());
     EXPECT_EQ(a.GetParseError(), noError.Code());
@@ -418,7 +499,7 @@ TYPED_TEST(DocumentMove, MoveConstructorParseError) {
     EXPECT_EQ(a.GetErrorOffset(), noError.Offset());
     EXPECT_EQ(b.GetErrorOffset(), error.Offset());
 
-    Document c(std::move(b));
+    D c(std::move(b));
     EXPECT_FALSE(b.HasParseError());
     EXPECT_TRUE(c.HasParseError());
     EXPECT_EQ(b.GetParseError(), noError.Code());
@@ -459,10 +540,10 @@ TYPED_TEST(DocumentMove, MoveConstructorStack) {
 
 TYPED_TEST(DocumentMove, MoveAssignment) {
     typedef TypeParam Allocator;
-    typedef GenericDocument<UTF8<>, Allocator> Document;
+    typedef GenericDocument<UTF8<>, Allocator> D;
     Allocator allocator;
 
-    Document a(&allocator);
+    D a(&allocator);
     a.Parse("[\"one\", \"two\", \"three\"]");
     EXPECT_FALSE(a.HasParseError());
     EXPECT_TRUE(a.IsArray());
@@ -470,12 +551,12 @@ TYPED_TEST(DocumentMove, MoveAssignment) {
     EXPECT_EQ(&a.GetAllocator(), &allocator);
 
     // Document b; b = a; // does not compile (!is_copy_assignable)
-    Document b;
+    D b;
     b = std::move(a);
     EXPECT_TRUE(a.IsNull());
     EXPECT_TRUE(b.IsArray());
     EXPECT_EQ(3u, b.Size());
-    EXPECT_EQ(&a.GetAllocator(), (void*)0);
+    EXPECT_THROW(a.GetAllocator(), AssertException);
     EXPECT_EQ(&b.GetAllocator(), &allocator);
 
     b.Parse("{\"Foo\": \"Bar\", \"Baz\": 42}");
@@ -484,28 +565,28 @@ TYPED_TEST(DocumentMove, MoveAssignment) {
     EXPECT_EQ(2u, b.MemberCount());
 
     // Document c; c = a; // does not compile (see static_assert)
-    Document c;
+    D c;
     c = std::move(b);
     EXPECT_TRUE(b.IsNull());
     EXPECT_TRUE(c.IsObject());
     EXPECT_EQ(2u, c.MemberCount());
-    EXPECT_EQ(&b.GetAllocator(), (void*)0);
+    EXPECT_THROW(b.GetAllocator(), AssertException);
     EXPECT_EQ(&c.GetAllocator(), &allocator);
 }
 
 TYPED_TEST(DocumentMove, MoveAssignmentParseError) {
     typedef TypeParam Allocator;
-    typedef GenericDocument<UTF8<>, Allocator> Document;
+    typedef GenericDocument<UTF8<>, Allocator> D;
 
     ParseResult noError;
-    Document a;
+    D a;
     a.Parse("{ 4 = 4]");
     ParseResult error(a.GetParseError(), a.GetErrorOffset());
     EXPECT_TRUE(a.HasParseError());
     EXPECT_NE(error.Code(), noError.Code());
     EXPECT_NE(error.Offset(), noError.Offset());
 
-    Document b;
+    D b;
     b = std::move(a);
     EXPECT_FALSE(a.HasParseError());
     EXPECT_TRUE(b.HasParseError());
@@ -514,7 +595,7 @@ TYPED_TEST(DocumentMove, MoveAssignmentParseError) {
     EXPECT_EQ(a.GetErrorOffset(), noError.Offset());
     EXPECT_EQ(b.GetErrorOffset(), error.Offset());
 
-    Document c;
+    D c;
     c = std::move(b);
     EXPECT_FALSE(b.HasParseError());
     EXPECT_TRUE(c.HasParseError());
@@ -531,9 +612,9 @@ TYPED_TEST(DocumentMove, MoveAssignmentParseError) {
 TYPED_TEST(DocumentMove, MoveAssignmentStack) {
     typedef TypeParam Allocator;
     typedef UTF8<> Encoding;
-    typedef GenericDocument<Encoding, Allocator> Document;
+    typedef GenericDocument<Encoding, Allocator> D;
 
-    Document a;
+    D a;
     size_t defaultCapacity = a.GetStackCapacity();
 
     // Trick Document into getting GetStackCapacity() to return non-zero
@@ -544,12 +625,12 @@ TYPED_TEST(DocumentMove, MoveAssignmentStack) {
     size_t capacity = a.GetStackCapacity();
     EXPECT_GT(capacity, 0u);
 
-    Document b;
+    D b;
     b = std::move(a);
     EXPECT_EQ(a.GetStackCapacity(), defaultCapacity);
     EXPECT_EQ(b.GetStackCapacity(), capacity);
 
-    Document c;
+    D c;
     c = std::move(b);
     EXPECT_EQ(b.GetStackCapacity(), defaultCapacity);
     EXPECT_EQ(c.GetStackCapacity(), capacity);
@@ -565,3 +646,7 @@ TYPED_TEST(DocumentMove, MoveAssignmentStack) {
 //  Document d2;
 //  d1 = d2;
 //}
+
+#ifdef __clang__
+RAPIDJSON_DIAG_POP
+#endif

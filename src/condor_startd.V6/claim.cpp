@@ -252,10 +252,6 @@ Claim::publish( ClassAd* cad )
 
 		int numJobPids = c_client->numPids();
 		
-		//In standard universe, numJobPids should be 1
-		if(c_universe == CONDOR_UNIVERSE_STANDARD) {
-			numJobPids = 1;
-		}
 		cad->Assign( ATTR_NUM_PIDS, numJobPids );
 
         if ((tmp = c_client->rmtgrp())) {
@@ -764,7 +760,7 @@ Claim::beginActivation( double now )
 
 	int univ;
 	if( c_jobad->LookupInteger(ATTR_JOB_UNIVERSE, univ) == 0 ) {
-		univ = CONDOR_UNIVERSE_STANDARD;
+		univ = CONDOR_UNIVERSE_VANILLA;
 		c_rip->dprintf( D_ALWAYS, "Default universe \"%s\" (%d) "
 						"since not in classad\n",
 						CondorUniverseName(univ), univ );
@@ -782,7 +778,6 @@ Claim::beginActivation( double now )
 			if( ! wantCheckpoint ) { break; }
 			//@fallthrough@
 		case CONDOR_UNIVERSE_VM:
-		case CONDOR_UNIVERSE_STANDARD:
 			c_last_pckpt = (int)now;
 		default:
 			break;
@@ -1654,13 +1649,13 @@ Claim::resumeClaim( void )
 
 
 bool
-Claim::starterKill( int sig ) const
+Claim::starterSignal( int sig ) const
 {
 		// don't need to work about the state, since we don't use this
 		// method to send any signals that change the claim state...
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter)  {
-		return starter->kill( sig );
+		return starter->signal( sig );
 	}
 
 		// if there's no starter, we don't need to kill anything, so
@@ -1670,14 +1665,14 @@ Claim::starterKill( int sig ) const
 
 
 bool
-Claim::starterKillPg( int sig )
+Claim::starterKillFamily()
 {
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter) {
-			// if we're using KillPg, we're trying to hard-kill the
+			// if we're using killfamily(), we're trying to hard-kill the
 			// starter and all its children
 		changeState( CLAIM_KILLING );
-		return starter->killpg( sig );
+		return starter->killfamily();
 	}
 
 		// if there's no starter, we don't need to kill anything, so
@@ -1856,13 +1851,7 @@ Claim::publishStarterAd(ClassAd *cad) const
 
 
 		// stuff in starter-specific attributes, if we have them.
-	StringList ability_list;
-	starter->publish(cad, &ability_list);
-	char* ability_str = ability_list.print_to_string();
-	if (ability_str) {
-		cad->Assign(ATTR_STARTER_ABILITY_LIST, ability_str);
-		free(ability_str);
-	}
+	starter->publish(cad);
 
 		// TODO add more goodness to this ClassAd??
 
@@ -1874,7 +1863,7 @@ Claim::periodicCheckpoint( void )
 {
 	Starter * starter = findStarterByPid(c_starter_pid);
 	if (starter) {
-		if( ! starter->kill(DC_SIGPCKPT) ) {
+		if( ! starter->signal(DC_SIGPCKPT) ) {
 			return false;
 		}
 	}
@@ -2014,6 +2003,8 @@ Claim::resetClaim( void )
 		delete( c_jobad );
 		c_jobad = NULL;
 	}
+	c_job_execution_overlay_ad.Clear();
+
 	c_universe = -1;
 	c_cluster = -1;
 	c_proc = -1;
@@ -2111,7 +2102,7 @@ Claim::writeJobAd( int pipe_end )
 }
 
 bool
-Claim::writeMachAd( Stream* stream )
+Claim::writeMachAdAndOverlay( Stream* stream )
 {
 	//PRAGMA_REMIND("flatten SlotEval here before printing/sending ad on wire")
 	if (IsDebugLevel(D_MACHINE)) {
@@ -2120,12 +2111,25 @@ Claim::writeMachAd( Stream* stream )
 	} else {
 		dprintf(D_FULLDEBUG, "Sending Machine Ad to Starter\n");
 	}
-	if (!putClassAd(stream, *c_rip->r_classad) || !stream->end_of_message()) {
+	if (!putClassAd(stream, *c_rip->r_classad)) {
+		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
+		return false;
+	}
+
+	// now write the execution overlay
+	if (IsDebugLevel(D_JOB)) {
+		std::string adbuf;
+		dprintf(D_JOB, "Sending Execution Overlay Ad to Starter :\n%s", formatAd(adbuf, c_job_execution_overlay_ad, "\t"));
+	} else {
+		dprintf(D_FULLDEBUG, "Sending Execution Overlay Ad to Starter (%d attributes)\n", (int)c_job_execution_overlay_ad.size());
+	}
+	if (!putClassAd(stream, c_job_execution_overlay_ad) || !stream->end_of_message()) {
 		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
 		return false;
 	}
 	return true;
 }
+
 
 ///////////////////////////////////////////////////////////////////////////
 // Client
@@ -2339,12 +2343,7 @@ newIdString( char** id_str_ptr )
 	formatstr( id, "%s#%d#%d#", daemonCore->publicNetworkIpAddr(),
 	           (int)startd_startup, sequence_num );
 
-		// keylen is 20 in order to avoid generating claim ids that
-		// overflow the 80 byte buffer in pre-7.1.3 negotiators
-		// Note: Claim id strings have been longer than 80 characters
-		//   ever since we started putting a security session ad in them.
-	const size_t keylen = 20;
-	char *keybuf = Condor_Crypt_Base::randomHexKey(keylen);
+	char *keybuf = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 	id += keybuf;
 	free( keybuf );
 

@@ -23,7 +23,7 @@
 %endif
 
 %if %uw_build
-%define devtoolset 0
+%define devtoolset 10
 %define debug 1
 %endif
 
@@ -113,6 +113,9 @@ Source5: condor_config.local.dedicated.resource
 
 Source8: htcondor.pp
 
+# Patch credmon-oauth to use Python 2 on EL7
+Patch1: rhel7-python2.patch
+
 # Patch to use Python 2 for file transfer plugins
 # The use the python-requests library and the one in EPEL is based Python 3.6
 # However, Amazon Linux 2 has Python 3.7
@@ -151,6 +154,7 @@ BuildRequires: redhat-rpm-config
 BuildRequires: sqlite-devel
 BuildRequires: perl(Data::Dumper)
 
+BuildRequires: glibc-static
 %if %uw_build
 BuildRequires: cmake >= 2.8
 BuildRequires: gcc-c++
@@ -212,7 +216,7 @@ Requires: libcgroup
 
 %if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
 BuildRequires: which
-BuildRequires: devtoolset-9-toolchain
+BuildRequires: devtoolset-%{devtoolset}-toolchain
 %endif
 
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
@@ -271,9 +275,7 @@ Requires: condor-procd = %{version}-%{release}
 Requires: %name-externals = %version-%release
 %endif
 
-%if %blahp
-Requires: blahp >= 2.1.1
-%endif
+Requires: %name-blahp = %version-%release
 
 # Useful tools are using the Python bindings
 Requires: python3-condor
@@ -333,8 +335,9 @@ Requires: krb5-libs
 Requires: libcom_err
 Requires: munge-libs
 Requires: openssl-libs
-Requires: scitokens-cpp
+Requires: scitokens-cpp >= 0.6.2
 Requires: systemd-libs
+Requires: rsync
 
 #Provides: user(condor) = 43
 #Provides: group(condor) = 43
@@ -352,6 +355,9 @@ Obsoletes: condor-small-shadow < 8.9.9
 
 # external-libs package discontinued as of 8.9.9
 Obsoletes: condor-external-libs < 8.9.9
+
+# Bosco package discontinued as of 9.5.0
+Obsoletes: condor-bosco < 9.5.0
 
 %description
 HTCondor is a specialized workload management system for
@@ -534,25 +540,32 @@ the ClassAd library and HTCondor from python
 %endif
 
 
-%if 0%{?rhel} == 7
 #######################
 %package credmon-oauth
 Summary: OAuth2 credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
+%if 0%{?rhel} == 7
 Requires: python2-condor
 Requires: python2-requests-oauthlib
 Requires: python-six
 Requires: python-flask
 Requires: python2-cryptography
 Requires: python2-scitokens
+%else
+Requires: python3-condor
+Requires: python3-requests-oauthlib
+Requires: python3-six
+Requires: python3-flask
+Requires: python3-cryptography
+Requires: python3-scitokens
+%endif
 Requires: httpd
 Requires: mod_wsgi
 
 %description credmon-oauth
 The OAuth2 credmon allows users to obtain credentials from configured
 OAuth2 endpoints and to use those credentials securely inside running jobs.
-%endif
 
 
 #######################
@@ -561,7 +574,7 @@ Summary: Vault credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor
-Requires: python-six
+Requires: python3-six
 %if 0%{?osg}
 # Although htgettoken is only needed on the submit machine and
 #  condor-credmon-vault is needed on both the submit and credd machines,
@@ -575,27 +588,21 @@ The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
 
 #######################
-%package bosco
-Summary: BOSCO, a HTCondor overlay system for managing jobs at remote clusters
-Url: https://osg-bosco.github.io/docs/
-Group: Applications/System
+%package blahp
+Summary: BLAHP daemon
+Url: https://github.com/htcondor/BLAH
+Group: System/Libraries
+BuildRequires:  docbook-style-xsl, libxslt
 %if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3
 %else
 Requires: python >= 2.2
 %endif
-Requires: %name = %version-%release
-Requires: rsync
+Provides: blahp = %{version}-%{release}
+Obsoletes: blahp < 9.5.0
 
-%description bosco
-BOSCO allows a locally-installed HTCondor to submit jobs to remote clusters,
-using SSH as a transit mechanism.  It is designed for cases where the remote
-cluster is using a different batch system such as PBS, SGE, LSF, or another
-HTCondor system.
-
-BOSCO provides an overlay system so the remote clusters appear to be a HTCondor
-cluster.  This allows the user to run their workflows using HTCondor tools across
-multiple clusters.
+%description blahp
+%{summary}
 
 #######################
 %package -n minicondor
@@ -662,7 +669,6 @@ Requires: %name-classads = %version-%release
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
-Requires: %name-bosco = %version-%release
 %if %uw_build
 Requires: %name-externals = %version-%release
 %endif
@@ -687,6 +693,11 @@ exit 0
 %setup -q -n %{name}-%{tarball_version}
 %endif
 
+# Patch credmon-oauth to use Python 2 on EL7
+%if 0%{?rhel} == 7
+%patch1 -p1
+%endif
+
 # Patch to use Python 2 for file transfer plugins
 # The use the python-requests library and the one in EPEL is based Python 3.6
 # However, Amazon Linux 2 has Python 3.7
@@ -705,7 +716,7 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 %build
 
 %if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
-. /opt/rh/devtoolset-9/enable
+. /opt/rh/devtoolset-%{devtoolset}/enable
 export CC=$(which cc)
 export CXX=$(which c++)
 %endif
@@ -721,24 +732,16 @@ export CMAKE_PREFIX_PATH=/usr
 %cmake3 \
        -DBUILDID:STRING=%condor_build_id \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
-       -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=TRUE \
-       -DHAVE_BACKFILL:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
-%if %blahp
-       -DWITH_BLAHP:BOOL=TRUE \
-       -DBLAHP_FOUND=/usr/libexec/blahp/BLClient \
-%else
-       -DWITH_BLAHP:BOOL=FALSE \
-%endif
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
-       -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+       -DCMAKE_INSTALL_PREFIX:PATH=/ \
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
        -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
@@ -761,37 +764,32 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -D_VERBOSE:BOOL=FALSE \
 %endif
-       -DUW_BUILD:BOOL=FALSE \
        -DPROPER:BOOL=TRUE \
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
-       -DHAVE_BACKFILL:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
-       -DHAVE_KBDD:BOOL=TRUE \
-       -DHAVE_HIBERNATION:BOOL=TRUE \
-       -DWANT_HDFS:BOOL=FALSE \
-       -DWANT_CONTRIB:BOOL=FALSE \
-       -DWITH_PIGEON:BOOL=FALSE \
-       -DWANT_FULL_DEPLOYMENT:BOOL=TRUE \
-       -DWITH_TRIGGERD:BOOL=FALSE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
        -DWITH_QPID:BOOL=FALSE \
-%if %blahp
-       -DBLAHP_FOUND=/usr/libexec/blahp/BLClient \
-       -DWITH_BLAHP:BOOL=TRUE \
-%else
-       -DWITH_BLAHP:BOOL=FALSE \
-%endif
 %if %globus
        -DWITH_GLOBUS:BOOL=TRUE \
 %else
        -DWITH_GLOBUS:BOOL=FALSE \
 %endif
-       -DWITH_PYTHON_BINDINGS:BOOL=TRUE \
-       -DWITH_LIBCGROUP:BOOL=TRUE \
-       -DLIBCGROUP_FOUND_SEARCH_cgroup=/%{_lib}/libcgroup.so.1
+       -DCMAKE_INSTALL_PREFIX:PATH=/ \
+       -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
+       -DSYSCONF_INSTALL_DIR:PATH=/etc \
+       -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
+%ifarch x86_64
+       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib64 \
+       -DLIB_INSTALL_DIR:PATH=/usr/lib64 \
+       -DLIB_SUFFIX=64 \
+%else
+       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib \
+       -DLIB_INSTALL_DIR:PATH=/usr/lib \
+%endif
+       -DBUILD_SHARED_LIBS:BOOL=ON
 %endif
 
 make %{?_smp_mflags}
@@ -907,8 +905,6 @@ rm -f %{buildroot}/%{_bindir}/condor_check_password
 rm -f %{buildroot}/%{_bindir}/condor_check_config
 %endif
 
-# For EL7, move oauth credmon WSGI script out of libexec to /var/www
-%if 0%{?rhel} == 7
 mkdir -p %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth
 mv %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi %{buildroot}/%{_var}/www/wsgi-scripts/condor_credmon_oauth/condor_credmon_oauth.wsgi
 
@@ -916,17 +912,9 @@ mv %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi %{buildroot}/%{_
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-oauth-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-credmon.conf
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-oauth-tokens.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-oauth-tokens.conf
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/README.credentials %{buildroot}/%{_var}/lib/condor/oauth_credentials/README.credentials
-%endif
 
 # Move vault credmon config file out of examples and into config.d
 mv %{buildroot}/usr/share/doc/condor-%{version}/examples/condor_credmon_oauth/config/condor/40-vault-credmon.conf %{buildroot}/%{_sysconfdir}/condor/config.d/40-vault-credmon.conf
-
-# For non-EL7, remove oauth credmon from the buildroot
-%if 0%{?rhel} > 7 || 0%{?fedora}
-rm -f %{buildroot}/%{_libexecdir}/condor/condor_credmon_oauth.wsgi
-rm -f %{buildroot}/%{_sbindir}/condor_credmon_oauth
-rm -f %{buildroot}/%{_sbindir}/scitokens_credential_producer
-%endif
 
 ###
 # Backwards compatibility on EL7 with the previous versions and configs of scitokens-credmon
@@ -1065,7 +1053,7 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%tarba
 #rm -rf %{buildroot}%{_datadir}/condor/python/{py3htcondor,py3classad}.so
 #rm -rf %{buildroot}%{_datadir}/condor/{libpy3classad*,py3htcondor,py3classad}.so
 
-# Install BOSCO
+# Install Campus Factory, option for condor_remote_cluster (nee BOSCO)
 %if 0%{?rhel} >= 8
 mkdir -p %{buildroot}%{python3_sitelib}
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python3_sitelib}
@@ -1082,6 +1070,20 @@ mv %{buildroot}%{_libexecdir}/condor/campus_factory/share/condor/condor_config.f
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{buildroot}%{_sysconfdir}/condor/
 %endif
 mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
+
+# Fix up blahp installation
+%if 0%{?rhel} == 7
+# Don't rely on Python 3 on EL7 (not installed by default)
+sed -i 's;/usr/bin/python3;/usr/bin/python2;' %{buildroot}%{_libexecdir}/blahp/*status.py
+%endif
+# Move batch system customization files to /etc, with symlinks in the
+# original location. Admins will need to edit these.
+install -m 0755 -d -p %{buildroot}%{_sysconfdir}/blahp
+for batch_system in condor kubernetes lsf nqs pbs sge slurm; do
+    mv %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh %{buildroot}%{_sysconfdir}/blahp
+    ln -s %{_sysconfdir}/blahp/${batch_system}_local_submit_attributes.sh \
+        %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh
+done
 
 # htcondor/dags only works with Python3
 rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
@@ -1151,6 +1153,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
 %_libexecdir/condor/htcondor_docker_test
+%_libexecdir/condor/exit_37.sif
 %if %globus
 %_sbindir/condor_gridshell
 %_sbindir/nordugrid_gahp
@@ -1197,6 +1200,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/elastic.py
 %_libexecdir/condor/adstash/history.py
 %_libexecdir/condor/adstash/utils.py
+%_libexecdir/condor/annex
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
 %_mandir/man1/condor_check_password.1.gz
@@ -1221,11 +1225,13 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_qedit.1.gz
 %_mandir/man1/condor_reconfig.1.gz
 %_mandir/man1/condor_release.1.gz
+%_mandir/man1/condor_remote_cluster.1.gz
 %_mandir/man1/condor_reschedule.1.gz
 %_mandir/man1/condor_restart.1.gz
 %_mandir/man1/condor_rm.1.gz
 %_mandir/man1/condor_run.1.gz
 %_mandir/man1/condor_set_shutdown.1.gz
+%_mandir/man1/condor_ssh_start.1.gz
 %_mandir/man1/condor_sos.1.gz
 %_mandir/man1/condor_stats.1.gz
 %_mandir/man1/condor_status.1.gz
@@ -1333,6 +1339,9 @@ rm -rf %{buildroot}
 %_bindir/condor_nsenter
 %_bindir/condor_evicted_files
 %_bindir/condor_adstash
+%_bindir/condor_remote_cluster
+%_bindir/bosco_cluster
+%_bindir/condor_ssh_start
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1343,6 +1352,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_collector
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
+%_sbindir/condor_ft-gahp
 %_sbindir/condor_had
 %_sbindir/condor_master
 %_sbindir/condor_negotiator
@@ -1370,6 +1380,9 @@ rm -rf %{buildroot}
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
 %_sbindir/remote_gahp
+%_sbindir/rvgahp_client
+%_sbindir/rvgahp_proxy
+%_sbindir/rvgahp_server
 %_sbindir/AzureGAHPServer
 %_sbindir/gce_gahp
 %_sbindir/arc_gahp
@@ -1377,6 +1390,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gpu_utilization
 %_sbindir/condor_vm-gahp-vmware
 %_sbindir/condor_vm_vmware
+%_sbindir/exit_37
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
 %defattr(-,condor,condor,-)
 %dir %_var/lib/condor/
@@ -1387,6 +1401,25 @@ rm -rf %{buildroot}
 %dir %_var/lib/condor/oauth_credentials
 %defattr(-,root,root,-)
 %dir %_var/lib/condor/krb_credentials
+# The Campus Factory
+%if 0%{?hcc}
+%config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
+%endif
+%if 0%{?osg} || 0%{?hcc}
+%config(noreplace) %_sysconfdir/condor/campus_factory.conf
+%endif
+%_libexecdir/condor/campus_factory
+%_sbindir/campus_factory
+%_sbindir/runfactory
+%_sbindir/glidein_creation
+%_datadir/condor/campus_factory
+%if 0%{?rhel} >= 8
+%{python3_sitelib}/GlideinWMS
+%{python3_sitelib}/campus_factory
+%else
+%{python_sitelib}/GlideinWMS
+%{python_sitelib}/campus_factory
+%endif
 
 #################
 %files devel
@@ -1545,7 +1578,6 @@ rm -rf %{buildroot}
 %endif
 %endif
 
-%if 0%{?rhel} == 7
 %files credmon-oauth
 %doc examples/condor_credmon_oauth
 %_sbindir/condor_credmon_oauth
@@ -1558,6 +1590,7 @@ rm -rf %{buildroot}
 %ghost %_var/lib/condor/oauth_credentials/wsgi_session_key
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
+%if 0%{?rhel} == 7
 ###
 # Backwards compatibility with the previous versions and configs of scitokens-credmon
 %_bindir/condor_credmon_oauth
@@ -1575,44 +1608,23 @@ rm -rf %{buildroot}
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
 
-%files bosco
-%defattr(-,root,root,-)
-%if 0%{?hcc}
-%config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
-%endif
-%if 0%{?osg} || 0%{?hcc}
-%config(noreplace) %_sysconfdir/condor/campus_factory.conf
-%endif
-%_libexecdir/condor/shellselector
-%_libexecdir/condor/campus_factory
-%_sbindir/bosco_install
-%_sbindir/campus_factory
-%_sbindir/condor_ft-gahp
-%_sbindir/runfactory
-%_bindir/bosco_cluster
-%_bindir/bosco_ssh_start
-%_bindir/bosco_start
-%_bindir/bosco_stop
-%_bindir/bosco_findplatform
-%_bindir/bosco_uninstall
-%_bindir/bosco_quickstart
-%_bindir/htsub
-%_sbindir/glidein_creation
-%_datadir/condor/campus_factory
-%if 0%{?rhel} >= 8
-%{python3_sitelib}/GlideinWMS
-%{python3_sitelib}/campus_factory
-%else
-%{python_sitelib}/GlideinWMS
-%{python_sitelib}/campus_factory
-%endif
-%_mandir/man1/bosco_cluster.1.gz
-%_mandir/man1/bosco_findplatform.1.gz
-%_mandir/man1/bosco_install.1.gz
-%_mandir/man1/bosco_ssh_start.1.gz
-%_mandir/man1/bosco_start.1.gz
-%_mandir/man1/bosco_stop.1.gz
-%_mandir/man1/bosco_uninstall.1.gz
+%files blahp
+%config %_sysconfdir/blah.config
+%config %_sysconfdir/blparser.conf
+%_sysconfdir/rc.d/init.d/glite-ce-blah-parser
+%dir %_sysconfdir/blahp/
+%config %_sysconfdir/blahp/condor_local_submit_attributes.sh
+%config %_sysconfdir/blahp/kubernetes_local_submit_attributes.sh
+%config %_sysconfdir/blahp/lsf_local_submit_attributes.sh
+%config %_sysconfdir/blahp/nqs_local_submit_attributes.sh
+%config %_sysconfdir/blahp/pbs_local_submit_attributes.sh
+%config %_sysconfdir/blahp/sge_local_submit_attributes.sh
+%config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
+%_bindir/blahpd
+%_sbindir/blah_check_config
+%_sbindir/blahpd_daemon
+%dir %_libexecdir/blahp
+%_libexecdir/blahp/*
 
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
@@ -1663,6 +1675,125 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Apr 25 2022 Tim Theisen <tim@cs.wisc.edu> - 9.8.1-1
+- Fix HTCondor startup failure with certain complex network configurations
+
+* Thu Apr 21 2022 Tim Theisen <tim@cs.wisc.edu> - 9.8.0-1
+- Support for Heterogeneous GPUs, some configuration required
+- Allow HTCondor to utilize grid sites requiring two-factor authentication
+- Technology preview: bring your own resources from (some) NSF HPC clusters
+
+* Tue Apr 19 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.12-1
+- Fix bug in parallel universe that could cause the schedd to crash
+- Fix rare crash where a daemon tries to use a discarded security session
+
+* Tue Apr 05 2022 Tim Theisen <tim@cs.wisc.edu> - 9.7.1-1
+- Fix recent bug where jobs may go on hold without a hold reason or code
+
+* Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.7.0-1
+- Support environment variables, other application elements in ARC REST jobs
+- Container universe supports Singularity jobs with hard-coded command
+- DAGMan submits jobs directly (does not shell out to condor_submit)
+- Meaningful error message and sub-code for file transfer failures
+- Add file transfer statistics for file transfer plugins
+- Add named list policy knobs for SYSTEM_PERIODIC_ policies
+
+* Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.11-1
+- The Job Router can now create an IDTOKEN for use by the job
+- Fix bug where a self-checkpointing job may erroneously be held
+- Fix bug where the Job Router could erroneously substitute a default value
+- Fix bug where a file transfer error may identify the wrong file
+- Fix bug where condor_ssh_to_job may fail to connect
+
+* Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 8.8.17-1
+- Fixed a memory leak in the Job Router
+
+* Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.6.0-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0002
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003
+
+* Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.10-1
+- Fixes for security issues
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0001
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0002
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003
+
+* Tue Mar 15 2022 Tim Theisen <tim@cs.wisc.edu> - 8.8.16-1
+- Fix for security issue
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2022-0003
+
+* Tue Feb 08 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.4-1
+- The access point more robustly detects execution points that disappear
+- The condor_procd will now function if /proc is mounted with hidepid=2
+
+* Tue Feb 01 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.3-1
+- Fix daemon crash where one of multiple collectors is not in DNS
+- Fix bug where initial schedd registration was rarely delayed by an hour
+- Can set CCB_TIMEOUT and choose to not start up if CCB address unavailable
+
+* Tue Jan 25 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.2-1
+- Fix bug where job may not go on hold when exceeding allowed_job_duration
+- Fix bug where the condor_shadow could run indefinitely
+- Fix bug where condor_ssh_to_job may fail to connect
+- Fix bug where a file transfer error may identify the wrong file
+
+* Tue Jan 18 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.1-1
+- Fix bug where a self-checkpointing job may erroneously be held
+
+* Thu Jan 13 2022 Tim Theisen <tim@cs.wisc.edu> - 9.5.0-1
+- Initial implementation of Container Universe
+- HTCondor will automatically detect container type and where it can run
+- The blahp is no longer separate, it is now an integral part of HTCondor
+- Docker Universe jobs can now self-checkpoint
+- Added Debian 11 (bullseye) as a supported platform
+- Since CentOS 8 has reached end of life, we build and test on Rocky Linux 8
+
+* Thu Jan 13 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.9-1
+- Added Debian 11 (bullseye) as a supported platform
+- Since CentOS 8 has reached end of life, we build and test on Rocky Linux 8
+- The OAUTH credmon is now packaged for Enterprise Linux 8
+
+* Tue Dec 21 2021 Tim Theisen <tim@cs.wisc.edu> - 9.4.1-1
+- Add the ability to track slot activation metrics
+- Fix bug where a file transfer plugin failure code may not be reported
+
+* Thu Dec 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.4.0-1
+- Initial implementation of Job Sets in the htcondor CLI tool
+- The access point administrator can add keywords to the submit language
+- Add submit commands that limit job run time
+- Fix bug where self check-pointing jobs may be erroneously held
+
+* Thu Dec 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.8-1
+- Fix bug where huge values of ImageSize and others would end up negative
+- Fix bug in how MAX_JOBS_PER_OWNER applied to late materialization jobs
+- Fix bug where the schedd could choose a slot with insufficient disk space
+- Fix crash in ClassAd substr() function when the offset is out of range
+- Fix bug in Kerberos code that can crash on macOS and could leak memory
+- Fix bug where a job is ignored for 20 minutes if the startd claim fails
+
+* Tue Nov 30 2021 Tim Theisen <tim@cs.wisc.edu> - 9.3.2-1
+- Add allowed_execute_duration condor_submit command to cap job run time
+- Fix bug where self check-pointing jobs may be erroneously held
+
+* Tue Nov 09 2021 Tim Theisen <tim@cs.wisc.edu> - 9.3.1-1
+- Add allowed_job_duration condor_submit command to cap job run time
+
+* Wed Nov 03 2021 Tim Theisen <tim@cs.wisc.edu> - 9.3.0-1
+- Discontinue support for Globus GSI
+- Discontinue support for grid type 'nordugrid', use 'arc' instead
+- MacOS version strings now include the major version number (10 or 11)
+- File transfer plugin sample code to aid in developing new plugins
+- Add generic knob to set the slot user for all slots
+
+* Tue Nov 02 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.7-1
+- Fix bug where condor_gpu_discovery could crash with older CUDA libraries
+- Fix bug where condor_watch_q would fail on machines with older kernels
+- condor_watch_q no longer has a limit on the number of job event log files
+- Fix bug where a startd could crash claiming a slot with p-slot preemption
+- Fix bug where a job start would not be recorded when a shadow reconnects
+
 * Thu Sep 23 2021 Tim Theisen <tim@cs.wisc.edu> - 9.2.0-1
 - Add SERVICE node that runs alongside the DAG for the duration of the DAG
 - Fix problem where proxy delegation to older HTCondor versions failed
@@ -1699,12 +1830,12 @@ fi
 
 * Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.4-1
 - Fixes for security issues
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004
 
 * Thu Jul 29 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.15-1
 - Fix for security issue
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003
 
 * Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.1.1-1
 - Fixes for security issues
@@ -1713,12 +1844,12 @@ fi
 
 * Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.3-1
 - Fixes for security issues
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0004
 
 * Tue Jul 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.8.14-1
 - Fix for security issue
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0003
 
 * Thu Jul 08 2021 Tim Theisen <tim@cs.wisc.edu> - 9.0.2-1
 - HTCondor can be set up to use only FIPS 140-2 approved security functions
@@ -1784,8 +1915,8 @@ fi
 
 * Wed Jan 27 2021 Tim Theisen <tim@cs.wisc.edu> - 8.9.11-1
 - This release of HTCondor fixes security-related bugs described at
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0001
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2021-0002
 
 * Tue Nov 24 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.10-1
 - Fix bug where negotiator stopped making matches when group quotas are used
@@ -1859,17 +1990,17 @@ fi
 
 * Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.6-1
 - Fixes addressing CVE-2019-18823
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004
 
 * Mon Apr 06 2020 Tim Theisen <tim@cs.wisc.edu> - 8.8.8-1
 - Fixes addressing CVE-2019-18823
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003/
-- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004/
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0001
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0002
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0003
+- https://research.cs.wisc.edu/htcondor/security/vulnerabilities/HTCONDOR-2020-0004
 
 * Thu Jan 02 2020 Tim Theisen <tim@cs.wisc.edu> - 8.9.5-1
 - Added a new mode that skips jobs whose outputs are newer than their inputs

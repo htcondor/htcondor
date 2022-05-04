@@ -5,13 +5,6 @@ Command Reference Manual (man pages)
    :maxdepth: 1
    :glob:
 
-   bosco_cluster
-   bosco_findplatform
-   bosco_install
-   bosco_ssh_start
-   bosco_start
-   bosco_stop
-   bosco_uninstall
    classad_eval
    classads
    condor_adstash
@@ -49,6 +42,7 @@ Command Reference Manual (man pages)
    condor_qsub
    condor_reconfig
    condor_release
+   condor_remote_cluster
    condor_reschedule
    condor_restart
    condor_rm
@@ -59,6 +53,7 @@ Command Reference Manual (man pages)
    condor_run
    condor_set_shutdown
    condor_sos
+   condor_ssh_start
    condor_ssh_to_job
    condor_stats
    condor_status

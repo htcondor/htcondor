@@ -53,6 +53,7 @@
 extern Starter *Starter;
 ReliSock *syscall_sock = NULL;
 extern const char* JOB_AD_FILENAME;
+extern const char* JOB_EXECUTION_OVERLAY_AD_FILENAME;
 extern const char* MACHINE_AD_FILENAME;
 const char* CHIRP_CONFIG_FILENAME = ".chirp.config";
 
@@ -175,11 +176,18 @@ JICShadow::init( void )
 	if ( m_job_startd_update_sock )
 	{
 		receiveMachineAd(m_job_startd_update_sock);
+		receiveExecutionOverlayAd(m_job_startd_update_sock);
 	}
 
 		// stash a copy of the unmodified job ad in case we decide
 		// below that we want to write out an execution visa
 	ClassAd orig_ad = *job_ad;	
+
+	if (job_execution_overlay_ad) {
+		// For now, we apply the execution overlay as soon as we have copied the original job classad
+		// TODO: do this update later (or never)? but we would have to fix a bunch of call sites first.
+		job_ad->Update(*job_execution_overlay_ad);
+	}
 
 		// now that we have the job ad, see if we should go into an
 		// infinite loop, waiting for someone to attach w/ the
@@ -477,6 +485,7 @@ JICShadow::transferOutput( bool &transient_failure )
 		// remove the job and machine classad files from the
 		// ft list
 		filetrans->addFileToExceptionList(JOB_AD_FILENAME);
+		filetrans->addFileToExceptionList(JOB_EXECUTION_OVERLAY_AD_FILENAME);
 		filetrans->addFileToExceptionList(MACHINE_AD_FILENAME);
 		filetrans->addFileToExceptionList(".docker_sock");
 		filetrans->addFileToExceptionList(".docker_stdout");
@@ -819,6 +828,17 @@ JICShadow::notifyJobPreSpawn( void )
 	u_log->logExecute( NULL );
 }
 
+void
+JICShadow::notifyExecutionExit( void ) {
+	// We don't send the time because all of the other Activation* times
+	// are shadow-side times.  It's not hard to get UTC, but it's easier
+	// to ignore clock synchronization entirely.
+	if( shadow_version && shadow_version->built_since_version(9, 4, 1) ) {
+		ClassAd ad;
+		ad.InsertAttr( "EventType", "ActivationExecutionExit" );
+		REMOTE_CONDOR_event_notification( & ad );
+	}
+}
 
 bool
 JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
@@ -1536,6 +1556,7 @@ JICShadow::initWithFileTransfer()
 	if ( job_ad->LookupBool( ATTR_STREAM_OUTPUT, stream ) && !stream &&
 		 !nullFile( stdout_name.c_str() ) ) {
 		job_ad->Assign( ATTR_JOB_OUTPUT, StdoutRemapName );
+		job_ad->Assign( ATTR_JOB_ORIGINAL_OUTPUT, stdout_name );
 	}
 	if ( job_ad->LookupBool( ATTR_STREAM_ERROR, stream ) && !stream &&
 		 !nullFile( stderr_name.c_str() ) ) {
@@ -1544,6 +1565,7 @@ JICShadow::initWithFileTransfer()
 		} else {
 			job_ad->Assign( ATTR_JOB_ERROR, StderrRemapName );
 		}
+		job_ad->Assign( ATTR_JOB_ORIGINAL_ERROR, stderr_name );
 	}
 
 	wants_file_transfer = true;
@@ -2262,6 +2284,15 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 			// insure_update, since we already have the socket open,
 			// and we want to use it (e.g. to prevent firewalls from
 			// closing it due to non-activity).
+
+			// Add an attribute that says when the shadow can expect to receive
+			// another update.  We do this because the shadow uses these updates
+			// as a heartbeat; if the shadow does not receive an expected update from
+			// us, it assumes the connection is dead (even if the syscall sock is still alive,
+			// since that may be the doing of a misbehaving NAT box).
+		ad->Assign(ATTR_JOBINFO_MAXINTERVAL, periodicJobUpdateTimerMaxInterval());
+
+			// Invoke the remote syscall
 		rval = (REMOTE_CONDOR_register_job_info(ad) == 0);
 	}
 	else {
@@ -3138,7 +3169,7 @@ JICShadow::initMatchSecuritySession()
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			NULL,
 			0 /*don't expire*/,
-			nullptr );
+			nullptr, false );
 
 		if( !rc ) {
 			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create "
@@ -3174,7 +3205,7 @@ JICShadow::initMatchSecuritySession()
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			shadow->addr(),
 			0 /*don't expire*/,
-			nullptr );
+			nullptr, false );
 
 		if( !rc ) {
 			dprintf(D_ALWAYS, "SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create file "
@@ -3208,6 +3239,36 @@ JICShadow::receiveMachineAd( Stream *stream )
 		dPrintAd(D_JOB, *mach_ad);
 	}
 
+	return ret_val;
+}
+
+bool JICShadow::receiveExecutionOverlayAd(Stream* stream)
+{
+	bool ret_val = true;
+
+	if (job_execution_overlay_ad) {
+		delete job_execution_overlay_ad;
+	}
+	job_execution_overlay_ad = new ClassAd();
+
+	if (!getClassAd(stream, *job_execution_overlay_ad))
+	{
+		delete job_execution_overlay_ad; job_execution_overlay_ad = nullptr;
+		dprintf(D_ALWAYS, "Received invalid Execution Overlay Ad.  Discarding\n");
+		return false;
+	}
+	else
+	{
+		if ((job_execution_overlay_ad->size() > 0) && IsDebugLevel(D_JOB)) {
+			std::string adbuf;
+			dprintf(D_JOB, "Received Execution Overlay Ad:\n%s", formatAd(adbuf, *job_execution_overlay_ad, "\t"));
+		} else {
+			dprintf(D_FULLDEBUG, "Received Execution Overlay Ad (%d attributes)\n", (int)job_execution_overlay_ad->size());
+		}
+		if (job_execution_overlay_ad->size() == 0) {
+			delete job_execution_overlay_ad; job_execution_overlay_ad = nullptr;
+		}
+	}
 	return ret_val;
 }
 

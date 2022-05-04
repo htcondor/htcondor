@@ -85,6 +85,9 @@ class JobRouter: public Service {
 	// jobs the JobRouter manages.
 	void EvalAllSrcJobPeriodicExprs();
 
+	// this is called on a timer to create/refresh IDTOKEN that will be sent along with routed jobs
+	void refreshIDTokens();
+
 	void config();
 	void set_schedds(Scheduler* schedd, Scheduler* schedd2); // let the tool mode push simulated schedulers
 	void dump_routes(FILE* hf); // dump the routing information to the given file.
@@ -132,6 +135,7 @@ class JobRouter: public Service {
 	HashTable<std::string,RoutedJob *> m_jobs;  //key="src job id"
 	RoutingTable *m_routes; //key="route name"
 	std::list<std::string> m_route_order; // string="route name". the order in which routes should be considered
+	std::map<std::string,std::string> m_idtokens; // IDTOKENs created by the job router that can be included in routed jobs
 
 	// m_routes->at() will throw if we try and lookup a route that's not in the list,
 	// we don't ever want to do that, we want NULL back for routes not found
@@ -163,6 +167,9 @@ class JobRouter: public Service {
 	bool m_enable_job_routing;
 	bool m_release_on_hold;
 	bool m_round_robin_selection;
+
+	int m_job_router_idtoken_refresh;
+	int m_job_router_idtoken_refresh_timer_id;
 
 	int m_job_router_entries_refresh;
 	int m_job_router_refresh_timer;
@@ -280,6 +287,10 @@ private:
 	// Return true if job should be edited in place rather than
 	// having a new copy submitted
 	bool TestEditJobInPlace(RoutedJob *job);
+
+	// create and destroy IDTOKEN files that can be sent along with routed jobs
+	bool CreateIDTokenFile(const char * name, const char * props);
+	bool RemoveIDTokenFile(const std::string & name);
 
 	//Produce a default JobRouter name.
 	std::string DaemonIdentityString();

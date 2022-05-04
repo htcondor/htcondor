@@ -31,13 +31,7 @@
 #include "condor_config.h"
 #include "subsystem_info.h"
 
-#define  USE_REPLICATION    (0)
-
 #include "StateMachine.h"
-
-#if USE_REPLICATION
-	#include "ReplicaStateMachine.h"
-#endif // USE_REPLICATION
 
 #include <iostream>
 using namespace std;

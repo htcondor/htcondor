@@ -50,10 +50,8 @@
 #include <sstream>
 #include <deque>
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
 #include "NegotiatorPlugin.h"
-#endif
 #endif
 
 // the comparison function must be declared before the declaration of the
@@ -581,11 +579,9 @@ initialize (const char *neg_name)
 			"Update Collector", this );
 
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
 	NegotiatorPluginManager::Load();
 	NegotiatorPluginManager::Initialize();
-#endif
 #endif
 }
 
@@ -932,7 +928,7 @@ Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 			SUBMIT_SIDE_MATCHSESSION_FQU,
 			sinful.c_str(),
 			1200,
-			nullptr, true
+			nullptr, false
 		);
 
 	}
@@ -1398,6 +1394,11 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 		}
 		classad::ClassAd::const_iterator attr_it;
 		for ( attr_it = startd_ad->begin(); attr_it != startd_ad->end(); attr_it++ ) {
+			// ignore list type values when computing external refs.
+			// this prevents Child* and AvailableGPUs slot attributes from polluting the sig attrs
+			if (attr_it->second->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
+				continue;
+			}
 			startd_ad->GetExternalReferences( attr_it->second, external_references, true );
 		}
 	}	// while startd_ad
@@ -1865,10 +1866,8 @@ void
 Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 		std::set<std::string>::iterator it;
 		
-		//DCCollector collector;
-		CollectorList *cl = daemonCore->getCollectorList();
-		if (cl == NULL) {
-			dprintf(D_ALWAYS, "Not updating collector with accounting information, as no collector are found\n");
+		if (nullptr == daemonCore->getCollectorList()) {
+			dprintf(D_ALWAYS, "Not updating collector with accounting information, as no collectors are found\n");
 			return;
 		}
 	
@@ -1911,16 +1910,16 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 				// will be zero.  Don't include those submitters.
 
 				if (updateAd.LookupInteger("ResourcesUsed", resUsed)) {
-					cl->sendUpdates(UPDATE_ACCOUNTING_AD, &updateAd, NULL, false);
+					daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &updateAd, NULL, false);
 				}
 			}
 		}
-		forwardGroupAccounting(cl, hgq_root_group);
+		forwardGroupAccounting(hgq_root_group);
 		dprintf(D_FULLDEBUG, "Done Updating collector with accounting information\n");
 }
 
 void
-Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
+Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 
 	ClassAd accountingAd;
 	accountingAd.Assign("MyType", "Accounting");
@@ -2008,11 +2007,11 @@ Matchmaker::forwardGroupAccounting(CollectorList *cl, GroupEntry* group) {
 
 	// And send the ad to the collector
 	DCCollectorAdSequences seq; // Don't need them, interface requires them
-	cl->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
+	daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
 
     // Populate group's children recursively, if it has any
     for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
-        forwardGroupAccounting(cl, *j);
+        forwardGroupAccounting(*j);
     }
 }
 
@@ -3030,6 +3029,14 @@ obtainAdsFromCollector (
 				ad->AssignExpr(ATTR_SLOT_WEIGHT, slotWeightStr);
 			}
 
+			if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
+				std::string scheddName;
+				if (!ad->LookupString(ATTR_SCHEDD_NAME, scheddName)) {
+					dprintf(D_ALWAYS, "WARNING: slot ad %s is missing a schedd name, skipping\n",remoteHost);
+					continue;
+				}
+				ad->Assign(ATTR_REMOTE_USER, scheddName);
+			}
 			OptimizeMachineAdForMatchmaking( ad );
 
 			startdAds.Insert(ad);
@@ -3046,6 +3053,16 @@ obtainAdsFromCollector (
 			if ( !IsValidSubmitterName( subname.c_str() ) ) {
 				dprintf( D_ALWAYS, "WARNING: ignoring submitter ad with invalid name: %s\n", subname.c_str() );
 				continue;
+			}
+
+			if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
+				std::string scheddName;
+				if (!ad->LookupString(ATTR_SCHEDD_NAME, scheddName)) {
+					dprintf(D_ALWAYS, "WARNING: Submitter Ad %s is missing a schedd name, skipping\n",subname.c_str());
+					continue;
+				}
+				ad->Assign(ATTR_NAME, scheddName);
+				subname = scheddName;
 			}
 
 			if (!TransformSubmitterAd(*ad)) {
@@ -3067,7 +3084,7 @@ obtainAdsFromCollector (
                 continue;
             }
 
-			submitterNames.insert(std::string(subname.c_str()));
+			submitterNames.insert(subname);
 
     		ad->Assign(ATTR_TOTAL_TIME_IN_CYCLE, 0);
 
@@ -3722,6 +3739,11 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 		negotiate_ad.InsertAttr(ATTR_AUTO_CLUSTER_ATTRS, job_attr_references ? job_attr_references : "");
 		// Tell the schedd a submitter tag value (used for flocking levels)
 		negotiate_ad.InsertAttr(ATTR_SUBMITTER_TAG, submitter_tag.c_str());
+
+		if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
+			negotiate_ad.InsertAttr(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, true);
+		}
+
 		if (!putClassAd(sock, negotiate_ad))
 		{
 			dprintf(D_ALWAYS, "    Failed to send negotiation header to %s\n",
@@ -4799,106 +4821,6 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 	return bestSoFar;
 }
 
-class NotifyStartdOfMatchHandler {
-public:
-	std::string m_startdName;
-	std::string  m_startdAddr;
-	std::string  m_claim_id;
-	int m_timeout;
-	DCStartd m_startd;
-	bool m_nonblocking;
-
-	NotifyStartdOfMatchHandler(char const *startdName,char const *startdAddr,int timeout,char const *claim_id,bool nonblocking):
-		
-		m_startdName(startdName),
-		m_startdAddr(startdAddr),
-		m_claim_id(claim_id),
-		m_timeout(timeout),
-		m_startd(startdAddr),
-		m_nonblocking(nonblocking) {}
-
-	static void startCommandCallback(bool success,Sock *sock,CondorError * /*errstack*/,
-		const std::string & /*trust_domain*/, bool /*should_try_token_request*/, void *misc_data)
-	{
-		NotifyStartdOfMatchHandler *self = (NotifyStartdOfMatchHandler *)misc_data;
-		ASSERT(misc_data);
-
-		if(!success) {
-			dprintf (D_ALWAYS,"      Failed to initiate socket to send MATCH_INFO to %s\n",
-					 self->m_startdName.c_str());
-		}
-		else {
-			self->WriteMatchInfo(sock);
-		}
-		if(sock) {
-			delete sock;
-		}
-		delete self;
-	}
-
-	bool WriteMatchInfo(Sock *sock) const
-	{
-		ClaimIdParser idp( m_claim_id.c_str() );
-		ASSERT(sock);
-
-		// pass the startd MATCH_INFO and claim id string
-		dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/claim id to %s\n",
-		         m_startdName.c_str());
-		dprintf (D_FULLDEBUG, "      (Claim ID is \"%s\" )\n",
-		         idp.publicClaimId() );
-
-		if ( !sock->put_secret (m_claim_id.c_str()) ||
-			 !sock->end_of_message())
-		{
-			dprintf (D_ALWAYS,
-			        "      Could not send MATCH_INFO/claim id to %s\n",
-			        m_startdName.c_str() );
-			dprintf (D_FULLDEBUG,
-			        "      (Claim ID is \"%s\")\n",
-			        idp.publicClaimId() );
-			return false;
-		}
-		return true;
-	}
-
-	bool startCommand()
-	{
-		dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n",
-					m_startdName.c_str(), m_startdAddr.c_str());
-
-		if(!m_nonblocking) {
-			Stream::stream_type st = m_startd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
-			Sock *sock =  m_startd.startCommand(MATCH_INFO,st,m_timeout);
-			bool result = false;
-			if(!sock) {
-				dprintf (D_ALWAYS,"      Failed to initiate socket (blocking mode) to send MATCH_INFO to %s\n",
-						 m_startdName.c_str());
-			}
-			else {
-				result = WriteMatchInfo(sock);
-			}
-			if(sock) {
-				delete sock;
-			}
-			delete this;
-			return result;
-		}
-
-		Stream::stream_type st = m_startd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
-		m_startd.startCommand_nonblocking (
-			MATCH_INFO,
-			st,
-			m_timeout,
-			NULL,
-			NotifyStartdOfMatchHandler::startCommandCallback,
-			this);
-
-			// Since this is nonblocking, we cannot give any immediate
-			// feedback on whether the message to the startd succeeds.
-		return true;
-	}
-};
-
 void Matchmaker::
 insertNegotiatorMatchExprs( ClassAdListDoesNotDeleteAds &cal )
 {
@@ -5139,6 +5061,10 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// used by schedd_negotiate.cpp when resource request lists are being used
 	offer->Assign(ATTR_RESOURCE_REQUEST_CLUSTER,cluster);
 	offer->Assign(ATTR_RESOURCE_REQUEST_PROC,proc);
+
+	if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
+		offer->InsertAttr(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, true);
+	}
 
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd
@@ -5915,10 +5841,8 @@ Matchmaker::updateCollector() {
         daemonCore->dc_stats.Publish(*publicAd);
 		daemonCore->monitor_data.ExportData(publicAd);
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN)
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT) && defined(UNIX)
 		NegotiatorPluginManager::Update(*publicAd);
-#endif
 #endif
 		daemonCore->sendUpdates(UPDATE_NEGOTIATOR_AD, publicAd, NULL, true);
 	}

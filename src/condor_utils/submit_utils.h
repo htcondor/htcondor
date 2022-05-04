@@ -32,8 +32,6 @@
 #define SUBMIT_CMD_AllowEnvironmentV1 "allow_environment_v1"
 #define SUBMIT_CMD_GetEnvironment "getenv"
 #define SUBMIT_CMD_GetEnvironmentAlt "get_env"
-#define SUBMIT_CMD_AllowStartupScript "allow_startup_script"
-#define SUBMIT_CMD_AllowStartupScriptAlt "AllowStartupScript"
 #define SUBMIT_CMD_SendCredential "send_credential"
 
 /*
@@ -47,7 +45,6 @@
 #define SUBMIT_KEY_Priority "priority"
 #define SUBMIT_KEY_Prio "prio"
 #define SUBMIT_KEY_Notification "notification"
-#define SUBMIT_KEY_WantRemoteIO "want_remote_io"
 #define SUBMIT_KEY_Executable "executable"
 #define SUBMIT_KEY_Description "description"
 #define SUBMIT_KEY_Arguments1 "arguments"
@@ -78,7 +75,9 @@
 #define SUBMIT_KEY_RequestMemory "request_memory"
 #define SUBMIT_KEY_RequestDisk "request_disk"
 #define SUBMIT_KEY_RequestGpus "request_gpus"
+#define SUBMIT_KEY_RequireGpus "require_gpus"
 #define SUBMIT_KEY_RequestPrefix "request_"
+#define SUBMIT_KEY_RequirePrefix "require_"
 
 #define SUBMIT_KEY_Universe "universe"
 #define SUBMIT_KEY_MachineCount "machine_count"
@@ -108,6 +107,7 @@
 #define SUBMIT_KEY_NordugridRSL "nordugrid_rsl"
 #define SUBMIT_KEY_ArcRSL "arc_rsl"
 #define SUBMIT_KEY_ArcRte "arc_rte"
+#define SUBMIT_KEY_ArcApplication "arc_application"
 #define SUBMIT_KEY_ArcResources "arc_resources"
 #define SUBMIT_KEY_RendezvousDir "rendezvousdir"
 #define SUBMIT_KEY_BatchExtraSubmitArgs "batch_extra_submit_args"
@@ -141,6 +141,7 @@
 #define SUBMIT_KEY_ShouldTransferFiles "should_transfer_files"
 #define SUBMIT_KEY_PreserveRelativePaths "preserve_relative_paths"
 #define SUBMIT_KEY_TransferCheckpointFiles "transfer_checkpoint_files"
+#define SUBMIT_KEY_TransferContainer "transfer_container"
 #define SUBMIT_KEY_TransferInputFiles "transfer_input_files"
 #define SUBMIT_KEY_TransferInputFilesAlt "TransferInputFiles"
 #define SUBMIT_KEY_TransferOutputFiles "transfer_output_files"
@@ -260,6 +261,7 @@
 #define SUBMIT_KEY_DockerImage "docker_image"
 #define SUBMIT_KEY_DockerNetworkType "docker_network_type"
 
+#define SUBMIT_KEY_ContainerImage "container_image"
 #define SUBMIT_KEY_ContainerServiceNames "container_service_names"
 #define SUBMIT_KEY_ContainerPortSuffix "_container_port"
 
@@ -350,6 +352,8 @@
 #define SUBMIT_KEY_NextJobStartDelay "next_job_start_delay"
 #define SUBMIT_KEY_WantGracefulRemoval "want_graceful_removal"
 #define SUBMIT_KEY_JobMaxVacateTime "job_max_vacate_time"
+#define SUBMIT_KEY_AllowedJobDuration "allowed_job_duration"
+#define SUBMIT_KEY_AllowedExecuteDuration "allowed_execute_duration"
 
 #define SUBMIT_KEY_JobMaterializeLimit "max_materialize"
 #define SUBMIT_KEY_JobMaterializeMaxIdle "max_idle"
@@ -474,6 +478,7 @@ enum _submit_file_role {
 	SFR_OUTPUT,
 };
 
+
 typedef int (*FNSUBMITPARSE)(void* pv, MACRO_SOURCE& source, MACRO_SET& set, char * line, std::string & errmsg);
 
 class DeltaClassAd;
@@ -483,12 +488,14 @@ public:
 	SubmitHash();
 	~SubmitHash();
 
-	void init();
+	void init(int value=-1);
 	void clear(); // clear, but do not deallocate
 	void setScheddVersion(const char * version) { ScheddVersion = version; }
 	void setMyProxyPassword(const char * pass) { MyProxyPassword = pass; }
 	bool setDisableFileChecks(bool value) { bool old = DisableFileChecks; DisableFileChecks = value; return old; }
 	bool setFakeFileCreationChecks(bool value) { bool old = FakeFileCreationChecks; FakeFileCreationChecks = value; return old; }
+	bool addExtendedCommands(const classad::ClassAd & cmds) { return extendedCmds.Update(cmds); }
+	void clearExtendedCommands() { extendedCmds.Clear(); }
 
 	char * submit_param( const char* name, const char* alt_name ) const;
 	char * submit_param( const char* name ) const; // call param with NULL as the alt
@@ -633,6 +640,10 @@ public:
 	bool AssignJobVal(const char * attr, long val) { return AssignJobVal(attr, (long long)val); }
 	//bool AssignJobVal(const char * attr, time_t val)  { return AssignJobVal(attr, (long long)val); }
 
+	//Set job submit method to enum equal to passed value if value is in range
+	void setSubmitMethod(int value) { s_method = value; }
+	int getSubmitMethod(){ return s_method; }//Return job submit method value given s_method enum
+
 	MACRO_ITEM* lookup_exact(const char * name) { return find_macro_item(name, NULL, SubmitMacroSet); }
 	CondorError* error_stack() const { return SubmitMacroSet.errors; }
 
@@ -650,6 +661,9 @@ public:
 	// and ads_error be set to describe any required but missing attributes in the request_ads
 	bool NeedsOAuthServices(std::string & services, ClassAdList * request_ads=NULL, std::string * ads_error=NULL) const;
 
+	// job needs the countMatches classad function to match
+	bool NeedsCountMatchesFunc() const { return HasRequireResAttr; };
+
 	MACRO_SET& macros() { return SubmitMacroSet; }
 	int getUniverse() const  { return JobUniverse; }
 	int getClusterId() const { return jid.cluster; }
@@ -661,6 +675,13 @@ public:
 	const char * full_path(const char *name, bool use_iwd=true);
 	int check_and_universalize_path(MyString &path);
 
+	enum class ContainerImageType {
+		DockerRepo,
+		SIF,
+		SandboxImage,
+		Unknown
+	};
+
 protected:
 	MACRO_SET SubmitMacroSet;
 	MACRO_EVAL_CONTEXT mctx;
@@ -671,6 +692,7 @@ protected:
 	JOB_ID_KEY jid; // id of the current job being built
 	time_t     submit_time;
 	std::string   submit_username; // username specified to init_cluster_ad
+	ClassAd extendedCmds; // extended submit keywords, from config
 
 	// these are used with the internal ABORT_AND_RETURN() and RETURN_IF_ABORT() methods
 	mutable int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
@@ -704,6 +726,8 @@ protected:
 	int  JobUniverse;
 	bool JobIwdInitialized;
 	bool IsDockerJob;
+	bool IsContainerJob;
+	bool HasRequireResAttr;
 	bool JobDisableFileChecks;	 // file checks disabled by submit file.
 	bool SubmitOnHold;
 	int  SubmitOnHoldCode;
@@ -711,6 +735,8 @@ protected:
 	bool already_warned_requirements_mem;
 	bool already_warned_job_lease_too_small;
 	bool already_warned_notification_never;
+	bool already_warned_require_gpus;
+	bool UseDefaultResourceParams;
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
 	#if !defined(WIN32)
@@ -780,6 +806,7 @@ protected:
 	int SetOAuth(); /* 1 attr, prunable, factory:ok */
 
 	int SetSimpleJobExprs(); /* run always */
+	int SetExtendedJobExprs(); /* run always */
 	int SetAutoAttributes(); /* run always */
 	int ReportCommonMistakes(); /* run always */
 
@@ -814,9 +841,10 @@ protected:
 		bool & stream_it);  // in,out: whether we expect to stream it or not
 
 	// private helper functions
+	int do_simple_commands(const struct SimpleSubmitKeyword * cmdtable);
 	int build_oauth_service_ads(classad::References & services, ClassAdList & ads, std::string & error) const;
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
-	int query_universe(MyString & sub_type, bool & is_docker); // figure out universe, but DON'T modify the cached members
+	int query_universe(MyString & sub_type); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
 	void push_error(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
 	void push_warning(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
@@ -840,6 +868,11 @@ private:
 	  const YourStringNoCase & gt );      /* used by SetGridParams */
 
 	int process_vm_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
+	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
+
+	ContainerImageType image_type_from_string(const std::string &image) const;
+
+	int s_method; //-1 represents undefined job submit method
 };
 
 struct SubmitStepFromQArgs {

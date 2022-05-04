@@ -123,6 +123,7 @@ RUN yum install -y \
     'openssl-devel' \
     'pam-devel' \
     'pcre-devel' \
+    'pcre2-devel' \
     'perl(Archive::Tar)' \
     'perl(Data::Dumper)' \
     'perl(Digest::MD5)' \
@@ -134,6 +135,14 @@ RUN yum install -y \
     'python-sphinx_rtd_theme' \
     'sqlite-devel' \
     'systemd-devel' \
+    && yum clean all
+
+# blahp build dependencies
+RUN yum install -y \
+    'autoconf' \
+    'automake' \
+    'docbook-style-xsl' \
+    'libxslt' \
     && yum clean all
 
 # Additional dependencies for OSG style builds
@@ -172,5 +181,4 @@ RUN yum install -y \
 RUN pip3 install pytest pytest-httpserver
 
 # Enable daily repo to get latest packages for tarballs
-RUN yum-config-manager --enable htcondor-daily
-RUN yum list -y blahp
+RUN yum-config-manager --enable htcondor-daily && yum list -y blahp && yum clean all

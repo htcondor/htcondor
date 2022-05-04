@@ -106,17 +106,12 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 void AddClassAdXMLFileHeader(std::string &buffer);
 void AddClassAdXMLFileFooter(std::string &buffer);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-	void clear_user_maps(StringList * keep_list);
-	int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NULL*/);
-	int add_user_mapping(const char * mapname, char * mapdata);
-	// these functions are in classad_usermap.cpp (and also libcondorapi_stubs.cpp)
-	int reconfig_user_maps();
-	bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
-#ifdef __cplusplus
-} // end extern "C"
+void clear_user_maps(StringList * keep_list);
+int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NULL*/);
+int add_user_mapping(const char * mapname, char * mapdata);
+// these functions are in classad_usermap.cpp (and also libcondorapi_stubs.cpp)
+int reconfig_user_maps();
+bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
 
 // a class to hold (and delete) a constraint ExprTree
 // it can be initialized with either a string for a tree
@@ -126,9 +121,12 @@ public:
 	ConstraintHolder() : expr(NULL), exprstr(NULL) {}
 	ConstraintHolder(char * str) : expr(NULL), exprstr(str) {}
 	ConstraintHolder(classad::ExprTree * tree) : expr(tree), exprstr(NULL) {}
-	ConstraintHolder(const ConstraintHolder& that) {  // for copy constructor, we prefer the tree form
+	ConstraintHolder(ConstraintHolder&& that) : expr(that.expr), exprstr(that.exprstr) { // move constructor
+		that.expr = nullptr;
+		that.exprstr = nullptr;
+	}
+	ConstraintHolder(const ConstraintHolder& that) : expr(NULL), exprstr(NULL) {  // for copy constructor, we prefer the tree form
 		if (this == &that) return;
-		clear();
 		if (that.expr) { this->set(that.expr->Copy()); }
 		else if (that.exprstr) { set(strdup(that.exprstr)); }
 	}
@@ -137,6 +135,14 @@ public:
 			clear();
 			if (that.expr) this->expr = that.expr->Copy();
 			if (that.exprstr) this->exprstr = strdup(that.exprstr);
+		}
+		return *this;
+	}
+	ConstraintHolder & operator=(ConstraintHolder&& that) { // move assignment operator
+		if (this != &that) {
+			clear();
+			expr = that.expr; that.expr = nullptr;
+			exprstr = that.exprstr; that.exprstr = nullptr;
 		}
 		return *this;
 	}
@@ -185,7 +191,5 @@ protected:
 
 typedef CondorClassAdFileParseHelper ClassAdFileParseType;
 ClassAdFileParseType::ParseType parseAdsFileFormat(const char * arg, ClassAdFileParseType::ParseType def_parse_type);
-
-#endif // __cplusplus
 
 #endif

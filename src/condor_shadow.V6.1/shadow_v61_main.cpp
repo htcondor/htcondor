@@ -57,13 +57,11 @@ usage( int argc, char* argv[] )
 }
 
 
-extern "C" {
 int
 ExceptCleanup(int, int, const char *buf)
 {
   BaseShadow::log_except(buf);
   return 0;
-}
 }
 
 int
@@ -323,15 +321,6 @@ void startShadow( ClassAd *ad )
 }
 
 
-int handleJobRemoval(Service*,int sig)
-{
-	if( Shadow ) {
-		return Shadow->handleJobRemoval(sig);
-	}
-	return 0;
-}
-
-
 int handleSignals(int sig)
 {
 	int iRet =0;
@@ -429,7 +418,7 @@ main_config()
 void
 main_shutdown_fast()
 {
-	Shadow->shutDownFast( JOB_NOT_CKPTED );
+	Shadow->shutDownFast( JOB_SHOULD_REQUEUE );
 }
 
 void

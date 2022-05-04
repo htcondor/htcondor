@@ -93,7 +93,7 @@ GPUFP cuda_t                    cudaRuntimeGetVersion;
 GPUFP dev_basic_props           getBasicProps;
 GPUFP cuda_DevicePropBuf_int    cudaGetDevicePropertiesOfIndeterminateStructure;
 
-typedef void * cudev;
+typedef int * cudev;
 typedef cudaError_t (CUDACALL* cuda_dev_int_t)(cudev *, int);
 typedef cudaError_t (CUDACALL* cuda_name_t)(char *, int, cudev);
 typedef CUresult (CUDACALL * cuda_uuid_t)(unsigned char uuid[16], cudev);
@@ -112,6 +112,7 @@ GPUFP cuda_cc_t                 cuDeviceComputeCapability;
 
 dlopen_return_t setCUDAFunctionPointers( bool force_nvcuda = false, bool force_cudart = false, bool must_load = true );
 void setSimulatedCUDAFunctionPointers();
+bool setupSimulatedDevices(const char * args);
 
 #undef GPUFP
 
@@ -119,8 +120,6 @@ void setSimulatedCUDAFunctionPointers();
 // We can simulate CUDA device enumeration for testing purposes.
 //
 
-extern int sim_index;
-extern int sim_device_count;
 extern const int sim_index_max;
 
 // basic device properties we can query from the driver

@@ -120,6 +120,7 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     libldap2-dev \
     libmunge-dev \
     libpam0g-dev \
+    libpcre2-dev \
     libpcre3-dev \
     libpq-dev \
     libscitokens-dev \
@@ -144,6 +145,15 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
     zlib1g-dev \
     && apt clean
 
+# blahp build dependencies
+RUN apt update && apt install -y \
+    autoconf \
+    automake \
+    docbook-xsl \
+    libxslt1.1 \
+    xsltproc \
+    && apt clean
+
 RUN apt update && apt install -y \
     python3-pip \
     && apt clean
@@ -153,4 +163,4 @@ RUN pip3 install pytest pytest-httpserver
 # Add daily HTCondor repository for the latest externals for tarballs
 RUN wget -qO - https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-9.1-Daily-Key | apt-key add -
 RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/9.1-daily bionic main" > /etc/apt/sources.list.d/htcondor-daily.list
-RUN apt update
+RUN apt update && apt clean

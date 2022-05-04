@@ -33,6 +33,7 @@ UniShadow::UniShadow() : delayedExitReason( -1 ) {
 		// pass RemoteResource ourself, so it knows where to go if
 		// it has to call something like shutDown().
 	remRes = new RemoteResource( this );
+	remRes->setWaitOnKillFailure(true);
 }
 
 UniShadow::~UniShadow() {
@@ -347,10 +348,10 @@ UniShadow::bytesReceived()
 }
 
 void
-UniShadow::getFileTransferStats(int &upload_file_cnt, int &download_file_cnt)
+UniShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_stats)
 {
-	upload_file_cnt = remRes->m_upload_xfer_file_count;
-	download_file_cnt = remRes->m_download_xfer_file_count;
+	upload_stats = remRes->m_upload_file_stats;
+	download_stats = remRes->m_download_file_stats;
 }
 
 void

@@ -324,13 +324,6 @@ SpooledJobFiles::createJobSwapSpoolDirectory(classad::ClassAd const *job_ad,priv
 bool
 SpooledJobFiles::createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_state )
 {
-	int universe=-1;
-
-	job_ad->EvaluateAttrInt(ATTR_JOB_UNIVERSE,universe);
-	if( universe == CONDOR_UNIVERSE_STANDARD ) {
-		return createParentSpoolDirectories(job_ad);
-	}
-
 	if ( param_boolean( "CHOWN_JOB_SPOOL_FILES", false ) == false ) {
 		desired_priv_state = PRIV_USER;
 	}

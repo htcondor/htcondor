@@ -58,9 +58,11 @@ vm_proc.cpp
 )
 
 if (LINUX)
+	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../openstack_gahp/rapidjson.src/include")
 	list(APPEND starterElements
 		cgroup.linux.cpp  
 		glexec_privsep_helper.linux.cpp
+		../condor_startd.V6/VolumeManager.cpp
 	)
 endif(LINUX)
 
@@ -91,6 +93,7 @@ endif(HAVE_SSH_TO_JOB)
 if (LINUX)
 	condor_exe(condor_pid_ns_init "condor_pid_ns_init.cpp" ${C_LIBEXEC} "" OFF)
 endif()
+
 if (DOCKER_ALLOW_RUN_AS_ROOT)
 	set_source_files_properties(docker_proc.cpp PROPERTIES COMPILE_DEFINITIONS DOCKER_ALLOW_RUN_AS_ROOT=1)
 endif()
@@ -102,6 +105,29 @@ endif()
 # docker build -t htcondor_docker_test .
 # docker save htcondor_docker_test > htcondor_docker_test
 
+# At startup we run singularity with a sandbox dir of SBIN
+# and run this small program to verify that it exits with code 37
+if (LINUX)
+	add_executable(exit_37 "exit_37.c")
+
+	# Our special assembly version of exit_37 needs special flags
+	# but only works on 64 bit linux
+	if ("${SYS_ARCH}" STREQUAL "X86_64")
+		target_link_libraries(exit_37 "-nostdlib -static")
+	else()
+		target_link_libraries(exit_37 "-static")
+	endif()
+endif()
+
+# Just like we can't asume that docker is installed or runnable on the build machine
+# we can't assume that singularity is either, so we check in a small .sif file
+# built with 
+# mkdir chroot
+# cp $(SBIN)/exit_37 chroot
+# singularity build exit_37.sif chroot
+
 if (LINUX)
 	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/htcondor_docker_test DESTINATION ${C_LIBEXEC} )
+	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/exit_37.sif DESTINATION ${C_LIBEXEC} )
+	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/exit_37 DESTINATION ${C_SBIN} PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 endif()

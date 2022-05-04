@@ -38,8 +38,7 @@ ScheddClassad::OpenConnection() const
 		check_warning_strictness( DAG_STRICT_3 );
 		return NULL;
 	}
-	Qmgr_connection *queue = ConnectQ( _schedd->addr(), 0, false,
-				&errstack, NULL, _schedd->version() );
+	Qmgr_connection *queue = ConnectQ( *_schedd, 0, false, &errstack );
 	if ( !queue ) {
 		debug_printf( DEBUG_QUIET,
 					"WARNING: failed to connect to queue manager (%s)\n",
@@ -76,7 +75,7 @@ ScheddClassad::SetAttribute( const char *attrName, int attrVal ) const
 
 //---------------------------------------------------------------------------
 void
-ScheddClassad::SetAttribute( const char *attrName, const MyString &value ) const
+ScheddClassad::SetAttribute( const char *attrName, const std::string &value ) const
 {
 	if ( SetAttributeString( _jobId._cluster, _jobId._proc,
 						  attrName, value.c_str() ) != 0 ) {
@@ -96,26 +95,6 @@ ScheddClassad::SetAttribute( const char *attrName, const ClassAd &ad ) const
 					  "WARNING: failed to set attribute %s\n", attrName );
 		check_warning_strictness( DAG_STRICT_3 );
 	}
-}
-
-//---------------------------------------------------------------------------
-bool
-ScheddClassad::GetAttribute( const char *attrName, MyString &attrVal,
-			bool printWarning ) const
-{
-	char *val;
-	if ( GetAttributeStringNew( _jobId._cluster, _jobId._proc,
-				attrName, &val ) == -1 ) {
-		if ( printWarning ) {
-			debug_printf( DEBUG_QUIET,
-					  	"Warning: failed to get attribute %s\n", attrName );
-		}
-		return false;
-	}
-
-	attrVal = val;
-	free( val );
-	return true;
 }
 
 //---------------------------------------------------------------------------
@@ -263,7 +242,7 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 
 //---------------------------------------------------------------------------
 void
-DagmanClassad::GetInfo( MyString &owner, MyString &nodeName )
+DagmanClassad::GetInfo( std::string &owner, std::string &nodeName )
 {
 	if ( !_valid ) {
 		debug_printf( DEBUG_VERBOSE,
@@ -321,8 +300,8 @@ DagmanClassad::GetSetBatchId( std::string &batchId )
 
 //---------------------------------------------------------------------------
 void
-DagmanClassad::GetSetBatchName( const MyString &primaryDagFile,
-			MyString &batchName )
+DagmanClassad::GetSetBatchName( const std::string &primaryDagFile,
+			std::string &batchName )
 {
 	if ( !_valid ) {
 		debug_printf( DEBUG_VERBOSE,
@@ -352,7 +331,7 @@ DagmanClassad::GetSetBatchName( const MyString &primaryDagFile,
 
 //---------------------------------------------------------------------------
 void
-DagmanClassad::GetAcctInfo( MyString &group, MyString &user )
+DagmanClassad::GetAcctInfo( std::string &group, std::string &user )
 {
 	if ( !_valid ) {
 		debug_printf( DEBUG_VERBOSE,

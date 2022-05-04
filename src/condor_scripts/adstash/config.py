@@ -279,6 +279,15 @@ def get_config(argv=None):
         ),
     )
     parser.add_argument(
+        "--ad_file",
+        type=Path,
+        metavar="PATH",
+        help=(
+            "Load Job ClassAds from a file instead of querying daemons. "
+            "Implies --standalone, ignores --schedd_history and --startd_history."
+        ),
+    )
+    parser.add_argument(
         "--sample_interval",
         type=int,
         metavar="SECONDS",

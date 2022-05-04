@@ -25,8 +25,6 @@
 #include "my_hostname.h"
 #include "string_list.h"
 
-using namespace std;
-
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
 #include "compat_classad.h"
@@ -46,20 +44,6 @@ void AttrList_setPublishServerTime(bool publish)
 }
 
 static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
-
-ClassAd *
-getClassAd( Stream *sock )
-{
-	ClassAd *ad = new ClassAd( );
-	if( !ad ) { 
-		return NULL;
-	}
-	if( !getClassAd( sock, *ad ) ) {
-		delete ad;
-		return NULL;
-	}
-	return ad;	
-}
 
 bool getClassAd( Stream *sock, classad::ClassAd& ad )
 {
@@ -424,7 +408,7 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 {
 	classad::ClassAdParser	parser;
 	int 					numExprs = 0; // Initialization clears Coverity warning
-	string					buffer;
+	std::string					buffer;
 	classad::ClassAd		*upd=NULL;
 	MyString				inputLine;
 
@@ -457,7 +441,7 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 		if ( strncmp( inputLine.c_str(), "ConcurrencyLimit.", 17 ) == 0 ) {
 			inputLine.setAt( 16, '_' );
 		}
-		buffer += string(inputLine.c_str()) + ";";
+		buffer += std::string(inputLine.c_str()) + ";";
 	}
 	buffer += "]";
 
@@ -630,6 +614,8 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 {
 	bool excludeTypes = (options & PUT_CLASSAD_NO_TYPES) == PUT_CLASSAD_NO_TYPES;
 	bool exclude_private = (options & PUT_CLASSAD_NO_PRIVATE) == PUT_CLASSAD_NO_PRIVATE;
+	auto *verinfo = sock->get_peer_version();
+	bool exclude_private_v2 = exclude_private || !verinfo || !verinfo->built_since_version(9, 9, 0);
 
 	classad::ClassAdUnParser	unp;
 	std::string					buf;
@@ -650,6 +636,11 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 		haveChainedAd = true;
 	}
 
+	bool crypto_is_noop = sock->prepare_crypto_for_secret_is_noop();
+
+	// Remember whether the ad has any private attributes for the cases
+	// where we care (when selectively encrypting them or when excluding
+	// them).
 	int private_count = 0;
 	for(int pass = 0; pass < 2; pass++){
 
@@ -673,19 +664,27 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 		for(;itor != itor_end; itor++) {
 			std::string const &attr = itor->first;
 
-			if(!exclude_private ||
-				!(ClassAdAttributeIsPrivate(attr) ||
-				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
-			{
+			// This logic is paralleled below when sending the attributes.
+			if (crypto_is_noop && !exclude_private && !exclude_private_v2) {
+				// If the channel is encrypted or we can't encrypt, and
+				// we're sending all attributes, then don't bother checking
+				// if any attributes are private.
 				numExprs++;
 			} else {
-				private_count++;
+				bool private_attr_v2 = ClassAdAttributeIsPrivateV2(attr);
+				bool private_attr = private_attr_v2 || ClassAdAttributeIsPrivateV1(attr) ||
+					(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()));
+				if (private_attr) {
+					private_count++;
+				}
+				if ((exclude_private && private_attr) || (exclude_private_v2 && private_attr_v2)) {
+					// This is a private attribute that should be excluded.
+					// Do not send it.
+					continue;
+				}
+				numExprs++;
 			}
 		}
-	}
-		// If we counted no private attributes, we don't need to test again later.
-	if (exclude_private && !private_count) {
-		//exclude_private = false;
 	}
 
 	if( publish_server_timeMangled ){
@@ -716,25 +715,43 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 			itor_end = ad.end();
 		}
 
-		bool crypto_is_noop = sock->prepare_crypto_for_secret_is_noop();
 		for(;itor != itor_end; itor++) {
 			std::string const &attr = itor->first;
 			classad::ExprTree const *expr = itor->second;
 
-			if(exclude_private && (ClassAdAttributeIsPrivate(attr) ||
-				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))))
-			{
-				continue;
+			bool encrypt_it = false;
+
+			// This parallels the logic above that counts the number of
+			// attributes to send, except that we skip checking for
+			// private attributes if we know there aren't any.
+			if ((crypto_is_noop && !exclude_private && !exclude_private_v2) || (private_count == 0)) {
+				// We can send everything without special handling of
+				// private attributes for one of these reasons:
+				// 1) We're sending all attributes and either the channel
+				//    is already encrypted or can't be encrypted.
+				// 2) There are no private attributes to worry about.
+			} else {
+				bool private_attr_v2 = ClassAdAttributeIsPrivateV2(attr);
+				bool private_attr = private_attr_v2 || ClassAdAttributeIsPrivateV1(attr) ||
+					(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()));
+				if ((exclude_private && private_attr) || (exclude_private_v2 && private_attr_v2)) {
+					// This is a private attribute that should be excluded.
+					// Do not send it.
+					continue;
+				}
+				if (private_attr /* && !crypto_is_noop */) {
+					// This is a private attribute and the channel is
+					// currently unencrypted.
+					// Turn on encryption for just this attribute.
+					encrypt_it = true;
+				}
 			}
 
 			buf = attr;
 			buf += " = ";
 			unp.Unparse( buf, expr );
 
-			if( ! crypto_is_noop && private_count &&
-				(ClassAdAttributeIsPrivate(attr) ||
-				(encrypted_attrs && (encrypted_attrs->find(attr) != encrypted_attrs->end()))) )
-			{
+			if (encrypt_it) {
 				sock->put(SECRET_MARKER);
 
 				sock->put_secret(buf.c_str());
@@ -752,16 +769,21 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 {
 	bool excludeTypes = (options & PUT_CLASSAD_NO_TYPES) == PUT_CLASSAD_NO_TYPES;
 	bool exclude_private = (options & PUT_CLASSAD_NO_PRIVATE) == PUT_CLASSAD_NO_PRIVATE;
+	auto *verinfo = sock->get_peer_version();
+	bool exclude_private_v2 = exclude_private || !verinfo || !verinfo->built_since_version(9, 9, 0);
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
 
 	classad::References blacklist;
 	for (classad::References::const_iterator attr = whitelist.begin(); attr != whitelist.end(); ++attr) {
-		if ( ! ad.Lookup(*attr) || (exclude_private && (
-			ClassAdAttributeIsPrivate(*attr) ||
-			(encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end()))
-		))) {
+		if ( ! ad.Lookup(*attr) ||
+			 (exclude_private &&
+			  (ClassAdAttributeIsPrivateV1(*attr) ||
+			   (encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end())))
+			  ) ||
+			 (exclude_private_v2 && ClassAdAttributeIsPrivateV2(*attr))
+			 ) {
 			blacklist.insert(*attr);
 		}
 	}
@@ -801,7 +823,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 		unp.Unparse( buf, expr );
 
 		if ( ! crypto_is_noop &&
-			(ClassAdAttributeIsPrivate(*attr) ||
+			(ClassAdAttributeIsPrivateAny(*attr) ||
 			(encrypted_attrs && (encrypted_attrs->find(*attr) != encrypted_attrs->end())))
 		) {
 			if (!sock->put(SECRET_MARKER)) {

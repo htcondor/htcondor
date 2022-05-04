@@ -17,10 +17,6 @@
  ############################################################### 
 
 
-if (DARWIN)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework IOKit -framework Carbon")
-endif()
-
 set(startdElements
 backfill_mgr.cpp
 claim.cpp
@@ -47,7 +43,6 @@ startd_named_classad.cpp
 startd_named_classad_list.cpp
 StartdPluginManager.cpp
 Starter.cpp
-starter_mgr.cpp
 util.cpp
 vm_common.cpp
 VMMachine.cpp
@@ -64,8 +59,10 @@ if (WINDOWS)
 endif(WINDOWS)
 
 if (LINUX)
+	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../openstack_gahp/rapidjson.src/include")
 	list(APPEND startdElements
 		glexec_starter.linux.cpp
+		VolumeManager.cpp
 	)
 endif(LINUX)
 

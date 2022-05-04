@@ -183,10 +183,9 @@ so, use ``condor_vacate_job`` to evict the job. When that's done (watch
 the user log), use ``condor_hold`` to put it on hold, so that it can't
 restart while you're looking at the checkpoint (and potentially,
 overwrite it). Finally, to obtain the checkpoint file(s) themselves, use
-``condor_config_val`` to ask where ``SPOOL`` is, and then look in
-appropriate subdirectory (named after the job ID).
+the somewhat mis-named ``condor_evicted_files`` to ask where they are.
 
-For example, if your job is ID 635.0, and is logging to the file
+For example, if your job is ID ``635.0``, and is logging to the file
 ``job.log``, you can copy the files in the checkpoint to a subdirectory of
 the current as follows:
 
@@ -204,13 +203,15 @@ and immediately hold the job.
     $ condor_hold 635.0
 
 Copy the checkpoint files from the spool.
-Note that _condor_stderr and _condor_stdout are the files corresponding
+Note that ``_condor_stderr`` and ``_condor_stdout`` are the files corresponding
 to the job's output and error submit commands; they aren't named
 correctly until the the job finishes.
 
 .. code-block:: console
 
-    $ cp -a `condor_config_val SPOOL`/635/0/cluster635.proc0.subproc0 .
+    $ condor_evicted_files get 635.0
+    Copied to '635.0'.
+    $ cd 635.0
 
 Now examine the checkpoint files to see if they look right.
 When you're done, release the job to see if it actually works right.
@@ -219,6 +220,12 @@ When you're done, release the job to see if it actually works right.
 
     $ condor_release 635.0
     $ condor_ssh_to_job 635.0
+
+You may also want to remove your copy of checkpoint files:
+
+.. code-block:: console
+
+    $ cd ..; rm -fr 635.0
 
 Working Around the Assumptions
 ------------------------------

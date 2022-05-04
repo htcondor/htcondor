@@ -126,6 +126,7 @@ set( C_LIB			lib)
 set( C_LIB_PUBLIC		lib)
 set( C_LIB32		lib)
 set( C_LIBEXEC		libexec )
+set( C_LIBEXEC_BLAHP		libexec )
 set( C_SBIN			sbin)
 
 set( C_PYTHONARCHLIB lib/python)
@@ -281,13 +282,43 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 		set (MSVCVER vc110)
 		set (MSVCVERNUM 11.0)
 	elseif(MSVC14)
-		if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-			set (VC_CRT_MSM Microsoft_VC140_CRT_x64.msm)
-		else()
-			set (VC_CRT_MSM Microsoft_VC140_CRT_x86.msm)
+		if (MSVC_VERSION LESS 1910)
+			# 14.0 toolset 140 (vs 2015)
+			if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+				set (VC_CRT_MSM Microsoft_VC140_CRT_x64.msm)
+			else()
+				set (VC_CRT_MSM Microsoft_VC140_CRT_x86.msm)
+			endif()
+			set (MSVCVER vc140)
+			set (MSVCVERNUM 14.0)
+		elseif (MSVC_VERSION LESS 1920)
+			# 15.0 toolset 141 (vs 2017)
+			if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+				set (VC_CRT_MSM Microsoft_VC141_CRT_x64.msm)
+			else()
+				set (VC_CRT_MSM Microsoft_VC141_CRT_x86.msm)
+			endif()
+			set (MSVCVER vc141)
+			set (MSVCVERNUM 14.1)
+		elseif (MSVC_VERSION LESS 1930)
+			# 16.0 toolset 142 (vs 2019)
+			if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+				set (VC_CRT_MSM Microsoft_VC142_CRT_x64.msm)
+			else()
+				set (VC_CRT_MSM Microsoft_VC142_CRT_x86.msm)
+			endif()
+			set (MSVCVER vc142)
+			set (MSVCVERNUM 14.2)
+		else ()
+			# 17 toolset 143 (vs 2022)
+			if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+				set (VC_CRT_MSM Microsoft_VC143_CRT_x64.msm)
+			else()
+				set (VC_CRT_MSM Microsoft_VC143_CRT_x86.msm)
+			endif()
+			set (MSVCVER vc143)
+			set (MSVCVERNUM 14.3)
 		endif()
-		set (MSVCVER vc140)
-		set (MSVCVERNUM 14.0)
 	else()
 		message(FATAL_ERROR "unsupported compiler version")
 	endif()
@@ -296,6 +327,28 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	find_file( CPACK_VC_MERGE_MODULE 
 		${VC_CRT_MSM}
 		"C:/Program Files/Common Files/Merge Modules" "C:/Program Files (x86)/Common Files/Merge Modules" )
+	if (CPACK_VC_MERGE_MODULE MATCHES "-NOTFOUND")
+		# VC tools after 2015 put the merge modules next to the tools
+		find_file( CPACK_VC_MERGE_MODULE
+			${VC_CRT_MSM}
+			"$ENV{VS170COMNTOOLS}../../VC/Redist/MSVC/v143/MergeModules"
+			"$ENV{SV170COMNTOOLS}../../VC/Redist/MSVC/14.16.27012/MergeModules"
+		)
+		## Win8 batlab hack! if we can't find the merge module we want, look again for the VC140 merge module...
+		## we need this because we can't install a new VC toolset on Win8, and the VC140 merge module is close enough...
+		if (CPACK_VC_MERGE_MODULE MATCHES "-NOTFOUND")
+			if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+				set (VC_CRT_MSM Microsoft_VC140_CRT_x64.msm)
+			else()
+				set (VC_CRT_MSM Microsoft_VC140_CRT_x86.msm)
+			endif()
+			find_file( CPACK_VC_MERGE_MODULE
+				${VC_CRT_MSM}
+				"C:/Program Files/Common Files/Merge Modules" "C:/Program Files (x86)/Common Files/Merge Modules" )
+		endif ()
+	endif ()
+
+	message(STATUS "CPACK_VC_MERGE_MODULE = ${CPACK_VC_MERGE_MODULE}")
 
 	set (WIX_MERGE_MODLES "<Merge Id=\"VCCRT\" Language=\"1033\" DiskId=\"1\" SourceFile=\"${CPACK_VC_MERGE_MODULE}\"/>\n${WIX_MERGE_MODLES}")
 	set (WIX_MERGE_REFS "<MergeRef Id=\"VCCRT\"/>\n${WIX_MERGE_REFS}")
@@ -321,8 +374,8 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	# below are options an overrides to enable packge generation for rpm & deb
 elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
-	execute_process( COMMAND python2 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1))" OUTPUT_VARIABLE C_PYTHONARCHLIB)
-	execute_process( COMMAND python3 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1))" OUTPUT_VARIABLE C_PYTHON3ARCHLIB)
+	execute_process( COMMAND python2 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1)[1:])" OUTPUT_VARIABLE C_PYTHONARCHLIB)
+	execute_process( COMMAND python3 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1)[1:])" OUTPUT_VARIABLE C_PYTHON3ARCHLIB)
 
 	# it's a smaller subset easier to differentiate.
 	# check the operating system name
@@ -386,12 +439,8 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( C_SHARE_EXAMPLES usr/share/doc/condor)
 		set( C_DOC			usr/share/doc/condor )
 		set( C_LIBEXEC		usr/lib/condor/libexec )
+		set( C_LIBEXEC_BLAHP	usr/libexec/blahp )
 		set( C_SYSCONFIG	etc/default )
-
-		#Because CPACK_PACKAGE_DEFAULT_LOCATION is set to "/" somewhere, so we have to set prefix like this
-		#This might break as we move to newer version of CMake
-		set( CMAKE_INSTALL_PREFIX "")
-		set( CPACK_SET_DESTDIR "ON")
 
 	elseif ( RPM_SYSTEM_NAME )
 		# This variable will be defined if the platfrom support RPM
@@ -446,6 +495,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 		set( C_BIN			usr/bin )
 		set( C_LIBEXEC		usr/libexec/condor )
+		set( C_LIBEXEC_BLAHP		usr/libexec/blahp )
 		set( C_SBIN			usr/sbin )
 		set( C_INCLUDE		usr/include/condor )
 		set( C_INCLUDE_PUBLIC		usr/include )
@@ -460,13 +510,6 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( C_ETC_EXAMPLES	usr/share/doc/${CONDOR_VERSION}/etc/examples )
 		set( C_SHARE_EXAMPLES usr/share/doc/${CONDOR_VERSION})
 		set( C_DOC			usr/share/doc/${CONDOR_VERSION} )
-
-		#Because CPACK_PACKAGE_DEFAULT_LOCATION is set to "/" somewhere, so we have to set prefix like this
-		#This might break as we move to newer version of CMake
-		set(CMAKE_INSTALL_PREFIX "")
-		set(CPACK_SET_DESTDIR "ON")
-
-		set(CPACK_PACKAGE_RELOCATABLE "OFF")
 
 	endif()
 

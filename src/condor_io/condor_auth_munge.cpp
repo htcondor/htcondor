@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 
-#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_MUNGE)
+#if defined(HAVE_EXT_MUNGE)
 #include <stdlib.h>
 #include <munge.h>
 #include "condor_auth_munge.h"

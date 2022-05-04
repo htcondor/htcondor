@@ -56,9 +56,12 @@
 #include "data_reuse.h"
 #include "authentication.h"
 
+#include <sstream>
+
 extern void main_shutdown_fast();
 
 const char* JOB_AD_FILENAME = ".job.ad";
+const char* JOB_EXECUTION_OVERLAY_AD_FILENAME = ".execution_overlay.ad";
 const char* MACHINE_AD_FILENAME = ".machine.ad";
 extern const char* JOB_WRAPPER_FAILURE_FILE;
 
@@ -142,6 +145,7 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 
 	Config();
 
+
 		// Now that we know what Execute is, we can figure out what
 		// directory the starter will be working in and save that,
 		// since we'll want this info a lot while we initialize and
@@ -157,6 +161,40 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 		formatstr( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 				 (long)daemonCore->getpid() );
 	}
+
+#ifdef LINUX
+	const char *thinpool = getenv("_CONDOR_THINPOOL");
+	const char *thinpool_vg = getenv("_CONDOR_THINPOOL_VG");
+	const char *thinpool_size = getenv("_CONDOR_THINPOOL_SIZE_KB");
+	if (thinpool && thinpool_vg && thinpool_size) {
+		try {
+			m_lvm_max_size_kb = std::stol(thinpool_size);
+		} catch (...) {
+			m_lvm_max_size_kb = -1;
+		}
+		if (m_lvm_max_size_kb > 0) {
+			CondorError err;
+                        std::string thinpool_str(thinpool), slot_name(getMySlotName());
+                        bool do_encrypt = thinpool_str.substr(thinpool_str.size() - 4, 4) == "-enc";
+                        if (do_encrypt) {
+                            slot_name += "-enc";
+                            thinpool_str = thinpool_str.substr(0, thinpool_str.size() - 4);
+                        }
+			m_volume_mgr.reset(new VolumeManager::Handle(Execute, slot_name, thinpool_str, thinpool_vg, m_lvm_max_size_kb, err));
+			if (!err.empty()) {
+				dprintf(D_ALWAYS, "Failure when setting up filesystem for job: %s\n", err.getFullText().c_str());
+				m_volume_mgr.reset();
+			}
+			m_lvm_thin_volume = slot_name;
+			m_lvm_thin_pool = thinpool_str;
+			m_lvm_volume_group = thinpool_vg;
+			m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
+				(TimerHandlercpp)&Starter::CheckDiskUsage,
+				"check disk usage", this);
+		}
+	}
+#endif // LINUX
+
 
 		//
 		// We have switched all of these to call the "Remote"
@@ -283,6 +321,12 @@ Starter::StarterExit( int code )
 
 void Starter::FinalCleanup()
 {
+		// Not useful to have the volume management code trigger
+		// while we are trying to cleanup.
+	if (m_lvm_poll_tid >= 0) {
+		daemonCore->Cancel_Timer(m_lvm_poll_tid);
+	}
+
 	RemoveRecoveryFile();
 	removeTempExecuteDir();
 #ifdef WIN32
@@ -629,7 +673,7 @@ Starter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 	}
 
 	char *session_id = Condor_Crypt_Base::randomHexKey();
-	char *session_key = Condor_Crypt_Base::randomHexKey();
+	char *session_key = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 
 	std::string session_info;
 	input.LookupString(ATTR_SESSION_INFO,session_info);
@@ -2435,6 +2479,26 @@ Starter::SpawnJob( void )
 		case CONDOR_UNIVERSE_VANILLA: {
 			bool wantDocker = false;
 			jobAd->LookupBool( ATTR_WANT_DOCKER, wantDocker );
+			bool wantContainer = false;
+			jobAd->LookupBool( ATTR_WANT_CONTAINER, wantContainer );
+
+			bool wantDockerRepo = false;
+			bool wantSandboxImage = false;
+			bool wantSIF = false;
+			jobAd->LookupBool(ATTR_WANT_DOCKER_IMAGE, wantDockerRepo);
+			jobAd->LookupBool(ATTR_WANT_SANDBOX_IMAGE, wantSandboxImage);
+			jobAd->LookupBool(ATTR_WANT_SIF, wantSIF);
+
+			std::string container_image;
+			jobAd->LookupString(ATTR_CONTAINER_IMAGE, container_image);
+			std::string docker_image;
+			jobAd->LookupString(ATTR_DOCKER_IMAGE, docker_image);
+
+			// If they give us a docker repo, use docker universe
+			if (wantContainer && wantDockerRepo) {
+				wantDocker = true;
+			}
+
 			std::string remote_cmd;
 			bool wantRemote = param(remote_cmd, "STARTER_REMOTE_CMD");
 
@@ -3151,6 +3215,12 @@ Starter::GetJobEnv( ClassAd *jobad, Env *job_env, std::string & env_errors )
 // helper function
 static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, const char * assigned, const char * tag);
 
+bool expandScratchDirInEnv(void * void_scratch_dir, const MyString & /*lhs */, MyString &rhs) {
+	const char *scratch_dir = (const char *) void_scratch_dir;
+	rhs.replaceString("#CoNdOrScRaTcHdIr#", scratch_dir);
+	return true;
+}
+
 void
 Starter::PublishToEnv( Env* proc_env )
 {
@@ -3399,6 +3469,10 @@ Starter::PublishToEnv( Env* proc_env )
 		dprintf( D_ALWAYS, 
 				"Failed to set _CHIRP_DELAYED_UPDATE_PREFIX environment variable\n");
 	}
+
+	// Many jobs need an absolute path into the scratch directory in an environment var
+	// expand a magic string in an env var to the scratch dir
+	proc_env->Walk(&expandScratchDirInEnv, (void *)const_cast<char *>(GetWorkingDir(true)));
 }
 
 // parse an environment prototype string of the form  key[[=/regex/replace/] key2=/regex2/replace2/]
@@ -3831,6 +3905,30 @@ Starter::WriteAdFiles() const
 		ret_val = false;
 	}
 
+	ad = this->jic->jobExecutionOverlayAd();
+	if (ad && ad->size() > 0)
+	{
+		formatstr(filename, "%s%c%s", dir, DIR_DELIM_CHAR, JOB_EXECUTION_OVERLAY_AD_FILENAME);
+		fp = safe_fopen_wrapper_follow(filename.c_str(), "w");
+		if (!fp)
+		{
+			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write job execution overlay ad: "
+						"%s (errno %d)\n", filename.c_str(),
+						strerror(errno), errno);
+			ret_val = false;
+		}
+		else
+		{
+		#ifdef WIN32
+			if (has_encrypted_working_dir) {
+				DecryptFile(filename.c_str(), 0);
+			}
+		#endif
+			fPrintAd(fp, *ad);
+			fclose(fp);
+		}
+	}
+
 	// Write the machine ad
 	ad = this->jic->machClassAd();
 	if (ad != NULL)
@@ -3895,4 +3993,68 @@ void
 Starter::RecordJobExitStatus(int status) {
 	recorded_job_exit_status = true;
 	job_exit_status = status;
+
+    // "When the job exits" is usually synonymous with "when the process
+    // spawned by the starter exits", but that's not the case for self-
+    // checkpointing jobs, which the starter just spawns again (after
+    // transferring the checkpoint) if the exit code indicates that the
+    // job checkpointed successfully.  Nothing else in HTCondor currently
+    // cares about this, but we've asked to track it (perhaps to see if
+    // anything else in HTCondor should care).  See HTCONDOR-861.
+    jic->notifyExecutionExit();
+}
+
+void
+Starter::CheckDiskUsage(void)
+{
+#ifdef LINUX
+		// Avoid repeatedly triggering
+	if (m_lvm_held_job) return;
+		// Logic error?
+	if (m_lvm_max_size_kb < 0) return;
+
+	// When the job exceeds its disk usage, there are three possibilities:
+	// 1. The backing pool has space remaining, we don't exhaust the extra allocated space (2GB by default),
+	//    and this polling catches the over-usage.  In that case, the job goes on hold and everyone's happy.
+	// 2. The backing pool has space remaining, the job DOES exhaust the extra allocated space, and the
+	//    job gets an ENOSPC before this polling can trigger.  The job may not go on hold and the user
+	//    doesn't get a reasonable indication without examining their stderr.  No one's happy.
+	// 3. The backing pool fills up due to overcommits.  All writes to othe device pause until enough
+	//    space is cleared up.
+	//
+	// In case (3), even well-behaved jobs will notice the issue; after a minute, if not enough space is
+	// available we start evicting even those jobs in oroder to prevent a deadlock.
+	//
+	// If you really want to avoid case (2), set THINPOOL_EXTRA_SIZE_MB to a value larger than the backing pool.
+
+	CondorError err;
+	uint64_t used_bytes;
+	bool out_of_space;
+	if (!VolumeManager::GetThinVolumeUsage(m_lvm_thin_volume, m_lvm_thin_pool, m_lvm_volume_group, used_bytes, out_of_space, err)) {
+		dprintf(D_ALWAYS, "Failed to poll managed volume (may not put job on hold correctly): %s\n", err.getFullText().c_str());
+		return;
+	}
+	if (used_bytes >= static_cast<uint64_t>(m_lvm_max_size_kb*1024)) {
+		std::stringstream ss;
+		ss << "Job is using " << (used_bytes/1024) << "KB of space, over the limit of " << m_lvm_max_size_kb << "KB";
+		dprintf(D_ALWAYS, "%s\n", ss.str().c_str());
+		jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+		m_lvm_held_job = true;
+	}
+	if (out_of_space) {
+		auto now = time(NULL);
+		if ((m_lvm_last_space_issue > 0) && (now - m_lvm_last_space_issue > 60)) {
+			dprintf(D_ALWAYS, "ERROR: Underlying thin pool is out of space and not recovering; evicting this job but not holding it.\n");
+			jic->holdJob("Underlying thin pool is out of space and not recovering", 0, 0);
+			m_lvm_held_job = true;
+			return;
+		} else if (m_lvm_last_space_issue < 0) {
+			dprintf(D_ALWAYS, "WARNING: Thin pool used by startd (%s) is out of space; writes will be paused until this is resolved.\n",
+				m_lvm_thin_pool.c_str());
+			m_lvm_last_space_issue = now;
+		}
+	} else {
+		m_lvm_last_space_issue = -1;
+	}
+#endif // LINUX
 }

@@ -133,7 +133,7 @@ static struct popen_entry * find_child(FILE* fp)
 // Windows versions of my_popen / my_pclose 
 //////////////////////////////////////////////////////////////////////////
 
-extern "C" FILE *
+FILE *
 my_popen(const char *const_cmd, const char *mode, int options)
 {
 	int want_stderr = (options & MY_POPEN_OPT_WANT_STDERR);
@@ -262,7 +262,7 @@ my_popen(const ArgList &args, const char *mode, int want_stderr, const Env *zkmE
 	return my_popen(cmdline.Value(), mode, want_stderr);
 }
 
-extern "C" FILE *
+FILE *
 my_popenv(const char *const args[], const char *mode, int options)
 {
 	// build the argument list
@@ -274,7 +274,7 @@ my_popenv(const char *const args[], const char *mode, int options)
 	return my_popen(arglist, mode, options);
 }
 
-extern "C" int
+int
 my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 {
 	HANDLE hChildProcess;
@@ -307,7 +307,6 @@ my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 }
 
 // this is the backward compatible my_pclose function that NO CONDOR CODE SHOULD USE!
-extern "C"
 int my_pclose( FILE *fp )
 {
 	int rv = my_pclose_ex(fp, 0xFFFFFFFF, false);
@@ -317,7 +316,7 @@ int my_pclose( FILE *fp )
 	return rv;
 }
 
-extern "C" int
+int
 my_system(const char *cmd)
 {
 	FILE* fp = my_popen(cmd, "w", FALSE);
@@ -625,7 +624,7 @@ my_popenv_impl( const char *const args[],
 	return retp;
 }
 
-extern "C" FILE *
+FILE *
 my_popenv( const char *const args[],
            const char * mode,
            int options )
@@ -657,7 +656,7 @@ my_popen(const ArgList &args, const char *mode, int options, const Env *env_ptr,
 }
 
 // this is the backward compatible my_pclose function that NO CONDOR CODE SHOULD USE!
-extern "C" int
+int
 my_pclose(FILE *fp)
 {
 	int			status;
@@ -707,7 +706,7 @@ static bool waitpid_with_timeout(pid_t pid, int *pstatus, time_t timeout)
 }
 
 
-extern "C" int
+int
 my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 {
 	int			status;
@@ -748,7 +747,7 @@ my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 
 #endif // !WIN32
 
-extern "C" int
+int
 my_systemv(const char *const args[])
 {
 	FILE* fp = my_popenv(args, "w", FALSE);
@@ -784,7 +783,7 @@ pid_t ChildPid = 0;
     0: Success (wait == true)
 */
 #define MAXARGS	32
-extern "C" int
+int
 my_spawnl( const char* cmd, ... )
 {
 	int		rval;
@@ -825,7 +824,7 @@ my_spawnl( const char* cmd, ... )
     -1: failure
     >0 == Return status of child
 */
-extern "C" int
+int
 my_spawnv( const char* cmd, const char *const argv[] )
 {
 	int					status;

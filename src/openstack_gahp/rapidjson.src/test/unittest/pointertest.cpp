@@ -32,6 +32,12 @@ static const char kJson[] = "{\n"
 "    \"m~n\" : 8\n"
 "}";
 
+TEST(Pointer, DefaultConstructor) {
+    Pointer p;
+    EXPECT_TRUE(p.IsValid());
+    EXPECT_EQ(0u, p.GetTokenCount());
+}
+
 TEST(Pointer, Parse) {
     {
         Pointer p("");
@@ -306,7 +312,7 @@ TEST(Pointer, Parse_URIFragment) {
         GenericPointer<GenericValue<UTF16<> > > p(L"#/%C2%A2");
         EXPECT_TRUE(p.IsValid());
         EXPECT_EQ(1u, p.GetTokenCount());
-        EXPECT_EQ(0x00A2, p.GetTokens()[0].name[0]);
+        EXPECT_EQ(static_cast<UTF16<>::Ch>(0x00A2), p.GetTokens()[0].name[0]);
         EXPECT_EQ(1u, p.GetTokens()[0].length);
     }
 
@@ -315,7 +321,7 @@ TEST(Pointer, Parse_URIFragment) {
         GenericPointer<GenericValue<UTF16<> > > p(L"#/%E2%82%AC");
         EXPECT_TRUE(p.IsValid());
         EXPECT_EQ(1u, p.GetTokenCount());
-        EXPECT_EQ(0x20AC, p.GetTokens()[0].name[0]);
+        EXPECT_EQ(static_cast<UTF16<>::Ch>(0x20AC), p.GetTokens()[0].name[0]);
         EXPECT_EQ(1u, p.GetTokens()[0].length);
     }
 
@@ -621,10 +627,15 @@ TEST(Pointer, Get) {
     EXPECT_EQ(&d[" "], Pointer("/ ").Get(d));
     EXPECT_EQ(&d["m~n"], Pointer("/m~0n").Get(d));
     EXPECT_TRUE(Pointer("/abc").Get(d) == 0);
-    EXPECT_TRUE(Pointer("/foo/2").Get(d) == 0); // Out of boundary
-    EXPECT_TRUE(Pointer("/foo/a").Get(d) == 0); // "/foo" is an array, cannot query by "a"
-    EXPECT_TRUE(Pointer("/foo/0/0").Get(d) == 0); // "/foo/0" is an string, cannot further query
-    EXPECT_TRUE(Pointer("/foo/0/a").Get(d) == 0); // "/foo/0" is an string, cannot further query
+    size_t unresolvedTokenIndex;
+    EXPECT_TRUE(Pointer("/foo/2").Get(d, &unresolvedTokenIndex) == 0); // Out of boundary
+    EXPECT_EQ(1, unresolvedTokenIndex);
+    EXPECT_TRUE(Pointer("/foo/a").Get(d, &unresolvedTokenIndex) == 0); // "/foo" is an array, cannot query by "a"
+    EXPECT_EQ(1, unresolvedTokenIndex);
+    EXPECT_TRUE(Pointer("/foo/0/0").Get(d, &unresolvedTokenIndex) == 0); // "/foo/0" is an string, cannot further query
+    EXPECT_EQ(2, unresolvedTokenIndex);
+    EXPECT_TRUE(Pointer("/foo/0/a").Get(d, &unresolvedTokenIndex) == 0); // "/foo/0" is an string, cannot further query
+    EXPECT_EQ(2, unresolvedTokenIndex);
 }
 
 TEST(Pointer, GetWithDefault) {
@@ -941,10 +952,30 @@ TEST(Pointer, GetValueByPointer) {
     EXPECT_EQ(&d["foo"][0], GetValueByPointer(d, Pointer("/foo/0")));
     EXPECT_EQ(&d["foo"][0], GetValueByPointer(d, "/foo/0"));
 
+    size_t unresolvedTokenIndex;
+    EXPECT_TRUE(GetValueByPointer(d, "/foo/2", &unresolvedTokenIndex) == 0); // Out of boundary
+    EXPECT_EQ(1, unresolvedTokenIndex);
+    EXPECT_TRUE(GetValueByPointer(d, "/foo/a", &unresolvedTokenIndex) == 0); // "/foo" is an array, cannot query by "a"
+    EXPECT_EQ(1, unresolvedTokenIndex);
+    EXPECT_TRUE(GetValueByPointer(d, "/foo/0/0", &unresolvedTokenIndex) == 0); // "/foo/0" is an string, cannot further query
+    EXPECT_EQ(2, unresolvedTokenIndex);
+    EXPECT_TRUE(GetValueByPointer(d, "/foo/0/a", &unresolvedTokenIndex) == 0); // "/foo/0" is an string, cannot further query
+    EXPECT_EQ(2, unresolvedTokenIndex);
+
     // const version
     const Value& v = d;
     EXPECT_EQ(&d["foo"][0], GetValueByPointer(v, Pointer("/foo/0")));
     EXPECT_EQ(&d["foo"][0], GetValueByPointer(v, "/foo/0"));
+
+    EXPECT_TRUE(GetValueByPointer(v, "/foo/2", &unresolvedTokenIndex) == 0); // Out of boundary
+    EXPECT_EQ(1, unresolvedTokenIndex);
+    EXPECT_TRUE(GetValueByPointer(v, "/foo/a", &unresolvedTokenIndex) == 0); // "/foo" is an array, cannot query by "a"
+    EXPECT_EQ(1, unresolvedTokenIndex);
+    EXPECT_TRUE(GetValueByPointer(v, "/foo/0/0", &unresolvedTokenIndex) == 0); // "/foo/0" is an string, cannot further query
+    EXPECT_EQ(2, unresolvedTokenIndex);
+    EXPECT_TRUE(GetValueByPointer(v, "/foo/0/a", &unresolvedTokenIndex) == 0); // "/foo/0" is an string, cannot further query
+    EXPECT_EQ(2, unresolvedTokenIndex);
+
 }
 
 TEST(Pointer, GetValueByPointerWithDefault_Pointer) {
@@ -1455,4 +1486,39 @@ TEST(Pointer, Ambiguity) {
         EXPECT_EQ(123, Pointer("/0/0").Get(d)->GetInt());
         EXPECT_EQ(456, Pointer("/0/1").Get(d)->GetInt());
     }
+}
+
+// https://github.com/miloyip/rapidjson/issues/483
+namespace myjson {
+
+class MyAllocator
+{
+public:
+    static const bool kNeedFree = true;
+    void * Malloc(size_t _size) { return malloc(_size); }
+    void * Realloc(void *_org_p, size_t _org_size, size_t _new_size) { (void)_org_size; return realloc(_org_p, _new_size); }
+    static void Free(void *_p) { return free(_p); }
+};
+
+typedef rapidjson::GenericDocument<
+            rapidjson::UTF8<>,
+            rapidjson::MemoryPoolAllocator< MyAllocator >,
+            MyAllocator
+        > Document;
+
+typedef rapidjson::GenericPointer<
+            ::myjson::Document::ValueType,
+            MyAllocator
+        > Pointer;
+
+typedef ::myjson::Document::ValueType Value;
+
+}
+
+TEST(Pointer, Issue483) {
+    std::string mystr, path;
+    myjson::Document document;
+    myjson::Value value(rapidjson::kStringType);
+    value.SetString(mystr.c_str(), static_cast<SizeType>(mystr.length()), document.GetAllocator());
+    myjson::Pointer(path.c_str()).Set(document, value, document.GetAllocator());
 }

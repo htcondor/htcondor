@@ -207,6 +207,7 @@ public:
 	Client* 	client() 		{return c_client;};
 	Resource* 	rip()			{return c_rip;};
 	ClassAd*	ad() 			{return c_jobad;};
+	ClassAd*	execution_overlay()	{return &c_job_execution_overlay_ad;};
 	int			universe() const		{return c_universe;};
 	int			cluster() const		{return c_cluster;};
 	int			proc() const			{return c_proc;};
@@ -252,8 +253,8 @@ public:
 	bool deactivateClaim( bool graceful );
 	bool suspendClaim( void );
 	bool resumeClaim( void );
-	bool starterKill( int sig ) const;
-	bool starterKillPg( int sig );
+	bool starterSignal( int sig ) const;
+	bool starterKillFamily();
 	bool starterKillSoft( bool state_change = false );
 	bool starterKillHard( void );
 	void starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft );
@@ -295,7 +296,7 @@ public:
 
 		/** Write out the machine ClassAd to the provided stream
  		*/
-	bool writeMachAd( Stream *stream );
+	bool writeMachAdAndOverlay( Stream *stream );
 
 	void receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update );
 
@@ -314,6 +315,7 @@ private:
 	ClaimId 	*c_id;
 	ClaimType	c_type;
 	ClassAd*	c_jobad;
+	ClassAd		c_job_execution_overlay_ad;
 	pid_t		c_starter_pid;
 	float		c_rank;
 	float		c_oldrank;

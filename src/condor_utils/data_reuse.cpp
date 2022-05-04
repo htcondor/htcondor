@@ -438,8 +438,8 @@ DataReuseDirectory::HandleEvent(ULogEvent &event, CondorError & err)
 				comEvent.getSize(),
 				comEvent.GetEventclock()));
 			m_contents.emplace_back(std::move(entry));
-			if (GetExtraDebug()) dprintf(D_FULLDEBUG, "Incrementing stored space by %zu to %ld\n",
-				comEvent.getSize(), m_stored_space + comEvent.getSize());
+			if (GetExtraDebug()) dprintf(D_FULLDEBUG, "Incrementing stored space by %zu to %zu\n",
+				comEvent.getSize(), (size_t)m_stored_space + comEvent.getSize());
 			m_stored_space += comEvent.getSize();
 
 			auto util_iter = m_space_utilization.insert({iter->second->getTag(), SpaceUtilization()});
@@ -596,11 +596,11 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	std::unique_ptr<void, decltype(&free)> memory_buffer(malloc(membufsiz), free);
 	ssize_t bytes;
 	while (true) {
-		bytes = _condor_full_read(source_fd, memory_buffer.get(), membufsiz);
+		bytes = full_read(source_fd, memory_buffer.get(), membufsiz);
 		if (bytes <= 0) {
 			break;
 		}
-		auto write_bytes = _condor_full_write(dest_fd, memory_buffer.get(), bytes);
+		auto write_bytes = full_write(dest_fd, memory_buffer.get(), bytes);
 		if (write_bytes != bytes) {
 			bytes = -1;
 			break;
@@ -806,11 +806,11 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 	std::unique_ptr<void, decltype(&free)> memory_buffer(malloc(membufsiz), free);
 	ssize_t bytes;
 	while (true) {
-		bytes = _condor_full_read(source_fd, memory_buffer.get(), membufsiz);
+		bytes = full_read(source_fd, memory_buffer.get(), membufsiz);
 		if (bytes <= 0) {
 			break;
 		}
-		auto write_bytes = _condor_full_write(dest_fd, memory_buffer.get(), bytes);
+		auto write_bytes = full_write(dest_fd, memory_buffer.get(), bytes);
 		if (write_bytes != bytes) {
 			bytes = -1;
 			break;

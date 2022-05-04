@@ -36,6 +36,10 @@
 #include <stack>
 using std::string;
 
+#ifdef LINUX
+class VolumeManager;
+#endif // LINUX
+
 class Resource;
 
 typedef int amask_t;
@@ -223,7 +227,7 @@ public:
     void init_machine_resources();
 
 	void publish_static(ClassAd*);     // things that can only change on reconfig
-	void publish_dynamic(ClassAd*);    // things that can change at runtime
+	void publish_dynamic(ClassAd*, int slotid, int slotsubid);    // things that can change at runtime
 	void compute_config();      // what compute(A_STATIC | A_SHARED) used to do
 	void compute_for_update();  // formerly compute(A_UPDATE | A_SHARED) -  before we send ads to the collector
 	void compute_for_policy();  // formerly compute(A_TIMEOUT | A_SHARED) - before we evaluate policy like PREEMPT
@@ -370,7 +374,7 @@ public:
 				   const std::string &execute_dir, const std::string &execute_partition_id );
 
 	void attach( Resource* );	// Attach to the given Resource
-	void bind_DevIds(int slot_id, int slot_sub_id);   // bind non-fungable resource ids to a slot
+	bool bind_DevIds(int slot_id, int slot_sub_id, bool abort_on_fail);   // bind non-fungable resource ids to a slot
 	void unbind_DevIds(int slot_id, int slot_sub_id); // release non-fungable resource ids
 	void reconfig_DevIds(int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
 
@@ -413,28 +417,16 @@ public:
 			c_total_disk = r_attr->c_total_disk;
 		}
 	}
-	bool set_total_disk(long long total, bool refresh) {
-		// if input total is < 0, that means to figure it out
-		if (total > 0) {
-			bool changed = total != c_total_disk;
-			c_total_disk = total;
-			return changed;
-		} else if (c_total_disk == 0) {
-			// calculate disk at least once if a value is not passed in
-			refresh = true;
-		}
-		// refresh disk if the flag was passed in, or we do not yet have a value
-		if (refresh) {
-			c_total_disk = sysapi_disk_space(executeDir());
-			return true;
-		}
-		return false;
-	}
+	bool set_total_disk(long long total, bool refresh);
 
 	static void swap_attributes(CpuAttributes & attra, CpuAttributes & attrb, int flags);
 
 	CpuAttributes& operator+=( CpuAttributes& rhs);
 	CpuAttributes& operator-=( CpuAttributes& rhs);
+
+#ifdef LINUX
+	void setVolumeManager(VolumeManager *volume_mgr) {m_volume_mgr = volume_mgr;}
+#endif // LINUX
 
 private:
 	Resource*	 	rip;
@@ -462,7 +454,7 @@ private:
     slotres_map_t c_slotres_map;
     slotres_map_t c_slottot_map;
 	slotres_constraint_map_t c_slotres_constraint_map;
-	slotres_devIds_map_t c_slotres_ids_map;
+	slotres_devIds_map_t c_slotres_ids_map; // map of resource tag to vector of Assigned devids
 	slotres_props_t c_slotres_props_map; // map if resource tag to aggregate ClassAd of props for custom resource
 
     // totals
@@ -478,6 +470,10 @@ private:
 	std::string     c_execute_partition_id;  // unique id for partition
 
 	int				c_type;		// The type of this resource
+
+#ifdef LINUX
+	VolumeManager *m_volume_mgr{nullptr};
+#endif // LINUX
 };	
 
 class AvailDiskPartition

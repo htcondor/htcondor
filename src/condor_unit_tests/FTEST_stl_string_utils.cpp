@@ -638,6 +638,9 @@ static bool tokenize_skip() {
 	const char *a = "     Ottavio Bottechia_";
 	Tokenize(a);
 	const char* tok = GetNextToken(" ", true);
+	if (tok == nullptr) {
+		FAIL;
+	}
 	emit_input_header();
 	emit_param("delim", "%s", " ");
 	emit_param("skipBlankTokens", "%d", true);

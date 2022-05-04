@@ -21,7 +21,7 @@
 #ifndef CONDOR_AUTHENTICATOR_KERBEROS
 #define CONDOR_AUTHENTICATOR_KERBEROS
 
-#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_KRB5)
+#if defined(HAVE_EXT_KRB5)
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "MyString.h"

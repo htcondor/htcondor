@@ -27,19 +27,29 @@ my $reldir = `condor_config_val release_dir`; chomp $reldir;
 my $pathsep = ':';
 my $relpy = "$reldir/lib/python3";
 my $pypgm = "python3";
+my $pyd = "htcondor.pyd";
 if ($iswindows) {
     $relpy = "$reldir\\lib\\python"; $pathsep = ';';
-    my $regkey = "HKLM\\Software\\Python\\PythonCore\\3.6\\InstallPath";
-    # use 32 bit python if we have a 32 bit htcondor python module
-    $regkey = "HKLM\\Software\\wow6432node\\Python\\PythonCore\\3.6\\InstallPath" if -f "$relpy\\htcondor\\htcondor.cp36-win32.pyd";
-    my @reglines = `reg query $regkey /ve`;
+    my $pyver = "3.9";
+    $pyd = "htcondor.cp39-win_amd64.pyd";
+    if (-f "$relpy\\htcondor\\htcondor.cp38-win_amd64.pyd") {
+        $pyver = "3.8";
+        $pyd = "htcondor.cp38-win_amd64.pyd";
+    } elsif (-f "$relpy\\htcondor\\htcondor.cp36-win_amd64.pyd") {
+        $pyver = "3.6";
+        $pyd = "htcondor.cp36-win_amd64.pyd";
+    }
+    my @reglines = `reg query HKLM\\Software\\Python\\PythonCore\\$pyver\\InstallPath /ve`;
     for my $line (@reglines) {
        if ($line =~ /REG_SZ\s+(.+)$/) {
-          print "\tfound python 3.6 install dir : '$1'\n";
-          $pypgm = "$1python3.exe";
+          print "\tfound python $pyver install dir : '$1'\n";
+          $pypgm = "$1python.exe";
           last;
        }
     }
+    $relpy .= ";$reldir\\bin";
+    print "\tsetting PYTHONPATH=$relpy\n";
+    $ENV{PYTHONPATH} = $relpy;
 }
 
 my $pythonpath = "";
@@ -56,6 +66,13 @@ if (exists($ENV{PYTHONPATH})) {
 }
 
 $ENV{ON_BATLAB} = 'true';
+
+if ($iswindows) {
+   #my $sleep = `sleep 10m`;
+   #print "sleep returned $sleep\n";
+   my $rvt = runCommandCarefully( {die_on_failed_expectation => FALSE}, "$reldir\\bin\\win_install_probe.exe", '-load', "$reldir\\lib\\python\\htcondor\\$pyd" );
+   print "probe load of bindings : $rvt\n";
+}
 
 my $rv = runCommandCarefully( undef, $pypgm, '-m', 'pytest', 'test_htcondor_dags' );
 exit $rv->{"exitcode"}

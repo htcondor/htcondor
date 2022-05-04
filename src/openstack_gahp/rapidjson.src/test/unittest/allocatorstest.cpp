@@ -22,21 +22,21 @@ template <typename Allocator>
 void TestAllocator(Allocator& a) {
     EXPECT_TRUE(a.Malloc(0) == 0);
 
-    uint8_t* p = (uint8_t*)a.Malloc(100);
+    uint8_t* p = static_cast<uint8_t*>(a.Malloc(100));
     EXPECT_TRUE(p != 0);
     for (size_t i = 0; i < 100; i++)
-        p[i] = (uint8_t)i;
+        p[i] = static_cast<uint8_t>(i);
 
     // Expand
-    uint8_t* q = (uint8_t*)a.Realloc(p, 100, 200);
+    uint8_t* q = static_cast<uint8_t*>(a.Realloc(p, 100, 200));
     EXPECT_TRUE(q != 0);
     for (size_t i = 0; i < 100; i++)
         EXPECT_EQ(i, q[i]);
     for (size_t i = 100; i < 200; i++)
-        q[i] = (uint8_t)i;
+        q[i] = static_cast<uint8_t>(i);
 
     // Shrink
-    uint8_t *r = (uint8_t*)a.Realloc(q, 200, 150);
+    uint8_t *r = static_cast<uint8_t*>(a.Realloc(q, 200, 150));
     EXPECT_TRUE(r != 0);
     for (size_t i = 0; i < 150; i++)
         EXPECT_EQ(i, r[i]);
@@ -56,7 +56,7 @@ TEST(Allocator, MemoryPoolAllocator) {
     MemoryPoolAllocator<> a;
     TestAllocator(a);
 
-    for (int i = 1; i < 1000; i++) {
+    for (size_t i = 1; i < 1000; i++) {
         EXPECT_TRUE(a.Malloc(i) != 0);
         EXPECT_LE(a.Size(), a.Capacity());
     }
@@ -80,4 +80,23 @@ TEST(Allocator, Alignment) {
         EXPECT_EQ(0xFFFFFFFCu, RAPIDJSON_ALIGN(0xFFFFFFF8u + i));
     }
 #endif
+}
+
+TEST(Allocator, Issue399) {
+    MemoryPoolAllocator<> a;
+    void* p = a.Malloc(100);
+    void* q = a.Realloc(p, 100, 200);
+    EXPECT_EQ(p, q);
+
+    // exhuasive testing
+    for (size_t j = 1; j < 32; j++) {
+        a.Clear();
+        a.Malloc(j); // some unaligned size
+        p = a.Malloc(1);
+        for (size_t i = 1; i < 1024; i++) {
+            q = a.Realloc(p, i, i + 1);
+            EXPECT_EQ(p, q);
+            p = q;
+        }
+    }
 }

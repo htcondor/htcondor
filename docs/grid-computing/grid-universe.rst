@@ -86,7 +86,7 @@ trusts the identity claimed by a host or IP address.
     SEC_DEFAULT_NEGOTIATION = OPTIONAL
     SEC_DEFAULT_AUTHENTICATION_METHODS = CLAIMTOBE
 
-Other working authentication methods are GSI, SSL, KERBEROS, and FS.
+Other working authentication methods are SSL, KERBEROS, and FS.
 
 HTCondor-C Job Submission
 '''''''''''''''''''''''''
@@ -144,10 +144,8 @@ This must appear in the HTCondor-C job submit description file as
 
     +remote_WhenToTransferOutput = "ON_EXIT"
 
-For convenience, the specific entries of **universe**,
-**remote_grid_resource**,
-**globus_rsl** :index:`globus_rsl<single: globus_rsl; submit commands>`, and
-**globus_xml** :index:`globus_xml<single: globus_xml; submit commands>` may be
+For convenience, the specific entries of **universe** and
+**remote_grid_resource** may be
 specified as **remote_** commands without the leading '+'. Instead of
 
 .. code-block:: condor-submit
@@ -231,53 +229,6 @@ description file defines the Windows domain of the remote machine with
 A Windows machine not part of a domain defines the Windows domain as the
 machine name. :index:`HTCondor-C`
 
-The nordugrid Grid Type
------------------------
-
-:index:`NorduGrid`
-:index:`submitting jobs to NorduGrid<single: submitting jobs to NorduGrid; grid computing>`
-
-NorduGrid is a project to develop free grid middleware named the
-Advanced Resource Connector (ARC). See the NorduGrid web page
-(`http://www.nordugrid.org <http://www.nordugrid.org>`_) for more
-information about NorduGrid software.
-
-NorduGrid ARC supports multiple job submission interfaces.
-The **nordugrid** grid type uses their older gridftp-based interface,
-which is due to be retired. We recommend using the new REST-based
-interface, available via the grid type **arc**, documented below.
-
-HTCondor jobs may be submitted to NorduGrid ARC resources using the **grid**
-universe. The
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
-command specifies the name of the NorduGrid resource as follows:
-
-.. code-block:: text
-
-    grid_resource = nordugrid ng.example.com
-
-NorduGrid uses X.509 credentials for authentication, usually in the form
-a proxy certificate. *condor_submit* looks in default locations for the
-proxy. The submit description file command
-**x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` may be
-used to give the full path name to the directory containing the proxy,
-when the proxy is not in a default location. If this optional command is
-not present in the submit description file, then the value of the
-environment variable ``X509_USER_PROXY`` is checked for the location of
-the proxy. If this environment variable is not present, then the proxy
-in the file ``/tmp/x509up_uXXXX`` is used, where the characters XXXX in
-this file name are replaced with the Unix user id.
-
-NorduGrid uses RSL syntax to describe jobs. The submit description file
-command
-**nordugrid_rsl** :index:`nordugrid_rsl<single: nordugrid_rsl; submit commands>` adds
-additional attributes to the job RSL that HTCondor constructs. The
-format this submit description file command is
-
-.. code-block:: text
-
-    nordugrid_rsl = (name=value)(name=value)
-
 The arc Grid Type
 -----------------------
 
@@ -297,7 +248,7 @@ universe. The
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
 command specifies the name of the ARC CE service as follows:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = arc https://arc.example.com:443/arex/rest/1.0
 
@@ -326,11 +277,11 @@ The submit description file command
 **arc_rte** :index:`arc_rte<single: arc_resources; submit commands>`
 can be used to request one of more of these labels.
 It is a comma-delimited list. If a label supports optional parameters, they
-can be provided after the label spearated by spaces.
+can be provided after the label separated by spaces.
 Here is an example showing use of two standard RTE labels, one with
 an optional parameter:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     arc_rte = ENV/RTE,ENV/PROXY USE_DELEGATION_DB
 
@@ -341,33 +292,41 @@ HTCondor constructs an ADL description of the job based on attributes in
 the job ClassAd, but some ADL elements don't have an equivalent job ClassAd
 attribute.
 The submit description file command
-**arc_resources** :index:`arc_resoruces<single: arc_resources; submit commands>`
+**arc_resources** :index:`arc_resources<single: arc_resources; submit commands>`
 can be used to specify these elements if they fall under the ``<Resources>``
 element of the ADL.
 The value should be a chunk of XML text that could be inserted inside the
 ``<Resources>`` element. For example:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     arc_resources = <NetworkInfo>gigabitethernet</NetworkInfo>
 
-The batch Grid Type (for PBS, LSF, SGE, and SLURM)
+Similarly, submit description file command
+**arc_application** :index:`arc_application<single: arc_resources; submit commands>`
+can be used to specify these elements if they fall under the ``<Application>``
+element of the ADL.
+
+The batch Grid Type (for SLURM, PBS, LSF, and SGE)
 --------------------------------------------------
 
 :index:`batch grid type`
 
-The **batch** grid type is used to submit to a local PBS, LSF, SGE, or
-SLURM system using the **grid** universe and the
+The **batch** grid type is used to submit to a local SLURM, PBS, LSF, or
+SGE system using the **grid** universe and the
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
 command by placing a variant of the following into the submit
 description file.
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-    grid_resource = batch pbs
+    grid_resource = batch slurm
 
-The second argument on the right hand side will be one of ``pbs``,
-``lsf``, ``sge``, or ``slurm``.
+The second argument on the right hand side will be one of ``slurm``,
+``pbs``, ``lsf``, or ``sge``.
+
+Submission to a batch system on a remote machine using SSH is also
+possible. This is described below.
 
 The batch GAHP server is a piece of software called the blahp.
 The configuration parameters ``BATCH_GAHP`` and ``BLAHPD_LOCATION``
@@ -376,12 +335,12 @@ files, respectively.
 The blahp has its own configuration file, located at /etc/blah.config
 (``$(RELEASE_DIR)``/etc/blah.config for a tarball release).
 
-The batch GAHP supports translating certain job classad attributes into the corresponding batch system submission parameters. However, note that not all parameters are supported.
+The batch GAHP supports translating certain job ClassAd attributes into the corresponding batch system submission parameters. However, note that not all parameters are supported.
 
-The following table summarizes how job classad attributes will be translated into the corresponding Slurm job parameters.
+The following table summarizes how job ClassAd attributes will be translated into the corresponding Slurm job parameters.
 
 +-------------------+---------------------+
-| Classad           | Slurm               |
+| Job ClassAd       | Slurm               |
 +===================+=====================+
 | ``RequestMemory`` | ``--mem``           |
 +-------------------+---------------------+
@@ -398,62 +357,111 @@ The following table summarizes how job classad attributes will be translated int
 
 Note that for Slurm, ``Queue`` is used for both ``--partition`` and ``--clusters``. If you use the ``partition@cluster`` syntax, the partition will be set to whatever is before the ``@``, and the cluster to whatever is after the ``@``. If you only wish to set the cluster, leave out the partition (e.g. use ``@cluster``).
 
+You can specify batch system parameters that HTCondor doesn't have
+translations for using the **batch_extra_submit_args** command in the
+submit description file.
 
-:index:`PBS (Portable Batch System)`
-:index:`submitting jobs to PBS<single: submitting jobs to PBS; grid computing>`
+.. code-block:: condor-submit
 
-The popular PBS (Portable Batch System) can be found at
-`http://www.pbsworks.com/ <http://www.pbsworks.com/>`_, and Torque is
-at
-(`http://www.adaptivecomputing.com/products/open-source/torque/ <http://www.adaptivecomputing.com/products/open-source/torque/>`_).
-
-As an alternative to the submission details given above, HTCondor jobs
-may be submitted to a local PBS system using the **grid** universe and
-the **grid_resource** command by placing the following into the submit
-description file.
-
-.. code-block:: text
-
-    grid_resource = pbs
-
-:index:`LSF`
-:index:`submitting jobs to Platform LSF<single: submitting jobs to Platform LSF; grid computing>`
-
-HTCondor jobs may be submitted to the Platform LSF batch system. Find
-the Platform product from the page
-`http://www.platform.com/Products/ <http://www.platform.com/Products/>`_
-for more information about Platform LSF.
-
-As an alternative to the submission details given above, HTCondor jobs
-may be submitted to a local Platform LSF system using the **grid**
-universe and the **grid_resource** command by placing the following
-into the submit description file.
-
-.. code-block:: text
-
-    grid_resource = lsf
-
-:index:`SGE (Sun Grid Engine)`
-:index:`submitting jobs to SGE<single: submitting jobs to SGE; grid computing>`
-
-The popular Grid Engine batch system (formerly known as Sun Grid Engine
-and abbreviated SGE) is available in two varieties: Oracle Grid Engine
-(`http://www.oracle.com/us/products/tools/oracle-grid-engine-075549.html <http://www.oracle.com/us/products/tools/oracle-grid-engine-075549.html>`_)
-and Univa Grid Engine
-(`http://www.univa.com/?gclid=CLXg6-OEy6wCFWICQAodl0lm9Q <http://www.univa.com/?gclid=CLXg6-OEy6wCFWICQAodl0lm9Q>`_).
-
-As an alternative to the submission details given above, HTCondor jobs
-may be submitted to a local SGE system using the **grid** universe and
-adding the **grid_resource** command by placing into the submit
-description file:
-
-.. code-block:: text
-
-    grid_resource = sge
+    batch_extra_submit_args = --cpus-per-task=4 --qos=fast
 
 The *condor_qsub* command line tool will take PBS/SGE style batch files
 or command line arguments and submit the job to HTCondor instead. See
 the :doc:`/man-pages/condor_qsub` manual page for details.
+
+Remote batch Job Submission via SSH
+'''''''''''''''''''''''''''''''''''
+
+HTCondor can submit jobs to a batch system on a remote machine via SSH.
+This requires an initial setup step that installs some binaries under
+your home directory on the remote machine and creates an SSH key that
+allows SSH authentication without the user typing a password.
+The setup command is *condor_remote_cluster*, which you should run at
+the command line.
+
+.. code-block:: text
+
+    condor_remote_cluster --add alice@login.example.edu slurm
+
+Once this setup command finishes successfully, you can submit jobs for the
+remote batch system by including the username and hostname in the
+**grid_resource** command in your submit description file.
+
+.. code-block:: condor-submit
+
+    grid_resource = batch slurm alice@login.example.edu
+
+Remote batch Job Submission via Reverse SSH
+'''''''''''''''''''''''''''''''''''''''''''
+
+Submission to a batch system on a remote machine requires that HTCondor
+be able to establish an SSH connection using just an ssh key for
+authentication.
+If the remote machine doesn't allow ssh keys or requires Multi-Factor
+Authentication (MFA), then the SSH connection can be established in the
+reverse connection using the Reverse GAHP.
+This requires some extra setup and maintenance, and is not recommended if
+the normal SSH connection method can be made to work.
+
+For the Reverse GAHP to work, your local machine must be reachable on
+the network from the remote machine on the SSH and HTCondor ports
+(22 and 9618, respectively).
+Also, your local machine must allow SSH logins using just an ssh key
+for authentication.
+
+First, run the *condor_remote_cluster* as you would for a regular
+remote SSH setup.
+
+.. code-block:: text
+
+    condor_remote_cluster --add alice@login.example.edu slurm
+
+Second, create an ssh key that's authorized to login to your account on
+your local machine and save the private key on the remote machine.
+The private key should not be protected with a passphrase.
+In the following examples, we'll assume the ssh private key is named
+``~/.ssh/id_rsa_rvgahp``.
+
+Third, select a pathname on your local machine for a unix socket file
+that will be used by the Reverse GAHP components to communicate with
+each other.
+The Reverse GAHP programs will create the file as your user identity,
+so we suggest using a location under your home directory or /tmp.
+In the following examples, we'll use ``/tmp/alice.rvgahp.socket``.
+
+Fourth, on the remote machine, create a ``~/bosco/glite/bin/rvgahp_ssh``
+shell script like this:
+
+.. code-block:: text
+
+    #!/bin/bash
+    exec ssh -o "ServerAliveInterval 60" -o "BatchMode yes" -i ~/.ssh/id_rsa_rvgahp alice@submithost "/usr/sbin/rvgahp_proxy /tmp/alice.rvgahp.sock"
+
+Run this script manually to ensure it works.
+It should print a couple messages from the *rvgahp_proxy* started on your
+local machine.
+You can kill the program once it's working correctly.
+
+.. code-block:: text
+
+    2022-03-23 13:06:08.304520 rvgahp_proxy[8169]: rvgahp_proxy starting...
+    2022-03-23 13:06:08.304766 rvgahp_proxy[8169]: UNIX socket: /tmp/alice.rvgahp.sock
+
+Finally, run the *rvgahp_server* program on the remote machine.
+You must ensure it remains running during the entire time you are
+submitting and running jobs on the batch system.
+
+.. code-block:: text
+
+    ~/bosco/glite/bin/rvgahp_server -b ~/bosco/glite
+
+Now, you can submit jobs for the remote batch system.
+Adding the **--rvgahp-socket** option to your **grid_resource** submit
+command tells HTCondor to use the Reverse GAHP for the SSH connection.
+
+.. code-block:: condor-submit
+
+    grid_resource = batch slurm alice@login.example.edu --rvgahp-socket /tmp/alice.rvgahp.sock
 
 The EC2 Grid Type
 -----------------
@@ -483,7 +491,7 @@ universe, setting the
 command to **ec2**, followed by the service's URL. For example, partial
 contents of the submit description file may be
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = ec2 https://ec2.us-east-1.amazonaws.com/
 
@@ -510,7 +518,7 @@ first authentication method uses the EC2 API's built-in authentication.
 Specify the service with expected ``http://`` or ``https://`` URL, and
 set the EC2 access key and secret access key as follows:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     ec2_access_key_id = /path/to/access.key
     ec2_secret_access_key = /path/to/secret.key
@@ -531,7 +539,7 @@ specifies the path to the X.509 private key, which is not the same as
 the built-in authentication's secret key. The following example
 illustrates the specification for X.509 authentication:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = ec2 x509://service.example
     ec2_access_key_id = /path/to/x.509/public.key
@@ -591,7 +599,7 @@ are separated by a commas, and/or spaces. For example, to specify that
 the first ephemeral device should be ``/dev/sdb`` and the second
 ``/dev/sdc``:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     ec2_block_device_mapping = ephemeral0:/dev/sdb, ephemeral1:/dev/sdc
 
@@ -650,7 +658,7 @@ submit command
 specifies this floating point value. For example, to bid 1.1 cents per
 hour on Amazon:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     ec2_spot_price = 0.011
 
@@ -686,7 +694,7 @@ command name.
 For example, the submit description file commands to set parameter
 ``IamInstanceProfile.Name`` to value ``ExampleProfile`` are
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     ec2_parameter_names = IamInstanceProfile.Name
     ec2_parameter_IamInstanceProfile_Name = ExampleProfile
@@ -776,8 +784,6 @@ The EC2 GAHP supplies no default value, if it does not find a CA file.
 The EC2 GAHP will set the CA directory given whichever of these
 variables it finds first, checking in the following order:
 
-#. The HTCondor configuration variable ``GSI_DAEMON_TRUSTED_CA_DIR``
-   :index:`GSI_DAEMON_TRUSTED_CA_DIR`.
 #. The environment variable ``X509_CERT_DIR``, set when the
    *condor_master* starts up.
 #. The HTCondor configuration variable ``GAHP_SSL_CADIR``
@@ -845,7 +851,7 @@ command to **gce**, followed by the service's URL, your GCE project, and
 the desired GCE zone to be used. The submit description file command
 will be similar to:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = gce https://www.googleapis.com/compute/v1 my_proj us-central1-a
 
@@ -875,7 +881,7 @@ description file using the
 **gce_auth_file** :index:`gce_auth_file<single: gce_auth_file; submit commands>`
 command, as in the example:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     gce_auth_file = /path/to/auth-file
 
@@ -896,7 +902,7 @@ the submit description file using the
 command. The value should be a comma-separated list of name=value
 settings, as the example:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     gce_metadata = setting1=foo,setting2=bar
 
@@ -942,7 +948,7 @@ the number of seconds between restarts using *GCE_GAHP_LIFETIME*, where zero
 means to never restart.  Restarting the *gce_gahp* does not affect the jobs
 themselves.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     GCE_GAHP     = $(SBIN)/gce_gahp
     GCE_GAHP_LOG = /tmp/GceGahpLog.$(USERNAME)
@@ -965,13 +971,13 @@ information about Azure is available at
 Azure Job Submission
 ''''''''''''''''''''
 
-HTCondor jobs are submitted to the Azyre service with the **grid**
+HTCondor jobs are submitted to the Azure service with the **grid**
 universe, setting the
 **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
 command to **azure**, followed by your Azure subscription id. The submit
 description file command will be similar to:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     grid_resource = azure 4843bfe3-1ebe-423e-a6ea-c777e57700a9
 
@@ -997,7 +1003,7 @@ in a file under your HOME directory. HTCondor will use these credentials
 to communicate with Azure.
 
 You can also set up a service account in Azure for HTCondor to use. This
-lets you limit the level of acccess HTCondor has to your Azure account.
+lets you limit the level of access HTCondor has to your Azure account.
 Instructions for creating a service account can be found here:
 `http://research.cs.wisc.edu/htcondor/gahp/AzureGAHPSetup.docx <http://research.cs.wisc.edu/htcondor/gahp/AzureGAHPSetup.docx>`_.
 
@@ -1006,7 +1012,7 @@ you can specify its location in the submit description file using the
 **azure_auth_file** :index:`azure_auth_file<single: azure_auth_file; submit commands>`
 command, as in the example:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     azure_auth_file = /path/to/auth-file
 
@@ -1058,7 +1064,7 @@ and specify its location in the submit description file using the
 **boinc_authenticator_file** :index:`boinc_authenticator_file<single: boinc_authenticator_file; submit commands>`
 command, as in the example:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     boinc_authenticator_file = /path/to/auth-file
 
@@ -1084,338 +1090,6 @@ The following configuration variable is specific to the **boinc** grid
 type. The value listed here is the default. A different value may be
 specified in the HTCondor configuration files.
 
-.. code-block:: text
+.. code-block:: condor-config
 
     BOINC_GAHP = $(SBIN)/boinc_gahp
-
-Matchmaking in the Grid Universe
---------------------------------
-
-:index:`on the Grid<single: on the Grid; matchmaking>`
-:index:`matchmaking<single: matchmaking; grid computing>`
-
-In a simple usage, the grid universe allows users to specify a single
-grid site as a destination for jobs. This is sufficient when a user
-knows exactly which grid site they wish to use, or a higher-level
-resource broker (such as the European Data Grid's resource broker) has
-decided which grid site should be used.
-
-When a user has a variety of grid sites to choose from, HTCondor allows
-matchmaking of grid universe jobs to decide which grid resource a job
-should run on. Please note that this form of matchmaking is relatively
-new. There are some rough edges as continual improvement occurs.
-
-To facilitate HTCondor's matching of jobs with grid resources, both the
-jobs and the grid resources are involved. The job's submit description
-file provides all commands needed to make the job work on a matched grid
-resource. The grid resource identifies itself to HTCondor by advertising
-a ClassAd. This ClassAd specifies all necessary attributes, such that
-HTCondor can properly make matches. The grid resource identification is
-accomplished by using *condor_advertise* to send a ClassAd representing
-the grid resource, which is then used by HTCondor to make matches.
-
-Job Submission
-''''''''''''''
-
-To submit a grid universe job intended for a single, specific **gt2**
-resource, the submit description file for the job explicitly specifies
-the resource:
-
-.. code-block:: text
-
-    grid_resource = gt2 grid.example.com/jobmanager-pbs
-
-If there were multiple **gt2** resources that might be matched to the
-job, the submit description file changes:
-
-.. code-block:: text
-
-    grid_resource   = $$(resource_name)
-    requirements    = TARGET.resource_name =!= UNDEFINED
-
-The **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
-command uses a substitution macro. The substitution macro defines the
-value of ``resource_name`` using attributes as specified by the matched
-grid resource. The
-**requirements** :index:`requirements<single: requirements; submit commands>` command
-further restricts that the job may only run on a machine (grid resource)
-that defines ``grid_resource``. Note that this attribute name is
-invented for this example. To make matchmaking work in this way, both
-the job (as used here within the submit description file) and the grid
-resource (in its created and advertised ClassAd) must agree upon the
-name of the attribute.
-
-As a more complex example, consider a job that wants to run not only on
-a **gt2** resource, but on one that has the Bamboozle software
-installed. The complete submit description file might appear:
-
-.. code-block:: text
-
-    universe        = grid
-    executable      = analyze_bamboozle_data
-    output          = aaa.$(Cluster).out
-    error           = aaa.$(Cluster).err
-    log             = aaa.log
-    grid_resource   = $$(resource_name)
-    requirements    = (TARGET.HaveBamboozle == True) && (TARGET.resource_name =!= UNDEFINED)
-    queue
-
-Any grid resource which has the ``HaveBamboozle`` attribute defined as
-well as set to ``True`` is further checked to have the ``resource_name``
-attribute defined. Where this occurs, a match may be made (from the
-job's point of view). A grid resource that has one of these attributes
-defined, but not the other results in no match being made.
-
-Note that the entire value of **grid_resource** comes from the grid
-resource's ad. This means that the job can be matched with a resource of
-any type, not just **gt2**.
-
-Advertising Grid Resources to HTCondor
-''''''''''''''''''''''''''''''''''''''
-
-Any grid resource that wishes to be matched by HTCondor with a job must
-advertise itself to HTCondor using a ClassAd. To properly advertise, a
-ClassAd is sent periodically to the *condor_collector* daemon. A
-ClassAd is a list of pairs, where each pair consists of an attribute
-name and value that describes an entity. There are two entities relevant
-to HTCondor: a job, and a machine. A grid resource is a machine. The
-ClassAd describes the grid resource, as well as identifying the
-capabilities of the grid resource. It may also state both requirements
-and preferences (called **rank** :index:`rank<single: rank; submit commands>`)
-for the jobs it will run. See the :doc:`/users-manual/matchmaking-with-classads`
-section for an overview of the interaction between matchmaking and ClassAds. A list of
-common machine ClassAd attributes is given in the
-:doc:`/classad-attributes/machine-classad-attributes` appendix page.
-
-To advertise a grid site, place the attributes in a file. Here is a
-sample ClassAd that describes a grid resource that is capable of running
-a **gt2** job.
-
-.. code-block:: text
-
-    # example grid resource ClassAd for a gt2 job
-    MyType         = "Machine"
-    TargetType     = "Job"
-    Name           = "Example1_Gatekeeper"
-    Machine        = "Example1_Gatekeeper"
-    resource_name  = "gt2 grid.example.com/jobmanager-pbs"
-    UpdateSequenceNumber  = 4
-    Requirements   = (TARGET.JobUniverse == 9)
-    Rank           = 0.000000
-    CurrentRank    = 0.000000
-
-Some attributes are defined as expressions, while others are integers,
-floating point values, or strings. The type is important, and must be
-correct for the ClassAd to be effective. The attributes
-
-.. code-block:: text
-
-    MyType         = "Machine"
-    TargetType     = "Job"
-
-identify the grid resource as a machine, and that the machine is to be
-matched with a job. In HTCondor, machines are matched with jobs, and
-jobs are matched with machines. These attributes are strings. Strings
-are surrounded by double quote marks.
-
-The attributes ``Name`` and ``Machine`` are likely to be defined to be
-the same string value as in the example:
-
-.. code-block:: text
-
-    Name           = "Example1_Gatekeeper"
-    Machine        = "Example1_Gatekeeper"
-
-Both give the fully qualified host name for the resource. The ``Name``
-may be different on an SMP machine, where the individual CPUs are given
-names that can be distinguished from each other. Each separate grid
-resource must have a unique name.
-
-Where the job depends on the resource to specify the value of the
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
-command by the use of the substitution macro, the ClassAd for the grid
-resource (machine) defines this value. The example given as
-
-.. code-block:: text
-
-    grid_resource = "gt2 grid.example.com/jobmanager-pbs"
-
-defines this value. Note that the invented name of this variable must
-match the one utilized within the submit description file. To make the
-matchmaking work, both the job (as used within the submit description
-file) and the grid resource (in this created and advertised ClassAd)
-must agree upon the name of the attribute.
-
-A machine's ClassAd information can be time sensitive, and may change
-over time. Therefore, ClassAds expire and are thrown away. In addition,
-the communication method by which ClassAds are sent implies that entire
-ads may be lost without notice or may arrive out of order. Out of order
-arrival leads to the definition of an attribute which provides an
-ordering. This positive integer value is given in the example ClassAd as
-
-.. code-block:: text
-
-    UpdateSequenceNumber  = 4
-
-This value must increase for each subsequent ClassAd. If state
-information for the ClassAd is kept in a file, a script executed each
-time the ClassAd is to be sent may use a counter for this value. An
-alternative for a stateless implementation sends the current time in
-seconds (since the epoch, as given by the C time() function call).
-
-The requirements that the grid resource sets for any job that it will
-accept are given as
-
-.. code-block:: text
-
-    Requirements     = (TARGET.JobUniverse == 9)
-
-This set of requirements state that any job is required to be for the
-**grid** universe.
-
-The attributes
-
-.. code-block:: text
-
-    Rank             = 0.000000
-    CurrentRank      = 0.000000
-
-are both necessary for HTCondor's negotiation to proceed, but are not
-relevant to grid matchmaking. Set both to the floating point value 0.0.
-
-The example machine ClassAd becomes more complex for the case where the
-grid resource allows matches with more than one job:
-
-.. code-block:: text
-
-    # example grid resource ClassAd for a gt2 job
-    MyType         = "Machine"
-    TargetType     = "Job"
-    Name           = "Example1_Gatekeeper"
-    Machine        = "Example1_Gatekeeper"
-    resource_name  = "gt2 grid.example.com/jobmanager-pbs"
-    UpdateSequenceNumber  = 4
-    Requirements   = (CurMatches < 10) && (TARGET.JobUniverse == 9)
-    Rank           = 0.000000
-    CurrentRank    = 0.000000
-    WantAdRevaluate = True
-    CurMatches     = 1
-
-In this example, the two attributes ``WantAdRevaluate`` and
-``CurMatches`` appear, and the ``Requirements`` expression has changed.
-
-``WantAdRevaluate`` is a boolean value, and may be set to either
-``True`` or ``False``. When ``True`` in the ClassAd and a match is made
-(of a job to the grid resource), the machine (grid resource) is not
-removed from the set of machines to be considered for further matches.
-This implements the ability for a single grid resource to be matched to
-more than one job at a time. Note that the spelling of this attribute is
-incorrect, and remains incorrect to maintain backward compatibility.
-
-To limit the number of matches made to the single grid resource, the
-resource must have the ability to keep track of the number of HTCondor
-jobs it has. This integer value is given as the ``CurMatches`` attribute
-in the advertised ClassAd. It is then compared in order to limit the
-number of jobs matched with the grid resource.
-
-.. code-block:: text
-
-    Requirements   = (CurMatches < 10) && (TARGET.JobUniverse == 9)
-    CurMatches     = 1
-
-This example assumes that the grid resource already has one job, and is
-willing to accept a maximum of 9 jobs. If ``CurMatches`` does not appear
-in the ClassAd, HTCondor uses a default value of 0.
-:index:`NEGOTIATOR_MATCHLIST_CACHING`
-:index:`NEGOTIATOR_IGNORE_USER_PRIORITIES`
-
-For multiple matching of a site ClassAd to work correctly, it is also
-necessary to add the following to the configuration file read by the
-*condor_negotiator*:
-
-.. code-block:: text
-
-    NEGOTIATOR_MATCHLIST_CACHING = False
-    NEGOTIATOR_IGNORE_USER_PRIORITIES = True
-
-This ClassAd (likely in a file) is to be periodically sent to the
-*condor_collector* daemon using *condor_advertise*. A recommended
-implementation uses a script to create or modify the ClassAd together
-with *cron* to send the ClassAd every five minutes. The
-*condor_advertise* program must be installed on the machine sending the
-ClassAd, but the remainder of HTCondor does not need to be installed.
-The required argument for the *condor_advertise* command is
-*UPDATE_STARTD_AD*.
-
-Advanced Grid Usage
-'''''''''''''''''''
-
-What if a job fails to run at a grid site due to an error? It will be
-returned to the queue, and HTCondor will attempt to match it and re-run
-it at another site. HTCondor isn't very clever about avoiding sites that
-may be bad, but you can give it some assistance. Let's say that you want
-to avoid running at the last grid site you ran at. You could add this to
-your job description:
-
-.. code-block:: text
-
-    match_list_length = 1
-    Rank              = TARGET.Name != LastMatchName0
-
-This will prefer to run at a grid site that was not just tried, but it
-will allow the job to be run there if there is no other option.
-
-When you specify **match_list_length**, you provide an integer N, and
-HTCondor will keep track of the last N matches. The oldest match will be
-LastMatchName0, and next oldest will be LastMatchName1, and so on. (See
-the *condor_submit* manual page for more details.) The Rank expression
-allows you to specify a numerical ranking for different matches. When
-combined with **match_list_length**, you can prefer to avoid sites
-that you have already run at.
-
-In addition, *condor_submit* has two options to help control grid
-universe job resubmissions and rematching. See the definitions of the
-submit description file commands **globus_resubmit** and
-**globus_rematch** on the :doc:`/man-pages/condor_submit` manual page. These
-options are independent of **match_list_length**.
-
-There are some new attributes that will be added to the Job ClassAd, and
-may be useful to you when you write your rank, requirements,
-globus_resubmit or globus_rematch option. Please refer to the 
-:doc:`/classad-attributes/job-classad-attributes` section to see a
-list containing the following attributes:
-
--  NumJobMatches
--  NumGlobusSubmits
--  NumSystemHolds
--  HoldReason
--  ReleaseReason
--  EnteredCurrentStatus
--  LastMatchTime
--  LastRejMatchTime
--  LastRejMatchReason
-
-The following example of a command within the submit description file
-releases jobs 5 minutes after being held, increasing the time between
-releases by 5 minutes each time. It will continue to retry up to 4 times
-per Globus submission, plus 4. The plus 4 is necessary in case the job
-goes on hold before being submitted to Globus, although this is
-unlikely.
-
-.. code-block:: text
-
-    periodic_release = ( NumSystemHolds <= ((NumGlobusSubmits * 4) + 4) ) \
-       && (NumGlobusSubmits < 4) && \
-       ( HoldReason != "via condor_hold (by user $ENV(USER))" ) && \
-       ((time() - EnteredCurrentStatus) > ( NumSystemHolds *60*5 ))
-
-The following example forces Globus resubmission after a job has been
-held 4 times per Globus submission.
-
-.. code-block:: text
-
-    globus_resubmit = NumSystemHolds == (NumGlobusSubmits + 1) * 4
-
-If you are concerned about unknown or malicious grid sites reporting to
-your *condor_collector*, you should use HTCondor's security options,
-documented in the :doc:`/admin-manual/security` section.

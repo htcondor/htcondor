@@ -367,18 +367,30 @@ sub DoChild
 
         if ($iswindows) {
             my $regkey = "HKLM\\Software\\Python\\PythonCore\\3.6\\InstallPath";
+            my $pyver = "3.6";
 
             # use 32 bit python if we have a 32 bit htcondor python module
             my $reldir = `condor_config_val release_dir`; chomp $reldir;
             my $relpy = "$reldir\\lib\\python";
             if( -f "$relpy\\htcondor\\htcondor.cp36-win32.pyd" ) {
-                $regkey = "HKLM\\Software\\wow6432node\\Python\\PythonCore\\3.6\\InstallPath" 
+                $regkey = "HKLM\\Software\\wow6432node\\Python\\PythonCore\\3.6\\InstallPath";
+            }
+            # use python 3.9, or 3.10 or 3.8 (64bit) if we have bindings for that
+            if( -f "$relpy\\htcondor\\htcondor.cp39-win_amd64.pyd" ) {
+                $regkey = "HKLM\\Software\\Python\\PythonCore\\3.9\\InstallPath";
+                $pyver = "3.9";
+            } elsif ( -f "$relpy\\htcondor\\htcondor.cp38-win_amd64.pyd" ) {
+                $regkey = "HKLM\\Software\\Python\\PythonCore\\3.8\\InstallPath";
+                $pyver = "3.8";
+            } elsif ( -f "$relpy\\htcondor\\htcondor.cp310-win_amd64.pyd" ) {
+                $regkey = "HKLM\\Software\\Python\\PythonCore\\3.10\\InstallPath";
+                $pyver = "3.10";
             }
 
             my @reglines = `reg query $regkey /ve`;
             for my $line (@reglines) {
                 if ($line =~ /REG_SZ\s+(.+)$/) {
-                    print "\tfound python 3.6 install dir : '$1'\n";
+                    print "\tfound python $pyver install dir : '$1'\n";
                    	# Since we're using the full path, 'python.exe' will
                    	# always by the right Python version, and some of the
                    	# installs don't have a 'python3.exe'.

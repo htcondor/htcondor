@@ -219,7 +219,7 @@ int main(int argc, const char *argv[])
 	unsigned int cat_and_flags = D_FULLDEBUG | D_CAT;
 	//if (dash_d_fulldebug) { cat_and_flags |= D_FULLDEBUG; }
 	DebugOutputChoice choice=1<<D_ERROR;
-	if (dash_diagnostic || dash_log_route_steps) { choice |= 1<<D_ALWAYS; }
+	if (dash_diagnostic || dash_log_route_steps) { choice |= (1<<D_ALWAYS)|(1<<D_STATUS); }
 	dprintf_set_output_intercept(cat_and_flags, choice, _dprintf_intercept);
 
 

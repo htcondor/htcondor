@@ -551,16 +551,11 @@ main( int argc, const char** argv)
 		}
 		else if (is_dash_arg_colon_prefix(argv[i], "simulate", &pcolon, 3)) {
 			opt_simulate = 1;
-			if (pcolon) {
-				sim_index = atoi(pcolon+1);
-				if (sim_index < 0 || sim_index > sim_index_max) {
-					// Deliberately unparseable.
-					fprintf(stderr, "Error: simulation must be in range of 0-%d\r\n", sim_index_max);
-					usage(stderr, argv[0]);
-					return 1;
-				}
-				const char * pcomma = strchr(pcolon+1,',');
-				if (pcomma) { sim_device_count = atoi(pcomma+1); }
+			if ( ! setupSimulatedDevices(pcolon ? pcolon+1 : nullptr)) {
+				// print an error message that can't be parsed as classad
+				fprintf(stderr, "Error: simulation must be in range of 0-%d\r\n", sim_index_max);
+				usage(stderr, argv[0]);
+				return 1;
 			}
 		}
 		else if (is_dash_arg_prefix(argv[i], "nvcuda",-1)) {

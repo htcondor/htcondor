@@ -65,7 +65,7 @@ std::string peer_condor_version;
 std::string sec_session_id;
 
 // this appears at the bottom of this file
-extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
+int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 
 #ifdef WIN32
 int STDIN_FILENO = fileno(stdin);
@@ -364,7 +364,7 @@ stdin_pipe_handler(int) {
 										CONDOR_PARENT_FQU,
 										NULL,
 										0,
-										nullptr ) ) {
+										nullptr, false ) ) {
 					gahp_output_return_error();
 				} else {
 					sec_session_id = claimid.secSessionId();
@@ -698,7 +698,6 @@ main( int argc, char **argv )
 
 // This function is called by dprintf - always display our pid in our
 // log entries.
-extern "C"
 int
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {

@@ -33,7 +33,9 @@ PASSPHRASE_LOCATION=`echo ~/.bosco/.pass`
 PRIVATE_KEY_LOCATION=`echo ~/.ssh/bosco_key.rsa`
 # Set 'ssh -o BatchMode yes' by default so we fail if a password is requested
 SSH_BATCHMODE=yes
-
+BASH_LOGIN=yes
+RVGAHP=no
+RVGAHP_SOCKET=""
 
 # Parse command line arguments 
 PROG_NAME=$0
@@ -48,6 +50,8 @@ Options: \n \
  --rgahp-glite PATH \tpath to the directory of the script (~/bosco/glite)\n \
  --rgahp-script SCRIPT \tpath to script to start up blahp (PATH/bin/blahpd)\n \
  --rgahp-nobatchmode \t\tDisable SSH BatchMode \n \
+ --rgahp-nologin \t\tDisable bash -l flag \n \
+ --rvgahp-socket SOCKET_FILE \tUse the reverse gahp with the given socket file \n \
  --help, -h \t\t\tprint this\n \
  remote_hostname: [USER@]HOST[:PORT] same string that can be used to ssh to the host\n \
  remote arguments are passed to the REMOTE_CMD
@@ -74,9 +78,14 @@ while [ $# != 0 ] ; do
             shift 2;;
         --rgahp-nobatchmode ) SSH_BATCHMODE=no
             shift ;;
+        --rgahp-nologin ) BASH_LOGIN=no
+            shift ;;
         --rgahp-* ) echo "Unknown option: $1" 1>&2
             echo -e "$USAGE"
             exit 1;;
+        --rvgahp-socket ) RVGAHP_SOCKET="$2"
+            RVGAHP=yes
+            shift 2;;
         -- ) shift
             if [ "$REMOTE_CMD" = "" -o "$1" = "condor_ft-gahp" ] ; then
                 REMOTE_CMD="$1"
@@ -113,6 +122,13 @@ if [ "$REMOTE_CMD" = "" ] ; then
     exit 1
 fi
 
+if [ "$RVGAHP" = "yes" ] ; then
+    # TODO handle default RVGAHP_SOCKET
+    exec $(condor_config_val SBIN)/rvgahp_client "${RVGAHP_SOCKET}" "${REMOTE_CMD}"
+    echo "Failed to run rvgahp_client" 1>&2
+    exit 1
+fi
+
 ##### Handling authentication #####
 # Start and init ssh agent if key file is specified
 
@@ -125,9 +141,9 @@ if [ -n "$PRIVATE_KEY_LOCATION" -a -f "$PRIVATE_KEY_LOCATION" ] ; then
 	# Call the external program to do ssh-add
         # If a passphrase is required pass it to the script
         if [ -n "$PASSPHRASE_LOCATION" ]; then
-	    bosco_ssh_start --key "$PRIVATE_KEY_LOCATION" --pass "$PASSPHRASE_LOCATION"
+	    condor_ssh_start --key "$PRIVATE_KEY_LOCATION" --pass "$PASSPHRASE_LOCATION"
         else
-	    bosco_ssh_start --key "$PRIVATE_KEY_LOCATION" --nopass
+	    condor_ssh_start --key "$PRIVATE_KEY_LOCATION" --nopass
         fi
 	ADD_STATUS=$?
 
@@ -149,9 +165,11 @@ SSH_ARGS=(-p $REMOTE_PORT)
 # https://opensciencegrid.atlassian.net/browse/SOFTWARE-4239
 [[ $SSH_BATCHMODE == "yes" ]] && SSH_ARGS+=(-o "BatchMode yes")
 
+[[ $BASH_LOGIN == "yes" ]] && BASH_ARGS+=(-l)
+
 #echo "** Follows output of: ssh ${SSH_ARGS[@]} $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'BLAHPD_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/blahpd $*'\""
 if [[ $REMOTE_CMD == "blahpd" || $REMOTE_CMD == "batch_gahp" ]] ; then
-    ssh "${SSH_ARGS[@]}" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'BLAHPD_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/$REMOTE_CMD $*'"
+    ssh "${SSH_ARGS[@]}" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash "${BASH_ARGS[@]}" -c "'BLAHPD_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/$REMOTE_CMD $*'"
     SSH_STATUS=$?
 elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
     # We need to set up a tunnel from the remote machine for the file
@@ -167,7 +185,12 @@ elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
     # several random ports in case we get unlucky on the first attempt.
     # We extract the IP and port on which the gridmanager can be
     # contacted from $CONDOR_INHERIT.
-    GRIDMANAGER_ADDRESS=`echo "$CONDOR_INHERIT" | sed 's/[^<]*<\([^?>]*\).*/\1/'`
+    if [ "$CONDOR_INHERIT" != "" ] ; then
+        GRIDMANAGER_ADDRESS=`echo "$CONDOR_INHERIT" | sed 's/[^<]*<\([^?>]*\).*/\1/'`
+    else
+        GRIDMANAGER_ADDRESS="127.0.0.1:12345"
+        echo "CONDOR_INHERIT not defined, using bogus value $GRIDMANAGER_ADDRESS for gridmanager address" 1>&2
+    fi
     SSH_STATUS=255
     if [[ `ssh -V 2>&1` =~ ^OpenSSH_[5-9].* ]] ; then
         SSH_ARGS+=(-o ExitOnForwardFailure=yes)
@@ -177,7 +200,7 @@ elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
     fi
     while ((tries-- > 0 && SSH_STATUS == 255)) ; do
         let port=${RANDOM}+32768
-        ssh "${SSH_ARGS[@]}" -R $port:$GRIDMANAGER_ADDRESS $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'echo Allocated port $port for remote forward to 1>&2 ; CONDOR_CONFIG=$REMOTE_GLITE/etc/condor_config.ft-gahp $REMOTE_GLITE/bin/condor_ft-gahp -f $*'"
+        ssh "${SSH_ARGS[@]}" -R $port:$GRIDMANAGER_ADDRESS $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash "${BASH_ARGS[@]}" -c "'echo Allocated port $port for remote forward to 1>&2 ; CONDOR_CONFIG=$REMOTE_GLITE/etc/condor_config.ft-gahp $REMOTE_GLITE/bin/condor_ft-gahp -f $*'"
         SSH_STATUS=$?
     done
 else

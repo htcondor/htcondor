@@ -34,8 +34,8 @@
 
 #include "Resource.h"
 #include "claim.h"
-#include "starter_mgr.h"
 #include "vmuniverse_mgr.h"
+#include "ad_transforms.h"
 
 #if HAVE_HIBERNATION
 #  include "hibernation_manager.h"
@@ -56,6 +56,10 @@
 
 #ifndef NUM_ELEMENTS
 #define NUM_ELEMENTS(_ary)   (sizeof(_ary) / sizeof((_ary)[0]))
+#endif
+
+#ifdef LINUX
+#include "VolumeManager.h"
 #endif
 
 typedef float (Resource::*ResourceFloatMember)();
@@ -152,7 +156,7 @@ private:
 public:
 	void	compute_static();
 	void	compute_dynamic(bool for_update, Resource * rip=NULL);
-	void	publish_static(ClassAd* cp) { starter_mgr.publish(cp); }
+	void	publish_static(ClassAd* cp) { Starter::publish(cp); }
 	void	publish_dynamic(ClassAd*);
 	void	publishSlotAttrs( ClassAd* cap );
 
@@ -260,9 +264,9 @@ public:
 	void		markShutdown() { is_shutting_down = true; };
 	bool		isShuttingDown() const { return is_shutting_down; };
 
-	StarterMgr starter_mgr;
-
 	VMUniverseMgr m_vmuniverse_mgr;
+
+	AdTransforms m_execution_xfm;
 
 #if HAVE_BACKFILL
 	BackfillMgr* m_backfill_mgr;
@@ -343,6 +347,10 @@ public:
 		last_drain_stop_time = time(NULL);
 		stats.Drain.Add( last_drain_stop_time - last_drain_start_time );
 	}
+
+#ifdef LINUX
+	VolumeManager *getVolumeManager() const {return m_volume_mgr.get();}
+#endif //LINUX
 
 private:
 	static void token_request_callback(bool success, void *miscdata);
@@ -435,6 +443,10 @@ private:
 	int total_draining_badput;
 	int total_draining_unclaimed;
 	int max_job_retirement_time_override;
+
+#ifdef LINUX
+	std::unique_ptr<VolumeManager> m_volume_mgr;
+#endif
 
 	DCTokenRequester m_token_requester;
 	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;

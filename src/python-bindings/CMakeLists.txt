@@ -2,7 +2,7 @@
 set( HTCONDOR_BINDINGS_SOURCES collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp daemon_location.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp credd.cpp secman.cpp event.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp JobEventLog.cpp exception_utils.cpp )
 
 if(WINDOWS)
-  if(WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND)
+  if(WITH_PYTHON_BINDINGS AND ( PYTHONLIBS_FOUND OR PYTHON3LIBS_FOUND ))
     # Modern compilers complain about using the deprecated std::auto_ptr.
     # Prevent boost from using them.
     add_definitions ( -DBOOST_NO_AUTO_PTR )
@@ -10,9 +10,13 @@ if(WINDOWS)
 	#only for VS2012 and above
 	if(NOT (MSVC_VERSION LESS 1700))
 		#only for boost-1.54.0 or boost-1.68
-		IF("${BOOST_VER}" MATCHES "boost-1.(54|68).0")
+		IF("${BOOST_VER}" MATCHES "boost-1.(54|68|78).0")
 			message(STATUS "===> Generating python-bindings with boost 1.${CMAKE_MATCH_1}")
 			set(BOOST_LIB_BOOST_VER "1_${CMAKE_MATCH_1}")
+			if ("${CMAKE_MATCH_1}" EQUAL "78")
+				# disable python2
+				unset (PYTHON_VERSION_STRING)
+			endif()
 			if ("${CMAKE_MATCH_1}" EQUAL "54") # no bitness neeeded	(32 bit only)
 			else() #need bitness
 				if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -26,7 +30,7 @@ if(WINDOWS)
 				set(BOOST_LIB_PY3_VC_VER "python3-vc110")
 			else()
 				set(BOOST_LIB_PY2_VC_VER "python27-vc141")
-				set(BOOST_LIB_PY3_VC_VER "python36-vc141")
+				set(BOOST_LIB_PY3_VC_VER "${PYTHON3_LIB_BASENAME}-${BOOST_DLL_VCVER}")
 			endif()
 
 			link_directories(${BOOST_LD})
@@ -133,8 +137,8 @@ if(WINDOWS)
 				set(THE_BOOST_LIBS
 				  optimized ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
 				      debug ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
-				  optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-				      debug ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+				#  optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+				#      debug ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
 					)
 
 				condor_shared_lib( py3classad classad.cpp classad_wrapper.h exprtree_wrapper.h exception_utils.cpp classad_exceptions.cpp )
@@ -172,7 +176,7 @@ if(WINDOWS)
 				install ( TARGETS py3htcondor DESTINATION ${C_PYTHONARCHLIB}/htcondor )
 				install ( TARGETS py3classad_module DESTINATION ${C_PYTHONARCHLIB}/classad )
 
-			endif(DEFINED PYTHON3_VERSION_STRING) # python36 was found
+			endif(DEFINED PYTHON3_VERSION_STRING) # python3x was found
 
 		# more targets are built if we plan on building wheels
 		if ( WANT_PYTHON_WHEELS )
@@ -213,7 +217,7 @@ else()
           if (${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7" OR ${SYSTEM_NAME} MATCHES "amzn2" OR ${SYSTEM_NAME} MATCHES "fc3[0-9]" OR ${SYSTEM_NAME} MATCHES "Debian.*10" OR WANT_PYTHON_WHEELS)
             set ( PYTHON_BOOST_LIB "boost_python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}" )
           endif()
-          if (${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8" )
+          if (${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8" OR ${SYSTEM_NAME} MATCHES "rocky8")
             set ( PYTHON_BOOST_LIB "boost_python${PYTHON_VERSION_MAJOR}" )
           endif()
           if (${SYSTEM_NAME} MATCHES "fc2[0-9]" )
@@ -316,7 +320,7 @@ else()
       if (NOT DEFINED PYTHON3_BOOST_LIB)
         if (${SYSTEM_NAME} MATCHES "Debian.*9" OR ${SYSTEM_NAME} MATCHES "Ubuntu.*16" OR ${SYSTEM_NAME} MATCHES "Ubuntu.*18")
           set ( PYTHON3_BOOST_LIB "boost_python-py${PYTHON3_VERSION_MAJOR}${PYTHON3_VERSION_MINOR}" )
-        elseif (${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8" )
+        elseif (${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8" OR ${SYSTEM_NAME} MATCHES "rocky8")
           set ( PYTHON3_BOOST_LIB "boost_python${PYTHON3_VERSION_MAJOR}" )
         else ()
           set ( PYTHON3_BOOST_LIB "boost_python${PYTHON3_VERSION_MAJOR}${PYTHON3_VERSION_MINOR}" )

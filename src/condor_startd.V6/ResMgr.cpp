@@ -446,6 +446,12 @@ ResMgr::init_resources( void )
 	int i, num_res;
 	CpuAttributes** new_cpu_attrs;
 
+	m_execution_xfm.config("JOB_EXECUTION");
+
+#ifdef LINUX
+	m_volume_mgr.reset(new VolumeManager());
+#endif // LINUX
+
     stats.Init();
 
     m_attr->init_machine_resources();
@@ -489,7 +495,7 @@ ResMgr::init_resources( void )
 		// Now, we can finally allocate our resources array, and
 		// populate it.
 	for( i=0; i<num_res; i++ ) {
-		addResource( new Resource( new_cpu_attrs[i], i+1, num_res>1 ) );
+		addResource( new Resource( new_cpu_attrs[i], i+1 ) );
 	}
 
 		// We can now seed our IdDispenser with the right slot id.
@@ -1784,6 +1790,12 @@ ResMgr::addResource( Resource *rip )
 			parent->add_dynamic_child(rip);
 		}
 	}
+
+#ifdef LINUX
+	if (!m_volume_mgr) {
+		rip->setVolumeManager(m_volume_mgr.get());
+	}
+#endif // LINUX
 }
 
 
@@ -1945,7 +1957,7 @@ static void clean_private_attrs(ClassAd & ad)
 	for (auto i = ad.begin(); i != ad.end(); ++i) {
 		const std::string & name = i->first;
 
-		if (ClassAdAttributeIsPrivate(name)) {
+		if (ClassAdAttributeIsPrivateAny(name)) {
 			// TODO: redact these while still providing some info, perhaps return the HASH?
 			ad.Assign(name, "<redacted>");
 		}
@@ -2115,13 +2127,11 @@ ResMgr::processAllocList( void )
 
 		// We're done destroying, and there's something to allocate.
 
-	bool multiple_slots = (alloc_list.Number() + numSlots()) > 1;
-
 		// Create the new Resource objects.
 	CpuAttributes* cap;
 	alloc_list.Rewind();
 	while( alloc_list.Next(cap) ) {
-		addResource( new Resource( cap, nextId(), multiple_slots ) );
+		addResource( new Resource( cap, nextId() ) );
 		alloc_list.DeleteCurrent();
 	}
 

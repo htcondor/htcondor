@@ -22,7 +22,6 @@
 #include "throttle_by_category.h"
 #include "dagman_main.h"
 #include "debug.h"
-#include "MyString.h"
 
 const int ThrottleByCategory::noThrottleSetting = -1;
 
@@ -42,7 +41,7 @@ ThrottleByCategory::~ThrottleByCategory()
 
 //---------------------------------------------------------------------------
 ThrottleByCategory::ThrottleInfo *
-ThrottleByCategory::AddCategory( const MyString *category, int maxJobs )
+ThrottleByCategory::AddCategory( const std::string *category, int maxJobs )
 {
 	ASSERT( category != NULL );
 
@@ -57,7 +56,7 @@ ThrottleByCategory::AddCategory( const MyString *category, int maxJobs )
 
 //---------------------------------------------------------------------------
 void
-ThrottleByCategory::SetThrottle( const MyString *category, int maxJobs )
+ThrottleByCategory::SetThrottle( const std::string *category, int maxJobs )
 {
 	ASSERT( category != NULL );
 
@@ -83,7 +82,7 @@ ThrottleByCategory::SetThrottle( const MyString *category, int maxJobs )
 
 //---------------------------------------------------------------------------
 ThrottleByCategory::ThrottleInfo *
-ThrottleByCategory::GetThrottleInfo( const MyString *category )
+ThrottleByCategory::GetThrottleInfo( const std::string *category )
 {
 	ASSERT( category != NULL );
 
@@ -97,7 +96,7 @@ ThrottleByCategory::GetThrottleInfo( const MyString *category )
 
 //---------------------------------------------------------------------------
 void
-ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
+ThrottleByCategory::PrefixAllCategoryNames( const std::string &prefix )
 {
 		// We copy the ThrottleInfo objects into this hash table,
 		// and then copy this hash table over the one in this object
@@ -105,7 +104,7 @@ ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 		// new names.  Note that we don't need to delete any
 		// ThrottleInfo objects because we're re-using the ones
 		// we already have.
-	std::map<MyString, ThrottleInfo *> tmpThrottles( {} );
+	std::map<std::string, ThrottleInfo *> tmpThrottles( {} );
 
 	for ( auto throttle: _throttles ) {
 		ThrottleInfo *info = throttle.second;
@@ -113,7 +112,7 @@ ThrottleByCategory::PrefixAllCategoryNames( const MyString &prefix )
 			// starting with '+') (allows nodes in different splices to
 			// be in the same category).
 		if ( ! info->isGlobal() ) {
-			MyString *newCat = new MyString( prefix );
+			std::string *newCat = new std::string( prefix );
 			*newCat += *(info->_category);
 			delete info->_category;
 			info->_category = newCat;

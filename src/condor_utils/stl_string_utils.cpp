@@ -222,6 +222,19 @@ void trim( std::string &str )
 	}
 }
 
+void trim_quotes (std::string &str, std::string quotes)
+{
+	if (str.length() < 2) {
+		return;
+	}
+	if (quotes.find(str.front()) != std::string::npos) {
+		str.erase(0, 1);
+	}
+	if (quotes.find(str.back()) != std::string::npos) {
+		str.pop_back();
+	}
+}
+
 #ifndef _tolower
 #define _tolower(c) ((c) + 'a' - 'A')
 #endif

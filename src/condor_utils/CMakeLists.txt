@@ -20,6 +20,13 @@ condor_exe( condor_testingd "testingd.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 condor_exe( condor_sinful "sinful-tool.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 condor_exe( test_user_mapping "test_user_mapping.cpp" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 
+if( NOT BUILD_DATE )
+	GET_DATE( BUILD_DATE )
+endif()
+if(BUILD_DATE)
+	set_source_files_properties(condor_version.cpp PROPERTIES COMPILE_DEFINITIONS BUILD_DATE="${BUILD_DATE}")
+endif()
+
 # We need this .o statically linked into every exe for the version object
 # to parse.  Make this an object library to link everywhere.
 add_library(condor_version_obj STATIC condor_version.cpp)
@@ -170,6 +177,8 @@ adcluster.cpp
 adcluster.h
 ad_printmask.cpp
 ad_printmask.h
+ad_transforms.cpp
+ad_transforms.h
 AWSv4-utils.cpp
 AWSv4-utils.h
 backward_file_reader.cpp
@@ -217,13 +226,11 @@ condor_blkng_full_disk_io.cpp
 condor_claimid_parser.h
 condor_common.cpp
 condor_config.cpp
-condor_create_id.cpp
 condor_crontab.cpp
 condor_crontab.h
 condor_fsync.cpp
 condor_fsync.h
 condor_ftp.cpp
-condor_full_io.cpp
 condor_getcwd.cpp
 condor_getcwd.h
 condor_holdcodes.h
@@ -695,25 +702,23 @@ if (LINUX OR DARWIN)
 	set_target_properties( condorapi_shared PROPERTIES OUTPUT_NAME condorapi )
 endif()
 
-if (WANT_FULL_DEPLOYMENT)
-	install (FILES MyString.h
-			 condor_event.h
-			 condor_holdcodes.h
-			 read_user_log.h
-			 user_log.c++.h
-			 user_log.README
-			 write_user_log.h
-			 compat_classad.h
-			 compat_classad_list.h
-			 compat_classad_util.h
-			 stl_string_utils.h
-			DESTINATION ${C_INCLUDE})
+install (FILES MyString.h
+		 condor_event.h
+		 condor_holdcodes.h
+		 read_user_log.h
+		 user_log.c++.h
+		 user_log.README
+		 write_user_log.h
+		 compat_classad.h
+		 compat_classad_list.h
+		 compat_classad_util.h
+		 stl_string_utils.h
+		DESTINATION ${C_INCLUDE})
 
-    install ( TARGETS condorapi DESTINATION ${C_LIB} )
-    if (LINUX OR DARWIN)
-        install ( TARGETS condorapi_shared DESTINATION ${C_LIB} )
-    endif()
-endif(WANT_FULL_DEPLOYMENT)
+install ( TARGETS condorapi DESTINATION ${C_LIB} )
+if (LINUX OR DARWIN)
+    install ( TARGETS condorapi_shared DESTINATION ${C_LIB} )
+endif()
 
 set_source_files_properties(test_log_reader.cpp PROPERTIES DEFINITIONS ENABLE_STATE_DUMP)
 

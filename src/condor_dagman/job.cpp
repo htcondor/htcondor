@@ -153,9 +153,9 @@ Job::Job( const char* jobName, const char *directory, const char* cmdFile )
 
 //---------------------------------------------------------------------------
 void
-Job::PrefixDirectory(MyString &prefix)
+Job::PrefixDirectory(std::string &prefix)
 {
-	MyString newdir;
+	std::string newdir;
 
 	// don't add an unnecessary prefix
 	if (prefix == ".") {
@@ -511,7 +511,7 @@ int Job::VisitChildren(Dag& dag, int(*pfn)(Dag& dag, Job* parent, Job* child, vo
 }
 
 bool
-Job::CanAddParent( Job* parent, MyString &whynot )
+Job::CanAddParent( Job* parent, std::string &whynot )
 {
 	if( !parent ) {
 		whynot = "parent == NULL";
@@ -533,15 +533,15 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 		// future once we figure out the right way for the DAG to
 		// respond...
 	if( _Status != STATUS_READY && parent->GetStatus() != STATUS_DONE ) {
-		whynot.formatstr( "%s child may not be given a new %s parent",
-						this->GetStatusName(), parent->GetStatusName() );
+		whynot = std::string(this->GetStatusName()) + " child may not be " +
+			"given a new " + std::string(parent->GetStatusName()) + " parent";
 		return false;
 	}
 	whynot = "n/a";
 	return true;
 }
 
-bool Job::CanAddChildren(std::forward_list<Job*> & children, MyString &whynot)
+bool Job::CanAddChildren(std::forward_list<Job*> & children, std::string &whynot)
 {
 	if ( GetType() == NodeType::FINAL ) {
 		whynot = "Tried to add a child to a final node";
@@ -611,7 +611,7 @@ int Job::PrintVars(std::string &vars)
 	return num_vars;
 }
 
-bool Job::AddChildren(std::forward_list<Job*> &children, MyString &whynot)
+bool Job::AddChildren(std::forward_list<Job*> &children, std::string &whynot)
 {
 	// check if all of this can be our child, and if all are ok being our children
 	if ( ! CanAddChildren(children, whynot)) {
@@ -750,7 +750,7 @@ void Job::FinalizeAdjustEdges(Dag* /*dag*/)
 }
 
 bool
-Job::CanAddChild( Job* child, MyString &whynot ) const
+Job::CanAddChild( Job* child, std::string &whynot ) const
 {
 	if( !child ) {
 		whynot = "child == NULL";
@@ -787,7 +787,7 @@ Job::TerminateFailure()
 } 
 
 bool
-Job::AddScript( ScriptType script_type, const char *cmd, int defer_status, time_t defer_time, MyString &whynot )
+Job::AddScript( ScriptType script_type, const char *cmd, int defer_status, time_t defer_time, std::string &whynot )
 {
 	if( !cmd || strcmp( cmd, "" ) == 0 ) {
 		whynot = "missing script name";
@@ -839,10 +839,10 @@ Job::AddScript( ScriptType script_type, const char *cmd, int defer_status, time_
 }
 
 bool
-Job::AddPreSkip( int exitCode, MyString &whynot )
+Job::AddPreSkip( int exitCode, std::string &whynot )
 {
 	if ( exitCode < PRE_SKIP_MIN || exitCode > PRE_SKIP_MAX ) {
-		whynot.formatstr( "PRE_SKIP exit code must be between %d and %d\n",
+		formatstr( whynot, "PRE_SKIP exit code must be between %d and %d\n",
 			PRE_SKIP_MIN, PRE_SKIP_MAX );
 		return false;
 	}
@@ -884,7 +884,7 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 	ASSERT( _type != NodeType::FINAL );
 	ASSERT( _type != NodeType::SERVICE );
 
-	MyString	tmpName( categoryName );
+	std::string tmpName( categoryName );
 
 	if ( (_throttleInfo != NULL) &&
 				(tmpName != *(_throttleInfo->_category)) ) {
@@ -915,9 +915,9 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 }
 
 void
-Job::PrefixName(const MyString &prefix)
+Job::PrefixName(const std::string &prefix)
 {
-	MyString tmp = prefix + _jobName;
+	std::string tmp = prefix + _jobName;
 
 	free(_jobName);
 
@@ -937,7 +937,7 @@ const char *
 Job::GetJobstateJobTag()
 {
 	if ( !_jobTag ) {
-		MyString jobTagName = MultiLogFiles::loadValueFromSubFile(
+		std::string jobTagName = MultiLogFiles::loadValueFromSubFile(
 					_cmdFile, _directory, JOB_TAG_NAME );
 		if ( jobTagName == "" ) {
 			jobTagName = PEGASUS_SITE;
@@ -949,7 +949,7 @@ Job::GetJobstateJobTag()
 			jobTagName = jobTagName.substr( begin, 1 + end - begin );
 		}
 
-		MyString tmpJobTag = MultiLogFiles::loadValueFromSubFile(
+		std::string tmpJobTag = MultiLogFiles::loadValueFromSubFile(
 					_cmdFile, _directory, jobTagName.c_str() );
 		if ( tmpJobTag == "" ) {
 			tmpJobTag = "-";

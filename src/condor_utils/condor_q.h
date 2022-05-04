@@ -114,6 +114,7 @@ class CondorQ
 		fetch_MyJobs=0x04,           // modifies fetch_Jobs
 		fetch_SummaryOnly=0x08,      // modifies fetch_Jobs
 		fetch_IncludeClusterAd=0x10, // modifies fetch_Jobs
+		fetch_IncludeJobsetAds=0x20, // modifies fetch_Jobs
 	} QueryFetchOpts;
 	
 		// fetch the job ads from database 	

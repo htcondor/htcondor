@@ -764,10 +764,14 @@ Directory::Rewind()
 				// this directory.  If that works, we should save this
 				// as our desired priv_state for future actions...
 			if( ! want_priv_change ) {
-				dprintf( D_ALWAYS, "Can't open directory \"%s\" as %s, "
-						 "errno: %d (%s)\n", curr_dir, 
-						 priv_to_string(get_priv()), errno, 
-						 strerror(errno) );
+				if( errno == ENOENT ) {
+					dprintf(D_FULLDEBUG, "Directory::Rewind(): path \"%s\" does not exist (yet)\n", curr_dir);
+				} else {
+					dprintf( D_ALWAYS, "Can't open directory \"%s\" as %s, "
+					         "errno: %d (%s)\n", curr_dir,
+					         priv_to_string(get_priv()), errno,
+					         strerror(errno) );
+				}
 				return_and_resetpriv(false);
 			}
 
@@ -776,7 +780,7 @@ Directory::Rewind()
 			priv_state old_priv = setOwnerPriv( curr_dir, err );
 			if( old_priv == PRIV_UNKNOWN ) {
 				if (err == SINoFile)
-					dprintf(D_FULLDEBUG, "Directory::Rewind(): path \"%s\" does not exist (yet) \n", curr_dir);
+					dprintf(D_FULLDEBUG, "Directory::Rewind(): path \"%s\" does not exist (yet)\n", curr_dir);
 				else 
 					dprintf( D_ALWAYS, "Directory::Rewind(): "
 							 "failed to find owner of \"%s\"\n", curr_dir );
