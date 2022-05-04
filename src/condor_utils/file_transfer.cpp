@@ -4077,10 +4077,12 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				// `StdoutRemapName` and `StderrRemapName` should be.
 				//
 				std::string outputName = fileitem.srcName();
-				if( outputName == StdoutRemapName ) {
-					jobAd.LookupString( ATTR_JOB_ORIGINAL_OUTPUT, outputName );
-				} else if( outputName == StderrRemapName ) {
-					jobAd.LookupString( ATTR_JOB_ORIGINAL_ERROR, outputName );
+				if(! uploadCheckpointFiles) {
+					if( outputName == StdoutRemapName ) {
+						jobAd.LookupString( ATTR_JOB_ORIGINAL_OUTPUT, outputName );
+					} else if( outputName == StderrRemapName ) {
+						jobAd.LookupString( ATTR_JOB_ORIGINAL_ERROR, outputName );
+					}
 				}
 				local_output_url += outputName;
 			}
