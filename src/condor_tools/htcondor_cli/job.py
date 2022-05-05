@@ -204,13 +204,14 @@ class Status(Verb):
 
         # Now, produce job status based on the resource type
         if resource_type == "htcondor":
+            annex_info = ""
             target_annex_name = job[0].get('TargetAnnexName')
             if target_annex_name is not None:
-                logger.info(f"Job will only run on your annex named '{target_annex_name}'.")
+                annex_info = " on the annex named '{target_annex_name}' "
 
             if JobStatus[job[0]['JobStatus']] == "RUNNING":
                 job_running_time = datetime.now() - datetime.fromtimestamp(job[0]["JobStartDate"])
-                logger.info(f"Job has been running for {round(job_running_time.seconds/3600)} hour(s), {round(job_running_time.seconds/60)} minute(s), and {(job_running_time.seconds%60)} second(s).")
+                logger.info(f"Job has been running {annex_info}for {round(job_running_time.seconds/3600)} hour(s), {round(job_running_time.seconds/60)} minute(s), and {(job_running_time.seconds%60)} second(s).")
             elif JobStatus[job[0]['JobStatus']] == "HELD":
                 job_held_time = datetime.now() - datetime.fromtimestamp(job[0]["EnteredCurrentStatus"])
                 logger.info(f"Job has been held for {round(job_held_time.seconds/3600)} hour(s), {round(job_held_time.seconds/60)} minute(s), and {(job_held_time.seconds%60)} second(s).\nHold Reason: {job[0]['HoldReason']}")
