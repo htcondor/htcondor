@@ -1048,7 +1048,7 @@ updateClassAd (CollectorHashTable &hashTable,
 {
 	CollectorRecord* record = nullptr;
 	ClassAd		*old_ad, *new_ad;
-	ClassAd     *old_pvt_ad, *new_pvt_ad;
+	ClassAd     *new_pvt_ad;
 	time_t		now;
 
 		// NOTE: LastHeardFrom will already be in ad if we are loading
@@ -1103,7 +1103,6 @@ updateClassAd (CollectorHashTable &hashTable,
 		dprintf (D_FULLDEBUG, "%s: Updating ... \"%s\"\n", adType, hashString.c_str() );
 
 		old_ad = record->m_publicAd;
-		old_pvt_ad = record->m_pvtAd;
 
 		// Update statistics
 		if (strcmp(label, "StartdPvt") != 0) {
