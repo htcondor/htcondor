@@ -326,7 +326,7 @@ class Status(Verb):
             print(f"{all_job_count} jobs must run on this annex, and {running_job_count} currently are.")
 
             # How many resource requests were made, and what's their status?
-            print(f"You made {requests} resource request(s) for this annex, of which {requested_but_not_joined} are pending, {requested_and_active} are established, and {requested_and_left} have retired.")
+            print(f"You requested resources for this annex {requests} times; {requested_but_not_joined} are pending, {requested_and_active} are established, and {requested_and_left} have retired.")
 
         if the_annex_name is None:
             print()

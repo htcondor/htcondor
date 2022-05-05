@@ -333,7 +333,8 @@ class Resources(Verb):
             target_annex = job[0].get("TargetAnnexName", None)
             machine_annex = job[0].get("MachineAttrAnnexName0", None)
             if target_annex is not None and machine_annex is not None and target_annex == machine_annex:
-                logger.info(f"Job is using annex '{target_annex}', resource {job_host}.")
+                pretty_job_host = job_host.split('@')[1]
+                logger.info(f"Job is using annex '{target_annex}', node {pretty_job_host}.")
             else:
                 logger.info(f"Job is using resource {job_host}")
 

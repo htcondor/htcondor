@@ -773,7 +773,10 @@ def annex_inner_func(
     )
     logger.debug(f"... made remote temporary directory {remote_script_dir} ...")
 
-    logger.info(f"Populating annex temporary directory...")
+    #
+    # FIXME: This operation can fail or take a while.
+    #
+    logger.debug(f"Populating annex temporary directory...")
     populate_remote_temporary_directory(
         logger,
         ssh_connection_sharing,
@@ -795,7 +798,7 @@ def annex_inner_func(
             remote_script_dir,
             sif_files,
         )
-    logger.info("... populated.")
+    logger.debug("... populated.")
 
     # Submit local universe job.
     logger.debug("Submitting state-tracking job...")
