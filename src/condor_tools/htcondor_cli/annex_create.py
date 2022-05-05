@@ -593,11 +593,11 @@ def annex_inner_func(
     if '@' in queue_at_machine:
         (queue_name, target) = queue_at_machine.split('@', 1)
     else:
-        error_string = "Target must have the form queue@machine."
+        error_string = "Target must have the form queue@system."
 
         target = queue_at_machine.casefold()
         if target not in MACHINE_TABLE:
-            error_string = f"{error_string}  Also, '{queue_at_machine}' is not a known machine."
+            error_string = f"{error_string}  Also, '{queue_at_machine}' is not a known system."
         else:
             default_queue = MACHINE_TABLE[target]['default_queue']
             queue_list = "\n    ".join([q for q in MACHINE_TABLE[target]['queues']])
@@ -625,7 +625,7 @@ def annex_inner_func(
 
     target = target.casefold()
     if target not in MACHINE_TABLE:
-        raise ValueError(f"{target} is not a known machine.")
+        raise ValueError(f"{target} is not a known system.")
 
     # Location of the local universe script files
     local_script_dir = (

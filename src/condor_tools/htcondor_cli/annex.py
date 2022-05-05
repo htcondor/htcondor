@@ -27,8 +27,8 @@ class Create(Verb):
         },
         "target": {
             "args": ("queue_at_machine",),
-            "metavar": "queue@machine",
-            "help": "Specify the queue and the HPC machine",
+            "metavar": "queue@system",
+            "help": "Specify the queue and the HPC system",
         },
         "nodes": {
             "args": ("--nodes",),
@@ -45,7 +45,7 @@ class Create(Verb):
         "allocation": {
             "args": ("--project",),
             "dest": "allocation",
-            "help": "The project name associated with HPC allocation (may be optional on some HPC machines)",
+            "help": "The project name associated with HPC allocation (may be optional on some HPC systems)",
             "default": None,
         },
         "owners": {
@@ -317,8 +317,8 @@ class Status(Verb):
 
             # How big is it?
             requested_machines = requested_machines.get(annex_name, 0)
-            print(f"You requested {requested_machines} machines for this annex, of which {machine_count} are in established annexes.")
-            print(f"There are {total_CPUs} CPUs in the established machines, of which {busy_CPUs} are busy.")
+            print(f"You requested {requested_machines} nodes for this annex, of which {machine_count} are in established annexes.")
+            print(f"There are {total_CPUs} CPUs in the established nodes, of which {busy_CPUs} are busy.")
 
             # How many jobs target it?  Of those, how many are running?
             all_job_count = all_jobs.get(annex_name, 0)
