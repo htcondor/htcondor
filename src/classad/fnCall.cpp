@@ -3036,7 +3036,7 @@ static bool regexp_helper(
     string     options_string,
     Value      &result)
 {
-    int         options;
+    int         options = 0;
 	int			status;
 	bool		full_target = false;
 	bool		find_all = false;
@@ -3052,26 +3052,24 @@ static bool regexp_helper(
 	PCRE2_SIZE target_len = (PCRE2_SIZE) strlen(target);
 	PCRE2_SPTR target_pcre2str = reinterpret_cast<const unsigned char *>(target);
 
-	int target_idx = 0;
-	string output;
+	size_t target_idx = 0;
+	std::string output;
 
-    options     = 0;
-    uint32_t options_pcre2 = (uint32_t) options;
     if( have_options ){
         // We look for the options we understand, and ignore
         // any others that we might find, hopefully allowing
         // forwards compatibility.
         if ( options_string.find( 'i' ) != string::npos ) {
-            options_pcre2 |= PCRE2_CASELESS;
+            options |= PCRE2_CASELESS;
         } 
         if ( options_string.find( 'm' ) != string::npos ) {
-            options_pcre2 |= PCRE2_MULTILINE;
+            options |= PCRE2_MULTILINE;
         }
         if ( options_string.find( 's' ) != string::npos ) {
-            options_pcre2 |= PCRE2_DOTALL;
+            options |= PCRE2_DOTALL;
         }
         if ( options_string.find( 'x' ) != string::npos ) {
-            options_pcre2 |= PCRE2_EXTENDED;
+            options |= PCRE2_EXTENDED;
         }
 		if ( replace ) {
 			// The 'f' option means that the result should consist of
@@ -3086,10 +3084,9 @@ static bool regexp_helper(
 				find_all = true;
 			}
 		}
-        options = static_cast<int>(options_pcre2);
     }
 
-    re = pcre2_compile(pattern_pcre2, PCRE2_ZERO_TERMINATED, options_pcre2, &error_code, &error_offset, NULL);
+    re = pcre2_compile(pattern_pcre2, PCRE2_ZERO_TERMINATED, options, &error_code, &error_offset, NULL);
     if ( re == NULL ){
 			// error in pattern
 		result.SetErrorValue( );
@@ -3111,7 +3108,7 @@ static bool regexp_helper(
 		}
 
 		pcre2_match_data * match_data = pcre2_match_data_create_from_pattern(re, NULL);
-		status = pcre2_match(re, target_pcre2str, target_len, (PCRE2_SIZE) target_idx, addl_opts, match_data, NULL);
+		status = pcre2_match(re, target_pcre2str, target_len, target_idx, addl_opts, match_data, NULL);
 		ovector = pcre2_get_ovector_pointer(match_data);
 		if (empty_match && status == PCRE2_ERROR_NOMATCH) {
 			output += target[target_idx];
@@ -3122,12 +3119,12 @@ static bool regexp_helper(
 		}
 
 		if( status >= 0 && replace ) {
-			PCRE2_UCHAR **groups_pcre2 = NULL;
+			PCRE2_UCHAR **groups_pcre2 = nullptr;
 			int ngroups = status;
 			const char *replace_ptr = replace;
 
 			if ( full_target ) {
-				output.append(&target[target_idx], static_cast<int>(ovector[0]) - target_idx);
+				output.append(&target[target_idx], (ovector[0]) - target_idx);
 			}
 
 			if (pcre2_substring_list_get(match_data, &groups_pcre2, NULL)) {
@@ -3153,9 +3150,9 @@ static bool regexp_helper(
 				replace_ptr++;
 			}
 
-			pcre2_substring_list_free((const unsigned char **) groups_pcre2);
+			pcre2_substring_list_free((PCRE2_SPTR *) groups_pcre2);
 
-			target_idx = static_cast<int>(ovector[1]);
+			target_idx = ovector[1];
 			if ( ovector[0] == ovector[1] ) {
 				empty_match = true;
 			}
