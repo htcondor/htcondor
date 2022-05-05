@@ -26,11 +26,15 @@
 
 use CondorTest;
 use CondorUtils;
+use Cwd qw(getcwd);
 
 $cmd = 'job_dagman_vars_prepend.dag';
 $testdesc =  'Condor submit dag - VARS PREPEND/APPEND test - scheduler U';
 $testname = "job_dagman_vars_prepend";
-$dagman_args = "-verbose -f";
+$dagman_args = "-verbose";
+
+$dir = getcwd;
+CondorTest::debug("Path to working directory: $dir\n",1);
 
 @ckptsdesc = ("Check 1: Direct Submit = True and Append VARS = False",
               "Check 2: Direct Submit = True and Append VARS = True",
@@ -64,7 +68,7 @@ VARS test APPEND test_var2=\"Passed Append\"
 VARS test test_var3=\"Outer\"";
 
 $submitfile=
-"executable = \$CHOICE(isWindows, /bin/echo, appendmsg.exe)
+"executable = \$CHOICE(isWindows, /bin/echo, ..\\appendmsg.exe)
 if defined pass_var1
      test_var1 = \$(pass_var1)
 else
@@ -84,12 +88,10 @@ error     = job_dagman_vars_prepend-Job.err
 queue";
 
 $dagconfig=
-"DAGMAN_USE_DIRECT_SUBMIT=True
-DAGMAN_DEFAULT_APPEND_VARS=False";
-
-emit_file(".dag",$dagfile);
-emit_file(".cmd",$submitfile);
-emit_file(".config",$dagconfig);
+"#Normal Global config values
+#DAGMAN_USE_DIRECT_SUBMIT=True
+#DAGMAN_DEFAULT_APPEND_VARS=False
+#Knobs past this will win in setting values";
 
 ##=============================================================================================================
 
@@ -98,20 +100,11 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-
-sub clean_up{
-	# Get rid of any existing log files.
-	foreach $name (@logfiles) {
-		if (-e $name) {
-			runcmd("rm -f $name");
-		}
-	}
-
-	# Get rid of any existing output files.
-	foreach $name (@outfiles) {
-		if (-e $name) {
-			runcmd("rm -f $name");
-		}
+# Remove Sub-directories if exist
+for ($i = 0; $i <= $#ckptsdesc; $i++){
+	if (-d "check_$i"){
+		system("rm -rf check_$i");
+		CondorTest::debug("Directory: check_$i already exists. Removing\n",1);
 	}
 }
 
@@ -224,18 +217,34 @@ CondorTest::RegisterSubmit( $testname, $submitted );
 # for each checkpoint
 for ($checknum = 0; $checknum <= $#ckptsdesc; $checknum++){
 	$check = $ckptsdesc[$checknum];
-	# Cleanup files
-	clean_up();
+
+	# Go back to parent directory
+	chdir $dir;
+	# Set up sub directory
+	mkdir "check_$checknum";
+	if ( ! CondorUtils::is_windows()) { chmod (0755, "check_$checknum"); }
+	if ( CondorUtils::is_windows()) {
+		chdir "$dir\\check_$checknum";
+	} else {
+		chdir "$dir/check_$checknum";
+	}
+	# Make files
+	emit_file(".dag",$dagfile);
+	emit_file(".cmd",$submitfile);
+	emit_file(".config",$dagconfig);
 
 	# Append config knobs with different values to job_dagman_vars_prepend.config (dag config)
 	# Config vals will go: direct/append  1:T/F 2:T/T 3:F/F 4:F/T
 	if ($checknum != 0){
 		open(CONFIG, ">>", "$testname.config") or die "Config file couldn't open";
 		if ($checknum % 2 == 0) {
-			print CONFIG "\nDAGMAN_USE_DIRECT_SUBMIT = False";
+
 			print CONFIG "\nDAGMAN_DEFAULT_APPEND_VARS = False";
 		} else {
 			print CONFIG "\nDAGMAN_DEFAULT_APPEND_VARS = True";
+		}
+		if ($checknum > 1){
+			print CONFIG "\nDAGMAN_USE_DIRECT_SUBMIT = False";
 		}
 		close CONFIG or "Config file failed to close";
 	}
