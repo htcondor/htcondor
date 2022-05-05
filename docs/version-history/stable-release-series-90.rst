@@ -24,7 +24,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where if a job's output and error were directed to the same
+  file, no other output files would be transfered.
+  :jira:`1101`
 
 .. _lts-version-history-9013:
 
