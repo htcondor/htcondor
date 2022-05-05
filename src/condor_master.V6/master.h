@@ -32,6 +32,7 @@ enum StopStateT { PEACEFUL, GRACEFUL, FAST, KILL, NONE };
 
 const char * StopStateToString(StopStateT state);
 StopStateT StringToStopState(const char * psz);
+bool advertise_shutdown_program(ClassAd & ad);
 
 // used to keep track of a query command for which we want to deferr the reply
 class DeferredQuery

@@ -20,7 +20,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- The manual page, usage and logging of the *condor_set_shutdown* tool
+  has been improved to clarify what this tool does and how to use it.
+  :jira:`1102`
 
 Bugs Fixed:
 
