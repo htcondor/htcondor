@@ -320,6 +320,8 @@ ${CONDOR_MEMORY_LINE}
 MUST_MODIFY_REQUEST_EXPRS = TRUE
 MODIFY_REQUEST_EXPR_REQUESTMEMORY = max({ 3072, quantize(RequestMemory, {128}) })
 
+NETWORK_INTERFACE = 172.18.*
+
 " > local/config.d/00-basic-pilot
 
 mkdir local/passwords.d
