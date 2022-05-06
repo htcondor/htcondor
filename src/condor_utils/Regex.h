@@ -26,7 +26,8 @@
 #ifdef HAVE_PCRE_PCRE_H
 #  include "pcre/pcre.h"
 #else
-#  include "pcre.h"
+#  define PCRE2_CODE_UNIT_WIDTH 8
+#  include <pcre2.h>
 #endif
 
 //Regex NULLRegex;
@@ -38,13 +39,13 @@ public:
 
 		// Options
 	enum {
-		anchored =  PCRE_ANCHORED,
-		caseless =  PCRE_CASELESS,
-		dollarend = PCRE_DOLLAR_ENDONLY,
-		dotall = PCRE_DOTALL,
-		extended =  PCRE_EXTENDED,
-		multiline = PCRE_MULTILINE,
-		ungreedy =  PCRE_UNGREEDY
+		anchored =  PCRE2_ANCHORED,
+		caseless =  PCRE2_CASELESS,
+		dollarend = PCRE2_DOLLAR_ENDONLY,
+		dotall = PCRE2_DOTALL,
+		extended =  PCRE2_EXTENDED,
+		multiline = PCRE2_MULTILINE,
+		ungreedy =  PCRE2_UNGREEDY
 	};
 
 	Regex();
@@ -59,20 +60,23 @@ public:
 		 * errstr and errcode provide information as to why the
 		 * construction may have failed. True is returned upon
 		 * success, false otherwise.
+		 * As of PCRE2, error code is provided by default in lieu of
+		 * a string error message, so if error message is needed,
+		 * implement Regex::get_error_message(...)
 		 */
 	bool compile(const char * pattern,
-				 const char ** errstr,
+				 int * errcode,
 				 int * erroffset,
-				 int options = 0);
+				 uint32_t options = 0);
 	bool compile(const MyString & pattern,
-				 const char ** errstr,
+				 int * errcode,
 				 int * erroffset,
-				 int options = 0);
+				 uint32_t options = 0);
 	bool compile(const std::string & pattern,
-				 const char ** errstr,
+				 int * errcode,
 				 int * erroffset,
-				 int options = 0);
-
+				 uint32_t options = 0);
+	
 		/*
 		 * Match the given string against the regular expression,
 		 * returning true if there was a match and false
@@ -102,10 +106,10 @@ public:
 
 private:
 
-	pcre * re;
-	int options;
+	pcre2_code * re;
+	uint32_t options;
 
-	static pcre * clone_re(pcre * re);
+	static pcre2_code * clone_re(pcre2_code * re);
 };
 
 
