@@ -214,13 +214,6 @@ ArcJob::ArcJob( ClassAd *classad )
 
 	jobProxy = AcquireProxy( jobAd, error_string,
 							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
-	if ( jobProxy == NULL ) {
-		if ( error_string == "" ) {
-			formatstr( error_string, "%s is not set in the job ad",
-								  ATTR_X509_USER_PROXY );
-		}
-		goto error_exit;
-	}
 
 	jobAd->LookupString( ATTR_SCITOKENS_FILE, m_tokenFile );
 
@@ -235,7 +228,7 @@ ArcJob::ArcJob( ClassAd *classad )
 		goto error_exit;
 	}
 	snprintf( buff, sizeof(buff), "ARC/%s#%s",
-	          jobProxy->subject->fqan, m_tokenFile.c_str() );
+	          jobProxy ? jobProxy->subject->fqan : "", m_tokenFile.c_str() );
 	gahp = new GahpClient( buff, gahp_path );
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
@@ -387,7 +380,9 @@ void ArcJob::doEvaluateState()
 				break;
 			}
 
-			gahp->setDelegProxy( jobProxy );
+			if (jobProxy) {
+				gahp->setDelegProxy( jobProxy );
+			}
 
 			gmState = GM_START;
 			} break;
@@ -445,7 +440,7 @@ void ArcJob::doEvaluateState()
 				gmState = GM_UNSUBMITTED;
 				break;
 			}
-			if ( ! delegationId.empty() ) {
+			if ( ! jobProxy || ! delegationId.empty() ) {
 				gmState = GM_SUBMIT;
 				break;
 			}
@@ -1217,9 +1212,11 @@ bool ArcJob::buildJobADL()
 
 	// Now handle the <DataStaging> element.
 	RSL += "<DataStaging>";
-	RSL += "<ng-adl:DelegationID>";
-	RSL += escapeXML(delegationId);
-	RSL += "</ng-adl:DelegationID>";
+	if ( ! delegationId.empty() ) {
+		RSL += "<ng-adl:DelegationID>";
+		RSL += escapeXML(delegationId);
+		RSL += "</ng-adl:DelegationID>";
+	}
 
 	stage_list = buildStageInList();
 

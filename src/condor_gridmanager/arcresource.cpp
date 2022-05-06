@@ -52,7 +52,7 @@ ArcResource *ArcResource::FindOrCreateResource( const char * resource_name,
                                                 const std::string& token_file )
 {
 	ArcResource *resource = NULL;
-	const std::string &key = HashName( resource_name, proxy->subject->fqan, token_file );
+	const std::string &key = HashName( resource_name, proxy ? proxy->subject->fqan : "", token_file );
 	auto itr = ResourcesByName.find( key );
 	if ( itr == ResourcesByName.end() ) {
 		resource = new ArcResource( resource_name, proxy, token_file );
@@ -72,14 +72,14 @@ ArcResource::ArcResource( const char *resource_name,
                           const std::string& token_file )
 	: BaseResource( resource_name )
 {
-	proxySubject = strdup( proxy->subject->subject_name );
-	proxyFQAN = strdup( proxy->subject->fqan );
+	proxySubject = proxy ? strdup( proxy->subject->subject_name ) : nullptr;
+	proxyFQAN = proxy ? strdup( proxy->subject->fqan ) : nullptr;
 	m_tokenFile = token_file;
 
 	gahp = NULL;
 
 	std::string buff;
-	formatstr( buff, "ARC/%s#%s", proxyFQAN, m_tokenFile.c_str() );
+	formatstr( buff, "ARC/%s#%s", proxyFQAN ? proxyFQAN : "", m_tokenFile.c_str() );
 
 	gahp = new GahpClient( buff.c_str() );
 	gahp->setNotificationTimerId( pingTimerId );
@@ -154,16 +154,18 @@ void ArcResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 {
 	int rc;
 
-	if ( gahp->isInitialized() == false ) {
+	if ( gahp->isStarted() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );
 		ping_delay = 5;
 		return;
 	}
-	gahp->setNormalProxy( gahp->getMasterProxy() );
-	if ( PROXY_IS_EXPIRED( gahp->getMasterProxy() ) ) {
-		dprintf( D_ALWAYS,"proxy near expiration or invalid, delaying ping\n" );
-		ping_delay = TIMER_NEVER;
-		return;
+	if (proxySubject) {
+		gahp->setNormalProxy( gahp->getMasterProxy() );
+		if ( PROXY_IS_EXPIRED( gahp->getMasterProxy() ) ) {
+			dprintf( D_ALWAYS,"proxy near expiration or invalid, delaying ping\n" );
+			ping_delay = TIMER_NEVER;
+			return;
+		}
 	}
 
 	ping_delay = 0;
