@@ -21,7 +21,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- HTCondor’s security library no longer tries to resolve the provided hostname
+  to a fully-qualified canonical name when authenticating with SSL, matching
+  the behavior of ``curl``.  Services using a DNS CNAME no longer need to
+  implement workarounds in the host certificate to support the prior behavior.
+  :jira:`692`
 
 Version 9.9.0
 -------------
