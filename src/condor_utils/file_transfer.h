@@ -563,13 +563,13 @@ class FileTransfer final: public Service {
 		//      paths of files stored in SPOOL, whether from
 		//      self-checkpointing, ON_EXIT_OR_EVICT, or remote input
 		//      file spooling.
-	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace, std::vector<std::string> & pathsAlreadyPreserved );
+	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace, std::set<std::string> & pathsAlreadyPreserved );
 
         // Function internal to ExpandFileTransferList() -- called twice there.
         // The SpoolSpace argument is only necessary because this function
         // calls back into  ExpandFileTransferList(); see that function
         // for details.
-    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list, const char *SpoolSpace, std::vector<std::string> & pathsAlreadyPreserved );
+    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list, const char *SpoolSpace, std::set<std::string> & pathsAlreadyPreserved );
 
 		// Returns true if path is a legal path for our peer to tell us it
 		// wants us to write to.  It must be a relative path, containing
