@@ -8782,7 +8782,6 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 		// so if we bail out early anywhere, we say we failed.
 	jobid.proc = -1;	
 
-	int i;
 	std::string owner;
 	if (user_is_the_new_owner) {
 	} else {

@@ -7,6 +7,27 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-9014:
+
+Version 9.0.14
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.0.14 released on Month Date, 2022.
+
+- HTCondor version 9.0.14 not yet released.
+
+New Features:
+
+- The manual page, usage and logging of the *condor_set_shutdown* tool
+  has been improved to clarify what this tool does and how to use it.
+  :jira:`1102`
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-9013:
 
 Version 9.0.13

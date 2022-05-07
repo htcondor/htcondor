@@ -66,7 +66,7 @@ my %skipad = (
 my $firstappend_condor_config = '
 	WANT_SUSPEND = FALSE
 	NEGOTIATOR_INTERVAL = 1
-	ALL_DEBUG = D_FULLDEBUG D_NETWORK
+	ALL_DEBUG = D_FULLDEBUG
 	NUM_CPUS = 2
 	CONDOR_Q_USE_V3_PROTOCOL = true
 	# Turning this on breaks this test, which means it is way less

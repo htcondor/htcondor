@@ -9,11 +9,25 @@ Version 9.10.0
 
 New Features:
 
+Release Notes:
+
+.. HTCondor version 9.10.0 released on Month Date, 2022.
+
+- HTCondor version 9.10.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-9014`.
+
+New Features:
+
 - SSL authentication will automatically be configured in the **condor_collector**,
   providing a mechanism to more easily bootstrap secure authentication within the
   pool.  Tools will allow users to setup trust with the generated CA similarly to
   how SSH enables trust on first use of a remote host.
   :jira:`501`
+
+Bugs Fixed:
+
+- None.
 
 Version 9.9.0
 -------------

@@ -17,6 +17,7 @@ import logging as _logging
 
 import os as _os
 import platform as _platform
+from contextlib import contextmanager as _contextmanager
 
 # SET UP NULL LOG HANDLER
 _logger = _logging.getLogger(__name__)
@@ -35,7 +36,12 @@ def _add_dll_dir():
         if _sys.version_info >= (3,8):
             bin_path = _os.path.realpath(_os.path.join(__file__,r'..\..\..\..\bin'))
             return _os.add_dll_directory(bin_path)
-    return memoryview(b'') # noop context manager
+
+    # Return a noop context manager
+    @_contextmanager
+    def _noop():
+        yield None
+    return _noop()
 
 with _add_dll_dir():
     from .classad import *

@@ -38,6 +38,10 @@ Options
     Display usage information
  **-version**
     Display version information
+ **-exec** *name*
+    Select the program the master should exec the next time it shuts down.
+    The master will run the program configured as ``MASTER_SHUTDOWN_<name>``
+    from the configuration of the *condor_master*.
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.

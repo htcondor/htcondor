@@ -448,6 +448,10 @@ ResMgr::init_resources( void )
 
 	m_execution_xfm.config("JOB_EXECUTION");
 
+#ifdef LINUX
+	m_volume_mgr.reset(new VolumeManager());
+#endif // LINUX
+
     stats.Init();
 
     m_attr->init_machine_resources();
@@ -1786,6 +1790,12 @@ ResMgr::addResource( Resource *rip )
 			parent->add_dynamic_child(rip);
 		}
 	}
+
+#ifdef LINUX
+	if (!m_volume_mgr) {
+		rip->setVolumeManager(m_volume_mgr.get());
+	}
+#endif // LINUX
 }
 
 
