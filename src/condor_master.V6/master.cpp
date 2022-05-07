@@ -1028,7 +1028,7 @@ handle_shutdown_program( int cmd, Stream* stream )
 	if ( name.empty() ) {
 		return FALSE;
 	}
-	name.upper_case(); // because we print this
+	upper_case(name); // because we print this
 
 	// Can we find it in the configuration?
 	std::string pname("MASTER_SHUTDOWN_");
