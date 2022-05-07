@@ -28,7 +28,7 @@ int getDisplayWidth();
 
 
 /* counters for job matchmaking analysis */
-typedef struct {
+typedef struct AnalysisCounters {
 	int fReqConstraint;   // # of slots that don't match job Requirements
 	int fOffConstraint;   // # of slots that match Job requirements, but refuse the job because of their own Requirements
 	int fPreemptPrioCond; // match but are serving users with a better priority in the pool
