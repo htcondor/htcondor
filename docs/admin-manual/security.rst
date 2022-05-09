@@ -1842,8 +1842,9 @@ With the integration of VOMS for GSI authentication, the interpretation
 of the regular expression representing the authenticated name may
 change. First, the full serialized DN and FQAN are used in attempting a
 match.
-See the description of job attribute ``X509UserProxyFQAN`` for details
-on how the DN and FQAN are serialized.
+See the description of job attribute ``X509UserProxyFQAN`` in
+:ref:`classad-attributes/job-classad-attributes:job classad attributes`
+for details on how the DN and FQAN are serialized.
 If no match is found using the full DN and FQAN, then the DN is
 then used on its own without the FQAN. Using this, roles or user names
 from the VOMS attributes may be extracted to be used as the target for
