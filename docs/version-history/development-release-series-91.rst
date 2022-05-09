@@ -68,6 +68,10 @@ New Features:
   with each schedd owning a local CM for fair-share between users.
   :jira:`1003`
 
+- Added a Job Ad attribute called ``JobSubmitMethod`` to record what tool a user
+  used to submit job(s) to HTCondor.
+  :jira:`996`
+
 - In the configuration for daemon logs, ``D_FULLDEBUG`` no longer modifies the verbosity
   of other message catagories.  For instance ``D_FULLDEBUG D_SECURITY`` will now select
   debug messages and ``D_SECURITY:1`` messages.  In previous versions it would select debug
