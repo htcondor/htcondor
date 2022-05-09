@@ -52,7 +52,7 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 	**	debug flags have changed, we actually use the new
 	**  flags.  -Derek Wright 12/8/97
 	*/
-	AnyDebugBasicListener = 1<<D_ALWAYS | 1<<D_ERROR | 1<<D_STATUS;
+	AnyDebugBasicListener = (1<<D_ALWAYS) | (1<<D_ERROR) | (1<<D_STATUS);
 	AnyDebugVerboseListener = 0;
 	DebugHeaderOptions = 0;
 

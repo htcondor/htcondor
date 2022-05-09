@@ -1463,8 +1463,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 				continue;
 			}
 
-			int birth;
-			if(! daemonCore->getStartTime(birth)) { continue; }
+			auto birth = daemonCore->getStartTime();
 			int duration = time(NULL) - birth;
 			double average = uptimeValue / duration;
 			// Since we don't have a whole-machine ad, we won't bother to

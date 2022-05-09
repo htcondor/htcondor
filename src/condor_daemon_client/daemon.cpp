@@ -38,6 +38,8 @@
 #include "subsystem_info.h"
 #include "condor_netaddr.h"
 #include "condor_sinful.h"
+#include "condor_claimid_parser.h"
+#include "authentication.h"
 
 #include "ipv6_hostname.h"
 
@@ -1985,6 +1987,24 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 	}
 
 	initStringFromAd( ad, ATTR_PLATFORM, &_platform );
+
+	std::string capability;
+	if (ad->EvaluateAttrString(ATTR_REMOTE_ADMIN_CAPABILITY, capability)) {
+		ClaimIdParser cidp(capability.c_str());
+		dprintf(D_FULLDEBUG, "Creating a new administrative session for capability %s\n", cidp.publicClaimId());
+		_sec_man.CreateNonNegotiatedSecuritySession(
+			CLIENT_PERM,
+			cidp.secSessionId(),
+			cidp.secSessionKey(),
+			cidp.secSessionInfo(),
+			COLLECTOR_SIDE_MATCHSESSION_FQU,
+			AUTH_METHOD_MATCH,
+			addr(),
+			1800,
+			nullptr,
+			true
+		);
+	}
 
 	if( initStringFromAd( ad, ATTR_MACHINE, &_full_hostname ) ) {
 		initHostnameFromFull();
