@@ -467,7 +467,7 @@ classad::ExprTree *ExprTreeHolder::get() const
     return m_expr->Copy();
 }
 
-AttrPairToSecond::result_type AttrPairToSecond::operator()(AttrPairToSecond::argument_type p) const
+boost::python::object AttrPairToSecond::operator()(std::pair<std::string, classad::ExprTree *> p) const
 {
     ExprTreeHolder holder(p.second, false);
     if (holder.ShouldEvaluate())
@@ -479,7 +479,7 @@ AttrPairToSecond::result_type AttrPairToSecond::operator()(AttrPairToSecond::arg
 }
 
 
-AttrPair::result_type AttrPair::operator()(AttrPair::argument_type p) const
+boost::python::object AttrPair::operator()(std::pair<std::string, classad::ExprTree *> p) const
 {
     ExprTreeHolder holder(p.second, false);
     boost::python::object result(holder);
