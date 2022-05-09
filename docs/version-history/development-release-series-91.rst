@@ -59,6 +59,9 @@ New Features:
   with each schedd owning a local CM for fair-share between users.
   :jira:`1003`
 
+- Added a Job Ad attribute called ``JobSubmitMethod`` to record what tool a user
+  used to submit job(s) to HTCondor.
+  :jira:`996`
 
 Bugs Fixed:
 
