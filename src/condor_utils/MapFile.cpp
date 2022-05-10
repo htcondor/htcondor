@@ -89,8 +89,8 @@ class CanonicalMapRegexEntry : public CanonicalMapEntry {
 public:
 	CanonicalMapRegexEntry() : CanonicalMapEntry(1), re_options(0), re(NULL), canonicalization(NULL) {}
 	~CanonicalMapRegexEntry() { clear(); }
-	void clear() { if (re) pcre_free(re); re = NULL; canonicalization = NULL; }
-	bool add(const char* pattern, int options, const char * canon, const char **errptr, int * erroffset);
+	void clear() { if (re) pcre2_code_free(re); re = NULL; canonicalization = NULL; }
+	bool add(const char* pattern, uint32_t options, const char * canon, int * errcode, PCRE2_SIZE * erroffset);
 	bool matches(const char * principal, int cch, ExtArray<MyString> *groups, const char ** pcanon);
 	void dump(FILE * fp) {
 		fprintf(fp, "   REGEX { /<compiled_regex>/%x %s }\n", re_options, canonicalization);
@@ -98,8 +98,8 @@ public:
 private:
 	friend class MapFile;
 	//Regex re;
-	int re_options;
-	pcre * re;
+	uint32_t re_options;
+	pcre2_code * re;
 	const char * canonicalization;
 };
 class CanonicalMapHashEntry : public CanonicalMapEntry {
@@ -191,10 +191,12 @@ MapFile::~MapFile()
 
 static size_t min_re_size=0, max_re_size=0, num_re=0, num_zero_re=0;
 #ifdef USE_MAPFILE_V2
-static size_t re_size(pcre* re) {
+static size_t re_size(pcre2_code * re) {
 	if ( !re) return 0;
 	size_t cb = 0;
-	pcre_fullinfo(re, NULL, PCRE_INFO_SIZE, &cb);
+	uint32_t cb_uint32 = 0;
+	pcre2_pattern_info(re, PCRE2_INFO_SIZE, &cb_uint32);
+	cb = static_cast<size_t>(cb_uint32);
 	++num_re;
 	if (cb) { if (!min_re_size || (cb && (cb < min_re_size))) min_re_size = cb; max_re_size = MAX(cb, max_re_size); }
 	else { ++num_zero_re; }
@@ -338,7 +340,7 @@ void MapFile::clear() // clear all items and free the allocation pool
 #endif
 
 size_t
-MapFile::ParseField(const std::string & line, size_t offset, std::string & field, int * popts /*=NULL*/)
+MapFile::ParseField(const std::string & line, size_t offset, std::string & field, uint32_t * popts /*=NULL*/)
 {
 	ASSERT(offset <= line.length());
 
@@ -359,7 +361,7 @@ MapFile::ParseField(const std::string & line, size_t offset, std::string & field
 			// multiword can start with / only  if popts is not null
 			if (ch == '/') { chEnd = 0; multiword = false; }
 		} else {
-			*popts = (ch == '/') ? PCRE_NOTEMPTY : 0;
+			*popts = (ch == '/') ? PCRE2_NOTEMPTY : 0;
 		}
 	}
 
@@ -381,11 +383,11 @@ MapFile::ParseField(const std::string & line, size_t offset, std::string & field
 					while ((ch = line[offset]) != 0) {
 						if (ch == 'i') {
 							if (popts) {
-								*popts |= PCRE_CASELESS;
+								*popts |= PCRE2_CASELESS;
 							}
 						} else if (ch == 'U') {
 							if (popts) {
-								*popts |= PCRE_UNGREEDY;
+								*popts |= PCRE2_UNGREEDY;
 							}
 						} else {
 							break;
@@ -518,7 +520,7 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 
 #ifdef USE_MAPFILE_V2
 		if (method.length() == 0 || method[0] == '#') continue; // ignore blank and comment lines
-		int regex_opts = assume_hash ? 0 : PCRE_NOTEMPTY;
+		uint32_t regex_opts = assume_hash ? 0 : PCRE2_NOTEMPTY;
 		offset = ParseField(input_line, offset, principal, assume_hash ? &regex_opts : NULL);
 #else
 		lower_case(method);
@@ -567,14 +569,14 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 	// a whole new array when it needs to grow and we don't want to be copying 
 	// compiled regex's when that happens. see #2409
 	for (int ix = 0; ix <= canonical_entries.getlast(); ++ix) {
-		const char *errptr;
+		int errcode;
 		int erroffset;
 		if (!canonical_entries[ix].regex.compile(canonical_entries[ix].principal,
-												 &errptr,
+												 &errcode,
 												 &erroffset)) {
-			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- %s.  this entry will be ignored.\n",
+			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- error code %d.  this entry will be ignored.\n",
 					canonical_entries[ix].principal.Value(),
-					errptr);
+					errcode);
 		}
 	}
 #endif
@@ -624,7 +626,7 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 
 		offset = 0;
 #ifdef USE_MAPFILE_V2
-		int regex_opts = assume_hash ? 0 : PCRE_NOTEMPTY;
+		uint32_t regex_opts = assume_hash ? 0 : PCRE2_NOTEMPTY;
 		offset = ParseField(input_line, offset, canonicalization, assume_hash ? &regex_opts : NULL);
 		if (canonicalization.length() == 0 || canonicalization[0] == '#') continue; // ignore blank and comment lines
 #else
@@ -653,12 +655,12 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 		user_entries[last].canonicalization = canonicalization;
 		user_entries[last].user = user;
 
-		const char *errptr;
+		int errcode;
 		int erroffset;
 		if (!user_entries[last].regex.compile(canonicalization,
-											  &errptr,
+											  &errcode,
 											  &erroffset)) {
-			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- %s\n",
+			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- error code %s\n",
 					canonicalization.c_str(),
 					errptr);
 
@@ -770,17 +772,17 @@ CanonicalMapList* MapFile::GetMapList(const char * method) // method is NULL for
 }
 
 
-void MapFile::AddEntry(CanonicalMapList* list, int regex_opts, const char * principal, const char * canonicalization)
+void MapFile::AddEntry(CanonicalMapList* list, uint32_t regex_opts, const char * principal, const char * canonicalization)
 {
 	//PRAGMA_REMIND("stringspace these??")
 	const char * canon = apool.insert(canonicalization);
 
 	if (regex_opts) {
-		regex_opts &= ~PCRE_NOTEMPTY; // we use this as a trigger, don't pass it down.
+		regex_opts &= ~PCRE2_NOTEMPTY; // we use this as a trigger, don't pass it down.
 		CanonicalMapRegexEntry * rxme = new CanonicalMapRegexEntry;
-		const char * errptr; int erroffset;
-		if ( ! rxme->add(principal, regex_opts, canon, &errptr, &erroffset)) {
-			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- %s.  this entry will be ignored.\n", principal, errptr);
+		int errcode; PCRE2_SIZE erroffset;
+		if ( ! rxme->add(principal, regex_opts, canon, &errcode, &erroffset)) {
+			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- PCRE2 error code %d.  this entry will be ignored.\n", principal, errcode);
 			delete rxme;
 		} else {
 			list->append(rxme);
@@ -815,34 +817,40 @@ bool CanonicalMapHashEntry::matches(const char * principal, int /*cch*/, ExtArra
 
 bool CanonicalMapRegexEntry::matches(const char * principal, int cch, ExtArray<MyString> *groups, const char ** pcanon)
 {
-	const int max_group_count = 11; // only \0 through \9 allowed.
-	int ovector[3 * (max_group_count + 1)]; // +1 for the string itself
+	pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
+	PCRE2_SPTR principal_pcre2str = reinterpret_cast<const unsigned char *>(principal);
 
-	int rc = pcre_exec(re, NULL, principal, cch,
+	int rc = pcre2_match(re, principal_pcre2str, static_cast<PCRE2_SIZE>(cch),
 						0, // Index in string from which to start matching
 						re_options,
-						ovector, (int)COUNTOF(ovector));
+						matchdata, NULL);
 	if (rc <= 0) {
 		// does not match
+		pcre2_match_data_free(matchdata);
 		return false;
 	}
 
 	if (pcanon) *pcanon = this->canonicalization;
 	if (groups) {
+		PCRE2_SIZE * ovector = pcre2_get_ovector_pointer(matchdata);
 		for (int i = 0; i < rc; i++) {
-			int ix1 = ovector[i * 2];
-			int ix2 = ovector[i * 2 + 1];
+			int ix1 = static_cast<int>(ovector[i * 2]);
+			int ix2 = static_cast<int>(ovector[i * 2 + 1]);
 			(*groups)[i].set(&principal[ix1], ix2 - ix1);
 		}
 	}
+
+	pcre2_match_data_free(matchdata);
+
 	return true;
 }
 
 
-bool CanonicalMapRegexEntry::add(const char * pattern, int options, const char * canon, const char **errptr, int * erroffset)
+bool CanonicalMapRegexEntry::add(const char * pattern, uint32_t options, const char * canon, int * errcode, PCRE2_SIZE * erroffset)
 {
-	if (re) pcre_free(re);
-	re = pcre_compile(pattern, options, errptr, erroffset, NULL);
+	if (re) pcre2_code_free(re);
+	PCRE2_SPTR pattern_pcre2str = reinterpret_cast<const unsigned char *>(pattern);
+	re = pcre2_compile(pattern_pcre2str, PCRE2_ZERO_TERMINATED, options, errcode, erroffset, NULL);
 	if (re) {
 		canonicalization = canon;
 		return true;

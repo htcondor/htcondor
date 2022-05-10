@@ -210,9 +210,9 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 		if( !evaluateOptionalString(ATTR_REGEX,regex,metric_ad,daemon_ad,NULL) ) return false;
 		if( !regex.empty() ) {
 			Regex re;
-			const char *errptr=NULL;
+			int errcode;
 			int erroffset=0;
-			if( !re.compile(regex.c_str(),&errptr,&erroffset,PCRE_ANCHORED) ) {
+			if( !re.compile(regex.c_str(),&errcode,&erroffset,PCRE2_ANCHORED) ) {
 				EXCEPT("Invalid regex %s",regex.c_str());
 			}
 			for( classad::ClassAd::const_iterator itr = daemon_ad.begin();

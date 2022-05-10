@@ -267,7 +267,7 @@ static bool test_tokener_parse_regex() {
     emit_test("Test tokener regex parsing");
 
 	MyString msg;
-	int fl;
+	uint32_t fl;
 	std::string temp;
 	tokener toke("/(.*)/i");
 
