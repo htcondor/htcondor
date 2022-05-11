@@ -68,8 +68,9 @@ class Submit(Verb):
             with submit_file.open() as f:
                 submit_data = f.read()
             submit_description = htcondor.Submit(submit_data)
-	    #Set s_method to HTC_JOB_SUBMIT
-            submit_description.setSubmitMethod(JSM_HTC_JOB_SUBMIT,True)
+            # Set s_method to HTC_JOB_SUBMIT
+            if hasattr(submit_description, "setSubmitMethod"):
+                submit_description.setSubmitMethod(JSM_HTC_JOB_SUBMIT,True)
 
             annex_name = options["annex_name"]
             if annex_name is not None:

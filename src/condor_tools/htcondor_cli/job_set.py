@@ -212,14 +212,16 @@ class Submit(Verb):
                             raise ValueError(f"""Unclosed bracket in {job_set_file} starting at line {lineno}.""")
                         lineno += inlineno
                         submit_obj = htcondor.Submit(inline_data)
-			#Set s_method to HTC_JOBSET_SUBMIT
-                        submit_obj.setSubmitMethod(JSM_HTC_JOBSET_SUBMIT,True)
+                        # Set s_method to HTC_JOBSET_SUBMIT
+                        if hasattr(submit_obj, "setSubmitMethod"):
+                            submit_obj.setSubmitMethod(JSM_HTC_JOBSET_SUBMIT,True)
                     else:
                         try:
                             with open(job_source, "rt") as f_sub:
                                 submit_obj = htcondor.Submit(f_sub.read())
-				#Set s_method to HTC_JOBSET_SUBMIT
-                                submit_obj.setSubmitMethod(JSM_HTC_JOBSET_SUBMIT,True)
+                                # Set s_method to HTC_JOBSET_SUBMIT
+                                if hasattr(submit_obj, "setSubmitMethod"):
+                                    submit_obj.setSubmitMethod(JSM_HTC_JOBSET_SUBMIT,True)
                         except IOError as e:
                             raise IOError(f"Error opening submit description file {job_source} in {job_set_file} at line {lineno}:\n{str(e)}")
 

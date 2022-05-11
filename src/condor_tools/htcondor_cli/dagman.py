@@ -43,8 +43,9 @@ class Submit(Verb):
 
         # Submit the DAG to the local schedd
         submit_description = htcondor.Submit.from_dag(dag_filename)
-	#Set s_method to HTC_DAG_SUBMIT
-        submit_description.setSubmitMethod(JSM_HTC_DAG_SUBMIT,True)
+        # Set s_method to HTC_DAG_SUBMIT
+        if hasattr(submit_description, "setSubmitMethod"):
+            submit_description.setSubmitMethod(JSM_HTC_DAG_SUBMIT,True)
 
         with schedd.transaction() as txn:
             try:
