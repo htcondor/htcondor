@@ -347,7 +347,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		std::string retryStr = std::to_string( retry );
 		replace_str( value, "$(RETRY)", retryStr.c_str() );
 		std::string varStr(nodeVar._name);
-		varStr += " = ";
+		varStr += "=";
 		varStr += value;
 
 		if ( !nodeVar._prepend ) { args.AppendArg( "-a" ); }// Append var if prepend is false; -a == -append; using -a to save chars
