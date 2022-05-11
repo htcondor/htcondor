@@ -51,13 +51,7 @@ int main(int, char **)
 
     /* ----- Regular expressions ----- */
     cout << "  Regular expression function:     ";
-#if defined USE_POSIX_REGEX 
-    cout << "POSIX\n";
-#elif defined USE_PCRE
     cout << "PCRE\n";
-#else
-    cout << "Disabled\n";
-#endif
 
     /* ----- GNU version, if applicable ----- */
 #if defined __GNUC__ && defined __GNUC_MINOR__

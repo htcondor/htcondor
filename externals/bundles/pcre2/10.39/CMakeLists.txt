@@ -49,7 +49,12 @@ if ( NOT PROPER )
 	# pcre2-8 is the cmake target for 8 bit characters, which expands to the proper platform-specific filename(s)
 	set(PCRE2_FOUND pcre2-8)
 
-	set(PCRE2_INCLUDE "${pcre2_BINARY_DIR}")
+	# pcre2 10.41 will do this for us, but for now attach the include dir to the library target
+	target_include_directories(pcre2-8-shared INTERFACE "${pcre2_BINARY_DIR}")
+
+	# Remove this when we drop Ubuntu 18 (and cmake 3.10)
+	set(PCRE2_INCLUDE ${pcre2_BINARY_DIR})
+	set(PCRE2_INCLUDE ${PCRE2_INCLUDE} PARENT_SCOPE)
 
 	# PCRE2_REF is used as the dependency to chain classads/condor_utils to pcre2
 	set(PCRE2_REF "${PCRE2_FOUND}")
@@ -76,7 +81,11 @@ if ( NOT PROPER )
 else()
 	# Proper, i.e. pre-installed 
 	find_library(PCRE2_FOUND "pcre2-8")
-	set(PRCE2_INCLUDE "/usr/include")
+	
+	# Make a library target for the installed on disk shared library
+	# that looks just like a target we would build
+	add_library(pcre2-8 SHARED IMPORTED GLOBAL)
+	set_target_properties(pcre2-8 PROPERTIES IMPORTED_LOCATION "${PCRE2_FOUND}")
 
 endif( NOT PROPER)
 
@@ -84,9 +93,7 @@ endif( NOT PROPER)
 if (PCRE2_FOUND)
 	message (STATUS "external configured (PCRE2_FOUND=${PCRE2_FOUND})")
 
-	# Globalize the variables
-	set(PCRE2_FOUND ${PCRE2_FOUND} PARENT_SCOPE )
-	set(PCRE2_INCLUDE ${PCRE2_INCLUDE} PARENT_SCOPE )
+	# Globalize the variable
 	set(HAVE_EXT_PCRE2 ON PARENT_SCOPE )
 else()
 	message (FATAL_ERROR "pcre2 not found and is required to build")
