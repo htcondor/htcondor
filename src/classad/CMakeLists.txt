@@ -49,8 +49,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
 
 	# Should use find_package here for either case
-	set(PCRE2_INCLUDE /usr/include)
-	set(PCRE2_FOUND -lpcre2-8)
+	find_library("pcre2-8" PCRE2_FOUND)
+	add_library(pcre2-8 IMPORTED)
+	set_target_properties(pcre2-8 PROPERTIES IMPORTED_LOCATION ${PCRE2_FOUND})
 
 	set(C_BIN bin)
 	set(C_LIB_PUBLIC lib/condor)
@@ -76,8 +77,6 @@ else()
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
-include_directories(${PCRE2_INCLUDE})
 
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	add_definitions( -DCLASSAD_VERSION="${PACKAGE_VERSION}"
@@ -159,21 +158,32 @@ xmlSource.cpp
 #####################################################################
 
 add_library(classads_objects OBJECT ${ClassadSrcs})
+# Older cmakes don't allow target_link_libraries to OBJECT libraries
+# remove this when we drop Ubuntu 18
+if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
+	target_link_libraries(classads_objects pcre2-8)
+else()
+	include_directories(${PCRE2_INCLUDE})
+endif()
+
 set_property(TARGET classads_objects PROPERTY POSITION_INDEPENDENT_CODE 1)
 add_library( classads STATIC $<TARGET_OBJECTS:classads_objects> )    # the one which all of condor depends upon
-target_link_libraries( classads PUBLIC "${PCRE2_FOUND};${CMAKE_DL_LIBS}")
+target_link_libraries( classads pcre2-8)
+target_link_libraries( classads "${CMAKE_DL_LIBS}")
 set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 
 if (UNIX)  
   add_library( classad SHARED $<TARGET_OBJECTS:classads_objects>)   # for distribution at this point may swap to depend at a future date.
+  target_link_libraries(classad pcre2-8)
   set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 15 )
-  target_link_libraries( classad PUBLIC "${PCRE2_FOUND};${CMAKE_DL_LIBS}" )
+  target_link_libraries( classad ${CMAKE_DL_LIBS})
   install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
 endif()
 if ( APPLE )
   set_target_properties( classad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib )
   install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB_PUBLIC}/libclassad.${PACKAGE_VERSION}.dylib)" )
-  target_link_libraries( classad PUBLIC "${PCRE2_FOUND};${CMAKE_DL_LIBS}" )
+  target_link_libraries( classad pcre2-8)
+  target_link_libraries( classad "${CMAKE_DL_LIBS}")
 endif()
 
 add_executable( classad_functional_tester "classad_functional_tester.cpp" )
@@ -195,7 +205,7 @@ message (STATUS "configured (CLASSADS_FOUND= ${CLASSADS_FOUND})")
 if (NOT PROPER)
   
   if(PCRE_REF)
-	add_dependencies( classads ${PCRE2_REF} )
+	add_dependencies( classads_objects ${PCRE2_REF} )
   endif()
 
   if (NOT WIN32)

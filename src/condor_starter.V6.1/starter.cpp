@@ -3549,7 +3549,6 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 			pcre2_match_data_free(matchdata);
 		}
 
-		//pcre_free(re);
 		pcre2_code_free(re);
 
 		proc_env->SetEnv(env_name.c_str(), rhs.c_str());
