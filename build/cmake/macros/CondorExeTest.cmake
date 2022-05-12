@@ -41,6 +41,13 @@ MACRO (CONDOR_EXE_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 		add_dependencies(${LOCAL_${_CNDR_TARGET}} condor_version_obj)
 		condor_set_link_libs( ${LOCAL_${_CNDR_TARGET}} "${_LINK_LIBS};condor_version_obj" )
 
+		if ( DARWIN )
+			add_custom_command( TARGET ${LOCAL_${_CNDR_TARGET}}
+				POST_BUILD
+				WORKING_DIRECTORY ${TEST_TARGET_DIR}
+				COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs ${LOCAL_${_CNDR_TARGET}} )
+		endif()
+
 		APPEND_VAR( CONDOR_TESTS ${LOCAL_${_CNDR_TARGET}} )
 
 	endif(BUILD_TESTING)
