@@ -596,16 +596,16 @@ add_library(condor_api_and_utils_objects OBJECT ${CONDOR_API_AND_UTILS_SRC})
 # Older cmakes don't allow target_link_libraries to OBJECT libraries
 # remove this when we drop Ubuntu 18
 if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
-	target_link_libraries(condor_api_and_utils_objects pcre2-8)
-else()
 	include_directories(${PCRE2_INCLUDE})
+else()
+	target_link_libraries(condor_api_and_utils_objects pcre2-8)
 endif()
 
 add_library(condor_utils_objects OBJECT ${CONDOR_UTILS_SRC})
 if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
-	target_link_libraries(condor_utils_objects pcre2-8)
-else()
 	include_directories(${PCRE2_INCLUDE})
+else()
+	target_link_libraries(condor_utils_objects pcre2-8)
 endif()
 
 add_dependencies(condor_utils_objects utils_genparams)
@@ -613,9 +613,9 @@ add_library(condor_extra_objects OBJECT ${EXTRA_SRCS})
 
 # The extra libraries also need pcre2
 if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
-	target_link_libraries(condor_extra_objects pcre2-8)
-else()
 	include_directories(${PCRE2_INCLUDE})
+else()
+	target_link_libraries(condor_extra_objects pcre2-8)
 endif()
 
 add_library(condor_safe_objects OBJECT ${SAFE_OPEN_SRC})
@@ -695,9 +695,9 @@ endif()
 
 add_library(condor_api_objects OBJECT ${CONDOR_API_SRC})
 if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
-	target_link_libraries(condor_api_objects pcre2-8)
-else()
 	include_directories(${PCRE2_INCLUDE})
+else()
+	target_link_libraries(condor_api_objects pcre2-8)
 endif()
 
 condor_static_lib(condorapi 

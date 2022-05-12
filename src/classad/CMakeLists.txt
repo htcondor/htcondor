@@ -161,9 +161,9 @@ add_library(classads_objects OBJECT ${ClassadSrcs})
 # Older cmakes don't allow target_link_libraries to OBJECT libraries
 # remove this when we drop Ubuntu 18
 if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
-	target_link_libraries(classads_objects pcre2-8)
-else()
 	include_directories(${PCRE2_INCLUDE})
+else()
+	target_link_libraries(classads_objects pcre2-8)
 endif()
 
 set_property(TARGET classads_objects PROPERTY POSITION_INDEPENDENT_CODE 1)
