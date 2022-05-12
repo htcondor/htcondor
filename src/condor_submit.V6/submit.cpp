@@ -135,6 +135,7 @@ int		DashMaxClusters = 0; // maximum number of clusters to create before generat
 const char * DashDryRunOutName = NULL;
 int		DumpSubmitHash = 0;
 int		DumpSubmitDigest = 0;
+int		DumpJOBSETClassad = 0;
 int		MaxProcsPerCluster;
 int	  ClusterId = -1;
 int	  ProcId = -1;
@@ -583,6 +584,8 @@ main( int argc, const char *argv[] )
 							DumpSubmitHash &= ~HASHITER_NO_DEFAULTS;
 						} else if (YourString(opt) == "digest") {
 							DumpSubmitDigest = 1;
+						} else if (YourString(opt) == "jobset") {
+							DumpJOBSETClassad = 1;
 						} else if (starts_with(opt, "cluster=")) {
 							sim_current_condor_version = true;
 							sim_starting_cluster = atoi(strchr(opt, '=') + 1);
@@ -1610,6 +1613,38 @@ bool CheckForNewExecutable(MACRO_SET& macro_set) {
 	return new_exe;
 }
 
+static bool jobset_ad_is_trivial(const ClassAd *ad)
+{
+	if ( ! ad) return true;
+	for (auto it : *ad) {
+		if (YourStringNoCase(ATTR_JOB_SET_NAME) == it.first) continue;
+		return false;
+	}
+	return true;
+}
+
+int send_jobset_ad(SubmitHash & hash, int ClusterId)
+{
+	int rval = 0;
+	const ClassAd * jobsetAd = hash.getJOBSET();
+	if (jobsetAd) {
+		int jobset_version = 0;
+		if (MyQ->has_send_jobset(jobset_version)) {
+			rval = MyQ->send_Jobset(ClusterId, jobsetAd);
+			if (rval == 0 || rval == 1) {
+				rval = 0;
+			} else {
+				fprintf( stderr, "\nERROR: Failed to submit jobset.\n" );
+				return rval;
+			}
+		} else {
+			fprintf(stderr, "\nWARNING: schedd does not support jobsets.%s\n",
+				jobset_ad_is_trivial(jobsetAd) ? "" : "  Ignoring JOBSET.* attributes");
+		}
+	}
+	return rval;
+}
+
 int send_cluster_ad(SubmitHash & hash, int ClusterId, bool is_interactive, bool is_remote)
 {
 	int rval = 0;
@@ -1628,29 +1663,35 @@ int send_cluster_ad(SubmitHash & hash, int ClusterId, bool is_interactive, bool 
 	classad::ClassAd * clusterAd = job->GetChainedParentAd();
 	if ( ! clusterAd) {
 		fprintf( stderr, "\nERROR: no cluster ad.\n" );
-		return -1;
+		rval = -1;
+		goto bail;
 	}
 
-	int JobUniverse = hash.getUniverse();
-	if ( ! JobUniverse) {
+	if ( ! hash.getUniverse()) {
+		fprintf( stderr, "\nERROR: job has no universe.\n" );
 		rval = -1;
-	} else {
+		goto bail;
+	}
+
+	// if this submission is using jobsets, send the jobset ad first
+	rval = send_jobset_ad(hash, ClusterId);
+	if (rval >= 0) {
 		SendLastExecutable(); // if spooling the exe, send it now.
 		rval = MySendJobAttributes(JOB_ID_KEY(ClusterId,-1), *clusterAd, setattrflags);
-		if (rval == 0 || rval == 1) {
-			rval = 0;
-		} else {
+		if (rval < 0) {
 			fprintf( stderr, "\nERROR: Failed to queue job.\n" );
 		}
 	}
 
+bail:
+	if (rval == 0 || rval == 1) {
+		rval = 0;
+	}
 	hash.delete_job_ad();
 	job = NULL;
 
 	return rval;
 }
-
-
 
 int submit_jobs (
 	FILE * fp,
@@ -1987,6 +2028,14 @@ int submit_jobs (
 
 			// make sure vars don't continue to reference the o.items data that we are about to free.
 			cleanup_vars(submit_hash, o.vars);
+		}
+
+		if (DashDryRun && DumpJOBSETClassad) {
+			fprintf(stdout, "\n----- jobset -----\n");
+			if (submit_hash.getJOBSET()) {
+				fPrintAd(stdout, *submit_hash.getJOBSET());
+			}
+			fprintf(stdout, "-----\n");
 		}
 
 		// if there was a failure, quit out of this loop.
@@ -2339,6 +2388,14 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		int JobUniverse = submit_hash.getUniverse();
 		rval = 0;
 		if ( ProcId == 0 ) {
+			// if there are custom jobset attributes, and the schedd supports jobsets
+			// send the jobset attributes now.
+			rval = send_jobset_ad(submit_hash, jid.cluster);
+			if (rval < 0) {
+				DoCleanup(0,0,NULL);
+				exit(1);
+			}
+
 			SendLastExecutable(); // if spooling the exe, send it now.
 
 			// before sending proc0 ad, send the cluster ad

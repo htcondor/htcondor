@@ -19,8 +19,10 @@ public:
 	virtual bool has_late_materialize(int &ver) = 0;
 	virtual bool allows_late_materialize() = 0;
 	virtual bool has_extended_submit_commands(ClassAd &cmds) = 0;
+	virtual bool has_send_jobset(int &ver) = 0;
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text) = 0;
 	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o) = 0;
+	virtual int send_Jobset(int cluster, const ClassAd * jobset_ad) = 0;
 
 	// helper function used as 3rd argument to SendMaterializeData.
 	// it treats pv as a pointer to SubmitForeachArgs, calls next() on it and then formats the
@@ -40,7 +42,10 @@ enum {
 
 class ActualScheddQ : public AbstractScheddQ {
 public:
-	ActualScheddQ() : qmgr(NULL), tried_to_get_capabilities(false), has_late(false), allows_late(false), late_ver(0) {}
+	ActualScheddQ() : qmgr(NULL)
+		, tried_to_get_capabilities(false), has_late(false), allows_late(false), late_ver(0)
+		, has_jobsets(false), use_jobsets(false), jobsets_ver(0)
+	{}
 	virtual ~ActualScheddQ();
 	virtual int get_NewCluster();
 	virtual int get_NewProc(int cluster_id);
@@ -55,8 +60,10 @@ public:
 	virtual bool has_late_materialize(int &ver); // version check for late materialize
 	virtual bool allows_late_materialize(); // capabilities check ffor late materialize enabled.
 	virtual bool has_extended_submit_commands(ClassAd &cmds); // capabilities check for extended submit commands
+	virtual bool has_send_jobset(int &ver);
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
 	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
+	virtual int send_Jobset(int cluster, const ClassAd * jobset_ad);
 
 	bool Connect(DCSchedd & MySchedd, CondorError & errstack);
 private:
@@ -66,5 +73,8 @@ private:
 	bool has_late; // set in Connect based on the version in DCSchedd
 	bool allows_late;
 	char late_ver;
+	bool has_jobsets;
+	bool use_jobsets;
+	char jobsets_ver;
 	int init_capabilities();
 };

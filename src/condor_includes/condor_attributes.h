@@ -520,7 +520,7 @@
 #define ATTR_NETWORK_IN  "NetworkInputMb"
 #define ATTR_NETWORK_OUT  "NetworkOutputMb"
 #define ATTR_NEXT_CLUSTER_NUM  "NextClusterNum"
-#define ATTR_NEXT_JOBSET_NUM "NextJobSetNum"
+//#define ATTR_NEXT_JOBSET_NUM "NextJobSetNum"	// TJ removed NextJobSetNum, will use NextClusterNum to allocate jobset ids
 #define ATTR_NEXT_FETCH_WORK_DELAY  "NextFetchWorkDelay"
 #define ATTR_NEXT_JOB_START_DELAY  "NextJobStartDelay"
 #define ATTR_NODE  "Node"

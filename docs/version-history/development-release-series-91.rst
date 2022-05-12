@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- *condor_submit* now has support for submitting jobsets. Jobsets are still
+  a technology preview and still not ready for general use.
+  :jira:`1063`
 
 Bugs Fixed:
 
