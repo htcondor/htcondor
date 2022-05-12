@@ -204,7 +204,7 @@ message (STATUS "configured (CLASSADS_FOUND= ${CLASSADS_FOUND})")
 # finally add dependencies if there are any
 if (NOT PROPER)
   
-  if(PCRE_REF)
+  if(PCRE2_REF)
 	add_dependencies( classads_objects ${PCRE2_REF} )
   endif()
 

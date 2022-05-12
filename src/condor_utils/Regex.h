@@ -23,12 +23,8 @@
 #include "condor_common.h"
 #include "MyString.h"
 #include "extArray.h"
-#ifdef HAVE_PCRE_PCRE_H
-#  include "pcre/pcre.h"
-#else
-#  define PCRE2_CODE_UNIT_WIDTH 8
-#  include <pcre2.h>
-#endif
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 //Regex NULLRegex;
 
