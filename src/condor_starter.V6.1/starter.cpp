@@ -3519,7 +3519,6 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 				if ( ! rhs.empty()) { rhs += env_id_separator; }
 				int cchresid = (int)strlen(resid);
 				PCRE2_SPTR resid_pcre2str = reinterpret_cast<const unsigned char *>(resid);
-				//int status = pcre_exec(re, NULL, resid, cchresid, 0, 0, ovector, ovecsize);
 				int status = pcre2_match(re, resid_pcre2str, static_cast<PCRE2_SIZE>(cchresid), 0, 0, matchdata, NULL);
 				if (status >= 0) {
 					const struct _pcre_vector { int start; int end; } * groups
