@@ -3509,10 +3509,6 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 			}
 		} else {
 			const char * resid;
-			//int cGroups = 0;
-			//pcre_fullinfo(re, NULL, PCRE_INFO_CAPTURECOUNT, &cGroups);
-			//int ovecsize = 3 * (cGroups + 1); // +1 for the string itself
-			//int * ovector = (int *) malloc(ovecsize * sizeof(int));
 			pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
 
 			dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' pattern: %s\n", tag, env_name.c_str(), peq);
