@@ -719,6 +719,9 @@ install ( TARGETS condorapi DESTINATION ${C_LIB} )
 if (LINUX OR DARWIN)
     install ( TARGETS condorapi_shared DESTINATION ${C_LIB} )
 endif()
+if (DARWIN)
+    install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/libcondorapi.dylib)" )
+endif()
 
 set_source_files_properties(test_log_reader.cpp PROPERTIES DEFINITIONS ENABLE_STATE_DUMP)
 
