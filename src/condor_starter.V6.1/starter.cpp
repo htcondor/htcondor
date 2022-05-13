@@ -3540,7 +3540,6 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 					rhs += resid;
 				}
 			}
-			//free(ovector);
 			pcre2_match_data_free(matchdata);
 		}
 
