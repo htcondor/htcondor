@@ -1000,7 +1000,7 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 				mapFailed = global_map_file->GetCanonicalization( "SCITOKENS", m_scitokens_auth_name, canonical_user );
 			}
 			if( mapFailed ) {
-				dprintf(D_SECURITY, "Failed to map SCITOKENS authenticated identity '%s', failing authentication to give another authentication method a go.\n", m_scitokens_auth_name.c_str() );
+				dprintf(D_ERROR, "Failed to map SCITOKENS authenticated identity '%s', failing authentication to give another authentication method a go.\n", m_scitokens_auth_name.c_str() );
 
 				m_auth_state->m_server_status = AUTH_SSL_QUITTING;
 			} else {
