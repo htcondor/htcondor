@@ -1762,17 +1762,6 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 		prepend = false;
 		varsStr += 6;
 	} else {
-		//Check and make sure PREPEND and/or APPEND don't exist later in string
-		std::string temp(varsStr);//Make string with current token
-		std::string varsAP_error = "";
-		if (temp.find("PREPEND") != std::string::npos ) { varsAP_error = "PREPEND"; }
-		else if (temp.find("APPEND") != std::string::npos ) { varsAP_error = "APPEND"; }
-		//If PREPEND or APPEND were found then it was added in an incorrect spot so debug message and return false
-		if ( varsAP_error.compare("") != 0 ){
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s not specified before passed variables.\n"
-						,filename,lineNumber,varsAP_error.c_str());
-			return false;
-		}
 		//If options aren't found then set to global knob
 		// !append -> prepend
 		prepend = !param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
@@ -2891,7 +2880,12 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 	}
 
 	if ( *str != '=' ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Illegal character (%c) in or after macroname %s\n", filename, lineNumber, *str, varName.c_str() );
+		if ( varName.compare("PREPEND") == 0 || varName.compare("APPEND") == 0){
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s not declared before all passed variables.\n"
+						,filename,lineNumber,varName.c_str());
+		} else {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Illegal character (%c) in or after macroname %s\n", filename, lineNumber, *str, varName.c_str() );
+		}
 		return false;
 	}
 	str++;
