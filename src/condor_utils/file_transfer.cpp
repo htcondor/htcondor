@@ -618,9 +618,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			if( OutputFiles ) {
 				if(! OutputFiles->file_contains( JobStdoutFile.c_str() )) {
 					OutputFiles->append( JobStdoutFile.c_str() );
-				} else {
-					OutputFiles = new StringList( JobStdoutFile, "," );
 				}
+			} else {
+				OutputFiles = new StringList( JobStdoutFile, "," );
 			}
 		}
 	}
@@ -630,9 +630,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			if( OutputFiles ) {
 				if(! OutputFiles->file_contains( JobStderrFile.c_str() )) {
 					OutputFiles->append( JobStderrFile.c_str() );
-				} else {
-					OutputFiles = new StringList( JobStderrFile, "," );
 				}
+			} else {
+				OutputFiles = new StringList( JobStderrFile, "," );
 			}
 		}
 	}
