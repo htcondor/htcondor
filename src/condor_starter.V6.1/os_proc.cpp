@@ -980,7 +980,17 @@ OsProc::ShutdownGraceful()
 	if ( findRmKillSig(JobAd) != -1 ) {
 		daemonCore->Send_Signal(JobPid, rm_kill_sig);
 	} else {
-		daemonCore->Send_Signal(JobPid, soft_kill_sig);
+		bool sent = daemonCore->Send_Signal(JobPid, soft_kill_sig);
+		if (!sent) {
+			dprintf(D_ALWAYS, "Send (softkill) signal failed, retrying...\n");
+			sleep(1);
+			sent = daemonCore->Send_Signal(JobPid, soft_kill_sig);
+			if (!sent) {
+				dprintf(D_ALWAYS, "Send (softkill) signal failed twice, hardkill will fire after timeout\n");
+			} else {
+				dprintf(D_ALWAYS, "Send (softkill) signal worked the second time\n");
+			}
+		}
 	}
 	return false;	// return false says shutdown is pending	
 }
