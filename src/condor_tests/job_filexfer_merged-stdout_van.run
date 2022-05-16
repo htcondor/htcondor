@@ -70,7 +70,7 @@ $success = sub
 	# (from stdout):Called with:...
 	# (from stderr):Hello
 	# (from stdout):Working Directory is ...
-	if(!open(FH, '<', "$stdout")){ print "Faild to open job stdout\n"; exit(1)};
+	if(!open(FH, '<', "$stdout")){ print "Failed to open job stdout\n"; exit(1)};
 	chomp(my @lines = <FH>);
 	if ($lines[0] !~ /Called with:/ || $lines[1] !~ /Hello/ || $lines[2] !~ /Working Directory/ ) {
 		print "Job stdout/err doesn't have expected contents\n";
