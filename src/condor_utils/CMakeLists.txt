@@ -591,9 +591,33 @@ endif()
 
 # Build "Object" libraries, which are just a set of .o files which can later to into libraries
 add_library(condor_api_and_utils_objects OBJECT ${CONDOR_API_AND_UTILS_SRC})
+
+# The utils need pcre2
+# Older cmakes don't allow target_link_libraries to OBJECT libraries
+# remove this when we drop Ubuntu 18
+if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
+	include_directories(${PCRE2_INCLUDE})
+else()
+	target_link_libraries(condor_api_and_utils_objects pcre2-8)
+endif()
+
 add_library(condor_utils_objects OBJECT ${CONDOR_UTILS_SRC})
+if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
+	include_directories(${PCRE2_INCLUDE})
+else()
+	target_link_libraries(condor_utils_objects pcre2-8)
+endif()
+
 add_dependencies(condor_utils_objects utils_genparams)
 add_library(condor_extra_objects OBJECT ${EXTRA_SRCS})
+
+# The extra libraries also need pcre2
+if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
+	include_directories(${PCRE2_INCLUDE})
+else()
+	target_link_libraries(condor_extra_objects pcre2-8)
+endif()
+
 add_library(condor_safe_objects OBJECT ${SAFE_OPEN_SRC})
 
 # linux condor_utils.so from the .o's built above
@@ -648,9 +672,9 @@ if ( LINUX )
 endif()
 
 if (DLOPEN_GSI_LIBS OR DLOPEN_VOMS_LIBS)
-	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${SCITOKENS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
+	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${SCITOKENS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
 else()
-	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${SCITOKENS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
+	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${SCITOKENS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
 endif()
 if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condor_utils ${LIBUUID_FOUND})
@@ -670,11 +694,18 @@ if(WINDOWS)
 endif()
 
 add_library(condor_api_objects OBJECT ${CONDOR_API_SRC})
+if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
+	include_directories(${PCRE2_INCLUDE})
+else()
+	target_link_libraries(condor_api_objects pcre2-8)
+endif()
+
 condor_static_lib(condorapi 
 						$<TARGET_OBJECTS:condor_api_objects>
 						$<TARGET_OBJECTS:condor_api_and_utils_objects>
 						$<TARGET_OBJECTS:condor_safe_objects>
 )
+target_link_libraries(condorapi pcre2-8)
 
 #add_dependencies( condorapi condor_utils )
 
@@ -686,7 +717,7 @@ if (DOCKER_ALLOW_RUN_AS_ROOT)
 	set_source_files_properties(docker-api.cpp PROPERTIES COMPILE_DEFINITIONS DOCKER_ALLOW_RUN_AS_ROOT=1)
 endif()
 
-target_link_libraries(condorapi classads;${CMAKE_DL_LIBS};${RT_FOUND})
+target_link_libraries(condorapi classads;${RT_FOUND})
 if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condorapi ${LIBUUID_FOUND})
 endif()

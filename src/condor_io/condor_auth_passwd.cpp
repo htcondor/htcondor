@@ -220,8 +220,7 @@ findTokens(const std::string &issuer,
 	}
 	dprintf(D_FULLDEBUG, "Looking for tokens in directory %s for issuer %s\n", dirpath.c_str(), issuer.c_str());
 
-	const char* _errstr;
-	int _erroffset;
+	int _errcode, _erroffset;
 	std::string excludeRegex;
 		// We simply fail invalid regex as the config subsys should have EXCEPT'd
 		// in this case.
@@ -230,11 +229,11 @@ findTokens(const std::string &issuer,
 		return false;
 	}
 	Regex excludeFilesRegex;
-	if (!excludeFilesRegex.compile(excludeRegex, &_errstr, &_erroffset)) {
+	if (!excludeFilesRegex.compile(excludeRegex, &_errcode, &_erroffset)) {
 		dprintf(D_FULLDEBUG, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
 			"config parameter is not a valid "
-			"regular expression.  Value: %s,  Error: %s",
-			excludeRegex.c_str(), _errstr ? _errstr : "");
+			"regular expression.  Value: %s,  Error Code: %d",
+			excludeRegex.c_str(), _errcode);
 		return false;
 	}
 	if(!excludeFilesRegex.isInitialized() ) {

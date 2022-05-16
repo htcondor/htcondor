@@ -42,7 +42,7 @@ Regex::operator = (const Regex & copy)
 		this->options = copy.options;
 
 		if (re) {
-			pcre_free(re); re = NULL;
+			pcre2_code_free(re); re = NULL;
 		}
 		re = clone_re(copy.re);
 	}
@@ -54,38 +54,42 @@ Regex::operator = (const Regex & copy)
 Regex::~Regex()
 {
 	if (re) {
-		pcre_free(re); re = NULL;
+		pcre2_code_free(re); re = NULL;
 	}
 }
 
 
 bool
 Regex::compile(const char * pattern,
-			   const char ** errptr,
+			   int * errcode,
 			   int * erroffset,
-			   int options_param)
+			   uint32_t options_param)
 {
-	re = pcre_compile(pattern, options_param, errptr, erroffset, NULL);
+	PCRE2_SPTR pattern_pcre2str = reinterpret_cast<const unsigned char *>(pattern);
+	PCRE2_SIZE erroffset_pcre2 = 0;
+	re = pcre2_compile(pattern_pcre2str, PCRE2_ZERO_TERMINATED, options_param, errcode, &erroffset_pcre2, NULL);
+
+	*erroffset = static_cast<int>(erroffset_pcre2);
 
 	return (NULL != re);
 }
 
 bool
 Regex::compile(const MyString & pattern,
-			   const char ** errptr,
+			   int * errcode,
 			   int * erroffset,
-			   int options_param)
+			   uint32_t options_param)
 {
-	return compile(pattern.c_str(), errptr, erroffset, options_param);
+	return compile(pattern.c_str(), errcode, erroffset, options_param);
 }
 
 bool
 Regex::compile(const std::string & pattern,
-			   const char ** errptr,
+			   int * errcode,
 			   int * erroffset,
-			   int options_param)
+			   uint32_t options_param)
 {
-	return compile(pattern.c_str(), errptr, erroffset, options_param);
+	return compile(pattern.c_str(), errcode, erroffset, options_param);
 }
 
 
@@ -96,32 +100,20 @@ Regex::match_str(const std::string & string, ExtArray<std::string> * groups) {
 		return false;
 	}
 
-	int group_count;
-	pcre_fullinfo(re, NULL, PCRE_INFO_CAPTURECOUNT, &group_count);
-	int oveccount = 3 * (group_count + 1); // +1 for the string itself
-	int * ovector = (int *) malloc(oveccount * sizeof(int));
-	if (!ovector) {
-			// XXX: EXCEPTing sucks
-		EXCEPT("No memory to allocate data for re match");
-	}
+	pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
+	PCRE2_SPTR string_pcre2str = reinterpret_cast<const unsigned char *>(string.c_str());
 
-	int rc = pcre_exec(re,
-					   NULL,
-					   string.c_str(),
-					   string.length(),
-					   0, // Index in string from which to start matching
-					   options,
-					   ovector,
-					   oveccount);
+	int rc = pcre2_match(re, string_pcre2str, static_cast<PCRE2_SIZE>(string.length()), 0, options, matchdata, NULL);
 
+	PCRE2_SIZE * ovector = pcre2_get_ovector_pointer(matchdata);
 	if (NULL != groups) {
 		for (int i = 0; i < rc; i++) {
-			(*groups)[i] = string.substr(ovector[i * 2],
-			                             ovector[i * 2 + 1] - ovector[i * 2]);
+			(*groups)[i] = string.substr(static_cast<int>(ovector[i * 2]),
+			                             static_cast<int>(ovector[i * 2 + 1] - ovector[i * 2]));
 		}
 	}
 
-	free(ovector);
+	pcre2_match_data_free(matchdata);
 	return rc > 0;
 }
 
@@ -133,32 +125,20 @@ Regex::match(const MyString & string,
 		return false;
 	}
 
-	int group_count;
-	pcre_fullinfo(re, NULL, PCRE_INFO_CAPTURECOUNT, &group_count);
-	int oveccount = 3 * (group_count + 1); // +1 for the string itself
-	int * ovector = (int *) malloc(oveccount * sizeof(int));
-	if (!ovector) {
-			// XXX: EXCEPTing sucks
-		EXCEPT("No memory to allocate data for re match");
-	}
+	pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
+	PCRE2_SPTR string_pcre2str = reinterpret_cast<const unsigned char *>(string.c_str());
 
-	int rc = pcre_exec(re,
-					   NULL,
-					   string.c_str(),
-					   string.length(),
-					   0, // Index in string from which to start matching
-					   options,
-					   ovector,
-					   oveccount);
+	int rc = pcre2_match(re, string_pcre2str, static_cast<PCRE2_SIZE>(string.length()), 0, options, matchdata, NULL);
+	PCRE2_SIZE * ovector = pcre2_get_ovector_pointer(matchdata);
 
 	if (NULL != groups) {
 		for (int i = 0; i < rc; i++) {
-			(*groups)[i] = string.substr(ovector[i * 2],
-			                             ovector[i * 2 + 1] - ovector[i * 2]);
+			(*groups)[i] = string.substr(static_cast<int>(ovector[i * 2]),
+			                             static_cast<int>(ovector[i * 2 + 1] - ovector[i * 2]));
 		}
 	}
 
-	free(ovector);
+	pcre2_match_data_free(matchdata);
 	return rc > 0;
 }
 
@@ -181,29 +161,22 @@ Regex::mem_used()
 {
 	if ( ! re) return 0;
 
-	size_t size = 0;
-	pcre_fullinfo(re, NULL, PCRE_INFO_SIZE, &size);
-	return size;
+	uint32_t size;
+	pcre2_pattern_info(re, PCRE2_INFO_SIZE, &size);
+	return static_cast<size_t>(size);
 }
 
 
-pcre *
-Regex::clone_re(pcre * re)
+pcre2_code *
+Regex::clone_re(pcre2_code * re)
 {
 	if (!re) {
 		return NULL;
 	}
 
-	size_t size = 0;
-	pcre_fullinfo(re, NULL, PCRE_INFO_SIZE, &size);
-
-	pcre * newre = (pcre *) pcre_malloc(size * sizeof(char));
-	if (!newre) {
-			// XXX: EXCEPTing sucks
-		EXCEPT("No memory to allocate re clone");
-	}
-
-	memcpy(newre, re, size);
+    pcre2_code * newre = pcre2_code_copy(re);
+	// Not using pcre2_code_copy_with_tables because custom tables are not used in the codebase
+	pcre2_jit_compile(re, PCRE2_JIT_COMPLETE);
 
 	return newre;
 }

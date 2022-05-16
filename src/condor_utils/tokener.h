@@ -53,7 +53,7 @@ public:
 	bool is_quoted_string() const { return ix_cur > 0 && ch_quote && (line[ix_cur-1] == ch_quote); }
 	bool is_regex() const { return (int)ix_cur >= 0 && (line[ix_cur] == '/'); }
 	// NOTE: copy_regex does not recognise \ as an escape, so it stops at the first /
-	bool copy_regex(std::string & value, int & pcre_flags);
+	bool copy_regex(std::string & value, uint32_t & pcre2_flags);
 protected:
 	std::string line;  // the line currently being tokenized
 	size_t ix_cur;     // start of the current token

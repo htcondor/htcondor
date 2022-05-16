@@ -83,7 +83,7 @@ if(WINDOWS)
 				# the 'optimized' keyword indicates that the library following it is for release builds only
 				# the 'debug' keyword indicates that the library following it is for debug builds only
 				add_library( classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
-				target_link_libraries( classad_module pyclassad ${PCRE_FOUND} ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} )
+				target_link_libraries( classad_module pyclassad ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} )
 				set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
 				set_target_properties(classad_module PROPERTIES SUFFIX "${PYTHON_DLL_SUFFIX}" )
 				target_include_directories( classad_module PUBLIC ${PYTHON_INCLUDE_DIRS} )
@@ -150,7 +150,7 @@ if(WINDOWS)
 				# the 'optimized' keyword indicates that the library following it is for release builds only
 				# the 'debug' keyword indicates that the library following it is for debug builds only
 				add_library( py3classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
-				target_link_libraries( py3classad_module py3classad ${PCRE_FOUND}  ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} )
+				target_link_libraries( py3classad_module py3classad ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} )
 				set_target_properties(py3classad_module PROPERTIES PREFIX "" OUTPUT_NAME py3classad PDB_NAME py3classad)
 				set_target_properties(py3classad_module PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME classad PDB_NAME py3classad)
 				set_target_properties(py3classad_module PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
