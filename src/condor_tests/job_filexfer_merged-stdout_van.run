@@ -30,6 +30,10 @@ use Check::SimpleJob;
 
 $testname = "job_filexfer_merged-stdout_van";
 
+# Merged stdout/err is broken on Windows (the two data streams overwite
+# each other). See HTCONDOR-1119.
+$check_stdout = ! CondorUtils::is_windows();
+
 # truly const variables in perl
 sub IDLE{1};
 sub HELD{5};
@@ -70,12 +74,17 @@ $success = sub
 	# (from stdout):Called with:...
 	# (from stderr):Hello
 	# (from stdout):Working Directory is ...
-	if(!open(FH, '<', "$stdout")){ print "Failed to open job stdout\n"; exit(1)};
-	chomp(my @lines = <FH>);
-	if ($lines[0] !~ /Called with:/ || $lines[1] !~ /Hello/ || $lines[2] !~ /Working Directory/ ) {
-		print "Job stdout/err doesn't have expected contents\n";
-		exit(1);
-	};
+	if ($check_stdout) {
+		CondorTest::debug("Checking merged stdout/err output\n", 1);
+		if(!open(FH, '<', "$stdout")){ print "Failed to open job stdout\n"; exit(1)};
+		chomp(my @lines = <FH>);
+		if ($lines[0] !~ /Called with:/ || $lines[1] !~ /Hello/ || $lines[2] !~ /Working Directory/ ) {
+			print "Job stdout/err doesn't have expected contents\n";
+			exit(1);
+		}
+	} else {
+		CondorTest::debug("Not checking merged stdout/err output\n" ,1);
+	}
 };
 
 $abort = sub {
