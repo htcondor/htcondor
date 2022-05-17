@@ -547,6 +547,20 @@ static void init_dag_vars(SubmitHash * submitHash,
 
 }
 
+static bool send_jobset_if_allowed(SubmitHash& submitHash, int cluster)
+{
+	if ( ! param_boolean("USE_JOBSETS", false))
+		return false;
+
+	const ClassAd * jobsetAd = submitHash.getJOBSET();
+	if (jobsetAd) {
+		if (SendJobsetAd(cluster, *jobsetAd, 0) >= 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
 //-------------------------------------------------------------------------
 bool
 direct_condor_submit(const Dagman &dm, Job* node,
@@ -689,6 +703,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 			if (rval == 2) { // we need to send the cluster ad
 				classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
 				if (clusterad) {
+					send_jobset_if_allowed(*submitHash, cluster_id);
 					rval = SendJobAttributes(JOB_ID_KEY(cluster_id, -1), *clusterad, SetAttribute_NoAck, submitHash->error_stack(), "Submit");
 					if (rval < 0) {
 						errmsg = "failed to send cluster classad";
