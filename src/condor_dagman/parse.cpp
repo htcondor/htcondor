@@ -55,6 +55,8 @@ static bool _mungeNames = true;
 // DAGMan global schedd object. Only used here to hand off to a splice DAG.
 DCSchedd *_schedd = NULL;
 
+static Dagman dagman;
+
 static bool parse_subdag( Dag *dag,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
@@ -1764,7 +1766,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 	} else {
 		//If options aren't found then set to global knob
 		// !append -> prepend
-		prepend = !param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
+		prepend = dagman.doAppendVars;
 	}
 
 	Job *job;
