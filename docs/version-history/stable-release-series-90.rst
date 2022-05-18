@@ -30,6 +30,9 @@ Bugs Fixed:
   file, no other output files would be transfered.
   :jira:`1101`
 
+- Fixed a bug that caused ``$(OPSYSANDVER)`` to expand to nothing in a JOB_TRANSFORM.
+  :jira:`1121`
+
 .. _lts-version-history-9013:
 
 Version 9.0.13
