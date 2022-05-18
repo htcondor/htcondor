@@ -17,7 +17,11 @@ Release Notes:
 
 New Features:
 
-- None.
+- DAGman ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
+  to allow passed variables to be initalized before or after DAG jobs are
+  submitted. Any ``VARS`` without these options will have behavior derived
+  from ``DAGMAN_DEFAULT_APPEND_VARS`` config variable.
+  :jira:`1080`
 
 Bugs Fixed:
 

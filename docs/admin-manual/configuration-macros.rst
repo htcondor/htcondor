@@ -8351,6 +8351,12 @@ General
     problem, release the job and continue their DAG execution. Defaults 
     to ``False``.
 
+:macro-def:`DAGMAN_DEFAULT_APPEND_VARS`
+    A boolean value that defaults to ``False``. When ``True``, variables
+    parsed in the DAG file *VARS* line will be appended to the given Job
+    submit description file unless *VARS* specifies *PREPEND* or *APPEND*.
+    When ``False``, the parsed variables will be prepended unless specified.
+
 Throttling
 ''''''''''
 
