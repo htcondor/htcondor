@@ -2463,6 +2463,44 @@ their defaults are
     MODIFY_REQUEST_EXPR_REQUESTMEMORY = quantize(RequestMemory, {128})
     MODIFY_REQUEST_EXPR_REQUESTDISK = quantize(RequestDisk, {1024})
 
+Enforcing scratch disk usage with on-the-fly, HTCondor managed, per-job scratch filesystems.
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:index:`DISK usage`
+:index:`per job scratch fileystem`
+
+
+On Linux systems, when HTCondor is started as root, it optionally has the ability to create
+a custom filesystem for the job's scratch directory.  This allows HTCondor to prevent the job
+from using more scratch space than provisioned.  This also requires that the disk is managed
+with the LVM disk management system.  Three HTCondor configuration knobs need to be set for
+this to work, in additional to the above requirements:
+
+.. code-block:: condor-config
+
+    THINPOOL_VOLUME_GROUP_NAME = vgname
+    THINPOOL_NAME = htcondor
+    STARTD_ENFORCE_DISK_USAGE = true
+
+
+THINPOOL_VOLUME_GROUP_NAME is the name of an existing LVM volume group, with enough 
+disk space to provision all the scratch directories for all running jobs on a worker node.
+THINPOOL_NAME is the name of the logical volume that the scratch directory filesystems will
+be created on in the volume group.  Finally, STARTD_ENFORCE_DISK_USAGE is a boolean.  When
+true, if a job fills up the filesystem created for it, the starter will put the job on hold
+with the out of resources hold code (34).  This is the recommended value.  If false, should
+the job fill the filesystem, writes will fail with ENOSPC, and it is up to the job to handle these errors
+and exit with an appropriate code in every part of the job that writes to the filesystem, including
+third party libraries.
+
+Note that the ephemeral filesystem created for the job is private to the job, so the contents
+of that filesytem are not visible outside the process hierarchy.  The administrator can use
+the nsenter command to enter this namespace, if they need to inspect the job's sandbox.
+As this filesytem will never live through a system reboot, it is mounted with mount options
+that optimize for performance, not reliability, and may improve performance for I/O heavy
+jobs.
+
+
+
 condor_negotiator-Side Resource Consumption Policies
 ''''''''''''''''''''''''''''''''''''''''''''''''''''
 
