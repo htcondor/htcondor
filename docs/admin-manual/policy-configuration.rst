@@ -2473,7 +2473,7 @@ On Linux systems, when HTCondor is started as root, it optionally has the abilit
 a custom filesystem for the job's scratch directory.  This allows HTCondor to prevent the job
 from using more scratch space than provisioned.  This also requires that the disk is managed
 with the LVM disk management system.  Three HTCondor configuration knobs need to be set for
-this to work, in additional to the above requirements:
+this to work, in addition to the above requirements:
 
 .. code-block:: condor-config
 

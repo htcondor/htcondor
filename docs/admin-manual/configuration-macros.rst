@@ -4257,8 +4257,8 @@ details.
     InfiniBand) regardless of this setting. The default value is
     ``docker0``,\ ``virbr0``.
 
-These macros control the startd's (and starters) capability to
-create a private filesystem for the scratch directory for each job
+These macros control the startds (and starters) capability to
+create a private filesystem for the scratch directory for each job.
 
 :macro-def:`THINPOOL_VOLUME_GROUP_NAME`
     A string that names the Linux LVM volume group the administrator 
