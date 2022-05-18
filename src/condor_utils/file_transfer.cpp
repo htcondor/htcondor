@@ -3094,7 +3094,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 		numFiles++;
 		if (xfer_command == TransferCommand::XferFile && rc == 0) {
-			long long num_cedar_files = 0;
+			int num_cedar_files = 0;
 			Info.stats.LookupInteger("CedarFilesCount", num_cedar_files);
 			num_cedar_files++;
 			Info.stats.InsertAttr("CedarFilesCount", num_cedar_files);
@@ -4868,7 +4868,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		numFiles++;
 
 		if (!fileitem.isSrcUrl() && !fileitem.isDestUrl()) {
-			long long num_cedar_files = 0;
+			int num_cedar_files = 0;
 			Info.stats.LookupInteger("CedarFilesCount", num_cedar_files);
 			num_cedar_files++;
 			Info.stats.InsertAttr("CedarFilesCount", num_cedar_files);
@@ -6156,7 +6156,7 @@ int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
 			std::string attr_count = protocol + "FilesCount";
 			std::string attr_size = protocol + "SizeBytes";
 
-			long long num_files = 0;
+			int num_files = 0;
 			Info.stats.LookupInteger(attr_count, num_files);
 			num_files++;
 			Info.stats.InsertAttr(attr_count, num_files);
