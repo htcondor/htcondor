@@ -3293,8 +3293,8 @@ public:
 	{
 		bool use_jobsets = false;
 		const ClassAd *capabilities = txn->capabilites();
-		if (capabilities && capabilities->LookupBool("UseJobsets", use_jobsets)) {
-			return use_jobsets;
+		if (capabilities) {
+			capabilities->LookupBool("UseJobsets", use_jobsets);
 		}
 		if (use_jobsets) {
 			const classad::ClassAd * jobsetAd = m_hash.getJOBSET();
