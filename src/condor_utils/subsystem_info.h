@@ -178,7 +178,7 @@ class SubsystemInfo
 	void printf( void ) const;
 
 	// Subsystem trusted privileges
-	bool isTrusted( void ) { return is_trusted; };
+	bool isTrusted( void ) { return m_trusted; };
 
   private:
 	const char					*m_Name;
@@ -193,7 +193,7 @@ class SubsystemInfo
 	const char					*m_LocalName;
 
 	//Data member for if a SubSystem is a trusted system with 'root' privilages
-	bool						is_trusted;
+	bool						m_trusted;
 
 	// Internal only methods
 	SubsystemType setType( SubsystemType _type, const char *_type_name );

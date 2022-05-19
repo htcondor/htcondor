@@ -329,7 +329,7 @@ SubsystemInfo::SubsystemInfo( const char *_name, bool _trust, SubsystemType _typ
 	m_Info = NULL;
 	m_InfoTable = new SubsystemInfoTable( );
 	setName( _name );
-	is_trusted = _trust;
+	m_trusted = _trust;
 	if ( _type == SUBSYSTEM_TYPE_AUTO ) {
 		setTypeFromName( _name );
 	}
