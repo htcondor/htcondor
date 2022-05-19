@@ -55,6 +55,8 @@ static bool _mungeNames = true;
 // DAGMan global schedd object. Only used here to hand off to a splice DAG.
 DCSchedd *_schedd = NULL;
 
+static Dagman dagman;
+
 static bool parse_subdag( Dag *dag,
 						const char* nodeTypeKeyword,
 						const char* dagFile, int lineNum,
@@ -1730,7 +1732,7 @@ static bool parse_dot(Dag *dag, const char *filename, int lineNumber)
 //-----------------------------------------------------------------------------
 static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 {
-	const char* example = "Vars JobName VarName1=\"value1\" VarName2=\"value2\"";
+	const char* example = "Vars JobName [PREPEND | APPEND] VarName1=\"value1\" VarName2=\"value2\"";
 	const char *jobName = strtok( NULL, DELIMITERS );
 	if ( jobName == NULL ) {
 		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Missing job name\n",
@@ -1745,8 +1747,27 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 
 	std::string varName;
 	std::string varValue;
+	bool prepend; //Bool for if variable is prepended or appended. Default is false
 
-	char *varsStr = strtok( NULL, "\n" ); // just get all the rest -- we'll be doing this by hand
+	char *varsStr = strtok( NULL, "\n" ); // just get all the rest and we will manually parse vars
+
+/*	
+*	Check to see if PREPEND or APPEND was specified before variables to be passed.
+*	If option is found then we set prepend boolean appropriately and increment
+*	the original varsStr pointer to point at char after option. -Cole Bollig
+*/
+
+        if (starts_with(varsStr,"PREPEND") ){//See if PREPEND is at beginning of token
+		prepend = true;
+		varsStr += 7;
+	} else if ( starts_with(varsStr,"APPEND") ){//See if APPEND is at beginning of token
+		prepend = false;
+		varsStr += 6;
+	} else {
+		//If options aren't found then set to global knob
+		// !append -> prepend
+		prepend = dagman.doAppendVars;
+	}
 
 	Job *job;
 	while ( ( job = dag->FindAllNodesByName( jobName,
@@ -1778,7 +1799,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 				break;
 			}
 
-			job->AddVar(varName.c_str(), varValue.c_str(), filename, lineNumber);
+			job->AddVar(varName.c_str(), varValue.c_str(), filename, lineNumber, prepend);
 			debug_printf(DEBUG_DEBUG_1,
 				"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
 				varName.c_str(), varValue.c_str());
@@ -2861,7 +2882,12 @@ get_next_var( const char *filename, int lineNumber, char *&str,
 	}
 
 	if ( *str != '=' ) {
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Illegal character (%c) in or after macroname %s\n", filename, lineNumber, *str, varName.c_str() );
+		if ( varName.compare("PREPEND") == 0 || varName.compare("APPEND") == 0){
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s not declared before all passed variables.\n"
+						,filename,lineNumber,varName.c_str());
+		} else {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): Illegal character (%c) in or after macroname %s\n", filename, lineNumber, *str, varName.c_str() );
+		}
 		return false;
 	}
 	str++;

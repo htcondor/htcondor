@@ -460,17 +460,13 @@ bool KeyCache::remove(const char *key_id) {
 }
 
 void KeyCache::expire(KeyCacheEntry *e) {
-	char* key_id = strdup (e->id());
 	time_t key_exp = e->expiration();
 	char const *expiration_type = e->expirationType();
 
-	dprintf (D_SECURITY|D_FULLDEBUG, "KEYCACHE: Session %s %s expired at %s", e->id(), expiration_type, ctime(&key_exp) );
+	dprintf (D_SECURITY|D_FULLDEBUG, "KEYCACHE: Session %s %s expired at %s\n", e->id(), expiration_type, ctime(&key_exp) );
 
 	// remove its reference from the hash table
-	remove(key_id);       // This should do it
-	dprintf (D_SECURITY|D_FULLDEBUG, "KEYCACHE: Removed %s from key cache.\n", key_id);
-
-	free( key_id );
+	remove(e->id());       // This should do it
 }
 
 StringList * KeyCache::getExpiredKeys() {

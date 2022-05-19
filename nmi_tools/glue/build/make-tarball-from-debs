@@ -73,6 +73,7 @@ mv tarball/etc/condor/config.d/* tarball/usr/share/doc/htcondor/examples/
 common_externals=" libcgroup1 \
     libgomp1 \
     libmunge2 \
+    libpcre2-8-0 \
     libscitokens0 \
     libvomsapi1v5"
 

@@ -267,28 +267,28 @@ static bool test_tokener_parse_regex() {
     emit_test("Test tokener regex parsing");
 
 	MyString msg;
-	int fl;
+	uint32_t fl;
 	std::string temp;
 	tokener toke("/(.*)/i");
 
 	REQUIRE(toke.next() && toke.is_regex());
 	REQUIRE(toke.copy_regex(temp,fl) && temp=="(.*)");
-	if (fl != 1) {
-		emit_step_failure(__LINE__, msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 1", fl));
+	if (fl != 8) {
+		emit_step_failure(__LINE__, msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 8", fl));
 	}
 
 	toke.set(" /([\\d]*)/i ");
 	REQUIRE(toke.next() && toke.is_regex());
 	REQUIRE(toke.copy_regex(temp,fl) && temp=="([\\d]*)");
-	if (fl != 1) {
-		emit_step_failure(__LINE__, msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 1", fl));
+	if (fl != 8) {
+		emit_step_failure(__LINE__, msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 8", fl));
 	}
 
 	toke.set(" /^Now is the|Time$/ ");
 	REQUIRE(toke.next() && toke.is_regex());
 	REQUIRE(toke.copy_regex(temp,fl) && temp=="^Now is the|Time$");
 	if (fl != 0) {
-		emit_step_failure(__LINE__, msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 1", fl));
+		emit_step_failure(__LINE__, msg.formatstr("toke.copy_regex() returned pcre_flags==%d, should be 0", fl));
 	}
 
 	return REQUIRED_RESULT();

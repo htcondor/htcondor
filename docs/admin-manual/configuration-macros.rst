@@ -4257,6 +4257,22 @@ details.
     InfiniBand) regardless of this setting. The default value is
     ``docker0``,\ ``virbr0``.
 
+These macros control the startds (and starters) capability to
+create a private filesystem for the scratch directory for each job.
+
+:macro-def:`THINPOOL_VOLUME_GROUP_NAME`
+    A string that names the Linux LVM volume group the administrator 
+    has configured as the storage for per-job scratch directories.
+
+:macro-def:`THINPOOL_NAME`
+    A string that names the Linux LVM logical volume for storage 
+    for per-job scratch directories.
+
+:macro-def:`STARTD_ENFORCE_DISK_USAGE`
+    A boolean that defaults to false that controls whether the
+    starter puts a job on hold that fills the per-job filesystem.
+
+
 condor_schedd Configuration File Entries
 -----------------------------------------
 
@@ -8334,6 +8350,12 @@ General
     temporary network outage), this gives users an opportunity to fix the
     problem, release the job and continue their DAG execution. Defaults 
     to ``False``.
+
+:macro-def:`DAGMAN_DEFAULT_APPEND_VARS`
+    A boolean value that defaults to ``False``. When ``True``, variables
+    parsed in the DAG file *VARS* line will be appended to the given Job
+    submit description file unless *VARS* specifies *PREPEND* or *APPEND*.
+    When ``False``, the parsed variables will be prepended unless specified.
 
 Throttling
 ''''''''''

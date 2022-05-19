@@ -29,7 +29,7 @@ use Cwd;
 print "Called with:" . join(" ", @ARGV) . "\n";
 my $btdebug = 1;
 
-my ($help, $noinput, $noextrainput, $extrainput, $onesetout, $long, $forever, $job, $failok);
+my ($help, $noinput, $noextrainput, $extrainput, $onesetout, $long, $forever, $job, $failok, $stderr_str);
 GetOptions (
     'help'         => \$help,
     'noinput'      => \$noinput,
@@ -40,11 +40,20 @@ GetOptions (
     'forever'      => \$forever,
     'job=i'        => \$job,
     'failok'       => \$failok,
+    'stderr=s'     => \$stderr_str,
 );
 
 if($help) {
     help();
     exit(0);
+}
+
+if ( $stderr_str ) {
+	# Print the reqeusted line to stderr, flushing stdout so the line
+	# appears interleaved with stdout when the two are mergd.
+	select(STDOUT);
+	$| = 1;
+    print STDERR "$stderr_str\n";
 }
 
 my $workingdir = getcwd();

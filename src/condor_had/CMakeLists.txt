@@ -22,7 +22,7 @@ set(HADSrcs
 	Utils.cpp
 )
 
-condor_exe(condor_had "${HADSrcs}" ${C_SBIN} "${PCRE_FOUND};${CONDOR_LIBS}" ON)
+condor_exe(condor_had "${HADSrcs}" ${C_SBIN} "${CONDOR_LIBS}" ON)
 
 set(RepSrcs
 	AbstractReplicatorStateMachine.cpp
@@ -33,7 +33,7 @@ set(RepSrcs
 	FilesOperations.cpp
 )
 
-condor_exe(condor_replication "${RepSrcs}" ${C_SBIN} "${PCRE_FOUND};${CONDOR_LIBS}" OFF)
+condor_exe(condor_replication "${RepSrcs}" ${C_SBIN} "${CONDOR_LIBS}" OFF)
 
 set(TransferSrcs
 	BaseReplicaTransferer.cpp
@@ -44,5 +44,5 @@ set(TransferSrcs
 	FilesOperations.cpp
 )
 
-condor_exe(condor_transferer "${TransferSrcs}" ${C_LIBEXEC} "${PCRE_FOUND};${CONDOR_LIBS}" OFF)
+condor_exe(condor_transferer "${TransferSrcs}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF)
 
