@@ -95,6 +95,32 @@ format_time( int tot_secs )
 }
 
 /*
+   Call format_time and returns the format_time char * return with an offset
+   to remove un-needed characters: space, 0, '+', until first ':'
+   Minum return: 00:00
+*/
+char *
+format_time_short( int tot_secs )
+{
+     //Get time in ddd+hh:mm:ss fromat
+     char *time = format_time(tot_secs);
+
+     int offset = 0;
+     while (time[offset]) { //Run till break
+          //If character is not whitespace, 0, or the + symbol we stop
+          if ( time[offset] != ' ' && time[offset] != '0' && time[offset] != '+' ){
+               //Check to see if current offset character is ':'
+               if ( time[offset] == ':' ) offset++; //If so then increment to only display mm:ss
+               break;
+          }
+          offset++;
+     }
+
+     //return formatted time with offset
+     return (time + offset);
+}
+
+/*
   Same as format_time above but don't print seconds field.
 */
 char    *

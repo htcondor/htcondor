@@ -352,6 +352,46 @@ bool operator()(const prio_rec& a, const prio_rec& b) const
 }
 };
 
+// Return the same comparison as above, but just comparing the submitter
+// field.  This allows us to binary search the PrioRecArray by submitter
+// Note the comparison up to the submitter must match the above
+struct prio_rec_submitter_lb {
+bool operator()(const prio_rec& a, const std::string &user) const {
+	if (a.submitter.length() < user.length()) {
+		return false;
+	}
+
+	if (a.submitter.length() > user.length()) {
+		return true;
+	}
+
+	if (a.submitter > user) {
+		return true;
+	}
+
+	return false;
+}
+};
+
+// The corresponding upper bound function, the negation of the above
+struct prio_rec_submitter_ub {
+bool operator()(const std::string &user, const prio_rec &a) const {
+	if (a.submitter.length() < user.length()) {
+		return true;
+	}
+
+	if (a.submitter.length() > user.length()) {
+		return false;
+	}
+
+	if (a.submitter < user) {
+		return true;
+	}
+
+	return false;
+}
+};
+
 int
 SetPrivateAttributeString(int cluster_id, int proc_id, const char *attr_name, const char *attr_value)
 {
@@ -1432,9 +1472,9 @@ InitQmgmt()
 	std::string queue_super_user_may_impersonate;
 	if( param(queue_super_user_may_impersonate,"QUEUE_SUPER_USER_MAY_IMPERSONATE") ) {
 		queue_super_user_may_impersonate_regex = new Regex;
-		const char *errptr=NULL;
+		int errnumber;
 		int erroffset=0;
-		if( !queue_super_user_may_impersonate_regex->compile(queue_super_user_may_impersonate.c_str(),&errptr,&erroffset) ) {
+		if( !queue_super_user_may_impersonate_regex->compile(queue_super_user_may_impersonate.c_str(),&errnumber,&erroffset) ) {
 			EXCEPT("QUEUE_SUPER_USER_MAY_IMPERSONATE is an invalid regular expression: %s",queue_super_user_may_impersonate.c_str());
 		}
 	}
@@ -6791,7 +6831,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 	{
 		name = itr->c_str();
 		expr = ad->LookupExpr(name);
-		if(expr && !ClassAdAttributeIsPrivate(name))
+		if(expr && !ClassAdAttributeIsPrivateAny(name))
 		{
 			if(!JobQueue->LookupInTransaction(key, name, val) )
 			{
@@ -8742,7 +8782,6 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 		// so if we bail out early anywhere, we say we failed.
 	jobid.proc = -1;	
 
-	int i;
 	std::string owner;
 	if (user_is_the_new_owner) {
 	} else {
@@ -8782,26 +8821,28 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 
 		// Iterate through the most recently constructed list of
-		// jobs, nicely pre-sorted in priority order.
+		// jobs, nicely pre-sorted first by submitter, then by job priority
 
 	// Stringify the user to make comparison faster
 	std::string user_str = user ? user : "";
 
 	do {
-		for (i=0; i < N_PrioRecs; i++) {
+		prio_rec *first = &PrioRec[0];
+		prio_rec *end = &PrioRec[N_PrioRecs];
 
-			if ( PrioRec[i].not_runnable || PrioRec[i].matched ) {
+		if (!match_any_user) {
+			first = std::lower_bound(first, end, user_str, prio_rec_submitter_lb{});
+			end = std::upper_bound(first, end, user_str, prio_rec_submitter_ub{});
+		}
+
+		for (prio_rec *p = first; p != end; p++) {
+			if ( p->not_runnable || p->matched ) {
 					// This record has been disabled, because it is no longer
 					// runnable or already matched.
 				continue;
 			}
 
-			if ( !match_any_user && (PrioRec[i].submitter != user_str) != 0) {
-					// Owner doesn't match.
-				continue;
-			}
-
-			ad = GetJobAd( PrioRec[i].id.cluster, PrioRec[i].id.proc );
+			ad = GetJobAd( p->id.cluster, p->id.proc );
 			if (!ad) {
 					// This ad must have been deleted since we last built
 					// runnable job list.
@@ -8809,19 +8850,19 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 			}	
 
 			int junk; // don't care about the value
-			if ( PrioRecAutoClusterRejected->lookup( PrioRec[i].auto_cluster_id, junk ) == 0 ) {
+			if ( PrioRecAutoClusterRejected->lookup( p->auto_cluster_id, junk ) == 0 ) {
 					// We have already failed to match a job from this same
 					// autocluster with this machine.  Skip it.
 				continue;
 			}
 
-			if (scheduler.AlreadyMatched(&PrioRec[i].id)) {
-				PrioRec[i].matched = true;
+			if (scheduler.AlreadyMatched(&p->id)) {
+				p->matched = true;
 			}
-			if (!Runnable(&PrioRec[i].id)) {
-				PrioRec[i].not_runnable = true;
+			if (!Runnable(&p->id)) {
+				p->not_runnable = true;
 			}
-			if (PrioRec[i].matched || PrioRec[i].not_runnable) {
+			if (p->matched || p->not_runnable) {
 					// This job's status must have changed since the
 					// time it was added to the runnable job list.
 					// The not_runnable and matched flags will prevent
@@ -8829,7 +8870,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 					// future iterations through the list.
 				dprintf(D_FULLDEBUG,
 						"record for job %d.%d skipped until PrioRec rebuild (%s)\n",
-						PrioRec[i].id.cluster, PrioRec[i].id.proc, PrioRec[i].matched ? "already matched" : "no longer runnable");
+						p->id.cluster, p->id.proc, p->matched ? "already matched" : "no longer runnable");
 
 					// Move along to the next job in the prio rec array
 				continue;
@@ -8844,7 +8885,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 					// THIS IS A DANGEROUS ASSUMPTION - what if this job is no longer
 					// part of this autocluster?  TODO perhaps we should verify this
 					// job is still part of this autocluster here.
-				PrioRecAutoClusterRejected->insert( PrioRec[i].auto_cluster_id, 1 );
+				PrioRecAutoClusterRejected->insert( p->auto_cluster_id, 1 );
 					// Move along to the next job in the prio rec array
 				continue;
 			}
@@ -8913,12 +8954,12 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 							"ConcurrencyLimits do not match, cannot "
 							"reuse claim\n");
 					PrioRecAutoClusterRejected->
-						insert(PrioRec[i].auto_cluster_id, 1);
+						insert(p->auto_cluster_id, 1);
 					continue;
 				}
 			}
 
-			jobid = PrioRec[i].id; // success!
+			jobid = p->id; // success!
 			return;
 
 		}	// end of for loop through PrioRec array

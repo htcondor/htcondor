@@ -595,6 +595,7 @@
 #define ATTR_REAL_UID  "RealUid"
 #define ATTR_RELEASE_CLAIM  "ReleaseClaim"
 #define ATTR_RELEASE_REASON  "ReleaseReason"
+#define ATTR_REMOTE_ADMIN_CAPABILITY "_condor_PrivRemoteAdminCapability"
 #define ATTR_REMOTE_AUTOREGROUP  "RemoteAutoregroup"
 #define ATTR_REMOTE_GROUP  "RemoteGroup"
 #define ATTR_REMOTE_GROUP_RESOURCES_IN_USE  "RemoteGroupResourcesInUse"
@@ -640,6 +641,7 @@
 #define ATTR_SHADOW_WAIT_FOR_DEBUG  "ShadowWaitForDebug"
 #define ATTR_SHOULD_FORWARD	"ShouldForward"
 #define ATTR_SCITOKENS_FILE "ScitokensFile"
+#define ATTR_SEND_PRIVATE_ATTRIBUTES "SendPrivateAttributes"
 #define ATTR_SINGULARITY_VERSION "SingularityVersion"
 #define ATTR_SLOT_ID  "SlotID"
 #define ATTR_SLOT_PAIR_NAME  "SlotPairName"
@@ -914,6 +916,7 @@
 #define ATTR_SEC_USER  "User"
 #define ATTR_SEC_MY_REMOTE_USER_NAME  "MyRemoteUserName"
 #define ATTR_SEC_NEW_SESSION  "NewSession"
+#define ATTR_SEC_NONCE  "Nonce"
 #define ATTR_SEC_USE_SESSION  "UseSession"
 #define ATTR_SEC_COOKIE  "Cookie"
 extern const char ATTR_SEC_AUTHENTICATED_USER [];
@@ -929,6 +932,9 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_REQUEST_ID "RequestId"
 #define ATTR_SEC_LIFETIME "Lifetime"
 #define ATTR_SEC_REQUESTED_KEY "RequestedKey"
+#define ATTR_SEC_ECDH_PUBLIC_KEY "ECDHPublicKey"
+#define ATTR_SEC_RESUME_RESPONSE "ResumeResponse"
+#define ATTR_SEC_NEGOTIATED_SESSION "NegotiatedSession"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 

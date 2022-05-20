@@ -1147,9 +1147,8 @@ void MachAttributes::init_machine_resources() {
 	m_machres_attr.Clear();
 
 	Regex re;
-	int err = 0;
-	const char* pszMsg = 0;
-	ASSERT(re.compile("^MACHINE_RESOURCE_[a-zA-Z0-9_]+", &pszMsg, &err, PCRE_CASELESS));
+	int errcode = 0, erroffset = 0;
+	ASSERT(re.compile("^MACHINE_RESOURCE_[a-zA-Z0-9_]+", &errcode, &erroffset, PCRE2_CASELESS));
 	const int iter_options = HASHITER_NO_DEFAULTS; // we can speed up iteration if there are no machine resources in the defaults table.
 	foreach_param_matching(re, iter_options, (bool(*)(void*,HASHITER&))MachAttributes::init_machine_resource, this);
 
@@ -1654,6 +1653,39 @@ CpuAttributes::attach( Resource* res_ip )
 	this->rip = res_ip;
 }
 
+
+bool
+CpuAttributes::set_total_disk(long long total, bool refresh) {
+		// if input total is < 0, that means to figure it out
+	if (total > 0) {
+		bool changed = total != c_total_disk;
+		c_total_disk = total;
+		return changed;
+	} else if (c_total_disk == 0) {
+			// calculate disk at least once if a value is not passed in
+		refresh = true;
+	}
+		// refresh disk if the flag was passed in, or we do not yet have a value
+	if (refresh) {
+#ifdef LINUX
+		CondorError err;
+		uint64_t used_bytes, total_bytes;
+		if (m_volume_mgr) {
+			if (m_volume_mgr->GetPoolSize(used_bytes, total_bytes, err)) {
+				c_total_disk = total_bytes/1024 - sysapi_reserve_for_fs();
+				c_total_disk = (c_total_disk < 0) ? 0 : c_total_disk;
+				dprintf(D_FULLDEBUG, "Used volume manager to get total logical size of %llu\n", c_total_disk);
+				return true;
+			} else {
+				dprintf(D_FULLDEBUG, "Failure to get pool size: %s\n", err.getFullText().c_str());
+			}
+		}
+#endif // LINUX
+		c_total_disk = sysapi_disk_space(executeDir());
+		return true;
+	}
+	return false;
+}
 
 bool
 CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id, bool abort_on_fail) // bind non-fungable resource ids to a slot

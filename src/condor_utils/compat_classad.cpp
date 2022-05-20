@@ -354,9 +354,9 @@ bool stringListMember_func( const char *name,
 	return true;
 }
 
-static int regexp_str_to_options( const char *option_str )
+static uint32_t regexp_str_to_options( const char *option_str )
 {
-	int options = 0;
+	uint32_t options = 0;
 	while (*option_str) {
 		switch (*option_str) {
 			case 'i':
@@ -428,13 +428,13 @@ bool stringListRegexpMember_func( const char * /*name*/,
 	}
 
 	Regex r;
-	const char *errstr = 0;
+	int errcode;
 	int errpos = 0;
 	bool valid;
-	int options = regexp_str_to_options(options_str.c_str());
+	uint32_t options = regexp_str_to_options(options_str.c_str());
 
 	/* can the pattern be compiled */
-	valid = r.compile(pattern_str.c_str(), &errstr, &errpos, options);
+	valid = r.compile(pattern_str.c_str(), &errcode, &errpos, options);
 	if (!valid) {
 		result.SetErrorValue();
 		return true;
@@ -2008,10 +2008,19 @@ int CondorClassAdListWriter::writeFooter(FILE* out, bool xml_always_write_header
 
 
 bool
-ClassAdAttributeIsPrivate( const std::string &name )
+ClassAdAttributeIsPrivateV1( const std::string &name )
 {
 	return ClassAdPrivateAttrs.find(name) != ClassAdPrivateAttrs.end();
 }
+
+bool
+ClassAdAttributeIsPrivateV2( const std::string &name )
+{
+	return strncasecmp(name.c_str(), "_condor_priv", 12) == 0;
+}
+
+bool
+ClassAdAttributeIsPrivateAny( const std::string &name ) {return ClassAdAttributeIsPrivateV2(name) || ClassAdAttributeIsPrivateV1(name);}
 
 int
 EvalAttr( const char *name, classad::ClassAd *my, classad::ClassAd *target, classad::Value & value)
@@ -2280,7 +2289,7 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 				continue; // attribute exists in child ad; we will print it below
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first ) ) {
+				 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 				attributes.emplace_back(itr->first,itr->second);
 			}
 		}
@@ -2296,7 +2305,7 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 		}
 
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first ) ) {
+			 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 			attributes.emplace_back(itr->first,itr->second);
 		}
 	}
@@ -2334,7 +2343,7 @@ _sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, S
 				continue; // attribute exists in child ad; we will print it below
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first ) ) {
+				 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 				value = "";
 				unp.Unparse( value, itr->second );
 				// output.formatstr_cat( "%s = %s\n", itr->first.c_str(), value.c_str() );
@@ -2348,7 +2357,7 @@ _sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, S
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first ) ) {
+			 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 			value = "";
 			unp.Unparse( value, itr->second );
 			// output.formatstr_cat( "%s = %s\n", itr->first.c_str(), value.c_str() );
@@ -2406,7 +2415,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivate( itr->first ) ) {
+			 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 			attrs.insert(itr->first);
 		}
 	}
@@ -2421,7 +2430,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 				continue; // not in white-list
 			}
 			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivate( itr->first ) ) {
+				 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
 				attrs.insert(itr->first);
 			}
 		}

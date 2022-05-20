@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include <limits.h>
 #include <string.h>
+#include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_cron_job_mgr.h"
@@ -348,17 +349,28 @@ CronJob::KillHandler( void )
 int
 CronJob::Reaper( int exitPid, int exitStatus )
 {
+	bool failed = false;
 	if( WIFSIGNALED(exitStatus) ) {
-		dprintf( D_FULLDEBUG, "CronJob: '%s' (pid %d) exit_signal=%d\n",
+		failed = true;
+		dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) exit_signal=%d\n",
 			 GetName(), exitPid, WTERMSIG(exitStatus) );
 	} else {
-		dprintf( D_FULLDEBUG, "CronJob: '%s' (pid %d) exit_status=%d\n",
-			 GetName(), exitPid, WEXITSTATUS(exitStatus) );
+		auto debugLevel = D_FULLDEBUG;
+		auto es = WEXITSTATUS(exitStatus);
+
+		std::string knob_name;
+		formatstr( knob_name, "%s_CRON_LOG_NON_ZERO_EXIT", m_mgr.GetName() );
+		if( es != 0 && param_boolean( knob_name.c_str(), false ) ) {
+			failed = true;
+			debugLevel = D_ALWAYS;
+		}
+		dprintf( debugLevel, "CronJob: '%s' (pid %d) exit_status=%d\n",
+			 GetName(), exitPid, es );
 	}
 
 	// What if the PIDs don't match?!
 	if ( exitPid != m_pid ) {
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 			"CronJob: WARNING: Child PID %d != Exit PID %d\n",
 			m_pid, exitPid );
 	}
@@ -427,8 +439,21 @@ CronJob::Reaper( int exitPid, int exitStatus )
 
 	}
 
+	// If we dump the output to the log here, it won't get processed.  That's
+	// probably a good thing for the devel series...
+	if( failed ) {
+		int linecount = m_stdOutBuf->GetQueueSize();
+		if( linecount == 0 ) {
+			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced no output\n",
+			         GetName(), exitPid );
+		} else {
+			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced %d lines of output, which follow.\n",
+			         GetName(), exitPid, linecount );
+		}
+	}
+
 	// Process the output
-	ProcessOutputQueue( );
+	ProcessOutputQueue( failed, exitPid );
 
 	// Finally, notify my manager
 	m_mgr.JobExited( *this );
@@ -438,7 +463,7 @@ CronJob::Reaper( int exitPid, int exitStatus )
 
 // Publisher
 int
-CronJob::ProcessOutputQueue( void )
+CronJob::ProcessOutputQueue( bool failed, int exitPid )
 {
 	int		status = 0;
 	int		linecount = m_stdOutBuf->GetQueueSize( );
@@ -453,6 +478,10 @@ CronJob::ProcessOutputQueue( void )
 		// Read all of the data from the queue
 		char	*linebuf;
 		while( ( linebuf = m_stdOutBuf->GetLineFromQueue( ) ) != NULL ) {
+			if( failed ) {
+				dprintf( D_ALWAYS, "['%s' (%d)] %s\n", GetName(), exitPid, linebuf );
+			}
+
 			int		tmpstatus = ProcessOutput( linebuf );
 			if ( tmpstatus ) {
 				status = tmpstatus;

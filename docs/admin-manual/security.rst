@@ -1587,7 +1587,11 @@ the user is given the name unauthenticated@unmapped.
 With the integration of VOMS for authentication, the interpretation
 of the regular expression representing the authenticated name may
 change. First, the full serialized DN and FQAN are used in attempting a
-match. If no match is found using the full DN and FQAN, then the DN is
+match.
+See the description of job attribute ``X509UserProxyFQAN`` in
+:ref:`classad-attributes/job-classad-attributes:job classad attributes`
+for details on how the DN and FQAN are serialized.
+If no match is found using the full DN and FQAN, then the DN is
 then used on its own without the FQAN. Using this, roles or user names
 from the VOMS attributes may be extracted to be used as the target for
 mapping. And, in this case the FQAN are verified, permitting reliance on
@@ -2862,7 +2866,7 @@ Under Unix, HTCondor runs jobs as one of
       machine that will run the job. Its default value is ``True`` on
       Unix platforms and ``False`` on Windows platforms.
    #. If the job's ClassAd has the attribute ``RunAsOwner``, it must be
-      set to ``True`; if unset, the job must be run on a Unix system.
+      set to ``True``; if unset, the job must be run on a Unix system.
       This attribute can be set up for all users by adding an attribute
       to configuration variable ``SUBMIT_ATTRS``
       :index:`SUBMIT_ATTRS`. If this were the only attribute to be

@@ -31,6 +31,10 @@
 
 #include <set>
 
+#ifdef LINUX
+class VolumeManager;
+#endif // LINUX
+
 class SlotType
 {
 public:
@@ -410,6 +414,11 @@ public:
 
 	std::list<int> *get_affinity_set() { return &m_affinity_mask;}
 
+#ifdef LINUX
+	void setVolumeManager(VolumeManager *volume_mgr) {m_volume_mgr = volume_mgr;}
+	VolumeManager *getVolumeManager() const {return m_volume_mgr;}
+#endif // LINUX
+
 	bool wasAcceptedWhileDraining() const { return m_acceptedWhileDraining; }
 	void setAcceptedWhileDraining() { m_acceptedWhileDraining = isDraining(); }
 private:
@@ -452,6 +461,10 @@ private:
 	char*	m_hook_keyword;
 	bool	m_hook_keyword_initialized;
 #endif /* HAVE_JOB_HOOKS */
+
+#ifdef LINUX
+	VolumeManager *m_volume_mgr{nullptr};
+#endif
 
 	std::list<int> m_affinity_mask;
 

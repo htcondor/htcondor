@@ -121,6 +121,9 @@ const int DaemonCore::ERRNO_PID_COLLISION = 666667;
 const int DaemonCore::ERRNO_REGISTRATION_FAILED = 666668;
 const int DaemonCore::ERRNO_EXIT = 666669;
 
+unsigned DaemonCore::m_remote_admin_seq = 0;
+time_t DaemonCore::m_startup_time = time(NULL);
+
 #define CREATE_PROCESS_FAILED_CHDIR 1
 
 // Make this the last include to fix assert problems on Win32 -- see
@@ -3185,6 +3188,8 @@ DaemonCore::reconfig(void) {
 
 		// in case our address changed, do whatever needs to be done
 	daemonContactInfoChanged();
+
+	SetRemoteAdmin(param_boolean("SEC_ENABLE_REMOTE_ADMINISTRATION", false));
 }
 
 void
@@ -3275,6 +3280,31 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_s
 	}
 
 	return result;
+}
+
+int
+DaemonCore::Verify(char const *command_descrip, DCpermission perm, const Sock &sock, int log_level)
+{
+	auto fqu = sock.getFullyQualifiedUser();
+
+	CondorError err;
+	if (!getSecMan()->IsAuthenticationSufficient(perm, sock, err))
+	{
+		char ipstr[IP_STRING_BUF_SIZE];
+		strcpy(ipstr, "(unknown)");
+		sock.peer_addr().to_ip_string(ipstr, sizeof(ipstr));
+
+		dprintf(log_level,
+			"PERMISSION DENIED to %s from host %s for %s, "
+			"access level %s: reason: %s.\n",
+			(fqu && *fqu) ? fqu : "unauthenticated user",
+			ipstr,
+			command_descrip ? command_descrip : "unspecified operation",
+			PermString(perm),
+			err.message());
+		return USER_AUTH_FAILURE;
+	}
+	return Verify(command_descrip, perm, sock.peer_addr(), fqu, log_level);
 }
 
 bool
@@ -7166,7 +7196,7 @@ int DaemonCore::Create_Process(
 	if(want_command_port != FALSE)
 	{
 		char* c_session_id = Condor_Crypt_Base::randomHexKey();
-		char* c_session_key = Condor_Crypt_Base::randomHexKey();
+		char* c_session_key = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 
 		session_id.assign(c_session_id);
 		std::string session_key(c_session_key);
@@ -7198,17 +7228,13 @@ int DaemonCore::Create_Process(
 			CONDOR_CHILD_FQU,
 			NULL,
 			0,
-			nullptr);
+			nullptr, true);
 
 		if(!rc)
 		{
 			dprintf(D_ALWAYS, "ERROR: Create_Process failed to create security session for child daemon.\n");
 			goto wrapup;
 		}
-		KeyCacheEntry *entry = NULL;
-		rc = getSecMan()->session_cache->lookup(session_id_c_str,entry);
-		ASSERT( rc && entry && entry->policy() );
-		entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 		IpVerify* ipv = getSecMan()->getIpVerify();
 		std::string id = CONDOR_CHILD_FQU;
 		ipv->PunchHole(ADMINISTRATOR, id);
@@ -9139,15 +9165,11 @@ DaemonCore::Inherit( void )
 				CONDOR_PARENT_FQU,
 				saved_sinful_string.c_str(),
 				0,
-				nullptr);
+				nullptr, false);
 			if(!rc)
 			{
 				dprintf(D_ALWAYS, "Error: Failed to recreate security session in child daemon.\n");
 			}
-			KeyCacheEntry *entry = NULL;
-			rc = getSecMan()->session_cache->lookup(claimid.secSessionId(),entry);
-			ASSERT( rc && entry && entry->policy() );
-			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 			IpVerify* ipv = getSecMan()->getIpVerify();
 			std::string id = CONDOR_PARENT_FQU;
 			ipv->PunchHole(ADMINISTRATOR, id);
@@ -9167,11 +9189,13 @@ DaemonCore::Inherit( void )
 		}
 	}
 
+	bool new_family_session = false;
 	if ( m_family_session_id.empty() ) {
 		if ( m_create_family_session && param_boolean("SEC_USE_FAMILY_SESSION", true) ) {
+			new_family_session = true;
 			dprintf(D_DAEMONCORE, "Creating family security session.\n");
 			char* c_session_id = Condor_Crypt_Base::randomHexKey();
-			char* c_session_key = Condor_Crypt_Base::randomHexKey();
+			char* c_session_key = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 
 			m_family_session_id = "family:";
 			m_family_session_id += c_session_id;
@@ -9194,7 +9218,7 @@ DaemonCore::Inherit( void )
 				CONDOR_FAMILY_FQU,
 				NULL,
 				0,
-				nullptr);
+				nullptr, new_family_session);
 
 		if(!rc) {
 			dprintf(D_ALWAYS, "ERROR: Failed to create family security session.\n");
@@ -9202,10 +9226,6 @@ DaemonCore::Inherit( void )
 			m_family_session_key.clear();
 		} else {
 
-			KeyCacheEntry *entry = NULL;
-			rc = getSecMan()->session_cache->lookup(m_family_session_id.c_str(),entry);
-			ASSERT( rc && entry && entry->policy() );
-			entry->policy()->Assign( ATTR_SEC_REMOTE_VERSION, CondorVersion() );
 			IpVerify* ipv = getSecMan()->getIpVerify();
 			ipv->PunchHole(ADMINISTRATOR, CONDOR_FAMILY_FQU);
 			ipv->PunchHole(DAEMON, CONDOR_FAMILY_FQU);
@@ -11086,6 +11106,12 @@ DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
 		beginDaemonShutdown(false);
 	}
 
+		// Provide the collector with a capability to administer us.
+	std::string capability;
+	if (SetupAdministratorSession(1800, capability)) {
+		ad1->InsertAttr(ATTR_REMOTE_ADMIN_CAPABILITY, capability);
+	}
+
 		// Even if we just decided to shut ourselves down, we should
 		// still send the updates originally requested by the caller.
 	return m_collector_list->sendUpdates(cmd, ad1, ad2, nonblock, token_requester,
@@ -11336,26 +11362,6 @@ bool DaemonCore::SockPair::has_safesock(bool b) {
 	return true;
 }
 
-#include "condor_daemon_client.h"
-#include "dc_collector.h"
-
-bool DaemonCore::getStartTime( int & startTime ) {
-	if(! m_collector_list) { return false; }
-	m_collector_list->rewind();
-
-	Daemon * d = NULL;
-	m_collector_list->next(d);
-	if(! d) { return false; }
-
-	DCCollector * dcc = dynamic_cast<DCCollector *>(d);
-	if(! dcc) { return false; }
-
-	startTime = dcc->getStartTime();
-	return true;
-}
-
-
-
 int DaemonCore::CreateProcessNew(
   const std::string & name,
   const std::vector< std::string > args,
@@ -11382,4 +11388,97 @@ int DaemonCore::CreateProcessNew(
 		ocpa._remap, ocpa.as_hard_limit );
 	if(! ms.empty()) { ocpa.err_return_msg = ms; }
 	return rv;
+}
+
+
+bool
+DaemonCore::SetupAdministratorSession(unsigned duration, std::string &capability)
+{
+	if (!m_enable_remote_admin) {
+		return false;
+	}
+
+		// Add some modest caching to the admin session; prevents us from
+		// using a unique session per d-slot in the startd.
+	time_t now = time(NULL);
+	if (m_remote_admin_last_time + 30 > now) {
+		capability = m_remote_admin_last;
+		return true;
+	}
+	if (duration < 30) {duration = 30;}
+
+	m_remote_admin_seq++;
+
+	std::string id;
+	formatstr( id, "admin_%s#%ld#%lu", daemonCore->publicNetworkIpAddr(),
+		m_startup_time, (long unsigned)m_remote_admin_seq);
+
+		// A keylength of 32 bytes = 256 bits.
+	const size_t keylen = 32;
+	auto keybuf = std::unique_ptr<char, decltype(free)*>{
+		Condor_Crypt_Base::randomHexKey(keylen),
+		free
+	};
+	if (!keybuf) {
+		return false;
+	}
+
+		// What should the collector admin be able to do to this daemon?
+		// - 453: RESTART
+		// - 454: DAEMONS_OFF
+		// - 455: DAEMONS_ON
+		// - 456: MASTER_OFF
+		// - 461: DAEMONS_OFF_FAST
+		// - 462: MASTER_OFF_FAST
+		// - 467: DAEMON_OFF
+		// - 468: DAEMON_OFF_FAST
+		// - 469: DAEMON_ON
+		// - 483: DAEMON_OFF_PEACEFUL
+		// - 484: DAEMONS_OFF_PEACEFUL
+		// - 485: RESTART_PEACEFUL
+		// - 60013: DC_FETCH_LOG
+		// - 60018: DC_PURGE_LOG
+		// - 60006: DC_OFF_FAST
+		// - 60005: DC_OFF_GRACEFUL
+		// - 60042: DC_OFF_FORCE
+		// - 60015: DC_OFF_PEACEFUL
+		// - 60016: DC_SET_PEACEFUL_SHUTDOWN
+		// - 60041: DC_SET_FORCE_SHUTDOWN
+
+	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"453,454,455,456,461,462,467,468,469,483,484,485,60013,60018,60006,60005,60042,60015,60016,60041\"]";
+
+	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+		ADMINISTRATOR,
+		id.c_str(),
+		keybuf.get(),
+		session_info,
+		AUTH_METHOD_MATCH,
+		COLLECTOR_SIDE_MATCHSESSION_FQU,
+		nullptr,
+		duration,
+		nullptr,
+		true
+	);
+	if (retval) {
+		ClaimIdParser cidp(id.c_str(), session_info, keybuf.get());
+		capability = cidp.claimId();
+		m_remote_admin_last = capability;
+		m_remote_admin_last_time = time(NULL);
+	}
+	return retval;
+}
+
+
+void
+DaemonCore::SetRemoteAdmin(bool remote_admin)
+{
+	if (remote_admin != m_enable_remote_admin) {
+                IpVerify* ipv = daemonCore->getIpVerify();
+		if (remote_admin) {
+			ipv->PunchHole( ADMINISTRATOR, COLLECTOR_SIDE_MATCHSESSION_FQU );
+		} else {
+			ipv->FillHole( ADMINISTRATOR, COLLECTOR_SIDE_MATCHSESSION_FQU );
+		}
+	}
+	m_enable_remote_admin = remote_admin;
 }

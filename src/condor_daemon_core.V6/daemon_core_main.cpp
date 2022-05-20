@@ -2827,11 +2827,11 @@ handle_config_val(int idCmd, Stream* stream )
 		if (is_arg_colon_prefix(param_name, "?names", &pcolon, -1)) {
 			const char * restr = ".*";
 			if (pcolon) { restr = ++pcolon; }
-			Regex re; int err = 0; const char * pszMsg = 0;
+			Regex re; int errcode = 0, erroffset = 0;
 
-			if ( ! re.compile(restr, &pszMsg, &err, PCRE_CASELESS)) {
+			if ( ! re.compile(restr, &errcode, &erroffset, PCRE2_CASELESS)) {
 				dprintf( D_ALWAYS, "Can't compile regex for DC_CONFIG_VAL ?names query\n" );
-				MyString errmsg; errmsg.formatstr("!error:regex:%d: %s", err, pszMsg ? pszMsg : "");
+				MyString errmsg; errmsg.formatstr("!error:regex:%d: error code %d", erroffset, errcode);
 				if (!stream->code(errmsg)) {
 						dprintf( D_ALWAYS, "and remote side disconnected from use\n" );
 				}

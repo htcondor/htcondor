@@ -387,6 +387,10 @@ Dagman::Config()
 		ASSERT( condorRmExe );
 	}
 
+	doAppendVars = param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_APPEND_VARS setting: %s\n",
+		doAppendVars ? "True" : "False" );
+
 	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES",
 				abortDuplicates );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_DUPLICATES setting: %s\n",

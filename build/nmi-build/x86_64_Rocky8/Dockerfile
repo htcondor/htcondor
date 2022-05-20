@@ -120,6 +120,7 @@ RUN dnf install -y \
     'pam-devel' \
     'patch' \
     'pcre-devel' \
+    'pcre2-devel' \
     'perl(Archive::Tar)' \
     'perl(Data::Dumper)' \
     'perl(Digest::MD5)' \

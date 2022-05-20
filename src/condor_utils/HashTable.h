@@ -41,7 +41,7 @@ template <class Index, class Value> class HashTable;
 // Note that the HashIterator only works if both Index and Value are
 // pointer types or can be assigned the value NULL.  wenger 2017-03-08
 template< class Index, class Value >
-class HashIterator : std::iterator<std::input_iterator_tag, std::pair<Index, Value> >
+class HashIterator 
 {
 public:
 	HashIterator(const HashIterator &original) {
@@ -54,6 +54,11 @@ public:
 	~HashIterator() {
 		m_parent->remove_iterator(this);
 	}
+
+	// Manually define all that the deprecated std::iterator used to do for us
+	using iterator_category = std::input_iterator_tag;
+	using value_type = std::pair<Index, Value>;
+	using difference_type = std::ptrdiff_t;
 
 	std::pair<Index, Value> operator *() const {
 		return std::pair<Index, Value>(m_cur ? m_cur->index : NULL, m_cur ? m_cur->value : NULL);

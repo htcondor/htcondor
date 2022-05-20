@@ -101,6 +101,8 @@ usage( const char *str, int iExitCode )
 	const char* tmp = strchr( str, '_' );
 	if( !tmp ) {
 		fprintf( stderr, "Usage: %s [command] ", str );
+	} else if (cmd == SET_SHUTDOWN_PROGRAM) {
+		fprintf( stderr, "Usage: %s -exec <name> ", str );
 	} else {
 		fprintf( stderr, "Usage: %s ", str );
 	}
@@ -108,6 +110,10 @@ usage( const char *str, int iExitCode )
 	fprintf( stderr, "[general-options] [targets]" );
 	if( takes_subsys ) {
 		fprintf( stderr, " [daemon]" );
+	}
+	if (cmd == SET_SHUTDOWN_PROGRAM) {
+		fprintf( stderr, "\n    -exec <name>\tTell the master to run the program is has configured as\n"
+						   "                \tMASTER_SHUTDOWN_<name> the next time it shuts down");
 	}
 	fprintf( stderr, "\nwhere [general-options] can be zero or more of:\n" );
 	fprintf( stderr, "    -help\t\tgives this usage information\n" );
@@ -178,6 +184,9 @@ usage( const char *str, int iExitCode )
 		fprintf( stderr, "  %s causes specified daemon to restart itself.\n", str );
 		fprintf( stderr, 
 				 "  If sent to the master, all daemons on that host will restart.\n" );
+		break;
+	case SET_SHUTDOWN_PROGRAM:
+		fprintf( stderr, "  %s causes the master to run a pre-configured program when it exits.\n", str );
 		break;
 
 	case DC_RECONFIG_FULL:
@@ -1276,7 +1285,8 @@ resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unreso
 	if (constraint!=NULL) {
 	  query.addANDConstraint(constraint);
 	}
-
+	query.setLocationLookup("tool", false);
+	query.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
 
 	if (pool_addr) {
 		q_result = query.fetchAds(ads, pool_addr, &errstack);

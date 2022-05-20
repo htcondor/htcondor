@@ -51,8 +51,8 @@ const char * nullStringIfEmpty( const string & str ) {
 // The hostname is the only required component.
 std::string fillURL(const char *url)
 {
-	Regex r; int errCode = 0; const char * errString = 0;
-	bool patternOK = r.compile( "([^:]+://)?([^:/]+)(:[0-9]*)?(.*)", & errString, & errCode );
+	Regex r; int errCode = 0, errOffset = 0;
+	bool patternOK = r.compile( "([^:]+://)?([^:/]+)(:[0-9]*)?(.*)", &errCode, &errOffset);
 	ASSERT( patternOK );
 	ExtArray<MyString> groups(5);
 	if(! r.match( url, & groups )) {

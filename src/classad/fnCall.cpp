@@ -37,20 +37,8 @@
 #include <sys/time.h>
 #endif
 
-#if defined(WIN32) && !defined(USE_PCRE) && !defined(USE_POSIX_REGEX)
-  #define USE_PCRE
-  #define HAVE_PCRE_H
-#endif
-
-#if defined USE_POSIX_REGEX 
-  #include <regex.h>
-#elif defined USE_PCRE
-  #ifdef HAVE_PCRE_H
-    #include <pcre.h>
-  #elif defined HAVE_PCRE_PCRE_H
-    #include <pcre/pcre.h>
-  #endif
-#endif
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 #ifdef UNIX
 #include <dlfcn.h>
@@ -160,13 +148,11 @@ FunctionCall( )
 		functionTable["version_in_range"] = (void*)versionInRange;
 
 			// pattern matching (regular expressions)
-#if defined USE_POSIX_REGEX || defined USE_PCRE
 		functionTable["regexp"		] =	(void*)matchPattern;
 		functionTable["regexpmember"] =	(void*)matchPatternMember;
 		functionTable["regexps"     ] = (void*)substPattern;
 		functionTable["replace"     ] = (void*)substPattern;
 		functionTable["replaceall"  ] = (void*)substPattern;
-#endif
 
 			// conversion functions
 		functionTable["int"			] =	(void*)convInt;
@@ -2078,7 +2064,7 @@ bool FunctionCall::hasRefs(const char*, const ArgumentList& argList, EvalState& 
 
 	// for the 2 arg form, the second argument is a regex pattern to be compared against
 	// each of the unresolved references
-	pcre * re = nullptr;
+	pcre2_code * re = nullptr;
 	if (argList.size() == 2) {
 		const char* pattern = nullptr;
 		if ( !argList[1]->Evaluate(state, arg) || ! arg.IsStringValue(pattern)) {
@@ -2086,9 +2072,10 @@ bool FunctionCall::hasRefs(const char*, const ArgumentList& argList, EvalState& 
 			return false;
 		}
 
-		const char  *error_message;
-		int error_offset;
-		re = pcre_compile(pattern, PCRE_CASELESS, &error_message, &error_offset, NULL);
+		int error_number;
+		PCRE2_SIZE error_offset;
+		PCRE2_SPTR pattern_pcre2str = reinterpret_cast<const unsigned char *>(pattern);
+		re = pcre2_compile(pattern_pcre2str, PCRE2_ZERO_TERMINATED, PCRE2_CASELESS, &error_number, &error_offset, NULL);
 		if ( ! re) {
 			// error in pattern
 			result.SetErrorValue();
@@ -2108,10 +2095,14 @@ bool FunctionCall::hasRefs(const char*, const ArgumentList& argList, EvalState& 
 					len -= 7;
 				}
 				if (re) {
-					int ovec[6];
-					if (pcre_exec(re, NULL, attr, len, 0, PCRE_NOTEMPTY, ovec, 6) > 0) {
+					pcre2_match_data * match_data = pcre2_match_data_create_from_pattern(re, NULL);
+					PCRE2_SPTR attr_pcre2str = reinterpret_cast<const unsigned char *>(attr);
+					if (pcre2_match(re, attr_pcre2str, len, 0, PCRE2_NOTEMPTY, match_data, NULL) > 0) {
 						result.SetBooleanValue(true); // found a match
+						pcre2_match_data_free(match_data);
 						break;
+					} else {
+						pcre2_match_data_free(match_data);
 					}
 				} else {
 					if (!val.empty()) val += ",";
@@ -2124,7 +2115,7 @@ bool FunctionCall::hasRefs(const char*, const ArgumentList& argList, EvalState& 
 	if ( ! re) {
 		result.SetStringValue(val);
 	} else {
-		pcre_free(re);
+		pcre2_code_free(re);
 	}
 	return true;
 }
@@ -2788,7 +2779,6 @@ debug( const char* name,const ArgumentList &argList,EvalState &state,
 	return true;
 }
 
-#if defined USE_POSIX_REGEX || defined USE_PCRE
 static bool regexp_helper(const char *pattern, const char *target,
                           const char *replace,
                           bool have_options, string options_string,
@@ -3046,151 +3036,40 @@ static bool regexp_helper(
     string     options_string,
     Value      &result)
 {
-    int         options;
+    int         options = 0;
 	int			status;
 	bool		full_target = false;
 	bool		find_all = false;
 
-#if defined (USE_POSIX_REGEX)
-	regex_t		re;
-
-	const int MAX_REGEX_GROUPS=11;
-	regmatch_t pmatch[MAX_REGEX_GROUPS];
-	size_t      nmatch = MAX_REGEX_GROUPS;
-
-    options = REG_EXTENDED;
-	if( !replace ) {
-		options |= REG_NOSUB;
-	}
-    if( have_options ){
-        // We look for the options we understand, and ignore
-        // any others that we might find, hopefully allowing
-        // forwards compatibility.
-        if ( options_string.find( 'i' ) != string::npos ) {
-            options |= REG_ICASE;
-        }
-        if ( options_string.find( 'f' ) != string::npos ) {
-            full_target = true;
-        }
-    }
-
-		// compile the patern
-	if( regcomp( &re, pattern, options ) != 0 ) {
-			// error in pattern
-		result.SetErrorValue( );
-		return( true );
-	}
-
-		// test the match
-	status = regexec( &re, target, nmatch, pmatch, 0 );
-
-		// dispose memory created by regcomp()
-	regfree( &re );
-
-	if( status == 0 && replace ) {
-		string group_buffers[MAX_REGEX_GROUPS];
-		char const *groups[MAX_REGEX_GROUPS];
-		int ngroups = MAX_REGEX_GROUPS;
-		int i;
-
-		for(i=0;i<MAX_REGEX_GROUPS;i++) {
-			regoff_t rm_so = pmatch[i].rm_so;
-			regoff_t rm_eo = pmatch[i].rm_eo;
-			if( rm_so >= 0 ) {
-				group_buffers[i].append(target,rm_so,rm_eo-rm_so);
-				groups[i] = group_buffers[i].c_str();
-			}
-			else {
-				groups[i] = NULL;
-			}
-		}
-
-		string output;
-		bool replace_success = true;
-
-		if ( full_target ) {
-			output.append(target, pmatch[0].rm_so);
-		}
-		while (*replace) {
-			if (*replace == '\\') {
-				if (isdigit(replace[1])) {
-					int offset = replace[1] - '0';
-					replace++;
-					if( offset >= ngroups || !groups[offset] ) {
-						replace_success = false;
-						break;
-					}
-					output += groups[offset];
-				} else {
-					output += '\\';
-				}
-			} else {
-				output += *replace;
-			}
-			replace++;
-		}
-		if ( replace_success && full_target ) {
-			output.append(target+pmatch[0].rm_eo, strlen(target+pmatch[0].rm_eo));
-		}
-
-		if( replace_success ) {
-			result.SetStringValue( output );
-		}
-		else {
-			result.SetErrorValue( );
-		}
-		return( true );
-	}
-	else if( status == REG_NOMATCH && replace ) {
-		if ( full_target ) {
-			result.SetStringValue( target );
-		} else {
-			result.SetStringValue( "" );
-		}
-		return( true );
-	}
-
-		// check for success/failure
-	if( status == 0 ) {
-		result.SetBooleanValue( true );
-		return( true );
-	} else if( status == REG_NOMATCH ) {
-		result.SetBooleanValue( false );
-		return( true );
-	} else {
-			// some error; we could possibly return 'false' here ...
-		result.SetErrorValue( );
-		return( true );
-	}
-#elif defined (USE_PCRE)
-    const char  *error_message;
-    int         error_offset;
-    pcre        *re = NULL;
-	int group_count = 0;
-	int oveccount = 0;
-	int *ovector = NULL;
+	PCRE2_SIZE error_offset;
+	int error_code;
+	pcre2_code * re = NULL;
+	PCRE2_SPTR pattern_pcre2 = reinterpret_cast<const unsigned char *>(pattern);
+	uint32_t group_count = 0;
+	PCRE2_SIZE *ovector = NULL;
 	bool empty_match = false;
-	int addl_opts = 0;
-	int target_len = strlen(target);
-	int target_idx = 0;
-	string output;
+	uint32_t addl_opts = 0;
+	PCRE2_SIZE target_len = (PCRE2_SIZE) strlen(target);
+	PCRE2_SPTR target_pcre2str = reinterpret_cast<const unsigned char *>(target);
 
-    options     = 0;
+	size_t target_idx = 0;
+	std::string output;
+
     if( have_options ){
         // We look for the options we understand, and ignore
         // any others that we might find, hopefully allowing
         // forwards compatibility.
         if ( options_string.find( 'i' ) != string::npos ) {
-            options |= PCRE_CASELESS;
+            options |= PCRE2_CASELESS;
         } 
         if ( options_string.find( 'm' ) != string::npos ) {
-            options |= PCRE_MULTILINE;
+            options |= PCRE2_MULTILINE;
         }
         if ( options_string.find( 's' ) != string::npos ) {
-            options |= PCRE_DOTALL;
+            options |= PCRE2_DOTALL;
         }
         if ( options_string.find( 'x' ) != string::npos ) {
-            options |= PCRE_EXTENDED;
+            options |= PCRE2_EXTENDED;
         }
 		if ( replace ) {
 			// The 'f' option means that the result should consist of
@@ -3207,17 +3086,12 @@ static bool regexp_helper(
 		}
     }
 
-    re = pcre_compile( pattern, options, &error_message,
-                      &error_offset, NULL );
+    re = pcre2_compile(pattern_pcre2, PCRE2_ZERO_TERMINATED, options, &error_code, &error_offset, NULL);
     if ( re == NULL ){
 			// error in pattern
 		result.SetErrorValue( );
 		goto cleanup;
 	}
-
-	pcre_fullinfo(re, NULL, PCRE_INFO_CAPTURECOUNT, &group_count);
-	oveccount = 3 * (group_count + 1); // +1 for the string itself
-	ovector = (int *) malloc(oveccount * sizeof(int));
 
 	// NOTE: For global replacement option 'g', we don't properly
 	//   handle situations where a single character of the target
@@ -3228,15 +3102,15 @@ static bool regexp_helper(
 	do {
 
 		if ( empty_match ) {
-			addl_opts = PCRE_NOTEMPTY_ATSTART | PCRE_ANCHORED;
+			addl_opts = PCRE2_NOTEMPTY_ATSTART | PCRE2_ANCHORED;
 		} else {
 			addl_opts = 0;
 		}
 
-        status = pcre_exec(re, NULL, target, target_len,
-                           target_idx, addl_opts, ovector, oveccount);
-
-		if (empty_match && status == PCRE_ERROR_NOMATCH) {
+		pcre2_match_data * match_data = pcre2_match_data_create_from_pattern(re, NULL);
+		status = pcre2_match(re, target_pcre2str, target_len, target_idx, addl_opts, match_data, NULL);
+		ovector = pcre2_get_ovector_pointer(match_data);
+		if (empty_match && status == PCRE2_ERROR_NOMATCH) {
 			output += target[target_idx];
 			target_idx++;
 			empty_match = false;
@@ -3245,16 +3119,15 @@ static bool regexp_helper(
 		}
 
 		if( status >= 0 && replace ) {
-
-			const char **groups = NULL;
+			PCRE2_UCHAR **groups_pcre2 = nullptr;
 			int ngroups = status;
 			const char *replace_ptr = replace;
 
 			if ( full_target ) {
-				output.append(&target[target_idx], ovector[0] - target_idx);
+				output.append(&target[target_idx], (ovector[0]) - target_idx);
 			}
 
-			if( pcre_get_substring_list(target,ovector,ngroups,&groups)!=0 ) {
+			if (pcre2_substring_list_get(match_data, &groups_pcre2, NULL)) {
 				result.SetErrorValue( );
 				goto cleanup;
 			}
@@ -3267,7 +3140,7 @@ static bool regexp_helper(
 							result.SetErrorValue();
 							goto cleanup;
 						}
-						output += groups[offset];
+						output += reinterpret_cast<const char *>(groups_pcre2[offset]);
 					} else {
 						output += '\\';
 					}
@@ -3277,17 +3150,19 @@ static bool regexp_helper(
 				replace_ptr++;
 			}
 
-			pcre_free_substring_list( groups );
+			pcre2_substring_list_free((PCRE2_SPTR *) groups_pcre2);
 
 			target_idx = ovector[1];
 			if ( ovector[0] == ovector[1] ) {
 				empty_match = true;
 			}
 		}
+	
+		pcre2_match_data_free(match_data);
 
     } while (status >= 0 && find_all);
 
-	if ( status < 0 && status != PCRE_ERROR_NOMATCH ) {
+	if ( status < 0 && status != PCRE2_ERROR_NOMATCH ) {
 		result.SetErrorValue();
 	} else if ( !replace ) {
 		result.SetBooleanValue( status >= 0 );
@@ -3299,14 +3174,10 @@ static bool regexp_helper(
 	}
  cleanup:
 	if ( re ) {
-		pcre_free(re);
+		pcre2_code_free(re);
 	}
-	free(ovector);
     return true;
-#endif
 }
-
-#endif /* defined USE_POSIX_REGEX || defined USE_PCRE */
 
 static bool 
 doSplitTime(const Value &time, ClassAd * &splitClassAd)

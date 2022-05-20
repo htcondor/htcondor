@@ -1,0 +1,144 @@
+#!/usr/bin/env perl
+#testreq: personal
+##**************************************************************
+##
+## Copyright (C) 2022, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+# Test that merged stdout/err is handled properly:
+# * Job's stdout and stderr are redirected to the same file, such that
+#   they are interleaved (when in-process buffering is disabled)
+# * Requested output files are transferred (HTCONDOR-1101)
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+
+$testname = "job_filexfer_merged-stdout_van";
+
+# Merged stdout/err is broken on Windows (the two data streams overwite
+# each other). See HTCONDOR-1119.
+$check_stdout = ! CondorUtils::is_windows();
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my $job = $$;
+my $stdout = "submit_filetrans_stdout" . "$job";
+my $baseoutfile = "submit_filetrans_output" . "$job";
+my $oute = "$baseoutfile"."e.txt";
+my $outf = "$baseoutfile"."f.txt";
+my $outg = "$baseoutfile"."g.txt";
+my $outh = "$baseoutfile"."h.txt";
+my $outi = "$baseoutfile"."i.txt";
+my $outj = "$baseoutfile"."j.txt";
+
+my $alreadydone=0;
+
+$execute = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	CondorTest::debug("Running $cluster\n",1);
+
+};
+
+$success = sub
+{
+	CondorTest::debug("Base file transfer job!\n",1);
+	if(!-f "$oute"){ print "$oute failed to arrive\n"; exit(1)};
+	if(!-f "$outf"){ print "$outf failed to arrive\n"; exit(1)};
+	if(!-f "$outg"){ print "$outg failed to arrive\n"; exit(1)};
+	if(!-f "$outh"){ print "$outh failed to arrive\n"; exit(1)};
+	if(!-f "$outi"){ print "$outi failed to arrive\n"; exit(1)};
+	if(!-f "$outj"){ print "$outj failed to arrive\n"; exit(1)};
+
+	# If the job's stdout/err are merged properly (with interleaving),
+	# we should see these as the first three lines:
+	# (from stdout):Called with:...
+	# (from stderr):Hello
+	# (from stdout):Working Directory is ...
+	if ($check_stdout) {
+		CondorTest::debug("Checking merged stdout/err output\n", 1);
+		if(!open(FH, '<', "$stdout")){ print "Failed to open job stdout\n"; exit(1)};
+		chomp(my @lines = <FH>);
+		if ($lines[0] !~ /Called with:/ || $lines[1] !~ /Hello/ || $lines[2] !~ /Working Directory/ ) {
+			print "Job stdout/err doesn't have expected contents\n";
+			exit(1);
+		}
+	} else {
+		CondorTest::debug("Not checking merged stdout/err output\n" ,1);
+	}
+};
+
+$abort = sub {
+	CondorTest::debug("Job is gone now, cool.\n",1);
+};
+
+$timed = sub
+{
+	die "Job should have ended by now. file transfer broken!\n";
+};
+
+# make some needed files. All 0 sized and xxxxxx.txt for
+# easy cleanup
+
+my $job = $$;
+CondorTest::debug("Process Id for this script is  $job\n",1);
+my $basefile = "submit_filetrans_input" . "$job";
+my $in = "$basefile".".txt";
+my $ina = "$basefile"."a.txt";
+my $inb = "$basefile"."b.txt";
+my $inc = "$basefile"."c.txt";
+
+my $inputdir = "job_"."$job"."_dir";
+
+CreateDir("-p $inputdir");
+CreateEmptyFile("$inputdir/$in");
+CreateEmptyFile("$inputdir/$ina");
+CreateEmptyFile("$inputdir/$inb");
+CreateEmptyFile("$inputdir/$inc");
+
+my $line = "";
+my $args = "--job=$job --long --stderr=Hello";
+
+
+SimpleJob::RunCheck(
+    runthis=>"x_job_filexfer_testjob.pl",
+    duration=>"$args",
+	output=>"$stdout",
+	error=>"$stdout",
+	transfer_output_files=>"$oute,$outf,$outg,$outh,$outi,$outj",
+    should_transfer_files=>"YES",
+    when_to_transfer_output=>"ON_EXIT",
+    on_success=>$success,
+    on_execute=>$execute,
+    on_abort=>$abort,
+);
+
+CondorTest::EndTest();
+print scalar localtime() . "\n";
+
+if( $result != 0 )
+{
+    exit(1);
+}
+
+CondorTest::debug("$testname SUCCESS\n",1);
+exit(0);

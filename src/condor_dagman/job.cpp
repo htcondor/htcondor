@@ -565,7 +565,7 @@ bool Job::CanAddChildren(std::forward_list<Job*> & children, std::string &whynot
 	return true;
 }
 
-bool Job::AddVar(const char *name, const char *value, const char * filename, int lineno)
+bool Job::AddVar(const char *name, const char *value, const char * filename, int lineno, bool prepend)
 {
 	name = dedup_str(name);
 	value = dedup_str(value);
@@ -584,7 +584,7 @@ bool Job::AddVar(const char *name, const char *value, const char * filename, int
 				return true;
 		}
 	}
-	varsFromDag.emplace_after(last_var, name, value);
+	varsFromDag.emplace_after(last_var, name, value, prepend);
 	return true;
 }
 

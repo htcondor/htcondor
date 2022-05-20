@@ -45,7 +45,7 @@ extern char *CondorCertDir;
 extern int active_cluster_num;
 
 static bool QmgmtMayAccessAttribute( char const *attr_name ) {
-	return !ClassAdAttributeIsPrivate( attr_name );
+	return !ClassAdAttributeIsPrivateAny( attr_name );
 }
 
 	// When in NoAck mode for SetAttribute, we don't have any

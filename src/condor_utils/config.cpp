@@ -3914,7 +3914,7 @@ static const char * get_lookup_and_expand_macro_arg (
 //          |    |     |
 //     dollar    body  defval - 0 if no :
 //
-typedef struct {
+typedef struct _config_macro_position {
 	ptrdiff_t dollar;
 	ptrdiff_t body;
 	ptrdiff_t defval;

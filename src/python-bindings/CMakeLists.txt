@@ -2,7 +2,7 @@
 set( HTCONDOR_BINDINGS_SOURCES collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp daemon_location.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp credd.cpp secman.cpp event.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp JobEventLog.cpp exception_utils.cpp )
 
 if(WINDOWS)
-  if(WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND)
+  if(WITH_PYTHON_BINDINGS AND ( PYTHONLIBS_FOUND OR PYTHON3LIBS_FOUND ))
     # Modern compilers complain about using the deprecated std::auto_ptr.
     # Prevent boost from using them.
     add_definitions ( -DBOOST_NO_AUTO_PTR )
@@ -10,9 +10,13 @@ if(WINDOWS)
 	#only for VS2012 and above
 	if(NOT (MSVC_VERSION LESS 1700))
 		#only for boost-1.54.0 or boost-1.68
-		IF("${BOOST_VER}" MATCHES "boost-1.(54|68).0")
+		IF("${BOOST_VER}" MATCHES "boost-1.(54|68|78).0")
 			message(STATUS "===> Generating python-bindings with boost 1.${CMAKE_MATCH_1}")
 			set(BOOST_LIB_BOOST_VER "1_${CMAKE_MATCH_1}")
+			if ("${CMAKE_MATCH_1}" EQUAL "78")
+				# disable python2
+				unset (PYTHON_VERSION_STRING)
+			endif()
 			if ("${CMAKE_MATCH_1}" EQUAL "54") # no bitness neeeded	(32 bit only)
 			else() #need bitness
 				if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -26,7 +30,7 @@ if(WINDOWS)
 				set(BOOST_LIB_PY3_VC_VER "python3-vc110")
 			else()
 				set(BOOST_LIB_PY2_VC_VER "python27-vc141")
-				set(BOOST_LIB_PY3_VC_VER "python36-vc141")
+				set(BOOST_LIB_PY3_VC_VER "${PYTHON3_LIB_BASENAME}-${BOOST_DLL_VCVER}")
 			endif()
 
 			link_directories(${BOOST_LD})
@@ -79,7 +83,7 @@ if(WINDOWS)
 				# the 'optimized' keyword indicates that the library following it is for release builds only
 				# the 'debug' keyword indicates that the library following it is for debug builds only
 				add_library( classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
-				target_link_libraries( classad_module pyclassad ${PCRE_FOUND} ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} )
+				target_link_libraries( classad_module pyclassad ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} )
 				set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
 				set_target_properties(classad_module PROPERTIES SUFFIX "${PYTHON_DLL_SUFFIX}" )
 				target_include_directories( classad_module PUBLIC ${PYTHON_INCLUDE_DIRS} )
@@ -133,8 +137,8 @@ if(WINDOWS)
 				set(THE_BOOST_LIBS
 				  optimized ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
 				      debug ${BOOST_LD}/boost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
-				  optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
-				      debug ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
+				#  optimized ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-${BOOST_LIB_BOOST_VER}.lib
+				#      debug ${BOOST_LD}/libboost_${BOOST_LIB_PY3_VC_VER}-mt-gd-${BOOST_LIB_BOOST_VER}.lib
 					)
 
 				condor_shared_lib( py3classad classad.cpp classad_wrapper.h exprtree_wrapper.h exception_utils.cpp classad_exceptions.cpp )
@@ -146,7 +150,7 @@ if(WINDOWS)
 				# the 'optimized' keyword indicates that the library following it is for release builds only
 				# the 'debug' keyword indicates that the library following it is for debug builds only
 				add_library( py3classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
-				target_link_libraries( py3classad_module py3classad ${PCRE_FOUND}  ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} )
+				target_link_libraries( py3classad_module py3classad ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} )
 				set_target_properties(py3classad_module PROPERTIES PREFIX "" OUTPUT_NAME py3classad PDB_NAME py3classad)
 				set_target_properties(py3classad_module PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME classad PDB_NAME py3classad)
 				set_target_properties(py3classad_module PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
@@ -172,7 +176,7 @@ if(WINDOWS)
 				install ( TARGETS py3htcondor DESTINATION ${C_PYTHONARCHLIB}/htcondor )
 				install ( TARGETS py3classad_module DESTINATION ${C_PYTHONARCHLIB}/classad )
 
-			endif(DEFINED PYTHON3_VERSION_STRING) # python36 was found
+			endif(DEFINED PYTHON3_VERSION_STRING) # python3x was found
 
 		# more targets are built if we plan on building wheels
 		if ( WANT_PYTHON_WHEELS )
@@ -229,16 +233,8 @@ else()
 
       get_filename_component(PYTHON_LIBRARY_FILENAME ${PYTHON_LIBRARIES} NAME)
       string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON_VERSION_STRING})
-      # Not sure why this is here. Probably should be in Python 3 section.
-      # Protecting with conditionals so Python wheel building will succeed.
-      if (DEFINED PYTHON3_VERSION_STRING)
-        string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON3_VERSION ${PYTHON3_VERSION_STRING})
-      endif()
       if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
         set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
-        if (DEFINED PYTHON3_VERSION_STRING)
-          set( PYCLASSAD3_LIB_NAME "pyclassad${_PYTHON3_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
-        endif()
       else()
         message(FATAL_ERROR "Can't determine HTCondor version!")
       endif()
@@ -398,7 +394,7 @@ else()
 
       if ( DARWIN )
           set_target_properties( py3classad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
-          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PYCLASSAD3_LIB_NAME}.dylib)" )
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PY3CLASSAD_LIB_NAME}.dylib)" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad/classad${PYTHON3_MODULE_SUFFIX})" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/htcondor/htcondor${PYTHON3_MODULE_SUFFIX})" )
       endif()

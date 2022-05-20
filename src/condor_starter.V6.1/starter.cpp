@@ -56,6 +56,8 @@
 #include "data_reuse.h"
 #include "authentication.h"
 
+#include <sstream>
+
 extern void main_shutdown_fast();
 
 const char* JOB_AD_FILENAME = ".job.ad";
@@ -143,6 +145,7 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 
 	Config();
 
+
 		// Now that we know what Execute is, we can figure out what
 		// directory the starter will be working in and save that,
 		// since we'll want this info a lot while we initialize and
@@ -158,6 +161,40 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 		formatstr( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 				 (long)daemonCore->getpid() );
 	}
+
+#ifdef LINUX
+	const char *thinpool = getenv("_CONDOR_THINPOOL");
+	const char *thinpool_vg = getenv("_CONDOR_THINPOOL_VG");
+	const char *thinpool_size = getenv("_CONDOR_THINPOOL_SIZE_KB");
+	if (thinpool && thinpool_vg && thinpool_size) {
+		try {
+			m_lvm_max_size_kb = std::stol(thinpool_size);
+		} catch (...) {
+			m_lvm_max_size_kb = -1;
+		}
+		if (m_lvm_max_size_kb > 0) {
+			CondorError err;
+                        std::string thinpool_str(thinpool), slot_name(getMySlotName());
+                        bool do_encrypt = thinpool_str.substr(thinpool_str.size() - 4, 4) == "-enc";
+                        if (do_encrypt) {
+                            slot_name += "-enc";
+                            thinpool_str = thinpool_str.substr(0, thinpool_str.size() - 4);
+                        }
+			m_volume_mgr.reset(new VolumeManager::Handle(Execute, slot_name, thinpool_str, thinpool_vg, m_lvm_max_size_kb, err));
+			if (!err.empty()) {
+				dprintf(D_ALWAYS, "Failure when setting up filesystem for job: %s\n", err.getFullText().c_str());
+				m_volume_mgr.reset();
+			}
+			m_lvm_thin_volume = slot_name;
+			m_lvm_thin_pool = thinpool_str;
+			m_lvm_volume_group = thinpool_vg;
+			m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
+				(TimerHandlercpp)&Starter::CheckDiskUsage,
+				"check disk usage", this);
+		}
+	}
+#endif // LINUX
+
 
 		//
 		// We have switched all of these to call the "Remote"
@@ -284,6 +321,12 @@ Starter::StarterExit( int code )
 
 void Starter::FinalCleanup()
 {
+		// Not useful to have the volume management code trigger
+		// while we are trying to cleanup.
+	if (m_lvm_poll_tid >= 0) {
+		daemonCore->Cancel_Timer(m_lvm_poll_tid);
+	}
+
 	RemoveRecoveryFile();
 	removeTempExecuteDir();
 #ifdef WIN32
@@ -630,7 +673,7 @@ Starter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 	}
 
 	char *session_id = Condor_Crypt_Base::randomHexKey();
-	char *session_key = Condor_Crypt_Base::randomHexKey();
+	char *session_key = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 
 	std::string session_info;
 	input.LookupString(ATTR_SESSION_INFO,session_info);
@@ -3490,12 +3533,14 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 		std::string pat;
 		pat.insert(0, pre, 0, (psub - pre));
 
-		const char * errstr = NULL; int erroff= 0;
-		int re_opts = 0;
-		pcre *re = pcre_compile(pat.c_str(), re_opts, &errstr, &erroff, NULL);
+		//const char * errstr = NULL; int erroff= 0;
+		int errcode = 0; PCRE2_SIZE erroff = 0;
+
+		PCRE2_SPTR pat_pcre2str = reinterpret_cast<const unsigned char *>(pat.c_str());
+		pcre2_code *re = pcre2_compile(pat_pcre2str, PCRE2_ZERO_TERMINATED, 0, &errcode, &erroff, NULL);
 		if ( ! re) {
-			dprintf(D_ALWAYS | D_FAILURE, "Assigned%s environment '%s' regex error %s at offset %d in: %s\n",
-				tag, env_name.c_str(), errstr ? errstr : "", erroff, pat.c_str());
+			dprintf(D_ALWAYS | D_FAILURE, "Assigned%s environment '%s' regex PCRE2 error code %d at offset %d in: %s\n",
+				tag, env_name.c_str(), errcode, static_cast<int>(erroff), pat.c_str());
 			break;
 		}
 
@@ -3507,10 +3552,7 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 			}
 		} else {
 			const char * resid;
-			int cGroups = 0;
-			pcre_fullinfo(re, NULL, PCRE_INFO_CAPTURECOUNT, &cGroups);
-			int ovecsize = 3 * (cGroups + 1); // +1 for the string itself
-			int * ovector = (int *) malloc(ovecsize * sizeof(int));
+			pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
 
 			dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' pattern: %s\n", tag, env_name.c_str(), peq);
 
@@ -3519,9 +3561,11 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 			while ((resid = ids.next())) {
 				if ( ! rhs.empty()) { rhs += env_id_separator; }
 				int cchresid = (int)strlen(resid);
-				int status = pcre_exec(re, NULL, resid, cchresid, 0, 0, ovector, ovecsize);
+				PCRE2_SPTR resid_pcre2str = reinterpret_cast<const unsigned char *>(resid);
+				int status = pcre2_match(re, resid_pcre2str, static_cast<PCRE2_SIZE>(cchresid), 0, 0, matchdata, NULL);
 				if (status >= 0) {
-					const struct _pcre_vector { int start; int end; } * groups = (const struct _pcre_vector*)ovector;
+					const struct _pcre_vector { int start; int end; } * groups
+						= (const struct _pcre_vector*) pcre2_get_ovector_pointer(matchdata);
 					dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' match at %d,%d of pattern: %s\n", tag, env_name.c_str(), groups[0].start, groups[0].end, pat.c_str());
 					if (groups[0].start > 0) { rhs.append(resid, 0, groups[0].start); }
 					const char * ps = psub;
@@ -3539,10 +3583,10 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 					rhs += resid;
 				}
 			}
-			free(ovector);
+			pcre2_match_data_free(matchdata);
 		}
 
-		pcre_free(re);
+		pcre2_code_free(re);
 
 		proc_env->SetEnv(env_name.c_str(), rhs.c_str());
 
@@ -3959,4 +4003,59 @@ Starter::RecordJobExitStatus(int status) {
     // cares about this, but we've asked to track it (perhaps to see if
     // anything else in HTCondor should care).  See HTCONDOR-861.
     jic->notifyExecutionExit();
+}
+
+void
+Starter::CheckDiskUsage(void)
+{
+#ifdef LINUX
+		// Avoid repeatedly triggering
+	if (m_lvm_held_job) return;
+		// Logic error?
+	if (m_lvm_max_size_kb < 0) return;
+
+	// When the job exceeds its disk usage, there are three possibilities:
+	// 1. The backing pool has space remaining, we don't exhaust the extra allocated space (2GB by default),
+	//    and this polling catches the over-usage.  In that case, the job goes on hold and everyone's happy.
+	// 2. The backing pool has space remaining, the job DOES exhaust the extra allocated space, and the
+	//    job gets an ENOSPC before this polling can trigger.  The job may not go on hold and the user
+	//    doesn't get a reasonable indication without examining their stderr.  No one's happy.
+	// 3. The backing pool fills up due to overcommits.  All writes to othe device pause until enough
+	//    space is cleared up.
+	//
+	// In case (3), even well-behaved jobs will notice the issue; after a minute, if not enough space is
+	// available we start evicting even those jobs in oroder to prevent a deadlock.
+	//
+	// If you really want to avoid case (2), set THINPOOL_EXTRA_SIZE_MB to a value larger than the backing pool.
+
+	CondorError err;
+	uint64_t used_bytes;
+	bool out_of_space;
+	if (!VolumeManager::GetThinVolumeUsage(m_lvm_thin_volume, m_lvm_thin_pool, m_lvm_volume_group, used_bytes, out_of_space, err)) {
+		dprintf(D_ALWAYS, "Failed to poll managed volume (may not put job on hold correctly): %s\n", err.getFullText().c_str());
+		return;
+	}
+	if (used_bytes >= static_cast<uint64_t>(m_lvm_max_size_kb*1024)) {
+		std::stringstream ss;
+		ss << "Job is using " << (used_bytes/1024) << "KB of space, over the limit of " << m_lvm_max_size_kb << "KB";
+		dprintf(D_ALWAYS, "%s\n", ss.str().c_str());
+		jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+		m_lvm_held_job = true;
+	}
+	if (out_of_space) {
+		auto now = time(NULL);
+		if ((m_lvm_last_space_issue > 0) && (now - m_lvm_last_space_issue > 60)) {
+			dprintf(D_ALWAYS, "ERROR: Underlying thin pool is out of space and not recovering; evicting this job but not holding it.\n");
+			jic->holdJob("Underlying thin pool is out of space and not recovering", 0, 0);
+			m_lvm_held_job = true;
+			return;
+		} else if (m_lvm_last_space_issue < 0) {
+			dprintf(D_ALWAYS, "WARNING: Thin pool used by startd (%s) is out of space; writes will be paused until this is resolved.\n",
+				m_lvm_thin_pool.c_str());
+			m_lvm_last_space_issue = now;
+		}
+	} else {
+		m_lvm_last_space_issue = -1;
+	}
+#endif // LINUX
 }

@@ -22,15 +22,24 @@ if(WITH_PYTHON_BINDINGS)
 # Search for system's boost libraries.
 if (WINDOWS)
 	condor_pre_external( BOOST boost-1.68.0 "lib;boost" "done")
-	if (BOOST_DOWNLOAD_WIN)
+	# a7c65f8d2b1614a0d48fb93ec78e4b7f  boost-1.68.0-VC15.tar.gz
+	# 87f74d9e539493bbed004bc10a4f0497  boost-1.68.0-VC141.full.tar.gz
+	set(BOOST_DOWNLOAD_WIN boost-1.68.0-VC141.full.tar.gz)
+	set(BOOST_DOWNLOAD_MD5SUM 87f74d9e539493bbed004bc10a4f0497)
+	set(BOOST_DLL_VCVER vc141)
+	set(BOOST_ADDL_REL_DLLS ${BOOST_INSTALL_LOC}/lib/boost_python38-${BOOST_DLL_VCVER}-mt-x64-1_68.dll ${BOOST_INSTALL_LOC}/lib/boost_python39-${BOOST_DLL_VCVER}-mt-x64-1_68.dll)
+	set(BOOST_ADDL_DBG_DLLS ${BOOST_INSTALL_LOC}/lib/boost_python38-${BOOST_DLL_VCVER}-mt-gd-x64-1_68.dll ${BOOST_INSTALL_LOC}/lib/boost_python39-${BOOST_DLL_VCVER}-mt-gd-x64-1_68.dll)
+
+	# if (BOOST_DOWNLOAD_WIN)
 		set (BOOST_CONFIGURE echo "Nothing to configure")
 		set (BOOST_MAKE echo "No make necessary")
-		set (BOOST_INSTALL tar -czpf boost.tar.gz boost && tar -xzvf boost.tar.gz -C "${BOOST_INSTALL_LOC}/boost/" && cp *.lib ${BOOST_INSTALL_LOC}/lib && cp *.dll ${BOOST_INSTALL_LOC}/lib && touch ${BOOST_INSTALL_LOC}/done)
+		set (BOOST_INSTALL tar -czpf boost.tar.gz boost && tar -xzvf boost.tar.gz -C "${BOOST_INSTALL_LOC}/boost/" && cp *boost_python* ${BOOST_INSTALL_LOC}/lib && touch ${BOOST_INSTALL_LOC}/done)
  
 		ExternalProject_Add(boost
 			#-- Download Step ----------
 			DOWNLOAD_DIR ${BOOST_STAGE}/dl
 			URL ${EXTERNALS_SOURCE_URL}/${BOOST_DOWNLOAD_WIN}
+			URL_MD5 ${BOOST_DOWNLOAD_MD5SUM}
 			CONFIGURE_COMMAND ${BOOST_CONFIGURE}
 			#--install Step ----------
 			BUILD_COMMAND ${BOOST_MAKE}
@@ -41,7 +50,7 @@ if (WINDOWS)
 		set(BOOST_ROOT ${BOOST_INSTALL_LOC} PARENT_SCOPE)
 		set(BOOST_SHORTVER 1_68 PARENT_SCOPE)
 		condor_post_external( boost "boost" "lib" "" )
-	endif(BOOST_DOWNLOAD_WIN)
+	# endif(BOOST_DOWNLOAD_WIN)
 
 else (WINDOWS)
 
@@ -135,7 +144,7 @@ else (WINDOWS)
 		unset(BOOST_INCLUDE)
 
 		if (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND)
-			message(STATUS "Bootstrapping python for boost")
+			message(STATUS "Bootstrapping python 2 and 3 for boost")
 			set(Boost_PYTHON_LIBRARY "external" PARENT_SCOPE)
 
 			# We should probably change how we write this file
@@ -145,6 +154,16 @@ else (WINDOWS)
 				"using python : ${PYTHON3_VERSION_MAJOR}.${PYTHON3_VERSION_MINOR} : ${PYTHON3_EXECUTABLE} : ${PYTHON3_INCLUDE_DIRS} ;\n"
 			)
 			set(BUILD_OPTIONS ${BUILD_OPTIONS} --user-config=${CMAKE_CURRENT_BINARY_DIR}/python-config.jam python=${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR},${PYTHON3_VERSION_MAJOR}.${PYTHON3_VERSION_MINOR})
+		else()
+			message(STATUS "Bootstrapping python 3 for boost")
+			set(Boost_PYTHON_LIBRARY "external" PARENT_SCOPE)
+
+			# We should probably change how we write this file
+			# depending on which Pythons we actually found.
+			file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/python-config.jam
+				"using python : ${PYTHON3_VERSION_MAJOR}.${PYTHON3_VERSION_MINOR} : ${PYTHON3_EXECUTABLE} : ${PYTHON3_INCLUDE_DIRS} ;\n"
+			)
+			set(BUILD_OPTIONS ${BUILD_OPTIONS} --user-config=${CMAKE_CURRENT_BINARY_DIR}/python-config.jam python=${PYTHON3_VERSION_MAJOR}.${PYTHON3_VERSION_MINOR})
 		endif()
 
 		# so the idea of privately staging boost is silly.
@@ -184,19 +203,23 @@ if (BOOST_VER)
 
   # Set the target dependencies which the rest of condor depends on.
   if (WINDOWS)
+  	set(BOOST_DLL_VCVER ${BOOST_DLL_VCVER} PARENT_SCOPE)
+
 	# note that on windows we ship a different library for debug vs. release builds (not that we actually ship debug...)
 	install ( FILES
-		${BOOST_INSTALL_LOC}/lib/boost_python27-vc141-mt-x32-1_68.dll
-		${BOOST_INSTALL_LOC}/lib/boost_python36-vc141-mt-x32-1_68.dll
-		${BOOST_INSTALL_LOC}/lib/boost_python27-vc141-mt-x64-1_68.dll
-		${BOOST_INSTALL_LOC}/lib/boost_python36-vc141-mt-x64-1_68.dll
+		${BOOST_INSTALL_LOC}/lib/boost_python27-${BOOST_DLL_VCVER}-mt-x32-1_68.dll
+		${BOOST_INSTALL_LOC}/lib/boost_python36-${BOOST_DLL_VCVER}-mt-x32-1_68.dll
+		${BOOST_INSTALL_LOC}/lib/boost_python27-${BOOST_DLL_VCVER}-mt-x64-1_68.dll
+		${BOOST_INSTALL_LOC}/lib/boost_python36-${BOOST_DLL_VCVER}-mt-x64-1_68.dll
+		${BOOST_ADDL_REL_DLLS}
 		DESTINATION ${C_LIB}
 		CONFIGURATIONS RelWithDebInfo)
 	install ( FILES
-		${BOOST_INSTALL_LOC}/lib/boost_python27-vc141-mt-gd-x32-1_68.dll
-		${BOOST_INSTALL_LOC}/lib/boost_python36-vc141-mt-gd-x32-1_68.dll
-		${BOOST_INSTALL_LOC}/lib/boost_python27-vc141-mt-gd-x64-1_68.dll
-		${BOOST_INSTALL_LOC}/lib/boost_python36-vc141-mt-gd-x64-1_68.dll
+		${BOOST_INSTALL_LOC}/lib/boost_python27-${BOOST_DLL_VCVER}-mt-gd-x32-1_68.dll
+		${BOOST_INSTALL_LOC}/lib/boost_python36-${BOOST_DLL_VCVER}-mt-gd-x32-1_68.dll
+		${BOOST_INSTALL_LOC}/lib/boost_python27-${BOOST_DLL_VCVER}-mt-gd-x64-1_68.dll
+		${BOOST_INSTALL_LOC}/lib/boost_python36-${BOOST_DLL_VCVER}-mt-gd-x64-1_68.dll
+		${BOOST_ADDL_DBG_DLLS}
 		DESTINATION ${C_LIB}
 		CONFIGURATIONS Debug)
   endif()

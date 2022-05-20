@@ -838,8 +838,9 @@ void ViewServer::WriteHistory()
 // Scan function for the submittor data
 //---------------------------------------------------------------------
 
-int ViewServer::SubmittorScanFunc(ClassAd* cad)
+int ViewServer::SubmittorScanFunc(CollectorRecord* record)
 {
+	ClassAd* cad = record->m_publicAd;
 	std::string machine;
 	std::string submittorName;
 	int JobsRunning, JobsIdle;
@@ -911,8 +912,9 @@ int ViewServer::SubmittorTotalFunc(void)
 // Scan function for the startd data
 //---------------------------------------------------------------------
 
-int ViewServer::StartdScanFunc(ClassAd* cad)
+int ViewServer::StartdScanFunc(CollectorRecord* record)
 {
+	ClassAd* cad = record->m_publicAd;
 	std::string Name;
 	std::string StateDesc;
 	float LoadAvg;
@@ -1039,8 +1041,9 @@ int ViewServer::StartdTotalFunc(void)
 // Scan function for the checkpoint server
 //---------------------------------------------------------------------
 
-int ViewServer::CkptScanFunc(ClassAd* cad)
+int ViewServer::CkptScanFunc(CollectorRecord* record)
 {
+	ClassAd* cad = record->m_publicAd;
 	std::string Name;
 	int Bytes;
 	float BytesReceived,BytesSent;
