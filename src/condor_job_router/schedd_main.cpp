@@ -129,7 +129,7 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem("JOB_ROUTER", SUBSYSTEM_TYPE_SCHEDD );	// used by Daemon Core
+	set_mySubSystem("JOB_ROUTER", true, SUBSYSTEM_TYPE_SCHEDD );	// used by Daemon Core
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

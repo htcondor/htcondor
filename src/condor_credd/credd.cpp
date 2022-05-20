@@ -573,7 +573,7 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem( "CREDD", SUBSYSTEM_TYPE_DAEMON );
+	set_mySubSystem( "CREDD", true, SUBSYSTEM_TYPE_DAEMON );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

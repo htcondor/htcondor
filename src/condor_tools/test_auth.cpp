@@ -78,7 +78,7 @@ main( int argc, char* argv[] )
 {
 	int		i;
 	
-	set_mySubSystem( "DAEMON-TOOL", SUBSYSTEM_TYPE_TOOL );
+	set_mySubSystem( "DAEMON-TOOL", false, SUBSYSTEM_TYPE_TOOL );
 
 	MyName = argv[0];
 	myDistro->Init( argc, argv );

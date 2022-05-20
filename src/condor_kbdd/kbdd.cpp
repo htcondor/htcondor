@@ -273,7 +273,7 @@ main_init(int, char *[])
 int
 daemon_main( int argc, char **argv )
 {
-	set_mySubSystem( "KBDD", SUBSYSTEM_TYPE_DAEMON );
+	set_mySubSystem( "KBDD", true, SUBSYSTEM_TYPE_DAEMON );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;
