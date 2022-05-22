@@ -24,7 +24,8 @@
 #ifdef HAVE_PCRE_PCRE_H
 #  include "pcre/pcre.h"
 #else
-#  include "pcre.h"
+#  define PCRE2_CODE_UNIT_WIDTH 8
+#  include <pcre2.h>
 #endif
 
 
@@ -769,33 +770,34 @@ validate_double_range_upper_bound(const char* range_end, double* max) {
 static int
 validate_regex(const char* pattern, const char* subject) {
 
-	pcre* re;
-	const char* err;
-	int err_index;
-    int group_count;
-	int oveccount;
-	int* ovector;
+	pcre2_code* re;
+	int err_code;
+	PCRE2_SIZE err_index;
 	int matches;
 	int i;
 	int is_valid = 0;
-	int subject_len;
+	PCRE2_STR pattern_pcre2str = reinterpret_cast<const unsigned char*>(pattern);
+	PCRE2_SIZE subject_len;
+	PCRE2_STR subject_pcre2str;
 
 	//compile the regex with default options
-	re = pcre_compile(pattern, 0, &err, &err_index, NULL);
+	re = pcre2_compile(pattern_pcre2str, PCRE2_ZERO_TERMINATED, 0, &err_code, &err_index, NULL);
 
 	//figure out how many groups there are so we can size ovector appropriately
-	pcre_fullinfo(re, NULL, PCRE_INFO_CAPTURECOUNT, &group_count);
-	oveccount = 2 * (group_count + 1); // +1 for the string itself
-	ovector = (int *)malloc(oveccount * sizeof(int));
+
+	pcre2_match_data* matchdata = pcre2_match_data_create_from_pattern(re, NULL);
 
 	if (!ovector) {
 		EXCEPT("unable to allocated memory for regex group info in validate_regex");
 	}
 
 	subject_len = strlen(subject);
+	subject_pcre2str = reinterpret_cast<const unsigned char*>(subject);
 
 	//run the regex
-	matches = pcre_exec(re, NULL, subject, subject_len, 0, 0, ovector, oveccount);
+	matches = pcre2_match(re, subject_pcre2str, subject_len, 0, 0, matchdata, NULL);
+
+	PCRE2_SIZE* ovector = pcre2_get_ovector_pointer(matchdata);
 
 	//make sure that one of the matches is the whole string
 	for (i=0; i<matches; i++) {
@@ -805,9 +807,9 @@ validate_regex(const char* pattern, const char* subject) {
 		}
 	}
 
-	free(ovector);
+	pcre2_match_data_free(matchdata);
 
-	pcre_free(re);
+	pcre2_code_free(re);
 
 	return is_valid;
 }

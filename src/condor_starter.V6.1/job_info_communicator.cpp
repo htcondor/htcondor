@@ -655,14 +655,14 @@ JobInfoCommunicator::checkDedicatedExecuteAccounts( char const *name )
 	formatstr(full_pattern, "^%s$", pattern_string);
 
 	Regex re;
-	char const *errstr = NULL;
+	int errcode;
 	int erroffset = 0;
 
-	if( !re.compile( full_pattern.c_str(), &errstr, &erroffset, 0 ) ) {
-		EXCEPT("Invalid regular expression for %s (%s): %s",
+	if( !re.compile( full_pattern.c_str(), &errcode, &erroffset, 0 ) ) {
+		EXCEPT("Invalid regular expression for %s (%s): error code %d",
 			   DEDICATED_EXECUTE_ACCOUNT_REGEXP,
 			   pattern_string,
-			   errstr);
+			   errcode);
 	}
 	free( pattern_string );
 

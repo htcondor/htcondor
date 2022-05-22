@@ -28,31 +28,27 @@ bool convert_python_to_constraint(boost::python::object value, std::string & con
 
 struct ExprTreeHolder;
 
-struct AttrPairToFirst :
-  public std::unary_function<std::pair<std::string, classad::ExprTree*> const&, std::string>
+struct AttrPairToFirst
 {
-  AttrPairToFirst::result_type operator()(AttrPairToFirst::argument_type p) const
-  {
-    return p.first;
-  }
+	std::string operator()(std::pair<std::string, classad::ExprTree*> p) const {
+		return p.first;
+	}
 };
 
 typedef boost::transform_iterator<AttrPairToFirst, classad::AttrList::iterator> AttrKeyIter;
 
 struct ExprTreeHolder;
 
-struct AttrPairToSecond :
-  public std::unary_function<std::pair<std::string, classad::ExprTree*> const&, boost::python::object>
+struct AttrPairToSecond
 {
-  AttrPairToSecond::result_type operator()(AttrPairToSecond::argument_type p) const;
+	boost::python::object operator()(std::pair<std::string, classad::ExprTree *> p) const;
 };
 
 typedef boost::transform_iterator<AttrPairToSecond, classad::AttrList::iterator> AttrValueIter;
 
-struct AttrPair :
-  public std::unary_function<std::pair<std::string, classad::ExprTree*> const&, boost::python::object>
+struct AttrPair 
 {
-  AttrPair::result_type operator()(AttrPair::argument_type p) const;
+	boost::python::object operator()(std::pair<std::string, classad::ExprTree *> p) const;
 };
 
 typedef boost::transform_iterator<AttrPair, classad::AttrList::iterator> AttrItemIter;

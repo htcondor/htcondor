@@ -525,7 +525,7 @@ void main_init(int argc, char *argv[])
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem( "VM_GAHP", SUBSYSTEM_TYPE_GAHP );
+	set_mySubSystem( "VM_GAHP", false, SUBSYSTEM_TYPE_GAHP );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

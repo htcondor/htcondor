@@ -7,6 +7,14 @@ version are described below.
 Version 9.10.0
 --------------
 
+Release Notes:
+
+.. HTCondor version 9.10.0 released on Month Date, 2022.
+
+- HTCondor version 9.10.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-9014`.
+
 New Features:
 
 - SSL authentication will automatically be configured in the **condor_collector**,
@@ -14,6 +22,16 @@ New Features:
   pool.  Tools will allow users to setup trust with the generated CA similarly to
   how SSH enables trust on first use of a remote host.
   :jira:`501`
+
+- DAGman ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
+  to allow passed variables to be initalized before or after DAG jobs are
+  submitted. Any ``VARS`` without these options will have behavior derived
+  from ``DAGMAN_DEFAULT_APPEND_VARS`` config variable.
+  :jira:`1080`
+
+Bugs Fixed:
+
+- None.
 
 Version 9.9.0
 -------------
@@ -28,9 +46,14 @@ Release Notes:
 
 New Features:
 
-- Job duration policy hold message now displays the time exceeded in 
+- Job duration policy hold message now displays the time exceeded in
   'dd+hh:mm:ss' format rather than just seconds.
   :jira:`1062`
+
+- All regular expressions in configuration and in the classad regexp function
+  now use the pcre2 10.39 library. (http://www.pcre.org). We believe that this
+  will break no existing regular expressions.
+  :jira:`1087`
 
 - The ``OWNER`` authorization level has been removed. Commands that used to
   require this level now require ``ADMINISTRATOR`` authorization.
@@ -53,8 +76,8 @@ New Features:
   :jira:`1057`
 
 - Changed the result returned by evaluating a nested classad a
-  with no attribute named "missing" to return undefined when evaluating
-  a["missing"].  This matches the a.missing syntax
+  with no attribute named ``missing`` to return undefined when evaluating
+  ``a["missing"]``.  This matches the ``a.missing`` syntax
   :jira:`1065`
 
 - Singularity jobs can now pull images from docker style repos.
@@ -79,6 +102,10 @@ New Features:
   with each schedd owning a local CM for fair-share between users.
   :jira:`1003`
 
+- Added a Job Ad attribute called ``JobSubmitMethod`` to record what tool a user
+  used to submit job(s) to HTCondor.
+  :jira:`996`
+
 - In the configuration for daemon logs, ``D_FULLDEBUG`` no longer modifies the verbosity
   of other message catagories.  For instance ``D_FULLDEBUG D_SECURITY`` will now select
   debug messages and ``D_SECURITY:1`` messages.  In previous versions it would select debug
@@ -95,6 +122,10 @@ Bugs Fixed:
 - Fixed a bug in the dedicated scheduler when using partionable slots that would
   cause the schedd to assert.
   :jira:`1042`
+
+- Fixed a bug preventing ``preserve_relative_paths`` from working with
+  lots (tens of thousands) of files.
+  :jira:`993`
 
 Version 9.8.1
 -------------

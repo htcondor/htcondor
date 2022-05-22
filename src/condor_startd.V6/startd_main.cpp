@@ -959,7 +959,7 @@ startd_check_free()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem( "STARTD", SUBSYSTEM_TYPE_STARTD );
+	set_mySubSystem( "STARTD", true, SUBSYSTEM_TYPE_STARTD );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

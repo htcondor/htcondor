@@ -133,7 +133,7 @@ class SubsystemInfo
   public:
 
 	// Constructors
-	SubsystemInfo( const char *subsystem_name,
+	SubsystemInfo( const char *subsystem_name, bool _trust,
 				   SubsystemType _type = SUBSYSTEM_TYPE_AUTO );
 	~SubsystemInfo( void );
 
@@ -177,6 +177,9 @@ class SubsystemInfo
 	void dprintf( int level ) const;
 	void printf( void ) const;
 
+	// Subsystem trusted privileges
+	bool isTrusted( void ) { return m_trusted; };
+
   private:
 	const char					*m_Name;
 	const char					*m_TempName;
@@ -189,6 +192,9 @@ class SubsystemInfo
 	const char					*m_ClassName;
 	const char					*m_LocalName;
 
+	//Data member for if a SubSystem is a trusted system with 'root' privilages
+	bool						m_trusted;
+
 	// Internal only methods
 	SubsystemType setType( SubsystemType _type, const char *_type_name );
 	SubsystemType setType ( const SubsystemInfoLookup *,
@@ -198,7 +204,7 @@ class SubsystemInfo
 
 SubsystemInfo* has_mySubSystem(); // returns true if subsystem has been initialized
 SubsystemInfo* get_mySubSystem();
-void set_mySubSystem( const char *subsystem_name,
+void set_mySubSystem( const char *subsystem_name, bool _trust,
 					  SubsystemType _type = SUBSYSTEM_TYPE_AUTO );
 
 

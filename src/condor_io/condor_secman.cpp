@@ -3480,12 +3480,18 @@ SecMan::IsAuthenticationSufficient(DCpermission perm, const Sock &sock, CondorEr
 		return false;
 	}
 
-	auto methods = getAuthenticationMethods(perm);
-	bool allowed_method = getAuthBitmask(methods.c_str()) & sec_char_to_auth_method(sock.getAuthenticationMethodUsed());
+	std::string methods_allowed = getAuthenticationMethods(perm);
+	bool allowed_method = getAuthBitmask(methods_allowed.c_str()) & sec_char_to_auth_method(authentication_method);
+	if (!allowed_method &&
+		(authentication_method == nullptr ||
+		 !strcasecmp(authentication_method, AUTH_METHOD_FAMILY) ||
+		 !strcasecmp(authentication_method, AUTH_METHOD_MATCH))) {
+		allowed_method = true;
+	}
 
 	if (!allowed_method) {
 		err.pushf("SECMAN", 80, "Used authentication method %s is not valid for permission level %s",
-			sock.getAuthenticationMethodUsed(), PermString(perm));
+		          authentication_method, PermString(perm));
 		return false;
 	}
 

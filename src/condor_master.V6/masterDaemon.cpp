@@ -2087,6 +2087,7 @@ Daemons::DeferredQueryReadyReply()
 	// we will return this, and may also use it to evaluate ready requirements.
 	// the default is_ready value is true when all non-held daemons are alive.
 	ClassAd readyAd;
+	advertise_shutdown_program(readyAd);
 	bool is_ready = InitDaemonReadyAd(readyAd);
 	dprintf(D_FULLDEBUG, "DeferredQueryReadyReply - %d\n", is_ready);
 
@@ -2145,6 +2146,7 @@ Daemons::QueryReady(ClassAd & cmdAd, Stream* stm)
 	// we will return this, and may also use it to evaluate ready requirements.
 	// the default is_ready value is true when all non-held daemons are alive.
 	ClassAd readyAd;
+	advertise_shutdown_program(readyAd);
 	bool is_ready = InitDaemonReadyAd(readyAd);
 
 	// if there is a requirements expression, check the requirements and use

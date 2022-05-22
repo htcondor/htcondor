@@ -1472,9 +1472,9 @@ InitQmgmt()
 	std::string queue_super_user_may_impersonate;
 	if( param(queue_super_user_may_impersonate,"QUEUE_SUPER_USER_MAY_IMPERSONATE") ) {
 		queue_super_user_may_impersonate_regex = new Regex;
-		const char *errptr=NULL;
+		int errnumber;
 		int erroffset=0;
-		if( !queue_super_user_may_impersonate_regex->compile(queue_super_user_may_impersonate.c_str(),&errptr,&erroffset) ) {
+		if( !queue_super_user_may_impersonate_regex->compile(queue_super_user_may_impersonate.c_str(),&errnumber,&erroffset) ) {
 			EXCEPT("QUEUE_SUPER_USER_MAY_IMPERSONATE is an invalid regular expression: %s",queue_super_user_may_impersonate.c_str());
 		}
 	}
@@ -8782,7 +8782,6 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 		// so if we bail out early anywhere, we say we failed.
 	jobid.proc = -1;	
 
-	int i;
 	std::string owner;
 	if (user_is_the_new_owner) {
 	} else {

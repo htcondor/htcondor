@@ -826,7 +826,7 @@ int exception_cleanup(int,int,const char*errmsg)
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem( NULL, SUBSYSTEM_TYPE_STARTER );
+	set_mySubSystem( NULL, true, SUBSYSTEM_TYPE_STARTER );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

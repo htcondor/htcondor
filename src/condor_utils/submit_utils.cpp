@@ -7852,15 +7852,15 @@ bool SubmitHash::NeedsOAuthServices(
 	// and create a list of individual tokens (with handles)
 	// that we need to have.
 
-	const char *errptr;
-	int erroffset;
-	pcre * re = pcre_compile("_oauth_(permissions|resource)", PCRE_CASELESS, &errptr, &erroffset, NULL);
+	int errcode;
+	PCRE2_SIZE erroffset;
+	pcre2_code * re = pcre2_compile(reinterpret_cast<const unsigned char*>("_oauth_(permissions|resource)"),
+		PCRE2_ZERO_TERMINATED, PCRE2_CASELESS, &errcode, &erroffset, NULL);
 	if ( ! re) {
 		dprintf(D_ALWAYS, "could not compile Oauth key regex!\n");
 		return true;
 	}
 	const int ocount = 2; // 1 for (permissions|resource) capture group, and 1 for whole pattern
-	int ovec[3 * ocount];
 	const int ovec_service_end = 0;  // index into ovec for the end of the service name (start of pattern)
 	const int ovec_handle_start = 1; // index into ovec for the start of the handle (end of the pattern)
 
@@ -7873,10 +7873,13 @@ bool SubmitHash::NeedsOAuthServices(
 	for (; !hash_iter_done(it); hash_iter_next(it)) {
 		const char *key = hash_iter_key(it);
 		if (*key == '+' || starts_with_ignore_case(key, "MY.")) continue;	// ignore job attrs, we care only about submit keywords
-		int cch = (int)strlen(key);
-		int onum = pcre_exec(re, NULL, key, cch, 0, PCRE_NOTBOL, ovec, ocount);
-		if (onum >= 0 && ovec[ovec_service_end] > 0) {
-			service.assign(key, ovec[ovec_service_end]);
+		PCRE2_SIZE cch = strlen(key);
+		PCRE2_SPTR key_pcre2str = reinterpret_cast<const unsigned char *>(key);
+		pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
+		int onum = pcre2_match(re, key_pcre2str, cch, 0, PCRE2_NOTBOL, matchdata, NULL);
+		PCRE2_SIZE* ovec = pcre2_get_ovector_pointer(matchdata);
+		if (onum >= 0) {
+			service.assign(key, static_cast<int>(ovec[ovec_service_end]));
 			if (enabled_services.count(service) > 0) {
 
 				// does this key have a handle suffix? of so append the suffix to the service name
@@ -7893,9 +7896,10 @@ bool SubmitHash::NeedsOAuthServices(
 				service_names.insert(service);
 			}
 		}
+		pcre2_match_data_free(matchdata);
 	}
 	hash_iter_delete(&it);
-	pcre_free(re);
+	pcre2_code_free(re);
 
 	// The services names that did *not* have a PERMISSIONS or RESOURCE key have not yet been added
 	// we want to add these only if that service has not already been added with a handle

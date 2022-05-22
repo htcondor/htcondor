@@ -77,7 +77,7 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem("GANGLIAD", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+	set_mySubSystem("GANGLIAD", true, SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;
