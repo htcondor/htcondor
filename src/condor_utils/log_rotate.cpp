@@ -26,6 +26,7 @@
 #ifndef WIN32
 #include <dirent.h>
 #endif
+#include <algorithm>
 
 /** is it a *.old file? */
 static int isOldString(const char *str);
@@ -88,7 +89,7 @@ long long quantizeTimestamp(time_t tt, long long secs)
 static
 int scandirectory(const char *dir, struct dirent ***namelist,
             int (*select)(const struct dirent *),
-        int (*compar)(const void*, const void*) ) {
+        bool (*compar)(const struct dirent*, const struct dirent*) ) {
 	DIR *d;
 	struct dirent *entry;
 	int i = 0;
@@ -120,17 +121,15 @@ int scandirectory(const char *dir, struct dirent ***namelist,
 	if (i == 0) 
 		return -1;
 	if (compar != NULL)
-    	qsort((void *)(*namelist), (size_t)i, sizeof(struct dirent *), compar);
+		std::sort(*namelist, *namelist + i, compar);
 
 	return i;
 }
 
 static
-int doalphasort(const void *a, const void *b) {
-        const struct dirent **d1 = (const struct dirent**)const_cast<void*>(a);
-        const struct dirent **d2 = (const struct dirent**)const_cast<void*>(b);
-        return(strcmp(const_cast<char*>((*d1)->d_name),
-		const_cast<char*>((*d2)->d_name)));
+bool doalphasort(const struct dirent *d1, const struct dirent *d2) {
+        return(strcmp(const_cast<char*>(d1->d_name),
+		const_cast<char*>(d2->d_name)) < 0);
 }
 
 #endif

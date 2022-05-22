@@ -140,7 +140,7 @@ class ResList : public CAList {
 
 	int num_matches;
 	
-	static int machineSortByRank(const void *lhs, const void *rhs);
+	static bool machineSortByRank(const struct rankSortRec &lhs, const struct rankSortRec &rhs);
 
 	void selectGroup( CAList *group, const char   *groupName);
 };
@@ -512,11 +512,11 @@ class DedicatedScheduler : public Service {
 time_t findAvailTime( match_rec* mrec );
 
 // Comparison function for sorting job cluster ids by JOB_PRIO and QDate
-int clusterSortByPrioAndDate( const void* ptr1, const void* ptr2 );
+bool clusterSortByPrioAndDate(int, int);
 
 // Comparison function for sorting machines by rank, cluster_id
-int
-RankSorter( const void *ptr1, const void* ptr2 );
+bool
+RankSorter(const PreemptCandidateNode &, const PreemptCandidateNode &);
 
 // Print out
 void displayResource( ClassAd* ad, const char* str, int debug_level );

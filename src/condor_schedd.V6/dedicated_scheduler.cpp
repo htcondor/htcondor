@@ -50,6 +50,7 @@
 #include "schedd_negotiate.h"
 
 #include <vector>
+#include <algorithm>
 
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
@@ -338,7 +339,7 @@ ResList::sortByRank(ClassAd *rankAd) {
 	}
 
 		// and sort it
-	qsort(array, index, sizeof(struct rankSortRec), ResList::machineSortByRank );
+	std::sort(array, array + index, ResList::machineSortByRank);
 
 		// Now, rebuild our list in order
 	for (int i = 0; i < index; i++) {
@@ -348,12 +349,9 @@ ResList::sortByRank(ClassAd *rankAd) {
 	delete [] array;
 }
 
-/* static */ int
-ResList::machineSortByRank(const void *left, const void *right) {
-	const struct rankSortRec *lhs = (const struct rankSortRec *)left;
-	const struct rankSortRec *rhs = (const struct rankSortRec *)right;
-
-	return lhs->rank < rhs->rank;
+/* static */ bool
+ResList::machineSortByRank(const struct rankSortRec &lhs, const struct rankSortRec &rhs) {
+	return lhs.rank > rhs.rank;
 }
 
 void
@@ -1441,8 +1439,7 @@ DedicatedScheduler::sortJobs( void )
 			 next_cluster );
 
 		// Now, sort them by prio and qdate
-	qsort( &(*idle_clusters)[0], next_cluster, sizeof(int), 
-		   clusterSortByPrioAndDate ); 
+	std::sort( &(*idle_clusters)[0], &(*idle_clusters)[0] + next_cluster, clusterSortByPrioAndDate );
 
 		// Show the world what we've got
 	listDedicatedJobs( D_FULLDEBUG );
@@ -2581,8 +2578,7 @@ DedicatedScheduler::computeSchedule( void )
 					// Now we've got an array from 0 to num_candidates
 					// of PreemptCandidateNodes sort by rank,
 					// cluster_id;
-				qsort( preempt_candidate_array, num_candidates,
-					   sizeof(struct PreemptCandidateNode), RankSorter );
+				std::sort( preempt_candidate_array, preempt_candidate_array + num_candidates, RankSorter );
 
 				int num_preemptions = 0;
 				for( int cand = 0; cand < num_candidates; cand++) {
@@ -4382,11 +4378,9 @@ findAvailTime( match_rec* mrec )
 
 
 // Comparison function for sorting jobs (given cluster id) by QDate 
-int
-clusterSortByPrioAndDate( const void *ptr1, const void* ptr2 )
+bool
+clusterSortByPrioAndDate(int cluster1, int cluster2)
 {
-	int cluster1 = *((const int*)ptr1);
-	int cluster2 = *((const int*)ptr2);
 	int c1_qdate, c2_qdate;	
 	int c1_prio=0, c1_preprio1=0, c1_preprio2=0, c1_postprio1=0, c1_postprio2=0;
 	int c2_prio=0, c2_preprio1=0, c2_preprio2=0, c2_postprio1=0, c2_postprio2=0;
@@ -4396,54 +4390,54 @@ clusterSortByPrioAndDate( const void *ptr1, const void* ptr2 )
 	        (GetAttributeInt(cluster1, 0, ATTR_JOB_PRIO, &c1_prio) < 0) ||
 	        (GetAttributeInt(cluster2, 0, ATTR_JOB_PRIO, &c2_prio) < 0)) {
 		
-		return -1;
+		return true;
 	}
 
 	GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO1, &c1_preprio1);
 	GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO1, &c2_preprio1);
 	if (c1_preprio1 < c2_preprio1) {
-		return 1;
+		return false;
 	}
 	if (c1_preprio1 > c2_preprio1) {
-		return -1;
+		return true;
 	}
 
 	GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO2, &c1_preprio2);
 	GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO2, &c2_preprio2);
 	if (c1_preprio2 < c2_preprio2) {
-		return 1;
+		return false;
 	}
 	if (c1_preprio2 > c2_preprio2) {
-		return -1;
+		return true;
 	}
 	
 	if (c1_prio < c2_prio) {
-		return 1;
+		return false;
 	}
 
 	if (c1_prio > c2_prio) {
-		return -1;
+		return true;
 	}
 
 	GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO1, &c1_postprio1);
 	GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO1, &c2_postprio1);
 	if (c1_postprio1 < c2_postprio1) {
-		return 1;
+		return false;
 	}
 	if (c1_postprio1 > c2_postprio1) {
-		return -1;
+		return true;
 	}
 
 	GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO2, &c1_postprio2);
 	GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO2, &c2_postprio2);
 	if (c1_postprio2 < c2_postprio2) {
-		return 1;
+		return false;
 	}
 	if (c1_postprio2 > c2_postprio2) {
-		return -1;
+		return true;
 	}
 	
-	return (c1_qdate - c2_qdate);
+	return (c1_qdate - c2_qdate) < 0;
 }
 
 
@@ -4487,20 +4481,17 @@ deallocMatchRec( match_rec* mrec )
 }
 
 // Comparision function for sorting machines
-int
-RankSorter(const void *ptr1, const void *ptr2) {
-	const PreemptCandidateNode *n1 = (const PreemptCandidateNode *) ptr1;
-	const PreemptCandidateNode *n2 = (const PreemptCandidateNode *) ptr2;
-
-	if (n1->rank < n2->rank) {
-		return -1;
+bool
+RankSorter(const PreemptCandidateNode &n1, const PreemptCandidateNode &n2) {
+	if (n1.rank < n2.rank) {
+		return true;
 	}
 
-	if (n1->rank > n2->rank) {
-		return 1;
+	if (n1.rank > n2.rank) {
+		return false;
 	}
 
-	return n1->cluster_id - n2->cluster_id;
+	return n1.cluster_id - n2.cluster_id < 0;
 }
 
 ClassAd *
