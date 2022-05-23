@@ -2317,7 +2317,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 				ClassAd iad;
 				cad->PopulateInfoAd(iad, 0, true);
 				retval = putClassAd(sock, iad,
-						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
+						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE | PUT_CLASSAD_SERVER_TIME,
 						projection.empty() ? NULL : &projection);
 			} else if (job->IsJobSet()) {
 				// if this is a set ad, then make a temporary child ad for returning the jobset aggregates
@@ -2326,11 +2326,11 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 				jobset->jobStatusAggregates.publish(iad, "Num");
 				iad.ChainToAd(jobset);
 				retval = putClassAd(sock, iad,
-						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
+						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE | PUT_CLASSAD_SERVER_TIME,
 						projection.empty() ? NULL : &projection);
 			} else {
 				retval = putClassAd(sock, *job,
-						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE,
+						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE | PUT_CLASSAD_SERVER_TIME,
 						projection.empty() ? NULL : &projection);
 			}
 		}
