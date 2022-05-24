@@ -2431,9 +2431,7 @@ int SubmitHash::SetGSICredentials()
 	bool use_proxy = submit_param_bool( SUBMIT_KEY_UseX509UserProxy, NULL, false );
 
 	YourStringNoCase gridType(JobGridType.c_str());
-	if (JobUniverse == CONDOR_UNIVERSE_GRID &&
-		(gridType == "arc" ||
-		 gridType == "nordugrid" ) )
+	if (JobUniverse == CONDOR_UNIVERSE_GRID && gridType == "nordugrid")
 	{
 		use_proxy = true;
 	}

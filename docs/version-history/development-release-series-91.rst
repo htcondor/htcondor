@@ -23,6 +23,10 @@ New Features:
   from ``DAGMAN_DEFAULT_APPEND_VARS`` config variable.
   :jira:`1080`
 
+- For **arc** grid universe jobs, SciTokens can now be used for
+  authentication with the ARC CE server.
+  :jira:`1061`
+
 Bugs Fixed:
 
 - None.
