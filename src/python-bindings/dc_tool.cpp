@@ -126,7 +126,7 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     bool result;
     {
     condor::ModuleLock ml;
-    result = !d.locate();
+    result = !d.locate(Daemon::LOCATE_FOR_ADMIN);
     }
     if (result)
     {
