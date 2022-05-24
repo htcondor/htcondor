@@ -2259,19 +2259,21 @@ struct QueryJobAdsContinuation : Service {
 	bool summary_only;
 	bool unfinished_eom;
 	bool registered_socket;
+	bool send_server_time;
 
-	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms=0, int iter_opts=0);
+	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms=0, int iter_opts=0, bool server_time=true);
 	int finish(Stream *);
 };
 
-QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms, int iter_opts)
+QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms, int iter_opts, bool server_time)
 	: requirements(requirements_),
 	  it(GetJobQueueIterator(*requirements, timeslice_ms)),
 	  match_limit(limit),
 	  match_count(0),
 	  summary_only(false),
 	  unfinished_eom(false),
-	  registered_socket(false)
+	  registered_socket(false),
+	  send_server_time(server_time)
 {
 	it.set_options(iter_opts);
 	my_job_counts.clear_counters();
@@ -2285,6 +2287,10 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		it = end;
 	}
 	bool has_backlog = false;
+	int put_flags = PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE;
+	if (send_server_time) {
+		put_flags |= PUT_CLASSAD_SERVER_TIME;
+	}
 
 	if (unfinished_eom) {
 		int retval = sock->finish_end_of_message();
@@ -2316,8 +2322,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 				JobQueueCluster * cad = static_cast<JobQueueCluster*>(job);
 				ClassAd iad;
 				cad->PopulateInfoAd(iad, 0, true);
-				retval = putClassAd(sock, iad,
-						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE | PUT_CLASSAD_SERVER_TIME,
+				retval = putClassAd(sock, iad, put_flags,
 						projection.empty() ? NULL : &projection);
 			} else if (job->IsJobSet()) {
 				// if this is a set ad, then make a temporary child ad for returning the jobset aggregates
@@ -2325,12 +2330,10 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 				ClassAd iad;
 				jobset->jobStatusAggregates.publish(iad, "Num");
 				iad.ChainToAd(jobset);
-				retval = putClassAd(sock, iad,
-						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE | PUT_CLASSAD_SERVER_TIME,
+				retval = putClassAd(sock, iad, put_flags,
 						projection.empty() ? NULL : &projection);
 			} else {
-				retval = putClassAd(sock, *job,
-						PUT_CLASSAD_NON_BLOCKING | PUT_CLASSAD_NO_PRIVATE | PUT_CLASSAD_SERVER_TIME,
+				retval = putClassAd(sock, *job, put_flags,
 						projection.empty() ? NULL : &projection);
 			}
 		}
@@ -2392,6 +2395,8 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 	if (query_autocluster || group_by) {
 		return command_query_job_aggregates(queryAd, stream);
 	}
+	bool send_server_time = true;
+	queryAd.LookupBool(ATTR_SEND_SERVER_TIME, send_server_time);
 
 	int dpf_level = D_COMMAND | D_VERBOSE;
 
@@ -2516,7 +2521,7 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 		dprintf(dpf_level, "QUERY_JOB_ADS limit=%d, iter_options=0x%x\n", resultLimit, iter_options);
 	}
 
-	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, resultLimit, 1000, iter_options);
+	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, resultLimit, 1000, iter_options, send_server_time);
 	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, continuation->projection, true);
 	if (proj_err < 0) {
 		delete continuation;

@@ -1438,6 +1438,8 @@ struct Schedd {
 
         CondorQ q;
 
+        q.requestServerTime(false);
+
         if (constraint.size())
             q.addAND(constraint.c_str());
 
@@ -2583,6 +2585,7 @@ struct Schedd {
         }
 
         classad::ClassAd ad;
+        ad.Assign(ATTR_SEND_SERVER_TIME, false);
         ad.Insert(ATTR_REQUIREMENTS, expr_copy);
         ad.InsertAttr(ATTR_LIMIT_RESULTS, limit);
         if (fetch_opts)
