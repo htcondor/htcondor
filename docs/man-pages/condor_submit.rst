@@ -2561,8 +2561,8 @@ ADVANCED COMMANDS :index:`accounting_group<single: accounting_group; submit comm
     :ref:`admin-manual/configuration-macros:daemon logging configuration file
     entries` page), but it applies to the job event log, instead of the system
     event log.
-    :index:`JobBatchName<single: JobBatchName; submit commands>`
- JobBatchName = <batch_name>
+    :index:`batch_name<single: batch_name; submit commands>`
+ batch_name = <batch_name>
     Set the batch name for this submit. The batch name is displayed by
     *condor_q* **-batch**. It is intended for use by users to give
     meaningful names to their jobs and to influence how *condor_q*
