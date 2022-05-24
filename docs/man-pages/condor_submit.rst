@@ -572,7 +572,6 @@ BASIC COMMANDS
     job event log file, ensure that all of the jobs specify this option
     in the same way.
 
-    :index:`submit command<single: submit command; email notification>`
     :index:`e-mail related to a job<single: e-mail related to a job; notification>`
     :index:`notification<single: notification; submit commands>`
  notification = <Always | Complete | Error | Never>
@@ -853,7 +852,6 @@ COMMANDS FOR MATCHMAKING
     resulting in a dynamic slot being created with this many GPUs.
 
     :index:`require_gpus<single: require_gpus; submit commands>`
-
  require_gpus = <constraint-expression>
     A constraint on the properties of GPUs when used with a non-zero ``request_gpus`` value.
     If not specified, no constraint on GPUs will be added to the job.
@@ -919,7 +917,7 @@ COMMANDS FOR MATCHMAKING
     ``<name>`` must be at least two characters, and must not begin with ``_``.
     If ``<name>`` is either ``Cpu`` or ``Gpu`` a warning will be printed since these are common typos.
 
-    :index:`CUDA version<single: CUDA version; submit commands>`
+    :index:`cuda_version<single: cuda_version; submit commands>`
  cuda_version = <version>
     The version of the CUDA runtime, if any, used or required by this job,
     specified as ``<major>.<minor>`` (for example, ``9.1``).  If the minor
@@ -1105,7 +1103,6 @@ FILE TRANSFER COMMANDS
     details.
 
     :index:`should_transfer_files<single: should_transfer_files; submit commands>`
-    :index:`submit command should_transfer_files<single: submit command should_transfer_files; file transfer mechanism>`
  should_transfer_files = <YES | NO | IF_NEEDED >
     The
     **should_transfer_files** :index:`should_transfer_files<single: should_transfer_files; submit commands>`
@@ -1464,6 +1461,7 @@ FILE TRANSFER COMMANDS
 
 POLICY COMMANDS
 
+    :index:`allowed_execute_duration<single: allowed_execute_duration; submit commands>`
  allowed_execute_duration = <integer>
     The longest time for which a job may be executing.  Jobs which exceed
     this duration will go on hold.  This time does not include file-transfer
@@ -1473,6 +1471,7 @@ POLICY COMMANDS
     This attribute is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
 
+    :index:`allowed_job_duration<single: allowed_job_duration; submit commands>`
  allowed_job_duration = <integer>
     The longest time for which a job may continuously be in the running state.
     Jobs which exceed this duration will go on hold.  Exiting the running
@@ -2457,6 +2456,7 @@ COMMANDS FOR THE DOCKER UNIVERSE
     Defines the name of the Docker image that is the basis for the
     docker container.
 
+    :index:`docker_network_type<single: docker_network_type; submit commands>`
  docker_network_type = < host | none | custom_admin_defined_value>
     If docker_network_type is set to the string host, then the job is run
     using the host's network. If docker_network_type is set to the string none,
@@ -2465,6 +2465,7 @@ COMMANDS FOR THE DOCKER UNIVERSE
     site specific docker networks on a given worker node.  When this
     is the case, additional values may be valid here.
 
+    :index:`container_service_names<single: container_service_names; submit commands>`
  container_service_names = <service-name>[, <service-name>]*
     A string- or comma- separated list of *service name*\s.
     Each *service-name*
@@ -2714,8 +2715,9 @@ ADVANCED COMMANDS
     set to 0 to disable the job lease semantics. The value can also be a
     ClassAd expression that evaluates to an integer. The HTCondor User's
     manual section on Special Environment Considerations has further
-    details. :index:`job_machine_attrs<single: job_machine_attrs; submit commands>`
+    details.
 
+    :index:`job_machine_attrs<single: job_machine_attrs; submit commands>`
     :index:`job_machine_attrs_history_length<single: job_machine_attrs_history_length; submit commands>`
  job_machine_attrs = <attr1, attr2, ...>
     A comma and/or space separated list of machine attribute names that
@@ -2809,7 +2811,6 @@ ADVANCED COMMANDS
     expression. The requirements can allow a job to prefer a match with
     either the same or a different resource than a previous match.
 
-    :index:`job_max_vacate_time`
     :index:`job_max_vacate_time<single: job_max_vacate_time; submit commands>`
  job_max_vacate_time = <integer expression>
     An integer-valued expression (in seconds) that may be used to adjust
@@ -2827,7 +2828,6 @@ ADVANCED COMMANDS
     machines, explicitly specify this in the requirements and/or rank
     expressions.
 
-    :index:`manifest`
     :index:`manifest<single: manifest; submit commands>`
  manifest = <True | False>
     For vanilla and Docker -universe jobs (and others that use the shadow),
@@ -2839,7 +2839,6 @@ ADVANCED COMMANDS
 
     This feature is not presently available for Windows.
 
-    :index:`manifest_dir`
     :index:`manifest_dir<single: manifest; submit commands>`
  manifest_dir = <directory name>
     For vanilla and Docker -universe jobs (and others that use the shadow),
@@ -2849,7 +2848,6 @@ ADVANCED COMMANDS
 
     This feature is not presently available for Windows.
 
-    :index:`max_job_retirement_time`
     :index:`max_job_retirement_time<single: max_job_retirement_time; submit commands>`
  max_job_retirement_time = <integer expression>
     An integer-valued expression (in seconds) that does nothing unless
@@ -2964,6 +2962,7 @@ ADVANCED COMMANDS
     automatically defined for **submit_event_notes**, causing the
     logged submit event to identify the DAG node job submitted.
 
+    :index:`use_oauth_services<single: use_oauth_services; submit commands>`
  use_oauth_services = <list of credential service names>
     A comma-separated list of crendential-providing service names for
     which the job should be provided credentials for the job execution
