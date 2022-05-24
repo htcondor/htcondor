@@ -71,6 +71,33 @@ std::string fillURL(const char *url)
 	return groups[1] + groups[2] + groups[3] + groups[4];
 }
 
+bool readShortFile( const string & fileName, string & contents ) {
+	int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
+
+	if( fd < 0 ) {
+		dprintf( D_ALWAYS, "Failed to open file '%s' for reading: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
+		return false;
+	}
+
+	StatWrapper sw( fd );
+	unsigned long fileSize = sw.GetBuf()->st_size;
+
+	char * rawBuffer = (char *)malloc( fileSize + 1 );
+	assert( rawBuffer != NULL );
+	unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
+	close( fd );
+	if( totalRead != fileSize ) {
+		dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %lu but got %lu.\n",
+		         fileName.c_str(), fileSize, totalRead );
+		free( rawBuffer );
+		return false;
+	}
+	rawBuffer[ fileSize ] = '\0';
+	contents = rawBuffer;
+	free( rawBuffer );
+
+	return true;
+}
 
 // Utility function for parsing the JSON response returned by the server.
 bool ParseJSONLine( const char *&input, string &key, string &value, int &nesting )
@@ -125,22 +152,6 @@ bool ParseJSONLine( const char *&input, string &key, string &value, int &nesting
 
 	input = ptr;
 	return false;
-}
-
-const char *escapeJSONString( const char *value )
-{
-	static string result;
-	result.clear();
-
-	while( *value ) {
-		if ( *value == '"' || *value == '\\' ) {
-			result += '\\';
-		}
-		result += *value;
-		value++;
-	}
-
-	return result.c_str();
 }
 
 // From the body of a failure reply from the server, extract the best
@@ -426,6 +437,25 @@ bool HttpRequest::SendRequest()
 		goto error_return;
 	}
 
+	if (!tokenFile.empty()) {
+		std::string token;
+		if (!readShortFile(tokenFile, token)) {
+			this->errorCode = "499";
+			this->errorMessage = "Failed to read token file";
+			dprintf(D_ALWAYS, "Failed to read token file %s, failing.\n", tokenFile.c_str());
+			goto error_return;
+		}
+		trim(token);
+		buf = "Authorization: Bearer " + token;
+		curl_headers = curl_slist_append( curl_headers, buf.c_str() );
+		if ( curl_headers == NULL ) {
+			this->errorCode = "499";
+			this->errorMessage = "curl_slist_append() failed.";
+			dprintf( D_ALWAYS, "curl_slist_append() failed, failing.\n" );
+			goto error_return;
+		}
+	}
+
 	rv = curl_easy_setopt( curl, CURLOPT_HTTPHEADER, curl_headers );
 	if( rv != CURLE_OK ) {
 		this->errorCode = "499";
@@ -691,6 +721,7 @@ bool ArcPingWorkerFunction(GahpRequest *gahp_request)
 	ping_request.serviceURL += "/jobs";
 	ping_request.requestMethod = "GET";
 	ping_request.proxyFile = gahp_request->m_proxy_file;
+	ping_request.tokenFile = gahp_request->m_token_file;
 
 	// Send the request.
 	if( ! ping_request.SendRequest() ) {
@@ -736,6 +767,7 @@ bool ArcJobNewWorkerFunction(GahpRequest *gahp_request)
 	submit_request.serviceURL += "/jobs?action=new";
  	submit_request.requestMethod = "POST";
 	submit_request.proxyFile = gahp_request->m_proxy_file;
+	submit_request.tokenFile = gahp_request->m_token_file;
 	submit_request.requestBody = argv[3];
 	if ( argv[3][0] == '<' ) {
 		submit_request.contentType = "application/xml";
@@ -846,6 +878,7 @@ bool ArcJobStatusWorkerFunction(GahpRequest *gahp_request)
 	status_request.serviceURL += "/jobs?action=status";
  	status_request.requestMethod = "POST";
 	status_request.proxyFile = gahp_request->m_proxy_file;
+	status_request.tokenFile = gahp_request->m_token_file;
 	formatstr(status_request.requestBody, "{\"job\":[{\"id\":\"%s\"}]}", argv[3]);
 //	status_request.requestBody="{\"job\":[{\"id\":\"1FeKDmC5WhynOSAtDmEBFKDmABFKDmABFKDmGPHKDmABFKDmZuDOhn\"},{\"id\":\"Mv3MDmU9WhynOSAtDmEBFKDmABFKDmABFKDmGPHKDmCBFKDmEhhugm\"}]}";
 
@@ -943,6 +976,7 @@ bool ArcJobStatusAllWorkerFunction(GahpRequest *gahp_request)
 	}
  	query_request.requestMethod = "GET";
 	query_request.proxyFile = gahp_request->m_proxy_file;
+	query_request.tokenFile = gahp_request->m_token_file;
 
 	// Send the request.
 	if( ! query_request.SendRequest() ) {
@@ -959,6 +993,7 @@ bool ArcJobStatusAllWorkerFunction(GahpRequest *gahp_request)
 	status_request.serviceURL += "/jobs?action=status";
  	status_request.requestMethod = "POST";
 	status_request.proxyFile = gahp_request->m_proxy_file;
+	status_request.tokenFile = gahp_request->m_token_file;
 	status_request.requestBody = query_request.responseBody;
 
 	// Send the request.
@@ -1053,6 +1088,7 @@ bool ArcJobInfoWorkerFunction(GahpRequest *gahp_request)
 	status_request.serviceURL += "/jobs?action=info";
  	status_request.requestMethod = "POST";
 	status_request.proxyFile = gahp_request->m_proxy_file;
+	status_request.tokenFile = gahp_request->m_token_file;
 	formatstr(status_request.requestBody, "{\"job\":[{\"id\":\"%s\"}]}", argv[3]);
 
 	// Send the request.
@@ -1163,6 +1199,7 @@ bool ArcJobStageInWorkerFunction(GahpRequest *gahp_request)
 	HttpRequest put_request;
  	put_request.requestMethod = "PUT";
 	put_request.proxyFile = gahp_request->m_proxy_file;
+	put_request.tokenFile = gahp_request->m_token_file;
 
 	// If we're giving 0 files to transfer, just fake a successful result.
 	put_request.errorCode = "200";
@@ -1222,6 +1259,7 @@ bool ArcJobStageOutWorkerFunction(GahpRequest *gahp_request)
 	HttpRequest get_request;
  	get_request.requestMethod = "GET";
 	get_request.proxyFile = gahp_request->m_proxy_file;
+	get_request.tokenFile = gahp_request->m_token_file;
 
 	// If we're giving 0 files to transfer, just fake a successful result.
 	get_request.errorCode = "200";
@@ -1281,6 +1319,7 @@ bool ArcJobKillWorkerFunction(GahpRequest *gahp_request)
 	status_request.serviceURL += "/jobs?action=kill";
  	status_request.requestMethod = "POST";
 	status_request.proxyFile = gahp_request->m_proxy_file;
+	status_request.tokenFile = gahp_request->m_token_file;
 	formatstr(status_request.requestBody, "{\"job\":[{\"id\":\"%s\"}]}", argv[3]);
 
 	// Send the request.
@@ -1361,6 +1400,7 @@ bool ArcJobCleanWorkerFunction(GahpRequest *gahp_request)
 	status_request.serviceURL += "/jobs?action=clean";
  	status_request.requestMethod = "POST";
 	status_request.proxyFile = gahp_request->m_proxy_file;
+	status_request.tokenFile = gahp_request->m_token_file;
 	formatstr(status_request.requestBody, "{\"job\":[{\"id\":\"%s\"}]}", argv[3]);
 
 	// Send the request.
@@ -1440,6 +1480,7 @@ bool ArcDelegationNewWorkerFunction(GahpRequest *gahp_request)
 	deleg1_request.serviceURL += "/delegations?action=new";
 	deleg1_request.requestMethod = "POST";
 	deleg1_request.proxyFile = gahp_request->m_proxy_file;
+	deleg1_request.tokenFile = gahp_request->m_token_file;
 	deleg1_request.includeResponseHeader = true;
 
 	// Send the request.
@@ -1463,6 +1504,7 @@ bool ArcDelegationNewWorkerFunction(GahpRequest *gahp_request)
 	deleg2_request.serviceURL += deleg_id;
 	deleg2_request.requestMethod = "PUT";
 	deleg2_request.proxyFile = gahp_request->m_proxy_file;
+	deleg2_request.tokenFile = gahp_request->m_token_file;
 	deleg2_request.requestBody = deleg_resp;
 
 	// Send the request.
@@ -1513,6 +1555,7 @@ bool ArcDelegationRenewWorkerFunction(GahpRequest *gahp_request)
 	deleg1_request.serviceURL += "?action=renew";
 	deleg1_request.requestMethod = "POST";
 	deleg1_request.proxyFile = gahp_request->m_proxy_file;
+	deleg1_request.tokenFile = gahp_request->m_token_file;
 	deleg1_request.includeResponseHeader = true;
 
 	// Send the request.
@@ -1534,6 +1577,7 @@ bool ArcDelegationRenewWorkerFunction(GahpRequest *gahp_request)
 	deleg2_request.serviceURL += argv[3];
 	deleg2_request.requestMethod = "PUT";
 	deleg2_request.proxyFile = gahp_request->m_proxy_file;
+	deleg2_request.tokenFile = gahp_request->m_token_file;
 	deleg2_request.requestBody = deleg_resp;
 
 	// Send the request.

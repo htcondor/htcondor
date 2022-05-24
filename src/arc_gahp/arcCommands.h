@@ -57,6 +57,7 @@ class HttpRequest {
 	std::string errorMessage;
 
 	std::string proxyFile;
+	std::string tokenFile;
 	std::string requestMethod;
 	std::string requestBody;
 	std::string requestBodyFilename;

@@ -40,12 +40,13 @@ class Worker;
 
 class GahpRequest {
  public:
-	GahpRequest(const char* cmd, const std::string &proxy_file);
+	GahpRequest(const char* cmd, const std::string &proxy_file, const std::string& token_file);
 
 	int m_reqid;
 	Worker* m_worker;
 
 	std::string m_proxy_file;
+	std::string m_token_file;
 	std::string m_raw_cmd;
 	Gahp_Args m_args;
 	std::string m_result;

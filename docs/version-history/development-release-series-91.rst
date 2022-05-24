@@ -30,6 +30,10 @@ New Features:
   this capability if it's available.
   :jira:`1122`
 
+- For **arc** grid universe jobs, SciTokens can now be used for
+  authentication with the ARC CE server.
+  :jira:`1061`
+
 Bugs Fixed:
 
 - None.
