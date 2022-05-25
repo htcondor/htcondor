@@ -2200,6 +2200,7 @@ sendDone(Stream *stream, bool send_job_counts, LiveJobCounters* query_counts, co
 	ClassAd ad;
 	ad.Assign(ATTR_OWNER, 0);
 	ad.Assign(ATTR_ERROR_CODE, 0);
+	ad.Assign(ATTR_SERVER_TIME, time(nullptr));
 
 	if (send_job_counts) {
 		ad.Assign(ATTR_MY_TYPE, "Summary");
