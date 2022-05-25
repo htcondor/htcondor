@@ -347,7 +347,8 @@ public:
 		: JobQueueBase(entry_type_jobset)
 		, id(jobset_id)
 	{
-		jid.proc = JOBSETID_to_qkey2(jobset_id);
+		jid.cluster = JOBSETID_to_qkey1(jobset_id);
+		jid.proc = JOBSETID_qkey2;
 	}
 #endif
 	virtual ~JobQueueJobSet() = default;
@@ -573,7 +574,7 @@ public:
 			Ad = new JobQueueJob(); Ad->Update(*ad); new_ad = true;
 		}
 		Ad->SetDirtyTracking(true);
-		JobQueueJob payload = reinterpret_cast<JobQueueJob>(Ad);
+		JobQueueJob* payload = reinterpret_cast<JobQueueJob*>(Ad);
 		int iret = table.insert(k, payload);
 		// If we made a new ad, we must now delete one of them.
 		// On success, delete the original ad.
