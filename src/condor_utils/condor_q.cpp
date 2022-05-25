@@ -91,6 +91,7 @@ CondorQ(void)
 	schedd[0] = '\0';
 	scheddBirthdate = 0;
 	useDefaultingOperator(false);
+	requestservertime = false;
 }
 
 void CondorQ::useDefaultingOperator(bool enable)
@@ -400,6 +401,8 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 	ClassAd *ad = NULL;	// job ad result
 
 	request_ad.Insert(ATTR_REQUIREMENTS, expr);
+
+	request_ad.Assign(ATTR_SEND_SERVER_TIME, requestservertime);
 
 	char *projection = attrs.print_to_delimed_string("\n");
 	if (projection) {

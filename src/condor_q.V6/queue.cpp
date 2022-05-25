@@ -4197,6 +4197,9 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		pvProcess = &rod_result_map;
 	}
 
+	// Ask the schedd to add the ServerTime attribute to the job ads
+	Q.requestServerTime(true);
+
 	int fetch_opts = 0;
 	if (dash_autocluster) {
 		fetch_opts = dash_autocluster;
