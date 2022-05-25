@@ -3358,7 +3358,7 @@ static void print_a_result(std::string & buf, JobRowOfData & jrod)
 	buf.clear();
 	app.prmask.display(buf, jrod.rov);
 	if (widescreen) trim_whitespace_before_newline(buf);
-	printf("%s", buf.c_str());
+	fputs(buf.c_str(), stdout);
 	jrod.flags |= JROD_PRINTED; // for debugging, keep track of what we already printed.
 }
 
@@ -3408,6 +3408,11 @@ void print_results(ROD_MAP_BY_ID & results, KeyToIdMap order, bool children_unde
 			}
 		}
 	}
+
+	// This fixes a random failure we see where condor_q correctly prints out
+	// the results to stdout, but they don't make it to the stdout of a
+	// backtick'ed caller in a perl test script.
+	fflush(stdout);
 }
 
 void clear_results(ROD_MAP_BY_ID & results, KeyToIdMap & order)
