@@ -13143,8 +13143,8 @@ Scheduler::Init()
 	// to a boolean.
 	//
 	{
-		Regex re; int err = 0; const char * pszMsg = 0;
-		ASSERT(re.compile("schedd_collect_stats_(by|for)_(.+)", &pszMsg, &err, PCRE_CASELESS));
+		Regex re; int errcode = 0, erroffset = 0;
+		ASSERT(re.compile("schedd_collect_stats_(by|for)_(.+)", &errcode, &erroffset, PCRE2_CASELESS));
 		
 		OtherPoolStats.DisableAll();
 

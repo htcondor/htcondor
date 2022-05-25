@@ -165,9 +165,8 @@ const char * SlotType::type_param(const char * name)
 	warned_startd_attrs_once = false; // allow the warning about mixing STARTD_ATTRS and STARTD_EXPRS once again
 
 	Regex re;
-	int err = 0;
-	const char* pszMsg = 0;
-	ASSERT(re.compile("^SLOT_TYPE_[0-9]+", &pszMsg, &err, PCRE_CASELESS));
+	int errcode = 0, erroffset = 0;
+	ASSERT(re.compile("^SLOT_TYPE_[0-9]+", &errcode, &erroffset, PCRE2_CASELESS));
 	const int iter_options = 0;
 	foreach_param_matching(re, iter_options, SlotType::insert_param, 0);
 }

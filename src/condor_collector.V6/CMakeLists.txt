@@ -44,7 +44,7 @@ if (LINUX)
     # and none of the other invocations of condor_plugin() use the library
     # argument -- although they're all explicitly Linux-specific.  For now,
     # only pass the libraries in on Windows and Mac.
-    condor_plugin( ce-audit "ce-audit-plugin.cpp" "${C_LIBEXEC}" "" off )
+    condor_plugin( ce-audit "ce-audit-plugin.cpp" "${C_LIBEXEC}" condor_utils off )
 else()
     # Collector plug-ins can't be be built on Windows or Mac because the
     # CollectorPlugin constructor and destructor are implemented in the

@@ -1880,7 +1880,7 @@ struct Schedd {
 
         if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
         {
-            reschedule();
+            sentry.reschedule();
         }
         return cluster;
     }

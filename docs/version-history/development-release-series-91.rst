@@ -20,6 +20,12 @@ New Features:
 - *condor_submit* now has support for submitting jobsets. Jobsets are still
   a technology preview and still not ready for general use.
   :jira:`1063`
+  
+- DAGman ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
+  to allow passed variables to be initalized before or after DAG jobs are
+  submitted. Any ``VARS`` without these options will have behavior derived
+  from ``DAGMAN_DEFAULT_APPEND_VARS`` config variable.
+  :jira:`1080`
 
 Bugs Fixed:
 
@@ -38,9 +44,14 @@ Release Notes:
 
 New Features:
 
-- Job duration policy hold message now displays the time exceeded in 
+- Job duration policy hold message now displays the time exceeded in
   'dd+hh:mm:ss' format rather than just seconds.
   :jira:`1062`
+
+- All regular expressions in configuration and in the classad regexp function
+  now use the pcre2 10.39 library. (http://www.pcre.org). We believe that this
+  will break no existing regular expressions.
+  :jira:`1087`
 
 - The ``OWNER`` authorization level has been removed. Commands that used to
   require this level now require ``ADMINISTRATOR`` authorization.
@@ -63,8 +74,8 @@ New Features:
   :jira:`1057`
 
 - Changed the result returned by evaluating a nested classad a
-  with no attribute named "missing" to return undefined when evaluating
-  a["missing"].  This matches the a.missing syntax
+  with no attribute named ``missing`` to return undefined when evaluating
+  ``a["missing"]``.  This matches the ``a.missing`` syntax
   :jira:`1065`
 
 - Singularity jobs can now pull images from docker style repos.
@@ -109,6 +120,10 @@ Bugs Fixed:
 - Fixed a bug in the dedicated scheduler when using partionable slots that would
   cause the schedd to assert.
   :jira:`1042`
+
+- Fixed a bug preventing ``preserve_relative_paths`` from working with
+  lots (tens of thousands) of files.
+  :jira:`993`
 
 Version 9.8.1
 -------------
