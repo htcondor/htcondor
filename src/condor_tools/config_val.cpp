@@ -1154,39 +1154,7 @@ main( int argc, const char* argv[] )
 		if( addr ) {
 			target = new DaemonAllowLocateFull( dt, addr, NULL );
 		} else {
-			char* collector_addr = NULL;
-			if( pool ) {
-				collector_addr = strdup(pool);
-			} else { 
-				CollectorList * collectors = CollectorList::create();
-				Daemon * collector = NULL;
-				ReliSock sock;
-				while (collectors->next (collector)) {
-					if (collector->locate() &&
-					    sock.connect(collector->addr(), 0)) {
-						// Do something with the connection, 
-						// such that we won't end up with 
-						// noise in the collector log
-						collector->startCommand( DC_NOP, &sock, 30 );
-						sock.encode();
-						sock.end_of_message();
-						// If we can connect to the
-						// collector, then we accept
-						// it as valid
-						break;
-					}
-				}
-				if( (!collector) || (!collector->addr()) ) {
-					fprintf( stderr, 
-							 "%s, Unable to locate a collector\n", 
-							 MyName);
-					my_exit( 1 );
-				}
-				collector_addr = strdup(collector->addr());
-				delete collectors;
-			}
-			target = new DaemonAllowLocateFull( dt, name, collector_addr );
-			free( collector_addr );
+			target = new DaemonAllowLocateFull(dt, name, pool);
 		}
 		if( ! target->locate(evaluate_daemon_vars ? Daemon::LOCATE_FULL : Daemon::LOCATE_FOR_LOOKUP) ) {
 			fprintf( stderr, "Can't find address for this %s\n", 
