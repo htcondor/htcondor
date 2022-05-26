@@ -30,6 +30,14 @@ New Features:
   exit code to the log, followed by the cron job's output.
   :jira:`971`
 
+- Add a ``SEC_CREDENTIAL_STORECRED_OPTS`` variable to **condor_vault_storer**
+  to enable sending additional options to every **condor_store_cred** command.
+  :jira:`1091`
+
+- Recognize the new format of vault tokens, beginning with ``hvs.`` in addition
+  to the old format beginning with ``s.`` .
+  :jira:`1091`
+
 Bugs Fixed:
 
 - The *condor_run* tool now reports job submit errors
@@ -40,7 +48,7 @@ Bugs Fixed:
   :jira:`840`
 
 - Fixed a bug where Kerberos Authentication would fail for
-  dagman.
+  DAGMan.
   :jira:`1060`
 
 - Fix problem that can cause HTCondor to not start up when the network
