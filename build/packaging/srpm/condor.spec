@@ -1676,6 +1676,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu May 26 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.13-1
+- Schedd and startd cron jobs can now log output upon non-zero exit
+- condor_config_val now produces correct syntax for multi-line values
+- The condor_run tool now reports submit errors and warnings to the terminal
+- Fix issue where Kerberos authentication would fail within DAGMan
+- Fix HTCondor startup failure with certain complex network configurations
+
 * Tue Apr 19 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.12-1
 - Fix bug in parallel universe that could cause the schedd to crash
 - Fix rare crash where a daemon tries to use a discarded security session

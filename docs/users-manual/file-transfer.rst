@@ -702,7 +702,7 @@ you can request files using that token by doing:
 If you add an optional handle to the token name,
 append the handle name to the token name in the URL with a ".":
 
-.. code-block:: condor_submit
+.. code-block:: condor-submit
 
     use_oauth_services = mytokens
     mytokens_oauth_permissions_personal =
