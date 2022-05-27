@@ -15,6 +15,9 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-9014`.
 
+- On macOS, updated to LibreSSL 2.8.3 and removed support for VOMS.
+  :jira:`1129`
+
 New Features:
 
 - DAGman ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
