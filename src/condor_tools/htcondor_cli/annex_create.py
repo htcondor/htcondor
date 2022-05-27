@@ -597,7 +597,7 @@ def annex_inner_func(
 
         system = queue_at_system.casefold()
         if system not in SYSTEM_TABLE:
-            error_string = f"{error_string}  Also, '{queue_at_system}' is not a known system."
+            error_string = f"{error_string}  Also, '{queue_at_system}' is not the name of a known system."
         else:
             default_queue = SYSTEM_TABLE[system]['default_queue']
             queue_list = "\n    ".join([q for q in SYSTEM_TABLE[system]['queues']])
@@ -736,7 +736,7 @@ def annex_inner_func(
 
     logger.info(
         f"This will{as_project}request {resources} for an annex named '{annex_name}'"
-        f" from the queue named '{queue_name}' on the '{SYSTEM_TABLE[system]['pretty_name']}' system."
+        f" from the queue named '{queue_name}' on the system named '{SYSTEM_TABLE[system]['pretty_name']}'."
         f"  To change the project, use --project."
         f"  To change the resources requested, use --nodes or --cpus and/or --mem_mb."
         f"  To change how long the resources are reqested for, use --lifetime (in seconds)."
@@ -752,8 +752,8 @@ def annex_inner_func(
     ## The user will do the 2FA/SSO dance here.
     ##
     logger.info(
-        f"{ANSI_BRIGHT}This command will access "
-        f"{SYSTEM_TABLE[system]['pretty_name']} via XSEDE.  To proceed, "
+        f"{ANSI_BRIGHT}This command will access the system named "
+        f"'{SYSTEM_TABLE[system]['pretty_name']}' via XSEDE.  To proceed, "
         f"enter your XSEDE user name and password at the prompt "
         f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
     )
@@ -767,7 +767,7 @@ def annex_inner_func(
     )
     if rc != 0:
         raise RuntimeError(
-            f"Failed to make initial connection to {SYSTEM_TABLE[system]['pretty_name']}, aborting ({rc})."
+            f"Failed to make initial connection to the system named '{SYSTEM_TABLE[system]['pretty_name']}', aborting ({rc})."
         )
     logger.info(f"{ANSI_BRIGHT}Thank you.{ANSI_RESET_ALL}\n")
 
@@ -955,7 +955,7 @@ def annex_inner_func(
                     schedd.edit(job_id, "TransferInput", "undefined")
 
     remotes = {}
-    logger.info(f"Requesting annex named '{annex_name}' from queue '{queue_name}' on the '{SYSTEM_TABLE[system]['pretty_name']}' system...\n")
+    logger.info(f"Requesting annex named '{annex_name}' from queue '{queue_name}' on the system named '{SYSTEM_TABLE[system]['pretty_name']}'...\n")
     rc = invoke_pilot_script(
         ssh_connection_sharing,
         ssh_target,
@@ -979,7 +979,7 @@ def annex_inner_func(
 
     if rc == 0:
         logger.info(f"... requested.")
-        logger.info(f"\nIt may take some time for {SYSTEM_TABLE[system]['pretty_name']} to establish the requested annex.")
+        logger.info(f"\nIt may take some time for the system named '{SYSTEM_TABLE[system]['pretty_name']}' to establish the requested annex.")
         logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
     else:
         error = f"Failed to start annex, SLURM returned code {rc}"
