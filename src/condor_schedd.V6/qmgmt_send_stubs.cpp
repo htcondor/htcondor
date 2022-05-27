@@ -338,6 +338,35 @@ int SendMaterializeData(int cluster_id, int flags, int (*next)(void* pv, std::st
 
 }
 
+// Future : expose this?
+static int SendJobQueueAd(int cluster_id, int ad_type, const classad::ClassAd & ad, unsigned int flags)
+{
+	int rval = -1;
+	CurrentSysCall = CONDOR_SendJobQueueAd;
+	qmgmt_sock->encode();
+	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
+	neg_on_error( qmgmt_sock->code(cluster_id) );
+	neg_on_error( qmgmt_sock->code(ad_type) );
+	neg_on_error( qmgmt_sock->code(flags) );
+	neg_on_error ( putClassAd(qmgmt_sock, ad) );
+	neg_on_error( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	neg_on_error( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		neg_on_error( qmgmt_sock->code(terrno) );
+		neg_on_error( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return rval;
+	}
+	neg_on_error( qmgmt_sock->end_of_message() );
+	return rval;
+}
+
+int SendJobsetAd(int cluster_id, const classad::ClassAd & ad, unsigned int flags) {
+	return SendJobQueueAd(cluster_id, SENDJOBAD_TYPE_JOBSET, ad, flags);
+}
+
 #if 0
 int
 DestroyClusterByConstraint( char *constraint )

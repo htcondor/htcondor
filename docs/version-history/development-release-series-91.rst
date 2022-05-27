@@ -20,6 +20,10 @@ Release Notes:
 
 New Features:
 
+- *condor_submit* now has support for submitting jobsets. Jobsets are still
+  a technology preview and still not ready for general use.
+  :jira:`1063`
+  
 - DAGman ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
   to allow passed variables to be initalized before or after DAG jobs are
   submitted. Any ``VARS`` without these options will have behavior derived

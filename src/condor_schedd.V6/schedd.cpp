@@ -175,7 +175,7 @@ bool service_this_universe(int, ClassAd*);
 bool jobIsSandboxed( ClassAd* ad );
 bool jobPrepNeedsThread( int cluster, int proc );
 bool jobCleanupNeedsThread( int cluster, int proc );
-int  count_a_job( JobQueueJob *job, const JOB_ID_KEY& jid, void* user);
+int  count_a_job( JobQueueBase *job, const JOB_ID_KEY& jid, void* user);
 void mark_jobs_idle();
 void load_job_factories();
 static void WriteCompletionVisa(ClassAd* ad);
@@ -2305,36 +2305,40 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		}
 	}
 	while ((it != end) && !has_backlog) {
-		JobQueueJob * job = *it++;
-		if (!job) {
+		JobQueuePayload ad = *it++;
+		if (!ad) {
 			// Return to DC in case if our time ran out.
 			has_backlog = true;
 			break;
 		}
-		if (job->IsJob()) { IncrementLiveJobCounter(query_job_counts, job->Universe(), job->Status(), 1); }
+		if (ad->IsJob()) {
+			JobQueueJob * job = dynamic_cast<JobQueueJob*>(ad);
+			IncrementLiveJobCounter(query_job_counts, job->Universe(), job->Status(), 1);
+		}
 		//if (IsDebugCatAndVerbosity(D_COMMAND | D_VERBOSE)) {
 		//	dprintf(D_COMMAND | D_VERBOSE, "Writing job %d.%d type=%d%d%d to wire\n", job->jid.cluster, job->jid.proc, job->IsJob(), job->IsCluster(), job->IsJobSet());
 		//}
 		int retval = 1;
 		if ( ! summary_only) {
-			if (job->IsCluster()) {
+			if (ad->IsCluster()) {
 				// if this is a cluster ad, then we are responding to a -factory query. In that case, we want to fake up
 				// a child ad so we can send some extra attributes.
-				JobQueueCluster * cad = static_cast<JobQueueCluster*>(job);
+				JobQueueCluster * cad = dynamic_cast<JobQueueCluster*>(ad);
 				ClassAd iad;
 				cad->PopulateInfoAd(iad, 0, true);
 				retval = putClassAd(sock, iad, put_flags,
 						projection.empty() ? NULL : &projection);
-			} else if (job->IsJobSet()) {
+			} else if (ad->IsJobSet()) {
 				// if this is a set ad, then make a temporary child ad for returning the jobset aggregates
-				JobQueueJobSet * jobset = static_cast<JobQueueJobSet*>(static_cast<JobQueueBase*>(job));
+				JobQueueJobSet * jobset = dynamic_cast<JobQueueJobSet*>(ad);
 				ClassAd iad;
 				jobset->jobStatusAggregates.publish(iad, "Num");
+				iad.Assign(ATTR_REF_COUNT, jobset->member_count);
 				iad.ChainToAd(jobset);
 				retval = putClassAd(sock, iad, put_flags,
 						projection.empty() ? NULL : &projection);
 			} else {
-				retval = putClassAd(sock, *job, put_flags,
+				retval = putClassAd(sock, *ad, put_flags,
 						projection.empty() ? NULL : &projection);
 			}
 		}
@@ -2888,7 +2892,7 @@ Scheduler::guessJobSlotWeight(JobQueueJob * job)
 }
 
 int
-count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
+count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 {
 	int		status;
 	int		cur_hosts;
@@ -2898,17 +2902,20 @@ count_a_job(JobQueueJob* job, const JOB_ID_KEY& /*jid*/, void*)
 		// we may get passed a NULL job ad if, for instance, the job ad was
 		// removed via condor_rm -f when some function didn't expect it.
 		// So check for it here before continuing onward...
-	if ( job == NULL ) {  
+	if ( ! ad) {
 		return 0;
 	}
 	// make sure that OwnerInfo records cannot be deleted while a jobset for that owner exists
-	if (job->IsJobSet()) {
-		JobQueueJobSet * jobset = static_cast<JobQueueJobSet*>(job);
+	if (ad->IsJobSet()) {
+		JobQueueJobSet * jobset = dynamic_cast<JobQueueJobSet*>(ad);
 		if (jobset->ownerinfo) {
 			jobset->ownerinfo->num.Hits += 1;
 		}
 		return 0;
 	}
+	JobQueueJob * job = dynamic_cast<JobQueueJob*>(ad);
+	if (! job) return 0;
+
 	// cluster ads get different treatment
 	if (job->IsCluster()) {
 		// set job->ownerdata pointer if it is not yet set. we do this in case the accounting group
@@ -16361,27 +16368,14 @@ Scheduler::processCronTabClusterIds( )
 		// procs to see if they have defined crontab information
 		//
 	for ( auto itr = cronTabClusterIds.begin(); itr != cronTabClusterIds.end(); itr++ ) {
-		cluster_id = *itr;
+		JobQueueCluster * cad = GetClusterAd(*itr);
+		if ( ! cad) continue;
 
-		int init = 1;
-		while ( ( jobAd = GetNextJobByCluster( cluster_id, init ) ) ) {
-			PROC_ID id;
-			jobAd->LookupInteger( ATTR_CLUSTER_ID, id.cluster );
-			jobAd->LookupInteger( ATTR_PROC_ID, id.proc );
-				//
-				// Simple safety check
-				//
-			ASSERT( id.cluster == cluster_id );
-				//
-				// If this job hasn't been added to our cron job table
-				// and if it needs to be, we wil added to our list
-				//
-			if ( this->cronTabs->lookup( id, cronTab ) < 0 &&
-				 CronTab::needsCronTab( jobAd ) ) {
-				this->cronTabs->insert( id, NULL );
-			}		
-			init = 0;
-		} // WHILE
+		for (JobQueueJob * job = cad->FirstJob(); job != nullptr; job = cad->NextJob(job)) {
+			if (this->cronTabs->lookup(job->jid, cronTab) < 0 && CronTab::needsCronTab(job)) {
+				this->cronTabs->insert(job->jid, nullptr);
+			}
+		}
 	} // WHILE
 	cronTabClusterIds.clear();
 }
@@ -17574,10 +17568,6 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 		std::string int_str = std::to_string(tmp_int);
 		export_queue.SetAttribute(hdr_id, ATTR_NEXT_CLUSTER_NUM, int_str.c_str());
 	}
-	if ( GetAttributeInt(0, 0, ATTR_NEXT_JOBSET_NUM, &tmp_int) >= 0 ) {
-		std::string int_str = std::to_string(tmp_int);
-		export_queue.SetAttribute(hdr_id, ATTR_NEXT_JOBSET_NUM, int_str.c_str());
-	}
 
 	int num_jobs = 0;
 	for (auto cid = clusters.begin(); cid != clusters.end(); ++cid) {
@@ -17694,7 +17684,7 @@ Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 			// build up a set of cluster ids that match the constraint expression
 			WalkJobQueueEntries(
 				(WJQ_WITH_CLUSTERS | WJQ_WITH_NO_JOBS),
-				[](JobQueueJob *job, const JOB_ID_KEY & cid, void * pv) -> int {
+				[](JobQueuePayload job, const JOB_ID_KEY & cid, void * pv) -> int {
 					struct _cluster_ids_args & args = *(struct _cluster_ids_args*)pv;
 					if ( ! args.constraint || EvalExprBool(job, args.constraint)) {
 						args.pids->insert(cid.cluster);
@@ -18009,7 +17999,7 @@ Scheduler::unexport_jobs_handler(int /*cmd*/, Stream *stream)
 			// build up a set of cluster ids that match the constraint expression
 			WalkJobQueueEntries(
 				(WJQ_WITH_CLUSTERS | WJQ_WITH_NO_JOBS),
-				[](JobQueueJob *job, const JOB_ID_KEY & cid, void * pv) -> int {
+				[](JobQueuePayload job, const JOB_ID_KEY & cid, void * pv) -> int {
 					struct _cluster_ids_args & args = *(struct _cluster_ids_args*)pv;
 					if ( ! args.constraint || EvalExprBool(job, args.constraint)) {
 						args.pids->insert(cid.cluster);

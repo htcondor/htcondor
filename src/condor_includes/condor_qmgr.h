@@ -142,6 +142,9 @@ int SendMaterializeData(int cluster_id, int flags, int (*next)(void* pv, std::st
 // To use this function to sent the cluster ad, pass a key with -1 as the proc id, and pass the cluster ad as the ad argument.
 int SendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags, CondorError *errstack=NULL, const char * who=NULL);
 
+// send the jobset ad during submission of the given cluster_id.
+int SendJobsetAd(int cluster_id, const classad::ClassAd & ad, unsigned int flags);
+
 /** For all jobs in the queue for which constraint evaluates to true, set
 	attr = value.  The value should be a valid ClassAd value (strings
 	should be surrounded by quotes).

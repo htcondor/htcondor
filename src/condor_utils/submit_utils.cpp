@@ -480,9 +480,10 @@ SetGridParams >> SetRequestResources
 */
 
 SubmitHash::SubmitHash()
-	: clusterAd(NULL)
-	, procAd(NULL)
-	, job(NULL)
+	: clusterAd(nullptr)
+	, procAd(nullptr)
+	, jobsetAd(nullptr)
+	, job(nullptr)
 	, submit_time(0)
 	, abort_code(0)
 	, abort_macro_name(NULL)
@@ -528,12 +529,13 @@ SubmitHash::~SubmitHash()
 	if (SubmitMacroSet.errors) delete SubmitMacroSet.errors;
 	SubmitMacroSet.errors = NULL;
 
-	delete job; job = NULL;
-	delete procAd; procAd = NULL;
+	delete job; job = nullptr;
+	delete procAd; procAd = nullptr;
+	delete jobsetAd; jobsetAd = nullptr;
 
 	// detach but do not delete the cluster ad
 	//PRAGMA_REMIND("tj: should we copy/delete the cluster ad?")
-	clusterAd = NULL;
+	clusterAd = nullptr;
 }
 
 void SubmitHash::push_error(FILE * fh, const char* format, ... ) const //CHECK_PRINTF_FORMAT(3,4);
@@ -1074,6 +1076,39 @@ void SubmitHash::set_submit_param_used( const char *name )
 	increment_macro_use_count(name, SubmitMacroSet);
 }
 
+int SubmitHash::AssignJOBSETExpr (const char * attr, const char *expr, const char * source_label /*=NULL*/)
+{
+	ExprTree *tree = NULL;
+	if (ParseClassAdRvalExpr(expr, tree)!=0 || ! tree) {
+		push_error(stderr, "Parse error in JOBSET expression: \n\t%s = %s\n\t", attr, expr);
+		if ( ! SubmitMacroSet.errors) {
+			fprintf(stderr,"Error in %s\n", source_label ? source_label : "submit file");
+		}
+		ABORT_AND_RETURN( 1 );
+	}
+
+	if ( ! jobsetAd) { jobsetAd = new ClassAd(); }
+
+	if ( ! jobsetAd->Insert (attr, tree)) {
+		push_error(stderr, "Unable to insert JOBSET expression: %s = %s\n", attr, expr);
+		ABORT_AND_RETURN( 1 );
+	}
+
+	return 0;
+}
+
+bool SubmitHash::AssignJOBSETString (const char * attr, const char *sval)
+{
+	if ( ! jobsetAd) { jobsetAd = new ClassAd(); }
+
+	if ( ! jobsetAd->Assign (attr, sval)) {
+		push_error(stderr, "Unable to insert JOBSET expression: %s = \"%s\"\n", attr, sval);
+		abort_code = 1;
+		return false;
+	}
+
+	return true;
+}
 
 int SubmitHash::AssignJobExpr (const char * attr, const char *expr, const char * source_label /*=NULL*/)
 {
@@ -2840,6 +2875,63 @@ int SubmitHash::SetForcedAttributes()
 	} else {
 		AssignJobVal(ATTR_PROC_ID, jid.proc);
 	}
+	return 0;
+}
+
+int SubmitHash::ProcessJobsetAttributes()
+{
+	RETURN_IF_ABORT();
+	// jobset attributes must be common for all the jobs in a cluster
+	// so when processing procid=0 anything is ok.  but when processing proc > 0 we have to make sure that the values are consistent
+	if (jid.proc <= 0) {
+		HASHITER it = hash_iter_begin(SubmitMacroSet);
+		for( ; ! hash_iter_done(it); hash_iter_next(it)) {
+			const char *name = hash_iter_key(it);
+			if ( ! starts_with_ignore_case(name, "JOBSET.")) continue;
+
+			const char *raw_value = hash_iter_value(it);
+			auto_free_ptr value(submit_param(name));
+
+			// For now, treat JOBSET.Name = x as a synonym for JOBSET.JobSetName = "x"
+			name += sizeof("JOBSET.")-1;
+			if (YourStringNoCase("name") == name) {
+				if (value) {
+					AssignJOBSETString(ATTR_JOB_SET_NAME, trim_and_strip_quotes_in_place(value.ptr()));
+				}
+			} else if (value) {
+				AssignJOBSETExpr(name, value);
+			}
+			RETURN_IF_ABORT();
+		}
+		hash_iter_delete(&it);
+
+		std::string name;
+		if (job->LookupString(ATTR_JOB_SET_NAME, name)) {
+			AssignJOBSETString(ATTR_JOB_SET_NAME, name.c_str());
+		} else if (jobsetAd) {
+			if ( ! jobsetAd->LookupString(ATTR_JOB_SET_NAME, name)) {
+				// use the clusterid as the jobset name
+				formatstr(name, "%d", jid.cluster);
+				jobsetAd->Assign(ATTR_JOB_SET_NAME, name);
+			}
+			job->Assign(ATTR_JOB_SET_NAME, name.c_str());
+		}
+
+	} else {
+		if (procAd->GetChainedParentAd() && procAd->LookupIgnoreChain(ATTR_JOB_SET_NAME)) {
+			// We cannot handle the case where multiple jobs in a cluster are in different JOBSETs
+			// so error out if that is attempted
+			classad::ClassAd * clusterAd = procAd->GetChainedParentAd();
+			std::string name1, name2;
+			clusterAd->LookupString(ATTR_JOB_SET_NAME, name1);
+			procAd->LookupString(ATTR_JOB_SET_NAME, name2);
+			push_error( stderr, "(%d.%d:%s != %d.%d:%s) All jobs from a single submission must be in the same JOBSET\n",
+				jid.cluster,0, name1.c_str(),
+				jid.cluster,jid.proc, name2.c_str());
+			ABORT_AND_RETURN( 1 );
+		}
+	}
+
 	return 0;
 }
 
@@ -4988,6 +5080,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 
 	{SUBMIT_KEY_AllowedJobDuration, ATTR_JOB_ALLOWED_JOB_DURATION, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_AllowedExecuteDuration, ATTR_JOB_ALLOWED_EXECUTE_DURATION, SimpleSubmitKeyword::f_as_expr},
+
+	{SUBMIT_KEY_JobSet, ATTR_JOB_SET_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
@@ -8389,6 +8483,10 @@ ClassAd* SubmitHash::make_job_ad (
 		// SetForcedAttributes should be last so that it trumps values
 		// set by normal submit attributes
 	SetForcedAttributes();
+
+		// process and validate JOBSET.* attributes
+		// and verify that the jobset membership request is valid (i.e. jobset memebership is a cluster attribute, not a job attribute)
+	ProcessJobsetAttributes();
 
 	// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
 	// SetCronTab(), SetPerFileEncryption(), SetAutoAttributes().
