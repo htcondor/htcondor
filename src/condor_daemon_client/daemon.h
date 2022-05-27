@@ -131,7 +131,7 @@ public:
 		  to use the DaemonAllowLocateFull subclass.
 		  @return Success or failure of getting all the info.
 		*/
-	enum LocateType {LOCATE_FULL, LOCATE_FOR_LOOKUP};
+	enum LocateType {LOCATE_FULL, LOCATE_FOR_LOOKUP, LOCATE_FOR_ADMIN};
 	virtual bool locate( LocateType method=LOCATE_FOR_LOOKUP );
 
 		/** Return the error string.  If there's ever a problem

@@ -9335,7 +9335,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     commands to the daemon.
     The **condor_collector** will only provide this key to clients who
     are authorized at the ADMINISTRATOR level to the **condor_collector**.
-    The default value is ``False``.
+    The default value is ``True``.
 
     When this parameter is enabled for all daemons, control of who is
     allowed to administer the pool can be consolidated in the

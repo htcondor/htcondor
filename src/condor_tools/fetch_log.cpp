@@ -146,7 +146,7 @@ int main( int argc, char *argv[] )
 		
 	dprintf(D_FULLDEBUG,"Locating daemon process on %s...\n",machine_name);
 
-	if(!daemon->locate()) {
+	if(!daemon->locate(Daemon::LOCATE_FOR_ADMIN)) {
 		fprintf(stderr,"Couldn't locate daemon on %s: %s\n",machine_name,daemon->error());
 		exit(1);
 	}

@@ -326,6 +326,7 @@ bool Defrag::queryMachines(char const *constraint,char const *constraint_source,
 		// if no projection supplied, just get the Name attribute
 		startdQuery.setDesiredAttrs("Name");
 	}
+	startdQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
 
 	CollectorList* collects = daemonCore->getCollectorList();
 	ASSERT( collects );

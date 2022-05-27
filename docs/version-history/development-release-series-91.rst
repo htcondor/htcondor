@@ -30,6 +30,13 @@ New Features:
   from ``DAGMAN_DEFAULT_APPEND_VARS`` config variable.
   :jira:`1080`
 
+- The remote administration capability in daemon ads sent to the
+  **condor_collector** (configuration parameter
+  ``SEC_ENABLE_REMOTE_ADMINISTRATION``) is now enabled be default.
+  Client tools that issue ADMINISTRATOR-level commands now try to use
+  this capability if it's available.
+  :jira:`1122`
+
 - For **arc** grid universe jobs, SciTokens can now be used for
   authentication with the ARC CE server.
   :jira:`1061`
