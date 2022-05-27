@@ -15,6 +15,9 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-9014`.
 
+- On macOS, updated to LibreSSL 2.8.3 and removed support for VOMS.
+  :jira:`1129`
+
 New Features:
 
 - *condor_submit* now has support for submitting jobsets. Jobsets are still
@@ -27,9 +30,17 @@ New Features:
   from ``DAGMAN_DEFAULT_APPEND_VARS`` config variable.
   :jira:`1080`
 
+- For **arc** grid universe jobs, SciTokens can now be used for
+  authentication with the ARC CE server.
+  :jira:`1061`
+
 Bugs Fixed:
 
-- None.
+- Fixed the ``TransferInputStats`` nested attributes ``SizeBytesLastRun`` and
+  ``SizeBytesTotal`` values from overflowing and becoming negative when transfering
+  files greater than two gigabytes via plugin.
+  :jira:`1103`
+  
 
 Version 9.9.0
 -------------

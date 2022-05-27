@@ -93,7 +93,7 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem("COLLECTOR", SUBSYSTEM_TYPE_COLLECTOR );
+	set_mySubSystem("COLLECTOR", true, SUBSYSTEM_TYPE_COLLECTOR );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

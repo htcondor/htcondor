@@ -35,16 +35,19 @@ class ArcResource : public BaseResource
 {
  public:
 
-	ArcResource( const char *resource_name, const Proxy *proxy );
+	ArcResource( const char *resource_name, const Proxy *proxy,
+	             const std::string& token_file );
 	~ArcResource();
 
 	const char *ResourceType();
 	void Reconfig();
 
 	static std::string & HashName( const char *resource_name,
-								 const char *proxy_subject );
+	                               const char *proxy_subject,
+	                               const std::string& token_file );
 	static ArcResource *FindOrCreateResource( const char *resource_name,
-													const Proxy *proxy );
+	                                          const Proxy *proxy,
+	                                          const std::string& token_file );
 
 	const char *GetHashName();
 
@@ -52,6 +55,7 @@ class ArcResource : public BaseResource
 
 	char *proxySubject;
 	char *proxyFQAN;
+	std::string m_tokenFile;
 	GahpClient *gahp;
 
 	static std::map <std::string, ArcResource *> ResourcesByName;

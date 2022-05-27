@@ -38,6 +38,7 @@
 #define GAHP_COMMAND_CACHE_PROXY_FROM_FILE "CACHE_PROXY_FROM_FILE"
 #define GAHP_COMMAND_USE_CACHED_PROXY "USE_CACHED_PROXY"
 #define GAHP_COMMAND_UNCACHE_PROXY "UNCACHE_PROXY"
+#define GAHP_COMMAND_UPDATE_TOKEN "UPDATE_TOKEN"
 
 #define GAHP_RESULT_SUCCESS "S"
 #define GAHP_RESULT_ERROR "E"
@@ -113,6 +114,7 @@ class IOProcess {
 
 	std::map<std::string, std::string> m_cached_proxies;
 	std::string m_active_proxy;
+	std::string m_active_token;
 };
 
 #endif

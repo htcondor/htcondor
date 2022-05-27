@@ -1277,8 +1277,9 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 				assert( syscall_sock->code(terrno) );
 			}
 
+			// Condor-C relies on the ServerTimer attribute
 			if( rval >= 0 ) {
-				assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE, proj.empty() ? NULL : &proj) );
+				assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE | PUT_CLASSAD_SERVER_TIME, proj.empty() ? NULL : &proj) );
 				FreeJobAd(ad);
 			}
 		} while (rval >= 0);

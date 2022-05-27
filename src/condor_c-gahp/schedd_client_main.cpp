@@ -214,7 +214,7 @@ main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem( "C_GAHP_WORKER_THREAD", SUBSYSTEM_TYPE_GAHP );
+	set_mySubSystem( "C_GAHP_WORKER_THREAD", false, SUBSYSTEM_TYPE_GAHP );
 
 	dc_main_pre_command_sock_init = main_pre_command_sock_init;
 	dc_main_init = main_init;

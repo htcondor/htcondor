@@ -30,8 +30,6 @@
 class ReliSock;
 class Stream;
 
-void AttrList_setPublishServerTime(bool publish);
-
 bool getClassAd( Stream *sock, classad::ClassAd& ad);
 bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options);
 #define GET_CLASSAD_NO_CACHE            0x01 // don't use the classAdCache (default is to cache)
@@ -78,6 +76,7 @@ int putClassAd (Stream *sock, const classad::ClassAd& ad, int options,
 #define PUT_CLASSAD_NO_TYPES            0x02 // exclude MyType and TargetType from output.
 #define PUT_CLASSAD_NON_BLOCKING        0x04 // use non-blocking sematics. returns 2 of this would have blocked.
 #define PUT_CLASSAD_NO_EXPAND_WHITELIST 0x08 // use the whitelist argument as-is, (default is to expand internal references before using it)
+#define PUT_CLASSAD_SERVER_TIME         0x10 // add ServerTime attribute with current time value
 
 // fetch the given attribute from the queryAd and convert it into a set of attributes
 //   the attribute should be a string value containing a comma and/or space separated list of attributes (like StringList)

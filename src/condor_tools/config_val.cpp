@@ -824,7 +824,7 @@ main( int argc, const char* argv[] )
 
 	// Set subsystem to tool, and subsystem name to either "TOOL" or what was 
 	// specified on the command line.
-	set_mySubSystem(subsys, SUBSYSTEM_TYPE_TOOL);
+	set_mySubSystem(subsys, false, SUBSYSTEM_TYPE_TOOL);
 
 		// Honor any local name we might want to use for the param system
 		// while looking up variables.
