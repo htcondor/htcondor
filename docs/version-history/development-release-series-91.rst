@@ -17,17 +17,14 @@ Release Notes:
 
 New Features:
 
-- Job duration policy hold message now displays the time exceeded in 
-  'dd+hh:mm:ss' format rather than just seconds.
-  :jira:`1062`
-
-- The ``OWNER`` authorization level has been removed. Commands that used to
-  require this level now require ``ADMINISTRATOR`` authorization.
-  :jira:`1023`
-
-- Improved the algorithm in the schedd to speed up the scheduling of jobs
-  when reusing claims.
-  :jira:`1056`
+- Daemons can optionally send a security capability when they advertise themselves
+  to the *condor_collector*.
+  Authorized administrator tools can retrieve this capability from the
+  *condor_collector*, which allows them to send administrative commands
+  to the daemons.
+  This allows the authentication and authorization of administrators of a
+  whole pool to be centralized at the *condor_collector*.
+  :jira:`638`
 
 - Elliptic-curve Diffie-Hellman (ECDH) Key Exchange is now used to generate
   session keys for network communication.
@@ -41,22 +38,19 @@ New Features:
   session is not recognized.
   :jira:`1057`
 
-- Changed the result returned by evaluating a nested classad a
-  with no attribute named "missing" to return undefined when evaluating
-  a["missing"].  This matches the a.missing syntax
-  :jira:`1065`
+- Fix issue where DAGMan direct submission failed when using Kerberos.
+  :jira:`1060`
 
-- Singularity jobs can now pull images from docker style repos.
+- Added a Job Ad attribute called ``JobSubmitMethod`` to record what tool a user
+  used to submit job(s) to HTCondor.
+  :jira:`996`
+
+- Singularity jobs can now pull images from docker style repositories.
   :jira:`1059`
 
-- Daemons now send a security capability when they advertise themselves
-  to the **condor_collector**.
-  Authorized administrator tools can retrieve this capability from the
-  **condor_collector**, which allows them to send administrative commands
-  to the daemons.
-  This allows the authentication and authorization of administrators of a
-  whole pool to be centralized at the **condor_collector**.
-  :jira:`638`
+- The ``OWNER`` authorization level has been removed. Commands that used to
+  require this level now require ``ADMINISTRATOR`` authorization.
+  :jira:`1023`
 
 - Python bindings on Windows have been updated to Python 3.9. Bindings for
   Python 2.7 will no longer be available. If you are building HTCondor
@@ -64,16 +58,25 @@ New Features:
   are now supported by the build.
   :jira:`1008`
 
-- Added support for a global CM which only schedules fair-share between schedds,
-  with each schedd owning a local CM for fair-share between users.
+- Job duration policy hold message now displays the time exceeded in 
+  'dd+hh:mm:ss' format rather than just seconds.
+  :jira:`1062`
+
+- Improved the algorithm in the *condor_schedd* to speed up the scheduling of jobs
+  when reusing claims.
+  :jira:`1056`
+
+- Changed the result returned by evaluating a nested ClassAd a
+  with no attribute named "missing" to return undefined when evaluating
+  a["missing"].  This matches the a.missing syntax
+  :jira:`1065`
+
+- Added support for a global CM which only schedules fair-share between *condor_schedd*s,
+  with each *condor_schedd* owning a local CM for fair-share between users.
   :jira:`1003`
 
-- Added a Job Ad attribute called ``JobSubmitMethod`` to record what tool a user
-  used to submit job(s) to HTCondor.
-  :jira:`996`
-
 - In the configuration for daemon logs, ``D_FULLDEBUG`` no longer modifies the verbosity
-  of other message catagories.  For instance ``D_FULLDEBUG D_SECURITY`` will now select
+  of other message categories.  For instance ``D_FULLDEBUG D_SECURITY`` will now select
   debug messages and ``D_SECURITY:1`` messages.  In previous versions it would select debug
   messages and also modify ``D_SECURITY`` to select ``D_SECURITY:2`` messages.   The manual
   has been updated to explain the use of verbosity modifiers in :macro:`<SUBSYS>_DEBUG`.
@@ -81,13 +84,13 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug in the dedicated scheduler when using partitionable slots that would
+  cause the *condor_schedd* to assert.
+  :jira:`1042`
+
 - Fix a rare bug where the starter will fail to start a job, and the job will
   immediately transition back to the idle state to be run elsewhere.
   :jira:`1040`
-
-- Fixed a bug in the dedicated scheduler when using partionable slots that would
-  cause the schedd to assert.
-  :jira:`1042`
 
 Version 9.8.1
 -------------
