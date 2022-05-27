@@ -37,33 +37,35 @@ Version 9.0.13
 
 Release Notes:
 
-.. HTCondor version 9.0.13 released on Month Date, 2022.
-
-- HTCondor version 9.0.13 not yet released.
+- HTCondor version 9.0.13 released on May 26, 2022.
 
 New Features:
-
-- *condor_config_val* will now print an ``@=end/@end`` pair rather than simply ``=``
-  when printing multi-line configuration values for ``-dump``, ``-summary``, and ``-verbose``
-  mode output.
-  :jira:`1032`
 
 - If the configuration macro ``[SCHEDD|STARTD]_CRON_LOG_NON_ZERO_EXIT`` is
   set to true, the corresponding daemon will write the cron job's non-zero
   exit code to the log, followed by the cron job's output.
   :jira:`971`
 
+- *condor_config_val* will now print an ``@=end/@end`` pair rather than simply ``=``
+  when printing multi-line configuration values for ``-dump``, ``-summary``, and ``-verbose``
+  mode output.
+  :jira:`1032`
+
+- Add a ``SEC_CREDENTIAL_STORECRED_OPTS`` variable to *condor_vault_storer*
+  to enable sending additional options to every *condor_store_cred* command.
+  :jira:`1091`
+
+- Recognize the new format of vault tokens, beginning with ``hvs.`` in addition
+  to the old format beginning with ``s.`` .
+  :jira:`1091`
+
 Bugs Fixed:
 
 - The *condor_run* tool now reports job submit errors
-  and warnings rather than writing them into a log file.
+  and warnings to the terminal rather than writing them into a log file.
   :jira:`1002`
 
-- Updated the Windows build of HTCondor to use SSL 1.1.1m.
-  :jira:`840`
-
-- Fixed a bug where Kerberos Authentication would fail for
-  dagman.
+- Fixed a bug where Kerberos Authentication would fail for DAGMan.
   :jira:`1060`
 
 - Fix problem that can cause HTCondor to not start up when the network
@@ -71,6 +73,9 @@ Bugs Fixed:
   Long hostnames, multiple CCB addresses, having both IPv4 and IPv6 addresses,
   and long private network names all contribute to complexity.
   :jira:`1070`
+
+- Updated the Windows build of HTCondor to use SSL 1.1.1m.
+  :jira:`840`
 
 .. _lts-version-history-9012:
 
