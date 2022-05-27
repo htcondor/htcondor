@@ -29,7 +29,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed the ``TransferInputStats`` nested attributes ``SizeBytesLastRun`` and
+  ``SizeBytesTotal`` values from overflowing and becoming negative when transfering
+  files greater than two gigabytes via plugin.
+  :jira:`1103`
+  
 
 Version 9.9.0
 -------------
