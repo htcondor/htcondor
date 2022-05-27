@@ -69,12 +69,13 @@ currently held by the *condor_collector* daemon. In this case the
  INVALIDATE_STORAGE_ADS
 
 For any of these INVALIDATE commands, the ClassAd in the required file
-consists of three entries. The file contents will be similar to:
+will look like the following:
 
 .. code-block:: condor-classad-expr
 
     MyType = "Query"
-    TargetType = "Machine" 
+    TargetType = "Machine"
+    Name = "condor.example.com"
     Requirements = Name == "condor.example.com"
 
 The definition for ``MyType`` is always ``Query``. ``TargetType`` is set
@@ -149,7 +150,8 @@ machine's *condor_startd* ClassAd. Create a file (called
 .. code-block:: condor-classad
 
     MyType = "Query"
-    TargetType = "Machine" 
+    TargetType = "Machine"
+    Name = "condor.example.com"
     Requirements = Name == "condor.example.com"
 
 This file is used with the command:
