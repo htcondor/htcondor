@@ -719,6 +719,8 @@ def annex_inner_func(
     # Print out what's going to be done, along with how to change the
     # values that came from defaults rather than the command-line.
     #
+    # FIXME: add --idle, once that's implemented.
+    #
     resources = ""
     if cpus is not None:
         resources = f"{cpus} CPUs "
@@ -738,7 +740,7 @@ def annex_inner_func(
         f"This will{as_project}request {resources} for an annex named '{annex_name}'"
         f" from the queue named '{queue_name}' on the system named '{SYSTEM_TABLE[system]['pretty_name']}'."
         f"  To change the project, use --project."
-        f"  To change the resources requested, use --nodes or --cpus and/or --mem_mb."
+        f"  To change the resources requested, use either --nodes or one or more of --cpus and --mem_mb."
         f"  To change how long the resources are reqested for, use --lifetime (in seconds)."
         f"\n"
     )
@@ -803,9 +805,10 @@ def annex_inner_func(
     logger.debug(f"... made remote temporary directory {remote_script_dir} ...")
 
     #
-    # FIXME: This operation can fail or take a while.
+    # This operation can fail or take a while, but (HTCONDOR-1058) should
+    # not need to display two lines.
     #
-    logger.debug(f"Populating annex temporary directory...")
+    logger.info(f"Populating annex temporary directory...")
     populate_remote_temporary_directory(
         logger,
         ssh_connection_sharing,
@@ -827,7 +830,7 @@ def annex_inner_func(
             remote_script_dir,
             sif_files,
         )
-    logger.debug("... populated.")
+    logger.info("... populated.")
 
     # Submit local universe job.
     logger.debug("Submitting state-tracking job...")
