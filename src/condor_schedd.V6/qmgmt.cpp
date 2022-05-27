@@ -1849,7 +1849,7 @@ static bool
 InitOwnerinfo(
 	JobQueueBase * bad,
 	std::string & owner,
-	struct ownerinfo_init_state & is)
+	const struct ownerinfo_init_state & is)
 {
 	// owner_history tracks the OS usernames that have
 	// been used to run jobs on this schedd; it's part of a
@@ -1903,7 +1903,7 @@ static bool
 InitJobsetAd(
 	JobQueueJobSet * jobset,
 	std::string & owner,
-	struct ownerinfo_init_state & is)
+	const struct ownerinfo_init_state & is)
 {
 	if ( ! InitOwnerinfo(jobset, owner, is))
 		return false;
@@ -1922,7 +1922,7 @@ static bool
 InitClusterAd (
 	JobQueueCluster * cad,
 	std::string & owner,
-	struct ownerinfo_init_state & is,
+	const struct ownerinfo_init_state & is,
 	std::vector<unsigned int> & jobset_ids,
 	std::unordered_map<std::string, unsigned int> & needed_sets)
 {
@@ -2007,6 +2007,7 @@ CreateNeededJobsets(
 			sad->LookupString(ATTR_JOB_SET_NAME, name2);
 			if (alias == JobSets::makeAlias(name2, sad->ownerinfo->name)) {
 				dprintf(D_FULLDEBUG, "need jobset id %d already has a jobset ad\n", jobset_id);
+				continue;
 			} else {
 				// allocate a new jobset id here
 				jobset_id = NewCluster();
@@ -2019,7 +2020,7 @@ CreateNeededJobsets(
 		cad->LookupString(ATTR_JOB_SET_NAME, setname);
 		if ( ! JobSetCreate(jobset_id, setname.c_str(), cad->ownerinfo->Name())) {
 			++fail_count;
-			break;
+			continue;
 		} else {
 			dprintf(D_STATUS, "Created new jobset %s for user %s.  jobset id = %d\n", setname.c_str(), cad->ownerinfo->Name(), jobset_id);
 			jobset_ids.push_back(jobset_id);
