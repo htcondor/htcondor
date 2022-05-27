@@ -431,6 +431,7 @@ main( int argc, char *argv[] )
 
 		ClassAdList schedList;
 		QueryResult qres = colist->query (query, schedList);
+		delete colist;
 		schedList.Rewind();
 		ClassAd * schedAd = schedList.Next();
 		if (qres != Q_OK || ! schedAd) {
