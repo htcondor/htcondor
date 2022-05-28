@@ -65,11 +65,11 @@ New Features:
   :jira:`1056`
 
 - Changed the result returned by evaluating a nested ClassAd a
-  with no attribute named "missing" to return undefined when evaluating
-  a["missing"].  This matches the a.missing syntax
+  with no attribute named ``missing`` to return undefined when evaluating
+  ``a["missing"]``.  This matches the ``a.missing`` syntax.
   :jira:`1065`
 
-- Added support for a global CM which only schedules fair-share between *condor_schedd*s,
+- Added support for a global CM which only schedules fair-share between *condor_schedd* s,
   with each *condor_schedd* owning a local CM for fair-share between users.
   :jira:`1003`
 
