@@ -66,7 +66,7 @@ num_string( int num )
 }
 
 
-char*
+std::string
 startdClaimIdFile( int slot_id )
 {
 	std::string filename;
@@ -83,7 +83,7 @@ startdClaimIdFile( int slot_id )
 		if( ! tmp ) {
 			dprintf( D_ALWAYS,
 					 "ERROR: startdClaimIdFile: LOG is not defined!\n" );
-			return NULL;
+			return "";
 		}
 		filename = tmp;
 		free( tmp );
@@ -96,7 +96,7 @@ startdClaimIdFile( int slot_id )
 		filename += ".slot";
 		filename += std::to_string( slot_id );
 	}			
-	return strdup( filename.c_str() );
+	return filename;
 }
 
 const char*

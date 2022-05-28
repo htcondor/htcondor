@@ -16209,27 +16209,26 @@ Scheduler::claimLocalStartd()
 		}
 
 			// now get the location of the claim id file
-		char *file_name = startdClaimIdFile(slot_id);
-		if (!file_name) continue;
+		std::string file_name = startdClaimIdFile(slot_id);
+		if (file_name.empty()) continue;
 			// now open it as user condor and read out the claim
 		claim_id[0] = '\0';	// so we notice if we fail to read
 			// note: claim file written w/ condor priv by the startd
 		priv_state old_priv = set_condor_priv(); 
-		FILE* fp=safe_fopen_wrapper_follow(file_name,"r");
+		FILE* fp=safe_fopen_wrapper_follow(file_name.c_str(),"r");
 		if ( fp ) {
 			if (fscanf(fp,"%150s\n",claim_id) != 1) {
-				dprintf(D_ALWAYS, "Failed to fscanf claim_id from file %s\n", file_name);
+				dprintf(D_ALWAYS, "Failed to fscanf claim_id from file %s\n", file_name.c_str());
 				continue;
 			}
 			fclose(fp);
 		}
 		set_priv(old_priv);	// switch our priv state back
-		free(file_name);
 		claim_id[150] = '\0';	// make certain it is null terminated
 			// if we failed to get the claim, move on
 		if ( !claim_id[0] ) {
 			dprintf(D_ALWAYS,"Failed to read startd claim id from file %s\n",
-				file_name);
+				file_name.c_str());
 			continue;
 		}
 
@@ -16358,10 +16357,7 @@ Scheduler::addCronTabClusterId( int cluster_id )
 void 
 Scheduler::processCronTabClusterIds( )
 {
-	int cluster_id;
 	CronTab *cronTab = NULL;
-	ClassAd *jobAd = NULL;
-	
 		//
 		// Loop through all the cluster_ids that we have stored
 		// For each cluster, we will inspect the job ads of all its
