@@ -41,6 +41,11 @@ New Features:
   authentication with the ARC CE server.
   :jira:`1061`
 
+- All regular expressions in configuration and in the classad regexp function
+  now use the pcre2 10.39 library. (http://www.pcre.org). We believe that this
+  will break no existing regular expressions.
+  :jira:`1087`
+
 Bugs Fixed:
 
 - Fixed the ``TransferInputStats`` nested attributes ``SizeBytesLastRun`` and
@@ -68,11 +73,6 @@ New Features:
 - Job duration policy hold message now displays the time exceeded in
   'dd+hh:mm:ss' format rather than just seconds.
   :jira:`1062`
-
-- All regular expressions in configuration and in the classad regexp function
-  now use the pcre2 10.39 library. (http://www.pcre.org). We believe that this
-  will break no existing regular expressions.
-  :jira:`1087`
 
 - The ``OWNER`` authorization level has been removed. Commands that used to
   require this level now require ``ADMINISTRATOR`` authorization.
