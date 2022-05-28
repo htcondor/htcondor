@@ -48,6 +48,9 @@ Bugs Fixed:
   files greater than two gigabytes via plugin.
   :jira:`1103`
   
+- Fixed a bug preventing ``preserve_relative_paths`` from working with
+  lots (tens of thousands) of files.
+  :jira:`993`
 
 Version 9.9.0
 -------------
@@ -138,10 +141,6 @@ Bugs Fixed:
 - Fixed a bug in the dedicated scheduler when using partionable slots that would
   cause the schedd to assert.
   :jira:`1042`
-
-- Fixed a bug preventing ``preserve_relative_paths`` from working with
-  lots (tens of thousands) of files.
-  :jira:`993`
 
 Version 9.8.1
 -------------
