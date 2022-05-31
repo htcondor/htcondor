@@ -24,6 +24,9 @@ New Features:
   has been improved to clarify what this tool does and how to use it.
   :jira:`1102`
 
+- Made SciTokens mapping failures more prominent in the daemon logs.
+  :jira:`1072`
+
 Bugs Fixed:
 
 - Fixed a bug where if a job's output and error were directed to the same
