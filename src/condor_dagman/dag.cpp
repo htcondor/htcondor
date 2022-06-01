@@ -2528,7 +2528,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 void
 Dag::WriteScriptToRescue( FILE *fp, Script *script )
 {
-	const char *type;
+	const char *type = nullptr;
 	switch( script->_type ) {
 		case ScriptType::PRE: type = "PRE"; break;
 		case ScriptType::POST: type = "POST"; break;

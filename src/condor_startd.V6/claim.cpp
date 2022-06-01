@@ -2455,16 +2455,14 @@ ClaimId::dropFile( int slot_id )
 	if( ! param_boolean("STARTD_SHOULD_WRITE_CLAIM_ID_FILE", true) ) {
 		return;
 	}
-	char* filename = startdClaimIdFile( slot_id );  
-	if( ! filename ) {
+	std::string filename = startdClaimIdFile( slot_id );  
+	if( filename.empty() ) {
 		dprintf( D_ALWAYS, "Error getting claim id filename, not writing\n" );
 		return;
 	}
 
 	std::string filename_final = filename;
 	std::string filename_tmp = filename;
-	free( filename );
-	filename = NULL;
 
 	filename_tmp += ".new";
 

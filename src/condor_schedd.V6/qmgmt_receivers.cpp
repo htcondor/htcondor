@@ -475,7 +475,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 		ClassAd ad;
 		assert( getClassAd(qmgmt_sock, ad) );
-		dprintf( D_SYSCALLS, "	ad = %p (%lld attrs)\n", &ad, ad.size() );
+		dprintf( D_SYSCALLS, "	ad = %p (%d attrs)\n", &ad, ad.size() );
 		assert ( syscall_sock->end_of_message() );
 
 		int terrno = 0;
@@ -488,7 +488,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		}
 
 		syscall_sock->encode();
-		if ( ! syscall_sock->code(rval) || (rval < 0) && ! syscall_sock->code(terrno)) {
+		if ( ! syscall_sock->code(rval) || ((rval < 0) && !syscall_sock->code(terrno))) {
 			return -1;
 		}
 		assert( syscall_sock->end_of_message() );;
