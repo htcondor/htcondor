@@ -49,6 +49,7 @@
 #include "AWSv4-utils.h"
 #include "condor_random_num.h"
 #include "condor_sys.h"
+#include "checksum.h"
 
 #include <fstream>
 #include <algorithm>
@@ -4337,10 +4338,38 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			filelist.erase( (iter + 1).base() );
 		}
 	}
-	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after duplicate removal: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+
+    //
+    // If we're transferring a checkpoint, create a MANIFEST file from
+    // the filelist and add it to the files going to the SPOOL.
+    //
+    if( uploadCheckpointFiles ) {
+        // What about partial writes of the MANIFEST file?  Is it enough to
+        // write it first, or does it also have to write its own length
+        // (in lines?) first?
+        dprintf( D_ALWAYS, "MANIFEST\n" );
+        for( auto & fileitem : filelist ) {
+            off_t sourceSize;
+            const std::string & sourceName = fileitem.srcName();
+            // Not sure why this source file doesn't use StatWrapper.
+            struct stat sourceStat;
+            if( stat( sourceName.c_str(), &sourceStat ) != 0 ) {
+                dprintf( D_ALWAYS, "%s ERROR ERROR\n", sourceName.c_str() );
+            } else {
+                sourceSize = sourceStat.st_size;
+            }
+            std::string sourceHash;
+            if(! compute_file_checksum( sourceName, sourceHash )) {
+                dprintf( D_ALWAYS, "Failed to compute file (%s) checksum when sending checkpoint, aborting.\n", sourceName.c_str() );
+                // It would be lovely to tell the shadow what the problem was,
+                // but I don't know how right at the moment.
+                return_and_resetpriv(-1);
+            }
+            dprintf( D_ALWAYS, "%s %ld %s\n", sourceName.c_str(), sourceSize, sourceHash.c_str() );
+        }
+    }
 
 	std::stable_sort(filelist.begin(), filelist.end());
-	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after sorting: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 	for (auto &fileitem : filelist)
 	{
 			// If there's a signed URL to work with, we should use that instead.
