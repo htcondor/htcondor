@@ -2110,22 +2110,32 @@ all attributes.
     Maximum observed physical memory in use by the job in KiB while
     running. :index:`StackSize<single: StackSize; ClassAd job attribute>`
 
-:index:`job ClassAd attribute<single: job ClassAd attribute; StackSize>`
+:index:`ScitokensFile`
+:index:`ScitokensFile<single: ScitokensFile; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ScitokensFile>`
 
 ``ScitokensFile``
     The path and filename containing a SciToken to use for a Condor-C job.
 
-:index:`ScitokensFile`
-:index:`ScitokensFile<single: ScitokensFile; ClassAd job attribute>`
-:index:`job ClassAd attribute<single: job ClassAd attribute; ScitokensFile>`
+:index:`ScratchDirFileCount`
+:index:`ScratchDirFileCount<single: ScratchDirFileCount; ClassAd job attribute>`
+:index:`job ClassAd attribute<single: job ClassAd attribute; ScratchDirFileCount>`
 
 ``ScratchDirFileCount``
     Number of files and directories in the jobs' Scratch directory.  The value is updated
     periodically while the job is running.
 
-:index:`ScratchDirFileCount`
-:index:`ScratchDirFileCount<single: ScratchDirFileCount; ClassAd job attribute>`
-:index:`job ClassAd attribute<single: job ClassAd attribute; ScratchDirFileCount>`
+:index:`ServerTime<single: ServerTime; ClassAd Scheduler attribute>`
+
+``ServerTime``:
+    This is the current time, in Unix epoch seconds.
+    It is added by the *condor_schedd* to the job ads that it sends in
+    reply to a query (e.g. sent to *condor_q*).
+    Since it it not present in the job ad in the *condor_schedd*, it
+    should not be used in any expressions that will be evaluated by the
+    *condor_schedd*.
+
+:index:`job ClassAd attribute<single: job ClassAd attribute; StackSize>`
 
 ``StackSize``
     Utilized for Linux jobs only, the number of bytes allocated for

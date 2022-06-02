@@ -647,6 +647,13 @@ Machine ClassAd Attributes
     *condor_shared_port*, and/or an additional private network
     interface, that information will be included here as well.
 
+:index:`MyCurrentTime<single: MyCurrentTime; ClassAd machine attribute>`
+
+``MyCurrentTime``:
+    The time, represented as the number of second elapsed since the Unix
+    epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor_startd*
+    daemon last sent a ClassAd update to the *condor_collector*.
+
 :index:`MyType<single: MyType; ClassAd machine attribute>`
 
 ``MyType``
