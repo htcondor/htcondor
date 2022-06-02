@@ -1479,7 +1479,7 @@ int PrettyPrinter::set_status_print_mask_from_stream (
 	//PRAGMA_REMIND("tj: fix to handle summary formatting.")
 	int err = SetAttrListPrintMaskFromStream(
 					*pstream,
-					*getCondorStatusPrintFormats(),
+					getCondorStatusPrintFormats(),
 					pm,
 					pmopt,
 					group_by_keys,
