@@ -30,6 +30,7 @@
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
 #include "AWSv4-utils.h"
+#include "shortfile.h"
 
 #include "condor_base64.h"
 #include <sstream>

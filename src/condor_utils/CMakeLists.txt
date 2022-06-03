@@ -429,6 +429,8 @@ secure_file.h
 selector.cpp
 selector.h
 set_user_priv_from_ad.cpp
+shortfile.cpp
+shortfile.h
 sig_name.cpp
 sig_name.h
 simplelist.h

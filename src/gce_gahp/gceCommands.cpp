@@ -23,9 +23,7 @@
 #include "string_list.h"
 #include "gcegahp_common.h"
 #include "gceCommands.h"
-
-// For htcondor::[read|write]ShortFile().
-#include "AWSv4-utils.h"
+#include "shortfile.h"
 
 #include "condor_base64.h"
 #include <sstream>
