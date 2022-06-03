@@ -187,6 +187,10 @@ class Dagman {
 		// condor_submit.
 	bool useDirectSubmit;
 
+		//Determine whether VARS naturally appends variables or not
+		//Only applied if neither APPEND nor PREPEND are specified
+	bool doAppendVars;
+
 		// The interval (in seconds) between reports on what nodes
 		// are pending.
 	int pendingReportInterval;

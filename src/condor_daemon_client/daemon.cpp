@@ -1351,6 +1351,10 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			}
 		}
 
+		if (method == LOCATE_FOR_ADMIN) {
+			query.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
+		}
+
 			// We need to query the collector
 		CollectorList * collectors = CollectorList::create(_pool);
 		CondorError errstack;

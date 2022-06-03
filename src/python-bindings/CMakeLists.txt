@@ -83,7 +83,7 @@ if(WINDOWS)
 				# the 'optimized' keyword indicates that the library following it is for release builds only
 				# the 'debug' keyword indicates that the library following it is for debug builds only
 				add_library( classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
-				target_link_libraries( classad_module pyclassad ${PCRE_FOUND} ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} )
+				target_link_libraries( classad_module pyclassad ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} )
 				set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
 				set_target_properties(classad_module PROPERTIES SUFFIX "${PYTHON_DLL_SUFFIX}" )
 				target_include_directories( classad_module PUBLIC ${PYTHON_INCLUDE_DIRS} )
@@ -150,7 +150,7 @@ if(WINDOWS)
 				# the 'optimized' keyword indicates that the library following it is for release builds only
 				# the 'debug' keyword indicates that the library following it is for debug builds only
 				add_library( py3classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
-				target_link_libraries( py3classad_module py3classad ${PCRE_FOUND}  ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} )
+				target_link_libraries( py3classad_module py3classad ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} )
 				set_target_properties(py3classad_module PROPERTIES PREFIX "" OUTPUT_NAME py3classad PDB_NAME py3classad)
 				set_target_properties(py3classad_module PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME classad PDB_NAME py3classad)
 				set_target_properties(py3classad_module PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
@@ -233,16 +233,8 @@ else()
 
       get_filename_component(PYTHON_LIBRARY_FILENAME ${PYTHON_LIBRARIES} NAME)
       string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON_VERSION_STRING})
-      # Not sure why this is here. Probably should be in Python 3 section.
-      # Protecting with conditionals so Python wheel building will succeed.
-      if (DEFINED PYTHON3_VERSION_STRING)
-        string(REGEX REPLACE "([0-9]+[.][0-9]+).*" "\\1" _PYTHON3_VERSION ${PYTHON3_VERSION_STRING})
-      endif()
       if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
         set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
-        if (DEFINED PYTHON3_VERSION_STRING)
-          set( PYCLASSAD3_LIB_NAME "pyclassad${_PYTHON3_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
-        endif()
       else()
         message(FATAL_ERROR "Can't determine HTCondor version!")
       endif()
@@ -402,7 +394,7 @@ else()
 
       if ( DARWIN )
           set_target_properties( py3classad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
-          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PYCLASSAD3_LIB_NAME}.dylib)" )
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PY3CLASSAD_LIB_NAME}.dylib)" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad/classad${PYTHON3_MODULE_SUFFIX})" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/htcondor/htcondor${PYTHON3_MODULE_SUFFIX})" )
       endif()

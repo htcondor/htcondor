@@ -96,9 +96,6 @@ main_init(int argc, char* argv[])
 		}
 	}
 
-		// Tell Attrlist to publish the server time
-	AttrList_setPublishServerTime( true );
-
 		// Initialize DaemonCore's use of ProcFamily. We do this so that we
 		// launch a ProcD if necessary so that any Starters that we launch
 		// for Local Universe jobs can share a single ProcD, instead of
@@ -207,7 +204,7 @@ main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem( "SCHEDD", SUBSYSTEM_TYPE_SCHEDD );
+	set_mySubSystem( "SCHEDD", true, SUBSYSTEM_TYPE_SCHEDD );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

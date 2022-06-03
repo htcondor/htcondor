@@ -65,7 +65,7 @@ auto_approve(const std::string &pool, const std::string &name, daemon_t dtype,
 		daemon.reset(new Daemon( dtype, name.c_str() ));
 	}
 
-	if (!(daemon->locate(Daemon::LOCATE_FOR_LOOKUP))) {
+	if (!(daemon->locate(Daemon::LOCATE_FOR_ADMIN))) {
 		if (!name.empty()) {
 			fprintf(stderr, "ERROR: couldn't locate daemon %s!\n", name.c_str());
 		} else {

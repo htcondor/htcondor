@@ -85,7 +85,7 @@ main( int argc, const char *argv[] )
 
 	DCStartd startd( target, pool );
 
-	if( ! startd.locate() ) {
+	if( ! startd.locate(Daemon::LOCATE_FOR_ADMIN) ) {
 		fprintf( stderr, "ERROR: %s\n", startd.error() );
 		exit( 1 );
 	}

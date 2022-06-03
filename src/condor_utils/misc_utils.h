@@ -20,6 +20,8 @@
 #ifndef _MISC_UTILS_H
 #define _MISC_UTILS_H
 
+#include <string>
+
 
 /* Converts an int to a string w/ "st", "nd", "rd, or "th" added on. */
 const char*	num_string( int );  
@@ -28,10 +30,9 @@ const char*	num_string( int );
 /* Returns the name of the local file the startd uses to write its
    current claim id into.  If the given slot_id is 0, we assume a
    non-SMP startd and use a generic name.  Otherwise, we append ".slotX"
-   to the filename we create.  The memory returned is allocated with
-   malloc() and must be deallocated with free().
+   to the filename we create.
 */
-char* startdClaimIdFile( int slot_id );  
+std::string startdClaimIdFile( int slot_id );  
 
 /* return the timezone on the local host */
 const char* my_timezone(int isdst);

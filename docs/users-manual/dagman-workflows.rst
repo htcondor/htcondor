@@ -1176,7 +1176,7 @@ a macro. Macros are defined on a per-node basis, using the syntax
 
 .. code-block:: condor-dagman
 
-    VARS <JobName | ALL_NODES> macroname="string" [macroname2="string2" ... ]
+    VARS <JobName | ALL_NODES> [PREPEND | APPEND] macroname="string" [macroname2="string2" ... ]
 
 The macro may be used within the submit description file of the relevant
 node. A *macroname* may contain alphanumeric characters (a-z, A-Z, and
@@ -1262,6 +1262,57 @@ The submit description file appears as
 For a DAG such as this one, but with thousands of nodes, the ability to
 write and maintain a single submit description file together with a
 single, yet more complex, DAG input file is worthwhile.
+
+Prepend or Append Variables to Node
+'''''''''''''''''''''''''''''''''''
+
+After *JobName* the word *PREPEND* or *APPEND* can be added to specify how
+a variable is passed to a node at job submission time. *APPEND* will add
+the variable after the submit description file is read. Resulting in the
+passed variable being added as a macro or overwitting any already existing
+variable values. *PREPEND* will add the variable before the submit
+description file is read. This allows the variable to be used in submit
+description file conditionals.
+
+The relevant portion of the DAG input file appears as
+
+.. code-block:: condor-dagman
+
+     JOB A theotherfile.sub
+
+     VARS A PREPEND var1="A"
+     VARS A APPEND  var2="B"
+
+The submit description file appears as
+
+.. code-block:: condor-submit
+
+     # submit description file called:   theotherfile.sub
+     executable   = progX
+
+     if defined var1
+          # This will occur due to PREPEND
+          Arguments = "$(var1) was prepended"
+     else
+          # This will occur due to APPEND
+          Arguments = "No variables prepended"
+     endif
+
+     var2 = "C"
+
+     output       = results-$(var2).out
+     error        = error.txt
+     log          = job.log
+     queue
+
+For a DAG such as this one, ``Arguments`` will become "A was prepended" and the
+output file will be named ``results-B.out``. If instead var1 used *APPEND*
+and var2 used *PREPEND* then ``Arguments`` will become "No variables prepended"
+and the output file will be named ``results-C.out``.
+
+If neither *PREPEND* nor *APPEND* is used in the *VARS* line then the variable
+will either be prepended or appended based on the configuration variable
+``DAGMAN_DEFAULT_APPEND_VARS``.
 
 Multiple macroname definitions
 ''''''''''''''''''''''''''''''

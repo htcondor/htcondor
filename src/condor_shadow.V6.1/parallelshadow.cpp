@@ -796,14 +796,14 @@ ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_st
 
 			// Lookup the value of this attribute. We only count integer values.
 			classad::Value attr_val;
-			int this_val;
+			long long this_val;
 			it->second->Evaluate(attr_val);
 			if (!attr_val.IsIntegerValue(this_val)) {
 				continue;
 			}
 
 			// Lookup the previous value if it exists
-			int prev_val = 0;
+			long long prev_val = 0;
 			upload_stats.LookupInteger(attr, prev_val);
 
 			upload_stats.InsertAttr(attr, prev_val + this_val);
@@ -815,14 +815,14 @@ ParallelShadow::getFileTransferStats(ClassAd &upload_stats, ClassAd &download_st
 
 			// Lookup the value of this attribute. We only count integer values.
 			classad::Value attr_val;
-			int this_val;
+			long long this_val;
 			it->second->Evaluate(attr_val);
 			if (!attr_val.IsIntegerValue(this_val)) {
 				continue;
 			}
 
 			// Lookup the previous value if it exists
-			int prev_val = 0;
+			long long prev_val = 0;
 			download_stats.LookupInteger(attr, prev_val);
 
 			download_stats.InsertAttr(attr, prev_val + this_val);

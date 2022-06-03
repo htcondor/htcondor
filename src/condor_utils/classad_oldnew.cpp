@@ -37,12 +37,6 @@ int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options,
 int _mergeStringListIntoWhitelist(StringList & list_in, classad::References & whitelist_out);
 
 
-static bool publish_server_timeMangled = false;
-void AttrList_setPublishServerTime(bool publish)
-{
-    publish_server_timeMangled = publish;
-}
-
 static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
 
 bool getClassAd( Stream *sock, classad::ClassAd& ad )
@@ -687,7 +681,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 		}
 	}
 
-	if( publish_server_timeMangled ){
+	if( (options & PUT_CLASSAD_SERVER_TIME) != 0 ){
 		//add one for the ATTR_SERVER_TIME expr
 		numExprs++;
 		send_server_time = true;
@@ -791,7 +785,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 	int numExprs = whitelist.size() - blacklist.size();
 
 	bool send_server_time = false;
-	if( publish_server_timeMangled ){
+	if( (options & PUT_CLASSAD_SERVER_TIME) != 0 ){
 		//add one for the ATTR_SERVER_TIME expr
 		// if its in the whitelist but not the blacklist, add it to the blacklist instead
 		// since its already been counted in that case.

@@ -106,7 +106,7 @@ format_time_short( int tot_secs )
      char *time = format_time(tot_secs);
 
      int offset = 0;
-     while ( time[offset] != NULL ){//Run till break
+     while (time[offset]) { //Run till break
           //If character is not whitespace, 0, or the + symbol we stop
           if ( time[offset] != ' ' && time[offset] != '0' && time[offset] != '+' ){
                //Check to see if current offset character is ':'

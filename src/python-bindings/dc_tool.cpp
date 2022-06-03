@@ -126,7 +126,7 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     bool result;
     {
     condor::ModuleLock ml;
-    result = !d.locate();
+    result = !d.locate(Daemon::LOCATE_FOR_ADMIN);
     }
     if (result)
     {
@@ -280,9 +280,9 @@ enable_log()
 
 
 void
-set_subsystem(std::string subsystem, SubsystemType type=SUBSYSTEM_TYPE_AUTO)
+set_subsystem(std::string subsystem, bool trust, SubsystemType type=SUBSYSTEM_TYPE_AUTO)
 {
-    set_mySubSystem(subsystem.c_str(), type);
+    set_mySubSystem(subsystem.c_str(), trust, type);
 }
 
 
@@ -492,10 +492,11 @@ export_dc_tool()
         The subsystem is primarily used for the parsing of the HTCondor configuration file.
 
         :param str name: The subsystem name.
+        :param bool trust: Boolean to represent whether subsystem can be trusted with 'root' privileges.
         :param daemon_type: The HTCondor daemon type. The default value of Auto infers the type from the name parameter.
         :type daemon_type: :class:`SubsystemType`
         )C0ND0R",
-        (boost::python::arg("subsystem"), boost::python::arg("type")=SUBSYSTEM_TYPE_AUTO))
+        (boost::python::arg("subsystem"), boost::python::arg("trust"), boost::python::arg("type")=SUBSYSTEM_TYPE_AUTO))
         ;
 
     def("enable_debug", enable_debug,
@@ -521,6 +522,6 @@ export_dc_tool()
         boost::python::args("level", "msg"))
         ;
 
-    if ( ! has_mySubSystem()) { set_mySubSystem("TOOL", SUBSYSTEM_TYPE_TOOL); }
+    if ( ! has_mySubSystem()) { set_mySubSystem("TOOL", false, SUBSYSTEM_TYPE_TOOL); }
     dprintf_pause_buffering();
 }

@@ -159,12 +159,12 @@ VolumeManager::MountFilesystem(const std::string &device_path, const std::string
         return false;
     }
 
-    // mount -o data=writeback,barrier=0 /dev/test_vg/condor_slot_1 /mnt/condor_slot_1
+    // mount -o ,barrier=0 /dev/test_vg/condor_slot_1 /mnt/condor_slot_1
     ArgList args;
     args.AppendArg("mount");
     args.AppendArg("--no-mtab");
     args.AppendArg("-o");
-    args.AppendArg("data=writeback,barrier=0,noatime,discard,nodev,nosuid,");
+    args.AppendArg("barrier=0,noatime,discard,nodev,nosuid,");
     args.AppendArg(device_path);
     args.AppendArg(mountpoint);
     int exit_status;

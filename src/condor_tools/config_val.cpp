@@ -824,7 +824,7 @@ main( int argc, const char* argv[] )
 
 	// Set subsystem to tool, and subsystem name to either "TOOL" or what was 
 	// specified on the command line.
-	set_mySubSystem(subsys, SUBSYSTEM_TYPE_TOOL);
+	set_mySubSystem(subsys, false, SUBSYSTEM_TYPE_TOOL);
 
 		// Honor any local name we might want to use for the param system
 		// while looking up variables.
@@ -913,9 +913,9 @@ main( int argc, const char* argv[] )
 	// Check for obsolete syntax in config file
 	check_config_for_obsolete_syntax = param_boolean("ENABLE_DEPRECATION_WARNINGS", check_config_for_obsolete_syntax);
 	if (check_config_for_obsolete_syntax) {
-		Regex re; int err = 0; const char * pszMsg = 0;
+		Regex re; int errcode = 0; int erroffset = 0;
 		// check for knobs of the form SUBSYS.LOCALNAME.*
-		ASSERT(re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &pszMsg, &err, PCRE_CASELESS));
+		ASSERT(re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &errcode, &erroffset, PCRE2_CASELESS));
 		std::string obsolete_vars;
 		foreach_param_matching(re, HASHITER_NO_DEFAULTS,
 #ifdef HAS_LAMBDA
@@ -1022,8 +1022,8 @@ main( int argc, const char* argv[] )
 				if (tmp && tmp[0]) { fprintf(stdout, "\n# Parameters with names that match %s:\n", tmp); }
 				std::vector<std::string> names;
 				std::string rawvalbuf;
-				Regex re; int err = 0; const char * pszMsg = 0;
-				if (re.compile(tmp, &pszMsg, &err, PCRE_CASELESS)) {
+				Regex re; int errcode = 0; int errindex;
+				if (re.compile(tmp, &errcode, &errindex, PCRE2_CASELESS)) {
 					if (show_by_usage) {
 						// condor_config_val doesn't normally have any valid use counts
 						// so to get some, we expand everthing in the default param table.
@@ -1154,39 +1154,7 @@ main( int argc, const char* argv[] )
 		if( addr ) {
 			target = new DaemonAllowLocateFull( dt, addr, NULL );
 		} else {
-			char* collector_addr = NULL;
-			if( pool ) {
-				collector_addr = strdup(pool);
-			} else { 
-				CollectorList * collectors = CollectorList::create();
-				Daemon * collector = NULL;
-				ReliSock sock;
-				while (collectors->next (collector)) {
-					if (collector->locate() &&
-					    sock.connect(collector->addr(), 0)) {
-						// Do something with the connection, 
-						// such that we won't end up with 
-						// noise in the collector log
-						collector->startCommand( DC_NOP, &sock, 30 );
-						sock.encode();
-						sock.end_of_message();
-						// If we can connect to the
-						// collector, then we accept
-						// it as valid
-						break;
-					}
-				}
-				if( (!collector) || (!collector->addr()) ) {
-					fprintf( stderr, 
-							 "%s, Unable to locate a collector\n", 
-							 MyName);
-					my_exit( 1 );
-				}
-				collector_addr = strdup(collector->addr());
-				delete collectors;
-			}
-			target = new DaemonAllowLocateFull( dt, name, collector_addr );
-			free( collector_addr );
+			target = new DaemonAllowLocateFull(dt, name, pool);
 		}
 		if( ! target->locate(evaluate_daemon_vars ? Daemon::LOCATE_FULL : Daemon::LOCATE_FOR_LOOKUP) ) {
 			fprintf( stderr, "Can't find address for this %s\n", 

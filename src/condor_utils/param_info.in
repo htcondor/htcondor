@@ -737,6 +737,12 @@ type=bool
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_DEFAULT_APPEND_VARS]
+default=false
+type=bool
+tags=dagman,dagman_main
+restart=never
+
 [DAGMAN_REPORT_GRAPH_METRICS]
 default=false
 type=bool
@@ -945,7 +951,7 @@ usage=Restrict what authorizations can be enabled with impersonation toekns.
 tags=schedd
 
 [SEC_ENABLE_REMOTE_ADMINISTRATION]
-default=false
+default=true
 type=bool
 tags=master
 usage=Set to true to allow the collector administrator(s) to manage the daemon

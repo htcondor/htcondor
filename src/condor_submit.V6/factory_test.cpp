@@ -564,6 +564,8 @@ typedef struct attr_force_pair {
 #define FILL(attr,force) { attr, force }
 static const ATTR_FORCE_PAIR aForcedSetAttrs[] = {
 	FILL(ATTR_CLUSTER_ID,         -1), // forced into cluster ad
+	FILL(ATTR_JOB_SET_ID,         -1), // forced into cluster ad
+	FILL(ATTR_JOB_SET_NAME,       -1), // forced into cluster ad
 	FILL(ATTR_JOB_STATUS,         1),  // forced into proc ad
 	FILL(ATTR_JOB_UNIVERSE,       -1), // forced into cluster ad
 	FILL(ATTR_OWNER,              -1), // forced into cluster ad
@@ -824,7 +826,7 @@ main( int argc, const char *argv[] )
 	ClassAdFileParseType::ParseType clusterad_format = ClassAdFileParseType::Parse_long;
 	std::string errmsg;
 
-	set_mySubSystem( "SUBMIT", SUBSYSTEM_TYPE_SUBMIT );
+	set_mySubSystem( "SUBMIT", false, SUBSYSTEM_TYPE_SUBMIT );
 
 	MyName = condor_basename(argv[0]);
 	myDistro->Init( argc, argv );

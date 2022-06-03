@@ -3533,12 +3533,14 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 		std::string pat;
 		pat.insert(0, pre, 0, (psub - pre));
 
-		const char * errstr = NULL; int erroff= 0;
-		int re_opts = 0;
-		pcre *re = pcre_compile(pat.c_str(), re_opts, &errstr, &erroff, NULL);
+		//const char * errstr = NULL; int erroff= 0;
+		int errcode = 0; PCRE2_SIZE erroff = 0;
+
+		PCRE2_SPTR pat_pcre2str = reinterpret_cast<const unsigned char *>(pat.c_str());
+		pcre2_code *re = pcre2_compile(pat_pcre2str, PCRE2_ZERO_TERMINATED, 0, &errcode, &erroff, NULL);
 		if ( ! re) {
-			dprintf(D_ALWAYS | D_FAILURE, "Assigned%s environment '%s' regex error %s at offset %d in: %s\n",
-				tag, env_name.c_str(), errstr ? errstr : "", erroff, pat.c_str());
+			dprintf(D_ALWAYS | D_FAILURE, "Assigned%s environment '%s' regex PCRE2 error code %d at offset %d in: %s\n",
+				tag, env_name.c_str(), errcode, static_cast<int>(erroff), pat.c_str());
 			break;
 		}
 
@@ -3550,10 +3552,7 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 			}
 		} else {
 			const char * resid;
-			int cGroups = 0;
-			pcre_fullinfo(re, NULL, PCRE_INFO_CAPTURECOUNT, &cGroups);
-			int ovecsize = 3 * (cGroups + 1); // +1 for the string itself
-			int * ovector = (int *) malloc(ovecsize * sizeof(int));
+			pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
 
 			dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' pattern: %s\n", tag, env_name.c_str(), peq);
 
@@ -3562,9 +3561,11 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 			while ((resid = ids.next())) {
 				if ( ! rhs.empty()) { rhs += env_id_separator; }
 				int cchresid = (int)strlen(resid);
-				int status = pcre_exec(re, NULL, resid, cchresid, 0, 0, ovector, ovecsize);
+				PCRE2_SPTR resid_pcre2str = reinterpret_cast<const unsigned char *>(resid);
+				int status = pcre2_match(re, resid_pcre2str, static_cast<PCRE2_SIZE>(cchresid), 0, 0, matchdata, NULL);
 				if (status >= 0) {
-					const struct _pcre_vector { int start; int end; } * groups = (const struct _pcre_vector*)ovector;
+					const struct _pcre_vector { int start; int end; } * groups
+						= (const struct _pcre_vector*) pcre2_get_ovector_pointer(matchdata);
 					dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' match at %d,%d of pattern: %s\n", tag, env_name.c_str(), groups[0].start, groups[0].end, pat.c_str());
 					if (groups[0].start > 0) { rhs.append(resid, 0, groups[0].start); }
 					const char * ps = psub;
@@ -3582,10 +3583,10 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 					rhs += resid;
 				}
 			}
-			free(ovector);
+			pcre2_match_data_free(matchdata);
 		}
 
-		pcre_free(re);
+		pcre2_code_free(re);
 
 		proc_env->SetEnv(env_name.c_str(), rhs.c_str());
 

@@ -243,7 +243,7 @@ main( int argc, char ** const argv )
     	setenv( "_CONDOR_LOG", logDirectory, 1 );
     }
 
-    set_mySubSystem( subSystemName, SUBSYSTEM_TYPE_GAHP );
+    set_mySubSystem( subSystemName, false, SUBSYSTEM_TYPE_GAHP );
     config();
     dprintf_config( subSystemName );
     const char * debug_string = getenv( "DebugLevel" );
