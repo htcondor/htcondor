@@ -187,9 +187,9 @@ static	ClassAdList	scheddList;
 static  ClassAdAnalyzer analyzer;
 #endif
 
-static bool render_owner_local(std::string & out, ClassAd*, Formatter &);
-static bool render_dag_owner_local(std::string & out, ClassAd*, Formatter &);
-static bool render_batch_name_local(std::string & out, ClassAd*, Formatter &);
+static bool local_render_owner(std::string & out, ClassAd*, Formatter &);
+static bool local_render_dag_owner(std::string & out, ClassAd*, Formatter &);
+static bool local_render_batch_name(std::string & out, ClassAd*, Formatter &);
 
 
 // the condor q strategy will be to ingest ads and print them into MyRowOfValues structures
@@ -270,6 +270,7 @@ static	bool		dash_idle = false;
 static	bool		dash_goodput = false;
 static	bool		dash_dry_run = false;
 static	bool		dash_unmatchable = false;
+static  bool		suspend_updates = param_boolean("REAL_TIME_JOB_SUSPEND_UPDATES", false);
 static  const char * dry_run_file = NULL;
 static  const char * capture_raw_results = NULL;
 static  FILE*        capture_raw_fp = NULL;
@@ -988,7 +989,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			}
 
 			if( !(daemonname = get_daemon_name(argv[i+1])) ) {
-				fprintf( stderr, "Error: Funknown host %s\n",
+				fprintf( stderr, "Error: unknown host %s\n",
 						 get_host_part(argv[i+1]) );
 				if (!expert) {
 					printf("\n");
@@ -1860,7 +1861,7 @@ job_time(double cpu_time,ClassAd *ad)
 
 
 static bool
-render_remote_host_local (std::string & result, ClassAd *ad, Formatter &)
+local_render_remote_host (std::string & result, ClassAd *ad, Formatter &)
 {
 	//static char host_result[MAXHOSTNAMELEN];
 	//static char unknownHost [] = "[????????????????]";
@@ -1893,7 +1894,7 @@ render_remote_host_local (std::string & result, ClassAd *ad, Formatter &)
 }
 
 static bool
-render_cpu_time_local (double & cputime, ClassAd *ad, Formatter &)
+local_render_cpu_time (double & cputime, ClassAd *ad, Formatter &)
 {
 	if ( ! ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, cputime))
 		return false;
@@ -1904,7 +1905,7 @@ render_cpu_time_local (double & cputime, ClassAd *ad, Formatter &)
 }
 
 static bool
-render_memory_usage_local(double & mem_used_mb, ClassAd *ad, Formatter &)
+local_render_memory_usage(double & mem_used_mb, ClassAd *ad, Formatter &)
 {
 	long long  image_size;
 	long long memory_usage;
@@ -1923,7 +1924,60 @@ render_memory_usage_local(double & mem_used_mb, ClassAd *ad, Formatter &)
 }
 
 static bool
-render_owner_local(std::string & out, ClassAd *ad, Formatter & /*fmt*/)
+local_render_job_status_char (std::string & result, ClassAd*ad, Formatter &)
+{
+	int job_status;
+	if ( ! ad->LookupInteger(ATTR_JOB_STATUS, job_status))
+		return false;
+
+	char put_result[3];
+	put_result[1] = ' ';
+	put_result[2] = 0;
+
+	put_result[0] = encode_status(job_status);
+	/* The suspension of a job is a second class citizen and is not a true
+	*  status that can exist as a job status ad and is instead
+	*  inferred, so therefore the processing and display of
+	*  said suspension is also second class.
+	*/
+	if (param_boolean("REAL_TIME_JOB_SUSPEND_UPDATES", false)) {
+		int last_susp_time;
+		if (!suspend_updates)
+		{
+			last_susp_time = 0;
+		}
+		/* sanity check the last_susp_time against if the job is running
+		*  or not in case the schedd hasn't synchronized the
+		*  last suspension time attribute correctly to job running
+		*  boundaries.
+		*/
+		if ( job_status == RUNNING && last_susp_time != 0 )
+		{
+			put_result[0] = 'S';
+		}
+	}
+
+	// adjust status field to indicate file transfer status
+	bool transferring_input = false;
+	bool transferring_output = false;
+	bool transfer_queued = false;
+	ad->LookupBool(ATTR_TRANSFERRING_INPUT,transferring_input);
+	ad->LookupBool(ATTR_TRANSFERRING_OUTPUT,transferring_output);
+	ad->LookupBool(ATTR_TRANSFER_QUEUED,transfer_queued);
+	if( transferring_input ) {
+		put_result[0] = '<';
+		put_result[1] = transfer_queued ? 'q' : ' ';
+	}
+	if( transferring_output || job_status == TRANSFERRING_OUTPUT) {
+		put_result[0] = transfer_queued ? 'q' : ' ';
+		put_result[1] = '>';
+	}
+	result = put_result;
+	return true;
+}
+
+static bool
+local_render_owner(std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 {
 	if ( ! ad->LookupString(ATTR_OWNER, out))
 		return false;
@@ -1942,7 +1996,7 @@ render_owner_local(std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 }
 
 static bool
-render_dag_owner_local (std::string & out, ClassAd *ad, Formatter & fmt)
+local_render_dag_owner (std::string & out, ClassAd *ad, Formatter & fmt)
 {
 	if (dash_dag && ad->LookupExpr(ATTR_DAGMAN_JOB_ID)) {
 		if (ad->LookupString(ATTR_DAG_NODE_NAME, out)) {
@@ -1952,11 +2006,11 @@ render_dag_owner_local (std::string & out, ClassAd *ad, Formatter & fmt)
 			fprintf(stderr, "DAG node job with no %s attribute!\n", ATTR_DAG_NODE_NAME);
 		}
 	}
-	return render_owner_local(out, ad, fmt);
+	return local_render_owner(out, ad, fmt);
 }
 
 static bool
-render_batch_name_local (std::string & out, ClassAd *ad, Formatter & /*fmt*/)
+local_render_batch_name (std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 {
 	const bool fold_dagman_sibs = dash_batch && (dash_batch & 2); // hack -batch:2 gives experimental behaviour
 
@@ -1987,7 +2041,7 @@ render_batch_name_local (std::string & out, ClassAd *ad, Formatter & /*fmt*/)
 }
 
 static bool
-render_grid_resource_local(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
+local_render_grid_resource(std::string & result, ClassAd * ad, Formatter & /*fmt*/ )
 {
 	std::string grid_type;
 	std::string str;
@@ -2988,7 +3042,7 @@ static int fnFixupWidthCallback(void* pv, int index, Formatter * fmt, const char
 	} else if (index == name_column_index) { // owner
 		fmt->width = MAX(fmt->width, p->name_width);
 		p->name_width = fmt->width; // return the actual width
-	} else if (fmt->fr == render_memory_usage_local) {
+	} else if (fmt->fr == local_render_memory_usage) {
 		char buf[30];
 		int wid = sprintf(buf, fmt->printfFmt ? fmt->printfFmt : "%.1f", p->max_mem_usage);
 		fmt->width = MAX(fmt->width, wid);
@@ -4336,13 +4390,14 @@ const char * const autoclusterNormal_PrintFormat = "SELECT\n"
 
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
-	{ "BATCH_NAME",      ATTR_JOB_CMD, 0, render_batch_name_local, ATTR_JOB_BATCH_NAME "\0" ATTR_JOB_CMD "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0" },
-	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, "%T", render_cpu_time_local, ATTR_JOB_STATUS "\0" ATTR_SERVER_TIME "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_JOB_REMOTE_WALL_CLOCK "\0" },
-	{ "DAG_OWNER",       ATTR_OWNER, 0, render_dag_owner_local, ATTR_NICE_USER_deprecated "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0"  },
-	{ "GRID_RESOURCE",   ATTR_GRID_RESOURCE, 0, render_grid_resource_local, ATTR_EC2_REMOTE_VM_NAME "\0" },
-	{ "MEMORY_USAGE",    ATTR_IMAGE_SIZE, "%.1f", render_memory_usage_local, ATTR_MEMORY_USAGE "\0" },
-	{ "OWNER",           ATTR_OWNER, 0, render_owner_local, ATTR_NICE_USER_deprecated "\0" },
-	{ "REMOTE_HOST",     ATTR_OWNER, 0, render_remote_host_local, ATTR_JOB_UNIVERSE "\0" ATTR_REMOTE_HOST "\0" ATTR_EC2_REMOTE_VM_NAME "\0" ATTR_GRID_RESOURCE "\0" },
+	{ "BATCH_NAME",      ATTR_JOB_CMD, 0, local_render_batch_name, ATTR_JOB_BATCH_NAME "\0" ATTR_JOB_CMD "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0" },
+	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, "%T", local_render_cpu_time, ATTR_JOB_STATUS "\0" ATTR_SERVER_TIME "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_JOB_REMOTE_WALL_CLOCK "\0" },
+	{ "DAG_OWNER",       ATTR_OWNER, 0, local_render_dag_owner, ATTR_NICE_USER_deprecated "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0"  },
+	{ "GRID_RESOURCE",   ATTR_GRID_RESOURCE, 0, local_render_grid_resource, ATTR_EC2_REMOTE_VM_NAME "\0" },
+	{ "JOB_STATUS",      ATTR_JOB_STATUS, 0, local_render_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
+	{ "MEMORY_USAGE",    ATTR_IMAGE_SIZE, "%.1f", local_render_memory_usage, ATTR_MEMORY_USAGE "\0" },
+	{ "OWNER",           ATTR_OWNER, 0, local_render_owner, ATTR_NICE_USER_deprecated "\0" },
+	{ "REMOTE_HOST",     ATTR_OWNER, 0, local_render_remote_host, ATTR_JOB_UNIVERSE "\0" ATTR_REMOTE_HOST "\0" ATTR_EC2_REMOTE_VM_NAME "\0" ATTR_GRID_RESOURCE "\0" },
 };
 static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
 

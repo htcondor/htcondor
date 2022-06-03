@@ -541,28 +541,7 @@ bool render_job_status_char (std::string & result, ClassAd*ad, Formatter &)
 	put_result[2] = 0;
 
 	put_result[0] = encode_status(job_status);
-	/* The suspension of a job is a second class citizen and is not a true
-	*  status that can exist as a job status ad and is instead
-	*  inferred, so therefore the processing and display of
-	*  said suspension is also second class.
-	*/
-	if (param_boolean("REAL_TIME_JOB_SUSPEND_UPDATES", false)) {
-		int last_susp_time;
-		if (!ad->LookupInteger(ATTR_LAST_SUSPENSION_TIME,last_susp_time))
-		{
-			last_susp_time = 0;
-		}
-		/* sanity check the last_susp_time against if the job is running
-		*  or not in case the schedd hasn't synchronized the
-		*  last suspension time attribute correctly to job running
-		*  boundaries.
-		*/
-		if ( job_status == RUNNING && last_susp_time != 0 )
-		{
-			put_result[0] = 'S';
-		}
-	}
-
+	//Global Table assumes suspension is False
 	// adjust status field to indicate file transfer status
 	bool transferring_input = false;
 	bool transferring_output = false;

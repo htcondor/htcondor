@@ -1078,7 +1078,8 @@ int ppAdjustProjection(void*pv, int index, Formatter * fmt, const char * attr)
 		}
 	}
 	if (fmt->sf) {
-		const CustomFormatFnTable * pFnTable = getCondorStatusPrintFormats();
+		const CustomFormatFnTable GlobalFnTable = getGlobalPrintFormatTable();
+		const CustomFormatFnTable * pFnTable = &GlobalFnTable;
 		if (pFnTable) {
 			const CustomFormatFnTableItem * ptable = pFnTable->pTable;
 			for (int ii = 0; ii < (int)pFnTable->cItems; ++ii) {
@@ -1240,6 +1241,4 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 	pm.adjust_formats(ppAdjustProjection, &wid_info);
 }
 
-static const CustomFormatFnTable GlobalPrintFormatsTable = SORTED_TOKENER_TABLE(getGlobalPrintFormats());
-const CustomFormatFnTable * getCondorStatusPrintFormats() { return &GlobalPrintFormatsTable; }
 
