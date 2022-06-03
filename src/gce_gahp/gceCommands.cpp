@@ -24,6 +24,9 @@
 #include "gcegahp_common.h"
 #include "gceCommands.h"
 
+// For htcondor::[read|write]ShortFile().
+#include "AWSv4-utils.h"
+
 #include "condor_base64.h"
 #include <sstream>
 #include "stat_wrapper.h"
@@ -46,54 +49,14 @@ const char * nullStringIfEmpty( const string & str ) {
 // Utility function.
 //
 bool writeShortFile( const string & fileName, const string & contents ) {
-	int fd = safe_open_wrapper_follow( fileName.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600 );
-
-	if( fd < 0 ) {
-		dprintf( D_ALWAYS, "Failed to open file '%s' for writing: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
-		return false;
-	}
-
-	unsigned long written = full_write( fd, contents.c_str(), contents.length() );
-	close( fd );
-	if( written != contents.length() ) {
-		dprintf( D_ALWAYS, "Failed to completely write file '%s'; wanted to write %lu but only put %lu.\n",
-				 fileName.c_str(), (unsigned long)contents.length(), written );
-		return false;
-	}
-
-	return true;
+    return htcondor::writeShortFile( fileName, contents );
 }
 
 //
 // Utility function; inefficient.
-// FIXME: GT #3924.  Also, broken for binary data with embedded NULs.
 //
 bool readShortFile( const string & fileName, string & contents ) {
-	int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
-
-	if( fd < 0 ) {
-		dprintf( D_ALWAYS, "Failed to open file '%s' for reading: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
-		return false;
-	}
-
-	StatWrapper sw( fd );
-	unsigned long fileSize = sw.GetBuf()->st_size;
-
-	char * rawBuffer = (char *)malloc( fileSize + 1 );
-	assert( rawBuffer != NULL );
-	unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
-	close( fd );
-	if( totalRead != fileSize ) {
-		dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %lu but got %lu.\n",
-				 fileName.c_str(), fileSize, totalRead );
-		free( rawBuffer );
-		return false;
-	}
-	rawBuffer[ fileSize ] = '\0';
-	contents = rawBuffer;
-	free( rawBuffer );
-
-	return true;
+    return htcondor::readShortFile( fileName, contents );
 }
 
 // Utility function for parsing the JSON response returned by the server.

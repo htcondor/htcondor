@@ -145,9 +145,10 @@ AWSv4Impl::doSha256( const std::string & payload,
 
 //
 // Utility function; inefficient.
+// FIXME: GT #3924.
 //
 bool
-AWSv4Impl::readShortFile( const std::string & fileName, std::string & contents ) {
+htcondor::readShortFile( const std::string & fileName, std::string & contents ) {
     int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
 
     if( fd < 0 ) {
@@ -171,6 +172,29 @@ AWSv4Impl::readShortFile( const std::string & fileName, std::string & contents )
     }
     contents.assign( rawBuffer, fileSize );
     free( rawBuffer );
+
+    return true;
+}
+
+//
+// Utility function.
+//
+bool
+htcondor::writeShortFile( const std::string & fileName, const std::string & contents ) {
+    int fd = safe_open_wrapper_follow( fileName.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600 );
+
+    if( fd < 0 ) {
+        dprintf( D_ALWAYS, "Failed to open file '%s' for writing: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
+        return false;
+    }
+
+    unsigned long written = full_write( fd, contents.c_str(), contents.length() );
+    close( fd );
+    if( written != contents.length() ) {
+        dprintf( D_ALWAYS, "Failed to completely write file '%s'; wanted to write %lu but only put %lu.\n",
+                 fileName.c_str(), (unsigned long)contents.length(), written );
+        return false;
+    }
 
     return true;
 }
@@ -417,7 +441,7 @@ htcondor::generate_presigned_url( const classad::ClassAd & jobAd,
 	}
 
 	std::string accessKeyID;
-	if(! AWSv4Impl::readShortFile( accessKeyIDFile, accessKeyID )) {
+	if(! htcondor::readShortFile( accessKeyIDFile, accessKeyID )) {
 		err.push( "AWS SigV4", 8, "unable to read from access key file" );
 		return false;
 	}
@@ -432,7 +456,7 @@ htcondor::generate_presigned_url( const classad::ClassAd & jobAd,
 	}
 
 	std::string secretAccessKey;
-	if(! AWSv4Impl::readShortFile( secretAccessKeyFile, secretAccessKey )) {
+	if(! htcondor::readShortFile( secretAccessKeyFile, secretAccessKey )) {
 		err.push( "AWS SigV4", 10, "unable to read from secret key file" );
 		return false;
 	}
@@ -445,7 +469,7 @@ htcondor::generate_presigned_url( const classad::ClassAd & jobAd,
 	std::string securityTokenFile;
 	jobAd.EvaluateAttrString( ATTR_EC2_SESSION_TOKEN, securityTokenFile );
 	if(! securityTokenFile.empty()) {
-		if(! AWSv4Impl::readShortFile( securityTokenFile, securityToken )) {
+		if(! htcondor::readShortFile( securityTokenFile, securityToken )) {
 			err.push( "AWS SigV4", 11, "unable to read from security token file" );
 			return false;
 		}

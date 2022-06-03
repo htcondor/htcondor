@@ -62,32 +62,17 @@ std::string amazonURLEncode( const std::string & input )
 }
 
 //
-// Utility function.
-//
-bool writeShortFile( const std::string & fileName, const std::string & contents ) {
-    int fd = safe_open_wrapper_follow( fileName.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600 );
-
-    if( fd < 0 ) {
-        dprintf( D_ALWAYS, "Failed to open file '%s' for writing: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
-        return false;
-    }
-
-    unsigned long written = full_write( fd, contents.c_str(), contents.length() );
-    close( fd );
-    if( written != contents.length() ) {
-        dprintf( D_ALWAYS, "Failed to completely write file '%s'; wanted to write %lu but only put %lu.\n",
-                 fileName.c_str(), (unsigned long)contents.length(), written );
-        return false;
-    }
-
-    return true;
-}
-
-//
 // Utility function; inefficient.
 //
 bool readShortFile( const std::string & fileName, std::string & contents ) {
-	return AWSv4Impl::readShortFile( fileName, contents );
+	return htcondor::readShortFile( fileName, contents );
+}
+
+//
+// Utility function.
+//
+bool writeShortFile( const std::string & fileName, const std::string & contents ) {
+    return htcondor::writeShortFile( fileName, contents );
 }
 
 //

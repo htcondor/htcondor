@@ -15,6 +15,7 @@
  */
 
 namespace htcondor {
+
 //
 // The jobAd must have ATTR_EC2_ACCESS_KEY_ID ATTR_EC2_SECRET_ACCESS_KEY set.
 // Optionally, ATTR_AWS_REGION may be provided.
@@ -25,6 +26,15 @@ generate_presigned_url( const classad::ClassAd & jobAd,
 	const std::string & verb,
 	std::string & presignedURL,
 	CondorError & err );
+
+// Functions used internally, but of potentially-general interest.
+
+bool
+readShortFile( const std::string & fileName, std::string & contents );
+
+bool
+writeShortFile( const std::string & fileName, const std::string & contents );
+
 }
 
 // Functions used internally by generate_presigned_url() and the Amazon GAHP.
@@ -47,9 +57,6 @@ convertMessageDigestToLowercaseHex( const unsigned char * messageDigest,
 bool
 doSha256( const std::string & payload, unsigned char * messageDigest,
 	unsigned int * mdLength );
-
-bool
-readShortFile( const std::string & fileName, std::string & contents );
 
 bool
 createSignature( const std::string & secretAccessKey,
