@@ -1459,10 +1459,7 @@ processCommandLineArguments (int argc, const char *argv[])
 		else
 		if (is_dash_arg_colon_prefix(dash_arg, "debug", &pcolon, 3)) {
 			// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
-			if (pcolon && pcolon[1]) {
-				set_debug_flags( ++pcolon, 0 );
-			}
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		}
 		else
 		if (is_dash_arg_prefix(dash_arg, "io", 2)) {

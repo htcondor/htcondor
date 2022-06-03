@@ -42,7 +42,7 @@ void print_usage(const char *argv0) {
 	exit(1);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
 
 	if (argc < 3) {
 		print_usage(argv[0]);
@@ -52,6 +52,7 @@ int main(int argc, char *argv[]) {
 	set_priv_initialize();
 	config();
 
+	const char * pcolon;
 	std::string pool;
 	std::string name;
 	std::string identity;
@@ -100,9 +101,9 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 			token_name = argv[i];
-		} else if(!strcmp(argv[i],"-debug")) {
+		} else if(is_dash_arg_colon_prefix(argv[i], "debug", &pcolon, 1)) {
 			// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		} else if (is_dash_arg_prefix(argv[i], "help", 1)) {
 			print_usage(argv[0]);
 			exit(1);

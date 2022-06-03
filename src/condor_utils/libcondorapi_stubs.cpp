@@ -98,6 +98,14 @@ char* param(const char *str)
 	return NULL;
 }
 
+char* expand_param(const char *str)
+{
+	if (str) {
+		return strdup(str);
+	}
+	return NULL;
+}
+
 char* param_without_default(const char *str)
 {
 	if(strcmp(str, "LOG") == 0) {

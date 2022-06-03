@@ -138,9 +138,9 @@ int main( int argc, char *argv[] )
 		} else if(!strcmp(argv[i],"-version")) {
 			version();
 			EXIT_FAILURE;
-		} else if(!strcmp(argv[i],"-debug")) {
+		} else if(is_dash_arg_colon_prefix(argv[i], "debug", &pcolon, 1)) {
 			// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 			print_status = false;
 		} else if(!strcmp(argv[i],"-status")) {
 			if (dprintf_to_term_check()) {
