@@ -17,9 +17,9 @@ using namespace htcondor;
 
 bool Singularity::m_enabled = false;
 bool Singularity::m_probed = false;
+bool Singularity::m_apptainer = false;
 int  Singularity::m_default_timeout = 120;
 MyString Singularity::m_singularity_version;
-
 
 static bool find_singularity(std::string &exec)
 {
@@ -37,7 +37,14 @@ static bool find_singularity(std::string &exec)
 #endif
 }
 
-
+// If singularity is really "apptainer", we need to
+// pass environment variables from host to container by
+// prefixing them with APPTAINERENV_.  Otherwise, they need
+// to be prefixed with SINGULARITY_ENV
+std::string 
+Singularity::environmentPrefix() {
+	return Singularity::m_apptainer ? "APPTAINERENV_" : "SINGULARITYENV_";
+}
 bool
 Singularity::advertise(ClassAd &ad)
 {
@@ -118,6 +125,9 @@ Singularity::detect(CondorError &err)
 		}
 	}
 
+	if (m_singularity_version.find("apptainer") != std::string::npos) {
+		m_apptainer = true;
+	}
 	m_enabled = ! m_singularity_version.empty();
 
 	return true;
@@ -348,7 +358,7 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 		std::string  value = myValue;
 		auto index_execute_dir = value.find(execute_dir);
 		if (index_execute_dir != std::string::npos) {
-			std::string new_name = "SINGULARITYENV_" + name;
+			std::string new_name = environmentPrefix() + name;
 			job_env.SetEnv(
 				new_name.c_str(),
 				value.replace(index_execute_dir, execute_dir.length(), target_dir)
@@ -371,11 +381,11 @@ Singularity::convertEnv(Env *job_env) {
 
 		// Skip env vars that already start with SINGULARITYENV_, as they
 		// have already been converted (probably via retargetEnvs()).
-		if (name.rfind("SINGULARITYENV_",0)==0) continue;
+		if (name.rfind(environmentPrefix(),0)==0) continue;
 
 		MyString value;
 		job_env->GetEnv(name.c_str(), value);
-		std::string new_name = "SINGULARITYENV_" + name;
+		std::string new_name = environmentPrefix() + name;
 		// Only copy over the value to the new_name if the new_name
 		// does not already exist because perhaps it was already set
 		// in retargetEnvs().  Note that 'value' is not touched if
