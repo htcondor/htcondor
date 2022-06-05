@@ -33,6 +33,10 @@ Bugs Fixed:
   file, no other output files would be transfered.
   :jira:`1101`
 
+- Ensure that the matching set of Python bindings is installed when HTCondor
+  is upgraded on RPM based platforms.
+  :jira:`1127`
+
 .. _lts-version-history-9013:
 
 Version 9.0.13
