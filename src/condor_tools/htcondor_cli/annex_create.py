@@ -124,11 +124,11 @@ MACHINE_TABLE = {
     "anvil": {
         "pretty_name":      "Anvil",
         "gsissh_name":      "anvil",
-        "default_queue":    "standard",
+        "default_queue":    "wholenode",
 
         # GPUs are completed untested, see above.
         "queues": {
-            "standard": {
+            "wholenode": {
                 "max_nodes_per_job":    16,
                 "max_duration":         96 * 60 * 60,
                 "allocation_type":      "node",
