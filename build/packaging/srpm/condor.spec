@@ -590,7 +590,6 @@ htgettoken and to use those credentials securely inside running jobs.
 #######################
 %package blahp
 Summary: BLAHP daemon
-Url: https://github.com/htcondor/BLAH
 Group: System/Libraries
 BuildRequires:  docbook-style-xsl, libxslt
 Requires: %name = %version-%release
