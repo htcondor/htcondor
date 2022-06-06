@@ -157,6 +157,9 @@ Bugs Fixed:
   immediately transition back to the idle state to be run elsewhere.
   :jira:`1040`
 
+- The ``condor-blahp`` RPM now requires the matching ``condor`` RPM version.
+  :jira:`1074`
+
 Version 9.8.1
 -------------
 
