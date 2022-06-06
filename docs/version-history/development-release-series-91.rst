@@ -46,6 +46,12 @@ New Features:
   will break no existing regular expressions.
   :jira:`1087`
 
+- If "singularity" is really the "apptainer" runtime, HTCondor now
+  sets environment variables to be passed to the job appropriately, which
+  prevents apptainer from displaying ugly warnings about how this won't
+  work in the future.
+  :jira:`1137`
+
 Bugs Fixed:
 
 - Fixed the ``TransferInputStats`` nested attributes ``SizeBytesLastRun`` and
