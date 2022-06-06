@@ -357,11 +357,6 @@ assignUserData( ClassAd & command, const char * ud, bool replace, std::string & 
 	return true;
 }
 
-bool
-readShortFile( const char * fileName, std::string & contents ) {
-    return htcondor::readShortFile( fileName, contents );
-}
-
 void
 help( const char * argv0 ) {
 	fprintf( stdout, "To create an annex:\n"
@@ -547,7 +542,7 @@ void handleUserData(	ClassAd & commandArguments,
 						bool clUserDataWins, std::string & userData,
 						const char * userDataFileName ) {
 	if( userDataFileName != NULL ) {
-		if(! readShortFile( userDataFileName, userData ) ) {
+		if(! htcondor::readShortFile( userDataFileName, userData ) ) {
 			exit( 4 );
 		}
 	}

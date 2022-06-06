@@ -43,20 +43,6 @@ const char * nullStringIfEmpty( const string & str ) {
 	else { return str.c_str(); }
 }
 
-//
-// Utility function.
-//
-bool writeShortFile( const string & fileName, const string & contents ) {
-    return htcondor::writeShortFile( fileName, contents );
-}
-
-//
-// Utility function; inefficient.
-//
-bool readShortFile( const string & fileName, string & contents ) {
-    return htcondor::readShortFile( fileName, contents );
-}
-
 // Utility function for parsing the JSON response returned by the server.
 bool ParseJSONLine( const char *&input, string &key, string &value, int &nesting )
 {
@@ -1144,7 +1130,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	}
 	if ( strcasecmp( argv[11], NULLSTRING ) ) {
 		string file_contents;
-		if ( !readShortFile( argv[11], file_contents ) ) {
+		if ( !htcondor::readShortFile( argv[11], file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open metadata file" );
 			return true;
 		}
@@ -1157,7 +1143,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	}
 	string json_file_contents;
 	if ( strcasecmp( argv[13], NULLSTRING ) ) {
-		if ( !readShortFile( argv[13], json_file_contents ) ) {
+		if ( !htcondor::readShortFile( argv[13], json_file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open additional JSON file" );
 			return true;
 		}
@@ -1674,7 +1660,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	}
 	if ( strcasecmp( argv[11], NULLSTRING ) ) {
 		string file_contents;
-		if ( !readShortFile( argv[11], file_contents ) ) {
+		if ( !htcondor::readShortFile( argv[11], file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open metadata file" );
 			return true;
 		}
@@ -1687,7 +1673,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	}
 	string json_file_contents;
 	if ( strcasecmp( argv[13], NULLSTRING ) ) {
-		if ( !readShortFile( argv[13], json_file_contents ) ) {
+		if ( !htcondor::readShortFile( argv[13], json_file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open additional JSON file" );
 			return true;
 		}
