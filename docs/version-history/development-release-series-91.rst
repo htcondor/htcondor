@@ -63,6 +63,11 @@ Bugs Fixed:
   lots (tens of thousands) of files.
   :jira:`993`
 
+- Fixed several minor bugs in how the *condor_shadow* and
+  *condor_starter* handle network disruptions and jobs that have no
+  lease.
+  :jira:`960`
+
 Version 9.9.0
 -------------
 
