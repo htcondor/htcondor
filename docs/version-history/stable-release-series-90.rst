@@ -33,6 +33,10 @@ Bugs Fixed:
   file, no other output files would be transfered.
   :jira:`1101`
 
+- Ensure that the matching set of Python bindings is installed when HTCondor
+  is upgraded on RPM based platforms.
+  :jira:`1127`
+
 - Fixed a bug that caused ``$(OPSYSANDVER)`` to expand to nothing in a JOB_TRANSFORM.
   :jira:`1121`
 
