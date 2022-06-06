@@ -629,7 +629,7 @@ ResMgr::reconfig_resources( void )
 		// Now, for each type, sort our resources by state.
 	for( t=0; t<max_types; t++ ) {
 		ASSERT( cur_type_index[t] == type_nums[t] );
-	    std::sort(sorted_resources[t], sorted_resources[t] + type_nums[t], &claimedRankCmp);
+		std::sort( sorted_resources[t], sorted_resources[t] + type_nums[t], claimedRankCmp );
 	}
 
 		////////////////////////////////////////////////////
@@ -766,7 +766,10 @@ ResMgr::resource_sort( ComparisonFunc compar )
 		return;
 	}
 	if( nresources > 1 ) {
-		std::sort(resources, resources + nresources, compar);
+		auto compar2 = [&compar] (const Resource* rip1, const Resource* rip2) {
+			return compar((const void*) &rip1, (const void *) &rip2) < 0;
+		};
+		std::sort(resources, resources + nresources, compar2);
 	}
 }
 
@@ -2420,21 +2423,27 @@ ResMgr::check_use( void )
 	}
 }
 
-bool
-naturalSlotOrderCmp( const Resource* rip1, const Resource* rip2 )
+int
+naturalSlotOrderCmp( const void* a, const void* b )
 {
+	const Resource *rip1 = *((Resource* const *)a);
+	const Resource *rip2 = *((Resource* const *)b);
+
 	int diff = rip1->r_id - rip2->r_id;
 	if (diff) { return diff; }
-	return rip1->r_sub_id - rip2->r_sub_id < 0;
+	return rip1->r_sub_id - rip2->r_sub_id;
 }
 
 
-bool
-ownerStateCmp( const Resource* rip1, const Resource* rip2 )
+int
+ownerStateCmp( const void* a, const void* b )
 {
+	const Resource *rip1, *rip2;
 	int val1, val2, diff;
 	float fval1, fval2;
 	State s;
+	rip1 = *((Resource* const *)a);
+	rip2 = *((Resource* const *)b);
 		// Since the State enum is already in the "right" order for
 		// this kind of sort, we don't need to do anything fancy, we
 		// just cast the state enum to an int and we're done.
@@ -2443,7 +2452,7 @@ ownerStateCmp( const Resource* rip1, const Resource* rip2 )
 	val2 = (int)rip2->state();
 	diff = val1 - val2;
 	if( diff ) {
-		return diff < 0;
+		return diff;
 	}
 		// We're still here, means we've got the same state.  If that
 		// state is "Claimed" or "Preempting", we want to break ties
@@ -2452,27 +2461,30 @@ ownerStateCmp( const Resource* rip1, const Resource* rip2 )
 		fval1 = rip1->r_cur->rank();
 		fval2 = rip2->r_cur->rank();
 		diff = (int)(fval1 - fval2);
-		return diff < 0;
+		return diff;
 	}
-	return true;
+	return 0;
 }
 
 
 // This is basically the same as above, except we want it in exactly
 // the opposite order, so reverse the signs.
-bool
-claimedRankCmp( const Resource* rip1, const Resource* rip2)
+int
+claimedRankCmp( const void* a, const void* b )
 {
+	const Resource *rip1, *rip2;
 	int val1, val2, diff;
 	float fval1, fval2;
 	State s;
+	rip1 = *((Resource* const *)a);
+	rip2 = *((Resource* const *)b);
 
 	s = rip1->state();
 	val1 = (int)s;
 	val2 = (int)rip2->state();
 	diff = val2 - val1;
 	if( diff ) {
-		return diff < 0;
+		return diff;
 	}
 		// We're still here, means we've got the same state.  If that
 		// state is "Claimed" or "Preempting", we want to break ties
@@ -2481,9 +2493,9 @@ claimedRankCmp( const Resource* rip1, const Resource* rip2)
 		fval1 = rip1->r_cur->rank();
 		fval2 = rip2->r_cur->rank();
 		diff = (int)(fval2 - fval1);
-		return diff < 0;
+		return diff;
 	}
-	return true;
+	return 0;
 }
 
 
@@ -2497,13 +2509,16 @@ claimedRankCmp( const Resource* rip1, const Resource* rip2)
   3) in case of a tie, the Claimed resource with the lowest value of
      machine Rank for its claim
 */
-bool
-newCODClaimCmp( const Resource* rip1, const Resource* rip2 )
+int
+newCODClaimCmp( const void* a, const void* b )
 {
+	const Resource *rip1, *rip2;
 	int val1, val2, diff;
 	int numCOD1, numCOD2;
 	float fval1, fval2;
 	State s;
+	rip1 = *((Resource* const *)a);
+	rip2 = *((Resource* const *)b);
 
 	numCOD1 = rip1->r_cod_mgr->numClaims();
 	numCOD2 = rip2->r_cod_mgr->numClaims();
@@ -2511,7 +2526,7 @@ newCODClaimCmp( const Resource* rip1, const Resource* rip2 )
 		// In the first case, sort based on # of COD claims
 	diff = numCOD1 - numCOD2;
 	if( diff ) {
-		return diff < 0;
+		return diff;
 	}
 
 		// If we're still here, we've got same # of COD claims, so
@@ -2524,7 +2539,7 @@ newCODClaimCmp( const Resource* rip1, const Resource* rip2 )
 	val2 = (int)rip2->state();
 	diff = val1 - val2;
 	if( diff ) {
-		return diff < 0;
+		return diff;
 	}
 
 		// We're still here, means we've got the same number of COD
@@ -2535,9 +2550,9 @@ newCODClaimCmp( const Resource* rip1, const Resource* rip2 )
 		fval1 = rip1->r_cur->rank();
 		fval2 = rip2->r_cur->rank();
 		diff = (int)(fval1 - fval2);
-		return diff < 0;
+		return diff;
 	}
-	return true;
+	return 0;
 }
 
 

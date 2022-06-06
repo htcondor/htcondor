@@ -65,7 +65,7 @@
 typedef float (Resource::*ResourceFloatMember)();
 typedef void (Resource::*ResourceMaskMember)(amask_t);
 typedef void (Resource::*VoidResourceMember)();
-typedef bool (*ComparisonFunc)(const Resource *, const Resource *);
+typedef int (*ComparisonFunc)(const void *, const void *);
 
 namespace htcondor {
 class DataReuseDirectory;
@@ -456,14 +456,14 @@ private:
 // Comparison function for sorting resources:
 
 // natural order is slotid / slot_sub_id
-bool naturalSlotOrderCmp(const Resource *, const Resource *);
+int naturalSlotOrderCmp(const void*, const void*);
 
 // Sort on State, with Owner state resources coming first, etc.
-bool ownerStateCmp(const Resource *, const Resource *);
+int ownerStateCmp( const void*, const void* );
 
 // Sort on State, with Claimed state resources coming first.  Break
 // ties with the value of the Rank expression for Claimed resources.
-bool claimedRankCmp(const Resource *, const Resource *);
+int claimedRankCmp( const void*, const void* );
 
 /*
   Sort resource so their in the right order to give out a new COD
@@ -475,7 +475,7 @@ bool claimedRankCmp(const Resource *, const Resource *);
   3) in case of a tie, the Claimed resource with the lowest value of
      machine Rank for its claim
 */
-bool newCODClaimCmp(const Resource *, const Resource *);
+int newCODClaimCmp( const void*, const void* );
 
 bool OtherSlotEval(const char * /*name*/,
 	const classad::ArgumentList &arg_list,
