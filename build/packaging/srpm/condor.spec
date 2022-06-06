@@ -593,6 +593,7 @@ Summary: BLAHP daemon
 Url: https://github.com/htcondor/BLAH
 Group: System/Libraries
 BuildRequires:  docbook-style-xsl, libxslt
+Requires: %name = %version-%release
 %if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3
 %else
