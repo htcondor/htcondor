@@ -69,7 +69,7 @@ JOB_TRANSFORM_ILLEGAL \@=end
 JOB_TRANSFORM_ALWAYS \@=end
 [
   requirements = True;
-  set_AlwaysThere = \"Please work!\";
+  set_AlwaysThere = \"Please work on \$(OPSYSANDVER)\";
   delete_NeverThere2 = true;
   eval_set_OnlyProcZero = ProcId == 0 ? \"Please work - proc zero\" : \"Please work - proc non-zero\"
 ]
@@ -81,7 +81,7 @@ JOB_TRANSFORM_NEVER \@=end
 ]
 \@end
 JOB_TRANSFORM_ALWAYS_NEWSCRIPT \@=end
-  SET AlwaysThereNew = \"Please work!\"
+  SET AlwaysThereNew = \"Please work on \$(OPSYSANDVER)\"
   DELETE NeverThereNew
 \@end";
 
@@ -157,7 +157,7 @@ JOB_TRANSFORM_BAD \@=end
 JOB_TRANSFORM_ALWAYS \@=end
 [
   requirements = True;
-  set_AlwaysThere = \"Please work!\";
+  set_AlwaysThere = \"Please work on \$(OPSYSANDVER)\";
   delete_NeverThere2 = true;
   eval_set_OnlyProcZero = ProcId == 0 ? \"Please work - proc zero\" : \"Please work - proc non-zero\"
 ]
@@ -169,7 +169,7 @@ JOB_TRANSFORM_NEVER \@=end
 ]
 \@end
 JOB_TRANSFORM_ALWAYS_NEWSCRIPT \@=end
-  SET AlwaysThereNew = \"Please work!\"
+  SET AlwaysThereNew = \"Please work on \$(OPSYSANDVER)\"
   DELETE NeverThereNew
 \@end";
 
@@ -212,18 +212,39 @@ if(how_many_entries(\@content) ne 2) {
 	print "        Error: there should be 2 jobs in the queue\n";
 	RegisterResult(0, check_name => "2 jobs", test_name => $testname);
 } else {
-print ($q_content[5]);
-	if ($q_content[0] eq "AlwaysThere = \"Please work!\"\n" &&
-	    $q_content[1] eq "AlwaysThereNew = \"Please work!\"\n" &&
+	RegisterResult(1, check_name => "2 jobs", test_name => $testname);
+
+	my $result1 = 0;
+	if ($q_content[0] =~ /^AlwaysThere = \"Please work on \S+\"$/ &&
+	    $q_content[1] =~ /^AlwaysThereNew = \"Please work on \S+\"$/ &&
 	    $q_content[2] eq "OnlyProcZero = \"Please work - proc zero\"\n" &&
 	    $q_content[3] eq $q_content[0] &&
 	    $q_content[4] eq $q_content[1] &&
 	    $q_content[5] eq "OnlyProcZero = \"Please work - proc non-zero\"\n") {
-		RegisterResult(1, check_name => "2 jobs", test_name => $testname);
+		$result1 = 1;
 	} else {
-		print "        should be :\n"."AlwaysThere = \"Please work!\"\nAlwaysThereNew = \"Please work!\"\nOnlyProcZero = \"Please work - proc zero\"\nAlwaysThere = \"Please work!\"\nAlwaysThereNew = \"Please work!\"\nOnlyProcZero = \"Please work - proc non-zero\"\n";
-		RegisterResult(0, check_name => "2 jobs", test_name => $testname);
+		print "        should be :\n"
+			. "\tAlwaysThere = \"Please work on \$(OPSYSANDVER)\"\n"
+			. "\tAlwaysThereNew = \"Please work on \$(OPSYSANDVER)\"\n"
+			. "\tOnlyProcZero = \"Please work - proc zero\"\n"
+			. "\tAlwaysThere = \"Please work on \$(OPSYSANDVER)\"\n"
+			. "\tAlwaysThereNew = \"Please work on \$(OPSYSANDVER)\"\n"
+			. "\tOnlyProcZero = \"Please work - proc non-zero\"\n";
 	}
+	RegisterResult($result1, check_name => "Jobs have expected attributes", test_name => $testname);
+
+	# check that OPSYSANDVER expanded in both old and new transforms to the same value
+	#
+	my $opsys0 = $q_content[0]; $opsys0 =~ s/^Always.+ = //;
+	my $opsys1 = $q_content[1]; $opsys1 =~ s/^Always.+ = //;
+	my $result2 = 0;
+	if ($opsys0 eq $opsys1) {
+		$result2 = 1;
+	} else {
+		print "        $opsys0 != $opsys1\n";
+		print "        AlwaysThere should have the same value as AlwaysThereNew\n";
+	}
+	RegisterResult($result2, check_name => "OPSYSANDVER expands the same in new and old syntax routes", test_name => $testname);
 }
 
 `condor_rm -all`;

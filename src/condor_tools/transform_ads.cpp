@@ -153,7 +153,7 @@ main( int argc, const char *argv[] )
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
-	XFormHash xform_hash;
+	XFormHash xform_hash(XFormHash::Flavor::Iterating);
 	xform_hash.init();
 
 	set_debug_flags(NULL, D_EXPR);
