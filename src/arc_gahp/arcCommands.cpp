@@ -23,6 +23,7 @@
 #include "basename.h"
 #include "arcgahp_common.h"
 #include "arcCommands.h"
+#include "shortfile.h"
 
 #include "stat_wrapper.h"
 #include <sstream>
@@ -69,34 +70,6 @@ std::string fillURL(const char *url)
 	}
 
 	return groups[1] + groups[2] + groups[3] + groups[4];
-}
-
-bool readShortFile( const string & fileName, string & contents ) {
-	int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
-
-	if( fd < 0 ) {
-		dprintf( D_ALWAYS, "Failed to open file '%s' for reading: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
-		return false;
-	}
-
-	StatWrapper sw( fd );
-	unsigned long fileSize = sw.GetBuf()->st_size;
-
-	char * rawBuffer = (char *)malloc( fileSize + 1 );
-	assert( rawBuffer != NULL );
-	unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
-	close( fd );
-	if( totalRead != fileSize ) {
-		dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %lu but got %lu.\n",
-		         fileName.c_str(), fileSize, totalRead );
-		free( rawBuffer );
-		return false;
-	}
-	rawBuffer[ fileSize ] = '\0';
-	contents = rawBuffer;
-	free( rawBuffer );
-
-	return true;
 }
 
 // Utility function for parsing the JSON response returned by the server.
@@ -439,7 +412,7 @@ bool HttpRequest::SendRequest()
 
 	if (!tokenFile.empty()) {
 		std::string token;
-		if (!readShortFile(tokenFile, token)) {
+		if (!htcondor::readShortFile(tokenFile, token)) {
 			this->errorCode = "499";
 			this->errorMessage = "Failed to read token file";
 			dprintf(D_ALWAYS, "Failed to read token file %s, failing.\n", tokenFile.c_str());

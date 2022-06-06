@@ -30,6 +30,7 @@
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
 #include "AWSv4-utils.h"
+#include "shortfile.h"
 
 #include "condor_base64.h"
 #include <sstream>
@@ -59,35 +60,6 @@ const char * nullStringIfEmpty( const std::string & str ) {
 std::string amazonURLEncode( const std::string & input )
 {
     return AWSv4Impl::amazonURLEncode( input );
-}
-
-//
-// Utility function.
-//
-bool writeShortFile( const std::string & fileName, const std::string & contents ) {
-    int fd = safe_open_wrapper_follow( fileName.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600 );
-
-    if( fd < 0 ) {
-        dprintf( D_ALWAYS, "Failed to open file '%s' for writing: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
-        return false;
-    }
-
-    unsigned long written = full_write( fd, contents.c_str(), contents.length() );
-    close( fd );
-    if( written != contents.length() ) {
-        dprintf( D_ALWAYS, "Failed to completely write file '%s'; wanted to write %lu but only put %lu.\n",
-                 fileName.c_str(), (unsigned long)contents.length(), written );
-        return false;
-    }
-
-    return true;
-}
-
-//
-// Utility function; inefficient.
-//
-bool readShortFile( const std::string & fileName, std::string & contents ) {
-	return AWSv4Impl::readShortFile( fileName, contents );
 }
 
 //
@@ -505,7 +477,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 		}
 		headers[ "X-Amz-Security-Token" ] = token;
 	} else {
-		if( ! readShortFile( this->secretKeyFile, saKey ) ) {
+		if( ! htcondor::readShortFile( this->secretKeyFile, saKey ) ) {
 			this->errorCode = "E_FILE_IO";
 			this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
 			dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
@@ -513,7 +485,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 		}
 		trim( saKey );
 
-		if( ! readShortFile( this->accessKeyFile, keyID ) ) {
+		if( ! htcondor::readShortFile( this->accessKeyFile, keyID ) ) {
 			this->errorCode = "E_FILE_IO";
 			this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
 			dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
@@ -795,7 +767,7 @@ bool AmazonRequest::sendV2Request() {
     //
     std::string keyID;
     if( protocol != "x509" ) {
-        if( ! readShortFile( this->accessKeyFile, keyID ) ) {
+        if( ! htcondor::readShortFile( this->accessKeyFile, keyID ) ) {
             this->errorCode = "E_FILE_IO";
             this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
             dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
@@ -853,7 +825,7 @@ bool AmazonRequest::sendV2Request() {
         saKey = std::string( "not-the-DN" );
         dprintf( D_FULLDEBUG, "Using '%s' as secret key for x.509\n", saKey.c_str() );
     } else {
-        if( ! readShortFile( this->secretKeyFile, saKey ) ) {
+        if( ! htcondor::readShortFile( this->secretKeyFile, saKey ) ) {
             this->errorCode = "E_FILE_IO";
             this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
             dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
@@ -1746,7 +1718,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     if( strcasecmp( argv[8], NULLSTRING ) ) {
         std::string udFileName = argv[8];
         std::string udFileContents;
-        if( ! readShortFile( udFileName, udFileContents ) ) {
+        if( ! htcondor::readShortFile( udFileName, udFileContents ) ) {
             result_string = create_failure_result( requestID, "Failed to read userdata file.", "E_FILE_IO" );
             dprintf( D_ALWAYS, "Failed to read userdata file '%s'.\n", udFileName.c_str() );
             return false;
@@ -1955,7 +1927,7 @@ bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & re
     if( strcasecmp( argv[9], NULLSTRING ) ) {
         std::string udFileName = argv[9];
         std::string udFileContents;
-        if( ! readShortFile( udFileName, udFileContents ) ) {
+        if( ! htcondor::readShortFile( udFileName, udFileContents ) ) {
             result_string = create_failure_result( requestID, "Failed to read userdata file.", "E_FILE_IO" );
             dprintf( D_ALWAYS, "failed to read userdata file '%s'.\n", udFileName.c_str() ) ;
             return false;
@@ -2831,7 +2803,7 @@ bool AmazonVMCreateKeypair::SendRequest() {
         XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
         XML_ParserFree( xp );
 
-        if( ! writeShortFile( this->privateKeyFileName, pkud.keyMaterial ) ) {
+        if( ! htcondor::writeShortFile( this->privateKeyFileName, pkud.keyMaterial ) ) {
             this->errorCode = "E_FILE_IO";
             this->errorMessage = "Failed to write private key to file.";
             dprintf( D_ALWAYS, "Failed to write private key material to '%s', failing.\n",
@@ -4075,7 +4047,7 @@ AmazonS3Upload::~AmazonS3Upload() { }
 bool AmazonS3Upload::SendRequest() {
 	httpVerb = "PUT";
 	std::string payload;
-	if( ! readShortFile( this->path, payload ) ) {
+	if( ! htcondor::readShortFile( this->path, payload ) ) {
 		this->errorCode = "E_FILE_IO";
 		this->errorMessage = "Unable to read file to upload '" + this->path + "'.";
 		dprintf( D_ALWAYS, "Unable to read from file to upload '%s', failing.\n", this->path.c_str() );
