@@ -279,7 +279,7 @@ void XFormHash::setup_macro_defaults()
 
 
 
-XFormHash::XFormHash(Flavor _flavor /* = Iterating*/)
+XFormHash::XFormHash(Flavor _flavor /* = Basic*/)
 	: flavor(_flavor), LiveProcessString(NULL), LiveRowString(NULL), LiveStepString(NULL)
 	, LiveRulesFileMacroDef(NULL), LiveIteratingMacroDef(NULL)
 {
