@@ -808,6 +808,7 @@ def annex_inner_func(
     # This operation can fail or take a while, but (HTCONDOR-1058) should
     # not need to display two lines.
     #
+    logging.StreamHandler.terminator = " ";
     logger.info(f"Populating annex temporary directory...")
     populate_remote_temporary_directory(
         logger,
@@ -821,7 +822,7 @@ def annex_inner_func(
         password_file,
     )
     if sif_files:
-        logger.debug("... transferring container images ...")
+        logger.debug("(transferring container images)")
         transfer_sif_files(
             logger,
             ssh_connection_sharing,
@@ -830,7 +831,8 @@ def annex_inner_func(
             remote_script_dir,
             sif_files,
         )
-    logger.info("... populated.")
+    logging.StreamHandler.terminator = "\n";
+    logger.info("done.")
 
     # Submit local universe job.
     logger.debug("Submitting state-tracking job...")
