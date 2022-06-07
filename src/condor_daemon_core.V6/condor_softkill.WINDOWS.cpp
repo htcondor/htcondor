@@ -54,6 +54,40 @@ debug(wchar_t* format, ...)
 	}
 }
 
+static double as_double(const FILETIME & ft) {
+	ULARGE_INTEGER nanos;
+	nanos.LowPart = ft.dwLowDateTime;
+	nanos.HighPart = ft.dwHighDateTime;
+	return nanos.QuadPart / (10.0 * 1000 * 1000);
+}
+
+static bool is_young_pid(DWORD pid, double delta_time)
+{
+	HANDLE hpid = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+	if ( ! hpid) {
+		return false;
+	}
+	FILETIME startTime, exitTime, krnTime, usrTime, now;
+	ZeroMemory(&startTime, sizeof(startTime));
+	ZeroMemory(&exitTime, sizeof(exitTime));
+	ZeroMemory(&krnTime, sizeof(krnTime));
+	ZeroMemory(&usrTime, sizeof(usrTime));
+	ZeroMemory(&now, sizeof(now));
+	bool got_times = GetProcessTimes(hpid, &startTime, &exitTime, &krnTime, &usrTime);
+	CloseHandle(hpid);
+	if ( ! got_times) {
+		return false;
+	}
+
+	GetSystemTimeAsFileTime(&now);
+	if (as_double(usrTime) < delta_time &&
+		as_double(now) - as_double(startTime) < delta_time) {
+		return true;
+	}
+
+	return false;
+}
+
 static BOOL CALLBACK
 check_window(HWND hwnd, LPARAM lParam)
 {
@@ -235,6 +269,20 @@ wWinMain(__in HINSTANCE, __in_opt HINSTANCE, __in wchar_t*, __in int)
 	if ( ! check_this_winsta()) {
 		if ((EnumWindowStations(check_winsta, NULL) == FALSE) && (GetLastError() != ERROR_SUCCESS)) {
 			debug(L"EnumWindowStations error: %u\n", GetLastError());
+		}
+	}
+	if (!window_found) {
+		// if the window is not found, check to see if the process is brand-new. if it is we want to
+		// wait a bit and try again on the theory that the process may still be starting up.
+		const double young_pid_time = 2.0; // < 2 seconds of life is young
+		if (is_young_pid(target_pid, young_pid_time)) {
+			debug(L"Pid is young. We'll give it 1.5 sec to initialize before we retry.\n");
+			Sleep(1500); // sleep 1.5 seconds and then try again.
+			if ( ! check_this_winsta()) {
+				if ((EnumWindowStations(check_winsta, NULL) == FALSE) && (GetLastError() != ERROR_SUCCESS)) {
+					debug(L"EnumWindowStations error: %u\n", GetLastError());
+				}
+			}
 		}
 	}
 
