@@ -390,14 +390,24 @@ def extract_full_lines(buffer):
     return buffer[last_newline + 1 :], lines
 
 
+previous_line_was_update = False
 def process_line(line, update_function):
+    global previous_line_was_update
+
     control = "=-.-= "
     if line.startswith(control):
         command = line[len(control) :]
         attribute, value = command.split(" ")
         update_function(attribute, value)
+        previous_line_was_update = False
+    elif line.startswith('\r'):
+        print("\r   ", line[1:], end='')
+        previous_line_was_update = True
     else:
+        if previous_line_was_update:
+            print('')
         print("   ", line)
+        previous_line_was_update = False
 
 
 def invoke_pilot_script(
