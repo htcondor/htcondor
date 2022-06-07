@@ -278,7 +278,7 @@ Requires: blahp >= 2.1.1
 %endif
 
 # Useful tools are using the Python bindings
-Requires: python3-condor
+Requires: python3-condor = %{version}-%{release}
 # The use the python-requests library in EPEL is based Python 3.6
 # However, Amazon Linux 2 has Python 3.7
 %if ! 0%{?amzn}
@@ -290,7 +290,7 @@ Requires: python3-requests
 %endif
 
 %if 0%{?rhel} == 7
-Requires: python2-condor
+Requires: python2-condor = %{version}-%{release}
 # For some reason OSG VMU tests need python-request
 Requires: python-requests
 %endif
@@ -542,14 +542,14 @@ Summary: OAuth2 credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
 %if 0%{?rhel} == 7
-Requires: python2-condor
+Requires: python2-condor = %{version}-%{release}
 Requires: python2-requests-oauthlib
 Requires: python-six
 Requires: python-flask
 Requires: python2-cryptography
 Requires: python2-scitokens
 %else
-Requires: python3-condor
+Requires: python3-condor = %{version}-%{release}
 Requires: python3-requests-oauthlib
 Requires: python3-six
 Requires: python3-flask
@@ -569,7 +569,7 @@ OAuth2 endpoints and to use those credentials securely inside running jobs.
 Summary: Vault credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
-Requires: python3-condor
+Requires: python3-condor = %{version}-%{release}
 Requires: python3-six
 %if 0%{?osg}
 # Although htgettoken is only needed on the submit machine and
@@ -1676,6 +1676,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu May 26 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.13-1
+- Schedd and startd cron jobs can now log output upon non-zero exit
+- condor_config_val now produces correct syntax for multi-line values
+- The condor_run tool now reports submit errors and warnings to the terminal
+- Fix issue where Kerberos authentication would fail within DAGMan
+- Fix HTCondor startup failure with certain complex network configurations
+
 * Tue Apr 19 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.12-1
 - Fix bug in parallel universe that could cause the schedd to crash
 - Fix rare crash where a daemon tries to use a discarded security session

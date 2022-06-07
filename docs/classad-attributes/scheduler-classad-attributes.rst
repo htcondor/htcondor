@@ -726,12 +726,6 @@ Scheduler ClassAd Attributes
     String with the IP and port address of the *condor_schedd* daemon
     which is publishing this Scheduler ClassAd.
 
-:index:`ServerTime<single: ServerTime; ClassAd Scheduler attribute>`
-
-``ServerTime``:
-    This is the current time, in Unix epoch seconds when the reply to
-    this query started.
-
 :index:`ShadowsReconnections<single: ShadowsReconnections; ClassAd Scheduler attribute>`
 
 ``ShadowsReconnections``:

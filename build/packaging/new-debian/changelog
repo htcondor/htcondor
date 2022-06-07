@@ -1,3 +1,13 @@
+condor (9.0.13-1) stable; urgency=medium
+
+  * Schedd and startd cron jobs can now log output upon non-zero exit
+  * condor_config_val now produces correct syntax for multi-line values
+  * The condor_run tool now reports submit errors and warnings to the terminal
+  * Fix issue where Kerberos authentication would fail within DAGMan
+  * Fix HTCondor startup failure with certain complex network configurations
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 May 2022 14:28:00 -0600
+
 condor (9.0.12-1) stable; urgency=medium
 
   * Fix bug in parallel universe that could cause the schedd to crash

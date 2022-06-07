@@ -162,7 +162,7 @@ public:
 		ParamTable,  // use config defaults as defaults for LocalMacroSet (WARNING! ignores config files!)
 	};
 
-	XFormHash(Flavor _flavor=Iterating);
+	XFormHash(Flavor _flavor=Basic);
 	~XFormHash();
 
 	void init();
