@@ -16,7 +16,7 @@
  # 
  ############################################################### 
 
-if (LINUX OR DARWIN)
+if (LINUX)
     option(WITH_GLOBUS "Compiling with support for GLOBUS" OFF)
 endif()
 

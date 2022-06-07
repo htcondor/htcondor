@@ -17,6 +17,7 @@
 #include "condor_base64.h"
 #include "my_username.h"
 #include "daemon.h"
+#include "shortfile.h"
 
 #include <queue>
 #include <iostream>
@@ -356,37 +357,6 @@ assignUserData( ClassAd & command, const char * ud, bool replace, std::string & 
 	return true;
 }
 
-// Modelled on readShortFile() from ec2_gahp/amazonCommands.cpp.
-bool
-readShortFile( const char * fileName, std::string & contents ) {
-    int fd = safe_open_wrapper_follow( fileName, O_RDONLY, 0600 );
-
-    if( fd < 0 ) {
-    	fprintf( stderr, "Failed to open file '%s' for reading: '%s' (%d).\n",
-            fileName, strerror( errno ), errno );
-        return false;
-    }
-
-    StatWrapper sw( fd );
-    unsigned long fileSize = sw.GetBuf()->st_size;
-
-    char * rawBuffer = (char *)malloc( fileSize + 1 );
-    assert( rawBuffer != NULL );
-    unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
-    close( fd );
-    if( totalRead != fileSize ) {
-    	fprintf( stderr, "Failed to completely read file '%s'; needed %lu but got %lu.\n",
-            fileName, fileSize, totalRead );
-        free( rawBuffer );
-        return false;
-    }
-    contents.assign( rawBuffer, fileSize );
-    free( rawBuffer );
-
-    return true;
-}
-
-
 void
 help( const char * argv0 ) {
 	fprintf( stdout, "To create an annex:\n"
@@ -572,7 +542,7 @@ void handleUserData(	ClassAd & commandArguments,
 						bool clUserDataWins, std::string & userData,
 						const char * userDataFileName ) {
 	if( userDataFileName != NULL ) {
-		if(! readShortFile( userDataFileName, userData ) ) {
+		if(! htcondor::readShortFile( userDataFileName, userData ) ) {
 			exit( 4 );
 		}
 	}
@@ -1549,7 +1519,7 @@ main_pre_command_sock_init() {
 
 int
 main( int argc, char ** argv ) {
-	set_mySubSystem( "ANNEX", SUBSYSTEM_TYPE_DAEMON );
+	set_mySubSystem( "ANNEX", true, SUBSYSTEM_TYPE_DAEMON );
 
 	// This is dumb, but easier than fighting daemon core about parsing.
 	_argc = argc;

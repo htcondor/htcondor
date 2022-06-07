@@ -462,6 +462,39 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		return 0;
 	}
 
+	case CONDOR_SendJobQueueAd:
+	{
+		int cluster_id, ad_type;
+		unsigned int flags;
+		assert( syscall_sock->code(cluster_id) );
+		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
+		assert( syscall_sock->code(ad_type) );
+		dprintf( D_SYSCALLS, "	ad_type = %d\n", ad_type );
+		assert( syscall_sock->code(flags) );
+		dprintf( D_SYSCALLS, "	flags = %d\n", flags );
+
+		ClassAd ad;
+		assert( getClassAd(qmgmt_sock, ad) );
+		dprintf( D_SYSCALLS, "	ad = %p (%d attrs)\n", &ad, ad.size() );
+		assert ( syscall_sock->end_of_message() );
+
+		int terrno = 0;
+		int rval = -1;
+		if (ad_type == SENDJOBAD_TYPE_JOBSET) {
+			rval = QmgmtHandleSendJobsetAd(cluster_id, ad, flags, terrno);
+		} else {
+			terrno = EINVAL;
+			rval = -1;
+		}
+
+		syscall_sock->encode();
+		if ( ! syscall_sock->code(rval) || ((rval < 0) && !syscall_sock->code(terrno))) {
+			return -1;
+		}
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	} break;
+
 	case CONDOR_SetJobFactory:
 	case CONDOR_SetMaterializeData:
 	{
@@ -1244,8 +1277,9 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 				assert( syscall_sock->code(terrno) );
 			}
 
+			// Condor-C relies on the ServerTimer attribute
 			if( rval >= 0 ) {
-				assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE, proj.empty() ? NULL : &proj) );
+				assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE | PUT_CLASSAD_SERVER_TIME, proj.empty() ? NULL : &proj) );
 				FreeJobAd(ad);
 			}
 		} while (rval >= 0);

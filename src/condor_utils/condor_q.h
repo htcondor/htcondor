@@ -128,6 +128,8 @@ class CondorQ
 	int  rawQuery(ExprTree * &tree) { return query.makeQuery(tree); }
 	int  rawQuery(std::string & str) { return query.makeQuery(str); }
 
+	void requestServerTime(bool request) { requestservertime = request; }
+
   private:
 	GenericQuery query;
 	
@@ -142,6 +144,7 @@ class CondorQ
 	char owner[MAXOWNERLEN];
 	char schedd[MAXSCHEDDLEN];
 	bool defaulting_operator;
+	bool requestservertime;
 	time_t scheddBirthdate;
 	
 	// helper functions

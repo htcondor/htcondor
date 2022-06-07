@@ -75,6 +75,7 @@ common_externals="boost169-python3 \
     libcgroup \
     libgomp \
     munge-libs \
+    pcre2 \
     scitokens-cpp \
     voms"
 

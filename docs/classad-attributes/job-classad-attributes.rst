@@ -1708,6 +1708,14 @@ all attributes.
     Number of files and directories in the jobs' Scratch directory.  The value is updated
     periodically while the job is running.
 
+:classad-attribute:`ServerTime`
+    This is the current time, in Unix epoch seconds.
+    It is added by the *condor_schedd* to the job ads that it sends in
+    reply to a query (e.g. sent to *condor_q*).
+    Since it it not present in the job ad in the *condor_schedd*, it
+    should not be used in any expressions that will be evaluated by the
+    *condor_schedd*.
+
 :classad-attribute:`StackSize`
     Utilized for Linux jobs only, the number of bytes allocated for
     stack space for this job. This number of bytes replaces the default

@@ -99,11 +99,12 @@ bool get_arc_proxy_server(const char* &host_name, int& port, const char* &user_n
 	return false;
 }
 
-GahpRequest::GahpRequest (const char *cmd, const std::string &proxy_file)
+GahpRequest::GahpRequest (const char *cmd, const std::string &proxy_file, const std::string& token_file)
 {
 	m_worker = NULL;
 	m_raw_cmd = cmd;
 	m_proxy_file = proxy_file;
+	m_token_file = token_file;
 
 	if ( parse_gahp_command(cmd, &m_args) )
 		m_reqid = (int)strtol(m_args.argv[1], (char **)NULL, 10);

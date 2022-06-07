@@ -92,7 +92,7 @@ main(int argc, char* argv[])
     // get our condor vars
     config();
 
-	set_mySubSystem( "TOOL", SUBSYSTEM_TYPE_TOOL);
+	set_mySubSystem( "TOOL", false, SUBSYSTEM_TYPE_TOOL );
     
     for(i=1; i<argc; i++) {
         if (strcmp(argv[i],"-h")==0) {

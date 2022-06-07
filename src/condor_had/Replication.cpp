@@ -70,7 +70,7 @@ main_config()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem( "Replication", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
+	set_mySubSystem( "Replication", true, SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

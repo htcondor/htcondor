@@ -52,6 +52,7 @@
 
 extern Starter *Starter;
 ReliSock *syscall_sock = NULL;
+time_t syscall_last_rpc_time = 0;
 extern const char* JOB_AD_FILENAME;
 extern const char* JOB_EXECUTION_OVERLAY_AD_FILENAME;
 extern const char* MACHINE_AD_FILENAME;
@@ -115,6 +116,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 		Starter->StarterExit( STARTER_EXIT_GENERAL_FAILURE );
 	}
 	syscall_sock = (ReliSock *)socks[0];
+	syscall_last_rpc_time = time(nullptr);
 	socks++;
 
 	m_proxy_expiration_tid = -1;
@@ -754,6 +756,7 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 	delete syscall_sock;
 	syscall_sock = s;
 	syscall_sock->timeout(param_integer( "STARTER_UPLOAD_TIMEOUT", 300));
+	syscall_last_rpc_time = time(nullptr);
 	dprintf( D_FULLDEBUG, "Using new syscall sock %s\n",
 			generate_sinful(syscall_sock->peer_ip_str(),
 					syscall_sock->peer_port()).c_str());
@@ -2361,19 +2364,18 @@ JICShadow::syscall_sock_disconnect()
 	}
 	int lease_duration = -1;
 	job_ad->LookupInteger(ATTR_JOB_LEASE_DURATION,lease_duration);
-	if (lease_duration > 0) {
-		syscall_sock_lost_tid = daemonCore->Register_Timer(
-				lease_duration,
-				(TimerHandlercpp)&JICShadow::job_lease_expired,
-				"job_lease_expired",
-				this );
-		dprintf(D_ALWAYS,
-			"Lost connection to shadow, waiting %d secs for reconnect\n",
-			lease_duration);
-	} else {
-		dprintf(D_ALWAYS,
-			"Lost connection to shadow, no job lease specified\n");
+	lease_duration -= now - syscall_last_rpc_time;
+	if (lease_duration < 0) {
+		lease_duration = 0;
 	}
+	syscall_sock_lost_tid = daemonCore->Register_Timer(
+			lease_duration,
+			(TimerHandlercpp)&JICShadow::job_lease_expired,
+			"job_lease_expired",
+			this );
+	dprintf(D_ALWAYS,
+		"Lost connection to shadow, last activity was %d secs ago, waiting %d secs for reconnect\n",
+		(now - syscall_last_rpc_time), lease_duration);
 
 	// Close up the syscall_socket and wait for a reconnect.  
 	if (syscall_sock) {
@@ -2451,7 +2453,8 @@ JICShadow::job_lease_expired() const
 {
 	/* 
 	  This method is invoked by a daemoncore timer, which is set
-	  to fire ATTR_JOB_LEASE_DURATION seconds after the syscall_sock disappears.
+	  to fire ATTR_JOB_LEASE_DURATION seconds after the last activity
+	  on the syscall_sock
 	*/
 
 	dprintf( D_ALWAYS, "No reconnect from shadow for %d seconds, aborting job execution!\n", (int)(time(NULL) - syscall_sock_lost_time) );

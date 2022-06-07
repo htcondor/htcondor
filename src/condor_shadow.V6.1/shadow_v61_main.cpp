@@ -471,7 +471,7 @@ main( int argc, char **argv )
 		exit(0);
 	}
 
-	set_mySubSystem( "SHADOW", SUBSYSTEM_TYPE_SHADOW );
+	set_mySubSystem( "SHADOW", true, SUBSYSTEM_TYPE_SHADOW );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

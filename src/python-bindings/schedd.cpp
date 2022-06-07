@@ -1438,6 +1438,8 @@ struct Schedd {
 
         CondorQ q;
 
+        q.requestServerTime(false);
+
         if (constraint.size())
             q.addAND(constraint.c_str());
 
@@ -1880,7 +1882,7 @@ struct Schedd {
 
         if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
         {
-            reschedule();
+            sentry.reschedule();
         }
         return cluster;
     }
@@ -2583,6 +2585,7 @@ struct Schedd {
         }
 
         classad::ClassAd ad;
+        ad.Assign(ATTR_SEND_SERVER_TIME, false);
         ad.Insert(ATTR_REQUIREMENTS, expr_copy);
         ad.InsertAttr(ATTR_LIMIT_RESULTS, limit);
         if (fetch_opts)
@@ -3288,6 +3291,28 @@ public:
         return obj.attr("__repr__")();
     }
 
+	// helper function for determining if schedd supports jobsets
+	bool push_jobset_if_supported(boost::shared_ptr<ConnectionSentry> txn, int cluster)
+	{
+		bool use_jobsets = false;
+		const ClassAd *capabilities = txn->capabilites();
+		if (capabilities) {
+			capabilities->LookupBool("UseJobsets", use_jobsets);
+		}
+		if (use_jobsets) {
+			const classad::ClassAd * jobsetAd = m_hash.getJOBSET();
+			if (jobsetAd) {
+				int rval = SendJobsetAd(cluster, *jobsetAd, 0);
+				if (rval < 0) {
+					m_hash.error_stack()->pushf("Submit", SCHEDD_ERR_SET_ATTRIBUTE_FAILED,  "Could not send jobset attributes");
+				} else {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
 	// helper function for determining if this is a factory submit for a job submit
 	bool is_factory(long long & max_materialize, boost::shared_ptr<ConnectionSentry> txn)
 	{
@@ -3606,6 +3631,7 @@ public:
 			// send the cluster ad
 			classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
 			if (clusterad) {
+				push_jobset_if_supported(txn, cluster);
 				rval = SendJobAttributes(JOB_ID_KEY(cluster, -1), *clusterad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
 				process_submit_errstack(m_hash.error_stack());
 				if (rval < 0) {
@@ -3667,6 +3693,8 @@ public:
 				if (rval == 2) {
 					classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
 					if (clusterad) {
+						// before the cluster ad, send the jobset ad if we have one, and can send it
+						push_jobset_if_supported(txn, cluster);
 						rval = SendJobAttributes(JOB_ID_KEY(cluster, -1), *clusterad, SetAttribute_NoAck, m_hash.error_stack(), "Submit");
 					}
 				}

@@ -140,6 +140,17 @@ def main():
     else:
         os.environ["LD_LIBRARY_PATH"] = new_library_path
 
+    # macOS clears DYLD_LIBRARY_PATH from the environment of system
+    # programs (e.g. /usr/bin/perl), so we can't use that to have the
+    # condor_tests binaries find the condor libraries.
+    # Making a symlink in src/condor_tests is our best option here.
+    if os.uname().sysname == "Darwin":
+        try:
+            symlink_dst = os.path.join(args.working_dir, "src", "condor_tests", "lib")
+            os.symlink(new_library_path, symlink_dst)
+        except FileExistsError:
+            pass
+
     os.environ["PATH"] = ":".join(
         [
             os.path.join(args.prefix_path, "bin"),

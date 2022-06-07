@@ -189,7 +189,7 @@ main_pre_dc_init( int argc, char* argv[] )
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem( "GRIDMANAGER", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
+	set_mySubSystem( "GRIDMANAGER", true, SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

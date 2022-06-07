@@ -994,11 +994,10 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 	std::string skip_check_pattern;
 	if( param(skip_check_pattern,"GSI_SKIP_HOST_CHECK_CERT_REGEX") ) {
 		Regex re;
-		const char *errptr=NULL;
-		int erroffset=0;
+		int errcode = 0, erroffset=0;
 		std::string full_pattern;
 		formatstr(full_pattern,"^(%s)$",skip_check_pattern.c_str());
-		if( !re.compile(full_pattern.c_str(),&errptr,&erroffset) ) {
+		if( !re.compile(full_pattern.c_str(),&errcode,&erroffset) ) {
 			dprintf(D_ALWAYS,"GSI_SKIP_HOST_CHECK_CERT_REGEX is not a valid regular expression: %s\n",skip_check_pattern.c_str());
 			return false;
 		}

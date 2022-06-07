@@ -347,10 +347,10 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		std::string retryStr = std::to_string( retry );
 		replace_str( value, "$(RETRY)", retryStr.c_str() );
 		std::string varStr(nodeVar._name);
-		varStr += " = ";
+		varStr += "=";
 		varStr += value;
 
-		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
+		if ( !nodeVar._prepend ) { args.AppendArg( "-a" ); }// Append var if prepend is false; -a == -append; using -a to save chars
 		args.AppendArg( varStr.c_str() );
 	}
 
@@ -453,7 +453,8 @@ static void init_dag_vars(SubmitHash * submitHash,
 	const char *workflowLogFile,
 	const std::string & parents,
 	const char *batchName,
-	const char *batchId)
+	const char *batchId,
+	bool before_subFile)
 {
 	const char* DAGNodeName = node->GetJobName();
 	int priority = node->_effectivePriority;
@@ -509,7 +510,7 @@ static void init_dag_vars(SubmitHash * submitHash,
 	// this allows for $(JOB) expansions in the vars (and in the submit file)
 	submitHash->set_arg_variable("JOB", node->GetJobName());
 	for (auto & it : node->varsFromDag) {
-		submitHash->set_arg_variable(it._name, it._value);
+		if ( it._prepend == before_subFile ) { submitHash->set_arg_variable(it._name, it._value); }
 	}
 
 	// set RETRY for $(RETRY) substitution
@@ -545,6 +546,20 @@ static void init_dag_vars(SubmitHash * submitHash,
 	// TODO: remove this when the tests no longer need it.
 	submitHash->set_arg_variable("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"");
 
+}
+
+static bool send_jobset_if_allowed(SubmitHash& submitHash, int cluster)
+{
+	if ( ! param_boolean("USE_JOBSETS", false))
+		return false;
+
+	const ClassAd * jobsetAd = submitHash.getJOBSET();
+	if (jobsetAd) {
+		if (SendJobsetAd(cluster, *jobsetAd, 0) >= 0) {
+			return true;
+		}
+	}
+	return false;
 }
 
 //-------------------------------------------------------------------------
@@ -592,6 +607,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 		submitHash->setDisableFileChecks(true);
 		submitHash->setScheddVersion(CondorVersion());
 		// if (myproxy_password) submitHash.setMyProxyPassword(myproxy_password);
+		init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId, true);
 
 		// open the submit file
 		if (! ms.open(cmdFile, false, submitHash->macros(), errmsg)) {
@@ -632,7 +648,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	}
 
 	// set submit keywords defined by dagman and VARS
-	init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId);
+	init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId, false);
 
 	submitHash->init_base_ad(time(NULL), owner);
 
@@ -689,6 +705,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 			if (rval == 2) { // we need to send the cluster ad
 				classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
 				if (clusterad) {
+					send_jobset_if_allowed(*submitHash, cluster_id);
 					rval = SendJobAttributes(JOB_ID_KEY(cluster_id, -1), *clusterad, SetAttribute_NoAck, submitHash->error_stack(), "Submit");
 					if (rval < 0) {
 						errmsg = "failed to send cluster classad";

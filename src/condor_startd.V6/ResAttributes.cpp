@@ -1147,9 +1147,8 @@ void MachAttributes::init_machine_resources() {
 	m_machres_attr.Clear();
 
 	Regex re;
-	int err = 0;
-	const char* pszMsg = 0;
-	ASSERT(re.compile("^MACHINE_RESOURCE_[a-zA-Z0-9_]+", &pszMsg, &err, PCRE_CASELESS));
+	int errcode = 0, erroffset = 0;
+	ASSERT(re.compile("^MACHINE_RESOURCE_[a-zA-Z0-9_]+", &errcode, &erroffset, PCRE2_CASELESS));
 	const int iter_options = HASHITER_NO_DEFAULTS; // we can speed up iteration if there are no machine resources in the defaults table.
 	foreach_param_matching(re, iter_options, (bool(*)(void*,HASHITER&))MachAttributes::init_machine_resource, this);
 

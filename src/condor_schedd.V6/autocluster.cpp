@@ -720,7 +720,7 @@ bool JobAggregationResults::compute()
 	aggregate_jobs_args agg_args(&jc, constraint);
 
 	schedd_runtime_probe runtime;
-	WalkJobQueueEntries(0,
+	WalkJobQueue3(
 		// aggregate_jobs as lambda (ignores constraint, assumes pv is pjc
 		// [](JobQueueJob *job, const JOB_ID_KEY &, void * pv) -> int { ((JobCluster*)pv)->getClusterid(*job, true, NULL); return 0; },
 		aggregate_jobs,

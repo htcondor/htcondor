@@ -1905,7 +1905,7 @@ RemoteResource::supportsReconnect( void )
 		return false;
 	}
 	int tmp;
-	if( ! jobAd->LookupInteger(ATTR_JOB_LEASE_DURATION, tmp) ) {
+	if( ! jobAd->LookupInteger(ATTR_JOB_LEASE_DURATION, tmp) || tmp <= 0 ) {
 		return false;
 	}
 

@@ -323,7 +323,7 @@ class FileTransfer final: public Service {
 	std::string DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
 	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload, std::vector<std::unique_ptr<ClassAd>> *);
-	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long &upload_bytes);
+	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long long &upload_bytes);
     int RecordFileTransferStats( ClassAd &stats );
 	std::string GetSupportedMethods(CondorError &err);
 	void DoPluginConfiguration();
@@ -563,13 +563,13 @@ class FileTransfer final: public Service {
 		//      paths of files stored in SPOOL, whether from
 		//      self-checkpointing, ON_EXIT_OR_EVICT, or remote input
 		//      file spooling.
-	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace );
+	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace, std::set<std::string> & pathsAlreadyPreserved );
 
         // Function internal to ExpandFileTransferList() -- called twice there.
         // The SpoolSpace argument is only necessary because this function
         // calls back into  ExpandFileTransferList(); see that function
         // for details.
-    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list, const char *SpoolSpace );
+    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list, const char *SpoolSpace, std::set<std::string> & pathsAlreadyPreserved );
 
 		// Returns true if path is a legal path for our peer to tell us it
 		// wants us to write to.  It must be a relative path, containing

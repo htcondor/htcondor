@@ -1,0 +1,64 @@
+From 7c50964e6851452177e1335386812014ee945987 Mon Sep 17 00:00:00 2001
+From: Mischa Salle <msalle@nikhef.nl>
+Date: Mon, 28 Jun 2021 21:24:01 +0200
+Subject: [PATCH] Fixes for OpenSSL-3.0.0-beta1
+
+- several functions now have 'constified' their parameters
+- defining AC_dup using &(AC_it) causes a SEGV in OpenSSL 3.0. The proper way
+  seems to always have been to use ASN1_ITEM_rptr(), see for example
+  https://github.com/openssl/openssl/blob/OpenSSL_1_1_1/crypto/rsa/rsa_asn1.c#L113_L116
+---
+ src/ac/newformat.c        | 6 +++++-
+ src/include/newformat.h   | 4 ++++
+ src/include/proxypolicy.h | 4 ++++
+ 3 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/src/ac/newformat.c b/src/ac/newformat.c
+index 078cbff1..7c593085 100644
+--- a/src/ac/newformat.c
++++ b/src/ac/newformat.c
+@@ -172,7 +172,11 @@ ASN1_SEQUENCE(AC) = {
+ 
+ IMPLEMENT_ASN1_FUNCTIONS(AC)
+ 
+-AC * AC_dup(AC *x) { return (AC*)ASN1_item_dup((&(AC_it)), x); }
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
++AC * AC_dup(AC *x) { return ASN1_item_dup(ASN1_ITEM_rptr(AC), x); }
++#else
++AC * AC_dup(const AC *x) { return ASN1_item_dup(ASN1_ITEM_rptr(AC), x); }
++#endif
+ 
+ ASN1_SEQUENCE(AC_SEQ) = {
+   ASN1_SEQUENCE_OF(AC_SEQ, acs, AC)
+diff --git a/src/include/newformat.h b/src/include/newformat.h
+index 886d8195..cc8d69fd 100644
+--- a/src/include/newformat.h
++++ b/src/include/newformat.h
+@@ -162,7 +162,11 @@ DECLARE_ASN1_FUNCTIONS(AC_CERTS)
+ 
+ DECLARE_ASN1_PRINT_FUNCTION(AC)
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+ extern AC *AC_dup(AC *ac);
++#else
++extern AC *AC_dup(const AC *ac);
++#endif
+ 
+ extern EVP_PKEY *EVP_PKEY_dup(EVP_PKEY *pkey);
+ 
+diff --git a/src/include/proxypolicy.h b/src/include/proxypolicy.h
+index c5bec33e..56a006a1 100644
+--- a/src/include/proxypolicy.h
++++ b/src/include/proxypolicy.h
+@@ -78,7 +78,11 @@ extern "C" {
+     , unsigned char *                     policy
+     , int                                 length);
+ 
++#if OPENSSL_VERSION_NUMBER < 0x30000000L
+   PROXY_POLICY* PROXY_POLICY_dup(PROXY_POLICY* policy);
++#else
++  PROXY_POLICY* PROXY_POLICY_dup(const PROXY_POLICY* policy);
++#endif
+   
+ #ifdef __cplusplus
+ }

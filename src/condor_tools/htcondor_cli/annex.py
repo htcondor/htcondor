@@ -382,7 +382,7 @@ class Shutdown(Verb):
         # which doesn't have a `setConfig` attribute.
         security_context = htcondor.SecMan()
         with security_context:
-            security_context.setConfig("SEC_DEFAULT_AUTHENTICATION_METHODS", "FS IDTOKENS PASSWORD")
+            security_context.setConfig("SEC_CLIENT_AUTHENTICATION_METHODS", "FS IDTOKENS PASSWORD")
             security_context.setConfig("SEC_PASSWORD_FILE", password_file)
 
             print(f"Shutting down annex '{annex_name}'...")

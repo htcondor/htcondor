@@ -92,7 +92,7 @@ main_config()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem( "NEGOTIATOR", SUBSYSTEM_TYPE_NEGOTIATOR );
+	set_mySubSystem( "NEGOTIATOR", true, SUBSYSTEM_TYPE_NEGOTIATOR );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

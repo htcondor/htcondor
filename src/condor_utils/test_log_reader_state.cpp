@@ -203,7 +203,7 @@ main(int argc, const char **argv)
 {
 	set_debug_flags(NULL, D_ALWAYS);
 
-	set_mySubSystem( "TEST_LOG_READER_STATE", SUBSYSTEM_TYPE_TOOL );
+	set_mySubSystem( "TEST_LOG_READER_STATE", false, SUBSYSTEM_TYPE_TOOL );
 
 		// initialize to read from config file
 	myDistro->Init( argc, argv );

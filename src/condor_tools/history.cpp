@@ -118,7 +118,6 @@ static int getDisplayWidth();
 
 //------------------------------------------------------------------------
 
-static CollectorList * Collectors = NULL;
 static  bool longformat=false;
 static  bool diagnostic = false;
 static  bool use_xml=false;
@@ -170,8 +169,6 @@ int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 int
 main(int argc, const char* argv[])
 {
-  Collectors = NULL;
-
   const char *owner=NULL;
   bool readfromfile = true;
   bool fileisuserlog = false;

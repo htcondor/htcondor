@@ -130,12 +130,6 @@
 /* Define to 1 if the system has the MS_REC flag. */
 #cmakedefine HAVE_MS_REC 1
 
-/* Do we have the blahp external (used Imake)*/
-#cmakedefine HAVE_EXT_BLAHP 1
-
-/* Do we have the classads external (used)*/
-#cmakedefine HAVE_EXT_CLASSADS 1
-
 /* Do we have the globus external (USED)*/
 #cmakedefine HAVE_EXT_GLOBUS 1
 
@@ -162,9 +156,6 @@
 
 ///* Do we have the glibc external*/
 #cmakedefine HAVE_EXT_GLIBC
-
-///* Do we have the pcre external*/
-#cmakedefine HAVE_EXT_PCRE
 
 ///* Do we have the libcgroup external */
 #cmakedefine HAVE_EXT_LIBCGROUP
@@ -228,12 +219,6 @@
 
 /* Define to 1 if you have the <os_types.h> header file. (USED)*/
 #cmakedefine HAVE_OS_TYPES_H 1
-
-/* Define to 1 if you have the <pcre.h> header file. (USED)*/
-#cmakedefine HAVE_PCRE_H 1
-
-/* Define to 1 if you have the <pcre/pcre.h> header file. (USED)*/
-#cmakedefine HAVE_PCRE_PCRE_H 1
 
 /* Define to 1 if you have the <resolv.h> header file. (USED)*/
 #cmakedefine HAVE_RESOLV_H 1

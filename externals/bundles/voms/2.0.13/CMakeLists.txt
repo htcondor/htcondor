@@ -21,9 +21,9 @@
 # tag v2.0.13.
 # Applied patch no_gsoap.patch and ran ./autogen.sh before creating tarball.
 
-if (LINUX OR DARWIN)
+if (LINUX)
   option( WITH_VOMS "Compiling with support for VOMS" ON )
-endif(LINUX OR DARWIN)
+endif(LINUX)
 
 if ( WITH_VOMS )
 
