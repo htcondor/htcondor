@@ -50,6 +50,7 @@
 #include "condor_random_num.h"
 #include "condor_sys.h"
 #include "checksum.h"
+#include "shortfile.h"
 
 #include <fstream>
 #include <algorithm>
@@ -4339,35 +4340,85 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 	}
 
-    //
-    // If we're transferring a checkpoint, create a MANIFEST file from
-    // the filelist and add it to the files going to the SPOOL.
-    //
-    if( uploadCheckpointFiles ) {
-        // What about partial writes of the MANIFEST file?  Is it enough to
-        // write it first, or does it also have to write its own length
-        // (in lines?) first?
-        dprintf( D_ALWAYS, "MANIFEST\n" );
-        for( auto & fileitem : filelist ) {
-            off_t sourceSize;
-            const std::string & sourceName = fileitem.srcName();
-            // Not sure why this source file doesn't use StatWrapper.
-            struct stat sourceStat;
-            if( stat( sourceName.c_str(), &sourceStat ) != 0 ) {
-                dprintf( D_ALWAYS, "%s ERROR ERROR\n", sourceName.c_str() );
-            } else {
-                sourceSize = sourceStat.st_size;
-            }
-            std::string sourceHash;
-            if(! compute_file_checksum( sourceName, sourceHash )) {
-                dprintf( D_ALWAYS, "Failed to compute file (%s) checksum when sending checkpoint, aborting.\n", sourceName.c_str() );
-                // It would be lovely to tell the shadow what the problem was,
-                // but I don't know how right at the moment.
-                return_and_resetpriv(-1);
-            }
-            dprintf( D_ALWAYS, "%s %ld %s\n", sourceName.c_str(), sourceSize, sourceHash.c_str() );
-        }
-    }
+	//
+	// If we're transferring a checkpoint, create a MANIFEST file from
+	// the filelist and add it to the files going to the SPOOL.
+	//
+	// Compute the manifest list, then its hash, then write the hash and
+	// the list to the MANIFEST file.
+	//
+	// FIXME: Test this with a really big checkpoint file, and/or determine
+	// how long we (the starter) have before the shadow gets bored and
+	// hangs up; calculating the checksum could take quite some time.
+	//
+	if( uploadCheckpointFiles ) {
+		std::string manifestText;
+		for( auto & fileitem : filelist ) {
+			off_t sourceSize;
+			const std::string & sourceName = fileitem.srcName();
+			// Not sure why this source file doesn't use StatWrapper.
+			struct stat sourceStat;
+			if( stat( sourceName.c_str(), &sourceStat ) != 0 ) {
+				dprintf( D_ALWAYS, "Could not stat(%s) when sending checkpoint, aborting.\n", sourceName.c_str() );
+				return_and_resetpriv(-1);
+			} else {
+				sourceSize = sourceStat.st_size;
+			}
+			std::string sourceHash;
+			if(! compute_file_checksum( sourceName, sourceHash )) {
+				dprintf( D_ALWAYS, "Failed to compute file (%s) checksum when sending checkpoint, aborting.\n", sourceName.c_str() );
+				// It would be lovely to tell the shadow what the problem was,
+				// but I don't know how right at the moment.
+				return_and_resetpriv(-1);
+			}
+			formatstr_cat( manifestText, "%s %ld %s\n", sourceName.c_str(), sourceSize, sourceHash.c_str() );
+		}
+		// dprintf( D_ALWAYS, "%s", manifestText.c_str() );
+
+		// We need the MANIFEST file on disk for the file-transfer plug-in,
+		// so we may as simplify our coding lives and compute its checksum
+		// off disk instead of in-memory.
+		// FIXME: is the CWD OK here?
+		if(! htcondor::writeShortFile( ".MANIFEST", manifestText )) {
+			dprintf( D_ALWAYS, "Failed to write manifest file when sending checkpoint, aborting.\n" );
+			return_and_resetpriv(-1);
+		}
+		std::string manifestHash;
+		if(! compute_file_checksum( ".MANIFEST", manifestHash )) {
+			dprintf( D_ALWAYS, "Failed to compute manifest (%s) checksum when sending checkpoint, aborting.\n", ".MANIFEST" );
+			return_and_resetpriv(-1);
+		}
+
+		// This adds a newline, which is nice, but it also means that we
+		// don't write out the trailing 4 NUL bytes, which is also nice,
+		// since we don't do that for the other hashes in the file.
+		std::string append;
+		formatstr( append, "%s\n", manifestHash.c_str() );
+		if(! htcondor::appendShortFile( ".MANIFEST",  append )) {
+			dprintf( D_ALWAYS, "Failed to write manifest checksum to manifest (%s) when sending checkpoint, aborting.\n", ".MANIFEST" );
+			return_and_resetpriv(-1);
+		}
+
+		// I don't know why we do it this way, but we do.
+		filelist.push_back( FileTransferItem() );
+		FileTransferItem & manifestFTI = filelist.back();
+		manifestFTI.setSrcName( ".MANIFEST" );
+		manifestFTI.setFileMode( (condor_mode_t)0600 );
+		manifestFTI.setFileSize( manifestText.length() + append.length() );
+
+		// FIXME: we should transfer the .MANIFEST file to MANIFEST.##;
+		// that number should come from and be recorded in the job ad
+		// (after we transfer the MANIFEST file to the spool).
+		//
+		// Actually, given that we should be deleting the local MANIFEST
+		// after uploading it (FIXME), we should probably just name it
+		// correctly locally...
+		}
+
+	// FIXME: we should probably add the MANIFEST file to the end AFTER
+	// the stable sort here; we _really_ want to transfer the MANIFEST file
+	// only if we believe that the checkpoint has been successfully stored.
+	// (This may require its own test....)
 
 	std::stable_sort(filelist.begin(), filelist.end());
 	for (auto &fileitem : filelist)

@@ -62,3 +62,24 @@ htcondor::writeShortFile( const std::string & fileName, const std::string & cont
 
     return true;
 }
+
+bool
+htcondor::appendShortFile( const std::string & fileName, const std::string & contents ) {
+    int fd = safe_open_wrapper_follow( fileName.c_str(), O_WRONLY | O_APPEND, 0600 );
+
+    if( fd < 0 ) {
+        dprintf( D_ALWAYS, "Failed to open file '%s' for writing: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
+        return false;
+    }
+
+    unsigned long written = full_write( fd, contents.c_str(), contents.length() );
+    close( fd );
+    if( written != contents.length() ) {
+        dprintf( D_ALWAYS, "Failed to completely append to file '%s'; wanted to append %lu but only put %lu.\n",
+                 fileName.c_str(), (unsigned long)contents.length(), written );
+        return false;
+    }
+
+    return true;
+}
+

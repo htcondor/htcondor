@@ -74,6 +74,7 @@ compute_checksum( int fd, std::string & checksum ) {
     memset( hash, 0, sizeof(hash) );
     SHA256_Final( hash, &context );
 
+    // FIXME: What are the extra 4 bytes for?
     char file_hash[SHA256_DIGEST_LENGTH * 2 + 4];
     encode_hex( file_hash, sizeof(file_hash), hash, sizeof(hash) );
     checksum.assign( file_hash, sizeof(file_hash) );
