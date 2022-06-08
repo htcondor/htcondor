@@ -73,7 +73,6 @@ int
 main(int argc, char* argv[])
 {
 	char *procd_address = NULL;
-	myDistro->Init(argc, argv);
 
 	if (argc < 2) {
 		fprintf(stderr, 

@@ -149,7 +149,6 @@ main( int argc, const char *argv[] )
 
 	set_mySubSystem( MySubsys, false, SUBSYSTEM_TYPE_TOOL );
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 

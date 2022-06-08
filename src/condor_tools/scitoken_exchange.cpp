@@ -104,7 +104,6 @@ exchange_scitoken(const std::string &pool, const std::string &name, daemon_t dty
 
 int main(int argc, char *argv[]) {
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 

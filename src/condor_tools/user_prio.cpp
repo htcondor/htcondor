@@ -383,7 +383,6 @@ main(int argc, const char* argv[])
   bool GroupRollup = false;
   const char * pcolon = NULL; // used to parse -arg:opt arguments
 
-  myDistro->Init( argc, argv );
   set_priv_initialize(); // allow uid switching if root
   config();
 

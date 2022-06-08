@@ -107,7 +107,6 @@ request_remote_token(const std::string &pool, const std::string &name, daemon_t 
 
 int main(int argc, const char *argv[]) {
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 

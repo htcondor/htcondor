@@ -59,7 +59,6 @@ main(int argc, const char **argv)
 	set_debug_flags(NULL, D_ALWAYS);
 
 		// initialize to read from config file
-	myDistro->Init( argc, argv );
 	config();
 
 		// Set up the dprintf stuff...

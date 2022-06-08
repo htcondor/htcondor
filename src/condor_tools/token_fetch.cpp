@@ -116,7 +116,6 @@ generate_remote_schedd_token(const std::string &pool, const std::string &name,
 
 int main(int argc, const char *argv[]) {
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 

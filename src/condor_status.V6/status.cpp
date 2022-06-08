@@ -711,7 +711,6 @@ main (int argc, char *argv[])
 #endif
 
 	// initialize to read from config file
-	myDistro->Init( argc, argv );
 	myName = argv[0];
 	set_priv_initialize(); // allow uid switching if root
 	config();
