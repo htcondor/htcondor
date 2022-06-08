@@ -19,7 +19,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bug introduced in 9.9.0 when forwarding slot ads from one
+  *condor_collector* to another. As a result, the *condor_negotiator*
+  was unable to match any jobs to the slots.
+  :jira:`1157`
 
 Version 9.9.0
 -------------
