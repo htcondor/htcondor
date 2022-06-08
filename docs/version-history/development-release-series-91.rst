@@ -18,6 +18,12 @@ Release Notes:
 - On macOS, updated to LibreSSL 2.8.3 and removed support for VOMS.
   :jira:`1129`
 
+- On macOS, the Python bindings are now built against the version of
+  Python 3 included in the Command Line Tools for Xcode package.
+  Previously, they were built against Python 3.8 as distributed from
+  the website python.org.
+  :jira:`1154`
+
 New Features:
 
 - Added support for running on Linux systems that ship with openssl version 3
