@@ -414,7 +414,9 @@ bool
 parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
 {
 	bool no_wait = false;
+	const char* pcolon;
 	char arg_prefix[16];
+
 	opts->mode = -1;
 	opts->daemonname = NULL;
 	opts->credential_file = NULL;
@@ -704,7 +706,9 @@ parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[])
 					break;
 #endif
 				case 'd':
-					dprintf_set_tool_debug("TOOL", 0);
+					if (is_dash_arg_colon_prefix(arg, "debug", &pcolon, 1)) {
+						dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
+					}
 					break;
 				case 'h':
 					opts->help = true;

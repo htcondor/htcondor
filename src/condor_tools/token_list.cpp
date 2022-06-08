@@ -198,15 +198,16 @@ int main(int argc, const char *argv[]) {
 #else
 
 	const char * token_dir = nullptr;
+	const char * pcolon;
 
 	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 
 	for (int i = 1; i < argc; i++) {
-		if(is_dash_arg_prefix(argv[i],"debug",3)) {
+		if (is_dash_arg_colon_prefix(argv[i], "debug", &pcolon, 1)) {
 			// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		} else if (is_dash_arg_prefix(argv[i], "help", 1)) {
 			print_usage(stdout, argv[0]);
 			exit(0);

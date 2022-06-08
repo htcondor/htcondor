@@ -184,6 +184,7 @@ main( int argc, char *argv[] )
 	DCCollector* pool = NULL;
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
+	const char * pcolon;
 
 	myDistro->Init( argc, argv );
 	MyName = strrchr( argv[0], DIR_DELIM_CHAR );
@@ -238,9 +239,9 @@ main( int argc, char *argv[] )
 
 	for( argv++; (arg = *argv); argv++ ) {
 		if( arg[0] == '-' ) {
-			if (is_dash_arg_prefix(arg, "debug", 1)) {
+			if (is_dash_arg_colon_prefix(arg, "debug", &pcolon, 1)) {
 				// dprintf to console
-				dprintf_set_tool_debug("TOOL", 0);
+				dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 			} else if (is_dash_arg_prefix(arg, "long", 1)) {
 				dash_long = true;
 			} else if (is_dash_arg_prefix(arg, "totals", 3)) {

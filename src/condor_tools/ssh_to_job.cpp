@@ -188,11 +188,11 @@ bool SSHToJob::parseArgs(int argc,char **argv)
 	int nextarg;
 	for( nextarg=1; nextarg<argc; nextarg++ ) {
 		bool missing_arg = false;
+		const char * pcolon = nullptr;
 
-		if( match_prefix( argv[nextarg], "-debug" ) ) {
+		if( is_dash_arg_colon_prefix( argv[nextarg], "debug", &pcolon ) ) {
 				// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
-			set_debug_flags(NULL, D_FULLDEBUG);
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : "D_ALWAYS:2");
 			m_debug = true;
 		} else if( match_prefix( argv[nextarg], "-help" ) ) {
 			printUsage();

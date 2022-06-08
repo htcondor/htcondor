@@ -885,8 +885,7 @@ main( int argc, const char* argv[] )
 
 
 	if (dash_debug) {
-		dprintf_set_tool_debug("TOOL", 0);
-		if (debug_flags) set_debug_flags(debug_flags, 0);
+		dprintf_set_tool_debug("TOOL", debug_flags);
 	}
 
 	// temporary, to get rid of build warning.
