@@ -51,6 +51,7 @@ static const char * encode_hex(char * buf, int bufsiz, const unsigned char * dat
     return buf;
 }
 
+// FIXME: this uses deprecated OpenSSL APIs.
 bool
 compute_checksum( int fd, std::string & checksum ) {
     const size_t BUF_SIZ = 1024 * 1024;
@@ -62,6 +63,8 @@ compute_checksum( int fd, std::string & checksum ) {
     SHA256_Init( &context );
 
     ssize_t bytesTotal = 0;
+    // FIXME: This doesn't handle EAGAIN, but really should.  Look at
+    // full_read(), instead.
     ssize_t bytesRead = read( fd, buffer, BUF_SIZ );
     while( bytesRead > 0 ) {
         SHA256_Update( &context, buffer, bytesRead );
@@ -75,6 +78,9 @@ compute_checksum( int fd, std::string & checksum ) {
     SHA256_Final( hash, &context );
 
     // FIXME: What are the extra 4 bytes for?
+    // FIXME: One extra byte for the trailing NUL, and the other 3 are
+    // probably because encode_hex() is broken and can run past the end of
+    // odd-sized arrays.
     char file_hash[SHA256_DIGEST_LENGTH * 2 + 4];
     encode_hex( file_hash, sizeof(file_hash), hash, sizeof(hash) );
     checksum.assign( file_hash, sizeof(file_hash) );

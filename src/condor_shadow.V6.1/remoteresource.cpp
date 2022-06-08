@@ -1275,7 +1275,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     CopyAttribute("Recent" ATTR_BLOCK_READS, *jobAd, *update_ad);
     CopyAttribute("Recent" ATTR_BLOCK_WRITES, *jobAd, *update_ad);
 
-
     CopyAttribute(ATTR_IO_WAIT, *jobAd, *update_ad);
     CopyAttribute(ATTR_JOB_CPU_INSTRUCTIONS, *jobAd, *update_ad);
 
@@ -1297,6 +1296,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		// Required to actually update the schedd's copy.  (sigh)
 		shadow->watchJobAttr(ATTR_JOB_TOE);
 	}
+
+    CopyAttribute( ATTR_JOB_CHECKPOINT_NUMBER, *jobAd, *update_ad );
 
     // these are headed for job ads in the scheduler, so rename them
     // to prevent these from colliding with similar attributes from schedd statistics

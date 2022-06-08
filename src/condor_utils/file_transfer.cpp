@@ -1371,7 +1371,9 @@ FileTransfer::FindChangedFiles()
 }
 
 int
-FileTransfer::UploadCheckpointFiles( bool blocking ) {
+FileTransfer::UploadCheckpointFiles( int checkpointNumber, bool blocking ) {
+	this->checkpointNumber = checkpointNumber;
+
 	// This is where we really want to separate "I understand the job ad"
 	// from "I can operate the protocol".  Until then, just set a member
 	// variable so that DetermineWhichFilesToSend() can know what to do.
@@ -4354,16 +4356,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	if( uploadCheckpointFiles ) {
 		std::string manifestText;
 		for( auto & fileitem : filelist ) {
-			off_t sourceSize;
 			const std::string & sourceName = fileitem.srcName();
-			// Not sure why this source file doesn't use StatWrapper.
-			struct stat sourceStat;
-			if( stat( sourceName.c_str(), &sourceStat ) != 0 ) {
-				dprintf( D_ALWAYS, "Could not stat(%s) when sending checkpoint, aborting.\n", sourceName.c_str() );
-				return_and_resetpriv(-1);
-			} else {
-				sourceSize = sourceStat.st_size;
-			}
+
 			std::string sourceHash;
 			if(! compute_file_checksum( sourceName, sourceHash )) {
 				dprintf( D_ALWAYS, "Failed to compute file (%s) checksum when sending checkpoint, aborting.\n", sourceName.c_str() );
@@ -4371,20 +4365,21 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				// but I don't know how right at the moment.
 				return_and_resetpriv(-1);
 			}
-			formatstr_cat( manifestText, "%s %ld %s\n", sourceName.c_str(), sourceSize, sourceHash.c_str() );
+			formatstr_cat( manifestText, "%s %s\n", sourceName.c_str(), sourceHash.c_str() );
 		}
-		// dprintf( D_ALWAYS, "%s", manifestText.c_str() );
 
 		// We need the MANIFEST file on disk for the file-transfer plug-in,
 		// so we may as simplify our coding lives and compute its checksum
 		// off disk instead of in-memory.
 		// FIXME: is the CWD OK here?
-		if(! htcondor::writeShortFile( ".MANIFEST", manifestText )) {
+		std::string manifestFileName;
+		formatstr( manifestFileName, "MANIFEST.%.4d", this->checkpointNumber );
+		if(! htcondor::writeShortFile( manifestFileName, manifestText )) {
 			dprintf( D_ALWAYS, "Failed to write manifest file when sending checkpoint, aborting.\n" );
 			return_and_resetpriv(-1);
 		}
 		std::string manifestHash;
-		if(! compute_file_checksum( ".MANIFEST", manifestHash )) {
+		if(! compute_file_checksum( manifestFileName, manifestHash )) {
 			dprintf( D_ALWAYS, "Failed to compute manifest (%s) checksum when sending checkpoint, aborting.\n", ".MANIFEST" );
 			return_and_resetpriv(-1);
 		}
@@ -4392,9 +4387,12 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		// This adds a newline, which is nice, but it also means that we
 		// don't write out the trailing 4 NUL bytes, which is also nice,
 		// since we don't do that for the other hashes in the file.
+		//
+		// Including the file name makes it easier to generate with the
+		// sha256sum command-line tool.
 		std::string append;
-		formatstr( append, "%s\n", manifestHash.c_str() );
-		if(! htcondor::appendShortFile( ".MANIFEST",  append )) {
+		formatstr( append, "%s %s\n", manifestFileName.c_str(), manifestHash.c_str() );
+		if(! htcondor::appendShortFile( manifestFileName,  append )) {
 			dprintf( D_ALWAYS, "Failed to write manifest checksum to manifest (%s) when sending checkpoint, aborting.\n", ".MANIFEST" );
 			return_and_resetpriv(-1);
 		}
@@ -4402,17 +4400,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		// I don't know why we do it this way, but we do.
 		filelist.push_back( FileTransferItem() );
 		FileTransferItem & manifestFTI = filelist.back();
-		manifestFTI.setSrcName( ".MANIFEST" );
+		manifestFTI.setSrcName( manifestFileName );
 		manifestFTI.setFileMode( (condor_mode_t)0600 );
 		manifestFTI.setFileSize( manifestText.length() + append.length() );
-
-		// FIXME: we should transfer the .MANIFEST file to MANIFEST.##;
-		// that number should come from and be recorded in the job ad
-		// (after we transfer the MANIFEST file to the spool).
-		//
-		// Actually, given that we should be deleting the local MANIFEST
-		// after uploading it (FIXME), we should probably just name it
-		// correctly locally...
 		}
 
 	// FIXME: we should probably add the MANIFEST file to the end AFTER

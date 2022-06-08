@@ -1066,7 +1066,7 @@ JICShadow::removeFromOutputFiles( const char* filename )
 }
 
 bool
-JICShadow::uploadCheckpointFiles()
+JICShadow::uploadCheckpointFiles(int checkpointNumber)
 {
 	if(! filetrans) {
 		return false;
@@ -1084,7 +1084,7 @@ JICShadow::uploadCheckpointFiles()
 	priv_state saved_priv = set_user_priv();
 
 	// this will block
-	bool rval = filetrans->UploadCheckpointFiles( true );
+	bool rval = filetrans->UploadCheckpointFiles( checkpointNumber, true );
 	set_priv( saved_priv );
 
 	if( !rval ) {

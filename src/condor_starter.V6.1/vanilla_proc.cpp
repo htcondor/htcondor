@@ -802,7 +802,24 @@ int VanillaProc::pidNameSpaceReaper( int status ) {
 }
 
 void VanillaProc::notifySuccessfulEvictionCheckpoint() { /* FIXME (#4969) */ }
-void VanillaProc::notifySuccessfulPeriodicCheckpoint() { /* FIXME (#4969) */ }
+
+void
+VanillaProc::notifySuccessfulPeriodicCheckpoint( int checkpointNumber ) {
+	//
+	// The checkpoint number in the job ad in the shadow / schedd is
+	// ADVISORY.  On start-up, the shadow will examine the job's SPOOL
+	// directory and determine which MANIFEST file(s) actually exist and
+	// have correct checksums, and use that information to determine
+	// from which checkpoint number to restart.
+	//
+	// However, this information could be useful for debugging, so we
+	// might as well send it along.
+	//
+	ClassAd updateAd;
+	Starter->publishUpdateAd( & updateAd );
+	updateAd.Assign( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+	Starter->jic->periodicJobUpdate( & updateAd, false );
+}
 
 void VanillaProc::recordFinalUsage() {
 	if( daemonCore->Get_Family_Usage(JobPid, m_final_usage) == FALSE ) {
@@ -832,8 +849,14 @@ void VanillaProc::restartCheckpointedJob() {
 	}
 	m_checkpoint_usage += last_usage;
 
-	if( Starter->jic->uploadCheckpointFiles() ) {
-			notifySuccessfulPeriodicCheckpoint();
+	static int checkpointNumber = 0;
+	if( checkpointNumber == 0 ) {
+		JobAd->LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+	}
+
+	if( Starter->jic->uploadCheckpointFiles(checkpointNumber) ) {
+			++checkpointNumber;
+			notifySuccessfulPeriodicCheckpoint(checkpointNumber);
 	} else {
 			// We assume this is a transient failure and will try
 			// to transfer again after the next periodic checkpoint.

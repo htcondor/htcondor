@@ -186,7 +186,7 @@ class FileTransfer final: public Service {
 	int UploadFiles(bool blocking=true, bool final_transfer=true);
 
 	/** @return 1 on success, 0 on failure */
-	int UploadCheckpointFiles( bool blocking = true );
+	int UploadCheckpointFiles( int checkpointNumber, bool blocking = true );
 
 	/** @return 1 on success, 0 on failure */
 	int UploadFailureFiles( bool blocking = true );
@@ -404,6 +404,7 @@ class FileTransfer final: public Service {
 
   private:
 
+	int checkpointNumber{-1};
 	bool uploadCheckpointFiles{false};
 	bool uploadFailureFiles{false};
 	bool TransferFilePermissions{false};

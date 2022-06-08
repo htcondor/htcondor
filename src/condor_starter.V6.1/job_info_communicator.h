@@ -385,7 +385,7 @@ public:
 		/* Upload files in a job working directory */
 	virtual bool uploadWorkingFiles(void) { return false; }
 
-	virtual bool uploadCheckpointFiles(void) { return false; }
+	virtual bool uploadCheckpointFiles( int /* checkpointNumber */ ) { return false; }
 
 		/* Update Job ClassAd with checkpoint info and log it */
 	virtual void updateCkptInfo(void) {};
