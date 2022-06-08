@@ -71,6 +71,26 @@ Bugs Fixed:
   lease.
   :jira:`960`
 
+Version 9.9.1
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.9.1 released on Month Date, 2022.
+
+- HTCondor version 9.9.1 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed bug introduced in 9.9.0 when forwarding slot ads from one
+  *condor_collector* to another. As a result, the *condor_negotiator*
+  was unable to match any jobs to the slots.
+  :jira:`1157`
+
 Version 9.9.0
 -------------
 
