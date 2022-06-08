@@ -40,6 +40,10 @@ Bugs Fixed:
 - Fixed a bug that caused ``$(OPSYSANDVER)`` to expand to nothing in a JOB_TRANSFORM.
   :jira:`1121`
 
+- Fixed a bug in the Python bindings that prevented context managed
+  ``htcondor.SecMan`` sessions from working.
+  :jira:`924`
+
 .. _lts-version-history-9013:
 
 Version 9.0.13
@@ -270,7 +274,7 @@ Bugs Fixed:
   status when the job policy indicated it should be held.
   :jira:`869`
 
-- Fixed a bug running jobs in a Singularity container where 
+- Fixed a bug running jobs in a Singularity container where
   the environment variables added by HTCondor could include incorrect
   pathnames to the location of the job's scratch directory.
   This occurred when setting the ``SINGULARITY_TARGET_DIR`` configuration option.
@@ -771,7 +775,7 @@ Known Issues:
 
 New Features:
 
-- The Windows MSI installer now sets up user-based authentication and creates 
+- The Windows MSI installer now sets up user-based authentication and creates
   an IDTOKEN for local administration.
   :jira:`407`
 
