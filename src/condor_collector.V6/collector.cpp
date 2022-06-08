@@ -2218,12 +2218,11 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 		AdNameHashKey hk;
 		ASSERT( makeStartdAdHashKey (hk, theAd) );
 		CollectorRecord* pvt_rec = collector.lookup(STARTD_PVT_AD,hk);
+		pvtAd = pvt_rec ? pvt_rec->m_pvtAd : nullptr;
 		if (pvt_rec && !forwardClaimedPrivateAds){
 			std::string state;
 			if (theAd->LookupString(ATTR_STATE, state) && state == "Claimed") {
 				pvtAd = NULL;
-			} else {
-				pvtAd = pvt_rec->m_pvtAd;
 			}
 		}
 	}
