@@ -126,8 +126,11 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 		$platform =~ s/_64_/_/;
 		print "platform = $platform\n";
 	}
-} else {
-	$ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
+} elsif ($ENV{NMI_PLATFORM} =~ /macos/i) {
+	# CRUFT Once 9.0 is EOL, remove the python.org version of python3
+	#   from the mac build machines and remove this setting of PATH.
+	# Ensure we're using the system python3
+	$ENV{PATH} ="/usr/bin:$ENV{PATH}";
 }
 print "------------------------- ENV DUMP ------------------------\n";
 foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {
