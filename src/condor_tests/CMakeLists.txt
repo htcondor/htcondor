@@ -421,6 +421,7 @@ endif ()
 	condor_pl_test(docker_simulator_test "docker_simulator_test" "quick;ctest" CTEST DEPENDS "src/condor_tests/docker_simulator.pl;src/condor_tests/x_sleep.pl")
 	condor_pl_test(map_user_to_groups_metaknob_test "map_user_to_groups_metaknob_test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(cmd_submit-factory "condor_submit -factory" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	condor_pl_test(job_ad_epoch_recording "Test Job Ads recorded per epoch" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 
 	if (LINUX)
 		condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "quick;ctest" CTEST DEPENDS "src/condor_tests/cmd_ssh_to_job_van.pl")
