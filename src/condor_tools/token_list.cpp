@@ -200,7 +200,6 @@ int main(int argc, const char *argv[]) {
 	const char * token_dir = nullptr;
 	const char * pcolon;
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 

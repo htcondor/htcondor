@@ -829,7 +829,6 @@ main( int argc, const char *argv[] )
 	set_mySubSystem( "SUBMIT", false, SUBSYSTEM_TYPE_SUBMIT );
 
 	MyName = condor_basename(argv[0]);
-	myDistro->Init( argc, argv );
 	config();
 
 

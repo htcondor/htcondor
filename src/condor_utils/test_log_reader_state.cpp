@@ -206,7 +206,6 @@ main(int argc, const char **argv)
 	set_mySubSystem( "TEST_LOG_READER_STATE", false, SUBSYSTEM_TYPE_TOOL );
 
 		// initialize to read from config file
-	myDistro->Init( argc, argv );
 	config();
 
 		// Set up the dprintf stuff...

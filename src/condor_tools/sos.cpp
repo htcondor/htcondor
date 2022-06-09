@@ -51,7 +51,6 @@ int main( int argc, char *argv[] )
 	const char* timeout_multiplier = "1";
 	std::string condor_prefix;
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 

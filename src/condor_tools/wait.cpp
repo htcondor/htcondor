@@ -121,7 +121,6 @@ int main( int argc, char *argv[] )
 	int format_opts = 0;
 	const char * pcolon;
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 

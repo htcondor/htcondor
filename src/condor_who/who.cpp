@@ -1422,8 +1422,6 @@ main( int argc, char *argv[] )
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
-	myDistro->Init( argc, argv );
-
 	if( argc < 1 ) {
 		usage(true);
 	}

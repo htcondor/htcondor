@@ -180,7 +180,6 @@ main(int argc, char *argv[])
 	std::string method;
 	char *tmp;
 
-	myDistro->Init( argc, argv );
 	MyName = condor_basename(argv[0]);
 	set_priv_initialize(); // allow uid switching if root
 	config();

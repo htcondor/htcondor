@@ -105,7 +105,6 @@ list_tokens(const std::string &pool, const std::string &name, daemon_t dtype, st
 }
 
 int main(int argc, const char *argv[]) {
-	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 
