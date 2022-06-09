@@ -37,6 +37,8 @@
 
 #include "strcasestr.h"
 
+#include <algorithm>
+
 
 ResMgr::ResMgr() :
 	extras_classad( NULL ),
@@ -627,8 +629,7 @@ ResMgr::reconfig_resources( void )
 		// Now, for each type, sort our resources by state.
 	for( t=0; t<max_types; t++ ) {
 		ASSERT( cur_type_index[t] == type_nums[t] );
-		qsort( sorted_resources[t], type_nums[t],
-			   sizeof(Resource*), &claimedRankCmp );
+		std::sort( sorted_resources[t], sorted_resources[t] + type_nums[t], claimedRankCmp );
 	}
 
 		////////////////////////////////////////////////////
@@ -765,7 +766,10 @@ ResMgr::resource_sort( ComparisonFunc compar )
 		return;
 	}
 	if( nresources > 1 ) {
-		qsort( resources, nresources, sizeof(Resource*), compar );
+		auto compar2 = [&compar] (const Resource* rip1, const Resource* rip2) {
+			return compar((const void*) &rip1, (const void *) &rip2) < 0;
+		};
+		std::sort(resources, resources + nresources, compar2);
 	}
 }
 
