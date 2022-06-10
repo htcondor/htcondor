@@ -499,7 +499,7 @@ endif ()
 	condor_pl_test(cmd_ccv_set_rset "condor_config_val set/rset" "quick;ctest" CTEST)
 	condor_pl_test(cmd_gpu_discovery "gpu discovery file" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 
-	if(NOT DARWIN)
+	if(NOT APPLE)
 	# globbiing only firs not supported on these platforms
 	condor_pl_test(job_foreach_submit-initialdir "submit file usage InitialDir" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_getsandbox.pl")
 	condor_pl_test(job_foreach_submit-initialdir-run "submit file usage InitialDir - run submit file" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_getsandbox.pl")

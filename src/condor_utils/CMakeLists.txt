@@ -578,7 +578,7 @@ include_directories(${SCITOKENS_INCLUDE_DIRS})
 endif(SCITOKENS_FOUND)
 
 # Turn off the OpenSSL deprecation warnings until we decide on the long-term direction with OpenSSL on Mac.
-if (DARWIN)
+if (APPLE)
 	set_source_files_properties(condor_base64.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 	set_source_files_properties(condor_dh.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 	set_source_files_properties(condor_md.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
@@ -639,7 +639,7 @@ endif()
 
 # for linux also make a static version of condor_utils
 #
-if (LINUX OR DARWIN)
+if (LINUX OR APPLE)
    condor_static_lib(condor_utils_s
 		$<TARGET_OBJECTS:condor_api_and_utils_objects>
 		$<TARGET_OBJECTS:condor_utils_objects>
@@ -649,7 +649,7 @@ if (LINUX OR DARWIN)
    if (HAVE_GNU_LD)
 	target_link_libraries( condor_utils_s -Wl,--wrap,exit )
    endif()
-endif(LINUX OR DARWIN)
+endif(LINUX OR APPLE)
 
 
 # Brain twister:
@@ -680,7 +680,7 @@ if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condor_utils ${LIBUUID_FOUND})
 endif()
 
-if ( DARWIN )
+if ( APPLE )
 	target_link_libraries( condor_utils ${IOKIT_FOUND} ${COREFOUNDATION_FOUND} resolv )
 	set_target_properties( condor_utils PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
 	install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${UTILS_LIB_NAME}.dylib)" )
@@ -722,7 +722,7 @@ if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condorapi ${LIBUUID_FOUND})
 endif()
 
-if (LINUX OR DARWIN)
+if (LINUX OR APPLE)
 	condor_shared_lib(condorapi_shared 
 						$<TARGET_OBJECTS:condor_api_objects>
 						$<TARGET_OBJECTS:condor_api_and_utils_objects>
@@ -747,10 +747,10 @@ install (FILES MyString.h
 		DESTINATION ${C_INCLUDE})
 
 install ( TARGETS condorapi DESTINATION ${C_LIB} )
-if (LINUX OR DARWIN)
+if (LINUX OR APPLE)
     install ( TARGETS condorapi_shared DESTINATION ${C_LIB} )
 endif()
-if (DARWIN)
+if (APPLE)
     install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/libcondorapi.dylib)" )
 endif()
 

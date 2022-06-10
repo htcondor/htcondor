@@ -16,9 +16,9 @@
  # 
  ############################################################### 
 
-if ( LINUX OR DARWIN )
+if ( LINUX OR APPLE )
 	option(WITH_CAMPUSFACTORY "Compiling with support for Campus Factory" ON)
-endif ( LINUX OR DARWIN )
+endif ( LINUX OR APPLE )
 
 if ( WITH_CAMPUSFACTORY )
 

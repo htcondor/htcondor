@@ -24,7 +24,7 @@ if (WITH_CURL)
 
 	find_multiple( "curl" CURL_FOUND )
 
-	if ( NOT CURL_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
+	if ( NOT CURL_FOUND AND NOT PROPER AND NOT LINUX AND NOT APPLE )
 		
 		condor_pre_external( CURL curl-7.54.1 "lib;include" "include/curl/curl.h")
 		set (CURL_DOWNLOAD ${CURL_VER}.tar.gz)

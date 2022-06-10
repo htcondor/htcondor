@@ -332,7 +332,7 @@ if(UNIX)
     endif( )
     set( PLATFORM "${SYS_ARCH}_freebsd_${FREEBSD_RELEASE}")
 
-  elseif(OS_NAME MATCHES "DARWIN")
+  elseif(APPLE)
     set( BSD_UNIX ON )
 
   endif(CMAKE_SYSTEM_NAME MATCHES "Linux")

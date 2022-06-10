@@ -199,7 +199,7 @@ else()
       add_definitions ( -DBOOST_NO_AUTO_PTR )
     endif()
 
-    if (DARWIN)
+    if (APPLE)
         # This is probably a sign that something else needs fixing.
         # Note that you can NOT set this to DARWIN, because CMake's parser
         # is terrible.  (It will silently dereference the quoted string
@@ -292,7 +292,7 @@ else()
       install ( TARGETS htcondor DESTINATION ${C_PYTHONARCHLIB}/htcondor )
       install ( TARGETS classad_module DESTINATION ${C_PYTHONARCHLIB}/classad )
 
-      if ( DARWIN )
+      if ( APPLE )
           set_target_properties( pyclassad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PYCLASSAD_LIB_NAME}.dylib)" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHONARCHLIB}/classad/classad${PYTHON_MODULE_SUFFIX})" )
@@ -300,7 +300,7 @@ else()
       endif()
     endif()
 
-    if (DARWIN)
+    if (APPLE)
         # This is probably a sign that something else needs fixing.
         # Note that you can NOT set this to DARWIN, because CMake's parser
         # is terrible.  (It will silently dereference the quoted string
@@ -392,7 +392,7 @@ else()
       install ( TARGETS py3htcondor DESTINATION ${C_PYTHON3ARCHLIB}/htcondor )
       install ( TARGETS py3classad_module DESTINATION ${C_PYTHON3ARCHLIB}/classad )
 
-      if ( DARWIN )
+      if ( APPLE )
           set_target_properties( py3classad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PY3CLASSAD_LIB_NAME}.dylib)" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad/classad${PYTHON3_MODULE_SUFFIX})" )
@@ -408,7 +408,7 @@ else()
 
       # the pyclassad library and the classad and htcondor modules should not link libpython
       # instead, the user's python interpreter will look for any such missing symbols
-      if ( DARWIN )
+      if ( APPLE )
         # in macOS, use "-undefined dynamic_lookup" in place of "-lpython" or "-framework Python" (i.e. ${PYTHON_LIBRARIES})
         set( NOLINK_PYTHON_LIB "-undefined dynamic_lookup" )
       else()
@@ -419,7 +419,7 @@ else()
       # build libpyclassad *not* linked against libpython
       add_library( wheel_pyclassad SHARED classad.cpp classad_wrapper.h exprtree_wrapper.h exception_utils.cpp classad_exceptions.cpp )
       target_link_libraries( wheel_pyclassad ${CLASSADS_FOUND} -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
-      if ( DARWIN )
+      if ( APPLE )
         set_target_properties( wheel_pyclassad PROPERTIES SUFFIX ".dylib" )
         set_target_properties( wheel_pyclassad PROPERTIES INSTALL_NAME_DIR "${WHEEL_BINARY_DIR}/htcondor/htcondor_libs" )
       else()
@@ -434,7 +434,7 @@ else()
       target_link_libraries( wheel_classad_module wheel_pyclassad -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
       set_target_properties( wheel_classad_module PROPERTIES PREFIX "" OUTPUT_NAME "classad" SUFFIX ".so")
       set_target_properties( wheel_classad_module PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/classad" )
-      if ( NOT DARWIN )
+      if ( NOT APPLE )
         set_target_properties( wheel_classad_module PROPERTIES INSTALL_RPATH "$ORIGIN/../htcondor/htcondor_libs" )
       endif()
 
@@ -444,7 +444,7 @@ else()
       target_link_libraries( wheel_htcondor wheel_pyclassad condor_utils -l${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
       set_target_properties( wheel_htcondor PROPERTIES PREFIX "" OUTPUT_NAME "htcondor" SUFFIX ".so")
       set_target_properties( wheel_htcondor PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/htcondor" )
-      if ( NOT DARWIN )
+      if ( NOT APPLE )
         set_target_properties( wheel_htcondor PROPERTIES INSTALL_RPATH "$ORIGIN/htcondor_libs" )
       endif()
 

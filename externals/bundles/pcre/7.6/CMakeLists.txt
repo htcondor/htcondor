@@ -19,7 +19,7 @@
 # The directory include-darwin contains the header files for pcre 8.02,
 # the version of pcre included in modern versions of Mac OS X.
 
-if ( NOT PROPER AND NOT LINUX AND NOT DARWIN )
+if ( NOT PROPER AND NOT LINUX AND NOT APPLE )
 
 	condor_pre_external( PCRE pcre-7.6 "lib;include" "include/pcre.h")
 
@@ -62,7 +62,7 @@ if ( NOT PROPER AND NOT LINUX AND NOT DARWIN )
 	if (WINDOWS)
 		set(PCRE_FOUND "${PCRE_INSTALL_LOC}/lib/libpcre.lib")
 		install ( FILES ${PCRE_INSTALL_LOC}/lib/libpcre.dll DESTINATION ${C_LIB} )
-	elseif(DARWIN)
+	elseif(APPLE)
 		set(PCRE_FOUND "${PCRE_INSTALL_LOC}/lib/libpcre.dylib")
 	else()
 		set(PCRE_FOUND "${PCRE_INSTALL_LOC}/lib/libpcre.a")
@@ -72,7 +72,7 @@ if ( NOT PROPER AND NOT LINUX AND NOT DARWIN )
 
 	condor_post_external( pcre include OFF )
 
-	if ( DARWIN )
+	if ( APPLE )
 		# Install the PCRE libraries manually.
 		# In order to use an install(FILES) command, we'd
 		# have to explicitly list evey file.
@@ -93,13 +93,13 @@ if ( NOT PROPER AND NOT LINUX AND NOT DARWIN )
 
 	set( HAVE_PCRE_H ON PARENT_SCOPE )
 
-else( NOT PROPER AND NOT LINUX AND NOT DARWIN )
+else( NOT PROPER AND NOT LINUX AND NOT APPLE )
 
         if (HAVE_PCRE_H OR HAVE_PCRE_PCRE_H)
             find_multiple( "pcre" PCRE_FOUND )
         endif()
 
-endif( NOT PROPER AND NOT LINUX AND NOT DARWIN )
+endif( NOT PROPER AND NOT LINUX AND NOT APPLE )
 
 ##################### 
 ## Hard failure if there is no PCRE

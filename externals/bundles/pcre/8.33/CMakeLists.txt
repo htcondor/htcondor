@@ -60,7 +60,7 @@ if ( NOT PROPER AND NOT LINUX )
 	if (WINDOWS)
 		set(PCRE_FOUND "${PCRE_INSTALL_LOC}/lib/pcre.lib")
 		install ( FILES ${PCRE_INSTALL_LOC}/lib/pcre.dll DESTINATION ${C_LIB} )
-	elseif(DARWIN)
+	elseif(APPLE)
 		set(PCRE_FOUND "${PCRE_INSTALL_LOC}/lib/libpcre.dylib")
 	else()
 		set(PCRE_FOUND "${PCRE_INSTALL_LOC}/lib/libpcre.a")
@@ -70,7 +70,7 @@ if ( NOT PROPER AND NOT LINUX )
 
 	condor_post_external( pcre include OFF "${PCRE_FOUND}" )
 
-	if ( DARWIN )
+	if ( APPLE )
 		# Install the PCRE libraries manually.
 		# In order to use an install(FILES) command, we'd
 		# have to explicitly list evey file.
