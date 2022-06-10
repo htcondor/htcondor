@@ -31,14 +31,14 @@
 
 // Basic constructor
 CronJobMgr::CronJobMgr( void ) 
-		: m_job_list( *this ),
+		: m_job_list(),
 		  m_name( NULL ),
 		  m_param_base( NULL ),
 		  m_params( NULL ),
 		  m_config_val_prog( NULL ),
 		  m_max_job_load( 0.2 ),
 		  m_cur_job_load( 0.0 ),
-		  m_schedule_timer( -1 )
+		  m_schedule_timer(-1)
 {
 }
 
