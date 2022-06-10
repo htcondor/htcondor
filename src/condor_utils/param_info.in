@@ -961,6 +961,10 @@ default=true
 type=bool
 tags=shadow,remoteresource
 
+[USE_VOMS_ATTRIBUTES]
+default=false
+type=bool
+
 [USE_AFS]
 default=
 type=string

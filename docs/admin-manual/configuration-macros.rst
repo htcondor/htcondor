@@ -9044,6 +9044,11 @@ macros are described in the :doc:`/admin-manual/security` section.
     delegated proxy remains valid, the interval for checking the proxy
     should be, at most, half of the interval for refreshing it.
 
+:macro-def:`USE_VOMS_ATTRIBUTES`
+    A boolean value that controls whether HTCondor will attempt to extract
+    and verify VOMS attributes from X.509 credentials.
+    The default is ``False``.
+
 :macro-def:`SEC_<access-level>_SESSION_DURATION`
     The amount of time in seconds before a communication session
     expires. A session is a record of necessary information to do
