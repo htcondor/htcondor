@@ -3751,7 +3751,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 #endif
 				holdJob(job_id.cluster, job_id.proc, msg.c_str(), 
 						CONDOR_HOLD_CODE::FailedToAccessUserAccount, 0,
-					false, true, false, false);
+					false, true);
 				return;
 			}
 			int kill_sig = -1;
@@ -9892,7 +9892,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 				 job_id->proc );
 		holdJob( job_id->cluster, job_id->proc,
 				 "No condor_starter installed that supports local universe",
-				 CONDOR_HOLD_CODE::NoCompatibleShadow, 0,
+				 CONDOR_HOLD_CODE::NoCompatibleShadow, 0, false,
 				 false, notify_admin, true );
 		delete_shadow_rec( srec );
 		notify_admin = false;
@@ -10134,7 +10134,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 #endif
 		holdJob(job_id->cluster, job_id->proc, tmpstr.c_str(),
 				CONDOR_HOLD_CODE::FailedToAccessUserAccount, 0,
-				false, true, false, false);
+				false, true);
 		goto wrapup;
 	}
 
@@ -10163,7 +10163,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			holdJob(job_id->cluster, job_id->proc, 
 				"Spooled executable is not executable!",
 					CONDOR_HOLD_CODE::FailedToCreateProcess, EACCES,
-				false, true, false, false );
+				false, true);
 
 			delete filestat;
 			filestat = NULL;
@@ -10188,7 +10188,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			holdJob(job_id->cluster, job_id->proc, 
 				"Executable unknown - not specified in job ad!",
 					CONDOR_HOLD_CODE::FailedToCreateProcess, ENOENT,
-				false, true, false, false );
+				false, true);
 			goto wrapup;
 		}
 
@@ -10212,7 +10212,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			set_priv( priv );  // back to regular privs...
 			holdJob(job_id->cluster, job_id->proc, tmpstr.c_str(),
 					CONDOR_HOLD_CODE::FailedToCreateProcess, EACCES,
-					false, true, false, false);
+					false, true);
 			goto wrapup;
 		}
 	}
@@ -16600,7 +16600,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			//
 		holdJob( id.cluster, id.proc, reason.c_str(),
 				 CONDOR_HOLD_CODE::InvalidCronSettings, 0,
-				 true, true, false, false );
+				 true, true );
 	}
 	
 	return ( valid );
