@@ -383,7 +383,6 @@ main(int argc, const char* argv[])
   bool GroupRollup = false;
   const char * pcolon = NULL; // used to parse -arg:opt arguments
 
-  myDistro->Init( argc, argv );
   set_priv_initialize(); // allow uid switching if root
   config();
 
@@ -475,12 +474,7 @@ main(int argc, const char* argv[])
         customFormat = true;
     }
     else if (IsArgColon(argv[i],"debug",&pcolon,1)) {
-      if (pcolon && pcolon[1]) {
-        set_debug_flags( ++pcolon, 0 );
-        // for now we also need to do this because dprintf_set_tool_debug reset global debug flags based on it
-        param_insert("TOOL_DEBUG", pcolon);
-      }
-      dprintf_set_tool_debug("TOOL", 0);
+      dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
     }
     else if (IsArg(argv[i],"hierarchical",2) || IsArg(argv[i],"heir")) {
       HierFlag=true;

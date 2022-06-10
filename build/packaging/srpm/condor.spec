@@ -278,7 +278,7 @@ Requires: %name-externals = %version-%release
 Requires: %name-blahp = %version-%release
 
 # Useful tools are using the Python bindings
-Requires: python3-condor
+Requires: python3-condor = %{version}-%{release}
 # The use the python-requests library in EPEL is based Python 3.6
 # However, Amazon Linux 2 has Python 3.7
 %if ! 0%{?amzn}
@@ -290,7 +290,7 @@ Requires: python3-requests
 %endif
 
 %if 0%{?rhel} == 7
-Requires: python2-condor
+Requires: python2-condor = %{version}-%{release}
 # For some reason OSG VMU tests need python-request
 Requires: python-requests
 %endif
@@ -546,14 +546,14 @@ Summary: OAuth2 credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
 %if 0%{?rhel} == 7
-Requires: python2-condor
+Requires: python2-condor = %{version}-%{release}
 Requires: python2-requests-oauthlib
 Requires: python-six
 Requires: python-flask
 Requires: python2-cryptography
 Requires: python2-scitokens
 %else
-Requires: python3-condor
+Requires: python3-condor = %{version}-%{release}
 Requires: python3-requests-oauthlib
 Requires: python3-six
 Requires: python3-flask
@@ -573,7 +573,7 @@ OAuth2 endpoints and to use those credentials securely inside running jobs.
 Summary: Vault credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
-Requires: python3-condor
+Requires: python3-condor = %{version}-%{release}
 Requires: python3-six
 %if 0%{?osg}
 # Although htgettoken is only needed on the submit machine and
@@ -590,9 +590,9 @@ htgettoken and to use those credentials securely inside running jobs.
 #######################
 %package blahp
 Summary: BLAHP daemon
-Url: https://github.com/htcondor/BLAH
 Group: System/Libraries
 BuildRequires:  docbook-style-xsl, libxslt
+Requires: %name = %version-%release
 %if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3
 %else

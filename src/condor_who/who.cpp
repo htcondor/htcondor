@@ -1043,6 +1043,7 @@ void AddPrintColumn(const char * heading, int width, const char * attr, const Cu
 
 void parse_args(int /*argc*/, char *argv[])
 {
+	const char * pcolon;
 	for (int ixArg = 0; argv[ixArg]; ++ixArg)
 	{
 		const char * parg = argv[ixArg];
@@ -1050,7 +1051,9 @@ void parse_args(int /*argc*/, char *argv[])
 			usage(true);
 			continue;
 		}
-		if (is_dash_arg_prefix(parg, "debug", 1)) {
+		// condor_who is unusual in that -debug can be followed by an optional second argument
+		// with debug flags.  We still allow that for backward compat.
+		if (is_dash_arg_colon_prefix(parg, "debug", &pcolon, 1)) {
 			const char * pflags = argv[ixArg+1];
 			if (pflags && (pflags[0] == '"' || pflags[0] == '\'')) ++pflags;
 			if (pflags && pflags[0] == 'D' && pflags[1] == '_') {
@@ -1058,8 +1061,8 @@ void parse_args(int /*argc*/, char *argv[])
 			} else {
 				pflags = NULL;
 			}
-			dprintf_set_tool_debug("TOOL", 0);
-			set_debug_flags( pflags, D_NOHEADER | D_FULLDEBUG );
+			if (pflags || ! pcolon) { set_debug_flags(pflags, D_NOHEADER | D_FULLDEBUG); }
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 			continue;
 		}
 
@@ -1418,8 +1421,6 @@ main( int argc, char *argv[] )
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
-
-	myDistro->Init( argc, argv );
 
 	if( argc < 1 ) {
 		usage(true);

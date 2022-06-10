@@ -63,7 +63,6 @@ directory.cpp
 directory.h
 directory_util.cpp
 directory_util.h
-distribution.cpp
 dprintf_common.cpp
 dprintf_config.cpp
 dprintf.cpp
@@ -85,7 +84,6 @@ log_rotate.cpp
 log_rotate.h
 misc_utils.cpp
 misc_utils.h
-my_distribution.cpp
 MyString.cpp
 MyString.h
 my_username.cpp

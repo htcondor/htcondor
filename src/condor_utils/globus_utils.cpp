@@ -787,7 +787,7 @@ extract_VOMS_info( X509 *cert, STACK_OF(X509) *chain, int verify_type, char **vo
 	// calling this function on something that doesn't have VOMS attributes
 	// should return error 1.  when the config knob disables VOMS, behave the
 	// same way.
-	if (!param_boolean("USE_VOMS_ATTRIBUTES", true)) {
+	if (!param_boolean("USE_VOMS_ATTRIBUTES", false)) {
 		return 1;
 	}
 

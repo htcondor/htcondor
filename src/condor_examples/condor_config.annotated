@@ -1007,7 +1007,7 @@ RESERVED_DISK		= 5
 ##  dropped.  If you enable this feature, you *MUST* turn on the
 ##  COLLECTOR_SOCKET_CACHE_SIZE setting at your collector, and each
 ##  entry in the socket cache uses another file descriptor.  If not
-##  defined, this feature is disabled by default.
+##  defined, this feature is enabled by default.
 #UPDATE_COLLECTOR_WITH_TCP = True
 
 ## HIGHPORT and LOWPORT let you set the range of ports that Condor

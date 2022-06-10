@@ -711,7 +711,6 @@ main (int argc, char *argv[])
 #endif
 
 	// initialize to read from config file
-	myDistro->Init( argc, argv );
 	myName = argv[0];
 	set_priv_initialize(); // allow uid switching if root
 	config();
@@ -1865,9 +1864,9 @@ firstPass (int argc, char *argv[])
 			diagnose = 1;
 			if (pcolon) diagnostics_ads_file = ++pcolon;
 		} else
-		if (is_dash_arg_prefix (argv[i], "debug", 2)) {
+		if (is_dash_arg_colon_prefix (argv[i], "debug", &pcolon, 2)) {
 			// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		} else
 		if (is_dash_arg_prefix (argv[i], "defrag", 3)) {
 			mainPP.setMode (SDO_Defrag, i, argv[i]);

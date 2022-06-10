@@ -246,10 +246,15 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat ZIP $VCVER $win64 $buildid";
     }
 }
-else {
-    $ENV{PATH} ="$ENV{PATH}:/opt/local/bin:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/opt/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
-    $ENV{LD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
+elsif ($ENV{NMI_PLATFORM} =~ /macos/i) {
+    # CRUFT Once 9.0 is EOL, remove the python.org version of python3
+    #   from the mac build machines and remove this setting of PATH.
+    # Ensure we're using the system python3
+    $ENV{PATH} ="/usr/bin:$ENV{PATH}";
     $ENV{DYLD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
+    $ENV{PYTHONPATH} ="$BaseDir/release_dir/lib/python";
+} else {
+    $ENV{LD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
     $ENV{PYTHONPATH} ="$BaseDir/release_dir/lib/python";
 }
 

@@ -104,13 +104,13 @@ list_tokens(const std::string &pool, const std::string &name, daemon_t dtype, st
 	return 0;
 }
 
-int main(int argc, char *argv[]) {
-	myDistro->Init( argc, argv );
+int main(int argc, const char *argv[]) {
 	set_priv_initialize();
 	config();
 
 	bool list_json = false;
 	daemon_t dtype = DT_COLLECTOR;
+	const char * pcolon;
 	std::string pool;
 	std::string name;
 	std::string reqid;
@@ -148,9 +148,9 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 			reqid = argv[i];
-		} else if(!strcmp(argv[i],"-debug")) {
+		} else if(is_dash_arg_colon_prefix(argv[i], "debug", &pcolon, 1)) {
 			// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		} else if (!strcmp(argv[i], "-json")) {
 			list_json = true;
 		} else if (is_dash_arg_prefix(argv[i], "help", 1)) {

@@ -3454,7 +3454,6 @@ int dc_main( int argc, char** argv )
 		}
 	}
 
-	myDistro->Init( argc, argv );
 	if ( EnvInit() < 0 ) {
 		exit( 1 );
 	}

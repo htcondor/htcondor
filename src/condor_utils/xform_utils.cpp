@@ -93,6 +93,7 @@ static MACRO_DEF_ITEM XFormMacroDefaults[] = {
 	{ "Step",      &UnliveStepMacroDef },
 	{ "XFormId",    &UnliveProcessMacroDef },
 };
+static MACRO_DEFAULTS XFormDefaults = { COUNTOF(XFormMacroDefaults), XFormMacroDefaults, NULL };
 
 static MACRO_DEF_ITEM XFormBasicMacroDefaults[] = {
 	{ "IsLinux",   &IsLinuxMacroDef },
@@ -242,11 +243,6 @@ void XFormHash::setup_macro_defaults()
 		LocalMacroSet.sources.push_back("<Live>");
 	}
 
-	if (flavor == Basic) {
-		// use minimal defaults table. this uses less memory, but disables all of the live looping variables
-		LocalMacroSet.defaults = &XFormBasicDefaults;
-		return;
-	} else
 	if (flavor == ParamTable) {
 		// use param table as defaults table.  this uses less memory, but disables all of the live looping variables
 		// warning, don't use this option if you plan to use a MACRO_EVAL_CONTEXT with also_in_config=true
@@ -255,19 +251,30 @@ void XFormHash::setup_macro_defaults()
 		return;
 	}
 
-	// flavor == Iterating
+	MACRO_DEFAULTS * defs = &XFormDefaults;
+	if (flavor == Basic) {
+		// use minimal defaults table. this uses less memory, but disables all of the live looping variables
+		defs = &XFormBasicDefaults;
+	} else {
+		// flavor == Iterating
 
-	// init the global xform default macros table (ARCH, OPSYS, etc) in case this hasn't happened already.
-	init_xform_default_macros();
+		// init the global xform default macros table (ARCH, OPSYS, etc) in case this hasn't happened already.
+		init_xform_default_macros();
+	}
 
-	// make an copy of the global xform default macros table that is private to this function.
+	// make a copy of the global xform default macros table that is private to this function.
 	// we do this because of the 'live' keys in the defaults table
-	struct condor_params::key_value_pair* pdi = reinterpret_cast<struct condor_params::key_value_pair*> (LocalMacroSet.apool.consume(sizeof(XFormMacroDefaults), sizeof(void*)));
-	memcpy((void*)pdi, XFormMacroDefaults, sizeof(XFormMacroDefaults));
+	int tblsize = defs->size * sizeof(defs->table[0]);
+	char * pdi = LocalMacroSet.apool.consume(tblsize, sizeof(void*));
+	memcpy(pdi, defs->table, tblsize);
 	LocalMacroSet.defaults = reinterpret_cast<MACRO_DEFAULTS*>(LocalMacroSet.apool.consume(sizeof(MACRO_DEFAULTS), sizeof(void*)));
-	LocalMacroSet.defaults->size = COUNTOF(XFormMacroDefaults);
-	LocalMacroSet.defaults->table = pdi;
+	LocalMacroSet.defaults->size = defs->size;
+	LocalMacroSet.defaults->table = reinterpret_cast<struct condor_params::key_value_pair*>(pdi);
 	LocalMacroSet.defaults->metat = NULL;
+
+	if (flavor == Basic) {
+		return;
+	}
 
 	// allocate space for the 'live' macro default string_values and for the strings themselves.
 	LiveProcessString = allocate_live_default_string(LocalMacroSet, UnliveProcessMacroDef, 24)->psz;
@@ -279,7 +286,7 @@ void XFormHash::setup_macro_defaults()
 
 
 
-XFormHash::XFormHash(Flavor _flavor /* = Iterating*/)
+XFormHash::XFormHash(Flavor _flavor /* = Basic*/)
 	: flavor(_flavor), LiveProcessString(NULL), LiveRowString(NULL), LiveStepString(NULL)
 	, LiveRulesFileMacroDef(NULL), LiveIteratingMacroDef(NULL)
 {
@@ -429,14 +436,14 @@ void XFormHash::clear_live_variables() const
 
 void XFormHash::set_iterate_step(int step, int proc)
 {
-	sprintf(LiveProcessString, "%d", proc);
-	sprintf(LiveStepString, "%d", step);
+	if (LiveProcessString) sprintf(LiveProcessString, "%d", proc);
+	if (LiveStepString) sprintf(LiveStepString, "%d", step);
 }
 
 void XFormHash::set_iterate_row(int row, bool iterating)
 {
-	sprintf(LiveRowString, "%d", row);
-	LiveIteratingMacroDef->psz = const_cast<char*>(iterating ? "1" : "0");
+	if (LiveRowString) sprintf(LiveRowString, "%d", row);
+	if (LiveIteratingMacroDef) LiveIteratingMacroDef->psz = const_cast<char*>(iterating ? "1" : "0");
 }
 
 void XFormHash::set_local_param_used(const char *name) 
@@ -499,7 +506,7 @@ void XFormHash::clear()
 	if (LocalMacroSet.sources.size() > 3) {
 		LocalMacroSet.sources.resize(3);
 	}
-	if (flavor == Iterating) {
+	if (flavor != ParamTable) {
 		// setup a defaults table for the macro_set. have to re-do this when we clear the apool
 		// if the defaults were allocated from that pool
 		setup_macro_defaults();
@@ -626,12 +633,12 @@ void XFormHash::insert_source(const char * filename, MACRO_SOURCE & source)
 void XFormHash::set_RulesFile(const char * filename, MACRO_SOURCE & source)
 {
 	this->insert_source(filename, source);
-	LiveRulesFileMacroDef->psz = const_cast<char*>(filename);
+	if (LiveRulesFileMacroDef) LiveRulesFileMacroDef->psz = const_cast<char*>(filename);
 }
 
 const char* XFormHash::get_RulesFilename()
 {
-	return LiveRulesFileMacroDef->psz;
+	return LiveRulesFileMacroDef ? LiveRulesFileMacroDef->psz : nullptr;
 }
 
 void XFormHash::warn_unused(FILE* out, const char *app)

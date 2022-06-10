@@ -18,7 +18,20 @@ Release Notes:
 - On macOS, updated to LibreSSL 2.8.3 and removed support for VOMS.
   :jira:`1129`
 
+- On macOS, the Python bindings are now built against the version of
+  Python 3 included in the Command Line Tools for Xcode package.
+  Previously, they were built against Python 3.8 as distributed from
+  the website python.org.
+  :jira:`1154`
+
+- The default value of configuration parameter ``USE_VOMS_ATTRIBUTES``
+  has been changed to ``False``.
+  :jira:`1161`
+
 New Features:
+
+- Added support for running on Linux systems that ship with openssl version 3
+  :jira:`1148`
 
 - *condor_submit* now has support for submitting jobsets. Jobsets are still
   a technology preview and still not ready for general use.
@@ -46,6 +59,12 @@ New Features:
   will break no existing regular expressions.
   :jira:`1087`
 
+- If "singularity" is really the "apptainer" runtime, HTCondor now
+  sets environment variables to be passed to the job appropriately, which
+  prevents apptainer from displaying ugly warnings about how this won't
+  work in the future.
+  :jira:`1137`
+
 Bugs Fixed:
 
 - Fixed the ``TransferInputStats`` nested attributes ``SizeBytesLastRun`` and
@@ -56,6 +75,31 @@ Bugs Fixed:
 - Fixed a bug preventing ``preserve_relative_paths`` from working with
   lots (tens of thousands) of files.
   :jira:`993`
+
+- Fixed several minor bugs in how the *condor_shadow* and
+  *condor_starter* handle network disruptions and jobs that have no
+  lease.
+  :jira:`960`
+
+Version 9.9.1
+-------------
+
+Release Notes:
+
+.. HTCondor version 9.9.1 released on Month Date, 2022.
+
+- HTCondor version 9.9.1 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed bug introduced in 9.9.0 when forwarding slot ads from one
+  *condor_collector* to another. As a result, the *condor_negotiator*
+  was unable to match any jobs to the slots.
+  :jira:`1157`
 
 Version 9.9.0
 -------------
@@ -142,6 +186,9 @@ Bugs Fixed:
 - Fix a rare bug where the starter will fail to start a job, and the job will
   immediately transition back to the idle state to be run elsewhere.
   :jira:`1040`
+
+- The ``condor-blahp`` RPM now requires the matching ``condor`` RPM version.
+  :jira:`1074`
 
 Version 9.8.1
 -------------
