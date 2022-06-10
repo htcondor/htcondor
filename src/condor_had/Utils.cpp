@@ -27,9 +27,7 @@
 // for 'getHostFromAddr' and 'getPortFromAddr'
 #include "internet.h"
 // for MD5
-#ifdef HAVE_EXT_OPENSSL
 #include <openssl/md5.h>
-#endif
 // for SHA-2 (SHA256)
 #include <openssl/sha.h>
 

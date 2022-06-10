@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "CondorError.h"
 
-#if defined(HAVE_EXT_OPENSSL)
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <openssl/hmac.h>
@@ -3024,5 +3023,3 @@ Condor_Auth_Passwd::set_remote_keys(const std::vector<std::string> &keys) {
 		m_server_keys.insert(key);
 	}
 }
-
-#endif	// of if defined(HAVE_EXT_OPENSSL)
