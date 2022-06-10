@@ -4353,6 +4353,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	// how long we (the starter) have before the shadow gets bored and
 	// hangs up; calculating the checksum could take quite some time.
 	//
+	// FIXME: remove the MANIFEST file after transfer or error.  Implement
+	// with a scope guard; explicitly call deallocator on success to ensure
+	// that the scope is what we want.
+	//
 	if( uploadCheckpointFiles ) {
 		std::string manifestText;
 		for( auto & fileitem : filelist ) {
@@ -4403,12 +4407,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		manifestFTI.setSrcName( manifestFileName );
 		manifestFTI.setFileMode( (condor_mode_t)0600 );
 		manifestFTI.setFileSize( manifestText.length() + append.length() );
-		}
+	}
 
-	// FIXME: we should probably add the MANIFEST file to the end AFTER
-	// the stable sort here; we _really_ want to transfer the MANIFEST file
-	// only if we believe that the checkpoint has been successfully stored.
-	// (This may require its own test....)
+	//
+	// Doing this sort AFTER adding the MANIFEST file ensures that the
+	// MANIFEST file will be sent BEFORE we invoke the file-transfer
+	// plug-ins, which is what we want, so that the AP can clean up if
+	// the transfer fails.  I really LIKE random CAPITALIZATION.
+	//
 
 	std::stable_sort(filelist.begin(), filelist.end());
 	for (auto &fileitem : filelist)
