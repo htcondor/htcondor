@@ -1373,9 +1373,6 @@ dprint ( "CONDOR_PACKAGE_NAME: ${CONDOR_PACKAGE_NAME}" )
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "UNIX: ${UNIX}" )
 
-# is TRUE on all BSD-derived UNIXen
-dprint ( "BSD_UNIX: ${BSD_UNIX}" )
-
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "Linux: ${LINUX_NAME}" )
 

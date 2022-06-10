@@ -43,12 +43,6 @@
 #cmakedefine CONDOR_UTMPX
 ///* Define if on FreeBSD */
 #cmakedefine CONDOR_FREEBSD
-///* Define release of FreeBSD (i.e. 7.4, 8.2) */
-#cmakedefine FREEBSD_RELEASE
-///* Define major release of FreeBSD */
-#cmakedefine FREEBSD_MAJOR
-///* Define minor release of FreeBSD */
-#cmakedefine FREEBSD_MINOR
 
 //////////////////////////////////////////////////
 
@@ -153,9 +147,6 @@
 
 ///* Do we have the curl external (Imake)*/
 #cmakedefine HAVE_EXT_CURL
-
-///* Do we have the glibc external*/
-#cmakedefine HAVE_EXT_GLIBC
 
 ///* Do we have the libcgroup external */
 #cmakedefine HAVE_EXT_LIBCGROUP
@@ -277,9 +268,6 @@
 /* Define to 1 if you have the 'vasprintf' function. (USED)*/
 #cmakedefine HAVE_VASPRINTF 1
 
-/* Define if vmware is available (USED)*/
-#cmakedefine HAVE_VMWARE 1
-
 /* Define to 1 if you have the '_fstati64' function. (USED)*/
 #cmakedefine HAVE__FSTATI64 1
 
@@ -295,21 +283,6 @@
 /* Define to 1 if the system has the type '__int64'. (USED)*/
 #cmakedefine HAVE___INT64 1
 
-/* Define to the address where bug reports for this package should be sent. (USED)*/
-#cmakedefine PACKAGE_BUGREPORT 1
-
-/* Define to the full name of this package. (USED)*/
-#cmakedefine PACKAGE_NAME 1
-
-/* Define to the full name and version of this package. (USED)*/
-#cmakedefine PACKAGE_STRING 1
-
-/* Define to the one symbol short name of this package. (USED)*/
-#cmakedefine PACKAGE_TARNAME 1
-
-/* Define to the version of this package. (USED)*/
-#cmakedefine PACKAGE_VERSION 1
-
 /* Number of arguments to statfs() (USED)*/
 #cmakedefine STATFS_ARGS 2
 
@@ -321,9 +294,6 @@
 
 /* Define to 1 if the system has proportional set size (PSS).*/
 #cmakedefine HAVE_PSS 1
-
-/* Define to 1 if the compiler supports C++11 conventions */
-#cmakedefine PREFER_CPP11
 
 /* Define to 1 if the OS has support for epoll (Linux) */
 #cmakedefine CONDOR_HAVE_EPOLL
