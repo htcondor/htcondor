@@ -303,7 +303,7 @@ ResMgr::backfillMgrDone()
 
 
 static bool
-verifyBackfillSystem( const char* sys )
+verifyBackfillSystem( const char* /*sys*/ )
 {
 
 #if HAVE_BOINC
