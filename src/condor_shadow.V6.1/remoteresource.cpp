@@ -1387,10 +1387,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			double prevTotalUsage = 0.0;
 			jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, prevTotalUsage);
 			jobAd->Assign(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, prevTotalUsage + (real_value - prevUsage));
+
+			// Also, do not reset remote cpu unless there was an increase, to guard
+			// against the case starter sending a zero value (perhaps right when the
+			// job terminates).
+			remote_rusage.ru_stime.tv_sec = (time_t)real_value;
+			jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 		}
-		
-		remote_rusage.ru_stime.tv_sec = (time_t) real_value;
-		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
@@ -1404,10 +1407,14 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			double prevTotalUsage = 0.0;
 			jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, prevTotalUsage);
 			jobAd->Assign(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, prevTotalUsage + (real_value - prevUsage));
+
+			// Also, do not reset remote cpu unless there was an increase, to guard
+			// against the case starter sending a zero value (perhaps right when the
+			// job terminates).
+			remote_rusage.ru_utime.tv_sec = (time_t)real_value;
+			jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
+
 		}
-		
-		remote_rusage.ru_utime.tv_sec = (time_t) real_value;
-		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
 	}
 
 	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, long_value) ) {
