@@ -24,6 +24,10 @@ Release Notes:
   the website python.org.
   :jira:`1154`
 
+- The default value of configuration parameter ``USE_VOMS_ATTRIBUTES``
+  has been changed to ``False``.
+  :jira:`1161`
+
 New Features:
 
 - Added support for running on Linux systems that ship with openssl version 3
