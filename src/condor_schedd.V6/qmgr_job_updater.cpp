@@ -31,6 +31,7 @@
 #include "qmgr_job_updater.h"
 #include "condor_qmgr.h"
 #include "dc_schedd.h"
+#include "condor_holdcodes.h"
 
 
 QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
@@ -377,6 +378,20 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		break;
 	default:
 		EXCEPT( "QmgrJobUpdater::updateJob: Unknown update type (%d)!", type );
+	}
+
+	if (type == U_HOLD) {
+		if (!ConnectQ(m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false, NULL, m_owner.c_str()) ) {
+			return false;
+		}
+		is_connected = true;
+
+		int job_status = 0;
+		GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &job_status);
+		if (job_status == HELD) {
+			dprintf(D_FULLDEBUG, "Job already held, not updating hold reason code\n");
+			job_queue_attrs = nullptr;
+		}
 	}
 
 	for ( auto itr = job_ad->dirtyBegin(); itr != job_ad->dirtyEnd(); itr++ ) {

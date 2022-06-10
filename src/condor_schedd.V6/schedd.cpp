@@ -3872,7 +3872,8 @@ ResponsibleForPeriodicExprs( JobQueueJob *jobad, int & status )
 	if( status == HELD ) {
 		int hold_reason_code = -1;
 		jobad->LookupInteger(ATTR_HOLD_REASON_CODE,hold_reason_code);
-		if( hold_reason_code == CONDOR_HOLD_CODE::SpoolingInput ) {
+		if( hold_reason_code == CONDOR_HOLD_CODE::SpoolingInput ||
+		    hold_reason_code == CONDOR_HOLD_CODE::UserRequest ) {
 			dprintf(D_FULLDEBUG,"Skipping periodic expressions for job %d.%d, because hold reason code is '%d'\n",
 				jobad->jid.cluster, jobad->jid.proc, hold_reason_code);
 			return 0;
@@ -6008,8 +6009,8 @@ Scheduler::actOnJobs(int, Stream* s)
 				ATTR_JOB_STATUS_ON_RELEASE,REMOVED);
 			break;
 		case JA_HOLD_JOBS:
-				// Don't hold held/removed/completed jobs (but do match cluster ads - so late materialization works)
-			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d && %s!=%d && %s!=%d)) && (", ATTR_JOB_STATUS, HELD, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, COMPLETED );
+				// Don't hold removed/completed jobs (but do match cluster ads - so late materialization works)
+			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d && %s!=%d)) && (", ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, COMPLETED );
 			break;
 		case JA_RELEASE_JOBS:
 				// Only release held jobs which aren't waiting for
@@ -6239,9 +6240,14 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		case JA_HOLD_JOBS:
 			if( status == HELD ) {
-				results.record( tmp_id, AR_ALREADY_DONE );
-				jobs[i].cluster = -1;
-				continue;
+				int hold_code = 0;
+				GetAttributeInt(tmp_id.cluster, tmp_id.proc,
+				                ATTR_HOLD_REASON_CODE, &hold_code);
+				if( hold_code == CONDOR_HOLD_CODE::UserRequest || hold_code == CONDOR_HOLD_CODE::SpoolingInput ) {
+					results.record( tmp_id, AR_ALREADY_DONE );
+					jobs[i].cluster = -1;
+					continue;
+				}
 			}
 			if ( status == REMOVED || status == COMPLETED )
 			{
@@ -15684,9 +15690,19 @@ holdJobRaw( int cluster, int proc, const char* reason,
 		return false;
 	}
 	if( status == HELD ) {
-		dprintf( D_ALWAYS, "Job %d.%d is already on hold\n",
-				 cluster, proc );
-		return false;
+		// Allow a held job's reason code to be changed to UserRequest
+		int old_reason_code = 0;
+		if( reason_code == CONDOR_HOLD_CODE::UserRequest ) {
+			GetAttributeInt(cluster, proc, ATTR_HOLD_REASON_CODE, &old_reason_code);
+		}
+		if( old_reason_code == CONDOR_HOLD_CODE::UserRequest ||
+		    old_reason_code == CONDOR_HOLD_CODE::SpoolingInput ||
+		    reason_code != CONDOR_HOLD_CODE::UserRequest ) {
+
+			dprintf( D_ALWAYS, "Job %d.%d is already on hold\n",
+			         cluster, proc );
+			return false;
+		}
 	}
 
 	if( reason ) {
