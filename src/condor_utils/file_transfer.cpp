@@ -3925,54 +3925,37 @@ FileTransfer::ParseDataManifest()
 int
 FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 {
-	int rc = 0;
-	std::string fullname;
-	filesize_t bytes=0;
-	filesize_t peer_max_transfer_bytes = -1; // unlimited
-	bool is_the_executable;
-	bool upload_success = false;
-	bool do_download_ack = false;
-	bool do_upload_ack = false;
-	bool try_again = false;
-	int hold_code = 0;
-	int hold_subcode = 0;
-	int numFiles = 0;
-	MyString error_desc;
-	bool I_go_ahead_always = false;
-	bool peer_goes_ahead_always = false;
+	FileTransferList filelist;
+	std::unordered_set<std::string> skip_files;
+	filesize_t sandbox_size = 0;
+	_ft_protocol_bits protocolState;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
-	int plugin_exit_code = 0;
 
+	int rc = computeFileList(
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
+	);
+	if( rc != 0 ) { return rc; }
+
+	return uploadFileList(
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
+	    total_bytes_ptr
+	);
+}
+
+int
+FileTransfer::computeFileList(
+    ReliSock * s, FileTransferList & filelist,
+    std::unordered_set<std::string> & skip_files,
+	filesize_t & sandbox_size,
+    DCTransferQueue & xfer_queue,
+    _ft_protocol_bits & protocolState
+) {
 		// Declaration to make the return_and_reset_priv macro happy.
-        std::string reservation_id;
-
-
-	// use an error stack to keep track of failures when invoke plugins,
-	// perhaps more of this can be instrumented with it later.
-	CondorError errstack;
-
-	// If a bunch of file transfers failed strictly due to
-	// PUT_FILE_OPEN_FAILED, then we keep track of the information relating to
-	// the first failed one, and continue to attempt to transfer the rest in
-	// the list. At the end of the transfer, the job will go on hold with the
-	// information of the first failed transfer. This is to allow things like
-	// corefiles and whatnot to be brought back to the spool even if the user
-	// job hadn't completed writing all the files as specified in
-	// transfer_output_files. These variables represent the saved state of the
-	// first failed transfer. See gt #487.
-	bool first_failed_file_transfer_happened = false;
-	bool first_failed_upload_success = false;
-	bool first_failed_try_again = false;
-	int first_failed_hold_code = 0;
-	int first_failed_hold_subcode = 0;
-	MyString first_failed_error_desc;
-	int first_failed_line_number = 0;
-
+	std::string reservation_id;
 	bool should_invoke_output_plugins = m_final_transfer_flag || uploadCheckpointFiles;
 
 	uploadStartTime = condor_gettimestamp_double();
 
-	*total_bytes_ptr = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
 	dprintf(D_FULLDEBUG,"DoUpload: Output URL plugins %s be run\n",
 		should_invoke_output_plugins ? "will" : "will not");
@@ -3982,18 +3965,12 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		saved_priv = set_priv( desired_priv_state );
 	}
 
-	// Aggregate multiple file uploads; we will upload them all at once
-	std::string currentUploadPlugin;
-	std::string currentUploadRequests;
-	int currentUploadDeferred = 0;
-
 	// record the state it was in when we started... the "default" state
-	bool socket_default_crypto = s->get_encryption();
+	protocolState.socket_default_crypto = s->get_encryption();
 
 	bool preserveRelativePaths = false;
 	jobAd.LookupBool( ATTR_PRESERVE_RELATIVE_PATHS, preserveRelativePaths );
 
-	FileTransferList filelist;
 	// dprintf( D_ALWAYS, ">>> DoUpload(), before ExpandFileTransferList(): InputFiles = %s\n", FilesToSend->to_string().c_str() );
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
 	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after ExpandFileTransferList(): %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
@@ -4010,7 +3987,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		filelist.erase(enditer, filelist.end());
 	}
 
-	filesize_t sandbox_size = 0;
 		// Calculate the sandbox size as the sum of the known file transfer items
 		// (only those that are transferred via CEDAR).
 	sandbox_size = std::accumulate(filelist.begin(),
@@ -4121,7 +4097,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				filesize_t logTCPStats = 0;
 				return ExitDoUpload( & logTCPStats,
 					/* num files */ 0,
-					s, saved_priv, socket_default_crypto,
+					s, saved_priv, protocolState.socket_default_crypto,
 					/* upload success */ false,
 					/* do upload ACK (required to put job on hold) */ true,
 					/* do download ACK */ false,
@@ -4141,7 +4117,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	}
 
 
-	std::unordered_set<std::string> skip_files;
 	if (!m_reuse_info.empty())
 	{
 		dprintf(D_FULLDEBUG, "DoUpload: Sending remote side hints about potential file reuse.\n");
@@ -4158,12 +4133,12 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 
 			// Here, we must wait for the go-ahead from the transfer peer.
-		if (!ReceiveTransferGoAhead(s, "", false, peer_goes_ahead_always, peer_max_transfer_bytes)) {
+		if (!ReceiveTransferGoAhead(s, "", false, protocolState.peer_goes_ahead_always, protocolState.peer_max_transfer_bytes)) {
 			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 			// Obtain the transfer token from the transfer queue.
-		if (!ObtainAndSendTransferGoAhead(xfer_queue, false, s, sandbox_size, "", I_go_ahead_always) ) {
+		if (!ObtainAndSendTransferGoAhead(xfer_queue, false, s, sandbox_size, "", protocolState.I_go_ahead_always) ) {
 			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
@@ -4235,12 +4210,12 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 
 			// Here, we must wait for the go-ahead from the transfer peer.
-		if (!ReceiveTransferGoAhead(s, "", false, peer_goes_ahead_always, peer_max_transfer_bytes)) {
+		if (!ReceiveTransferGoAhead(s, "", false, protocolState.peer_goes_ahead_always, protocolState.peer_max_transfer_bytes)) {
 			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n", __LINE__);
 			return_and_resetpriv(-1);
 		}
 			// Obtain the transfer token from the transfer queue.
-		if (!ObtainAndSendTransferGoAhead(xfer_queue, false, s, sandbox_size, "", I_go_ahead_always) ) {
+		if (!ObtainAndSendTransferGoAhead(xfer_queue, false, s, sandbox_size, "", protocolState.I_go_ahead_always) ) {
 			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n", __LINE__);
 			return_and_resetpriv(-1);
 		}
@@ -4281,7 +4256,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			filesize_t logTCPStats = 0;
 			return ExitDoUpload( & logTCPStats,
 				/* num files */ 0,
-				s, saved_priv, socket_default_crypto,
+				s, saved_priv, protocolState.socket_default_crypto,
 				/* upload success */ false,
 				/* do upload ACK (required to avoid hanging the shadow and starter */ true,
 				/* do download ACK */ false,
@@ -4417,6 +4392,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	//
 
 	std::stable_sort(filelist.begin(), filelist.end());
+
 	for (auto &fileitem : filelist)
 	{
 			// If there's a signed URL to work with, we should use that instead.
@@ -4424,7 +4400,71 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		if (iter != s3_url_map.end()) {
 			fileitem.setDestUrl(iter->second);
 		}
+	}
 
+	return_and_resetpriv(0);
+}
+
+int
+FileTransfer::uploadFileList(
+    ReliSock * s, const FileTransferList & filelist,
+    std::unordered_set<std::string> & skip_files,
+    const filesize_t & sandbox_size,
+    DCTransferQueue & xfer_queue,
+    _ft_protocol_bits & protocolState,
+    filesize_t * total_bytes_ptr
+) {
+	int rc = 0;
+	std::string fullname;
+	filesize_t bytes = 0;
+
+	bool is_the_executable;
+	bool upload_success = false;
+	bool do_download_ack = false;
+	bool do_upload_ack = false;
+	bool try_again = false;
+	int hold_code = 0;
+	int hold_subcode = 0;
+	int numFiles = 0;
+	int plugin_exit_code = 0;
+
+	// If a bunch of file transfers failed strictly due to
+	// PUT_FILE_OPEN_FAILED, then we keep track of the information relating to
+	// the first failed one, and continue to attempt to transfer the rest in
+	// the list. At the end of the transfer, the job will go on hold with the
+	// information of the first failed transfer. This is to allow things like
+	// corefiles and whatnot to be brought back to the spool even if the user
+	// job hadn't completed writing all the files as specified in
+	// transfer_output_files. These variables represent the saved state of the
+	// first failed transfer. See gt #487.
+	bool first_failed_file_transfer_happened = false;
+	bool first_failed_upload_success = false;
+	bool first_failed_try_again = false;
+	int first_failed_hold_code = 0;
+	int first_failed_hold_subcode = 0;
+	MyString first_failed_error_desc;
+	int first_failed_line_number = 0;
+
+	int currentUploadDeferred = 0;
+
+	// Aggregate multiple file uploads; we will upload them all at once
+	std::string currentUploadPlugin;
+	std::string currentUploadRequests;
+
+	// use an error stack to keep track of failures when invoke plugins,
+	// perhaps more of this can be instrumented with it later.
+	CondorError errstack;
+	MyString error_desc;
+
+	std::string reservation_id;
+	priv_state saved_priv = PRIV_UNKNOWN;
+	if( want_priv_change ) {
+		saved_priv = set_priv( desired_priv_state );
+	}
+
+	*total_bytes_ptr = 0;
+	for (auto &fileitem : filelist)
+	{
 		auto &filename = fileitem.srcName();
 		auto &dest_dir = fileitem.destDir();
 
@@ -4515,7 +4555,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			try_again = false; // put job on hold
 			hold_code = CONDOR_HOLD_CODE::UploadFileError;
 			hold_subcode = EPERM;
-			return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,socket_default_crypto,
+			return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,protocolState.socket_default_crypto,
 			                    upload_success,do_upload_ack,do_download_ack,
 								try_again,hold_code,hold_subcode,
 								error_desc.Value(),__LINE__);
@@ -4664,7 +4704,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			s->set_crypto_mode(false);
 		}
 		else {
-			bool cryp_ret = s->set_crypto_mode(socket_default_crypto);
+			bool cryp_ret = s->set_crypto_mode(protocolState.socket_default_crypto);
 			if (!cryp_ret) {
 				dprintf(D_ALWAYS,"DoUpload: failed to set default crypto on outgoing file, exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
@@ -4689,19 +4729,19 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				return_and_resetpriv( -1 );
 			}
 
-			if( !peer_goes_ahead_always ) {
+			if( !protocolState.peer_goes_ahead_always ) {
 					// Now wait for our peer to tell us it is ok for us to
 					// go ahead and send data.
-				if( !ReceiveTransferGoAhead(s,fullname.c_str(),false,peer_goes_ahead_always,peer_max_transfer_bytes) ) {
+				if( !ReceiveTransferGoAhead(s,fullname.c_str(),false,protocolState.peer_goes_ahead_always,protocolState.peer_max_transfer_bytes) ) {
 					dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
 			}
 
-			if( !I_go_ahead_always ) {
+			if( !protocolState.I_go_ahead_always ) {
 					// Now tell our peer when it is ok for us to read data
 					// from disk for sending.
-				if( !ObtainAndSendTransferGoAhead(xfer_queue,false,s,sandbox_size,fullname.c_str(),I_go_ahead_always) ) {
+				if( !ObtainAndSendTransferGoAhead(xfer_queue,false,s,sandbox_size,fullname.c_str(),protocolState.I_go_ahead_always) ) {
 					dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
@@ -4715,14 +4755,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		//
 		// NOTE: if we ever want to reacquire the token (or acquire an alternate token for non-CEDAR transfers),
 		// then this would provide a natural synchronization point.
-		bool can_defer_uploads = !PeerDoesGoAhead || (peer_goes_ahead_always && I_go_ahead_always);
+		bool can_defer_uploads = !PeerDoesGoAhead || (protocolState.peer_goes_ahead_always && protocolState.I_go_ahead_always);
 
 		UpdateXferStatus(XFER_STATUS_ACTIVE);
 
 		filesize_t this_file_max_bytes = -1;
 		filesize_t effective_max_upload_bytes = MaxUploadBytes;
 		bool using_peer_max_transfer_bytes = false;
-		if( peer_max_transfer_bytes >= 0 && (peer_max_transfer_bytes < effective_max_upload_bytes || effective_max_upload_bytes < 0) ) {
+		if( protocolState.peer_max_transfer_bytes >= 0 && (protocolState.peer_max_transfer_bytes < effective_max_upload_bytes || effective_max_upload_bytes < 0) ) {
 				// For superior error handling, it is best for the
 				// uploading side to know about the downloading side's
 				// max transfer byte limit.  This prevents the
@@ -4731,11 +4771,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				// close the connection, which would cause the
 				// uploading side to assume there was a communication
 				// error rather than an intentional stop.
-			effective_max_upload_bytes = peer_max_transfer_bytes;
+			effective_max_upload_bytes = protocolState.peer_max_transfer_bytes;
 			using_peer_max_transfer_bytes = true;
 			dprintf(D_FULLDEBUG,"DoUpload: changing maximum upload MB from %ld to %ld at request of peer.\n",
 					(long int)(effective_max_upload_bytes >= 0 ? effective_max_upload_bytes/1024/1024 : effective_max_upload_bytes),
-					(long int)(peer_max_transfer_bytes/1024/1024));
+					(long int)(protocolState.peer_max_transfer_bytes/1024/1024));
 		}
 		if( effective_max_upload_bytes < 0 ) {
 			this_file_max_bytes = -1; // no limit
@@ -4987,7 +5027,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				// for the more interesting reasons why the transfer failed,
 				// we can try again and see what happens.
 				return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,
-								socket_default_crypto,upload_success,
+								protocolState.socket_default_crypto,upload_success,
 								do_upload_ack,do_download_ack,
 			                    try_again,hold_code,hold_subcode,
 			                    error_desc.c_str(),__LINE__);
@@ -5072,7 +5112,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	do_upload_ack = true;
 
 	if (first_failed_file_transfer_happened == true) {
-		return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,socket_default_crypto,
+		return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,protocolState.socket_default_crypto,
 			first_failed_upload_success,do_upload_ack,do_download_ack,
 			first_failed_try_again,first_failed_hold_code,
 			first_failed_hold_subcode,first_failed_error_desc.c_str(),
@@ -5082,7 +5122,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	uploadEndTime = condor_gettimestamp_double();
 
 	upload_success = true;
-	return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,socket_default_crypto,
+	return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,protocolState.socket_default_crypto,
 	                    upload_success,do_upload_ack,do_download_ack,
 	                    try_again,hold_code,hold_subcode,NULL,__LINE__);
 }

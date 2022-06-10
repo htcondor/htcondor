@@ -388,6 +388,39 @@ class FileTransfer final: public Service {
 	int DoDownload( filesize_t *total_bytes, ReliSock *s);
 	int DoUpload( filesize_t *total_bytes, ReliSock *s);
 
+	typedef struct {
+		filesize_t peer_max_transfer_bytes = {-1};
+		bool I_go_ahead_always = {false};
+		bool peer_goes_ahead_always = {false};
+		bool socket_default_crypto;
+	} _ft_protocol_bits;
+
+	// Do the final computation of which files we'll be transferring.  This
+	// _includes_ starting the file-transfer protocol and executing the
+	// data reuse and S3 URL signing/conversion routines.
+	//
+	// This is the first half of the old DoUpload().
+	int computeFileList(
+	    ReliSock * s, FileTransferList & filelist,
+	    std::unordered_set<std::string> & skip_files,
+	    filesize_t & sandbox_size,
+	    DCTransferQueue & xfer_queue,
+	    _ft_protocol_bits & protocolState
+	);
+
+	// Execute the CEDAR file-transfer protocol and call plug-ins as
+	// appropriate.
+	//
+	// This is the second half of the old DoUpload().
+	int uploadFileList(
+	    ReliSock * s, const FileTransferList & filelist,
+	    std::unordered_set<std::string> & skip_files,
+	    const filesize_t & sandbox_size,
+	    DCTransferQueue & xfer_queue,
+	    _ft_protocol_bits & protocolState,
+	    filesize_t * total_bytes_ptr
+	);
+
 	double uploadStartTime{-1}, uploadEndTime{-1};
 	double downloadStartTime{-1}, downloadEndTime{-1};
 
