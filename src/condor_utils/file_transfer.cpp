@@ -3923,8 +3923,136 @@ FileTransfer::ParseDataManifest()
 
 
 int
-FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
+FileTransfer::DoUpload( filesize_t * total_bytes_ptr, ReliSock * s )
 {
+	//
+	// It would be better if the checkpoint-specific function's body
+	// were instead in UploadCheckpointFiles(), but that would involve
+	// refactoring UploadFiles() and friends, which I don't want to do
+	// right now.
+	//
+
+	if( uploadCheckpointFiles ) {
+		return DoCheckpointUpload( total_bytes_ptr, s );
+	} else {
+		return DoNormalUpload( total_bytes_ptr, s );
+	}
+}
+
+int
+createCheckpointManifest(
+	const FileTransferList & filelist,
+	int checkpointNumber,
+	FileTransferItem & manifestFTI
+) {
+	//
+	// If we're transferring a checkpoint, create a MANIFEST file from
+	// the filelist and add it to the files going to the SPOOL.
+	//
+	// Compute the manifest list, then its hash, then write the hash and
+	// the list to the MANIFEST file.
+	//
+	// FIXME: Test this with a really big checkpoint file, and/or determine
+	// how long we (the starter) have before the shadow gets bored and
+	// hangs up; calculating the checksum could take quite some time.
+	//
+	// FIXME: remove the MANIFEST file after transfer or error.  Implement
+	// with a scope guard; explicitly call deallocator on success to ensure
+	// that the scope is what we want.
+	//
+	std::string manifestText;
+	for( auto & fileitem : filelist ) {
+		const std::string & sourceName = fileitem.srcName();
+
+		std::string sourceHash;
+		if(! compute_file_checksum( sourceName, sourceHash )) {
+			dprintf( D_ALWAYS, "Failed to compute file (%s) checksum when sending checkpoint, aborting.\n", sourceName.c_str() );
+			return -1;
+		}
+		formatstr_cat( manifestText, "%s %s\n", sourceName.c_str(), sourceHash.c_str() );
+	}
+
+	// We need the MANIFEST file on disk for the file-transfer plug-in,
+	// so we may as simplify our coding lives and compute its checksum
+	// off disk instead of in-memory.
+	// FIXME: is the CWD OK here?
+	std::string manifestFileName;
+	formatstr( manifestFileName, "MANIFEST.%.4d", checkpointNumber );
+	if(! htcondor::writeShortFile( manifestFileName, manifestText )) {
+		dprintf( D_ALWAYS, "Failed to write manifest file when sending checkpoint, aborting.\n" );
+		return -1;
+	}
+	std::string manifestHash;
+	if(! compute_file_checksum( manifestFileName, manifestHash )) {
+		dprintf( D_ALWAYS, "Failed to compute manifest (%s) checksum when sending checkpoint, aborting.\n", ".MANIFEST" );
+		return -1;
+	}
+
+	// This adds a newline, which is nice, but it also means that we
+	// don't write out the trailing 4 NUL bytes, which is also nice,
+	// since we don't do that for the other hashes in the file.
+	//
+	// Including the file name makes it easier to generate with the
+	// sha256sum command-line tool.
+	std::string append;
+	formatstr( append, "%s %s\n", manifestFileName.c_str(), manifestHash.c_str() );
+	if(! htcondor::appendShortFile( manifestFileName,  append )) {
+		dprintf( D_ALWAYS, "Failed to write manifest checksum to manifest (%s) when sending checkpoint, aborting.\n", ".MANIFEST" );
+		return -1;
+	}
+
+	manifestFTI.setSrcName( manifestFileName );
+	manifestFTI.setFileMode( (condor_mode_t)0600 );
+	manifestFTI.setFileSize( manifestText.length() + append.length() );
+	return 0;
+}
+
+//
+// This not a special case in DoUpload() because that function, even split
+// into the two pieces of computeFileList() and updateFileList(), is too
+// long, too complicated, and too hard to use or modify.  Rather than make
+// it worse, I moved the checkpoint-specific parts out here, into one place.
+//
+int
+FileTransfer::DoCheckpointUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
+	FileTransferList filelist;
+	std::unordered_set<std::string> skip_files;
+	filesize_t sandbox_size = 0;
+	_ft_protocol_bits protocolState;
+	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
+
+	int rc = computeFileList(
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
+	);
+	if( rc != 0 ) { return rc; }
+
+	{
+		priv_state saved_priv = PRIV_UNKNOWN;
+		if( want_priv_change ) {
+			saved_priv = set_priv( desired_priv_state );
+		}
+
+		filelist.push_back( FileTransferItem() );
+		FileTransferItem & manifestFTI = filelist.back();
+		rc = createCheckpointManifest(
+			filelist, this->checkpointNumber, manifestFTI
+		);
+		if( rc != 0 ) { return rc; }
+
+		if( saved_priv != PRIV_UNKNOWN ) {
+			set_priv( saved_priv );
+		}
+	}
+
+
+	return uploadFileList(
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
+	    total_bytes_ptr
+	);
+}
+
+int
+FileTransfer::DoNormalUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
 	FileTransferList filelist;
 	std::unordered_set<std::string> skip_files;
 	filesize_t sandbox_size = 0;
@@ -4316,80 +4444,6 @@ FileTransfer::computeFileList(
 			filelist.erase( (iter + 1).base() );
 		}
 	}
-
-	//
-	// If we're transferring a checkpoint, create a MANIFEST file from
-	// the filelist and add it to the files going to the SPOOL.
-	//
-	// Compute the manifest list, then its hash, then write the hash and
-	// the list to the MANIFEST file.
-	//
-	// FIXME: Test this with a really big checkpoint file, and/or determine
-	// how long we (the starter) have before the shadow gets bored and
-	// hangs up; calculating the checksum could take quite some time.
-	//
-	// FIXME: remove the MANIFEST file after transfer or error.  Implement
-	// with a scope guard; explicitly call deallocator on success to ensure
-	// that the scope is what we want.
-	//
-	if( uploadCheckpointFiles ) {
-		std::string manifestText;
-		for( auto & fileitem : filelist ) {
-			const std::string & sourceName = fileitem.srcName();
-
-			std::string sourceHash;
-			if(! compute_file_checksum( sourceName, sourceHash )) {
-				dprintf( D_ALWAYS, "Failed to compute file (%s) checksum when sending checkpoint, aborting.\n", sourceName.c_str() );
-				// It would be lovely to tell the shadow what the problem was,
-				// but I don't know how right at the moment.
-				return_and_resetpriv(-1);
-			}
-			formatstr_cat( manifestText, "%s %s\n", sourceName.c_str(), sourceHash.c_str() );
-		}
-
-		// We need the MANIFEST file on disk for the file-transfer plug-in,
-		// so we may as simplify our coding lives and compute its checksum
-		// off disk instead of in-memory.
-		// FIXME: is the CWD OK here?
-		std::string manifestFileName;
-		formatstr( manifestFileName, "MANIFEST.%.4d", this->checkpointNumber );
-		if(! htcondor::writeShortFile( manifestFileName, manifestText )) {
-			dprintf( D_ALWAYS, "Failed to write manifest file when sending checkpoint, aborting.\n" );
-			return_and_resetpriv(-1);
-		}
-		std::string manifestHash;
-		if(! compute_file_checksum( manifestFileName, manifestHash )) {
-			dprintf( D_ALWAYS, "Failed to compute manifest (%s) checksum when sending checkpoint, aborting.\n", ".MANIFEST" );
-			return_and_resetpriv(-1);
-		}
-
-		// This adds a newline, which is nice, but it also means that we
-		// don't write out the trailing 4 NUL bytes, which is also nice,
-		// since we don't do that for the other hashes in the file.
-		//
-		// Including the file name makes it easier to generate with the
-		// sha256sum command-line tool.
-		std::string append;
-		formatstr( append, "%s %s\n", manifestFileName.c_str(), manifestHash.c_str() );
-		if(! htcondor::appendShortFile( manifestFileName,  append )) {
-			dprintf( D_ALWAYS, "Failed to write manifest checksum to manifest (%s) when sending checkpoint, aborting.\n", ".MANIFEST" );
-			return_and_resetpriv(-1);
-		}
-
-		// I don't know why we do it this way, but we do.
-		filelist.push_back( FileTransferItem() );
-		FileTransferItem & manifestFTI = filelist.back();
-		manifestFTI.setSrcName( manifestFileName );
-		manifestFTI.setFileMode( (condor_mode_t)0600 );
-		manifestFTI.setFileSize( manifestText.length() + append.length() );
-	}
-
-	//
-	// Doing this sort AFTER adding the MANIFEST file ensures that the
-	// MANIFEST file will be sent BEFORE we invoke the file-transfer
-	// plug-ins, which is what we want, so that the AP can clean up if
-	// the transfer fails.  I really LIKE random CAPITALIZATION.
-	//
 
 	std::stable_sort(filelist.begin(), filelist.end());
 

@@ -387,6 +387,8 @@ class FileTransfer final: public Service {
 		*/
 	int DoDownload( filesize_t *total_bytes, ReliSock *s);
 	int DoUpload( filesize_t *total_bytes, ReliSock *s);
+	int DoCheckpointUpload( filesize_t * total_bytes, ReliSock * s );
+	int DoNormalUpload( filesize_t * total_bytes, ReliSock * s );
 
 	typedef struct {
 		filesize_t peer_max_transfer_bytes = {-1};

@@ -2889,7 +2889,7 @@ int SubmitHash::ProcessJobsetAttributes()
 			const char *name = hash_iter_key(it);
 			if ( ! starts_with_ignore_case(name, "JOBSET.")) continue;
 
-			const char *raw_value = hash_iter_value(it);
+			// const char *raw_value = hash_iter_value(it);
 			auto_free_ptr value(submit_param(name));
 
 			// For now, treat JOBSET.Name = x as a synonym for JOBSET.JobSetName = "x"
@@ -7952,7 +7952,7 @@ bool SubmitHash::NeedsOAuthServices(
 		dprintf(D_ALWAYS, "could not compile Oauth key regex!\n");
 		return true;
 	}
-	const int ocount = 2; // 1 for (permissions|resource) capture group, and 1 for whole pattern
+	// const int ocount = 2; // 1 for (permissions|resource) capture group, and 1 for whole pattern
 	const int ovec_service_end = 0;  // index into ovec for the end of the service name (start of pattern)
 	const int ovec_handle_start = 1; // index into ovec for the start of the handle (end of the pattern)
 
