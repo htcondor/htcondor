@@ -3962,6 +3962,9 @@ createCheckpointManifest(
 	//
 	std::string manifestText;
 	for( auto & fileitem : filelist ) {
+		// FIXME: IIRC, we transfer symlinks as is, so we'll need for
+		// compute_file_checksum (or a sibling function) to open no-follow.
+		if( fileitem.isDirectory() || fileitem.isDomainSocket() ) { continue; }
 		const std::string & sourceName = fileitem.srcName();
 
 		std::string sourceHash;
@@ -4032,12 +4035,12 @@ FileTransfer::DoCheckpointUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
 			saved_priv = set_priv( desired_priv_state );
 		}
 
-		filelist.push_back( FileTransferItem() );
-		FileTransferItem & manifestFTI = filelist.back();
+		FileTransferItem manifestFTI;
 		rc = createCheckpointManifest(
 			filelist, this->checkpointNumber, manifestFTI
 		);
 		if( rc != 0 ) { return rc; }
+		filelist.emplace_back(manifestFTI);
 
 		if( saved_priv != PRIV_UNKNOWN ) {
 			set_priv( saved_priv );
