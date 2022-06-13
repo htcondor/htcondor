@@ -3960,6 +3960,9 @@ createCheckpointManifest(
 	// with a scope guard; explicitly call deallocator on success to ensure
 	// that the scope is what we want.
 	//
+	// FIXME: do NOT produce a MANIFEST file if checkpointDestination is
+	// not set -- if we're storing to SPOOL, we don't need one.
+	//
 	std::string manifestText;
 	for( auto & fileitem : filelist ) {
 		// FIXME: IIRC, we transfer symlinks as is, so we'll need for
@@ -3972,7 +3975,10 @@ createCheckpointManifest(
 			dprintf( D_ALWAYS, "Failed to compute file (%s) checksum when sending checkpoint, aborting.\n", sourceName.c_str() );
 			return -1;
 		}
-		formatstr_cat( manifestText, "%s %s\n", sourceName.c_str(), sourceHash.c_str() );
+		// The '*' marks the hash as having been computed in binary mode.
+		formatstr_cat( manifestText, "%s *%s\n",
+			sourceHash.c_str(), sourceName.c_str()
+		);
 	}
 
 	// We need the MANIFEST file on disk for the file-transfer plug-in,
@@ -3997,8 +4003,12 @@ createCheckpointManifest(
 	//
 	// Including the file name makes it easier to generate with the
 	// sha256sum command-line tool.
+	//
+	// The '*' marks the hash as having been computed in binary mode.
 	std::string append;
-	formatstr( append, "%s %s\n", manifestFileName.c_str(), manifestHash.c_str() );
+	formatstr( append, "%s *%s\n",
+		manifestHash.c_str(), manifestFileName.c_str()
+	);
 	if(! htcondor::appendShortFile( manifestFileName,  append )) {
 		dprintf( D_ALWAYS, "Failed to write manifest checksum to manifest (%s) when sending checkpoint, aborting.\n", ".MANIFEST" );
 		return -1;
@@ -4029,6 +4039,7 @@ FileTransfer::DoCheckpointUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
 	);
 	if( rc != 0 ) { return rc; }
 
+
 	{
 		priv_state saved_priv = PRIV_UNKNOWN;
 		if( want_priv_change ) {
@@ -4048,10 +4059,16 @@ FileTransfer::DoCheckpointUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
 	}
 
 
-	return uploadFileList(
+	// FIXME: startCheckpointPlugins();
+
+	rc = uploadFileList(
 	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
 	    total_bytes_ptr
 	);
+
+	// FIXME: stopCheckpointPlugins(rc == 0);
+
+	return rc;
 }
 
 int
@@ -4173,6 +4190,9 @@ FileTransfer::computeFileList(
 				local_output_url = OutputDestination;
 				if(! ends_with(local_output_url, "/")) {
 				    local_output_url += '/';
+				}
+				if( uploadCheckpointFiles ) {
+					formatstr_cat( local_output_url, "%.4d/", this->checkpointNumber );
 				}
 				//
 				// For whatever reason we don't just write the std{out,err}
