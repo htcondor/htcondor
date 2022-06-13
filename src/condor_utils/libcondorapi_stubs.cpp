@@ -210,7 +210,7 @@ CondorQuery::CondorQuery(AdTypes ) { not_impl();}
 
 CondorQuery::~CondorQuery() {} 
 
-#include "Regex.h"
+#include "condor_regex.h"
 
 Regex::Regex() {not_impl();}
 Regex::~Regex() {}

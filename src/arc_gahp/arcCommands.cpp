@@ -29,7 +29,7 @@
 #include <sstream>
 #include <curl/curl.h>
 #include "thread_control.h"
-#include "Regex.h"
+#include "condor_regex.h"
 
 #include "DelegationInterface.h"
 

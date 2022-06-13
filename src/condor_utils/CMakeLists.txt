@@ -244,6 +244,8 @@ condor_q.cpp
 condor_q.h
 condor_query.cpp
 condor_query.h
+condor_regex.cpp
+condor_regex.h
 condor_scitokens.cpp
 condor_scitokens.h
 condor_sinful.cpp
@@ -420,8 +422,6 @@ ranger.cpp
 ranger.h
 read_multiple_logs.cpp
 read_multiple_logs.h
-Regex.cpp
-Regex.h
 secure_file.cpp
 secure_file.h
 selector.cpp

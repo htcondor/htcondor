@@ -39,7 +39,7 @@
 #include "classad/source.h"
 #include "condor_attributes.h"
 #include "condor_base64.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "directory.h"
 #include "subsystem_info.h"
 #include "secure_file.h"

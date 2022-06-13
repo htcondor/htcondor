@@ -17,8 +17,8 @@
  *
  ***************************************************************/
 
-#ifndef REGEX_INCLUDE
-#define REGEX_INCLUDE
+#ifndef CONDOR_REGEX_INCLUDE
+#define CONDOR_REGEX_INCLUDE
 
 #include "condor_common.h"
 #include "MyString.h"

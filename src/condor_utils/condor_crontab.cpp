@@ -24,7 +24,7 @@
 #include "condor_debug.h"
 #include "MyString.h"
 #include "extArray.h"
-#include "regex.h"
+//#include "regex.h"
 #include "date_util.h"
 
 //

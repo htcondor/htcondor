@@ -23,7 +23,7 @@
 
 #include "match_prefix.h"
 #include "CondorError.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "directory.h"
 
 // The GCC_DIAG_OFF() disables warnings so that we can build on our

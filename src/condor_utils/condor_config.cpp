@@ -82,7 +82,7 @@
 #include "subsystem_info.h"
 #include "param_info.h"
 #include "param_info_tables.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "filename_tools.h"
 #include "which.h"
 #include "classad_helpers.h"

@@ -28,7 +28,7 @@
 #include "condor_attributes.h"
 #include "MyString.h"
 #include "extArray.h"
-#include "Regex.h"
+#include "condor_regex.h"
 
 //
 // Attributes for a parameter will be separated by the this character
