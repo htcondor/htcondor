@@ -130,7 +130,7 @@ BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: cmake
 BuildRequires: %_bindir/flex
 BuildRequires: %_bindir/byacc
-BuildRequires: pcre-devel
+BuildRequires: pcre2-devel
 BuildRequires: openssl-devel
 BuildRequires: krb5-devel
 BuildRequires: libvirt-devel
@@ -220,11 +220,9 @@ BuildRequires: devtoolset-%{devtoolset}-toolchain
 %endif
 
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
-%ifarch x86_64
 BuildRequires: python36-devel
 BuildRequires: boost169-devel
 BuildRequires: boost169-static
-%endif
 %endif
 
 %if 0%{?rhel} >= 8
@@ -457,7 +455,7 @@ compatibility of jobs and workstations where they may be run.
 Summary: Headers for HTCondor's classified advertisement language
 Group: Development/System
 Requires: %name-classads = %version-%release
-Requires: pcre-devel
+Requires: pcre2-devel
 %if 0%{?osg} || 0%{?hcc}
 Obsoletes: classads-devel <= 1.0.10
 Provides: classads-devel = %version-%release
@@ -503,9 +501,7 @@ Requires: python >= 2.2
 Requires: %name = %version-%release
 %{?python_provide:%python_provide python2-condor}
 %if 0%{?rhel} >= 7
-%ifarch x86_64
 Requires: boost169-python2
-%endif
 %endif
 # Remove before F30
 Provides: %{name}-python = %{version}-%{release}
@@ -519,7 +515,6 @@ the ClassAd library and HTCondor from python
 
 
 %if 0%{?rhel} >= 7 || 0%{?fedora}
-%ifarch x86_64
 #######################
 %package -n python3-condor
 Summary: Python bindings for HTCondor.
@@ -535,7 +530,6 @@ Requires: python3
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
-%endif
 %endif
 %endif
 
@@ -745,14 +739,9 @@ export CMAKE_PREFIX_PATH=/usr
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
        -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
-%ifarch x86_64
        -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib64 \
        -DLIB_INSTALL_DIR:PATH=/usr/lib64 \
        -DLIB_SUFFIX=64 \
-%else
-       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib \
-       -DLIB_INSTALL_DIR:PATH=/usr/lib \
-%endif 
        -DBUILD_SHARED_LIBS:BOOL=ON
 
 %else
@@ -781,14 +770,9 @@ export CMAKE_PREFIX_PATH=/usr
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
        -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
-%ifarch x86_64
        -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib64 \
        -DLIB_INSTALL_DIR:PATH=/usr/lib64 \
        -DLIB_SUFFIX=64 \
-%else
-       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib \
-       -DLIB_INSTALL_DIR:PATH=/usr/lib \
-%endif
        -DBUILD_SHARED_LIBS:BOOL=ON
 %endif
 
@@ -1558,7 +1542,6 @@ rm -rf %{buildroot}
 %endif
 
 %if 0%{?rhel} >= 7 || 0%{?fedora}
-%ifarch x86_64
 %files -n python3-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
@@ -1574,7 +1557,6 @@ rm -rf %{buildroot}
 /usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
 /usr/lib64/python%{python3_version}/site-packages/htcondor_cli/
-%endif
 %endif
 %endif
 
@@ -1675,6 +1657,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Jun 14 2022 Tim Theisen <tim@cs.wisc.edu> - 9.9.1-1
+- Fix bug where jobs would not match when using a child collector
+
 * Tue May 31 2022 Tim Theisen <tim@cs.wisc.edu> - 9.9.0-1
 - A new authentication method for remote HTCondor administration
 - Several changes to improve the security of connections
