@@ -286,8 +286,8 @@ set_subsystem(std::string subsystem, SubsystemType type=SUBSYSTEM_TYPE_AUTO)
     set_mySubSystem(subsystem.c_str(), false, type);
     //Get the Subsystem
     SubsystemInfo *subsys = get_mySubSystem();
-    //If Subsystem is a Daemon class the reset subsystem
-    if (subsys->isDaemon()) { set_mySubSystem(subsystem.c_str(), true, type); }
+    //If Subsystem is a Daemon class the set m_trusted to true
+    if (subsys->isDaemon()) { subsys->setIsTrusted(true); }
 }
 
 
