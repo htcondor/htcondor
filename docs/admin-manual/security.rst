@@ -465,18 +465,21 @@ described.
     advertise a *condor_master* daemon to the collector. Any setting
     for this access level that is not defined will default to the
     corresponding setting in the ``DAEMON`` access level.
+    The ``ADVERTISE_MASTER`` level of access implies ``READ`` access. 
 
 ``ADVERTISE_STARTD``
     This access level is used specifically for commands used to
     advertise a *condor_startd* daemon to the collector. Any setting
     for this access level that is not defined will default to the
     corresponding setting in the ``DAEMON`` access level.
+    The ``ADVERTISE_STARTD`` level of access implies ``READ`` access. 
 
 ``ADVERTISE_SCHEDD``
     This access level is used specifically for commands used to
     advertise a *condor_schedd* daemon to the collector. Any setting
     for this access level that is not defined will default to the
     corresponding setting in the ``DAEMON`` access level.
+    The ``ADVERTISE_SCHEDD`` level of access implies ``READ`` access. 
 
 ``CLIENT``
     This access level is different from all the others. Whereas all of

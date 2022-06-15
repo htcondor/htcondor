@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- The ``ADVERTISE_MASTER``, ``ADVERTISE_SCHEDD``, and
+  ``ADVERTISE_STARTD`` authorization levels now also provide ``READ``
+  level authorization.
+  :jira:`1164`
 
 Bugs Fixed:
 
