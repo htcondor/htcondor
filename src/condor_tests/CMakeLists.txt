@@ -539,6 +539,11 @@ endif ()
 	condor_pl_test(job_core_basic_par "Basic Parallel Universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_echostring.pl")
 	#condor_pl_test(job_core_basic-security_par "Basic Parallel Universe w/security on" "quick;ctest")
 
+	# Our ppc machine has a broken java.  Ignore the tests for now
+	if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le")
+		set(ENABLE_JAVA_TESTS FALSE)
+	endif()
+
 	if ( ENABLE_JAVA_TESTS )
 		condor_pl_test(job_core_err_java "Java Universe: basic error test" "quick;ctest;java" CTEST DEPENDS "src/condor_tests/x_java_CondorEcho.class;src/condor_tests/job_core_err_java.cmd" JAVA)
 		condor_pl_test(job_core_output_java "Java Universe: basic output test" "quick;ctest;java" CTEST DEPENDS "src/condor_tests/job_core_output_java.cmd;src/condor_tests/x_java_ReadStdin.class;src/condor_tests/job_core_output.in" JAVA)
