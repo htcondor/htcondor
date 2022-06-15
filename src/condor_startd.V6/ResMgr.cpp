@@ -32,6 +32,7 @@
 #include "condor_netdb.h"
 #include "token_utils.h"
 #include "data_reuse.h"
+#include "dc_schedd.h"
 
 #include "slot_builder.h"
 
@@ -40,6 +41,7 @@
 
 ResMgr::ResMgr() :
 	extras_classad( NULL ),
+	m_lastOfferToSchedd(0),
 	max_job_retirement_time_override(-1),
 	m_token_requester(&ResMgr::token_request_callback, this)
 {
@@ -1185,6 +1187,7 @@ ResMgr::update_all( void )
 		// What this actually does is insure that the update timers have been registered for all slots
 	walk( &Resource::update );
 
+	offerToSchedd();
 	report_updates();
 	check_polling();
 	check_use();
@@ -1219,6 +1222,107 @@ ResMgr::eval_all( void )
 #if HAVE_HIBERNATION
 	}
 #endif
+}
+
+void
+ResMgr::offerToSchedd()
+{
+	std::string schedd_name;
+	std::string submitter_name;
+	int req_cluster = 0;
+	int req_proc = 0;
+	int interval = 0;
+
+	param(schedd_name, "OFFER_SCHEDD");
+	param(submitter_name, "OFFER_SUBMITTER");
+
+	if ( schedd_name.empty() || submitter_name.empty() ) {
+		dprintf(D_FULLDEBUG, "No offer schedd\n");
+		return;
+	}
+
+	interval = param_integer("OFFER_INTERVAL", 300);
+	if ( m_lastOfferToSchedd + interval > time(NULL) ) {
+		dprintf(D_FULLDEBUG," Delaying offer to schedd\n");
+		return;
+	}
+
+	req_cluster = param_integer("OFFER_CLUSTER", 1);
+	req_proc = param_integer("OFFER_PROC", 0);
+
+	std::vector<Resource*> offer_resources;
+
+	for ( int i = 0; i < nresources; i++ ) {
+		if ( resources[i]->state() != unclaimed_state ) {
+			continue;
+		}
+		offer_resources.push_back(resources[i]);
+	}
+
+	if ( offer_resources.empty() ) {
+		dprintf(D_FULLDEBUG, "No unclaimed slots, nothing to offer to schedd\n");
+		return;
+	}
+	dprintf(D_FULLDEBUG, "Found %d slots to offer to schedd\n", (int)offer_resources.size());
+
+	// Do we need this if we only trigger when updating the collector?
+	compute_dynamic(true);
+
+	m_lastOfferToSchedd = time(NULL);
+
+	int timeout = param_integer("NEGOTIATOR_TIMEOUT",30);
+	DCSchedd schedd(schedd_name.c_str());
+	ReliSock *sock = schedd.reliSock(timeout);
+	if ( ! sock ) {
+		dprintf(D_FULLDEBUG, "Failed to contact schedd for offer\n");
+		return;
+	}
+	if (!schedd.startCommand(NEGOTIATE, sock, timeout)) {
+		dprintf(D_FULLDEBUG, "Failed to send NEGOTIATE command to %s\n",
+		        schedd_name.c_str());
+		delete sock;
+		return;
+	}
+
+	sock->encode();
+	ClassAd neg_ad;
+	neg_ad.InsertAttr(ATTR_OWNER, submitter_name);
+	neg_ad.InsertAttr(ATTR_SUBMITTER_TAG, "");
+	neg_ad.InsertAttr(ATTR_AUTO_CLUSTER_ATTRS, "");
+	if ( !putClassAd(sock, neg_ad) || !sock->end_of_message() ) {
+		dprintf(D_FULLDEBUG, "Failed to send NEGOTIATE ad to %s\n",
+		        schedd_name.c_str());
+		delete sock;
+		return;
+	}
+
+	for ( auto slot: offer_resources ) {
+		ClassAd offer_ad;
+		slot->publish_single_slot_ad(offer_ad, time(NULL), Resource::Purpose::for_query);
+		offer_ad.InsertAttr(ATTR_REMOTE_NEGOTIATING_GROUP, "<None>");
+		offer_ad.InsertAttr(ATTR_RESOURCE_REQUEST_CLUSTER, req_cluster);
+		offer_ad.InsertAttr(ATTR_RESOURCE_REQUEST_PROC, req_proc);
+			// TODO This assumes the resource has not preempting claimids,
+			//   because we're only looking at unclaimed slots.
+		std::string claimid = slot->r_cur->id();
+
+		if ( !sock->put(PERMISSION_AND_AD) ||
+		     !sock->put_secret(claimid) ||
+		     !putClassAd(sock, offer_ad) ||
+		     !sock->end_of_message() )
+		{
+			dprintf(D_FULLDEBUG, "Failed to send offer ad to %s\n",
+			        schedd_name.c_str());
+			delete sock;
+			return;
+		}
+	}
+
+	if ( !sock->put(END_NEGOTIATE) || !sock->end_of_message() ) {
+		dprintf(D_FULLDEBUG, "Failed to send END_NEGOTIATE to %s\n",
+		        schedd_name.c_str());
+	}
+	delete sock;
 }
 
 

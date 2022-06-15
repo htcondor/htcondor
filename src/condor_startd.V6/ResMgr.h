@@ -264,6 +264,9 @@ public:
 	void		markShutdown() { is_shutting_down = true; };
 	bool		isShuttingDown() const { return is_shutting_down; };
 
+	void offerToSchedd();
+	time_t m_lastOfferToSchedd;
+
 	VMUniverseMgr m_vmuniverse_mgr;
 
 	AdTransforms m_execution_xfm;
