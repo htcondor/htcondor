@@ -65,8 +65,8 @@ New Features:
   work in the future.
   :jira:`1137`
 
-- Prelimary support for ARM (aarch64) and Power PC (ppc64le) platforms on
-  Alma Linux 8 and equivalent platforms.
+- Prelimary support for ARM (aarch64) and Power PC (ppc64le) CPU architectures
+  on Alma Linux 8 and equivalent platforms.
   :jira:`1150`
 
 Bugs Fixed:
