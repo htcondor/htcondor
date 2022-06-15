@@ -41,6 +41,11 @@ void set_mySubSystem( const char *subsystem_name, bool _trust,
 {
 	delete mySubSystem;
 	mySubSystem = new SubsystemInfo( subsystem_name, _trust, _type );
+	/* If Subsystem type passed is AUTO, then we can't be certain whether or not the subsystem
+	 * is assumed to be trusted with root privileges for various checks. So, after initialization
+	 * we check if the subsystem class is DAEMON. If so, then set trust to true. -Cole Bollig
+	*/
+	if ( _type == SUBSYSTEM_TYPE_AUTO && mySubSystem->isDaemon() ) { mySubSystem->setIsTrusted(true); }
 }
 
 //

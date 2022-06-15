@@ -280,9 +280,12 @@ enable_log()
 
 
 void
-set_subsystem(std::string subsystem, bool trust, SubsystemType type=SUBSYSTEM_TYPE_AUTO)
+set_subsystem(std::string subsystem, SubsystemType type=SUBSYSTEM_TYPE_AUTO)
 {
-    set_mySubSystem(subsystem.c_str(), trust, type);
+    //Boolean array that corresponds to SubsystemType enum for whether that subsystem is assumed to be trusted with root privileges or not
+    bool trustedSubsys[] = {false, true, true, true, true, true, true, true, false, false, true, true, false, false, false, false};
+    //Corresponding enum:   Inval,Mastr,Clctr,Negtr,Sched,Shado,Stard,Strtr,  GHAP,DAGMan,SHPrt,Daemn, Tool ,Submit,  Job , Auto 
+    set_mySubSystem(subsystem.c_str(), trustedSubsys[type], type);
 }
 
 
@@ -492,11 +495,10 @@ export_dc_tool()
         The subsystem is primarily used for the parsing of the HTCondor configuration file.
 
         :param str name: The subsystem name.
-        :param bool trust: Boolean to represent whether subsystem can be trusted with 'root' privileges.
         :param daemon_type: The HTCondor daemon type. The default value of Auto infers the type from the name parameter.
         :type daemon_type: :class:`SubsystemType`
         )C0ND0R",
-        (boost::python::arg("subsystem"), boost::python::arg("trust"), boost::python::arg("type")=SUBSYSTEM_TYPE_AUTO))
+        (boost::python::arg("subsystem"), boost::python::arg("type")=SUBSYSTEM_TYPE_AUTO))
         ;
 
     def("enable_debug", enable_debug,
