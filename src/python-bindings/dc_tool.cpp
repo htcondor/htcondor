@@ -282,10 +282,12 @@ enable_log()
 void
 set_subsystem(std::string subsystem, SubsystemType type=SUBSYSTEM_TYPE_AUTO)
 {
-    //Boolean array that corresponds to SubsystemType enum for whether that subsystem is assumed to be trusted with root privileges or not
-    bool trustedSubsys[] = {false, true, true, true, true, true, true, true, false, false, true, true, false, false, false, false};
-    //Corresponding enum:   Inval,Mastr,Clctr,Negtr,Sched,Shado,Stard,Strtr,  GHAP,DAGMan,SHPrt,Daemn, Tool ,Submit,  Job , Auto 
-    set_mySubSystem(subsystem.c_str(), trustedSubsys[type], type);
+    //Assume Python Tool Subsystem is false
+    set_mySubSystem(subsystem.c_str(), false, type);
+    //Get the Subsystem
+    SubsystemInfo *subsys = get_mySubSystem();
+    //If Subsystem is a Daemon class the reset subsystem
+    if (subsys->isDaemon()) { set_mySubSystem(subsystem.c_str(), true, type); }
 }
 
 
