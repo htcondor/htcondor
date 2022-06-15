@@ -1657,6 +1657,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Jun 14 2022 Tim Theisen <tim@cs.wisc.edu> - 9.9.1-1
+- Fix bug where jobs would not match when using a child collector
+
 * Tue May 31 2022 Tim Theisen <tim@cs.wisc.edu> - 9.9.0-1
 - A new authentication method for remote HTCondor administration
 - Several changes to improve the security of connections
