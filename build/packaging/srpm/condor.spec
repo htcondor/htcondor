@@ -269,10 +269,6 @@ Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
-%if %uw_build
-Requires: %name-externals = %version-%release
-%endif
-
 Requires: %name-blahp = %version-%release
 
 # Useful tools are using the Python bindings
@@ -353,6 +349,9 @@ Obsoletes: condor-small-shadow < 8.9.9
 
 # external-libs package discontinued as of 8.9.9
 Obsoletes: condor-external-libs < 8.9.9
+
+# externals package discontinued as of 9.10.0
+Obsoletes: condor-externals < 9.10.0
 
 # Bosco package discontinued as of 9.5.0
 Obsoletes: condor-bosco < 9.5.0
@@ -612,19 +611,6 @@ This example configuration is good for trying out HTCondor for the first time.
 It only configures the IPv4 loopback address, turns on basic security, and
 shortens many timers to be more responsive.
 
-%if %uw_build
-
-#######################
-%package externals
-Summary: Empty package to ensure yum gets the blahp from its own package
-Group: Applications/System
-Requires: %name = %version-%release
-
-%description externals
-Dummy package to help yum out
-
-%endif
-
 #######################
 %package annex-ec2
 Summary: Configuration and scripts to make an EC2 image annex-compatible.
@@ -663,10 +649,6 @@ Requires: %name-classads = %version-%release
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
-%if %uw_build
-Requires: %name-externals = %version-%release
-%endif
-
 
 %description all
 Include dependencies for all condor packages in a typical installation
@@ -1086,11 +1068,7 @@ rm -rf %{buildroot}
 
 #################
 %files all
-%if %uw_build
 #################
-%files externals
-#################
-%endif
 %files
 %exclude %_sbindir/openstack_gahp
 %defattr(-,root,root,-)
