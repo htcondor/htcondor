@@ -30,10 +30,7 @@ using namespace std;
 // Instantiate the list of Cron Jobs
 
 // Basic constructor
-CondorCronJobList::CondorCronJobList( CronJobMgr &mgr )
-		: m_mgr( mgr )
-{
-}
+CondorCronJobList::CondorCronJobList() {}
 
 // Basic destructor
 CondorCronJobList::~CondorCronJobList( void )
