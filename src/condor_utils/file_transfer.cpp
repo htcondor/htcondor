@@ -1376,21 +1376,9 @@ FileTransfer::UploadCheckpointFiles( int checkpointNumber, bool blocking ) {
 
 	// This is where we really want to separate "I understand the job ad"
 	// from "I can operate the protocol".  Until then, just set a member
-	// variable so that DetermineWhichFilesToSend() can know what to do.
+	// variable to make the special-case behavior happen.
 	uploadCheckpointFiles = true;
-	char * originalOutputDestination = OutputDestination;
-
-	std::string checkpointDestination;
-	if( jobAd.LookupString( "CheckpointDestination", checkpointDestination ) ) {
-		OutputDestination = strdup(checkpointDestination.c_str());
-		dprintf( D_FULLDEBUG, "Using %s as checkpoint destination\n", OutputDestination );
-	}
 	int rv = UploadFiles( blocking, false );
-
-	if( OutputDestination != originalOutputDestination ) {
-		free(OutputDestination);
-		OutputDestination = originalOutputDestination;
-	}
 	uploadCheckpointFiles = false;
 	return rv;
 }
@@ -4052,9 +4040,23 @@ FileTransfer::DoCheckpointUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
 	// the caller-constructed checkpointList.
 	filelist = this->checkpointList;
 
+
+	std::string checkpointDestination;
+	char * originalOutputDestination = OutputDestination;
+	if( jobAd.LookupString( "CheckpointDestination", checkpointDestination ) ) {
+		OutputDestination = strdup(checkpointDestination.c_str());
+		dprintf( D_FULLDEBUG, "Using %s as checkpoint destination\n", OutputDestination );
+	}
+
 	int rc = computeFileList(
 	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
 	);
+
+	if( OutputDestination != originalOutputDestination ) {
+		free(OutputDestination);
+		OutputDestination = originalOutputDestination;
+	}
+
 	if( rc != 0 ) { return rc; }
 
 
