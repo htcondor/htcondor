@@ -17,7 +17,8 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added configuration templates ``PREEMPT_IF_DISK_EXCEEDED`` and ``HOLD_IF_DISK_EXCEEDED``
+  :jira:`1173`
 
 Bugs Fixed:
 
