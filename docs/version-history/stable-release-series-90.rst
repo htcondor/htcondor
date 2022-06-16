@@ -63,6 +63,10 @@ Bugs Fixed:
   ``htcondor.SecMan`` sessions from working.
   :jira:`924`
 
+- Make ``condor-externals`` package dependency less strict to ease transition
+  between CHTC and OSG RPM repositories.
+  :jira:`1177`
+
 .. _lts-version-history-9013:
 
 Version 9.0.13
