@@ -2209,6 +2209,37 @@ RemoteResource::initFileTransfer()
 
 		filetrans.AddDownloadFilenameRemap( StderrRemapName, file.c_str() );
 	}
+
+	//
+	// Check this job's SPOOL directory for MANIFEST files and pick the
+	// highest-numbered valid one.  That MANIFEST file must be transferred
+	// to the starter (so it can validate the checkpoint) and the files
+	// therein converted to URLs and added to the transfer list for the
+	// starter to fetch.
+	//
+
+	// FIXME
+
+#ifdef BROKEN
+	// ...
+	if(! filetrans.addInputFile( manifestFile ) ) {
+		/* FIXME */
+	}
+	if(! filetrans.AddDownloadFileRemap( ".MANIFEST", manifestFile ) ) {
+		/* FIXME */
+	}
+	// ...
+
+	// ...
+	for( auto & manifestEntry : manifestFile ) {
+		// ...
+		if(! filetrans.addCheckpointFile( checkpointURL, checkpointFile ) ) {
+			/* FIXME */
+		}
+	}
+	// ...
+#endif
+
 }
 
 void

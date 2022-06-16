@@ -266,15 +266,31 @@ class FileTransfer final: public Service {
 
 	float TotalBytesReceived() const { return bytesRcvd; };
 
-		/** Add the given filename to our list of output files to
-			transfer back.  If we're not managing a list of output
-			files, we return failure.  If we already have this file,
-			we immediately return success.  Otherwise, we append the
-			given filename to our list and return success.
-			@param filename Name of file to add to our list
-			@return false if we don't have a list, else true
-		*/
-	bool addOutputFile( const char* filename );
+	//
+	// Add the given filename to the list of "output" files.  Will
+	// create the empty list of output files if necessary; never
+	// fails (unless the sytem is out of memory).
+	//
+	void addOutputFile( const char* filename );
+
+	//
+	// Add the given URL targeting the given sandbox-relative path to the
+	// list of "input" files.  This function should only ever be called
+	// by the shadow during initial file transfer to the starter.
+	//
+	// Returns false if we're not managing "input" files.
+	//
+	bool addCheckpointFile(
+		const std::string & fileURL, const std::string & fileName
+	);
+	//
+	// Add the named file to the list of "input" files.  This function
+	// should only ever be called by the shadow during initial file
+	// transfer to the starter, and only ever with the chosen MANIFEST file.
+	//
+	// Returns false if we're not managing "input" files.
+	//
+	bool addInputFile( const std::string & fileName );
 
 		/** Add the given filename to our list of exceptions.  These
 			files to will not be transfer back, even if they meet the
@@ -289,7 +305,7 @@ class FileTransfer final: public Service {
 			*/
 	bool addFileToExceptionList( const char* filename );
 
-		/** Allows the client side of the filetransfer object to 
+		/** Allows the client side of the filetransfer object to
 			point to a different server.
 			@param transkey Value of ATTR_TRANSFER_KEY set by server
 			@param transsock Value of ATTR_TRANSFER_SOCKET set by server
@@ -601,11 +617,11 @@ class FileTransfer final: public Service {
 		//      file spooling.
 	static bool ExpandFileTransferList( char const *src_path, char const *dest_dir, char const *iwd, int max_depth, FileTransferList &expanded_list, bool preserveRelativePaths, char const *SpoolSpace, std::set<std::string> & pathsAlreadyPreserved );
 
-        // Function internal to ExpandFileTransferList() -- called twice there.
-        // The SpoolSpace argument is only necessary because this function
-        // calls back into  ExpandFileTransferList(); see that function
-        // for details.
-    static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list, const char *SpoolSpace, std::set<std::string> & pathsAlreadyPreserved );
+		// Function internal to ExpandFileTransferList() -- called twice there.
+		// The SpoolSpace argument is only necessary because this function
+		// calls back into  ExpandFileTransferList(); see that function
+		// for details.
+	static bool ExpandParentDirectories( const char *src_path, const char *iwd, FileTransferList & expanded_list, const char *SpoolSpace, std::set<std::string> & pathsAlreadyPreserved );
 
 		// Returns true if path is a legal path for our peer to tell us it
 		// wants us to write to.  It must be a relative path, containing
@@ -660,6 +676,17 @@ class FileTransfer final: public Service {
 	// Returns true on success; false otherwise.  In the case of a failure, the
 	// err object is filled in with an appropriate error message.
 	bool ParseDataManifest();
+
+    // We need a little more control over checkpoint files than we do
+    // for normal input URLs.  Because of the design of the rest of the
+    // code, this list still can't directly specify an arbitrary file
+    // name for a URL, but we don't need that for checkpoints.
+    //
+    // (It might be possible to _fake_ such a targeting using input file
+    // but I'm quite sure we don't tell the multi-file downloaders about
+    // the remaps, which means it's impossible in the general case to
+    // collisions.)
+    FileTransferList checkpointList;
 };
 
 // returns 0 if no expiration

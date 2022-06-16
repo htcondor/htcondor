@@ -1666,8 +1666,20 @@ FileTransfer::HandleCommands(int command, Stream *s)
 			// And before we do that, call CommitFiles() to finish any
 			// previous commit which may have been prematurely aborted.
 			{
-			const char *currFile;
 			transobject->CommitFiles();
+
+			//
+			// If CheckpointDestination is set, then the checkpoint is not
+			// stored in SPOOL, and we need to use the MANIFEST.* files in
+			// SPOOL to determine which files to transfer.  Furthermore,
+			// we must transfer the highest-numbered MANIFEST file to the
+			// starter so that it can verify the integrity of the checkpoint
+			// its plug-ins download.
+			//
+
+			// FIXME FIRST.
+
+			const char *currFile;
 			Directory spool_space( transobject->SpoolSpace,
 								   transobject->getDesiredPrivState() );
 			while ( (currFile=spool_space.Next()) ) {
@@ -1728,11 +1740,10 @@ FileTransfer::HandleCommands(int command, Stream *s)
 			}
 
 			//
-			// Finally, if we have a checkpoint destination set, ask the
-			// starter to download from there, as well.
-			//
-			// This implementation is probably wrong, but it will work for
-			// transfer_checkpoint_files lists which don't include directories.
+			// Finally, if we have a checkpoint destination set, and the
+			// transfer_checkpoint_list contains either the standard output
+			// or error log by its final name, change it to the intermediate
+			// name we use to actually store those files on the remote disk.
 			//
 			std::string checkpointDestination;
 			if(alreadyUploadedCheckpoint && transobject->jobAd.LookupString( "CheckpointDestination", checkpointDestination )) {
@@ -1748,7 +1759,7 @@ FileTransfer::HandleCommands(int command, Stream *s)
 					//
 					// If ATTRS_JOB_OUTPUT or ATTR_JOB_ERROR are set to real
 					// files, the shadow (in jic_shadow.cpp) resets them to
-					// Std[out|err[RemapName, and the shadow inserts a remap
+					// Std[out|err]RemapName, and the shadow inserts a remap
 					// to the real file names for the final transfer.  Since
 					// this isn't the final transfer, the remaps aren't set,
 					// and we have to do this by hand.
@@ -3967,6 +3978,9 @@ createCheckpointManifest(
 	for( auto & fileitem : filelist ) {
 		// FIXME: IIRC, we transfer symlinks as is, so we'll need for
 		// compute_file_checksum (or a sibling function) to open no-follow.
+		// FIXME: At this point in the code, we should have already traversed
+		// each directory in the list and recursively added its contents,
+		// but that needs to be verified...
 		if( fileitem.isDirectory() || fileitem.isDomainSocket() ) { continue; }
 		const std::string & sourceName = fileitem.srcName();
 
@@ -4033,6 +4047,10 @@ FileTransfer::DoCheckpointUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
 	filesize_t sandbox_size = 0;
 	_ft_protocol_bits protocolState;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
+
+	// It would be at best confusing if DoCheckpointUpload() mutated
+	// the caller-constructed checkpointList.
+	filelist = this->checkpointList;
 
 	int rc = computeFileList(
 	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
@@ -5701,7 +5719,7 @@ FileTransfer::Continue() const
 }
 
 
-bool
+void
 FileTransfer::addOutputFile( const char* filename )
 {
 	if( ! OutputFiles ) {
@@ -5709,10 +5727,9 @@ FileTransfer::addOutputFile( const char* filename )
 		ASSERT(OutputFiles != NULL);
 	}
 	else if( OutputFiles->file_contains(filename) ) {
-		return true;
+		return;
 	}
 	OutputFiles->append( filename );
-	return true;
 }
 
 bool
@@ -7247,4 +7264,38 @@ void
 FileTransfer::setMaxDownloadBytes(filesize_t _MaxDownloadBytes)
 {
 	MaxDownloadBytes = _MaxDownloadBytes;
+}
+
+
+bool
+FileTransfer::addInputFile( const std::string & fileName ) {
+	if(! InputFiles) {
+		return false;
+	}
+
+	if( InputFiles->file_contains( fileName.c_str() ) ) {
+		return true;
+	}
+
+	InputFiles->append( fileName.c_str() );
+	return true;
+}
+
+bool
+FileTransfer::addCheckpointFile(
+  const std::string & fileURL, const std::string & fileName
+) {
+	if(! InputFiles) {
+		return false;
+	}
+
+	// We can't yet set the downloaded file name completely independently
+	// of the source URL, which is annoying, but doesn't matter for this
+	// case (because we set the uploaded file name in the first place).
+	FileTransferItem checkpointItem;
+	checkpointItem.setSrcName( fileURL );
+	checkpointItem.setDestDir( condor_dirname( fileName.c_str() ) );
+
+	this->checkpointList.emplace_back( checkpointItem );
+	return true;
 }
