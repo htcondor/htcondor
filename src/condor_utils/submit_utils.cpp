@@ -7952,7 +7952,6 @@ bool SubmitHash::NeedsOAuthServices(
 		dprintf(D_ALWAYS, "could not compile Oauth key regex!\n");
 		return true;
 	}
-	const int ocount = 2; // 1 for (permissions|resource) capture group, and 1 for whole pattern
 	const int ovec_service_end = 0;  // index into ovec for the end of the service name (start of pattern)
 	const int ovec_handle_start = 1; // index into ovec for the start of the handle (end of the pattern)
 

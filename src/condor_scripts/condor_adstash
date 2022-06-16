@@ -157,7 +157,7 @@ def main():
 
     # register with the condor_master unless running standalone
     if not args.standalone:
-        htcondor.set_subsystem(args.process_name, False, htcondor.SubsystemType.Daemon)
+        htcondor.set_subsystem(args.process_name, htcondor.SubsystemType.Daemon)
         try:
             logging.info("Sending DC_SET_READY message to condor_master")
             htcondor.set_ready_state("Ready")

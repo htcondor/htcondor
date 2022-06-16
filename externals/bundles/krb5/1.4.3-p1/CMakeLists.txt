@@ -23,7 +23,7 @@ if (WITH_KRB5)
 
 	find_multiple( "krb5;com_err;k5crypto;krb5support;gssapi_krb5" KRB5_FOUND )
 
-	if ( NOT KRB5_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
+	if ( NOT KRB5_FOUND AND NOT PROPER AND NOT LINUX AND NOT APPLE )
 
 		condor_pre_external( KRB5 krb5-1.4.3-p1 "lib;include" "include/krb5.h")
 

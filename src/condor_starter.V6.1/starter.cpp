@@ -50,7 +50,7 @@
 #include "sshd_proc.h"
 #include "condor_base64.h"
 #include "my_username.h"
-#include <Regex.h>
+#include "condor_regex.h"
 #include "starter_util.h"
 #include "condor_random_num.h"
 #include "data_reuse.h"

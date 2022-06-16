@@ -7,6 +7,25 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-9015:
+
+Version 9.0.15
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.0.15 released on Month Date, 2022.
+
+- HTCondor version 9.0.15 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-9014:
 
 Version 9.0.14
@@ -43,6 +62,10 @@ Bugs Fixed:
 - Fixed a bug in the Python bindings that prevented context managed
   ``htcondor.SecMan`` sessions from working.
   :jira:`924`
+
+- Make ``condor-externals`` package dependency less strict to ease transition
+  between CHTC and OSG RPM repositories.
+  :jira:`1177`
 
 .. _lts-version-history-9013:
 

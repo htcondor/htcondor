@@ -2946,8 +2946,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 	}
 
 	if (job->LookupInteger(ATTR_JOB_STATUS, status) == 0) {
-		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
-				ATTR_JOB_STATUS);
+		dprintf(D_ALWAYS, "Job %d.%d has no %s attribute.  Ignoring...\n",
+		        job->jid.cluster, job->jid.proc, ATTR_JOB_STATUS);
 		return 0;
 	}
 
@@ -3003,7 +3003,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 	SubmitterData * SubData = NULL;
 	OwnerInfo * OwnInfo = scheduler.get_submitter_and_owner(job, SubData);
 	if ( ! OwnInfo) {
-		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n", ATTR_OWNER);
+		dprintf(D_ALWAYS, "Job %d.%d has no %s attribute.  Ignoring...\n",
+		        job->jid.cluster, job->jid.proc, ATTR_OWNER);
 		return 0;
 	}
 		// Keep track of unique owners per submitter.

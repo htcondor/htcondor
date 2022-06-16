@@ -114,7 +114,7 @@ else (WINDOWS)
 
 			set(BUILD_OPTIONS --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
 
-			if (DARWIN)
+			if (APPLE)
 				if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 					set(TOOLSET clang-darwin)
 				else()
