@@ -485,20 +485,16 @@ void sysapi_opsys_dump(int category)
 void
 sysapi_get_darwin_info(void)
 {
-    char ver_str[255];
+    char ver_str[255] = "";
     const char *args[] = {"/usr/bin/sw_vers", "-productVersion", NULL};
     FILE *output_fp;
 
     char tmp_info[262];
-    char *info_str;
     const char *os_name = "macOS ";
  
     if ((output_fp = my_popenv(args, "r", FALSE)) != NULL) {
 	fgets(ver_str, 255, output_fp);
 	my_pclose(output_fp);
-    } else 
-    {
-	info_str = strdup( "Unknown" );
     }
 
 	int major = 0, minor = 0, patch = 0;
