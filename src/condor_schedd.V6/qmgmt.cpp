@@ -8178,7 +8178,7 @@ GetNextJobOrClusterByConstraint(const char *constraint, int initScan)
 	if (constraint && !constraint[0]) constraint = nullptr;
 
 	while(JobQueue->Iterate(key,ad)) {
-		if (ad->IsCluster() || ad->IsJob() && 
+		if ((ad->IsCluster() || ad->IsJob()) &&
 			(!constraint || EvalExprBool(ad, constraint))) {
 			return static_cast<JobQueueJob*>(ad);
 		}
