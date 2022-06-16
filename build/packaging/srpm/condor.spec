@@ -270,7 +270,7 @@ Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
 %if %uw_build
-Requires: %name-externals = %version-%release
+Requires: %name-externals >= 8.9.9
 %endif
 
 %if %blahp
@@ -626,7 +626,6 @@ shortens many timers to be more responsive.
 %package externals
 Summary: Empty package to ensure yum gets the blahp from its own package
 Group: Applications/System
-Requires: %name = %version-%release
 
 %description externals
 Dummy package to help yum out
@@ -673,7 +672,7 @@ Requires: python3-condor = %version-%release
 %endif
 Requires: %name-bosco = %version-%release
 %if %uw_build
-Requires: %name-externals = %version-%release
+Requires: %name-externals >= 8.9.9
 %endif
 
 
