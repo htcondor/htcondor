@@ -2381,7 +2381,6 @@ handle_dc_approve_token_request(int, Stream* stream)
 		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
 		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
 	} else {
-#if defined(HAVE_EXT_OPENSSL)
 		auto &token_request = *(iter->second);
 		CondorError err;
 		std::string token;
@@ -2401,10 +2400,6 @@ handle_dc_approve_token_request(int, Stream* stream)
 			token_request.setToken(token);
 			result_ad.InsertAttr(ATTR_ERROR_CODE, 0);
 		}
-#else
-		result_ad.InsertAttr(ATTR_ERROR_STRING, "Support for tokens not available");
-		result_ad.InsertAttr(ATTR_ERROR_CODE, 3);
-#endif
 	}
 
 	if (!putClassAd(stream, result_ad) || !stream->end_of_message())
@@ -2708,7 +2703,6 @@ handle_dc_session_token(int, Stream* stream)
 	}
 	else
 	{
-#if defined(HAVE_EXT_OPENSSL)
 		std::string token;
 		if (!Condor_Auth_Passwd::generate_token(
 			auth_user,
@@ -2724,10 +2718,6 @@ handle_dc_session_token(int, Stream* stream)
 		} else {
 			result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
 		}
-#else
-		result_ad.InsertAttr(ATTR_ERROR_STRING, "Not implemented");
-		result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
-#endif
 	}
 
 	stream->encode();

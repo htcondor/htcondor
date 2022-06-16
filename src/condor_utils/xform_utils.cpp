@@ -36,7 +36,7 @@
 #include "ad_printmask.h"
 #include "condor_version.h"
 #include "submit_utils.h" // for queue iteration stuff
-#include "Regex.h"
+#include "condor_regex.h"
 #include "xform_utils.h"
 
 #include "list.h"

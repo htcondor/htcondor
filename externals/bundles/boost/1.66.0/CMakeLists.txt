@@ -145,7 +145,7 @@ else (WINDOWS)
 				set(BUILD_OPTIONS --user-config=${CMAKE_CURRENT_BINARY_DIR}/python-config.jam --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
 			endif()
 
-			if (DARWIN)
+			if (APPLE)
 				if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 					set(TOOLSET clang-darwin)
 				else()

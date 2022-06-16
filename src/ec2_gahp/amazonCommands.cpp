@@ -35,7 +35,7 @@
 #include "condor_base64.h"
 #include <sstream>
 #include "stat_wrapper.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include <algorithm>
 #include <openssl/hmac.h>
 #include <curl/curl.h>

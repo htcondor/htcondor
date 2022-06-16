@@ -22,7 +22,7 @@ if (WITH_OPENSSL)
 
   find_multiple( "ssl;crypto" OPENSSL_FOUND )
 
-  if ( NOT OPENSSL_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
+  if ( NOT OPENSSL_FOUND AND NOT PROPER AND NOT LINUX AND NOT APPLE )
   
     condor_pre_external( OPENSSL openssl-1.0.1j "lib;include" "include/openssl/ssl.h")
 
@@ -53,7 +53,7 @@ if (WITH_OPENSSL)
 
 			set (OPENSSL_CONFIGURE ./config --prefix=${OPENSSL_INSTALL_LOC} no-asm )
 			
-			if (DARWIN)
+			if (APPLE)
 			  string(SUBSTRING ${OS_VER} 0 2 DARWIN_MAJOR)
 			  if(${DARWIN_MAJOR} STREQUAL "10")
 				dprint("OPENSSL_CONVERT")

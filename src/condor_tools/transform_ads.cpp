@@ -36,7 +36,7 @@
 #include "match_prefix.h"
 #include "condor_version.h"
 #include "ad_printmask.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "tokener.h"
 #include <submit_utils.h>
 #include <xform_utils.h>
