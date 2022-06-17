@@ -44,20 +44,14 @@ compat_classad_util.cpp
 compat_classad_util.h
 condor_arglist.cpp
 condor_arglist.h
-condor_attributes.cpp
 condor_environ.cpp
-CondorError.cpp
-CondorError.h
 condor_event.cpp
 condor_event.h
-condor_open.h
 condor_snutils.cpp
 condor_ver_info.cpp
 condor_ver_info.h
 condor_version.h
 condor_version.cpp
-directory.cpp
-directory.h
 directory_util.cpp
 directory_util.h
 dprintf_common.cpp
@@ -69,9 +63,6 @@ env.h
 except.cpp
 file_lock.cpp
 filename_tools.cpp
-filename_tools_cpp.cpp
-format_time.cpp
-format_time.h
 get_random_num.cpp
 HashTable.cpp
 HashTable.h
@@ -90,10 +81,6 @@ read_user_log_state.h
 rotate_file.cpp
 setenv.cpp
 setenv.h
-simple_arg.cpp
-simple_arg.h
-stat_info.cpp
-stat_info.h
 stat_wrapper.cpp
 stat_wrapper.h
 stl_string_utils.cpp
@@ -144,14 +131,12 @@ if(NOT WINDOWS)
 		lock_file.unix.cpp
 		passwd_cache.unix.cpp
 		passwd_cache.unix.h
-		sig_install.unix.cpp
 	)
 endif(NOT WINDOWS)
 
 # These sources compile to .o's which only go into libcondorapi
 set(CONDOR_API_SRC
 	libcondorapi_stubs.cpp
-	../condor_sysapi/kernel_version.cpp
 	../condor_sysapi/kernel_version.cpp
 	../condor_sysapi/reconfig.cpp
 	../condor_sysapi/sysapi.h
@@ -208,6 +193,7 @@ compat_classad_list.cpp
 compat_classad_list.h
 condor_adtypes.cpp
 condor_api.h
+condor_attributes.cpp
 condor_base64.cpp
 condor_base64.h
 condor_blkng_full_disk_io.cpp
@@ -216,6 +202,8 @@ condor_common.cpp
 condor_config.cpp
 condor_crontab.cpp
 condor_crontab.h
+CondorError.cpp
+CondorError.h
 condor_fsync.cpp
 condor_fsync.h
 condor_ftp.cpp
@@ -228,6 +216,7 @@ condor_md.cpp
 condor_mkstemp.cpp
 condor_netaddr.cpp
 condor_netdb.cpp
+condor_open.h
 condor_perms.cpp
 condor_pidenvid.cpp
 condor_q.cpp
@@ -280,6 +269,8 @@ dc_service.h
 DelegationInterface.cpp
 DelegationInterface.h
 d_format_time.cpp
+directory.cpp
+directory.h
 docker-api.cpp
 docker-api.h
 domain_tools.cpp
@@ -299,6 +290,7 @@ expr_analyze.h
 extArray.h
 file_modified_trigger.cpp
 file_modified_trigger.h
+filename_tools_cpp.cpp
 filesystem_remap.cpp
 filesystem_remap.h
 file_transfer.cpp
@@ -307,6 +299,8 @@ file_transfer_stats.cpp
 file_transfer_stats.h
 forkwork.cpp
 forkwork.h
+format_time.cpp
+format_time.h
 fs_util.cpp
 gahp_common.cpp
 gahp_common.h
@@ -425,6 +419,8 @@ shortfile.cpp
 shortfile.h
 sig_name.cpp
 sig_name.h
+simple_arg.cpp
+simple_arg.h
 simplelist.h
 socket_proxy.cpp
 socket_proxy.h
@@ -434,6 +430,8 @@ spooled_job_files.cpp
 spooled_job_files.h
 spool_version.cpp
 spool_version.h
+stat_info.cpp
+stat_info.h
 status_string.cpp
 status_string.h
 status_types.h
@@ -507,6 +505,7 @@ if(NOT WINDOWS)
 		limit.unix.cpp
 		network_adapter.unix.cpp
 		network_adapter.unix.h
+		sig_install.unix.cpp
 		sleep.unix.cpp
 	)
 endif(NOT WINDOWS)
