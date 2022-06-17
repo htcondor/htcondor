@@ -350,9 +350,6 @@ Obsoletes: condor-small-shadow < 8.9.9
 # external-libs package discontinued as of 8.9.9
 Obsoletes: condor-external-libs < 8.9.9
 
-# externals package discontinued as of 9.10.0
-Obsoletes: condor-externals < 9.10.0
-
 # Bosco package discontinued as of 9.5.0
 Obsoletes: condor-bosco < 9.5.0
 
@@ -610,6 +607,18 @@ Requires: python3-condor = %version-%release
 This example configuration is good for trying out HTCondor for the first time.
 It only configures the IPv4 loopback address, turns on basic security, and
 shortens many timers to be more responsive.
+
+%if %uw_build
+
+#######################
+%package externals
+Summary: Empty package without strict version requirement to help yum out.
+Group: Applications/System
+
+%description externals
+Dummy package to help yum out
+
+%endif
 
 #######################
 %package annex-ec2
@@ -1068,7 +1077,11 @@ rm -rf %{buildroot}
 
 #################
 %files all
+%if %uw_build
 #################
+%files externals
+#################
+%endif
 %files
 %exclude %_sbindir/openstack_gahp
 %defattr(-,root,root,-)
