@@ -117,10 +117,6 @@ user_log_header.cpp
 user_log_header.h
 utc_time.cpp
 utc_time.h
-write_user_log.cpp
-write_user_log.h
-write_user_log_state.cpp
-write_user_log_state.h
 )
 
 if (NOT WINDOWS)
@@ -490,6 +486,10 @@ waker.cpp
 waker.h
 which.cpp
 which.h
+write_user_log.cpp
+write_user_log.h
+write_user_log_state.cpp
+write_user_log_state.h
 xform_utils.cpp
 xform_utils.h
 zkm_base64.cpp

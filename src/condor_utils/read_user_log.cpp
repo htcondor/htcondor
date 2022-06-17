@@ -18,13 +18,11 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "condor_open.h"
 #include "condor_debug.h"
 #include <stdarg.h>
 #include "read_user_log.h"
 #include <time.h>
 #include "MyString.h"
-#include "condor_uid.h"
 #include "condor_config.h"
 #include "stat_wrapper.h"
 #include "file_lock.h"
