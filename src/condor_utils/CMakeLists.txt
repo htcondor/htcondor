@@ -56,8 +56,6 @@ condor_ver_info.cpp
 condor_ver_info.h
 condor_version.h
 condor_version.cpp
-consumption_policy.cpp
-consumption_policy.h
 directory.cpp
 directory.h
 directory_util.cpp
@@ -81,8 +79,6 @@ iso_dates.cpp
 iso_dates.h
 log_rotate.cpp
 log_rotate.h
-misc_utils.cpp
-misc_utils.h
 MyString.cpp
 MyString.h
 my_username.cpp
@@ -105,8 +101,6 @@ stl_string_utils.h
 strcasestr.cpp
 string_list.cpp
 string_list.h
-stringSpace.cpp
-stringSpace.h
 strnewp.cpp
 strupr.cpp
 subsystem_info.cpp
@@ -262,6 +256,8 @@ condor_user_policy.h
 config.cpp
 console-utils.cpp
 console-utils.h
+consumption_policy.cpp
+consumption_policy.h
 copy_file.cpp
 credmon_interface.cpp
 credmon_interface.h
@@ -371,6 +367,8 @@ mark_thread.cpp
 match_prefix.cpp
 metric_units.cpp
 metric_units.h
+misc_utils.cpp
+misc_utils.h
 mk_cache_links.cpp
 mk_cache_links.h
 my_async_fread.cpp
@@ -442,6 +440,8 @@ status_types.h
 stopwatch.h
 store_cred.cpp
 store_cred.h
+stringSpace.cpp
+stringSpace.h
 str_isxxx.cpp
 str_isxxx.h
 submit_glob.cpp

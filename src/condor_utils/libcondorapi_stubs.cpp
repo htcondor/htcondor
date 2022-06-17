@@ -23,6 +23,13 @@
 #include "generic_query.h"
 #include "condor_query.h"
 
+/* This file contains various stub functions or small implementation of other
+	functions. The purpose of this is to break edges in a nasty dependency
+	graph between our .o files so we are able to release the user log API
+	to the world. 
+	-psilord 02/20/03
+	*/
+
 #ifdef WIN32
 bool 
 get_password_from_credd (
@@ -43,19 +50,6 @@ cache_credd_locally (
 	return false;
 }
 #endif
-/* This file contains various stub functions or small implementation of other
-	functions. The purpose of this is to break edges in a nasty dependency
-	graph between our .o files so we are able to release the user log API
-	to the world. The user log code now uses old classads, and old classads for
-	some dumb reason requires cedar. So, I stubbed ceder out right to here
-	to avoid dependance on the security libraries and many other things 
-	related to that. Then, I made sure to stub the CondorQuery object
-	because this little object is responsible for brining in a helluva
-	lot of stuff ending at daemoncore.  Since the user of the condorapi
-	library doesn't need to talk to a collector to get ads or anything
-	they won't miss it. -psilord 02/20/03
-	*/
-
 
 /* if a truly not supportable function is somehow used. Abort. */
 static int not_impl(void)
@@ -144,71 +138,6 @@ bool param_boolean( const char *, bool default_value, bool,
 {
 	return default_value;
 }
-
-
-/* stubs for generic query object */
-GenericQuery::GenericQuery(void) { 
-	integerThreshold = stringThreshold = floatThreshold = 0; 
-	integerConstraints = 0; 
-	floatConstraints = 0;
-	stringConstraints = 0;
-	integerKeywordList = floatKeywordList = stringKeywordList = 0;
-}
-GenericQuery::~GenericQuery(void) {}
-
-/* stubs for query object. */
-QueryResult clearStringConstraints  (const int ) 
-{ return (QueryResult)not_impl();}
-
-QueryResult clearIntegerConstraints (const int )
-{ return (QueryResult)not_impl();}
-
-QueryResult clearFloatConstraints   (const int )
-{ return (QueryResult)not_impl();}
-
-void		clearORCustomConstraints(void) 
-{ not_impl(); }
-
-void		clearANDCustomConstraints(void) 
-{ not_impl(); }
-
-QueryResult CondorQuery::addConstraint (const int , const char *) 
-{ return (QueryResult)not_impl();}
-
-QueryResult CondorQuery::addConstraint (const int , const int )
-{ return (QueryResult)not_impl();}
-
-QueryResult CondorQuery::addConstraint (const int, const float)
-{ return (QueryResult)not_impl();}
-
-QueryResult CondorQuery::addORConstraint (const char *)
-{ return (QueryResult)not_impl();}
-
-QueryResult CondorQuery::addANDConstraint (const char *)
-{ return (QueryResult)not_impl();}
-
-QueryResult CondorQuery::fetchAds (ClassAdList &, const char [], CondorError* )
-{ return (QueryResult)not_impl();}
-
-QueryResult CondorQuery::filterAds (ClassAdList &, ClassAdList &)
-{ return (QueryResult)not_impl();}
-
-QueryResult CondorQuery::getQueryAd (ClassAd &)
-{ return (QueryResult)not_impl();}
-
-// overloaded operators
-
-// display
-/*friend ostream &CondorQuery::operator<< (ostream &foo, CondorQuery &bar) */
-/*	{ return (QueryResult)not_impl();}*/
-
-// assignment
-/*CondorQuery	&CondorQuery::operator=  (CondorQuery &)*/
-/*	{ return (CondorQuery)not_impl();}*/
-
-CondorQuery::CondorQuery(AdTypes ) { not_impl();} 
-
-CondorQuery::~CondorQuery() {} 
 
 #include "condor_regex.h"
 
