@@ -321,7 +321,7 @@ incorporates.
        exceed the disk in the slot, preempt the job immediately
        ignoring any job retirement time.
 
-    -  ``Hold_If_Cpus_Exceeded``
+    -  ``Hold_If_Disk_Exceeded``
 
        If the startd observes the amount of disk space used by the job
        exceed the disk in the slot, immediately place the job on hold
