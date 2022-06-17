@@ -659,13 +659,6 @@ const std::string * StringTokenIterator::next_string()
 	return &current;
 }
 
-bool StringTokenIterator::next(MyString & tok)
-{
-	const char * p = next(); 
-	tok = p;
-	return p != NULL; 
-}
-
 int
 replace_str( std::string & str, const std::string & from, const std::string & to, size_t start ) {
     if( from.empty() ) { return -1; }
