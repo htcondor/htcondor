@@ -748,7 +748,7 @@ static bool test_xml() {
 	classad::ClassAdXMLUnParser unparser;
 	classad::ClassAdXMLParser parser;
 	ClassAd classad, *classadAfter;
-	MyString before, after;
+	std::string before, after;
 	std::string xml;
 	initAdFromString(classad_string, classad);
 	sPrintAd(before, classad);
@@ -763,8 +763,8 @@ static bool test_xml() {
 	emit_param("Before", classad_string);
 	emit_param("After", classad_string);
 	emit_output_actual_header();
-	emit_param("Before", before.Value());
-	emit_param("After", after.Value());
+	emit_param("Before", before.c_str());
+	emit_param("After", after.c_str());
 	if(!classad.SameAs(classadAfter)) {
 		delete classadAfter;
 		FAIL;
