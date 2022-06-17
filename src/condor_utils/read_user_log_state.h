@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include <time.h>
-#include "MyString.h"
 #include "stat_wrapper.h"
 
 
@@ -198,7 +197,7 @@ public:
 		{ Update(); m_event_num += num; return m_event_num; };
 
 	// Get / set the uniq identifier
-	void UniqId( const MyString &id ) { Update(); m_uniq_id = id; };
+	void UniqId( const std::string &id ) { Update(); m_uniq_id = id; };
 	const char *UniqId( void ) const { return m_uniq_id.c_str(); };
 	bool ValidUniqId( void ) const { return ( m_uniq_id.length() != 0 ); };
 
@@ -221,7 +220,7 @@ public:
 
 	// Compare the ID to the one stored
 	// 0==one (or both) are empty, 1=same, -1=different
-	int CompareUniqId( const MyString &id ) const;
+	int CompareUniqId( const std::string &id ) const;
 
 	// Get updated stat of the file
 	int StatFile( void );
@@ -239,7 +238,7 @@ public:
 
 	// Get / set the log file type
 	// Method to generate log path
-	bool GeneratePath( int rotation, MyString &path,
+	bool GeneratePath( int rotation, std::string &path,
 					   bool initializing = false ) const;
 
 	// Check the file for differences
@@ -273,9 +272,9 @@ public:
 
 	// *** Testing API ***
 	// Get file state into a formated string
-	void GetStateString( MyString &str, const char *label = NULL ) const;
+	void GetStateString( std::string &str, const char *label = NULL ) const;
 	void GetStateString( const ReadUserLog::FileState &state,
-						 MyString &str, const char *label = NULL ) const;
+						 std::string &str, const char *label = NULL ) const;
 
 private:
 	// Private methods
@@ -287,10 +286,10 @@ private:
 	bool			m_init_error;		// Error initializing?
 	bool			m_initialized;		// Initialized OK?
 
-	MyString		m_base_path;		// The log's base path
-	MyString		m_cur_path;			// The current (reading) log's path
+	std::string		m_base_path;		// The log's base path
+	std::string		m_cur_path;			// The current (reading) log's path
 	int				m_cur_rot;			// Current file rotation number
-	MyString		m_uniq_id;			// File's uniq identifier
+	std::string		m_uniq_id;			// File's uniq identifier
 	int				m_sequence;			// File's sequence number
 	time_t			m_update_time;		// Time of last data update
 
