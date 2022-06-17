@@ -274,23 +274,25 @@ class FileTransfer final: public Service {
 	void addOutputFile( const char* filename );
 
 	//
-	// Add the given URL targeting the given sandbox-relative path to the
-	// list of "input" files.  This function should only ever be called
-	// by the shadow during initial file transfer to the starter.
+	// Add the given path or URL to the list of checkpoint files.  The file
+	// will be transferred to the named destination* in the sandbox.
 	//
-	// Returns false if we're not managing "input" files.
+	// *: At present, the basename of the destination must be the same
+	//    as the basename of the source.
 	//
-	bool addCheckpointFile(
-		const std::string & fileURL, const std::string & fileName
+	// This function should only ever be
+	// called by the shadow during initial file transfer to the starter.
+	//
+	void addCheckpointFile(
+		const std::string & source, const std::string & destination
 	);
+
 	//
-	// Add the named file to the list of "input" files.  This function
-	// should only ever be called by the shadow during initial file
-	// transfer to the starter, and only ever with the chosen MANIFEST file.
+	// As addCheckpointFile(), but for input files.
 	//
-	// Returns false if we're not managing "input" files.
-	//
-	bool addInputFile( const std::string & fileName );
+	void addInputFile(
+		const std::string & source, const std::string & destination
+	);
 
 		/** Add the given filename to our list of exceptions.  These
 			files to will not be transfer back, even if they meet the
@@ -386,6 +388,11 @@ class FileTransfer final: public Service {
 
   protected:
 
+    // Because FileTransferItem doesn't store the destination file name
+    // (only the directory), this doesn't actually work right.
+	void addSandboxRelativePath( const std::string & source,
+	  const std::string & destination, FileTransferList & ftl );
+
 	// There's three places where we need to know this.
 	bool shouldSendStderr();
 	bool shouldSendStdout();
@@ -403,7 +410,8 @@ class FileTransfer final: public Service {
 		*/
 	int DoDownload( filesize_t *total_bytes, ReliSock *s);
 	int DoUpload( filesize_t *total_bytes, ReliSock *s);
-	int DoCheckpointUpload( filesize_t * total_bytes, ReliSock * s );
+	int DoCheckpointUploadFromStarter( filesize_t * total_bytes, ReliSock * s );
+	int DoCheckpointUploadFromShadow( filesize_t * total_bytes, ReliSock * s );
 	int DoNormalUpload( filesize_t * total_bytes, ReliSock * s );
 
 	typedef struct {
@@ -458,6 +466,7 @@ class FileTransfer final: public Service {
 	int checkpointNumber{-1};
 	bool uploadCheckpointFiles{false};
 	bool uploadFailureFiles{false};
+    bool inHandleCommands{false};
 	bool TransferFilePermissions{false};
 	bool DelegateX509Credentials{false};
 	bool PeerDoesTransferAck{false};
@@ -687,6 +696,8 @@ class FileTransfer final: public Service {
     // the remaps, which means it's impossible in the general case to
     // collisions.)
     FileTransferList checkpointList;
+
+    FileTransferList inputList;
 };
 
 // returns 0 if no expiration

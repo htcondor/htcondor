@@ -34,6 +34,9 @@
 #include "globus_utils.h"
 #include "limit_directory_access.h"
 
+#include <fstream>
+#include "spooled_job_files.h"
+
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
 // for remote syscalls, this is currently in NTreceivers.C.
@@ -2150,6 +2153,30 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 	return 0;
 }
 
+// FIXME: This may need to be refactored and stuck in utility code.
+
+int
+getManifestNumberFromFileName( const char * fileName ) {
+	if( fileName == strstr( fileName, "MANIFEST." ) ) {
+		char * endptr;
+		const char * suffix = fileName + 9;
+		if( *suffix != '\0' ) {
+			int manifestNumber = strtol( suffix, & endptr, 10 );
+			if( *endptr == '\0' ) {
+				return manifestNumber;
+			}
+		}
+	}
+	return -1;
+}
+
+// FIXME: This should almost certainly be refactored and stuck in utility code.
+bool
+validateManifestFile( const std::string & /* fileName */ ) {
+	// FIXME
+	return true;
+}
+
 void
 RemoteResource::initFileTransfer()
 {
@@ -2218,28 +2245,75 @@ RemoteResource::initFileTransfer()
 	// starter to fetch.
 	//
 
-	// FIXME
+	// FIXME (somewhere else): only send MANIFEST files if we're setting a
+	// checkpoint destination.
 
-#ifdef BROKEN
-	// ...
-	if(! filetrans.addInputFile( manifestFile ) ) {
-		/* FIXME */
+	std::string checkpointDestination;
+	if(! jobAd->LookupString( "CheckpointDestination", checkpointDestination )) {
+		return;
 	}
-	if(! filetrans.AddDownloadFileRemap( ".MANIFEST", manifestFile ) ) {
-		/* FIXME */
-	}
-	// ...
 
-	// ...
-	for( auto & manifestEntry : manifestFile ) {
-		// ...
-		if(! filetrans.addCheckpointFile( checkpointURL, checkpointFile ) ) {
-			/* FIXME */
+	std::string spoolPath;
+	SpooledJobFiles::getJobSpoolPath(jobAd, spoolPath);
+
+	// Find the largest manifest number.
+	int largestManifestNumber = -1;
+	const char * currentFile = NULL;
+	Directory spoolDirectory( spoolPath.c_str() );
+	while( (currentFile = spoolDirectory.Next()) ) {
+		int manifestNumber = getManifestNumberFromFileName( currentFile );
+		if( manifestNumber > largestManifestNumber ) {
+			largestManifestNumber = manifestNumber;
 		}
 	}
-	// ...
-#endif
+	if( largestManifestNumber == -1 ) {
+		return;
+	}
 
+	// Validate the candidate manifests in reverse ordinal order.
+	int manifestNumber = -1;
+	std::string manifestFileName;
+	if( largestManifestNumber != -1 ) {
+		for( int i = largestManifestNumber; i >= 0; --i ) {
+			formatstr( manifestFileName, "%s/MANIFEST.\%.4d", spoolPath.c_str(), i );
+			if( validateManifestFile( manifestFileName ) ) {
+				manifestNumber = i;
+				break;
+			} else {
+				dprintf( D_VERBOSE, "Manifest file '%s' failed validation.\n", manifestFileName.c_str() );
+			}
+		}
+	}
+	if( manifestNumber == -1 ) {
+		// This should alarm the administrator, but is not job-fatal.
+		dprintf( D_ALWAYS, "No manifest file validated.\n" );
+		return;
+	}
+
+	// Transfer the MANIFEST file.  We can't use AddDownloadFilenameRemap()
+	// because those are applied on the starter side and aren't transferred
+	// from the shadow (except as part of the job ad, which we've already
+	// sent).
+	filetrans.addInputFile( manifestFileName, ".MANIFEST" );
+
+	//
+	// Transfer every file listed in the MANIFEST file.  It could be quite
+	// large, so process it line-by-line.
+	//
+
+	std::ifstream ifs( manifestFileName.c_str() );
+	if(! ifs.good()) {
+		dprintf( D_ALWAYS, "Failed to open MANIFEST file (%s), aborting.\n", manifestFileName.c_str() );
+		return; // FIMXE
+	}
+
+	std::string manifestLine;
+	for( ; std::getline( ifs, manifestLine ); ifs.good() ) {
+		dprintf( D_ALWAYS, "MANIFEST: %s\n", manifestLine.c_str() );  // FIXME: remove
+
+		// ...
+		// filetrans.addCheckpointFile( checkpointURL, checkpointFile );
+	}
 }
 
 void

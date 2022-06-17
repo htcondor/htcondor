@@ -1658,50 +1658,93 @@ FileTransfer::HandleCommands(int command, Stream *s)
 
 			//
 			// If CheckpointDestination is set, then the checkpoint is not
-			// stored in SPOOL, and we need to use the MANIFEST.* files in
-			// SPOOL to determine which files to transfer.  Furthermore,
-			// we must transfer the highest-numbered MANIFEST file to the
-			// starter so that it can verify the integrity of the checkpoint
-			// its plug-ins download.
+			// stored in SPOOL, and we shouldn't transfer anything in
+			// SPOOL to the job of our own accord; the caller should have
+			// already made all those decisions.
 			//
-
-			// FIXME FIRST.
-
-			const char *currFile;
-			Directory spool_space( transobject->SpoolSpace,
-								   transobject->getDesiredPrivState() );
-			while ( (currFile=spool_space.Next()) ) {
-				if (transobject->UserLogFile &&
-						!file_strcmp(transobject->UserLogFile,currFile))
-				{
-						// Don't send the userlog from the shadow to starter
-					continue;
-				} else {
-						// We aren't looking at the userlog file... ship it!
-					const char *filename = spool_space.GetFullPath();
-
-					// If the spool contains a file with the same full path as a
-					// file in the input list, do nothing (don't duplicate it).
-					//
-					// If the spool contains a file whose basename is in the input list,
-					// prefer the copy of the file in spool, because it might have been
-					// uploaded as part of a checkpoint.
-					if( transobject->InputFiles->file_contains(filename) ) {
-						// dprintf( D_ALWAYS, "[FT] Found full path %s in input files and SPOOL, doing nothing.\n", filename );
-					} else if( transobject->InputFiles->file_contains(condor_basename(filename)) ) {
-						transobject->InputFiles->remove(condor_basename(filename));
-						transobject->InputFiles->append(filename);
-						// dprintf( D_ALWAYS, "[FT] Found base name %s in input files and SPOOL, removing it and adding %s.\n", condor_basename(filename), filename );
-						if( transobject->ExecFile && strcmp( condor_basename(filename), transobject->ExecFile ) == 0 ) {
-							// dprintf( D_ALWAYS, "[FT] Changing executable name from %s to %s.\n", transobject->ExecFile, filename );
-							free(transobject->ExecFile);
-							transobject->ExecFile = strdup(filename);
-						}
+			// Otherwise, send everything in SPOOL (except for the userlog).
+			//
+			std::string checkpointDestination;
+			if(! transobject->jobAd.LookupString( "CheckpointDestination", checkpointDestination )) {
+				const char *currFile;
+				Directory spool_space( transobject->SpoolSpace,
+									   transobject->getDesiredPrivState() );
+				while ( (currFile=spool_space.Next()) ) {
+					if (transobject->UserLogFile &&
+							!file_strcmp(transobject->UserLogFile,currFile))
+					{
+							// Don't send the userlog from the shadow to starter
+						continue;
 					} else {
-						// dprintf( D_ALWAYS, "[FT] Full path %s not in SPOOL but not input files, appending to intput files.\n", filename );
-						transobject->InputFiles->append(filename);
+							// We aren't looking at the userlog file... ship it!
+						const char *filename = spool_space.GetFullPath();
+
+						// If the spool contains a file with the same full path as a
+						// file in the input list, do nothing (don't duplicate it).
+						//
+						// If the spool contains a file whose basename is in the input list,
+						// prefer the copy of the file in spool, because it might have been
+						// uploaded as part of a checkpoint.
+						if( transobject->InputFiles->file_contains(filename) ) {
+							// dprintf( D_ALWAYS, "[FT] Found full path %s in input files and SPOOL, doing nothing.\n", filename );
+						} else if( transobject->InputFiles->file_contains(condor_basename(filename)) ) {
+							transobject->InputFiles->remove(condor_basename(filename));
+							transobject->InputFiles->append(filename);
+							// dprintf( D_ALWAYS, "[FT] Found base name %s in input files and SPOOL, removing it and adding %s.\n", condor_basename(filename), filename );
+							if( transobject->ExecFile && strcmp( condor_basename(filename), transobject->ExecFile ) == 0 ) {
+								// dprintf( D_ALWAYS, "[FT] Changing executable name from %s to %s.\n", transobject->ExecFile, filename );
+								free(transobject->ExecFile);
+								transobject->ExecFile = strdup(filename);
+							}
+						} else {
+							// dprintf( D_ALWAYS, "[FT] Full path %s not in SPOOL but not input files, appending to intput files.\n", filename );
+							transobject->InputFiles->append(filename);
+						}
 					}
 				}
+
+
+    			//
+    			// It might be better to be more explicit about this, since it's
+    			// possible that the job specifies ON_EXIT_OR_EVICT and that the
+    			// job was evicted before uploading its first checkpoint, but for
+    			// now let's just say that we don't support that.
+    			//
+    			bool alreadyUploadedCheckpoint = false;
+    			int transferOutFinished;
+    			if( transobject->jobAd.LookupInteger( "TransferOutFinished", transferOutFinished ) ) {
+    				alreadyUploadedCheckpoint = true;
+    			}
+
+    			if( alreadyUploadedCheckpoint ) {
+    				transobject->uploadCheckpointFiles = true;
+    				transobject->DetermineWhichFilesToSend();
+    				transobject->uploadCheckpointFiles = false;
+
+    				const char * path = NULL;
+    				std::string destination_path;
+    				transobject->CheckpointFiles->rewind();
+    				while( (path = transobject->CheckpointFiles->next()) != NULL ) {
+
+    					//
+    					// If ATTRS_JOB_OUTPUT or ATTR_JOB_ERROR are set to real
+    					// files, the shadow (in jic_shadow.cpp) resets them to
+    					// Std[out|err]RemapName, and the shadow inserts a remap
+    					// to the real file names for the final transfer.  Since
+    					// this isn't the final transfer, the remaps aren't set,
+    					// and we have to do this by hand.
+    					//
+    					if( strcmp(path, transobject->JobStdoutFile.c_str()) == 0 ) {
+    						path = StdoutRemapName;
+    					} else if( strcmp(path, transobject->JobStderrFile.c_str()) == 0 ) {
+    						path = StderrRemapName;
+    					}
+
+    					formatstr( destination_path, "%s/%s", checkpointDestination.c_str(), path );
+    					dprintf( D_FULLDEBUG, "Adding %s as checkpoint file\n", destination_path.c_str() );
+    					transobject->InputFiles->append( destination_path.c_str() );
+    				}
+    			}
 			}
 
 			// Similarly, we want to look through any data reuse file and treat them as input
@@ -1715,60 +1758,16 @@ FileTransfer::HandleCommands(int command, Stream *s)
 					transobject->InputFiles->append(info.filename().c_str());
 			}
 
-			//
-			// It might be better to be more explicit about this, since it's
-			// possible that the job specifies ON_EXIT_OR_EVICT and that the
-			// job was evicted before uploading its first checkpoint, but for
-			// now let's just say that we don't support that.
-			//
-			bool alreadyUploadedCheckpoint = false;
-			int transferOutFinished;
-			if( transobject->jobAd.LookupInteger( "TransferOutFinished", transferOutFinished ) ) {
-				alreadyUploadedCheckpoint = true;
-			}
-
-			//
-			// Finally, if we have a checkpoint destination set, and the
-			// transfer_checkpoint_list contains either the standard output
-			// or error log by its final name, change it to the intermediate
-			// name we use to actually store those files on the remote disk.
-			//
-			std::string checkpointDestination;
-			if(alreadyUploadedCheckpoint && transobject->jobAd.LookupString( "CheckpointDestination", checkpointDestination )) {
-				transobject->uploadCheckpointFiles = true;
-				transobject->DetermineWhichFilesToSend();
-				transobject->uploadCheckpointFiles = false;
-
-				const char * path = NULL;
-				std::string destination_path;
-				transobject->CheckpointFiles->rewind();
-				while( (path = transobject->CheckpointFiles->next()) != NULL ) {
-
-					//
-					// If ATTRS_JOB_OUTPUT or ATTR_JOB_ERROR are set to real
-					// files, the shadow (in jic_shadow.cpp) resets them to
-					// Std[out|err]RemapName, and the shadow inserts a remap
-					// to the real file names for the final transfer.  Since
-					// this isn't the final transfer, the remaps aren't set,
-					// and we have to do this by hand.
-					//
-					if( strcmp(path, transobject->JobStdoutFile.c_str()) == 0 ) {
-						path = StdoutRemapName;
-					} else if( strcmp(path, transobject->JobStderrFile.c_str()) == 0 ) {
-						path = StderrRemapName;
-					}
-
-					formatstr( destination_path, "%s/%s", checkpointDestination.c_str(), path );
-					dprintf( D_FULLDEBUG, "Adding %s as checkpoint file\n", destination_path.c_str() );
-					transobject->InputFiles->append( destination_path.c_str() );
-				}
-			}
-
 			// dprintf( D_ALWAYS, "HandleCommands(): InputFiles = %s\n", transobject->InputFiles->to_string().c_str() );
 			transobject->FilesToSend = transobject->InputFiles;
 			transobject->EncryptFiles = transobject->EncryptInputFiles;
 			transobject->DontEncryptFiles = transobject->DontEncryptInputFiles;
+
+			transobject->inHandleCommands = true;
+			transobject->uploadCheckpointFiles = true;
 			transobject->Upload(sock,ServerShouldBlock);
+			transobject->uploadCheckpointFiles = false;
+			transobject->inHandleCommands = false;
 			}
 			break;
 		case FILETRANS_DOWNLOAD:
@@ -3932,7 +3931,11 @@ FileTransfer::DoUpload( filesize_t * total_bytes_ptr, ReliSock * s )
 	//
 
 	if( uploadCheckpointFiles ) {
-		return DoCheckpointUpload( total_bytes_ptr, s );
+		if(! inHandleCommands ) {
+			return DoCheckpointUploadFromStarter( total_bytes_ptr, s );
+		} else {
+			return DoCheckpointUploadFromShadow( total_bytes_ptr, s );
+		}
 	} else {
 		return DoNormalUpload( total_bytes_ptr, s );
 	}
@@ -4029,17 +4032,12 @@ createCheckpointManifest(
 // it worse, I moved the checkpoint-specific parts out here, into one place.
 //
 int
-FileTransfer::DoCheckpointUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
-	FileTransferList filelist;
+FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliSock * s ) {
+	FileTransferList filelist = checkpointList;
 	std::unordered_set<std::string> skip_files;
 	filesize_t sandbox_size = 0;
 	_ft_protocol_bits protocolState;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
-
-	// It would be at best confusing if DoCheckpointUpload() mutated
-	// the caller-constructed checkpointList.
-	filelist = this->checkpointList;
-
 
 	std::string checkpointDestination;
 	char * originalOutputDestination = OutputDestination;
@@ -4088,8 +4086,48 @@ FileTransfer::DoCheckpointUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
 
 	// FIXME: stopCheckpointPlugins(rc == 0);
 
+
 	return rc;
 }
+
+int
+FileTransfer::DoCheckpointUploadFromShadow( filesize_t * total_bytes_ptr, ReliSock * s ) {
+	FileTransferList filelist = inputList;
+	std::unordered_set<std::string> skip_files;
+	filesize_t sandbox_size = 0;
+	_ft_protocol_bits protocolState;
+	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
+
+	filelist.insert( filelist.end(), checkpointList.begin(), checkpointList.end() );
+	for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoCheckpointUploadFromShadow(), file-item after merging checkpoint list into input list: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+
+
+	//
+	// FIXME: this assumes that the de-duplication code works on URLs,
+	// which it currently doesn't.  However, since the shadow set the
+	// destination directory for those URLs, the de-duplication code will
+	// be able to detect duplicates against input file.
+	//
+	// FIXME: this assumes that both inputList and checkpointList already
+	// include the directory-creation entries they need, which is
+	// a blatant lie.
+	//
+	// FIXME: if the user checkpoints their executable, uploadFileList()
+	// won't rename it.
+	//
+	int rc = computeFileList(
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
+	);
+	for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoCheckpointUploadFromShadow(), file-item after computing file list: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+	if( rc != 0 ) { return rc; }
+
+
+	return uploadFileList(
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
+	    total_bytes_ptr
+	);
+}
+
 
 int
 FileTransfer::DoNormalUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
@@ -4098,6 +4136,8 @@ FileTransfer::DoNormalUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
 	filesize_t sandbox_size = 0;
 	_ft_protocol_bits protocolState;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
+
+	if( inHandleCommands ) { filelist = this->inputList; }
 
 	int rc = computeFileList(
 	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
@@ -7268,36 +7308,33 @@ FileTransfer::setMaxDownloadBytes(filesize_t _MaxDownloadBytes)
 	MaxDownloadBytes = _MaxDownloadBytes;
 }
 
-
-bool
-FileTransfer::addInputFile( const std::string & fileName ) {
-	if(! InputFiles) {
-		return false;
-	}
-
-	if( InputFiles->file_contains( fileName.c_str() ) ) {
-		return true;
-	}
-
-	InputFiles->append( fileName.c_str() );
-	return true;
-}
-
-bool
-FileTransfer::addCheckpointFile(
-  const std::string & fileURL, const std::string & fileName
+void
+FileTransfer::addSandboxRelativePath(
+	const std::string & source,
+	const std::string & destination,
+	FileTransferList & ftl
 ) {
-	if(! InputFiles) {
-		return false;
-	}
+	FileTransferItem fti;
+	fti.setSrcName( source );
+	// FIXME: Also add the necessary preceeding directory-creation entries.
+	// ExpandParentDirectories() will do the trick.
 
-	// We can't yet set the downloaded file name completely independently
-	// of the source URL, which is annoying, but doesn't matter for this
-	// case (because we set the uploaded file name in the first place).
-	FileTransferItem checkpointItem;
-	checkpointItem.setSrcName( fileURL );
-	checkpointItem.setDestDir( condor_dirname( fileName.c_str() ) );
-
-	this->checkpointList.emplace_back( checkpointItem );
-	return true;
+	// At some point, we'd like to be able to store target _name_, too.
+	fti.setDestDir( condor_dirname( destination.c_str() ) );
+	ftl.emplace_back(fti);
 }
+
+void
+FileTransfer::addCheckpointFile(
+  const std::string & source, const std::string & destination
+) {
+	addSandboxRelativePath( source, destination, this->checkpointList );
+}
+
+void
+FileTransfer::addInputFile(
+  const std::string & source, const std::string & destination
+) {
+	addSandboxRelativePath( source, destination, this->inputList );
+}
+
