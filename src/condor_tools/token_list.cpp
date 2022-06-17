@@ -23,10 +23,8 @@
 
 #include "match_prefix.h"
 #include "CondorError.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "directory.h"
-
-#if defined(HAVE_EXT_OPENSSL)
 
 // The GCC_DIAG_OFF() disables warnings so that we can build on our
 // -Werror platforms.
@@ -70,8 +68,6 @@ GCC_DIAG_OFF(cast-qual)
 GCC_DIAG_ON(float-equal)
 GCC_DIAG_ON(cast-qual)
 
-#endif
-
 #include <fstream>
 #include <stdio.h>
 
@@ -107,7 +103,6 @@ bool printToken(const std::string &tokenfilename) {
 		if (line.empty() || line[0] == '#') {
 			continue;
 		}
-#if defined(HAVE_EXT_OPENSSL)
 		try {
 			auto decoded_jwt = jwt::decode(line);
 			printf("Header: %s Payload: %s File: %s\n", decoded_jwt.get_header().c_str(),
@@ -117,7 +112,6 @@ bool printToken(const std::string &tokenfilename) {
 		} catch (...) {
 			++invalid_lines;
 		}
-#endif
 	}
 	if (invalid_lines) {
 		if (valid_tokens) {
@@ -192,10 +186,6 @@ printAllTokens(const char * token_dir) {
 
 
 int main(int argc, const char *argv[]) {
-#if !defined(HAVE_EXT_OPENSSL)
-	fprintf(stderr, "Cannot list tokens on HTCondor build without OpenSSL\n");
-	return 1;
-#else
 
 	const char * token_dir = nullptr;
 	const char * pcolon;
@@ -226,5 +216,4 @@ int main(int argc, const char *argv[]) {
 
 	printAllTokens(token_dir);
 	return 0;
-#endif
 }

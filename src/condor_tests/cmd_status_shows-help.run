@@ -63,7 +63,7 @@ CondorTest::debug("Looking at condor_status -help \n", $debuglevel);
 # looking for.....  <Usage: condor_status>
 foreach my $line (@adarray) {
 	fullchomp($line);
-    if($line =~ /^\s*Usage:\s+condor_status.*/) {
+    if($line =~ /^\s*Usage:\s+(\/[^\/]+)*\/?condor_status.*/) {
         CondorTest::debug("found usage: $line\n", $debuglevel);
 	print "Found usage\n";
         $found_usage = 1;

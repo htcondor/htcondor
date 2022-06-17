@@ -28,7 +28,7 @@ if (WITH_SCITOKENS)
 		# On macOS, force the SciTokens build to use the OS-supplied
 		# SSL library, ignoring any from MacPorts (which CMake likes
 		# to use by default).
-		if ( DARWIN )
+		if ( APPLE )
 			set ( CONFIGURE_ARGS -DLIBCRYPTO_INCLUDE_DIRS=${DARWIN_OPENSSL_INCLUDE} -DLIBCRYPTO_LIBRARIES=${DARWIN_OPENSSL_LIB_DIR}/libcrypto.dylib )
 		endif()
 
@@ -50,13 +50,13 @@ if (WITH_SCITOKENS)
 				    INSTALL_COMMAND make install && touch ${SCITOKENS_INSTALL_LOC}/done)
 
 		# Set the target dependencies which the rest of condor depends on.
-		if (DARWIN)
+		if (APPLE)
 			set( SCITOKENS_SO "libSciTokens.0.dylib" )
 			set (SCITOKENS_FOUND "${SCITOKENS_INSTALL_LOC}/lib/libSciTokens.dylib")
-		else(DARWIN)
+		else(APPLE)
 			set( SCITOKENS_SO "libSciTokens.so.0" )
 			set (SCITOKENS_FOUND "${SCITOKENS_INSTALL_LOC}/lib/libSciTokens.so")
-		endif(DARWIN)
+		endif(APPLE)
 
 		condor_post_external( scitokens include OFF "${SCITOKENS_FOUND}" )
 
@@ -78,7 +78,7 @@ if (WITH_SCITOKENS)
 					COMMAND xargs strip)" )
 			endif()
 		endif()
-		if ( DARWIN )
+		if ( APPLE )
 			# Install the SciTokens library manually.
 			# In order to use an install(FILES) command, we'd
 			# have to explicitly list evey file.

@@ -2793,7 +2793,7 @@ union _jobid {
 	long long id;
 };
 
-static union _jobid sequence_id = { 0, INT_MAX };
+static union _jobid sequence_id = { {0, INT_MAX} };
 static bool assume_cluster_ad_if_no_proc_id = false; // set to true when we expect to get clusterad ads that don't have a ProcId attribute
 
 // callback function for processing a job from the Q query that just adds the job into a IdToClassaAdMap.

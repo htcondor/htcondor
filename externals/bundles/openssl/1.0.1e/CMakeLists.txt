@@ -68,7 +68,7 @@ if (WITH_OPENSSL)
 
 	else()
 
-		if ( DARWIN )
+		if ( APPLE )
 			exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
 			if (${TEST_VER} MATCHES "10.1[1-2]" )
 				if ( NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/openssl-darwin )

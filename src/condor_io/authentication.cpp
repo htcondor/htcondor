@@ -222,7 +222,6 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				break;
 #endif /* HAVE_EXT_GLOBUS */
 
-#ifdef HAVE_EXT_OPENSSL
 			case CAUTH_SSL:
 				m_auth = new Condor_Auth_SSL(mySock, 0, false);
 				m_method_name = "SSL";
@@ -233,7 +232,6 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				m_method_name = "SCITOKENS";
 				break;
 #endif
-#endif
 
 #if defined(HAVE_EXT_KRB5) 
 			case CAUTH_KERBEROS:
@@ -242,7 +240,6 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				break;
 #endif
 
-#ifdef HAVE_EXT_OPENSSL  // 3DES is the prerequisite for passwd auth
 			case CAUTH_PASSWORD:
 				m_auth = new Condor_Auth_Passwd(mySock, 1);
 				m_method_name = "PASSWORD";
@@ -274,7 +271,6 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 				m_method_name = "IDTOKENS";
 				break;
 			}
-#endif
  
 #if defined(WIN32)
 			case CAUTH_NTSSPI:
@@ -1022,11 +1018,7 @@ int Authentication::handshake(const std::string& my_methods, bool non_blocking) 
 			dprintf (D_SECURITY, "HANDSHAKE: excluding KERBEROS: %s\n", "Initialization failed");
 			method_bitmask &= ~CAUTH_KERBEROS;
 		}
-#ifdef HAVE_EXT_OPENSSL
 		if ( (method_bitmask & CAUTH_SSL) && Condor_Auth_SSL::Initialize() == false )
-#else
-		if (method_bitmask & CAUTH_SSL)
-#endif
 		{
 			dprintf (D_SECURITY, "HANDSHAKE: excluding SSL: %s\n", "Initialization failed");
 			method_bitmask &= ~CAUTH_SSL;
@@ -1101,11 +1093,7 @@ Authentication::handshake_continue(const std::string& my_methods, bool non_block
 			client_methods &= ~CAUTH_KERBEROS;
 			continue;
 		}
-#ifdef HAVE_EXT_OPENSSL
 		if ( (shouldUseMethod & CAUTH_SSL) && Condor_Auth_SSL::Initialize() == false )
-#else
-		if (shouldUseMethod & CAUTH_SSL)
-#endif
 		{
 			dprintf (D_SECURITY, "HANDSHAKE: excluding SSL: %s\n", "Initialization failed");
 			client_methods &= ~CAUTH_SSL;
