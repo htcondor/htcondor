@@ -432,9 +432,6 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 	    free( secret_line );
         }
 
-		if ( strncmp( inputLine.c_str(), "ConcurrencyLimit.", 17 ) == 0 ) {
-			inputLine.setAt( 16, '_' );
-		}
 		buffer += std::string(inputLine.c_str()) + ";";
 	}
 	buffer += "]";
