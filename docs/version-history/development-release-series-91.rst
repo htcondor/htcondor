@@ -17,6 +17,9 @@ Release Notes:
 
 New Features:
 
+- Added configuration templates ``PREEMPT_IF_DISK_EXCEEDED`` and ``HOLD_IF_DISK_EXCEEDED``
+  :jira:`1173`
+
 - The ``ADVERTISE_MASTER``, ``ADVERTISE_SCHEDD``, and
   ``ADVERTISE_STARTD`` authorization levels now also provide ``READ``
   level authorization.
