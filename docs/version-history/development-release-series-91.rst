@@ -85,10 +85,6 @@ Bugs Fixed:
   lease.
   :jira:`960`
 
-- Removed the dummy ``condor-externals`` RPM package. It is no longer needed
-  now that the ``condor-blahp`` RPM package exists.
-  :jira:`1177`
-
 Version 9.9.1
 -------------
 
