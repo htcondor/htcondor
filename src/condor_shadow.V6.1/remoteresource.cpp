@@ -2177,6 +2177,17 @@ validateManifestFile( const std::string & /* fileName */ ) {
 	return true;
 }
 
+// FIXME: This should almost certainly be refactored and stuck in utility code.
+namespace manifest {
+	std::string
+	FileFromLine( const std::string & manifestLine ) {
+		auto pos = manifestLine.find(' ');
+		if( manifestLine[++pos] == '*' ) { ++pos; }
+		return manifestLine.substr(pos);
+	}
+}
+
+
 void
 RemoteResource::initFileTransfer()
 {
@@ -2298,7 +2309,8 @@ RemoteResource::initFileTransfer()
 
 	//
 	// Transfer every file listed in the MANIFEST file.  It could be quite
-	// large, so process it line-by-line.
+	// large, so process it line-by-line, ignoring the last one (which is
+	// always itself).
 	//
 
 	std::ifstream ifs( manifestFileName.c_str() );
@@ -2308,12 +2320,22 @@ RemoteResource::initFileTransfer()
 	}
 
 	std::string manifestLine;
-	for( ; std::getline( ifs, manifestLine ); ifs.good() ) {
-		dprintf( D_ALWAYS, "MANIFEST: %s\n", manifestLine.c_str() );  // FIXME: remove
+	std::string nextManifestLine;
+	std::getline( ifs, manifestLine );
+	std::getline( ifs, nextManifestLine );
+	bool processLine = ifs.good();
+	for( ; processLine; ) {
+		std::string checkpointURL;
+		std::string checkpointFile = manifest::FileFromLine( manifestLine );
+		formatstr( checkpointURL, "%s/%.4d/%s", checkpointDestination.c_str(),
+		  manifestNumber, checkpointFile.c_str() );
+		filetrans.addCheckpointFile( checkpointURL, checkpointFile );
 
-		// ...
-		// filetrans.addCheckpointFile( checkpointURL, checkpointFile );
+		manifestLine = nextManifestLine;
+		std::getline( ifs, nextManifestLine );
+		processLine = ifs.good();
 	}
+
 }
 
 void
