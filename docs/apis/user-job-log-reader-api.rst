@@ -379,7 +379,7 @@ state, it should instantiate a ``ReadUserLogStateAccess`` object.
 
 -  Accessor Methods
 
-   -  ``bool`` ReadUserLogFileState::isInitialized(void) ``const``
+   -  ``bool`` ReadUserLogStateAccess::isInitialized(void) ``const``
       **Synopsis:** Checks if the buffer initialized
       **Returns:** ``bool``; ``true`` if successfully initialized,
       ``false`` otherwise
@@ -387,7 +387,7 @@ state, it should instantiate a ``ReadUserLogStateAccess`` object.
 
       -  None.
 
-   -  ``bool`` ReadUserLogFileState::isValid(void) ``const``
+   -  ``bool`` ReadUserLogStateAccess::isValid(void) ``const``
       **Synopsis:** Checks if the buffer is valid for use by
       ReadUserLog::initialize()
       **Returns:** ``bool``; ``true`` if successful, ``false`` otherwise
@@ -395,7 +395,7 @@ state, it should instantiate a ``ReadUserLogStateAccess`` object.
 
       -  None.
 
-   -  ``bool`` ReadUserLogFileState::getFileOffset(unsigned long &pos)
+   -  ``bool`` ReadUserLogStateAccess::getFileOffset(unsigned long &pos)
       ``const``
       **Synopsis:** Get position within individual file.
       NOTE: Can return an error if the result is too large to be stored
@@ -406,7 +406,7 @@ state, it should instantiate a ``ReadUserLogStateAccess`` object.
       -  ``unsigned long &`` ``pos``
          Byte position within the current log file
 
-   -  ``bool`` ReadUserLogFileState::getFileEventNum(unsigned long &num)
+   -  ``bool`` ReadUserLogStateAccess::getFileEventNum(unsigned long &num)
       ``const``
       **Synopsis:** Get event number in individual file.
       NOTE: Can return an error if the result is too large to be stored
@@ -417,7 +417,7 @@ state, it should instantiate a ``ReadUserLogStateAccess`` object.
       -  ``unsigned long &`` ``num``
          Event number of the current event in the current log file
 
-   -  ``bool`` ReadUserLogFileState::getLogPosition(unsigned long &pos)
+   -  ``bool`` ReadUserLogStateAccess::getLogPosition(unsigned long &pos)
       ``const``
       **Synopsis:** Position of the start of the current file in overall
       log.
@@ -430,7 +430,7 @@ state, it should instantiate a ``ReadUserLogStateAccess`` object.
          Byte offset of the start of the current file in the overall
          logical log stream.
 
-   -  bool ReadUserLogFileState::getEventNumber(unsigned long &num)
+   -  bool ReadUserLogStateAccess::getEventNumber(unsigned long &num)
       ``const``
       **Synopsis:** Get the event number of the first event in the
       current file
@@ -443,7 +443,7 @@ state, it should instantiate a ``ReadUserLogStateAccess`` object.
          This is the absolute event number of the first event in the
          current file in the overall logical log stream.
 
-   -  bool ReadUserLogFileState::getUniqId(char \*buf, int size)
+   -  bool ReadUserLogStateAccess::getUniqId(char \*buf, int size)
       ``const``
       **Synopsis:** Get the unique ID of the associated state file.
       **Returns:** bool; ``true`` if successful, ``false`` otherwise
@@ -453,10 +453,10 @@ state, it should instantiate a ``ReadUserLogStateAccess`` object.
          Buffer to fill with the unique ID of the current file.
       -  ``int`` ``size``
          Size in bytes of ``buf``.
-         This is to prevent ReadUserLogFileState::getUniqId from writing
+         This is to prevent ReadUserLogStateAccess::getUniqId from writing
          past the end of ``buf``.
 
-   -  ``bool`` ReadUserLogFileState::getSequenceNumber(int &seqno)
+   -  ``bool`` ReadUserLogStateAccess::getSequenceNumber(int &seqno)
       ``const``
       **Synopsis:** Get the sequence number of the associated state
       file.
@@ -468,7 +468,7 @@ state, it should instantiate a ``ReadUserLogStateAccess`` object.
 
 -  Comparison Methods
 
-   -  ``bool`` ReadUserLogFileState::getFileOffsetDiff(const
+   -  ``bool`` ReadUserLogStateAccess::getFileOffsetDiff(const
       ReadUserLogStateAccess &other, unsigned long &pos) ``const``
       **Synopsis:** Get the position difference of two states given by
       ``this`` and ``other``.
@@ -482,7 +482,7 @@ state, it should instantiate a ``ReadUserLogStateAccess`` object.
       -  ``long &`` ``diff``
          Difference in the positions
 
-   -  bool ReadUserLogFileState::getFileEventNumDiff(const
+   -  bool ReadUserLogStateAccess::getFileEventNumDiff(const
       ReadUserLogStateAccess &other, long &diff) ``const``
       **Synopsis:** Get event number in individual file.
       NOTE: Can return an error if the result is too large to be stored
@@ -495,7 +495,7 @@ state, it should instantiate a ``ReadUserLogStateAccess`` object.
       -  ``long &`` ``diff``
          Event number of the current event in the current log file
 
-   -  bool ReadUserLogFileState::getLogPosition(const
+   -  bool ReadUserLogStateAccess::getLogPosition(const
       ReadUserLogStateAccess &other, long &diff) ``const``
       **Synopsis:** Get the position difference of two states given by
       ``this`` and ``other``.
@@ -510,7 +510,7 @@ state, it should instantiate a ``ReadUserLogStateAccess`` object.
          Difference between the byte offset of the start of the current
          file in the overall logical log stream and that of ``other``.
 
-   -  bool ReadUserLogFileState::getEventNumber(const
+   -  bool ReadUserLogStateAccess::getEventNumber(const
       ReadUserLogStateAccess &other, long &diff) ``const``
       **Synopsis:** Get the difference between the event number of the
       first event in two state buffers (this - other).
