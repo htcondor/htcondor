@@ -2323,8 +2323,7 @@ RemoteResource::initFileTransfer()
 	std::string nextManifestLine;
 	std::getline( ifs, manifestLine );
 	std::getline( ifs, nextManifestLine );
-	bool processLine = ifs.good();
-	for( ; processLine; ) {
+	for( ; ifs.good(); ) {
 		std::string checkpointURL;
 		std::string checkpointFile = manifest::FileFromLine( manifestLine );
 		formatstr( checkpointURL, "%s/%.4d/%s", checkpointDestination.c_str(),
@@ -2333,7 +2332,6 @@ RemoteResource::initFileTransfer()
 
 		manifestLine = nextManifestLine;
 		std::getline( ifs, nextManifestLine );
-		processLine = ifs.good();
 	}
 
 }
