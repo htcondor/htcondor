@@ -50,6 +50,12 @@ Release Notes:
   has been changed to ``False``.
   :jira:`1161`
 
+- Removed support for the WriteUserLog class from libcondorapi.a.  This
+  class was difficult to use correctly, and to our knowledge it is not
+  currently in use.  Programmer who need to read the condor event
+  log are recommended to do so from the HTCondor python bindings.
+  :jira:`1163`
+
 New Features:
 
 - Added support for running on Linux systems that ship with openssl version 3
