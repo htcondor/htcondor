@@ -72,7 +72,6 @@ main( int argc, char *argv[] )
 	std::string DaemonName;
 
 	MyName = argv[0];
-	myDistro->Init( argc, argv );
 
 	set_priv_initialize(); // allow uid switching if root
 	config();

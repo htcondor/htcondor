@@ -186,7 +186,6 @@ main( int argc, char *argv[] )
 	char* scheddAddr = NULL;
 	const char * pcolon;
 
-	myDistro->Init( argc, argv );
 	MyName = strrchr( argv[0], DIR_DELIM_CHAR );
 	if( !MyName ) {
 		MyName = argv[0];

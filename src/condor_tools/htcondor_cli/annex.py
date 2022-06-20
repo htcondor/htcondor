@@ -25,10 +25,10 @@ class Create(Verb):
             "metavar": "annex-name",
             "help": "Provide a name for your annex",
         },
-        "target": {
-            "args": ("queue_at_machine",),
-            "metavar": "queue@machine",
-            "help": "Specify the queue and the HPC machine",
+        "queue_at_system": {
+            "args": ("queue_at_system",),
+            "metavar": "queue@system",
+            "help": "Specify the queue and the HPC system",
         },
         "nodes": {
             "args": ("--nodes",),
@@ -45,7 +45,7 @@ class Create(Verb):
         "allocation": {
             "args": ("--project",),
             "dest": "allocation",
-            "help": "The project name associated with HPC allocation (may be optional on some HPC machines)",
+            "help": "The project name associated with HPC allocation (may be optional on some HPC systems)",
             "default": None,
         },
         "owners": {
@@ -146,13 +146,13 @@ class Status(Verb):
         status = { job["hpc_annex_name"]: {} for job in annex_jobs }
 
         lifetimes = {}
-        requested_machines = defaultdict(int)
+        requested_nodes = defaultdict(int)
         for job in annex_jobs:
             annex_name = job["hpc_annex_name"]
             request_id = job.eval("hpc_annex_request_id")
 
             count = job.get('hpc_annex_nodes', "0")
-            requested_machines[annex_name] += int(count)
+            requested_nodes[annex_name] += int(count)
 
             status[annex_name][request_id] = "requested"
             if job.get("hpc_annex_PID") is not None:
@@ -199,7 +199,7 @@ class Status(Verb):
             if slot.get("PartitionableSlot", False):
                 status[annex_name][request_id]["TotalCPUs"] += slot["TotalSlotCPUs"]
                 status[annex_name][request_id]["BusyCPUs"] += len(slot["ChildCPUs"])
-                status[annex_name][request_id]["MachineCount"] += 1
+                status[annex_name][request_id]["NodeCount"] += 1
 
             slot_birthday = slot.get("DaemonStartTime")
             annex_birthday = annex_attrs[annex_name].get('first_birthday')
@@ -246,7 +246,7 @@ class Status(Verb):
 
             busy_CPUs = 0
             total_CPUs = 0
-            machine_count = 0
+            node_count = 0
             requested_and_left = 0
             requested_but_not_joined = 0
             for request_ID, values in annex_status.items():
@@ -258,7 +258,7 @@ class Status(Verb):
                 else:
                     total_CPUs += values.get("TotalCPUs", 0)
                     busy_CPUs += values.get("BusyCPUs", 0)
-                    machine_count += values.get("MachineCount", 0)
+                    node_count += values.get("NodeCount", 0)
             requested_and_active = requests - requested_but_not_joined - requested_and_left
 
             if the_annex_name is None:
@@ -316,9 +316,9 @@ class Status(Verb):
                 print(f"Annex '{annex_name}' is not established.")
 
             # How big is it?
-            requested_machines = requested_machines.get(annex_name, 0)
-            print(f"You requested {requested_machines} machines for this annex, of which {machine_count} are in established annexes.")
-            print(f"There are {total_CPUs} CPUs in the established machines, of which {busy_CPUs} are busy.")
+            requested_nodes = requested_nodes.get(annex_name, 0)
+            print(f"You requested {requested_nodes} nodes for this annex, of which {node_count} are in an established annex.")
+            print(f"There are {total_CPUs} CPUs in the established annex, of which {busy_CPUs} are busy.")
 
             # How many jobs target it?  Of those, how many are running?
             all_job_count = all_jobs.get(annex_name, 0)
@@ -326,7 +326,7 @@ class Status(Verb):
             print(f"{all_job_count} jobs must run on this annex, and {running_job_count} currently are.")
 
             # How many resource requests were made, and what's their status?
-            print(f"You made {requests} resource request(s) for this annex, of which {requested_but_not_joined} are pending, {requested_and_active} are established, and {requested_and_left} have retired.")
+            print(f"You requested resources for this annex {requests} times; {requested_but_not_joined} are pending, {requested_and_active} comprise the established annex, and {requested_and_left} have retired.")
 
         if the_annex_name is None:
             print()

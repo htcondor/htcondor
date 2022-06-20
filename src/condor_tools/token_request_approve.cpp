@@ -132,7 +132,6 @@ approve_token(const std::string &pool, const std::string &name, daemon_t dtype,
 
 int main(int argc, const char *argv[]) {
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 

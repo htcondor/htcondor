@@ -36,7 +36,7 @@
 #include "match_prefix.h"
 #include "condor_version.h"
 #include "ad_printmask.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "tokener.h"
 #include <submit_utils.h>
 #include <xform_utils.h>
@@ -149,7 +149,6 @@ main( int argc, const char *argv[] )
 
 	set_mySubSystem( MySubsys, false, SUBSYSTEM_TYPE_TOOL );
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 

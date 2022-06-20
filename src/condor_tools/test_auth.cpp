@@ -82,7 +82,6 @@ main( int argc, char* argv[] )
 	set_mySubSystem( "DAEMON-TOOL", false, SUBSYSTEM_TYPE_TOOL );
 
 	MyName = argv[0];
-	myDistro->Init( argc, argv );
 
 	FILE *input_fp = stdin;
 

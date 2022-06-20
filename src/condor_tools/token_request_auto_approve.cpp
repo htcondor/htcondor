@@ -118,7 +118,6 @@ void printRemainingRequests(std::unique_ptr<Daemon> daemon) {
 
 int main(int argc, const char *argv[]) {
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 

@@ -973,7 +973,6 @@ void interrupt_handler(int sig)
 int
 main(int argc, char *argv[])
 {
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 

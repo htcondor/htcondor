@@ -51,7 +51,7 @@
 #include "string_list.h"
 #include "simplelist.h"
 #include "subsystem_info.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #ifdef WIN32
  #include "exception_handling.WINDOWS.h"
 #endif
@@ -594,7 +594,6 @@ main( int argc, const char* argv[] )
 	ModeType mt = CONDOR_QUERY;
 
 	MyName = argv[0];
-	myDistro->Init( argc, argv );
 
 	for (int i = 1; i < argc; ++i) {
 		// arguments that don't begin with "-" are params to be looked up.

@@ -50,7 +50,6 @@ int
 main(int argc, char *argv[])
 {
 
-	myDistro->Init( argc, argv );
 	CondorVersionInfo *version;
 
 	bool use_syscall_lib = false;

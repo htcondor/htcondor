@@ -48,7 +48,6 @@ int main(int argc, const char *argv[]) {
 		print_usage(argv[0]);
 	}
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 

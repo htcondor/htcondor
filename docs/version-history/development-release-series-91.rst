@@ -4,6 +4,31 @@ Version 9 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 9.11.0
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.11.0 released on Month Date, 2022.
+
+- HTCondor version 9.11.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-9015`.
+
+New Features:
+
+- Added configuration templates ``PREEMPT_IF_DISK_EXCEEDED`` and ``HOLD_IF_DISK_EXCEEDED``
+  :jira:`1173`
+
+- The ``ADVERTISE_MASTER``, ``ADVERTISE_SCHEDD``, and
+  ``ADVERTISE_STARTD`` authorization levels now also provide ``READ``
+  level authorization.
+  :jira:`1164`
+
+Bugs Fixed:
+
+- None.
+
 Version 9.10.0
 --------------
 
@@ -18,6 +43,16 @@ Release Notes:
 - On macOS, updated to LibreSSL 2.8.3 and removed support for VOMS.
   :jira:`1129`
 
+- On macOS, the Python bindings are now built against the version of
+  Python 3 included in the Command Line Tools for Xcode package.
+  Previously, they were built against Python 3.8 as distributed from
+  the website python.org.
+  :jira:`1154`
+
+- The default value of configuration parameter ``USE_VOMS_ATTRIBUTES``
+  has been changed to ``False``.
+  :jira:`1161`
+
 New Features:
 
 - Added support for running on Linux systems that ship with openssl version 3
@@ -27,10 +62,10 @@ New Features:
   a technology preview and still not ready for general use.
   :jira:`1063`
   
-- DAGman ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
-  to allow passed variables to be initalized before or after DAG jobs are
+- DAGMan ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
+  to allow passed variables to be initialized before or after DAG jobs are
   submitted. Any ``VARS`` without these options will have behavior derived
-  from ``DAGMAN_DEFAULT_APPEND_VARS`` config variable.
+  from ``DAGMAN_DEFAULT_APPEND_VARS`` configuration variable.
   :jira:`1080`
 
 - The remote administration capability in daemon ads sent to the
@@ -44,7 +79,7 @@ New Features:
   authentication with the ARC CE server.
   :jira:`1061`
 
-- All regular expressions in configuration and in the classad regexp function
+- All regular expressions in configuration and in the ClassAd regexp function
   now use the pcre2 10.39 library. (http://www.pcre.org). We believe that this
   will break no existing regular expressions.
   :jira:`1087`
@@ -63,10 +98,14 @@ New Features:
   jobs.
   :jira:`740`
 
+- Preliminary support for ARM (aarch64) and Power PC (ppc64le) CPU architectures
+  on Alma Linux 8 and equivalent platforms.
+  :jira:`1150`
+
 Bugs Fixed:
 
 - Fixed the ``TransferInputStats`` nested attributes ``SizeBytesLastRun`` and
-  ``SizeBytesTotal`` values from overflowing and becoming negative when transfering
+  ``SizeBytesTotal`` values from overflowing and becoming negative when transferring
   files greater than two gigabytes via plugin.
   :jira:`1103`
   
@@ -78,6 +117,24 @@ Bugs Fixed:
   *condor_starter* handle network disruptions and jobs that have no
   lease.
   :jira:`960`
+
+Version 9.9.1
+-------------
+
+Release Notes:
+
+- HTCondor version 9.9.1 released on June 14, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed bug introduced in 9.9.0 when forwarding slot ads from one
+  *condor_collector* to another. As a result, the *condor_negotiator*
+  was unable to match any jobs to the slots.
+  :jira:`1157`
 
 Version 9.9.0
 -------------

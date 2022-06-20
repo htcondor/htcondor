@@ -25,7 +25,7 @@
 #include "condor_attributes.h"
 #include "classad/xmlSink.h"
 #include "condor_config.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "classad/classadCache.h"
 #include "env.h"
 #include "condor_arglist.h"

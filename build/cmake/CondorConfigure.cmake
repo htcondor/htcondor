@@ -17,9 +17,7 @@
  ###############################################################
 
 # OS pre mods
-if(${OS_NAME} STREQUAL "DARWIN")
-	#this needs to be evaluated in order due to WIN collision.
-elseif(${OS_NAME} MATCHES "WIN")
+if(${OS_NAME} MATCHES "^WIN")
 	set(WINDOWS ON)
 
 	# The following is necessary for sdk/ddk version to compile against.
@@ -101,7 +99,7 @@ if(NOT WINDOWS)
         # We need to do this the hard way for both python2 and python3 support in the same build
         # This will be easier in cmake 3
 
-        if(${OS_NAME} STREQUAL "DARWIN")
+        if(APPLE)
             # macOS 12.X (Monterey) and above don't support python2
             if(NOT ${OS_VER} MATCHES "2[1-9]")
                 find_program(PYTHON_EXECUTABLE python)
@@ -150,7 +148,7 @@ if(NOT WINDOWS)
             list(GET _PYTHON_VALUES 10 PYTHON_PREFIX)
             #set(C_PYTHONARCHLIB ${C_PYTHONARCHLIB})
 
-			if(${OS_NAME} STREQUAL "DARWIN")
+			if(APPLE)
 				set(PYTHON_LIBDIR "${PYTHON_PREFIX}/lib")
 				set(PYTHON_LIB "libpython${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.dylib")
 			endif()
@@ -215,7 +213,7 @@ if(NOT WINDOWS)
             list(GET _PYTHON_VALUES 10 PYTHON3_PREFIX)
             #set(C_PYTHON3ARCHLIB ${C_PYTHON3ARCHLIB})
 
-			if(${OS_NAME} STREQUAL "DARWIN")
+			if(APPLE)
 				set(PYTHON3_LIBDIR "${PYTHON3_PREFIX}/lib")
 				set(PYTHON3_LIB "libpython${PYTHON3_VERSION_MAJOR}.${PYTHON3_VERSION_MINOR}.dylib")
 			endif()
@@ -510,7 +508,7 @@ if( NOT WINDOWS)
 	find_multiple( "expat" EXPAT_FOUND )
 	find_multiple( "uuid" LIBUUID_FOUND )
 		# UUID appears to be available in the C runtime on Darwin.
-	if (NOT LIBUUID_FOUND AND NOT (${OS_NAME} STREQUAL "DARWIN") )
+	if (NOT LIBUUID_FOUND AND NOT APPLE )
 		message(FATAL_ERROR "Could not find libuuid")
 	endif()
 	find_path(HAVE_UUID_UUID_H "uuid/uuid.h")
@@ -569,7 +567,7 @@ if( NOT WINDOWS)
 	# we can likely put many of the checks below in here.
 	check_include_files("inttypes.h" HAVE_INTTYPES_H)
 	check_include_files("ldap.h" HAVE_LDAP_H)
-	if (${OS_NAME} STREQUAL "DARWIN")
+	if (APPLE)
 		find_multiple( "LDAP;lber" LDAP_FOUND )
 	else()
 		find_multiple( "ldap;lber" LDAP_FOUND )
@@ -589,7 +587,7 @@ if( NOT WINDOWS)
 
 	check_struct_has_member("struct sockaddr_in" sin_len "netinet/in.h" HAVE_STRUCT_SOCKADDR_IN_SIN_LEN)
 
-	if (NOT ${OS_NAME} STREQUAL "DARWIN")
+	if (NOT APPLE)
 		check_struct_has_member("struct statfs" f_fstypename "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYPENAME )
 	endif()
 
@@ -673,8 +671,9 @@ if(${OS_NAME} STREQUAL "LINUX")
     option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
     option(WITH_BLAHP "Compiling the blahp" ON)
-elseif(${OS_NAME} STREQUAL "DARWIN")
+elseif(APPLE)
 	add_definitions(-DDarwin)
+	# CRUFT Remove this variable. All cmake files should be using APPLE.
 	set(DARWIN ON)
 	set( CONDOR_BUILD_SHARED_LIBS TRUE )
 	check_struct_has_member("struct statfs" f_fstypename "sys/param.h;sys/mount.h" HAVE_STRUCT_STATFS_F_FSTYPENAME)
@@ -788,7 +787,7 @@ if (NOT WINDOWS)
     option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 if ( HAVE_SSH_TO_JOB )
-    if ( DARWIN )
+    if ( APPLE )
         set( SFTP_SERVER "/usr/libexec/sftp-server" )
     elseif ( DEB_SYSTEM_NAME )
         set( SFTP_SERVER "/usr/lib/openssh/sftp-server" )
@@ -928,7 +927,7 @@ if (WINDOWS)
 else ()
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
-  if (DARWIN)
+  if (APPLE)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
   else()
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
@@ -974,7 +973,7 @@ endif(WINDOWS)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
-if (DARWIN)
+if (APPLE)
 	include_directories( ${DARWIN_OPENSSL_INCLUDE} )
 endif()
 
@@ -1373,9 +1372,6 @@ dprint ( "CONDOR_PACKAGE_NAME: ${CONDOR_PACKAGE_NAME}" )
 
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "UNIX: ${UNIX}" )
-
-# is TRUE on all BSD-derived UNIXen
-dprint ( "BSD_UNIX: ${BSD_UNIX}" )
 
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "Linux: ${LINUX_NAME}" )

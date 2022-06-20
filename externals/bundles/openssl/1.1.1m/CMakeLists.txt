@@ -23,7 +23,7 @@ if (WITH_OPENSSL)
 
   find_multiple( "ssl;crypto" OPENSSL_FOUND )
 
-  if ( NOT OPENSSL_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
+  if ( NOT OPENSSL_FOUND AND NOT PROPER AND NOT LINUX AND NOT APPLE )
 
     condor_pre_external( OPENSSL openssl-1.1.1m "lib;include" "include/openssl/ssl.h")
     set (OPENSSL_DOWNLOAD ${OPENSSL_VER}.tar.gz)

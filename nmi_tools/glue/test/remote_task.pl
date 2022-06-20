@@ -222,6 +222,11 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     }
     #my $newpath = join("\n", split(';',$ENV{PATH}));
     #out("PATH is now\n$newpath");
+} elsif ($ENV{NMI_PLATFORM} =~ /macos/i) {
+    # CRUFT Once 9.0 is EOL, remove the python.org version of python3
+    #   from the mac build machines and remove this setting of PATH.
+    # Ensure we're using the system python3
+    $ENV{PATH} ="/usr/bin:$ENV{PATH}";
 }
 
 out("RUNNING run_test.pl '$testname'\n    -X-X-X-X-X-X- run_test.pl output -X-X-X-X-X-X-");

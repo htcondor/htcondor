@@ -23,22 +23,18 @@
 #include "condor_open.h"
 #include "condor_debug.h"
 
-#ifdef HAVE_EXT_OPENSSL
 #ifdef FIPS_MODE
 #include <openssl/sha.h>
 #else
 #include <openssl/md5.h>
 #endif
-#endif
 
 class MD_Context {
 public:
-#ifdef HAVE_EXT_OPENSSL
 #ifdef FIPS_MODE
     SHA256_CTX          sha256_;     // SHA256 context
 #else
     MD5_CTX             md5_;        // MD5 context
-#endif
 #endif
 };
 
@@ -65,7 +61,6 @@ Condor_MD_MAC :: ~Condor_MD_MAC()
 
 void Condor_MD_MAC :: init()
 {
-#ifdef HAVE_EXT_OPENSSL
 #ifdef FIPS_MODE
     SHA256_Init(&(context_->sha256_));
 
@@ -79,12 +74,10 @@ void Condor_MD_MAC :: init()
         addMD(key_->getKeyData(), key_->getKeyLength());
     }
 #endif
-#endif
 }
 
 unsigned char * Condor_MD_MAC::computeOnce(const unsigned char * buffer, unsigned long length)
 {
-#ifdef HAVE_EXT_OPENSSL
     unsigned char * md = (unsigned char *) malloc(MAC_SIZE);
 
 #ifdef FIPS_MODE
@@ -92,16 +85,12 @@ unsigned char * Condor_MD_MAC::computeOnce(const unsigned char * buffer, unsigne
 #else
     return MD5(buffer, (unsigned long) length, md);
 #endif
-#else
-    return NULL;
-#endif
 }
 
 unsigned char * Condor_MD_MAC::computeOnce(const unsigned char * buffer,
                                            unsigned long   length, 
                                            KeyInfo       * key)
 {
-#ifdef HAVE_EXT_OPENSSL
     unsigned char * md = (unsigned char *) malloc(MAC_SIZE);
 #ifdef FIPS_MODE
     SHA256_CTX  context;
@@ -118,23 +107,16 @@ unsigned char * Condor_MD_MAC::computeOnce(const unsigned char * buffer,
 #endif
 
     return md;
-#else
-    return NULL;
-#endif
 }
 
 bool Condor_MD_MAC::verifyMD(const unsigned char * md,
                              const unsigned char * buffer,
                              unsigned long   length)
 {
-#ifdef HAVE_EXT_OPENSSL
     unsigned char * myMd = Condor_MD_MAC::computeOnce(buffer, length);
     bool match = (memcmp(md, myMd, MAC_SIZE) == 0);
     free(myMd);
     return match;
-#else
-    return true;
-#endif
 }
 
 bool Condor_MD_MAC::verifyMD(const unsigned char * md,
@@ -142,30 +124,23 @@ bool Condor_MD_MAC::verifyMD(const unsigned char * md,
                              unsigned long   length, 
                              KeyInfo       * key)
 {
-#ifdef HAVE_EXT_OPENSSL
    unsigned char * myMd = Condor_MD_MAC::computeOnce(buffer, length, key); 
    bool match = (memcmp(md, myMd, MAC_SIZE) == 0);
    free(myMd);
    return match;
-#else
-   return true;
-#endif
 }
   
 void Condor_MD_MAC::addMD(const unsigned char * buffer, unsigned long length)
 {
-#ifdef HAVE_EXT_OPENSSL
 #ifdef FIPS_MODE
    SHA256_Update(&(context_->sha256_), buffer, length);
 #else
    MD5_Update(&(context_->md5_), buffer, length);
 #endif
-#endif
 }
 
 bool Condor_MD_MAC::addMDFile(const char * filePathName)
 {
-#ifdef HAVE_EXT_OPENSSL
 	int fd;
 
     fd = safe_open_wrapper_follow(filePathName, O_RDONLY | O_LARGEFILE, 0);
@@ -204,14 +179,10 @@ bool Condor_MD_MAC::addMDFile(const char * filePathName)
 	close(fd);
 	free(buffer);
 	return ok;
-#else
-	return false;
-#endif
 }
 
 unsigned char * Condor_MD_MAC::computeMD()
 {
-#ifdef HAVE_EXT_OPENSSL
     unsigned char * md = (unsigned char *) malloc(MAC_SIZE);
     
 #ifdef FIPS_MODE
@@ -223,20 +194,13 @@ unsigned char * Condor_MD_MAC::computeMD()
     init(); // reinitialize for the next round
 
     return md;
-#else 
-    return NULL;
-#endif
 }
 
 bool Condor_MD_MAC :: verifyMD(const unsigned char * md)
 {
-#ifdef HAVE_EXT_OPENSSL
     unsigned char * md2 = computeMD();
     bool match = (memcmp(md, md2, MAC_SIZE) == 0);
     free(md2);
     return match;
-#else
-    return true;
-#endif
 }
 

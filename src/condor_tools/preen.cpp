@@ -132,7 +132,6 @@ main( int argc, char *argv[] )
 	
 		// Initialize things
 	MyName = argv[0];
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 

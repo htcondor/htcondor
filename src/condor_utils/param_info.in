@@ -961,6 +961,10 @@ default=true
 type=bool
 tags=shadow,remoteresource
 
+[USE_VOMS_ATTRIBUTES]
+default=false
+type=bool
+
 [USE_AFS]
 default=
 type=string
@@ -6061,6 +6065,33 @@ default : @end
   use POLICY : WANT_HOLD_IF( CPU_EXCEEDED, $(HOLD_SUBCODE_CPU_EXCEEDED:101), $(HOLD_REASON_CPU_EXCEEDED) )
 @end
 
+[$POLICY.PREEMPT_IF_DISK_EXCEEDED]
+description=Preempt jobs that use more disk than in slot
+default : @end
+  #
+  # If the startd sees the disk usage of the job exceed the
+  # disk in the slot, preempt the job immediately ignoring
+  # any retirement time.  VM universe jobs can't go over their
+  # disk allocations, so we ignore them.
+  #
+  DISK_EXCEEDED = (JobUniverse != 13 && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
+  use POLICY : PREEMPT_IF(DISK_EXCEEDED)
+@end
+
+[$POLICY.HOLD_IF_DISK_EXCEEDED]
+description=Hold jobs that use more disk than in slot
+default : @end
+  #
+  # If the startd preempted a job because disk usage exceeded
+  # the amount of memory in the slot, put the job on hold.  VM
+  # universe jobs can't go over their disk allocations, so
+  # we ignore them.
+  #
+  DISK_EXCEEDED = (JobUniverse != 13 && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
+  HOLD_REASON_DISK_EXCEEDED = disk usage exceeded allocated disk
+  use POLICY : WANT_HOLD_IF( DISK_EXCEEDED, $(HOLD_SUBCODE_DISK_EXCEEDED:104), $(HOLD_REASON_DISK_EXCEEDED) )
+@end
+
 [$POLICY.PREEMPT_IF_MEMORY_EXCEEDED]
 description=Preempt jobs that use more memory than in slot
 default : @end
@@ -6087,7 +6118,6 @@ default : @end
   HOLD_REASON_MEMORY_EXCEEDED = memory usage exceeded request_memory
   use POLICY : WANT_HOLD_IF( MEMORY_EXCEEDED, $(HOLD_SUBCODE_MEMORY_EXCEEDED:102), $(HOLD_REASON_MEMORY_EXCEEDED) )
 @end
-
 
 [$POLICY.PREEMPT_IF]
 description=Configure a PREEMPT expression args:(policy_variable)

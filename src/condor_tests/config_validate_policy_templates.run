@@ -25,217 +25,104 @@ use Check::SimpleJob;
 use strict;
 use warnings;
 
-my $testname = "config_validate_policy_templates";
-my $configfile;
-my $appendcontent;
-my $result;
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	DAEMON_LIST = MASTER COLLECTOR STARTD
+	use FEATURE:PartitionableSlot(1)
+	# prevent the master from taking longer and longer to restart the startd each time
+	# constant is minimum time to wait, factor is x^restarts added to that, ceiling is cap
+	MASTER_BACKOFF_CONSTANT = 1
+	#MASTER_BACKOFF_FACTOR = 1
+	#MASTER_RECOVER_FACTOR = 1
+	MASTER_BACKOFF_CEILING = 1
+	CONFIG_FRAGMENT = $(LOCAL_DIR)/validate_policy.config
+	include ifexist : $(CONFIG_FRAGMENT)
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 
-$appendcontent = '
-    use POLICY:Always_Run_Jobs
-';
+my $testname = "config_validate_policy_templates";
 
 TLOG("Initialize\n");
-#$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy");
-#
-#CondorTest::StartCondorWithParams(
-#    condor_name => "ConfigPolicy",
-#    fresh_local => "TRUE",
-#    condorlocalsrc => "$configfile",
-#);
-#
-#$result = SimpleJob::RunCheck();
+my $config_fragment = `condor_config_val CONFIG_FRAGMENT`;
 
-my $on_success = sub {
-	print "Success in RunCheck\n";
-};
+# --- helper functions
+# 
 
-my $on_execute = sub {
-	runCondorTool("condor_q");
-};
+# remove \r but preserve \n at the end of each line
+sub winchomp {
+    foreach my $arg (@_) { $arg =~ s/\012\015$/\015/; }
+    return;
+}
 
-print "---------------------------------------------------------------------------------------------------------\n";
-TLOG("Checking Policy1, ALWAYS_RUN_JOBS\n");
+sub test_policy {
+	my $knob = shift;
+	my $knob_args = shift;
 
-$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy1");
+	print "---------------------------------------------------------------------------------------------------------\n";
+	TLOG("Checking Policy $knob$knob_args\n");
 
-CondorTest::StartCondorWithParams(
-    condor_name => "ConfigPolicy1",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
+	# write the policy into config, overwriting the previous policy
+	open (FH, ">$config_fragment") || print "error writing to $config_fragment: $!\n";
+	print FH "\nuse POLICY : $knob$knob_args\n";
+	close(FH);
+	chmod(0755,$config_fragment);
 
-$result = SimpleJob::RunCheck(
-        on_execute => $on_execute,
-        on_success => $on_success,
-);
+	my $restart = `condor_restart -startd`;
+	my @who = ();
+	my $result = runCondorTool("condor_who -quick", \@who, 2, {emit_output=>0});
+	foreach my $line (@who) { winchomp($line); print "\t$line" if ($line =~ /^STARTD|IsReady/); }
+	#TLOG("result is $result\n");
 
-RegisterResult(1, $testname, "ALWAYS_RUN_JOBS");
+	my @summary = ();
+	runCondorTool('condor_config_val -summary',\@summary,2,{emit_output=>0});
 
-# get the shutdown of this pool started
-runCondorTool("condor_off -master");
+	# print the part of config that is defined by our config fragment file
+	TLOG("config to validate:\n");
+	my $show = 0;
+	my $hash = 0;
+	foreach my $line (@summary) {
+		winchomp($line);
+		if ($line =~ /^#.*validate_policy\.config/) { $show = 1; }
+		if ($show) {
+			if ($line =~ /^#/) { $hash += 1; }
+			last if $hash > 2;
+			print "\t$line";
+		}
+	}
 
-print "---------------------------------------------------------------------------------------------------------\n";
-TLOG("Checking Policy2, DESKTOP\n");
+	@who = ();
+	$result = runCondorTool('condor_who -quick -wait:60 IsReady', \@who,2,{emit_output=>0});
+	TLOG("query STARTD state:\n");
+	foreach my $line (@who) {
+		winchomp($line);
+		print "\t$line" if ($line =~ /^STARTD|IsReady/);
+		fullchomp($line);
+		if ($line =~ /^STARTD = (.*)$/) {
+			my $state = $1;
+			$result = ($state eq '"Alive"');
+		}
+	}
 
-$appendcontent = '
-    use POLICY:Desktop
-';
-$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy2");
+	RegisterResult($result, $testname, $knob);
+}
 
-CondorTest::StartCondorWithParams(
-    condor_name => "ConfigPolicy2",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
+# --- Test statements begin here
+# 
+test_policy("ALWAYS_RUN_JOBS", "");
 
-$result = CondorTest::SearchCondorLog("STARTD", 'Daemon Log is logging');
-print "result is $result\n";
+test_policy("DESKTOP", "");
 
-RegisterResult($result, $testname, "DESKTOP");
+test_policy("UWCS_DESKTOP", "");
 
-# get the shutdown of this pool started
-runCondorTool("condor_off -master");
+test_policy("PREEMPT_IF_CPUS_EXCEEDED", "");
+test_policy("PREEMPT_IF_MEMORY_EXCEEDED", "");
+test_policy("PREEMPT_IF_DISK_EXCEEDED", "");
 
-print "---------------------------------------------------------------------------------------------------------\n";
-TLOG("Checking Policy3, HOLD_IF_CPUS_EXCEEDED\n");
+test_policy("HOLD_IF_CPUS_EXCEEDED", "");
+test_policy("HOLD_IF_MEMORY_EXCEEDED", "");
+test_policy("HOLD_IF_DISK_EXCEEDED", "");
 
-$appendcontent = '
-    use POLICY:Hold_If_Cpus_Exceeded
-';
-$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy3");
-
-CondorTest::StartCondorWithParams(
-    condor_name => "ConfigPolicy3",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
-
-$result = SimpleJob::RunCheck(
-        on_execute => $on_execute,
-        on_success => $on_success,
-);
-
-RegisterResult(1, $testname, "HOLD_IF_CPUS_EXCEEDED");
-
-# get the shutdown of this pool started
-runCondorTool("condor_off -master");
-
-print "---------------------------------------------------------------------------------------------------------\n";
-TLOG("Checking Policy4, HOLD_IF_MEMORY_EXCEEDED\n");
-
-$appendcontent = '
-    use POLICY:HOLD_IF_MEMORY_EXCEEDED
-';
-$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy4");
-
-CondorTest::StartCondorWithParams(
-    condor_name => "ConfigPolicy4",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
-
-$result = SimpleJob::RunCheck(
-        on_execute => $on_execute,
-        on_success => $on_success,
-);
-
-RegisterResult(1, $testname, "HOLD_IF_MEMORY_EXCEEDED");
-
-# get the shutdown of this pool started
-runCondorTool("condor_off -master");
-
-print "---------------------------------------------------------------------------------------------------------\n";
-TLOG("Checking Policy5, LIMIT_JOB_RUNTIMES\n");
-
-$appendcontent = '
-    use POLICY:LIMIT_JOB_RUNTIMES
-';
-$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy5");
-
-CondorTest::StartCondorWithParams(
-    condor_name => "ConfigPolicy5",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
-
-$result = SimpleJob::RunCheck(
-        on_execute => $on_execute,
-        on_success => $on_success,
-);
-
-RegisterResult(1, $testname, "LIMIT_JOB_RUNTIMES");
-
-# get the shutdown of this pool started
-runCondorTool("condor_off -master");
-
-print "---------------------------------------------------------------------------------------------------------\n";
-TLOG("Checking Policy6, PREEMPT_IF_CPUS_EXCEEDED\n");
-
-$appendcontent = '
-    use POLICY:PREEMPT_IF_CPUS_EXCEEDED
-';
-$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy6");
-
-CondorTest::StartCondorWithParams(
-    condor_name => "ConfigPolicy6",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
-
-$result = SimpleJob::RunCheck(
-        on_execute => $on_execute,
-        on_success => $on_success,
-);
-
-RegisterResult(1, $testname, "PREEMPT_IF_CPUS_EXCEEDED");
-
-# get the shutdown of this pool started
-runCondorTool("condor_off -master");
-
-print "---------------------------------------------------------------------------------------------------------\n";
-TLOG("Checking Policy7, PREEMPT_IF_MEMORY_EXCEEDED\n");
-
-$appendcontent = '
-    use POLICY:PREEMPT_IF_MEMORY_EXCEEDED
-';
-$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy7");
-
-CondorTest::StartCondorWithParams(
-    condor_name => "ConfigPolicy7",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
-
-$result = SimpleJob::RunCheck(
-        on_execute => $on_execute,
-        on_success => $on_success,
-);
-
-RegisterResult(1, $testname, "PREEMPT_IF_MEMORY_EXCEEDED");
-
-# get the shutdown of this pool started
-runCondorTool("condor_off -master");
-
-print "---------------------------------------------------------------------------------------------------------\n";
-TLOG("Checking Policy8, UWCS_DESKTOP\n");
-
-$appendcontent = '
-    use POLICY:UWCS_DESKTOP
-';
-$configfile = CondorTest::CreateLocalConfig($appendcontent, "ConfigPolicy8");
-
-CondorTest::StartCondorWithParams(
-    condor_name => "ConfigPolicy8",
-    fresh_local => "TRUE",
-    condorlocalsrc => "$configfile",
-);
-
-$result = CondorTest::SearchCondorLog("STARTD", "Daemon Log is logging");
-
-RegisterResult($result, $testname, "UWCS_DESKTOP");
-
-# get the shutdown of this pool started
-runCondorTool("condor_off -master");
+test_policy("LIMIT_JOB_RUNTIMES", "");
 
 CondorTest::EndTest();
 exit(0);

@@ -92,7 +92,6 @@ int main(int argc, const char *argv[]) {
 	MyName = condor_basename(argv[0]);
 	
 	// load up configuration file
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 

@@ -197,7 +197,6 @@ main(int argc, const char *argv[])
 	StringList job_list; // list of job ids (or mixed job & cluster id's to modify)
 	std::map<std::string, std::string> kvp_list; // Classad of attr=value pairs to set
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
