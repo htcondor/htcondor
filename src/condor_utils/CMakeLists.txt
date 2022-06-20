@@ -54,10 +54,6 @@ condor_version.h
 condor_version.cpp
 directory_util.cpp
 directory_util.h
-dprintf_common.cpp
-dprintf_config.cpp
-dprintf.cpp
-dprintf_setup.cpp
 env.cpp
 env.h
 except.cpp
@@ -275,6 +271,10 @@ docker-api.cpp
 docker-api.h
 domain_tools.cpp
 domain_tools.h
+dprintf_common.cpp
+dprintf_config.cpp
+dprintf.cpp
+dprintf_setup.cpp
 dynuser.h
 email.cpp
 email_cpp.cpp
