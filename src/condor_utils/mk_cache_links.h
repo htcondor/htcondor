@@ -23,7 +23,6 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_config.h"
-#include "condor_constants.h"
 
 #ifdef HAVE_HTTP_PUBLIC_FILES
 

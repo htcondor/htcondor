@@ -22,7 +22,6 @@
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
 #include "condor_io.h"
-#include "condor_constants.h"
 #include "condor_classad.h"
 #include "condor_sys.h"
 #include "starter.h"

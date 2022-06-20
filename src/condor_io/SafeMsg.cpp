@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "internet.h"

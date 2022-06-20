@@ -20,7 +20,6 @@
 #define _POSIX_SOURCE
 
 #include "condor_common.h"
-#include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "condor_md.h"
