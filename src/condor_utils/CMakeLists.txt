@@ -44,7 +44,6 @@ compat_classad_util.cpp
 compat_classad_util.h
 condor_arglist.cpp
 condor_arglist.h
-condor_environ.cpp
 condor_event.cpp
 condor_event.h
 condor_snutils.cpp
@@ -64,17 +63,12 @@ HashTable.cpp
 HashTable.h
 iso_dates.cpp
 iso_dates.h
-log_rotate.cpp
-log_rotate.h
 MyString.cpp
 MyString.h
-my_username.cpp
-my_username.h
 read_user_log.cpp
 read_user_log.h
 read_user_log_state.cpp
 read_user_log_state.h
-rotate_file.cpp
 setenv.cpp
 setenv.h
 stat_wrapper.cpp
@@ -89,7 +83,6 @@ strupr.cpp
 subsystem_info.cpp
 subsystem_info.h
 ToE.cpp
-uids.cpp
 user_log_header.cpp
 user_log_header.h
 utc_time.cpp
@@ -125,8 +118,6 @@ endif(WINDOWS)
 if(NOT WINDOWS)
 	list(APPEND CONDOR_API_AND_UTILS_SRC
 		lock_file.unix.cpp
-		passwd_cache.unix.cpp
-		passwd_cache.unix.h
 	)
 endif(NOT WINDOWS)
 
@@ -198,6 +189,7 @@ condor_common.cpp
 condor_config.cpp
 condor_crontab.cpp
 condor_crontab.h
+condor_environ.cpp
 CondorError.cpp
 CondorError.h
 condor_fsync.cpp
@@ -352,6 +344,8 @@ LoadPlugins.cpp
 LoadPlugins.h
 log.cpp
 log.h
+log_rotate.cpp
+log_rotate.h
 log_transaction.cpp
 log_transaction.h
 make_printmask.cpp
@@ -372,6 +366,8 @@ my_hostname.cpp
 my_hostname.h
 my_popen.cpp
 my_popen.h
+my_username.cpp
+my_username.h
 named_classad.cpp
 named_classad_list.cpp
 NegotiationUtils.cpp
@@ -410,6 +406,7 @@ ranger.cpp
 ranger.h
 read_multiple_logs.cpp
 read_multiple_logs.h
+rotate_file.cpp
 secure_file.cpp
 secure_file.h
 selector.cpp
@@ -467,6 +464,7 @@ transfer_request.cpp
 translation_utils.cpp
 translation_utils.h
 tree.h
+uids.cpp
 udp_waker.cpp
 udp_waker.h
 usagemon.cpp
@@ -505,6 +503,8 @@ if(NOT WINDOWS)
 		limit.unix.cpp
 		network_adapter.unix.cpp
 		network_adapter.unix.h
+		passwd_cache.unix.cpp
+		passwd_cache.unix.h
 		sig_install.unix.cpp
 		sleep.unix.cpp
 	)

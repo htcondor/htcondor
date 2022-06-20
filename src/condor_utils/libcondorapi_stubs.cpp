@@ -22,6 +22,7 @@
 #include "condor_classad.h"
 #include "generic_query.h"
 #include "condor_query.h"
+#include "condor_uid.h"
 
 /* This file contains various stub functions or small implementation of other
 	functions. The purpose of this is to break edges in a nasty dependency
@@ -148,6 +149,14 @@ int _condor_dprintf_works;
 void _condor_dprintf_saved_lines( void ) {}
 void _condor_save_dprintf_line(int, char const*, ...) {}
 void dprintf(int /* level */, const char * /* format */, ...) {}
+
+priv_state _set_priv(priv_state s, const char*, int, int)
+{
+	static priv_state old_priv = PRIV_UNKNOWN;
+	priv_state rc = old_priv;
+	old_priv = s;
+	return rc;
+}
 
 #include "condor_regex.h"
 
