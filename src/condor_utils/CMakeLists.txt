@@ -732,17 +732,8 @@ if (LINUX OR APPLE)
 	set_target_properties( condorapi_shared PROPERTIES OUTPUT_NAME condorapi )
 endif()
 
-install (FILES MyString.h
-		 condor_event.h
-		 condor_holdcodes.h
+install (FILES condor_event.h
 		 read_user_log.h
-		 user_log.c++.h
-		 user_log.README
-		 write_user_log.h
-		 compat_classad.h
-		 compat_classad_list.h
-		 compat_classad_util.h
-		 stl_string_utils.h
 		DESTINATION ${C_INCLUDE})
 
 install ( TARGETS condorapi DESTINATION ${C_LIB} )
