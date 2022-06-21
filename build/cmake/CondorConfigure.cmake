@@ -504,7 +504,6 @@ if( NOT WINDOWS)
 
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
-    find_multiple( "z" ZLIB_FOUND)
 	find_multiple( "expat" EXPAT_FOUND )
 	find_multiple( "uuid" LIBUUID_FOUND )
 		# UUID appears to be available in the C runtime on Darwin.
