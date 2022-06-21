@@ -303,13 +303,15 @@ ResMgr::backfillMgrDone()
 
 
 static bool
-verifyBackfillSystem( const char* /*sys*/ )
+verifyBackfillSystem( const char* sys )
 {
 
 #if HAVE_BOINC
 	if( ! strcasecmp(sys, "BOINC") ) {
 		return true;
 	}
+#else
+	(void)sys;
 #endif /* HAVE_BOINC */
 
 	return false;

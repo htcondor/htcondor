@@ -31,7 +31,6 @@
 # include "config.h"
 #endif
 
-#include "condor_constants.h"
 #include "basename.h"
 #include "fs_util.h"
 

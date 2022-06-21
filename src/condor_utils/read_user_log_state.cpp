@@ -22,7 +22,6 @@
 #include <stdarg.h>
 #include "read_user_log.h"
 #include <time.h>
-#include "MyString.h"
 #include "condor_uid.h"
 #include "condor_config.h"
 #include "stat_wrapper.h"
@@ -373,7 +372,7 @@ ReadUserLogState::Rotation( int rotation,
 
 bool
 ReadUserLogState::GeneratePath( int rotation,
-								MyString &path,
+								std::string &path,
 								bool initializing ) const
 {
 	// If we're not initializing and we're not initialized, something is wrong
@@ -396,7 +395,7 @@ ReadUserLogState::GeneratePath( int rotation,
 	path = m_base_path;
 	if ( rotation ) {
 		if ( m_max_rotations > 1 ) {
-			path.formatstr_cat( ".%d", rotation );
+			formatstr_cat(path, ".%d", rotation );
 		}
 		else {
 			path += ".old";
@@ -474,7 +473,7 @@ ReadUserLogState::ScoreFile( int rot ) const
 		rot = m_cur_rot;
 	}
 
-	MyString	path;
+	std::string	path;
 	if ( !GeneratePath( rot, path ) ) {
 		return -1;
 	}
@@ -514,7 +513,7 @@ ReadUserLogState::ScoreFile( const StatStructType &statbuf, int rot ) const
 	bool	same_size = ( statbuf.st_size == m_stat_buf.st_size );
 	bool 	has_grown = ( statbuf.st_size > m_stat_buf.st_size );
 
-	MyString	MatchList = "";	// For debugging
+	std::string	MatchList = "";	// For debugging
 
 	// Check inode match
 	if ( m_stat_buf.st_ino == statbuf.st_ino ) {
@@ -643,7 +642,7 @@ ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 }
 
 int
-ReadUserLogState::CompareUniqId( const MyString &id ) const
+ReadUserLogState::CompareUniqId( const std::string &id ) const
 {
 	if ( ( m_uniq_id == "" ) || ( id == "" ) ) {
 		return 0;
@@ -760,7 +759,7 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 
 	m_initialized  = true;
 
-	MyString	str;
+	std::string	str;
 	GetStateString( str, "Restored reader state" );
 	dprintf( D_FULLDEBUG, "%s", str.c_str() );
 
@@ -768,13 +767,13 @@ ReadUserLogState::SetState( const ReadUserLog::FileState &state )
 }
 
 void
-ReadUserLogState::GetStateString( MyString &str, const char *label ) const
+ReadUserLogState::GetStateString( std::string &str, const char *label ) const
 {
 	str = "";
 	if ( NULL != label ) {
-		str.formatstr( "%s:\n", label );
+		formatstr(str, "%s:\n", label );
 	}
-	str.formatstr_cat (
+	formatstr_cat (str,
 		"  BasePath = %s\n"
 		"  CurPath = %s\n"
 		"  UniqId = %s, seq = %d\n"
@@ -791,14 +790,14 @@ ReadUserLogState::GetStateString( MyString &str, const char *label ) const
 void
 ReadUserLogState::GetStateString(
 	const ReadUserLog::FileState	&state,
-	MyString						&str,
+	std::string						&str,
 	const char						*label
   ) const
 {
 	const ReadUserLogFileState::FileState *istate;
 	if ( ( !convertState(state, istate) ) || ( !istate->m_version ) ) {
 		if ( label ) {
-			str.formatstr( "%s: no state", label );
+			formatstr(str, "%s: no state", label );
 		}
 		else {
 			str = "no state\n";
@@ -808,9 +807,9 @@ ReadUserLogState::GetStateString(
 
 	str = "";
 	if ( NULL != label ) {
-		str.formatstr( "%s:\n", label );
+		formatstr(str, "%s:\n", label );
 	}
-	str.formatstr_cat (
+	formatstr_cat (str,
 		"  signature = '%s'; version = %d; update = %ld\n"
 		"  base path = '%s'\n"
 		"  cur path = '%s'\n"
@@ -848,7 +847,7 @@ ReadUserLogState::CurPath( const ReadUserLog::FileState &state ) const
 		return NULL;
 	}
 
-	static MyString	path;
+	static std::string	path;
 	if ( !GeneratePath( istate->m_rotation, path, true ) ) {
 		return NULL;
 	}

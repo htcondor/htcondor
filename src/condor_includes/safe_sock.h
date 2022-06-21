@@ -28,7 +28,6 @@
 #endif
 
 #include "sock.h"
-#include "condor_constants.h"
 #include "my_hostname.h"
 #include "condor_random_num.h"
 #include "SafeMsg.h"

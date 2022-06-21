@@ -3275,7 +3275,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 	}
 	int result = -1;
 	if(!ad.LookupInteger(ATTR_RESULT,result)) {
-		MyString ad_str;
+		std::string ad_str;
 		sPrintAd(ad_str, ad);
 		dprintf(D_ALWAYS,"Download acknowledgment missing attribute: %s.  Full classad: [\n%s]\n",ATTR_RESULT,ad_str.c_str());
 		success = false;
@@ -4702,7 +4702,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 					// same length.  Since the size will be wrong anyway, simplify
 					// future security audits but not printing the private attrs.
 					//
-					MyString junkbuf;
+					std::string junkbuf;
 					sPrintAd(junkbuf, file_info);
 					bytes = junkbuf.length();
 				}
@@ -5198,7 +5198,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 
 		go_ahead = GO_AHEAD_UNDEFINED;
 		if(!msg.LookupInteger(ATTR_RESULT,go_ahead)) {
-			MyString msg_str;
+			std::string msg_str;
 			sPrintAd(msg_str, msg);
 			error_desc.formatstr("GoAhead message missing attribute: %s.  "
 							   "Full classad: [\n%s]",
@@ -6125,8 +6125,8 @@ int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
 	stats.Assign( "JobOwner", owner );
 
 	// Output statistics to file
-	MyString stats_string;
-	MyString stats_output = "***\n";
+	std::string stats_string;
+	std::string stats_output = "***\n";
 	sPrintAd( stats_string, stats );
 	stats_output += stats_string;
 

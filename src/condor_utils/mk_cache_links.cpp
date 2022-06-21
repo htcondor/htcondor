@@ -21,7 +21,6 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_config.h"
-#include "condor_constants.h"
 #include "condor_uid.h"
 #include "condor_md.h"
 #include "directory_util.h"

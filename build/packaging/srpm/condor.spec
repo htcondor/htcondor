@@ -1398,23 +1398,10 @@ rm -rf %{buildroot}
 
 #################
 %files devel
-%{_includedir}/condor/MyString.h
 %{_includedir}/condor/chirp_client.h
-%{_includedir}/condor/compat_classad.h
-%{_includedir}/condor/compat_classad_list.h
-%{_includedir}/condor/compat_classad_util.h
-%{_includedir}/condor/condor_classad.h
-%{_includedir}/condor/condor_constants.h
 %{_includedir}/condor/condor_event.h
-%{_includedir}/condor/condor_header_features.h
-%{_includedir}/condor/condor_holdcodes.h
 %{_includedir}/condor/file_lock.h
-%{_includedir}/condor/iso_dates.h
 %{_includedir}/condor/read_user_log.h
-%{_includedir}/condor/stl_string_utils.h
-%{_includedir}/condor/user_log.README
-%{_includedir}/condor/user_log.c++.h
-%{_includedir}/condor/write_user_log.h
 %{_libdir}/condor/libchirp_client.a
 %{_libdir}/condor/libcondorapi.a
 %{_libdir}/libclassad.a

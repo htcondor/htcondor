@@ -288,7 +288,7 @@ StartdHookMgr::hookReplyFetch(bool accepted, ClassAd* job_ad, Resource* rip)
 	//PRAGMA_REMIND("tj, flatten SlotEval here?")
 
 		// Construct the output to write to STDIN.
-	MyString hook_stdin;
+	std::string hook_stdin;
 	sPrintAd(hook_stdin, *job_ad);
 	hook_stdin += "-----\n";  // TODO-fetch: better delimiter?
 	sPrintAd(hook_stdin, *rip->r_classad);
@@ -303,7 +303,7 @@ StartdHookMgr::hookReplyFetch(bool accepted, ClassAd* job_ad, Resource* rip)
 	ArgList args;
 	args.AppendArg((accepted ? "accept" : "reject"));
 
-	spawn(&hook_client, &args, &hook_stdin);
+	spawn(&hook_client, &args, hook_stdin);
 }
 
 
@@ -322,7 +322,7 @@ StartdHookMgr::hookEvictClaim(Resource* rip)
 	//PRAGMA_REMIND("tj, flatten SlotEval here?")
 
 		// Construct the output to write to STDIN.
-	MyString hook_stdin;
+	std::string hook_stdin;
 	sPrintAd(hook_stdin, *rip->r_cur->ad());
 	hook_stdin += "-----\n";  // TODO-fetch: better delimiter?
 	sPrintAd(hook_stdin, *rip->r_classad);
@@ -332,7 +332,7 @@ StartdHookMgr::hookEvictClaim(Resource* rip)
 	hook_stdin += rip->r_cur->id();
 	hook_stdin += "\"\n";
 
-	spawn(&hook_client, NULL, &hook_stdin);
+	spawn(&hook_client, NULL, hook_stdin);
 }
 
 
@@ -365,9 +365,9 @@ FetchClient::startFetch()
 
 	m_rip->publish_single_slot_ad(slot_ad, time(NULL), Resource::Purpose::for_workfetch);
 
-	MyString slot_ad_txt;
+	std::string slot_ad_txt;
 	sPrintAd(slot_ad_txt, slot_ad);
-	resmgr->m_hook_mgr->spawn(this, NULL, &slot_ad_txt);
+	resmgr->m_hook_mgr->spawn(this, NULL, slot_ad_txt);
 	m_rip->startedFetch();
 	return true;
 }

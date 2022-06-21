@@ -98,7 +98,7 @@ usage()
 
 
 int
-main( int argc, char *argv[] )
+main( int /*argc*/, char *argv[] )
 {
 #ifndef WIN32
 		// Ignore SIGPIPE so if we cannot connect to a daemon we do

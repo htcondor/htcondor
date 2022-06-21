@@ -18,13 +18,10 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "condor_open.h"
 #include "condor_debug.h"
 #include <stdarg.h>
 #include "read_user_log.h"
 #include <time.h>
-#include "MyString.h"
-#include "condor_uid.h"
 #include "condor_config.h"
 #include "stat_wrapper.h"
 #include "file_lock.h"
@@ -568,7 +565,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 		const char *path = m_state->CurPath( );
 
 		// If no path provided, generate one
-		MyString temp_path;
+		std::string temp_path;
 		if (  NULL == path ) {
 			m_state->GeneratePath( m_state->Rotation(), temp_path );
 			path = temp_path.c_str( );
@@ -638,7 +635,7 @@ ReadUserLog::determineLogType( FileLockBase *lock )
 		// what sort of log is this???
 		dprintf(D_FULLDEBUG, "Error, apparently invalid user log file\n");
 		m_state->LogType(ReadUserLogState::LOG_TYPE_UNKNOWN);
-	} else if (YourString("<") == intro) {
+	} else if ('<' == intro[0]) {
 		m_state->LogType( ReadUserLogState::LOG_TYPE_XML );
 
 		int afterangle = fgetc(m_fp);
@@ -656,7 +653,7 @@ ReadUserLog::determineLogType( FileLockBase *lock )
 		// File type set, we're all done.
 		Unlock( lock, false );
 		return true;
-	} else if (YourString("{") == intro) {
+	} else if ('{' == intro[0]) {
 		m_state->LogType(ReadUserLogState::LOG_TYPE_JSON);
 	} else {
 		m_state->LogType(ReadUserLogState::LOG_TYPE_NORMAL);
@@ -1556,7 +1553,7 @@ ReadUserLogMatch::MatchInternal(
 	int		score = *score_ptr;
 
 	// If no path provided, generate one
-	MyString path_str;
+	std::string path_str;
 	if ( NULL == path ) {
 		m_state->GeneratePath( rot, path_str );
 	} else {

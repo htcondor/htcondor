@@ -22,7 +22,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_io.h"
-#include "condor_constants.h"
 #include "pseudo_ops.h"
 #include "condor_sys.h"
 #include "baseshadow.h"
