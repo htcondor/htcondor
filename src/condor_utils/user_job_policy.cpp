@@ -412,10 +412,13 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 
 	if (mode != PERIODIC_ONLY && mode != PERIODIC_THEN_EXIT)
 	{
-		EXCEPT("UserPolicy Error: Unknown mode in AnalyzePolicy()");
+		dprintf(D_ERROR, "UserPolicy Error: Unknown mode %d in AnalyzePolicy()\n", mode);
+		return UNDEFINED_EVAL;
 	}
 
 	if( state < 0 && ! ad.LookupInteger(ATTR_JOB_STATUS, state) ) {
+		dprintf( D_ERROR, "UserPolicy Error: %s is not present in the classad\n",
+		         ATTR_JOB_STATUS );
 		return UNDEFINED_EVAL;
 	}
 
@@ -560,8 +563,9 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 	/* This better be in the classad because it determines how the process
 		exited, either by signal, or by exit() */
 	if( ! ad.LookupExpr(ATTR_ON_EXIT_BY_SIGNAL) ) {
-		EXCEPT( "UserPolicy Error: %s is not present in the classad",
-				ATTR_ON_EXIT_BY_SIGNAL );
+		dprintf( D_ERROR, "UserPolicy Error: %s is not present in the classad\n",
+		         ATTR_ON_EXIT_BY_SIGNAL );
+		return UNDEFINED_EVAL;
 	}
 
 	/* Check to see if ExitSignal or ExitCode
@@ -571,7 +575,8 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 	if( ad.LookupExpr(ATTR_ON_EXIT_CODE) == 0 &&
 		ad.LookupExpr(ATTR_ON_EXIT_SIGNAL) == 0 )
 	{
-		EXCEPT( "UserPolicy Error: No signal/exit codes in job ad!" );
+		dprintf( D_ERROR, "UserPolicy Error: No signal/exit codes in job ad!\n" );
+		return UNDEFINED_EVAL;
 	}
 
 	/* Should I hold on exit? */
