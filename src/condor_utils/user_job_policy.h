@@ -264,7 +264,7 @@ class UserPolicy
 		void ResetTriggers();
 
 		/* mode is PERIODIC_ONLY or PERIODIC_THEN_EXIT */
-		/* state is the job status, looked up in the ad if not provided
+		/* state is the job status, looked up in the ad if not provided */
 		/* returns STAYS_IN_QUEUE, REMOVE_FROM_QUEUE, HOLD_IN_QUEUE, 
 			UNDEFINED_EVAL, or RELEASE_FROM_HOLD */
 		int AnalyzePolicy(ClassAd &ad, int mode, int state = -1);

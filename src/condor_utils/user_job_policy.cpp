@@ -536,7 +536,8 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 	if(state==HELD) {
 		/* Ignore jobs held at user request */
 		int hold_code = 0;
-		if(ad.LookupInteger(ATTR_HOLD_REASON_CODE, hold_code) && hold_code != CONDOR_HOLD_CODE::UserRequest) {
+		ad.LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
+		if(hold_code != CONDOR_HOLD_CODE::UserRequest) {
 			if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_RELEASE_CHECK, POLICY_SYSTEM_PERIODIC_RELEASE, RELEASE_FROM_HOLD, retval)) {
 				return retval;
 			}
