@@ -3873,8 +3873,7 @@ ResponsibleForPeriodicExprs( JobQueueJob *jobad, int & status )
 	if( status == HELD ) {
 		int hold_reason_code = -1;
 		jobad->LookupInteger(ATTR_HOLD_REASON_CODE,hold_reason_code);
-		if( hold_reason_code == CONDOR_HOLD_CODE::SpoolingInput ||
-		    hold_reason_code == CONDOR_HOLD_CODE::UserRequest ) {
+		if( hold_reason_code == CONDOR_HOLD_CODE::SpoolingInput ) {
 			dprintf(D_FULLDEBUG,"Skipping periodic expressions for job %d.%d, because hold reason code is '%d'\n",
 				jobad->jid.cluster, jobad->jid.proc, hold_reason_code);
 			return 0;
