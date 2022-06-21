@@ -33,6 +33,7 @@
 #include "authentication.h"
 #include "globus_utils.h"
 #include "limit_directory_access.h"
+#include "manifest.h"
 
 #include <fstream>
 #include "spooled_job_files.h"
@@ -2153,41 +2154,6 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 	return 0;
 }
 
-// FIXME: This may need to be refactored and stuck in utility code.
-
-int
-getManifestNumberFromFileName( const char * fileName ) {
-	if( fileName == strstr( fileName, "MANIFEST." ) ) {
-		char * endptr;
-		const char * suffix = fileName + 9;
-		if( *suffix != '\0' ) {
-			int manifestNumber = strtol( suffix, & endptr, 10 );
-			if( *endptr == '\0' ) {
-				return manifestNumber;
-			}
-		}
-	}
-	return -1;
-}
-
-// FIXME: This should almost certainly be refactored and stuck in utility code.
-bool
-validateManifestFile( const std::string & /* fileName */ ) {
-	// FIXME
-	return true;
-}
-
-// FIXME: This should almost certainly be refactored and stuck in utility code.
-namespace manifest {
-	std::string
-	FileFromLine( const std::string & manifestLine ) {
-		auto pos = manifestLine.find(' ');
-		if( manifestLine[++pos] == '*' ) { ++pos; }
-		return manifestLine.substr(pos);
-	}
-}
-
-
 void
 RemoteResource::initFileTransfer()
 {
@@ -2272,7 +2238,7 @@ RemoteResource::initFileTransfer()
 	const char * currentFile = NULL;
 	Directory spoolDirectory( spoolPath.c_str() );
 	while( (currentFile = spoolDirectory.Next()) ) {
-		int manifestNumber = getManifestNumberFromFileName( currentFile );
+		int manifestNumber = manifest::getNumberFromFileName( currentFile );
 		if( manifestNumber > largestManifestNumber ) {
 			largestManifestNumber = manifestNumber;
 		}
@@ -2287,7 +2253,7 @@ RemoteResource::initFileTransfer()
 	if( largestManifestNumber != -1 ) {
 		for( int i = largestManifestNumber; i >= 0; --i ) {
 			formatstr( manifestFileName, "%s/MANIFEST.\%.4d", spoolPath.c_str(), i );
-			if( validateManifestFile( manifestFileName ) ) {
+			if( manifest::validateFile( manifestFileName ) ) {
 				manifestNumber = i;
 				break;
 			} else {

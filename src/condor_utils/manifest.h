@@ -17,14 +17,15 @@
  *
  ***************************************************************/
 
-#ifndef _COMPUTE_CHECKSUM_H
-#define _COMPUTE_CHECKSUM_H
+#ifndef _CHECKPOINT_MANIFEST_H
+#define _CHECKPOINT_MANIFEST_H
 
-// #include <string>
+namespace manifest {
 
-bool compute_checksum( int fd, std::string & checksum );
-bool compute_file_checksum( const std::string & file_name, std::string & checksum );
+    int  getNumberFromFileName( const std::string & fileName );
+    bool validateFile( const std::string & fileName );
+    std::string FileFromLine( const std::string & manifestLine );
+    std::string ChecksumFromLine( const std::string & manifestLine );
+}
 
-const char * encode_hex( char * buf, int bufsiz, const unsigned char * data, int datalen );
-
-#endif /* _COMPUTE_CHECKSUM_H */
+#endif /* _CHECKPOINT_MANIFEST_H */

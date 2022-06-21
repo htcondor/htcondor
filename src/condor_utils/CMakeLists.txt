@@ -82,6 +82,8 @@ iso_dates.cpp
 iso_dates.h
 log_rotate.cpp
 log_rotate.h
+manifest.cpp
+manifest.h
 misc_utils.cpp
 misc_utils.h
 MyString.cpp

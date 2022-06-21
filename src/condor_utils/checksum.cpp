@@ -35,7 +35,7 @@
 // encode an unsigned character array as a null terminated hex string
 // the caller must supply an input buffer that is at least 2*datalen+1 in size
 static char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
-static const char * encode_hex(char * buf, int bufsiz, const unsigned char * data, int datalen)
+const char * encode_hex(char * buf, int bufsiz, const unsigned char * data, int datalen)
 {
     if (!buf || bufsiz < 3) return "";
     const unsigned char * d = data;
@@ -77,13 +77,10 @@ compute_checksum( int fd, std::string & checksum ) {
     memset( hash, 0, sizeof(hash) );
     SHA256_Final( hash, &context );
 
-    // FIXME: What are the extra 4 bytes for?
-    // FIXME: One extra byte for the trailing NUL, and the other 3 are
-    // probably because encode_hex() is broken and can run past the end of
-    // odd-sized arrays.
+    // Ask TJ why this is +4 instead of +1.
     char file_hash[SHA256_DIGEST_LENGTH * 2 + 4];
     encode_hex( file_hash, sizeof(file_hash), hash, sizeof(hash) );
-    checksum.assign( file_hash, sizeof(file_hash) );
+    checksum.assign( file_hash, strlen(file_hash) );
 
     if( bytesRead == -1 ) { return false; }
     return true;

@@ -47,7 +47,10 @@
 #include "credmon_interface.h"
 #include "condor_base64.h"
 #include "zkm_base64.h"
+#include "manifest.h"
+#include "checksum.h"
 
+#include <fstream>
 #include <algorithm>
 
 extern Starter *Starter;
@@ -2374,7 +2377,7 @@ JICShadow::syscall_sock_disconnect()
 			"job_lease_expired",
 			this );
 	dprintf(D_ALWAYS,
-		"Lost connection to shadow, last activity was %d secs ago, waiting %d secs for reconnect\n",
+		"Lost connection to shadow, last activity was %ld secs ago, waiting %d secs for reconnect\n",
 		(now - syscall_last_rpc_time), lease_duration);
 
 	// Close up the syscall_socket and wait for a reconnect.  
@@ -2579,6 +2582,84 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 			EXCEPT( "Failed to transfer files" );
 		}
+
+		// It's not enought to for the FTO to believe that the transfer
+		// of a checkpoint succeeded if that checkpoint wasn't transferred
+		// by CEDAR (because our file-transfer plugins don't do integrity).
+		std::string checkpointDestination;
+		if( job_ad->LookupString( "CheckpointDestination", checkpointDestination ) ) {
+			// We only generate MANIFEST files if the checkpoint wasn't
+			// stored to the spool, which is exactly the case in which
+			// we want to do this manual integrity check.
+			// (FIXME: make the above true.)
+
+			// Due to a shortcoming in the FTO, we can't send files with
+			// one name from the shadow to the starter with another, so
+			// we have to look for any file of the form `MANIFEST\.\d\d\d\d`;
+			// it is erroneous to have received more than one.
+
+			std::string manifestFileName;
+			const char * currentFile = NULL;
+			// Should this be Starter->getWorkingDir(false)?
+			Directory sandboxDirectory( "." );
+			while( (currentFile = sandboxDirectory.Next()) ) {
+				if( -1 != manifest::getNumberFromFileName( currentFile ) ) {
+					if(! manifestFileName.empty()) {
+						std::string message = "Found more than one MANIFEST file, aborting.";
+						notifyStarterError( message.c_str(), true, 0, 0 );
+						EXCEPT( message.c_str() );
+					}
+					manifestFileName = currentFile;
+				}
+			}
+
+			if(! manifestFileName.empty()) {
+
+				// This file should have been transferred via CEDAR, so this
+				// check shouldn't be necessary, but it also ensures that we
+				// haven't had a name collision with the job.
+				if(! manifest::validateFile( manifestFileName )) {
+					std::string message = "Invalid MANIFEST file, aborting.";
+					notifyStarterError( message.c_str(), true, 0, 0 );
+					EXCEPT( message.c_str() );
+				}
+
+				std::ifstream ifs( manifestFileName.c_str() );
+				if(! ifs.good() ) {
+					std::string message = "Failed to open MANIFEST, aborting.";
+					notifyStarterError( message.c_str(), true, 0, 0 );
+					EXCEPT( message.c_str() );
+				}
+
+				std::string manifestLine;
+				std::string nextManifestLine;
+				std::getline( ifs, manifestLine );
+				std::getline( ifs, nextManifestLine );
+				for( ; ifs.good(); ) {
+					std::string file = manifest::FileFromLine( manifestLine );
+					std::string listedChecksum = manifest::ChecksumFromLine( manifestLine );
+
+					std::string computedChecksum;
+					if(! compute_file_checksum( file, computedChecksum )) {
+						std::string message;
+						formatstr( message, "Failed to open checkpoint file ('%s') to compute checksum.", file.c_str() );
+						notifyStarterError( message.c_str(), true, 0, 0 );
+						EXCEPT( message.c_str() );
+					}
+
+					if( listedChecksum != computedChecksum ) {
+						std::string message;
+						formatstr( message, "Checkpoint file '%s' did not have expected checksum (%s vs %s).", file.c_str(), computedChecksum.c_str(), listedChecksum.c_str() );
+						notifyStarterError( message.c_str(), true, 0, 0 );
+						EXCEPT( message.c_str() );
+					}
+
+					manifestLine = nextManifestLine;
+					std::getline( ifs, nextManifestLine );
+				}
+			}
+		}
+
 		const char *stats = m_ft_info.tcp_stats.c_str();
 		if (strlen(stats) != 0) {
 			std::string full_stats = "(peer stats from starter): ";

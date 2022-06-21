@@ -4099,7 +4099,7 @@ FileTransfer::DoCheckpointUploadFromShadow( filesize_t * total_bytes_ptr, ReliSo
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
 
 	filelist.insert( filelist.end(), checkpointList.begin(), checkpointList.end() );
-	for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoCheckpointUploadFromShadow(), file-item after merging checkpoint list into input list: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoCheckpointUploadFromShadow(), file-item after merging checkpoint list into input list: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 
 
 	//
@@ -4118,7 +4118,7 @@ FileTransfer::DoCheckpointUploadFromShadow( filesize_t * total_bytes_ptr, ReliSo
 	int rc = computeFileList(
 	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
 	);
-	for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoCheckpointUploadFromShadow(), file-item after computing file list: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoCheckpointUploadFromShadow(), file-item after computing file list: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 	if( rc != 0 ) { return rc; }
 
 
