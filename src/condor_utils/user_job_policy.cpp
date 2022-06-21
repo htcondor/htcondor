@@ -405,18 +405,17 @@ void UserPolicy::ResetTriggers()
 }
 
 int
-UserPolicy::AnalyzePolicy(ClassAd & ad, int mode)
+UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 {
 
 	int timer_remove;
-	int state;
 
 	if (mode != PERIODIC_ONLY && mode != PERIODIC_THEN_EXIT)
 	{
 		EXCEPT("UserPolicy Error: Unknown mode in AnalyzePolicy()");
 	}
 
-	if( ! ad.LookupInteger(ATTR_JOB_STATUS,state) ) {
+	if( state < 0 && ! ad.LookupInteger(ATTR_JOB_STATUS, state) ) {
 		return UNDEFINED_EVAL;
 	}
 

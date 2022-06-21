@@ -3938,7 +3938,7 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void * pvUser)
 	UserPolicy & policy = *(UserPolicy*)pvUser;
 
 	policy.ResetTriggers();
-	int action = policy.AnalyzePolicy(*jobad, PERIODIC_ONLY);
+	int action = policy.AnalyzePolicy(*jobad, PERIODIC_ONLY, status);
 
 	// Build a "reason" string for logging
 	std::string reason;
