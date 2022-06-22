@@ -1702,49 +1702,48 @@ FileTransfer::HandleCommands(int command, Stream *s)
 						}
 					}
 				}
+			} else {
+				//
+				// It might be better to be more explicit about this, since it's
+				// possible that the job specifies ON_EXIT_OR_EVICT and that the
+				// job was evicted before uploading its first checkpoint, but for
+				// now let's just say that we don't support that.
+				//
+				bool alreadyUploadedCheckpoint = false;
+				int transferOutFinished;
+				if( transobject->jobAd.LookupInteger( "TransferOutFinished", transferOutFinished ) ) {
+					alreadyUploadedCheckpoint = true;
+				}
 
+				if( alreadyUploadedCheckpoint ) {
+					transobject->uploadCheckpointFiles = true;
+					transobject->DetermineWhichFilesToSend();
+					transobject->uploadCheckpointFiles = false;
 
-    			//
-    			// It might be better to be more explicit about this, since it's
-    			// possible that the job specifies ON_EXIT_OR_EVICT and that the
-    			// job was evicted before uploading its first checkpoint, but for
-    			// now let's just say that we don't support that.
-    			//
-    			bool alreadyUploadedCheckpoint = false;
-    			int transferOutFinished;
-    			if( transobject->jobAd.LookupInteger( "TransferOutFinished", transferOutFinished ) ) {
-    				alreadyUploadedCheckpoint = true;
-    			}
+					const char * path = NULL;
+					std::string destination_path;
+					transobject->CheckpointFiles->rewind();
+					while( (path = transobject->CheckpointFiles->next()) != NULL ) {
 
-    			if( alreadyUploadedCheckpoint ) {
-    				transobject->uploadCheckpointFiles = true;
-    				transobject->DetermineWhichFilesToSend();
-    				transobject->uploadCheckpointFiles = false;
+						//
+						// If ATTRS_JOB_OUTPUT or ATTR_JOB_ERROR are set to real
+						// files, the shadow (in jic_shadow.cpp) resets them to
+						// Std[out|err]RemapName, and the shadow inserts a remap
+						// to the real file names for the final transfer.  Since
+						// this isn't the final transfer, the remaps aren't set,
+						// and we have to do this by hand.
+						//
+						if( strcmp(path, transobject->JobStdoutFile.c_str()) == 0 ) {
+							path = StdoutRemapName;
+						} else if( strcmp(path, transobject->JobStderrFile.c_str()) == 0 ) {
+							path = StderrRemapName;
+						}
 
-    				const char * path = NULL;
-    				std::string destination_path;
-    				transobject->CheckpointFiles->rewind();
-    				while( (path = transobject->CheckpointFiles->next()) != NULL ) {
-
-    					//
-    					// If ATTRS_JOB_OUTPUT or ATTR_JOB_ERROR are set to real
-    					// files, the shadow (in jic_shadow.cpp) resets them to
-    					// Std[out|err]RemapName, and the shadow inserts a remap
-    					// to the real file names for the final transfer.  Since
-    					// this isn't the final transfer, the remaps aren't set,
-    					// and we have to do this by hand.
-    					//
-    					if( strcmp(path, transobject->JobStdoutFile.c_str()) == 0 ) {
-    						path = StdoutRemapName;
-    					} else if( strcmp(path, transobject->JobStderrFile.c_str()) == 0 ) {
-    						path = StderrRemapName;
-    					}
-
-    					formatstr( destination_path, "%s/%s", checkpointDestination.c_str(), path );
-    					dprintf( D_FULLDEBUG, "Adding %s as checkpoint file\n", destination_path.c_str() );
-    					transobject->InputFiles->append( destination_path.c_str() );
-    				}
-    			}
+						formatstr( destination_path, "%s/%s", checkpointDestination.c_str(), path );
+						dprintf( D_FULLDEBUG, "Adding %s as checkpoint file\n", destination_path.c_str() );
+						transobject->InputFiles->append( destination_path.c_str() );
+					}
+				}
 			}
 
 			// Similarly, we want to look through any data reuse file and treat them as input
@@ -3962,9 +3961,6 @@ createCheckpointManifest(
 	// with a scope guard; explicitly call deallocator on success to ensure
 	// that the scope is what we want.
 	//
-	// FIXME: do NOT produce a MANIFEST file if checkpointDestination is
-	// not set -- if we're storing to SPOOL, we don't need one.
-	//
 	std::string manifestText;
 	for( auto & fileitem : filelist ) {
 		// FIXME: IIRC, we transfer symlinks as is, so we'll need for
@@ -4058,7 +4054,7 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 	if( rc != 0 ) { return rc; }
 
 
-	{
+    if(! checkpointDestination.empty()) {
 		priv_state saved_priv = PRIV_UNKNOWN;
 		if( want_priv_change ) {
 			saved_priv = set_priv( desired_priv_state );

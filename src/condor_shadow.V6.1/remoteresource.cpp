@@ -2222,9 +2222,6 @@ RemoteResource::initFileTransfer()
 	// starter to fetch.
 	//
 
-	// FIXME (somewhere else): only send MANIFEST files if we're setting a
-	// checkpoint destination.
-
 	std::string checkpointDestination;
 	if(! jobAd->LookupString( "CheckpointDestination", checkpointDestination )) {
 		return;

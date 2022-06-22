@@ -2591,7 +2591,6 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 			// We only generate MANIFEST files if the checkpoint wasn't
 			// stored to the spool, which is exactly the case in which
 			// we want to do this manual integrity check.
-			// (FIXME: make the above true.)
 
 			// Due to a shortcoming in the FTO, we can't send files with
 			// one name from the shadow to the starter with another, so
