@@ -108,18 +108,50 @@ signalName( int sig )
 
 #else /* WIN32 */
 
+// these should match condor_sys_nt.h
+static const char * const SignalNameTable[] = {
+	"SIGHUP",    /* 1 Hangup (POSIX).  */
+	"SIGINT",    /* 2 Interrupt (ANSI).  */
+	"SIGQUIT",   /* 3 Quit (POSIX).  */
+	"SIGILL",    /* 4 Illegal instruction (ANSI).  */
+	"SIGTRAP",   /* 5 Trace trap (POSIX).  */
+	"SIGABRT",   /* 6 Abort (ANSI).  */
+	"SIGBUS",    /* 7 BUS error (4.2 BSD).  */
+	"SIGFPE",    /* 8 Floating-point exception (ANSI).  */
+	"SIGKILL",   /* 9 Kill, unblockable (POSIX).  */
+	"SIGUSR1",   /* 10 User-defined signal 1 (POSIX).  */
+	"SIGSEGV",   /* 11 Segmentation violation (ANSI).  */
+	"SIGUSR2",   /* 12 User-defined signal 2 (POSIX).  */
+	"SIGPIPE",   /* 13 Broken pipe (POSIX).  */
+	"SIGALRM",   /* 14 Alarm clock (POSIX).  */
+	"SIGTERM",   /* 15 Termination (ANSI).  */
+	"SIGSTKFLT", /* 16 Stack fault.  */
+	"SIGCHLD",   /* 17 Child status has changed (POSIX).  */
+	"SIGCONT",   /* 18 Continue (POSIX).  */
+	"SIGSTOP",   /* 19 Stop, unblockable (POSIX).  */
+	"SIGTSTP",   /* 20 Keyboard stop (POSIX).  */
+};
+static const int SignalNameTable_min = SIGHUP;
+static const int SignalNameTable_max = SIGTSTP;
 
 int
-signalNumber( const char* )
+signalNumber( const char* signame)
 {
+	for (int sig = SignalNameTable_min; sig <= SignalNameTable_max; ++sig) {
+		if (MATCH == strcmp(signame, SignalNameTable[sig - SignalNameTable_min])) {
+			return sig;
+		}
+	}
 	return -1;
 }
 
 
 const char*
-signalName( int )
+signalName(int sig)
 {
-	return NULL;
+	if (sig >= SignalNameTable_min && sig <= SignalNameTable_max)
+		return SignalNameTable[sig - SignalNameTable_min];
+	return nullptr;
 }
 
 #endif /* WIN32 */
