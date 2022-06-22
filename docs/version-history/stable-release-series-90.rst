@@ -24,7 +24,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug on Windows that caused a misleading error message about
+  the SharedPortEndpoint when a daemon exits.
+  :jira:`1178`
 
 .. _lts-version-history-9014:
 
