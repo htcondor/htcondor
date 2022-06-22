@@ -25,6 +25,10 @@ New Features:
   level authorization.
   :jira:`1164`
 
+- Singularity jobs now mount /tmp and /var/tmp under the scratch
+  directory, not in tmpfs
+  :jira:`1180`
+
 Bugs Fixed:
 
 - None.
