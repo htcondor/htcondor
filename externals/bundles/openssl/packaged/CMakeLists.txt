@@ -21,20 +21,10 @@ if (APPLE)
 
 	exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE MACOS_PRODUCT_VER)
 
-	# On very old MacOS's we can use openssl, but we need to install it ourselves
-	if (${MACOS_PRODUCT_VER} VERSION_LESS "10.13")
-		FetchContent_declare(
-			openssldarwin
-			URL ${EXTERNALS_SOURCE_URL}/openssl-darwin.tar.gz
-		)
-		FetchContent_MakeAvailable(openssldarwin)
-		set_target_properties(openssl PROPERTIES IMPORTED_LOCATION "${openssldarwin-source-dir}/lib/libssl.dylib")
-		set_target_properties(crypto PROPERTIES IMPORTED_LOCATION  "${openssldarwin-source-dir}/lib/libcrypto.dylib")
-		target_include_directories(crypto INTERFACE "${openssldarwin-source-dir}/include")
-
-	# Otherwise, copy the libressl header files that we took from an older macos and use it to build
-	# copying the on-the-host shared libraries into our source directory
-	elseif (${MACOS_PRODUCT_VER} VERSION_LESS "10.20")
+	# On older macOS verions, copy the libressl header files that
+	# we took from a previous macos and use it to build,
+	# symlinking the on-the-host shared libraries into our source directory
+	if (${MACOS_PRODUCT_VER} VERSION_LESS "10.20")
 		FetchContent_declare(
 			libressl_headers_darwin
 			URL ${EXTERNALS_SOURCE_URL}/libressl-2.8.3.tar.gz
@@ -48,11 +38,14 @@ if (APPLE)
 
 		target_include_directories(openssl INTERFACE "${libressl_headers_darwin_SOURCE_DIR}/include")
 	else()
-		# Fetch the whole tarball, then delete the CMakeLists.txt so we don't try to build it
+		# Fetch the whole source tarball, then delete the
+		# CMakeLists.txt so we don't try to build it
+		# Then download a copy of the dynamic libraries to
+		# link against.
 		FetchContent_declare(
 			libressl_headers_darwin
 			URL ${EXTERNALS_SOURCE_URL}/libressl-2.8.3.tar.gz
-			PATCH_COMMAND /bin/rm -f "${CMAKE_BINARY_DIR}/_deps/libressl_headers_darwin-src/CMakeLists.txt"
+			PATCH_COMMAND /bin/rm -f "${CMAKE_BINARY_DIR}/_deps/libressl_headers_darwin-src/CMakeLists.txt" && ln -s ../libressl_libs_darwin-src/lib "${CMAKE_BINARY_DIR}/_deps/libressl_headers_darwin-src/lib"
 		)
 
 		# then fetch the libressl libraries from an earlier macos
