@@ -5165,7 +5165,9 @@ These macros control the *condor_schedd*.
     local *condor_startd*. This allows for a machine that is acting as
     both a submit and execute node to run jobs locally if it cannot
     communicate with the central manager. The default value, if not
-    specified, is 1200 (20 minutes).
+    specified, is 2,000,000 seconds (effectively never).  If this
+    feature is desired, we recommend setting it to some small multiple
+    of the negotiation cycle, say, 1200 seconds, or 20 minutes.
 
 .. _GRACEFULLY_REMOVE_JOBS:
 
