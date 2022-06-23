@@ -25,6 +25,12 @@ New Features:
   level authorization.
   :jira:`1164`
 
+- The default value for ``SCHEDD_ASSUME_NEGOTIATOR_GONE`` has been changed 
+  from 20 minutes to a practically infinite value.  This is to prevent
+  surprises when the schedd starts running vanilla universe jobs even when
+  the admin has intentionally stopped the negotiator.
+  :jira:`1185`
+
 Bugs Fixed:
 
 - None.

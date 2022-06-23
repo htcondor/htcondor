@@ -3135,6 +3135,12 @@ type=bool
 tags=schedd
 description=Set to false to have Schedd refuse late materialization submits
 
+[SCHEDD_ASSUME_NEGOTIATOR_GONE]
+default=2000000000
+type=int
+tags=schedd
+description=
+
 [SCHEDD_NON_DURABLE_LATE_MATERIALIZE]
 default=true
 type=bool
