@@ -1702,48 +1702,6 @@ FileTransfer::HandleCommands(int command, Stream *s)
 						}
 					}
 				}
-			} else {
-				//
-				// It might be better to be more explicit about this, since it's
-				// possible that the job specifies ON_EXIT_OR_EVICT and that the
-				// job was evicted before uploading its first checkpoint, but for
-				// now let's just say that we don't support that.
-				//
-				bool alreadyUploadedCheckpoint = false;
-				int transferOutFinished;
-				if( transobject->jobAd.LookupInteger( "TransferOutFinished", transferOutFinished ) ) {
-					alreadyUploadedCheckpoint = true;
-				}
-
-				if( alreadyUploadedCheckpoint ) {
-					transobject->uploadCheckpointFiles = true;
-					transobject->DetermineWhichFilesToSend();
-					transobject->uploadCheckpointFiles = false;
-
-					const char * path = NULL;
-					std::string destination_path;
-					transobject->CheckpointFiles->rewind();
-					while( (path = transobject->CheckpointFiles->next()) != NULL ) {
-
-						//
-						// If ATTRS_JOB_OUTPUT or ATTR_JOB_ERROR are set to real
-						// files, the shadow (in jic_shadow.cpp) resets them to
-						// Std[out|err]RemapName, and the shadow inserts a remap
-						// to the real file names for the final transfer.  Since
-						// this isn't the final transfer, the remaps aren't set,
-						// and we have to do this by hand.
-						//
-						if( strcmp(path, transobject->JobStdoutFile.c_str()) == 0 ) {
-							path = StdoutRemapName;
-						} else if( strcmp(path, transobject->JobStderrFile.c_str()) == 0 ) {
-							path = StderrRemapName;
-						}
-
-						formatstr( destination_path, "%s/%s", checkpointDestination.c_str(), path );
-						dprintf( D_FULLDEBUG, "Adding %s as checkpoint file\n", destination_path.c_str() );
-						transobject->InputFiles->append( destination_path.c_str() );
-					}
-				}
 			}
 
 			// Similarly, we want to look through any data reuse file and treat them as input
@@ -4104,9 +4062,8 @@ FileTransfer::DoCheckpointUploadFromShadow( filesize_t * total_bytes_ptr, ReliSo
 	// destination directory for those URLs, the de-duplication code will
 	// be able to detect duplicates against input file.
 	//
-	// FIXME: this assumes that both inputList and checkpointList already
-	// include the directory-creation entries they need, which is
-	// a blatant lie.
+	// (That is, files in the input list shouldn't be transferred if they'll
+	//  end up being overwritten by files in the checkpoint list.)
 	//
 	// FIXME: if the user checkpoints their executable, uploadFileList()
 	// won't rename it.
@@ -4175,7 +4132,7 @@ FileTransfer::computeFileList(
 	bool preserveRelativePaths = false;
 	jobAd.LookupBool( ATTR_PRESERVE_RELATIVE_PATHS, preserveRelativePaths );
 
-	// dprintf( D_ALWAYS, ">>> DoUpload(), before ExpandFileTransferList(): InputFiles = %s\n", FilesToSend->to_string().c_str() );
+	// dprintf( D_ALWAYS, ">>> DoUpload(), before ExpandFileTransferList(): FilesToSend = %s\n", FilesToSend->to_string().c_str() );
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
 	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after ExpandFileTransferList(): %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 
@@ -6781,10 +6738,8 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 	return rc;
 }
 
-bool
-FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, FileTransferList &expanded_list, const char * SpoolSpace, std::set<std::string> & pathsAlreadyPreserved ) {
-	// dprintf( D_ALWAYS, ">>> ExpandParentDirectories( %s, %s, ...)\n", src_path, iwd );
-
+std::vector<std::string>
+split_path( const char * src_path ) {
 	// Fill a stack with path components from right to left.
 	std::string dir, file;
 	std::string path( src_path );
@@ -6798,6 +6753,15 @@ FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, 
 	}
 	// dprintf( D_ALWAYS, ">>> found root path-component %s\n", file.c_str() );
 	splitPath.emplace_back( file );
+
+	return splitPath;
+}
+
+bool
+FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, FileTransferList &expanded_list, const char * SpoolSpace, std::set<std::string> & pathsAlreadyPreserved ) {
+	// dprintf( D_ALWAYS, ">>> ExpandParentDirectories( %s, %s, ...)\n", src_path, iwd );
+
+	std::vector< std::string > splitPath = split_path(src_path);
 
 	// Empty the stack to add directories from the root down.  Note
 	// that the "parent" directory is always empty, because src_path
@@ -7310,11 +7274,28 @@ FileTransfer::addSandboxRelativePath(
 	const std::string & destination,
 	FileTransferList & ftl
 ) {
+// dprintf( D_ALWAYS, "%s -> %s\n", source.c_str(), destination.c_str() );
+	std::vector< std::string > splitPath = split_path( destination.c_str() );
+
+	std::string parent;
+	while( splitPath.size() > 1 ) {
+		std::string partialPath = parent;
+		if( partialPath.length() > 0 ) {
+			partialPath += DIR_DELIM_CHAR;
+		}
+		partialPath += splitPath.back(); splitPath.pop_back();
+
+		FileTransferItem fti;
+		fti.setSrcName( partialPath.c_str() );
+		fti.setDestDir( parent.c_str() );
+		fti.setDirectory( true );
+		ftl.emplace_back( fti );
+
+		parent = partialPath;
+	}
+
 	FileTransferItem fti;
 	fti.setSrcName( source );
-	// FIXME: Also add the necessary preceeding directory-creation entries.
-	// ExpandParentDirectories() will do the trick.
-
 	// At some point, we'd like to be able to store target _name_, too.
 	fti.setDestDir( condor_dirname( destination.c_str() ) );
 	ftl.emplace_back(fti);
