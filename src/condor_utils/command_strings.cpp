@@ -22,6 +22,7 @@
 #include "command_strings.h"
 #include "condor_perms.h"
 #include <map>
+#include <algorithm>
 
 #define USE_GENERATED_CMD_TABLES
 #ifdef USE_GENERATED_CMD_TABLES
@@ -385,15 +386,21 @@ const T * BinaryLookupFromIndex (const int aIndex[], const T aTable[], int cElms
 	}
 }
 
+static constexpr auto getSortedTable_DCTranslation() {
+	auto arrTable = std::to_array(DCTranslation);
+	std::sort(arrTable.begin(), arrTable.end(),
+		[](const BTranslation& e1, const BTranslation& e2) { return strcmp(e1.name, e2.name) < 0; });
+	return arrTable;
+}
 
-const char * getCommandString(int id)
-{
-	const BTranslation * ptr = BinaryLookup(
-			DCTranslation,
-			DCTranslation_count,
-			id);
-	if (ptr) return ptr->name;
-	return NULL;
+static constexpr auto DCTranslation_sorted = getSortedTable_DCTranslation();
+
+static_assert(DCTranslation_sorted[8].id == CA_CMD);
+
+const char * getCommandString(int id) {
+    auto iter = std::lower_bound(DCTranslation_sorted.begin(), DCTranslation_sorted.end(), id,
+		[](const BTranslation& e, int _id) { return e.id < _id; });
+	return (iter != DCTranslation_sorted.end()) ? iter->name : NULL;
 }
 
 int getCommandNum(const char * name)
