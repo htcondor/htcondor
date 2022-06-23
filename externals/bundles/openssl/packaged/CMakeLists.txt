@@ -56,10 +56,17 @@ if (APPLE)
 		)
 
 		# then fetch the libressl libraries from an earlier macos
-		FetchContent_declare(
-			libressl_libs_darwin
-			URL ${EXTERNALS_SOURCE_URL}/libressl_libs-2.8.3.tar.gz
-		)
+		if (${SYS_ARCH} STREQUAL "ARM64")
+			FetchContent_declare(
+				libressl_libs_darwin
+				URL ${EXTERNALS_SOURCE_URL}/libressl_libs_arm64-2.8.3.tar.gz
+			)
+		else()
+			FetchContent_declare(
+				libressl_libs_darwin
+				URL ${EXTERNALS_SOURCE_URL}/libressl_libs-2.8.3.tar.gz
+			)
+		endif()
 		FetchContent_MakeAvailable(libressl_headers_darwin libressl_libs_darwin)
 
 		set_target_properties(openssl PROPERTIES IMPORTED_LOCATION "${libressl_libs_darwin_SOURCE_DIR}/lib/libssl.dylib")
