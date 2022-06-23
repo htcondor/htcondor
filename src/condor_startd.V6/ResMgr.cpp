@@ -2417,7 +2417,7 @@ ResMgr::check_use( void )
 				 "No resources have been claimed for %d seconds\n",
 				 startd_noclaim_shutdown );
 		dprintf( D_ALWAYS, "Shutting down Condor on this machine.\n" );
-		daemonCore->Send_Signal( daemonCore->getppid(), SIGTERM );
+		daemonCore->Signal_Myself(SIGTERM);
 	}
 }
 

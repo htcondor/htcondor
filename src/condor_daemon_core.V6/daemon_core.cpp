@@ -4898,6 +4898,8 @@ char const *DCSignalMsg::signalName() const
 
 bool DaemonCore::Send_Signal(pid_t pid, int sig)
 {
+	if (pid == mypid) return Signal_Myself(sig);
+
 	classy_counted_ptr<DCSignalMsg> msg = new DCSignalMsg(pid,sig);
 	Send_Signal(msg, false);
 
@@ -4930,15 +4932,90 @@ void DaemonCore::Send_Signal_nonblocking(classy_counted_ptr<DCSignalMsg> msg) {
 	}
 }
 
+// Send a "signal" to this process without using any external
+// mechanism such as opening a socket.  For most signals it
+// mark the DC signal handler as HOT.  for KILL, STOP or CONT it
+// calls the appropriate OS function on the current process.
+// As a special case on Windows, SIGKILL here will cause the process
+// to exit with SIGKILL as the exit code.
+//
+// This method is (mostly) thread safe on Windows if called after the signal
+// handlers have been registered
+//
+bool DaemonCore::Signal_Myself(int sig)
+{
+	// handle the "special" action signals which are really just telling
+	// DaemonCore to do something.
+	switch (sig) {
+		case SIGKILL:
+			#ifdef WIN32
+				if (dcmainThreadId == ::GetCurrentThreadId()) {
+					DC_Exit(SIGKILL);
+					return true;
+				}
+				// handle the case of other threads ?
+			#else
+				return Shutdown_Fast(mypid);
+			#endif
+			return false;
+
+		case SIGSTOP:
+			#ifdef WIN32
+				// there is no SuspendProcess on Windows, only suspend thread
+				::SuspendThread(::GetCurrentThread());
+				return true;
+			#else
+				return Suspend_Process(mypid);
+			#endif
+			return false;
+
+		case SIGCONT:
+			return false;
+	}
+
+#ifdef WIN32
+	if (dcmainThreadId != ::GetCurrentThreadId()) {
+		// we aren't the main thread, so we can't manipulate daemon core objects
+		// so register a pump work callback to do that for us instead.
+		Register_PumpWork_TS(
+			[](void*pv, void* data) -> int {
+				((DaemonCore*)pv)->Signal_Myself((int)(long long)data);
+				return 0;
+			}, this, (void*)(long long)sig);
+		return true;
+	}
+#endif
+
+	// when the signal is being sent to ourselves (i.e. this process), then just twiddle
+	// the signal table and set sent_signal to TRUE.  sent_signal is used by the
+	// Driver() to ensure that a signal raised from inside a signal handler is
+	// indeed delivered.
+	if (HandleSig(_DC_RAISESIGNAL, sig)) {
+		sent_signal = TRUE;
+	#ifdef WIN32
+	#else
+		// On UNIX, if async_sigs_unblocked == TRUE, we are being invoked
+		// from inside of a unix signal handler.  So we also need to write
+		// something to the async_pipe.  It does not matter what we write,
+		// we just need to write something to ensure that the
+		// select() in Driver() does not block.
+		if (async_sigs_unblocked == TRUE) {
+			full_write(async_pipe[1], "!", 1);
+		}
+	#endif
+		return true;
+	}
+	return false;
+}
+
 void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocking)
 {
 	pid_t pid = msg->thePid();
 	int sig = msg->theSignal();
 	PidEntry * pidinfo = NULL;
-	int same_thread = FALSE;
 	int is_local = FALSE;
 	char const *destination = NULL;
-	int target_has_dcpm = TRUE;		// is process pid a daemon core process?
+	bool target_has_dcpm = true; // is process pid a daemon core process?
 
 	// sanity check on the pid.  we don't want to do something silly like
 	// kill pid -1 because the pid has not been initialized yet.
@@ -4947,45 +5024,34 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 		EXCEPT("Send_Signal: sent unsafe pid (%d)",signed_pid);
 	}
 
-	// First, if not sending a signal to ourselves, lookup the PidEntry struct
+	// if the destination is me, just invoke the me-signalling function
+	// just in case callers are still using this function for self-signalling
+	if (pid == mypid) {
+		if (Signal_Myself(sig)) {
+			msg->deliveryStatus(DCMsg::DELIVERY_SUCCEEDED);
+		} else {
+			msg->deliveryStatus(DCMsg::DELIVERY_FAILED);
+		}
+		return;
+	}
+
+	// First lookup the PidEntry struct
 	// so we can determine if our child is a daemon core process or not.
-	if ( pid != mypid ) {
-		if ( pidTable->lookup(pid,pidinfo) < 0 ) {
-			// we did not find this pid in our hashtable
-			pidinfo = NULL;
-			target_has_dcpm = FALSE;
-		}
-		if ( pidinfo && pidinfo->sinful_string[0] == '\0' ) {
-			// process pid found in our table, but does not
-			// our table says it does _not_ have a command socket
-			target_has_dcpm = FALSE;
-		}
+	if ( pidTable->lookup(pid,pidinfo) < 0 ) {
+		// we did not find this pid in our hashtable
+		pidinfo = NULL;
+		target_has_dcpm = false;
+	}
+	if ( pidinfo && pidinfo->sinful_string[0] == '\0' ) {
+		// process pid found in our table, but does not
+		// our table says it does _not_ have a command socket
+		target_has_dcpm = false;
 	}
 
 	if( ProcessExitedButNotReaped(pid) ) {
 		msg->deliveryStatus( DCMsg::DELIVERY_FAILED );
 		dprintf(D_ALWAYS,"Send_Signal: attempt to send signal %d to process %d, which has exited but not yet been reaped.\n",sig,pid);
 		return;
-	}
-
-	// if we're using priv sep, we may not have permission to send signals
-	// to our child processes; ask the ProcD to do it for us
-	//
-	if (param_boolean("GLEXEC_JOB", false)) {
-		if (!target_has_dcpm && pidinfo && pidinfo->new_process_group) {
-			ASSERT(m_proc_family != NULL);
-			bool ok =  m_proc_family->signal_process(pid, sig);
-			if (ok) {
-				// set flag for success
-				msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
-			} else {
-				dprintf(D_ALWAYS,
-				        "error using procd to send signal %d to pid %u\n",
-				        sig,
-				        pid);
-			}
-			return;
-		}
 	}
 
 	// handle the "special" action signals which are really just telling
@@ -5016,7 +5082,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 				// signal.  Under UNIX, we just use the default logic
 				// below to determine whether we should send a UNIX
 				// SIGTERM or a DC signal.
-			if ( pid != mypid && target_has_dcpm == FALSE ) {
+			if ( ! target_has_dcpm) {
 				dprintf(D_ALWAYS, "Send_Signal SIGTERM to pid %d using Shutdown_Graceful\n", pid);
 				if( Shutdown_Graceful(pid) ) {
 					msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
@@ -5028,16 +5094,10 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 		default: {
 #ifndef WIN32
 			bool use_kill = false;
-			if( pid == mypid ) {
-					// Never never send unix signals directly to self,
-					// because the signal handlers all just turn around
-					// and call Send_Signal() again.
-				use_kill = false;
-			}
-			else if( target_has_dcpm == FALSE ) {
+			if( ! target_has_dcpm) {
 				use_kill = true;
 			}
-			else if( target_has_dcpm == TRUE && ! m_never_use_kill_for_dc_signals &&
+			else if( ! m_never_use_kill_for_dc_signals &&
 			         (sig == SIGUSR1 || sig == SIGUSR2 || sig == SIGQUIT ||
 			          sig == SIGTERM || sig == SIGHUP) )
 			{
@@ -5067,7 +5127,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 				if (status >= 0) {
 					msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
 				}
-				else if( target_has_dcpm == TRUE ) {
+				else if(target_has_dcpm) {
 						// kill() failed.  Fall back on a UDP message.
 					dprintf(D_ALWAYS,"Send_Signal error: kill(%d,%d) failed: errno=%d %s\n",
 							pid,sig,errno,strerror(errno));
@@ -5080,70 +5140,19 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 		}
 	}
 
-	// a Signal is sent via UDP if going to a different process or
-	// thread on the same machine.  it is sent via TCP if going to
-	// a process on a remote machine.  if the signal is being sent
-	// to ourselves (i.e. this process), then just twiddle
-	// the signal table and set sent_signal to TRUE.  sent_signal is used by the
-	// Driver() to ensure that a signal raised from inside a signal handler is
-	// indeed delivered.
-
-#ifdef WIN32
-	if ( dcmainThreadId == ::GetCurrentThreadId() )
-		same_thread = TRUE;
-	else
-		same_thread = FALSE;
-#else
-	// On Unix, we only support one thread inside daemons for now...
-	same_thread = TRUE;
-#endif
-
-	// handle the case of sending a signal to the same process
-	if ( pid == mypid ) {
-		if ( same_thread == TRUE ) {
-			// send signal to ourselves, same process & thread.
-			// no need to go via UDP/TCP, just call HandleSig directly.
-			HandleSig(_DC_RAISESIGNAL,sig);
-			sent_signal = TRUE;
-#ifndef WIN32
-			// On UNIX, if async_sigs_unblocked == TRUE, we are being invoked
-			// from inside of a unix signal handler.  So we also need to write
-			// something to the async_pipe.  It does not matter what we write,
-			// we just need to write something to ensure that the
-			// select() in Driver() does not block.
-			if ( async_sigs_unblocked == TRUE ) {
-				full_write(async_pipe[1],"!",1);
-			}
-#endif
-			msg->deliveryStatus( DCMsg::DELIVERY_SUCCEEDED );
-			return;
-		} 
-
-// Only support multithreads on Windows
-#ifdef WIN32
-		else {
-			// send signal to same process, different thread.
-			// we will still need to go out via UDP so that our call
-			// to select() returns.
-			destination = InfoCommandSinfulString();
-			is_local = TRUE;
-		}
-#endif
-	}
-
+	// a Signal is sent via UDP if going to a different process
+	// it is sent via TCP if going to a process on a remote machine.
 	// handle case of sending to a child process; get info on this pid
-	if ( pid != mypid ) {
-		if ( target_has_dcpm == FALSE || pidinfo == NULL) {
-			// this child process does not have a command socket
-			dprintf(D_ALWAYS,
-				"Send_Signal: ERROR Attempt to send signal %d to pid %d, but pid %d has no command socket\n",
-				sig,pid,pid);
-			return;
-		}
-
-		is_local = pidinfo->is_local;
-		destination = pidinfo->sinful_string.c_str();
+	if ( ! target_has_dcpm || ! pidinfo) {
+		// this child process does not have a command socket
+		dprintf(D_ALWAYS,
+			"Send_Signal: ERROR Attempt to send signal %d to pid %d, but pid %d has no command socket\n",
+			sig,pid,pid);
+		return;
 	}
+
+	is_local = pidinfo->is_local;
+	destination = pidinfo->sinful_string.c_str();
 
 	classy_counted_ptr<Daemon> d = new Daemon( DT_ANY, destination );
 
@@ -9485,7 +9494,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 		wait_entry.exit_status = status;
 		WaitpidQueue.push_back(wait_entry);
 		if (first_time) {
-			Send_Signal( mypid, DC_SERVICEWAITPIDS );
+			Signal_Myself(DC_SERVICEWAITPIDS);
 			first_time = false;
 		}
 
@@ -9521,7 +9530,7 @@ DaemonCore::HandleDC_SERVICEWAITPIDS(int)
 	// repost the DC_SERVICEWAITPIDS signal so we'll eventually
 	// come back here and service the next entry.
 	if ( !WaitpidQueue.empty() ) {
-		Send_Signal( mypid, DC_SERVICEWAITPIDS );
+		Signal_Myself(DC_SERVICEWAITPIDS);
 	}
 
 	return TRUE;
@@ -9992,7 +10001,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 		dprintf(D_ALWAYS,
 				"Our parent process (pid %lu) exited; shutting down fast\n",
 				(unsigned long)pid);
-		Send_Signal(mypid,SIGQUIT);	// SIGQUIT means shutdown fast
+		Signal_Myself(SIGQUIT);	// SIGQUIT means shutdown fast
 	}
 
 	return TRUE;
@@ -11073,14 +11082,14 @@ void DaemonCore::beginDaemonRestart(bool fast /* = false*/, bool restart /*= tru
 		if ( ! restart) m_wants_restart = false;
 		if ( ! m_in_daemon_shutdown_fast) {
 			m_in_daemon_shutdown_fast = true;
-			daemonCore->Send_Signal(daemonCore->getpid(), SIGQUIT);
+			daemonCore->Signal_Myself(SIGQUIT);
 		}
 	} else {
 		// turning off restart is 'sticky' since always defaults to true on daemon startup
 		if ( ! restart) m_wants_restart = false;
 		if ( ! m_in_daemon_shutdown_fast && ! m_in_daemon_shutdown) {
 			m_in_daemon_shutdown = true;
-			daemonCore->Send_Signal(daemonCore->getpid(), SIGTERM);
+			daemonCore->Signal_Myself(SIGTERM);
 		}
 	}
 }

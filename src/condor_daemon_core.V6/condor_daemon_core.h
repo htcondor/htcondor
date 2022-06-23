@@ -774,6 +774,7 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     bool Send_Signal (pid_t pid, int sig);
+    bool Signal_Myself(int sig);
 
 	/**  Send a signal to a process, as a nonblocking operation.
 		 If the caller cares about the success/failure status, this
