@@ -3896,8 +3896,9 @@ DedicatedScheduler::holdAllDedicatedJobs( void )
 	for( i=0; i<last_cluster; i++ ) {
 		cluster = (*idle_clusters)[i];
 		holdJob( cluster, 0, 
-				 "No condor_shadow installed that supports MPI jobs",
-				 true, true, true, should_notify_admin );
+		         "No condor_shadow installed that supports MPI jobs",
+		         CONDOR_HOLD_CODE::NoCompatibleShadow, 0, false,
+		         false, should_notify_admin );
 		if( should_notify_admin ) {
 				// only send email to the admin once per lifetime of
 				// the schedd, so we don't swamp them w/ email...

@@ -3752,7 +3752,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 #endif
 				holdJob(job_id.cluster, job_id.proc, msg.c_str(), 
 						CONDOR_HOLD_CODE::FailedToAccessUserAccount, 0,
-					false, true, false, false);
+					false, true);
 				return;
 			}
 			int kill_sig = -1;
@@ -3937,7 +3937,7 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void * pvUser)
 	UserPolicy & policy = *(UserPolicy*)pvUser;
 
 	policy.ResetTriggers();
-	int action = policy.AnalyzePolicy(*jobad, PERIODIC_ONLY);
+	int action = policy.AnalyzePolicy(*jobad, PERIODIC_ONLY, status);
 
 	// Build a "reason" string for logging
 	std::string reason;
@@ -6009,8 +6009,8 @@ Scheduler::actOnJobs(int, Stream* s)
 				ATTR_JOB_STATUS_ON_RELEASE,REMOVED);
 			break;
 		case JA_HOLD_JOBS:
-				// Don't hold held/removed/completed jobs (but do match cluster ads - so late materialization works)
-			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d && %s!=%d && %s!=%d)) && (", ATTR_JOB_STATUS, HELD, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, COMPLETED );
+				// Don't hold removed/completed jobs (but do match cluster ads - so late materialization works)
+			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d && %s!=%d)) && (", ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, COMPLETED );
 			break;
 		case JA_RELEASE_JOBS:
 				// Only release held jobs which aren't waiting for
@@ -6240,9 +6240,14 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		case JA_HOLD_JOBS:
 			if( status == HELD ) {
-				results.record( tmp_id, AR_ALREADY_DONE );
-				jobs[i].cluster = -1;
-				continue;
+				int hold_code = 0;
+				GetAttributeInt(tmp_id.cluster, tmp_id.proc,
+				                ATTR_HOLD_REASON_CODE, &hold_code);
+				if( hold_code == CONDOR_HOLD_CODE::UserRequest || hold_code == CONDOR_HOLD_CODE::SpoolingInput ) {
+					results.record( tmp_id, AR_ALREADY_DONE );
+					jobs[i].cluster = -1;
+					continue;
+				}
 			}
 			if ( status == REMOVED || status == COMPLETED )
 			{
@@ -9893,7 +9898,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 				 job_id->proc );
 		holdJob( job_id->cluster, job_id->proc,
 				 "No condor_starter installed that supports local universe",
-				 CONDOR_HOLD_CODE::NoCompatibleShadow, 0,
+				 CONDOR_HOLD_CODE::NoCompatibleShadow, 0, false,
 				 false, notify_admin, true );
 		delete_shadow_rec( srec );
 		notify_admin = false;
@@ -10135,7 +10140,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 #endif
 		holdJob(job_id->cluster, job_id->proc, tmpstr.c_str(),
 				CONDOR_HOLD_CODE::FailedToAccessUserAccount, 0,
-				false, true, false, false);
+				false, true);
 		goto wrapup;
 	}
 
@@ -10164,7 +10169,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			holdJob(job_id->cluster, job_id->proc, 
 				"Spooled executable is not executable!",
 					CONDOR_HOLD_CODE::FailedToCreateProcess, EACCES,
-				false, true, false, false );
+				false, true);
 
 			delete filestat;
 			filestat = NULL;
@@ -10189,7 +10194,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			holdJob(job_id->cluster, job_id->proc, 
 				"Executable unknown - not specified in job ad!",
 					CONDOR_HOLD_CODE::FailedToCreateProcess, ENOENT,
-				false, true, false, false );
+				false, true);
 			goto wrapup;
 		}
 
@@ -10213,7 +10218,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			set_priv( priv );  // back to regular privs...
 			holdJob(job_id->cluster, job_id->proc, tmpstr.c_str(),
 					CONDOR_HOLD_CODE::FailedToCreateProcess, EACCES,
-					false, true, false, false);
+					false, true);
 			goto wrapup;
 		}
 	}
@@ -15685,9 +15690,19 @@ holdJobRaw( int cluster, int proc, const char* reason,
 		return false;
 	}
 	if( status == HELD ) {
-		dprintf( D_ALWAYS, "Job %d.%d is already on hold\n",
-				 cluster, proc );
-		return false;
+		// Allow a held job's reason code to be changed to UserRequest
+		int old_reason_code = 0;
+		if( reason_code == CONDOR_HOLD_CODE::UserRequest ) {
+			GetAttributeInt(cluster, proc, ATTR_HOLD_REASON_CODE, &old_reason_code);
+		}
+		if( old_reason_code == CONDOR_HOLD_CODE::UserRequest ||
+		    old_reason_code == CONDOR_HOLD_CODE::SpoolingInput ||
+		    reason_code != CONDOR_HOLD_CODE::UserRequest ) {
+
+			dprintf( D_ALWAYS, "Job %d.%d is already on hold\n",
+			         cluster, proc );
+			return false;
+		}
 	}
 
 	if( reason ) {
@@ -16601,7 +16616,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			//
 		holdJob( id.cluster, id.proc, reason.c_str(),
 				 CONDOR_HOLD_CODE::InvalidCronSettings, 0,
-				 true, true, false, false );
+				 true, true );
 	}
 	
 	return ( valid );

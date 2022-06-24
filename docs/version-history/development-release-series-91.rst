@@ -102,6 +102,14 @@ New Features:
   work in the future.
   :jira:`1137`
 
+- Using *condor_hold* to put jobs on hold now overrides other hold
+  conditions. Jobs already held for other reasons will be updated (i.e.
+  ``HoldReason`` and ``HoldReasonCode`` changed). The jobs will remain
+  held with the updated hold reason until released with *condor_release*.
+  The periodic release job policy expressions are now ignored for these
+  jobs.
+  :jira:`740`
+
 - Preliminary support for ARM (aarch64) and Power PC (ppc64le) CPU architectures
   on Alma Linux 8 and equivalent platforms.
   :jira:`1150`
