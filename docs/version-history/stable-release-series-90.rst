@@ -24,7 +24,13 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug on Windows that caused a misleading error message about
+  the SharedPortEndpoint when a daemon exits.
+  :jira:`1178`
+
+- Fixed a bug where the *condor_check_config* tool raised an UnboundLocalError
+  due to an undefined variable.
+  :jira:`1186`
 
 .. _lts-version-history-9014:
 

@@ -843,10 +843,10 @@ admin_command_handler(int cmd, Stream* stream )
 		daemons.DaemonsOffPeaceful();
 		return TRUE;
 	case MASTER_OFF:
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+		daemonCore->Signal_Myself(SIGTERM);
 		return TRUE;
 	case MASTER_OFF_FAST:
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+		daemonCore->Signal_Myself(SIGQUIT);
 		return TRUE;
 
 	case SET_SHUTDOWN_PROGRAM:
