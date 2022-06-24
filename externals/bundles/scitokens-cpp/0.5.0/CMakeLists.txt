@@ -32,14 +32,15 @@ if (WITH_SCITOKENS)
 			set ( CONFIGURE_ARGS -DLIBCRYPTO_INCLUDE_DIRS=${DARWIN_OPENSSL_INCLUDE} -DLIBCRYPTO_LIBRARIES=${DARWIN_OPENSSL_LIB_DIR}/libcrypto.dylib )
 		endif()
 
-		condor_pre_external( SCITOKENS scitokens-0.5.0 "lib;include" "done" )
+		condor_pre_external( SCITOKENS scitokens-0.5.0-p1 "lib;include" "done" )
 
 		ExternalProject_Add(scitokens
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${SCITOKENS_STAGE}/dl
 				    URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-0.5.0.tar.gz
 				    #--Patch step ----------
-				    PATCH_COMMAND patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/macos-openssl.patch
+				    PATCH_COMMAND patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/macos-openssl.patch &&
+					patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3-leak.patch
 					#--Configure step ----------
 				    CONFIGURE_COMMAND cmake ${CONFIGURE_ARGS} -DJWT_CPP_DIR=${CMAKE_SOURCE_DIR}/src/condor_io/ -DCMAKE_INSTALL_PREFIX=${SCITOKENS_INSTALL_LOC}
 				    #--Build Step ----------
