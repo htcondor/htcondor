@@ -50,7 +50,8 @@ if (WITH_SCITOKENS)
 			scitokens
 			URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-0.7.0.tar.gz
 			URL_HASH MD5=625bbedd620796707b85ddd50f85dee9
-		    PATCH_COMMAND patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/macos-openssl.patch
+			PATCH_COMMAND patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/macos-openssl.patch &&
+				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3-leak.patch
 		)
 
 		# Check if population has already been performed
