@@ -37,8 +37,10 @@ if (WITH_SCITOKENS)
 		   get_target_property(SSL_DYLIB openssl IMPORTED_LOCATION)
 		   get_target_property(CRYPTO_DYLIB crypto IMPORTED_LOCATION)
 
-		   # We've patched the scitokens cmake file to look at this variable
-		   set(LIBCRYPTO_LIBRARIES "${SSL_DYLIB};${CRYPTO_DYLIB}")
+		   # Make the SciTokens CMake file find our downloaded
+		   # set of libressl headers and libraries
+		   FetchContent_GetProperties(libressl_headers_darwin)
+		   set(OPENSSL_ROOT_DIR "${libressl_headers_darwin_SOURCE_DIR}")
 		endif()
 
 		include(FetchContent)
