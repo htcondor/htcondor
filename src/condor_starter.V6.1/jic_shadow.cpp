@@ -1096,6 +1096,8 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 	if( !rval ) {
 		// Failed to transfer.
 		dprintf( D_ALWAYS,"JICShadow::uploadCheckpointFiles() failed.\n" );
+		// FIXME: this doesn't appear to actually do much of anything, but
+		// we should probably put the job on hold.
 		return false;
 	}
 	dprintf( D_FULLDEBUG,"JICShadow::uploadCheckpointFiles() succeeded.\n" );

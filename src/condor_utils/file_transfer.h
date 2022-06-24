@@ -283,15 +283,20 @@ class FileTransfer final: public Service {
 	// This function should only ever be
 	// called by the shadow during initial file transfer to the starter.
 	//
+	// The caller must ensure that pathsAlreadyPreserved is empty the
+	// first time and is preserved between calls.
+	//
 	void addCheckpointFile(
-		const std::string & source, const std::string & destination
+		const std::string & source, const std::string & destination,
+		std::set< std::string > & pathsAlreadyPreserved
 	);
 
 	//
 	// As addCheckpointFile(), but for input files.
 	//
 	void addInputFile(
-		const std::string & source, const std::string & destination
+		const std::string & source, const std::string & destination,
+		std::set< std::string > & pathsAlreadyPreserved
 	);
 
 		/** Add the given filename to our list of exceptions.  These
@@ -388,10 +393,12 @@ class FileTransfer final: public Service {
 
   protected:
 
-    // Because FileTransferItem doesn't store the destination file name
-    // (only the directory), this doesn't actually work right.
+	// Because FileTransferItem doesn't store the destination file name
+	// (only the directory), this doesn't actually work right.
 	void addSandboxRelativePath( const std::string & source,
-	  const std::string & destination, FileTransferList & ftl );
+		const std::string & destination, FileTransferList & ftl,
+		std::set< std::string > & pathsAlreadyPreserved
+	);
 
 	// There's three places where we need to know this.
 	bool shouldSendStderr();

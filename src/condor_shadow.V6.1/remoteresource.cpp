@@ -2264,11 +2264,13 @@ RemoteResource::initFileTransfer()
 		return;
 	}
 
+	std::set< std::string > pathsAlreadyPreserved;
+
 	// Transfer the MANIFEST file.  We can't use AddDownloadFilenameRemap()
 	// because those are applied on the starter side and aren't transferred
 	// from the shadow (except as part of the job ad, which we've already
 	// sent).
-	filetrans.addInputFile( manifestFileName, ".MANIFEST" );
+	filetrans.addInputFile( manifestFileName, ".MANIFEST", pathsAlreadyPreserved );
 
 	//
 	// Transfer every file listed in the MANIFEST file.  It could be quite
@@ -2291,7 +2293,7 @@ RemoteResource::initFileTransfer()
 		std::string checkpointFile = manifest::FileFromLine( manifestLine );
 		formatstr( checkpointURL, "%s/%.4d/%s", checkpointDestination.c_str(),
 		  manifestNumber, checkpointFile.c_str() );
-		filetrans.addCheckpointFile( checkpointURL, checkpointFile );
+		filetrans.addCheckpointFile( checkpointURL, checkpointFile, pathsAlreadyPreserved );
 
 		manifestLine = nextManifestLine;
 		std::getline( ifs, nextManifestLine );

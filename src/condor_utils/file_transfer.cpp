@@ -61,7 +61,6 @@
 #include <unordered_map>
 #include <string>
 
-
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
 
@@ -256,6 +255,17 @@ private:
 	condor_mode_t m_file_mode{NULL_FILE_PERMISSIONS};
 	filesize_t m_file_size{0};
 };
+
+void
+dPrintFileTransferList( int flags, const FileTransferList & list, const std::string & header ) {
+	std::string message = header;
+	for( auto & i: list ) {
+		formatstr_cat( message, " %s -> %s,",
+			i.srcName().c_str(), i.destDir().c_str()
+		);
+	}
+	dprintf( flags, "%s\n", message.c_str() );
+}
 
 const int GO_AHEAD_FAILED = -1; // failed to contact transfer queue manager
 const int GO_AHEAD_UNDEFINED = 0;
@@ -4053,7 +4063,7 @@ FileTransfer::DoCheckpointUploadFromShadow( filesize_t * total_bytes_ptr, ReliSo
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
 
 	filelist.insert( filelist.end(), checkpointList.begin(), checkpointList.end() );
-	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoCheckpointUploadFromShadow(), file-item after merging checkpoint list into input list: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+    // dPrintFileTransferList( D_ALWAYS, filelist, "After merging checkpoint list into input list:" );
 
 
 	//
@@ -4071,7 +4081,7 @@ FileTransfer::DoCheckpointUploadFromShadow( filesize_t * total_bytes_ptr, ReliSo
 	int rc = computeFileList(
 	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
 	);
-	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoCheckpointUploadFromShadow(), file-item after computing file list: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+	// dPrintFileTransferList( D_ALWAYS, filelist, "After computeFileList():" );
 	if( rc != 0 ) { return rc; }
 
 
@@ -4132,9 +4142,9 @@ FileTransfer::computeFileList(
 	bool preserveRelativePaths = false;
 	jobAd.LookupBool( ATTR_PRESERVE_RELATIVE_PATHS, preserveRelativePaths );
 
-	// dprintf( D_ALWAYS, ">>> DoUpload(), before ExpandFileTransferList(): FilesToSend = %s\n", FilesToSend->to_string().c_str() );
+	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), before ExpandeFileTransferList():" );
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
-	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after ExpandFileTransferList(): %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), after ExpandeFileTransferList():" );
 
 	// Remove any files from the catalog that are in the ExceptionList
 	if (ExceptionFiles) {
@@ -4456,6 +4466,7 @@ FileTransfer::computeFileList(
 	}
 
 
+	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), before duplicate removal:" );
 	//
 	// Remove file entries which result in duplicates at the destination.
 	// This is no longer necessary for correctness (because I changed
@@ -4480,8 +4491,11 @@ FileTransfer::computeFileList(
 			filelist.erase( (iter + 1).base() );
 		}
 	}
+	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), after duplicate removal:" );
 
+    // dPrintFileTransferList( D_ALWAYS, filelist, "Before stable sorting:" );
 	std::stable_sort(filelist.begin(), filelist.end());
+	// dPrintFileTransferList( D_ALWAYS, filelist, "After stable sorting:" );
 
 	for (auto &fileitem : filelist)
 	{
@@ -7268,13 +7282,25 @@ FileTransfer::setMaxDownloadBytes(filesize_t _MaxDownloadBytes)
 	MaxDownloadBytes = _MaxDownloadBytes;
 }
 
+//
+// There are two differences between this and ExpandParentDirectories():
+//   (1) this function doesn't check if the source's parent directories
+//       exist (they won't, because they're coming for URLs); and
+//   (2) the source _must_ be a file (and won't be expanded if it's a
+//       directory, because we can't do that for URLs).  This is the reason
+//       we don't call ExpandFileTransferList() to add the directory entries.
+// We may refactor these two functions together at some point (probably
+// cleanest to do with callbacks), but until then, if you find a bug in one
+// function, it's probably in the other, too.  If you change one function,
+// you probably need to change the other one, too.
+//
 void
 FileTransfer::addSandboxRelativePath(
 	const std::string & source,
 	const std::string & destination,
-	FileTransferList & ftl
+	FileTransferList & ftl,
+	std::set< std::string > & pathsAlreadyPreserved
 ) {
-// dprintf( D_ALWAYS, "%s -> %s\n", source.c_str(), destination.c_str() );
 	std::vector< std::string > splitPath = split_path( destination.c_str() );
 
 	std::string parent;
@@ -7285,11 +7311,16 @@ FileTransfer::addSandboxRelativePath(
 		}
 		partialPath += splitPath.back(); splitPath.pop_back();
 
-		FileTransferItem fti;
-		fti.setSrcName( partialPath.c_str() );
-		fti.setDestDir( parent.c_str() );
-		fti.setDirectory( true );
-		ftl.emplace_back( fti );
+		if( pathsAlreadyPreserved.find( partialPath ) == pathsAlreadyPreserved.end() ) {
+			FileTransferItem fti;
+			fti.setSrcName( partialPath.c_str() );
+			fti.setDestDir( parent.c_str() );
+			fti.setDirectory( true );
+			dprintf( D_ALWAYS, "addSandboxRelativePath(%s, %s): %s -> %s\n", source.c_str(), destination.c_str(), partialPath.c_str(), parent.c_str() );
+			ftl.emplace_back( fti );
+
+			pathsAlreadyPreserved.insert( partialPath );
+		}
 
 		parent = partialPath;
 	}
@@ -7303,15 +7334,17 @@ FileTransfer::addSandboxRelativePath(
 
 void
 FileTransfer::addCheckpointFile(
-  const std::string & source, const std::string & destination
+  const std::string & source, const std::string & destination,
+  std::set< std::string > & pathsAlreadyPreserved
 ) {
-	addSandboxRelativePath( source, destination, this->checkpointList );
+	addSandboxRelativePath( source, destination, this->checkpointList, pathsAlreadyPreserved );
 }
 
 void
 FileTransfer::addInputFile(
-  const std::string & source, const std::string & destination
+  const std::string & source, const std::string & destination,
+  std::set< std::string > & pathsAlreadyPreserved
 ) {
-	addSandboxRelativePath( source, destination, this->inputList );
+	addSandboxRelativePath( source, destination, this->inputList, pathsAlreadyPreserved );
 }
 
