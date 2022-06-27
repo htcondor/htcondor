@@ -2632,6 +2632,8 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 					EXCEPT( message.c_str() );
 				}
 
+				// This doesn't check the checksum on the last line, because
+				// that's what the validator does.
 				std::string manifestLine;
 				std::string nextManifestLine;
 				std::getline( ifs, manifestLine );
@@ -2658,6 +2660,9 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 					manifestLine = nextManifestLine;
 					std::getline( ifs, nextManifestLine );
 				}
+
+				ifs.close();
+				unlink( manifestFileName.c_str() );
 			}
 		}
 
