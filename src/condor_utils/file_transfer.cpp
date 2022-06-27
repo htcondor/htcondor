@@ -3931,11 +3931,6 @@ createCheckpointManifest(
 	//
 	std::string manifestText;
 	for( auto & fileitem : filelist ) {
-		// FIXME: IIRC, we transfer symlinks as is, so we'll need for
-		// compute_file_checksum (or a sibling function) to open no-follow.
-		// FIXME: At this point in the code, we should have already traversed
-		// each directory in the list and recursively added its contents,
-		// but that needs to be verified...
 		if( fileitem.isDirectory() || fileitem.isDomainSocket() ) { continue; }
 		const std::string & sourceName = fileitem.srcName();
 
@@ -3950,10 +3945,9 @@ createCheckpointManifest(
 		);
 	}
 
-	// We need the MANIFEST file on disk for the file-transfer plug-in,
-	// so we may as simplify our coding lives and compute its checksum
-	// off disk instead of in-memory.
-	// FIXME: is the CWD OK here?
+	// It would be more efficient to compute the checksum from memory,
+	// but writing the file to disk simplifies both this code and means
+	// that the MANIFEST file isn't a special case for the actual transfer.
 	std::string manifestFileName;
 	formatstr( manifestFileName, "MANIFEST.%.4d", checkpointNumber );
 	if(! htcondor::writeShortFile( manifestFileName, manifestText )) {
@@ -3966,14 +3960,8 @@ createCheckpointManifest(
 		return -1;
 	}
 
-	// This adds a newline, which is nice, but it also means that we
-	// don't write out the trailing 4 NUL bytes, which is also nice,
-	// since we don't do that for the other hashes in the file.
-	//
-	// Including the file name makes it easier to generate with the
-	// sha256sum command-line tool.
-	//
-	// The '*' marks the hash as having been computed in binary mode.
+	// Duplicating the format of the rest of the file makes it (a) easier
+	// to generate with sha256sum and (b) easier for us to parse later.
 	std::string append;
 	formatstr( append, "%s *%s\n",
 		manifestHash.c_str(), manifestFileName.c_str()
@@ -4043,6 +4031,7 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 
 	// FIXME: startCheckpointPlugins();
 
+	// dPrintFileTransferList( D_ALWAYS, filelist, "DoCheckpointUploadFromStarter():" );
 	rc = uploadFileList(
 	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
 	    total_bytes_ptr
