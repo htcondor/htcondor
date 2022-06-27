@@ -3925,10 +3925,6 @@ createCheckpointManifest(
 	// how long we (the starter) have before the shadow gets bored and
 	// hangs up; calculating the checksum could take quite some time.
 	//
-	// FIXME: remove the MANIFEST file after transfer or error.  Implement
-	// with a scope guard; explicitly call deallocator on success to ensure
-	// that the scope is what we want.
-	//
 	std::string manifestText;
 	for( auto & fileitem : filelist ) {
 		if( fileitem.isDirectory() || fileitem.isDomainSocket() ) { continue; }
@@ -3957,6 +3953,7 @@ createCheckpointManifest(
 	std::string manifestHash;
 	if(! compute_file_checksum( manifestFileName, manifestHash )) {
 		dprintf( D_ALWAYS, "Failed to compute manifest (%s) checksum when sending checkpoint, aborting.\n", ".MANIFEST" );
+		unlink( manifestFileName.c_str() );
 		return -1;
 	}
 
@@ -3968,6 +3965,7 @@ createCheckpointManifest(
 	);
 	if(! htcondor::appendShortFile( manifestFileName,  append )) {
 		dprintf( D_ALWAYS, "Failed to write manifest checksum to manifest (%s) when sending checkpoint, aborting.\n", ".MANIFEST" );
+		unlink( manifestFileName.c_str() );
 		return -1;
 	}
 
@@ -4010,7 +4008,8 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 	if( rc != 0 ) { return rc; }
 
 
-    if(! checkpointDestination.empty()) {
+	std::string manifestFileName;
+	if(! checkpointDestination.empty()) {
 		priv_state saved_priv = PRIV_UNKNOWN;
 		if( want_priv_change ) {
 			saved_priv = set_priv( desired_priv_state );
@@ -4021,6 +4020,7 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 			filelist, this->checkpointNumber, manifestFTI
 		);
 		if( rc != 0 ) { return rc; }
+		manifestFileName = manifestFTI.srcName();
 		filelist.emplace_back(manifestFTI);
 
 		// Additonally, the file-transfer protocol asplodes if we have
@@ -4049,7 +4049,9 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 
 	// FIXME: stopCheckpointPlugins(rc == 0);
 
-
+	if(! checkpointDestination.empty()) {
+		unlink( manifestFileName.c_str() );
+	}
 	return rc;
 }
 
@@ -7315,7 +7317,7 @@ FileTransfer::addSandboxRelativePath(
 			fti.setSrcName( partialPath.c_str() );
 			fti.setDestDir( parent.c_str() );
 			fti.setDirectory( true );
-			dprintf( D_ALWAYS, "addSandboxRelativePath(%s, %s): %s -> %s\n", source.c_str(), destination.c_str(), partialPath.c_str(), parent.c_str() );
+			// dprintf( D_ALWAYS, "addSandboxRelativePath(%s, %s): %s -> %s\n", source.c_str(), destination.c_str(), partialPath.c_str(), parent.c_str() );
 			ftl.emplace_back( fti );
 
 			pathsAlreadyPreserved.insert( partialPath );
