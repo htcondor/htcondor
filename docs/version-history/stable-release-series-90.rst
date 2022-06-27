@@ -32,6 +32,10 @@ Bugs Fixed:
   due to an undefined variable.
   :jira:`1186`
 
+- Fixed a bug in *condor_gpu_discovery* which would cause the tool to crash
+  when OpenCL devices were detected and ``GPU_DEVICE_ORDINAL`` was set in the environment.
+  :jira:`1191`
+
 .. _lts-version-history-9014:
 
 Version 9.0.14
