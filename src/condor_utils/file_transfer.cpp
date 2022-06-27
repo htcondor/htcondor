@@ -260,8 +260,8 @@ void
 dPrintFileTransferList( int flags, const FileTransferList & list, const std::string & header ) {
 	std::string message = header;
 	for( auto & i: list ) {
-		formatstr_cat( message, " %s -> %s,",
-			i.srcName().c_str(), i.destDir().c_str()
+		formatstr_cat( message, " %s -> %s [%s],",
+			i.srcName().c_str(), i.destDir().c_str(), i.destUrl().c_str()
 		);
 	}
 	dprintf( flags, "%s\n", message.c_str() );
@@ -4022,6 +4022,16 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 		);
 		if( rc != 0 ) { return rc; }
 		filelist.emplace_back(manifestFTI);
+
+		// Additonally, the file-transfer protocol asplodes if we have
+		// any directory-creation entries which point to URLs.
+		for( auto i = filelist.begin(); i != filelist.end(); ) {
+			if( i->isDirectory() && (! i->destUrl().empty()) ) {
+				i = filelist.erase(i);
+			} else {
+				++i;
+			}
+		}
 
 		if( saved_priv != PRIV_UNKNOWN ) {
 			set_priv( saved_priv );
