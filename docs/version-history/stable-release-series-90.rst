@@ -32,6 +32,9 @@ Bugs Fixed:
   due to an undefined variable.
   :jira:`1186`
 
+- Fixed a file descriptor leak when using SciTokens for authentication.
+  :jira:`1188`
+
 .. _lts-version-history-9014:
 
 Version 9.0.14
