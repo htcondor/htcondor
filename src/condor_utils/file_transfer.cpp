@@ -3921,9 +3921,8 @@ createCheckpointManifest(
 	// Compute the manifest list, then its hash, then write the hash and
 	// the list to the MANIFEST file.
 	//
-	// FIXME: Test this with a really big checkpoint file, and/or determine
-	// how long we (the starter) have before the shadow gets bored and
-	// hangs up; calculating the checksum could take quite some time.
+	// The shadow side disables the socket time-out entirely before accepting
+	// commands, so we have all the time we need to compute these checksums.
 	//
 	std::string manifestText;
 	for( auto & fileitem : filelist ) {
@@ -4068,16 +4067,10 @@ FileTransfer::DoCheckpointUploadFromShadow( filesize_t * total_bytes_ptr, ReliSo
 
 
 	//
-	// FIXME: this assumes that the de-duplication code works on URLs,
-	// which it currently doesn't.  However, since the shadow set the
-	// destination directory for those URLs, the de-duplication code will
-	// be able to detect duplicates against input file.
-	//
-	// (That is, files in the input list shouldn't be transferred if they'll
-	//  end up being overwritten by files in the checkpoint list.)
-	//
-	// FIXME: if the user checkpoints their executable, uploadFileList()
-	// won't rename it.
+	// If the user checkpoints their executable, uploadFileList() won't
+	// rename it, which will cause problems when resuming after an
+	// interruption.  For now, we just won't support self-modifying
+	// executables.
 	//
 	int rc = computeFileList(
 	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
@@ -4469,7 +4462,7 @@ FileTransfer::computeFileList(
 
 	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), before duplicate removal:" );
 	//
-	// Remove file entries which result in duplicates at the destination.
+	// Remove entries which result in duplicates at the destination.
 	// This is no longer necessary for correctness (because I changed
 	// FileTransferItem::operator < to group rather than sort), but it's
 	// still more efficient.  Some of these duplicates will have been
@@ -4482,8 +4475,6 @@ FileTransfer::computeFileList(
 	std::set<std::string> names;
 	for( auto iter = filelist.rbegin(); iter != filelist.rend(); ++iter ) {
 		auto & item = * iter;
-
-		if( item.isSrcUrl() ) { continue; }
 		if( item.isDestUrl() ) { continue; }
 
 		std::string rd_path = item.destDir() + DIR_DELIM_CHAR + condor_basename(item.srcName().c_str());
