@@ -20,7 +20,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Singularity jobs now mount /tmp and /var/tmp under the scratch
+  directory, not in tmpfs.
+  :jira:`1193`
 
 Bugs Fixed:
 
