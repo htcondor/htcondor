@@ -2608,7 +2608,7 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 					if(! manifestFileName.empty()) {
 						std::string message = "Found more than one MANIFEST file, aborting.";
 						notifyStarterError( message.c_str(), true, 0, 0 );
-						EXCEPT( message.c_str() );
+						EXCEPT( "%s\n", message.c_str() );
 					}
 					manifestFileName = currentFile;
 				}
@@ -2622,14 +2622,14 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 				if(! manifest::validateFile( manifestFileName )) {
 					std::string message = "Invalid MANIFEST file, aborting.";
 					notifyStarterError( message.c_str(), true, 0, 0 );
-					EXCEPT( message.c_str() );
+					EXCEPT( "%s\n", message.c_str() );
 				}
 
 				std::ifstream ifs( manifestFileName.c_str() );
 				if(! ifs.good() ) {
 					std::string message = "Failed to open MANIFEST, aborting.";
 					notifyStarterError( message.c_str(), true, 0, 0 );
-					EXCEPT( message.c_str() );
+					EXCEPT( "%s\n", message.c_str() );
 				}
 
 				// This doesn't check the checksum on the last line, because
@@ -2647,14 +2647,14 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 						std::string message;
 						formatstr( message, "Failed to open checkpoint file ('%s') to compute checksum.", file.c_str() );
 						notifyStarterError( message.c_str(), true, 0, 0 );
-						EXCEPT( message.c_str() );
+						EXCEPT( "%s\n", message.c_str() );
 					}
 
 					if( listedChecksum != computedChecksum ) {
 						std::string message;
 						formatstr( message, "Checkpoint file '%s' did not have expected checksum (%s vs %s).", file.c_str(), computedChecksum.c_str(), listedChecksum.c_str() );
 						notifyStarterError( message.c_str(), true, 0, 0 );
-						EXCEPT( message.c_str() );
+						EXCEPT( "%s\n", message.c_str() );
 					}
 
 					manifestLine = nextManifestLine;
