@@ -1731,9 +1731,9 @@ FileTransfer::HandleCommands(int command, Stream *s)
 			transobject->DontEncryptFiles = transobject->DontEncryptInputFiles;
 
 			transobject->inHandleCommands = true;
-			transobject->uploadCheckpointFiles = true;
+			if(! checkpointDestination.empty()) { transobject->uploadCheckpointFiles = true; }
 			transobject->Upload(sock,ServerShouldBlock);
-			transobject->uploadCheckpointFiles = false;
+			if(! checkpointDestination.empty()) { transobject->uploadCheckpointFiles = false; }
 			transobject->inHandleCommands = false;
 			}
 			break;
@@ -3974,6 +3974,10 @@ createCheckpointManifest(
 	return 0;
 }
 
+#define    WITH_OUTPUT_DESTINATION true
+#define WITHOUT_OUTPUT_DESTINATION false
+#define    WITH_OUTPUT_DESTINATION_IF_FINAL_TRANSFER (m_final_transfer_flag==1)
+
 //
 // This not a special case in DoUpload() because that function, even split
 // into the two pieces of computeFileList() and updateFileList(), is too
@@ -3996,7 +4000,8 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 	}
 
 	int rc = computeFileList(
-	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
+	    WITH_OUTPUT_DESTINATION
 	);
 
 	if( OutputDestination != originalOutputDestination ) {
@@ -4073,7 +4078,8 @@ FileTransfer::DoCheckpointUploadFromShadow( filesize_t * total_bytes_ptr, ReliSo
 	// executables.
 	//
 	int rc = computeFileList(
-	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
+		WITHOUT_OUTPUT_DESTINATION
 	);
 	// dPrintFileTransferList( D_ALWAYS, filelist, "After computeFileList():" );
 	if( rc != 0 ) { return rc; }
@@ -4097,7 +4103,8 @@ FileTransfer::DoNormalUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
 	if( inHandleCommands ) { filelist = this->inputList; }
 
 	int rc = computeFileList(
-	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
+	    WITH_OUTPUT_DESTINATION_IF_FINAL_TRANSFER
 	);
 	if( rc != 0 ) { return rc; }
 
@@ -4111,13 +4118,13 @@ int
 FileTransfer::computeFileList(
     ReliSock * s, FileTransferList & filelist,
     std::unordered_set<std::string> & skip_files,
-	filesize_t & sandbox_size,
+    filesize_t & sandbox_size,
     DCTransferQueue & xfer_queue,
-    _ft_protocol_bits & protocolState
+    _ft_protocol_bits & protocolState,
+    bool should_invoke_output_plugins
 ) {
 		// Declaration to make the return_and_reset_priv macro happy.
 	std::string reservation_id;
-	bool should_invoke_output_plugins = m_final_transfer_flag || uploadCheckpointFiles;
 
 	uploadStartTime = condor_gettimestamp_double();
 

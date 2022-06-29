@@ -438,7 +438,8 @@ class FileTransfer final: public Service {
 	    std::unordered_set<std::string> & skip_files,
 	    filesize_t & sandbox_size,
 	    DCTransferQueue & xfer_queue,
-	    _ft_protocol_bits & protocolState
+	    _ft_protocol_bits & protocolState,
+	    bool using_output_destination
 	);
 
 	// Execute the CEDAR file-transfer protocol and call plug-ins as
